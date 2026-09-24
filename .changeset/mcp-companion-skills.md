@@ -1,7 +1,6 @@
 ---
 "@kilocode/cli": minor
 "kilo-code": minor
-"@kilocode/kilo-jetbrains": minor
 "@kilocode/sdk": minor
 ---
 

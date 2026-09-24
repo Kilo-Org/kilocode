@@ -124,22 +124,6 @@ class KiloBundleLocaleTest : BasePlatformTestCase() {
         assertTrue("Missing base bundle keys: $missing", missing.isEmpty())
     }
 
-    fun `test marketplace skill destinations match the scope in every locale`() {
-        for (locale in LOCALES) {
-            val props = load(locale)
-            assertEquals(
-                "$locale: project skill destination",
-                ".kilo/skills/review/",
-                format(props.getProperty("settings.marketplace.install.destination.skill.project"), "review"),
-            )
-            assertEquals(
-                "$locale: global skill destination",
-                "~/.kilo/skills/review/",
-                format(props.getProperty("settings.marketplace.install.destination.skill.global"), "review"),
-            )
-        }
-    }
-
     fun `test source scan keeps every when branch after comma separated conditions`() {
         val source = """
             KiloBundle.message(

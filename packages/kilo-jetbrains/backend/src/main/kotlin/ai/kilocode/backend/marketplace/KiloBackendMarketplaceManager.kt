@@ -7,7 +7,6 @@ import ai.kilocode.rpc.dto.MarketplaceListDto
 import ai.kilocode.rpc.dto.MarketplaceMethodDto
 import ai.kilocode.rpc.dto.MarketplaceParamDto
 import ai.kilocode.rpc.dto.MarketplaceResultDto
-import ai.kilocode.rpc.dto.MarketplaceSkillDto
 import com.intellij.openapi.components.service
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -21,7 +20,6 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
-import kotlinx.serialization.json.decodeFromJsonElement
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -79,14 +77,6 @@ class KiloBackendMarketplaceManager(private val backend: KiloBackendAppService? 
                     put("type", item.type)
                     put("id", item.id)
                     put("content", content)
-                    if (item.type == "mcp" && item.skills.isNotEmpty()) {
-                        put("skills", JsonArray(item.skills.map { skill ->
-                            buildJsonObject {
-                                put("id", skill.id)
-                                put("content", skill.content)
-                            }
-                        }))
-                    }
                 },
             )
             put("target", target)
@@ -132,9 +122,6 @@ class KiloBackendMarketplaceManager(private val backend: KiloBackendAppService? 
         val line: Int? = null,
     )
 
-    @Serializable
-    private data class WireSkill(val id: String, val content: String)
-
     private fun installedKeys(element: JsonElement?): Set<String> = element?.jsonObject?.keys ?: emptySet()
 
     /** [item] paired with its raw `suggest_for.filename` glob patterns, used only to compute [relevantKeys]. */
@@ -170,11 +157,6 @@ class KiloBackendMarketplaceManager(private val backend: KiloBackendAppService? 
             content = contentElement.toString(),
             installedProject = project.contains(key),
             installedGlobal = global.contains(key),
-            skills = if (type == "mcp") get("skills")?.let {
-                JSON.decodeFromJsonElement<List<WireSkill>>(it).map { skill ->
-                    MarketplaceSkillDto(skill.id, skill.content)
-                }
-            }.orEmpty() else emptyList(),
         )
         return Decoded(item, key, filenames)
     }

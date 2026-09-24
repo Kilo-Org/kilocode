@@ -17,12 +17,6 @@ data class MarketplaceMethodDto(
     val parameters: List<MarketplaceParamDto> = emptyList(),
 )
 
-@Serializable
-data class MarketplaceSkillDto(
-    val id: String,
-    val content: String,
-)
-
 // `content` carries the marketplace catalog item's raw `content` field as JSON text
 // (a string for skills, an AgentContent object for agents, a string or an array of
 // installation methods for MCP servers) so it can be replayed verbatim on install
@@ -45,7 +39,6 @@ data class MarketplaceItemDto(
     val installedProject: Boolean = false,
     val installedGlobal: Boolean = false,
     val relevant: Boolean = false,
-    val skills: List<MarketplaceSkillDto> = emptyList(),
 )
 
 @Serializable

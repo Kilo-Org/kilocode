@@ -5,7 +5,6 @@ import ai.kilocode.client.util.edtWait
 import ai.kilocode.rpc.dto.MarketplaceItemDto
 import ai.kilocode.rpc.dto.MarketplaceMethodDto
 import ai.kilocode.rpc.dto.MarketplaceParamDto
-import ai.kilocode.rpc.dto.MarketplaceSkillDto
 import com.intellij.openapi.ui.ComboBox
 import com.intellij.openapi.ui.DialogWrapper
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
@@ -110,45 +109,6 @@ class MarketplaceInstallDialogTest : BasePlatformTestCase() {
             val note = labels(dialog.centerComponent()).single { it.contains("Only install servers you trust") }
             assertTrue("the security note wraps", note.startsWith("<html>"))
             assertTrue(note.contains("width=\"${UiStyle.Text.bodyWidth()}\""))
-            assertFalse(labels(dialog.centerComponent()).contains("Included skills"))
-        }
-    }
-
-    fun `test MCP companion IDs and destinations follow scope before install consent`() {
-        val item = item(type = "mcp").copy(skills = listOf(
-            MarketplaceSkillDto("gitlab-review", "https://example.com/gitlab-review.tar.gz"),
-            MarketplaceSkillDto("gitlab-pipelines", "https://example.com/gitlab-pipelines.tar.gz"),
-        ))
-        withDialog(item) { dialog ->
-            val project = labels(dialog.centerComponent())
-            assertTrue(project.contains("Included skills"))
-            for (skill in item.skills) {
-                assertTrue(project.any { it.contains("${skill.id}: .kilo/skills/${skill.id}/") })
-                assertTrue("archive URLs are not presentation fields", project.none { it.contains(skill.content) })
-            }
-            assertFalse(dialog.result().remove)
-
-            dialog.scopeBox().selectedItem = "Global"
-
-            val global = labels(dialog.centerComponent())
-            for (skill in item.skills) {
-                assertTrue(global.any { it.contains("${skill.id}: ~/.kilo/skills/${skill.id}/") })
-            }
-            assertEquals("global", dialog.result().target)
-            assertFalse(dialog.result().remove)
-        }
-    }
-
-    fun `test MCP removal notice does not depend on current catalog companions`() {
-        withDialog(item(type = "mcp", installedProject = true)) { dialog ->
-            assertTrue(labels(dialog.centerComponent()).none { it.contains("companion skills owned") })
-
-            dialog.scopeBox().selectedItem = "This workspace"
-
-            val shown = labels(dialog.centerComponent())
-            assertTrue(shown.any { it.contains("companion skills owned by this MCP installation in this scope") })
-            assertTrue(shown.any { it.contains("Other skills are kept.") })
-            assertTrue(dialog.result().remove)
         }
     }
 
@@ -240,7 +200,7 @@ class MarketplaceInstallDialogTest : BasePlatformTestCase() {
             params = listOf(MarketplaceParamDto("Token", "token")),
             prerequisites = listOf("Docker"),
             methods = listOf(MarketplaceMethodDto("UVX"), MarketplaceMethodDto("Docker")),
-        ).copy(skills = listOf(MarketplaceSkillDto("gitlab-review", "https://example.com/gitlab-review.tar.gz")))
+        )
         withDialog(item) { dialog ->
             dialog.scopeBox().selectedItem = "This workspace"
 
@@ -248,17 +208,11 @@ class MarketplaceInstallDialogTest : BasePlatformTestCase() {
             val shown = labels(dialog.centerComponent())
             assertTrue("prerequisites are install-only", shown.none { it.contains("Docker") })
             assertTrue("the security note is install-only", shown.none { it.contains("Only install servers you trust") })
-            assertFalse("the current catalog must not imply removal ownership", shown.contains("Included skills"))
-            assertTrue(shown.none { it.contains("gitlab-review") })
-            assertTrue(shown.any { it.contains("companion skills owned") })
 
             dialog.scopeBox().selectedItem = "Global"
 
             assertEquals("switching back to an install asks for its parameters again", 1, fields(dialog.centerComponent()).size)
             assertTrue(labels(dialog.centerComponent()).any { it.contains("Docker") })
-            assertTrue(labels(dialog.centerComponent()).contains("Included skills"))
-            assertTrue(labels(dialog.centerComponent()).any { it.contains("gitlab-review: ~/.kilo/skills/gitlab-review/") })
-            assertTrue(labels(dialog.centerComponent()).none { it.contains("companion skills owned") })
         }
     }
 
