@@ -7,7 +7,7 @@ import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
 import { parse } from "jsonc-parser"
 import * as Companions from "../../src/kilocode/marketplace/companions"
 import * as Paths from "../../src/kilocode/marketplace/paths"
-import { install, remove } from "../../src/kilocode/marketplace/installer"
+import { findEscapedPaths, install, remove } from "../../src/kilocode/marketplace/installer"
 import { OWNER, stageSkill } from "../../src/kilocode/marketplace/skill-archive"
 import { Process } from "../../src/util/process"
 import { tmpdirScoped } from "../fixture/fixture"
@@ -189,15 +189,20 @@ describe("marketplace MCP companions", () => {
   ]) {
     it.live(`rejects unsafe archive entry before extraction: ${name}`, () =>
       Effect.gen(function* () {
-        // Windows treats a backslash as a path separator, so that entry is a
-        // valid nested path there and is not a traversal.
-        if (process.platform === "win32" && name.includes("\\")) return
         const tmp = yield* tmpdirScoped()
         const skill = yield* Effect.promise(() => archive("guide", { [name]: "untrusted" }))
         const out = yield* Companions.install(input(tmp), "server", [skill], entry).pipe(Effect.exit)
-        expect(Exit.isFailure(out)).toBe(true)
-        expect(yield* Effect.promise(() => exists(Paths.skillsDir("project", tmp)))).toBe(false)
+        const base = Paths.skillsDir("project", tmp)
+        // Windows reads a backslash as a path separator, so that entry is a valid
+        // nested path there instead of a traversal. It must still stay contained.
+        if (!(process.platform === "win32" && name.includes("\\"))) {
+          expect(Exit.isFailure(out)).toBe(true)
+          expect(yield* Effect.promise(() => exists(base))).toBe(false)
+        }
         expect(yield* Effect.promise(() => exists(path.join(tmp, "outside")))).toBe(false)
+        if (yield* Effect.promise(() => exists(base))) {
+          expect(yield* Effect.promise(() => findEscapedPaths(base))).toEqual([])
+        }
       }),
     )
   }
@@ -368,9 +373,6 @@ describe("marketplace MCP companions", () => {
 
   it.live("does not follow scope symlinks or accept receipt path traversal", () =>
     Effect.gen(function* () {
-      // Creating and removing directory symlinks on Windows needs privileges,
-      // and the scope-escape check is POSIX-specific.
-      if (process.platform === "win32") return
       const tmp = yield* tmpdirScoped()
       const outside = yield* tmpdirScoped()
       yield* Effect.promise(() => fs.symlink(outside, path.join(tmp, ".kilo")))
@@ -379,7 +381,8 @@ describe("marketplace MCP companions", () => {
         true,
       )
       expect(yield* Effect.promise(() => fs.readdir(outside))).toEqual([])
-      yield* Effect.promise(() => fs.rm(path.join(tmp, ".kilo")))
+      // Unlink the link itself. `rm` on a symlink errors on Windows.
+      yield* Effect.promise(() => fs.unlink(path.join(tmp, ".kilo")))
       yield* Companions.install(input(tmp), "server", [skill], entry)
       const receipt = (yield* Effect.promise(() => Companions.read("project", tmp, "server")))!
       const receipts = yield* Effect.promise(() => Paths.mcpsDir("project", tmp))
