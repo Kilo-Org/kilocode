@@ -28,6 +28,7 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import java.util.concurrent.CopyOnWriteArrayList
+import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * Fake [KiloAppRpcApi] for testing.
@@ -55,6 +56,7 @@ class FakeAppRpcApi : KiloAppRpcApi {
     val variants = mutableListOf<ModelVariantUpdateDto>()
     val configPatches = mutableListOf<ConfigPatchDto>()
     var retention = RetentionStatusDto()
+    val retentionStatusCalls = AtomicInteger()
     val retentionForces = CopyOnWriteArrayList<Boolean>()
     var retentionError: Exception? = null
     val logConfigs = mutableListOf<LogConfigDto>()
@@ -182,6 +184,7 @@ class FakeAppRpcApi : KiloAppRpcApi {
 
     override suspend fun retentionStatus(): RetentionStatusDto {
         assertNotEdt("retentionStatus")
+        retentionStatusCalls.incrementAndGet()
         retentionError?.let { throw it }
         return retention
     }

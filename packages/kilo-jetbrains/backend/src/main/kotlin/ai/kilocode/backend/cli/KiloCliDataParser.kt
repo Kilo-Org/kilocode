@@ -639,7 +639,9 @@ object KiloCliDataParser {
             retention = obj["retention"].obj()?.let { retention ->
                 RetentionConfigDto(
                     enabled = runCatching { retention.flagOrNull("enabled") }.getOrNull(),
-                    maxAgeDays = retention.long("maxAgeDays")?.takeIf { it in 1..Int.MAX_VALUE }?.toInt(),
+                    maxAgeDays = runCatching { retention.long("maxAgeDays") }.getOrNull()
+                        ?.takeIf { it in 1..Int.MAX_VALUE }
+                        ?.toInt(),
                 )
             },
         )

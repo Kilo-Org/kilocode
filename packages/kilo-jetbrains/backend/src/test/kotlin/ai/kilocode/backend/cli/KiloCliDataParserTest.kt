@@ -1416,6 +1416,17 @@ class KiloCliDataParserTest {
         }
 
         @Test
+        fun `parseConfig - malformed retention days do not discard other config`() {
+            val cfg = KiloCliDataParser.parseConfig(
+                """{"model":"openai/gpt","retention":{"enabled":true,"maxAgeDays":{}}}""",
+            )
+
+            assertEquals("openai/gpt", cfg.model)
+            assertEquals(true, cfg.retention?.enabled)
+            assertNull(cfg.retention?.maxAgeDays)
+        }
+
+        @Test
         fun `parseConfig - agent overrides and permissions`() {
             val cfg = KiloCliDataParser.parseConfig(
                 """{"agent":{"build":{"model":"x","variant":"high","prompt":"p","description":"d","mode":"subagent","hidden":"true","disable":false,"temperature":0.2,"top_p":0.8,"steps":12,"permission":{"edit":"ask","bash":{"git *":"allow"},"webfetch":null}}}}"""

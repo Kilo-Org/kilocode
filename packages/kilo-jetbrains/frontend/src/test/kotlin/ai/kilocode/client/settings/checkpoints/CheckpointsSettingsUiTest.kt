@@ -148,6 +148,14 @@ class CheckpointsSettingsUiTest : BasePlatformTestCase() {
         }
     }
 
+    fun `test idle cleanup status is fetched once instead of polled`() {
+        start(ConfigDto())
+
+        flushUntil { rpc.retentionStatusCalls.get() > 0 }
+
+        assertEquals(1, rpc.retentionStatusCalls.get())
+    }
+
     fun `test invalid retention days disable manual cleanup without changing the draft`() {
         start(ConfigDto(retention = RetentionConfigDto(enabled = true, maxAgeDays = 30)))
 
@@ -156,6 +164,11 @@ class CheckpointsSettingsUiTest : BasePlatformTestCase() {
         }
         flushUntil { edt { !runButton().isEnabled } }
         edt { assertFalse(requireNotNull(ui).modified()) }
+
+        edt { requireNotNull(ui).resetDraft() }
+
+        assertEquals("30", edt { days().text })
+        assertTrue(edt { runButton().isEnabled })
     }
 
     fun `test cleanup policy saves globally while snapshots save to project`() {

@@ -55,25 +55,12 @@ internal class CheckpointsSettingsUi(
     private var retention: RetentionStatusDto? = null
     private var pending = false
     private var retentionError = false
+    private var retentionPoll: kotlinx.coroutines.Job? = null
 
     init {
         startSettings(CheckpointsContent(this, { updateDraft(it) }, ::runCleanup, ::syncContent))
         if (hint != null) loadProject(projectId, hint)
-        jobs += scope.launch {
-            while (isActive) {
-                val status = app.retentionStatus()
-                withContext(UI) {
-                    if (status != null) {
-                        retention = status
-                        retentionError = false
-                    } else {
-                        retentionError = true
-                    }
-                    syncContent()
-                }
-                delay(RETENTION_POLL_MS)
-            }
-        }
+        startRetentionPoll()
     }
 
     override fun change(from: CheckpointsDraft, to: CheckpointsDraft): CheckpointsChange? = patch(from, to)
@@ -131,6 +118,10 @@ internal class CheckpointsSettingsUi(
         effective = result
     }
 
+    override fun restoreFields() {
+        form.restore()
+    }
+
     override fun logSaveStarted(change: CheckpointsChange) = LOG.info("checkpoints settings save: started")
     override fun logSaveCompleted(change: CheckpointsChange) = LOG.info("checkpoints settings save: completed")
     override fun logSaveFailed(change: CheckpointsChange) = LOG.warn("checkpoints settings save: failed")
@@ -175,8 +166,9 @@ internal class CheckpointsSettingsUi(
         pending = true
         retentionError = false
         syncContent()
+        startRetentionPoll()
         LOG.info("manual session cleanup: confirmed")
-        app.runRetentionAsync(true) { result ->
+        jobs += app.runRetentionAsync(true) { result ->
             ApplicationManager.getApplication().invokeLater({
                 if (isDisposed) return@invokeLater
                 pending = false
@@ -193,6 +185,29 @@ internal class CheckpointsSettingsUi(
                 syncContent()
             }, ModalityState.any())
         }
+    }
+
+    @RequiresEdt
+    private fun startRetentionPoll() {
+        if (retentionPoll?.isActive == true) return
+        val job = scope.launch {
+            do {
+                val status = app.retentionStatus()
+                val active = withContext(UI) {
+                    if (status != null) {
+                        retention = status
+                        retentionError = false
+                    } else {
+                        retentionError = true
+                    }
+                    syncContent()
+                    pending || status?.progress != null
+                }
+                if (active) delay(RETENTION_POLL_MS)
+            } while (active && isActive)
+        }
+        retentionPoll = job
+        jobs += job
     }
 
     private companion object {
@@ -272,6 +287,10 @@ internal class CheckpointsContent(
         )
     }
 
+    fun restore() {
+        days.restore()
+    }
+
     private fun statusText(status: RetentionStatusDto?, pending: Boolean, error: Boolean): String {
         val progress = status?.progress
         if (progress != null) return if (progress.phase == "scanning") {
@@ -340,5 +359,9 @@ private class RetentionDaysField(
         if (synced && !valid()) return
         if ((!synced || !hasFocus()) && text != value.toString()) text = value.toString()
         synced = true
+    }
+
+    fun restore() {
+        synced = false
     }
 }

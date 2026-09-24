@@ -164,6 +164,7 @@ internal abstract class BaseSettingsUi<C : BaseContentPanel, D, P, R, W>(
     override fun resetDraft() {
         checkEdt()
         state.reset()
+        restoreFields()
         if (!saving) clearProgress()
         syncContent()
     }
@@ -191,6 +192,7 @@ internal abstract class BaseSettingsUi<C : BaseContentPanel, D, P, R, W>(
                     logSaveCompleted(change)
                     val base = base(result)
                     state.complete(token, base)
+                    restoreFields()
                     clearProgress()
                     syncContent()
                     return@invokeLater
@@ -294,6 +296,9 @@ internal abstract class BaseSettingsUi<C : BaseContentPanel, D, P, R, W>(
 
     @RequiresEdt
     protected open fun clearWorkspaceError() = Unit
+
+    @RequiresEdt
+    protected open fun restoreFields() = Unit
 
     private fun openProfile(src: JComponent) {
         val settings = Settings.KEY.getData(DataManager.getInstance().getDataContext(src))
