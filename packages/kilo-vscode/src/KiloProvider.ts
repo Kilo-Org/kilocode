@@ -418,6 +418,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   /** Coalesce provider refreshes — at most one follow-up rerun when a request lands mid-flight. */
   private providersRefresh: Promise<void> | null = null
   private providersQueued = false
+  private providersRetry = false
   private providersGeneration = 0
   private sandboxRevision = 0
   private cachedAgentsMessage: unknown = null
@@ -2022,6 +2023,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           const target = this.indexingScope
           this.fetchAndSendIndexingStatus(target.directory, target.projectId)
           this.flushPendingKiloModel()
+          // A fetch that ran without a usable client set this flag. Fetch again
+          // so the model picker does not stay on "No providers".
+          if (this.providersRetry) void this.fetchAndSendProviders()
           // Fire config warnings independently so a failure in the
           // sequential await chain doesn't prevent warnings from being shown
           void this.checkConfigWarnings("state")
@@ -2776,6 +2780,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         this.providersQueued = false
         const client = this.client
         if (!client) {
+          // Nothing was loaded, so remember to fetch once a client is available.
+          // The webview retries may already be spent by then.
+          if (!this.cachedProvidersMessage) this.providersRetry = true
           if (this.cachedProvidersMessage && generation === this.providersGeneration)
             this.postMessage(this.cachedProvidersMessage)
           return
@@ -2808,6 +2815,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
             authStates,
           }
           this.cachedProvidersMessage = message
+          this.providersRetry = false
           this.postMessage(message)
         } catch (error) {
           if (generation !== this.providersGeneration) {
@@ -2815,6 +2823,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
             generation = this.providersGeneration
             continue
           }
+          // A rejected fetch leaves nothing cached, so retry on the next connect.
+          if (!this.cachedProvidersMessage) this.providersRetry = true
           console.error("[Kilo New] KiloProvider: Failed to fetch providers:", error)
         }
         if (!this.providersQueued) return
