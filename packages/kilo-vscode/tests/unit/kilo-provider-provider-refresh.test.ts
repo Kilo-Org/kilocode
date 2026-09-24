@@ -6,8 +6,8 @@ const { KiloProvider } = await import("../../src/KiloProvider")
 type State = "connecting" | "connected" | "disconnected" | "error"
 
 type Internals = {
-  cachedProvidersMessage: unknown
   webview: { postMessage: (message: unknown) => Promise<unknown> } | null
+  providersRetry: boolean
   initializeConnection: () => Promise<void>
   fetchAndSendProviders: () => Promise<void>
   fetchAndSendIndexingStatus: (directory?: string, projectId?: string) => void
@@ -26,7 +26,7 @@ type Internals = {
   startStatsPolling: () => void
 }
 
-function connection() {
+function connection(online = true) {
   let listener: ((state: State, error?: Error) => void) | undefined
   const client = { kilo: { profile: async () => ({ data: null }) } }
   return {
@@ -35,7 +35,10 @@ function connection() {
       listener(next)
     },
     connect: async () => {},
-    getClient: () => client as never,
+    getClient: () => {
+      if (!online) throw new Error("Not connected — call connect() first")
+      return client as never
+    },
     onEventFiltered: () => () => undefined,
     onStateChange: (next: typeof listener) => {
       listener = next
@@ -57,55 +60,73 @@ function connection() {
   }
 }
 
+function provider(service: ReturnType<typeof connection>) {
+  return new KiloProvider({} as never, service as never, undefined, {
+    projectDirectory: "/repo",
+    rootDirectory: () => "/repo",
+  }) as unknown as Internals
+}
+
+function stub(internal: Internals) {
+  internal.webview = { postMessage: async () => true }
+  internal.fetchAndSendIndexingStatus = () => {}
+  internal.flushPendingKiloModel = () => {}
+  internal.checkConfigWarnings = async () => {}
+  internal.syncWebviewState = async () => {}
+  internal.flushPendingSessionRefresh = async () => {}
+  internal.recoverPendingPrompts = () => {}
+  internal.fetchAndSendAgents = async () => {}
+  internal.fetchAndSendSkills = async () => {}
+  internal.fetchAndSendCommands = async () => {}
+  internal.fetchAndSendConfig = async () => {}
+  internal.fetchAndSendNotifications = async () => {}
+  internal.seedSessionStatusMap = async () => {}
+  internal.sendNotificationSettings = () => {}
+  internal.startStatsPolling = () => {}
+}
+
 describe("KiloProvider providers on reconnect", () => {
-  async function setup() {
-    const service = connection()
-    const provider = new KiloProvider({} as never, service as never, undefined, {
-      projectDirectory: "/repo",
-      rootDirectory: () => "/repo",
-    })
-    const internal = provider as unknown as Internals
-    const counter = { providers: 0 }
-    internal.webview = { postMessage: async () => true }
-    internal.fetchAndSendProviders = async () => {
-      counter.providers++
-    }
-    internal.fetchAndSendIndexingStatus = () => {}
-    internal.flushPendingKiloModel = () => {}
-    internal.checkConfigWarnings = async () => {}
-    internal.syncWebviewState = async () => {}
-    internal.flushPendingSessionRefresh = async () => {}
-    internal.recoverPendingPrompts = () => {}
-    internal.fetchAndSendAgents = async () => {}
-    internal.fetchAndSendSkills = async () => {}
-    internal.fetchAndSendCommands = async () => {}
-    internal.fetchAndSendConfig = async () => {}
-    internal.fetchAndSendNotifications = async () => {}
-    internal.seedSessionStatusMap = async () => {}
-    internal.sendNotificationSettings = () => {}
-    internal.startStatsPolling = () => {}
-    await internal.initializeConnection()
-    return { service, internal, counter }
-  }
+  it("marks a retry when providers are fetched without a client", async () => {
+    const internal = provider(connection(false))
+    stub(internal)
 
-  it("fetches providers on connect when no provider list was loaded", async () => {
-    const test = await setup()
-    const before = test.counter.providers
+    await internal.fetchAndSendProviders()
 
-    test.service.emitState("connected")
-    await Bun.sleep(0)
-
-    expect(test.counter.providers).toBe(before + 1)
+    expect(internal.providersRetry).toBe(true)
   })
 
-  it("does not refetch providers on reconnect when they are already loaded", async () => {
-    const test = await setup()
-    test.internal.cachedProvidersMessage = { type: "providersLoaded" }
-    const before = test.counter.providers
+  it("fetches providers on connect when a previous fetch had no client", async () => {
+    const service = connection()
+    const internal = provider(service)
+    let providers = 0
+    stub(internal)
+    internal.fetchAndSendProviders = async () => {
+      providers++
+    }
+    await internal.initializeConnection()
+    internal.providersRetry = true
+    const before = providers
 
-    test.service.emitState("connected")
+    service.emitState("connected")
     await Bun.sleep(0)
 
-    expect(test.counter.providers).toBe(before)
+    expect(providers).toBe(before + 1)
+  })
+
+  it("does not refetch providers on connect when none are pending", async () => {
+    const service = connection()
+    const internal = provider(service)
+    let providers = 0
+    stub(internal)
+    internal.fetchAndSendProviders = async () => {
+      providers++
+    }
+    await internal.initializeConnection()
+    const before = providers
+
+    service.emitState("connected")
+    await Bun.sleep(0)
+
+    expect(providers).toBe(before)
   })
 })
