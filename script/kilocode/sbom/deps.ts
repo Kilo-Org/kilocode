@@ -14,7 +14,7 @@
 
 import fs from "node:fs"
 import path from "node:path"
-import type { Component, Gap } from "./model"
+import { ref, type Component, type Gap } from "./model"
 
 export type Lock = {
   lockfileVersion: number
@@ -346,7 +346,11 @@ export async function enrich(components: Component[], modules: string | string[]
             .find((candidate): candidate is string => !!candidate)
         : undefined)
     if (!manifest) {
-      gaps.push({ component: `${item.name}@${item.version}`, reason: "licence unknown: package not installed locally" })
+      gaps.push({
+        component: `${item.name}@${item.version}`,
+        reason: "licence unknown: package not installed locally",
+        ref: ref(item),
+      })
       out.push(item)
       continue
     }
@@ -364,7 +368,11 @@ export async function enrich(components: Component[], modules: string | string[]
             .filter(Boolean)
             .join(" OR "))
     if (!license) {
-      gaps.push({ component: `${item.name}@${item.version}`, reason: "licence unknown: not declared by the package" })
+      gaps.push({
+        component: `${item.name}@${item.version}`,
+        reason: "licence unknown: not declared by the package",
+        ref: ref(item),
+      })
     }
     const author = typeof pkg?.author === "string" ? pkg.author : (pkg?.author as { name?: string } | undefined)?.name
     out.push({
@@ -419,12 +427,13 @@ export function reconcile(components: Component[], gaps: Gap[]) {
     const sibling = known.get(`${family(item.name)}@${item.version}`)
     if (!sibling) return item
     borrowed.add(`${item.name}@${item.version}`)
-    return {
-      ...item,
-      licenses: sibling.licenses,
-      ...(sibling.description ? { description: sibling.description } : {}),
-      ...(sibling.author ? { author: sibling.author } : {}),
-    }
+    // Only the licence is safe to borrow: it is a project-level legal
+    // attribute shared by every platform variant. `description` and `author`
+    // are per-package fields that commonly differ -- e.g. a real package in
+    // this repo, @opentui/core-darwin-arm64, declares its own description as
+    // "Prebuilt darwin-arm64 binaries for @opentui/core", which would be
+    // wrong if attached to the linux-x64 sibling.
+    return { ...item, licenses: sibling.licenses }
   })
 
   return { components: out, gaps: gaps.filter((gap) => !borrowed.has(gap.component)) }

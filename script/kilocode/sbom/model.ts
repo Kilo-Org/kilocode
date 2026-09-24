@@ -78,7 +78,20 @@ export type Target = {
 
 export type Tool = { name: string; version?: string }
 
-export type Gap = { component: string; reason: string }
+export type Gap = {
+  component: string
+  reason: string
+  /**
+   * Identity of the component the gap describes, matching what `ref()` would
+   * compute for it (typically its purl). Lets `compose()` drop the gap if a
+   * different generator resolved the same component after all -- e.g. Syft
+   * cataloguing a JAR that the version catalog could only mark as unlicensed,
+   * or the physical scan finding an npm package `Deps.enrich` could not.
+   * Gaps with no matching component (e.g. an unresolvable dependency name)
+   * omit this and are always kept.
+   */
+  ref?: string
+}
 
 export type Compose = {
   subject: Subject
@@ -258,6 +271,14 @@ export function compose(input: Compose): Bom {
   const refs = new Set(components.map((item) => ref(item)))
   const root = `${PROPERTY_NAMESPACE}:artifact:${input.subject.name}`
 
+  // A gap recorded before merging generators can be stale: dedupe() may have
+  // combined it with a component another generator did resolve a licence for
+  // (Syft cataloguing a JAR, or the physical scan finding an npm package).
+  // Asserting "licence unknown" for a component the same document lists with
+  // a licence would make the evidence self-contradictory.
+  const licensed = new Set(components.filter((item) => item.licenses?.length).map((item) => ref(item)))
+  const gaps = (input.gaps ?? []).filter((gap) => !gap.ref || !licensed.has(gap.ref))
+
   // Only keep edges whose endpoints exist, so `dependencies` never points at a
   // component that was filtered out as dev-only or host-provided.
   const edges = Object.entries(input.dependencies ?? {}).flatMap(([from, to]) => {
@@ -324,7 +345,7 @@ export function compose(input: Compose): Bom {
         "target:abi": input.target?.abi,
         "target:baseline": input.target?.baseline == null ? undefined : String(input.target.baseline),
         ...input.build?.properties,
-        ...Object.fromEntries((input.gaps ?? []).map((gap) => [`coverage:gap:${gap.component}`, gap.reason])),
+        ...Object.fromEntries(gaps.map((gap) => [`coverage:gap:${gap.component}`, gap.reason])),
       }),
     },
     components: components.map(component),

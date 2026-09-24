@@ -85,6 +85,66 @@ describe("compose", () => {
     })
   })
 
+  test("keeps a gap with no matching component, since there is nothing to reconcile it against", () => {
+    const document = bom({ gaps: [{ component: "ghost", reason: "not resolvable from bun.lock" }] })
+    expect(document.metadata.properties).toContainEqual({
+      name: "kilocode:coverage:gap:ghost",
+      value: "not resolvable from bun.lock",
+    })
+  })
+
+  test("drops a gap once dedupe merges its component with a licensed one from another generator", () => {
+    // The version catalog and a physical JAR scan can describe the same
+    // dependency: one has no licence data, the other does. dedupe() merges
+    // them under the shared purl, and the resulting document must not still
+    // assert "licence unknown" for a component it lists with a licence.
+    const document = bom({
+      components: [
+        { type: "library", name: "okhttp", version: "4.12.0", purl: "pkg:maven/com.squareup.okhttp3/okhttp@4.12.0" },
+        {
+          type: "library",
+          name: "okhttp",
+          version: "4.12.0",
+          purl: "pkg:maven/com.squareup.okhttp3/okhttp@4.12.0",
+          licenses: ["Apache-2.0"],
+          properties: { source: "syft" },
+        },
+      ],
+      gaps: [
+        {
+          component: "com.squareup.okhttp3:okhttp@4.12.0",
+          reason: "licence unknown: not tracked by the Gradle version catalog",
+          ref: "pkg:maven/com.squareup.okhttp3/okhttp@4.12.0",
+        },
+      ],
+    })
+    expect(document.components.find((item: any) => item.name === "okhttp")?.licenses).toEqual([
+      { license: { id: "Apache-2.0" } },
+    ])
+    expect(document.metadata.properties).not.toContainEqual(
+      expect.objectContaining({ name: "kilocode:coverage:gap:com.squareup.okhttp3:okhttp@4.12.0" }),
+    )
+  })
+
+  test("keeps a ref-tagged gap when the component really never got a licence from any generator", () => {
+    const document = bom({
+      components: [
+        { type: "library", name: "okhttp", version: "4.12.0", purl: "pkg:maven/com.squareup.okhttp3/okhttp@4.12.0" },
+      ],
+      gaps: [
+        {
+          component: "com.squareup.okhttp3:okhttp@4.12.0",
+          reason: "licence unknown: not tracked by the Gradle version catalog",
+          ref: "pkg:maven/com.squareup.okhttp3/okhttp@4.12.0",
+        },
+      ],
+    })
+    expect(document.metadata.properties).toContainEqual({
+      name: "kilocode:coverage:gap:com.squareup.okhttp3:okhttp@4.12.0",
+      value: "licence unknown: not tracked by the Gradle version catalog",
+    })
+  })
+
   test("attaches unparented components to the artifact root", () => {
     const document = bom({
       components: [
@@ -384,7 +444,11 @@ describe("deps", () => {
       const result = await Deps.enrich(input, dir)
       expect(result.components[0]).toMatchObject({ licenses: ["MIT"], description: "d" })
       expect(result.gaps).toEqual([
-        { component: "absent@1.0.0", reason: "licence unknown: package not installed locally" },
+        {
+          component: "absent@1.0.0",
+          reason: "licence unknown: package not installed locally",
+          ref: "pkg:npm/absent@1.0.0",
+        },
       ])
     } finally {
       await fs.promises.rm(dir, { recursive: true, force: true })
@@ -463,7 +527,11 @@ describe("deps", () => {
       const input: Component[] = [{ type: "library", name: "missing", version: "1.0.0", purl: "pkg:npm/missing@1.0.0" }]
       const result = await Deps.enrich(input, dir)
       expect(result.gaps).toEqual([
-        { component: "missing@1.0.0", reason: "licence unknown: package not installed locally" },
+        {
+          component: "missing@1.0.0",
+          reason: "licence unknown: package not installed locally",
+          ref: "pkg:npm/missing@1.0.0",
+        },
       ])
     } finally {
       await fs.promises.rm(dir, { recursive: true, force: true })
@@ -478,7 +546,7 @@ describe("deps", () => {
       // JetBrains plugin does for all six CLI platforms.
       await Bun.write(
         path.join(dir, "@opentui", "core-darwin-arm64", "package.json"),
-        JSON.stringify({ license: "MIT" }),
+        JSON.stringify({ license: "MIT", description: "Prebuilt darwin-arm64 binaries for @opentui/core" }),
       )
       const input: Component[] = [
         {
@@ -503,6 +571,12 @@ describe("deps", () => {
       const result = await Deps.enrich(input, dir)
       expect(result.components.map((item) => item.licenses)).toEqual([["MIT"], ["MIT"], ["MIT"]])
       expect(result.gaps).toEqual([])
+
+      // description is per-package and commonly names the platform (as it
+      // does for the real darwin-arm64 sibling above); only the licence is
+      // safe to borrow.
+      const linux = result.components.find((item) => item.name === "@opentui/core-linux-x64")
+      expect(linux?.description).toBeUndefined()
     } finally {
       await fs.promises.rm(dir, { recursive: true, force: true })
     }
@@ -531,7 +605,11 @@ describe("deps", () => {
       ]
       const result = await Deps.enrich(input, dir)
       expect(result.gaps).toEqual([
-        { component: "@opentui/core-linux-x64@0.6.0", reason: "licence unknown: package not installed locally" },
+        {
+          component: "@opentui/core-linux-x64@0.6.0",
+          reason: "licence unknown: package not installed locally",
+          ref: "pkg:npm/%40opentui/core-linux-x64@0.6.0",
+        },
       ])
     } finally {
       await fs.promises.rm(dir, { recursive: true, force: true })
@@ -553,7 +631,11 @@ describe("deps", () => {
       ]
       const result = await Deps.enrich(input, dir)
       expect(result.gaps).toEqual([
-        { component: "@opentui/core-linux-x64@2.8.6", reason: "licence unknown: package not installed locally" },
+        {
+          component: "@opentui/core-linux-x64@2.8.6",
+          reason: "licence unknown: package not installed locally",
+          ref: "pkg:npm/%40opentui/core-linux-x64@2.8.6",
+        },
       ])
     } finally {
       await fs.promises.rm(dir, { recursive: true, force: true })
@@ -595,7 +677,11 @@ describe("deps", () => {
       const input: Component[] = [{ type: "library", name: "cors", version: "1.0.0", purl: "pkg:npm/cors@1.0.0" }]
       const result = await Deps.enrich(input, dir)
       expect(result.gaps).toEqual([
-        { component: "cors@1.0.0", reason: "licence unknown: package not installed locally" },
+        {
+          component: "cors@1.0.0",
+          reason: "licence unknown: package not installed locally",
+          ref: "pkg:npm/cors@1.0.0",
+        },
       ])
     } finally {
       await fs.promises.rm(dir, { recursive: true, force: true })

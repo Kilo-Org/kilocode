@@ -70,6 +70,11 @@ const EXCLUDED = /mockwebserver|junit|coroutines-test|detekt/
  * always report an explicit gap. This matches how `Deps.enrich` handles an
  * npm package it cannot resolve: the limitation is recorded rather than left
  * as a silently blank field with no explanation.
+ *
+ * The gap carries the component's purl as `ref` so `compose()` can drop it if
+ * the physical scan of the signed ZIP separately catalogues the same JAR with
+ * a licence -- otherwise the document would list a licence for a component
+ * while simultaneously asserting it has none.
  */
 function declared(text: string): { components: Component[]; gaps: Gap[] } {
   const components = catalog(text)
@@ -86,6 +91,7 @@ function declared(text: string): { components: Component[]; gaps: Gap[] } {
   const gaps = components.map((item) => ({
     component: `${item.group}:${item.name}@${item.version}`,
     reason: "licence unknown: not tracked by the Gradle version catalog",
+    ref: item.purl,
   }))
   return { components, gaps }
 }
