@@ -207,7 +207,7 @@ import { dispatchInitialPrompt, seedInitialVariant } from "./initial-message"
 import { SidebarToggleButton } from "./SidebarToggleButton"
 import { setTabWidths } from "./tab-widths"
 import { clampPanelWidth, createPanelResize, maxPanelWidth, minPanelWidth, SidePanel } from "./side-panel-layout"
-import { createSidePanel } from "./side-panel-state"
+import { createSidePanel, sideHostNeeded } from "./side-panel-state"
 import { SubagentPanel } from "./SubagentPanel"
 import { DocumentPanelHost } from "./documents/DocumentPanelHost"
 import { createDocumentInspector } from "../documents/state"
@@ -416,6 +416,7 @@ const AgentManagerContent: Component = () => {
     },
     setHistory,
     setReviewActive,
+    session.sessions,
   )
   const diffStyle = useDiffStyle()!
   const setSharedDiffStyle = (style: "unified" | "split") => {
@@ -904,6 +905,9 @@ const AgentManagerContent: Component = () => {
       !restricted() &&
       keepTerminalStack(history(), selection(), contextEmpty(), terms.all().length + terms.sides().length),
   )
+
+  const sideHostVisible = () =>
+    sideHostNeeded(sidePanel(), diffMounted(), terms.sides().length, subagents.tabs().length, browser.hasCache())
 
   const overlay = createMemo((): SetupState | null => {
     if (restricted()) return null
@@ -2588,9 +2592,7 @@ const AgentManagerContent: Component = () => {
                   </Show>
                 </div>
               </div>
-              <Show
-                when={sidePanel() !== null || diffMounted() || terms.sides().length > 0 || subagents.tabs().length > 0}
-              >
+              <Show when={sideHostVisible()}>
                 <div
                   class={`am-diff-resize ${sidePanel() === null ? "am-side-host-hidden" : ""}`}
                   style={{ width: `${panelWidth()}px` }}
