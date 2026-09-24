@@ -16,6 +16,7 @@ import {
   restoreTrackedTabs,
   showTabStrip,
   tabsForCreatedSession,
+  tabsForLoadedSessions,
   trackedSessionInventory,
   type LocalTabState,
 } from "../../webview-ui/src/utils/local-tabs"
@@ -336,6 +337,31 @@ describe("tracked tab reconcile", () => {
     expect(reconcileTrackedTabs(["pending-1", "gone"], [], inventory([]), trackedPending)).toEqual({
       ids: ["pending-1"],
       forget: ["gone"],
+    })
+  })
+})
+
+describe("tabs for loaded sessions", () => {
+  it("keeps a tab opened from an older page when more pages exist", () => {
+    const tabs = state(["new", "old"], "old")
+
+    expect(tabsForLoadedSessions(tabs, { sessions: [{ id: "new" }], hasMore: true }, [], makePending())).toBeUndefined()
+    expect(tabsForLoadedSessions(tabs, { sessions: [], append: true }, [], makePending())).toBeUndefined()
+  })
+
+  it("closes tabs a complete list no longer has", () => {
+    expect(
+      tabsForLoadedSessions(state(["new", "gone"], "gone"), { sessions: [{ id: "new" }] }, [], makePending()),
+    ).toEqual({ ids: ["new"], active: "new" })
+  })
+
+  it("keeps preserved and freshly created sessions on a complete list", () => {
+    const tabs = state(["kept", "created", "gone"], "kept")
+    const message = { sessions: [], preserveSessionIds: ["kept"] }
+
+    expect(tabsForLoadedSessions(tabs, message, ["created"], makePending())).toEqual({
+      ids: ["kept", "created"],
+      active: "kept",
     })
   })
 })
