@@ -35794,9 +35794,6 @@
               "native_notebook_tools": {
                 "type": "boolean"
               },
-              "task_model_selection": {
-                "type": "boolean"
-              },
               "code_mode": {
                 "type": "boolean"
               },
