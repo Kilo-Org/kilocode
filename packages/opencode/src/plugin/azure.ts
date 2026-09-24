@@ -115,8 +115,13 @@ export function createAzureAuthHooks(
               instructions: "Sign in with `az login` before continuing.",
               method: "auto",
               callback: async () => {
-                const resourceName = inputs?.resourceName ?? process.env.AZURE_RESOURCE_NAME
-                if (!resourceName) throw new Error("Azure Resource Name is required")
+                // kilocode_change start - resolve the resource name or endpoint from inputs and every supported env var
+                const resourceName =
+                  inputs?.resourceName ??
+                  process.env.AZURE_RESOURCE_NAME ??
+                  process.env.AZURE_OPENAI_RESOURCE_NAME
+                const endpoint = inputs?.baseURL ?? process.env.AZURE_OPENAI_ENDPOINT
+                if (!resourceName && !endpoint) throw new Error("Azure Resource Name or endpoint URL is required")
 
                 await token(AZURE_COGNITIVE_SERVICES_SCOPE)
                 return {
@@ -124,8 +129,10 @@ export function createAzureAuthHooks(
                   access: OAUTH_DUMMY_KEY,
                   refresh: OAUTH_DUMMY_KEY,
                   expires: Date.now() + 365 * 24 * 60 * 60 * 1000,
-                  accountId: resourceName,
+                  ...(resourceName ? { accountId: resourceName } : {}),
+                  ...(endpoint ? { baseURL: endpoint } : {}),
                 }
+                // kilocode_change end
               },
             }
           },

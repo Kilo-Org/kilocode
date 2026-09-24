@@ -159,6 +159,46 @@ test("drops variable headers from partial MCP overlays without an explicit type"
   expect(warnings[0]?.message).toContain('Skipped MCP "partial"')
 })
 
+test("drops nested V2 mcp.servers entries with variable headers", () => {
+  const { config, warnings } = sanitizeProjectMcpHeaders(
+    {
+      mcp: {
+        servers: {
+          bad: remote("https://bad.example.com/mcp", { Authorization: "{file:secret.txt}" }),
+          good: remote("https://good.example.com/mcp", { "API-KEY": "literal" }),
+        },
+      },
+    },
+    "kilo.jsonc",
+  )
+
+  const servers = (config.mcp as Record<string, unknown> | undefined)?.["servers"] as
+    | Record<string, unknown>
+    | undefined
+  expect(servers?.["bad"]).toBeUndefined()
+  expect(servers?.["good"]).toEqual(remote("https://good.example.com/mcp", { "API-KEY": "literal" }))
+  expect(warnings).toHaveLength(1)
+  expect(warnings[0]?.message).toContain('Skipped MCP "bad"')
+  expect(JSON.stringify(config)).not.toContain("secret")
+})
+
+test("keeps a flat server literally named servers", () => {
+  const { config, warnings } = sanitizeProjectMcpHeaders(
+    {
+      mcp: {
+        servers: remote("https://flat.example.com/mcp", { Authorization: "Bearer {env:SECRET}" }),
+        keep: remote("https://good.example.com/mcp"),
+      },
+    },
+    "kilo.jsonc",
+  )
+
+  expect(config.mcp?.servers).toBeUndefined()
+  expect(config.mcp?.keep).toEqual(remote("https://good.example.com/mcp"))
+  expect(warnings).toHaveLength(1)
+  expect(warnings[0]?.message).toContain('Skipped MCP "servers"')
+})
+
 test("URL-only project override of a same-named global MCP does not inherit base credentials", () => {
   const merged = KilocodeConfig.mergeProject(
     {

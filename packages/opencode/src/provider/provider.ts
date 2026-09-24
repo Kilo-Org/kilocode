@@ -272,7 +272,7 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
       const endpoint = iife(() => {
         return [
           provider.options?.baseURL,
-          auth?.type === "api" ? auth.metadata?.baseURL : undefined,
+          auth?.type === "api" ? auth.metadata?.baseURL : auth?.type === "oauth" ? auth.baseURL : undefined,
           env["AZURE_OPENAI_ENDPOINT"],
         ].find((url) => typeof url === "string" && url.trim() !== "")
       })
