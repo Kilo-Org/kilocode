@@ -246,6 +246,33 @@ const ProviderConnectDialog: Component<ProviderConnectDialogProps> = (props) => 
     )
   }
 
+  const PromptFields: Component<{
+    prompts: Prompt[]
+    fields: Record<string, string>
+    setField: (key: string, value: string) => void
+    invalidKey?: string
+    error?: string
+  }> = (props) => (
+    <>
+      <For each={props.prompts}>
+        {(prompt) => (
+          <PromptField
+            prompt={prompt}
+            fields={props.fields}
+            setField={props.setField}
+            invalid={props.invalidKey === prompt.key}
+            error={props.error}
+          />
+        )}
+      </For>
+      <Show when={props.error && !props.invalidKey}>
+        <div style={{ color: "var(--vscode-errorForeground)", "font-size": "var(--kilo-font-size-13)" }}>
+          {props.error}
+        </div>
+      </Show>
+    </>
+  )
+
   onCleanup(action.dispose)
 
   onMount(() => {
@@ -547,22 +574,13 @@ const ProviderConnectDialog: Component<ProviderConnectDialogProps> = (props) => 
           validationState={state.field === "apiKey" ? "invalid" : undefined}
           error={state.field === "apiKey" ? state.error : undefined}
         />
-        <For each={prompts()}>
-          {(prompt) => (
-            <PromptField
-              prompt={prompt}
-              fields={fields}
-              setField={(key, value) => setFields(key, value)}
-              invalid={state.field === prompt.key}
-              error={state.error}
-            />
-          )}
-        </For>
-        <Show when={state.error && !state.field}>
-          <div style={{ color: "var(--vscode-errorForeground)", "font-size": "var(--kilo-font-size-13)" }}>
-            {state.error}
-          </div>
-        </Show>
+        <PromptFields
+          prompts={prompts()}
+          fields={fields}
+          setField={(key, value) => setFields(key, value)}
+          invalidKey={state.field}
+          error={state.error}
+        />
         <div class="dialog-confirm-actions provider-connect-actions">
           <div class="provider-connect-byok">
             {language.t("provider.connect.kiloGateway.byok.prefix")}
@@ -677,22 +695,13 @@ const ProviderConnectDialog: Component<ProviderConnectDialogProps> = (props) => 
         style={{ display: "flex", "flex-direction": "column", gap: "16px" }}
         onSubmit={submit}
       >
-        <For each={prompts()}>
-          {(prompt) => (
-            <PromptField
-              prompt={prompt}
-              fields={fields}
-              setField={(key, value) => setFields(key, value)}
-              invalid={state.field === prompt.key}
-              error={state.error}
-            />
-          )}
-        </For>
-        <Show when={state.error && !state.field}>
-          <div style={{ color: "var(--vscode-errorForeground)", "font-size": "var(--kilo-font-size-13)" }}>
-            {state.error}
-          </div>
-        </Show>
+        <PromptFields
+          prompts={prompts()}
+          fields={fields}
+          setField={(key, value) => setFields(key, value)}
+          invalidKey={state.field}
+          error={state.error}
+        />
         <div class="dialog-confirm-actions">
           <Button variant="ghost" size="large" type="button" onClick={back}>
             {language.t("common.goBack")}
