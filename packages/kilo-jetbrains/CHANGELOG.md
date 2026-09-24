@@ -530,6 +530,19 @@
 
 ## [Unreleased]
 
+## [7.1.8-rc.1] - 2026-09-24
+
+### Added
+
+### Fixed
+
+- Avoid a crash when reloading or unloading the JetBrains plugin while editor history still references Kilo virtual files.
+
+### Changed
+
+- Speed up switching between worktree session editor tabs with long transcripts and reduce unnecessary Agent Manager list repainting.
+- Trim single-line transcript labels more consistently with an ellipsis when they overflow.
+
 ## [7.1.7] - 2026-09-23
 
 ### Added
