@@ -75,6 +75,9 @@ export const ItemCard = (props: Props) => {
           <Show when={installed()}>
             <Tag class="marketplace-badge-installed">{t("marketplace.card.installed")}</Tag>
           </Show>
+          <Show when={props.item.type === "mcp" && props.item.skills?.length}>
+            <Tag class="marketplace-badge-skills">{t("marketplace.badge.skills")}</Tag>
+          </Show>
           {props.footer}
         </div>
         <div class="marketplace-card-actions">

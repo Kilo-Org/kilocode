@@ -2,7 +2,7 @@
 
 package ai.kilocode.client.vfs
 
-import com.intellij.openapi.components.service
+import com.intellij.openapi.components.serviceOrNull
 import com.intellij.openapi.fileEditor.FileEditorManagerKeys
 import com.intellij.openapi.fileTypes.FileType
 import com.intellij.openapi.fileTypes.FileTypes
@@ -54,5 +54,8 @@ class KiloVirtualFile(
 
     override fun hashCode(): Int = path.hashCode()
 
-    private fun kind(): KiloVirtualFileKind? = service<KiloVirtualFileKindRegistry>().get(path.kind)
+    // serviceOrNull (not service) because callers such as EditorHistoryManager.isValid()
+    // can still hold a KiloVirtualFile while this plugin's classloader is mid-unload,
+    // when the application service is no longer resolvable.
+    private fun kind(): KiloVirtualFileKind? = serviceOrNull<KiloVirtualFileKindRegistry>()?.get(path.kind)
 }

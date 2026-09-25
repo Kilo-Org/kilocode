@@ -1,5 +1,73 @@
 # @kilocode/cli
 
+## 7.7.12
+
+### Minor Changes
+
+- [#14508](https://github.com/Kilo-Org/kilocode/pull/14508) [`e09883c`](https://github.com/Kilo-Org/kilocode/commit/e09883c19ac7e1e1ba895b217cbb9f6dcf8aa13d) - Support MCP OAuth client metadata documents while preserving dynamic registration and configured client credentials.
+
+- [#14510](https://github.com/Kilo-Org/kilocode/pull/14510) [`c06228d`](https://github.com/Kilo-Org/kilocode/commit/c06228d6a0090307331a572d726348b7ad3df722) - Install MCP servers with companion skills from the marketplace, preview the included skills, and remove owned skills with the server.
+
+- [#14533](https://github.com/Kilo-Org/kilocode/pull/14533) [`3380e16`](https://github.com/Kilo-Org/kilocode/commit/3380e167c2aef2c0232f49cacdc3fe5e1d87f63e) - Enable task subagent model selection by default and remove the `experimental.task_model_selection` flag. You can now request a model, provider, or reasoning effort for an individual subagent task without enabling an experiment.
+
+### Patch Changes
+
+- [#14480](https://github.com/Kilo-Org/kilocode/pull/14480) [`5e05988`](https://github.com/Kilo-Org/kilocode/commit/5e05988b17ced03fb040476c8748c86eae992e31) - Deliver plan completion questions to directory-scoped clients such as JetBrains without requiring a reconnect.
+
+- Updated dependencies [[`c06228d`](https://github.com/Kilo-Org/kilocode/commit/c06228d6a0090307331a572d726348b7ad3df722)]:
+  - @kilocode/sdk@7.8.0
+  - @kilocode/plugin@7.7.10
+  - @opencode-ai/tui@7.7.10
+  - @opencode-ai/ui@7.7.10
+  - @kilocode/kilo-gateway@7.7.10
+  - @kilocode/kilo-indexing@7.7.10
+  - @kilocode/plugin-atomic-chat@7.7.10
+  - @opencode-ai/server@7.7.10
+  - @kilocode/kilo-telemetry@7.7.10
+
+## 7.7.9
+
+### Minor Changes
+
+- [#14445](https://github.com/Kilo-Org/kilocode/pull/14445) [`1ac7cc1`](https://github.com/Kilo-Org/kilocode/commit/1ac7cc17003f4c4ecf2a19c5932f7cdd2af7f08e) - Let the agent start or resume a session goal itself with the `goal` tool. The agent's call arms the goal without cancelling the current turn, then the goal loop continues after that turn. The tool uses the `goal` permission, which is allowed by default and can be set to `ask` or `deny`.
+
+- [#14312](https://github.com/Kilo-Org/kilocode/pull/14312) [`dfeeb48`](https://github.com/Kilo-Org/kilocode/commit/dfeeb48bd8f4e15fabb7c7c2deade0b199687be6) - Add a `monitor` action to the `background_process` tool that streams a long command's output back as it arrives, bounded by a line cap (default 200) and a wall-time cap (default 120000 ms) so a waiting agent reads progress instead of polling `logs`. Existing `background_process` actions are unchanged. Add session cron scheduling through `cron_create`, `cron_list`, and `cron_delete`: a recurring 5-field expression or a one-shot time/delay fires the session between turns after it goes idle, missed windows are not replayed, fire times carry deterministic jitter, each task expires seven days after creation, and tasks survive `--resume`.
+
+- [#14268](https://github.com/Kilo-Org/kilocode/pull/14268) [`f330846`](https://github.com/Kilo-Org/kilocode/commit/f3308468990769a6f8303b6b49c833f1b44fae82) - Add experimental `get_context_info` and `compact` tools that let an agent inspect and compact its own context. Reach them with `KILO_EXPERIMENTAL=1`, or `KILO_EXPERIMENTAL_CONTEXT_TOOLS=true`.
+
+- [#14485](https://github.com/Kilo-Org/kilocode/pull/14485) [`9088b7d`](https://github.com/Kilo-Org/kilocode/commit/9088b7d0b261f725505cdb6a3da906ab885d0680) - Install Marketplace plugins from a git repository. Plugin catalog entries can now use a git source such as `git:github.com/owner/repo@v1.2.3#subdir`, so a plugin can be distributed from a public repository without publishing to npm. The client clones the repository at the pinned ref into the plugin cache and loads the plugin from there.
+
+- [#14281](https://github.com/Kilo-Org/kilocode/pull/14281) [`7c59855`](https://github.com/Kilo-Org/kilocode/commit/7c59855ff37416ff40e9ef2b47b851d1ed01634e) - Install plugins from the Kilo Marketplace. The Marketplace now lists plugin items alongside agents, skills, and MCP servers, and installing one adds the npm package to Kilo's plugin configuration for the chosen project or global scope. Removing a plugin item cleans the configuration entry again.
+
+### Patch Changes
+
+- [#14318](https://github.com/Kilo-Org/kilocode/pull/14318) [`5edf432`](https://github.com/Kilo-Org/kilocode/commit/5edf432c2f4a34f333ff4e498e111d6f854cbe95) - An empty compaction response no longer replaces the conversation; the CLI reports that compaction did not run and lets you retry with /compact.
+
+- [#14315](https://github.com/Kilo-Org/kilocode/pull/14315) [`3fbb454`](https://github.com/Kilo-Org/kilocode/commit/3fbb454a4c3efdbf613a54212520c7a1990c970b) - Link a session to its pull request reliably, on GitHub, GitLab and Bitbucket. An explicit link (`link_pr`, `kilo pr link`, or the app's set-PR-link action) always wins, and a check every 5 minutes asks the session's own git host whether an open pull request exists for its branch. A stale link is cleared when that check finds the pull request no longer open, so the app row updates when the pull request closes.
+
+- [#14492](https://github.com/Kilo-Org/kilocode/pull/14492) [`43f5d55`](https://github.com/Kilo-Org/kilocode/commit/43f5d5551a77ccb1140388bd62f08c74510da2c0) - Fix git-hosted Marketplace plugins so `~/` repository paths resolve, a failed clone leaves no staging directory, and POSIX paths that contain a backslash are preserved. The plugin install dialog no longer describes every plugin as an npm plugin.
+
+- [#14196](https://github.com/Kilo-Org/kilocode/pull/14196) [`49df20f`](https://github.com/Kilo-Org/kilocode/commit/49df20fc74661e237df91f4a83d2b22560663e86) - Fix `kilo mcp auth` failing at the last step when another Kilo process touches the same MCP server while the browser tab is open: the OAuth flow now keeps its own state and PKCE verifier instead of reading them back from the process-shared `mcp-auth.json`, and every remaining failure names the step that failed (the token exchange, the browser authorization, a timeout, or a superseded authorization attempt). Running `kilo mcp auth` for the same server at the same time in two terminals now works too: the newer attempt takes the local callback listener over, the later browser tab completes, and the earlier command reports that it was replaced.
+
+- [#13513](https://github.com/Kilo-Org/kilocode/pull/13513) [`3add597`](https://github.com/Kilo-Org/kilocode/commit/3add59707346f6f14f33c3dd6e7c4132d578e301) - Adopt OpenCode v1.18.19 through v1.18.20 improvements, including subagent error and permission handling in non-interactive runs, network and stream error retry coverage, Cerebras completion limit handling, Cloudflare AI Gateway support, and TUI reasoning status updates.
+
+- [#14448](https://github.com/Kilo-Org/kilocode/pull/14448) [`9340d34`](https://github.com/Kilo-Org/kilocode/commit/9340d34f5297919a436e22e0ff87d6f1c8a816cf) - Fix provider initialization failing with an HTTP 500 when `enabled_providers` excludes Kilo while a Kilo login is stored. Excluded providers are now skipped before their auth loader runs.
+
+- [#14464](https://github.com/Kilo-Org/kilocode/pull/14464) [`b9dc741`](https://github.com/Kilo-Org/kilocode/commit/b9dc741b11a5e86db1832e60cac1de1fc9c326b9) - Explain that file checkpoints require Git when a revert cannot restore files. Reverting in a folder that is not a Git repository now shows "File checkpoints require a Git repository" instead of the generic "No file checkpoint was available" notice.
+
+- [#14484](https://github.com/Kilo-Org/kilocode/pull/14484) [`065bc5c`](https://github.com/Kilo-Org/kilocode/commit/065bc5c2e7a0779853f6231a215f2a1990c5fdd3) - Keep session costs complete after reopening paginated conversations, including nested subagents without counting their parents or siblings.
+
+- Updated dependencies [[`065bc5c`](https://github.com/Kilo-Org/kilocode/commit/065bc5c2e7a0779853f6231a215f2a1990c5fdd3)]:
+  - @kilocode/sdk@7.7.8
+  - @kilocode/plugin@7.7.8
+  - @opencode-ai/tui@7.7.8
+  - @opencode-ai/ui@7.7.8
+  - @kilocode/kilo-gateway@7.7.8
+  - @kilocode/kilo-indexing@7.7.8
+  - @kilocode/plugin-atomic-chat@7.7.8
+  - @opencode-ai/server@7.7.8
+  - @kilocode/kilo-telemetry@7.7.8
+
 ## 7.7.7
 
 ### Patch Changes

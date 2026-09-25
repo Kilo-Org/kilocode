@@ -916,9 +916,6 @@ export const dict = {
     "استورد مرة واحدة تعليمات CLAUDE.md العامة المدعومة والمهارات البسيطة وتعريفات MCP المعطلة. تبقى ملفات Claude الأصلية دون تغيير؛ أعد تشغيل الخلفية بعد التفعيل.",
   "settings.experimental.multiProject.description":
     "تفعيل إدارة الجلسات وأشجار العمل عبر مستودعات متعددة في Agent Manager. المستودع الحالي هو دائمًا المشروع الافتراضي.",
-  "settings.experimental.taskModelSelection.title": "اختيار نموذج الوكيل الفرعي لـ Task",
-  "settings.experimental.taskModelSelection.description":
-    "السماح باختيار النموذج والمزوّد ومستوى الاستدلال صراحةً للوكلاء الفرعيين في Task.",
   "settings.experimental.mcpTimeout.title": "مهلة MCP (مللي ثانية)",
   "settings.experimental.mcpTimeout.description": "مهلة طلبات خادم MCP بالمللي ثانية",
   "settings.experimental.remote.title": "التحكم Remote",
@@ -1113,6 +1110,9 @@ export const dict = {
   "settings.autoCleanup.runNow": "شغّل التنظيف الآن",
   "settings.autoCleanup.runNow.confirm":
     "حذف الجلسات المنتهية الصلاحية نهائيًا عبر جميع المشاريع وكل عميل Kilo على هذا الجهاز؟",
+  "settings.autoCleanup.stop": "إيقاف التنظيف",
+  "settings.autoCleanup.progress.cancelling": "جارٍ إيقاف تنظيف الجلسات...",
+  "settings.autoCleanup.lastRun.cancelled": "تمت المقاطعة",
   "settings.context.autoCompaction.title": "ضغط تلقائي",
   "settings.context.autoCompaction.description": "ضغط السياق تلقائياً قبل أن يصل إلى الحد",
   "settings.context.compaction.title": "الضغط",

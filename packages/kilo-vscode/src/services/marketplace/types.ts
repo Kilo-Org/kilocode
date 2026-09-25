@@ -34,6 +34,7 @@ export interface McpMarketplaceItem extends MarketplaceItemBase {
   url: string
   content: string | McpInstallationMethod[]
   parameters?: McpParameter[]
+  skills?: Array<{ id: string; content: string }>
 }
 
 export interface AgentContent {

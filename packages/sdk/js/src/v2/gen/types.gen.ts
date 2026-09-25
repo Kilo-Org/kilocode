@@ -2702,7 +2702,6 @@ export type Config = {
     image_generation?: boolean
     image_generation_model?: string
     native_notebook_tools?: boolean
-    task_model_selection?: boolean
     code_mode?: boolean
     speech_to_text_model?: string
     speech_to_text_base_url?: string
@@ -4202,6 +4201,11 @@ export type McpInstallationMethod = {
   prerequisites?: Array<string>
 }
 
+export type McpSkill = {
+  id: string
+  content: string
+}
+
 export type McpMarketplaceItem = {
   id: string
   name: string
@@ -4215,6 +4219,7 @@ export type McpMarketplaceItem = {
   url: string
   content: string | Array<McpInstallationMethod>
   parameters?: Array<McpParameter>
+  skills?: Array<McpSkill>
 }
 
 export type AgentMarketplaceItem = {
@@ -4303,6 +4308,7 @@ export type McpInstallItem = {
   type: "mcp"
   id: string
   content: string | Array<McpInstallationMethod>
+  skills?: Array<McpSkill>
 }
 
 export type AgentInstallItem = {
@@ -17729,9 +17735,11 @@ export type KilocodeRetentionStatusResponses = {
       skippedActive: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
       failed: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
       durationMs: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+      cancelled?: boolean
+      reclaimedBytes?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
     }
     progress?: {
-      phase: "scanning" | "deleting"
+      phase: "scanning" | "deleting" | "cancelling"
       total: number
       processed: number
       deleted: number
@@ -17780,9 +17788,11 @@ export type KilocodeRetentionRunResponses = {
       skippedActive: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
       failed: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
       durationMs: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+      cancelled?: boolean
+      reclaimedBytes?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
     }
     progress?: {
-      phase: "scanning" | "deleting"
+      phase: "scanning" | "deleting" | "cancelling"
       total: number
       processed: number
       deleted: number
@@ -17793,6 +17803,36 @@ export type KilocodeRetentionRunResponses = {
 }
 
 export type KilocodeRetentionRunResponse = KilocodeRetentionRunResponses[keyof KilocodeRetentionRunResponses]
+
+export type KilocodeRetentionCancelData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/kilocode/retention/cancel"
+}
+
+export type KilocodeRetentionCancelErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type KilocodeRetentionCancelError = KilocodeRetentionCancelErrors[keyof KilocodeRetentionCancelErrors]
+
+export type KilocodeRetentionCancelResponses = {
+  /**
+   * Retention cancel request outcome; false when no pass was running
+   */
+  200: {
+    requested: boolean
+  }
+}
+
+export type KilocodeRetentionCancelResponse = KilocodeRetentionCancelResponses[keyof KilocodeRetentionCancelResponses]
 
 export type AnacondaDesktopStatusData = {
   body?: never

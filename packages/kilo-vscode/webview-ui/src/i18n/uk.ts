@@ -931,9 +931,6 @@ export const dict = {
     "Одноразово імпортуйте підтримувані глобальні інструкції CLAUDE.md, прості навички та вимкнені визначення MCP. Оригінальні файли Claude не змінюються; після ввімкнення перезапустіть бекенд.",
   "settings.experimental.multiProject.description":
     "Увімкніть керування сеансами та робочими деревами в кількох репозиторіях в Agent Manager. Поточний репозиторій робочого простору завжди є проєктом за замовчуванням.",
-  "settings.experimental.taskModelSelection.title": "Вибір моделі субагента Task",
-  "settings.experimental.taskModelSelection.description":
-    "Дозволяє явно вибирати модель, провайдера та рівень міркування для субагентів Task.",
   "settings.experimental.mcpTimeout.title": "Тайм-аут MCP (мс)",
   "settings.experimental.mcpTimeout.description": "Тайм-аут у мілісекундах для запитів до MCP-сервера",
   "settings.experimental.remote.title": "Керування Remote",
@@ -1102,6 +1099,9 @@ export const dict = {
   "settings.autoCleanup.runNow": "Запустити очищення зараз",
   "settings.autoCleanup.runNow.confirm":
     "Безповоротно видалити застарілі сесії в усіх проєктах і в усіх клієнтах Kilo на цьому комп'ютері?",
+  "settings.autoCleanup.stop": "Зупинити очищення",
+  "settings.autoCleanup.progress.cancelling": "Зупинка очищення сеансів...",
+  "settings.autoCleanup.lastRun.cancelled": "перервано",
 
   "settings.context.autoCompaction.title": "Автоматичне стиснення",
   "settings.context.autoCompaction.description": "Автоматично стискати контекст до досягнення ліміту",

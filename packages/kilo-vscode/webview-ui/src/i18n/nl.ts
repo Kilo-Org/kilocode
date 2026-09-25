@@ -938,9 +938,6 @@ export const dict = {
     "Importeer ondersteunde globale CLAUDE.md-instructies, eenvoudige vaardigheden en uitgeschakelde MCP-definities één keer. Originele Claude-bestanden blijven ongewijzigd; herstart de backend na inschakelen.",
   "settings.experimental.multiProject.description":
     "Schakel het beheren van sessies en worktrees over meerdere repositories in Agent Manager in. De huidige workspace-repository is altijd het standaardproject.",
-  "settings.experimental.taskModelSelection.title": "Task-subagentmodel selecteren",
-  "settings.experimental.taskModelSelection.description":
-    "Sta toe dat je expliciet een model, provider en redeneerinspanning kiest voor Task-subagents.",
   "settings.experimental.mcpTimeout.title": "MCP Timeout (ms)",
   "settings.experimental.mcpTimeout.description": "Timeout voor MCP-serververzoeken in milliseconden",
   "settings.experimental.remote.title": "Remote-bediening",
@@ -1114,6 +1111,9 @@ export const dict = {
   "settings.autoCleanup.runNow": "Opschoning nu uitvoeren",
   "settings.autoCleanup.runNow.confirm":
     "Verlopen sessies definitief verwijderen in alle projecten en alle Kilo-clients op deze machine?",
+  "settings.autoCleanup.stop": "Opschonen stoppen",
+  "settings.autoCleanup.progress.cancelling": "Sessie-opschoning wordt gestopt...",
+  "settings.autoCleanup.lastRun.cancelled": "afgebroken",
 
   "settings.context.autoCompaction.title": "Automatische Compactie",
   "settings.context.autoCompaction.description": "Context automatisch compacteren voordat deze de limiet bereikt",

@@ -37,6 +37,7 @@ export const dict = {
   "marketplace.install.scope.global.description":
     "Tutti i progetti su questo computer. Viene salvato nella configurazione utente.",
   "marketplace.install.destination": "Destinazione dell'installazione",
+  "marketplace.install.includedSkills": "Skill incluse",
   "marketplace.install.about.mcp":
     "Un server MCP fornisce a Kilo strumenti aggiuntivi per interagire con servizi esterni o programmi locali.",
   "marketplace.install.about.agent":
@@ -50,7 +51,7 @@ export const dict = {
   "marketplace.install.learnMore": "Scopri come funzionano le installazioni dal Marketplace",
   "marketplace.install.learnMcp": "Scopri di più su MCP",
   "marketplace.install.about.plugin":
-    "Un plugin npm aggiunge strumenti e integrazioni personalizzati a Kilo. I plugin vengono eseguiti con tutte le autorizzazioni.",
+    "Un plugin aggiunge strumenti e integrazioni personalizzati a Kilo. I plugin vengono eseguiti con tutte le autorizzazioni.",
   "marketplace.install.plugin.warning":
     "I plugin eseguono codice con tutte le autorizzazioni. Possono leggere e modificare i tuoi file, eseguire comandi e accedere alle tue credenziali e alla tua rete. Installa solo plugin di cui ti fidi.",
   "marketplace.install.installedAt": "Installato in {{path}}",
@@ -66,6 +67,8 @@ export const dict = {
   "marketplace.remove.title": "Rimuovere {{name}}?",
   "marketplace.remove.confirm": "Vuoi davvero rimuovere questo {{type}}? Verrà rimosso dalla configurazione {{scope}}.",
   "marketplace.remove.cancel": "Annulla",
+  "marketplace.remove.mcp.skills":
+    "Questa operazione rimuove anche le skill complementari appartenenti a questa installazione. Le skill installate in modo indipendente vengono conservate.",
   "marketplace.remove.confirm.button": "Rimuovi",
   "marketplace.search": "Cerca...",
   "marketplace.filter.all": "Tutti gli elementi",
@@ -74,6 +77,7 @@ export const dict = {
   "marketplace.empty": "Nessun elemento trovato",
   "marketplace.empty.relevant": "Nessun elemento rilevante del marketplace trovato per questo spazio di lavoro.",
   "marketplace.badge.mcpServer": "Server MCP",
+  "marketplace.badge.skills": "Include skill",
   "marketplace.card.by": "di {{author}}",
   "marketplace.install.method": "Metodo di installazione",
   "marketplace.install.parameters": "Parametri",

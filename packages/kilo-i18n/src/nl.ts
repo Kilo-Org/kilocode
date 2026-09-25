@@ -37,6 +37,7 @@ export const dict = {
   "marketplace.install.scope.global.description":
     "Alle projecten op deze computer. Wordt opgeslagen in je gebruikersconfiguratie.",
   "marketplace.install.destination": "Installatielocatie",
+  "marketplace.install.includedSkills": "Meegeleverde skills",
   "marketplace.install.about.mcp":
     "Een MCP-server geeft Kilo extra hulpmiddelen om met externe diensten of lokale programma's te werken.",
   "marketplace.install.about.agent": "Een agent voegt een herbruikbare rol toe met eigen instructies en machtigingen.",
@@ -49,7 +50,7 @@ export const dict = {
   "marketplace.install.learnMore": "Lees hoe installaties vanuit Marketplace werken",
   "marketplace.install.learnMcp": "Meer informatie over MCP",
   "marketplace.install.about.plugin":
-    "Een npm-plugin voegt aangepaste hulpmiddelen en integraties toe aan Kilo. Plugins worden uitgevoerd met volledige machtigingen.",
+    "Een plugin voegt aangepaste hulpmiddelen en integraties toe aan Kilo. Plugins worden uitgevoerd met volledige machtigingen.",
   "marketplace.install.plugin.warning":
     "Plugins voeren code uit met volledige machtigingen. Ze kunnen je bestanden lezen en wijzigen, opdrachten uitvoeren en toegang krijgen tot je inloggegevens en netwerk. Installeer alleen plugins die je vertrouwt.",
   "marketplace.install.installedAt": "Geïnstalleerd in {{path}}",
@@ -67,6 +68,8 @@ export const dict = {
   "marketplace.remove.confirm":
     "Weet je zeker dat je deze {{type}} wilt verwijderen? Dit verwijdert het uit je {{scope}} configuratie.",
   "marketplace.remove.cancel": "Annuleren",
+  "marketplace.remove.mcp.skills":
+    "Dit verwijdert ook de bijbehorende skills die bij deze installatie horen. Afzonderlijk geïnstalleerde skills blijven behouden.",
   "marketplace.remove.confirm.button": "Verwijderen",
   "marketplace.search": "Zoeken...",
   "marketplace.filter.all": "Alle items",
@@ -75,6 +78,7 @@ export const dict = {
   "marketplace.empty": "Geen items gevonden",
   "marketplace.empty.relevant": "Geen relevante marketplace-items gevonden voor deze werkruimte.",
   "marketplace.badge.mcpServer": "MCP Server",
+  "marketplace.badge.skills": "Inclusief skills",
   "marketplace.card.by": "door {{author}}",
   "marketplace.install.method": "Installatiemethode",
   "marketplace.install.parameters": "Parameters",

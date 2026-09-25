@@ -940,9 +940,6 @@ export const dict = {
     "Jednom uvezite podržane globalne CLAUDE.md upute, jednostavne vještine i onemogućene MCP definicije. Originalne Claude datoteke ostaju nepromijenjene; ponovo pokrenite backend nakon uključivanja.",
   "settings.experimental.multiProject.description":
     "Omogući upravljanje sesijama i worktree-ima kroz više repozitorija u Agent Manager-u. Trenutni workspace repozitorij je uvijek zadani projekat.",
-  "settings.experimental.taskModelSelection.title": "Odabir modela podagenta za Task",
-  "settings.experimental.taskModelSelection.description":
-    "Omogućava izričit odabir modela, provajdera i napora zaključivanja za Task podagente.",
   "settings.experimental.mcpTimeout.title": "MCP istek vremena (ms)",
   "settings.experimental.mcpTimeout.description": "Istek vremena za MCP server zahtjeve u milisekundama",
   "settings.experimental.remote.title": "Remote kontrola",
@@ -1148,6 +1145,9 @@ export const dict = {
   "settings.autoCleanup.runNow": "Pokreni čišćenje sada",
   "settings.autoCleanup.runNow.confirm":
     "Trajno obrisati istekle sesije u svim projektima i svim Kilo klijentima na ovom računaru?",
+  "settings.autoCleanup.stop": "Zaustavi čišćenje",
+  "settings.autoCleanup.progress.cancelling": "Zaustavljanje čišćenja sesija...",
+  "settings.autoCleanup.lastRun.cancelled": "prekinuto",
   "settings.context.autoCompaction.title": "Automatska kompresija",
   "settings.context.autoCompaction.description": "Automatski komprimiraj kontekst prije nego dostigne limit",
   "settings.context.compaction.title": "Kompresija",

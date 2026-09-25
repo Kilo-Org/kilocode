@@ -858,8 +858,6 @@ export const dict = {
     "一次性匯入受支援的全域 CLAUDE.md 指示、簡單技能和已停用的 MCP 定義。不會修改原始 Claude 檔案；啟用後請重新啟動後端。",
   "settings.experimental.multiProject.description":
     "在 Agent Manager 中啟用跨多個儲存庫的工作階段和工作樹管理。當前工作區儲存庫始終是預設專案。",
-  "settings.experimental.taskModelSelection.title": "Task 子代理模型選擇",
-  "settings.experimental.taskModelSelection.description": "允許為 Task 子代理選擇指定的模型、提供者和推理工作量。",
   "settings.experimental.mcpTimeout.title": "MCP 逾時（毫秒）",
   "settings.experimental.mcpTimeout.description": "MCP 伺服器請求的逾時時間（毫秒）",
   "settings.experimental.remote.title": "Remote 控制",
@@ -1039,6 +1037,9 @@ export const dict = {
     "正在刪除會話：已處理 {{processed}}/{{total}}（已刪除 {{deleted}} 個，失敗 {{failed}} 個）",
   "settings.autoCleanup.runNow": "立即執行清理",
   "settings.autoCleanup.runNow.confirm": "永久刪除這台機器上所有專案和所有 Kilo 用戶端中已過期的會話？",
+  "settings.autoCleanup.stop": "停止清理",
+  "settings.autoCleanup.progress.cancelling": "正在停止工作階段清理...",
+  "settings.autoCleanup.lastRun.cancelled": "已中斷",
   "settings.context.autoCompaction.title": "自動壓縮",
   "settings.context.autoCompaction.description": "在上下文達到限制前自動壓縮",
   "settings.context.compaction.title": "壓縮",

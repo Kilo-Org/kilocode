@@ -1,19 +1,19 @@
-import { randomUUID } from "crypto"
-import { access, mkdir, mkdtemp, readdir, realpath, rename, rm } from "fs/promises"
+import { access, mkdir, mkdtemp, rename, rm } from "fs/promises"
 import path from "path"
-import os from "os"
 import { stringify as stringifyYaml } from "yaml"
 import { applyEdits, modify, parse as parseJsonc, type ParseError as JsoncParseError } from "jsonc-parser"
-import { Effect } from "effect"
+import { Cause, Effect } from "effect"
 import { Flock } from "@opencode-ai/core/util/flock"
 import { Config } from "@/config/config"
 import { Agent } from "@/agent/agent"
 import { Skill } from "@/skill"
-import { Process } from "@/util/process"
 import { Filesystem } from "@/util/filesystem"
 import { installPlugin as stagePlugin, readPluginManifest } from "@/plugin/install"
-import { pluginPackageName } from "./plugin-spec"
+import { pluginIdentity } from "./plugin-spec"
 import { patchPlugin } from "./plugin-config"
+import * as Companions from "./companions"
+import { stageSkill } from "./skill-archive"
+import { isSafeId } from "./paths"
 import type {
   AgentInstallItem,
   MarketplaceInstallPayload,
@@ -27,6 +27,9 @@ import type {
   SkillInstallItem,
 } from "./schema"
 import * as Paths from "./paths"
+
+export { isSafeId } from "./paths"
+export { findEscapedPaths } from "./skill-archive"
 
 type Services = {
   config: Config.Interface
@@ -49,12 +52,6 @@ async function exists(file: string) {
 
 function contains(dir: string, file: string) {
   return path.resolve(file).startsWith(path.resolve(dir) + path.sep)
-}
-
-export function isSafeId(id: string) {
-  if (!id || id === "." || id.includes("..") || id.includes("/") || id.includes("\\") || id.endsWith(".")) return false
-  if (/^(con|prn|aux|nul|com[1-9]|lpt[1-9])(\.|$)/i.test(id)) return false
-  return /^[\w\-@.]+$/.test(id)
 }
 
 function escapeJsonValue(raw: string) {
@@ -147,6 +144,35 @@ function installMcp(svc: Services, item: McpInstallItem, opts: MarketplaceInstal
     const content = resolveMcpContent(item, opts)
     if (!content) return { success: false, slug: item.id, error: "No installation content for MCP server" }
 
+    if (item.skills?.length) {
+      const skills = item.skills
+      return yield* Effect.try({
+        try: () => buildMcpEntry(content, opts.parameters),
+        catch: (err) => err,
+      }).pipe(
+        Effect.flatMap((entry) => Companions.install({ ...svc, scope }, item.id, skills, entry)),
+        Effect.tap(() =>
+          svc.config.invalidate().pipe(Effect.catchCause((cause) => Effect.logWarning(Cause.pretty(cause)))),
+        ),
+        Effect.map(
+          (files): MarketplaceInstallResult => ({
+            success: true,
+            slug: item.id,
+            filePath: files.at(0),
+            filePaths: files,
+            line: 1,
+          }),
+        ),
+      )
+    }
+
+    // An earlier companion install may still need cleanup even when its MCP
+    // entry was removed by hand. Do not detach its receipt with a new install.
+    const receipt = yield* Effect.promise(() => Companions.read(scope, svc.directory, item.id, svc.worktree))
+    if (receipt) {
+      return { success: false, slug: item.id, error: "MCP companion ownership already exists. Remove it first." }
+    }
+
     // buildMcpEntry parses JSON and can throw; run it inside the effect so a bad
     // config surfaces as the friendly failure below instead of a 500-level defect.
     return yield* Effect.try({
@@ -163,7 +189,11 @@ function installMcp(svc: Services, item: McpInstallItem, opts: MarketplaceInstal
         }),
       ),
     )
-  })
+  }).pipe(
+    Effect.catchCause((cause) =>
+      Effect.succeed<MarketplaceInstallResult>({ success: false, slug: item.id, error: failure(cause) }),
+    ),
+  )
 }
 
 function installAgent(svc: Services, item: AgentInstallItem, scope: Scope) {
@@ -189,33 +219,6 @@ function installAgent(svc: Services, item: AgentInstallItem, scope: Scope) {
   })
 }
 
-export async function findEscapedPaths(dir: string): Promise<string[]> {
-  const root = path.resolve(dir)
-  const escaped: string[] = []
-
-  async function walk(current: string): Promise<void> {
-    const entries = await readdir(current, { withFileTypes: true })
-    for (const item of entries) {
-      const full = path.resolve(current, item.name)
-      if (!full.startsWith(root + path.sep) && full !== root) {
-        escaped.push(full)
-        continue
-      }
-      if (item.isSymbolicLink()) {
-        const target = await realpath(full)
-        if (!target.startsWith(root + path.sep) && target !== root) {
-          escaped.push(full)
-          continue
-        }
-      }
-      if (item.isDirectory()) await walk(full)
-    }
-  }
-
-  await walk(dir)
-  return escaped
-}
-
 function installSkill(item: SkillInstallItem, scope: Scope, directory: string) {
   return Effect.promise(async (): Promise<MarketplaceInstallResult> => {
     if (!item.content) return { success: false, slug: item.id, error: "Skill has no tarball URL" }
@@ -229,31 +232,9 @@ function installSkill(item: SkillInstallItem, scope: Scope, directory: string) {
 
     await mkdir(base, { recursive: true })
     const staging = await mkdtemp(path.join(base, `.staging-${item.id}-`))
-    const archive = `kilo-skill-${item.id}-${randomUUID()}.tar.gz`
-    const tarball = path.join(os.tmpdir(), archive)
-    const inline = item.content.startsWith("data:")
-    const data = inline ? item.content.match(/^data:[^,]*;base64,(.*)$/) : null
 
     try {
-      if (inline) {
-        // Only base64 data URLs are supported; fail closed rather than falling
-        // through to fetch() with a data: URL that will not resolve.
-        if (!data) return { success: false, slug: item.id, error: "Unsupported skill archive data URL" }
-        await Bun.write(tarball, Buffer.from(data[1], "base64"))
-      } else {
-        const response = await fetch(item.content)
-        if (!response.ok) return { success: false, slug: item.id, error: `Download failed: ${response.status}` }
-        await Bun.write(tarball, Buffer.from(await response.arrayBuffer()))
-      }
-      // Pass the archive as a bare filename with cwd at its directory: GNU tar (on Windows)
-      // otherwise misreads a `C:\...` archive path as a remote `host:path` and fails to extract.
-      await Process.run(["tar", "-xzf", archive, "--strip-components=1", "-C", staging], { cwd: os.tmpdir() })
-
-      const escaped = await findEscapedPaths(staging)
-      if (escaped.length > 0) return { success: false, slug: item.id, error: "Skill archive contains unsafe paths" }
-      if (!(await exists(path.join(staging, "SKILL.md"))))
-        return { success: false, slug: item.id, error: "Extracted archive missing SKILL.md" }
-
+      await stageSkill(item, staging)
       await rename(staging, dir)
       return { success: true, slug: item.id, filePath: path.join(dir, "SKILL.md"), line: 1 }
     } catch (err) {
@@ -265,12 +246,9 @@ function installSkill(item: SkillInstallItem, scope: Scope, directory: string) {
         }
       return { success: false, slug: item.id, error: String(err) }
     } finally {
-      await Promise.all([
-        rm(staging, { recursive: true, force: true }).catch((err) =>
-          console.warn("Failed to clean marketplace staging directory", err),
-        ),
-        rm(tarball, { force: true }).catch((err) => console.warn("Failed to clean marketplace tarball", err)),
-      ])
+      await rm(staging, { recursive: true, force: true }).catch((err) =>
+        console.warn("Failed to clean marketplace staging directory", err),
+      )
     }
   })
 }
@@ -281,6 +259,14 @@ function errorText(err: unknown) {
   return err instanceof Error ? err.message : String(err)
 }
 
+function failure(cause: Cause.Cause<unknown>) {
+  return (
+    Cause.prettyErrors(cause)
+      .map((err) => (err instanceof Cause.UnknownError ? errorText(err) : err.message))
+      .join("; ") || "MCP operation interrupted"
+  )
+}
+
 function installPlugin(svc: Services, item: PluginInstallItem, scope: Scope) {
   return Effect.promise(async (): Promise<MarketplaceInstallResult> => {
     try {
@@ -288,11 +274,15 @@ function installPlugin(svc: Services, item: PluginInstallItem, scope: Scope) {
       if (!spec) return { success: false, slug: item.id, error: "Plugin has no package spec" }
 
       // Installed state is keyed by catalog id, so it must equal the resolved
-      // package name or detection and removal cannot find the entry again.
-      const pkg = pluginPackageName(spec)
-      if (!pkg) return { success: false, slug: item.id, error: `Plugin spec ${spec} is not a valid package` }
-      if (pkg !== item.id) {
-        return { success: false, slug: item.id, error: `Plugin id ${item.id} must match the package name ${pkg}` }
+      // plugin identity or detection and removal cannot find the entry again.
+      const identity = pluginIdentity(spec)
+      if (!identity) return { success: false, slug: item.id, error: `Plugin spec ${spec} is not a valid package` }
+      if (identity !== item.id) {
+        return {
+          success: false,
+          slug: item.id,
+          error: `Plugin id ${item.id} must match the plugin identity ${identity}`,
+        }
       }
 
       const staged = await stagePlugin(spec)
@@ -329,7 +319,7 @@ function lockPath(file: string) {
   return path.join(path.dirname(file), path.basename(file).replace(/\.jsonc?$/, ""))
 }
 
-async function stripPluginFromFile(file: string, pkg: string) {
+async function stripPluginFromFile(file: string, identity: string) {
   // Take the same lock runtime-backed installs use so a concurrent install and
   // remove cannot interleave and drop an entry.
   await using _ = await Flock.acquire(`plug-config:${Filesystem.resolve(lockPath(file))}`)
@@ -348,7 +338,7 @@ async function stripPluginFromFile(file: string, pkg: string) {
       ? (data as { plugin: unknown[] }).plugin
       : undefined
   if (!list) return "missing"
-  const next = list.filter((entry) => pluginPackageName(entry) !== pkg)
+  const next = list.filter((entry) => pluginIdentity(entry) !== identity)
   if (next.length === list.length) return "missing"
   const out = applyEdits(
     text,
@@ -360,12 +350,12 @@ async function stripPluginFromFile(file: string, pkg: string) {
 
 function removePlugin(svc: Services, item: MarketplaceItemRef, scope: Scope) {
   return Effect.promise(async (): Promise<MarketplaceRemoveResult> => {
-    const pkg = pluginPackageName(item.id) ?? item.id
+    const identity = pluginIdentity(item.id) ?? item.id
     const removed: string[] = []
     const errors: string[] = []
     for (const file of Paths.pluginFiles(scope, svc.directory, svc.worktree)) {
       try {
-        if ((await stripPluginFromFile(file, pkg)) === "removed") removed.push(file)
+        if ((await stripPluginFromFile(file, identity)) === "removed") removed.push(file)
       } catch (err) {
         errors.push(`${file}: ${errorText(err)}`)
       }
@@ -382,21 +372,45 @@ function removePlugin(svc: Services, item: MarketplaceItemRef, scope: Scope) {
   })
 }
 
+function locked<A, E, R>(svc: Services, scope: Scope, effect: Effect.Effect<A, E, R>) {
+  const root =
+    scope === "global"
+      ? Paths.configRoot(scope, svc.directory)
+      : svc.worktree && svc.worktree !== path.parse(svc.worktree).root
+        ? svc.worktree
+        : svc.directory
+  return Effect.scoped(
+    Effect.gen(function* () {
+      yield* Flock.effect(`marketplace:${scope}:${Filesystem.resolve(root)}`)
+      return yield* effect
+    }),
+  )
+}
+
 export function install(svc: Services, payload: MarketplaceInstallPayload) {
   const scope = payload.target ?? "project"
-  if (payload.item.type === "mcp") return installMcp(svc, payload.item, payload, scope)
+  if (payload.item.type === "mcp") return locked(svc, scope, installMcp(svc, payload.item, payload, scope))
   if (payload.item.type === "agent") return installAgent(svc, payload.item, scope)
   if (payload.item.type === "plugin") return installPlugin(svc, payload.item, scope)
-  return installSkill(payload.item, scope, svc.directory)
+  return locked(svc, scope, installSkill(payload.item, scope, svc.directory).pipe(Effect.uninterruptible))
 }
 
 function removeMcp(svc: Services, item: MarketplaceItemRef, scope: Scope) {
   return Effect.gen(function* () {
+    const receipt = yield* Effect.tryPromise({
+      try: () => Companions.read(scope, svc.directory, item.id, svc.worktree),
+      catch: (err) => err,
+    })
+    if (receipt) {
+      yield* Companions.remove({ ...svc, scope }, receipt)
+      yield* svc.config.invalidate().pipe(Effect.catchCause((cause) => Effect.logWarning(Cause.pretty(cause))))
+      return { success: true, slug: item.id }
+    }
     const cfg = yield* scopedConfig(scope, svc)
     if (!cfg.mcp?.[item.id]) return { success: true, slug: item.id }
     yield* writeMcp(scope, svc, item.id, null)
     return { success: true, slug: item.id }
-  })
+  }).pipe(Effect.catchCause((cause) => Effect.succeed({ success: false, slug: item.id, error: failure(cause) })))
 }
 
 function removeAgent(svc: Services, item: MarketplaceItemRef, scope: Scope) {
@@ -442,8 +456,8 @@ function removeSkill(svc: Services, item: MarketplaceItemRef, scope: Scope) {
 }
 
 export function remove(svc: Services, item: MarketplaceItemRef, scope: Scope) {
-  if (item.type === "mcp") return removeMcp(svc, item, scope)
+  if (item.type === "mcp") return locked(svc, scope, removeMcp(svc, item, scope))
   if (item.type === "agent") return removeAgent(svc, item, scope)
   if (item.type === "plugin") return removePlugin(svc, item, scope)
-  return removeSkill(svc, item, scope)
+  return locked(svc, scope, removeSkill(svc, item, scope).pipe(Effect.uninterruptible))
 }

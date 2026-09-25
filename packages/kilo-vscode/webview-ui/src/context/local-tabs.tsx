@@ -16,14 +16,15 @@ import {
   PENDING_TAB_PREFIX,
   addPendingTab,
   addSessionTab,
+  closeAllTabs,
   closeOtherTabs,
   closeTab,
   insertSessionTabAfter,
   isPendingTab,
   openSessionTab,
-  reconcileTabs,
   restoreTabs,
   tabsForCreatedSession,
+  tabsForLoadedSessions,
   type LocalTabState,
 } from "../utils/local-tabs"
 import {
@@ -51,6 +52,7 @@ interface LocalTabsValue {
   openAfter: (source: string, id: string) => void
   select: (id: string) => void
   close: (id: string) => void
+  closeAll: () => void
   closeOthers: (id: string) => void
   closeToRight: (id: string) => void
   closableRight: (id: string) => string[]
@@ -75,6 +77,7 @@ export const LocalTabsProvider: ParentComponent = (props) => {
   const init = restoreTabs(saved?.sidebarSessionTabIDs, saved?.sidebarActiveSessionTabID, pending)
   const [ids, setIds] = createSignal(init.ids)
   onCleanup(session.trackScopes(ids))
+  onCleanup(session.keepSessions(ids))
   const [active, setActive] = createSignal(init.active)
   const [pinned, setPinned] = createSignal((saved?.sidebarPinnedSessionTabIDs ?? []).filter((id) => !isPendingTab(id)))
   const [cloud, setCloud] = createSignal<string>()
@@ -142,6 +145,19 @@ export const LocalTabsProvider: ParentComponent = (props) => {
       if (session.isSubmitting(id) || isPendingSend(id)) discardPendingDraft(id)
       queueMicrotask(() => deletePendingDraft(id))
     }
+  }
+
+  const closeAll = () => {
+    const removed = ids()
+    const next = closeAllTabs(pending)
+    apply(next)
+    setPinned([])
+    focus(next.active)
+    const drafts = removed.filter(isPendingTab)
+    for (const id of drafts) {
+      if (session.isSubmitting(id) || isPendingSend(id)) discardPendingDraft(id)
+    }
+    if (drafts.length > 0) queueMicrotask(() => drafts.forEach(deletePendingDraft))
   }
 
   const closeDeps = sessionCloseDeps({
@@ -245,11 +261,8 @@ export const LocalTabsProvider: ParentComponent = (props) => {
         const before = active()
         const listed = message.sessions.map((item) => item.id)
         for (const id of listed) fresh.delete(id)
-        // Appended pages only add older sessions; they do not list every open
-        // tab, so reconciling against them would close tabs for sessions that
-        // are still valid.
-        if (message.append) return
-        const next = reconcileTabs(current(), [...listed, ...(message.preserveSessionIds ?? []), ...fresh], pending)
+        const next = tabsForLoadedSessions(current(), message, fresh, pending)
+        if (!next) return
         apply(next)
         if (before !== next.active) focus(next.active)
         return
@@ -277,6 +290,7 @@ export const LocalTabsProvider: ParentComponent = (props) => {
         openAfter,
         select,
         close,
+        closeAll,
         closeOthers,
         closeToRight: closeToRightTab,
         closableRight: rightTabs,

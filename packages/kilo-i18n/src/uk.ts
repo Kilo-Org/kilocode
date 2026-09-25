@@ -35,6 +35,7 @@ export const dict = {
   "marketplace.install.scope.global.description":
     "Усі проєкти на цьому комп'ютері. Зберігається у вашій користувацькій конфігурації.",
   "marketplace.install.destination": "Місце встановлення",
+  "marketplace.install.includedSkills": "Включені навички",
   "marketplace.install.about.mcp":
     "MCP-сервер надає Kilo додаткові інструменти для роботи із зовнішніми сервісами або локальними програмами.",
   "marketplace.install.about.agent": "Агент додає багаторазову роль із власними інструкціями та дозволами.",
@@ -47,7 +48,7 @@ export const dict = {
   "marketplace.install.learnMore": "Дізнайтеся, як працює встановлення з Marketplace",
   "marketplace.install.learnMcp": "Докладніше про MCP",
   "marketplace.install.about.plugin":
-    "Плагін npm додає до Kilo користувацькі інструменти та інтеграції. Плагіни виконуються з повними правами доступу.",
+    "Плагін додає до Kilo користувацькі інструменти та інтеграції. Плагіни виконуються з повними правами доступу.",
   "marketplace.install.plugin.warning":
     "Плагіни виконують код із повними правами доступу. Вони можуть читати й змінювати ваші файли, виконувати команди та отримувати доступ до ваших облікових даних і мережі. Встановлюйте лише плагіни, яким довіряєте.",
   "marketplace.install.installedAt": "Встановлено в {{path}}",
@@ -65,6 +66,8 @@ export const dict = {
   "marketplace.remove.confirm":
     "Ви впевнені, що хочете видалити цей {{type}}? Це видалить його з вашої конфігурації {{scope}}.",
   "marketplace.remove.cancel": "Скасувати",
+  "marketplace.remove.mcp.skills":
+    "Це також видалить супутні навички, що належать цьому встановленню. Незалежно встановлені навички буде збережено.",
   "marketplace.remove.confirm.button": "Видалити",
   "marketplace.search": "Пошук...",
   "marketplace.filter.all": "Усі елементи",
@@ -73,6 +76,7 @@ export const dict = {
   "marketplace.empty": "Елементів не знайдено",
   "marketplace.empty.relevant": "Для цього робочого простору не знайдено відповідних елементів маркетплейсу.",
   "marketplace.badge.mcpServer": "MCP-сервер",
+  "marketplace.badge.skills": "Містить навички",
   "marketplace.card.by": "від {{author}}",
   "marketplace.install.method": "Метод встановлення",
   "marketplace.install.parameters": "Параметри",

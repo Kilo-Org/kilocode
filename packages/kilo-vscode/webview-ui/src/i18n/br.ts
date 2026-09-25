@@ -947,9 +947,6 @@ export const dict = {
     "Importe uma vez instruções globais CLAUDE.md compatíveis, habilidades simples e definições MCP desativadas. Os arquivos originais do Claude permanecem inalterados; reinicie o backend após ativar.",
   "settings.experimental.multiProject.description":
     "Ativar gerenciamento de sessões e worktrees em múltiplos repositórios no Agent Manager. O repositório do workspace atual é sempre o projeto padrão.",
-  "settings.experimental.taskModelSelection.title": "Seleção de modelo de subagente do Task",
-  "settings.experimental.taskModelSelection.description":
-    "Permite selecionar explicitamente o modelo, o provedor e o esforço de raciocínio dos subagentes do Task.",
   "settings.experimental.mcpTimeout.title": "Tempo limite MCP (ms)",
   "settings.experimental.mcpTimeout.description": "Tempo limite para solicitações do servidor MCP em milissegundos",
   "settings.experimental.remote.title": "Controle Remote",
@@ -1157,6 +1154,9 @@ export const dict = {
   "settings.autoCleanup.runNow": "Executar limpeza agora",
   "settings.autoCleanup.runNow.confirm":
     "Excluir permanentemente as sessões expiradas em todos os projetos e em todos os clientes Kilo desta máquina?",
+  "settings.autoCleanup.stop": "Parar a limpeza",
+  "settings.autoCleanup.progress.cancelling": "Parando a limpeza de sessões...",
+  "settings.autoCleanup.lastRun.cancelled": "interrompida",
   "settings.context.autoCompaction.title": "Compactação automática",
   "settings.context.autoCompaction.description": "Compactar automaticamente o contexto antes que atinja o limite",
   "settings.context.compaction.title": "Compactação",

@@ -901,9 +901,6 @@ export const dict = {
     "Importer støttede globale CLAUDE.md-instruksjoner, enkle ferdigheter og deaktiverte MCP-definisjoner én gang. Originale Claude-filer forblir uendret; start backend på nytt etter aktivering.",
   "settings.experimental.multiProject.description":
     "Aktiver administrering av økter og worktrees på tvers av flere repositories i Agent Manager. Det nåværende workspace-repositoryet er alltid standardprosjektet.",
-  "settings.experimental.taskModelSelection.title": "Valg av Task-underagentmodell",
-  "settings.experimental.taskModelSelection.description":
-    "Tillat eksplisitt valg av modell, leverandør og resonneringsinnsats for Task-underagenter.",
   "settings.experimental.mcpTimeout.title": "MCP-tidsavbrudd (ms)",
   "settings.experimental.mcpTimeout.description": "Tidsavbrudd for MCP-serverforespørsler i millisekunder",
   "settings.experimental.remote.title": "Remote-kontroll",
@@ -1142,6 +1139,9 @@ export const dict = {
   "settings.autoCleanup.runNow": "Kjør opprydding nå",
   "settings.autoCleanup.runNow.confirm":
     "Slett utløpte økter permanent på tvers av alle prosjekter og alle Kilo-klienter på denne maskinen?",
+  "settings.autoCleanup.stop": "Stopp opprydding",
+  "settings.autoCleanup.progress.cancelling": "Stopper opprydding av økter...",
+  "settings.autoCleanup.lastRun.cancelled": "avbrutt",
   "settings.context.autoCompaction.title": "Automatisk komprimering",
   "settings.context.autoCompaction.description": "Komprimer automatisk kontekst før den når grensen",
   "settings.context.compaction.title": "Komprimering",

@@ -35,6 +35,7 @@ export const dict = {
   "marketplace.install.scope.global.description":
     "Все проекты на этом компьютере. Сохраняется в вашей пользовательской конфигурации.",
   "marketplace.install.destination": "Место установки",
+  "marketplace.install.includedSkills": "Включённые навыки",
   "marketplace.install.about.mcp":
     "MCP-сервер предоставляет Kilo дополнительные инструменты для работы с внешними сервисами или локальными программами.",
   "marketplace.install.about.agent":
@@ -48,7 +49,7 @@ export const dict = {
   "marketplace.install.learnMore": "Узнайте, как работает установка из Marketplace",
   "marketplace.install.learnMcp": "Подробнее о MCP",
   "marketplace.install.about.plugin":
-    "Плагин npm добавляет в Kilo пользовательские инструменты и интеграции. Плагины выполняются с полными правами доступа.",
+    "Плагин добавляет в Kilo пользовательские инструменты и интеграции. Плагины выполняются с полными правами доступа.",
   "marketplace.install.plugin.warning":
     "Плагины выполняют код с полными правами доступа. Они могут читать и изменять ваши файлы, выполнять команды и получать доступ к вашим учётным данным и сети. Устанавливайте только те плагины, которым доверяете.",
   "marketplace.install.installedAt": "Установлено в {{path}}",
@@ -66,6 +67,8 @@ export const dict = {
   "marketplace.remove.confirm":
     "Вы уверены, что хотите удалить этот {{type}}? Это удалит его из вашей конфигурации ({{scope}}).",
   "marketplace.remove.cancel": "Отмена",
+  "marketplace.remove.mcp.skills":
+    "Также будут удалены сопутствующие навыки, принадлежащие этой установке. Независимо установленные навыки сохранятся.",
   "marketplace.remove.confirm.button": "Удалить",
   "marketplace.search": "Поиск...",
   "marketplace.filter.all": "Все элементы",
@@ -74,6 +77,7 @@ export const dict = {
   "marketplace.empty": "Элементы не найдены",
   "marketplace.empty.relevant": "Для этого рабочего пространства не найдено подходящих элементов маркетплейса.",
   "marketplace.badge.mcpServer": "MCP-сервер",
+  "marketplace.badge.skills": "Включает навыки",
   "marketplace.card.by": "от {{author}}",
   "marketplace.install.method": "Способ установки",
   "marketplace.install.parameters": "Параметры",
