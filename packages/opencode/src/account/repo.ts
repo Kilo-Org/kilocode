@@ -56,6 +56,7 @@ const layer = Layer.effect(
       return { ...account, active_org_id: state.active_org_id ?? null }
     })
 
+    // kilocode_change start
     const state = (exec: Pick<typeof db, "insert">, accountID: AccountID, orgID: Option.Option<OrgID>) => {
       const id = Option.getOrNull(orgID)
       return exec
@@ -67,6 +68,7 @@ const layer = Layer.effect(
         })
         .run()
     }
+    // kilocode_change end
 
     const active = Effect.fn("AccountRepo.active")(() =>
       query(current()).pipe(Effect.map((row) => (row ? Option.some(decode(row)) : Option.none()))),
@@ -97,9 +99,11 @@ const layer = Layer.effect(
       ).pipe(Effect.asVoid),
     )
 
+    // kilocode_change start
     const use = Effect.fn("AccountRepo.use")((accountID: AccountID, orgID: Option.Option<OrgID>) =>
       query(state(db, accountID, orgID)).pipe(Effect.asVoid),
     )
+    // kilocode_change end
 
     const getRow = Effect.fn("AccountRepo.getRow")((accountID: AccountID) =>
       query(db.select().from(AccountTable).where(eq(AccountTable.id, accountID)).get()).pipe(
@@ -148,7 +152,7 @@ const layer = Layer.effect(
                 },
               })
               .run()
-            yield* state(tx, input.id, input.orgID)
+            yield* state(tx, input.id, input.orgID) // kilocode_change
           }),
         ),
       ).pipe(Effect.asVoid),
