@@ -94,7 +94,7 @@ async function setGlobal(dir: string, value: Config.Info) {
 }
 
 describe("config overlay routes", () => {
-  test("saving task model selection refreshes cached tools without restarting the server", async () => {
+  test("saving an experimental flag refreshes cached tools without restarting the server", async () => {
     await using global = await tmpdir()
     await using project = await tmpdir()
     await using other = await tmpdir()
@@ -120,13 +120,14 @@ describe("config overlay routes", () => {
           parameters: { properties: Record<string, unknown> }
         }>
       >(await request(target, dir, "/experimental/tool?provider=test&model=model"))
+      expect(tools.some((tool) => tool.id === "generate_image")).toBe(enabled)
       const task = tools.find((tool) => tool.id === "task")
       expect(task).toBeDefined()
       for (const field of ["model", "provider", "variant"]) {
-        expect(Object.hasOwn(task!.parameters.properties, field)).toBe(enabled)
+        expect(Object.hasOwn(task!.parameters.properties, field)).toBe(true)
       }
-      expect(task!.description.includes("Experimental subagent model selection is enabled")).toBe(enabled)
-      if (enabled) expect(tools.some((tool) => tool.id === "agent_manager_models")).toBe(true)
+      expect(task!.description.includes("Subagent model selection is enabled")).toBe(true)
+      expect(tools.some((tool) => tool.id === "agent_manager_models")).toBe(true)
     }
     await check(project.path, false)
     await check(other.path, false)
@@ -135,11 +136,11 @@ describe("config overlay routes", () => {
         await request(target, project.path, "/config/overlay", {
           method: "PATCH",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ scope: "global", set: { experimental: { task_model_selection: enabled } } }),
+          body: JSON.stringify({ scope: "global", set: { experimental: { image_generation: enabled } } }),
         }),
       )
-      expect(saved.effective?.experimental?.task_model_selection).toBe(enabled)
-      expect(await Bun.file(saved.targets.global.path).text()).toContain(`"task_model_selection": ${enabled}`)
+      expect(saved.effective?.experimental?.image_generation).toBe(enabled)
+      expect(await Bun.file(saved.targets.global.path).text()).toContain(`"image_generation": ${enabled}`)
       await check(project.path, enabled)
       await check(other.path, enabled)
     }

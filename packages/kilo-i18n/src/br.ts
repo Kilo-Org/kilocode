@@ -35,6 +35,7 @@ export const dict = {
   "marketplace.install.scope.global.description":
     "Todos os projetos nesta máquina. Armazenado na sua configuração de usuário.",
   "marketplace.install.destination": "Destino da instalação",
+  "marketplace.install.includedSkills": "Habilidades incluídas",
   "marketplace.install.about.mcp":
     "Um servidor MCP fornece ao Kilo ferramentas adicionais para trabalhar com serviços externos ou programas locais.",
   "marketplace.install.about.agent": "Um agente adiciona uma função reutilizável com instruções e permissões próprias.",
@@ -65,6 +66,8 @@ export const dict = {
   "marketplace.remove.confirm":
     "Tem certeza que deseja remover este {{type}}? Isso o removerá da sua configuração {{scope}}.",
   "marketplace.remove.cancel": "Cancelar",
+  "marketplace.remove.mcp.skills":
+    "Isso também remove as habilidades complementares pertencentes a esta instalação. As habilidades instaladas de forma independente são mantidas.",
   "marketplace.remove.confirm.button": "Remover",
   "marketplace.search": "Pesquisar...",
   "marketplace.filter.all": "Todos os Itens",
@@ -73,6 +76,7 @@ export const dict = {
   "marketplace.empty": "Nenhum item encontrado",
   "marketplace.empty.relevant": "Nenhum item relevante do marketplace foi encontrado para este espaço de trabalho.",
   "marketplace.badge.mcpServer": "Servidor MCP",
+  "marketplace.badge.skills": "Inclui habilidades",
   "marketplace.card.by": "por {{author}}",
   "marketplace.install.method": "Método de Instalação",
   "marketplace.install.parameters": "Parâmetros",
