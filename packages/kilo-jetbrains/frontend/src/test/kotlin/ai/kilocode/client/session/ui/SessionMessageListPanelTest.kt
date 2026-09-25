@@ -1402,15 +1402,14 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
         val buttons = components(banner).filterIsInstance<JButton>()
             .filter { it !is ActionLink && it.text.isNotEmpty() }
         assertEquals(
-            listOf(
-                KiloBundle.message("revert.banner.workspace.enableSnapshots"),
-                KiloBundle.message("revert.banner.redo"),
-                KiloBundle.message("revert.banner.redo.all"),
-            ),
+            listOf(KiloBundle.message("revert.banner.redo"), KiloBundle.message("revert.banner.redo.all")),
             buttons.map { it.text },
         )
         assertEquals(listOf(KiloBundle.message("revert.banner.redo")), buttons.filter { it.isVisible }.map { it.text })
-        assertTrue(buttons.all { it.getClientProperty(DarculaButtonUI.DEFAULT_STYLE_KEY) == null })
+        assertEquals(true, buttons.single { it.text == KiloBundle.message("revert.banner.redo") }
+            .getClientProperty(DarculaButtonUI.DEFAULT_STYLE_KEY))
+        assertNull(buttons.single { it.text == KiloBundle.message("revert.banner.redo.all") }
+            .getClientProperty(DarculaButtonUI.DEFAULT_STYLE_KEY))
 
         val hint = components(banner)
             .filterIsInstance<JBLabel>()
@@ -1540,10 +1539,8 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
 
         banner.update()
 
-        val button = components(banner).filterIsInstance<HoverIcon>()
-            .first { it.toolTipText == KiloBundle.message("session.part.tool.openDiff") }
-        assertFalse(button.isVisible)
-        assertFalse(button.isEnabled)
+        assertTrue(components(banner).filterIsInstance<HoverIcon>()
+            .none { it.toolTipText == KiloBundle.message("session.part.tool.openDiff") })
     }
 
     fun `test rollback banner opens session diff when revert diff is absent`() {
@@ -1692,12 +1689,12 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
         model.setRevert(SessionRevertDto("u1", workspace = "unavailable"))
         banner.update()
 
-        assertFalse(button.isVisible)
+        assertNull(button.parent)
 
         model.setRevert(SessionRevertDto("u1", snapshot = "snap1", workspace = "restored"))
         banner.update()
 
-        assertFalse(button.isVisible)
+        assertNull(button.parent)
     }
 
     fun `test rollback banner explains missing checkpoint`() {

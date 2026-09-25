@@ -56,10 +56,11 @@ class RevertBanner(
         isVisible = false
     }
 
+    private val diffNode = PartHeader.centered(diff)
+
     private val header = PartHeader().apply {
         leading(JBLabel(AllIcons.Actions.Back))
         left(title)
-        left(PartHeader.centered(diff))
     }
 
     private val body = Stack.vertical(UiStyle.Gap.lg())
@@ -96,18 +97,19 @@ class RevertBanner(
         setAllowAutoWrapping(true)
     }
 
+    private val snapshotAction = DialogView.Action(
+        "snapshots",
+        KiloBundle.message("revert.banner.workspace.enableSnapshots"),
+        primary = false,
+    ) { openSettingsAction() }
+
     init {
         isOpaque = false
         setTopPanel(header)
         body.next(scroll).next(hint).next(notice)
         setContent(body)
         setActions(listOf(
-            DialogView.Action(
-                "snapshots",
-                KiloBundle.message("revert.banner.workspace.enableSnapshots"),
-                primary = false,
-            ) { openSettingsAction() },
-            DialogView.Action("redo", KiloBundle.message("revert.banner.redo"), primary = false) { redoAction() },
+            DialogView.Action("redo", KiloBundle.message("revert.banner.redo"), primary = true) { redoAction() },
             DialogView.Action("all", KiloBundle.message("revert.banner.redo.all"), primary = false) { redoAllAction() },
         ))
         applyStyle(SessionEditorStyle.current())
@@ -131,11 +133,18 @@ class RevertBanner(
         val message = workspaceNotice(revert)
         notice.isVisible = message != null
         notice.text = message?.let { UiStyle.Text.wrapLines(listOf(it)) } ?: ""
-        setActionVisible("snapshots", revert.workspace == "snapshots-disabled")
+        if (progress?.parent == null) {
+            setLeftAction(snapshotAction.takeIf { revert.workspace == "snapshots-disabled" })
+        }
         val diffs = resolveDiffs(revert)
         val names = disambiguate(diffs.map { it.file })
-        diff.isVisible = diffs.isNotEmpty()
-        diff.isEnabled = diffs.isNotEmpty()
+        val showDiff = diffs.isNotEmpty()
+        if (showDiff && diffNode.parent == null) header.left(diffNode)
+        if (!showDiff && diffNode.parent != null) header.left.remove(diffNode)
+        diff.isVisible = showDiff
+        diff.isEnabled = showDiff
+        header.revalidate()
+        header.repaint()
         val keep = diffs.mapTo(LinkedHashSet()) { it.file }
         rows.entries.removeIf { it.key !in keep }
         scroll.isVisible = diffs.isNotEmpty()
@@ -168,7 +177,7 @@ class RevertBanner(
             setActionLeft(node)
             return
         }
-        setActionLeft(null)
+        restoreLeftAction()
         setActionEnabled("redo", true)
         setActionEnabled("all", true)
     }

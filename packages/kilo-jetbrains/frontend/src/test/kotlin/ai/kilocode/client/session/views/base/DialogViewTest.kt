@@ -473,6 +473,26 @@ class DialogViewTest : BasePlatformTestCase() {
         }
     }
 
+    fun `test standard left action uses shared button behavior`() {
+        edt {
+            var clicked = false
+            val panel = DialogView()
+            panel.setLeftAction(DialogView.Action("left", "Left", primary = false) { clicked = true })
+
+            val button = actionButton(panel, "Left")
+            val footer = region(panel, BorderLayout.SOUTH) as JPanel
+            val west = (footer.layout as BorderLayout).getLayoutComponent(BorderLayout.WEST) as Container
+            assertNotNull(find(west, button))
+            assertNull(button.getClientProperty(DarculaButtonUI.DEFAULT_STYLE_KEY))
+            button.doClick(0)
+            assertTrue(clicked)
+
+            panel.setActionLeft(JLabel("progress"))
+            panel.restoreLeftAction()
+            assertNotNull(find(west, button))
+        }
+    }
+
     fun `test action left component is transparent`() {
         edt {
             val panel = DialogView()
