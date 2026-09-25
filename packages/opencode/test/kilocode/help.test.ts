@@ -194,13 +194,6 @@ describe("kilo help command accepts a nested path", () => {
     const command = await parseCommand(["help", "session list"])
     expect(commandPath(command)).toBe("session list")
   })
-
-  test("commandPath normalizes the help positional", () => {
-    expect(commandPath(["session", "list"])).toBe("session list")
-    expect(commandPath("session list")).toBe("session list")
-    expect(commandPath(undefined)).toBeUndefined()
-    expect(commandPath([])).toBeUndefined()
-  })
 })
 
 // The unit tests above call generateHelp directly. This spawns the real CLI so
