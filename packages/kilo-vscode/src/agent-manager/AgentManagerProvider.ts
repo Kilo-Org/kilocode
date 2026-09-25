@@ -1588,6 +1588,7 @@ export class AgentManagerProvider implements Disposable {
       this.projectPollers.sync(this.contexts)
     }
     this.panel?.sessions.refreshGitStatus?.()
+    this.panel?.sessions.retryInitialization?.()
   }
   private onWorkspaceChanged(): void {
     if (this.contexts.syncPinned()) {
