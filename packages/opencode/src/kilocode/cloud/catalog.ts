@@ -4,6 +4,7 @@ import {
   getDefaultHeaders,
   getKiloUrlFromToken,
   resolveKiloOpenRouterBaseUrl,
+  supportsTools,
 } from "@kilocode/kilo-gateway"
 import { Context, Effect, Layer, Redacted, Schema } from "effect"
 import z from "zod"
@@ -150,11 +151,7 @@ export namespace CloudCatalog {
       return [
         ...new Set(
           result.data
-            .filter(
-              (model) =>
-                !model.architecture?.output_modalities?.includes("image") &&
-                model.supported_parameters?.includes("tools"),
-            )
+            .filter((model) => !model.architecture?.output_modalities?.includes("image") && supportsTools(model))
             .map((model) => model.id),
         ),
       ]
