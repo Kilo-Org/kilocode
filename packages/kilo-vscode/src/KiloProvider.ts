@@ -1034,6 +1034,18 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     void this.handleLoadSessions()
   }
 
+  /** Retry failed workspace initialization against the newly selected project. */
+  public async retryInitialization(): Promise<void> {
+    if (this.cachedProvidersMessage && this.cachedConfigMessage) return
+    await this.fetchAndSendConfig()
+    await Promise.all([
+      this.fetchAndSendProviders(),
+      this.fetchAndSendAgents(),
+      this.fetchAndSendSkills(),
+      this.fetchAndSendCommands(),
+    ])
+  }
+
   /** Register a listener invoked when a plan follow-up session is adopted. */
   public onFollowupAdopted(cb: (session: Session, directory: string) => void): void {
     this.followupListeners.push(cb)
@@ -3927,6 +3939,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   }
   private async refreshConfig(type: "configLoaded" | "configUpdated", dir = this.settingsDirectory()) {
     const snapshot = await fetchSnapshot(this.client!, dir, () => this.configSettings())
+    if (dir !== this.settingsDirectory()) return
     const bindings = this.bindingsFor(dir, snapshot.targets)
     const globalConfig = (snapshot.targets?.global.raw ?? snapshot.globalConfig) as Config
     const projectConfig = bindings.project ? (snapshot.targets?.project.raw as Config) : undefined

@@ -71,6 +71,7 @@ export interface SessionProvider {
   routeSessionDirectoryFor?(ref: SessionRef): string | undefined
   /** Re-check Git capability for the active project/session directory. */
   refreshGitStatus?(): void
+  retryInitialization?(): void
   dispose(): void
 }
 

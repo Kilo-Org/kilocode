@@ -8,6 +8,8 @@ type State = "connecting" | "connected" | "disconnected" | "error"
 type Internals = {
   webview: { postMessage: (message: unknown) => Promise<unknown> } | null
   providersRetry: boolean
+  cachedConfigMessage: unknown
+  retryInitialization: () => Promise<void>
   initializeConnection: () => Promise<void>
   fetchAndSendProviders: () => Promise<void>
   fetchAndSendIndexingStatus: (directory?: string, projectId?: string) => void
@@ -60,10 +62,9 @@ function connection(online = true, custom?: unknown) {
   }
 }
 
-function provider(service: ReturnType<typeof connection>) {
+function provider(service: ReturnType<typeof connection>, root = () => "/repo") {
   return new KiloProvider({} as never, service as never, undefined, {
-    projectDirectory: "/repo",
-    rootDirectory: () => "/repo",
+    rootDirectory: root,
   }) as unknown as Internals
 }
 
@@ -86,6 +87,46 @@ function stub(internal: Internals) {
 }
 
 describe("KiloProvider providers on reconnect", () => {
+  it("recovers providers against the selected project without reconnecting", async () => {
+    let dir = "/unavailable"
+    const requests: string[] = []
+    const messages: unknown[] = []
+    const internal = provider(
+      connection(true, {
+        kilo: { authStatus: async () => ({ data: { authenticated: false } }) },
+        provider: {
+          list: async (input: { directory: string }) => {
+            requests.push(input.directory)
+            if (input.directory === "/unavailable") throw new Error("PermissionDenied")
+            return { data: { all: [], connected: [], default: {} } }
+          },
+        },
+      }),
+      () => dir,
+    )
+    stub(internal)
+    internal.webview = { postMessage: async (message) => messages.push(message) }
+    const configs: string[] = []
+    internal.fetchAndSendConfig = async () => {
+      configs.push(dir)
+      internal.cachedConfigMessage = { type: "configLoaded", config: {} }
+    }
+    await internal.fetchAndSendProviders()
+    expect(internal.providersRetry).toBe(true)
+
+    dir = "/healthy"
+    await internal.retryInitialization()
+
+    expect(requests).toEqual(["/unavailable", "/healthy"])
+    expect(configs).toEqual(["/healthy"])
+    expect(internal.providersRetry).toBe(false)
+    expect(messages).toContainEqual(expect.objectContaining({ type: "providersLoaded", ready: true }))
+
+    await internal.retryInitialization()
+    expect(requests).toHaveLength(2)
+    expect(configs).toHaveLength(1)
+  })
+
   it("marks a retry when providers are fetched without a client", async () => {
     const internal = provider(connection(false))
     stub(internal)
