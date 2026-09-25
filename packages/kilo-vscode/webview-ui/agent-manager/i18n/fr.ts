@@ -459,6 +459,8 @@ export const dict = {
   "agentManager.browser.inspect": "Sélectionner l'élément",
   "agentManager.browser.devtoolsTitle": "Outils de développement",
   "agentManager.browser.refresh": "Actualiser le navigateur",
+  "agentManager.browser.back": "Page précédente",
+  "agentManager.browser.forward": "Page suivante",
   "agentManager.browser.close": "Fermer le navigateur",
   "agentManager.browser.empty":
     "Ouvrez une application locale ou une page HTTPS publique pour en afficher un aperçu ici.",

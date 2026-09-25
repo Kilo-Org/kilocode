@@ -454,6 +454,8 @@ export const dict = {
   "agentManager.browser.inspect": "Vælg element",
   "agentManager.browser.devtoolsTitle": "Udviklerværktøjer",
   "agentManager.browser.refresh": "Opdater browser",
+  "agentManager.browser.back": "Tilbage",
+  "agentManager.browser.forward": "Frem",
   "agentManager.browser.close": "Luk browser",
   "agentManager.browser.empty":
     "Åbn en lokal applikation eller en offentlig HTTPS-side for at få vist en forhåndsvisning her.",

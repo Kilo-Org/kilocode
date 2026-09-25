@@ -74,6 +74,8 @@ export const BrowserOpenTool = Tool.define<
           }
 
           const url = URL.parse(params.url)
+          // Dev servers print 0.0.0.0 when they listen on every interface. It is not a destination, so use loopback.
+          if (url?.protocol === "http:" && url.hostname === "0.0.0.0") url.hostname = "127.0.0.1"
           if (!url) {
             return {
               title: "Browser URL invalid",
@@ -101,7 +103,7 @@ export const BrowserOpenTool = Tool.define<
             permission: "browser_open",
             patterns: [`navigate:${url.origin}`],
             always: [],
-            metadata: { operation: "open", url: params.url },
+            metadata: { operation: "open", url: url.href },
           })
 
           return yield* Effect.gen(function* () {
@@ -109,7 +111,7 @@ export const BrowserOpenTool = Tool.define<
               http,
               broker,
               token,
-              { sessionID: ctx.sessionID, directory: instance.directory, url: params.url },
+              { sessionID: ctx.sessionID, directory: instance.directory, url: url.href },
               ctx.abort,
             )
             if (response.status < 200 || response.status >= 300) {

@@ -486,6 +486,8 @@ interface BrowserStateMessage {
   error?: string
   missing?: "chrome" | "chromium"
   frameError?: string
+  back?: boolean
+  forward?: boolean
 }
 
 interface BrowserInspectionMessage {
@@ -1229,6 +1231,8 @@ interface BrowserRequestIn {
   type:
     | "agentManager.browser.open"
     | "agentManager.browser.refresh"
+    | "agentManager.browser.back"
+    | "agentManager.browser.forward"
     | "agentManager.browser.close"
     | "agentManager.browser.state"
     | "agentManager.browser.inspect"

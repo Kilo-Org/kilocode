@@ -437,6 +437,8 @@ export const dict = {
   "agentManager.browser.urlPlaceholder": "http://localhost:3000",
   "agentManager.browser.open": "開啟",
   "agentManager.browser.refresh": "重新整理瀏覽器",
+  "agentManager.browser.back": "上一頁",
+  "agentManager.browser.forward": "下一頁",
   "agentManager.browser.close": "關閉瀏覽器",
   "agentManager.browser.inspect": "選取元素",
   "agentManager.browser.devtoolsTitle": "開發人員工具",

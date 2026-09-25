@@ -43,6 +43,8 @@ export interface BrowserState {
   error?: string
   missing?: "chrome" | "chromium"
   frameError?: string
+  back?: boolean
+  forward?: boolean
 }
 
 export interface BrowserInspection {
@@ -65,6 +67,8 @@ export interface BrowserDevtools {
 export type BrowserCommand =
   | { type: "open"; scope: BrowserScope; url: string }
   | { type: "refresh"; scope: BrowserScope }
+  | { type: "back"; scope: BrowserScope }
+  | { type: "forward"; scope: BrowserScope }
   | { type: "close"; scope: BrowserScope }
   | { type: "state"; scope: BrowserScope }
   | { type: "inspect"; scope: BrowserScope; position: BrowserPosition; hover: boolean; requestId: string }
@@ -91,6 +95,8 @@ export interface BrowserLabels {
   urlPlaceholder: string
   open: string
   refresh: string
+  back: string
+  forward: string
   close: string
   inspect: string
   devtoolsTitle: string

@@ -480,6 +480,8 @@ export const dict = {
   "agentManager.browser.inspect": "Select element",
   "agentManager.browser.devtoolsTitle": "Developer tools",
   "agentManager.browser.refresh": "Refresh browser",
+  "agentManager.browser.back": "Go back",
+  "agentManager.browser.forward": "Go forward",
   "agentManager.browser.close": "Close browser",
   "agentManager.browser.empty": "Open a local application or a public HTTPS page to preview it here.",
   "agentManager.browser.requirement":

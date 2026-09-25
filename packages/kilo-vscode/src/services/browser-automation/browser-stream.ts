@@ -390,6 +390,11 @@ export class BrowserStream {
     return queued.result
   }
 
+  // Runs a page operation that must not overlap viewport changes or input.
+  exclusive<T>(run: () => Promise<T>): Promise<T> {
+    return this.serial(run)
+  }
+
   close(): Promise<void> {
     if (this.closing) return this.closing
     this.closed = true

@@ -450,6 +450,8 @@ export const dict = {
   "agentManager.browser.urlPlaceholder": "http://localhost:3000",
   "agentManager.browser.open": "開く",
   "agentManager.browser.refresh": "ブラウザーを更新",
+  "agentManager.browser.back": "戻る",
+  "agentManager.browser.forward": "進む",
   "agentManager.browser.close": "ブラウザーを閉じる",
   "agentManager.browser.inspect": "要素を選択",
   "agentManager.browser.devtoolsTitle": "開発者ツール",

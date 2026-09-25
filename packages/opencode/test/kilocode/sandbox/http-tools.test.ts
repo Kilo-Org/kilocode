@@ -203,6 +203,39 @@ describe("model HTTP tool network policy", () => {
     }).pipe(Effect.scoped)
   })
 
+  it.instance("opens a 0.0.0.0 dev server address on loopback", () => {
+    const patterns: string[] = []
+    return Effect.gen(function* () {
+      const server = yield* serve(async (request) => {
+        expect(await request.json()).toMatchObject({ url: "http://127.0.0.1:3018/app?x=1" })
+        return Response.json({
+          browserId: "browser-test",
+          sessionId: ctx.sessionID,
+          status: "ready",
+          url: "http://127.0.0.1:3018/app?x=1",
+          errors: 0,
+        })
+      })
+      const env = yield* Env.Service
+      yield* env.set("KILO_BROWSER_BROKER_URL", server.url.origin)
+      yield* env.set("KILO_BROWSER_BROKER_TOKEN", "browser-secret")
+      const info = yield* BrowserOpenTool
+      const browser = yield* info.init()
+      const result = yield* run(
+        profile("deny"),
+        ToolNetwork.tool(
+          ToolNetwork.builtin({ id: "browser_open" }),
+          browser.execute(
+            { url: "http://0.0.0.0:3018/app?x=1" },
+            { ...ctx, ask: (request) => Effect.sync(() => patterns.push(...request.patterns)) },
+          ),
+        ),
+      )
+      expect(patterns).toEqual(["navigate:http://127.0.0.1:3018"])
+      expect(result.metadata.status).toBe("ready")
+    }).pipe(Effect.scoped)
+  })
+
   for (const url of ["https://www.google.com/", "https://www.google.com/search?q=browser"]) {
     it.instance(`forwards approved public HTTPS (${url}) through only the authenticated loopback broker`, () => {
       let requests = 0
@@ -320,7 +353,7 @@ describe("model HTTP tool network policy", () => {
         "http://example.com/",
         "http://user:secret@localhost:3018/",
         "http://[::1]:3018/",
-        "http://0.0.0.0:3018/",
+        "https://0.0.0.0:3018/",
       ]) {
         const result = yield* run(
           profile("deny"),

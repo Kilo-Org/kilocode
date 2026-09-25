@@ -24,6 +24,11 @@ interface Options {
 
 const LIMIT = 16 * 1024
 
+// Marks a 502 response that the proxy creates because no connection to the local application was possible.
+export const UNREACHABLE = "x-kilo-browser-unreachable"
+
+class Unreachable extends Error {}
+
 function authority(value: string, scheme: "http" | "https") {
   if (!/^(?:\[[\da-f:]+\]|[^\s:/?#@\\]+):\d+$/i.test(value)) {
     throw new TypeError("Invalid proxy authority")
@@ -403,7 +408,7 @@ export class BrowserProxy {
         attempt.close()
       }
     }
-    throw err
+    throw new Unreachable("Browser proxy could not connect", { cause: err })
   }
 
   private tunnel(request: IncomingMessage, client: Duplex, head: Buffer) {
@@ -491,9 +496,14 @@ export class BrowserProxy {
         response.end()
       })
       request.pipe(upstream)
-    } catch {
+    } catch (error) {
       state.close()
-      if (!response.headersSent) response.writeHead(403, { connection: "close" })
+      if (!response.headersSent) {
+        response.writeHead(
+          error instanceof Unreachable ? 502 : 403,
+          error instanceof Unreachable ? { connection: "close", [UNREACHABLE]: "1" } : { connection: "close" },
+        )
+      }
       response.end()
     }
   }

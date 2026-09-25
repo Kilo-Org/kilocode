@@ -461,6 +461,8 @@ export const dict = {
   "agentManager.browser.urlPlaceholder": "http://localhost:3000",
   "agentManager.browser.open": "Відкрити",
   "agentManager.browser.refresh": "Оновити браузер",
+  "agentManager.browser.back": "Назад",
+  "agentManager.browser.forward": "Вперед",
   "agentManager.browser.close": "Закрити браузер",
   "agentManager.browser.inspect": "Вибрати елемент",
   "agentManager.browser.devtoolsTitle": "Інструменти розробника",

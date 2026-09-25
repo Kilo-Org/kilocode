@@ -7,6 +7,7 @@ import {
   chromium,
   type BrowserContext,
   type BrowserContextOptions,
+  type CDPSession,
   type LaunchOptions,
   type Page,
 } from "playwright-core"
@@ -15,7 +16,7 @@ import { capture as element, locate } from "./browser-element"
 import { options } from "./browser-runtime"
 import { BrowserStream } from "./browser-stream"
 import { BrowserNetwork } from "./browser-network"
-import { BrowserProxy } from "./browser-proxy"
+import { BrowserProxy, UNREACHABLE } from "./browser-proxy"
 import { parse } from "./browser-policy"
 import type {
   BrowserFrame,
@@ -48,6 +49,8 @@ export interface BrowserState {
   error?: string
   missing?: "chrome" | "chromium"
   frameError?: string
+  back?: boolean
+  forward?: boolean
 }
 
 export interface BrowserElement {
@@ -91,6 +94,7 @@ export interface BrowserContextFactory {
   debugging?: number
   newContext(options: BrowserContextOptions): Promise<BrowserContext>
   close(): Promise<void>
+  on?(event: "disconnected", listener: () => void): unknown
 }
 
 interface Entry {
@@ -108,6 +112,9 @@ interface Entry {
   stream?: BrowserStream
   viewport?: BrowserViewport
   navigating?: boolean
+  dead?: boolean
+  unreachable?: boolean
+  history?: Promise<CDPSession | undefined>
 }
 
 export class BrowserLaunchError extends Error {
@@ -148,13 +155,25 @@ type RequestBody = {
 const MAX_BODY = 32 * 1024
 const MAX_SCREENSHOT = 2 * 1024 * 1024
 const TIMEOUT = /ERR_CONNECTION_TIMED_OUT|ETIMEDOUT|Timeout \d+ms exceeded/i
+const CRASHED = "The browser stopped unexpectedly. Refresh to start it again."
+
+function unreachable(url?: string): string {
+  return `Cannot connect to ${url ?? "the local application"}. Make sure the local server is running.`
+}
+
+function reason(entry: Entry, error: unknown, url: URL): unknown {
+  if (entry.dead) return new BrowserNavigationError(entry.state.error ?? CRASHED)
+  if (entry.unreachable) return new BrowserNavigationError(unreachable(url.href), entry.response)
+  if (entry.waiting.size === 0 || !TIMEOUT.test(error instanceof Error ? error.message : String(error))) return error
+  return new BrowserNavigationError(
+    "Browser navigation stopped while waiting for approval in VS Code. Dismiss the approval prompt and retry.",
+  )
+}
 
 export function diagnostic(error: unknown, url?: string): string {
   const text = stripVTControlCharacters(error instanceof Error ? error.message : String(error))
   const launch = error instanceof BrowserLaunchError
-  if (!launch && /ERR_CONNECTION_REFUSED|ECONNREFUSED/i.test(text)) {
-    return `Cannot connect to ${url ?? "the local application"}. Make sure the local server is running.`
-  }
+  if (!launch && /ERR_CONNECTION_REFUSED|ECONNREFUSED/i.test(text)) return unreachable(url)
   if (!launch && TIMEOUT.test(text)) {
     return url && URL.parse(url)?.protocol === "https:"
       ? "The website did not respond in time. Check the URL and network connection, then try again."
@@ -311,19 +330,23 @@ export class BrowserBroker {
     const entry = this.view(sessionId, projectId, { browserId, navigation })
     if (!entry || !Number.isSafeInteger(viewport.revision) || viewport.revision < 1) return
     if (entry.viewport && viewport.revision < entry.viewport.revision) return
-    if (!entry.stream) {
-      entry.stream = new BrowserStream(
-        entry.page,
-        () => ({ browserId: entry.browserId, navigation: entry.state.navigation }),
-        (frame) => {
-          if (!this.view(sessionId, projectId, frame) || entry.viewport?.active !== true) return
-          for (const viewer of this.viewers) viewer({ ...frame, projectId, sessionId })
-        },
-        this.opts.log,
-      )
-    }
     entry.viewport = { ...viewport }
-    await entry.stream.configure(viewport)
+    await this.cast(entry).configure(viewport)
+  }
+
+  private cast(entry: Entry): BrowserStream {
+    if (entry.stream) return entry.stream
+    const route = entry.route
+    entry.stream = new BrowserStream(
+      entry.page,
+      () => ({ browserId: entry.browserId, navigation: entry.state.navigation }),
+      (frame) => {
+        if (!this.view(route.sessionId, route.projectId, frame) || entry.viewport?.active !== true) return
+        for (const viewer of this.viewers) viewer({ ...frame, projectId: route.projectId, sessionId: route.sessionId })
+      },
+      this.opts.log,
+    )
+    return entry.stream
   }
 
   accepts(sessionId: string, projectId: string | undefined, identity: BrowserViewIdentity): boolean {
@@ -376,7 +399,13 @@ export class BrowserBroker {
   ): Entry | undefined {
     if (this.closed || this.opts.enabled?.() === false || this.opts.trusted?.() === false) return
     const entry = this.entries.get(this.key(sessionId, projectId))
-    if (!entry || entry.browserId !== identity.browserId || entry.state.navigation !== identity.navigation) return
+    if (
+      !entry ||
+      entry.dead ||
+      entry.browserId !== identity.browserId ||
+      entry.state.navigation !== identity.navigation
+    )
+      return
     const scope = this.owner ? this.owner(entry.route) : entry.route
     return scope?.directory === entry.route.directory && scope.projectId === entry.route.projectId ? entry : undefined
   }
@@ -410,6 +439,7 @@ export class BrowserBroker {
         throw new Error("Browser session project cannot change")
       }
       const replace =
+        existing.dead === true ||
         existing.network?.active === false ||
         existing.local !== (url.protocol === "http:") ||
         (existing.local && existing.origin !== url.origin)
@@ -572,11 +602,32 @@ export class BrowserBroker {
     })
   }
 
+  history(sessionId: string, projectId: string | undefined, direction: "back" | "forward"): Promise<BrowserState> {
+    return this.serial(this.key(sessionId, projectId), async () => {
+      this.available()
+      const entry = this.require(sessionId, undefined, projectId)
+      if (entry.dead || !(direction === "back" ? entry.state.back : entry.state.forward)) return this.copy(entry.state)
+      const opts = { waitUntil: "domcontentloaded" as const, timeout: 30_000 }
+      await (direction === "back" ? entry.page.goBack(opts) : entry.page.goForward(opts)).catch((error: unknown) => {
+        this.fail(entry, error)
+        throw error
+      })
+      await this.update(entry)
+      this.emit(entry.state)
+      return this.copy(entry.state)
+    })
+  }
+
   refresh(sessionId: string, projectId?: string, capture = true): Promise<BrowserState> {
     return this.serial(this.key(sessionId, projectId), async () => {
       this.available()
       const entry = this.require(sessionId, undefined, projectId)
       const url = this.validate(entry.state.url ?? entry.origin)
+      if (entry.dead) {
+        const scope = this.owner ? this.owner(entry.route) : entry.route
+        if (!scope) throw new Error("Browser session does not belong to the requested project or directory")
+        return this.create(scope, url.href, capture)
+      }
       await this.goto(entry, url, true, capture)
       return this.copy(entry.state)
     })
@@ -608,6 +659,9 @@ export class BrowserBroker {
     const key = this.key(entry.route.sessionId, entry.route.projectId)
     if (this.entries.get(key) === entry) this.entries.delete(key)
     this.tools?.revoke(entry.browserId)
+    void entry.history
+      ?.then((session) => session?.detach())
+      .catch((error: unknown) => this.opts.log("Browser history session close failed", error))
     const stream = entry.stream?.close().catch((error: unknown) => this.opts.log("Browser stream close failed", error))
     const network = entry.network
       ?.close()
@@ -651,12 +705,12 @@ export class BrowserBroker {
     void this.disposeAsync().catch((error: unknown) => this.opts.log("Browser broker dispose failed", error))
   }
 
-  private async ensureBrowser(): Promise<BrowserContextFactory> {
-    if (this.closed) throw new Error("Browser broker is closed")
-    if (this.browser) return this.browser
+  private ensureBrowser(): Promise<BrowserContextFactory> {
+    if (this.closed) return Promise.reject(new Error("Browser broker is closed"))
+    if (this.browser) return Promise.resolve(this.browser)
     if (this.browserStarting) return this.browserStarting
     const system = this.opts.useSystemChrome?.() !== false
-    this.browserStarting = (async () => {
+    const starting = (async () => {
       const port = this.opts.launch ? undefined : await reserve()
       const base = options(system, port)
       const gateway = await BrowserProxy.start("deny")
@@ -679,27 +733,62 @@ export class BrowserBroker {
       const browser = await (this.opts.launch?.(config) ?? chromium.launch(config))
       this.debugging = ("debugging" in browser ? browser.debugging : undefined) ?? port
       this.browser = browser
+      browser.on?.("disconnected", () => this.lost(browser))
       return browser
     })()
-    try {
-      return await this.browserStarting
-    } catch (error) {
-      const gateway = this.gateway
-      this.gateway = undefined
-      if (gateway) {
-        await gateway.close().catch((failure: unknown) => this.opts.log("Browser proxy close failed", failure))
-        this.proxies.delete(gateway)
-      }
-      const detail = error instanceof Error ? error.message : String(error)
-      const missing = /Chromium distribution ['"]chrome['"] is not found\b|Executable doesn't exist at\b/i.test(detail)
-        ? system
-          ? "chrome"
-          : "chromium"
-        : undefined
-      throw new BrowserLaunchError(missing, error)
-    } finally {
-      this.browserStarting = undefined
-    }
+      .catch(async (error: unknown) => {
+        await this.release()
+        const detail = error instanceof Error ? error.message : String(error)
+        const missing = /Chromium distribution ['"]chrome['"] is not found\b|Executable doesn't exist at\b/i.test(
+          detail,
+        )
+          ? system
+            ? "chrome"
+            : "chromium"
+          : undefined
+        throw new BrowserLaunchError(missing, error)
+      })
+      .finally(() => {
+        if (this.browserStarting === starting) this.browserStarting = undefined
+      })
+    this.browserStarting = starting
+    return starting
+  }
+
+  private async release(): Promise<void> {
+    const gateway = this.gateway
+    this.gateway = undefined
+    if (!gateway) return
+    await gateway.close().catch((failure: unknown) => this.opts.log("Browser proxy close failed", failure))
+    this.proxies.delete(gateway)
+  }
+
+  // Chromium exited or crashed. Keep each entry so its panel shows the failure, and let the next open or
+  // refresh replace it with a new browser.
+  private lost(browser: BrowserContextFactory): void {
+    if (this.closed || this.browser !== browser) return
+    this.opts.log("Browser disconnected")
+    this.browser = undefined
+    this.debugging = undefined
+    void this.release()
+    for (const entry of this.entries.values()) this.kill(entry, CRASHED)
+  }
+
+  private kill(entry: Entry, message: string): void {
+    if (entry.dead) return
+    entry.dead = true
+    this.tools?.revoke(entry.browserId)
+    void entry.stream?.close().catch((error: unknown) => this.opts.log("Browser stream close failed", error))
+    void entry.network?.close().catch((error: unknown) => this.opts.log("Browser network close failed", error))
+    void entry.proxy.close().catch((error: unknown) => this.opts.log("Browser proxy close failed", error))
+    entry.stream = undefined
+    entry.viewport = undefined
+    entry.state.status = "error"
+    entry.state.error = message
+    entry.state.screenshot = undefined
+    entry.state.mime = undefined
+    entry.state.inspecting = false
+    this.emit(entry.state)
   }
 
   private record(entry: Entry, message: string): void {
@@ -712,6 +801,7 @@ export class BrowserBroker {
     entry.page.on("response", (response) => {
       if (response.request().isNavigationRequest() && response.frame() === entry.page.mainFrame()) {
         entry.response = response.status()
+        entry.unreachable = response.headers()[UNREACHABLE] === "1"
       }
     })
     entry.page.on("console", (message) => {
@@ -725,6 +815,7 @@ export class BrowserBroker {
       this.record(entry, error.message)
       this.emit(entry.state)
     })
+    entry.page.on("crash", () => this.kill(entry, "The page crashed. Refresh to load it again."))
     entry.page.on("popup", (page) => {
       entry.state.errors++
       this.record(entry, "Blocked browser popup")
@@ -749,6 +840,7 @@ export class BrowserBroker {
     entry.navigating = true
     entry.origin = url.origin
     entry.response = undefined
+    entry.unreachable = false
     entry.state.navigation++
     entry.state.status = "loading"
     entry.state.url = url.href
@@ -775,13 +867,8 @@ export class BrowserBroker {
       entry.state.status = "ready"
       this.emit(entry.state)
     } catch (error) {
-      const waiting = entry.waiting.size > 0 && TIMEOUT.test(error instanceof Error ? error.message : String(error))
-      const failure = waiting
-        ? new BrowserNavigationError(
-            "Browser navigation stopped while waiting for approval in VS Code. Dismiss the approval prompt and retry.",
-          )
-        : error
-      if (waiting)
+      const failure = reason(entry, error, url)
+      if (failure !== error && !entry.dead && !entry.unreachable)
         await entry.network?.close().catch((error: unknown) => this.opts.log("Browser network close failed", error))
       entry.state.url = url.href
       this.fail(entry, failure)
@@ -825,13 +912,32 @@ export class BrowserBroker {
     const parsed = URL.parse(url)
     if (!parsed || !["http:", "https:"].includes(parsed.protocol)) return
     const title = await entry.page.title().catch(() => undefined)
+    const steps = await this.steps(entry)
     if (entry.state.navigation !== navigation || entry.page.url() !== url) return
     entry.state.url = url
     entry.state.title = title
+    entry.state.back = steps.back
+    entry.state.forward = steps.forward
+  }
+
+  // Reads the page history. The first entry of a new context is about:blank, so only web pages count as steps.
+  private async steps(entry: Entry): Promise<{ back: boolean; forward: boolean }> {
+    if (typeof entry.context.newCDPSession !== "function") return { back: false, forward: false }
+    entry.history ??= entry.context.newCDPSession(entry.page).catch((error: unknown) => {
+      this.opts.log("Browser history session failed", error)
+      return undefined
+    })
+    const session = await entry.history
+    const result = await session?.send("Page.getNavigationHistory").catch(() => undefined)
+    if (!Array.isArray(result?.entries)) return { back: false, forward: false }
+    const web = (index: number) => /^https?:/i.test(result.entries.at(index)?.url ?? "") && index >= 0
+    return { back: web(result.currentIndex - 1), forward: web(result.currentIndex + 1) }
   }
 
   private async capture(entry: Entry): Promise<void> {
-    const data = await entry.page.screenshot({ type: "jpeg", quality: 70 })
+    // Playwright restores its viewport after a screenshot. Run the screenshot in the stream queue, so it cannot
+    // overwrite a concurrent stream resize and leave Chromium at a size that the stream rejects.
+    const data = await this.cast(entry).exclusive(() => entry.page.screenshot({ type: "jpeg", quality: 70 }))
     if (data.byteLength > MAX_SCREENSHOT) throw new Error("Browser screenshot is too large")
     entry.state.screenshot = `data:image/jpeg;base64,${data.toString("base64")}`
     entry.state.mime = "image/jpeg"

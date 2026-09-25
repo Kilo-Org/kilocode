@@ -33,6 +33,26 @@ const Toolbar: Component<{
   const ready = () => !!props.controller.state()?.url && props.controller.state()?.status !== "closed"
   return (
     <div class="am-browser-toolbar">
+      <Tooltip value={props.labels.back} placement="bottom">
+        <IconButton
+          icon="chevron-left"
+          size="small"
+          variant="ghost"
+          aria-label={props.labels.back}
+          onClick={props.controller.back}
+          disabled={!ready() || !props.controller.state()?.back || props.controller.loading()}
+        />
+      </Tooltip>
+      <Tooltip value={props.labels.forward} placement="bottom">
+        <IconButton
+          icon="chevron-right"
+          size="small"
+          variant="ghost"
+          aria-label={props.labels.forward}
+          onClick={props.controller.forward}
+          disabled={!ready() || !props.controller.state()?.forward || props.controller.loading()}
+        />
+      </Tooltip>
       <Tooltip value={props.labels.refresh} placement="bottom">
         <IconButton
           icon="refresh"

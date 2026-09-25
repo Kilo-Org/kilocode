@@ -442,6 +442,8 @@ export const dict = {
   "agentManager.browser.urlPlaceholder": "http://localhost:3000",
   "agentManager.browser.open": "เปิด",
   "agentManager.browser.refresh": "รีเฟรชเบราว์เซอร์",
+  "agentManager.browser.back": "ย้อนกลับ",
+  "agentManager.browser.forward": "ไปข้างหน้า",
   "agentManager.browser.close": "ปิดเบราว์เซอร์",
   "agentManager.browser.inspect": "เลือกองค์ประกอบ",
   "agentManager.browser.devtoolsTitle": "เครื่องมือสำหรับนักพัฒนา",

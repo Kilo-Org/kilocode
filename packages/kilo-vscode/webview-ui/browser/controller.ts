@@ -31,6 +31,8 @@ export interface BrowserController {
   setUrl: (value: string) => void
   open: () => void
   refresh: () => void
+  back: () => void
+  forward: () => void
   close: () => void
   toggleSelecting: () => void
   toggleTools: () => void
@@ -42,7 +44,7 @@ export interface BrowserController {
 function address(value: string): string {
   if (/^[a-z][a-z\d+.-]*:\/\//i.test(value)) return value
   const host = value.replace(/^\/\//, "")
-  const scheme = /^(?:localhost|127\.0\.0\.1)(?=[:/?#]|$)/i.test(host) ? "http" : "https"
+  const scheme = /^(?:localhost|127\.0\.0\.1|0\.0\.0\.0)(?=[:/?#]|$)/i.test(host) ? "http" : "https"
   return `${scheme}://${host}`
 }
 
@@ -91,7 +93,7 @@ export function createBrowserController(props: BrowserControllerOptions): Browse
     props.transport.send(command)
   }
 
-  const request = (type: "refresh" | "close" | "state") => {
+  const request = (type: "refresh" | "back" | "forward" | "close" | "state") => {
     sync()
     if (!current) return
     send({ type, scope: current })
@@ -243,6 +245,8 @@ export function createBrowserController(props: BrowserControllerOptions): Browse
       send({ type: "open", scope: current, url: target })
     },
     refresh: () => request("refresh"),
+    back: () => request("back"),
+    forward: () => request("forward"),
     close: () => {
       if (!sync()) return
       stop()

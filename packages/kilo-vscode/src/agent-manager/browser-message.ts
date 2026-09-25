@@ -156,6 +156,15 @@ function action(m: BrowserMessage, deps: Dependencies): boolean {
       })
     return true
   }
+  if (m.type === "agentManager.browser.back" || m.type === "agentManager.browser.forward") {
+    const direction = m.type === "agentManager.browser.back" ? "back" : "forward"
+    void deps.browser.history(m.sessionId, scope.project, direction).catch((error: unknown) => {
+      deps.log("Browser history navigation failed:", error)
+      const current = deps.browser.get(m.sessionId, scope.project)
+      if (current) deps.post(browserMessage(current))
+    })
+    return true
+  }
   if (m.type === "agentManager.browser.refresh") {
     void deps.browser.refresh(m.sessionId, scope.project, false).catch((error: unknown) => {
       deps.log("Browser refresh failed:", error)
@@ -232,5 +241,7 @@ export function browserMessage(state: BrowserState): AgentManagerOutMessage {
     error: state.error,
     missing: state.missing,
     frameError: state.frameError,
+    back: state.back,
+    forward: state.forward,
   }
 }

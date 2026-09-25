@@ -1371,6 +1371,8 @@ export interface AgentManagerBrowserRequestMessage {
   type:
     | "agentManager.browser.open"
     | "agentManager.browser.refresh"
+    | "agentManager.browser.back"
+    | "agentManager.browser.forward"
     | "agentManager.browser.close"
     | "agentManager.browser.state"
     | "agentManager.browser.inspect"

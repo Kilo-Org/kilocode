@@ -448,6 +448,8 @@ export const dict = {
   "agentManager.browser.urlPlaceholder": "http://localhost:3000",
   "agentManager.browser.open": "열기",
   "agentManager.browser.refresh": "브라우저 새로 고침",
+  "agentManager.browser.back": "뒤로",
+  "agentManager.browser.forward": "앞으로",
   "agentManager.browser.close": "브라우저 닫기",
   "agentManager.browser.inspect": "요소 선택",
   "agentManager.browser.devtoolsTitle": "개발자 도구",

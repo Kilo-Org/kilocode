@@ -45,6 +45,8 @@ const [labels, update] = createSignal<BrowserLabels>({
   urlPlaceholder: "Local URL",
   open: "Go",
   refresh: "Reload",
+  back: "Back",
+  forward: "Forward",
   close: "Close",
   inspect: "Select element",
   devtoolsTitle: "Developer tools",
@@ -132,6 +134,19 @@ receive?.({ type: "state", value: { ...state, logs: ["[info] Updated"] } })
 assert.equal(root.querySelector(".am-browser-stream canvas"), frame)
 assert.equal(root.querySelector(".am-browser-diagnostics button")?.textContent, "Browser diagnostics")
 assert.equal(root.querySelector(".am-browser-console"), null)
+const back = root.querySelector("button[aria-label=Back]") as HTMLButtonElement
+const forward = root.querySelector("button[aria-label=Forward]") as HTMLButtonElement
+assert.equal(back.disabled, true)
+assert.equal(forward.disabled, true)
+receive?.({ type: "state", value: { ...state, back: true } })
+assert.equal(back.disabled, false)
+assert.equal(forward.disabled, true)
+back.click()
+assert.deepEqual(sent.at(-1), { type: "back", scope })
+receive?.({ type: "state", value: { ...state, forward: true } })
+assert.equal(back.disabled, true)
+forward.click()
+assert.deepEqual(sent.at(-1), { type: "forward", scope })
 ;(root.querySelector("button[aria-label=Reload]") as HTMLButtonElement).click()
 assert.deepEqual(sent.at(-1), { type: "refresh", scope })
 receive?.({ type: "state", value: { ...state, navigation: 1 } })

@@ -72,6 +72,8 @@ function command(command: BrowserCommand): WebviewMessage {
     return { type: "agentManager.browser.open", ...command.scope, url: command.url }
   }
   if (command.type === "refresh") return { type: "agentManager.browser.refresh", ...command.scope }
+  if (command.type === "back") return { type: "agentManager.browser.back", ...command.scope }
+  if (command.type === "forward") return { type: "agentManager.browser.forward", ...command.scope }
   if (command.type === "close") return { type: "agentManager.browser.close", ...command.scope }
   if (command.type === "state") return { type: "agentManager.browser.state", ...command.scope }
   if (command.type === "devtools") {
@@ -127,6 +129,8 @@ function event(message: ExtensionMessage): BrowserEvent | undefined {
       error: message.error,
       missing: message.missing,
       frameError: message.frameError,
+      back: message.back,
+      forward: message.forward,
     }
     return { type: "state", value }
   }
@@ -175,6 +179,8 @@ function BrowserAdapter(props: {
     urlPlaceholder: language.t("agentManager.browser.urlPlaceholder"),
     open: language.t("agentManager.browser.open"),
     refresh: language.t("agentManager.browser.refresh"),
+    back: language.t("agentManager.browser.back"),
+    forward: language.t("agentManager.browser.forward"),
     close: language.t("agentManager.browser.close"),
     inspect: language.t("agentManager.browser.inspect"),
     devtoolsTitle: language.t("agentManager.browser.devtoolsTitle"),

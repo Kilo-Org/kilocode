@@ -453,6 +453,8 @@ export const dict = {
   "agentManager.browser.urlPlaceholder": "http://localhost:3000",
   "agentManager.browser.open": "باز کردن",
   "agentManager.browser.refresh": "بازخوانی مرورگر",
+  "agentManager.browser.back": "بازگشت",
+  "agentManager.browser.forward": "جلو",
   "agentManager.browser.close": "بستن مرورگر",
   "agentManager.browser.inspect": "انتخاب عنصر",
   "agentManager.browser.devtoolsTitle": "ابزارهای توسعه",

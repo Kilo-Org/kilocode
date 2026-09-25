@@ -10,7 +10,7 @@ import {
 } from "node:http"
 import { connect, createServer, type Server, Socket } from "node:net"
 import WebSocket, { WebSocketServer } from "ws"
-import { BrowserProxy } from "../../src/services/browser-automation/browser-proxy"
+import { BrowserProxy, UNREACHABLE } from "../../src/services/browser-automation/browser-proxy"
 
 const cleanup: Array<() => Promise<unknown> | void> = []
 
@@ -672,6 +672,22 @@ describe("browser proxy", { concurrency: false, timeout: 15_000 }, () => {
     expect((await response).status).toBe(502)
     await end
     expect(upstream.destroyed).toBe(true)
+  })
+
+  test("reports an unreachable local application as a marked bad gateway, not a policy denial", async () => {
+    const value = await proxy(new URL("http://127.0.0.1:3000"), {
+      connect: () => {
+        const socket = new Socket()
+        queueMicrotask(() => socket.destroy(Object.assign(new Error("connect ECONNREFUSED"), { code: "ECONNREFUSED" })))
+        return socket
+      },
+    })
+    const response = await forward(value, "http://127.0.0.1:3000/")
+    expect(response.status).toBe(502)
+    expect(response.headers[UNREACHABLE]).toBe("1")
+    const denied = await forward(value, "http://127.0.0.1:3001/")
+    expect(denied.status).toBe(403)
+    expect(denied.headers[UNREACHABLE]).toBeUndefined()
   })
 
   test("does not contact a non-loopback answer for an approved localhost origin", async () => {

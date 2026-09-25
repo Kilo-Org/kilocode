@@ -52,7 +52,7 @@ describe("BrowserBroker", () => {
     expect(() => broker.validate("https://localhost:3000")).toThrow()
     expect(() => broker.validate("http://127.0.0.1:3000")).not.toThrow()
     expect(() => broker.validate("http://[::1]:3000")).toThrow()
-    expect(() => broker.validate("http://0.0.0.0:3000")).toThrow()
+    expect(broker.validate("http://0.0.0.0:3000/path?q=1").href).toBe("http://127.0.0.1:3000/path?q=1")
     expect(() => broker.validate("http://example.com")).toThrow()
     expect(() => broker.validate("http://username:password@localhost:3000")).toThrow()
     expect(() => broker.validate("file:///tmp/example.html")).toThrow()
@@ -81,6 +81,7 @@ describe("BrowserBroker", () => {
       url: () => "about:blank",
       title: async () => "",
       screenshot: async () => Buffer.from("jpeg"),
+      off: () => undefined,
       on: (_type: string, _listener: (...args: never[]) => void) => undefined,
       mainFrame: () => undefined,
       goto: async () => {
@@ -119,6 +120,7 @@ describe("BrowserBroker", () => {
         url: () => "about:blank",
         title: async () => "",
         screenshot: async () => Buffer.from("jpeg"),
+        off: () => undefined,
         on: () => undefined,
         mainFrame: () => undefined,
         goto: async () => {
@@ -168,6 +170,7 @@ describe("BrowserBroker", () => {
       url: () => url,
       title: async () => "Local fixture",
       screenshot: async () => Buffer.from(`shot-${++shots}`),
+      off: () => undefined,
       on: () => undefined,
       mainFrame: () => undefined,
       goto: async (value: string) => {
@@ -200,6 +203,7 @@ describe("BrowserBroker", () => {
       url: () => "http://localhost:3000/",
       title: async () => `Application version ${version}`,
       screenshot: async () => Buffer.from(`version-${version}`),
+      off: () => undefined,
       on: (type: string, listener: (value: unknown) => void) => {
         listeners.set(type, listener)
       },
@@ -344,6 +348,7 @@ describe("BrowserBroker", () => {
           url: () => "http://localhost:3000/",
           title: async () => "Developer tools test",
           screenshot: async () => Buffer.from("jpeg"),
+          off: () => undefined,
           on: (_type: string, _listener: (...args: never[]) => void) => undefined,
           mainFrame: () => undefined,
           goto: async () => undefined,
@@ -532,6 +537,7 @@ describe("BrowserBroker", () => {
           url: () => "http://localhost:3000/",
           title: async () => "Local app",
           screenshot: async () => Buffer.from("jpeg"),
+          off: () => undefined,
           on: () => undefined,
           mainFrame: () => undefined,
           goto: async () => undefined,
@@ -643,6 +649,259 @@ describe("BrowserBroker", () => {
     expect(diagnostic(error, "http://localhost:3000/")).toBe(`The browser could not start. ${message}`)
   })
 
+  test("reports a missing browser to every concurrent open", async () => {
+    const cause = new Error(
+      "browserType.launch: Chromium distribution 'chrome' is not found at /opt/google/chrome/chrome",
+    )
+    const gate = Promise.withResolvers<void>()
+    let attempts = 0
+    const broker = new BrowserBroker({
+      log: () => {},
+      launch: async () => {
+        attempts++
+        await gate.promise
+        throw cause
+      },
+    })
+    brokers.push(broker)
+    const opens = ["one", "two"].map((id) =>
+      broker.open({ sessionId: id, directory: "/tmp/project" }, "http://localhost:3000/").catch((err: unknown) => err),
+    )
+    gate.resolve()
+    const errors = await Promise.all(opens)
+    expect(attempts).toBe(1)
+    for (const error of errors) expect(error).toMatchObject({ name: "BrowserLaunchError", missing: "chrome", cause })
+  })
+
+  test("restarts Chromium for every session after it disconnects", async () => {
+    const listeners: Array<() => void> = []
+    let launches = 0
+    let contexts = 0
+    const page = () => {
+      let target = "about:blank"
+      return {
+        url: () => target,
+        title: async () => "Local app",
+        screenshot: async () => Buffer.from("jpeg"),
+        off: () => undefined,
+        on: (_type: string, _listener: (...args: never[]) => void) => undefined,
+        mainFrame: () => undefined,
+        goto: async (url: string) => {
+          target = url
+          return { status: () => 200 }
+        },
+        reload: async () => ({ status: () => 200 }),
+      }
+    }
+    const broker = new BrowserBroker({
+      log: () => {},
+      network,
+      launch: async () => {
+        launches++
+        return {
+          newContext: async () => {
+            contexts++
+            return { close: async () => undefined, newPage: async () => page() }
+          },
+          close: async () => undefined,
+          on: (_event: "disconnected", listener: () => void) => listeners.push(listener),
+        }
+      },
+    })
+    brokers.push(broker)
+    const one = { sessionId: "one", directory: "/tmp/one" }
+    const two = { sessionId: "two", directory: "/tmp/two" }
+    const first = await broker.open(one, "http://localhost:3000/", false)
+    await broker.open(two, "http://localhost:3001/", false)
+    listeners.at(0)?.()
+    const crashed = "The browser stopped unexpectedly. Refresh to start it again."
+    expect(broker.get("one")).toMatchObject({ browserId: first.browserId, status: "error", error: crashed })
+    expect(broker.get("two")).toMatchObject({ status: "error", error: crashed })
+    const refreshed = await broker.refresh("one", undefined, false)
+    expect(refreshed).toMatchObject({ status: "ready", url: "http://localhost:3000/" })
+    expect(refreshed.browserId).not.toBe(first.browserId)
+    expect((await broker.open(two, "http://localhost:3001/", false)).status).toBe("ready")
+    expect(launches).toBe(2)
+    expect(contexts).toBe(4)
+  })
+
+  test("replaces a crashed page on refresh", async () => {
+    const crashes: Array<() => void> = []
+    let contexts = 0
+    let target = "about:blank"
+    const page = {
+      url: () => target,
+      title: async () => "Local app",
+      screenshot: async () => Buffer.from("jpeg"),
+      off: () => undefined,
+      on: (type: string, listener: () => void) => {
+        if (type === "crash") crashes.push(listener)
+      },
+      mainFrame: () => undefined,
+      goto: async (url: string) => {
+        target = url
+        return { status: () => 200 }
+      },
+      reload: async () => ({ status: () => 200 }),
+    }
+    const broker = new BrowserBroker({
+      log: () => {},
+      network,
+      launch: async () => ({
+        newContext: async () => {
+          contexts++
+          return { close: async () => undefined, newPage: async () => page }
+        },
+        close: async () => undefined,
+      }),
+    })
+    brokers.push(broker)
+    const route = { sessionId: "crash", directory: "/tmp/project" }
+    const opened = await broker.open(route, "http://localhost:3000/", false)
+    crashes.at(-1)?.()
+    expect(broker.get("crash")).toMatchObject({
+      browserId: opened.browserId,
+      status: "error",
+      error: "The page crashed. Refresh to load it again.",
+    })
+    const refreshed = await broker.refresh("crash", undefined, false)
+    expect(refreshed.status).toBe("ready")
+    expect(refreshed.browserId).not.toBe(opened.browserId)
+    expect(contexts).toBe(2)
+  })
+
+  test("reports an unreachable local application instead of a proxy status", async () => {
+    let target = "about:blank"
+    const listeners = new Map<string, (value: unknown) => void>()
+    const main = {}
+    const page = {
+      url: () => target,
+      title: async () => "",
+      screenshot: async () => Buffer.from("jpeg"),
+      off: () => undefined,
+      on: (type: string, listener: (value: unknown) => void) => listeners.set(type, listener),
+      mainFrame: () => main,
+      goto: async (url: string) => {
+        target = url
+        listeners.get("response")?.({
+          request: () => ({ isNavigationRequest: () => true }),
+          frame: () => main,
+          status: () => 502,
+          headers: () => ({ "x-kilo-browser-unreachable": "1" }),
+        })
+        throw new Error("page.goto: net::ERR_HTTP_RESPONSE_CODE_FAILURE at http://localhost:3000/")
+      },
+    }
+    const broker = fixture(page)
+    const message = "Cannot connect to http://localhost:3000/. Make sure the local server is running."
+    await expect(
+      broker.open({ sessionId: "down", directory: "/tmp/project" }, "http://localhost:3000/"),
+    ).rejects.toThrow(message)
+    expect(broker.get("down")).toMatchObject({ status: "error", error: message })
+  })
+
+  test("does not take a screenshot while the stream changes the viewport", async () => {
+    const order: string[] = []
+    const resize = Promise.withResolvers<void>()
+    const entered = Promise.withResolvers<void>()
+    let target = "about:blank"
+    const session = Object.assign(new EventEmitter(), {
+      send: async () => ({}),
+      detach: async () => undefined,
+    })
+    const page = Object.assign(new EventEmitter(), {
+      url: () => target,
+      title: async () => "Local app",
+      mainFrame: () => page,
+      context: () => ({ newCDPSession: async () => session }),
+      setViewportSize: async () => {
+        order.push("resize")
+        entered.resolve()
+        await resize.promise
+        order.push("resized")
+      },
+      screenshot: async () => {
+        order.push("screenshot")
+        return Buffer.from("jpeg")
+      },
+      goto: async (url: string) => {
+        target = url
+        return { status: () => 200 }
+      },
+      reload: async () => ({ status: () => 200 }),
+    })
+    const broker = fixture(page)
+    const route = { sessionId: "stream", directory: "/tmp/project" }
+    const opened = await broker.open(route, "http://localhost:3000/", false)
+    const viewport = { width: 393, height: 689, scale: 2, revision: 1, active: true }
+    const streaming = broker.viewport("stream", undefined, opened.browserId, opened.navigation, viewport)
+    await entered.promise
+    const refreshing = broker.refresh("stream", undefined, true)
+    await new Promise((resolve) => setTimeout(resolve, 10))
+    expect(order).toEqual(["resize"])
+    resize.resolve()
+    await Promise.all([streaming, refreshing])
+    expect(order).toEqual(["resize", "resized", "screenshot"])
+  })
+
+  test("navigates back and forward only through web page history", async () => {
+    const pages = ["about:blank"]
+    let index = 0
+    const calls: string[] = []
+    const page = {
+      url: () => pages[index],
+      title: async () => `Page ${index}`,
+      screenshot: async () => Buffer.from("jpeg"),
+      off: () => undefined,
+      on: () => undefined,
+      mainFrame: () => undefined,
+      goto: async (url: string) => {
+        pages.splice(index + 1, Infinity, url)
+        index++
+        return { status: () => 200 }
+      },
+      goBack: async () => {
+        calls.push("back")
+        index--
+        return { status: () => 200 }
+      },
+      goForward: async () => {
+        calls.push("forward")
+        index++
+        return { status: () => 200 }
+      },
+    }
+    const session = {
+      send: async () => ({ currentIndex: index, entries: pages.map((url) => ({ url })) }),
+      detach: async () => undefined,
+    }
+    const broker = new BrowserBroker({
+      log: () => {},
+      network,
+      launch: async () => ({
+        newContext: async () => ({
+          close: async () => undefined,
+          newPage: async () => page,
+          newCDPSession: async () => session,
+        }),
+        close: async () => undefined,
+      }),
+    })
+    brokers.push(broker)
+    const route = { sessionId: "history", directory: "/tmp/project" }
+    const first = await broker.open(route, "http://localhost:3000/one", false)
+    expect([first.back, first.forward]).toEqual([false, false])
+    expect((await broker.history("history", undefined, "back")).url).toBe("http://localhost:3000/one")
+    expect(calls).toEqual([])
+    const second = await broker.open(route, "http://localhost:3000/two", false)
+    expect([second.back, second.forward]).toEqual([true, false])
+    const back = await broker.history("history", undefined, "back")
+    expect([back.url, back.back, back.forward]).toEqual(["http://localhost:3000/one", false, true])
+    const forward = await broker.history("history", undefined, "forward")
+    expect([forward.url, forward.back, forward.forward]).toEqual(["http://localhost:3000/two", true, false])
+    expect(calls).toEqual(["back", "forward"])
+  })
+
   test("rejects unregistered browser sessions before launching Chrome", async () => {
     const broker = new BrowserBroker({ log: () => {} })
     broker.bind(() => undefined)
@@ -661,6 +920,7 @@ describe("BrowserBroker", () => {
       url: () => target,
       title: async () => (status === 404 ? "Missing page" : "Local app"),
       screenshot: async () => Buffer.from("jpeg"),
+      off: () => undefined,
       on: (_type: string, _listener: (...args: never[]) => void) => undefined,
       mainFrame: () => undefined,
       goto: async (url: string) => {
@@ -717,6 +977,7 @@ describe("BrowserBroker", () => {
       url: () => target,
       title: async () => "Local app",
       screenshot: async () => Buffer.from("jpeg"),
+      off: () => undefined,
       on: (_type: string, _listener: (...args: never[]) => void) => undefined,
       mainFrame: () => undefined,
       goto: async (url: string) => {
@@ -751,6 +1012,7 @@ describe("BrowserBroker", () => {
       url: () => target,
       title: async () => "Local app",
       screenshot: async () => Buffer.from("jpeg"),
+      off: () => undefined,
       on: (_type: string, _listener: (...args: never[]) => void) => undefined,
       mainFrame: () => undefined,
       goto: async (url: string) => {
@@ -813,6 +1075,7 @@ describe("BrowserBroker", () => {
                 url: () => target,
                 title: async () => "Application",
                 screenshot: async () => Buffer.from("jpeg"),
+                off: () => undefined,
                 on: () => undefined,
                 mainFrame: () => undefined,
                 goto: async (url: string) => void (target = url),
@@ -879,6 +1142,7 @@ describe("BrowserBroker", () => {
               url: () => target,
               title: async () => "Application",
               screenshot: async () => Buffer.from("jpeg"),
+              off: () => undefined,
               on: () => undefined,
               mainFrame: () => undefined,
               goto: async (url: string) => void (target = url),
@@ -948,6 +1212,7 @@ describe("BrowserBroker", () => {
       url: () => "http://localhost:3000/",
       title: async () => "Feedback demo",
       screenshot: async () => Buffer.from("jpeg"),
+      off: () => undefined,
       on: (type: string, listener: (value: unknown) => void) => {
         listeners.set(type, listener)
       },
@@ -1019,6 +1284,7 @@ describe("BrowserBroker", () => {
       url: () => "http://localhost:3000/",
       title: async () => "Local app",
       screenshot: async () => Buffer.from("jpeg"),
+      off: () => undefined,
       on: (type: string, listener: (...args: never[]) => void) => {
         listeners.set(type, listener)
       },
@@ -1236,6 +1502,7 @@ describe("BrowserBroker", () => {
               url: () => target,
               title: async () => "Application",
               screenshot: async () => Buffer.from("jpeg"),
+              off: () => undefined,
               on: () => undefined,
               mainFrame: () => undefined,
               goto: async (url: string) => void (target = url),
@@ -1271,6 +1538,7 @@ describe("BrowserBroker", () => {
       url: () => target,
       title: async () => "Application",
       screenshot: async () => Buffer.from("jpeg"),
+      off: () => undefined,
       on: () => undefined,
       mainFrame: () => undefined,
       goto: async (url: string) => void (target = url),

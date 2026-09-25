@@ -1606,6 +1606,8 @@ export interface AgentManagerBrowserStateMessage {
   error?: string
   missing?: "chrome" | "chromium"
   frameError?: string
+  back?: boolean
+  forward?: boolean
 }
 
 export interface AgentManagerBrowserInspectionMessage {

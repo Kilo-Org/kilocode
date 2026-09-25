@@ -452,6 +452,8 @@ export const dict = {
   "agentManager.browser.inspect": "Odaberite element",
   "agentManager.browser.devtoolsTitle": "Razvojni alati",
   "agentManager.browser.refresh": "Osvježi preglednik",
+  "agentManager.browser.back": "Nazad",
+  "agentManager.browser.forward": "Naprijed",
   "agentManager.browser.close": "Zatvori preglednik",
   "agentManager.browser.empty": "Otvorite lokalnu aplikaciju ili javnu HTTPS stranicu da biste je ovdje pregledali.",
   "agentManager.browser.requirement":
