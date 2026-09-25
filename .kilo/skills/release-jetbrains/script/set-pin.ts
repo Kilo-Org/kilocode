@@ -16,22 +16,25 @@ const { values } = parseArgs({
     version: { type: "string" },
     latest: { type: "boolean", default: false },
     pr: { type: "boolean", default: false },
+    "pre-release": { type: "boolean", default: false },
     help: { type: "boolean", short: "h", default: false },
   },
 })
 
 if (values.help) {
   console.log(`
-Usage: bun .kilo/skills/release-jetbrains/script/set-pin.ts (--latest | --version <semver>) [--pr]
+Usage: bun .kilo/skills/release-jetbrains/script/set-pin.ts (--latest | --version <semver>) [--pr] [--pre-release]
 
 Without --pr, rewrites ${file} in the local worktree so you can test a CLI pin.
 With --pr, opens or updates a PR against main using the GitHub API; prepare tags
 origin/main, so the pin bump must merge there before a JetBrains release starts.
+With --pre-release, adds the pre-release label even when the published version is plain semver.
 
 Examples:
   bun .kilo/skills/release-jetbrains/script/set-pin.ts --latest
   bun .kilo/skills/release-jetbrains/script/set-pin.ts --version 7.4.1
   bun .kilo/skills/release-jetbrains/script/set-pin.ts --version 7.4.2-rc.1 --pr
+  bun .kilo/skills/release-jetbrains/script/set-pin.ts --version 7.4.2 --pr --pre-release
   bun .kilo/skills/release-jetbrains/script/set-pin.ts --latest --pr
 `)
   process.exit(0)
@@ -49,7 +52,7 @@ if (miss.length > 0) {
 }
 
 if (values.pr) {
-  await pr(version)
+  await pr(version, values["pre-release"])
   process.exit(0)
 }
 
@@ -65,7 +68,7 @@ if (previous === version) {
 console.log("Test locally with: cd packages/kilo-jetbrains && ./gradlew typecheck && ./gradlew test")
 console.log("When satisfied, run this script again with --pr so the bump lands on main before prepare tags it.")
 
-async function pr(version: string) {
+async function pr(version: string, pre: boolean) {
   await $`git fetch origin main`.quiet()
   const branch = `chore/jetbrains-cli-pin-v${version}`
   const main = (await $`git rev-parse origin/main`.text()).trim()
@@ -97,12 +100,12 @@ async function pr(version: string) {
   const view = await $`gh pr view ${branch} --repo ${repo} --json url --jq .url`.quiet().nothrow()
   if (view.exitCode === 0 && view.stdout.toString().trim()) {
     await $`gh pr edit ${branch} --repo ${repo} --title ${title} --body ${desc}`
-    await tag(branch, version)
+    await tag(branch, version, pre)
     console.log(view.stdout.toString().trim())
     return
   }
   const url = await $`gh pr create --repo ${repo} --base main --head ${branch} --title ${title} --body ${desc}`.text()
-  await tag(branch, version)
+  await tag(branch, version, pre)
   console.log(url.trim())
 }
 
@@ -116,12 +119,12 @@ async function ensure(branch: string, sha: string) {
   await $`gh api --method POST ${`repos/${repo}/git/refs`} -f ref=${`refs/heads/${branch}`} -f sha=${sha}`.quiet()
 }
 
-async function tag(branch: string, version: string) {
+async function tag(branch: string, version: string, pre: boolean) {
   const labels = [label]
   await $`gh label create ${label} --repo ${repo} --color 1D76DB --description ${"JetBrains pinned CLI version bump"}`
     .quiet()
     .nothrow()
-  if (semver.prerelease(version)) {
+  if (pre || semver.prerelease(version)) {
     labels.push(preview)
     await $`gh label create ${preview} --repo ${repo} --color FBCA04 --description ${"Pre-release version"}`
       .quiet()

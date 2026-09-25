@@ -129,8 +129,9 @@ async function createJetbrainsPinPr() {
     console.log("Skipping JetBrains CLI pin bump PR: not a release build")
     return
   }
-  const result =
-    await $`bun .kilo/skills/release-jetbrains/script/set-pin.ts --version ${Script.version} --pr`.nothrow()
+  const args = ["--version", Script.version, "--pr"]
+  if (Script.preview) args.push("--pre-release")
+  const result = await $`bun .kilo/skills/release-jetbrains/script/set-pin.ts ${args}`.nothrow()
   const out = result.stdout.toString().trim()
   const err = result.stderr.toString().trim()
   if (result.exitCode === 0) {

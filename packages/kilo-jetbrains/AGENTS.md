@@ -211,7 +211,7 @@ For a one-shot pin/unpin/regen that also cleans every leftover CLI binary and bu
 
 `set-pin.ts` accepts stable and pre-release CLI versions, but refuses versions whose CLI release or runtime assets do not exist, so it cannot create a pin that would 404 during runtime download.
 
-CLI releases also attempt this PR automatically after publishing and label it `jetbrains-cli-pin-bump`. Pre-release CLI bump PRs also receive the `pre-release` label. The CLI release workflow logs the PR URL when creation succeeds and logs a warning without failing the release if PR creation fails.
+CLI releases also attempt this PR automatically after publishing and label it `jetbrains-cli-pin-bump`. Pre-release CLI bump PRs also receive the `pre-release` label, including preview-channel releases with a plain semver version. The CLI release workflow logs the PR URL when creation succeeds and logs a warning without failing the release if PR creation fails.
 
 For the full release process (resolve version, pin verification, prepare, changelog, publish), load the `release-jetbrains` skill: `.kilo/skills/release-jetbrains/SKILL.md`.
 
