@@ -20,8 +20,14 @@ export class CorrectedError extends Schema.TaggedErrorClass<CorrectedError>()("P
 
 export class DeniedError extends Schema.TaggedErrorClass<DeniedError>()("PermissionDeniedError", {
   ruleset: Schema.Any,
+  // kilocode_change start: set when the denial did not come from a rule the user wrote
+  // — a plugin's `permission.ask` hook, for instance. Without it the model is told the
+  // user authored a rule that does not exist.
+  reason: Schema.optional(Schema.String),
+  // kilocode_change end
 }) {
   override get message() {
+    if (this.reason) return this.reason // kilocode_change
     return `The user has specified a rule which prevents you from using this specific tool call. Here are some of the relevant rules ${JSON.stringify(this.ruleset)}`
   }
 }
