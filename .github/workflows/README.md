@@ -4,7 +4,7 @@ Workflows that automate dependency remediation and give the team Slack visibilit
 
 | File | Trigger | Manual run |
 |---|---|---|
-| `dependabot-auto-merge.yml` | `schedule`: every 30 minutes, plus `workflow_dispatch` | Actions tab → "Dependabot auto-merge" → Run workflow, or `gh workflow run dependabot-auto-merge.yml` |
+| `dependabot-auto-merge.yml` | `schedule`: hourly, plus `workflow_dispatch` | Actions tab → "Dependabot auto-merge" → Run workflow, or `gh workflow run dependabot-auto-merge.yml` |
 | `security-findings-notify.yml` | `schedule`: every 6 hours, plus `workflow_dispatch` | Actions tab → "Security findings notify" → Run workflow, or `gh workflow run security-findings-notify.yml` |
 | `stale-bot-pr-notify.yml` | `schedule`: daily at 13:00 UTC, plus `workflow_dispatch` | Actions tab → "Stale bot PR notify" → Run workflow, or `gh workflow run stale-bot-pr-notify.yml` |
 | `../dependabot.yml` | Not a workflow — read directly by GitHub's Dependabot service | No manual run; check **Insights → Dependency graph → Dependabot** |
@@ -28,7 +28,7 @@ They don't call each other or trigger off PR creation. Each one wakes up on its 
 
 | Workflow | Wakes up | Reads | Does |
 |---|---|---|---|
-| `dependabot-auto-merge.yml` | Every 30 min | Open `app/dependabot` PRs with a grouped `*-minor-patch` title | Enables GitHub's native auto-merge flag if every changed file besides shared `bun.lock` is under a `kilo`-named path; otherwise leaves it and logs a warning. |
+| `dependabot-auto-merge.yml` | Hourly | Open `app/dependabot` PRs with a grouped `*-minor-patch` title | Enables GitHub's native auto-merge flag if every changed file besides shared `bun.lock` is under a `kilo`-named path; otherwise leaves it and logs a warning. |
 | `security-findings-notify.yml` | Every 6h | GitHub's Dependabot **Alerts** (the vulnerability list, separate from the PR list above) | Posts new/at-risk/breached critical & high alerts to Slack, independent of whether a fix PR exists. |
 | `stale-bot-pr-notify.yml` | Daily, 13:00 UTC | All open bot-authored PRs (not limited to Dependabot) | Flags any that are conflicting or long-unreviewed to Slack. |
 

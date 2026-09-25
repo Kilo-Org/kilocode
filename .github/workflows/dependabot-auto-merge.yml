@@ -13,7 +13,7 @@ name: Dependabot auto-merge
 
 on:
   schedule:
-    - cron: "*/30 * * * *"
+    - cron: "9 * * * *" # hourly, offset to avoid the top of the hour
   workflow_dispatch:
 
 concurrency:
