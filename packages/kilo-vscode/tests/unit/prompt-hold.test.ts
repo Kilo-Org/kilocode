@@ -49,20 +49,23 @@ describe("createHold", () => {
     expect(focused).toEqual([])
   })
 
-  it("keeps the hold when the prompt blurs to idle while the webview stays focused", () => {
+  it("drops the hold when the prompt blurs to idle while the webview stays focused", () => {
     const focused: string[] = []
+    const dropped: boolean[] = []
     const node = { focus: () => focused.push("prompt") } as unknown as HTMLElement
     const hold = createHold({
       target: () => node,
       focused: () => true,
       active: () => null,
-      idle: (el) => !el,
       defer: (fn) => fn(),
+      drop: () => dropped.push(true),
     })
     hold.claim()
     hold.release()
     hold.reclaim()
-    expect(focused).toEqual(["prompt"])
+    expect(hold.held()).toBe(false)
+    expect(dropped).toEqual([true])
+    expect(focused).toEqual([])
   })
 
   it("keeps the hold when the prompt blurs because the window deactivated", () => {

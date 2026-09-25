@@ -70,6 +70,7 @@ export function createHold(opts: {
   active?: () => Element | null
   idle?: (el: Element | null) => boolean
   defer?: (fn: () => void) => void
+  drop?: () => void
 }) {
   let held = false
   const focused = opts.focused ?? (() => document.hasFocus())
@@ -80,12 +81,16 @@ export function createHold(opts: {
     claim() {
       held = true
     },
+    held() {
+      return held
+    },
     release() {
       defer(() => {
         if (!focused()) return
         if (active() === opts.target()) return
-        if (idle(active())) return
+        if (!held) return
         held = false
+        opts.drop?.()
       })
     },
     reclaim() {

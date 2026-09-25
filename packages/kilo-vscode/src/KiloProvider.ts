@@ -580,9 +580,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       focused: () => vscode.window.state.focused,
       onChange: (listener) => vscode.window.onDidChangeWindowState(listener),
       enabled: () => !this.opts.hideTopBar,
-      restore: (live) => {
+      restore: ({ live, prompt }) => {
         if (!live) this.revealHost()
-        this.postMessage({ type: "action", action: "restoreInput" })
+        if (prompt) this.postMessage({ type: "action", action: "restoreInput" })
       },
     })
   }
@@ -1722,6 +1722,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
   private handleWebviewFocusMessage(message: TypedWebviewMessage & { focused?: unknown; target?: unknown }): void {
     if (message.type === "webviewFocusChanged") this.latch?.note(message.focused === true)
+    if (message.type === "promptFocusChanged") this.latch?.input(message.focused === true)
     if (message.type === "webviewFocusChanged" && this.opts.focusContext) {
       void vscode.commands.executeCommand("setContext", this.opts.focusContext, message.focused === true)
     }
