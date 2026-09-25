@@ -133,7 +133,7 @@
     "lucide-solid": "0.576.0",
     "motion": "12.34.5",
     "motion-dom": "12.34.3",
-    "motion-utils": "12.29.2",
+    "motion-utils": "13.3.0",
     "strip-ansi": "7.1.2",
     "chart.js": "4.5.1"
   }
