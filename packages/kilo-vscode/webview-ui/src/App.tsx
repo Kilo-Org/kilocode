@@ -32,6 +32,7 @@ import HistoryView from "./components/history/HistoryView"
 import { MigrationWizard } from "./components/migration"
 import type { Message as SDKMessage, Part as SDKPart } from "@kilocode/sdk/v2"
 import { cycleAgent as cycle } from "./context/session-agent"
+import { routeChatInput } from "./utils/chat-input-route"
 import "./styles/chat.css"
 
 type ViewType = "newTask" | "history" | "profile" | "settings" | "subAgentViewer"
@@ -343,6 +344,12 @@ const AppContent: Component = () => {
       open(message)
       handleKiloModel(message)
       handleForked(message)
+      routeChatInput(
+        message,
+        currentView(),
+        () => setCurrentView("newTask"),
+        (msg) => window.postMessage(msg, window.origin),
+      )
       if (message?.type === "viewSubAgentSession" && message.sessionID) {
         console.log("[Kilo New] App: 🔍 viewSubAgentSession:", message.sessionID)
         session.setCurrentSessionID(message.sessionID)
