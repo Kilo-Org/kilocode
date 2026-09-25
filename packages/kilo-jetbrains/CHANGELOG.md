@@ -536,6 +536,33 @@
 
 ## [Unreleased]
 
+## [7.1.8-rc.2] - 2026-09-25
+
+### Added
+- feat: reclaim database space after session cleanup and add a stop button by @vkeerthivikram in https://github.com/Kilo-Org/kilocode/pull/14540
+- feat(vscode): add Close Task and Close All Tasks commands by @sylwester-liljegren in https://github.com/Kilo-Org/kilocode/pull/13808
+- feat: stream Agent Manager browser previews with public HTTPS by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13804
+- feat(security): automate dependency remediation by @brunoagatao in https://github.com/Kilo-Org/kilocode/pull/14506
+- feat(cli,vscode,jetbrains): generate CycloneDX SBOMs for release artifacts by @kirillk in https://github.com/Kilo-Org/kilocode/pull/14513
+- feat(jetbrains): support marketplace MCP companion skills by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14525
+- feat(jetbrains): add checkpoint settings and revert guidance by @kirillk in https://github.com/Kilo-Org/kilocode/pull/14512
+
+### Fixed
+- fix(cli): keep sub-agents of a chat in use during session cleanup by @hdcodedev in https://github.com/Kilo-Org/kilocode/pull/14502
+- fix(vscode): run editor actions when the sidebar shows History by @hdcodedev in https://github.com/Kilo-Org/kilocode/pull/14491
+- fix(cli): surface network disconnects in the TUI instead of hanging silently by @rakshith1928 in https://github.com/Kilo-Org/kilocode/pull/13523
+- fix(vscode): keep chat tabs for older History sessions open by @hdcodedev in https://github.com/Kilo-Org/kilocode/pull/14536
+- fix(agent-manager): evict stale worktree pool slots and cold-create by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14556
+- fix(agent-manager): survive inaccessible historical project paths by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14557
+- fix(jetbrains): generate CLI pin bumps for pre-releases by @kirillk in https://github.com/Kilo-Org/kilocode/pull/14577
+- fix(jetbrains): unify session strip interactions by @kirillk in https://github.com/Kilo-Org/kilocode/pull/14548
+
+### Changed
+- release(jetbrains): v7.1.8-rc.1 by @kilo-maintainer[bot] in https://github.com/Kilo-Org/kilocode/pull/14545
+- docs: auto-sync cloud-web with merged PRs (through 2026-09-24) by @github-actions[bot] in https://github.com/Kilo-Org/kilocode/pull/14527
+- OpenCode Merge v1.18.21…v1.18.26 by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14449
+
+
 ## [7.1.8-rc.1] - 2026-09-24
 
 ### Added
