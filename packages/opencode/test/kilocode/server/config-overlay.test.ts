@@ -197,6 +197,57 @@ describe("config overlay routes", () => {
     expect(await Bun.file(file).json()).toEqual({ future: { enabled: true }, model: "test/model" })
   })
 
+  test.each([
+    ["V1", '"anthropic/claude-sonnet"'],
+    ["V2", '{ "providerID": "anthropic", "model": "claude-sonnet" }'],
+  ])("preserves %s JSONC and Kilo settings when saving an unrelated setting", async (_version, model) => {
+    await using project = await tmpdir()
+    const file = path.join(project.path, "kilo.jsonc")
+    const before = `{
+  // Keep the user's model format and Kilo settings.
+  "model": ${model},
+  "privacy_mode": true,
+  "indexing": { "enabled": false, "provider": "ollama" },
+  "autoupdate": true,
+}
+`
+    await Bun.write(file, before)
+    const input = { directory: project.path, worktree: project.path, scope: "project" as const }
+    const target = await KilocodeConfigOverlay.target(input)
+    const result = await KilocodeConfigWriter.write({ ...input, expected: target, set: { autoupdate: false } })
+
+    expect(result).toMatchObject({ ok: true, changed: true })
+    expect(await Bun.file(file).text()).toBe(before.replace('"autoupdate": true', '"autoupdate": false'))
+    expect(await KilocodeConfigOverlay.project(input)).toMatchObject({
+      model: "anthropic/claude-sonnet",
+      privacy_mode: true,
+      indexing: { enabled: false, provider: "ollama" },
+      autoupdate: false,
+    })
+  })
+
+  test.each([{ model: { providerID: "anthropic", model: 42 } }, { permissions: {} }])(
+    "rejects invalid or unsupported config without changing the file: %j",
+    async (value) => {
+      await using project = await tmpdir()
+      const file = path.join(project.path, "kilo.jsonc")
+      const before = JSON.stringify(value)
+      await Bun.write(file, before)
+
+      const error = await KilocodeConfigWriter.write({
+        directory: project.path,
+        worktree: project.path,
+        scope: "project",
+        set: { autoupdate: false },
+      }).then(
+        () => undefined,
+        (err: unknown) => err,
+      )
+      expect(error).toMatchObject({ name: "ConfigInvalidError" })
+      expect(await Bun.file(file).text()).toBe(before)
+    },
+  )
+
   test("ignores a nested unset path when the project target is missing", async () => {
     await using project = await tmpdir()
     const response = await req(project.path, "/config/overlay", {
