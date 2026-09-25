@@ -70,7 +70,8 @@ describe("buildTelemetryPayload", () => {
 
 describe("TelemetryProxy sampling", () => {
   it("does not forward dropped failures, but forwards successes and weighted retained failures", () => {
-    const proxy = TelemetryProxy.getInstance()
+    // Isolate provider state from other suites that use the singleton.
+    const proxy: TelemetryProxy = Reflect.construct(TelemetryProxy, [])
     proxy.configure("http://localhost:12345", "test-only")
     const consent = spyOn(proxy, "isVSCodeTelemetryEnabled").mockReturnValue(true)
     const random = spyOn(Math, "random").mockReturnValue(0.99)
