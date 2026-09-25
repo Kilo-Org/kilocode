@@ -231,6 +231,26 @@ describe("WorktreeManager pool disabled", () => {
     expect(result.path).toBe(path.join(root, ".kilo", "worktrees", "plain"))
     expect((await simpleGit(result.path).raw(["symbolic-ref", "--short", "HEAD"])).trim()).toBe("plain")
   })
+
+  it("does not create the worktrees directory when reconciling with poolSize 0", async () => {
+    const root = await createTempRepo()
+    const manager = createManager(root, 0)
+
+    await manager.reconcilePool()
+
+    expect(existsSync(path.join(root, ".kilo", "worktrees"))).toBe(false)
+  })
+
+  it("still removes leftover pooled slots when reconciling with poolSize 0", async () => {
+    const root = await createTempRepo()
+    createManager(root).warmPool()
+    const slot = await waitForPooledSlot(root)
+
+    await createManager(root, 0).reconcilePool()
+
+    expect(existsSync(slot)).toBe(false)
+    expect(await pooledSlots(root)).toEqual([])
+  })
 })
 
 describe("WorktreeManager commit detection", () => {

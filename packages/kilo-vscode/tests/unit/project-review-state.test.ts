@@ -1,4 +1,5 @@
 import { describe, expect, it } from "bun:test"
+import { createReviewComposers } from "../../webview-ui/agent-manager/review-composers"
 import {
   reviewComments,
   reviewKey,
@@ -9,6 +10,25 @@ import {
 } from "../../webview-ui/agent-manager/project/review-state"
 
 describe("project review state", () => {
+  it("retains unsent composers across project switches and clears only explicit targets", () => {
+    let project = "a"
+    const composers = createReviewComposers(() => project)
+    const draft = composers.get("a\0local#unstaged")
+    draft.draft = { type: "draft", comment: null, file: "a.ts", side: "additions", line: 1, text: "unsent" }
+    project = "b"
+    const other = composers.get("b\0local#unstaged")
+    expect(other.draft).toBeNull()
+    composers.prune(new Set())
+    project = "a"
+    expect(composers.get("a\0local#unstaged")).toBe(draft)
+    expect(draft.draft?.text).toBe("unsent")
+    composers.clear("local")
+    expect(composers.get("a\0local#unstaged").draft).toBeNull()
+    expect(composers.get("b\0local#unstaged")).toBe(other)
+    composers.clearProject("b")
+    expect(composers.get("b\0local#unstaged")).not.toBe(other)
+  })
+
   it("keeps identical contexts separate by project", () => {
     let open = setReviewOpen({}, "a", "local", true)
     open = setReviewOpen(open, "b", "local", false)

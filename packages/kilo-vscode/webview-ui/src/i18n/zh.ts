@@ -899,8 +899,6 @@ export const dict = {
     "一次性导入受支持的全局 CLAUDE.md 指令、简单技能和已禁用的 MCP 定义。不会修改原始 Claude 文件；启用后请重启后端。",
   "settings.experimental.multiProject.description":
     "在 Agent Manager 中启用跨多个仓库的会话和工作树管理。当前工作区仓库始终是默认项目。",
-  "settings.experimental.taskModelSelection.title": "Task 子代理模型选择",
-  "settings.experimental.taskModelSelection.description": "允许为 Task 子代理选择指定的模型、提供商和推理工作量。",
   "settings.experimental.mcpTimeout.title": "MCP 超时（毫秒）",
   "settings.experimental.mcpTimeout.description": "MCP 服务器请求的超时时间（毫秒）",
   "settings.experimental.remote.title": "Remote 控制",

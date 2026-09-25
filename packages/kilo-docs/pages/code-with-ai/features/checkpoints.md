@@ -75,6 +75,7 @@ Once enabled, the VS Code extension triggers cleanup about once a day while it i
 
 - **Active sessions**: Cleanup skips sessions reported as busy by the current backend and sessions with message or part writes in the last hour, including writes from another window or terminal. Merely keeping an idle session open does not protect it.
 - **Sessions with a recent fork**: Deleting a session also deletes sessions forked from it, so an old session with a recent fork stays until the fork ages out too.
+- **Sub-agents of a chat in use**: A chat and its sub-agents are kept or deleted together, so returning to an older chat keeps its earlier sub-agents.
 
 {% callout type="warning" %}
 Deleted sessions are gone permanently, including their conversation history, across every project on this machine. Make sure the retention window fits how you work before enabling it.

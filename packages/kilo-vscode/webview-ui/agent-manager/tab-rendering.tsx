@@ -192,7 +192,7 @@ function renderSessionTab(s: SessionInfo, deps: TabRenderDeps): JSX.Element {
   }
   return (
     <SortableTab
-      tab={s}
+      tab={() => deps.tabLookup().get(s.id) ?? s}
       active={active() && !deps.reviewActive()}
       state={state()}
       stateLabel={deps.stateLabel(state())}

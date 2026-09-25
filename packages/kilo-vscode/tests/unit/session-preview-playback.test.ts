@@ -83,23 +83,28 @@ describe("session preview playback", () => {
     expect(reasoning.split(/\s+/).length).toBeLessThanOrEqual(300)
   })
 
-  it("shows whole tool output immediately and completes each tool at its exact boundary", () => {
-    for (const [name, start, end] of [
-      ["sample_docs_lookup", 1200, 1400],
-      ["edit", 1400, 1600],
-      ["bash", 1600, 2000],
+  it("streams tool input while pending, then shows whole output and completes at the exact boundary", () => {
+    for (const [name, start, run, end] of [
+      ["sample_docs_lookup", 1200, 1260, 1400],
+      ["edit", 1400, 1480, 1600],
+      ["bash", 1600, 1760, 2000],
     ] as const) {
-      expect(previewFrame(sample, start - 1).parts.find((part) => part.id === name)).toBeUndefined()
+      expect(previewFrame(sample, start - 1).parts.find((part) => part.id === `${name}-0`)).toBeUndefined()
+      const pending = previewFrame(sample, start).parts.find((part) => part.id === `${name}-0`)
+      expect(pending?.type === "tool" && pending.state.status).toBe("pending")
+      // The command types in while pending, like streamed tool input.
+      const typed = previewFrame(sample, start + 1).parts.find((part) => part.id === `${name}-0`)
+      expect(typed?.type === "tool" && (typed.state.input.command as string).length).toBeLessThan("sample".length)
       for (const reduced of [false, true]) {
-        for (const elapsed of [start, start + 1, (start + end) / 2, end - 1]) {
-          const running = previewFrame(sample, elapsed, reduced).parts.find((part) => part.id === name)
+        for (const elapsed of [run, run + 1, (run + end) / 2, end - 1]) {
+          const running = previewFrame(sample, elapsed, reduced).parts.find((part) => part.id === `${name}-0`)
           expect(running?.type === "tool" && running.state.status).toBe("running")
           expect(running?.type === "tool" && running.state.metadata?.output).toBe(
             "first test passed\nsecond test passed\n2 tests passed",
           )
         }
       }
-      const complete = previewFrame(sample, end).parts.find((part) => part.id === name)
+      const complete = previewFrame(sample, end).parts.find((part) => part.id === `${name}-0`)
       expect(complete?.type === "tool" && complete.state.status).toBe("completed")
       expect(complete?.type === "tool" && complete.state.status === "completed" && complete.state.output).toContain(
         "2 tests passed",
@@ -109,7 +114,7 @@ describe("session preview playback", () => {
         filediff: { file: "/preview/greeting.ts" },
       })
       expect(complete?.type === "tool" && complete.state.status === "completed" && complete.state.time).toEqual({
-        start: 1000 + start,
+        start: 1000 + run,
         end: 1000 + end,
       })
     }
@@ -172,5 +177,15 @@ describe("session preview playback", () => {
     expect(previewFrame(sample, 2000, true).parts.find((part) => part.type === "text")?.text).toBe(
       "Updated the greeting. Both tests pass.",
     )
+  })
+
+  it("refreshes part identities each replay cycle and keeps them stable within a cycle", () => {
+    const first = previewFrame(sample, 2000, false, 0).parts.map((part) => part.id)
+    const second = previewFrame(sample, 2000, false, 1).parts.map((part) => part.id)
+    expect(first).not.toEqual(second)
+    expect(previewFrame(sample, 2100, false, 1).parts.map((part) => part.id)).toEqual(second)
+    const tool = previewFrame(sample, 2000, false, 1).parts.find((part) => part.type === "tool")
+    expect(tool?.id).toBe("sample_docs_lookup-1")
+    expect(tool?.type === "tool" && tool.callID).toBe("sample_docs_lookup-1")
   })
 })
