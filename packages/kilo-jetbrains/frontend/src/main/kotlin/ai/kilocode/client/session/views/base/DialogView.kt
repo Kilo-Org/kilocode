@@ -289,10 +289,12 @@ open class DialogView(
     /** Render a standard retained dialog action on the left side of the footer. */
     @RequiresEdt
     fun setLeftAction(action: Action?) {
+        val previous = leftActionButton
+        val showingRetained = actionLeft == null || actionLeft === previous
         if (action == null) {
             leftActionId?.let(actionHandlers::remove)
             leftActionId = null
-            setActionLeft(null)
+            if (showingRetained) setActionLeft(null)
             return
         }
         val btn = if (leftActionId == action.id) {
@@ -307,7 +309,7 @@ open class DialogView(
         btn.text = action.text
         btn.isEnabled = action.enabled
         btn.putClientProperty(DarculaButtonUI.DEFAULT_STYLE_KEY, if (action.primary) true else null)
-        setActionLeft(btn)
+        if (showingRetained) setActionLeft(btn)
     }
 
     /** Reattach the retained left action after a temporary [setActionLeft] component. */

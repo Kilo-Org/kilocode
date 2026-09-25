@@ -487,9 +487,29 @@ class DialogViewTest : BasePlatformTestCase() {
             button.doClick(0)
             assertTrue(clicked)
 
-            panel.setActionLeft(JLabel("progress"))
+            val progress = JLabel("progress")
+            panel.setActionLeft(progress)
+            panel.setLeftAction(DialogView.Action("left", "Updated", primary = false) { clicked = true })
+            assertNotNull(find(west, progress))
             panel.restoreLeftAction()
-            assertNotNull(find(west, button))
+            assertEquals("Updated", actionButton(panel, "Updated").text)
+        }
+    }
+
+    fun `test clearing retained left action does not replace temporary content`() {
+        edt {
+            val panel = DialogView()
+            panel.setLeftAction(DialogView.Action("left", "Left", primary = false) {})
+            val progress = JLabel("progress")
+            panel.setActionLeft(progress)
+
+            panel.setLeftAction(null)
+
+            val footer = region(panel, BorderLayout.SOUTH) as JPanel
+            val west = (footer.layout as BorderLayout).getLayoutComponent(BorderLayout.WEST) as Container
+            assertNotNull(find(west, progress))
+            panel.restoreLeftAction()
+            assertNull(region(panel, BorderLayout.SOUTH))
         }
     }
 

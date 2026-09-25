@@ -1697,6 +1697,32 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
         assertNull(button.parent)
     }
 
+    fun `test rollback banner retains latest snapshot action state while reverting`() {
+        val banner = RevertBanner(model, {}, {}, {})
+        model.upsertMessage(msg("u1", "user"))
+        model.setRevert(SessionRevertDto("u1", workspace = "unavailable"))
+        banner.update()
+        banner.setReverting(SessionState.Reverting("Rolling back...", SessionState.Reverting.Kind.ROLLBACK, "u1"))
+
+        model.setRevert(SessionRevertDto("u1", workspace = "snapshots-disabled"))
+        banner.update()
+        assertTrue(components(banner).filterIsInstance<RevertProgress>().isNotEmpty())
+        assertTrue(components(banner).filterIsInstance<JButton>()
+            .none { it.text == KiloBundle.message("revert.banner.workspace.enableSnapshots") })
+
+        banner.setReverting(SessionState.Idle)
+        assertTrue(components(banner).filterIsInstance<JButton>()
+            .any { it.text == KiloBundle.message("revert.banner.workspace.enableSnapshots") })
+
+        banner.setReverting(SessionState.Reverting("Rolling back...", SessionState.Reverting.Kind.ROLLBACK, "u1"))
+        model.setRevert(SessionRevertDto("u1", workspace = "unavailable"))
+        banner.update()
+        banner.setReverting(SessionState.Idle)
+
+        assertTrue(components(banner).filterIsInstance<JButton>()
+            .none { it.text == KiloBundle.message("revert.banner.workspace.enableSnapshots") })
+    }
+
     fun `test rollback banner explains missing checkpoint`() {
         val banner = RevertBanner(model, {}, {}, {})
         model.upsertMessage(msg("u1", "user"))

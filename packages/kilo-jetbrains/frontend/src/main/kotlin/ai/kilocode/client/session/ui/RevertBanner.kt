@@ -133,9 +133,7 @@ class RevertBanner(
         val message = workspaceNotice(revert)
         notice.isVisible = message != null
         notice.text = message?.let { UiStyle.Text.wrapLines(listOf(it)) } ?: ""
-        if (progress?.parent == null) {
-            setLeftAction(snapshotAction.takeIf { revert.workspace == "snapshots-disabled" })
-        }
+        setLeftAction(snapshotAction.takeIf { revert.workspace == "snapshots-disabled" })
         val diffs = resolveDiffs(revert)
         val names = disambiguate(diffs.map { it.file })
         val showDiff = diffs.isNotEmpty()
