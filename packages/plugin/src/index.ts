@@ -275,11 +275,10 @@ export interface Hooks {
       sessionID?: string
       agent?: string
       source?: "ask" | "assert" | string
-      tool: string
+      id?: string
       action: string
-      resource: string
       resources?: readonly string[]
-      args?: unknown
+      save?: readonly string[]
       metadata: Record<string, unknown>
       rules?: ReadonlyArray<{ action: string; resource: string; effect: "allow" | "deny" | "ask" }>
     },
@@ -301,10 +300,10 @@ export interface Hooks {
       sessionID?: string
       agent?: string
       source?: "ask" | "assert" | string
-      tool: string
+      id?: string
       action: string
-      resource: string
       resources?: readonly string[]
+      save?: readonly string[]
       decision: "allow" | "deny" | "ask"
       metadata: Record<string, unknown>
       rules?: ReadonlyArray<{ action: string; resource: string; effect: "allow" | "deny" | "ask" }>

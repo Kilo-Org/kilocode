@@ -117,9 +117,7 @@ const registryLayer = Layer.effect(
           const metadata: Record<string, unknown> = {}
           const beforeInput = {
             phase: "materialize" as const,
-            tool: name,
             action,
-            resource: "*",
             resources: ["*"],
             metadata,
             rules: permissions,
@@ -136,9 +134,7 @@ const registryLayer = Layer.effect(
                 "permission.evaluate.after",
                 {
                   phase: "materialize",
-                  tool: name,
                   action,
-                  resource: "*",
                   resources: ["*"],
                   decision: beforeOutput.effect,
                   metadata: beforeOutput.metadata,
@@ -153,9 +149,7 @@ const registryLayer = Layer.effect(
               "permission.evaluate.after",
               {
                 phase: "materialize",
-                tool: name,
                 action,
-                resource: "*",
                 resources: ["*"],
                 decision: computedEffect,
                 metadata,

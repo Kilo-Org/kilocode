@@ -138,7 +138,7 @@ describe("ToolRegistry", () => {
       expect(names).toEqual([])
       expect(calls[0]).toMatchObject({
         name: "permission.evaluate.before",
-        input: { phase: "materialize", action: "question", tool: "echo" },
+        input: { phase: "materialize", action: "question" },
       })
       const before = calls[0] as Extract<PermissionHookCall, { name: "permission.evaluate.before" }>
       const after = calls[1] as Extract<PermissionHookCall, { name: "permission.evaluate.after" }>

@@ -142,9 +142,8 @@ describe("PermissionV2", () => {
         name: "permission.evaluate.before",
         input: {
           phase: "execute",
-          action: "read",
-          tool: "read",
           sessionID: SessionV2.ID.make("ses_test"),
+          action: "read",
           resources: ["src/index.ts"],
         },
       })
@@ -154,9 +153,8 @@ describe("PermissionV2", () => {
         name: "permission.evaluate.after",
         input: {
           phase: "execute",
-          action: "read",
-          tool: "read",
           sessionID: SessionV2.ID.make("ses_test"),
+          action: "read",
           resources: ["src/index.ts"],
           decision: "allow",
         },
@@ -192,12 +190,12 @@ describe("PermissionV2", () => {
       expect(result).toEqual({ id: PermissionV2.ID.create("per_test"), effect: "allow" })
       expect(calls[0]).toMatchObject({
         name: "permission.evaluate.before",
-        input: { phase: "execute", action: "read", tool: "read" },
+        input: { phase: "execute", action: "read" },
       })
       expect(calls[0].output.effect).toBe("deny")
       expect(calls[1]).toMatchObject({
         name: "permission.evaluate.after",
-        input: { phase: "execute", action: "read", tool: "read", decision: "deny" },
+        input: { phase: "execute", action: "read", decision: "deny" },
       })
       expect(calls[1].output.effect).toBe("allow")
     }),
