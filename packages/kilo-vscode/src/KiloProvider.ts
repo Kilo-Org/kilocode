@@ -22,6 +22,7 @@ import { notebookUri } from "./services/autocomplete/continuedev/core/autocomple
 import { buildWebviewHtml, getWebviewFontSize, isCursorHost } from "./utils"
 import { saveImage } from "./kilo-provider/save-image"
 import { handleEditorAction } from "./kilo-provider/editor-actions"
+import { openApprovalDiff, closeApprovalDiff, type PermissionAsk } from "./kilo-provider/approval-diff"
 import { exportTranscript } from "./kilo-provider/export-transcript"
 import {
   TelemetryProxy,
@@ -5346,6 +5347,28 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       this.aborts.observe(sid, status.type, directory)
       this.publish(sid, status)
       return
+    }
+
+    // Auto-open the full diff for edit permission asks when the user enabled it.
+    // Runs before the trackedSessionIds guard so worktree sessions surfaced only
+    // through Agent Manager tabs still open their diff.
+    if (event.type === "permission.asked" && !isLegacySyncEvent(event)) {
+      const ask: PermissionAsk = {
+        id: event.properties.id,
+        sessionID: event.properties.sessionID,
+        toolName: event.properties.permission,
+        metadata: event.properties.metadata,
+      }
+      openApprovalDiff(ask, {
+        diff: this.diffVirtualProvider,
+        directory: directory ?? this.getWorkspaceDirectory(event.properties.sessionID),
+      })
+    }
+
+    // Close the auto-opened diff once the permission is answered (approve,
+    // reject, or resolved externally). Only viewers this ask opened close.
+    if (event.type === "permission.replied" && !isLegacySyncEvent(event)) {
+      closeApprovalDiff(event.properties.requestID)
     }
 
     // session.wakeup also passes the pre-filter for all providers. Forward it
