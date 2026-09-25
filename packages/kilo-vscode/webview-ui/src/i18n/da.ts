@@ -841,7 +841,8 @@ export const dict = {
   "settings.browser.description":
     "Konfigurér indbygget browserautomatisering drevet af Playwright. Kilo kan navigere, interagere med og tage skærmbilleder af websider i dine sessioner.",
   "settings.browser.enable.title": "Aktivér browserautomatisering",
-  "settings.browser.enable.description": "Registrér Playwright MCP-serveren hos CLI-backend'en.",
+  "settings.browser.enable.description":
+    "Aktivér den sessionsspecifikke browser i Agent Manager til lokale applikationer og offentlige HTTPS-sider.",
   "settings.browser.systemChrome.title": "Brug system-Chrome",
   "settings.browser.systemChrome.description":
     "Brug din installerede Chrome-browser i stedet for en separat Chromium-instans.",

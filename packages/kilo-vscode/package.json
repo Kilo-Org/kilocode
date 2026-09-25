@@ -1366,6 +1366,7 @@
     "@kilocode/kilo-memory": "workspace:*",
     "@kilocode/kilo-ui": "workspace:*",
     "@kilocode/plugin": "workspace:*",
+    "@kilocode/sandbox": "workspace:*",
     "@kilocode/sdk": "workspace:*",
     "@lottiefiles/dotlottie-web": "0.63.0",
     "@opencode-ai/core": "workspace:*",

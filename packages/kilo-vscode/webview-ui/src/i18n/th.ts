@@ -828,7 +828,8 @@ export const dict = {
   "settings.browser.description":
     "กำหนดค่าการทำงานอัตโนมัติของเบราว์เซอร์ในตัวที่ขับเคลื่อนโดย Playwright Kilo สามารถนำทาง โต้ตอบ และจับภาพหน้าจอของหน้าเว็บในเซสชันของคุณได้",
   "settings.browser.enable.title": "เปิดใช้งานการทำงานอัตโนมัติของเบราว์เซอร์",
-  "settings.browser.enable.description": "ลงทะเบียนเซิร์ฟเวอร์ Playwright MCP กับ CLI backend",
+  "settings.browser.enable.description":
+    "เปิดใช้งานเบราว์เซอร์ Agent Manager แบบแยกตามเซสชันสำหรับแอปพลิเคชันในเครื่องและหน้าเว็บ HTTPS สาธารณะ",
   "settings.browser.systemChrome.title": "ใช้ Chrome ของระบบ",
   "settings.browser.systemChrome.description": "ใช้เบราว์เซอร์ Chrome ที่ติดตั้งแทนอินสแตนซ์ Chromium แยกต่างหาก",
   "settings.browser.headless.title": "โหมด Headless",

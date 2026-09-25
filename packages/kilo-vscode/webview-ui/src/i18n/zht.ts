@@ -766,7 +766,8 @@ export const dict = {
   "settings.browser.description":
     "設定由 Playwright 提供支援的內建瀏覽器自動化。Kilo 可以在你的工作階段中瀏覽網頁、與網頁互動，並擷取螢幕截圖。",
   "settings.browser.enable.title": "啟用瀏覽器自動化",
-  "settings.browser.enable.description": "將 Playwright MCP 伺服器註冊到 CLI 後端。",
+  "settings.browser.enable.description":
+    "啟用工作階段專屬的 Agent Manager 瀏覽器，用於本機應用程式和公開的 HTTPS 頁面。",
   "settings.browser.systemChrome.title": "使用系統 Chrome",
   "settings.browser.systemChrome.description": "使用已安裝的 Chrome 瀏覽器，而非獨立的 Chromium 實例。",
   "settings.browser.headless.title": "無頭模式",

@@ -821,7 +821,8 @@ export const dict = {
   "settings.browser.description":
     "پیکربندی اتوماسیون مرورگر داخلی با پشتیبانی Playwright. Kilo می‌تواند در جلسات شما در صفحات وب پیمایش کند، با آن‌ها تعامل داشته باشد و اسکرین‌شات بگیرد.",
   "settings.browser.enable.title": "فعال‌سازی اتوماسیون مرورگر",
-  "settings.browser.enable.description": "سرور Playwright MCP را با بک‌اند CLI ثبت کنید.",
+  "settings.browser.enable.description":
+    "مرورگر Agent Manager مختص هر جلسه را برای برنامه‌های محلی و صفحات عمومی HTTPS فعال کنید.",
   "settings.browser.systemChrome.title": "استفاده از Chrome سیستم",
   "settings.browser.systemChrome.description":
     "به جای یک نمونه Chromium جداگانه، از مرورگر Chrome نصب‌شده شما استفاده کنید.",

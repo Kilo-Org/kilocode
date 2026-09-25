@@ -848,7 +848,8 @@ export const dict = {
   "settings.browser.description":
     "Configura la automatización de navegador integrada basada en Playwright. Kilo puede navegar, interactuar y capturar pantallas de páginas web en tus sesiones.",
   "settings.browser.enable.title": "Activar automatización del navegador",
-  "settings.browser.enable.description": "Registrar el servidor Playwright MCP con el backend CLI.",
+  "settings.browser.enable.description":
+    "Activar el navegador de Agent Manager específico de cada sesión para aplicaciones locales y páginas HTTPS públicas.",
   "settings.browser.systemChrome.title": "Usar Chrome del sistema",
   "settings.browser.systemChrome.description":
     "Usar el navegador Chrome instalado en lugar de una instancia separada de Chromium.",

@@ -829,7 +829,8 @@ export const dict = {
   "settings.browser.description":
     "Налаштуйте вбудовану автоматизацію браузера на основі Playwright. Kilo може переходити веб-сторінками, взаємодіяти з ними та робити знімки екрана у ваших сесіях.",
   "settings.browser.enable.title": "Увімкнути автоматизацію браузера",
-  "settings.browser.enable.description": "Зареєструвати MCP-сервер Playwright з CLI-бекендом.",
+  "settings.browser.enable.description":
+    "Увімкнути прив'язаний до сесії браузер Agent Manager для локальних програм і загальнодоступних HTTPS-сторінок.",
   "settings.browser.systemChrome.title": "Використовувати системний Chrome",
   "settings.browser.systemChrome.description":
     "Використовувати встановлений браузер Chrome замість окремого екземпляра Chromium.",

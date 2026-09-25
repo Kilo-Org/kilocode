@@ -152,6 +152,7 @@ export interface Host {
   /** Whether the experimental multi-project Agent Manager mode is enabled. */
   multiProject(): boolean
   browserAutomation(): boolean
+  approveBrowserNavigation?(origin: string): Promise<boolean>
 
   /** Whether background worktree pre-warming is enabled. */
   worktreePool(): boolean
@@ -210,7 +211,8 @@ export interface Host {
   extensionKeybindings(): Array<{ command: string; key?: string; mac?: string; when?: string }>
 
   /** Copy text to the system clipboard. */
-  copyToClipboard(text: string): void
+  copyToClipboard(text: string): void | Promise<void>
+  readClipboard?(): Promise<string>
 
   /** Capture a telemetry event. */
   capture(event: string, properties?: Record<string, unknown>): void

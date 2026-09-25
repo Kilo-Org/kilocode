@@ -821,7 +821,8 @@ export const dict = {
   "settings.browser.description":
     "تكوين أتمتة المتصفح المدمجة المدعومة من Playwright. يمكن لـ Kilo التنقل والتفاعل مع صفحات الويب والتقاط لقطات شاشة لها في جلساتك.",
   "settings.browser.enable.title": "تفعيل أتمتة المتصفح",
-  "settings.browser.enable.description": "تسجيل خادم Playwright MCP مع الواجهة الخلفية لـ CLI.",
+  "settings.browser.enable.description":
+    "تفعيل متصفح Agent Manager الخاص بكل جلسة للتطبيقات المحلية وصفحات HTTPS العامة.",
   "settings.browser.systemChrome.title": "استخدام Chrome النظام",
   "settings.browser.systemChrome.description": "استخدم متصفح Chrome المثبت لديك بدلاً من نسخة Chromium منفصلة.",
   "settings.browser.headless.title": "الوضع بدون واجهة",

@@ -835,7 +835,8 @@ export const dict = {
   "settings.browser.description":
     "Playwrightを利用した組み込みブラウザ自動化を設定します。Kiloはセッション内でWebページのナビゲーション、操作、スクリーンショット撮影を行えます。",
   "settings.browser.enable.title": "ブラウザ自動化を有効にする",
-  "settings.browser.enable.description": "Playwright MCPサーバーをCLIバックエンドに登録します。",
+  "settings.browser.enable.description":
+    "ローカルアプリケーションと公開 HTTPS ページ向けに、セッション単位の Agent Manager ブラウザを有効にします。",
   "settings.browser.systemChrome.title": "システムChromeを使用",
   "settings.browser.systemChrome.description":
     "別のChromiumインスタンスの代わりに、インストール済みのChromeブラウザを使用します。",

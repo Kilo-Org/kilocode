@@ -841,7 +841,8 @@ export const dict = {
   "settings.browser.description":
     "Konfigurirajte ugrađenu automatizaciju preglednika koju pokreće Playwright. Kilo može navigirati, komunicirati sa web stranicama i snimati ekran u vašim sesijama.",
   "settings.browser.enable.title": "Omogući automatizaciju preglednika",
-  "settings.browser.enable.description": "Registriraj Playwright MCP server s CLI pozadinom.",
+  "settings.browser.enable.description":
+    "Omogući preglednik vezan za sesiju u aplikaciji Agent Manager za lokalne aplikacije i javne HTTPS stranice.",
   "settings.browser.systemChrome.title": "Koristi sistemski Chrome",
   "settings.browser.systemChrome.description":
     "Koristite instalirani Chrome preglednik umjesto zasebne Chromium instance.",

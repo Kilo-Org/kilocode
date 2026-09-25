@@ -806,7 +806,7 @@ export const dict = {
   "settings.browser.description":
     "配置由 Playwright 提供支持的内置浏览器自动化。Kilo 可在你的会话中浏览网页、与网页交互并截取屏幕截图。",
   "settings.browser.enable.title": "启用浏览器自动化",
-  "settings.browser.enable.description": "将 Playwright MCP 服务器注册到 CLI 后端。",
+  "settings.browser.enable.description": "启用会话专属的 Agent Manager 浏览器，用于本地应用和公开的 HTTPS 页面。",
   "settings.browser.systemChrome.title": "使用系统 Chrome",
   "settings.browser.systemChrome.description": "使用已安装的 Chrome 浏览器，而不是单独的 Chromium 实例。",
   "settings.browser.headless.title": "无头模式",
