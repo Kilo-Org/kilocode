@@ -24,6 +24,7 @@ import { Question } from "@/question"
 // kilocode_change start
 import { KiloSessionProcessor, type ReviewTelemetry } from "@/kilocode/session/processor"
 import { PermissionProvenance } from "@/kilocode/permission/provenance" // kilocode_change
+import { KiloToolInput } from "@/kilocode/session/tool-input" // kilocode_change
 import { KiloSessionOverflow } from "@/kilocode/session/overflow"
 import { KiloRoutedModel } from "@/kilocode/session/routed-model"
 import { KiloResponseMetadata } from "@/kilocode/session/response-metadata"
@@ -82,6 +83,7 @@ type ToolCall = {
   messageID: SessionV1.ToolPart["messageID"]
   sessionID: SessionV1.ToolPart["sessionID"]
   done: Deferred.Deferred<void>
+  executing?: boolean // kilocode_change - only executing calls hold the offline guard back
 }
 
 interface ProcessorContext extends Input {
@@ -449,9 +451,17 @@ const layer = Layer.effect(
             return
 
           // kilocode_change start - upstream calls ensureToolCall here, which creates a part when none
-          // exists and so resurrects a settled call as pending. Nothing else is needed from these two:
-          // tool-call carries the full input, and the v2 runner publishes the input events.
+          // exists and so resurrects a settled call as pending. tool-call carries the full input; the
+          // live delta only lets clients show a pending call while its input streams.
           case "tool-input-delta":
+            if (!ctx.toolcalls[value.id]) return
+            yield* KiloToolInput.delta(events, {
+              sessionID: ctx.sessionID,
+              messageID: ctx.assistantMessage.id,
+              callID: value.id,
+              text: value.text,
+            })
+            return
           case "tool-input-end":
             return
           // kilocode_change end
@@ -489,6 +499,8 @@ const layer = Layer.effect(
             }))
             delete ctx.toolmeta[value.id]
             // kilocode_change end
+            const call = ctx.toolcalls[value.id] // kilocode_change - provider-executed tools stay guard-covered
+            if (call && !value.providerExecuted) call.executing = true // kilocode_change
 
             const parts = yield* MessageV2.parts(ctx.assistantMessage.id).pipe(
               Effect.provideService(Database.Service, database),
@@ -618,6 +630,20 @@ const layer = Layer.effect(
             })
             // kilocode_change end
             yield* Effect.forEach(Object.keys(ctx.reasoningMap), finishReasoning)
+            // Anthropic reports thinking blocks it removed before the model saw the
+            // prompt. Prefix mismatches mean opencode changed history behind a signed
+            // block; log them so the churn can be tracked down.
+            const dropped = isRecord(value.providerMetadata?.anthropic)
+              ? value.providerMetadata.anthropic.inputTransformations
+              : undefined
+            if (Array.isArray(dropped) && dropped.length > 0) {
+              yield* Effect.logWarning("thinking blocks dropped by provider", {
+                sessionID: ctx.sessionID,
+                messageID: ctx.assistantMessage.id,
+                model: ctx.model.id,
+                transformations: JSON.stringify(dropped),
+              })
+            }
             const usage = Session.getUsage({
               model: ctx.model,
               usage: value.usage ?? new Usage({}),
@@ -949,16 +975,30 @@ const layer = Layer.effect(
               ctx.reasoningMap = {}
               yield* status.set(ctx.sessionID, { type: "busy" })
               ctx.step = { reasoning: false, text: false, tool: false }
+              // kilocode_change start - fail the attempt when the provider stalls on a dead network
+              const guard = KiloSessionProcessor.offlineGuard({
+                busy: () => KiloSessionProcessor.executingTools(ctx.toolcalls),
+                providerID: input.model.providerID, // probe the provider's own endpoint
+                apiUrl: input.model.api.url,
+              })
+              // kilocode_change end
               const stream = llm.stream({
                 ...streamInput,
                 preflight: !ctx.assistantMessage.summary,
               })
 
-              yield* stream.pipe(
-                Stream.tap((event) => handleEvent(event)),
-                Stream.takeUntil(() => ctx.needsCompaction),
-                Stream.runDrain,
+              // kilocode_change start
+              yield* guard.watch.pipe(
+                Effect.raceFirst(
+                  stream.pipe(
+                    Stream.tap((event) => handleEvent(event)),
+                    Stream.tap(() => Effect.sync(() => guard.touch())),
+                    Stream.takeUntil(() => ctx.needsCompaction),
+                    Stream.runDrain,
+                  ),
+                ),
               )
+              // kilocode_change end
             }).pipe(
               Effect.onInterrupt(() =>
                 Effect.gen(function* () {

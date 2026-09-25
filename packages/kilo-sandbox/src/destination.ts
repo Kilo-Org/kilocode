@@ -63,6 +63,10 @@ export function isPublicAddress(input: string) {
   return address.range() === "unicast"
 }
 
+export function isIpAddress(input: string) {
+  return isIP(input) !== 0
+}
+
 export async function resolveDestination(dest: Destination) {
   const addresses = await lookup(dest.host, { all: true, verbatim: true })
   if (addresses.length === 0 || addresses.some((entry) => !isPublicAddress(entry.address))) {

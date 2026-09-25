@@ -703,7 +703,8 @@ export const dict = {
   "settings.browser.description":
     "Configura l'automazione del browser integrata basata su Playwright. Kilo può navigare, interagire e acquisire screenshot delle pagine web nelle tue sessioni.",
   "settings.browser.enable.title": "Abilita automazione browser",
-  "settings.browser.enable.description": "Registra il server MCP Playwright con il backend CLI.",
+  "settings.browser.enable.description":
+    "Abilita il browser di Agent Manager dedicato a ciascuna sessione per le applicazioni locali e le pagine HTTPS pubbliche.",
   "settings.browser.systemChrome.title": "Usa Chrome di sistema",
   "settings.browser.systemChrome.description":
     "Usa il browser Chrome installato invece di un'istanza Chromium separata.",
@@ -787,9 +788,6 @@ export const dict = {
     "Importa una volta le istruzioni globali CLAUDE.md supportate, le competenze semplici e le definizioni MCP disabilitate. I file Claude originali restano invariati; riavvia il backend dopo l'attivazione.",
   "settings.experimental.multiProject.description":
     "Abilita la gestione di sessioni e worktree su più repository in Agent Manager. Il repository dell'area di lavoro corrente è sempre il progetto predefinito.",
-  "settings.experimental.taskModelSelection.title": "Selezione del modello del sub-agent Task",
-  "settings.experimental.taskModelSelection.description":
-    "Consente di selezionare esplicitamente modello, provider e sforzo di ragionamento per i sub-agent Task.",
   "settings.experimental.mcpTimeout.title": "Timeout MCP (ms)",
   "settings.experimental.mcpTimeout.description": "Timeout per richieste server MCP in millisecondi",
   "settings.experimental.remote.title": "Controllo remoto",
@@ -1010,6 +1008,9 @@ export const dict = {
   "settings.autoCleanup.runNow": "Esegui pulizia ora",
   "settings.autoCleanup.runNow.confirm":
     "Eliminare definitivamente le sessioni scadute in tutti i progetti e in tutti i client Kilo di questo computer?",
+  "settings.autoCleanup.stop": "Interrompi pulizia",
+  "settings.autoCleanup.progress.cancelling": "Interruzione della pulizia delle sessioni...",
+  "settings.autoCleanup.lastRun.cancelled": "interrotta",
   "settings.context.autoCompaction.title": "Compattazione automatica",
   "settings.context.autoCompaction.description": "Compatta automaticamente il contesto quando è pieno",
   "settings.context.compaction.title": "Compattazione",

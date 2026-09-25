@@ -68,7 +68,10 @@ jobs:
     runs-on: blacksmith-8vcpu-ubuntu-2404
     permissions:
       actions: read
+      artifact-metadata: write
+      attestations: write
       contents: write
+      id-token: write
     outputs:
       version: ${{ needs.validate.outputs.version }}
       kind: ${{ needs.validate.outputs.kind }}
@@ -115,6 +118,9 @@ jobs:
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
+
+      - name: Setup SBOM tooling
+        uses: ./.github/actions/setup-sbom
 
       - name: Validate signing secrets
         run: |
@@ -186,12 +192,74 @@ jobs:
         env:
           VERSION: ${{ needs.validate.outputs.version }}
 
+      # One release publishes two plugin artifacts from two workflows, so the
+      # already-published lean manifest is pulled back in and merged. Without it
+      # the release would claim it only ever produced the bundled ZIP.
+      # Absent evidence is a legitimate state (the lean run may have produced
+      # none in advisory mode), so that case continues. Evidence that exists but
+      # cannot be fetched fails the step: continuing would upload a bundled-only
+      # manifest over the published one and permanently drop the lean evidence.
+      # The sidecars listed in the manifest are restored alongside it because
+      # verification resolves them relative to the manifest directory.
+      - name: Restore published JetBrains SBOM manifest
+        run: |
+          set -euo pipefail
+          dir=packages/kilo-jetbrains/build/release
+          mkdir -p "$dir"
+          assets="$(gh release view "$TAG" --json assets --jq '.assets[].name' --repo "$GITHUB_REPOSITORY")"
+          if ! grep -qx jetbrains-sbom-evidence.json <<<"$assets"; then
+            echo "No published JetBrains SBOM manifest on $TAG yet; bundled evidence starts a new one."
+            exit 0
+          fi
+          gh release download "$TAG" --pattern jetbrains-sbom-evidence.json --dir "$dir" --clobber --repo "$GITHUB_REPOSITORY"
+          mapfile -t sidecars < <(jq -r '.entries[] | select(.sbom) | .sbom' "$dir/jetbrains-sbom-evidence.json")
+          for sidecar in "${sidecars[@]}"; do
+            if grep -qx "$sidecar" <<<"$assets"; then
+              gh release download "$TAG" --pattern "$sidecar" --dir "$dir" --clobber --repo "$GITHUB_REPOSITORY"
+            fi
+          done
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.validate.outputs.tag }}
+
+      # The bundled ZIP embeds all six CLI builds, so its evidence is generated
+      # separately from the lean plugin and merged into the same release manifest.
+      - name: Generate bundled plugin SBOM
+        id: sbom
+        run: |
+          bun packages/kilo-jetbrains/script/sbom.ts \
+            --zip "$ARCHIVE" \
+            --variant bundled \
+            --version "$VERSION" \
+            --channel "$CHANNEL" \
+            --tag "$TAG" \
+            --merge "$MERGE_COMMIT"
+          echo "sidecar=$ARCHIVE.cdx.json" >> "$GITHUB_OUTPUT"
+          echo "digest=sha256:$(sha256sum "$ARCHIVE" | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
+          echo "name=$(basename "$ARCHIVE")" >> "$GITHUB_OUTPUT"
+        env:
+          ARCHIVE: ${{ steps.archive.outputs.path }}
+          VERSION: ${{ needs.validate.outputs.version }}
+          CHANNEL: ${{ needs.validate.outputs.channel }}
+          TAG: ${{ needs.validate.outputs.tag }}
+          MERGE_COMMIT: ${{ inputs.merge_commit }}
+          SBOM_ENFORCE: ${{ vars.SBOM_ENFORCE }}
+
+      - name: Attest bundled plugin SBOM
+        continue-on-error: ${{ vars.SBOM_ENFORCE != 'true' }}
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-name: ${{ steps.sbom.outputs.name }}
+          subject-digest: ${{ steps.sbom.outputs.digest }}
+          sbom-path: ${{ steps.sbom.outputs.sidecar }}
+
       - name: Upload bundled ZIP to GitHub Release
-        run: gh release upload "$TAG" "$ARCHIVE" --clobber --repo "$GITHUB_REPOSITORY"
+        run: gh release upload "$TAG" "$ARCHIVE" $EVIDENCE --clobber --repo "$GITHUB_REPOSITORY"
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ needs.validate.outputs.tag }}
           ARCHIVE: ${{ steps.archive.outputs.path }}
+          EVIDENCE: ${{ steps.sbom.outputs.sidecar }} packages/kilo-jetbrains/build/release/jetbrains-sbom-evidence.json packages/kilo-jetbrains/build/release/kilo-jetbrains-SHA256SUMS
 
       - name: Resolve bundled asset URL
         id: asset
@@ -296,6 +364,9 @@ jobs:
           name: kilo-jetbrains-bundled-${{ needs.validate.outputs.version }}
           path: |
             packages/kilo-jetbrains/build/release/*.zip
+            packages/kilo-jetbrains/build/release/*.cdx.json
+            packages/kilo-jetbrains/build/release/jetbrains-sbom-evidence.json
+            packages/kilo-jetbrains/build/release/kilo-jetbrains-SHA256SUMS
             pages/jetbrains/updatePlugins.xml
           if-no-files-found: ignore
 

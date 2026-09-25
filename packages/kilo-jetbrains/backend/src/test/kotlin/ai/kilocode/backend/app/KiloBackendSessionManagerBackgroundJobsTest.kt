@@ -6,10 +6,12 @@ import ai.kilocode.backend.testing.TestLog
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import java.net.URLDecoder
@@ -81,11 +83,20 @@ class KiloBackendSessionManagerBackgroundJobsTest {
         val app = setup()
         ready(app)
 
-        val a = async { app.sessions.backgroundJobs("ses_root", "/repo").first() }
-        val b = async { app.sessions.backgroundJobs("ses_root", "/repo").first() }
-        withTimeout(10_000) { awaitAll(a, b) }
+        // Keep the first collector subscribed so the shared flow exists before the second
+        // subscribes. Two `.first()` collectors cancel immediately and can race the cache
+        // lookup, which starts one poller per collector by design and makes the count flaky.
+        val seen = Channel<Unit>(Channel.UNLIMITED)
+        val a = launch { app.sessions.backgroundJobs("ses_root", "/repo").onEach { seen.send(Unit) }.collect() }
+        withTimeout(10_000) { seen.receive() }
 
-        assertEquals(1, mock.backgroundJobsRequests.size)
+        val before = mock.backgroundJobsRequests.size
+        val b = launch { app.sessions.backgroundJobs("ses_root", "/repo").onEach { seen.send(Unit) }.collect() }
+        withTimeout(10_000) { seen.receive() }
+
+        assertEquals(before, mock.backgroundJobsRequests.size)
+        a.cancel()
+        b.cancel()
     }
 
     @Test
@@ -108,16 +119,22 @@ class KiloBackendSessionManagerBackgroundJobsTest {
             }]
         """.trimIndent()
         val before = mock.backgroundJobsRequests.size
-
-        // Resolve the manager flow once so both collectors exercise the same shared poller even if
-        // the previous cache entry is being evicted concurrently.
         val jobs = app.sessions.backgroundJobs("ses_root", "/repo")
-        val a = async { jobs.first { it.singleOrNull()?.id == "job2" } }
-        val b = async { jobs.first { it.singleOrNull()?.id == "job2" } }
-        val results = withTimeout(10_000) { awaitAll(a, b) }
-
-        assertTrue(results.all { it.single().id == "job2" })
+        val seen = Channel<Unit>(Channel.UNLIMITED)
+        val a = launch {
+            jobs.onEach { if (it.singleOrNull()?.id == "job2") seen.send(Unit) }.collect()
+        }
+        withTimeout(10_000) { seen.receive() }
         assertEquals(1, mock.backgroundJobsRequests.size - before)
+
+        val shared = mock.backgroundJobsRequests.size
+        val b = launch {
+            jobs.onEach { if (it.singleOrNull()?.id == "job2") seen.send(Unit) }.collect()
+        }
+        withTimeout(10_000) { seen.receive() }
+        assertEquals(shared, mock.backgroundJobsRequests.size)
+        a.cancel()
+        b.cancel()
     }
 
     @Test

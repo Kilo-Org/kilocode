@@ -27,6 +27,9 @@
       "dependsOn": ["^build"],
       "outputs": []
     },
+    "@opencode-ai/function#test": {
+      "outputs": []
+    },
     "@kilocode/cli#test:ci": {
       "dependsOn": ["^build"],
       "env": ["KILO_TEST_PROFILE", "KILO_TEST_SHARD"],

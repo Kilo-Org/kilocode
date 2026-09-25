@@ -76,6 +76,54 @@ function inspection(requestId: string, scope: BrowserScope, error?: string): Bro
 }
 
 describe("browser controller", () => {
+  test.each([
+    ["google.com", "https://google.com"],
+    ["  www.spiegel.de/news?q=test#section  ", "https://www.spiegel.de/news?q=test#section"],
+    ["example.com:8443/path", "https://example.com:8443/path"],
+    ["//google.com/path", "https://google.com/path"],
+    ["localhost:3000/path", "http://localhost:3000/path"],
+    ["127.0.0.1:8080", "http://127.0.0.1:8080"],
+    ["localhost.example.com", "https://localhost.example.com"],
+    ["https://localhost:3000", "https://localhost:3000"],
+    ["http://google.com", "http://google.com"],
+    ["https://google.com", "https://google.com"],
+    ["file:///tmp/index.html", "file:///tmp/index.html"],
+  ])("opens %s as %s without changing explicit schemes", (value, expected) => {
+    const view = setup()
+    view.controller.setUrl(value)
+    view.controller.open()
+    expect(view.sent.at(-1)).toEqual({
+      type: "open",
+      scope: { sessionId: "session-a", projectId: "project-a" },
+      url: expected,
+    })
+    expect(view.controller.url()).toBe(expected)
+    view.dispose()
+  })
+
+  test("retries a missing browser with the entered URL and clears the warning on success", () => {
+    const view = setup()
+    const scope = { sessionId: "session-a", projectId: "project-a" }
+    view.controller.setUrl("localhost:3000")
+    view.controller.open()
+    view.emit({
+      type: "state",
+      value: { scope, browserId: "", status: "error", errors: 0, missing: "chrome", error: "Browser missing" },
+    })
+    expect(view.controller.url()).toBe("http://localhost:3000")
+    expect(view.controller.state()?.missing).toBe("chrome")
+    expect(view.controller.loading()).toBe(false)
+    view.controller.open()
+    expect(view.sent.at(-1)).toEqual({ type: "open", scope, url: "http://localhost:3000" })
+    view.emit({
+      type: "state",
+      value: { scope, browserId: "installed", status: "ready", errors: 0, url: "http://localhost:3000" },
+    })
+    expect(view.controller.state()?.missing).toBeUndefined()
+    expect(view.controller.loading()).toBe(false)
+    view.dispose()
+  })
+
   test("coalesces pointer movement while an inspection is active", () => {
     const view = setup()
     view.controller.toggleSelecting()

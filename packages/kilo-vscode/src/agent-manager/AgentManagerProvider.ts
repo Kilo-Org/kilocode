@@ -414,7 +414,7 @@ export class AgentManagerProvider implements Disposable {
       panel.dispose()
     }
     this.panel = ctx
-    this.browserLifecycle.replay()
+    this.browserLifecycle.attach(ctx)
 
     for (const poller of [this.statsPoller, this.projectPollers]) poller.setVisible(ctx.visible)
     this.diffs.setVisible(ctx.visible).catch((err) => this.log("Failed to update diff visibility:", err))
@@ -1236,7 +1236,6 @@ export class AgentManagerProvider implements Disposable {
     if (!ctx) return null
     return closeLifecycleSession(ctx, this.lifecycleHost, sessionId)
   }
-
   // Multi-version worktree creation
 
   /** Create N worktree sessions for the same prompt (multi-version mode). */
@@ -1589,6 +1588,7 @@ export class AgentManagerProvider implements Disposable {
       this.projectPollers.sync(this.contexts)
     }
     this.panel?.sessions.refreshGitStatus?.()
+    this.panel?.sessions.retryInitialization?.()
   }
   private onWorkspaceChanged(): void {
     if (this.contexts.syncPinned()) {

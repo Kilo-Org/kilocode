@@ -798,7 +798,8 @@ export const dict = {
   "settings.browser.description":
     "Skonfiguruj wbudowaną automatyzację przeglądarki opartą na Playwright. Kilo może nawigować po stronach internetowych, wchodzić z nimi w interakcję i robić zrzuty ekranu w Twoich sesjach.",
   "settings.browser.enable.title": "Włącz automatyzację przeglądarki",
-  "settings.browser.enable.description": "Zarejestruj serwer Playwright MCP w backendzie CLI.",
+  "settings.browser.enable.description":
+    "Włącz przeglądarkę Agent Manager przypisaną do sesji dla lokalnych aplikacji i publicznych stron HTTPS.",
   "settings.browser.systemChrome.title": "Użyj systemowego Chrome",
   "settings.browser.systemChrome.description":
     "Użyj zainstalowanej przeglądarki Chrome zamiast oddzielnej instancji Chromium.",
@@ -897,9 +898,6 @@ export const dict = {
     "Jednorazowo importuj obsługiwane globalne instrukcje CLAUDE.md, proste umiejętności i wyłączone definicje MCP. Oryginalne pliki Claude pozostają niezmienione; po włączeniu uruchom ponownie backend.",
   "settings.experimental.multiProject.description":
     "Włącz zarządzanie sesjami i worktree w wielu repozytoriach w Agent Managerze. Bieżące repozytorium obszaru roboczego jest zawsze projektem domyślnym.",
-  "settings.experimental.taskModelSelection.title": "Wybór modelu podagenta Task",
-  "settings.experimental.taskModelSelection.description":
-    "Umożliwia jawny wybór modelu, dostawcy i wysiłku wnioskowania dla podagentów Task.",
   "settings.experimental.mcpTimeout.title": "Limit czasu MCP (ms)",
   "settings.experimental.mcpTimeout.description": "Limit czasu żądań serwera MCP w milisekundach",
   "settings.experimental.remote.title": "Sterowanie Remote",
@@ -1148,6 +1146,9 @@ export const dict = {
   "settings.autoCleanup.runNow": "Uruchom czyszczenie teraz",
   "settings.autoCleanup.runNow.confirm":
     "Trwale usunąć wygasłe sesje we wszystkich projektach i we wszystkich klientach Kilo na tym komputerze?",
+  "settings.autoCleanup.stop": "Zatrzymaj czyszczenie",
+  "settings.autoCleanup.progress.cancelling": "Zatrzymywanie czyszczenia sesji...",
+  "settings.autoCleanup.lastRun.cancelled": "przerwane",
   "settings.context.autoCompaction.title": "Automatyczna kompakcja",
   "settings.context.autoCompaction.description": "Automatycznie kompaktuj kontekst, zanim osiągnie limit",
   "settings.context.compaction.title": "Kompaktowanie",
