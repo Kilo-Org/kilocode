@@ -1236,7 +1236,6 @@ export class AgentManagerProvider implements Disposable {
     if (!ctx) return null
     return closeLifecycleSession(ctx, this.lifecycleHost, sessionId)
   }
-
   // Multi-version worktree creation
 
   /** Create N worktree sessions for the same prompt (multi-version mode). */

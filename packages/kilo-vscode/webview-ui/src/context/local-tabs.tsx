@@ -16,6 +16,7 @@ import {
   PENDING_TAB_PREFIX,
   addPendingTab,
   addSessionTab,
+  closeAllTabs,
   closeOtherTabs,
   closeTab,
   insertSessionTabAfter,
@@ -51,6 +52,7 @@ interface LocalTabsValue {
   openAfter: (source: string, id: string) => void
   select: (id: string) => void
   close: (id: string) => void
+  closeAll: () => void
   closeOthers: (id: string) => void
   closeToRight: (id: string) => void
   closableRight: (id: string) => string[]
@@ -143,6 +145,19 @@ export const LocalTabsProvider: ParentComponent = (props) => {
       if (session.isSubmitting(id) || isPendingSend(id)) discardPendingDraft(id)
       queueMicrotask(() => deletePendingDraft(id))
     }
+  }
+
+  const closeAll = () => {
+    const removed = ids()
+    const next = closeAllTabs(pending)
+    apply(next)
+    setPinned([])
+    focus(next.active)
+    const drafts = removed.filter(isPendingTab)
+    for (const id of drafts) {
+      if (session.isSubmitting(id) || isPendingSend(id)) discardPendingDraft(id)
+    }
+    if (drafts.length > 0) queueMicrotask(() => drafts.forEach(deletePendingDraft))
   }
 
   const closeDeps = sessionCloseDeps({
@@ -275,6 +290,7 @@ export const LocalTabsProvider: ParentComponent = (props) => {
         openAfter,
         select,
         close,
+        closeAll,
         closeOthers,
         closeToRight: closeToRightTab,
         closableRight: rightTabs,
