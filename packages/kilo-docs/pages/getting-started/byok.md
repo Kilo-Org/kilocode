@@ -24,7 +24,7 @@ Use your provider API key to route matching models through your account:
 
 - Anthropic
 - AWS Bedrock
-- Azure Foundry (experimental)
+- Azure Foundry
 - DeepSeek
 - Fireworks
 - Google AI Studio
@@ -102,7 +102,7 @@ Your IAM user or role must have the following permissions:
 
 ### Azure Foundry configuration
 
-Select **Azure Foundry (experimental)** and enter JSON credentials. Use `resourceName` for the subdomain of your endpoint, such as `my-resource` from `my-resource.openai.azure.com`:
+Select **Azure Foundry** and enter JSON credentials. Use `resourceName` for the subdomain of your endpoint, such as `my-resource` from `my-resource.openai.azure.com`:
 
 ```json
 {
