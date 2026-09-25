@@ -22,6 +22,7 @@ import { RuntimeFlags } from "@/effect/runtime-flags"
 import { EventV2Bridge } from "@/event-v2-bridge"
 import { EventV2 } from "@opencode-ai/core/event"
 import { Project } from "@opencode-ai/schema/project"
+import { prune } from "@/kilocode/project/visible" // kilocode_change
 
 export const Info = Project.Info
 export type Info = Types.DeepMutable<Schema.Schema.Type<typeof Info>>
@@ -334,7 +335,10 @@ const layer = Layer.effect(
     })
 
     const list = Effect.fn("Project.list")(function* () {
-      return (yield* db.select().from(ProjectTable).all().pipe(Effect.orDie)).map(fromRow)
+      // kilocode_change start - hide projects whose checkout was removed from disk
+      const rows = (yield* db.select().from(ProjectTable).all().pipe(Effect.orDie)).map(fromRow)
+      return yield* prune(rows, (dir) => fs.existsSafe(dir))
+      // kilocode_change end
     })
 
     const get = Effect.fn("Project.get")(function* (id: ProjectV2.ID) {
