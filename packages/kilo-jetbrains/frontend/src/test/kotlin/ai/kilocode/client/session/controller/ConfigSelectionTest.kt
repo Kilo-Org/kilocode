@@ -50,6 +50,14 @@ class ConfigSelectionTest : SessionControllerTestBase() {
             second,
             show = false,
         )
+        assertTrue(first.model.modelOverride)
+
+        app.toggleModelFavorite("kilo", "opus")
+        flush()
+
+        assertEquals("kilo/opus", first.model.model)
+        assertTrue(first.model.modelOverride)
+        assertEquals("kilo/gpt-5", second.model.model)
     }
 
     /**
@@ -152,7 +160,6 @@ class ConfigSelectionTest : SessionControllerTestBase() {
 
         assertEquals("anthropic/claude", m.model.model)
         assertFalse(m.model.modelOverride)
-        assertTrue(appRpc.cleared.isEmpty())
     }
 
     fun `test global config supplies computed default`() {

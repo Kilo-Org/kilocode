@@ -69,9 +69,6 @@ interface KiloAppRpcApi : RemoteApi<Unit> {
     /** Persist a per-agent model selection. */
     suspend fun updateModelSelection(update: ModelSelectionUpdateDto): ModelStateDto
 
-    /** Clear a persisted per-agent model selection. */
-    suspend fun clearModelSelection(agent: String): ModelStateDto
-
     /** Persist a per-model reasoning variant selection. */
     suspend fun updateModelVariant(update: ModelVariantUpdateDto): ModelStateDto
 
