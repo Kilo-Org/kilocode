@@ -327,9 +327,6 @@ export const Info = Schema.Struct({
       native_notebook_tools: Schema.optional(Schema.Boolean).annotate({
         description: "Enable native tools for reading, editing, and executing VS Code notebooks",
       }),
-      task_model_selection: Schema.optional(Schema.Boolean).annotate({
-        description: "Allow task subagents to select a model, provider, and reasoning effort",
-      }),
       code_mode: Schema.optional(Schema.Boolean).annotate({
         description:
           "Route MCP tool calls through a confined JavaScript runtime with on-demand tool discovery instead of exposing every MCP tool directly",

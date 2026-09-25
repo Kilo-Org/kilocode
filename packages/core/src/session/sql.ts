@@ -50,7 +50,7 @@ export const SessionTable = sqliteTable(
     tokens_cache_write: integer().notNull().default(0),
     // kilocode_change - Kilo also persists a workspace restore status on the revert record
     revert: text({ mode: "json" }).$type<
-      Revert.State & { workspace?: "restored" | "snapshots-disabled" | "unavailable" }
+      Revert.State & { workspace?: "restored" | "snapshots-disabled" | "unavailable" | "not-a-git-repo" } // kilocode_change
     >(),
     permission: text({ mode: "json" }).$type<PermissionV1.Ruleset>(),
     agent: text(),

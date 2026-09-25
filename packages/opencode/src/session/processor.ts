@@ -24,6 +24,7 @@ import { Question } from "@/question"
 // kilocode_change start
 import { KiloSessionProcessor, type ReviewTelemetry } from "@/kilocode/session/processor"
 import { PermissionProvenance } from "@/kilocode/permission/provenance" // kilocode_change
+import { KiloToolInput } from "@/kilocode/session/tool-input" // kilocode_change
 import { KiloSessionOverflow } from "@/kilocode/session/overflow"
 import { KiloRoutedModel } from "@/kilocode/session/routed-model"
 import { KiloResponseMetadata } from "@/kilocode/session/response-metadata"
@@ -449,9 +450,17 @@ const layer = Layer.effect(
             return
 
           // kilocode_change start - upstream calls ensureToolCall here, which creates a part when none
-          // exists and so resurrects a settled call as pending. Nothing else is needed from these two:
-          // tool-call carries the full input, and the v2 runner publishes the input events.
+          // exists and so resurrects a settled call as pending. tool-call carries the full input; the
+          // live delta only lets clients show a pending call while its input streams.
           case "tool-input-delta":
+            if (!ctx.toolcalls[value.id]) return
+            yield* KiloToolInput.delta(events, {
+              sessionID: ctx.sessionID,
+              messageID: ctx.assistantMessage.id,
+              callID: value.id,
+              text: value.text,
+            })
+            return
           case "tool-input-end":
             return
           // kilocode_change end

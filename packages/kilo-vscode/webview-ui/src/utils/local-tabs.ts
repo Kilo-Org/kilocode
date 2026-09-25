@@ -143,9 +143,10 @@ export function closeAllTabs(pending: PendingTabFactory): LocalTabState {
   return normalize([], undefined, pending)
 }
 
-export function closeOtherTabs(state: LocalTabState, id: string): LocalTabState {
+export function closeOtherTabs(state: LocalTabState, id: string, pinned: readonly string[] = []): LocalTabState {
   if (!state.ids.includes(id)) return state
-  return { ids: [id], active: id }
+  const keep = new Set([id, ...pinned])
+  return { ids: state.ids.filter((tab) => keep.has(tab)), active: id }
 }
 
 export function addSessionTab(state: LocalTabState, id: string): LocalTabState {

@@ -90,6 +90,8 @@ export const dict = {
     "Conversation annulée. Les modifications de fichiers n’ont pas été restaurées, car les instantanés sont désactivés.",
   "revert.banner.workspace.unavailable":
     "Conversation annulée. Aucun point de contrôle de fichiers n’était disponible, les modifications de l’espace de travail n’ont donc pas été restaurées.",
+  "revert.banner.workspace.notAGitRepo":
+    "Conversation annulée. Les points de contrôle de fichiers nécessitent un dépôt Git, les modifications de l’espace de travail n’ont donc pas été restaurées.",
   "revert.banner.workspace.legacy":
     "Conversation annulée. L’état de restauration de l’espace de travail n’est pas disponible pour cette annulation antérieure.",
   "revert.banner.workspace.enableSnapshots": "Activer les instantanés",
@@ -959,9 +961,6 @@ export const dict = {
     "Importer une fois les instructions CLAUDE.md globales prises en charge, les compétences simples et les définitions MCP désactivées. Les fichiers Claude d'origine restent inchangés ; redémarrez le backend après activation.",
   "settings.experimental.multiProject.description":
     "Activer la gestion des sessions et worktrees sur plusieurs dépôts dans Agent Manager. Le dépôt de l'espace de travail actuel est toujours le projet par défaut.",
-  "settings.experimental.taskModelSelection.title": "Sélection du modèle des sous-agents Task",
-  "settings.experimental.taskModelSelection.description":
-    "Permet de sélectionner explicitement le modèle, le fournisseur et l'effort de raisonnement des sous-agents Task.",
   "settings.experimental.mcpTimeout.title": "Délai MCP (ms)",
   "settings.experimental.mcpTimeout.description": "Délai des requêtes du serveur MCP en millisecondes",
   "settings.experimental.remote.title": "Contrôle Remote",

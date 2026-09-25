@@ -1497,6 +1497,8 @@ export interface MarketplaceInstallResultMessage {
   success: boolean
   slug: string
   error?: string
+  filePath?: string
+  filePaths?: string[]
 }
 
 export interface OpenInstallModalMessage {

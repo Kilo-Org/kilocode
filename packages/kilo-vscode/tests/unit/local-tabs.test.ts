@@ -191,6 +191,20 @@ describe("local session tabs", () => {
     const current = state(["s1", "s2"], "s1")
     expect(closeOtherTabs(current, "missing")).toBe(current)
   })
+
+  it("keeps pinned tabs open when closing the others", () => {
+    expect(closeOtherTabs(state(["s1", "s2", "s3"], "s1"), "s1", ["s3"])).toEqual({
+      ids: ["s1", "s3"],
+      active: "s1",
+    })
+  })
+
+  it("activates the retained tab even when pinned neighbors survive", () => {
+    expect(closeOtherTabs(state(["s1", "s2", "s3"], "s2"), "s3", ["s1"])).toEqual({
+      ids: ["s1", "s3"],
+      active: "s3",
+    })
+  })
 })
 
 describe("shared close selection", () => {

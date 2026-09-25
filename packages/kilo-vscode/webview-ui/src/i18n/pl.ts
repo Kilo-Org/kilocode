@@ -90,6 +90,8 @@ export const dict = {
     "Rozmowa została cofnięta. Zmiany w plikach nie zostały przywrócone, ponieważ migawki są wyłączone.",
   "revert.banner.workspace.unavailable":
     "Rozmowa została cofnięta. Żaden punkt kontrolny plików nie był dostępny, więc zmiany w obszarze roboczym nie zostały przywrócone.",
+  "revert.banner.workspace.notAGitRepo":
+    "Rozmowa została cofnięta. Punkty kontrolne plików wymagają repozytorium Git, więc zmiany w obszarze roboczym nie zostały przywrócone.",
   "revert.banner.workspace.legacy":
     "Konwersacja została cofnięta. Stan przywracania obszaru roboczego nie jest dostępny dla tego wcześniejszego cofnięcia.",
   "revert.banner.workspace.enableSnapshots": "Włącz migawki",
@@ -895,9 +897,6 @@ export const dict = {
     "Jednorazowo importuj obsługiwane globalne instrukcje CLAUDE.md, proste umiejętności i wyłączone definicje MCP. Oryginalne pliki Claude pozostają niezmienione; po włączeniu uruchom ponownie backend.",
   "settings.experimental.multiProject.description":
     "Włącz zarządzanie sesjami i worktree w wielu repozytoriach w Agent Managerze. Bieżące repozytorium obszaru roboczego jest zawsze projektem domyślnym.",
-  "settings.experimental.taskModelSelection.title": "Wybór modelu podagenta Task",
-  "settings.experimental.taskModelSelection.description":
-    "Umożliwia jawny wybór modelu, dostawcy i wysiłku wnioskowania dla podagentów Task.",
   "settings.experimental.mcpTimeout.title": "Limit czasu MCP (ms)",
   "settings.experimental.mcpTimeout.description": "Limit czasu żądań serwera MCP w milisekundach",
   "settings.experimental.remote.title": "Sterowanie Remote",

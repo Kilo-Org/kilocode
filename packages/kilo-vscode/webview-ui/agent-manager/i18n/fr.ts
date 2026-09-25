@@ -122,6 +122,7 @@ export const dict = {
   "agentManager.session.noSessions": "Aucune session ouverte",
   "agentManager.tab.close": "Fermer",
   "agentManager.tab.closeOthers": "Fermer les autres",
+  "agentManager.tab.closeToRight": "Fermer à droite",
   "agentManager.tab.closeTab": "Fermer l'onglet",
   "agentManager.tab.forkSession": "Dupliquer la session",
   "agentManager.tab.pin": "Épingler",
