@@ -9,7 +9,9 @@ type Internals = {
   webview: { postMessage: (message: unknown) => Promise<unknown> } | null
   providersRetry: boolean
   cachedConfigMessage: unknown
+  cachedConfigDirectory: string | null
   retryInitialization: () => Promise<void>
+  refreshConfig: (type: "configLoaded" | "configUpdated", dir?: string) => Promise<void>
   initializeConnection: () => Promise<void>
   fetchAndSendProviders: () => Promise<void>
   fetchAndSendIndexingStatus: (directory?: string, projectId?: string) => void
@@ -110,6 +112,7 @@ describe("KiloProvider providers on reconnect", () => {
     internal.fetchAndSendConfig = async () => {
       configs.push(dir)
       internal.cachedConfigMessage = { type: "configLoaded", config: {} }
+      internal.cachedConfigDirectory = dir
     }
     await internal.fetchAndSendProviders()
     expect(internal.providersRetry).toBe(true)
@@ -125,6 +128,33 @@ describe("KiloProvider providers on reconnect", () => {
     await internal.retryInitialization()
     expect(requests).toHaveLength(2)
     expect(configs).toHaveLength(1)
+  })
+
+  it("drops a config snapshot that resolves for a previous project directory", async () => {
+    let dir = "/project-a"
+    const messages: unknown[] = []
+    const internal = provider(
+      connection(true, {
+        config: {
+          get: async () => ({ data: {} }),
+          overlay: async () => ({ data: { collections: [] } }),
+        },
+        global: { config: { get: async () => ({ data: {} }) } },
+        experimental: { capabilities: { get: async () => ({ data: { backgroundSubagents: false } }) } },
+      }),
+      () => dir,
+    )
+    stub(internal)
+    internal.webview = { postMessage: async (message) => messages.push(message) }
+
+    await internal.refreshConfig("configLoaded", "/project-a")
+    expect(messages).toContainEqual(expect.objectContaining({ type: "configLoaded" }))
+    const published = messages.length
+
+    dir = "/project-b"
+    await internal.refreshConfig("configLoaded", "/project-a")
+
+    expect(messages).toHaveLength(published)
   })
 
   it("marks a retry when providers are fetched without a client", async () => {

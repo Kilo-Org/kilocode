@@ -408,6 +408,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private readonly extensionVersion =
     vscode.extensions.getExtension("kilocode.kilo-code")?.packageJSON?.version ?? "unknown"
   private cachedProvidersMessage: unknown = null
+  /** Directory the cached provider payload was loaded for, so recovery is keyed to the active project. */
+  private cachedProvidersDirectory: string | null = null
   /**
    * Provider API keys retained extension-side for authenticated model
    * fetches (#10139). Keys are stripped before provider data reaches the
@@ -428,6 +430,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private cachedCommandsMessage: unknown = null
   /** Cached configLoaded payload so requestConfig can be served before client is ready */
   private cachedConfigMessage: unknown = null
+  /** Directory the cached config payload was loaded for, so recovery is keyed to the active project. */
+  private cachedConfigDirectory: string | null = null
   private readonly configBindings = new ConfigBindings()
   private cachedGlobalConfig: Config | null = null
   /** Cached indexingStatusLoaded payload so requestIndexingStatus can be served before client is ready */
@@ -1036,7 +1040,14 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
   /** Retry failed workspace initialization against the newly selected project. */
   public async retryInitialization(): Promise<void> {
-    if (this.cachedProvidersMessage && this.cachedConfigMessage) return
+    const dir = this.settingsDirectory()
+    if (
+      this.cachedProvidersMessage &&
+      this.cachedConfigMessage &&
+      this.cachedProvidersDirectory === dir &&
+      this.cachedConfigDirectory === dir
+    )
+      return
     await this.fetchAndSendConfig()
     await Promise.all([
       this.fetchAndSendProviders(),
@@ -2827,6 +2838,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
             authStates,
           }
           this.cachedProvidersMessage = message
+          this.cachedProvidersDirectory = this.settingsDirectory()
           this.providersRetry = false
           this.postMessage(message)
         } catch (error) {
@@ -3912,6 +3924,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         settings: this.configSettings(),
         features,
       }
+      this.cachedConfigDirectory = dir
       this.postMessage({
         type: "configUpdated",
         config: snapshot.effective,
@@ -3955,6 +3968,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       settings: snapshot.settings,
       features: snapshot.features,
     }
+    this.cachedConfigDirectory = dir
     this.postMessage({
       type,
       config: snapshot.config,
