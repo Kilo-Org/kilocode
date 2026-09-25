@@ -338,6 +338,41 @@ dbIt.live("run skips history queries without age candidates and includes scannin
   }),
 )
 
+runIt.live("90-day retention preserves younger sessions and parents with fresh or busy descendants", () =>
+  Effect.gen(function* () {
+    expect(Database.path()).toBe(":memory:")
+    const { db } = yield* Database.Service
+    const now = Date.now()
+    const ids = Array.from({ length: 7 }, () => SessionID.make(`ses_retention_${crypto.randomUUID()}`))
+    const [young, recent, parent, child, ancestor, busy, expired] = ids
+    yield* seed({
+      directory: "/tmp/retention-90-days",
+      rows: [
+        { id: young, updated: now - 60 * KiloSessionRetention.DAY_MS },
+        { id: recent, updated: now - 89 * KiloSessionRetention.DAY_MS },
+        { id: parent, updated: now - 120 * KiloSessionRetention.DAY_MS },
+        { id: child, parent, updated: now - 89 * KiloSessionRetention.DAY_MS },
+        { id: ancestor, updated: now - 120 * KiloSessionRetention.DAY_MS },
+        {
+          id: busy,
+          parent: ancestor,
+          updated: now - 100 * KiloSessionRetention.DAY_MS,
+          message: now - 100 * KiloSessionRetention.DAY_MS,
+          part: now,
+        },
+        { id: expired, updated: now - 91 * KiloSessionRetention.DAY_MS },
+      ],
+    })
+    const config = Layer.mock(Config.Service, {
+      get: () => Effect.succeed({ retention: { enabled: true, maxAgeDays: 90 } }),
+    })
+    const outcome = yield* KiloSessionRetention.run({ force: true }).pipe(Effect.provide(config))
+    expect(outcome.ran && outcome.result).toMatchObject({ scanned: 7, deleted: 1, failed: 0, skippedActive: 2 })
+    const rows = yield* db.select({ id: SessionTable.id }).from(SessionTable).all().pipe(Effect.orDie)
+    expect(rows.map((row) => row.id).sort()).toEqual(ids.filter((id) => id !== expired).sort())
+  }),
+)
+
 runIt.live("candidate probes preserve cross-project descendant and busy-parent selection", () =>
   Effect.gen(function* () {
     const { db } = yield* Database.Service
