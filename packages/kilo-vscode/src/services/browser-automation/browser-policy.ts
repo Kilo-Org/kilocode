@@ -10,8 +10,9 @@ export function parse(value: string): URL {
   if (url.username || url.password || /^https?:\/\/[^/?#]*@/i.test(value)) {
     throw new TypeError("Browser URLs must not contain credentials")
   }
-  // Dev servers print 0.0.0.0 when they listen on every interface. It is not a destination, so use loopback.
-  if (url.protocol === "http:" && url.hostname === "0.0.0.0") url.hostname = "127.0.0.1"
+  // Dev servers print 0.0.0.0 when they listen on every interface. It is not a destination, so use localhost,
+  // the origin that dev tools usually configure.
+  if (url.protocol === "http:" && url.hostname === "0.0.0.0") url.hostname = "localhost"
   if (url.protocol === "http:" && ["localhost", "127.0.0.1"].includes(url.hostname)) {
     return url
   }

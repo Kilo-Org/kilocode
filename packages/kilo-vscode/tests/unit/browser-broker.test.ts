@@ -52,7 +52,7 @@ describe("BrowserBroker", () => {
     expect(() => broker.validate("https://localhost:3000")).toThrow()
     expect(() => broker.validate("http://127.0.0.1:3000")).not.toThrow()
     expect(() => broker.validate("http://[::1]:3000")).toThrow()
-    expect(broker.validate("http://0.0.0.0:3000/path?q=1").href).toBe("http://127.0.0.1:3000/path?q=1")
+    expect(broker.validate("http://0.0.0.0:3000/path?q=1").href).toBe("http://localhost:3000/path?q=1")
     expect(() => broker.validate("http://example.com")).toThrow()
     expect(() => broker.validate("http://username:password@localhost:3000")).toThrow()
     expect(() => broker.validate("file:///tmp/example.html")).toThrow()

@@ -203,16 +203,16 @@ describe("model HTTP tool network policy", () => {
     }).pipe(Effect.scoped)
   })
 
-  it.instance("opens a 0.0.0.0 dev server address on loopback", () => {
+  it.instance("opens a 0.0.0.0 dev server address on localhost", () => {
     const patterns: string[] = []
     return Effect.gen(function* () {
       const server = yield* serve(async (request) => {
-        expect(await request.json()).toMatchObject({ url: "http://127.0.0.1:3018/app?x=1" })
+        expect(await request.json()).toMatchObject({ url: "http://localhost:3018/app?x=1" })
         return Response.json({
           browserId: "browser-test",
           sessionId: ctx.sessionID,
           status: "ready",
-          url: "http://127.0.0.1:3018/app?x=1",
+          url: "http://localhost:3018/app?x=1",
           errors: 0,
         })
       })
@@ -231,7 +231,7 @@ describe("model HTTP tool network policy", () => {
           ),
         ),
       )
-      expect(patterns).toEqual(["navigate:http://127.0.0.1:3018"])
+      expect(patterns).toEqual(["navigate:http://localhost:3018"])
       expect(result.metadata.status).toBe("ready")
     }).pipe(Effect.scoped)
   })

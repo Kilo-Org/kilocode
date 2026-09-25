@@ -74,8 +74,9 @@ export const BrowserOpenTool = Tool.define<
           }
 
           const url = URL.parse(params.url)
-          // Dev servers print 0.0.0.0 when they listen on every interface. It is not a destination, so use loopback.
-          if (url?.protocol === "http:" && url.hostname === "0.0.0.0") url.hostname = "127.0.0.1"
+          // Dev servers print 0.0.0.0 when they listen on every interface. It is not a destination, so use localhost,
+          // the origin that dev tools usually configure.
+          if (url?.protocol === "http:" && url.hostname === "0.0.0.0") url.hostname = "localhost"
           if (!url) {
             return {
               title: "Browser URL invalid",

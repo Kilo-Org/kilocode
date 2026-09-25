@@ -6,7 +6,7 @@ browser instead of launching another browser. Native select menus on macOS are
 not captured by the streamed view.
 
 HTTP URLs on localhost or 127.0.0.1 and public HTTPS URLs are supported. Use localhost
-for IPv6 loopback servers. HTTP URLs on 0.0.0.0 open as 127.0.0.1. Local applications can load public HTTPS resources and
+for IPv6 loopback servers. HTTP URLs on 0.0.0.0 open as localhost. Local applications can load public HTTPS resources and
 secure WebSockets, while HTTP and local WebSockets stay on the approved loopback
 origin. Local preview documents must stay on that origin. Public pages can load
 public HTTPS resources and secure WebSockets across origins, but cannot access
