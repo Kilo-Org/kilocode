@@ -297,19 +297,6 @@ class KiloAppService internal constructor(
         }
     }
 
-    fun clearModel(agent: String) {
-        val prev = _models.value
-        setModelState(prev.copy(model = prev.model - agent))
-        cs.launch {
-            try {
-                setModelState(call { clearModelSelection(agent) })
-            } catch (e: Exception) {
-                LOG.warn("model selection clear failed", e)
-                setModelState(prev)
-            }
-        }
-    }
-
     fun selectVariant(key: String, value: String) {
         val prev = _models.value
         setModelState(prev.copy(variant = prev.variant + (key to value)))

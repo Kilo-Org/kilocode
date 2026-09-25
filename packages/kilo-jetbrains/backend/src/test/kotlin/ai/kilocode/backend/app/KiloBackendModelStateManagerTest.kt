@@ -84,19 +84,6 @@ class KiloBackendModelStateManagerTest {
     }
 
     @Test
-    fun `clear selection removes agent model`() = runBlocking {
-        val port = start()
-        dir.resolve("model.json").writeText("""{"model":{"code":{"providerID":"kilo","modelID":"auto"},"plan":{"providerID":"openai","modelID":"gpt"}}}""")
-        val mgr = KiloBackendModelStateManager(log)
-        mgr.start(http, port)
-
-        val state = mgr.clear("code")
-
-        assertTrue("code" !in state.model)
-        assertEquals("gpt", state.model["plan"]?.modelID)
-    }
-
-    @Test
     fun `variant update writes model json`() = runBlocking {
         val port = start()
         dir.resolve("model.json").writeText("{}")
