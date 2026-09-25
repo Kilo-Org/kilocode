@@ -421,6 +421,7 @@ class WorktreeRunManager internal constructor(
         val key = Key(id, worktree)
         val handler = handlers[key]
         if (handler != null) {
+            val shared = siblings(key).isNotEmpty()
             LOG.info(
                 "worktree run: stop config=$id worktree=$worktree" +
                     " terminating=${handler.isProcessTerminating} detach=${handler.detachIsDefault()}",
@@ -432,7 +433,7 @@ class WorktreeRunManager internal constructor(
             // a delegated bootRun/run is) since 4.8, so this SIGTERMs a delegated app's forked JVM in
             // the common case; arm() is the fallback for when it does not.
             ExecutionManagerImpl.stopProcess(handler)
-            clones[key]?.takeIf { it.reapable }?.let { arm(key, handler, it.start) }
+            clones[key]?.takeIf { it.reapable }?.let { arm(key, handler, it.start, shared) }
             return true
         }
         // No live handler: either unknown, or its app JVM outlived it and arm() is already tracking
@@ -454,10 +455,17 @@ class WorktreeRunManager internal constructor(
      * an application the user is still using. A live delegated run always has a handler for as long as
      * its application runs, because the build that forked it blocks.
      */
-    private fun arm(key: Key, handler: ProcessHandler, since: Instant) {
+    private fun arm(key: Key, handler: ProcessHandler, since: Instant, shared: Boolean) {
         cs.launch {
             if (!awaitGone(key, handler)) {
                 LOG.info("worktree run: handler still alive after stop, not reaping config=${key.id}")
+                return@launch
+            }
+            if (shared) {
+                LOG.info(
+                    "worktree run: not reaping config=${key.id} worktree=${key.worktree};" +
+                        " another run was live there when stop was requested",
+                )
                 return@launch
             }
             val siblings = siblings(key)
