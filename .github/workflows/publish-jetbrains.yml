@@ -121,6 +121,22 @@ jobs:
           JETBRAINS_PRIVATE_KEY: ${{ secrets.JETBRAINS_PRIVATE_KEY }}
           JETBRAINS_PRIVATE_KEY_PASSWORD: ${{ secrets.JETBRAINS_PRIVATE_KEY_PASSWORD }}
 
+      - name: Write signing secrets to temp files
+        run: |
+          dir="$RUNNER_TEMP/jetbrains-signing"
+          mkdir -m 700 -p "$dir"
+          chain="$dir/certificate-chain.pem"
+          key="$dir/private-key.pem"
+          umask 077
+          printf '%s' "$JETBRAINS_CERTIFICATE_CHAIN" > "$chain"
+          printf '%s' "$JETBRAINS_PRIVATE_KEY" > "$key"
+          chmod 600 "$chain" "$key"
+          echo "JETBRAINS_CERTIFICATE_CHAIN_FILE=$chain" >> "$GITHUB_ENV"
+          echo "JETBRAINS_PRIVATE_KEY_FILE=$key" >> "$GITHUB_ENV"
+        env:
+          JETBRAINS_CERTIFICATE_CHAIN: ${{ secrets.JETBRAINS_CERTIFICATE_CHAIN }}
+          JETBRAINS_PRIVATE_KEY: ${{ secrets.JETBRAINS_PRIVATE_KEY }}
+
       # Signing moved ahead of the Marketplace upload so the SBOM can describe the
       # exact signed bytes that ship, and so evidence problems surface while the
       # publish is still reversible. publishPlugin reuses these outputs.
@@ -131,8 +147,6 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           VERSION: ${{ steps.release.outputs.version }}
           CHANNEL: ${{ steps.release.outputs.marketplace_channel }}
-          JETBRAINS_CERTIFICATE_CHAIN: ${{ secrets.JETBRAINS_CERTIFICATE_CHAIN }}
-          JETBRAINS_PRIVATE_KEY: ${{ secrets.JETBRAINS_PRIVATE_KEY }}
           JETBRAINS_PRIVATE_KEY_PASSWORD: ${{ secrets.JETBRAINS_PRIVATE_KEY_PASSWORD }}
 
       - name: Render release notes
@@ -204,9 +218,11 @@ jobs:
           VERSION: ${{ steps.release.outputs.version }}
           CHANNEL: ${{ steps.release.outputs.marketplace_channel }}
           JETBRAINS_MARKETPLACE_TOKEN: ${{ secrets.JETBRAINS_MARKETPLACE_TOKEN }}
-          JETBRAINS_CERTIFICATE_CHAIN: ${{ secrets.JETBRAINS_CERTIFICATE_CHAIN }}
-          JETBRAINS_PRIVATE_KEY: ${{ secrets.JETBRAINS_PRIVATE_KEY }}
           JETBRAINS_PRIVATE_KEY_PASSWORD: ${{ secrets.JETBRAINS_PRIVATE_KEY_PASSWORD }}
+
+      - name: Remove signing secret temp files
+        if: always()
+        run: rm -rf "$RUNNER_TEMP/jetbrains-signing"
 
       - name: Upload to GitHub Release
         run: |

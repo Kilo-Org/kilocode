@@ -536,6 +536,43 @@
 
 ## [Unreleased]
 
+## [7.1.8] - 2026-09-25
+
+### Added
+
+- Add Checkpoints settings for snapshots and automatic session cleanup, including manual cleanup controls and the latest cleanup result.
+- Install companion skills when adding MCP servers from the marketplace.
+- Publish CycloneDX software bills of materials alongside JetBrains release artifacts.
+- Support MCP servers that use client ID metadata documents for OAuth registration.
+
+### Fixed
+
+- Avoid a crash when reloading or unloading the JetBrains plugin while editor history still references Kilo virtual files.
+- Keep model selection isolated to each session, including overlapping agent runs and cleanup.
+- Keep sub-agents that belong to an active chat during session cleanup.
+- Make background-agent and todo strip headers expand, collapse, and highlight consistently while keeping expanded agent links actionable.
+- Show specific revert guidance when snapshots are disabled, a checkpoint is unavailable, or the project is not a Git repository.
+
+### Changed
+
+- Reclaim database space after session cleanup and allow cleanup to be stopped.
+- Speed up switching between worktree session editor tabs with long transcripts and reduce unnecessary Agent Manager list repainting.
+- Trim single-line transcript labels more consistently with an ellipsis when they overflow.
+
+## [7.1.8-rc.2] - 2026-09-25
+
+### Added
+
+- Add Checkpoints settings for snapshots and automatic session cleanup, including manual cleanup controls and the latest cleanup result.
+- Publish CycloneDX software bills of materials alongside JetBrains release artifacts.
+
+### Fixed
+
+- Show specific revert guidance when snapshots are disabled, a checkpoint is unavailable, or the project is not a Git repository.
+- Make background-agent and todo strip headers expand, collapse, and highlight consistently while keeping expanded agent links actionable.
+
+### Changed
+
 ## [7.1.8-rc.1] - 2026-09-24
 
 ### Added
