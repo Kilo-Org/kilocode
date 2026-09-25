@@ -1,6 +1,6 @@
 {
   "$schema": "https://json.schemastore.org/package.json",
-  "version": "7.7.9",
+  "version": "7.8.0",
   "name": "@opencode-ai/core",
   "type": "module",
   "license": "MIT",
@@ -85,7 +85,7 @@
     "zod": "catalog:",
     "@ai-sdk/alibaba": "1.0.17",
     "@ai-sdk/amazon-bedrock": "4.0.166",
-    "@ai-sdk/anthropic": "3.0.82",
+    "@ai-sdk/anthropic": "3.0.111",
     "@ai-sdk/azure": "3.0.93",
     "@ai-sdk/cerebras": "2.0.54",
     "@ai-sdk/cohere": "3.0.27",

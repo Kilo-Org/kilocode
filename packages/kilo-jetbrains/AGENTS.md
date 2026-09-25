@@ -358,6 +358,7 @@ Swing is retained-mode UI. For dynamic Swing surfaces such as session cards, tra
 - Expandable session cards extend `AbstractSessionPartView`, which binds click-to-toggle and hover across the whole header subtree automatically (including children added later). Do not re-bind header parts per view. A header control that must not toggle the card (file link, copy button, toolbar action) simply owns its own mouse listener and is skipped automatically.
 - Hover should update only the affected component (usually the header background) and repaint only that component when the effective color changed.
 - Lazy-create expensive bodies such as `JBTextArea`, `JBScrollPane`, markdown panes, and HTML panes on first expansion or first direct access.
+- Keep what every transcript card carries for the whole session small. Every editor tab switch walks the entire transcript tree, so attach rarely shown header parts (the expand arrow, a file link, a copy placeholder) only while they show instead of keeping them attached and hidden.
 - Parent containers should refresh for add/remove/reorder operations, not automatically after every delegated child update or streaming delta.
 - Child views should call `revalidate()`/`repaint()` only when they changed preferred size, visibility, containment, or paint output.
 - Empty deltas, identical text, unchanged styles, repeated hover values, and no-op toggles should not repaint the whole card.
@@ -430,6 +431,7 @@ Generic utilities:
 |---|---|
 | Rich HTML with modern CSS, icons, shortcuts | `JBHtmlPane` (`com.intellij.ui.components.JBHtmlPane`) |
 | Simple multi-line label with HTML | `JBLabel` + `XmlStringUtil.wrapInHtml()` |
+| Single-line transcript text (tool headers, file links, to-do rows) | `PlainLabel` (`ai.kilocode.client.ui.PlainLabel`) with `underline`/`strike`; never `<html>` text, because Swing re-parses every HTML label each time an editor tab is detached or re-attached |
 | Scrollable / wrapping HTML panel | `SwingHelper.createHtmlViewer()` |
 | High-performance colored text fragments in trees/lists/tables | `SimpleColoredComponent` |
 | Plain-text newline splitting | `MultiLineLabel` — legacy, do not use in new code |
@@ -549,6 +551,7 @@ Stack.horizontal()
 - Use `fill(size)`, `Stack.verticalFiller(size)`, or `Stack.horizontalFiller(size)` for persistent leading, trailing, or interstitial whitespace. Do not use `Box` or `gap(size)` for persistent spacing.
 - Use `Stack` for simple retained Swing rows/columns where children should track the cross-axis size. Use `Align` for positioning one child inside available space.
 - Do not use `Stack` for padding, borders, colors, wrapping rows, flexible glue, or transcript components that need width-aware HTML reflow. Use `JBUI.Borders.empty(...)`, `UiStyle.Gap`, purpose-built layouts, or `SessionLayout` for those concerns.
+- `Stack` and `Align` ask each child for its minimum, preferred and maximum size, so measuring a deep invalid tree grows with every nesting level. A tree that is invalidated and measured over and over, such as a list renderer stamp, should run each layout or size read inside `LayoutPass.measure { ... }`, which answers each size once per container for that pass. Do not change the measured content inside the pass.
 
 ### Align — Single-Component Alignment Wrapper
 

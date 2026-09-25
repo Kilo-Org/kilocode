@@ -1,0 +1,68 @@
+# kilocode_change - new file
+version: 2
+updates:
+  # Bun workspace root (packages/*). Known overlap: packages/kilo-docs also
+  # has its own pnpm block below, since this scan can't see its separate
+  # pnpm-lock.yaml. Both may target the same package.json line; whichever PR
+  # merges first makes the other stale (caught by stale-bot-pr-notify.yml).
+  - package-ecosystem: "bun"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    cooldown:
+      default-days: 7
+    open-pull-requests-limit: 10
+    labels:
+      - "dependencies"
+    commit-message:
+      prefix: "chore"
+      include: "scope"
+    groups:
+      bun-minor-patch:
+        update-types:
+          - "minor"
+          - "patch"
+
+  # packages/kilo-docs deploys separately via pnpm; see note above.
+  - package-ecosystem: "npm"
+    directory: "/packages/kilo-docs"
+    schedule:
+      interval: "weekly"
+    cooldown:
+      default-days: 7
+    open-pull-requests-limit: 10
+    labels:
+      - "dependencies"
+    commit-message:
+      prefix: "chore(kilo-docs)"
+    groups:
+      kilo-docs-minor-patch:
+        update-types:
+          - "minor"
+          - "patch"
+
+  - package-ecosystem: "gradle"
+    directory: "/packages/kilo-jetbrains"
+    schedule:
+      interval: "weekly"
+    cooldown:
+      default-days: 7
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+    commit-message:
+      prefix: "chore(jetbrains)"
+    groups:
+      jetbrains-minor-patch:
+        update-types:
+          - "minor"
+          - "patch"
+
+# Deliberately not covered: docker (packages/opencode/Dockerfile) and
+# github-actions (.github/workflows/**). Both paths are shared/upstream code
+# with no "kilo" in their path, so dependabot-auto-merge.yml would never
+# auto-merge them anyway, and .github/workflows/** changes routinely fail
+# the repo's kilocode_change annotation check unless they happen to land
+# inside an existing marker block. Watch these via Dependabot's native
+# security alerts (already repo-wide) and security-findings-notify.yml
+# instead of proposing PRs that need manual handling either way.

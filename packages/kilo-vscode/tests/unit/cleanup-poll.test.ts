@@ -151,4 +151,45 @@ describe("session cleanup polling", () => {
     f.poll.execute()
     expect(f.sent).toHaveLength(2)
   })
+
+  test("stop posts once per running pass and never while idle", () => {
+    const f = fixture()
+    f.poll.stop()
+    expect(f.sent).toHaveLength(0)
+    f.poll.start()
+    f.reply(0, { pending: true, progress })
+    f.poll.stop()
+    f.poll.stop()
+    expect(f.sent.filter((message) => message.type === "stopAutoCleanupNow")).toHaveLength(1)
+    const halt = f.sent.at(1)
+    if (!halt || !("requestID" in halt)) throw new Error("Missing stop request")
+    f.poll.receive({
+      type: "autoCleanupStateLoaded",
+      requestID: halt.requestID,
+      last: null,
+      progress: { ...progress, phase: "cancelling" },
+    })
+    expect(f.states.at(-1)?.message.progress?.phase).toBe("cancelling")
+  })
+
+  test("stop works while the run reply is still outstanding and resets once a pass ends", () => {
+    const f = fixture()
+    f.poll.execute()
+    f.poll.stop()
+    f.poll.stop()
+    expect(f.sent.filter((message) => message.type === "stopAutoCleanupNow")).toHaveLength(1)
+    const halt = f.sent.at(1)
+    if (!halt || !("requestID" in halt)) throw new Error("Missing stop request")
+    // The stop reply arrives without progress: nothing is stoppable anymore.
+    f.poll.receive({ type: "autoCleanupStateLoaded", requestID: halt.requestID, last: null })
+    // The run completes afterwards without progress either.
+    const run = f.sent.at(0)
+    if (!run || !("requestID" in run)) throw new Error("Missing run request")
+    f.poll.receive({ type: "autoCleanupStateLoaded", requestID: run.requestID, last: null })
+    // A later pass can be stopped again.
+    f.poll.start()
+    f.reply(2, { pending: true, progress })
+    f.poll.stop()
+    expect(f.sent.filter((message) => message.type === "stopAutoCleanupNow")).toHaveLength(2)
+  })
 })

@@ -128,7 +128,8 @@
     white-space: nowrap;
     direction: rtl;
     text-align: left;
-    flex-shrink: 1;
+    /* Collapse the directory before the file name so the name stays readable. */
+    flex-shrink: 100;
     min-width: 0;
     font-size: var(--kilo-font-size-12);
   }

@@ -40,6 +40,7 @@ export const dict = {
   "marketplace.install.scope.global.description":
     "Svi projekti na ovom računaru. Čuva se u vašoj korisničkoj konfiguraciji.",
   "marketplace.install.destination": "Odredište instalacije",
+  "marketplace.install.includedSkills": "Uključene vještine",
   "marketplace.install.about.mcp":
     "MCP server pruža Kilu dodatne alate za rad s vanjskim servisima ili lokalnim programima.",
   "marketplace.install.about.agent": "Agent dodaje višekratnu ulogu s vlastitim uputama i dozvolama.",
@@ -69,6 +70,8 @@ export const dict = {
   "marketplace.remove.confirm":
     "Jeste li sigurni da želite ukloniti ovaj {{type}}? Ovo će ga ukloniti iz vaše {{scope}} konfiguracije.",
   "marketplace.remove.cancel": "Otkaži",
+  "marketplace.remove.mcp.skills":
+    "Ovo uklanja i prateće vještine koje pripadaju ovoj instalaciji. Samostalno instalirane vještine se zadržavaju.",
   "marketplace.remove.confirm.button": "Ukloni",
   "marketplace.search": "Pretraži...",
   "marketplace.filter.all": "Sve stavke",
@@ -77,6 +80,7 @@ export const dict = {
   "marketplace.empty": "Nema pronađenih stavki",
   "marketplace.empty.relevant": "Nisu pronađene relevantne stavke marketplacea za ovaj radni prostor.",
   "marketplace.badge.mcpServer": "MCP Server",
+  "marketplace.badge.skills": "Uključuje vještine",
   "marketplace.card.by": "od {{author}}",
   "marketplace.install.method": "Metoda instalacije",
   "marketplace.install.parameters": "Parametri",

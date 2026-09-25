@@ -1,0 +1,58 @@
+# kilocode_change - new file
+name: Dependabot auto-merge
+
+# Runs on a schedule, not `pull_request`: GitHub gives dependabot[bot]-
+# triggered runs a read-only GITHUB_TOKEN regardless of `permissions:`.
+#
+# Title match on dependabot.yml's `*-minor-patch` group name is the low-risk
+# classifier. kilocode forks opencode, sharing one bun.lock with ~17
+# upstream-owned packages, so every changed file (besides bun.lock) must
+# also live under a "kilo"-named path (AGENTS.md's shared-vs-owned rule) --
+# shared-code PRs are left for a human, since auto-merging risks a recurring
+# conflict or silent revert on the next upstream sync.
+
+on:
+  schedule:
+    - cron: "*/30 * * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: dependabot-auto-merge
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  auto-merge:
+    if: github.repository == 'Kilo-Org/kilocode'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Enable auto-merge on grouped minor/patch Dependabot PRs
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          gh pr list --repo "$REPO" --search "is:open is:pr author:app/dependabot" \
+            --json number,title,url,autoMergeRequest \
+            --jq '.[] | select(.title | test("Bump the [a-z-]*-minor-patch group")) | select(.autoMergeRequest == null) | .url' |
+          while IFS= read -r pr_url; do
+            [ -z "$pr_url" ] && continue
+
+            # Fetch the diff separately so a transient `gh pr diff` failure
+            # (empty stdout) can never collapse into "no unsafe paths found".
+            if ! diff_files=$(gh pr diff "$pr_url" --name-only); then
+              echo "::warning::could not fetch diff for $pr_url, skipping"
+              continue
+            fi
+            unsafe=$(echo "$diff_files" | grep -viE '^bun\.lock$|kilo' || true)
+            if [ -n "$unsafe" ]; then
+              echo "::warning::skipping $pr_url, touches shared/upstream path(s): $(echo "$unsafe" | tr '\n' ' ')"
+              continue
+            fi
+
+            echo "Enabling auto-merge for $pr_url"
+            gh pr merge --auto --squash "$pr_url" || echo "::warning::could not enable auto-merge for $pr_url"
+          done
