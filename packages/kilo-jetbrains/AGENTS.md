@@ -209,9 +209,9 @@ For a one-shot pin/unpin/regen that also cleans every leftover CLI binary and bu
 | Bump the pin to `<version>` / latest and test locally | `bun .kilo/skills/release-jetbrains/script/set-pin.ts --version <x.y.z>` or `bun .kilo/skills/release-jetbrains/script/set-pin.ts --latest`, then run `./gradlew typecheck && ./gradlew test` from `packages/kilo-jetbrains/`. |
 | Land a tested pin bump for release | `bun .kilo/skills/release-jetbrains/script/set-pin.ts --version <x.y.z> --pr` or `bun .kilo/skills/release-jetbrains/script/set-pin.ts --latest --pr`; merge the PR to `main`, then re-run `check-pin.ts` before dispatching prepare. |
 
-`set-pin.ts` refuses versions whose CLI release or runtime assets do not exist, so it cannot create a pin that would 404 during runtime download.
+`set-pin.ts` accepts stable and pre-release CLI versions, but refuses versions whose CLI release or runtime assets do not exist, so it cannot create a pin that would 404 during runtime download.
 
-Stable CLI releases also attempt this PR automatically after publishing and label it `jetbrains-cli-pin-bump`. The CLI release workflow logs the PR URL when creation succeeds and logs a warning without failing the release if PR creation fails.
+CLI releases also attempt this PR automatically after publishing and label it `jetbrains-cli-pin-bump`. Pre-release CLI bump PRs also receive the `pre-release` label. The CLI release workflow logs the PR URL when creation succeeds and logs a warning without failing the release if PR creation fails.
 
 For the full release process (resolve version, pin verification, prepare, changelog, publish), load the `release-jetbrains` skill: `.kilo/skills/release-jetbrains/SKILL.md`.
 

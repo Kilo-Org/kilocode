@@ -8,6 +8,7 @@ import { latest, missing } from "./pin-common"
 const repo = process.env.GH_REPO ?? process.env.GITHUB_REPOSITORY ?? "Kilo-Org/kilocode"
 const file = "packages/kilo-jetbrains/package.json"
 const label = "jetbrains-cli-pin-bump"
+const preview = "pre-release"
 
 const { values } = parseArgs({
   args: Bun.argv.slice(2),
@@ -21,7 +22,7 @@ const { values } = parseArgs({
 
 if (values.help) {
   console.log(`
-Usage: bun .kilo/skills/release-jetbrains/script/set-pin.ts (--latest | --version <x.y.z>) [--pr]
+Usage: bun .kilo/skills/release-jetbrains/script/set-pin.ts (--latest | --version <semver>) [--pr]
 
 Without --pr, rewrites ${file} in the local worktree so you can test a CLI pin.
 With --pr, opens or updates a PR against main using the GitHub API; prepare tags
@@ -30,6 +31,7 @@ origin/main, so the pin bump must merge there before a JetBrains release starts.
 Examples:
   bun .kilo/skills/release-jetbrains/script/set-pin.ts --latest
   bun .kilo/skills/release-jetbrains/script/set-pin.ts --version 7.4.1
+  bun .kilo/skills/release-jetbrains/script/set-pin.ts --version 7.4.2-rc.1 --pr
   bun .kilo/skills/release-jetbrains/script/set-pin.ts --latest --pr
 `)
   process.exit(0)
@@ -37,8 +39,8 @@ Examples:
 
 if (values.latest && values.version) throw new Error("Pass either --latest or --version, not both")
 const version = values.latest ? await latest(repo) : values.version?.replace(/^v/, "")
-if (!version || !semver.valid(version) || semver.prerelease(version)) {
-  throw new Error("Pass a stable CLI version with --version x.y.z or use --latest")
+if (!version || !semver.valid(version)) {
+  throw new Error("Pass a valid CLI semver with --version or use --latest")
 }
 
 const miss = await missing(repo, version)
@@ -95,12 +97,12 @@ async function pr(version: string) {
   const view = await $`gh pr view ${branch} --repo ${repo} --json url --jq .url`.quiet().nothrow()
   if (view.exitCode === 0 && view.stdout.toString().trim()) {
     await $`gh pr edit ${branch} --repo ${repo} --title ${title} --body ${desc}`
-    await tag(branch)
+    await tag(branch, version)
     console.log(view.stdout.toString().trim())
     return
   }
   const url = await $`gh pr create --repo ${repo} --base main --head ${branch} --title ${title} --body ${desc}`.text()
-  await tag(branch)
+  await tag(branch, version)
   console.log(url.trim())
 }
 
@@ -114,10 +116,19 @@ async function ensure(branch: string, sha: string) {
   await $`gh api --method POST ${`repos/${repo}/git/refs`} -f ref=${`refs/heads/${branch}`} -f sha=${sha}`.quiet()
 }
 
-async function tag(branch: string) {
-  await $`gh label create ${label} --repo ${repo} --color 1D76DB --description ${"JetBrains pinned CLI version bump"}`.quiet().nothrow()
-  const result = await $`gh pr edit ${branch} --repo ${repo} --add-label ${label}`.quiet().nothrow()
+async function tag(branch: string, version: string) {
+  const labels = [label]
+  await $`gh label create ${label} --repo ${repo} --color 1D76DB --description ${"JetBrains pinned CLI version bump"}`
+    .quiet()
+    .nothrow()
+  if (semver.prerelease(version)) {
+    labels.push(preview)
+    await $`gh label create ${preview} --repo ${repo} --color FBCA04 --description ${"Pre-release version"}`
+      .quiet()
+      .nothrow()
+  }
+  const result = await $`gh pr edit ${branch} --repo ${repo} --add-label ${labels.join(",")}`.quiet().nothrow()
   if (result.exitCode !== 0) {
-    console.warn(`Warning: failed to add ${label} label to ${branch}`)
+    console.warn(`Warning: failed to add ${labels.join(", ")} label(s) to ${branch}`)
   }
 }
