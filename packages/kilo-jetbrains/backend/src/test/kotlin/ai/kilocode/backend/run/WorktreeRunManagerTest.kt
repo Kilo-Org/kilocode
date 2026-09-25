@@ -633,6 +633,41 @@ class WorktreeRunManagerTest : BasePlatformTestCase() {
         }
     }
 
+    fun testOverlappingStopsAssignAppCleanupToLastRun() = runBlocking {
+        val type = register(paramsType("kilo.test.params.overlap"))
+        val first = add(type, "first")
+        val second = add(type, "second")
+        val mgr = manager()
+        val wt = Files.createTempDirectory("kilo-overlap-wt").toString()
+        assertTrue(mgr.run(first.uniqueID, wt).ok)
+        assertTrue(mgr.run(second.uniqueID, wt).ok)
+
+        val app = StubbornJvm.stubborn(wt)
+        try {
+            val handlers = launched.map { start(it, StubbornHandler()) }
+            assertTrue(mgr.stop(first.uniqueID, wt))
+            assertTrue(mgr.stop(second.uniqueID, wt))
+
+            // Both Stop requests own a live sibling. Finishing afterwards proves the later request is
+            // the sole cleanup owner rather than both arms suppressing the worktree-wide orphan scan.
+            handlers.forEach { it.finish() }
+            await("overlapping handlers stopped") { handlers.all { it.isProcessTerminated } }
+            await("single orphan owner", REAP_WAIT_NANOS, { mgr.states.value }) {
+                mgr.states.value.singleOrNull()?.orphan == true
+            }
+            assertEquals(second.uniqueID, mgr.states.value.single().id)
+            assertTrue(app.isAlive)
+
+            assertTrue(mgr.stop(second.uniqueID, wt))
+            await("overlapping app killed", REAP_WAIT_NANOS) { !app.isAlive }
+            await("overlapping orphan cleared", REAP_WAIT_NANOS, { mgr.states.value }) {
+                mgr.states.value.isEmpty()
+            }
+        } finally {
+            app.destroyForcibly()
+        }
+    }
+
     /**
      * Editing the source configuration replaces the cached clone. The replaced run's application must
      * still be reaped even though the replacement immediately occupies the very same key: waiting for
@@ -1076,5 +1111,7 @@ class WorktreeRunManagerTest : BasePlatformTestCase() {
         override fun killProcess() {
             killed = true
         }
+
+        fun finish() = notifyProcessTerminated(0)
     }
 }
