@@ -357,6 +357,15 @@ class BackgroundAgentStripTest : BasePlatformTestCase() {
         assertEquals("First finished", after[1].toolTipText)
     }
 
+    fun `test compact preview mirrors the title tooltip across the chip`() {
+        val strip = strip()
+        strip.update(listOf(agent("job1", BackgroundAgentStatus.RUNNING, title = "Analyze APIs")))
+
+        val chip = compactAgents(strip).single()
+
+        assertTrue(descendants(chip).filterIsInstance<JComponent>().all { it.toolTipText == "Analyze APIs" })
+    }
+
     fun `test compact preview never displaces east actions`() {
         val strip = strip()
         strip.update((1..6).map { agent("job$it", BackgroundAgentStatus.RUNNING, title = "Agent ${"x".repeat(40)}") })

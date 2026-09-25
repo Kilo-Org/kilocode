@@ -399,7 +399,7 @@ class BackgroundAgentStrip(
             avatar.icon = if (next.status == BackgroundAgentStatus.RUNNING) running else static
             label.text = title(next)
             area.name = "background-agent-preview"
-            area.toolTipText = label.text
+            listOf(area, avatar, label).forEach { it.toolTipText = label.text }
             area.accessibleContext.accessibleName = KiloBundle.message("session.header.agents.toggle")
         }
 

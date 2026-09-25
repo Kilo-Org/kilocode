@@ -29,6 +29,7 @@ import javax.swing.BoxLayout
 import javax.swing.JComponent
 import javax.swing.JPanel
 import javax.swing.ScrollPaneConstants
+import javax.swing.SwingUtilities
 import javax.swing.ToolTipManager
 
 /**
@@ -78,8 +79,7 @@ abstract class Strip : JPanel(), SessionEditorStyleTarget {
         override fun mouseEntered(event: MouseEvent) = hover(true)
 
         override fun mouseExited(event: MouseEvent) {
-            val point = javax.swing.SwingUtilities.convertPoint(event.component, event.point, row)
-            if (!row.contains(point)) hover(false)
+            if (!inside(event)) hover(false)
         }
     }
     private val nested = object : ContainerAdapter() {
@@ -139,6 +139,15 @@ abstract class Strip : JPanel(), SessionEditorStyleTarget {
         val before = row.background
         row.isHovered = value
         if (before.rgb != row.background.rgb) row.repaint()
+    }
+
+    private fun inside(event: MouseEvent): Boolean {
+        val point = SwingUtilities.convertPoint(event.component, event.point, row)
+        if (!row.contains(point)) return false
+        val pane = SwingUtilities.getRootPane(row)?.layeredPane ?: return true
+        val spot = SwingUtilities.convertPoint(event.component, event.point, pane)
+        val top = SwingUtilities.getDeepestComponentAt(pane, spot.x, spot.y) ?: return true
+        return SwingUtilities.isDescendingFrom(top, row)
     }
 
     /** Build the expanded body. Called at most once; the result is retained for the strip's lifetime. */
