@@ -16,14 +16,12 @@ import ai.kilocode.client.ui.layout.Stack
 import ai.kilocode.client.ui.toolbarButton
 import ai.kilocode.rpc.dto.DiffFileDto
 import com.intellij.icons.AllIcons
-import com.intellij.ui.components.ActionLink
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.util.ui.JBFont
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
-import com.intellij.util.ui.components.BorderLayoutPanel
 import java.awt.Component
 import java.awt.Container
 import java.awt.Dimension
@@ -93,29 +91,22 @@ class RevertBanner(
     }
 
     private val notice = JBLabel("").apply {
+        name = "revert-workspace-notice"
         font = JBFont.small()
         setAllowAutoWrapping(true)
-    }
-
-    private val enableSnapshots = ActionLink(KiloBundle.message("revert.banner.workspace.enableSnapshots")) {
-        openSettingsAction()
-    }.apply {
-        font = JBFont.small()
-        isVisible = false
-    }
-
-    private val noticeRow = BorderLayoutPanel(UiStyle.Gap.sm(), 0).apply {
-        isOpaque = false
-        addToCenter(notice)
-        addToRight(enableSnapshots)
     }
 
     init {
         isOpaque = false
         setTopPanel(header)
-        body.next(scroll).next(hint).next(noticeRow)
+        body.next(scroll).next(hint).next(notice)
         setContent(body)
         setActions(listOf(
+            DialogView.Action(
+                "snapshots",
+                KiloBundle.message("revert.banner.workspace.enableSnapshots"),
+                primary = false,
+            ) { openSettingsAction() },
             DialogView.Action("redo", KiloBundle.message("revert.banner.redo"), primary = false) { redoAction() },
             DialogView.Action("all", KiloBundle.message("revert.banner.redo.all"), primary = false) { redoAllAction() },
         ))
@@ -138,10 +129,9 @@ class RevertBanner(
         title.text = KiloBundle.message(if (total == 1) "revert.banner.count.one" else "revert.banner.count.other", total)
         setActionVisible("all", total > 1)
         val message = workspaceNotice(revert)
-        noticeRow.isVisible = message != null
         notice.isVisible = message != null
-        notice.text = message ?: ""
-        enableSnapshots.isVisible = revert.workspace == "snapshots-disabled"
+        notice.text = message?.let { UiStyle.Text.wrapLines(listOf(it)) } ?: ""
+        setActionVisible("snapshots", revert.workspace == "snapshots-disabled")
         val diffs = resolveDiffs(revert)
         val names = disambiguate(diffs.map { it.file })
         diff.isVisible = diffs.isNotEmpty()

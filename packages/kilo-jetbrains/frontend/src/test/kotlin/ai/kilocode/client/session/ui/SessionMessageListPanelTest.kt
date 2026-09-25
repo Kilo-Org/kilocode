@@ -1402,7 +1402,11 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
         val buttons = components(banner).filterIsInstance<JButton>()
             .filter { it !is ActionLink && it.text.isNotEmpty() }
         assertEquals(
-            listOf(KiloBundle.message("revert.banner.redo"), KiloBundle.message("revert.banner.redo.all")),
+            listOf(
+                KiloBundle.message("revert.banner.workspace.enableSnapshots"),
+                KiloBundle.message("revert.banner.redo"),
+                KiloBundle.message("revert.banner.redo.all"),
+            ),
             buttons.map { it.text },
         )
         assertEquals(listOf(KiloBundle.message("revert.banner.redo")), buttons.filter { it.isVisible }.map { it.text })
@@ -1629,9 +1633,10 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
         banner.update()
 
         val notice = components(banner).filterIsInstance<JBLabel>()
-            .first { it.text == KiloBundle.message("revert.banner.workspace.legacy") }
+            .single { it.name == "revert-workspace-notice" }
 
         assertTrue(notice.isVisible)
+        assertTrue(notice.text.contains(KiloBundle.message("revert.banner.workspace.legacy")))
         assertTrue(components(banner).filterIsInstance<DiffStatBadge>().isEmpty())
     }
 
@@ -1641,7 +1646,9 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
         model.setRevert(SessionRevertDto("u1", snapshot = "snap1"))
         banner.update()
 
-        assertTrue(components(banner).filterIsInstance<JBLabel>().none { it.isVisible && it.text.orEmpty().startsWith("Conversation reverted") })
+        val notice = components(banner).filterIsInstance<JBLabel>()
+            .single { it.name == "revert-workspace-notice" }
+        assertFalse(notice.isVisible)
     }
 
     fun `test rollback banner hides notice when workspace was restored`() {
@@ -1650,7 +1657,9 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
         model.setRevert(SessionRevertDto("u1", snapshot = "snap1", workspace = "restored"))
         banner.update()
 
-        assertTrue(components(banner).filterIsInstance<JBLabel>().none { it.isVisible && it.text.orEmpty().startsWith("Conversation reverted") })
+        val notice = components(banner).filterIsInstance<JBLabel>()
+            .single { it.name == "revert-workspace-notice" }
+        assertFalse(notice.isVisible)
     }
 
     fun `test rollback banner explains snapshots disabled`() {
@@ -1660,9 +1669,11 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
         banner.update()
 
         val notice = components(banner).filterIsInstance<JBLabel>()
-            .first { it.text == KiloBundle.message("revert.banner.workspace.snapshotsDisabled") }
+            .single { it.name == "revert-workspace-notice" }
 
         assertTrue(notice.isVisible)
+        assertTrue(notice.text.startsWith("<html>"))
+        assertTrue(notice.text.contains(KiloBundle.message("revert.banner.workspace.snapshotsDisabled")))
     }
 
     fun `test rollback banner opens checkpoints settings only when snapshots are disabled`() {
@@ -1672,22 +1683,21 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
         model.setRevert(SessionRevertDto("u1", workspace = "snapshots-disabled"))
         banner.update()
 
-        val link = components(banner).filterIsInstance<ActionLink>()
+        val button = components(banner).filterIsInstance<JButton>()
             .first { it.text == KiloBundle.message("revert.banner.workspace.enableSnapshots") }
-        assertTrue(link.isVisible)
-        link.doClick()
+        assertTrue(button.isVisible)
+        button.doClick(0)
         assertTrue(opened)
 
         model.setRevert(SessionRevertDto("u1", workspace = "unavailable"))
         banner.update()
 
-        assertFalse(link.isVisible)
-        assertTrue(link.parent.isVisible)
+        assertFalse(button.isVisible)
 
         model.setRevert(SessionRevertDto("u1", snapshot = "snap1", workspace = "restored"))
         banner.update()
 
-        assertFalse(link.parent.isVisible)
+        assertFalse(button.isVisible)
     }
 
     fun `test rollback banner explains missing checkpoint`() {
@@ -1697,9 +1707,10 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
         banner.update()
 
         val notice = components(banner).filterIsInstance<JBLabel>()
-            .first { it.text == KiloBundle.message("revert.banner.workspace.unavailable") }
+            .single { it.name == "revert-workspace-notice" }
 
         assertTrue(notice.isVisible)
+        assertTrue(notice.text.contains(KiloBundle.message("revert.banner.workspace.unavailable")))
     }
 
     fun `test rollback banner explains non-git workspace`() {
@@ -1709,9 +1720,10 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
         banner.update()
 
         val notice = components(banner).filterIsInstance<JBLabel>()
-            .first { it.text == KiloBundle.message("revert.banner.workspace.notAGitRepo") }
+            .single { it.name == "revert-workspace-notice" }
 
         assertTrue(notice.isVisible)
+        assertTrue(notice.text.contains(KiloBundle.message("revert.banner.workspace.notAGitRepo")))
     }
 
     // ------ question tool suppression ------
