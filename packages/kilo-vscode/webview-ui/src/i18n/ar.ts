@@ -88,6 +88,8 @@ export const dict = {
   "revert.banner.workspace.snapshotsDisabled": "تم التراجع عن المحادثة. لم تُستعَد تغييرات الملفات لأن اللقطات معطّلة.",
   "revert.banner.workspace.unavailable":
     "تم التراجع عن المحادثة. لم تكن هناك نقطة تحقق للملفات، لذا لم تُستعَد تغييرات مساحة العمل.",
+  "revert.banner.workspace.notAGitRepo":
+    "تم التراجع عن المحادثة. تتطلب نقاط تحقق الملفات مستودع Git، لذا لم تُستعَد تغييرات مساحة العمل.",
   "revert.banner.workspace.legacy": "تم التراجع عن المحادثة. حالة استعادة مساحة العمل غير متاحة لهذا التراجع السابق.",
   "revert.banner.workspace.enableSnapshots": "تفعيل اللقطات",
   "revert.disabled.agentBusy": "انتظر انتهاء الوكيل",
@@ -820,7 +822,8 @@ export const dict = {
   "settings.browser.description":
     "تكوين أتمتة المتصفح المدمجة المدعومة من Playwright. يمكن لـ Kilo التنقل والتفاعل مع صفحات الويب والتقاط لقطات شاشة لها في جلساتك.",
   "settings.browser.enable.title": "تفعيل أتمتة المتصفح",
-  "settings.browser.enable.description": "تسجيل خادم Playwright MCP مع الواجهة الخلفية لـ CLI.",
+  "settings.browser.enable.description":
+    "تفعيل متصفح Agent Manager الخاص بكل جلسة للتطبيقات المحلية وصفحات HTTPS العامة.",
   "settings.browser.systemChrome.title": "استخدام Chrome النظام",
   "settings.browser.systemChrome.description": "استخدم متصفح Chrome المثبت لديك بدلاً من نسخة Chromium منفصلة.",
   "settings.browser.headless.title": "الوضع بدون واجهة",
@@ -915,9 +918,6 @@ export const dict = {
     "استورد مرة واحدة تعليمات CLAUDE.md العامة المدعومة والمهارات البسيطة وتعريفات MCP المعطلة. تبقى ملفات Claude الأصلية دون تغيير؛ أعد تشغيل الخلفية بعد التفعيل.",
   "settings.experimental.multiProject.description":
     "تفعيل إدارة الجلسات وأشجار العمل عبر مستودعات متعددة في Agent Manager. المستودع الحالي هو دائمًا المشروع الافتراضي.",
-  "settings.experimental.taskModelSelection.title": "اختيار نموذج الوكيل الفرعي لـ Task",
-  "settings.experimental.taskModelSelection.description":
-    "السماح باختيار النموذج والمزوّد ومستوى الاستدلال صراحةً للوكلاء الفرعيين في Task.",
   "settings.experimental.mcpTimeout.title": "مهلة MCP (مللي ثانية)",
   "settings.experimental.mcpTimeout.description": "مهلة طلبات خادم MCP بالمللي ثانية",
   "settings.experimental.remote.title": "التحكم Remote",
@@ -1112,6 +1112,9 @@ export const dict = {
   "settings.autoCleanup.runNow": "شغّل التنظيف الآن",
   "settings.autoCleanup.runNow.confirm":
     "حذف الجلسات المنتهية الصلاحية نهائيًا عبر جميع المشاريع وكل عميل Kilo على هذا الجهاز؟",
+  "settings.autoCleanup.stop": "إيقاف التنظيف",
+  "settings.autoCleanup.progress.cancelling": "جارٍ إيقاف تنظيف الجلسات...",
+  "settings.autoCleanup.lastRun.cancelled": "تمت المقاطعة",
   "settings.context.autoCompaction.title": "ضغط تلقائي",
   "settings.context.autoCompaction.description": "ضغط السياق تلقائياً قبل أن يصل إلى الحد",
   "settings.context.compaction.title": "الضغط",

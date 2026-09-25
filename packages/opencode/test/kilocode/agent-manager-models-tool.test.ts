@@ -70,15 +70,13 @@ const ctx = {
   ask: () => Effect.void,
 }
 
-function run(params: Record<string, unknown>, selection = false) {
+function run(params: Record<string, unknown>) {
   return runtime.runPromise(
-    provideTmpdirInstance(
-      () =>
-        Effect.gen(function* () {
-          const tool = yield* Tool.init(yield* AgentManagerModelsTool)
-          return yield* tool.execute(params, ctx)
-        }),
-      { config: { experimental: { task_model_selection: selection } } },
+    provideTmpdirInstance(() =>
+      Effect.gen(function* () {
+        const tool = yield* Tool.init(yield* AgentManagerModelsTool)
+        return yield* tool.execute(params, ctx)
+      }),
     ).pipe(Effect.scoped),
   )
 }
@@ -88,11 +86,9 @@ function json<T>(value: string): T {
 }
 
 describe("agent_manager_models tool", () => {
-  test("explains Task selection only when the experiment is enabled", async () => {
-    const disabled = await run({ query: "shared" })
-    const enabled = await run({ query: "shared" }, true)
-    expect(json<{ hint: string }>(disabled.output).hint).not.toContain("to task or agent_manager")
-    expect(json<{ hint: string }>(enabled.output).hint).toContain("to task or agent_manager")
+  test("explains Task selection", async () => {
+    const result = await run({ query: "shared" })
+    expect(json<{ hint: string }>(result.output).hint).toContain("to task or agent_manager")
   })
 
   test("returns models grouped by name, capped at 20", async () => {

@@ -90,6 +90,8 @@ export const dict = {
     "Разговор был отменён. Изменения файлов не были восстановлены, так как снимки отключены.",
   "revert.banner.workspace.unavailable":
     "Разговор был отменён. Контрольная точка файлов была недоступна, поэтому изменения в рабочей области не были восстановлены.",
+  "revert.banner.workspace.notAGitRepo":
+    "Разговор был отменён. Контрольные точки файлов требуют репозитория Git, поэтому изменения в рабочей области не были восстановлены.",
   "revert.banner.workspace.legacy":
     "Диалог отменён. Статус восстановления рабочей области недоступен для этого более раннего отката.",
   "revert.banner.workspace.enableSnapshots": "Включить снимки",
@@ -837,7 +839,8 @@ export const dict = {
   "settings.browser.description":
     "Настройте встроенную автоматизацию браузера на основе Playwright. Kilo может переходить по веб-страницам, взаимодействовать с ними и делать скриншоты в ваших сессиях.",
   "settings.browser.enable.title": "Включить автоматизацию браузера",
-  "settings.browser.enable.description": "Зарегистрировать сервер Playwright MCP в CLI-бэкенде.",
+  "settings.browser.enable.description":
+    "Включить привязанный к сеансу браузер Agent Manager для локальных приложений и общедоступных HTTPS-страниц.",
   "settings.browser.systemChrome.title": "Использовать системный Chrome",
   "settings.browser.systemChrome.description":
     "Использовать установленный браузер Chrome вместо отдельного экземпляра Chromium.",
@@ -935,9 +938,6 @@ export const dict = {
     "Однократно импортируйте поддерживаемые глобальные инструкции CLAUDE.md, простые навыки и отключённые определения MCP. Исходные файлы Claude не изменяются; после включения перезапустите backend.",
   "settings.experimental.multiProject.description":
     "Включите управление сессиями и рабочими деревьями в нескольких репозиториях в Agent Manager. Текущий репозиторий рабочего пространства всегда является проектом по умолчанию.",
-  "settings.experimental.taskModelSelection.title": "Выбор модели субагента Task",
-  "settings.experimental.taskModelSelection.description":
-    "Позволяет явно выбирать модель, провайдера и уровень рассуждения для субагентов Task.",
   "settings.experimental.mcpTimeout.title": "Таймаут MCP (мс)",
   "settings.experimental.mcpTimeout.description": "Таймаут запросов MCP-сервера в миллисекундах",
   "settings.experimental.remote.title": "Управление Remote",
@@ -1141,6 +1141,9 @@ export const dict = {
   "settings.autoCleanup.runNow": "Запустить очистку сейчас",
   "settings.autoCleanup.runNow.confirm":
     "Безвозвратно удалить устаревшие сессии во всех проектах и во всех клиентах Kilo на этом компьютере?",
+  "settings.autoCleanup.stop": "Остановить очистку",
+  "settings.autoCleanup.progress.cancelling": "Остановка очистки сессий...",
+  "settings.autoCleanup.lastRun.cancelled": "прервана",
   "settings.context.autoCompaction.title": "Автоматическое сжатие",
   "settings.context.autoCompaction.description": "Автоматически сжимать контекст до достижения лимита",
   "settings.context.compaction.title": "Сжатие",

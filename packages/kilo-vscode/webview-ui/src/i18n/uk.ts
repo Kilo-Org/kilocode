@@ -90,6 +90,8 @@ export const dict = {
     "Розмову скасовано. Зміни файлів не відновлено, оскільки знімки вимкнено.",
   "revert.banner.workspace.unavailable":
     "Розмову скасовано. Контрольна точка файлів була недоступна, тому зміни в робочому просторі не відновлено.",
+  "revert.banner.workspace.notAGitRepo":
+    "Розмову скасовано. Контрольні точки файлів потребують репозиторію Git, тому зміни в робочому просторі не відновлено.",
   "revert.banner.workspace.legacy":
     "Розмову скасовано. Стан відновлення робочого простору для цього попереднього скасування недоступний.",
   "revert.banner.workspace.enableSnapshots": "Увімкнути знімки",
@@ -828,7 +830,8 @@ export const dict = {
   "settings.browser.description":
     "Налаштуйте вбудовану автоматизацію браузера на основі Playwright. Kilo може переходити веб-сторінками, взаємодіяти з ними та робити знімки екрана у ваших сесіях.",
   "settings.browser.enable.title": "Увімкнути автоматизацію браузера",
-  "settings.browser.enable.description": "Зареєструвати MCP-сервер Playwright з CLI-бекендом.",
+  "settings.browser.enable.description":
+    "Увімкнути прив'язаний до сесії браузер Agent Manager для локальних програм і загальнодоступних HTTPS-сторінок.",
   "settings.browser.systemChrome.title": "Використовувати системний Chrome",
   "settings.browser.systemChrome.description":
     "Використовувати встановлений браузер Chrome замість окремого екземпляра Chromium.",
@@ -930,9 +933,6 @@ export const dict = {
     "Одноразово імпортуйте підтримувані глобальні інструкції CLAUDE.md, прості навички та вимкнені визначення MCP. Оригінальні файли Claude не змінюються; після ввімкнення перезапустіть бекенд.",
   "settings.experimental.multiProject.description":
     "Увімкніть керування сеансами та робочими деревами в кількох репозиторіях в Agent Manager. Поточний репозиторій робочого простору завжди є проєктом за замовчуванням.",
-  "settings.experimental.taskModelSelection.title": "Вибір моделі субагента Task",
-  "settings.experimental.taskModelSelection.description":
-    "Дозволяє явно вибирати модель, провайдера та рівень міркування для субагентів Task.",
   "settings.experimental.mcpTimeout.title": "Тайм-аут MCP (мс)",
   "settings.experimental.mcpTimeout.description": "Тайм-аут у мілісекундах для запитів до MCP-сервера",
   "settings.experimental.remote.title": "Керування Remote",
@@ -1101,6 +1101,9 @@ export const dict = {
   "settings.autoCleanup.runNow": "Запустити очищення зараз",
   "settings.autoCleanup.runNow.confirm":
     "Безповоротно видалити застарілі сесії в усіх проєктах і в усіх клієнтах Kilo на цьому комп'ютері?",
+  "settings.autoCleanup.stop": "Зупинити очищення",
+  "settings.autoCleanup.progress.cancelling": "Зупинка очищення сеансів...",
+  "settings.autoCleanup.lastRun.cancelled": "перервано",
 
   "settings.context.autoCompaction.title": "Автоматичне стиснення",
   "settings.context.autoCompaction.description": "Автоматично стискати контекст до досягнення ліміту",

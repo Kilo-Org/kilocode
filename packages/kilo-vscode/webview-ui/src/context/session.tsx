@@ -26,6 +26,7 @@ import { useConfig } from "./config"
 import { useLanguage } from "./language"
 import { createCostAlertHandler } from "./cost-alert"
 import { showToast } from "@kilocode/kilo-ui/toast"
+import { touch } from "@kilocode/kilo-ui/tool-motion"
 import type {
   SessionInfo,
   SessionModelUsage,
@@ -1477,6 +1478,8 @@ export const SessionProvider: ParentComponent = (props) => {
 
     if (sessionID) patchPage(sessionID, { lastMutation: "update" })
     patchToolPart(sessionID, effectiveMessageID, part)
+    // Tool rows animate only when they mount right after a streamed update.
+    if (part.type === "tool") touch(part.id)
 
     // If the stash has parts for this message, hydrate them first so the
     // SSE update merges into the full part list rather than an empty array.
@@ -1917,6 +1920,8 @@ export const SessionProvider: ParentComponent = (props) => {
       loaded,
       preserve,
       append,
+      hasMore,
+      open: paging.open(),
       fresh: freshSessions,
       setSessions: (updater) => setStore("sessions", produce(updater)),
     })
@@ -3056,6 +3061,7 @@ export const SessionProvider: ParentComponent = (props) => {
     loadSessions,
     loadMoreSessions: paging.loadMore,
     sessionsHasMore: paging.hasMore,
+    keepSessions: paging.keep,
     sessionsLoadingMore: paging.loadingMore,
     loadOlderMessages,
     selectSession,

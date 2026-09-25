@@ -126,7 +126,7 @@ Learn more about [agents and custom agents](https://kilo.ai/docs/code-with-ai/ag
 - **Inline autocomplete** with ghost-text suggestions and tab to accept.
 - **Self-checking** so the agent reviews and corrects its own work.
 - **Terminal and browser control** to run commands and automate the web.
-- **MCP marketplace** to find and wire up MCP servers that extend what the agent can do.
+- **Kilo Marketplace** to install agents, skills, MCP servers, and plugins that extend what the agent can do.
 - **500+ models** with mid-task switching, so you can match latency, cost, and reasoning to the job.
 
 ### Autonomous Mode (CI/CD)

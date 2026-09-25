@@ -3,6 +3,7 @@ import fs from "node:fs"
 import path from "node:path"
 
 const TAB_BAR = path.resolve(import.meta.dir, "../../webview-ui/agent-manager/TabBar.tsx")
+const TAB_RENDERING = path.resolve(import.meta.dir, "../../webview-ui/agent-manager/tab-rendering.tsx")
 const BROWSER_PANEL = path.resolve(import.meta.dir, "../../webview-ui/browser/BrowserPanel.tsx")
 const BROWSER_ADAPTER = path.resolve(import.meta.dir, "../../webview-ui/agent-manager/BrowserPanel.tsx")
 
@@ -18,17 +19,18 @@ describe("Agent Manager diff toggle", () => {
     expect(button).toContain('aria-label={props.t("agentManager.browser.title")}')
   })
 
-  it("renders a real sandboxed browser document instead of an image", () => {
+  it("uses a reusable streamed viewport and keeps developer tools sandboxed", () => {
     const source = fs.readFileSync(BROWSER_PANEL, "utf-8")
-    expect(source).toContain("<iframe")
+    expect(source).toContain("<StreamViewport")
+    expect(source).toContain('class="am-browser-devtools-frame"')
     expect(source).toContain('sandbox="allow-scripts allow-forms allow-same-origin"')
     expect(source).not.toContain("<img")
     expect(source).not.toContain("<canvas")
   })
 
-  it("reloads the visible document on each browser navigation and bridges native element inspection", () => {
+  it("passes navigation state to the stream and bridges element inspection", () => {
     const source = fs.readFileSync(BROWSER_PANEL, "utf-8")
-    expect(source).toContain("props.state?.navigation")
+    expect(source).toContain("state={() => props.state}")
     expect(source).toContain("when={identity()}")
     expect(source).not.toContain("contentWindow")
     expect(source).toContain("onMouseMove={(event) => props.controller.move(position(event))}")
@@ -71,5 +73,10 @@ describe("Agent Manager diff toggle", () => {
     expect(button).not.toContain("props.prStatus()")
     expect(button).not.toContain("pr().additions")
     expect(button).not.toContain("pr().deletions")
+  })
+
+  it("reads the session tab from the live lookup so rename reaches the label", () => {
+    const source = fs.readFileSync(TAB_RENDERING, "utf-8")
+    expect(source).toContain("tab={() => deps.tabLookup().get(s.id) ?? s}")
   })
 })

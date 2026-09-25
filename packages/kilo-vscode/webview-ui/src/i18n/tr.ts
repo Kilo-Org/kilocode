@@ -90,6 +90,8 @@ export const dict = {
     "Konuşma geri alındı. Anlık görüntüler devre dışı olduğu için dosya değişiklikleri geri yüklenmedi.",
   "revert.banner.workspace.unavailable":
     "Konuşma geri alındı. Dosya kontrol noktası olmadığından çalışma alanı değişiklikleri geri yüklenmedi.",
+  "revert.banner.workspace.notAGitRepo":
+    "Konuşma geri alındı. Dosya kontrol noktaları bir Git deposu gerektirir, bu nedenle çalışma alanı değişiklikleri geri yüklenmedi.",
   "revert.banner.workspace.legacy":
     "Konuşma geri alındı. Bu önceki geri alma için çalışma alanı geri yükleme durumu kullanılamıyor.",
   "revert.banner.workspace.enableSnapshots": "Anlık Görüntüleri Etkinleştir",
@@ -828,7 +830,8 @@ export const dict = {
   "settings.browser.description":
     "Playwright ile çalışan yerleşik tarayıcı otomasyonunu yapılandırın. Kilo, oturumlarınızda web sayfalarında gezinebilir, bunlarla etkileşime girebilir ve ekran görüntüsü alabilir.",
   "settings.browser.enable.title": "Tarayıcı Otomasyonunu Etkinleştir",
-  "settings.browser.enable.description": "Playwright MCP sunucusunu CLI arka ucuyla kaydet.",
+  "settings.browser.enable.description":
+    "Yerel uygulamalar ve herkese açık HTTPS sayfaları için oturuma özel Agent Manager tarayıcısını etkinleştir.",
   "settings.browser.systemChrome.title": "Sistem Chrome'unu Kullan",
   "settings.browser.systemChrome.description": "Ayrı bir Chromium örneği yerine yüklü Chrome tarayıcınızı kullanın.",
   "settings.browser.headless.title": "Başsız Mod",
@@ -929,9 +932,6 @@ export const dict = {
     "Desteklenen genel CLAUDE.md talimatlarını, basit becerileri ve devre dışı MCP tanımlarını bir kez içe aktarın. Orijinal Claude dosyaları değiştirilmez; etkinleştirdikten sonra arka ucu yeniden başlatın.",
   "settings.experimental.multiProject.description":
     "Agent Manager'da birden fazla depo genelinde oturum ve worktree yönetimini etkinleştirin. Mevcut çalışma alanı deposu her zaman varsayılan projedir.",
-  "settings.experimental.taskModelSelection.title": "Task Alt Aracı Modeli Seçimi",
-  "settings.experimental.taskModelSelection.description":
-    "Task alt aracıları için model, sağlayıcı ve akıl yürütme çabasını açıkça seçmeye izin verin.",
   "settings.experimental.mcpTimeout.title": "MCP Zaman Aşımı (ms)",
   "settings.experimental.mcpTimeout.description": "MCP sunucu istekleri için milisaniye cinsinden zaman aşımı",
   "settings.experimental.remote.title": "Remote Kontrolü",
@@ -1101,6 +1101,9 @@ export const dict = {
   "settings.autoCleanup.runNow": "Temizliği şimdi çalıştır",
   "settings.autoCleanup.runNow.confirm":
     "Süresi dolmuş oturumlar bu bilgisayardaki tüm projelerde ve tüm Kilo istemcilerinde kalıcı olarak silinsin mi?",
+  "settings.autoCleanup.stop": "Temizliği durdur",
+  "settings.autoCleanup.progress.cancelling": "Oturum temizliği durduruluyor...",
+  "settings.autoCleanup.lastRun.cancelled": "kesintiye uğradı",
 
   "settings.context.autoCompaction.title": "Otomatik Sıkıştırma",
   "settings.context.autoCompaction.description": "Bağlam sınıra ulaşmadan önce otomatik olarak sıkıştır",

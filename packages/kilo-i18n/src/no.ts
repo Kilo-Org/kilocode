@@ -35,6 +35,7 @@ export const dict = {
   "marketplace.install.scope.global.description":
     "Alle prosjekter på denne maskinen. Lagres i brukerkonfigurasjonen din.",
   "marketplace.install.destination": "Installasjonssted",
+  "marketplace.install.includedSkills": "Inkluderte ferdigheter",
   "marketplace.install.about.mcp":
     "En MCP-server gir Kilo flere verktøy for å arbeide med eksterne tjenester eller lokale programmer.",
   "marketplace.install.about.agent": "En agent legger til en gjenbrukbar rolle med egne instruksjoner og tillatelser.",
@@ -46,8 +47,13 @@ export const dict = {
     "Prosjektfiler kan legges til i versjonskontroll. Ikke lagre hemmeligheter her med mindre konfigurasjonen viser til en miljøvariabel.",
   "marketplace.install.learnMore": "Finn ut hvordan installasjoner fra Marketplace fungerer",
   "marketplace.install.learnMcp": "Finn ut mer om MCP",
+  "marketplace.install.about.plugin":
+    "Et programtillegg legger til tilpassede verktøy og integrasjoner i Kilo. Programtillegg kjører med fulle tillatelser.",
+  "marketplace.install.plugin.warning":
+    "Programtillegg kjører kode med fulle tillatelser. De kan lese og endre filene dine, kjøre kommandoer og få tilgang til påloggingsopplysningene dine og nettverket ditt. Installer bare programtillegg du stoler på.",
   "marketplace.install.installedAt": "Installert i {{path}}",
-  "marketplace.intro": "Installer gjenbrukbare agenter, ferdigheter og MCP-verktøy for ett eller alle prosjekter.",
+  "marketplace.intro":
+    "Installer gjenbrukbare agenter, ferdigheter, MCP-verktøy og programtillegg for ett eller alle prosjekter.",
   "marketplace.intro.learnMore": "Om Marketplace",
   "marketplace.install.prerequisites": "Forutsetninger",
   "marketplace.install.installing": "Installerer...",
@@ -60,6 +66,8 @@ export const dict = {
   "marketplace.remove.confirm":
     "Er du sikker på at du vil fjerne denne {{type}}? Dette vil fjerne den fra din {{scope}}-konfigurasjon.",
   "marketplace.remove.cancel": "Avbryt",
+  "marketplace.remove.mcp.skills":
+    "Dette fjerner også de medfølgende ferdighetene som tilhører denne installasjonen. Ferdigheter som er installert separat, beholdes.",
   "marketplace.remove.confirm.button": "Fjern",
   "marketplace.search": "Søk...",
   "marketplace.filter.all": "Alle elementer",
@@ -68,6 +76,7 @@ export const dict = {
   "marketplace.empty": "Ingen elementer funnet",
   "marketplace.empty.relevant": "Ingen relevante marketplace-elementer funnet for dette arbeidsområdet.",
   "marketplace.badge.mcpServer": "MCP-server",
+  "marketplace.badge.skills": "Inkluderer ferdigheter",
   "marketplace.card.by": "av {{author}}",
   "marketplace.install.method": "Installasjonsmetode",
   "marketplace.install.parameters": "Parametere",
@@ -75,6 +84,7 @@ export const dict = {
   "marketplace.scope.project": "prosjekt",
   "marketplace.scope.global": "global",
   "marketplace.remove.type.mcp": "MCP-server",
+  "marketplace.remove.type.plugin": "programtillegg",
   "marketplace.remove.type.skill": "ferdighet",
   "marketplace.remove.type.agent": "agent",
   "marketplace.remove.failed": "Kunne ikke fjerne {{name}}",
@@ -85,7 +95,7 @@ export const dict = {
   "marketplace.warning.busyMany": "Flere økter kjører og vil bli avbrutt",
   "marketplace.warning.installAnyway": "Installer uansett",
   "marketplace.warning.cancel": "Avbryt",
-  "marketplace.contribute.prompt": "Mangler du en skill, agent eller MCP-server?",
+  "marketplace.contribute.prompt": "Mangler du en skill, agent, MCP-server eller et programtillegg?",
   "marketplace.contribute.cta": "Bidra på GitHub",
   "marketplace.migration.notice":
     "Modi er erstattet av agenter. Hvis du tidligere har installert marketplace-modi, fjern dem og installer dem på nytt som agenter for å migrere til det nye formatet.",

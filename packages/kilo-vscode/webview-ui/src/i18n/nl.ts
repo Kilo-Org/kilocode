@@ -90,6 +90,8 @@ export const dict = {
     "Conversatie teruggedraaid. Bestandswijzigingen zijn niet hersteld omdat snapshots zijn uitgeschakeld.",
   "revert.banner.workspace.unavailable":
     "Conversatie teruggedraaid. Er was geen bestandscheckpoint beschikbaar, dus wijzigingen in de werkruimte zijn niet hersteld.",
+  "revert.banner.workspace.notAGitRepo":
+    "Conversatie teruggedraaid. Bestandscheckpoints vereisen een Git-repository, dus wijzigingen in de werkruimte zijn niet hersteld.",
   "revert.banner.workspace.legacy":
     "Gesprek teruggedraaid. De herstelstatus van de werkruimte is niet beschikbaar voor deze eerdere terugdraaiing.",
   "revert.banner.workspace.enableSnapshots": "Snapshots inschakelen",
@@ -832,7 +834,8 @@ export const dict = {
   "settings.browser.description":
     "Configureer ingebouwde browserautomatisering mogelijk gemaakt door Playwright. Kilo kan in je sessies door webpagina's navigeren, ermee werken en schermafbeeldingen maken.",
   "settings.browser.enable.title": "Browserautomatisering inschakelen",
-  "settings.browser.enable.description": "Registreer de Playwright MCP-server bij de CLI backend.",
+  "settings.browser.enable.description":
+    "Schakel de sessiegebonden browser van Agent Manager in voor lokale applicaties en openbare HTTPS-pagina's.",
   "settings.browser.systemChrome.title": "Gebruik Systeem Chrome",
   "settings.browser.systemChrome.description":
     "Gebruik je geïnstalleerde Chrome-browser in plaats van een aparte Chromium-instantie.",
@@ -937,9 +940,6 @@ export const dict = {
     "Importeer ondersteunde globale CLAUDE.md-instructies, eenvoudige vaardigheden en uitgeschakelde MCP-definities één keer. Originele Claude-bestanden blijven ongewijzigd; herstart de backend na inschakelen.",
   "settings.experimental.multiProject.description":
     "Schakel het beheren van sessies en worktrees over meerdere repositories in Agent Manager in. De huidige workspace-repository is altijd het standaardproject.",
-  "settings.experimental.taskModelSelection.title": "Task-subagentmodel selecteren",
-  "settings.experimental.taskModelSelection.description":
-    "Sta toe dat je expliciet een model, provider en redeneerinspanning kiest voor Task-subagents.",
   "settings.experimental.mcpTimeout.title": "MCP Timeout (ms)",
   "settings.experimental.mcpTimeout.description": "Timeout voor MCP-serververzoeken in milliseconden",
   "settings.experimental.remote.title": "Remote-bediening",
@@ -1113,6 +1113,9 @@ export const dict = {
   "settings.autoCleanup.runNow": "Opschoning nu uitvoeren",
   "settings.autoCleanup.runNow.confirm":
     "Verlopen sessies definitief verwijderen in alle projecten en alle Kilo-clients op deze machine?",
+  "settings.autoCleanup.stop": "Opschonen stoppen",
+  "settings.autoCleanup.progress.cancelling": "Sessie-opschoning wordt gestopt...",
+  "settings.autoCleanup.lastRun.cancelled": "afgebroken",
 
   "settings.context.autoCompaction.title": "Automatische Compactie",
   "settings.context.autoCompaction.description": "Context automatisch compacteren voordat deze de limiet bereikt",

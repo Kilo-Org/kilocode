@@ -52,7 +52,6 @@ export interface ExperimentalConfig {
   batch_tool?: boolean
   image_generation?: boolean
   image_generation_model?: string
-  task_model_selection?: boolean
   code_mode?: boolean
   native_notebook_tools?: boolean
   speech_to_text_model?: string

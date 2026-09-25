@@ -88,6 +88,7 @@ export const dict = {
   "revert.banner.hint": "You can redo these changes until you send a new message",
   "revert.banner.workspace.snapshotsDisabled": "工作階段已還原。由於快照已停用，未還原檔案變更。",
   "revert.banner.workspace.unavailable": "工作階段已還原。沒有可用的檔案檢查點，因此未還原工作區變更。",
+  "revert.banner.workspace.notAGitRepo": "工作階段已還原。檔案檢查點需要 Git 儲存庫，因此未還原工作區變更。",
   "revert.banner.workspace.legacy": "工作階段已還原。此次先前還原的工作區復原狀態無法取得。",
   "revert.banner.workspace.enableSnapshots": "啟用快照",
   "revert.disabled.agentBusy": "等待 Agent 完成",
@@ -766,7 +767,8 @@ export const dict = {
   "settings.browser.description":
     "設定由 Playwright 提供支援的內建瀏覽器自動化。Kilo 可以在你的工作階段中瀏覽網頁、與網頁互動，並擷取螢幕截圖。",
   "settings.browser.enable.title": "啟用瀏覽器自動化",
-  "settings.browser.enable.description": "將 Playwright MCP 伺服器註冊到 CLI 後端。",
+  "settings.browser.enable.description":
+    "啟用工作階段專屬的 Agent Manager 瀏覽器，用於本機應用程式和公開的 HTTPS 頁面。",
   "settings.browser.systemChrome.title": "使用系統 Chrome",
   "settings.browser.systemChrome.description": "使用已安裝的 Chrome 瀏覽器，而非獨立的 Chromium 實例。",
   "settings.browser.headless.title": "無頭模式",
@@ -858,8 +860,6 @@ export const dict = {
     "一次性匯入受支援的全域 CLAUDE.md 指示、簡單技能和已停用的 MCP 定義。不會修改原始 Claude 檔案；啟用後請重新啟動後端。",
   "settings.experimental.multiProject.description":
     "在 Agent Manager 中啟用跨多個儲存庫的工作階段和工作樹管理。當前工作區儲存庫始終是預設專案。",
-  "settings.experimental.taskModelSelection.title": "Task 子代理模型選擇",
-  "settings.experimental.taskModelSelection.description": "允許為 Task 子代理選擇指定的模型、提供者和推理工作量。",
   "settings.experimental.mcpTimeout.title": "MCP 逾時（毫秒）",
   "settings.experimental.mcpTimeout.description": "MCP 伺服器請求的逾時時間（毫秒）",
   "settings.experimental.remote.title": "Remote 控制",
@@ -1039,6 +1039,9 @@ export const dict = {
     "正在刪除會話：已處理 {{processed}}/{{total}}（已刪除 {{deleted}} 個，失敗 {{failed}} 個）",
   "settings.autoCleanup.runNow": "立即執行清理",
   "settings.autoCleanup.runNow.confirm": "永久刪除這台機器上所有專案和所有 Kilo 用戶端中已過期的會話？",
+  "settings.autoCleanup.stop": "停止清理",
+  "settings.autoCleanup.progress.cancelling": "正在停止工作階段清理...",
+  "settings.autoCleanup.lastRun.cancelled": "已中斷",
   "settings.context.autoCompaction.title": "自動壓縮",
   "settings.context.autoCompaction.description": "在上下文達到限制前自動壓縮",
   "settings.context.compaction.title": "壓縮",

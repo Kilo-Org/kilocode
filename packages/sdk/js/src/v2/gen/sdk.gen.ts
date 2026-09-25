@@ -211,6 +211,8 @@ import type {
   KilocodeResetSessionBoardResponses,
   KilocodeResumeSessionErrors,
   KilocodeResumeSessionResponses,
+  KilocodeRetentionCancelErrors,
+  KilocodeRetentionCancelResponses,
   KilocodeRetentionRunErrors,
   KilocodeRetentionRunResponses,
   KilocodeRetentionStatusErrors,
@@ -7337,7 +7339,7 @@ export class Marketplace extends HeyApiClient {
   /**
    * Install a marketplace item
    *
-   * Install a marketplace MCP server, agent, or skill into project or global Kilo config.
+   * Install a marketplace MCP server, agent, skill, or plugin into project or global Kilo config.
    */
   public install<ThrowOnError extends boolean = false>(
     parameters: {
@@ -7384,7 +7386,7 @@ export class Marketplace extends HeyApiClient {
   /**
    * Remove a marketplace item
    *
-   * Remove a marketplace MCP server, agent, or skill from project or global Kilo config.
+   * Remove a marketplace MCP server, agent, skill, or plugin from project or global Kilo config.
    */
   public remove<ThrowOnError extends boolean = false>(
     parameters: {
@@ -7924,6 +7926,40 @@ export class Retention extends HeyApiClient {
       },
     })
   }
+
+  /**
+   * Stop the active session retention pass
+   *
+   * Ask the machine-wide retention pass to stop before deleting more sessions. Already-deleted sessions stay deleted; the interrupted pass still records its partial result and honors the spacing window.
+   */
+  public cancel<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<
+      KilocodeRetentionCancelResponses,
+      KilocodeRetentionCancelErrors,
+      ThrowOnError
+    >({
+      url: "/kilocode/retention/cancel",
+      ...options,
+      ...params,
+    })
+  }
 }
 
 export class Migrate extends HeyApiClient {
@@ -8118,7 +8154,7 @@ export class SessionImport extends HeyApiClient {
         partID?: string
         snapshot?: string
         diff?: string
-        workspace?: "restored" | "snapshots-disabled" | "unavailable"
+        workspace?: "restored" | "snapshots-disabled" | "unavailable" | "not-a-git-repo"
       }
       permission?: {
         [key: string]: unknown

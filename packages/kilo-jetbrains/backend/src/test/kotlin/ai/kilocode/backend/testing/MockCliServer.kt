@@ -80,6 +80,16 @@ class MockCliServer : AutoCloseable {
     @Volatile var lastSessionBoardPath: String? = null
     @Volatile var lastResetSessionBoardPath: String? = null
     @Volatile var lastResetSessionBoardBody: String? = null
+    @Volatile var backgroundJobs = "[]"
+    @Volatile var backgroundJobsStatus = 200
+    @Volatile var backgroundJobCancelResult = "true"
+    @Volatile var backgroundJobCancelStatus = 200
+    @Volatile var backgroundJobPromoteResult = "true"
+    @Volatile var backgroundJobPromoteStatus = 200
+    @Volatile var lastBackgroundJobsPath: String? = null
+    @Volatile var lastBackgroundJobCancelPath: String? = null
+    @Volatile var lastBackgroundJobPromotePath: String? = null
+    val backgroundJobsRequests = java.util.concurrent.CopyOnWriteArrayList<String>()
     @Volatile var lastCommandRemoveBody: String? = null
     @Volatile var lastSkillRemoveBody: String? = null
     @Volatile var lastAgentBuilderPath: String? = null
@@ -172,7 +182,9 @@ class MockCliServer : AutoCloseable {
     @Volatile var lastSessionRenameBody: String? = null
     @Volatile var lastSessionRenameMethod: String? = null
     @Volatile var pendingPermissions = "[]"
+    @Volatile var pendingPermissionsStatus = 200
     @Volatile var pendingQuestions = "[]"
+    @Volatile var pendingQuestionsStatus = 200
 
     /** Configurable delay for all endpoint responses (ms). 0 = no delay. */
     @Volatile var responseDelay: Long = 0
@@ -182,6 +194,9 @@ class MockCliServer : AutoCloseable {
 
     /** Optional gate for config warnings only. */
     @Volatile var warningsGate: CountDownLatch? = null
+
+    /** Holds `/experimental/capabilities` so a test can simulate a hung optional probe. */
+    @Volatile var capabilitiesGate: CountDownLatch? = null
 
     /** Request counts by bare path (e.g. "/session" or "/global/config"). Thread-safe. */
     private val counts = ConcurrentHashMap<String, AtomicInteger>()
@@ -220,6 +235,9 @@ class MockCliServer : AutoCloseable {
     }
 
     @Volatile var lastExperimentalSessionPath: String? = null
+    @Volatile var lastCapabilitiesPath: String? = null
+    @Volatile var capabilities = """{"backgroundSubagents":true}"""
+    @Volatile var capabilitiesStatus = 200
 
     /** Reset all request counters. */
     fun resetCounts() { counts.clear() }
@@ -351,6 +369,7 @@ class MockCliServer : AutoCloseable {
             if (delay > 0) Thread.sleep(delay)
             if (bare != "/global/event") responseGate?.await()
             if (bare.startsWith("/config/warnings")) warningsGate?.await()
+            if (bare == "/experimental/capabilities") capabilitiesGate?.await()
 
             when {
                 path == "/global/health" -> respond(output, 200, health)
@@ -443,6 +462,19 @@ class MockCliServer : AutoCloseable {
                     lastResetSessionBoardBody = body
                     respond(output, resetSessionBoardStatus, resetSessionBoardResponse)
                 }
+                bare == "/kilocode/background-jobs" && method == "GET" -> {
+                    lastBackgroundJobsPath = path
+                    backgroundJobsRequests.add(path)
+                    respond(output, backgroundJobsStatus, backgroundJobs)
+                }
+                bare.matches(Regex("/kilocode/background-jobs/[^/]+/cancel")) && method == "POST" -> {
+                    lastBackgroundJobCancelPath = path
+                    respond(output, backgroundJobCancelStatus, backgroundJobCancelResult)
+                }
+                bare.matches(Regex("/kilocode/background-jobs/[^/]+/promote")) && method == "POST" -> {
+                    lastBackgroundJobPromotePath = path
+                    respond(output, backgroundJobPromoteStatus, backgroundJobPromoteResult)
+                }
                 bare == "/instance/reload" && method == "POST" -> respond(output, 200, "true")
                 bare == "/command" -> respond(output, commandsStatus, commands)
                 bare == "/skill" -> respond(output, skillsStatus, skills)
@@ -464,6 +496,10 @@ class MockCliServer : AutoCloseable {
                     lastExperimentalSessionPath = path
                     respond(output, recentSessionsStatus, recentSessions)
                 }
+                bare == "/experimental/capabilities" -> {
+                    lastCapabilitiesPath = path
+                    respond(output, capabilitiesStatus, capabilities)
+                }
                 bare == "/kilo/cloud-sessions" -> {
                     lastCloudSessionsPath = path
                     respond(output, cloudSessionsStatus, cloudSessions)
@@ -474,8 +510,10 @@ class MockCliServer : AutoCloseable {
                     respond(output, cloudSessionImportStatus, cloudSessionImport)
                 }
                 bare == "/session/status" -> respond(output, sessionStatusesStatus, sessionStatuses)
-                bare == "/permission" && method == "GET" -> respond(output, 200, pendingPermissions)
-                bare == "/question" && method == "GET" -> respond(output, 200, pendingQuestions)
+                bare == "/permission" && method == "GET" ->
+                    respond(output, pendingPermissionsStatus, pendingPermissions)
+                bare == "/question" && method == "GET" ->
+                    respond(output, pendingQuestionsStatus, pendingQuestions)
                 bare == "/session" && method == "GET" -> respond(output, sessionsStatus, sessions)
                 bare == "/session" && method == "POST" -> respond(output, sessionCreateStatus, sessionCreate)
                 bare.matches(Regex("/session/ses_[^/]+")) && method == "GET" ->

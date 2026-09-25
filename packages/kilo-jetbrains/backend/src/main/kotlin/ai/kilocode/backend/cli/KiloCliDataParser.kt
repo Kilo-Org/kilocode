@@ -13,6 +13,7 @@ import ai.kilocode.backend.workspace.ModelTerminalBenchInfo
 import ai.kilocode.backend.workspace.ProviderData
 import ai.kilocode.backend.workspace.ProviderInfo
 import ai.kilocode.rpc.dto.AgentConfigDto
+import ai.kilocode.rpc.dto.BackgroundJobDto
 import ai.kilocode.rpc.dto.BoardMessageDto
 import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.CloudSessionDto
@@ -448,6 +449,40 @@ object KiloCliDataParser {
             cursor = obj.str("cursor"),
             hasMore = obj.bool("hasMore"),
         )
+    }
+
+    /**
+     * Parse a background-jobs list response (`GET /kilocode/background-jobs`) into
+     * [BackgroundJobDto]s, flattening the open `metadata` map's `sessionId`/`parentSessionId`/
+     * `background` keys into typed fields. A row missing `id`/`type`/`status` is dropped rather
+     * than failing the whole list.
+     *
+     * `started_at`/`completed_at` normally arrive as numbers, but the generated SDK types widen them
+     * to `"NaN"`/`"Infinity"`/`"-Infinity"` strings — [JsonObject.num] parses both via
+     * [String.toDoubleOrNull], and a non-finite result falls back to the given default rather than a
+     * garbage [Long].
+     */
+    fun parseBackgroundJobs(raw: String): List<BackgroundJobDto> {
+        val arr = tryParseArray(raw) ?: return emptyList()
+        return arr.mapNotNull { elem ->
+            val row = elem.obj() ?: return@mapNotNull null
+            val id = row.str("id") ?: return@mapNotNull null
+            val type = row.str("type") ?: return@mapNotNull null
+            val status = row.str("status") ?: return@mapNotNull null
+            val metadata = row["metadata"].obj()
+            BackgroundJobDto(
+                id = id,
+                type = type,
+                status = status,
+                title = row.str("title"),
+                startedAt = row.num("started_at")?.takeIf { it.isFinite() }?.toLong() ?: 0L,
+                completedAt = row.num("completed_at")?.takeIf { it.isFinite() }?.toLong(),
+                error = row.str("error"),
+                sessionId = metadata?.str("sessionId"),
+                parentSessionId = metadata?.str("parentSessionId"),
+                background = metadata.bool("background"),
+            )
+        }
     }
 
     /**
@@ -1095,14 +1130,23 @@ object KiloCliDataParser {
         return json.encodeToString(JsonObject.serializer(), JsonObject(mapOf("disabled_providers" to arr)))
     }
 
-    fun buildCustomProviderPatch(input: CustomProviderSaveDto): String {
+    /**
+     * [removedModelIds] are previously configured model IDs no longer present in [input.models].
+     * The config schema deep-merges provider objects on PATCH, so a removed model key must be
+     * emitted as an explicit `null` sentinel or it survives on disk under the old id forever
+     * (visible again after a restart).
+     */
+    fun buildCustomProviderPatch(input: CustomProviderSaveDto, removedModelIds: Set<String> = emptySet()): String {
         val id = input.id.trim()
         val env = input.envVar?.trim()?.takeIf { it.isNotBlank() }
-        val models = input.models.associate { model ->
-            model.id to buildJsonObject {
-                put("id", model.id)
-                put("name", model.name.ifBlank { model.id })
-                put("capabilities", buildJsonObject { put("reasoning", model.reasoning) })
+        val models = buildJsonObject {
+            removedModelIds.forEach { removedId -> put(removedId, JsonNull) }
+            input.models.forEach { model ->
+                put(model.id, buildJsonObject {
+                    put("id", model.id)
+                    put("name", model.name.ifBlank { model.id })
+                    put("capabilities", buildJsonObject { put("reasoning", model.reasoning) })
+                })
             }
         }
         val provider = buildJsonObject {
@@ -1111,7 +1155,7 @@ object KiloCliDataParser {
             put("options", buildJsonObject { put("baseURL", input.baseUrl.trim()) })
             if (env != null) put("env", buildJsonArray { add(JsonPrimitive(env)) })
             if (input.headers.isNotEmpty()) put("headers", buildJsonObject { input.headers.forEach { (k, v) -> put(k, v) } })
-            if (models.isNotEmpty()) put("models", JsonObject(models))
+            if (models.isNotEmpty()) put("models", models)
         }
         val root = buildJsonObject {
             put("provider", buildJsonObject { put(id, provider) })
@@ -1122,6 +1166,23 @@ object KiloCliDataParser {
     fun buildCustomProviderDeletePatch(id: String): String {
         val root = buildJsonObject {
             put("provider", buildJsonObject { put(id, JsonNull) })
+        }
+        return json.encodeToString(JsonObject.serializer(), root)
+    }
+
+    /**
+     * A models-only deletion patch for provider [id]. Used when the same custom provider id has a
+     * separate, independently-authored config entry in another scope (global vs. workspace) that
+     * still lists a model the primary save removed. Only nulls the given model keys; every other
+     * field on that scope's entry is left untouched by the deep-merge PATCH.
+     */
+    fun buildCustomProviderModelRemovalPatch(id: String, modelIds: Set<String>): String {
+        val root = buildJsonObject {
+            put("provider", buildJsonObject {
+                put(id, buildJsonObject {
+                    put("models", buildJsonObject { modelIds.forEach { put(it, JsonNull) } })
+                })
+            })
         }
         return json.encodeToString(JsonObject.serializer(), root)
     }

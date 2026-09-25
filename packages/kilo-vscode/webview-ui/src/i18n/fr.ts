@@ -90,6 +90,8 @@ export const dict = {
     "Conversation annulée. Les modifications de fichiers n’ont pas été restaurées, car les instantanés sont désactivés.",
   "revert.banner.workspace.unavailable":
     "Conversation annulée. Aucun point de contrôle de fichiers n’était disponible, les modifications de l’espace de travail n’ont donc pas été restaurées.",
+  "revert.banner.workspace.notAGitRepo":
+    "Conversation annulée. Les points de contrôle de fichiers nécessitent un dépôt Git, les modifications de l’espace de travail n’ont donc pas été restaurées.",
   "revert.banner.workspace.legacy":
     "Conversation annulée. L’état de restauration de l’espace de travail n’est pas disponible pour cette annulation antérieure.",
   "revert.banner.workspace.enableSnapshots": "Activer les instantanés",
@@ -857,7 +859,8 @@ export const dict = {
   "settings.browser.description":
     "Configurez l'automatisation de navigateur intégrée propulsée par Playwright. Kilo peut naviguer, interagir et prendre des captures d'écran de pages web dans vos sessions.",
   "settings.browser.enable.title": "Activer l'automatisation du navigateur",
-  "settings.browser.enable.description": "Enregistrer le serveur Playwright MCP auprès du backend CLI.",
+  "settings.browser.enable.description":
+    "Activer le navigateur d'Agent Manager propre à chaque session pour les applications locales et les pages HTTPS publiques.",
   "settings.browser.systemChrome.title": "Utiliser le Chrome système",
   "settings.browser.systemChrome.description":
     "Utiliser votre navigateur Chrome installé au lieu d'une instance Chromium séparée.",
@@ -961,9 +964,6 @@ export const dict = {
     "Importer une fois les instructions CLAUDE.md globales prises en charge, les compétences simples et les définitions MCP désactivées. Les fichiers Claude d'origine restent inchangés ; redémarrez le backend après activation.",
   "settings.experimental.multiProject.description":
     "Activer la gestion des sessions et worktrees sur plusieurs dépôts dans Agent Manager. Le dépôt de l'espace de travail actuel est toujours le projet par défaut.",
-  "settings.experimental.taskModelSelection.title": "Sélection du modèle des sous-agents Task",
-  "settings.experimental.taskModelSelection.description":
-    "Permet de sélectionner explicitement le modèle, le fournisseur et l'effort de raisonnement des sous-agents Task.",
   "settings.experimental.mcpTimeout.title": "Délai MCP (ms)",
   "settings.experimental.mcpTimeout.description": "Délai des requêtes du serveur MCP en millisecondes",
   "settings.experimental.remote.title": "Contrôle Remote",
@@ -1174,6 +1174,9 @@ export const dict = {
   "settings.autoCleanup.runNow": "Lancer le nettoyage maintenant",
   "settings.autoCleanup.runNow.confirm":
     "Supprimer définitivement les sessions expirées dans tous les projets et tous les clients Kilo de cette machine ?",
+  "settings.autoCleanup.stop": "Arrêter le nettoyage",
+  "settings.autoCleanup.progress.cancelling": "Arrêt du nettoyage des sessions...",
+  "settings.autoCleanup.lastRun.cancelled": "interrompu",
   "settings.context.autoCompaction.title": "Compaction automatique",
   "settings.context.autoCompaction.description":
     "Compacter automatiquement le contexte avant qu'il n'atteigne la limite",

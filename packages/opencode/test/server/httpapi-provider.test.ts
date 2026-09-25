@@ -370,6 +370,11 @@ describe("provider HttpApi", () => {
 
       const providerBody = yield* providerResponse.json
       const configBody = yield* configResponse.json
+      // kilocode_change start - persisted Kilo credentials count as connected providers
+      expect(isRecord(providerBody) && Array.isArray(providerBody.connected) ? providerBody.connected : []).toContain(
+        "google",
+      )
+      // kilocode_change end
       expect(hasProviderWithFetch(providerBody, "all")).toBe(false)
       expect(hasProviderWithFetch(configBody, "providers")).toBe(false)
       expect(hasNonZeroModelCost(providerBody, "all", "google")).toBe(true)

@@ -90,6 +90,8 @@ export const dict = {
     "Conversación revertida. Los cambios en los archivos no se restauraron porque las instantáneas están desactivadas.",
   "revert.banner.workspace.unavailable":
     "Conversación revertida. No había ningún punto de control de archivos disponible, por lo que no se restauraron los cambios del espacio de trabajo.",
+  "revert.banner.workspace.notAGitRepo":
+    "Conversación revertida. Los puntos de control de archivos requieren un repositorio Git, por lo que no se restauraron los cambios del espacio de trabajo.",
   "revert.banner.workspace.legacy":
     "Conversación revertida. El estado de restauración del espacio de trabajo no está disponible para esta reversión anterior.",
   "revert.banner.workspace.enableSnapshots": "Activar instantáneas",
@@ -848,7 +850,8 @@ export const dict = {
   "settings.browser.description":
     "Configura la automatización de navegador integrada basada en Playwright. Kilo puede navegar, interactuar y capturar pantallas de páginas web en tus sesiones.",
   "settings.browser.enable.title": "Activar automatización del navegador",
-  "settings.browser.enable.description": "Registrar el servidor Playwright MCP con el backend CLI.",
+  "settings.browser.enable.description":
+    "Activar el navegador de Agent Manager específico de cada sesión para aplicaciones locales y páginas HTTPS públicas.",
   "settings.browser.systemChrome.title": "Usar Chrome del sistema",
   "settings.browser.systemChrome.description":
     "Usar el navegador Chrome instalado en lugar de una instancia separada de Chromium.",
@@ -949,9 +952,6 @@ export const dict = {
     "Importar una vez las instrucciones globales CLAUDE.md compatibles, habilidades simples y definiciones MCP desactivadas. Los archivos originales de Claude no se modifican; reinicia el backend después de activar.",
   "settings.experimental.multiProject.description":
     "Habilitar la gestión de sesiones y worktrees en múltiples repositorios en Agent Manager. El repositorio del workspace actual es siempre el proyecto predeterminado.",
-  "settings.experimental.taskModelSelection.title": "Selección de modelo de subagente de Task",
-  "settings.experimental.taskModelSelection.description":
-    "Permite seleccionar explícitamente el modelo, proveedor y esfuerzo de razonamiento de los subagentes de Task.",
   "settings.experimental.mcpTimeout.title": "Tiempo de espera MCP (ms)",
   "settings.experimental.mcpTimeout.description": "Tiempo de espera para solicitudes del servidor MCP en milisegundos",
   "settings.experimental.remote.title": "Control Remote",
@@ -1160,6 +1160,9 @@ export const dict = {
   "settings.autoCleanup.runNow": "Ejecutar limpieza ahora",
   "settings.autoCleanup.runNow.confirm":
     "¿Eliminar permanentemente las sesiones caducadas en todos los proyectos y en todos los clientes de Kilo de esta máquina?",
+  "settings.autoCleanup.stop": "Detener limpieza",
+  "settings.autoCleanup.progress.cancelling": "Deteniendo la limpieza de sesiones...",
+  "settings.autoCleanup.lastRun.cancelled": "interrumpida",
   "settings.context.autoCompaction.title": "Compactación automática",
   "settings.context.autoCompaction.description": "Compactar automáticamente el contexto antes de que alcance el límite",
   "settings.context.compaction.title": "Compactación",

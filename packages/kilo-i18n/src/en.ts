@@ -36,19 +36,24 @@ export const dict = {
     "Only this project. The installed files can be committed and shared with your team.",
   "marketplace.install.scope.global.description": "All projects on this machine. Stored in your user configuration.",
   "marketplace.install.destination": "Installation destination",
+  "marketplace.install.includedSkills": "Included skills",
   "marketplace.install.about.mcp":
     "An MCP server gives Kilo additional tools for working with external services or local programs.",
   "marketplace.install.about.agent": "An agent adds a reusable role with its own instructions and permissions.",
   "marketplace.install.about.skill":
     "A skill adds task-specific instructions and resources that Kilo can load when needed.",
+  "marketplace.install.about.plugin":
+    "A plugin adds custom tools and integrations to Kilo. Plugins run with full permissions.",
   "marketplace.install.mcp.warning":
     "MCP servers can run local commands or connect to external services. Kilo will ask for permission before using their tools unless your permissions allow them automatically.",
+  "marketplace.install.plugin.warning":
+    "Plugins run code with full permissions. They can read and change your files, run commands, and access your credentials and network. Only install plugins you trust.",
   "marketplace.install.project.warning":
     "Project files may be committed to version control. Do not store secrets here unless the configuration references an environment variable.",
   "marketplace.install.learnMore": "Learn how Marketplace installs work",
   "marketplace.install.learnMcp": "Learn more about MCP",
   "marketplace.install.installedAt": "Installed to {{path}}",
-  "marketplace.intro": "Install reusable agents, skills, and MCP tools for one project or every project.",
+  "marketplace.intro": "Install reusable agents, skills, MCP tools, and plugins for one project or every project.",
   "marketplace.intro.learnMore": "About Marketplace",
   "marketplace.install.prerequisites": "Prerequisites",
   "marketplace.install.installing": "Installing...",
@@ -61,6 +66,8 @@ export const dict = {
   "marketplace.remove.confirm":
     "Are you sure you want to remove this {{type}}? This will remove it from your {{scope}} configuration.",
   "marketplace.remove.cancel": "Cancel",
+  "marketplace.remove.mcp.skills":
+    "This also removes companion skills owned by this installation. Independently installed skills are kept.",
   "marketplace.remove.confirm.button": "Remove",
   "marketplace.search": "Search...",
   "marketplace.filter.all": "All Items",
@@ -69,6 +76,7 @@ export const dict = {
   "marketplace.empty": "No items found",
   "marketplace.empty.relevant": "No relevant marketplace items found for this workspace.",
   "marketplace.badge.mcpServer": "MCP Server",
+  "marketplace.badge.skills": "Includes skills",
   "marketplace.card.by": "by {{author}}",
   "marketplace.install.method": "Installation Method",
   "marketplace.install.parameters": "Parameters",
@@ -78,6 +86,7 @@ export const dict = {
   "marketplace.remove.type.mcp": "MCP server",
   "marketplace.remove.type.skill": "skill",
   "marketplace.remove.type.agent": "agent",
+  "marketplace.remove.type.plugin": "plugin",
   "marketplace.remove.failed": "Failed to remove {{name}}",
   "marketplace.install": "Install",
   "marketplace.filter.installed": "Installed",
@@ -86,7 +95,7 @@ export const dict = {
   "marketplace.warning.busyMany": "Several sessions are running and will be interrupted",
   "marketplace.warning.installAnyway": "Install anyway",
   "marketplace.warning.cancel": "Cancel",
-  "marketplace.contribute.prompt": "Missing a skill, agent, or MCP server?",
+  "marketplace.contribute.prompt": "Missing a skill, agent, MCP server, or plugin?",
   "marketplace.contribute.cta": "Contribute on GitHub",
   "marketplace.migration.notice":
     "Modes have been replaced by agents. If you previously installed marketplace modes, please remove and reinstall them as agents to migrate to the new format.",

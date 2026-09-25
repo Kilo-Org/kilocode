@@ -1211,6 +1211,8 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         val item = WorktreeDto("${project.basePath!!}/.kilo/worktrees/feature-x", "feature-x", "feature/x", "${project.basePath!!}/.kilo/worktrees/feature-x")
         rpc.listed += item
         rpc.prResult = WorktreePrListDto(GhAvailability.OK, listOf(WorktreePrDto(item.path, 7, GhState.OPEN, "https://example.test/pr/7")))
+        val gate = CompletableDeferred<Unit>()
+        rpc.beforePrStatus = { gate.await() }
         val timers = TestUiTimers()
         ApplicationManager.getApplication().replaceService(KiloWorktreeService::class.java, service, testRootDisposable)
         project.replaceService(WorktreeStatusService::class.java, WorktreeStatusService(project, coroutines.scope, timers), testRootDisposable)
@@ -1219,6 +1221,13 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         edt { controller.reload() }
         timers.advanceBy(300)
         flush()
+
+        assertFalse(edt { panel.canOpenPr(item) })
+        assertTrue(edt { panel.canRename(item) })
+
+        gate.complete(Unit)
+        // The status binding uses Dispatchers.Default, which flush() does not drain.
+        waitUntil { panel.canOpenPr(item) }
 
         assertTrue(edt { panel.canOpenPr(item) })
         assertFalse(edt { panel.canOpenPr(null) })
@@ -1766,6 +1775,9 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         edt { controller.reload() }
         timers.advanceBy(300)
         flush()
+        // A row hides its PR badges while a reload reports progress, so wait for the load to settle
+        // instead of racing a fixed flush under CI load.
+        waitUntil { rows(panel) > 0 && (0 until rows(panel)).all { row(panel, it).progress == null } }
         return panel
     }
 

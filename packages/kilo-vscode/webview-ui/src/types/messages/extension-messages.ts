@@ -19,6 +19,7 @@ import type { AgentManagerSidebarTarget } from "./webview-messages"
 import type { PermissionRequest } from "./permissions"
 import type { AnacondaDesktopExtensionMessage } from "../../../../src/shared/anaconda-desktop-messages"
 import type { BrowserFeedbackData, BrowserReference } from "../../../../src/shared/browser-feedback"
+import type { BrowserFrame } from "../../../../src/shared/browser-stream"
 import type { CodeContext } from "../../../../src/shared/code-context"
 import type { PRMergeResult, PRReviewResult } from "../../../../src/shared/pr-comment-actions"
 
@@ -812,6 +813,8 @@ export interface AutoCleanupLastResult {
   skippedActive: number
   failed: number
   durationMs: number
+  cancelled?: boolean
+  reclaimedBytes?: number
 }
 
 export interface AutoCleanupStateLoadedMessage {
@@ -821,7 +824,7 @@ export interface AutoCleanupStateLoadedMessage {
   pending?: boolean
   error?: "status" | "timeout" | "run"
   progress?: {
-    phase: "scanning" | "deleting"
+    phase: "scanning" | "deleting" | "cancelling"
     total: number
     processed: number
     deleted: number
@@ -1497,6 +1500,8 @@ export interface MarketplaceInstallResultMessage {
   success: boolean
   slug: string
   error?: string
+  filePath?: string
+  filePaths?: string[]
 }
 
 export interface OpenInstallModalMessage {
@@ -1601,7 +1606,10 @@ export interface AgentManagerBrowserStateMessage {
   errors: number
   logs?: string[]
   error?: string
+  missing?: "chrome" | "chromium"
   frameError?: string
+  back?: boolean
+  forward?: boolean
 }
 
 export interface AgentManagerBrowserInspectionMessage {
@@ -1626,6 +1634,12 @@ export interface AgentManagerBrowserInspectionMessage {
   }
   logs: string[]
   hover?: boolean
+}
+
+interface AgentManagerBrowserFrameMessage extends BrowserFrame {
+  type: "agentManager.browserFrame"
+  projectId?: string
+  sessionId: string
 }
 
 export interface AgentManagerBrowserDevtoolsMessage {
@@ -1653,6 +1667,7 @@ export type ExtensionMessage =
   | AgentManagerBrowserStateMessage
   | AgentManagerBrowserInspectionMessage
   | AgentManagerBrowserDevtoolsMessage
+  | AgentManagerBrowserFrameMessage
   | ReadyMessage
   | FontSizeChangedMessage
   | GitStatusMessage

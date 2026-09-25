@@ -34,6 +34,7 @@ export const dict = {
     "このプロジェクトのみ。インストールしたファイルはバージョン管理に追加し、チームと共有できます。",
   "marketplace.install.scope.global.description": "このマシン上のすべてのプロジェクト。ユーザー設定に保存されます。",
   "marketplace.install.destination": "インストール先",
+  "marketplace.install.includedSkills": "同梱スキル",
   "marketplace.install.about.mcp":
     "MCPサーバーは、外部サービスやローカルプログラムを操作するための追加ツールをKiloに提供します。",
   "marketplace.install.about.agent": "エージェントは、独自の指示と権限を持つ再利用可能な役割を追加します。",
@@ -44,9 +45,13 @@ export const dict = {
     "プロジェクトファイルはバージョン管理に追加される場合があります。設定で環境変数を参照している場合を除き、ここにシークレットを保存しないでください。",
   "marketplace.install.learnMore": "Marketplaceからのインストールの仕組みを見る",
   "marketplace.install.learnMcp": "MCPについて詳しく見る",
+  "marketplace.install.about.plugin":
+    "プラグインは、カスタムツールや連携機能をKiloに追加します。プラグインはすべての権限を持って実行されます。",
+  "marketplace.install.plugin.warning":
+    "プラグインはすべての権限を持ってコードを実行します。ファイルの読み取りや変更、コマンドの実行、認証情報やネットワークへのアクセスが可能です。信頼できるプラグインのみをインストールしてください。",
   "marketplace.install.installedAt": "{{path}} にインストール済み",
   "marketplace.intro":
-    "再利用可能なエージェント、スキル、MCPツールを1つのプロジェクトまたはすべてのプロジェクトにインストールできます。",
+    "再利用可能なエージェント、スキル、MCPツール、プラグインを1つのプロジェクトまたはすべてのプロジェクトにインストールできます。",
   "marketplace.intro.learnMore": "Marketplaceについて",
   "marketplace.install.prerequisites": "前提条件",
   "marketplace.install.installing": "インストール中...",
@@ -58,6 +63,8 @@ export const dict = {
   "marketplace.remove.title": "{{name}} を削除しますか？",
   "marketplace.remove.confirm": "この{{type}}を削除してもよろしいですか？ これにより、{{scope}}設定から削除されます。",
   "marketplace.remove.cancel": "キャンセル",
+  "marketplace.remove.mcp.skills":
+    "このインストールに属する同梱スキルも削除されます。個別にインストールしたスキルは保持されます。",
   "marketplace.remove.confirm.button": "削除",
   "marketplace.search": "検索...",
   "marketplace.filter.all": "すべてのアイテム",
@@ -66,6 +73,7 @@ export const dict = {
   "marketplace.empty": "アイテムが見つかりません",
   "marketplace.empty.relevant": "このワークスペースに関連するマーケットプレイスのアイテムが見つかりませんでした。",
   "marketplace.badge.mcpServer": "MCPサーバー",
+  "marketplace.badge.skills": "スキル同梱",
   "marketplace.card.by": "作成者: {{author}}",
   "marketplace.install.method": "インストール方法",
   "marketplace.install.parameters": "パラメーター",
@@ -73,6 +81,7 @@ export const dict = {
   "marketplace.scope.project": "プロジェクト",
   "marketplace.scope.global": "グローバル",
   "marketplace.remove.type.mcp": "MCPサーバー",
+  "marketplace.remove.type.plugin": "プラグイン",
   "marketplace.remove.type.skill": "スキル",
   "marketplace.remove.type.agent": "エージェント",
   "marketplace.remove.failed": "{{name}} の削除に失敗しました",
@@ -83,7 +92,7 @@ export const dict = {
   "marketplace.warning.busyMany": "複数のセッションが実行中で中断されます",
   "marketplace.warning.installAnyway": "それでもインストール",
   "marketplace.warning.cancel": "キャンセル",
-  "marketplace.contribute.prompt": "スキル、エージェント、またはMCPサーバーが見つかりませんか？",
+  "marketplace.contribute.prompt": "スキル、エージェント、MCPサーバー、またはプラグインが見つかりませんか？",
   "marketplace.contribute.cta": "GitHub で貢献する",
   "marketplace.migration.notice":
     "モードはエージェントに置き換えられました。以前にマーケットプレイスのモードをインストールしていた場合は、新しい形式に移行するためにそれらを削除してエージェントとして再インストールしてください。",

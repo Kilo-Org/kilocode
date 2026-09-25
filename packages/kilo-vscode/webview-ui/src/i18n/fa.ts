@@ -90,6 +90,8 @@ export const dict = {
     "مکالمه بازگردانده شد. تغییرات فایل بازیابی نشدند زیرا عکس‌برداری غیرفعال است.",
   "revert.banner.workspace.unavailable":
     "مکالمه بازگردانده شد. هیچ نقطه بازیابی فایلی موجود نبود، بنابراین تغییرات فضای کاری بازیابی نشدند.",
+  "revert.banner.workspace.notAGitRepo":
+    "مکالمه بازگردانده شد. نقاط بازیابی فایل به مخزن Git نیاز دارند، بنابراین تغییرات فضای کاری بازیابی نشدند.",
   "revert.banner.workspace.legacy":
     "مکالمه بازگردانده شد. وضعیت بازیابی فضای کاری برای این بازگردانی قدیمی‌تر در دسترس نیست.",
   "revert.banner.workspace.enableSnapshots": "فعال‌سازی اسنپ‌شات‌ها",
@@ -821,7 +823,8 @@ export const dict = {
   "settings.browser.description":
     "پیکربندی اتوماسیون مرورگر داخلی با پشتیبانی Playwright. Kilo می‌تواند در جلسات شما در صفحات وب پیمایش کند، با آن‌ها تعامل داشته باشد و اسکرین‌شات بگیرد.",
   "settings.browser.enable.title": "فعال‌سازی اتوماسیون مرورگر",
-  "settings.browser.enable.description": "سرور Playwright MCP را با بک‌اند CLI ثبت کنید.",
+  "settings.browser.enable.description":
+    "مرورگر Agent Manager مختص هر جلسه را برای برنامه‌های محلی و صفحات عمومی HTTPS فعال کنید.",
   "settings.browser.systemChrome.title": "استفاده از Chrome سیستم",
   "settings.browser.systemChrome.description":
     "به جای یک نمونه Chromium جداگانه، از مرورگر Chrome نصب‌شده شما استفاده کنید.",
@@ -928,9 +931,6 @@ export const dict = {
     "دستورالعمل‌های سراسری CLAUDE.md پشتیبانی‌شده، مهارت‌های ساده و تعریف‌های MCP غیرفعال را فقط یک‌بار وارد کنید. فایل‌های اصلی Claude تغییر نمی‌کنند؛ پس از فعال‌سازی backend را دوباره راه‌اندازی کنید.",
   "settings.experimental.multiProject.description":
     "مدیریت sessionها و worktreeها را در چند مخزن در Agent Manager فعال می‌کند. مخزن فضای کاری فعلی همیشه پروژه پیش‌فرض است.",
-  "settings.experimental.taskModelSelection.title": "انتخاب مدل زیرعامل Task",
-  "settings.experimental.taskModelSelection.description":
-    "انتخاب صریح مدل، ارائه‌دهنده و میزان استدلال برای زیرعامل‌های Task را فعال می‌کند.",
   "settings.experimental.mcpTimeout.title": "زمان‌وقفه MCP (میلی‌ثانیه)",
   "settings.experimental.mcpTimeout.description": "زمان‌وقفه برای درخواست‌های سرور MCP بر حسب میلی‌ثانیه",
   "settings.experimental.remote.title": "کنترل از راه دور",
@@ -1128,6 +1128,9 @@ export const dict = {
   "settings.autoCleanup.runNow": "اجرای پاکسازی الآن",
   "settings.autoCleanup.runNow.confirm":
     "حذف دائمی جلسه‌های منقضی‌شده در همهٔ پروژه‌ها و همهٔ سرویس‌گیرنده‌های Kilo روی این رایانه؟",
+  "settings.autoCleanup.stop": "توقف پاکسازی",
+  "settings.autoCleanup.progress.cancelling": "در حال توقف پاکسازی نشست‌ها...",
+  "settings.autoCleanup.lastRun.cancelled": "قطع‌شده",
 
   "settings.context.autoCompaction.title": "فشرده‌سازی خودکار",
   "settings.context.autoCompaction.description": "قبل از رسیدن به محدودیت، زمینه را به‌طور خودکار فشرده کنید",

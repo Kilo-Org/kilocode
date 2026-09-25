@@ -121,6 +121,7 @@ export const dict = {
 
   "agentManager.tab.close": "Kapat",
   "agentManager.tab.closeOthers": "Diğerlerini kapat",
+  "agentManager.tab.closeToRight": "Sağdakileri kapat",
   "agentManager.tab.closeTab": "Sekmeyi kapat",
   "agentManager.tab.forkSession": "Oturumu Fork'la",
   "agentManager.tab.pin": "Sabitle",
@@ -454,16 +455,26 @@ export const dict = {
   "agentManager.caffeination.active": "Kilo ajanları çalışırken bilgisayar uyanık tutuluyor",
   "agentManager.caffeination.unavailable": "Bilgisayarı uyanık tutma modu bu platformda kullanılamıyor",
   "agentManager.browser.title": "Entegre Tarayıcı",
-  "agentManager.browser.url": "Yerel uygulama URL'si",
+  "agentManager.browser.url": "Adres",
   "agentManager.browser.urlPlaceholder": "http://localhost:3000",
   "agentManager.browser.open": "Aç",
   "agentManager.browser.refresh": "Tarayıcıyı yenile",
+  "agentManager.browser.back": "Geri",
+  "agentManager.browser.forward": "İleri",
   "agentManager.browser.close": "Tarayıcıyı kapat",
   "agentManager.browser.inspect": "Öğeyi seç",
   "agentManager.browser.devtoolsTitle": "Geliştirici araçları",
-  "agentManager.browser.empty": "Burada önizlemek için yerel bir uygulama açın.",
-  "agentManager.browser.noSession":
-    "Yerel bir uygulamada gezinmek için Agent Manager'da bir oturum başlatın veya seçin.",
+  "agentManager.browser.empty": "Burada önizlemek için yerel bir uygulama veya herkese açık bir HTTPS sayfası açın.",
+  "agentManager.browser.requirement":
+    "Google Chrome veya uyumlu bir Playwright Chromium tarayıcısı gerekir. Tarayıcılar otomatik olarak yüklenmez.",
+  "agentManager.browser.missingTitle": "Tarayıcı bulunamadı",
+  "agentManager.browser.missingChrome":
+    "Google Chrome bulunamadı. Entegre Tarayıcı'yı kullanmak için Chrome'u yükleyin, ardından yeniden deneyin.",
+  "agentManager.browser.missingChromium":
+    "Playwright Chromium bulunamadı. Uyumlu bir tarayıcı yükleyin veya “Tarayıcı Ayarları” bölümünde “Sistem Chrome'unu Kullan” seçeneğini etkinleştirin.",
+  "agentManager.browser.downloadChrome": "Chrome'u indir",
+  "agentManager.browser.settings": "Tarayıcı Ayarları",
+  "agentManager.browser.noSession": "Agent Manager'da bir oturum başlatın veya seçin.",
   "agentManager.browser.screenshotAlt": "Geçerli tarayıcı sayfası",
   "agentManager.browser.errors": "Tarayıcı sorunları: {{count}}",
   "agentManager.browser.diagnostics": "Tarayıcı tanılaması",

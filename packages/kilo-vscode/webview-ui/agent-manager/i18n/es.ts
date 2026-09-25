@@ -120,6 +120,7 @@ export const dict = {
   "agentManager.session.noSessions": "No hay sesiones abiertas",
   "agentManager.tab.close": "Cerrar",
   "agentManager.tab.closeOthers": "Cerrar otras",
+  "agentManager.tab.closeToRight": "Cerrar a la derecha",
   "agentManager.tab.closeTab": "Cerrar pestaña",
   "agentManager.tab.forkSession": "Bifurcar sesión",
   "agentManager.tab.pin": "Fijar",
@@ -452,16 +453,26 @@ export const dict = {
   "agentManager.caffeination.unavailable":
     "El modo para mantener el equipo activo no está disponible en esta plataforma",
   "agentManager.browser.title": "Navegador integrado",
-  "agentManager.browser.url": "URL de la aplicación local",
+  "agentManager.browser.url": "Dirección",
   "agentManager.browser.urlPlaceholder": "http://localhost:3000",
   "agentManager.browser.open": "Abrir",
   "agentManager.browser.inspect": "Seleccionar elemento",
   "agentManager.browser.devtoolsTitle": "Herramientas de desarrollo",
   "agentManager.browser.refresh": "Actualizar navegador",
+  "agentManager.browser.back": "Atrás",
+  "agentManager.browser.forward": "Adelante",
   "agentManager.browser.close": "Cerrar navegador",
-  "agentManager.browser.empty": "Abre una aplicación local para previsualizarla aquí.",
-  "agentManager.browser.noSession":
-    "Inicia o selecciona una sesión en Agent Manager para navegar por una aplicación local.",
+  "agentManager.browser.empty": "Abre una aplicación local o una página HTTPS pública para previsualizarla aquí.",
+  "agentManager.browser.requirement":
+    "Requiere Google Chrome o un navegador Playwright Chromium compatible. Los navegadores no se instalan automáticamente.",
+  "agentManager.browser.missingTitle": "Navegador no encontrado",
+  "agentManager.browser.missingChrome":
+    "No se encontró Google Chrome. Instala Chrome para usar el navegador integrado y vuelve a intentarlo.",
+  "agentManager.browser.missingChromium":
+    "No se encontró Playwright Chromium. Instala un navegador compatible o activa «Usar Chrome del sistema» en «Configuración del navegador».",
+  "agentManager.browser.downloadChrome": "Descargar Chrome",
+  "agentManager.browser.settings": "Configuración del navegador",
+  "agentManager.browser.noSession": "Inicia o selecciona una sesión en Agent Manager.",
   "agentManager.browser.screenshotAlt": "Página actual del navegador",
   "agentManager.browser.errors": "Problemas del navegador: {{count}}",
   "agentManager.browser.diagnostics": "Diagnóstico del navegador",
