@@ -536,6 +536,55 @@
 
 ## [Unreleased]
 
+## [7.1.8] - 2026-09-25
+
+### Added
+- feat(cli): support MCP client ID metadata documents by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14508
+- feat(ci): sign Windows CLI binaries with Azure Key Vault EV certificate by @zfralish in https://github.com/Kilo-Org/kilocode/pull/14462
+- feat(vscode): animate tool calls and stream live tool input by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14490
+- feat(marketplace): install MCP servers with companion skills by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14510
+- feat: make task subagent model selection the default by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14533
+- feat(ci): sign Windows CLI binaries with Azure Key Vault EV certificate by @zfralish in https://github.com/Kilo-Org/kilocode/pull/14543
+- feat: reclaim database space after session cleanup and add a stop button by @vkeerthivikram in https://github.com/Kilo-Org/kilocode/pull/14540
+- feat(vscode): add Close Task and Close All Tasks commands by @sylwester-liljegren in https://github.com/Kilo-Org/kilocode/pull/13808
+- feat: stream Agent Manager browser previews with public HTTPS by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13804
+- feat(security): automate dependency remediation by @brunoagatao in https://github.com/Kilo-Org/kilocode/pull/14506
+- feat(cli,vscode,jetbrains): generate CycloneDX SBOMs for release artifacts by @kirillk in https://github.com/Kilo-Org/kilocode/pull/14513
+- feat(jetbrains): support marketplace MCP companion skills by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14525
+- feat(jetbrains): add checkpoint settings and revert guidance by @kirillk in https://github.com/Kilo-Org/kilocode/pull/14512
+
+### Fixed
+- fix(agent-manager): avoid creating .kilo/worktrees when worktree pool is off by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14530
+- fix(agent-manager): preserve tab and panel state across project switches by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14529
+- fix(vscode): recover Agent Manager requests and providers after reconnect by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14531
+- fix(agent-manager): keep session tab title in sync on rename by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14532
+- fix(vscode): stop transcript re-render loop on session switch by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14534
+- fix(agent-manager): keep the loaded browser page across context switches by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14535
+- fix(jetbrains): avoid crash when vfs kind service is unresolvable during plugin unload by @kirillk in https://github.com/Kilo-Org/kilocode/pull/14515
+- fix(cli): keep sub-agents of a chat in use during session cleanup by @hdcodedev in https://github.com/Kilo-Org/kilocode/pull/14502
+- fix(vscode): run editor actions when the sidebar shows History by @hdcodedev in https://github.com/Kilo-Org/kilocode/pull/14491
+- fix(cli): surface network disconnects in the TUI instead of hanging silently by @rakshith1928 in https://github.com/Kilo-Org/kilocode/pull/13523
+- fix(vscode): keep chat tabs for older History sessions open by @hdcodedev in https://github.com/Kilo-Org/kilocode/pull/14536
+- fix(agent-manager): evict stale worktree pool slots and cold-create by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14556
+- fix(agent-manager): survive inaccessible historical project paths by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14557
+- fix(jetbrains): generate CLI pin bumps for pre-releases by @kirillk in https://github.com/Kilo-Org/kilocode/pull/14577
+- fix(jetbrains): unify session strip interactions by @kirillk in https://github.com/Kilo-Org/kilocode/pull/14548
+- fix(jetbrains): verify published plugin signatures by @kirillk in https://github.com/Kilo-Org/kilocode/pull/14586
+- fix(jetbrains): isolate model selection by session by @kirillk in https://github.com/Kilo-Org/kilocode/pull/14583
+
+### Changed
+- release(jetbrains): v7.1.7 by @kilo-maintainer[bot] in https://github.com/Kilo-Org/kilocode/pull/14509
+- docs: auto-sync cloud-mobile with merged PRs (through 2026-09-23) by @github-actions[bot] in https://github.com/Kilo-Org/kilocode/pull/14198
+- docs: auto-sync cloud-web with merged PRs (through 2026-09-23) by @github-actions[bot] in https://github.com/Kilo-Org/kilocode/pull/14219
+- Revert "feat(ci): sign Windows CLI binaries with Azure Key Vault EV certificate" by @zfralish in https://github.com/Kilo-Org/kilocode/pull/14541
+- perf(jetbrains): speed up transcript tab switching and list painting by @kirillk in https://github.com/Kilo-Org/kilocode/pull/14520
+- release(jetbrains): v7.1.8-rc.1 by @kilo-maintainer[bot] in https://github.com/Kilo-Org/kilocode/pull/14545
+- docs: auto-sync cloud-web with merged PRs (through 2026-09-24) by @github-actions[bot] in https://github.com/Kilo-Org/kilocode/pull/14527
+- OpenCode Merge v1.18.21…v1.18.26 by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14449
+- release(jetbrains): v7.1.8-rc.2 by @kilo-maintainer[bot] in https://github.com/Kilo-Org/kilocode/pull/14582
+- chore(jetbrains): bump CLI pin to v7.8.1 by @kilo-maintainer[bot] in https://github.com/Kilo-Org/kilocode/pull/14581
+
+
 ## [7.1.8-rc.2] - 2026-09-25
 
 ### Added
