@@ -216,6 +216,8 @@ export interface SessionContextValue {
   loadSessions: () => void
   loadMoreSessions: () => void
   sessionsHasMore: Accessor<boolean>
+  /** Keep these sessions in the store when a full load lists only its first page. */
+  keepSessions: (ids: Accessor<readonly string[]>) => () => void
   sessionsLoadingMore: Accessor<boolean>
   loadOlderMessages: () => boolean
   selectSession: (id: string, options?: { focus?: boolean; scrollToBottom?: boolean }) => void

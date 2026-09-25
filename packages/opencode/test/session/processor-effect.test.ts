@@ -1212,10 +1212,16 @@ itLateToolInput.live("session.processor effect tests ignore tool input after the
     (dir) =>
       Effect.gen(function* () {
         const { processors, session, provider } = yield* boot()
+        const events = yield* EventV2Bridge.Service
         const chat = yield* session.create({})
         const parent = yield* user(chat.id, "read a file")
         const msg = yield* assistant(chat.id, parent.id, path.resolve(dir))
         const mdl = yield* provider.getModel(ref.providerID, ref.modelID)
+        const deltas: unknown[] = []
+        const off = yield* events.listen((event) => {
+          if (event.type === "session.next.tool.input.delta") deltas.push(event.data)
+          return Effect.void
+        })
         const handle = yield* processors.create({ assistantMessage: msg, sessionID: chat.id, model: mdl })
 
         yield* handle.process({
@@ -1234,6 +1240,7 @@ itLateToolInput.live("session.processor effect tests ignore tool input after the
           messages: [{ role: "user", content: "read a file" }],
           tools: {},
         })
+        yield* off
 
         const calls = (yield* MessageV2.parts(msg.id)).filter(
           (part): part is SessionV1.ToolPart => part.type === "tool",
@@ -1242,6 +1249,14 @@ itLateToolInput.live("session.processor effect tests ignore tool input after the
         expect(calls[0]?.callID).toBe("call-1")
         expect(calls[0]?.tool).toBe("read")
         expect(calls[0]?.state.status).toBe("completed")
+        // The streamed input is published live for the open call only, never after it settles.
+        expect(deltas).toEqual([
+          expect.objectContaining({
+            callID: "call-1",
+            assistantMessageID: msg.id,
+            delta: '{"filePath":"package.json"}',
+          }),
+        ])
       }),
     { config: cfg },
   ),

@@ -71,7 +71,7 @@ export const dict: Record<string, string> = {
   "ui.sessionTurn.error.addCredits": "Kredit qo'shing",
   "dialog.usageExceeded.freeTier.title": "Bepul chegaraga yetdi",
   "dialog.usageExceeded.freeTier.description":
-    "Oyiga $5 dan boshlab eng yaxshi ochiq kodli modellarga ishonchli kirish uchun Kilo Go ga obuna bo'ling.", // kilocode_change
+    "Oyiga $10 evaziga eng yaxshi ochiq kodli modellarga ishonchli kirish uchun Kilo Go ga obuna bo'ling.", // kilocode_change
   "dialog.usageExceeded.freeTier.actionLabel": "Obuna boʻling",
   "dialog.usageExceeded.accountRateLimit.title": "Oʻtish chegarasiga yetdi",
   "dialog.usageExceeded.accountRateLimit.description":

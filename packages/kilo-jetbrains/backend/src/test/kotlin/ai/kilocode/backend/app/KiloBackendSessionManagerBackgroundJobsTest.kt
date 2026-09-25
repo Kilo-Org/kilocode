@@ -6,10 +6,12 @@ import ai.kilocode.backend.testing.TestLog
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import java.net.URLDecoder
@@ -81,11 +83,20 @@ class KiloBackendSessionManagerBackgroundJobsTest {
         val app = setup()
         ready(app)
 
-        val a = async { app.sessions.backgroundJobs("ses_root", "/repo").first() }
-        val b = async { app.sessions.backgroundJobs("ses_root", "/repo").first() }
-        withTimeout(10_000) { awaitAll(a, b) }
+        // Keep the first collector subscribed so the shared flow exists before the second
+        // subscribes. Two `.first()` collectors cancel immediately and can race the cache
+        // lookup, which starts one poller per collector by design and makes the count flaky.
+        val seen = Channel<Unit>(Channel.UNLIMITED)
+        val a = launch { app.sessions.backgroundJobs("ses_root", "/repo").onEach { seen.send(Unit) }.collect() }
+        withTimeout(10_000) { seen.receive() }
 
-        assertEquals(1, mock.backgroundJobsRequests.size)
+        val before = mock.backgroundJobsRequests.size
+        val b = launch { app.sessions.backgroundJobs("ses_root", "/repo").onEach { seen.send(Unit) }.collect() }
+        withTimeout(10_000) { seen.receive() }
+
+        assertEquals(before, mock.backgroundJobsRequests.size)
+        a.cancel()
+        b.cancel()
     }
 
     @Test
@@ -94,16 +105,21 @@ class KiloBackendSessionManagerBackgroundJobsTest {
         ready(app)
 
         // Guards the cache-eviction path: the entry is dropped when sharing stops, so a later
-        // subscriber must still get a working flow, and concurrent subscribers must still share one
-        // poller rather than each starting their own.
+        // subscriber must still get a working flow, and a concurrent subscriber must reuse it
+        // rather than poll again.
         withTimeout(10_000) { app.sessions.backgroundJobs("ses_root", "/repo").first() }
+
+        val seen = Channel<Unit>(Channel.UNLIMITED)
+        val a = launch { app.sessions.backgroundJobs("ses_root", "/repo").onEach { seen.send(Unit) }.collect() }
+        withTimeout(10_000) { seen.receive() }
+
         val before = mock.backgroundJobsRequests.size
+        val b = launch { app.sessions.backgroundJobs("ses_root", "/repo").onEach { seen.send(Unit) }.collect() }
+        withTimeout(10_000) { seen.receive() }
 
-        val a = async { app.sessions.backgroundJobs("ses_root", "/repo").first() }
-        val b = async { app.sessions.backgroundJobs("ses_root", "/repo").first() }
-        withTimeout(10_000) { awaitAll(a, b) }
-
-        assertEquals(1, mock.backgroundJobsRequests.size - before)
+        assertEquals(before, mock.backgroundJobsRequests.size)
+        a.cancel()
+        b.cancel()
     }
 
     @Test

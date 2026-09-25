@@ -833,7 +833,8 @@ export const dict = {
   "settings.browser.description":
     "Playwright 기반의 내장 브라우저 자동화를 구성합니다. Kilo는 세션에서 웹 페이지를 탐색하고 상호 작용하며 스크린샷을 찍을 수 있습니다.",
   "settings.browser.enable.title": "브라우저 자동화 활성화",
-  "settings.browser.enable.description": "Playwright MCP 서버를 CLI 백엔드에 등록합니다.",
+  "settings.browser.enable.description":
+    "로컬 애플리케이션과 공개 HTTPS 페이지를 위한 세션별 Agent Manager 브라우저를 활성화합니다.",
   "settings.browser.systemChrome.title": "시스템 Chrome 사용",
   "settings.browser.systemChrome.description": "별도의 Chromium 인스턴스 대신 설치된 Chrome 브라우저를 사용합니다.",
   "settings.browser.headless.title": "헤드리스 모드",
@@ -930,9 +931,6 @@ export const dict = {
     "지원되는 전역 CLAUDE.md 지침, 간단한 스킬 및 비활성화된 MCP 정의를 한 번 가져옵니다. 원본 Claude 파일은 변경되지 않으며 활성화 후 백엔드를 다시 시작해야 합니다.",
   "settings.experimental.multiProject.description":
     "Agent Manager에서 여러 저장소에 걸친 세션과 워크트리 관리를 활성화합니다. 현재 워크스페이스 저장소는 항상 기본 프로젝트입니다.",
-  "settings.experimental.taskModelSelection.title": "Task 하위 에이전트 모델 선택",
-  "settings.experimental.taskModelSelection.description":
-    "Task 하위 에이전트에 대해 모델, 제공자 및 추론 수준을 명시적으로 선택합니다.",
   "settings.experimental.mcpTimeout.title": "MCP 타임아웃 (ms)",
   "settings.experimental.mcpTimeout.description": "MCP 서버 요청의 타임아웃 시간 (밀리초)",
   "settings.experimental.remote.title": "Remote 제어",
@@ -1124,6 +1122,9 @@ export const dict = {
   "settings.autoCleanup.runNow": "지금 정리 실행",
   "settings.autoCleanup.runNow.confirm":
     "이 컴퓨터의 모든 프로젝트와 모든 Kilo 클라이언트에 걸쳐 만료된 세션을 영구적으로 삭제할까요?",
+  "settings.autoCleanup.stop": "정리 중지",
+  "settings.autoCleanup.progress.cancelling": "세션 정리를 중지하는 중...",
+  "settings.autoCleanup.lastRun.cancelled": "중단됨",
   "settings.context.autoCompaction.title": "자동 압축",
   "settings.context.autoCompaction.description": "컨텍스트가 한도에 도달하기 전에 자동으로 압축",
   "settings.context.compaction.title": "압축",

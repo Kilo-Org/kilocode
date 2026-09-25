@@ -27,7 +27,7 @@ interface ProviderConnectDialogProps {
 interface ViewState {
   methodIndex?: number
   authorization?: ProviderAuthAuthorization
-  phase?: "authorizing" | "connecting"
+  phase?: "authorizing" | "connecting" | "prompts"
   error?: string
   field?: string
   failed?: string
@@ -135,6 +135,7 @@ const ProviderConnectDialog: Component<ProviderConnectDialogProps> = (props) => 
   function optional(prompt: Prompt) {
     if (bedrockKeys() && prompt.key === "sessionToken") return true
     if (vertexCredentials() && prompt.key === "project") return true
+    if (props.providerID === "snowflake-cortex" && prompt.key === "role") return true
     return false
   }
 
@@ -188,6 +189,91 @@ const ProviderConnectDialog: Component<ProviderConnectDialogProps> = (props) => 
     return hint ? `${label} (${hint})` : label
   }
 
+  const PromptField: Component<{
+    prompt: Prompt
+    fields: Record<string, string>
+    setField: (key: string, value: string) => void
+    invalid?: boolean
+    error?: string
+  }> = (props) => {
+    return (
+      <Switch>
+        <Match when={props.prompt.type === "text"}>
+          <TextField
+            type={bedrockKeys() && ["secretAccessKey", "sessionToken"].includes(props.prompt.key) ? "password" : "text"}
+            autocomplete="off"
+            spellcheck={false}
+            label={promptLabel(props.prompt)}
+            placeholder={promptPlaceholder(props.prompt)}
+            value={props.fields[props.prompt.key] ?? ""}
+            onChange={(next) => props.setField(props.prompt.key, next)}
+            validationState={props.invalid ? "invalid" : undefined}
+            error={props.invalid ? props.error : undefined}
+          />
+        </Match>
+        <Match when={props.prompt.type === "select"}>
+          <div style={{ display: "flex", "flex-direction": "column", gap: "4px" }}>
+            <label
+              style={{
+                "font-size": "var(--kilo-font-size-12)",
+                "font-weight": "500",
+                color: "var(--text-weak-base)",
+              }}
+            >
+              {promptLabel(props.prompt)}
+            </label>
+            <Select
+              options={props.prompt.type === "select" ? props.prompt.options : []}
+              current={
+                props.prompt.type === "select"
+                  ? props.prompt.options.find((item) => item.value === props.fields[props.prompt.key])
+                  : undefined
+              }
+              value={(item) => item.value}
+              label={(item) => optionText(props.prompt, item)}
+              onSelect={(item) => props.setField(props.prompt.key, item?.value ?? "")}
+              variant="secondary"
+              size="small"
+              triggerVariant="settings"
+            />
+            <Show when={props.invalid && props.error}>
+              <span style={{ "font-size": "var(--kilo-font-size-12)", color: "var(--vscode-errorForeground)" }}>
+                {props.error}
+              </span>
+            </Show>
+          </div>
+        </Match>
+      </Switch>
+    )
+  }
+
+  const PromptFields: Component<{
+    prompts: Prompt[]
+    fields: Record<string, string>
+    setField: (key: string, value: string) => void
+    invalidKey?: string
+    error?: string
+  }> = (props) => (
+    <>
+      <For each={props.prompts}>
+        {(prompt) => (
+          <PromptField
+            prompt={prompt}
+            fields={props.fields}
+            setField={props.setField}
+            invalid={props.invalidKey === prompt.key}
+            error={props.error}
+          />
+        )}
+      </For>
+      <Show when={props.error && !props.invalidKey}>
+        <div style={{ color: "var(--vscode-errorForeground)", "font-size": "var(--kilo-font-size-13)" }}>
+          {props.error}
+        </div>
+      </Show>
+    </>
+  )
+
   onCleanup(action.dispose)
 
   onMount(() => {
@@ -240,24 +326,23 @@ const ProviderConnectDialog: Component<ProviderConnectDialogProps> = (props) => 
     dialog.close()
   }
 
-  function selectMethod(index: number) {
-    const current = methods()[index]
-    action.clear()
+  function authorize(inputs?: Record<string, string>) {
+    const index = state.methodIndex
+    if (index === undefined) return
+
     setState({
-      methodIndex: index,
-      authorization: undefined,
-      phase: current?.type === "oauth" ? "authorizing" : undefined,
+      ...state,
+      phase: "authorizing",
       error: undefined,
       field: undefined,
       failed: undefined,
     })
-    if (current?.type !== "oauth") return
-
     action.send(
       {
         type: "authorizeProviderOAuth",
         providerID: props.providerID,
         method: index,
+        inputs,
       },
       {
         onOAuthReady: (message) => {
@@ -272,6 +357,23 @@ const ProviderConnectDialog: Component<ProviderConnectDialogProps> = (props) => 
         onError: (message) => fail(message.message),
       },
     )
+  }
+
+  function selectMethod(index: number) {
+    const current = methods()[index]
+    action.clear()
+    const needsPrompts = current?.type === "oauth" && (current.prompts?.length ?? 0) > 0
+    setState({
+      methodIndex: index,
+      authorization: undefined,
+      phase: current?.type === "oauth" ? (needsPrompts ? "prompts" : "authorizing") : undefined,
+      error: undefined,
+      field: undefined,
+      failed: undefined,
+    })
+    if (current?.type !== "oauth" || needsPrompts) return
+
+    authorize()
   }
 
   function connect(apiKey: string, metadata?: Record<string, string>) {
@@ -473,62 +575,13 @@ const ProviderConnectDialog: Component<ProviderConnectDialogProps> = (props) => 
           validationState={state.field === "apiKey" ? "invalid" : undefined}
           error={state.field === "apiKey" ? state.error : undefined}
         />
-        <For each={prompts()}>
-          {(prompt) => (
-            <Switch>
-              <Match when={prompt.type === "text"}>
-                <TextField
-                  type={bedrockKeys() && ["secretAccessKey", "sessionToken"].includes(prompt.key) ? "password" : "text"}
-                  autocomplete="off"
-                  spellcheck={false}
-                  label={promptLabel(prompt)}
-                  placeholder={promptPlaceholder(prompt)}
-                  value={fields[prompt.key] ?? ""}
-                  onChange={(next) => setFields(prompt.key, next)}
-                  validationState={state.field === prompt.key ? "invalid" : undefined}
-                  error={state.field === prompt.key ? state.error : undefined}
-                />
-              </Match>
-              <Match when={prompt.type === "select"}>
-                <div style={{ display: "flex", "flex-direction": "column", gap: "4px" }}>
-                  <label
-                    style={{
-                      "font-size": "var(--kilo-font-size-12)",
-                      "font-weight": "500",
-                      color: "var(--text-weak-base)",
-                    }}
-                  >
-                    {promptLabel(prompt)}
-                  </label>
-                  <Select
-                    options={prompt.type === "select" ? prompt.options : []}
-                    current={
-                      prompt.type === "select"
-                        ? prompt.options.find((item) => item.value === fields[prompt.key])
-                        : undefined
-                    }
-                    value={(item) => item.value}
-                    label={(item) => optionText(prompt, item)}
-                    onSelect={(item) => setFields(prompt.key, item?.value ?? "")}
-                    variant="secondary"
-                    size="small"
-                    triggerVariant="settings"
-                  />
-                  <Show when={state.field === prompt.key && state.error}>
-                    <span style={{ "font-size": "var(--kilo-font-size-12)", color: "var(--vscode-errorForeground)" }}>
-                      {state.error}
-                    </span>
-                  </Show>
-                </div>
-              </Match>
-            </Switch>
-          )}
-        </For>
-        <Show when={state.error && !state.field}>
-          <div style={{ color: "var(--vscode-errorForeground)", "font-size": "var(--kilo-font-size-13)" }}>
-            {state.error}
-          </div>
-        </Show>
+        <PromptFields
+          prompts={prompts()}
+          fields={fields}
+          setField={(key, value) => setFields(key, value)}
+          invalidKey={state.field}
+          error={state.error}
+        />
         <div class="dialog-confirm-actions provider-connect-actions">
           <div class="provider-connect-byok">
             {language.t("provider.connect.kiloGateway.byok.prefix")}
@@ -615,6 +668,54 @@ const ProviderConnectDialog: Component<ProviderConnectDialogProps> = (props) => 
     )
   }
 
+  const OAuthPromptsView: Component = () => {
+    const [fields, setFields] = createStore<Record<string, string>>({})
+    const prompts = createMemo(() => method()?.prompts?.filter((prompt) => visible(prompt, fields)) ?? [])
+
+    function submit(e: SubmitEvent) {
+      e.preventDefault()
+      const inputs: Record<string, string> = {}
+      for (const prompt of prompts()) {
+        const value = (fields[prompt.key] ?? "").trim()
+        if (!value && !optional(prompt)) {
+          setState({
+            ...state,
+            error: language.t("provider.connect.prompt.required", { field: promptLabel(prompt) }),
+            field: prompt.key,
+          })
+          return
+        }
+        if (!value) continue
+        inputs[prompt.key] = value
+      }
+      authorize(Object.keys(inputs).length > 0 ? inputs : undefined)
+    }
+
+    return (
+      <form
+        class="dialog-confirm-body"
+        style={{ display: "flex", "flex-direction": "column", gap: "16px" }}
+        onSubmit={submit}
+      >
+        <PromptFields
+          prompts={prompts()}
+          fields={fields}
+          setField={(key, value) => setFields(key, value)}
+          invalidKey={state.field}
+          error={state.error}
+        />
+        <div class="dialog-confirm-actions">
+          <Button variant="ghost" size="large" type="button" onClick={back}>
+            {language.t("common.goBack")}
+          </Button>
+          <Button variant="primary" size="large" type="submit">
+            {language.t("common.submit")}
+          </Button>
+        </div>
+      </form>
+    )
+  }
+
   const OAuthAutoView: Component = () => {
     const code = createMemo(() => {
       const instructions = state.authorization?.instructions
@@ -672,6 +773,9 @@ const ProviderConnectDialog: Component<ProviderConnectDialogProps> = (props) => 
       <Switch>
         <Match when={state.methodIndex === undefined}>
           <MethodSelection />
+        </Match>
+        <Match when={state.phase === "prompts"}>
+          <OAuthPromptsView />
         </Match>
         <Match when={state.phase === "authorizing"}>
           <div class="dialog-confirm-body">
