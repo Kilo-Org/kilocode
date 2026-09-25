@@ -22,7 +22,7 @@ import { RemoteCommand } from "../../src/cli/cmd/remote"
 import { ConfigCommand as ConfigCLICommand } from "../../src/cli/cmd/config"
 import { PluginCommand } from "../../src/cli/cmd/plug"
 import { DbCommand } from "../../src/cli/cmd/db"
-import { HelpCommand } from "../../src/kilocode/help-command"
+import { HelpCommand, createHelpCommand, commandPath } from "../../src/kilocode/help-command"
 import { ProfileCommand } from "../../src/kilocode/cli/cmd/profile"
 import { DaemonCommand } from "../../src/kilocode/cli/cmd/daemon"
 import { KiloConsoleCommand } from "../../src/kilocode/cli/cmd/console"
@@ -147,6 +147,110 @@ describe("kilo help <command>", () => {
     expect(output).toContain("--foreground")
     expect(output).toContain("-f")
   })
+
+  test("nested session help shows the list command options (kilo help session list)", async () => {
+    const output = await generateHelp({ command: "session list", format: "md", commands })
+    expect(output).toContain("kilo session list")
+    expect(output).toContain("--max-count")
+    expect(output).toContain("--format")
+    expect(output).toContain("--all")
+    expect(output).toContain("--search")
+  })
+
+  test("kilo help 'session list' supports text format", async () => {
+    const output = await generateHelp({ command: "session list", format: "text", commands })
+    expect(output).toContain("kilo session list")
+    expect(output).toContain("--max-count")
+  })
+
+  test("kilo help with an unknown nested path still throws", async () => {
+    await expect(generateHelp({ command: "session nonexistent", commands })).rejects.toThrow("unknown command")
+  })
+})
+
+describe("kilo help command accepts a nested path", () => {
+  async function parseCommand(argv: string[]): Promise<unknown> {
+    const cli = yargs([]).scriptName("kilo").exitProcess(false).strict()
+    const base = createHelpCommand()
+    let captured: unknown
+    cli.command({
+      command: base.command,
+      describe: base.describe,
+      builder: base.builder,
+      handler: (args) => {
+        captured = args.command
+      },
+    })
+    await cli.parseAsync(argv)
+    return captured
+  }
+
+  test("kilo help session list is parsed as separate tokens", async () => {
+    const command = await parseCommand(["help", "session", "list"])
+    expect(commandPath(command)).toBe("session list")
+  })
+
+  test("kilo help 'session list' is parsed as one quoted token", async () => {
+    const command = await parseCommand(["help", "session list"])
+    expect(commandPath(command)).toBe("session list")
+  })
+
+  test("commandPath normalizes the help positional", () => {
+    expect(commandPath(["session", "list"])).toBe("session list")
+    expect(commandPath("session list")).toBe("session list")
+    expect(commandPath(undefined)).toBeUndefined()
+    expect(commandPath([])).toBeUndefined()
+  })
+})
+
+// The unit tests above call generateHelp directly. This spawns the real CLI so
+// yargs positional parsing of `help session list` is covered end to end.
+describe("kilo help session list (real CLI)", () => {
+  const root = path.resolve(import.meta.dir, "../..")
+
+  async function run(args: string[]) {
+    const proc = Bun.spawn([process.execPath, "--conditions=browser", path.join(root, "src/index.ts"), ...args], {
+      cwd: root,
+      env: {
+        ...process.env,
+        KILO_CONFIG_CONTENT: '{"experimental":{"openTelemetry":false}}',
+        KILO_DISABLE_PROJECT_CONFIG: "1",
+        KILO_DISABLE_AUTOUPDATE: "1",
+        KILO_DISABLE_MODELS_FETCH: "1",
+        KILO_AUTH_CONTENT: "{}",
+        KILO_PURE: "1",
+      },
+      stdin: "ignore",
+      stdout: "pipe",
+      stderr: "pipe",
+      windowsHide: true,
+    })
+    const [stdout, stderr, code] = await Promise.all([
+      new Response(proc.stdout).text(),
+      new Response(proc.stderr).text(),
+      proc.exited,
+    ])
+    return { stdout, stderr, code }
+  }
+
+  test(
+    "nested session help shows the list command options",
+    async () => {
+      const spaced = await run(["help", "session", "list"])
+      expect(spaced.code).toBe(0)
+      expect(spaced.stdout).toContain("kilo session list")
+      expect(spaced.stdout).toContain("--max-count")
+      expect(spaced.stdout).toContain("--format")
+      expect(spaced.stdout).toContain("--all")
+      expect(spaced.stdout).toContain("--search")
+
+      const quoted = await run(["help", "session list"])
+      expect(quoted.code).toBe(0)
+      expect(quoted.stdout).toContain("kilo session list")
+      expect(quoted.stdout).toContain("--max-count")
+    },
+    60_000,
+  )
 })
 
 describe("kilo cloud help", () => {

@@ -180,8 +180,11 @@ export async function generateHelp(options: {
   const format = options.format ?? "md"
 
   const cmds = options.commands ?? (await loadCommands())
+  // A command may be addressed by a nested path, e.g. `kilo help session list`.
+  const path = options.command?.trim().split(/\s+/).filter(Boolean) ?? []
+  const root = path[0]
   const relevant = (() => {
-    if (options.command) return cmds.filter((c) => extractCommandName(c) === options.command)
+    if (root) return cmds.filter((c) => extractCommandName(c) === root)
     if (options.all) return cmds.filter((c) => extractCommandName(c) !== undefined && c.describe)
     return []
   })()
@@ -199,10 +202,23 @@ export async function generateHelp(options: {
 
   for (const cmd of relevant) {
     const name = extractCommandName(cmd)!
-    const help = await getHelpText(name, cmd)
-    const hidden = (cmd as any).hidden === true
     const subs = await getSubcommands(name, typeof cmd.builder === "function" ? cmd.builder : undefined)
 
+    if (path.length > 1) {
+      const full = path.join(" ")
+      const match = subs.find((sub) => sub.name === full)
+      if (!match) throw new Error(`unknown command: ${options.command}`)
+      sections.push({
+        name: match.name,
+        hidden: match.hidden,
+        help: match.help,
+        subs: subs.filter((sub) => sub.name.startsWith(`${full} `)),
+      })
+      continue
+    }
+
+    const help = await getHelpText(name, cmd)
+    const hidden = (cmd as any).hidden === true
     sections.push({ name, hidden, help, subs })
   }
 

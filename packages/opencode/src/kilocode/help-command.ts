@@ -3,9 +3,21 @@ import { generateHelp } from "./help"
 import type { Argv } from "yargs"
 import { markLazyCommandSelection } from "@/kilocode/cli/lazy-commands"
 
+// A nested command may arrive either as one quoted argument
+// (`kilo help "session list"`) or as separate tokens (`kilo help session list`).
+// Normalize both shapes to the space-joined path generateHelp expects.
+export function commandPath(value: unknown): string | undefined {
+  if (Array.isArray(value)) {
+    const joined = value.map(String).join(" ").trim()
+    return joined || undefined
+  }
+  if (typeof value === "string") return value
+  return undefined
+}
+
 export function createHelpCommand(root?: () => Argv) {
   return cmd({
-    command: "help [command]",
+    command: "help [command..]",
     describe: "show full CLI reference",
     builder: (yargs) => {
       markLazyCommandSelection()
@@ -27,7 +39,8 @@ export function createHelpCommand(root?: () => Argv) {
         })
     },
     async handler(args) {
-      if (!args.command && !args.all) {
+      const command = commandPath(args.command)
+      if (!command && !args.all) {
         if (root) {
           const help = await root().getHelp()
           process.stdout.write(help + "\n")
@@ -35,7 +48,7 @@ export function createHelpCommand(root?: () => Argv) {
         return
       }
       const output = await generateHelp({
-        command: args.command,
+        command,
         all: args.all,
         format: args.format as "md" | "text",
       })
