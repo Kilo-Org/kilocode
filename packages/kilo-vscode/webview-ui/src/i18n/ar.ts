@@ -1111,6 +1111,9 @@ export const dict = {
   "settings.autoCleanup.runNow": "شغّل التنظيف الآن",
   "settings.autoCleanup.runNow.confirm":
     "حذف الجلسات المنتهية الصلاحية نهائيًا عبر جميع المشاريع وكل عميل Kilo على هذا الجهاز؟",
+  "settings.autoCleanup.stop": "إيقاف التنظيف",
+  "settings.autoCleanup.progress.cancelling": "جارٍ إيقاف تنظيف الجلسات...",
+  "settings.autoCleanup.lastRun.cancelled": "تمت المقاطعة",
   "settings.context.autoCompaction.title": "ضغط تلقائي",
   "settings.context.autoCompaction.description": "ضغط السياق تلقائياً قبل أن يصل إلى الحد",
   "settings.context.compaction.title": "الضغط",

@@ -1140,6 +1140,9 @@ export const dict = {
   "settings.autoCleanup.runNow": "Запустить очистку сейчас",
   "settings.autoCleanup.runNow.confirm":
     "Безвозвратно удалить устаревшие сессии во всех проектах и во всех клиентах Kilo на этом компьютере?",
+  "settings.autoCleanup.stop": "Остановить очистку",
+  "settings.autoCleanup.progress.cancelling": "Остановка очистки сессий...",
+  "settings.autoCleanup.lastRun.cancelled": "прервана",
   "settings.context.autoCompaction.title": "Автоматическое сжатие",
   "settings.context.autoCompaction.description": "Автоматически сжимать контекст до достижения лимита",
   "settings.context.compaction.title": "Сжатие",

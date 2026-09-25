@@ -1126,6 +1126,9 @@ export const dict = {
   "settings.autoCleanup.runNow": "اجرای پاکسازی الآن",
   "settings.autoCleanup.runNow.confirm":
     "حذف دائمی جلسه‌های منقضی‌شده در همهٔ پروژه‌ها و همهٔ سرویس‌گیرنده‌های Kilo روی این رایانه؟",
+  "settings.autoCleanup.stop": "توقف پاکسازی",
+  "settings.autoCleanup.progress.cancelling": "در حال توقف پاکسازی نشست‌ها...",
+  "settings.autoCleanup.lastRun.cancelled": "قطع‌شده",
 
   "settings.context.autoCompaction.title": "فشرده‌سازی خودکار",
   "settings.context.autoCompaction.description": "قبل از رسیدن به محدودیت، زمینه را به‌طور خودکار فشرده کنید",

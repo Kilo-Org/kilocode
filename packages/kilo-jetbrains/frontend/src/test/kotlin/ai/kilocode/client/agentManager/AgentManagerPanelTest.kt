@@ -1775,6 +1775,9 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         edt { controller.reload() }
         timers.advanceBy(300)
         flush()
+        // A row hides its PR badges while a reload reports progress, so wait for the load to settle
+        // instead of racing a fixed flush under CI load.
+        waitUntil { rows(panel) > 0 && (0 until rows(panel)).all { row(panel, it).progress == null } }
         return panel
     }
 

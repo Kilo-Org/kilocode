@@ -1123,6 +1123,9 @@ export const dict = {
   "settings.autoCleanup.runNow": "Run Cleanup Now",
   "settings.autoCleanup.runNow.confirm":
     "Permanently delete expired sessions across all projects and every Kilo client on this machine?",
+  "settings.autoCleanup.stop": "Stop cleanup",
+  "settings.autoCleanup.progress.cancelling": "Stopping session cleanup...",
+  "settings.autoCleanup.lastRun.cancelled": "interrupted",
 
   "settings.context.autoCompaction.title": "Auto Compaction",
   "settings.context.autoCompaction.description": "Automatically compact context before it reaches the limit",
