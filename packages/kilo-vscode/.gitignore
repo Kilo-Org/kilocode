@@ -4,3 +4,4 @@ out/
 storybook-static/
 test-results/
 playwright-report/
+tests/fixtures/response-lens-real-host/runs/

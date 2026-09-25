@@ -1,3 +1,8 @@
+import type {
+  ResponseLensSettings,
+  ExplainBrieflyResult,
+  ExplainBrieflyError,
+} from "../../../../src/shared/response-lens"
 import type { ProviderAuthAuthorization, ProviderAuthMethod } from "@kilocode/sdk/v2/client"
 import type { DiffSourceCapabilities, DiffSourceDescriptor } from "../../../../src/diff/sources/types"
 import type { PRComment, PRReactionContent } from "../../../agent-manager/pr/pr-types"
@@ -358,6 +363,8 @@ export interface RestoredImage {
 
 export interface SetChatBoxMessage {
   type: "setChatBoxMessage"
+  /** Session whose prompt draft is being replaced. Omitted by legacy callers. */
+  sessionID?: string
   text: string
   /**
    * Exact relative paths of the file attachments carried by the restored
@@ -514,6 +521,7 @@ export interface ChatSettingsLoadedMessage {
   type: "chatSettingsLoaded"
   settings: {
     shiftTabCyclesVariant: boolean
+    responseLens: ResponseLensSettings
   }
 }
 
@@ -1815,6 +1823,8 @@ export type ExtensionMessage =
   | MigrationCompleteMessage
   | EnhancePromptResultMessage
   | EnhancePromptErrorMessage
+  | ExplainBrieflyResult
+  | ExplainBrieflyError
   | ViewSubAgentSessionMessage
   | DiffViewerContextMessage
   | DiffViewerPRCommentsMessage

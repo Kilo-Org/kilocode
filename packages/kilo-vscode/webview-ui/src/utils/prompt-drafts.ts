@@ -1,6 +1,19 @@
 import { partFeedback } from "../../../src/shared/browser-feedback"
 import type { SendMessageFailedMessage } from "../types/messages"
 
+export function composePromptMessage(parts: {
+  review: string
+  browser: string
+  annotations: string
+  push?: string
+  context?: string
+  draft: string
+}): string {
+  return [parts.review, parts.browser, parts.annotations, parts.push, parts.context, parts.draft]
+    .filter(Boolean)
+    .join("\n\n")
+}
+
 export function failedPrompt(failed: Pick<SendMessageFailedMessage, "text" | "review" | "browserFeedback">) {
   if (!failed.review && !failed.browserFeedback) return { text: failed.text, comments: [], browsers: [] }
   const parsed = partFeedback({ kilo: { review: failed.review, browserFeedback: failed.browserFeedback } }, failed.text)
@@ -69,6 +82,46 @@ export function clearPromptDraftRoutes(id?: string): void {
   }
 }
 
+interface PromptDraftLookupStores {
+  text: ReadonlyMap<string, unknown>
+  comments: ReadonlyMap<string, unknown>
+  images: ReadonlyMap<string, unknown>
+  scrolls: ReadonlyMap<string, unknown>
+  browsers?: ReadonlyMap<string, unknown>
+  pastes?: ReadonlyMap<string, unknown>
+  contexts?: ReadonlyMap<string, unknown>
+  annotations?: ReadonlyMap<string, unknown>
+  editors?: ReadonlyMap<string, unknown>
+}
+
+export function promptDraftStorageKey(raw: string, fallback: string, stores: PromptDraftLookupStores): string {
+  const suffix = `:${raw}`
+  const maps: ReadonlyMap<string, unknown>[] = [stores.text, stores.comments, stores.images, stores.scrolls]
+  if (stores.browsers) maps.push(stores.browsers)
+  if (stores.pastes) maps.push(stores.pastes)
+  if (stores.contexts) maps.push(stores.contexts)
+  if (stores.annotations) maps.push(stores.annotations)
+  if (stores.editors) maps.push(stores.editors)
+  for (const map of maps) {
+    for (const key of map.keys()) {
+      if (key.endsWith(suffix)) return key
+    }
+  }
+  return scopeDraftKey(fallback, raw)
+}
+
+export function promptDraftPromotion(
+  raw: string,
+  sessionID: string,
+  fallback: string,
+  stores: PromptDraftLookupStores,
+) {
+  const suffix = `:${raw}`
+  const source = promptDraftStorageKey(raw, fallback, stores)
+  const box = source.slice(0, -suffix.length)
+  return { source, target: scopeDraftKey(box, sessionDraftKey(sessionID)) }
+}
+
 /**
  * Move one draft value from `source` to `target`. Required stores never
  * overwrite an existing target value; optional stores do.
@@ -81,7 +134,7 @@ function move<V>(map: Map<string, V>, source: string, target: string, overwrite:
   return value
 }
 
-export function movePromptDraft<T, C, I, S, B, P, X>(
+export function movePromptDraft<T, C, I, S, B, P, X, A, E>(
   stores: {
     text: Map<string, T>
     comments: Map<string, C>
@@ -90,13 +143,29 @@ export function movePromptDraft<T, C, I, S, B, P, X>(
     browsers?: Map<string, B>
     pastes?: Map<string, P>
     contexts?: Map<string, X>
+    annotations?: Map<string, A>
+    editors?: Map<string, E>
   },
   source: string,
   target: string,
-): { text?: T; comments?: C; images?: I; scroll?: S; browsers?: B; pastes?: P; contexts?: X } {
-  const hasBrowsers = stores.browsers?.has(source) ?? false
-  const hasPastes = stores.pastes?.has(source) ?? false
-  const hasContexts = stores.contexts?.has(source) ?? false
+): {
+  text?: T
+  comments?: C
+  images?: I
+  scroll?: S
+  browsers?: B
+  pastes?: P
+  contexts?: X
+  annotations?: A
+  editor?: E
+} {
+  const hasAnnotations = Boolean(stores.annotations?.has(source))
+  const hasEditors = Boolean(stores.editors?.has(source))
+  const annotations = stores.annotations ? move(stores.annotations, source, target, false) : undefined
+  const editor = stores.editors ? move(stores.editors, source, target, false) : undefined
+  const hasBrowsers = Boolean(stores.browsers?.has(source))
+  const hasPastes = Boolean(stores.pastes?.has(source))
+  const hasContexts = Boolean(stores.contexts?.has(source))
   const browsers = stores.browsers ? move(stores.browsers, source, target, true) : undefined
   const pastes = stores.pastes ? move(stores.pastes, source, target, true) : undefined
   const contexts = stores.contexts ? move(stores.contexts, source, target, true) : undefined
@@ -108,5 +177,7 @@ export function movePromptDraft<T, C, I, S, B, P, X>(
     ...(hasBrowsers ? { browsers } : {}),
     ...(hasPastes ? { pastes } : {}),
     ...(hasContexts ? { contexts } : {}),
+    ...(hasAnnotations ? { annotations } : {}),
+    ...(hasEditors ? { editor } : {}),
   }
 }

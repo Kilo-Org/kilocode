@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it } from "bun:test"
 import {
+  annotationDrafts,
+  annotationEditorDrafts,
   beginPendingSend,
   clearSessionDraftDiscarded,
   deletePendingDraft,
@@ -20,7 +22,16 @@ import {
 } from "../../webview-ui/src/utils/draft-store"
 import { clearPromptDraftRoutes, promotePromptDraft, promptDraftKey } from "../../webview-ui/src/utils/prompt-drafts"
 
-const stores = [drafts, browserDrafts, reviewDrafts, contextDrafts, imageDrafts, scrollDrafts]
+const stores = [
+  drafts,
+  browserDrafts,
+  reviewDrafts,
+  contextDrafts,
+  imageDrafts,
+  scrollDrafts,
+  annotationDrafts,
+  annotationEditorDrafts,
+]
 
 beforeEach(() => {
   stores.forEach((store) => store.clear())
@@ -40,6 +51,17 @@ describe("prompt draft storage", () => {
       browser,
       contexts,
     )
+    const annotation = {
+      id: "annotation",
+      sessionID: "s1",
+      messageID: "message",
+      selectedText: "selection",
+      comment: "comment",
+      createdAt: 1,
+      updatedAt: 1,
+    }
+    annotationDrafts.set("prompt:default:pending:sidebar-pending:1", [annotation])
+    annotationEditorDrafts.set("prompt:default:pending:sidebar-pending:1", { annotation, comment: "editing" })
 
     expect(drafts.size).toBe(1)
     expect(reviewDrafts.size).toBe(1)
@@ -78,6 +100,19 @@ describe("prompt draft storage", () => {
   it("deletes session and pre-promotion pending keys", () => {
     savePromptDraft("prompt:default:session:s1", "session", [], [], 1)
     savePromptDraft("prompt:default:pending:s1", "pending", [], [], 2)
+    annotationDrafts.set("prompt:default:session:s1", [])
+    annotationEditorDrafts.set("prompt:default:pending:s1", {
+      annotation: {
+        id: "annotation",
+        sessionID: "s1",
+        messageID: "message",
+        selectedText: "selection",
+        comment: "",
+        createdAt: 1,
+        updatedAt: 1,
+      },
+      comment: "editing",
+    })
     deleteDraftsForSession("s1")
     expect(drafts.size).toBe(0)
     expect(scrollDrafts.size).toBe(0)

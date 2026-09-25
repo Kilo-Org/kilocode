@@ -2,3 +2,4 @@ node_modules
 dist
 out
 *.md
+tests/fixtures/response-lens-real-host/runs/

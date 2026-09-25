@@ -123,6 +123,7 @@ async function cliSourceHash() {
         "KILO_MODELS_URL",
         "KILO_PRE_RELEASE",
         "KILO_RELEASE",
+        "KILO_LOCAL_PACKAGE",
         "KILO_SKIP_BUNDLED_BWRAP",
         "KILO_VERSION",
         "MODELS_DEV_API_JSON",
@@ -255,12 +256,11 @@ async function ensureBuiltBinary(): Promise<string> {
   const pkg = await Bun.file(join(repoDir, "package.json")).json()
   const bun = String(pkg.packageManager)
   log("Building CLI binary...")
-  try {
-    await $`bunx ${bun} run build --single --skip-install`.cwd(opencodeDir)
-  } catch (err) {
-    log(`Pinned bunx build failed (${err}), running via active bun runtime...`)
-    await $`bun run script/build.ts --single --skip-install`.cwd(opencodeDir)
-  }
+  const compiler = process.env.KILO_BUILD_BUN ?? process.execPath
+  const version = (await $`${compiler} --version`.text()).trim()
+  if (bun !== `bun@${version}`)
+    throw new Error(`Build requires ${bun}; set KILO_BUILD_BUN to that executable. No runtime fallback is permitted.`)
+  await $`${compiler} run build --single --skip-install`.cwd(opencodeDir)
 
   const built = await findKiloBinaryInOpencodeDist()
   if (!built) {
