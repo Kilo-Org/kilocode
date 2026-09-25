@@ -1,5 +1,11 @@
 # Changelog
 
+## 7.8.0
+
+### Minor Changes
+
+- [#14525](https://github.com/Kilo-Org/kilocode/pull/14525) [`de7df7d`](https://github.com/Kilo-Org/kilocode/commit/de7df7d6b9f63eccb49bbd7cc3d2f3071abc0647) - Show included skills and their install destination before installing a marketplace MCP server, and remove only the skills owned by that installation.
+
 ## 7.7.10
 
 ### Patch Changes
