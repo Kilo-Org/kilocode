@@ -1133,6 +1133,9 @@ export const dict = {
   "settings.autoCleanup.runNow": "今すぐクリーンアップを実行",
   "settings.autoCleanup.runNow.confirm":
     "このマシン上のすべてのプロジェクトとすべての Kilo クライアントにわたる、削除対象の古いセッションを完全に削除しますか？",
+  "settings.autoCleanup.stop": "クリーンアップを停止",
+  "settings.autoCleanup.progress.cancelling": "セッションのクリーンアップを停止しています...",
+  "settings.autoCleanup.lastRun.cancelled": "中断されました",
   "settings.context.autoCompaction.title": "自動圧縮",
   "settings.context.autoCompaction.description": "コンテキストが上限に達する前に自動的に圧縮",
   "settings.context.compaction.title": "圧縮",

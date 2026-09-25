@@ -1121,6 +1121,9 @@ export const dict = {
   "settings.autoCleanup.runNow": "지금 정리 실행",
   "settings.autoCleanup.runNow.confirm":
     "이 컴퓨터의 모든 프로젝트와 모든 Kilo 클라이언트에 걸쳐 만료된 세션을 영구적으로 삭제할까요?",
+  "settings.autoCleanup.stop": "정리 중지",
+  "settings.autoCleanup.progress.cancelling": "세션 정리를 중지하는 중...",
+  "settings.autoCleanup.lastRun.cancelled": "중단됨",
   "settings.context.autoCompaction.title": "자동 압축",
   "settings.context.autoCompaction.description": "컨텍스트가 한도에 도달하기 전에 자동으로 압축",
   "settings.context.compaction.title": "압축",

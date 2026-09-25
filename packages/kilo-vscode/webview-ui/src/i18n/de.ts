@@ -1165,6 +1165,9 @@ export const dict = {
   "settings.autoCleanup.runNow": "Bereinigung jetzt ausführen",
   "settings.autoCleanup.runNow.confirm":
     "Abgelaufene Sitzungen endgültig in allen Projekten und allen Kilo-Clients auf diesem Rechner löschen?",
+  "settings.autoCleanup.stop": "Bereinigung stoppen",
+  "settings.autoCleanup.progress.cancelling": "Sitzungsbereinigung wird gestoppt...",
+  "settings.autoCleanup.lastRun.cancelled": "abgebrochen",
   "settings.context.autoCompaction.title": "Automatische Komprimierung",
   "settings.context.autoCompaction.description": "Kontext automatisch komprimieren, bevor er das Limit erreicht",
   "settings.context.compaction.title": "Komprimierung",

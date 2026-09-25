@@ -1139,6 +1139,9 @@ export const dict = {
   "settings.autoCleanup.runNow": "Kjør opprydding nå",
   "settings.autoCleanup.runNow.confirm":
     "Slett utløpte økter permanent på tvers av alle prosjekter og alle Kilo-klienter på denne maskinen?",
+  "settings.autoCleanup.stop": "Stopp opprydding",
+  "settings.autoCleanup.progress.cancelling": "Stopper opprydding av økter...",
+  "settings.autoCleanup.lastRun.cancelled": "avbrutt",
   "settings.context.autoCompaction.title": "Automatisk komprimering",
   "settings.context.autoCompaction.description": "Komprimer automatisk kontekst før den når grensen",
   "settings.context.compaction.title": "Komprimering",

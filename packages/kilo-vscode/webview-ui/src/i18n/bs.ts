@@ -1145,6 +1145,9 @@ export const dict = {
   "settings.autoCleanup.runNow": "Pokreni čišćenje sada",
   "settings.autoCleanup.runNow.confirm":
     "Trajno obrisati istekle sesije u svim projektima i svim Kilo klijentima na ovom računaru?",
+  "settings.autoCleanup.stop": "Zaustavi čišćenje",
+  "settings.autoCleanup.progress.cancelling": "Zaustavljanje čišćenja sesija...",
+  "settings.autoCleanup.lastRun.cancelled": "prekinuto",
   "settings.context.autoCompaction.title": "Automatska kompresija",
   "settings.context.autoCompaction.description": "Automatski komprimiraj kontekst prije nego dostigne limit",
   "settings.context.compaction.title": "Kompresija",

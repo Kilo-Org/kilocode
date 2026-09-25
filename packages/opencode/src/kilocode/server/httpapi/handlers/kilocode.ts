@@ -570,6 +570,10 @@ export const kilocodeHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilocode"
       return { ...(yield* retentionActive()), last: outcome.result }
     })
 
+    const retentionCancel = Effect.fn("KilocodeHttpApi.retentionCancel")(function* () {
+      return { requested: KiloSessionRetention.cancel() }
+    })
+
     return handlers
       .handle("resumeSession", resumeSession)
       .handle("drainSession", drainSession)
@@ -607,5 +611,6 @@ export const kilocodeHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilocode"
       .handle("wakeups", wakeups)
       .handle("retentionStatus", retentionStatus)
       .handle("retentionRun", retentionRun)
+      .handle("retentionCancel", retentionCancel)
   }),
 )

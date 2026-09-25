@@ -532,6 +532,11 @@ export interface RunAutoCleanupNowMessage {
   requestID: string
 }
 
+export interface StopAutoCleanupNowMessage {
+  type: "stopAutoCleanupNow"
+  requestID: string
+}
+
 export interface RequestThroughputSettingMessage {
   type: "requestThroughputSetting"
 }
@@ -1712,6 +1717,7 @@ export type WebviewMessage =
   | RequestTimelineSettingMessage
   | RequestAutoCleanupStateMessage
   | RunAutoCleanupNowMessage
+  | StopAutoCleanupNowMessage
   | RequestThroughputSettingMessage
   | RequestAutoApprovalReasonSettingMessage
   | RequestWorkStyleMessage
