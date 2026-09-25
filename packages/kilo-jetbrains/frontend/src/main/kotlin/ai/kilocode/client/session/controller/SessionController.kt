@@ -829,13 +829,14 @@ class SessionController(
         val key = "$provider/$id"
         if (item(key) == null && model.workspace.providers != null) return
         modelTime = null
-        prefModel = null
-        prefAgent = null
+        prefModel = key
+        prefAgent = agent
         prefVariantKey = null
         prefVariant = null
-        app.selectModel(agent, provider, id)
-        selectResolvedModel(key)
-        model.modelOverride = model.defaultModel != model.model
+        fire(SessionControllerEvent.WorkspaceReady) {
+            selectResolvedModel(key)
+            model.modelOverride = model.defaultModel != model.model
+        }
         capture("Model Selected", sessionProps() + mapOf("agent" to agent, "provider" to provider, "modelId" to id, "isOverride" to "true"))
     }
 
@@ -845,10 +846,13 @@ class SessionController(
         LOG.debug { "${ChatLogSummary.sid(sid ?: ref?.key ?: "pending")} kind=config model-reset agent=$agent" }
         prefVariantKey = null
         prefVariant = null
-        app.clearModel(agent)
         val auto = resolvedDefaultModel(agent)?.key
-        selectResolvedModel(auto)
-        model.modelOverride = false
+        prefModel = auto
+        prefAgent = agent
+        fire(SessionControllerEvent.WorkspaceReady) {
+            selectResolvedModel(auto)
+            model.modelOverride = false
+        }
         capture("Model Override Cleared", sessionProps() + mapOf("agent" to agent))
     }
 
@@ -859,7 +863,6 @@ class SessionController(
         LOG.debug { "${ChatLogSummary.sid(sid ?: ref?.key ?: "pending")} kind=config variant=$key/$value" }
         prefVariantKey = key
         prefVariant = value
-        app.selectVariant(key, value)
         model.variant = value
         capture("Reasoning Variant Selected", sessionProps() + mapOf("model" to key, "variant" to value))
     }
@@ -881,8 +884,6 @@ class SessionController(
             val id = select.model
             if (provider != null && id != null) {
                 val key = "$provider/$id"
-                app.selectModel(agent, provider, id)
-                select.variant?.let { app.selectVariant(key, it) }
                 prefAgent = agent
                 prefModel = key
                 prefVariantKey = key
