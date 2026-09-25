@@ -28167,6 +28167,9 @@
           },
           "enterpriseUrl": {
             "type": "string"
+          },
+          "baseURL": {
+            "type": "string"
           }
         },
         "required": ["type", "refresh", "access", "expires"],

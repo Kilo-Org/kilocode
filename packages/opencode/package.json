@@ -12,8 +12,8 @@
     "bench:test": "bun run script/bench-test-suite.ts",
     "profile:test": "bun run script/profile-test-files.ts",
     "build": "bun run script/build.ts",
-    "dev": "bun run --conditions=browser ./src/index.ts",
-    "dev:temporary": "bun run --conditions=browser ./src/temporary.ts",
+    "dev": "bun run ./src/index.ts",
+    "dev:temporary": "bun run ./src/temporary.ts",
     "test:ci": "bun run script/test-runner.ts --ci"
   },
   "bin": {
@@ -72,7 +72,7 @@
     "@agentclientprotocol/sdk": "0.21.0",
     "@ai-sdk/alibaba": "1.0.17",
     "@ai-sdk/amazon-bedrock": "4.0.166",
-    "@ai-sdk/anthropic": "3.0.82",
+    "@ai-sdk/anthropic": "3.0.111",
     "@ai-sdk/azure": "3.0.93",
     "@ai-sdk/cerebras": "2.0.60",
     "@ai-sdk/cohere": "3.0.27",
