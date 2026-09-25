@@ -18,11 +18,14 @@ import ai.kilocode.rpc.dto.KiloAppStatusDto
 import ai.kilocode.rpc.dto.MarketplaceItemDto
 import ai.kilocode.rpc.dto.MarketplaceListDto
 import ai.kilocode.rpc.dto.MarketplaceResultDto
+import ai.kilocode.rpc.dto.MarketplaceSkillDto
 import ai.kilocode.client.ui.UiStyle
 import com.intellij.openapi.actionSystem.ActionToolbar
 import com.intellij.openapi.actionSystem.impl.ActionButton
 import com.intellij.openapi.actionSystem.impl.ActionButtonWithText
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.ui.ComboBox
+import com.intellij.openapi.ui.DialogWrapper
 import com.intellij.openapi.ui.Messages
 import com.intellij.openapi.ui.TestDialog
 import com.intellij.openapi.ui.TestDialogManager
@@ -348,10 +351,15 @@ class MarketplaceSettingsUiTest : BasePlatformTestCase() {
         assertEquals(1, marketRpc.listCalls.size)
     }
 
-    fun `test install sends target and parameters then reloads`() {
-        val panel = panel { item, hasProjectDirectory ->
+    fun `test MCP install preserves companions and refreshes the Skills cache`() {
+        val skills = listOf(MarketplaceSkillDto("docs-lookup", "https://example.com/docs-lookup.tar.gz"))
+        val rpc = FakeMarketplaceRpcApi().apply {
+            list = MarketplaceListDto(items = items().map { if (it.type == "mcp") it.copy(skills = skills) else it })
+        }
+        val panel = panel(rpc = rpc) { item, hasProjectDirectory ->
             assertTrue(hasProjectDirectory)
-            FakeInstallDialog(MarketplaceInstallRequest("global", mapOf("apiKey" to "secret", "__method" to "npx")))
+            assertEquals(skills, item.skills)
+            FakeInstallDialog(MarketplaceInstallRequest("project", mapOf("apiKey" to "secret", "__method" to "npx")))
         }
         flushUntil { rows(panel).size == 3 }
 
@@ -361,8 +369,44 @@ class MarketplaceSettingsUiTest : BasePlatformTestCase() {
         val call = marketRpc.installCalls.single()
         assertEquals(DIR, call.directory)
         assertEquals("context7", call.item.id)
-        assertEquals("global", call.target)
+        assertEquals(skills, call.item.skills)
+        assertEquals("project", call.target)
         assertEquals(mapOf("apiKey" to "secret", "__method" to "npx"), call.parameters)
+        assertEquals(listOf(DIR), agentRpc.skillReloads)
+    }
+
+    fun `test switching the install dialog to an installed MCP scope removes and refreshes Skills`() {
+        val panel = panel { item, directory ->
+            val dialog = MarketplaceInstallDialog(item, directory)
+            try {
+                components(dialog.centerComponent()).filterIsInstance<ComboBox<*>>().first().selectedItem = "Global"
+                assertTrue(text(dialog.centerComponent()).contains("companion skills owned"))
+                FakeInstallDialog(dialog.result())
+            } finally {
+                dialog.close(DialogWrapper.CANCEL_EXIT_CODE)
+            }
+        }
+        flushUntil { rows(panel).size == 3 }
+
+        click(panel, "mcp:context7", "install")
+
+        flushUntil { marketRpc.listCalls.size == 2 }
+        assertTrue(marketRpc.installCalls.isEmpty())
+        val call = marketRpc.removeCalls.single()
+        assertEquals("context7", call.id)
+        assertEquals("mcp", call.type)
+        assertEquals("global", call.scope)
+        assertEquals(listOf(DIR), agentRpc.skillReloads)
+    }
+
+    fun `test standalone skill install still refreshes the Skills cache`() {
+        val panel = panel { _, _ -> FakeInstallDialog(MarketplaceInstallRequest("project", emptyMap())) }
+        flushUntil { rows(panel).size == 3 }
+
+        click(panel, "skill:review-skill", "install")
+
+        flushUntil { marketRpc.listCalls.size == 2 }
+        assertEquals(listOf(DIR), agentRpc.skillReloads)
     }
 
     fun `test the acting row reports progress in place of its buttons, then gets them back`() {
@@ -404,6 +448,7 @@ class MarketplaceSettingsUiTest : BasePlatformTestCase() {
         click(panel, "mcp:context7", "install")
 
         flushUntil { text(panel).contains("Nope.") }
+        assertTrue(agentRpc.skillReloads.isEmpty())
         edt {
             val row = rows(panel).single { it.key == "mcp:context7" }
             assertNull("a failure must not leave the row stuck on progress", row.progress)
@@ -448,6 +493,34 @@ class MarketplaceSettingsUiTest : BasePlatformTestCase() {
         assertEquals("planner", call.id)
         assertEquals("agent", call.type)
         assertEquals("project", call.scope)
+        assertTrue("agent removal does not change skills", agentRpc.skillReloads.isEmpty())
+    }
+
+    fun `test MCP Remove confirms ownership without catalog companions then refreshes Skills`() {
+        val panel = panel()
+        flushUntil { rows(panel).size == 3 }
+        val notices = mutableListOf<String>()
+        TestDialogManager.setTestDialog { text ->
+            notices.add(text)
+            Messages.YES
+        }
+        marketRpc.list = MarketplaceListDto(items = items().map {
+            if (it.type == "mcp") it.copy(installedGlobal = false) else it
+        })
+
+        click(panel, "mcp:context7", "removeGlobal")
+
+        flushUntil { rows(panel).single { it.key == "mcp:context7" }.cells.none { it.id == "removeGlobal" } }
+        assertEquals(
+            KiloBundle.message("settings.marketplace.remove.message", "Context7", "Global") +
+                "\n\n" + KiloBundle.message("settings.marketplace.remove.skills"),
+            notices.single(),
+        )
+        val call = marketRpc.removeCalls.single()
+        assertEquals("context7", call.id)
+        assertEquals("mcp", call.type)
+        assertEquals("global", call.scope)
+        assertEquals(listOf(DIR), agentRpc.skillReloads)
     }
 
     fun `test remove without confirmation performs no removal`() {
@@ -455,10 +528,11 @@ class MarketplaceSettingsUiTest : BasePlatformTestCase() {
         flushUntil { rows(panel).size == 3 }
         TestDialogManager.setTestDialog { Messages.NO }
 
-        click(panel, "agent:planner", "removeProject")
+        click(panel, "mcp:context7", "removeGlobal")
 
         edt { UIUtil.dispatchAllInvocationEvents(); true }
         assertTrue(marketRpc.removeCalls.isEmpty())
+        assertTrue(agentRpc.skillReloads.isEmpty())
     }
 
     fun `test docs cell opens the item link`() {
