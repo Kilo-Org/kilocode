@@ -75,6 +75,7 @@ import ai.kilocode.client.session.views.SessionOutcomeView
 import ai.kilocode.client.session.views.permission.PermissionView
 import ai.kilocode.client.session.views.question.QuestionView
 import ai.kilocode.client.settings.KiloSettingsConfigurable
+import ai.kilocode.client.settings.checkpoints.CheckpointsConfigurable
 import ai.kilocode.client.settings.profile.UserProfileConfigurable
 import ai.kilocode.client.telemetry.Telemetry
 import ai.kilocode.client.util.UiTimerSource
@@ -546,7 +547,14 @@ class SessionUi(
             fork = if (forkSurface) ({ id -> forkMessage(id, "message") }) else null,
             cancelRevert = if (readonly) null else ::cancelRevert,
             deleteQueued = if (readonly) null else { id -> controller.deleteQueuedMessage(id) },
-            banner = if (readonly) null else RevertBanner(controller.model, ::redo, controller::redoAll, ::cancelRevert, focus),
+            banner = if (readonly) null else RevertBanner(
+                controller.model,
+                ::redo,
+                controller::redoAll,
+                ::cancelRevert,
+                focus,
+                openSettingsAction = ::openCheckpointsSettings,
+            ),
             onOpenSubagent = ::openSubagent,
             onPromoteBackgroundAgent = if (readonly) null else BackgroundPromote(
                 available = { app.state.value.backgroundSubagents },
@@ -1420,6 +1428,16 @@ class SessionUi(
                 cfg is ConfigurableWithId && cfg.getId() == UserProfileConfigurable.ID
             },
             { cfg: Configurable -> cfg.focusOn(UserProfileConfigurable.FOCUS_ACCOUNT_COMBO) },
+        )
+    }
+
+    private fun openCheckpointsSettings() {
+        ShowSettingsUtil.getInstance().showSettingsDialog(
+            project,
+            Predicate { cfg: Configurable ->
+                cfg is ConfigurableWithId && cfg.getId() == CheckpointsConfigurable.ID
+            },
+            { _: Configurable -> },
         )
     }
 
