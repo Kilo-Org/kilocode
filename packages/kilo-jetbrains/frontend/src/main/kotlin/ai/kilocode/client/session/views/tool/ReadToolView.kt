@@ -20,7 +20,7 @@ class ReadToolView(
     tool: Tool,
     openFile: SessionFileOpener = { _, _ -> },
     private val selection: SessionSelection? = null,
-    private val parts: ToolParts = toolParts(tool, openFile),
+    private val parts: ToolParts = toolParts(tool, openFile, link = true),
     ) : AbstractSessionPartView(parts.header, { parts.scroll(tool) }, expandable = false) {
 
     companion object {
@@ -81,7 +81,7 @@ class ReadToolView(
     @RequiresEdt
     internal fun linkText() = parts.label
     @RequiresEdt
-    internal fun linkMarkup() = parts.link.text ?: ""
+    internal fun linkUnderline() = parts.link.underline
     @RequiresEdt
     internal fun linkForeground() = parts.link.foreground
     @RequiresEdt

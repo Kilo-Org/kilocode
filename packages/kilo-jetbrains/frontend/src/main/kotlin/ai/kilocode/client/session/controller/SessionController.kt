@@ -216,6 +216,7 @@ class SessionController(
     private var agentTime: Double? = null
     private var prefModel: String? = null
     private var prefAgent: String? = null
+    private var prefOverride = false
     private var prefVariantKey: String? = null
     private var prefVariant: String? = null
     private var modelTime: Double? = null
@@ -857,6 +858,7 @@ class SessionController(
         modelTime = null
         prefModel = null
         prefAgent = null
+        prefOverride = false
         prefVariantKey = null
         prefVariant = null
         KiloPluginSettings.setAgent(name)
@@ -874,13 +876,15 @@ class SessionController(
         val key = "$provider/$id"
         if (item(key) == null && model.workspace.providers != null) return
         modelTime = null
-        prefModel = null
-        prefAgent = null
+        prefModel = key
+        prefAgent = agent
+        prefOverride = true
         prefVariantKey = null
         prefVariant = null
-        app.selectModel(agent, provider, id)
-        selectResolvedModel(key)
-        model.modelOverride = model.defaultModel != model.model
+        fire(SessionControllerEvent.WorkspaceReady) {
+            selectResolvedModel(key)
+            model.modelOverride = model.defaultModel != model.model
+        }
         capture("Model Selected", sessionProps() + mapOf("agent" to agent, "provider" to provider, "modelId" to id, "isOverride" to "true"))
     }
 
@@ -890,10 +894,14 @@ class SessionController(
         LOG.debug { "${ChatLogSummary.sid(sid ?: ref?.key ?: "pending")} kind=config model-reset agent=$agent" }
         prefVariantKey = null
         prefVariant = null
-        app.clearModel(agent)
         val auto = resolvedDefaultModel(agent)?.key
-        selectResolvedModel(auto)
-        model.modelOverride = false
+        prefModel = auto
+        prefAgent = agent
+        prefOverride = false
+        fire(SessionControllerEvent.WorkspaceReady) {
+            selectResolvedModel(auto)
+            model.modelOverride = false
+        }
         capture("Model Override Cleared", sessionProps() + mapOf("agent" to agent))
     }
 
@@ -904,7 +912,6 @@ class SessionController(
         LOG.debug { "${ChatLogSummary.sid(sid ?: ref?.key ?: "pending")} kind=config variant=$key/$value" }
         prefVariantKey = key
         prefVariant = value
-        app.selectVariant(key, value)
         model.variant = value
         capture("Reasoning Variant Selected", sessionProps() + mapOf("model" to key, "variant" to value))
     }
@@ -926,13 +933,13 @@ class SessionController(
             val id = select.model
             if (provider != null && id != null) {
                 val key = "$provider/$id"
-                app.selectModel(agent, provider, id)
-                select.variant?.let { app.selectVariant(key, it) }
                 prefAgent = agent
                 prefModel = key
+                prefOverride = true
                 prefVariantKey = key
                 prefVariant = select.variant
             } else {
+                prefOverride = false
                 prefVariantKey = null
                 prefVariant = null
             }
@@ -2577,7 +2584,8 @@ class SessionController(
         val state = app.models.value
         val cfg = model.app.config
         val auto = resolvedDefaultModel(agent)?.key
-        val selected = messageSelection(agent)?.key ?: resolveSessionModel(
+        val preferred = messageSelection(agent)
+        val selected = preferred?.key ?: resolveSessionModel(
             providers = providers,
             agent = agent,
             state = state,
@@ -2586,7 +2594,7 @@ class SessionController(
         )?.key
         model.defaultModel = auto
         selectResolvedModel(selected)
-        model.modelOverride = messageSelection(agent) == null && selected != auto
+        model.modelOverride = (preferred == null || prefOverride) && selected != auto
     }
 
     private fun resolvedDefaultModel(agent: String): ModelSelectionDto? {
@@ -2665,6 +2673,7 @@ class SessionController(
         messageAgent(agent)?.let { model.agent = it }
         prefModel = messageModel(msg)
         prefAgent = messageAgent(msg) ?: model.agent
+        prefOverride = false
         syncModelSelection()
         if (model.prefs() != before) fire(SessionControllerEvent.WorkspaceReady)
     }
@@ -2680,6 +2689,8 @@ class SessionController(
         val key = messageModel(info)
         val last = modelTime
         if (info.role == "user" && key != null && (info.time.created >= (last ?: Double.NEGATIVE_INFINITY))) {
+            val owner = agent ?: model.agent
+            prefOverride = prefOverride && prefModel == key && (prefAgent == null || prefAgent == owner)
             modelTime = info.time.created
             prefModel = key
             prefAgent = agent ?: model.agent

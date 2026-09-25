@@ -4,6 +4,8 @@ package ai.kilocode.client.app
 
 import ai.kilocode.rpc.KiloWorkspaceRpcApi
 import ai.kilocode.rpc.dto.ConfigTargetDto
+import ai.kilocode.rpc.dto.ConfigDto
+import ai.kilocode.rpc.dto.ConfigPatchDto
 import ai.kilocode.rpc.dto.DiffFileDto
 import ai.kilocode.rpc.dto.FileSearchResultDto
 import ai.kilocode.rpc.dto.KiloWorkspaceStateDto
@@ -95,6 +97,29 @@ class KiloWorkspaceService internal constructor(
         refreshLocalConfigTarget(directory)
         refreshGlobalConfigTarget()
         return workspace
+    }
+
+    suspend fun config(directory: String): ConfigDto? {
+        return try {
+            call { config(directory) }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            LOG.warn("Workspace config load failed for directory=$directory", e)
+            null
+        }
+    }
+
+    fun updateConfigAsync(directory: String, patch: ConfigPatchDto, done: (ConfigDto?) -> Unit): Job = cs.launch {
+        val config = try {
+            call { updateConfig(directory, patch) }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            LOG.warn("Workspace config update failed for directory=$directory", e)
+            null
+        }
+        done(config)
     }
 
     /**

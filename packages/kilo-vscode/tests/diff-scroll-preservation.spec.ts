@@ -381,13 +381,35 @@ test("keeps the inline diff position stable when the row width changes", async (
   const mounted = await scroll.evaluate(async (el) => {
     const frame = () => new Promise((resolve) => requestAnimationFrame(resolve))
     const initial = Array.from(el.querySelectorAll("[data-file-path]"), (row) => row.getAttribute("data-file-path"))
-    while (el.scrollTop < el.scrollHeight - el.clientHeight - 1) {
-      el.scrollTop = Math.min(el.scrollHeight - el.clientHeight, el.scrollTop + 120)
+    const measured = new Set<string>()
+    while (true) {
       await frame()
+      const bounds = el.getBoundingClientRect()
+      const rows = Array.from(el.querySelectorAll<HTMLElement>("[data-file-path]")).filter((row) => {
+        const rect = row.getBoundingClientRect()
+        return rect.bottom > bounds.top && rect.top < bounds.bottom
+      })
+      // Reaching the estimated bottom does not mean deferred rows have rendered.
+      // Keep each visible row in view until Pierre has released its height pin.
+      if (
+        !rows.length ||
+        !rows.every((row) => {
+          const diff = row.querySelector<HTMLElement>('[data-component="diff"]')
+          return (
+            diff?.querySelector("diffs-container")?.shadowRoot?.querySelector("[data-line]") &&
+            diff.style.minHeight === ""
+          )
+        })
+      )
+        continue
+      for (const row of rows) measured.add(row.dataset.filePath!)
+      if (el.scrollTop >= el.scrollHeight - el.clientHeight - 1) break
+      el.scrollTop = Math.min(el.scrollHeight - el.clientHeight, el.scrollTop + 120)
     }
     for (let index = 0; index < 30; index++) await frame()
-    return initial
+    return { initial, measured: [...measured] }
   })
+  expect(mounted.measured).toEqual(Array.from({ length: 5 }, (_, index) => `src/review-${index}.ts`))
 
   // A width change (panel resize or scrollbar toggle) leaves the measured
   // heights on a different width, so a remounted row must reuse the last
@@ -428,7 +450,7 @@ test("keeps the inline diff position stable when the row width changes", async (
     }
     observer.disconnect()
     return { correction, range, remounts }
-  }, mounted)
+  }, mounted.initial)
 
   expect(result.remounts).toBeGreaterThan(0)
   expect(result.correction).toBeLessThanOrEqual(1)

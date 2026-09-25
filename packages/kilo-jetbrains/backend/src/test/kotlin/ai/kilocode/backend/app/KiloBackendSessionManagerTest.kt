@@ -927,7 +927,7 @@ class KiloBackendSessionManagerTest {
             "version": "1",
             "time": {"created": 1, "updated": 1},
             "summary": {"additions": 42, "deletions": 7, "files": 3},
-            "revert": {"messageID":"msg_1","partID":"prt_1","snapshot":"snap_1","diff":"patch"}
+            "revert": {"messageID":"msg_1","partID":"prt_1","snapshot":"snap_1","diff":"patch","workspace":"not-a-git-repo"}
         }]"""
         val app = setup()
         ready(app)
@@ -940,6 +940,7 @@ class KiloBackendSessionManagerTest {
         assertEquals(3, session.summary!!.files)
         assertEquals("msg_1", session.revert?.messageID)
         assertEquals("prt_1", session.revert?.partID)
+        assertEquals("not-a-git-repo", session.revert?.workspace)
     }
 
     @Test

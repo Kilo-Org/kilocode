@@ -20,12 +20,16 @@ import ai.kilocode.rpc.dto.PermissionConfigDto
 import ai.kilocode.rpc.dto.PermissionRuleDto
 import ai.kilocode.rpc.dto.ProfileDto
 import ai.kilocode.rpc.dto.SandboxConfigDto
+import ai.kilocode.rpc.dto.RetentionConfigDto
+import ai.kilocode.rpc.dto.RetentionStatusDto
 import ai.kilocode.rpc.dto.SkillsConfigDto
 import ai.kilocode.rpc.dto.TelemetryCaptureDto
 import ai.kilocode.rpc.dto.WatcherConfigDto
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import java.util.concurrent.CopyOnWriteArrayList
+import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * Fake [KiloAppRpcApi] for testing.
@@ -49,9 +53,12 @@ class FakeAppRpcApi : KiloAppRpcApi {
         private set
     var models = ModelStateDto()
     val selections = mutableListOf<ModelSelectionUpdateDto>()
-    val cleared = mutableListOf<String>()
     val variants = mutableListOf<ModelVariantUpdateDto>()
     val configPatches = mutableListOf<ConfigPatchDto>()
+    var retention = RetentionStatusDto()
+    val retentionStatusCalls = AtomicInteger()
+    val retentionForces = CopyOnWriteArrayList<Boolean>()
+    var retentionError: Exception? = null
     val logConfigs = mutableListOf<LogConfigDto>()
     var configUpdateAttempts = 0
         private set
@@ -147,13 +154,6 @@ class FakeAppRpcApi : KiloAppRpcApi {
         return models
     }
 
-    override suspend fun clearModelSelection(agent: String): ModelStateDto {
-        assertNotEdt("clearModelSelection")
-        cleared.add(agent)
-        models = models.copy(model = models.model - agent)
-        return models
-    }
-
     override suspend fun updateModelVariant(update: ModelVariantUpdateDto): ModelStateDto {
         assertNotEdt("updateModelVariant")
         variants.add(update)
@@ -173,6 +173,20 @@ class FakeAppRpcApi : KiloAppRpcApi {
         state.value = next
         if (configUpdateReturnStale) return current
         return next
+    }
+
+    override suspend fun retentionStatus(): RetentionStatusDto {
+        assertNotEdt("retentionStatus")
+        retentionStatusCalls.incrementAndGet()
+        retentionError?.let { throw it }
+        return retention
+    }
+
+    override suspend fun runRetention(force: Boolean): RetentionStatusDto {
+        assertNotEdt("runRetention")
+        retentionError?.let { throw it }
+        retentionForces.add(force)
+        return retention
     }
 
     override suspend fun applyLogConfig(config: LogConfigDto) {
@@ -293,6 +307,14 @@ class FakeAppRpcApi : KiloAppRpcApi {
             permission = mergePermission(config.permission, patch.permission),
             shared_agent_board = patch.shared_agent_board ?: config.shared_agent_board,
             sandbox = sandbox,
+            snapshot = patch.snapshot ?: config.snapshot,
+            retention = patch.retention?.let { item ->
+                val current = config.retention ?: RetentionConfigDto()
+                current.copy(
+                    enabled = item.enabled ?: current.enabled,
+                    maxAgeDays = item.maxAgeDays ?: current.maxAgeDays,
+                )
+            } ?: config.retention,
         )
     }
 

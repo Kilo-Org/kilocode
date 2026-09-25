@@ -17,6 +17,23 @@ const state = (projectId: string, order: string[]) => ({
 })
 
 describe("project stores", () => {
+  it("preserves temporary tab positions when durable order is pushed again", () => {
+    const store = createProjectStore("a")
+    const order = ["terminal:second", "ses-2", "review", "pending:draft", "ses-1", "terminal:first"]
+    store.setTabOrder({ local: order })
+    store.applyState({ ...state("a", []), tabOrder: { local: ["ses-2", "ses-1"] } })
+    expect(store.tabOrder().local).toEqual(order)
+    store.applyState({ ...state("a", []), tabOrder: { local: ["ses-2", "ses-1"] } })
+    expect(store.tabOrder().local).toEqual(order)
+  })
+
+  it("accepts durable changes without dropping temporary tabs", () => {
+    const store = createProjectStore("a")
+    store.setTabOrder({ local: ["ses-1", "terminal:1", "ses-2", "review"] })
+    store.applyState({ ...state("a", []), tabOrder: { local: ["ses-2", "ses-3"] } })
+    expect(store.tabOrder().local).toEqual(["terminal:1", "ses-2", "review", "ses-3"])
+  })
+
   it("keeps worktree order isolated between projects", () => {
     const first = createProjectStore("a")
     const second = createProjectStore("b")

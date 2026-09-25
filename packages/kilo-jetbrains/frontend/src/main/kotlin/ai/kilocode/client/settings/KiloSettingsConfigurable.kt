@@ -3,6 +3,7 @@ package ai.kilocode.client.settings
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.settings.agents.AgentBehaviorConfigurable
 import ai.kilocode.client.settings.autoapprove.AutoApproveConfigurable
+import ai.kilocode.client.settings.checkpoints.CheckpointsConfigurable
 import ai.kilocode.client.settings.context.ContextConfigurable
 import ai.kilocode.client.settings.integrations.IntegrationsConfigurable
 import ai.kilocode.client.settings.marketplace.MarketplaceConfigurable
@@ -23,7 +24,7 @@ import javax.swing.JComponent
 /**
  * Root settings entry under Settings -> Tools -> Kilo Code.
  *
- * Displays a brief description and a link to the User Profile child page.
+ * Displays a brief description and links to the registered child pages.
  * Child configurables are registered in XML (`kilo.jetbrains.frontend.xml`) as
  * `applicationConfigurable` entries with the appropriate `parentId` — that is the
  * single source of truth for the settings hierarchy. This class does NOT implement
@@ -109,6 +110,14 @@ class KiloSettingsConfigurable : SearchableConfigurable {
         }
         context.border = JBUI.Borders.emptyBottom(UiStyle.Gap.sm())
         panel.next(context)
+
+        val checkpoints = ActionLink(KiloBundle.message("settings.checkpoints.displayName")) { e ->
+            val src = e.source as? JComponent ?: return@ActionLink
+            val settings = Settings.KEY.getData(DataManager.getInstance().getDataContext(src)) ?: return@ActionLink
+            open(settings, CheckpointsConfigurable.ID)
+        }
+        checkpoints.border = JBUI.Borders.emptyBottom(UiStyle.Gap.sm())
+        panel.next(checkpoints)
 
         val integrations = ActionLink(KiloBundle.message("settings.integrations.displayName")) { e ->
             val src = e.source as? JComponent ?: return@ActionLink

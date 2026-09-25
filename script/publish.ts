@@ -118,7 +118,7 @@ await import(`../packages/kilo-vscode/script/publish.ts`)
 const dir = fileURLToPath(new URL("..", import.meta.url))
 process.chdir(dir)
 
-// kilocode_change start - non-blocking JetBrains CLI pin bump PR after stable CLI release
+// kilocode_change start - non-blocking JetBrains CLI pin bump PR after CLI release
 await createJetbrainsPinPr()
 // kilocode_change end
 
@@ -129,12 +129,9 @@ async function createJetbrainsPinPr() {
     console.log("Skipping JetBrains CLI pin bump PR: not a release build")
     return
   }
-  if (Script.preview) {
-    console.log(`Skipping JetBrains CLI pin bump PR for pre-release v${Script.version}`)
-    return
-  }
-  const result =
-    await $`bun .kilo/skills/release-jetbrains/script/set-pin.ts --version ${Script.version} --pr`.nothrow()
+  const args = ["--version", Script.version, "--pr"]
+  if (Script.preview) args.push("--pre-release")
+  const result = await $`bun .kilo/skills/release-jetbrains/script/set-pin.ts ${args}`.nothrow()
   const out = result.stdout.toString().trim()
   const err = result.stderr.toString().trim()
   if (result.exitCode === 0) {

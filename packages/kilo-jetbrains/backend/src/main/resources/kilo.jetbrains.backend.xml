@@ -18,6 +18,7 @@
         <platform.rpc.backend.remoteApiProvider implementation="ai.kilocode.backend.rpc.KiloSandboxRpcApiProvider"/>
         <applicationService serviceImplementation="ai.kilocode.backend.migration.KiloBackendLegacyMigrationStoreService"/>
         <directoryIndexExcludePolicy implementation="ai.kilocode.backend.workspace.KiloWorktreeExcludePolicy"/>
+        <postStartupActivity implementation="ai.kilocode.backend.app.KiloBackendRetentionStartupActivity"/>
     </extensions>
 
     <applicationListeners>

@@ -3,6 +3,7 @@ import { createStore, reconcile } from "solid-js/store"
 import type { AssistantMessage as Message, Part, ToolPart, UserMessage } from "@kilocode/sdk/v2"
 import { DataProvider } from "@kilocode/kilo-ui/context/data"
 import { ToolApprovalVisibilityProvider, UserMessageDisplay } from "@kilocode/kilo-ui/message-part"
+import { touch, useReducedMotion } from "@kilocode/kilo-ui/tool-motion"
 import { useConfig } from "../../context/config"
 import { DisplayContext, useDisplay } from "../../context/display"
 import { useLanguage } from "../../context/language"
@@ -144,8 +145,8 @@ const SessionPreview: Component = () => {
 
   const Playback: Component<{ sample: ReturnType<typeof fixture> }> = (props) => {
     const sample = props.sample
-    const motion = window.matchMedia("(prefers-reduced-motion: reduce)")
-    const [state, setState] = createStore(previewFrame(sample, 0, motion.matches))
+    const reduce = useReducedMotion()
+    const [state, setState] = createStore(previewFrame(sample, 0, reduce()))
     let body: HTMLDivElement | undefined
     let content: HTMLDivElement | undefined
     let following = true
@@ -166,7 +167,10 @@ const SessionPreview: Component = () => {
         painted += Math.min(delta, limit)
         if (painted - applied < step) return
         applied = painted
-        setState(reconcile(previewFrame(sample, painted % previewDuration, motion.matches)))
+        const cycle = Math.floor(painted / previewDuration)
+        const frame = previewFrame(sample, painted % previewDuration, reduce(), cycle)
+        for (const part of frame.parts) touch(part.id)
+        setState(reconcile(frame))
       })
       const observer = new ResizeObserver(() => {
         if (following && body) body.scrollTop = body.scrollHeight
@@ -193,16 +197,25 @@ const SessionPreview: Component = () => {
             if (body) following = body.scrollHeight - body.scrollTop - body.clientHeight < 32
           }}
         >
+          {/* Same row markup as TranscriptRow, so spacing matches a real session. */}
           <div ref={content} class="settings-session-preview-content">
-            <UserMessageDisplay message={sample.user} parts={sample.prompt} />
-            <AssistantMessage message={state.thought} parts={state.thoughts} readonly interactivePrompts={false} />
-            <AssistantMessage
-              message={state.message}
-              parts={state.parts}
-              showAssistantCopyPartID={state.message.time.completed ? sample.copy : undefined}
-              readonly
-              interactivePrompts={false}
-            />
+            <div class="vscode-session-turn" data-row="user">
+              <div class="vscode-session-turn-user">
+                <UserMessageDisplay message={sample.user} parts={sample.prompt} />
+              </div>
+            </div>
+            <div class="vscode-session-turn" data-row="assistant">
+              <div class="vscode-session-turn-assistant">
+                <AssistantMessage message={state.thought} parts={state.thoughts} readonly interactivePrompts={false} />
+                <AssistantMessage
+                  message={state.message}
+                  parts={state.parts}
+                  showAssistantCopyPartID={state.message.time.completed ? state.copy : undefined}
+                  readonly
+                  interactivePrompts={false}
+                />
+              </div>
+            </div>
           </div>
         </div>
       </DataProvider>

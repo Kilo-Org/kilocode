@@ -73,6 +73,7 @@ import ai.kilocode.rpc.dto.SandboxConfigDto
 import ai.kilocode.rpc.dto.SandboxConfigPatchDto
 import ai.kilocode.rpc.dto.SandboxNetworkDto
 import ai.kilocode.rpc.dto.SandboxStatusDto
+import ai.kilocode.rpc.dto.RetentionConfigDto
 import ai.kilocode.rpc.dto.SessionChangeDto
 import ai.kilocode.rpc.dto.SessionChangeKindDto
 import ai.kilocode.rpc.dto.SessionBoardDto
@@ -660,6 +661,15 @@ object KiloCliDataParser {
             permission = parsePermissionConfig(obj["permission"].obj()),
             shared_agent_board = runCatching { obj.flagOrNull("shared_agent_board") }.getOrNull(),
             sandbox = parseSandboxConfig(obj["sandbox"].obj()),
+            snapshot = runCatching { obj.flagOrNull("snapshot") }.getOrNull(),
+            retention = obj["retention"].obj()?.let { retention ->
+                RetentionConfigDto(
+                    enabled = runCatching { retention.flagOrNull("enabled") }.getOrNull(),
+                    maxAgeDays = runCatching { retention.long("maxAgeDays") }.getOrNull()
+                        ?.takeIf { it in 1..Int.MAX_VALUE }
+                        ?.toInt(),
+                )
+            },
         )
     }.getOrDefault(ConfigDto())
 
@@ -1127,6 +1137,12 @@ object KiloCliDataParser {
             if (permission != null) put("permission", buildPermission(permission))
 
             if (patch.shared_agent_board != null) put("shared_agent_board", patch.shared_agent_board)
+            if (patch.snapshot != null) put("snapshot", patch.snapshot)
+            val retention = patch.retention
+            if (retention != null) put("retention", buildJsonObject {
+                if (retention.enabled != null) put("enabled", retention.enabled)
+                if (retention.maxAgeDays != null) put("maxAgeDays", retention.maxAgeDays)
+            })
 
             val sandbox = patch.sandbox
             if (sandbox != null) {
@@ -1789,6 +1805,7 @@ object KiloCliDataParser {
             snapshot = obj.str("snapshot"),
             diff = diff,
             diffs = parseUnifiedDiff(diff),
+            workspace = obj.str("workspace"),
         )
     }
 

@@ -1,6 +1,6 @@
 {
   "name": "@kilocode/kilo-ui",
-  "version": "7.7.9",
+  "version": "7.8.1",
   "type": "module",
   "license": "MIT",
   "exports": {
@@ -63,6 +63,7 @@
     "./scroll-view": "./src/components/scroll-view.tsx",
     "./file": "./src/components/file.tsx",
     "./motion-spring": "./src/components/motion-spring.tsx",
+    "./tool-motion": "./src/components/tool-motion.ts",
     "./line-comment-annotations": "./src/components/line-comment-annotations.tsx",
     "./animated-number": "./src/components/animated-number.tsx",
     "./text-reveal": "./src/components/text-reveal.tsx",

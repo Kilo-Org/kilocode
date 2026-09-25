@@ -7,6 +7,7 @@ import ai.kilocode.rpc.dto.AgentConfigPatchDto
 import ai.kilocode.rpc.dto.CompactionPatchDto
 import ai.kilocode.rpc.dto.ConfigDto
 import ai.kilocode.rpc.dto.ConfigPatchDto
+import ai.kilocode.rpc.dto.RetentionPatchDto
 import ai.kilocode.rpc.dto.CustomModelDto
 import ai.kilocode.rpc.dto.CustomProviderSaveDto
 import ai.kilocode.rpc.dto.EditorContextDto
@@ -735,7 +736,8 @@ class KiloCliDataParserTest {
                             "messageID": "msg_rollback",
                             "partID": "prt_rollback",
                             "snapshot": "snap_rollback",
-                            "diff": "diff --git a/src/A.kt b/src/A.kt\n--- a/src/A.kt\n+++ b/src/A.kt\n@@ -1 +1,2 @@\n-old\n+new\n+more\ndiff --git a/src/Old.kt b/src/Old.kt\ndeleted file mode 100644\n--- a/src/Old.kt\n+++ /dev/null\n@@ -1 +0,0 @@\n-gone"
+                            "diff": "diff --git a/src/A.kt b/src/A.kt\n--- a/src/A.kt\n+++ b/src/A.kt\n@@ -1 +1,2 @@\n-old\n+new\n+more\ndiff --git a/src/Old.kt b/src/Old.kt\ndeleted file mode 100644\n--- a/src/Old.kt\n+++ /dev/null\n@@ -1 +0,0 @@\n-gone",
+                            "workspace": "not-a-git-repo"
                         }
                     }
                 }
@@ -756,6 +758,7 @@ class KiloCliDataParserTest {
             assertEquals("modified", result.session.revert?.diffs?.get(0)?.status)
             assertEquals("src/Old.kt", result.session.revert?.diffs?.get(1)?.file)
             assertEquals("deleted", result.session.revert?.diffs?.get(1)?.status)
+            assertEquals("not-a-git-repo", result.session.revert?.workspace)
         }
 
         @Test
@@ -1394,6 +1397,47 @@ class KiloCliDataParserTest {
             val cfg = KiloCliDataParser.parseConfig("""{"model":"openai/gpt","shared_agent_board":{}}""")
             assertEquals("openai/gpt", cfg.model)
             assertNull(cfg.shared_agent_board)
+        }
+
+        @Test
+        fun `parseConfig - snapshot values preserve default resolution`() {
+            assertEquals(true, KiloCliDataParser.parseConfig("""{"snapshot":true}""").snapshot)
+            assertEquals(false, KiloCliDataParser.parseConfig("""{"snapshot":false}""").snapshot)
+            assertNull(KiloCliDataParser.parseConfig("""{"model":"openai/gpt"}""").snapshot)
+        }
+
+        @Test
+        fun `parseConfig - malformed snapshot does not discard config`() {
+            val cfg = KiloCliDataParser.parseConfig("""{"model":"openai/gpt","snapshot":{}}""")
+
+            assertEquals("openai/gpt", cfg.model)
+            assertNull(cfg.snapshot)
+        }
+
+        @Test
+        fun `parseConfig - retention reads valid values and normalizes invalid days`() {
+            val enabled = KiloCliDataParser.parseConfig(
+                """{"retention":{"enabled":true,"maxAgeDays":45}}""",
+            ).retention
+            val invalid = KiloCliDataParser.parseConfig(
+                """{"retention":{"enabled":false,"maxAgeDays":0}}""",
+            ).retention
+
+            assertEquals(true, enabled?.enabled)
+            assertEquals(45, enabled?.maxAgeDays)
+            assertEquals(false, invalid?.enabled)
+            assertNull(invalid?.maxAgeDays)
+        }
+
+        @Test
+        fun `parseConfig - malformed retention days do not discard other config`() {
+            val cfg = KiloCliDataParser.parseConfig(
+                """{"model":"openai/gpt","retention":{"enabled":true,"maxAgeDays":{}}}""",
+            )
+
+            assertEquals("openai/gpt", cfg.model)
+            assertEquals(true, cfg.retention?.enabled)
+            assertNull(cfg.retention?.maxAgeDays)
         }
 
         @Test
@@ -2647,6 +2691,28 @@ class KiloCliDataParserTest {
         @Test
         fun `buildConfigPatch - shared_agent_board omitted when null`() {
             assertEquals("{}", KiloCliDataParser.buildConfigPatch(ConfigPatchDto()))
+        }
+
+        @Test
+        fun `buildConfigPatch - snapshot writes explicit booleans`() {
+            assertEquals(
+                "{\"snapshot\":true}",
+                KiloCliDataParser.buildConfigPatch(ConfigPatchDto(snapshot = true)),
+            )
+            assertEquals(
+                "{\"snapshot\":false}",
+                KiloCliDataParser.buildConfigPatch(ConfigPatchDto(snapshot = false)),
+            )
+        }
+
+        @Test
+        fun `buildConfigPatch - retention writes nested policy`() {
+            assertEquals(
+                "{\"retention\":{\"enabled\":true,\"maxAgeDays\":30}}",
+                KiloCliDataParser.buildConfigPatch(ConfigPatchDto(
+                    retention = RetentionPatchDto(enabled = true, maxAgeDays = 30),
+                )),
+            )
         }
 
         @Test
