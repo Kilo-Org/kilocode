@@ -472,6 +472,15 @@ class WorktreeRunManager internal constructor(
                 LOG.info("worktree run: handler still alive after stop, not reaping config=${key.id}")
                 return@launch
             }
+            val initial = synchronized(owners) {
+                val owner = owners[root]?.takeIf { it.key == key } ?: return@synchronized null
+                owner.since to siblings(key)
+            }
+            if (initial == null) {
+                LOG.info("worktree run: yielding orphan cleanup config=${key.id} worktree=${key.worktree}")
+                return@launch
+            }
+            if (initial.second.isNotEmpty()) awaitHandlersGone(initial.second, HANDLER_WAIT_MS)
             val candidate = synchronized(owners) {
                 val owner = owners[root]?.takeIf { it.key == key } ?: return@synchronized null
                 owner.since to siblings(key)

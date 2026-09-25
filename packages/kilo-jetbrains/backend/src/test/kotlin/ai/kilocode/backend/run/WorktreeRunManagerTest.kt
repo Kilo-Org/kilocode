@@ -648,9 +648,15 @@ class WorktreeRunManagerTest : BasePlatformTestCase() {
             assertTrue(mgr.stop(first.uniqueID, wt))
             assertTrue(mgr.stop(second.uniqueID, wt))
 
-            // Both Stop requests own a live sibling. Finishing afterwards proves the later request is
-            // the sole cleanup owner rather than both arms suppressing the worktree-wide orphan scan.
-            handlers.forEach { it.finish() }
+            // Finish the later Stop's handler first: its arm must wait for the older stopped sibling,
+            // whose arm yields ownership, then perform the sole worktree-wide orphan scan.
+            val sibling = handlers.getOrNull(0) ?: error("missing first handler")
+            val owner = handlers.getOrNull(1) ?: error("missing second handler")
+            owner.finish()
+            await("cleanup owner stopped") { owner.isProcessTerminated }
+            assertFalse(sibling.isProcessTerminated)
+            assertTrue(app.isAlive)
+            sibling.finish()
             await("overlapping handlers stopped") { handlers.all { it.isProcessTerminated } }
             await("single orphan owner", REAP_WAIT_NANOS, { mgr.states.value }) {
                 mgr.states.value.singleOrNull()?.orphan == true
