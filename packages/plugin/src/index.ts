@@ -261,6 +261,56 @@ export interface Hooks {
     output: { headers: Record<string, string> },
   ) => Promise<void>
   "permission.ask"?: (input: Permission, output: { status: "ask" | "deny" | "allow" }) => Promise<void>
+  /**
+   * Run before the permission engine evaluates the request.
+   *
+   * This hook is optional and additive: it may enrich metadata for later
+   * evaluation, and it may also short-circuit the final decision by setting
+   * `output.effect`. When it does not set `output.effect`, the normal
+   * permission evaluation continues.
+   */
+  "permission.evaluate.before"?: (
+    input: {
+      phase: "materialize" | "execute"
+      sessionID?: string
+      agent?: string
+      source?: "ask" | "assert" | string
+      tool: string
+      action: string
+      resource: string
+      resources?: readonly string[]
+      args?: unknown
+      metadata: Record<string, unknown>
+      rules?: ReadonlyArray<{ action: string; resource: string; effect: "allow" | "deny" | "ask" }>
+    },
+    output: {
+      metadata: Record<string, unknown>
+      effect?: "allow" | "deny" | "ask"
+      reason?: string
+    },
+  ) => Promise<void>
+  /**
+   * Run after the permission engine computes a decision.
+   *
+   * This hook can finalize or override the computed effect, but only after the
+   * base decision exists. It is the final override point for permission policy.
+   */
+  "permission.evaluate.after"?: (
+    input: {
+      phase: "materialize" | "execute"
+      sessionID?: string
+      agent?: string
+      source?: "ask" | "assert" | string
+      tool: string
+      action: string
+      resource: string
+      resources?: readonly string[]
+      decision: "allow" | "deny" | "ask"
+      metadata: Record<string, unknown>
+      rules?: ReadonlyArray<{ action: string; resource: string; effect: "allow" | "deny" | "ask" }>
+    },
+    output: { effect: "allow" | "deny" | "ask"; reason?: string },
+  ) => Promise<void>
   "command.execute.before"?: (
     input: { command: string; sessionID: string; arguments: string },
     output: { parts: Part[] },

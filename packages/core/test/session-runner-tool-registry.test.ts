@@ -1,4 +1,5 @@
 import { describe, expect } from "bun:test"
+import type { Hooks } from "@kilocode/plugin"
 import { Tool } from "@opencode-ai/core/tool/tool"
 import { AgentV2 } from "@opencode-ai/core/agent"
 import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
@@ -7,6 +8,7 @@ import { ApplicationTools } from "@opencode-ai/core/tool/application-tools"
 import { SessionV2 } from "@opencode-ai/core/session"
 import { SessionMessage } from "@opencode-ai/core/session/message"
 import { ToolOutputStore } from "@opencode-ai/core/tool-output-store"
+import { PluginV2 } from "@opencode-ai/core/plugin"
 import { ToolRegistry } from "@opencode-ai/core/tool/registry"
 import { executeTool, settleTool, toolDefinitions } from "./lib/tool"
 import { Cause, Deferred, Effect, Exit, Fiber, Layer, Option, Schema, SchemaGetter, SchemaIssue, Scope } from "effect"
@@ -58,6 +60,18 @@ const make = (permission?: string) => {
   return permission ? Tool.withPermission(tool, permission) : tool
 }
 
+type PermissionHookCall =
+  | {
+      name: "permission.evaluate.before"
+      input: Parameters<Required<Hooks>["permission.evaluate.before"]>[0]
+      output: Parameters<Required<Hooks>["permission.evaluate.before"]>[1]
+    }
+  | {
+      name: "permission.evaluate.after"
+      input: Parameters<Required<Hooks>["permission.evaluate.after"]>[0]
+      output: Parameters<Required<Hooks>["permission.evaluate.after"]>[1]
+    }
+
 describe("ToolRegistry", () => {
   it.effect("filters disabled tools with edit aliases and ordered wildcard precedence", () =>
     Effect.gen(function* () {
@@ -91,6 +105,74 @@ describe("ToolRegistry", () => {
         ]),
       ).toEqual([])
       expect(yield* names([{ action: "edit", resource: "*", effect: "deny" }])).toEqual(["question", "bash"])
+    }),
+  )
+
+  it.effect("lets permission hooks enrich metadata and deny a tool at materialization time", () =>
+    Effect.gen(function* () {
+      const calls: PermissionHookCall[] = []
+      const service = yield* ToolRegistry.Service
+      const trigger: PluginV2.Interface["trigger"] = (name, input, output) => {
+        calls.push({ name, input, output } as PermissionHookCall)
+        if (name === "permission.evaluate.before") {
+          const before = output as Parameters<Required<Hooks>["permission.evaluate.before"]>[1]
+          before.metadata.test = "enriched"
+        }
+        if (name === "permission.evaluate.after") {
+          const after = output as Parameters<Required<Hooks>["permission.evaluate.after"]>[1]
+          after.effect = "deny"
+        }
+        return Effect.succeed(output)
+      }
+      const plugin = PluginV2.Service.of({
+        add: () => Effect.void,
+        remove: () => Effect.void,
+        wait: () => Effect.void,
+        trigger,
+      })
+      yield* service.register({ echo: make("question") })
+      const names = yield* toolDefinitions(service, [{ action: "question", resource: "*", effect: "allow" }]).pipe(
+        Effect.provideService(PluginV2.Service, plugin),
+        Effect.map((definitions) => definitions.map((tool) => tool.name)),
+      )
+      expect(names).toEqual([])
+      expect(calls[0]).toMatchObject({
+        name: "permission.evaluate.before",
+        input: { phase: "materialize", action: "question", tool: "echo" },
+      })
+      const before = calls[0] as Extract<PermissionHookCall, { name: "permission.evaluate.before" }>
+      const after = calls[1] as Extract<PermissionHookCall, { name: "permission.evaluate.after" }>
+      expect(before.output.metadata).toMatchObject({ test: "enriched" })
+      expect(after.output.effect).toBe("deny")
+    }),
+  )
+
+  it.effect("supports early deny short-circuit in the before hook for materialization", () =>
+    Effect.gen(function* () {
+      const service = yield* ToolRegistry.Service
+      const trigger: PluginV2.Interface["trigger"] = (name, input, output) => {
+        if (name === "permission.evaluate.before") {
+          const before = output as Parameters<Required<Hooks>["permission.evaluate.before"]>[1]
+          before.effect = "deny"
+        }
+        if (name === "permission.evaluate.after") {
+          const after = output as Parameters<Required<Hooks>["permission.evaluate.after"]>[1]
+          after.effect = "allow"
+        }
+        return Effect.succeed(output)
+      }
+      const plugin = PluginV2.Service.of({
+        add: () => Effect.void,
+        remove: () => Effect.void,
+        wait: () => Effect.void,
+        trigger,
+      })
+      yield* service.register({ echo: make("question") })
+      const names = yield* toolDefinitions(service, [{ action: "question", resource: "*", effect: "allow" }]).pipe(
+        Effect.provideService(PluginV2.Service, plugin),
+        Effect.map((definitions) => definitions.map((tool) => tool.name)),
+      )
+      expect(names).toEqual([])
     }),
   )
 
