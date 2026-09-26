@@ -113,11 +113,11 @@ it.instance("routes URL-scoped credentials to their catalog origin", () => {
   )
 })
 
-it.instance("returns only tool-capable text-output models", () =>
+it.instance("returns text-output models that support or may support tools", () =>
   Effect.gen(function* () {
     const catalog = yield* CloudCatalog.Service
     const models = yield* catalog.models({ token: Redacted.make("stored-token") })
-    expect(models).toEqual(["anthropic/code"])
+    expect(models).toEqual(["anthropic/code", "typesafe/jev-router", "anthropic/unknown"])
   }).pipe(
     Effect.provide(
       CloudCatalog.layer({
@@ -138,6 +138,11 @@ it.instance("returns only tool-capable text-output models", () =>
                 id: "anthropic/chat",
                 architecture: { output_modalities: ["text"] },
                 supported_parameters: ["temperature"],
+              },
+              {
+                id: "typesafe/jev-router",
+                architecture: { output_modalities: ["text"] },
+                supported_parameters: [],
               },
               { id: "anthropic/unknown" },
             ],
