@@ -177,14 +177,99 @@ export const {
           const processes = draft.background_process[sessionID]?.filter((item) => item.lifetime === "persistent")
           if (processes?.length) draft.background_process[sessionID] = processes
           else delete draft.background_process[sessionID]
-          delete draft.permission[sessionID]
-          delete draft.question[sessionID]
+          // pending asks are one-shot events; an unanswered ask hangs its session forever, so
+          // eviction keeps them and permission.replied/question.replied remove them
           delete draft.suggestion[sessionID]
           delete draft.network[sessionID]
         }),
       )
       fullSyncedSessions.delete(sessionID)
       for (const child of children) evict(child)
+    }
+
+    // pending asks are one-shot events; refetch them so an evicted or missed ask cannot strand a session
+    // kilocode_change start - skill shell batches and sandbox escalations need an interactive human decision:
+    // the server refuses machine replies for them, mirroring temporaryPermission in cli/cmd/run/permission.shared
+    const temporaryPermission = (request: PermissionRequest) =>
+      request.metadata?.["skillShell"] === true || request.metadata?.["sandboxEscalation"] === true
+    // kilocode_change end
+    function mergePending<T extends PermissionRequest | QuestionRequest>(
+      list: T[],
+      current: Record<string, T[]>,
+      before: Set<string>,
+      settled: Set<string>,
+    ): Record<string, T[]> {
+      const fresh: Record<string, T[]> = {}
+      for (const request of list) (fresh[request.sessionID] ??= []).push(request)
+      const next: Record<string, T[]> = {}
+      for (const sessionID of new Set([...Object.keys(current), ...Object.keys(fresh)])) {
+        const merged = new Map<string, T>()
+        for (const request of fresh[sessionID] ?? []) {
+          if (settled.has(request.id)) continue // kilocode_change - answered while the list was in flight
+          // skip entries the store already dropped (replied mid-fetch): the stale list resurrects answered asks
+          if (before.has(request.id) && !(current[sessionID] ?? []).some((r) => r.id === request.id)) continue
+          merged.set(request.id, request)
+        }
+        for (const request of current[sessionID] ?? []) {
+          if (merged.has(request.id)) continue
+          if (before.has(request.id)) continue // the server list no longer holds it
+          merged.set(request.id, request)
+        }
+        if (merged.size) next[sessionID] = [...merged.values()].sort((a, b) => a.id.localeCompare(b.id))
+      }
+      return next
+    }
+
+    let task: Promise<void> | undefined // dedupe overlapping recoveries (bootstrap + session sync)
+    async function syncPending() {
+      if (task) return task // an in-flight recovery serves both callers
+      task = recover().finally(() => {
+        task = undefined
+      })
+      return task
+    }
+
+    async function recover() {
+      const workspace = project.workspace.current()
+      const before = {
+        permission: new Set(Object.values(store.permission).flatMap((list) => list.map((r) => r.id))),
+        question: new Set(Object.values(store.question).flatMap((list) => list.map((r) => r.id))),
+      }
+      const [permissions, questions] = await Promise.all([
+        // throwOnError so a failed list fetch rejects into the caller's catch instead of
+        // merging an empty list, which would drop live asks and re-hang the session
+        sdk.client.permission.list({ workspace }, { throwOnError: true }).then((x) => x.data ?? []),
+        sdk.client.question.list({ workspace }, { throwOnError: true }).then((x) => x.data ?? []),
+      ])
+      if (permission.mode === "auto") {
+        for (const request of permissions) {
+          // kilocode_change start - skill shell batches and sandbox escalations cannot be settled by a
+          // machine reply: the server refuses non-interactive approvals, so they stay pending for a
+          // human decision and must remain visible instead of being cleared
+          if (temporaryPermission(request)) continue
+          // kilocode_change end
+          if (terminal.has(request.id)) continue // kilocode_change - already answered, ignore straggler events
+          void sdk.client.permission.reply({ requestID: request.id, reply: "once", workspace })
+        }
+        // kilocode_change start - keep protected asks visible; clear only what was settled
+        const kept = new Map<string, PermissionRequest>()
+        for (const request of [...Object.values(store.permission).flat(), ...permissions]) {
+          if (terminal.has(request.id)) continue
+          if (!temporaryPermission(request)) continue
+          kept.set(request.id, request)
+        }
+        const next: Record<string, PermissionRequest[]> = {}
+        for (const request of kept.values()) (next[request.sessionID] ??= []).push(request)
+        for (const list of Object.values(next)) list.sort((a, b) => a.id.localeCompare(b.id))
+        setStore("permission", reconcile(next))
+        // kilocode_change end
+      } else {
+        setStore(
+          "permission",
+          reconcile(mergePending(permissions, store.permission, before.permission, terminal)),
+        )
+      }
+      setStore("question", reconcile(mergePending(questions, store.question, before.question, terminal)))
     }
 
     function strip(message: Message): Message {
@@ -195,6 +280,16 @@ export const {
 
     const fullSyncedSessions = new Set<string>()
     const deleted = new Set<string>() // kilocode_change
+        // kilocode_change - request IDs already replied/rejected; a stale pending list must not resurrect them
+    const terminal = new Set<string>() // kilocode_change
+    // replied/rejected asks are terminal: a stale pending list must not resurrect them; cap the set so it cannot grow unbounded
+    const terminalCap = 512
+    function markTerminal(id: string) {
+      terminal.add(id)
+      if (terminal.size <= terminalCap) return
+      const oldest = terminal.values().next().value
+      if (oldest != null) terminal.delete(oldest)
+    }
     let syncedWorkspace = project.workspace.current() // kilocode_change
     let vcsVersion = 0 // kilocode_change
     const syncingSessions = new Map<string, Promise<void>>()
@@ -227,11 +322,13 @@ export const {
         case "server.instance.disposed":
           // kilocode_change start
           deleted.clear()
+          terminal.clear()
           setStore("background_process", {})
           // kilocode_change end
           void bootstrap()
           break
         case "permission.replied": {
+          markTerminal(event.properties.requestID) // kilocode_change - a replied ask is terminal: a stale list must not resurrect it
           const requests = store.permission[event.properties.sessionID]
           if (!requests) break
           const match = search(requests, event.properties.requestID, (r) => r.id)
@@ -248,7 +345,10 @@ export const {
 
         case "permission.asked": {
           const request = event.properties
-          if (permission.mode === "auto") {
+          if (terminal.has(request.id)) break // kilocode_change - already answered, ignore straggler events
+          // kilocode_change start - the server refuses non-interactive approvals for skill shell
+          // batches and sandbox escalations, so auto mode cannot settle them: store for a human decision
+          if (permission.mode === "auto" && !temporaryPermission(request)) {
             void sdk.client.permission.reply({
               requestID: request.id,
               reply: "once",
@@ -257,6 +357,7 @@ export const {
             })
             break
           }
+          // kilocode_change end
           const requests = store.permission[request.sessionID]
           if (!requests) {
             setStore("permission", request.sessionID, [request])
@@ -279,6 +380,7 @@ export const {
 
         case "question.replied":
         case "question.rejected": {
+          markTerminal(event.properties.requestID) // kilocode_change - a settled question is terminal: a stale list must not resurrect it
           const requests = store.question[event.properties.sessionID]
           if (!requests) break
           const match = search(requests, event.properties.requestID, (r) => r.id)
@@ -295,6 +397,7 @@ export const {
 
         case "question.asked": {
           const request = event.properties
+          if (terminal.has(request.id)) break // kilocode_change - already answered, ignore straggler events
           const requests = store.question[request.sessionID]
           if (!requests) {
             setStore("question", request.sessionID, [request])
@@ -850,7 +953,7 @@ export const {
             sdk.client.indexing
               .status()
               .then((result) => setStore("indexing", reconcile(result.data ?? store.indexing))),
-            // kilocode_change end
+            syncPending().catch(() => {}), // kilocode_change - recover pending asks missed while disconnected
           ]).then(() => {
             setStore("status", "complete")
           })
@@ -991,6 +1094,8 @@ export const {
               }),
             )
             fullSyncedSessions.add(sessionID)
+            // a failed pending-ask recovery must not fail the session load; the next visit retries it
+            await syncPending().catch(() => {}) // kilocode_change - recover pending asks lost to eviction or a missed one-shot event
           })().finally(() => {
             syncingSessions.delete(sessionID)
             hydratingSessions.delete(sessionID)

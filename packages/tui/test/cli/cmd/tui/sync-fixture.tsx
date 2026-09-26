@@ -1,7 +1,7 @@
 /** @jsxImportSource @opentui/solid */
 import { testRender } from "@opentui/solid"
 import { onMount } from "solid-js"
-import { ArgsProvider } from "../../../../src/context/args"
+import { ArgsProvider, type Args } from "../../../../src/context/args" // kilocode_change - plumb CLI args for mode-specific sync tests
 import { KVProvider, useKV } from "../../../../src/context/kv"
 import { ProjectProvider, useProject } from "../../../../src/context/project"
 import { SDKProvider } from "../../../../src/context/sdk"
@@ -23,7 +23,7 @@ export async function wait(fn: () => boolean, timeout = 2000) {
 
 type Ctx = { kv: ReturnType<typeof useKV>; project: ReturnType<typeof useProject>; sync: ReturnType<typeof useSync> }
 
-export async function mount(override?: FetchHandler, state?: string) {
+export async function mount(override?: FetchHandler, state?: string, args?: Args) { // kilocode_change - optional TUI args for tests
   const calls = createFetch(override)
   const events = createEventSource()
   let sync!: ReturnType<typeof useSync>
@@ -47,7 +47,9 @@ export async function mount(override?: FetchHandler, state?: string) {
 
   const app = await testRender(() => (
     <TestTuiContexts paths={state ? { state } : undefined}>
-      <ArgsProvider>
+      {/* kilocode_change start - optional TUI args for tests */}
+      <ArgsProvider {...args}>
+      {/* kilocode_change end */}
         <KVProvider>
           {/* kilocode_change start */}
           <ToastProvider>
