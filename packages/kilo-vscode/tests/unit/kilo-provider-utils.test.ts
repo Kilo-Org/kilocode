@@ -910,6 +910,20 @@ describe("getConfigErrorDetails", () => {
     expect(getConfigErrorDetails({ data: { path: "/cfg.json" } })).toBe("File: /cfg.json")
   })
 
+  it("formats a shadowed-write error with the overriding file", () => {
+    const err = {
+      data: {
+        message:
+          "The setting was saved to /home/me/.config/kilo/kilo.json, but /home/me/.config/kilo/opencode.json still takes precedence over it.",
+        path: "/home/me/.config/kilo/kilo.json",
+        shadowedBy: "/home/me/.config/kilo/opencode.json",
+      },
+    }
+    expect(getConfigErrorDetails(err)).toBe(
+      "File: /home/me/.config/kilo/kilo.json\nShadowed by: /home/me/.config/kilo/opencode.json",
+    )
+  })
+
   it("returns undefined when issues array is empty and no path", () => {
     expect(getConfigErrorDetails({ data: { issues: [] } })).toBeUndefined()
   })
