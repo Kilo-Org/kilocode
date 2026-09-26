@@ -67,7 +67,7 @@ import { ToolInputStream } from "./kilo-provider/tool-input-stream"
 import { handleSidebarWorktreeMessage } from "./kilo-provider/sidebar-worktree"
 import { parseMessageFiles, type MessageFile } from "./kilo-provider/message-files"
 import { renameSession } from "./kilo-provider/rename-session"
-import { handleFileSearch } from "./kilo-provider/file-search"
+import { handleFileSearch, type SearchRoot } from "./kilo-provider/file-search"
 import { handleSessionSearch } from "./kilo-provider/session-search"
 import { handleFilePicker } from "./kilo-provider/file-picker"
 import { watchFontSizeConfig } from "./kilo-provider/font-size"
@@ -531,8 +531,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private autoApproveBridge: ReturnType<typeof createAutoApproveBridge> | null = null
   private readonly marketplace = new MarketplaceService()
 
-  private ignoreController: FileIgnoreController | null = null
-  private ignoreControllerDir: string | null = null
+  /** Workspace folders plus any session directories recently asked about. */
+  private static readonly IGNORE_CONTROLLER_LIMIT = 16
+  private readonly ignoreControllers = new Map<string, Promise<FileIgnoreController>>()
   private chatAutocomplete: ChatTextAreaAutocomplete | null = null
   private projectDirectory: string | null | undefined
   private settingsGeneration = 0
@@ -2556,6 +2557,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         context: this.contextSessionID,
         dir: (id) => this.getWorkspaceDirectory(id),
         open: (dir) => this.getOpenTabPaths(dir),
+        roots: () => this.getWorkspaceRoots(),
+        allowed: (dir, files) => this.filterIgnored(dir, files),
         post: (msg) => this.postMessage(msg),
       })
       return
@@ -5648,18 +5651,74 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   }
 
   /**
-   * Get or create a FileIgnoreController for the current workspace directory.
-   * Reinitializes if the workspace directory has changed.
+   * Every folder in the editor workspace, as candidate file-mention sources.
+   *
+   * File search fans out across these so files in folders added via "Add Folder
+   * to Workspace..." are mentionable. Fan-out is declined downstream unless the
+   * session's own directory is one of them.
+   */
+  private getWorkspaceRoots(): SearchRoot[] {
+    return (vscode.workspace.workspaceFolders ?? []).map((folder) => ({
+      path: folder.uri.fsPath,
+      name: folder.name,
+    }))
+  }
+
+  /**
+   * Narrow a directory's files to those its own ignore rules permit.
+   *
+   * The editor's file index honours files.exclude, search.exclude and
+   * .gitignore, but knows nothing of .kilocodeignore, so that is applied here.
+   * A controller that cannot be built lets the files through rather than
+   * hiding everything, since this is a relevance filter and not a permission
+   * boundary.
+   */
+  private async filterIgnored(dir: string, files: string[]): Promise<string[]> {
+    if (!dir || !files.length) return files
+    const controller = await this.getIgnoreController(dir).catch((err) => {
+      console.warn("[Kilo New] Failed to read ignore rules for", dir, err)
+      return undefined
+    })
+    if (!controller) return files
+    return files.filter((file) => controller.validateAccess(file))
+  }
+
+  /**
+   * Get or create a FileIgnoreController for a workspace directory.
+   *
+   * Keyed by directory rather than holding a single controller: multi-root file
+   * search asks about several roots per keystroke, and a one-entry cache would
+   * re-read .kilocodeignore from disk on every alternating lookup. Bounded by
+   * insertion order because session directories, not just workspace folders,
+   * reach this cache.
+   *
+   * A failed init is evicted rather than cached. `initialize()` lets permission
+   * errors from reading .kilocodeignore propagate, and caching that rejection
+   * would keep failing every later lookup for the same directory.
    */
   private async getIgnoreController(workspaceDir: string): Promise<FileIgnoreController> {
-    if (this.ignoreController && this.ignoreControllerDir === workspaceDir) {
-      return this.ignoreController
+    const cached = this.ignoreControllers.get(workspaceDir)
+    if (cached) return cached
+    const pending = (async () => {
+      const controller = new FileIgnoreController(workspaceDir)
+      await controller.initialize()
+      return controller
+    })()
+    void pending.catch(() => {
+      if (this.ignoreControllers.get(workspaceDir) === pending) this.ignoreControllers.delete(workspaceDir)
+    })
+    this.ignoreControllers.set(workspaceDir, pending)
+    while (this.ignoreControllers.size > KiloProvider.IGNORE_CONTROLLER_LIMIT) {
+      const oldest = this.ignoreControllers.keys().next().value
+      if (oldest === undefined || oldest === workspaceDir) break
+      const evicted = this.ignoreControllers.get(oldest)
+      this.ignoreControllers.delete(oldest)
+      void evicted?.then(
+        (controller) => controller.dispose(),
+        (err) => console.warn("[Kilo New] Failed to dispose ignore controller:", err),
+      )
     }
-    const controller = new FileIgnoreController(workspaceDir)
-    await controller.initialize()
-    this.ignoreController = controller
-    this.ignoreControllerDir = workspaceDir
-    return controller
+    return pending
   }
 
   private async gatherEditorContext(dir?: string): Promise<EditorContext> {
@@ -6103,7 +6162,13 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.epochs.clear()
     this.sessionStatusMap.clear()
     this.wakeupSessions.clear()
-    this.ignoreController?.dispose()
+    for (const pending of this.ignoreControllers.values()) {
+      void pending.then(
+        (controller) => controller.dispose(),
+        (err) => console.warn("[Kilo New] Failed to dispose ignore controller:", err),
+      )
+    }
+    this.ignoreControllers.clear()
     this.chatAutocomplete?.dispose()
     disposeGitChangesTarget()
   }
