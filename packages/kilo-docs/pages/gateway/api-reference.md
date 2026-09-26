@@ -279,6 +279,31 @@ curl -X POST "https://api.kilo.ai/api/fim/completions" \
 FIM completions are limited to Mistral models (model IDs starting with `mistralai/`). BYOK is supported with the `codestral` key type.
 {% /callout %}
 
+## TypeSafe System One
+
+Route TypeSafe System One requests through the gateway with your Kilo API key. This endpoint is not OpenAI-compatible; use it with the `@typesafe-ai/sdk` client, which points its base URL at the TypeSafe gateway path.
+
+```
+POST /typesafe/v1/systemone
+```
+
+The gateway forwards each request to OpenRouter using the platform credential, so no OpenRouter key is required. Requests are limited to the pinned `typesafe/jev-1.13` model, and an HTTP request that omits the model defaults to it; the bare `jev-1.13` SDK model ID is also accepted. Gateway authentication, rate limits, balance checks, and organization policy apply, and upstream usage is billed to your Kilo account.
+
+```typescript
+import { TypeSafeClient } from "@typesafe-ai/sdk"
+
+const client = new TypeSafeClient({
+  apiKey: process.env.KILO_API_KEY,
+  baseURL: "https://api.kilo.ai/api/gateway/typesafe",
+  defaultModel: "typesafe/jev-1.13",
+})
+
+const result = await client.systemOne({
+  state: "I was charged twice for my subscription.",
+  questions: { refund: { type: "noul", instructions: "Is the customer asking for money back?" } },
+})
+```
+
 ## List models
 
 Retrieve the list of available models.
