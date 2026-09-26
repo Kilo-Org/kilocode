@@ -13,7 +13,7 @@ name: Dependabot auto-merge
 
 on:
   schedule:
-    - cron: "*/30 * * * *"
+    - cron: "9 * * * *" # hourly, offset to avoid the top of the hour
   workflow_dispatch:
 
 concurrency:
@@ -37,7 +37,7 @@ jobs:
         run: |
           gh pr list --repo "$REPO" --search "is:open is:pr author:app/dependabot" \
             --json number,title,url,autoMergeRequest \
-            --jq '.[] | select(.title | test("Bump the [a-z-]*-minor-patch group")) | select(.autoMergeRequest == null) | .url' |
+            --jq '.[] | select(.title | test("bump the [a-z-]*-minor-patch group"; "i")) | select(.autoMergeRequest == null) | .url' |
           while IFS= read -r pr_url; do
             [ -z "$pr_url" ] && continue
 
