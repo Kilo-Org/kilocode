@@ -194,6 +194,60 @@ describe("ConfigProtection.isRequest", () => {
   })
 })
 
+describe("ConfigProtection.enabled", () => {
+  test("defaults on when the global value is absent or true", () => {
+    expect(ConfigProtection.enabled(undefined)).toBe(true)
+    expect(ConfigProtection.enabled({})).toBe(true)
+    expect(ConfigProtection.enabled({ require_approval_for_config_edits: true })).toBe(true)
+  })
+
+  test("only an explicit false disables protection", () => {
+    expect(ConfigProtection.enabled({ require_approval_for_config_edits: false })).toBe(false)
+  })
+})
+
+describe("ConfigProtection.scope", () => {
+  const edit = (target: string) => ({ permission: "edit", patterns: [target], metadata: { filepath: target } })
+
+  test("classifies project config files as inside the worktree", async () => {
+    await using tmp = await tmpdir()
+    const ctx = { directory: tmp.path, worktree: tmp.path }
+    expect(ConfigProtection.scope(edit(".kilo/kilo.json"), ctx)).toEqual({ inside: true, outside: false })
+    expect(ConfigProtection.scope(edit("AGENTS.md"), ctx)).toEqual({ inside: true, outside: false })
+  })
+
+  test("classifies global config dirs and traversal out of the project as outside", async () => {
+    await using tmp = await tmpdir()
+    const ctx = { directory: tmp.path, worktree: tmp.path }
+    const global = path.join(Global.Path.config, "kilo.json")
+    expect(ConfigProtection.scope(edit(global), ctx)).toEqual({ inside: false, outside: true })
+    expect(ConfigProtection.scope(edit("../other/.kilo/kilo.json"), ctx)).toEqual({ inside: false, outside: true })
+  })
+
+  test("uses the directory as the boundary for non-git projects", async () => {
+    await using tmp = await tmpdir()
+    const ctx = { directory: tmp.path, worktree: "/" }
+    const rel = path.relative("/", path.join(tmp.path, ".kilo", "kilo.json"))
+    expect(ConfigProtection.scope(edit(rel), ctx)).toEqual({ inside: true, outside: false })
+  })
+
+  test("classifies a dangling symlink as outside and a new plain file as inside", async () => {
+    await using tmp = await tmpdir()
+    await using other = await tmpdir()
+    const ctx = { directory: tmp.path, worktree: tmp.path }
+    await fs.mkdir(path.join(tmp.path, ".kilo"))
+    const link = process.platform === "win32" ? "junction" : "dir"
+    await fs.symlink(path.join(other.path, "missing"), path.join(tmp.path, ".kilo", "agent"), link)
+    expect(ConfigProtection.scope(edit(".kilo/agent/demo.md"), ctx)).toEqual({ inside: false, outside: true })
+    expect(ConfigProtection.scope(edit(".kilo/new.md"), ctx)).toEqual({ inside: true, outside: false })
+  })
+
+  test("returns undefined for ordinary files", async () => {
+    await using tmp = await tmpdir()
+    expect(ConfigProtection.scope(edit("src/index.ts"), { directory: tmp.path, worktree: tmp.path })).toBeUndefined()
+  })
+})
+
 describe("ConfigProtection.isGlobalSkillRequest", () => {
   const roots = [Global.Path.config, ...KilocodePaths.globalDirs()]
 
