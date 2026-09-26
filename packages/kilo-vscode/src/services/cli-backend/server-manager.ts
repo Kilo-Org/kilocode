@@ -6,7 +6,7 @@ import * as path from "path"
 import * as vscode from "vscode"
 import { resolveLocalBwrapEnv, resolveTreeSitterEnv } from "./cli-resources"
 import { t } from "./i18n"
-import { scanServerPort } from "./server-utils"
+import { ensureServerCwd, scanServerPort } from "./server-utils"
 
 export interface ServerInstance {
   port: number
@@ -108,7 +108,7 @@ export class ServerManager {
       // or "$HOME" in empty VS Code windows.
       const folders = vscode.workspace.workspaceFolders
       const spawnCwd = resolveServerCwd(folders, this.context.globalStorageUri.fsPath)
-      fs.mkdirSync(spawnCwd, { recursive: true })
+      ensureServerCwd(spawnCwd)
       const indexingEnv = resolveIndexingEnv(folders)
       const localCli =
         this.context.extensionMode === vscode.ExtensionMode.Development ||
