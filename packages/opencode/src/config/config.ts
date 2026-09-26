@@ -830,7 +830,8 @@ const layer = Layer.effect(
             ? undefined
             : { root: primarySet.has(dir) ? path.dirname(dir) : projectRoot, source: dir }
           if (KilocodeConfig.isConfigDir(dir, Flag.KILO_CONFIG_DIR)) {
-            for (const file of KilocodeConfig.ALL_CONFIG_FILES) {
+            KilocodeConfig.warnShadowed(dir)
+            for (const file of KilocodeConfig.MERGE_ORDER) {
               const source = path.join(dir, file)
               yield* Effect.logDebug(`loading config from ${source}`)
               // kilocode_change - untrusted config dirs confine {file:} reads to projectRoot

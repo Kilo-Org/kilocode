@@ -40,6 +40,22 @@ export namespace KilocodeConfig {
   /** All config file names in precedence order (kilo + opencode). */
   export const ALL_CONFIG_FILES = ["kilo.jsonc", "kilo.json", "opencode.jsonc", "opencode.json"] as const
 
+  /** Config directory files in merge order: later files win, so the highest-precedence file is merged last. */
+  export const MERGE_ORDER = ALL_CONFIG_FILES.toReversed()
+
+  /** Log when kilo and opencode config files coexist in one directory, since the opencode values get shadowed. */
+  export function warnShadowed(dir: string) {
+    const found = ALL_CONFIG_FILES.filter((file) => existsSync(path.join(dir, file)))
+    const kilo = found.filter((file) => file.startsWith("kilo."))
+    const opencode = found.filter((file) => file.startsWith("opencode."))
+    if (kilo.length === 0 || opencode.length === 0) return
+    log.warn("kilo and opencode config files found in the same directory; kilo config takes precedence", {
+      dir,
+      kilo,
+      opencode,
+    })
+  }
+
   /** Config directory suffixes in update-target preference order. */
   export const KILO_DIR_SUFFIXES = [".kilo", ".kilocode"] as const
 
