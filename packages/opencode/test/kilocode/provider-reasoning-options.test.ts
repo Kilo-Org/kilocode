@@ -72,6 +72,24 @@ describe("ProviderTransform.reasoningVariants - models.dev reasoning_options", (
     expect(result?.max).toEqual({ reasoning: { effort: "max" } })
   })
 
+  test("toggle plus effort exposes an explicit reasoning-off variant on OpenRouter", () => {
+    const target = mockModel({
+      providerID: "openrouter",
+      api: { id: "deepseek/deepseek-v4-flash-0731", url: "https://openrouter.ai", npm: "@openrouter/ai-sdk-provider" },
+    })
+    const result = ProviderTransform.reasoningVariants(
+      raw([
+        { type: "toggle" },
+        { type: "effort", values: ["low", "high", "max"] },
+      ]),
+      target,
+    )
+    expect(Object.keys(result ?? {})).toEqual(["none", "low", "high", "max"])
+    expect(result?.none).toEqual({ reasoning: { enabled: false } })
+    expect(result?.low).toEqual({ reasoning: { effort: "low" } })
+    expect(result?.max).toEqual({ reasoning: { effort: "max" } })
+  })
+
   test("budget_tokens produces high/max budget variants on bedrock", () => {
     const target = mockModel({
       api: { id: "anthropic.claude-sonnet-4-5", url: "https://bedrock.amazonaws.com", npm: "@ai-sdk/amazon-bedrock" },
