@@ -183,4 +183,17 @@ Broken agent`,
     expect(result).toContain("broken.md")
     expect(result).toContain("Post-edit validation")
   })
+
+  test("validates markdown command without active instance context without throwing", async () => {
+    await using tmp = await tmpdir({ git: true })
+    const filepath = path.join(tmp.path, ".kilo", "command", "probe.md")
+    await Filesystem.write(filepath, "Just a command body without frontmatter")
+
+    // Run directly without provideTestInstance
+    const result = await check(filepath)
+    expect(result).toContain("config_validation")
+    expect(result).toContain("validated successfully")
+    expect(result).not.toContain("No context found for instance")
+  })
 })
+
