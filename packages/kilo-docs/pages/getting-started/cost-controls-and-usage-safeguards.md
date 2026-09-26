@@ -137,7 +137,7 @@ See [Context Condensing](/docs/customize/context/context-condensing) for full co
 
 ### Keep max output tokens conservative
 
-Every token you allocate to model output reduces how much conversation history can remain in the context window. For routine coding tasks, keep Code mode at **16k max output tokens or below**. Raise the limit only in Architect or Debug modes where extended reasoning is useful.
+Every token you allocate to model output reduces how much conversation history can remain in the context window. For routine coding tasks, keep the Code agent at **16k max output tokens or below**. Raise the limit only in the Plan or Debug agents where extended reasoning is useful.
 
 **Where to configure:** Model settings in the Kilo Code UI, or the `limit.output` key in custom model configuration.
 
@@ -168,9 +168,9 @@ Kilo has auto-models that can help you control costs; more information is availa
 |---|---|
 | Quick questions, syntax lookups, simple formatting | `kilo-auto/efficient` or a lightweight model |
 | Routine edits, test generation, straightforward refactors | `kilo-auto/efficient` or a mid-tier model |
-| Complex debugging, tracing unexpected behavior | `kilo-auto/frontier` or a strong reasoning model; Debug mode |
-| Architecture planning, design decisions | `kilo-auto/frontier`; Architect mode |
-| Repository-wide analysis or search | A model with a large context window (256K+); Architect mode |
+| Complex debugging, tracing unexpected behavior | `kilo-auto/frontier` or a strong reasoning model; Debug agent |
+| Architecture planning, design decisions | `kilo-auto/frontier`; Plan agent |
+| Repository-wide analysis or search | A model with a large context window (256K+); Plan agent |
 | Code review and summarization | `kilo-auto/efficient` or a cost-effective model |
 | Automated background tasks (CI, scripting) | `kilo-auto/efficient` or `kilo-auto/free` |
 
