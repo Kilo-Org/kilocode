@@ -4,6 +4,11 @@ const effort = ["none", "minimal", "low", "medium", "high", "xhigh", "max"]
 // Variant names are non-empty, so this cannot collide with a provider variant.
 export const DEFAULT_VARIANT = ""
 
+/** Label a variant the way the reasoning picker shows it, e.g. `xhigh` -> `Xhigh`. */
+export function variantLabel(value: string) {
+  return value.charAt(0).toUpperCase() + value.slice(1)
+}
+
 /** Keep the selected effort when possible, falling back to the nearest known effort. */
 export function preserveVariant(current: string | undefined, variants: string[]) {
   if (!current || variants.length === 0) return undefined

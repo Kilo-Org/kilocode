@@ -8,11 +8,19 @@ import {
   sessionVariants,
   transferVariants,
   variantKey,
+  variantLabel,
 } from "../../webview-ui/src/context/session-variant-store"
 import type { ModelSelection } from "../../webview-ui/src/types/messages"
 
 const model: ModelSelection = { providerID: "anthropic", modelID: "claude-sonnet-4" }
 const variants = ["low", "medium", "high"]
+
+describe("variant labels", () => {
+  it("capitalizes the variant name the way the reasoning picker shows it", () => {
+    expect(variantLabel("high")).toBe("High")
+    expect(variantLabel("xhigh")).toBe("Xhigh")
+  })
+})
 
 describe("per-session variant selection", () => {
   it("keeps reasoning effort independent for each Agent Manager session", () => {
