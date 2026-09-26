@@ -32,6 +32,7 @@ import HistoryView from "./components/history/HistoryView"
 import { MigrationWizard } from "./components/migration"
 import type { Message as SDKMessage, Part as SDKPart } from "@kilocode/sdk/v2"
 import { cycleAgent as cycle } from "./context/session-agent"
+import { routeChatInput } from "./utils/chat-input-route"
 import "./styles/chat.css"
 
 type ViewType = "newTask" | "history" | "profile" | "settings" | "subAgentViewer"
@@ -258,16 +259,32 @@ const AppContent: Component = () => {
       : undefined,
   )
 
+  const newTask = () => {
+    if (currentView() === "newTask") {
+      window.dispatchEvent(new CustomEvent("newTaskRequest"))
+      return
+    }
+    tabs?.add()
+    if (!tabs) session.clearCurrentSession()
+    setCurrentView("newTask")
+  }
+
   const handleViewAction = (action: string) => {
     switch (action) {
-      case "plusButtonClicked": {
-        const chat = currentView() === "newTask"
-        if (chat) window.dispatchEvent(new CustomEvent("newTaskRequest"))
-        if (!chat && tabs) tabs.add()
-        if (!chat && !tabs) session.clearCurrentSession()
-        setCurrentView("newTask")
+      case "plusButtonClicked":
+        newTask()
+        break
+      case "closeTask": {
+        if (currentView() !== "newTask") break
+        const id = tabs?.active()
+        if (!tabs || !id) break
+        tabs.close(id)
         break
       }
+      case "closeAllTasks":
+        tabs?.closeAll()
+        setCurrentView("newTask")
+        break
       case "historyButtonClicked":
         setCurrentView("history")
         break
@@ -343,6 +360,12 @@ const AppContent: Component = () => {
       open(message)
       handleKiloModel(message)
       handleForked(message)
+      routeChatInput(
+        message,
+        currentView(),
+        () => setCurrentView("newTask"),
+        (msg) => window.postMessage(msg, window.origin),
+      )
       if (message?.type === "viewSubAgentSession" && message.sessionID) {
         console.log("[Kilo New] App: 🔍 viewSubAgentSession:", message.sessionID)
         session.setCurrentSessionID(message.sessionID)

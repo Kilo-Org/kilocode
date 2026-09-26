@@ -633,6 +633,47 @@ class WorktreeRunManagerTest : BasePlatformTestCase() {
         }
     }
 
+    fun testOverlappingStopsAssignAppCleanupToLastRun() = runBlocking {
+        val type = register(paramsType("kilo.test.params.overlap"))
+        val first = add(type, "first")
+        val second = add(type, "second")
+        val mgr = manager()
+        val wt = Files.createTempDirectory("kilo-overlap-wt").toString()
+        assertTrue(mgr.run(first.uniqueID, wt).ok)
+        assertTrue(mgr.run(second.uniqueID, wt).ok)
+
+        val app = StubbornJvm.stubborn(wt)
+        try {
+            val handlers = launched.map { start(it, StubbornHandler()) }
+            assertTrue(mgr.stop(first.uniqueID, wt))
+            assertTrue(mgr.stop(second.uniqueID, wt))
+
+            // Finish the later Stop's handler first: its arm must wait for the older stopped sibling,
+            // whose arm yields ownership, then perform the sole worktree-wide orphan scan.
+            val sibling = handlers.getOrNull(0) ?: error("missing first handler")
+            val owner = handlers.getOrNull(1) ?: error("missing second handler")
+            owner.finish()
+            await("cleanup owner stopped") { owner.isProcessTerminated }
+            assertFalse(sibling.isProcessTerminated)
+            assertTrue(app.isAlive)
+            sibling.finish()
+            await("overlapping handlers stopped") { handlers.all { it.isProcessTerminated } }
+            await("single orphan owner", REAP_WAIT_NANOS, { mgr.states.value }) {
+                mgr.states.value.singleOrNull()?.orphan == true
+            }
+            assertEquals(second.uniqueID, mgr.states.value.single().id)
+            assertTrue(app.isAlive)
+
+            assertTrue(mgr.stop(second.uniqueID, wt))
+            await("overlapping app killed", REAP_WAIT_NANOS) { !app.isAlive }
+            await("overlapping orphan cleared", REAP_WAIT_NANOS, { mgr.states.value }) {
+                mgr.states.value.isEmpty()
+            }
+        } finally {
+            app.destroyForcibly()
+        }
+    }
+
     /**
      * Editing the source configuration replaces the cached clone. The replaced run's application must
      * still be reaped even though the replacement immediately occupies the very same key: waiting for
@@ -1076,5 +1117,7 @@ class WorktreeRunManagerTest : BasePlatformTestCase() {
         override fun killProcess() {
             killed = true
         }
+
+        fun finish() = notifyProcessTerminated(0)
     }
 }

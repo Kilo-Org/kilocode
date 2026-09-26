@@ -73,6 +73,10 @@ data class ConfigDto(
     val permission: PermissionConfigDto? = null,
     /** Kilo Swarm. Null means unset, which the CLI treats as enabled. */
     val shared_agent_board: Boolean? = null,
+    /** Snapshot tracking. Null means unset, which the CLI treats as enabled. */
+    val snapshot: Boolean? = null,
+    /** Machine-wide session retention policy. Null means disabled with a 30-day default. */
+    val retention: RetentionConfigDto? = null,
 )
 
 @Serializable
@@ -135,6 +139,22 @@ data class ConfigPatchDto(
     val permission: PermissionConfigDto? = null,
     /** Kilo Swarm. Always written as an explicit boolean, matching the VS Code toggle. */
     val shared_agent_board: Boolean? = null,
+    /** Snapshot tracking. Always written as an explicit boolean, matching the VS Code toggle. */
+    val snapshot: Boolean? = null,
+    /** Machine-wide session retention policy. */
+    val retention: RetentionPatchDto? = null,
+)
+
+@Serializable
+data class RetentionConfigDto(
+    val enabled: Boolean? = null,
+    val maxAgeDays: Int? = null,
+)
+
+@Serializable
+data class RetentionPatchDto(
+    val enabled: Boolean? = null,
+    val maxAgeDays: Int? = null,
 )
 
 @Serializable

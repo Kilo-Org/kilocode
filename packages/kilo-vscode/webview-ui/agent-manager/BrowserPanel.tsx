@@ -72,6 +72,8 @@ function command(command: BrowserCommand): WebviewMessage {
     return { type: "agentManager.browser.open", ...command.scope, url: command.url }
   }
   if (command.type === "refresh") return { type: "agentManager.browser.refresh", ...command.scope }
+  if (command.type === "back") return { type: "agentManager.browser.back", ...command.scope }
+  if (command.type === "forward") return { type: "agentManager.browser.forward", ...command.scope }
   if (command.type === "close") return { type: "agentManager.browser.close", ...command.scope }
   if (command.type === "state") return { type: "agentManager.browser.state", ...command.scope }
   if (command.type === "devtools") {
@@ -79,6 +81,26 @@ function command(command: BrowserCommand): WebviewMessage {
   }
   if (command.type === "input") {
     return { type: "agentManager.browser.input", ...command.scope, ...command.position, click: command.click }
+  }
+  if (command.type === "viewport") {
+    return {
+      type: "agentManager.browser.viewport",
+      ...command.scope,
+      browserId: command.browserId,
+      navigation: command.navigation,
+      viewport: command.viewport,
+    }
+  }
+  if (command.type === "interact") {
+    return { type: "agentManager.browser.interact", ...command.scope, identity: command.identity, event: command.event }
+  }
+  if (command.type === "acknowledge") {
+    return {
+      type: "agentManager.browser.acknowledge",
+      ...command.scope,
+      identity: command.identity,
+      sequence: command.sequence,
+    }
   }
   return {
     type: "agentManager.browser.inspect",
@@ -90,6 +112,9 @@ function command(command: BrowserCommand): WebviewMessage {
 }
 
 function event(message: ExtensionMessage): BrowserEvent | undefined {
+  if (message.type === "agentManager.browserFrame") {
+    return { type: "frame", value: { ...message, scope: scope(message.sessionId, message.projectId) } }
+  }
   if (message.type === "agentManager.browserState") {
     const value: BrowserState = {
       scope: scope(message.sessionId, message.projectId),
@@ -102,7 +127,10 @@ function event(message: ExtensionMessage): BrowserEvent | undefined {
       errors: message.errors,
       logs: message.logs,
       error: message.error,
+      missing: message.missing,
       frameError: message.frameError,
+      back: message.back,
+      forward: message.forward,
     }
     return { type: "state", value }
   }
@@ -151,12 +179,21 @@ function BrowserAdapter(props: {
     urlPlaceholder: language.t("agentManager.browser.urlPlaceholder"),
     open: language.t("agentManager.browser.open"),
     refresh: language.t("agentManager.browser.refresh"),
+    back: language.t("agentManager.browser.back"),
+    forward: language.t("agentManager.browser.forward"),
     close: language.t("agentManager.browser.close"),
     inspect: language.t("agentManager.browser.inspect"),
     devtoolsTitle: language.t("agentManager.browser.devtoolsTitle"),
     diagnostics: language.t("agentManager.browser.diagnostics"),
     diagnosticsHint: language.t("agentManager.browser.diagnosticsHint"),
     empty: language.t("agentManager.browser.empty"),
+    requirement: language.t("agentManager.browser.requirement"),
+    missingTitle: language.t("agentManager.browser.missingTitle"),
+    missingChrome: language.t("agentManager.browser.missingChrome"),
+    missingChromium: language.t("agentManager.browser.missingChromium"),
+    download: language.t("agentManager.browser.downloadChrome"),
+    retry: language.t("common.retry"),
+    settings: language.t("agentManager.browser.settings"),
     noSession: language.t("agentManager.browser.noSession"),
     screenshotAlt: language.t("agentManager.browser.screenshotAlt"),
     errors: (count: number) => language.t("agentManager.browser.errors", { count }),
@@ -177,6 +214,8 @@ function BrowserAdapter(props: {
       transport={transport}
       labels={labels()}
       theme={theme}
+      download={() => vscode.postMessage({ type: "openExternal", url: "https://www.google.com/chrome/" })}
+      settings={() => vscode.postMessage({ type: "openSettingsPanel", tab: "browser", projectId: props.projectId() })}
       onReference={reference}
       onClose={props.onClose}
     />

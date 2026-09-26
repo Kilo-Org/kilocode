@@ -67,4 +67,3 @@ After enabling SSO:
 When you open an SSO sign-in link, Kilo checks whether your browser is already signed in to Kilo with a different address than the one the link requests. If the addresses differ, sign-in stops and Kilo shows a **Wrong account signed in** page instead of continuing. The page names the address the app requested and the address currently signed in, with a single button that signs out of the current browser session and returns you to SSO sign-in for the expected address. The switch keeps the original callback path and device code, so sign-in completes for the right account once you sign in with it. A matching address continues to the callback path unchanged.
 
 Kilo trims spaces and ignores case when comparing addresses. A request without an `email` keeps the previous behavior, and an explicit `email` in the sign-in URL takes precedence over a remembered returning-user address when the form is prefilled.
-

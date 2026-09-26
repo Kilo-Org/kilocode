@@ -81,6 +81,8 @@ Local test edit only:
 bun .kilo/skills/release-jetbrains/script/set-pin.ts --latest
 # or
 bun .kilo/skills/release-jetbrains/script/set-pin.ts --version 7.4.1
+# Pre-release versions are also supported:
+bun .kilo/skills/release-jetbrains/script/set-pin.ts --version 7.4.2-rc.1
 ```
 
 Then test from `packages/kilo-jetbrains/`:
@@ -97,6 +99,8 @@ bun .kilo/skills/release-jetbrains/script/set-pin.ts --latest --pr
 # or
 bun .kilo/skills/release-jetbrains/script/set-pin.ts --version 7.4.1 --pr
 ```
+
+Pre-release pin PRs receive both the `jetbrains-cli-pin-bump` and `pre-release` labels. Pass `--pre-release` when the release channel is pre-release but the CLI version is plain semver; the CLI publish workflow does this automatically.
 
 After that PR merges to `main`, re-run `resolve-version.ts`, re-run `check-pin.ts`, confirm `drift=up-to-date`, then dispatch prepare. Do not dispatch prepare from a local-only pin edit; the prepare workflow tags `origin/main`.
 

@@ -236,6 +236,7 @@ export type OAuth = {
   expires: number
   accountId?: string
   enterpriseUrl?: string
+  baseURL?: string
 }
 
 export type ApiAuth = {
@@ -17734,9 +17735,11 @@ export type KilocodeRetentionStatusResponses = {
       skippedActive: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
       failed: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
       durationMs: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+      cancelled?: boolean
+      reclaimedBytes?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
     }
     progress?: {
-      phase: "scanning" | "deleting"
+      phase: "scanning" | "deleting" | "cancelling"
       total: number
       processed: number
       deleted: number
@@ -17785,9 +17788,11 @@ export type KilocodeRetentionRunResponses = {
       skippedActive: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
       failed: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
       durationMs: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+      cancelled?: boolean
+      reclaimedBytes?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
     }
     progress?: {
-      phase: "scanning" | "deleting"
+      phase: "scanning" | "deleting" | "cancelling"
       total: number
       processed: number
       deleted: number
@@ -17798,6 +17803,36 @@ export type KilocodeRetentionRunResponses = {
 }
 
 export type KilocodeRetentionRunResponse = KilocodeRetentionRunResponses[keyof KilocodeRetentionRunResponses]
+
+export type KilocodeRetentionCancelData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/kilocode/retention/cancel"
+}
+
+export type KilocodeRetentionCancelErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type KilocodeRetentionCancelError = KilocodeRetentionCancelErrors[keyof KilocodeRetentionCancelErrors]
+
+export type KilocodeRetentionCancelResponses = {
+  /**
+   * Retention cancel request outcome; false when no pass was running
+   */
+  200: {
+    requested: boolean
+  }
+}
+
+export type KilocodeRetentionCancelResponse = KilocodeRetentionCancelResponses[keyof KilocodeRetentionCancelResponses]
 
 export type AnacondaDesktopStatusData = {
   body?: never
