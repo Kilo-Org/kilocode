@@ -1,4 +1,4 @@
-import { batch, For, type Component } from "solid-js"
+import { batch, For, Show, type Component } from "solid-js"
 import { Button } from "@kilocode/kilo-ui/button"
 import { Select } from "@kilocode/kilo-ui/select"
 import { TextField } from "@kilocode/kilo-ui/text-field"
@@ -31,6 +31,9 @@ const MCP_OPTIONS: LayoutOption[] = [
   { value: "expanded", labelKey: "settings.display.mcpTool.expanded" },
   { value: "collapsed", labelKey: "settings.display.mcpTool.collapsed" },
 ]
+
+// Seeds the color picker when the user switches off "match theme"; also the input's fallback value.
+const DEFAULT_INLINE_CODE_COLOR = "#00ceb9"
 
 const DISPLAY_DEFAULTS = {
   terminal_command_display: "expanded",
@@ -100,6 +103,43 @@ const DisplayTab: Component = () => {
               aria-label={language.t("settings.display.fontSize.title")}
             />
             <span>{display.fontSize()}px</span>
+          </div>
+        </SettingsRow>
+
+        <SettingsRow
+          title={language.t("settings.display.inlineCodeBackground.title")}
+          description={language.t("settings.display.inlineCodeBackground.description")}
+        >
+          <Switch
+            checked={display.inlineCodeBackground()}
+            onChange={(checked: boolean) => display.setInlineCodeBackground(checked)}
+            hideLabel
+          >
+            {language.t("settings.display.inlineCodeBackground.title")}
+          </Switch>
+        </SettingsRow>
+
+        <SettingsRow
+          title={language.t("settings.display.inlineCodeColor.title")}
+          description={language.t("settings.display.inlineCodeColor.description")}
+        >
+          <div style={{ display: "flex", "align-items": "center", gap: "8px" }}>
+            <Switch
+              checked={!display.inlineCodeColor()}
+              onChange={(matchTheme: boolean) =>
+                display.setInlineCodeColor(matchTheme ? undefined : DEFAULT_INLINE_CODE_COLOR)
+              }
+            >
+              {language.t("settings.display.inlineCodeColor.matchTheme")}
+            </Switch>
+            <Show when={display.inlineCodeColor()}>
+              <input
+                type="color"
+                value={display.inlineCodeColor() ?? DEFAULT_INLINE_CODE_COLOR}
+                onInput={(event) => display.setInlineCodeColor(event.currentTarget.value)}
+                aria-label={language.t("settings.display.inlineCodeColor.title")}
+              />
+            </Show>
           </div>
         </SettingsRow>
 

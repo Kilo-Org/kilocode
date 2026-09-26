@@ -154,6 +154,19 @@ Code edit and diff blocks start collapsed. Choose **Expanded** for **Code Edit B
 
 Both keys accept `expanded` and `collapsed`.
 
+### Inline Code
+
+Inline code keeps its current text-only appearance by default. Enable **Highlight Inline Code** in the Display tab, or set `inline_code_background` to `true`, to add a theme-aware background and spacing. You can independently set `inline_code_color` to a hex color:
+
+```json
+{
+  "inline_code_background": true,
+  "inline_code_color": "#9dbefe"
+}
+```
+
+Omit either setting to keep its current theme-controlled behavior.
+
 ### Work Styles and the Session Preview
 
 Onboarding asks you to pick a work style. The choice sets display defaults and, for **Review first**, permission rules:
