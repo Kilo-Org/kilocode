@@ -186,6 +186,7 @@ import {
 } from "./speech-to-text/source"
 import { stopSessionProcesses } from "./kilo-provider/background-process"
 import { sandboxDefault, sandboxSessionMetadata } from "./shared/sandbox-session"
+import { REVERT_ERROR_CODE } from "./shared/revert-error"
 import {
   buildIndexingSettingsMessage,
   validIndexingSetting,
@@ -4777,7 +4778,12 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     const { data, error } = await this.client.session.revert({ sessionID, messageID, partID, directory: dir })
     if (error) {
       console.error("[Kilo New] KiloProvider: Failed to revert session:", error)
-      this.postMessage({ type: "error", message: "Failed to revert session", sessionID })
+      this.postMessage({
+        type: "error",
+        message: getErrorMessage(error),
+        code: REVERT_ERROR_CODE,
+        sessionID,
+      })
       throw error
     }
     if (!data) throw new Error("Revert returned no session")
@@ -4792,7 +4798,12 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     const { data, error } = await this.client.session.unrevert({ sessionID, directory: dir })
     if (error) {
       console.error("[Kilo New] KiloProvider: Failed to unrevert session:", error)
-      this.postMessage({ type: "error", message: "Failed to redo session", sessionID })
+      this.postMessage({
+        type: "error",
+        message: getErrorMessage(error),
+        code: REVERT_ERROR_CODE,
+        sessionID,
+      })
       throw error
     }
     if (!data) throw new Error("Redo returned no session")

@@ -95,6 +95,7 @@ export const dict = {
     "ย้อนกลับการสนทนาแล้ว ไม่ทราบสถานะการกู้คืนพื้นที่ทำงานสำหรับการย้อนกลับก่อนหน้านี้",
   "revert.banner.workspace.enableSnapshots": "เปิดใช้งานสแนปชอต",
   "revert.disabled.agentBusy": "รอให้เอเจนต์ทำงานเสร็จ",
+  "revert.error.body": "ที่เก็บข้อมูลอาจกำลังถูกใช้งาน ลองอีกครั้ง หรือดูรายละเอียดในบันทึกของ Kilo",
   "command.session.compact": "บีบอัดเซสชัน",
   "command.session.export": "ส่งออกบันทึกเซสชัน",
 

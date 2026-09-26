@@ -42,6 +42,7 @@ import { dict as appNl } from "../../webview-ui/src/i18n/nl"
 import { dict as appUk } from "../../webview-ui/src/i18n/uk"
 import { dict as appIt } from "../../webview-ui/src/i18n/it"
 import { dict as appFa } from "../../webview-ui/src/i18n/fa"
+import { REVERT_ERROR_CODE } from "../../src/shared/revert-error"
 
 // Layer 2: upstream UI (@opencode-ai/ui re-exported via @kilocode/kilo-ui)
 import { dict as uiEn } from "../../../ui/src/i18n/en"
@@ -440,6 +441,12 @@ describe("i18n key validation — no missing translation keys", () => {
       ).toEqual([])
     }
     expect(missing).toEqual([])
+  })
+})
+
+describe("i18n keys reached through a constant rather than a literal", () => {
+  it("the shared revert failure code is a key in the sidebar dictionary", () => {
+    expect(Object.keys(appEn)).toContain(REVERT_ERROR_CODE)
   })
 })
 

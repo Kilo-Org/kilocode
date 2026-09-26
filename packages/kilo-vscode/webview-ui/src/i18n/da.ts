@@ -96,6 +96,7 @@ export const dict = {
     "Samtalen blev gendannet. Status for gendannelse af arbejdsområdet er ikke tilgængelig for denne tidligere gendannelse.",
   "revert.banner.workspace.enableSnapshots": "Aktivér snapshots",
   "revert.disabled.agentBusy": "Vent på at agenten er færdig",
+  "revert.error.body": "Lageret er muligvis i brug. Prøv igen, eller se Kilo-loggene for detaljer.",
   "command.session.compact": "Komprimér session",
   "command.session.export": "Eksporter sessionsudskrift",
 
