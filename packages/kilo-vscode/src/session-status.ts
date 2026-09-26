@@ -1,6 +1,26 @@
 import type { KiloClient, SessionStatus } from "@kilocode/sdk/v2/client"
 
 /**
+ * The CLI derives `scheduled` for a session asleep on a pending wakeup. It is
+ * not a running turn, but this client renders every non-idle status as working,
+ * so the derived value is folded back to `idle` at the boundary until the
+ * webview grows a `scheduled` rendering. The SDK type is regenerated from the
+ * server schema, so the extra variant is widened locally.
+ */
+export type ClientSessionStatus = SessionStatus | { type: "scheduled"; scheduledAt: string }
+
+export function clientSessionStatus(status: ClientSessionStatus): SessionStatus {
+  return status.type === "scheduled" ? { type: "idle" } : status
+}
+
+/** A session asleep on a pending wakeup is not a running turn. */
+export function isRunningStatus(
+  status: SessionStatus["type"] | "scheduled" | undefined,
+): status is "busy" | "retry" | "offline" {
+  return status !== undefined && status !== "idle" && status !== "scheduled"
+}
+
+/**
  * Fetch all current session statuses and seed the provided map + webview.
  * Called on connect so the Settings panel knows about already-running sessions
  * without waiting for the next session.status SSE event.
@@ -19,7 +39,8 @@ export async function seedSessionStatuses(
     const active = result.data
 
     // Seed/update entries the server knows about
-    for (const [sid, info] of Object.entries(active) as [string, SessionStatus][]) {
+    for (const [sid, raw] of Object.entries(active) as [string, ClientSessionStatus][]) {
+      const info = clientSessionStatus(raw)
       if (accept && !accept(sid, info)) continue
       map.set(sid, info.type)
       post({

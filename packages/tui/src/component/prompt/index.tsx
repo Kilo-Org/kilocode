@@ -41,6 +41,7 @@ import { useRenderer, useTerminalDimensions, type JSX } from "@opentui/solid"
 import type { AssistantMessage, FilePart, UserMessage } from "@kilocode/sdk/v2"
 import { Locale } from "../../util/locale"
 import { errorMessage } from "../../util/error"
+import { running } from "../../util/session"
 import { formatDuration } from "../../util/format"
 import { createColors, createFrames } from "../../ui/spinner"
 import { useDialog } from "../../ui/dialog"
@@ -235,7 +236,7 @@ export function Prompt(props: PromptProps) {
     cursorVersion: () => cursorVersion(),
   })
   const interruptible = createMemo(
-    () => status().type !== "idle" || (goal()?.active === true && (!vim.vimEnabled() || vim.vimMode() === "normal")),
+    () => running(status().type) || (goal()?.active === true && (!vim.vimEnabled() || vim.vimMode() === "normal")),
   )
   // kilocode_change end
   const currentProviderLabel = createMemo(() => local.model.parsed().provider)
@@ -1471,7 +1472,7 @@ export function Prompt(props: PromptProps) {
 
   const spinnerDef = createMemo(() => {
     const agent =
-      status().type !== "idle"
+      running(status().type)
         ? (local.agent.list().find((a) => a.name === lastUserMessage()?.agent) ?? local.agent.current())
         : local.agent.current()
     const color = agent ? local.agent.color(agent.name ?? "") : theme.border // kilocode_change
@@ -1690,7 +1691,7 @@ export function Prompt(props: PromptProps) {
         </box>
         <box width="100%" flexDirection="row" justifyContent="space-between">
           <Switch>
-            <Match when={status().type !== "idle" || goal()?.active /* kilocode_change */}>
+            <Match when={running(status().type) || goal()?.active /* kilocode_change */}>
               <box
                 flexDirection="row"
                 gap={1}

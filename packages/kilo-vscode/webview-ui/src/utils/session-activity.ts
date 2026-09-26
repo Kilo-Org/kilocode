@@ -1,6 +1,6 @@
 export type Activity = "waiting" | "error" | "retry" | "busy" | "done" | "scheduled" | "idle"
 
-export type Status = "idle" | "busy" | "retry" | "offline"
+export type Status = "idle" | "busy" | "retry" | "offline" | "scheduled"
 
 export interface ActivityInput {
   status?: Status

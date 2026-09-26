@@ -1,4 +1,5 @@
 import { KiloShutdown } from "@/kilocode/cli/shutdown"
+import { futureDue } from "@/kilocode/session/scheduled"
 import { SessionID } from "@/session/schema"
 import { Storage } from "@/storage/storage"
 import { EventV2Bridge } from "@/event-v2-bridge"
@@ -44,6 +45,7 @@ export namespace Wakeup {
     readonly schedule: (input: Input) => Effect.Effect<Info, InvalidTime | PastTime | TooMany>
     readonly list: (input?: { sessionID?: SessionID }) => Effect.Effect<Info[]>
     readonly pending: (directory: string) => Effect.Effect<{ sessionID: SessionID; pending: number }[]>
+    readonly scheduled: (directory?: string) => Effect.Effect<Map<SessionID, number>>
     readonly cancel: (id: ID, sessionID?: SessionID) => Effect.Effect<Info | undefined>
     readonly cancelSession: (sessionID: SessionID) => Effect.Effect<number>
     readonly adopt: (directory: string) => Effect.Effect<void>
@@ -270,6 +272,15 @@ export namespace Wakeup {
         return Array.from(counts, ([sessionID, count]) => ({ sessionID, pending: count }))
       })
 
+      // Earliest future wakeup per session, read from memory only like
+      // `pending`: bootstrap adopts before an instance's routes run, so
+      // `entries` is authoritative here. A wakeup already due is excluded,
+      // because that turn is running now and must not read as `scheduled`.
+      const scheduled = Effect.fn("Wakeup.scheduled")(function* (directory?: string) {
+        const infos = Array.from(entries.values())
+        return futureDue(directory === undefined ? infos : infos.filter((info) => info.directory === directory))
+      })
+
       const schedule = Effect.fn("Wakeup.schedule")(function* (input: Input) {
         return yield* gate.withPermits(1)(
           Effect.gen(function* () {
@@ -441,7 +452,18 @@ export namespace Wakeup {
         }
       })
 
-      return Service.of({ schedule, list, pending, cancel, cancelSession, adopt, cronCreate, cronList, cronCancel })
+      return Service.of({
+        schedule,
+        list,
+        pending,
+        scheduled,
+        cancel,
+        cancelSession,
+        adopt,
+        cronCreate,
+        cronList,
+        cronCancel,
+      })
     }),
   )
 

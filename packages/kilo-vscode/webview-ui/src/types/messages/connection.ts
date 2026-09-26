@@ -2,7 +2,7 @@
 export type ConnectionState = "connecting" | "connected" | "disconnected" | "error"
 
 // Session status (simplified from backend)
-export type SessionStatus = "idle" | "busy" | "retry" | "offline"
+export type SessionStatus = "idle" | "busy" | "retry" | "offline" | "scheduled"
 
 // Rich status info for retry countdown and future extensions
 export type SessionStatusInfo =
@@ -10,6 +10,7 @@ export type SessionStatusInfo =
   | { type: "busy" }
   | { type: "retry"; attempt: number; message: string; next: number }
   | { type: "offline"; message: string }
+  | { type: "scheduled" }
 
 // Server info
 export interface ServerInfo {
