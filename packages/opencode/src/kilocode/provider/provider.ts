@@ -14,7 +14,7 @@ import { optionalOmitUndefined } from "@opencode-ai/core/schema"
 import { ProviderError } from "@/provider/error"
 import { Effect, Schema } from "effect"
 import type { LanguageModelV3 } from "@ai-sdk/provider"
-import { mapValues, omit, pickBy } from "remeda"
+import { mapValues, omit, pickBy, sortBy } from "remeda"
 import { reasoningSummary } from "./reasoning-summary"
 import type { Provider } from "@/provider/provider"
 import type { Auth } from "@/auth"
@@ -297,6 +297,31 @@ export function patchCustomLoaderResult(
 export function kiloSmallModelPriority(providerID: string): string[] | undefined {
   if (providerID.startsWith("kilo")) return ["kilo-auto/small"]
   return undefined
+}
+
+/**
+ * Picks the cheapest chat-capable model from the provider's own catalog as the
+ * small model for auxiliary tasks (session titles, prompt enhance, commit
+ * messages, branch names). Keeps those calls on the provider the user
+ * configured instead of falling through to Kilo's auto small model, which
+ * draws Kilo credits in BYOK setups. Chat-capable means text in and text out;
+ * tool calling is not required (e.g. Perplexity sonar and morph chat models
+ * advertise tool_call false). Models with no text output (image, audio, video)
+ * are skipped, and so are embedding and rerank models: they also take text in
+ * and return text scores, but requests to them cannot produce titles or commit
+ * messages. Missing cost data sorts as free; ties break by release date and
+ * id, matching the catalog ordering in getSmallModel.
+ */
+export function cheapestSmallModel(models: Provider.Model[]) {
+  return sortBy(
+    models.filter((model) => {
+      if (!model.capabilities.input.text || !model.capabilities.output.text) return false
+      return !/(embed|rerank)/.test(`${model.family} ${model.id}`)
+    }),
+    [(model) => model.cost.input + model.cost.output, "asc"],
+    [(model) => model.release_date, "desc"],
+    [(model) => model.id, "desc"],
+  ).at(0)
 }
 
 /**
