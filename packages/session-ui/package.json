@@ -45,7 +45,7 @@
     "@opencode-ai/ui": "workspace:*",
     "@pierre/diffs": "catalog:",
     "@shikijs/stream": "catalog:",
-    "@shikijs/transformers": "3.9.2",
+    "@shikijs/transformers": "4.4.3",
     "@solid-primitives/bounds": "0.1.3",
     "@solid-primitives/event-listener": "2.4.5",
     "@solid-primitives/media": "2.3.3",
