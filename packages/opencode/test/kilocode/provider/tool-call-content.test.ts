@@ -77,7 +77,7 @@ describe("normalizeToolCallBody", () => {
     expect(out.messages[0]).toEqual({ role: "system", content: "You are helpful." })
   })
 
-  test("drops non-text parts when flattening content arrays", () => {
+  test("leaves content arrays with non-text parts untouched", () => {
     const body = JSON.stringify({
       messages: [
         {
@@ -90,7 +90,10 @@ describe("normalizeToolCallBody", () => {
       ],
     })
     const out = JSON.parse(normalizeToolCallBody(body))
-    expect(out.messages[0].content).toBe("look at this")
+    expect(out.messages[0].content).toEqual([
+      { type: "text", text: "look at this" },
+      { type: "image_url", image_url: { url: "data:image/png;base64,AAAA" } },
+    ])
   })
 })
 

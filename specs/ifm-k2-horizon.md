@@ -456,9 +456,6 @@ models.dev cached locally) already has partial K2 support.
   `IfmK2.applyDefaults(...)`) and into variants at
   `packages/opencode/src/kilocode/provider/provider.ts` (`customProviderVariants`).
   Tests: `packages/opencode/test/kilocode/ifm-k2-provider.test.ts`.
-  - Stale-comment fix needed: the file header references the retired base URL
-    `https://api.k2think.ai` — the current hosted endpoint is
-    `https://api.ifm.ai/v1` (see §3).
 - `interleaved` replay path: `packages/opencode/src/provider/transform.ts`
   `normalizeMessages()` extracts assistant reasoning parts and reattaches them
   as `providerOptions.openaiCompatible[field]` — this is the `reasoning_content`
