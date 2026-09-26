@@ -38,6 +38,7 @@ import com.intellij.util.ui.JBDimension
 import com.intellij.util.ui.JBUI
 import java.awt.BorderLayout
 import java.awt.Dimension
+import javax.swing.plaf.basic.BasicComboBoxUI
 import java.awt.Rectangle
 import javax.swing.JComponent
 import javax.swing.JPanel
@@ -62,16 +63,25 @@ internal class AgentEditDialog(
     }
     private val prompt = PromptField(agent.prompt.orEmpty())
     private var selected = agent.model
+    private val variant = VariantField(agent.variant.orEmpty()).apply {
+        setVariants(variantsFor(selected))
+    }
     private val model = ModelSettingPicker().apply {
         picker.emptyText = KiloBundle.message("settings.agentBehavior.agents.edit.default")
         picker.placement = ModelPicker.Placement.BELOW
         picker.favorites = { app.favorites.value }
         picker.onFavoriteToggle = { app.toggleModelFavorite(it.provider, it.id) }
-        picker.onSelect = { selected = it.key }
-        picker.onClear = { selected = null }
+        picker.onSelect = {
+            val next = it.key
+            variant.setVariants(variantsFor(next), reconcile = next != selected)
+            selected = next
+        }
+        picker.onClear = {
+            selected = null
+            variant.setVariants(emptyList())
+        }
         setItems(items, agent.model)
     }
-    private val variant = NumericField(agent.variant.orEmpty(), decimal = true)
     private val mode = ComboBox(arrayOf(KiloCliParser.MODE_PRIMARY, KiloCliParser.MODE_SUBAGENT, KiloCliParser.MODE_ALL)).apply {
         selectedItem = agent.mode
         isEnabled = canEditMode(agent)
@@ -95,7 +105,7 @@ internal class AgentEditDialog(
         description = text(description.text),
         prompt = text(prompt.text),
         model = selected,
-        variant = text(variant.text),
+        variant = text(variant.value()),
         mode = mode.selectedItem?.toString() ?: agent.mode,
         hidden = hidden,
         disable = disabled,
@@ -227,6 +237,9 @@ internal class AgentEditDialog(
         return null
     }
 
+    private fun variantsFor(key: String?): List<String> =
+        items.firstOrNull { it.key == key }?.variants.orEmpty()
+
     private fun validateSteps(): ValidationInfo? {
         val value = steps.text.trim()
         if (value.isBlank()) return null
@@ -240,6 +253,41 @@ internal class AgentEditDialog(
             columns = NUMERIC_COLUMNS
             emptyText.text = KiloBundle.message("settings.agentBehavior.agents.edit.default")
             (document as AbstractDocument).documentFilter = NumericFilter(decimal)
+        }
+    }
+
+    private class VariantField(initial: String) : ComboBox<String>() {
+        init {
+            isEditable = true
+            if (initial.isNotBlank()) selectedItem = initial
+        }
+
+        override fun getPreferredSize(): Dimension {
+            ensureEditor()
+            return super.getPreferredSize()
+        }
+
+        fun setVariants(variants: List<String>, reconcile: Boolean = false) {
+            val current = value()
+            removeAllItems()
+            variants.forEach { addItem(it) }
+            val keep = variants.isEmpty() || current.isBlank() || current in variants
+            selectedItem = when {
+                keep -> current
+                reconcile -> variants.first()
+                else -> current
+            }
+        }
+
+        fun value(): String =
+            (editor.item as? String)?.takeIf { it.isNotBlank() }
+                ?: (selectedItem as? String).orEmpty()
+
+        private fun ensureEditor() {
+            if (!isEditable) return
+            val ui = ui as? BasicComboBoxUI ?: return
+            val comp = editor.editorComponent ?: return
+            if (components.none { it === comp }) ui.addEditor()
         }
     }
 
