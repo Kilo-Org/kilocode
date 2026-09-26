@@ -135,6 +135,15 @@ class TurnView(
         return true
     }
 
+    /** Re-derive compact-mode tool grouping in every message. Returns true when containment moved. */
+    @RequiresEdt
+    fun syncCompact(): Boolean {
+        var changed = false
+        for (view in messages.values) changed = view.syncCompact() || changed
+        if (changed) revalidate()
+        return changed
+    }
+
     @RequiresEdt
     fun syncCopyToolbars() {
         val id = messages.values.reversed().firstNotNullOfOrNull { it.latestAssistantCopyId() }
