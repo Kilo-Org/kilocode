@@ -745,6 +745,21 @@ export const dict = {
   "context.usage.sessionCost": "Koszt sesji",
   "context.usage.olderSessions": "{{count}} starszych sesji",
   "context.stats.thisSession": "Ta sesja",
+  "session.costNotice.request": "Ostatnie żądanie kosztowało {{cost}}.",
+  "session.costNotice.subagent": "Żądanie subagenta kosztowało {{cost}}.",
+  "session.costNotice.model":
+    "Zmiana modelu: następne żądanie nie użyje pamięci podręcznej ({{tokens}} tokenów, około {{cost}}).",
+  "session.costNotice.variant":
+    "Zmiana rozumowania: następne żądanie nie użyje pamięci podręcznej ({{tokens}} tokenów, około {{cost}}).",
+  "session.costNotice.idle":
+    "Bezczynność {{minutes}} min: następne żądanie może nie użyć pamięci podręcznej ({{tokens}} tokenów, około {{cost}}).",
+  "session.costNotice.dismiss": "Zamknij powiadomienie o koszcie",
+  "settings.autoApprove.requestCost.title": "Powiadomienie o koszcie żądania",
+  "settings.autoApprove.requestCost.description":
+    "Pokaż krótkie powiadomienie, gdy jedno żądanie do modelu kosztuje co najmniej tę kwotę w USD lub będzie ją kosztować, bo zmiana modelu lub rozumowania pomija pamięć podręczną. 0 wyłącza.",
+  "settings.autoApprove.cacheIdle.title": "Powiadomienie o bezczynnej pamięci podręcznej",
+  "settings.autoApprove.cacheIdle.description":
+    "Ostrzegaj przed następnym żądaniem po tylu minutach bezczynności, bo pamięć podręczna promptu mogła wygasnąć. Ostrzeżenie pojawia się tylko, gdy szacunek osiąga kwotę powiadomienia o koszcie żądania. 0 wyłącza.",
 
   "time.today": "Dzisiaj",
   "time.yesterday": "Wczoraj",

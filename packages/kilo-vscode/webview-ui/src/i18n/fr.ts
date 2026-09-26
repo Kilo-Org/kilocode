@@ -801,6 +801,21 @@ export const dict = {
   "context.usage.sessionCost": "Coût de la session",
   "context.usage.olderSessions": "{{count}} sessions précédentes",
   "context.stats.thisSession": "Cette session",
+  "session.costNotice.request": "La dernière requête a coûté {{cost}}.",
+  "session.costNotice.subagent": "Une requête de sous-agent a coûté {{cost}}.",
+  "session.costNotice.model":
+    "Changement de modèle : la prochaine requête n'utilise pas le cache ({{tokens}} jetons, environ {{cost}}).",
+  "session.costNotice.variant":
+    "Changement de raisonnement : la prochaine requête n'utilise pas le cache ({{tokens}} jetons, environ {{cost}}).",
+  "session.costNotice.idle":
+    "Inactif depuis {{minutes}} min : la prochaine requête risque de ne pas utiliser le cache ({{tokens}} jetons, environ {{cost}}).",
+  "session.costNotice.dismiss": "Ignorer l'avis de coût",
+  "settings.autoApprove.requestCost.title": "Avis de coût par requête",
+  "settings.autoApprove.requestCost.description":
+    "Afficher un bref avis lorsqu'une requête au modèle coûte au moins ce montant en USD, ou le coûtera car un changement de modèle ou de raisonnement contourne le cache. 0 le désactive.",
+  "settings.autoApprove.cacheIdle.title": "Avis de cache inactif",
+  "settings.autoApprove.cacheIdle.description":
+    "Avertir avant la prochaine requête après ce nombre de minutes d'inactivité, car le cache du prompt a peut-être expiré. L'avertissement s'affiche seulement si l'estimation atteint le montant de l'avis de coût de requête. 0 le désactive.",
 
   "time.today": "Aujourd'hui",
   "time.yesterday": "Hier",

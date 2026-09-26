@@ -781,6 +781,19 @@ export const dict = {
   "context.usage.sessionCost": "세션 비용",
   "context.usage.olderSessions": "{{count}}개의 이전 세션",
   "context.stats.thisSession": "이 세션",
+  "session.costNotice.request": "마지막 요청 비용은 {{cost}}입니다.",
+  "session.costNotice.subagent": "서브에이전트 요청 비용은 {{cost}}입니다.",
+  "session.costNotice.model": "모델 변경: 다음 요청은 캐시를 사용하지 않습니다 ({{tokens}} 토큰, 약 {{cost}}).",
+  "session.costNotice.variant": "추론 변경: 다음 요청은 캐시를 사용하지 않습니다 ({{tokens}} 토큰, 약 {{cost}}).",
+  "session.costNotice.idle":
+    "{{minutes}}분 유휴: 다음 요청은 캐시를 사용하지 못할 수 있습니다 ({{tokens}} 토큰, 약 {{cost}}).",
+  "session.costNotice.dismiss": "비용 알림 닫기",
+  "settings.autoApprove.requestCost.title": "요청 비용 알림",
+  "settings.autoApprove.requestCost.description":
+    "한 번의 모델 요청 비용이 이 USD 금액 이상이거나, 모델 또는 추론 변경으로 캐시를 건너뛰어 그만큼 들 예정일 때 짧은 알림을 표시합니다. 0이면 사용 안 함.",
+  "settings.autoApprove.cacheIdle.title": "캐시 유휴 알림",
+  "settings.autoApprove.cacheIdle.description":
+    "이 시간(분) 동안 유휴 상태이면 프롬프트 캐시가 만료되었을 수 있으므로 다음 요청 전에 경고합니다. 예상 비용이 요청 비용 알림 금액에 도달할 때만 표시됩니다. 0이면 사용 안 함.",
 
   "time.today": "오늘",
   "time.yesterday": "어제",

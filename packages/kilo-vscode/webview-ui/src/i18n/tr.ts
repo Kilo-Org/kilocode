@@ -776,6 +776,21 @@ export const dict = {
   "context.usage.sessionCost": "Oturum maliyeti",
   "context.usage.olderSessions": "{{count}} eski oturum",
   "context.stats.thisSession": "Bu oturum",
+  "session.costNotice.request": "Son istek {{cost}} tuttu.",
+  "session.costNotice.subagent": "Bir alt ajan isteği {{cost}} tuttu.",
+  "session.costNotice.model":
+    "Model değişikliği: sonraki istek önbellek kullanmaz ({{tokens}} token, yaklaşık {{cost}}).",
+  "session.costNotice.variant":
+    "Akıl yürütme değişikliği: sonraki istek önbellek kullanmaz ({{tokens}} token, yaklaşık {{cost}}).",
+  "session.costNotice.idle":
+    "{{minutes}} dk boşta: sonraki istek önbellek kullanmayabilir ({{tokens}} token, yaklaşık {{cost}}).",
+  "session.costNotice.dismiss": "Maliyet bildirimini kapat",
+  "settings.autoApprove.requestCost.title": "İstek maliyeti bildirimi",
+  "settings.autoApprove.requestCost.description":
+    "Bir model isteği en az bu USD tutarına mal olduğunda veya model ya da akıl yürütme değişikliği önbelleği atladığı için olacağında kısa bir bildirim göster. 0 kapatır.",
+  "settings.autoApprove.cacheIdle.title": "Boşta önbellek bildirimi",
+  "settings.autoApprove.cacheIdle.description":
+    "Bu kadar dakika boşta kaldıktan sonra sonraki istekten önce uyar, çünkü istem önbelleğinin süresi dolmuş olabilir. Uyarı yalnızca tahmin istek maliyeti bildirimi tutarına ulaştığında görünür. 0 kapatır.",
 
   "time.today": "Bugün",
   "time.yesterday": "Dün",

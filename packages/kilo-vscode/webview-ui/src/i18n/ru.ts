@@ -786,6 +786,20 @@ export const dict = {
   "context.usage.sessionCost": "Стоимость сессии",
   "context.usage.olderSessions": "{{count}} предыдущих сессий",
   "context.stats.thisSession": "Эта сессия",
+  "session.costNotice.request": "Последний запрос стоил {{cost}}.",
+  "session.costNotice.subagent": "Запрос субагента стоил {{cost}}.",
+  "session.costNotice.model": "Смена модели: следующий запрос будет без кэша ({{tokens}} токенов, около {{cost}}).",
+  "session.costNotice.variant":
+    "Изменение рассуждения: следующий запрос будет без кэша ({{tokens}} токенов, около {{cost}}).",
+  "session.costNotice.idle":
+    "Простой {{minutes}} мин: следующий запрос может быть без кэша ({{tokens}} токенов, около {{cost}}).",
+  "session.costNotice.dismiss": "Закрыть уведомление о стоимости",
+  "settings.autoApprove.requestCost.title": "Уведомление о стоимости запроса",
+  "settings.autoApprove.requestCost.description":
+    "Показывать короткое уведомление, когда один запрос к модели стоит не меньше этой суммы в USD или будет стоить, потому что смена модели или рассуждения обходит кэш. 0 отключает.",
+  "settings.autoApprove.cacheIdle.title": "Уведомление о простое кэша",
+  "settings.autoApprove.cacheIdle.description":
+    "Предупреждать перед следующим запросом после стольких минут простоя, потому что кэш промпта мог истечь. Предупреждение появляется, только если оценка достигает суммы уведомления о стоимости запроса. 0 отключает.",
 
   "time.today": "Сегодня",
   "time.yesterday": "Вчера",

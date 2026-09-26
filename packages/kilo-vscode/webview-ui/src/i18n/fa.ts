@@ -767,6 +767,19 @@ export const dict = {
   "context.usage.sessionCost": "هزینه جلسه",
   "context.usage.olderSessions": "{{count}} جلسه قدیمی‌تر",
   "context.stats.thisSession": "این جلسه",
+  "session.costNotice.request": "هزینهٔ آخرین درخواست {{cost}} بود.",
+  "session.costNotice.subagent": "هزینهٔ یک درخواست زیرعامل {{cost}} بود.",
+  "session.costNotice.model": "تغییر مدل: درخواست بعدی بدون حافظه نهان است ({{tokens}} توکن، حدود {{cost}}).",
+  "session.costNotice.variant": "تغییر استدلال: درخواست بعدی بدون حافظه نهان است ({{tokens}} توکن، حدود {{cost}}).",
+  "session.costNotice.idle":
+    "{{minutes}} دقیقه غیرفعال: ممکن است درخواست بعدی بدون حافظه نهان باشد ({{tokens}} توکن، حدود {{cost}}).",
+  "session.costNotice.dismiss": "بستن اعلان هزینه",
+  "settings.autoApprove.requestCost.title": "اعلان هزینهٔ درخواست",
+  "settings.autoApprove.requestCost.description":
+    "وقتی یک درخواست مدل دست‌کم این مبلغ دلاری هزینه دارد، یا به دلیل تغییر مدل یا استدلال که حافظه نهان را دور می‌زند خواهد داشت، یک اعلان کوتاه نشان بده. 0 آن را غیرفعال می‌کند.",
+  "settings.autoApprove.cacheIdle.title": "اعلان حافظه نهان غیرفعال",
+  "settings.autoApprove.cacheIdle.description":
+    "پس از این تعداد دقیقه عدم فعالیت، پیش از درخواست بعدی هشدار بده، چون ممکن است حافظه نهان پرامپت منقضی شده باشد. هشدار فقط وقتی نشان داده می‌شود که برآورد به مبلغ اعلان هزینه درخواست برسد. 0 آن را غیرفعال می‌کند.",
 
   "time.today": "امروز",
   "time.yesterday": "دیروز",
