@@ -59,16 +59,6 @@ When you are signed in with ChatGPT, Kilo reports your Codex quota alongside you
 
 Codex shows its plan and each usage window — for example, a five-hour and a weekly limit — with the percentage used and the reset time. The **Manage** link opens your Codex usage settings at chatgpt.com. If your ChatGPT sign-in has expired, you can reconnect from the provider settings.
 
-When you are signed in on the web, the BYOK page and the personal usage page show a **View and manage your ChatGPT usage** notice with a **Manage usage** action while the account is connected.
-
-## Usage limits
-
-If ChatGPT reports a plan limit for a delegated request, the BYOK card shows **ChatGPT usage limit reached** and asks you to review your usage settings in ChatGPT. **Manage usage** opens your ChatGPT usage settings, and **Buy Kilo credits instead** uses Kilo credits for that model. A per-minute rate limit is handled as a retryable rate limit, not a plan limit.
-
-## Organization shared-services connection
-
-An organization owner or admin can connect a ChatGPT subscription as the organization's shared-services connection on the Organization BYOK page. The connection is stored separately from each member's own connection. Organization-level service requests use it first and fall back to the caller's own connection.
-
 ## Tips and Notes
 
 - **Subscription Required:** You need an active ChatGPT Plus or Pro subscription. This provider won't work with free ChatGPT accounts. [Codex is included](https://developers.openai.com/codex/pricing/) in ChatGPT Plus, Pro, Business, Edu, and Enterprise plans. See [OpenAI's ChatGPT plans](https://chatgpt.com/pricing/) for more information.
