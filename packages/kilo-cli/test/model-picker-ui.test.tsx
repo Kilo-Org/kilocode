@@ -1,13 +1,15 @@
 import { expect, test } from "bun:test"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
-import { fixture } from "./fixture"
+import { fixture, interactiveBun } from "./fixture"
 
-test("native Kilo model picker groups Auto/recommended and retains favorite actions", async () => {
+const bundledBun = interactiveBun()
+
+test.skipIf(!bundledBun)("native Kilo model picker groups Auto/recommended and retains favorite actions", async () => {
   await using input = await fixture()
   const child = Bun.spawn(
     [
-      path.resolve(import.meta.dir, "../dist/interactive/bun"),
+      bundledBun!,
       "--no-env-file",
       "--preload",
       fileURLToPath(import.meta.resolve("@opentui/solid/preload")),

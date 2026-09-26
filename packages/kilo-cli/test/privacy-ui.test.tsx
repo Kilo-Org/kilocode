@@ -1,7 +1,9 @@
 import { expect, test } from "bun:test"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
-import { fixture } from "./fixture"
+import { fixture, interactiveBun } from "./fixture"
+
+const bundledBun = interactiveBun()
 
 function createGatewayMock() {
   return Bun.serve({
@@ -32,15 +34,13 @@ function createGatewayMock() {
   })
 }
 
-test("Kilo TUI privacy persists, hides account labels, and gates profile/team reveal", async () => {
+test.skipIf(!bundledBun)("Kilo TUI privacy persists, hides account labels, and gates profile/team reveal", async () => {
   await using input = await fixture()
-  const bundledBun = path.resolve(import.meta.dir, "../dist/interactive/bun")
-  expect(await Bun.file(bundledBun).exists(), "Build the bundled Bun runtime before the live TUI proof").toBe(true)
   const gateway = createGatewayMock()
   try {
     const child = Bun.spawn(
       [
-        bundledBun,
+        bundledBun!,
         "--no-env-file",
         "--preload",
         fileURLToPath(import.meta.resolve("@opentui/solid/preload")),

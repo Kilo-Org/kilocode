@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test"
 import path from "node:path"
 import { createClient } from "@kilocode/client"
-import { fixture, ready } from "./fixture"
+import { fixture, interactiveKilo2, ready } from "./fixture"
 
 // Subprocess test for the tui-preview cloud CLI verbs. A credential is first
 // seeded into the fixture store through the real device-auth flow against a
@@ -20,7 +20,7 @@ const TOKEN = "fixture-cloud-token"
 const cloudFixture = path.resolve(import.meta.dir, "cloud-fixture.ts")
 // The packaged interactive launcher runs tui-preview.ts with the Solid preload
 // and bundled Bun 1.4, which the source-only tui-preview.ts invocation lacks.
-const kilo2 = path.resolve(import.meta.dir, "../dist/interactive/kilo2")
+const kilo2 = interactiveKilo2()
 
 type Admission = { path: string; body: string; authorization: string | null }
 
@@ -169,7 +169,7 @@ async function runCloud(
   env: Record<string, string>,
   args: string[],
 ) {
-  const child = Bun.spawn([kilo2, ...args], {
+  const child = Bun.spawn([kilo2!, ...args], {
     cwd: input.cwd,
     env: { ...input.env, ...env },
     stdin: "ignore",
@@ -198,7 +198,7 @@ function startRequest(file: string) {
   )
 }
 
-test("cloud CLI start admits through the resolved org and redacts the stream URL", async () => {
+test.skipIf(!kilo2)("cloud CLI start admits through the resolved org and redacts the stream URL", async () => {
   await using input = await fixture()
   const cloud = cloudAgent()
   const gate = gateway(ORG_SELECTED)
@@ -228,7 +228,7 @@ test("cloud CLI start admits through the resolved org and redacts the stream URL
   }
 })
 
-test("cloud CLI send admits and redacts the token", async () => {
+test.skipIf(!kilo2)("cloud CLI send admits and redacts the token", async () => {
   await using input = await fixture()
   const cloud = cloudAgent()
   const gate = gateway(ORG_SELECTED)
@@ -248,7 +248,7 @@ test("cloud CLI send admits and redacts the token", async () => {
   }
 })
 
-test("cloud CLI status projects the assistant payload away", async () => {
+test.skipIf(!kilo2)("cloud CLI status projects the assistant payload away", async () => {
   await using input = await fixture()
   const cloud = cloudAgent()
   const gate = gateway(ORG_SELECTED)
@@ -267,7 +267,7 @@ test("cloud CLI status projects the assistant payload away", async () => {
   }
 })
 
-test("cloud CLI result maps a completed status to exit code 0", async () => {
+test.skipIf(!kilo2)("cloud CLI result maps a completed status to exit code 0", async () => {
   await using input = await fixture()
   const cloud = cloudAgent()
   const gate = gateway(ORG_SELECTED)
@@ -283,7 +283,7 @@ test("cloud CLI result maps a completed status to exit code 0", async () => {
   }
 })
 
-test("cloud CLI result maps a failed status to exit code 3", async () => {
+test.skipIf(!kilo2)("cloud CLI result maps a failed status to exit code 3", async () => {
   await using input = await fixture()
   const cloud = cloudAgent()
   const gate = gateway(ORG_SELECTED)
@@ -299,7 +299,7 @@ test("cloud CLI result maps a failed status to exit code 3", async () => {
   }
 })
 
-test("cloud CLI start omits the org field for a personal (null) selection", async () => {
+test.skipIf(!kilo2)("cloud CLI start omits the org field for a personal (null) selection", async () => {
   await using input = await fixture()
   const cloud = cloudAgent()
   const gate = gateway(null)
@@ -318,7 +318,7 @@ test("cloud CLI start omits the org field for a personal (null) selection", asyn
   }
 })
 
-test("cloud CLI fails closed with no seeded credential and never contacts the cloud", async () => {
+test.skipIf(!kilo2)("cloud CLI fails closed with no seeded credential and never contacts the cloud", async () => {
   await using input = await fixture()
   const cloud = cloudAgent()
   const gate = gateway(ORG_SELECTED)

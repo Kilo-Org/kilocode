@@ -131,6 +131,59 @@ export function compiledBinary(directory = testArtifactDir()) {
   return binary
 }
 
+export const KILO_CLI_INTERACTIVE_DIR = "KILO_CLI_INTERACTIVE_DIR"
+
+function interactiveArtifactPath(): string {
+  return process.env[KILO_CLI_INTERACTIVE_DIR] ?? path.resolve(import.meta.dir, "../dist/interactive")
+}
+
+function interactiveMissingMessage(): string {
+  return process.platform === "win32"
+    ? "the interactive launcher is unsupported on Windows (`bun run build:tui` cannot produce it there)"
+    : `the interactive runtime is missing at ${interactiveArtifactPath()}; run \`bun run build:tui\` then \`bun run test:interactive\``
+}
+
+let interactiveBannerShown = false
+
+function announceInteractiveMissing(): void {
+  if (interactiveBannerShown) return
+  interactiveBannerShown = true
+  console.warn(
+    `Kilo interactive proofs are skipped: ${interactiveMissingMessage()}. ` +
+      `The gated set is enforced by test/interactive-artifact-registry.test.ts.`,
+  )
+}
+
+export function interactiveArtifactDir(): string | undefined {
+  if (process.platform === "win32") return undefined
+  const directory = interactiveArtifactPath()
+  return existsSync(directory) ? directory : undefined
+}
+
+function interactiveBinary(name: "bun" | "kilo2"): string | undefined {
+  const directory = interactiveArtifactDir()
+  if (!directory) return undefined
+  const binary = path.join(directory, name)
+  return existsSync(binary) ? binary : undefined
+}
+
+export function interactiveBun(): string | undefined {
+  const binary = interactiveBinary("bun")
+  if (!binary) announceInteractiveMissing()
+  return binary
+}
+
+export function interactiveKilo2(): string | undefined {
+  const binary = interactiveBinary("kilo2")
+  if (!binary) announceInteractiveMissing()
+  return binary
+}
+
+export function interactiveSkipReason(): string | undefined {
+  if (interactiveArtifactDir() && interactiveBinary("bun") && interactiveBinary("kilo2")) return undefined
+  return interactiveMissingMessage()
+}
+
 type Input = { cwd: string; env: NodeJS.ProcessEnv; binary?: string }
 
 export function start(input: Input, args: string[], binary = input.binary) {

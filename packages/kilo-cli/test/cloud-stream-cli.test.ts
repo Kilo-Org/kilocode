@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test"
 import path from "node:path"
 import { createClient } from "@kilocode/client"
-import { fixture, ready } from "./fixture"
+import { fixture, interactiveKilo2, ready } from "./fixture"
 
 // Real loopback WebSocket streaming tests for the `cloud start --stream` CLI.
 // A credential is seeded through the real device-auth flow; the cloud-agent
@@ -15,7 +15,7 @@ const SESSION = "agent_12345678-1234-1234-1234-123456789abc"
 const TOKEN = "fixture-cloud-token"
 
 const cloudFixture = path.resolve(import.meta.dir, "cloud-fixture.ts")
-const kilo2 = path.resolve(import.meta.dir, "../dist/interactive/kilo2")
+const kilo2 = interactiveKilo2()
 
 type Admission = { path: string; body: string; authorization: string | null }
 
@@ -161,7 +161,7 @@ async function runCloud(
   args: string[],
   options: { signal?: AbortSignal; timeout?: number } = {},
 ) {
-  const child = Bun.spawn([kilo2, ...args], {
+  const child = Bun.spawn([kilo2!, ...args], {
     cwd: input.cwd,
     env: { ...input.env, ...env },
     stdin: "ignore",
@@ -195,7 +195,7 @@ async function writeStart(input: Awaited<ReturnType<typeof fixture>>) {
 
 const FRAMES = ['{"event":"running"}', '{"streamEventType":"complete","data":{"exitCode":0}}']
 
-test("cloud start --stream prints the admission then streams provided-URL frames", async () => {
+test.skipIf(!kilo2)("cloud start --stream prints the admission then streams provided-URL frames", async () => {
   await using input = await fixture()
   const cloud = cloudAgent(FRAMES)
   const gate = gateway()
@@ -228,7 +228,7 @@ test("cloud start --stream prints the admission then streams provided-URL frames
   }
 })
 
-test("cloud start --stream falls back to a fetched stream ticket", async () => {
+test.skipIf(!kilo2)("cloud start --stream falls back to a fetched stream ticket", async () => {
   await using input = await fixture()
   // No provided streamUrl in the admission -> the ticket fallback runs.
   const cloud = cloudAgent(FRAMES, { providedUrl: false })
@@ -263,7 +263,7 @@ test("cloud start --stream falls back to a fetched stream ticket", async () => {
   }
 })
 
-test("cloud start --stream emits a non-fatal error notice when the socket fails", async () => {
+test.skipIf(!kilo2)("cloud start --stream emits a non-fatal error notice when the socket fails", async () => {
   await using input = await fixture()
   // Serve the admission and a WebSocket endpoint on one loopback origin, but
   // the socket closes abnormally (1006-style) as soon as it opens, so the
@@ -331,7 +331,7 @@ test("cloud start --stream emits a non-fatal error notice when the socket fails"
   }
 })
 
-test("cloud start --stream aborts the live socket on SIGINT", async () => {
+test.skipIf(!kilo2)("cloud start --stream aborts the live socket on SIGINT", async () => {
   await using input = await fixture()
   // A socket that streams a frame then stays open (no complete, no close).
   const hanging = Bun.serve({
