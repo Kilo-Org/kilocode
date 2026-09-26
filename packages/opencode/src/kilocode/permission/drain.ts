@@ -1,6 +1,7 @@
 import { Deferred, Effect } from "effect"
 import { Permission } from "@/permission"
 import { ConfigProtection } from "@/kilocode/permission/config-paths"
+import { SecurityKeys } from "@/kilocode/security/keys"
 
 interface PendingEntry {
   info: Permission.Request
@@ -36,6 +37,8 @@ export function drainCovered(
       // Never auto-resolve a skill shell batch; it must get an explicit reply.
       if (entry.info.metadata?.["skillShell"] === true) continue
       if (entry.info.metadata?.["sandboxEscalation"] === true) continue
+      // A security hard ask needs a human answer for this exact request.
+      if (entry.info.metadata?.[SecurityKeys.ASK] === true) continue
       const actions = entry.info.patterns.map((pattern: string) => {
         const rule = skill
           ? Permission.evaluate(entry.info.permission, skill, approved)

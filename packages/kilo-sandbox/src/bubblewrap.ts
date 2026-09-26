@@ -105,15 +105,20 @@ function code(cause: unknown) {
 }
 
 // Lists one directory during the deny-name scan. A directory that vanished mid-scan
-// (ENOENT/ENOTDIR) is treated as empty, and an unreadable directory (EACCES/EPERM)
-// yields undefined so the caller can protect it instead of failing the whole scan.
+// (ENOENT/ENOTDIR) is treated as empty, and one that cannot be enumerated yields undefined so the
+// caller can protect it instead of failing the whole scan.
+//
+// EINVAL belongs in that second group, and on Linux it is not a corner case: the allowed-read set
+// names `/proc`, and `scandir` on a `/proc/<pid>/net` entry returns EINVAL. Letting it through
+// aborted the scan, so no profile could be built and the extension host refused to start at all —
+// on every Linux machine, while macOS never saw it.
 function list(dir: string) {
   try {
     return readdirSync(dir, { withFileTypes: true })
   } catch (cause) {
     const tag = code(cause)
     if (tag === "ENOENT" || tag === "ENOTDIR") return []
-    if (tag === "EACCES" || tag === "EPERM") return undefined
+    if (tag === "EACCES" || tag === "EPERM" || tag === "EINVAL") return undefined
     throw cause
   }
 }
@@ -160,6 +165,38 @@ function protectedPaths(profile: Profile, allow: ReadonlyArray<PathRule>) {
   return [...found].sort((a, b) => a.length - b.length)
 }
 
+/**
+ * Read confinement. Without `allowRead` the whole filesystem is bound read-only, which is what an
+ * ordinary session uses. With it, the root is a tmpfs and only the listed paths are bound in, so a
+ * path that was never bound does not exist for the process at all — symlinks out of an allowed
+ * subtree included, because the bind is what makes a path visible, not its name.
+ *
+ * Paths that must stay hidden inside an allowed subtree are covered afterwards: a directory with an
+ * empty tmpfs, a file with `/dev/null`.
+ */
+function readable(profile: Profile, writable: ReadonlyArray<PathRule>) {
+  const rules = profile.filesystem.allowRead
+  if (!rules) return { mounts: ["--ro-bind", "/", "/"], hidden: [] as Array<string> }
+  const mounts = ["--tmpfs", "/"]
+  const seen = new Set<string>()
+  for (const rule of rules) {
+    if (!existsSync(rule.path) || seen.has(rule.path)) continue
+    seen.add(rule.path)
+    mounts.push("--ro-bind", rule.path, rule.path)
+  }
+  const hide = new Set((profile.filesystem.denyRead ?? []).filter((rule) => existsSync(rule.path)).map((r) => r.path))
+  const names = new Set(profile.filesystem.denyNames)
+  if (names.size > 0) {
+    for (const rule of rules) {
+      if (rule.kind === "subtree" && existsSync(rule.path)) scan(rule.path, names, hide)
+    }
+    for (const rule of writable) {
+      if (rule.kind === "subtree" && existsSync(rule.path)) scan(rule.path, names, hide)
+    }
+  }
+  return { mounts, hidden: [...hide].sort((a, b) => a.length - b.length) }
+}
+
 export function generate(
   profile: Profile,
   launch: Launch,
@@ -177,6 +214,7 @@ export function generate(
   if (worker) validate(allow, worker.path, mounts)
   if (filter) validate(allow, filter, mounts)
   if (worker) validate(allow, process.execPath, mounts)
+  const reads = readable(profile, allow)
   const args = [
     "--unshare-user",
     "--disable-userns",
@@ -185,15 +223,17 @@ export function generate(
     ...(profile.network.mode === "proxy" ? ["--cap-add", "cap_sys_admin"] : []),
     "--die-with-parent",
     "--new-session",
-    "--ro-bind",
-    "/",
-    "/",
+    ...reads.mounts,
     "--dev",
     "/dev",
   ]
 
   for (const rule of allow) args.push("--bind", rule.path, rule.path)
   for (const target of protectedPaths(profile, allow)) args.push("--ro-bind", target, target)
+  for (const target of reads.hidden) {
+    if (statSync(target).isDirectory()) args.push("--tmpfs", target)
+    else args.push("--ro-bind", "/dev/null", target)
+  }
   if (proxy?.socket) args.push("--ro-bind", proxy.socket, proxy.socket)
   args.push("--proc", "/proc")
   if (launch.cwd) args.push("--chdir", launch.cwd)
@@ -281,7 +321,8 @@ function select(): Selection {
     const executable = resolve(candidate.executable, candidate.expected)
     if (!executable) continue
     const failure = probe(executable)
-    if (!failure) return { executable, support: { available: true } satisfies Support, network: undefined, proxy: undefined }
+    if (!failure)
+      return { executable, support: { available: true } satisfies Support, network: undefined, proxy: undefined }
     failures.push(failure)
   }
 
@@ -314,7 +355,8 @@ function selection(): Selection {
 
 function support(network?: Profile["network"]): Support {
   const selected = selection()
-  if (!selected.support.available || !network || network.mode === "allow" || !selected.executable) return selected.support
+  if (!selected.support.available || !network || network.mode === "allow" || !selected.executable)
+    return selected.support
   if (network?.mode === "proxy" && selected.proxy) return selected.proxy
   if (network?.mode === "deny" && selected.network) return selected.network
   const failure = probe(selected.executable, true)
@@ -322,8 +364,7 @@ function support(network?: Profile["network"]): Support {
     const value = { available: false, reason: failure }
     if (network?.mode === "proxy") selected.proxy = value
     else selected.network = value
-  }
-  else if (network?.mode === "proxy") {
+  } else if (network?.mode === "proxy") {
     const worker = relay().path
     const filter = seccomp()
     const missing = !existsSync(worker)
@@ -334,7 +375,10 @@ function support(network?: Profile["network"]): Support {
           ? filter
           : undefined
     selected.proxy = missing
-      ? { available: false, reason: `Linux sandbox proxy dependency is unavailable: ${missing ?? "unsupported architecture"}` }
+      ? {
+          available: false,
+          reason: `Linux sandbox proxy dependency is unavailable: ${missing ?? "unsupported architecture"}`,
+        }
       : { available: true }
   } else selected.network = { available: true }
   return network?.mode === "proxy" ? selected.proxy! : selected.network!

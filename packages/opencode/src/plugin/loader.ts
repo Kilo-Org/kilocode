@@ -53,7 +53,7 @@ export namespace PluginLoader {
     error?: (
       candidate: Candidate,
       retry: boolean,
-      stage: "install" | "entry" | "compatibility" | "load",
+      stage: "install" | "entry" | "compatibility" | "load" | "trust", // kilocode_change - trust boundary
       error: unknown,
       resolved?: Resolved,
     ) => void
@@ -155,6 +155,7 @@ export namespace PluginLoader {
     finish: ((load: Loaded, origin: ConfigPlugin.Origin, retry: boolean) => Promise<R | undefined>) | undefined,
     missing: ((value: Missing, origin: ConfigPlugin.Origin, retry: boolean) => Promise<R | undefined>) | undefined,
     report: Report | undefined,
+    input_trust?: (resolved: Resolved, origin: ConfigPlugin.Origin) => boolean, // kilocode_change
   ): Promise<AttemptResult<R>> {
     const plan = candidate.plan
     const filePlugin = pluginSource(plan.spec) === "file"
@@ -181,6 +182,19 @@ export namespace PluginLoader {
       return { retry: filePlugin && isRetryableResolveError(resolved.stage, resolved.error) }
     }
 
+    // kilocode_change start - `load` evaluates the module, so a repository-controlled
+    // plugin gets host authority right here. The trust decision has to sit between resolve and import.
+    if (input_trust && !input_trust(resolved.value, candidate.origin)) {
+      report?.error?.(
+        candidate,
+        retry,
+        "trust",
+        new Error("blocked by the executable-code trust boundary"),
+        resolved.value,
+      )
+      return { retry: false }
+    }
+    // kilocode_change end
     const loaded = await load(resolved.value)
     if (!loaded.ok) {
       report?.error?.(candidate, retry, "load", loaded.error, resolved.value)
@@ -201,6 +215,10 @@ export namespace PluginLoader {
     finish?: (load: Loaded, origin: ConfigPlugin.Origin, retry: boolean) => Promise<R | undefined>
     missing?: (value: Missing, origin: ConfigPlugin.Origin, retry: boolean) => Promise<R | undefined>
     report?: Report
+    // kilocode_change start - called with the resolved entry *before* it is
+    // imported. Returning false means the module is never evaluated.
+    trust?: (resolved: Resolved, origin: ConfigPlugin.Origin) => boolean
+    // kilocode_change end
   }
 
   // Resolve and load all configured plugins in parallel.
@@ -212,7 +230,7 @@ export namespace PluginLoader {
     const candidates = input.items.map((origin) => ({ origin, plan: plan(origin.spec) }))
     const list: Array<Promise<AttemptResult<R>>> = []
     for (const candidate of candidates) {
-      list.push(attempt(candidate, input.kind, false, input.finish, input.missing, input.report))
+      list.push(attempt(candidate, input.kind, false, input.finish, input.missing, input.report, input.trust)) // kilocode_change
     }
     const out = await Promise.all(list)
     if (input.wait) {
@@ -228,7 +246,7 @@ export namespace PluginLoader {
         if (!candidate || pluginSource(candidate.plan.spec) !== "file") continue
         deps ??= input.wait()
         await deps
-        out[i] = await attempt(candidate, input.kind, true, input.finish, input.missing, input.report)
+        out[i] = await attempt(candidate, input.kind, true, input.finish, input.missing, input.report, input.trust) // kilocode_change
       }
     }
 

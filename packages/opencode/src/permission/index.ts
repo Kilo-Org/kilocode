@@ -19,6 +19,7 @@ import { drainCovered } from "@/kilocode/permission/drain"
 import { ReadPermission } from "@/kilocode/permission/read"
 import { AgentManagerPermission } from "@/kilocode/permission/agent-manager" // kilocode_change
 import { ExternalDirectoryPermission } from "@/kilocode/permission/external-directory"
+import { SecurityKeys } from "@/kilocode/security/keys"
 // kilocode_change end
 
 export const Event = PermissionV1.Event
@@ -147,6 +148,7 @@ function covered(entry: PendingEntry, approved: Ruleset, local: Ruleset) {
   if (ConfigProtection.isRequest(entry.info)) return false
   if (entry.info.metadata?.["skillShell"] === true) return false // kilocode_change - skill batch needs an explicit reply
   if (entry.info.metadata?.["sandboxEscalation"] === true) return false // kilocode_change - host access needs an explicit reply
+  if (entry.info.metadata?.[SecurityKeys.ASK] === true) return false // kilocode_change - security hard ask needs an explicit reply
   return entry.info.patterns.every((pattern) => {
     if (veto(entry.info.permission, pattern, entry.hardRuleset)) return false
     return resolve(entry.info.permission, pattern, entry.ruleset, approved, local).action === "allow"
@@ -213,7 +215,10 @@ const layer = Layer.effect(
         : false
       // kilocode_change end
 
-      const forceAsk = request.metadata?.["skillShell"] === true || request.metadata?.["sandboxEscalation"] === true // kilocode_change
+      const forceAsk =
+        request.metadata?.["skillShell"] === true ||
+        request.metadata?.["sandboxEscalation"] === true ||
+        request.metadata?.[SecurityKeys.ASK] === true // kilocode_change - security hard ask ignores allow rules
       for (const pattern of request.patterns) {
         const rule = resolve(request.permission, pattern, ruleset, approved, local) // kilocode_change — include session-scoped rules
         yield* Effect.logInfo("evaluated", { permission: request.permission, pattern, action: rule })
@@ -293,7 +298,9 @@ const layer = Layer.effect(
       // Log rather than fail silently: a genuine human client sets `interactive`, so a refused reply here
       // means an auto-approver tried to answer — the request intentionally stays pending for a human.
       if (
-        (existing.info.metadata?.["skillShell"] === true || existing.info.metadata?.["sandboxEscalation"] === true) &&
+        (existing.info.metadata?.["skillShell"] === true ||
+          existing.info.metadata?.["sandboxEscalation"] === true ||
+          existing.info.metadata?.[SecurityKeys.ASK] === true) &&
         input.reply !== "reject" &&
         input.interactive !== true
       ) {
