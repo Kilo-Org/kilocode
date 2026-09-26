@@ -1,6 +1,9 @@
 import { afterEach, describe, expect, it, spyOn } from "bun:test"
+import * as fs from "node:fs"
+import * as os from "node:os"
+import * as path from "node:path"
 import * as vscode from "vscode"
-import { openFileInEditor, openRelativeFile } from "../../src/review-utils"
+import { openDocumentFile, openFileInEditor, openRelativeFile } from "../../src/review-utils"
 
 const execute = spyOn(vscode.commands, "executeCommand")
 
@@ -32,11 +35,38 @@ describe("openRelativeFile", () => {
   it("resolves diff paths from the selected repository", () => {
     openRelativeFile("/repo/app_alpha", "README.md")
 
-    expect((execute.mock.calls[0]?.[1] as vscode.Uri).fsPath).toBe("/repo/app_alpha/README.md")
+    expect((execute.mock.calls[0]?.[1] as vscode.Uri).fsPath).toBe(path.resolve("/repo/app_alpha", "README.md"))
   })
 
   it("rejects paths outside the selected repository", () => {
     openRelativeFile("/repo/app_alpha", "../app_beta/README.md")
+
+    expect(execute).not.toHaveBeenCalled()
+  })
+})
+
+describe("openDocumentFile", () => {
+  it("opens an absolute path inside the document worktree", () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "kilo-document-open-"))
+    const file = path.join(root, "README.md")
+    fs.writeFileSync(file, "# README\n")
+
+    openDocumentFile(root, file, 7, 3)
+
+    expect(execute).toHaveBeenCalledTimes(1)
+    expect((execute.mock.calls[0]?.[1] as vscode.Uri).fsPath).toBe(file)
+    const options = execute.mock.calls[0]?.[2] as vscode.TextDocumentShowOptions
+    expect(options.selection?.start.line).toBe(6)
+    expect(options.selection?.start.character).toBe(2)
+  })
+
+  it("rejects an absolute path outside the document worktree", () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "kilo-document-open-"))
+    const other = fs.mkdtempSync(path.join(os.tmpdir(), "kilo-document-other-"))
+    const file = path.join(other, "outside.md")
+    fs.writeFileSync(file, "outside")
+
+    openDocumentFile(root, file)
 
     expect(execute).not.toHaveBeenCalled()
   })
