@@ -1834,3 +1834,56 @@ handoff; CLI and TUI typechecks pass. Broader native tab coverage: 64 pass, two
 shared-storage timeout failures. See
 [Plan parity notes](../technical-notes/baseline/plan-v2-parity.md) for scope and
 limitations. No capability percentage changed, no live session restart, no commit.
+
+## Self-sufficient CLI test harness — 2026-09-24
+
+`packages/kilo-cli` `bun run test` now exits cleanly in a checkout without
+`dist/interactive`: the live interactive/TUI proofs skip with a named reason
+instead of hard-asserting, silently returning, or crashing `ENOENT`.
+
+Approach: skip + opt-in (plan "A refined"). `test/fixture.ts` gained
+`interactiveArtifactDir()`, `interactiveBun()`, `interactiveKilo2()`, and
+`interactiveSkipReason()`, resolving the artifact directory from
+`KILO_CLI_INTERACTIVE_DIR` (default `dist/interactive`). Fourteen gated files now
+use `test.skipIf(!binary)` (28 tests total); the two former `console.warn`+`return`
+silent skips and the three hard `expect(...).toBe(true)` gates are gone. A
+one-time banner names the missing prerequisite once per run. A new
+`test/interactive-artifact-registry.test.ts` scans the tree and fails the default
+run if the gated set drifts. A package-only `test:interactive` script verifies the
+runtime and delegates to the unchanged `script/test.ts`; it fails loudly when the
+runtime is absent and does not build it.
+
+Why this differs from v1: `main` has no `packages/kilo-cli`; v1's
+`packages/opencode` harness auto-builds a single `Bun.build` cheaply (with a
+`KILO_TEST_CLI_PATH` override). v2's `build-tui.ts` copies a Bun >= 1.4 runtime and
+builds an ~800-closure portable bundle plus the ACP bridge, is platform-sensitive,
+and throws on Windows, so it cannot be a mandatory default. `KILO_CLI_INTERACTIVE_DIR`
+is the direct analog of v1's `KILO_TEST_CLI_PATH`.
+
+CI rationale: there is no `@kilocode/cli#test` entry in `turbo.json`, so
+`@kilocode/cli` runs its package `bun run test` -> `script/test.ts`, which builds
+only the admission-only artifact + ACP, never `dist/interactive`; the interactive
+proofs skip in CI. Guardrails forbid editing `.github/workflows/*`/`turbo.json` and
+Windows cannot build the launcher. Net: the interactive proofs run developer-local
+only (`bun run build:tui` then `bun run test:interactive`) and skip in CI with a
+named reason. This matches the spec, which lists CI live-proof coverage as out of
+scope.
+
+Repoint audit (open question #2): all fourteen files are genuinely interactive;
+none can be repointed to the admission-only `compiledBinary()` (that binary does not
+execute conversations and lacks the cloud/TUI entrypoints). Recorded per-file:
+interactive-runtime `bun` (agent-policy, privacy-ui, sidebar-account-ui, telemetry,
+project-config, model-picker-ui, gateway-protocol, routed-model-integration,
+routed-model-title-leak, settings-ui, gateway-scope-acceptance, model-prompt-policy)
+and launcher `kilo2` (cloud-cli-subprocess, cloud-stream-cli). `cloud-cli.test.ts`
+and the `seed(...)` paths spawn `cloud-fixture.ts` via `process.execPath` (Bun >= 1.4
+under the runner), so they are not gated.
+
+Verification: `bun typecheck` (tsgo --noEmit) passes. Focused run of the six
+mixed/gated files reports 18 pass / 15 skip / 0 fail with the banner printed once.
+Drift-guard fails when an unregistered gated file exists and passes after revert.
+Full `bun run test` reports 577 pass / 28 skip (all 28 gated tests skip, zero
+gated failures). Pre-existing, unrelated failures remain in `portable.test.ts`
+(`portable-smoke-entry.js` `ReferenceError: settings is not defined` and a 28.7s
+Gateway Auto timeout) and `sidebar-pr.test.tsx` (30s SIGTERM/SIGKILL grace timeout);
+these are out of scope for this change.

@@ -1,13 +1,15 @@
 import { expect, test } from "bun:test"
 import { fileURLToPath } from "node:url"
 import path from "node:path"
-import { fixture } from "./fixture"
+import { fixture, interactiveBun } from "./fixture"
 
-test("launched Kilo gateway records actual Auto response model without changing the request", async () => {
+const bundledBun = interactiveBun()
+
+test.skipIf(!bundledBun)("launched Kilo gateway records actual Auto response model without changing the request", async () => {
   await using input = await fixture()
   const child = Bun.spawn(
     [
-      path.resolve(import.meta.dir, "../dist/interactive/bun"),
+      bundledBun!,
       "--no-env-file",
       "--preload",
       fileURLToPath(import.meta.resolve("@opentui/solid/preload")),
