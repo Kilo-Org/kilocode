@@ -1,7 +1,7 @@
 import { Schema } from "effect"
 import DESCRIPTION from "./shell.txt"
 import { PositiveInt } from "@opencode-ai/core/schema"
-import { Global } from "@opencode-ai/core/global"
+import { sessionTmp } from "@/kilocode/tool/shell-tmp" // kilocode_change
 import { ShellID } from "./id"
 
 const PS = new Set(["powershell", "pwsh"])
@@ -296,7 +296,7 @@ export function render(name: string, platform: NodeJS.Platform, limits: Limits, 
       intro: selected.intro,
       os: platform,
       shell: name,
-      tmp: Global.Path.tmp,
+      tmp: sessionTmp(), // kilocode_change - session-scoped temp dir in cloud sessions
       workdirSection: selected.workdirSection,
       commandSection: selected.commandSection,
       gitCommands: selected.gitCommands,
