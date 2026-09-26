@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import type { Provider, SessionModelUsage } from "../../webview-ui/src/types/messages"
+import type { Message, Provider, SessionModelUsage } from "../../webview-ui/src/types/messages"
 import {
   cacheRate,
   groupModelUsage,
@@ -7,6 +7,7 @@ import {
   isSameSessionTree,
   modelUsageName,
   tokenSummary,
+  turnModel,
 } from "../../webview-ui/src/context/model-usage"
 
 const tokens = { input: 10, output: 2, reasoning: 1, cache: { read: 20, write: 5 } }
@@ -67,5 +68,64 @@ describe("model usage", () => {
     expect(isSameSessionTree("child", "sibling", get)).toBeTrue()
     expect(isSameSessionTree("child", "new", get, "sibling")).toBeTrue()
     expect(isSameSessionTree("child", "other", get)).toBeFalse()
+  })
+})
+
+describe("turn model", () => {
+  const user = (id: string, model: Message["model"]): Message => ({
+    id,
+    sessionID: "child",
+    role: "user",
+    createdAt: "",
+    model,
+  })
+  const reply = (id: string, providerID?: string, modelID?: string, variant?: string): Message => ({
+    id,
+    sessionID: "child",
+    role: "assistant",
+    createdAt: "",
+    providerID,
+    modelID,
+    variant,
+  })
+
+  test("is undefined before the session has a turn", () => {
+    expect(turnModel([])).toBeUndefined()
+  })
+
+  test("reports the model and reasoning variant the latest reply ran with", () => {
+    const messages = [
+      user("u1", { providerID: "anthropic", modelID: "claude-opus-5", variant: "high" }),
+      reply("a1", "anthropic", "claude-opus-5", "high"),
+    ]
+
+    expect(turnModel(messages)).toEqual({ providerID: "anthropic", modelID: "claude-opus-5", variant: "high" })
+  })
+
+  test("follows a task resumed on another model as soon as its turn starts", () => {
+    const messages = [
+      user("u1", { providerID: "anthropic", modelID: "claude-opus-5", variant: "high" }),
+      reply("a1", "anthropic", "claude-opus-5", "high"),
+      user("u2", { providerID: "minimax", modelID: "minimax-m3" }),
+    ]
+
+    expect(turnModel(messages)).toEqual({ providerID: "minimax", modelID: "minimax-m3" })
+  })
+
+  test("treats the default reasoning effort as no variant", () => {
+    expect(turnModel([reply("a1", "anthropic", "claude-opus-5", "default")])).toEqual({
+      providerID: "anthropic",
+      modelID: "claude-opus-5",
+    })
+    expect(turnModel([reply("a1", "anthropic", "claude-opus-5", "")])).toEqual({
+      providerID: "anthropic",
+      modelID: "claude-opus-5",
+    })
+  })
+
+  test("skips a reply that carries no model and falls back to its prompt", () => {
+    const messages = [user("u1", { providerID: "anthropic", modelID: "claude-opus-5", variant: "max" }), reply("a1")]
+
+    expect(turnModel(messages)).toEqual({ providerID: "anthropic", modelID: "claude-opus-5", variant: "max" })
   })
 })

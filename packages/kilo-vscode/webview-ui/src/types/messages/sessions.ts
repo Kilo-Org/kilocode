@@ -18,6 +18,7 @@ export interface Message {
   model?: { providerID: string; modelID: string; variant?: string }
   providerID?: string
   modelID?: string
+  variant?: string
   mode?: string
   parentID?: string
   path?: { cwd: string; root: string }
