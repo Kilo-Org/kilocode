@@ -8,6 +8,7 @@ import type { PollOptions, PollResult } from "../types.js"
  */
 export async function poll<T>(options: PollOptions<T>): Promise<T> {
   const { interval, maxAttempts, pollFn } = options
+  let error: unknown
 
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     // Wait before polling (except first attempt)
@@ -15,7 +16,15 @@ export async function poll<T>(options: PollOptions<T>): Promise<T> {
       await new Promise((resolve) => setTimeout(resolve, interval))
     }
 
-    const result: PollResult<T> = await pollFn()
+    // A thrown poll error (e.g. a transient 5xx or network failure) is not
+    // terminal: remember it and keep polling until attempts run out.
+    const result: PollResult<T> | undefined = await Promise.resolve()
+      .then(pollFn)
+      .catch((err: unknown) => {
+        error = err
+        return undefined
+      })
+    if (!result) continue
 
     // If polling should stop
     if (!result.continue) {
@@ -29,6 +38,7 @@ export async function poll<T>(options: PollOptions<T>): Promise<T> {
     }
   }
 
+  if (error) throw error
   throw new Error("Polling timeout: Maximum attempts reached")
 }
 
