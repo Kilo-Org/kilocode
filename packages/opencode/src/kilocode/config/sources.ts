@@ -153,7 +153,7 @@ export namespace KilocodeConfigSources {
         editable: scope !== "managed" && scope !== "cloud",
       })
 
-      for (const name of KilocodeConfig.ALL_CONFIG_FILES) {
+      for (const name of KilocodeConfig.MERGE_ORDER) {
         const file = path.join(dir, name)
         result.push(await fileSource({ kind: "config-dir-file", scope, label: `Config directory ${name}`, file }))
       }

@@ -227,6 +227,19 @@ describe("config overlay routes", () => {
     })
   })
 
+  test("project overlay uses the loader precedence inside a config directory", async () => {
+    await using project = await tmpdir()
+    await Filesystem.write(path.join(project.path, ".kilo", "kilo.jsonc"), JSON.stringify({ model: "kilo/from-kilo" }))
+    await Filesystem.write(
+      path.join(project.path, ".kilo", "opencode.json"),
+      JSON.stringify({ model: "opencode/from-opencode" }),
+    )
+
+    expect(await KilocodeConfigOverlay.project({ directory: project.path, worktree: project.path })).toMatchObject({
+      model: "kilo/from-kilo",
+    })
+  })
+
   test.each([{ model: { providerID: "anthropic", model: 42 } }, { permissions: {} }])(
     "rejects invalid or unsupported config without changing the file: %j",
     async (value) => {
