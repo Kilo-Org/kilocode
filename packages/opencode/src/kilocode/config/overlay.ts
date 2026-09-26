@@ -229,7 +229,7 @@ export namespace KilocodeConfigOverlay {
   async function projectFiles(input: { directory: string; worktree?: string }) {
     const roots = await Filesystem.findUp([...files], input.directory, input.worktree, { rootFirst: true })
     const found = await Filesystem.findUp([...dirs], input.directory, input.worktree)
-    const nested = found.flatMap((dir) => files.map((file) => path.join(dir, file)))
+    const nested = found.flatMap((dir) => KilocodeConfig.MERGE_ORDER.map((file) => path.join(dir, file)))
     const checks = await Promise.all(
       [...roots, ...nested].map(async (file) => ({ file, exists: await Bun.file(file).exists() })),
     )
