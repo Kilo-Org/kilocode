@@ -47,9 +47,11 @@ import {
   buildTimeoutSignal,
   requestTimeout,
   wrapFirstByte,
+  normalizeToolCallContent,
 } from "@/kilocode/provider/provider"
 import * as ModelsRefresh from "@/kilocode/provider/models-refresh"
 import { bedrockAuth, providerKey, vertexAuth, vertexCredentials, vertexOptions } from "@/kilocode/provider/cloud-auth"
+import * as IfmK2 from "@/kilocode/provider/ifm-k2" // kilocode_change
 // kilocode_change end
 import { ProviderError } from "./error"
 
@@ -1633,6 +1635,7 @@ const layer = Layer.effect(
               baseGenerate,
             )
             const merged = mergeDeep(generated, model.variants ?? {})
+            IfmK2.applyDefaults(parsedModel, model) // kilocode_change - MBZUAI-IFM K2 (OpenAI-compatible) defaults
             // kilocode_change end
             parsedModel.variants = mapValues(
               pickBy(merged, (v): v is NonNullable<typeof v> => !!v && !v.disabled), // kilocode_change - drop null delete sentinels
@@ -1897,6 +1900,7 @@ const layer = Layer.effect(
         options["fetch"] = async (input: any, init?: BunFetchRequestInit) => {
           const fetchFn = customFetch ?? fetch
           const opts = init ?? {}
+          if (model.api.npm.includes("@ai-sdk/openai-compatible")) opts.body = normalizeToolCallContent(opts.body) // kilocode_change
           const chunkAbortCtl = typeof chunkTimeout === "number" && chunkTimeout > 0 ? new AbortController() : undefined
           const timeout = buildTimeoutSignal(options) // kilocode_change - use cancellable timeout for connection phase
           // kilocode_change start - extend the same deadline to the first response byte
