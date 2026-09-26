@@ -151,6 +151,8 @@ class MockCliServer : AutoCloseable {
     @Volatile var sessionsStatus = 200
     @Volatile var recentSessionsStatus = 200
     @Volatile var sessionCreateStatus = 200
+    @Volatile var lastSessionCreatePath: String? = null
+    @Volatile var lastSessionCreateBody: String? = null
     @Volatile var sessionGetStatus = 200
     @Volatile var sessionDeleteStatus = 200
     @Volatile var sessionStatusesStatus = 200
@@ -190,6 +192,17 @@ class MockCliServer : AutoCloseable {
     @Volatile var pendingPermissionsStatus = 200
     @Volatile var pendingQuestions = "[]"
     @Volatile var pendingQuestionsStatus = 200
+
+    // Sandbox REST responses
+    @Volatile var sandboxSupport = """{"available":true}"""
+    @Volatile var sandboxStatus = """{"directory":"/test","enabled":false,"available":true,"version":0}"""
+    @Volatile var sandboxToggle = """{"directory":"/test","enabled":true,"available":true,"version":1}"""
+    @Volatile var sandboxSupportStatus = 200
+    @Volatile var sandboxStatusStatus = 200
+    @Volatile var sandboxToggleStatus = 200
+    @Volatile var lastSandboxSupportPath: String? = null
+    @Volatile var lastSandboxStatusPath: String? = null
+    @Volatile var lastSandboxTogglePath: String? = null
 
     /** Configurable delay for all endpoint responses (ms). 0 = no delay. */
     @Volatile var responseDelay: Long = 0
@@ -525,8 +538,25 @@ class MockCliServer : AutoCloseable {
                     respond(output, pendingPermissionsStatus, pendingPermissions)
                 bare == "/question" && method == "GET" ->
                     respond(output, pendingQuestionsStatus, pendingQuestions)
+                bare == "/sandbox/support" && method == "GET" -> {
+                    lastSandboxSupportPath = path
+                    respond(output, sandboxSupportStatus, sandboxSupport)
+                }
+                bare.matches(Regex("/session/ses_[^/]+/sandbox")) && method == "GET" -> {
+                    lastSandboxStatusPath = path
+                    respond(output, sandboxStatusStatus, sandboxStatus)
+                }
+                bare.matches(Regex("/session/ses_[^/]+/sandbox/toggle")) && method == "POST" -> {
+                    lastSandboxTogglePath = path
+                    sandboxStatus = sandboxToggle
+                    respond(output, sandboxToggleStatus, sandboxToggle)
+                }
                 bare == "/session" && method == "GET" -> respond(output, sessionsStatus, sessions)
-                bare == "/session" && method == "POST" -> respond(output, sessionCreateStatus, sessionCreate)
+                bare == "/session" && method == "POST" -> {
+                    lastSessionCreatePath = path
+                    lastSessionCreateBody = body
+                    respond(output, sessionCreateStatus, sessionCreate)
+                }
                 bare.matches(Regex("/session/ses_[^/]+")) && method == "GET" ->
                     respond(output, sessionGetStatus, sessionCreate)
                 bare.matches(Regex("/session/ses_[^/]+")) && method == "DELETE" ->

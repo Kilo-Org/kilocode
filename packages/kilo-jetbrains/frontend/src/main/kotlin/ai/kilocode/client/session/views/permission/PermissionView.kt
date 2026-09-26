@@ -127,30 +127,35 @@ class PermissionView(
 
         val skillShell = permission.meta.raw["skillShell"] == "true"
         val skill = permission.meta.raw["skill"]
+        val tool = permission.name
+        val sandboxEscalation = tool == "sandbox_escalation"
         setHeader(
-            if (skillShell && !skill.isNullOrBlank())
-                // skill is the untrusted SKILL.md frontmatter name; escape it the same way as
-                // the command list so it can't reorder/repaint the header.
-                KiloBundle.message("session.permission.skillShell.title", escapeControl(skill))
-            else KiloBundle.message("session.permission.title"),
+            when {
+                skillShell && !skill.isNullOrBlank() ->
+                    // skill is the untrusted SKILL.md frontmatter name; escape it the same way as
+                    // the command list so it can't reorder/repaint the header.
+                    KiloBundle.message("session.permission.skillShell.title", escapeControl(skill))
+                sandboxEscalation -> KiloBundle.message("session.permission.sandboxEscalation.title")
+                else -> KiloBundle.message("session.permission.title")
+            },
         )
         syncDescription(description(permission))
 
-        val tool = permission.name
         // A skill-shell bash batch shows the verbatim command list (control-char-escaped so the
         // displayed command can't repaint the line). Its external_directory sibling still shows
-        // directories via resolveTarget; only the header carries the skill attribution.
+        // directories via resolveTarget; only the header carries the skill attribution. A sandbox
+        // escalation always carries the whole normalized command in metadata.command.
         val target = when {
             skillShell && tool == "bash" -> permission.meta.skillCommands.joinToString("\n") { escapeControl(it) }
-            tool == "bash" -> permission.meta.command
+            tool == "bash" || sandboxEscalation -> permission.meta.command
             else -> resolveTarget(permission)
         }
         syncCode(tool, target)
         syncDiffs(permission.meta.fileDiffs)
         responding = permission.state == PermissionRequestState.RESPONDING || permission.state == PermissionRequestState.RESOLVED
-        // Skill-shell approvals are never persisted, so no auto-approve rule toggles even if a
-        // future backend change starts sending candidates for this batch.
-        rules.update(if (skillShell) emptyList() else permission.meta.ruleDecisions, reset = prev != permission.id)
+        // Skill-shell and sandbox-escalation approvals are never persisted, so no auto-approve rule
+        // toggles even if a future backend change starts sending candidates for either.
+        rules.update(if (skillShell || sandboxEscalation) emptyList() else permission.meta.ruleDecisions, reset = prev != permission.id)
         syncState(permission)
         syncPrimaryText()
 
@@ -272,7 +277,7 @@ class PermissionView(
         }
 
         val view = ensureMd()
-        val lang = if (tool == "bash") "bash" else ""
+        val lang = if (tool == "bash" || tool == "sandbox_escalation") "bash" else ""
         val text = fenced(target, lang)
         if (view.markdown() != text) view.set(text)
         applyCodeStyle(view)
@@ -335,10 +340,11 @@ class PermissionView(
             code in 0x202a..0x202e ||
             code in 0x2066..0x2069
 
-    private fun description(permission: Permission): String = if (permission.name == "bash") {
-        permission.meta.raw["description"] ?: toolLabel(permission.name)
-    } else {
-        toolLabel(permission.name)
+    private fun description(permission: Permission): String = when (permission.name) {
+        "bash" -> permission.meta.raw["description"] ?: toolLabel(permission.name)
+        "sandbox_escalation" ->
+            permission.meta.raw["description"] ?: KiloBundle.message("session.permission.sandboxEscalation.description")
+        else -> toolLabel(permission.name)
     }
 
     private fun makeDescription(): JBTextArea {

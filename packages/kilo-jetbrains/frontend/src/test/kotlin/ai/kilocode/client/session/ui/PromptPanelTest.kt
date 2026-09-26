@@ -5,6 +5,7 @@ import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.model.PromptAttachment
+import ai.kilocode.client.session.model.SandboxUiState
 import ai.kilocode.client.session.ui.attachment.AttachmentCard
 import ai.kilocode.client.session.ui.attachment.AttachmentCardItem
 import ai.kilocode.client.session.ui.style.SessionUiStyle
@@ -1637,10 +1638,39 @@ class PromptPanelTest : BasePlatformTestCase() {
         assertTrue(SwingUtilities.isDescendingFrom(auto, panel.shellForTest()))
         assertSame(auto.parent, enhance.parent)
         assertSame(auto.parent, send.parent)
-        assertEquals(2, items.indexOf(enhance) - items.indexOf(auto))
+        // auto -> strut -> hidden sandbox/no gap -> enhance
+        assertEquals(4, items.indexOf(enhance) - items.indexOf(auto))
         assertEquals(4, items.indexOf(send) - items.indexOf(enhance))
         assertEquals(JBUI.scale(1), sep.preferredSize.width)
         assertNotNull(sep.border)
+    }
+
+    fun `test hidden sandbox controls retain read only active status`() {
+        val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> })
+        val state = SandboxUiState.Known(enabled = true, available = true, reason = null, version = 1)
+
+        panel.setSandbox(visible = false, state = state, busy = false)
+        val button = sandboxButton(panel)
+
+        assertTrue(button.isVisible)
+        assertFalse(button.isEnabled)
+        assertEquals(KiloBundle.message("prompt.action.sandbox.enabled.restricted.tooltip"), button.toolTipText)
+    }
+
+    fun `test sandbox pending state disables retained button without rebuilding it`() {
+        val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> })
+        val ready = SandboxUiState.Known(enabled = false, available = true, reason = null, version = 1)
+        val pending = ready.copy(pending = true)
+
+        panel.setSandbox(visible = true, state = ready, busy = false)
+        val button = sandboxButton(panel)
+        val count = button.parent.componentCount
+        panel.setSandbox(visible = true, state = pending, busy = false)
+
+        assertSame(button, sandboxButton(panel))
+        assertEquals(count, button.parent.componentCount)
+        assertFalse(button.isEnabled)
+        assertEquals(KiloBundle.message("prompt.action.sandbox.pending.tooltip"), button.toolTipText)
     }
 
     fun `test enhance button follows connection and busy state`() {
@@ -1784,6 +1814,16 @@ class PromptPanelTest : BasePlatformTestCase() {
     private fun enhanceButton(panel: PromptPanel): JButton {
         val name = KiloBundle.message("prompt.action.enhance")
         return buttons(panel).first { it.accessibleContext.accessibleName == name }
+    }
+
+    private fun sandboxButton(panel: PromptPanel): JButton {
+        val names = setOf(
+            KiloBundle.message("prompt.action.sandbox.enabled.tooltip"),
+            KiloBundle.message("prompt.action.sandbox.enabled.restricted.tooltip"),
+            KiloBundle.message("prompt.action.sandbox.disabled.tooltip"),
+            KiloBundle.message("prompt.action.sandbox.pending.tooltip"),
+        )
+        return buttons(panel).first { it.accessibleContext.accessibleName in names }
     }
 
     private fun buttons(root: java.awt.Component): List<JButton> {

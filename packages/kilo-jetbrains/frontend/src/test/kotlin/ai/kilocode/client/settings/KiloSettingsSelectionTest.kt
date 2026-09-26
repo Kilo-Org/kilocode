@@ -2,6 +2,7 @@ package ai.kilocode.client.settings
 
 import ai.kilocode.client.settings.models.ModelsConfigurable
 import ai.kilocode.client.settings.profile.UserProfileConfigurable
+import ai.kilocode.client.settings.sandbox.SandboxConfigurable
 import com.intellij.ide.util.PropertiesComponent
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 
@@ -35,6 +36,12 @@ class KiloSettingsSelectionTest : BasePlatformTestCase() {
         select(ModelsConfigurable.ID)
 
         assertEquals(ModelsConfigurable.ID, KiloSettingsSelection.target(project))
+    }
+
+    fun `test keeps sandbox child page`() {
+        select(SandboxConfigurable.ID)
+
+        assertEquals(SandboxConfigurable.ID, KiloSettingsSelection.target(project))
     }
 
     private fun select(id: String) {

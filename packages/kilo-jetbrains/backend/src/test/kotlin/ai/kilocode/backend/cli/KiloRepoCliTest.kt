@@ -28,6 +28,13 @@ class KiloRepoCliTest {
         assertTrue(cli.isFile)
         assertEquals("#!/bin/old\n", cli.readText())
         assertTrue(File(cli.parentFile, "kilo-sandbox-mutation-worker.js").isFile)
+        val seccomp = File(cli.parentFile, "kilo-sandbox-seccomp")
+        assertTrue(seccomp.isFile)
+        // Executable bit must be restored on non-Windows the same as `kilo`/`bwrap`, or Linux
+        // allowed_hosts/proxy network mode reports available and then fails to spawn the relay.
+        if (!System.getProperty("os.name").lowercase().contains("windows")) {
+            assertTrue(seccomp.canExecute())
+        }
         assertTrue(File(dir, ".complete").isFile)
 
         val cached = KiloRepoCli.extract(false, dir) { ByteArrayInputStream(next) }
@@ -95,6 +102,9 @@ class KiloRepoCliTest {
             zip.closeEntry()
             zip.putNextEntry(ZipEntry("bin/kilo-sandbox-mutation-worker.js"))
             zip.write("worker".toByteArray())
+            zip.closeEntry()
+            zip.putNextEntry(ZipEntry("bin/kilo-sandbox-seccomp"))
+            zip.write("seccomp".toByteArray())
             zip.closeEntry()
         }
         return out.toByteArray()

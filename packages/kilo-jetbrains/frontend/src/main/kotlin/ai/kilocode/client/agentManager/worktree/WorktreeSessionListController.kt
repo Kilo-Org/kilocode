@@ -1,10 +1,13 @@
 package ai.kilocode.client.agentManager.worktree
 
+import ai.kilocode.client.app.KiloSandboxService
 import ai.kilocode.client.app.KiloSessionService
+import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.telemetry.Telemetry
 import ai.kilocode.client.util.edt
 import ai.kilocode.log.KiloLog
 import ai.kilocode.rpc.dto.SessionDto
+import com.intellij.openapi.components.service
 import com.intellij.ui.CollectionListModel
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import kotlinx.coroutines.CoroutineScope
@@ -19,6 +22,7 @@ class WorktreeSessionListController(
     private val service: KiloSessionService,
     private val dir: String,
     private val cs: CoroutineScope,
+    private val sandbox: KiloSandboxService? = null,
     private val telemetry: (String, Map<String, String>) -> Unit = { event, props -> Telemetry.send(event, props) },
 ) {
     val model = CollectionListModel<SessionDto>()
@@ -71,8 +75,21 @@ class WorktreeSessionListController(
 
     fun create(done: (SessionDto?) -> Unit) {
         cs.launch {
+            val choice = service<PendingWorktreeSandbox>().take(dir)
             try {
-                val session = service.create(dir)
+                // A New Worktree dialog override is consumed exactly once. Later sessions use the
+                // project default, matching ordinary chat.
+                val desired = choice?.enabled
+                    ?: sandbox?.newSessionDefault()
+                    ?: false
+                val session = service.create(dir, desired)
+                if (desired) {
+                    val status = sandbox?.status(session.id, dir)
+                    if (status == null || !status.available || !status.enabled) {
+                        service.deleteSession(session.id, dir)
+                        error(status?.reason ?: KiloBundle.message("session.sandbox.error.unavailable"))
+                    }
+                }
                 edt {
                     val keep = (0 until model.size)
                         .map { model.getElementAt(it) }
@@ -82,6 +99,7 @@ class WorktreeSessionListController(
                     capture("Worktree Session Created", mapOf("sessionId" to session.id))
                 }
             } catch (e: Exception) {
+                choice?.let { edt(it.rollback) }
                 LOG.warn("worktree session create failed dir=$dir message=${e.message}", e)
                 edt { done(null) }
             }

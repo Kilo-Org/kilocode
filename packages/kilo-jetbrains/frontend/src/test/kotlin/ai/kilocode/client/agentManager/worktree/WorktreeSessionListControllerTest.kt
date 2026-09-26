@@ -1,7 +1,10 @@
 package ai.kilocode.client.agentManager.worktree
 
+import ai.kilocode.client.app.KiloSandboxService
 import ai.kilocode.client.app.KiloSessionService
+import ai.kilocode.client.testing.FakeSandboxRpcApi
 import ai.kilocode.client.testing.FakeSessionRpcApi
+import com.intellij.openapi.components.service
 import ai.kilocode.client.testing.FakeSessionRpcApi.ForkCall
 import ai.kilocode.client.testing.TestCoroutines
 import ai.kilocode.client.testing.pumpEdt
@@ -83,6 +86,59 @@ class WorktreeSessionListControllerTest : BasePlatformTestCase() {
         assertEquals("ses_test", created?.id)
         assertEquals("ses_test", controller.model.getElementAt(0).id)
         assertTrue(controller.sessions().any { it.id == "existing" })
+    }
+
+    fun `test create carries the project-scoped sandbox default`() {
+        val sandboxRpc = FakeSandboxRpcApi()
+        sandboxRpc.defaultStatus = { id, path ->
+            ai.kilocode.rpc.dto.SandboxStatusDto(id, path, enabled = true, available = true, version = 1)
+        }
+        val sandbox = KiloSandboxService(project, coroutines.scope, sandboxRpc)
+        sandbox.unsetNewSessionDefault()
+        service<PendingWorktreeSandbox>().take(dir)
+        val withSandbox = WorktreeSessionListController(sessions, dir, coroutines.scope, sandbox = sandbox, telemetry = { _, _ -> })
+
+        withSandbox.create {}
+        drain()
+        assertEquals(listOf<Boolean?>(false), rpc.createSandboxCalls)
+
+        sandbox.setNewSessionDefault(true)
+        withSandbox.create {}
+        drain()
+        assertEquals(listOf(false, true), rpc.createSandboxCalls)
+
+        sandbox.setNewSessionDefault(false)
+        service<PendingWorktreeSandbox>().put(dir, true) {}
+        withSandbox.create {}
+        drain()
+        assertEquals(listOf(false, true, true), rpc.createSandboxCalls)
+        sandbox.unsetNewSessionDefault()
+    }
+
+    fun `test unavailable sandbox deletes session and rolls back new worktree`() {
+        val sandboxRpc = FakeSandboxRpcApi()
+        sandboxRpc.defaultStatus = { id, path ->
+            ai.kilocode.rpc.dto.SandboxStatusDto(
+                id,
+                path,
+                enabled = false,
+                available = false,
+                reason = "missing helper",
+                version = 1,
+            )
+        }
+        val sandbox = KiloSandboxService(project, coroutines.scope, sandboxRpc)
+        var rolledBack = false
+        service<PendingWorktreeSandbox>().put(dir, true) { rolledBack = true }
+        val withSandbox = WorktreeSessionListController(sessions, dir, coroutines.scope, sandbox = sandbox, telemetry = { _, _ -> })
+        var result: SessionDto? = rpc.session
+
+        withSandbox.create { result = it }
+        drain()
+
+        assertNull(result)
+        assertTrue(rolledBack)
+        assertEquals(listOf(rpc.session.id to dir), rpc.deletes)
     }
 
     fun `test fork prepends the forked session and keeps the source row`() {
