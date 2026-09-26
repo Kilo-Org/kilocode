@@ -117,11 +117,38 @@ class KiloBundleLocaleTest : BasePlatformTestCase() {
         }
     }
 
+    fun `test checkpoint settings keys are mirrored in every locale`() {
+        for (locale in LOCALES) {
+            val props = load(locale)
+            for (key in CHECKPOINTS) {
+                val value = props.getProperty(key)
+                assertNotNull("$locale: missing $key", value)
+                assertTrue("$locale: $key is blank", value!!.isNotBlank())
+            }
+        }
+    }
+
     fun `test source bundle literals exist in base bundle`() {
         val base = load("en").stringPropertyNames()
         val missing = bundleKeys().filter { "$" !in it }.filter { it !in base }.sorted()
 
         assertTrue("Missing base bundle keys: $missing", missing.isEmpty())
+    }
+
+    fun `test marketplace skill destinations match the scope in every locale`() {
+        for (locale in LOCALES) {
+            val props = load(locale)
+            assertEquals(
+                "$locale: project skill destination",
+                ".kilo/skills/review/",
+                format(props.getProperty("settings.marketplace.install.destination.skill.project"), "review"),
+            )
+            assertEquals(
+                "$locale: global skill destination",
+                "~/.kilo/skills/review/",
+                format(props.getProperty("settings.marketplace.install.destination.skill.global"), "review"),
+            )
+        }
     }
 
     fun `test source scan keeps every when branch after comma separated conditions`() {
@@ -296,6 +323,37 @@ class KiloBundleLocaleTest : BasePlatformTestCase() {
             "session.header.agents.more.one",
             "session.header.agents.more.accessible.one",
             "session.header.agents.running.one",
+        )
+
+        val CHECKPOINTS = listOf(
+            "revert.banner.workspace.enableSnapshots",
+            "settings.checkpoints.displayName",
+            "settings.checkpoints.description",
+            "settings.checkpoints.enable.title",
+            "settings.checkpoints.enable.description",
+            "settings.checkpoints.save.failed",
+            "settings.checkpoints.saving",
+            "settings.checkpoints.loading",
+            "settings.checkpoints.cleanup.section",
+            "settings.checkpoints.cleanup.description",
+            "settings.checkpoints.cleanup.enable.title",
+            "settings.checkpoints.cleanup.enable.description",
+            "settings.checkpoints.cleanup.days.title",
+            "settings.checkpoints.cleanup.days.description",
+            "settings.checkpoints.cleanup.days.invalid",
+            "settings.checkpoints.cleanup.last",
+            "settings.checkpoints.cleanup.never",
+            "settings.checkpoints.cleanup.run",
+            "settings.checkpoints.cleanup.running",
+            "settings.checkpoints.cleanup.starting",
+            "settings.checkpoints.cleanup.progress.scanning",
+            "settings.checkpoints.cleanup.progress.deleting",
+            "settings.checkpoints.cleanup.status.error",
+            "settings.checkpoints.cleanup.last.details",
+            "settings.checkpoints.cleanup.confirm.title",
+            "settings.checkpoints.cleanup.confirm.message",
+            "settings.checkpoints.cleanup.error.title",
+            "settings.checkpoints.cleanup.error.message",
         )
 
         val RELEASE_7_1_7 = mapOf(

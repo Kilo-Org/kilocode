@@ -101,11 +101,20 @@ export class WorktreePool {
    */
   async claim(branch: string, oid: string, auto = false): Promise<{ path: string; branch: string } | undefined> {
     if (!this.has()) return undefined
-    const exact = this.slots.find((slot) => slot.baseOid === oid)
-    if (exact) return this.take(exact, branch, oid, true, auto)
-    const delta = await this.findDelta(oid)
-    if (!delta) return undefined
-    return this.take(delta, branch, oid, false, auto)
+    // take() discards a slot it cannot use (for example one deleted on disk),
+    // so keep trying the remaining slots, exact base first, then a small delta,
+    // before falling back to a cold worktree add.
+    for (const slot of this.slots.filter((known) => known.baseOid === oid)) {
+      const claimed = await this.take(slot, branch, oid, true, auto)
+      if (claimed) return claimed
+    }
+    for (let left = this.slots.length; left > 0; left--) {
+      const delta = await this.findDelta(oid)
+      if (!delta) return undefined
+      const claimed = await this.take(delta, branch, oid, false, auto)
+      if (claimed) return claimed
+    }
+    return undefined
   }
 
   /** True when at least one slot is available. Pure in-memory check. */
@@ -194,6 +203,15 @@ export class WorktreePool {
     exact: boolean,
     auto: boolean,
   ): Promise<{ path: string; branch: string } | undefined> {
+    // A slot can be deleted on disk outside the pool, for example by a
+    // worktree-hygiene script. simple-git throws when constructed on a missing
+    // directory, so validate the slot before touching it and evict the stale
+    // entry instead of failing the whole creation.
+    if (!fs.existsSync(path.join(slot.path, ".git"))) {
+      this.deps.log(`worktree pool: slot missing on disk, evicting ${slot.path}`)
+      await this.discard(slot)
+      return undefined
+    }
     const git = this.deps.client(slot.path)
     // For generated names, reuse the slot directory name as the branch so the
     // worktree folder and branch keep matching, as they do without the pool.

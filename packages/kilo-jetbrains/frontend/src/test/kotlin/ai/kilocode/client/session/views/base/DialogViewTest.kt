@@ -473,6 +473,46 @@ class DialogViewTest : BasePlatformTestCase() {
         }
     }
 
+    fun `test standard left action uses shared button behavior`() {
+        edt {
+            var clicked = false
+            val panel = DialogView()
+            panel.setLeftAction(DialogView.Action("left", "Left", primary = false) { clicked = true })
+
+            val button = actionButton(panel, "Left")
+            val footer = region(panel, BorderLayout.SOUTH) as JPanel
+            val west = (footer.layout as BorderLayout).getLayoutComponent(BorderLayout.WEST) as Container
+            assertNotNull(find(west, button))
+            assertNull(button.getClientProperty(DarculaButtonUI.DEFAULT_STYLE_KEY))
+            button.doClick(0)
+            assertTrue(clicked)
+
+            val progress = JLabel("progress")
+            panel.setActionLeft(progress)
+            panel.setLeftAction(DialogView.Action("left", "Updated", primary = false) { clicked = true })
+            assertNotNull(find(west, progress))
+            panel.restoreLeftAction()
+            assertEquals("Updated", actionButton(panel, "Updated").text)
+        }
+    }
+
+    fun `test clearing retained left action does not replace temporary content`() {
+        edt {
+            val panel = DialogView()
+            panel.setLeftAction(DialogView.Action("left", "Left", primary = false) {})
+            val progress = JLabel("progress")
+            panel.setActionLeft(progress)
+
+            panel.setLeftAction(null)
+
+            val footer = region(panel, BorderLayout.SOUTH) as JPanel
+            val west = (footer.layout as BorderLayout).getLayoutComponent(BorderLayout.WEST) as Container
+            assertNotNull(find(west, progress))
+            panel.restoreLeftAction()
+            assertNull(region(panel, BorderLayout.SOUTH))
+        }
+    }
+
     fun `test action left component is transparent`() {
         edt {
             val panel = DialogView()

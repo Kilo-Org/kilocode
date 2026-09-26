@@ -50,6 +50,8 @@ const EXCLUDE_PATTERNS = [
   /^https?:\/\/api\.github\.com/,
   /^https?:\/\/api\.githubcopilot\.com/,
   /^https?:\/\/[^/]+\.openai\.azure\.com\/openai/, // kilocode_change
+  /^https?:\/\/cognitiveservices\.azure\.com\//, // kilocode_change - Azure CLI OAuth scope, not a link
+  /^https?:\/\/ai\.azure\.com\//, // kilocode_change - Azure CLI OAuth scope, not a link
   /^https?:\/\/api\.cloudflare\.com/,
   /^https?:\/\/api\.releases\.hashicorp\.com/,
   /^https?:\/\/auth\.openai\.com/,

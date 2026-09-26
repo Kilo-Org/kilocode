@@ -69,7 +69,7 @@ export const dict = {
   "ui.sessionTurn.error.addCredits": "Илова кардани кредитҳо",
   "dialog.usageExceeded.freeTier.title": "Ба ҳадди ройгон расид",
   "dialog.usageExceeded.freeTier.description":
-    "Ба Kilo Go обуна шавед, то дастрасии боэътимод ба беҳтарин моделҳои кушодаасос аз $5 дар як моҳ оғоз шавад.", // kilocode_change
+    "Ба Kilo Go бо нархи $10 дар як моҳ обуна шавед, то ба беҳтарин моделҳои кушодаасос дастрасии боэътимод дошта бошед.", // kilocode_change
   "dialog.usageExceeded.freeTier.actionLabel": "Обуна шавед",
   "dialog.usageExceeded.accountRateLimit.title": "Ба маҳдудияти рафтан расид",
   "dialog.usageExceeded.accountRateLimit.description":

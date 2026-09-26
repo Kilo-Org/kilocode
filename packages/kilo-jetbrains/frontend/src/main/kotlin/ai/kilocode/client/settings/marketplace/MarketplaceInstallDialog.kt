@@ -20,6 +20,7 @@ import com.intellij.ui.TitledSeparator
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.components.JBTextField
+import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
 import java.awt.event.ComponentAdapter
@@ -85,14 +86,17 @@ internal class MarketplaceInstallDialog(
 ) : DialogWrapper(true), MarketplaceInstallDialogHandle {
     private val scope = combo(scopeOptions()).apply { selectedItem = preferred() }
     private val destination = JBLabel().apply { foreground = UIUtil.getContextHelpForeground() }
+    private val included = JBLabel()
     private val method = combo(item.methods.map { it.name }.toTypedArray())
     private val fields = linkedMapOf<String, JBTextField>()
     private val paramsRows = SettingsRows()
 
-    // Install-only parts of the form, hidden for a removal. Declared before [body] on purpose: form()
+    // Scope-dependent parts of the form. Declared before [body] on purpose: form()
     // assigns them, and a property initializer running afterwards would reset them to null.
     private var methodRow: JComponent? = null
     private var security: JComponent? = null
+    private var companions: JComponent? = null
+    private var ownership: JComponent? = null
 
     /**
      * The form, built before [init] runs. Declaring it here rather than inside [createCenterPanel]
@@ -132,6 +136,7 @@ internal class MarketplaceInstallDialog(
         return MarketplaceInstallRequest(target, params)
     }
 
+    @RequiresEdt
     private fun form(): JComponent {
         val panel = BaseContentPanel().apply {
             border = JBUI.Borders.empty(UiStyle.Gap.pad())
@@ -146,6 +151,12 @@ internal class MarketplaceInstallDialog(
                 KiloBundle.message("settings.marketplace.install.destination"),
                 value = destination,
             ))
+            if (item.type == "mcp" && item.skills.isNotEmpty()) {
+                companions = SettingsStackedRow(
+                    KiloBundle.message("settings.marketplace.install.skills"),
+                    value = included,
+                ).also { row(it) }
+            }
             if (item.methods.size > 1) {
                 val pick = SettingsRow(KiloBundle.message("settings.marketplace.install.method"), value = method)
                 methodRow = pick
@@ -158,6 +169,9 @@ internal class MarketplaceInstallDialog(
                 .next(TitledSeparator(KiloBundle.message("settings.marketplace.install.security.title")))
                 .next(note(KiloBundle.message("settings.marketplace.install.security")))
             panel.next(security!!)
+            ownership = note(KiloBundle.message("settings.marketplace.remove.skills"))
+                .apply { isVisible = false }
+                .also { panel.next(it) }
         }
         panel.next(paramsRows)
         return panel
@@ -168,6 +182,7 @@ internal class MarketplaceInstallDialog(
      * than installed. The install-only parts of the form go away with it, since nothing about a
      * parameter or an installation method applies to a removal.
      */
+    @RequiresEdt
     private fun syncAction() {
         val remove = uninstalls()
         title = KiloBundle.message(
@@ -179,6 +194,8 @@ internal class MarketplaceInstallDialog(
         )
         methodRow?.isVisible = !remove
         security?.isVisible = !remove
+        companions?.isVisible = !remove
+        ownership?.isVisible = remove
         syncDestination()
         syncParams()
     }
@@ -243,9 +260,13 @@ internal class MarketplaceInstallDialog(
         return selected.prerequisites.ifEmpty { item.prerequisites }
     }
 
+    @RequiresEdt
     private fun syncDestination() {
         val target = if (scope.selectedItem == globalLabel()) "global" else "project"
         destination.text = destinationText(item.type, target, item.id)
+        included.text = bullets(item.skills.map {
+            KiloBundle.message("settings.marketplace.install.skills.item", it.id, destinationText("skill", target, it.id))
+        })
     }
 
     private fun syncParams() {

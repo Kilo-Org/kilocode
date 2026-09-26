@@ -85,6 +85,11 @@ class MockCliServer : AutoCloseable {
     @Volatile var backgroundJobCancelResult = "true"
     @Volatile var backgroundJobCancelStatus = 200
     @Volatile var backgroundJobPromoteResult = "true"
+    @Volatile var retentionStatus = """{"policy":{"enabled":false,"maxAgeDays":30},"last":null,"progress":null}"""
+    @Volatile var retentionRun = retentionStatus
+    @Volatile var retentionStatusCode = 200
+    @Volatile var retentionRunStatus = 200
+    @Volatile var lastRetentionRunBody: String? = null
     @Volatile var backgroundJobPromoteStatus = 200
     @Volatile var lastBackgroundJobsPath: String? = null
     @Volatile var lastBackgroundJobCancelPath: String? = null
@@ -474,6 +479,12 @@ class MockCliServer : AutoCloseable {
                 bare.matches(Regex("/kilocode/background-jobs/[^/]+/promote")) && method == "POST" -> {
                     lastBackgroundJobPromotePath = path
                     respond(output, backgroundJobPromoteStatus, backgroundJobPromoteResult)
+                }
+                bare == "/kilocode/retention" && method == "GET" ->
+                    respond(output, retentionStatusCode, retentionStatus)
+                bare == "/kilocode/retention/run" && method == "POST" -> {
+                    lastRetentionRunBody = body
+                    respond(output, retentionRunStatus, retentionRun)
                 }
                 bare == "/instance/reload" && method == "POST" -> respond(output, 200, "true")
                 bare == "/command" -> respond(output, commandsStatus, commands)
