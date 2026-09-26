@@ -215,7 +215,13 @@ export class CodeIndexOrchestrator {
       }
 
       const hasExistingData = this.overlay ? false : await this.vectorStore.hasIndexedData()
-      if (!this.overlay && !hasExistingData) {
+      let hasPoints = false
+      if (!this.overlay && !hasExistingData && typeof this.vectorStore.hasPoints === "function") {
+        hasPoints = await this.vectorStore.hasPoints()
+      }
+      const canResume = !this.overlay && !hasExistingData && hasPoints && !collectionCreated
+
+      if (!this.overlay && !hasExistingData && !canResume) {
         if (!collectionCreated) await this.vectorStore.clearCollection()
         await this.cacheManager.clearCacheFile()
         log.info("cleared indexing cache before full scan", {
@@ -226,6 +232,8 @@ export class CodeIndexOrchestrator {
       log.info("checked vector store indexed data", {
         workspacePath: this.workspacePath,
         hasExistingData,
+        hasPoints,
+        canResume,
         collectionCreated,
       })
 
@@ -234,12 +242,16 @@ export class CodeIndexOrchestrator {
         return
       }
 
-      mode = hasExistingData && !collectionCreated ? "incremental" : "full"
+      mode = (hasExistingData || canResume) && !collectionCreated ? "incremental" : "full"
 
       if (mode === "incremental") {
-        log.info("collection has existing data, running incremental scan")
-
-        this.stateManager.setSystemState("Indexing", "Checking for new or modified files...")
+        if (canResume) {
+          log.info("resuming interrupted index, running incremental scan over existing data")
+          this.stateManager.setSystemState("Indexing", "Resuming indexing from previous progress...")
+        } else {
+          log.info("collection has existing data, running incremental scan")
+          this.stateManager.setSystemState("Indexing", "Checking for new or modified files...")
+        }
         await this.vectorStore.markIndexingIncomplete()
         await this._runScan(mode, trigger)
       } else {
