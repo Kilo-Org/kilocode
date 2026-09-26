@@ -13,12 +13,14 @@ import { resolveFileExtensions } from "./shared/supported-extensions"
 export interface IndexingConfigInput {
   enabled: boolean
   embedderProvider: EmbedderProvider
-  vectorStoreProvider?: "lancedb" | "qdrant"
+  vectorStoreProvider?: "lancedb" | "qdrant" | "valkey"
   lancedbVectorStoreDirectory?: string
   modelId?: string
   modelDimension?: number
   qdrantUrl?: string
   qdrantApiKey?: string
+  valkeyUrl?: string
+  valkeyPassword?: string
   searchMinScore?: number
   searchMaxResults?: number
   embeddingBatchSize?: number
@@ -52,7 +54,7 @@ export interface IndexingConfigInput {
 export class CodeIndexConfigManager {
   private enabled = false
   private embedderProvider: EmbedderProvider = "openai"
-  private vectorStoreProvider: "lancedb" | "qdrant" = DEFAULT_VECTOR_STORE
+  private vectorStoreProvider: "lancedb" | "qdrant" | "valkey" = DEFAULT_VECTOR_STORE
   private lancedbVectorStoreDirectory?: string
   private modelId?: string
   private modelDimension?: number
@@ -68,6 +70,8 @@ export class CodeIndexConfigManager {
   private voyageOptions?: { apiKey: string }
   private qdrantUrl?: string = "http://localhost:6333"
   private qdrantApiKey?: string
+  private valkeyUrl?: string
+  private valkeyPassword?: string
   private searchMinScore?: number
   private searchMaxResults?: number
   private embeddingBatchSize?: number
@@ -95,6 +99,8 @@ export class CodeIndexConfigManager {
     this.lancedbVectorStoreDirectory = input.lancedbVectorStoreDirectory
     this.qdrantUrl = input.qdrantUrl ?? "http://localhost:6333"
     this.qdrantApiKey = input.qdrantApiKey
+    this.valkeyUrl = input.valkeyUrl
+    this.valkeyPassword = input.valkeyPassword
     this.searchMinScore = input.searchMinScore
     this.searchMaxResults = input.searchMaxResults
     this.embeddingBatchSize = input.embeddingBatchSize
@@ -157,6 +163,8 @@ export class CodeIndexConfigManager {
       voyageApiKey: this.voyageOptions?.apiKey ?? "",
       qdrantUrl: this.qdrantUrl ?? "",
       qdrantApiKey: this.qdrantApiKey ?? "",
+      valkeyUrl: this.valkeyUrl ?? "",
+      valkeyPassword: this.valkeyPassword ?? "",
       fileExtensions: [...this.fileExtensions],
     }
   }
@@ -164,9 +172,18 @@ export class CodeIndexConfigManager {
   public isConfigured(): boolean {
     const provider = this.embedderProvider
     const qdrant = this.qdrantUrl
-    const isLancedb = this.vectorStoreProvider === "lancedb"
-    // LanceDB doesn't need a qdrant URL; qdrant does
-    const hasStore = isLancedb || !!qdrant
+    // Each vector store backend has its own connectivity requirement
+    let hasStore: boolean
+    switch (this.vectorStoreProvider) {
+      case "lancedb":
+        hasStore = true // LanceDB uses a local directory, no URL needed
+        break
+      case "valkey":
+        hasStore = !!this.valkeyUrl
+        break
+      default:
+        hasStore = !!qdrant
+    }
 
     if (provider === "kilo")
       return !!(this.kiloOptions?.apiKey && this.modelId && this.currentModelDimension && hasStore)
@@ -235,6 +252,13 @@ export class CodeIndexConfigManager {
     if ((prev.qdrantUrl ?? "") !== (this.qdrantUrl ?? "") || (prev.qdrantApiKey ?? "") !== (this.qdrantApiKey ?? ""))
       return true
 
+    // Valkey connection changes
+    if (
+      (prev.valkeyUrl ?? "") !== (this.valkeyUrl ?? "") ||
+      (prev.valkeyPassword ?? "") !== (this.valkeyPassword ?? "")
+    )
+      return true
+
     if (prev.fileExtensions.join("\0") !== this.fileExtensions.join("\0")) return true
 
     if (this.hasEmbeddingProfileChanged(prevProvider, prev.modelId, prev.modelDimension)) return true
@@ -279,6 +303,8 @@ export class CodeIndexConfigManager {
       voyageOptions: this.voyageOptions,
       qdrantUrl: this.qdrantUrl,
       qdrantApiKey: this.qdrantApiKey,
+      valkeyUrl: this.valkeyUrl,
+      valkeyPassword: this.valkeyPassword,
       searchMinScore: this.currentSearchMinScore,
       searchMaxResults: this.currentSearchMaxResults,
       embeddingBatchSize: this.currentEmbeddingBatchSize,
