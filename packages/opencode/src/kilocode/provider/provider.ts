@@ -433,8 +433,9 @@ export function wrapFirstByte(res: Response, ms: number, ctl: AbortController) {
  * environment details as a second text part) as a `content` array. Strict
  * OpenAI-compatible APIs (e.g. MBZUAI IFM, text content only) reject both with
  * a 400 on `messages.content`. Rewrites null to "" on assistant tool-call
- * messages and flattens content arrays to their text parts; every other byte
- * of the body is left untouched.
+ * messages and flattens all-text content arrays to their text; content arrays
+ * carrying non-text parts (e.g. image_url) are passed through so vision
+ * providers keep their images. Every other byte of the body is untouched.
  */
 type ToolCallMsg = { role?: string; content?: unknown; tool_calls?: unknown }
 type ContentPart = { type?: unknown; text?: unknown }
@@ -467,7 +468,7 @@ export function normalizeToolCallBody(body: string): string {
   const msgs = parsed.messages
   if (!Array.isArray(msgs)) return body
   for (const msg of msgs) {
-    if (isContentParts(msg.content)) {
+    if (isContentParts(msg.content) && msg.content.every((part) => part.type === "text")) {
       msg.content = flattenParts(msg.content)
     } else if (msg.role === "assistant" && Array.isArray(msg.tool_calls) && msg.content === null) {
       msg.content = ""
