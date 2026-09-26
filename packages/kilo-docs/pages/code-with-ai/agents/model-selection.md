@@ -103,7 +103,7 @@ One thing that doesn't change: context window size matters for your workflow.
 Check [our provider docs](/docs/ai-providers) for specific context limits on each model.
 
 {% callout type="tip" %}
-**Be thoughtful about Max Tokens settings for thinking models.** Every token you allocate to output takes away from space available to store conversation history. Consider only using high `Max Tokens` / `Max Thinking Tokens` settings with modes like Architect and Debug, and keeping Code mode at 16k max tokens or less.
+**Be thoughtful about Max Tokens settings for thinking models.** Every token you allocate to output takes away from space available to store conversation history. Consider only using high `Max Tokens` / `Max Thinking Tokens` settings with agents like Plan and Debug, and keeping the Code agent at 16k max tokens or less.
 {% /callout %}
 
 {% callout type="tip" %}
