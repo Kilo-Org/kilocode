@@ -297,6 +297,13 @@ const BATCH_EXCLUDES = [
   // dominated by real execution (not process boot) parallelize better in their own process.
   "tool/shell.test.ts",
   "tool/task.test.ts",
+  // `kilocode/session/` files are real I/O work, which the fast-tier comment above says the
+  // batch must not carry; goal.test.ts is the file that proves it. The goal suite drives 96
+  // turns against a real in-process LLM server with 5.2s stall sleeps, multi-cycle waits and
+  // session forks — wall-clock work inside a long-lived shared process, where it was the only
+  // failing file on the unit windows shards. Per-file it runs green. Give it the batch-free
+  // process the other heavy real-work files get.
+  "kilocode/session/goal.test.ts",
 ]
 // Entry semantics shared by FAST_TIERS and BATCH_EXCLUDES: ".ts" = exact file, else prefix.
 const matchesEntry = (file: string, entry: string) => (entry.endsWith(".ts") ? file === entry : file.startsWith(entry))

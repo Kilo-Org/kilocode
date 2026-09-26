@@ -2,7 +2,7 @@ Run and manage long-running background processes.
 
 Use `start` only for processes that must keep running independently after this tool call returns, such as development servers, file watchers, local services, and test watchers (`npm run dev`, `next dev`, `vite`, or `bun --watch`).
 
-`start` returns immediately and never blocks your turn. `monitor` starts the same kind of process but waits for its output, bounded by a line cap and a wall-time cap, so you read progress instead of polling. Do not start `sleep`, timers, cooldowns, delays, or polling loops with this tool. To wait a fixed time before your next action, run the wait as a normal blocking shell command and set its `timeout` higher than the wait.
+`start` returns immediately and never blocks your turn. `monitor` starts the same kind of process but waits for its output, bounded by a line cap and a wall-time cap, so you read progress instead of polling. Do not start `sleep`, timers, cooldowns, delays, or polling loops with this tool. Outside a session goal, wait a fixed time with a blocking shell command and raise its `timeout`. In a session goal, a time-based wait must use `schedule_wakeup` or `cron_create` so the goal suspends; a blocking shell sleep is progress and the goal loop will spin.
 
 Do not use the shell tool with `&`, `nohup`, `disown`, `setsid`, `Start-Process`, or similar backgrounding patterns. Processes started with this tool are tracked and shown in the CLI sidebar.
 
@@ -20,6 +20,11 @@ Monitor:
 - `timeout` caps wall time in milliseconds (default 120000, clamped to 5000..600000).
 - `monitor` also stops as soon as the process exits. Reaching either cap does not stop the process: it keeps running as a normal background process, and the result names the process `id` so you can follow up with `logs`, `status`, or `stop`.
 - Prefer `monitor` over `start` plus repeated `logs` when you need the output of a command that finishes on its own, such as a build, a test run, or a deploy. Use `start` for servers and watchers that should outlive the call.
+
+Goals:
+- In a session goal, `monitor` blocks the goal turn until the process stops, so the goal does not spin while the process runs; the process exit resumes the goal.
+- A non-terminal `start` suspends the goal until the process exits, and the exit resumes the goal.
+- Do not explore the repository, search for a deploy, or poll with bash when the goal is to wait for a deploy, build, or CI job; schedule that wait. Do not report blocked because no deploy is visible.
 
 Lifetime options for `start`:
 - By default, the process stops when its session ends, the user switches session groups, or Kilo exits.
