@@ -50,6 +50,7 @@ export const AiProvidersNav: NavSection[] = [
       { href: "/ai-providers/groq", children: "Groq" },
       { href: "/ai-providers/cerebras", children: "Cerebras" },
       { href: "/ai-providers/fireworks", children: "Fireworks AI" },
+      { href: "/ai-providers/gmicloud", children: "GMI Cloud" },
       { href: "/ai-providers/mixlayer", children: "Mixlayer" },
     ],
   },

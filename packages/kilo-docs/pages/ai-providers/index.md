@@ -27,6 +27,7 @@ Major AI companies offering powerful models via API:
 - **[Alibaba Cloud](/docs/ai-providers/alibaba)** - DashScope and Qwen models through Model Studio
 - **[Cloudflare](/docs/ai-providers/cloudflare)** - Workers AI and Cloudflare AI Gateway
 - **[DeepSeek](/docs/ai-providers/deepseek)** - DeepSeek V3., R1
+- **[GMI Cloud](/docs/ai-providers/gmicloud)** - OpenAI-compatible models from GMI Cloud
 - **[Mistral](/docs/ai-providers/mistral)** - Mistral Large, Codestral
 - **[Poolside](/docs/ai-providers/poolside)** - Laguna models
 

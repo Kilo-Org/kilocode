@@ -46,6 +46,7 @@ const providerFamilies = [
   ["deepinfra", OpenAICompatible.deepinfra, "https://api.deepinfra.com/v1/openai"],
   ["deepseek", OpenAICompatible.deepseek, "https://api.deepseek.com/v1"],
   ["fireworks", OpenAICompatible.fireworks, "https://api.fireworks.ai/inference/v1"],
+  ["gmicloud", OpenAICompatible.gmicloud, "https://api.gmi-serving.com/v1"], // kilocode_change
   ["togetherai", OpenAICompatible.togetherai, "https://api.together.xyz/v1"],
 ] as const
 
