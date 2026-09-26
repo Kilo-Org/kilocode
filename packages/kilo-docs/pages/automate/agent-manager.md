@@ -533,13 +533,13 @@ The project and worktree context owns document tabs, loaded content, and comment
 
 ## Browser previews
 
-Enable **Browser Automation** in **Settings > Experimental** to show the Browser panel. It is off by default. Open the panel with the **Browser** button and enter your local application's URL. Each session has its own browser, with developer tools and console diagnostics beside the preview.
+Enable **Integrated Browser** in **Settings > Experimental** to show the Browser panel. It is off by default. Open it with the **Browser** button and enter a local application URL such as `http://localhost:3000`, or a public HTTPS page. Each session has its own browser, with developer tools and console diagnostics beside the preview.
 
 Use **Select element** to attach an element reference to your next message. It includes enough page context for Kilo to identify the element, plus a source file and line when the page provides a verifiable location. Add your instruction before sending it.
 
-The agent can open the application with `browser_open`. Its automation browser accepts only HTTP URLs on `localhost` or `127.0.0.1` and blocks other origins, including external assets and APIs on separate ports. Serve the resources the agent needs from the same loopback origin. These restrictions apply to the automation browser, not the independent visible preview iframe.
+The agent can open the application with `browser_open`. The preview streams the same controlled Chromium page the agent uses for automation, so what you see is what the agent inspects. The browser accepts `http://` URLs on `localhost` or `127.0.0.1` and public `https://` pages. A local page must stay on its approved origin, and navigating a page to a new document origin shows a modal prompt you must allow. Public HTTPS and WSS resources, including assets and APIs from other origins, load normally, so public CDNs work without serving them locally. Public pages cannot reach private or loopback addresses, and certificate validation stays enabled.
 
-Google Chrome must be installed for the default runtime. To use an already-installed compatible Playwright Chromium browser instead, turn off **Use System Chrome** under **Settings > Web Tools**.
+Google Chrome must be installed for the default runtime. To use an already-installed compatible Playwright Chromium browser instead, turn off **Use System Chrome**. If no supported browser is found, the panel explains what is missing and offers **Download Chrome**, retry, and **Browser Settings** actions.
 
 ## Terminals
 

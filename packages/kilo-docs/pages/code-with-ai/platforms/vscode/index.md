@@ -68,6 +68,15 @@ Send a message while Kilo is working to queue it for processing in order. To rev
 
 After stopping a response, leave the input empty and click **Continue** to resume the interrupted turn with its original model and agent, without adding another user message. Continue starts a new model request; it does not undo tool actions already performed and is not available for completed responses.
 
+## Closing tasks
+
+Kilo can keep several tasks open at once. Close them from the Command Palette (`Ctrl+Shift+P` / `Cmd+Shift+P`):
+
+- **Kilo Code: Close Task** closes the task tab you are currently on.
+- **Kilo Code: Close All Tasks** closes every open task tab and returns to the empty start state.
+
+Both commands act on whichever Kilo surface you last worked in — the sidebar, an **Open in Tab** editor tab, or the [Agent Manager](/docs/automate/agent-manager) — and they only close task tabs. Terminals, review tabs, subagent tabs, and worktrees are never closed by them.
+
 ## Shared Settings
 
 Settings apply across extension surfaces, including the sidebar and Agent Manager. The standalone CLI uses the same `~/.config/kilo/kilo.jsonc` (global) and `./kilo.jsonc` (project) files when used directly.
