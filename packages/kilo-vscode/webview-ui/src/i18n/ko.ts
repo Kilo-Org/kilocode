@@ -283,6 +283,7 @@ export const dict = {
   "ui.permission.reject": "거부",
   "ui.permission.feedbackPlaceholder": "Kilo가 다르게 하길 원하는 내용을 알려주세요",
   "ui.permission.feedbackHint": "Enter로 거부, Esc로 취소",
+  "ui.permission.reason": "이유:",
   "ui.permission.doomLoop.prompt": "{{tool}} 도구에서 잠재적인 반복 실행이 감지되었습니다. 계속 실행하시겠습니까?",
   "ui.permission.doomLoop.rule": "{{tool}} 호출 계속",
   "ui.permission.rule.addToAllowed": "허용 목록에 추가",

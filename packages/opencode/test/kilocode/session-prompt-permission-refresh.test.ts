@@ -385,6 +385,45 @@ it.live(
 )
 
 it.live(
+  "preserves attachment context in read permission requests",
+  () =>
+    provideTmpdirServer(
+      Effect.fnUntraced(function* ({ dir, llm }) {
+        const file = path.join(dir, "report.txt")
+        yield* Effect.promise(() => Bun.write(file, "report contents"))
+        const prompt = yield* SessionPrompt.Service
+        const sessions = yield* Session.Service
+        const permission = yield* Permission.Service
+        const session = yield* sessions.create({})
+        yield* prompt
+          .prompt({
+            sessionID: session.id,
+            parts: yield* prompt.resolvePromptParts("Read @report.txt"),
+          })
+          .pipe(Effect.forkScoped)
+        const request = yield* pollWithTimeout(
+          Effect.gen(function* () {
+            const requests = yield* permission.list()
+            return requests.find((request) => request.sessionID === session.id && request.permission === "read")
+          }),
+          "attachment permission was never requested",
+          "15 seconds",
+        )
+        expect(request.metadata.description).toBe("Access an attachment from the user message")
+        expect(request.patterns).toEqual(["report.txt"])
+        expect(request.always).toEqual(["*"])
+        expect(yield* llm.calls).toBe(0)
+        yield* prompt.cancel(session.id)
+      }),
+      {
+        git: true,
+        config: (url) => ({ ...providerCfg(url), permission: { read: "ask" } }),
+      },
+    ),
+  30_000,
+)
+
+it.live(
   "stops a prompt while an attachment read permission is pending",
   () =>
     provideTmpdirServer(

@@ -551,6 +551,21 @@ describe("fetchAndSendPendingPermissions", () => {
     expect(msg.permission.id).toBe("p1")
   })
 
+  it("preserves descriptions on recovered permissions", async () => {
+    const request = {
+      ...pending("p-description", "s1", "external_directory"),
+      metadata: { description: "Read the report requested by the user" },
+    }
+    const { fake, messages } = ctx({
+      tracked: ["s1"],
+      permsPerDir: { "/workspace": [request] },
+    })
+    await fetchAndSendPendingPermissions(fake)
+    expect(messages).toHaveLength(1)
+    const msg = messages.at(0) as { type: string; permission: { args: Record<string, unknown> } }
+    expect(msg.permission.args).toEqual(request.metadata)
+  })
+
   it("does not forward permissions from untracked sessions", async () => {
     const { fake, messages } = ctx({
       tracked: ["s1"],

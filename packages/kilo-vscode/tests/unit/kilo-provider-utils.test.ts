@@ -488,6 +488,25 @@ describe("mapSSEEventToWebviewMessage", () => {
     }
   })
 
+  it("preserves permission descriptions", () => {
+    const event: EventPermissionAsked = {
+      type: "permission.asked",
+      properties: {
+        id: "perm-description",
+        sessionID: "sess-1",
+        permission: "read_file",
+        patterns: ["**/*.ts"],
+        metadata: { path: "/foo", description: "Read the module to investigate the reported failure" },
+        always: [],
+      },
+    }
+    const msg = mapSSEEventToWebviewMessage(event, "sess-1")
+    expect(msg?.type).toBe("permissionRequest")
+    if (msg?.type === "permissionRequest") {
+      expect(msg.permission.args).toEqual(event.properties.metadata)
+    }
+  })
+
   it("defaults patterns to [] when not provided in permission.asked", () => {
     const event: EventPermissionAsked = {
       type: "permission.asked",

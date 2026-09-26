@@ -277,6 +277,7 @@ export const dict = {
   "ui.permission.reject": "Reject",
   "ui.permission.feedbackPlaceholder": "Tell Kilo what to do differently",
   "ui.permission.feedbackHint": "Enter to reject, Esc to cancel",
+  "ui.permission.reason": "Reason:",
   "ui.permission.doomLoop.prompt": "Potential loop detected for the {{tool}} tool. Continue running?",
   "ui.permission.doomLoop.rule": "Continue {{tool}} calls",
   "ui.permission.rule.addToAllowed": "Add to allowed list",
