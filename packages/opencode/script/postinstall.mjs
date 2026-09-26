@@ -5,13 +5,11 @@ import fs from "fs"
 import os from "os"
 import path from "path"
 import { createRequire } from "module"
-import { fileURLToPath } from "url"
+import { fileURLToPath, pathToFileURL } from "url"
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const require = createRequire(import.meta.url)
-const packageJson = JSON.parse(fs.readFileSync(path.join(__dirname, "package.json"), "utf8"))
 
-// kilocode_change start - variant detection matching bin/kilo logic
 const platformMap = {
   darwin: "darwin",
   linux: "linux",
@@ -170,13 +168,32 @@ function copyBinary(source) {
 }
 // kilocode_change end
 
+// kilocode_change start - capture output so verification failures are diagnosable
 function verifyBinary() {
   const result = childProcess.spawnSync(targetBinary, ["--version"], {
-    stdio: "ignore",
+    stdio: ["ignore", "pipe", "pipe"],
     windowsHide: true,
   })
+  if (result.status !== 0) {
+    const out = (result.stdout || "").toString().trim()
+    const err = (result.stderr || "").toString().trim()
+    if (out) console.error(`[kilo] binary verification stdout: ${out}`)
+    if (err) console.error(`[kilo] binary verification stderr: ${err}`)
+    if (result.error) console.error(`[kilo] binary verification error: ${result.error.message}`)
+  }
   return result.status === 0
 }
+// kilocode_change end
+
+// kilocode_change start - check if a package name is compatible with the current libc
+export function isLibcCompatible(name, musl = isMusl()) {
+  const nameIsMusl = name.endsWith("-musl") || name.includes("-musl-")
+  // prevent installing a musl package on a glibc system and vice versa
+  if (nameIsMusl && !musl) return false
+  if (!nameIsMusl && musl && name.startsWith("@kilocode/cli-linux-")) return false
+  return true
+}
+// kilocode_change end
 
 function main() {
   if (platform === "windows") {
@@ -185,12 +202,24 @@ function main() {
   }
 
   for (const name of packageNames()) {
+    // kilocode_change start - skip packages incompatible with the current libc
+    if (!isLibcCompatible(name)) {
+      console.log(`[kilo] skipping ${name}: incompatible libc`)
+      continue
+    }
+    // kilocode_change end
     try {
       copyBinary(resolveBinary(name))
       if (verifyBinary()) return
     } catch {
       const temp = fs.mkdtempSync(path.join(os.tmpdir(), "kilo-install-"))
       try {
+        let packageJson
+        try {
+          packageJson = JSON.parse(fs.readFileSync(path.join(__dirname, "package.json"), "utf8"))
+        } catch {
+          packageJson = JSON.parse(fs.readFileSync(path.join(__dirname, "..", "package.json"), "utf8"))
+        }
         const version = packageJson.optionalDependencies?.[name]
         if (!version) continue
         const result = childProcess.spawnSync(
@@ -214,9 +243,14 @@ function main() {
   )
 }
 
-try {
-  main()
-} catch (error) {
-  console.error("Failed to setup kilo binary:", error.message)
-  process.exit(1)
+// kilocode_change start - only run main if executed directly (allows importing in tests)
+const isMain = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href
+if (isMain) {
+  try {
+    main()
+  } catch (error) {
+    console.error("Failed to setup kilo binary:", error.message)
+    process.exit(1)
+  }
 }
+// kilocode_change end
