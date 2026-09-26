@@ -70,4 +70,14 @@ describe("openDocumentFile", () => {
 
     expect(execute).not.toHaveBeenCalled()
   })
+
+  it("opens a file without decoding preview content", () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "kilo-document-open-"))
+    const file = path.join(root, "data.bin")
+    fs.writeFileSync(file, Buffer.from([1, 0, 2]))
+
+    openDocumentFile(root, file)
+
+    expect((execute.mock.calls[0]?.[1] as vscode.Uri).fsPath).toBe(file)
+  })
 })
