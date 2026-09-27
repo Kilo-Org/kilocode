@@ -1835,7 +1835,13 @@ raceNoLLMServer.instance(
       const firstCreate = yield* Deferred.make<void>()
       processorCreateStarted.push(firstCreate)
       const first = yield* prompt.loop({ sessionID: chat.id }).pipe(Effect.forkChild)
-      yield* awaitWithTimeout(Deferred.await(firstCreate), "processor.create did not start for first turn")
+      // kilocode_change start - explicit budget: the 2s default starves on loaded CI runners
+      yield* awaitWithTimeout(
+        Deferred.await(firstCreate),
+        "processor.create did not start for first turn",
+        "10 seconds",
+      )
+      // kilocode_change end
 
       yield* prompt.cancel(chat.id)
       const firstExit = yield* Fiber.await(first)
@@ -1861,7 +1867,13 @@ raceNoLLMServer.instance(
       const secondCreate = yield* Deferred.make<void>()
       processorCreateStarted.push(secondCreate)
       const second = yield* prompt.loop({ sessionID: chat.id }).pipe(Effect.forkChild)
-      yield* awaitWithTimeout(Deferred.await(secondCreate), "processor.create did not start for second turn")
+      // kilocode_change start - explicit budget: the 2s default starves on loaded CI runners
+      yield* awaitWithTimeout(
+        Deferred.await(secondCreate),
+        "processor.create did not start for second turn",
+        "10 seconds",
+      )
+      // kilocode_change end
 
       yield* prompt.cancel(chat.id)
       const secondExit = yield* Fiber.await(second)
@@ -1896,7 +1908,9 @@ raceNoLLMServer.instance(
       }
     }),
   { config: cfg },
-  10_000,
+  // kilocode_change start - headroom for the two explicit waits above
+  20_000,
+  // kilocode_change end
 )
 
 noLLMServer.instance(
