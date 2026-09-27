@@ -168,10 +168,10 @@ const layer: Layer.Layer<
           const instruction = raw.startsWith("~/") ? path.join(global.home, raw.slice(2)) : raw
           const matches = yield* (
             path.isAbsolute(instruction)
-              ? fs.glob(path.basename(instruction), {
-                  cwd: path.dirname(instruction),
+              ? fs.glob(path.sep === "\\" ? instruction.replaceAll("\\", "/") : instruction, {
                   absolute: true,
                   include: "file",
+                  dot: true,
                 })
               : relative(instruction)
           ).pipe(Effect.catch(() => Effect.succeed([] as string[])))
