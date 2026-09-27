@@ -22,6 +22,12 @@ export const McpInstallationMethod = Schema.Struct({
 }).annotate({ identifier: "McpInstallationMethod" })
 export type McpInstallationMethod = typeof McpInstallationMethod.Type
 
+export const McpSkill = Schema.Struct({
+  id: Schema.String,
+  content: Schema.String,
+}).annotate({ identifier: "McpSkill" })
+export type McpSkill = typeof McpSkill.Type
+
 // The live catalog ships vscode_extension either as a bare extension id string or
 // as a { name, id } object, so accept both to avoid rejecting valid catalog data.
 export const VscodeExtensionRef = Schema.Union([
@@ -53,6 +59,7 @@ export const McpMarketplaceItem = Schema.Struct({
   url: Schema.String,
   content: Schema.Union([Schema.String, Schema.Array(McpInstallationMethod)]),
   parameters: Schema.optional(Schema.Array(McpParameter)),
+  skills: Schema.optional(Schema.Array(McpSkill)),
 }).annotate({ identifier: "McpMarketplaceItem" })
 export type McpMarketplaceItem = typeof McpMarketplaceItem.Type
 
@@ -150,6 +157,7 @@ export const McpInstallItem = Schema.Struct({
   type: Schema.Literal("mcp"),
   id: Schema.String,
   content: Schema.Union([Schema.String, Schema.Array(McpInstallationMethod)]),
+  skills: Schema.optional(Schema.Array(McpSkill)),
 }).annotate({ identifier: "McpInstallItem" })
 export type McpInstallItem = typeof McpInstallItem.Type
 

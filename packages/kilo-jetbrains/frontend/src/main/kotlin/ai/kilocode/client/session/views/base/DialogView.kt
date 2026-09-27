@@ -98,6 +98,8 @@ open class DialogView(
     private var top: JComponent? = null
     private var content: JComponent? = null
     private var actionLeft: JComponent? = null
+    private var leftActionId: String? = null
+    private var leftActionButton: JButton? = null
 
     // Top inset value used when top padding is on; QuestionView sets a non-standard step here.
     private var topInset = UiStyle.Gap.pad()
@@ -282,6 +284,38 @@ open class DialogView(
             sideActions.next(it).fill(UiStyle.Gap.pad())
         }
         syncFooter()
+    }
+
+    /** Render a standard retained dialog action on the left side of the footer. */
+    @RequiresEdt
+    fun setLeftAction(action: Action?) {
+        val previous = leftActionButton
+        val showingRetained = actionLeft == null || actionLeft === previous
+        if (action == null) {
+            leftActionId?.let(actionHandlers::remove)
+            leftActionId = null
+            if (showingRetained) setActionLeft(null)
+            return
+        }
+        val btn = if (leftActionId == action.id) {
+            leftActionButton ?: makeButton(action.id, action.text)
+        } else {
+            leftActionId?.let(actionHandlers::remove)
+            makeButton(action.id, action.text)
+        }
+        leftActionId = action.id
+        leftActionButton = btn
+        actionHandlers[action.id] = action.handler
+        btn.text = action.text
+        btn.isEnabled = action.enabled
+        btn.putClientProperty(DarculaButtonUI.DEFAULT_STYLE_KEY, if (action.primary) true else null)
+        if (showingRetained) setActionLeft(btn)
+    }
+
+    /** Reattach the retained left action after a temporary [setActionLeft] component. */
+    @RequiresEdt
+    fun restoreLeftAction() {
+        setActionLeft(leftActionButton.takeIf { leftActionId != null })
     }
 
     /**

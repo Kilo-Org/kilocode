@@ -22,6 +22,7 @@ import type { SidebarTarget } from "./project/route"
 import type { TerminalDestination } from "./terminal-destination"
 import type { ScriptTerminalView } from "./ScriptTerminalManager"
 import type { BrowserFeedbackData } from "../shared/browser-feedback"
+import type { BrowserFrame, BrowserInteraction, BrowserViewport, BrowserViewIdentity } from "../shared/browser-stream"
 
 export type { TerminalFont }
 export type { ProjectSnapshot }
@@ -483,7 +484,10 @@ interface BrowserStateMessage {
   errors: number
   logs?: string[]
   error?: string
+  missing?: "chrome" | "chromium"
   frameError?: string
+  back?: boolean
+  forward?: boolean
 }
 
 interface BrowserInspectionMessage {
@@ -497,6 +501,12 @@ interface BrowserInspectionMessage {
   element?: BrowserElement
   logs: string[]
   hover?: boolean
+}
+
+interface BrowserFrameMessage extends BrowserFrame {
+  type: "agentManager.browserFrame"
+  projectId?: string
+  sessionId: string
 }
 
 interface BrowserDevtoolsMessage {
@@ -553,6 +563,7 @@ export type AgentManagerOutMessage =
   | BrowserStateMessage
   | BrowserInspectionMessage
   | BrowserDevtoolsMessage
+  | BrowserFrameMessage
   | RunStatusMessage
   | TerminalCreatedMessage
   | TerminalRestartedMessage
@@ -1220,14 +1231,25 @@ interface BrowserRequestIn {
   type:
     | "agentManager.browser.open"
     | "agentManager.browser.refresh"
+    | "agentManager.browser.back"
+    | "agentManager.browser.forward"
     | "agentManager.browser.close"
     | "agentManager.browser.state"
     | "agentManager.browser.inspect"
     | "agentManager.browser.input"
     | "agentManager.browser.devtools"
+    | "agentManager.browser.viewport"
+    | "agentManager.browser.interact"
+    | "agentManager.browser.acknowledge"
   sessionId: string
   requestId?: string
   projectId?: string
+  browserId?: string
+  navigation?: number
+  viewport?: BrowserViewport
+  identity?: BrowserViewIdentity
+  event?: BrowserInteraction
+  sequence?: number
   url?: string
   x?: number
   y?: number

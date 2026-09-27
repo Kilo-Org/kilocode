@@ -274,7 +274,6 @@ Available experimental settings include:
 - **LSP integration** - expose language server diagnostics to the agent
 - **Paste summary** - summarize large clipboard pastes before including them
 - **Batch tool** - allow the agent to batch multiple tool calls in one step
-- **Task Subagent Model Selection** - let you request a different model or reasoning effort for an individual subagent task (off by default)
 - **Claude Code Migration** - import supported global Claude Code configuration once (off by default)
 - **OpenTelemetry** - enable Kilo telemetry and optional OTLP export when configured
 
@@ -305,9 +304,7 @@ Telemetry is enabled by default. Set `experimental.openTelemetry` to `false` in 
 
 ### Task subagent model selection
 
-Enable **Task Subagent Model Selection** in **Settings → Experimental**, or set `experimental.task_model_selection` to `true` in `kilo.jsonc`. It is off by default.
-
-This lets you explicitly request a different model, provider, or reasoning effort for an individual subagent task. The agent keeps normal defaults unless you request an override; it does not select models autonomously for cost or complexity. See [Per-task model selection](/docs/code-with-ai/agents/model-selection#per-task-model-selection-experimental).
+You can explicitly request a different model, provider, or reasoning effort for an individual subagent task. The agent keeps normal defaults unless you request an override; it does not select models autonomously for cost or complexity. See [Per-task model selection](/docs/code-with-ai/agents/model-selection#per-task-model-selection).
 
 ### Claude Code migration
 

@@ -58,6 +58,62 @@ describe("CodeIndexServiceFactory", () => {
     expect(factory.createEmbedder().embedderInfo).toEqual({ name: "openai-compatible" })
   })
 
+  test("passes configured dimension to OpenAI-compatible embed requests", async () => {
+    const factory = createFactory({
+      embedderProvider: "openai-compatible",
+      openAiKey: undefined,
+      openAiCompatibleBaseUrl: "http://localhost:1234/v1",
+      openAiCompatibleApiKey: "compat-test",
+      modelId: "custom-embed",
+      modelDimension: 4096,
+    })
+
+    const testEmbedding = new Float32Array([0.25, 0.5])
+    const base64String = Buffer.from(testEmbedding.buffer).toString("base64")
+
+    mockEmbeddingsCreate.mockResolvedValue({
+      data: [{ embedding: base64String }],
+      usage: { prompt_tokens: 1, total_tokens: 1 },
+    })
+
+    const embedder = factory.createEmbedder()
+    await embedder.createEmbeddings(["hello"])
+
+    expect(mockEmbeddingsCreate).toHaveBeenCalledWith({
+      input: ["hello"],
+      model: "custom-embed",
+      encoding_format: "base64",
+      dimensions: 4096,
+    })
+  })
+
+  test("leaves OpenAI-compatible dimensions unset when no override is configured", async () => {
+    const factory = createFactory({
+      embedderProvider: "openai-compatible",
+      openAiKey: undefined,
+      openAiCompatibleBaseUrl: "http://localhost:1234/v1",
+      openAiCompatibleApiKey: "compat-test",
+      modelId: "custom-embed",
+    })
+
+    const testEmbedding = new Float32Array([0.25, 0.5])
+    const base64String = Buffer.from(testEmbedding.buffer).toString("base64")
+
+    mockEmbeddingsCreate.mockResolvedValue({
+      data: [{ embedding: base64String }],
+      usage: { prompt_tokens: 1, total_tokens: 1 },
+    })
+
+    const embedder = factory.createEmbedder()
+    await embedder.createEmbeddings(["hello"])
+
+    expect(mockEmbeddingsCreate).toHaveBeenCalledWith({
+      input: ["hello"],
+      model: "custom-embed",
+      encoding_format: "base64",
+    })
+  })
+
   test("lets SDK-backed embedders own validation timeouts", async () => {
     const original = globalThis.setTimeout
     const timer = mock((...args: Parameters<typeof setTimeout>) => original(...args))

@@ -363,6 +363,7 @@ describe("kilocode tool registry indexing", () => {
         "kilo_memory_save",
         "recall",
         "background_process",
+        "agent_manager_models",
         "notify_user",
         "send_file",
         "link_pr",
@@ -376,24 +377,11 @@ describe("kilocode tool registry indexing", () => {
         "kilo_memory_save",
         "recall",
         "background_process",
+        "agent_manager_models",
         "notify_user",
         "send_file",
         "link_pr",
       ])
-
-      for (const client of ["cli", "run", "acp"]) {
-        process.env["KILO_CLIENT"] = client
-        const enabled = KiloToolRegistry.extra(tools, { experimental: { task_model_selection: true } }, flags).map(
-          (tool) => tool.id,
-        )
-        expect(enabled).toContain("agent_manager_models")
-        expect(enabled).not.toContain("agent_manager")
-        expect(
-          KiloToolRegistry.extra(tools, { experimental: { task_model_selection: false } }, flags).map(
-            (tool) => tool.id,
-          ),
-        ).not.toContain("agent_manager_models")
-      }
 
       process.env["KILO_CLIENT"] = "vscode"
       expect(KiloToolRegistry.extra(tools, {}, flags).map((tool) => tool.id)).toEqual([
@@ -455,6 +443,7 @@ describe("kilocode tool registry indexing", () => {
         "kilo_memory_recall",
         "kilo_memory_save",
         "recall",
+        "agent_manager_models",
         "notify_user",
         "send_file",
         "link_pr",
@@ -466,6 +455,7 @@ describe("kilocode tool registry indexing", () => {
         "kilo_memory_recall",
         "kilo_memory_save",
         "recall",
+        "agent_manager_models",
         "notify_user",
         "send_file",
         "link_pr",
@@ -477,6 +467,7 @@ describe("kilocode tool registry indexing", () => {
         "kilo_memory_recall",
         "kilo_memory_save",
         "recall",
+        "agent_manager_models",
         "notify_user",
         "send_file",
         "link_pr",

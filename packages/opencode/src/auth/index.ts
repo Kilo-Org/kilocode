@@ -19,6 +19,7 @@ export class Oauth extends Schema.Class<Oauth>("OAuth")({
   expires: NonNegativeInt,
   accountId: Schema.optional(Schema.String),
   enterpriseUrl: Schema.optional(Schema.String),
+  baseURL: Schema.optional(Schema.String), // kilocode_change - Azure Entra endpoint captured from OAuth prompts
 }) {}
 
 export class Api extends Schema.Class<Api>("ApiAuth")({

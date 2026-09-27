@@ -34,6 +34,7 @@ export const dict = {
     "このプロジェクトのみ。インストールしたファイルはバージョン管理に追加し、チームと共有できます。",
   "marketplace.install.scope.global.description": "このマシン上のすべてのプロジェクト。ユーザー設定に保存されます。",
   "marketplace.install.destination": "インストール先",
+  "marketplace.install.includedSkills": "同梱スキル",
   "marketplace.install.about.mcp":
     "MCPサーバーは、外部サービスやローカルプログラムを操作するための追加ツールをKiloに提供します。",
   "marketplace.install.about.agent": "エージェントは、独自の指示と権限を持つ再利用可能な役割を追加します。",
@@ -62,6 +63,8 @@ export const dict = {
   "marketplace.remove.title": "{{name}} を削除しますか？",
   "marketplace.remove.confirm": "この{{type}}を削除してもよろしいですか？ これにより、{{scope}}設定から削除されます。",
   "marketplace.remove.cancel": "キャンセル",
+  "marketplace.remove.mcp.skills":
+    "このインストールに属する同梱スキルも削除されます。個別にインストールしたスキルは保持されます。",
   "marketplace.remove.confirm.button": "削除",
   "marketplace.search": "検索...",
   "marketplace.filter.all": "すべてのアイテム",
@@ -70,6 +73,7 @@ export const dict = {
   "marketplace.empty": "アイテムが見つかりません",
   "marketplace.empty.relevant": "このワークスペースに関連するマーケットプレイスのアイテムが見つかりませんでした。",
   "marketplace.badge.mcpServer": "MCPサーバー",
+  "marketplace.badge.skills": "スキル同梱",
   "marketplace.card.by": "作成者: {{author}}",
   "marketplace.install.method": "インストール方法",
   "marketplace.install.parameters": "パラメーター",

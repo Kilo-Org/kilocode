@@ -5,6 +5,7 @@ import ai.kilocode.client.session.model.SessionState
 import ai.kilocode.client.session.ui.attachment.AttachmentCard
 import ai.kilocode.client.session.ui.attachment.AttachmentChip
 import ai.kilocode.client.session.ui.style.SessionUiStyle
+import ai.kilocode.client.ui.PlainLabel
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.session.views.AttachmentView
 import ai.kilocode.client.session.views.PromptAttachmentView
@@ -22,7 +23,6 @@ import ai.kilocode.rpc.dto.PartSourceTextDto
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.util.Disposer
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
-import com.intellij.ui.components.JBLabel
 import com.intellij.util.ui.JBUI
 import java.awt.Container
 import java.awt.event.MouseEvent
@@ -383,7 +383,7 @@ class SessionUiUpdateTest : BasePlatformTestCase() {
         val chip = find(view, AttachmentChip::class.java)
 
         assertNotNull(chip)
-        assertTrue(findAll(chip!!, JBLabel::class.java).any { it.text.contains("<u>HvJwtFilter.java:12-40</u>") })
+        assertTrue(findAll(chip!!, PlainLabel::class.java).any { it.text == "HvJwtFilter.java:12-40" && it.underline })
     }
 
     fun `test source backed image attachment still renders in prompt strip`() {
