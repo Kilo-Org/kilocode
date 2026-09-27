@@ -88,7 +88,7 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
   // Read-only chats (subagents) have no prompt box, so its model and reasoning
   // pickers are gone. Show what the session actually ran with instead.
   const provider = useProvider()
-  const model = createMemo(() => (props.readonly ? turnModel(session.messages()) : undefined))
+  const model = createMemo(() => (props.readonly ? turnModel(session.visibleMessages()) : undefined))
 
   const hasTimeline = createMemo(() => {
     for (const m of session.visibleMessages()) {
