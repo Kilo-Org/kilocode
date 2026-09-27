@@ -518,19 +518,15 @@ export function DialogSelect<T>(props: DialogSelectProps<T>) {
       },
     },
   ]
-  const jumpBindings = () =>
+  const allJumpBindings = () =>
     tuiConfig.keybinds.gather("dialog.select.jump", ["dialog.select.home", "dialog.select.end"])
-  useBindings(() => ({
-    commands: jumpCommands,
-    bindings: jumpBindings().filter((binding) => !isConflictKey(binding)),
-  }))
-  useBindings(() => ({
-    enabled: () => {
-      const editor = renderer.currentFocusedEditor
-      return editor !== input || store.filter.length === 0
-    },
-    bindings: jumpBindings().filter(isConflictKey),
-  }))
+  useBindings(() => {
+    const editor = renderer.currentFocusedEditor
+    const filterHasText = store.filter.length > 0
+    const gateConflicts = editor === input && filterHasText
+    const bindings = allJumpBindings().filter((binding) => !gateConflicts || !isConflictKey(binding))
+    return { commands: jumpCommands, bindings }
+  })
   // kilocode_change end
 
   let scroll: ScrollBoxRenderable | undefined
