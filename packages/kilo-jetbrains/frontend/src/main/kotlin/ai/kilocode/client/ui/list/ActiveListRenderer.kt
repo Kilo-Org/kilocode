@@ -7,6 +7,7 @@ import ai.kilocode.client.ui.FilledBadgeIcon
 import ai.kilocode.client.ui.LayeredOverlayPanel
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.layout.HAlign
+import ai.kilocode.client.ui.layout.LayoutPass
 import ai.kilocode.client.ui.layout.Stack
 import ai.kilocode.client.ui.layout.VAlign
 import ai.kilocode.client.ui.layout.align
@@ -263,6 +264,13 @@ internal class ActiveListRenderer(
         syncScale()
     }
 
+    // The stamp is invalidated wholesale for every row (see [activeListInvalidate]), so without a pass each
+    // nested Stack/Align re-measures its whole subtree for every size it is asked. The painting validate and
+    // every row-height read run as one [LayoutPass] each, which measures every container once.
+    override fun validate() = LayoutPass.measure { super.validate() }
+
+    override fun getPreferredSize(): Dimension = LayoutPass.measure { super.getPreferredSize() }
+
     @RequiresEdt
     override fun getListCellRendererComponent(
         list: JList<out ActiveListItem>,
@@ -443,7 +451,7 @@ internal class ActiveListRenderer(
         val fixed = bodyHeight
         bodyHeight = null
         getListCellRendererComponent(list, value, index, selected, focused)
-        val height = wrap.preferredSize.height
+        val height = LayoutPass.measure { wrap.preferredSize.height }
         bodyHeight = fixed
         return height
     }

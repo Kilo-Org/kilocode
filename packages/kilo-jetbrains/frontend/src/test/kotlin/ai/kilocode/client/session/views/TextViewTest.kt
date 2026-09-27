@@ -149,6 +149,20 @@ class TextViewTest : BasePlatformTestCase() {
         assertTrue(view.hasCopyToolbar())
     }
 
+    fun `test copy placeholder joins the tree only while the toolbar is on`() {
+        val view = TextView(Text("p1").also { it.content.append("hello") })
+        val layout = view.layout as BorderLayout
+        assertNull(layout.getLayoutComponent(BorderLayout.SOUTH))
+        assertEquals(1, view.componentCount)
+
+        view.setCopyToolbar(true)
+        assertSame(view.copyAnchor, layout.getLayoutComponent(BorderLayout.SOUTH))
+
+        view.setCopyToolbar(false)
+        assertNull(layout.getLayoutComponent(BorderLayout.SOUTH))
+        assertNull(view.copyAnchor.parent)
+    }
+
     fun `test assistant copy button copies current trimmed markdown`() {
         val view = TextView(Text("p1").also { it.content.append(" hello ") })
         view.setCopyToolbar(true)

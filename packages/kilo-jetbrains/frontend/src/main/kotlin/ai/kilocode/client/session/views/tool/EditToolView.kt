@@ -18,6 +18,7 @@ import ai.kilocode.client.session.views.base.PartHeader
 import ai.kilocode.client.session.views.base.AbstractSessionPartView
 import ai.kilocode.client.session.views.base.HeaderOpenAction
 import ai.kilocode.client.ui.DiffStatBadge
+import ai.kilocode.client.ui.PlainLabel
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.md.MdCodeBlockBorder
 import ai.kilocode.client.ui.md.MdCodeBlockOptions
@@ -26,7 +27,6 @@ import com.intellij.openapi.actionSystem.DataSink
 import com.intellij.openapi.actionSystem.UiDataProvider
 import com.intellij.openapi.util.Disposer
 import com.intellij.ui.EditorTextField
-import com.intellij.ui.components.JBLabel
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.util.ui.JBFont
 import java.awt.Dimension
@@ -57,7 +57,7 @@ class EditToolView(
     private var canDiff = false
     private val badge = DiffStatBadge(0, 0)
     private val open = HeaderOpenAction(SessionViewIcons.openDiff, KiloBundle.message("session.part.tool.openDiff"), ::openDiffViewer)
-    private val filesTag = JBLabel().apply {
+    private val filesTag = PlainLabel().apply {
         foreground = SessionUiStyle.Text.Secondary.foreground()
         font = JBFont.small()
         isVisible = false

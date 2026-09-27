@@ -806,7 +806,7 @@ export const dict = {
   "settings.browser.description":
     "配置由 Playwright 提供支持的内置浏览器自动化。Kilo 可在你的会话中浏览网页、与网页交互并截取屏幕截图。",
   "settings.browser.enable.title": "启用浏览器自动化",
-  "settings.browser.enable.description": "将 Playwright MCP 服务器注册到 CLI 后端。",
+  "settings.browser.enable.description": "启用会话专属的 Agent Manager 浏览器，用于本地应用和公开的 HTTPS 页面。",
   "settings.browser.systemChrome.title": "使用系统 Chrome",
   "settings.browser.systemChrome.description": "使用已安装的 Chrome 浏览器，而不是单独的 Chromium 实例。",
   "settings.browser.headless.title": "无头模式",
@@ -899,8 +899,6 @@ export const dict = {
     "一次性导入受支持的全局 CLAUDE.md 指令、简单技能和已禁用的 MCP 定义。不会修改原始 Claude 文件；启用后请重启后端。",
   "settings.experimental.multiProject.description":
     "在 Agent Manager 中启用跨多个仓库的会话和工作树管理。当前工作区仓库始终是默认项目。",
-  "settings.experimental.taskModelSelection.title": "Task 子代理模型选择",
-  "settings.experimental.taskModelSelection.description": "允许为 Task 子代理选择指定的模型、提供商和推理工作量。",
   "settings.experimental.mcpTimeout.title": "MCP 超时（毫秒）",
   "settings.experimental.mcpTimeout.description": "MCP 服务器请求的超时时间（毫秒）",
   "settings.experimental.remote.title": "Remote 控制",
@@ -1077,6 +1075,9 @@ export const dict = {
     "正在删除会话：已处理 {{processed}}/{{total}}（已删除 {{deleted}} 个，失败 {{failed}} 个）",
   "settings.autoCleanup.runNow": "立即运行清理",
   "settings.autoCleanup.runNow.confirm": "永久删除这台机器上所有项目和所有 Kilo 客户端中已过期的会话？",
+  "settings.autoCleanup.stop": "停止清理",
+  "settings.autoCleanup.progress.cancelling": "正在停止会话清理...",
+  "settings.autoCleanup.lastRun.cancelled": "已中断",
   "settings.context.autoCompaction.title": "自动压缩",
   "settings.context.autoCompaction.description": "在上下文达到限制前自动压缩",
   "settings.context.compaction.title": "压缩",

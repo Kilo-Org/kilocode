@@ -278,6 +278,9 @@ export class WorktreeManager {
   /** Adopt leftover pooled slots at startup and discard broken ones. */
   async reconcilePool(): Promise<void> {
     await this.ensureMigrated()
+    // With the pool disabled there is nothing to warm, so never create the
+    // directory. Leftover pooled slots are still adopted and removed.
+    if (!this.pool.enabled()) return this.pool.reconcile()
     // Exclude before creating anything: a repository that cannot be excluded
     // must not leave an untracked `.kilo/worktrees` directory behind.
     await this.ensureGitExclude()

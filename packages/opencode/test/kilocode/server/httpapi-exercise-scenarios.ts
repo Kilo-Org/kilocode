@@ -782,6 +782,17 @@ export const kiloScenarios: Scenario[] = [
       }
     }),
   http.protected
+    .post("/kilocode/retention/cancel", "kilocode.retention.cancel")
+    .mutating()
+    .at((ctx) => ({
+      path: "/kilocode/retention/cancel",
+      headers: ctx.headers(),
+    }))
+    .json(200, (body) => {
+      object(body)
+      check(typeof body.requested === "boolean", "retention cancel should report whether a pass was running")
+    }),
+  http.protected
     .post("/kilocode/background-jobs/{jobID}/cancel", "kilocode.backgroundJob.cancel")
     .at((ctx) => ({
       path: route("/kilocode/background-jobs/{jobID}/cancel", { jobID: "job_httpapi_missing" }),

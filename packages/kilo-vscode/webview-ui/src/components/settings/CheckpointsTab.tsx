@@ -50,14 +50,17 @@ const CheckpointsTab: Component = () => {
   const lastText = () => {
     const run = state().last
     if (!run) return language.t("settings.autoCleanup.lastRun.never")
-    return language.t("settings.autoCleanup.result", {
-      date: new Date(run.at).toLocaleString(),
-      deleted: String(run.deleted),
-      scanned: String(run.scanned),
-      failed: String(run.failed),
-      active: String(run.skippedActive),
-      seconds: String(Math.max(0.1, Math.round(run.durationMs / 100) / 10)),
-    })
+    const cancelled = run.cancelled ? ` — ${language.t("settings.autoCleanup.lastRun.cancelled")}` : ""
+    return (
+      language.t("settings.autoCleanup.result", {
+        date: new Date(run.at).toLocaleString(),
+        deleted: String(run.deleted),
+        scanned: String(run.scanned),
+        failed: String(run.failed),
+        active: String(run.skippedActive),
+        seconds: String(Math.max(0.1, Math.round(run.durationMs / 100) / 10)),
+      }) + cancelled
+    )
   }
 
   const progressText = () => {
@@ -157,17 +160,29 @@ const CheckpointsTab: Component = () => {
           )}
         </For>
         <SettingsRow title={language.t("settings.autoCleanup.lastRun.title")} description={lastText()} last>
-          <Button
-            variant="secondary"
-            size="normal"
-            disabled={running() || isDirty() || !enabled()}
-            onClick={confirmRun}
-          >
+          <>
+            <Button
+              variant="secondary"
+              size="normal"
+              disabled={running() || isDirty() || !enabled()}
+              onClick={confirmRun}
+            >
+              <Show when={running()}>
+                <Spinner />
+              </Show>
+              {language.t("settings.autoCleanup.runNow")}
+            </Button>
             <Show when={running()}>
-              <Spinner />
+              <Button
+                variant="ghost"
+                size="normal"
+                disabled={state().progress?.phase === "cancelling"}
+                onClick={() => poll.stop()}
+              >
+                {language.t("settings.autoCleanup.stop")}
+              </Button>
             </Show>
-            {language.t("settings.autoCleanup.runNow")}
-          </Button>
+          </>
         </SettingsRow>
         <div role="status" aria-live="polite" aria-atomic="true">
           <Show when={running()}>{progressText()}</Show>

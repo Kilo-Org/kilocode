@@ -91,6 +91,34 @@ class AbstractSessionPartViewTest : BasePlatformTestCase() {
         assertNull(content.parent)
     }
 
+    fun `test the arrow joins the header row only while the card can toggle`() {
+        val view = TestView(content = JLabel("body"))
+        val row = view.component(0) as JPanel
+        assertTrue(view.arrowAttached())
+
+        view.syncExpandable(false)
+
+        // Every tab switch walks the whole transcript tree, so a hidden arrow is not kept attached.
+        assertFalse(view.arrowAttached())
+        assertFalse(view.arrowVisible())
+
+        view.syncExpandable(true)
+        view.toggle()
+
+        assertTrue(view.arrowAttached())
+        assertSame(row, view.arrowParent())
+        assertTrue(view.isExpanded())
+        assertEquals(Cursor.HAND_CURSOR, view.arrowCursor())
+    }
+
+    fun `test a fixed non expandable card never attaches the arrow`() {
+        val view = TestView(content = JLabel("body"), expandable = false)
+
+        view.syncExpandable(true)
+
+        assertFalse(view.arrowAttached())
+    }
+
     fun `test expandable card header shows the hand cursor`() {
         val view = TestView(content = JLabel("body"))
 
@@ -273,6 +301,9 @@ class AbstractSessionPartViewTest : BasePlatformTestCase() {
         override fun update(content: Content) {}
         fun arrowVisible() = arrow.isVisible
         fun arrowIcon(): Icon = arrow.icon
+        fun arrowAttached() = arrow.parent === row
+        fun arrowParent(): Component? = arrow.parent
+        fun arrowCursor() = arrow.cursor.type
     }
 
     private class NestedView(header: JComponent) : AbstractSessionPartView(header, JLabel("body")) {

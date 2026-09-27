@@ -922,16 +922,13 @@ export const dict = {
     "Enable managing sessions and worktrees across multiple repositories in Agent Manager. The current workspace repository is always the default project.",
   "settings.experimental.browserAutomation.title": "Integrated Browser",
   "settings.experimental.browserAutomation.description":
-    "Show local application previews in Agent Manager and expose the browser_open tool to Agent Manager sessions.",
+    "Preview local applications and public HTTPS pages in Agent Manager and expose the browser_open tool to Agent Manager sessions.",
   "settings.experimental.browserAutomation.systemChrome.title": "Use System Chrome",
   "settings.experimental.browserAutomation.systemChrome.description":
     "Use installed Google Chrome for the Integrated Browser. Disable only when a compatible Playwright Chromium browser is already installed.",
   "settings.experimental.claudeMigration.title": "Claude Code Migration",
   "settings.experimental.claudeMigration.description":
     "On the next backend start, import supported global CLAUDE.md instructions, simple skills, and disabled MCP definitions. This runs once with no automatic retry; global Claude instructions and skills are then handed off to Kilo. Claude files stay unchanged; keep them if you still use Claude Code.",
-  "settings.experimental.taskModelSelection.title": "Task Subagent Model Selection",
-  "settings.experimental.taskModelSelection.description":
-    "Allow task subagents to use an explicitly selected model, provider, and reasoning effort.",
   "settings.experimental.mcpTimeout.title": "MCP Timeout (ms)",
   "settings.experimental.mcpTimeout.description": "Timeout for MCP server requests in milliseconds",
   "settings.experimental.remote.title": "Remote Control",
@@ -1126,6 +1123,9 @@ export const dict = {
   "settings.autoCleanup.runNow": "Run Cleanup Now",
   "settings.autoCleanup.runNow.confirm":
     "Permanently delete expired sessions across all projects and every Kilo client on this machine?",
+  "settings.autoCleanup.stop": "Stop cleanup",
+  "settings.autoCleanup.progress.cancelling": "Stopping session cleanup...",
+  "settings.autoCleanup.lastRun.cancelled": "interrupted",
 
   "settings.context.autoCompaction.title": "Auto Compaction",
   "settings.context.autoCompaction.description": "Automatically compact context before it reaches the limit",
