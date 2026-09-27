@@ -5609,6 +5609,7 @@ export class Config3 extends HeyApiClient {
     parameters?: {
       directory?: string
       workspace?: string
+      scope?: "project" | "global"
     },
     options?: Options<never, ThrowOnError>,
   ) {
@@ -5619,6 +5620,7 @@ export class Config3 extends HeyApiClient {
           args: [
             { in: "query", key: "directory" },
             { in: "query", key: "workspace" },
+            { in: "query", key: "scope" },
           ],
         },
       ],

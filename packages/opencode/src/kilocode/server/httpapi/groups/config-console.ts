@@ -252,7 +252,7 @@ export const ConfigConsoleApi = HttpApi.make("config-console")
           }),
         ),
         HttpApiEndpoint.get("tuiConfigGet", ConfigConsolePaths.tuiConfig, {
-          query: WorkspaceRoutingQuery,
+          query: TuiConfigQuery,
           success: described(TuiConfigResponse, "Effective TUI configuration"),
         }).annotateMerge(
           OpenApi.annotations({

@@ -42,7 +42,6 @@ export function MainView(props: {
         }
       })
 
-    const pluginCount = Array.isArray(props.ctx.tui("plugin")) ? (props.ctx.tui("plugin") as unknown[]).length : 0
     const disabledProvidersFooter = props.ctx.store.disabledProviders.length
       ? `${props.ctx.store.disabledProviders.length} hidden`
       : "none"
@@ -94,47 +93,40 @@ export function MainView(props: {
         agentLabel(sync, props.ctx.field("default_agent", props.scope())),
         props.ctx.meta("default_agent", props.scope()),
       ),
-      {
-        title: "Plugins",
-        description: "Enable or disable registered TUI plugins.",
-        category: "Plugins",
-        value: "plugins",
-        footer: pluginCount ? `${pluginCount} installed` : "none",
-      },
       setting(
         "Theme",
         "Preview and choose the terminal color theme.",
         "Appearance",
         "theme",
-        props.ctx.tui("theme") ?? themes.selected,
+        props.ctx.tui("theme", props.scope()) ?? themes.selected,
       ),
       setting(
         "Diff layout",
         "Choose automatic or always-stacked code diffs.",
         "Appearance",
         "diff",
-        props.ctx.tui("diff_style") ?? "auto",
+        props.ctx.tui("diff_style", props.scope()) ?? "auto",
       ),
       setting(
         "Title icon",
         "Choose the status icon style used in terminal titles.",
         "Appearance",
         "icon",
-        props.ctx.tui("title_icon") ?? "none",
+        props.ctx.tui("title_icon", props.scope()) ?? "none",
       ),
       setting(
         "Mouse support",
         "Capture mouse clicks, selection, and scrolling.",
         "Interaction",
         "mouse",
-        on(props.ctx.tui("mouse"), true),
+        on(props.ctx.tui("mouse", props.scope()), true),
       ),
       setting(
         "Vim editing",
         "Use Vim-style modal editing in the prompt.",
         "Interaction",
         "vim",
-        on(props.ctx.tui("vim"), false),
+        on(props.ctx.tui("vim", props.scope()), false),
       ),
       setting(
         "Animations (global)",
@@ -165,35 +157,35 @@ export function MainView(props: {
         "Set how far the interface moves on each scroll step.",
         "Interaction",
         "speed",
-        props.ctx.tui("scroll_speed") ?? "3 · default",
+        props.ctx.tui("scroll_speed", props.scope()) ?? "3 · default",
       ),
       setting(
         "Scroll acceleration",
         "Accelerate repeated scrolling for smoother navigation.",
         "Interaction",
         "acceleration",
-        on(acceleration(props.ctx.tui("scroll_acceleration")), false),
+        on(acceleration(props.ctx.tui("scroll_acceleration", props.scope())), false),
       ),
       setting(
         "Attention alerts",
         "Allow Kilo to notify you when a session needs input.",
         "Notifications",
         "attention",
-        on(attention(props.ctx.tui("attention")).enabled, false),
+        on(attention(props.ctx.tui("attention", props.scope())).enabled, false),
       ),
       setting(
         "Desktop notifications",
         "Show an operating-system notification for attention alerts.",
         "Notifications",
         "notifications",
-        on(attention(props.ctx.tui("attention")).notifications, true),
+        on(attention(props.ctx.tui("attention", props.scope())).notifications, true),
       ),
       setting(
         "Sounds",
         "Play a sound for attention alerts.",
         "Notifications",
         "sound",
-        on(attention(props.ctx.tui("attention")).sound, true),
+        on(attention(props.ctx.tui("attention", props.scope())).sound, true),
       ),
       setting(
         "Auto-approve (global)",
@@ -232,10 +224,6 @@ export function MainView(props: {
       props.setView({ name: "agent" })
       return
     }
-    if (value === "plugins") {
-      props.setView({ name: "plugins" })
-      return
-    }
     if (value === "theme") {
       props.setView({ name: "theme" })
       return
@@ -249,11 +237,19 @@ export function MainView(props: {
       return
     }
     if (value === "mouse") {
-      void props.ctx.updateTui(props.scope(), { mouse: !readBool(props.ctx.tui("mouse"), true) }, "Mouse support")
+      void props.ctx.updateTui(
+        props.scope(),
+        { mouse: !readBool(props.ctx.tui("mouse", props.scope()), true) },
+        "Mouse support",
+      )
       return
     }
     if (value === "vim") {
-      void props.ctx.updateTui(props.scope(), { vim: !readBool(props.ctx.tui("vim"), false) }, "Vim editing")
+      void props.ctx.updateTui(
+        props.scope(),
+        { vim: !readBool(props.ctx.tui("vim", props.scope()), false) },
+        "Vim editing",
+      )
       return
     }
     if (value === "animations") {
@@ -277,12 +273,16 @@ export function MainView(props: {
       return
     }
     if (value === "acceleration") {
-      const enabled = acceleration(props.ctx.tui("scroll_acceleration"))
-      void props.ctx.updateTui(props.scope(), { scroll_acceleration: { enabled: !enabled } }, "Scroll acceleration")
+      const enabled = acceleration(props.ctx.tui("scroll_acceleration", props.scope()))
+      void props.ctx.updateTui(
+        props.scope(),
+        { scroll_acceleration: { enabled: !enabled } },
+        "Scroll acceleration",
+      )
       return
     }
     if (value === "attention" || value === "notifications" || value === "sound") {
-      const current = attention(props.ctx.tui("attention"))
+      const current = attention(props.ctx.tui("attention", props.scope()))
       const key = value === "attention" ? "enabled" : value
       const fallback = key !== "enabled"
       const patch = { ...current, [key]: !readBool(current[key], fallback) }

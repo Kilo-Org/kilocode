@@ -12,7 +12,7 @@ type Warning = { path: string; message: string }
 
 type Store = {
   overlay: ConfigOverlayResponse | undefined
-  tui: TuiConfigGetResponse
+  tui: Record<Scope, TuiConfigGetResponse>
   warnings: Warning[]
   disabledProviders: Provider[]
   loading: boolean
@@ -27,7 +27,7 @@ export type SettingsState = {
   reload: () => Promise<boolean>
   field: (key: string, scope: Scope) => unknown
   meta: (key: string, scope: Scope) => string | undefined
-  tui: (key: keyof TuiConfigGetResponse) => unknown
+  tui: (key: keyof TuiConfigGetResponse, scope: Scope) => unknown
   currentScopeList: (scope: Scope) => unknown[]
   updateField: (scope: Scope, key: string, value: unknown, label: string) => Promise<boolean>
   unsetField: (scope: Scope, key: string, label: string) => Promise<boolean>
@@ -36,7 +36,6 @@ export type SettingsState = {
   enableProvider: (id: string, label: string, scope: Scope) => Promise<boolean>
   disableProvider: (id: string, label: string, scope: Scope) => Promise<boolean>
   isHiddenInOtherScope: (id: string, scope: Scope) => boolean
-  togglePlugin: (id: string, enabled: boolean, label: string) => Promise<boolean>
   setAutoApprove: (enable: boolean) => Promise<boolean>
   isAutoApprove: () => boolean
 }
@@ -47,7 +46,7 @@ export function createSettings(): SettingsState {
   const toast = useToast()
   const [store, setStore] = createStore<Store>({
     overlay: undefined,
-    tui: {},
+    tui: { project: {}, global: {} },
     warnings: [],
     disabledProviders: [],
     loading: true,
@@ -67,9 +66,10 @@ export function createSettings(): SettingsState {
     // permanent banner describing a problem that no longer exists.
     const prevError = opts.keepError ? store.error : undefined
     pending = (async () => {
-      const [overlay, tui, warnings, disabled] = await Promise.allSettled([
+      const [overlay, tuiProject, tuiGlobal, warnings, disabled] = await Promise.allSettled([
         deadline(sdk.client.config.overlay({ scope: "project" }), "Configuration"),
-        deadline(sdk.client.tui.config.get(), "Terminal configuration"),
+        deadline(sdk.client.tui.config.get({ scope: "project" }), "Terminal configuration"),
+        deadline(sdk.client.tui.config.get({ scope: "global" }), "Terminal configuration"),
         deadline(sdk.client.config.warnings(), "Configuration warnings"),
         deadline(sdk.client.disabledProviders.list(), "Disabled providers"),
       ])
@@ -84,11 +84,15 @@ export function createSettings(): SettingsState {
         else errors.push("Configuration returned no data")
       }
 
-      if (tui.status === "rejected") errors.push(errorMessage(tui.reason))
-      if (tui.status === "fulfilled" && tui.value.error) {
-        errors.push(errorMessage(tui.value.error))
+      const handleTui = (result: PromiseSettledResult<{ data?: TuiConfigGetResponse; error?: unknown }>, scope: Scope) => {
+        if (result.status === "rejected") errors.push(errorMessage(result.reason))
+        if (result.status === "fulfilled" && result.value.error) {
+          errors.push(errorMessage(result.value.error))
+        }
+        if (result.status === "fulfilled" && !result.value.error) setStore("tui", scope, result.value.data ?? {})
       }
-      if (tui.status === "fulfilled" && !tui.value.error) setStore("tui", tui.value.data ?? {})
+      handleTui(tuiProject, "project")
+      handleTui(tuiGlobal, "global")
 
       if (warnings.status === "fulfilled" && !warnings.value.error) {
         setStore("warnings", warnings.value.data ?? [])
@@ -132,8 +136,8 @@ export function createSettings(): SettingsState {
     return info.source
   }
 
-  function tui(key: keyof TuiConfigGetResponse) {
-    return store.tui[key]
+  function tui(key: keyof TuiConfigGetResponse, scope: Scope) {
+    return store.tui[scope][key]
   }
 
   // Read the raw disabled_providers list for the target scope. Using the
@@ -296,13 +300,6 @@ export function createSettings(): SettingsState {
     )
   }
 
-  function togglePlugin(id: string, enabled: boolean, label: string) {
-    // plugins are global-only — the TUI config has no project file
-    const current = (store.tui.plugin_enabled ?? {}) as Record<string, boolean>
-    const next = { ...current, [id]: enabled }
-    return updateTui("global", { plugin_enabled: next }, label)
-  }
-
   function isAutoApprove() {
     return isAllowEverything(sync.data.config.permission)
   }
@@ -332,7 +329,6 @@ export function createSettings(): SettingsState {
     enableProvider,
     disableProvider,
     isHiddenInOtherScope,
-    togglePlugin,
     setAutoApprove,
     isAutoApprove,
   }

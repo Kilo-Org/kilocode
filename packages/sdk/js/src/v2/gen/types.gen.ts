@@ -15881,6 +15881,7 @@ export type TuiConfigGetData = {
   query?: {
     directory?: string
     workspace?: string
+    scope?: "project" | "global"
   }
   url: "/tui/config"
 }

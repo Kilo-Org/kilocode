@@ -6,7 +6,6 @@ import { MainView } from "./tui"
 import { ModelView, SettingsSelect } from "./models"
 import { ProviderView } from "./providers"
 import { AgentView } from "./agents"
-import { PluginsView } from "./plugins"
 import { DisabledProvidersView } from "./disabled-providers"
 import { createSettings, type Scope, type SettingsState, type TuiPatch } from "./state"
 
@@ -17,7 +16,6 @@ export type View =
   | { name: "choice"; field: "diff_style" | "title_icon" | "scroll_speed"; title: string }
   | { name: "provider"; id: string; title: string; source: Provider["source"] }
   | { name: "agent" }
-  | { name: "plugins" }
   | { name: "disabledProviders" }
 
 export function createSettingsDialog(dialog: DialogContext) {
@@ -97,9 +95,6 @@ function SettingsBody(props: {
       <Match when={props.view().name === "agent"}>
         <AgentView ctx={props.ctx} scope={props.scope()} back={() => props.setView({ name: "main" })} />
       </Match>
-      <Match when={props.view().name === "plugins"}>
-        <PluginsView ctx={props.ctx} back={() => props.setView({ name: "main" })} />
-      </Match>
       <Match when={props.view().name === "disabledProviders"}>
         <DisabledProvidersView
           ctx={props.ctx}
@@ -123,7 +118,7 @@ function ChoiceView(props: {
     <SettingsSelect
       title={`Choose ${props.view.title.toLowerCase()}`}
       options={data.options}
-      current={props.ctx.tui(props.view.field) ?? data.fallback}
+      current={props.ctx.tui(props.view.field, props.scope) ?? data.fallback}
       busy={props.ctx.store.busy}
       back={props.back}
       onSelect={async (option) => {
@@ -159,7 +154,7 @@ function ThemeView(props: { ctx: SettingsState; scope: Scope; back: () => void }
     <SettingsSelect
       title="Choose theme"
       options={options}
-      current={readString(props.ctx.tui("theme")) ?? initial}
+      current={readString(props.ctx.tui("theme", props.scope)) ?? initial}
       busy={props.ctx.store.busy}
       back={() => {
         themes.set(initial)

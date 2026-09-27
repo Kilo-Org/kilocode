@@ -12284,6 +12284,16 @@
               "type": "string"
             },
             "required": false
+          },
+          {
+            "name": "scope",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": ["project", "global"],
+              "default": "project"
+            },
+            "required": false
           }
         ],
         "responses": {

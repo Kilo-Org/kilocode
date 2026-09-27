@@ -233,4 +233,53 @@ describe("TUI config routes", () => {
 
     expect(events.some((event) => event.payload?.type === "global.config.updated")).toBe(true)
   })
+
+  test("?scope=project returns the project file's raw value without effective-layer injection", async () => {
+    await using tmp = await tmpdir({
+      init: async (dir) => {
+        const cfg = path.join(dir, ".kilo")
+        await fs.mkdir(cfg, { recursive: true })
+        await Bun.write(
+          path.join(cfg, "tui.json"),
+          JSON.stringify({ theme: "dracula", keybinds: { app_exit: "ctrl+q" } }, null, 2),
+        )
+      },
+    })
+
+    const project = (await (
+      await Server.Default().app.request("/tui/config?scope=project", {
+        headers: { "x-kilo-directory": tmp.path },
+      })
+    ).json()) as { theme?: string; plugin?: unknown; keybinds?: Record<string, string> }
+
+    const effective = (await (
+      await Server.Default().app.request("/tui/config", {
+        headers: { "x-kilo-directory": tmp.path },
+      })
+    ).json()) as { theme?: string; plugin?: unknown }
+
+    expect(project.theme).toBe("dracula")
+    // Raw scope read must not inject Kilo default plugins the effective resolver adds.
+    expect(project.plugin).toBeUndefined()
+    // keybinds come back as a plain string map (the raw scope shape), not the
+    // richer per-keybind union the effective TuiConfig.Info carries.
+    expect(project.keybinds?.app_exit).toBe("ctrl+q")
+    expect(effective.theme).toBe("dracula")
+    expect(effective.plugin).toBeDefined()
+  })
+
+  test("?scope=global returns empty when no global TUI config file exists", async () => {
+    await using tmp = await tmpdir()
+
+    const response = await Server.Default().app.request("/tui/config?scope=global", {
+      headers: { "x-kilo-directory": tmp.path },
+    })
+
+    expect(response.status).toBe(200)
+    const body = (await response.json()) as { theme?: string; plugin?: unknown; keybinds?: Record<string, string> }
+    expect(body.theme).toBeUndefined()
+    expect(body.plugin).toBeUndefined()
+    // keybinds defaults are still applied so the dialog can render consistently.
+    expect(body.keybinds?.leader).toBe("ctrl+x")
+  })
 })
