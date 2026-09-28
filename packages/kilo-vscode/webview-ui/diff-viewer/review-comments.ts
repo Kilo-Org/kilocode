@@ -1,4 +1,5 @@
 import type { ReviewComment, WorktreeFileDiff } from "../src/types/messages"
+import { parsePatch } from "../../src/shared/pr-patch"
 import { formatReviewCommentMarkdown, formatReviewCommentsMarkdown } from "../src/utils/review-comment-markdown"
 
 export type { ReviewComment }
@@ -39,16 +40,30 @@ export function extractLines(content: string, start: number, end: number): strin
   return content.slice(begin, i)
 }
 
+export function isReviewRangeValid(
+  diff: WorktreeFileDiff,
+  side: ReviewComment["side"],
+  start: number,
+  end = start,
+): boolean {
+  if (start < 1 || end < start) return false
+  if (diff.summarized === true) return true
+  if (diff.patch) {
+    // Session diff text contains only hunk excerpts, not complete file contents.
+    const target = side === "deletions" ? "LEFT" : "RIGHT"
+    return (
+      parsePatch(diff.patch)?.ranges.some(
+        (range) => range.side === target && start >= range.start && end <= range.end,
+      ) ?? false
+    )
+  }
+  return end <= lineCount(side === "deletions" ? diff.before : diff.after)
+}
+
 export function sanitizeReviewComments(comments: ReviewComment[], diffs: WorktreeFileDiff[]): ReviewComment[] {
   const map = new Map(diffs.map((diff) => [diff.file, diff]))
   return comments.filter((comment) => {
     const diff = map.get(comment.file)
-    if (!diff) return false
-    const content = comment.side === "deletions" ? diff.before : diff.after
-    if (diff.summarized === true) return true
-    const max = lineCount(content)
-    if (comment.line < 1) return false
-    if (comment.line > max) return false
-    return true
+    return !!diff && isReviewRangeValid(diff, comment.side, comment.line)
   })
 }
