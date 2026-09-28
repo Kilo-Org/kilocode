@@ -30,8 +30,8 @@ const patterns = [
   /too many tokens/i,
   /token limit exceeded/i,
   // kilocode_change start - providers/gateways report over-long requests as
-  // "<N> tokens long and exceeds this model's context length of <M> tokens"
-  /exceeds (?:this|the) model'?s (?:(?:maximum|max) )?context length(?: of [\d,]+ tokens?)?/i,
+  // "<N> tokens long and exceeds this model's context length"
+  /exceeds (?:this|the) model'?s (?:(?:maximum|max) )?context length/i,
   // kilocode_change end
 ]
 
