@@ -124,7 +124,7 @@ internal class CommandsSettingsUi(
 
     override fun applyDraft() {
         val token = state.start() ?: return
-        val fallback = fallback(token.target)
+        val retained = fallback(token.target)
         if (!launch("apply") { id ->
             val target = token.target
             var failed: String? = null
@@ -142,7 +142,7 @@ internal class CommandsSettingsUi(
                 }
             }
             val reloaded = if (failed == null) behavior.reloadCommands(dir) else true
-            val items = behavior.refreshCommandFiles(dir, fallback)
+            val items = behavior.refreshCommandFiles(dir, retained)
             withContext(edt) {
                 if (!active(id)) {
                     if (failed == null) KiloNotifications.info(KiloBundle.message("settings.agentBehavior.commands.saved.notification"))
