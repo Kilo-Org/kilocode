@@ -36,11 +36,11 @@ try {
   if (before !== after) {
     console.error("bun.lock is out of sync with workspace package.json.")
     console.error("Run 'bun install' and commit the regenerated bun.lock.")
-    process.exit(1)
+    process.exitCode = 1
   }
 } catch (err) {
   console.error("Failed to run lockfile check:", err)
-  process.exit(1)
+  process.exitCode = 1
 } finally {
   // Always restore the committed lockfile so the working tree stays clean.
   writeFileSync(LOCK, before)
