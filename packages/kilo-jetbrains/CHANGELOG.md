@@ -536,6 +536,31 @@
 
 ## [Unreleased]
 
+## [7.1.9-rc.1] - 2026-09-28
+
+### Added
+- feat(cli): make goals and the timing tools one system by @iscekic in https://github.com/Kilo-Org/kilocode/pull/14504
+- feat(jetbrains): rename workflows to commands by @kirillk in https://github.com/Kilo-Org/kilocode/pull/14642
+- feat(jetbrains): render agent board messages as markdown by @kirillk in https://github.com/Kilo-Org/kilocode/pull/14622
+
+### Fixed
+- fix(indexing): pass configured dimension to OpenAI-compatible embedder by @magiccodelab in https://github.com/Kilo-Org/kilocode/pull/14580
+- fix(security): repair dependabot-auto-merge by @brunoagatao in https://github.com/Kilo-Org/kilocode/pull/14574
+- fix(gateway): assume models with empty supported parameters support tools by @chrarnoldus in https://github.com/Kilo-Org/kilocode/pull/14592
+- fix(cli): recover from provider context-limit errors by compacting by @eshurakov in https://github.com/Kilo-Org/kilocode/pull/14635
+- fix(vscode): fix `Open in Editor` button in `Documents` viewer by @brunoagatao in https://github.com/Kilo-Org/kilocode/pull/14631
+- fix(cli): gate prompt cache breakpoints to first-party OpenAI providers by @maphew in https://github.com/Kilo-Org/kilocode/pull/13321
+- fix(cli): report a scheduled session status with its wake time by @iscekic in https://github.com/Kilo-Org/kilocode/pull/14547
+- fix(vscode): apply pending edit from quick fix by @kirillk in https://github.com/Kilo-Org/kilocode/pull/14641
+
+### Changed
+- release(jetbrains): v7.1.8 by @kilo-maintainer[bot] in https://github.com/Kilo-Org/kilocode/pull/14587
+- docs: auto-sync cloud-mobile with merged PRs (through 2026-09-25) by @github-actions[bot] in https://github.com/Kilo-Org/kilocode/pull/14554
+- docs: auto-sync gateway with merged PRs (through 2026-09-26) by @github-actions[bot] in https://github.com/Kilo-Org/kilocode/pull/14526
+- docs(gateway): document 20MB request payload size limit by @kilo-code-bot[bot] in https://github.com/Kilo-Org/kilocode/pull/14640
+- docs(jetbrains): split agent guidance into skills by @kirillk in https://github.com/Kilo-Org/kilocode/pull/14619
+
+
 ## [7.1.8] - 2026-09-25
 
 ### Added
