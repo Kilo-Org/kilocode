@@ -1,4 +1,5 @@
 import { KiloShutdown } from "@/kilocode/cli/shutdown"
+import { futureDue } from "@/kilocode/session/scheduled"
 import { GoalLink } from "@/kilocode/session/goal/link"
 import { GoalState } from "@/kilocode/session/goal/state"
 import { Session } from "@/session/session"
@@ -47,6 +48,7 @@ export namespace Wakeup {
     readonly schedule: (input: Input) => Effect.Effect<Info, InvalidTime | PastTime | TooMany>
     readonly list: (input?: { sessionID?: SessionID }) => Effect.Effect<Info[]>
     readonly pending: (directory: string) => Effect.Effect<{ sessionID: SessionID; pending: number }[]>
+    readonly scheduled: (directory?: string) => Effect.Effect<Map<SessionID, number>>
     readonly cancel: (id: ID, sessionID?: SessionID) => Effect.Effect<Info | undefined>
     readonly cancelSession: (sessionID: SessionID, options?: { notify?: boolean }) => Effect.Effect<number>
     readonly adopt: (directory: string) => Effect.Effect<void>
@@ -271,6 +273,17 @@ export namespace Wakeup {
           counts.set(info.sessionID, (counts.get(info.sessionID) ?? 0) + 1)
         }
         return Array.from(counts, ([sessionID, count]) => ({ sessionID, pending: count }))
+      })
+
+      // Earliest future wakeup per session, read from memory only like
+      // `pending`: bootstrap adopts before an instance's routes run, so
+      // `entries` and `cronEntries` are authoritative here. Both stores count,
+      // because a session asleep on a recurring cron task waits exactly like one
+      // asleep on a one-shot wakeup. A wakeup already due is excluded, because
+      // that turn is running now and must not read as `scheduled`.
+      const scheduled = Effect.fn("Wakeup.scheduled")(function* (directory?: string) {
+        const infos = [...entries.values(), ...cronEntries.values()]
+        return futureDue(directory === undefined ? infos : infos.filter((info) => info.directory === directory))
       })
 
       const schedule = Effect.fn("Wakeup.schedule")(function* (input: Input) {
@@ -518,7 +531,18 @@ export namespace Wakeup {
         }
       })
 
-      return Service.of({ schedule, list, pending, cancel, cancelSession, adopt, cronCreate, cronList, cronCancel })
+      return Service.of({
+        schedule,
+        list,
+        pending,
+        scheduled,
+        cancel,
+        cancelSession,
+        adopt,
+        cronCreate,
+        cronList,
+        cronCancel,
+      })
     }),
   )
 
