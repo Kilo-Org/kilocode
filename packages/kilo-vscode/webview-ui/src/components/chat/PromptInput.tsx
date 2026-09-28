@@ -326,7 +326,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   const goal = useGoalComposer(draftKey, {
     send: (...args) => session.sendCommand(...args),
     fingerprint: (key) => fingerprint(key),
-    clear: (key) => clearDraft(key),
+    clear: (key, historyKey) => clearDraft(key, undefined, historyKey),
   })
   const fingerprint = (key: string) =>
     JSON.stringify(
@@ -1113,7 +1113,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     if (!raw) return
     const source = scopeDraftKey(boxKey(), raw)
     const target = scopeDraftKey(boxKey(), sessionDraftKey(message.session.id))
-    goal.move(source, target)
+    goal.move(source, target, message.session.id)
     const queued = deferred.get(source)
     if (queued) {
       deferred.set(target, [...queued, ...(deferred.get(target) ?? [])])
@@ -1772,16 +1772,12 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       mention.closeMention()
       slash.close()
       ghost.dismiss()
-      goal.send(key, stamp, [
-        "goal",
-        `-- ${message}`,
-        sel?.providerID,
-        sel?.modelID,
-        attachments,
-        pendingId,
-        context,
-        origin ?? null,
-      ])
+      goal.send(
+        key,
+        stamp,
+        ["goal", `-- ${message}`, sel?.providerID, sel?.modelID, attachments, pendingId, context, origin ?? null],
+        id,
+      )
       return
     }
 
@@ -1819,17 +1815,20 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       if (!accepted) return
     }
 
-    clearDraft(key, draft)
+    // `id` was captured before the terminal/git attachment awaits above, so it still
+    // names the conversation this message was actually sent to even if the user has
+    // since switched to a different conversation.
+    clearDraft(key, draft, id)
   }
 
-  const clearDraft = (key: string, value?: string) => {
+  const clearDraft = (key: string, value?: string, historyKey?: string) => {
     if (value === undefined) {
       const active = key === draftKey()
       const source = active ? text() : (drafts.get(key) ?? "")
       const backing = active ? paste.pastes().map((item) => item.text) : (pasteDrafts.get(key) ?? [])
       value = paste.plainTextFor(source, backing).trim()
     }
-    history.append(value)
+    history.append(value, historyKey)
     drafts.delete(key)
     reviewDrafts.delete(key)
     references.delete(key)

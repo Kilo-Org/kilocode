@@ -6,6 +6,7 @@ import {
   seedEntries,
   usePromptHistory,
   MAX,
+  MAX_CONVERSATIONS,
 } from "../../webview-ui/src/hooks/usePromptHistory"
 
 describe("canNavigate", () => {
@@ -256,7 +257,10 @@ describe("usePromptHistory — per-conversation isolation", () => {
       history.navigate("up", "", 0)
       expect(history.index()).toBe(0)
 
+      // The reset happens on the next action (navigate/append/seed), not merely by
+      // reading `index()` — that accessor is a pure signal read with no side effects.
       setSid("session-f-unique")
+      history.navigate("up", "", 0)
       expect(history.index()).toBe(-1)
 
       dispose()
@@ -269,6 +273,61 @@ describe("usePromptHistory — per-conversation isolation", () => {
       const history = usePromptHistory(sid)
       history.append("draft without a session yet")
       expect(history.navigate("up", "", 0)).toBe("draft without a session yet")
+      dispose()
+    })
+  })
+
+  it("records an append against an explicit target key even after the active key changed", () => {
+    createRoot((dispose) => {
+      const [sid, setSid] = createSignal<string | undefined>("session-g-unique")
+      const history = usePromptHistory(sid)
+
+      // Simulate a send that resolves after the user has already switched conversations:
+      // the entry must land in the conversation it was sent from, not the one now active.
+      setSid("session-h-unique")
+      history.append("sent from session-g-unique", "session-g-unique")
+
+      // The now-active conversation (session-h-unique) must not see it.
+      expect(history.navigate("up", "", 0)).toBeNull()
+
+      setSid("session-g-unique")
+      expect(history.navigate("up", "", 0)).toBe("sent from session-g-unique")
+
+      dispose()
+    })
+  })
+
+  it("does not create a stored bucket merely from a read (ArrowUp on an empty conversation)", () => {
+    createRoot((dispose) => {
+      const [sid] = createSignal<string | undefined>("session-i-unique")
+      const history = usePromptHistory(sid)
+      expect(history.navigate("up", "", 0)).toBeNull()
+      // A second, unrelated conversation must not see any entry created by the read above.
+      const [sid2] = createSignal<string | undefined>("session-j-unique")
+      const other = usePromptHistory(sid2)
+      other.append("only in session-j-unique")
+      expect(other.navigate("up", "", 0)).toBe("only in session-j-unique")
+      dispose()
+    })
+  })
+
+  it("evicts the least recently used conversation once the cap is exceeded", () => {
+    createRoot((dispose) => {
+      // Comfortably larger than both the cap and whatever other tests in this file
+      // already added to the shared module-level store, so the assertions below
+      // are independent of test ordering.
+      const batch = MAX_CONVERSATIONS + 100
+      const histories = Array.from({ length: batch }, (_, i) => {
+        const [sid] = createSignal<string | undefined>(`evict-${i}`)
+        return usePromptHistory(sid)
+      })
+      histories.forEach((history, i) => history.append(`msg-${i}`))
+
+      // The earliest conversation written in this batch was evicted...
+      expect(histories[0]!.navigate("up", "", 0)).toBeNull()
+      // ...while the most recently written one survives.
+      expect(histories.at(-1)!.navigate("up", "", 0)).toBe(`msg-${batch - 1}`)
+
       dispose()
     })
   })

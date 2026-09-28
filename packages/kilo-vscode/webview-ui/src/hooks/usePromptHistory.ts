@@ -15,30 +15,35 @@ export const MAX = 100
 const STORAGE_KEY = "kilo.prompt-history.v2"
 /** Bucket for conversations that do not yet have a stable key (e.g. a brand-new tab). */
 const FALLBACK_KEY = "new"
+/** Cap on remembered conversations, evicting the least recently used once exceeded. */
+export const MAX_CONVERSATIONS = 50
+const EMPTY: string[] = []
 
-type Store = Record<string, string[]>
+// Insertion order doubles as recency order: touching a key re-inserts it at the end.
+type Store = Map<string, string[]>
 
 function load(): Store {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
-    if (!raw) return {}
+    if (!raw) return new Map()
     const parsed = JSON.parse(raw)
-    if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) return {}
-    const store: Store = {}
+    if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) return new Map()
+    const store: Store = new Map()
     for (const [key, value] of Object.entries(parsed as Record<string, unknown>)) {
       if (!Array.isArray(value)) continue
-      store[key] = value.filter((e): e is string => typeof e === "string").slice(0, MAX)
+      const list = value.filter((e): e is string => typeof e === "string").slice(0, MAX)
+      if (list.length > 0) store.set(key, list)
     }
     return store
   } catch (err) {
     console.warn("[Kilo New] prompt history load failed", err)
-    return {}
+    return new Map()
   }
 }
 
 function save(store: Store) {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(store))
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(Object.fromEntries(store)))
   } catch (err) {
     console.warn("[Kilo New] prompt history save failed", err)
   }
@@ -95,24 +100,47 @@ export function seedEntries(entries: string[], texts: string[], max: number): bo
 // Module-level: initialized from localStorage, shared across remounts, keyed per conversation.
 const store: Store = load()
 
+/** Read-only lookup: never allocates or persists an empty bucket for a key that was merely browsed. */
 function entriesFor(key: string): string[] {
-  const existing = store[key]
-  if (existing) return existing
+  return store.get(key) ?? EMPTY
+}
+
+/** Get-or-create the mutable bucket for `key`, marking it most-recently-used and
+ * evicting the oldest conversation once the cap is exceeded. Only call this when
+ * about to write, so reads never grow the store. */
+function mutableEntriesFor(key: string): string[] {
+  const existing = store.get(key)
+  if (existing) {
+    store.delete(key)
+    store.set(key, existing)
+    return existing
+  }
   const created: string[] = []
-  store[key] = created
+  store.set(key, created)
+  if (store.size > MAX_CONVERSATIONS) {
+    const oldest = store.keys().next().value
+    if (oldest !== undefined) store.delete(oldest)
+  }
   return created
 }
 
 export interface PromptHistory {
   /** Navigate history. Returns the new text value, or null if no navigation occurred. */
   navigate: (direction: "up" | "down", text: string, cursor: number) => string | null
-  /** Append a sent prompt to history (deduplicates consecutive identical entries). */
-  append: (text: string) => void
+  /**
+   * Append a sent prompt to history (deduplicates consecutive identical entries).
+   * Pass `targetKey` to record against a specific conversation instead of whichever
+   * conversation is currently active — required when the send may complete after
+   * the user has already switched to a different conversation.
+   */
+  append: (text: string, targetKey?: string) => void
   /** Seed history from existing session messages (e.g., when a session is loaded). */
   seed: (texts: string[]) => void
   /** Reset navigation state. Call when the user types new input. */
   reset: () => void
-  /** Current history index (-1 = not browsing). */
+  /** Current history index (-1 = not browsing). Reflects the active conversation
+   * only after an action (navigate/append/seed) has synced it; it is a plain
+   * signal read with no side effects. */
   index: Accessor<number>
 }
 
@@ -128,6 +156,7 @@ export function usePromptHistory(key: Accessor<string | undefined>): PromptHisto
   let lastKey = resolve()
 
   // Switching conversations must not carry over browsing position or the saved draft.
+  // Only action methods call this — reading `index` never triggers it.
   function syncKey(): string {
     const current = resolve()
     if (current === lastKey) return current
@@ -137,12 +166,8 @@ export function usePromptHistory(key: Accessor<string | undefined>): PromptHisto
     return current
   }
 
-  function entries(): string[] {
-    return entriesFor(syncKey())
-  }
-
   function navigate(direction: "up" | "down", text: string, cursor: number): string | null {
-    const list = entries()
+    const list = entriesFor(syncKey())
     if (!canNavigate(direction, text, cursor, index() >= 0)) return null
 
     if (direction === "up") {
@@ -174,12 +199,17 @@ export function usePromptHistory(key: Accessor<string | undefined>): PromptHisto
     return draft
   }
 
-  function append(text: string) {
-    if (appendEntry(entries(), text, MAX)) save(store)
+  function append(text: string, targetKey?: string) {
+    if (!text.trim()) return
+    // An explicit targetKey (the session the message actually belongs to) bypasses
+    // this hook's own browsing state; it may not match the currently active key.
+    const list = targetKey !== undefined ? mutableEntriesFor(targetKey) : mutableEntriesFor(syncKey())
+    if (appendEntry(list, text, MAX)) save(store)
   }
 
   function seed(texts: string[]) {
-    if (seedEntries(entries(), texts, MAX)) save(store)
+    if (!texts.some((t) => t.trim())) return
+    if (seedEntries(mutableEntriesFor(syncKey()), texts, MAX)) save(store)
   }
 
   function reset() {
@@ -187,10 +217,5 @@ export function usePromptHistory(key: Accessor<string | undefined>): PromptHisto
     saved = null
   }
 
-  const currentIndex: Accessor<number> = () => {
-    syncKey()
-    return index()
-  }
-
-  return { navigate, append, seed, reset, index: currentIndex }
+  return { navigate, append, seed, reset, index }
 }
