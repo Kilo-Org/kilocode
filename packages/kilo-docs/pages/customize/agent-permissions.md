@@ -173,6 +173,20 @@ permission:
 
 This allows delegation only to `code-reviewer` and `docs-writer`.
 
+## Approve for Me (Experimental Preview)
+
+Approve for me is an early, hidden preview of a future third approval mode. The final feature will use a heuristic and an LLM reviewer to auto-allow low-risk commands and flag risky ones, so you see fewer approval prompts without turning on full auto-approve.
+
+{% callout type="warning" %}
+This preview build does not change approval behavior yet. The composer button only tracks on and off state. See [issue #7684](https://github.com/Kilo-Org/kilocode/issues/7684) for the current status.
+{% /callout %}
+
+To see the preview toggle in the VS Code composer:
+
+1. Open VS Code settings and search for `kilo-code.new.experimental.approveForMe`.
+2. Turn the setting on. It is an application-scoped setting and defaults to `false`.
+3. Reload the composer. A new toggle button appears next to **Auto-Approve** and **Sandbox**.
+
 ## Troubleshooting
 
 - If a specific rule appears to be ignored, check whether a later catch-all also matches.
