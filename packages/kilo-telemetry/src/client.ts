@@ -1,6 +1,7 @@
 import { PostHog } from "posthog-node"
 import { Identity } from "./identity.js"
 import { TelemetryEvent } from "./events.js"
+import { Delivery } from "./delivery.js"
 
 const POSTHOG_API_KEY = "phc_GK2Pxl0HPj5ZPfwhLRjXrtdz8eD7e9MKnXiFrOqnB6z"
 const POSTHOG_HOST = "https://us.i.posthog.com"
@@ -8,12 +9,16 @@ const POSTHOG_HOST = "https://us.i.posthog.com"
 export namespace Client {
   let client: PostHog | null = null
   let enabled = true
+  let delivery = new Delivery("")
 
-  export function init() {
+  export function init(dataPath = "") {
+    delivery = new Delivery(dataPath)
     client = new PostHog(POSTHOG_API_KEY, {
       host: POSTHOG_HOST,
       disableGeoip: false,
     })
+    client.on("flush", (messages) => delivery.confirm(messages))
+    client.on("error", () => delivery.retry())
   }
 
   export function getClient(): PostHog | null {
@@ -49,6 +54,7 @@ export namespace Client {
 
   export function identify(distinctId: string, properties?: Record<string, unknown>) {
     if (!enabled || !client) return
+    if (!delivery.accept({ event: "$identify", distinct_id: distinctId, properties: { $set: properties } })) return
 
     client.capture({
       distinctId,
@@ -61,6 +67,7 @@ export namespace Client {
 
   export function alias(distinctId: string, aliasId: string) {
     if (!enabled || !client) return
+    if (!delivery.accept({ event: "$create_alias", distinct_id: distinctId, properties: { alias: aliasId } })) return
 
     client.alias({
       distinctId,

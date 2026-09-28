@@ -84,7 +84,7 @@ export namespace Telemetry {
     const vscodeVersion = process.env.KILO_VSCODE_VERSION
     if (vscodeVersion) props.vscodeVersion = vscodeVersion
 
-    Client.init()
+    Client.init(options.dataPath)
 
     const level = process.env.KILO_TELEMETRY_LEVEL
     const enabled = level ? level === "all" : options.enabled
