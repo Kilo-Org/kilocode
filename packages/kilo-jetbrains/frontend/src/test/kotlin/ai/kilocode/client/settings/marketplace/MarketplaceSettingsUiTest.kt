@@ -375,6 +375,25 @@ class MarketplaceSettingsUiTest : BasePlatformTestCase() {
         assertEquals(listOf(DIR), agentRpc.skillReloads)
     }
 
+    fun `test MCP with companion skills uses the combined type badge`() {
+        val skills = listOf(MarketplaceSkillDto("docs-lookup", "https://example.com/docs-lookup.tar.gz"))
+        val rpc = FakeMarketplaceRpcApi().apply {
+            list = MarketplaceListDto(items = items().map { if (it.type == "mcp") it.copy(skills = skills) else it })
+        }
+        val panel = panel(rpc = rpc)
+
+        flushUntil { rows(panel).size == 3 }
+
+        edt {
+            val badge = rows(panel).single { it.key == "mcp:context7" }.badges.first()
+            assertEquals("MCP|Skill", badge.text)
+            assertEquals(listOf("MCP", "Skill"), badge.segments.map { it.text })
+            assertEquals(UiStyle.Badge.typeMcp(true), badge.segments.first().style)
+            assertEquals(UiStyle.Badge.typeSkill(true), badge.segments.last().style)
+            true
+        }
+    }
+
     fun `test switching the install dialog to an installed MCP scope removes and refreshes Skills`() {
         val panel = panel { item, directory ->
             val dialog = MarketplaceInstallDialog(item, directory)
