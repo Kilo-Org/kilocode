@@ -48,7 +48,7 @@ bun .kilo/skills/release-jetbrains/script/set-pin.ts --latest --pr
 
 Merge the generated pin PR first, then re-run `check-pin.ts` and dispatch prepare. Do not dispatch prepare from a local-only pin edit.
 
-Stable CLI releases also try to open this pin bump PR automatically after publishing. The PR is labeled `jetbrains-cli-pin-bump`. Release publishing does not fail if creating the PR fails; inspect the publish log for either the PR URL or the warning with manual follow-up instructions.
+CLI releases also try to open this pin bump PR automatically after publishing. The PR is labeled `jetbrains-cli-pin-bump`, and pre-release CLI bump PRs also receive the `pre-release` label, including preview-channel releases with a plain semver version. Release publishing does not fail if creating the PR fails; inspect the publish log for either the PR URL or the warning with manual follow-up instructions.
 
 ## Create Release Tag And PR
 

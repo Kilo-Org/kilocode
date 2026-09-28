@@ -34,6 +34,7 @@ export const dict = {
     "เฉพาะโปรเจกต์นี้ ไฟล์ที่ติดตั้งสามารถเพิ่มลงในระบบควบคุมเวอร์ชันและแชร์กับทีมของคุณได้",
   "marketplace.install.scope.global.description": "ทุกโปรเจกต์ในเครื่องนี้ จัดเก็บไว้ในการกำหนดค่าผู้ใช้ของคุณ",
   "marketplace.install.destination": "ปลายทางการติดตั้ง",
+  "marketplace.install.includedSkills": "ทักษะที่รวมมาด้วย",
   "marketplace.install.about.mcp":
     "เซิร์ฟเวอร์ MCP เพิ่มเครื่องมือให้ Kilo สำหรับทำงานกับบริการภายนอกหรือโปรแกรมในเครื่อง",
   "marketplace.install.about.agent": "เอเจนต์เพิ่มบทบาทที่นำกลับมาใช้ใหม่ได้พร้อมคำสั่งและสิทธิ์ของตนเอง",
@@ -45,7 +46,7 @@ export const dict = {
   "marketplace.install.learnMore": "เรียนรู้วิธีการติดตั้งจาก Marketplace",
   "marketplace.install.learnMcp": "เรียนรู้เพิ่มเติมเกี่ยวกับ MCP",
   "marketplace.install.about.plugin":
-    "ปลั๊กอิน npm เพิ่มเครื่องมือและการเชื่อมต่อแบบกำหนดเองให้กับ Kilo ปลั๊กอินทำงานโดยมีสิทธิ์เต็มรูปแบบ",
+    "ปลั๊กอินเพิ่มเครื่องมือและการเชื่อมต่อแบบกำหนดเองให้กับ Kilo ปลั๊กอินทำงานโดยมีสิทธิ์เต็มรูปแบบ",
   "marketplace.install.plugin.warning":
     "ปลั๊กอินเรียกใช้โค้ดโดยมีสิทธิ์เต็มรูปแบบ สามารถอ่านและแก้ไขไฟล์ของคุณ เรียกใช้คำสั่ง และเข้าถึงข้อมูลรับรองและเครือข่ายของคุณได้ ติดตั้งเฉพาะปลั๊กอินที่คุณเชื่อถือเท่านั้น",
   "marketplace.install.installedAt": "ติดตั้งไปยัง {{path}} แล้ว",
@@ -63,6 +64,8 @@ export const dict = {
   "marketplace.remove.confirm":
     "คุณแน่ใจหรือไม่ว่าต้องการลบ {{type}} นี้? สิ่งนี้จะลบออกจากการกำหนดค่า {{scope}} ของคุณ",
   "marketplace.remove.cancel": "ยกเลิก",
+  "marketplace.remove.mcp.skills":
+    "การดำเนินการนี้จะลบทักษะเสริมที่เป็นของการติดตั้งนี้ด้วย ทักษะที่ติดตั้งแยกต่างหากจะยังคงอยู่",
   "marketplace.remove.confirm.button": "ลบ",
   "marketplace.search": "ค้นหา...",
   "marketplace.filter.all": "รายการทั้งหมด",
@@ -71,6 +74,7 @@ export const dict = {
   "marketplace.empty": "ไม่พบรายการ",
   "marketplace.empty.relevant": "ไม่พบรายการในมาร์เก็ตเพลสที่เกี่ยวข้องกับพื้นที่ทำงานนี้",
   "marketplace.badge.mcpServer": "เซิร์ฟเวอร์ MCP",
+  "marketplace.badge.skills": "มีทักษะรวมมาด้วย",
   "marketplace.card.by": "โดย {{author}}",
   "marketplace.install.method": "วิธีการติดตั้ง",
   "marketplace.install.parameters": "พารามิเตอร์",

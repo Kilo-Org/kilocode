@@ -11,6 +11,20 @@ const ownership: Record<SidePanel, "worktree" | "session"> = {
   [SidePanel.Browser]: "session",
 }
 
+/**
+ * True when the side host must stay mounted. A cached browser panel keeps the
+ * host alive even while hidden, so its iframe keeps the loaded page.
+ */
+export function sideHostNeeded(
+  panel: SidePanel | null,
+  diff: boolean,
+  sides: number,
+  subagents: number,
+  browser: boolean,
+): boolean {
+  return panel !== null || diff || sides > 0 || subagents > 0 || browser
+}
+
 export function createSidePanel(opts: {
   project: Accessor<string | undefined>
   selection: Accessor<string | null>

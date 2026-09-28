@@ -87,6 +87,32 @@ class SessionBoardDialogTest : BasePlatformTestCase() {
         }
     }
 
+    fun `test loaded messages do not show body tooltip`() {
+        rpc.board = board(messages = listOf(message("m1", body = "status update")), hasMore = false)
+        val d = open()
+
+        flushUntil { edt { itemCount(d) > 0 } }
+
+        edt {
+            val list = jList(d) ?: error("board list not found")
+            list.setSize(400, 400)
+            list.doLayout()
+            val bounds = list.getCellBounds(0, 0)
+            val event = MouseEvent(
+                list,
+                MouseEvent.MOUSE_MOVED,
+                System.currentTimeMillis(),
+                0,
+                bounds.x + 8,
+                bounds.y + 8,
+                0,
+                false,
+            )
+
+            assertNull(list.getToolTipText(event))
+        }
+    }
+
     fun `test hasMore shows load more and paging prepends older messages`() {
         rpc.board = board(messages = listOf(message("m2", body = "second")), hasMore = true, cursor = "m2")
         val d = open()

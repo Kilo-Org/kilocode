@@ -207,6 +207,7 @@ class SessionController(
     private var agentTime: Double? = null
     private var prefModel: String? = null
     private var prefAgent: String? = null
+    private var prefOverride = false
     private var prefVariantKey: String? = null
     private var prefVariant: String? = null
     private var modelTime: Double? = null
@@ -812,6 +813,7 @@ class SessionController(
         modelTime = null
         prefModel = null
         prefAgent = null
+        prefOverride = false
         prefVariantKey = null
         prefVariant = null
         KiloPluginSettings.setAgent(name)
@@ -829,13 +831,15 @@ class SessionController(
         val key = "$provider/$id"
         if (item(key) == null && model.workspace.providers != null) return
         modelTime = null
-        prefModel = null
-        prefAgent = null
+        prefModel = key
+        prefAgent = agent
+        prefOverride = true
         prefVariantKey = null
         prefVariant = null
-        app.selectModel(agent, provider, id)
-        selectResolvedModel(key)
-        model.modelOverride = model.defaultModel != model.model
+        fire(SessionControllerEvent.WorkspaceReady) {
+            selectResolvedModel(key)
+            model.modelOverride = model.defaultModel != model.model
+        }
         capture("Model Selected", sessionProps() + mapOf("agent" to agent, "provider" to provider, "modelId" to id, "isOverride" to "true"))
     }
 
@@ -845,10 +849,14 @@ class SessionController(
         LOG.debug { "${ChatLogSummary.sid(sid ?: ref?.key ?: "pending")} kind=config model-reset agent=$agent" }
         prefVariantKey = null
         prefVariant = null
-        app.clearModel(agent)
         val auto = resolvedDefaultModel(agent)?.key
-        selectResolvedModel(auto)
-        model.modelOverride = false
+        prefModel = auto
+        prefAgent = agent
+        prefOverride = false
+        fire(SessionControllerEvent.WorkspaceReady) {
+            selectResolvedModel(auto)
+            model.modelOverride = false
+        }
         capture("Model Override Cleared", sessionProps() + mapOf("agent" to agent))
     }
 
@@ -859,7 +867,6 @@ class SessionController(
         LOG.debug { "${ChatLogSummary.sid(sid ?: ref?.key ?: "pending")} kind=config variant=$key/$value" }
         prefVariantKey = key
         prefVariant = value
-        app.selectVariant(key, value)
         model.variant = value
         capture("Reasoning Variant Selected", sessionProps() + mapOf("model" to key, "variant" to value))
     }
@@ -881,13 +888,13 @@ class SessionController(
             val id = select.model
             if (provider != null && id != null) {
                 val key = "$provider/$id"
-                app.selectModel(agent, provider, id)
-                select.variant?.let { app.selectVariant(key, it) }
                 prefAgent = agent
                 prefModel = key
+                prefOverride = true
                 prefVariantKey = key
                 prefVariant = select.variant
             } else {
+                prefOverride = false
                 prefVariantKey = null
                 prefVariant = null
             }
@@ -945,11 +952,11 @@ class SessionController(
     private fun approve(id: String, restore: () -> Permission) {
         assertEdt()
         LOG.debug { "${ChatLogSummary.sid(sid ?: ref?.key ?: "pending")} kind=permission-auto rid=$id" }
-        // Skill-shell batches must be answered by a human: the server refuses non-interactive
+        // Sensitive permissions must be answered by a human: the server refuses non-interactive
         // approvals, so show the card (its manual reply sets interactive=true) rather than send a
         // machine reply. Decide and enqueue synchronously on the EDT so back-to-back asks keep
         // arrival (FIFO) order, matching asked()'s non-auto path; only the RPC needs a coroutine.
-        if (!autoApprove || restore().meta.raw["skillShell"] == "true") {
+        if (!autoApprove || manual(restore().meta.raw)) {
             show(restore())
             return
         }
@@ -983,9 +990,9 @@ class SessionController(
             try {
                 val permissions = sessions.pendingPermissions(directory).filter { it.sessionID in ids && it.id !in skip }
                 val count = replyAll(permissions)
-                // Skill-shell requests are skipped by replyAll; queue all of them so they aren't
+                // Sensitive requests are skipped by replyAll; queue all of them so they aren't
                 // stranded (never machine-approved, never shown) or overwritten by later cards.
-                val cards = permissions.filter { it.metadata["skillShell"] == "true" }.map(::toPermission)
+                val cards = permissions.filter { manual(it.metadata) }.map(::toPermission)
                 if (count == 0 && cards.isEmpty()) return@launch
                 runEdt {
                     if (disposed) return@runEdt
@@ -1000,8 +1007,8 @@ class SessionController(
                     }
                     val current = model.state
                     // A card in `skip` was handled synchronously by the caller (approve() either
-                    // replied to it — already Busy — or re-showed a skill-shell card we must keep).
-                    // Never transition it to Busy here or the preserved skill-shell card vanishes
+                    // replied to it — already Busy — or re-showed a sensitive card we must keep).
+                    // Never transition it to Busy here or the preserved sensitive card vanishes
                     // with no reply path left.
                     if (current is SessionState.AwaitingPermission &&
                         current.permission.sessionId in ids &&
@@ -1020,8 +1027,8 @@ class SessionController(
         var count = 0
         for (request in permissions) {
             if (!autoApprove) return count
-            // Skill-shell batches need a human; skip them here (callers surface the card).
-            if (request.metadata["skillShell"] == "true") continue
+            // Sensitive permissions need a human; skip them here (callers surface the card).
+            if (manual(request.metadata)) continue
             sessions.replyPermission(request.id, directory, PermissionReplyDto("once"))
             capture("Permission Auto Approved", sessionProps(request.sessionID) + mapOf("tool" to request.permission, "source" to "drain"))
             count++
@@ -1029,10 +1036,13 @@ class SessionController(
         return count
     }
 
-    // A skill-shell request is never machine-approved (the server refuses non-interactive
-    // approvals); after draining, callers must surface one as a card so a human can answer.
-    private fun skillShellCard(permissions: List<PermissionRequestDto>): PermissionRequestDto? =
-        permissions.lastOrNull { it.metadata["skillShell"] == "true" }
+    // Sensitive requests are never machine-approved; after draining, callers must surface one as a
+    // card so a human can answer.
+    private fun card(permissions: List<PermissionRequestDto>): PermissionRequestDto? =
+        permissions.lastOrNull { manual(it.metadata) }
+
+    private fun manual(metadata: Map<String, String>): Boolean =
+        metadata["skillShell"] == "true" || metadata["sandboxEscalation"] == "true"
 
     private fun updatePermission(id: String, state: PermissionRequestState, message: String? = null) {
         assertEdt()
@@ -1566,11 +1576,11 @@ class SessionController(
             val permissions = sessions.pendingPermissions(directory).filter { it.sessionID == child }
             if (permissions.isEmpty()) return
             LOG.debug { "${ChatLogSummary.sid(sid ?: "pending")} kind=child-recovery child=$child permissions=${permissions.size}" }
-            // Under auto-approve, replyAll approves the ordinary permissions and skips skill-shell
-            // ones (they need a human); queue only those. Otherwise queue every pending permission.
+            // Under auto-approve, replyAll approves ordinary permissions and skips sensitive ones;
+            // queue only the latter. Otherwise queue every pending permission.
             val queue = if (autoApprove) {
                 replyAll(permissions)
-                permissions.filter { it.metadata["skillShell"] == "true" }
+                permissions.filter { manual(it.metadata) }
             } else {
                 permissions
             }
@@ -1633,12 +1643,12 @@ class SessionController(
             val permissions = sessions.pendingPermissions(directory).filter { it.sessionID == id }
             val questions = sessions.pendingQuestions(directory).filter { it.sessionID == id }
             val status = sessions.statuses.value[id]
-            // replyAll auto-approves the ordinary permissions and skips skill-shell ones. A
-            // skill-shell request must then fall through to a human card rather than go Busy.
-            val skillCard = skillShellCard(permissions)
+            // replyAll auto-approves ordinary permissions and skips sensitive ones. A sensitive
+            // request must then fall through to a human card rather than go Busy.
+            val prompt = card(permissions)
             if (permissions.isNotEmpty() && autoApprove) {
                 val count = replyAll(permissions)
-                if (count > 0 && skillCard == null) {
+                if (count > 0 && prompt == null) {
                     runEdt {
                         if (disposed) return@runEdt
                         if (sid != id) return@runEdt
@@ -1648,9 +1658,9 @@ class SessionController(
                     return
                 }
             }
-            // After auto-approve only skill-shell permissions still need a human card; queue those.
+            // After auto-approve only sensitive permissions still need a human card; queue those.
             // Otherwise queue the whole pending set so each request is resolved in turn.
-            val queue = if (autoApprove) permissions.filter { it.metadata["skillShell"] == "true" } else permissions
+            val queue = if (autoApprove) permissions.filter { manual(it.metadata) } else permissions
             // An "idle" status is still a status. It means no live work, not "nothing to recover", so it
             // must not shadow the transcript: a session reopened after a failed turn is idle on the
             // server and would otherwise recover as if it had never failed.
@@ -2355,7 +2365,8 @@ class SessionController(
         val state = app.models.value
         val cfg = model.app.config
         val auto = resolvedDefaultModel(agent)?.key
-        val selected = messageSelection(agent)?.key ?: resolveSessionModel(
+        val preferred = messageSelection(agent)
+        val selected = preferred?.key ?: resolveSessionModel(
             providers = providers,
             agent = agent,
             state = state,
@@ -2364,7 +2375,7 @@ class SessionController(
         )?.key
         model.defaultModel = auto
         selectResolvedModel(selected)
-        model.modelOverride = messageSelection(agent) == null && selected != auto
+        model.modelOverride = (preferred == null || prefOverride) && selected != auto
     }
 
     private fun resolvedDefaultModel(agent: String): ModelSelectionDto? {
@@ -2443,6 +2454,7 @@ class SessionController(
         messageAgent(agent)?.let { model.agent = it }
         prefModel = messageModel(msg)
         prefAgent = messageAgent(msg) ?: model.agent
+        prefOverride = false
         syncModelSelection()
         if (model.prefs() != before) fire(SessionControllerEvent.WorkspaceReady)
     }
@@ -2458,6 +2470,8 @@ class SessionController(
         val key = messageModel(info)
         val last = modelTime
         if (info.role == "user" && key != null && (info.time.created >= (last ?: Double.NEGATIVE_INFINITY))) {
+            val owner = agent ?: model.agent
+            prefOverride = prefOverride && prefModel == key && (prefAgent == null || prefAgent == owner)
             modelTime = info.time.created
             prefModel = key
             prefAgent = agent ?: model.agent

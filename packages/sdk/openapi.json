@@ -16410,6 +16410,9 @@
                         "pattern": "^ses"
                       }
                     },
+                    "sessionCost": {
+                      "type": "number"
+                    },
                     "totals": {
                       "type": "object",
                       "properties": {
@@ -17109,6 +17112,32 @@
                               "enum": ["Infinity", "-Infinity", "NaN"]
                             }
                           ]
+                        },
+                        "cancelled": {
+                          "type": "boolean"
+                        },
+                        "reclaimedBytes": {
+                          "anyOf": [
+                            {
+                              "type": "number"
+                            },
+                            {
+                              "type": "string",
+                              "enum": ["NaN"]
+                            },
+                            {
+                              "type": "string",
+                              "enum": ["Infinity"]
+                            },
+                            {
+                              "type": "string",
+                              "enum": ["-Infinity"]
+                            },
+                            {
+                              "type": "string",
+                              "enum": ["Infinity", "-Infinity", "NaN"]
+                            }
+                          ]
                         }
                       },
                       "required": ["at", "scanned", "deleted", "skippedActive", "failed", "durationMs"],
@@ -17119,7 +17148,7 @@
                       "properties": {
                         "phase": {
                           "type": "string",
-                          "enum": ["scanning", "deleting"]
+                          "enum": ["scanning", "deleting", "cancelling"]
                         },
                         "total": {
                           "type": "integer",
@@ -17377,6 +17406,32 @@
                               "enum": ["Infinity", "-Infinity", "NaN"]
                             }
                           ]
+                        },
+                        "cancelled": {
+                          "type": "boolean"
+                        },
+                        "reclaimedBytes": {
+                          "anyOf": [
+                            {
+                              "type": "number"
+                            },
+                            {
+                              "type": "string",
+                              "enum": ["NaN"]
+                            },
+                            {
+                              "type": "string",
+                              "enum": ["Infinity"]
+                            },
+                            {
+                              "type": "string",
+                              "enum": ["-Infinity"]
+                            },
+                            {
+                              "type": "string",
+                              "enum": ["Infinity", "-Infinity", "NaN"]
+                            }
+                          ]
                         }
                       },
                       "required": ["at", "scanned", "deleted", "skippedActive", "failed", "durationMs"],
@@ -17387,7 +17442,7 @@
                       "properties": {
                         "phase": {
                           "type": "string",
-                          "enum": ["scanning", "deleting"]
+                          "enum": ["scanning", "deleting", "cancelling"]
                         },
                         "total": {
                           "type": "integer",
@@ -17453,6 +17508,68 @@
           {
             "lang": "js",
             "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.kilocode.retention.run({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/kilocode/retention/cancel": {
+      "post": {
+        "tags": ["kilocode"],
+        "operationId": "kilocode.retention.cancel",
+        "parameters": [
+          {
+            "name": "directory",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Retention cancel request outcome; false when no pass was running",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "requested": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": ["requested"],
+                  "additionalProperties": false,
+                  "description": "Retention cancel request outcome; false when no pass was running"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Ask the machine-wide retention pass to stop before deleting more sessions. Already-deleted sessions stay deleted; the interrupted pass still records its partial result and honors the spacing window.",
+        "summary": "Stop the active session retention pass",
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.kilocode.retention.cancel({\n  ...\n})"
           }
         ]
       }
@@ -28050,6 +28167,9 @@
           },
           "enterpriseUrl": {
             "type": "string"
+          },
+          "baseURL": {
+            "type": "string"
           }
         },
         "required": ["type", "refresh", "access", "expires"],
@@ -35791,9 +35911,6 @@
               "native_notebook_tools": {
                 "type": "boolean"
               },
-              "task_model_selection": {
-                "type": "boolean"
-              },
               "code_mode": {
                 "type": "boolean"
               },
@@ -40430,6 +40547,19 @@
         "required": ["name", "content"],
         "additionalProperties": false
       },
+      "McpSkill": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "content": {
+            "type": "string"
+          }
+        },
+        "required": ["id", "content"],
+        "additionalProperties": false
+      },
       "McpMarketplaceItem": {
         "type": "object",
         "properties": {
@@ -40484,6 +40614,12 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/McpParameter"
+            }
+          },
+          "skills": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/McpSkill"
             }
           }
         },
@@ -40782,6 +40918,12 @@
                 }
               }
             ]
+          },
+          "skills": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/McpSkill"
+            }
           }
         },
         "required": ["type", "id", "content"],

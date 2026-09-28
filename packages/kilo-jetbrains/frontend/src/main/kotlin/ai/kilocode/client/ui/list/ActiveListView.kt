@@ -24,6 +24,8 @@ import java.awt.Dimension
 import java.awt.Image
 import java.awt.Point
 import java.awt.Rectangle
+import java.awt.event.ComponentAdapter
+import java.awt.event.ComponentEvent
 import java.awt.event.FocusAdapter
 import java.awt.event.FocusEvent
 import java.awt.event.KeyEvent
@@ -116,9 +118,17 @@ internal class ActiveListView(
     private var restoring = false
     // Cursor for the row body; buttons override it on hover via [cursorAt].
     private var baseCursor: Cursor = Cursor.getDefaultCursor()
+    private var extent = -1
     // JBList's constructor calls updateUI() before the fields above exist, so guard the re-measure.
     private var wired = false
     internal var onSelect: (() -> Unit)? = null
+
+    // Without a delegate every animation frame repaints the whole list, and every row re-renders and re-lays out
+    // its stamp at the frame rate of whichever spinner is running. Only rows that show an animated glyph need
+    // the next frame. REFRESH_DELEGATE is an experimental platform hook, installed/cleared with the view's own
+    // attach/detach (see addNotify/removeNotify) rather than once in init, because a worktree session editor
+    // tab switch detaches and re-attaches this exact view.
+    private val refreshDelegate = Runnable { repaintAnimated() }
 
     fun setEmptyText(text: String) {
         list.emptyText.text = text
@@ -223,10 +233,35 @@ internal class ActiveListView(
 
             override fun focusLost(e: FocusEvent) = list.repaint()
         })
+        list.addComponentListener(object : ComponentAdapter() {
+            override fun componentResized(e: ComponentEvent) {
+                if (extent == list.width || !cfg.wrapDescription) return
+                extent = list.width
+                resetCellSizes()
+            }
+        })
         reorder?.let { installActiveListReorder(this, list, it) }
         ScrollingUtil.installActions(list)
         next(list)
         wired = true
+    }
+
+    // Symmetric with removeNotify below: the client property only matters while this view is actually showing
+    // (that is when the platform's own animation cycle reads it), and a tab switch detaches and re-attaches the
+    // same view, so installing it once in init would leave it cleared — and the whole-list repaint it exists to
+    // avoid back — for the rest of the view's life after the first switch.
+    override fun addNotify() {
+        super.addNotify()
+        list.putClientProperty(AnimatedIcon.REFRESH_DELEGATE, refreshDelegate)
+    }
+
+    // The delegate closes over this view's model/renderer/items. It costs nothing while the view stays attached
+    // — the platform only reads it during its own paint/animation cycle — but clearing it on detach makes the
+    // delegate's lifetime match the view's instead of depending on how long the platform's animation registry
+    // happens to retain it.
+    override fun removeNotify() {
+        super.removeNotify()
+        list.putClientProperty(AnimatedIcon.REFRESH_DELEGATE, null)
     }
 
     /**
@@ -267,6 +302,20 @@ internal class ActiveListView(
         heightKey = null
         renderer.setBodyHeight(null)
         sync()
+    }
+
+    @RequiresEdt
+    private fun resetCellSizes() {
+        checkEdt()
+        heightKey = null
+        renderer.setBodyHeight(null)
+        if (list.fixedCellHeight == -1) {
+            list.fixedCellHeight = 1
+            list.fixedCellHeight = -1
+        }
+        sync()
+        list.revalidate()
+        list.repaint()
     }
 
     @RequiresEdt
@@ -545,6 +594,18 @@ internal class ActiveListView(
         checkEdt()
         if (idx < 0) return
         list.getCellBounds(idx, idx)?.let { list.repaint(it) }
+    }
+
+    /** Advances an animation frame: repaints only the visible rows that paint an animated glyph. */
+    @RequiresEdt
+    private fun repaintAnimated() {
+        checkEdt()
+        val first = list.firstVisibleIndex
+        val last = list.lastVisibleIndex
+        if (first < 0 || last < first) return
+        for (idx in first..last) {
+            if (activeListAnimated(model.getElementAt(idx))) repaintRow(idx)
+        }
     }
 
     @RequiresEdt

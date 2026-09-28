@@ -87,6 +87,7 @@ export async function createWorktreeOnDisk(
       probeFailed: manager.gitProbeFailed,
       err: error,
     })
+    ctx.log(`Worktree creation failed: ${msg}`)
     report(opts, { message: msg, code: errorCode })
     ctx.postToWebview({
       type: "agentManager.worktreeSetup",

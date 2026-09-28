@@ -85,6 +85,11 @@ class MockCliServer : AutoCloseable {
     @Volatile var backgroundJobCancelResult = "true"
     @Volatile var backgroundJobCancelStatus = 200
     @Volatile var backgroundJobPromoteResult = "true"
+    @Volatile var retentionStatus = """{"policy":{"enabled":false,"maxAgeDays":30},"last":null,"progress":null}"""
+    @Volatile var retentionRun = retentionStatus
+    @Volatile var retentionStatusCode = 200
+    @Volatile var retentionRunStatus = 200
+    @Volatile var lastRetentionRunBody: String? = null
     @Volatile var backgroundJobPromoteStatus = 200
     @Volatile var lastBackgroundJobsPath: String? = null
     @Volatile var lastBackgroundJobCancelPath: String? = null
@@ -182,7 +187,9 @@ class MockCliServer : AutoCloseable {
     @Volatile var lastSessionRenameBody: String? = null
     @Volatile var lastSessionRenameMethod: String? = null
     @Volatile var pendingPermissions = "[]"
+    @Volatile var pendingPermissionsStatus = 200
     @Volatile var pendingQuestions = "[]"
+    @Volatile var pendingQuestionsStatus = 200
 
     /** Configurable delay for all endpoint responses (ms). 0 = no delay. */
     @Volatile var responseDelay: Long = 0
@@ -473,6 +480,12 @@ class MockCliServer : AutoCloseable {
                     lastBackgroundJobPromotePath = path
                     respond(output, backgroundJobPromoteStatus, backgroundJobPromoteResult)
                 }
+                bare == "/kilocode/retention" && method == "GET" ->
+                    respond(output, retentionStatusCode, retentionStatus)
+                bare == "/kilocode/retention/run" && method == "POST" -> {
+                    lastRetentionRunBody = body
+                    respond(output, retentionRunStatus, retentionRun)
+                }
                 bare == "/instance/reload" && method == "POST" -> respond(output, 200, "true")
                 bare == "/command" -> respond(output, commandsStatus, commands)
                 bare == "/skill" -> respond(output, skillsStatus, skills)
@@ -508,8 +521,10 @@ class MockCliServer : AutoCloseable {
                     respond(output, cloudSessionImportStatus, cloudSessionImport)
                 }
                 bare == "/session/status" -> respond(output, sessionStatusesStatus, sessionStatuses)
-                bare == "/permission" && method == "GET" -> respond(output, 200, pendingPermissions)
-                bare == "/question" && method == "GET" -> respond(output, 200, pendingQuestions)
+                bare == "/permission" && method == "GET" ->
+                    respond(output, pendingPermissionsStatus, pendingPermissions)
+                bare == "/question" && method == "GET" ->
+                    respond(output, pendingQuestionsStatus, pendingQuestions)
                 bare == "/session" && method == "GET" -> respond(output, sessionsStatus, sessions)
                 bare == "/session" && method == "POST" -> respond(output, sessionCreateStatus, sessionCreate)
                 bare.matches(Regex("/session/ses_[^/]+")) && method == "GET" ->

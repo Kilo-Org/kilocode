@@ -7,6 +7,7 @@ import ai.kilocode.client.ui.layout.Stack
 import ai.kilocode.client.ui.list.ActiveList
 import ai.kilocode.client.ui.list.ActiveListBadge
 import ai.kilocode.client.ui.list.ActiveListConfig
+import ai.kilocode.client.ui.list.ActiveListIconAlignment
 import ai.kilocode.client.ui.list.ActiveListItem
 import ai.kilocode.client.ui.list.ActiveListRowHeight
 import ai.kilocode.log.KiloLog
@@ -97,7 +98,12 @@ internal class SessionBoardDialog(
     // internal (not private): lets tests simulate real clicks/selection on the live list.
     internal val list = ActiveList(
         emptyText = KiloBundle.message("session.board.empty"),
-        cfg = ActiveListConfig(height = ActiveListRowHeight.PREFERRED, wrapDescription = true),
+        cfg = ActiveListConfig(
+            height = ActiveListRowHeight.PREFERRED,
+            tooltip = false,
+            iconAlignment = ActiveListIconAlignment.TOP,
+            wrapDescription = true,
+        ),
         showSearch = false,
         onCell = { _, _ -> },
         onClick = { item -> (item as? Row)?.let(::openParticipant) },

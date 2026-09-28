@@ -7,6 +7,7 @@ import ai.kilocode.client.ui.FilledBadgeIcon
 import ai.kilocode.client.ui.LayeredOverlayPanel
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.layout.HAlign
+import ai.kilocode.client.ui.layout.LayoutPass
 import ai.kilocode.client.ui.layout.Stack
 import ai.kilocode.client.ui.layout.VAlign
 import ai.kilocode.client.ui.layout.align
@@ -103,7 +104,7 @@ internal class ActiveListRenderer(
     // Pin the glyph to the top of the label so a stretched icon column keeps the icon on the
     // first text line instead of centering it across a multi-line row.
     private val icon = JBLabel().apply { verticalAlignment = SwingConstants.TOP }
-    private val mark = icon.align(HAlign.CENTER, VAlign.CENTER)
+    private val mark = icon.align(HAlign.CENTER, cfg.iconAlignment.align())
     private val title = FadeText()
     private val leading = Stack.horizontal(JBUI.scale(activeListIconGap()))
     private val badges = Stack.horizontal(JBUI.scale(activeListIconGap()))
@@ -262,6 +263,13 @@ internal class ActiveListRenderer(
         if (!wired) return
         syncScale()
     }
+
+    // The stamp is invalidated wholesale for every row (see [activeListInvalidate]), so without a pass each
+    // nested Stack/Align re-measures its whole subtree for every size it is asked. The painting validate and
+    // every row-height read run as one [LayoutPass] each, which measures every container once.
+    override fun validate() = LayoutPass.measure { super.validate() }
+
+    override fun getPreferredSize(): Dimension = LayoutPass.measure { super.getPreferredSize() }
 
     @RequiresEdt
     override fun getListCellRendererComponent(
@@ -443,7 +451,7 @@ internal class ActiveListRenderer(
         val fixed = bodyHeight
         bodyHeight = null
         getListCellRendererComponent(list, value, index, selected, focused)
-        val height = wrap.preferredSize.height
+        val height = LayoutPass.measure { wrap.preferredSize.height }
         bodyHeight = fixed
         return height
     }
@@ -635,6 +643,11 @@ internal class ActiveListBadgeCell : JBLabel(), ActiveListHitCell {
     override fun cellTooltip(): String? = badge?.tooltip?.takeIf { it.isNotBlank() }
 
     override fun cellAction(): (() -> Unit)? = badge?.action
+}
+
+private fun ActiveListIconAlignment.align(): VAlign = when (this) {
+    ActiveListIconAlignment.CENTER -> VAlign.CENTER
+    ActiveListIconAlignment.TOP -> VAlign.TOP
 }
 
 /**

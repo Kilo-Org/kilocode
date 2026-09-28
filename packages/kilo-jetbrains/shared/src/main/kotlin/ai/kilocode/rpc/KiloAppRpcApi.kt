@@ -11,6 +11,7 @@ import ai.kilocode.rpc.dto.ModelSelectionUpdateDto
 import ai.kilocode.rpc.dto.ModelStateDto
 import ai.kilocode.rpc.dto.ModelVariantUpdateDto
 import ai.kilocode.rpc.dto.ProfileDto
+import ai.kilocode.rpc.dto.RetentionStatusDto
 import ai.kilocode.rpc.dto.TelemetryCaptureDto
 import com.intellij.platform.rpc.RemoteApiProviderService
 import fleet.rpc.RemoteApi
@@ -68,14 +69,17 @@ interface KiloAppRpcApi : RemoteApi<Unit> {
     /** Persist a per-agent model selection. */
     suspend fun updateModelSelection(update: ModelSelectionUpdateDto): ModelStateDto
 
-    /** Clear a persisted per-agent model selection. */
-    suspend fun clearModelSelection(agent: String): ModelStateDto
-
     /** Persist a per-model reasoning variant selection. */
     suspend fun updateModelVariant(update: ModelVariantUpdateDto): ModelStateDto
 
     /** Patch global CLI config values. */
     suspend fun updateConfig(patch: ConfigPatchDto): KiloAppStateDto
+
+    /** Read the machine-wide session-retention policy, progress, and last run. */
+    suspend fun retentionStatus(): RetentionStatusDto
+
+    /** Trigger a machine-wide session-retention pass. */
+    suspend fun runRetention(force: Boolean): RetentionStatusDto
 
     /** Apply frontend-managed diagnostic log settings in the backend process. */
     suspend fun applyLogConfig(config: LogConfigDto)

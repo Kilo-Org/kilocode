@@ -5,7 +5,8 @@ import * as Log from "@opencode-ai/core/util/log"
 import type { Skill } from "@/skill"
 import type { MarketplaceInstalledMetadata, Scope } from "./schema"
 import * as Paths from "./paths"
-import { pluginPackageName } from "./plugin-spec"
+import * as Companions from "./companions"
+import { pluginIdentity } from "./plugin-spec"
 
 const log = Log.create({ service: "marketplace" })
 
@@ -48,6 +49,28 @@ async function agentFiles(scope: Scope, directory: string): Promise<Entry[]> {
   }
 }
 
+async function mcpFiles(scope: Scope, directory: string, worktree?: string): Promise<Entry[]> {
+  const dir = await Paths.mcpsDir(scope, directory, worktree)
+  const files = await readdir(dir).catch((err: NodeJS.ErrnoException) => {
+    if (err.code !== "ENOENT") log.warn("MCP receipt detection failed", { scope, dir, err })
+    return [] as string[]
+  })
+  const result = await Promise.all(
+    files
+      .filter((file) => file.endsWith(".json"))
+      .map(async (file): Promise<Entry[]> => {
+        const id = path.basename(file, ".json")
+        try {
+          return (await Companions.read(scope, directory, id, worktree)) ? [entry(id, "mcp")] : []
+        } catch (err) {
+          log.warn("MCP receipt detection failed", { scope, file, err })
+          return []
+        }
+      }),
+  )
+  return result.flat()
+}
+
 async function configEntries(scope: Scope, directory: string, worktree?: string): Promise<Entry[]> {
   const file = await Paths.configPath(scope, directory, worktree)
   try {
@@ -75,6 +98,8 @@ async function detectScope(scope: Scope, input: DetectInput): Promise<Record<str
   return Object.fromEntries([
     ...(await agentFiles(scope, input.directory)),
     ...(await configEntries(scope, input.directory, input.worktree)),
+    // Keep failed-install receipts visible so users can retry cleanup without the catalog.
+    ...(await mcpFiles(scope, input.directory, input.worktree)),
     ...(await pluginEntries(scope, input)),
     ...skillEntries(input.skills, input.directory, scope === "project"),
   ])
@@ -99,7 +124,7 @@ async function pluginEntries(scope: Scope, input: DetectInput): Promise<Entry[]>
   const out: Entry[] = []
   for (const file of Paths.pluginFiles(scope, input.directory, input.worktree)) {
     for (const spec of await readPluginList(file)) {
-      const name = pluginPackageName(spec)
+      const name = pluginIdentity(spec)
       if (name) out.push(entry(name, "plugin"))
     }
   }

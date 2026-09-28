@@ -1037,6 +1037,43 @@ it.instance("loop continues when finish is tool-calls", () =>
   }),
 )
 
+it.instance("loop continues when finish is unknown", () =>
+  Effect.gen(function* () {
+    const { llm } = yield* useServerConfig(providerCfg)
+    const prompt = yield* SessionPrompt.Service
+    const sessions = yield* Session.Service
+    const session = yield* sessions.create({
+      title: "Pinned",
+      permission: [{ permission: "*", pattern: "*", action: "allow" }],
+    })
+    yield* prompt.prompt({
+      sessionID: session.id,
+      agent: "build",
+      noReply: true,
+      parts: [{ type: "text", text: "hello" }],
+    })
+    yield* llm.push(reply())
+    yield* llm.text("second")
+
+    const result = yield* prompt.loop({ sessionID: session.id })
+    // kilocode_change start - Kilo settles a finish-less response instead of
+    // continuing the prompt loop. Kilo preserves the AI SDK's unexpected
+    // provider finish reason as "other" (packages/llm/src/schema/ids.ts), which
+    // is a terminal finish for the loop-exit check in session/prompt.ts, and
+    // src/kilocode/session/processor.ts only retries genuinely incomplete
+    // responses through its bounded recover budget. The second queued reply is
+    // therefore never consumed and only one model call is made.
+    expect(yield* llm.calls).toBe(1)
+    expect(yield* llm.pending).toBe(1)
+    expect(result.info.role).toBe("assistant")
+    if (result.info.role === "assistant") {
+      expect(result.parts.some((part) => part.type === "text" && part.text === "second")).toBe(false)
+      expect(result.info.finish).toBe("other")
+    }
+    // kilocode_change end
+  }),
+)
+
 it.instance("glob tool keeps instance context during prompt runs", () =>
   Effect.gen(function* () {
     const { dir, llm } = yield* useServerConfig(providerCfg)

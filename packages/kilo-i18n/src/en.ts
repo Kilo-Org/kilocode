@@ -36,13 +36,14 @@ export const dict = {
     "Only this project. The installed files can be committed and shared with your team.",
   "marketplace.install.scope.global.description": "All projects on this machine. Stored in your user configuration.",
   "marketplace.install.destination": "Installation destination",
+  "marketplace.install.includedSkills": "Included skills",
   "marketplace.install.about.mcp":
     "An MCP server gives Kilo additional tools for working with external services or local programs.",
   "marketplace.install.about.agent": "An agent adds a reusable role with its own instructions and permissions.",
   "marketplace.install.about.skill":
     "A skill adds task-specific instructions and resources that Kilo can load when needed.",
   "marketplace.install.about.plugin":
-    "An npm plugin adds custom tools and integrations to Kilo. Plugins run with full permissions.",
+    "A plugin adds custom tools and integrations to Kilo. Plugins run with full permissions.",
   "marketplace.install.mcp.warning":
     "MCP servers can run local commands or connect to external services. Kilo will ask for permission before using their tools unless your permissions allow them automatically.",
   "marketplace.install.plugin.warning":
@@ -65,6 +66,8 @@ export const dict = {
   "marketplace.remove.confirm":
     "Are you sure you want to remove this {{type}}? This will remove it from your {{scope}} configuration.",
   "marketplace.remove.cancel": "Cancel",
+  "marketplace.remove.mcp.skills":
+    "This also removes companion skills owned by this installation. Independently installed skills are kept.",
   "marketplace.remove.confirm.button": "Remove",
   "marketplace.search": "Search...",
   "marketplace.filter.all": "All Items",
@@ -73,6 +76,7 @@ export const dict = {
   "marketplace.empty": "No items found",
   "marketplace.empty.relevant": "No relevant marketplace items found for this workspace.",
   "marketplace.badge.mcpServer": "MCP Server",
+  "marketplace.badge.skills": "Includes skills",
   "marketplace.card.by": "by {{author}}",
   "marketplace.install.method": "Installation Method",
   "marketplace.install.parameters": "Parameters",
