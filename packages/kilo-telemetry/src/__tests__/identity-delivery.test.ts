@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, expect, test } from "bun:test"
 import { createHash } from "node:crypto"
-import { mkdtemp, rm } from "node:fs/promises"
+import { mkdir, mkdtemp, readdir, rm } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import path from "node:path"
 
@@ -63,6 +63,25 @@ test("failed uploads do not suppress identity events on the next process", async
   const next = await run()
   expect(next.filter((event) => event.event === "$create_alias")).toHaveLength(1)
 }, 20000)
+
+test("disabled telemetry writes no alias marker and a later enabled run sends the alias", async () => {
+  expect(await run({ KILO_TELEMETRY_LEVEL: "off" })).toEqual([])
+  expect((await readdir(dir)).filter((file) => file.startsWith("telemetry-alias-"))).toEqual([])
+  const events = await run()
+  expect(events.filter((event) => event.event === "$create_alias")).toHaveLength(1)
+})
+
+test.each(["corrupt", "unreadable"])("an alias marker that is %s does not suppress the alias", async (kind) => {
+  await run()
+  const name = (await readdir(dir)).find((file) => file.startsWith("telemetry-alias-"))
+  expect(name).toBeDefined()
+  const file = path.join(dir, name!)
+  await rm(file)
+  if (kind === "corrupt") await Bun.write(file, "invalid")
+  if (kind === "unreadable") await mkdir(file)
+  const events = await run()
+  expect(events.filter((event) => event.event === "$create_alias")).toHaveLength(1)
+})
 
 test("a new machine gets its own alias even when the user properties are unchanged", async () => {
   await run()
