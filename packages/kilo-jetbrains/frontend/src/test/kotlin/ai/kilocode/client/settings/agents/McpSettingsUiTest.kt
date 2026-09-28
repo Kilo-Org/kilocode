@@ -5,6 +5,7 @@ import ai.kilocode.client.app.KiloAgentBehaviorService
 import ai.kilocode.client.app.KiloAppService
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.settings.base.DirectoryReadyConfigurable
+import ai.kilocode.client.settings.base.SettingsInfo
 import ai.kilocode.client.testing.FakeAgentBehaviorRpcApi
 import ai.kilocode.client.testing.FakeAppRpcApi
 import ai.kilocode.client.testing.fire
@@ -58,6 +59,17 @@ class McpSettingsUiTest : BasePlatformTestCase() {
             scope = null
         } finally {
             super.tearDown()
+        }
+    }
+
+    fun `test page shows exactly one info banner explaining mcp servers`() {
+        val panel = panel()
+        flushUntil { rows(panel).size == 3 }
+
+        edt {
+            val info = components(panel).filterIsInstance<SettingsInfo>().single()
+            assertEquals(KiloBundle.message("settings.agentBehavior.mcp.info"), bannerIntro(info))
+            true
         }
     }
 
@@ -413,6 +425,11 @@ class McpSettingsUiTest : BasePlatformTestCase() {
     }
 
     private fun list(panel: McpSettingsUi) = components(panel).filterIsInstance<JBList<ActiveListItem>>().single()
+
+    private fun bannerIntro(info: SettingsInfo): String {
+        val pane = UIUtil.findComponentOfType(info, javax.swing.JEditorPane::class.java) ?: error("no banner text")
+        return pane.text.replace(Regex("<[^>]+>"), "").replace(Regex("\\s+"), " ").trim()
+    }
 
     private fun components(root: java.awt.Component): List<java.awt.Component> {
         val out = mutableListOf<java.awt.Component>()
