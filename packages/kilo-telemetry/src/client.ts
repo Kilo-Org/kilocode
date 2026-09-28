@@ -1,7 +1,9 @@
 import { PostHog } from "posthog-node"
 import { Identity } from "./identity.js"
 import { TelemetryEvent } from "./events.js"
-import { Delivery } from "./delivery.js"
+import { createHash } from "node:crypto"
+import { readFileSync, writeFileSync } from "node:fs"
+import path from "node:path"
 
 const POSTHOG_API_KEY = "phc_GK2Pxl0HPj5ZPfwhLRjXrtdz8eD7e9MKnXiFrOqnB6z"
 const POSTHOG_HOST = "https://us.i.posthog.com"
@@ -9,16 +11,54 @@ const POSTHOG_HOST = "https://us.i.posthog.com"
 export namespace Client {
   let client: PostHog | null = null
   let enabled = true
-  let delivery = new Delivery("")
+  let directory = ""
+  const pending = new Map<string, string>()
 
   export function init(dataPath = "") {
-    delivery = new Delivery(dataPath)
+    directory = dataPath
+    pending.clear()
     client = new PostHog(POSTHOG_API_KEY, {
       host: POSTHOG_HOST,
       disableGeoip: false,
     })
-    client.on("flush", (messages) => delivery.confirm(messages))
-    client.on("error", () => delivery.retry())
+    client.on("flush", (messages) => {
+      if (!directory) return
+      for (const message of messages) {
+        if (message.event !== "$identify" && message.event !== "$create_alias") continue
+        const [file, value] = fingerprint(message.event, message.distinct_id, message.properties)
+        try {
+          // Persist only successful uploads. A partial write just causes a resend.
+          writeFileSync(file, value, { mode: 0o600 })
+        } catch (err) {
+          if (process.env.KILO_PRINT_LOGS) console.warn("telemetry cache write failed", err)
+        }
+      }
+    })
+    client.on("error", () => pending.clear())
+  }
+
+  function fingerprint(event: string, id: string, properties: Record<string, unknown>) {
+    const hash = (value: unknown) =>
+      createHash("sha256")
+        .update(JSON.stringify(value) ?? "null")
+        .digest("hex")
+    const key = hash([event, id, properties.alias])
+    return [
+      path.join(directory, `telemetry-delivery-${key}`),
+      hash(event === "$identify" ? properties.$set : properties.alias),
+    ] as const
+  }
+
+  function duplicate(event: string, id: string, properties: Record<string, unknown>) {
+    const [file, value] = fingerprint(event, id, properties)
+    try {
+      const previous = pending.get(file) ?? (directory ? readFileSync(file, "utf8") : undefined)
+      if (previous === value) return true
+    } catch {
+      // Missing or unreadable caches must not prevent identification.
+    }
+    pending.set(file, value)
+    return false
   }
 
   export function getClient(): PostHog | null {
@@ -54,7 +94,7 @@ export namespace Client {
 
   export function identify(distinctId: string, properties?: Record<string, unknown>) {
     if (!enabled || !client) return
-    if (!delivery.accept({ event: "$identify", distinct_id: distinctId, properties: { $set: properties } })) return
+    if (duplicate("$identify", distinctId, { $set: properties })) return
 
     client.capture({
       distinctId,
@@ -67,7 +107,7 @@ export namespace Client {
 
   export function alias(distinctId: string, aliasId: string) {
     if (!enabled || !client) return
-    if (!delivery.accept({ event: "$create_alias", distinct_id: distinctId, properties: { alias: aliasId } })) return
+    if (duplicate("$create_alias", distinctId, { alias: aliasId })) return
 
     client.alias({
       distinctId,

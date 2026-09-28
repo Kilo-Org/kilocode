@@ -16,7 +16,7 @@ const { Client } = await import("../../client")
 await Telemetry.init({
   dataPath: process.env.TEST_DATA!,
   version: process.env.TEST_VERSION ?? "1.0.0",
-  enabled: !process.env.TEST_DISABLED,
+  enabled: true,
 })
 await Promise.all(
   Array.from({ length: process.env.TEST_CONCURRENT ? 3 : 1 }, () =>
