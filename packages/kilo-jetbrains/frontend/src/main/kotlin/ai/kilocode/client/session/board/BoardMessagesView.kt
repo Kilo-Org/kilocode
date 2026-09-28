@@ -23,7 +23,13 @@ import javax.swing.JPanel
 import javax.swing.Scrollable
 import javax.swing.SwingConstants
 
-/** Width-tracking board body that retains one Markdown view per loaded message. */
+/**
+ * Width-tracking board body that retains one Markdown view per explicitly loaded message.
+ *
+ * Retaining deep pages is deliberate: paging is a user action in batches of 20, the CLI caps a
+ * board at 1,000 messages, and evicting an already loaded row would make backward paging lossy.
+ * The dialog is short-lived and [dispose] releases every Markdown editor when it closes.
+ */
 internal class BoardMessagesView @RequiresEdt constructor(
     private val avatars: BoardAvatars,
     private val open: (String, String?) -> Unit,
@@ -169,16 +175,36 @@ private class RouteMember @RequiresEdt constructor(
     private val avatars: BoardAvatars,
     private val open: (String, String?) -> Unit,
 ) {
-    private val icon = JBLabel()
-    private val area = HoverArea(icon)
-    val component: JComponent get() = area
+    private val active = JBLabel()
+    private val plain = JBLabel()
+    private val area = HoverArea(active)
+    private val root = JPanel(BorderLayout()).apply { isOpaque = false }
+    val component: JComponent get() = root
 
     @RequiresEdt
     fun update(id: String, label: String?) {
         val title = label ?: id
-        icon.icon = avatars.icon(id)
-        area.action = id.takeIf(::isSubagent)?.let { target -> { open(target, label) } }
+        val icon = avatars.icon(id)
+        active.icon = icon
+        plain.icon = icon
         val tip = if (title == id) title else "$title ($id)"
+        val target = id.takeIf(::isSubagent)
+        val child = if (target == null) plain else area
+        if (child.parent !== root) {
+            root.removeAll()
+            root.add(child, BorderLayout.CENTER)
+            root.revalidate()
+            root.repaint()
+        }
+        if (target == null) {
+            area.action = null
+            area.tooltip(null)
+            plain.toolTipText = tip
+            plain.accessibleContext.accessibleName = title
+            return
+        }
+        plain.toolTipText = null
+        area.action = { open(target, label) }
         area.tooltip(tip, title)
     }
 }

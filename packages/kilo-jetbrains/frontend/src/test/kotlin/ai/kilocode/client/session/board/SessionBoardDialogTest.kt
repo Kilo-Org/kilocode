@@ -247,8 +247,8 @@ class SessionBoardDialogTest : BasePlatformTestCase() {
 
         edt {
             val row = rows(d).single()
-            clickMember(row, "main")
-            clickMember(row, "ALL")
+            assertTrue(UIUtil.findComponentsOfType(row, HoverArea::class.java).isEmpty())
+            assertEquals(listOf("main", "ALL"), iconLabels(row).map { it.accessibleContext.accessibleName })
         }
 
         assertTrue(opened.isEmpty())
@@ -480,10 +480,10 @@ class SessionBoardDialogTest : BasePlatformTestCase() {
     private fun route(row: BoardMessageView): List<String> =
         UIUtil.findComponentsOfType(row, PlainLabel::class.java).map { it.text }
 
-    private fun icons(row: BoardMessageView): List<javax.swing.Icon> =
-        UIUtil.findComponentsOfType(row, HoverArea::class.java).map { area ->
-            UIUtil.findComponentsOfType(area, JBLabel::class.java).firstNotNullOf { it.icon }
-        }
+    private fun icons(row: BoardMessageView): List<javax.swing.Icon> = iconLabels(row).mapNotNull { it.icon }
+
+    private fun iconLabels(row: BoardMessageView): List<JBLabel> =
+        UIUtil.findComponentsOfType(row, JBLabel::class.java).filter { it.icon != null }
 
     private fun html(row: BoardMessageView): String =
         UIUtil.findComponentsOfType(row, JBHtmlPane::class.java).joinToString("\n") { it.text }

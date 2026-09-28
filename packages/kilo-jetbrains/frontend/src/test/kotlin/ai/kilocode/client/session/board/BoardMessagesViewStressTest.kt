@@ -27,21 +27,34 @@ class BoardMessagesViewStressTest : BasePlatformTestCase() {
         }
     }
 
-    fun `test repeated updates retain message and code editor then release both on clear`() {
+    fun `test repeated updates retain editors and subset removal releases only dropped rows`() {
         val base = EditorFactory.getInstance().allEditors.size
 
         edt {
-            view.sync(listOf(message(0)))
-            val row = rows().single()
-            val field = UIUtil.findComponentsOfType(row, EditorTextField::class.java).single()
-            field.getEditor(true)
+            view.sync(listOf(message("m1", 0), message("m2", 0)))
+            val first = rows().first()
+            val second = rows().last()
+            val fields = listOf(
+                UIUtil.findComponentsOfType(first, EditorTextField::class.java).single(),
+                UIUtil.findComponentsOfType(second, EditorTextField::class.java).single(),
+            )
+            val editors = fields.map { it.getEditor(true)!! }
 
             repeat(150) { index ->
-                view.sync(listOf(message(index)))
-                assertSame(row, rows().single())
-                assertSame(field, UIUtil.findComponentsOfType(row, EditorTextField::class.java).single())
-                assertEquals(1, stack().componentCount)
+                view.sync(listOf(message("m1", index), message("m2", index)))
+                assertSame(first, rows().first())
+                assertSame(second, rows().last())
+                assertSame(fields.first(), UIUtil.findComponentsOfType(first, EditorTextField::class.java).single())
+                assertSame(fields.last(), UIUtil.findComponentsOfType(second, EditorTextField::class.java).single())
+                assertEquals(2, stack().componentCount)
             }
+
+            view.sync(listOf(message("m2", 151)))
+            UIUtil.dispatchAllInvocationEvents()
+            assertEquals(listOf(second), rows())
+            assertTrue(editors.first().isDisposed)
+            assertFalse(editors.last().isDisposed)
+            assertEquals(base + 1, EditorFactory.getInstance().allEditors.size)
 
             view.sync(emptyList())
             UIUtil.dispatchAllInvocationEvents()
@@ -50,8 +63,8 @@ class BoardMessagesViewStressTest : BasePlatformTestCase() {
         }
     }
 
-    private fun message(index: Int) = BoardMessageDto(
-        id = "m1",
+    private fun message(id: String, index: Int) = BoardMessageDto(
+        id = id,
         timestamp = index.toLong(),
         from = "ses_a",
         to = "main",
