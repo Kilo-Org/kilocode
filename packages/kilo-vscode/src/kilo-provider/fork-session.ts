@@ -1,6 +1,7 @@
 import type { Session, SessionStatus } from "@kilocode/sdk/v2/client"
 import type { KiloConnectionService } from "../services/cli-backend"
 import { forkSession } from "../agent-manager/fork-session"
+import { isRunningStatus } from "../session-status"
 
 export interface ForkContext {
   connection: KiloConnectionService
@@ -23,7 +24,7 @@ export async function handleForkSession(ctx: ForkContext, sessionId: string, mes
         console.error("[Kilo New] refreshForkStatus failed:", e)
         return "busy" as SessionStatus["type"]
       }))
-  if (status !== "idle") {
+  if (isRunningStatus(status)) {
     ctx.post({ type: "error", message: "Wait for the session to finish before forking it." })
     return
   }
