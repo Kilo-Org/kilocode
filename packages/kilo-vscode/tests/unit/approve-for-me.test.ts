@@ -1,7 +1,21 @@
-import { describe, expect, it } from "bun:test"
+import { afterEach, describe, expect, it } from "bun:test"
 import * as vscode from "vscode"
 import { registerToggleApproveForMe, type ApproveForMeController } from "../../src/commands/toggle-approve-for-me"
 import { createApproveForMeBridge } from "../../src/kilo-provider/approve-for-me"
+
+// config() below mutates the process-wide vscode mock (shared across every test
+// file). Restore it after each test so a later file doesn't observe this one's stubs.
+const original = {
+  getConfiguration: vscode.workspace.getConfiguration,
+  onDidChangeConfiguration: vscode.workspace.onDidChangeConfiguration,
+  showInformationMessage: vscode.window.showInformationMessage,
+  registerCommand: vscode.commands.registerCommand,
+}
+afterEach(() => {
+  Object.assign(vscode.workspace, original)
+  vscode.window.showInformationMessage = original.showInformationMessage
+  vscode.commands.registerCommand = original.registerCommand
+})
 
 function config(initial: { active?: boolean; visible?: boolean } = {}) {
   const handlers: Array<() => void> = []
