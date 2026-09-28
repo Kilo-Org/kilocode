@@ -85,8 +85,8 @@ for repo CLI tasks. `pin` removes it because pinned mode should not depend on lo
 
 ## Related
 
-- Version-bump and release-gating logic lives in the `release-jetbrains` skill
-  (`.kilo/skills/release-jetbrains/SKILL.md`); this skill reuses its `set-pin.ts` and
-  `pin-common.ts` helpers.
-- Background on the build wiring: the "CLI Pinning, Unpinning, and Bumping" and "CLI
-  Integration" sections of `packages/kilo-jetbrains/AGENTS.md`.
+- Version-bump and release-gating logic lives in the `/release-jetbrains` command
+  (`.kilo/command/release-jetbrains.md`); this skill reuses its `set-pin.ts` and
+  `pin-common.ts` helpers from `.kilo/skills/release-jetbrains/script/`.
+- Background on the build wiring: the "CLI Pinning, Unpinning, and Bumping" section of
+  the `jetbrains-dev` skill (`.kilo/skills/jetbrains-dev/SKILL.md`).
