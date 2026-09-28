@@ -1,10 +1,14 @@
 package ai.kilocode.client.settings.base
 
+import ai.kilocode.client.ui.UiStyle
 import com.intellij.openapi.util.text.HtmlChunk
 import com.intellij.ui.EditorNotificationPanel.Status
 import com.intellij.ui.InlineBanner
+import com.intellij.util.ui.JBUI
+import java.awt.BorderLayout
 import java.awt.event.ComponentAdapter
 import java.awt.event.ComponentEvent
+import javax.swing.JComponent
 
 /**
  * The platform's information banner, carrying copy that re-wraps to the width it is actually given.
@@ -20,6 +24,7 @@ import java.awt.event.ComponentEvent
 internal open class WrapBanner(copy: String, private val seed: Int) : InlineBanner("", Status.Info) {
     private var paragraphs = listOf(copy)
     private var applied = 0
+    private var trailing: JComponent? = null
 
     /** Measured once per banner: chrome cannot change mid-resize, and [chrome] builds a component. */
     private val chrome = chrome()
@@ -39,12 +44,23 @@ internal open class WrapBanner(copy: String, private val seed: Int) : InlineBann
         wrap(if (width > 0) width - chrome else seed)
     }
 
+    /** Places retained controls beside the message and reserves their width while wrapping copy. */
+    protected fun setTrailing(component: JComponent) {
+        component.border = JBUI.Borders.emptyLeft(UiStyle.Gap.lg())
+        message.parent.add(component, BorderLayout.EAST)
+        trailing = component
+        applied = 0
+        wrap(if (width > 0) width - chrome else seed)
+    }
+
     private fun wrap(to: Int) {
         if (to <= 0 || to == applied) return
         applied = to
+        val width = to - (trailing?.preferredSize?.width ?: 0)
+        if (width <= 0) return
         setMessage(
             HtmlChunk.div()
-                .attr("width", to)
+                .attr("width", width)
                 .children(
                     paragraphs.flatMapIndexed { i, paragraph ->
                         if (i == paragraphs.lastIndex) listOf(HtmlChunk.text(paragraph))

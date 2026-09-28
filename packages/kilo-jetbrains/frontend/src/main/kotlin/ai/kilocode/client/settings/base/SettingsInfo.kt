@@ -1,17 +1,16 @@
 package ai.kilocode.client.settings.base
 
 import ai.kilocode.client.plugin.KiloBundle
+import ai.kilocode.client.ui.UiStyle
+import ai.kilocode.client.ui.layout.Stack
 import com.intellij.ide.BrowserUtil
+import com.intellij.ui.components.labels.LinkLabel
 import com.intellij.util.concurrency.annotations.RequiresEdt
 
 /**
  * A short, always-visible sentence explaining what a settings page configures, with a `Show more`
- * link that reveals a longer explanation and — once expanded — a `Learn more` link to the doc site.
- *
- * Follows the same shape as [ai.kilocode.client.session.board.SessionBoardDialog]'s banner: the
- * toggle sits in the banner's action row rather than inline in the sentence, because the banner
- * installs its own [com.intellij.ui.BrowserHyperlinkListener] on a message pane this class cannot
- * reach, so an in-text `<a href>` would be treated as a URL.
+ * link that reveals a longer explanation and a `Learn more` link to the doc site. Both links stay
+ * right-aligned beside the intro so the collapsed banner remains a single row.
  */
 internal class SettingsInfo(
     private val intro: String,
@@ -21,9 +20,15 @@ internal class SettingsInfo(
 ) : WrapBanner(intro, SEED_WIDTH) {
     private var expanded = false
 
-    private val toggle = addAction(KiloBundle.message("settings.info.showMore"), null) { flip() }
+    private val toggle = link(KiloBundle.message("settings.info.showMore"), ::flip)
     private val learnMore = doc?.let { url ->
-        addAction(KiloBundle.message("settings.info.learnMore"), null) { browse(url) }.apply { isVisible = false }
+        link(KiloBundle.message("settings.info.learnMore")) { browse(url) }
+    }
+
+    init {
+        val actions = Stack.horizontal(UiStyle.Gap.lg()).next(toggle)
+        learnMore?.let(actions::next)
+        setTrailing(actions)
     }
 
     @RequiresEdt
@@ -35,10 +40,16 @@ internal class SettingsInfo(
     private fun sync() {
         if (expanded) setCopy(intro, more) else setCopy(intro)
         toggle.text = KiloBundle.message(if (expanded) "settings.info.showLess" else "settings.info.showMore")
-        learnMore?.isVisible = expanded
         revalidate()
         repaint()
     }
+
+    private fun link(text: String, action: () -> Unit) = LinkLabel<Runnable>(
+        text,
+        null,
+        { _, runnable -> runnable.run() },
+        Runnable(action),
+    )
 
     private companion object {
         /** Seed column for the first layout pass, before Swing assigns the settings page's real width. */
