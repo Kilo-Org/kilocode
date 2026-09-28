@@ -151,6 +151,29 @@ describe("sanitizeReviewComments", () => {
     expect(isReviewRangeValid(d, "additions", 82, 130)).toBe(false)
   })
 
+  it("updates comment bounds when a cached session patch changes", () => {
+    const patch = "@@ -50 +80 @@\n-old\n+new\n"
+    const d: WorktreeFileDiff = { ...diff("a.ts", "old", "new"), patch }
+    const deleted = comment({ file: "a.ts", line: 50, side: "deletions" })
+    const added = comment({ file: "a.ts", line: 80 })
+    const moved = comment({ file: "a.ts", line: 90 })
+    const full = comment({ file: "a.ts", line: 1 })
+    const comments = [deleted, added, moved, full]
+
+    expect(sanitizeReviewComments(comments, [d])).toEqual([deleted, added])
+    d.patch = "@@ -60 +90 @@\n-old\n+new\n"
+    expect(sanitizeReviewComments(comments, [d])).toEqual([moved])
+    expect(isReviewRangeValid(d, "deletions", 50)).toBe(false)
+    expect(isReviewRangeValid(d, "deletions", 60)).toBe(true)
+
+    d.patch = "@@ -50 +80 @@\n-old\n"
+    expect(sanitizeReviewComments(comments, [d])).toEqual([])
+    d.patch = patch
+    expect(sanitizeReviewComments(comments, [d])).toEqual([deleted, added])
+    d.patch = undefined
+    expect(sanitizeReviewComments(comments, [d])).toEqual([full])
+  })
+
   it("does not invent lines on the empty side of an added or deleted session file", () => {
     for (const status of ["added", "deleted"] as const) {
       const added = status === "added"
