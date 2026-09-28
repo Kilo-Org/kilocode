@@ -1020,7 +1020,7 @@ describe("wakeup resume", () => {
       // detached fiber reaches its notify step. Join that fiber so the
       // assertions below see a settled cancel: a notify that re-hydrates would
       // otherwise run after they pass, and the guard would prove nothing.
-      await AppRuntime.runPromise(Fiber.join(cancel))
+      await Effect.runPromise(Fiber.join(cancel))
 
       // A cancel notification would re-hydrate the persisted waiting goal from
       // the still-present session record and resume a session being deleted.
