@@ -448,15 +448,27 @@ export const dict = {
   "agentManager.caffeination.unavailable":
     "Tilstanden til at holde computeren vågen er ikke tilgængelig på denne platform",
   "agentManager.browser.title": "Integreret browser",
-  "agentManager.browser.url": "URL til lokal applikation",
+  "agentManager.browser.url": "Adresse",
   "agentManager.browser.urlPlaceholder": "http://localhost:3000",
   "agentManager.browser.open": "Åbn",
   "agentManager.browser.inspect": "Vælg element",
   "agentManager.browser.devtoolsTitle": "Udviklerværktøjer",
   "agentManager.browser.refresh": "Opdater browser",
+  "agentManager.browser.back": "Tilbage",
+  "agentManager.browser.forward": "Frem",
   "agentManager.browser.close": "Luk browser",
-  "agentManager.browser.empty": "Åbn en lokal applikation for at få vist en forhåndsvisning her.",
-  "agentManager.browser.noSession": "Start eller vælg en session i Agent Manager for at gennemse en lokal applikation.",
+  "agentManager.browser.empty":
+    "Åbn en lokal applikation eller en offentlig HTTPS-side for at få vist en forhåndsvisning her.",
+  "agentManager.browser.requirement":
+    "Kræver Google Chrome eller en kompatibel Playwright Chromium-browser. Browsere installeres ikke automatisk.",
+  "agentManager.browser.missingTitle": "Browser ikke fundet",
+  "agentManager.browser.missingChrome":
+    "Google Chrome blev ikke fundet. Installer Chrome for at bruge den integrerede browser, og prøv igen.",
+  "agentManager.browser.missingChromium":
+    "Playwright Chromium blev ikke fundet. Installer en kompatibel browser, eller aktivér “Brug system-Chrome” under “Browserindstillinger”.",
+  "agentManager.browser.downloadChrome": "Download Chrome",
+  "agentManager.browser.settings": "Browserindstillinger",
+  "agentManager.browser.noSession": "Start eller vælg en session i Agent Manager.",
   "agentManager.browser.screenshotAlt": "Aktuel browserside",
   "agentManager.browser.errors": "Browserproblemer: {{count}}",
   "agentManager.browser.diagnostics": "Browserdiagnostik",

@@ -146,6 +146,7 @@ class KiloBackendAppService private constructor(
     val port: Int get() = connection.port
 
     val sessions = KiloBackendSessionManager(cs, log)
+    val retention = KiloBackendRetentionManager(this)
     val chat = KiloBackendChatManager(cs, log)
     val activity = KiloBackendActivityManager(cs, log)
     val models = KiloBackendModelStateManager(log)

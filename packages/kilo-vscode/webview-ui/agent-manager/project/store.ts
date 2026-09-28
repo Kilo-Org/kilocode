@@ -1,4 +1,7 @@
 import { createSignal, type Accessor, type Setter } from "solid-js"
+import { isTerminalTabId } from "../../src/utils/terminal-tab-id"
+import { mergeTransientTabs } from "../tab-order"
+import { PENDING_PREFIX, REVIEW_TAB_ID } from "../tab-ids"
 import type {
   AgentManagerStateMessage,
   LocalGitStats,
@@ -91,7 +94,22 @@ export function createProjectStore(id: string, opts: { tabs?: string[] } = {}) {
     setWorktreeHealth(state.worktreeHealth ?? {})
     setOrphanDirectories(state.orphanDirectories ?? [])
     setSections(state.sections ?? [])
-    if (state.tabOrder) setTabOrder(state.tabOrder)
+    if (state.tabOrder) {
+      const incoming = state.tabOrder
+      setTabOrder((previous) => ({
+        ...previous,
+        ...Object.fromEntries(
+          Object.entries(incoming).map(([key, order]) => [
+            key,
+            mergeTransientTabs(
+              previous[key] ?? [],
+              order,
+              (id) => id === REVIEW_TAB_ID || isTerminalTabId(id) || id.startsWith(PENDING_PREFIX),
+            ),
+          ]),
+        ),
+      }))
+    }
     if (state.pinnedTabs) setPinnedTabs(state.pinnedTabs)
     if (state.worktreeOrder) setWorktreeOrder(state.worktreeOrder)
     if ("defaultBaseBranch" in state) setDefaultBaseBranch(state.defaultBaseBranch || undefined)

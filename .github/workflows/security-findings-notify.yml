@@ -1,0 +1,134 @@
+# kilocode_change - new file
+name: Security findings notify
+
+# Posts open Dependabot security alerts (critical/high) to Slack, and pings
+# the channel when a critical finding breaches its resolution SLA. Read-only;
+# follows the cron pattern from watch-opencode-releases.yml.
+
+on:
+  schedule:
+    - cron: "17 */6 * * *" # every 6 hours, offset to avoid the top of the hour
+  workflow_dispatch:
+
+concurrency:
+  group: security-findings-notify
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  vulnerability-alerts: read
+
+jobs:
+  list-findings:
+    if: github.repository == 'Kilo-Org/kilocode'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      matrix: ${{ steps.build.outputs.matrix }}
+    steps:
+      - id: build
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          # 15 matches an observed real critical deadline; 30 is a guess.
+          CRIT_DAYS: ${{ vars.SECURITY_SLA_CRITICAL_DAYS || '15' }}
+          HIGH_DAYS: ${{ vars.SECURITY_SLA_HIGH_DAYS || '30' }}
+        run: |
+          # --method GET is required: gh api auto-switches to POST whenever
+          # -f is passed, which would 404 against this GET-only endpoint.
+          alerts=$(gh api --paginate --method GET -f state=open -f per_page=100 "repos/$REPO/dependabot/alerts")
+          now=$(date -u +%s)
+          matrix=$(echo "$alerts" | jq -c --argjson now "$now" --argjson critDays "$CRIT_DAYS" --argjson highDays "$HIGH_DAYS" '
+            map(select(.security_advisory.severity == "critical" or .security_advisory.severity == "high"))
+            | map(
+                . as $a
+                | $a.security_advisory.severity as $sev
+                | (if $sev == "critical" then $critDays else $highDays end) as $threshold
+                | (($now - ($a.created_at | fromdateiso8601)) / 86400) as $age
+                | {
+                    number: $a.number,
+                    severity: $sev,
+                    ghsa_id: $a.security_advisory.ghsa_id,
+                    summary: $a.security_advisory.summary,
+                    html_url: $a.html_url,
+                    age_days: ($age | floor),
+                    status: (if $age >= $threshold then "breach" elif $age >= ($threshold * 0.7) then "warning" else "new" end)
+                  }
+              )
+          ')
+          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
+
+  notify:
+    needs: list-findings
+    if: needs.list-findings.outputs.matrix != '[]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJson(needs.list-findings.outputs.matrix) }}
+    steps:
+      # API values (summary, URL, etc.) go through `env:`/`jq --arg`, never
+      # spliced via `${{ }}` into a script or payload -- avoids script
+      # injection from free-text advisory summaries.
+      - id: key
+        env:
+          NUMBER: ${{ matrix.number }}
+          STATUS: ${{ matrix.status }}
+        run: |
+          if [ "$STATUS" = "breach" ]; then
+            # Re-notify once per day while a critical/high stays breached,
+            # instead of once ever, so an unresolved breach keeps nagging.
+            echo "value=sec-alert-${NUMBER}-breach-$(date -u +%Y-%m-%d)" >> "$GITHUB_OUTPUT"
+          else
+            echo "value=sec-alert-${NUMBER}-${STATUS}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - id: cache
+        uses: actions/cache/restore@v4
+        with:
+          path: .cache/security-notified
+          key: ${{ steps.key.outputs.value }}
+
+      - if: steps.cache.outputs.cache-hit != 'true'
+        name: Build Slack payload
+        id: message
+        env:
+          SEVERITY: ${{ matrix.severity }}
+          STATUS: ${{ matrix.status }}
+          AGE_DAYS: ${{ matrix.age_days }}
+          HTML_URL: ${{ matrix.html_url }}
+          GHSA_ID: ${{ matrix.ghsa_id }}
+          SUMMARY: ${{ matrix.summary }}
+        run: |
+          mention=""
+          if [ "$STATUS" = "breach" ] && [ "$SEVERITY" = "critical" ]; then
+            mention="<!here> "
+          fi
+          case "$STATUS" in
+            breach) label=":rotating_light: SLA breached" ;;
+            warning) label=":hourglass_flowing_sand: SLA at risk" ;;
+            *) label=":mag: New finding" ;;
+          esac
+          text=$(printf '%s%s (%s severity, open %sd): <%s|%s> %s' \
+            "$mention" "$label" "$SEVERITY" "$AGE_DAYS" "$HTML_URL" "$GHSA_ID" "$SUMMARY")
+          mkdir -p .cache
+          jq -n --arg text "$text" '{text: $text}' > .cache/slack-payload.json
+
+      - if: steps.cache.outputs.cache-hit != 'true'
+        name: Notify Slack
+        uses: slackapi/slack-github-action@v2.0.0
+        with:
+          webhook: ${{ secrets.SECURITY_ALERTS_SLACK_WEBHOOK }}
+          webhook-type: incoming-webhook
+          payload-file-path: .cache/slack-payload.json
+
+      - if: steps.cache.outputs.cache-hit != 'true'
+        name: Mark as notified
+        run: mkdir -p .cache/security-notified && date -u > .cache/security-notified/marker
+
+      - if: success() && steps.cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: .cache/security-notified
+          key: ${{ steps.key.outputs.value }}

@@ -34,22 +34,21 @@ export function createTabMemory(opts: {
   applied: () => string | undefined
   active: () => string | undefined
   owns: (selection: string) => boolean
-  pending: (id: string) => boolean
   locals: () => string[]
   localTab?: (id: string) => boolean
+  session?: () => string | undefined
+  rememberSession?: (selection: string, id: string) => void
   set: (selection: string, tab: string) => void
 }) {
-  return () => {
+  return (switching = false) => {
     const sel = opts.selection()
     const tab = opts.tab()
     if (sel === null || !tab) return
-    if (opts.multi() && opts.applied() !== opts.active()) return
-    if (
-      opts.multi() &&
-      !(sel === LOCAL ? opts.localTab?.(tab) || opts.pending(tab) || opts.locals().includes(tab) : opts.owns(sel))
-    )
-      return
+    if (!switching && opts.multi() && opts.applied() !== opts.active()) return
+    if (opts.multi() && !(sel === LOCAL ? opts.localTab?.(tab) || opts.locals().includes(tab) : opts.owns(sel))) return
     rememberSelectionTab(opts.set, sel, tab)
+    const session = opts.session?.()
+    if (session) opts.rememberSession?.(sel, session)
   }
 }
 
@@ -59,6 +58,7 @@ export interface SelectionActionDeps<T extends SessionLike> {
   setSelection: (id: string) => void
   post: (msg: unknown) => void
   tabMemory: () => Record<string, string>
+  sessionMemory?: (selection: string) => string | undefined
   terms: TermState
   /** Terminal state is keyed by project-namespaced context; map a plain
    *  selection ("local" or a worktree id) to its terminal-state key. */
@@ -104,7 +104,7 @@ export function createSessionRestore<T extends SessionLike>(deps: {
     remember: () => {
       const selection = deps.selection()
       const id = deps.current() ?? deps.pending()
-      if (selection !== null && id) deps.remember(selection, id)
+      if (selection !== null && id && deps.sessions().some((item) => item.id === id)) deps.remember(selection, id)
     },
     restore: () => {
       const selection = deps.selection()
@@ -141,6 +141,7 @@ export function selectLocalAction<T extends SessionLike>(
   deps.saveTabMemory()
   deps.post({ type: "agentManager.requestRepoInfo" })
   const remembered = deps.tabMemory()[LOCAL]
+  const backing = deps.isReviewTab(remembered, LOCAL) ? deps.sessionMemory?.(LOCAL) : remembered
   batch(() => {
     deps.setReviewActive(false)
     deps.setSelection(LOCAL)
@@ -151,12 +152,12 @@ export function selectLocalAction<T extends SessionLike>(
     }
     deps.terms.setActiveId(undefined)
     const real = locals.filter((item) => !deps.isPending(item.id))
-    const target = remembered ? real.find((s) => s.id === remembered) : undefined
-    const draft = remembered && deps.isPending(remembered) ? remembered : undefined
+    const target = backing ? real.find((s) => s.id === backing) : undefined
+    const draft = locals.find((item) => item.id === backing && deps.isPending(item.id))?.id
     const fallback =
       target?.id ??
       draft ??
-      (remembered && ids.includes(remembered) ? remembered : undefined) ??
+      (backing && ids.includes(backing) ? backing : undefined) ??
       real[0]?.id ??
       ids[0] ??
       locals.find((item) => deps.isPending(item.id))?.id
@@ -189,9 +190,9 @@ export function selectWorktreeAction<T extends SessionLike>(
       return
     }
     deps.terms.setActiveId(undefined)
-    const target = remembered ? sessions.find((s) => s.id === remembered) : undefined
-    const fallback =
-      target?.id ?? (remembered && ids.includes(remembered) ? remembered : undefined) ?? sessions[0]?.id ?? ids[0]
+    const backing = deps.isReviewTab(remembered, worktreeId) ? deps.sessionMemory?.(worktreeId) : remembered
+    const target = backing ? sessions.find((s) => s.id === backing) : undefined
+    const fallback = target?.id ?? (backing && ids.includes(backing) ? backing : undefined) ?? sessions[0]?.id ?? ids[0]
     if (fallback) deps.selectSession(fallback)
     else deps.resetSession()
     deps.setReviewActive(deps.isReviewTab(remembered, worktreeId))

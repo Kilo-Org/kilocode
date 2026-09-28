@@ -305,7 +305,7 @@ describe("Expanded tool motion and typography (source)", () => {
   const reasoning =
     fs
       .readFileSync(KILO_MESSAGE_PART_FILE, "utf-8")
-      .match(/PART_MAPPING\["reasoning"\][\s\S]*?(?=\nfunction useToolReveal)/)?.[0] ?? ""
+      .match(/PART_MAPPING\["reasoning"\][\s\S]*?(?=\nfunction WebfetchMeta)/)?.[0] ?? ""
 
   it("animates completed rolling shell details", () => {
     const src = fs.readFileSync(SHELL_ROLLING_FILE, "utf-8")

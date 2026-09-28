@@ -76,10 +76,11 @@
   overflow-wrap: anywhere;
 }
 
+/* Matches .message-list-content; the rows bring their own turn spacing. */
 .settings-session-preview-content {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
 }
 
 /* Settings save bar */

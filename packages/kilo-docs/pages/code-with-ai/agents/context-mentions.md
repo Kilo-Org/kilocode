@@ -43,7 +43,7 @@ Very long chat histories are truncated, keeping the beginning and end, so a sing
 
 In Agent Manager, choose **Worktrees** to search other worktrees by name, branch, or session title. A worktree mention includes its path, branch, base branch, and session metadata. It does not attach files, diffs, or chat history, and does not change your working directory.
 
-Choose **Model** to insert an inline `@provider/model` reference. Use it to request a particular model for a subagent or Agent Manager session. It does not attach a file or change the current session's model. Subagent overrides require [Task Subagent Model Selection](/docs/getting-started/settings#task-subagent-model-selection).
+Choose **Model** to insert an inline `@provider/model` reference. Use it to request a particular model for a subagent or Agent Manager session. It does not attach a file or change the current session's model.
 
 ### Drag and Drop
 

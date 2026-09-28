@@ -70,7 +70,7 @@ export const dict: Record<string, string> = {
   "ui.sessionTurn.error.addCredits": "Adaugă credit",
   "dialog.usageExceeded.freeTier.title": "Limită gratuită atinsă",
   "dialog.usageExceeded.freeTier.description":
-    "Abonează-te la Kilo Go pentru acces fiabil la cele mai bune modele open-source, de la 5$/lună.", // kilocode_change
+    "Abonează-te la Kilo Go pentru 10$/lună și obține acces fiabil la cele mai bune modele open-source.", // kilocode_change
   "dialog.usageExceeded.freeTier.actionLabel": "Abonează-te",
   "dialog.usageExceeded.accountRateLimit.title": "Limită Go atinsă",
   "dialog.usageExceeded.accountRateLimit.description":
