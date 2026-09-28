@@ -83,14 +83,14 @@ describe("messageShape", () => {
     expect(shape[2]?.parts).toEqual([])
   })
 
-  test("degrades malformed runtime parts instead of throwing", () => {
-    // The messages failed schema validation, so parts may be null/primitives at
-    // runtime. Diagnostics on the failure path must never throw.
+  test("degrades malformed runtime entries instead of throwing", () => {
+    // The messages failed schema validation, so entries may be null/primitives
+    // at runtime. Diagnostics on the failure path must never throw.
     const malformed = {
       role: "assistant",
       content: [null, 42, "bare-string", { type: "tool-call" }, { type: "text" }],
     } as unknown as ModelMessage
-    const shape = KiloMessageDiagnostics.messageShape([malformed])
+    const shape = KiloMessageDiagnostics.messageShape([malformed, null, 42, "bare"] as unknown as ModelMessage[])
     expect(shape[0]?.contentKind).toBe("array")
     expect(shape[0]?.parts).toEqual([
       { type: "null" },
@@ -99,6 +99,9 @@ describe("messageShape", () => {
       { type: "tool-call", toolCallId: "undefined", toolName: "undefined" },
       { type: "text" },
     ])
+    expect(shape[1]).toMatchObject({ index: 1, role: "undefined", contentKind: "absent", parts: [] })
+    expect(shape[2]).toMatchObject({ index: 2, role: "undefined", contentKind: "absent", parts: [] })
+    expect(shape[3]).toMatchObject({ index: 3, role: "undefined", contentKind: "absent", parts: [] })
   })
 })
 

@@ -90,13 +90,18 @@ export namespace KiloMessageDiagnostics {
     }
   }
 
-  export function messageShape(msgs: readonly ModelMessage[]): MessageShape[] {
-    return msgs.map((msg, i) => {
-      // The messages failed schema validation, so runtime parts can be anything:
+  export function messageShape(msgs: readonly unknown[]): MessageShape[] {
+    return msgs.map((entry, i) => {
+      const msg = (entry && typeof entry === "object" ? entry : {}) as {
+        role?: unknown
+        content?: unknown
+        providerOptions?: unknown
+      }
+      // The messages failed schema validation, so runtime entries can be anything:
       // null, primitives, or objects missing expected fields. Diagnostics on the
-      // failure path must never throw, so each part is treated as unknown and
-      // degraded to a safe placeholder before its fields are read.
-      const content = (msg as { content?: unknown }).content
+      // failure path must never throw, so the envelope and each part are treated
+      // as unknown and degraded to safe placeholders before fields are read.
+      const content = msg.content
       const isArray = Array.isArray(content)
       const contentKind = typeof content === "string"
         ? "string"
@@ -107,10 +112,13 @@ export namespace KiloMessageDiagnostics {
             : "other"
       return {
         index: i,
-        role: msg.role,
+        role: typeof msg.role === "string" ? msg.role : String(msg.role),
         contentKind,
         parts: isArray ? (content as unknown[]).map(partShape) : [],
-        providerOptions: msg.providerOptions ? Object.keys(msg.providerOptions) : undefined,
+        providerOptions:
+          msg.providerOptions && typeof msg.providerOptions === "object"
+            ? Object.keys(msg.providerOptions)
+            : undefined,
       }
     })
   }
@@ -129,12 +137,14 @@ export namespace KiloMessageDiagnostics {
     return { type: String(part.type) }
   }
 
-  export function toolPairing(msgs: readonly ModelMessage[]): ToolPairing {
+  export function toolPairing(msgs: readonly unknown[]): ToolPairing {
     const callIds = new Set<string>()
     const resultIds = new Set<string>()
-    for (const msg of msgs) {
-      if (!Array.isArray(msg.content)) continue
-      for (const part of msg.content) {
+    for (const entry of msgs) {
+      if (!entry || typeof entry !== "object") continue
+      const content = (entry as { content?: unknown }).content
+      if (!Array.isArray(content)) continue
+      for (const part of content) {
         if (!part || typeof part !== "object") continue
         if (part.type === "tool-call" && typeof part.toolCallId === "string") callIds.add(part.toolCallId)
         if (part.type === "tool-result" && typeof part.toolCallId === "string") resultIds.add(part.toolCallId)
@@ -151,7 +161,7 @@ export namespace KiloMessageDiagnostics {
     }
   }
 
-  export function describe(err: unknown, msgs: readonly ModelMessage[]) {
+  export function describe(err: unknown, msgs: readonly unknown[]) {
     return {
       issues: schemaIssues(err),
       messages: messageShape(msgs),
@@ -161,7 +171,7 @@ export namespace KiloMessageDiagnostics {
 
   export function reportModelMessageError(
     err: unknown,
-    msgs: readonly ModelMessage[],
+    msgs: readonly unknown[],
   ): ReturnType<typeof describe> | undefined {
     const mismatch = err instanceof Error && err.message.includes("do not match the ModelMessage[] schema")
     if (!mismatch) return undefined
