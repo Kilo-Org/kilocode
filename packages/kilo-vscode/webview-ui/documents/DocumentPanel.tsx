@@ -1,5 +1,5 @@
 import { Dynamic } from "solid-js/web"
-import { Component, Show, Accessor, createMemo, createSignal, createEffect, on } from "solid-js"
+import { Component, Show, Accessor, createMemo, createSignal, createEffect, onCleanup, on } from "solid-js"
 import { MarkdownPane } from "../diff-viewer/MarkdownDiffView"
 import { isMarkdownPath, type DocumentData, type DocumentTab } from "./state"
 import { InspectorTabStrip } from "../agent-manager/InspectorTabStrip"
@@ -61,6 +61,34 @@ function sendAllKeybind(t: (key: string) => string): string {
     : t("agentManager.review.sendAllShortcut.other")
 }
 
+function asMarkdownContent(file: string, text: string): string {
+  if (isMarkdownPath(file)) return text
+  const name = getFilename(file)
+  const dot = name.lastIndexOf(".")
+  const ext = dot > 0 ? name.slice(dot + 1) : ""
+  return `\`\`\`${ext}\n${text}\n\`\`\`\n`
+}
+
+type CopyKind = "text" | "markdown"
+
+function copyDocument(
+  file: string,
+  content: string,
+  kind: CopyKind,
+  timer: { id?: ReturnType<typeof setTimeout> },
+  setCopied: (value: CopyKind | null | ((current: CopyKind | null) => CopyKind | null)) => void,
+): void {
+  clearTimeout(timer.id)
+  const text = kind === "markdown" ? asMarkdownContent(file, content) : content
+  navigator.clipboard
+    ?.writeText(text)
+    .then(() => {
+      setCopied(kind)
+      timer.id = setTimeout(() => setCopied((current) => (current === kind ? null : current)), 1500)
+    })
+    .catch(() => setCopied(null))
+}
+
 function handleSendAllKeyDown(event: KeyboardEvent, comments: ReviewComment[], send: () => void): void {
   if (event.key !== "Enter" || (!event.metaKey && !event.ctrlKey)) return
   const target = event.target
@@ -92,22 +120,15 @@ export const DocumentPanel: Component<DocumentPanelProps> = (props) => {
     const tab = selected()
     return tab ? props.getData(tab.file) : undefined
   }
+  const isImage = () => data()?.kind === "image"
   const file = () => selected()?.file ?? ""
   const content = () => data()?.content ?? ""
   const diff = () => virtualDiff(file(), content())
 
-  const [copied, setCopied] = createSignal<"text" | "markdown" | null>(null)
-  const asMarkdown = () => {
-    const text = content()
-    if (isMarkdownPath(file())) return text
-    const ext = file().split(".").pop() ?? ""
-    return `\`\`\`${ext}\n${text}\n\`\`\`\n`
-  }
-  const copy = (kind: "text" | "markdown") => {
-    navigator.clipboard?.writeText(kind === "markdown" ? asMarkdown() : content())
-    setCopied(kind)
-    setTimeout(() => setCopied((current) => (current === kind ? null : current)), 1500)
-  }
+  const [copied, setCopied] = createSignal<CopyKind | null>(null)
+  const copyTimer: { id?: ReturnType<typeof setTimeout> } = {}
+  onCleanup(() => clearTimeout(copyTimer.id))
+  const copy = (kind: CopyKind) => copyDocument(file(), content(), kind, copyTimer, setCopied)
 
   const updateComments = (next: ReviewComment[]) => props.onCommentsChange(next)
   const comments = () => props.comments.filter((item) => item.file === file())
@@ -268,15 +289,17 @@ export const DocumentPanel: Component<DocumentPanelProps> = (props) => {
                 onClick={() => props.onOpenFile(file(), selected()?.line, selected()?.column)}
               />
             </Tooltip>
-            <Tooltip value={t("agentManager.documents.copy")} placement="top">
-              <IconButton
-                icon={copied() === "text" ? "check" : "copy"}
-                size="small"
-                variant="ghost"
-                label={t("agentManager.documents.copy")}
-                onClick={() => copy("text")}
-              />
-            </Tooltip>
+            <Show when={!isImage()}>
+              <Tooltip value={t("agentManager.documents.copy")} placement="top">
+                <IconButton
+                  icon={copied() === "text" ? "check" : "copy"}
+                  size="small"
+                  variant="ghost"
+                  label={t("agentManager.documents.copy")}
+                  onClick={() => copy("text")}
+                />
+              </Tooltip>
+            </Show>
           </Show>
           <IconButton
             icon="close"
@@ -331,12 +354,12 @@ export const DocumentPanel: Component<DocumentPanelProps> = (props) => {
           <div class="am-document-state">{t("agentManager.documents.loading")}</div>
         </Show>
         <Show when={data()?.error}>{(error) => <div class="am-document-state am-document-error">{error()}</div>}</Show>
-        <Show when={!data()?.loading && !data()?.error && data()?.kind === "image"}>
+        <Show when={!data()?.loading && !data()?.error && isImage()}>
           <div class="am-document-image-wrap">
             <img src={`data:${data()?.mime};base64,${data()?.data}`} alt={file()} class="am-document-image" />
           </div>
         </Show>
-        <Show when={!data()?.loading && !data()?.error && data()?.kind !== "image"}>
+        <Show when={!data()?.loading && !data()?.error && !isImage()}>
           <ContextMenu>
             <ContextMenu.Trigger as="div" style={{ display: "contents" }}>
               <div class="am-document-content">
