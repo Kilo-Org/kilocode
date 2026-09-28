@@ -13,6 +13,11 @@ describe("provider error classification", () => {
       "Prompt has 5,958,968 tokens, but the configured context size is 256,000 tokens",
       "Too many tokens",
       "Token limit exceeded",
+      // kilocode_change start - gateway/provider wording seen in production
+      "The request is 280913 tokens long and exceeds this model's context length of 262144 tokens.",
+      "[Nex AGI] The request is 282364 tokens long and exceeds this model's context length of 262144 tokens.",
+      "The request is 265,246 tokens long and exceeds this model's context length of 262,144 tokens.",
+      // kilocode_change end
     ]
 
     expect(messages.every(isContextOverflow)).toBe(true)

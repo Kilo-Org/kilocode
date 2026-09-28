@@ -1,6 +1,6 @@
-import { describe, expect } from "bun:test"
+import { afterAll, describe, expect, test } from "bun:test"
 import fs from "fs"
-import { rm } from "fs/promises"
+import { remove as cleanup } from "../cleanup"
 import os from "os"
 import path from "path"
 import { Context, Effect, Layer } from "effect"
@@ -8,10 +8,16 @@ import * as TestClock from "effect/testing/TestClock"
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { EventV2 } from "@opencode-ai/core/event"
 import { FSUtil } from "@opencode-ai/core/fs-util"
+import { AppRuntime } from "@/effect/app-runtime"
+import { InstanceRef } from "@/effect/instance-ref"
 import { EventV2Bridge } from "@/event-v2-bridge"
 import { Git } from "@/git"
+import { GoalState } from "@/kilocode/session/goal/state"
 import { Wakeup } from "@/kilocode/wakeup"
 import { JITTER_MS, next } from "@/kilocode/wakeup/cron"
+import { InstanceStore } from "@/project/instance-store"
+import { Session } from "@/session/session"
+import { SessionPrompt } from "@/session/prompt"
 import { SessionID } from "@/session/schema"
 import { Storage } from "@/storage/storage"
 import { pollWithTimeout, testEffect } from "../../lib/effect"
@@ -81,7 +87,7 @@ const dirLayer = Layer.effect(
     Effect.sync(() => ({ dir: fs.mkdtempSync(path.join(os.tmpdir(), "opencode-wakeup-cron-")) })),
     ({ dir }) =>
       Effect.promise(() =>
-        rm(dir, { recursive: true, force: true }).catch(() => {
+        cleanup(dir).catch(() => {
           // best effort cleanup of a temp directory
         }),
       ),
@@ -564,4 +570,339 @@ describe("Wakeup cron", () => {
       }),
     20_000,
   )
+})
+
+const model = {
+  name: "Test Model",
+  tool_call: true,
+  attachment: true,
+  modalities: { input: ["text", "image"], output: ["text"] },
+  limit: { context: 100000, output: 10000 },
+}
+
+function line(input: unknown) {
+  return `data: ${JSON.stringify(input)}\n\n`
+}
+
+function chunk(input: { delta?: Record<string, unknown>; finish?: string }) {
+  return {
+    id: "chatcmpl-wakeup-cron-goal-test",
+    object: "chat.completion.chunk",
+    choices: [
+      {
+        delta: input.delta ?? {},
+        ...(input.finish ? { finish_reason: input.finish } : {}),
+      },
+    ],
+  }
+}
+
+function reply(text: string) {
+  const enc = new TextEncoder()
+  return new ReadableStream<Uint8Array>({
+    start(ctrl) {
+      ctrl.enqueue(enc.encode(line(chunk({ delta: { role: "assistant" } }))))
+      ctrl.enqueue(enc.encode(line(chunk({ delta: { content: text } }))))
+      ctrl.enqueue(enc.encode(line(chunk({ finish: "stop" }))))
+      ctrl.enqueue(enc.encode("data: [DONE]\n\n"))
+      ctrl.close()
+    },
+  })
+}
+
+function tool(name: string, input: unknown) {
+  const enc = new TextEncoder()
+  return new ReadableStream<Uint8Array>({
+    start(ctrl) {
+      ctrl.enqueue(enc.encode(line(chunk({ delta: { role: "assistant" } }))))
+      ctrl.enqueue(
+        enc.encode(
+          line(
+            chunk({
+              delta: {
+                tool_calls: [
+                  {
+                    index: 0,
+                    id: `call_${name}_${crypto.randomUUID()}`,
+                    type: "function",
+                    function: { name, arguments: "" },
+                  },
+                ],
+              },
+            }),
+          ),
+        ),
+      )
+      ctrl.enqueue(
+        enc.encode(
+          line(
+            chunk({
+              delta: {
+                tool_calls: [
+                  {
+                    index: 0,
+                    function: { arguments: JSON.stringify(input) },
+                  },
+                ],
+              },
+            }),
+          ),
+        ),
+      )
+      ctrl.enqueue(enc.encode(line(chunk({ finish: "tool_calls" }))))
+      ctrl.enqueue(enc.encode("data: [DONE]\n\n"))
+      ctrl.close()
+    },
+  })
+}
+
+function transcript(body: string) {
+  try {
+    return JSON.stringify((JSON.parse(body) as { messages?: unknown }).messages ?? [])
+  } catch {
+    return body
+  }
+}
+
+function config(baseURL: string) {
+  return JSON.stringify({
+    model: "test/test-model",
+    small_model: "test/test-model",
+    enabled_providers: ["test"],
+    formatter: false,
+    lsp: false,
+    provider: {
+      test: {
+        name: "Test",
+        npm: "@ai-sdk/openai-compatible",
+        options: { apiKey: "test-key", baseURL },
+        models: { "test-model": model },
+      },
+    },
+  })
+}
+
+describe("Wakeup cron goal resume", () => {
+  afterAll(async () => {
+    await AppRuntime.dispose()
+  })
+
+  test("a fired one-shot cron task for a suspended goal resumes the goal", async () => {
+    const bodies: string[] = []
+    const objective = "Improve the validation workflow"
+    const server = Bun.serve({
+      port: 0,
+      async fetch(req) {
+        const url = new URL(req.url)
+        if (!url.pathname.endsWith("/chat/completions")) return new Response("not found", { status: 404 })
+        const body = await req.text()
+        bodies.push(body)
+        if (body.includes("Generate a title")) {
+          return new Response(reply("Title"), {
+            status: 200,
+            headers: { "Content-Type": "text/event-stream" },
+          })
+        }
+        const history = transcript(body)
+        const stream = history.includes("Report recorded")
+          ? reply("Final report")
+          : history.includes("[scheduled cron task]") && history.includes("Continue working toward this session goal")
+            ? tool("goal_report", { status: "complete", reason: "The deploy check passed." })
+            : history.includes("Scheduled cron task")
+              ? reply("Scheduled the task")
+              : tool("cron_create", {
+                  prompt: "Poll the deploy",
+                  when: new Date(Date.now() + 3000).toISOString(),
+                })
+        return new Response(stream, {
+          status: 200,
+          headers: { "Content-Type": "text/event-stream" },
+        })
+      },
+    })
+
+    const base = fs.realpathSync(os.tmpdir())
+    const dir = fs.mkdtempSync(path.join(base, "opencode-cron-goal-"))
+    try {
+      await Bun.write(path.join(dir, "opencode.json"), config(`${server.url.origin}/v1`))
+
+      const ctx = await AppRuntime.runPromise(InstanceStore.Service.use((store) => store.load({ directory: dir })))
+      const session = await AppRuntime.runPromise(
+        Session.Service.use((svc) => svc.create({ title: "Cron goal" })).pipe(Effect.provideService(InstanceRef, ctx)),
+      )
+
+      await AppRuntime.runPromise(
+        SessionPrompt.Service.use((svc) =>
+          svc.command({
+            sessionID: session.id,
+            command: "goal",
+            arguments: objective,
+            agent: "code",
+            model: "test/test-model",
+          }),
+        ).pipe(Effect.provideService(InstanceRef, ctx)),
+      )
+
+      const read = () =>
+        Session.Service.use((svc) => svc.get(session.id)).pipe(
+          Effect.provideService(InstanceRef, ctx),
+          Effect.map((value) => GoalState.read(value.metadata)),
+        )
+
+      await AppRuntime.runPromise(
+        pollWithTimeout(
+          read().pipe(Effect.map((goal) => (goal?.status === "waiting" ? goal : undefined))),
+          "goal never reached waiting",
+          "15 seconds",
+        ),
+      )
+
+      await Effect.runPromise(
+        pollWithTimeout(
+          Effect.sync(() =>
+            bodies.some(
+              (body) =>
+                body.includes("Continue working toward this session goal") &&
+                body.includes(objective) &&
+                body.includes("[scheduled cron task]") &&
+                body.includes("goal_report"),
+            )
+              ? true
+              : undefined,
+          ),
+          "the fired cron task did not resume as a goal turn",
+          "15 seconds",
+        ),
+      )
+
+      const done = await AppRuntime.runPromise(
+        pollWithTimeout(
+          read().pipe(Effect.map((goal) => (goal?.status === "complete" ? goal : undefined))),
+          "goal never reached complete",
+          "15 seconds",
+        ),
+      )
+      expect(done.active).toBe(false)
+      expect(done.text).toBe(objective)
+    } finally {
+      await server.stop(true)
+      await cleanup(dir)
+    }
+  }, 30_000)
+
+  test("a reloaded instance still resumes the waiting goal when its armed wakeup fires", async () => {
+    const bodies: string[] = []
+    const objective = "Improve the validation workflow"
+    const server = Bun.serve({
+      port: 0,
+      async fetch(req) {
+        const url = new URL(req.url)
+        if (!url.pathname.endsWith("/chat/completions")) return new Response("not found", { status: 404 })
+        const body = await req.text()
+        bodies.push(body)
+        if (body.includes("Generate a title")) {
+          return new Response(reply("Title"), {
+            status: 200,
+            headers: { "Content-Type": "text/event-stream" },
+          })
+        }
+        const history = transcript(body)
+        const stream = history.includes("Report recorded")
+          ? reply("Final report")
+          : history.includes("[scheduled wakeup]") && history.includes("Continue working toward this session goal")
+            ? tool("goal_report", { status: "complete", reason: "The deploy check passed." })
+            : history.includes("Scheduled wakeup")
+              ? reply("Scheduled the check")
+              : tool("schedule_wakeup", {
+                  prompt: "Check the deploy",
+                  when: new Date(Date.now() + 5000).toISOString(),
+                  reason: "deploy",
+                })
+        return new Response(stream, {
+          status: 200,
+          headers: { "Content-Type": "text/event-stream" },
+        })
+      },
+    })
+
+    const base = fs.realpathSync(os.tmpdir())
+    const dir = fs.mkdtempSync(path.join(base, "opencode-wakeup-reload-"))
+    try {
+      await Bun.write(path.join(dir, "opencode.json"), config(`${server.url.origin}/v1`))
+
+      const ctx = await AppRuntime.runPromise(InstanceStore.Service.use((store) => store.load({ directory: dir })))
+      const session = await AppRuntime.runPromise(
+        Session.Service.use((svc) => svc.create({ title: "Wakeup reload" })).pipe(
+          Effect.provideService(InstanceRef, ctx),
+        ),
+      )
+
+      await AppRuntime.runPromise(
+        SessionPrompt.Service.use((svc) =>
+          svc.command({
+            sessionID: session.id,
+            command: "goal",
+            arguments: objective,
+            agent: "code",
+            model: "test/test-model",
+          }),
+        ).pipe(Effect.provideService(InstanceRef, ctx)),
+      )
+
+      await AppRuntime.runPromise(
+        pollWithTimeout(
+          Session.Service.use((svc) => svc.get(session.id)).pipe(
+            Effect.provideService(InstanceRef, ctx),
+            Effect.map((value) => {
+              const goal = GoalState.read(value.metadata)
+              return goal?.status === "waiting" ? goal : undefined
+            }),
+          ),
+          "goal never reached waiting",
+          "15 seconds",
+        ),
+      )
+
+      const reloaded = await AppRuntime.runPromise(
+        InstanceStore.Service.use((store) => store.reload({ directory: dir })),
+      )
+
+      const read = () =>
+        Session.Service.use((svc) => svc.get(session.id)).pipe(
+          Effect.provideService(InstanceRef, reloaded),
+          Effect.map((value) => GoalState.read(value.metadata)),
+        )
+
+      await Effect.runPromise(
+        pollWithTimeout(
+          Effect.sync(() =>
+            bodies.some(
+              (body) =>
+                body.includes("Continue working toward this session goal") &&
+                body.includes(objective) &&
+                body.includes("[scheduled wakeup]") &&
+                body.includes("goal_report"),
+            )
+              ? true
+              : undefined,
+          ),
+          "the reloaded instance did not resume the waiting goal",
+          "20 seconds",
+        ),
+      )
+
+      const done = await AppRuntime.runPromise(
+        pollWithTimeout(
+          read().pipe(Effect.map((goal) => (goal?.status === "complete" ? goal : undefined))),
+          "goal never reached complete after reload",
+          "15 seconds",
+        ),
+      )
+      expect(done.active).toBe(false)
+      expect(done.text).toBe(objective)
+    } finally {
+      await server.stop(true)
+      await cleanup(dir)
+    }
+  }, 45_000)
 })
