@@ -56,7 +56,7 @@ setup_java() {
 
 extract_intercept_ca() {
   rm -f "$state_dir"/chain-*.pem
-  local chain
+  local chain leaf verified
   # Only trust a chain that verifies against the system trust store. Otherwise an
   # attacker who can intercept DNS/TCP during bootstrap could feed a self-signed
   # chain that we then install as the global CA for git and the JVM.
@@ -70,17 +70,30 @@ extract_intercept_ca() {
   echo "$chain" |
     awk '/BEGIN CERTIFICATE/,/END CERTIFICATE/' |
     awk 'BEGIN { n=0 } /BEGIN CERT/ { n++ } { print > "'"$state_dir"'/chain-" n ".pem" }'
+  leaf="$state_dir/chain-1.pem"
+  [ -f "$leaf" ] || return 1
+  verified=""
   for f in "$state_dir"/chain-*.pem; do
     [ -e "$f" ] || continue
     # -F: the issuer DN is compared as a literal string, not a regex (DNs can
     # contain `.`, `+`, `(`, etc.)
     if openssl x509 -in "$f" -noout -subject 2>/dev/null |
       grep -qF "$(openssl x509 -in "$f" -noout -issuer 2>/dev/null | sed 's/^issuer=//')"; then
-      echo "$f"
-      return
+      # A relay MITM can precede the real intercept CA with its own root, so a
+      # self-signed candidate only counts when the presented leaf actually
+      # verifies against it. Without this check setup_ca would install the
+      # attacker's root as git's global CA and into the JVM cacerts.
+      if openssl verify -CAfile "$f" "$leaf" >/dev/null 2>&1; then
+        verified="$f"
+        break
+      fi
     fi
   done
-  return 1
+  if [ -z "$verified" ]; then
+    echo "Warning: no presented CA verifies the github.com leaf; not trusting any intercept CA" >&2
+    return 1
+  fi
+  echo "$verified"
 }
 
 setup_ca() {
