@@ -42,15 +42,10 @@ export function registerToggleApproveForMe(context: vscode.ExtensionContext): Ap
   }
 
   context.subscriptions.push(
-    vscode.workspace.onDidChangeConfiguration((event) => {
+    vscode.workspace.onDidChangeConfiguration(() => {
       const nextActive = readActive()
       const nextVisible = readVisible()
       if (nextActive === active && nextVisible === visible) return
-      if (
-        !event.affectsConfiguration(`${CONFIG}.${KEY}`) &&
-        !event.affectsConfiguration(`${VISIBILITY_CONFIG}.${VISIBILITY_KEY}`)
-      )
-        return
       active = nextActive
       visible = nextVisible
       notify()

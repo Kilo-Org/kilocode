@@ -185,7 +185,7 @@ To see the preview toggle in the VS Code composer:
 
 1. Open VS Code settings and search for `kilo-code.new.experimental.approveForMe`.
 2. Turn the setting on. It is an application-scoped setting and defaults to `false`.
-3. Reload the composer. A new toggle button appears next to **Auto-Approve** and **Sandbox**.
+3. A new toggle button appears next to **Auto-Approve** and **Sandbox** in the composer.
 
 ## Troubleshooting
 

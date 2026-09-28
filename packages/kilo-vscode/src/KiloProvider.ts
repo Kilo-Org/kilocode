@@ -600,14 +600,18 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
   setAutoApproveController(ctrl: Parameters<typeof createAutoApproveBridge>[0]): void {
     this.autoApproveBridge?.dispose()
-    this.autoApproveBridge = createAutoApproveBridge(ctrl, (msg) => this.postMessage(msg), this.onBeforeMessage)
-    this.onBeforeMessage = (msg) => this.autoApproveBridge!.handle(msg)
+    // Bind to the created bridge itself, not the mutable field: a second call would
+    // otherwise make onBeforeMessage forward into itself and drop every message.
+    const bridge = createAutoApproveBridge(ctrl, (msg) => this.postMessage(msg), this.onBeforeMessage)
+    this.autoApproveBridge = bridge
+    this.onBeforeMessage = (msg) => bridge.handle(msg)
   }
 
   setApproveForMeController(ctrl: Parameters<typeof createApproveForMeBridge>[0]): void {
     this.approveForMeBridge?.dispose()
-    this.approveForMeBridge = createApproveForMeBridge(ctrl, (msg) => this.postMessage(msg), this.onBeforeMessage)
-    this.onBeforeMessage = (msg) => this.approveForMeBridge!.handle(msg)
+    const bridge = createApproveForMeBridge(ctrl, (msg) => this.postMessage(msg), this.onBeforeMessage)
+    this.approveForMeBridge = bridge
+    this.onBeforeMessage = (msg) => bridge.handle(msg)
   }
 
   private setCurrentSession(session: Session | null): void {

@@ -3,10 +3,8 @@ import * as vscode from "vscode"
 import { registerToggleApproveForMe, type ApproveForMeController } from "../../src/commands/toggle-approve-for-me"
 import { createApproveForMeBridge } from "../../src/kilo-provider/approve-for-me"
 
-type ConfigEvent = { affectsConfiguration(key: string): boolean }
-
 function config(initial: { active?: boolean; visible?: boolean } = {}) {
-  const handlers: Array<(event: ConfigEvent) => void> = []
+  const handlers: Array<() => void> = []
   const updates: Array<{ key: string; value: unknown; target: unknown }> = []
   const messages: string[] = []
   const commands = new Map<string, (...args: unknown[]) => unknown>()
@@ -18,7 +16,7 @@ function config(initial: { active?: boolean; visible?: boolean } = {}) {
         inspect: <T>(key: string) => Record<string, unknown> | undefined
         update: (key: string, value: unknown, target: unknown) => Promise<void>
       }
-      onDidChangeConfiguration: (listener: (event: ConfigEvent) => void) => { dispose(): void }
+      onDidChangeConfiguration: (listener: () => void) => { dispose(): void }
     }
     window: { showInformationMessage: (message: string) => Promise<undefined> }
     commands: { registerCommand: (command: string, callback: (...args: unknown[]) => unknown) => { dispose(): void } }
@@ -27,8 +25,8 @@ function config(initial: { active?: boolean; visible?: boolean } = {}) {
   api.workspace.getConfiguration = (section) => ({
     get: (_key, fallback) => (section?.endsWith("experimental") ? state.visible : state.active) ?? fallback,
     inspect: () => ({}),
-    update: async (_key, value) => {
-      updates.push({ key: _key, value, target: undefined })
+    update: async (_key, value, target) => {
+      updates.push({ key: _key, value, target })
       state.active = Boolean(value)
     },
   })
@@ -60,8 +58,8 @@ function config(initial: { active?: boolean; visible?: boolean } = {}) {
     set visible(value: boolean) {
       state.visible = value
     },
-    emit(key = "kilo-code.new.approveForMe.enabled") {
-      for (const handler of handlers) handler({ affectsConfiguration: (name) => name === key })
+    emit() {
+      for (const handler of handlers) handler()
     },
   }
 }
@@ -96,7 +94,7 @@ describe("registerToggleApproveForMe", () => {
 
     expect(ctrl.active()).toBe(true)
     expect(changes).toEqual([{ active: true, visible: true }])
-    expect(env.updates).toEqual([{ key: "enabled", value: true, target: undefined }])
+    expect(env.updates).toEqual([{ key: "enabled", value: true, target: vscode.ConfigurationTarget.Global }])
     expect(env.messages).toContain("Approve for me is enabled. This entry point does not change approval behavior yet.")
   })
 
@@ -107,7 +105,7 @@ describe("registerToggleApproveForMe", () => {
     ctrl.onChange((state) => changes.push(state))
 
     env.visible = true
-    env.emit("kilo-code.new.experimental.approveForMe")
+    env.emit()
 
     expect(ctrl.visible()).toBe(true)
     expect(ctrl.active()).toBe(false)
