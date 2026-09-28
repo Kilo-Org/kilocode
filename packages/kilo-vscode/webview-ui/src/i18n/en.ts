@@ -422,6 +422,7 @@ export const dict = {
   "provider.custom.models.toggleImages": "Toggle image for all",
   "provider.custom.models.remove": "Remove model",
   "provider.custom.models.add": "Add model",
+  "provider.custom.models.fetch.button": "Fetch models",
   "provider.custom.models.fetch.authError": "Authentication failed. Check the API key above and try again.",
   "provider.custom.models.fetch.empty": "No models found on this server.",
   "provider.custom.models.fetch.added": "Added {{count}} model(s).",

@@ -693,6 +693,16 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
                   type="button"
                   size="small"
                   variant="ghost"
+                  icon="reset"
+                  onClick={doFetch}
+                  disabled={fetching() || form.npm === "@ai-sdk/anthropic" || !/^https?:\/\//.test(form.baseURL.trim())}
+                >
+                  {language.t("provider.custom.models.fetch.button")}
+                </Button>
+                <Button
+                  type="button"
+                  size="small"
+                  variant="ghost"
                   onClick={toggleAllReasoning}
                   disabled={form.models.length === 0}
                 >
