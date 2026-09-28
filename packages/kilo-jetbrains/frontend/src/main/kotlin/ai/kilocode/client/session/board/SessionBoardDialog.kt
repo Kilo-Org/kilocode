@@ -4,12 +4,6 @@ import ai.kilocode.client.app.KiloSessionService
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.layout.Stack
-import ai.kilocode.client.ui.list.ActiveList
-import ai.kilocode.client.ui.list.ActiveListBadge
-import ai.kilocode.client.ui.list.ActiveListConfig
-import ai.kilocode.client.ui.list.ActiveListIconAlignment
-import ai.kilocode.client.ui.list.ActiveListItem
-import ai.kilocode.client.ui.list.ActiveListRowHeight
 import ai.kilocode.log.KiloLog
 import ai.kilocode.rpc.dto.BoardMessageDto
 import ai.kilocode.rpc.dto.SessionBoardDto
@@ -22,11 +16,13 @@ import com.intellij.openapi.ui.DialogWrapper
 import com.intellij.openapi.ui.Messages
 import com.intellij.openapi.ui.popup.Balloon
 import com.intellij.openapi.ui.popup.JBPopupFactory
+import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.wm.WindowManager
 import com.intellij.ui.EditorNotificationPanel
 import com.intellij.ui.InlineBanner
 import com.intellij.ui.awt.RelativePoint
 import com.intellij.ui.components.JBLabel
+import com.intellij.ui.components.JBScrollPane
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.util.ui.JBDimension
 import com.intellij.util.ui.JBUI
@@ -41,6 +37,7 @@ import javax.swing.Action
 import javax.swing.JButton
 import javax.swing.JComponent
 import javax.swing.JPanel
+import javax.swing.ScrollPaneConstants
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -83,31 +80,15 @@ internal class SessionBoardDialog(
         ) == Messages.YES
     }
 
-    private data class Row(
-        override val key: String,
-        override val title: String,
-        override val description: String?,
-        override val icon: javax.swing.Icon?,
-        override val badges: List<ActiveListBadge>,
-        val from: String,
-        val fromLabel: String?,
-        val to: String,
-        val toLabel: String?,
-    ) : ActiveListItem
-
-    // internal (not private): lets tests simulate real clicks/selection on the live list.
-    internal val list = ActiveList(
-        emptyText = KiloBundle.message("session.board.empty"),
-        cfg = ActiveListConfig(
-            height = ActiveListRowHeight.PREFERRED,
-            tooltip = false,
-            iconAlignment = ActiveListIconAlignment.TOP,
-            wrapDescription = true,
-        ),
-        showSearch = false,
-        onCell = { _, _ -> },
-        onClick = { item -> (item as? Row)?.let(::openParticipant) },
-    )
+    internal val messages = BoardMessagesView(avatars, onOpenAgent)
+    internal val scroll = JBScrollPane(messages).apply {
+        border = JBUI.Borders.empty()
+        viewportBorder = JBUI.Borders.empty()
+        horizontalScrollBarPolicy = ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER
+        verticalScrollBarPolicy = ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED
+        isFocusable = true
+        accessibleContext.accessibleName = KiloBundle.message("session.board.title")
+    }
 
     internal val loadMoreButton = button(KiloBundle.message("session.board.loadMore")) { load(before = board?.cursor) }
     internal val resetButton = button(KiloBundle.message("session.board.reset.action")) { onReset() }
@@ -145,12 +126,13 @@ internal class SessionBoardDialog(
         // which is the point of watching it. Callers must use show(); showAndGet() throws on a
         // non-modal dialog.
         isModal = false
+        Disposer.register(disposable, messages)
         init()
         load(before = null)
     }
 
     override fun createCenterPanel(): JComponent {
-        list.preferredSize = JBDimension(0, DIALOG_HEIGHT)
+        scroll.preferredSize = JBDimension(0, DIALOG_HEIGHT)
         syncBanner()
         val panel = object : JPanel(BorderLayout()) {
             /**
@@ -169,7 +151,7 @@ internal class SessionBoardDialog(
             },
             BorderLayout.NORTH,
         )
-        panel.add(list, BorderLayout.CENTER)
+        panel.add(scroll, BorderLayout.CENTER)
         return panel
     }
 
@@ -199,6 +181,8 @@ internal class SessionBoardDialog(
     }
 
     override fun createActions(): Array<Action> = emptyArray()
+
+    override fun getPreferredFocusedComponent(): JComponent = scroll
 
     override fun createSouthPanel(): JComponent = JPanel(BorderLayout()).apply {
         isOpaque = false
@@ -240,7 +224,7 @@ internal class SessionBoardDialog(
             revision = page.revision,
         ) else page
         hideError()
-        list.update(board?.messages.orEmpty().map(::row))
+        messages.sync(board?.messages.orEmpty())
     }
 
     private fun onReset() {
@@ -260,47 +244,12 @@ internal class SessionBoardDialog(
                     }
                     board = updated
                     hideError()
-                    list.update(updated.messages.map(::row))
+                    messages.sync(updated.messages)
                 }
                 result.onFailure { fail(KiloBundle.message("session.board.reset.failed"), it) }
                 syncButtons()
             }
         }
-    }
-
-    /**
-     * Opens whichever route endpoint is a subagent, regardless of message direction: both
-     * `main -> agent` and `agent -> main` open `agent`. A route between two subagents opens the
-     * sender, matching the row's own reading order. Never closes the board — it stays open behind
-     * the newly opened (or focused) editor tab.
-     */
-    private fun openParticipant(row: Row) {
-        val (id, label) = openTarget(row) ?: return
-        onOpenAgent(id, label)
-    }
-
-    private fun openTarget(row: Row): Pair<String, String?>? {
-        if (isSubagent(row.from)) return row.from to row.fromLabel
-        if (isSubagent(row.to)) return row.to to row.toLabel
-        return null
-    }
-
-    private fun isSubagent(participant: String): Boolean = participant != "main" && participant != "ALL"
-
-    private fun row(message: BoardMessageDto): Row {
-        val from = message.fromLabel ?: message.from
-        val to = message.toLabel ?: message.to
-        return Row(
-            key = message.id,
-            title = "$from \u2192 $to",
-            description = message.body,
-            icon = avatars.icon(message.from),
-            badges = listOf(ActiveListBadge(message.type)),
-            from = message.from,
-            fromLabel = message.fromLabel,
-            to = message.to,
-            toLabel = message.toLabel,
-        )
     }
 
     /**

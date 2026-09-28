@@ -164,3 +164,49 @@ for (const change of ["live event", "workspace switch"]) {
     expect(handlers.size).toBe(0)
   })
 }
+
+test("refreshes a waiting goal even though it is inactive", async () => {
+  const waiting = {
+    text: "Wait for the deploy",
+    status: "waiting",
+    active: false,
+    wait: { kind: "wakeup", id: "wk_deploy", label: "deploy" },
+  }
+  const client = createKiloClient({ baseUrl: "http://test" })
+  const get = spyOn(client.session, "get").mockResolvedValue({
+    data: { ...info, metadata: { retained: true, "kilo.goal": waiting } },
+    request: new Request("http://test"),
+    response: json({}),
+  })
+  const handlers = new Set<(event: GlobalEvent) => void>()
+  const event = {
+    emit(_type: "event", value: GlobalEvent) {
+      for (const handler of handlers) handler(value)
+    },
+    on(_type: "event", handler: (event: GlobalEvent) => void) {
+      handlers.add(handler)
+      return () => {
+        handlers.delete(handler)
+      }
+    },
+  }
+  const [workspace] = createSignal("ws_a")
+  const [store, setStore] = createStore<{ session: Session[] }>({
+    session: [{ ...info, metadata: { retained: true, "kilo.goal": { ...waiting, text: "Historical goal" } } }],
+  })
+  const dispose = createRoot((dispose) => {
+    GoalSync.watch({ client, event }, workspace, store, (fn) => setStore(produce(fn)))
+    return dispose
+  })
+  try {
+    await wait(() => handlers.size === 1)
+    event.emit("event", connected())
+    await wait(() => get.mock.calls.length === 1)
+    await wait(() => GoalState.read(store.session.at(0)?.metadata)?.text === waiting.text)
+  } finally {
+    dispose()
+    get.mockRestore()
+  }
+  expect(store.session.at(0)?.metadata).toEqual({ retained: true, "kilo.goal": waiting })
+  expect(handlers.size).toBe(0)
+})
