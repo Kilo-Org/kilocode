@@ -18,13 +18,19 @@ await Telemetry.init({
   version: process.env.TEST_VERSION ?? "1.0.0",
   enabled: true,
 })
+if (process.env.TEST_LOGIN) Telemetry.trackCliStart()
 await Promise.all(
   Array.from({ length: process.env.TEST_CONCURRENT ? 3 : 1 }, () =>
     Telemetry.updateIdentity("test-token", process.env.TEST_ORG),
   ),
 )
 if (process.env.TEST_LOGOUT) await Telemetry.updateIdentity(null)
-Telemetry.trackCliStart()
+if (process.env.TEST_LOGIN) {
+  Telemetry.trackAuthSuccess("kilo")
+  Telemetry.trackCliExit()
+} else {
+  Telemetry.trackCliStart()
+}
 await Client.shutdown().catch(() => {})
 console.log(JSON.stringify(batches))
 process.exit(0)

@@ -2,4 +2,4 @@
 "@kilocode/kilo-telemetry": patch
 ---
 
-Avoid resending successfully uploaded identity updates and machine aliases on every CLI or extension restart while preserving identified activity and retrying failed uploads.
+Update person properties through existing startup and login events, and avoid repeating successfully uploaded machine aliases across restarts.

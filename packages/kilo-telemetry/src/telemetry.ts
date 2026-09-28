@@ -112,24 +112,29 @@ export namespace Telemetry {
 
     const email = Identity.getUserId()
     if (email && previousId && email !== previousId) {
-      // Identify the user with their email and properties
-      Client.identify(email, {
-        ...(accountId && { kilocodeOrganizationId: accountId }),
-        appName: props.appName,
-        appVersion: props.appVersion,
-        platform: props.platform,
-        os_name: props.os_name,
-        os_version: props.os_version,
-        os_arch: props.os_arch,
-      })
-
       // Link the anonymous machineId to the authenticated email
       Client.alias(email, previousId)
     }
   }
 
   export function track(event: TelemetryEvent, properties?: Record<string, unknown>) {
-    Client.capture(event, { ...props, ...properties })
+    const org = Identity.getOrganizationId()
+    Client.capture(event, {
+      ...props,
+      ...properties,
+      ...(Identity.getUserId() &&
+        (event === TelemetryEvent.CLI_START || event === TelemetryEvent.AUTH_SUCCESS) && {
+          $set: {
+            ...(org && { kilocodeOrganizationId: org }),
+            appName: props.appName,
+            appVersion: props.appVersion,
+            platform: props.platform,
+            os_name: props.os_name,
+            os_version: props.os_version,
+            os_arch: props.os_arch,
+          },
+        }),
+    })
   }
 
   // CLI Lifecycle

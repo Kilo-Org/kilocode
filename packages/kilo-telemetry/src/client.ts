@@ -12,7 +12,7 @@ export namespace Client {
   let client: PostHog | null = null
   let enabled = true
   let directory = ""
-  const pending = new Map<string, string>()
+  const pending = new Set<string>()
 
   export function init(dataPath = "") {
     directory = dataPath
@@ -24,11 +24,11 @@ export namespace Client {
     client.on("flush", (messages) => {
       if (!directory) return
       for (const message of messages) {
-        if (message.event !== "$identify" && message.event !== "$create_alias") continue
-        const [file, value] = fingerprint(message.event, message.distinct_id, message.properties)
+        if (message.event !== "$create_alias") continue
+        const file = aliasPath(message.distinct_id, message.properties.alias)
         try {
-          // Persist only successful uploads. A partial write just causes a resend.
-          writeFileSync(file, value, { mode: 0o600 })
+          // Remember the link only after a successful upload.
+          writeFileSync(file, "1", { mode: 0o600 })
         } catch (err) {
           if (process.env.KILO_PRINT_LOGS) console.warn("telemetry cache write failed", err)
         }
@@ -37,28 +37,11 @@ export namespace Client {
     client.on("error", () => pending.clear())
   }
 
-  function fingerprint(event: string, id: string, properties: Record<string, unknown>) {
-    const hash = (value: unknown) =>
-      createHash("sha256")
-        .update(JSON.stringify(value) ?? "null")
-        .digest("hex")
-    const key = hash([event, id, properties.alias])
-    return [
-      path.join(directory, `telemetry-delivery-${key}`),
-      hash(event === "$identify" ? properties.$set : properties.alias),
-    ] as const
-  }
-
-  function duplicate(event: string, id: string, properties: Record<string, unknown>) {
-    const [file, value] = fingerprint(event, id, properties)
-    try {
-      const previous = pending.get(file) ?? (directory ? readFileSync(file, "utf8") : undefined)
-      if (previous === value) return true
-    } catch {
-      // Missing or unreadable caches must not prevent identification.
-    }
-    pending.set(file, value)
-    return false
+  function aliasPath(id: string, alias: string) {
+    const key = createHash("sha256")
+      .update(JSON.stringify([id, alias]))
+      .digest("hex")
+    return path.join(directory, `telemetry-alias-${key}`)
   }
 
   export function getClient(): PostHog | null {
@@ -92,22 +75,16 @@ export namespace Client {
     })
   }
 
-  export function identify(distinctId: string, properties?: Record<string, unknown>) {
-    if (!enabled || !client) return
-    if (duplicate("$identify", distinctId, { $set: properties })) return
-
-    client.capture({
-      distinctId,
-      event: "$identify",
-      properties: {
-        $set: properties,
-      },
-    })
-  }
-
   export function alias(distinctId: string, aliasId: string) {
     if (!enabled || !client) return
-    if (duplicate("$create_alias", distinctId, { alias: aliasId })) return
+    const file = aliasPath(distinctId, aliasId)
+    if (pending.has(file)) return
+    try {
+      if (directory && readFileSync(file, "utf8") === "1") return
+    } catch {
+      // Missing or unreadable markers must not prevent linking identities.
+    }
+    pending.add(file)
 
     client.alias({
       distinctId,
