@@ -19,7 +19,7 @@ describe("terminal context architecture", () => {
   it("keeps webview terminal attachment logic outside PromptInput", () => {
     const prompt = src("webview-ui/src/components/chat/PromptInput.tsx")
     const hook = src("webview-ui/src/hooks/useTerminalContext.ts")
-    const util = src("webview-ui/src/hooks/terminal-context-utils.ts")
+    const util = src("webview-ui/src/hooks/context-mention-utils.ts")
 
     expect(prompt).toContain("useTerminalContext")
     expect(prompt).toContain("resolveAttachment(message, id, readTerminalContext(props.terminalContext))")

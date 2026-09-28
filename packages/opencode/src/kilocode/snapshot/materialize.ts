@@ -25,6 +25,15 @@ export namespace KiloSnapshotMaterialize {
   }
 
   export const ref = (gitdir: string) => `refs/kilo/materialize/${Hash.fast(path.resolve(gitdir))}`
+
+  /**
+   * Quiet period after a snapshot before borrowed objects are repacked into the snapshot
+   * repository. Tests set `KILO_SNAPSHOT_MATERIALIZE_IDLE_MS=0` to materialize at once.
+   */
+  export const idle = () => {
+    const raw = Number(process.env["KILO_SNAPSHOT_MATERIALIZE_IDLE_MS"])
+    return Number.isFinite(raw) && raw >= 0 ? raw : 10_000
+  }
   const snapshotRef = (hash: string, time = Date.now()) => `refs/kilo/snapshots/${time}/${hash}`
 
   const pack = Effect.fnUntraced(function* (input: Input, dir: string, name: string, objects: string[]) {

@@ -5,6 +5,10 @@ import ai.kilocode.client.app.KiloAppService
 import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.plugin.KiloPluginSettings
+import ai.kilocode.client.session.controller.key
+import ai.kilocode.client.session.controller.resolveSessionAgent
+import ai.kilocode.client.session.controller.resolveSessionDefaultModel
+import ai.kilocode.client.session.controller.resolveSessionModel
 import ai.kilocode.client.session.ui.ReasoningPicker
 import ai.kilocode.client.session.ui.mode.modeItems
 import ai.kilocode.client.session.ui.model.ModelPicker
@@ -18,7 +22,10 @@ import ai.kilocode.client.settings.base.SettingsRows
 import ai.kilocode.client.settings.base.SettingsStackedRow
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.layout.Stack
+import ai.kilocode.rpc.dto.KiloAppStatusDto
+import ai.kilocode.rpc.dto.ModelSelectionDto
 import ai.kilocode.rpc.dto.ModelsWorkspaceDto
+import ai.kilocode.rpc.foreignPr
 import ai.kilocode.rpc.parsePrUrl
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ModalityState
@@ -38,6 +45,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import java.awt.Component
 import java.awt.GridBagConstraints
@@ -85,6 +93,9 @@ internal class NewWorktreeDialog(
     private val suggestedName: String,
     private val defaultBase: String,
     private val branches: List<String>,
+    // `owner/repo` for the checkout's origin remote; null when there is no GitHub origin. Used to
+    // reject a pull request URL that belongs to a different repository before it is ever fetched.
+    private val origin: String? = null,
     private val app: KiloAppService = service(),
     private val workspaces: KiloWorkspaceService = service(),
 ) : DialogWrapper(parent, false), NewWorktreeHandle {
@@ -131,6 +142,12 @@ internal class NewWorktreeDialog(
 
     /** The loaded catalog, so mode changes can re-point the model picker without a reload. */
     private var items: List<ModelPicker.Item> = emptyList()
+
+    /** The directory-scoped providers and agents used by normal-session selection resolution. */
+    private var workspace: ModelsWorkspaceDto? = null
+
+    /** The reasoning effort currently displayed by the picker. */
+    private var variant: String? = null
 
     @Volatile
     private var disposed = false
@@ -211,6 +228,7 @@ internal class NewWorktreeDialog(
 
     private fun newContent(): JComponent {
         wirePickers()
+        watchModels()
         loadModels()
         return Stack.vertical(gap = UiStyle.Gap.pad())
             .next(name)
@@ -257,8 +275,18 @@ internal class NewWorktreeDialog(
             modelKey = item.key
             agent?.let { app.selectModel(it, item.provider, item.id) }
             syncReasoning(item)
+            prompt.setAttachmentEnabled(item.attachment)
         }
-        prompt.reasoning.onSelect = { item -> modelKey?.let { app.selectVariant(it, item.id) } }
+        prompt.reasoning.onSelect = { item ->
+            variant = item.id
+            modelKey?.let { app.selectVariant(it, item.id) }
+        }
+    }
+
+    private fun watchModels() {
+        scope.launch {
+            combine(app.state, app.models) { _, _ -> Unit }.collect { ui(::syncSelection) }
+        }
     }
 
     private fun loadModels() {
@@ -269,19 +297,15 @@ internal class NewWorktreeDialog(
     }
 
     private fun applyModels(ws: ModelsWorkspaceDto) {
+        workspace = ws
         items = modelItems(ws.providers)
-        agent = ws.agents?.default
+        agent = resolveSessionAgent(ws.agents, KiloPluginSettings.getAgent())
         prompt.mode.setItems(modeItems(ws.agents?.agents), agent)
         if (items.isEmpty()) {
             prompt.setReady(true)
             return
         }
-        val saved = agent?.let { app.models.value.model[it] }?.let { "${it.providerID}/${it.modelID}" }
-        prompt.model.setItems(items, saved)
-        val current = items.firstOrNull { it.key == saved } ?: items.first()
-        modelKey = current.key
-        syncReasoning(current)
-        prompt.setAttachmentEnabled(current.attachment)
+        syncSelection()
         prompt.setReady(true)
     }
 
@@ -290,18 +314,41 @@ internal class NewWorktreeDialog(
         // longer writes default_agent to the global config here — doing so changed the mode for
         // every other workspace and raced the new session's own model load.
         agent = id
-        val saved = app.models.value.model[id]?.let { "${it.providerID}/${it.modelID}" }
-        if (saved != null && items.any { it.key == saved }) {
-            prompt.model.select(saved)
-            modelKey = saved
+        syncSelection()
+    }
+
+    private fun syncSelection() {
+        val ws = workspace ?: return
+        val first = items.firstOrNull() ?: return
+        val id = agent
+        val current = if (id == null) {
+            first
+        } else {
+            val state = app.models.value
+            val cfg = app.state.value
+            val fallback = resolveSessionDefaultModel(
+                providers = ws.providers,
+                agent = id,
+                state = state,
+                config = cfg.config,
+                ready = cfg.status == KiloAppStatusDto.READY,
+                first = ModelSelectionDto(first.provider, first.id),
+            )
+            val selection = resolveSessionModel(ws.providers, id, state, cfg.config, fallback)
+            items.firstOrNull { it.key == selection?.key } ?: first
         }
-        items.firstOrNull { it.key == modelKey }?.let { syncReasoning(it) }
+        prompt.model.setItems(items, current.key)
+        modelKey = current.key
+        syncReasoning(current)
+        prompt.setAttachmentEnabled(current.attachment)
     }
 
     private fun syncReasoning(item: ModelPicker.Item) {
+        val saved = app.models.value.variant[item.key]?.takeIf { it in item.variants }
+        variant = saved ?: item.variants.firstOrNull()
         prompt.reasoning.setItems(
             item.variants.map { ReasoningPicker.Item(it, variantTitle(it)) },
-            app.models.value.variant[item.key],
+            variant,
         )
     }
 
@@ -332,8 +379,16 @@ internal class NewWorktreeDialog(
             url.requestFocusInWindow()
             return
         }
-        if (parsePrUrl(value) == null) {
+        val ref = parsePrUrl(value)
+        if (ref == null) {
             setErrorText(KiloBundle.message("worktree.import.pr.invalid"), url)
+            url.requestFocusInWindow()
+            url.selectAll()
+            return
+        }
+        val slug = "${ref.owner}/${ref.repo}"
+        if (foreignPr(slug, origin)) {
+            setErrorText(KiloBundle.message("worktree.import.pr.foreign", slug, origin.orEmpty()), url)
             url.requestFocusInWindow()
             url.selectAll()
             return
@@ -369,7 +424,7 @@ internal class NewWorktreeDialog(
             agent = agent,
             provider = item?.provider,
             model = item?.id,
-            variant = modelKey?.let { app.models.value.variant[it] },
+            variant = variant,
         )
     }
 

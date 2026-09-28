@@ -8,6 +8,7 @@ import ai.kilocode.client.ui.layout.Stack
 import com.intellij.openapi.editor.EditorFactory
 import com.intellij.openapi.util.Disposer
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.util.ui.UIUtil
 import java.awt.Component
@@ -31,6 +32,9 @@ class TaskToolViewStressTest : BasePlatformTestCase() {
         val view = view(task(children = children(3)))
         val first = rows(view)[0]
         val second = rows(view)[1]
+        // The task's own child session id never changes across this churn, so its generated-avatar
+        // glyph must stay the exact same retained icon instance the whole time (see [AgentAvatar]).
+        val avatar = glyph(view).icon
 
         repeat(120) { i ->
             val count = 4 + i % 25
@@ -38,6 +42,7 @@ class TaskToolViewStressTest : BasePlatformTestCase() {
             assertSame(first, rows(view)[0])
             assertSame(second, rows(view)[1])
             assertEquals(count, rows(view).size)
+            assertSame(avatar, glyph(view).icon)
         }
 
         repeat(80) { i ->
@@ -82,6 +87,9 @@ class TaskToolViewStressTest : BasePlatformTestCase() {
         if (root !is Container) return emptyList()
         return root.components.flatMap { child -> listOf(child) + descendants(child) }
     }
+
+    /** The task card's leading generated-avatar glyph: the one icon-only, text-less header label. */
+    private fun glyph(view: TaskToolView) = descendants(view).filterIsInstance<JBLabel>().first { it.text.isNullOrBlank() && it.icon != null }
 
     private fun drainEdt() {
         UIUtil.dispatchAllInvocationEvents()

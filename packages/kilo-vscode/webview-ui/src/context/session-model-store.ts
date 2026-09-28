@@ -17,6 +17,7 @@ export interface ModelStore {
   agentSelections: Record<string, string>
   recentModels: ModelSelection[]
   userSetAgents?: Record<string, boolean>
+  preferred?: ModelSelection
 }
 
 export interface ResolveEnv {
@@ -36,6 +37,7 @@ function resolveModel(
   override?: ModelSelection | null,
   recents?: ModelSelection[],
   session?: ModelSelection,
+  preferred?: ModelSelection,
 ): ModelSelection | null {
   return resolveModelSelection({
     providers: env.providers,
@@ -44,6 +46,7 @@ function resolveModel(
     organizationId: env.organizationId,
     defaults: env.defaults,
     session,
+    preferred: preferred && { providerID: preferred.providerID, modelID: preferred.modelID },
     override,
     mode: env.getModeModel(agentName),
     global: env.getGlobalModel(),
@@ -85,6 +88,7 @@ export function getSelected(
     override,
     store.recentModels,
     sessionID ? store.sessionOverrides[sessionID] : undefined,
+    store.preferred,
   )
 }
 
@@ -95,11 +99,8 @@ export function getAgentModel(
   agentName: string,
   userSet = store.userSetAgents?.[agentName] === true,
 ): ModelSelection | null {
-  const override =
-    (env.getModeModel(agentName) && userSet) || (env.organizationId && !userSet)
-      ? null
-      : store.modelSelections[agentName]
-  return resolveModel(env, agentName, override, store.recentModels)
+  const override = env.organizationId && !userSet ? null : store.modelSelections[agentName]
+  return resolveModel(env, agentName, override, store.recentModels, undefined, store.preferred)
 }
 
 export interface ApplyResult {

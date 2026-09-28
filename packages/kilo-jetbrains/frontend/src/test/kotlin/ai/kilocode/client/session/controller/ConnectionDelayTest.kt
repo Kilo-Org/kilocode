@@ -262,8 +262,7 @@ class ConnectionDelayTest : SessionControllerTestBase() {
         flush()
         events.clear()
 
-        appRpc.state.value = KiloAppStateDto(
-            status = KiloAppStatusDto.READY,
+        projectRpc.state.value = workspaceReady(
             warnings = listOf(ConfigWarningDto(path = ".kilo/kilo.json", message = "Invalid JSON")),
         )
         pause(10)
@@ -281,8 +280,7 @@ class ConnectionDelayTest : SessionControllerTestBase() {
         flush()
         states.clear()
 
-        appRpc.state.value = KiloAppStateDto(
-            status = KiloAppStatusDto.READY,
+        projectRpc.state.value = workspaceReady(
             warnings = listOf(ConfigWarningDto(path = ".kilo/kilo.json", message = "Invalid JSON")),
         )
         pause(10)

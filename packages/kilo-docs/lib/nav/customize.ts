@@ -49,6 +49,10 @@ export const CustomizeNav: NavSection[] = [
         children: "Context Condensing",
       },
       {
+        href: "/customize/context/memory",
+        children: "Memory",
+      },
+      {
         href: "/customize/context/kilocodeignore",
         children: ".kilocodeignore",
       },

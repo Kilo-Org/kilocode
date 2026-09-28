@@ -70,7 +70,7 @@ export const dict: Record<string, string> = {
   "ui.sessionTurn.error.addCredits": "क्रेडिट जोड़ें",
   "dialog.usageExceeded.freeTier.title": "मुफ़्त सीमा पूरी हो गई",
   "dialog.usageExceeded.freeTier.description":
-    "$5/month से शुरू होने वाली सदस्यता के साथ सर्वोत्तम ओपन-सोर्स मॉडलों तक विश्वसनीय पहुँच के लिए Kilo Go की सदस्यता लें।",
+    "$10/month में सर्वोत्तम ओपन-सोर्स मॉडलों तक विश्वसनीय पहुँच के लिए Kilo Go की सदस्यता लें।", // kilocode_change
   "dialog.usageExceeded.freeTier.actionLabel": "सदस्यता लें",
   "dialog.usageExceeded.accountRateLimit.title": "Go सीमा पूरी हो गई",
   "dialog.usageExceeded.accountRateLimit.description":
@@ -89,6 +89,15 @@ export const dict: Record<string, string> = {
   "ui.sessionTurn.status.gatheringThoughts": "विचार एकत्रित करना",
   "ui.sessionTurn.status.consideringNextSteps": "अगले कदमों पर विचार",
   "ui.messagePart.diagnostic.error": "त्रुटि",
+  // kilocode_change start
+  "ui.messagePart.board.read": "एजेंटों के संदेश पढ़ें",
+  "ui.messagePart.board.all": "सभी एजेंट",
+  "ui.messagePart.board.primary": "मुख्य एजेंट",
+  "ui.messagePart.board.agent": "एजेंट",
+  "ui.messagePart.board.route": "{{from}} से {{to}} को",
+  "ui.messagePart.board.empty": "एजेंटों का कोई संदेश नहीं",
+  "ui.messagePart.board.stored": "केवल सहेजा गया है। पहुँचने और पढ़े जाने की पुष्टि नहीं हुई है।",
+  // kilocode_change end
   "ui.messagePart.title.edit": "संपादित करें",
   "ui.messagePart.title.write": "लिखें",
   "ui.messagePart.option.typeOwnAnswer": "अपना उत्तर स्वयं लिखें",

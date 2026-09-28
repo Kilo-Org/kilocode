@@ -2,29 +2,33 @@ package ai.kilocode.client.ui.list
 
 import ai.kilocode.client.session.ui.PickerRow
 import ai.kilocode.client.ui.ChangesPanel
+import ai.kilocode.client.ui.FadeText
 import ai.kilocode.client.ui.FilledBadgeIcon
 import ai.kilocode.client.ui.LayeredOverlayPanel
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.layout.HAlign
+import ai.kilocode.client.ui.layout.LayoutPass
 import ai.kilocode.client.ui.layout.Stack
 import ai.kilocode.client.ui.layout.VAlign
 import ai.kilocode.client.ui.layout.align
 import com.intellij.icons.AllIcons
+import com.intellij.openapi.util.registry.Registry
 import com.intellij.ui.CollectionListModel
 import com.intellij.ui.GroupHeaderSeparator
 import com.intellij.ui.RelativeFont
-import com.intellij.ui.SimpleColoredComponent
 import com.intellij.ui.SimpleTextAttributes
 import com.intellij.ui.components.JBLabel
 import com.intellij.util.IconUtil
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.util.ui.EmptyIcon
+import com.intellij.util.ui.JBFont
 import com.intellij.util.ui.JBInsets
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
 import java.awt.AlphaComposite
 import java.awt.BasicStroke
 import java.awt.BorderLayout
+import java.awt.Color
 import java.awt.Cursor
 import java.awt.Dimension
 import java.awt.Graphics
@@ -33,7 +37,9 @@ import java.awt.Point
 import java.awt.RenderingHints
 import java.awt.Rectangle
 import java.awt.image.BufferedImage
+import com.intellij.ui.components.JBTextArea
 import javax.swing.Icon
+import javax.swing.JComponent
 import javax.swing.JList
 import javax.swing.JPanel
 import javax.swing.ListCellRenderer
@@ -47,6 +53,15 @@ import javax.swing.SwingConstants
  * is handed).
  */
 private fun activeListIconGap() = JBUI.getInt("ActionsList.icon.gap", UiStyle.Gap.MD)
+
+/**
+ * Whether row text that does not fit fades into the row background instead of stopping at a bare cut.
+ *
+ * On by default. Off leaves the cut exposed, which is legible but reads as the end of the text rather than
+ * the middle of it — the escape hatch for a surface where the fade is wrong, such as a theme that paints a
+ * row background the renderer cannot name.
+ */
+private fun activeListFade() = Registry.`is`("kilo.list.fade", true)
 
 internal class ActiveListRenderer(
     private val model: CollectionListModel<ActiveListItem>,
@@ -89,8 +104,8 @@ internal class ActiveListRenderer(
     // Pin the glyph to the top of the label so a stretched icon column keeps the icon on the
     // first text line instead of centering it across a multi-line row.
     private val icon = JBLabel().apply { verticalAlignment = SwingConstants.TOP }
-    private val mark = icon.align(HAlign.CENTER, VAlign.CENTER)
-    private val title = SimpleColoredComponent()
+    private val mark = icon.align(HAlign.CENTER, cfg.iconAlignment.align())
+    private val title = FadeText()
     private val leading = Stack.horizontal(JBUI.scale(activeListIconGap()))
     private val badges = Stack.horizontal(JBUI.scale(activeListIconGap()))
     private val secondary = Stack.horizontal(UiStyle.Gap.md())
@@ -106,12 +121,25 @@ internal class ActiveListRenderer(
     // the group stretched across the row instead, which lands its badges on the same trailing edge as
     // the metrics and secondary badges below them.
     private val header = titleGroup.align(if (cfg.badgesRight) HAlign.FIT else HAlign.LEFT, VAlign.CENTER)
-    private val desc = JBLabel()
+    // Carries the description as a [FadeText] rather than the JBLabel it used to be, so both lines of a
+    // row clip the same way: cut and faded, not ellipsed through the label UI. The internal padding and
+    // border a colored component ships with are cleared to keep the label's own geometry, which would
+    // otherwise indent the line by a few pixels and grow every row.
+    private val desc = FadeText().apply {
+        ipad = JBUI.emptyInsets()
+        myBorder = null
+    }
+    // Only built when a caller opts into wrapping (board-style rows); every other list keeps the
+    // single-line faded [desc] and pays nothing for this. Measured at its own current width, which
+    // [activeListLayout] assigns before anything reads its preferred size — see the wrap block near
+    // the end of [getListCellRendererComponent].
+    private val descWrap: ActiveListWrapText? = if (cfg.wrapDescription) ActiveListWrapText() else null
+    private val descBody: JComponent = descWrap ?: desc
     private val metrics = ActiveListChangesCell()
     private val details = Stack.horizontal(UiStyle.Gap.md()).next(metrics).next(secondary)
     private val detailsPane = details.align(HAlign.RIGHT, VAlign.CENTER)
     private val descLine = JPanel(BorderLayout(UiStyle.Gap.md(), 0)).apply {
-        add(desc, BorderLayout.CENTER)
+        add(descBody, BorderLayout.CENTER)
         add(detailsPane, BorderLayout.EAST)
     }
     private val text = Stack.vertical().next(header).next(descLine)
@@ -176,6 +204,7 @@ internal class ActiveListRenderer(
             glyph,
             spacer,
         )
+        descWrap?.let { UiStyle.Components.transparent(it) }
         layers.addOverlay(pill) { host, child ->
             val size = child.preferredSize
             // The dropdown column, so the pill clears it when a list opts into both.
@@ -235,6 +264,13 @@ internal class ActiveListRenderer(
         syncScale()
     }
 
+    // The stamp is invalidated wholesale for every row (see [activeListInvalidate]), so without a pass each
+    // nested Stack/Align re-measures its whole subtree for every size it is asked. The painting validate and
+    // every row-height read run as one [LayoutPass] each, which measures every container once.
+    override fun validate() = LayoutPass.measure { super.validate() }
+
+    override fun getPreferredSize(): Dimension = LayoutPass.measure { super.getPreferredSize() }
+
     @RequiresEdt
     override fun getListCellRendererComponent(
         list: JList<out ActiveListItem>,
@@ -267,6 +303,13 @@ internal class ActiveListRenderer(
         gap = false
         layers.isVisible = true
 
+        // Text that runs out of room is cut and faded rather than ellipsed, so the row spends every pixel
+        // it has on the text itself. The fade blends into whatever the row painted behind the line, read
+        // back off [wrap] so it cannot drift from the selection color the row actually filled.
+        val backdrop = if (activeListFade()) wrap.selectionColor ?: wrap.background else null
+        title.backdrop = backdrop
+        desc.backdrop = backdrop
+
         title.clear()
         // Bold carries most rows by default: the description under it and the icon beside it both
         // render in the muted secondary color, so cfg.title separates the two lines when enabled.
@@ -275,21 +318,35 @@ internal class ActiveListRenderer(
         value.note?.takeIf { it.isNotBlank() }?.let {
             title.append("  $it", SimpleTextAttributes.GRAYED_ATTRIBUTES)
         }
-        syncBadges(value)
+        // The row's ordinary text color rather than the muted one: a labelled glyph is a figure the user is
+        // meant to read, and the muted tone made it fainter than the neutral glyph beside it. Selection
+        // aware, so a highlighted row does not leave the count dark on dark blue.
+        syncBadges(value, fg)
         // A selected row paints its title in the selection foreground; recolor a tinted glyph to
         // match so it reads as part of the highlighted text. Colored status icons opt out and keep
         // their own hue.
         icon.icon = value.icon?.let { if (active && value.tinted) IconUtil.colorize(it, fg, keepBrightness = false) else it }
         mark.isVisible = value.icon != null
         val note = if (cfg.description) value.description.orEmpty() else ""
-        desc.text = note
-        desc.isVisible = note.isNotBlank()
-        desc.border = if (cfg.descriptionIndent && desc.isVisible) {
-            JBUI.Borders.emptyLeft(UiStyle.Gap.SM)
+        if (descWrap != null) {
+            if (descWrap.text != note) descWrap.text = note
+            descWrap.foreground = weak
+            descWrap.isVisible = note.isNotBlank()
+            descWrap.border = if (cfg.descriptionIndent && descWrap.isVisible) {
+                JBUI.Borders.emptyLeft(UiStyle.Gap.SM)
+            } else {
+                JBUI.Borders.empty()
+            }
         } else {
-            JBUI.Borders.empty()
+            desc.clear()
+            if (note.isNotBlank()) desc.append(note, SimpleTextAttributes(SimpleTextAttributes.STYLE_PLAIN, weak))
+            desc.isVisible = note.isNotBlank()
+            desc.border = if (cfg.descriptionIndent && desc.isVisible) {
+                JBUI.Borders.emptyLeft(UiStyle.Gap.SM)
+            } else {
+                JBUI.Borders.empty()
+            }
         }
-        desc.foreground = weak
         val data = if (value.progress != null) null else value.metrics
         metrics.isEnabled = list.isEnabled && !value.disabled
         metrics.update(data)
@@ -297,7 +354,7 @@ internal class ActiveListRenderer(
         trail.text = end
         trail.isVisible = end.isNotBlank() && data == null
         detailsPane.isVisible = metrics.isVisible || secondary.isVisible
-        descLine.isVisible = desc.isVisible || detailsPane.isVisible
+        descLine.isVisible = descBody.isVisible || detailsPane.isVisible
         trail.foreground = weak
 
         val hovered = (list as? ActiveListActive)?.hoveredIndex() == index
@@ -311,6 +368,23 @@ internal class ActiveListRenderer(
         pill.background = if (selected && list.isEnabled) UIUtil.getListBackground(true, active) else list.background
         val height = bodyHeight
         wrap.setPreferredSize(height?.let { Dimension(0, it) })
+        if (cfg.wrapDescription) {
+            // [descWrap] answers its own preferred height from its current width (see
+            // [ActiveListWrapText.getPreferredSize]), but nothing has assigned it a width yet: this
+            // renderer is a stamp that has never been through a real layout pass at [list]'s size. A
+            // real (not preferred-size-only) layout pass at the list's width — the same
+            // [activeListLayout] helper [rowImage] uses to learn actual widths — cascades the real
+            // column width down through every BorderLayout/Stack/Align level to [descWrap] before
+            // anything below reads a preferred size. Column widths never depend on the height passed
+            // here, so it is kept at a minimal placeholder rather than a generous one: [layers]'
+            // absolutely-positioned overlay/blocker children have no layout manager of their own, so
+            // in a renderer that was never added to a real, displayable window they fall back to
+            // reporting their *current bounds* as their preferred size. A tall placeholder here would
+            // land in that fallback and make [LayeredOverlayPanel] report a body far taller than the
+            // wrapped text actually needs.
+            setBounds(0, 0, list.width.coerceAtLeast(1), 1)
+            activeListLayout(this)
+        }
         // Neither the content mutations above nor setPreferredSize invalidate reliably: a same-size
         // icon swap, an equal label text, or an explicit preferred size leave the tree valid, and a
         // valid subtree keeps the sizes it was measured with for another row.
@@ -377,7 +451,7 @@ internal class ActiveListRenderer(
         val fixed = bodyHeight
         bodyHeight = null
         getListCellRendererComponent(list, value, index, selected, focused)
-        val height = wrap.preferredSize.height
+        val height = LayoutPass.measure { wrap.preferredSize.height }
         bodyHeight = fixed
         return height
     }
@@ -413,22 +487,22 @@ internal class ActiveListRenderer(
         return image to Point(wrap.x, wrap.y)
     }
 
-    private fun syncBadges(item: ActiveListItem) {
+    private fun syncBadges(item: ActiveListItem, color: Color) {
         val hidden = item.progress != null
         val gap = activeListIconGap()
         leading.border = JBUI.Borders.emptyRight(gap)
         badges.border = JBUI.Borders.emptyLeft(gap)
-        syncBadges(leading, if (hidden) emptyList() else item.leading)
-        syncBadges(badges, if (hidden) emptyList() else item.badges)
-        syncBadges(secondary, if (hidden) emptyList() else item.secondaryBadges)
+        syncBadges(leading, if (hidden) emptyList() else item.leading, color)
+        syncBadges(badges, if (hidden) emptyList() else item.badges, color)
+        syncBadges(secondary, if (hidden) emptyList() else item.secondaryBadges, color)
     }
 
-    private fun syncBadges(stack: JPanel, items: List<ActiveListBadge>) {
+    private fun syncBadges(stack: JPanel, items: List<ActiveListBadge>, color: Color) {
         while (stack.componentCount > items.size) stack.remove(stack.componentCount - 1)
         while (stack.componentCount < items.size) stack.add(ActiveListBadgeCell())
         stack.isVisible = items.isNotEmpty()
         for (i in items.indices) {
-            (stack.getComponent(i) as ActiveListBadgeCell).update(items[i])
+            (stack.getComponent(i) as ActiveListBadgeCell).update(items[i], color)
         }
     }
 
@@ -471,6 +545,7 @@ internal class ActiveListChangesCell @RequiresEdt constructor() : JPanel(BorderL
             localAdditions = data?.localAdditions ?: 0,
             localDeletions = data?.localDeletions ?: 0,
             base = data?.base.orEmpty(),
+            conflict = data?.conflict == true,
         )
         panel.setActions(data?.action.takeIf { isEnabled })
         isVisible = panel.isVisible
@@ -526,13 +601,32 @@ internal class ActiveListBadgeCell : JBLabel(), ActiveListHitCell {
     override var cellId: String = ""
         private set
 
-    fun update(badge: ActiveListBadge) {
+    /**
+     * [color] is the row's text foreground, applied only to a labelled glyph. A pill paints its own text
+     * inside [FilledBadgeIcon], and a bare glyph has no text to color; a labelled glyph does, and a
+     * [JBLabel]'s own foreground is a UIResource that does not inherit from the transparent stack it sits
+     * in, so a count would otherwise be unreadable on a selected row.
+     */
+    fun update(badge: ActiveListBadge, color: Color? = null) {
         this.badge = badge
         cellId = badge.id.orEmpty()
         val next = badge.icon ?: pill(badge)
         // Both branches answer with the instance already installed when nothing changed, so a repaint
         // of an unchanged row does not churn the label's icon.
         if (icon !== next) icon = next
+        val label = if (badge.icon != null) badge.text else ""
+        if (text != label) text = label
+        if (label.isNotBlank()) {
+            // Font and gap match the ahead/behind counters in ChangesPanel: a glyph with a figure beside it
+            // reads as one token, and a default label gap pulls the two apart into an icon with a caption.
+            // Re-read rather than assigned once, because updateUI puts the LaF defaults back on an IDE
+            // zoom; the comparisons make that the only time this writes.
+            val small = JBFont.small()
+            if (font != small) font = small
+            val gap = UiStyle.Gap.xs()
+            if (iconTextGap != gap) iconTextGap = gap
+            if (color != null && foreground != color) foreground = color
+        }
         toolTipText = cellTooltip()
     }
 
@@ -549,4 +643,40 @@ internal class ActiveListBadgeCell : JBLabel(), ActiveListHitCell {
     override fun cellTooltip(): String? = badge?.tooltip?.takeIf { it.isNotBlank() }
 
     override fun cellAction(): (() -> Unit)? = badge?.action
+}
+
+private fun ActiveListIconAlignment.align(): VAlign = when (this) {
+    ActiveListIconAlignment.CENTER -> VAlign.CENTER
+    ActiveListIconAlignment.TOP -> VAlign.TOP
+}
+
+/**
+ * Wrapping row body used when [ActiveListConfig.wrapDescription] is enabled, in place of the
+ * single-line faded [FadeText]. Non-interactive: it carries no [ActiveListHitCell] contract, so it
+ * never becomes a click/cursor/tooltip target the way a badge or action cell does.
+ *
+ * Measured at its own current width rather than a fixed row/columns count, matching the same
+ * pattern as `MessageErrorView.ErrorText`: [javax.swing.JTextArea] answers a wrap-aware preferred
+ * height only once it already knows the width it will paint at, so [getPreferredSize] re-measures
+ * against [width] instead of the platform default.
+ */
+private class ActiveListWrapText : JBTextArea() {
+    init {
+        isEditable = false
+        isFocusable = false
+        caret.isVisible = false
+        caret.isSelectionVisible = false
+        lineWrap = true
+        wrapStyleWord = true
+        border = JBUI.Borders.empty()
+    }
+
+    override fun getPreferredSize(): Dimension {
+        if (width <= 0) return super.getPreferredSize()
+        val old = size
+        setSize(width, Int.MAX_VALUE)
+        val height = super.getPreferredSize().height
+        setSize(old)
+        return Dimension(width, height)
+    }
 }

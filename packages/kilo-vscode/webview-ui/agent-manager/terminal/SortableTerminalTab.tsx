@@ -22,6 +22,7 @@ interface Props extends Omit<ClosableTabProps, "icon" | "onClose" | "trailing"> 
   status?: ScriptTerminalStatus
   onClose: () => void
   onStop?: (event: MouseEvent) => void
+  onCloseToRight?: () => void
 }
 
 const StopButton: Component<{ active: boolean; tabIndex: number; onStop?: (event: MouseEvent) => void }> = (props) => {
@@ -104,6 +105,7 @@ export const SortableTerminalTab: Component<
       onMiddleClick={props.onMiddleClick}
       onClose={props.onClose}
       onCloseOthers={props.onCloseOthers}
+      onCloseToRight={props.onCloseToRight}
       trailing={
         <StopButton active={terminalStoppable(props.status)} tabIndex={props.active ? 0 : -1} onStop={props.onStop} />
       }

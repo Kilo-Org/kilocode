@@ -9,12 +9,16 @@ import {
   imageDrafts,
   mentionDrafts,
   reviewDrafts,
+  scrollDrafts,
 } from "../../webview-ui/src/utils/draft-store"
 import {
+  clearPromptDraftRoutes,
   createdDraftKey,
   failedPrompt,
   movePromptDraft,
   pendingDraftKey,
+  promotePromptDraft,
+  promptDraftKey,
   scopeDraftKey,
   sessionDraftKey,
 } from "../../webview-ui/src/utils/prompt-drafts"
@@ -25,6 +29,8 @@ beforeEach(() => {
   reviewDrafts.clear()
   imageDrafts.clear()
   mentionDrafts.clear()
+  scrollDrafts.clear()
+  clearPromptDraftRoutes()
 })
 
 describe("failedPrompt", () => {
@@ -189,6 +195,64 @@ describe("pendingDraftKey", () => {
   })
 })
 
+describe("promptDraftKey", () => {
+  it("uses pending keys for offscreen pending sessions", () => {
+    expect(promptDraftKey("prompt:default", "sidebar-pending:1")).toBe("prompt:default:pending:sidebar-pending:1")
+  })
+
+  it("uses a draft key for the active unprefixed pending id", () => {
+    expect(promptDraftKey("prompt:default", "draft-1", { draft: "draft-1" })).toBe("prompt:default:pending:draft-1")
+  })
+
+  it("does not classify a selected session as pending when its draft id matches", () => {
+    const state = { current: "ses_selected", draft: "ses_selected" }
+
+    expect(promptDraftKey("prompt:default", "ses_selected", state)).toBe("prompt:default:session:ses_selected")
+    expect(promptDraftKey("prompt:default", "ses_other", state)).toBe("prompt:default:session:ses_other")
+  })
+
+  it("routes both ids of an active promoted draft to the same session", () => {
+    const state = { current: "ses_created", draft: "ses_created" }
+    promotePromptDraft("prompt:default", "pending:1", state.current)
+
+    expect(promptDraftKey("prompt:default", "pending:1", state)).toBe("prompt:default:session:ses_created")
+    expect(promptDraftKey("prompt:default", "ses_created", state)).toBe("prompt:default:session:ses_created")
+  })
+
+  it("resolves an old pending id to its promoted session", () => {
+    promotePromptDraft("prompt:default", "pending:1", "session-1")
+
+    expect(promptDraftKey("prompt:default", "pending:1")).toBe("prompt:default:session:session-1")
+    expect(promptDraftKey("prompt:other", "pending:1")).toBe("prompt:other:pending:1")
+  })
+
+  it("does not confuse a pending id with an existing session id", () => {
+    promotePromptDraft("prompt:default", "pending:1", "session-1")
+
+    expect(promptDraftKey("prompt:default", "session-1")).toBe("prompt:default:session:session-1")
+    expect(promptDraftKey("prompt:default", "pending:2")).toBe("prompt:default:pending:2")
+  })
+
+  it("uses session keys for existing sessions", () => {
+    expect(promptDraftKey("prompt:default", "session-1")).toBe("prompt:default:session:session-1")
+  })
+
+  it("clears routes when the promoted session is deleted", () => {
+    promotePromptDraft("prompt:default", "pending:1", "session-1")
+    deleteDraftsForSession("session-1")
+
+    expect(promptDraftKey("prompt:default", "pending:1")).toBe("prompt:default:pending:1")
+  })
+
+  it("keeps routes for other prompt boxes", () => {
+    promotePromptDraft("prompt:default", "pending:1", "session-1")
+    promotePromptDraft("prompt:other", "pending:2", "session-2")
+    deleteDraftsForSession("session-1")
+
+    expect(promptDraftKey("prompt:other", "pending:2")).toBe("prompt:other:session:session-2")
+  })
+})
+
 describe("scopeDraftKey", () => {
   it("scopes raw keys to a prompt box", () => {
     expect(scopeDraftKey("prompt:1", "session:abc")).toBe("prompt:1:session:abc")
@@ -242,6 +306,38 @@ describe("movePromptDraft", () => {
     expect(comments.has(source)).toBe(false)
     expect(images.has(source)).toBe(false)
     expect(browser.has(source)).toBe(false)
+    expect(scrolls.has(source)).toBe(false)
+  })
+
+  it("keeps existing target artifacts during promotion", () => {
+    const source = scopeDraftKey("prompt:default", pendingDraftKey("pending-1"))
+    const target = scopeDraftKey("prompt:default", sessionDraftKey("session-1"))
+    const text = new Map([
+      [source, "pending prompt"],
+      [target, "existing prompt"],
+    ])
+    const comments = new Map<string, { id: string }[]>([
+      [source, [{ id: "pending-comment" }]],
+      [target, [{ id: "existing-comment" }]],
+    ])
+    const images = new Map<string, string[]>([
+      [source, ["pending-image"]],
+      [target, ["existing-image"]],
+    ])
+    const scrolls = new Map([
+      [source, 64],
+      [target, 128],
+    ])
+
+    movePromptDraft({ text, comments, images, scrolls }, source, target)
+
+    expect(text.get(target)).toBe("existing prompt")
+    expect(comments.get(target)).toEqual([{ id: "existing-comment" }])
+    expect(images.get(target)).toEqual(["existing-image"])
+    expect(scrolls.get(target)).toBe(128)
+    expect(text.has(source)).toBe(false)
+    expect(comments.has(source)).toBe(false)
+    expect(images.has(source)).toBe(false)
     expect(scrolls.has(source)).toBe(false)
   })
 })

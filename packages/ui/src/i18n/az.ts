@@ -69,7 +69,7 @@ export const dict: Record<string, string> = {
   "ui.sessionTurn.error.addCredits": "Kredit əlavə et",
   "dialog.usageExceeded.freeTier.title": "Pulsuz limitə çatdınız",
   "dialog.usageExceeded.freeTier.description":
-    "Ayda $5-dan başlayan Kilo Go abunəliyi ilə ən yaxşı açıq mənbəli modellərə etibarlı giriş əldə edin.",
+    "Ayda $10 olan Kilo Go abunəliyi ilə ən yaxşı açıq mənbəli modellərə etibarlı giriş əldə edin.", // kilocode_change
   "dialog.usageExceeded.freeTier.actionLabel": "Abunə ol",
   "dialog.usageExceeded.accountRateLimit.title": "Go limitinə çatdınız",
   "dialog.usageExceeded.accountRateLimit.description":
@@ -88,6 +88,15 @@ export const dict: Record<string, string> = {
   "ui.sessionTurn.status.gatheringThoughts": "Düşüncələr toplanır",
   "ui.sessionTurn.status.consideringNextSteps": "Növbəti addımlar nəzərdən keçirilir",
   "ui.messagePart.diagnostic.error": "Xəta",
+  // kilocode_change start
+  "ui.messagePart.board.read": "Agent mesajlarını oxu",
+  "ui.messagePart.board.all": "Bütün agentlər",
+  "ui.messagePart.board.primary": "Əsas agent",
+  "ui.messagePart.board.agent": "Agent",
+  "ui.messagePart.board.route": "Göndərən: {{from}}, alıcı: {{to}}",
+  "ui.messagePart.board.empty": "Agent mesajı yoxdur",
+  "ui.messagePart.board.stored": "Yalnız saxlanılıb. Çatdırılması və oxunması təsdiqlənməyib.",
+  // kilocode_change end
   "ui.messagePart.title.edit": "Redaktə",
   "ui.messagePart.title.write": "Yaz",
   "ui.messagePart.option.typeOwnAnswer": "Öz cavabınızı yazın",

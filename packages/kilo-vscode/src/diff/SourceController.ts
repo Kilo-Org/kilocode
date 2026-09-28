@@ -67,6 +67,8 @@ export class SourceController {
   private interval: ReturnType<typeof setInterval> | undefined
   private lastHash: string | undefined
   private epoch = 0
+  private visible = true
+  private options: ActivateOptions = {}
   private readonly fetches = new Map<DiffSource, Promise<boolean>>()
 
   constructor(
@@ -86,6 +88,16 @@ export class SourceController {
 
   get isPolling(): boolean {
     return this.interval !== undefined
+  }
+
+  async setVisible(visible: boolean): Promise<void> {
+    if (this.visible === visible) return
+    this.visible = visible
+    if (!visible) {
+      this.stopPolling()
+      return
+    }
+    await this.resume()
   }
 
   /** Dispose the active source and bump the epoch so in-flight fetches are dropped. */
@@ -108,8 +120,8 @@ export class SourceController {
     const ctx = this.ctx
     if (!ctx) return
     this.stop()
-    const epoch = this.epoch
     this.activeId = id
+    this.options = opts
 
     const source = this.build(id, ctx)
     this.active = source
@@ -117,12 +129,7 @@ export class SourceController {
     this.send(this.messages.available?.(this.listAvailable(ctx), id))
     this.send(this.messages.capabilities?.(source.descriptor.capabilities))
 
-    if (opts.fetch === false) return
-
-    const keepPolling = await this.fetch(source, epoch, true)
-    // Prevents the polling interval from starting after teardown or swap.
-    if (this.epoch !== epoch || this.activeId !== id) return
-    if (opts.poll !== false && keepPolling) this.startPolling(source, epoch)
+    await this.resume()
   }
 
   /**
@@ -174,10 +181,7 @@ export class SourceController {
   async requestFile(file: string): Promise<void> {
     const source = this.active
     const epoch = this.epoch
-    if (!source) {
-      this.send(this.messages.diffFile(undefined, file, null))
-      return
-    }
+    if (!source) return
     if (!source.fetchFile) {
       this.send(this.messages.diffFile(source, file, null))
       return
@@ -185,17 +189,9 @@ export class SourceController {
     // Yield once so a worktree switch can advance the epoch before queued
     // detail work enters the shared Git semaphore.
     await new Promise<void>((resolve) => setTimeout(resolve, 0))
-    if (this.epoch !== epoch || this.active !== source) {
-      this.send(this.messages.diffFile(source, file, null))
-      return
-    }
+    if (this.epoch !== epoch) return
     const diff = await source.fetchFile(file).catch(() => null)
-    // Discard stale content after disposal/swap, but still complete the request
-    // so consumers can clear per-file loading state.
-    if (this.epoch !== epoch) {
-      this.send(this.messages.diffFile(source, file, null))
-      return
-    }
+    if (this.epoch !== epoch) return
     this.send(this.messages.diffFile(source, file, diff))
   }
 
@@ -246,6 +242,15 @@ export class SourceController {
     this.post(msg)
   }
 
+  private async resume(): Promise<void> {
+    const source = this.active
+    const epoch = this.epoch
+    if (!source || !this.visible || this.options.fetch === false) return
+    const keep = await this.fetch(source, epoch, true)
+    if (this.epoch !== epoch || this.active !== source || !this.visible) return
+    if (this.options.poll !== false && keep) this.startPolling(source, epoch)
+  }
+
   private startPolling(source: DiffSource, epoch: number): void {
     this.stopPolling()
     let busy = false
@@ -268,6 +273,7 @@ export class SourceController {
   }
 
   private fetch(source: DiffSource, epoch: number, initial: boolean, force = false): Promise<boolean> {
+    if (!this.visible) return Promise.resolve(false)
     const current = this.fetches.get(source)
     if (current && !force) return current
     if (current) {

@@ -203,7 +203,8 @@ body.vscode-light
   outline-offset: -1px;
 }
 
-.cloud-session-load-more {
+.cloud-session-load-more,
+.session-list-load-more {
   flex-shrink: 0;
   display: flex;
   justify-content: center;

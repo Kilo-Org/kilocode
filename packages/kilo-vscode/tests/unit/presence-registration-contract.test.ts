@@ -49,7 +49,7 @@ describe("KiloProvider editor-panel visible registration contract", () => {
     expect(body).toContain("this.contextSessionID")
     expect(body).toContain("panel.visible")
     expect(body).toContain("this.connectionService.registerVisible(this.instanceId,")
-    expect(body).not.toContain("panel.active")
+    expect(body).toContain("this.connectionService.registerVisible(this.instanceId, panel.visible && id ? [id] : [])")
     expect(body).not.toContain("this.currentSession")
   })
 

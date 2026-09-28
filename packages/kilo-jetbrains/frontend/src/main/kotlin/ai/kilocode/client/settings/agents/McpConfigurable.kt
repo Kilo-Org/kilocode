@@ -2,10 +2,11 @@ package ai.kilocode.client.settings.agents
 
 import ai.kilocode.client.app.KiloAgentBehaviorService
 import ai.kilocode.client.plugin.KiloBundle
+import ai.kilocode.client.settings.base.DirectoryReadyConfigurable
 import ai.kilocode.client.settings.base.SettingsListPanel
 import ai.kilocode.client.settings.base.SettingsMessageException
+import ai.kilocode.client.settings.marketplace.marketplaceAction
 import ai.kilocode.client.ui.UiStyle
-import ai.kilocode.client.ui.layout.Stack
 import ai.kilocode.client.ui.list.ActiveListBadge
 import ai.kilocode.client.ui.list.ActiveListCell
 import ai.kilocode.client.ui.list.ActiveListConfig
@@ -16,6 +17,7 @@ import ai.kilocode.rpc.dto.McpConfigDto
 import ai.kilocode.rpc.dto.McpServerConfigDto
 import ai.kilocode.rpc.dto.McpStatusDto
 import com.intellij.icons.AllIcons
+import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.application.EDT
 import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.application.asContextElement
@@ -30,7 +32,7 @@ import kotlinx.coroutines.withContext
 
 private val edt = Dispatchers.EDT + ModalityState.any().asContextElement()
 
-class McpConfigurable : AgentBehaviorConfigurableBase<JComponent>() {
+class McpConfigurable : DirectoryReadyConfigurable<JComponent>() {
     override fun getId(): String = ID
     override fun getDisplayName(): String = KiloBundle.message("settings.agentBehavior.mcp.displayName")
     override fun create(cs: CoroutineScope, dir: String): JComponent = McpSettingsUi(cs, dir)
@@ -91,10 +93,11 @@ internal class McpSettingsUi(
 
     override fun searchPlaceholder() = KiloBundle.message("settings.agentBehavior.mcp.search")
 
-    override fun toolbarRight(): JComponent = Stack.horizontal(UiStyle.Gap.sm())
-        .next(JBLabel(KiloBundle.message("settings.agentBehavior.mcp.addHint")).apply {
-            foreground = UIUtil.getContextHelpForeground()
-        })
+    override fun tailActions(): List<AnAction> = listOf(marketplaceAction("settings_mcp"))
+
+    override fun toolbarRight(): JComponent = JBLabel(KiloBundle.message("settings.agentBehavior.mcp.addHint")).apply {
+        foreground = UIUtil.getContextHelpForeground()
+    }
 
     private fun item(name: String, cfg: McpConfigDto?, status: McpStatusDto?) = object : ActiveListItem {
         override val key = name

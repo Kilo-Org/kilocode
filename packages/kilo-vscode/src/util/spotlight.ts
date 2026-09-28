@@ -1,17 +1,8 @@
 import * as fs from "fs"
 import * as path from "path"
+import { exists, message } from "@opencode-ai/core/kilocode/spotlight"
 
 const marker = ".metadata_never_index"
-
-function exists(err: unknown): boolean {
-  if (typeof err !== "object" || err === null) return false
-  return "code" in err && err.code === "EEXIST"
-}
-
-function message(err: unknown): string {
-  if (err instanceof Error) return err.message
-  return String(err)
-}
 
 export async function markNoIndex(dir: string, log: (msg: string) => void): Promise<void> {
   if (process.platform !== "darwin") return

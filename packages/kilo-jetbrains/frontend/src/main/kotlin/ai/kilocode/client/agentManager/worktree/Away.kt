@@ -61,10 +61,11 @@ internal class Away(private val now: () -> Long) {
          * that ran while the window sat in the background, another panel's lookup — is still current
          * and worth reusing; only answers that predate the departure have to be rejected.
          *
-         * [bar] is how long an absence has to be to earn one, and belongs to the caller because it is
-         * really a price: one `gh auth status` is worth spending on a ten-second absence, while a
-         * per-worktree pull request fan-out costs several calls per return and has to clear the poll
-         * floor it is bypassing, or steady window switching would outspend the poll it replaces.
+         * [bar] is how long an absence has to be to earn one, and belongs to the caller so an expensive
+         * return can demand a longer absence before it is worth answering. It is not the caller's
+         * spending control: how *often* a return may be paid for is a separate limit, kept by the caller
+         * against its own last lookup. Conflating the two makes the bar do both jobs badly — raising it
+         * to throttle cost also blinds the caller to the short absences it could have afforded.
          */
         fun ceiling(gone: Long, bar: Long = FRESH): Long? = gone.takeIf { it >= bar }
     }

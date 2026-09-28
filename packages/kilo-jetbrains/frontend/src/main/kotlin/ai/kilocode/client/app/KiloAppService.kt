@@ -16,6 +16,8 @@ import ai.kilocode.rpc.dto.ModelSelectionUpdateDto
 import ai.kilocode.rpc.dto.ModelStateDto
 import ai.kilocode.rpc.dto.ModelVariantUpdateDto
 import ai.kilocode.rpc.dto.ProfileDto
+import ai.kilocode.rpc.dto.RetentionStatusDto
+import ai.kilocode.rpc.dto.RetentionPatchDto
 import ai.kilocode.rpc.dto.ProfileStatusDto
 import ai.kilocode.log.KiloLog
 import ai.kilocode.client.settings.KiloLogSettingsService
@@ -24,11 +26,14 @@ import com.intellij.openapi.components.service
 import fleet.rpc.client.durable
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * App-level frontend service for Kilo Core interaction.
@@ -292,19 +297,6 @@ class KiloAppService internal constructor(
         }
     }
 
-    fun clearModel(agent: String) {
-        val prev = _models.value
-        setModelState(prev.copy(model = prev.model - agent))
-        cs.launch {
-            try {
-                setModelState(call { clearModelSelection(agent) })
-            } catch (e: Exception) {
-                LOG.warn("model selection clear failed", e)
-                setModelState(prev)
-            }
-        }
-    }
-
     fun selectVariant(key: String, value: String) {
         val prev = _models.value
         setModelState(prev.copy(variant = prev.variant + (key to value)))
@@ -337,11 +329,74 @@ class KiloAppService internal constructor(
         done(state)
     }
 
+    suspend fun retentionStatus(): RetentionStatusDto? = try {
+        call { fetchRetention() }
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        LOG.warn("Session cleanup status failed", e)
+        null
+    }
+
+    suspend fun runRetention(force: Boolean): RetentionStatusDto? = try {
+        call { triggerRetention(force) }
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        LOG.warn("Session cleanup run failed", e)
+        null
+    }
+
+    fun runRetentionAsync(force: Boolean, done: (RetentionStatusDto?) -> Unit): Job = cs.launch {
+        done(runRetention(force))
+    }
+
+    /** Run cleanup once without leaving automatic retention enabled when the saved policy is off. */
+    suspend fun runManualRetention(policy: RetentionPatchDto): RetentionStatusDto? {
+        if (policy.enabled == true) return runRetention(true)
+        val enabled = policy.copy(enabled = true)
+        if (updateConfig(ConfigPatchDto(retention = enabled)) == null) return null
+        return try {
+            runRetention(true)
+        } finally {
+            withContext(NonCancellable) {
+                updateConfig(ConfigPatchDto(retention = policy.copy(enabled = false)))
+            }
+        }
+    }
+
+    fun runManualRetentionAsync(
+        policy: RetentionPatchDto,
+        done: (RetentionStatusDto?) -> Unit,
+    ): Job = cs.launch {
+        done(runManualRetention(policy))
+    }
+
     fun applyLogConfigAsync(config: LogConfigDto): Job = cs.launch {
         try {
             call { applyLogConfig(config) }
         } catch (e: Exception) {
             LOG.warn("log config apply failed", e)
+        }
+    }
+
+    /** Whether Kilo-managed worktrees under `.kilo/worktrees` are indexed by their containing project. */
+    suspend fun indexWorktrees(): Boolean = try {
+        call { indexWorktrees() }
+    } catch (e: Exception) {
+        LOG.warn("index worktrees read failed", e)
+        false
+    }
+
+    /**
+     * Persist the worktree-indexing setting and reindex every open project. Runs on the app-lifetime
+     * [scope] so the write and the reindex it triggers survive the settings dialog closing on OK.
+     */
+    fun setIndexWorktreesAsync(value: Boolean): Job = cs.launch {
+        try {
+            call { setIndexWorktrees(value) }
+        } catch (e: Exception) {
+            LOG.warn("index worktrees apply failed", e)
         }
     }
 
@@ -423,6 +478,9 @@ class KiloAppService internal constructor(
         _state.value = current.copy(profile = profile, progress = progress)
     }
 }
+
+private suspend fun KiloAppRpcApi.fetchRetention(): RetentionStatusDto = retentionStatus()
+private suspend fun KiloAppRpcApi.triggerRetention(force: Boolean): RetentionStatusDto = runRetention(force)
 
 data class CoreInfo(val version: String, val platform: String)
 

@@ -19,6 +19,12 @@ module.exports = withMarkdoc(/* config: https://markdoc.io/docs/nextjs#options *
         destination: "/kiloclaw/overview",
         permanent: false,
       },
+      {
+        source: "/llms.txt",
+        destination: "/docs/llms.txt",
+        basePath: false,
+        permanent: true,
+      },
       ...previousDocsRedirects,
     ]
   },

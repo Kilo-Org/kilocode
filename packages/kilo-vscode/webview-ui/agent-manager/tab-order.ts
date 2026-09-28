@@ -2,7 +2,24 @@
  * Pure tab-ordering logic for the agent manager.
  */
 
-export { reorderTabs } from "../src/utils/tab-order"
+export { applyPinnedTabs, reorderTabs, togglePinnedTab } from "../src/utils/tab-order"
+
+/** Restore durable ordering without moving tabs that only exist in this webview. */
+export function mergeTransientTabs(
+  previous: string[],
+  incoming: string[],
+  transient: (id: string) => boolean,
+): string[] {
+  const result = [...incoming]
+  for (const [index, id] of previous.entries()) {
+    if (!transient(id) || result.includes(id)) continue
+    const before = previous.slice(0, index).findLast((item) => result.includes(item))
+    const after = previous.slice(index + 1).find((item) => result.includes(item))
+    const position = before ? result.indexOf(before) + 1 : after ? result.indexOf(after) : result.length
+    result.splice(position, 0, id)
+  }
+  return result
+}
 
 /**
  * Apply a custom ordering to a list of items.

@@ -72,7 +72,7 @@ export const dict = {
 
   "dialog.usageExceeded.freeTier.title": "Limite gratuito atingido",
   "dialog.usageExceeded.freeTier.description":
-    "Assine o Kilo Go para ter acesso confiável aos melhores modelos de código aberto, a partir de $5/mês.", // kilocode_change
+    "Assine o Kilo Go por $10/mês para ter acesso confiável aos melhores modelos de código aberto.", // kilocode_change
   "dialog.usageExceeded.freeTier.actionLabel": "Assinar",
   "dialog.usageExceeded.accountRateLimit.title": "Limite do Go atingido",
   "dialog.usageExceeded.accountRateLimit.description":
@@ -108,6 +108,15 @@ export const dict = {
   "ui.messagePart.diagnostic.error": "Erro",
   "ui.messagePart.mcp.input": "Entrada",
   "ui.messagePart.mcp.output": "Saída",
+  // kilocode_change start
+  "ui.messagePart.board.read": "Ler mensagens dos agentes",
+  "ui.messagePart.board.all": "Todos os agentes",
+  "ui.messagePart.board.primary": "Agente principal",
+  "ui.messagePart.board.agent": "Agente",
+  "ui.messagePart.board.route": "{{from}} para {{to}}",
+  "ui.messagePart.board.empty": "Nenhuma mensagem dos agentes",
+  "ui.messagePart.board.stored": "Apenas armazenada. A entrega e a leitura não foram confirmadas.",
+  // kilocode_change end
   "ui.messagePart.title.edit": "Editar",
   "ui.messagePart.title.write": "Escrever",
   "ui.messagePart.option.typeOwnAnswer": "Digite sua própria resposta",
@@ -156,6 +165,10 @@ export const dict = {
   "ui.mermaid.copyPng": "Copiar PNG",
   "ui.mermaid.downloadSvg": "Baixar SVG",
   "ui.mermaid.downloadPng": "Baixar PNG",
+  "ui.mermaid.zoom": "Zoom",
+  "ui.mermaid.zoomIn": "Ampliar",
+  "ui.mermaid.zoomOut": "Reduzir",
+  "ui.mermaid.zoomReset": "Redefinir zoom",
   // kilocode_change end
   "ui.scrollView.ariaLabel": "conteúdo rolável",
 

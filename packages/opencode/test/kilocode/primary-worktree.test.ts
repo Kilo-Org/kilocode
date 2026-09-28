@@ -111,6 +111,8 @@ describe("primaryWorktree", () => {
       yield* Effect.promise(() => $`git worktree add -b primary-newline-worktree ${worktree}`.cwd(repo).quiet())
 
       expect(yield* primaryWorktree(worktree)).toBe(repo)
+      // Resolving from inside the primary checkout itself must survive the newline too.
+      expect(yield* primaryWorktree(repo)).toBe(repo)
     }),
   )
 

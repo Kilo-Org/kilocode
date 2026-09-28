@@ -1,6 +1,11 @@
 // kilocode_change - new file
 import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
+import * as Log from "@opencode-ai/core/util/log"
 import { afterEach, beforeEach, describe, expect, mock, spyOn, test } from "bun:test"
+import { $ } from "bun"
+import { Global } from "@opencode-ai/core/global"
+import * as fs from "fs/promises"
+import { join } from "node:path"
 import { tmpdir } from "../fixture/fixture"
 import { Effect, Layer } from "effect"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
@@ -15,6 +20,7 @@ import { writePrLinkOverride } from "../../src/kilo-sessions/pr-link"
 import * as PrLink from "../../src/kilo-sessions/pr-link"
 import { RemoteWS } from "../../src/kilo-sessions/remote-ws"
 import { RemoteSender } from "../../src/kilo-sessions/remote-sender"
+import { RemoteSessionLog } from "../../src/kilo-sessions/remote-session-log"
 import { ProjectV2 } from "@opencode-ai/core/project"
 import { Session } from "../../src/session/session"
 import { SessionID } from "../../src/session/schema"
@@ -25,6 +31,7 @@ import { testEffect } from "../lib/effect"
 import { InstanceStore } from "../../src/project/instance-store"
 import { TestInstance, testInstanceStoreLayer, tmpdirScoped } from "../fixture/fixture"
 import { RemoteProtocol } from "../../src/kilo-sessions/remote-protocol"
+import { MessageV2 } from "../../src/session/message-v2"
 
 const it = testEffect(AppNodeBuilder.build(CrossSpawnSpawner.node))
 const multi = testEffect(Layer.merge(AppNodeBuilder.build(CrossSpawnSpawner.node), testInstanceStoreLayer))
@@ -342,12 +349,17 @@ describe("KiloSessions.setInstanceAdvertisement (K1 W1 / DEF-1)", () => {
     // which corrupted that call's own error handling badly enough to abort
     // the whole test worker with an unrelated WASM CompileError. Reject
     // anything else so callers take their own real offline/error path.
-    globalThis.fetch = mock(async (input) => {
-      if (String(input).endsWith("/api/user")) {
-        return new Response(null, { status: 200 })
-      }
-      throw new Error(`unexpected fetch in test: ${String(input)}`)
-    }) as unknown as typeof fetch
+    //
+    // spyOn (not a raw `globalThis.fetch = ...` assignment): `mock.restore()`
+    // cannot revert a raw assignment, so the stub would leak into later tests.
+    const fetch: typeof globalThis.fetch = Object.assign(
+      async (input: RequestInfo | URL) => {
+        if (String(input).endsWith("/api/user")) return new Response(null, { status: 200 })
+        throw new Error(`unexpected fetch in test: ${String(input)}`)
+      },
+      { preconnect: globalThis.fetch.preconnect },
+    )
+    spyOn(globalThis, "fetch").mockImplementation(fetch)
   })
 
   afterEach(async () => {
@@ -566,6 +578,8 @@ describe("KiloSessions.setInstanceAdvertisement (K1 W1 / DEF-1)", () => {
     })
   })
 
+  // The heartbeat loop makes many real git calls; the 5 s default is too tight
+  // once the whole file runs sequentially on a loaded machine.
   test("refreshes and bounds only instance branches while preserving process identity", async () => {
     await using tmp = await tmpdir({ git: true })
     await provide({
@@ -573,6 +587,7 @@ describe("KiloSessions.setInstanceAdvertisement (K1 W1 / DEF-1)", () => {
       fn: async () => {
         const { AppRuntime } = await import("../../src/effect/app-runtime")
         const { Vcs } = await import("../../src/project/vcs")
+        const { Git } = await import("../../src/git")
         const vcs = await AppRuntime.runPromise(Vcs.Service.use((svc) => Effect.succeed(svc)))
         const branch = spyOn(vcs, "branch").mockReturnValue(Effect.succeed("main"))
         await KiloSessions.enableRemote()
@@ -580,6 +595,11 @@ describe("KiloSessions.setInstanceAdvertisement (K1 W1 / DEF-1)", () => {
         if (!first.instance) throw new Error("initial heartbeat is missing its instance advertisement")
         const chat = await AppRuntime.runPromise(Session.Service.use((svc) => svc.create({})))
         KiloSessions.setAttachedSessions([chat.id])
+        // Rows carry the session directory's branch via Git.Service — not the
+        // context-scoped Vcs branch that only feeds the instance advertisement.
+        const git = await AppRuntime.runPromise(Git.Service.use((svc) => Effect.succeed(svc)))
+        const gitBranch = spyOn(git, "branch").mockReturnValue(Effect.succeed("feature/session"))
+        clearInFlightCache(`kilo-sessions:git-branch:${tmp.path}`)
         for (const [input, expected] of [
           ["feature/current", "feature/current"],
           ["a".repeat(25), "a".repeat(24)],
@@ -594,14 +614,140 @@ describe("KiloSessions.setInstanceAdvertisement (K1 W1 / DEF-1)", () => {
           branch.mockReturnValue(Effect.succeed(input))
           const payload = await capturedGetSessions()()
           expect(payload.instance).toEqual({ ...first.instance, gitBranch: expected })
-          expect(payload.sessions.find((row) => row.id === chat.id)).toMatchObject({ id: chat.id, gitBranch: input })
+          expect(payload.sessions.find((row) => row.id === chat.id)).toMatchObject({
+            id: chat.id,
+            gitBranch: "feature/session",
+          })
         }
         branch.mockReturnValue(Effect.die(new Error("branch unavailable")))
         const payload = await capturedGetSessions()()
         expect(payload.instance).toEqual({ ...first.instance, gitBranch: undefined })
       },
     })
-  })
+  }, 20_000)
+
+  // Creates a child repository through shell git before asserting; keep room
+  // for that setup under sequential full-file load.
+  test("session repository metadata follows the session directory when the host was started outside the selected repository", async () => {
+    // Parent WITHOUT git mirrors `kilo remote` launched from e.g. ~/Projects;
+    // the session is created inside the child repo `cloud`, which has its own
+    // remote and branch. Rows and persisted kilo_meta must describe the child.
+    await using tmp = await tmpdir({
+      git: false,
+      init: async (dir) => {
+        const repo = join(dir, "cloud")
+        await fs.mkdir(repo, { recursive: true })
+        await $`git init`.cwd(repo).quiet()
+        await $`git config core.fsmonitor false`.cwd(repo).quiet()
+        await $`git config user.email "test@opencode.test"`.cwd(repo).quiet()
+        await $`git config user.name "Test"`.cwd(repo).quiet()
+        await $`git commit --allow-empty -m "root commit"`.cwd(repo).quiet()
+        await $`git branch -m feature/live`.cwd(repo).quiet()
+        await $`git remote add origin https://github.com/kilo-test/cloud.git`.cwd(repo).quiet()
+        return { repo }
+      },
+    })
+    await provide({
+      directory: tmp.path,
+      fn: async () => {
+        const { AppRuntime } = await import("../../src/effect/app-runtime")
+        await KiloSessions.enableRemote()
+        // Create the session the way create_session does: inside the child repo.
+        const chat: { info?: Session.Info } = {}
+        await provide({
+          directory: join(tmp.path, "cloud"),
+          fn: async () => {
+            chat.info = await AppRuntime.runPromise(Session.Service.use((svc) => svc.create({})))
+          },
+        })
+        if (!chat.info) throw new Error("session was not created in the child repository")
+        KiloSessions.setAttachedSessions([chat.info.id])
+        const payload = await capturedGetSessions()()
+        const row = payload.sessions.find((r) => r.id === chat.info!.id)
+        expect(row?.gitUrl).toBe("https://github.com/kilo-test/cloud.git")
+        expect(row?.gitBranch).toBe("feature/live")
+        // The host itself is not a git repo, so the instance advertisement
+        // describes the launch directory only: no branch.
+        expect(payload.instance?.gitBranch).toBeUndefined()
+        // The persisted kilo_meta path follows the session directory too.
+        const info = await AppRuntime.runPromise(Session.Service.use((svc) => svc.get(chat.info!.id)))
+        const persisted = await KiloSessions._metaForTests(chat.info!.id, info)
+        expect(persisted.gitUrl).toBe("https://github.com/kilo-test/cloud.git")
+        expect(persisted.gitBranch).toBe("feature/live")
+      },
+    })
+  }, 20_000)
+
+  // e5 (device scenario): `chmod 000 .git` makes git fail, so heartbeat rows
+  // omit repository metadata; the first gather AFTER `chmod 755` must recompute
+  // and carry it again. A failed read is never cached (the in-flight cache
+  // drops `undefined`), so the row self-heals within one heartbeat interval —
+  // no user action. If a negative cache ever returns here, the final gather
+  // stays metadata-free and this test fails.
+  test("heartbeat rows drop repository metadata while .git is unreadable and restore it on the next gather", async () => {
+    // Windows: chmod(0o000) is a no-op for reads, so git keeps succeeding and
+    // the assertions below would spuriously fail on the Windows CI shards.
+    if (process.platform === "win32") return
+    if (process.getuid?.() === 0) return // skip when running as root
+    await using tmp = await tmpdir({
+      git: false,
+      init: async (dir) => {
+        const repo = join(dir, "cloud")
+        await fs.mkdir(repo, { recursive: true })
+        await $`git init`.cwd(repo).quiet()
+        await $`git config core.fsmonitor false`.cwd(repo).quiet()
+        await $`git config user.email "test@opencode.test"`.cwd(repo).quiet()
+        await $`git config user.name "Test"`.cwd(repo).quiet()
+        await $`git commit --allow-empty -m "root commit"`.cwd(repo).quiet()
+        await $`git branch -m feature/live`.cwd(repo).quiet()
+        await $`git remote add origin https://github.com/kilo-test/cloud.git`.cwd(repo).quiet()
+        return { repo }
+      },
+    })
+    const repo = join(tmp.path, "cloud")
+    const gitDir = join(repo, ".git")
+    await provide({
+      directory: tmp.path,
+      fn: async () => {
+        const { AppRuntime } = await import("../../src/effect/app-runtime")
+        try {
+          await KiloSessions.enableRemote()
+          const chat: { info?: Session.Info } = {}
+          await provide({
+            directory: repo,
+            fn: async () => {
+              chat.info = await AppRuntime.runPromise(Session.Service.use((svc) => svc.create({})))
+            },
+          })
+          if (!chat.info) throw new Error("session was not created in the child repository")
+          KiloSessions.setAttachedSessions([chat.info.id])
+          const rowOf = (payload: RemoteProtocol.Heartbeat) => payload.sessions.find((r) => r.id === chat.info!.id)
+          const healthy = rowOf(await capturedGetSessions()())
+          expect(healthy?.gitUrl).toBe("https://github.com/kilo-test/cloud.git")
+          expect(healthy?.gitBranch).toBe("feature/live")
+
+          // Break git, then expire the cached good values the way the 10 s
+          // gather TTL does between heartbeats.
+          await fs.chmod(gitDir, 0o000)
+          clearInFlightCache(`kilo-sessions:git-url:${repo}`)
+          clearInFlightCache(`kilo-sessions:git-branch:${repo}`)
+          const broken = rowOf(await capturedGetSessions()())
+          expect(broken?.gitUrl).toBeUndefined()
+          expect(broken?.gitBranch).toBeUndefined()
+
+          // Restore git. NO cache clear: the failed reads must not be cached,
+          // so the very next gather recomputes and the row heals.
+          await fs.chmod(gitDir, 0o755)
+          const restored = rowOf(await capturedGetSessions()())
+          expect(restored?.gitUrl).toBe("https://github.com/kilo-test/cloud.git")
+          expect(restored?.gitBranch).toBe("feature/live")
+        } finally {
+          // tmpdir cleanup cannot recurse into an unreadable .git.
+          await fs.chmod(gitDir, 0o755).catch(() => {})
+        }
+      },
+    })
+  }, 20_000)
 
   test("omits the whole instance when no advertisement is present", async () => {
     await using tmp = await tmpdir({ git: true })
@@ -705,16 +851,18 @@ describe("KiloSessions.detachRemoteSession heartbeat fence (K1 W1)", () => {
     clearInFlightCache("kilo-sessions:token")
     clearInFlightCache("kilo-sessions:token-valid:tok")
 
-    globalThis.fetch = mock(async (input) => {
-      const url = String(input)
-      if (url.endsWith("/api/user")) {
-        return new Response(null, { status: 200 })
-      }
-      if (url.endsWith("/api/session")) {
-        return Response.json({ id: "remote-test", ingestPath: "/api/ingest/test" })
-      }
-      throw new Error(`unexpected fetch in test: ${url}`)
-    }) as unknown as typeof fetch
+    const fetch: typeof globalThis.fetch = Object.assign(
+      async (input: RequestInfo | URL) => {
+        const url = String(input)
+        if (url.endsWith("/api/user")) return new Response(null, { status: 200 })
+        if (url.endsWith("/api/session")) {
+          return Response.json({ id: "remote-test", ingestPath: "/api/ingest/test" })
+        }
+        throw new Error(`unexpected fetch in test: ${url}`)
+      },
+      { preconnect: globalThis.fetch.preconnect },
+    )
+    spyOn(globalThis, "fetch").mockImplementation(fetch)
   })
 
   afterEach(async () => {
@@ -831,16 +979,18 @@ describe("KiloSessions heartbeat attention status (DEF-3)", () => {
     clearInFlightCache("kilo-sessions:token")
     clearInFlightCache("kilo-sessions:token-valid:tok")
 
-    globalThis.fetch = mock(async (input) => {
-      const url = String(input)
-      if (url.endsWith("/api/user")) {
-        return new Response(null, { status: 200 })
-      }
-      if (url.endsWith("/api/session")) {
-        return Response.json({ id: "remote-test", ingestPath: "/api/ingest/test" })
-      }
-      throw new Error(`unexpected fetch in test: ${url}`)
-    }) as unknown as typeof fetch
+    const fetch: typeof globalThis.fetch = Object.assign(
+      async (input: RequestInfo | URL) => {
+        const url = String(input)
+        if (url.endsWith("/api/user")) return new Response(null, { status: 200 })
+        if (url.endsWith("/api/session")) {
+          return Response.json({ id: "remote-test", ingestPath: "/api/ingest/test" })
+        }
+        throw new Error(`unexpected fetch in test: ${url}`)
+      },
+      { preconnect: globalThis.fetch.preconnect },
+    )
+    spyOn(globalThis, "fetch").mockImplementation(fetch)
   })
 
   afterEach(async () => {
@@ -1139,16 +1289,20 @@ describe("KiloSessions PR link advertise (plan 8.2)", () => {
     clearInFlightCache("kilo-sessions:token")
     clearInFlightCache("kilo-sessions:token-valid:tok")
 
-    globalThis.fetch = mock(async (input, init) => {
-      const url = String(input)
-      if (url.endsWith("/api/user")) return new Response(null, { status: 200 })
-      if (url.endsWith("/api/session")) return Response.json({ id: "remote-test", ingestPath: "/api/ingest/test" })
-      if (url.includes("/ingest")) {
-        ingestBodies.push(JSON.parse((init?.body as string) ?? "{}"))
-        return new Response("{}", { status: 200 })
-      }
-      throw new Error(`unexpected fetch in test: ${url}`)
-    }) as unknown as typeof fetch
+    const fetch: typeof globalThis.fetch = Object.assign(
+      async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = String(input)
+        if (url.endsWith("/api/user")) return new Response(null, { status: 200 })
+        if (url.endsWith("/api/session")) return Response.json({ id: "remote-test", ingestPath: "/api/ingest/test" })
+        if (url.includes("/ingest")) {
+          ingestBodies.push(JSON.parse((init?.body as string) ?? "{}"))
+          return new Response("{}", { status: 200 })
+        }
+        throw new Error(`unexpected fetch in test: ${url}`)
+      },
+      { preconnect: globalThis.fetch.preconnect },
+    )
+    spyOn(globalThis, "fetch").mockImplementation(fetch)
   })
 
   afterEach(async () => {
@@ -1185,6 +1339,55 @@ describe("KiloSessions PR link advertise (plan 8.2)", () => {
 
   function prLinkItems() {
     return ingestBodies.flatMap((b) => b.data).filter((d) => d.type === "session_pr_link")
+  }
+
+  // Session-output PR detection lives in the KiloSessions event handlers, which
+  // are registered lazily by `init()` into the per-directory instance state.
+  // Keep that layer alive for the whole test through a managed runtime so the
+  // GlobalBus dispatcher is still installed when the test emits a part event;
+  // the caller disposes it in a `finally`.
+  async function initKiloSessions() {
+    const { ManagedRuntime } = await import("effect")
+    const runtime = ManagedRuntime.make(layer())
+    await runtime.runPromise(KiloSessions.Service.use((svc) => svc.init()))
+    return runtime
+  }
+
+  // The ingest queue is a module-level singleton with a ~1s debounce, so a
+  // session_pr_link queued by an earlier test can flush into this test's mock
+  // buffer after beforeEach resets it. Settle first, then drop those stale
+  // items so the assertions below count only this test's items.
+  async function clearStaleIngest() {
+    await new Promise((r) => setTimeout(r, 1200))
+    ingestBodies.length = 0
+  }
+
+  function emitPart(sessionID: string, part: unknown) {
+    GlobalBus.emit("event", {
+      directory: Instance.directory,
+      payload: {
+        id: `part-event-${Math.random().toString(36).slice(2)}`,
+        type: MessageV2.Event.PartUpdated.type,
+        properties: { sessionID, part, time: Date.now() },
+      },
+    })
+  }
+
+  function textPart(sessionID: string, id: string, text: string) {
+    return { id, sessionID, messageID: `msg-${id}`, type: "text", text }
+  }
+
+  function toolPart(sessionID: string, id: string, output: string) {
+    const time = { start: Date.now(), end: Date.now() }
+    return {
+      id,
+      sessionID,
+      messageID: `msg-${id}`,
+      type: "tool",
+      callID: `call-${id}`,
+      tool: "bash",
+      state: { status: "completed", input: {}, output, title: "gh pr create", metadata: {}, time },
+    }
   }
 
   test("stored override advertises prLink and ingests the set triple", async () => {
@@ -1267,10 +1470,12 @@ describe("KiloSessions PR link advertise (plan 8.2)", () => {
   }, 30000)
 
   test("detected link advertises prLink and ingests the set triple", async () => {
-    const detect = spyOn(PrLink, "detectPrLink").mockResolvedValue({
-      platform: "github",
-      prUrl: "https://github.com/o/r/pull/2",
-      prNumber: 2,
+    const detect = spyOn(PrLink, "detectPrLinkState").mockResolvedValue({
+      link: {
+        platform: "github",
+        prUrl: "https://github.com/o/r/pull/2",
+        prNumber: 2,
+      },
     })
     try {
       await using tmp = await tmpdir({ git: true })
@@ -1298,7 +1503,7 @@ describe("KiloSessions PR link advertise (plan 8.2)", () => {
   }, 30000)
 
   test("no detected link omits prLink and sends no clear ingest", async () => {
-    const detect = spyOn(PrLink, "detectPrLink").mockResolvedValue(undefined)
+    const detect = spyOn(PrLink, "detectPrLinkState").mockResolvedValue({})
     try {
       await using tmp = await tmpdir({ git: true })
       await provide({
@@ -1324,7 +1529,7 @@ describe("KiloSessions PR link advertise (plan 8.2)", () => {
   }, 30000)
 
   test("override present wins and skips detection", async () => {
-    const detect = spyOn(PrLink, "detectPrLink")
+    const detect = spyOn(PrLink, "detectPrLinkState")
     try {
       await using tmp = await tmpdir({ git: true })
       await provide({
@@ -1349,5 +1554,655 @@ describe("KiloSessions PR link advertise (plan 8.2)", () => {
     } finally {
       detect.mockRestore()
     }
+  }, 30000)
+
+  test("text part PR URL advertises prLink and enqueues one item", async () => {
+    await using tmp = await tmpdir({ git: true })
+    await provide({
+      directory: tmp.path,
+      fn: async () => {
+        const runtime = await initKiloSessions()
+        try {
+          const id = await setupSession()
+          await KiloSessions.bootstrap(id)
+          await KiloSessions.enableRemote()
+          await KiloSessions.attachRemoteSession(id)
+
+          await clearStaleIngest()
+          emitPart(id, textPart(id, "p-text", "Opened https://github.com/o/r/pull/7 for this change"))
+          await new Promise((r) => setTimeout(r, 200))
+
+          const payload = await capturedGetSessions()()
+          const row = payload.sessions.find((s) => s.id === id)
+          expect(row?.prLink).toEqual({ platform: "github", prUrl: "https://github.com/o/r/pull/7", prNumber: 7 })
+
+          await new Promise((r) => setTimeout(r, 1200))
+          const links = prLinkItems()
+          expect(links.length).toBe(1)
+          expect(links[0]!.data).toEqual({ platform: "github", prUrl: "https://github.com/o/r/pull/7", prNumber: 7 })
+        } finally {
+          await runtime.dispose()
+        }
+      },
+    })
+  }, 30000)
+
+  test("text part GitLab and Bitbucket PR URLs advertises prLink and enqueue one item each", async () => {
+    await using tmp = await tmpdir({ git: true })
+    await provide({
+      directory: tmp.path,
+      fn: async () => {
+        const runtime = await initKiloSessions()
+        try {
+          const id = await setupSession()
+          await KiloSessions.bootstrap(id)
+          await KiloSessions.enableRemote()
+          await KiloSessions.attachRemoteSession(id)
+
+          await clearStaleIngest()
+          emitPart(id, textPart(id, "p-gitlab", "Merged https://gitlab.example.com/group/sub/proj/-/merge_requests/3"))
+          await new Promise((r) => setTimeout(r, 200))
+
+          const gitlab = await capturedGetSessions()()
+          expect(gitlab.sessions.find((s) => s.id === id)?.prLink).toEqual({
+            platform: "gitlab",
+            prUrl: "https://gitlab.example.com/group/sub/proj/-/merge_requests/3",
+            prNumber: 3,
+          })
+
+          await new Promise((r) => setTimeout(r, 1200))
+          const first = prLinkItems()
+          expect(first.length).toBe(1)
+          expect(first[0]!.data).toEqual({
+            platform: "gitlab",
+            prUrl: "https://gitlab.example.com/group/sub/proj/-/merge_requests/3",
+            prNumber: 3,
+          })
+
+          emitPart(id, textPart(id, "p-bitbucket", "Opened https://bitbucket.org/team/repo/pull-requests/9"))
+          await new Promise((r) => setTimeout(r, 200))
+
+          const bitbucket = await capturedGetSessions()()
+          expect(bitbucket.sessions.find((s) => s.id === id)?.prLink).toEqual({
+            platform: "bitbucket",
+            prUrl: "https://bitbucket.org/team/repo/pull-requests/9",
+            prNumber: 9,
+          })
+
+          await new Promise((r) => setTimeout(r, 1200))
+          const links = prLinkItems()
+          expect(links.length).toBe(2)
+          expect(links[1]!.data).toEqual({
+            platform: "bitbucket",
+            prUrl: "https://bitbucket.org/team/repo/pull-requests/9",
+            prNumber: 9,
+          })
+        } finally {
+          await runtime.dispose()
+        }
+      },
+    })
+  }, 30000)
+
+  // The write side the CLI's next process depends on: a GitLab MR URL in the
+  // session's own output is persisted under `recordedKey`, so a later
+  // `kilo pr status` process (which has no in-process record and no REST
+  // lookup for GitLab) can read it back.
+  test("session-output link is persisted for the next process", async () => {
+    await using tmp = await tmpdir({ git: true })
+    await provide({
+      directory: tmp.path,
+      fn: async () => {
+        const runtime = await initKiloSessions()
+        try {
+          const id = await setupSession()
+          await KiloSessions.bootstrap(id)
+          await KiloSessions.enableRemote()
+          await KiloSessions.attachRemoteSession(id)
+
+          emitPart(id, textPart(id, "p-persist", "Merged https://gitlab.example.com/group/sub/proj/-/merge_requests/3"))
+          await new Promise((r) => setTimeout(r, 200))
+
+          const stored = await PrLink.readRecordedPrLink(Instance.worktree)
+          expect(stored?.link).toEqual({
+            platform: "gitlab",
+            prUrl: "https://gitlab.example.com/group/sub/proj/-/merge_requests/3",
+            prNumber: 3,
+          })
+        } finally {
+          await runtime.dispose()
+        }
+      },
+    })
+  }, 30000)
+
+  // The repro for the lost durability: a storage write failure must not skip the
+  // immediate `session_pr_link` ingest and must not drop the record — the
+  // watcher persists on every part that carries a PR URL, so the next one
+  // retries and the next `kilo pr status` process finds it.
+  test("a failed record write does not skip the ingest and is retried", async () => {
+    await using tmp = await tmpdir({ git: true })
+    await provide({
+      directory: tmp.path,
+      fn: async () => {
+        const runtime = await initKiloSessions()
+        try {
+          const id = await setupSession()
+          await KiloSessions.bootstrap(id)
+          await KiloSessions.enableRemote()
+          await KiloSessions.attachRemoteSession(id)
+          await clearStaleIngest()
+
+          const url = "https://gitlab.example.com/group/sub/proj/-/merge_requests/3"
+          const target = join(Global.Path.data, "storage", ...PrLink.recordedKey(Instance.worktree)) + ".json"
+          // A directory where the record file belongs fails the write the way a
+          // transient storage error does.
+          await fs.mkdir(target, { recursive: true })
+          try {
+            emitPart(id, textPart(id, "p-fail", `Merged ${url}`))
+            await new Promise((r) => setTimeout(r, 1200))
+
+            const payload = await capturedGetSessions()()
+            expect(payload.sessions.find((s) => s.id === id)?.prLink).toEqual({
+              platform: "gitlab",
+              prUrl: url,
+              prNumber: 3,
+            })
+            expect(prLinkItems().length).toBe(1)
+          } finally {
+            await fs.rm(target, { recursive: true, force: true })
+          }
+
+          expect(await PrLink.readRecordedPrLink(Instance.worktree)).toBeUndefined()
+
+          emitPart(id, textPart(id, "p-retry", `Still ${url}`))
+          await new Promise((r) => setTimeout(r, 200))
+
+          const stored = await PrLink.readRecordedPrLink(Instance.worktree)
+          expect(stored?.link).toEqual({ platform: "gitlab", prUrl: url, prNumber: 3 })
+        } finally {
+          await runtime.dispose()
+        }
+      },
+    })
+  }, 30000)
+
+  // The clear the app row depends on: the 5-minute check writes `cleared: true`
+  // for a polled link after the remote's PR ref disappears, and the next
+  // heartbeat ingests the null `session_pr_link` triple.
+  test("a polled clear makes the next heartbeat ingest the null triple", async () => {
+    await using tmp = await tmpdir({ git: true })
+    await provide({
+      directory: tmp.path,
+      fn: async () => {
+        const id = await setupSession()
+        await KiloSessions.bootstrap(id)
+        await KiloSessions.enableRemote()
+        await KiloSessions.attachRemoteSession(id)
+        await clearStaleIngest()
+
+        await PrLink.writePolledPrLink(Instance.worktree, "origin/feature/x", {
+          platform: "github",
+          prUrl: "https://github.com/o/r/pull/3",
+          prNumber: 3,
+        })
+        const linked = await capturedGetSessions()()
+        expect(linked.sessions.find((s) => s.id === id)?.prLink).toEqual({
+          platform: "github",
+          prUrl: "https://github.com/o/r/pull/3",
+          prNumber: 3,
+        })
+        await new Promise((r) => setTimeout(r, 1200))
+        expect(prLinkItems().length).toBe(1)
+
+        await PrLink.clearPolledPrLink(Instance.worktree, "origin/feature/x")
+        const cleared = await capturedGetSessions()()
+        expect(cleared.sessions.find((s) => s.id === id)?.prLink).toBeUndefined()
+        await new Promise((r) => setTimeout(r, 1200))
+        const links = prLinkItems()
+        expect(links.at(-1)!.data).toEqual({ platform: null, prUrl: null, prNumber: null })
+      },
+    })
+  }, 30000)
+
+  test("repeated identical URL enqueues no second item", async () => {
+    await using tmp = await tmpdir({ git: true })
+    await provide({
+      directory: tmp.path,
+      fn: async () => {
+        const runtime = await initKiloSessions()
+        try {
+          const id = await setupSession()
+          await KiloSessions.bootstrap(id)
+          await KiloSessions.enableRemote()
+          await KiloSessions.attachRemoteSession(id)
+
+          await clearStaleIngest()
+          emitPart(id, textPart(id, "p-text-1", "PR: https://github.com/o/r/pull/8"))
+          await new Promise((r) => setTimeout(r, 200))
+          await capturedGetSessions()()
+          await new Promise((r) => setTimeout(r, 1200))
+          expect(prLinkItems().length).toBe(1)
+
+          // The same URL in later output is not a change: no second ingest item
+          // and the heartbeat still advertises the same link.
+          emitPart(id, textPart(id, "p-text-2", "PR: https://github.com/o/r/pull/8"))
+          await new Promise((r) => setTimeout(r, 200))
+          const payload = await capturedGetSessions()()
+          expect(payload.sessions.find((s) => s.id === id)?.prLink).toEqual({
+            platform: "github",
+            prUrl: "https://github.com/o/r/pull/8",
+            prNumber: 8,
+          })
+          await new Promise((r) => setTimeout(r, 1200))
+          expect(prLinkItems().length).toBe(1)
+        } finally {
+          await runtime.dispose()
+        }
+      },
+    })
+  }, 30000)
+
+  test("completed tool part output PR URL advertises prLink and enqueues one item", async () => {
+    await using tmp = await tmpdir({ git: true })
+    await provide({
+      directory: tmp.path,
+      fn: async () => {
+        const runtime = await initKiloSessions()
+        try {
+          const id = await setupSession()
+          await KiloSessions.bootstrap(id)
+          await KiloSessions.enableRemote()
+          await KiloSessions.attachRemoteSession(id)
+
+          await clearStaleIngest()
+          emitPart(id, toolPart(id, "p-tool", "https://github.com/o/r/pull/9\n"))
+          await new Promise((r) => setTimeout(r, 200))
+
+          const payload = await capturedGetSessions()()
+          const row = payload.sessions.find((s) => s.id === id)
+          expect(row?.prLink).toEqual({ platform: "github", prUrl: "https://github.com/o/r/pull/9", prNumber: 9 })
+
+          await new Promise((r) => setTimeout(r, 1200))
+          const links = prLinkItems()
+          expect(links.length).toBe(1)
+          expect(links[0]!.data).toEqual({ platform: "github", prUrl: "https://github.com/o/r/pull/9", prNumber: 9 })
+        } finally {
+          await runtime.dispose()
+        }
+      },
+    })
+  }, 30000)
+})
+
+// The create_session command hosts a session on the relay, so the relay must
+// first accept that session's ingest bootstrap (POST /api/session). A refused
+// bootstrap must fail the attach, so the command rolls the local session back
+// instead of advertising and logging a session the relay never accepted.
+describe("KiloSessions create_session share gate", () => {
+  let sessionStatus = 200
+  let sessionNetworkDown = false
+
+  beforeEach(() => {
+    process.env["KILO_DISABLE_SESSION_INGEST"] = "0"
+    delete process.env["KILO_SESSION_INGEST_URL"]
+    process.env["KILO_API_KEY"] = "tok"
+    reset("tok")
+    KiloSessions.resetInstanceAdvertisementForTests()
+    sessionStatus = 200
+    sessionNetworkDown = false
+
+    spyOn(RemoteSender, "create").mockImplementation(
+      () =>
+        ({
+          handle() {},
+          dispose() {},
+        }) as RemoteSender.Sender,
+    )
+    spyOn(RemoteWS, "connect").mockImplementation(
+      (options) =>
+        ({
+          connectionId: "test-conn",
+          send() {},
+          heartbeat: () => options.getSessions().then(() => undefined),
+          close() {},
+          get connected() {
+            return true
+          },
+        }) as RemoteWS.Connection,
+    )
+
+    clearInFlightCache("kilo-sessions:token")
+    clearInFlightCache("kilo-sessions:token-valid:tok")
+
+    // spyOn (not a raw `globalThis.fetch = ...` assignment) so `mock.restore()`
+    // in afterEach puts the original fetch back instead of leaking this stub
+    // into every test that runs after this describe block.
+    const fetch: typeof globalThis.fetch = Object.assign(
+      async (input: RequestInfo | URL) => {
+        const url = String(input)
+        if (url.endsWith("/api/user")) return new Response(null, { status: 200 })
+        if (url.endsWith("/api/session")) {
+          // A request that never reaches the relay is a transient failure, not
+          // a refusal.
+          if (sessionNetworkDown) throw new TypeError("fetch failed")
+          if (sessionStatus !== 200) {
+            return new Response(JSON.stringify({ error: `session status ${sessionStatus}` }), {
+              status: sessionStatus,
+              headers: { "content-type": "application/json" },
+            })
+          }
+          return Response.json({ id: "remote-test", ingestPath: "/api/ingest/test" })
+        }
+        return new Response("{}", { status: 200 })
+      },
+      { preconnect: globalThis.fetch.preconnect },
+    )
+    spyOn(globalThis, "fetch").mockImplementation(fetch)
+  })
+
+  afterEach(async () => {
+    const pub = spyOn(Bus, "publish").mockResolvedValue(undefined as never)
+    await using tmp = await tmpdir({ git: true })
+    await provide({
+      directory: tmp.path,
+      fn: async () => {
+        KiloSessions.disableRemote()
+      },
+    })
+    pub.mockRestore()
+    mock.restore()
+    delete process.env["KILO_DISABLE_SESSION_INGEST"]
+    delete process.env["KILO_SESSION_INGEST_URL"]
+    delete process.env["KILO_PLATFORM"]
+    delete process.env["KILO_API_KEY"]
+    reset("tok")
+  })
+
+  async function setupSession() {
+    const { AppRuntime } = await import("@/effect/app-runtime")
+    const { Session } = await import("@/session/session")
+    const chat = await AppRuntime.runPromise(Session.Service.use((svc) => svc.create({})))
+    return chat.id
+  }
+
+  test("requireShare fails and leaves the session unattached when the relay refuses the ingest bootstrap", async () => {
+    await using tmp = await tmpdir({ git: true })
+    await provide({
+      directory: tmp.path,
+      fn: async () => {
+        await KiloSessions.enableRemote()
+        const id = await setupSession()
+        // The relay now answers POST /api/session with 409 Conflict.
+        sessionStatus = 409
+
+        await expect(KiloSessions.attachRemoteSession(id, { requireShare: true })).rejects.toThrow(/409/)
+
+        expect(KiloSessions.hasRemoteSession(id)).toBe(false)
+      },
+    })
+  }, 30000)
+
+  test("requireShare attaches once the relay accepts the ingest bootstrap", async () => {
+    await using tmp = await tmpdir({ git: true })
+    await provide({
+      directory: tmp.path,
+      fn: async () => {
+        await KiloSessions.enableRemote()
+        const id = await setupSession()
+
+        await KiloSessions.attachRemoteSession(id, { requireShare: true })
+
+        expect(KiloSessions.hasRemoteSession(id)).toBe(true)
+      },
+    })
+  }, 30000)
+
+  test("requireShare still hosts the session when the relay fails transiently", async () => {
+    await using tmp = await tmpdir({ git: true })
+    await provide({
+      directory: tmp.path,
+      fn: async () => {
+        await KiloSessions.enableRemote()
+        const id = await setupSession()
+        // A 5xx is a transient bootstrap failure, not a refusal: the session
+        // must be hosted (and retried later), never rolled back.
+        sessionStatus = 503
+
+        await KiloSessions.attachRemoteSession(id, { requireShare: true })
+
+        expect(KiloSessions.hasRemoteSession(id)).toBe(true)
+      },
+    })
+  }, 30000)
+
+  test("requireShare still hosts the session when the relay answers 429", async () => {
+    await using tmp = await tmpdir({ git: true })
+    await provide({
+      directory: tmp.path,
+      fn: async () => {
+        await KiloSessions.enableRemote()
+        const id = await setupSession()
+        // 429 (Too Many Requests) is retryable, unlike the other 4xx refusals.
+        sessionStatus = 429
+
+        await KiloSessions.attachRemoteSession(id, { requireShare: true })
+
+        expect(KiloSessions.hasRemoteSession(id)).toBe(true)
+      },
+    })
+  }, 30000)
+
+  test("requireShare still hosts the session when the bootstrap never reaches the relay", async () => {
+    await using tmp = await tmpdir({ git: true })
+    await provide({
+      directory: tmp.path,
+      fn: async () => {
+        await KiloSessions.enableRemote()
+        const id = await setupSession()
+        // A thrown fetch is a network failure, not a refusal: also retryable,
+        // so the session must be hosted rather than rolled back.
+        sessionNetworkDown = true
+
+        await KiloSessions.attachRemoteSession(id, { requireShare: true })
+
+        expect(KiloSessions.hasRemoteSession(id)).toBe(true)
+      },
+    })
+  }, 30000)
+})
+
+// Hosting ends for every attached session when the remote connection goes away
+// (a permanent WS close, instance teardown, Ctrl-C), so the session log must be
+// drained there. Otherwise the open entry survives the disconnect and the next
+// `endAll` reports a stale end line whose duration spans the disconnected
+// period.
+describe("KiloSessions remote session log lifecycle", () => {
+  test("disableRemote drains the sessions this run started so a later end is not stale", async () => {
+    const started: Array<[string, unknown]> = []
+    const later: Array<[string, unknown]> = []
+    const sink = (lines: Array<[string, unknown]>) => ({
+      info: (message: string, extra?: Record<string, unknown>) => lines.push([message, extra ?? {}]),
+    })
+    const id = SessionID.make("ses_disable_remote_drain")
+
+    await using tmp = await tmpdir({ git: true })
+    await provide({
+      directory: tmp.path,
+      fn: async () => {
+        RemoteSessionLog.start(sink(started), { sessionID: id, directory: tmp.path })
+        KiloSessions.disableRemote()
+        // The start line was already paired when hosting ended, so a later end
+        // for the same session must find nothing open.
+        RemoteSessionLog.end(sink(later), { sessionID: id, reason: "detached" })
+      },
+    })
+
+    expect(started.map(([message]) => message)).toEqual(["remote session started"])
+    expect(later).toEqual([])
+  })
+
+  // The HTTP `remote/disable` endpoint (the VS Code status bar toggle and the
+  // `/remote` TUI command both call it) stops hosting while the process stays
+  // up, so the sessions it closes must be reported as disabled, not as a
+  // process shutdown.
+  test("the user-initiated disable reports the disabled reason", async () => {
+    const writes: string[] = []
+    const original = process.stderr.write
+    process.stderr.write = ((chunk: unknown) => {
+      writes.push(String(chunk))
+      return true
+    }) as typeof process.stderr.write
+
+    const id = SessionID.make("ses_disable_remote_reason")
+    await using tmp = await tmpdir({ git: true })
+    try {
+      await Log.init({ print: true, level: "INFO" })
+      const log = Log.create({ service: "kilo-sessions" })
+      await provide({
+        directory: tmp.path,
+        fn: async () => {
+          RemoteSessionLog.start(log, { sessionID: id, directory: tmp.path })
+          // Exactly what the `remote/disable` handler calls.
+          KiloSessions.disableRemote()
+        },
+      })
+    } finally {
+      process.stderr.write = original
+    }
+
+    const end = writes.find((line) => line.includes("remote session ended") && line.includes(String(id)))
+    expect(end).toBeDefined()
+    expect(end).toContain("reason=disabled")
+  })
+
+  // Regression: `mock.restore()` cannot undo a raw `globalThis.fetch = mock(...)`
+  // assignment, so the share-gate block must install its stub through spyOn. If
+  // it regresses, the leaked mock is still on globalThis here.
+  test("the fetch stub installed by the share gate does not leak past its block", () => {
+    expect("mock" in globalThis.fetch).toBe(false)
+  })
+})
+
+// The 5-minute check is started by `init` — once per instance, with the default
+// interval, and never on a session update or a heartbeat. The poller module is
+// replaced with a spy that spreads the real exports, so the scheduler start is
+// counted without issuing a real host query.
+describe("KiloSessions PR poll wiring", () => {
+  beforeEach(() => {
+    process.env["KILO_DISABLE_SESSION_INGEST"] = "0"
+    delete process.env["KILO_SESSION_INGEST_URL"]
+    process.env["KILO_API_KEY"] = "tok"
+    reset("tok")
+    KiloSessions.resetInstanceAdvertisementForTests()
+
+    spyOn(RemoteSender, "create").mockImplementation(
+      () =>
+        ({
+          handle() {},
+          dispose() {},
+        }) as RemoteSender.Sender,
+    )
+    spyOn(RemoteWS, "connect").mockImplementation(
+      (options) =>
+        ({
+          connectionId: "test-conn",
+          send() {},
+          heartbeat: () => options.getSessions().then(() => undefined),
+          close() {},
+          get connected() {
+            return true
+          },
+        }) as RemoteWS.Connection,
+    )
+
+    clearInFlightCache("kilo-sessions:token")
+    clearInFlightCache("kilo-sessions:token-valid:tok")
+
+    const fetch: typeof globalThis.fetch = Object.assign(
+      async (input: RequestInfo | URL) => {
+        const url = String(input)
+        if (url.endsWith("/api/user")) return new Response(null, { status: 200 })
+        if (url.endsWith("/api/session")) return Response.json({ id: "remote-test", ingestPath: "/api/ingest/test" })
+        return new Response("{}", { status: 200 })
+      },
+      { preconnect: globalThis.fetch.preconnect },
+    )
+    spyOn(globalThis, "fetch").mockImplementation(fetch)
+  })
+
+  afterEach(async () => {
+    const pub = spyOn(Bus, "publish").mockResolvedValue(undefined as never)
+    await using tmp = await tmpdir({ git: true })
+    await provide({
+      directory: tmp.path,
+      fn: async () => {
+        KiloSessions.disableRemote()
+      },
+    })
+    pub.mockRestore()
+    mock.restore()
+    delete process.env["KILO_DISABLE_SESSION_INGEST"]
+    delete process.env["KILO_SESSION_INGEST_URL"]
+    delete process.env["KILO_PLATFORM"]
+    delete process.env["KILO_API_KEY"]
+    reset("tok")
+  })
+
+  function capturedGetSessions(): () => Promise<RemoteProtocol.Heartbeat> {
+    const calls = (RemoteWS.connect as unknown as { mock: { calls: { 0: RemoteWS.Options }[] } }).mock.calls
+    const getSessions = calls[0]?.[0].getSessions
+    if (!getSessions) throw new Error("RemoteWS.connect was not called")
+    return getSessions as () => Promise<RemoteProtocol.Heartbeat>
+  }
+
+  test("starts the check once at init and never on a session update or a heartbeat", async () => {
+    const poller = await import("@/kilo-sessions/pr-link-poller")
+    const startPoll = mock((_run: () => Promise<void>, _opts?: { intervalMs?: number }) => () => {})
+    void mock.module("@/kilo-sessions/pr-link-poller", () => ({
+      ...poller,
+      startPrLinkPoll: startPoll,
+    }))
+
+    await using tmp = await tmpdir({ git: true })
+    await provide({
+      directory: tmp.path,
+      fn: async () => {
+        // The instance bootstrap runs KiloSessions.init for this instance, so the
+        // check has started exactly once with no interval override (the default
+        // 5-minute interval applies).
+        expect(startPoll).toHaveBeenCalledTimes(1)
+        expect(startPoll.mock.calls[0]?.[1]).toBeUndefined()
+        expect(poller.PR_POLL_INTERVAL_MS).toBe(5 * 60_000)
+
+        const { AppRuntime } = await import("@/effect/app-runtime")
+        const { Session } = await import("@/session/session")
+        const chat = await AppRuntime.runPromise(Session.Service.use((svc) => svc.create({})))
+        await KiloSessions.bootstrap(chat.id)
+        await KiloSessions.enableRemote()
+        await KiloSessions.attachRemoteSession(chat.id)
+
+        // A session update never starts another check.
+        GlobalBus.emit("event", {
+          directory: Instance.directory,
+          payload: {
+            id: "poll-part",
+            type: MessageV2.Event.PartUpdated.type,
+            properties: {
+              sessionID: chat.id,
+              part: { id: "p-poll", sessionID: chat.id, messageID: "m-poll", type: "text", text: "no link here" },
+              time: Date.now(),
+            },
+          },
+        })
+        await new Promise((r) => setTimeout(r, 50))
+        expect(startPoll).toHaveBeenCalledTimes(1)
+
+        // Nor does a heartbeat.
+        await capturedGetSessions()()
+        await new Promise((r) => setTimeout(r, 50))
+        expect(startPoll).toHaveBeenCalledTimes(1)
+      },
+    })
   }, 30000)
 })

@@ -93,15 +93,6 @@ Pull request'leriniz için otomatik AI kod incelemelerini [app.kilo.ai/code-revi
 </details>
 
 <details>
-<summary><strong>KiloClaw</strong></summary>
-
-<br>
-
-Her zaman açık AI ajanınızı [app.kilo.ai/claw](https://app.kilo.ai/claw) adresinde başlatın.
-
-</details>
-
-<details>
 <summary>CLI'yi GitHub Releases üzerinden kurun (ikili dosyalar)</summary>
 
 En son ikili dosyayı [Releases sayfasından](https://github.com/Kilo-Org/kilocode/releases) indirin.

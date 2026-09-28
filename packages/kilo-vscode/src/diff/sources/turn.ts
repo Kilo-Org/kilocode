@@ -1,5 +1,6 @@
 import type { SnapshotFileDiff } from "@kilocode/sdk/v2/client"
 import type { DiffSource, DiffSourceDescriptor, DiffSourceFetch } from "./types"
+import type { GeneratedFiles } from "../shared/git-attributes"
 import { toSessionDiffFile } from "./session"
 
 export const TURN_PREFIX = "turn:"
@@ -41,13 +42,15 @@ export function createTurnDiffSource(
   messageId: string,
   fetch: TurnDiffFetch,
   workspaceRoot?: string,
+  generated?: GeneratedFiles,
 ): DiffSource {
   return {
     descriptor: turnDescriptor(sessionId, messageId),
 
     async fetch(): Promise<DiffSourceFetch> {
       const raw = await fetch({ sessionID: sessionId, messageID: messageId, directory: workspaceRoot })
-      return { diffs: raw.map(toSessionDiffFile), stopPolling: true }
+      const configured = generated ? await generated(raw.map((file) => file.file ?? "")) : undefined
+      return { diffs: raw.map((file) => toSessionDiffFile(file, configured)), stopPolling: true }
     },
   }
 }

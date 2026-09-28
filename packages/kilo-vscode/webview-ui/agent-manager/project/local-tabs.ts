@@ -59,6 +59,10 @@ export function createLocalSessions(opts: {
   })
 }
 
+export function needsLocalDraft(sessions: readonly string[], terminals: readonly { id: string }[]): boolean {
+  return sessions.length === 0 && terminals.length === 0
+}
+
 export function projectLocalIds(state: AgentManagerStateMessage | undefined): string[] {
   return state?.sessions.filter((item) => item.worktreeId === null).map((item) => item.id) ?? []
 }

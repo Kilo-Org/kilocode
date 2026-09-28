@@ -3,8 +3,8 @@ package ai.kilocode.client.agentManager.worktree
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.rpc.dto.RunConfigDto
 import ai.kilocode.rpc.dto.RunProcessState
+import ai.kilocode.rpc.dto.RunSkipDto
 import ai.kilocode.rpc.dto.RunStateDto
-import com.intellij.execution.runners.ExecutionUtil
 import com.intellij.icons.AllIcons
 import com.intellij.ide.ui.ProductIcons
 import com.intellij.openapi.actionSystem.ActionUpdateThread
@@ -17,7 +17,8 @@ import javax.swing.Icon
 /**
  * Builds the action group for the worktree Run popup: a "Running" section with stop/output
  * rows per live process, a "Start" section listing the supported run configurations, Build and
- * Rebuild rows when the project has a buildable external project, and a trailing
+ * Rebuild rows when the project has a buildable external project, a collapsed "Not Supported"
+ * submenu naming the configurations the worktree cannot run and why, and a trailing
  * "Open in New Frame" escape hatch for full run/debug support.
  */
 internal object WorktreeRunPopup {
@@ -31,6 +32,7 @@ internal object WorktreeRunPopup {
         frame: () -> Unit,
         buildable: Boolean,
         build: (Boolean) -> Unit,
+        skipped: List<RunSkipDto>,
     ): DefaultActionGroup {
         val group = DefaultActionGroup()
         if (states.isNotEmpty()) {
@@ -46,16 +48,24 @@ internal object WorktreeRunPopup {
                         enabled = !terminating || state.killable,
                     ) { stop(state) },
                 )
-                group.add(
-                    action(KiloBundle.message("worktree.run.output", state.name), AllIcons.Debugger.Console) { output(state) },
-                )
+                // An orphan row is a process the backend found still alive after its Run tab was gone,
+                // so there is no console to bring to the front.
+                if (!state.orphan) {
+                    group.add(
+                        action(KiloBundle.message("worktree.run.output", state.name), AllIcons.Debugger.Console) { output(state) },
+                    )
+                }
             }
             group.addSeparator(KiloBundle.message("worktree.run.section.start"))
         }
         val running = states.map { it.id }.toSet()
         for (cfg in configs) {
-            val icon = if (cfg.id in running) ExecutionUtil.getLiveIndicator(AllIcons.Actions.Execute) else AllIcons.Actions.Execute
-            group.add(action(cfg.name, icon, description = cfg.type) { run(cfg) })
+            // Badged over the run action icon rather than WorktreeIcons.runIndicator's neutral triangle:
+            // every other row here is a green Execute glyph, so a started row reads as one of them
+            // wearing the live dot instead of a different icon altogether.
+            val icon = if (cfg.id in running) WorktreeIcons.live(AllIcons.Actions.Execute) else AllIcons.Actions.Execute
+            val text = cfg.via?.let { KiloBundle.message("worktree.run.via", cfg.type, it) } ?: cfg.type
+            group.add(action(cfg.name, icon, description = text) { run(cfg) })
         }
         if (configs.isEmpty()) {
             group.add(action(error ?: KiloBundle.message("worktree.run.empty"), null, enabled = false) {})
@@ -64,6 +74,20 @@ internal object WorktreeRunPopup {
             group.addSeparator()
             group.add(action(KiloBundle.message("worktree.run.build"), AllIcons.Actions.Compile) { build(false) })
             group.add(action(KiloBundle.message("worktree.run.rebuild"), AllIcons.Actions.Rebuild) { build(true) })
+        }
+        // Collapsed into a submenu rather than listed inline: a large project can skip every test and
+        // module-classpath configuration it has, which would bury the rows that can actually run.
+        if (skipped.isNotEmpty()) {
+            group.addSeparator()
+            val unsupported = DefaultActionGroup(KiloBundle.message("worktree.run.section.unsupported", skipped.size), true)
+            for (skip in skipped) {
+                // The reason goes in the row text, not the description: a disabled row in an action
+                // popup never shows a tooltip, so a description would be unreadable.
+                unsupported.add(
+                    action(KiloBundle.message("worktree.run.unsupported.item", skip.name, skip.reason), null, enabled = false) {},
+                )
+            }
+            group.add(unsupported)
         }
         group.addSeparator()
         group.add(action(KiloBundle.message("worktree.run.open.frame"), ProductIcons.getInstance().productIcon) { frame() })

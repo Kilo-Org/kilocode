@@ -7,17 +7,24 @@ import { Effect } from "effect"
 // handler reads the override/detection from these stubs instead of spawning
 // `gh` or touching real Storage.
 const realPrLink = await import("@/kilo-sessions/pr-link")
+const realPoller = await import("@/kilo-sessions/pr-link-poller")
 
 let override: { platform: string; prUrl: string; prNumber: number } | { cleared: true } | undefined
 let detected: { platform: string; prUrl: string; prNumber: number } | undefined
 
 const readOverride = mock(async (_worktree: string) => override)
 const detect = mock(async () => detected)
+const refresh = mock(async (_worktree: string) => undefined)
 
 void mock.module("@/kilo-sessions/pr-link", () => ({
   ...realPrLink,
   readPrLinkOverride: readOverride,
   detectPrLink: detect,
+}))
+
+void mock.module("@/kilo-sessions/pr-link-poller", () => ({
+  ...realPoller,
+  refreshPrLink: refresh,
 }))
 
 import { prStatusHandler } from "../../src/cli/cmd/pr"
@@ -45,6 +52,7 @@ describe("pr status", () => {
     detected = undefined
     readOverride.mockClear()
     detect.mockClear()
+    refresh.mockClear()
     writeSpy.mockClear()
   })
 

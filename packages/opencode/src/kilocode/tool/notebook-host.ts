@@ -1,8 +1,9 @@
 import { Notebook, HostError } from "@/kilocode/notebook/service"
-import { Path, type Result } from "@/kilocode/notebook/protocol"
+import { Path } from "@/kilocode/notebook/protocol"
 import { NonNegativeInt } from "@opencode-ai/core/schema"
 import * as Tool from "@/tool/tool"
 import { Effect, Schema } from "effect"
+import { runner } from "./host"
 
 const Source = Schema.String.check(Schema.isMaxLength(200_000))
 const Revision = Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(200)).annotate({
@@ -26,19 +27,7 @@ function render(value: unknown) {
   )
 }
 
-function abort(signal: AbortSignal) {
-  return Effect.callback<never, HostError>((resume) => {
-    const err = () => new HostError({ code: "cancelled", detail: "The notebook tool call was cancelled" })
-    if (signal.aborted) return resume(Effect.fail(err()))
-    const handler = () => resume(Effect.fail(err()))
-    signal.addEventListener("abort", handler, { once: true })
-    return Effect.sync(() => signal.removeEventListener("abort", handler))
-  })
-}
-
-function run(effect: Effect.Effect<Result, HostError>, signal: AbortSignal) {
-  return effect.pipe(Effect.raceFirst(abort(signal)), Effect.orDie)
-}
+const run = runner(() => new HostError({ code: "cancelled", detail: "The notebook tool call was cancelled" }))
 
 const ReadParams = Schema.Struct({
   path: Path,

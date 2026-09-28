@@ -1,0 +1,73 @@
+# kilocode_change - new file
+name: Stale bot PR notify
+
+# Bot-opened PRs (Dependabot, Security Agent, etc.) can sit unreviewed until
+# stale (a real security PR went 13 days with green CI and zero reviews).
+# Once a day, flag any open bot PR that's conflicting or long unreviewed.
+
+on:
+  schedule:
+    - cron: "0 13 * * *" # once a day
+  workflow_dispatch:
+
+concurrency:
+  group: stale-bot-pr-notify
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  notify:
+    if: github.repository == 'Kilo-Org/kilocode'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - id: build
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          STALE_DAYS: ${{ vars.STALE_BOT_PR_DAYS || '3' }}
+        run: |
+          prs=$(gh pr list --repo "$REPO" --search "is:open is:pr" \
+            --json number,author,title,url,createdAt,mergeStateStatus,reviews --limit 100)
+          now=$(date -u +%s)
+          flagged=$(echo "$prs" | jq -c --argjson now "$now" --argjson staleDays "$STALE_DAYS" '
+            map(select(.author.is_bot == true))
+            | map(
+                . as $pr
+                | (($now - ($pr.createdAt | fromdateiso8601)) / 86400) as $age
+                | $pr + {
+                    age_days: ($age | floor),
+                    reason: (
+                      if .mergeStateStatus == "DIRTY" then "conflicting"
+                      elif ((.reviews | length) == 0 and $age >= $staleDays) then "unreviewed"
+                      else empty
+                      end
+                    )
+                  }
+              )
+            | map(select(.reason != null))
+          ')
+          echo "flagged=$flagged" >> "$GITHUB_OUTPUT"
+
+          # Build real JSON via jq instead of splicing PR titles (free text)
+          # into a YAML payload through `${{ }}`.
+          mkdir -p .cache
+          echo "$flagged" | jq '
+            if length == 0 then {text: ""} else
+              {text: (["*Bot PRs needing attention:*"] + map(
+                "- <" + .url + "|#" + (.number | tostring) + " " + .title + "> ("
+                + .author.login + ", " + (.age_days | tostring) + "d old, " + .reason + ")"
+              )) | join("\n")}
+            end
+          ' > .cache/slack-payload.json
+
+      - if: steps.build.outputs.flagged != '[]'
+        name: Notify Slack
+        uses: slackapi/slack-github-action@v2.0.0
+        with:
+          webhook: ${{ secrets.SECURITY_ALERTS_SLACK_WEBHOOK }}
+          webhook-type: incoming-webhook
+          payload-file-path: .cache/slack-payload.json

@@ -1,0 +1,16 @@
+Schedule a wakeup for yourself: a point in the future when the harness resumes this session with the prompt you give it.
+
+Use this tool to defer your own continuation to a future time, when you cannot keep the turn open:
+- Waiting on a build, deploy, or CI window that finishes outside a blocking command.
+- A later check-in on something that changes slowly.
+- A reminder to poll a long-running task after a sensible interval.
+
+Do NOT use this tool for short waits that a blocking shell command covers, for anything inside the next few seconds, for periodic or repeating schedules, or for more than the per-session cap. For a short wait, run the wait as a normal blocking shell command with its `timeout` raised instead.
+
+Time:
+- Give exactly one of `when` or `delay`.
+- `when` is an absolute ISO-8601 date-time, e.g. `2026-09-13T14:30:00Z`. With an explicit offset (`Z` or `+02:00`) it is absolute; without one, the host's local timezone applies.
+- `delay` is a relative span, e.g. `30s`, `5m`, `2h`, `1d`; a bare number is seconds.
+- Clamps: a delay under 10 seconds is raised to the 10-second minimum, a time more than 7 days out is pulled back to the 7-day maximum, and a time at or before now is rejected. A session may hold at most 10 pending wakeups; cancel one with `cancel_wakeup` first when it is full.
+
+After a successful call, the tool reports the wakeup `id`, its absolute due time, and the relative delay. Keep that id to list or cancel the wakeup later.

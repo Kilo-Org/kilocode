@@ -73,7 +73,7 @@ export const dict = {
 
   "dialog.usageExceeded.freeTier.title": "ถึงขีดจำกัดฟรีแล้ว",
   "dialog.usageExceeded.freeTier.description":
-    "สมัครสมาชิก Kilo Go เพื่อการเข้าถึงโมเดลโอเพนซอร์สที่ดีที่สุดอย่างเชื่อถือได้ เริ่มต้นที่ $5/เดือน", // kilocode_change
+    "สมัครสมาชิก Kilo Go ในราคา $10/เดือน เพื่อการเข้าถึงโมเดลโอเพนซอร์สที่ดีที่สุดอย่างเชื่อถือได้", // kilocode_change
   "dialog.usageExceeded.freeTier.actionLabel": "สมัครสมาชิก",
   "dialog.usageExceeded.accountRateLimit.title": "ถึงขีดจำกัดของ Go แล้ว",
   "dialog.usageExceeded.accountRateLimit.description":
@@ -222,6 +222,10 @@ export const dict = {
   "ui.mermaid.copySvg": "คัดลอก SVG",
   "ui.mermaid.download": "ดาวน์โหลด",
   "ui.mermaid.downloadPng": "ดาวน์โหลด PNG",
+  "ui.mermaid.zoom": "ซูม",
+  "ui.mermaid.zoomIn": "ซูมเข้า",
+  "ui.mermaid.zoomOut": "ซูมออก",
+  "ui.mermaid.zoomReset": "รีเซ็ตการซูม",
   "ui.mermaid.downloadSvg": "ดาวน์โหลด SVG",
   "ui.mermaid.errorDefault": "ไม่สามารถเรนเดอร์ไดอะแกรม Mermaid ได้",
   "ui.mermaid.errorEmpty": "Mermaid เรนเดอร์ไดอะแกรมว่าง",
@@ -230,6 +234,13 @@ export const dict = {
   "ui.message.deleteQueued": "ลบข้อความที่อยู่ในคิว",
   "ui.messagePart.mcp.input": "อินพุต",
   "ui.messagePart.mcp.output": "เอาต์พุต",
+  "ui.messagePart.board.read": "อ่านข้อความของเอเจนต์",
+  "ui.messagePart.board.all": "เอเจนต์ทั้งหมด",
+  "ui.messagePart.board.primary": "เอเจนต์หลัก",
+  "ui.messagePart.board.agent": "เอเจนต์",
+  "ui.messagePart.board.route": "จาก {{from}} ถึง {{to}}",
+  "ui.messagePart.board.empty": "ไม่มีข้อความจากเอเจนต์",
+  "ui.messagePart.board.stored": "จัดเก็บไว้เท่านั้น ยังไม่มีการยืนยันการส่งถึงหรือการอ่าน",
   "ui.question.answer.dismissed": "Dismissed",
   "ui.question.subtitle.dismissed": "{{count}} dismissed",
   "ui.sessionTurn.diffs.changed": "เปลี่ยนแปลงแล้ว",

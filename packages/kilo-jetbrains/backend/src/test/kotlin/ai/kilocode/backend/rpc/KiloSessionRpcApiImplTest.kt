@@ -104,6 +104,46 @@ class KiloSessionRpcApiImplTest {
     }
 
     @Test
+    fun `fork forks into the requested directory and hands the note to the new session`() = runBlocking(Dispatchers.Default) {
+        val log = TestLog()
+        mock.sessionFork = """{"id":"ses_forked","slug":"forked","projectID":"prj_test","directory":"/worktree","title":"Forked","version":"1.0.0","time":{"created":1000,"updated":1000}}"""
+        val app = app(log)
+        ready(app)
+        val api = KiloSessionRpcApiImpl(appOverride = app, log = log)
+
+        val forked = api.fork("ses_source", "/worktree", null)
+
+        assertEquals("ses_forked", forked.id)
+        // The fork targets the directory the caller asked for, not the source session's own.
+        assertTrue(mock.lastForkPath.orEmpty().startsWith("/session/ses_source/fork?"), mock.lastForkPath.orEmpty())
+        assertEquals("", mock.lastForkBody)
+        // The handoff must land on the forked session, never the source.
+        assertTrue(mock.lastPromptPath.orEmpty().startsWith("/session/ses_forked/prompt_async?"), mock.lastPromptPath.orEmpty())
+        assertTrue(mock.lastPromptBody.orEmpty().contains(""""noReply":true"""), mock.lastPromptBody.orEmpty())
+    }
+
+    @Test
+    fun `fork passes a message id through for a per-message fork`() = runBlocking(Dispatchers.Default) {
+        val log = TestLog()
+        val app = app(log)
+        ready(app)
+        val api = KiloSessionRpcApiImpl(appOverride = app, log = log)
+
+        api.fork("ses_source", "/worktree", "msg_9")
+
+        assertEquals("""{"messageID":"msg_9"}""", mock.lastForkBody)
+    }
+
+    @Test
+    fun `fork refuses before the app is ready`() = runBlocking<Unit>(Dispatchers.Default) {
+        val log = TestLog()
+        val api = KiloSessionRpcApiImpl(appOverride = app(log), log = log)
+
+        assertFailsWith<IllegalStateException> { api.fork("ses_source", "/worktree", null) }
+        assertNull(mock.lastForkPath)
+    }
+
+    @Test
     fun `delete logs deleted session id`() = runBlocking(Dispatchers.Default) {
         val log = TestLog()
         val app = app(log)

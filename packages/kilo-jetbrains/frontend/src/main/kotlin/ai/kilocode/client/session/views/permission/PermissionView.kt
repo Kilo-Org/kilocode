@@ -871,7 +871,7 @@ internal class PermissionRulesView private constructor(
             val g2 = g.create() as Graphics2D
             try {
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
-                val base = SessionUiStyle.Colors.sessionBackground()
+                val base = SessionUiStyle.View.Dialog.bgColor()
                 g2.color = when {
                     active -> UiStyle.Colors.blend(base, if (approve) UiStyle.Colors.addedForeground() else UiStyle.Colors.removedForeground(), 0.15f)
                     else -> UiStyle.Colors.actionHoverBackground()

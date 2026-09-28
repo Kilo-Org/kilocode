@@ -29,10 +29,15 @@ class FakeElement {
   hovered = false
   control = false
   dir = ""
+  root: unknown = null
   rect = { left: 0, top: 0, right: 100, bottom: 100 }
   ownerDocument!: FakeDocument
   private children = new Set<FakeElement>()
   private listeners = new Map<string, Listener[]>()
+
+  getRootNode(): unknown {
+    return this.root ?? this.ownerDocument
+  }
 
   closest(selector: string) {
     return this.control && selector === "button, input, textarea, select" ? this : null
@@ -515,6 +520,38 @@ describe("createAutoScroll non-scrollable layouts", () => {
     ctx.dispose()
   })
 
+  test("skips mutation geometry reads after settling expires but still follows content resize", async () => {
+    const ctx = setup()
+    overflow(ctx)
+
+    try {
+      ctx.el.scrollHeight = 1080
+      ctx.mutate()
+      expect(ctx.el.scrollTop).toBe(1080)
+
+      await Bun.sleep(350)
+      ctx.el.scrollTop = 880
+      const height = mock(() => 1200)
+      const viewport = mock(() => 200)
+      Object.defineProperties(ctx.el, {
+        scrollHeight: { get: height },
+        clientHeight: { get: viewport },
+      })
+
+      ctx.mutate()
+
+      expect(height).not.toHaveBeenCalled()
+      expect(viewport).not.toHaveBeenCalled()
+      expect(ctx.el.scrollTop).toBe(880)
+      expect(ctx.scroll.userScrolled()).toBe(false)
+
+      ctx.resize(0)
+      expect(ctx.el.scrollTop).toBe(1200)
+    } finally {
+      ctx.dispose()
+    }
+  })
+
   test("ignores content mutations while the user reads earlier output", () => {
     const ctx = setup({ working: true })
     ctx.el.scrollHeight = 1000
@@ -529,8 +566,9 @@ describe("createAutoScroll non-scrollable layouts", () => {
     ctx.dispose()
   })
 
-  test("leaves an idle transcript where a layout clamp put it", () => {
+  test("leaves an idle transcript where a layout clamp put it", async () => {
     const ctx = setup()
+    await Bun.sleep(350)
     ctx.el.scrollHeight = 1000
     ctx.el.clientHeight = 200
     ctx.el.scrollTop = 800
@@ -838,6 +876,124 @@ describe("createAutoScroll non-scrollable layouts", () => {
       expect(ctx.el.scrollTop).toBe(600)
     } finally {
       clock.mockRestore()
+      ctx.dispose()
+    }
+  })
+
+  test("pauses auto-follow after a drag that selects transcript text", () => {
+    const ctx = setup({ working: true })
+    overflow(ctx)
+    const child = new FakeElement()
+    ctx.el.append(child)
+    const doc = ctx.doc as unknown as { getSelection?: () => unknown }
+    doc.getSelection = () => ({
+      isCollapsed: false,
+      rangeCount: 1,
+      getRangeAt: () => ({ startContainer: child, endContainer: child }),
+    })
+    let now = 10
+    const clock = spyOn(performance, "now").mockImplementation(() => now)
+
+    try {
+      ctx.doc.fire("mousedown", new FakeMouseEvent(child) as unknown as Event)
+      ctx.doc.fire("mousemove", new FakeMouseEvent(child) as unknown as Event)
+      ctx.doc.fire("mouseup", new FakeMouseEvent(child) as unknown as Event)
+      expect(ctx.scroll.userScrolled()).toBe(true)
+
+      now = 1000
+      ctx.el.scrollHeight = 1400
+      ctx.mutate()
+      expect(ctx.el.scrollTop).toBe(800)
+    } finally {
+      clock.mockRestore()
+      delete doc.getSelection
+      ctx.dispose()
+    }
+  })
+
+  test("pauses auto-follow after a touch drag that selects transcript text", () => {
+    const ctx = setup({ working: true })
+    overflow(ctx)
+    const child = new FakeElement()
+    ctx.el.append(child)
+    const doc = ctx.doc as unknown as { getSelection?: () => unknown }
+    doc.getSelection = () => ({
+      isCollapsed: false,
+      rangeCount: 1,
+      getRangeAt: () => ({ startContainer: child, endContainer: child }),
+    })
+    let now = 10
+    const clock = spyOn(performance, "now").mockImplementation(() => now)
+
+    try {
+      ctx.doc.fire("pointerdown", new FakePointerEvent(1, child) as unknown as Event)
+      ctx.doc.fire("touchstart", new FakeTouchEvent(child) as unknown as Event)
+      ctx.doc.fire("touchend", new FakeTouchEvent(child) as unknown as Event)
+      expect(ctx.scroll.userScrolled()).toBe(true)
+
+      now = 1000
+      ctx.el.scrollHeight = 1400
+      ctx.mutate()
+      expect(ctx.el.scrollTop).toBe(800)
+    } finally {
+      clock.mockRestore()
+      delete doc.getSelection
+      ctx.dispose()
+    }
+  })
+
+  test("pauses auto-follow after a drag that selects inside a shadow root", () => {
+    const ctx = setup({ working: true })
+    overflow(ctx)
+    const host = new FakeElement()
+    ctx.el.append(host)
+    const inner = new FakeElement()
+    inner.root = { host }
+    const doc = ctx.doc as unknown as { getSelection?: () => unknown }
+    doc.getSelection = () => ({
+      isCollapsed: false,
+      rangeCount: 1,
+      getRangeAt: () => ({ startContainer: inner, endContainer: inner }),
+    })
+    let now = 10
+    const clock = spyOn(performance, "now").mockImplementation(() => now)
+
+    try {
+      ctx.doc.fire("mousedown", new FakeMouseEvent(host) as unknown as Event)
+      ctx.doc.fire("mouseup", new FakeMouseEvent(host) as unknown as Event)
+      expect(ctx.scroll.userScrolled()).toBe(true)
+
+      now = 1000
+      ctx.el.scrollHeight = 1400
+      ctx.mutate()
+      expect(ctx.el.scrollTop).toBe(800)
+    } finally {
+      clock.mockRestore()
+      delete doc.getSelection
+      ctx.dispose()
+    }
+  })
+
+  test("does not pause auto-follow after a click that leaves no selection", () => {
+    const ctx = setup({ working: true })
+    overflow(ctx)
+    const doc = ctx.doc as unknown as { getSelection?: () => unknown }
+    doc.getSelection = () => ({ isCollapsed: true, rangeCount: 1 })
+    let now = 10
+    const clock = spyOn(performance, "now").mockImplementation(() => now)
+
+    try {
+      ctx.doc.fire("mousedown", new FakeMouseEvent(ctx.el) as unknown as Event)
+      ctx.doc.fire("mouseup", new FakeMouseEvent(ctx.el) as unknown as Event)
+      expect(ctx.scroll.userScrolled()).toBe(false)
+
+      now = 1000
+      ctx.el.scrollHeight = 1400
+      ctx.mutate()
+      expect(ctx.el.scrollTop).toBe(1400)
+    } finally {
+      clock.mockRestore()
+      delete doc.getSelection
       ctx.dispose()
     }
   })

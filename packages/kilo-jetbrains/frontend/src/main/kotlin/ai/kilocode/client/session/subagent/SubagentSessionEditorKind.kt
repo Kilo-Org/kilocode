@@ -4,6 +4,7 @@ import ai.kilocode.client.app.KiloAppService
 import ai.kilocode.client.app.KiloSessionService
 import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.plugin.KiloBundle
+import ai.kilocode.client.session.AgentAvatar
 import ai.kilocode.client.session.SessionUi
 import ai.kilocode.client.session.SessionUiFactory
 import ai.kilocode.client.vfs.KiloEditorKind
@@ -32,7 +33,16 @@ object SubagentSessionEditorKind : KiloEditorKind {
             ?: KiloBundle.message("session.subagent.title")
     }
 
-    override fun icon(params: Map<String, String>): Icon = AllIcons.Nodes.Function
+    /**
+     * Static, ID-derived identity (see [ai.kilocode.client.session.AgentAvatar]) so a read-only
+     * subagent tab reads with the same shape/hue as its task card and background-agent row. Falls
+     * back to a generic icon only when the tab has no session id at all.
+     */
+    override fun icon(params: Map<String, String>): Icon {
+        val id = params[SESSION]?.takeIf { it.isNotBlank() } ?: return AllIcons.Nodes.Function
+        val color = service<SubagentTitleCache>().color(id)
+        return AgentAvatar.static(id, color)
+    }
     override fun presentablePath(params: Map<String, String>): String = KiloBundle.message("session.subagent.path", params[SESSION].orEmpty())
     override fun isValid(params: Map<String, String>): Boolean = !params[SESSION].isNullOrBlank() && !params[DIR].isNullOrBlank()
 

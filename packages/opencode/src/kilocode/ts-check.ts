@@ -10,13 +10,28 @@ export namespace TsCheck {
 
   // Match: file(line,col): error TSxxxx: message
   const DIAG_RE = /^(.+?)\((\d+),(\d+)\):\s+(error|warning)\s+(TS\d+):\s+(.*)$/
+  const GLOBAL_RE = /\b(?:error|fatal)\s+TS\d+:/m
 
-  export async function run(root: string): Promise<Map<string, Diagnostic[]>> {
+  export async function run(root: string, signal?: AbortSignal): Promise<Map<string, Diagnostic[]> | undefined> {
+    if (signal?.aborted) {
+      log.warn("ts check aborted before resolve", { root })
+      return undefined
+    }
+
     const result = new Map<string, Diagnostic[]>()
-    const bin = await resolve(root)
+    const bin = await resolve(root).catch((error) => {
+      log.error("failed to resolve typescript checker", { root, error })
+      return undefined
+    })
+
+    if (signal?.aborted) {
+      log.warn("ts check aborted after resolve", { root })
+      return undefined
+    }
+
     if (!bin) {
-      log.info("no typescript checker found", { root })
-      return result
+      log.warn("no typescript checker found", { root })
+      return undefined
     }
 
     log.info("running ts check", { bin, root })
@@ -25,32 +40,104 @@ export namespace TsCheck {
     // --incremental writes a .tsbuildinfo cache so subsequent runs only
     // re-check changed files. First run is cold (~1.3s), warm runs
     // reuse the cache and typically finish in ~200-400ms.
-    const proc = Bun.spawn([bin, "--noEmit", "--pretty", "false", "--incremental"], {
-      cwd: root,
-      stdout: "pipe",
-      stderr: "pipe",
-      windowsHide: true,
-      env: { ...process.env },
-    })
+    const proc = (() => {
+      try {
+        return Bun.spawn([bin, "--noEmit", "--pretty", "false", "--incremental"], {
+          cwd: root,
+          stdout: "pipe",
+          stderr: "pipe",
+          windowsHide: true,
+          env: { ...process.env },
+        })
+      } catch (error) {
+        log.error("failed to spawn typescript checker", { root, bin, error })
+        return undefined
+      }
+    })()
+    if (!proc) return undefined
 
     const TIMEOUT = 30_000
-    const done = Promise.all([new Response(proc.stdout).text(), new Response(proc.stderr).text(), proc.exited])
-    const settled = await Promise.race([
-      done.then(([out, err]) => ({ out, err, timedOut: false as const })),
-      new Promise<{ out: string; err: string; timedOut: true }>((r) =>
-        setTimeout(() => r({ out: "", err: "", timedOut: true }), TIMEOUT),
-      ),
-    ])
-    if (settled.timedOut) {
-      log.warn("ts check timed out, killing process", { elapsed: Date.now() - start })
-      proc.kill()
+    const GRACE = 1_000
+    let stopped = false
+    const stop = () => {
+      if (stopped || proc.exitCode != null) return
+      stopped = true
+      try {
+        proc.kill()
+      } catch (error) {
+        log.error("failed to kill typescript checker", { root, error })
+      }
     }
+    const done = Promise.all([new Response(proc.stdout).text(), new Response(proc.stderr).text(), proc.exited])
+    void done.catch((error) => {
+      log.error("failed to collect typescript checker output", { root, error })
+    })
+    const reap = async () => {
+      stop()
+      const exited = await Promise.race([
+        proc.exited.then(() => true).catch(() => true),
+        Bun.sleep(GRACE).then(() => false),
+      ])
+      if (!exited && proc.exitCode == null) {
+        try {
+          proc.kill(9)
+        } catch (error) {
+          log.error("failed to force kill typescript checker", { root, error })
+        }
+      }
+      await proc.exited.catch((error) => {
+        log.error("failed to reap typescript checker", { root, error })
+      })
+      await done.catch(() => undefined)
+    }
+
+    const timeout = Promise.withResolvers<"timeout">()
+    const cancel = Promise.withResolvers<"abort">()
+    const abort = () => {
+      stop()
+      cancel.resolve("abort")
+    }
+    const timer = setTimeout(() => timeout.resolve("timeout"), TIMEOUT)
+    signal?.addEventListener("abort", abort, { once: true })
+    if (signal?.aborted) abort()
+
+    const settled = await Promise.race([
+      done.then(([out, err, code]) => ({ kind: "done" as const, out, err, code })),
+      timeout.promise.then((kind) => ({ kind })),
+      cancel.promise.then((kind) => ({ kind })),
+    ])
+      .catch(async (error) => {
+        log.error("ts check failed", { root, error })
+        await reap()
+        return { kind: "failed" as const }
+      })
+      .finally(() => {
+        clearTimeout(timer)
+        signal?.removeEventListener("abort", abort)
+      })
+
+    if (settled.kind === "timeout") {
+      log.warn("ts check timed out, killing process", { root, elapsed: Date.now() - start })
+      await reap()
+      return undefined
+    }
+
+    if (settled.kind === "abort") {
+      log.warn("ts check aborted, killing process", { root, elapsed: Date.now() - start })
+      await reap()
+      return undefined
+    }
+
+    if (settled.kind === "failed") return undefined
 
     const stdout = settled.out
     const stderr = settled.err
+    const code = settled.code
+    const text = `${stdout}\n${stderr}`
 
     log.info("ts check done", {
       elapsed: Date.now() - start,
+      code,
       lines: stdout.split("\n").length,
     })
 
@@ -58,7 +145,7 @@ export namespace TsCheck {
       log.info("ts check stderr", { stderr: stderr.slice(0, 500) })
     }
 
-    for (const line of stdout.split("\n")) {
+    for (const line of text.split(/\r?\n/)) {
       const m = DIAG_RE.exec(line)
       if (!m) continue
       if (m.length < 7) continue
@@ -84,6 +171,26 @@ export namespace TsCheck {
       const arr = result.get(normalized) ?? []
       arr.push(diag)
       result.set(normalized, arr)
+    }
+
+    if (result.size === 0 && GLOBAL_RE.test(text)) {
+      log.warn("ts check reported a global compiler error", {
+        root,
+        code,
+        stdout: stdout.slice(0, 500),
+        stderr: stderr.slice(0, 500),
+      })
+      return undefined
+    }
+
+    if (code !== 0 && result.size === 0) {
+      log.warn("ts check failed without file diagnostics", {
+        root,
+        code,
+        stdout: stdout.slice(0, 500),
+        stderr: stderr.slice(0, 500),
+      })
+      return undefined
     }
 
     return result

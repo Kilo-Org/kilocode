@@ -77,7 +77,7 @@ export const dict = {
 
   "dialog.usageExceeded.freeTier.title": "تم الوصول إلى الحد المجاني",
   "dialog.usageExceeded.freeTier.description":
-    "اشترك في Kilo Go للحصول على وصول موثوق إلى أفضل النماذج مفتوحة المصدر، ابتداءً من $5/شهر.", // kilocode_change
+    "اشترك في Kilo Go مقابل $10/شهر للحصول على وصول موثوق إلى أفضل النماذج مفتوحة المصدر.", // kilocode_change
   "dialog.usageExceeded.freeTier.actionLabel": "اشترك",
   "dialog.usageExceeded.accountRateLimit.title": "تم الوصول إلى حد Go",
   "dialog.usageExceeded.accountRateLimit.description":
@@ -238,6 +238,10 @@ export const dict = {
   "ui.mermaid.copySvg": "نسخ SVG",
   "ui.mermaid.download": "تنزيل",
   "ui.mermaid.downloadPng": "تنزيل PNG",
+  "ui.mermaid.zoom": "تكبير العرض",
+  "ui.mermaid.zoomIn": "تكبير",
+  "ui.mermaid.zoomOut": "تصغير",
+  "ui.mermaid.zoomReset": "إعادة تعيين التكبير",
   "ui.mermaid.downloadSvg": "تنزيل SVG",
   "ui.mermaid.errorDefault": "تعذر عرض مخطط Mermaid.",
   "ui.mermaid.errorEmpty": "عرض Mermaid مخططًا فارغًا.",
@@ -246,6 +250,13 @@ export const dict = {
   "ui.message.deleteQueued": "حذف الرسالة من قائمة الانتظار",
   "ui.messagePart.mcp.input": "الإدخال",
   "ui.messagePart.mcp.output": "الإخراج",
+  "ui.messagePart.board.read": "قراءة رسائل الوكلاء",
+  "ui.messagePart.board.all": "جميع الوكلاء",
+  "ui.messagePart.board.primary": "الوكيل الرئيسي",
+  "ui.messagePart.board.agent": "وكيل",
+  "ui.messagePart.board.route": "من {{from}} إلى {{to}}",
+  "ui.messagePart.board.empty": "لا توجد رسائل من الوكلاء",
+  "ui.messagePart.board.stored": "تم الحفظ فقط. لم يتم تأكيد التسليم أو القراءة.",
   "ui.question.answer.dismissed": "Dismissed",
   "ui.question.subtitle.dismissed": "{{count}} dismissed",
   "ui.sessionTurn.diffs.changed": "تم التغيير",

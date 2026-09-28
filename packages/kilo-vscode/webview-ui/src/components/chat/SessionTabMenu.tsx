@@ -8,6 +8,9 @@ export const SessionTabMenu: ParentComponent<{
   onFork?: () => void
   onClose: () => void
   onCloseOthers?: () => void
+  onCloseToRight?: () => void
+  pinned?: boolean
+  onTogglePin?: () => void
   closeable?: boolean
   closeShortcut?: JSX.Element
 }> = (props) => {
@@ -24,6 +27,17 @@ export const SessionTabMenu: ParentComponent<{
               <Icon name="fork" size="small" />
               <ContextMenu.ItemLabel>{t("agentManager.tab.forkSession")}</ContextMenu.ItemLabel>
             </ContextMenu.Item>
+            <Show when={props.closeable !== false || props.onCloseOthers || props.onTogglePin}>
+              <ContextMenu.Separator />
+            </Show>
+          </Show>
+          <Show when={props.onTogglePin}>
+            <ContextMenu.Item onSelect={() => props.onTogglePin?.()}>
+              <Icon name={props.pinned ? "pin-filled" : "pin"} size="small" />
+              <ContextMenu.ItemLabel>
+                {props.pinned ? t("agentManager.tab.unpin") : t("agentManager.tab.pin")}
+              </ContextMenu.ItemLabel>
+            </ContextMenu.Item>
             <Show when={props.closeable !== false || props.onCloseOthers}>
               <ContextMenu.Separator />
             </Show>
@@ -39,6 +53,12 @@ export const SessionTabMenu: ParentComponent<{
             <ContextMenu.Item onSelect={() => props.onCloseOthers?.()}>
               <Icon name="close" size="small" />
               <ContextMenu.ItemLabel>{t("agentManager.tab.closeOthers")}</ContextMenu.ItemLabel>
+            </ContextMenu.Item>
+          </Show>
+          <Show when={props.onCloseToRight}>
+            <ContextMenu.Item onSelect={() => props.onCloseToRight?.()}>
+              <Icon name="arrow-right" size="small" />
+              <ContextMenu.ItemLabel>{t("agentManager.tab.closeToRight")}</ContextMenu.ItemLabel>
             </ContextMenu.Item>
           </Show>
         </ContextMenu.Content>

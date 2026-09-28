@@ -9,6 +9,7 @@ export const BoardTable = sqliteTable("kilo_board", {
   objective: text().notNull(),
   objective_message_id: text(),
   next_seq: integer().notNull().default(1),
+  cleared_seq: integer().notNull().default(0),
   message_count: integer().notNull().default(0),
   message_bytes: integer().notNull().default(0),
   time_created: integer().notNull(),

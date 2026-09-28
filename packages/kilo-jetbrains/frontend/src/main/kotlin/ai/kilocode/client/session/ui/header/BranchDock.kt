@@ -30,6 +30,12 @@ internal class BranchDock @RequiresEdt constructor(
     private val onMove: (() -> Unit)?,
     private val onNewWorktree: (() -> Unit)? = null,
     titleStyle: Int = SimpleTextAttributes.STYLE_PLAIN,
+    /**
+     * Whether the dock carries the branch's pull request and its changes summary above the action row.
+     * A host whose own header already shows the branch, its PR, and its counts (the worktree editor
+     * tab) takes just the action row, and leaves that reporting to the header it already has.
+     */
+    private val header: Boolean = true,
 ) : BorderLayoutPanel(), SessionEditorStyleTarget, UiDataProvider {
     private val core = PrHeaderView(titleStyle = titleStyle, mode = ChangesPanel.Mode.COMPACT, openDiff = openDiff)
     private val changes = ChangesPanel(ChangesPanel.Mode.COMPACT, onBase = openDiff)
@@ -145,13 +151,15 @@ internal class BranchDock @RequiresEdt constructor(
 
     @RequiresEdt
     private fun sync() {
-        val pull = branch?.pr
+        // A header-less host treats the branch as having no PR, so the PR row never shows and never
+        // takes the place of the action row below it.
+        val pull = branch?.pr?.takeIf { header }
         val count = files.size
         val additions = files.sumOf { it.additions }
         val deletions = files.sumOf { it.deletions }
         core.update(count, additions, deletions, pull, branch?.branch.orEmpty())
         changes.update(count, additions, deletions)
-        core.isVisible = pull != null
+        if (core.isVisible != (pull != null)) core.isVisible = pull != null
         val visible = pull == null && gitAvailable() && !busy &&
             (files.isNotEmpty() || hasMessages || newWorktreeEnabled() || moveEnabled())
         if (actionRow.isVisible != visible) actionRow.isVisible = visible

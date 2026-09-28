@@ -6,43 +6,47 @@ import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionEditorStyleTarget
 import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.ui.UiStyle
-import com.intellij.ui.components.JBLabel
-import com.intellij.util.ui.Centerizer
+import ai.kilocode.client.ui.layout.HAlign
+import ai.kilocode.client.ui.layout.VAlign
+import ai.kilocode.client.ui.layout.align
 import java.awt.BorderLayout
 import javax.swing.JPanel
 
 class LoadingPanel : JPanel(BorderLayout()), SessionEditorStyleTarget {
-    private val label = JBLabel(KiloBundle.message("session.empty.loading"))
+    private var text = KiloBundle.message("session.empty.loading")
+    private val label = StatusLabel(centered = true)
 
     init {
         isOpaque = false
-        add(Centerizer(label, Centerizer.TYPE.BOTH), BorderLayout.CENTER)
+        label.sync(text)
+        add(label.align(HAlign.TRACK, VAlign.CENTER), BorderLayout.CENTER)
         applyStyle(SessionEditorStyle.current())
     }
 
     fun setState(state: SessionState) {
         when (state) {
             is SessionState.Retry -> {
-                label.text = state.message.ifBlank { KiloBundle.message("session.status.retry") }
+                text = state.message.ifBlank { KiloBundle.message("session.status.retry") }
                 label.foreground = UiStyle.Colors.warningLabelForeground()
             }
 
             is SessionState.Offline -> {
-                label.text = state.message.ifBlank { KiloBundle.message("session.status.offline") }
+                text = state.message.ifBlank { KiloBundle.message("session.status.offline") }
                 label.foreground = UiStyle.Colors.errorLabelForeground()
             }
 
             else -> {
-                label.text = KiloBundle.message("session.empty.loading")
+                text = KiloBundle.message("session.empty.loading")
                 label.foreground = SessionUiStyle.Text.Secondary.foreground()
             }
         }
+        label.sync(text)
         revalidate()
         repaint()
     }
 
     /** Exposed for test assertions. */
-    fun labelText(): String = label.text
+    fun labelText(): String = text
 
     override fun applyStyle(style: SessionEditorStyle) {
         label.font = style.regularFont

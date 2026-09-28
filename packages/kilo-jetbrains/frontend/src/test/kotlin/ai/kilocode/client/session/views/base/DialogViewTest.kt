@@ -16,6 +16,7 @@ import javax.swing.JButton
 import javax.swing.JComponent
 import javax.swing.JLabel
 import javax.swing.JPanel
+import kotlin.test.assertNotEquals
 
 @Suppress("UnstableApiUsage")
 class DialogViewTest : BasePlatformTestCase() {
@@ -80,6 +81,73 @@ class DialogViewTest : BasePlatformTestCase() {
             assertNull(panel.line())
             panel.setOutlined(true)
             assertNotNull(panel.line())
+        }
+    }
+
+    fun `test default card fill is a distinct dialog surface, not the backdrop`() {
+        edt {
+            val panel = InspectDialogView()
+            assertEquals(SessionUiStyle.View.Dialog.bgColor().rgb, panel.fill().rgb)
+            assertNotEquals(
+                SessionUiStyle.Colors.sessionBackground().rgb,
+                panel.fill().rgb,
+                "Dialog fill should not be the same color as the session backdrop",
+            )
+        }
+    }
+
+    fun `test card fill stays distinct from the code block surface`() {
+        edt {
+            val panel = InspectDialogView()
+            assertNotEquals(
+                SessionUiStyle.Colors.codeBlockBackground().rgb,
+                panel.fill().rgb,
+                "Dialog fill should not match the code-block surface nested content paints on",
+            )
+        }
+    }
+
+    fun `test setOutlined toggles the card fill along with the outline`() {
+        edt {
+            val panel = InspectDialogView()
+
+            assertEquals(SessionUiStyle.View.Dialog.bgColor().rgb, panel.fill().rgb)
+            panel.setOutlined(false)
+            assertEquals(SessionUiStyle.Colors.sessionBackground().rgb, panel.fill().rgb)
+            panel.setOutlined(true)
+            assertEquals(SessionUiStyle.View.Dialog.bgColor().rgb, panel.fill().rgb)
+        }
+    }
+
+    fun `test outline sits between the backdrop and the card fill`() {
+        edt {
+            val panel = InspectDialogView()
+            val backdrop = SessionUiStyle.Colors.sessionBackground()
+            val fill = panel.fill()
+            val line = panel.line()!!
+
+            listOf(
+                Triple(backdrop.red, fill.red, line.red),
+                Triple(backdrop.green, fill.green, line.green),
+                Triple(backdrop.blue, fill.blue, line.blue),
+            ).forEach { (from, to, actual) ->
+                assertTrue(
+                    "Outline channel $actual should sit between backdrop $from and fill $to",
+                    actual in minOf(from, to)..maxOf(from, to),
+                )
+            }
+            assertNotEquals(backdrop.rgb, line.rgb, "Outline should be visible against the backdrop")
+            assertNotEquals(fill.rgb, line.rgb, "Outline should be visible against the card fill")
+        }
+    }
+
+    fun `test card background follows the painted fill`() {
+        edt {
+            val panel = InspectDialogView()
+
+            assertEquals(panel.fill().rgb, panel.background.rgb)
+            panel.setOutlined(false)
+            assertEquals(panel.fill().rgb, panel.background.rgb)
         }
     }
 
@@ -405,6 +473,46 @@ class DialogViewTest : BasePlatformTestCase() {
         }
     }
 
+    fun `test standard left action uses shared button behavior`() {
+        edt {
+            var clicked = false
+            val panel = DialogView()
+            panel.setLeftAction(DialogView.Action("left", "Left", primary = false) { clicked = true })
+
+            val button = actionButton(panel, "Left")
+            val footer = region(panel, BorderLayout.SOUTH) as JPanel
+            val west = (footer.layout as BorderLayout).getLayoutComponent(BorderLayout.WEST) as Container
+            assertNotNull(find(west, button))
+            assertNull(button.getClientProperty(DarculaButtonUI.DEFAULT_STYLE_KEY))
+            button.doClick(0)
+            assertTrue(clicked)
+
+            val progress = JLabel("progress")
+            panel.setActionLeft(progress)
+            panel.setLeftAction(DialogView.Action("left", "Updated", primary = false) { clicked = true })
+            assertNotNull(find(west, progress))
+            panel.restoreLeftAction()
+            assertEquals("Updated", actionButton(panel, "Updated").text)
+        }
+    }
+
+    fun `test clearing retained left action does not replace temporary content`() {
+        edt {
+            val panel = DialogView()
+            panel.setLeftAction(DialogView.Action("left", "Left", primary = false) {})
+            val progress = JLabel("progress")
+            panel.setActionLeft(progress)
+
+            panel.setLeftAction(null)
+
+            val footer = region(panel, BorderLayout.SOUTH) as JPanel
+            val west = (footer.layout as BorderLayout).getLayoutComponent(BorderLayout.WEST) as Container
+            assertNotNull(find(west, progress))
+            panel.restoreLeftAction()
+            assertNull(region(panel, BorderLayout.SOUTH))
+        }
+    }
+
     fun `test action left component is transparent`() {
         edt {
             val panel = DialogView()
@@ -556,5 +664,6 @@ class DialogViewTest : BasePlatformTestCase() {
 
     private class InspectDialogView : DialogView() {
         fun line() = outlineColor()
+        fun fill() = contentColor()
     }
 }

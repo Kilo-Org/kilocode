@@ -14,6 +14,8 @@ import ai.kilocode.rpc.dto.WorktreeDto
 import ai.kilocode.rpc.dto.WorktreeListDto
 import ai.kilocode.rpc.dto.WorktreePrListDto
 import ai.kilocode.rpc.dto.WorktreeStatsListDto
+import ai.kilocode.rpc.dto.orphans.OrphanRemoveResultDto
+import ai.kilocode.rpc.dto.orphans.RemoveOrphansResultDto
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.asFlow
 import java.util.concurrent.ConcurrentHashMap
@@ -25,6 +27,8 @@ import java.util.concurrent.CopyOnWriteArrayList
  */
 class FakeWorktreeRpcApi : KiloWorktreeRpcApi {
     val listed = CopyOnWriteArrayList<WorktreeDto>()
+    /** Orphan directories [list] reports, alongside [listed]. See [ai.kilocode.rpc.dto.orphans.OrphanDto]. */
+    var orphans: List<ai.kilocode.rpc.dto.orphans.OrphanDto> = emptyList()
     val branchesList = CopyOnWriteArrayList<String>()
     var statsResult = WorktreeStatsListDto()
     var dirtyResult = WorktreeDirtyListDto()
@@ -34,6 +38,7 @@ class FakeWorktreeRpcApi : KiloWorktreeRpcApi {
     /** When set, [branchStatus] throws it instead of answering. */
     var branchThrows: Exception? = null
     var currentBranch: String? = null
+    var originSlug: String? = null
     val moves = CopyOnWriteArrayList<Triple<String, String?, String>>()
     /** Progress events emitted by [moveToWorktree], in order. */
     var moveScript: List<MoveProgressDto> = emptyList()
@@ -63,10 +68,16 @@ class FakeWorktreeRpcApi : KiloWorktreeRpcApi {
     val prAges = CopyOnWriteArrayList<Long?>()
     val statsCalls = CopyOnWriteArrayList<String>()
     val dirtyCalls = CopyOnWriteArrayList<String>()
+    /** When set, [stats] throws it instead of answering. */
+    var statsThrows: Exception? = null
+    /** When set, [dirty] throws it instead of answering. */
+    var dirtyThrows: Exception? = null
     var beforeCreate: suspend () -> Unit = {}
     var beforeRemove: suspend () -> Unit = {}
     var beforeRename: suspend () -> Unit = {}
     var beforeGhStatus: suspend () -> Unit = {}
+    /** Gate for holding a [stats] answer open, so a test can prove polls do not stack. */
+    var beforeStats: suspend () -> Unit = {}
     /** Gate for holding a [prStatus] answer open while the test changes state around it. */
     var beforePrStatus: suspend () -> Unit = {}
     var adoptResult: (String, String) -> RenameWorktreeResultDto = { path, name ->
@@ -81,6 +92,16 @@ class FakeWorktreeRpcApi : KiloWorktreeRpcApi {
     }
     var openResult: (String) -> Boolean = { true }
     var removeResult: (String, String?, Boolean) -> RemoveWorktreeResultDto = { _, _, _ -> RemoveWorktreeResultDto(ok = true) }
+    val orphanSizeCalls = CopyOnWriteArrayList<Pair<String, List<String>>>()
+    var orphanSizesResult: (List<String>) -> Map<String, Long> = { emptyMap() }
+    /** Gate for holding an [orphanSizes] answer open, so a test can observe the "calculating" state. */
+    var beforeOrphanSizes: suspend () -> Unit = {}
+    val removeOrphansCalls = CopyOnWriteArrayList<Pair<String, List<String>>>()
+    var removeOrphansResult: (List<String>) -> RemoveOrphansResultDto = { paths ->
+        RemoveOrphansResultDto(paths.map { OrphanRemoveResultDto(it, ok = true) })
+    }
+    val revealPaths = CopyOnWriteArrayList<String>()
+    var revealPathResult: (String) -> Boolean = { true }
     var renameResult: (String, String) -> RenameWorktreeResultDto = { path, name ->
         val idx = listed.indexOfFirst { it.path == path }
         if (idx < 0) RenameWorktreeResultDto(error = "missing") else {
@@ -92,23 +113,26 @@ class FakeWorktreeRpcApi : KiloWorktreeRpcApi {
 
     override suspend fun list(directory: String): WorktreeListDto {
         assertNotEdt("list")
-        return WorktreeListDto(listed.toList())
+        return WorktreeListDto(listed.toList(), orphans = orphans)
     }
 
     override suspend fun listBranches(directory: String): WorktreeBranchesDto {
         assertNotEdt("listBranches")
-        return WorktreeBranchesDto(branchesList.toList(), currentBranch)
+        return WorktreeBranchesDto(branchesList.toList(), currentBranch, originSlug)
     }
 
     override suspend fun stats(directory: String): WorktreeStatsListDto {
         assertNotEdt("stats")
         statsCalls.add(directory)
+        beforeStats()
+        statsThrows?.let { throw it }
         return statsResult
     }
 
     override suspend fun dirty(directory: String): WorktreeDirtyListDto {
         assertNotEdt("dirty")
         dirtyCalls.add(directory)
+        dirtyThrows?.let { throw it }
         return dirtyResult
     }
 
@@ -207,5 +231,24 @@ class FakeWorktreeRpcApi : KiloWorktreeRpcApi {
         sessionListThrows?.let { throw it }
         sessionLists[directory] = visible
         return true
+    }
+
+    override suspend fun orphanSizes(directory: String, paths: List<String>): Map<String, Long> {
+        assertNotEdt("orphanSizes")
+        orphanSizeCalls.add(directory to paths)
+        beforeOrphanSizes()
+        return orphanSizesResult(paths)
+    }
+
+    override suspend fun removeOrphans(directory: String, paths: List<String>): RemoveOrphansResultDto {
+        assertNotEdt("removeOrphans")
+        removeOrphansCalls.add(directory to paths)
+        return removeOrphansResult(paths)
+    }
+
+    override suspend fun revealPath(path: String): Boolean {
+        assertNotEdt("revealPath")
+        revealPaths.add(path)
+        return revealPathResult(path)
     }
 }

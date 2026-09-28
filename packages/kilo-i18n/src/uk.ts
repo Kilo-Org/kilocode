@@ -35,6 +35,7 @@ export const dict = {
   "marketplace.install.scope.global.description":
     "Усі проєкти на цьому комп'ютері. Зберігається у вашій користувацькій конфігурації.",
   "marketplace.install.destination": "Місце встановлення",
+  "marketplace.install.includedSkills": "Включені навички",
   "marketplace.install.about.mcp":
     "MCP-сервер надає Kilo додаткові інструменти для роботи із зовнішніми сервісами або локальними програмами.",
   "marketplace.install.about.agent": "Агент додає багаторазову роль із власними інструкціями та дозволами.",
@@ -46,8 +47,13 @@ export const dict = {
     "Файли проєкту можуть бути додані до системи контролю версій. Не зберігайте тут секрети, якщо конфігурація не посилається на змінну середовища.",
   "marketplace.install.learnMore": "Дізнайтеся, як працює встановлення з Marketplace",
   "marketplace.install.learnMcp": "Докладніше про MCP",
+  "marketplace.install.about.plugin":
+    "Плагін додає до Kilo користувацькі інструменти та інтеграції. Плагіни виконуються з повними правами доступу.",
+  "marketplace.install.plugin.warning":
+    "Плагіни виконують код із повними правами доступу. Вони можуть читати й змінювати ваші файли, виконувати команди та отримувати доступ до ваших облікових даних і мережі. Встановлюйте лише плагіни, яким довіряєте.",
   "marketplace.install.installedAt": "Встановлено в {{path}}",
-  "marketplace.intro": "Встановлюйте багаторазових агентів, навички та інструменти MCP для одного або всіх проєктів.",
+  "marketplace.intro":
+    "Встановлюйте багаторазових агентів, навички, інструменти MCP та плагіни для одного або всіх проєктів.",
   "marketplace.intro.learnMore": "Про Marketplace",
   "marketplace.install.prerequisites": "Передумови",
   "marketplace.install.installing": "Встановлення...",
@@ -60,6 +66,8 @@ export const dict = {
   "marketplace.remove.confirm":
     "Ви впевнені, що хочете видалити цей {{type}}? Це видалить його з вашої конфігурації {{scope}}.",
   "marketplace.remove.cancel": "Скасувати",
+  "marketplace.remove.mcp.skills":
+    "Це також видалить супутні навички, що належать цьому встановленню. Незалежно встановлені навички буде збережено.",
   "marketplace.remove.confirm.button": "Видалити",
   "marketplace.search": "Пошук...",
   "marketplace.filter.all": "Усі елементи",
@@ -68,6 +76,7 @@ export const dict = {
   "marketplace.empty": "Елементів не знайдено",
   "marketplace.empty.relevant": "Для цього робочого простору не знайдено відповідних елементів маркетплейсу.",
   "marketplace.badge.mcpServer": "MCP-сервер",
+  "marketplace.badge.skills": "Містить навички",
   "marketplace.card.by": "від {{author}}",
   "marketplace.install.method": "Метод встановлення",
   "marketplace.install.parameters": "Параметри",
@@ -75,6 +84,7 @@ export const dict = {
   "marketplace.scope.project": "проєкт",
   "marketplace.scope.global": "глобально",
   "marketplace.remove.type.mcp": "MCP-сервер",
+  "marketplace.remove.type.plugin": "плагін",
   "marketplace.remove.type.skill": "навичка",
   "marketplace.remove.type.agent": "агент",
   "marketplace.remove.failed": "Не вдалося видалити {{name}}",
@@ -85,7 +95,7 @@ export const dict = {
   "marketplace.warning.busyMany": "Виконується кілька сесій, їх буде перервано",
   "marketplace.warning.installAnyway": "Встановити все одно",
   "marketplace.warning.cancel": "Скасувати",
-  "marketplace.contribute.prompt": "Бракує навички, агента або MCP-сервера?",
+  "marketplace.contribute.prompt": "Бракує навички, агента, MCP-сервера або плагіна?",
   "marketplace.contribute.cta": "Зробити внесок на GitHub",
   "marketplace.migration.notice":
     "Режими замінено агентами. Якщо ви раніше встановлювали режими з маркетплейсу, видаліть їх та перевстановіть як агенти для переходу на новий формат.",

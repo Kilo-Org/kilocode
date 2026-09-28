@@ -139,6 +139,10 @@ export class ProjectRegistry {
     return this.load().find((p) => p.id === id)
   }
 
+  has(id: string): boolean {
+    return this.load().some((p) => p.id === id)
+  }
+
   /** Return explicit expansion state, if one has been persisted. */
   expanded(id: string): boolean | undefined {
     const project = this.get(id)

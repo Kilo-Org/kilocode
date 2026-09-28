@@ -93,15 +93,6 @@ Thiết lập review code tự động bằng AI cho pull request của bạn t�
 </details>
 
 <details>
-<summary><strong>KiloClaw</strong></summary>
-
-<br>
-
-Khởi chạy AI agent luôn hoạt động của bạn tại [app.kilo.ai/claw](https://app.kilo.ai/claw).
-
-</details>
-
-<details>
 <summary>Cài CLI từ GitHub Releases (binary)</summary>
 
 Tải binary mới nhất từ [trang Releases](https://github.com/Kilo-Org/kilocode/releases).

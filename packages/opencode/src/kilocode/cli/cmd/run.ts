@@ -1,6 +1,7 @@
 import type { KiloClient } from "@kilocode/sdk/v2"
 import { KiloRunDrain } from "../run-drain"
 import { UI } from "@/cli/ui"
+import { FormatError, FormatUnknownError } from "@/cli/error"
 import { DaemonClient } from "@/kilocode/daemon/client"
 import { isBuiltinCommand, type BuiltinCommand } from "@/kilocode/session/builtin-commands"
 import { Provider } from "@/provider/provider"
@@ -20,6 +21,37 @@ export namespace KiloRun {
     if (args.continue || args.session) return
     UI.error(`--command ${args.command} requires --continue or --session`)
     process.exit(1)
+  }
+
+  export function validateGoal(text: string) {
+    return ["", "pause", "clear"].includes(text.trim())
+      ? undefined
+      : "Goal start and resume require the TUI. Run kilo, then use /goal <text> or /goal resume."
+  }
+
+  export async function goal(
+    sdk: KiloClient,
+    sessionID: string,
+    text: string,
+    emit: (type: string, data: Record<string, unknown>) => boolean,
+  ) {
+    try {
+      const action = text.trim()
+      const error = validateGoal(action)
+      if (error) throw new Error(error)
+      const result = await sdk.session.command(
+        { sessionID, command: "goal", arguments: action },
+        { throwOnError: true },
+      )
+      for (const part of result.data.parts) {
+        if (part.type !== "text") continue
+        if (!emit("text", { part })) process.stdout.write(part.text + "\n")
+      }
+    } catch (err) {
+      const error = FormatError(err) ?? (err instanceof Error ? err.message : FormatUnknownError(err))
+      if (!emit("error", { error })) UI.error(error)
+      process.exitCode = 1
+    }
   }
 
   export async function runBuiltin(

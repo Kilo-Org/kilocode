@@ -17,6 +17,10 @@ This means:
 - **No shell integration setup or troubleshooting** — it works out of the box
 - **Consistent behavior** across environments — the same shell execution logic runs whether you use the CLI directly or through the VS Code extension
 
+{% callout type="warning" title="Interactive terminal removed" %}
+The `interactive_terminal` tool, the in-session terminal controls, the related API endpoints, and the matching SDK types were removed. Run commands that need keyboard input in your own terminal instead, and use the [`bash` tool](#the-bash-tool) for non-interactive commands.
+{% /callout %}
+
 ## The `bash` Tool
 
 The `bash` tool is the primary way the agent executes shell commands. It spawns a persistent shell session and runs commands within it.
@@ -55,7 +59,7 @@ When using the Kilo Code VS Code extension with the Agent Manager, each agent se
 | Shortcut | Action |
 |---|---|
 | <kbd>Cmd</kbd>+<kbd>/</kbd> | Focus the session's terminal |
-| <kbd>Cmd</kbd>+<kbd>.</kbd> | Cycle agent mode |
+| <kbd>Cmd</kbd>+<kbd>.</kbd> | Cycle agents |
 
 ### Terminal Context Menu Actions
 

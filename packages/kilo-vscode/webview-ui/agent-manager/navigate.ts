@@ -104,13 +104,20 @@ export function remoteSessions(
  * After removing a worktree, pick the nearest remaining sidebar neighbor.
  * Order: the worktree just below → the one above → LOCAL.
  */
-export function nextSelectionAfterDelete(deletedId: string, worktreeIds: string[]): typeof LOCAL | string {
+export function nextSelectionAfterDelete(
+  deletedId: string,
+  worktreeIds: string[],
+  available: (id: string) => boolean = () => true,
+): typeof LOCAL | string {
   const idx = worktreeIds.indexOf(deletedId)
   if (idx === -1) return LOCAL
-  const remaining = worktreeIds.filter((id) => id !== deletedId)
-  if (remaining.length === 0) return LOCAL
-  // Prefer the item that was below (same index in the shortened list), else the one above
-  return remaining[Math.min(idx, remaining.length - 1)]!
+  for (let distance = 1; distance < worktreeIds.length; distance++) {
+    const below = worktreeIds.at(idx + distance)
+    if (below && available(below)) return below
+    const above = idx >= distance ? worktreeIds.at(idx - distance) : undefined
+    if (above && available(above)) return above
+  }
+  return LOCAL
 }
 
 /**

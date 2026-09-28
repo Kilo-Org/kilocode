@@ -257,6 +257,40 @@ describe("workspace revert status", () => {
   )
 
   it.live(
+    "reports not-a-git-repo when the workspace is not a Git repository",
+    provideTmpdirInstance((dir) =>
+      Effect.gen(function* () {
+        const sessions = yield* Session.Service
+        const revert = yield* SessionRevert.Service
+        const session = yield* sessions.create({})
+        const file = path.join(dir, "created.txt")
+        const providerID = ProviderV2.ID.make("test")
+        yield* Effect.promise(() => fs.writeFile(file, "created"))
+        const user = yield* sessions.updateMessage({
+          id: MessageID.ascending(),
+          sessionID: session.id,
+          role: "user",
+          agent: "default",
+          model: { providerID, modelID: ModelV2.ID.make("test") },
+          time: { created: Date.now() },
+        })
+        yield* sessions.updatePart({
+          id: PartID.ascending(),
+          messageID: user.id,
+          sessionID: session.id,
+          type: "text",
+          text: "create a file",
+        })
+
+        const result = yield* revert.revert({ sessionID: session.id, messageID: user.id })
+
+        expect(result.revert?.workspace).toBe("not-a-git-repo")
+        expect(yield* Effect.promise(() => fs.readFile(file, "utf8"))).toBe("created")
+      }),
+    ),
+  )
+
+  it.live(
     "reports restored when historical patches restore a file",
     provideTmpdirInstance(
       (dir) =>

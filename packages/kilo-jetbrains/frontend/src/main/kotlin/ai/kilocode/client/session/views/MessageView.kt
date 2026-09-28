@@ -68,7 +68,12 @@ class MessageView(
     private val repo: String? = null,
     private val hover: ((PartView, Boolean) -> Unit)? = null,
     private val revert: ((String) -> Unit)? = null,
+    // Forks the session at this message. Null on surfaces that cannot fork (sidebar, read-only tabs).
+    private val fork: ((String) -> Unit)? = null,
     private val onOpenSubagent: ((String, String) -> Unit)? = null,
+    private val onPromoteBackgroundAgent: BackgroundPromote? = null,
+    /** Sibling color slot for a child session's generated avatar. See [ai.kilocode.client.session.AgentAvatar]. */
+    private val avatarColor: (String) -> Int? = { null },
 ) : ai.kilocode.client.session.ui.SessionLayoutPanel(
     SessionUiStyle.SessionLayout.GAP,
 ), Disposable, SessionEditorStyleTarget, SessionView {
@@ -409,9 +414,17 @@ class MessageView(
     }
 
     private fun view(content: Content) = if (msg.info.role == SessionUiStyle.View.Message.USER_ROLE) {
-        ViewFactory.createUser(content, openFile, openUrl, selection, repo, promptMentions(msg), { openAttachment(msg.info.id, it) }, openDiff, sessionId, onOpenSubagent)
+        ViewFactory.createUser(
+            content, openFile, openUrl, selection, repo, promptMentions(msg),
+            { openAttachment(msg.info.id, it) }, openDiff, sessionId,
+            onOpenSubagent = onOpenSubagent, avatarColor = avatarColor, onPromoteBackgroundAgent = onPromoteBackgroundAgent,
+        )
     } else {
-        ViewFactory.create(content, openFile, openUrl, selection, repo, { openAttachment(msg.info.id, it) }, openDiff, sessionId, onOpenSubagent)
+        ViewFactory.create(
+            content, openFile, openUrl, selection, repo,
+            { openAttachment(msg.info.id, it) }, openDiff, sessionId,
+            onOpenSubagent = onOpenSubagent, avatarColor = avatarColor, onPromoteBackgroundAgent = onPromoteBackgroundAgent,
+        )
     }
 
     private fun syncPromptMentions() {
@@ -627,6 +640,7 @@ class MessageView(
         val bar = MessageToolbar(
             { prompt?.copyMarkdown(trim = false) },
             revert?.let { fn -> { fn(msg.info.id) } },
+            fork?.let { fn -> { fn(msg.info.id) } },
         )
         private val placeholder = bar.placeholder()
         private var reverting = false

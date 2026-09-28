@@ -102,9 +102,4 @@ export class SetupScriptService {
     if (kind === "powershell") return SETUP_SCRIPT_TEMPLATE_POWERSHELL
     return SETUP_SCRIPT_TEMPLATE
   }
-
-  private log(message: string): void {
-    // Log to console since we don't have an OutputChannel here
-    console.log(`[SetupScriptService] ${message}`)
-  }
 }

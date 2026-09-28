@@ -16,6 +16,8 @@ import {
   shouldSync,
   validate,
 } from "./state/indexing"
+import "../../styles/agents-tools.css"
+import "../../styles/indexing.css"
 
 type Provider = NonNullable<IndexingConfig["provider"]>
 type ProviderValue = Provider | ""

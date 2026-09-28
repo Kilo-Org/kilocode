@@ -93,15 +93,6 @@ Opsæt automatiske AI-kodegennemgange på dine pull requests på [app.kilo.ai/co
 </details>
 
 <details>
-<summary><strong>KiloClaw</strong></summary>
-
-<br>
-
-Start din altid aktive AI-agent på [app.kilo.ai/claw](https://app.kilo.ai/claw).
-
-</details>
-
-<details>
 <summary>Installer CLI fra GitHub Releases (binære filer)</summary>
 
 Download den nyeste binære fil fra [Releases-siden](https://github.com/Kilo-Org/kilocode/releases).

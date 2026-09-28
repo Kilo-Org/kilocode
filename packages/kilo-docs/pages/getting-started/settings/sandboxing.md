@@ -122,7 +122,7 @@ Writes are denied everywhere else. The following rules still apply inside writab
 
 Shell commands and their child processes inherit the same restrictions. Kilo's file tools perform mutations through a sandboxed worker. Writable file handles are unavailable, so a tool that requires an open read-write handle may fail even for an allowed path.
 
-Direct filesystem access inside trusted integrations is confined only when the integration uses Kilo's sandbox-aware filesystem service. Interactive terminals, notebook execution, and starting or restarting a background process are unavailable while sandboxing is active because those processes do not yet run inside the same boundary.
+Direct filesystem access inside trusted integrations is confined only when the integration uses Kilo's sandbox-aware filesystem service. Notebook execution and starting or restarting a background process are unavailable while sandboxing is active because those processes do not yet run inside the same boundary.
 
 {% callout type="info" %}
 The sandbox is a write boundary, not a privacy boundary. It does not prevent an agent from reading files outside your workspace if your operating-system account can read them.
@@ -156,6 +156,26 @@ For HTTP, the proxy checks the requested DNS host and port. For HTTPS `CONNECT`,
 {% callout type="warning" %}
 A configured destination is an egress route, not tenant, organization, repository, HTTP-origin, path, action, content, or data-loss-prevention isolation. The allowed service can receive, route, or store readable data and inherited credentials under its own policies. After an HTTPS tunnel passes the SNI check, Kilo cannot inspect encrypted requests, and the service may honor an alternate HTTP `Host` value within that connection. Allowing GitHub therefore grants the operations permitted by the active token, not access to only one organization or repository. HTTP and HTTPS are supported, including HTTPS Git remotes. SSH, arbitrary TCP, UDP, QUIC, SOCKS, CIDR ranges, and wildcard hosts remain blocked.
 {% /callout %}
+
+## Leaving the sandbox
+
+Some commands must write outside the sandbox boundary. Kilo then shows an escalation prompt and waits for an explicit approval before it runs the command.
+
+### Git and linked worktrees
+
+`.git` is always read-only inside the sandbox. A mutating git command, such as `git commit`, `git checkout`, or `git worktree add`, must write to `.git` metadata. In a linked worktree, the `.git` file points into the parent repository's `.git` directory. That directory is outside the worktree, so the write is outside the sandbox write boundary. Read-only git commands, such as `git status` or `git log`, do not trigger the prompt.
+
+| Detail | Behavior |
+|---|---|
+| Trigger | A mutating git command while the sandbox is on |
+| Scope | The whole command and its child processes run without filesystem or network restrictions |
+| Duration | One approval covers one command only |
+| Bash allow rules | Do not approve the escalation prompt |
+| Auto-approve | Does not approve the escalation prompt |
+
+Approving the prompt runs the entire shell command outside the sandbox. Filesystem writes and network access are unrestricted for that command and its child processes. The approval is one-shot and applies to that command only. Bash allow rules and auto-approve never cover the escalation prompt, so Kilo always asks for an explicit reply.
+
+GitHub access is a network question, not an escalation question. The GitHub CLI (`gh`) and HTTPS Git need `github.com:443` and `api.github.com:443` in `sandbox.allowed_hosts`. The escalation prompt does not grant network access by itself. See [Network restrictions](#network-restrictions).
 
 ## Session behavior
 

@@ -1,7 +1,10 @@
 import { RemoteCommand } from "@/kilo-sessions/remote-command"
 import { RemoteExit } from "@/kilo-sessions/remote-exit"
 import { RemoteModelCatalog } from "@/kilo-sessions/remote-model-catalog"
+import { RemoteSessionLog } from "@/kilo-sessions/remote-session-log"
 import { RemoteProtocol } from "@/kilo-sessions/remote-protocol"
+// kilocode_change - set_pr_link: parse the app-supplied PR URL into the stored override.
+import { parsePrUrl, type PrLinkOverride } from "@/kilo-sessions/pr-link"
 import { consumeRenameAdoption, markRenameAdopted } from "@/kilo-sessions/rename-adoptions"
 import type { RemoteWS } from "@/kilo-sessions/remote-ws"
 import { GlobalBus } from "@/bus/global"
@@ -55,6 +58,11 @@ const SuggestionData = z.object({
 const DropQueuedMessageData = z.object({
   messageID: z.string().startsWith("msg"),
 })
+
+// kilocode_change start - set_pr_link: the app-controlled PR link override.
+// `{ prUrl }` is parsed into a PrLink; `{ cleared: true }` removes the link.
+const SetPrLinkData = z.union([z.object({ prUrl: z.string() }), z.object({ cleared: z.literal(true) })])
+// kilocode_change end
 
 // kilocode_change start - create_session: strict v1 request with optional inheritance fields
 const CreateSessionModel = z.object({
@@ -173,7 +181,6 @@ function normalizePrompt(input: RemotePromptInput): SessionPrompt.PromptInput {
   return {
     ...input,
     model: normalizeModel(input.model),
-    ephemeralTools: { interactive_terminal: false },
   }
 }
 
@@ -221,7 +228,12 @@ export namespace RemoteSender {
     // these paths simply omit them and the defaults supply no-op-safe
     // shims so the production call sites stay the only places that
     // actually touch the AttachedState).
-    attachSession?: (sessionID: SessionID) => Promise<void>
+    //
+    // `attachSession`'s `requireShare` option belongs to the create_session
+    // command: it makes the attach fail unless the relay accepted the
+    // session's ingest bootstrap, so the command rolls the new session back
+    // instead of hosting one the relay refuses (KiloSessions.ensureSharedSession).
+    attachSession?: (sessionID: SessionID, opts?: { requireShare?: boolean }) => Promise<void>
     detachSession?: (sessionID: SessionID) => Promise<void>
     hasSession?: (sessionID: SessionID) => boolean
     ownedCount?: () => number
@@ -250,6 +262,9 @@ export namespace RemoteSender {
     // returns the input so the existing remote-sender suite continues to
     // exercise schema/ordering paths without touching the network.
     attachments?: (sessionID: SessionID) => RemoteAttachments.Result | undefined
+    // kilocode_change - set_pr_link: app-controlled PR link override seam. The
+    // default writes the override for the launch worktree; tests inject this.
+    setPrLink?: (value: PrLinkOverride) => Promise<void>
   }
 
   export type Sender = {
@@ -363,9 +378,9 @@ export namespace RemoteSender {
       })
     const attachSession =
       options.attachSession ??
-      (async (id: SessionID) => {
+      (async (id: SessionID, opts?: { requireShare?: boolean }) => {
         const { KiloSessions } = await import("@/kilo-sessions/kilo-sessions")
-        await KiloSessions.attachRemoteSession(id)
+        await KiloSessions.attachRemoteSession(id, opts)
       })
     const detachSession =
       options.detachSession ??
@@ -385,6 +400,25 @@ export namespace RemoteSender {
     // kilocode_change start - injectable slash command discovery + execution
     const commands = options.commands ?? RemoteCommand.live()
     const remoteExit = options.remoteExit ?? RemoteExit
+    // kilocode_change end
+    // kilocode_change start - set_pr_link default: write the app-supplied
+    // override for the launch worktree the heartbeat reads. `options.directory`
+    // selects the instance whose `Instance.worktree` is the same one
+    // resolvePrLink reads (kilo-sessions.ts), so the override wins and detection
+    // stops. No timer and no `gh` call is added.
+    const setPrLink =
+      options.setPrLink ??
+      (async (value: PrLinkOverride) => {
+        const run = options.provide ?? provide
+        await run({
+          directory: options.directory,
+          fn: async () => {
+            const { writePrLinkOverride } = await import("@/kilo-sessions/pr-link")
+            const { Instance } = await import("@/kilocode/instance")
+            await writePrLinkOverride(Instance.worktree, value)
+          },
+        })
+      })
     // kilocode_change end
 
     const sub =
@@ -900,6 +934,9 @@ export namespace RemoteSender {
             await cancelPrompt(target)
             // 2. Detach + await the negative-containment heartbeat.
             await detachSession(target)
+            // The session this run hosted has ended; log its end before the ACK
+            // so the trace exists even if a later step fails.
+            RemoteSessionLog.end(options.log, { sessionID: target, reason: "detached" })
             // 3. Snapshot remaining sessions AFTER detach. Headless hosts
             //    (`kilo remote`) never register a RemoteExit callback, so
             //    `exit` is undefined there and the host stays alive.
@@ -1049,6 +1086,11 @@ export namespace RemoteSender {
                   // Restore workspace files and write storage keys only after
                   // the attach succeeded. finalize never rejects.
                   await imported.finalize()
+                  RemoteSessionLog.start(options.log, {
+                    sessionID: imported.session.id,
+                    model: RemoteSessionLog.modelLabel(imported.session.model),
+                    directory: imported.session.directory ?? targetDirectory,
+                  })
                   return { id: imported.session.id }
                 },
               })
@@ -1071,14 +1113,20 @@ export namespace RemoteSender {
                 // attached set exactly once and fires conn.heartbeat() only
                 // when the set actually changes, so the relay learns about
                 // the new session before we respond.
+                //
+                // requireShare makes the attach wait for the relay's answer to
+                // the session's ingest bootstrap (POST /api/session). A relay
+                // that refuses the session leaves nothing to share, so the
+                // session is rolled back below and never logged as started.
                 try {
-                  await attachSession(created.id)
+                  await attachSession(created.id, { requireShare: true })
                 } catch (attachError) {
                   // Roll back the newly-created root session so the DB does
-                  // not keep an orphan the relay never learned about.
+                  // not keep an orphan the relay never accepted.
                   // Swallow the cleanup error here — the original attach
                   // failure is what the caller must see, so we re-throw it
                   // below.
+                  options.log.warn("create session rolled back", { id: msg.id, sessionID: created.id })
                   try {
                     await sessionRemove(created.id)
                   } catch (cleanupError) {
@@ -1089,6 +1137,13 @@ export namespace RemoteSender {
                   }
                   throw attachError
                 }
+                // The session is attached and this run hosts it; log its start
+                // with the model and directory already in hand.
+                RemoteSessionLog.start(options.log, {
+                  sessionID: created.id,
+                  model: RemoteSessionLog.modelLabel(created.model ?? createInput.model),
+                  directory: created.directory ?? targetDirectory,
+                })
                 return created
               },
             })
@@ -1168,7 +1223,7 @@ export namespace RemoteSender {
           })
           return
         }
-        const promptInput = { ...input.data, ephemeralTools: normalized.ephemeralTools } as SessionPrompt.PromptInput
+        const promptInput = input.data as SessionPrompt.PromptInput
         const remote = promptInput.parts.some((part) => part.type === "file" && RemoteAttachments.isFetchable(part.url))
         if (remote) {
           begin(promptInput.sessionID)
@@ -1309,6 +1364,37 @@ export namespace RemoteSender {
         })
         return
       }
+      // kilocode_change start - set_pr_link: the app (or the cloud) knows the
+      // PR; store it as the worktree override so the heartbeat advertises it and
+      // detection stops. An unparseable URL is non-retryable and writes nothing.
+      if (msg.command === "set_pr_link") {
+        const parsed = SetPrLinkData.safeParse(msg.data)
+        if (!parsed.success) {
+          options.conn.send({ type: "response", id: msg.id, error: "invalid set_pr_link command" })
+          return
+        }
+        const value = "cleared" in parsed.data ? ({ cleared: true } as const) : parsePrUrl(parsed.data.prUrl)
+        if (!value) {
+          options.conn.send({ type: "response", id: msg.id, error: "invalid set_pr_link url" })
+          return
+        }
+        void (async () => {
+          try {
+            await setPrLink(value)
+            options.conn.send({ type: "response", id: msg.id, result: {} })
+            // Best-effort: let the cloud see the link immediately. Never await
+            // the heartbeat before responding (mirror setInstanceAdvertisement).
+            void options.conn
+              .heartbeat()
+              .catch((err) => options.log.warn("set_pr_link heartbeat failed", { id: msg.id, error: String(err) }))
+          } catch (error) {
+            options.log.error("set pr link failed", { id: msg.id, error: errorName(error) })
+            options.conn.send({ type: "response", id: msg.id, error: "failed to set pr link" })
+          }
+        })()
+        return
+      }
+      // kilocode_change end
       options.conn.send({
         type: "response",
         id: msg.id,

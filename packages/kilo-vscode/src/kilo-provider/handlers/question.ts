@@ -109,12 +109,12 @@ export async function fetchAndSendPendingQuestions(
   }
 }
 
-/** Handle question reply from the webview. */
-export async function handleQuestionReply(
+async function resolve(
   ctx: QuestionContext,
   requestID: string,
-  answers: string[][],
-  sessionID?: string,
+  sessionID: string | undefined,
+  operation: "reply to" | "reject",
+  request: (question: KiloClient["question"], directory: string) => Promise<unknown>,
 ): Promise<boolean> {
   if (!ctx.client) {
     ctx.postMessage({ type: "questionError", requestID })
@@ -125,7 +125,7 @@ export async function handleQuestionReply(
   const dir = ctx.getQuestionDirectory(requestID) ?? ctx.getWorkspaceDirectory(sid)
 
   try {
-    await ctx.client.question.reply({ requestID, answers, directory: dir }, { throwOnError: true })
+    await request(ctx.client.question, dir)
     ctx.clearQuestionDirectory(requestID)
     return true
   } catch (error) {
@@ -133,19 +133,31 @@ export async function handleQuestionReply(
     if (route?.kind === "stale") return false
     if (route?.kind === "retry" && route.dir !== dir) {
       try {
-        await ctx.client.question.reply({ requestID, answers, directory: route.dir }, { throwOnError: true })
+        await request(ctx.client.question, route.dir)
         ctx.clearQuestionDirectory(requestID)
         return true
       } catch (retry) {
-        console.error("[Kilo New] KiloProvider: Failed to reply to recovered question:", retry)
+        console.error(`[Kilo New] KiloProvider: Failed to ${operation} recovered question:`, retry)
         ctx.postMessage({ type: "questionError", requestID })
         return false
       }
     }
-    console.error("[Kilo New] KiloProvider: Failed to reply to question:", error)
+    console.error(`[Kilo New] KiloProvider: Failed to ${operation} question:`, error)
     ctx.postMessage({ type: "questionError", requestID })
     return false
   }
+}
+
+/** Handle question reply from the webview. */
+export async function handleQuestionReply(
+  ctx: QuestionContext,
+  requestID: string,
+  answers: string[][],
+  sessionID?: string,
+): Promise<boolean> {
+  return resolve(ctx, requestID, sessionID, "reply to", (question, directory) =>
+    question.reply({ requestID, answers, directory }, { throwOnError: true }),
+  )
 }
 
 /** Handle question reject (dismiss) from the webview. */
@@ -154,34 +166,7 @@ export async function handleQuestionReject(
   requestID: string,
   sessionID?: string,
 ): Promise<boolean> {
-  if (!ctx.client) {
-    ctx.postMessage({ type: "questionError", requestID })
-    return false
-  }
-
-  const sid = sessionID ?? ctx.currentSessionId
-  const dir = ctx.getQuestionDirectory(requestID) ?? ctx.getWorkspaceDirectory(sid)
-
-  try {
-    await ctx.client.question.reject({ requestID, directory: dir }, { throwOnError: true })
-    ctx.clearQuestionDirectory(requestID)
-    return true
-  } catch (error) {
-    const route = isNotFoundError(error, true) ? await recover(ctx, requestID) : undefined
-    if (route?.kind === "stale") return false
-    if (route?.kind === "retry" && route.dir !== dir) {
-      try {
-        await ctx.client.question.reject({ requestID, directory: route.dir }, { throwOnError: true })
-        ctx.clearQuestionDirectory(requestID)
-        return true
-      } catch (retry) {
-        console.error("[Kilo New] KiloProvider: Failed to reject recovered question:", retry)
-        ctx.postMessage({ type: "questionError", requestID })
-        return false
-      }
-    }
-    console.error("[Kilo New] KiloProvider: Failed to reject question:", error)
-    ctx.postMessage({ type: "questionError", requestID })
-    return false
-  }
+  return resolve(ctx, requestID, sessionID, "reject", (question, directory) =>
+    question.reject({ requestID, directory }, { throwOnError: true }),
+  )
 }

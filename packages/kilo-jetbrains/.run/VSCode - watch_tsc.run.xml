@@ -1,0 +1,12 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="VSCode - watch:tsc" type="js.build_tools.npm">
+    <package-json value="$PROJECT_DIR$/packages/kilo-vscode/package.json" />
+    <command value="run" />
+    <scripts>
+      <script value="watch:tsc" />
+    </scripts>
+    <node-interpreter value="project" />
+    <envs />
+    <method v="2" />
+  </configuration>
+</component>

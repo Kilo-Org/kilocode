@@ -1,6 +1,7 @@
 package ai.kilocode.client.plugin
 
 import ai.kilocode.KiloPlugin
+import ai.kilocode.client.KILO_TOOL_WINDOW_ID
 import ai.kilocode.client.agentManager.worktree.unregisterWorktreeSessionEditorKind
 import ai.kilocode.client.session.ui.attachment.unregisterAttachmentEditorKind
 import ai.kilocode.client.ui.diagram.ui.DiagramWindows
@@ -32,7 +33,7 @@ object KiloFrontendUnloadCleanup {
             ProjectManager.getInstance().openProjects.forEach { project ->
                 if (project.isDisposed) return@forEach
                 project.getServiceIfCreated(DiagramWindows::class.java)?.closeAll()
-                ToolWindowManager.getInstance(project).getToolWindow("Kilo Code")
+                ToolWindowManager.getInstance(project).getToolWindow(KILO_TOOL_WINDOW_ID)
                     ?.contentManager
                     ?.removeAllContents(true)
                 val editors = FileEditorManager.getInstance(project).openFiles

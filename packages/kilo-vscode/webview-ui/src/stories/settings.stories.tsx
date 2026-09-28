@@ -5,12 +5,13 @@
 
 import { onMount, createSignal } from "solid-js"
 import type { Meta, StoryObj } from "storybook-solidjs-vite"
-import { StoryProviders, mockSessionValue } from "./StoryProviders"
+import { StoryProviders, mockSessionValue, t } from "./StoryProviders"
 import { SessionContext } from "../context/session"
 import { KiloEmbeddingModelsContext } from "../context/kilo-embedding-models"
 import Settings from "../components/settings/Settings"
 import ProvidersTab from "../components/settings/ProvidersTab"
 import ModelsTab from "../components/settings/ModelsTab"
+import DisplayTab from "../components/settings/DisplayTab"
 import AgentBehaviourTab from "../components/settings/AgentBehaviourTab"
 import AutoApproveTab from "../components/settings/AutoApproveTab"
 import ModeEditView from "../components/settings/ModeEditView"
@@ -97,6 +98,23 @@ export const SandboxingAllowlist: Story = {
   ),
 }
 
+/**
+ * The Display tab shows its session preview beside the controls only when the
+ * `@container (min-width: 1050px)` grid rule matches. This wrapper establishes
+ * the inline-size container, like the Tabs root does in the full settings panel,
+ * so the two-column layout renders.
+ */
+export const DisplayPreview: Story = {
+  name: "Display — session preview",
+  render: () => (
+    <StoryProviders config={{}}>
+      <div style={{ width: "1200px", height: "700px", overflow: "auto", "container-type": "inline-size" }}>
+        <DisplayTab />
+      </div>
+    </StoryProviders>
+  ),
+}
+
 export const ProvidersConfigure: Story = {
   name: "ProvidersTab — no providers configured",
   render: () => (
@@ -158,11 +176,33 @@ export const ModelsSpeechToText: Story = {
   name: "ModelsTab — speech-to-text model",
   render: () => (
     <StoryProviders kiloAuth config={{ experimental: { speech_to_text_model: "google/chirp-3" } } as any}>
-      <div style={{ "max-height": "700px", overflow: "auto" }}>
-        <ModelsTab />
-      </div>
+      <ScrollToSpeechModels />
     </StoryProviders>
   ),
+}
+
+/**
+ * Scrolls the clipped ModelsTab to the speech-to-text rows on mount. The added
+ * rows push the model row below the 700px capture area otherwise.
+ */
+function ScrollToSpeechModels() {
+  let ref: HTMLDivElement | undefined
+  onMount(() => {
+    requestAnimationFrame(() => {
+      const rows = Array.from(ref?.querySelectorAll<HTMLElement>('[data-slot="settings-row"]') ?? [])
+      const title = t("settings.models.speechToTextModel.title")
+      for (const row of rows) {
+        if (!row.textContent?.includes(title)) continue
+        row.scrollIntoView({ block: "center" })
+        return
+      }
+    })
+  })
+  return (
+    <div ref={ref} style={{ "max-height": "700px", overflow: "auto" }}>
+      <ModelsTab />
+    </div>
+  )
 }
 
 function OpenModelPicker(props: { children: any }) {

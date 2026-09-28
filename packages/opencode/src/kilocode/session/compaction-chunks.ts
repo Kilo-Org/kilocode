@@ -25,6 +25,8 @@ const DEPTH = 3
 const OUTPUT = 2_048
 
 export namespace KiloCompactionChunks {
+  export const EMPTY_SUMMARY = "Compaction did not run: the model returned an empty summary. Retry with /compact."
+
   type Chunk = {
     index: number
     messages: MessageV2.WithParts[]
@@ -48,7 +50,7 @@ export namespace KiloCompactionChunks {
     model: Provider.Model
     cfg: Config.Info
     messages: MessageV2.WithParts[]
-    prompt: string
+    prompt: (context: string[]) => string
     target: MessageV2.Assistant
     outputTokenMax?: number
     updateMessage: UpdateMessage
@@ -220,16 +222,10 @@ export namespace KiloCompactionChunks {
     ].join("\n")
   }
 
-  function messages(input: { summaries: string[] }) {
-    return input.summaries.map((summary, index) => ({
-      role: "user" as const,
-      content: [
-        {
-          type: "text" as const,
-          text: [`<partial-summary index=\"${index + 1}\">`, summary, "</partial-summary>"].join("\n"),
-        },
-      ],
-    }))
+  function context(input: { summaries: string[] }) {
+    return input.summaries.map((summary, index) =>
+      [`<partial-summary index=\"${index + 1}\">`, summary, "</partial-summary>"].join("\n"),
+    )
   }
 
   function assistant(input: { base: MessageV2.Assistant; sessionID: SessionID }) {
@@ -287,7 +283,7 @@ export namespace KiloCompactionChunks {
           error:
             out.error ??
             new MessageV2.APIError({
-              message: "Compaction worker returned an empty response",
+              message: EMPTY_SUMMARY,
               isRetryable: true,
             }).toObject(),
         }
@@ -346,7 +342,7 @@ export namespace KiloCompactionChunks {
     input: Input & { summaries: string[]; depth: number },
   ): Effect.Effect<Output, never, Database.Service> {
     return Effect.gen(function* () {
-      const result = yield* run({ ...input, data: messages({ summaries: input.summaries }), text: input.prompt })
+      const result = yield* run({ ...input, data: [], text: input.prompt(context({ summaries: input.summaries })) })
       if (result.result === "continue") return result
       if (input.depth >= DEPTH || input.summaries.length <= 1) return result
 

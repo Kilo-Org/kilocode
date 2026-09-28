@@ -120,30 +120,38 @@ internal class ChangesPanel @RequiresEdt constructor(
         localAdditions: Int = 0,
         localDeletions: Int = 0,
         base: String = "",
+        conflict: Boolean = false,
     ) {
         // A compact summary has one group, so uncommitted work is all it can show for a worktree that has
         // committed nothing yet — and hiding instead would read as "this worktree changed nothing", which
         // is the opposite of what the row is being asked. The counts it drops in that case are zero, so
         // they stay out of the state and an unrelated poll cannot repaint the row.
         val next = when {
-            mode == Mode.FULL ->
-                State(files, additions, deletions, ahead, behind, localFiles, localAdditions, localDeletions, base)
+            mode == Mode.FULL -> State(
+                files, additions, deletions, ahead, behind, localFiles, localAdditions, localDeletions, base,
+                conflict = conflict,
+            )
+            // A conflict is measured against the base branch, so it belongs to the committed counts and
+            // says nothing about the uncommitted ones standing in for them.
             files == 0 && localFiles > 0 ->
                 State(localFiles, localAdditions, localDeletions, base = base, local = true)
-            else -> State(files, additions, deletions, base = base)
+            else -> State(files, additions, deletions, base = base, conflict = conflict)
         }
         if (state == next) return
         state = next
         // A compact summary sits inside a row that already prints the file count and the +/- lines, so
         // its tooltip only has to say what a click does. The full form is the one that can be squeezed
         // out of a narrow header, and it keeps the counts and the base branch.
-        val tip = when {
+        val counts = when {
             next.local -> KiloBundle.message("worktree.dirty.tooltip.open")
             mode == Mode.COMPACT -> KiloBundle.message("worktree.stats.tooltip.open")
             base.isBlank() -> KiloBundle.message("worktree.stats.tooltip", files, additions, deletions)
             else -> KiloBundle.message("worktree.stats.base.tooltip", files, additions, deletions, base)
         }
-        this.base.update(next.files, next.additions, next.deletions, tip)
+        // A conflict is the one thing no form of the summary can print, so whichever one is showing says it
+        // in the tooltip: the marker on the badge reports that something is wrong without saying what.
+        val tip = if (next.conflict) conflictTooltip(counts, base) else counts
+        this.base.update(next.files, next.additions, next.deletions, tip, next.conflict)
         local?.update(
             next.localFiles, next.localAdditions, next.localDeletions,
             KiloBundle.message("worktree.dirty.tooltip", next.localFiles, next.localAdditions, next.localDeletions),
@@ -283,11 +291,12 @@ internal class ChangesPanel @RequiresEdt constructor(
         }
 
         @RequiresEdt
-        fun update(files: Int, additions: Int, deletions: Int, tip: String) {
+        fun update(files: Int, additions: Int, deletions: Int, tip: String, conflict: Boolean = false) {
             val text = KiloBundle.message(if (files == 1) "session.changes.count.one" else "session.changes.count.other", files)
             if (count.text != text) count.text = text
             if (count.isVisible != (files > 0)) count.isVisible = files > 0
             stat.update(additions, deletions)
+            stat.conflict = conflict
             val lines = files > 0 && (additions > 0 || deletions > 0)
             if (stat.isVisible != lines) stat.isVisible = lines
             if (isVisible != (files > 0)) isVisible = files > 0
@@ -373,6 +382,8 @@ internal class ChangesPanel @RequiresEdt constructor(
         val base: String = "",
         /** The counts above are uncommitted, stood in for a committed set that is empty. Compact only. */
         val local: Boolean = false,
+        /** The committed counts no longer merge into [base]. Never set alongside [local]. */
+        val conflict: Boolean = false,
     )
 
     private companion object {

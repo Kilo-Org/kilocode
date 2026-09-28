@@ -63,6 +63,13 @@ export namespace KiloSessionControl {
           }),
       )
 
-    return { begin, stop }
+    // Whether the session is between a stop and the next resuming prompt. A
+    // synthetic background prompt does not clear it, so a caller that cannot
+    // accept a dropped turn (a scheduled wakeup) reads this first.
+    const paused = Effect.fn("KiloSessionControl.paused")(function* (id: SessionID) {
+      return (yield* get(id)).paused
+    })
+
+    return { begin, stop, paused }
   })
 }

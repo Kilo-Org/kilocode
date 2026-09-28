@@ -230,6 +230,18 @@ const SessionList: Component<SessionListProps> = (props) => {
           </>
         )}
       </List>
+      <Show when={props.sessionIds?.() === undefined && session.sessionsHasMore()}>
+        <div class="session-list-load-more">
+          <Button
+            variant="ghost"
+            size="small"
+            disabled={session.sessionsLoadingMore()}
+            onClick={() => session.loadMoreSessions()}
+          >
+            {language.t("common.loadMore") ?? "Load more"}
+          </Button>
+        </div>
+      </Show>
       <div data-slot="session-list-status" class="sr-only" role="status" aria-live="polite" aria-atomic="true">
         {notice()}
       </div>

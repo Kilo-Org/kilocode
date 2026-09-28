@@ -86,6 +86,31 @@ class GhBannerTest : BasePlatformTestCase() {
         assertNotNull(edt { links(banner).singleOrNull { it.text == "Turn off GitHub integration" } })
     }
 
+    fun `test banner explains a gh that did not answer in time`() {
+        // Twice and spread out, because the coordinator does not call gh unresponsive on one slow lookup
+        // and reads a quick second report as a cached replay of the first — see
+        // GhStatusCoordinator.TIMEOUT_CONFIRMATIONS and TIMEOUT_WINDOW. This test is about what the
+        // banner says once that state is reached, not about how it is reached.
+        repeat(GhStatusCoordinator.TIMEOUT_CONFIRMATIONS) {
+            edt { service.report(project, GhAvailability.TIMEOUT) }
+            timers.advanceBy(GhStatusCoordinator.TIMEOUT_WINDOW)
+        }
+        pump()
+
+        val banner = edt { GhBanner(project, testRootDisposable) }
+
+        // Same shape as a spent budget: the badges are stale, not wrong, and there is nothing to
+        // authorize or install — so the banner explains the degradation instead of blaming the user.
+        assertTrue(edt { banner.isVisible })
+        assertEquals(
+            "gh did not answer in time, so pull request badges may be out of date. " +
+                "Kilo retries less often until it does.",
+            edt { banner.text },
+        )
+        assertTrue(edt { links(banner).none { it.text == "Authorize" } })
+        assertNotNull(edt { links(banner).singleOrNull { it.text == "Turn off GitHub integration" } })
+    }
+
     fun `test banner hides immediately when coordinator reports ok`() {
         rpc.ghResult = GhAvailability.UNAUTH
         val banner = edt { GhBanner(project, testRootDisposable) }

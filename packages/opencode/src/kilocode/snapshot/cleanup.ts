@@ -1,10 +1,16 @@
 import { FSUtil } from "@opencode-ai/core/fs-util"
 import { EffectFlock } from "@opencode-ai/core/util/effect-flock"
 import { Hash } from "@opencode-ai/core/util/hash"
+import * as Log from "@opencode-ai/core/util/log"
 import { Effect } from "effect"
 import path from "path"
+import { Process } from "@/util/process"
+import { KiloSnapshotMaterialize } from "./materialize"
+import { KiloSnapshotPrepare } from "./prepare"
 
 export namespace KiloSnapshotCleanup {
+  const log = Log.create({ service: "snapshot.cleanup" })
+
   export interface Input {
     readonly root: string
     readonly project: string
@@ -123,7 +129,12 @@ export namespace KiloSnapshotCleanup {
   const pending = Effect.fnUntraced(function* (fs: FSUtil.Interface, gitdir: string) {
     const root = yield* fs.readDirectoryEntries(gitdir)
     const names = new Set(root.map((entry) => entry.name))
-    if (names.has("seed.index") || names.has("seed.index.lock") || names.has("seed-objects")) return true
+    if (names.has("seed.index") || names.has("seed.index.lock")) return true
+    // A prepared repository that was never tracked keeps its seed artifacts but has
+    // nothing materializing, so cleanup may remove it. Preparation clears this marker
+    // before it starts materializing.
+    if (names.has(KiloSnapshotPrepare.MARKER)) return false
+    if (names.has("seed-objects")) return true
 
     const objects = root.find((entry) => entry.name === "objects")
     if (!objects) return false
@@ -140,6 +151,19 @@ export namespace KiloSnapshotCleanup {
       (entry) =>
         entry.name === "alternates" || entry.name === "alternates.seed" || entry.name === "alternates.materializing",
     )
+  })
+
+  // Seeding pins the seed tree in the project's common git dir so the source objects
+  // survive gc while the snapshot repository borrows them. Materialization releases
+  // that pin, so a repository removed before it ever materialized must release it here.
+  // Git run from the project root resolves the shared refs itself, also for worktrees.
+  const release = Effect.fnUntraced(function* (fs: FSUtil.Interface, directory: string, gitdir: string) {
+    if (!(yield* inspect(fs, path.join(directory, ".git"))).exists) return
+    const result = yield* Effect.promise(() =>
+      Process.run(["git", "update-ref", "-d", KiloSnapshotMaterialize.ref(gitdir)], { cwd: directory, nothrow: true }),
+    )
+    if (result.code !== 0)
+      log.warn("failed to release snapshot seed pin", { directory, stderr: result.stderr.toString() })
   })
 
   export const remove = Effect.fnUntraced(function* (input: Input) {
@@ -212,7 +236,11 @@ export namespace KiloSnapshotCleanup {
           return yield* Effect.fail(new Error("snapshot repository changed during cleanup"))
         yield* Effect.uninterruptible(input.fs.remove(quarantine, { recursive: true, force: true }))
         return true
-      }),
+      }).pipe(
+        // Every success exit means the repository is gone, including one already removed by
+        // an earlier interrupted cleanup, so none of them may leave the seed pin behind.
+        Effect.tap(() => release(input.fs, directory, gitdir)),
+      ),
       `snapshot:${gitdir}`,
     )
   })

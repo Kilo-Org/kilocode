@@ -39,6 +39,21 @@ export const StatusText: Component<{ text: string }> = (props) => {
     setWidth(undefined)
   }
 
+  // A label that outgrows the row is clipped rather than ellipsized: it is measured
+  // at its natural width for the glide, so it cannot also be clamped to the box. A
+  // fade marks the cut instead, and because it is only a mask it never feeds back
+  // into layout or into the measurement. Mid-glide that same fade covers the part
+  // of the incoming label the box has not opened up for yet.
+  //
+  // Only the live label is compared. The outgoing copy stays mounted, invisible,
+  // until the lock is released, and on a shrink it is wider than the box for the
+  // whole glide: judged by `scrollWidth` it would mask the tail of a label that
+  // does fit.
+  const check = () => {
+    if (!box || !line) return
+    box.toggleAttribute("data-clip", line.getBoundingClientRect().width > box.clientWidth + 1)
+  }
+
   createEffect(
     on(
       () => props.text,
@@ -47,9 +62,13 @@ export const StatusText: Component<{ text: string }> = (props) => {
         // Read the box before the swap: mid-glide this is the animated width, so a
         // status change during a glide continues from where the box actually is.
         const from = measure(box)
+        const prev = label()
         settle()
-        setOld(label())
         setLabel(next)
+        // Without layout (the dock is `display: none` between turns) every measure
+        // is 0px, and the lock would blank the label until it is released.
+        if (from === undefined || from === "0px") return
+        setOld(prev)
         setWidth(from)
         // The line is `justify-self: start` and never wraps, so it keeps its
         // natural width inside the locked box and can be measured directly. The
@@ -57,6 +76,7 @@ export const StatusText: Component<{ text: string }> = (props) => {
         frame = requestAnimationFrame(() => {
           frame = undefined
           setWidth(measure(line))
+          check()
           timer = setTimeout(settle, SWAP)
         })
       },
@@ -66,18 +86,12 @@ export const StatusText: Component<{ text: string }> = (props) => {
 
   onCleanup(settle)
 
-  // A label that outgrows the row is clipped rather than ellipsized: it is measured
-  // at its natural width for the glide, so it cannot also be clamped to the box. A
-  // fade marks the cut instead, and because it is only a mask it never feeds back
-  // into layout or into the measurement. Mid-glide that same fade covers the part
-  // of the incoming label the box has not opened up for yet.
-  //
-  // Observing the box is enough: the clip state can only change when its used width
-  // does, whether that is the surface resizing or a swap resizing the label.
+  // The box is observed because the clip state changes with its used width, whether
+  // that is the surface resizing or a glide. A swap under a locked box changes only
+  // the label, so the swap effect runs the same check itself.
   onMount(() => {
     const el = box
     if (!el || typeof ResizeObserver === "undefined") return
-    const check = () => el.toggleAttribute("data-clip", el.scrollWidth > el.clientWidth + 1)
     const observer = new ResizeObserver(check)
     observer.observe(el)
     onCleanup(() => observer.disconnect())

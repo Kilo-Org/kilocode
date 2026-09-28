@@ -128,6 +128,77 @@ class ModelPickerTest : BasePlatformTestCase() {
         assertEquals("openai/a", rows[modelPickerIndex(rows, 1)].key)
     }
 
+    fun `test cycle order is favorites in favorites order when any exist`() {
+        val items = listOf(
+            item("a", "A", "openai", "OpenAI"),
+            item("b", "B", "openai", "OpenAI", index = 0.0),
+            item("c", "C", "openai", "OpenAI"),
+        )
+        val favorites = listOf(ModelSelectionDto("openai", "c"), ModelSelectionDto("openai", "a"))
+
+        val cycle = modelCycle(items, favorites)
+
+        assertEquals(listOf("openai/c", "openai/a"), cycle.map { it.key })
+    }
+
+    fun `test cycle order falls back to recommended when no favorites`() {
+        val items = listOf(
+            item("a", "A", "openai", "OpenAI"),
+            item("b", "B", "openai", "OpenAI", index = 1.0),
+            item("c", "C", "openai", "OpenAI", index = 0.0),
+        )
+
+        val cycle = modelCycle(items, emptyList())
+
+        assertEquals(listOf("openai/c", "openai/b"), cycle.map { it.key })
+    }
+
+    fun `test cycle order is empty with no favorites and no recommended`() {
+        val items = listOf(item("a", "A", "openai", "OpenAI"))
+
+        assertTrue(modelCycle(items, emptyList()).isEmpty())
+    }
+
+    fun `test cycle order excludes small models unless included`() {
+        val items = listOf(
+            item("auto-small", "Auto Small", "kilo", "Kilo", index = 0.0),
+            item("big", "Auto Big", "kilo", "Kilo", index = 1.0),
+        )
+
+        assertEquals(listOf("kilo/big"), modelCycle(items, emptyList()).map { it.key })
+        assertEquals(listOf("kilo/auto-small", "kilo/big"), modelCycle(items, emptyList(), includeSmall = true).map { it.key })
+    }
+
+    fun `test picker cycle activates the next favorite and fires onSelect`() {
+        val picker = ModelPicker()
+        var selected: ModelPicker.Item? = null
+        picker.onSelect = { selected = it }
+        picker.favorites = { listOf(ModelSelectionDto("openai", "b"), ModelSelectionDto("openai", "a")) }
+        picker.setItems(listOf(item("a", "A", "openai", "OpenAI"), item("b", "B", "openai", "OpenAI")), "openai/b")
+
+        picker.cycle()
+
+        assertEquals("openai/a", picker.selectionKeyForTest())
+        assertEquals("openai/a", selected?.key)
+    }
+
+    fun `test picker canCycle is false with no favorites and no recommended`() {
+        val picker = ModelPicker()
+        picker.setItems(listOf(item("a", "A", "openai", "OpenAI")), "openai/a")
+
+        assertFalse(picker.canCycle())
+    }
+
+    fun `test picker cycle jumps to the first cycle entry when current model is outside it`() {
+        val picker = ModelPicker()
+        picker.favorites = { listOf(ModelSelectionDto("openai", "b")) }
+        picker.setItems(listOf(item("a", "A", "openai", "OpenAI"), item("b", "B", "openai", "OpenAI")), "openai/a")
+
+        picker.cycle()
+
+        assertEquals("openai/b", picker.selectionKeyForTest())
+    }
+
     fun `test index caps after favorite removal`() {
         val rows = modelPickerRows(listOf(
             item("a", "A", "openai", "OpenAI"),

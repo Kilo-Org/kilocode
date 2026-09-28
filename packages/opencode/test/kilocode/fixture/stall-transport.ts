@@ -84,17 +84,45 @@ function stalling() {
   )
 }
 
+const ZERO: StallState = { calls: 0, stalls: 0, recovered: 0 }
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
+
+const transient = (error: unknown) => {
+  if (typeof error !== "object" || error === null || !("code" in error)) return false
+  return ["EPERM", "EACCES", "EBUSY"].includes(String((error as { code: unknown }).code))
+}
+
+// Replacing the state file with rename fails transiently on Windows while the
+// test's state poll (every 200ms) or Defender holds the destination open. Retry
+// so a transient lock never drops a state update.
+async function persist(file: string, json: string) {
+  const tmp = `${file}.${crypto.randomUUID()}.tmp`
+  await Bun.write(tmp, json)
+  for (let attempt = 0; ; attempt++) {
+    try {
+      await rename(tmp, file)
+      return
+    } catch (error) {
+      if (attempt >= 20 || !transient(error)) throw error
+      await sleep(50)
+    }
+  }
+}
+
 export function createStallTransport(input: { state: string; answer?: string; command?: string }) {
   const state: StallState = { calls: 0, stalls: 0, recovered: 0 }
+  // The state file is test diagnostics, not provider protocol. Writes are
+  // serialized and best-effort, and the response never waits on them, so disk
+  // latency or a failed mirror can neither delay nor reject the simulated
+  // response. Every write stores the full current state, so a later write
+  // still lands anything an earlier failed one dropped. Tests poll the file.
   let pending = Promise.resolve()
   const save = () => {
     const json = JSON.stringify(state)
-    const tmp = `${input.state}.${crypto.randomUUID()}.tmp`
-    pending = pending.then(async () => {
-      await Bun.write(tmp, json)
-      await rename(tmp, input.state)
+    pending = pending.then(() => persist(input.state, json)).catch((error) => {
+      console.error("[stall-transport] state write failed", error)
     })
-    return pending
   }
 
   return async (_input: unknown, init?: { body?: unknown }) => {
@@ -102,29 +130,34 @@ export function createStallTransport(input: { state: string; answer?: string; co
     state.calls++
 
     if (body.includes("Generate a title")) {
-      await save()
+      save()
       return answer("Stall repro")
     }
 
     if (!body.includes('"role":"tool"')) {
-      await save()
+      save()
       return toolCall(input.command ?? "echo repro-8656")
     }
 
     if (state.stalls === 0) {
       state.stalls++
-      await save()
+      save()
       return stalling()
     }
 
     state.recovered++
-    await save()
+    save()
     return answer(input.answer ?? "recovered after the stall")
   }
 }
 
 export async function readStallState(file: string): Promise<StallState> {
   const handle = Bun.file(file)
-  if (!(await handle.exists())) return { calls: 0, stalls: 0, recovered: 0 }
-  return JSON.parse(await handle.text()) as StallState
+  if (!(await handle.exists())) return { ...ZERO }
+  try {
+    return JSON.parse(await handle.text()) as StallState
+  } catch {
+    // A concurrent replace can expose an empty or partial file for one poll.
+    return { ...ZERO }
+  }
 }

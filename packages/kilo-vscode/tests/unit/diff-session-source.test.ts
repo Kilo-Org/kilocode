@@ -91,6 +91,24 @@ describe("createSessionDiffSource.fetch", () => {
     expect(result.diffs[2]?.summarized).toBe(true)
   })
 
+  it("uses repository generated-file classifications for session diffs", async () => {
+    const { fetch } = recording([
+      { file: "i18n/en.ts", patch: modifiedPatch, additions: 1, deletions: 1, status: "modified" },
+      { file: "i18n/fr.ts", patch: modifiedPatch, additions: 1, deletions: 1, status: "modified" },
+      { file: "dist/bundle.js", patch: modifiedPatch, additions: 1, deletions: 1, status: "modified" },
+    ])
+    const generated = async (files: readonly string[]) =>
+      new Map(files.filter((file) => file === "i18n/fr.ts").map((file) => [file, true]))
+
+    const result = await createSessionDiffSource("s-generated", fetch, "/repo", undefined, generated).fetch()
+
+    expect(result.diffs.map((diff) => [diff.file, diff.generatedLike])).toEqual([
+      ["i18n/en.ts", false],
+      ["i18n/fr.ts", true],
+      ["dist/bundle.js", true],
+    ])
+  })
+
   it("keeps valid files visible when one persisted patch is malformed", async () => {
     const malformed = [
       "diff --git a/broken.ts b/broken.ts",

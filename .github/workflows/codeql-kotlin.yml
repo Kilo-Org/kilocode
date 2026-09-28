@@ -21,6 +21,7 @@ jobs:
     name: Analyze (java-kotlin)
     if: github.event_name == 'workflow_dispatch' || github.repository == 'Kilo-Org/kilocode'
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     permissions:
       security-events: write
       packages: read
@@ -62,6 +63,8 @@ jobs:
         shell: bash
         run: ./gradlew typecheck --rerun-tasks --no-build-cache
         working-directory: packages/kilo-jetbrains
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v4

@@ -95,15 +95,6 @@ paru -S kilo-bin
 </details>
 
 <details>
-<summary><strong>KiloClaw</strong></summary>
-
-<br>
-
-شغّل وكيل الذكاء الاصطناعي الدائم لديك على [app.kilo.ai/claw](https://app.kilo.ai/claw).
-
-</details>
-
-<details>
 <summary>تثبيت CLI من GitHub Releases (ملفات ثنائية)</summary>
 
 نزّل أحدث ملف ثنائي من [صفحة Releases](https://github.com/Kilo-Org/kilocode/releases).

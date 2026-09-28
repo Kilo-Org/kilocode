@@ -2,6 +2,7 @@ import { createHash } from "crypto"
 import type { SnapshotFileDiff } from "@kilocode/sdk/v2/client"
 import { normalize, text } from "@kilocode/kilo-ui/session-diff"
 import { encodeImageSide, imageMime } from "../shared/image"
+import { classifyGenerated, type GeneratedAttributes, type GeneratedFiles } from "../shared/git-attributes"
 import type { DiffFile } from "../types"
 import type { DiffSource, DiffSourceDescriptor, DiffSourceFetch } from "./types"
 
@@ -35,6 +36,7 @@ export function createSessionDiffSource(
   fetch: SessionDiffFetch,
   workspaceRoot?: string,
   checkSnapshotsEnabled?: SnapshotEnabledCheck,
+  generated?: GeneratedFiles,
 ): DiffSource {
   // Cached across fetches so subsequent polling ticks skip the config lookup.
   let snapshotsDisabled = false
@@ -57,9 +59,10 @@ export function createSessionDiffSource(
       }
 
       const raw = await fetch({ sessionID: sessionId, directory: workspaceRoot })
-      const key = raw.map(fingerprint).join("|")
+      const configured = generated ? await generated(raw.map((file) => file.file ?? "")) : undefined
+      const key = `${raw.map(fingerprint).join("|")}\0${configured ? [...configured].sort().join("|") : ""}`
       if (cache?.key === key) return { diffs: cache.diffs }
-      const diffs = raw.map(toSessionDiffFile)
+      const diffs = raw.map((file) => toSessionDiffFile(file, configured))
       cache = { key, diffs }
       return { diffs }
     },
@@ -77,7 +80,7 @@ function fingerprint(raw: SnapshotFileDiff): string {
  * Project a backend `SnapshotFileDiff` onto the `DiffFile` shape the viewer
  * expects. Shared with `createTurnDiffSource` since both hit the same endpoint.
  */
-export function toSessionDiffFile(raw: SnapshotFileDiff): DiffFile {
+export function toSessionDiffFile(raw: SnapshotFileDiff, generated?: GeneratedAttributes): DiffFile {
   const file = raw.file ?? ""
   const mime = imageMime(file)
   // Empty patch means binary or summarized (>256 KB) — normalize() can't
@@ -113,7 +116,7 @@ export function toSessionDiffFile(raw: SnapshotFileDiff): DiffFile {
     deletions: raw.deletions,
     status: raw.status,
     tracked: true,
-    generatedLike: false,
+    generatedLike: classifyGenerated(file, generated),
     // A zero-stat empty patch has no text body to fetch; nonzero stats
     // indicate a deferred large-file summary.
     summarized:

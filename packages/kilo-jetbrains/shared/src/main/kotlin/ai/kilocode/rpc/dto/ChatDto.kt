@@ -162,6 +162,8 @@ data class PromptPartDto(
     val url: String? = null,
     val filename: String? = null,
     val source: PartSourceDto? = null,
+    /** Hides the part from the transcript; used for handoff notes the agent reads but the user never sees. */
+    val synthetic: Boolean? = null,
 )
 
 // --- Streaming Events ---

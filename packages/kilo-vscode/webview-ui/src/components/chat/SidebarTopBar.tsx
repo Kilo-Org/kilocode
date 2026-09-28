@@ -1,5 +1,5 @@
 /**
- * Renders New Task, History, Agent Manager, KiloClaw, Marketplace, Profile, and
+ * Renders New Task, History, Agent Manager, Marketplace, Profile, and
  * Settings inside the webview, as a fallback for Cursor only (see isCursorHost()
  * in src/utils.ts). Cursor's Secondary Side Bar support is unreliable for
  * extension-contributed `view/title` toolbars, which render outside the webview
@@ -8,11 +8,11 @@
  */
 
 import { Component, For } from "solid-js"
+import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { useVSCode } from "../../context/vscode"
 import { useLanguage } from "../../context/language"
 import { TelemetryEventName } from "../../../../src/services/telemetry/types"
-import "@vscode/codicons/dist/codicon.css"
 
 export interface SidebarTopBarProps {
   onNewTask: () => void
@@ -21,12 +21,9 @@ export interface SidebarTopBarProps {
   surface: string
 }
 
-/** Codicon names used below. */
-type Codicon = "add" | "history" | "organization" | "comment-discussion" | "extensions" | "account" | "settings-gear"
-
 interface Action {
   key: string
-  codicon: Codicon
+  icon: "plus" | "history" | "organization" | "extensions" | "user" | "settings-gear"
   button: string
   run: () => void
 }
@@ -43,18 +40,16 @@ export const SidebarTopBar: Component<SidebarTopBarProps> = (props) => {
       properties: { button, surface: props.surface },
     })
 
-  const open = (
-    type: "openAgentManager" | "openKiloClaw" | "openMarketplacePanel" | "openProfilePanel" | "openSettingsPanel",
-  ) => vscode.postMessage({ type })
+  const open = (type: "openAgentManager" | "openMarketplacePanel" | "openProfilePanel" | "openSettingsPanel") =>
+    vscode.postMessage({ type })
 
   const actions: Action[] = [
-    { key: "newTask", codicon: "add", button: "new_task", run: () => props.onNewTask() },
-    { key: "history", codicon: "history", button: "history", run: () => props.onHistory() },
-    { key: "agentManager", codicon: "organization", button: "agent_manager", run: () => open("openAgentManager") },
-    { key: "kiloClaw", codicon: "comment-discussion", button: "kiloclaw", run: () => open("openKiloClaw") },
-    { key: "marketplace", codicon: "extensions", button: "marketplace", run: () => open("openMarketplacePanel") },
-    { key: "profile", codicon: "account", button: "profile", run: () => open("openProfilePanel") },
-    { key: "settings", codicon: "settings-gear", button: "settings", run: () => open("openSettingsPanel") },
+    { key: "newTask", icon: "plus", button: "new_task", run: () => props.onNewTask() },
+    { key: "history", icon: "history", button: "history", run: () => props.onHistory() },
+    { key: "agentManager", icon: "organization", button: "agent_manager", run: () => open("openAgentManager") },
+    { key: "marketplace", icon: "extensions", button: "marketplace", run: () => open("openMarketplacePanel") },
+    { key: "profile", icon: "user", button: "profile", run: () => open("openProfilePanel") },
+    { key: "settings", icon: "settings-gear", button: "settings", run: () => open("openSettingsPanel") },
   ]
 
   return (
@@ -64,21 +59,16 @@ export const SidebarTopBar: Component<SidebarTopBarProps> = (props) => {
           const label = language.t(`sidebar.topBar.${action.key}`)
           return (
             <Tooltip value={label} placement="bottom">
-              <button
-                type="button"
-                data-component="icon-button"
-                data-variant="ghost"
-                data-size="small"
+              <IconButton
+                icon={action.icon}
+                variant="ghost"
+                size="small"
                 aria-label={label}
                 onClick={() => {
                   track(action.button)
                   action.run()
                 }}
-              >
-                <div data-component="icon" data-size="small">
-                  <i class={`codicon codicon-${action.codicon}`} aria-hidden="true" />
-                </div>
-              </button>
+              />
             </Tooltip>
           )
         }}

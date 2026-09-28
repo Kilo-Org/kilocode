@@ -1,5 +1,6 @@
 import type { Part } from "../../types/messages"
 import type { TranscriptRow } from "../../context/transcript-rows"
+import { stripLinks } from "./transcript-search-text"
 
 export interface PromptRailItem {
   key: string
@@ -58,10 +59,6 @@ export function previewText(raw: string): string {
     .replace(/^\s*[-*>+]\s+/gm, "")
     .replace(/\s+/g, " ")
     .trim()
-}
-
-function stripLinks(text: string) {
-  return text.replace(/!\[[^\]]*\]\([^)]*\)/g, "").replace(/\[([^\]]*)\]\([^)]*\)/g, "$1")
 }
 
 function text(parts: Part[], limit: number): string {

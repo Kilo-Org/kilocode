@@ -4,6 +4,7 @@ import ai.kilocode.client.KiloNotifications
 import ai.kilocode.client.app.KiloAgentBehaviorService
 import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.plugin.KiloBundle
+import ai.kilocode.client.settings.base.DirectoryReadyConfigurable
 import ai.kilocode.client.settings.base.SettingsDraftPage
 import ai.kilocode.client.settings.base.SettingsDraftState
 import ai.kilocode.client.settings.base.SettingsListPanel
@@ -40,7 +41,7 @@ import kotlinx.coroutines.withTimeoutOrNull
 
 private val workflowEdt = Dispatchers.EDT + ModalityState.any().asContextElement()
 
-class WorkflowsConfigurable : AgentBehaviorConfigurableBase<JComponent>() {
+class WorkflowsConfigurable : DirectoryReadyConfigurable<JComponent>() {
     override fun getId(): String = ID
     override fun getDisplayName(): String = KiloBundle.message("settings.agentBehavior.workflows.displayName")
     override fun create(cs: CoroutineScope, dir: String): JComponent = WorkflowsSettingsUi(cs, dir)

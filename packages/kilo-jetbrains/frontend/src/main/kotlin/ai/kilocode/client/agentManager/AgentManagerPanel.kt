@@ -8,9 +8,11 @@ import ai.kilocode.client.agentManager.worktree.NewWorktreeDialog
 import ai.kilocode.client.agentManager.worktree.NewWorktreeHandle
 import ai.kilocode.client.agentManager.worktree.NewWorktreePlan
 import ai.kilocode.client.agentManager.worktree.GhBanner
+import ai.kilocode.client.agentManager.orphans.OrphanBanner
 import ai.kilocode.client.agentManager.worktree.WorktreeController
 import ai.kilocode.client.agentManager.worktree.WorktreeDataKeys
 import ai.kilocode.client.agentManager.worktree.WorktreeIcons
+import ai.kilocode.client.agentManager.worktree.WorktreeRunBinding
 import ai.kilocode.client.agentManager.worktree.WorktreeStatusBinding
 import ai.kilocode.client.agentManager.worktree.WorktreeStatusService
 import ai.kilocode.client.agentManager.worktree.WorktreeNameCache
@@ -28,6 +30,9 @@ import ai.kilocode.client.session.ui.popup.HeaderPopupBody
 import ai.kilocode.client.ui.PrIcons
 import ai.kilocode.client.ui.checksTooltip
 import ai.kilocode.client.ui.checksUrl
+import ai.kilocode.client.ui.commentsCount
+import ai.kilocode.client.ui.commentsTooltip
+import ai.kilocode.client.ui.conflicted
 import ai.kilocode.client.ui.popup.SidePopupContent
 import ai.kilocode.client.ui.popup.SidePopupController
 import ai.kilocode.client.ui.popup.SidePopupFit
@@ -43,6 +48,7 @@ import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.SessionActivityKind
 import ai.kilocode.client.telemetry.Telemetry
 import ai.kilocode.client.ui.UiStyle
+import ai.kilocode.client.ui.layout.Stack
 import ai.kilocode.client.ui.list.ActiveList
 import ai.kilocode.client.ui.list.ActiveListBadge
 import ai.kilocode.client.ui.list.ActiveListConfig
@@ -64,6 +70,7 @@ import ai.kilocode.rpc.dto.WorktreeStatsDto
 import com.intellij.icons.AllIcons
 import com.intellij.ide.BrowserUtil
 import com.intellij.ide.DeleteProvider
+import com.intellij.ide.actions.RevealFileAction
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.actionSystem.ActionManager
 import com.intellij.openapi.actionSystem.ActionGroup
@@ -112,6 +119,7 @@ class AgentManagerPanel(
             controller.suggestName(),
             controller.defaultBranch,
             controller.branches,
+            controller.origin,
         )
     },
 ) : BorderLayoutPanel(), Disposable, UiDataProvider {
@@ -153,7 +161,9 @@ class AgentManagerPanel(
     private var stats: Map<String, WorktreeStatsDto> = emptyMap()
     private var prs: Map<String, WorktreePrDto> = emptyMap()
     private var dirty: Map<String, WorktreeDirtyDto> = emptyMap()
+    private var running: Set<String> = emptySet()
     private var hovered: String? = null
+    private var orphanBanner: OrphanBanner? = null
 
     init {
         Disposer.register(parent, this)
@@ -162,7 +172,11 @@ class AgentManagerPanel(
         // busy list or a rebuilt model has already dropped the hover the popup was opened from.
         list.onScroll = { popup.hideAll() }
         isOpaque = true
-        project?.let { addToTop(GhBanner(it, this)) }
+        project?.let {
+            val orphan = OrphanBanner(it, controller, this)
+            orphanBanner = orphan
+            addToTop(Stack.vertical().next(GhBanner(it, this)).next(orphan))
+        }
         addToCenter(body())
         list.installPopup(group)
         sync()
@@ -181,7 +195,7 @@ class AgentManagerPanel(
             project?.service<WorktreeStatusService>()?.refreshPr(force = true, maxAge = 0)
             autoRunSetupScript(created)
         }
-        controller.onReload = { sync() }
+        controller.onReload = { sync(); orphanBanner?.refresh() }
         controller.onCreateFailure = { err -> notifyCreateFailed(err) }
         controller.onMoveFailure = { err -> notifyMoveFailed(err) }
         controller.onRemoveSuccess = { item, index -> onRemoved(item, index) }
@@ -245,7 +259,8 @@ class AgentManagerPanel(
         }
     }
 
-    internal fun move(sessionId: String?, directory: String) = controller.move(sessionId, directory)
+    internal fun move(sessionId: String?, directory: String, surface: String = "sidebar") =
+        controller.move(sessionId, directory, surface)
 
     private fun remove(item: WorktreeDto, force: Boolean) {
         controller.remove(item, force, onFailure = { result -> notifyFailed(item, result, force) })
@@ -456,7 +471,10 @@ class AgentManagerPanel(
         KiloNotifications.error(project, KiloBundle.message("worktree.move.failed.title"), err)
     }
 
-    /** Surfaces a failed removal; offers a force-delete retry when git reported a lock. */
+    /**
+     * Surfaces a failed removal; offers a force-delete retry when git reported a lock, or
+     * copy-path/reveal actions for the blocking worktree(s) when a nested worktree is in the way.
+     */
     private fun notifyFailed(item: WorktreeDto, result: RemoveWorktreeResultDto, forced: Boolean) {
         val title = KiloBundle.message("worktree.delete.failed.title", item.name)
         if (result.locked && !forced) {
@@ -468,8 +486,36 @@ class AgentManagerPanel(
             ) { remove(item, force = true) }
             return
         }
+        if (result.nestedPaths.isNotEmpty()) {
+            KiloNotifications.error(project, title, result.error, nestedPathActions(result.nestedPaths))
+            return
+        }
         KiloNotifications.error(project, title, result.error)
     }
+
+    /**
+     * Copy/reveal actions for the worktree(s) blocking a delete, using the same primitives as the
+     * row context menu (copy) and the orphan-cleanup dialog (reveal, routed through the backend RPC
+     * since split mode runs the frontend on the client machine while the folder lives on the host).
+     * Copy captures every blocking path; reveal opens only the first — the common (and only tested)
+     * case is exactly one nested worktree. `revealPath` answers `false` instead of throwing when the
+     * host can't reveal it (unsupported platform, or the directory is already gone), so that failure
+     * is surfaced as a warning rather than silently doing nothing.
+     */
+    private fun nestedPathActions(paths: List<String>): List<Pair<String, () -> Unit>> = listOf(
+        KiloBundle.message("worktree.delete.nested.copyPath") to {
+            CopyPasteManager.getInstance().setContents(StringSelection(paths.joinToString("\n")))
+        },
+        RevealFileAction.getActionName() to {
+            controller.reveal(paths.first()) {
+                KiloNotifications.warning(
+                    project,
+                    KiloBundle.message("worktree.delete.nested.reveal.failed.title"),
+                    KiloBundle.message("worktree.delete.nested.reveal.failed.detail"),
+                )
+            }
+        },
+    )
 
     private fun bindEditorSelection() {
         val target = project ?: return
@@ -503,6 +549,7 @@ class AgentManagerPanel(
                 // The main checkout can sit on a PR branch just like a worktree can.
                 pr = prs[normalizeWorktreePath(item.path)],
                 current = true,
+                running = running.contains(normalizeWorktreePath(item.path)),
             )
         }
         list.update(
@@ -518,6 +565,7 @@ class AgentManagerPanel(
                     stats[key],
                     pull,
                     dirty[key],
+                    running = running.contains(key),
                 )
             },
             ActiveListSelection.Preserve,
@@ -647,6 +695,7 @@ class AgentManagerPanel(
             // so a poll has to rebuild them. Row equality keeps a poll that found nothing new from churning.
             onDirty = { value -> dirty = value; sync() },
         )
+        WorktreeRunBinding(target, this) { value -> running = value; sync() }
     }
 
     override fun dispose() {
@@ -715,27 +764,33 @@ class AgentManagerPanel(
         val pr: WorktreePrDto?,
         val dirty: WorktreeDirtyDto? = null,
         val current: Boolean = false,
+        val running: Boolean = false,
     ) : ActiveListItem {
         override val key: String get() = dto.id
         override val identity: Any get() = if (current) "local:${dto.path}" else "worktree:${dto.path}"
         override val title: String get() = if (current) dto.branch else WorktreeTitle.text(dto.name, dto.path, pr)
         override val description: String get() = WorktreeTitle.fallback(dto.path)
         override val tooltip: String? get() = null
-        override val icon = WorktreeIcons.forRow(progress != null, kind, dto.locked, current)
+        override val icon = WorktreeIcons.forRow(progress != null, kind, dto.locked, current, running)
         override val tinted: Boolean get() = WorktreeIcons.neutral(icon)
         override val section: String? get() = if (current) null else KiloBundle.message("worktree.section.local")
         override val search: String get() = listOfNotNull(dto.name, dto.branch, dto.path, dto.lockReason).joinToString(" ")
 
         /**
-         * Review then CI verdict, on the title line so they stay readable without hovering the row.
-         * Both are glyphs rather than pills: they are the states a reviewer scans a worktree list for,
-         * and GitHub's own icons say it faster than words at this size.
+         * Unresolved review conversations, review verdict, then CI verdict, on the title line so they stay
+         * readable without hovering the row. All three are glyphs rather than pills: they are the states a
+         * reviewer scans a worktree list for, and GitHub's own icons say it faster than words at this size.
+         *
+         * Conversations lead because they are the one entry that needs a person: a build result and a review
+         * verdict are outcomes to read, while an unresolved thread is somebody waiting on a reply. The glyph
+         * carries a number for the same reason — "waiting on a reply" is not worth acting on until you know
+         * whether that is one comment or twelve.
          */
         override val badges: List<ActiveListBadge>
             get() {
                 if (progress != null) return emptyList()
                 val p = pr ?: return emptyList()
-                return listOfNotNull(reviewBadge(p), checksBadge(p))
+                return listOfNotNull(commentsBadge(p), reviewBadge(p), checksBadge(p))
             }
 
         private fun reviewBadge(p: WorktreePrDto): ActiveListBadge? {
@@ -757,6 +812,18 @@ class AgentManagerPanel(
                 tooltip = checksTooltip(p.checks),
                 // The checks tab rather than the conversation: someone clicking a red build wants the log.
                 action = { BrowserUtil.browse(checksUrl(p)) },
+                icon = glyph,
+            )
+        }
+
+        private fun commentsBadge(p: WorktreePrDto): ActiveListBadge? {
+            val glyph = PrIcons.comments(p.comments) ?: return null
+            return ActiveListBadge(
+                commentsCount(p.comments),
+                id = "pr-comments",
+                tooltip = commentsTooltip(p.comments),
+                // The conversation tab, which is where GitHub lists the threads themselves.
+                action = { BrowserUtil.browse(p.url) },
                 icon = glyph,
             )
         }
@@ -789,6 +856,7 @@ class AgentManagerPanel(
                     additions = stats?.additions ?: 0,
                     deletions = stats?.deletions ?: 0,
                     base = stats?.base.orEmpty(),
+                    conflict = conflicted(pr),
                     onChanges = { openDiff(dto) },
                     localFiles = dirty?.files ?: 0,
                     localAdditions = dirty?.additions ?: 0,
@@ -805,7 +873,8 @@ class AgentManagerPanel(
                 stats == row.stats &&
                 pr == row.pr &&
                 dirty == row.dirty &&
-                current == row.current
+                current == row.current &&
+                running == row.running
         }
 
         override fun hashCode(): Int {
@@ -816,6 +885,7 @@ class AgentManagerPanel(
             result = 31 * result + (pr?.hashCode() ?: 0)
             result = 31 * result + (dirty?.hashCode() ?: 0)
             result = 31 * result + current.hashCode()
+            result = 31 * result + running.hashCode()
             return result
         }
     }

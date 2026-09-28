@@ -11,7 +11,8 @@
  * docs_worthy:false so filter-worthy excludes it) so the watermark holds
  * back and the next run re-collects those PRs.
  *
- * Env: TRIAGE_MODEL (provider/model), KILO_API_KEY + KILO_ORG_ID (gateway auth, set by
+ * Env: TRIAGE_MODEL (provider/model), DOCS_SYNC_VARIANT (reasoning effort, default max),
+ * KILO_API_KEY + KILO_ORG_ID (gateway auth, set by
  * the workflow; the kilo provider reads them natively). Reads the prompt from triage-prompt.md next to this script.
  * Budget: TRIAGE_BUDGET_MINUTES (default 35). Test hook: DOCS_SYNC_BACKOFF_MS.
  */
@@ -20,7 +21,15 @@ import fs from "node:fs"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 import { parseTriageEntries } from "./extract-json.mjs"
-import { appendSummary, backoffMsForAttempt, deadline, remainingMs, runKilo, sleepSync } from "./lib.mjs"
+import {
+  appendSummary,
+  backoffMsForAttempt,
+  deadline,
+  remainingMs,
+  REASONING_VARIANT,
+  runKilo,
+  sleepSync,
+} from "./lib.mjs"
 import { readLearningsBlock } from "./learn.mjs"
 
 const CHUNK_SIZE = 25
@@ -78,7 +87,19 @@ function triageChunk(chunk, index, budgetDeadline) {
     // permission.bash map via KILO_CONFIG_CONTENT should replace --auto once the
     // required shell patterns are stable (see PR #12605 review thread).
     const result = runKilo({
-      args: ["run", "--auto", prompt, "-m", model, "--dir", process.cwd(), "-f", chunkFile],
+      args: [
+        "run",
+        "--auto",
+        prompt,
+        "-m",
+        model,
+        "--variant",
+        REASONING_VARIANT,
+        "--dir",
+        process.cwd(),
+        "-f",
+        chunkFile,
+      ],
       timeoutMs: Math.min(CHUNK_TIMEOUT_MS, left),
       streamStdout: false,
       label: `triage chunk ${index} attempt ${attempt}`,

@@ -8,6 +8,14 @@ function env(options?: Omit<ExecFileOptionsWithStringEncoding, "encoding">): Nod
   return result
 }
 
+/**
+ * Name of the GitHub CLI, owned here so no other module needs the literal.
+ *
+ * The architecture test forbids the bare binary name elsewhere, which is what keeps every gh
+ * invocation on the Windows-safe path in {@link execGhRead}.
+ */
+export const GH = "gh"
+
 /** Run read-only gh queries without tzutil console windows flashing on Windows. */
 export function execGhRead(
   args: string[],

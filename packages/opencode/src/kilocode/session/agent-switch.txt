@@ -1,0 +1,5 @@
+<system-reminder>
+The active agent has changed from ${prior} to ${current}.
+This supersedes earlier agent-switch reminders. Your instructions and permissions are those of the ${current} agent as given in the current system prompt; earlier turns reflect the previous agent, not your current capabilities.
+${capability}
+</system-reminder>

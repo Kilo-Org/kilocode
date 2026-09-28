@@ -1,5 +1,5 @@
 import type { ProjectContext } from "./project/context"
-import type { LifecycleHost } from "./provider-lifecycle"
+import { removeWorktreeSnapshot, type LifecycleHost } from "./provider-lifecycle"
 
 export async function discardWorktree(
   ctx: ProjectContext,
@@ -26,6 +26,7 @@ export async function discardWorktree(
       }
     }
     await ctx.worktreeManager().removeWorktree(dir, branch)
+    await removeWorktreeSnapshot(host, ctx.root, dir)
     ctx.peekState()?.removeWorktree(id)
     host.push()
   } catch (error) {

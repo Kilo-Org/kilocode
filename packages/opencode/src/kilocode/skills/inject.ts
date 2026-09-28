@@ -38,6 +38,12 @@ export namespace SkillInject {
     decompose: Decompose
   }
 
+  // Migration validation uses the same inert-code boundaries without executing commands.
+  export function hasLiveShell(content: string) {
+    const inert = ranges(content)
+    return ConfigMarkdown.shell(content).some((match) => !inert(match.index))
+  }
+
   export const render = Effect.fn("SkillInject.render")(function* (opts: Options) {
     // Fenced blocks and inline code spans (`` !`cmd` ``) are documentation, not live commands.
     const inert = ranges(opts.content)

@@ -100,13 +100,18 @@ export function permissionInfo(request: PermissionRequest): PermissionInfo {
 
   if (request.permission === "sandbox_escalation") {
     const command = text(input.command)
+    // kilocode_change start - explain the escalation scope, the git reason, and the excluded approvals
+    const detail = [
+      "This runs the whole command with filesystem and network restrictions removed, for this command only.",
+      "Git must write to .git, which is read-only in the sandbox and outside the worktree in a linked worktree.",
+      "Bash allow rules and auto-approve never approve this prompt automatically.",
+    ]
     return {
       icon: "!",
-      title: "Allow Git operation outside the sandbox", // kilocode_change
-      lines: command
-        ? [`$ ${command}`, "This approval applies to this command only."]
-        : ["This approval applies to this command only."],
+      title: "Run outside the sandbox", // kilocode_change
+      lines: command ? [`$ ${command}`, ...detail] : detail,
     }
+    // kilocode_change end
   }
 
   if (request.permission === "external_directory") {

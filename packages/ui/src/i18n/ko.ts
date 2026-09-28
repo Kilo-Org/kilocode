@@ -49,7 +49,7 @@ export const dict = {
 
   "dialog.usageExceeded.freeTier.title": "무료 한도에 도달했습니다",
   "dialog.usageExceeded.freeTier.description":
-    "Kilo Go를 구독하여 최고의 오픈 소스 모델에 안정적으로 액세스하세요. 월 $5부터 시작합니다.", // kilocode_change
+    "월 $10로 Kilo Go를 구독하여 최고의 오픈 소스 모델에 안정적으로 액세스하세요.", // kilocode_change
   "dialog.usageExceeded.freeTier.actionLabel": "구독",
   "dialog.usageExceeded.accountRateLimit.title": "Go 한도에 도달했습니다",
   "dialog.usageExceeded.accountRateLimit.description":
@@ -223,6 +223,10 @@ export const dict = {
   "ui.mermaid.copySvg": "SVG 복사",
   "ui.mermaid.download": "다운로드",
   "ui.mermaid.downloadPng": "PNG 다운로드",
+  "ui.mermaid.zoom": "확대/축소",
+  "ui.mermaid.zoomIn": "확대",
+  "ui.mermaid.zoomOut": "축소",
+  "ui.mermaid.zoomReset": "확대/축소 초기화",
   "ui.mermaid.downloadSvg": "SVG 다운로드",
   "ui.mermaid.errorDefault": "Mermaid 다이어그램을 렌더링할 수 없습니다.",
   "ui.mermaid.errorEmpty": "Mermaid가 빈 다이어그램을 렌더링했습니다.",
@@ -231,6 +235,13 @@ export const dict = {
   "ui.message.deleteQueued": "대기 중인 메시지 삭제",
   "ui.messagePart.mcp.input": "입력",
   "ui.messagePart.mcp.output": "출력",
+  "ui.messagePart.board.read": "에이전트 메시지 읽기",
+  "ui.messagePart.board.all": "모든 에이전트",
+  "ui.messagePart.board.primary": "주 에이전트",
+  "ui.messagePart.board.agent": "에이전트",
+  "ui.messagePart.board.route": "{{from}}에서 {{to}}(으)로",
+  "ui.messagePart.board.empty": "에이전트 메시지 없음",
+  "ui.messagePart.board.stored": "저장만 되었습니다. 전달 및 읽기 여부는 확인되지 않았습니다.",
   "ui.question.answer.dismissed": "Dismissed",
   "ui.question.subtitle.dismissed": "{{count}} dismissed",
   "ui.sessionTurn.diffs.changed": "변경됨",

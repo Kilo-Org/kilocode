@@ -45,3 +45,37 @@ export async function seedSessionStatuses(
     console.error("[Kilo New] KiloProvider: Failed to seed session statuses:", error)
   }
 }
+
+/**
+ * Fetch pending wakeup counts for every known directory and seed the webview.
+ * Wakeups are directory scoped, like session status, so each directory needs
+ * its own request. A failed directory is logged and skipped: one missing
+ * directory must not blank the others. Returns the session IDs that still hold
+ * a wakeup and whether every directory answered, so the caller can reconcile a
+ * previous seed to zero only when the result is complete.
+ */
+export async function seedSessionWakeups(
+  client: KiloClient,
+  dirs: string[],
+  post: (msg: unknown) => void,
+  accept?: (sessionID: string) => boolean,
+): Promise<{ seen: Set<string>; complete: boolean }> {
+  const seen = new Set<string>()
+  let complete = true
+  await Promise.all(
+    dirs.map(async (dir) => {
+      try {
+        const result = await client.kilocode.wakeups({ directory: dir }, { throwOnError: true })
+        for (const item of result.data ?? []) {
+          if (accept && !accept(item.sessionID)) continue
+          seen.add(item.sessionID)
+          post({ type: "sessionWakeup", sessionID: item.sessionID, pending: item.pending })
+        }
+      } catch (error) {
+        complete = false
+        console.error(`[Kilo New] KiloProvider: Failed to seed session wakeups for ${dir}:`, error)
+      }
+    }),
+  )
+  return { seen, complete }
+}

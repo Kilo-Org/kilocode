@@ -1,5 +1,7 @@
 import { afterEach, describe, expect, it, mock } from "bun:test"
+import { createKiloClient } from "@kilocode/sdk/v2/client"
 import * as vscode from "vscode"
+import { MarketplaceService } from "../../src/services/marketplace"
 import {
   removeMarketplaceItem,
   removeMarketplaceItemFromAllScopes,
@@ -37,6 +39,14 @@ const agent = {
   category: "development",
   content: { mode: "all" as const, description: "Reviews code", prompt: "Review code" },
 }
+const plugin = {
+  id: "@acme/deploy",
+  type: "plugin" as const,
+  name: "Deploy Toolkit",
+  description: "",
+  category: "devops",
+  content: "@acme/deploy",
+}
 const fs = vscode.workspace.fs as unknown as {
   readFile: (uri: vscode.Uri) => Promise<Uint8Array>
   writeFile: (uri: vscode.Uri, data: Uint8Array) => Promise<void>
@@ -64,13 +74,12 @@ function has(files: Map<string, string>, file: string) {
   return !!JSON.parse(files.get(file)!).mcpServers.memory
 }
 
-function connection() {
+function ctx(remove = mock(async () => ({ success: true, slug: item.id }))) {
   return {
-    getClientAsync: mock(async () => ({
-      global: { config: { update: mock(async () => {}) } },
-      instance: { dispose: mock(async () => {}) },
-    })),
-  } as unknown as MarketplaceActionContext["connection"]
+    connection: { getClientAsync: mock(async () => ({ id: "client" })) },
+    marketplace: { remove },
+    storage,
+  } as unknown as MarketplaceActionContext & MarketplaceRemoveContext
 }
 
 afterEach(() => {
@@ -127,24 +136,37 @@ describe("Marketplace installation metadata", () => {
         githubUrl: "https://example.com",
         content: "https://example.com/skill.tar.gz",
       },
+      {
+        type: "plugin",
+        id: "@acme/deploy",
+        name: "Deploy Toolkit",
+        description: "Deploys services",
+        category: "devops",
+        content: "@acme/deploy",
+        url: "https://example.com/deploy",
+      },
     ]
     const metadata = { project: { "mcp:warehouse": { type: "mcp" } }, global: {} }
 
-    expect(filterItems(items, metadata, "reviewer", "all", [], []).map((item) => item.id)).toEqual(["reviewer"])
-    expect(filterItems(items, metadata, "web automation", "all", [], []).map((item) => item.id)).toEqual(["warehouse"])
+    expect(filterItems(items, metadata, "reviewer", "all", [], []).map((entry) => entry.id)).toEqual(["reviewer"])
+    expect(filterItems(items, metadata, "web automation", "all", [], []).map((entry) => entry.id)).toEqual([
+      "warehouse",
+    ])
     expect(
-      filterItems(items, metadata, "servidor mcp", "all", [], [], { mcp: "Servidor MCP" }).map((item) => item.id),
+      filterItems(items, metadata, "servidor mcp", "all", [], [], { mcp: "Servidor MCP" }).map((entry) => entry.id),
     ).toEqual(["warehouse"])
-    expect(filterItems(items, metadata, "", "all", ["business"], []).map((item) => item.id)).toEqual([
+    expect(filterItems(items, metadata, "", "all", ["business"], []).map((entry) => entry.id)).toEqual([
       "campaign-writer",
     ])
-    expect(filterItems(items, metadata, "", "installed", [], []).map((item) => item.id)).toEqual(["warehouse"])
-    expect(filterItems(items, metadata, "", "all", [], ["mcp"]).map((item) => item.id)).toEqual(["warehouse"])
+    expect(filterItems(items, metadata, "", "installed", [], []).map((entry) => entry.id)).toEqual(["warehouse"])
+    expect(filterItems(items, metadata, "", "all", [], ["mcp"]).map((entry) => entry.id)).toEqual(["warehouse"])
+    expect(filterItems(items, metadata, "", "all", [], ["plugin"]).map((entry) => entry.id)).toEqual(["@acme/deploy"])
+    expect(filterItems(items, metadata, "deploy", "all", [], []).map((entry) => entry.id)).toEqual(["@acme/deploy"])
     expect(
       filterItems(items, metadata, "", "all", [], [], {}, true, {
         "agent:reviewer": { filename: ["*.review.ts"] },
         "mcp:warehouse": { vscodeExtension: ["data.warehouse"] },
-      }).map((item) => item.id),
+      }).map((entry) => entry.id),
     ).toEqual(["reviewer", "warehouse"])
     const relevance = { "agent:reviewer": { filename: ["*.review.ts"] } }
     expect(filterItems(items, metadata, "warehouse", "all", [], [], {}, true, relevance)).toEqual([])
@@ -153,16 +175,82 @@ describe("Marketplace installation metadata", () => {
   })
 })
 
-describe("Marketplace legacy MCP cleanup", () => {
+describe("Marketplace companion skill payloads", () => {
+  it.each(["project", "global"] as const)("preserves companion skills from catalog to %s install", async (scope) => {
+    const mcp: McpMarketplaceItem = {
+      ...item,
+      skills: [
+        { id: "query-workflow", content: "https://example.test/query-workflow.tar.gz" },
+        { id: "data-checks", content: "data:application/gzip;base64,ZmFrZQ==" },
+      ],
+    }
+    const result = {
+      success: true,
+      slug: mcp.id,
+      filePaths: [
+        "/chosen/config/kilo.jsonc",
+        "/chosen/skills/query-workflow/SKILL.md",
+        "/chosen/skills/data-checks/SKILL.md",
+      ],
+    }
+    const calls: Array<{ method: string; path: string; directory: string | null; body: unknown }> = []
+    const server = Bun.serve({
+      hostname: "127.0.0.1",
+      port: 0,
+      async fetch(request) {
+        const url = new URL(request.url)
+        calls.push({
+          method: request.method,
+          path: url.pathname,
+          directory: url.searchParams.get("directory"),
+          body: request.method === "POST" ? await request.json() : undefined,
+        })
+        if (url.pathname === "/kilocode/marketplace")
+          return Response.json({ items: [mcp], installed: { project: {}, global: {} } })
+        if (url.pathname === "/kilocode/marketplace/install") return Response.json(result)
+        if (url.pathname === "/kilocode/marketplace/remove") return Response.json({ success: true, slug: mcp.id })
+        return new Response(null, { status: 404 })
+      },
+    })
+    const service = new MarketplaceService()
+    const client = createKiloClient({ baseUrl: server.url.href })
+    const extensions = Object.getOwnPropertyDescriptor(vscode.extensions, "all")
+    try {
+      Object.defineProperty(vscode.extensions, "all", { configurable: true, value: [] })
+      const data = await service.fetchData(client, project, project, [])
+      expect(data.marketplaceItems).toEqual([mcp])
+      const loaded = data.marketplaceItems.at(0)!
+      const options = { target: scope, parameters: { token: "test-value" } }
+      expect(await service.install(client, loaded, options, project)).toEqual(result)
+      expect(await service.remove(client, loaded, scope, project)).toEqual({ success: true, slug: mcp.id })
+      expect(calls).toEqual([
+        { method: "GET", path: "/kilocode/marketplace", directory: project, body: undefined },
+        {
+          method: "POST",
+          path: "/kilocode/marketplace/install",
+          directory: project,
+          body: { item: mcp, ...options },
+        },
+        {
+          method: "POST",
+          path: "/kilocode/marketplace/remove",
+          directory: project,
+          body: { item: { id: mcp.id, type: "mcp" }, scope },
+        },
+      ])
+    } finally {
+      if (extensions) Object.defineProperty(vscode.extensions, "all", extensions)
+      if (!extensions) Reflect.deleteProperty(vscode.extensions, "all")
+      service.dispose()
+      server.stop(true)
+    }
+  })
+})
+
+describe("Marketplace removal actions", () => {
   it("preserves global legacy config during project removal", async () => {
     const files = setup()
-    const ctx = {
-      connection: connection(),
-      marketplace: { remove: mock(async () => ({ success: true, slug: item.id })) },
-      storage,
-    } as unknown as MarketplaceActionContext
-
-    await removeMarketplaceItem(ctx, item, "project", project, project)
+    await removeMarketplaceItem(ctx(), item, "project", project, project)
 
     expect(has(files, local)).toBe(false)
     expect(has(files, legacy)).toBe(false)
@@ -171,32 +259,38 @@ describe("Marketplace legacy MCP cleanup", () => {
 
   it("preserves project legacy config during global removal", async () => {
     const files = setup()
-    const ctx = {
-      connection: connection(),
-      marketplace: { remove: mock(async () => ({ success: true, slug: item.id })) },
-      storage,
-    } as unknown as MarketplaceActionContext
-
-    await removeMarketplaceItem(ctx, item, "global", project, project)
+    await removeMarketplaceItem(ctx(), item, "global", project, project)
 
     expect(has(files, local)).toBe(true)
     expect(has(files, legacy)).toBe(true)
     expect(has(files, global)).toBe(false)
   })
 
-  it("removes project and global legacy config during sidebar cleanup", async () => {
+  it("removes project and global through CLI-backed service during sidebar cleanup", async () => {
     const files = setup()
-    const ctx = {
-      connection: connection(),
-      remove: mock(async () => ({ success: true, slug: item.id })),
-      storage,
-    } as MarketplaceRemoveContext
+    const remove = mock(async () => ({ success: true, slug: item.id }))
+    await removeMarketplaceItemFromAllScopes(ctx(remove), item, project, project)
 
-    await removeMarketplaceItemFromAllScopes(ctx, item, project, project)
-
+    expect(remove).toHaveBeenCalledTimes(2)
+    expect(remove.mock.calls.map((call) => call[2])).toEqual(["project", "global"])
     expect(has(files, local)).toBe(false)
     expect(has(files, legacy)).toBe(false)
     expect(has(files, global)).toBe(false)
+  })
+})
+
+describe("Marketplace plugin removal", () => {
+  it("uses the generic CLI-backed path without touching legacy MCP files", async () => {
+    const files = setup()
+    const remove = mock(async () => ({ success: true, slug: plugin.id }))
+
+    const result = await removeMarketplaceItem(ctx(remove), plugin, "project", project, project)
+
+    expect(result).toEqual({ success: true, slug: plugin.id })
+    expect(remove).toHaveBeenCalledTimes(1)
+    expect(has(files, local)).toBe(true)
+    expect(has(files, legacy)).toBe(true)
+    expect(has(files, global)).toBe(true)
   })
 })
 

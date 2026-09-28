@@ -16,6 +16,7 @@
 @import "../../components/context-menu.css";
 @import "../../components/dialog.css";
 @import "../../components/dropdown-menu.css";
+@import "../../components/icon.css";
 @import "../../components/icon-button.css";
 @import "../../components/inline-input.css";
 @import "../../components/list.css";
@@ -23,7 +24,6 @@
 @import "../../components/message-part.css";
 @import "../../components/message-row.css";
 @import "../../components/model-info-card.css";
-@import "../../components/model-selector.css";
 @import "../../components/popover.css";
 @import "../../components/prompt-input.css";
 @import "../../components/radio-group.css";

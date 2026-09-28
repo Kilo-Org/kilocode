@@ -69,7 +69,7 @@ export const dict: Record<string, string> = {
   "ui.sessionTurn.error.addCredits": "Thêm số dư",
   "dialog.usageExceeded.freeTier.title": "Đã đạt đến giới hạn miễn phí",
   "dialog.usageExceeded.freeTier.description":
-    "Đăng ký Kilo Go để có quyền truy cập đáng tin cậy vào các mô hình nguồn mở tốt nhất, bắt đầu từ $5/tháng.",
+    "Đăng ký Kilo Go với giá $10/tháng để có quyền truy cập đáng tin cậy vào các mô hình nguồn mở tốt nhất.", // kilocode_change
   "dialog.usageExceeded.freeTier.actionLabel": "Đăng ký",
   "dialog.usageExceeded.accountRateLimit.title": "Đã đạt giới hạn Go",
   "dialog.usageExceeded.accountRateLimit.description":
@@ -88,6 +88,15 @@ export const dict: Record<string, string> = {
   "ui.sessionTurn.status.gatheringThoughts": "Thu thập suy nghĩ",
   "ui.sessionTurn.status.consideringNextSteps": "Đang xem xét các bước tiếp theo",
   "ui.messagePart.diagnostic.error": "Lỗi",
+  // kilocode_change start
+  "ui.messagePart.board.read": "Đọc tin nhắn của tác nhân",
+  "ui.messagePart.board.all": "Tất cả tác nhân",
+  "ui.messagePart.board.primary": "Tác nhân chính",
+  "ui.messagePart.board.agent": "Tác nhân",
+  "ui.messagePart.board.route": "Từ {{from}} đến {{to}}",
+  "ui.messagePart.board.empty": "Không có tin nhắn từ tác nhân",
+  "ui.messagePart.board.stored": "Chỉ được lưu trữ. Chưa xác nhận tin nhắn đã được gửi đến hay đã được đọc.",
+  // kilocode_change end
   "ui.messagePart.title.edit": "Chỉnh sửa",
   "ui.messagePart.title.write": "Viết",
   "ui.messagePart.option.typeOwnAnswer": "Nhập câu trả lời của riêng bạn",

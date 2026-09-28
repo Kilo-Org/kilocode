@@ -78,7 +78,7 @@ export const dict = {
 
   "dialog.usageExceeded.freeTier.title": "Dostignut besplatan limit",
   "dialog.usageExceeded.freeTier.description":
-    "Pretplati se na Kilo Go za pouzdan pristup najboljim modelima otvorenog koda, počevši od $5/mjesec.", // kilocode_change
+    "Pretplati se na Kilo Go za $10/mjesec i ostvari pouzdan pristup najboljim modelima otvorenog koda.", // kilocode_change
   "dialog.usageExceeded.freeTier.actionLabel": "Pretplati se",
   "dialog.usageExceeded.accountRateLimit.title": "Dostignut Go limit",
   "dialog.usageExceeded.accountRateLimit.description":
@@ -228,6 +228,13 @@ export const dict = {
   "ui.sessionTurn.status.delegatingWaitingQuestion": "Subagent waiting for response",
   "ui.messagePart.mcp.input": "Ulaz",
   "ui.messagePart.mcp.output": "Izlaz",
+  "ui.messagePart.board.read": "Čitanje poruka agenata",
+  "ui.messagePart.board.all": "Svi agenti",
+  "ui.messagePart.board.primary": "Glavni agent",
+  "ui.messagePart.board.agent": "Agent",
+  "ui.messagePart.board.route": "Pošiljalac: {{from}}, primalac: {{to}}",
+  "ui.messagePart.board.empty": "Nema poruka agenata",
+  "ui.messagePart.board.stored": "Samo sačuvano. Nema potvrde o isporuci ni o čitanju.",
   "ui.mermaid.rendering": "Renderovanje Mermaid dijagrama...",
   "ui.mermaid.renderError": "Renderovanje Mermaid dijagrama nije uspjelo: {{message}}",
   "ui.mermaid.errorDefault": "Nije moguće renderovati Mermaid dijagram.",
@@ -238,6 +245,10 @@ export const dict = {
   "ui.mermaid.copyPng": "Kopiraj PNG",
   "ui.mermaid.downloadSvg": "Preuzmi SVG",
   "ui.mermaid.downloadPng": "Preuzmi PNG",
+  "ui.mermaid.zoom": "Zumiranje",
+  "ui.mermaid.zoomIn": "Uvećaj",
+  "ui.mermaid.zoomOut": "Umanji",
+  "ui.mermaid.zoomReset": "Resetuj zumiranje",
   "ui.message.deleteQueued": "Obriši poruku iz reda",
   "ui.question.subtitle.dismissed": "{{count}} dismissed",
   "ui.question.answer.dismissed": "Dismissed",

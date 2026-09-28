@@ -17,12 +17,22 @@ export interface TranscriptUserRow extends TranscriptMeta {
   answered: boolean
 }
 
+/**
+ * Wall-clock finish time and duration for a completed turn, shown as the
+ * turn's chat-line timestamp.
+ */
+export interface TurnTiming {
+  completedAt: number
+  durationMs?: number
+}
+
 export interface TranscriptAssistantRow extends TranscriptMeta {
   type: "assistant"
   key: string
   message: Message
   parts: Part[]
   copy?: string
+  timing?: TurnTiming
 }
 
 export interface TranscriptDiffRow extends TranscriptMeta {
@@ -84,6 +94,10 @@ function meta(a: TranscriptRow, b: TranscriptRow) {
   return a.turn === b.turn && a.partial === b.partial && a.queued === b.queued && a.live === b.live
 }
 
+function sameTiming(a?: TurnTiming, b?: TurnTiming) {
+  return a?.completedAt === b?.completedAt && a?.durationMs === b?.durationMs
+}
+
 function equal(a: TranscriptRow, b: TranscriptRow) {
   if (a.type !== b.type || !meta(a, b)) return false
   if (a.type === "user" && b.type === "user") {
@@ -92,7 +106,7 @@ function equal(a: TranscriptRow, b: TranscriptRow) {
     )
   }
   if (a.type === "assistant" && b.type === "assistant") {
-    return a.message === b.message && same(a.parts, b.parts) && a.copy === b.copy
+    return a.message === b.message && same(a.parts, b.parts) && a.copy === b.copy && sameTiming(a.timing, b.timing)
   }
   if (a.type === "diff" && b.type === "diff") {
     return a.message === b.message && same(a.diffs, b.diffs)
@@ -106,6 +120,39 @@ function equal(a: TranscriptRow, b: TranscriptRow) {
 function diffs(msg: Message) {
   if (!msg.summary || typeof msg.summary === "boolean") return []
   return msg.summary.diffs ?? []
+}
+
+/**
+ * Finish time and duration for a settled turn, derived the same way as the
+ * TUI session view: the last assistant message's completion time minus the
+ * user prompt's creation time. Mirrors the TUI's finish guard, because
+ * `time.completed` is also set on `tool-calls` steps, and skips partial
+ * (not-yet-parented) turns whose synthetic user message reuses an assistant
+ * timestamp.
+ */
+function turnTiming(turn: MessageTurn) {
+  if (turn.partial) return undefined
+  const last = turn.assistant.at(-1)
+  if (!last?.finish || last.finish === "tool-calls" || last.finish === "unknown") return undefined
+  const end = last.time?.completed
+  if (typeof end !== "number") return undefined
+  const start = turn.user.time?.created
+  if (typeof start !== "number") return { completedAt: end }
+  return { completedAt: end, durationMs: Math.max(0, end - start) }
+}
+
+/**
+ * Attach turn timing to the row whose action row carries the copy button,
+ * because that is where it renders rather than on the turn's last row: the
+ * copy part can sit in an earlier chunk, and a tool-only or empty trailing
+ * message has no action row at all. Only the current turn's assistant rows are
+ * scanned, and the lookup is skipped when there is no timing to show, so the
+ * per-part streaming path stays cheap.
+ */
+function attachTiming(rows: TranscriptAssistantRow[], copied: string | undefined, timing: TurnTiming | undefined) {
+  if (!timing || !copied) return
+  const owner = rows.find((row) => row.parts.some((part) => part.id === copied))
+  if (owner) owner.timing = timing
 }
 
 function content(parts: Part[]) {
@@ -165,6 +212,7 @@ export function transcriptRows(
       })
     }
 
+    const assistant: TranscriptAssistantRow[] = []
     for (const msg of turn.assistant) {
       const visible = parts(msg.id)
       if (visible.length === 0) {
@@ -180,16 +228,20 @@ export function transcriptRows(
       }
       for (let start = 0; start < visible.length; start += size) {
         const chunk = visible.slice(start, start + size)
-        rows.push({
+        const row: TranscriptAssistantRow = {
           ...meta,
           type: "assistant",
           key: `${turn.id}:assistant:${msg.id}:${chunk[0]!.id}`,
           message: msg,
           parts: chunk,
           copy: copied,
-        })
+        }
+        assistant.push(row)
+        rows.push(row)
       }
     }
+
+    attachTiming(assistant, copied, turnTiming(turn))
 
     const changes = diffs(turn.user)
     if (changes.length > 0) {
@@ -219,16 +271,18 @@ export function partitionRows(rows: TranscriptRow[], direct: ReadonlySet<string>
   // Only the latest visible turn can render directly.
   if (!turn || !direct.has(turn)) return { virtual: visible, direct: [], queued }
 
-  let boundary = -1
-  for (let i = 0; i < visible.length; i += 1) {
-    const row = visible[i]!
-    if (row.turn === turn && row.type === "assistant") boundary = i
+  // The selected turn has no renderable assistant row.
+  if (!visible.some((row) => row.turn === turn && row.type === "assistant")) {
+    return { virtual: visible, direct: [], queued }
   }
 
-  // The selected turn has no renderable assistant row.
-  if (boundary === -1) return { virtual: visible, direct: [], queued }
+  // The whole live turn renders directly. Handing each finished step to the
+  // virtualizer mid-turn mounted those rows at the 260px estimate while their
+  // real height (a collapsed tool row is ~28px) was only known once measured;
+  // the correction fought the bottom pin and rows near the range edge blinked
+  // in and out of the DOM. One handoff happens when the next turn starts.
+  const boundary = visible.findIndex((row) => row.turn === turn)
 
-  // Boundary starts the direct suffix, preserving rows after the streaming assistant.
   return {
     virtual: visible.slice(0, boundary),
     direct: visible.slice(boundary),

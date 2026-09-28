@@ -319,6 +319,61 @@ const file = Effect.fn("prompt-safety.file")(function* (
 })
 
 describe("SessionPrompt compaction safety", () => {
+  it.live("prunes a single-turn subagent payload before the provider request", () =>
+    provideTmpdirServer(
+      Effect.fnUntraced(function* ({ llm }) {
+        const prompt = yield* SessionPrompt.Service
+        const sessions = yield* Session.Service
+        const root = yield* sessions.create({ title: "Parent" })
+        const chat = yield* sessions.create({ parentID: root.id, title: "Single-turn pruning" })
+        const request = yield* user(chat.id, "Complete the task")
+        const outputs = ["stale-output".repeat(120_000), "recent-one", "recent-two"]
+        expect(Buffer.byteLength(outputs.join(""))).toBeGreaterThan(1_250_000)
+        for (const output of outputs) {
+          const response = yield* assistant(chat.id, request.id, { finish: "tool-calls" })
+          yield* sessions.updateMessage({ ...response, time: { ...response.time, completed: Date.now() } })
+          yield* sessions.updatePart({
+            id: PartID.ascending(),
+            sessionID: chat.id,
+            messageID: response.id,
+            type: "tool",
+            callID: crypto.randomUUID(),
+            tool: "bash",
+            state: {
+              status: "completed",
+              input: { command: "pwd" },
+              output,
+              title: "result",
+              metadata: {},
+              time: { start: Date.now(), end: Date.now() },
+            },
+          })
+        }
+        yield* llm.text("final answer")
+
+        const result = yield* prompt.loop({ sessionID: chat.id })
+
+        expect(yield* llm.calls).toBe(1)
+        expect(result.parts.some((part) => part.type === "text" && part.text === "final answer")).toBe(true)
+        const body = JSON.stringify((yield* llm.inputs).at(-1)?.messages)
+        expect(Buffer.byteLength(body)).toBeLessThan(1_250_000)
+        expect(body).toContain("[Old tool result content cleared]")
+        expect(body).not.toContain("stale-output")
+        expect(body).toContain("recent-one")
+        expect(body).toContain("recent-two")
+        const messages = yield* sessions.messages({ sessionID: chat.id })
+        expect(messages.filter((message) => message.info.role === "user")).toHaveLength(1)
+        expect(
+          messages
+            .flatMap((message) => message.parts)
+            .filter((part) => part.type === "tool")
+            .map((part) => part.state.status === "completed" && !!part.state.time.compacted),
+        ).toEqual([true, false, false])
+      }),
+      { git: true, config: (url) => ({ ...providerCfg(url), compaction: { auto: false } }) },
+    ),
+  )
+
   it.live("compacts estimated outgoing context before the provider request", () =>
     provideTmpdirServer(
       Effect.fnUntraced(function* ({ llm }) {
@@ -370,7 +425,8 @@ describe("SessionPrompt compaction safety", () => {
         Effect.fnUntraced(function* ({ llm }) {
           const prompt = yield* SessionPrompt.Service
           const sessions = yield* Session.Service
-          const chat = yield* sessions.create({})
+          // Explicit title so the auxiliary title-generation call is skipped and llm.calls stays exact.
+          const chat = yield* sessions.create({ title: "Pending request replay" })
           const old = yield* user(chat.id, "old request")
           yield* assistant(chat.id, old.id, {
             tokens: { input: 95_000, output: 100, reasoning: 0, cache: { read: 0, write: 0 } },
@@ -411,7 +467,11 @@ describe("SessionPrompt compaction safety", () => {
             const prompt = yield* SessionPrompt.Service
             const sessions = yield* Session.Service
             const tools = finish !== "stop"
-            const chat = yield* sessions.create({ permission: [{ permission: "*", pattern: "*", action: "allow" }] })
+            // Explicit title so the auxiliary title-generation call is skipped and llm.calls stays exact.
+            const chat = yield* sessions.create({
+              title: "Completed work no-replay",
+              permission: [{ permission: "*", pattern: "*", action: "allow" }],
+            })
             yield* llm.push(
               (tools ? reply().tool("glob", { pattern: "*.txt" }) : reply().text("answer"))
                 .finish(finish)
@@ -445,7 +505,8 @@ describe("SessionPrompt compaction safety", () => {
           const prompt = yield* SessionPrompt.Service
           const sessions = yield* Session.Service
           const compaction = yield* SessionCompaction.Service
-          const chat = yield* sessions.create({})
+          // Explicit title so the auxiliary title-generation call is skipped and llm.calls stays exact.
+          const chat = yield* sessions.create({ title: "Saved marker replay" })
           const old = yield* user(chat.id, "old request")
           yield* assistant(chat.id, old.id)
           const request = yield* user(chat.id, "run the tool")

@@ -47,6 +47,8 @@ This means:
 
 Skills are loaded from multiple locations, allowing both personal skills and project-specific instructions.
 
+To share personal skills across projects, install them at `~/.agents/skills/<name>/SKILL.md`. Kilo discovers this user-level directory by default, without a `skills.paths` entry or a plugin to register the skills. This does not register plugin hooks. Skills in this trusted user-level location can execute [embedded shell commands](/docs/customize/skills#shell-commands-in-skills) when invoked.
+
 {% tabs %}
 {% tab label="VSCode" %}
 
@@ -82,8 +84,8 @@ your-project/
 
 For interoperability with other tools, Kilo Code also loads skills from:
 
-- `.agents/skills/` — Open agent standard, loaded by default
-- `.claude/skills/` — Claude Code compatibility, loaded when Claude Code Compatibility is enabled
+- `~/.agents/skills/` and `.agents/skills/` - Open agent standard, loaded by default
+- `~/.claude/skills/` and `.claude/skills/` - Claude Code compatibility, loaded when Claude Code Compatibility is enabled
 
 ### Additional Skill Paths and Remote URLs
 
@@ -99,6 +101,8 @@ You can configure extra skill locations and remote skill URLs in your `kilo.json
 ```
 
 The `skills.paths` key accepts absolute paths, `~/` home-relative paths, or paths relative to the project root. The `skills.urls` key accepts URLs to remote skill directories that serve an `index.json` manifest.
+
+A path that starts with `/` or `\` but has no drive letter, such as `/.github/skills`, is tried as an absolute path first. If that directory does not exist, Kilo resolves it relative to the project root instead, so `/.github/skills` and `.github/skills` load the same repository skills. Skills loaded through this fallback are treated as project skills.
 
 The remote server must serve an `index.json` file at the URL path with the following structure:
 
@@ -154,8 +158,8 @@ your-project/
 
 For interoperability with other tools, the CLI also loads skills from:
 
-- `.claude/skills/` — Claude Code compatibility
-- `.agents/skills/` — Open agent standard
+- `~/.claude/skills/` and `.claude/skills/` - Claude Code compatibility
+- `~/.agents/skills/` and `.agents/skills/` - Open agent standard
 
 ### Additional Skill Paths and Remote URLs
 
@@ -171,6 +175,8 @@ You can configure extra skill locations and remote skill URLs in your `kilo.json
 ```
 
 The `skills.paths` key accepts absolute paths, `~/` home-relative paths, or paths relative to the project root. The `skills.urls` key accepts URLs to remote skill directories that serve an `index.json` manifest.
+
+A path that starts with `/` or `\` but has no drive letter, such as `/.github/skills`, is tried as an absolute path first. If that directory does not exist, Kilo resolves it relative to the project root instead, so `/.github/skills` and `.github/skills` load the same repository skills. Skills loaded through this fallback are treated as project skills.
 
 The remote server must serve an `index.json` file at the URL path with the following structure:
 
@@ -193,6 +199,12 @@ When you change a remote skill's contents or file list, also change its `version
 
 {% /tab %}
 {% /tabs %}
+
+{% callout type="warning" title="External skill paths" %}
+To load skills from outside the project, declare their `skills.paths` entries in your user-level config, such as `~/.config/kilo/kilo.jsonc`.
+
+Paths declared only in project config remain untrusted. Their `SKILL.md` files and `{file:...}` references must stay inside the project, even if the configured path is absolute or starts with `~/`. External files fail to load with `blocked file reference outside project config scope`. Granting `external_directory` permission does not make these skill paths trusted.
+{% /callout %}
 
 ## Mode-Specific Skills
 
@@ -220,10 +232,14 @@ If you need a skill to only apply in certain situations, write a clear and speci
 
 When multiple skills share the same name, project-level skills (`.kilo/skills/`) take precedence over global skills (`~/.kilo/skills/`). Skills from compatibility directories (`.claude/skills/`, `.agents/skills/`) and additional configured paths are loaded alongside project and global skills.
 
+Every loaded skill is also available as a slash command. The `/` menu lists skills in a separate **Skills** group. When a skill shares its name with a custom command or MCP prompt, the command keeps `/name` and the skill is listed as `/name:skill`, so both stay reachable.
+
 {% /tab %}
 {% tab label="CLI" %}
 
 When multiple skills share the same name, project-level skills (`.kilo/skills/`) take precedence over global skills (`~/.kilo/skills/`). Skills from compatibility directories (`.claude/skills/`, `.agents/skills/`) and additional configured paths are loaded alongside project and global skills.
+
+Every loaded skill is also available as a slash command. When a skill shares its name with a custom command or MCP prompt, the command keeps `/name` and the skill is offered as `/name:skill` in autocomplete, so both stay reachable.
 
 {% /tab %}
 {% /tabs %}

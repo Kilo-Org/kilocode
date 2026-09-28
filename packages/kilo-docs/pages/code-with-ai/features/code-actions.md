@@ -15,7 +15,7 @@ Code Actions are a **VS Code extension feature** and are not available in the CL
 
 The extension provides code actions via the editor context menu and lightbulb:
 
-- **Add to Context:** Adds selected code (with file path and line numbers) to the active chat session. Keyboard shortcut: `Cmd+K Cmd+A` (Mac) or `Ctrl+K Ctrl+A` (Windows/Linux).
+- **Add to Context:** Adds selected code (with file path and line numbers) to the active chat session. The selection appears in the chat input as a collapsible context card. Expand a card to review the code, open the file, or remove it. Keyboard shortcut: `Cmd+K Cmd+A` (Mac) or `Ctrl+K Ctrl+A` (Windows/Linux).
 - **Explain Code:** Asks Kilo to explain the selected code.
 - **Fix Code:** Asks Kilo to fix problems in the selected code.
 - **Improve Code:** Asks Kilo to suggest improvements to the selected code.

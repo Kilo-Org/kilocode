@@ -1,7 +1,12 @@
 import type { SessionStatus } from "../../types/messages"
+import type { Timing } from "../../context/session-timing"
 
-export function tracksElapsed(status: SessionStatus, submitting: boolean, since: number | undefined): since is number {
-  return since !== undefined && (status !== "idle" || submitting)
+export function tracksElapsed(
+  status: SessionStatus,
+  submitting: boolean,
+  timing: Timing | undefined,
+): timing is Timing {
+  return timing !== undefined && (status !== "idle" || submitting)
 }
 
 /**

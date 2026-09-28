@@ -37,13 +37,18 @@ internal object EditorContextGatherer {
 
     data class Result(
         val context: EditorContextDto?,
-        val selection: PromptPartDto?,
+        /**
+         * The selection marker (a synthetic text part naming the selected range so vague prompts
+         * like "this" or "the selection" resolve to it) followed by the existing ranged file part,
+         * or empty when there is no selection to attach.
+         */
+        val selection: List<PromptPartDto>,
     )
 
     fun gather(project: Project, root: String): Result {
         if (!KiloPluginSettings.getAutoEditorContext()) {
             LOG.debug { "kind=editor-context enabled=false" }
-            return Result(null, null)
+            return Result(null, emptyList())
         }
         val manager = FileEditorManager.getInstance(project)
         val base = Path.of(root).toAbsolutePath().normalize()
@@ -67,13 +72,13 @@ internal object EditorContextGatherer {
             visibleFiles = visible.takeIf { it.isNotEmpty() },
             shell = shell,
         ).takeIf { active != null || open.isNotEmpty() || visible.isNotEmpty() || shell != null }
-        val part = editor?.let { selection(it, base, ignore) }
+        val part = editor?.let { selection(it, base, ignore) } ?: emptyList()
         LOG.debug {
             val first = openFiles.firstOrNull()
             val filtered = openRel.count { ignore.ignored(it) }
             "kind=editor-context enabled=true localId=${ClientId.isCurrentlyUnderLocalId}" +
                 " rawOpen=${openFiles.size} rawSel=${manager.selectedTextEditorWithRemotes.size}" +
-                " active=${active ?: "none"} open=${open.size} visible=${visible.size} selection=${part != null}" +
+                " active=${active ?: "none"} open=${open.size} visible=${visible.size} selection=${part.isNotEmpty()}" +
                 " ignored=$filtered shell=${shell ?: "none"}" +
                 " firstFs=${first?.fileSystem?.protocol ?: "none"} firstLocal=${first?.isInLocalFileSystem ?: false}" +
                 " firstPath=${first?.path ?: "none"}"
@@ -99,26 +104,44 @@ internal object EditorContextGatherer {
         return null
     }
 
-    private fun selection(editor: Editor, root: Path, ignore: KiloIgnore): PromptPartDto? {
+    private fun selection(editor: Editor, root: Path, ignore: KiloIgnore): List<PromptPartDto> {
         val model = editor.selectionModel
-        if (!model.hasSelection()) return null
-        val file = file(editor) ?: return null
-        val path = local(file, root) ?: return null
-        if (ignore.ignored(root.relativize(path).toString())) return null
+        if (!model.hasSelection()) return emptyList()
+        val vf = file(editor) ?: return emptyList()
+        val path = local(vf, root) ?: return emptyList()
+        val relative = root.relativize(path).toString()
+        if (ignore.ignored(relative)) return emptyList()
         val start = model.selectionStart
         val end = model.selectionEnd
-        if (start == end) return null
+        if (start == end) return emptyList()
         val doc = editor.document
         val last = (end - 1).coerceAtLeast(start)
         val first = doc.getLineNumber(start) + 1
         val line = doc.getLineNumber(last) + 1
         val url = "${path.toUri()}?start=$first&end=$line"
-        return PromptPartDto(
+        val marker = PromptPartDto(
+            type = "text",
+            text = selectionMarkerText(relative, first, line),
+            synthetic = true,
+        )
+        val range = PromptPartDto(
             type = "file",
             mime = "text/plain",
             url = url,
             filename = path.name,
         )
+        return listOf(marker, range)
+    }
+
+    // Grounds vague prompt references (e.g. "this", "this code", "the selection") in the attached
+    // range that follows. Leading blank lines separate it from the user's own text when the parts
+    // are adjacent, mirroring the <environment_details> block. Wrapped in <system-reminder> like
+    // ForkHandoff.forkText and the CLI's own editor-context note, the two other hidden-note producers.
+    private fun selectionMarkerText(relative: String, first: Int, last: Int): String {
+        val lines = if (first == last) "line $first" else "lines $first-$last"
+        return "\n\n<system-reminder>Note: The user selected $lines from \"$relative\" in the active editor. " +
+            "Treat this selected range as the primary referent when the user's prompt says \"this\", " +
+            "\"this code\", \"these lines\", or \"the selection\".</system-reminder>"
     }
 
     private fun file(editor: Editor): VirtualFile? = FileDocumentManager.getInstance().getFile(editor.document)

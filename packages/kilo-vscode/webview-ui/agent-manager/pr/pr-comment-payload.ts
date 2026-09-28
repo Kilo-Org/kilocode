@@ -1,5 +1,5 @@
-import { formatReviewCommentMarkdown, type PRReviewCommentData } from "../../../src/shared/review-comments"
-import type { PRComment } from "./pr-types"
+import { formatReviewCommentMarkdown, isHttpsUrl, type PRReviewCommentData } from "../../../src/shared/review-comments"
+import type { PRComment, PRConversationComment } from "./pr-types"
 
 /** Caps so one talkative PR cannot blow up a prompt. */
 const BODY = 4_000
@@ -78,8 +78,14 @@ function patch(header: string, lines: HunkLine[]): string {
 }
 
 /** Index of the line the comment was written against, or the end of the hunk. */
-function target(lines: HunkLine[], line?: number): number {
+function target(lines: HunkLine[], line?: number, side?: PRComment["side"]): number {
   if (!line) return lines.length - 1
+  if (side) {
+    const key = side === "deletions" ? "old" : "next"
+    const skip = side === "deletions" ? "+" : "-"
+    const index = lines.findIndex((item) => item[key] === line && item.text[0] !== skip)
+    return index >= 0 ? index : lines.length - 1
+  }
   const added = lines.findIndex((item) => item.next === line && item.text[0] === "+")
   if (added >= 0) return added
   const removed = lines.findIndex((item) => item.old === line && item.text[0] === "-")
@@ -116,16 +122,17 @@ function crop(
   line: number | undefined,
   window: { before: number; after: number },
   after?: string[],
+  side?: PRComment["side"],
 ): HunkView {
   const parsed = parseHunk(value)
   if (!parsed || parsed.lines.length === 0) {
     return { header: "", lines: [], patch: value, top: false, bottom: false }
   }
-  const index = target(parsed.lines, line)
+  const index = target(parsed.lines, line, side)
   const start = Math.max(0, index - window.before)
   const end = Math.min(parsed.lines.length, index + window.after + 1)
   const room = window.after - (end - index - 1)
-  const tail = end === parsed.lines.length && after?.length && room > 0 ? after : []
+  const tail = side !== "deletions" && end === parsed.lines.length && after?.length && room > 0 ? after : []
   const lines = extend(parsed.lines.slice(start, end), tail, Math.min(room, tail.length))
   return {
     header: parsed.header,
@@ -137,13 +144,13 @@ function crop(
 }
 
 /** Bounded context rendered inside a comment card. */
-export function displayHunk(value: string, line?: number, after?: string[]): HunkView {
-  return crop(value, line, VIEW, after)
+export function displayHunk(value: string, line?: number, after?: string[], side?: PRComment["side"]): HunkView {
+  return crop(value, line, VIEW, after, side)
 }
 
 /** Keep the `@@` header and the comment context when formatting agent input. */
-function trim(value: string, line?: number, after?: string[]): string {
-  const view = crop(value, line, SEND, after)
+function trim(value: string, line?: number, after?: string[], side?: PRComment["side"]): string {
+  const view = crop(value, line, SEND, after, side)
   if (view.lines.length === 0) return trimFallback(value)
   if (!view.top && !view.bottom) return clip(value, HUNK_CHARS)
   const body = view.patch.split("\n")
@@ -159,25 +166,55 @@ function trimFallback(value: string): string {
 }
 
 export function prPayload(comment: PRComment): PRReviewCommentData {
-  const replies = (comment.replies ?? [])
-    .slice(0, REPLIES)
-    .map((reply) => ({ author: reply.author, body: clip(reply.body, BODY) }))
+  const replies = (comment.replies ?? []).slice(0, REPLIES).map((reply) => {
+    const avatar = githubUrl(reply.avatar)
+    return {
+      author: reply.author,
+      body: clip(reply.body, BODY),
+      ...(avatar ? { avatar } : {}),
+    }
+  })
+  const avatar = githubUrl(comment.avatar)
+  const url = githubUrl(comment.url)
   return {
     id: comment.threadId,
     origin: "pr",
     author: comment.author,
+    ...(avatar ? { avatar } : {}),
     body: clip(comment.body, BODY),
     file: comment.file,
+    ...(comment.side ? { side: comment.side } : {}),
     line: comment.line,
-    diffHunk: comment.diffHunk ? trim(comment.diffHunk, comment.line, comment.after) : undefined,
+    ...(comment.originalLine === undefined ? {} : { originalLine: comment.originalLine }),
+    ...(comment.startLine === undefined ? {} : { startLine: comment.startLine }),
+    ...(url ? { url } : {}),
+    resolved: comment.resolved,
+    diffHunk: comment.diffHunk
+      ? trim(comment.diffHunk, comment.originalLine ?? comment.line, comment.after, comment.side)
+      : undefined,
     outdated: comment.outdated || undefined,
     replies: replies.length > 0 ? replies : undefined,
   }
 }
 
+export function prConversationPayload(comment: PRConversationComment): PRReviewCommentData {
+  return {
+    id: comment.id,
+    origin: "pr",
+    author: comment.author,
+    body: clip(comment.body, BODY),
+    reviewState: comment.state,
+  }
+}
+
+export function prConversationMarkdown(comment: PRConversationComment): string {
+  return formatReviewCommentMarkdown(prConversationPayload(comment))
+}
+
 /** Only https urls reach the payload, the markdown, or `openExternal`. */
 export function githubUrl(url?: string): string | undefined {
-  return url?.startsWith("https://") ? url : undefined
+  if (!url || !isHttpsUrl(url)) return undefined
+  return url
 }
 
 /** The whole thread as markdown, for the copy action. */

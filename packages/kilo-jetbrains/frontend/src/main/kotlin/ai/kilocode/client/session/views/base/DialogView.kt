@@ -98,6 +98,8 @@ open class DialogView(
     private var top: JComponent? = null
     private var content: JComponent? = null
     private var actionLeft: JComponent? = null
+    private var leftActionId: String? = null
+    private var leftActionButton: JButton? = null
 
     // Top inset value used when top padding is on; QuestionView sets a non-standard step here.
     private var topInset = UiStyle.Gap.pad()
@@ -284,6 +286,38 @@ open class DialogView(
         syncFooter()
     }
 
+    /** Render a standard retained dialog action on the left side of the footer. */
+    @RequiresEdt
+    fun setLeftAction(action: Action?) {
+        val previous = leftActionButton
+        val showingRetained = actionLeft == null || actionLeft === previous
+        if (action == null) {
+            leftActionId?.let(actionHandlers::remove)
+            leftActionId = null
+            if (showingRetained) setActionLeft(null)
+            return
+        }
+        val btn = if (leftActionId == action.id) {
+            leftActionButton ?: makeButton(action.id, action.text)
+        } else {
+            leftActionId?.let(actionHandlers::remove)
+            makeButton(action.id, action.text)
+        }
+        leftActionId = action.id
+        leftActionButton = btn
+        actionHandlers[action.id] = action.handler
+        btn.text = action.text
+        btn.isEnabled = action.enabled
+        btn.putClientProperty(DarculaButtonUI.DEFAULT_STYLE_KEY, if (action.primary) true else null)
+        if (showingRetained) setActionLeft(btn)
+    }
+
+    /** Reattach the retained left action after a temporary [setActionLeft] component. */
+    @RequiresEdt
+    fun restoreLeftAction() {
+        setActionLeft(leftActionButton.takeIf { leftActionId != null })
+    }
+
     /**
      * Show or hide a specific action button identified by [id].
      * No-ops if the id is not found.
@@ -308,6 +342,10 @@ open class DialogView(
         btn.text = text
     }
 
+    /**
+     * Toggle the card's chrome. Outlined (the default) paints the dialog surface fill plus the
+     * outline; disabling it drops both, leaving the content flush with the session backdrop.
+     */
     @RequiresEdt
     fun setOutlined(value: Boolean) {
         if (outlined == value) return
@@ -337,9 +375,18 @@ open class DialogView(
 
     // ---- contentColor override ----
 
-    override fun contentColor(): Color = SessionUiStyle.View.Surface.bgColor()
+    override fun contentColor(): Color =
+        if (outlined) SessionUiStyle.View.Dialog.bgColor() else SessionUiStyle.View.Surface.bgColor()
 
-    override fun outlineColor(): Color? = if (outlined) SessionUiStyle.View.Outline.brightColor() else null
+    /**
+     * The painted surface depends on [outlined], which is still `false` while the super constructor
+     * assigns `background = contentColor()`, and it changes again on every [setOutlined] call.
+     * Deriving the background here keeps the reported color equal to the one the card actually
+     * paints instead of leaving a stale value behind from construction.
+     */
+    override fun getBackground(): Color = contentColor()
+
+    override fun outlineColor(): Color? = if (outlined) SessionUiStyle.View.Dialog.outlineColor() else null
 
     // ---- private helpers ----
 

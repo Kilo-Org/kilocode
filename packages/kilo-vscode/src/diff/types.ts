@@ -1,6 +1,8 @@
 export interface PanelContext {
   workspaceRoot: string | undefined
   sessionId?: string
+  comment?: import("../shared/review-comments").PRReviewCommentData
+  beside?: boolean
   /** Overrides the computed default source on open. */
   initialSourceId?: string
   /** Select a file when the source first loads. */

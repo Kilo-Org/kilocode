@@ -5,13 +5,19 @@
 // touch the real Question module or write to the filesystem.
 
 import { describe, expect, test } from "bun:test"
+import { ModelV2 } from "@opencode-ai/core/model"
+import { ProviderV2 } from "@opencode-ai/core/provider"
 import { Deferred, Duration, Effect, Fiber } from "effect"
 import * as TestClock from "effect/testing/TestClock"
 import path from "path"
 import { PartID, type MessageID, type SessionID } from "../../src/session/schema"
 import { KiloSnapshotTrack } from "../../src/kilocode/snapshot/track"
 import { KiloPartLifecycle } from "../../src/kilocode/session/part-lifecycle"
-import { TestInstance } from "../fixture/fixture"
+import { AppRuntime } from "../../src/effect/app-runtime"
+import { GlobalBus, type GlobalEvent } from "../../src/bus/global"
+import { InstanceRef } from "../../src/effect/instance-ref"
+import { Session } from "../../src/session/session"
+import { requireInstance, TestInstance } from "../fixture/fixture"
 import { awaitWithTimeout, it } from "../lib/effect"
 
 const SESSION = "ses_test" as SessionID
@@ -949,6 +955,75 @@ describe("KiloSnapshotTrack progress indicator", () => {
     // At least two different frames should have been rendered during the run.
     expect(frames.size).toBeGreaterThanOrEqual(2)
   })
+})
+
+describe("KiloSnapshotTrack default hooks", () => {
+  it.instance(
+    "preserves the instance directory for real session progress events",
+    () =>
+      Effect.gen(function* () {
+        const test = yield* TestInstance
+        const ctx = yield* requireInstance
+        const session = yield* Effect.promise(() =>
+          AppRuntime.runPromise(
+            Session.Service.use((svc) => svc.create({ title: "snapshot progress" })).pipe(
+              Effect.provideService(InstanceRef, ctx),
+            ),
+          ),
+        )
+        const message = yield* Effect.promise(() =>
+          AppRuntime.runPromise(
+            Session.Service.use((svc) =>
+              svc.updateMessage({
+                id: MESSAGE,
+                role: "user",
+                sessionID: session.id,
+                agent: "build",
+                model: { providerID: ProviderV2.ID.make("test"), modelID: ModelV2.ID.make("test") },
+                time: { created: Date.now() },
+              }),
+            ).pipe(Effect.provideService(InstanceRef, ctx)),
+          ),
+        )
+
+        const seen: GlobalEvent[] = []
+        const removed = yield* Deferred.make<void>()
+        const on = (event: GlobalEvent) => {
+          const properties = event.payload?.properties
+          if (properties?.sessionID !== session.id && properties?.part?.sessionID !== session.id) return
+          seen.push(event)
+          if (event.payload?.type === "message.part.removed") Deferred.doneUnsafe(removed, Effect.succeed(undefined))
+        }
+        GlobalBus.on("event", on)
+        yield* Effect.addFinalizer(() =>
+          Effect.promise(async () => {
+            GlobalBus.off("event", on)
+            await AppRuntime.runPromise(
+              Session.Service.use((svc) => svc.remove(session.id)).pipe(Effect.provideService(InstanceRef, ctx)),
+            )
+          }),
+        )
+
+        const result = yield* KiloSnapshotTrack.wrap({
+          inner: slowInner(350, "progress-hash"),
+          state: KiloSnapshotTrack.makeState(),
+          sessionID: session.id,
+          messageID: message.id,
+          timeoutMs: 1_000,
+          progressDelayMs: 1,
+        })
+
+        expect(result).toBe("progress-hash")
+        yield* awaitWithTimeout(Deferred.await(removed), "timed out waiting for snapshot progress removal")
+        const progress = seen.filter(
+          (event) => event.payload?.type === "message.part.updated" || event.payload?.type === "message.part.removed",
+        )
+        expect(progress.some((event) => event.payload?.type === "message.part.updated")).toBe(true)
+        expect(progress.some((event) => event.payload?.type === "message.part.removed")).toBe(true)
+        for (const event of progress) expect(event.directory).toBe(test.directory)
+      }),
+    { git: true },
+  )
 })
 
 describe("KiloSnapshotTrack persistDisable", () => {

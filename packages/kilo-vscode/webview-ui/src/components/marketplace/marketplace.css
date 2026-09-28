@@ -260,6 +260,13 @@
   border-color: var(--border-warning-base) !important;
 }
 
+.marketplace-type-plugin [data-component="tag"],
+.marketplace-badge-type.marketplace-type-plugin {
+  color: var(--text-on-critical-base) !important;
+  background-color: color-mix(in srgb, var(--border-critical-base) 14%, transparent) !important;
+  border-color: var(--border-critical-base) !important;
+}
+
 .marketplace-badge-installed {
   color: var(--text-on-success-base) !important;
   border-color: var(--border-success-base) !important;

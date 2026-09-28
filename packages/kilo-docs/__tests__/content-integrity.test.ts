@@ -34,6 +34,8 @@ const removed = [
   "automate/tools/update-todo-list",
   "automate/tools/use-mcp-tool",
   "automate/tools/write-to-file",
+  "kiloclaw/overview",
+  "kiloclaw/dashboard",
 ]
 
 function markdown(dir: string): string[] {

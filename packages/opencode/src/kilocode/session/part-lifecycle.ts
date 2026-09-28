@@ -1,4 +1,4 @@
-import { MessageV2 } from "@/session/message-v2"
+import type { MessageV2 } from "@/session/message-v2"
 
 export namespace KiloPartLifecycle {
   export const key = "kilocode.lifecycle"

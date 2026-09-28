@@ -26,6 +26,7 @@ export const AgentManagerStart = Schema.Struct({
   sessionID: SessionID,
   sandboxInheritanceToken: Schema.optional(Schema.String),
   mode: AgentManagerMode,
+  worktreeID: Schema.optional(Schema.String),
   versions: Schema.optional(Schema.Boolean),
   tasks: Schema.Array(AgentManagerTask).check(Schema.isMinLength(1), Schema.isMaxLength(20)),
 })

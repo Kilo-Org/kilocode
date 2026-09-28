@@ -2,6 +2,7 @@ package ai.kilocode.client.ui
 
 import ai.kilocode.rpc.dto.GhChecks
 import ai.kilocode.rpc.dto.GhChecksDto
+import ai.kilocode.rpc.dto.GhCommentsDto
 import ai.kilocode.rpc.dto.GhReview
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -21,6 +22,7 @@ class PrIconsTest {
         "pr-checks-passed",
         "pr-checks-failed",
         "pr-checks-running",
+        "pr-comments",
     )
 
     @Test
@@ -107,6 +109,27 @@ class PrIconsTest {
         assertEquals(PrIcons.checksFailed, PrIcons.checks(GhChecksDto(GhChecks.FAILED, total = 2, failed = 1)))
         assertEquals(PrIcons.checksRunning, PrIcons.checks(GhChecksDto(GhChecks.PENDING, total = 2, pending = 2)))
         assertNull(PrIcons.checks(GhChecksDto()))
+    }
+
+    @Test
+    fun `the comment glyph is shown only while a conversation is unresolved`() {
+        assertEquals(PrIcons.comments, PrIcons.comments(GhCommentsDto(total = 4, unresolved = 1)))
+        // A reviewed PR whose every thread is settled has nothing outstanding, and a glyph there would sit
+        // on most rows saying only "someone commented once".
+        assertNull(PrIcons.comments(GhCommentsDto(total = 4, unresolved = 0)))
+        assertNull(PrIcons.comments(GhCommentsDto()))
+    }
+
+    @Test
+    fun `the comment glyph is a neutral stroke rather than a third verdict badge`() {
+        // It always appears with a count, so the number carries the weight; a hue would claim a verdict it
+        // has not got, and a filled badge would read as another pass or fail beside the CI one.
+        val light = assertNotNull(read("pr-comments.svg"))
+        val dark = assertNotNull(read("pr-comments_dark.svg"))
+
+        assertEquals(setOf("#6C707E"), HEX.findAll(light).map { it.value.uppercase() }.toSet())
+        assertEquals(setOf("#CED0D6"), HEX.findAll(dark).map { it.value.uppercase() }.toSet())
+        assertNull(FILL.find(light), "the comment glyph must not fill a shape")
     }
 
     private fun read(file: String): String? =

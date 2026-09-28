@@ -70,7 +70,7 @@ export const dict = {
 
   "dialog.usageExceeded.freeTier.title": "Gratis grænse nået",
   "dialog.usageExceeded.freeTier.description":
-    "Abonnér på Kilo Go for pålidelig adgang til de bedste open source-modeller fra $5/måned.", // kilocode_change
+    "Abonnér på Kilo Go for $10/måned, og få pålidelig adgang til de bedste open source-modeller.", // kilocode_change
   "dialog.usageExceeded.freeTier.actionLabel": "Abonnér",
   "dialog.usageExceeded.accountRateLimit.title": "Go-grænse nået",
   "dialog.usageExceeded.accountRateLimit.description":
@@ -103,6 +103,15 @@ export const dict = {
   "ui.messagePart.diagnostic.error": "Fejl",
   "ui.messagePart.mcp.input": "Input",
   "ui.messagePart.mcp.output": "Output",
+  // kilocode_change start
+  "ui.messagePart.board.read": "Læs beskeder fra agenter",
+  "ui.messagePart.board.all": "Alle agenter",
+  "ui.messagePart.board.primary": "Hovedagent",
+  "ui.messagePart.board.agent": "Agent",
+  "ui.messagePart.board.route": "{{from}} til {{to}}",
+  "ui.messagePart.board.empty": "Ingen beskeder fra agenter",
+  "ui.messagePart.board.stored": "Kun gemt. Levering og læsning er ikke bekræftet.",
+  // kilocode_change end
   "ui.messagePart.title.edit": "Rediger",
   "ui.messagePart.title.write": "Skriv",
   "ui.messagePart.option.typeOwnAnswer": "Skriv dit eget svar",
@@ -132,6 +141,10 @@ export const dict = {
   "ui.mermaid.copyPng": "Kopiér PNG",
   "ui.mermaid.downloadSvg": "Download SVG",
   "ui.mermaid.downloadPng": "Download PNG",
+  "ui.mermaid.zoom": "Zoom",
+  "ui.mermaid.zoomIn": "Zoom ind",
+  "ui.mermaid.zoomOut": "Zoom ud",
+  "ui.mermaid.zoomReset": "Nulstil zoom",
   // kilocode_change end
   "ui.scrollView.ariaLabel": "rulbart indhold",
 

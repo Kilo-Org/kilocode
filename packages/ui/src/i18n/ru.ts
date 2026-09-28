@@ -74,7 +74,7 @@ export const dict = {
 
   "dialog.usageExceeded.freeTier.title": "Достигнут бесплатный лимит",
   "dialog.usageExceeded.freeTier.description":
-    "Подпишитесь на Kilo Go для надёжного доступа к лучшим моделям с открытым исходным кодом, от $5/месяц.", // kilocode_change
+    "Подпишитесь на Kilo Go за $10/месяц для надёжного доступа к лучшим моделям с открытым исходным кодом.", // kilocode_change
   "dialog.usageExceeded.freeTier.actionLabel": "Подписаться",
   "dialog.usageExceeded.accountRateLimit.title": "Достигнут лимит Go",
   "dialog.usageExceeded.accountRateLimit.description":
@@ -229,6 +229,10 @@ export const dict = {
   "ui.mermaid.copySvg": "Копировать SVG",
   "ui.mermaid.download": "Скачать",
   "ui.mermaid.downloadPng": "Скачать PNG",
+  "ui.mermaid.zoom": "Масштаб",
+  "ui.mermaid.zoomIn": "Увеличить",
+  "ui.mermaid.zoomOut": "Уменьшить",
+  "ui.mermaid.zoomReset": "Сбросить масштаб",
   "ui.mermaid.downloadSvg": "Скачать SVG",
   "ui.mermaid.errorDefault": "Не удалось отрисовать диаграмму Mermaid.",
   "ui.mermaid.errorEmpty": "Mermaid отрисовал пустую диаграмму.",
@@ -237,6 +241,13 @@ export const dict = {
   "ui.message.deleteQueued": "Удалить сообщение из очереди",
   "ui.messagePart.mcp.input": "Ввод",
   "ui.messagePart.mcp.output": "Вывод",
+  "ui.messagePart.board.read": "Чтение сообщений агентов",
+  "ui.messagePart.board.all": "Все агенты",
+  "ui.messagePart.board.primary": "Главный агент",
+  "ui.messagePart.board.agent": "Агент",
+  "ui.messagePart.board.route": "Отправитель: {{from}}, получатель: {{to}}",
+  "ui.messagePart.board.empty": "Нет сообщений агентов",
+  "ui.messagePart.board.stored": "Только сохранено. Доставка и прочтение не подтверждены.",
   "ui.question.answer.dismissed": "Dismissed",
   "ui.question.subtitle.dismissed": "{{count}} dismissed",
   "ui.sessionTurn.diffs.changed": "Изменено",

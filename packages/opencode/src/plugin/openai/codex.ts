@@ -54,10 +54,12 @@ function base64UrlEncode(buffer: ArrayBuffer): string {
 
 export interface IdTokenClaims {
   chatgpt_account_id?: string
+  chatgpt_compute_residency?: string
   organizations?: Array<{ id: string }>
   email?: string
   "https://api.openai.com/auth"?: {
     chatgpt_account_id?: string
+    chatgpt_compute_residency?: string
   }
 }
 
@@ -90,6 +92,14 @@ export function extractAccountId(tokens: TokenResponse): string | undefined {
     return claims ? extractAccountIdFromClaims(claims) : undefined
   }
   return undefined
+}
+
+export function extractResidency(token: string): string | undefined {
+  const claims = parseJwtClaims(token)
+  const residency =
+    claims?.["https://api.openai.com/auth"]?.chatgpt_compute_residency ?? claims?.chatgpt_compute_residency
+  if (!residency || residency === "no_constraint") return undefined
+  return residency
 }
 
 function buildAuthorizeUrl(redirectUri: string, pkce: PkceCodes, state: string): string {
@@ -402,8 +412,13 @@ export async function CodexAuthPlugin(input: PluginInput, options: CodexAuthPlug
               if (ALLOWED_MODELS.has(model.api.id)) return true
               if (DISALLOWED_MODELS.has(model.api.id)) return false // kilocode_change
               if (model.api.id === "gpt-5.6") return false
-              const match = model.api.id.match(/^gpt-(\d+\.\d+)/)
-              return match ? parseFloat(match[1]) > 5.4 : false
+              // kilocode_change start - allow integer GPT major versions until the next upstream sync
+              const match = model.api.id.match(/^gpt-(\d+)(?:\.(\d+))?/)
+              if (!match) return false
+              const major = Number(match[1])
+              const minor = Number(match[2] ?? 0)
+              return major > 5 || (major === 5 && minor > 4)
+              // kilocode_change end
             })
             .map(([modelID, model]) => [
               modelID,
@@ -522,10 +537,12 @@ export async function CodexAuthPlugin(input: PluginInput, options: CodexAuthPlug
               requestInput instanceof URL
                 ? requestInput
                 : new URL(typeof requestInput === "string" ? requestInput : requestInput.url)
-            const url =
-              parsed.pathname.includes("/v1/responses") || parsed.pathname.includes("/chat/completions")
-                ? new URL(codexApiEndpoint)
-                : parsed
+            const rewrite = parsed.pathname.includes("/v1/responses") || parsed.pathname.includes("/chat/completions")
+            const url = rewrite ? new URL(codexApiEndpoint) : parsed
+            if (rewrite) {
+              const residency = extractResidency(currentAuth.access)
+              if (residency) headers.set("x-openai-internal-codex-residency", residency)
+            }
 
             const requestInit = {
               ...init,

@@ -6,6 +6,7 @@ import { SearchField } from "../../components/SearchField"
 import { useConfig } from "../../context/config"
 import { toolCapabilities, toolName } from "../../shared/utils"
 import { ConfigCountTag as CountTag, ConfigPage, ConfigTag as Tag, SourceBadge } from "./ConfigPage"
+import "../../styles/agents-tools.css"
 
 export function ToolsRoute() {
   const ctx = useConfig()

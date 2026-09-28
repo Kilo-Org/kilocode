@@ -1,6 +1,6 @@
 import { createEffect, on, type JSX, onMount, onCleanup } from "solid-js"
 import { useReducedMotion } from "../hooks/use-reduced-motion"
-import { animate, tunableSpringValue, type AnimationPlaybackControls, GROW_SPRING, type SpringConfig } from "./motion"
+import { animate, settle, tunableSpringValue, type AnimationPlaybackControls, GROW_SPRING, type SpringConfig } from "./motion"
 
 export interface GrowBoxProps {
   children: JSX.Element
@@ -406,8 +406,8 @@ export function GrowBox(props: GrowBoxProps) {
     if (resizeFrame !== undefined) cancelAnimationFrame(resizeFrame)
     observer?.disconnect()
     height.destroy()
-    fadeAnim?.stop()
-    edgeAnim?.stop()
+    settle(fadeAnim)
+    settle(edgeAnim)
     edgeAnim = undefined
     edgeOn = false
   })

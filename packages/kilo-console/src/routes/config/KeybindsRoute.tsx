@@ -5,6 +5,7 @@ import { IconButton } from "@kilocode/kilo-web-ui/icon-button"
 import { SearchField } from "../../components/SearchField"
 import { ConfigCountTag as CountTag, ConfigPage, ConfigTag as Tag, SourceBadge } from "./ConfigPage"
 import { useKeybindSettings } from "./state/keybinds"
+import "../../styles/keybinds.css"
 
 export function KeybindsRoute() {
   const state = useKeybindSettings()

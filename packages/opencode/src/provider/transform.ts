@@ -89,6 +89,8 @@ function sdkKey(npm: string): string | undefined {
       return "openrouter"
     case "@kilocode/kilo-gateway": // kilocode_change
       return "openrouter"
+    case "merge-gateway-ai-sdk-provider":
+      return "mergeGateway"
     case "ai-gateway-provider":
       // ai-gateway-provider/unified wraps createOpenAICompatible({ name: "Unified" }),
       // and @ai-sdk/openai-compatible parses compatibleOptions from one of
@@ -214,11 +216,10 @@ function normalizeMessages(
             return part.text !== ""
           }
           if (part.type === "reasoning") {
-            return (
-              part.text.trim().length > 0 ||
-              part.providerOptions?.bedrock?.signature != null ||
-              part.providerOptions?.bedrock?.redactedData != null
-            )
+            // Match what the SDK can replay before assigning cache points. Otherwise
+            // unsigned reasoning can leave an empty or cache-point-only message.
+            const metadata = part.providerOptions?.[model.providerID] ?? part.providerOptions?.bedrock
+            return metadata?.signature != null || metadata?.redactedContent != null || metadata?.redactedData != null
           }
           return true
         })
@@ -588,7 +589,6 @@ const GEMINI_MODELS_WITH_SAMPLING_DEFAULTS = [
 export function temperature(model: Provider.Model) {
   const id = model.api.id.toLowerCase()
   if (id.includes("north-mini-code")) return 1.0
-  if (id.includes("qwen")) return 0.55
   if (id.includes("claude")) return undefined
   if (id.includes("gemini"))
     return GEMINI_MODELS_WITH_SAMPLING_DEFAULTS.some((model) => model.test(id)) ? 1.0 : undefined
@@ -608,13 +608,19 @@ export function temperature(model: Provider.Model) {
 
 export function topP(model: Provider.Model) {
   const id = model.api.id.toLowerCase()
-  if (id.includes("qwen")) return 1
   if (id.includes("gemini"))
     return GEMINI_MODELS_WITH_SAMPLING_DEFAULTS.some((model) => model.test(id)) ? 0.95 : undefined
   if (["minimax-m2", "kimi-k2.5", "kimi-k2p5", "kimi-k2-5"].some((s) => id.includes(s))) {
     return 0.95
   }
   if (isLing(model.api.id)) return 0.95 // kilocode_change
+  if (
+    ["deepseek-v4-flash-0731", "deepseek-v4-flash:0731"].some((name) => id.includes(name)) ||
+    (model.providerID === "kilo" && id.includes("deepseek-v4-flash")) || // kilocode_change
+    (id.includes("deepseek-v4-flash") && (model.providerID === "deepseek" || model.providerID.startsWith("opencode")))
+  ) {
+    return 0.95
+  }
   return undefined
 }
 
@@ -742,6 +748,41 @@ function anthropicAdaptiveEfforts(apiId: string): string[] | null {
 
 function anthropicOmitsThinking(apiId: string) {
   return anthropicUsesModernAdaptiveThinking(apiId)
+}
+
+// Opus 5, Sonnet 5, Fable 5.x, and Mythos 5.x think without a `thinking` parameter.
+function anthropicThinksByDefault(apiId: string) {
+  const version = /claude-(?:[a-z]+-)?(\d+)(?:[.-](\d{1,2}))?(?:[.@-]|$)/i.exec(apiId)
+  if (!version) return false
+  return Number(version[1]) >= 5
+}
+
+// Fable 5.1 binds each thinking signature to the system prompt, tool list, and
+// messages above it, and rejects the request when any of that changes. opencode
+// re-renders parts of that prefix between turns (system prompt, tools, compaction),
+// so ask the API to drop the affected blocks instead of failing the request.
+// Models that do not run the check accept the field, so it is safe on every Claude.
+// The patched AI SDK adds the thinking-binding-controls beta whenever it is set.
+const ANTHROPIC_BLOCK_BINDING = { prefixMismatchBehavior: "drop_block" }
+
+function anthropicBlockBinding(model: Provider.Model, options: { [x: string]: any }) {
+  if (!model.api.id.toLowerCase().includes("claude")) return options
+  const byDefault = anthropicThinksByDefault(model.api.id)
+  switch (model.api.npm) {
+    case "@ai-sdk/anthropic":
+    case "@ai-sdk/google-vertex/anthropic": {
+      const thinking = options.thinking ?? (byDefault ? { type: "adaptive" } : undefined)
+      if (!thinking || (thinking.type !== "adaptive" && thinking.type !== "enabled")) return options
+      return { ...options, thinking: { ...thinking, blockBinding: ANTHROPIC_BLOCK_BINDING } }
+    }
+    case "@ai-sdk/amazon-bedrock": {
+      const reasoningConfig = options.reasoningConfig ?? (byDefault ? { type: "adaptive" } : undefined)
+      if (!reasoningConfig || (reasoningConfig.type !== "adaptive" && reasoningConfig.type !== "enabled"))
+        return options
+      return { ...options, reasoningConfig: { ...reasoningConfig, blockBinding: ANTHROPIC_BLOCK_BINDING } }
+    }
+  }
+  return options
 }
 
 function googleThinkingLevelEfforts(apiId: string) {
@@ -1352,6 +1393,7 @@ function reasoningEffort(model: Provider.Model, effort: string) {
     case "@ai-sdk/togetherai":
     case "venice-ai-sdk-provider":
     case "ai-gateway-provider":
+    case "merge-gateway-ai-sdk-provider":
       return { reasoningEffort: effort }
     case "@kilocode/kilo-gateway": // kilocode_change - OpenRouter-shaped reasoning effort
       return { reasoning: { effort } } // kilocode_change
@@ -1598,11 +1640,11 @@ export function options(input: {
         input.model.api.npm === "@ai-sdk/github-copilot" ||
         input.model.api.npm === "@openrouter/ai-sdk-provider" ||
         input.model.api.npm === "@kilocode/kilo-gateway") &&
-      // kilocode_change end
       input.model.api.id.includes("gpt-5.") &&
       !input.model.api.id.includes("codex") &&
       !input.model.api.id.includes("-chat") &&
       input.model.providerID !== "azure"
+      // kilocode_change end
     ) {
       result["textVerbosity"] = "low"
     }
@@ -1662,7 +1704,7 @@ export function providerOptions(model: Provider.Model, options: { [x: string]: a
     usesOpenAIReasoningGate &&
     (model.capabilities.reasoning || options.reasoningEffort !== undefined || options.reasoningSummary !== undefined)
       ? { ...options, forceReasoning: true }
-      : options
+      : anthropicBlockBinding(model, options)
 
   if (model.api.npm === "@ai-sdk/gateway") {
     // Gateway providerOptions are split across two namespaces:

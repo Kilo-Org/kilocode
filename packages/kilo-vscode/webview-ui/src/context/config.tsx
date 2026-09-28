@@ -78,6 +78,7 @@ function loadedSettings(message: ExtensionMessage): Record<string, unknown> | un
   }
   if (message.type === "throughputSettingLoaded") return { showTokenThroughput: message.visible }
   if (message.type === "autoApprovalReasonSettingLoaded") return { showAutoApprovalReason: message.visible }
+  if (message.type === "pushFixesSettingLoaded") return { "agentManager.pushFixes": message.enabled }
 }
 
 export const ConfigProvider: ParentComponent = (props) => {
@@ -92,6 +93,7 @@ export const ConfigProvider: ParentComponent = (props) => {
     indexing: false,
     sandboxControls: false,
     backgroundSubagents: false,
+    speechToText: false,
   })
   const [loading, setLoading] = createSignal(true)
   const [draft, setDraft] = createSignal<Partial<Config>>({})

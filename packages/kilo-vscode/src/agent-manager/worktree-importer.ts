@@ -149,7 +149,12 @@ export class WorktreeImporter {
   private importError(error: unknown, duplicate: string, projectId?: string): void {
     const raw = error instanceof Error ? error.message : String(error)
     const message = raw.includes("already used by worktree") || raw.includes("already checked out") ? duplicate : raw
-    const code = classifyWorktreeError(message)
+    const manager = this.host.manager()
+    const code = classifyWorktreeError(message, {
+      cwd: manager?.repo,
+      probeFailed: manager?.gitProbeFailed,
+      err: error,
+    })
     this.host.post({ type: "agentManager.worktreeSetup", projectId, status: "error", message, errorCode: code })
     this.host.post({ type: "agentManager.importResult", projectId, success: false, message, errorCode: code })
   }

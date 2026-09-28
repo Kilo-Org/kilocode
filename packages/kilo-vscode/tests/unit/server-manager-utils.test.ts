@@ -4,6 +4,7 @@ import {
   resolveServerCwd,
   resolveIndexingEnv,
   resolveManagedServerEnv,
+  resolveClaudeMigrationEnv,
   toErrorMessage,
 } from "../../src/services/cli-backend/server-manager"
 import {
@@ -400,5 +401,12 @@ describe("server workspace helpers", () => {
       KILO_DISABLE_CHANNEL_DB: "true",
       KILO_EXPERIMENTAL_DISABLE_FILEWATCHER: "true",
     })
+  })
+
+  it("uses the explicit migration environment value before the setting", () => {
+    expect(resolveClaudeMigrationEnv({}, false)).toBe("false")
+    expect(resolveClaudeMigrationEnv({}, true)).toBe("true")
+    expect(resolveClaudeMigrationEnv({ KILO_EXPERIMENTAL_CLAUDE_MIGRATION: "false" }, true)).toBe("false")
+    expect(resolveClaudeMigrationEnv({ KILO_EXPERIMENTAL_CLAUDE_MIGRATION: "" }, true)).toBe("")
   })
 })

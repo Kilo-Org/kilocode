@@ -36,9 +36,9 @@ import { Global } from "@opencode-ai/core/global"
 // kilocode_change start - Kilo session behavior extensions
 import { BackgroundProcess } from "@/kilocode/background-process"
 import * as SandboxInheritance from "@/kilocode/sandbox/inheritance"
-import { InteractiveTerminal } from "@/kilocode/interactive-terminal"
 import { KiloSession } from "@/kilocode/session"
 import { forkWriter } from "@/kilocode/session/fork"
+import { GoalState } from "@/kilocode/session/goal/state"
 import { kiloSessionFork } from "@/kilocode/session/fork-command"
 import { KiloSessionEvent } from "@/kilocode/session/event"
 import { SessionExport } from "@/kilocode/session-export"
@@ -117,7 +117,7 @@ export function fromRow(row: SessionRow): Info {
       },
     },
     share,
-    metadata: row.metadata ?? undefined,
+    metadata: GoalState.project(row.id, row.metadata), // kilocode_change
     revert,
     permission: row.permission ? [...row.permission] : undefined,
     time: {
@@ -219,7 +219,9 @@ const Revert = Schema.Struct({
   partID: optionalOmitUndefined(PartID),
   snapshot: optionalOmitUndefined(Schema.String),
   diff: optionalOmitUndefined(Schema.String),
-  workspace: optionalOmitUndefined(Schema.Literals(["restored", "snapshots-disabled", "unavailable"])), // kilocode_change
+  workspace: optionalOmitUndefined(
+    Schema.Literals(["restored", "snapshots-disabled", "unavailable", "not-a-git-repo"]),
+  ), // kilocode_change
 })
 
 const Model = Schema.Struct({
@@ -421,10 +423,8 @@ export const getUsage = (input: {
   metadata?: ProviderMetadata
   provider?: Provider.Info // kilocode_change
 }) => {
-  const safe = (value: number) => {
-    if (!Number.isFinite(value)) return 0
-    return Math.max(0, value)
-  }
+  const finite = (value: number) => (Number.isFinite(value) ? value : 0)
+  const safe = (value: number) => Math.max(0, finite(value))
   const inputTokens = safe(input.usage.inputTokens ?? 0)
   const outputTokens = safe(input.usage.outputTokens ?? 0)
   const reasoningTokens = safe(input.usage.reasoningTokens ?? 0)
@@ -488,13 +488,13 @@ export const getUsage = (input: {
         ? new Decimal(totalNanoAiu).div(100_000_000_000).toNumber()
         : safe(
             new Decimal(0)
-              .add(new Decimal(tokens.input).mul(costInfo?.input ?? 0).div(1_000_000))
-              .add(new Decimal(tokens.output).mul(costInfo?.output ?? 0).div(1_000_000))
-              .add(new Decimal(tokens.cache.read).mul(costInfo?.cache?.read ?? 0).div(1_000_000))
-              .add(new Decimal(tokens.cache.write).mul(costInfo?.cache?.write ?? 0).div(1_000_000))
+              .add(new Decimal(tokens.input).mul(finite(costInfo?.input ?? 0)).div(1_000_000))
+              .add(new Decimal(tokens.output).mul(finite(costInfo?.output ?? 0)).div(1_000_000))
+              .add(new Decimal(tokens.cache.read).mul(finite(costInfo?.cache?.read ?? 0)).div(1_000_000))
+              .add(new Decimal(tokens.cache.write).mul(finite(costInfo?.cache?.write ?? 0)).div(1_000_000))
               // TODO: update models.dev to have better pricing model, for now:
               // charge reasoning tokens at the same rate as output tokens
-              .add(new Decimal(tokens.reasoning).mul(costInfo?.output ?? 0).div(1_000_000))
+              .add(new Decimal(tokens.reasoning).mul(finite(costInfo?.output ?? 0)).div(1_000_000))
               .toNumber(),
           ),
     tokens,
@@ -661,6 +661,7 @@ export const layer: Layer.Layer<
       if (source) yield* SandboxPolicy.inherit(source, result.id, input.sandboxFallback, input.sourceDirectory)
       // kilocode_change end
 
+      result.metadata = GoalState.project(result.id, result.metadata) // kilocode_change
       yield* events.publish(SessionV1.Event.Created, { sessionID: result.id, info: result })
 
       return result
@@ -708,6 +709,7 @@ export const layer: Layer.Layer<
     // kilocode_change end
 
     const remove: Interface["remove"] = Effect.fnUntraced(function* (sessionID: SessionID) {
+      GoalState.pause(sessionID) // kilocode_change
       const session = yield* get(sessionID)
       try {
         // `remove` needs to work in all cases, such as broken sessions that
@@ -731,12 +733,13 @@ export const layer: Layer.Layer<
             KiloSession.clearPlatformOverride(sessionID)
             if (hasInstance) {
               yield* Effect.promise(() => BackgroundProcess.stopSession(sessionID)).pipe(Effect.ignore)
-              yield* Effect.promise(() => InteractiveTerminal.stopSession(sessionID)).pipe(Effect.ignore)
               void Promise.all([import("@/effect/app-runtime"), import("./run-state")]).then(([app, run]) =>
                 app.AppRuntime.runPromise(run.SessionRunState.Service.use((svc) => svc.cancel(sessionID))).catch(
                   () => {},
                 ),
               )
+              // kilocode_change - stop a removed session's wakeups holding Keep Awake
+              yield* KiloSession.cancelWakeups(sessionID)
             }
             // kilocode_change - migrated from legacy sync.run/sync.remove to EventV2 (events.publish/remove)
             yield* events.publish(SessionV1.Event.Deleted, { sessionID, info: session })
@@ -872,10 +875,10 @@ export const layer: Layer.Layer<
         platform: KiloSession.resolvePlatform(original.id), // kilocode_change - inherit platform telemetry attribution
       })
       const idMap = new Map<string, MessageID>()
+      const target = input.messageID ? msgs.findIndex((msg) => msg.info.id === input.messageID) : msgs.length
       const writer = forkWriter(events, { get, messages, create }) // kilocode_change
 
-      for (const msg of msgs) {
-        if (input.messageID && msg.info.id >= input.messageID) break
+      for (const msg of msgs.slice(0, target < 0 ? msgs.length : target)) {
         const newID = MessageID.ascending()
         idMap.set(msg.info.id, newID)
 
@@ -933,6 +936,7 @@ export const layer: Layer.Layer<
           revert: info.revert === null ? undefined : (info.revert ?? current.revert),
           permission: info.permission === null ? undefined : (info.permission ?? current.permission),
         } as Info
+        next.metadata = GoalState.project(sessionID, next.metadata) // kilocode_change
         yield* events.publish(SessionV1.Event.Updated, { sessionID, info: next })
       })
 
@@ -945,6 +949,7 @@ export const layer: Layer.Layer<
     })
 
     const setArchived = Effect.fn("Session.setArchived")(function* (input: { sessionID: SessionID; time?: number }) {
+      if (input.time != null) GoalState.pause(input.sessionID) // kilocode_change
       yield* patch(input.sessionID, { time: { archived: input.time } }).pipe(Effect.orDie)
     })
 

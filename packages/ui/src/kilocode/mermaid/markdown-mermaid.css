@@ -1,0 +1,178 @@
+[data-component="markdown"] {
+  [data-component="markdown-code"][data-kind="mermaid"] {
+    border: 0.5px solid var(--border-weak-base);
+    border-radius: 6px;
+    background: var(--surface-base);
+    overflow: hidden;
+
+    > [data-slot="markdown-copy-button"] {
+      display: none;
+    }
+  }
+
+  [data-component="markdown-mermaid"] {
+    margin: 0;
+    padding: 12px;
+    border: 0;
+    background: transparent;
+    overflow: auto;
+  }
+
+  [data-component="markdown-mermaid"][data-state="rendered"] {
+    display: block;
+  }
+
+  [data-slot="markdown-mermaid-actions"] {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 10px;
+    padding-right: 32px;
+  }
+
+  [data-component="markdown-mermaid"][data-state="rendered"] > svg {
+    display: block;
+    margin: 0 auto;
+    max-width: 100%;
+    height: auto;
+  }
+
+  [data-component="markdown-mermaid"][data-state="rendering"] {
+    color: var(--text-weak);
+    font-style: italic;
+  }
+
+  [data-component="markdown-mermaid"][data-state="error"] {
+    color: var(--text-danger, var(--text-strong));
+    white-space: pre-wrap;
+  }
+}
+
+[data-component="markdown-mermaid-zoom"] {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  background: hsl(from var(--background-base) h s l / 0.6);
+}
+
+[data-slot="markdown-mermaid-zoom-panel"] {
+  display: flex;
+  flex-direction: column;
+  width: min(calc(100vw - 24px), 1100px);
+  height: min(calc(100vh - 24px), 800px);
+  overflow: hidden;
+  outline: none;
+  border: 0.5px solid var(--border-weak-base);
+  border-radius: var(--radius-lg);
+  background: var(--surface-raised-stronger-non-alpha);
+  box-shadow: var(--shadow-lg-border-base);
+}
+
+[data-slot="markdown-mermaid-zoom-header"] {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 14px;
+  border-bottom: 0.5px solid var(--border-weak-base);
+}
+
+[data-slot="markdown-mermaid-zoom-title"] {
+  color: var(--text-strong);
+  font-size: var(--font-size-small);
+  font-weight: var(--font-weight-medium);
+}
+
+[data-slot="markdown-mermaid-zoom-close"],
+[data-slot="markdown-mermaid-zoom-button"] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 0.5px solid transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-base);
+  cursor: pointer;
+}
+
+[data-slot="markdown-mermaid-zoom-close"]:hover,
+[data-slot="markdown-mermaid-zoom-button"]:hover {
+  background: var(--surface-weak);
+}
+
+[data-slot="markdown-mermaid-zoom-viewport"] {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  min-height: 0;
+  overflow: hidden;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+
+[data-slot="markdown-mermaid-zoom-viewport"][data-dragging] {
+  cursor: grabbing;
+}
+
+[data-slot="markdown-mermaid-zoom-canvas"] {
+  width: 100%;
+  transform-origin: center center;
+}
+
+[data-slot="markdown-mermaid-zoom-canvas"] > svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-width: none !important;
+}
+
+[data-slot="markdown-mermaid-zoom-footer"] {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-top: 0.5px solid var(--border-weak-base);
+}
+
+[data-slot="markdown-mermaid-zoom-percent"] {
+  min-width: 48px;
+  text-align: center;
+  color: var(--text-weak);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--font-size-small);
+}
+
+[data-slot="markdown-mermaid-zoom-icon"],
+[data-slot="markdown-mermaid-expand"] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+[data-slot="markdown-mermaid-zoom-icon"],
+[data-slot="markdown-mermaid-zoom-icon"] > svg {
+  width: 16px;
+  height: 16px;
+}
+
+[data-slot="markdown-mermaid-expand"],
+[data-slot="markdown-mermaid-expand"] > svg {
+  width: 12px;
+  height: 12px;
+}
+
+[data-slot="markdown-mermaid-zoom-icon"] > svg,
+[data-slot="markdown-mermaid-expand"] > svg {
+  display: block;
+}

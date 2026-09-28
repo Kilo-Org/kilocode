@@ -5,6 +5,8 @@ description: "Deploy applications and manage security with Kilo Code"
 
 # {% $markdoc.frontmatter.title %}
 
+{% partial file="deploy-eol.md" /%}
+
 {% callout type="generic" %}
 Deploy your applications directly from Kilo Code and manage security with AI-powered reviews and scans.
 {% /callout %}

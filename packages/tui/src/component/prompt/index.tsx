@@ -57,6 +57,7 @@ import { KiloSessionTuiSync } from "@/kilocode/session/tui-sync"
 import { slashMatches } from "@/kilocode/cli/cmd/command-display"
 import { createCostAlertController } from "@/kilocode/cli/cmd/tui/cost-alert"
 import { MemoryPrompt } from "@/kilocode/cli/cmd/tui/component/memory-prompt"
+import { GoalPrompt } from "@/kilocode/cli/cmd/tui/component/goal"
 // kilocode_change end
 import { KILO_BASE_MODE, useBindings, useCommandShortcut, useLeaderActive, useOpencodeKeymap } from "../../keymap"
 import { useTuiConfig } from "../../config"
@@ -173,6 +174,7 @@ export function Prompt(props: PromptProps) {
   const toast = useToast()
   const nudge = useNudge() // kilocode_change
   const status = createMemo(() => sync.data.session_status?.[props.sessionID ?? ""] ?? { type: "idle" })
+  const goal = createMemo(() => GoalPrompt.read(sync.session.get(props.sessionID ?? "")?.metadata)) // kilocode_change
   const history = usePromptHistory()
   const stash = usePromptStash()
   const keymap = useOpencodeKeymap()
@@ -232,6 +234,9 @@ export function Prompt(props: PromptProps) {
     bumpCursor: () => setCursorVersion((value) => value + 1),
     cursorVersion: () => cursorVersion(),
   })
+  const interruptible = createMemo(
+    () => status().type !== "idle" || (goal()?.active === true && (!vim.vimEnabled() || vim.vimMode() === "normal")),
+  )
   // kilocode_change end
   const currentProviderLabel = createMemo(() => local.model.parsed().provider)
   const hasRightContent = createMemo(() => Boolean(props.right))
@@ -274,6 +279,7 @@ export function Prompt(props: PromptProps) {
     if (!input || input.isDestroyed) return
     if (props.disabled) input.cursorColor = theme.backgroundElement
     if (!props.disabled) input.cursorColor = theme.text
+    if (tuiConfig.cursor && !vim.vimEnabled()) input.cursorStyle = tuiConfig.cursor // kilocode_change
   })
 
   const lastUserMessage = createMemo(() => {
@@ -421,8 +427,9 @@ export function Prompt(props: PromptProps) {
         name: "session.interrupt",
         category: "Session",
         hidden: true,
-        enabled: status().type !== "idle",
+        enabled: interruptible(), // kilocode_change
         run: () => {
+          if (!interruptible()) return // kilocode_change
           if (auto()?.visible) return
           if (!input.focused) return
           // TODO: this should be its own command
@@ -864,7 +871,9 @@ export function Prompt(props: PromptProps) {
     return {
       target: inputTarget,
       enabled: inputTarget() !== undefined && !props.disabled,
-      bindings: tuiConfig.keybinds.get("prompt.paste"),
+      // kilocode_change start
+      bindings: tuiConfig.keybinds.gather("prompt.input", ["prompt.paste", "input.buffer.home", "input.buffer.end"]),
+      // kilocode_change end
     }
   })
 
@@ -1203,7 +1212,7 @@ export function Prompt(props: PromptProps) {
         model: `${selectedModel.providerID}/${selectedModel.modelID}`,
         variant,
         parts: nonTextParts.filter((x) => x.type === "file"),
-      })
+      }).then((result) => GoalPrompt.feedback(command.slice(1), args, result, toast)) // kilocode_change
     } else {
       move.startSubmit()
       sdk.client.session
@@ -1532,7 +1541,7 @@ export function Prompt(props: PromptProps) {
                   return
                 }
                 // kilocode_change start - route keys through the vim layer when enabled
-                if (vim.vimOnKey(e)) {
+                if (!(e.name === "escape" && interruptible()) && vim.vimOnKey(e)) {
                   e.preventDefault()
                   e.stopPropagation()
                   return
@@ -1583,11 +1592,13 @@ export function Prompt(props: PromptProps) {
                   // setTimeout is a workaround and needs to be addressed properly
                   if (!input || input.isDestroyed) return
                   input.cursorColor = theme.text
+                  if (tuiConfig.cursor && !vim.vimEnabled()) input.cursorStyle = tuiConfig.cursor // kilocode_change
                 }, 0)
               }}
               onMouseDown={(r: MouseEvent) => r.target?.focus()}
               focusedBackgroundColor={theme.backgroundElement}
               cursorColor={props.disabled ? theme.backgroundElement : theme.text}
+              cursorStyle={tuiConfig.cursor}
               syntaxStyle={syntax()}
             />
             <box flexDirection="row" flexShrink={0} paddingTop={1} gap={1} justifyContent="space-between">
@@ -1679,7 +1690,7 @@ export function Prompt(props: PromptProps) {
         </box>
         <box width="100%" flexDirection="row" justifyContent="space-between">
           <Switch>
-            <Match when={status().type !== "idle"}>
+            <Match when={status().type !== "idle" || goal()?.active /* kilocode_change */}>
               <box
                 flexDirection="row"
                 gap={1}
@@ -1696,7 +1707,9 @@ export function Prompt(props: PromptProps) {
                     {(() => {
                       const retry = createMemo(() => {
                         const s = status()
-                        if (s.type !== "retry") return
+                        // kilocode_change start - render the offline state in this inline error line too
+                        if (s.type !== "retry" && s.type !== "offline") return
+                        // kilocode_change end
                         return s
                       })
                       const message = createMemo(() => {
@@ -1715,7 +1728,10 @@ export function Prompt(props: PromptProps) {
                       const [seconds, setSeconds] = createSignal(0)
                       onMount(() => {
                         const timer = setInterval(() => {
-                          const next = retry()?.next
+                          // kilocode_change start - only the retry state has a countdown target
+                          const s = retry()
+                          const next = s?.type === "retry" ? s.next : undefined
+                          // kilocode_change end
                           if (next) setSeconds(Math.round((next - Date.now()) / 1000))
                         }, 1000)
 
@@ -1735,6 +1751,9 @@ export function Prompt(props: PromptProps) {
                         const r = retry()
                         if (!r) return ""
                         const baseMessage = message()
+                        // kilocode_change start - offline waits on the network probe instead of counting down attempts
+                        if (r.type === "offline") return `${baseMessage} [waiting for network]`
+                        // kilocode_change end
                         const truncatedHint = isTruncated() ? " (click to expand)" : ""
                         const duration = formatDuration(seconds())
                         const retryInfo = ` [retrying ${duration ? `in ${duration} ` : ""}attempt #${r.attempt}]`

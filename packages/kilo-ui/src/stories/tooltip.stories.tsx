@@ -1,8 +1,8 @@
 /** @jsxImportSource solid-js */
 import type { Meta, StoryObj } from "storybook-solidjs-vite"
-import { Tooltip, TooltipKeybind } from "@opencode-ai/ui/tooltip"
-import { Button } from "@opencode-ai/ui/button"
-import { IconButton } from "@opencode-ai/ui/icon-button"
+import { Button } from "../components/button"
+import { IconButton } from "../components/icon-button"
+import { Tooltip, TooltipKeybind } from "../components/tooltip"
 
 const meta: Meta = {
   title: "Components/Tooltip",
@@ -30,7 +30,7 @@ export const ForceOpen: Story = {
 export const WithKeybind: Story = {
   render: () => (
     <TooltipKeybind title="Open Command Palette" keybind="⌘K">
-      <IconButton variant="ghost" icon="magnifying-glass-menu" />
+      <IconButton variant="ghost" icon="magnifying-glass-menu" aria-label="Open command palette" />
     </TooltipKeybind>
   ),
 }

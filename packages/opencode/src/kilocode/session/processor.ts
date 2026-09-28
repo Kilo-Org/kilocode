@@ -7,13 +7,14 @@ import { MessageV2 } from "@/session/message-v2"
 import { isRecord } from "@/util/record"
 import { parseReviewCommand, reviewCommandName } from "@/kilocode/review/command"
 import * as Log from "@opencode-ai/core/util/log"
-import { Cause, Effect, Exit } from "effect"
+import { Cause, Duration, Effect, Exit } from "effect"
 import { Flag } from "@opencode-ai/core/flag/flag"
 import { EffectBridge } from "@/effect/bridge"
 import type { LLMEvent, ProviderMetadata, Usage } from "@opencode-ai/llm"
 import type { ProviderV2 } from "@opencode-ai/core/provider"
 import { SessionRetry } from "@/session/retry"
 import { computeMetrics as computeMetricsHelper, type TokenRates } from "@/kilocode/session/metrics"
+import { InvalidArgumentsError } from "@/tool/tool"
 
 export type ReviewTelemetry = {
   mode: "review"
@@ -70,6 +71,25 @@ export namespace KiloSessionProcessor {
       part.metadata = { ...part.metadata, ...tel }
     }
     return tel
+  }
+
+  /**
+   * Tag the expanded slash-command template so clients can show the user the
+   * command they typed (`/review branch`) instead of the full template, while
+   * keeping the template inspectable. Shape matches
+   * `packages/kilo-vscode/src/shared/injected-prompt.ts`.
+   */
+  export function markCommand(
+    parts: Array<{ type: string; metadata?: Record<string, unknown> }>,
+    command: string,
+    args: string,
+  ) {
+    const title = `/${command} ${args}`.trim()
+    for (const part of parts) {
+      if (part.type !== "text") continue
+      const kilo = isRecord(part.metadata?.kilo) ? part.metadata.kilo : {}
+      part.metadata = { ...part.metadata, kilo: { ...kilo, injected: { title } } }
+    }
   }
 
   export function extractReviewTelemetry(parts: MessageV2.Part[]): ReviewTelemetry | undefined {
@@ -195,6 +215,120 @@ export namespace KiloSessionProcessor {
     })
   }
 
+  /** How long a stream may stay silent before the guard probes connectivity. */
+  export const STALL_MS = 10_000
+
+  /** True only for calls whose local execution started; pending input must not hold the guard back. */
+  export function executingTools(calls: Record<string, { executing?: boolean }>) {
+    return Object.values(calls).some((call) => call.executing)
+  }
+
+  /** resolveSDK's env pass: ${VAR} names resolve from the environment or stay intact. */
+  export function expandEnv(url: string) {
+    return url.replace(/\$\{([^}]+)\}/g, (match, key) => process.env[String(key)] ?? match)
+  }
+
+  // Dynamic import: app-runtime depends on this module, so a static import would
+  // be circular; the annotated return type keeps the AppLayer type graph acyclic.
+  async function providerBaseURL(id: ProviderV2.ID | undefined, apiUrl: string | undefined): Promise<string | undefined> {
+    const url = (id ? await configured(id) : undefined) ?? apiUrl
+    if (!url) return url
+    // varsLoaders vars from resolveSDK are unreachable here; unexpanded names
+    // fail the endpoint probe and fall back to the public probe.
+    return expandEnv(url)
+  }
+
+  async function configured(id: ProviderV2.ID): Promise<string | undefined> {
+    const [runtime, provider] = await Promise.all([
+      import("@/effect/app-runtime").catch(() => undefined),
+      import("@/provider/provider").catch(() => undefined),
+    ])
+    if (!runtime || !provider) return undefined
+    // Bound the lookup: a wedged runtime must not stall the watchdog. The lookup
+    // keeps its own catch, so a rejection after the deadline is still handled,
+    // and the timer is cleared whichever side wins.
+    let timer: ReturnType<typeof setTimeout> | undefined
+    const deadline = new Promise<undefined>((resolve) => {
+      timer = setTimeout(() => resolve(undefined), 2_000)
+    })
+    const lookup = Promise.resolve()
+      .then(() =>
+        runtime.AppRuntime.runPromise(
+          Effect.gen(function* () {
+            const svc = yield* provider.Provider.Service
+            return yield* svc.getProvider(id)
+          }),
+        ),
+      )
+      .catch((err) => {
+        log.warn("offline probe provider lookup failed", { err })
+        return undefined
+      })
+    const info = await Promise.race([lookup, deadline]).finally(() => clearTimeout(timer))
+    // Same resolution as resolveSDK: configured baseURL wins over the catalog URL.
+    const base = info?.options?.baseURL
+    return typeof base === "string" && base !== "" ? base : undefined
+  }
+
+  /** Synthetic stall failure; its message is matched by SessionNetwork.disconnected(). */
+  export class DisconnectedError extends Error {
+    constructor() {
+      super("network connection was lost")
+      this.name = "DisconnectedError"
+    }
+  }
+
+  /**
+   * Fails an attempt stalled for `stallMs` with DisconnectedError when the
+   * connectivity probe also fails. A passing probe resets the clock; only
+   * executing tool calls hold it back.
+   */
+  export function offlineGuard(input: {
+    busy?: () => boolean
+    stallMs?: number
+    tickMs?: number
+    check?: () => Promise<boolean>
+    providerID?: ProviderV2.ID
+    apiUrl?: string
+  }) {
+    const stall = input.stallMs ?? STALL_MS
+    const tick = input.tickMs ?? 1_000
+    const check =
+      input.check ??
+      (async () => {
+        const baseURL = await providerBaseURL(input.providerID, input.apiUrl)
+        return SessionNetwork.probeProvider(baseURL)
+      })
+    const state = { at: Date.now() }
+    return {
+      touch() {
+        state.at = Date.now()
+      },
+      watch: Effect.gen(function* () {
+        while (true) {
+          yield* Effect.sleep(Duration.millis(tick))
+          if (Date.now() - state.at < stall) continue
+          if (input.busy?.()) {
+            state.at = Date.now()
+            continue
+          }
+          // a rejected probe can't confirm connectivity either
+          const ok = yield* Effect.tryPromise({
+            try: check,
+            catch: () => new DisconnectedError(),
+          })
+          if (ok) {
+            state.at = Date.now()
+            continue
+          }
+          // stream activity during the probe proves the connection is alive
+          if (Date.now() - state.at < stall) continue
+          return yield* Effect.fail(new DisconnectedError())
+        }
+      }),
+    }
+  }
+
   /**
    * Returns the Kilo-specific retry policy options (limit + offline handler).
    * Designed to be spread into SessionRetry.policy() opts.
@@ -236,6 +370,61 @@ export namespace KiloSessionProcessor {
 
   export function attempt(): Attempt {
     return { text: false, reasoning: false, tool: false, usage: false, finished: false }
+  }
+
+  /**
+   * Consecutive invalid-argument failures allowed in one turn before it is
+   * aborted. A model that keeps re-issuing malformed calls never makes
+   * progress, so retrying it again only burns tokens (#14143).
+   */
+  export const REPEATED_TOOL_FAILURE_LIMIT = 3
+
+  /**
+   * Per-turn failure counts. A turn spans several `SessionProcessor.create`
+   * calls (one per model step), so the count is keyed by the parent user
+   * message rather than held in the processor instance. Entries clear on a
+   * completed tool call, a non-validation failure, or when they trip. A turn
+   * that ends without any of those leaves its entry for the 64-entry cache
+   * bound to evict; entries are small and the map is never unbounded.
+   */
+  const malformed = new Map<string, number>()
+
+  export function malformedToolFailure(tool: string) {
+    return new MessageV2.APIError({
+      message: `Stopped after ${REPEATED_TOOL_FAILURE_LIMIT} consecutive invalid-argument failures for the "${tool}" tool. The model kept re-issuing malformed input, so the turn was aborted to avoid burning tokens.`,
+      isRetryable: false,
+    }).toObject()
+  }
+
+  /**
+   * Circuit breaker for stuck tool validation. `inspect` returns a ready abort
+   * error once the turn accumulates `REPEATED_TOOL_FAILURE_LIMIT` consecutive
+   * invalid-argument failures, regardless of which tool failed or how the
+   * malformed input differed. A completed tool call or any other tool failure
+   * clears the count, so unrelated errors and progress cannot trip it. Call
+   * `reset` when a tool call completes.
+   */
+  export const malformedToolGuard = {
+    inspect(key: string, error: unknown) {
+      if (!(error instanceof InvalidArgumentsError)) {
+        malformed.delete(key)
+        return undefined
+      }
+      const count = (malformed.get(key) ?? 0) + 1
+      if (count < REPEATED_TOOL_FAILURE_LIMIT) {
+        if (malformed.size >= 64 && !malformed.has(key)) {
+          const oldest = malformed.keys().next()
+          if (!oldest.done) malformed.delete(oldest.value)
+        }
+        malformed.set(key, count)
+        return undefined
+      }
+      malformed.delete(key)
+      return malformedToolFailure(error.tool)
+    },
+    reset(key: string) {
+      malformed.delete(key)
+    },
   }
 
   export function observe(attempt: Attempt, event: LLMEvent) {
@@ -289,8 +478,7 @@ export namespace KiloSessionProcessor {
         if (!error && !input.replayable()) return
 
         yield* input.discard()
-        if (index === INCOMPLETE_RESPONSE_RETRIES)
-          return yield* Effect.fail(error ?? new IncompleteResponseError())
+        if (index === INCOMPLETE_RESPONSE_RETRIES) return yield* Effect.fail(error ?? new IncompleteResponseError())
         const wait = SessionRetry.delay(index + 1)
         yield* input.set({ attempt: index + 1, message: INCOMPLETE_RESPONSE_MESSAGE, next: Date.now() + wait })
         yield* Effect.sleep(`${wait} millis`)

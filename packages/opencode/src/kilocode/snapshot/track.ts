@@ -285,6 +285,9 @@ export namespace KiloSnapshotTrack {
       const timeoutMs = input.timeoutMs ?? TIMEOUT_MS
       const progressDelayMs = input.progressDelayMs ?? PROGRESS_DELAY_MS
       const cleanupTimeoutMs = input.progressCleanupTimeoutMs ?? PROGRESS_CLEANUP_TIMEOUT_MS
+      // Progress cleanup can outlive this fiber, but its events must retain the project directory.
+      const bridge = yield* EffectBridge.make()
+      const call = <A>(fn: () => Promise<A>) => bridge.promise(Effect.promise(fn))
 
       // The progress part is only published when we have both a session and
       // a target message. Background/non-turn callers skip the indicator.
@@ -321,8 +324,7 @@ export namespace KiloSnapshotTrack {
             timeout.resolve(false)
           }, cleanupTimeoutMs)
           const removed = await Promise.race([
-            hooks
-              .endProgress({ handle }, ctl.signal)
+            call(() => hooks.endProgress({ handle }, ctl.signal))
               .then(() => true as const)
               .catch((err) => {
                 log.warn("failed to clear snapshot progress part", { err })
@@ -373,7 +375,7 @@ export namespace KiloSnapshotTrack {
               handle.started = true
               const started = yield* Effect.promise((signal) =>
                 settleProgress(
-                  () => hooks.startProgress({ handle, text: nextFrameText() }, signal),
+                  () => call(() => hooks.startProgress({ handle, text: nextFrameText() }, signal)),
                   "failed to publish snapshot progress part",
                 ),
               )
@@ -384,7 +386,7 @@ export namespace KiloSnapshotTrack {
                 const text = nextFrameText()
                 yield* Effect.promise((signal) =>
                   settleProgress(
-                    () => hooks.updateProgress({ handle, text }, signal),
+                    () => call(() => hooks.updateProgress({ handle, text }, signal)),
                     "failed to advance snapshot spinner frame",
                   ),
                 )

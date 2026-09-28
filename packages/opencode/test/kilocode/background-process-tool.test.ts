@@ -12,7 +12,7 @@ describe("BackgroundProcessTool", () => {
     expect(json.type).toBe("object")
     expect(json.anyOf).toBeUndefined()
     expect(json.properties?.action).toEqual(
-      expect.objectContaining({ enum: ["start", "list", "status", "logs", "stop", "restart"] }),
+      expect.objectContaining({ enum: ["start", "monitor", "list", "status", "logs", "stop", "restart"] }),
     )
   })
 
@@ -23,6 +23,11 @@ describe("BackgroundProcessTool", () => {
     expect(accepts({ action: "start", command: "bun run dev", persistent: true })).toBe(true)
     expect(accepts({ action: "start", command: "bun run dev", inherit: true, persistent: true })).toBe(false)
     expect(accepts({ action: "start" })).toBe(false)
+    expect(accepts({ action: "monitor", command: "bun run build" })).toBe(true)
+    expect(accepts({ action: "monitor", command: "bun run build", lines: 50, timeout: 30_000 })).toBe(true)
+    expect(accepts({ action: "monitor" })).toBe(false)
+    expect(accepts({ action: "monitor", command: "bun run build", persistent: true })).toBe(false)
+    expect(accepts({ action: "monitor", command: "bun run build", inherit: true })).toBe(false)
     expect(accepts({ action: "stop", id: "bgp01" })).toBe(true)
     expect(accepts({ action: "stop", id: "bgp01", persistent: true })).toBe(false)
     expect(accepts({ action: "stop" })).toBe(false)

@@ -19,6 +19,7 @@ import { KiloSessionPromptQueue } from "@/kilocode/session/prompt-queue"
 import { Permission } from "@/permission"
 import { PermissionProvenance } from "@/kilocode/permission/provenance"
 import { Question } from "@/question"
+import { InstanceRef } from "@/effect/instance-ref"
 import { environmentDetails } from "@/kilocode/editor-context"
 import { Identifier } from "@/id/id"
 import { Filesystem } from "@/util/filesystem"
@@ -28,7 +29,6 @@ import { MemoryPaths } from "@kilocode/kilo-memory/effect/paths"
 import { MemoryMarker } from "@/kilocode/memory/marker"
 import { KilocodeSystemPrompt } from "@/kilocode/system-prompt"
 import { KiloToolRegistry } from "@/kilocode/tool/registry"
-import ASK_CODE_SWITCH from "./ask-code-switch.txt"
 import { consumeAutoTitle, markAutoTitle } from "@/kilo-sessions/rename-adoptions"
 
 export namespace KiloSessionPrompt {
@@ -138,19 +138,20 @@ export namespace KiloSessionPrompt {
     question: Pick<Question.Interface, "ask" | "list" | "reject">
   }): Promise<"continue" | "break"> {
     if (!shouldAskPlanFollowup({ messages: input.messages, abort: input.abort })) return "break"
+    const ctx = Instance.current
+    const run = <A, E>(effect: Effect.Effect<A, E>) =>
+      Effect.runPromise(effect.pipe(Effect.provideService(InstanceRef, ctx)))
     const ask = Instance.bind(PlanFollowup.ask)
     const action = await ask({
       sessionID: input.sessionID,
       messages: input.messages,
       abort: input.abort,
-      // Keep the request in the listener-local Question service so HTTP replies can resolve it.
+      // Keep the listener-local service for replies and the instance ref for directory-routed events.
       question: {
-        ask: Instance.bind((request: Parameters<Question.Interface["ask"]>[0]) =>
-          Effect.runPromise(input.question.ask(request)),
-        ),
-        list: Instance.bind(() => Effect.runPromise(input.question.list())),
+        ask: Instance.bind((request: Parameters<Question.Interface["ask"]>[0]) => run(input.question.ask(request))),
+        list: Instance.bind(() => run(input.question.list())),
         reject: Instance.bind((requestID: Parameters<Question.Interface["reject"]>[0]) =>
-          Effect.runPromise(input.question.reject(requestID)),
+          run(input.question.reject(requestID)),
         ),
       },
     })
@@ -553,30 +554,14 @@ export namespace KiloSessionPrompt {
       "Use the chosen plan path as the main plan file. Do not write or edit other files unless the user explicitly asks and your permissions allow it.",
       "Project/user instructions about plan location (for example plans/ or .plans/) are authorized when permissions allow them; they do not conflict with this reminder. When finalizing, call plan_exit with the path of the plan file you wrote.",
       "In the visible final response, cite the saved plan path as an inline code span so the client can open it as a document. Cite other user-facing files you create the same way instead of pasting the full file into chat.",
+      ...(Flag.KILO_CLIENT === "vscode"
+        ? ["When the plan is ready for user review, call open_plan with the saved path before calling plan_exit."]
+        : []),
       supportsPlanFollowup()
         ? "When the plan is implementation-ready, write the main plan file and call plan_exit. Do not ask the user to choose between finalizing and refining in chat; the client follow-up after plan_exit asks whether to implement the saved plan or keep refining."
         : 'Before creating or updating the plan file, or calling plan_exit, ask the user to choose exactly one of: "Finalize and save the plan" or "Continue refining". If the user chooses to finalize, write the main plan file, then call plan_exit.',
     ].join("\n")
     add(`\n\n<system-reminder>\n${body}\n</system-reminder>`)
-  }
-
-  export function insertAgentSwitchReminder(input: {
-    agent: { name: string }
-    userMessage: MessageV2.WithParts
-    messages: MessageV2.WithParts[]
-  }) {
-    if (mode(input.agent.name) !== "code") return
-    const prior = input.messages.findLast((msg) => msg.info.id !== input.userMessage.info.id)
-    if (!prior || mode(prior.info.agent) !== "ask") return
-    if (input.userMessage.parts.some((part) => part.type === "text" && part.text === ASK_CODE_SWITCH)) return
-    return {
-      id: PartID.ascending(),
-      messageID: input.userMessage.info.id,
-      sessionID: input.userMessage.info.sessionID,
-      type: "text" as const,
-      text: ASK_CODE_SWITCH,
-      synthetic: true,
-    }
   }
 
   /**

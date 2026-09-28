@@ -39,6 +39,12 @@ data class MdCodeBlockOptions(
      * band), while the scrollbar still appears on demand for wide content such as diffs.
      */
     val overlapScrollbar: Boolean = false,
+    /**
+     * Decides whether a block renders folded behind a placeholder the reader can click to unfold,
+     * returning the placeholder text or null to leave the block open. Folded blocks size themselves
+     * from what is actually visible, so a folded one takes a single line.
+     */
+    val fold: ((String) -> String?)? = null,
 )
 
 enum class MdCodeBlockBorder { All, Horizontal, Bottom, None }

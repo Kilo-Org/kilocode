@@ -5,6 +5,7 @@ import { Banner, StatusDot, StatusTag } from "@kilocode/kilo-web-ui/console"
 import { useConfig } from "../../context/config"
 import { friendly, size, text } from "../../shared/utils"
 import { ConfigPage } from "./ConfigPage"
+import "../../styles/overview.css"
 
 function repo(input: string) {
   const parts = input.split(/[\\/]/).filter(Boolean)

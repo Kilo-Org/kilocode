@@ -60,6 +60,7 @@ const mockVscode = {
     }),
     getConfiguration: () => ({
       get: <T>(_key: string, value?: T) => value,
+      inspect: () => ({}),
       update: async () => {},
     }),
     asRelativePath: (pathOrUri: string | { fsPath?: string }) => {

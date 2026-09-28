@@ -157,6 +157,22 @@ For blocking I/O in coroutines, move the dispatcher switch inside the callee usi
 - `kotlinx.coroutines` is the one mandatory exception — it is provided by the platform and must not be bundled (the IntelliJ Platform Gradle plugin enforces this automatically).
 - Pin exact versions in `gradle/libs.versions.toml` and reference them via the version catalog (`libs.*`) in `build.gradle.kts`. Never hardcode version strings in `build.gradle.kts`.
 
+### Never Ask a Shared DTO For Its Serializer From `frontend` or `backend`
+
+`shared/` declares no kotlinx-serialization dependency, so its `@Serializable` DTOs bind to the platform's copy. `frontend/` and `backend/` each bundle their own `kotlinx-serialization-json`. Touching a shared DTO's generated serializer from either module therefore resolves `KSerializer` from two different classloaders and fails at runtime with:
+
+```
+java.lang.LinkageError: loader constraint violation: when resolving method
+'kotlinx.serialization.KSerializer ai.kilocode.rpc.dto.SomeDto$Companion.serializer()'
+```
+
+In `frontend/` and `backend/`, do not call `Json.decodeFromString<SharedDto>(...)`, `Json.encodeToString(dto)`, `decodeFromJsonElement<SharedDto>(...)`, or `SharedDto.serializer()`. Module-local `@Serializable` types (for example `WorktreeNamesFile`) and built-ins like `List<String>` are fine, because the class and the serialization runtime come from the same loader — this is the reason two different patterns are used in `KiloBackendMarketplaceManager`:
+
+- When the wire shape is a 1:1 match for the shared DTO (`MarketplaceResultDto`), decode into a private module-local wire type (e.g. `WireResult`) with `Json.decodeFromString<WireResult>(...)`, then map its fields onto the shared DTO by hand. Prefer this over raw `JsonObject` field extraction — it is real deserialization instead of hand-parsing, and any wire/DTO field mismatch fails at decode time instead of silently reading `null`.
+- When the wire shape doesn't match the DTO at all — a discriminated union, fields nested differently, or DTO fields that are computed rather than present on the wire (`MarketplaceItemDto`'s `installedProject`/`methods`/`relevant`) — there is no serializer to safely call regardless of classloaders, so parse into a `JsonObject` and construct the DTO by hand; see `toDecoded()` in `KiloBackendMarketplaceManager` and `KiloCliDataParser`.
+
+**Tests cannot catch this.** Gradle test runs put `shared`, the module under test, and kotlinx-serialization on one flat classpath, so the split only exists in a real IDE. Verify RPC paths that return shared DTOs in a sandbox run (`runIdeSplitMode`), not only under `./gradlew test`.
+
 ## CLI Integration
 
 - CLI process spawning, download, extraction, and lifecycle belong in `backend`.
@@ -193,9 +209,9 @@ For a one-shot pin/unpin/regen that also cleans every leftover CLI binary and bu
 | Bump the pin to `<version>` / latest and test locally | `bun .kilo/skills/release-jetbrains/script/set-pin.ts --version <x.y.z>` or `bun .kilo/skills/release-jetbrains/script/set-pin.ts --latest`, then run `./gradlew typecheck && ./gradlew test` from `packages/kilo-jetbrains/`. |
 | Land a tested pin bump for release | `bun .kilo/skills/release-jetbrains/script/set-pin.ts --version <x.y.z> --pr` or `bun .kilo/skills/release-jetbrains/script/set-pin.ts --latest --pr`; merge the PR to `main`, then re-run `check-pin.ts` before dispatching prepare. |
 
-`set-pin.ts` refuses versions whose CLI release or runtime assets do not exist, so it cannot create a pin that would 404 during runtime download.
+`set-pin.ts` accepts stable and pre-release CLI versions, but refuses versions whose CLI release or runtime assets do not exist, so it cannot create a pin that would 404 during runtime download.
 
-Stable CLI releases also attempt this PR automatically after publishing and label it `jetbrains-cli-pin-bump`. The CLI release workflow logs the PR URL when creation succeeds and logs a warning without failing the release if PR creation fails.
+CLI releases also attempt this PR automatically after publishing and label it `jetbrains-cli-pin-bump`. Pre-release CLI bump PRs also receive the `pre-release` label, including preview-channel releases with a plain semver version. The CLI release workflow logs the PR URL when creation succeeds and logs a warning without failing the release if PR creation fails.
 
 For the full release process (resolve version, pin verification, prepare, changelog, publish), load the `release-jetbrains` skill: `.kilo/skills/release-jetbrains/SKILL.md`.
 
@@ -233,10 +249,12 @@ For the full release process (resolve version, pin verification, prepare, change
 - **Gradle only**: `./gradlew buildPlugin` from `packages/kilo-jetbrains/`.
 - **Java checks**: Do not run `java -version` as a routine preflight. Gradle commands already fail clearly when Java is missing or incompatible; check Java only when diagnosing that failure mode.
 - **Via Turbo**: `bun turbo build --filter=@kilocode/kilo-jetbrains` from repo root.
-- **Run split mode**: `./gradlew --no-configuration-cache runIdeSplitMode` or the checked-in `Run IDE (Split Mode)` configuration — launches backend and frontend locally. Emulate latency via the Split Mode widget (requires internal mode: `-Didea.is.internal=true`).
+- **Run split mode**: `./gradlew --no-configuration-cache runIdeSplitMode` or the checked-in `Run IDE (Split Mode)` configuration — launches backend and frontend locally. Emulate latency via the Split Mode widget — internal mode is already on for every dev run (see below).
 - **Run split backend**: `./gradlew --no-configuration-cache runIdeBackend` — if it exits shortly after startup, check for an orphaned Java process from a previous backend run and kill it before restarting.
 - **Corrupt IDE extraction**: if `runIdeBackend` or `runIdeSplitMode` fails before startup with `coroutinesJavaAgentFile` / `Collection contains no element matching the predicate`, the extracted IDE under `.intellijPlatform/ides/` is likely incomplete. Health check: `ls .intellijPlatform/ides/*/lib/*.jar | wc -l` should be in the hundreds. Repair by removing `.intellijPlatform/ides`, `.intellijPlatform/localPlatformArtifacts`, `.intellijPlatform/layoutIndex`, and `.intellijPlatform/coroutines-javaagent.jar`, then rerun the Gradle task.
 - **Run in monolithic sandbox**: `./gradlew runIde` — launches sandboxed IntelliJ with the plugin. Does not build or bundle CLI binaries; the backend downloads the pinned release at connect time.
+- **Surveys are off in dev runs**: every `runIde*` task sets `platform.feedback=false`, `csat.survey.enabled=false`, and `editor.ux.survey.enabled=false` so IntelliJ feedback surveys ("Share Your Experience" / "Take Survey") never interrupt a sandbox run. These are IntelliJ registry keys overridden as JVM system properties; keep them unconditional.
+- **Internal mode is on in dev runs**: every `runIde*` task sets `idea.is.internal=true` (`ApplicationManagerEx.IS_INTERNAL_PROPERTY`), which enables the Split Mode latency widget and the Internal Actions menu. The embedded JetBrains Client inherits this property from the backend; the survey keys above are not on that inherit list, so a split-mode client may still need them set in its own Registry.
 
 ### Stopping a Sandbox Run
 
@@ -318,6 +336,7 @@ theme-specific artifacts in transparent/rounded Swing painting.
 - Primary/secondary transcript card bodies are transparent by default. The actual content inside a body (code blocks, todo list, shell/tool output) is the raised surface: make that content component opaque and paint `SessionUiStyle.Colors.codeBlockBackground()` (the editor background), using its own insets so the fill covers the whole content. For `MdView`-backed bodies set `md.opaque = false` so the prose/body stays transparent while the code/output panes remain the opaque editor surface — do not make the whole body opaque.
 - Rounded cards that paint their own surface (for example `RoundedContentPanel`-based question/login cards) should do that in custom painting or a `contentColor()` override, not by making every nested panel opaque.
 - Standard platform buttons placed on custom-painted session cards should not force the card background. If a button sits on a rounded/custom-painted card, make it non-opaque when needed so Swing does not fill its rectangular bounds behind `DarculaButtonUI`'s rounded paint (notably visible in Islands Light).
+- `DialogView` (question, permission, login-required, outcome, revert, onboarding cards) is a fourth documented surface: `contentColor()` paints `SessionUiStyle.View.Dialog.bgColor()` — a `DIALOG_DELTA` contrast shift off the backdrop — while `outlined` is true, so the card reads as its own panel, distinct from both the backdrop and `codeBlockBackground()`. Its border is `Dialog.outlineColor()`, the midpoint between backdrop and card fill, so the edge is a soft transition rather than the hard `Outline.brightColor()` line a fill-less card needs. `setOutlined(false)` drops back to the plain backdrop color with no outline, for chrome-free states like an interrupted-run note.
 
 When adding a new session view, start with transparent containers and add opaque
 painting only for components that are actual visual surfaces. If a component's
@@ -339,6 +358,7 @@ Swing is retained-mode UI. For dynamic Swing surfaces such as session cards, tra
 - Expandable session cards extend `AbstractSessionPartView`, which binds click-to-toggle and hover across the whole header subtree automatically (including children added later). Do not re-bind header parts per view. A header control that must not toggle the card (file link, copy button, toolbar action) simply owns its own mouse listener and is skipped automatically.
 - Hover should update only the affected component (usually the header background) and repaint only that component when the effective color changed.
 - Lazy-create expensive bodies such as `JBTextArea`, `JBScrollPane`, markdown panes, and HTML panes on first expansion or first direct access.
+- Keep what every transcript card carries for the whole session small. Every editor tab switch walks the entire transcript tree, so attach rarely shown header parts (the expand arrow, a file link, a copy placeholder) only while they show instead of keeping them attached and hidden.
 - Parent containers should refresh for add/remove/reorder operations, not automatically after every delegated child update or streaming delta.
 - Child views should call `revalidate()`/`repaint()` only when they changed preferred size, visibility, containment, or paint output.
 - Empty deltas, identical text, unchanged styles, repeated hover values, and no-op toggles should not repaint the whole card.
@@ -411,6 +431,7 @@ Generic utilities:
 |---|---|
 | Rich HTML with modern CSS, icons, shortcuts | `JBHtmlPane` (`com.intellij.ui.components.JBHtmlPane`) |
 | Simple multi-line label with HTML | `JBLabel` + `XmlStringUtil.wrapInHtml()` |
+| Single-line transcript text (tool headers, file links, to-do rows) | `PlainLabel` (`ai.kilocode.client.ui.PlainLabel`) with `underline`/`strike`; never `<html>` text, because Swing re-parses every HTML label each time an editor tab is detached or re-attached |
 | Scrollable / wrapping HTML panel | `SwingHelper.createHtmlViewer()` |
 | High-performance colored text fragments in trees/lists/tables | `SimpleColoredComponent` |
 | Plain-text newline splitting | `MultiLineLabel` — legacy, do not use in new code |
@@ -530,6 +551,7 @@ Stack.horizontal()
 - Use `fill(size)`, `Stack.verticalFiller(size)`, or `Stack.horizontalFiller(size)` for persistent leading, trailing, or interstitial whitespace. Do not use `Box` or `gap(size)` for persistent spacing.
 - Use `Stack` for simple retained Swing rows/columns where children should track the cross-axis size. Use `Align` for positioning one child inside available space.
 - Do not use `Stack` for padding, borders, colors, wrapping rows, flexible glue, or transcript components that need width-aware HTML reflow. Use `JBUI.Borders.empty(...)`, `UiStyle.Gap`, purpose-built layouts, or `SessionLayout` for those concerns.
+- `Stack` and `Align` ask each child for its minimum, preferred and maximum size, so measuring a deep invalid tree grows with every nesting level. A tree that is invalidated and measured over and over, such as a list renderer stamp, should run each layout or size read inside `LayoutPass.measure { ... }`, which answers each size once per container for that pass. Do not change the measured content inside the pass.
 
 ### Align — Single-Component Alignment Wrapper
 

@@ -5,6 +5,9 @@ type PermissionConfig = Partial<Record<string, PermissionRule>>
 export interface WorkStyleConfig {
   permission?: PermissionConfig
   terminal_command_display?: "expanded" | "collapsed"
+  code_edit_display?: "expanded" | "collapsed"
+  mcp_tool_display?: "expanded" | "collapsed"
+  reasoning_display?: "expanded" | "preview" | "headline"
   auto_collapse_reasoning?: boolean
 }
 
@@ -13,6 +16,7 @@ export type WorkStyleState = WorkStyle | "skipped" | "unset"
 
 export interface WorkStyleSettings {
   showTaskTimeline: boolean
+  showAutoApprovalReason: boolean
 }
 
 export interface WorkStylePreset {
@@ -60,12 +64,24 @@ const BASH: Record<string, PermissionLevel> = {
 
 export const WORK_STYLE_CHOICES: WorkStyle[] = ["human-in-the-loop", "autonomous"]
 
+export function getDisplayPreset(style: WorkStyle) {
+  const human = style === "human-in-the-loop"
+  return {
+    config: {
+      reasoning_display: human ? "expanded" : "preview",
+      terminal_command_display: human ? "expanded" : "collapsed",
+      code_edit_display: human ? "expanded" : "collapsed",
+      mcp_tool_display: "collapsed",
+    },
+    settings: { showAutoApprovalReason: human },
+  } as const
+}
+
 export const WORK_STYLE_PRESETS: Record<WorkStyle, WorkStylePreset> = {
   "human-in-the-loop": {
     style: "human-in-the-loop",
     config: {
-      terminal_command_display: "expanded",
-      auto_collapse_reasoning: false,
+      ...getDisplayPreset("human-in-the-loop").config,
       permission: {
         read: {
           "*": "allow",
@@ -87,17 +103,18 @@ export const WORK_STYLE_PRESETS: Record<WorkStyle, WorkStylePreset> = {
       },
     },
     settings: {
+      ...getDisplayPreset("human-in-the-loop").settings,
       showTaskTimeline: true,
     },
   },
   autonomous: {
     style: "autonomous",
     config: {
-      terminal_command_display: "collapsed",
-      auto_collapse_reasoning: true,
+      ...getDisplayPreset("autonomous").config,
     },
     settings: {
-      showTaskTimeline: false,
+      ...getDisplayPreset("autonomous").settings,
+      showTaskTimeline: true,
     },
   },
 }
@@ -145,8 +162,14 @@ export function buildWorkStyleApplyPlan(input: {
   if (input.config.terminal_command_display === undefined) {
     next.terminal_command_display = preset.config.terminal_command_display
   }
-  if (input.config.auto_collapse_reasoning === undefined) {
-    next.auto_collapse_reasoning = preset.config.auto_collapse_reasoning
+  if (input.config.code_edit_display === undefined) {
+    next.code_edit_display = preset.config.code_edit_display
+  }
+  if (input.config.mcp_tool_display === undefined) {
+    next.mcp_tool_display = preset.config.mcp_tool_display
+  }
+  if (input.config.reasoning_display === undefined && input.config.auto_collapse_reasoning === undefined) {
+    next.reasoning_display = preset.config.reasoning_display
   }
 
   const settingDefault = input.settingDefault ?? (() => true)
@@ -154,6 +177,9 @@ export function buildWorkStyleApplyPlan(input: {
     config: next,
     settings: {
       ...(settingDefault("showTaskTimeline") ? { showTaskTimeline: preset.settings.showTaskTimeline } : {}),
+      ...(settingDefault("showAutoApprovalReason")
+        ? { showAutoApprovalReason: preset.settings.showAutoApprovalReason }
+        : {}),
     },
   }
 }

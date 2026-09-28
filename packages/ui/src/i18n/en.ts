@@ -75,7 +75,7 @@ export const dict: Record<string, string> = {
 
   "dialog.usageExceeded.freeTier.title": "Free limit reached",
   "dialog.usageExceeded.freeTier.description":
-    "Subscribe to Kilo Go for reliable access to the best open-source models, starting at $5/month.", // kilocode_change
+    "Subscribe to Kilo Go for reliable access to the best open-source models for $10/month.", // kilocode_change
   "dialog.usageExceeded.freeTier.actionLabel": "Subscribe",
   "dialog.usageExceeded.accountRateLimit.title": "Go limit reached",
   "dialog.usageExceeded.accountRateLimit.description":
@@ -100,6 +100,15 @@ export const dict: Record<string, string> = {
   "ui.messagePart.diagnostic.error": "Error",
   "ui.messagePart.mcp.input": "Input",
   "ui.messagePart.mcp.output": "Output",
+  // kilocode_change start
+  "ui.messagePart.board.read": "Read agent messages",
+  "ui.messagePart.board.all": "All agents",
+  "ui.messagePart.board.primary": "Primary agent",
+  "ui.messagePart.board.agent": "Agent",
+  "ui.messagePart.board.route": "{{from}} to {{to}}",
+  "ui.messagePart.board.empty": "No agent messages",
+  "ui.messagePart.board.stored": "Stored only. Delivery and reading are not confirmed.",
+  // kilocode_change end
   "ui.messagePart.title.edit": "Edit",
   "ui.messagePart.title.write": "Write",
   "ui.messagePart.option.typeOwnAnswer": "Type your own answer",
@@ -161,6 +170,10 @@ export const dict: Record<string, string> = {
   "ui.mermaid.copyPng": "Copy PNG",
   "ui.mermaid.downloadSvg": "Download SVG",
   "ui.mermaid.downloadPng": "Download PNG",
+  "ui.mermaid.zoom": "Zoom",
+  "ui.mermaid.zoomIn": "Zoom in",
+  "ui.mermaid.zoomOut": "Zoom out",
+  "ui.mermaid.zoomReset": "Reset zoom",
   // kilocode_change end
   "ui.scrollView.ariaLabel": "scrollable content",
 

@@ -86,6 +86,19 @@ afterEach(() => {
   api.languages.getDiagnostics = original.diagnostics
 })
 
+function expectContextPost(post: unknown) {
+  const value = post as { type: string; context: Record<string, unknown> }
+  expect(value.type).toBe("appendChatContext")
+  expect(value.context).toMatchObject({
+    filePath: "src/file.ts",
+    startLine: 3,
+    endLine: 5,
+    text: "const value = 1",
+  })
+  expect(typeof value.context.id).toBe("string")
+  expect(value.context.id).not.toHaveLength(0)
+}
+
 describe("registerCodeActions", () => {
   it("reveals the sidebar before adding selected code to context", async () => {
     const state = setup()
@@ -95,12 +108,8 @@ describe("registerCodeActions", () => {
     expect(state.events).toEqual(["focus", "wait", "post"])
     expect(state.executed).toEqual([["kilo-code.SidebarProvider.focus"]])
     expect(state.waits).toEqual(["provider"])
-    expect(state.posts).toEqual([
-      {
-        type: "appendChatBoxMessage",
-        text: "src/file.ts:3-5\n```\nconst value = 1\n```",
-      },
-    ])
+    expect(state.posts).toHaveLength(1)
+    expectContextPost(state.posts[0])
   })
 
   it("adds selected code to the active Agent Manager without revealing the sidebar", async () => {
@@ -111,12 +120,8 @@ describe("registerCodeActions", () => {
     expect(state.events).toEqual(["wait", "post"])
     expect(state.executed).toEqual([])
     expect(state.waits).toEqual(["agent"])
-    expect(state.posts).toEqual([
-      {
-        type: "appendChatBoxMessage",
-        text: "src/file.ts:3-5\n```\nconst value = 1\n```",
-      },
-    ])
+    expect(state.posts).toHaveLength(1)
+    expectContextPost(state.posts[0])
   })
 
   it("does not post to the Agent Manager when its readiness wait is cancelled", async () => {

@@ -99,12 +99,12 @@ function args() {
 
 const exitCode = process.exitCode
 const tty = Object.getOwnPropertyDescriptor(process.stdin, "isTTY")
-const text = Bun.stdin.text
+const stream = Bun.stdin.stream
 
 afterEach(async () => {
   await mock.module("@kilocode/sdk/v2", () => actual)
   process.exitCode = exitCode ?? 0
-  Bun.stdin.text = text
+  Bun.stdin.stream = stream
   if (tty) {
     Object.defineProperty(process.stdin, "isTTY", tty)
     return
@@ -252,7 +252,8 @@ describe("cli run network retries", () => {
   test("built-in compaction uses the session model without reading stdin", async () => {
     const q = feed<Event>()
     const calls: unknown[] = []
-    Bun.stdin.text = async () => {
+    // kilocode_change - run-stdin.ts reads piped stdin through Bun.stdin.stream()
+    Bun.stdin.stream = () => {
       throw new Error("stdin should not be read")
     }
 
@@ -294,7 +295,8 @@ describe("cli run network retries", () => {
   test("custom compact commands retain piped arguments without a session", async () => {
     const q = feed<Event>()
     const calls: unknown[] = []
-    Bun.stdin.text = async () => "from stdin"
+    // kilocode_change - run-stdin.ts reads piped stdin through Bun.stdin.stream()
+    Bun.stdin.stream = () => new Response("from stdin").body!
 
     const sdk = {
       command: {

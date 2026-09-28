@@ -149,6 +149,36 @@ class KiloBackendChatManagerTest {
     }
 
     @Test
+    fun `pending prompt checks distinguish present absent and unavailable requests`() = runBlocking {
+        val port = mock.start()
+        val chat = KiloBackendChatManager(scope, TestLog())
+        chat.start(OkHttpClient(), port, MutableSharedFlow())
+        mock.pendingPermissions =
+            """[{"id":"perm_1","sessionID":"ses_1","permission":"edit","patterns":[]}]"""
+        mock.pendingQuestions =
+            """[{"id":"q_1","sessionID":"ses_1","questions":[{"question":"Pick one","header":"Choice"}]}]"""
+
+        assertEquals(true, chat.permissionPending("perm_1", "/test/project"))
+        assertEquals(false, chat.permissionPending("perm_other", "/test/project"))
+        assertEquals(true, chat.questionPending("q_1", "/test/project"))
+        assertEquals(false, chat.questionPending("q_other", "/test/project"))
+
+        mock.pendingPermissions = "{}"
+        mock.pendingQuestions = "not json"
+        assertEquals(null, chat.permissionPending("perm_1", "/test/project"))
+        assertEquals(null, chat.questionPending("q_1", "/test/project"))
+
+        mock.pendingPermissionsStatus = 500
+        mock.pendingQuestionsStatus = 500
+        mock.pendingPermissions =
+            """[{"id":"perm_1","sessionID":"ses_1","permission":"edit","patterns":[]}]"""
+        mock.pendingQuestions =
+            """[{"id":"q_1","sessionID":"ses_1","questions":[{"question":"Pick one","header":"Choice"}]}]"""
+        assertEquals(null, chat.permissionPending("perm_1", "/test/project"))
+        assertEquals(null, chat.questionPending("q_1", "/test/project"))
+    }
+
+    @Test
     fun `enhance prompt posts scoped request and returns rewritten text`() = runBlocking {
         val port = mock.start()
         val chat = KiloBackendChatManager(scope, TestLog())

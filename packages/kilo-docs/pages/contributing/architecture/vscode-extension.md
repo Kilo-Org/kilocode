@@ -54,10 +54,10 @@ Shared service has more consumers than chat tabs:
 | Family | Consumers |
 |---|---|
 | Chat | Sidebar provider and editor-tab providers |
-| Panels | Settings, profile and marketplace surfaces, sub-agent viewers, Agent Manager, KiloClaw |
+| Panels | Settings, profile and marketplace surfaces, sub-agent viewers, Agent Manager |
 | Diff | Diff Viewer, Diff Virtual, and diff source catalog |
 | Editor assistance | Autocomplete and commit-message generation |
-| Integrations | Browser automation MCP registration and KiloClaw bootstrap |
+| Integrations | Browser automation MCP registration |
 
 New mutable state must account for concurrent consumers and multiple directory contexts on one process.
 
@@ -119,7 +119,7 @@ Agent Manager PTY WebSocket URL uses `auth_token=<base64 kilo:password>` query m
 | Config owner | Examples |
 |---|---|
 | VS Code settings | `kilo-code.new.*` extension UI, proxy, autocomplete, and integration settings |
-| CLI config | Global and project `kilo.jsonc`, `kilo.json`, compatible OpenCode files, provider auth, tools, permissions, modes |
+| CLI config | Global and project `kilo.jsonc`, `kilo.json`, compatible OpenCode files, provider auth, tools, permissions, agents |
 
 Extension-specific behavior belongs in VS Code settings. Agent runtime behavior belongs in CLI config so TUI, Console, VS Code, and JetBrains can share it.
 
@@ -152,7 +152,6 @@ Speech-to-text captures audio locally, then sends completed recording through sh
 | Extension host | `src/extension.ts` | `dist/extension.js` |
 | Sidebar and editor chat webview | `webview-ui/src/index.tsx` | `dist/webview.js` |
 | Agent Manager webview | `webview-ui/agent-manager/index.tsx` | `dist/agent-manager.js` |
-| KiloClaw webview | `webview-ui/kiloclaw/index.tsx` | `dist/kiloclaw.js` |
 | Diff Viewer webview | `webview-ui/diff-viewer/index.tsx` | `dist/diff-viewer.js` |
 | Diff Virtual webview | `webview-ui/diff-virtual/index.tsx` | `dist/diff-virtual.js` |
 | Shared Shiki worker | synthetic worker entry | `dist/shiki-worker.js` |

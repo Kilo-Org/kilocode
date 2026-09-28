@@ -8,22 +8,49 @@ import {
   clearMaskStyles,
   COLLAPSIBLE_SPRING,
   GROW_SPRING,
+  settle,
   WIPE_MASK,
 } from "./motion"
 
 export const TEXT_RENDER_THROTTLE_MS = 100
+export const STREAMING_TEXT_RENDER_THROTTLE_MS = 16
 
-export function createThrottledValue(getValue: () => string) {
+export function createThrottledValue(getValue: () => string, getInterval: () => number = () => TEXT_RENDER_THROTTLE_MS) {
   const [value, setValue] = createSignal(getValue())
   let timeout: ReturnType<typeof setTimeout> | undefined
+  let pending: string | undefined
   let last = 0
+  let previous = getInterval()
+
+  const flush = () => {
+    if (timeout) {
+      clearTimeout(timeout)
+      timeout = undefined
+    }
+    if (pending === undefined) return
+    last = Date.now()
+    setValue(pending)
+    pending = undefined
+  }
 
   createEffect(() => {
     const next = getValue()
+    const wait = getInterval()
     const now = Date.now()
 
-    const remaining = TEXT_RENDER_THROTTLE_MS - (now - last)
+    // When the cadence slows (streaming -> settled), flush the pending tail now
+    // instead of waiting out the longer interval.
+    const slowed = wait > previous
+    previous = wait
+    if (slowed && timeout) {
+      pending = next
+      flush()
+      return
+    }
+
+    const remaining = wait - (now - last)
     if (remaining <= 0) {
+      pending = undefined
       if (timeout) {
         clearTimeout(timeout)
         timeout = undefined
@@ -32,12 +59,9 @@ export function createThrottledValue(getValue: () => string) {
       setValue(next)
       return
     }
+    pending = next
     if (timeout) clearTimeout(timeout)
-    timeout = setTimeout(() => {
-      last = Date.now()
-      setValue(next)
-      timeout = undefined
-    }, remaining)
+    timeout = setTimeout(flush, remaining)
   })
 
   onCleanup(() => {
@@ -49,6 +73,47 @@ export function createThrottledValue(getValue: () => string) {
 
 export function busy(status: string | undefined) {
   return status === "pending" || status === "running"
+}
+
+/**
+ * Find how many leading rendered lines were dropped from a sliding tail
+ * window. Returns the first shifted index `shift` and how many new lines
+ * overlap it (`overlap`). Only indices where the first new line matches are
+ * considered, so the scan stays cheap for the bounded bash window.
+ */
+function bashLineSlide(rendered: string[], lines: string[]) {
+  let shift = 0
+  let overlap = 0
+  for (let k = 1; k < rendered.length; k++) {
+    if (rendered[k] !== lines[0]) continue
+    let m = 1
+    while (k + m < rendered.length && m < lines.length && rendered[k + m] === lines[m]) m++
+    if (m <= overlap) continue
+    shift = k
+    overlap = m
+    // The whole rendered block is still present, so no later index can beat it.
+    if (k + m >= rendered.length) break
+  }
+  return { shift, overlap }
+}
+
+/**
+ * Decide how to patch a streaming block of highlighted lines.
+ *
+ * Returns the number of leading lines that are unchanged (`start`), so only the
+ * trailing lines need re-highlighting. `shift` is the number of leading line
+ * nodes to drop from the DOM when the output is a sliding tail window. `skip`
+ * is true when the new lines are identical to the rendered ones. A shorter line
+ * set is not an append, so it reports `start: 0` and forces a full rebuild.
+ */
+export function bashLineUpdate(rendered: string[], lines: string[]) {
+  let same = 0
+  while (same < rendered.length && same < lines.length && rendered[same] === lines[same]) same++
+  if (same === lines.length) return { start: 0, skip: same === rendered.length, shift: 0 }
+  if (same > 0) return { start: same, skip: false, shift: 0 }
+  const { shift, overlap } = bashLineSlide(rendered, lines)
+  if (overlap > 0) return { start: overlap, skip: false, shift }
+  return { start: 0, skip: false, shift: 0 }
 }
 
 export function hold(state: () => boolean, wait = 2000) {
@@ -105,14 +170,21 @@ export function useCollapsible(options: {
   open: () => boolean
   measure?: () => number
   onOpen?: () => void
+  // Skip the mount run so content rendered in its initial state does not
+  // animate in; the caller renders the matching inline styles itself.
+  defer?: boolean
 }) {
   const reduce = useReducedMotion()
   let heightAnim: AnimationPlaybackControls | undefined
   let fadeAnim: AnimationPlaybackControls | undefined
   let gen = 0
+  let first = true
 
   createEffect(
     on(options.open, (isOpen) => {
+      const skip = first && options.defer
+      first = false
+      if (skip) return
       const content = options.content()
       const body = options.body()
       if (!content || !body) return
@@ -171,8 +243,70 @@ export function useCollapsible(options: {
 
   onCleanup(() => {
     ++gen
-    heightAnim?.stop()
-    fadeAnim?.stop()
+    settle(heightAnim)
+    settle(fadeAnim)
+  })
+}
+
+export function useGrowIn(el: () => HTMLElement | undefined, enabled: boolean) {
+  const reduce = useReducedMotion()
+  let height: AnimationPlaybackControls | undefined
+  let obs: ResizeObserver | undefined
+  let gen = 0
+
+  // Height only: the parts reveal their own text with useToolFade, and a
+  // wrapper fade would hide that wipe.
+  const clear = (node: HTMLElement) => {
+    node.style.height = ""
+    node.style.overflow = ""
+  }
+
+  onMount(() => {
+    if (!enabled || reduce()) return
+    const node = el()
+    if (!node) return
+    const id = ++gen
+    node.style.overflow = "clip"
+    node.style.height = "0px"
+
+    queueMicrotask(() => {
+      if (gen !== id) return
+      const value = el()
+      if (!value) return
+      const child = value.firstElementChild ?? value
+      let target = Math.ceil(value.scrollHeight || child.getBoundingClientRect().height)
+      const done = (anim: AnimationPlaybackControls) => {
+        if (gen !== id || height !== anim) return
+        obs?.disconnect()
+        height = undefined
+        clear(value)
+      }
+      const start = (from: number, to: number) => {
+        const anim = animate(value, { height: [`${from}px`, `${to}px`] }, COLLAPSIBLE_SPRING)
+        height = anim
+        void anim.finished.then(() => done(anim)).catch(() => undefined)
+      }
+
+      start(0, target)
+      obs = new ResizeObserver(() => {
+        if (gen !== id || !height) return
+        const next = Math.ceil(child.getBoundingClientRect().height)
+        if (Math.abs(next - target) <= 1) return
+        const from = value.getBoundingClientRect().height
+        height.stop()
+        target = next
+        start(from, next)
+      })
+      obs.observe(child)
+    })
+  })
+
+  onCleanup(() => {
+    ++gen
+    obs?.disconnect()
+    settle(height)
+    const node = el()
+    if (node) clear(node)
   })
 }
 
@@ -262,6 +396,7 @@ export function useRowWipe(opts: {
         cancelAnimationFrame(frame)
         clear()
       }
+      settle(anim)
     })
   })
 }
@@ -309,6 +444,13 @@ export function useToolFade(
       frame = undefined
       const node = ref()
       if (!node) return
+      // A node outside the document never finishes a Web Animation, and the
+      // pending animation keeps the node and its owner tree alive. Show it as is.
+      if (!node.isConnected) {
+        clearFadeStyles(node)
+        if (mask) clearMaskStyles(node)
+        return
+      }
 
       anim = wipe
         ? mask
@@ -331,6 +473,6 @@ export function useToolFade(
 
   onCleanup(() => {
     if (frame !== undefined) cancelAnimationFrame(frame)
-    anim?.stop()
+    settle(anim)
   })
 }

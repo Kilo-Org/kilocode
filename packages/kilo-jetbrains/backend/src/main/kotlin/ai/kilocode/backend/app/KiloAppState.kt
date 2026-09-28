@@ -57,5 +57,4 @@ data class AppData(
     val profile: KiloProfile200Response?,
     val config: ConfigDto,
     val notifications: List<KiloNotifications200ResponseInner>,
-    val warnings: List<ConfigWarning> = emptyList(),
 )

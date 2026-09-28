@@ -11,6 +11,7 @@ const icons: Record<Activity, string> = {
   waiting: "⚠",
   error: "⚠",
   done: "✓",
+  scheduled: "◷",
 }
 
 export const nativeTitle = (session: Session | null, state: Activity = "idle", label?: string) => {

@@ -1,23 +1,26 @@
 import { Component, createSignal, createMemo, createEffect, Switch, Match, Show, onMount, onCleanup } from "solid-js"
 import { DataProvider } from "@kilocode/kilo-ui/context/data"
+import { BoardNavigationProvider } from "@kilocode/kilo-ui/context/board-navigation"
 import Settings from "./components/settings/Settings"
 import ProfileView from "./components/profile/ProfileView"
 import { useVSCode } from "./context/vscode"
 import { useServer } from "./context/server"
 import { useProvider } from "./context/provider"
 import { WorkStyleProvider } from "./context/work-style"
-import { useSession } from "./context/session"
+import { useSession, useSessionVisibility } from "./context/session"
 import { LocalTabsProvider, useLocalTabs } from "./context/local-tabs"
 import { ProviderShell } from "./context/provider-shell"
 import { ChatView } from "./components/chat"
 import { SidebarEmptyState } from "./components/chat/SidebarEmptyState"
 import { SidebarTopBar } from "./components/chat/SidebarTopBar"
+import { openSubagent } from "./components/chat/open-subagent"
 import { registerExpandedTaskTool } from "./components/chat/TaskToolExpanded"
 import { registerVscodeToolOverrides } from "./components/chat/VscodeToolOverrides"
 import { useWorktreeMode } from "./context/worktree-mode"
 import { useDiffStyle } from "./context/diff-style"
 import { dispatchAgentManagerEditPreview } from "./utils/agent-manager-events"
 import { strongest } from "./utils/session-activity"
+import { createPlanOpener } from "./utils/open-plan"
 import type { PermissionFileDiff } from "./types/messages"
 
 // Override the upstream "task" tool renderer with the fully-expanded version
@@ -29,6 +32,7 @@ import HistoryView from "./components/history/HistoryView"
 import { MigrationWizard } from "./components/migration"
 import type { Message as SDKMessage, Part as SDKPart } from "@kilocode/sdk/v2"
 import { cycleAgent as cycle } from "./context/session-agent"
+import { routeChatInput } from "./utils/chat-input-route"
 import "./styles/chat.css"
 
 type ViewType = "newTask" | "history" | "profile" | "settings" | "subAgentViewer"
@@ -127,6 +131,17 @@ export const DataBridge: Component<{ children: any }> = (props) => {
     session.rejectQuestion(input.requestID)
   }
 
+  const openAgent = (id: string, title?: string) => {
+    const parent = session.sessions().find((item) => item.id === id)?.parentID ?? session.currentSessionID()
+    openSubagent({
+      sessionID: id,
+      title,
+      parentSessionID: parent,
+      worktree: !!worktree,
+      post: vscode.postMessage,
+    })
+  }
+
   const open = (filePath: string, line?: number, column?: number, sessionID?: string) => {
     const event = new CustomEvent("kilo:open-file", {
       cancelable: true,
@@ -135,6 +150,13 @@ export const DataBridge: Component<{ children: any }> = (props) => {
     if (!window.dispatchEvent(event)) return
     vscode.postMessage({ type: "openFile", filePath, line, column, sessionID })
   }
+
+  const opener = createPlanOpener(session.currentSessionID, (plan) =>
+    open(plan.path, undefined, undefined, plan.sessionID),
+  )
+  const unsubscribePlans = vscode.onMessage(opener.accept)
+  createEffect(() => opener.flush(session.currentSessionID()))
+  onCleanup(unsubscribePlans)
 
   const openDiff = (diff: PermissionFileDiff) => {
     if (worktree) {
@@ -212,7 +234,7 @@ export const DataBridge: Component<{ children: any }> = (props) => {
       onValidateFiles={validateFiles}
       onNavigateToSession={(id) => session.selectSession(id)}
     >
-      {props.children}
+      <BoardNavigationProvider open={openAgent}>{props.children}</BoardNavigationProvider>
     </DataProvider>
   )
 }
@@ -231,17 +253,38 @@ const AppContent: Component = () => {
     strongest([session.currentSessionID(), ...(tabs?.ids() ?? [])].map(session.activityFor)),
   )
   createEffect(() => vscode.postMessage({ type: "sessionActivity", state: activity() }))
+  useSessionVisibility(() =>
+    !migration() && (currentView() === "newTask" || currentView() === "subAgentViewer")
+      ? session.currentSessionID()
+      : undefined,
+  )
+
+  const newTask = () => {
+    if (currentView() === "newTask") {
+      window.dispatchEvent(new CustomEvent("newTaskRequest"))
+      return
+    }
+    tabs?.add()
+    if (!tabs) session.clearCurrentSession()
+    setCurrentView("newTask")
+  }
 
   const handleViewAction = (action: string) => {
     switch (action) {
-      case "plusButtonClicked": {
-        const chat = currentView() === "newTask"
-        if (chat) window.dispatchEvent(new CustomEvent("newTaskRequest"))
-        if (!chat && tabs) tabs.add()
-        if (!chat && !tabs) session.clearCurrentSession()
-        setCurrentView("newTask")
+      case "plusButtonClicked":
+        newTask()
+        break
+      case "closeTask": {
+        if (currentView() !== "newTask") break
+        const id = tabs?.active()
+        if (!tabs || !id) break
+        tabs.close(id)
         break
       }
+      case "closeAllTasks":
+        tabs?.closeAll()
+        setCurrentView("newTask")
+        break
       case "historyButtonClicked":
         setCurrentView("history")
         break
@@ -287,6 +330,14 @@ const AppContent: Component = () => {
     if (message.type === "selectKiloModel") setCurrentView("newTask")
   }
 
+  const open = (message: { type?: string; sessionID?: string }) => {
+    if (message.type !== "openSession" || !message.sessionID) return
+    console.log("[Kilo New] App: opening local session:", message.sessionID)
+    if (tabs) tabs.open(message.sessionID, { scrollToBottom: true })
+    if (!tabs) session.selectSession(message.sessionID, { scrollToBottom: true })
+    setCurrentView("newTask")
+  }
+
   onMount(() => {
     const handler = (event: MessageEvent) => {
       const message = event.data
@@ -306,8 +357,15 @@ const AppContent: Component = () => {
         session.selectCloudSession(message.sessionId)
         setCurrentView("newTask")
       }
+      open(message)
       handleKiloModel(message)
       handleForked(message)
+      routeChatInput(
+        message,
+        currentView(),
+        () => setCurrentView("newTask"),
+        (msg) => window.postMessage(msg, window.origin),
+      )
       if (message?.type === "viewSubAgentSession" && message.sessionID) {
         console.log("[Kilo New] App: 🔍 viewSubAgentSession:", message.sessionID)
         session.setCurrentSessionID(message.sessionID)

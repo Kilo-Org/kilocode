@@ -8,6 +8,7 @@ import { InstanceRef } from "@/effect/instance-ref"
 import { Process } from "@/util/process"
 import { existsSync } from "node:fs" // kilocode_change
 import { detectPrLink, parsePrUrl, readPrLinkOverride, writePrLinkOverride } from "@/kilo-sessions/pr-link" // kilocode_change
+import { refreshPrLink } from "@/kilo-sessions/pr-link-poller" // kilocode_change
 
 const subcommand = "pr" // kilocode_change
 
@@ -203,6 +204,10 @@ export const prStatusHandler = Effect.fn("Cli.pr.status")(function* () {
     UI.println(override.prUrl)
     return
   }
+
+  // An explicit user check: query the worktree's own remote now, before falling
+  // back to the recorded link, so a PR opened since the last poll is found.
+  yield* Effect.promise(() => refreshPrLink(ctx.worktree)) // kilocode_change
 
   const detected = yield* Effect.promise(() => detectPrLink())
   if (detected) {

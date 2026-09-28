@@ -45,6 +45,8 @@ describe("sitemap.xml", () => {
       "/automate/tools/read-file",
       "/code-with-ai/features/fast-edits",
       "/ai-providers/vscode-lm",
+      "/kiloclaw/overview",
+      "/kiloclaw/dashboard",
     ]
 
     for (const route of removed) expect(xml).not.toContain(`https://kilo.ai/docs${route}`)

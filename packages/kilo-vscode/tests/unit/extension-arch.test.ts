@@ -198,6 +198,41 @@ describe("Extension — package.json command sync", () => {
       ]),
     )
   })
+
+  it("routes task-close commands to the focused Kilo surface", () => {
+    const commands = pkg.contributes?.commands ?? []
+    expect(commands).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ command: "kilo-code.new.closeTask", title: "Close Task", category: "Kilo Code" }),
+        expect.objectContaining({
+          command: "kilo-code.new.closeAllTasks",
+          title: "Close All Tasks",
+          category: "Kilo Code",
+        }),
+      ]),
+    )
+
+    const source = fs.readFileSync(EXTENSION_FILE, "utf-8")
+    const closeTask = sliceBlock(source, source.indexOf('vscode.commands.registerCommand("kilo-code.new.closeTask"'))
+    const closeAll = sliceBlock(source, source.indexOf('vscode.commands.registerCommand("kilo-code.new.closeAllTasks"'))
+    expect(closeTask).toContain('taskTarget().postMessage({ type: "action", action: "closeTask" })')
+    expect(closeAll).toContain('taskTarget().postMessage({ type: "action", action: "closeAllTasks" })')
+
+    // A panel can stay "active" while the user is in the sidebar, and on Agent
+    // Manager these commands stop sessions, so the remembered surface decides.
+    // It must be the tracked one, never focus sampled when the command runs:
+    // the Command Palette blurs the webview before it executes.
+    const target = sliceBlock(source, source.indexOf("const taskTarget = () =>"))
+    expect(target).toContain("focused: focus.current()")
+    expect(target).toContain("agentManager: agentManagerProvider.isActive() ? agentManagerProvider : undefined")
+
+    // Every surface has to report focus, or the remembered one goes stale and
+    // commands keep targeting a surface the user has already left.
+    for (const surface of ["sidebar", "tab", "agentManager"]) {
+      expect(source, `${surface} should report focus gains`).toContain(`focus.gained("${surface}")`)
+      expect(source, `${surface} should be forgotten when it goes away`).toContain(`focus.lost("${surface}")`)
+    }
+  })
 })
 
 // ---------------------------------------------------------------------------
@@ -225,10 +260,7 @@ describe("Extension — KiloProvider handler wiring", () => {
       instances.push(match.index)
     }
 
-    expect(
-      instances.length,
-      "expected at least 3 KiloProvider instances (sidebar, tab, deserializer)",
-    ).toBeGreaterThanOrEqual(3)
+    expect(instances.length, "expected sidebar and shared tab KiloProvider constructors").toBeGreaterThanOrEqual(2)
 
     const missing: string[] = []
     for (let i = 0; i < instances.length; i++) {
@@ -251,26 +283,40 @@ describe("Extension — KiloProvider handler wiring", () => {
     ).toEqual([])
   })
 
-  it("openKiloInNewTab wires setContinueInWorktreeHandler before resolveWebviewPanel", () => {
-    const fn = ext.indexOf("function openKiloInNewTab")
-    expect(fn, "openKiloInNewTab must exist").toBeGreaterThan(-1)
-    const body = sliceBlock(ext, fn)
-    const handler = body.indexOf("setContinueInWorktreeHandler")
+  it("shared tab setup wires services and handlers before resolveWebviewPanel", () => {
+    const start = ext.indexOf("const attach =")
+    expect(start, "shared tab setup must exist").toBeGreaterThan(-1)
+    const body = sliceBlock(ext, start)
     const resolve = body.indexOf("resolveWebviewPanel")
-    expect(handler, "setContinueInWorktreeHandler must be called").toBeGreaterThan(-1)
     expect(resolve, "resolveWebviewPanel must be called").toBeGreaterThan(-1)
-    expect(handler, "handler must be wired before resolving the panel").toBeLessThan(resolve)
+    for (const name of [
+      "setRemoteService",
+      "setAutoApproveController",
+      "setContinueInWorktreeHandler",
+      "setCreateWorktreeHandler",
+      "setDiffVirtualProvider",
+      "setDiffViewerProvider",
+      "setReviewCommentsHandler",
+    ]) {
+      const handler = body.indexOf(name)
+      expect(handler, `${name} must be called`).toBeGreaterThan(-1)
+      expect(handler, `${name} must be wired before resolving the panel`).toBeLessThan(resolve)
+    }
+    expect(body).toContain("tabPanels.set(panel, tabProvider)")
+    expect(body).toContain("return tabProvider")
   })
 
-  it("TabPanel deserializer wires setContinueInWorktreeHandler before resolveWebviewPanel", () => {
-    const serializer = ext.indexOf('"kilo-code.new.TabPanel"')
-    expect(serializer, "TabPanel serializer must exist").toBeGreaterThan(-1)
-    const body = sliceBlock(ext, serializer)
-    const handler = body.indexOf("setContinueInWorktreeHandler")
-    const resolve = body.indexOf("resolveWebviewPanel")
-    expect(handler, "setContinueInWorktreeHandler must be called in deserializer").toBeGreaterThan(-1)
-    expect(resolve, "resolveWebviewPanel must be called in deserializer").toBeGreaterThan(-1)
-    expect(handler, "handler must be wired before resolving the panel").toBeLessThan(resolve)
+  it("new and restored tabs use shared setup and retain disposal", () => {
+    expect(ext).toContain("openKiloInNewTab(context, tabPanels, attach)")
+    for (const name of ["function openKiloInNewTab", '"kilo-code.new.TabPanel"']) {
+      const start = ext.indexOf(name)
+      expect(start, `${name} must exist`).toBeGreaterThan(-1)
+      const body = sliceBlock(ext, start)
+      expect(body).toContain("const tabProvider = attach(panel)")
+      expect(body).toContain("panel.onDidDispose(")
+      expect(body).toContain("tabPanels.delete(panel)")
+      expect(body).toContain("tabProvider.dispose()")
+    }
   })
 })
 
@@ -313,7 +359,7 @@ describe("Extension — Agent Manager remote wiring", () => {
   const host = fs.readFileSync(VSCODE_HOST_FILE, "utf-8")
 
   it("passes the shared remote service to Agent Manager", () => {
-    expect(ext).toContain("new VscodeHost(context.extensionUri, connectionService, context, remoteService)")
+    expect(ext).toContain("new VscodeHost(context.extensionUri, connectionService, context, remoteService, controls)")
   })
 
   it("wires the remote service before attaching the Agent Manager webview", () => {

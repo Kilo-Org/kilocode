@@ -31,24 +31,32 @@ export type QuestionStep = {
   reply?: QuestionReply
 }
 
-export function createQuestionBodyState(requestID: string): QuestionBodyState {
+// kilocode_change start
+export function createQuestionBodyState(requestID: string, question?: QuestionInfo): QuestionBodyState {
+  // kilocode_change end
   return {
     requestID,
     tab: 0,
     answers: [],
     custom: [],
-    selected: 0,
+    // kilocode_change start
+    selected: question?.multiple
+      ? 0
+      : Math.max(0, question?.options.findIndex((option) => option.label === question.default) ?? 0),
+    // kilocode_change end
     editing: false,
     submitting: false,
   }
 }
 
-export function questionSync(state: QuestionBodyState, requestID: string): QuestionBodyState {
+// kilocode_change start
+export function questionSync(state: QuestionBodyState, requestID: string, question?: QuestionInfo): QuestionBodyState {
+  // kilocode_change end
   if (state.requestID === requestID) {
     return state
   }
 
-  return createQuestionBodyState(requestID)
+  return createQuestionBodyState(requestID, question) // kilocode_change
 }
 
 export function questionSingle(request: QuestionRequest): boolean {
@@ -106,11 +114,17 @@ export function questionAnswers(state: QuestionBodyState, count: number): string
   return Array.from({ length: count }, (_, idx) => state.answers[idx] ?? [])
 }
 
-export function questionSetTab(state: QuestionBodyState, tab: number): QuestionBodyState {
+// kilocode_change start
+export function questionSetTab(state: QuestionBodyState, tab: number, question?: QuestionInfo): QuestionBodyState {
+  // kilocode_change end
   return {
     ...state,
     tab,
-    selected: 0,
+    // kilocode_change start
+    selected: question?.multiple
+      ? 0
+      : Math.max(0, question?.options.findIndex((option) => option.label === question.default) ?? 0),
+    // kilocode_change end
     editing: false,
   }
 }
@@ -188,7 +202,7 @@ function questionPick(
   }
 
   return {
-    state: questionSetTab(next, state.tab + 1),
+    state: questionSetTab(next, state.tab + 1, request.questions.at(state.tab + 1)), // kilocode_change
   }
 }
 

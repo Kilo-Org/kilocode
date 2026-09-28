@@ -8,6 +8,7 @@ import ai.kilocode.client.session.SessionSidePanelManager
 import ai.kilocode.client.telemetry.Telemetry
 import ai.kilocode.client.agentManager.worktree.GhStatusCoordinator
 import ai.kilocode.client.agentManager.worktree.KiloWorktreeService
+import ai.kilocode.client.agentManager.AgentManagerHost
 import ai.kilocode.client.agentManager.SidePanelKeys
 import ai.kilocode.client.agentManager.SidePanelMode
 import ai.kilocode.client.agentManager.applySidePanelMode
@@ -41,6 +42,9 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.awt.BorderLayout
 import javax.swing.JPanel
+
+/** Registered id of the Kilo Code tool window (`kilo.jetbrains.frontend.xml`'s `<toolWindow id=...>`). */
+const val KILO_TOOL_WINDOW_ID = "Kilo Code"
 
 /**
  * Creates the Kilo Code tool window and delegates session content management.
@@ -153,6 +157,19 @@ internal class KiloToolWindowSetupService(
                 agents()
                 agentManagerPanel.move(id, dir)
             }
+            // Same two flows, reachable from a worktree editor tab, which cannot see
+            // agentManagerPanel directly: see AgentManagerHost.
+            project.service<AgentManagerHost>().bind(
+                manager,
+                move = { id, dir, surface ->
+                    agents()
+                    agentManagerPanel.move(id, dir, surface)
+                },
+                newWorktree = {
+                    Telemetry.send("New Worktree Clicked", mapOf("surface" to "worktree_editor"))
+                    agentManagerPanel.configure(anchor = chat, onCreate = { agents() })
+                },
+            )
             val listener = object : ContentManagerListener {
                 override fun selectionChanged(event: ContentManagerEvent) {
                     if (event.operation != ContentManagerEvent.ContentOperation.add) return

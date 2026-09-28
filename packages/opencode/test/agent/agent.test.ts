@@ -78,7 +78,6 @@ it.instance("build agent has correct default properties", () =>
     expect(evalPerm(build, "bash")).toBe("ask")
     expect(evalPerm(build, "repo_clone")).toBe("deny")
     expect(evalPerm(build, "repo_overview")).toBe("deny")
-    expect(evalPerm(build, "interactive_terminal")).toBe("allow") // kilocode_change
   }),
 )
 
@@ -88,7 +87,6 @@ it.instance("plan agent denies edits except .opencode/plans/*", () =>
     expect(plan).toBeDefined()
     // Wildcard is denied
     expect(evalPerm(plan, "edit")).toBe("deny")
-    expect(evalPerm(plan, "interactive_terminal")).toBe("deny") // kilocode_change
     // But specific path is allowed
     expect(Permission.evaluate("edit", ".opencode/plans/foo.md", plan!.permission).action).toBe("allow")
   }),
@@ -131,7 +129,6 @@ it.instance("explore agent denies edit and write", () =>
     expect(evalPerm(explore, "edit")).toBe("deny")
     expect(evalPerm(explore, "write")).toBe("deny")
     expect(evalPerm(explore, "todowrite")).toBe("deny")
-    expect(evalPerm(explore, "interactive_terminal")).toBe("deny") // kilocode_change
   }),
 )
 

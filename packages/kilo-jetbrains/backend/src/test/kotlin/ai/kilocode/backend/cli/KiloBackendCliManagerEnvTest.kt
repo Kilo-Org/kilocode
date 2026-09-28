@@ -161,4 +161,51 @@ class KiloBackendCliManagerEnvTest {
         assertFalse(env.containsKey("XDG_STATE_HOME"), "XDG_STATE_HOME should not be set when root is missing")
         assertFalse(env.containsKey("XDG_CACHE_HOME"), "XDG_CACHE_HOME should not be set when root is missing")
     }
+
+    @Test
+    fun `work dir is created under the provided root`() {
+        val dir = workDir(tmp)
+
+        assertEquals(File(tmp, "cwd"), dir)
+        assertTrue(dir!!.isDirectory, "work dir should be created")
+    }
+
+    @Test
+    fun `work dir is reused when it already exists`() {
+        val first = workDir(tmp)
+        val second = workDir(tmp)
+
+        assertEquals(first, second)
+        assertTrue(second!!.isDirectory, "work dir should still exist on reuse")
+    }
+
+    @Test
+    fun `work dir is returned when the directory was created concurrently`() {
+        // mkdirs() returns false for an already-existing directory; that must not fall back to
+        // the inherited IDE cwd, which is the $HOME resolution this helper exists to prevent.
+        File(tmp, "cwd").mkdirs()
+
+        val dir = workDir(tmp)
+
+        assertEquals(File(tmp, "cwd"), dir)
+    }
+
+    @Test
+    fun `work dir is never home or a filesystem root`() {
+        val dir = workDir(tmp)
+
+        assertTrue(dir != null)
+        assertFalse(dir!!.absolutePath == System.getProperty("user.home"), "work dir must not be the home directory")
+        assertFalse(dir.absolutePath == dir.toPath().root?.toString(), "work dir must not be a filesystem root")
+    }
+
+    @Test
+    fun `work dir returns null when the root cannot be created`() {
+        val blocker = File(tmp, "blocker")
+        blocker.writeText("not a directory")
+
+        val dir = workDir(blocker)
+
+        assertEquals(null, dir)
+    }
 }

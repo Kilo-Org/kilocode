@@ -77,7 +77,7 @@ export const dict: Record<string, string> = {
 
   "dialog.usageExceeded.freeTier.title": "Безкоштовний ліміт вичерпано",
   "dialog.usageExceeded.freeTier.description":
-    "Підпишіться на Kilo Go для надійного доступу до найкращих моделей із відкритим кодом від $5 на місяць.", // kilocode_change
+    "Підпишіться на Kilo Go за $10 на місяць для надійного доступу до найкращих моделей із відкритим кодом.", // kilocode_change
   "dialog.usageExceeded.freeTier.actionLabel": "Підписатися",
   "dialog.usageExceeded.accountRateLimit.title": "Ліміт Go вичерпано",
   "dialog.usageExceeded.accountRateLimit.description":
@@ -233,6 +233,10 @@ export const dict: Record<string, string> = {
   "ui.mermaid.copySvg": "Копіювати SVG",
   "ui.mermaid.download": "Завантажити",
   "ui.mermaid.downloadPng": "Завантажити PNG",
+  "ui.mermaid.zoom": "Масштаб",
+  "ui.mermaid.zoomIn": "Збільшити",
+  "ui.mermaid.zoomOut": "Зменшити",
+  "ui.mermaid.zoomReset": "Скинути масштаб",
   "ui.mermaid.downloadSvg": "Завантажити SVG",
   "ui.mermaid.errorDefault": "Не вдалося відтворити діаграму Mermaid.",
   "ui.mermaid.errorEmpty": "Mermaid відтворив порожню діаграму.",
@@ -241,6 +245,13 @@ export const dict: Record<string, string> = {
   "ui.message.deleteQueued": "Видалити повідомлення з черги",
   "ui.messagePart.mcp.input": "Вхід",
   "ui.messagePart.mcp.output": "Вихід",
+  "ui.messagePart.board.read": "Читання повідомлень агентів",
+  "ui.messagePart.board.all": "Усі агенти",
+  "ui.messagePart.board.primary": "Головний агент",
+  "ui.messagePart.board.agent": "Агент",
+  "ui.messagePart.board.route": "Відправник: {{from}}, одержувач: {{to}}",
+  "ui.messagePart.board.empty": "Немає повідомлень агентів",
+  "ui.messagePart.board.stored": "Лише збережено. Доставлення та прочитання не підтверджено.",
   "ui.question.answer.dismissed": "Dismissed",
   "ui.question.subtitle.dismissed": "{{count}} dismissed",
   "ui.sessionTurn.status.delegatingWaitingPermission": "Subagent waiting for permission",

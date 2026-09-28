@@ -6,7 +6,7 @@
 
 import { Component, createEffect, createSignal, onCleanup } from "solid-js"
 import { deferredHighlight } from "@kilocode/kilo-ui/context/marked"
-import { Icon } from "@kilocode/kilo-ui/icon"
+import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { useLanguage } from "../../context/language"
 
@@ -48,14 +48,15 @@ export const PermissionCommand: Component<{ command: string; plain?: boolean }> 
     <div data-slot="permission-command">
       <div data-slot="permission-command-code" ref={ref} />
       <Tooltip value={language.t("ui.permission.copyCommand")} placement="top">
-        <button
+        <IconButton
+          icon={copied() ? "check-small" : "copy"}
+          variant="ghost"
+          size="small"
           data-slot="permission-command-copy"
           data-copied={copied() ? "" : undefined}
           onClick={copy}
           aria-label={language.t("ui.permission.copyCommand")}
-        >
-          <Icon name={copied() ? "check-small" : "copy"} size="small" />
-        </button>
+        />
       </Tooltip>
     </div>
   )
