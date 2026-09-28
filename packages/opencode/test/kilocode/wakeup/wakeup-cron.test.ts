@@ -908,8 +908,8 @@ describe("Wakeup cron goal resume", () => {
 })
 
 // Kept in its own trailing block: the goal-resume suite below drives the shared
-// AppRuntime, and it fails with "ManagedRuntime disposed" when these tests run
-// before it as the first tests in this file.
+// process runtime, and it fails with "ManagedRuntime disposed" when these tests
+// run before it as the first tests in this file.
 describe("Wakeup cron in the derived status", () => {
   it.effect("reports a session asleep on a cron task as scheduled at its next fire", () =>
     Effect.gen(function* () {
