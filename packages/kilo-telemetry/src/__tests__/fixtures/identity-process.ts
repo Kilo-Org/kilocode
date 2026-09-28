@@ -30,6 +30,8 @@ if (process.env.TEST_LOGIN) {
 } else {
   Telemetry.trackCliStart()
 }
-await Client.shutdown().catch(() => {})
+await Client.shutdown().catch((err) => {
+  if (!process.env.TEST_FAIL) throw err
+})
 console.log(JSON.stringify(batches))
 process.exit(0)

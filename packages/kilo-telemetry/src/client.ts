@@ -14,8 +14,8 @@ export namespace Client {
   let directory = ""
   const pending = new Set<string>()
 
-  export function init(dataPath = "") {
-    directory = dataPath
+  export function init(dir = "") {
+    directory = dir
     pending.clear()
     client = new PostHog(POSTHOG_API_KEY, {
       host: POSTHOG_HOST,
@@ -25,7 +25,7 @@ export namespace Client {
       if (!directory) return
       for (const message of messages) {
         if (message.event !== "$create_alias") continue
-        const file = aliasPath(message.distinct_id, message.properties.alias)
+        const file = marker(message.distinct_id, message.properties.alias)
         try {
           // Remember the link only after a successful upload.
           writeFileSync(file, "1", { mode: 0o600 })
@@ -37,7 +37,7 @@ export namespace Client {
     client.on("error", () => pending.clear())
   }
 
-  function aliasPath(id: string, alias: string) {
+  function marker(id: string, alias: string) {
     const key = createHash("sha256")
       .update(JSON.stringify([id, alias]))
       .digest("hex")
@@ -77,12 +77,12 @@ export namespace Client {
 
   export function alias(distinctId: string, aliasId: string) {
     if (!enabled || !client) return
-    const file = aliasPath(distinctId, aliasId)
+    const file = marker(distinctId, aliasId)
     if (pending.has(file)) return
     try {
       if (directory && readFileSync(file, "utf8") === "1") return
-    } catch {
-      // Missing or unreadable markers must not prevent linking identities.
+    } catch (err) {
+      if (process.env.KILO_PRINT_LOGS) console.warn("telemetry alias marker read failed; retrying link", err)
     }
     pending.add(file)
 
