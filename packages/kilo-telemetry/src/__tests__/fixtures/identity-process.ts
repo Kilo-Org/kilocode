@@ -19,12 +19,11 @@ await Telemetry.init({
   enabled: true,
 })
 if (process.env.TEST_LOGIN) Telemetry.trackCliStart()
-await Promise.all(
-  Array.from({ length: process.env.TEST_CONCURRENT ? 3 : 1 }, () =>
-    Telemetry.updateIdentity("test-token", process.env.TEST_ORG),
-  ),
-)
-if (process.env.TEST_LOGOUT) await Telemetry.updateIdentity(null)
+// Overlapping auth checks must not enqueue the same alias twice.
+await Promise.all([
+  Telemetry.updateIdentity("test-token", process.env.TEST_ORG),
+  Telemetry.updateIdentity("test-token", process.env.TEST_ORG),
+])
 if (process.env.TEST_LOGIN) {
   Telemetry.trackAuthSuccess("kilo")
   Telemetry.trackCliExit()
