@@ -1,6 +1,7 @@
 import { describe, it, expect } from "bun:test"
 import {
   sanitizeReviewComments,
+  isReviewRangeValid,
   formatReviewCommentsMarkdown,
   extractLines,
   getDirectory,
@@ -21,6 +22,7 @@ import {
 } from "../../webview-ui/diff-viewer/review-annotations"
 import type { WorktreeFileDiff } from "../../webview-ui/src/types/messages"
 import { parseReview, partReview } from "../../src/shared/review-comments"
+import { toSessionDiffFile } from "../../src/diff/sources/session"
 
 function diff(file: string, before: string, after: string): WorktreeFileDiff {
   return { file, before, after, additions: 1, deletions: 0 }
@@ -113,6 +115,58 @@ describe("sanitizeReviewComments", () => {
     const d = { ...diff("a.ts", "", ""), summarized: true }
     const result = sanitizeReviewComments([c], [d])
     expect(result).toEqual([c])
+  })
+
+  it("keeps saved comments at original file coordinates in session patch excerpts", () => {
+    const patch = [
+      "--- a/a.ts",
+      "+++ b/a.ts",
+      "@@ -50,3 +80,3 @@",
+      " keep",
+      "-old",
+      "+new",
+      " end",
+      "@@ -100,2 +130,2 @@",
+      "-old tail",
+      "+new tail",
+      " final",
+      "",
+    ].join("\n")
+    const d = toSessionDiffFile({ file: "a.ts", patch, additions: 2, deletions: 2, status: "modified" })
+    const deleted = comment({ file: "a.ts", line: 51, side: "deletions" })
+    const added = comment({ file: "a.ts", line: 81 })
+    const later = comment({ file: "a.ts", line: 130 })
+    const outside = comment({ file: "a.ts", line: 132 })
+    const gap = comment({ file: "a.ts", line: 90 })
+    const wrongSide = comment({ file: "a.ts", line: 81, side: "deletions" })
+
+    expect(sanitizeReviewComments([deleted, added, later, outside, gap, wrongSide], [d])).toEqual([
+      deleted,
+      added,
+      later,
+    ])
+    expect(isReviewRangeValid(d, "additions", 80, 82)).toBe(true)
+    expect(isReviewRangeValid(d, "deletions", 50, 52)).toBe(true)
+    expect(isReviewRangeValid(d, "additions", 81, 83)).toBe(false)
+    expect(isReviewRangeValid(d, "additions", 82, 130)).toBe(false)
+  })
+
+  it("does not invent lines on the empty side of an added or deleted session file", () => {
+    for (const status of ["added", "deleted"] as const) {
+      const added = status === "added"
+      const patch = added ? "@@ -0,0 +1 @@\n+new\n" : "@@ -1 +0,0 @@\n-old\n"
+      const d = toSessionDiffFile({
+        file: "a.ts",
+        patch: `--- a/a.ts\n+++ b/a.ts\n${patch}`,
+        additions: added ? 1 : 0,
+        deletions: added ? 0 : 1,
+        status,
+      })
+      const left = comment({ file: "a.ts", line: 1, side: "deletions" })
+      const right = comment({ file: "a.ts", line: 1 })
+
+      expect(sanitizeReviewComments([left, right], [d])).toEqual([added ? right : left])
+    }
   })
 
   it("returns all when all comments are valid", () => {
