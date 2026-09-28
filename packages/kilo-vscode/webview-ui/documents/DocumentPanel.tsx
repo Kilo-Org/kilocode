@@ -61,12 +61,19 @@ function sendAllKeybind(t: (key: string) => string): string {
     : t("agentManager.review.sendAllShortcut.other")
 }
 
+function fenceFor(text: string): string {
+  const runs = text.match(/`+/g)
+  const longest = runs ? Math.max(...runs.map((run) => run.length)) : 0
+  return "`".repeat(Math.max(3, longest + 1))
+}
+
 function asMarkdownContent(file: string, text: string): string {
   if (isMarkdownPath(file)) return text
   const name = getFilename(file)
   const dot = name.lastIndexOf(".")
   const ext = dot > 0 ? name.slice(dot + 1) : ""
-  return `\`\`\`${ext}\n${text}\n\`\`\`\n`
+  const fence = fenceFor(text)
+  return `${fence}${ext}\n${text}\n${fence}\n`
 }
 
 type CopyKind = "text" | "markdown"
