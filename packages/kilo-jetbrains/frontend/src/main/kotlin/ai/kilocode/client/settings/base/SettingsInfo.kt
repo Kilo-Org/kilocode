@@ -2,7 +2,10 @@ package ai.kilocode.client.settings.base
 
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.ui.UiStyle
+import ai.kilocode.client.ui.layout.HAlign
 import ai.kilocode.client.ui.layout.Stack
+import ai.kilocode.client.ui.layout.VAlign
+import ai.kilocode.client.ui.layout.align
 import com.intellij.ide.BrowserUtil
 import com.intellij.ui.components.labels.LinkLabel
 import com.intellij.util.concurrency.annotations.RequiresEdt
@@ -28,7 +31,7 @@ internal class SettingsInfo(
     init {
         val actions = Stack.horizontal(UiStyle.Gap.lg()).next(toggle)
         learnMore?.let(actions::next)
-        setTrailing(actions)
+        setTrailing(actions.align(HAlign.RIGHT, VAlign.TOP))
     }
 
     @RequiresEdt

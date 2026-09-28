@@ -7,6 +7,8 @@ import com.intellij.ui.InlineBanner
 import com.intellij.ui.components.labels.LinkLabel
 import com.intellij.util.ui.UIUtil
 import java.awt.BorderLayout
+import java.awt.Container
+import java.awt.Dimension
 import javax.swing.JEditorPane
 
 /**
@@ -33,10 +35,26 @@ class SettingsInfoTest : BasePlatformTestCase() {
         val learn = learnMoreLink(info)
         val layout = pane.parent.layout as BorderLayout
         assertSame(pane, layout.getLayoutComponent(BorderLayout.CENTER))
-        assertSame(toggle.parent, layout.getLayoutComponent(BorderLayout.EAST))
+        assertSame(toggle.parent.parent, layout.getLayoutComponent(BorderLayout.EAST))
         assertSame(toggle.parent, learn.parent)
         assertTrue(toggle.isVisible)
         assertTrue(learn.isVisible)
+    }
+
+    fun `test expanded banner keeps actions aligned with the first text line`() {
+        val info = info()
+        edt { toggleLink(info).doClick() }
+
+        edt {
+            info.size = Dimension(900, info.preferredSize.height)
+            layout(info)
+        }
+
+        val pane = message(info)
+        val actions = toggleLink(info).parent
+        val wrapper = actions.parent
+        assertTrue("expanded copy must be taller than the action row", pane.height > actions.height)
+        assertEquals("actions must stay pinned to the first line", wrapper.insets.top, actions.y)
     }
 
     fun `test expanding reveals the long explanation, flips the link, and shows learn more`() {
@@ -111,6 +129,11 @@ class SettingsInfoTest : BasePlatformTestCase() {
 
     private fun learnMoreLink(info: InlineBanner): LinkLabel<*> =
         UIUtil.findComponentsOfType(info, LinkLabel::class.java).single { it.text == "Learn more" }
+
+    private fun layout(root: java.awt.Component) {
+        root.doLayout()
+        if (root is Container) root.components.filterIsInstance<Container>().forEach(::layout)
+    }
 
     private fun <T> edt(block: () -> T): T = edtWait(block)
 }
