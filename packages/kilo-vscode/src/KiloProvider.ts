@@ -169,6 +169,7 @@ import type { Agent } from "@kilocode/sdk/v2/client"
 import { configFeatures, serverFeatures } from "./features"
 import { fetchSnapshot } from "./kilo-provider/config-snapshot"
 import { createAutoApproveBridge } from "./kilo-provider/auto-approve"
+import { createApproveForMeBridge } from "./kilo-provider/approve-for-me"
 import type { KiloProviderOptions } from "./kilo-provider/options"
 import { watchRestore } from "./kilo-provider/prompt-focus"
 import type { ProjectRef, SessionRef, WorktreeRef } from "./agent-manager/project/route"
@@ -529,6 +530,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private panel: vscode.WebviewPanel | undefined
   private latch: ReturnType<typeof watchRestore> | undefined
   private autoApproveBridge: ReturnType<typeof createAutoApproveBridge> | null = null
+  private approveForMeBridge: ReturnType<typeof createApproveForMeBridge> | null = null
   private readonly marketplace = new MarketplaceService()
 
   private ignoreController: FileIgnoreController | null = null
@@ -600,6 +602,12 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.autoApproveBridge?.dispose()
     this.autoApproveBridge = createAutoApproveBridge(ctrl, (msg) => this.postMessage(msg), this.onBeforeMessage)
     this.onBeforeMessage = (msg) => this.autoApproveBridge!.handle(msg)
+  }
+
+  setApproveForMeController(ctrl: Parameters<typeof createApproveForMeBridge>[0]): void {
+    this.approveForMeBridge?.dispose()
+    this.approveForMeBridge = createApproveForMeBridge(ctrl, (msg) => this.postMessage(msg), this.onBeforeMessage)
+    this.onBeforeMessage = (msg) => this.approveForMeBridge!.handle(msg)
   }
 
   private setCurrentSession(session: Session | null): void {
@@ -1142,7 +1150,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   ): void {
     this.isWebviewReady = false
     this.webview = webview
-    if (!this.autoApproveBridge) this.onBeforeMessage = options?.onBeforeMessage ?? null
+    if (!this.autoApproveBridge && !this.approveForMeBridge) this.onBeforeMessage = options?.onBeforeMessage ?? null
     this.setupWebviewMessageHandler(webview)
     this.initializeConnection()
   }
@@ -6079,6 +6087,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.pushFixesConfigDisposable?.dispose()
     this.telemetryStateDisposable?.dispose()
     this.autoApproveBridge?.dispose()
+    this.approveForMeBridge?.dispose()
     this.marketplace.dispose()
     this.visibleTaskStreams.clear()
     this.inputs.dispose()

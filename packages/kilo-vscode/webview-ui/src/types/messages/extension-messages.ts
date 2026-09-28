@@ -1100,6 +1100,12 @@ export interface AutoApproveStateMessage {
   active: boolean
 }
 
+export interface ApproveForMeStateMessage {
+  type: "approveForMeState"
+  active: boolean
+  visible: boolean
+}
+
 export interface SandboxStatusMessage {
   type: "sandboxStatus"
   sessionID: string
@@ -1778,6 +1784,7 @@ export type ExtensionMessage =
   | AgentManagerCaffeinationMessage
   | AgentManagerKeybindingsMessage
   | AutoApproveStateMessage
+  | ApproveForMeStateMessage
   | SandboxStatusMessage
   | SandboxDefaultStatusMessage
   | SandboxStatusErrorMessage
