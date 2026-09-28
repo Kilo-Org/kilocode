@@ -1,5 +1,12 @@
 import { describe, it, expect, beforeEach } from "bun:test"
-import { canNavigate, appendEntry, seedEntries, MAX } from "../../webview-ui/src/hooks/usePromptHistory"
+import { createRoot, createSignal } from "solid-js"
+import {
+  canNavigate,
+  appendEntry,
+  seedEntries,
+  usePromptHistory,
+  MAX,
+} from "../../webview-ui/src/hooks/usePromptHistory"
 
 describe("canNavigate", () => {
   it("allows up when cursor is at start and not browsing", () => {
@@ -199,5 +206,70 @@ describe("append after seed — no duplicates", () => {
     // Session B sends "alpha" again — should move to front, not duplicate
     appendEntry(entries, "alpha", MAX)
     expect(entries.filter((e) => e === "alpha")).toHaveLength(1)
+  })
+})
+
+describe("usePromptHistory — per-conversation isolation", () => {
+  it("keeps history separate per session key", () => {
+    createRoot((dispose) => {
+      const [sidA, setSidA] = createSignal<string | undefined>("session-a-unique")
+      const historyA = usePromptHistory(sidA)
+      historyA.append("hello from A")
+
+      const [sidB] = createSignal<string | undefined>("session-b-unique")
+      const historyB = usePromptHistory(sidB)
+
+      // Session B must not see session A's entries.
+      expect(historyB.navigate("up", "", 0)).toBeNull()
+
+      // Session A still sees its own entry.
+      expect(historyA.navigate("up", "", 0)).toBe("hello from A")
+
+      dispose()
+    })
+  })
+
+  it("does not leak entries across different keys used by the same hook instance", () => {
+    createRoot((dispose) => {
+      const [sid, setSid] = createSignal<string | undefined>("session-c-unique")
+      const history = usePromptHistory(sid)
+      history.append("first conversation message")
+      expect(history.navigate("up", "", 0)).toBe("first conversation message")
+
+      setSid("session-d-unique")
+      // Switching keys resets browsing state and reveals the new key's (empty) history.
+      expect(history.navigate("up", "", 0)).toBeNull()
+
+      history.append("second conversation message")
+      expect(history.navigate("up", "", 0)).toBe("second conversation message")
+
+      dispose()
+    })
+  })
+
+  it("resets browsing index when the conversation key changes", () => {
+    createRoot((dispose) => {
+      const [sid, setSid] = createSignal<string | undefined>("session-e-unique")
+      const history = usePromptHistory(sid)
+      history.append("a")
+      history.append("b")
+      history.navigate("up", "", 0)
+      expect(history.index()).toBe(0)
+
+      setSid("session-f-unique")
+      expect(history.index()).toBe(-1)
+
+      dispose()
+    })
+  })
+
+  it("falls back to a shared bucket when the key is undefined", () => {
+    createRoot((dispose) => {
+      const [sid] = createSignal<string | undefined>(undefined)
+      const history = usePromptHistory(sid)
+      history.append("draft without a session yet")
+      expect(history.navigate("up", "", 0)).toBe("draft without a session yet")
+      dispose()
+    })
   })
 })

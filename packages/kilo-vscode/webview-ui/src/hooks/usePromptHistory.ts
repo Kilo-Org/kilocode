@@ -4,30 +4,41 @@
  * matching the behavior of the CLI TUI.
  *
  * Entries persist via localStorage, surviving webview hide/show cycles.
+ * History is scoped per conversation key (typically the session ID), so
+ * switching conversations does not mix unrelated prompt history.
  */
 
 import { createSignal } from "solid-js"
 import type { Accessor } from "solid-js"
 
 export const MAX = 100
-const STORAGE_KEY = "kilo.prompt-history.v1"
+const STORAGE_KEY = "kilo.prompt-history.v2"
+/** Bucket for conversations that do not yet have a stable key (e.g. a brand-new tab). */
+const FALLBACK_KEY = "new"
 
-function load(): string[] {
+type Store = Record<string, string[]>
+
+function load(): Store {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
-    if (!raw) return []
+    if (!raw) return {}
     const parsed = JSON.parse(raw)
-    if (!Array.isArray(parsed)) return []
-    return parsed.filter((e): e is string => typeof e === "string").slice(0, MAX)
+    if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) return {}
+    const store: Store = {}
+    for (const [key, value] of Object.entries(parsed as Record<string, unknown>)) {
+      if (!Array.isArray(value)) continue
+      store[key] = value.filter((e): e is string => typeof e === "string").slice(0, MAX)
+    }
+    return store
   } catch (err) {
     console.warn("[Kilo New] prompt history load failed", err)
-    return []
+    return {}
   }
 }
 
-function save(items: string[]) {
+function save(store: Store) {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(items))
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(store))
   } catch (err) {
     console.warn("[Kilo New] prompt history save failed", err)
   }
@@ -81,8 +92,16 @@ export function seedEntries(entries: string[], texts: string[], max: number): bo
   return true
 }
 
-// Module-level: initialized from localStorage, shared across remounts
-const entries: string[] = load()
+// Module-level: initialized from localStorage, shared across remounts, keyed per conversation.
+const store: Store = load()
+
+function entriesFor(key: string): string[] {
+  const existing = store[key]
+  if (existing) return existing
+  const created: string[] = []
+  store[key] = created
+  return created
+}
 
 export interface PromptHistory {
   /** Navigate history. Returns the new text value, or null if no navigation occurred. */
@@ -97,24 +116,46 @@ export interface PromptHistory {
   index: Accessor<number>
 }
 
-export function usePromptHistory(): PromptHistory {
+/**
+ * @param key Accessor for the current conversation's history key (typically the
+ * session ID). History is isolated per key; an undefined key falls back to a
+ * shared bucket for conversations that have not been created yet.
+ */
+export function usePromptHistory(key: Accessor<string | undefined>): PromptHistory {
   const [index, setIndex] = createSignal(-1)
   let saved: string | null = null
+  const resolve = () => key() ?? FALLBACK_KEY
+  let lastKey = resolve()
+
+  // Switching conversations must not carry over browsing position or the saved draft.
+  function syncKey(): string {
+    const current = resolve()
+    if (current === lastKey) return current
+    lastKey = current
+    setIndex(-1)
+    saved = null
+    return current
+  }
+
+  function entries(): string[] {
+    return entriesFor(syncKey())
+  }
 
   function navigate(direction: "up" | "down", text: string, cursor: number): string | null {
+    const list = entries()
     if (!canNavigate(direction, text, cursor, index() >= 0)) return null
 
     if (direction === "up") {
-      if (entries.length === 0) return null
+      if (list.length === 0) return null
       if (index() === -1) {
         saved = text
         setIndex(0)
-        return entries[0]!
+        return list[0]!
       }
       const next = index() + 1
-      if (next >= entries.length) return null
+      if (next >= list.length) return null
       setIndex(next)
-      return entries[next]!
+      return list[next]!
     }
 
     // direction === "down"
@@ -123,7 +164,7 @@ export function usePromptHistory(): PromptHistory {
     if (index() > 0) {
       const next = index() - 1
       setIndex(next)
-      return entries[next]!
+      return list[next]!
     }
 
     // index === 0: return to the saved draft
@@ -134,11 +175,11 @@ export function usePromptHistory(): PromptHistory {
   }
 
   function append(text: string) {
-    if (appendEntry(entries, text, MAX)) save(entries)
+    if (appendEntry(entries(), text, MAX)) save(store)
   }
 
   function seed(texts: string[]) {
-    if (seedEntries(entries, texts, MAX)) save(entries)
+    if (seedEntries(entries(), texts, MAX)) save(store)
   }
 
   function reset() {
@@ -146,5 +187,10 @@ export function usePromptHistory(): PromptHistory {
     saved = null
   }
 
-  return { navigate, append, seed, reset, index }
+  const currentIndex: Accessor<number> = () => {
+    syncKey()
+    return index()
+  }
+
+  return { navigate, append, seed, reset, index: currentIndex }
 }
