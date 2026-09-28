@@ -111,12 +111,20 @@ export const SessionListCommand = effectCmd({
     // kilocode_change start - fold a future wakeup into each session's status so
     // the list shows `scheduled <wake time>` instead of a bare idle. The list
     // runs in its own process and can cover directories this instance never
-    // adopted, so read the persisted wakeups (`Wakeup.list`) and keep the ones
-    // belonging to the sessions being listed. The in-memory, directory-scoped
-    // `Wakeup.scheduled` would miss every session whose directory differs from the
-    // shell's working directory.
+    // adopted, so read the persisted wakeups (`Wakeup.list`) and cron tasks
+    // (`Wakeup.cronList`), and keep the ones belonging to the sessions being
+    // listed. A cron task waits like a one-shot wakeup, so both stores count.
+    // The in-memory, directory-scoped `Wakeup.scheduled` would miss every session
+    // whose directory differs from the shell's working directory.
+    const held = yield* Wakeup.Service.use((svc) =>
+      Effect.gen(function* () {
+        const wakeup = yield* svc.list()
+        const cron = yield* svc.cronList()
+        return [...wakeup, ...cron]
+      }),
+    )
     const due = futureDueFor(
-      yield* Wakeup.Service.use((svc) => svc.list()),
+      held,
       sessions.map((session) => String(session.id)),
     )
     const statuses = mergeScheduled(Object.fromEntries(yield* SessionStatus.Service.use((svc) => svc.list())), due)
@@ -160,9 +168,11 @@ export const SessionListCommand = effectCmd({
 
 // kilocode_change start
 /** The Status column cell: the wake time for a scheduled session, its status type
- * otherwise, and `idle` when the session carries no status at all. */
+ * otherwise, and `idle` when the session carries no status at all. The wake time
+ * goes through the same locale helper as the Updated column, so one row never
+ * mixes a local time with a raw UTC one. */
 function statusCell(status: SessionStatus.Info | undefined): string {
-  if (status?.type === "scheduled") return `scheduled ${status.scheduledAt}`
+  if (status?.type === "scheduled") return `scheduled ${Locale.todayTimeOrDateTime(Date.parse(status.scheduledAt))}`
   return status?.type ?? "idle"
 }
 

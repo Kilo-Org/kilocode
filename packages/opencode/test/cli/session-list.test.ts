@@ -3,6 +3,7 @@ import { describe, expect, test } from "bun:test"
 import { SessionID } from "@/session/schema"
 import type { SessionStatus } from "@/session/status"
 import { Session } from "@/session/session"
+import { Locale } from "@/util/locale"
 import {
   formatGlobalSessionJSON,
   formatGlobalSessionTable,
@@ -12,6 +13,7 @@ import {
 
 const id = (value: string) => SessionID.make(value)
 const iso = new Date(1_700_000_000_000).toISOString()
+const local = Locale.todayTimeOrDateTime(Date.parse(iso))
 
 const session = (value: string, title: string) =>
   ({ id: id(value), title, time: { created: 1, updated: 1_700_000_000_000 } }) as unknown as Session.Info
@@ -27,9 +29,10 @@ const scheduled: Record<string, SessionStatus.Info> = {
 }
 
 describe("formatSessionTable", () => {
-  test("renders `scheduled <ISO>` for a session asleep on a wakeup", () => {
+  test("renders the wake time in the same locale as the Updated column", () => {
     const table = formatSessionTable([session("ses_sleep", "Sleepy")], scheduled)
-    expect(table).toContain(`scheduled ${iso}`)
+    expect(table).toContain(`scheduled ${local}`)
+    expect(table).not.toContain(iso)
   })
 
   test("renders `idle` for a session with no status", () => {
@@ -61,7 +64,7 @@ describe("formatSessionJSON", () => {
 describe("global formatters", () => {
   test("keep the Project column beside the new Status column", () => {
     const table = formatGlobalSessionTable([globalSession("ses_sleep", "Sleepy")], scheduled)
-    expect(table).toContain(`scheduled ${iso}`)
+    expect(table).toContain(`scheduled ${local}`)
     expect(table).toContain("proj")
   })
 

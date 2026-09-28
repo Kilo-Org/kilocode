@@ -274,10 +274,12 @@ export namespace Wakeup {
 
       // Earliest future wakeup per session, read from memory only like
       // `pending`: bootstrap adopts before an instance's routes run, so
-      // `entries` is authoritative here. A wakeup already due is excluded,
-      // because that turn is running now and must not read as `scheduled`.
+      // `entries` and `cronEntries` are authoritative here. Both stores count,
+      // because a session asleep on a recurring cron task waits exactly like one
+      // asleep on a one-shot wakeup. A wakeup already due is excluded, because
+      // that turn is running now and must not read as `scheduled`.
       const scheduled = Effect.fn("Wakeup.scheduled")(function* (directory?: string) {
-        const infos = Array.from(entries.values())
+        const infos = [...entries.values(), ...cronEntries.values()]
         return futureDue(directory === undefined ? infos : infos.filter((info) => info.directory === directory))
       })
 

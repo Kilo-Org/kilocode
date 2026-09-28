@@ -133,6 +133,33 @@ function persistCron(dir: string, value: Wakeup.CronInfo) {
 }
 
 describe("Wakeup cron", () => {
+  it.effect("reports a session asleep on a cron task as scheduled at its next fire", () =>
+    Effect.gen(function* () {
+      const wake = yield* Wakeup.Service
+      const dir = (yield* TestDir).dir
+      const sessionID = session()
+
+      const task = yield* wake.cronCreate({ sessionID, directory: dir, prompt: "poll the feed", cron: "*/5 * * * *" })
+
+      expect(yield* wake.scheduled(dir)).toEqual(new Map([[sessionID, task.dueAt]]))
+      // The derivation stays scoped to the directory it was asked about.
+      expect((yield* wake.scheduled("/tmp/elsewhere")).has(sessionID)).toBe(false)
+    }),
+  )
+
+  it.effect("reports the earliest of a wakeup and a cron task", () =>
+    Effect.gen(function* () {
+      const wake = yield* Wakeup.Service
+      const dir = (yield* TestDir).dir
+      const sessionID = session()
+
+      const task = yield* wake.cronCreate({ sessionID, directory: dir, prompt: "poll the feed", cron: "*/5 * * * *" })
+      const info = yield* wake.schedule({ sessionID, directory: dir, prompt: "check the build", delay: "1m" })
+
+      expect((yield* wake.scheduled(dir)).get(sessionID)).toBe(Math.min(task.dueAt, info.dueAt))
+    }),
+  )
+
   it.effect("creates, lists and cancels a recurring task", () =>
     Effect.gen(function* () {
       const wake = yield* Wakeup.Service
