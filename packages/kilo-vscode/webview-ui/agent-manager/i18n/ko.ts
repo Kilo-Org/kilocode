@@ -427,6 +427,8 @@ export const dict = {
   "agentManager.documents.loading": "문서 로드 중...",
   "agentManager.documents.preview": "문서 미리 보기",
   "agentManager.documents.source": "소스 보기",
+  "agentManager.documents.copy": "내용 복사",
+  "agentManager.documents.copyAsMarkdown": "Markdown으로 복사",
   "agentManager.documents.comments": "댓글 {{count}}개",
   "agentManager.import.pullRequest": "풀 리퀘스트",
   "agentManager.import.pastePrUrl": "PR URL 붙여넣기...",

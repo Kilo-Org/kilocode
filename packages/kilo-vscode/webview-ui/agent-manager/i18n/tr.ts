@@ -437,6 +437,8 @@ export const dict = {
   "agentManager.documents.loading": "Belge yükleniyor...",
   "agentManager.documents.preview": "Belgeyi önizle",
   "agentManager.documents.source": "Kaynak kodu göster",
+  "agentManager.documents.copy": "İçeriği kopyala",
+  "agentManager.documents.copyAsMarkdown": "Markdown olarak kopyala",
   "agentManager.documents.comments": "{{count}} yorum",
   "agentManager.import.pullRequest": "Çekme İsteği",
   "agentManager.import.pastePrUrl": "PR URL'sini yapıştırın...",

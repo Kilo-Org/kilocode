@@ -431,6 +431,8 @@ export const dict = {
   "agentManager.documents.loading": "در حال بارگذاری سند...",
   "agentManager.documents.preview": "پیش‌نمایش سند",
   "agentManager.documents.source": "نمایش کد منبع",
+  "agentManager.documents.copy": "کپی محتوا",
+  "agentManager.documents.copyAsMarkdown": "کپی به‌صورت Markdown",
   "agentManager.documents.comments": "{{count}} نظر",
   "agentManager.import.pullRequest": "درخواست ادغام",
   "agentManager.import.pastePrUrl": "URL درخواست PR را وارد کنید...",

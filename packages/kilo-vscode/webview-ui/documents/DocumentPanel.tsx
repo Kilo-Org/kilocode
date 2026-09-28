@@ -10,6 +10,7 @@ import { Icon } from "@kilocode/kilo-ui/icon"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Button } from "@kilocode/kilo-ui/button"
 import { Tooltip, TooltipKeybind } from "@kilocode/kilo-ui/tooltip"
+import { ContextMenu } from "@kilocode/kilo-ui/context-menu"
 import type { DiffLineAnnotation, AnnotationSide, SelectedLineRange } from "@pierre/diffs"
 import type { WorktreeFileDiff } from "../src/types/messages"
 import type { ReviewComment } from "../diff-viewer/review-comments"
@@ -94,6 +95,26 @@ export const DocumentPanel: Component<DocumentPanelProps> = (props) => {
   const file = () => selected()?.file ?? ""
   const content = () => data()?.content ?? ""
   const diff = () => virtualDiff(file(), content())
+
+  const [copied, setCopied] = createSignal<"text" | "markdown" | null>(null)
+  const flashCopied = (kind: "text" | "markdown") => {
+    setCopied(kind)
+    setTimeout(() => setCopied((current) => (current === kind ? null : current)), 1500)
+  }
+  const asMarkdown = () => {
+    const text = content()
+    if (isMarkdownPath(file())) return text
+    const ext = file().split(".").pop() ?? ""
+    return `\`\`\`${ext}\n${text}\n\`\`\`\n`
+  }
+  const copyContent = () => {
+    navigator.clipboard?.writeText(content())
+    flashCopied("text")
+  }
+  const copyAsMarkdown = () => {
+    navigator.clipboard?.writeText(asMarkdown())
+    flashCopied("markdown")
+  }
 
   const updateComments = (next: ReviewComment[]) => props.onCommentsChange(next)
   const comments = () => props.comments.filter((item) => item.file === file())
@@ -254,6 +275,15 @@ export const DocumentPanel: Component<DocumentPanelProps> = (props) => {
                 onClick={() => props.onOpenFile(file(), selected()?.line, selected()?.column)}
               />
             </Tooltip>
+            <Tooltip value={t("agentManager.documents.copy")} placement="top">
+              <IconButton
+                icon={copied() === "text" ? "check" : "copy"}
+                size="small"
+                variant="ghost"
+                label={t("agentManager.documents.copy")}
+                onClick={copyContent}
+              />
+            </Tooltip>
           </Show>
           <IconButton
             icon="close"
@@ -314,25 +344,43 @@ export const DocumentPanel: Component<DocumentPanelProps> = (props) => {
           </div>
         </Show>
         <Show when={!data()?.loading && !data()?.error && data()?.kind !== "image"}>
-          <div class="am-document-content">
-            <Show
-              when={!source() && isMarkdownPath(file())}
-              fallback={
-                <Dynamic component={code} file={{ name: file(), contents: content() }} class="am-document-code" />
-              }
-            >
-              <MarkdownPane
-                text={content()}
-                side="additions"
-                cache={`${file()}:document`}
-                annotations={annotations()}
-                renderAnnotation={renderAnnotation}
-                enableGutterUtility={true}
-                onGutterUtilityClick={gutter}
-                onLineNumberClick={(event) => props.onOpenFile(file(), event.lineNumber)}
-              />
-            </Show>
-          </div>
+          <ContextMenu>
+            <ContextMenu.Trigger as="div" style={{ display: "contents" }}>
+              <div class="am-document-content">
+                <Show
+                  when={!source() && isMarkdownPath(file())}
+                  fallback={
+                    <Dynamic component={code} file={{ name: file(), contents: content() }} class="am-document-code" />
+                  }
+                >
+                  <MarkdownPane
+                    text={content()}
+                    side="additions"
+                    cache={`${file()}:document`}
+                    annotations={annotations()}
+                    renderAnnotation={renderAnnotation}
+                    enableGutterUtility={true}
+                    onGutterUtilityClick={gutter}
+                    onLineNumberClick={(event) => props.onOpenFile(file(), event.lineNumber)}
+                  />
+                </Show>
+              </div>
+            </ContextMenu.Trigger>
+            <ContextMenu.Portal>
+              <ContextMenu.Content class="am-ctx-menu">
+                <ContextMenu.Item onSelect={copyContent}>
+                  <Icon name="copy" size="small" />
+                  <ContextMenu.ItemLabel>{t("agentManager.documents.copy")}</ContextMenu.ItemLabel>
+                </ContextMenu.Item>
+                <Show when={!isMarkdownPath(file())}>
+                  <ContextMenu.Item onSelect={copyAsMarkdown}>
+                    <Icon name="copy" size="small" />
+                    <ContextMenu.ItemLabel>{t("agentManager.documents.copyAsMarkdown")}</ContextMenu.ItemLabel>
+                  </ContextMenu.Item>
+                </Show>
+              </ContextMenu.Content>
+            </ContextMenu.Portal>
+          </ContextMenu>
         </Show>
       </Show>
       <Show when={props.comments.length > 0}>

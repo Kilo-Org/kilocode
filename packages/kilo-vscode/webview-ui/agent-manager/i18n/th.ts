@@ -421,6 +421,8 @@ export const dict = {
   "agentManager.documents.loading": "กำลังโหลดเอกสาร...",
   "agentManager.documents.preview": "ดูตัวอย่างเอกสาร",
   "agentManager.documents.source": "แสดงซอร์สโค้ด",
+  "agentManager.documents.copy": "คัดลอกเนื้อหา",
+  "agentManager.documents.copyAsMarkdown": "คัดลอกเป็น Markdown",
   "agentManager.documents.comments": "{{count}} ความคิดเห็น",
   "agentManager.import.pullRequest": "คำขอรวมโค้ด",
   "agentManager.import.pastePrUrl": "วาง URL ของ PR...",

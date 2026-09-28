@@ -429,6 +429,8 @@ export const dict = {
   "agentManager.documents.loading": "Ładowanie dokumentu...",
   "agentManager.documents.preview": "Podgląd dokumentu",
   "agentManager.documents.source": "Pokaż kod źródłowy",
+  "agentManager.documents.copy": "Kopiuj zawartość",
+  "agentManager.documents.copyAsMarkdown": "Kopiuj jako Markdown",
   "agentManager.documents.comments": "{{count}} komentarzy",
   "agentManager.import.pullRequest": "Prośba o scalenie",
   "agentManager.import.pastePrUrl": "Wklej URL PR...",

@@ -416,6 +416,8 @@ export const dict = {
   "agentManager.documents.loading": "正在載入文件...",
   "agentManager.documents.preview": "預覽文件",
   "agentManager.documents.source": "顯示原始碼",
+  "agentManager.documents.copy": "複製內容",
+  "agentManager.documents.copyAsMarkdown": "複製為 Markdown",
   "agentManager.documents.comments": "{{count}} 則留言",
   "agentManager.import.pullRequest": "提取請求",
   "agentManager.import.pastePrUrl": "貼上 PR URL...",

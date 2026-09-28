@@ -472,6 +472,8 @@ export const dict = {
   "agentManager.documents.loading": "Loading document...",
   "agentManager.documents.preview": "Preview document",
   "agentManager.documents.source": "Show source",
+  "agentManager.documents.copy": "Copy content",
+  "agentManager.documents.copyAsMarkdown": "Copy as Markdown",
   "agentManager.documents.comments": "{{count}} comments",
   "agentManager.browser.title": "Integrated Browser",
   "agentManager.browser.url": "Address",

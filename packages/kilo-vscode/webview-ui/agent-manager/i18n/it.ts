@@ -440,6 +440,8 @@ export const dict = {
   "agentManager.documents.loading": "Caricamento del documento...",
   "agentManager.documents.preview": "Visualizza anteprima del documento",
   "agentManager.documents.source": "Mostra il codice sorgente",
+  "agentManager.documents.copy": "Copia contenuto",
+  "agentManager.documents.copyAsMarkdown": "Copia come Markdown",
   "agentManager.documents.comments": "{{count}} commenti",
   "agentManager.import.pullRequest": "Pull Request",
   "agentManager.import.pastePrUrl": "Incolla URL PR...",

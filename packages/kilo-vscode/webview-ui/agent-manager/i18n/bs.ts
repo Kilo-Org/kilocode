@@ -428,6 +428,8 @@ export const dict = {
   "agentManager.documents.loading": "Učitavanje dokumenta...",
   "agentManager.documents.preview": "Pregled dokumenta",
   "agentManager.documents.source": "Prikaži izvorni kod",
+  "agentManager.documents.copy": "Kopiraj sadržaj",
+  "agentManager.documents.copyAsMarkdown": "Kopiraj kao Markdown",
   "agentManager.documents.comments": "{{count}} komentara",
   "agentManager.import.pullRequest": "Zahtjev za povlačenje",
   "agentManager.import.pastePrUrl": "Zalijepite PR URL...",

@@ -424,6 +424,8 @@ export const dict = {
   "agentManager.documents.loading": "جارٍ تحميل المستند...",
   "agentManager.documents.preview": "معاينة المستند",
   "agentManager.documents.source": "عرض التعليمات البرمجية المصدر",
+  "agentManager.documents.copy": "نسخ المحتوى",
+  "agentManager.documents.copyAsMarkdown": "نسخ كـ Markdown",
   "agentManager.documents.comments": "{{count}} تعليقًا",
   "agentManager.import.pullRequest": "طلب سحب",
   "agentManager.import.pastePrUrl": "الصق رابط PR...",
