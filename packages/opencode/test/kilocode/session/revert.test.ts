@@ -15,7 +15,7 @@ import { Session } from "@/session/session"
 import { SessionRunState } from "@/session/run-state"
 import { Snapshot } from "@/snapshot"
 import { provideInstance, provideTmpdirInstance } from "../../fixture/fixture"
-import { testEffect } from "../../lib/effect"
+import { pollWithTimeout, testEffect } from "../../lib/effect"
 
 const env = LayerNode.compile(
   LayerNode.group([
@@ -1072,8 +1072,23 @@ describe("sub-agent revert busy guard", () => {
           })
 
           const child = yield* sessions.create({ parentID: session.id })
-          const fiber = yield* run.ensureRunning(child.id, Effect.never, Effect.never).pipe(Effect.forkChild)
-          yield* Effect.sleep("50 millis")
+          // Start the run later than any single fixed sleep would cover, so wall-clock
+          // synchronization would fail here rather than flake on a loaded host.
+          const fiber = yield* Effect.gen(function* () {
+            yield* Effect.sleep("250 millis")
+            return yield* run.ensureRunning(child.id, Effect.never, Effect.never)
+          }).pipe(Effect.forkChild)
+          // Wait for the run to publish busy instead of racing the scheduler with a fixed sleep. The
+          // runner only starts the work after it commits to "Running", which is what makes
+          // `assertNotBusy` fail; it does not publish `SessionStatus` busy on this path (the prompt
+          // loop and `startShell` do that), so the runner's own state is the readiness signal here.
+          yield* pollWithTimeout(
+            run.assertNotBusy(child.id).pipe(
+              Effect.as(undefined),
+              Effect.catchTag("SessionBusyError", () => Effect.succeed(true)),
+            ),
+            "child session never became busy",
+          )
           expect(Exit.isFailure(yield* run.assertNotBusy(child.id).pipe(Effect.exit))).toBe(true)
 
           const exit = yield* revert.revert({ sessionID: session.id, messageID: user.id }).pipe(Effect.exit)
