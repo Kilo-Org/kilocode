@@ -2,6 +2,8 @@ package ai.kilocode.client.settings.agents
 
 import ai.kilocode.client.app.KiloAgentBehaviorService
 import ai.kilocode.client.app.KiloWorkspaceService
+import ai.kilocode.client.plugin.KiloBundle
+import ai.kilocode.client.settings.base.SettingsInfo
 import ai.kilocode.client.testing.FakeAgentBehaviorRpcApi
 import ai.kilocode.client.testing.FakeWorkspaceRpcApi
 import ai.kilocode.client.testing.fire
@@ -39,9 +41,9 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 
-class WorkflowsSettingsUiTest : BasePlatformTestCase() {
+class CommandsSettingsUiTest : BasePlatformTestCase() {
     private var scope: CoroutineScope? = null
-    private var ui: WorkflowsSettingsUi? = null
+    private var ui: CommandsSettingsUi? = null
     private lateinit var agentRpc: FakeAgentBehaviorRpcApi
     private lateinit var workspaceRpc: FakeWorkspaceRpcApi
     private var shown = 0
@@ -58,7 +60,7 @@ class WorkflowsSettingsUiTest : BasePlatformTestCase() {
         }
     }
 
-    fun `test loads workflows with location note and builtins have no actions`() {
+    fun `test loads commands with location note and builtins have no actions`() {
         val panel = panel()
 
         flushUntil { rows(panel).size == 3 }
@@ -89,12 +91,12 @@ class WorkflowsSettingsUiTest : BasePlatformTestCase() {
         }
     }
 
-    fun `test workflows list is vertically scrolled without horizontal scrollbar`() {
+    fun `test commands list is vertically scrolled without horizontal scrollbar`() {
         val panel = panel()
         flushUntil { rows(panel).size == 3 }
 
         edt {
-            val pane = scrollFor(panel, workflowsList(panel))
+            val pane = scrollFor(panel, commandsList(panel))
             val view = pane.viewport.view
 
             assertEquals(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER, pane.horizontalScrollBarPolicy)
@@ -109,7 +111,7 @@ class WorkflowsSettingsUiTest : BasePlatformTestCase() {
         flushUntil { rows(panel).size == 3 }
 
         edt {
-            val list = workflowsList(panel)
+            val list = commandsList(panel)
             val row = rows(panel).single { it.key == CUSTOM }
             val idx = rows(panel).indexOf(row)
             val comp = list.cellRenderer.getListCellRendererComponent(list, row, idx, true, true)
@@ -123,11 +125,11 @@ class WorkflowsSettingsUiTest : BasePlatformTestCase() {
         }
     }
 
-    fun `test double click stages workflow content until apply`() {
-        val panel = panel(edit = { _, _ -> FakeWorkflowDialog("# Saved") })
+    fun `test double click stages command content until apply`() {
+        val panel = panel(edit = { _, _ -> FakeCommandDialog("# Saved") })
         flushUntil { rows(panel).size == 3 }
 
-        doubleClick(workflowsList(panel), panel, CUSTOM)
+        doubleClick(commandsList(panel), panel, CUSTOM)
 
         assertTrue(edt { panel.modified() })
         assertTrue(agentRpc.commandSaves.isEmpty())
@@ -136,41 +138,41 @@ class WorkflowsSettingsUiTest : BasePlatformTestCase() {
         assertEquals(Triple(DIR, CUSTOM, "# Saved"), agentRpc.commandSaves.single())
     }
 
-    fun `test reopening staged workflow edit shows draft content before apply`() {
+    fun `test reopening staged command edit shows draft content before apply`() {
         val seen = mutableListOf<String?>()
-        val panel = panel(edit = { flow, _ ->
-            seen += flow.content
-            FakeWorkflowDialog(if (seen.size == 1) "# Draft" else "# Draft 2")
+        val panel = panel(edit = { cmd, _ ->
+            seen += cmd.content
+            FakeCommandDialog(if (seen.size == 1) "# Draft" else "# Draft 2")
         })
         flushUntil { rows(panel).size == 3 }
 
-        doubleClick(workflowsList(panel), panel, CUSTOM)
-        doubleClick(workflowsList(panel), panel, CUSTOM)
+        doubleClick(commandsList(panel), panel, CUSTOM)
+        doubleClick(commandsList(panel), panel, CUSTOM)
 
         assertEquals(listOf("# Plan\nUse steps", "# Draft"), seen)
         assertTrue(agentRpc.commandSaves.isEmpty())
     }
 
-    fun `test open in editor action opens workflow file`() {
+    fun `test open in editor action opens command file`() {
         val panel = panel()
         flushUntil { rows(panel).size == 3 }
 
-        click(workflowsList(panel), panel, CUSTOM, "open")
+        click(commandsList(panel), panel, CUSTOM, "open")
 
-        assertEquals("The workflow file will open after you close Settings.", edt { progressText(panel) })
+        assertEquals("The command file will open after you close Settings.", edt { progressText(panel) })
         flushUntil { workspaceRpc.openedFiles.size == 1 }
         assertEquals(FakeWorkspaceRpcApi.Opened(CUSTOM, null, null), workspaceRpc.openedFiles.single())
     }
 
-    fun `test read only workflows open without staging edits or editor file open`() {
+    fun `test read only commands open without staging edits or editor file open`() {
         shown = 0
         val panel = panel(edit = { _, savable ->
             assertFalse(savable)
-            FakeWorkflowDialog("# Ignored") { shown += 1 }
+            FakeCommandDialog("# Ignored") { shown += 1 }
         })
         flushUntil { rows(panel).size == 3 }
 
-        click(workflowsList(panel), panel, REMOTE, "edit")
+        click(commandsList(panel), panel, REMOTE, "edit")
 
         assertEquals(1, shown)
         assertFalse(edt { panel.modified() })
@@ -178,11 +180,11 @@ class WorkflowsSettingsUiTest : BasePlatformTestCase() {
         assertTrue(workspaceRpc.openedFiles.isEmpty())
     }
 
-    fun `test workflow edit dialog shows content with fallback`() {
+    fun `test command edit dialog shows content with fallback`() {
         edt {
-            val content = WorkflowEditDialog(CommandFileDto("plan", "desc", location = CUSTOM, content = "# Plan\nUse steps"), true)
-            val fallback = WorkflowEditDialog(CommandFileDto("plan", "desc", location = CUSTOM), true)
-            val readonly = WorkflowEditDialog(CommandFileDto("init", "desc", location = "builtin", content = "Built in content"), false)
+            val content = CommandEditDialog(CommandFileDto("plan", "desc", location = CUSTOM, content = "# Plan\nUse steps"), true)
+            val fallback = CommandEditDialog(CommandFileDto("plan", "desc", location = CUSTOM), true)
+            val readonly = CommandEditDialog(CommandFileDto("init", "desc", location = "builtin", content = "Built in content"), false)
             try {
                 assertEquals("# Plan\nUse steps", content.content())
                 assertEquals("desc", fallback.content())
@@ -197,12 +199,12 @@ class WorkflowsSettingsUiTest : BasePlatformTestCase() {
         }
     }
 
-    fun `test delete action stages workflow removal until apply`() {
+    fun `test delete action stages command removal until apply`() {
         val panel = panel()
         flushUntil { rows(panel).size == 3 }
         TestDialogManager.setTestDialog(TestDialog.YES)
 
-        click(workflowsList(panel), panel, CUSTOM, "delete")
+        click(commandsList(panel), panel, CUSTOM, "delete")
 
         assertTrue(edt { rows(panel).none { it.key == CUSTOM } })
         assertTrue(agentRpc.commandRemovals.isEmpty())
@@ -211,15 +213,15 @@ class WorkflowsSettingsUiTest : BasePlatformTestCase() {
         assertEquals(listOf(DIR to CUSTOM), agentRpc.commandRemovals)
     }
 
-    fun `test delete selects the workflow that took the deleted slot`() {
+    fun `test delete selects the command that took the deleted slot`() {
         val panel = panel()
         flushUntil { rows(panel).size == 3 }
         val next = edt { rows(panel)[1].key }
         TestDialogManager.setTestDialog(TestDialog.YES)
 
-        click(workflowsList(panel), panel, CUSTOM, "delete")
+        click(commandsList(panel), panel, CUSTOM, "delete")
 
-        assertEquals(next, edt { workflowsList(panel).selectedValue?.key })
+        assertEquals(next, edt { commandsList(panel).selectedValue?.key })
     }
 
     fun `test delete action requires confirmation`() {
@@ -227,7 +229,7 @@ class WorkflowsSettingsUiTest : BasePlatformTestCase() {
         flushUntil { rows(panel).size == 3 }
         TestDialogManager.setTestDialog { Messages.NO }
 
-        click(workflowsList(panel), panel, CUSTOM, "delete")
+        click(commandsList(panel), panel, CUSTOM, "delete")
 
         edt { UIUtil.dispatchAllInvocationEvents(); true }
         assertTrue(agentRpc.commandRemovals.isEmpty())
@@ -235,23 +237,23 @@ class WorkflowsSettingsUiTest : BasePlatformTestCase() {
     }
 
     fun `test blocked reload completes apply with warning`() {
-        val panel = panel(edit = { _, _ -> FakeWorkflowDialog("# Saved") })
+        val panel = panel(edit = { _, _ -> FakeCommandDialog("# Saved") })
         agentRpc.reloadCommandResult = false
         flushUntil { rows(panel).size == 3 }
 
-        doubleClick(workflowsList(panel), panel, CUSTOM)
+        doubleClick(commandsList(panel), panel, CUSTOM)
         edt { panel.applyDraft(); true }
 
         flushUntil { agentRpc.commandSaves.size == 1 && !edt { panel.modified() } }
         assertEquals(listOf(DIR), agentRpc.commandReloads)
-        assertEquals("Workflows settings saved, but active sessions are present. Reload the core after those sessions finish to apply the new workflows.", edt { progressText(panel) })
+        assertEquals("Commands settings saved, but active sessions are present. Reload the core after those sessions finish to apply the new commands.", edt { progressText(panel) })
     }
 
-    fun `test post apply workflows refresh failure keeps saved rows`() {
-        val panel = panel(edit = { _, _ -> FakeWorkflowDialog("# Saved") })
+    fun `test post apply commands refresh failure keeps saved rows`() {
+        val panel = panel(edit = { _, _ -> FakeCommandDialog("# Saved") })
         flushUntil { rows(panel).size == 3 }
 
-        doubleClick(workflowsList(panel), panel, CUSTOM)
+        doubleClick(commandsList(panel), panel, CUSTOM)
         agentRpc.commandFilesError = RuntimeException("timeout")
         edt { panel.applyDraft(); true }
 
@@ -260,12 +262,12 @@ class WorkflowsSettingsUiTest : BasePlatformTestCase() {
         assertEquals("# Saved", agentRpc.commandFiles.single { it.location == CUSTOM }.content)
     }
 
-    fun `test fileless workflow keys stay unique and route read only opens`() {
+    fun `test fileless command keys stay unique and route read only opens`() {
         val seen = mutableListOf<String?>()
-        val panel = panel(edit = { flow, savable ->
+        val panel = panel(edit = { cmd, savable ->
             assertFalse(savable)
-            seen += flow.content
-            FakeWorkflowDialog("# Ignored")
+            seen += cmd.content
+            FakeCommandDialog("# Ignored")
         })
         flushUntil { rows(panel).size == 3 }
         agentRpc.commandFiles = listOf(
@@ -275,17 +277,17 @@ class WorkflowsSettingsUiTest : BasePlatformTestCase() {
         edt { panel.reload(); true }
         flushUntil { rows(panel).size == 2 }
 
-        click(workflowsList(panel), panel, "builtin::init", "edit")
-        click(workflowsList(panel), panel, "builtin::review", "edit")
+        click(commandsList(panel), panel, "builtin::init", "edit")
+        click(commandsList(panel), panel, "builtin::review", "edit")
 
         assertEquals(listOf("builtin::init", "builtin::review"), edt { rows(panel).map { it.key } })
         assertEquals(listOf("Init content", "Review content"), seen)
     }
 
-    fun `test apply while list busy preserves staged workflow edits`() {
-        val panel = panel(edit = { _, _ -> FakeWorkflowDialog("# Saved") })
+    fun `test apply while list busy preserves staged command edits`() {
+        val panel = panel(edit = { _, _ -> FakeCommandDialog("# Saved") })
         flushUntil { rows(panel).size == 3 }
-        doubleClick(workflowsList(panel), panel, CUSTOM)
+        doubleClick(commandsList(panel), panel, CUSTOM)
         agentRpc.commandFilesGate = CompletableDeferred()
 
         edt {
@@ -304,12 +306,12 @@ class WorkflowsSettingsUiTest : BasePlatformTestCase() {
         workspaceRpc.openResult = false
         flushUntil { rows(panel).size == 3 }
 
-        click(workflowsList(panel), panel, CUSTOM, "open")
+        click(commandsList(panel), panel, CUSTOM, "open")
 
         flushUntil { workspaceRpc.openedFiles.size == 1 && edt { !panel.progress.isVisible && progressText(panel).isBlank() } }
     }
 
-    fun `test search filters workflows by name`() {
+    fun `test search filters commands by name`() {
         val panel = panel()
         flushUntil { rows(panel).size == 3 }
 
@@ -322,31 +324,42 @@ class WorkflowsSettingsUiTest : BasePlatformTestCase() {
         flushUntil { rows(panel).map { it.key } == listOf("builtin::init") }
     }
 
-    fun `test workflows reload failure keeps existing rows`() {
+    fun `test commands reload failure keeps existing rows`() {
         val panel = panel()
         flushUntil { rows(panel).size == 3 }
         agentRpc.commandFilesError = RuntimeException("timeout")
 
         edt { panel.reload(); true }
-        flushUntil { edt { workflowsList(panel).isEnabled } }
+        flushUntil { edt { commandsList(panel).isEnabled } }
 
         assertEquals(listOf(CUSTOM, "builtin::init", REMOTE), edt { rows(panel).map { it.key } })
     }
 
-    fun `test workflow editor file type follows location extension`() {
-        assertNotSame(UnknownFileType.INSTANCE, workflowFileType("/tmp/workflows/plan.md"))
+    fun `test command editor file type follows location extension`() {
+        assertNotSame(UnknownFileType.INSTANCE, commandFileType("/tmp/workflows/plan.md"))
         assertEquals(
             FileTypeManager.getInstance().getFileTypeByFileName("index.html"),
-            workflowFileType("/tmp/workflows/index.html"),
+            commandFileType("/tmp/workflows/index.html"),
         )
-        assertEquals(PlainTextFileType.INSTANCE, workflowFileType("/tmp/workflows/index.unknown"))
+        assertEquals(PlainTextFileType.INSTANCE, commandFileType("/tmp/workflows/index.unknown"))
+    }
+
+    fun `test page shows exactly one info banner explaining commands`() {
+        val panel = panel()
+        flushUntil { rows(panel).size == 3 }
+
+        edt {
+            val info = components(panel).filterIsInstance<SettingsInfo>().single()
+            assertEquals(KiloBundle.message("settings.agentBehavior.commands.info"), bannerIntro(info))
+            true
+        }
     }
 
     private fun panel(
-        edit: (CommandFileDto, Boolean) -> WorkflowEditDialogHandle = { _, _ -> FakeWorkflowDialog("# Plan\nUse steps") },
-    ): WorkflowsSettingsUi {
+        edit: (CommandFileDto, Boolean) -> CommandEditDialogHandle = { _, _ -> FakeCommandDialog("# Plan\nUse steps") },
+    ): CommandsSettingsUi {
         install()
-        val panel = edt { WorkflowsSettingsUi(scope!!, DIR, edit) }
+        val panel = edt { CommandsSettingsUi(scope!!, DIR, edit) }
         ui = panel
         edt { panel.reload(); true }
         return panel
@@ -360,14 +373,14 @@ class WorkflowsSettingsUiTest : BasePlatformTestCase() {
             commandFiles = listOf(
                 CommandFileDto("plan", "Plan work", location = CUSTOM, editable = true, content = "# Plan\nUse steps"),
                 CommandFileDto("init", "Built in", builtin = true, location = "builtin", content = "Built in content"),
-                CommandFileDto("remote", "Remote workflow", location = REMOTE, content = "# Remote workflow"),
+                CommandFileDto("remote", "Remote command", location = REMOTE, content = "# Remote command"),
             )
         }
         ApplicationManager.getApplication().replaceService(KiloAgentBehaviorService::class.java, KiloAgentBehaviorService(cs, agentRpc), testRootDisposable)
         ApplicationManager.getApplication().replaceService(KiloWorkspaceService::class.java, KiloWorkspaceService(cs, workspaceRpc), testRootDisposable)
     }
 
-    private fun click(list: JBList<ActiveListItem>, panel: WorkflowsSettingsUi, key: String, id: String) {
+    private fun click(list: JBList<ActiveListItem>, panel: CommandsSettingsUi, key: String, id: String) {
         edt {
             list.size = Dimension(520, 320)
             list.doLayout()
@@ -379,7 +392,7 @@ class WorkflowsSettingsUiTest : BasePlatformTestCase() {
         }
     }
 
-    private fun doubleClick(list: JBList<ActiveListItem>, panel: WorkflowsSettingsUi, key: String) {
+    private fun doubleClick(list: JBList<ActiveListItem>, panel: CommandsSettingsUi, key: String) {
         edt {
             list.size = Dimension(520, 320)
             list.doLayout()
@@ -391,22 +404,27 @@ class WorkflowsSettingsUiTest : BasePlatformTestCase() {
         }
     }
 
-    private fun rows(panel: WorkflowsSettingsUi): List<ActiveListItem> = items(workflowsList(panel))
+    private fun rows(panel: CommandsSettingsUi): List<ActiveListItem> = items(commandsList(panel))
 
     private fun items(list: JBList<ActiveListItem>): List<ActiveListItem> {
         val model = list.model
         return (0 until model.size).map { model.getElementAt(it) }
     }
 
-    private fun workflowsList(panel: WorkflowsSettingsUi) = components(panel).filterIsInstance<JBList<ActiveListItem>>().first()
+    private fun commandsList(panel: CommandsSettingsUi) = components(panel).filterIsInstance<JBList<ActiveListItem>>().first()
 
-    private fun scrollFor(panel: WorkflowsSettingsUi, list: JBList<ActiveListItem>) = components(panel)
+    private fun bannerIntro(info: SettingsInfo): String {
+        val pane = UIUtil.findComponentOfType(info, javax.swing.JEditorPane::class.java) ?: error("no banner text")
+        return pane.text.replace(Regex("<[^>]+>"), "").replace(Regex("\\s+"), " ").trim()
+    }
+
+    private fun scrollFor(panel: CommandsSettingsUi, list: JBList<ActiveListItem>) = components(panel)
         .filterIsInstance<JBScrollPane>()
         .single { pane -> pane.viewport.view === list.parent }
 
-    private fun progressText(panel: WorkflowsSettingsUi) = components(panel.progress).filterIsInstance<JBLabel>().single().text
+    private fun progressText(panel: CommandsSettingsUi) = components(panel.progress).filterIsInstance<JBLabel>().single().text
 
-    private fun WorkflowEditDialog.okText(): String {
+    private fun CommandEditDialog.okText(): String {
         val method = DialogWrapper::class.java.getDeclaredMethod("getOKAction")
         method.isAccessible = true
         return (method.invoke(this) as javax.swing.Action).getValue(javax.swing.Action.NAME) as String
@@ -466,7 +484,7 @@ class WorkflowsSettingsUiTest : BasePlatformTestCase() {
     }
 }
 
-private class FakeWorkflowDialog(private val text: String, private val show: () -> Unit = {}) : WorkflowEditDialogHandle {
+private class FakeCommandDialog(private val text: String, private val show: () -> Unit = {}) : CommandEditDialogHandle {
     override fun showAndGet(): Boolean {
         show()
         return true

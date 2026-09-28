@@ -58,6 +58,7 @@ import { SubagentFooter } from "./subagent-footer.tsx"
 import { filetype } from "../../util/filetype"
 import parsers from "../../parsers-config"
 import { errorMessage } from "../../util/error"
+import { running } from "../../util/session" // kilocode_change
 import { Toast, useToast } from "../../ui/toast"
 import { useKV } from "../../context/kv.tsx"
 import stripAnsi from "strip-ansi"
@@ -712,7 +713,10 @@ export function Session() {
       },
       run: async () => {
         const status = sync.data.session_status?.[route.sessionID]
-        if (status?.type !== "idle") await sdk.client.session.abort({ sessionID: route.sessionID }).catch(() => {})
+        // kilocode_change start - a scheduled session is asleep on a wakeup, with no turn to abort
+        if (status?.type !== "idle" && status?.type !== "scheduled")
+          await sdk.client.session.abort({ sessionID: route.sessionID }).catch(() => {})
+        // kilocode_change end
         const message = messagesBeforeRevert().findLast((item) => item.role === "user")
         if (!message) return
         void sdk.client.session
@@ -2552,7 +2556,7 @@ function Task(props: ToolProps) {
     const value = status()
     return (
       props.part.state.status === "running" ||
-      (props.metadata.background === true && value !== undefined && value.type !== "idle")
+      (props.metadata.background === true && value !== undefined && running(value.type)) // kilocode_change
     )
   })
   const retry = createMemo(() => {
