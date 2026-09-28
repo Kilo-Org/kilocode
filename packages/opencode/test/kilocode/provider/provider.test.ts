@@ -200,16 +200,23 @@ describe("cheapestSmallModel", () => {
   })
 
   test("skips embedding and rerank models even when they are free", () => {
+    const free = { input: 0, output: 0, cache: { read: 0, write: 0 } }
     const picked = cheapestSmallModel([
-      model({
-        id: "nomic-embed-text",
-        family: "nomic-embed",
-        cost: { input: 0, output: 0, cache: { read: 0, write: 0 } },
-      }),
-      model({ id: "jina-reranker-v3", cost: { input: 0, output: 0, cache: { read: 0, write: 0 } } }),
+      model({ id: "nomic-embed-text", family: "nomic-embed", cost: free }),
+      model({ id: "jina-reranker-v3", cost: free }),
+      model({ id: "Qwen/Qwen3-Reranker-0.6B", cost: free }),
+      model({ id: "intfloat/e5-mistral-7b-instruct", cost: free }),
+      model({ id: "bge-m3", cost: free }),
       model({ id: "gpt-oss-120b", cost: { input: 0.15, output: 0.6, cache: { read: 0, write: 0 } } }),
     ])
     expect(picked).toMatchObject({ id: "gpt-oss-120b" })
+  })
+
+  test("keeps similarly-named chat models", () => {
+    const picked = cheapestSmallModel([
+      model({ id: "voyager-chat", cost: { input: 0.5, output: 0.5, cache: { read: 0, write: 0 } } }),
+    ])
+    expect(picked).toMatchObject({ id: "voyager-chat" })
   })
 
   test("keeps tool-less chat models like sonar", () => {

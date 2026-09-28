@@ -311,12 +311,21 @@ export function kiloSmallModelPriority(providerID: string): string[] | undefined
  * and return text scores, but requests to them cannot produce titles or commit
  * messages. Missing cost data sorts as free; ties break by release date and
  * id, matching the catalog ordering in getSmallModel.
+ *
+ * Non-generative exclusion is a case-insensitive id/family heuristic: besides
+ * the obvious embed/rerank substrings it covers common embedding families
+ * (bge, gte, e5, uae, instructor, colbert, voyage, sentence-similarity) whose
+ * ids carry no embed/rerank token (e.g. intfloat/e5-mistral-7b-instruct,
+ * bge-m3, Qwen/Qwen3-Reranker-0.6B).
  */
+const NON_GENERATIVE_RE =
+  /embed|rerank|sentence[-_ ]similarity|text-embedding|bge|gte-?(?:large|base|small)?|e5-|-e5\b|\buae\b|instructor|colbert|voyage(?![a-z])/i
+
 export function cheapestSmallModel(models: Provider.Model[]) {
   return sortBy(
     models.filter((model) => {
       if (!model.capabilities.input.text || !model.capabilities.output.text) return false
-      return !/(embed|rerank)/.test(`${model.family} ${model.id}`)
+      return !NON_GENERATIVE_RE.test(`${model.family} ${model.id}`)
     }),
     [(model) => model.cost.input + model.cost.output, "asc"],
     [(model) => model.release_date, "desc"],
