@@ -838,7 +838,8 @@ export const dict = {
   "settings.browser.description":
     "Настройте встроенную автоматизацию браузера на основе Playwright. Kilo может переходить по веб-страницам, взаимодействовать с ними и делать скриншоты в ваших сессиях.",
   "settings.browser.enable.title": "Включить автоматизацию браузера",
-  "settings.browser.enable.description": "Зарегистрировать сервер Playwright MCP в CLI-бэкенде.",
+  "settings.browser.enable.description":
+    "Включить привязанный к сеансу браузер Agent Manager для локальных приложений и общедоступных HTTPS-страниц.",
   "settings.browser.systemChrome.title": "Использовать системный Chrome",
   "settings.browser.systemChrome.description":
     "Использовать установленный браузер Chrome вместо отдельного экземпляра Chromium.",
@@ -1139,6 +1140,9 @@ export const dict = {
   "settings.autoCleanup.runNow": "Запустить очистку сейчас",
   "settings.autoCleanup.runNow.confirm":
     "Безвозвратно удалить устаревшие сессии во всех проектах и во всех клиентах Kilo на этом компьютере?",
+  "settings.autoCleanup.stop": "Остановить очистку",
+  "settings.autoCleanup.progress.cancelling": "Остановка очистки сессий...",
+  "settings.autoCleanup.lastRun.cancelled": "прервана",
   "settings.context.autoCompaction.title": "Автоматическое сжатие",
   "settings.context.autoCompaction.description": "Автоматически сжимать контекст до достижения лимита",
   "settings.context.compaction.title": "Сжатие",

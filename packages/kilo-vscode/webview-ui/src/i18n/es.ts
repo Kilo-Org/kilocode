@@ -848,7 +848,8 @@ export const dict = {
   "settings.browser.description":
     "Configura la automatización de navegador integrada basada en Playwright. Kilo puede navegar, interactuar y capturar pantallas de páginas web en tus sesiones.",
   "settings.browser.enable.title": "Activar automatización del navegador",
-  "settings.browser.enable.description": "Registrar el servidor Playwright MCP con el backend CLI.",
+  "settings.browser.enable.description":
+    "Activar el navegador de Agent Manager específico de cada sesión para aplicaciones locales y páginas HTTPS públicas.",
   "settings.browser.systemChrome.title": "Usar Chrome del sistema",
   "settings.browser.systemChrome.description":
     "Usar el navegador Chrome instalado en lugar de una instancia separada de Chromium.",
@@ -1157,6 +1158,9 @@ export const dict = {
   "settings.autoCleanup.runNow": "Ejecutar limpieza ahora",
   "settings.autoCleanup.runNow.confirm":
     "¿Eliminar permanentemente las sesiones caducadas en todos los proyectos y en todos los clientes de Kilo de esta máquina?",
+  "settings.autoCleanup.stop": "Detener limpieza",
+  "settings.autoCleanup.progress.cancelling": "Deteniendo la limpieza de sesiones...",
+  "settings.autoCleanup.lastRun.cancelled": "interrumpida",
   "settings.context.autoCompaction.title": "Compactación automática",
   "settings.context.autoCompaction.description": "Compactar automáticamente el contexto antes de que alcance el límite",
   "settings.context.compaction.title": "Compactación",

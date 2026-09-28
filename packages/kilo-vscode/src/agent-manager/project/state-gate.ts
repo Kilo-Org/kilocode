@@ -39,6 +39,8 @@ export const STATE_GATED = new Set<string>([
   "agentManager.moveSection",
   "agentManager.browser.open",
   "agentManager.browser.refresh",
+  "agentManager.browser.back",
+  "agentManager.browser.forward",
   "agentManager.browser.close",
   "agentManager.browser.state",
   "agentManager.browser.inspect",

@@ -86,6 +86,8 @@ jobs:
 
       - uses: ./.github/actions/setup-bun
 
+      - uses: ./.github/actions/setup-sbom # kilocode_change
+
       # kilocode_change start
       - name: Setup Zig for Linux sandbox helpers
         run: |
@@ -106,6 +108,32 @@ jobs:
           KILO_PRE_RELEASE: ${{ inputs.pre_release }}
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
+          SBOM_ENFORCE: ${{ vars.SBOM_ENFORCE }} # kilocode_change
+
+      # kilocode_change start - CRA evidence. The build already generated and
+      # uploaded a sidecar per archive; this re-checks the published set and
+      # exports the attestation subjects so signing never guesses a digest.
+      - name: Verify CLI SBOM evidence
+        id: sbom
+        if: needs.version.outputs.release != ''
+        run: |
+          bun run script/kilocode/sbom.ts verify --manifest "$MANIFEST" --dir packages/opencode/dist
+          bun run script/kilocode/sbom.ts matrix --manifest "$MANIFEST" --output subjects
+        env:
+          MANIFEST: packages/opencode/dist/cli-sbom-evidence.json
+          SBOM_ENFORCE: ${{ vars.SBOM_ENFORCE }}
+
+      - name: Upload CLI SBOM evidence
+        if: needs.version.outputs.release != ''
+        uses: actions/upload-artifact@v7
+        with:
+          name: kilo-cli-sboms
+          path: |
+            packages/opencode/dist/*.cdx.json
+            packages/opencode/dist/cli-sbom-evidence.json
+            packages/opencode/dist/kilo-cli-SHA256SUMS
+          if-no-files-found: error
+      # kilocode_change end
 
       # kilocode_change start - pack dist tree into a single zstd-compressed tar before upload.
       # download-artifact@v4's streaming unzip is CPU-bound and processes entries one by one;
@@ -129,6 +157,37 @@ jobs:
 
     outputs:
       version: ${{ needs.version.outputs.version }}
+      sbom-subjects: ${{ steps.sbom.outputs.subjects }} # kilocode_change
+
+  # kilocode_change start - bind each published CLI archive to its SBOM with a
+  # signed attestation. Runs off the small sidecar artifact rather than the ~1 GB
+  # CLI build artifact, since attestation needs the digest, not the bytes.
+  attest-cli:
+    name: Attest CLI SBOM (${{ matrix.artifact }})
+    needs: build-cli
+    if: needs.build-cli.outputs.sbom-subjects != '' && fromJSON(needs.build-cli.outputs.sbom-subjects).include[0] != null
+    runs-on: ubuntu-latest
+    continue-on-error: ${{ vars.SBOM_ENFORCE != 'true' }}
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+      artifact-metadata: write
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.build-cli.outputs.sbom-subjects) }}
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: kilo-cli-sboms
+          path: sboms
+
+      - uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-name: ${{ matrix.artifact }}
+          subject-digest: ${{ matrix.digest }}
+          sbom-path: sboms/${{ matrix.sbom }}
+  # kilocode_change end
 
   # kilocode_change start - execute supported Unix CLI binaries before packaging VSIX artifacts
   validate-cli-unix:
@@ -476,6 +535,8 @@ jobs:
 
       - uses: ./.github/actions/setup-bun
 
+      - uses: ./.github/actions/setup-sbom # kilocode_change - VSIX sidecars scan the packaged archive
+
       - uses: actions/setup-node@v6 # kilocode_change
         with:
           node-version: "24"
@@ -511,6 +572,7 @@ jobs:
           KILO_VERSION: ${{ needs.build-cli.outputs.version }}
           KILO_PRE_RELEASE: ${{ inputs.pre_release }}
           GH_REPO: ${{ github.repository }}
+          SBOM_ENFORCE: ${{ vars.SBOM_ENFORCE }} # kilocode_change
 
       - uses: actions/upload-artifact@v7 # kilocode_change
         with:
@@ -551,6 +613,8 @@ jobs:
         # kilocode_change end
 
       - uses: ./.github/actions/setup-bun
+
+      - uses: ./.github/actions/setup-sbom # kilocode_change - npm and OCI sidecars scan the published bytes
 
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v3
@@ -630,3 +694,4 @@ jobs:
           NPM_CONFIG_PROVENANCE: true
           VSCE_PAT: ${{ secrets.VSCE_TOKEN }}
           OPENVSX_TOKEN: ${{ secrets.OVSX_TOKEN }}
+          SBOM_ENFORCE: ${{ vars.SBOM_ENFORCE }} # kilocode_change

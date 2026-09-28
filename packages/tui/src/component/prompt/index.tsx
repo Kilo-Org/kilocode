@@ -1708,7 +1708,9 @@ export function Prompt(props: PromptProps) {
                     {(() => {
                       const retry = createMemo(() => {
                         const s = status()
-                        if (s.type !== "retry") return
+                        // kilocode_change start - render the offline state in this inline error line too
+                        if (s.type !== "retry" && s.type !== "offline") return
+                        // kilocode_change end
                         return s
                       })
                       const message = createMemo(() => {
@@ -1727,7 +1729,10 @@ export function Prompt(props: PromptProps) {
                       const [seconds, setSeconds] = createSignal(0)
                       onMount(() => {
                         const timer = setInterval(() => {
-                          const next = retry()?.next
+                          // kilocode_change start - only the retry state has a countdown target
+                          const s = retry()
+                          const next = s?.type === "retry" ? s.next : undefined
+                          // kilocode_change end
                           if (next) setSeconds(Math.round((next - Date.now()) / 1000))
                         }, 1000)
 
@@ -1747,6 +1752,9 @@ export function Prompt(props: PromptProps) {
                         const r = retry()
                         if (!r) return ""
                         const baseMessage = message()
+                        // kilocode_change start - offline waits on the network probe instead of counting down attempts
+                        if (r.type === "offline") return `${baseMessage} [waiting for network]`
+                        // kilocode_change end
                         const truncatedHint = isTruncated() ? " (click to expand)" : ""
                         const duration = formatDuration(seconds())
                         const retryInfo = ` [retrying ${duration ? `in ${duration} ` : ""}attempt #${r.attempt}]`

@@ -176,6 +176,7 @@ export type AuthOAuthResult = { url: string; instructions: string } & (
                 expires: number
                 accountId?: string
                 enterpriseUrl?: string
+                baseURL?: string
               }
             | { key: string; metadata?: Record<string, string> }
           ))
@@ -197,6 +198,7 @@ export type AuthOAuthResult = { url: string; instructions: string } & (
                 expires: number
                 accountId?: string
                 enterpriseUrl?: string
+                baseURL?: string
               }
             | { key: string; metadata?: Record<string, string> }
           ))
