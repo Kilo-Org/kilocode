@@ -212,6 +212,11 @@ export const dict = {
   "prompt.action.autoApprove.disabled":
     "Automatisk godkendelse er deaktiveret. Klik for at godkende tilladelsesanmodninger automatisk.",
   "prompt.action.autoApprove.sandboxExcluded": "Sandbox-eskaleringsanmodninger er altid udelukket.",
+  "prompt.action.approveForMe.enable": "Aktivér godkend for mig (eksperimentel)",
+  "prompt.action.approveForMe.disable": "Deaktivér godkend for mig (eksperimentel)",
+  "prompt.action.approveForMe.enabled":
+    "Godkend for mig er aktiveret. Dette er en tidlig preview: det ændrer endnu ikke godkendelsesadfærden.",
+  "prompt.action.approveForMe.disabled": "Godkend for mig er deaktiveret. Eksperimentel preview, ingen effekt endnu.",
   "prompt.action.enhanceDescription":
     "Knappen 'Forbedr prompt' hjælper med at forbedre din forespørgsel ved at give ekstra kontekst, præcisering eller omformulering. Prøv at skrive en forespørgsel her og klik på knappen igen for at se hvordan det virker.",
   "prompt.action.sandbox.enable": "Aktivér sandbox",

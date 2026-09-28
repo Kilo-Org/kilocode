@@ -209,6 +209,11 @@ export const dict = {
   "prompt.action.autoApprove.enabled": "เปิดใช้การอนุมัติอัตโนมัติแล้ว คำขอสิทธิ์จะได้รับการอนุมัติโดยอัตโนมัติ",
   "prompt.action.autoApprove.disabled": "ปิดใช้การอนุมัติอัตโนมัติแล้ว คลิกเพื่ออนุมัติคำขอสิทธิ์โดยอัตโนมัติ",
   "prompt.action.autoApprove.sandboxExcluded": "พร้อมท์การออกจากแซนด์บ็อกซ์จะถูกยกเว้นเสมอ",
+  "prompt.action.approveForMe.enable": "เปิดใช้งานอนุมัติให้ฉัน (ทดลอง)",
+  "prompt.action.approveForMe.disable": "ปิดใช้งานอนุมัติให้ฉัน (ทดลอง)",
+  "prompt.action.approveForMe.enabled":
+    "เปิดใช้งานอนุมัติให้ฉันแล้ว นี่เป็นตัวอย่างเบื้องต้น ยังไม่เปลี่ยนพฤติกรรมการอนุมัติ",
+  "prompt.action.approveForMe.disabled": "อนุมัติให้ฉันถูกปิดใช้งาน ตัวอย่างทดลอง ยังไม่มีผลใดๆ",
   "prompt.action.enhanceDescription":
     "ปุ่ม 'ปรับปรุงพรอมต์' ช่วยปรับปรุงพรอมต์ของคุณโดยให้บริบทเพิ่มเติม ชี้แจง หรือเขียนใหม่ ลองพิมพ์พรอมต์ที่นี่และคลิกปุ่มอีกครั้งเพื่อดูว่ามันทำงานอย่างไร",
   "prompt.action.indexing": "การตั้งค่าการสร้างดัชนี",

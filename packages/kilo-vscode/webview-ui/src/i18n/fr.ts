@@ -213,6 +213,12 @@ export const dict = {
   "prompt.action.autoApprove.disabled":
     "L'approbation automatique est désactivée. Cliquez pour approuver automatiquement les demandes d'autorisation.",
   "prompt.action.autoApprove.sandboxExcluded": "Les demandes d’escalade du bac à sable sont toujours exclues.",
+  "prompt.action.approveForMe.enable": "Activer approuver pour moi (expérimental)",
+  "prompt.action.approveForMe.disable": "Désactiver approuver pour moi (expérimental)",
+  "prompt.action.approveForMe.enabled":
+    "Approuver pour moi est activé. Aperçu précoce : le comportement d’approbation n’est pas encore modifié.",
+  "prompt.action.approveForMe.disabled":
+    "Approuver pour moi est désactivé. Aperçu expérimental, sans effet pour le moment.",
   "prompt.action.enhanceDescription":
     "Le bouton 'Améliorer la requête' aide à améliorer votre demande en fournissant un contexte supplémentaire, des clarifications ou des reformulations. Essayez de taper une demande ici et cliquez à nouveau sur le bouton pour voir comment cela fonctionne.",
   "prompt.action.indexing": "Paramètres d'indexation",

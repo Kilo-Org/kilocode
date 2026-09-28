@@ -206,6 +206,10 @@ export const dict = {
   "prompt.action.autoApprove.enabled": "الموافقة التلقائية مفعلة. ستتم الموافقة على طلبات الأذونات تلقائياً.",
   "prompt.action.autoApprove.disabled": "الموافقة التلقائية معطلة. انقر للموافقة على طلبات الأذونات تلقائياً.",
   "prompt.action.autoApprove.sandboxExcluded": "تُستثنى دائماً مطالبات الخروج من البيئة المعزولة.",
+  "prompt.action.approveForMe.enable": "تفعيل الموافقة عني (تجريبي)",
+  "prompt.action.approveForMe.disable": "تعطيل الموافقة عني (تجريبي)",
+  "prompt.action.approveForMe.enabled": "تم تفعيل الموافقة عني. هذه معاينة أولية: لا تغيّر سلوك الموافقة بعد.",
+  "prompt.action.approveForMe.disabled": "الموافقة عني معطّلة. معاينة تجريبية، لا تأثير بعد.",
   "prompt.action.enhanceDescription":
     "زر «حسّن الموجه» يطوّر موجهك بإضافة سياق أو توضيح أو إعادة صياغة. جرّب اكتب موجه هنا ثم اضغط الزر مرة ثانية وشوف النتيجة.",
   "prompt.action.sandbox.enable": "تفعيل sandbox",

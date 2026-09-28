@@ -218,6 +218,12 @@ export const dict = {
   "prompt.action.autoApprove.disabled":
     "Automatische Genehmigung ist deaktiviert. Klicken, um Berechtigungsanfragen automatisch zu genehmigen.",
   "prompt.action.autoApprove.sandboxExcluded": "Sandbox-Eskalationsanfragen sind immer ausgeschlossen.",
+  "prompt.action.approveForMe.enable": "„Für mich genehmigen“ aktivieren (experimentell)",
+  "prompt.action.approveForMe.disable": "„Für mich genehmigen“ deaktivieren (experimentell)",
+  "prompt.action.approveForMe.enabled":
+    "„Für mich genehmigen“ ist aktiviert. Frühe Vorschau: Das Genehmigungsverhalten ändert sich noch nicht.",
+  "prompt.action.approveForMe.disabled":
+    "„Für mich genehmigen“ ist deaktiviert. Experimentelle Vorschau, noch ohne Wirkung.",
   "prompt.action.enhanceDescription":
     "Die Schaltfläche 'Prompt verbessern' hilft, deine Anfrage durch zusätzlichen Kontext, Klarstellungen oder Umformulierungen zu verbessern. Versuche, hier eine Anfrage einzugeben und klicke erneut auf die Schaltfläche, um zu sehen, wie es funktioniert.",
   "prompt.action.sandbox.enable": "Sandbox aktivieren",

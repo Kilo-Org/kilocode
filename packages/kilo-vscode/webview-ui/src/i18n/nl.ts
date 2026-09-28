@@ -214,6 +214,11 @@ export const dict = {
   "prompt.action.autoApprove.disabled":
     "Automatisch goedkeuren is uitgeschakeld. Klik om toestemmingsverzoeken automatisch goed te keuren.",
   "prompt.action.autoApprove.sandboxExcluded": "Escalatieaanvragen van de sandbox worden altijd uitgesloten.",
+  "prompt.action.approveForMe.enable": "Keur voor mij goed inschakelen (experimenteel)",
+  "prompt.action.approveForMe.disable": "Keur voor mij goed uitschakelen (experimenteel)",
+  "prompt.action.approveForMe.enabled":
+    "Keur voor mij goed is ingeschakeld. Vroege preview: het goedkeuringsgedrag verandert nog niet.",
+  "prompt.action.approveForMe.disabled": "Keur voor mij goed is uitgeschakeld. Experimentele preview, nog geen effect.",
   "prompt.action.enhanceDescription":
     "De knop 'Prompt verbeteren' helpt je prompt te verbeteren door extra context, verduidelijking of herformulering te bieden. Typ hier een prompt en klik nogmaals op de knop om te zien hoe het werkt.",
   "prompt.action.sandbox.enable": "Sandbox inschakelen",
