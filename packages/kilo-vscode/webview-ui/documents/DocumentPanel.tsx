@@ -97,23 +97,16 @@ export const DocumentPanel: Component<DocumentPanelProps> = (props) => {
   const diff = () => virtualDiff(file(), content())
 
   const [copied, setCopied] = createSignal<"text" | "markdown" | null>(null)
-  const flashCopied = (kind: "text" | "markdown") => {
-    setCopied(kind)
-    setTimeout(() => setCopied((current) => (current === kind ? null : current)), 1500)
-  }
   const asMarkdown = () => {
     const text = content()
     if (isMarkdownPath(file())) return text
     const ext = file().split(".").pop() ?? ""
     return `\`\`\`${ext}\n${text}\n\`\`\`\n`
   }
-  const copyContent = () => {
-    navigator.clipboard?.writeText(content())
-    flashCopied("text")
-  }
-  const copyAsMarkdown = () => {
-    navigator.clipboard?.writeText(asMarkdown())
-    flashCopied("markdown")
+  const copy = (kind: "text" | "markdown") => {
+    navigator.clipboard?.writeText(kind === "markdown" ? asMarkdown() : content())
+    setCopied(kind)
+    setTimeout(() => setCopied((current) => (current === kind ? null : current)), 1500)
   }
 
   const updateComments = (next: ReviewComment[]) => props.onCommentsChange(next)
@@ -281,7 +274,7 @@ export const DocumentPanel: Component<DocumentPanelProps> = (props) => {
                 size="small"
                 variant="ghost"
                 label={t("agentManager.documents.copy")}
-                onClick={copyContent}
+                onClick={() => copy("text")}
               />
             </Tooltip>
           </Show>
@@ -368,12 +361,12 @@ export const DocumentPanel: Component<DocumentPanelProps> = (props) => {
             </ContextMenu.Trigger>
             <ContextMenu.Portal>
               <ContextMenu.Content class="am-ctx-menu">
-                <ContextMenu.Item onSelect={copyContent}>
+                <ContextMenu.Item onSelect={() => copy("text")}>
                   <Icon name="copy" size="small" />
                   <ContextMenu.ItemLabel>{t("agentManager.documents.copy")}</ContextMenu.ItemLabel>
                 </ContextMenu.Item>
                 <Show when={!isMarkdownPath(file())}>
-                  <ContextMenu.Item onSelect={copyAsMarkdown}>
+                  <ContextMenu.Item onSelect={() => copy("markdown")}>
                     <Icon name="copy" size="small" />
                     <ContextMenu.ItemLabel>{t("agentManager.documents.copyAsMarkdown")}</ContextMenu.ItemLabel>
                   </ContextMenu.Item>
