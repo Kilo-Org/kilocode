@@ -66,5 +66,6 @@ Then set your default model:
 
 ## Tips and Notes
 
+- **ChatGPT/Codex sign-in:** The direct subscription integration has an instructions size limit that can cause `Invalid 'instructions': string too long`. See [ChatGPT/Codex limitations](/docs/ai-providers/openai-chatgpt-plus-pro#limitations) for details and workarounds.
 - **Pricing:** Refer to the [OpenAI Pricing](https://openai.com/pricing) page for details on model costs.
 - **Azure OpenAI Service:** Use Kilo Code's native `azure` provider for Azure OpenAI, especially GPT-5 deployments. Do not configure Azure GPT-5 through a generic [OpenAI-compatible](/docs/ai-providers/openai-compatible) custom provider.

@@ -69,6 +69,7 @@ Codex shows its plan and each usage window — for example, a five-hour and a we
 
 ## Limitations
 
+- **Instructions size limit.** The direct ChatGPT/Codex integration sends the combined system prompt in OpenAI's `instructions` field, which has a limit of 1,048,576 characters. If you see `Invalid 'instructions': string too long`, reduce large `AGENTS.md` files, configured instructions, or custom agent prompts, or disable MCP servers that supply large instructions. This is separate from your subscription quota and the model's context window; starting a new chat or compacting history does not reduce instructions loaded on every request.
 - **Codex catalog models only.** This provider only exposes the models listed in Kilo Code's Codex model catalog. It does not give access to every model available through the OpenAI API.
 - **OAuth tokens can't be exported with settings.** Tokens are stored in VS Code SecretStorage, which isn't included in Kilo Code's settings export.
 - **Cloud features not included.** Cloud Agents and Kilo Deploy require the [Kilo Gateway](/docs/gateway).
