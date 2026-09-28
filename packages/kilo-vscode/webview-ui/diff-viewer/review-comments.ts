@@ -1,9 +1,11 @@
 import type { ReviewComment, WorktreeFileDiff } from "../src/types/messages"
-import { parsePatch } from "../../src/shared/pr-patch"
+import { parsePatch, type Range } from "../../src/shared/pr-patch"
 import { formatReviewCommentMarkdown, formatReviewCommentsMarkdown } from "../src/utils/review-comment-markdown"
 
 export type { ReviewComment }
 export { formatReviewCommentsMarkdown }
+
+const patches = new WeakMap<WorktreeFileDiff, { patch: string; ranges: Range[] | undefined }>()
 
 export function lineCount(text: string): number {
   if (text.length === 0) return 0
@@ -50,12 +52,13 @@ export function isReviewRangeValid(
   if (diff.summarized === true) return true
   if (diff.patch) {
     // Session diff text contains only hunk excerpts, not complete file contents.
+    let cached = patches.get(diff)
+    if (cached?.patch !== diff.patch) {
+      cached = { patch: diff.patch, ranges: parsePatch(diff.patch)?.ranges }
+      patches.set(diff, cached)
+    }
     const target = side === "deletions" ? "LEFT" : "RIGHT"
-    return (
-      parsePatch(diff.patch)?.ranges.some(
-        (range) => range.side === target && start >= range.start && end <= range.end,
-      ) ?? false
-    )
+    return cached.ranges?.some((range) => range.side === target && start >= range.start && end <= range.end) ?? false
   }
   return end <= lineCount(side === "deletions" ? diff.before : diff.after)
 }
