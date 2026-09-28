@@ -4,9 +4,11 @@ import ai.kilocode.client.KiloNotifications
 import ai.kilocode.client.app.KiloAgentBehaviorService
 import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.plugin.KiloBundle
+import ai.kilocode.client.plugin.KiloDocs
 import ai.kilocode.client.settings.base.DirectoryReadyConfigurable
 import ai.kilocode.client.settings.base.SettingsDraftPage
 import ai.kilocode.client.settings.base.SettingsDraftState
+import ai.kilocode.client.settings.base.SettingsInfo
 import ai.kilocode.client.settings.base.SettingsListPanel
 import ai.kilocode.client.settings.base.SettingsMessageException
 import ai.kilocode.client.settings.base.settingsContentScroll
@@ -39,29 +41,29 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 
-private val workflowEdt = Dispatchers.EDT + ModalityState.any().asContextElement()
+private val edt = Dispatchers.EDT + ModalityState.any().asContextElement()
 
-class WorkflowsConfigurable : DirectoryReadyConfigurable<JComponent>() {
+class CommandsConfigurable : DirectoryReadyConfigurable<JComponent>() {
     override fun getId(): String = ID
-    override fun getDisplayName(): String = KiloBundle.message("settings.agentBehavior.workflows.displayName")
-    override fun create(cs: CoroutineScope, dir: String): JComponent = WorkflowsSettingsUi(cs, dir)
+    override fun getDisplayName(): String = KiloBundle.message("settings.agentBehavior.commands.displayName")
+    override fun create(cs: CoroutineScope, dir: String): JComponent = CommandsSettingsUi(cs, dir)
     override fun update(ui: JComponent, dir: String) {
-        (ui as? WorkflowsSettingsUi)?.setDirectory(dir)
+        (ui as? CommandsSettingsUi)?.setDirectory(dir)
     }
     override fun scrollReadyShell() = false
 
-    companion object { const val ID = "ai.kilocode.jetbrains.settings.agentBehavior.workflows" }
+    companion object { const val ID = "ai.kilocode.jetbrains.settings.agentBehavior.commands" }
 }
 
-internal class WorkflowsSettingsUi(
+internal class CommandsSettingsUi(
     scope: CoroutineScope,
     dir: String,
-    private val edit: (CommandFileDto, Boolean) -> WorkflowEditDialogHandle = ::WorkflowEditDialog,
+    private val edit: (CommandFileDto, Boolean) -> CommandEditDialogHandle = ::CommandEditDialog,
 ) : SettingsListPanel(scope, ActiveListConfig.Equal.copy(tooltip = false)), SettingsDraftPage {
     private var dir = dir
-    private var flows = emptyMap<String, CommandFileDto>()
-    private val state = SettingsDraftState(workflowsDraft(), ::saved)
-    private var draft: WorkflowsDraft
+    private var commands = emptyMap<String, CommandFileDto>()
+    private val state = SettingsDraftState(commandsDraft(), ::saved)
+    private var draft: CommandsDraft
         get() = state.draft
         set(value) {
             state.draft = value
@@ -69,7 +71,7 @@ internal class WorkflowsSettingsUi(
 
     init {
         start()
-        setCenter(workflowsScroll())
+        setCenter(scroll())
     }
 
     fun setDirectory(value: String) {
@@ -79,32 +81,38 @@ internal class WorkflowsSettingsUi(
     }
 
     override suspend fun fetch(): List<ActiveListItem> {
-        val items = withTimeoutOrNull(WORKFLOW_LOAD_TIMEOUT_MS) {
+        val items = withTimeoutOrNull(LOAD_TIMEOUT_MS) {
             service<KiloAgentBehaviorService>().loadCommandFiles(dir)
-        } ?: throw SettingsMessageException(KiloBundle.message("settings.agentBehavior.workflows.load.timeout"))
-        withContext(workflowEdt) {
+        } ?: throw SettingsMessageException(KiloBundle.message("settings.agentBehavior.commands.load.timeout"))
+        withContext(edt) {
             val dirty = state.modified()
             val edit = draft
-            state.accept(workflowsDraft())
+            state.accept(commandsDraft())
             if (dirty) draft = state.draft.copy(edited = edit.edited, deleted = edit.deleted)
-            flows = items.associateBy { key(it) }
+            commands = items.associateBy { key(it) }
         }
-        LOG.info("workflows settings fetch dir=$dir total=${items.size}")
+        LOG.info("commands settings fetch dir=$dir total=${items.size}")
         return rows(items)
     }
 
     override fun onCell(key: String, cellId: String) {
-        val flow = flows[key] ?: return
+        val cmd = commands[key] ?: return
         when (cellId) {
-            OPEN_CELL -> open(flow)
-            EDIT_CELL -> edit(flow)
-            DELETE_CELL -> remove(flow)
+            OPEN_CELL -> open(cmd)
+            EDIT_CELL -> edit(cmd)
+            DELETE_CELL -> remove(cmd)
         }
     }
 
-    override fun searchPlaceholder() = KiloBundle.message("settings.agentBehavior.workflows.search")
+    override fun info(): JComponent = SettingsInfo(
+        KiloBundle.message("settings.agentBehavior.commands.info"),
+        KiloBundle.message("settings.agentBehavior.commands.info.more"),
+        KiloDocs.COMMANDS,
+    )
 
-    override fun emptyText() = KiloBundle.message("settings.agentBehavior.workflows.empty")
+    override fun searchPlaceholder() = KiloBundle.message("settings.agentBehavior.commands.search")
+
+    override fun emptyText() = KiloBundle.message("settings.agentBehavior.commands.empty")
 
     override fun modified(): Boolean = state.modified()
 
@@ -116,42 +124,42 @@ internal class WorkflowsSettingsUi(
 
     override fun applyDraft() {
         val token = state.start() ?: return
-        val fallback = workflowFallback(token.target)
+        val fallback = fallback(token.target)
         if (!launch("apply") { id ->
             val target = token.target
             var failed: String? = null
             val behavior = service<KiloAgentBehaviorService>()
-            LOG.info("workflows settings apply start dir=$dir edited=${target.edited.size} deleted=${target.deleted.size}")
+            LOG.info("commands settings apply start dir=$dir edited=${target.edited.size} deleted=${target.deleted.size}")
             if (target.edited.isNotEmpty() && !behavior.saveCommands(dir, target.edited)) {
                 failed = KiloBundle.message("settings.agentBehavior.save.failed")
             }
             if (failed == null) {
                 for (location in target.deleted) {
                     if (!behavior.removeCommand(dir, location)) {
-                        failed = KiloBundle.message("settings.agentBehavior.workflows.delete.failed")
+                        failed = KiloBundle.message("settings.agentBehavior.commands.delete.failed")
                         break
                     }
                 }
             }
             val reloaded = if (failed == null) behavior.reloadCommands(dir) else true
             val items = behavior.refreshCommandFiles(dir, fallback)
-            withContext(workflowEdt) {
+            withContext(edt) {
                 if (!active(id)) {
-                    if (failed == null) KiloNotifications.info(KiloBundle.message("settings.agentBehavior.workflows.saved.notification"))
+                    if (failed == null) KiloNotifications.info(KiloBundle.message("settings.agentBehavior.commands.saved.notification"))
                     else KiloNotifications.error(failed)
                     return@withContext
                 }
                 if (failed == null) {
-                    flows = items.associateBy { key(it) }
-                    state.complete(token, workflowsDraft())
+                    commands = items.associateBy { key(it) }
+                    state.complete(token, commandsDraft())
                     view.update(rows(items))
-                    if (reloaded) clearProgress() else showProgress(KiloBundle.message("settings.agentBehavior.workflows.reload.blocked"))
-                    LOG.info("workflows settings apply succeeded dir=$dir")
+                    if (reloaded) clearProgress() else showProgress(KiloBundle.message("settings.agentBehavior.commands.reload.blocked"))
+                    LOG.info("commands settings apply succeeded dir=$dir")
                 } else {
                     state.fail(token, failed)
                     view.update(rows(items))
                     showError(failed)
-                    LOG.warn("workflows settings apply failed dir=$dir message=$failed")
+                    LOG.warn("commands settings apply failed dir=$dir message=$failed")
                 }
                 setBusy(false)
             }
@@ -164,92 +172,92 @@ internal class WorkflowsSettingsUi(
         showProgress(KiloBundle.message("settings.agentBehavior.saving"))
     }
 
-    private fun workflowsScroll() = JBScrollPane(view).apply {
+    private fun scroll() = JBScrollPane(view).apply {
         border = null
         horizontalScrollBarPolicy = ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER
         verticalScrollBarPolicy = ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED
     }
 
-    private fun rows(items: List<CommandFileDto> = flows.values.toList()): List<ActiveListItem> = items.mapNotNull { flow ->
-        if (flow.location in draft.deleted) return@mapNotNull null
-        item(flow)
+    private fun rows(items: List<CommandFileDto> = commands.values.toList()): List<ActiveListItem> = items.mapNotNull { cmd ->
+        if (cmd.location in draft.deleted) return@mapNotNull null
+        item(cmd)
     }
 
-    private fun workflowFallback(target: WorkflowsDraft): List<CommandFileDto> = flows.values.mapNotNull { flow ->
-        if (flow.location in target.deleted) return@mapNotNull null
-        target.edited[flow.location]?.let { flow.copy(content = it) } ?: flow
+    private fun fallback(target: CommandsDraft): List<CommandFileDto> = commands.values.mapNotNull { cmd ->
+        if (cmd.location in target.deleted) return@mapNotNull null
+        target.edited[cmd.location]?.let { cmd.copy(content = it) } ?: cmd
     }
 
-    private fun item(flow: CommandFileDto) = object : ActiveListItem {
-        override val key = key(flow)
-        override val title = "/${flow.name}"
-        override val note = flow.location.takeUnless { builtin(flow) }
-        override val description = flow.description
+    private fun item(cmd: CommandFileDto) = object : ActiveListItem {
+        override val key = key(cmd)
+        override val title = "/${cmd.name}"
+        override val note = cmd.location.takeUnless { builtin(cmd) }
+        override val description = cmd.description
         override val doubleClick = EDIT_CELL
         override val badges = listOf(
             ActiveListBadge(KiloBundle.message("settings.agentBehavior.badge.builtin"), UiStyle.Badge.Secondary),
-        ).takeIf { builtin(flow) } ?: emptyList()
+        ).takeIf { builtin(cmd) } ?: emptyList()
         override val cells = listOfNotNull(
             ActiveListCell(
                 OPEN_CELL,
-                KiloBundle.message("settings.agentBehavior.workflows.openInEditor"),
+                KiloBundle.message("settings.agentBehavior.commands.openInEditor"),
                 primary = true,
-            ).takeIf { flow.editable },
+            ).takeIf { cmd.editable },
             ActiveListCell(
                 EDIT_CELL,
-                KiloBundle.message(if (flow.editable) "settings.agentBehavior.edit" else "common.open"),
-                primary = !flow.editable,
+                KiloBundle.message(if (cmd.editable) "settings.agentBehavior.edit" else "common.open"),
+                primary = !cmd.editable,
             ),
             ActiveListCell(
                 DELETE_CELL,
                 KiloBundle.message("common.delete"),
                 icon = AllIcons.Actions.GC,
                 iconOnly = true,
-            ).takeIf { flow.editable },
+            ).takeIf { cmd.editable },
         )
     }
 
-    private fun edit(flow: CommandFileDto) {
-        val current = flow.copy(content = content(flow))
-        val dialog = edit(current, flow.editable)
-        if (!flow.editable) {
+    private fun edit(cmd: CommandFileDto) {
+        val current = cmd.copy(content = content(cmd))
+        val dialog = edit(current, cmd.editable)
+        if (!cmd.editable) {
             dialog.showAndGet()
             return
         }
         if (!dialog.showAndGet()) return
-        state.update { copy(edited = edited + (flow.location to dialog.content())) }
-        view.update(rows(), ActiveListSelection.Key(key(flow)))
+        state.update { copy(edited = edited + (cmd.location to dialog.content())) }
+        view.update(rows(), ActiveListSelection.Key(key(cmd)))
     }
 
-    private fun open(flow: CommandFileDto) {
-        if (!flow.editable) return
+    private fun open(cmd: CommandFileDto) {
+        if (!cmd.editable) return
         if (!launch("open") { id ->
-            val opened = service<KiloWorkspaceService>().openFile(flow.location)
-            withContext(workflowEdt) {
+            val opened = service<KiloWorkspaceService>().openFile(cmd.location)
+            withContext(edt) {
                 if (!active(id)) return@withContext
                 setBusy(false)
                 if (opened) return@withContext
                 clearProgress()
-                KiloNotifications.error(KiloBundle.message("settings.agentBehavior.workflows.openInEditor.failed"))
+                KiloNotifications.error(KiloBundle.message("settings.agentBehavior.commands.openInEditor.failed"))
             }
         }) return
-        showProgress(KiloBundle.message("settings.agentBehavior.workflows.openInEditor.pending"))
+        showProgress(KiloBundle.message("settings.agentBehavior.commands.openInEditor.pending"))
     }
 
-    private fun remove(flow: CommandFileDto) {
+    private fun remove(cmd: CommandFileDto) {
         val result = Messages.showYesNoDialog(
-            KiloBundle.message("settings.agentBehavior.workflows.delete.message", flow.name),
-            KiloBundle.message("settings.agentBehavior.workflows.delete.title"),
+            KiloBundle.message("settings.agentBehavior.commands.delete.message", cmd.name),
+            KiloBundle.message("settings.agentBehavior.commands.delete.title"),
             KiloBundle.message("common.delete"),
             Messages.getCancelButton(),
             Messages.getQuestionIcon(),
         )
         if (result != Messages.YES) return
-        state.update { copy(deleted = deleted + flow.location, edited = edited - flow.location) }
+        state.update { copy(deleted = deleted + cmd.location, edited = edited - cmd.location) }
         view.update(rows(), ActiveListSelection.Slide)
     }
 
-    private fun content(flow: CommandFileDto) = draft.edited[flow.location] ?: flow.content
+    private fun content(cmd: CommandFileDto) = draft.edited[cmd.location] ?: cmd.content
 
     private companion object {
         const val EDIT_CELL = "edit"
@@ -257,37 +265,37 @@ internal class WorkflowsSettingsUi(
         const val DELETE_CELL = "delete"
         const val BUILTIN = "builtin"
         const val LEGACY_BUILTIN = "<built-in>"
-        val LOG = KiloLog.create(WorkflowsSettingsUi::class.java)
+        val LOG = KiloLog.create(CommandsSettingsUi::class.java)
 
-        fun key(flow: CommandFileDto) = if (builtin(flow)) {
-            listOf("builtin", flow.source.orEmpty(), flow.name).joinToString(":")
+        fun key(cmd: CommandFileDto) = if (builtin(cmd)) {
+            listOf("builtin", cmd.source.orEmpty(), cmd.name).joinToString(":")
         } else {
-            flow.location.ifBlank { flow.name }
+            cmd.location.ifBlank { cmd.name }
         }
-        fun builtin(flow: CommandFileDto) = flow.builtin || flow.location == BUILTIN || flow.location == LEGACY_BUILTIN
+        fun builtin(cmd: CommandFileDto) = cmd.builtin || cmd.location == BUILTIN || cmd.location == LEGACY_BUILTIN
     }
 }
 
-internal interface WorkflowEditDialogHandle {
+internal interface CommandEditDialogHandle {
     fun showAndGet(): Boolean
     fun content(): String
 }
 
-private data class WorkflowsDraft(
+private data class CommandsDraft(
     val edited: Map<String, String> = emptyMap(),
     val deleted: Set<String> = emptySet(),
 )
 
-private fun workflowsDraft() = WorkflowsDraft()
+private fun commandsDraft() = CommandsDraft()
 
-private fun saved(base: WorkflowsDraft, draft: WorkflowsDraft): Boolean = base == draft
+private fun saved(base: CommandsDraft, draft: CommandsDraft): Boolean = base == draft
 
-internal class WorkflowEditDialog(private val flow: CommandFileDto, private val savable: Boolean) : DialogWrapper(true), WorkflowEditDialogHandle {
+internal class CommandEditDialog(private val cmd: CommandFileDto, private val savable: Boolean) : DialogWrapper(true), CommandEditDialogHandle {
     private val base = initial()
-    private val editor = CodeViewField(base, workflowFileType(flow.location, base), savable)
+    private val editor = CodeViewField(base, commandFileType(cmd.location, base), savable)
 
     init {
-        title = "/${flow.name}"
+        title = "/${cmd.name}"
         setOKButtonText(CommonBundle.getOkButtonText())
         setCancelButtonText(CommonBundle.getCloseButtonText())
         init()
@@ -305,13 +313,13 @@ internal class WorkflowEditDialog(private val flow: CommandFileDto, private val 
 
     override fun content() = editor.text
 
-    private fun initial() = flow.content?.takeIf { it.isNotBlank() }
-        ?: flow.description?.takeIf { it.isNotBlank() }
-        ?: KiloBundle.message("settings.agentBehavior.workflows.content.empty")
+    private fun initial() = cmd.content?.takeIf { it.isNotBlank() }
+        ?: cmd.description?.takeIf { it.isNotBlank() }
+        ?: KiloBundle.message("settings.agentBehavior.commands.content.empty")
 }
 
-internal fun workflowFileType(location: String, content: String? = null): FileType =
-    settingsEditorFileType(location.ifBlank { WORKFLOW_FILE }, content)
+internal fun commandFileType(location: String, content: String? = null): FileType =
+    settingsEditorFileType(location.ifBlank { COMMAND_FILE }, content)
 
-private const val WORKFLOW_FILE = "workflow.md"
-private const val WORKFLOW_LOAD_TIMEOUT_MS = 10_000L
+private const val COMMAND_FILE = "command.md"
+private const val LOAD_TIMEOUT_MS = 10_000L
