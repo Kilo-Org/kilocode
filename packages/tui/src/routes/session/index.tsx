@@ -713,7 +713,10 @@ export function Session() {
       },
       run: async () => {
         const status = sync.data.session_status?.[route.sessionID]
-        if (status?.type !== "idle") await sdk.client.session.abort({ sessionID: route.sessionID }).catch(() => {})
+        // kilocode_change start - a scheduled session is asleep on a wakeup, with no turn to abort
+        if (status?.type !== "idle" && status?.type !== "scheduled")
+          await sdk.client.session.abort({ sessionID: route.sessionID }).catch(() => {})
+        // kilocode_change end
         const message = messagesBeforeRevert().findLast((item) => item.role === "user")
         if (!message) return
         void sdk.client.session

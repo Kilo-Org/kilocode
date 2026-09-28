@@ -17,7 +17,7 @@ export function clientSessionStatus(status: ClientSessionStatus): SessionStatus 
 export function isRunningStatus(
   status: SessionStatus["type"] | "scheduled" | undefined,
 ): status is "busy" | "retry" | "offline" {
-  return status !== undefined && status !== "idle" && status !== "scheduled"
+  return status === "busy" || status === "retry" || status === "offline"
 }
 
 /**
