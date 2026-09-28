@@ -907,7 +907,7 @@ describe("Wakeup cron goal resume", () => {
   }, 45_000)
 })
 
-// Kept in its own trailing block: the goal-resume suite below drives the shared
+// Kept in its own trailing block: the goal-resume suite above drives the shared
 // process runtime, and it fails with "ManagedRuntime disposed" when these tests
 // run before it as the first tests in this file.
 describe("Wakeup cron in the derived status", () => {
