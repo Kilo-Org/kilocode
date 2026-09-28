@@ -27,7 +27,10 @@ export namespace KiloSessionRevert {
     return [...new Set(result)]
   }
 
-  export type Entry = { at: number; part: Snapshot.Patch }
+  export type Entry = { at: number; id: string; part: Snapshot.Patch }
+
+  const order = (left: Entry, right: Entry) =>
+    left.at - right.at || (left.id < right.id ? -1 : left.id > right.id ? 1 : 0)
 
   /**
    * Patch parts recorded by the session and its descendants, ordered by the time of the message
@@ -45,7 +48,13 @@ export namespace KiloSessionRevert {
    *
    * Message time is the ordering key, not the message id: ids are handed out by several code paths
    * and do not sort chronologically, which is why `SessionRevert` resolves its own boundaries by
-   * position instead of by id.
+   * position instead of by id. The id is still the tie breaker, because a depth-first walk visits a
+   * grandchild before its own parent and equal millisecond timestamps would otherwise leave the
+   * winner to that traversal order.
+   *
+   * Every descendant is checked for a running processor before its messages are read: a background
+   * child that keeps appending patch parts, or rewrites a file while `Snapshot.revert` checks the
+   * others out, would leave the workspace in a state the revert card does not describe.
    *
    * The merged message list is what the revert summary reads: `SessionSummary.computeDiff` derives
    * its diff from the `step-start`/`step-finish` snapshots of the messages it is given, so without
@@ -57,6 +66,7 @@ export namespace KiloSessionRevert {
     sessionID: SessionID,
     from: string,
     messages: MessageV2.WithParts[],
+    assertNotBusy: (sessionID: SessionID) => Effect.Effect<void, Session.BusyError>,
   ) {
     // The revert point is resolved by position the way `SessionRevert` does it: message ids do not
     // sort chronologically, so comparing ids would pick the wrong boundary.
@@ -67,18 +77,19 @@ export namespace KiloSessionRevert {
     const own: Entry[] = []
     for (const msg of messages.slice(index)) {
       for (const part of msg.parts) {
-        if (part.type === "patch") own.push({ at: msg.info.time.created, part })
+        if (part.type === "patch") own.push({ at: msg.info.time.created, id: msg.info.id, part })
       }
     }
 
     const walk = (
       parent: SessionID,
-    ): Effect.Effect<{ entries: Entry[]; files: string[]; messages: MessageV2.WithParts[] }> =>
+    ): Effect.Effect<{ entries: Entry[]; files: string[]; messages: MessageV2.WithParts[] }, Session.BusyError> =>
       Effect.gen(function* () {
         const entries: Entry[] = []
         const files: string[] = []
         const messages: MessageV2.WithParts[] = []
         for (const kid of yield* sessions.children(parent).pipe(Effect.orDie)) {
+          yield* assertNotBusy(kid.id)
           const nested = yield* walk(kid.id)
           entries.push(...nested.entries)
           files.push(...nested.files)
@@ -88,7 +99,7 @@ export namespace KiloSessionRevert {
             messages.push(msg)
             for (const part of msg.parts) {
               if (part.type !== "patch") continue
-              entries.push({ at: msg.info.time.created, part })
+              entries.push({ at: msg.info.time.created, id: msg.info.id, part })
               files.push(...part.files)
             }
           }
@@ -97,9 +108,7 @@ export namespace KiloSessionRevert {
       })
 
     const found = yield* walk(sessionID)
-    const patches = [...own, ...found.entries]
-      .toSorted((left, right) => left.at - right.at)
-      .map((entry) => entry.part)
+    const patches = [...own, ...found.entries].toSorted(order).map((entry) => entry.part)
     const range = [...messages.slice(index), ...found.messages].toSorted(
       (left, right) => left.info.time.created - right.info.time.created,
     )

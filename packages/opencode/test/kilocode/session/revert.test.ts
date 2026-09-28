@@ -1,7 +1,7 @@
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { SessionProjector } from "@opencode-ai/core/session/projector"
 import { describe, expect } from "bun:test"
-import { Effect, Exit } from "effect"
+import { Cause, Effect, Exit, Fiber } from "effect"
 import fs from "node:fs/promises"
 import path from "node:path"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
@@ -12,6 +12,7 @@ import { KiloSessionRevert } from "@/kilocode/session/revert"
 import { SessionRevert } from "@/session/revert"
 import { MessageID, PartID, SessionID } from "@/session/schema"
 import { Session } from "@/session/session"
+import { SessionRunState } from "@/session/run-state"
 import { Snapshot } from "@/snapshot"
 import { provideInstance, provideTmpdirInstance } from "../../fixture/fixture"
 import { testEffect } from "../../lib/effect"
@@ -21,6 +22,7 @@ const env = LayerNode.compile(
     Session.node,
     SessionProjector.node,
     SessionRevert.node,
+    SessionRunState.node,
     Snapshot.node,
     CrossSpawnSpawner.node,
   ]),
@@ -951,6 +953,135 @@ describe("sub-agent revert summary", () => {
             files: result.summary?.files,
             child: result.summary?.diffs?.some((item) => item.file?.endsWith("child.txt")),
           }).toEqual({ workspace: "restored", file: "before", files: 1, child: true })
+        }),
+      { git: true },
+    ),
+    30_000,
+  )
+})
+
+describe("sub-agent revert tie breaks", () => {
+  it.live(
+    "keeps the earlier snapshot when a descendant and its own child share a message time",
+    provideTmpdirInstance(
+      (dir) =>
+        Effect.gen(function* () {
+          const sessions = yield* Session.Service
+          const revert = yield* SessionRevert.Service
+          const snapshot = yield* Snapshot.Service
+          const providerID = ProviderV2.ID.make("test")
+          const file = path.join(dir, "shared.txt")
+          yield* Effect.promise(() => fs.writeFile(file, "before"))
+
+          const session = yield* sessions.create({})
+          const user = yield* sessions.updateMessage({
+            id: MessageID.make("msg_t0-user"),
+            sessionID: session.id,
+            role: "user",
+            agent: "default",
+            model: { providerID, modelID: ModelV2.ID.make("test") },
+            time: { created: 1 },
+          })
+          yield* sessions.updatePart({
+            id: PartID.ascending(),
+            messageID: user.id,
+            sessionID: session.id,
+            type: "text",
+            text: "delegate twice",
+          })
+
+          const child = yield* sessions.create({ parentID: session.id })
+          const grandchild = yield* sessions.create({ parentID: child.id })
+
+          const record = (sessionID: SessionID, id: string, text: string) =>
+            Effect.gen(function* () {
+              const before = yield* snapshot.track()
+              if (!before) throw new Error("expected snapshot")
+              yield* Effect.promise(() => fs.writeFile(file, text))
+              const after = yield* snapshot.track()
+              if (!after) throw new Error("expected snapshot")
+              const patch = yield* snapshot.patch(before)
+              const message = yield* sessions.updateMessage({
+                id: MessageID.make(id),
+                sessionID,
+                role: "assistant",
+                parentID: user.id,
+                mode: "default",
+                agent: "default",
+                path: { cwd: dir, root: dir },
+                cost: 0,
+                tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
+                modelID: ModelV2.ID.make("test"),
+                providerID,
+                time: { created: 5 },
+                finish: "end_turn",
+              })
+              yield* sessions.updatePart({
+                id: PartID.ascending(),
+                messageID: message.id,
+                sessionID,
+                type: "patch",
+                hash: patch.hash,
+                files: patch.files,
+              })
+            })
+
+          // Both messages carry the same millisecond. The child edits first under the smaller id,
+          // its own child edits second under the larger id, so a depth-first walk that leaves ties
+          // to traversal order hands the file to the grandchild's later snapshot.
+          yield* record(child.id, "msg_a1-child", "first")
+          yield* record(grandchild.id, "msg_b2-grandchild", "second")
+
+          yield* revert.revert({ sessionID: session.id, messageID: user.id })
+
+          expect(yield* Effect.promise(() => fs.readFile(file, "utf8"))).toBe("before")
+        }),
+      { git: true },
+    ),
+    30_000,
+  )
+})
+
+describe("sub-agent revert busy guard", () => {
+  it.live(
+    "refuses to revert while a descendant session is running",
+    provideTmpdirInstance(
+      (dir) =>
+        Effect.gen(function* () {
+          const sessions = yield* Session.Service
+          const revert = yield* SessionRevert.Service
+          const run = yield* SessionRunState.Service
+          const providerID = ProviderV2.ID.make("test")
+          yield* Effect.promise(() => fs.writeFile(path.join(dir, "child.txt"), "before"))
+
+          const session = yield* sessions.create({})
+          const user = yield* sessions.updateMessage({
+            id: MessageID.ascending(),
+            sessionID: session.id,
+            role: "user",
+            agent: "default",
+            model: { providerID, modelID: ModelV2.ID.make("test") },
+            time: { created: Date.now() },
+          })
+          yield* sessions.updatePart({
+            id: PartID.ascending(),
+            messageID: user.id,
+            sessionID: session.id,
+            type: "text",
+            text: "delegate the edit",
+          })
+
+          const child = yield* sessions.create({ parentID: session.id })
+          const fiber = yield* run.ensureRunning(child.id, Effect.never, Effect.never).pipe(Effect.forkChild)
+          yield* Effect.sleep("50 millis")
+          expect(Exit.isFailure(yield* run.assertNotBusy(child.id).pipe(Effect.exit))).toBe(true)
+
+          const exit = yield* revert.revert({ sessionID: session.id, messageID: user.id }).pipe(Effect.exit)
+          expect(Exit.isFailure(exit)).toBe(true)
+          if (Exit.isFailure(exit)) expect(Cause.squash(exit.cause)).toBeInstanceOf(Session.BusyError)
+
+          yield* run.cancel(child.id)
+          yield* Fiber.interrupt(fiber)
         }),
       { git: true },
     ),

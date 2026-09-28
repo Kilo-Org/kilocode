@@ -76,7 +76,13 @@ const layer = Layer.effect(
       // A delegated task records its edits in its own session, so collect those too: the whole set
       // is ordered chronologically, which is what lets the earliest snapshot win the file dedup,
       // and the merged message list is what the revert summary reads for its file list.
-      const ordered = yield* KiloSessionRevert.ordered(sessions, input.sessionID, rev.messageID, all)
+      const ordered = yield* KiloSessionRevert.ordered(
+        sessions,
+        input.sessionID,
+        rev.messageID,
+        all,
+        state.assertNotBusy,
+      )
       patches.length = 0
       patches.push(...ordered.patches)
       const range = ordered.messages
@@ -137,7 +143,13 @@ const layer = Layer.effect(
       if (!session.revert) return session
       // kilocode_change start - preserve the reverted workspace if redo cannot complete
       const all = yield* sessions.messages({ sessionID: input.sessionID }).pipe(Effect.orDie)
-      const found = yield* KiloSessionRevert.ordered(sessions, input.sessionID, session.revert.messageID, all)
+      const found = yield* KiloSessionRevert.ordered(
+        sessions,
+        input.sessionID,
+        session.revert.messageID,
+        all,
+        state.assertNotBusy,
+      )
       const files = [...new Set([...KiloSessionRevert.files(all, session.revert), ...found.files])]
       const baseline = files.length > 0 ? yield* snap.track() : undefined
       if (files.length > 0 && !baseline) {
