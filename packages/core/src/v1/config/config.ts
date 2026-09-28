@@ -184,6 +184,19 @@ export const Info = Schema.Struct({
       ),
     }).annotate({ description: "Sandbox configuration for agent tools" }),
   ),
+  // kilocode_change start - approve-for-me entry point (issue #7684)
+  // NOTE: mirror this key in apps/web/src/app/config.json/extras.ts in the cloud repo, see note above.
+  approve_for_me: Schema.optional(
+    Schema.Struct({
+      mode: Schema.optional(
+        Schema.Literals(["off", "review", "auto"]).annotate({
+          description:
+            "Approve-for-me mode: 'off' disables the feature, 'review' labels risky commands without changing approval behavior, 'auto' additionally auto-allows low-risk commands the reviewer clears (default: off)",
+        }),
+      ),
+    }).annotate({ description: "Approve-for-me (Gatekeeper) configuration. Hidden behind an experimental flag." }),
+  ),
+  // kilocode_change end
   model: Schema.optional(Schema.NullOr(Schema.String)).annotate({
     description: "Model to use in the format of provider/model, eg anthropic/claude-2",
   }),
