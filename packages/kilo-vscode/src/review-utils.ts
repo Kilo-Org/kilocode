@@ -1,3 +1,4 @@
+import * as path from "path"
 import * as vscode from "vscode"
 import { resolveInside } from "./diff/shared/path"
 import { inspect } from "util"
@@ -37,6 +38,10 @@ export function openFileInEditor(
 }
 
 export function openRelativeFile(root: string | undefined, relativePath: string, line?: number, column?: number): void {
+  if (path.isAbsolute(relativePath)) {
+    openFileInEditor(relativePath, line, column, vscode.ViewColumn.Beside, "DiffPanel")
+    return
+  }
   if (!root) return
   const resolved = resolveInside(root, relativePath)
   if (!resolved) return
