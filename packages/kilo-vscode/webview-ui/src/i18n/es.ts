@@ -512,6 +512,7 @@ export const dict = {
   "provider.custom.models.toggleImages": "Alternar imagen para todos",
   "provider.custom.models.remove": "Eliminar modelo",
   "provider.custom.models.add": "Añadir modelo",
+  "provider.custom.models.fetch.button": "Obtener modelos",
   "provider.custom.models.fetch.authError":
     "Autenticación fallida. Verifica la clave de API arriba e intenta de nuevo.",
   "provider.custom.models.fetch.empty": "No se encontraron modelos en este servidor.",

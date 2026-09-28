@@ -507,6 +507,7 @@ export const dict = {
   "provider.custom.models.toggleImages": "Переключить изображения для всех",
   "provider.custom.models.remove": "Удалить модель",
   "provider.custom.models.add": "Добавить модель",
+  "provider.custom.models.fetch.button": "Получить модели",
   "provider.custom.models.fetch.authError": "Ошибка аутентификации. Проверьте API-ключ выше и попробуйте снова.",
   "provider.custom.models.fetch.empty": "На этом сервере модели не найдены.",
   "provider.custom.models.fetch.added": "Добавлено {{count}} модель(ей).",

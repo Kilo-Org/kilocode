@@ -228,6 +228,10 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
   const [fetchKey, setFetchKey] = createSignal("")
   let fetchVersion = 0
 
+  // Whether a model-listing fetch is possible for the current package + URL.
+  const canFetch = (npm: CustomProviderPackage, url: string) =>
+    npm !== "@ai-sdk/anthropic" && /^https?:\/\//.test(url.trim())
+
   createEffect(() => {
     const npm = fetchPackage()
     const url = fetchURL()
@@ -240,7 +244,7 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
     setFetchStatus(undefined)
     setSearch("")
 
-    if (npm === "@ai-sdk/anthropic" || !/^https?:\/\//.test(url.trim())) return
+    if (!canFetch(npm, url)) return
 
     fetchVersion++
     const version = fetchVersion
@@ -695,7 +699,7 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
                   variant="ghost"
                   icon="reset"
                   onClick={doFetch}
-                  disabled={fetching() || form.npm === "@ai-sdk/anthropic" || !/^https?:\/\//.test(form.baseURL.trim())}
+                  disabled={fetching() || !canFetch(form.npm, form.baseURL)}
                 >
                   {language.t("provider.custom.models.fetch.button")}
                 </Button>

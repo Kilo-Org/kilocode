@@ -468,6 +468,7 @@ export const dict = {
   "provider.custom.models.toggleImages": "Przełącz obraz dla wszystkich",
   "provider.custom.models.remove": "Usuń model",
   "provider.custom.models.add": "Dodaj model",
+  "provider.custom.models.fetch.button": "Pobierz modele",
   "provider.custom.models.fetch.authError":
     "Uwierzytelnianie nie powiodło się. Sprawdź klucz API powyżej i spróbuj ponownie.",
   "provider.custom.models.fetch.empty": "Nie znaleziono modeli na tym serwerze.",

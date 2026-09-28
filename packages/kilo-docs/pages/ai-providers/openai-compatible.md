@@ -58,6 +58,8 @@ Once you enter a valid **Base URL** and **API Key**, Kilo Code will query the pr
 
 This eliminates the need to manually look up and type model IDs. If auto-detection fails (for example, if the provider doesn't support the `/v1/models` endpoint), you can still enter model IDs manually.
 
+Click **Fetch models** next to the model list to retry the fetch at any time, for example after fixing the base URL or API key.
+
 {% /tab %}
 {% tab label="CLI" %}
 
