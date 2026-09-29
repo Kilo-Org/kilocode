@@ -95,6 +95,10 @@ If you use Kilo Code with VS Code on WSL and the extension repeatedly disconnect
 
    It may ask for your sudo password. The command collects kernel out-of-memory events, WSL VM uptime (which shows whether the whole VM restarted or just the VS Code server died), current memory stats, the VS Code remote server logs, and Kilo logs — nothing else.
 
+   {% callout type="warning" %}
+   Inspect the bundle before sharing it and remove any secrets such as API keys, tokens, prompts, or file paths. The bundle is written to `C:\Users\Public`, a folder shared with Windows so you can access it outside WSL — delete it once you're done sharing it.
+   {% /callout %}
+
 3. When it prints `Done`, send us the file `C:\Users\Public\kilo-diag.tgz` from Windows.
 
 4. Include roughly how many Agent Manager sessions or worktrees were running in parallel when the disconnect happened.
