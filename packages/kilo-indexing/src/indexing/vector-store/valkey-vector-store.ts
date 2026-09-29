@@ -617,6 +617,7 @@ export class ValkeyVectorStore implements IVectorStore {
       useTLS,
       credentials: this.valkeyPassword ? { password: this.valkeyPassword } : undefined,
       clientName: "kilo-valkey-store",
+      clientInfoTag: "kilocode",
       requestTimeout: 5000,
     })
   }
