@@ -536,6 +536,21 @@
 
 ## [Unreleased]
 
+## [7.1.9-rc.1] - 2026-09-28
+
+### Added
+
+- Rename workflows to commands throughout the JetBrains plugin and improve the related settings presentation.
+- Render agent board messages as Markdown.
+- Unify goals with scheduling and timing tools so agents can coordinate long-running work more reliably.
+
+### Fixed
+
+- Recover from provider context-limit errors by compacting the conversation automatically.
+- Preserve prompt cache breakpoints only for first-party OpenAI providers, avoiding incompatible requests to custom providers.
+- Report scheduled sessions with their wake time instead of leaving them in a generic busy state.
+- Pass the configured embedding dimension to OpenAI-compatible indexing providers.
+
 ## [7.1.8] - 2026-09-25
 
 ### Added

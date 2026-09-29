@@ -914,7 +914,11 @@ export const layer: Layer.Layer<Service, never, Requirements> =
             )
           })
 
-          yield* materialize() // kilocode_change - resume interrupted snapshot object materialization
+          // Resume any interrupted materialization on the same quiet-period terms as a
+          // fresh snapshot: with a zero delay this fiber's exists-check can land after the
+          // first track created the alternates and repack behind it, defeating the wait
+          // the tracks scheduled. A restart has been quiet, so the default idle applies.
+          yield* materialize(KiloSnapshotMaterialize.idle()) // kilocode_change - resume interrupted snapshot object materialization
 
           yield* cleanup().pipe(
             Effect.catchCause((cause) => Effect.logError("cleanup loop failed", { cause: Cause.pretty(cause) })),
