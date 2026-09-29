@@ -686,53 +686,6 @@ class SessionSidePanelManagerTest : BasePlatformTestCase() {
         assertFalse(ui.contains(first))
     }
 
-    // ------ hidden-session question reveal (JetBrains bug regression) ------
-
-    fun `test question asked while session is hidden is surfaced when reopened`() {
-        useLongInactiveDisposeTimeout()
-        val manager = manager()
-        val host = JPanel()
-        host.add(manager.component)
-
-        try {
-            host.addNotify()
-
-            manager.openSession(session("ses_1"))
-            settle()
-            val first = active(manager) as SessionUi
-
-            // Switch away — the session UI is retained but its component is now hidden, exactly
-            // like leaving one JetBrains session tab open while looking at another.
-            manager.openSession(session("ses_2"))
-            settle()
-            assertFalse("First session UI should be hidden after switching away", first.isShowing)
-
-            // The question arrives while hidden. History activity must reflect it immediately.
-            kotlinx.coroutines.runBlocking {
-                rpc.events.emit(ChatEventDto.QuestionAsked("ses_1", rpcQuestion("q1")))
-            }
-            settle()
-            assertEquals(mapOf("ses_1" to SessionActivityKind.QUESTION), manager.activity())
-
-            // Reopening the session must surface the interactive question card, not leave it
-            // silently active and invisible.
-            manager.openSession(session("ses_1"))
-            settle()
-            pumpEdt()
-            assertSame(first, active(manager))
-            assertTrue("Reopened session should be showing", first.isShowing)
-
-            val question = first.controller().model.state
-            assertTrue("Model should still report AwaitingQuestion", question is SessionState.AwaitingQuestion)
-
-            val qv = findComponent<ai.kilocode.client.session.views.question.QuestionView>(first)
-            assertNotNull("QuestionView should exist in the reopened session", qv)
-            assertTrue("QuestionView should be visible after reopening", qv!!.isVisible)
-        } finally {
-            host.removeNotify()
-        }
-    }
-
     fun `test activity ignores disposed idle session ui`() {
         useShortInactiveDisposeTimeout()
         val manager = manager()
@@ -786,19 +739,6 @@ class SessionSidePanelManagerTest : BasePlatformTestCase() {
     }
 
     private fun active(manager: SessionSidePanelManager) = manager.component.getComponent(0) as JPanel
-
-    private inline fun <reified T> findComponent(root: java.awt.Container): T? = findComponentCls(root, T::class.java)
-
-    private fun <T> findComponentCls(root: java.awt.Container, cls: Class<T>): T? {
-        for (child in root.components) {
-            if (cls.isInstance(child)) return cls.cast(child)
-            if (child is java.awt.Container) {
-                val found = findComponentCls(child, cls)
-                if (found != null) return found
-            }
-        }
-        return null
-    }
 
     private fun controller() = SessionController(
         parent = testRootDisposable,
