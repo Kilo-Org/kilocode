@@ -578,6 +578,11 @@ export type ProjectLiveStatus = {
   attention: boolean
 }
 
+/** A session asleep on a pending wakeup reports `scheduled`; it is not a running turn. */
+export function running(status: SessionStatus) {
+  return status.type === "busy" || status.type === "retry" || status.type === "offline"
+}
+
 export async function loadProjectLiveStatus(input: ProjectQuery, dir: string): Promise<ProjectLiveStatus> {
   const sdk = client({ url: input.url, dir })
   const [status, terminals, permissions, questions] = await Promise.all([
@@ -587,7 +592,7 @@ export async function loadProjectLiveStatus(input: ProjectQuery, dir: string): P
     maybe("Pending questions", sdk.question.list({ directory: dir })),
   ])
   const open = opened(terminals ?? [])
-  const busy = Object.entries(status ?? {}).some(([id, s]) => open.has(id) && s.type !== "idle")
+  const busy = Object.entries(status ?? {}).some(([id, s]) => open.has(id) && running(s))
   const attention = requested(permissions ?? [], open) || requested(questions ?? [], open)
   return { busy, attention }
 }
