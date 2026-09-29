@@ -50,7 +50,12 @@ export namespace IngestQueue {
       }
     | {
         type: "session_status"
-        data: { status: "idle" | "busy" | "question" | "permission" | "retry" }
+        data: {
+          status: "idle" | "busy" | "question" | "permission" | "retry" | "scheduled"
+          // scheduled wakeups: the ISO-8601 due time, present only with status
+          // "scheduled".
+          scheduledAt?: string
+        }
       }
     | {
         type: "session_pr_link"
