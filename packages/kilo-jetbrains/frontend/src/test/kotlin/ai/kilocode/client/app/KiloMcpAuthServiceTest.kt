@@ -82,6 +82,17 @@ class KiloMcpAuthServiceTest : BasePlatformTestCase() {
         assertTrue(rpc.mcpCalls.isEmpty())
     }
 
+    fun `test refresh bounds directory state`() = runBlocking(Dispatchers.Default) {
+        val service = service()
+        rpc.mcps = listOf(McpStatusDto("linear", "needs_auth"))
+
+        repeat(65) { service.refresh("/test/$it") }
+
+        assertEquals(64, service.needsAuth.value.size)
+        assertFalse(service.needsAuth.value.containsKey("/test/0"))
+        assertTrue(service.needsAuth.value.containsKey("/test/64"))
+    }
+
     fun `test signIn returns connected result and clears needs_auth`() = runBlocking(Dispatchers.Default) {
         rpc.mcps = listOf(McpStatusDto("linear", "needs_auth"))
         val service = service()
@@ -137,6 +148,21 @@ class KiloMcpAuthServiceTest : BasePlatformTestCase() {
         val ok = service.cancel("/test", "linear")
 
         assertTrue(ok)
+        assertEquals(listOf("linear"), rpc.mcpAuthRemovals)
+    }
+
+    fun `test cancelling an active sign in returns a quiet cancelled result`() = runBlocking(Dispatchers.Default) {
+        val gate = CompletableDeferred<Unit>()
+        rpc.beforeAuthenticate = { gate.await() }
+        rpc.mcpAuthenticateResult = McpAuthResultDto("failed", "Browser authorization failed: Authorization cancelled")
+        val service = service()
+        val result = async { service.signIn("/test", "linear") }
+        withTimeout(5000) { while (!rpc.mcpAuthenticateStarted) delay(5) }
+
+        assertTrue(service.cancel("/test", "linear"))
+        gate.complete(Unit)
+
+        assertEquals("cancelled", result.await().status)
         assertEquals(listOf("linear"), rpc.mcpAuthRemovals)
     }
 

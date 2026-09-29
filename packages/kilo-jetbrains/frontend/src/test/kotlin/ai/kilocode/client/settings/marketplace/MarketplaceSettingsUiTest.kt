@@ -420,6 +420,29 @@ class MarketplaceSettingsUiTest : BasePlatformTestCase() {
         flushUntil { agentRpc.mcpAuthentications.contains("context7") }
     }
 
+    fun `test marketplace sign in keeps progress and cancel visible while authentication waits`() {
+        val panel = panel { _, _ -> FakeInstallDialog(MarketplaceInstallRequest("project", emptyMap())) }
+        flushUntil { rows(panel).size == 3 }
+        agentRpc.mcps = listOf(McpStatusDto("context7", "needs_auth"))
+        agentRpc.mcpAuthenticateResult = McpAuthResultDto("connected")
+        val gate = CompletableDeferred<Unit>()
+        agentRpc.beforeAuthenticate = { gate.await() }
+        TestDialogManager.setTestDialog(TestDialog.YES)
+
+        click(panel, "mcp:context7", "install")
+
+        flushUntil { agentRpc.mcpAuthenticateStarted }
+        edt {
+            val visible = text(panel)
+            assertTrue(visible.contains(KiloBundle.message("settings.agentBehavior.mcp.signIn.progress", "context7")))
+            assertTrue(visible.contains(KiloBundle.message("settings.agentBehavior.mcp.signIn.cancel")))
+            true
+        }
+
+        gate.complete(Unit)
+        flushUntil { agentRpc.mcpAuthentications.contains("context7") }
+    }
+
     fun `test a connected MCP install shows no sign in prompt`() {
         val panel = panel { _, _ -> FakeInstallDialog(MarketplaceInstallRequest("project", emptyMap())) }
         flushUntil { rows(panel).size == 3 }

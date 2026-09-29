@@ -181,7 +181,7 @@ internal class McpSettingsUi(
             val result = auth.signIn(dir, name)
             if (!withContext(edt) { active(id) }) return@launch
             withContext(edt) { auth.report(name, result) }
-            if (result.status != "connected") {
+            if (result.status != "connected" && result.status != "cancelled") {
                 throw SettingsMessageException(
                     result.error ?: KiloBundle.message("settings.agentBehavior.mcp.signIn.failed", name),
                 )

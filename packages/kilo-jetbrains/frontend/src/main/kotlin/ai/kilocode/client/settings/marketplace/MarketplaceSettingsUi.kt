@@ -27,6 +27,7 @@ import com.intellij.openapi.actionSystem.ActionToolbar
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.DefaultActionGroup
 import com.intellij.openapi.actionSystem.ex.ActionUtil
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.EDT
 import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.application.asContextElement
@@ -309,7 +310,7 @@ internal class MarketplaceSettingsUi(
         }
         val item = authPrompt ?: return
         authPrompt = null
-        promptSignIn(item)
+        ApplicationManager.getApplication().invokeLater({ promptSignIn(item) }, ModalityState.any())
     }
 
     @RequiresEdt
@@ -328,10 +329,15 @@ internal class MarketplaceSettingsUi(
             val result = auth.signIn(dir, name)
             if (!withContext(edt) { active(id) }) return@launch
             withContext(edt) { auth.report(name, result) }
-            if (result.status != "connected") {
+            if (result.status != "connected" && result.status != "cancelled") {
                 throw SettingsMessageException(
                     result.error ?: KiloBundle.message("settings.agentBehavior.mcp.signIn.failed", name),
                 )
+            }
+            withContext(edt) {
+                if (!active(id)) return@withContext
+                setBusy(false)
+                clearProgress()
             }
         }) return
         showProgress(

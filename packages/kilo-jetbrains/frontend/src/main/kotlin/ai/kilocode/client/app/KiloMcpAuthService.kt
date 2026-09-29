@@ -49,6 +49,7 @@ class KiloMcpAuthService internal constructor(
         // so the CLI names the failure first.
         private const val DEFAULT_AUTH_TIMEOUT_MS = 6 * 60 * 1000L
         private const val DEFAULT_DEDUPE_WINDOW_MS = 4000L
+        private const val MAX_DIRECTORIES = 64
     }
 
     private fun svc(): KiloAgentBehaviorService = behavior ?: service()
@@ -59,6 +60,7 @@ class KiloMcpAuthService internal constructor(
     private val _busy = MutableStateFlow<Set<String>>(emptySet())
     val busy: StateFlow<Set<String>> = _busy.asStateFlow()
     private val active = ConcurrentHashMap.newKeySet<String>()
+    private val cancelled = ConcurrentHashMap.newKeySet<String>()
 
     private val started = AtomicBoolean(false)
     private val lastEventUrl = AtomicReference<String?>(null)
@@ -72,7 +74,11 @@ class KiloMcpAuthService internal constructor(
             .filter { it.status == "needs_auth" }
             .map { it.name }
             .toSet()
-        _needsAuth.update { it + (dir to names) }
+        _needsAuth.update { current ->
+            val next = current + (dir to names)
+            if (next.size <= MAX_DIRECTORIES) return@update next
+            next.entries.drop(next.size - MAX_DIRECTORIES).associate { it.toPair() }
+        }
         return names
     }
 
@@ -87,26 +93,36 @@ class KiloMcpAuthService internal constructor(
                     svc().mcpAuthenticate(dir, name)
                 }
             }
-            if (result != null) return result
+            if (result != null) {
+                if (cancelled.contains(key)) return McpAuthResultDto("cancelled", null)
+                return result
+            }
             attempt("mcp auth timeout cleanup failed dir=$dir name=$name", false) {
                 svc().mcpAuthRemove(dir, name)
             }
             McpAuthResultDto("timeout", null)
         } finally {
             active.remove(key)
+            cancelled.remove(key)
             _busy.update { it - key }
             refresh(dir)
         }
     }
 
     /** Cancels a pending sign-in and clears any stored credentials for [name]. */
-    suspend fun cancel(dir: String, name: String): Boolean =
-        attempt("mcp auth cancel failed dir=$dir name=$name", false) { svc().mcpAuthRemove(dir, name) }
+    suspend fun cancel(dir: String, name: String): Boolean {
+        val key = busyKey(dir, name)
+        if (active.contains(key)) cancelled.add(key)
+        val removed = attempt("mcp auth cancel failed dir=$dir name=$name", false) { svc().mcpAuthRemove(dir, name) }
+        if (!removed) cancelled.remove(key)
+        return removed
+    }
 
     /** Reports a sign-in [result] for [name] via a Kilo notification. Must run on EDT. */
     @RequiresEdt
     fun report(name: String, result: McpAuthResultDto) {
         when (result.status) {
+            "cancelled" -> Unit
             "connected" -> KiloNotifications.info(
                 KiloBundle.message("settings.agentBehavior.mcp.signIn.success", name),
             )
