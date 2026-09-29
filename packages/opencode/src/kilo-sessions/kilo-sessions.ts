@@ -515,6 +515,11 @@ export namespace KiloSessions {
   async function syncSessionPrLink(sessionId: string, record: SessionPrLink | undefined, pending: Set<string>) {
     if (record) {
       await syncPrLinkTriple(sessionId, tripleOf(record))
+      // A candidate that already owns a real link owes no clear, so settle it
+      // now. Otherwise it never reaches `legacyPruned`, `settleLegacyPrLinks`
+      // can never satisfy its loop, and the persisted `{ pending }` set is
+      // re-read on every later process.
+      if (pending.has(sessionId)) legacyPruned.add(sessionId)
       return
     }
     const sent = lastPrLinkTriple.get(sessionId)

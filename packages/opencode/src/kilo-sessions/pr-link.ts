@@ -431,6 +431,22 @@ function parsePushCommand(command: string): string | undefined {
   return dest?.replace(/^refs\/heads\//, "") || undefined
 }
 
+// A command that names a push but never moves the session's evidence must not
+// be read as one: `--dry-run`/`-n` prints the same `old..new  branch -> branch`
+// line without sending anything, and `--delete`/`-d` (or the empty-source
+// refspec `:branch`) removes the branch instead of pushing a commit.
+function pushDeletesOrDryRuns(args: string): boolean {
+  const tokens = args.trim().split(/\s+/).filter(Boolean)
+  for (const token of tokens) {
+    if (!token.startsWith("-")) continue
+    const flag = token.split("=")[0] ?? token
+    if (flag === "--dry-run" || flag === "--delete") return true
+    // A short cluster such as `-fn` carries `-n`; a long flag never matches.
+    if (flag.startsWith("-") && !flag.startsWith("--") && /[nd]/.test(flag.slice(1))) return true
+  }
+  return tokens.some((token) => token.startsWith(":"))
+}
+
 function revParse(worktree: string, ref: string): Promise<string | undefined> {
   return simpleGit(worktree)
     .revparse([ref])
@@ -493,7 +509,8 @@ export async function recordPush(
   command: string,
   output: string,
 ): Promise<SessionPrLink | undefined> {
-  if (!/(?:^|\s)git\s+push(?:\s|$)/.test(command)) return undefined
+  const args = command.match(/(?:^|\s)git\s+push\b(.*)$/)?.[1]
+  if (args === undefined || pushDeletesOrDryRuns(args)) return undefined
   const current = await readSessionPrLink(sessionId)
   if (!current) return undefined
   const repo = await repoFor(worktree)

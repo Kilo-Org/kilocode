@@ -391,6 +391,26 @@ describe("refreshPrLink", () => {
     expect((await readSessionPrLink("ses_a"))?.link.prNumber).toBe(12)
   })
 
+  test("refresh never rewrites headSha with a commit the session did not push", async () => {
+    await seedGitHub("ses_a")
+    // The host reports a different head commit for the session's own open pull
+    // request (a force-push by someone else). The refresh must not overwrite the
+    // session's evidence with a commit it never pushed.
+    respondGh([
+      {
+        html_url: "https://github.com/owner/repo/pull/12",
+        head: { ref: "feature/x", sha: "deadbeefcafe", repo: { full_name: "owner/repo" } },
+        base: { repo: { full_name: "owner/repo" } },
+      },
+    ])
+
+    await refreshPrLink()
+
+    const record = await readSessionPrLink("ses_a")
+    expect(record?.link.prNumber).toBe(12)
+    expect(record?.headSha).toBe("abc1234")
+  })
+
   test("a fork pull request on the same branch is not the session's link", async () => {
     await seedGitHub("ses_a")
     respondGh([ghPr("https://github.com/owner/repo/pull/12", "feature/x", "someone/fork")])
@@ -744,6 +764,50 @@ describe("recordPush", () => {
       dir,
       "git push origin other",
       `To github.com:owner/repo.git\n   ${first?.headSha}..${next}  other -> other\n`,
+    )
+    expect(pushed).toBeUndefined()
+    expect((await readSessionPrLink("ses_a"))?.headSha).toBe(first?.headSha)
+  })
+
+  test("a dry run does not advance headSha", async () => {
+    const dir = await makeRepo()
+    const first = await recordPrCreate("ses_a", dir, "Opened\nhttps://github.com/owner/repo/pull/7\n")
+    const next = await commit(dir, "d.txt")
+    const pushed = await recordPush(
+      "ses_a",
+      dir,
+      "git push --dry-run origin feature/x",
+      `To github.com:owner/repo.git\n   ${first?.headSha}..${next}  feature/x -> feature/x\n`,
+    )
+    expect(pushed).toBeUndefined()
+    expect((await readSessionPrLink("ses_a"))?.headSha).toBe(first?.headSha)
+  })
+
+  test("a short dry-run flag does not advance headSha", async () => {
+    const dir = await makeRepo()
+    const first = await recordPrCreate("ses_a", dir, "Opened\nhttps://github.com/owner/repo/pull/7\n")
+    const next = await commit(dir, "e.txt")
+    const pushed = await recordPush(
+      "ses_a",
+      dir,
+      "git push -n origin feature/x",
+      `To github.com:owner/repo.git\n   ${first?.headSha}..${next}  feature/x -> feature/x\n`,
+    )
+    expect(pushed).toBeUndefined()
+    expect((await readSessionPrLink("ses_a"))?.headSha).toBe(first?.headSha)
+  })
+
+  test("a branch deletion does not advance headSha", async () => {
+    const dir = await makeRepo()
+    const first = await recordPrCreate("ses_a", dir, "Opened\nhttps://github.com/owner/repo/pull/7\n")
+    // The local branch moved on but was never pushed; a delete must not promote
+    // that local commit to the session's pushed evidence.
+    await commit(dir, "f.txt")
+    const pushed = await recordPush(
+      "ses_a",
+      dir,
+      "git push origin --delete feature/x",
+      "To github.com:owner/repo.git\n - [deleted]         feature/x\n",
     )
     expect(pushed).toBeUndefined()
     expect((await readSessionPrLink("ses_a"))?.headSha).toBe(first?.headSha)

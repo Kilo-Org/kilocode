@@ -15,7 +15,6 @@ import {
   parsePrUrl,
   readSessionPrLink,
   urlRepo,
-  writeSessionPrLink,
 } from "@/kilo-sessions/pr-link"
 import type { PrLink, SessionPrLink } from "@/kilo-sessions/pr-link"
 
@@ -307,10 +306,22 @@ export async function refreshPrLink(opts?: { sessionId?: string; concurrency?: n
         await clearSessionLink(sessionId)
         continue
       }
-      if (answer.link.prUrl !== record.link.prUrl) continue
-      const next: SessionPrLink = { ...record, headRef: group.headRef }
-      if (answer.sha) next.headSha = answer.sha
-      await writeSessionPrLink(sessionId, next)
+      if (answer.link.prUrl !== record.link.prUrl) {
+        // The host reports an open pull request on the session's head that is not
+        // the one the session owns. A head can carry several open pull requests to
+        // different bases, so this is not proof the session's own pull request
+        // closed; surface it instead of withdrawing a link that may still be open.
+        log.warn("PR link refresh saw a different open pull request", {
+          sessionId,
+          owned: record.link.prUrl,
+          reported: answer.link.prUrl,
+        })
+        continue
+      }
+      // The host confirms the session's own pull request is open. `headSha` is
+      // deliberately left untouched: it is evidence of a commit the session
+      // pushed, and a force-push by someone else must not rewrite it. It advances
+      // only through `recordPush`, which enforces the ancestry guard.
     }
   })
 }

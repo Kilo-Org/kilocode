@@ -1669,6 +1669,49 @@ describe("KiloSessions PR link (per-session hard evidence)", () => {
     })
   }, 30000)
 
+  test("upgrade settles when a migration candidate already owns a real link", async () => {
+    await using tmp = await repoWithRemote()
+    const legacy = join(Global.Path.data, "storage", "session_pr_link_recorded", encodeURIComponent(tmp.path) + ".json")
+    await fs.mkdir(join(Global.Path.data, "storage", "session_pr_link_recorded"), { recursive: true })
+    await fs.writeFile(
+      legacy,
+      JSON.stringify({
+        key: "origin/feature/x",
+        link: { platform: "github", prUrl: "https://github.com/owner/repo/pull/1", prNumber: 1 },
+      }),
+    )
+    const markerPath = join(Global.Path.data, "storage", "session_pr_link_migration", "legacy-worktree-prune.json")
+
+    await provide({
+      directory: tmp.path,
+      fn: async () => {
+        const id = await setupSession()
+        await KiloSessions.bootstrap(id)
+        // The candidate set is every session the project knows, so drop sessions
+        // earlier tests left behind; otherwise their un-advertised ids keep the
+        // marker pending and mask whether this candidate settled.
+        const { AppRuntime } = await import("../../src/effect/app-runtime")
+        for (const other of await AppRuntime.runPromise(Session.Service.use((svc) => svc.list()))) {
+          if (other.id !== id) await AppRuntime.runPromise(Session.Service.use((svc) => svc.remove(other.id)))
+        }
+        // The candidate already owns a real link before the migration runs: it
+        // owes no clear, so the sweep must still settle instead of leaving the
+        // persisted pending set to be re-read on every later process.
+        await PrLink.recordPrCreate(id, tmp.path, "Opened\nhttps://github.com/owner/repo/pull/7\n")
+        await KiloSessions.enableRemote()
+        await new Promise((r) => setTimeout(r, 1200))
+        ingestBodies.length = 0
+        await KiloSessions.attachRemoteSession(id)
+        await new Promise((r) => setTimeout(r, 1200))
+
+        const payload = await capturedGetSessions()()
+        expect(payload.sessions.find((s) => s.id === id)?.prLink).toMatchObject({ prNumber: 7 })
+        // No clear is owed, so the marker reads "done" rather than `{ pending }`.
+        expect(JSON.parse(await fs.readFile(markerPath, "utf8"))).toBe(true)
+      },
+    })
+  }, 30000)
+
   test("deleting a session removes its persisted link so the heartbeat read stays bounded", async () => {
     await using tmp = await repoWithRemote()
     await provide({
