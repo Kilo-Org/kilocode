@@ -69,7 +69,7 @@ flowchart LR
 | Auto Triage | GitHub issue event or dispatch queue | Web duplicate check and `auto-triage-infra` Durable Object per ticket | Cloud Agent only when classification session is needed | Labels, status, callback, and timeout alarm |
 | Auto Fix | `kilo-auto-fix` label or dispatch rule | `auto-fix-infra` Durable Object per fix ticket | Cloud Agent branch and pull-request work | Pull request and lifecycle status callback |
 | Security Agent | Interactive or scheduled Dependabot sync plus analysis queue | `security-sync` and `security-auto-analysis` Workers | Model triage in `security-auto-analysis`; Cloud Agent only for selected deep analysis | Finding state, audit records, and stale-analysis cleanup |
-| Webhook Agent Ingest | HTTP webhook or scheduled alarm | `webhook-agent-ingest` queue and `TriggerDO` | Cloud Agent or Kilo Chat destination | Destination delivery and queue retry behavior |
+| Webhook Agent Ingest | HTTP webhook or scheduled alarm | `webhook-agent-ingest` queue and `TriggerDO` | Cloud Agent destination | Destination delivery and queue retry behavior |
 
 ## Kilo Bot ingress and source-control targets
 
