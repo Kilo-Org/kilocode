@@ -56,6 +56,14 @@ internal class FilledBadgeIcon(
             g2.font = font
             val fm = g2.fontMetrics
             val base = (iconHeight + fm.ascent - fm.descent) / 2
+            if (segments.size == 1) {
+                val segment = segments.single()
+                g2.color = segment.style.bg()
+                g2.fillRoundRect(0, 0, iconWidth, iconHeight, iconHeight, iconHeight)
+                g2.color = segment.style.fg()
+                g2.drawString(segment.text, UiStyle.Gap.lg(), base)
+                return
+            }
             val widths = widths()
             val pill = Area(
                 RoundRectangle2D.Double(
