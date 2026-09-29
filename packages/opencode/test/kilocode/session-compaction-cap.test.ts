@@ -6,7 +6,7 @@
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { SessionProjector } from "@opencode-ai/core/session/projector"
 import { describe, expect } from "bun:test"
-import { Deferred, Effect, Layer } from "effect"
+import { Deferred, Effect, Layer, Schema } from "effect"
 import { Database } from "@opencode-ai/core/database/database"
 import { Agent as AgentSvc } from "../../src/agent/agent"
 import { BackgroundJob } from "../../src/background/job"
@@ -234,6 +234,72 @@ function providerCfg(url: string) {
 const overflowBody = { type: "error", error: { code: "context_length_exceeded" } }
 
 describe("session compaction cap", () => {
+  for (const scenario of [
+    { name: "ordinary overflow", text: "please compact", recovery: false, auto: true, calls: 2 },
+    { name: "chunk worker overflow", text: "x".repeat(400_000), recovery: false, auto: true, calls: 1 },
+    { name: "successful chunk recovery", text: "please compact", recovery: true, auto: true, calls: 3 },
+    { name: "manual recovery with auto disabled", text: "please compact", recovery: true, auto: false, calls: 3 },
+  ]) {
+    it.live(
+      `publishes only terminal errors during ${scenario.name}`,
+      () =>
+        provideTmpdirServer(
+          Effect.fnUntraced(function* ({ llm }) {
+            const prompt = yield* SessionPrompt.Service
+            const sessions = yield* Session.Service
+            const compaction = yield* SessionCompaction.Service
+            const chat = yield* sessions.create({})
+            const errors: Array<typeof Session.Event.Error.data.Type> = []
+            const off = yield* (yield* EventV2Bridge.Service).listen((evt) => {
+              if (evt.type !== Session.Event.Error.type) return Effect.void
+              const data = Schema.decodeUnknownSync(Session.Event.Error.data)(evt.data)
+              if (data.sessionID === chat.id) errors.push(data)
+              return Effect.void
+            })
+            yield* Effect.addFinalizer(() => off)
+
+            yield* llm.error(400, overflowBody)
+            if (scenario.recovery) {
+              yield* llm.text("partial summary")
+              yield* llm.text("recovered summary")
+            }
+            if (!scenario.recovery && scenario.calls === 2) yield* llm.error(400, overflowBody)
+            const user = yield* prompt.prompt({
+              sessionID: chat.id,
+              agent: "code",
+              model: ref,
+              noReply: true,
+              parts: [{ type: "text", text: scenario.text }],
+            })
+            const result = yield* compaction.process({
+              sessionID: chat.id,
+              parentID: user.info.id,
+              messages: yield* sessions.messages({ sessionID: chat.id }),
+              auto: false,
+            })
+            expect(yield* llm.calls).toBe(scenario.calls)
+            expect(result).toBe(scenario.recovery ? "continue" : "stop")
+            const history = yield* sessions.messages({ sessionID: chat.id })
+            expect(history.some((msg) => msg.info.id === user.info.id)).toBe(true)
+            const summary = history.find((msg) => msg.info.role === "assistant" && msg.info.summary)
+            expect(summary?.info.role).toBe("assistant")
+            if (summary?.info.role !== "assistant") return
+            if (scenario.recovery) {
+              expect(errors).toEqual([])
+              expect(summary.info.error).toBeUndefined()
+              expect(summary.parts.some((part) => part.type === "text" && part.text === "recovered summary")).toBe(true)
+              return
+            }
+            expect(summary.info.error?.name).toBe("ContextOverflowError")
+            expect(errors).toEqual([{ sessionID: chat.id, error: summary.info.error }])
+            expect(JSON.stringify(summary.info.error)).toContain("Start a new session")
+          }),
+          { git: true, config: (url) => ({ ...providerCfg(url), compaction: { auto: scenario.auto } }) },
+        ),
+      30_000,
+    )
+  }
+
   for (const scenario of [
     { name: "automatic", auto: true, text: "please overflow", blank: "" },
     { name: "chunked", auto: true, text: "x".repeat(400_000), blank: "" },
