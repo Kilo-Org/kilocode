@@ -122,13 +122,16 @@ class KiloRecoveryActionsTest : BasePlatformTestCase() {
         assertEquals("Reinstall Core", event.presentation.text)
     }
 
-    fun `test core group has visible menu text and info action`() {
+    fun `test core group separates reload from recovery actions`() {
         val xml = requireNotNull(javaClass.classLoader.getResourceAsStream("kilo.jetbrains.frontend.xml"))
             .bufferedReader()
             .use { it.readText() }
 
         assertTrue(xml.contains("<group id=\"Kilo.CliGroup\" text=\"Core\" popup=\"true\">"))
-        assertTrue(xml.indexOf("<reference ref=\"Kilo.ReloadCoreSettings\"/>") < xml.indexOf("<reference ref=\"Kilo.Restart\"/>"))
+        val reload = xml.indexOf("<reference ref=\"Kilo.ReloadCoreSettings\"/>")
+        val restart = xml.indexOf("<reference ref=\"Kilo.Restart\"/>")
+        assertTrue(reload < restart)
+        assertTrue(xml.substring(reload, restart).contains("<separator/>"))
         assertTrue(xml.contains("<reference ref=\"Kilo.Restart\"/>"))
         assertTrue(xml.contains("<reference ref=\"Kilo.Reinstall\"/>"))
         assertTrue(xml.contains("<reference ref=\"Kilo.CoreInfo\"/>"))

@@ -230,6 +230,7 @@
 
         <group id="Kilo.CliGroup" text="Core" popup="true">
             <reference ref="Kilo.ReloadCoreSettings"/>
+            <separator/>
             <reference ref="Kilo.Restart"/>
             <reference ref="Kilo.Reinstall"/>
             <separator/>
