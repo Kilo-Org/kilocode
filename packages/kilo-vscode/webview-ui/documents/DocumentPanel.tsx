@@ -38,6 +38,7 @@ export interface DocumentPanelProps {
   onCloseOthers: (id: string) => void
   onReorder: (from: string, to: string) => void
   onOpenFile: (file: string, line?: number, column?: number) => void
+  onCopyPath: (file: string) => void
   onClosePanel: () => void
   onSendAll?: () => void
   activeTerminalId?: string
@@ -61,39 +62,23 @@ function sendAllKeybind(t: (key: string) => string): string {
     : t("agentManager.review.sendAllShortcut.other")
 }
 
-function fenceFor(text: string): string {
-  const runs = text.match(/`+/g)
-  const longest = runs ? Math.max(...runs.map((run) => run.length)) : 0
-  return "`".repeat(Math.max(3, longest + 1))
+function copyText(text: string): void {
+  navigator.clipboard?.writeText(text).catch(() => {})
 }
 
-function asMarkdownContent(file: string, text: string): string {
-  if (isMarkdownPath(file)) return text
-  const name = getFilename(file)
-  const dot = name.lastIndexOf(".")
-  const ext = dot > 0 ? name.slice(dot + 1) : ""
-  const fence = fenceFor(text)
-  return `${fence}${ext}\n${text}\n${fence}\n`
-}
-
-type CopyKind = "text" | "markdown"
-
-function copyDocument(
-  file: string,
-  content: string,
-  kind: CopyKind,
+function copyDocumentContent(
+  text: string,
   timer: { id?: ReturnType<typeof setTimeout> },
-  setCopied: (value: CopyKind | null | ((current: CopyKind | null) => CopyKind | null)) => void,
+  setCopied: (value: boolean) => void,
 ): void {
   clearTimeout(timer.id)
-  const text = kind === "markdown" ? asMarkdownContent(file, content) : content
   navigator.clipboard
     ?.writeText(text)
     .then(() => {
-      setCopied(kind)
-      timer.id = setTimeout(() => setCopied((current) => (current === kind ? null : current)), 1500)
+      setCopied(true)
+      timer.id = setTimeout(() => setCopied(false), 1500)
     })
-    .catch(() => setCopied(null))
+    .catch(() => setCopied(false))
 }
 
 function handleSendAllKeyDown(event: KeyboardEvent, comments: ReviewComment[], send: () => void): void {
@@ -128,14 +113,15 @@ export const DocumentPanel: Component<DocumentPanelProps> = (props) => {
     return tab ? props.getData(tab.file) : undefined
   }
   const isImage = () => data()?.kind === "image"
+  const canCopy = () => !isImage() && !data()?.loading && !data()?.error
   const file = () => selected()?.file ?? ""
   const content = () => data()?.content ?? ""
   const diff = () => virtualDiff(file(), content())
 
-  const [copied, setCopied] = createSignal<CopyKind | null>(null)
+  const [copied, setCopied] = createSignal(false)
   const copyTimer: { id?: ReturnType<typeof setTimeout> } = {}
   onCleanup(() => clearTimeout(copyTimer.id))
-  const copy = (kind: CopyKind) => copyDocument(file(), content(), kind, copyTimer, setCopied)
+  const copy = () => copyDocumentContent(content(), copyTimer, setCopied)
 
   const updateComments = (next: ReviewComment[]) => props.onCommentsChange(next)
   const comments = () => props.comments.filter((item) => item.file === file())
@@ -246,6 +232,8 @@ export const DocumentPanel: Component<DocumentPanelProps> = (props) => {
         editMeta = null
         composer.draft = null
         composer.edit = null
+        clearTimeout(copyTimer.id)
+        setCopied(false)
       },
       { defer: true },
     ),
@@ -296,14 +284,14 @@ export const DocumentPanel: Component<DocumentPanelProps> = (props) => {
                 onClick={() => props.onOpenFile(file(), selected()?.line, selected()?.column)}
               />
             </Tooltip>
-            <Show when={!isImage()}>
+            <Show when={canCopy()}>
               <Tooltip value={t("agentManager.documents.copy")} placement="top">
                 <IconButton
-                  icon={copied() === "text" ? "check" : "copy"}
+                  icon={copied() ? "check" : "copy"}
                   size="small"
                   variant="ghost"
                   label={t("agentManager.documents.copy")}
-                  onClick={() => copy("text")}
+                  onClick={copy}
                 />
               </Tooltip>
             </Show>
@@ -352,6 +340,26 @@ export const DocumentPanel: Component<DocumentPanelProps> = (props) => {
               }}
               onClose={() => close(id, api.focus)}
               onCloseOthers={() => props.onCloseOthers(id)}
+              menuLeading={
+                <>
+                  <ContextMenu.Item onSelect={() => props.onCopyPath(tab.file)}>
+                    <Icon name="copy" size="small" />
+                    <ContextMenu.ItemLabel>{t("agentManager.documents.copyPath")}</ContextMenu.ItemLabel>
+                  </ContextMenu.Item>
+                  <ContextMenu.Item onSelect={() => copyText(tab.file)}>
+                    <Icon name="copy" size="small" />
+                    <ContextMenu.ItemLabel>{t("agentManager.documents.copyRelativePath")}</ContextMenu.ItemLabel>
+                  </ContextMenu.Item>
+                  <ContextMenu.Item onSelect={() => copyText(getFilename(tab.file))}>
+                    <Icon name="copy" size="small" />
+                    <ContextMenu.ItemLabel>{t("agentManager.documents.copyFileName")}</ContextMenu.ItemLabel>
+                  </ContextMenu.Item>
+                  <ContextMenu.Item onSelect={() => props.onOpenFile(tab.file, tab.line, tab.column)}>
+                    <Icon name="go-to-file" size="small" />
+                    <ContextMenu.ItemLabel>{t("agentManager.diff.openFile")}</ContextMenu.ItemLabel>
+                  </ContextMenu.Item>
+                </>
+              }
             />
           )
         }}
@@ -367,43 +375,25 @@ export const DocumentPanel: Component<DocumentPanelProps> = (props) => {
           </div>
         </Show>
         <Show when={!data()?.loading && !data()?.error && !isImage()}>
-          <ContextMenu>
-            <ContextMenu.Trigger as="div" style={{ display: "contents" }}>
-              <div class="am-document-content">
-                <Show
-                  when={!source() && isMarkdownPath(file())}
-                  fallback={
-                    <Dynamic component={code} file={{ name: file(), contents: content() }} class="am-document-code" />
-                  }
-                >
-                  <MarkdownPane
-                    text={content()}
-                    side="additions"
-                    cache={`${file()}:document`}
-                    annotations={annotations()}
-                    renderAnnotation={renderAnnotation}
-                    enableGutterUtility={true}
-                    onGutterUtilityClick={gutter}
-                    onLineNumberClick={(event) => props.onOpenFile(file(), event.lineNumber)}
-                  />
-                </Show>
-              </div>
-            </ContextMenu.Trigger>
-            <ContextMenu.Portal>
-              <ContextMenu.Content class="am-ctx-menu">
-                <ContextMenu.Item onSelect={() => copy("text")}>
-                  <Icon name="copy" size="small" />
-                  <ContextMenu.ItemLabel>{t("agentManager.documents.copy")}</ContextMenu.ItemLabel>
-                </ContextMenu.Item>
-                <Show when={!isMarkdownPath(file())}>
-                  <ContextMenu.Item onSelect={() => copy("markdown")}>
-                    <Icon name="copy" size="small" />
-                    <ContextMenu.ItemLabel>{t("agentManager.documents.copyAsMarkdown")}</ContextMenu.ItemLabel>
-                  </ContextMenu.Item>
-                </Show>
-              </ContextMenu.Content>
-            </ContextMenu.Portal>
-          </ContextMenu>
+          <div class="am-document-content">
+            <Show
+              when={!source() && isMarkdownPath(file())}
+              fallback={
+                <Dynamic component={code} file={{ name: file(), contents: content() }} class="am-document-code" />
+              }
+            >
+              <MarkdownPane
+                text={content()}
+                side="additions"
+                cache={`${file()}:document`}
+                annotations={annotations()}
+                renderAnnotation={renderAnnotation}
+                enableGutterUtility={true}
+                onGutterUtilityClick={gutter}
+                onLineNumberClick={(event) => props.onOpenFile(file(), event.lineNumber)}
+              />
+            </Show>
+          </div>
         </Show>
       </Show>
       <Show when={props.comments.length > 0}>

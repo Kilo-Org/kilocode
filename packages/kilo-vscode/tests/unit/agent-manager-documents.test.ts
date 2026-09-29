@@ -2,6 +2,7 @@ import { describe, expect, it } from "bun:test"
 import { createRoot, createSignal } from "solid-js"
 import {
   createDocumentComments,
+  createDocumentInspector,
   createDocuments,
   handleDocumentOpen,
   isMarkdownPath,
@@ -115,5 +116,67 @@ describe("Agent Manager document state", () => {
       () => false,
     )
     expect(missing.defaultPrevented).toBe(false)
+  })
+
+  it("posts copyFilePath and openFile requests scoped to the active session", () => {
+    createRoot((dispose) => {
+      const sent: unknown[] = []
+      const vscode = {
+        postMessage: (message: unknown) => sent.push(message),
+        onMessage: () => () => {},
+      } as unknown as Parameters<typeof createDocumentInspector>[0]
+      const [context] = createSignal<string | null>("ses-a")
+      const inspector = createDocumentInspector(
+        vscode,
+        context,
+        () => undefined,
+        () => true,
+        () => {},
+        () => {},
+      )
+
+      expect(inspector.copyPath("src/index.ts")).toBe(true)
+      expect(sent).toContainEqual({
+        type: "agentManager.copyFilePath",
+        sessionId: "ses-a",
+        filePath: "src/index.ts",
+      })
+
+      expect(inspector.openFile("src/index.ts", 4, 2)).toBe(true)
+      expect(sent).toContainEqual({
+        type: "agentManager.openFile",
+        sessionId: "ses-a",
+        filePath: "src/index.ts",
+        line: 4,
+        column: 2,
+      })
+
+      dispose()
+    })
+  })
+
+  it("does not post copyFilePath or openFile requests without an active session", () => {
+    createRoot((dispose) => {
+      const sent: unknown[] = []
+      const vscode = {
+        postMessage: (message: unknown) => sent.push(message),
+        onMessage: () => () => {},
+      } as unknown as Parameters<typeof createDocumentInspector>[0]
+      const [context] = createSignal<string | null>(null)
+      const inspector = createDocumentInspector(
+        vscode,
+        context,
+        () => undefined,
+        () => true,
+        () => {},
+        () => {},
+      )
+
+      expect(inspector.copyPath("src/index.ts")).toBe(false)
+      expect(inspector.openFile("src/index.ts")).toBe(false)
+      expect(sent).toEqual([])
+
+      dispose()
+    })
   })
 })

@@ -2,6 +2,7 @@ import * as vscode from "vscode"
 import type { ReviewCommentEntry } from "./shared/review-comments"
 import { readDocument } from "./documents/document-reader"
 import { openRelativeFile } from "./review-utils"
+import { resolveInside } from "./diff/shared/path"
 import { buildWebviewHtml } from "./utils"
 import type { KiloConnectionService } from "./services/cli-backend"
 
@@ -105,6 +106,12 @@ export class DocumentViewerProvider implements vscode.Disposable {
         typeof message.line === "number" ? message.line : undefined,
         typeof message.column === "number" ? message.column : undefined,
       )
+      return
+    }
+    if (message.type === "document.copyPath" && typeof message.file === "string") {
+      const context = this.contexts.get(this.currentKey)
+      const resolved = context?.directory ? resolveInside(context.directory, message.file) : undefined
+      if (resolved) void vscode.env.clipboard.writeText(resolved)
       return
     }
     if (message.type === "document.close") this.panel?.dispose()
