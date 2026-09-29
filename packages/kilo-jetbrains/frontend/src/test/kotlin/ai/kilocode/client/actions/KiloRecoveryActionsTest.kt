@@ -14,6 +14,7 @@ import ai.kilocode.rpc.dto.KiloWorkspaceStateDto
 import ai.kilocode.rpc.dto.KiloWorkspaceStatusDto
 import ai.kilocode.rpc.dto.SetupScriptTargetDto
 import ai.kilocode.rpc.dto.WorktreeDto
+import com.intellij.ide.util.PropertiesComponent
 import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.CommonDataKeys
 import com.intellij.openapi.actionSystem.AnAction
@@ -23,7 +24,9 @@ import com.intellij.openapi.actionSystem.DefaultActionGroup
 import com.intellij.openapi.actionSystem.Presentation
 import com.intellij.openapi.actionSystem.ex.ActionUtil
 import com.intellij.openapi.application.ApplicationManager
-import com.intellij.ide.util.PropertiesComponent
+import com.intellij.openapi.ui.Messages
+import com.intellij.openapi.ui.TestDialog
+import com.intellij.openapi.ui.TestDialogManager
 import com.intellij.testFramework.replaceService
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import kotlinx.coroutines.CompletableDeferred
@@ -61,6 +64,7 @@ class KiloRecoveryActionsTest : BasePlatformTestCase() {
 
     override fun tearDown() {
         try {
+            TestDialogManager.setTestDialog(TestDialog.DEFAULT)
             scope.cancel()
         } finally {
             super.tearDown()
@@ -83,6 +87,52 @@ class KiloRecoveryActionsTest : BasePlatformTestCase() {
         update(action, event)
 
         assertTrue("Reinstall should force-enable recovery action", event.presentation.isEnabled)
+    }
+
+    fun `test restart warns before cancelling active sessions`() {
+        val action = RestartKiloAction()
+        val notices = mutableListOf<String>()
+        TestDialogManager.setTestDialog { message ->
+            notices.add(message)
+            Messages.NO
+        }
+
+        action.actionPerformed(event(action))
+
+        assertEquals(0, appRpc.restarts)
+        assertTrue(notices.single().contains("cancel all active sessions"))
+
+        TestDialogManager.setTestDialog(TestDialog.YES)
+        action.actionPerformed(event(action))
+        runBlocking {
+            withTimeout(5_000) {
+                while (appRpc.restarts == 0) delay(5)
+            }
+        }
+        assertEquals(1, appRpc.restarts)
+    }
+
+    fun `test reinstall warns before cancelling active sessions`() {
+        val action = ReinstallKiloAction()
+        val notices = mutableListOf<String>()
+        TestDialogManager.setTestDialog { message ->
+            notices.add(message)
+            Messages.NO
+        }
+
+        action.actionPerformed(event(action))
+
+        assertEquals(0, appRpc.reinstalls)
+        assertTrue(notices.single().contains("cancel all active sessions"))
+
+        TestDialogManager.setTestDialog(TestDialog.YES)
+        action.actionPerformed(event(action))
+        runBlocking {
+            withTimeout(5_000) {
+                while (appRpc.reinstalls == 0) delay(5)
+            }
+        }
+        assertEquals(1, appRpc.reinstalls)
     }
 
     fun `test reload core settings action requires and uses the current workspace`() {
