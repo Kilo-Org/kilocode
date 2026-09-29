@@ -68,6 +68,19 @@ Send a message while Kilo is working to queue it for processing in order. To rev
 
 After stopping a response, leave the input empty and click **Continue** to resume the interrupted turn with its original model and agent, without adding another user message. Continue starts a new model request; it does not undo tool actions already performed and is not available for completed responses.
 
+## Session tabs
+
+The sidebar keeps open sessions as tabs above the chat. Right-click a tab to **Pin** or **Unpin** it, **Close** it, **Close Others**, or **Close to the Right**. Middle-click closes a tab.
+
+- Pinned tabs move to the front of the tab bar, show a pin marker, and have no close button. They keep their position across reloads, and both **Close Others** and **Close to the Right** leave them open.
+- **Close to the Right** closes only the tabs after the selected one, and is hidden when nothing closable sits to its right.
+- Drag tabs to reorder them. An unpinned tab cannot be dragged into the pinned group, and pending draft tabs cannot be pinned because their IDs change once the session exists.
+
+You can also close tasks from the Command Palette with **Kilo Code: Close Task** and **Kilo Code: Close All Tasks**. Both act on the surface you last used — the sidebar, a Kilo editor tab (**Open in Tab**), or [Agent Manager](/docs/automate/agent-manager) — and work even when a single task is open and the sidebar has no tab strip.
+
+- **Close Task** closes the task in front of you. In Agent Manager it closes the focused session tab, but never a terminal, review tab, subagent tab, or worktree. Use `Cmd+Shift+W` / `Ctrl+Shift+W` to close a worktree instead (see the [Agent Manager shortcuts](/docs/automate/agent-manager#keyboard-shortcuts-agent-manager-panel)).
+- **Close All Tasks** closes every visible task tab on that surface and returns to the empty start state, leaving terminals, review tabs, subagent tabs, and worktrees open.
+
 ## Shared Settings
 
 Settings apply across extension surfaces, including the sidebar and Agent Manager. The standalone CLI uses the same `~/.config/kilo/kilo.jsonc` (global) and `./kilo.jsonc` (project) files when used directly.

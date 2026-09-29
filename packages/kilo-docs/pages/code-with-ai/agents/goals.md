@@ -44,9 +44,9 @@ An objective can be up to 10,000 characters.
 |---|---|
 | `/goal <objective>` | Start a goal, or replace the running objective |
 | `/goal` | Show the current goal and help text |
-| `/goal pause` | Pause active work and keep the objective |
+| `/goal pause` | Pause active work and keep the objective. Cancels the goal's armed wakeups and cron tasks |
 | `/goal resume` | Continue a paused goal, or restart a complete goal |
-| `/goal clear` | Remove the saved objective and report |
+| `/goal clear` | Remove the saved objective and report. Cancels the goal's armed wakeups and cron tasks |
 
 The CLI and VS Code also show a goal control next to the composer. Select it to pause, resume, or clear the goal. When a goal is complete, the control label is **Restart goal** instead of **Resume**.
 
@@ -61,13 +61,26 @@ Unlike `/goal`, the agent's call does not cancel the current response. The goal 
 | Status | Meaning |
 |---|---|
 | Active | The agent is working toward the objective |
+| Waiting | The goal is suspended on a scheduled wakeup, cron task, or background process. It resumes itself when the wait fires |
 | Paused | The objective is saved but not running. Resume to continue |
 | Blocked | A request was rejected or execution was blocked. Resolve the blocker, then resume |
 | Complete | The working model reported the goal met |
 
 **Complete (model-reported)** means the model reported success. Kilo does not independently verify the result. Review the work before you rely on it.
 
-The objective and the last report stay on the session until you clear the goal. They survive session restarts and forks. Active goals become paused after a backend restart; complete goals stay complete.
+The objective and the last report stay on the session until you clear the goal. They survive session restarts and forks. Active goals become paused after a backend restart; complete goals stay complete. A waiting goal also survives a restart: its armed timer resumes it, or it settles with a reason you can read.
+
+## Waiting on scheduled work
+
+A goal can wait on time instead of ending. When the objective is to wait for a deploy, build, CI job, or other time-based event, the agent schedules the wait with one of the scheduling tools instead of exploring or polling:
+
+- `schedule_wakeup` — a one-shot wakeup at an absolute `when` time or after a relative `delay`. The goal resumes when the wakeup fires.
+- `cron_create` — a recurring or one-shot scheduled task. The goal resumes on each fire.
+- `background_process` — a `monitor` call blocks the goal turn while the process runs, and a non-terminal `start` suspends the goal until the process exits.
+
+While a wait is armed the goal reads as **Waiting**, and no further goal turn runs until the wait fires. A time-based wait is normal goal progress, not a blocker: the agent should report the goal blocked only when no scheduled wait can carry it forward.
+
+A wait longer than the seven-day horizon is clamped to it, and the tool result says the requested time was pulled back. Completing, blocking, pausing, or clearing a goal cancels its armed wakeups and cron tasks and says so, leaving no timers behind. Cancelling or deleting the wakeup or task a goal waits for resumes the goal with a goal turn, or settles it with a reason you can read; it leaves the session's other reminders alone.
 
 ## Automatic pauses
 
@@ -109,6 +122,7 @@ Goal-composer mode accepts multiline objectives and file or image attachments. I
 
 ## Related
 
+- [Scheduled wakeups and tasks](/docs/automate/tools#scheduled-wakeups) for the tools a goal can wait on
 - [Using Agents](/docs/code-with-ai/agents/using-agents) for agent selection and tool access
 - [Session History and Search](/docs/code-with-ai/agents/session-history) for resuming and forking sessions
 - [CLI](/docs/code-with-ai/platforms/cli) for the full slash-command list

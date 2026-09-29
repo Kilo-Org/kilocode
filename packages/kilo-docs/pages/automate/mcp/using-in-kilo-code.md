@@ -115,6 +115,17 @@ You can disable a server by setting `enabled` to `false` without removing it fro
 {% /tab %}
 {% /tabs %}
 
+## Authentication
+
+Remote MCP servers can require OAuth 2.0. When a server advertises OAuth, Kilo starts the authorization flow when you connect, opens the authorization page in your browser, and stores the resulting credentials for later sessions. Set `"oauth": false` on the server to turn this off.
+
+Kilo identifies itself to the authorization server in one of two ways:
+
+- **Dynamic Client Registration (DCR):** Kilo registers a client with the authorization server on the fly.
+- **Client ID Metadata Documents (CIMD):** Kilo publishes a hosted client metadata document and uses it as its client identity instead of registering a client per server.
+
+Kilo uses CIMD when the server advertises support for it and falls back to DCR otherwise, so MCP servers that support CIMD but not dynamic client registration can complete authorization automatically. If you configure your own `client_id` and `client_secret`, Kilo keeps using those credentials instead.
+
 ## Understanding Transport Types
 
 MCP supports two main transport types:

@@ -43,6 +43,8 @@ History and CLI list searches do **not** search message content. To find a strin
 
 Local history actions also let you rename, export, or delete a session. Cloud history can be filtered to **Only this repository**.
 
+The list loads the newest sessions first and shows a **Load more** button below them; select it to fetch older sessions on demand, so history is no longer capped at the 100 most recent. Paging covers the workspace root and every registered worktree directory.
+
 In Agent Manager, select a worktree before opening **History**. The **Worktree** source is selected by default and lists only sessions assigned to that worktree. When you open a worktree session, Agent Manager returns to its owning worktree. Select **Local** or **Cloud** to view another source.
 
 The History search is a fuzzy title search over the sessions currently loaded into the view. It does not search prompts or agent replies.
@@ -133,6 +135,12 @@ kilo --session ses_123
 kilo run --session ses_123 "Summarize where we stopped"
 kilo export ses_123 > session.json
 ```
+
+### Read session status
+
+The table output of `kilo session list` includes a Status column. A session asleep on a future [wakeup or cron task](/docs/automate/tools#scheduled-wakeups) shows `scheduled` with the wake time in local time instead of `idle`. Starting a turn or cancelling the wakeup clears it immediately.
+
+With `--format json`, the wake time is the ISO-8601 `scheduledAt` field, and it appears only on the `scheduled` status. Other statuses (`idle`, `busy`, and `retry`) are unchanged.
 
 ### Find the local database
 

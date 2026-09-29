@@ -345,10 +345,21 @@ Imported work stays associated with its branch or worktree and can be continued 
 - Hover a session in history for actions to open it in a new worktree or move it to the project's Local tabs.
 - When a worktree is selected, open session history to use the **Worktree** source, which is selected by default and lists only sessions assigned to that worktree. Opening a worktree session returns to its owning worktree.
 - Continue a cloud session locally from Agent Manager using the same extension sign-in and provider settings
+- Close tasks from the Command Palette with **Kilo Code: Close Task** (the task in front of you) or **Kilo Code: Close All Tasks** (every open task). Both act on the surface you last used and close only task tabs, leaving terminals, review tabs, subagent tabs, and worktrees open. See [Session tabs](/docs/code-with-ai/platforms/vscode#session-tabs).
 
 File mentions, clickable file links, review-comment file links, file-link validation, and native VS Code opening resolve against the referenced session's directory or worktree. If a session ID is present in multiple projects, Kilo rejects the unqualified reference rather than choosing an arbitrary project.
 
 When a session delegates work to a subagent, open the child transcript from its task card or background-agent row. Agent Manager displays it in the read-only **Subagents** inspector. The inspector supports multiple child-session tabs and keeps them scoped to the selected project and parent session. For the difference between Agent Manager inspector tabs and the separate subagent editor tabs used by the sidebar, see [Inspecting delegated sessions in VS Code](/docs/customize/custom-subagents#inspecting-delegated-sessions-in-vs-code).
+
+### Pinning session tabs
+
+Right-click a session tab and select **Pin** to move it to the front of the tab bar. Pinned tabs stay in pin order, keep that position across reloads, and survive **Close Others** and **Close to the Right**. Middle-click still closes a tab.
+
+A pinned tab shows a pin beside its title, next to the activity icon, and has no close button, so a click cannot land on a control that was under the cursor. Use the tab's context menu to **Unpin** or **Close** it. Dragging reorders tabs within the pinned group, and an unpinned tab cannot be dragged into it. **Unpin** returns the tab to its previous position in the normal order.
+
+The tab context menu also offers **Close**, **Close Others**, and **Close to the Right**. **Close to the Right** closes the session, terminal, and review tabs after the target in left-to-right order and is hidden when nothing closable sits to its right. All three leave pinned tabs open, and the visible selection changes only when it is one of the closed tabs.
+
+Pinning works the same way on the sidebar session tab strip, where pinned tabs also keep their position across webview reloads and survive **Close Others** and **Close to the Right**. Pending draft tabs cannot be pinned, because their ids change once the session exists. Pinned ids are stored per project or worktree in `.kilo/agent-manager.json` alongside the saved tab order; sidebar pins are saved with the webview state.
 
 ### Renaming Worktrees
 
@@ -489,6 +500,14 @@ The worktree creation base and the diff comparison base are separate. The Branch
 
 Files marked `linguist-generated` in the repository's `.gitattributes` start collapsed. Expand them to review their changes; files explicitly marked as not generated stay expanded.
 
+### Keyboard review
+
+The diff shortcut (`Cmd+D` / `Ctrl+D`) gives the diff viewport reading focus. Pressing it opens the Changes panel and focuses the scroll area; if the panel is already open, it moves focus to the viewport first, and closes the panel only when the viewport already owns reading focus. The full-screen review behaves the same way.
+
+Clicking diff content also claims reading focus, so the native keys scroll the review: arrow keys, `Page Up`/`Page Down`, `Space`, `Home`, and `End`. While the viewport owns reading focus and no text is selected, `Shift+ArrowDown` and `Shift+ArrowUp` page the viewport by one screen with a small overlap. A focus frame is drawn around the diff while it owns reading focus. Interactive controls inside it, such as comment editors, buttons, and file-tree items, keep their own keyboard behavior.
+
+Closing the diff restores the previous prompt or opener with the draft and caret intact. Paste from a non-editable surface is routed to the prompt, while editors and terminals keep native paste and selection.
+
 ### Sending review comments
 
 Add comments in the diff panel or in the rendered view of a Markdown document. Click **Send all to chat** to send the collected comments to chat. If an Agent Manager terminal is active, the comments are sent to that terminal instead. Press `Cmd+Enter` (macOS) or `Ctrl+Enter` (Windows/Linux) to use the same action from the review panel.
@@ -533,13 +552,13 @@ The project and worktree context owns document tabs, loaded content, and comment
 
 ## Browser previews
 
-Enable **Browser Automation** in **Settings > Experimental** to show the Browser panel. It is off by default. Open the panel with the **Browser** button and enter your local application's URL. Each session has its own browser, with developer tools and console diagnostics beside the preview.
+Enable **Browser Automation** in **Settings > Experimental** to show the Browser panel. It is off by default. Open the panel with the **Browser** button and enter a local application URL or a public HTTPS page. Each session has its own browser, with developer tools and console diagnostics beside the preview.
 
 Use **Select element** to attach an element reference to your next message. It includes enough page context for Kilo to identify the element, plus a source file and line when the page provides a verifiable location. Add your instruction before sending it.
 
-The agent can open the application with `browser_open`. Its automation browser accepts only HTTP URLs on `localhost` or `127.0.0.1` and blocks other origins, including external assets and APIs on separate ports. Serve the resources the agent needs from the same loopback origin. These restrictions apply to the automation browser, not the independent visible preview iframe.
+The agent can open the application with `browser_open`. The panel streams the same Chromium page the agent controls, so what you see matches what the agent inspects instead of a separate preview iframe. The automation browser accepts HTTP URLs on `localhost` or `127.0.0.1` and public HTTPS URLs. Public HTTPS and WSS resources, such as public CDN modules, can load across origins. When a page navigates to a new document origin, Kilo asks you to approve it first. Requests to private or loopback destinations over the public internet are blocked.
 
-Google Chrome must be installed for the default runtime. To use an already-installed compatible Playwright Chromium browser instead, turn off **Use System Chrome** under **Settings > Web Tools**.
+Google Chrome must be installed for the default runtime. If Chrome is missing, the panel explains what to install and offers actions to download Chrome, retry, or open browser settings. To use an already-installed compatible Playwright Chromium browser instead, turn off **Use System Chrome** under **Settings > Experimental**.
 
 ## Terminals
 
@@ -703,7 +722,7 @@ Use the coffee-cup button in the project list header, or **Kilo Code: Toggle Kee
 
 ## Session State and Persistence
 
-Agent Manager state is persisted in `.kilo/agent-manager.json`. It stores worktrees, sections, session tabs, ordering, collapsed state, diff preferences, and cached PR metadata. Git branches and worktree directories remain on disk separately.
+Agent Manager state is persisted in `.kilo/agent-manager.json`. It stores worktrees, sections, session tabs, ordering, pinned tabs, collapsed state, diff preferences, and cached PR metadata. Git branches and worktree directories remain on disk separately.
 
 Closing a managed worktree removes it from Agent Manager, deletes its `.kilo/worktrees/` directory, and deletes the local branch. Closing an imported external worktree removes the Agent Manager entry but leaves the external directory and branch untouched.
 

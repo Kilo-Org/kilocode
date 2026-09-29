@@ -9,7 +9,7 @@ description: Learn how the semantic_search tool uses AI embeddings and vector se
 The `semantic_search` tool is part of the [Codebase Indexing](/docs/customize/context/codebase-indexing) feature. It requires additional setup including an embedding provider and vector database.
 {% /callout %}
 
-The `semantic_search` tool performs semantic searches across your entire codebase using AI embeddings. Unlike traditional text-based search, it understands the meaning of your queries and finds relevant code even when exact keywords don't match.
+The `semantic_search` tool performs semantic searches across your indexed codebase using AI embeddings. Unlike traditional text-based search, it understands the meaning of your queries and finds relevant code even when exact keywords don't match.
 
 ---
 
@@ -41,7 +41,7 @@ This tool searches through your indexed codebase using semantic similarity rathe
 ## Key Features
 
 - **Semantic Understanding**: Finds code by meaning rather than exact keyword matches
-- **Cross-Project Search**: Searches across your entire indexed codebase, not just open files
+- **Whole-Root Search**: Searches the entire indexed root, not just open files
 - **Contextual Results**: Returns code snippets with file paths and line numbers for easy navigation
 - **Similarity Scoring**: Results ranked by relevance with similarity scores (0-1 scale)
 - **Scope Filtering**: Optional path parameter to limit searches to specific directories
@@ -185,6 +185,20 @@ Use the optional `path` parameter to focus searches on specific parts of your co
 <path>src/components/auth</path>
 </semantic_search>
 ```
+
+---
+
+## Search Scope and Empty Results
+
+The tool searches one indexed root — the folder Kilo indexed for the project. It searches the whole root by default, and a `path` parameter narrows the search to a directory inside it. Results name the scope that was actually searched, such as `Found 3 results for "auth middleware" in /path/to/project/src/api.`
+
+An empty result does not always mean the code is missing. When nothing matches, the tool reports the index state so you can tell a genuine miss from an index that is not ready:
+
+- **Indexing disabled or failed** — nothing was searched.
+- **Index still building** — results are incomplete.
+- **Index up to date** — no semantically similar code exists in the searched scope.
+
+Only one root is indexed. Files in other workspace folders are not searchable with this tool; reach them with `Read`, `Grep`, or `Glob` using an absolute path.
 
 ---
 

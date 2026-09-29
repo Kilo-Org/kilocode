@@ -354,6 +354,8 @@ For Azure OpenAI, use the native `azure` provider and set `id` to your Azure dep
 
 Here `azure/gpt-5.5` is the model you select in Kilo Code, while `my-gpt-5-5-deployment` is the Azure deployment name sent to Azure. If you prefer to configure the full Azure endpoint instead of a resource name, replace `resourceName` with `baseURL`, for example `"baseURL": "https://my-resource.openai.azure.com/openai"`. If both are configured, Kilo Code uses `baseURL` and ignores `resourceName` to avoid sending conflicting Azure SDK options.
 
+If your organization uses Microsoft Entra ID, connect the `azure` provider with **Microsoft Entra ID (Azure CLI)** instead of an API key. Run `az login` first, then enter your Azure resource name or the full endpoint URL when prompted. Kilo requests an access token from the Azure CLI for each call, and the sign-in method appears only while the `az` command is installed.
+
 ## Model Loading Priority
 
 When Kilo starts, it resolves the active model in this order:

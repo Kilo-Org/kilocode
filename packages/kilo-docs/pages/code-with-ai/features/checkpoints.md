@@ -51,6 +51,11 @@ Checkpoints are controlled by the `snapshot` boolean in your `kilo.jsonc` config
 When enabled, the system automatically captures snapshots at each step of a task.
 
 {% /tab %}
+{% tab label="JetBrains" %}
+
+Snapshots are enabled by default. Open **Settings → Tools → Kilo Code → Checkpoints** to toggle **Enable snapshots** for the current project. An unset value stays enabled, matching the CLI and VS Code, and the `snapshot` boolean in `kilo.jsonc` remains the source of truth. The same page manages [automatic session cleanup](#automatic-session-cleanup).
+
+{% /tab %}
 {% /tabs %}
 
 ## Automatic Session Cleanup
@@ -67,9 +72,11 @@ Cleanup is a machine-wide policy, owned by the Kilo backend. When enabled, it ap
 4. Set **Keep sessions for (days)**, the time session history is kept before cleanup deletes it (default 30 days)
 5. Click **Save** if you made changes
 
+In the JetBrains plugin, the same controls live under **Settings → Tools → Kilo Code → Checkpoints**.
+
 The policy lives in `kilo.json` under the `retention` key, so it applies no matter which client you use next. Archived sessions age out on the same clock as everything else.
 
-Once enabled, the VS Code extension triggers cleanup about once a day while it is running. You can also run it immediately with the **Run Cleanup Now** button, which asks for confirmation first because deletion is permanent. A spinner and live status show the scanning or deleting phase and the number of sessions processed out of the total. During deletion, the status also shows deleted and failed counts. Reopening Settings shows the current progress. After each run, the **Last cleanup** line shows how many sessions were deleted, how many were skipped, and whether anything failed.
+Once enabled, the VS Code extension and the JetBrains plugin trigger cleanup about once a day while they are running. You can also run it immediately with the **Run Cleanup Now** button, which asks for confirmation first because deletion is permanent. A spinner and live status show the scanning or deleting phase and the number of sessions processed out of the total. During deletion, the status also shows deleted and failed counts. Reopening Settings shows the current progress. After each run, the **Last cleanup** line shows how many sessions were deleted, how many were skipped, and whether anything failed.
 
 A long pass can be halted with the **Stop cleanup** button while it runs. Stopping keeps what the pass already deleted and skips the rest; the **Last cleanup** line marks an interrupted run. After a pass frees a large share of the session database, Kilo also reclaims the disk space, so the storage file shrinks instead of keeping its old size.
 
@@ -155,6 +162,7 @@ If a revert could not restore your workspace files, the banner warns you that on
 
 - **Snapshots disabled** — the banner explains that file changes were not restored because snapshots are disabled, and offers an **Enable snapshots** button that opens **Settings → Checkpoints**.
 - **No checkpoint available** — the banner explains that no file checkpoint was available, so workspace changes remain on disk (for example, when reverting a range that predates checkpoints).
+- **Not a Git repository** — the banner explains that file checkpoints require a Git repository, so workspace changes remain on disk.
 
 ### Making a Revert Permanent
 

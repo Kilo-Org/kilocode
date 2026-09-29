@@ -105,13 +105,15 @@ Group worktrees into folders in the sidebar. Folders are private to you, not sha
 
 ## Reviewing changes
 
-Select **Changes** in the chat header to review the worktree's saved change summary, including file status and lines added and removed. The panel shows the comparison's base branch and when the summary was saved. Refresh the panel to load the latest saved summary. Large summaries can be partial, with some files or line counts omitted.
+Select **Changes** in the chat header to open the worktree's saved change summary, including file status and lines added and removed. The view shows the comparison's base branch and when the summary was saved, with the changed-file list on the left and the selected file's diff on the right. Selecting another file replaces the diff in place instead of opening a new tab. Refresh to load the latest saved summary; reloading reads the latest saved revision without starting the workspace. Large summaries can be partial, with some files or line counts omitted.
 
-Select a file to open its saved diff and, when available, full contents in a read-only tab. Reloading reads the latest saved revision without starting the workspace.
+While the change view is open, the current workspace tab is not shown as selected. Select that tab to close the view and return to it.
+
+Drag the divider between the list and the diff to resize the file list between 200 and 640 pixels. Kilo saves the width in your browser and restores it the next time you open the view. On narrow viewports the list takes the full width, the diff appears after you select a file, and the resize handle is hidden.
 
 Use the side-by-side toggle in the file viewer to switch between a unified diff and a split, side-by-side diff. The viewer starts in unified and remembers your choice for the files you open next. The markdown preview is unaffected.
 
-These are saved snapshots, not a live view of the checkout. Diffs or contents may be unavailable for binary, unsupported, or large files, or when there are too many changes to save in full.
+These are saved snapshots, not a live view of the checkout. Diffs may be unavailable for binary, unsupported, or large files, or when there are too many changes to save in full.
 
 ## Agent Environment Profiles
 

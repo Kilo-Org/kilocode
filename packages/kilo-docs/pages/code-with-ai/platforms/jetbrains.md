@@ -15,7 +15,9 @@ Open **Settings → Tools → Kilo Code** to configure the plugin. Shared agent 
 
 - **Auto-Approve** — set per-tool permission levels (Allow / Ask / Deny) and manage granular command and path exceptions without editing config by hand. Permission prompts offer one-time approvals alongside saved allow/reject rules. See [Auto-Approving Actions](/docs/getting-started/settings/auto-approving-actions) for the shared permission model.
 - **Context** — toggle auto-compaction, set the auto-compaction limit (the percentage of the model window that triggers compaction), enable pruning of old tool outputs, and manage file watcher ignore patterns. See [Context Condensing](/docs/customize/context/context-condensing) and [.kilocodeignore](/docs/customize/context/kilocodeignore) for what these settings control.
+- **Checkpoints** — turn file snapshots on or off for the current project and manage automatic session cleanup. Snapshots stay enabled unless the project opts out, matching the CLI and VS Code. Cleanup is a machine-wide policy that deletes expired session history across every project and Kilo client on this machine; set the retention period, run cleanup on demand, and inspect progress and the last run. See [Checkpoints](/docs/code-with-ai/features/checkpoints) for how snapshots and reverts work.
 - **Agent Behavior → Skills** — inspect loaded skills, add extra skill sources (local paths or remote URLs), edit or remove custom skills, and open skill files in the editor. See [Skills](/docs/customize/skills) for the skill format and discovery rules.
+- **Agent Behavior → Commands** — inspect the commands available to the agent and manage custom command files: open one in the editor, edit it, or delete it. Commands are Markdown prompts you run by typing `/name` in chat, and this is the renamed Workflows page; files in older `.kilo/workflows` folders are still picked up. Front matter in a command file can pin an agent, model, or variant for that command. Built-in commands can be opened but not edited or deleted. See [Workflows](/docs/customize/workflows) for the command format and discovery rules.
 - **Integrations** - enable or disable the GitHub integration for pull request badges and imports. It requires the GitHub CLI (`gh`) to be installed and authenticated.
 - **Advanced → Index agent worktrees** - include `.kilo/worktrees` in the containing project's index. Worktrees are excluded by default to avoid duplicate search results. Files opened from an excluded worktree in the main IDE window lack code resolution and inspections; open the worktree as its own project for full indexing.
 
@@ -49,6 +51,33 @@ Use **Show Output** to view a running process's console, **Stop** to stop it, or
 
 Use **Fork Session** in a worktree session's row menu, right-click menu, or prompt bar's more menu to try another approach without losing the original conversation. To branch from an earlier message, use that user message's hover toolbar. The copied conversation opens as a new session next to its source; forking does not create a separate worktree.
 
+## Background agents
+
+When Kilo starts a subagent in the background, a collapsible status strip appears below the session title. The strip stays visible while the transcript scrolls, so you can check background work without searching the conversation. Each row shows the subagent's generated avatar, title, and status.
+
+Each agent shows one of these states:
+
+| State | Meaning |
+|---|---|
+| **Running** | The agent is still working. |
+| **Done** | The agent completed successfully. |
+| **Cancelled** | The agent was stopped before it completed. |
+| **Error** | The agent stopped because it encountered an error. |
+
+A row also shows **Needs input** when the agent is waiting for a permission decision or an answer to a question. Click a row to open the child session's read-only transcript in its own editor tab.
+
+The expanded list shows up to five agents before it scrolls. Use these controls in the background-agent strip:
+
+- **Stop** cancels a running agent and its child session.
+- **Stop all (N)** cancels every running background agent for the current session without stopping the main session.
+- **Dismiss** hides one finished agent from the strip. It does not delete the transcript or the agent record.
+- **Clear finished** hides all agents that are no longer running.
+- **Open all** opens every visible agent's transcript.
+
+**Continue in background** appears on a running foreground task card when the connected CLI allows background subagents. It detaches that work so the parent session can continue while the subagent runs in the background. When the CLI has background subagents disabled, Kilo keeps the task in the foreground and shows a notification instead.
+
+Stopping the main session ends its current response but leaves background agents running. Use **Stop all (N)** or an individual agent's **Stop** to cancel background work.
+
 ## Diagrams in chat
 
 Ask Kilo for a Mermaid diagram to visualize a workflow, architecture, data relationship, or timeline. Chat renders `mermaid` and `mmd` code blocks inline, with source shown while streaming or if rendering fails.
@@ -60,6 +89,8 @@ Click a diagram to open a zoomable viewer, or use its toolbar to open an editor 
 - **Modified files per turn** — each assistant turn that changed files shows a **Modified** card with the affected files and their diff stats. Expand a file to see its diff inline, or open all of the turn's changes in the **Changed files** diff viewer.
 - **Branch comparison** - use the session header's **Compare with base branch** badge to open a diff editor with a file tree and per-file navigation. A separate uncommitted-changes badge compares local edits with the last commit.
 - **Stale diff refresh** — diff views detect when files change on disk and offer a **Refresh** action to reload them instead of showing outdated content.
+
+After you revert a message, the revert banner states whether workspace files were restored. When they were not, it explains why: snapshots are disabled, no checkpoint was available, or the folder is not a Git repository.
 
 Worktree rows separate committed changes against the base branch from uncommitted changes. Select the uncommitted-changes badge to compare with `HEAD`, or use **Compare to Base** in the session menu to review the branch's changes including uncommitted work.
 

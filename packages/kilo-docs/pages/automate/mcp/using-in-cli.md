@@ -185,6 +185,10 @@ Use `{env:VARIABLE_NAME}` syntax in config files to reference environment variab
 }
 ```
 
+{% callout type="warning" %}
+Project config files cannot use variable references in MCP `headers`. Kilo drops any server whose `headers` contain an `{env:...}` or `{file:...}` reference — including servers nested under `mcp.servers` — and logs a warning. Set the header value directly in the project config, or move the server to your global config, where variable references are allowed.
+{% /callout %}
+
 ## Finding MCP Servers
 
 Browse community-contributed MCP server configurations and agent skills in the [Kilo Marketplace](https://github.com/Kilo-Org/kilo-marketplace). The marketplace includes ready-to-use configs for popular tools like Figma, Sentry, and more.

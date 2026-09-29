@@ -56,14 +56,14 @@ Organization accounts can additionally configure **per-user daily spending limit
 
 ### Spend alerts
 
-A scope can notify its billing contacts when usage crosses a limit or runs far above its usual rate. Every account has a personal scope, and every organization has its own scope; each scope keeps its own alert settings.
+A scope can notify its recipients when usage crosses a limit or runs far above its usual rate. Every account has a personal scope, and every organization has its own scope; each scope keeps its own alert settings. The spend-alerts panel names the scope it edits — `Account: <name>` or `Organization: <name>` — and each rule states what it measures, so you can tell which scope and metric an alert watches.
 
 Two rule kinds are available, and you can switch each one on or off on its own:
 
 - **Spending limit** — fires when spend in a rolling 24-hour, 7-day, or 30-day window crosses the limit you set.
 - **Spend spike** — fires when one hour's spend runs a set multiple (1x to 50x) above the scope's usual rate, taken from the previous 14 days of hourly usage. The rule stays quiet until the scope has a day of history.
 
-Each rule can send by email to the scope's billing contacts and by push to a signed-in Kilo mobile app. Push needs the app installed and its **Spend alerts** notification category on; in the mobile app, spend alerts are their own category, so you can turn them off without silencing agent notifications.
+Each rule can send by email and by push to a signed-in Kilo mobile app. For a personal scope, recipients are your billing contacts. For an organization, they are the alert's creator, the organization's owners, and members holding the `billing_manager` role; an admin without that role does not receive organization alerts. Push needs the app installed and its **Spend alerts** notification category on; in the mobile app, spend alerts are their own category, so you can turn them off without silencing agent notifications.
 
 **Where to configure:** the spend view at [app.kilo.ai](https://app.kilo.ai), or the same view in the Kilo mobile app. For an organization, owners, admins, and billing managers can manage the alerts.
 

@@ -126,6 +126,14 @@ If your deployment names differ from the gateway model IDs, add `modelMappings` 
 }
 ```
 
+## ChatGPT subscription connections
+
+You can connect a ChatGPT Plus/Pro subscription as a BYOK connection, so eligible gateway requests are delegated to your ChatGPT account instead of an API key.
+
+- While a ChatGPT account is connected, its card and the **Usage** page link to **View and manage your ChatGPT usage**, which opens your ChatGPT usage settings.
+- If a request is rejected because the subscription hit its ChatGPT usage limit, the card shows a **ChatGPT usage limit reached** notice. **Manage usage** opens your ChatGPT usage settings, and **Buy Kilo credits instead** continues the work on [Kilo credits](/docs/getting-started/adding-credits) instead of waiting for the limit to reset. A short per-minute rate limit is not treated as a plan limit.
+- In an organization, an owner or admin can mark one ChatGPT connection as the organization's **shared-services** connection on the organization's BYOK page. Work started by platform services uses that shared connection first and falls back to the requesting member's own ChatGPT connection, so each member can still connect their own account.
+
 ## How Bring Your Own Key works
 
 - When you use the **Kilo Gateway** provider, Kilo checks if there's a BYOK key for the selected model's provider.
