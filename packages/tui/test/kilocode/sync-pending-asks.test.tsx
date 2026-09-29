@@ -63,13 +63,17 @@ function wrap(payload: GlobalEvent["payload"]): GlobalEvent {
   return { directory, project: "proj_test", payload }
 }
 
-function serveSessions(sessions: Session[], asks: () => { permission?: PermissionRequest[]; question?: QuestionRequest[] }) {
+function serveSessions(
+  sessions: Session[],
+  asks: () => { permission?: PermissionRequest[]; question?: QuestionRequest[] },
+) {
   return (url: URL) => {
     if (url.pathname === "/session") return json(sessions)
     for (const session of sessions) {
       if (url.pathname === `/session/${session.id}`) return json(session)
       if (url.pathname === `/session/${session.id}/message`) return json([])
-      if (url.pathname === `/session/${session.id}/todo` || url.pathname === `/session/${session.id}/diff`) return json([])
+      if (url.pathname === `/session/${session.id}/todo` || url.pathname === `/session/${session.id}/diff`)
+        return json([])
     }
     if (url.pathname === "/permission") return json(asks().permission ?? [])
     if (url.pathname === "/question") return json(asks().question ?? [])
@@ -80,7 +84,10 @@ function serveSessions(sessions: Session[], asks: () => { permission?: Permissio
 test("evicting a parent session keeps pending child permission and question asks", async () => {
   await using tmp = await tmpdir()
   await Bun.write(`${tmp.path}/kv.json`, "{}")
-  const { app, emit, sync } = await mount(serveSessions([parent, child], () => ({})), tmp.path)
+  const { app, emit, sync } = await mount(
+    serveSessions([parent, child], () => ({})),
+    tmp.path,
+  )
 
   try {
     emit(wrap({ id: "evt_ask", type: "permission.asked", properties: permission("per_1") }))
@@ -99,7 +106,11 @@ test("evicting a parent session keeps pending child permission and question asks
     expect(sync.data.question[childID]).toHaveLength(1)
 
     emit(
-      wrap({ id: "evt_replied", type: "permission.replied", properties: { sessionID: childID, requestID: "per_1", reply: "once" } }),
+      wrap({
+        id: "evt_replied",
+        type: "permission.replied",
+        properties: { sessionID: childID, requestID: "per_1", reply: "once" },
+      }),
     )
     emit(
       wrap({
@@ -119,7 +130,10 @@ test("session sync refetches pending permission and question asks and drops stal
   await using tmp = await tmpdir()
   await Bun.write(`${tmp.path}/kv.json`, "{}")
   let pending = { permission: [permission("per_1")], question: [question("que_1")] }
-  const { app, sync } = await mount(serveSessions([parent, child], () => pending), tmp.path)
+  const { app, sync } = await mount(
+    serveSessions([parent, child], () => pending),
+    tmp.path,
+  )
 
   try {
     // Eviction no longer wipes the asks; simulate losing them anyway (e.g. the
@@ -147,17 +161,14 @@ test("an ask arriving while the pending refetch is in flight survives it", async
   await Bun.write(`${tmp.path}/kv.json`, "{}")
   const held = Promise.withResolvers<PermissionRequest[]>()
   let seen = 0
-  const { app, emit, sync } = await mount(
-    (url) => {
-      if (url.pathname === "/permission") {
-        seen += 1
-        // bootstrap consumes the first list call; the session sync holds the second
-        return seen === 1 ? json([]) : held.promise.then((data) => json(data))
-      }
-      return serveSessions([parent, child], () => ({}))(url)
-    },
-    tmp.path,
-  )
+  const { app, emit, sync } = await mount((url) => {
+    if (url.pathname === "/permission") {
+      seen += 1
+      // bootstrap consumes the first list call; the session sync holds the second
+      return seen === 1 ? json([]) : held.promise.then((data) => json(data))
+    }
+    return serveSessions([parent, child], () => ({}))(url)
+  }, tmp.path)
 
   try {
     // The store starts empty (e.g. the ask raced the SSE stream).
@@ -181,17 +192,14 @@ test("an ask answered while the pending refetch is in flight is not resurrected"
   await Bun.write(`${tmp.path}/kv.json`, "{}")
   const held = Promise.withResolvers<PermissionRequest[]>()
   let seen = 0
-  const { app, emit, sync } = await mount(
-    (url) => {
-      if (url.pathname === "/permission") {
-        seen += 1
-        // bootstrap consumes the first list call; the session sync holds the second
-        return seen === 1 ? json([]) : held.promise.then((data) => json(data))
-      }
-      return serveSessions([parent, child], () => ({}))(url)
-    },
-    tmp.path,
-  )
+  const { app, emit, sync } = await mount((url) => {
+    if (url.pathname === "/permission") {
+      seen += 1
+      // bootstrap consumes the first list call; the session sync holds the second
+      return seen === 1 ? json([]) : held.promise.then((data) => json(data))
+    }
+    return serveSessions([parent, child], () => ({}))(url)
+  }, tmp.path)
 
   try {
     // The store holds a pending ask; the refetch starts while it is still live.
@@ -220,17 +228,14 @@ test("a failed pending list fetch keeps existing asks", async () => {
   await using tmp = await tmpdir()
   await Bun.write(`${tmp.path}/kv.json`, "{}")
   let seen = 0
-  const { app, sync } = await mount(
-    (url) => {
-      if (url.pathname === "/permission") {
-        seen += 1
-        // bootstrap consumes the first list call; the session sync gets a 500
-        return seen === 1 ? json([]) : json({ message: "boom" }, { status: 500 })
-      }
-      return serveSessions([parent, child], () => ({}))(url)
-    },
-    tmp.path,
-  )
+  const { app, sync } = await mount((url) => {
+    if (url.pathname === "/permission") {
+      seen += 1
+      // bootstrap consumes the first list call; the session sync gets a 500
+      return seen === 1 ? json([]) : json({ message: "boom" }, { status: 500 })
+    }
+    return serveSessions([parent, child], () => ({}))(url)
+  }, tmp.path)
 
   try {
     // A live ask is in the store; the refetch then fails.
@@ -251,17 +256,14 @@ test("an ask created and answered during the refetch is not resurrected", async 
   await Bun.write(`${tmp.path}/kv.json`, "{}")
   const held = Promise.withResolvers<PermissionRequest[]>()
   let seen = 0
-  const { app, emit, sync } = await mount(
-    (url) => {
-      if (url.pathname === "/permission") {
-        seen += 1
-        // bootstrap consumes the first list call; the session sync holds the second
-        return seen === 1 ? json([]) : held.promise.then((data) => json(data))
-      }
-      return serveSessions([parent, child], () => ({}))(url)
-    },
-    tmp.path,
-  )
+  const { app, emit, sync } = await mount((url) => {
+    if (url.pathname === "/permission") {
+      seen += 1
+      // bootstrap consumes the first list call; the session sync holds the second
+      return seen === 1 ? json([]) : held.promise.then((data) => json(data))
+    }
+    return serveSessions([parent, child], () => ({}))(url)
+  }, tmp.path)
 
   try {
     // The store is empty when the refetch snapshots, so the new ask's ID is
@@ -302,8 +304,7 @@ test("auto mode settles recovered asks but keeps protected ones visible", async 
         replies.push(match.at(1) ?? "")
         return json(true)
       }
-      if (url.pathname === "/permission")
-        return json([permission("per_normal"), protectedPermission("per_protected")])
+      if (url.pathname === "/permission") return json([permission("per_normal"), protectedPermission("per_protected")])
       return serveSessions([parent, child], () => ({}))(url)
     },
     tmp.path,

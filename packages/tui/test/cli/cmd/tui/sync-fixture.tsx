@@ -23,7 +23,8 @@ export async function wait(fn: () => boolean, timeout = 2000) {
 
 type Ctx = { kv: ReturnType<typeof useKV>; project: ReturnType<typeof useProject>; sync: ReturnType<typeof useSync> }
 
-export async function mount(override?: FetchHandler, state?: string, args?: Args) { // kilocode_change - optional TUI args for tests
+export async function mount(override?: FetchHandler, state?: string, args?: Args) {
+  // kilocode_change - optional TUI args for tests
   const calls = createFetch(override)
   const events = createEventSource()
   let sync!: ReturnType<typeof useSync>
@@ -49,7 +50,7 @@ export async function mount(override?: FetchHandler, state?: string, args?: Args
     <TestTuiContexts paths={state ? { state } : undefined}>
       {/* kilocode_change start - optional TUI args for tests */}
       <ArgsProvider {...args}>
-      {/* kilocode_change end */}
+        {/* kilocode_change end */}
         <KVProvider>
           {/* kilocode_change start */}
           <ToastProvider>

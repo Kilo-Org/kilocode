@@ -188,11 +188,10 @@ export const {
     }
 
     // pending asks are one-shot events; refetch them so an evicted or missed ask cannot strand a session
-    // kilocode_change start - skill shell batches and sandbox escalations need an interactive human decision:
+    // skill shell batches and sandbox escalations need an interactive human decision:
     // the server refuses machine replies for them, mirroring temporaryPermission in cli/cmd/run/permission.shared
     const temporaryPermission = (request: PermissionRequest) =>
       request.metadata?.["skillShell"] === true || request.metadata?.["sandboxEscalation"] === true
-    // kilocode_change end
     function mergePending<T extends PermissionRequest | QuestionRequest>(
       list: T[],
       current: Record<string, T[]>,
@@ -243,32 +242,26 @@ export const {
       ])
       if (permission.mode === "auto") {
         for (const request of permissions) {
-          // kilocode_change start - skill shell batches and sandbox escalations cannot be settled by a
+          // skill shell batches and sandbox escalations cannot be settled by a
           // machine reply: the server refuses non-interactive approvals, so they stay pending for a
           // human decision and must remain visible instead of being cleared
           if (temporaryPermission(request)) continue
-          // kilocode_change end
           if (terminal.has(request.id)) continue // kilocode_change - already answered, ignore straggler events
           void sdk.client.permission.reply({ requestID: request.id, reply: "once", workspace })
         }
-        // kilocode_change start - keep protected asks visible; clear only what was settled
-        const protectedList = permissions.filter((request)=> temporaryPermission(request))      
+        // keep protected asks visible; clear only what was settled
+        const protectedList = permissions.filter((request) => temporaryPermission(request))
         const protectedCurrent: Record<string, PermissionRequest[]> = {}
 
-        for(const list of Object.values(store.permission)){
-          for(const request of list){
-            if(!temporaryPermission(request)) continue
-            (protectedCurrent[request.sessionID] ??= []).push(request)
+        for (const list of Object.values(store.permission)) {
+          for (const request of list) {
+            if (!temporaryPermission(request)) continue
+            ;(protectedCurrent[request.sessionID] ??= []).push(request)
           }
-        } 
+        }
         setStore("permission", reconcile(mergePending(protectedList, protectedCurrent, before.permission, terminal)))
-
-        // kilocode_change end
       } else {
-        setStore(
-          "permission",
-          reconcile(mergePending(permissions, store.permission, before.permission, terminal)),
-        )
+        setStore("permission", reconcile(mergePending(permissions, store.permission, before.permission, terminal)))
       }
       setStore("question", reconcile(mergePending(questions, store.question, before.question, terminal)))
     }
@@ -281,7 +274,6 @@ export const {
 
     const fullSyncedSessions = new Set<string>()
     const deleted = new Set<string>() // kilocode_change
-        // kilocode_change - request IDs already replied/rejected; a stale pending list must not resurrect them
     const terminal = new Set<string>() // kilocode_change
     // replied/rejected asks are terminal: a stale pending list must not resurrect them; cap the set so it cannot grow unbounded
     const terminalCap = 512
@@ -886,11 +878,7 @@ export const {
               setStore("provider_default", reconcile(providers.default))
               setStore("provider_next", reconcile(providerList))
               // kilocode_change start - fail closed when the backend omits the capability
-              setStore(
-                "capabilities",
-                "experimentalBackgroundSubagents",
-                capabilities?.backgroundSubagents === true,
-              )
+              setStore("capabilities", "experimentalBackgroundSubagents", capabilities?.backgroundSubagents === true)
               // kilocode_change end
               setStore("console_state", reconcile(consoleState))
               setStore("agent", reconcile(agents))
@@ -954,7 +942,8 @@ export const {
             sdk.client.indexing
               .status()
               .then((result) => setStore("indexing", reconcile(result.data ?? store.indexing))),
-            syncPending().catch(() => {}), // kilocode_change - recover pending asks missed while disconnected
+            syncPending().catch((err) => console.error("pending-ask recovery failed", err)), // kilocode_change - recover pending asks missed while disconnected
+            // kilocode_change end
           ]).then(() => {
             setStore("status", "complete")
           })
@@ -1096,7 +1085,7 @@ export const {
             )
             fullSyncedSessions.add(sessionID)
             // a failed pending-ask recovery must not fail the session load; the next visit retries it
-            await syncPending().catch(() => {}) // kilocode_change - recover pending asks lost to eviction or a missed one-shot event
+            await syncPending().catch((err) => console.error("pending-ask recovery failed", err)) // kilocode_change - recover pending asks lost to eviction or a missed one-shot event
           })().finally(() => {
             syncingSessions.delete(sessionID)
             hydratingSessions.delete(sessionID)
