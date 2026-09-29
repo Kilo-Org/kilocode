@@ -431,3 +431,29 @@ test("auto mode retries a failed reply on the next recovery", async () => {
     app.renderer.destroy()
   }
 })
+
+test("auto mode drops a protected ask answered while the SSE stream was down", async () => {
+  await using tmp = await tmpdir()
+  await Bun.write(`${tmp.path}/kv.json`, "{}")
+  const { app, sync } = await mount(
+    (url) => {
+      if (url.pathname === "/permission") return json([])
+      return serveSessions([parent, child], () => ({}))(url)
+    },
+    tmp.path,
+    { auto: true },
+  )
+
+  try {
+    // The protected ask is in the store, but it was answered elsewhere while
+    // the SSE stream was down: the replied event was missed (so the ask was
+    // never removed or terminal-marked) and the server no longer holds it.
+    sync.set("permission", { [childID]: [protectedPermission("per_protected")] })
+    await sync.session.sync(childID)
+
+    // The recovery must drop it instead of resurrecting an unanswerable prompt.
+    expect(sync.data.permission[childID]).toBeUndefined()
+  } finally {
+    app.renderer.destroy()
+  }
+})

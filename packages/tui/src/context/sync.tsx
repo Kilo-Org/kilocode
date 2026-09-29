@@ -252,16 +252,17 @@ export const {
           void sdk.client.permission.reply({ requestID: request.id, reply: "once", workspace })
         }
         // kilocode_change start - keep protected asks visible; clear only what was settled
-        const kept = new Map<string, PermissionRequest>()
-        for (const request of [...Object.values(store.permission).flat(), ...permissions]) {
-          if (terminal.has(request.id)) continue
-          if (!temporaryPermission(request)) continue
-          kept.set(request.id, request)
-        }
-        const next: Record<string, PermissionRequest[]> = {}
-        for (const request of kept.values()) (next[request.sessionID] ??= []).push(request)
-        for (const list of Object.values(next)) list.sort((a, b) => a.id.localeCompare(b.id))
-        setStore("permission", reconcile(next))
+        const protectedList = permissions.filter((request)=> temporaryPermission(request))      
+        const protectedCurrent: Record<string, PermissionRequest[]> = {}
+
+        for(const list of Object.values(store.permission)){
+          for(const request of list){
+            if(!temporaryPermission(request)) continue
+            (protectedCurrent[request.sessionID] ??= []).push(request)
+          }
+        } 
+        setStore("permission", reconcile(mergePending(protectedList, protectedCurrent, before.permission, terminal)))
+
         // kilocode_change end
       } else {
         setStore(
