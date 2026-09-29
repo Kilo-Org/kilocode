@@ -238,6 +238,12 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
     const key = fetchKey()
     void key // subscribe to key changes without using the value here
 
+    // Invalidate any in-flight fetch (including a manual one) as soon as the
+    // connection details change, so a stale response can't land after the
+    // user has moved on to different URL/key/package values.
+    fetchVersion++
+    setFetching(false)
+
     // Clear previous results whenever URL or key changes
     setFetchedModels(undefined)
     setFetchError(undefined)
@@ -246,7 +252,6 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
 
     if (!canFetch(npm, url)) return
 
-    fetchVersion++
     const version = fetchVersion
     const timer = setTimeout(() => {
       if (version === fetchVersion) doFetch()
