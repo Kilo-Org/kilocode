@@ -52,7 +52,7 @@ In a Kilo client such as the VS Code extension or CLI, sign in to the same Kilo 
 After you connect your ChatGPT subscription, supported OpenAI models should be marked **BYOK** in the model picker. Choose one of these models to use your subscription. If the badge is missing, check that your connection shows **Connected** on the BYOK page for the account or organization you are using. You may also need to restart your Kilo client to refresh the model list after connecting your account at [app.kilo.ai](https://app.kilo.ai).
 {% /callout %}
 
-The subscription does not cover every OpenAI model or every kind of request. Kilo uses OpenAI's available-model list to determine eligible models; GPT-OSS models are not included in this route. For API integrations, the subscription route supports the **Responses API**, not Chat Completions requests.
+The subscription does not cover every OpenAI model or every kind of request. Kilo uses OpenAI's available-model list to determine eligible models, for example GPT-OSS models are not included in this route. For API integrations, the subscription route supports the **Responses API**, not Chat Completions requests.
 
 For eligible requests, Kilo uses your connected ChatGPT subscription instead of a saved OpenAI API key or Kilo credits. Reaching your subscription limit does not automatically switch those requests to paid usage.
 
