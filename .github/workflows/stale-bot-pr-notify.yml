@@ -4,6 +4,13 @@ name: Stale bot PR notify
 # Bot-opened PRs (Dependabot, Security Agent, etc.) can sit unreviewed until
 # stale (a real security PR went 13 days with green CI and zero reviews).
 # Once a day, flag any open bot PR that's conflicting or long unreviewed.
+#
+# Re-registration note: this file's workflow_id got stuck with a corrupted
+# GitHub-side registration shortly after it was first added (name showing as
+# the file path instead of "Stale bot PR notify", schedule never firing,
+# workflow_dispatch rejected with a bogus parse error at an unrelated line).
+# This comment exists to force a substantive content change so GitHub
+# re-parses and re-registers the workflow cleanly.
 
 on:
   schedule:
