@@ -9,6 +9,7 @@ const timeout = "Timeout while shutting down PostHog. Some events may not have b
 
 mock.module("posthog-node", () => ({
   PostHog: class {
+    on() {}
     async flush() {
       flushCalls += 1
       throw new Error("flush should not be called")

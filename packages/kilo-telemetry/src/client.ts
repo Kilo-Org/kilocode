@@ -1,6 +1,9 @@
 import { PostHog } from "posthog-node"
 import { Identity } from "./identity.js"
 import { TelemetryEvent } from "./events.js"
+import { createHash } from "node:crypto"
+import { readFileSync, writeFileSync } from "node:fs"
+import path from "node:path"
 
 const POSTHOG_API_KEY = "phc_GK2Pxl0HPj5ZPfwhLRjXrtdz8eD7e9MKnXiFrOqnB6z"
 const POSTHOG_HOST = "https://us.i.posthog.com"
@@ -8,12 +11,37 @@ const POSTHOG_HOST = "https://us.i.posthog.com"
 export namespace Client {
   let client: PostHog | null = null
   let enabled = true
+  let directory = ""
+  const pending = new Set<string>()
 
-  export function init() {
+  export function init(dir = "") {
+    directory = dir
+    pending.clear()
     client = new PostHog(POSTHOG_API_KEY, {
       host: POSTHOG_HOST,
       disableGeoip: false,
     })
+    client.on("flush", (messages) => {
+      if (!directory) return
+      for (const message of messages) {
+        if (message.event !== "$create_alias") continue
+        const file = marker(message.distinct_id, message.properties.alias)
+        try {
+          // Remember the link only after a successful upload.
+          writeFileSync(file, "1", { mode: 0o600 })
+        } catch (err) {
+          if (process.env.KILO_PRINT_LOGS) console.warn("telemetry cache write failed", err)
+        }
+      }
+    })
+    client.on("error", () => pending.clear())
+  }
+
+  function marker(id: string, alias: string) {
+    const key = createHash("sha256")
+      .update(JSON.stringify([id, alias]))
+      .digest("hex")
+    return path.join(directory, `telemetry-alias-${key}`)
   }
 
   export function getClient(): PostHog | null {
@@ -47,20 +75,16 @@ export namespace Client {
     })
   }
 
-  export function identify(distinctId: string, properties?: Record<string, unknown>) {
-    if (!enabled || !client) return
-
-    client.capture({
-      distinctId,
-      event: "$identify",
-      properties: {
-        $set: properties,
-      },
-    })
-  }
-
   export function alias(distinctId: string, aliasId: string) {
     if (!enabled || !client) return
+    const file = marker(distinctId, aliasId)
+    if (pending.has(file)) return
+    try {
+      if (directory && readFileSync(file, "utf8") === "1") return
+    } catch (err) {
+      if (process.env.KILO_PRINT_LOGS) console.warn("telemetry alias marker read failed; retrying link", err)
+    }
+    pending.add(file)
 
     client.alias({
       distinctId,
