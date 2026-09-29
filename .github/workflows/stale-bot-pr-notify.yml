@@ -33,9 +33,17 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
           STALE_DAYS: ${{ vars.STALE_BOT_PR_DAYS || '3' }}
+          # Must match the "Main branch protection" ruleset's required status
+          # checks, so a failing non-required check (CodeQL, etc.) is never
+          # reported as blocking a PR that can actually still merge.
+          REQUIRED_CHECKS: '["test (linux)","typecheck","unit (linux)","Visual Regression (kilo-ui)","Visual Regression (kilo-vscode webview)"]'
         run: |
+          # 500 is generous headroom above this repo's current ~150 open PRs.
+          # gh pr list sorts newest-first by default, so a too-low --limit
+          # would silently miss exactly the oldest/stalest PRs this workflow
+          # exists to catch.
           prs=$(gh pr list --repo "$REPO" --search "is:open is:pr" \
-            --json number,author,title,url,createdAt --limit 100)
+            --json number,author,title,url,createdAt --limit 500)
           now=$(date -u +%s)
 
           # mergeStateStatus, reviews, and statusCheckRollup are fetched per
@@ -51,10 +59,20 @@ jobs:
               echo "::warning::could not fetch detail for PR #$number, skipping"
               continue
             fi
-            jq -cn --argjson now "$now" --argjson staleDays "$STALE_DAYS" --argjson pr "$pr" --argjson detail "$detail" '
+            jq -cn --argjson now "$now" --argjson staleDays "$STALE_DAYS" \
+              --argjson required "$REQUIRED_CHECKS" --argjson pr "$pr" --argjson detail "$detail" '
               $pr + $detail
               | (($now - (.createdAt | fromdateiso8601)) / 86400) as $age
-              | ((.statusCheckRollup // []) | any(.conclusion == "FAILURE")) as $ciFailing
+              # statusCheckRollup mixes CheckRun (uses conclusion) and legacy
+              # StatusContext (uses state) entries; CANCELLED/TIMED_OUT/
+              # STARTUP_FAILURE/ACTION_REQUIRED block a merge just as much as
+              # FAILURE/ERROR does. Only required checks count, so a failing
+              # advisory job (CodeQL, etc.) never gets reported as blocking.
+              | (
+                  (.statusCheckRollup // [])
+                  | map(select(.name as $n | $required | index($n) != null))
+                  | any((.conclusion // .state) as $c | ["FAILURE","ERROR","CANCELLED","TIMED_OUT","STARTUP_FAILURE","ACTION_REQUIRED"] | index($c) != null)
+                ) as $ciFailing
               | . + {
                   age_days: ($age | floor),
                   reason: (
