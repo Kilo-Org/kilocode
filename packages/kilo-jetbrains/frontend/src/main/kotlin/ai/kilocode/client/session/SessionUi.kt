@@ -258,6 +258,7 @@ class SessionUi(
     private var refreshJob: Job? = null
     private var branchJob: Job? = null
     private var boardJob: Job? = null
+    private var issuesJob: Job? = null
     private var boardHasMessages = false
     private var disposed = false
 
@@ -1457,7 +1458,8 @@ class SessionUi(
      */
     private fun startMcpAuthTracking() {
         val auth = service<KiloMcpAuthService>()
-        cs.launch {
+        issuesJob?.cancel()
+        issuesJob = cs.launch {
             auth.needsAuth.combine(auth.busy) { needs, busy ->
                 val servers = needs[workspace.directory].orEmpty()
                 val prefix = "${workspace.directory}\u0000"
@@ -1508,6 +1510,7 @@ class SessionUi(
         disposed = true
         refreshJob?.cancel()
         branchJob?.cancel()
+        issuesJob?.cancel()
         hide.stop()
         popup.hideAll()
         modalFocus = null

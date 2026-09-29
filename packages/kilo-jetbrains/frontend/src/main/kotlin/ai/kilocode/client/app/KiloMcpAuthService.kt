@@ -59,8 +59,8 @@ class KiloMcpAuthService internal constructor(
 
     private val _busy = MutableStateFlow<Set<String>>(emptySet())
     val busy: StateFlow<Set<String>> = _busy.asStateFlow()
-    private val active = ConcurrentHashMap.newKeySet<String>()
-    private val cancelled = ConcurrentHashMap.newKeySet<String>()
+    private val active = ConcurrentHashMap<String, Any>()
+    private val cancelled = ConcurrentHashMap.newKeySet<Any>()
 
     private val started = AtomicBoolean(false)
     private val lastEventUrl = AtomicReference<String?>(null)
@@ -74,18 +74,15 @@ class KiloMcpAuthService internal constructor(
             .filter { it.status == "needs_auth" }
             .map { it.name }
             .toSet()
-        _needsAuth.update { current ->
-            val next = current + (dir to names)
-            if (next.size <= MAX_DIRECTORIES) return@update next
-            next.entries.drop(next.size - MAX_DIRECTORIES).associate { it.toPair() }
-        }
+        updateNeedsAuth(dir, names)
         return names
     }
 
     /** Starts (or resumes) sign-in for [name] in [dir]. Single-flight per directory/name pair. */
     suspend fun signIn(dir: String, name: String): McpAuthResultDto {
         val key = busyKey(dir, name)
-        if (!active.add(key)) return McpAuthResultDto("failed", null)
+        val token = Any()
+        if (active.putIfAbsent(key, token) != null) return McpAuthResultDto("failed", null)
         _busy.update { it + key }
         return try {
             val result = withTimeoutOrNull(authTimeoutMs) {
@@ -94,7 +91,7 @@ class KiloMcpAuthService internal constructor(
                 }
             }
             if (result != null) {
-                if (cancelled.contains(key)) return McpAuthResultDto("cancelled", null)
+                if (cancelled.contains(token)) return McpAuthResultDto("cancelled", null)
                 return result
             }
             attempt("mcp auth timeout cleanup failed dir=$dir name=$name", false) {
@@ -102,8 +99,8 @@ class KiloMcpAuthService internal constructor(
             }
             McpAuthResultDto("timeout", null)
         } finally {
-            active.remove(key)
-            cancelled.remove(key)
+            active.remove(key, token)
+            cancelled.remove(token)
             _busy.update { it - key }
             refresh(dir)
         }
@@ -112,20 +109,37 @@ class KiloMcpAuthService internal constructor(
     /** Cancels a pending sign-in and clears any stored credentials for [name]. */
     suspend fun cancel(dir: String, name: String): Boolean {
         val key = busyKey(dir, name)
-        if (active.contains(key)) cancelled.add(key)
+        val token = active[key]
+        if (token != null) cancelled.add(token)
         val removed = attempt("mcp auth cancel failed dir=$dir name=$name", false) { svc().mcpAuthRemove(dir, name) }
-        if (!removed) cancelled.remove(key)
+        if (!removed && token != null) cancelled.remove(token)
         return removed
     }
 
     /** Clears stored credentials and reconnects so the runtime immediately reports [needsAuth]. */
     suspend fun reset(dir: String, name: String): Boolean {
+        val key = busyKey(dir, name)
+        val auth = active[key]
+        if (auth != null) cancelled.add(auth)
         val removed = attempt("mcp auth reset failed dir=$dir name=$name", false) { svc().mcpAuthRemove(dir, name) }
-        if (!removed) return false
-        val disconnected = svc().mcpDisconnect(dir, name)
-        val connected = svc().mcpConnect(dir, name)
-        refresh(dir)
-        return disconnected && connected
+        if (!removed) {
+            if (auth != null) cancelled.remove(auth)
+            return false
+        }
+        var reconnected = false
+        try {
+            val disconnected = attempt("mcp disconnect after auth reset failed dir=$dir name=$name", false) {
+                svc().mcpDisconnect(dir, name)
+            }
+            val connected = attempt("mcp connect after auth reset failed dir=$dir name=$name", false) {
+                svc().mcpConnect(dir, name)
+            }
+            reconnected = disconnected && connected
+            return reconnected
+        } finally {
+            refresh(dir)
+            if (!reconnected) markNeedsAuth(dir, name)
+        }
     }
 
     /** Reports a sign-in [result] for [name] via a Kilo notification. Must run on EDT. */
@@ -153,6 +167,18 @@ class KiloMcpAuthService internal constructor(
     }
 
     private fun busyKey(dir: String, name: String) = "$dir\u0000$name"
+
+    private fun markNeedsAuth(dir: String, name: String) {
+        updateNeedsAuth(dir, _needsAuth.value[dir].orEmpty() + name)
+    }
+
+    private fun updateNeedsAuth(dir: String, names: Set<String>) {
+        _needsAuth.update { current ->
+            val next = current + (dir to names)
+            if (next.size <= MAX_DIRECTORIES) return@update next
+            next.entries.drop(next.size - MAX_DIRECTORIES).associate { it.toPair() }
+        }
+    }
 
     private suspend fun <T> attempt(message: String, fallback: T, block: suspend () -> T): T = try {
         block()

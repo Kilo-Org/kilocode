@@ -1152,9 +1152,21 @@ class PromptPanelTest : BasePlatformTestCase() {
 
     fun `test session issue action invokes its supplied recovery`() {
         var clicked = false
+        val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> })
         val issue = SessionIssue("mcp-auth:anaconda", "Sign in to Anaconda") { clicked = true }
+        panel.setIssues(listOf(issue))
+        val action = panel.issueActions().single()
 
-        issue.action()
+        action.actionPerformed(
+            AnActionEvent.createEvent(
+                action,
+                DataContext.EMPTY_CONTEXT,
+                null,
+                ActionPlaces.UNKNOWN,
+                ActionUiKind.NONE,
+                null,
+            ),
+        )
 
         assertTrue(clicked)
     }

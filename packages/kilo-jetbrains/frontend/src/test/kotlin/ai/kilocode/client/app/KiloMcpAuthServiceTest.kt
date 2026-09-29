@@ -164,6 +164,31 @@ class KiloMcpAuthServiceTest : BasePlatformTestCase() {
         assertEquals(setOf("linear"), service.needsAuth.value["/test"])
     }
 
+    fun `test reset marks an active sign in as quietly cancelled`() = runBlocking(Dispatchers.Default) {
+        val gate = CompletableDeferred<Unit>()
+        rpc.beforeAuthenticate = { gate.await() }
+        rpc.mcpAuthenticateResult = McpAuthResultDto("failed", "Authorization cancelled")
+        rpc.afterMcpConnect = { _, name -> rpc.mcps = listOf(McpStatusDto(name, "needs_auth")) }
+        val service = service()
+        val signIn = async { service.signIn("/test", "linear") }
+        withTimeout(5000) { while (!rpc.mcpAuthenticateStarted) delay(5) }
+
+        assertTrue(service.reset("/test", "linear"))
+        gate.complete(Unit)
+
+        assertEquals("cancelled", signIn.await().status)
+    }
+
+    fun `test reset keeps needs auth state when reconnect fails`() = runBlocking(Dispatchers.Default) {
+        rpc.mcps = listOf(McpStatusDto("linear", "connected"))
+        rpc.mcpConnectError = RuntimeException("offline")
+        val service = service()
+
+        assertFalse(service.reset("/test", "linear"))
+
+        assertEquals(setOf("linear"), service.needsAuth.value["/test"])
+    }
+
     fun `test cancelling an active sign in returns a quiet cancelled result`() = runBlocking(Dispatchers.Default) {
         val gate = CompletableDeferred<Unit>()
         rpc.beforeAuthenticate = { gate.await() }
@@ -177,6 +202,11 @@ class KiloMcpAuthServiceTest : BasePlatformTestCase() {
 
         assertEquals("cancelled", result.await().status)
         assertEquals(listOf("linear"), rpc.mcpAuthRemovals)
+
+        rpc.beforeAuthenticate = null
+        rpc.mcpAuthenticateStarted = false
+        rpc.mcpAuthenticateResult = McpAuthResultDto("connected")
+        assertEquals("connected", service.signIn("/test", "linear").status)
     }
 
     fun `test duplicate browser open failed events within the dedupe window are collapsed`() {

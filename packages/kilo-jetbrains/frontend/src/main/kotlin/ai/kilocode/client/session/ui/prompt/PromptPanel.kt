@@ -727,17 +727,7 @@ class PromptPanel(
     private fun showIssues() {
         if (issues.isEmpty()) return
         val group = DefaultActionGroup()
-        for (issue in issues) {
-            group.add(object : DumbAwareAction(issue.title, issue.description, issue.icon) {
-                override fun update(e: AnActionEvent) {
-                    e.presentation.isEnabled = issue.enabled
-                }
-
-                override fun actionPerformed(e: AnActionEvent) {
-                    issue.action()
-                }
-            })
-        }
+        issueActions().forEach(group::add)
         JBPopupFactory.getInstance().createActionGroupPopup(
             KiloBundle.message("prompt.issues.title"),
             group,
@@ -745,6 +735,19 @@ class PromptPanel(
             JBPopupFactory.ActionSelectionAid.SPEEDSEARCH,
             true,
         ).show(PopupShowOptions.aboveComponent(issuesButton))
+    }
+
+    @RequiresEdt
+    internal fun issueActions(): List<AnAction> = issues.map { issue ->
+        object : DumbAwareAction(issue.title, issue.description, issue.icon) {
+            override fun update(e: AnActionEvent) {
+                e.presentation.isEnabled = issue.enabled
+            }
+
+            override fun actionPerformed(e: AnActionEvent) {
+                issue.action()
+            }
+        }
     }
 
     @RequiresEdt
