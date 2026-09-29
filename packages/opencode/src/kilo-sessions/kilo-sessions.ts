@@ -29,8 +29,14 @@ import { RemoteWS } from "@/kilo-sessions/remote-ws"
 import { RemoteSender } from "@/kilo-sessions/remote-sender"
 import { RemoteProtocol } from "@/kilo-sessions/remote-protocol"
 import { buildInstanceAdvertisement } from "@/kilo-sessions/instance-advertisement"
-import { detectPrLinkState, persistRecordedPrLink, readPrLinkOverride, recordPrLinkText } from "@/kilo-sessions/pr-link"
-import type { PrLink } from "@/kilo-sessions/pr-link"
+import {
+  clearSessionLink,
+  loadSessionLinks,
+  pruneLegacyWorktreeLinks,
+  recordPrCreate,
+  recordPush,
+} from "@/kilo-sessions/pr-link"
+import type { SessionPrLink } from "@/kilo-sessions/pr-link"
 import { refreshPrLink, startPrLinkPoll } from "@/kilo-sessions/pr-link-poller"
 import { AttachedState } from "@/kilo-sessions/attached-state"
 import { RemoteSessionLog } from "@/kilo-sessions/remote-session-log"
@@ -446,10 +452,42 @@ export namespace KiloSessions {
     await ingest.sync(sessionID, [{ type: "session_status", data: derived }])
   }
 
-  // kilocode_change - PR link advertise (plan 8.2/8.4): resolve the worktree PR
-  // link (Storage override → detect) and persist it as a `session_pr_link`
-  // ingest item. The heartbeat alone does not write Postgres — ingest does.
-  type PrLinkTriple = { platform: string | null; prUrl: string | null; prNumber: number | null }
+  // kilocode_change - PR link advertise: a PR is linked to a session only on
+  // hard evidence the session itself produced (it created the PR or pushed its
+  // head branch), stored per session. The heartbeat reads each advertised
+  // session's own link and ingests its triple; it never resolves one worktree
+  // link and fans it out to every session in the checkout. A wrong link is
+  // worse than no link, so no branch-name discovery and no text scraping.
+  type PrLinkTriple = {
+    platform: string | null
+    prUrl: string | null
+    prNumber: number | null
+    // The evidence contract shared with the Kilo-Org/cloud item: the branch the
+    // session pushed and the commit it pushed. Null on a clear. Kept optional to
+    // older backends by sending them alongside the three legacy keys.
+    headRef: string | null
+    headSha: string | null
+  }
+
+  function tripleOf(record: SessionPrLink): PrLinkTriple {
+    return {
+      platform: record.link.platform,
+      prUrl: record.link.prUrl,
+      prNumber: record.link.prNumber,
+      headRef: record.headRef ?? null,
+      headSha: record.headSha ?? null,
+    }
+  }
+
+  // An all-null triple withdraws the session's link on the backend. The three
+  // legacy keys stay first so older backends keep working.
+  const clearedTriple: PrLinkTriple = {
+    platform: null,
+    prUrl: null,
+    prNumber: null,
+    headRef: null,
+    headSha: null,
+  }
 
   // Last triple synced per session id so the ~10s heartbeat does not re-ingest
   // an unchanged link. Module-level (process-wide) like the instance advertisement.
@@ -465,34 +503,119 @@ export namespace KiloSessions {
     if (accepted) lastPrLinkTriple.set(sessionId, key)
   }
 
-  // Resolve the worktree PR link: a stored override wins (link or clear), then
-  // detection. Returns the heartbeat value (undefined when cleared or missing)
-  // and the ingest triple (undefined when nothing should be ingested — a
-  // missing detect is not a clear).
-  async function resolvePrLink(): Promise<{ prLink?: PrLink; triple?: PrLinkTriple }> {
-    const override = await readPrLinkOverride(Instance.worktree)
-    if (override) {
-      if ("cleared" in override) return { triple: { platform: null, prUrl: null, prNumber: null } }
-      return {
-        prLink: override,
-        triple: { platform: override.platform, prUrl: override.prUrl, prNumber: override.prNumber },
-      }
+  // Sessions already cleared by the legacy sweep this process.
+  const legacyPruned = new Set<string>()
+
+  // Advertise and ingest the session's own link, or withdraw it when the session
+  // no longer owns one. A session that never had a link stays silent unless the
+  // legacy sweep is clearing a link it inherited from the dropped worktree
+  // records: `pending` names exactly the sessions that existed when the
+  // migration ran, so a session first advertised on a later heartbeat still gets
+  // its one clear.
+  async function syncSessionPrLink(sessionId: string, record: SessionPrLink | undefined, pending: Set<string>) {
+    if (record) {
+      await syncPrLinkTriple(sessionId, tripleOf(record))
+      return
     }
-    const state = await detectPrLinkState()
-    if (state.cleared) return { triple: { platform: null, prUrl: null, prNumber: null } }
-    if (state.link) {
-      return {
-        prLink: state.link,
-        triple: { platform: state.link.platform, prUrl: state.link.prUrl, prNumber: state.link.prNumber },
-      }
+    const sent = lastPrLinkTriple.get(sessionId)
+    if (sent !== undefined && sent !== JSON.stringify(clearedTriple)) {
+      await syncPrLinkTriple(sessionId, clearedTriple)
+      return
     }
-    return {}
+    if (pending.has(sessionId) && !legacyPruned.has(sessionId)) {
+      await syncPrLinkTriple(sessionId, clearedTriple)
+      legacyPruned.add(sessionId)
+    }
   }
 
-  async function syncPrLinkForSession(sessionId: string) {
-    const pr = await resolvePrLink()
-    if (!pr.triple) return
-    await syncPrLinkTriple(sessionId, pr.triple)
+  // One migration per process: drop the per-worktree recorded links an older CLI
+  // wrote (they were never per-session evidence) and return the sessions that
+  // must each receive one clear. The candidate set is every session the project
+  // knew when the migration ran, persisted under a Storage marker, because a
+  // session may be first advertised on a heartbeat after the prune; writing the
+  // marker "done" on the first heartbeat would leave those sessions with the
+  // stale, inherited link. A marker already carried over (or `true`) means the
+  // prune has run and the persisted candidates are still owed their clear.
+  type PrMigrationMarker = true | { pending: string[] }
+  const prMigrationKey = ["session_pr_link_migration", "legacy-worktree-prune"]
+  let prMigration: Promise<Set<string>> | undefined
+  let prMigrationSettled = false
+
+  async function readMarker(): Promise<PrMigrationMarker | undefined> {
+    const { AppRuntime } = await import("@/effect/app-runtime")
+    return AppRuntime.runPromise(Storage.Service.use((svc) => svc.read<PrMigrationMarker>(prMigrationKey))).catch(
+      () => undefined,
+    )
+  }
+
+  async function writeMarker(value: PrMigrationMarker): Promise<void> {
+    const { AppRuntime } = await import("@/effect/app-runtime")
+    await AppRuntime.runPromise(Storage.Service.use((svc) => svc.write(prMigrationKey, value))).catch(() => undefined)
+  }
+
+  async function pruneLegacyPrLinks(): Promise<Set<string>> {
+    if (prMigration) return prMigration
+    prMigration = (async () => {
+      const marker = await readMarker()
+      if (marker === true) return new Set<string>()
+      if (marker && Array.isArray(marker.pending)) return new Set(marker.pending)
+
+      const pruned = await pruneLegacyWorktreeLinks()
+      if (pruned === 0) {
+        await writeMarker(true)
+        return new Set<string>()
+      }
+      const { AppRuntime } = await import("@/effect/app-runtime")
+      const candidates = await AppRuntime.runPromise(Session.Service.use((svc) => svc.list())).then(
+        (list) => [...new Set(list.map((s) => s.id))],
+        () => [] as string[],
+      )
+      if (candidates.length === 0) {
+        await writeMarker(true)
+        return new Set<string>()
+      }
+      await writeMarker({ pending: candidates })
+      return new Set(candidates)
+    })().catch(() => new Set<string>())
+    return prMigration
+  }
+
+  // Record the migration done once every session that existed at the migration
+  // has been sent its clear. A candidate that was never advertised stays
+  // pending, so if it resurfaces later it still receives its one clear instead
+  // of inheriting the dropped worktree link.
+  async function settleLegacyPrLinks(pending: Set<string>) {
+    if (prMigrationSettled || pending.size === 0) return
+    for (const sessionId of pending) if (!legacyPruned.has(sessionId)) return
+    prMigrationSettled = true
+    await writeMarker(true)
+  }
+
+  /** @internal - test-only: forget the migration so an upgrade can be replayed */
+  export async function _resetPrLinkMigrationForTests() {
+    prMigration = undefined
+    prMigrationSettled = false
+    legacyPruned.clear()
+    const { AppRuntime } = await import("@/effect/app-runtime")
+    await AppRuntime.runPromise(Storage.Service.use((svc) => svc.remove(prMigrationKey))).catch(() => undefined)
+  }
+
+  // Only a host CLI's create subcommand names a new PR; a listing (`gh pr list`),
+  // a view, a review, or a pasted link is a mention. `gh api` counts only when it
+  // POSTs to the pulls collection.
+  function isPrCreateCommand(command: string): boolean {
+    if (/(?:^|[\s;&|(])gh\s+pr\s+create(?:\s|$)/.test(command)) return true
+    if (/(?:^|[\s;&|(])glab\s+mr\s+create(?:\s|$)/.test(command)) return true
+    if (/(?:^|[\s;&|(])hub\s+pull-request(?:\s|$)/.test(command)) return true
+    return (
+      /(?:^|[\s;&|(])gh\s+api\b/.test(command) &&
+      /\/pulls\b/.test(command) &&
+      /(?:-X\s*POST|--method[=\s]+POST|-f\b|--field\b|--raw-field\b)/.test(command)
+    )
+  }
+
+  function isPushCommand(command: string): boolean {
+    return /(?:^|[\s;&|(])git\s+push(?:\s|$)/.test(command)
   }
 
   async function cumulative(sessionId: string, local: Snapshot.FileDiff[]) {
@@ -589,7 +712,6 @@ export namespace KiloSessions {
                 { type: "kilo_meta", data: await meta(sessionID, session) },
                 { type: "session", data: transport(session) },
               ])
-              await syncPrLinkForSession(sessionID)
             } catch (error) {
               restoreTitleState()
               log.error("session updated ingest failed", { sessionID, error })
@@ -627,6 +749,11 @@ export namespace KiloSessions {
             const sessionID = evt.properties.sessionID
             knownTitles.delete(sessionID)
             lastPrLinkTriple.delete(sessionID)
+            legacyPruned.delete(sessionID)
+            // Drop the persisted per-session link too: otherwise the record
+            // outlives the session and every heartbeat's read grows with the
+            // sessions ever deleted.
+            void clearSessionLink(sessionID)
             clearRenameMarks(sessionID)
             KiloSessionTitle.clear(sessionID)
             // kilocode_change - detach a locally announced session on dispose.
@@ -644,27 +771,23 @@ export namespace KiloSessions {
           watch(MessageV2.Event.PartUpdated, async (evt) => {
             const part = evt.properties.part
             await ingest.sync(part.sessionID, [{ type: "part", data: part }])
-            // kilocode_change - PR link from the session's own output: agent text
-            // or a completed tool's output (e.g. the `gh pr create` URL). The
-            // regex prefilters before the record attempt and `recordPrLinkText`
-            // returns a link only when it is new or changed, so the next
-            // heartbeat advertises it and `syncPrLinkForSession` queues exactly
-            // one `session_pr_link` item (the triple dedupe suppresses repeats).
-            const text =
-              part.type === "text"
-                ? part.text
-                : part.type === "tool" && part.state.status === "completed"
-                  ? part.state.output
-                  : undefined
-            if (!text || !/\/pull\/|\/pull-requests\/|\/merge_requests\//.test(text)) return
-            const link = recordPrLinkText(Instance.worktree, text)
-            // kilocode_change - keep the link for the next process: a GitLab/
-            // Bitbucket link has no REST lookup to recover it after this
-            // process exits, so the CLI would print `no PR linked`. Persist for
-            // every part that carries a PR URL — an already-stored record is a
-            // no-op — so a failed write is retried instead of being lost.
-            await persistRecordedPrLink(Instance.worktree)
-            if (link) await syncPrLinkForSession(part.sessionID)
+            // kilocode_change - A PR is linked only on the session's own hard
+            // evidence: the session ran a create command whose output returned
+            // the PR URL, or it pushed the PR's head branch. Agent text, a
+            // listing (`gh pr list`), a view, or a review is a mention, never a
+            // link, so only a completed shell tool with such a command is read.
+            if (part.type !== "tool" || part.state.status !== "completed") return
+            if (part.tool !== "bash" && part.tool !== "shell") return
+            const raw = part.state.input["command"]
+            const command = typeof raw === "string" ? raw : undefined
+            if (!command) return
+            if (isPrCreateCommand(command)) {
+              await recordPrCreate(part.sessionID, Instance.worktree, part.state.output)
+              return
+            }
+            if (isPushCommand(command)) {
+              await recordPush(part.sessionID, Instance.worktree, command, part.state.output)
+            }
           })
           watch(Session.Event.Diff, (evt) =>
             cumulative(evt.properties.sessionID, evt.properties.diff).then((diff) =>
@@ -749,7 +872,7 @@ export namespace KiloSessions {
           yield* Effect.acquireRelease(
             Effect.sync(() =>
               startPrLinkPoll(async () => {
-                await Instance.restore(ctx, () => refreshPrLink(ctx.worktree))
+                await Instance.restore(ctx, () => refreshPrLink())
               }),
             ),
             (stop) => Effect.sync(stop),
@@ -948,14 +1071,37 @@ export namespace KiloSessions {
             ...gitPairs.get(r.directory ?? Instance.worktree),
             platform: r.platform,
           }))
-        // kilocode_change - PR link advertise (plan 8.2): resolve once
-        // (worktree-scoped) and attach to every advertised row, then ingest the
-        // triple per session (deduped by last-sent triple).
-        const pr = await resolvePrLink()
-        if (pr.triple) {
-          for (const row of sessions) await syncPrLinkTriple(row.id, pr.triple)
+        // kilocode_change - A PR link is per session and only from that
+        // session's own hard evidence (see the PartUpdated watcher). Read the
+        // stored links for exactly the advertised rows once and attach each to
+        // its own row; never resolve one worktree link and stamp it on every
+        // session in the checkout, and never read every record ever written.
+        // The one-time migration drops the old per-worktree records and sends
+        // one clear for the sessions that only inherited a link from them.
+        const [links, pending] = await Promise.all([
+          loadSessionLinks(sessions.map((row) => row.id)),
+          pruneLegacyPrLinks(),
+        ])
+        const advertised: RemoteProtocol.SessionInfo[] = []
+        for (const row of sessions) {
+          const record = links.get(row.id)
+          if (record) {
+            advertised.push({
+              ...row,
+              prLink: {
+                platform: record.link.platform,
+                prUrl: record.link.prUrl,
+                prNumber: record.link.prNumber,
+                ...(record.headRef ? { headRef: record.headRef } : {}),
+                ...(record.headSha ? { headSha: record.headSha } : {}),
+              },
+            })
+          } else {
+            advertised.push(row)
+          }
+          await syncSessionPrLink(row.id, record, pending)
         }
-        const advertised = pr.prLink ? sessions.map((row) => ({ ...row, prLink: pr.prLink })) : sessions
+        await settleLegacyPrLinks(pending)
         const instance = instanceAdvertisement && {
           ...instanceAdvertisement,
           // Truncate the launch-directory branch without splitting a surrogate pair.
@@ -1610,7 +1756,6 @@ export namespace KiloSessions {
         data: await deriveStatus(sessionId),
       },
     ])
-    await syncPrLinkForSession(sessionId)
   }
 
   /** Normalize a git remote URL: strip credentials, query params, and hash. Returns undefined for unrecognized formats. */
