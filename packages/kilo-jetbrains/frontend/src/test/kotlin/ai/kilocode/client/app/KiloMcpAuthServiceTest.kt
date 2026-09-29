@@ -151,6 +151,19 @@ class KiloMcpAuthServiceTest : BasePlatformTestCase() {
         assertEquals(listOf("linear"), rpc.mcpAuthRemovals)
     }
 
+    fun `test reset reconnects and refreshes needs auth state`() = runBlocking(Dispatchers.Default) {
+        rpc.mcps = listOf(McpStatusDto("linear", "connected"))
+        rpc.afterMcpConnect = { _, name -> rpc.mcps = listOf(McpStatusDto(name, "needs_auth")) }
+        val service = service()
+
+        assertTrue(service.reset("/test", "linear"))
+
+        assertEquals(listOf("linear"), rpc.mcpAuthRemovals)
+        assertEquals(listOf("linear"), rpc.mcpDisconnects)
+        assertEquals(listOf("linear"), rpc.mcpConnects)
+        assertEquals(setOf("linear"), service.needsAuth.value["/test"])
+    }
+
     fun `test cancelling an active sign in returns a quiet cancelled result`() = runBlocking(Dispatchers.Default) {
         val gate = CompletableDeferred<Unit>()
         rpc.beforeAuthenticate = { gate.await() }

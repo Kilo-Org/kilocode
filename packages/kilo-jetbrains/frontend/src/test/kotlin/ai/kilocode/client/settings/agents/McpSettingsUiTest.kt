@@ -391,11 +391,17 @@ class McpSettingsUiTest : BasePlatformTestCase() {
         val panel = panel()
         flushUntil { rows(panel).size == 3 }
         agentRpc.mcpAuthRemoveResult = true
+        agentRpc.afterMcpConnect = { _, name ->
+            agentRpc.mcps = agentRpc.mcps.filterNot { it.name == name } + McpStatusDto(name, "needs_auth")
+        }
         TestDialogManager.setTestDialog(TestDialog.YES)
 
         click(panel, "github", "resetAuth")
 
-        flushUntil { agentRpc.mcpAuthRemovals.contains("github") }
+        flushUntil { service<KiloMcpAuthService>().needsAuth.value[DIR].orEmpty().contains("github") }
+        assertEquals(listOf("github"), agentRpc.mcpAuthRemovals)
+        assertEquals(listOf("github"), agentRpc.mcpDisconnects)
+        assertEquals(listOf("github"), agentRpc.mcpConnects)
     }
 
     fun `test reset sign in decline does not call mcpAuthRemove`() {

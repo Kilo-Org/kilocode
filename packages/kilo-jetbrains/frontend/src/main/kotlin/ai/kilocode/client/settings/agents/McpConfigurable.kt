@@ -209,7 +209,7 @@ internal class McpSettingsUi(
             Messages.getQuestionIcon(),
         )
         if (result != Messages.YES) return
-        mutate(name) { service<KiloMcpAuthService>().cancel(dir, name) }
+        mutate(name) { service<KiloMcpAuthService>().reset(dir, name) }
     }
 
     private fun remove(name: String) {

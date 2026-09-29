@@ -118,6 +118,16 @@ class KiloMcpAuthService internal constructor(
         return removed
     }
 
+    /** Clears stored credentials and reconnects so the runtime immediately reports [needsAuth]. */
+    suspend fun reset(dir: String, name: String): Boolean {
+        val removed = attempt("mcp auth reset failed dir=$dir name=$name", false) { svc().mcpAuthRemove(dir, name) }
+        if (!removed) return false
+        val disconnected = svc().mcpDisconnect(dir, name)
+        val connected = svc().mcpConnect(dir, name)
+        refresh(dir)
+        return disconnected && connected
+    }
+
     /** Reports a sign-in [result] for [name] via a Kilo notification. Must run on EDT. */
     @RequiresEdt
     fun report(name: String, result: McpAuthResultDto) {
