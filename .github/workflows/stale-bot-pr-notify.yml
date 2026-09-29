@@ -2,8 +2,12 @@
 name: Stale bot PR notify
 
 # Bot-opened PRs (Dependabot, Security Agent, etc.) can sit unreviewed until
-# stale (a real security PR went 13 days with green CI and zero reviews).
-# Once a day, flag any open bot PR that's conflicting or long unreviewed.
+# stale (a real security PR went 13 days with green CI and zero reviews), or
+# get reviewed and approved but never merge because a required check keeps
+# failing -- dependabot-auto-merge.yml only arms auto-merge once and never
+# checks back, so nothing else would ever catch that case. Once a day, flag
+# any open bot PR that's conflicting, has a failing required check, or has
+# sat unreviewed too long.
 
 on:
   schedule:
@@ -31,30 +35,45 @@ jobs:
           STALE_DAYS: ${{ vars.STALE_BOT_PR_DAYS || '3' }}
         run: |
           prs=$(gh pr list --repo "$REPO" --search "is:open is:pr" \
-            --json number,author,title,url,createdAt,mergeStateStatus,reviews --limit 100)
+            --json number,author,title,url,createdAt --limit 100)
           now=$(date -u +%s)
-          flagged=$(echo "$prs" | jq -c --argjson now "$now" --argjson staleDays "$STALE_DAYS" '
-            map(select(.author.is_bot == true))
-            | map(
-                . as $pr
-                | (($now - ($pr.createdAt | fromdateiso8601)) / 86400) as $age
-                | $pr + {
-                    age_days: ($age | floor),
-                    reason: (
-                      if .mergeStateStatus == "DIRTY" then "conflicting"
-                      elif ((.reviews | length) == 0 and $age >= $staleDays) then "unreviewed"
-                      else empty
-                      end
-                    )
-                  }
-              )
-            | map(select(.reason != null))
-          ')
+
+          # mergeStateStatus, reviews, and statusCheckRollup are fetched per
+          # bot PR individually, not in the bulk list above: with 150+ PRs
+          # open on this repo, mergeStateStatus alone is expensive enough
+          # that requesting it for 100 PRs in one query reliably 502s.
+          mkdir -p .cache
+          : > .cache/flagged.ndjson
+          while IFS= read -r pr; do
+            [ -z "$pr" ] && continue
+            number=$(echo "$pr" | jq -r '.number')
+            if ! detail=$(gh pr view "$number" --repo "$REPO" --json mergeStateStatus,reviews,statusCheckRollup); then
+              echo "::warning::could not fetch detail for PR #$number, skipping"
+              continue
+            fi
+            jq -cn --argjson now "$now" --argjson staleDays "$STALE_DAYS" --argjson pr "$pr" --argjson detail "$detail" '
+              $pr + $detail
+              | (($now - (.createdAt | fromdateiso8601)) / 86400) as $age
+              | ((.statusCheckRollup // []) | any(.conclusion == "FAILURE")) as $ciFailing
+              | . + {
+                  age_days: ($age | floor),
+                  reason: (
+                    if .mergeStateStatus == "DIRTY" then "conflicting"
+                    elif $ciFailing then "CI failing"
+                    elif ((.reviews | length) == 0 and $age >= $staleDays) then "unreviewed"
+                    else empty
+                    end
+                  )
+                }
+              | select(.reason != null)
+            ' >> .cache/flagged.ndjson
+          done < <(echo "$prs" | jq -c 'map(select(.author.is_bot == true)) | .[]')
+
+          flagged=$(jq -c -s '.' .cache/flagged.ndjson)
           echo "flagged=$flagged" >> "$GITHUB_OUTPUT"
 
           # Build real JSON via jq instead of splicing PR titles (free text)
           # into a YAML payload through `${{ }}`.
-          mkdir -p .cache
           echo "$flagged" | jq '
             if length == 0 then {text: ""} else
               {text: (["*Bot PRs needing attention:*"] + map(
