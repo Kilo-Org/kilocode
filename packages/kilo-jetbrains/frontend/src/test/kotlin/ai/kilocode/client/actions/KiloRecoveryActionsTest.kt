@@ -85,6 +85,25 @@ class KiloRecoveryActionsTest : BasePlatformTestCase() {
         assertTrue("Reinstall should force-enable recovery action", event.presentation.isEnabled)
     }
 
+    fun `test reload core settings action requires and uses the current workspace`() {
+        val action = ReloadCoreSettingsAction()
+        val missing = event(action)
+        update(action, missing)
+        assertFalse(missing.presentation.isEnabled)
+
+        val active = event(action, workspace("/test worktree"))
+        update(action, active)
+        assertTrue(active.presentation.isEnabled)
+
+        action.actionPerformed(active)
+        runBlocking {
+            withTimeout(5_000) {
+                while (rpc.coreReloads.isEmpty()) delay(5)
+            }
+        }
+        assertEquals(listOf("/test worktree"), rpc.coreReloads.toList())
+    }
+
     fun `test restart action adds core suffix in connection retry popup`() {
         val action = RestartKiloAction()
         val event = event(action, place = KiloActionPlaces.connectionRetryPopup())
@@ -109,6 +128,7 @@ class KiloRecoveryActionsTest : BasePlatformTestCase() {
             .use { it.readText() }
 
         assertTrue(xml.contains("<group id=\"Kilo.CliGroup\" text=\"Core\" popup=\"true\">"))
+        assertTrue(xml.indexOf("<reference ref=\"Kilo.ReloadCoreSettings\"/>") < xml.indexOf("<reference ref=\"Kilo.Restart\"/>"))
         assertTrue(xml.contains("<reference ref=\"Kilo.Restart\"/>"))
         assertTrue(xml.contains("<reference ref=\"Kilo.Reinstall\"/>"))
         assertTrue(xml.contains("<reference ref=\"Kilo.CoreInfo\"/>"))
