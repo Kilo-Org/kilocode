@@ -200,13 +200,6 @@ class ReasoningView(
 
     private fun canExpand(): Boolean = source.isNotBlank()
 
-    /** Whether [mode] auto-opens this block right now, given its current [visible]/[done] state. */
-    private fun wantsAutoExpand(visible: Boolean): Boolean = when (mode) {
-        ReasoningDisplay.EXPANDED -> visible
-        ReasoningDisplay.PREVIEW -> visible && !done
-        ReasoningDisplay.HEADLINE -> false
-    }
-
     private fun sync(): Boolean {
         var changed = false
         val visible = source.isNotBlank()
@@ -215,7 +208,7 @@ class ReasoningView(
             changed = true
         }
         changed = syncExpandable(canExpand()) || changed
-        if (!pinned && wantsAutoExpand(visible) && !isExpanded()) {
+        if (!pinned && opens(mode, visible, done) && !isExpanded()) {
             changed = expand() || changed
             changed = syncExpandable(canExpand()) || changed
         }
@@ -372,9 +365,14 @@ class ReasoningBody(
 /** Whether a freshly constructed [ReasoningView] should start expanded, given [mode] and [reasoning]. */
 private fun initialExpanded(mode: ReasoningDisplay, reasoning: Reasoning): Boolean {
     val visible = reasoning.content.isNotBlank()
+    return opens(mode, visible, reasoning.done)
+}
+
+/** The single mode rule used for both initial state and later automatic expansion. */
+private fun opens(mode: ReasoningDisplay, visible: Boolean, done: Boolean): Boolean {
     return when (mode) {
         ReasoningDisplay.EXPANDED -> visible
-        ReasoningDisplay.PREVIEW -> visible && !reasoning.done
+        ReasoningDisplay.PREVIEW -> visible && !done
         ReasoningDisplay.HEADLINE -> false
     }
 }
