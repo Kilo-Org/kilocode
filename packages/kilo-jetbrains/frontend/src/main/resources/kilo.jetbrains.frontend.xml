@@ -293,6 +293,14 @@
                                first-keystroke="control ENTER"/>
         </action>
 
+        <action id="Kilo.SubmitDialog"
+                class="ai.kilocode.client.actions.SubmitDialogAction"
+                text="Submit Dialog"
+                description="Run the default action in the current Kilo dialog">
+            <keyboard-shortcut keymap="Mac OS X 10.5+"
+                               first-keystroke="meta ENTER"/>
+        </action>
+
         <action id="Kilo.StopSession"
                 class="ai.kilocode.client.actions.StopSessionAction"
                 text="Stop Session"
