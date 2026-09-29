@@ -137,7 +137,7 @@ Static source proves scheduled sync and separate auto-analysis infrastructure. I
 
 ## Webhook Agent Ingest
 
-Webhook Agent Ingest handles configured trigger endpoints and schedules. `TriggerDO` stores trigger config and scheduled alarms. Queue consumer dispatches selected destination.
+Webhook Agent Ingest handles configured trigger endpoints and schedules. `TriggerDO` stores trigger config and scheduled alarms. Queue consumer dispatches to the Cloud Agent destination.
 
 | Dimension | Variants | Notes |
 |---|---|---|
