@@ -12,6 +12,7 @@ import ai.kilocode.rpc.dto.CustomModelDto
 import ai.kilocode.rpc.dto.CustomProviderSaveDto
 import ai.kilocode.rpc.dto.EditorContextDto
 import ai.kilocode.rpc.dto.McpConfigDto
+import ai.kilocode.rpc.dto.McpOAuthDto
 import ai.kilocode.rpc.dto.PermissionAlwaysRulesDto
 import ai.kilocode.rpc.dto.PermissionReplyDto
 import ai.kilocode.rpc.dto.PermissionRuleDto
@@ -1296,6 +1297,43 @@ class KiloCliDataParserTest {
         }
 
         @Test
+        fun `parseConfig - mcp oauth absent`() {
+            val cfg = KiloCliDataParser.parseConfig(
+                """{"mcp":{"remote":{"type":"remote","url":"https://mcp.example.test"}}}"""
+            )
+
+            assertNull(cfg.mcp["remote"]?.oauth)
+        }
+
+        @Test
+        fun `parseConfig - mcp oauth disabled`() {
+            val cfg = KiloCliDataParser.parseConfig(
+                """{"mcp":{"remote":{"type":"remote","url":"https://mcp.example.test","oauth":false}}}"""
+            )
+            val oauth = cfg.mcp["remote"]?.oauth
+
+            assertNotNull(oauth)
+            assertEquals(false, oauth.enabled)
+            assertNull(oauth.clientId)
+        }
+
+        @Test
+        fun `parseConfig - mcp oauth custom client object`() {
+            val cfg = KiloCliDataParser.parseConfig(
+                """{"mcp":{"remote":{"type":"remote","url":"https://mcp.example.test","oauth":{"clientId":"abc","clientSecret":"shh","scope":"read","callbackPort":19999,"redirectUri":"http://127.0.0.1:19999/cb"}}}}"""
+            )
+            val oauth = cfg.mcp["remote"]?.oauth
+
+            assertNotNull(oauth)
+            assertEquals(true, oauth.enabled)
+            assertEquals("abc", oauth.clientId)
+            assertEquals("shh", oauth.clientSecret)
+            assertEquals("read", oauth.scope)
+            assertEquals(19999, oauth.callbackPort)
+            assertEquals("http://127.0.0.1:19999/cb", oauth.redirectUri)
+        }
+
+        @Test
         fun `parseConfig - scalars instructions and skills`() {
             val cfg = KiloCliDataParser.parseConfig(
                 """{
@@ -2193,6 +2231,90 @@ class KiloCliDataParserTest {
         }
     }
 
+    @Nested
+    inner class McpAuth {
+
+        // ---- parseMcpAuthResult ----
+
+        @Test
+        fun `parseMcpAuthResult - 200 with connected status`() {
+            val result = KiloCliDataParser.parseMcpAuthResult(200, """{"status":"connected"}""")
+
+            assertEquals("connected", result.status)
+            assertNull(result.error)
+        }
+
+        @Test
+        fun `parseMcpAuthResult - 200 with failed status and error`() {
+            val result = KiloCliDataParser.parseMcpAuthResult(200, """{"status":"failed","error":"denied"}""")
+
+            assertEquals("failed", result.status)
+            assertEquals("denied", result.error)
+        }
+
+        @Test
+        fun `parseMcpAuthResult - 400 maps to unsupported`() {
+            val result = KiloCliDataParser.parseMcpAuthResult(400, """{"error":"UnsupportedOAuthError"}""")
+
+            assertEquals("unsupported", result.status)
+            assertEquals("UnsupportedOAuthError", result.error)
+        }
+
+        @Test
+        fun `parseMcpAuthResult - 404 maps to not_found`() {
+            val result = KiloCliDataParser.parseMcpAuthResult(404, """{"message":"no such server"}""")
+
+            assertEquals("not_found", result.status)
+            assertEquals("no such server", result.error)
+        }
+
+        @Test
+        fun `parseMcpAuthResult - non-JSON body falls back to HTTP status`() {
+            val result = KiloCliDataParser.parseMcpAuthResult(500, "not json")
+
+            assertEquals("failed", result.status)
+            assertEquals("HTTP 500", result.error)
+        }
+
+        // ---- parseMcpBrowserOpenFailed ----
+
+        @Test
+        fun `parseMcpBrowserOpenFailed - wrapped payload shape`() {
+            val event = KiloCliDataParser.parseMcpBrowserOpenFailed(
+                """{"directory":"/test","payload":{"type":"mcp.browser.open.failed","properties":{"mcpName":"linear","url":"https://auth.example.test/authorize"}}}"""
+            )
+
+            assertNotNull(event)
+            assertEquals("linear", event.name)
+            assertEquals("https://auth.example.test/authorize", event.url)
+        }
+
+        @Test
+        fun `parseMcpBrowserOpenFailed - flat payload shape`() {
+            val event = KiloCliDataParser.parseMcpBrowserOpenFailed(
+                """{"properties":{"mcpName":"linear","url":"https://auth.example.test/authorize"}}"""
+            )
+
+            assertNotNull(event)
+            assertEquals("linear", event.name)
+            assertEquals("https://auth.example.test/authorize", event.url)
+        }
+
+        @Test
+        fun `parseMcpBrowserOpenFailed - missing url returns null`() {
+            val event = KiloCliDataParser.parseMcpBrowserOpenFailed(
+                """{"properties":{"mcpName":"linear"}}"""
+            )
+
+            assertNull(event)
+        }
+
+        @Test
+        fun `parseMcpBrowserOpenFailed - malformed JSON returns null`() {
+            assertNull(KiloCliDataParser.parseMcpBrowserOpenFailed("not json"))
+        }
+    }
+
     // ================================================================
     // Group 3 — Request / body builders and local model state
     // ================================================================
@@ -2698,6 +2820,66 @@ class KiloCliDataParserTest {
 
             assertEquals(
                 "{\"mcp\":{\"local\":{\"type\":\"local\",\"command\":[\"node\",\"server.js\"],\"environment\":{\"TOKEN\":\"x\"},\"headers\":{\"X-Test\":\"1\"},\"enabled\":false,\"timeout\":12000},\"old\":null}}",
+                KiloCliDataParser.buildConfigPatch(patch),
+            )
+        }
+
+        @Test
+        fun `buildConfigPatch - mcp oauth disabled writes false`() {
+            val patch = ConfigPatchDto(mcp = linkedMapOf(
+                "remote" to McpConfigDto(
+                    type = "remote",
+                    url = "https://mcp.example.test",
+                    oauth = McpOAuthDto(enabled = false),
+                ),
+            ))
+
+            assertEquals(
+                "{\"mcp\":{\"remote\":{\"type\":\"remote\",\"url\":\"https://mcp.example.test\",\"oauth\":false}}}",
+                KiloCliDataParser.buildConfigPatch(patch),
+            )
+        }
+
+        @Test
+        fun `buildConfigPatch - mcp oauth custom client writes object`() {
+            val patch = ConfigPatchDto(mcp = linkedMapOf(
+                "remote" to McpConfigDto(
+                    type = "remote",
+                    url = "https://mcp.example.test",
+                    oauth = McpOAuthDto(enabled = true, clientId = "abc", scope = "read"),
+                ),
+            ))
+
+            assertEquals(
+                "{\"mcp\":{\"remote\":{\"type\":\"remote\",\"url\":\"https://mcp.example.test\",\"oauth\":{\"clientId\":\"abc\",\"scope\":\"read\"}}}}",
+                KiloCliDataParser.buildConfigPatch(patch),
+            )
+        }
+
+        @Test
+        fun `buildConfigPatch - mcp oauth clear writes null`() {
+            val patch = ConfigPatchDto(mcp = linkedMapOf(
+                "remote" to McpConfigDto(
+                    type = "remote",
+                    url = "https://mcp.example.test",
+                    oauth = McpOAuthDto(clear = true),
+                ),
+            ))
+
+            assertEquals(
+                "{\"mcp\":{\"remote\":{\"type\":\"remote\",\"url\":\"https://mcp.example.test\",\"oauth\":null}}}",
+                KiloCliDataParser.buildConfigPatch(patch),
+            )
+        }
+
+        @Test
+        fun `buildConfigPatch - mcp without oauth omits the key`() {
+            val patch = ConfigPatchDto(mcp = linkedMapOf(
+                "remote" to McpConfigDto(type = "remote", url = "https://mcp.example.test"),
+            ))
+
+            assertEquals(
+                "{\"mcp\":{\"remote\":{\"type\":\"remote\",\"url\":\"https://mcp.example.test\"}}}",
                 KiloCliDataParser.buildConfigPatch(patch),
             )
         }

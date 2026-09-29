@@ -112,6 +112,18 @@ data class McpConfigDto(
     val headers: Map<String, String>? = null,
     val enabled: Boolean? = null,
     val timeout: Long? = null,
+    val oauth: McpOAuthDto? = null,
+)
+
+@Serializable
+data class McpOAuthDto(
+    val enabled: Boolean? = null,
+    val clientId: String? = null,
+    val clientSecret: String? = null,
+    val scope: String? = null,
+    val callbackPort: Int? = null,
+    val redirectUri: String? = null,
+    val clear: Boolean = false,
 )
 
 typealias PermissionConfigDto = Map<String, PermissionRuleDto>

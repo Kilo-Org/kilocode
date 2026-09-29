@@ -3,6 +3,7 @@ package ai.kilocode.client.settings.marketplace
 import ai.kilocode.client.app.KiloAgentBehaviorService
 import ai.kilocode.client.app.KiloAppService
 import ai.kilocode.client.app.KiloMarketplaceService
+import ai.kilocode.client.app.KiloMcpAuthService
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.settings.base.DirectoryReadyConfigurable
 import ai.kilocode.client.testing.FakeAgentBehaviorRpcApi
@@ -15,6 +16,8 @@ import ai.kilocode.client.ui.list.activeListCellBounds
 import ai.kilocode.rpc.dto.ConfigDto
 import ai.kilocode.rpc.dto.KiloAppStateDto
 import ai.kilocode.rpc.dto.KiloAppStatusDto
+import ai.kilocode.rpc.dto.McpAuthResultDto
+import ai.kilocode.rpc.dto.McpStatusDto
 import ai.kilocode.rpc.dto.MarketplaceItemDto
 import ai.kilocode.rpc.dto.MarketplaceListDto
 import ai.kilocode.rpc.dto.MarketplaceResultDto
@@ -375,6 +378,65 @@ class MarketplaceSettingsUiTest : BasePlatformTestCase() {
         assertEquals(listOf(DIR), agentRpc.skillReloads)
     }
 
+    fun `test successful MCP install that needs auth prompts to sign in`() {
+        val panel = panel { _, _ -> FakeInstallDialog(MarketplaceInstallRequest("project", emptyMap())) }
+        flushUntil { rows(panel).size == 3 }
+        agentRpc.mcps = listOf(McpStatusDto("context7", "needs_auth"))
+        var prompted = 0
+        TestDialogManager.setTestDialog {
+            prompted++
+            Messages.NO
+        }
+
+        click(panel, "mcp:context7", "install")
+
+        flushUntil { prompted == 1 }
+        assertEquals(1, prompted)
+        assertTrue(agentRpc.mcpAuthentications.isEmpty())
+    }
+
+    fun `test declining the sign in prompt leaves the install successful`() {
+        val panel = panel { _, _ -> FakeInstallDialog(MarketplaceInstallRequest("project", emptyMap())) }
+        flushUntil { rows(panel).size == 3 }
+        agentRpc.mcps = listOf(McpStatusDto("context7", "needs_auth"))
+        TestDialogManager.setTestDialog { Messages.NO }
+
+        click(panel, "mcp:context7", "install")
+
+        flushUntil { marketRpc.listCalls.size == 2 }
+        assertTrue(marketRpc.installCalls.isNotEmpty())
+        assertTrue(agentRpc.mcpAuthentications.isEmpty())
+    }
+
+    fun `test accepting the sign in prompt calls mcpAuthenticate`() {
+        val panel = panel { _, _ -> FakeInstallDialog(MarketplaceInstallRequest("project", emptyMap())) }
+        flushUntil { rows(panel).size == 3 }
+        agentRpc.mcps = listOf(McpStatusDto("context7", "needs_auth"))
+        agentRpc.mcpAuthenticateResult = McpAuthResultDto("connected")
+        TestDialogManager.setTestDialog(TestDialog.YES)
+
+        click(panel, "mcp:context7", "install")
+
+        flushUntil { agentRpc.mcpAuthentications.contains("context7") }
+    }
+
+    fun `test a connected MCP install shows no sign in prompt`() {
+        val panel = panel { _, _ -> FakeInstallDialog(MarketplaceInstallRequest("project", emptyMap())) }
+        flushUntil { rows(panel).size == 3 }
+        agentRpc.mcps = listOf(McpStatusDto("context7", "connected"))
+        var prompted = 0
+        TestDialogManager.setTestDialog {
+            prompted++
+            Messages.NO
+        }
+
+        click(panel, "mcp:context7", "install")
+
+        flushUntil { marketRpc.listCalls.size == 2 }
+        edt { UIUtil.dispatchAllInvocationEvents(); true }
+        assertEquals(0, prompted)
+    }
+
     fun `test switching the install dialog to an installed MCP scope removes and refreshes Skills`() {
         val panel = panel { item, directory ->
             val dialog = MarketplaceInstallDialog(item, directory)
@@ -633,7 +695,9 @@ class MarketplaceSettingsUiTest : BasePlatformTestCase() {
         appRpc.state.value = ready
         ApplicationManager.getApplication().replaceService(KiloAppService::class.java, app, testRootDisposable)
         ApplicationManager.getApplication().replaceService(KiloMarketplaceService::class.java, KiloMarketplaceService(cs, marketRpc), testRootDisposable)
-        ApplicationManager.getApplication().replaceService(KiloAgentBehaviorService::class.java, KiloAgentBehaviorService(cs, agentRpc), testRootDisposable)
+        val behavior = KiloAgentBehaviorService(cs, agentRpc)
+        ApplicationManager.getApplication().replaceService(KiloAgentBehaviorService::class.java, behavior, testRootDisposable)
+        ApplicationManager.getApplication().replaceService(KiloMcpAuthService::class.java, KiloMcpAuthService(cs, behavior), testRootDisposable)
     }
 
     private fun click(panel: MarketplaceSettingsUi, key: String, id: String) {

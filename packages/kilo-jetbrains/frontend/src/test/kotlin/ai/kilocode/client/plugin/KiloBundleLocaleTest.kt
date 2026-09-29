@@ -107,6 +107,23 @@ class KiloBundleLocaleTest : BasePlatformTestCase() {
         }
     }
 
+    fun `test mcp auth keys are present and format in every locale`() {
+        for (locale in LOCALES) {
+            val props = load(locale)
+            for ((key, args) in MCP_AUTH) {
+                val pattern = props.getProperty(key)
+                assertNotNull("$locale: missing $key", pattern)
+                assertTrue("$locale: $key is blank", pattern!!.isNotBlank())
+                assertEscaped(locale, key, pattern)
+                val rendered = format(pattern, *args.toTypedArray())
+                for (arg in args) {
+                    assertTrue("$locale: $key dropped $arg -> $rendered", rendered.contains(arg))
+                }
+                assertClean(locale, key, rendered)
+            }
+        }
+    }
+
     fun `test localized bundles do not carry stale keys`() {
         val base = load("en").stringPropertyNames()
         for (locale in LOCALES.filterNot { it == "en" }) {
@@ -330,6 +347,32 @@ class KiloBundleLocaleTest : BasePlatformTestCase() {
             "session.empty.worktree.unknown",
             "action.Kilo.NewSession.toolbar",
             "action.Kilo.NewWorktree.toolbar",
+            "settings.agentBehavior.mcp.signIn.cancel",
+            "settings.agentBehavior.mcp.resetAuth",
+            "settings.agentBehavior.mcp.resetAuth.title",
+            "settings.agentBehavior.mcp.resetAuth.failed",
+            "settings.agentBehavior.mcp.authUrl.title",
+            "settings.agentBehavior.mcp.authUrl.open",
+            "settings.agentBehavior.mcp.authUrl.copy",
+            "settings.agentBehavior.mcp.edit.oauth",
+            "settings.agentBehavior.mcp.edit.oauth.help",
+            "settings.agentBehavior.mcp.edit.oauth.mode",
+            "settings.agentBehavior.mcp.edit.oauth.mode.automatic",
+            "settings.agentBehavior.mcp.edit.oauth.mode.disabled",
+            "settings.agentBehavior.mcp.edit.oauth.mode.custom",
+            "settings.agentBehavior.mcp.edit.oauth.clientId",
+            "settings.agentBehavior.mcp.edit.oauth.clientSecret",
+            "settings.agentBehavior.mcp.edit.oauth.scope",
+            "settings.agentBehavior.mcp.edit.oauth.callbackPort",
+            "settings.agentBehavior.mcp.edit.oauth.redirectUri",
+            "settings.agentBehavior.mcp.edit.oauth.redirectUri.help",
+            "settings.agentBehavior.mcp.edit.oauth.port.invalid",
+            "settings.agentBehavior.mcp.edit.oauth.secret.invalid",
+            "settings.agentBehavior.mcp.edit.oauth.redirectUri.invalid",
+            "settings.marketplace.mcp.signIn.title",
+            "settings.marketplace.mcp.signIn.confirm",
+            "prompt.mcp.needsAuth.busy",
+            "prompt.mcp.openSettings",
         )
 
         val AGENT = mapOf(
@@ -438,6 +481,19 @@ class KiloBundleLocaleTest : BasePlatformTestCase() {
             "worktree.diagnostics.copied" to emptyList(),
             "worktree.diagnostics.noProject" to emptyList(),
             "settings.agentBehavior.extended.title" to emptyList(),
+        )
+
+        val MCP_AUTH = mapOf(
+            "settings.agentBehavior.mcp.signIn.progress" to listOf("SERVER_NAME"),
+            "settings.agentBehavior.mcp.signIn.success" to listOf("SERVER_NAME"),
+            "settings.agentBehavior.mcp.signIn.failed" to listOf("SERVER_NAME"),
+            "settings.agentBehavior.mcp.signIn.timeout" to listOf("SERVER_NAME"),
+            "settings.agentBehavior.mcp.signIn.unsupported" to listOf("SERVER_NAME"),
+            "settings.agentBehavior.mcp.resetAuth.message" to listOf("SERVER_NAME"),
+            "settings.agentBehavior.mcp.authUrl.message" to listOf("SERVER_NAME"),
+            "settings.marketplace.mcp.signIn.message" to listOf("SERVER_NAME"),
+            "prompt.mcp.needsAuth.one" to listOf("SERVER_NAME"),
+            "prompt.mcp.needsAuth.many" to listOf("7"),
         )
     }
 }

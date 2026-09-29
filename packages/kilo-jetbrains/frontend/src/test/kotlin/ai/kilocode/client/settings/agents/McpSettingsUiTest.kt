@@ -3,6 +3,7 @@ package ai.kilocode.client.settings.agents
 import ai.kilocode.client.util.edtWait
 import ai.kilocode.client.app.KiloAgentBehaviorService
 import ai.kilocode.client.app.KiloAppService
+import ai.kilocode.client.app.KiloMcpAuthService
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.settings.base.DirectoryReadyConfigurable
 import ai.kilocode.client.settings.base.SettingsInfo
@@ -15,11 +16,13 @@ import ai.kilocode.client.ui.list.activeListCellBounds
 import ai.kilocode.rpc.dto.ConfigDto
 import ai.kilocode.rpc.dto.KiloAppStateDto
 import ai.kilocode.rpc.dto.KiloAppStatusDto
+import ai.kilocode.rpc.dto.McpAuthResultDto
 import ai.kilocode.rpc.dto.McpConfigDto
 import ai.kilocode.rpc.dto.McpServerConfigDto
 import ai.kilocode.rpc.dto.McpStatusDto
 import com.intellij.icons.AllIcons
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.components.service
 import com.intellij.openapi.ui.Messages
 import com.intellij.openapi.ui.TestDialog
 import com.intellij.openapi.ui.TestDialogManager
@@ -41,6 +44,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 
 class McpSettingsUiTest : BasePlatformTestCase() {
@@ -88,7 +92,7 @@ class McpSettingsUiTest : BasePlatformTestCase() {
             assertEquals(listOf("failed"), rows.single { it.key == "runtime" }.badges.map { it.text })
             assertEquals("crashed", rows.single { it.key == "runtime" }.description)
             val github = rows.single { it.key == "github" }
-            assertEquals(listOf("connect", "auth", "edit", "remove"), github.cells.map { it.id })
+            assertEquals(listOf("connect", "auth", "resetAuth", "edit", "remove"), github.cells.map { it.id })
             assertTrue(github.cells.single { it.id == "edit" }.primary)
             assertEquals(KiloBundle.message("settings.agentBehavior.mcp.connect"), github.cells.single { it.id == "connect" }.label)
             val remove = github.cells.single { it.id == "remove" }
@@ -331,6 +335,80 @@ class McpSettingsUiTest : BasePlatformTestCase() {
         assertTrue(edt { rows(panel).any { it.key == "runtime" } })
     }
 
+    fun `test sign in success reconnects and clears the auth cell`() {
+        val panel = panel()
+        flushUntil { rows(panel).size == 3 }
+        agentRpc.mcpAuthenticateResult = McpAuthResultDto("connected")
+
+        click(panel, "github", "auth")
+        // The fake authenticate call succeeds instantly; the ensuing reload picks up a status that
+        // the test flips to connected, mirroring what a real reconnect would report.
+        agentRpc.mcps = agentRpc.mcps.filterNot { it.name == "github" } + McpStatusDto("github", "connected")
+
+        flushUntil { rows(panel).single { it.key == "github" }.badges.first().text == "connected" }
+        assertEquals(listOf("github"), agentRpc.mcpAuthentications)
+    }
+
+    fun `test sign in failure shows the CLI error`() {
+        val panel = panel()
+        flushUntil { rows(panel).size == 3 }
+        agentRpc.mcpAuthenticateResult = McpAuthResultDto("failed", "denied by server")
+
+        click(panel, "github", "auth")
+
+        flushUntil { text(panel).contains("denied by server") }
+        assertTrue(edt { rows(panel).any { it.key == "github" } })
+    }
+
+    fun `test sign in cancel calls mcpAuthRemove`() {
+        val panel = panel()
+        flushUntil { rows(panel).size == 3 }
+        agentRpc.mcpAuthRemoveResult = true
+
+        edt {
+            // Directly exercises the cancel path the progress overlay's Cancel button wires to,
+            // since driving the real overlay button requires a longer-lived in-flight sign-in.
+            scope!!.launch { service<KiloMcpAuthService>().cancel(DIR, "github") }
+            true
+        }
+
+        flushUntil { agentRpc.mcpAuthRemovals.contains("github") }
+    }
+
+    fun `test reset sign in cell only appears for remote servers`() {
+        val panel = panel()
+        flushUntil { rows(panel).size == 3 }
+
+        edt {
+            val rows = rows(panel)
+            assertTrue(rows.single { it.key == "github" }.cells.any { it.id == "resetAuth" })
+            assertFalse(rows.single { it.key == "filesystem" }.cells.any { it.id == "resetAuth" })
+            true
+        }
+    }
+
+    fun `test reset sign in requires confirmation and calls mcpAuthRemove on accept`() {
+        val panel = panel()
+        flushUntil { rows(panel).size == 3 }
+        agentRpc.mcpAuthRemoveResult = true
+        TestDialogManager.setTestDialog(TestDialog.YES)
+
+        click(panel, "github", "resetAuth")
+
+        flushUntil { agentRpc.mcpAuthRemovals.contains("github") }
+    }
+
+    fun `test reset sign in decline does not call mcpAuthRemove`() {
+        val panel = panel()
+        flushUntil { rows(panel).size == 3 }
+        TestDialogManager.setTestDialog { Messages.NO }
+
+        click(panel, "github", "resetAuth")
+
+        edt { UIUtil.dispatchAllInvocationEvents(); true }
+        assertTrue(agentRpc.mcpAuthRemovals.isEmpty())
+    }
+
     fun `test missing directory still shows configured mcp servers`() {
         install()
         val panel = edt { McpSettingsUi(scope!!, "") }
@@ -389,7 +467,9 @@ class McpSettingsUiTest : BasePlatformTestCase() {
         app._state.value = ready
         appRpc.state.value = ready
         ApplicationManager.getApplication().replaceService(KiloAppService::class.java, app, testRootDisposable)
-        ApplicationManager.getApplication().replaceService(KiloAgentBehaviorService::class.java, KiloAgentBehaviorService(cs, agentRpc), testRootDisposable)
+        val behavior = KiloAgentBehaviorService(cs, agentRpc)
+        ApplicationManager.getApplication().replaceService(KiloAgentBehaviorService::class.java, behavior, testRootDisposable)
+        ApplicationManager.getApplication().replaceService(KiloMcpAuthService::class.java, KiloMcpAuthService(cs, behavior), testRootDisposable)
     }
 
     private fun click(panel: McpSettingsUi, key: String, id: String) {

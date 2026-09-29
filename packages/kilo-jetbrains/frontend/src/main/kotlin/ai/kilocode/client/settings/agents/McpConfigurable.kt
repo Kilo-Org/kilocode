@@ -1,6 +1,7 @@
 package ai.kilocode.client.settings.agents
 
 import ai.kilocode.client.app.KiloAgentBehaviorService
+import ai.kilocode.client.app.KiloMcpAuthService
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.plugin.KiloDocs
 import ai.kilocode.client.settings.base.DirectoryReadyConfigurable
@@ -26,10 +27,12 @@ import com.intellij.openapi.application.asContextElement
 import com.intellij.openapi.components.service
 import com.intellij.openapi.ui.Messages
 import com.intellij.ui.components.JBLabel
+import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.util.ui.UIUtil
 import javax.swing.JComponent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 private val edt = Dispatchers.EDT + ModalityState.any().asContextElement()
@@ -47,7 +50,7 @@ class McpConfigurable : DirectoryReadyConfigurable<JComponent>() {
 }
 
 internal class McpSettingsUi(
-    cs: CoroutineScope,
+    private val cs: CoroutineScope,
     dir: String,
     private val create: (String, McpConfigDto) -> McpEditDialogHandle = ::McpEditDialog,
 ) : SettingsListPanel(cs, ActiveListConfig.Equal.copy(description = false)) {
@@ -87,7 +90,8 @@ internal class McpSettingsUi(
         when (cellId) {
             CONNECT_CELL -> mutate(key) { service<KiloAgentBehaviorService>().mcpConnect(dir, key) }
             DISCONNECT_CELL -> mutate(key) { service<KiloAgentBehaviorService>().mcpDisconnect(dir, key) }
-            AUTH_CELL -> mutate(key) { service<KiloAgentBehaviorService>().mcpAuthenticate(dir, key) }
+            AUTH_CELL -> signIn(key)
+            RESET_AUTH_CELL -> resetAuth(key)
             EDIT_CELL -> edit(key)
             REMOVE_CELL -> remove(key)
         }
@@ -134,6 +138,9 @@ internal class McpSettingsUi(
         ActiveListCell(AUTH_CELL, KiloBundle.message("settings.agentBehavior.mcp.signIn")).takeIf {
             status?.status == NEEDS_AUTH
         },
+        ActiveListCell(RESET_AUTH_CELL, KiloBundle.message("settings.agentBehavior.mcp.resetAuth")).takeIf {
+            cfg?.type == "remote"
+        },
         ActiveListCell(
             EDIT_CELL,
             KiloBundle.message("settings.agentBehavior.edit"),
@@ -164,6 +171,45 @@ internal class McpSettingsUi(
             }
             true
         }
+    }
+
+    @RequiresEdt
+    private fun signIn(name: String) {
+        checkEdt()
+        val auth = service<KiloMcpAuthService>()
+        if (!launch("mcp sign in name=$name") { id ->
+            val result = auth.signIn(dir, name)
+            if (!withContext(edt) { active(id) }) return@launch
+            withContext(edt) { auth.report(name, result) }
+            if (result.status != "connected") {
+                throw SettingsMessageException(
+                    result.error ?: KiloBundle.message("settings.agentBehavior.mcp.signIn.failed", name),
+                )
+            }
+            val items = fetch()
+            withContext(edt) {
+                if (!active(id)) return@withContext
+                setBusy(false)
+                view.update(items, ActiveListSelection.Key(name))
+                clearProgress()
+            }
+        }) return
+        showProgress(
+            KiloBundle.message("settings.agentBehavior.mcp.signIn.progress", name),
+            KiloBundle.message("settings.agentBehavior.mcp.signIn.cancel"),
+        ) { cs.launch { auth.cancel(dir, name) } }
+    }
+
+    private fun resetAuth(name: String) {
+        val result = Messages.showYesNoDialog(
+            KiloBundle.message("settings.agentBehavior.mcp.resetAuth.message", name),
+            KiloBundle.message("settings.agentBehavior.mcp.resetAuth.title"),
+            KiloBundle.message("settings.agentBehavior.mcp.resetAuth"),
+            Messages.getCancelButton(),
+            Messages.getQuestionIcon(),
+        )
+        if (result != Messages.YES) return
+        mutate(name) { service<KiloMcpAuthService>().cancel(dir, name) }
     }
 
     private fun remove(name: String) {
@@ -200,6 +246,7 @@ internal class McpSettingsUi(
         const val CONNECT_CELL = "connect"
         const val DISCONNECT_CELL = "disconnect"
         const val AUTH_CELL = "auth"
+        const val RESET_AUTH_CELL = "resetAuth"
         const val EDIT_CELL = "edit"
         const val REMOVE_CELL = "remove"
         val LOG = KiloLog.create(McpSettingsUi::class.java)

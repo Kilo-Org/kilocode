@@ -12,12 +12,17 @@ import ai.kilocode.rpc.dto.AgentDetailDto
 import ai.kilocode.jetbrains.api.model.AgentBuilderSaveRequest
 import ai.kilocode.rpc.dto.CommandFileDto
 import ai.kilocode.rpc.dto.ConfigPatchDto
+import ai.kilocode.rpc.dto.McpAuthEventDto
+import ai.kilocode.rpc.dto.McpAuthResultDto
 import ai.kilocode.rpc.dto.McpConfigDto
 import ai.kilocode.rpc.dto.McpServerConfigDto
 import ai.kilocode.rpc.dto.PermissionRuleItemDto
 import ai.kilocode.rpc.dto.SkillDto
 import com.intellij.openapi.components.service
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.channels.trySendBlocking
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.channelFlow
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -40,6 +45,7 @@ class KiloAgentBehaviorRpcApiImpl(private val backend: KiloBackendAppService? = 
         private val saved = ConcurrentHashMap<String, SavedMcp>()
         private val port = AtomicInteger(-1)
         private val extensions = setOf("md", "markdown", "txt", "text", "html", "htm")
+        private const val BROWSER_OPEN_FAILED = "mcp.browser.open.failed"
     }
 
     private val app: KiloBackendAppService get() = backend ?: service()
@@ -217,8 +223,28 @@ class KiloAgentBehaviorRpcApiImpl(private val backend: KiloBackendAppService? = 
 
     override suspend fun mcpDisconnect(directory: String, name: String): Boolean = post(directory, "/mcp/${encodePath(name)}/disconnect")
 
-    override suspend fun mcpAuthenticate(directory: String, name: String): Boolean =
-        post(directory, "/mcp/${encodePath(name)}/auth/authenticate")
+    override suspend fun mcpAuthenticate(directory: String, name: String): McpAuthResultDto {
+        val reply = send(directory, "/mcp/${encodePath(name)}/auth/authenticate", "POST")
+        val result = KiloCliDataParser.parseMcpAuthResult(reply.code, reply.body)
+        LOG.info("MCP auth dir=$directory name=$name http=${reply.code} status=${result.status}")
+        return result
+    }
+
+    override suspend fun mcpAuthRemove(directory: String, name: String): Boolean {
+        val reply = send(directory, "/mcp/${encodePath(name)}/auth", "DELETE")
+        LOG.info("MCP auth remove dir=$directory name=$name http=${reply.code}")
+        return reply.code in 200..299
+    }
+
+    override suspend fun mcpAuthEvents(): Flow<McpAuthEventDto> = channelFlow {
+        app.events.collect { event ->
+            val type = if (event.type == BROWSER_OPEN_FAILED) event.type else KiloCliDataParser.extractEventType(event.data)
+            if (type != BROWSER_OPEN_FAILED) return@collect
+            val dto = KiloCliDataParser.parseMcpBrowserOpenFailed(event.data) ?: return@collect
+            LOG.info("MCP auth browser open failed name=${dto.name}")
+            trySendBlocking(dto)
+        }
+    }
 
     override suspend fun claudeCodeCompat(): Boolean = KiloClaudeCompatSettings.get()
 
@@ -414,6 +440,21 @@ class KiloAgentBehaviorRpcApiImpl(private val backend: KiloBackendAppService? = 
                 LOG.warn("MCP config patch failed: $path HTTP ${response.code}")
                 throw RuntimeException("HTTP ${response.code}")
             }
+        }
+    }
+
+    private data class Reply(val code: Int, val body: String)
+
+    private suspend fun send(directory: String, path: String, method: String): Reply = withContext(Dispatchers.IO) {
+        val http = app.http ?: throw IllegalStateException("Kilo HTTP client is unavailable")
+        val url = "http://127.0.0.1:${app.port}$path?directory=${encode(directory)}"
+        val builder = Request.Builder().url(url)
+        when (method) {
+            "DELETE" -> builder.delete()
+            else -> builder.post(JsonObject(emptyMap()).toString().toRequestBody(JSON))
+        }
+        http.newCall(builder.build()).execute().use { response ->
+            Reply(response.code, response.body?.string().orEmpty())
         }
     }
 

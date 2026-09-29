@@ -8,13 +8,17 @@ import ai.kilocode.rpc.dto.AgentDetailDto
 import ai.kilocode.rpc.dto.AgentCreateDto
 import ai.kilocode.rpc.dto.CommandDto
 import ai.kilocode.rpc.dto.CommandFileDto
+import ai.kilocode.rpc.dto.McpAuthEventDto
+import ai.kilocode.rpc.dto.McpAuthResultDto
 import ai.kilocode.rpc.dto.McpConfigDto
 import ai.kilocode.rpc.dto.McpServerConfigDto
 import ai.kilocode.rpc.dto.McpStatusDto
 import ai.kilocode.rpc.dto.SkillDto
 import com.intellij.openapi.components.Service
 import fleet.rpc.client.durable
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.flow.Flow
 
 @Service(Service.Level.APP)
 class KiloAgentBehaviorService internal constructor(
@@ -80,7 +84,13 @@ class KiloAgentBehaviorService internal constructor(
 
     suspend fun mcpDisconnect(directory: String, name: String): Boolean = safe(false) { call { mcpDisconnect(directory, name) } }
 
-    suspend fun mcpAuthenticate(directory: String, name: String): Boolean = safe(false) { call { mcpAuthenticate(directory, name) } }
+    suspend fun mcpAuthenticate(directory: String, name: String): McpAuthResultDto =
+        safe(McpAuthResultDto("failed", "RPC failed")) { call { mcpAuthenticate(directory, name) } }
+
+    suspend fun mcpAuthRemove(directory: String, name: String): Boolean =
+        safe(false) { call { mcpAuthRemove(directory, name) } }
+
+    suspend fun mcpAuthEvents(): Flow<McpAuthEventDto> = call { mcpAuthEvents() }
 
     suspend fun claudeCodeCompat(): Boolean = safe(false) { call { claudeCodeCompat() } }
 
@@ -88,6 +98,8 @@ class KiloAgentBehaviorService internal constructor(
 
     private suspend fun <T> safe(fallback: T, block: suspend () -> T): T = try {
         block()
+    } catch (err: CancellationException) {
+        throw err
     } catch (e: Exception) {
         LOG.warn("agent behavior RPC failed", e)
         fallback

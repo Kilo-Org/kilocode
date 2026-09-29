@@ -67,11 +67,14 @@ class MockCliServer : AutoCloseable {
     @Volatile var mcp = "[]"
     @Volatile var mcpStatus = 200
     @Volatile var mcpActionStatus = 200
+    @Volatile var mcpAuthenticateResponse = """{"status":"connected"}"""
+    @Volatile var mcpAuthRemoveStatus = 200
     @Volatile var agentRemoveStatus = 200
     @Volatile var commandRemoveStatus = 200
     @Volatile var skillRemoveStatus = 200
     @Volatile var agentBuilderStatus = 200
     @Volatile var lastMcpActionPath: String? = null
+    @Volatile var lastMcpAuthDeletePath: String? = null
     @Volatile var lastAgentRemoveBody: String? = null
     @Volatile var sessionBoard = """{"ownerSessionID":"ses_root","revision":1,"hasMore":false,"messages":[]}"""
     @Volatile var sessionBoardStatus = 200
@@ -501,7 +504,11 @@ class MockCliServer : AutoCloseable {
                 }
                 bare.matches(Regex("/mcp/[^/]+/auth/authenticate")) && method == "POST" -> {
                     lastMcpActionPath = path
-                    respond(output, mcpActionStatus, "true")
+                    respond(output, mcpActionStatus, mcpAuthenticateResponse)
+                }
+                bare.matches(Regex("/mcp/[^/]+/auth")) && method == "DELETE" -> {
+                    lastMcpAuthDeletePath = bare
+                    respond(output, mcpAuthRemoveStatus, "true")
                 }
                 bare == "/experimental/session" -> {
                     lastExperimentalSessionPath = path

@@ -5,11 +5,15 @@ import ai.kilocode.rpc.dto.AgentCreateDto
 import ai.kilocode.rpc.dto.AgentDetailDto
 import ai.kilocode.rpc.dto.CommandFileDto
 import ai.kilocode.rpc.dto.CommandDto
+import ai.kilocode.rpc.dto.McpAuthEventDto
+import ai.kilocode.rpc.dto.McpAuthResultDto
 import ai.kilocode.rpc.dto.McpConfigDto
 import ai.kilocode.rpc.dto.McpServerConfigDto
 import ai.kilocode.rpc.dto.McpStatusDto
 import ai.kilocode.rpc.dto.SkillDto
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
 
 class FakeAgentBehaviorRpcApi : KiloAgentBehaviorRpcApi {
     var agents = emptyList<AgentDetailDto>()
@@ -33,6 +37,8 @@ class FakeAgentBehaviorRpcApi : KiloAgentBehaviorRpcApi {
     val mcpConnects = mutableListOf<String>()
     val mcpDisconnects = mutableListOf<String>()
     val mcpAuthentications = mutableListOf<String>()
+    val mcpAuthRemovals = mutableListOf<String>()
+    val mcpAuthEventsFlow = MutableSharedFlow<McpAuthEventDto>(extraBufferCapacity = 8)
     val creations = mutableListOf<AgentCreateDto>()
     val createDirs = mutableListOf<String>()
     var afterCreate: (suspend (String, AgentCreateDto) -> Unit)? = null
@@ -56,7 +62,10 @@ class FakeAgentBehaviorRpcApi : KiloAgentBehaviorRpcApi {
     var saveCommandResult = true
     var mcpConnectResult = true
     var mcpDisconnectResult = true
-    var mcpAuthenticateResult = true
+    var mcpAuthenticateResult = McpAuthResultDto("connected")
+    var mcpAuthRemoveResult = true
+    @Volatile var mcpAuthenticateStarted = false
+    var beforeAuthenticate: (suspend () -> Unit)? = null
     var claudeCodeCompat = false
     val compatSaves = mutableListOf<Boolean>()
 
@@ -199,10 +208,23 @@ class FakeAgentBehaviorRpcApi : KiloAgentBehaviorRpcApi {
         return mcpDisconnectResult
     }
 
-    override suspend fun mcpAuthenticate(directory: String, name: String): Boolean {
+    override suspend fun mcpAuthenticate(directory: String, name: String): McpAuthResultDto {
         assertNotEdt("agentBehavior.mcpAuthenticate")
+        mcpAuthenticateStarted = true
+        beforeAuthenticate?.invoke()
         mcpAuthentications.add(name)
         return mcpAuthenticateResult
+    }
+
+    override suspend fun mcpAuthRemove(directory: String, name: String): Boolean {
+        assertNotEdt("agentBehavior.mcpAuthRemove")
+        mcpAuthRemovals.add(name)
+        return mcpAuthRemoveResult
+    }
+
+    override suspend fun mcpAuthEvents(): Flow<McpAuthEventDto> {
+        assertNotEdt("agentBehavior.mcpAuthEvents")
+        return mcpAuthEventsFlow
     }
 
     override suspend fun claudeCodeCompat(): Boolean {

@@ -155,6 +155,7 @@ class PromptPanel(
     var onChange: () -> Unit = {}
     var onAutoApproveToggle: (Boolean) -> Unit = {}
     var onFileDrag: (Boolean) -> Unit = {}
+    var onMcpAuthClick: () -> Unit = {}
     private var style = SessionEditorStyle.current()
     private var focused = false
     private val shell = BorderLayoutPanel().apply {
@@ -259,6 +260,12 @@ class PromptPanel(
         addActionListener { onAutoApproveToggle(!autoApprove) }
     }
 
+    private val mcpAuth = HoverIcon().apply {
+        icon = AllIcons.General.Warning
+        isVisible = false
+        addActionListener { onMcpAuthClick() }
+    }
+
     /**
      * Opens the Kilo.Session.PromptMenu popup (auto-approve + sharing). Resolves its context from
      * DataManager, so it reads live SessionActionsKeys.ACTIONS from the session ancestor chain rather
@@ -355,6 +362,8 @@ class PromptPanel(
         bar.add(Box.createHorizontalStrut(JBUI.scale(SessionUiStyle.View.Prompt.CONTROL_GAP)))
         bar.add(reset)
         bar.add(Box.createHorizontalGlue())
+        bar.add(mcpAuth)
+        bar.add(Box.createHorizontalStrut(JBUI.scale(SessionUiStyle.View.Prompt.CONTROL_GAP)))
         if (approve) {
             bar.add(menu)
             bar.add(Box.createHorizontalStrut(JBUI.scale(SessionUiStyle.View.Prompt.CONTROL_GAP)))
@@ -523,6 +532,21 @@ class PromptPanel(
     }
 
     @RequiresEdt
+    fun setMcpAuth(servers: List<String>, busy: Boolean) {
+        mcpAuth.isVisible = servers.isNotEmpty() || busy
+        mcpAuth.isEnabled = !busy
+        mcpAuth.icon = if (busy) SpinnerIcon.icon else AllIcons.General.Warning
+        mcpAuth.toolTipText = when {
+            busy -> KiloBundle.message("prompt.mcp.needsAuth.busy")
+            servers.size == 1 -> KiloBundle.message("prompt.mcp.needsAuth.one", servers.first())
+            else -> KiloBundle.message("prompt.mcp.needsAuth.many", servers.size)
+        }
+        mcpAuth.accessibleContext.accessibleName = mcpAuth.toolTipText
+        revalidate()
+        repaint()
+    }
+
+    @RequiresEdt
     fun text(): String = editor.text.trim()
 
     @RequiresEdt
@@ -554,6 +578,8 @@ class PromptPanel(
     internal fun resetVisibleForTest() = reset.isVisible
 
     internal fun resetForTest(): JComponent = reset
+
+    internal fun mcpAuthForTest(): JComponent = mcpAuth
 
     internal fun shellForTest(): JComponent = shell
 

@@ -44,3 +44,15 @@ data class McpServerConfigDto(
     val config: McpConfigDto,
     val scope: String,
 )
+
+@Serializable
+data class McpAuthResultDto(
+    val status: String,
+    val error: String? = null,
+)
+
+@Serializable
+data class McpAuthEventDto(
+    val name: String,
+    val url: String,
+)

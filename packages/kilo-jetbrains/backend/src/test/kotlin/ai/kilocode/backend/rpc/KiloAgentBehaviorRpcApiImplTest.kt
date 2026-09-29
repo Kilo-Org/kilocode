@@ -353,8 +353,34 @@ class KiloAgentBehaviorRpcApiImplTest {
         assertContains(mock.lastMcpActionPath.orEmpty(), "/mcp/local%20server/connect")
         assertTrue(rpc.mcpDisconnect("/test", "local server"))
         assertContains(mock.lastMcpActionPath.orEmpty(), "/mcp/local%20server/disconnect")
-        assertTrue(rpc.mcpAuthenticate("/test", "local server"))
+        val authResult = rpc.mcpAuthenticate("/test", "local server")
+        assertEquals("connected", authResult.status)
         assertContains(mock.lastMcpActionPath.orEmpty(), "/mcp/local%20server/auth/authenticate")
+    }
+
+    @Test
+    fun `mcp auth remove and browser open failed event`() = runBlocking {
+        val rpc = rpc()
+
+        mock.mcpAuthRemoveStatus = 200
+        assertTrue(rpc.mcpAuthRemove("/test", "linear"))
+        assertContains(mock.lastMcpAuthDeletePath.orEmpty(), "/mcp/linear/auth")
+
+        mock.mcpAuthRemoveStatus = 404
+        assertFalse(rpc.mcpAuthRemove("/test", "missing"))
+    }
+
+    @Test
+    fun `mcp authenticate maps failure statuses`() = runBlocking {
+        val rpc = rpc()
+
+        mock.mcpActionStatus = 400
+        mock.mcpAuthenticateResponse = """{"error":"unsupported"}"""
+        assertEquals("unsupported", rpc.mcpAuthenticate("/test", "linear").status)
+
+        mock.mcpActionStatus = 404
+        mock.mcpAuthenticateResponse = """{"error":"not found"}"""
+        assertEquals("not_found", rpc.mcpAuthenticate("/test", "linear").status)
     }
 
     private suspend fun rpc(): KiloAgentBehaviorRpcApiImpl = KiloAgentBehaviorRpcApiImpl(app())

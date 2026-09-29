@@ -33,7 +33,10 @@ import ai.kilocode.rpc.dto.MessageErrorDto
 import ai.kilocode.rpc.dto.MessageSummaryDto
 import ai.kilocode.rpc.dto.MessageTimeDto
 import ai.kilocode.rpc.dto.MessageWithPartsDto
+import ai.kilocode.rpc.dto.McpAuthEventDto
+import ai.kilocode.rpc.dto.McpAuthResultDto
 import ai.kilocode.rpc.dto.McpConfigDto
+import ai.kilocode.rpc.dto.McpOAuthDto
 import ai.kilocode.rpc.dto.McpStatusDto
 import ai.kilocode.rpc.dto.ModelAutoRoutingDto
 import ai.kilocode.rpc.dto.ModelCacheCostDto
@@ -692,8 +695,23 @@ object KiloCliDataParser {
                 headers = item.map("headers").takeIf { it.isNotEmpty() },
                 enabled = item.flagOrNull("enabled"),
                 timeout = item.long("timeout"),
+                oauth = parseMcpOAuth(item["oauth"]),
             )
         }.toMap()
+    }
+
+    private fun parseMcpOAuth(elem: JsonElement?): McpOAuthDto? {
+        if (elem == null || elem is JsonNull) return null
+        runCatching { elem.jsonPrimitive.booleanOrNull }.getOrNull()?.let { return McpOAuthDto(enabled = it) }
+        val obj = elem.obj() ?: return null
+        return McpOAuthDto(
+            enabled = true,
+            clientId = obj.str("clientId"),
+            clientSecret = obj.str("clientSecret"),
+            scope = obj.str("scope"),
+            callbackPort = obj.long("callbackPort")?.toInt(),
+            redirectUri = obj.str("redirectUri"),
+        )
     }
 
     private fun parseAgentConfig(obj: JsonObject?): Map<String, AgentConfigDto> {
@@ -817,6 +835,28 @@ object KiloCliDataParser {
             is JsonObject -> root.mapNotNull { (name, item) -> mcpStatus(item, name) }
             else -> emptyList()
         }
+    }
+
+    fun parseMcpAuthResult(code: Int, raw: String): McpAuthResultDto {
+        val obj = tryParseObject(raw)
+        if (code in 200..299) {
+            return McpAuthResultDto(status = obj?.str("status") ?: "failed", error = obj?.str("error"))
+        }
+        val status = when (code) {
+            400 -> "unsupported"
+            404 -> "not_found"
+            else -> "failed"
+        }
+        return McpAuthResultDto(status = status, error = obj?.str("error") ?: obj?.str("message") ?: "HTTP $code")
+    }
+
+    fun parseMcpBrowserOpenFailed(raw: String): McpAuthEventDto? {
+        val obj = tryParseObject(raw) ?: return null
+        val payload = obj["payload"]?.jsonObject ?: obj
+        val props = payload["properties"]?.jsonObject ?: obj
+        val name = props.str("mcpName") ?: return null
+        val url = props.str("url") ?: return null
+        return McpAuthEventDto(name = name, url = url)
     }
 
     private fun String.array(): JsonArray {
@@ -1065,6 +1105,19 @@ object KiloCliDataParser {
                             }
                             if (it.enabled != null) put("enabled", it.enabled)
                             if (it.timeout != null) put("timeout", it.timeout)
+                            val oauth = it.oauth
+                            when {
+                                oauth == null -> Unit
+                                oauth.clear -> put("oauth", JsonNull)
+                                oauth.enabled == false -> put("oauth", JsonPrimitive(false))
+                                else -> put("oauth", buildJsonObject {
+                                    if (oauth.clientId != null) put("clientId", oauth.clientId)
+                                    if (oauth.clientSecret != null) put("clientSecret", oauth.clientSecret)
+                                    if (oauth.scope != null) put("scope", oauth.scope)
+                                    if (oauth.callbackPort != null) put("callbackPort", oauth.callbackPort)
+                                    if (oauth.redirectUri != null) put("redirectUri", oauth.redirectUri)
+                                })
+                            }
                         }
                     } ?: JsonNull)
                 })

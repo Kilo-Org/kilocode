@@ -1117,6 +1117,58 @@ class PromptPanelTest : BasePlatformTestCase() {
         assertTrue(panel.resetVisibleForTest())
     }
 
+    fun `test mcp auth indicator is hidden with no servers and not busy`() {
+        val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> })
+
+        panel.setMcpAuth(emptyList(), busy = false)
+
+        assertFalse(panel.mcpAuthForTest().isVisible)
+    }
+
+    fun `test mcp auth indicator shows singular tooltip for one server`() {
+        val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> })
+
+        panel.setMcpAuth(listOf("linear"), busy = false)
+
+        val icon = panel.mcpAuthForTest()
+        assertTrue(icon.isVisible)
+        assertTrue(icon.isEnabled)
+        assertEquals(KiloBundle.message("prompt.mcp.needsAuth.one", "linear"), icon.toolTipText)
+    }
+
+    fun `test mcp auth indicator shows plural tooltip for several servers`() {
+        val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> })
+
+        panel.setMcpAuth(listOf("linear", "github"), busy = false)
+
+        assertEquals(
+            KiloBundle.message("prompt.mcp.needsAuth.many", 2),
+            panel.mcpAuthForTest().toolTipText,
+        )
+    }
+
+    fun `test mcp auth indicator disables and swaps icon while busy`() {
+        val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> })
+
+        panel.setMcpAuth(listOf("linear"), busy = true)
+
+        val icon = panel.mcpAuthForTest()
+        assertTrue("busy still shows the affordance", icon.isVisible)
+        assertFalse(icon.isEnabled)
+        assertEquals(KiloBundle.message("prompt.mcp.needsAuth.busy"), icon.toolTipText)
+    }
+
+    fun `test mcp auth indicator click invokes onMcpAuthClick`() {
+        var clicked = false
+        val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> })
+        panel.onMcpAuthClick = { clicked = true }
+        panel.setMcpAuth(listOf("linear"), busy = false)
+
+        (panel.mcpAuthForTest() as JButton).doClick()
+
+        assertTrue(clicked)
+    }
+
     fun `test prompt editor exposes send context`() {
         val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> })
         val sink = TestSink()
