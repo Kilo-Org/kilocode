@@ -5,6 +5,7 @@ import ai.kilocode.client.settings.base.BaseContentPanel
 import ai.kilocode.client.settings.base.SettingsRow
 import ai.kilocode.client.settings.base.SettingsRows
 import ai.kilocode.client.settings.base.SettingsStackedRow
+import ai.kilocode.client.settings.base.WrapBanner
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.layout.Stack
 import ai.kilocode.rpc.dto.MarketplaceItemDto
@@ -14,8 +15,6 @@ import com.intellij.openapi.ui.ComboBox
 import com.intellij.openapi.ui.DialogWrapper
 import com.intellij.openapi.ui.ValidationInfo
 import com.intellij.openapi.util.text.HtmlChunk
-import com.intellij.ui.EditorNotificationPanel.Status
-import com.intellij.ui.InlineBanner
 import com.intellij.ui.TitledSeparator
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBScrollPane
@@ -23,8 +22,6 @@ import com.intellij.ui.components.JBTextField
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
-import java.awt.event.ComponentAdapter
-import java.awt.event.ComponentEvent
 import javax.swing.JComponent
 import javax.swing.ScrollPaneConstants
 
@@ -34,46 +31,6 @@ internal data class MarketplaceInstallRequest(
     /** The chosen scope already has the item, so confirming removes it from that scope. */
     val remove: Boolean = false,
 )
-
-/**
- * The platform's information banner, carrying copy that re-wraps to the width it is actually given.
- *
- * Swing cannot ask an HTML view "how tall are you at some width you do not have yet", so [seed] is the
- * column the first layout wraps at — that is what the dialog packs around. Once Swing has assigned a
- * real width, the text re-wraps to it, which keeps a resized dialog from leaving a ragged right edge.
- * Re-wrapping is skipped unless the width actually changed, so the resize does not loop.
- */
-internal class WrapBanner(private val copy: String, private val seed: Int) :
-    InlineBanner("", Status.Info) {
-    private var applied = 0
-
-    /** Measured once per banner: chrome cannot change mid-resize, and [chrome] builds a component. */
-    private val chrome = chrome()
-
-    init {
-        showCloseButton(false)
-        wrap(seed)
-        addComponentListener(object : ComponentAdapter() {
-            override fun componentResized(e: ComponentEvent) = wrap(width - chrome)
-        })
-    }
-
-    private fun wrap(to: Int) {
-        if (to <= 0 || to == applied) return
-        applied = to
-        setMessage(UiStyle.Text.wrap(copy, to))
-    }
-
-    companion object {
-        /**
-         * Horizontal space a banner spends on itself — insets, icon, the gap after it, and the slot it
-         * reserves for its buttons. Measured from an empty banner rather than rebuilt from the platform's
-         * constants, so it stays right if any of them change. Callers should hold the result rather than
-         * call this per layout pass; it constructs a banner to measure.
-         */
-        fun chrome(): Int = InlineBanner("", Status.Info).showCloseButton(false).preferredSize.width
-    }
-}
 
 internal interface MarketplaceInstallDialogHandle {
     fun showAndGet(): Boolean

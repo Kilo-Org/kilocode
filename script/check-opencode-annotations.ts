@@ -196,7 +196,15 @@ function addedLines(file: string): { added: Set<number>; revert: boolean } {
 // kilocode_change start
 function content(file: string) {
   const abs = path.join(ROOT, file)
-  if (existsSync(abs)) return readFileSync(abs, "utf8")
+  // The content must come from the SAME revision the added-line numbers come
+  // from. In `--worktree` mode that revision is the working tree; every other
+  // mode diffs `<base>...HEAD`, so it is HEAD. Reading the working tree while
+  // numbering its lines from HEAD mixes two revisions: a worktree dirty with the
+  // round's own edits (the driver commits the slice after the round) shifts the
+  // lines, and a properly marked added line then collides with an untouched
+  // upstream line and reports it as unannotated. Default mode is documented to
+  // ignore local edits; it must do so for the file content too.
+  if (worktree && existsSync(abs)) return readFileSync(abs, "utf8")
 
   const out = run("git", ["show", `HEAD:${file}`])
   const target = out.trim()
