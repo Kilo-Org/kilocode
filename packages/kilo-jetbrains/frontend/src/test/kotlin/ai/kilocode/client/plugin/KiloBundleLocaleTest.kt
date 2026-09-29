@@ -373,6 +373,7 @@ class KiloBundleLocaleTest : BasePlatformTestCase() {
             "settings.marketplace.mcp.signIn.confirm",
             "prompt.mcp.needsAuth.busy",
             "prompt.mcp.openSettings",
+            "prompt.issues.title",
         )
 
         val AGENT = mapOf(
@@ -494,6 +495,8 @@ class KiloBundleLocaleTest : BasePlatformTestCase() {
             "settings.marketplace.mcp.signIn.message" to listOf("SERVER_NAME"),
             "prompt.mcp.needsAuth.one" to listOf("SERVER_NAME"),
             "prompt.mcp.needsAuth.many" to listOf("7"),
+            "prompt.mcp.signIn" to listOf("SERVER_NAME"),
+            "prompt.mcp.signingIn" to listOf("SERVER_NAME"),
         )
     }
 }

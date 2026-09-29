@@ -15,6 +15,7 @@ import ai.kilocode.client.session.ui.prompt.PromptAttachmentPasteHandler
 import ai.kilocode.client.session.ui.prompt.PromptAttachmentPasteProvider
 import ai.kilocode.client.session.ui.prompt.PromptDataKeys
 import ai.kilocode.client.session.ui.prompt.PromptPanel
+import ai.kilocode.client.session.ui.prompt.SessionIssue
 import ai.kilocode.client.session.ui.prompt.PromptTextPasteProvider
 import ai.kilocode.client.session.ui.prompt.SlashAction
 import ai.kilocode.client.session.ui.selection.SessionSelection
@@ -1117,54 +1118,43 @@ class PromptPanelTest : BasePlatformTestCase() {
         assertTrue(panel.resetVisibleForTest())
     }
 
-    fun `test mcp auth indicator is hidden with no servers and not busy`() {
+    fun `test session issues button is hidden when there are no issues`() {
         val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> })
 
-        panel.setMcpAuth(emptyList(), busy = false)
+        panel.setIssues(emptyList())
 
-        assertFalse(panel.mcpAuthForTest().isVisible)
+        assertFalse(panel.issuesButtonForTest().isVisible)
     }
 
-    fun `test mcp auth indicator shows singular tooltip for one server`() {
+    fun `test session issues button appears for an actionable issue`() {
         val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> })
+        val issue = SessionIssue("mcp-auth:anaconda", "Sign in to Anaconda") {}
 
-        panel.setMcpAuth(listOf("linear"), busy = false)
+        panel.setIssues(listOf(issue))
 
-        val icon = panel.mcpAuthForTest()
-        assertTrue(icon.isVisible)
-        assertTrue(icon.isEnabled)
-        assertEquals(KiloBundle.message("prompt.mcp.needsAuth.one", "linear"), icon.toolTipText)
+        val button = panel.issuesButtonForTest()
+        assertTrue(button.isVisible)
+        assertEquals(KiloBundle.message("prompt.issues.title"), button.toolTipText)
+        assertEquals(listOf(issue), panel.issuesForTest())
     }
 
-    fun `test mcp auth indicator shows plural tooltip for several servers`() {
+    fun `test session issues keep multiple future actions`() {
         val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> })
-
-        panel.setMcpAuth(listOf("linear", "github"), busy = false)
-
-        assertEquals(
-            KiloBundle.message("prompt.mcp.needsAuth.many", 2),
-            panel.mcpAuthForTest().toolTipText,
+        val issues = listOf(
+            SessionIssue("mcp-auth:anaconda", "Sign in to Anaconda") {},
+            SessionIssue("other", "Resolve another session issue") {},
         )
+
+        panel.setIssues(issues)
+
+        assertEquals(issues, panel.issuesForTest())
     }
 
-    fun `test mcp auth indicator disables and swaps icon while busy`() {
-        val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> })
-
-        panel.setMcpAuth(listOf("linear"), busy = true)
-
-        val icon = panel.mcpAuthForTest()
-        assertTrue("busy still shows the affordance", icon.isVisible)
-        assertFalse(icon.isEnabled)
-        assertEquals(KiloBundle.message("prompt.mcp.needsAuth.busy"), icon.toolTipText)
-    }
-
-    fun `test mcp auth indicator click invokes onMcpAuthClick`() {
+    fun `test session issue action invokes its supplied recovery`() {
         var clicked = false
-        val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> })
-        panel.onMcpAuthClick = { clicked = true }
-        panel.setMcpAuth(listOf("linear"), busy = false)
+        val issue = SessionIssue("mcp-auth:anaconda", "Sign in to Anaconda") { clicked = true }
 
-        (panel.mcpAuthForTest() as JButton).doClick()
+        issue.action()
 
         assertTrue(clicked)
     }

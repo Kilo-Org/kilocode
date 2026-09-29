@@ -39,6 +39,7 @@ import ai.kilocode.client.session.ui.prompt.KiloPromptCompletionProvider
 import ai.kilocode.client.session.ui.prompt.MentionAction
 import ai.kilocode.client.session.ui.prompt.PromptDataKeys
 import ai.kilocode.client.session.ui.prompt.PromptPanel
+import ai.kilocode.client.session.ui.prompt.SessionIssue
 import ai.kilocode.client.session.ui.prompt.SlashAction
 import ai.kilocode.client.session.ui.prompt.mentionParts as promptMentionParts
 import ai.kilocode.client.session.settings.ApprovalReasonVisibilityListener
@@ -77,7 +78,6 @@ import ai.kilocode.client.session.views.SessionOutcomeView
 import ai.kilocode.client.session.views.permission.PermissionView
 import ai.kilocode.client.session.views.question.QuestionView
 import ai.kilocode.client.settings.KiloSettingsConfigurable
-import ai.kilocode.client.settings.agents.McpConfigurable
 import ai.kilocode.client.settings.checkpoints.CheckpointsConfigurable
 import ai.kilocode.client.settings.profile.UserProfileConfigurable
 import ai.kilocode.client.telemetry.Telemetry
@@ -95,6 +95,7 @@ import ai.kilocode.rpc.dto.SessionRevertDto
 import ai.kilocode.rpc.dto.WorktreePrDto
 import com.intellij.util.ui.JBUI
 import ai.kilocode.log.KiloLog
+import com.intellij.icons.AllIcons
 import com.intellij.ide.BrowserUtil
 import com.intellij.ide.TextCopyProvider
 import com.intellij.openapi.actionSystem.ActionUpdateThread
@@ -113,7 +114,6 @@ import com.intellij.openapi.editor.colors.EditorColorsManager
 import com.intellij.openapi.options.Configurable
 import com.intellij.openapi.options.ConfigurableWithId
 import com.intellij.openapi.options.ShowSettingsUtil
-import com.intellij.openapi.ui.popup.JBPopupFactory
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.util.registry.Registry
@@ -126,7 +126,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.awt.BorderLayout
@@ -717,7 +716,6 @@ class SessionUi(
             prompt.onReset = { controller.clearModelOverride() }
             prompt.onChange = { scroll.refresh() }
             prompt.onAutoApproveToggle = ::setAuto
-            prompt.onMcpAuthClick = ::openMcpAuth
             prompt.setAutoApprove(controller.autoApprove)
             startMcpAuthTracking()
             prompt.model.favorites = { app.favorites.value }
@@ -1452,51 +1450,40 @@ class SessionUi(
         )
     }
 
-    private fun openMcpSettings() {
-        ShowSettingsUtil.getInstance().showSettingsDialog(
-            project,
-            Predicate { cfg: Configurable ->
-                cfg is ConfigurableWithId && cfg.getId() == McpConfigurable.ID
-            },
-            { _: Configurable -> },
-        )
-    }
-
     /**
      * Collects [KiloMcpAuthService] state for this session's directory and reflects it on the prompt
-     * toolbar indicator. Refresh is event-driven (workspace ready, after a sign-in attempt) rather
+     * issue actions. Refresh is event-driven (workspace ready, after a sign-in attempt) rather
      * than polled.
      */
     private fun startMcpAuthTracking() {
         val auth = service<KiloMcpAuthService>()
         cs.launch {
-            auth.needsAuth.combine(auth.busy) { needs, busy -> needs[workspace.directory].orEmpty() to (busy.any { it.startsWith("${workspace.directory}\u0000") }) }
+            auth.needsAuth.combine(auth.busy) { needs, busy ->
+                val servers = needs[workspace.directory].orEmpty()
+                val prefix = "${workspace.directory}\u0000"
+                val active = busy.mapNotNull { key -> if (key.startsWith(prefix)) key.removePrefix(prefix) else null }.toSet()
+                servers to active
+            }
                 .distinctUntilChanged()
-                .collect { (servers, busy) ->
-                    withContext(Dispatchers.EDT) { prompt.setMcpAuth(servers.toList(), busy) }
+                .collect { (servers, active) ->
+                    withContext(Dispatchers.EDT) {
+                        prompt.setIssues(servers.sorted().map { name -> mcpAuthIssue(name, name in active) })
+                    }
                 }
         }
     }
 
     @RequiresEdt
-    private fun openMcpAuth() {
-        val auth = service<KiloMcpAuthService>()
-        val servers = auth.needsAuth.value[workspace.directory].orEmpty().toList()
-        if (servers.isEmpty()) {
-            openMcpSettings()
-            return
-        }
-        if (servers.size == 1) {
-            signInFromPrompt(servers.first())
-            return
-        }
-        JBPopupFactory.getInstance()
-            .createPopupChooserBuilder(servers + KiloBundle.message("prompt.mcp.openSettings"))
-            .setItemChosenCallback { choice ->
-                if (choice == KiloBundle.message("prompt.mcp.openSettings")) openMcpSettings() else signInFromPrompt(choice)
-            }
-            .createPopup()
-            .showUnderneathOf(prompt)
+    private fun mcpAuthIssue(name: String, busy: Boolean): SessionIssue {
+        val display = name.replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
+        return SessionIssue(
+            id = "mcp-auth:$name",
+            title = KiloBundle.message(if (busy) "prompt.mcp.signingIn" else "prompt.mcp.signIn", display),
+            description = KiloBundle.message("prompt.mcp.needsAuth.one", display),
+            icon = if (busy) SpinnerIcon.icon else AllIcons.General.Warning,
+            enabled = !busy,
+            action = { signInFromPrompt(name) },
+        )
     }
 
     private fun signInFromPrompt(name: String) {

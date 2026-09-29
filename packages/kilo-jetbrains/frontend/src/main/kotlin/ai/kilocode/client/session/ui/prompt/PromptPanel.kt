@@ -23,6 +23,9 @@ import ai.kilocode.client.ui.HoverIcon
 import ai.kilocode.client.ui.editor.EditorFolds
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.iconButton
+import ai.kilocode.client.ui.layout.HAlign
+import ai.kilocode.client.ui.layout.VAlign
+import ai.kilocode.client.ui.layout.align
 import ai.kilocode.log.ChatLogSummary
 import ai.kilocode.log.KiloLog
 import ai.kilocode.rpc.dto.PromptPartDto
@@ -45,6 +48,7 @@ import com.intellij.openapi.actionSystem.ActionUiKind
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.DataSink
+import com.intellij.openapi.actionSystem.DefaultActionGroup
 import com.intellij.openapi.actionSystem.UiDataProvider
 import com.intellij.openapi.actionSystem.ex.ActionUtil
 import com.intellij.openapi.actionSystem.IdeActions
@@ -155,7 +159,6 @@ class PromptPanel(
     var onChange: () -> Unit = {}
     var onAutoApproveToggle: (Boolean) -> Unit = {}
     var onFileDrag: (Boolean) -> Unit = {}
-    var onMcpAuthClick: () -> Unit = {}
     private var style = SessionEditorStyle.current()
     private var focused = false
     private val shell = BorderLayoutPanel().apply {
@@ -260,11 +263,15 @@ class PromptPanel(
         addActionListener { onAutoApproveToggle(!autoApprove) }
     }
 
-    private val mcpAuth = HoverIcon().apply {
+    private var issues = emptyList<SessionIssue>()
+    private val issuesButton = HoverIcon().apply {
         icon = AllIcons.General.Warning
+        toolTipText = KiloBundle.message("prompt.issues.title")
+        accessibleContext.accessibleName = toolTipText
         isVisible = false
-        addActionListener { onMcpAuthClick() }
+        addActionListener { showIssues() }
     }
+    private val issuesSlot = issuesButton.align(HAlign.RIGHT, VAlign.BOTTOM).apply { isVisible = false }
 
     /**
      * Opens the Kilo.Session.PromptMenu popup (auto-approve + sharing). Resolves its context from
@@ -347,7 +354,12 @@ class PromptPanel(
             }
         })
         shell.add(strip, BorderLayout.NORTH)
-        shell.add(editor, BorderLayout.CENTER)
+        val input = BorderLayoutPanel().apply {
+            isOpaque = false
+            add(editor, BorderLayout.CENTER)
+            add(issuesSlot, BorderLayout.EAST)
+        }
+        shell.add(input, BorderLayout.CENTER)
 
         val bar = BorderLayoutPanel().apply {
             layout = BoxLayout(this, BoxLayout.X_AXIS)
@@ -362,8 +374,6 @@ class PromptPanel(
         bar.add(Box.createHorizontalStrut(JBUI.scale(SessionUiStyle.View.Prompt.CONTROL_GAP)))
         bar.add(reset)
         bar.add(Box.createHorizontalGlue())
-        bar.add(mcpAuth)
-        bar.add(Box.createHorizontalStrut(JBUI.scale(SessionUiStyle.View.Prompt.CONTROL_GAP)))
         if (approve) {
             bar.add(menu)
             bar.add(Box.createHorizontalStrut(JBUI.scale(SessionUiStyle.View.Prompt.CONTROL_GAP)))
@@ -532,16 +542,11 @@ class PromptPanel(
     }
 
     @RequiresEdt
-    fun setMcpAuth(servers: List<String>, busy: Boolean) {
-        mcpAuth.isVisible = servers.isNotEmpty() || busy
-        mcpAuth.isEnabled = !busy
-        mcpAuth.icon = if (busy) SpinnerIcon.icon else AllIcons.General.Warning
-        mcpAuth.toolTipText = when {
-            busy -> KiloBundle.message("prompt.mcp.needsAuth.busy")
-            servers.size == 1 -> KiloBundle.message("prompt.mcp.needsAuth.one", servers.first())
-            else -> KiloBundle.message("prompt.mcp.needsAuth.many", servers.size)
-        }
-        mcpAuth.accessibleContext.accessibleName = mcpAuth.toolTipText
+    internal fun setIssues(value: List<SessionIssue>) {
+        issues = value
+        val visible = value.isNotEmpty()
+        issuesButton.isVisible = visible
+        issuesSlot.isVisible = visible
         revalidate()
         repaint()
     }
@@ -579,7 +584,9 @@ class PromptPanel(
 
     internal fun resetForTest(): JComponent = reset
 
-    internal fun mcpAuthForTest(): JComponent = mcpAuth
+    internal fun issuesForTest(): List<SessionIssue> = issues
+
+    internal fun issuesButtonForTest(): JComponent = issuesButton
 
     internal fun shellForTest(): JComponent = shell
 
@@ -714,6 +721,30 @@ class PromptPanel(
             true,
         )
         popup.show(PopupShowOptions.aboveComponent(menu))
+    }
+
+    @RequiresEdt
+    private fun showIssues() {
+        if (issues.isEmpty()) return
+        val group = DefaultActionGroup()
+        for (issue in issues) {
+            group.add(object : DumbAwareAction(issue.title, issue.description, issue.icon) {
+                override fun update(e: AnActionEvent) {
+                    e.presentation.isEnabled = issue.enabled
+                }
+
+                override fun actionPerformed(e: AnActionEvent) {
+                    issue.action()
+                }
+            })
+        }
+        JBPopupFactory.getInstance().createActionGroupPopup(
+            KiloBundle.message("prompt.issues.title"),
+            group,
+            DataManager.getInstance().getDataContext(issuesButton),
+            JBPopupFactory.ActionSelectionAid.SPEEDSEARCH,
+            true,
+        ).show(PopupShowOptions.aboveComponent(issuesButton))
     }
 
     @RequiresEdt
