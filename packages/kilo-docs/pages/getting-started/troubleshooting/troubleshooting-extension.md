@@ -81,6 +81,24 @@ Then reload VS Code or reconnect Remote SSH. Kilo Code recreates these directori
 This resets local sessions, history, settings, and cached data. Prefer renaming the directories instead of deleting them so you can recover files. Remove secrets such as API keys or tokens before sharing any backup with support.
 {% /callout %}
 
+## Diagnosing WSL disconnects
+
+If you use Kilo Code with VS Code on WSL and the extension repeatedly disconnects — VS Code shows "reconnecting" or the Kilo backend stops responding — capture a diagnostic bundle **before** restarting WSL or rebooting. A restart wipes most of the evidence.
+
+1. Open any WSL terminal. An already-open Windows Terminal tab with your distribution works fine, even while VS Code is still reconnecting.
+
+2. Paste this single command:
+
+   ```bash
+   OUT=/tmp/kilo-diag-$(date +%Y%m%dT%H%M%S) && mkdir -p $OUT && { echo "--- date"; date; echo "--- uptime"; uptime; echo "--- free"; free -h; echo "--- oom/kills"; sudo dmesg -T | grep -iE "oom|out of memory|killed process" | tail -60; } > $OUT/system.txt 2>&1; cp -r ~/.vscode-server/data/logs $OUT/vscode-logs 2>/dev/null; cp -r ~/.vscode-server-insiders/data/logs $OUT/vscode-insiders-logs 2>/dev/null; cp -r ~/.local/share/kilo/log $OUT/kilo-logs 2>/dev/null; tar czf /mnt/c/Users/Public/kilo-diag.tgz -C /tmp $(basename $OUT) && echo "Done -> C:\\Users\\Public\\kilo-diag.tgz"
+   ```
+
+   It may ask for your sudo password. The command collects kernel out-of-memory events, WSL VM uptime (which shows whether the whole VM restarted or just the VS Code server died), current memory stats, the VS Code remote server logs, and Kilo logs — nothing else.
+
+3. When it prints `Done`, send us the file `C:\Users\Public\kilo-diag.tgz` from Windows.
+
+4. Include roughly how many Agent Manager sessions or worktrees were running in parallel when the disconnect happened.
+
 ## Contact Support
 
 If you're unable to resolve the issue, please inspect the console logs, remove any secrets, and send the logs to **[hi@kilocode.ai](mailto:hi@kilocode.ai)** along with the following:
