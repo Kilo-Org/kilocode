@@ -6,6 +6,10 @@ export namespace RemoteProtocol {
   export const SessionInfo = z.object({
     id: z.string(),
     status: z.string(),
+    // scheduled wakeups: the ISO-8601 time the session is due to wake. Present
+    // only with status "scheduled". Optional so legacy CLIs (no field) remain
+    // wire-compatible.
+    scheduledAt: z.string().optional(),
     title: z.string(),
     parentSessionId: z.string().optional(),
     gitUrl: z.string().optional(),

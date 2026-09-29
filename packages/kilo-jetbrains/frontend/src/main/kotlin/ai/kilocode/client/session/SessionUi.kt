@@ -16,6 +16,7 @@ import ai.kilocode.client.onboarding.OnboardingController
 import ai.kilocode.client.onboarding.OnboardingStep
 import ai.kilocode.client.onboarding.ui.OnboardingListCard
 import ai.kilocode.client.plugin.KiloBundle
+import ai.kilocode.client.plugin.KiloDocs
 import ai.kilocode.client.plugin.KiloPluginSettings
 import ai.kilocode.client.session.board.SessionBoardDialog
 import ai.kilocode.client.session.model.FileAttachment
@@ -1069,7 +1070,7 @@ class SessionUi(
             SlashAction.VARIANT to { prompt.reasoning.open() },
             SlashAction.COMPACT to { controller.compact() },
             SlashAction.SETTINGS to { openKiloSettings() },
-            SlashAction.HELP to { BrowserUtil.browse("https://kilo.ai/docs") },
+            SlashAction.HELP to { BrowserUtil.browse(KiloDocs.BASE) },
         )
         return SlashAction.ALL.map { spec -> bind(spec, fns.getValue(spec)) }
     }

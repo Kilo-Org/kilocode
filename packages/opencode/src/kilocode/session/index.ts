@@ -300,9 +300,21 @@ export namespace KiloSession {
     return Effect.gen(function* () {
       const inst = yield* InstanceState.context
       yield* Effect.tryPromise(async () => {
-        const [app, wake] = await Promise.all([import("@/effect/app-runtime"), import("@/kilocode/wakeup")])
+        const [app, wake, goal] = await Promise.all([
+          import("@/effect/app-runtime"),
+          import("@/kilocode/wakeup"),
+          import("@/kilocode/session/goal/link"),
+        ])
+        // Drop the per-session goal link state (the arm closure that retains this
+        // process's service graph, the wait record, and any queued fire) before
+        // cancelling timers. The cancel suppresses its goal notification: the
+        // session record still exists here, so a notification would re-hydrate
+        // the persisted waiting goal and resume a session that is being deleted.
+        goal.GoalLink.release(id)
         await app.AppRuntime.runPromise(
-          wake.Wakeup.Service.use((svc) => svc.cancelSession(id)).pipe(Effect.provideService(InstanceRef, inst)),
+          wake.Wakeup.Service.use((svc) => svc.cancelSession(id, { notify: false })).pipe(
+            Effect.provideService(InstanceRef, inst),
+          ),
         )
       })
     }).pipe(
