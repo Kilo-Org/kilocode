@@ -5,7 +5,7 @@ description: "Configure Kilo Code and connect to your AI providers"
 
 # Authentication
 
-When you install Kilo Code, you'll be prompted to sign in or create a free account. This automatically configures everything you need to get started. You can sign in with your email address, Google, Apple, GitHub, GitLab, Discord, LinkedIn, or Anaconda, or through your organization's single sign-on.
+When you install Kilo Code, you'll be prompted to sign in or create a free account. This automatically configures everything you need to get started. You can sign in with your email address, ChatGPT, Google, Apple, GitHub, GitLab, Discord, LinkedIn, or Anaconda, or through your organization's single sign-on.
 
 ## Quick Start with Kilo Account
 
@@ -34,6 +34,14 @@ kilo auth list
 {% /tab %}
 {% /tabs %}
 
+### Sign in with ChatGPT
+
+Choose **Sign in with ChatGPT** if it is available for your account. This identifies your Kilo account; it does not automatically authorize Kilo to use your ChatGPT subscription for model requests. The option is not available for every account yet.
+
+To use your subscription through the Kilo Gateway, sign in to Kilo, open the [BYOK page](https://app.kilo.ai/byok), and connect **OpenAI (ChatGPT subscription)**. You can do this regardless of which method you use to sign in to Kilo. No OpenAI API key is needed.
+
+See [ChatGPT subscription setup](/docs/ai-providers/openai-chatgpt-plus-pro#connect-your-subscription-to-kilo) for the connection steps, account scope, and billing details. If you only want to connect OpenAI directly in VS Code or the CLI, use the [local provider setup](/docs/ai-providers/openai-chatgpt-plus-pro#connect-directly-in-vs-code-or-the-cli) instead.
+
 {% callout type="tip" title="Add Credits" %}
 [Add credits to your account](https://app.kilo.ai/profile), or sign up for [Kilo Pass](https://kilo.ai/pricing/kilo-pass).
 {% /callout %}
@@ -61,10 +69,6 @@ If you prefer to use your own API key or existing subscription, Kilo Code suppor
 {% callout type="info" title="Many More Providers Available" %}
 These are just a few examples! Kilo Code supports many more providers including Google Gemini, DeepSeek, Mistral, Ollama (for local models), AWS Bedrock, Google Vertex, and more. See the complete list at [AI Providers](/docs/ai-providers/).
 {% /callout %}
-
-### ChatGPT Plus/Pro Subscription
-
-Already have a ChatGPT subscription? You can use it with Kilo Code through the [OpenAI ChatGPT provider](/docs/ai-providers/openai-chatgpt-plus-pro)—no API key needed.
 
 ### OpenRouter
 
