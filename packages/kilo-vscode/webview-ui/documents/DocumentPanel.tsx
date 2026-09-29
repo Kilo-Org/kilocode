@@ -81,15 +81,34 @@ function copyDocumentContent(
     .catch(() => setCopied(false))
 }
 
+function isEditableTarget(target: EventTarget | null): boolean {
+  if (target instanceof HTMLTextAreaElement || target instanceof HTMLInputElement) return true
+  return target instanceof HTMLElement && target.isContentEditable
+}
+
 function handleSendAllKeyDown(event: KeyboardEvent, comments: ReviewComment[], send: () => void): void {
   if (event.key !== "Enter" || (!event.metaKey && !event.ctrlKey)) return
-  const target = event.target
-  if (target instanceof HTMLTextAreaElement || target instanceof HTMLInputElement) return
-  if (target instanceof HTMLElement && target.isContentEditable) return
+  if (isEditableTarget(event.target)) return
   if (comments.length === 0) return
   event.preventDefault()
   event.stopPropagation()
   send()
+}
+
+// Cmd/Ctrl+A inside the panel otherwise selects the whole webview DOM
+// (header title, tab labels, action icons). Scope it to the rendered
+// document content so users get just the file's text, matching what
+// the Copy Content action copies.
+function handleSelectAllKeyDown(event: KeyboardEvent, content: HTMLElement | undefined): void {
+  if (event.key.toLowerCase() !== "a" || (!event.metaKey && !event.ctrlKey)) return
+  if (isEditableTarget(event.target) || !content) return
+  event.preventDefault()
+  const selection = window.getSelection()
+  if (!selection) return
+  const range = document.createRange()
+  range.selectNodeContents(content)
+  selection.removeAllRanges()
+  selection.addRange(range)
 }
 
 export const DocumentPanel: Component<DocumentPanelProps> = (props) => {
@@ -103,6 +122,7 @@ export const DocumentPanel: Component<DocumentPanelProps> = (props) => {
   let editMeta: AnnotationMeta | null = null
   let nextId = 0
   let rootRef: HTMLElement | undefined
+  let contentRef: HTMLDivElement | undefined
 
   const selected = createMemo(() => {
     const id = props.active()
@@ -251,7 +271,10 @@ export const DocumentPanel: Component<DocumentPanelProps> = (props) => {
       aria-label={t("agentManager.documents.title")}
       aria-hidden={!props.visible()}
       inert={!props.visible()}
-      onKeyDown={(event) => handleSendAllKeyDown(event, props.comments, sendAll)}
+      onKeyDown={(event) => {
+        handleSendAllKeyDown(event, props.comments, sendAll)
+        handleSelectAllKeyDown(event, contentRef)
+      }}
       tabIndex={-1}
       ref={rootRef}
     >
@@ -375,7 +398,7 @@ export const DocumentPanel: Component<DocumentPanelProps> = (props) => {
           </div>
         </Show>
         <Show when={!data()?.loading && !data()?.error && !isImage()}>
-          <div class="am-document-content">
+          <div class="am-document-content" ref={contentRef}>
             <Show
               when={!source() && isMarkdownPath(file())}
               fallback={
