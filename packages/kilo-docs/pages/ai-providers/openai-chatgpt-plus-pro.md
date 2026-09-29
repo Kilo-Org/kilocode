@@ -6,33 +6,31 @@ sidebar_label: ChatGPT Plus/Pro
 
 # Using ChatGPT subscriptions with Kilo Code
 
-You can use your ChatGPT account to sign in to Kilo and your subscription to run supported OpenAI models. Signing in and connecting your subscription are separate steps, explained below. Neither requires an OpenAI API key.
+You can use your ChatGPT account to sign in to Kilo and your subscription to run supported OpenAI models. Signing in and connecting your subscription are separate options. You can sign in with ChatGPT without using it for model requests, or connect a ChatGPT subscription to your existing Kilo account.
 
-OpenAI controls which models and how much usage your plan includes. Check [OpenAI's current plan details](https://developers.openai.com/codex/pricing/) for eligibility and limits.
+Your ChatGPT plan determines which models and how much usage are included. Check [OpenAI's current plan details](https://developers.openai.com/codex/pricing/) for details.
 
 {% callout type="info" %}
-An [OpenAI API key](/docs/ai-providers/openai) uses separate OpenAI Platform billing. It does not spend your ChatGPT subscription allowance.
+Signing in with ChatGPT is free. Model requests served through your ChatGPT subscription are included in your plan, with no additional API charges or Kilo credit usage.
+
+An [OpenAI API key](/docs/ai-providers/openai) is different: it uses separate, pay-as-you-go OpenAI Platform billing, not your ChatGPT subscription allowance.
 {% /callout %}
 
 ## Sign in to Kilo with ChatGPT
 
-1. Open [Kilo](https://app.kilo.ai) and enter your email address when prompted.
-2. Choose **Sign in with ChatGPT** if it is available for your account.
+1. Open [Kilo](https://app.kilo.ai) and scroll down to the alternative login methods. If ChatGPT is not shown, enter your email address and continue first.
+2. Choose **Sign in with ChatGPT**.
 3. Sign in to OpenAI, review the permissions shown, and return to Kilo.
 
 To use your subscription for model requests, complete the BYOK connection below as well. You do not have to use ChatGPT as your Kilo login method: if you already use email, GitHub, or another method, sign in as usual and connect your subscription from BYOK.
 
-{% callout type="note" %}
-ChatGPT sign-in and the BYOK subscription connection are not available for every Kilo account yet. If the option is missing after you enter your email or sign in, this does not necessarily mean your ChatGPT plan is unsupported. Continue with another sign-in method or provider.
-{% /callout %}
-
 ## Connect your subscription to Kilo
 
-Use this connection for supported requests through the [Kilo Gateway](/docs/gateway), rather than configuring OpenAI separately on each device.
+Connect your subscription in the BYOK section to use it for supported model requests through the [Kilo Gateway](/docs/gateway), rather than [connecting OpenAI directly on each device](/docs/ai-providers/openai-chatgpt-plus-pro#connect-directly-in-vs-code-or-the-cli).
 
 1. Sign in to Kilo and select the personal account or organization where you want to use the subscription.
 2. Open the [Bring Your Own Key (BYOK) page](https://app.kilo.ai/byok).
-3. Find **OpenAI (ChatGPT subscription)** and choose **Sign in with ChatGPT**. Do not paste an API key into the OpenAI API-key form.
+3. Find **OpenAI (ChatGPT subscription)** and choose **Sign in with ChatGPT**. Do not enter an API key in the OpenAI API-key section; that uses pay-as-you-go token pricing instead of your subscription.
 4. Sign in to the OpenAI account you want to use and approve the subscription permissions. This approval is separate from permission to sign in to Kilo.
 5. Return to BYOK and confirm that the card shows **Connected** and the expected account next to **Connected as**.
 
@@ -48,32 +46,34 @@ Connect separately for each organization where you need access. If you connect t
 
 ### Choose a model
 
-In VS Code or the CLI, sign in to the same Kilo account and use the **Kilo Gateway** provider. For Cloud Agents, use the account or organization where you connected the subscription.
+In a Kilo client such as the VS Code extension or CLI, sign in to the same Kilo account and use the **Kilo Gateway** provider. For Cloud Agents, use the account or organization where you connected the subscription.
 
 {% callout type="tip" title="Look for the BYOK badge" %}
-After you connect your ChatGPT subscription, supported OpenAI models should be marked **BYOK** in the model picker. Choose one of these models to use your subscription. If the badge is missing, check that your connection shows **Connected** on the BYOK page for the account or organization you are using.
+After you connect your ChatGPT subscription, supported OpenAI models should be marked **BYOK** in the model picker. Choose one of these models to use your subscription. If the badge is missing, check that your connection shows **Connected** on the BYOK page for the account or organization you are using. You may also need to restart your Kilo client to refresh the model list after connecting your account at [app.kilo.ai](https://app.kilo.ai).
 {% /callout %}
 
 The subscription does not cover every OpenAI model or every kind of request. Kilo uses OpenAI's available-model list to determine eligible models; GPT-OSS models are not included in this route. For API integrations, the subscription route supports the **Responses API**, not Chat Completions requests.
 
-For eligible requests, Kilo tries the connected ChatGPT subscription before a saved OpenAI API key.
+For eligible requests, Kilo uses your connected ChatGPT subscription instead of a saved OpenAI API key or Kilo credits. Reaching your subscription limit does not automatically switch those requests to paid usage.
 
 ### Costs and usage limits
 
 Requests served through the subscription use your ChatGPT allowance rather than Kilo credits for model inference. Other costs are separate: [Cloud Agent compute](/docs/code-with-ai/platforms/cloud-agent#cost), Kilo Deploy, and other paid services are not included in your ChatGPT subscription.
 
-{% callout type="warning" title="A connection is not a spending cap" %}
-Requests that are not eligible for the subscription use normal Gateway routing. Some temporary connection failures can also fall back to normal routing. Depending on your configuration, those requests can use a saved provider API key or Kilo credits. Do not assume every OpenAI request is covered just because a subscription is connected.
-{% /callout %}
+**When you reach your ChatGPT usage limit, the request stops with an error.** Kilo does not retry it using a saved API key or Kilo credits. Retrying the same eligible request with the same connection still uses ChatGPT, so buying Kilo credits alone does not bypass the limit.
 
-If OpenAI rejects a request because you reached your ChatGPT usage limit, Kilo does not automatically retry that request using a saved API key or Kilo credits. Open BYOK and use **Manage usage** to check your allowance and reset time. Wait for the limit to reset, or disconnect the applicable subscription connection to use your usual paid route. Buying Kilo credits alone does not switch a connected request away from ChatGPT.
+Open BYOK and use **Manage usage** to check your allowance and reset time. Wait for the limit to reset, or disconnect the applicable subscription connection to use your saved API key or Kilo credits for subsequent requests.
+
+{% callout type="note" title="When paid routing can still apply" %}
+Requests outside your subscription's supported models or API types use your usual Gateway billing. Separately, if Kilo cannot renew your subscription sign-in before sending a request, some renewal failures can cause it to use a saved API key or Kilo credits instead. This is different from a ChatGPT usage-limit error, which stops the request rather than switching billing.
+{% /callout %}
 
 ### Manage the connection
 
 Return to the BYOK page in the account or organization where you connected:
 
 - **Connected:** Use **View and manage your ChatGPT usage** to open OpenAI's usage settings. Kilo's usage-limit notice reports a recent limit error; it is not a live remaining-quota meter.
-- **Needs reconnect:** Choose **Reconnect with ChatGPT** and approve access again. Shared-services connections use **Reconnect**. Kilo normally refreshes access automatically, but an expired or revoked connection can require another sign-in.
+- **Needs reconnect:** Choose **Reconnect with ChatGPT** and approve access again. Kilo normally refreshes access automatically, but an expired or revoked connection can require another sign-in.
 - **Disconnect:** Removes that subscription connection from Kilo. It does not cancel your ChatGPT subscription or remove ChatGPT as a Kilo login method. Subsequent requests may use a saved API key or Kilo credits.
 
 Signing out of Kilo does not disconnect your subscription. Manage each personal, organization-member, and shared-services connection separately.
@@ -82,7 +82,7 @@ Signing out of Kilo does not disconnect your subscription. Manage each personal,
 
 The browser-based authorization uses OAuth: you sign in on OpenAI's site rather than giving Kilo your ChatGPT password. The BYOK flow asks for permission to use your allowance and renew access without asking you to sign in for every request.
 
-Kilo stores the connection credentials encrypted. Requests and their code context pass through the Kilo Gateway before reaching OpenAI. This is not a local-only connection or a promise of zero data retention; review the applicable Kilo and OpenAI privacy terms before using sensitive code.
+Kilo stores the connection credentials encrypted. Requests and their code context pass through the Kilo Gateway before reaching OpenAI.
 
 ## Connect directly in VS Code or the CLI
 

@@ -63,24 +63,9 @@ These providers offer coding-focused subscriptions or dedicated endpoints. Bring
 
 ## Connect a ChatGPT subscription
 
-Use **OpenAI (ChatGPT subscription)** to authorize subscription usage instead of adding an OpenAI API key:
+Connect **OpenAI (ChatGPT subscription)** on the [BYOK page](https://app.kilo.ai/byok) to use your subscription allowance for supported OpenAI models through the Kilo Gateway. No OpenAI API key is needed.
 
-1. Sign in to Kilo and select your personal account or the organization where you will use the subscription.
-2. Open the [BYOK page](https://app.kilo.ai/byok) and find **OpenAI (ChatGPT subscription)**.
-3. Choose **Sign in with ChatGPT**, sign in to OpenAI, and approve the subscription permissions.
-4. Return to BYOK and confirm **Connected** and the expected account. Use the **Kilo Gateway** provider with a supported OpenAI model.
-
-Signing in to Kilo with ChatGPT does not complete this connection. You can also connect a subscription if you use another method to sign in to Kilo.
-
-This option is not available for every Kilo account yet. If the subscription card is missing, you can still use a supported provider API key.
-
-Personal connections do not apply to organization requests. In an organization, each member connects their own account; owners and admins can also configure a separate shared-services connection for organization automation.
-
-{% callout type="warning" %}
-Only eligible requests use your ChatGPT allowance. Other requests, and some connection failures, use normal Gateway routing and may charge your saved provider key or Kilo credits. Cloud compute is charged separately. The API-key failure behavior described below is not a guarantee for ChatGPT connections.
-{% /callout %}
-
-See [ChatGPT subscription setup](/docs/ai-providers/openai-chatgpt-plus-pro#connect-your-subscription-to-kilo) for model support, usage limits, and connection management.
+See [ChatGPT subscription setup](/docs/ai-providers/openai-chatgpt-plus-pro#connect-your-subscription-to-kilo) for connection steps, personal and organization scope, and billing details.
 
 ## Add a BYOK key
 
@@ -154,7 +139,7 @@ If your deployment names differ from the gateway model IDs, add `modelMappings` 
 These rules apply to saved API keys. Eligible requests use a connected ChatGPT subscription first.
 
 - When you use the **Kilo Gateway** provider, Kilo checks if there's a BYOK key for the selected model's provider.
-- If a matching BYOK key exists and the request is not served by a connected ChatGPT subscription, the request is routed using your key.
+- If a matching BYOK key exists and the request is not served by a connected subscription like ChatGPT, the request is routed using your key.
 - If the key is invalid, the request fails. It does not fall back to using Kilo's keys.
 - Subscription-based providers (such as the Z.ai Coding Plan or Kimi Code) only expose the models included in that plan. Select one of those models to route traffic through your subscription.
 

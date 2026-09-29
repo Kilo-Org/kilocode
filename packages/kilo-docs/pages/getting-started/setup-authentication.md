@@ -36,11 +36,7 @@ kilo auth list
 
 ### Sign in with ChatGPT
 
-Choose **Sign in with ChatGPT** if it is available for your account. This identifies your Kilo account; it does not automatically authorize Kilo to use your ChatGPT subscription for model requests. The option is not available for every account yet.
-
-To use your subscription through the Kilo Gateway, sign in to Kilo, open the [BYOK page](https://app.kilo.ai/byok), and connect **OpenAI (ChatGPT subscription)**. You can do this regardless of which method you use to sign in to Kilo. No OpenAI API key is needed.
-
-See [ChatGPT subscription setup](/docs/ai-providers/openai-chatgpt-plus-pro#connect-your-subscription-to-kilo) for the connection steps, account scope, and billing details. If you only want to connect OpenAI directly in VS Code or the CLI, use the [local provider setup](/docs/ai-providers/openai-chatgpt-plus-pro#connect-directly-in-vs-code-or-the-cli) instead.
+You can use ChatGPT to sign in to Kilo, connect your subscription for model requests, or both. These are separate options and neither requires an OpenAI API key. See [using ChatGPT with Kilo](/docs/ai-providers/openai-chatgpt-plus-pro) for setup and billing details.
 
 {% callout type="tip" title="Add Credits" %}
 [Add credits to your account](https://app.kilo.ai/profile), or sign up for [Kilo Pass](https://kilo.ai/pricing/kilo-pass).
