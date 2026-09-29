@@ -179,9 +179,13 @@ function wrapGlobalStream(stream: EventStream): GlobalEventStream {
   })()
 }
 
-function statusMap(busy: boolean): SessionStatusMap {
+function statusMap(busy: boolean, status?: SessionStatusMap[string]): SessionStatusMap {
   if (busy) {
     return { "session-1": { type: "busy" } }
+  }
+
+  if (status) {
+    return { "session-1": status }
   }
 
   return {}
@@ -2113,6 +2117,45 @@ describe("run stream transport", () => {
           return ok(undefined)
         },
         status: async () => ok(statusMap(busy)),
+      }),
+      sessionID: "session-1",
+      thinking: true,
+      limits: () => ({}),
+      footer: ui.api,
+    })
+
+    try {
+      await Promise.race([
+        transport.runPromptTurn({
+          agent: undefined,
+          model: undefined,
+          variant: undefined,
+          prompt: { text: "hello", parts: [] },
+          files: [],
+          includeFiles: false,
+        }),
+        new Promise((_, reject) => setTimeout(() => reject(new Error("turn timed out")), 1_000)),
+      ])
+    } finally {
+      src.close()
+      await transport.close()
+    }
+  })
+
+  test("treats a scheduled status as idle when the turn ends", async () => {
+    const src = eventFeed()
+    const ui = footer()
+    const transport = await createSessionTransport({
+      sdk: sdk({
+        stream: src.stream,
+        promptAsync: async () => {
+          queueMicrotask(() => {
+            src.push(assistant("msg-1"))
+          })
+          return ok(undefined)
+        },
+        status: async () =>
+          ok(statusMap(false, { type: "scheduled", scheduledAt: "2026-06-06T12:34:56.789Z" })),
       }),
       sessionID: "session-1",
       thinking: true,
