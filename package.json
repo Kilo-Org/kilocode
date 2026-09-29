@@ -111,6 +111,12 @@
     "@changesets/changelog-github": "^0.5.1",
     "@changesets/cli": "^2.27.10",
     "@actions/artifact": "5.0.1",
+    "@cyclonedx/cyclonedx-library": "10.3.0",
+    "@types/spdx-expression-parse": "4.0.0",
+    "ajv": "8.20.0",
+    "ajv-formats": "3.0.1",
+    "ajv-formats-draft2019": "1.6.1",
+    "spdx-expression-parse": "5.0.0",
     "sst": "catalog:"
   },
   "dependencies": {
@@ -185,6 +191,6 @@
     "@ai-sdk/openai-compatible@2.0.48": "patches/@ai-sdk%2Fopenai-compatible@2.0.48.patch",
     "bun-pty@0.4.8": "patches/bun-pty@0.4.8.patch"
   },
-  "version": "7.7.12",
+  "version": "7.8.1",
   "peerDependencies": {}
 }
