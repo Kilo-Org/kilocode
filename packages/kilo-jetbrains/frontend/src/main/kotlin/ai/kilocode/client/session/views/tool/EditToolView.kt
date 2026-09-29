@@ -2,11 +2,13 @@ package ai.kilocode.client.session.views.tool
 
 import ai.kilocode.client.diff.DiffLineNumbers
 import ai.kilocode.client.plugin.KiloBundle
+import ai.kilocode.client.plugin.KiloPluginSettings
 import ai.kilocode.client.session.SessionDiffOpener
 import ai.kilocode.client.session.SessionFileOpener
 import ai.kilocode.client.session.model.Content
 import ai.kilocode.client.session.model.Tool
 import ai.kilocode.client.session.model.ToolKind
+import ai.kilocode.client.session.settings.BlockDisplay
 import ai.kilocode.client.session.ui.popup.HeaderPopupBody
 import ai.kilocode.client.session.ui.popup.HeaderPopupRequest
 import ai.kilocode.client.session.ui.selection.SessionCopyTarget
@@ -45,6 +47,7 @@ class EditToolView(
     private val parts: ToolParts = toolParts(tool, openFile),
     private var body: EditBody = editBody(tool, selection, openFile),
     private val footer: ToolApprovalFooter = ToolApprovalFooter(),
+    display: BlockDisplay = KiloPluginSettings.getCodeEditDisplay(),
 ) : AbstractSessionPartView(parts.header, { body.mount(tool) }, { footer }), UiDataProvider, SessionCopyTarget, ApprovalReasonTarget {
 
     override val contentId: String = tool.id
@@ -55,6 +58,9 @@ class EditToolView(
     private var opener: SessionDiffOpener = { _, _, _ -> }
     private var sessionId: String? = null
     private var canDiff = false
+
+    /** True while the configured [BlockDisplay] should auto-open this card once it becomes expandable. */
+    private var wanted = display == BlockDisplay.EXPANDED
     private val badge = DiffStatBadge(0, 0)
     private val open = HeaderOpenAction(SessionViewIcons.openDiff, KiloBundle.message("session.part.tool.openDiff"), ::openDiffViewer)
     private val filesTag = PlainLabel().apply {
@@ -81,6 +87,11 @@ class EditToolView(
     override val copyEligible: Boolean get() = canDiff
     override val copyAnchor: JComponent get() = open.anchor
     override val copyToolbar: JComponent get() = open.button
+
+    @RequiresEdt
+    override fun userToggled() {
+        wanted = false
+    }
 
     constructor(
         tool: Tool,
@@ -222,6 +233,7 @@ class EditToolView(
         val expand = expandable()
         var changed = false
         changed = syncExpandable(expand) || changed
+        if (wanted && expand && !isExpanded()) changed = expand() || changed
         changed = setVisible(parts.state, !expand) || changed
         changed = setIcon(parts.glyph, icon(item)) || changed
         changed = setForeground(parts.glyph, color(item)) || changed

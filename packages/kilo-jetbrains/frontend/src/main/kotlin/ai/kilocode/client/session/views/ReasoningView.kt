@@ -3,10 +3,12 @@
 package ai.kilocode.client.session.views
 
 import ai.kilocode.client.plugin.KiloBundle
+import ai.kilocode.client.plugin.KiloPluginSettings
 import ai.kilocode.client.session.SessionFileOpener
 import ai.kilocode.client.session.openSessionLink
 import ai.kilocode.client.session.model.Content
 import ai.kilocode.client.session.model.Reasoning
+import ai.kilocode.client.session.settings.ReasoningDisplay
 import ai.kilocode.client.session.ui.popup.HeaderPopupBody
 import ai.kilocode.client.session.ui.popup.HeaderPopupRequest
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
@@ -31,18 +33,29 @@ import javax.swing.ScrollPaneConstants
 import javax.swing.Scrollable
 import javax.swing.SwingUtilities
 
-/** Renders reasoning as a secondary collapsible block. */
+/**
+ * Renders reasoning as a secondary collapsible block. Behavior is driven by the configured
+ * [ReasoningDisplay] mode (Transcript settings), read once at construction:
+ * - [ReasoningDisplay.EXPANDED]: opens whenever content is non-blank (streaming or history), full
+ *   height, never auto-collapses.
+ * - [ReasoningDisplay.PREVIEW]: opens while streaming in a height-capped auto-scrolling body,
+ *   auto-collapses and releases its body when the block finishes; history starts collapsed.
+ * - [ReasoningDisplay.HEADLINE]: never auto-opens; header only until the user expands it.
+ *
+ * A manual user toggle ([pinned]) always overrides the mode's automatic expand/collapse.
+ */
 class ReasoningView(
     reasoning: Reasoning,
     private val openFile: SessionFileOpener = { _, _ -> },
     private val openUrl: (String) -> Unit = {},
     private val selection: SessionSelection? = null,
     private val parts: ReasoningParts = reasoningParts(selection),
+    private val mode: ReasoningDisplay = KiloPluginSettings.getReasoningDisplay(),
 ) :
     AbstractSessionPartView(
         parts.header,
         { parts.scroll(openFile, openUrl) },
-        expanded = reasoning.content.isNotBlank() && !reasoning.done,
+        expanded = initialExpanded(mode, reasoning),
         compact = true,
     ) {
 
@@ -103,7 +116,7 @@ class ReasoningView(
             }
             changed = true
         }
-        if (finishing && !pinned) {
+        if (finishing && !pinned && mode == ReasoningDisplay.PREVIEW) {
             changed = collapse() || changed
             changed = releaseBody() || changed
         }
@@ -180,12 +193,19 @@ class ReasoningView(
     @RequiresEdt
     override fun getPreferredSize(): Dimension {
         val size = super.getPreferredSize()
-        if (!bodyVisible()) return size
+        if (!bodyVisible() || mode != ReasoningDisplay.PREVIEW) return size
         val height = row.preferredSize.height + expandedGap() + bodyMaxHeight()
         return Dimension(size.width, minOf(size.height, height))
     }
 
     private fun canExpand(): Boolean = source.isNotBlank()
+
+    /** Whether [mode] auto-opens this block right now, given its current [visible]/[done] state. */
+    private fun wantsAutoExpand(visible: Boolean): Boolean = when (mode) {
+        ReasoningDisplay.EXPANDED -> visible
+        ReasoningDisplay.PREVIEW -> visible && !done
+        ReasoningDisplay.HEADLINE -> false
+    }
 
     private fun sync(): Boolean {
         var changed = false
@@ -195,7 +215,7 @@ class ReasoningView(
             changed = true
         }
         changed = syncExpandable(canExpand()) || changed
-        if (visible && !done && !parts.bodyCreated()) {
+        if (!pinned && wantsAutoExpand(visible) && !isExpanded()) {
             changed = expand() || changed
             changed = syncExpandable(canExpand()) || changed
         }
@@ -348,6 +368,16 @@ class ReasoningBody(
     val panel: TrackPanel,
     val scroll: JBScrollPane,
 )
+
+/** Whether a freshly constructed [ReasoningView] should start expanded, given [mode] and [reasoning]. */
+private fun initialExpanded(mode: ReasoningDisplay, reasoning: Reasoning): Boolean {
+    val visible = reasoning.content.isNotBlank()
+    return when (mode) {
+        ReasoningDisplay.EXPANDED -> visible
+        ReasoningDisplay.PREVIEW -> visible && !reasoning.done
+        ReasoningDisplay.HEADLINE -> false
+    }
+}
 
 private fun reasoningParts(selection: SessionSelection? = null): ReasoningParts {
     val title = JBLabel(KiloBundle.message("session.part.reasoning")).apply { foreground = SessionUiStyle.Text.Secondary.foreground() }

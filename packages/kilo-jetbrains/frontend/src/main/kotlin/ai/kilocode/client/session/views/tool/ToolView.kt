@@ -1,8 +1,10 @@
 package ai.kilocode.client.session.views.tool
 
+import ai.kilocode.client.plugin.KiloPluginSettings
 import ai.kilocode.client.session.model.Content
 import ai.kilocode.client.session.model.Tool
 import ai.kilocode.client.session.model.ToolExecState
+import ai.kilocode.client.session.settings.BlockDisplay
 import ai.kilocode.client.session.ui.popup.HeaderPopupRequest
 import ai.kilocode.client.session.ui.selection.SessionSelection
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
@@ -23,6 +25,7 @@ class ToolView(
     private val selection: SessionSelection? = null,
     private val parts: ToolParts = toolParts(tool, mode = ToolBodyMode.EDITOR),
     private val footer: ToolApprovalFooter = ToolApprovalFooter(),
+    display: BlockDisplay = KiloPluginSettings.getMcpToolDisplay(),
 ) : AbstractSessionPartView(parts.header, { parts.scroll(tool) }, { footer }), UiDataProvider, ApprovalReasonTarget {
 
     override val contentId: String = tool.id
@@ -32,9 +35,17 @@ class ToolView(
     private var registered = false
     private var disposed = false
 
+    /** True while the configured [BlockDisplay] should auto-open this card once it becomes expandable. */
+    private var wanted = display == BlockDisplay.EXPANDED
+
     init {
         applyStyle(style)
         sync()
+    }
+
+    @RequiresEdt
+    override fun userToggled() {
+        wanted = false
     }
 
     override fun uiDataSnapshot(sink: DataSink) {
@@ -149,6 +160,7 @@ class ToolView(
         val expand = canExpand(item)
         var changed = false
         changed = syncExpandable(expand) || changed
+        if (wanted && expand && !isExpanded()) changed = expand() || changed
         changed = setVisible(parts.state, !expand) || changed
         changed = syncLabels() || changed
         val body = parts.content

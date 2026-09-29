@@ -2,7 +2,9 @@ package ai.kilocode.client.session
 
 import ai.kilocode.client.agentManager.worktree.KiloWorktreeService
 import ai.kilocode.client.plugin.KiloBundle
+import ai.kilocode.client.plugin.KiloPluginSettings
 import ai.kilocode.client.session.model.SessionState
+import ai.kilocode.client.session.settings.BlockDisplay
 import ai.kilocode.client.session.ui.ModifiedFilesView
 import ai.kilocode.client.session.ui.SessionMessageListPanel
 import ai.kilocode.client.session.ui.header.BranchDock
@@ -49,6 +51,21 @@ import kotlinx.coroutines.CompletableDeferred
 
 @Suppress("UnstableApiUsage")
 class SessionScrollTest : SessionUiTestBase() {
+
+    override fun setUp() {
+        super.setUp()
+        // Scroll-preservation tests manually expand shell cards; pin that fixture behavior instead
+        // of depending on the transcript's user-configurable terminal default.
+        KiloPluginSettings.setTerminalCommandDisplay(BlockDisplay.COLLAPSED)
+    }
+
+    override fun tearDown() {
+        try {
+            KiloPluginSettings.unsetTerminalCommandDisplay()
+        } finally {
+            super.tearDown()
+        }
+    }
 
     fun `test session update follows when transcript is at bottom`() {
         showMessages()

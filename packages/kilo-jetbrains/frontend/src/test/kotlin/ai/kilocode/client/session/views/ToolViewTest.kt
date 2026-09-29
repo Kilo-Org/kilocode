@@ -5,6 +5,7 @@ import ai.kilocode.client.session.model.Tool
 import ai.kilocode.client.session.model.ToolApproval
 import ai.kilocode.client.session.model.ToolExecState
 import ai.kilocode.client.session.model.toolKind
+import ai.kilocode.client.session.settings.BlockDisplay
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.session.views.tool.FileLinkLabel
@@ -36,6 +37,37 @@ class ToolViewTest : BasePlatformTestCase() {
         } finally {
             super.tearDown()
         }
+    }
+
+    fun `test expanded display opens generic tool when output is available`() {
+        val tool = tool("p1", "custom_tool", ToolExecState.COMPLETED).also { it.output = "done" }
+        val view = track(ToolView(tool, display = BlockDisplay.EXPANDED))
+
+        assertTrue(view.isExpanded())
+        assertTrue(view.bodyCreated())
+    }
+
+    fun `test expanded display waits for output then opens once expandable`() {
+        val view = track(ToolView(
+            tool("p1", "custom_tool", ToolExecState.RUNNING),
+            display = BlockDisplay.EXPANDED,
+        ))
+
+        assertFalse(view.isExpanded())
+
+        view.update(tool("p1", "custom_tool", ToolExecState.COMPLETED).also { it.output = "done" })
+
+        assertTrue(view.isExpanded())
+    }
+
+    fun `test manual generic tool collapse is not undone by later updates`() {
+        val initial = tool("p1", "custom_tool", ToolExecState.RUNNING).also { it.output = "first" }
+        val view = track(ToolView(initial, display = BlockDisplay.EXPANDED))
+
+        view.toggle()
+        view.update(tool("p1", "custom_tool", ToolExecState.COMPLETED).also { it.output = "second" })
+
+        assertFalse(view.isExpanded())
     }
 
     // ---- state icons ------

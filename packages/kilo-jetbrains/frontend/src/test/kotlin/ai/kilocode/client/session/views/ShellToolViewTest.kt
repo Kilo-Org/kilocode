@@ -1,8 +1,10 @@
 package ai.kilocode.client.session.views
 
+import ai.kilocode.client.plugin.KiloPluginSettings
 import ai.kilocode.client.session.model.Tool
 import ai.kilocode.client.session.model.ToolExecState
 import ai.kilocode.client.session.model.toolKind
+import ai.kilocode.client.session.settings.BlockDisplay
 import ai.kilocode.client.session.ui.SessionSurfacePanel
 import ai.kilocode.client.session.ui.selection.SessionSelection
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
@@ -27,13 +29,56 @@ import javax.swing.ScrollPaneConstants
 class ShellToolViewTest : BasePlatformTestCase() {
     private val views = mutableListOf<ShellToolView>()
 
+    override fun setUp() {
+        super.setUp()
+        // Most legacy behavior tests exercise manual expansion. Pin their fixture to collapsed;
+        // dedicated tests below cover the new expanded transcript default.
+        KiloPluginSettings.setTerminalCommandDisplay(BlockDisplay.COLLAPSED)
+    }
+
     override fun tearDown() {
         try {
             views.forEach(Disposer::dispose)
             views.clear()
+            KiloPluginSettings.unsetTerminalCommandDisplay()
         } finally {
             super.tearDown()
         }
+    }
+
+    fun `test expanded display opens shell when command is available`() {
+        val view = track(ShellToolView(
+            tool().also { it.input = mapOf("command" to "pwd") },
+            display = BlockDisplay.EXPANDED,
+        ))
+
+        assertTrue(view.isExpanded())
+        assertTrue(view.bodyCreated())
+    }
+
+    fun `test expanded display waits for content then opens once expandable`() {
+        val initial = tool(ToolExecState.RUNNING)
+        val view = track(ShellToolView(initial, display = BlockDisplay.EXPANDED))
+
+        assertFalse(view.isExpanded())
+
+        val updated = tool(ToolExecState.RUNNING).also { it.input = mapOf("command" to "pwd") }
+        view.update(updated)
+
+        assertTrue(view.isExpanded())
+    }
+
+    fun `test manual shell collapse is not undone by later updates`() {
+        val initial = tool(ToolExecState.RUNNING).also { it.input = mapOf("command" to "pwd") }
+        val view = track(ShellToolView(initial, display = BlockDisplay.EXPANDED))
+
+        view.toggle()
+        view.update(tool(ToolExecState.COMPLETED).also {
+            it.input = mapOf("command" to "pwd")
+            it.output = "/tmp"
+        })
+
+        assertFalse(view.isExpanded())
     }
 
     fun `test command only shell renders one code surface without labels`() {
