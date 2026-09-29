@@ -35553,6 +35553,12 @@
             "type": "string",
             "enum": ["expanded", "collapsed"]
           },
+          "inline_code_background": {
+            "type": "boolean"
+          },
+          "inline_code_color": {
+            "type": "string"
+          },
           "hide_prompt_training_models": {
             "type": "boolean"
           },
