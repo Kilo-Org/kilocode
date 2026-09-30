@@ -61,6 +61,9 @@ class McpConfigurable : DirectoryReadyConfigurable<JComponent>() {
     override fun disposeReadyComponent(component: JComponent) {
         if (ui === component) ui = null
         query = null
+        // DraftReadyConfigurableBase clears its retained panel and disposes McpSettingsUi, which is a
+        // Disposable SettingsListPanel. Skipping super would leak the page and its in-flight reload.
+        super.disposeReadyComponent(component)
     }
 
     companion object { const val ID = "ai.kilocode.jetbrains.settings.agentBehavior.mcp" }

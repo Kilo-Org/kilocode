@@ -52,6 +52,9 @@ class FakeAgentBehaviorRpcApi : KiloAgentBehaviorRpcApi {
     var removeSkillError: Exception? = null
     var saveSkillError: Exception? = null
     var mcpStatusError: Exception? = null
+
+    /** Holds `mcpStatus` so a test can observe the list panel while it is still busy. */
+    var mcpStatusGate: CompletableDeferred<Unit>? = null
     var mcpConnectError: Exception? = null
     var removeResult = true
     var removeSkillResult = true
@@ -178,6 +181,7 @@ class FakeAgentBehaviorRpcApi : KiloAgentBehaviorRpcApi {
         assertNotEdt("agentBehavior.mcpStatus")
         mcpStatusError?.let { throw it }
         mcpCalls.add(directory)
+        mcpStatusGate?.await()
         return mcps
     }
 

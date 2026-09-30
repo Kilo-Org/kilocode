@@ -28,6 +28,7 @@ import com.intellij.openapi.ui.TestDialog
 import com.intellij.openapi.ui.TestDialogManager
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.testFramework.replaceService
+import com.intellij.ui.SearchTextField
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBList
 import com.intellij.util.ui.UIUtil
@@ -40,6 +41,7 @@ import javax.swing.JButton
 import javax.swing.JComponent
 import javax.swing.JTextField
 import javax.swing.SwingUtilities
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
@@ -453,6 +455,27 @@ class McpSettingsUiTest : BasePlatformTestCase() {
         edt { cfg.disposeUIResources(); true }
     }
 
+    fun `test configurable disposal disposes the mcp settings panel`() {
+        install()
+        // Hold the status call so the panel is provably still busy when the dialog closes. Only
+        // SettingsListPanel.dispose() clears that busy state; cancelling the configurable scope
+        // leaves the search field disabled, so this fails unless the override delegates to
+        // DraftReadyConfigurableBase.
+        val gate = CompletableDeferred<Unit>()
+        agentRpc.mcpStatusGate = gate
+        val cfg = McpConfigurable()
+        val shell = edt { cfg.createComponent() }
+        flushUntil { components(shell).filterIsInstance<McpSettingsUi>().singleOrNull() != null }
+        val panel = components(shell).filterIsInstance<McpSettingsUi>().single()
+        ui = panel
+        flushUntil { agentRpc.mcpCalls.isNotEmpty() && !searchField(panel).isEnabled }
+
+        edt { cfg.disposeUIResources(); true }
+        gate.complete(Unit)
+
+        assertTrue("dispose() must clear the busy state", edt { searchField(panel).isEnabled })
+    }
+
     private fun panel(create: (String, McpConfigDto) -> McpEditDialogHandle = ::McpEditDialog): McpSettingsUi {
         install()
         val panel = edt { McpSettingsUi(scope!!, DIR, create) }
@@ -527,6 +550,9 @@ class McpSettingsUiTest : BasePlatformTestCase() {
         val pane = UIUtil.findComponentOfType(info, javax.swing.JEditorPane::class.java) ?: error("no banner text")
         return pane.text.replace(Regex("<[^>]+>"), "").replace(Regex("\\s+"), " ").trim()
     }
+
+    private fun searchField(panel: McpSettingsUi): SearchTextField =
+        components(panel).filterIsInstance<SearchTextField>().single()
 
     private fun components(root: java.awt.Component): List<java.awt.Component> {
         val out = mutableListOf<java.awt.Component>()
