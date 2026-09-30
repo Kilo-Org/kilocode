@@ -189,7 +189,9 @@ test("keeps both chips when a rewrite follows an edit that left the text unchang
 
 test("keeps the chip and its backing after browsing prompt history and back", async ({ page }) => {
   await page.context().grantPermissions(["clipboard-read", "clipboard-write"])
-  await page.addInitScript(() => localStorage.setItem("kilo.prompt-history.v1", JSON.stringify(["say hi"])))
+  await page.addInitScript(() =>
+    localStorage.setItem("kilo.prompt-history.v2", JSON.stringify({ "story-session-001": ["say hi"] })),
+  )
   const input = await open(page)
   const log = Array.from({ length: 40 }, (_, index) => `${index + 1}`).join("\n")
 
