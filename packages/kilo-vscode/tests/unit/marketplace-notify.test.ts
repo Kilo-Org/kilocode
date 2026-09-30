@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test"
-import { catalogUrl, selectSuggestions, suggestionSlug } from "../../src/services/marketplace/notify"
+import { selectSuggestions, suggestionSlug } from "../../src/services/marketplace/notify"
 import type { MarketplaceItem, MarketplaceRelevanceMetadata } from "../../src/services/marketplace/types"
 
 const agent: MarketplaceItem = {
@@ -41,15 +41,6 @@ describe("Marketplace suggestion notification", () => {
     expect(suggestionSlug(agent)).toBe("agent:angular")
     expect(suggestionSlug(mcp)).toBe("mcp:jupyter")
     expect(suggestionSlug(plugin)).toBe("plugin:@acme/deploy")
-  })
-
-  it("builds catalog entry URLs from the item type and id", () => {
-    expect(catalogUrl(agent)).toBe("https://github.com/Kilo-Org/kilo-marketplace/tree/main/agents/angular")
-    expect(catalogUrl(mcp)).toBe("https://github.com/Kilo-Org/kilo-marketplace/tree/main/mcps/jupyter")
-    expect(catalogUrl(plugin)).toBe("https://github.com/Kilo-Org/kilo-marketplace/tree/main/plugins/%40acme/deploy")
-    expect(catalogUrl({ type: "plugin", id: "git/github.com/Kilo-Org/kilo-marketplace-test-plugin" })).toBe(
-      "https://github.com/Kilo-Org/kilo-marketplace/tree/main/plugins/git/github.com/Kilo-Org/kilo-marketplace-test-plugin",
-    )
   })
 
   it("selects only relevant, non-dismissed items", () => {

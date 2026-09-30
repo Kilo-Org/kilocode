@@ -9,8 +9,8 @@ import type { MarketplaceItem } from "./types"
 const DISMISSED_KEY = "kilo.marketplace.dismissedSuggestions"
 const DEBOUNCE = 1500
 
-/** Opens the marketplace install flow for a suggested item. */
-export type InstallHandler = (item: MarketplaceItem) => void
+/** Runs a marketplace action for a suggested item. */
+export type MarketplaceItemHandler = (item: MarketplaceItem) => void
 
 /**
  * Scans the workspace for marketplace items annotated with relevant `suggest_for`
@@ -29,7 +29,8 @@ export class MarketplaceNotifier implements vscode.Disposable {
   constructor(
     private readonly connection: KiloConnectionService,
     private readonly context: vscode.ExtensionContext,
-    private readonly install: InstallHandler,
+    private readonly install: MarketplaceItemHandler,
+    private readonly details: MarketplaceItemHandler,
   ) {
     this.disposables.push(
       vscode.workspace.onDidChangeWorkspaceFolders(() => this.schedule()),
@@ -114,21 +115,13 @@ export class MarketplaceNotifier implements vscode.Disposable {
     this.shown.add(slug)
 
     // A later rescan must never void the user's explicit choice, so only a
-    // disposed notifier short-circuits here — not a bumped generation.
-    // "View details" opens the catalog entry in the browser, which also closes
-    // the toast, so re-offer the suggestion until the user picks a final action.
+    // disposed notifier short-circuits here, not a bumped generation.
+    // "View details" opens the Marketplace panel, which also closes the toast,
+    // so re-offer the suggestion until the user picks a final action.
     let choice = await showSuggestionNotification(item)
     while (choice?.action === "details") {
       if (this.disposed) return
-      const url = choice.url
-      if (url) {
-        void vscode.env.openExternal(vscode.Uri.parse(url)).then(
-          (opened) => {
-            if (!opened) console.warn("[Kilo New] No handler opened the marketplace catalog URL:", url)
-          },
-          (err: unknown) => console.warn("[Kilo New] Failed to open the marketplace catalog URL:", err),
-        )
-      }
+      this.details(item)
       choice = await showSuggestionNotification(item)
     }
     if (this.disposed) return

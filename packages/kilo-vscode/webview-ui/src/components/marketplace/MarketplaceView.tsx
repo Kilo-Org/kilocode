@@ -32,6 +32,8 @@ export const MarketplaceView = () => {
   const [errors, setErrors] = createSignal<string[]>([])
   const [pending, setPending] = createSignal<{ item: MarketplaceItem; scope: "project" | "global" } | null>(null)
   const [showMigrationBanner, setShowMigrationBanner] = createSignal(false)
+  const [search, setSearch] = createSignal("")
+  const [focusType, setFocusType] = createSignal<MarketplaceItem["type"] | undefined>()
 
   const fetchData = () => {
     setFetching(true)
@@ -52,6 +54,10 @@ export const MarketplaceView = () => {
       if (msg.type === "openInstallModal") {
         const match = items().find((i) => i.type === msg.mpItem.type && i.id === msg.mpItem.id)
         handleInstall(match ?? msg.mpItem)
+      }
+      if (msg.type === "focusMarketplaceItem") {
+        setSearch(msg.mpItem.name)
+        setFocusType(msg.mpItem.type)
       }
       if (msg.type === "marketplaceRemoveResult") {
         const removed = pending()
@@ -169,6 +175,9 @@ export const MarketplaceView = () => {
         metadata={metadata()}
         relevance={relevance()}
         fetching={fetching()}
+        search={search()}
+        onSearchChange={setSearch}
+        focusType={focusType()}
         searchPlaceholder={t("marketplace.search")}
         emptyMessage={t("marketplace.empty")}
         relevantEmptyMessage={t("marketplace.empty.relevant")}

@@ -28,6 +28,9 @@ interface Props {
   metadata: MarketplaceInstalledMetadata
   relevance: MarketplaceRelevanceMetadata
   fetching: boolean
+  search?: string
+  onSearchChange?: (value: string) => void
+  focusType?: MarketplaceItem["type"]
   searchPlaceholder: string
   emptyMessage: string
   relevantEmptyMessage: string
@@ -39,7 +42,12 @@ interface Props {
 export const MarketplaceListView = (props: Props) => {
   const { t } = useLanguage()
   const vscode = useVSCode()
-  const [search, setSearch] = createSignal("")
+  const [internalSearch, setInternalSearch] = createSignal("")
+  const search = () => props.search ?? internalSearch()
+  const setSearch = (value: string) => {
+    if (props.onSearchChange) props.onSearchChange(value)
+    else setInternalSearch(value)
+  }
   const [status, setStatus] = createSignal<StatusOption>({ value: "all", label: t("marketplace.filter.all") })
   const [types, setTypes] = createSignal<MarketplaceItem["type"][]>([])
   const [categories, setCategories] = createSignal<string[]>([])
@@ -73,6 +81,11 @@ export const MarketplaceListView = (props: Props) => {
   createEffect(() => {
     setTypes((current) => retain(current, allTypes()))
     setCategories((current) => retain(current, allCategories()))
+  })
+
+  createEffect(() => {
+    const type = props.focusType
+    if (type) setTypes([type])
   })
 
   const toggleType = (type: MarketplaceItem["type"]) => {
