@@ -289,24 +289,34 @@ describe("link_pr tool", () => {
 
     expect(built.linkPr.id).toBe("link_pr")
 
-    const ids = KiloToolRegistry.extra(
-      {
-        recall: built.recall,
-        managerModels: built.managerModels,
-        memory: built.memory,
-        save: built.save,
-        manager: built.manager,
-        process: built.process,
-        chart: built.chart,
-        image: built.image,
-        notify: built.notify,
-        send: built.send,
-        linkPr: built.linkPr,
-      },
-      {},
-      { experimentalSharedAgentBoard: false },
-    ).map((tool) => tool.id)
+    // The CLI client keeps link_pr; the VS Code client drops it (see
+    // chart-tool-gating.test.ts). Set the client explicitly so a leaked
+    // KILO_CLIENT from another test file cannot decide this assertion.
+    const prev = process.env["KILO_CLIENT"]
+    process.env["KILO_CLIENT"] = "cli"
+    try {
+      const ids = KiloToolRegistry.extra(
+        {
+          recall: built.recall,
+          managerModels: built.managerModels,
+          memory: built.memory,
+          save: built.save,
+          manager: built.manager,
+          process: built.process,
+          chart: built.chart,
+          image: built.image,
+          notify: built.notify,
+          send: built.send,
+          linkPr: built.linkPr,
+        },
+        {},
+        { experimentalSharedAgentBoard: false },
+      ).map((tool) => tool.id)
 
-    expect(ids).toContain("link_pr")
+      expect(ids).toContain("link_pr")
+    } finally {
+      if (prev === undefined) delete process.env["KILO_CLIENT"]
+      if (prev !== undefined) process.env["KILO_CLIENT"] = prev
+    }
   })
 })

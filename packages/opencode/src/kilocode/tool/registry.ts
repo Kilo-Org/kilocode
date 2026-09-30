@@ -359,7 +359,10 @@ export namespace KiloToolRegistry {
       tools.notify,
       ...(Flag.KILO_CLIENT === "vscode" && tools.openPlan ? [tools.openPlan] : []),
       tools.send,
-      tools.linkPr,
+      // PR links are only consumed by CLI and remote sessions. Every other
+      // client detects a worktree's PR from its branch, so `link_pr` would
+      // store a link nothing on those clients reads.
+      ...(Flag.KILO_CLIENT === "cli" ? [tools.linkPr] : []),
     ]
   }
 
