@@ -44,6 +44,7 @@ export {
   fetchKiloTranscriptionModels,
   type KiloTranscriptionModel,
   type KiloTranscriptionModelsResult,
+  supportsTools,
 } from "./api/models.js"
 export {
   EMPTY_KILO_EMBEDDING_MODEL_CATALOG,

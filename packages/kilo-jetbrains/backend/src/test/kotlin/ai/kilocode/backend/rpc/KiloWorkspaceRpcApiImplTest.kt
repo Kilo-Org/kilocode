@@ -6,6 +6,7 @@ import ai.kilocode.backend.testing.FakeCliServer
 import ai.kilocode.backend.testing.MockCliServer
 import ai.kilocode.backend.testing.TestLog
 import ai.kilocode.rpc.dto.WorkspaceFileDto
+import ai.kilocode.rpc.dto.ConfigPatchDto
 import ai.kilocode.rpc.dto.KiloWorkspaceStatusDto
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -75,6 +76,20 @@ class KiloWorkspaceRpcApiImplTest {
         assertNotNull(state)
         assertEquals(KiloWorkspaceStatusDto.UNSUPPORTED, state.status)
         assertEquals("devcontainer_virtual_filesystem", state.error)
+    }
+
+    @Test
+    fun `workspace config update patches project scope and reloads effective config`() = runBlocking {
+        mock.workspaceConfig = """{"snapshot":false}"""
+        val app = app()
+        val rpc = KiloWorkspaceRpcApiImpl(app)
+
+        assertEquals(false, rpc.config("/repo").snapshot)
+        val config = rpc.updateConfig("/repo", ConfigPatchDto(snapshot = true))
+
+        assertTrue(requireNotNull(mock.lastWorkspaceConfigPatchPath).contains("directory=%2Frepo"))
+        assertEquals("{\"snapshot\":true}", mock.lastWorkspaceConfigPatchBody)
+        assertEquals(true, config.snapshot)
     }
 
     private suspend fun app(): KiloBackendAppService {

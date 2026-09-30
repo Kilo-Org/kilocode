@@ -1,6 +1,7 @@
 import * as fs from "fs"
 import type { KiloClient, SessionStatus } from "@kilocode/sdk/v2/client"
 import { sameDirectory } from "../kilo-provider-utils"
+import { isRunningStatus } from "../session-status"
 import type { LocalStats, WorktreeStats } from "./GitStatsPoller"
 import type { PRStatus } from "./types"
 import type { ManagedSession, Worktree, WorktreeStateManager } from "./WorktreeStateManager"
@@ -165,7 +166,7 @@ async function live(input: OverviewInput, sessions: ManagedSession[]) {
       ])
       if (status.error || perms.error || qs.error) unavailable.add(dir)
       for (const [id, value] of Object.entries(status.data ?? {}) as Array<[string, SessionStatus]>) {
-        statuses.set(id, value.type)
+        statuses.set(id, isRunningStatus(value.type) ? value.type : "idle")
       }
       for (const value of perms.data ?? []) permissions.add(value.sessionID)
       for (const value of qs.data ?? []) questions.add(value.sessionID)

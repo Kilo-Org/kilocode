@@ -2,7 +2,9 @@ package ai.kilocode.client.settings.agents
 
 import ai.kilocode.client.app.KiloAgentBehaviorService
 import ai.kilocode.client.plugin.KiloBundle
+import ai.kilocode.client.plugin.KiloDocs
 import ai.kilocode.client.settings.base.DirectoryReadyConfigurable
+import ai.kilocode.client.settings.base.SettingsInfo
 import ai.kilocode.client.settings.base.SettingsListPanel
 import ai.kilocode.client.settings.base.SettingsMessageException
 import ai.kilocode.client.settings.marketplace.marketplaceAction
@@ -94,6 +96,12 @@ internal class McpSettingsUi(
     override fun searchPlaceholder() = KiloBundle.message("settings.agentBehavior.mcp.search")
 
     override fun tailActions(): List<AnAction> = listOf(marketplaceAction("settings_mcp"))
+
+    override fun info(): JComponent = SettingsInfo(
+        KiloBundle.message("settings.agentBehavior.mcp.info"),
+        KiloBundle.message("settings.agentBehavior.mcp.info.more"),
+        KiloDocs.MCP,
+    )
 
     override fun toolbarRight(): JComponent = JBLabel(KiloBundle.message("settings.agentBehavior.mcp.addHint")).apply {
         foreground = UIUtil.getContextHelpForeground()
