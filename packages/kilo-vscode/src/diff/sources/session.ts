@@ -112,6 +112,7 @@ export function toSessionDiffFile(raw: SnapshotFileDiff, generated?: GeneratedAt
     before: mime ? "" : before,
     after: mime ? "" : after,
     patch: mime ? "" : raw.patch,
+    excerpt: !mime,
     additions: raw.additions,
     deletions: raw.deletions,
     status: raw.status,
