@@ -90,26 +90,30 @@ export async function checkAnacondaLogin(): Promise<AnacondaLoginStatus> {
  * @returns true on success, false on failure
  */
 export async function linkAnacondaAccount(kiloToken: string): Promise<boolean> {
-  const response = await fetch(LINK_ENDPOINT, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${kiloToken}`,
-      "Content-Type": "application/json",
-    },
-    signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
-  })
+  try {
+    const response = await fetch(LINK_ENDPOINT, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${kiloToken}`,
+        "Content-Type": "application/json",
+      },
+      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+    })
 
-  if (!response.ok) return false
+    if (!response.ok) return false
 
-  const data = (await response.json()) as LinkResponse
+    const data = (await response.json()) as LinkResponse
 
-  if (!data.api_key) return false
+    if (!data.api_key) return false
 
-  saveCredential({
-    apiKey: data.api_key,
-    domain: ANACONDA_DOMAIN,
-    userId: data.key?.user_id,
-  })
+    saveCredential({
+      apiKey: data.api_key,
+      domain: ANACONDA_DOMAIN,
+      userId: data.key?.user_id,
+    })
 
-  return true
+    return true
+  } catch {
+    return false
+  }
 }
