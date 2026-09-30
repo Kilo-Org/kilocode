@@ -134,13 +134,15 @@ export async function handleProjectMessage(m: AgentManagerInMessage, deps: Proje
 
 async function activateSelection(requested: SidebarTarget, deps: ProjectMessageDeps, restore = false): Promise<void> {
   if (disabled(deps)) return
-  const token = Symbol()
-  selections.set(deps, token)
   const ctx = deps.contexts.resolve(requested.projectId)
   if (!ctx || !deps.contexts.usable(requested.projectId)) {
     deps.error("The project is unavailable. Check that the repository still exists.")
     return
   }
+  // Record the token only for an actionable target, so a click on an
+  // unavailable project cannot discard a pending valid selection.
+  const token = Symbol()
+  selections.set(deps, token)
   const result = await deps.ready(ctx, { warm: true })
   // A newer click can finish while this project's readiness is pending.
   if (selections.get(deps) !== token || !deps.enabled()) return

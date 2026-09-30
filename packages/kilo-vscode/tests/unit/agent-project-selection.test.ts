@@ -155,6 +155,29 @@ describe("activateSelection — cross-project selection", () => {
     expect(calls.error).toEqual([])
   })
 
+  it("keeps a pending selection when a newer click targets an unavailable project", async () => {
+    const gate = Promise.withResolvers<void>()
+    const { contexts, deps, calls, extra } = setup({
+      ready: (ctx) =>
+        ctx.ensureReady(async () => {
+          ctx.stateManager()
+          if (!ctx.pinned) await gate.promise
+          return { ok: true, refsFixed: 0 }
+        }),
+    })
+
+    const pending = handleProjectMessage(activateMsg(extra), deps)
+    await handleProjectMessage(activateMsg("prj-missing"), deps)
+    expect(calls.selected).toEqual([])
+    expect(calls.error.length).toBe(1)
+
+    gate.resolve()
+    await pending
+
+    expect(contexts.active()?.id).toBe(extra)
+    expect(calls.selected).toEqual([extra])
+  })
+
   it("falls back to local without an error toast when the target is gone", async () => {
     const { contexts, deps, calls, extra } = setup()
     contexts.activate(PINNED)
