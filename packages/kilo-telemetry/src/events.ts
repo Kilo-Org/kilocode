@@ -41,6 +41,10 @@ export enum TelemetryEvent {
   AUTH_SUCCESS = "Auth Success",
   AUTH_LOGOUT = "Auth Logout",
 
+  // Anaconda Integration Events
+  ANACONDA_LINK_CREATED = "Anaconda Link Created",
+  ANACONDA_EMAIL_MISMATCH = "Anaconda Email Mismatch",
+
   // Config Events
   TELEMETRY_DISABLED = "Telemetry Disabled",
 

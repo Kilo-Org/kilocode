@@ -290,6 +290,15 @@ export namespace Telemetry {
     track(TelemetryEvent.AUTH_LOGOUT, { provider })
   }
 
+  // Anaconda Integration
+  export function trackAnacondaLinkCreated() {
+    track(TelemetryEvent.ANACONDA_LINK_CREATED)
+  }
+
+  export function trackAnacondaEmailMismatch() {
+    track(TelemetryEvent.ANACONDA_EMAIL_MISMATCH)
+  }
+
   // Errors
   export function trackError(error: string, context?: string) {
     track(TelemetryEvent.ERROR, { error, context })
