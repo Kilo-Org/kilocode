@@ -7,8 +7,8 @@
  * status must read in both states: this stack leads the working spinner and
  * the actions row alike, and stands alone when a surface has no actions.
  *
- * It is status, not an action: hovering lists the agents, and a click only
- * reveals the background agent strip. It appears after a short delay and stays
+ * Hover names the state. A click opens the agents in a menu at the stack, the
+ * same way the Goal control opens its menu in this row. It appears after a short delay and stays
  * for a short time after the last agent finishes, so agents that finish
  * quickly do not make it flicker.
  */
@@ -16,11 +16,15 @@
 import { Component, For, Show, createEffect, createMemo, createSignal, on, onCleanup, onMount, untrack } from "solid-js"
 import { AgentAvatar } from "@kilocode/kilo-ui/agent-avatar"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
+import { DropdownMenu } from "@kilocode/kilo-ui/dropdown-menu"
+import { Icon } from "@kilocode/kilo-ui/icon"
 import { useLanguage } from "../../context/language"
 import { useSession } from "../../context/session"
 import { useVSCode } from "../../context/vscode"
+import { useWorktreeMode } from "../../context/worktree-mode"
 import type { BackgroundJobInfo } from "../../types/messages"
 import { backgroundAgents, backgroundJobAgents, mergePromptAgents, type PromptAgent } from "./background-agents"
+import { openSubagent } from "./open-subagent"
 
 const DELAY = 400
 const LINGER = 1500
@@ -153,6 +157,8 @@ export const AgentStack: Component<{ state: AgentStackState; label?: boolean; ma
 ) => {
   const session = useSession()
   const language = useLanguage()
+  const vscode = useVSCode()
+  const worktree = useWorktreeMode()
   // The stack opens once. The actions row can rebuild and move this node,
   // which would replay a CSS animation, so the open animation only applies
   // until the stack is ready. Avatars that join later grow in on their own.
@@ -187,9 +193,6 @@ export const AgentStack: Component<{ state: AgentStackState; label?: boolean; ma
     if (stack().length === 1) return String(total)
     return `+${total - stack().length}`
   }
-  const rows = () => props.state.items().slice(0, ROWS)
-  const more = () => props.state.items().length - rows().length
-
   const summary = createMemo(() => {
     const count = props.state.running()
     if (count === 0) return language.t("task.backgroundAgents.finished")
@@ -202,73 +205,113 @@ export const AgentStack: Component<{ state: AgentStackState; label?: boolean; ma
   const status = (item: PromptAgent) =>
     language.t(item.done ? "task.backgroundAgents.status.completed" : "task.backgroundAgents.status.running")
 
-  const reveal = () => {
-    const id = session.currentSessionID()
-    if (id) window.dispatchEvent(new CustomEvent("showBackgroundAgents", { detail: { sessionID: id } }))
+  // Click opens the agents right at the stack, the same way the Goal control
+  // opens its menu in this row. A row opens that agent, Stop all stops the
+  // running ones. Each stop ends only that agent and anything it started.
+  const [open, setOpen] = createSignal(false)
+  const rows = () => props.state.items().slice(0, ROWS)
+  const more = () => props.state.items().length - rows().length
+  const running = () => props.state.items().filter((item) => !item.done)
+
+  const show = (item: PromptAgent) =>
+    openSubagent({
+      sessionID: item.id,
+      title: item.description,
+      parentSessionID: session.currentSessionID(),
+      worktree: !!worktree,
+      post: vscode.postMessage,
+    })
+
+  const stop = () => {
+    for (const item of running()) vscode.postMessage({ type: "abort", sessionID: item.id, scope: "tree" })
   }
+
+  createEffect(() => {
+    if (props.state.items().length === 0) setOpen(false)
+  })
 
   const tooltip = () => (
     <div data-slot="agent-stack-tooltip">
       <div data-slot="agent-stack-tooltip-title">{summary()}</div>
-      <For each={rows()}>
-        {(item) => (
-          <div data-slot="agent-stack-tooltip-row" data-done={item.done ? "true" : undefined}>
-            <AgentAvatar id={item.id} status={item.done ? undefined : "running"} />
-            <span data-slot="agent-stack-tooltip-label" dir="auto">
-              {name(item)}
-            </span>
-            <span data-slot="agent-stack-tooltip-status">{status(item)}</span>
-          </div>
-        )}
-      </For>
-      <Show when={more() > 0}>
-        <div data-slot="agent-stack-tooltip-more">
-          {language.t("task.backgroundAgents.more", { count: String(more()) })}
-        </div>
-      </Show>
       <div data-slot="agent-stack-tooltip-hint">{language.t("prompt.agents.hint")}</div>
     </div>
   )
 
   return (
-    <Tooltip value={tooltip()} placement="top" openDelay={150} contentClass="agent-stack-tooltip-content">
-      <button
-        type="button"
-        data-component="agent-stack"
-        data-ready={ready() ? "" : undefined}
-        data-idle={props.state.active() ? undefined : "true"}
-        data-rule={props.rule ? "" : undefined}
-        aria-label={`${summary()}. ${language.t("prompt.agents.show")}`}
-        onClick={reveal}
-      >
-        <span data-slot="agent-stack-body">
-          <span data-slot="agent-stack-avatars">
-            <For each={ids()}>
-              {(id) => {
-                const done = () => byId().get(id)?.done ?? false
-                const enter = untrack(() => (ready() ? (ids().length > size ? "grow" : "fade") : undefined))
-                return (
-                  <span
-                    data-slot="agent-stack-avatar"
-                    data-enter={enter}
-                    onAnimationEnd={(event) => event.currentTarget.removeAttribute("data-enter")}
-                    data-done={done() ? "true" : undefined}
-                    data-leaving={props.state.leaving().has(id) ? "" : undefined}
-                  >
-                    <AgentAvatar id={id} status={done() ? undefined : "running"} />
-                  </span>
-                )
-              }}
-            </For>
+    <DropdownMenu open={open()} onOpenChange={setOpen} placement="top-start" gutter={6}>
+      <Tooltip value={tooltip()} placement="top" openDelay={150} contentClass="agent-stack-tooltip-content">
+        <DropdownMenu.Trigger
+          data-component="agent-stack"
+          data-ready={ready() ? "" : undefined}
+          data-idle={props.state.active() ? undefined : "true"}
+          data-rule={props.rule ? "" : undefined}
+          aria-label={`${summary()}. ${language.t("prompt.agents.show")}`}
+        >
+          <span data-slot="agent-stack-body">
+            <span data-slot="agent-stack-avatars">
+              <For each={ids()}>
+                {(id) => {
+                  const done = () => byId().get(id)?.done ?? false
+                  const enter = untrack(() => (ready() ? (ids().length > size ? "grow" : "fade") : undefined))
+                  return (
+                    <span
+                      data-slot="agent-stack-avatar"
+                      data-enter={enter}
+                      onAnimationEnd={(event) => event.currentTarget.removeAttribute("data-enter")}
+                      data-done={done() ? "true" : undefined}
+                      data-leaving={props.state.leaving().has(id) ? "" : undefined}
+                    >
+                      <AgentAvatar id={id} status={done() ? undefined : "running"} />
+                    </span>
+                  )
+                }}
+              </For>
+            </span>
+            <Show when={count()}>
+              <span data-slot="agent-stack-extra">{count()}</span>
+            </Show>
+            <Show when={props.label}>
+              <span data-slot="agent-stack-label">{summary()}</span>
+            </Show>
           </span>
-          <Show when={count()}>
-            <span data-slot="agent-stack-extra">{count()}</span>
+        </DropdownMenu.Trigger>
+      </Tooltip>
+      <DropdownMenu.Portal>
+        <DropdownMenu.Content class="agent-stack-menu">
+          <DropdownMenu.Group>
+            <DropdownMenu.GroupLabel class="agent-stack-menu-title">{summary()}</DropdownMenu.GroupLabel>
+            <For each={rows()}>
+              {(item) => (
+                <DropdownMenu.Item
+                  class="agent-stack-menu-item"
+                  data-done={item.done ? "true" : undefined}
+                  onSelect={() => show(item)}
+                >
+                  <AgentAvatar id={item.id} status={item.done ? undefined : "running"} />
+                  <DropdownMenu.ItemLabel class="agent-stack-menu-label" dir="auto">
+                    {name(item)}
+                  </DropdownMenu.ItemLabel>
+                  <span class="agent-stack-menu-status">{status(item)}</span>
+                </DropdownMenu.Item>
+              )}
+            </For>
+            <Show when={more() > 0}>
+              <div class="agent-stack-menu-more">
+                {language.t("task.backgroundAgents.more", { count: String(more()) })}
+              </div>
+            </Show>
+          </DropdownMenu.Group>
+          <Show when={running().length > 0}>
+            <DropdownMenu.Separator />
+            <DropdownMenu.Item class="agent-stack-menu-item" onSelect={stop}>
+              <Icon name="stop" size="small" />
+              <DropdownMenu.ItemLabel>
+                {language.t("task.backgroundAgents.stopAll", { count: String(running().length) })}
+              </DropdownMenu.ItemLabel>
+            </DropdownMenu.Item>
           </Show>
-          <Show when={props.label}>
-            <span data-slot="agent-stack-label">{summary()}</span>
-          </Show>
-        </span>
-      </button>
-    </Tooltip>
+        </DropdownMenu.Content>
+      </DropdownMenu.Portal>
+    </DropdownMenu>
   )
 }

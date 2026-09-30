@@ -374,8 +374,8 @@
   padding: 6px 12px;
 }
 
-/* Status, not a button: no border, no fill. Hover only brightens the text, the
-   same as the working indicator next to it.
+/* Status, not a button: no border and no fill at rest. Hover matches the
+   working indicator next to it.
 
    Every size change animates, so nothing next to the stack jumps: the stack
    opens from zero width, collapses to zero before it unmounts, and each avatar
@@ -399,10 +399,11 @@
   font-weight: var(--font-weight-medium);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
-  cursor: default;
+  cursor: pointer;
   transition:
     opacity 200ms ease,
     color 150ms ease,
+    background-color 150ms ease,
     grid-template-columns var(--agent-stack-open) var(--agent-stack-ease),
     padding var(--agent-stack-open) var(--agent-stack-ease),
     margin var(--agent-stack-open) var(--agent-stack-ease);
@@ -413,8 +414,11 @@
     animation: agent-stack-in var(--agent-stack-open) var(--agent-stack-ease) backwards;
   }
 
+  /* Same hover as the working indicator next to it, which also reveals
+     something on click. */
   &:hover,
   &:focus-visible {
+    background: var(--surface-interactive-hover, var(--vscode-list-hoverBackground));
     color: var(--vscode-foreground);
   }
 
@@ -550,60 +554,75 @@
   }
 }
 
-/* The hidden dock state stays mounted, so its stack must not animate. */
-.session-dock-state:not([data-active]) [data-component="agent-stack"] * {
-  animation-play-state: paused;
-}
-
 .agent-stack-tooltip-content {
-  min-width: 200px;
   max-width: 300px;
-  padding: 10px 12px;
   white-space: normal;
 }
 
 [data-slot="agent-stack-tooltip"] {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+  display: grid;
+  gap: 4px;
 }
 
-[data-slot="agent-stack-tooltip-title"] {
-  color: var(--text-invert-strong);
-  font-weight: var(--font-weight-medium);
+[data-slot="agent-stack-tooltip-hint"] {
+  color: var(--text-invert-weak, var(--text-invert-base));
 }
 
-[data-slot="agent-stack-tooltip-row"] {
+/* Same surface as the Goal menu in this row. */
+.agent-stack-menu[data-component="dropdown-menu-content"] {
+  box-sizing: border-box;
+  width: 260px;
+  min-width: 0;
+  max-width: calc(100vw - 24px);
+  padding: 6px;
+  border-radius: var(--radius-xl);
+}
+
+.agent-stack-menu .agent-stack-menu-title {
+  padding: 4px 8px 2px;
+  font-size: var(--kilo-font-size-10);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.agent-stack-menu[data-component="dropdown-menu-content"] [data-slot="dropdown-menu-item"] {
   display: grid;
   grid-template-columns: 18px minmax(0, 1fr) auto;
   align-items: center;
   gap: 8px;
-  color: var(--text-invert-base);
-
-  &[data-done="true"] {
-    opacity: 0.6;
-  }
+  min-height: 28px;
+  padding: 5px 8px;
+  border-radius: var(--radius-lg);
+  font-size: var(--kilo-font-size-12);
 }
 
-[data-slot="agent-stack-tooltip-label"] {
+.agent-stack-menu[data-component="dropdown-menu-content"] [data-slot="dropdown-menu-item"][data-done="true"] {
+  opacity: 0.6;
+}
+
+.agent-stack-menu[data-component="dropdown-menu-content"] [data-highlighted] {
+  background: var(--surface-raised-base-hover);
+  color: var(--text-strong);
+}
+
+.agent-stack-menu[data-component="dropdown-menu-content"] [data-slot="dropdown-menu-separator"] {
+  margin: 4px 0;
+}
+
+.agent-stack-menu .agent-stack-menu-label {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-[data-slot="agent-stack-tooltip-status"],
-[data-slot="agent-stack-tooltip-more"] {
-  color: var(--text-invert-weak, var(--text-invert-base));
+.agent-stack-menu-status,
+.agent-stack-menu-more {
+  color: var(--text-weak);
+  font-size: var(--kilo-font-size-11);
 }
 
-[data-slot="agent-stack-tooltip-more"] {
-  padding-inline-start: 26px;
-}
-
-[data-slot="agent-stack-tooltip-hint"] {
-  padding-top: 6px;
-  border-top: 1px solid var(--border-weak-base);
-  color: var(--text-invert-weak, var(--text-invert-base));
+.agent-stack-menu-more {
+  padding: 2px 8px 4px 34px;
 }
 
 @keyframes agent-stack-in {
