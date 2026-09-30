@@ -7,6 +7,7 @@
 // reviewing a PR is never evidence, and a link is never inherited from the
 // worktree, a branch name, or a previous session.
 import { Storage } from "@/storage/storage"
+import { Flag } from "@opencode-ai/core/flag/flag"
 import * as Log from "@opencode-ai/core/util/log"
 import simpleGit from "simple-git"
 
@@ -29,6 +30,11 @@ export type SessionPrLink = {
 }
 
 const sessionPrefix = "session_pr_link_session"
+
+// IDE backends use their own worktree PR integrations, not session PR links.
+export function enabled() {
+  return Flag.KILO_CLIENT === "cli"
+}
 
 export function sessionLinkKey(sessionId: string) {
   return [sessionPrefix, sessionId]
@@ -359,6 +365,7 @@ export async function recordSessionLink(
   evidence: SessionPrLink,
   worktree: string,
 ): Promise<SessionPrLink | undefined> {
+  if (!enabled()) return undefined
   const repo = await repoFor(worktree)
   if (!repo || !sameRepo(evidence.link, repo)) return undefined
   await writeValue(sessionLinkKey(sessionId), evidence)
@@ -366,16 +373,19 @@ export async function recordSessionLink(
 }
 
 export async function clearSessionLink(sessionId: string): Promise<void> {
+  if (!enabled()) return
   await removeValue(sessionLinkKey(sessionId))
 }
 
 export async function readSessionPrLink(sessionId: string): Promise<SessionPrLink | undefined> {
+  if (!enabled()) return undefined
   return readValue<SessionPrLink>(sessionLinkKey(sessionId))
 }
 
 // Direct write for a refresh of a link a session already owns. The caller has
 // the session's own URL already, so no worktree or repo re-check is needed.
 export async function writeSessionPrLink(sessionId: string, record: SessionPrLink): Promise<void> {
+  if (!enabled()) return
   await writeValue(sessionLinkKey(sessionId), record)
 }
 
@@ -385,14 +395,13 @@ export async function writeSessionPrLink(sessionId: string, record: SessionPrLin
 // 5-minute check omits `ids` because it must refresh every link. Reads run with
 // a small concurrency bound so a large listing cannot exhaust file handles.
 export async function loadSessionLinks(ids?: Iterable<string>): Promise<Map<string, SessionPrLink>> {
+  if (!enabled()) return new Map()
   const wanted = ids ? [...new Set(ids)] : undefined
   if (wanted && wanted.length === 0) return new Map()
   const { AppRuntime } = await import("@/effect/app-runtime")
   const keys = wanted
     ? wanted.map((sessionId) => sessionLinkKey(sessionId))
-    : await AppRuntime.runPromise(Storage.Service.use((svc) => svc.list([sessionPrefix]))).catch(
-        () => [] as string[][],
-      )
+    : await AppRuntime.runPromise(Storage.Service.use((svc) => svc.list([sessionPrefix]))).catch(() => [] as string[][])
   const entries = await mapLimit(keys, 32, async (key) => {
     const sessionId = key.at(-1)
     if (!sessionId) return undefined
@@ -470,6 +479,7 @@ export async function recordPrCreate(
   worktree: string,
   output: string,
 ): Promise<SessionPrLink | undefined> {
+  if (!enabled()) return undefined
   const link = createdLink(output)
   if (!link) return undefined
 
@@ -509,6 +519,7 @@ export async function recordPush(
   command: string,
   output: string,
 ): Promise<SessionPrLink | undefined> {
+  if (!enabled()) return undefined
   const args = command.match(/(?:^|\s)git\s+push\b(.*)$/)?.[1]
   if (args === undefined || pushDeletesOrDryRuns(args)) return undefined
   const current = await readSessionPrLink(sessionId)
@@ -535,6 +546,7 @@ export async function recordPush(
 // per-session evidence, so they must not survive an upgrade. Returns how many
 // keys were removed.
 export async function pruneLegacyWorktreeLinks(): Promise<number> {
+  if (!enabled()) return 0
   const [{ Effect }, { AppRuntime }] = await Promise.all([import("effect"), import("@/effect/app-runtime")])
   const [recorded, overrides] = await AppRuntime.runPromise(
     Storage.Service.use((svc) => Effect.all([svc.list(["session_pr_link_recorded"]), svc.list(["session_pr_link"])])),
