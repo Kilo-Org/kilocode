@@ -111,6 +111,7 @@ import {
   scrollDrafts,
 } from "../../utils/draft-store"
 import { ReviewComments } from "./ReviewComments"
+import { useRunningAgents } from "./AgentStack"
 import { BrowserReferences } from "./BrowserReferences"
 import { CodeContextChips } from "./CodeContextChips"
 import {
@@ -822,6 +823,9 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     (isBusy() || session.currentSession()?.goal?.active) &&
     !hasInput() &&
     speech.state() !== "recording"
+  // Stop only ends the main agent's turn. Say so while background agents run.
+  const agents = useRunningAgents()
+  const stopLabel = () => language.t(agents().length > 0 ? "prompt.action.stop.background" : "prompt.action.stop")
   const isAtEnd = () =>
     textareaRef ? atEnd(textareaRef.selectionStart, textareaRef.selectionEnd, textareaRef.value.length) : false
   const highlightMentions = () => {
@@ -2285,7 +2289,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
               </Tooltip>
             }
           >
-            <Tooltip value={language.t("prompt.action.stop")} placement="top" openDelay={0}>
+            <Tooltip value={stopLabel()} placement="top" openDelay={0}>
               <IconButton
                 icon="stop"
                 variant="ghost"
