@@ -28,6 +28,8 @@ internal class SidePopupSpot(
     val point: Point,
     val position: Balloon.Position,
     val distance: Int,
+    /** Whether the balloon points at [point] with the usual triangular callout. */
+    val callout: Boolean = true,
 )
 
 /**

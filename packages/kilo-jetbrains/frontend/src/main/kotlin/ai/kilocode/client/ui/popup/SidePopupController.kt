@@ -71,6 +71,14 @@ internal class SidePopupController(
         showTimer.restart()
     }
 
+    /** Shows [request] immediately, without the normal hover dwell. */
+    @RequiresEdt
+    fun showNow(key: Any, owner: Disposable, request: () -> SidePopupRequest?) {
+        show(key, owner, request)
+        showTimer.stop()
+        display()
+    }
+
     @RequiresEdt
     fun notifyExit(key: Any) {
         if (target != key) return
@@ -156,6 +164,7 @@ internal class SidePopupController(
             .setPointerSize(UiStyle.Balloon.pointer())
             .setCornerToPointerDistance(spot.distance)
             .setCornerRadius(UiStyle.Balloon.arc())
+            .setShowCallout(spot.callout)
             .setHideOnClickOutside(true)
             .setHideOnKeyOutside(true)
             .setHideOnFrameResize(true)
