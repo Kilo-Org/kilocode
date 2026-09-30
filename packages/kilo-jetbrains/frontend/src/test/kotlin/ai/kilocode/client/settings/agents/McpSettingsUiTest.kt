@@ -43,6 +43,7 @@ import java.awt.event.InputEvent
 import java.awt.event.MouseEvent
 import javax.swing.JButton
 import javax.swing.JComponent
+import javax.swing.JPanel
 import javax.swing.JTextField
 import javax.swing.SwingUtilities
 import kotlinx.coroutines.CompletableDeferred
@@ -236,6 +237,29 @@ class McpSettingsUiTest : BasePlatformTestCase() {
 
         flushUntil { rows(panel).single { it.key == "filesystem" }.badges.first().text == "disabled" }
         assertEquals(listOf(DIR, DIR), agentRpc.mcpCalls)
+    }
+
+    fun `test panel reloads automatically when it becomes visible again`() {
+        val panel = panel()
+        flushUntil { rows(panel).size == 3 }
+        val calls = agentRpc.mcpCalls.size
+        val host = JPanel()
+
+        edt {
+            host.add(panel)
+            host.addNotify()
+            true
+        }
+        try {
+            edt { host.removeNotify(); true }
+            assertEquals(calls, agentRpc.mcpCalls.size)
+
+            edt { host.addNotify(); true }
+
+            flushUntil { agentRpc.mcpCalls.size > calls }
+        } finally {
+            edt { host.removeNotify(); true }
+        }
     }
 
     fun `test connect action updates runtime status and keeps selection`() {
