@@ -10,7 +10,6 @@ import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.popup.SidePopupController
 import ai.kilocode.client.ui.popup.SidePopupContent
-import ai.kilocode.client.ui.popup.SidePopupGeometry
 import ai.kilocode.client.ui.popup.SidePopupRequest
 import ai.kilocode.client.ui.popup.SidePopupSpot
 import ai.kilocode.client.util.UiTimerSource
@@ -21,6 +20,7 @@ import com.intellij.openapi.ui.popup.Balloon
 import com.intellij.openapi.util.Disposer
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.util.ui.JBUI
+import java.awt.Dimension
 import java.awt.Point
 import java.awt.Rectangle
 import java.awt.event.AdjustmentListener
@@ -249,10 +249,14 @@ internal class PromptRailController(
     }
 
     /**
-     * Anchors the balloon on the left edge of the rail, so the body opens into the transcript and never
-     * covers the ticks it describes. The body is capped to the room between that edge and the window, and
-     * its height is budgeted against the visible session: `BalloonImpl.show` silently re-points a balloon
-     * `ABOVE`/`BELOW` when the requested rectangle does not fit, which would drop it back over the ticks.
+     * Puts the balloon entirely left of the ticks, so the body opens into the transcript instead of
+     * covering the rail it was opened from. The body is capped to the room between the rail and the
+     * window edge, and its height to the visible session.
+     *
+     * The point handed back is the balloon's intended center, not an edge: with the callout off the
+     * platform ignores the position and the pointer distance and centers the box on the target (see
+     * [PromptRailPlacement]). [SidePopupGeometry] is deliberately not used here — its `aim` result drives
+     * `cornerToPointerDistance`, which only applies to balloons that draw a pointer.
      */
     private fun place(index: Int, built: SidePopupContent): SidePopupSpot? {
         val pane = SwingUtilities.getRootPane(rail)?.layeredPane ?: return null
@@ -269,28 +273,40 @@ internal class PromptRailController(
         val chromeHeight = insets.top + insets.bottom + shadow * 2
         // Room is measured to the window edge rather than the chat panel: the rail hugs the right side of
         // a narrow sidebar, where the panel alone would leave almost nothing to open into.
-        val maxWidth = (rect.x - chromeWidth - gap)
-            .coerceIn(0, JBUI.scale(SessionUiStyle.View.Popup.MAX_WIDTH))
-        val maxHeight = (area.height - gap * 2 - chromeHeight)
-            .coerceIn(0, JBUI.scale(SessionUiStyle.View.Popup.MAX_HEIGHT))
+        val maxWidth = PromptRailPlacement.maxWidth(
+            railX = rect.x,
+            gap = gap,
+            chrome = chromeWidth,
+            cap = JBUI.scale(SessionUiStyle.View.Popup.MAX_WIDTH),
+        )
+        val maxHeight = PromptRailPlacement.maxHeight(
+            height = area.height,
+            gap = gap,
+            chrome = chromeHeight,
+            cap = JBUI.scale(SessionUiStyle.View.Popup.MAX_HEIGHT),
+        )
         if (maxWidth <= 0 || maxHeight <= 0) return null
         built.fitWithin(maxWidth, maxHeight)
-        val view = Rectangle(area.x, area.y + shadow, area.width, (area.height - shadow * 2).coerceAtLeast(0))
-        val height = built.component.preferredSize.height + insets.top + insets.bottom
+        val body = built.component.preferredSize
+        val content = Dimension(
+            body.width + insets.left + insets.right,
+            body.height + insets.top + insets.bottom,
+        )
         val tick = SwingUtilities.convertPoint(rail, Point(0, rail.tickCenterY(index.coerceAtLeast(0))), pane)
-        val aim = SidePopupGeometry.aim(
-            view = view,
-            subject = rect,
-            y = tick.y,
-            height = height,
+        val center = PromptRailPlacement.center(
+            railX = rect.x,
+            area = area,
             gap = gap,
-            indent = UiStyle.Balloon.arc(),
+            shadow = shadow,
+            content = content,
+            tickY = tick.y,
         )
         return SidePopupSpot(
             pane = pane,
-            point = Point(rect.x, aim.y),
+            point = center,
+            // Ignored while the callout is off, but kept correct so enabling it would still open left.
             position = Balloon.Position.atLeft,
-            distance = aim.distance,
+            distance = 0,
             callout = false,
         )
     }
