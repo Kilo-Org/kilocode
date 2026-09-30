@@ -61,7 +61,11 @@ function ensureDir(dir: string) {
   fs.chmodSync(dir, 0o700)
 }
 
-/** Write file with 0o600 permissions (owner rw only), truncating. */
+/**
+ * Write file with 0o600 permissions (owner rw only), truncating.
+ * Always enforces permissions even if the file already exists with
+ * looser permissions.
+ */
 function writeSecure(filepath: string, data: string) {
   const fd = fs.openSync(filepath, fs.constants.O_WRONLY | fs.constants.O_CREAT | fs.constants.O_TRUNC, 0o600)
   try {
@@ -69,6 +73,7 @@ function writeSecure(filepath: string, data: string) {
   } finally {
     fs.closeSync(fd)
   }
+  fs.chmodSync(filepath, 0o600)
 }
 
 /**
