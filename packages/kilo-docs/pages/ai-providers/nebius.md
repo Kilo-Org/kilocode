@@ -43,9 +43,9 @@ The extension stores this in your `kilo.json` config file. You can also edit the
 {% /tab %}
 {% tab label="JetBrains" %}
 
-1. Open **Settings** and go to the **Providers** tab.
-2. Click **Show more providers** and select **Nebius Token Factory**.
-3. Paste your API key and save.
+1. Open **Settings** and go to **Kilo Code > Providers**.
+2. Find **Nebius Token Factory** in the **All providers** list, or use the filter box.
+3. Click **Connect** and paste your API key.
 
 {% /tab %}
 {% tab label="CLI" %}
@@ -78,7 +78,7 @@ Then set your default model:
 
 ```jsonc
 {
-  "model": "nebius/moonshotai/Kimi-K2.5",
+  "model": "nebius/zai-org/GLM-5.3",
 }
 ```
 
@@ -87,7 +87,7 @@ Then set your default model:
 
 ## Select a Nebius Model
 
-Once your key is configured, open the model picker and select any model tagged **Nebius Token Factory**. Model IDs use the `nebius/<vendor>/<model>` format (for example, `nebius/moonshotai/Kimi-K2.5`). See the [Nebius Token Factory docs](https://docs.tokenfactory.nebius.com/) for the full model list.
+Once your key is configured, open the model picker and select any model tagged **Nebius Token Factory**. Model IDs use the `nebius/<vendor>/<model>` format (for example, `nebius/zai-org/GLM-5.3`). See the [Nebius Token Factory docs](https://docs.tokenfactory.nebius.com/) for the full model list.
 
 {% image src="/docs/img/nebius/vscode-model-picker.jpg" alt="VS Code model picker showing models tagged Nebius Token Factory" width="600" caption="Select any model tagged Nebius Token Factory" /%}
 
@@ -113,12 +113,12 @@ Model access controls are an **Enterprise-only** feature. Organizations on other
 The [Kilo Gateway](/docs/gateway) provides access to 500+ models from 60+ providers, including Nebius Token Factory. As an organization owner, you can control which models and provider routes your team can use:
 
 1. Navigate to your organization's **Providers & Models** page.
-2. Enable **Nebius Token Factory** on the **Providers** tab.
-3. Choose which models and regions your team is allowed to use. You can filter providers by data policy (trains on data, retains prompts) and datacenter location.
+2. Toggle **Nebius Token Factory** on the **Providers** tab to control access to all of its models at once.
+3. Toggle individual models on the **Models** tab. Use the data policy (trains on data, retains prompts) and location filters to review providers.
 
 {% image src="/docs/img/nebius/gateway-allowlist.png" alt="Kilo Gateway provider list showing Nebius Token Factory enabled, with region and training-data filters" width="800" caption="Kilo Gateway provider allowlist showing Nebius Token Factory enabled, with region and training-data filters" /%}
 
-Team members can then select the approved Nebius models through the Kilo Gateway. For details, see [Model Access Controls](/docs/collaborate/enterprise/model-access-controls).
+Team members can then select the allowed Nebius models through the Kilo Gateway. For details, see [Model Access Controls](/docs/collaborate/enterprise/model-access-controls).
 
 ## Tips and Notes
 
