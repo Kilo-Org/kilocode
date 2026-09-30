@@ -340,11 +340,6 @@
   transition: width var(--working-status-glide) var(--working-status-ease);
 }
 
-/* The lock itself is instant. Only the release to the incoming width glides. */
-.working-status[data-lock] {
-  transition: none;
-}
-
 /* Set by StatusText while the label does not fit, so the cut reads as truncation
    rather than a label that lost its last few characters. */
 .working-status[data-clip] {

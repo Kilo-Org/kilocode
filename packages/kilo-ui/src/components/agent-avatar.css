@@ -19,9 +19,8 @@
     opacity: 1;
   }
 
-  /* While running, the glyph stays solid and the frame dots shimmer around
-     it. The peak is bright enough to read as activity at a glance, while the
-     desynced phases keep the lit glyph recognizable. */
+  /* While running, the glyph stays solid and the faint frame dots shimmer
+     around it, so the symbol remains recognizable. */
   &[data-status="running"] circle:not([data-lit]) {
     animation: agent-avatar-pulse 1.4s ease-in-out infinite both;
     animation-delay: var(--agent-avatar-delay);
@@ -91,16 +90,16 @@
 @keyframes agent-avatar-pulse {
   0%,
   100% {
-    opacity: 0.12;
+    opacity: 0.1;
   }
   50% {
-    opacity: 0.65;
+    opacity: 0.45;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
   [data-component="agent-avatar"][data-status="running"] circle:not([data-lit]) {
     animation: none;
-    opacity: 0.35;
+    opacity: 0.25;
   }
 }

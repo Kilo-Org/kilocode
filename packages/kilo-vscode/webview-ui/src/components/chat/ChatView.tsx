@@ -29,7 +29,6 @@ import { useServer } from "../../context/server"
 import { TranscriptSearchProvider } from "../../context/transcript-search"
 import { isPromptBlocked, isSuggesting, isQuestioning } from "./prompt-input-utils"
 import { taskChildren } from "./background-agents"
-import { pollBackgroundJobs } from "./background-jobs"
 import { showTabStrip } from "../../utils/local-tabs"
 import type { WorktreeReference } from "../../hooks/file-mention-utils"
 
@@ -74,15 +73,10 @@ export const ChatView: Component<ChatViewProps> = (props) => {
   const ownsPrompts = () => props.interactivePrompts !== false
 
   const id = () => session.currentSessionID()
-  // Keeps the background job list fresh for the dock's agent stack and the
-  // swarm board, which both read the replies.
-  pollBackgroundJobs()
   const goal = () => session.currentSession()?.goal
   // Counts the in-flight first message too, so the dock reserves the same row on
   // the very first send instead of growing once the message lands.
-  // A memo, so the dock's actions row rebuilds only when this flips, not on
-  // every new message. A rebuild re-inserts the row and skips its transitions.
-  const hasMessages = createMemo(() => session.messages().length > 0 || session.submitting())
+  const hasMessages = () => session.messages().length > 0 || session.submitting()
 
   const [editable, setEditable] = createSignal(false)
   const [editing, setEditing] = createSignal<{ sessionID: string; messageID: string }>()
@@ -259,11 +253,10 @@ export const ChatView: Component<ChatViewProps> = (props) => {
   const hasActions = (hasChat: boolean) =>
     canStartSession(hasChat) || canFork(hasChat) || canStartWorktree() || canMoveToWorktree(hasChat)
 
-  const renderActions = (hasChat: boolean, control: () => JSX.Element, agents: JSX.Element) => (
+  const renderActions = (hasChat: boolean, control: () => JSX.Element) => (
     <Show when={hasActions(hasChat) || !!goal()}>
       <div class="new-task-button-wrapper" classList={{ "new-task-button-wrapper--empty": !hasChat }}>
         <div class="session-actions-row">
-          {agents}
           <Show when={canStartSession(hasChat)}>
             <Tooltip value={language.t("sidebar.session.newSession.tooltip")} placement="top">
               <Button
@@ -433,7 +426,7 @@ export const ChatView: Component<ChatViewProps> = (props) => {
               <SessionDock
                 blocked={dockBlocked()}
                 hasActions={() => !props.readonly && (hasActions(hasMessages()) || !!goal())}
-                actions={(control, agents) => renderActions(hasMessages(), control, agents)}
+                actions={(control) => renderActions(hasMessages(), control)}
                 onScrollToBottom={scrollToBottom}
                 readonly={props.readonly}
               />

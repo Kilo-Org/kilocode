@@ -18,6 +18,7 @@ import { calcTokenUsage, collapseCostBreakdown, sessionCost } from "../../contex
 import { useLanguage } from "../../context/language"
 import { useVSCode } from "../../context/vscode"
 import { TaskTimeline } from "./TaskTimeline"
+import { BackgroundAgents } from "./BackgroundAgents"
 import { SwarmBoard } from "./SwarmBoard"
 import { ContextProgress } from "./ContextProgress"
 import { TaskUsage } from "./TaskUsage"
@@ -328,6 +329,7 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
           </Show>
         </div>
       </Show>
+      <BackgroundAgents readonly={props.readonly} />
       <Show when={hasTodos()}>
         <div data-component="task-header-todos">
           <button
