@@ -29,6 +29,7 @@ import { useServer } from "../../context/server"
 import { TranscriptSearchProvider } from "../../context/transcript-search"
 import { isPromptBlocked, isSuggesting, isQuestioning } from "./prompt-input-utils"
 import { taskChildren } from "./background-agents"
+import { pollBackgroundJobs } from "./background-jobs"
 import { showTabStrip } from "../../utils/local-tabs"
 import type { WorktreeReference } from "../../hooks/file-mention-utils"
 
@@ -73,6 +74,9 @@ export const ChatView: Component<ChatViewProps> = (props) => {
   const ownsPrompts = () => props.interactivePrompts !== false
 
   const id = () => session.currentSessionID()
+  // Keeps the background job list fresh for the dock's agent stack and the
+  // swarm board, which both read the replies.
+  pollBackgroundJobs()
   const goal = () => session.currentSession()?.goal
   // Counts the in-flight first message too, so the dock reserves the same row on
   // the very first send instead of growing once the message lands.

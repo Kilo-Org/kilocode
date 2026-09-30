@@ -204,7 +204,6 @@ export const dict = {
   "prompt.action.stop": "停止",
   "prompt.action.stop.background": "停止主智能体。后台智能体将继续运行。",
   "prompt.agents.show": "显示后台智能体",
-  "prompt.agents.hint": "点击以显示和停止后台智能体",
   "prompt.action.enhance": "优化提示词",
   "prompt.paste.expand": "点击展开粘贴的文本",
   "prompt.action.enhanceDescription":
@@ -1240,7 +1239,6 @@ export const dict = {
   "task.todos.allDone": "{{count}} 个待办已完成",
   "task.backgroundAgents.running.one": "1 个后台智能体",
   "task.backgroundAgents.running.many": "{{count}} 个后台智能体",
-  "task.backgroundAgents.more": "+{{count}} 个",
   "task.backgroundAgents.open": "打开后台智能体",
   "task.backgroundAgents.openAll": "打开所有后台智能体",
   "task.backgroundAgents.cancel": "停止",

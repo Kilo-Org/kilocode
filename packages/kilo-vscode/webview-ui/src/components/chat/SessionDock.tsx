@@ -103,9 +103,7 @@ export const SessionDock: Component<SessionDockProps> = (props) => {
     if (!actions() || !visible() || !state || typeof ResizeObserver === "undefined") return
     const place = () => {
       const row = state.querySelector<HTMLElement>(".session-actions-row")
-      const item = row?.querySelector<HTMLElement>(
-        ':scope > [data-component="tooltip-trigger"]:has(> [data-component="agent-stack"])',
-      )
+      const item = row?.querySelector<HTMLElement>(':scope > [data-component="agent-stack"]')
       if (!row || !item) return
       const all = [...row.children].filter((child): child is HTMLElement => child instanceof HTMLElement)
       const kids = all.filter((child) => child !== item)

@@ -32,23 +32,10 @@ export interface BackgroundAgent {
   status: BackgroundAgentStatus
   error?: string
   startedAt: number
+  finishedAt?: number
   jobID: string
   permission?: PermissionRequest
   question?: QuestionRequest
-}
-
-export function fitBackgroundAgents(widths: number[], space: number, overflow: number, gap: number): number {
-  const total = widths.reduce((sum, width) => sum + width, 0) + Math.max(0, widths.length - 1) * gap
-  if (total <= space) return widths.length
-  let used = 0
-  let count = 0
-  for (const width of widths) {
-    const next = used + width + (count > 0 ? gap : 0)
-    if (next + gap + overflow > space) break
-    used = next
-    count += 1
-  }
-  return count
 }
 
 export function showBackgroundAgent(agent: BackgroundAgent, hidden: ReadonlySet<string>): boolean {
@@ -192,6 +179,7 @@ export function backgroundJobAgents(
         status: job.status,
         error: job.error,
         startedAt: job.started_at,
+        finishedAt: job.completed_at,
         jobID: job.id,
         permission: permissions.find((item) => item.sessionID === id),
         question: questions.find((item) => item.sessionID === id),

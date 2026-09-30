@@ -427,18 +427,18 @@
     outline-offset: -1px;
   }
 
-  /* All agents are done: hold the finished glyphs, fade, then collapse to zero
-     width just before the stack unmounts. A new agent reopens it at once. */
+  /* Every agent left the run: fade and collapse to zero width before the
+     stack unmounts. A new agent reopens it at once. */
   &[data-idle="true"] {
     grid-template-columns: 0fr;
     padding-inline: 0;
     margin-inline: 0;
     opacity: 0;
     transition:
-      opacity 280ms ease 900ms,
-      grid-template-columns var(--agent-stack-open) var(--agent-stack-ease) 1140ms,
-      padding var(--agent-stack-open) var(--agent-stack-ease) 1140ms,
-      margin var(--agent-stack-open) var(--agent-stack-ease) 1140ms;
+      opacity 200ms ease,
+      grid-template-columns var(--agent-stack-open) var(--agent-stack-ease),
+      padding var(--agent-stack-open) var(--agent-stack-ease),
+      margin var(--agent-stack-open) var(--agent-stack-ease);
   }
 }
 
@@ -474,7 +474,7 @@
 }
 
 /* At the end of an actions line the rule moves in front of the stack. */
-[data-place="end"] > [data-component="agent-stack"][data-rule] {
+[data-component="agent-stack"][data-rule][data-place="end"] {
   margin-inline: 4px 0;
 
   &::after {
@@ -483,34 +483,40 @@
 }
 
 /* The idle collapse also closes the rule margin, whichever side it is on. */
-[data-component="agent-stack"][data-rule][data-idle="true"],
-[data-place="end"] > [data-component="agent-stack"][data-rule][data-idle="true"] {
+[data-component="agent-stack"][data-rule][data-idle="true"] {
   margin-inline: 0;
 }
 
-/* The row gap next to the stack opens and closes with it, so the actions
-   beside it slide instead of jumping by the gap. */
-.session-actions-row > [data-component="tooltip-trigger"]:has(> [data-component="agent-stack"]) {
-  transition: margin 260ms cubic-bezier(0.22, 1, 0.36, 1);
-
-  &:has(> :not([data-ready])) {
-    animation: agent-stack-gap-end 260ms cubic-bezier(0.22, 1, 0.36, 1) backwards;
+/* In the actions row, the row gap next to the stack opens and closes with it,
+   so the actions beside it slide instead of jumping by the gap. */
+.session-actions-row > [data-component="agent-stack"] {
+  &:not([data-ready]) {
+    animation-name: agent-stack-in, agent-stack-gap-end;
   }
 
-  &:has(> [data-idle="true"]) {
-    margin-inline-end: -4px;
-    transition-delay: 1140ms;
+  &[data-place="end"]:not([data-ready]) {
+    animation-name: agent-stack-in, agent-stack-gap-start;
   }
 
-  &[data-place="end"]:has(> :not([data-ready])) {
-    animation-name: agent-stack-gap-start;
+  &[data-idle="true"] {
+    margin-inline: 0 -4px;
   }
 
-  &[data-place="end"] {
-    &:has(> [data-idle="true"]) {
-      margin-inline: -4px 0;
-    }
+  &[data-place="end"][data-idle="true"] {
+    margin-inline: -4px 0;
   }
+}
+
+/* Waiting on the user: a small dot marks the stack. */
+[data-component="agent-stack"][data-attention]::before {
+  content: "";
+  position: absolute;
+  top: 1px;
+  inset-inline-end: 1px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--icon-warning-base, var(--vscode-editorWarning-foreground));
 }
 
 /* A small gap keeps each dot glyph separate. Overlapping glyphs merge into one
@@ -554,75 +560,120 @@
   }
 }
 
-.agent-stack-tooltip-content {
-  max-width: 300px;
-  white-space: normal;
-}
-
-[data-slot="agent-stack-tooltip"] {
-  display: grid;
-  gap: 4px;
-}
-
-[data-slot="agent-stack-tooltip-hint"] {
-  color: var(--text-invert-weak, var(--text-invert-base));
-}
-
 /* Same surface as the Goal menu in this row. */
-.agent-stack-menu[data-component="dropdown-menu-content"] {
+.agent-panel[data-component="popover-content"] {
   box-sizing: border-box;
-  width: 260px;
-  min-width: 0;
+  width: 300px;
   max-width: calc(100vw - 24px);
   padding: 6px;
   border-radius: var(--radius-xl);
 }
 
-.agent-stack-menu .agent-stack-menu-title {
-  padding: 4px 8px 2px;
-  font-size: var(--kilo-font-size-10);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
-.agent-stack-menu[data-component="dropdown-menu-content"] [data-slot="dropdown-menu-item"] {
+[data-slot="agent-panel"] {
   display: grid;
-  grid-template-columns: 18px minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 8px;
-  min-height: 28px;
-  padding: 5px 8px;
-  border-radius: var(--radius-lg);
+  gap: 4px;
   font-size: var(--kilo-font-size-12);
 }
 
-.agent-stack-menu[data-component="dropdown-menu-content"] [data-slot="dropdown-menu-item"][data-done="true"] {
-  opacity: 0.6;
+[data-slot="agent-panel-header"] {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-inline-start: 8px;
 }
 
-.agent-stack-menu[data-component="dropdown-menu-content"] [data-highlighted] {
-  background: var(--surface-raised-base-hover);
-  color: var(--text-strong);
+[data-slot="agent-panel-title"] {
+  color: var(--text-weak);
+  font-size: var(--kilo-font-size-10);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
-.agent-stack-menu[data-component="dropdown-menu-content"] [data-slot="dropdown-menu-separator"] {
-  margin: 4px 0;
+[data-slot="agent-panel-attention"] {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border-radius: var(--radius-lg);
+  color: var(--text-warning-base, var(--vscode-editorWarning-foreground));
+  background: var(--surface-warning-weak, transparent);
 }
 
-.agent-stack-menu .agent-stack-menu-label {
+[data-slot="agent-panel-list"] {
+  display: grid;
+  gap: 2px;
+  max-height: 220px;
+  overflow-y: auto;
+
+  /* A rule separates finished agents only from active ones above them. */
+  & + &[data-finished],
+  [data-slot="agent-panel-stop-all"] + &[data-finished] {
+    padding-top: 4px;
+    border-top: 1px solid var(--border-weak-base, var(--vscode-panel-border));
+  }
+}
+
+[data-slot="agent-panel-row"] {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  border-radius: var(--radius-lg);
+
+  &:hover,
+  &:focus-within {
+    background: var(--surface-raised-base-hover);
+  }
+
+  &:not([data-status="running"], [data-status="waiting"]) [data-slot="agent-panel-main"] {
+    opacity: 0.6;
+  }
+}
+
+[data-slot="agent-panel-main"] {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr) auto;
+  flex: 1;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  min-height: 28px;
+  padding: 5px 8px;
+  border: 0;
+  border-radius: inherit;
+  background: none;
+  color: var(--text-base);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+
+  &:focus-visible {
+    outline: 1px solid var(--vscode-focusBorder);
+  }
+}
+
+[data-slot="agent-panel-label"] {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.agent-stack-menu-status,
-.agent-stack-menu-more {
+[data-slot="agent-panel-status"] {
   color: var(--text-weak);
   font-size: var(--kilo-font-size-11);
+
+  [data-status="waiting"] & {
+    color: var(--text-warning-base, var(--vscode-editorWarning-foreground));
+  }
+
+  [data-status="error"] & {
+    color: var(--text-critical-base, var(--vscode-errorForeground));
+  }
 }
 
-.agent-stack-menu-more {
-  padding: 2px 8px 4px 34px;
+[data-slot="agent-panel-stop-all"],
+[data-slot="agent-panel-clear"] {
+  justify-self: end;
 }
 
 @keyframes agent-stack-in {
@@ -662,8 +713,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   [data-component="agent-stack"],
-  [data-slot="agent-stack-avatar"],
-  .session-actions-row > [data-component="tooltip-trigger"]:has(> [data-component="agent-stack"]) {
+  [data-slot="agent-stack-avatar"] {
     animation: none;
     transition: none;
   }
@@ -679,11 +729,11 @@
     margin-inline: 0 4px;
   }
 
-  [data-place="end"] > [data-component="agent-stack"][data-rule][data-idle="true"] {
+  [data-component="agent-stack"][data-rule][data-place="end"][data-idle="true"] {
     margin-inline: 4px 0;
   }
 
-  .session-actions-row > [data-component="tooltip-trigger"]:has(> [data-idle="true"]) {
+  .session-actions-row > [data-component="agent-stack"]:not([data-rule])[data-idle="true"] {
     margin-inline: 0;
   }
 }

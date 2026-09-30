@@ -3,7 +3,6 @@ import {
   backgroundAgents,
   backgroundJobAgents,
   taskChildren,
-  fitBackgroundAgents,
   mergePromptAgents,
   stackFit,
   stackPlace,
@@ -53,29 +52,6 @@ function taskPart(opts: TaskOptions = {}): ToolPart {
 
 const busy: SessionStatusInfo = { type: "busy" }
 const idle: SessionStatusInfo = { type: "idle" }
-
-describe("fitBackgroundAgents", () => {
-  it("uses the full width when all agents fit without an overflow button", () => {
-    expect(fitBackgroundAgents([30, 30], 66, 80, 6)).toBe(2)
-  })
-
-  it("reserves the overflow button and spacing while fitting a prefix", () => {
-    expect(fitBackgroundAgents([100, 120, 80], 285, 50, 6)).toBe(2)
-    expect(fitBackgroundAgents([100, 120, 80], 281, 50, 6)).toBe(1)
-  })
-
-  it("falls back to the summary when no agent fits with the overflow button", () => {
-    expect(fitBackgroundAgents([100, 120], 155, 50, 6)).toBe(0)
-    expect(fitBackgroundAgents([100, 120], 156, 50, 6)).toBe(1)
-  })
-
-  it("handles single agents, empty lists, and hidden containers", () => {
-    expect(fitBackgroundAgents([100], 100, 50, 6)).toBe(1)
-    expect(fitBackgroundAgents([100], 99, 50, 6)).toBe(0)
-    expect(fitBackgroundAgents([], 100, 50, 6)).toBe(0)
-    expect(fitBackgroundAgents([100, 120], 0, 50, 6)).toBe(0)
-  })
-})
 
 describe("children", () => {
   it("keeps background children while listing each task child once in spawn order", () => {
