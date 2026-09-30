@@ -229,7 +229,15 @@ export const prepare = Effect.fn("LLMRequestPrep.prepare")(function* (input: Pre
     messages,
     tools: Object.fromEntries(Object.entries(tools).toSorted(([a], [b]) => a.localeCompare(b))),
     params,
-    messageTransformOptions: options,
+    // kilocode_change start - surface provider-level endpoint overrides to message
+    // transforms without leaking them into the wire params (options is also params.options)
+    messageTransformOptions: {
+      ...options,
+      ...(typeof (input.provider.options?.endpoint ?? input.provider.options?.baseURL) === "string"
+        ? { providerEndpointOverride: input.provider.options?.endpoint ?? input.provider.options?.baseURL }
+        : {}),
+    },
+    // kilocode_change end
     headers: {
       ...(input.model.providerID.startsWith("opencode")
         ? {
@@ -242,7 +250,6 @@ export const prepare = Effect.fn("LLMRequestPrep.prepare")(function* (input: Pre
         : {
             "x-session-affinity": input.sessionID,
             "X-Session-Id": input.sessionID,
-            ...(input.parentSessionID ? { "x-parent-session-id": input.parentSessionID } : {}),
             "User-Agent": USER_AGENT,
             ...(input.model.providerID !== "anthropic" ? DEFAULT_HEADERS : undefined), // kilocode_change
           }),
@@ -254,6 +261,7 @@ export const prepare = Effect.fn("LLMRequestPrep.prepare")(function* (input: Pre
       ...(isKilo && parent ? { [HEADER_PARENT_TASKID]: parent } : {}),
       ...(isKilo && attr.feature ? { [HEADER_FEATURE]: attr.feature } : {}),
       // kilocode_change end
+      ...(input.parentSessionID ? { "x-parent-session-id": input.parentSessionID } : {}),
       ...input.model.headers,
       ...headers,
     },

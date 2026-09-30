@@ -52,7 +52,12 @@ export class MarketplaceService {
     dir: string,
   ): Promise<InstallResult> {
     const { data } = await client.kilocode.marketplace.install(
-      { directory: dir, item, target: options.target, parameters: options.parameters },
+      {
+        directory: dir,
+        item,
+        target: options.target,
+        parameters: options.parameters,
+      },
       { throwOnError: true },
     )
     // Success notifications are owned by the caller driving the user-facing flow
@@ -83,6 +88,7 @@ export class MarketplaceService {
 export type {
   MarketplaceItem,
   AgentMarketplaceItem,
+  PluginMarketplaceItem,
   InstallMarketplaceItemOptions,
   MarketplaceDataResponse,
   InstallResult,

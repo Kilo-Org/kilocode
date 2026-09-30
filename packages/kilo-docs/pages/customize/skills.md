@@ -47,6 +47,8 @@ This means:
 
 Skills are loaded from multiple locations, allowing both personal skills and project-specific instructions.
 
+To share personal skills across projects, install them at `~/.agents/skills/<name>/SKILL.md`. Kilo discovers this user-level directory by default, without a `skills.paths` entry or a plugin to register the skills. This does not register plugin hooks. Skills in this trusted user-level location can execute [embedded shell commands](/docs/customize/skills#shell-commands-in-skills) when invoked.
+
 {% tabs %}
 {% tab label="VSCode" %}
 
@@ -82,8 +84,8 @@ your-project/
 
 For interoperability with other tools, Kilo Code also loads skills from:
 
-- `.agents/skills/` — Open agent standard, loaded by default
-- `.claude/skills/` — Claude Code compatibility, loaded when Claude Code Compatibility is enabled
+- `~/.agents/skills/` and `.agents/skills/` - Open agent standard, loaded by default
+- `~/.claude/skills/` and `.claude/skills/` - Claude Code compatibility, loaded when Claude Code Compatibility is enabled
 
 ### Additional Skill Paths and Remote URLs
 
@@ -156,8 +158,8 @@ your-project/
 
 For interoperability with other tools, the CLI also loads skills from:
 
-- `.claude/skills/` — Claude Code compatibility
-- `.agents/skills/` — Open agent standard
+- `~/.claude/skills/` and `.claude/skills/` - Claude Code compatibility
+- `~/.agents/skills/` and `.agents/skills/` - Open agent standard
 
 ### Additional Skill Paths and Remote URLs
 
@@ -197,6 +199,12 @@ When you change a remote skill's contents or file list, also change its `version
 
 {% /tab %}
 {% /tabs %}
+
+{% callout type="warning" title="External skill paths" %}
+To load skills from outside the project, declare their `skills.paths` entries in your user-level config, such as `~/.config/kilo/kilo.jsonc`.
+
+Paths declared only in project config remain untrusted. Their `SKILL.md` files and `{file:...}` references must stay inside the project, even if the configured path is absolute or starts with `~/`. External files fail to load with `blocked file reference outside project config scope`. Granting `external_directory` permission does not make these skill paths trusted.
+{% /callout %}
 
 ## Mode-Specific Skills
 

@@ -36,8 +36,14 @@ async function createTempRepo(): Promise<string> {
   return dir
 }
 
-function createManager(root: string, poolSize = 1, rewarmDelay = 0): WorktreeManager {
-  const manager = new WorktreeManager(root, () => undefined, undefined, undefined, poolSize)
+function createManager(root: string, poolSize = 1, rewarmDelay = 0, logs?: string[]): WorktreeManager {
+  const manager = new WorktreeManager(
+    root,
+    logs ? (msg) => logs.push(msg) : () => undefined,
+    undefined,
+    undefined,
+    poolSize,
+  )
   manager.rewarmDelay = rewarmDelay
   return manager
 }
@@ -73,6 +79,19 @@ async function waitForPooledSlot(root: string, timeout = 10000): Promise<string>
     await new Promise((resolve) => setTimeout(resolve, 25))
   }
   throw new Error("Timed out waiting for a pooled slot")
+}
+
+async function waitForPooledSlots(root: string, count: number, timeout = 10000): Promise<string[]> {
+  const deadline = Date.now() + timeout
+  while (Date.now() < deadline) {
+    const slots: string[] = []
+    for (const slot of await pooledSlots(root)) {
+      if ((await slotMeta(slot))?.pooled === true) slots.push(slot)
+    }
+    if (slots.length >= count) return slots
+    await new Promise((resolve) => setTimeout(resolve, 25))
+  }
+  throw new Error(`Timed out waiting for ${count} pooled slots`)
 }
 
 describe("WorktreeManager pool warm-up", () => {
@@ -194,6 +213,64 @@ describe("WorktreeManager pool claim", () => {
   })
 })
 
+describe("WorktreeManager pool stale slot", () => {
+  it("evicts a slot whose directory was deleted and cold-creates instead", async () => {
+    const root = await createTempRepo()
+    const logs: string[] = []
+    const manager = createManager(root, 1, 0, logs)
+
+    manager.warmPool()
+    const slot = await waitForPooledSlot(root)
+
+    await fs.rm(slot, { recursive: true, force: true })
+    expect(existsSync(slot)).toBe(false)
+
+    const result = await manager.createWorktree({})
+    expect(existsSync(result.path)).toBe(true)
+    expect(result.path).not.toBe(slot)
+    expect((await simpleGit(result.path).raw(["status", "--porcelain"])).trim()).toBe("")
+    expect(logs.some((line) => line.includes("slot missing on disk, evicting"))).toBe(true)
+
+    // The stale slot is evicted and the next create succeeds as well.
+    const second = await manager.createWorktree({})
+    expect(existsSync(second.path)).toBe(true)
+  })
+
+  it("reuses a healthy slot when another pooled slot was deleted", async () => {
+    const root = await createTempRepo()
+    const logs: string[] = []
+    const manager = createManager(root, 2, 0, logs)
+
+    manager.warmPool()
+    const original = await waitForPooledSlots(root, 2)
+
+    // The first claim consumes the pool's first slot. Identifying it pins the
+    // creation order, so the slot that stays in the pool is deterministically
+    // the one claim() tries first after the replacement warm.
+    const first = await manager.createWorktree({})
+    const firstReal = await fs.realpath(first.path)
+    const remaining: string[] = []
+    for (const slot of original) {
+      if ((await fs.realpath(slot)) !== firstReal) remaining.push(slot)
+    }
+    expect(remaining).toHaveLength(1)
+    const stale = remaining[0]!
+
+    const refilled = await waitForPooledSlots(root, 2)
+    const healthy = refilled.find((slot) => slot !== stale)
+    expect(healthy).toBeDefined()
+
+    await fs.rm(stale, { recursive: true, force: true })
+    expect(existsSync(stale)).toBe(false)
+
+    const result = await manager.createWorktree({})
+
+    expect(await fs.realpath(result.path)).toBe(await fs.realpath(healthy!))
+    expect(existsSync(stale)).toBe(false)
+    expect(logs.some((line) => line.includes("slot missing on disk, evicting"))).toBe(true)
+  })
+})
+
 describe("WorktreeManager pool reconcile", () => {
   it("trusts the slot HEAD over stale metadata when adopting", async () => {
     const root = await createTempRepo()
@@ -230,6 +307,26 @@ describe("WorktreeManager pool disabled", () => {
 
     expect(result.path).toBe(path.join(root, ".kilo", "worktrees", "plain"))
     expect((await simpleGit(result.path).raw(["symbolic-ref", "--short", "HEAD"])).trim()).toBe("plain")
+  })
+
+  it("does not create the worktrees directory when reconciling with poolSize 0", async () => {
+    const root = await createTempRepo()
+    const manager = createManager(root, 0)
+
+    await manager.reconcilePool()
+
+    expect(existsSync(path.join(root, ".kilo", "worktrees"))).toBe(false)
+  })
+
+  it("still removes leftover pooled slots when reconciling with poolSize 0", async () => {
+    const root = await createTempRepo()
+    createManager(root).warmPool()
+    const slot = await waitForPooledSlot(root)
+
+    await createManager(root, 0).reconcilePool()
+
+    expect(existsSync(slot)).toBe(false)
+    expect(await pooledSlots(root)).toEqual([])
   })
 })
 

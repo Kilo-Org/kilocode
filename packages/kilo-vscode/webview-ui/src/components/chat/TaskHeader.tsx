@@ -14,7 +14,7 @@ import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { Checkbox } from "@kilocode/kilo-ui/checkbox"
 import { useSession } from "../../context/session"
-import { calcTokenUsage, collapseCostBreakdown } from "../../context/session-utils"
+import { calcTokenUsage, collapseCostBreakdown, sessionCost } from "../../context/session-utils"
 import { useLanguage } from "../../context/language"
 import { useVSCode } from "../../context/vscode"
 import { TaskTimeline } from "./TaskTimeline"
@@ -49,16 +49,17 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
   const fmt = (n: number) => money().format(n)
 
   const breakdown = () => session.costBreakdown()
+  const total = createMemo(() => sessionCost(breakdown(), session.currentSession(), session.modelUsage()))
 
   const cost = createMemo(() => {
-    const total = breakdown().reduce((sum, e) => sum + e.cost, 0)
-    if (total === 0) return undefined
-    return fmt(total)
+    const value = total().total
+    if (value === 0) return undefined
+    return fmt(value)
   })
 
   const costTooltip = createMemo(() => {
     const items = breakdown()
-    if (items.length <= 1) return <span>{language.t("context.usage.sessionCost")}</span>
+    if (items.length <= 1 || total().partial) return <span>{language.t("context.usage.sessionCost")}</span>
     const collapsed = collapseCostBreakdown(items, (n) =>
       language.t("context.usage.olderSessions", { count: String(n) }),
     )

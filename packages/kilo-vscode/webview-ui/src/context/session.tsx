@@ -26,6 +26,7 @@ import { useConfig } from "./config"
 import { useLanguage } from "./language"
 import { createCostAlertHandler } from "./cost-alert"
 import { showToast } from "@kilocode/kilo-ui/toast"
+import { touch } from "@kilocode/kilo-ui/tool-motion"
 import type {
   SessionInfo,
   SessionModelUsage,
@@ -93,6 +94,7 @@ import { preserveVariant, sessionVariantKeys, transferVariants, variantKey } fro
 import { createSessionVariants } from "./session-variants"
 import { KILO_AUTO, KILO_PROVIDER_ID, parseModelString } from "../../../src/shared/provider-model"
 import { type ReviewMessageData } from "../../../src/shared/review-comments"
+import { REVERT_ERROR_CODE } from "../../../src/shared/revert-error"
 import type { BrowserFeedbackData } from "../../../src/shared/browser-feedback"
 import { activeUserMessageID, removeQueuedMessage, visibleMessages as filterVisibleMessages } from "./session-queue"
 import { clearSessionDraftDiscarded, deleteDraftsForSession } from "../utils/draft-store"
@@ -143,6 +145,8 @@ export const SessionProvider: ParentComponent = (props) => {
   const provider = useProvider()
   const { config } = useConfig()
   const language = useLanguage()
+  // The Agent Manager nests a second provider for the subagent inspector; the outer one owns the toasts.
+  const nested = useContext(SessionContext) !== undefined
 
   // Current session ID
   const [currentSessionID, setCurrentSessionID] = createSignal<string | undefined>()
@@ -820,6 +824,12 @@ export const SessionProvider: ParentComponent = (props) => {
   function handleError(message: Extract<ExtensionMessage, { type: "error" }>) {
     if (!message.sessionID || message.sessionID === currentSessionID()) setLoading(false)
     if (message.sessionID) patchPage(message.sessionID, { loadingInitial: false, loadingOlder: false })
+    if (message.code !== REVERT_ERROR_CODE || nested) return
+    showToast({
+      variant: "error",
+      title: language.t("common.requestFailed"),
+      description: language.t(REVERT_ERROR_CODE),
+    })
   }
 
   function closed(message: Extract<ExtensionMessage, { type: "sessionTurnClosed" }>) {
@@ -1468,6 +1478,8 @@ export const SessionProvider: ParentComponent = (props) => {
 
     if (sessionID) patchPage(sessionID, { lastMutation: "update" })
     patchToolPart(sessionID, effectiveMessageID, part)
+    // Tool rows animate only when they mount right after a streamed update.
+    if (part.type === "tool") touch(part.id)
 
     // If the stash has parts for this message, hydrate them first so the
     // SSE update merges into the full part list rather than an empty array.
@@ -1908,6 +1920,8 @@ export const SessionProvider: ParentComponent = (props) => {
       loaded,
       preserve,
       append,
+      hasMore,
+      open: paging.open(),
       fresh: freshSessions,
       setSessions: (updater) => setStore("sessions", produce(updater)),
     })
@@ -3047,6 +3061,7 @@ export const SessionProvider: ParentComponent = (props) => {
     loadSessions,
     loadMoreSessions: paging.loadMore,
     sessionsHasMore: paging.hasMore,
+    keepSessions: paging.keep,
     sessionsLoadingMore: paging.loadingMore,
     loadOlderMessages,
     selectSession,

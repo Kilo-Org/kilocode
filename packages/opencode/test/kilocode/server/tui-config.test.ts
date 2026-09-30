@@ -1,7 +1,11 @@
 import { afterEach, describe, expect, test } from "bun:test"
 import path from "path"
 import fs from "fs/promises"
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
+import { Effect, Layer, Logger } from "effect"
 import * as Log from "@opencode-ai/core/util/log"
+import { CurrentWorkingDirectory } from "../../../src/config/tui-cwd"
+import { TuiConfig } from "../../../src/config/tui"
 import { Server } from "../../../src/server/server"
 import { GlobalBus, type GlobalEvent } from "../../../src/bus/global"
 import { resetDatabase } from "../../fixture/db"
@@ -41,6 +45,31 @@ describe("TUI config routes", () => {
     expect(body.keybinds?.app_exit).toBe("ctrl+q")
     expect(body.keybinds?.leader).toBe("ctrl+x")
     expect(body.plugin_origins).toBeUndefined()
+  })
+
+  test("warns about unknown top-level TUI settings while applying valid settings", async () => {
+    await using tmp = await tmpdir({
+      init: async (dir) => {
+        const cfg = path.join(dir, ".kilo")
+        await fs.mkdir(cfg, { recursive: true })
+        await Bun.write(path.join(cfg, "tui.json"), JSON.stringify({ theme: "nord", typo_setting: true }))
+      },
+    })
+    const logs: string[] = []
+    const logger = Logger.make(({ message }) => logs.push(JSON.stringify(message)))
+    const config = await Effect.runPromise(
+      TuiConfig.Service.use((svc) => svc.info()).pipe(
+        Effect.provide(
+          AppNodeBuilder.build(TuiConfig.node).pipe(
+            Layer.provide(Layer.succeed(CurrentWorkingDirectory, tmp.path)),
+            Layer.provideMerge(Logger.layer([logger], { mergeWithExisting: false })),
+          ),
+        ),
+      ),
+    )
+
+    expect(config.theme).toBe("nord")
+    expect(logs.some((message) => message.includes("typo_setting"))).toBe(true)
   })
 
   test("does not write TUI config logs to the terminal", async () => {

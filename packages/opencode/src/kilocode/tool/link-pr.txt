@@ -1,0 +1,12 @@
+Link this session to a pull request.
+
+Call it immediately after you open a pull request or merge request for this
+worktree, or when the user gives you the URL of one. It does not create a pull
+request.
+
+An explicit link overrides any link the session detected, and it survives later
+detection passes, so it is the strongest way to say which pull request this
+session is working on.
+
+Pass the full URL of the GitHub pull request, GitLab merge request or Bitbucket
+pull request for this repository.

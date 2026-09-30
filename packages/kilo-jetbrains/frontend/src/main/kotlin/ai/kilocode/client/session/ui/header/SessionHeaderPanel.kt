@@ -8,11 +8,9 @@ import ai.kilocode.client.session.ui.style.SessionEditorStyleTarget
 import ai.kilocode.client.session.controller.SessionController
 import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.session.views.SessionViewIcons
-import ai.kilocode.client.session.views.todo.TodoListPanel
 import ai.kilocode.client.ui.HoverIcon
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.layout.Stack
-import ai.kilocode.rpc.dto.TodoDto
 import ai.kilocode.rpc.dto.TokensDto
 import com.intellij.icons.AllIcons
 import com.intellij.ide.util.PropertiesComponent
@@ -35,6 +33,7 @@ import java.awt.event.MouseWheelEvent
 import javax.swing.Box
 import javax.swing.BoxLayout
 import javax.swing.Icon
+import javax.swing.JComponent
 import javax.swing.JPanel
 import javax.swing.JViewport
 import javax.swing.SwingUtilities
@@ -46,6 +45,8 @@ class SessionHeaderPanel(
     /** Whether the shared agent board icon should show, re-derived on every [update]. */
     private val boardVisible: () -> Boolean = { false },
     private val onShowBoard: () -> Unit = {},
+    /** Opens a background agent's read-only transcript. See [ai.kilocode.client.session.SessionUi.openSubagent]. */
+    private val onOpenSubagent: (String, String) -> Unit = { _, _ -> },
 ) : BorderLayoutPanel(), SessionEditorStyleTarget {
 
     companion object {
@@ -69,9 +70,17 @@ class SessionHeaderPanel(
     }
     private val cost = JBLabel()
     private val context = JBLabel()
-    private val todos = JBLabel()
-    private val todoArrow = JBLabel(AllIcons.General.ArrowRight)
-    private val todoList = TodoListPanel()
+    private val agentStrip = BackgroundAgentStrip(
+        readonly = readonly,
+        onOpen = onOpenSubagent,
+        onCancel = controller::cancelBackgroundAgent,
+        onCancelAll = { jobs -> jobs.forEach(controller::cancelBackgroundAgent) },
+        onDismiss = controller::dismissBackgroundAgents,
+        // Same source as the foreground task card's palette (all child sessions, not just the
+        // currently visible background rows), so a promoted agent keeps its hue.
+        avatarColor = { id -> ai.kilocode.client.session.AgentAvatarIdentity.palette(controller.model.childSessions())[id] },
+    )
+    private val todoStrip = TodoStrip()
     private val compact = HoverIcon().apply {
         icon = COMPRESS_ICON
         cursor = java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.HAND_CURSOR)
@@ -145,20 +154,6 @@ class SessionHeaderPanel(
         add(Box.createHorizontalStrut(UiStyle.Gap.sm()))
         add(cacheWrite)
     }
-    private val todoRow = JPanel(FlowLayout(FlowLayout.LEFT, UiStyle.Gap.sm(), 0)).apply {
-        isOpaque = false
-        border = JBUI.Borders.empty(UiStyle.Gap.sm(), 0, 0, 0)
-        cursor = java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.HAND_CURSOR)
-        toolTipText = KiloBundle.message("session.header.todos.toggle")
-        accessibleContext.accessibleName = KiloBundle.message("session.header.todos.toggle")
-        add(todoArrow)
-        add(todos)
-    }
-    private val todoBox = JPanel().apply {
-        isOpaque = false
-        layout = BoxLayout(this, BoxLayout.Y_AXIS)
-        add(todoRow)
-    }
     private val body = JPanel().apply {
         isOpaque = false
         layout = BoxLayout(this, BoxLayout.Y_AXIS)
@@ -171,7 +166,15 @@ class SessionHeaderPanel(
         add(viewport)
         add(tokens)
         add(bar)
-        add(todoBox)
+    }
+    // Always visible regardless of [isExpanded] — background agents and to-dos must not require
+    // expanding the metrics body to be seen (they cannot scroll away). See [Strip].
+    private val strips = JPanel().apply {
+        isOpaque = false
+        layout = BoxLayout(this, BoxLayout.Y_AXIS)
+        border = JBUI.Borders.empty(0, UiStyle.Gap.xl(), UiStyle.Gap.md(), UiStyle.Gap.xl())
+        add(agentStrip)
+        add(todoStrip)
     }
     private var style = SessionEditorStyle.current()
     private var costValue = ""
@@ -184,6 +187,9 @@ class SessionHeaderPanel(
         top.add(title, BorderLayout.CENTER)
         top.add(right, BorderLayout.EAST)
         add(top, BorderLayout.NORTH)
+        // SOUTH, not stacked under `top`, so the expandable stats body (CENTER) opens directly
+        // below the title row and the strips stay pinned beneath it.
+        add(strips, BorderLayout.SOUTH)
         timeline.addMouseListener(object : MouseAdapter() {
             override fun mousePressed(event: MouseEvent) {
                 press = event.point
@@ -201,19 +207,11 @@ class SessionHeaderPanel(
         })
         timeline.addMouseWheelListener { scroll(it) }
         viewport.addMouseWheelListener { scroll(it) }
-        val todoClick = object : MouseAdapter() {
-            override fun mouseClicked(event: MouseEvent) {
-                toggleTodos()
-            }
-        }
-        listOf(todoRow, todoArrow, todos).forEach {
-            it.cursor = java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.HAND_CURSOR)
-            it.addMouseListener(todoClick)
-        }
 
         controller.model.addListener(parent) { event ->
             when (event) {
                 is SessionModelEvent.HeaderUpdated -> update(event.header)
+                is SessionModelEvent.BackgroundAgentsUpdated -> agentStrip.update(event.agents)
 
                 is SessionModelEvent.MessageAdded,
                 is SessionModelEvent.MessageUpdated,
@@ -270,7 +268,10 @@ class SessionHeaderPanel(
         set(context, contextText(header.context))
         context.toolTipText = contextTip(header.context)
         setTokens(header.tokens)
-        syncTodos(header.todos.items)
+        todoStrip.update(header.todos.items)
+        // Driven from here as well as from BackgroundAgentsUpdated: the model suppresses a no-change
+        // event, so a session that never had a background agent would otherwise never sync the strip.
+        agentStrip.update(controller.model.backgroundAgents)
 
         compact.isVisible = !readonly
         compact.isEnabled = !readonly && header.canCompact
@@ -293,8 +294,6 @@ class SessionHeaderPanel(
         top.border = JBUI.Borders.empty(UiStyle.Gap.md(), UiStyle.Gap.sm(), UiStyle.Gap.md(), UiStyle.Gap.sm())
         right.background = bg
         tokens.background = bg
-        todoRow.background = bg
-        todoBox.background = bg
         body.background = bg
         viewport.background = bg
         title.font = style.boldFont
@@ -304,10 +303,8 @@ class SessionHeaderPanel(
         cost.icon = null
         context.font = style.regularFont
         context.foreground = style.editorForeground
-        todos.font = style.smallFont
-        todos.foreground = style.editorForeground
-        todoArrow.foreground = style.editorForeground
-        todoList.applyStyle(style)
+        agentStrip.applyStyle(style)
+        todoStrip.applyStyle(style)
         tokenTitle.font = style.smallFont
         tokenTitle.foreground = style.editorForeground
         input.font = style.smallFont
@@ -332,12 +329,31 @@ class SessionHeaderPanel(
 
     internal fun contextText(): String = context.text
 
-    internal fun foregrounds() = listOf(title, cost, context, todos, tokenTitle, input, output, cacheWrite, cacheRead)
-        .map { it.foreground }
+    internal fun foregrounds() = listOf(title, cost, context).map { it.foreground } +
+        todoStrip.labelForeground() +
+        listOf(tokenTitle, input, output, cacheWrite, cacheRead).map { it.foreground }
 
     internal fun tokenText(): String = listOf(tokenTitle, input, output, cacheWrite, cacheRead)
         .filter { it.isVisible }
         .joinToString(" ") { it.text }
+
+    // ------ background agents strip test accessors ------
+
+    internal fun agentStripPanel(): BackgroundAgentStrip = agentStrip
+
+    // ------ todo strip test accessors (delegate to TodoStrip; kept for existing tests) ------
+
+    internal fun todoText(): String = todoStrip.labelText()
+
+    internal fun todoVisible(): Boolean = todoStrip.isVisible
+
+    internal fun todoListVisible(): Boolean = todoStrip.bodyAttached()
+
+    internal fun todoRowPanel(): JComponent = todoStrip.rowPanel()
+
+    internal fun todoLabel(): JComponent = todoStrip.labelComponent()
+
+    internal fun todoListPanel(): TodoStrip = todoStrip
 
     internal fun tokenTip(): String = tokens.toolTipText
 
@@ -348,18 +364,6 @@ class SessionHeaderPanel(
     internal fun cacheReadText(): String = cacheRead.text
 
     internal fun cacheWriteText(): String = cacheWrite.text
-
-    internal fun todoText(): String = todos.text
-
-    internal fun todoVisible() = todoRow.isVisible && todos.isVisible
-
-    internal fun todoListVisible() = todoList.parent === todoBox
-
-    internal fun todoRowPanel() = todoRow
-
-    internal fun todoLabel() = todos
-
-    internal fun todoListPanel() = todoList
 
     internal fun compactButton() = compact
 
@@ -453,41 +457,6 @@ class SessionHeaderPanel(
         cost.toolTipText = tip
         cost.accessibleContext.accessibleName = tip
         cost.isVisible = costValue.isNotBlank()
-    }
-
-    private fun syncTodos(items: List<TodoDto>) {
-        val total = items.size
-        val done = items.count { it.status == "completed" }
-        set(todos, todo(done, total))
-        todos.foreground = if (total > 0 && done == total) SessionUiStyle.Timeline.SUCCESS else style.editorForeground
-        todoArrow.isVisible = total > 0
-        todoBox.isVisible = total > 0
-        todoRow.isVisible = total > 0
-        todoList.update(items)
-        if (total == 0) collapseTodos()
-    }
-
-    private fun toggleTodos() {
-        if (!todoBox.isVisible) return
-        if (todoListVisible()) collapseTodos() else expandTodos()
-        refresh()
-    }
-
-    private fun expandTodos(): Boolean {
-        if (todoListVisible()) return false
-        todoBox.add(todoList)
-        todoArrow.icon = AllIcons.General.ArrowDown
-        return true
-    }
-
-    private fun collapseTodos(): Boolean {
-        if (!todoListVisible()) {
-            todoArrow.icon = AllIcons.General.ArrowRight
-            return false
-        }
-        todoBox.remove(todoList)
-        todoArrow.icon = AllIcons.General.ArrowRight
-        return true
     }
 
     private fun toggle() {

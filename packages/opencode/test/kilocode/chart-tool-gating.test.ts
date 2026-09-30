@@ -18,6 +18,7 @@ const tools = {
   notify: stub("notify"),
   openPlan: stub("open_plan"),
   send: stub("send_file"),
+  linkPr: stub("link_pr"),
 }
 
 function ids(client: string) {

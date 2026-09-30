@@ -87,7 +87,9 @@ export namespace KilocodeConfig {
       const existing = input.parse(before, file)
       const merged = mergeConfig(input.writable(existing), patch)
       if (!(source === undefined && Object.keys(merged).length === 0)) {
-        yield* input.fs.writeWithDirs(file, JSON.stringify(merged, null, 2)).pipe(Effect.orDie)
+        yield* input.fs
+          .writeWithDirs(file, JSON.stringify(preserve(parseJsonc(before), patch, file), null, 2))
+          .pipe(Effect.orDie)
       }
     }
 
@@ -95,6 +97,11 @@ export namespace KilocodeConfig {
     // to the update target leaves lower-precedence copies of the key visible.
     yield* propagateUnset({ fs: input.fs, files, exclude: file, patch })
   })
+
+  export function preserve(input: unknown, patch: Config.Info, source: string) {
+    const raw = retireExperimentalFlags(isRecord(input) ? input : {}, source)
+    return mergeConfig(raw as Config.Info, patch)
+  }
 
   /** Collect the leaf paths of null delete sentinels in a config patch. */
   export function unsetPaths(patch: unknown, prefix: string[] = []): string[][] {

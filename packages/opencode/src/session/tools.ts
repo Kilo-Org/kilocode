@@ -1,6 +1,7 @@
 import { Agent } from "@/agent/agent"
 import { KiloSessionPrompt } from "@/kilocode/session/prompt" // kilocode_change
 import { GoalPolicy } from "@/kilocode/session/goal/policy" // kilocode_change
+import type { Goal } from "@/kilocode/session/goal/runner" // kilocode_change
 import { MemoryMarker } from "@/kilocode/memory/marker" // kilocode_change
 import { BoardNotice } from "@/kilocode/board/notice" // kilocode_change
 import { SessionV1 } from "@opencode-ai/core/v1/session"
@@ -58,6 +59,7 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
   bypassAgentCheck: boolean
   messages: SessionV1.WithParts[]
   promptOps: TaskPromptOps
+  goalOps?: Goal.Ops // kilocode_change
   memoryCache: MemoryMarker.Cache // kilocode_change
   // kilocode_change start
   notify?: <T extends Tool.ExecuteResult>(tool: string, output: T, signal?: AbortSignal) => Effect.Effect<T>
@@ -101,6 +103,7 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
       model: input.model,
       bypassAgentCheck: input.bypassAgentCheck,
       promptOps: input.promptOps,
+      goalOps: input.goalOps, // kilocode_change
       sandboxed, // kilocode_change
       sandboxEscalation: false,
     }
@@ -493,7 +496,7 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
             ctx.sessionID,
             entry, // kilocode_change - retain the native entry's local/remote network authority marker
             Effect.gen(function* () {
-              yield* ctx.ask({ permission: key, metadata: {}, patterns: ["*"], always: ["*"] })
+              yield* ctx.ask({ permission: key, metadata: { mcpInput: args }, patterns: ["*"], always: ["*"] })
               return yield* Effect.promise(() => execute(args, opts))
             }),
           ).pipe(

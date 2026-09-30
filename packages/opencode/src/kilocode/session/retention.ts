@@ -49,10 +49,16 @@ export namespace KiloSessionRetention {
     skippedActive: number
     failed: number
     durationMs: number
+    cancelled?: boolean
+    reclaimedBytes?: number
   }
 
+  /** Free pages must clear both floors before a pass pays for a full database rebuild. */
+  export const VACUUM_MIN_FREE_BYTES = 16 * 1024 * 1024
+  export const VACUUM_MIN_FREE_RATIO = 0.2
+
   export interface Progress {
-    phase: "scanning" | "deleting"
+    phase: "scanning" | "deleting" | "cancelling"
     total: number
     processed: number
     deleted: number
@@ -71,12 +77,31 @@ export namespace KiloSessionRetention {
       }
     | undefined
 
+  let halting = false
+  // Set once the deletion sweep is over; cancel only makes sense before that.
+  let sealed = false
+
+  /**
+   * Ask the active pass to stop before removing more sessions. Cooperative:
+   * the pass checks between removals, keeps what it already deleted, and
+   * still records its partial result so the spacing gate holds. Returns false
+   * when no pass is running or its deletions already finished.
+   */
+  export function cancel(): boolean {
+    if (!current || sealed) return false
+    halting = true
+    current.phase = "cancelling"
+    return true
+  }
+
   // Sample only outstanding candidate IDs when polled, not the entire database
   // after each removal. This also observes children during a long root cascade.
   export const readProgress = Effect.fn("KiloSessionRetention.readProgress")(function* () {
     const state = current
     if (!state) return undefined
-    if (state.phase === "deleting") {
+    // Refresh during cancelling too, so a cancelled pass's final counts
+    // include children removed by earlier root cascades.
+    if (state.phase === "deleting" || state.phase === "cancelling") {
       const { db } = yield* Database.Service
       const ids = [...state.pending]
       for (let start = 0; start < ids.length; start += 500) {
@@ -129,6 +154,12 @@ export namespace KiloSessionRetention {
     return typeof value === "number" && Number.isInteger(value) && value >= 1 ? value : fallback
   }
 
+  export function worthVacuuming(pageCount: number, freePages: number, pageSize: number): boolean {
+    if (!pageCount || !pageSize || freePages <= 0) return false
+    const free = freePages * pageSize
+    return free >= VACUUM_MIN_FREE_BYTES && free / (pageCount * pageSize) >= VACUUM_MIN_FREE_RATIO
+  }
+
   export function policy(info: { retention?: { enabled?: boolean; maxAgeDays?: number } } | undefined): Policy {
     return {
       enabled: info?.retention?.enabled === true,
@@ -141,7 +172,8 @@ export namespace KiloSessionRetention {
    * expired ancestors to actually delete (the backend cascades children with
    * the parent), and expired sessions held back because they or a descendant
    * look busy. A parent is as fresh — and as protected — as its freshest
-   * descendant, so an old task with a recent or busy fork survives.
+   * descendant, so an old task with a recent or busy fork survives, and a
+   * child is as fresh as its top-level session.
    */
   export function expiredRoots(
     rows: Row[],
@@ -172,10 +204,25 @@ export namespace KiloSessionRetention {
       return next
     }
 
+    // A sub-agent session stops updating when it finishes, so a child is judged
+    // by its top-level chat: resuming an old chat keeps its earlier sub-agents.
+    const byId = new Map(rows.map((row) => [row.id, row]))
+    const top = (row: Row) => {
+      const seen = new Set<string>()
+      let cur = row
+      while (cur.parentID && !seen.has(cur.id)) {
+        seen.add(cur.id)
+        const next = byId.get(cur.parentID)
+        if (!next) break
+        cur = next
+      }
+      return cur
+    }
+
     const expired = new Set<string>()
     const skipped: string[] = []
     for (const row of rows) {
-      const state = touch(row)
+      const state = touch(top(row))
       if (input.now - state.updated < input.maxAgeDays * DAY_MS) continue
       if (state.busy) {
         skipped.push(row.id)
@@ -184,7 +231,6 @@ export namespace KiloSessionRetention {
       expired.add(row.id)
     }
 
-    const byId = new Map(rows.map((row) => [row.id, row]))
     const roots: string[] = []
     for (const row of rows) {
       if (!expired.has(row.id)) continue
@@ -217,6 +263,7 @@ export namespace KiloSessionRetention {
     const busy = new Set<string>()
     let count = 0
     for (const id of ids) {
+      if (halting) break
       // SQLite is synchronous. Let status/health requests run between batches.
       if (count++ % 32 === 0) yield* Effect.sleep("1 millis")
       const session = SessionID.make(id)
@@ -243,6 +290,39 @@ export namespace KiloSessionRetention {
     return busy
   })
 
+  /**
+   * Return freed pages to the OS after a pass. SQLite keeps deleted pages
+   * allocated for reuse, so a pass that empties most of the file still leaves
+   * its size on disk unchanged until a rebuild. Only worth the rebuild cost
+   * when the free tail is large in absolute terms and relative to the whole
+   * file, and never for in-memory databases. Best effort: a busy database
+   * only skips or delays the rebuild, it must never fail the pass.
+   */
+  export const reclaim = Effect.fn("KiloSessionRetention.reclaim")(function* () {
+    const { db } = yield* Database.Service
+    const page = yield* db
+      .get<{
+        page_size: number
+        page_count: number
+        freelist_count: number
+        file: string
+      }>(
+        "SELECT page_size, page_count, freelist_count, (SELECT file FROM pragma_database_list WHERE name = 'main') AS file FROM pragma_page_size, pragma_page_count, pragma_freelist_count",
+      )
+      .pipe(Effect.orDie)
+    if (!page?.file) return { vacuumed: false as const, reclaimedBytes: 0 }
+    if (!worthVacuuming(page.page_count, page.freelist_count, page.page_size))
+      return { vacuumed: false as const, reclaimedBytes: 0 }
+    yield* db.run("VACUUM").pipe(Effect.orDie)
+    // The rebuild lands in the WAL first; truncate it so both files shrink.
+    yield* db.run("PRAGMA wal_checkpoint(TRUNCATE)").pipe(Effect.orDie)
+    const after = yield* db.get<{ page_count: number }>("PRAGMA page_count").pipe(Effect.orDie)
+    const reclaimedBytes = Math.max(0, page.page_count - (after?.page_count ?? page.page_count)) * page.page_size
+    if (reclaimedBytes > 0)
+      log.info("retention vacuum reclaimed database space", { reclaimedBytes, freePagesBefore: page.freelist_count })
+    return { vacuumed: true as const, reclaimedBytes }
+  })
+
   const statePath = path.join(Global.Path.data, "retention", "state.json")
 
   export const readState = Effect.fn("KiloSessionRetention.readState")(function* () {
@@ -263,6 +343,8 @@ export namespace KiloSessionRetention {
   export const run = Effect.fn("KiloSessionRetention.run")(
     function* (input: { force?: boolean } = {}) {
       const started = Date.now()
+      halting = false
+      sealed = false
       const progress = (current = {
         phase: "scanning" as Progress["phase"],
         total: 0,
@@ -290,7 +372,7 @@ export namespace KiloSessionRetention {
         updated: row.updated ?? now,
       }))
       // Select by age first so unrelated fresh sessions never require history
-      // probes. The second pass still propagates busy descendants to ancestors.
+      // probes. The second pass still propagates busy status across each session tree.
       const candidates = expiredRoots(mapped, { maxAgeDays: active.maxAgeDays, busy: new Set(), now })
       const recent = yield* busySessions(now, candidates.expired)
       const memory = yield* SessionStatus.busyAll()
@@ -304,10 +386,12 @@ export namespace KiloSessionRetention {
       progress.total = expired.size
       progress.pending = new Set([...expired].map((id) => SessionID.make(id)))
       progress.skippedActive = skipped.length
-      progress.phase = "deleting"
+      // A cancel that landed during scanning keeps its phase; the loops
+      // below break before removing anything.
+      if (!halting) progress.phase = "deleting"
 
       const sessions = yield* Session.Service
-      const remove = Effect.fn("KiloSessionRetention.remove")(function* (id: SessionID, final: boolean) {
+      const remove = Effect.fn("KiloSessionRetention.remove")(function* (id: SessionID) {
         yield* sessions.remove(id).pipe(
           Effect.catchCause((cause) => {
             if (Cause.hasInterrupts(cause)) return Effect.interrupt
@@ -328,16 +412,22 @@ export namespace KiloSessionRetention {
           progress.failed.delete(id)
           return
         }
-        if (final && progress.pending.has(id)) progress.failed.add(id)
+        // Count the loss even on a non-final attempt: the leftover sweep
+        // retries it and clears the mark on success, but a cancelled pass
+        // never retries, so the root failure must already be recorded.
+        if (progress.pending.has(id)) progress.failed.add(id)
       })
-      for (const id of roots) yield* remove(SessionID.make(id), false)
+      for (const id of roots) {
+        if (halting) break
+        yield* remove(SessionID.make(id))
+      }
       // Children stored in another project are not covered by the parent's
       // cascade — sweep whatever expired rows are still present. NotFound here
       // means an earlier cascade already removed the row. Chunked because a
       // machine with retention off for a while can expire thousands at once.
       const expiredIds = [...progress.pending]
       const chunkSize = 500
-      for (let start = 0; start < expiredIds.length; start += chunkSize) {
+      for (let start = 0; start < expiredIds.length && !halting; start += chunkSize) {
         const chunk = expiredIds.slice(start, start + chunkSize)
         const leftover = yield* db
           .select({ id: SessionTable.id })
@@ -346,21 +436,40 @@ export namespace KiloSessionRetention {
           .all()
           .pipe(Effect.orDie)
         for (const row of leftover) {
-          yield* remove(row.id, true)
+          if (halting) break
+          yield* remove(row.id)
         }
       }
+      sealed = true
 
       yield* readProgress()
+      const cancelled = halting
+      const back = yield* cancelled
+        ? Effect.succeed({ vacuumed: false as const, reclaimedBytes: 0 })
+        : reclaim().pipe(
+            Effect.catchCause((cause) =>
+              Cause.hasInterrupts(cause)
+                ? Effect.interrupt
+                : Effect.sync(() => {
+                    log.error("retention reclaim failed", { cause })
+                    return { vacuumed: false as const, reclaimedBytes: 0 }
+                  }),
+            ),
+          )
       const result: State = {
         at: started,
         scanned: mapped.length,
         deleted: progress.total - progress.pending.size,
         skippedActive: skipped.length,
-        failed: progress.pending.size,
+        // A swept pass counts every outstanding row as failed; a cancelled
+        // pass only counts rows it actually tried and lost.
+        failed: cancelled ? progress.failed.size : progress.pending.size,
         durationMs: Date.now() - started,
+        ...(cancelled ? { cancelled: true } : {}),
+        ...(back.reclaimedBytes > 0 ? { reclaimedBytes: back.reclaimedBytes } : {}),
       }
       yield* writeState(result)
-      log.info("retention pass complete", { ...result })
+      log.info(cancelled ? "retention pass cancelled" : "retention pass complete", { ...result })
       return { ran: true as const, result }
     },
     (effect, _input: { force?: boolean } = {}) =>
@@ -368,6 +477,8 @@ export namespace KiloSessionRetention {
         effect.pipe(
           Effect.ensuring(
             Effect.sync(() => {
+              halting = false
+              sealed = false
               current = undefined
             }),
           ),

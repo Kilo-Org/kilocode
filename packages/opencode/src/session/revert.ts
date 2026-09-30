@@ -3,6 +3,7 @@ import { Effect, Layer, Context, Schema } from "effect"
 import { SessionV1 } from "@opencode-ai/core/v1/session"
 import { EventV2Bridge } from "@/event-v2-bridge"
 import { Config } from "@/config/config" // kilocode_change
+import { InstanceState } from "@/effect/instance-state" // kilocode_change
 import { Snapshot } from "../snapshot"
 import { Storage } from "@/storage/storage"
 import { Session } from "./session"
@@ -87,11 +88,14 @@ const layer = Layer.effect(
       patches.push(...ordered.patches)
       const range = ordered.messages
       const checkpoint = patches.length > 0
+      const ctx = yield* InstanceState.context
       rev.workspace = checkpoint
         ? "restored"
-        : (yield* config.get()).snapshot === false
-          ? "snapshots-disabled"
-          : "unavailable"
+        : ctx.project.vcs !== "git"
+          ? "not-a-git-repo"
+          : (yield* config.get()).snapshot === false
+            ? "snapshots-disabled"
+            : "unavailable"
       // kilocode_change end
       rev.snapshot = session.revert?.snapshot ?? (yield* snap.track())
       // kilocode_change start - keep the entire workspace transition atomic

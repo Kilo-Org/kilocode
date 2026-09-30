@@ -5,7 +5,7 @@ import { ProjectV2 } from "@opencode-ai/core/project"
 import { RemoteCommand } from "../../../src/kilo-sessions/remote-command"
 import { RemoteModelCatalog } from "../../../src/kilo-sessions/remote-model-catalog"
 import { RemoteSender } from "../../../src/kilo-sessions/remote-sender"
-import type { PrLinkOverride } from "../../../src/kilo-sessions/pr-link"
+import type { PrLink } from "../../../src/kilo-sessions/pr-link"
 import type { RemoteWS } from "../../../src/kilo-sessions/remote-ws"
 import type { RemoteProtocol } from "../../../src/kilo-sessions/remote-protocol"
 import type { SessionPrompt } from "../../../src/session/prompt"
@@ -4853,17 +4853,17 @@ describe("RemoteSender slash commands", () => {
     expect(createCalls).toEqual([])
   })
 
-  // set_pr_link: the app-controlled PR link override.
-  test("set_pr_link stores the parsed override, ACKs, then fires a best-effort heartbeat", async () => {
+  // set_pr_link: the app-controlled, per-session PR link.
+  test("set_pr_link records the parsed link on the command session, ACKs, then fires a best-effort heartbeat", async () => {
     const { conn, sent, beats } = fakeConn()
-    const calls: PrLinkOverride[] = []
+    const calls: [PrLink | undefined, SessionID][] = []
     const sender = RemoteSender.create({
       conn,
       directory: "/tmp/test",
       log: nolog,
       subscribe: fakeBus().subscribe,
-      setPrLink: async (value) => {
-        calls.push(value)
+      setPrLink: async (value, sessionId) => {
+        calls.push([value, sessionId])
       },
     })
 
@@ -4872,48 +4872,86 @@ describe("RemoteSender slash commands", () => {
       type: "command",
       id: "req_pr",
       command: "set_pr_link",
+      sessionId: "ses_pr_owner",
       data: { prUrl: "https://github.com/acme/widgets/pull/42" },
     })
     await response.promise
     response.restore()
 
-    expect(calls).toEqual([{ platform: "github", prUrl: "https://github.com/acme/widgets/pull/42", prNumber: 42 }])
+    expect(calls).toEqual([
+      [
+        { platform: "github", prUrl: "https://github.com/acme/widgets/pull/42", prNumber: 42 },
+        SessionID.make("ses_pr_owner"),
+      ],
+    ])
     expect(sent).toEqual([{ type: "response", id: "req_pr", result: {} }])
     expect(beats()).toBe(1)
   })
 
-  test("set_pr_link with cleared calls the seam with the cleared override", async () => {
+  test("set_pr_link with cleared withdraws the command session's link", async () => {
     const { conn, sent } = fakeConn()
-    const calls: PrLinkOverride[] = []
+    const calls: [PrLink | undefined, SessionID][] = []
     const sender = RemoteSender.create({
       conn,
       directory: "/tmp/test",
       log: nolog,
       subscribe: fakeBus().subscribe,
-      setPrLink: async (value) => {
-        calls.push(value)
+      setPrLink: async (value, sessionId) => {
+        calls.push([value, sessionId])
       },
     })
 
     const response = expectResponse(conn, sent, "req_clear")
-    sender.handle({ type: "command", id: "req_clear", command: "set_pr_link", data: { cleared: true } })
+    sender.handle({
+      type: "command",
+      id: "req_clear",
+      command: "set_pr_link",
+      sessionId: "ses_pr_owner",
+      data: { cleared: true },
+    })
     await response.promise
     response.restore()
 
-    expect(calls).toEqual([{ cleared: true }])
+    expect(calls).toEqual([[undefined, SessionID.make("ses_pr_owner")]])
     expect(sent).toEqual([{ type: "response", id: "req_clear", result: {} }])
   })
 
-  test("set_pr_link rejects an invalid url and never writes the override", () => {
+  test("set_pr_link without a session id fails closed and writes nothing", () => {
     const { conn, sent } = fakeConn()
-    const calls: PrLinkOverride[] = []
+    const calls: [PrLink | undefined, SessionID][] = []
     const sender = RemoteSender.create({
       conn,
       directory: "/tmp/test",
       log: nolog,
       subscribe: fakeBus().subscribe,
-      setPrLink: async (value) => {
-        calls.push(value)
+      setPrLink: async (value, sessionId) => {
+        calls.push([value, sessionId])
+      },
+    })
+
+    sender.handle({
+      type: "command",
+      id: "req_no_session",
+      command: "set_pr_link",
+      data: { prUrl: "https://github.com/acme/widgets/pull/42" },
+    })
+
+    // No owner means no link: the command is rejected and the seam is untouched,
+    // so the link can never be pinned to a worktree another session inherits.
+    expect(sent).toEqual([{ type: "response", id: "req_no_session", error: "invalid set_pr_link command" }])
+    expect(calls).toEqual([])
+  })
+
+  test("set_pr_link rejects an invalid url and never writes the link", () => {
+    const { conn, sent } = fakeConn()
+    const calls: [PrLink | undefined, SessionID][] = []
+    const sender = RemoteSender.create({
+      conn,
+      directory: "/tmp/test",
+      log: nolog,
+      subscribe: fakeBus().subscribe,
+      setPrLink: async (value, sessionId) => {
+        calls.push([value, sessionId])
       },
     })
 
@@ -4921,6 +4959,7 @@ describe("RemoteSender slash commands", () => {
       type: "command",
       id: "req_bad_url",
       command: "set_pr_link",
+      sessionId: "ses_pr_owner",
       data: { prUrl: "https://github.com/acme/widgets/issues/42" },
     })
 
@@ -4930,18 +4969,24 @@ describe("RemoteSender slash commands", () => {
 
   test("set_pr_link rejects a malformed request", () => {
     const { conn, sent } = fakeConn()
-    const calls: PrLinkOverride[] = []
+    const calls: [PrLink | undefined, SessionID][] = []
     const sender = RemoteSender.create({
       conn,
       directory: "/tmp/test",
       log: nolog,
       subscribe: fakeBus().subscribe,
-      setPrLink: async (value) => {
-        calls.push(value)
+      setPrLink: async (value, sessionId) => {
+        calls.push([value, sessionId])
       },
     })
 
-    sender.handle({ type: "command", id: "req_bad", command: "set_pr_link", data: { cleared: false } })
+    sender.handle({
+      type: "command",
+      id: "req_bad",
+      command: "set_pr_link",
+      sessionId: "ses_pr_owner",
+      data: { cleared: false },
+    })
 
     expect(sent).toEqual([{ type: "response", id: "req_bad", error: "invalid set_pr_link command" }])
     expect(calls).toEqual([])
@@ -4964,6 +5009,7 @@ describe("RemoteSender slash commands", () => {
       type: "command",
       id: "req_fail",
       command: "set_pr_link",
+      sessionId: "ses_pr_owner",
       data: { prUrl: "https://github.com/acme/widgets/pull/42" },
     })
     await response.promise

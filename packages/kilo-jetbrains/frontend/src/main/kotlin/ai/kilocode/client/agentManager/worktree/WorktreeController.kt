@@ -275,6 +275,18 @@ class WorktreeController(
     }
 
     /**
+     * Fire-and-forget reveal for a path this controller manages (e.g. a worktree blocking a delete).
+     * [onFailure] runs on the EDT when the host can't reveal the path (unsupported platform, or the
+     * directory is already gone) so callers can surface that instead of silently no-op'ing.
+     */
+    fun reveal(path: String, onFailure: () -> Unit = {}) {
+        cs.launch {
+            val ok = service.revealPath(path)
+            if (!ok) edt { onFailure() }
+        }
+    }
+
+    /**
      * Copies working-tree changes into a new worktree. When [sessionId] is set, the source session is
      * also forked into the worktree; otherwise the opened worktree starts with a fresh session.
      * [surface] is reported only on the "Continue in Worktree" telemetry event, so callers other than

@@ -8,6 +8,7 @@ import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.actionSystem.Presentation
 import com.intellij.openapi.actionSystem.ex.ActionUtil
+import com.intellij.openapi.actionSystem.impl.ActionButtonWithText
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 
 @Suppress("UnstableApiUsage")
@@ -19,7 +20,6 @@ class NewWorktreeActionTest : BasePlatformTestCase() {
         ActionUtil.updateAction(action, event)
 
         assertEquals("Worktree", event.presentation.text)
-        assertEquals(true, event.presentation.getClientProperty(ActionUtil.SHOW_TEXT_IN_TOOLBAR))
         assertSame(KiloActionIcons.add, event.presentation.icon)
     }
 
@@ -30,7 +30,16 @@ class NewWorktreeActionTest : BasePlatformTestCase() {
         ActionUtil.updateAction(action, event)
 
         assertEquals("New Worktree", event.presentation.text)
-        assertNull(event.presentation.getClientProperty(ActionUtil.SHOW_TEXT_IN_TOOLBAR))
+    }
+
+    fun `test custom component is an ActionButtonWithText bound to the presentation`() {
+        val action = NewWorktreeAction()
+        val presentation = Presentation().apply { copyFrom(action.templatePresentation) }
+
+        val component = action.createCustomComponent(presentation, ActionPlaces.TOOLWINDOW_TITLE)
+
+        val button = assertInstanceOf(component, ActionButtonWithText::class.java)
+        assertSame(presentation, button.presentation)
     }
 
     fun `test action visible on agent manager tab`() {

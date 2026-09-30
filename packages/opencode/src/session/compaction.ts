@@ -41,9 +41,8 @@ export const PRUNE_MINIMUM = 20_000
 export const PRUNE_PROTECT = 40_000
 const TOOL_OUTPUT_MAX_CHARS = 2_000
 const PRUNE_PROTECTED_TOOLS = ["skill"]
-const DEFAULT_TAIL_TURNS = 2
 const MIN_PRESERVE_RECENT_TOKENS = 2_000
-const MAX_PRESERVE_RECENT_TOKENS = 8_000
+const MAX_PRESERVE_RECENT_TOKENS = 15_000
 type Turn = {
   start: number
   end: number
@@ -245,8 +244,8 @@ const layer = Layer.effect(
       cfg: ConfigV1.Info
       model: Provider.Model
     }) {
-      const limit = input.cfg.compaction?.tail_turns ?? DEFAULT_TAIL_TURNS
-      if (limit <= 0) return { head: input.messages, tail_start_id: undefined }
+      const limit = input.cfg.compaction?.tail_turns ?? 2 // kilocode_change
+      if (limit <= 0) return { head: input.messages, tail_start_id: undefined } // kilocode_change
       // kilocode_change start
       const budget = preserveRecentBudget({
         cfg: input.cfg,
@@ -256,22 +255,17 @@ const layer = Layer.effect(
       // kilocode_change end
       const all = turns(input.messages)
       if (!all.length) return { head: input.messages, tail_start_id: undefined }
-      const recent = all.slice(-limit)
-      const sizes = yield* Effect.forEach(
-        recent,
-        (turn) =>
-          estimate({
-            messages: input.messages.slice(turn.start, turn.end),
-            model: input.model,
-          }),
-        { concurrency: 1 },
-      )
+      const recent = all.slice(-limit) // kilocode_change
 
       let total = 0
       let keep: Tail | undefined
       for (let i = recent.length - 1; i >= 0; i--) {
         const turn = recent[i]!
-        const size = sizes[i]
+        // estimate lazily so cost stays proportional to the retained tail, not the whole session
+        const size = yield* estimate({
+          messages: input.messages.slice(turn.start, turn.end),
+          model: input.model,
+        })
         if (total + size <= budget) {
           total += size
           keep = { start: turn.start, id: turn.id }
@@ -434,10 +428,23 @@ const layer = Layer.effect(
         { sessionID: input.sessionID },
         { context: [], prompt: undefined },
       )
-      const nextPrompt = compacting.prompt ?? buildPrompt({ previousSummary, context: compacting.context })
       const msgs = structuredClone(selected.head)
       yield* plugin.trigger("experimental.chat.messages.transform", {}, { messages: msgs })
       const conversation = msgs.map(serialize).filter(Boolean).join("\n\n")
+      // kilocode_change start - rerender upstream prompt after payload stripping or chunk reduction
+      const render = (context: string[]) => {
+        if (compacting.prompt)
+          return [
+            compacting.prompt,
+            ...(context.length ? ["The following is the conversation history:", ...context] : []),
+          ]
+            .filter(Boolean)
+            .join("\n\n")
+        return [buildPrompt({ previousSummary, context }), ...compacting.context].filter(Boolean).join("\n\n")
+      }
+      const nextPrompt = render(conversation ? [conversation] : [])
+      // kilocode_change end
+      // kilocode_change start
       const modelMessages = yield* MessageV2.toModelMessagesEffect(msgs, model, {
         stripMedia: true,
         toolOutputMaxChars: TOOL_OUTPUT_MAX_CHARS,
@@ -455,6 +462,7 @@ const layer = Layer.effect(
                 toolOutputMaxChars: TOOL_OUTPUT_MAX_CHARS,
               }),
             )
+      // kilocode_change end
       const ctx = yield* InstanceState.context
       const msg: SessionV1.Assistant = {
         id: MessageID.ascending(),
@@ -497,7 +505,7 @@ const layer = Layer.effect(
             agent,
             sessionID: input.sessionID,
             model,
-            prompt: nextPrompt,
+            prompt: render,
             messages: msgs,
             serialize,
             recovery: selected.head,
@@ -505,7 +513,7 @@ const layer = Layer.effect(
             updatePart: session.updatePart,
           }).pipe(Effect.provideService(Database.Service, database)) // kilocode_change
 
-      const fallback = KiloCompactionChunks.eligible({
+      let fallback = KiloCompactionChunks.eligible({
         result,
         error: processor.message.error ?? processor.compactError?.(),
       })
@@ -519,7 +527,7 @@ const layer = Layer.effect(
             cfg,
             outputTokenMax: flags.outputTokenMax,
             messages: selected.head,
-            prompt: nextPrompt,
+            prompt: render,
             target: processor.message,
             updateMessage: session.updateMessage,
             updatePart: session.updatePart,
@@ -537,12 +545,38 @@ const layer = Layer.effect(
         return "stop"
       }
 
-      if (compactionPart && selected.tail_start_id && compactionPart.tail_start_id !== selected.tail_start_id) {
+      // kilocode_change start - an empty worker response fails retryably and never replaces the session
+      if (fallback === "continue") {
+        const produced = yield* MessageV2.parts(msg.id).pipe(Effect.provideService(Database.Service, database))
+        const visible = produced.some((part) => part.type === "text" && part.text.trim().length > 0)
+        // A processor that returns "continue" without rendering any text
+        // answered with nothing; fail retryably instead of replacing the session.
+        if (!visible) {
+          processor.message.error = new MessageV2.APIError({
+            message: KiloCompactionChunks.EMPTY_SUMMARY,
+            isRetryable: true,
+          }).toObject()
+          processor.message.finish = "error"
+          processor.message.time.completed = Date.now()
+          yield* session.updateMessage(processor.message)
+          fallback = "stop"
+        }
+      }
+      // kilocode_change end
+
+      // kilocode_change start - a failed compaction never anchors a tail
+      if (
+        fallback === "continue" &&
+        compactionPart &&
+        selected.tail_start_id &&
+        compactionPart.tail_start_id !== selected.tail_start_id
+      ) {
         yield* session.updatePart({
           ...compactionPart,
           tail_start_id: selected.tail_start_id,
         })
       }
+      // kilocode_change end
 
       // kilocode_change start
       if (fallback === "continue" && input.auto) {
@@ -559,7 +593,7 @@ const layer = Layer.effect(
             cfg,
             outputTokenMax: flags.outputTokenMax,
             messages: selected.head,
-            prompt: nextPrompt,
+            prompt: render,
             target: processor.message,
             updateMessage: session.updateMessage,
             updatePart: session.updatePart,
@@ -655,7 +689,26 @@ const layer = Layer.effect(
       }
 
       // kilocode_change start - compaction already invalidates cache, so collapse stale tool outputs too
-      if (processor.message.error) return "stop"
+      if (processor.message.error) {
+        // The empty-summary copy is written only for the empty-summary failure:
+        // a retryable failure with no rendered part is dropped by clients, so
+        // surface it as a real text part before stopping. Other provider
+        // failures must keep their own error.
+        const error = processor.message.error
+        const produced = yield* MessageV2.parts(msg.id).pipe(Effect.provideService(Database.Service, database))
+        const visible = produced.some((part) => part.type === "text" && part.text.trim().length > 0)
+        const empty = error.name === "APIError" && error.data.message === KiloCompactionChunks.EMPTY_SUMMARY
+        if (empty && !visible) {
+          yield* session.updatePart({
+            id: PartID.ascending(),
+            messageID: msg.id,
+            sessionID: input.sessionID,
+            type: "text",
+            text: KiloCompactionChunks.EMPTY_SUMMARY,
+          })
+        }
+        return "stop"
+      }
       if (fallback === "continue") {
         const summary = summaryText(
           (yield* session.messages({ sessionID: input.sessionID }).pipe(Effect.orDie)).find(

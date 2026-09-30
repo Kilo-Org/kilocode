@@ -76,4 +76,24 @@ describe("Ripgrep", () => {
     }),
   )
   // kilocode_change end
+  it.live("does not split surrogate pairs in oversized line previews", () =>
+    Effect.acquireUseRelease(
+      Effect.promise(() => tmpdir()),
+      (tmp) =>
+        Effect.gen(function* () {
+          yield* Effect.promise(() =>
+            fs.writeFile(path.join(tmp.path, "unicode.txt"), `needle${"x".repeat(1_993)}😀\n`),
+          )
+
+          const matches = yield* (yield* Ripgrep.Service).grep({
+            cwd: tmp.path,
+            pattern: "needle",
+            limit: 10,
+          })
+
+          expect(matches.items[0]?.text).toBe(`needle${"x".repeat(1_993)}...`)
+        }),
+      (tmp) => Effect.promise(() => tmp[Symbol.asyncDispose]()),
+    ),
+  )
 })
