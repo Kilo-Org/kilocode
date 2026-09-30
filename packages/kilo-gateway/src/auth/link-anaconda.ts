@@ -20,6 +20,7 @@ import { getApiKey, saveCredential } from "./anaconda-keyring.js"
 const ANACONDA_DOMAIN = "anaconda.com"
 const LINK_ENDPOINT = `https://${ANACONDA_DOMAIN}/api/auth/kilo/api-key`
 const PASSPORT_ENDPOINT = `https://${ANACONDA_DOMAIN}/api/auth/passport`
+const FETCH_TIMEOUT_MS = 10_000
 
 interface LinkKeyInfo {
   id: string
@@ -70,6 +71,7 @@ export async function checkAnacondaLogin(): Promise<AnacondaLoginStatus> {
       Authorization: `Bearer ${key}`,
       "Content-Type": "application/json",
     },
+    signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
   })
 
   if (!response.ok) return { hasKey: true, email: null }
@@ -94,6 +96,7 @@ export async function linkAnacondaAccount(kiloToken: string): Promise<boolean> {
       Authorization: `Bearer ${kiloToken}`,
       "Content-Type": "application/json",
     },
+    signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
   })
 
   if (!response.ok) return false
