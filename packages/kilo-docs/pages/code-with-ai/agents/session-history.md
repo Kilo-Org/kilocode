@@ -134,6 +134,16 @@ kilo run --session ses_123 "Summarize where we stopped"
 kilo export ses_123 > session.json
 ```
 
+### Check session status
+
+`kilo session list` prints a **Status** column. A session with nothing running shows `idle`, and a session that is waiting on a scheduled wakeup or a recurring cron task shows `scheduled` with the time it will wake, in your local time. Use it to tell a session that is asleep on a timer apart from an idle one:
+
+```bash
+kilo session list
+```
+
+With `--format json`, each entry carries a `status` object. A scheduled session includes `scheduledAt`, the wake time as an ISO-8601 string; an idle session reports only `{"type":"idle"}`.
+
 ### Find the local database
 
 Print the database selected by the current CLI environment:

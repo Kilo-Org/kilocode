@@ -6,7 +6,7 @@ platform: new
 
 # Workflows
 
-Workflows (also called **slash commands** in the new extension) automate repetitive tasks by defining step-by-step instructions for Kilo Code to execute.
+Workflows (also called **slash commands** in the new extension) automate repetitive tasks by defining step-by-step instructions for Kilo Code to execute. In the JetBrains plugin, the settings page for workflows is named **Commands**; the file format and `/name` invocation are the same.
 
 {% image src="/docs/img/screenshot-tests/kilo-vscode/visual-regression/settings/agent-behaviour-workflows-chromium-linux.png" alt="Workflows tab in Kilo Code" width="420" caption="Workflows tab in Kilo Code" /%}
 

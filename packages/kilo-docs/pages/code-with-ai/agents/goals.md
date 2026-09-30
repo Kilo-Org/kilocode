@@ -63,11 +63,12 @@ Unlike `/goal`, the agent's call does not cancel the current response. The goal 
 | Active | The agent is working toward the objective |
 | Paused | The objective is saved but not running. Resume to continue |
 | Blocked | A request was rejected or execution was blocked. Resolve the blocker, then resume |
+| Waiting | The goal is suspended until a scheduled wakeup, a cron task, or a background process fires. It resumes itself when the wait ends |
 | Complete | The working model reported the goal met |
 
 **Complete (model-reported)** means the model reported success. Kilo does not independently verify the result. Review the work before you rely on it.
 
-The objective and the last report stay on the session until you clear the goal. They survive session restarts and forks. Active goals become paused after a backend restart; complete goals stay complete.
+The objective and the last report stay on the session until you clear the goal. They survive session restarts and forks. Active goals become paused after a backend restart; a waiting goal resumes when its wait fires; complete goals stay complete.
 
 ## Automatic pauses
 
@@ -78,9 +79,21 @@ Kilo pauses an active goal when progress stops or the session changes direction:
 - You press Stop.
 - You run a shell command.
 - A permission request or tool call is rejected, which marks the goal blocked instead of paused.
-- The backend restarts. An active goal becomes paused; a complete goal stays complete.
+- The backend restarts. An active goal becomes paused; a waiting goal resumes when its wait fires; a complete goal stays complete.
 
 A new message you send is not an automatic pause. It takes priority for that turn, then the goal continues toward the objective. Use Stop or `/goal pause` to stop active work.
+
+## Waiting on time
+
+A goal can wait on time instead of spinning. When the agent schedules a wakeup with `schedule_wakeup`, creates a recurring task with `cron_create`, or starts a non-terminal `background_process`, the goal suspends and no further goal turn runs until the wait fires or the process exits. Scheduling a wait is normal goal progress, not a blocker. When the objective is to wait for a deploy, build, or CI job, the agent schedules that wait immediately instead of exploring the repository first.
+
+While a goal waits, its status is **Waiting** and it names what it waits for. When a wakeup or cron task fires, the goal resumes as a goal turn that carries the objective, so a recurring task re-suspends the goal after each resumed turn. A background process resumes the goal when it exits or fails.
+
+- `/goal pause` and `/goal clear` cancel the goal's armed wakeups and cron tasks. Completing, blocking, pausing, or clearing a goal leaves no armed wakeup or cron task behind.
+- Cancelling or deleting the awaited wakeup or cron task resumes or settles the goal with a reason you can read, and leaves the session's other reminders alone.
+- A waiting goal survives a backend restart. The armed timer resumes it, or it settles with a user-readable reason.
+- A wait longer than seven days is clamped to the seven-day horizon and reported in the tool result. A recurring cron schedule whose next fire falls past the task's seven-day expiry is rejected instead.
+- Each session can hold at most 10 pending wakeups and 10 cron tasks. Cancel or delete one before scheduling more.
 
 ## Completion reports
 

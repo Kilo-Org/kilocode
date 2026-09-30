@@ -15,9 +15,13 @@ Open **Settings → Tools → Kilo Code** to configure the plugin. Shared agent 
 
 - **Auto-Approve** — set per-tool permission levels (Allow / Ask / Deny) and manage granular command and path exceptions without editing config by hand. Permission prompts offer one-time approvals alongside saved allow/reject rules. See [Auto-Approving Actions](/docs/getting-started/settings/auto-approving-actions) for the shared permission model.
 - **Context** — toggle auto-compaction, set the auto-compaction limit (the percentage of the model window that triggers compaction), enable pruning of old tool outputs, and manage file watcher ignore patterns. See [Context Condensing](/docs/customize/context/context-condensing) and [.kilocodeignore](/docs/customize/context/kilocodeignore) for what these settings control.
+- **Checkpoints** — enable or disable file snapshots for the current project and manage machine-wide automatic session cleanup (`retention`), including a manual **Run Cleanup Now** action. See [Checkpoints](/docs/code-with-ai/features/checkpoints) for snapshot behavior, cleanup defaults, and what cleanup protects.
 - **Agent Behavior → Skills** — inspect loaded skills, add extra skill sources (local paths or remote URLs), edit or remove custom skills, and open skill files in the editor. See [Skills](/docs/customize/skills) for the skill format and discovery rules.
+- **Agent Behavior → Commands** — the page previously named **Workflows**. Commands are saved prompts you run by typing `/name` in a chat, and the plugin still discovers legacy `.kilo/workflows` files. See [Workflows](/docs/customize/workflows) for the command format and discovery rules.
 - **Integrations** - enable or disable the GitHub integration for pull request badges and imports. It requires the GitHub CLI (`gh`) to be installed and authenticated.
 - **Advanced → Index agent worktrees** - include `.kilo/worktrees` in the containing project's index. Worktrees are excluded by default to avoid duplicate search results. Files opened from an excluded worktree in the main IDE window lack code resolution and inspections; open the worktree as its own project for full indexing.
+
+Each **Agent Behavior** page — Agents, MCP Servers, Skills, Commands, and Rules — shows a short explanation you can expand, with a link to the matching documentation.
 
 ## Chat and worktrees
 

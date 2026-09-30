@@ -38,6 +38,19 @@ Unlike the legacy extension which used a separate shadow Git repository, the new
 {% /callout %}
 
 {% /tab %}
+{% tab label="JetBrains" %}
+
+Snapshots are enabled by default. Toggle them for the current project in **Settings → Tools → Kilo Code → Checkpoints** under **Enable snapshots**.
+
+The plugin reads the effective `snapshot` value for the current project and writes changes to that project's Kilo config. Without a project context it falls back to your global config. An unset value stays enabled by default, matching the CLI and VS Code:
+
+```json
+{
+  "snapshot": true
+}
+```
+
+{% /tab %}
 {% tab label="CLI" %}
 
 Checkpoints are controlled by the `snapshot` boolean in your `kilo.jsonc` configuration file:
@@ -67,9 +80,11 @@ Cleanup is a machine-wide policy, owned by the Kilo backend. When enabled, it ap
 4. Set **Keep sessions for (days)**, the time session history is kept before cleanup deletes it (default 30 days)
 5. Click **Save** if you made changes
 
+In JetBrains, the same controls are under **Settings → Tools → Kilo Code → Checkpoints**. Focus a project so the snapshot toggle targets it; the cleanup controls edit the machine-wide `retention` policy. **Run Cleanup Now** triggers a pass manually, whether or not automatic cleanup is enabled.
+
 The policy lives in `kilo.json` under the `retention` key, so it applies no matter which client you use next. Archived sessions age out on the same clock as everything else.
 
-Once enabled, the VS Code extension triggers cleanup about once a day while it is running. You can also run it immediately with the **Run Cleanup Now** button, which asks for confirmation first because deletion is permanent. A spinner and live status show the scanning or deleting phase and the number of sessions processed out of the total. During deletion, the status also shows deleted and failed counts. Reopening Settings shows the current progress. After each run, the **Last cleanup** line shows how many sessions were deleted, how many were skipped, and whether anything failed.
+Once enabled, the VS Code extension and the JetBrains plugin each trigger cleanup about once a day while they are running. You can also run it immediately with the **Run Cleanup Now** button, which asks for confirmation first because deletion is permanent. A spinner and live status show the scanning or deleting phase and the number of sessions processed out of the total. During deletion, the status also shows deleted and failed counts. Reopening Settings shows the current progress. After each run, the **Last cleanup** line shows how many sessions were deleted, how many were skipped, and whether anything failed.
 
 A long pass can be halted with the **Stop cleanup** button while it runs. Stopping keeps what the pass already deleted and skips the rest; the **Last cleanup** line marks an interrupted run. After a pass frees a large share of the session database, Kilo also reclaims the disk space, so the storage file shrinks instead of keeping its old size.
 
@@ -154,7 +169,9 @@ The banner provides two actions:
 If a revert could not restore your workspace files, the banner warns you that only the conversation was rewound:
 
 - **Snapshots disabled** — the banner explains that file changes were not restored because snapshots are disabled, and offers an **Enable snapshots** button that opens **Settings → Checkpoints**.
+- **No Git repository** — file checkpoints require a Git repository, so workspace changes were not restored.
 - **No checkpoint available** — the banner explains that no file checkpoint was available, so workspace changes remain on disk (for example, when reverting a range that predates checkpoints).
+- **Earlier revert** — for a revert recorded before workspace status was tracked, the banner says the restoration status is unavailable.
 
 ### Making a Revert Permanent
 
@@ -166,6 +183,20 @@ While in a reverted state, you have two choices:
 {% callout type="tip" %}
 Reverting is non-destructive until you send a new message. You can freely revert and redo to compare different states of your code without losing anything.
 {% /callout %}
+
+{% /tab %}
+{% tab label="JetBrains" %}
+
+Checkpoints are captured automatically at each step of a task. Each assistant turn that changed files shows a **Modified** card with the affected files and their diff stats.
+
+To revert, use a user message's **Rollback to this message** action. The rollback banner shows how many messages were reverted and the changes that were undone, with **Redo** and **Redo All** to step forward again. Reverting is non-destructive until you send a new message.
+
+If a revert could not restore your workspace files, the banner explains why:
+
+- **Snapshots disabled** — file changes were not restored because snapshots are disabled, with an **Enable snapshots** action that opens **Settings → Tools → Kilo Code → Checkpoints**.
+- **No Git repository** — file checkpoints require a Git repository, so workspace changes were not restored.
+- **No checkpoint available** — no file checkpoint was available, so workspace changes remain on disk.
+- **Earlier revert** — the workspace restoration status is unavailable for a revert recorded before this support existed.
 
 {% /tab %}
 {% tab label="CLI" %}

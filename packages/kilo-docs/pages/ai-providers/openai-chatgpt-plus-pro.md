@@ -18,8 +18,8 @@ An [OpenAI API key](/docs/ai-providers/openai) is different: it uses separate, p
 
 ## Sign in to Kilo with ChatGPT
 
-1. Open [Kilo](https://app.kilo.ai) and scroll down to the alternative login methods. If ChatGPT is not shown, enter your email address and continue first.
-2. Choose **Sign in with ChatGPT**.
+1. Open [Kilo](https://app.kilo.ai). The sign-in screen lists **Continue with ChatGPT** with the other OAuth providers, so you can choose it without entering your email first.
+2. Choose **Continue with ChatGPT**.
 3. Sign in to OpenAI, review the permissions shown, and return to Kilo.
 
 To use your subscription for model requests, complete the BYOK connection below as well. You do not have to use ChatGPT as your Kilo login method: if you already use email, GitHub, or another method, sign in as usual and connect your subscription from BYOK.
