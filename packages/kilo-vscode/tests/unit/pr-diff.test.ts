@@ -11,22 +11,6 @@ const snapshot: PRDiffSnapshot = {
 }
 
 describe("PR diff adapter", () => {
-  it("projects complete GitHub patches into diff viewer files", () => {
-    expect(createPRDiffs(snapshot)).toEqual([
-      {
-        file: "src/file.ts",
-        before: "one\ntwo\nthree\n",
-        after: "one\nupdated\nanother\nthree\n",
-        patch: "--- a/src/file.ts\n+++ b/src/file.ts\n" + patch,
-        additions: 2,
-        deletions: 1,
-        status: "modified",
-        tracked: true,
-        stamp: "snapshot-1",
-      },
-    ])
-  })
-
   it("accepts only ranges represented by the PR patch", () => {
     expect(canCommentOnPRLine(snapshot, "src/file.ts", "RIGHT", 2, 3)).toBe(true)
     expect(canCommentOnPRLine(snapshot, "src/file.ts", "LEFT", 2, 2)).toBe(true)

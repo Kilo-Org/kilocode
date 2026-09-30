@@ -38,6 +38,7 @@ export function createPRDiffs(snapshot: PRDiffSnapshot): WorktreeFileDiff[] {
         before: diff.before,
         after: diff.after,
         patch: diff.patch,
+        excerpt: true,
         additions: total.additions,
         deletions: total.deletions,
         status: status(file.status),

@@ -50,8 +50,8 @@ export function isReviewRangeValid(
 ): boolean {
   if (start < 1 || end < start) return false
   if (diff.summarized === true) return true
-  if (diff.patch) {
-    // Session diff text contains only hunk excerpts, not complete file contents.
+  if (diff.excerpt && diff.patch) {
+    // Excerpt coordinates come from the patch; full files use their content bounds.
     let cached = patches.get(diff)
     if (cached?.patch !== diff.patch) {
       cached = { patch: diff.patch, ranges: parsePatch(diff.patch)?.ranges }

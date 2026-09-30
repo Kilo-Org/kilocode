@@ -23,6 +23,7 @@ import {
 import type { WorktreeFileDiff } from "../../webview-ui/src/types/messages"
 import { parseReview, partReview } from "../../src/shared/review-comments"
 import { toSessionDiffFile } from "../../src/diff/sources/session"
+import { createPRDiffs } from "../../webview-ui/diff-viewer/pr-diff"
 
 function diff(file: string, before: string, after: string): WorktreeFileDiff {
   return { file, before, after, additions: 1, deletions: 0 }
@@ -151,9 +152,36 @@ describe("sanitizeReviewComments", () => {
     expect(isReviewRangeValid(d, "additions", 82, 130)).toBe(false)
   })
 
+  it("preserves unchanged-line comments and multi-hunk drafts in complete files with patches", () => {
+    const d = {
+      ...diff("notes.md", "# Old\n\nUnchanged paragraph\n\nOld end", "# New\n\nUnchanged paragraph\n\nNew end"),
+      patch: "@@ -1 +1 @@\n-# Old\n+# New\n@@ -5 +5 @@\n-Old end\n+New end\n",
+    }
+    const comments = [comment({ file: d.file, line: 3, side: "deletions" }), comment({ file: d.file, line: 3 })]
+
+    expect(sanitizeReviewComments(comments, [d])).toEqual(comments)
+    for (const side of ["deletions", "additions"] as const) {
+      expect(isReviewRangeValid(d, side, 1, 5)).toBe(true)
+      expect(isReviewRangeValid(d, side, 5, 6)).toBe(false)
+    }
+  })
+
+  it("uses original hunk coordinates for PR excerpts", () => {
+    const diffs = createPRDiffs({
+      id: "snapshot",
+      head: "a".repeat(40),
+      files: [{ path: "a.ts", status: "modified", patch: "@@ -50 +80 @@\n-old\n+new\n" }],
+    })
+    const deleted = comment({ file: "a.ts", line: 50, side: "deletions" })
+    const added = comment({ file: "a.ts", line: 80 })
+    const omitted = comment({ file: "a.ts", line: 1 })
+
+    expect(sanitizeReviewComments([deleted, added, omitted], diffs)).toEqual([deleted, added])
+  })
+
   it("updates comment bounds when a cached session patch changes", () => {
     const patch = "@@ -50 +80 @@\n-old\n+new\n"
-    const d: WorktreeFileDiff = { ...diff("a.ts", "old", "new"), patch }
+    const d: WorktreeFileDiff = { ...diff("a.ts", "old", "new"), patch, excerpt: true }
     const deleted = comment({ file: "a.ts", line: 50, side: "deletions" })
     const added = comment({ file: "a.ts", line: 80 })
     const moved = comment({ file: "a.ts", line: 90 })
