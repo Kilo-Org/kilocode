@@ -67,9 +67,18 @@ Cleanup is a machine-wide policy, owned by the Kilo backend. When enabled, it ap
 4. Set **Keep sessions for (days)**, the time session history is kept before cleanup deletes it (default 30 days)
 5. Click **Save** if you made changes
 
-The policy lives in `kilo.json` under the `retention` key, so it applies no matter which client you use next. Archived sessions age out on the same clock as everything else.
+The policy lives in the global `kilo.json` under the `retention` key, so it applies no matter which client you use next. Project configuration does not override this machine-wide policy. Archived sessions age out on the same clock as everything else. CLI users can enable it in `~/.config/kilo/kilo.json`:
 
-Once enabled, the VS Code extension triggers cleanup about once a day while it is running. You can also run it immediately with the **Run Cleanup Now** button, which asks for confirmation first because deletion is permanent. A spinner and live status show the scanning or deleting phase and the number of sessions processed out of the total. During deletion, the status also shows deleted and failed counts. Reopening Settings shows the current progress. After each run, the **Last cleanup** line shows how many sessions were deleted, how many were skipped, and whether anything failed.
+```json
+{
+  "retention": {
+    "enabled": true,
+    "maxAgeDays": 30
+  }
+}
+```
+
+Once enabled, the core runtime checks for due cleanup at startup and periodically while Kilo is running, including CLI-only use. Automatic passes are at least 23 hours apart. Cleanup does not run while Kilo is closed. You can also run it immediately with the **Run Cleanup Now** button, which asks for confirmation first because deletion is permanent. A spinner and live status show the scanning or deleting phase and the number of sessions processed out of the total. During deletion, the status also shows deleted and failed counts. Reopening Settings shows the current progress. After each run, the **Last cleanup** line shows how many sessions were deleted, how many were skipped, and whether anything failed.
 
 A long pass can be halted with the **Stop cleanup** button while it runs. Stopping keeps what the pass already deleted and skips the rest; the **Last cleanup** line marks an interrupted run. After a pass frees a large share of the session database, Kilo also reclaims the disk space, so the storage file shrinks instead of keeping its old size.
 

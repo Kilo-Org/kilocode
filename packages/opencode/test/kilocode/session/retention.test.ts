@@ -1,9 +1,10 @@
 import { describe, expect, it } from "bun:test"
-import { Deferred, Effect, Exit, Fiber, Layer, Schema } from "effect"
+import { Cause, Deferred, Effect, Exit, Fiber, Layer, Schema } from "effect"
 import { eq, inArray } from "drizzle-orm"
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
 import { Database } from "@opencode-ai/core/database/database"
+import { Global } from "@opencode-ai/core/global"
 import { FSUtil } from "@opencode-ai/core/fs-util"
 import { AppProcess } from "@opencode-ai/core/process"
 import { EffectFlock } from "@opencode-ai/core/util/effect-flock"
@@ -31,7 +32,7 @@ const runIt = testEffect(
   LayerNode.compile(LayerNode.group([Session.node, SessionProjector.node, Database.node, CrossSpawnSpawner.node])),
 )
 const enabled = Layer.mock(Config.Service, {
-  get: () => Effect.succeed({ retention: { enabled: true, maxAgeDays: 30 } }),
+  getGlobal: () => Effect.succeed({ retention: { enabled: true, maxAgeDays: 30 } }),
 })
 
 const NOW = 1_700_000_000_000
@@ -342,6 +343,32 @@ dbIt.live("busySessions flags sessions with recent message or part activity", ()
   }),
 )
 
+runIt.live("global disabled policy prevents scheduled and forced deletion despite enabled project policy", () =>
+  Effect.gen(function* () {
+    const { db } = yield* Database.Service
+    const id = SessionID.make(`ses_retention_disabled_${crypto.randomUUID()}`)
+    yield* seed({
+      directory: "/tmp/retention-disabled",
+      rows: [{ id, updated: Date.now() - 40 * KiloSessionRetention.DAY_MS }],
+    })
+    const config = Layer.mock(Config.Service, {
+      getGlobal: () => Effect.succeed({ retention: { enabled: false, maxAgeDays: 30 } }),
+      get: () => Effect.succeed({ retention: { enabled: true, maxAgeDays: 30 } }),
+    })
+    for (const force of [false, true]) {
+      const outcome = yield* KiloSessionRetention.run({ force }).pipe(Effect.provide(config))
+      expect(outcome).toEqual({ ran: false, reason: "disabled" })
+      const row = yield* db
+        .select({ id: SessionTable.id })
+        .from(SessionTable)
+        .where(eq(SessionTable.id, id))
+        .get()
+        .pipe(Effect.orDie)
+      expect(row?.id).toBe(id)
+    }
+  }),
+)
+
 dbIt.live("run skips history queries without age candidates and includes scanning in duration", () =>
   Effect.gen(function* () {
     expect(Database.path()).toBe(":memory:")
@@ -358,7 +385,7 @@ dbIt.live("run skips history queries without age candidates and includes scannin
     yield* db.run("DROP TABLE part").pipe(Effect.orDie)
     yield* db.run("DROP TABLE message").pipe(Effect.orDie)
     const config = Layer.mock(Config.Service, {
-      get: () => Effect.sleep(20).pipe(Effect.as({ retention: { enabled: true, maxAgeDays: 30 } })),
+      getGlobal: () => Effect.sleep(20).pipe(Effect.as({ retention: { enabled: true, maxAgeDays: 30 } })),
     })
     const sessions = Layer.mock(Session.Service, { remove: () => Effect.die("no session should be removed") })
     const outcome = yield* KiloSessionRetention.run({ force: true }).pipe(Effect.provide(Layer.merge(config, sessions)))
@@ -395,7 +422,7 @@ runIt.live("90-day retention preserves younger sessions and parents with fresh o
       ],
     })
     const config = Layer.mock(Config.Service, {
-      get: () => Effect.succeed({ retention: { enabled: true, maxAgeDays: 90 } }),
+      getGlobal: () => Effect.succeed({ retention: { enabled: true, maxAgeDays: 90 } }),
     })
     const outcome = yield* KiloSessionRetention.run({ force: true }).pipe(Effect.provide(config))
     expect(outcome.ran && outcome.result).toMatchObject({ scanned: 7, deleted: 1, failed: 0, skippedActive: 2 })
@@ -585,11 +612,67 @@ runIt.live("run verifies actual Session.remove failures instead of counting retu
   }),
 )
 
+runIt.live("cross-process lock prevents scanning until another process releases it", () =>
+  Effect.gen(function* () {
+    const id = SessionID.make(`ses_retention_locked_${crypto.randomUUID()}`)
+    yield* seed({
+      directory: "/tmp/retention-locked",
+      rows: [{ id, updated: Date.now() - 40 * KiloSessionRetention.DAY_MS }],
+    })
+    const child = yield* Effect.acquireRelease(
+      Effect.sync(() =>
+        Bun.spawn(
+          [
+            process.execPath,
+            "--eval",
+            `import { Flock } from "@opencode-ai/core/util/flock"
+             Flock.setGlobal({ state: ${JSON.stringify(Global.Path.state)} })
+             const lease = await Flock.acquire("session-retention")
+             process.stdout.write("ready\\n")
+             await Bun.stdin.text()
+             await lease.release()`,
+          ],
+          { stdin: "pipe", stdout: "pipe", stderr: "inherit", windowsHide: true },
+        ),
+      ),
+      (child) =>
+        Effect.promise(async () => {
+          child.stdin.end()
+          await child.exited
+        }),
+    )
+    const ready = yield* awaitWithTimeout(
+      Effect.promise(() => child.stdout.getReader().read()),
+      "child did not acquire the retention lock",
+    )
+    expect(new TextDecoder().decode(ready.value)).toBe("ready\n")
+    let calls = 0
+    const config = Layer.mock(Config.Service, {
+      getGlobal: () =>
+        Effect.sync(() => {
+          calls++
+          return { retention: { enabled: true, maxAgeDays: 30 } }
+        }),
+    })
+    const exit = yield* KiloSessionRetention.run({ force: true }).pipe(Effect.provide(config), Effect.exit)
+    expect(Exit.isFailure(exit)).toBe(true)
+    if (Exit.isFailure(exit))
+      expect(Cause.pretty(exit.cause)).toContain("Timed out waiting for lock: session-retention")
+    expect(calls).toBe(0)
+    expect(yield* KiloSessionRetention.readProgress()).toBeUndefined()
+    child.stdin.end()
+    expect(yield* Effect.promise(() => child.exited)).toBe(0)
+    const outcome = yield* KiloSessionRetention.run({ force: true }).pipe(Effect.provide(config))
+    expect(calls).toBe(1)
+    expect(outcome.ran && outcome.result).toMatchObject({ deleted: 1, failed: 0 })
+  }),
+)
+
 dbIt.live("run serializes duplicates and clears progress on failure and interruption", () =>
   Effect.gen(function* () {
     const reached = yield* Deferred.make<void>()
     const blocked = Layer.mock(Config.Service, {
-      get: () => Deferred.succeed(reached, undefined).pipe(Effect.andThen(Effect.never)),
+      getGlobal: () => Deferred.succeed(reached, undefined).pipe(Effect.andThen(Effect.never)),
     })
     const sessions = Layer.mock(Session.Service, { remove: () => Effect.void })
     const fiber = yield* KiloSessionRetention.run({ force: true }).pipe(
@@ -607,7 +690,7 @@ dbIt.live("run serializes duplicates and clears progress on failure and interrup
     })
     let calls = 0
     const broken = Layer.mock(Config.Service, {
-      get: () =>
+      getGlobal: () =>
         Effect.sync(() => {
           calls++
         }).pipe(Effect.andThen(Effect.die("scan failed"))),
@@ -790,7 +873,7 @@ dbIt.live("cancel during scanning aborts before any deletion", () =>
     const gate = yield* Deferred.make<void>()
     const entered = yield* Deferred.make<void>()
     const config = Layer.mock(Config.Service, {
-      get: () =>
+      getGlobal: () =>
         Deferred.succeed(entered, undefined).pipe(
           Effect.andThen(Deferred.await(gate)),
           Effect.as({ retention: { enabled: true, maxAgeDays: 30 } }),

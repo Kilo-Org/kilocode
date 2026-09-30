@@ -93,7 +93,7 @@ export const Info = Schema.Struct({
       }),
     }),
   ).annotate({
-    description: "Machine-wide session retention. Evaluated by the backend; clients only trigger runs.",
+    description: "Machine-wide session retention. Read from global config and scheduled by the backend.",
   }),
   // kilocode_change end
   plugin: Schema.optional(Schema.mutable(Schema.Array(ConfigPluginV1.Spec))),

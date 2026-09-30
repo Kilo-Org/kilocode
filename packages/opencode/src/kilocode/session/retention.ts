@@ -4,6 +4,7 @@ import { Database } from "@opencode-ai/core/database/database"
 import { Global } from "@opencode-ai/core/global"
 import { MessageTable, PartTable, SessionTable } from "@opencode-ai/core/session/sql"
 import * as Log from "@opencode-ai/core/util/log"
+import { Flock } from "@opencode-ai/core/util/flock"
 import { Config } from "@/config/config"
 import { Session } from "@/session/session"
 import { SessionID } from "@/session/schema"
@@ -13,8 +14,8 @@ import path from "path"
 /**
  * Backend-owned session retention. The policy lives in kilo.json
  * (`retention.enabled` / `retention.maxAgeDays`), selection and deletion run
- * here against the machine-wide database, and clients only trigger a pass or
- * read the last-run state. Deletion is fail-closed: a pass does nothing unless
+ * here against the machine-wide database. Core schedules passes; clients can
+ * also trigger a pass or read its state. A pass does nothing unless
  * the policy is explicitly enabled.
  */
 export namespace KiloSessionRetention {
@@ -353,7 +354,7 @@ export namespace KiloSessionRetention {
         skippedActive: 0,
       })
       const config = yield* Config.Service
-      const active = policy(yield* config.get())
+      const active = policy(yield* config.getGlobal())
       const now = Date.now()
       const previous = yield* readState()
       const gate = shouldRun(active, input, previous, now)
@@ -474,7 +475,12 @@ export namespace KiloSessionRetention {
     },
     (effect, _input: { force?: boolean } = {}) =>
       lock.withPermit(
-        effect.pipe(
+        Effect.gen(function* () {
+          // VACUUM can block the heartbeat while rebuilding a large database.
+          yield* Flock.effect("session-retention", { timeoutMs: 1000, staleMs: DAY_MS })
+          return yield* effect
+        }).pipe(
+          Effect.scoped,
           Effect.ensuring(
             Effect.sync(() => {
               halting = false

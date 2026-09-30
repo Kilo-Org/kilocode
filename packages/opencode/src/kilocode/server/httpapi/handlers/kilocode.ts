@@ -549,7 +549,7 @@ export const kilocodeHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilocode"
     })
 
     const retentionActive = Effect.fn("KilocodeHttpApi.retentionActive")(function* () {
-      const info = yield* config.get()
+      const info = yield* config.getGlobal()
       const active = KiloSessionRetention.policy(info)
       return {
         policy: { enabled: active.enabled, maxAgeDays: active.maxAgeDays },

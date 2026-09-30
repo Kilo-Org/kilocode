@@ -15,9 +15,11 @@ import { ensureProcessMetadata } from "@opencode-ai/core/util/opencode-process" 
 import { createWorkerRemoteExit } from "@/kilocode/cli/cmd/tui/remote-exit-worker" // kilocode_change
 import { createWorkerShutdown } from "@/cli/tui/worker-shutdown" // kilocode_change
 import { KiloSessions } from "@/kilo-sessions/kilo-sessions" // kilocode_change
+import { KiloRetentionScheduler } from "@/kilocode/session/retention-scheduler" // kilocode_change
 
 ensureProcessMetadata("worker") // kilocode_change - retain worker role and parent run correlation
 await KiloLog.init() // kilocode_change - keep compatibility logs off the TUI terminal
+await AppRuntime.runPromise(Effect.void) // kilocode_change - start core retention in the embedded backend
 Heap.start()
 
 // kilocode_change start - keep upstream's keep-alive intent but never swallow the error silently
@@ -104,6 +106,7 @@ export const rpc = {
   },
   async shutdown() {
     remoteExit.shutdown() // kilocode_change
+    await AppRuntime.runPromise(KiloRetentionScheduler.Service.use((s) => s.stop())) // kilocode_change
     await runShutdown() // kilocode_change - drain → dispose → stopServer
     // kilocode_change start - Clear the Rpc message channel so the worker's event loop can drain and
     // exit naturally. Without this, the active onmessage handle keeps the
