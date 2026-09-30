@@ -108,7 +108,7 @@ import { createModelSelector } from "./session-model-selector"
 import { createModelPreferences } from "./session-model-preferences"
 import { createPreferenceLoader } from "./session-preference-loader"
 import { activities, blockedSessionIds, type Activity } from "../utils/session-activity"
-import { hold, type Timing } from "./session-timing"
+import { createTiming, running, type Timing } from "./session-timing"
 import type { SessionContextValue } from "./session-types"
 
 const RECENT_LIMIT = 5
@@ -226,6 +226,7 @@ export const SessionProvider: ParentComponent = (props) => {
     return id ? isSubmitting(id) : false
   }
   const isSubmitting = (id: string) => (submissionMap[id] ?? 0) > 0
+  const goal = (id: string) => running(store.sessions[id]?.goal, statusMap[id]?.type, closeMap[id]?.reason)
 
   const [loading, setLoading] = createSignal(false)
   const [loaded, setLoaded] = createSignal<Set<string>>(new Set())
@@ -374,7 +375,7 @@ export const SessionProvider: ParentComponent = (props) => {
         delete map[sid]
       }),
     )
-    if ((statusMap[sid] ?? idle).type !== "idle") return
+    if ((statusMap[sid] ?? idle).type !== "idle" || goal(sid)) return
     setTimingMap(
       produce((map) => {
         delete map[sid]
@@ -848,7 +849,8 @@ export const SessionProvider: ParentComponent = (props) => {
     })
   }
 
-  function failed(id: string, message: Message) {
+  function failed(id: string, message: Message, phase?: "admission" | "execution") {
+    if (phase === "admission") return
     if (message.error?.name === "ContextOverflowError" && closeMap[id]?.reason !== "error") {
       const ids = recoveries.get(id) ?? new Set<string>()
       ids.add(message.id)
@@ -1023,11 +1025,10 @@ export const SessionProvider: ParentComponent = (props) => {
           error: message.error,
           sessionErrorID: message.eventID,
         }
-        failed(sid, errorMsg)
+        failed(sid, errorMsg, message.phase)
         handleMessageCreated(errorMsg)
         break
       }
-
       case "error":
         handleError(message)
         break
@@ -1577,11 +1578,12 @@ export const SessionProvider: ParentComponent = (props) => {
     if (newStatus === "busy" || newStatus === "retry") clearClose(sessionID)
     if (prev === "idle" && newStatus !== "idle") startTiming(sessionID)
     if (newStatus === "idle") {
-      setTimingMap(
-        produce((map) => {
-          delete map[sessionID]
-        }),
-      )
+      if (!goal(sessionID))
+        setTimingMap(
+          produce((map) => {
+            delete map[sessionID]
+          }),
+        )
       for (const msg of store.messages[sessionID] ?? []) optimisticParts.delete(msg.id)
       // Session is idle - any remaining pending optimistic IDs are either
       // already confirmed (messageCreated removed them) or orphaned (queued
@@ -1851,15 +1853,13 @@ export const SessionProvider: ParentComponent = (props) => {
     setTimingMap(sid, "since", (v) => v ?? Date.now())
   }
 
-  // Pauses every running timing entry whose family is parked on a user prompt,
-  // and resumes any parked entry whose family has been cleared. Reads the map
-  // keys under `untrack` so writing the map here cannot re-trigger this computed.
-  createComputed(() => {
-    const now = Date.now()
-    for (const sid of untrack(() => Object.keys(timingMap))) {
-      if (parked(sid)) setTimingMap(sid, (t) => hold(t, now))
-      else setTimingMap(sid, "since", (v) => v ?? now)
-    }
+  createTiming({
+    sessions: () => Object.keys(store.sessions),
+    timing: timingMap,
+    running: goal,
+    parked,
+    start: startTiming,
+    set: setTimingMap,
   })
 
   const disconnected = createMemo<boolean>((previous) => {
