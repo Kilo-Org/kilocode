@@ -34,6 +34,10 @@ Nebius Token Factory provides inference for a wide range of models on Nebius inf
 2. Click **Show more providers** and select **Nebius Token Factory**.
 3. Paste your API key and save.
 
+{% image src="/docs/img/nebius/vscode-find-provider.png" alt="VS Code provider catalog showing Nebius Token Factory" width="800" caption="Find the Nebius Token Factory provider" /%}
+
+{% image src="/docs/img/nebius/vscode-api-key.jpg" alt="VS Code dialog to enter the Nebius Token Factory API key" width="600" caption="Set your API key for the Nebius Token Factory" /%}
+
 The extension stores this in your `kilo.json` config file. You can also edit the config file directly — see the **CLI** tab for the file format.
 
 {% /tab %}
@@ -47,6 +51,8 @@ The extension stores this in your `kilo.json` config file. You can also edit the
 {% tab label="CLI" %}
 
 Run `kilo` and use the `/connect` command to add your Nebius Token Factory API key interactively.
+
+{% image src="/docs/img/nebius/cli-connect.png" alt="Kilo CLI /connect command with Nebius Token Factory selected" width="600" caption="Get the key connected in the Kilo CLI with the /connect command" /%}
 
 Alternatively, set the API key as an environment variable or configure it in your `kilo.json` config file:
 
@@ -83,6 +89,8 @@ Then set your default model:
 
 Once your key is configured, open the model picker and select any model tagged **Nebius Token Factory**. Model IDs use the `nebius/<vendor>/<model>` format (for example, `nebius/moonshotai/Kimi-K2.5`). See the [Nebius Token Factory docs](https://docs.tokenfactory.nebius.com/) for the full model list.
 
+{% image src="/docs/img/nebius/vscode-model-picker.jpg" alt="VS Code model picker showing models tagged Nebius Token Factory" width="600" caption="Select any model tagged Nebius Token Factory" /%}
+
 ## Share Your Key With Your Team (Kilo Cloud BYOK)
 
 Storing your key as a [BYOK (Bring Your Own Key)](/docs/getting-started/byok) key in Kilo Cloud makes it available to Cloud Agents and, at the organization level, to every member of your team through a shared usage pool. Requests are billed directly by Nebius at your account's rates — Kilo adds no markup.
@@ -92,15 +100,23 @@ Storing your key as a [BYOK (Bring Your Own Key)](/docs/getting-started/byok) ke
 3. Click **Add API Key**, select **Nebius Token Factory** as the provider, and paste your key.
 4. Save.
 
+{% image src="/docs/img/nebius/cloud-byok.png" alt="Kilo Cloud BYOK page with the Add API Key dialog and Nebius Token Factory selected as provider" width="800" caption="Add API Key dialog with Nebius Token Factory selected as provider" /%}
+
 Organization-level keys apply to all members of the organization and require owner or billing manager access to manage. For details on how BYOK routing works, see [Bring Your Own Key (BYOK)](/docs/getting-started/byok).
 
 ## Control Nebius Access Org-Wide (Kilo Gateway)
+
+{% callout type="info" %}
+Model access controls are an **Enterprise-only** feature. Organizations on other plans have unrestricted access to all models and providers.
+{% /callout %}
 
 The [Kilo Gateway](/docs/gateway) provides access to 500+ models from 60+ providers, including Nebius Token Factory. As an organization owner, you can control which models and provider routes your team can use:
 
 1. Navigate to your organization's **Providers & Models** page.
 2. Enable **Nebius Token Factory** on the **Providers** tab.
 3. Choose which models and regions your team is allowed to use. You can filter providers by data policy (trains on data, retains prompts) and datacenter location.
+
+{% image src="/docs/img/nebius/gateway-allowlist.png" alt="Kilo Gateway provider list showing Nebius Token Factory enabled, with region and training-data filters" width="800" caption="Kilo Gateway provider allowlist showing Nebius Token Factory enabled, with region and training-data filters" /%}
 
 Team members can then select the approved Nebius models through the Kilo Gateway. For details, see [Model Access Controls](/docs/collaborate/enterprise/model-access-controls).
 
