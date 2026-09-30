@@ -282,6 +282,11 @@ export const TaskTool = Tool.define(
           // kilocode_change start - expose terminal child assistant errors through the task tool boundary,
           // including the resumable task_id so the parent agent can continue the subagent (#11620)
           if (result.info.role === "assistant" && result.info.error) {
+            // a session-scoped abort (Esc in the subagent view) ends the child's turn with AbortedError
+            if (MessageV2.AbortedError.isInstance(result.info.error))
+              return yield* Effect.fail(
+                new KiloTask.Interrupted({ sessionID: nextSession.id, activity: params.description }),
+              )
             return yield* Effect.fail(new Error(`${errorMessage(result.info.error)}\n${resumeHint(nextSession.id)}`))
           }
           const failed = result.parts.findLast((item) => item.type === "tool" && item.state.status === "error")

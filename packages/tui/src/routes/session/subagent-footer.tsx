@@ -1,4 +1,5 @@
 import { createMemo, createSignal, Show } from "solid-js"
+import type { Accessor } from "solid-js" // kilocode_change
 import { useRouteData } from "../../context/route"
 import { useSync } from "../../context/sync"
 import { useTheme } from "../../context/theme"
@@ -10,7 +11,11 @@ import { Locale } from "../../util/locale"
 import { useTerminalDimensions } from "@opentui/solid"
 import { useCommandShortcut, useOpencodeKeymap } from "../../keymap"
 
-export function SubagentFooter() {
+// kilocode_change start - double-press counters owned by the session route
+type Props = { interrupt: Accessor<number>; exitPress: Accessor<number> }
+
+export function SubagentFooter(props: Props) {
+  // kilocode_change end
   const route = useRouteData("session")
   const sync = useSync()
   const local = useLocal() // kilocode_change
@@ -76,6 +81,8 @@ export function SubagentFooter() {
   const parentShortcut = useCommandShortcut("session.parent")
   const previousShortcut = useCommandShortcut("session.child.previous")
   const nextShortcut = useCommandShortcut("session.child.next")
+  const interruptShortcut = useCommandShortcut("subagent.interrupt") // kilocode_change
+  const exitShortcut = useCommandShortcut("app.exit") // kilocode_change
   const [hover, setHover] = createSignal<"parent" | "prev" | "next" | null>(null)
   useTerminalDimensions()
 
@@ -114,6 +121,14 @@ export function SubagentFooter() {
                 </text>
               )}
             </Show>
+            {/* kilocode_change start - interrupt/exit double-press hints */}
+            <Show when={isRunning() && props.interrupt() > 0}>
+              <text fg={theme.primary}>{interruptShortcut() || "esc"} again to interrupt</text>
+            </Show>
+            <Show when={props.exitPress() > 0}>
+              <text fg={theme.primary}>{exitShortcut() || "ctrl+c"} again to exit</text>
+            </Show>
+            {/* kilocode_change end */}
           </box>
           <box flexDirection="row" gap={2}>
             <box
