@@ -1838,12 +1838,12 @@ export const SessionProvider: ParentComponent = (props) => {
     return ids
   })
 
-  /** Whether sid's family (self + subagents) is parked on a user prompt — the
-   *  working timer must pause for as long as this is true. */
+  /** Whether sid's family is parked on a user prompt or a transient offline state,
+   *  so the working timer holds for as long as this is true. */
   const parked = (sid: string) => {
     const family = sessionFamily(sid)
     for (const id of parkedIds()) if (family.has(id)) return true
-    return false
+    return store.sessions[sid]?.goal?.active === true && statusMap[sid]?.type === "offline"
   }
 
   /** Ensure sid has a timing entry and, unless parked, start (or continue) its clock. */

@@ -41,6 +41,8 @@ export function createTiming(opts: {
         untrack(() => opts.start(sid))
         continue
       }
+      // A goal held by a transient state (offline) or a user prompt keeps its time.
+      if (opts.parked(sid)) continue
       if (!goals.delete(sid)) continue
       opts.set(produce((map) => delete map[sid]))
     }

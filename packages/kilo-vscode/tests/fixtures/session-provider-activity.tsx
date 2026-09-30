@@ -379,6 +379,10 @@ try {
         assert.equal(value.closeReason(), reason)
         assert.equal(value.activityFor(sid), status)
       }
+      await emit({ type: "sessionStatus", sessionID: sid, status: "offline" })
+      assert.deepEqual(unwrap(value.busyTiming()), { active: 10_000 }, "Offline keeps banked goal time")
+      await emit({ type: "sessionStatus", sessionID: sid, status: "busy" })
+      assert.equal(value.busyTiming()?.since, 20_000, "Reconnect resumes without resetting")
       time.now = 30_000
       await emit({
         type: "permissionRequest",
