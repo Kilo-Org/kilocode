@@ -214,10 +214,14 @@ class KiloSessionService internal constructor(
     suspend fun get(id: String, dir: String): SessionDto =
         call { get(id, dir) }
 
-    /** Create a new session. Caller awaits the result. */
-    suspend fun create(dir: String): SessionDto {
-        log.info("kind=session create=true dir=${ChatLogSummary.dir(dir)}")
-        val session = call { create(dir) }
+    /**
+     * Create a new session. [sandbox] null leaves the CLI's own default precedence in effect; a
+     * non-null value is sent as create-time metadata so the session's first tool call is already
+     * governed by it. Caller awaits the result.
+     */
+    suspend fun create(dir: String, sandbox: Boolean? = null): SessionDto {
+        log.info("kind=session create=true dir=${ChatLogSummary.dir(dir)} sandbox=$sandbox")
+        val session = call { create(dir, sandbox) }
         log.info("${ChatLogSummary.sid(session.id)} kind=session create=true ok=true dir=${ChatLogSummary.dir(dir)}")
         refresh(dir)
         return session

@@ -247,14 +247,15 @@ class AgentManagerPanel(
         val plan = handle.result() ?: return
         onCreate()
         when (plan) {
-            is NewWorktreePlan.Create -> controller.create(plan.branch, plan.base, prompt = plan.prompt)
+            is NewWorktreePlan.Create ->
+                controller.create(plan.branch, plan.base, prompt = plan.prompt, sandbox = plan.sandbox)
             is NewWorktreePlan.Branch -> {
                 Telemetry.send("Worktree Import Submitted", mapOf("kind" to "branch"))
-                controller.importBranch(plan.branch)
+                controller.importBranch(plan.branch, plan.sandbox)
             }
             is NewWorktreePlan.Pr -> {
                 Telemetry.send("Worktree Import Submitted", mapOf("kind" to "pr"))
-                controller.importPr(plan.url)
+                controller.importPr(plan.url, plan.sandbox)
             }
         }
     }

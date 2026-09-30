@@ -205,7 +205,7 @@ class KiloBackendWorkspace(
     // ------ session access (delegates to session manager) ------
 
     fun sessions(): SessionListDto = sessions.list(directory)
-    fun createSession(): SessionDto = sessions.create(directory)
+    fun createSession(sandbox: Boolean? = null): SessionDto = sessions.create(directory, sandbox)
     fun deleteSession(id: String) = sessions.delete(id, directory)
     fun seedStatuses() = sessions.seed(directory)
 

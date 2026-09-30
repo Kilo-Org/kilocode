@@ -32,6 +32,7 @@ abstract class GenerateOpenApiSpecTask : DefaultTask() {
     companion object {
         private val DIGEST = Regex("^sha256:[a-f0-9]{64}$")
         private val JSON = Json { ignoreUnknownKeys = true }
+        private val EXECUTABLE_NAMES = setOf("kilo", "bwrap", "kilo-sandbox-seccomp")
         private const val API = "https://api.github.com/repos/Kilo-Org/kilocode/releases/tags"
         private const val ATTEMPTS = 8
         private const val DELAY_MS = 5_000L
@@ -297,7 +298,9 @@ abstract class GenerateOpenApiSpecTask : DefaultTask() {
         }
         target.parentFile.mkdirs()
         target.outputStream().use(copy)
-        if (!windows() && (target.name == "kilo" || target.name == "bwrap")) target.setExecutable(true)
+        // Mirror KiloCliDownloader/KiloRepoCli's executable set for consistency, even though this
+        // task only runs `kilo generate` and does not spawn a sandbox.
+        if (!windows() && target.name in EXECUTABLE_NAMES) target.setExecutable(true)
     }
 
     private fun platform(): String {

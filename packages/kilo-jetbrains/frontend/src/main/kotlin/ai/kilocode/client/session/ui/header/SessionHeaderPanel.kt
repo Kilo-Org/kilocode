@@ -227,6 +227,7 @@ class SessionHeaderPanel(
                 is SessionModelEvent.RevertChanged,
                 is SessionModelEvent.QueueChanged,
                 is SessionModelEvent.Compacted,
+                is SessionModelEvent.SandboxChanged,
                 is SessionModelEvent.HistoryLoaded,
                 is SessionModelEvent.Cleared,
                 is SessionModelEvent.TurnAdded,

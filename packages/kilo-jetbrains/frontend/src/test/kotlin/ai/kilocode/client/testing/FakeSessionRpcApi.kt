@@ -145,6 +145,9 @@ class FakeSessionRpcApi : KiloSessionRpcApi {
     var creates = 0
         private set
 
+    /** `sandbox` argument of every [create] call, in order. */
+    val createSandboxCalls = mutableListOf<Boolean?>()
+
     /** When set, [create] throws it after incrementing [creates] — simulates a paused backend. */
     var createThrows: Exception? = null
 
@@ -165,9 +168,10 @@ class FakeSessionRpcApi : KiloSessionRpcApi {
 
     // --- Implementation ---
 
-    override suspend fun create(directory: String): SessionDto {
+    override suspend fun create(directory: String, sandbox: Boolean?): SessionDto {
         assertNotEdt("create")
         creates++
+        createSandboxCalls.add(sandbox)
         createThrows?.let { throw it }
         return session
     }

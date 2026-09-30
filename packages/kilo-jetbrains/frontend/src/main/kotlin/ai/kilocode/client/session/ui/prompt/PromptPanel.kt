@@ -13,6 +13,7 @@ import ai.kilocode.client.session.ui.ReasoningPicker
 import ai.kilocode.client.session.ui.SessionRootPanel
 import ai.kilocode.client.session.model.PromptAttachment
 import ai.kilocode.client.session.model.PromptAttachmentExtractor
+import ai.kilocode.client.session.model.SandboxUiState
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionEditorStyleTarget
 import ai.kilocode.client.session.ui.style.SessionUiStyle
@@ -137,6 +138,8 @@ class PromptPanel(
         private val STOP_ICON: Icon = AllIcons.Actions.Suspend
         private val SHIELD_ICON: Icon = IconLoader.getIcon("/icons/shield.svg", PromptPanel::class.java)
         private val SHIELD_FILLED_ICON: Icon = IconLoader.getIcon("/icons/shield-filled.svg", PromptPanel::class.java)
+        private val SANDBOX_LOCKED_ICON: Icon = AllIcons.Ide.Readonly
+        private val SANDBOX_UNLOCKED_ICON: Icon = AllIcons.Ide.Readwrite
         private val WAND_ICON: Icon = IconLoader.getIcon("/icons/wand-sparkles.svg", PromptPanel::class.java)
         private val MENTION_KEY = DefaultLanguageHighlighterColors.METADATA
         private val COMMAND_KEY = DefaultLanguageHighlighterColors.KEYWORD
@@ -154,6 +157,7 @@ class PromptPanel(
     var onReset: () -> Unit = {}
     var onChange: () -> Unit = {}
     var onAutoApproveToggle: (Boolean) -> Unit = {}
+    var onSandboxToggle: () -> Unit = {}
     var onFileDrag: (Boolean) -> Unit = {}
     private var style = SessionEditorStyle.current()
     private var focused = false
@@ -260,6 +264,20 @@ class PromptPanel(
     }
 
     /**
+     * Sandbox confinement control. Hidden until [setSandbox] is called with `visible = true` (the
+     * feature service exists and global config does not explicitly disable it). While hidden it
+     * still occupies no layout space, mirroring [reset]'s pattern.
+     */
+    private val sandbox = HoverIcon().apply {
+        icon = SANDBOX_UNLOCKED_ICON
+        isVisible = false
+        addActionListener { onSandboxToggle() }
+    }
+    private val sandboxGap = Box.createHorizontalStrut(JBUI.scale(SessionUiStyle.View.Prompt.CONTROL_GAP)).apply {
+        isVisible = false
+    }
+
+    /**
      * Opens the Kilo.Session.PromptMenu popup (auto-approve + sharing). Resolves its context from
      * DataManager, so it reads live SessionActionsKeys.ACTIONS from the session ancestor chain rather
      * than needing SessionUi to wire anything through this panel directly.
@@ -360,6 +378,8 @@ class PromptPanel(
             bar.add(Box.createHorizontalStrut(JBUI.scale(SessionUiStyle.View.Prompt.CONTROL_GAP)))
             bar.add(auto)
             bar.add(Box.createHorizontalStrut(JBUI.scale(SessionUiStyle.View.Prompt.CONTROL_GAP)))
+            bar.add(sandbox)
+            bar.add(sandboxGap)
         }
         if (showEnhance) bar.add(enhance)
         if (showSubmit) {
@@ -520,6 +540,55 @@ class PromptPanel(
         reset.isVisible = value
         revalidate()
         repaint()
+    }
+
+    /**
+     * Sync the sandbox control. [visible] hides the action entirely (feature service absent or
+     * explicitly disabled by global config) without clearing [state] — a session that is already
+     * sandboxed, or unavailable while desired-on, keeps reporting real status even when the
+     * interactive action is hidden; only [SandboxUiState.Unknown] has no status to show.
+     */
+    @RequiresEdt
+    fun setSandbox(
+        visible: Boolean,
+        state: SandboxUiState,
+        busy: Boolean,
+        networkRestricted: Boolean = true,
+    ) {
+        // Hiding controls must not hide actual confinement or a fail-closed unavailable state.
+        // Those remain visible as a disabled, read-only status indicator.
+        val status = state as? SandboxUiState.Known
+        val show = visible || status?.enabled == true || status?.available == false
+        val changed = sandbox.isVisible != show
+        sandbox.isVisible = show
+        sandboxGap.isVisible = show
+        when (state) {
+            is SandboxUiState.Unknown -> {
+                sandbox.icon = SANDBOX_UNLOCKED_ICON
+                sandbox.toolTipText = KiloBundle.message("prompt.action.sandbox.unknown.tooltip")
+                sandbox.isEnabled = false
+            }
+            is SandboxUiState.Known -> {
+                sandbox.icon = if (state.enabled) SANDBOX_LOCKED_ICON else SANDBOX_UNLOCKED_ICON
+                sandbox.toolTipText = when {
+                    state.pending -> KiloBundle.message("prompt.action.sandbox.pending.tooltip")
+                    state.enabled && !state.available ->
+                        KiloBundle.message("prompt.action.sandbox.unavailable.tooltip", state.reason ?: "")
+                    !state.available && !state.reason.isNullOrBlank() ->
+                        KiloBundle.message("prompt.action.sandbox.unsupported.tooltip", state.reason)
+                    state.enabled && networkRestricted ->
+                        KiloBundle.message("prompt.action.sandbox.enabled.restricted.tooltip")
+                    state.enabled -> KiloBundle.message("prompt.action.sandbox.enabled.tooltip")
+                    else -> KiloBundle.message("prompt.action.sandbox.disabled.tooltip")
+                }
+                sandbox.isEnabled = visible && state.available && !state.pending && !busy
+            }
+        }
+        sandbox.accessibleContext.accessibleName = sandbox.toolTipText
+        if (changed) {
+            revalidate()
+            repaint()
+        }
     }
 
     @RequiresEdt

@@ -89,6 +89,9 @@ class SessionModel {
     var todos: List<TodoDto> = emptyList()
         private set
 
+    var sandbox: SandboxUiState = SandboxUiState.Unknown
+        private set
+
     /** Already dismissal-filtered, already-ordered rows for the background-agents strip. */
     var backgroundAgents: List<BackgroundAgent> = emptyList()
         private set
@@ -341,6 +344,20 @@ class SessionModel {
         updateHeader()
     }
 
+    /**
+     * Apply a sandbox status update, discarding one whose [SandboxUiState.Known.version] is not
+     * newer than the currently applied version — an out-of-order status/event must never overwrite
+     * a fresher one for the same session.
+     */
+    @RequiresEdt
+    fun setSandbox(state: SandboxUiState) {
+        val current = sandbox
+        if (state is SandboxUiState.Known && current is SandboxUiState.Known && state.version < current.version) return
+        if (sandbox == state) return
+        sandbox = state
+        fire(SessionModelEvent.SandboxChanged(state))
+    }
+
     /** Replace the raw background-agent rows (already parent-filtered by the caller) and re-derive [backgroundAgents]. */
     @RequiresEdt
     fun setBackgroundAgents(agents: List<BackgroundAgent>) {
@@ -394,6 +411,7 @@ class SessionModel {
         dismissedBackgroundAgents = emptySet()
         backgroundAgents = emptyList()
         compactionCount = 0
+        sandbox = SandboxUiState.Unknown
         for (msg in history) {
             val item = Message(msg.info)
             for (part in msg.parts) {
@@ -432,6 +450,7 @@ class SessionModel {
         dismissedBackgroundAgents = emptySet()
         backgroundAgents = emptyList()
         compactionCount = 0
+        sandbox = SandboxUiState.Unknown
         fire(SessionModelEvent.Cleared)
         updateHeader()
     }

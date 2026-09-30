@@ -155,7 +155,8 @@ class WorktreeController(
     fun quickCreate() = create(suggestName(), defaultBranch)
 
     /** Imports a worktree that checks out an existing local branch. */
-    fun importBranch(branch: String) = create(branch, base = null, existingBranch = true, kind = CreateKind.BRANCH)
+    fun importBranch(branch: String, sandbox: Boolean? = null) =
+        create(branch, base = null, existingBranch = true, sandbox = sandbox, kind = CreateKind.BRANCH)
 
     /**
      * Creates a worktree. When [prompt] is set, it is stashed for the worktree's first session so the
@@ -166,6 +167,7 @@ class WorktreeController(
         base: String?,
         existingBranch: Boolean = false,
         prompt: PendingPrompt? = null,
+        sandbox: Boolean? = null,
         kind: CreateKind = CreateKind.CREATE,
     ) {
         val id = "pending:$branch:${System.nanoTime()}"
@@ -178,11 +180,11 @@ class WorktreeController(
         }
         cs.launch {
             val result = service.create(directory, CreateWorktreeRequestDto(branch, base, existingBranch))
-            finishCreate(temp, branch, prompt, result, kind)
+            finishCreate(temp, branch, prompt, sandbox, result, kind)
         }
     }
 
-    fun importPr(url: String) {
+    fun importPr(url: String, sandbox: Boolean? = null) {
         val id = "pending:pr:${System.nanoTime()}"
         val temp = WorktreeDto(id, KiloBundle.message("worktree.import.pr.section"), "", id)
         edt {
@@ -193,7 +195,7 @@ class WorktreeController(
         }
         cs.launch {
             val result = service.importPr(directory, url)
-            finishCreate(temp, "pr", null, result, CreateKind.PR)
+            finishCreate(temp, "pr", null, sandbox, result, CreateKind.PR)
         }
     }
 
@@ -201,6 +203,7 @@ class WorktreeController(
         temp: WorktreeDto,
         branch: String,
         prompt: PendingPrompt?,
+        sandbox: Boolean?,
         result: CreateWorktreeResultDto,
         kind: CreateKind,
     ) {
@@ -213,6 +216,11 @@ class WorktreeController(
                 if (idx >= 0) model.setElementAt(created, idx) else model.add(0, created)
                 cache().put(created)
                 prompt?.let { service<PendingWorktreePrompt>().put(created.path, it) }
+                sandbox?.let { enabled ->
+                    service<PendingWorktreeSandbox>().put(created.path, enabled) {
+                        rollback(created, removeBranch = kind == CreateKind.CREATE)
+                    }
+                }
                 onSelect?.invoke(created.id)
                 onCreated?.invoke(created)
                 telemetry("Worktree Created", mapOf("branch" to branch))
@@ -252,6 +260,7 @@ class WorktreeController(
                     val index = model.getElementIndex(dto)
                     model.remove(dto)
                     cache().remove(dto.path)
+                    service<PendingWorktreeSandbox>().take(dto.path)
                     onRemoveSuccess?.invoke(dto, index)
                     onSuccess()
                     telemetry("Worktree Deleted", mapOf("branch" to dto.branch, "force" to force.toString()))
@@ -271,6 +280,30 @@ class WorktreeController(
                 onFailure(result)
             }
             reload()
+        }
+    }
+
+    /** Best-effort cleanup for a newly provisioned run whose first sandboxed session failed. */
+    private fun rollback(dto: WorktreeDto, removeBranch: Boolean) {
+        if (dto.id in tasks) return
+        tasks[dto.id] = KiloBundle.message("common.deleting")
+        edt { refresh(dto) }
+        cs.launch {
+            service<KiloRunService>().release(directory, dto.path)
+            val result = service.remove(directory, dto.path, dto.branch.takeIf { removeBranch }, force = true)
+            edt {
+                tasks.remove(dto.id)
+                if (result.ok) {
+                    model.remove(dto)
+                    cache().remove(dto.path)
+                    service<PendingWorktreeSandbox>().take(dto.path)
+                    telemetry("Worktree Sandbox Rollback", mapOf("branch" to dto.branch, "ok" to "true"))
+                    return@edt
+                }
+                refresh(dto)
+                telemetry("Worktree Sandbox Rollback", mapOf("branch" to dto.branch, "ok" to "false"))
+                reload()
+            }
         }
     }
 

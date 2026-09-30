@@ -46,6 +46,13 @@ class KiloCliDownloaderTest {
             assertEquals(File(File(dir, "1.2.3"), KiloCliPlatform.current()).absolutePath, cli.parentFile.parentFile.absolutePath)
             assertEquals("#!/bin/sh\n", cli.readText())
             assertTrue(File(cli.parentFile, "kilo-sandbox-mutation-worker.js").isFile)
+            val seccomp = File(cli.parentFile, "kilo-sandbox-seccomp")
+            assertTrue(seccomp.isFile)
+            // Executable bit must be restored on non-Windows the same as `kilo`/`bwrap`, or Linux
+            // allowed_hosts/proxy network mode reports available and then fails to spawn the relay.
+            if (!System.getProperty("os.name").lowercase().contains("windows")) {
+                assertTrue(seccomp.canExecute())
+            }
             assertEquals("/release/v1.2.3/kilo-${KiloCliPlatform.current()}.${KiloCliPlatform.archive()}", server.takeRequest().path)
             assertEquals(CliDownload(0, "1.2.3", KiloCliPlatform.current()), seen.first())
             assertTrue(seen.any { it.percent == 100 && it.version == "1.2.3" && it.platform == KiloCliPlatform.current() })
@@ -380,6 +387,7 @@ class KiloCliDownloaderTest {
         val files = mapOf(
             "bin/${KiloCliPlatform.exe()}" to script.toByteArray(),
             "bin/kilo-sandbox-mutation-worker.js" to "worker\n".toByteArray(),
+            "bin/kilo-sandbox-seccomp" to "seccomp\n".toByteArray(),
         )
         if (KiloCliPlatform.archive() == "zip") return zip(files)
         return tar(files)

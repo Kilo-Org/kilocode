@@ -73,6 +73,12 @@ sealed class SessionModelEvent {
     data class Compacted(val count: Int) : SessionModelEvent() {
         override fun toString() = "Compacted count=$count"
     }
+    data class SandboxChanged(val state: SandboxUiState) : SessionModelEvent() {
+        override fun toString() = when (val s = state) {
+            is SandboxUiState.Unknown -> "SandboxChanged unknown"
+            is SandboxUiState.Known -> "SandboxChanged enabled=${s.enabled} available=${s.available} version=${s.version}"
+        }
+    }
     data object HistoryLoaded : SessionModelEvent()
     data object Cleared : SessionModelEvent()
 

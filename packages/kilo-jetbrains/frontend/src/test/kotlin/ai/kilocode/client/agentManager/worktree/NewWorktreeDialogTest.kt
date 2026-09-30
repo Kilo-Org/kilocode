@@ -1,13 +1,16 @@
 package ai.kilocode.client.agentManager.worktree
 
 import ai.kilocode.client.app.KiloAppService
+import ai.kilocode.client.app.KiloSandboxService
 import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.plugin.KiloPluginSettings
 import ai.kilocode.client.session.ui.ReasoningPicker
 import ai.kilocode.client.session.ui.mode.ModePicker
 import ai.kilocode.client.session.ui.model.ModelPicker
 import ai.kilocode.client.session.ui.prompt.PromptPanel
+import ai.kilocode.client.settings.base.SettingsToggle
 import ai.kilocode.client.testing.FakeAppRpcApi
+import ai.kilocode.client.testing.FakeSandboxRpcApi
 import ai.kilocode.client.testing.FakeSessionRpcApi
 import ai.kilocode.client.testing.FakeWorkspaceRpcApi
 import ai.kilocode.client.util.edtWait
@@ -48,6 +51,7 @@ class NewWorktreeDialogTest : BasePlatformTestCase() {
     private lateinit var app: KiloAppService
     private lateinit var appRpc: FakeAppRpcApi
     private lateinit var workspaces: KiloWorkspaceService
+    private lateinit var sandbox: KiloSandboxService
     private lateinit var sessionRpc: FakeSessionRpcApi
     private var dialog: NewWorktreeDialog? = null
 
@@ -58,6 +62,8 @@ class NewWorktreeDialogTest : BasePlatformTestCase() {
         app = KiloAppService(scope, appRpc)
         val ws = FakeWorkspaceRpcApi().apply { models = workspace() }
         workspaces = KiloWorkspaceService(scope, ws)
+        sandbox = KiloSandboxService(project, scope, FakeSandboxRpcApi())
+        sandbox.unsetNewSessionDefault()
         sessionRpc = FakeSessionRpcApi()
         KiloPluginSettings.unsetAgent()
     }
@@ -65,6 +71,7 @@ class NewWorktreeDialogTest : BasePlatformTestCase() {
     override fun tearDown() {
         try {
             KiloPluginSettings.unsetGithub()
+            sandbox.unsetNewSessionDefault()
             dialog?.let { d -> edt { Disposer.dispose(d.disposable) } }
             dialog = null
             scope.cancel()
@@ -198,6 +205,21 @@ class NewWorktreeDialogTest : BasePlatformTestCase() {
         assertEquals("low", submitted().prompt?.variant)
     }
 
+    fun `test sandbox selection travels with the worktree plan`() {
+        open()
+        flushUntil { edt { sandboxToggle().isEnabled } }
+
+        edt {
+            sandboxToggle().doClick()
+            prompt().setText("build the thing")
+        }
+        flushUntil { edt { prompt().isSendEnabled } }
+        edt { prompt().send() }
+
+        assertTrue(submitted().sandbox)
+        assertTrue(sandbox.newSessionDefault())
+    }
+
     fun `test base branch fuzzy search selects matching popup item`() {
         open(branches = listOf("main", "release/candidate", "feature/refactor-ui"))
 
@@ -281,7 +303,7 @@ class NewWorktreeDialogTest : BasePlatformTestCase() {
             submit()
         }
 
-        assertEquals(NewWorktreePlan.Pr("https://github.com/o/r/pull/7"), taken())
+        assertEquals(NewWorktreePlan.Pr("https://github.com/o/r/pull/7", sandbox = false), taken())
     }
 
     fun `test blank pr url does not import`() {
@@ -322,7 +344,7 @@ class NewWorktreeDialogTest : BasePlatformTestCase() {
             submit()
         }
 
-        assertEquals(NewWorktreePlan.Pr("https://github.com/kilo-org/KiloCode/pull/7"), taken())
+        assertEquals(NewWorktreePlan.Pr("https://github.com/kilo-org/KiloCode/pull/7", sandbox = false), taken())
     }
 
     fun `test picking a branch produces a branch plan`() {
@@ -333,7 +355,7 @@ class NewWorktreeDialogTest : BasePlatformTestCase() {
             submit()
         }
 
-        assertEquals(NewWorktreePlan.Branch("feature/x"), taken())
+        assertEquals(NewWorktreePlan.Branch("feature/x", sandbox = false), taken())
     }
 
     fun `test importing a fuzzy branch resolves to the real branch`() {
@@ -344,7 +366,7 @@ class NewWorktreeDialogTest : BasePlatformTestCase() {
             submit()
         }
 
-        assertEquals(NewWorktreePlan.Branch("feature/refactor-ui"), taken())
+        assertEquals(NewWorktreePlan.Branch("feature/refactor-ui", sandbox = false), taken())
     }
 
     fun `test importing an unknown branch does not import`() {
@@ -368,7 +390,7 @@ class NewWorktreeDialogTest : BasePlatformTestCase() {
             submit()
         }
 
-        assertEquals(NewWorktreePlan.Pr("https://github.com/o/r/pull/7"), taken())
+        assertEquals(NewWorktreePlan.Pr("https://github.com/o/r/pull/7", sandbox = false), taken())
     }
 
     fun `test the deselected tab stops painting`() {
@@ -426,6 +448,7 @@ class NewWorktreeDialogTest : BasePlatformTestCase() {
                 origin,
                 app,
                 workspaces,
+                sandbox,
             )
         }
     }
@@ -465,6 +488,10 @@ class NewWorktreeDialogTest : BasePlatformTestCase() {
 
     private fun reasoning(): ReasoningPicker = prompt().reasoning
 
+    private fun sandboxToggle(): SettingsToggle = descendants(requireNotNull(dialog).centerComponent())
+        .filterIsInstance<SettingsToggle>()
+        .single()
+
     private fun prompt(): PromptPanel = descendants(newTab()).filterIsInstance<PromptPanel>().single()
 
     private fun combo(): ComboBox<*> = descendants(newTab()).filterIsInstance<ComboBox<*>>().single()
@@ -473,7 +500,9 @@ class NewWorktreeDialogTest : BasePlatformTestCase() {
 
     private fun popup(): BasicComboPopup = combo().accessibleContext.getAccessibleChild(0) as BasicComboPopup
 
-    private fun tabs(): JBTabs = requireNotNull(dialog).centerComponent() as JBTabs
+    private fun tabs(): JBTabs = descendants(requireNotNull(dialog).centerComponent())
+        .filterIsInstance<JBTabs>()
+        .single()
 
     private fun newTab(): Component = tabs().tabs[0].component
 
