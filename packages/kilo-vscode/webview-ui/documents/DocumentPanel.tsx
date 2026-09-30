@@ -1,7 +1,7 @@
 import { Dynamic } from "solid-js/web"
 import { Component, Show, Accessor, createMemo, createSignal, createEffect, onCleanup, on } from "solid-js"
 import { MarkdownPane } from "../diff-viewer/MarkdownDiffView"
-import { isMarkdownPath, type DocumentData, type DocumentTab } from "./state"
+import { documentPath, isMarkdownPath, type DocumentData, type DocumentTab } from "./state"
 import { InspectorTabStrip } from "../agent-manager/InspectorTabStrip"
 import { SortableClosableTab } from "../agent-manager/ClosableTab"
 import { useCodeComponent } from "@kilocode/kilo-ui/context/code"
@@ -63,22 +63,27 @@ function sendAllKeybind(t: (key: string) => string): string {
 }
 
 function copyText(text: string): void {
-  navigator.clipboard?.writeText(text).catch(() => {})
+  navigator.clipboard?.writeText(text).catch((err) => console.error("[Kilo New] Failed to copy text:", err))
 }
 
 function copyDocumentContent(
   text: string,
   timer: { id?: ReturnType<typeof setTimeout> },
   setCopied: (value: boolean) => void,
+  active: () => boolean,
 ): void {
   clearTimeout(timer.id)
   navigator.clipboard
     ?.writeText(text)
     .then(() => {
+      if (!active()) return
       setCopied(true)
       timer.id = setTimeout(() => setCopied(false), 1500)
     })
-    .catch(() => setCopied(false))
+    .catch((err) => {
+      console.error("[Kilo New] Failed to copy document content:", err)
+      setCopied(false)
+    })
 }
 
 function isEditableTarget(target: EventTarget | null): boolean {
@@ -141,7 +146,10 @@ export const DocumentPanel: Component<DocumentPanelProps> = (props) => {
   const [copied, setCopied] = createSignal(false)
   const copyTimer: { id?: ReturnType<typeof setTimeout> } = {}
   onCleanup(() => clearTimeout(copyTimer.id))
-  const copy = () => copyDocumentContent(content(), copyTimer, setCopied)
+  const copy = () => {
+    const path = file()
+    copyDocumentContent(content(), copyTimer, setCopied, () => file() === path)
+  }
 
   const updateComments = (next: ReviewComment[]) => props.onCommentsChange(next)
   const comments = () => props.comments.filter((item) => item.file === file())
@@ -341,11 +349,12 @@ export const DocumentPanel: Component<DocumentPanelProps> = (props) => {
         }}
         renderTab={(id, api) => {
           const tab = props.tabs().find((item) => item.id === id)!
+          const path = () => documentPath(tab, props.getData)
           return (
             <SortableClosableTab
               id={id}
               class="am-document-tab"
-              label={getFilename(tab.file)}
+              label={getFilename(path())}
               tooltip={tab.file}
               icon="open-file"
               iconNode={<FileIcon node={{ path: tab.file, type: "file" }} class="am-document-tab-icon" />}
@@ -365,15 +374,15 @@ export const DocumentPanel: Component<DocumentPanelProps> = (props) => {
               onCloseOthers={() => props.onCloseOthers(id)}
               menuLeading={
                 <>
-                  <ContextMenu.Item onSelect={() => props.onCopyPath(tab.file)}>
+                  <ContextMenu.Item onSelect={() => props.onCopyPath(path())}>
                     <Icon name="copy" size="small" />
                     <ContextMenu.ItemLabel>{t("agentManager.documents.copyPath")}</ContextMenu.ItemLabel>
                   </ContextMenu.Item>
-                  <ContextMenu.Item onSelect={() => copyText(tab.file)}>
+                  <ContextMenu.Item onSelect={() => copyText(path())}>
                     <Icon name="copy" size="small" />
                     <ContextMenu.ItemLabel>{t("agentManager.documents.copyRelativePath")}</ContextMenu.ItemLabel>
                   </ContextMenu.Item>
-                  <ContextMenu.Item onSelect={() => copyText(getFilename(tab.file))}>
+                  <ContextMenu.Item onSelect={() => copyText(getFilename(path()))}>
                     <Icon name="copy" size="small" />
                     <ContextMenu.ItemLabel>{t("agentManager.documents.copyFileName")}</ContextMenu.ItemLabel>
                   </ContextMenu.Item>

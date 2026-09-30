@@ -111,7 +111,10 @@ export class DocumentViewerProvider implements vscode.Disposable {
     if (message.type === "document.copyPath" && typeof message.file === "string") {
       const context = this.contexts.get(this.currentKey)
       const resolved = context?.directory ? resolveInside(context.directory, message.file) : undefined
-      if (resolved) void vscode.env.clipboard.writeText(resolved)
+      if (resolved)
+        vscode.env.clipboard
+          .writeText(resolved)
+          .then(undefined, (err) => console.error("[Kilo New] DocumentViewerProvider: Failed to copy path:", err))
       return
     }
     if (message.type === "document.close") this.panel?.dispose()

@@ -36,6 +36,11 @@ function key(context: string, file: string): string {
   return `${context}:${file}`
 }
 
+/** Tabs keep the path they were opened with (possibly absolute); loaded data carries the canonical relative path. */
+export function documentPath(tab: DocumentTab, get: (file: string) => DocumentData | undefined): string {
+  return get(tab.file)?.file ?? tab.file
+}
+
 export function isMarkdownPath(file: string): boolean {
   return /\.(md|mdx|markdown)$/i.test(file)
 }

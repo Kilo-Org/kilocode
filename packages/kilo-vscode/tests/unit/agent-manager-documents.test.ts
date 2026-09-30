@@ -4,6 +4,7 @@ import {
   createDocumentComments,
   createDocumentInspector,
   createDocuments,
+  documentPath,
   handleDocumentOpen,
   isMarkdownPath,
 } from "../../webview-ui/documents/state"
@@ -178,5 +179,12 @@ describe("Agent Manager document state", () => {
 
       dispose()
     })
+  })
+
+  it("uses the canonical relative path for tabs opened with an absolute path", () => {
+    const tab = { id: "wt:C:\\repo\\docs\\file.md", file: "C:\\repo\\docs\\file.md" }
+    const data = { file: "docs/file.md", content: "# Hi", loading: false }
+    expect(documentPath(tab, () => data)).toBe("docs/file.md")
+    expect(documentPath(tab, () => undefined)).toBe(tab.file)
   })
 })
