@@ -1990,7 +1990,7 @@ const layer = Layer.effect(
           : fuzzysort
               .go(providerID, Object.keys({ ...s.catalog, ...s.providers }), { limit: 3, threshold: -10000 })
               .map((m) => m.target)
-        const empty = false // kilocode_change
+        const empty = !!catalogProvider && Object.keys(catalogProvider.models).length === 0 // kilocode_change
         return yield* new ModelNotFoundError({ providerID, modelID, suggestions, modelsEmpty: empty }) // kilocode_change
       }
 
