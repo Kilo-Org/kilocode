@@ -20,7 +20,7 @@ Workflows that automate dependency remediation and give the team Slack visibilit
 
 `dependabot.yml` is not a workflow — it's a config file that GitHub's Dependabot backend reads directly. None of the 3 workflow files in this directory ever open a PR; they only act on PRs that already exist.
 
-Dependabot re-scans on the `schedule: interval` set per ecosystem block, and once immediately whenever `dependabot.yml` itself changes on the default branch. Per ecosystem (`bun`, `npm` for kilo-docs, `gradle` for kilo-jetbrains), it checks each dependency for updates, classifies each as `major`, `minor`, or `patch`, bundles everything matching a `groups: *-minor-patch` rule into one combined PR, and opens every major bump as its own individual PR. These are normal PRs from that point on — required CI and branch protection apply like any other PR.
+Dependabot re-scans on the `schedule: interval` set per ecosystem block, and once immediately whenever `dependabot.yml` itself changes on the default branch. Per ecosystem (`npm` for kilo-docs, `gradle` for kilo-jetbrains), it checks each dependency for updates, bundles minor and patch bumps into `groups: *-minor-patch` PRs (related packages share a group, so they move together), and ignores every major bump. Majors are bumped by hand. The `bun` block has `open-pull-requests-limit: 0`, so it opens no version-update PRs, only security-alert PRs. These are normal PRs from that point on — required CI and branch protection apply like any other PR.
 
 ### The 3 workflows each poll independently on their own schedule
 
@@ -41,4 +41,5 @@ They don't call each other or trigger off PR creation. Each one wakes up on its 
 kilocode is a fork of opencode sharing one `bun.lock` with upstream-owned `@opencode-ai/*` packages. Two things exist specifically to avoid friction with upstream syncs:
 
 - `dependabot-auto-merge.yml` only auto-merges a PR if every changed file (besides the shared `bun.lock`) lives under a `kilo`-named path. Anything touching shared/upstream code is left for a human.
+- The root `bun` block has version updates turned off. It scans ~17 upstream-owned packages and cannot be scoped by path, so its PRs almost always touched upstream files. Those dependencies come in with upstream merges.
 - `dependabot.yml` deliberately does **not** cover `packages/opencode/Dockerfile` or `.github/workflows/**`: both are shared/upstream paths that the auto-merge guard above would never approve anyway, and `.github/workflows/**` changes routinely fail this repo's `kilocode_change` annotation check unless they land inside an existing marker block. Those paths are covered by `security-findings-notify.yml` instead, which only reads GitHub's alerts, it never proposes a PR.
