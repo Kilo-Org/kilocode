@@ -24,6 +24,7 @@ import * as Network from "@/kilocode/sandbox/network"
 import { Notebook } from "@/kilocode/notebook/service"
 import { AgentManager, HostError } from "@/kilocode/agent-manager/service"
 import { KiloSessions } from "@/kilo-sessions/kilo-sessions"
+import { enabled as prEnabled } from "@/kilo-sessions/pr-link"
 import * as Log from "@opencode-ai/core/util/log"
 import type { Config } from "@/config/config"
 import type { RuntimeFlags } from "@/effect/runtime-flags"
@@ -359,10 +360,7 @@ export namespace KiloToolRegistry {
       tools.notify,
       ...(Flag.KILO_CLIENT === "vscode" && tools.openPlan ? [tools.openPlan] : []),
       tools.send,
-      // PR links are only consumed by CLI and remote sessions. Every other
-      // client detects a worktree's PR from its branch, so `link_pr` would
-      // store a link nothing on those clients reads.
-      ...(Flag.KILO_CLIENT === "cli" ? [tools.linkPr] : []),
+      ...(prEnabled() ? [tools.linkPr] : []),
     ]
   }
 

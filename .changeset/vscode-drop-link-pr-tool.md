@@ -2,4 +2,4 @@
 "@kilocode/cli": patch
 ---
 
-Offer the `link_pr` tool to CLI sessions only. VS Code, JetBrains, and other clients detect a worktree's pull request from its branch and never read a stored session link.
+Restrict session PR linking, automatic recording, and background polling to CLI backends. VS Code, Agent Manager, JetBrains, and other clients keep their existing PR integrations without running the separate session-link mechanism, including when controlled from mobile.
