@@ -152,6 +152,8 @@ class ReasoningView(
     @RequiresEdt
     fun hasToggle(): Boolean = arrow.isVisible
     @RequiresEdt
+    internal fun arrowIcon() = arrow.icon
+    @RequiresEdt
     fun headerText(): String = parts.title.text
     @RequiresEdt
     internal fun headerFont() = parts.title.font
@@ -222,6 +224,7 @@ class ReasoningView(
             collapse()
             releaseBody()
         }
+        syncExpandable(canExpand())
         return true
     }
 

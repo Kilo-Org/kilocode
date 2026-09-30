@@ -109,6 +109,28 @@ class ReasoningViewTest : BasePlatformTestCase() {
         assertTrue(view.isExpanded())
     }
 
+    fun `test live setting collapsing reasoning updates the chevron`() {
+        val view = ReasoningView(reasoning("p1", done = true, text = "one"), mode = ReasoningDisplay.EXPANDED)
+        assertSame(SessionViewIcons.chevronExpanded, view.arrowIcon())
+        KiloPluginSettings.setReasoningDisplay(ReasoningDisplay.HEADLINE)
+
+        assertTrue(view.syncTranscriptDisplay())
+
+        assertFalse(view.isExpanded())
+        assertSame(SessionViewIcons.chevronCollapsed, view.arrowIcon())
+    }
+
+    fun `test live setting expanding reasoning updates the chevron`() {
+        val view = ReasoningView(reasoning("p1", done = true, text = "one"), mode = ReasoningDisplay.HEADLINE)
+        assertSame(SessionViewIcons.chevronCollapsed, view.arrowIcon())
+        KiloPluginSettings.setReasoningDisplay(ReasoningDisplay.EXPANDED)
+
+        assertTrue(view.syncTranscriptDisplay())
+
+        assertTrue(view.isExpanded())
+        assertSame(SessionViewIcons.chevronExpanded, view.arrowIcon())
+    }
+
     // -- Preview mode (height-capped auto-scrolling body while streaming; auto-collapses + releases body when done) --
 
     fun `test preview mode collapses completed reasoning by default`() {
