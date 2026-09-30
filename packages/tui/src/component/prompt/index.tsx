@@ -59,6 +59,7 @@ import { slashMatches } from "@/kilocode/cli/cmd/command-display"
 import { createCostAlertController } from "@/kilocode/cli/cmd/tui/cost-alert"
 import { MemoryPrompt } from "@/kilocode/cli/cmd/tui/component/memory-prompt"
 import { GoalPrompt } from "@/kilocode/cli/cmd/tui/component/goal"
+import { KiloSteer } from "../../kilocode/steer"
 // kilocode_change end
 import { KILO_BASE_MODE, useBindings, useCommandShortcut, useLeaderActive, useOpencodeKeymap } from "../../keymap"
 import { useTuiConfig } from "../../config"
@@ -235,8 +236,11 @@ export function Prompt(props: PromptProps) {
     bumpCursor: () => setCursorVersion((value) => value + 1),
     cursorVersion: () => cursorVersion(),
   })
+  // Subagent views never interrupt: aborting the child would fail the parent's pending task call.
   const interruptible = createMemo(
-    () => running(status().type) || (goal()?.active === true && (!vim.vimEnabled() || vim.vimMode() === "normal")),
+    () =>
+      !KiloSteer.steering(sync.session.get(props.sessionID ?? "")) &&
+      (running(status().type) || (goal()?.active === true && (!vim.vimEnabled() || vim.vimMode() === "normal"))),
   )
   // kilocode_change end
   const currentProviderLabel = createMemo(() => local.model.parsed().provider)
@@ -1181,6 +1185,7 @@ export function Prompt(props: PromptProps) {
           ]
         : []
 
+    const target = sync.session.get(sessionID) // kilocode_change - subagent steering target
     if (store.mode === "shell") {
       move.startSubmit()
       void sdk.client.session.shell({
@@ -1191,6 +1196,7 @@ export function Prompt(props: PromptProps) {
           modelID: selectedModel.modelID,
         },
         command: inputText,
+        ...KiloSteer.shell(target), // kilocode_change - run subagent shell as the subagent
       })
       setStore("mode", "normal")
     } else if (
@@ -1212,6 +1218,7 @@ export function Prompt(props: PromptProps) {
         agent: local.agent.current()?.name ?? "", // kilocode_change
         model: `${selectedModel.providerID}/${selectedModel.modelID}`,
         variant,
+        ...KiloSteer.command(target), // kilocode_change - run subagent commands as the subagent
         parts: nonTextParts.filter((x) => x.type === "file"),
       }).then((result) => GoalPrompt.feedback(command.slice(1), args, result, toast)) // kilocode_change
     } else {
@@ -1224,11 +1231,13 @@ export function Prompt(props: PromptProps) {
             agent: agent.name,
             model: selectedModel,
             variant,
+            ...KiloSteer.prompt(target), // kilocode_change - steer a subagent with its own agent/model
             parts: [
               ...editorParts,
               {
                 type: "text",
                 text: inputText,
+                ...KiloSteer.mark(target), // kilocode_change - mark human steering for the parent notice
               },
               ...nonTextParts,
             ],

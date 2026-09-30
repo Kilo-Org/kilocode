@@ -65,6 +65,7 @@ import stripAnsi from "strip-ansi"
 import { usePromptRef } from "../../context/prompt"
 import { ApprovalBadge, describeApproval, stateMetadata } from "../../kilocode/tool-approval" // kilocode_change
 import { BoardTool } from "../../kilocode/board-tool" // kilocode_change
+import { KiloSteer } from "../../kilocode/steer" // kilocode_change
 import { useEpilogue } from "../../context/epilogue"
 import { normalizePath } from "../../util/path"
 import { PermissionPrompt } from "./permission"
@@ -159,10 +160,11 @@ const sessionBindingCommands = [
   "session.copy",
   "session.export",
   "session.child.first",
-  "session.parent",
-  "session.child.next",
-  "session.child.previous",
 ] as const
+
+// kilocode_change start - subagent navigation keys (bare arrows) yield to a steering prompt with text
+const sessionNavBindingCommands = ["session.parent", "session.child.next", "session.child.previous"] as const
+// kilocode_change end
 
 const sessionGlobalBindingCommands = [
   "session.page.up",
@@ -278,7 +280,7 @@ export function Session() {
   const blockingSuggestion = createMemo(() => blockingSuggestions()[0])
   const visible = createMemo(
     () =>
-      !session()?.parentID &&
+      KiloSteer.open(session(), sync.data.session_status?.[route.sessionID]?.type) &&
       permissions().length === 0 &&
       blockingQuestions().length === 0 &&
       blockingSuggestions().length === 0 &&
@@ -1243,6 +1245,15 @@ export function Session() {
     mode: KILO_BASE_MODE,
     bindings: tuiConfig.keybinds.gather("session", sessionBindingCommands),
   }))
+
+  // kilocode_change start - outrank prompt history on an empty prompt; step aside once a steer is typed
+  useBindings(() => ({
+    mode: KILO_BASE_MODE,
+    priority: 1,
+    enabled: () => KiloSteer.nav(prompt),
+    bindings: tuiConfig.keybinds.gather("session.nav", sessionNavBindingCommands),
+  }))
+  // kilocode_change end
 
   useBindings(() => ({
     mode: KILO_BASE_MODE,
