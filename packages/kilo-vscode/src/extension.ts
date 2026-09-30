@@ -435,8 +435,11 @@ export async function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(settingsEditorProvider, marketplacePanelProvider)
 
   // Surface a discardable notification when a marketplace item matches the workspace.
-  const marketplaceNotifier = new MarketplaceNotifier(connectionService, context, (item) =>
-    marketplacePanelProvider.openInstall(item),
+  const marketplaceNotifier = new MarketplaceNotifier(
+    connectionService,
+    context,
+    (item) => marketplacePanelProvider.openInstall(item),
+    (item) => marketplacePanelProvider.focusItem(item),
   )
   context.subscriptions.push(marketplaceNotifier)
   marketplaceNotifier.start()
