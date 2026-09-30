@@ -4,11 +4,13 @@ import ai.kilocode.client.util.edtWait
 import ai.kilocode.client.app.KiloAgentBehaviorService
 import ai.kilocode.client.app.KiloAppService
 import ai.kilocode.client.app.KiloMcpAuthService
+import ai.kilocode.client.app.KiloMarketplaceService
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.settings.base.DirectoryReadyConfigurable
 import ai.kilocode.client.settings.base.SettingsInfo
 import ai.kilocode.client.testing.FakeAgentBehaviorRpcApi
 import ai.kilocode.client.testing.FakeAppRpcApi
+import ai.kilocode.client.testing.FakeMarketplaceRpcApi
 import ai.kilocode.client.testing.fire
 import ai.kilocode.client.testing.rowLines
 import ai.kilocode.client.ui.list.ActiveListItem
@@ -21,6 +23,7 @@ import ai.kilocode.rpc.dto.McpAuthResultDto
 import ai.kilocode.rpc.dto.McpConfigDto
 import ai.kilocode.rpc.dto.McpServerConfigDto
 import ai.kilocode.rpc.dto.McpStatusDto
+import ai.kilocode.rpc.dto.MarketplaceBundleDto
 import com.intellij.icons.AllIcons
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.service
@@ -56,6 +59,7 @@ class McpSettingsUiTest : BasePlatformTestCase() {
     private lateinit var app: KiloAppService
     private lateinit var appRpc: FakeAppRpcApi
     private lateinit var agentRpc: FakeAgentBehaviorRpcApi
+    private lateinit var marketRpc: FakeMarketplaceRpcApi
 
     override fun tearDown() {
         try {
@@ -91,13 +95,13 @@ class McpSettingsUiTest : BasePlatformTestCase() {
             assertEquals(listOf("connected", "stdio"), rows.single { it.key == "filesystem" }.badges.map { it.text })
             assertEquals("bun mcp-files", rows.single { it.key == "filesystem" }.description)
             assertEquals(listOf("needs auth", "remote"), rows.single { it.key == "github" }.badges.map { it.text })
+            assertEquals(AllIcons.General.Warning, rows.single { it.key == "github" }.badges.first().icon)
             assertEquals("https://mcp.github.test", rows.single { it.key == "github" }.description)
             assertEquals(listOf("failed"), rows.single { it.key == "runtime" }.badges.map { it.text })
             assertEquals("crashed", rows.single { it.key == "runtime" }.description)
             val github = rows.single { it.key == "github" }
-            assertEquals(listOf("connect", "auth", "resetAuth", "edit", "remove"), github.cells.map { it.id })
+            assertEquals(listOf("auth", "edit", "remove"), github.cells.map { it.id })
             assertTrue(github.cells.single { it.id == "edit" }.primary)
-            assertEquals(KiloBundle.message("settings.agentBehavior.mcp.connect"), github.cells.single { it.id == "connect" }.label)
             val remove = github.cells.single { it.id == "remove" }
             assertEquals(AllIcons.Actions.GC, remove.icon)
             assertTrue(remove.iconOnly)
@@ -131,6 +135,8 @@ class McpSettingsUiTest : BasePlatformTestCase() {
             // github is needs_auth in the fixture; the row must expose sign-in, not just Connect.
             val cells = rows(panel).single { it.key == "github" }.cells.map { it.id }
             assertTrue("needs_auth must offer sign-in, got $cells", cells.contains("auth"))
+            assertFalse("needs_auth must not offer connect, got $cells", cells.contains("connect"))
+            assertFalse("needs_auth must not offer reset sign-in, got $cells", cells.contains("resetAuth"))
             val label = rows(panel).single { it.key == "github" }.cells.single { it.id == "auth" }.label
             assertEquals(KiloBundle.message("settings.agentBehavior.mcp.signIn"), label)
             // A healthy server must not.
@@ -239,11 +245,11 @@ class McpSettingsUiTest : BasePlatformTestCase() {
             agentRpc.mcps = agentRpc.mcps.filterNot { it.name == name } + McpStatusDto(name, "connected")
         }
 
-        click(panel, "github", "connect")
+        click(panel, "runtime", "connect")
 
-        flushUntil { rows(panel).single { it.key == "github" }.badges.first().text == "connected" }
-        assertEquals(listOf("github"), agentRpc.mcpConnects)
-        assertEquals("github", edt { list(panel).selectedValue?.key })
+        flushUntil { rows(panel).single { it.key == "runtime" }.badges.first().text == "connected" }
+        assertEquals(listOf("runtime"), agentRpc.mcpConnects)
+        assertEquals("runtime", edt { list(panel).selectedValue?.key })
     }
 
     fun `test remove action writes mcp config patch and reloads`() {
@@ -259,6 +265,44 @@ class McpSettingsUiTest : BasePlatformTestCase() {
         assertEquals("filesystem", save.first)
         assertEquals("global", save.second)
         assertNull(save.third)
+    }
+
+    fun `test removing a marketplace MCP confirms and removes its companion bundle`() {
+        val panel = panel()
+        flushUntil { rows(panel).size == 3 }
+        val server = agentRpc.mcpConfigs.getValue("github")
+        agentRpc.mcpConfigs = agentRpc.mcpConfigs + ("github" to server.copy(scope = "workspace"))
+        marketRpc.bundles = listOf(MarketplaceBundleDto("github", "project", listOf("$DIR/.kilo/skills/github/SKILL.md")))
+        edt { panel.reload(); true }
+        flushUntil { marketRpc.bundleCalls.size >= 2 && searchField(panel).isEnabled }
+        var message = ""
+        TestDialogManager.setTestDialog {
+            message = it
+            Messages.YES
+        }
+
+        click(panel, "github", "remove")
+
+        flushUntil { marketRpc.removeCalls.isNotEmpty() }
+        assertTrue(message.contains("companion skills"))
+        assertEquals(FakeMarketplaceRpcApi.RemoveCall(DIR, "github", "mcp", "project"), marketRpc.removeCalls.single())
+        assertTrue(agentRpc.mcpSaves.isEmpty())
+        assertEquals(listOf(DIR), agentRpc.skillReloads)
+    }
+
+    fun `test declining marketplace MCP removal keeps both components`() {
+        val panel = panel()
+        flushUntil { rows(panel).size == 3 }
+        marketRpc.bundles = listOf(MarketplaceBundleDto("github", "global", listOf("/skills/github/SKILL.md")))
+        edt { panel.reload(); true }
+        flushUntil { marketRpc.bundleCalls.size >= 2 && searchField(panel).isEnabled }
+        TestDialogManager.setTestDialog { Messages.NO }
+
+        click(panel, "github", "remove")
+
+        edt { UIUtil.dispatchAllInvocationEvents(); true }
+        assertTrue(marketRpc.removeCalls.isEmpty())
+        assertTrue(agentRpc.mcpSaves.isEmpty())
     }
 
     fun `test remove selects the server that took the deleted slot`() {
@@ -449,14 +493,22 @@ class McpSettingsUiTest : BasePlatformTestCase() {
         flushUntil { agentRpc.mcpAuthRemovals.contains("github") }
     }
 
-    fun `test reset sign in cell only appears for remote servers`() {
+    fun `test reset sign in cell only appears for connected remote servers`() {
         val panel = panel()
         flushUntil { rows(panel).size == 3 }
 
         edt {
             val rows = rows(panel)
-            assertTrue(rows.single { it.key == "github" }.cells.any { it.id == "resetAuth" })
+            assertFalse(rows.single { it.key == "github" }.cells.any { it.id == "resetAuth" })
             assertFalse(rows.single { it.key == "filesystem" }.cells.any { it.id == "resetAuth" })
+            true
+        }
+
+        status(panel, "github", "connected")
+
+        edt {
+            val cells = rows(panel).single { it.key == "github" }.cells.map { it.id }
+            assertEquals(listOf("disconnect", "resetAuth", "edit", "remove"), cells)
             true
         }
     }
@@ -464,6 +516,7 @@ class McpSettingsUiTest : BasePlatformTestCase() {
     fun `test reset sign in requires confirmation and calls mcpAuthRemove on accept`() {
         val panel = panel()
         flushUntil { rows(panel).size == 3 }
+        status(panel, "github", "connected")
         agentRpc.mcpAuthRemoveResult = true
         agentRpc.afterMcpConnect = { _, name ->
             agentRpc.mcps = agentRpc.mcps.filterNot { it.name == name } + McpStatusDto(name, "needs_auth")
@@ -481,6 +534,7 @@ class McpSettingsUiTest : BasePlatformTestCase() {
     fun `test reset sign in decline does not call mcpAuthRemove`() {
         val panel = panel()
         flushUntil { rows(panel).size == 3 }
+        status(panel, "github", "connected")
         TestDialogManager.setTestDialog { Messages.NO }
 
         click(panel, "github", "resetAuth")
@@ -545,10 +599,18 @@ class McpSettingsUiTest : BasePlatformTestCase() {
         return panel
     }
 
+    private fun status(panel: McpSettingsUi, name: String, status: String) {
+        val calls = agentRpc.mcpCalls.size
+        agentRpc.mcps = agentRpc.mcps.filterNot { it.name == name } + McpStatusDto(name, status)
+        edt { panel.reload(); true }
+        flushUntil { agentRpc.mcpCalls.size > calls && searchField(panel).isEnabled }
+    }
+
     private fun install() {
         val cs = CoroutineScope(SupervisorJob())
         scope = cs
         appRpc = FakeAppRpcApi()
+        marketRpc = FakeMarketplaceRpcApi()
         agentRpc = FakeAgentBehaviorRpcApi().apply {
             mcps = listOf(
                 McpStatusDto("filesystem", "connected"),
@@ -571,6 +633,11 @@ class McpSettingsUiTest : BasePlatformTestCase() {
         val behavior = KiloAgentBehaviorService(cs, agentRpc)
         ApplicationManager.getApplication().replaceService(KiloAgentBehaviorService::class.java, behavior, testRootDisposable)
         ApplicationManager.getApplication().replaceService(KiloMcpAuthService::class.java, KiloMcpAuthService(cs, behavior), testRootDisposable)
+        ApplicationManager.getApplication().replaceService(
+            KiloMarketplaceService::class.java,
+            KiloMarketplaceService(cs, marketRpc),
+            testRootDisposable,
+        )
     }
 
     private fun click(panel: McpSettingsUi, key: String, id: String) {

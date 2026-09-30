@@ -1,6 +1,7 @@
 package ai.kilocode.client.testing
 
 import ai.kilocode.rpc.KiloMarketplaceRpcApi
+import ai.kilocode.rpc.dto.MarketplaceBundleDto
 import ai.kilocode.rpc.dto.MarketplaceItemDto
 import ai.kilocode.rpc.dto.MarketplaceListDto
 import ai.kilocode.rpc.dto.MarketplaceResultDto
@@ -11,10 +12,12 @@ class FakeMarketplaceRpcApi : KiloMarketplaceRpcApi {
     var listError: Exception? = null
     var installResult = MarketplaceResultDto(success = true, slug = "test")
     var removeResult = MarketplaceResultDto(success = true, slug = "test")
+    var bundles = emptyList<MarketplaceBundleDto>()
 
     /** Holds [install] open until completed, so a test can observe the in-flight state. */
     var installGate: CompletableDeferred<Unit>? = null
     val listCalls = mutableListOf<String>()
+    val bundleCalls = mutableListOf<String>()
     val installCalls = mutableListOf<InstallCall>()
     val removeCalls = mutableListOf<RemoveCall>()
 
@@ -26,6 +29,12 @@ class FakeMarketplaceRpcApi : KiloMarketplaceRpcApi {
         listError?.let { throw it }
         listCalls.add(directory)
         return list
+    }
+
+    override suspend fun bundles(directory: String): List<MarketplaceBundleDto> {
+        assertNotEdt("marketplace.bundles")
+        bundleCalls.add(directory)
+        return bundles
     }
 
     override suspend fun install(

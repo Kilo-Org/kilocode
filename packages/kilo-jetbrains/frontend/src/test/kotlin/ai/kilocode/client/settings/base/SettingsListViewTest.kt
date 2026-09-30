@@ -660,7 +660,7 @@ class SettingsListViewTest : BasePlatformTestCase() {
         }
     }
 
-    fun `test in-place action cells are hidden on unfocused selected row`() {
+    fun `test in-place action cells stay visible on unfocused selected row`() {
         edt {
             val row = item("with", "Alpha", "Description", ActiveListCell("edit", "Edit"))
             val model = CollectionListModel<ActiveListItem>(listOf(row))
@@ -668,7 +668,7 @@ class SettingsListViewTest : BasePlatformTestCase() {
             val renderer = ActiveListRenderer(model, ActiveListConfig.Equal)
 
             renderer.getListCellRendererComponent(list, row, 0, true, false)
-            assertTrue(actionCells(renderer).none { it.isVisible })
+            assertEquals(listOf("edit"), actionCells(renderer).filter { it.isVisible }.map { it.cellId })
 
             renderer.getListCellRendererComponent(list, row, 0, true, true)
             assertEquals(listOf("edit"), actionCells(renderer).filter { it.isVisible }.map { it.cellId })

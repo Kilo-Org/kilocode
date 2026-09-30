@@ -2,6 +2,7 @@ package ai.kilocode.client.settings.agents
 
 import ai.kilocode.client.app.KiloAgentBehaviorService
 import ai.kilocode.client.app.KiloMcpAuthService
+import ai.kilocode.client.app.KiloMarketplaceService
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.plugin.KiloDocs
 import ai.kilocode.client.settings.base.DirectoryReadyConfigurable
@@ -19,6 +20,7 @@ import ai.kilocode.log.KiloLog
 import ai.kilocode.rpc.dto.McpConfigDto
 import ai.kilocode.rpc.dto.McpServerConfigDto
 import ai.kilocode.rpc.dto.McpStatusDto
+import ai.kilocode.rpc.dto.MarketplaceBundleDto
 import com.intellij.icons.AllIcons
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.application.EDT
@@ -77,6 +79,7 @@ internal class McpSettingsUi(
     private var dir = dir
 
     private var servers: Map<String, McpServerConfigDto> = emptyMap()
+    private var bundles: List<MarketplaceBundleDto> = emptyList()
 
     init {
         start()
@@ -91,7 +94,11 @@ internal class McpSettingsUi(
     override suspend fun fetch(): List<ActiveListItem> {
         val behavior = service<KiloAgentBehaviorService>()
         val cfg = behavior.mcpConfig(dir)
-        withContext(edt) { servers = cfg }
+        val owned = if (dir.isBlank()) emptyList() else service<KiloMarketplaceService>().bundles(dir)
+        withContext(edt) {
+            servers = cfg
+            bundles = owned
+        }
         val statuses = if (dir.isBlank()) {
             LOG.warn("mcp settings fetch skipped runtime status: missing project directory config=${cfg.size}")
             emptyMap()
@@ -162,18 +169,19 @@ internal class McpSettingsUi(
             statusLabel(status),
             statusStyle(status),
             id = STATUS_BADGE,
+            icon = AllIcons.General.Warning.takeIf { status?.status == NEEDS_AUTH },
             tooltip = statusTooltip(status),
         ).takeIf { status != null },
         ActiveListBadge(cfg?.type ?: KiloBundle.message("settings.agentBehavior.mcp.configured")).takeIf { cfg != null },
     )
 
     private fun cells(cfg: McpConfigDto?, status: McpStatusDto?): List<ActiveListCell> = listOfNotNull(
-        connect(status?.status == CONNECTED),
+        connect(status?.status == CONNECTED).takeUnless { status?.status == NEEDS_AUTH },
         ActiveListCell(AUTH_CELL, KiloBundle.message("settings.agentBehavior.mcp.signIn")).takeIf {
             status?.status == NEEDS_AUTH
         },
         ActiveListCell(RESET_AUTH_CELL, KiloBundle.message("settings.agentBehavior.mcp.resetAuth")).takeIf {
-            cfg?.type == "remote"
+            cfg?.type == "remote" && status?.status == CONNECTED
         },
         ActiveListCell(
             EDIT_CELL,
@@ -247,16 +255,32 @@ internal class McpSettingsUi(
     }
 
     private fun remove(name: String) {
+        val scope = servers[name]?.scope ?: return
+        val target = if (scope == "workspace") "project" else scope
+        val bundle = bundles.singleOrNull { it.id == name && it.scope == target }
         val result = Messages.showYesNoDialog(
-            KiloBundle.message("settings.agentBehavior.mcp.delete.message", name),
+            KiloBundle.message(
+                if (bundle == null) "settings.agentBehavior.mcp.delete.message"
+                else "settings.agentBehavior.mcp.delete.bundle.message",
+                name,
+            ),
             KiloBundle.message("settings.agentBehavior.mcp.delete.title"),
             KiloBundle.message("common.delete"),
             Messages.getCancelButton(),
             Messages.getQuestionIcon(),
         )
         if (result != Messages.YES) return
-        val scope = servers[name]?.scope ?: return
         mutateAndReload(ActiveListSelection.Slide) {
+            if (bundle != null) {
+                val removed = service<KiloMarketplaceService>().remove(dir, name, "mcp", target)
+                if (!removed.success) {
+                    throw SettingsMessageException(
+                        removed.error ?: KiloBundle.message("settings.marketplace.remove.failed"),
+                    )
+                }
+                service<KiloAgentBehaviorService>().reloadSkills(dir)
+                return@mutateAndReload true
+            }
             if (!service<KiloAgentBehaviorService>().saveMcp(dir, name, scope, null)) {
                 throw SettingsMessageException(KiloBundle.message("settings.agentBehavior.save.failed"))
             }

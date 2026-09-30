@@ -3,6 +3,7 @@ package ai.kilocode.client.settings.agents
 import ai.kilocode.client.KiloNotifications
 import ai.kilocode.client.app.KiloAgentBehaviorService
 import ai.kilocode.client.app.KiloAppService
+import ai.kilocode.client.app.KiloMarketplaceService
 import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.plugin.KiloDocs
@@ -29,6 +30,7 @@ import ai.kilocode.client.ui.list.ActiveListSelection
 import ai.kilocode.client.ui.list.ActiveListView
 import ai.kilocode.log.KiloLog
 import ai.kilocode.rpc.dto.ConfigPatchDto
+import ai.kilocode.rpc.dto.MarketplaceBundleDto
 import ai.kilocode.rpc.dto.SkillDto
 import ai.kilocode.rpc.dto.SkillsConfigDto
 import ai.kilocode.rpc.dto.SkillsPatchDto
@@ -91,6 +93,7 @@ internal class SkillsSettingsUi(
     private val cs = scope
     private var dir = dir
     private var skills = emptyMap<String, SkillDto>()
+    private var bundles = emptyList<MarketplaceBundleDto>()
     private val app get() = service<KiloAppService>()
     private val state = SettingsDraftState(skillsDraft(app.state.value.config?.skills ?: SkillsConfigDto()), ::saved)
     private var draft: SkillsDraft
@@ -116,12 +119,20 @@ internal class SkillsSettingsUi(
         val items = withTimeoutOrNull(SKILL_LOAD_TIMEOUT_MS) {
             service<KiloAgentBehaviorService>().loadSkills(dir)
         } ?: throw SettingsMessageException(KiloBundle.message("settings.agentBehavior.skills.load.timeout"))
+        val owned = if (dir.isBlank()) emptyList() else service<KiloMarketplaceService>().bundles(dir)
         withContext(edt) {
             val dirty = state.modified()
             val edit = draft
             state.accept(skillsDraft(config()))
-            if (dirty) draft = state.draft.copy(edited = edit.edited, deleted = edit.deleted)
+            if (dirty) {
+                draft = state.draft.copy(
+                    edited = edit.edited,
+                    deleted = edit.deleted,
+                    uninstalls = edit.uninstalls,
+                )
+            }
             skills = items.associateBy { key(it) }
+            bundles = owned
             sources.refresh(draft.sources)
         }
         LOG.info("skills settings fetch dir=$dir total=${items.size}")
@@ -179,6 +190,15 @@ internal class SkillsSettingsUi(
                 failed = KiloBundle.message("settings.agentBehavior.save.failed")
             }
             if (failed == null) {
+                for (bundle in target.uninstalls) {
+                    val result = service<KiloMarketplaceService>().remove(dir, bundle.id, "mcp", bundle.scope)
+                    if (!result.success) {
+                        failed = result.error ?: KiloBundle.message("settings.marketplace.remove.failed")
+                        break
+                    }
+                }
+            }
+            if (failed == null) {
                 for (location in target.deleted) {
                     if (!behavior.removeSkill(dir, location)) {
                         failed = KiloBundle.message("settings.agentBehavior.skills.delete.failed")
@@ -226,12 +246,12 @@ internal class SkillsSettingsUi(
     }
 
     private fun rows(items: List<SkillDto> = skills.values.toList()): List<ActiveListItem> = items.mapNotNull { skill ->
-        if (skill.location in draft.deleted) return@mapNotNull null
+        if (skill.location in draft.deleted || draft.uninstalls.any { skill.location in it.skills }) return@mapNotNull null
         item(skill)
     }
 
     private fun skillFallback(target: SkillsDraft): List<SkillDto> = skills.values.mapNotNull { skill ->
-        if (skill.location in target.deleted) return@mapNotNull null
+        if (skill.location in target.deleted || target.uninstalls.any { skill.location in it.skills }) return@mapNotNull null
         target.edited[skill.location]?.let { skill.copy(content = it) } ?: skill
     }
 
@@ -287,14 +307,30 @@ internal class SkillsSettingsUi(
     }
 
     private fun remove(skill: SkillDto) {
+        val bundle = bundles.singleOrNull { skill.location in it.skills }
         val result = Messages.showYesNoDialog(
-            KiloBundle.message("settings.agentBehavior.skills.delete.message", skill.name),
+            if (bundle == null) {
+                KiloBundle.message("settings.agentBehavior.skills.delete.message", skill.name)
+            } else {
+                KiloBundle.message("settings.agentBehavior.skills.delete.bundle.message", skill.name, bundle.id)
+            },
             KiloBundle.message("settings.agentBehavior.skills.delete.title"),
             KiloBundle.message("common.delete"),
             Messages.getCancelButton(),
             Messages.getQuestionIcon(),
         )
         if (result != Messages.YES) return
+        if (bundle != null) {
+            state.update {
+                copy(
+                    deleted = deleted - bundle.skills.toSet(),
+                    edited = edited - bundle.skills.toSet(),
+                    uninstalls = uninstalls + bundle,
+                )
+            }
+            view.update(rows(), ActiveListSelection.Slide)
+            return
+        }
         state.update { copy(deleted = deleted + skill.location, edited = edited - skill.location) }
         view.update(rows(), ActiveListSelection.Slide)
     }
@@ -325,6 +361,7 @@ private data class SkillsDraft(
     val sources: SkillsConfigDto,
     val edited: Map<String, String> = emptyMap(),
     val deleted: Set<String> = emptySet(),
+    val uninstalls: Set<MarketplaceBundleDto> = emptySet(),
 )
 
 private fun skillsDraft(sources: SkillsConfigDto) = SkillsDraft(sources)

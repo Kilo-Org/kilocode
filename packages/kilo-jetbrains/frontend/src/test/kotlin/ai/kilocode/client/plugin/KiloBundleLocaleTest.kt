@@ -513,6 +513,8 @@ class KiloBundleLocaleTest : BasePlatformTestCase() {
             "settings.agentBehavior.mcp.signIn.unsupported" to listOf("SERVER_NAME"),
             "settings.agentBehavior.mcp.resetAuth.message" to listOf("SERVER_NAME"),
             "settings.agentBehavior.mcp.authUrl.message" to listOf("SERVER_NAME"),
+            "settings.agentBehavior.mcp.delete.bundle.message" to listOf("SERVER_NAME"),
+            "settings.agentBehavior.skills.delete.bundle.message" to listOf("SKILL_NAME", "SERVER_NAME"),
             "settings.marketplace.mcp.signIn.message" to listOf("SERVER_NAME"),
             "prompt.mcp.needsAuth.one" to listOf("SERVER_NAME"),
             "prompt.mcp.needsAuth.many" to listOf("7"),
