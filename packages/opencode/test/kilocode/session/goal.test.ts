@@ -1191,7 +1191,21 @@ it.instance(
 it.instance(
   "preserves metadata and paused forks while goal controls leave the transcript and model unchanged",
   Effect.gen(function* () {
-    const { llm, sessions, session, command, metadata, wait } = yield* setup()
+    const { llm, sessions, session, command, metadata } = yield* setup()
+    const events = yield* EventV2Bridge.Service
+    const drain = yield* SessionDrain.Service
+    const resume = Effect.gen(function* () {
+      // An HTTP hit does not mean the client has started processing the stream.
+      const received = yield* events.subscribe(MessageV2.Event.PartUpdated).pipe(
+        Stream.filter((event) => event.data.part.sessionID === session.id && event.data.part.type === "step-start"),
+        Stream.take(1),
+        Stream.runDrain,
+        Effect.forkChild({ startImmediately: true }),
+      )
+      yield* llm.hang
+      yield* command("resume")
+      yield* awaitWithTimeout(Fiber.join(received), "goal stream did not start", "15 seconds")
+    })
     const selected = {
       agent: "ask",
       model: {
@@ -1208,6 +1222,8 @@ it.instance(
       if (before.length) expect(target).toBeDefined()
       for (const message of before) ids.add(message.info.id)
       const ack = yield* command(args)
+      // Cancellation can return before the prompt waiter releases its queue slot.
+      yield* awaitWithTimeout(drain.wait(session.id), "goal prompt did not drain")
       const after = yield* sessions.messages({ sessionID: session.id })
       expect(after.map((message) => message.info.id)).toEqual(before.map((message) => message.info.id))
       expect(KiloSessionContinuation.target(after)).toBe(target)
@@ -1230,9 +1246,7 @@ it.instance(
       expect.arrayContaining([expect.objectContaining({ text: expect.stringContaining("paused") })]),
     )
     expect(yield* llm.hits).toHaveLength(0)
-    yield* llm.hang
-    yield* command("resume")
-    yield* wait(1)
+    yield* resume
     const fork = yield* sessions.fork({ sessionID: session.id })
     expect(fork.metadata).toMatchObject({
       ...retained,
@@ -1251,9 +1265,7 @@ it.instance(
     })
     yield* control("")
     expect(yield* llm.hits).toHaveLength(1)
-    yield* llm.hang
-    yield* command("resume")
-    yield* wait(2)
+    yield* resume
     yield* control("clear")
     expect(yield* metadata).toEqual(retained)
     yield* Effect.sleep("5200 millis")
@@ -2580,4 +2592,3 @@ it.instance(
   }),
   30_000,
 )
-
