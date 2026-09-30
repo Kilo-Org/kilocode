@@ -673,7 +673,7 @@ module.exports = [
   // ============================================
   {
     source: "/docs/advanced-usage/appbuilder",
-    destination: "/docs/code-with-ai/app-builder",
+    destination: "/docs/getting-started",
     basePath: false,
     permanent: true,
   },
@@ -1237,6 +1237,12 @@ module.exports = [
         permanent: true,
       })),
   ),
+  {
+    source: "/docs/code-with-ai/app-builder",
+    destination: "/docs/getting-started",
+    basePath: false,
+    permanent: true,
+  },
   {
     source: "/docs/code-with-ai/gastown/wasteland/troubleshooting",
     destination: "/docs/code-with-ai/gastown/wasteland",
