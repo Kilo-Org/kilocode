@@ -5585,8 +5585,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   /**
    * Narrow a directory's files to those its own ignore rules permit.
    *
-   * The editor's file index honours files.exclude, search.exclude and
-   * .gitignore, but knows nothing of .kilocodeignore, so that is applied here.
+   * File search applies editor exclusions separately; this adds .kilocodeignore.
    * A controller that cannot be built lets the files through rather than
    * hiding everything, since this is a relevance filter and not a permission
    * boundary.
@@ -5629,12 +5628,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     while (this.ignoreControllers.size > KiloProvider.IGNORE_CONTROLLER_LIMIT) {
       const oldest = this.ignoreControllers.keys().next().value
       if (oldest === undefined || oldest === workspaceDir) break
-      const evicted = this.ignoreControllers.get(oldest)
       this.ignoreControllers.delete(oldest)
-      void evicted?.then(
-        (controller) => controller.dispose(),
-        (err) => console.warn("[Kilo New] Failed to dispose ignore controller:", err),
-      )
     }
     return pending
   }

@@ -1,6 +1,7 @@
 import * as path from "path"
 import * as vscode from "vscode"
 import type { KiloClient } from "@kilocode/sdk/v2/client"
+import { Glob } from "@opencode-ai/core/util/glob"
 import { mergeFileSearchResults } from "./file-search-results"
 import { mergeFileSearchItems, type FileSearchItem } from "./file-search-items"
 
@@ -143,9 +144,8 @@ async function gather(
  * file index and a filesystem watcher per directory. Adding a folder to the
  * workspace must not buy any of that.
  *
- * `findFiles` already has an index for every workspace folder, honours
- * `files.exclude` and `search.exclude`, spawns nothing, and never reaches the
- * backend. Results feed the same ranking and merge path as the primary root.
+ * `findFiles` searches workspace folders without reaching the backend.
+ * Results feed the same ranking and merge path as the primary root.
  *
  * Paths come back absolute, which is what makes them insertable as mentions
  * while `buildFileAttachments` still refuses to auto-read them — the same
@@ -165,8 +165,20 @@ async function gatherExternal(
   try {
     const folder = vscode.workspace.workspaceFolders?.find((entry) => same(entry.uri.fsPath, root.path))
     if (!folder) return empty()
-    const find = (pattern: string) =>
-      vscode.workspace.findFiles(new vscode.RelativePattern(folder, pattern), undefined, EXTERNAL_LIMIT)
+    const rules = ["files", "search"].flatMap((section) =>
+      Object.entries(
+        vscode.workspace
+          .getConfiguration(section, folder.uri)
+          .get<Record<string, boolean | { when: string }>>("exclude", {}),
+      ),
+    )
+    const excluded = rules.filter(([, rule]) => rule === true).map(([pattern]) => pattern)
+    const find = (match: string) =>
+      vscode.workspace.findFiles(
+        new vscode.RelativePattern(folder, `{**/*${match}*,**/*${match}*/**}`),
+        excluded.length ? `{${excluded.join(",")}}` : undefined,
+        EXTERNAL_LIMIT,
+      )
     // A glob's `*` spans one path segment, so interleaving them asks for the
     // query's characters in order within a single segment — the subsequence
     // shape fuzzysort matches on, and a superset of the plain substring form.
@@ -174,8 +186,8 @@ async function gatherExternal(
     // literal hit must not be crowded out by looser ones.
     const loose = [...needle].join("*")
     const [literal, subsequence] = await Promise.all([
-      find(`**/*${needle}*`),
-      loose === needle ? Promise.resolve([]) : find(`**/*${loose}*`),
+      find(needle),
+      loose === needle ? Promise.resolve([]) : find(loose),
     ])
 
     // Literal hits first, then whatever the looser pass adds, bounded once
@@ -197,13 +209,39 @@ async function gatherExternal(
       return full
     }
 
-    // findFiles honours files.exclude, search.exclude and .gitignore, but knows
-    // nothing of .kilocodeignore. One pass covers everything this folder would
-    // offer, so a file the user told Kilo to leave alone cannot come back as
-    // the directory holding it or as the active editor.
+    // Apply editor exclusions to open tabs too, then this folder's Kilo ignore rules.
     const active = activeIn(root.path)
-    const candidates = [...hits, ...(active ? [active] : [])].map(record)
-    const kept = new Set(allowed ? await allowed(root.path, candidates) : candidates)
+    const opened = [...(await open(root.path))].map(record)
+    const candidates = [...new Set([...hits.map(record), ...opened, ...(active ? [record(active)] : [])])]
+    const filtered = (
+      await Promise.all(
+        candidates.map(async (full) => {
+          const parts = relative.get(full)!.split("/")
+          const prefixes = parts.map((_, index) => parts.slice(0, index + 1).join("/"))
+          for (const [pattern, rule] of rules) {
+            if (!rule) continue
+            for (const rel of prefixes) {
+              if (!Glob.match(pattern, rel)) continue
+              if (rule === true) return []
+              const sibling = vscode.Uri.joinPath(
+                folder.uri,
+                path.posix.dirname(rel),
+                rule.when.replace("$(basename)", path.posix.parse(rel).name),
+              )
+              if (
+                await vscode.workspace.fs.stat(sibling).then(
+                  () => true,
+                  () => false,
+                )
+              )
+                return []
+            }
+          }
+          return [full]
+        }),
+      )
+    ).flat()
+    const kept = new Set(allowed ? await allowed(root.path, filtered) : filtered)
 
     const files: string[] = []
     const folders = new Set<string>()
@@ -224,7 +262,7 @@ async function gatherExternal(
     return {
       files,
       folders: [...folders],
-      open: new Set([...(await open(root.path))].map(record)),
+      open: new Set(opened.filter((full) => kept.has(full))),
       active: pinned && kept.has(pinned) ? pinned : undefined,
       relative,
     }
@@ -289,9 +327,6 @@ export async function handleFileSearch(input: Input): Promise<void> {
   })
 
   const opened = new Set(groups.flatMap((group) => [...group.hits.open]))
-  for (const group of groups) {
-    if (group.hits.active) opened.add(group.hits.active)
-  }
 
   const ranked = mergeFileSearchResults({
     query,

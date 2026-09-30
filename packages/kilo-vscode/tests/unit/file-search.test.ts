@@ -47,8 +47,6 @@ const roots = [
 
 type Glob = { base: { uri: { fsPath: string } }; pattern: string }
 
-const quote = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
-
 /** Point the editor's active tab at a file, restoring it afterwards. */
 function activeEditor(fsPath: string) {
   const window = vscode.window as unknown as { activeTextEditor: unknown }
@@ -77,12 +75,9 @@ function editorIndex(files: Record<string, string[]>, fail?: string) {
     const root = glob.base.uri.fsPath
     calls.push({ root, pattern: glob.pattern, max })
     if (root === fail) throw new Error("EACCES: permission denied")
-    // Emulate VS Code glob semantics closely enough to be useful: `*` spans one
-    // path segment, so the pattern has to match within a single segment.
-    const body = glob.pattern.replace(/^\*\*\//, "")
-    const expr = new RegExp(`^${body.split("*").map(quote).join("[^/]*")}$`, "i")
+    const pattern = new Bun.Glob(glob.pattern.toLowerCase())
     return (files[root] ?? [])
-      .filter((rel) => rel.split("/").some((segment) => expr.test(segment)))
+      .filter((rel) => pattern.match(rel.toLowerCase()))
       .slice(0, max ?? Infinity)
       .map((rel) => ({ fsPath: abs(root, rel) }))
   }
@@ -276,7 +271,7 @@ describe("handleFileSearch", () => {
       index.restore()
     }
 
-    expect(index.calls[0]!.pattern).toBe("**/*note*")
+    expect(index.calls[0]!.pattern).toBe("{**/*note*,**/*note*/**}")
   })
 
   it("finds a file in an added folder by a subsequence of its name", async () => {
@@ -303,7 +298,7 @@ describe("handleFileSearch", () => {
       index.restore()
     }
 
-    expect(index.calls.map((call) => call.pattern)).toEqual(["**/*fmu*", "**/*f*m*u*"])
+    expect(index.calls.map((call) => call.pattern)).toEqual(["{**/*fmu*,**/*fmu*/**}", "{**/*f*m*u*,**/*f*m*u*/**}"])
     expect(posted[0]!.paths).toContain(abs("/other", "src/file-mention-utils.ts"))
   })
 
@@ -328,7 +323,7 @@ describe("handleFileSearch", () => {
       index.restore()
     }
 
-    expect(index.calls.map((call) => call.pattern)).toEqual(["**/*f*"])
+    expect(index.calls.map((call) => call.pattern)).toEqual(["{**/*f*,**/*f*/**}"])
   })
 
   it("returns a file only once when both globs match it", async () => {

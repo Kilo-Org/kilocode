@@ -1979,6 +1979,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
                     <div
                       class="file-mention-item"
                       data-type={item.type}
+                      title={"root" in item ? item.value : undefined}
                       classList={{ "file-mention-item--active": index() === mention.mentionIndex() }}
                       onMouseDown={(e) => {
                         e.preventDefault()
