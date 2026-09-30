@@ -1,5 +1,6 @@
 package ai.kilocode.client.session.views
 
+import ai.kilocode.client.plugin.KiloPluginSettings
 import ai.kilocode.client.session.model.Reasoning
 import ai.kilocode.client.session.settings.ReasoningDisplay
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
@@ -21,6 +22,14 @@ import javax.swing.ScrollPaneConstants
 
 @Suppress("UnstableApiUsage")
 class ReasoningViewTest : BasePlatformTestCase() {
+
+    override fun tearDown() {
+        try {
+            KiloPluginSettings.unsetReasoningDisplay()
+        } finally {
+            super.tearDown()
+        }
+    }
 
     // -- Expanded mode (the default: full text inline, opens whenever content is non-blank, never auto-collapses) --
 
@@ -78,6 +87,26 @@ class ReasoningViewTest : BasePlatformTestCase() {
 
         assertFalse("a manual collapse is pinned and is not undone by new content", view.isExpanded())
         assertEquals("one\ntwo", view.markdown())
+    }
+
+    fun `test live setting collapses untouched reasoning`() {
+        val view = ReasoningView(reasoning("p1", done = true, text = "one"), mode = ReasoningDisplay.EXPANDED)
+        KiloPluginSettings.setReasoningDisplay(ReasoningDisplay.HEADLINE)
+
+        assertTrue(view.syncTranscriptDisplay())
+
+        assertFalse(view.isExpanded())
+        assertFalse(view.bodyCreated())
+    }
+
+    fun `test live setting skips manually expanded reasoning`() {
+        val view = ReasoningView(reasoning("p1", done = true, text = "one"), mode = ReasoningDisplay.PREVIEW)
+        view.toggle()
+        KiloPluginSettings.setReasoningDisplay(ReasoningDisplay.HEADLINE)
+
+        assertFalse(view.syncTranscriptDisplay())
+
+        assertTrue(view.isExpanded())
     }
 
     // -- Preview mode (height-capped auto-scrolling body while streaming; auto-collapses + releases body when done) --

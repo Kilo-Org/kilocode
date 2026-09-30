@@ -594,6 +594,15 @@ class SessionMessageListPanel(
         refresh()
     }
 
+    @RequiresEdt
+    fun syncTranscriptDisplay() {
+        var changed = false
+        for (mv in msgToView.values) changed = mv.syncTranscriptDisplay() || changed
+        if (!changed) return
+        reflow()
+        refresh()
+    }
+
     private fun syncSettled(state: SessionState = model.state) {
         val active = if (state.isBusy()) turnViews.values.lastOrNull { !model.isQueued(it.id) } else null
         for (view in turnViews.values) view.setSettled(view !== active)

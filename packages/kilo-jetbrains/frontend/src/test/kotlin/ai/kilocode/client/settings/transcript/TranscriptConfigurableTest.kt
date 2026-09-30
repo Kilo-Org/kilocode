@@ -4,6 +4,7 @@ import ai.kilocode.client.plugin.KiloPluginSettings
 import ai.kilocode.client.session.settings.ApprovalReasonVisibilityListener
 import ai.kilocode.client.session.settings.BlockDisplay
 import ai.kilocode.client.session.settings.ReasoningDisplay
+import ai.kilocode.client.session.settings.TranscriptDisplayListener
 import ai.kilocode.client.util.edtWait
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.options.Configurable
@@ -71,11 +72,15 @@ class TranscriptConfigurableTest : BasePlatformTestCase() {
     }
 
     fun `test reasoning combo persists selection`() {
+        var events = 0
+        ApplicationManager.getApplication().messageBus.connect(testRootDisposable)
+            .subscribe(TranscriptDisplayListener.TOPIC, TranscriptDisplayListener { events++ })
         val cfg = TranscriptConfigurable()
         edt {
             val panel = cfg.createComponent()
             combos(panel as Container)[0].selectedItem = ReasoningDisplay.HEADLINE
             assertEquals(ReasoningDisplay.HEADLINE, KiloPluginSettings.getReasoningDisplay())
+            assertEquals(1, events)
             cfg.disposeUIResources()
         }
     }

@@ -81,6 +81,27 @@ class ShellToolViewTest : BasePlatformTestCase() {
         assertFalse(view.isExpanded())
     }
 
+    fun `test live setting expands untouched shell`() {
+        val item = tool().also { it.input = mapOf("command" to "pwd") }
+        val view = track(ShellToolView(item, display = BlockDisplay.COLLAPSED))
+        KiloPluginSettings.setTerminalCommandDisplay(BlockDisplay.EXPANDED)
+
+        assertTrue(view.syncTranscriptDisplay())
+
+        assertTrue(view.isExpanded())
+    }
+
+    fun `test live setting skips manually collapsed shell`() {
+        val item = tool().also { it.input = mapOf("command" to "pwd") }
+        val view = track(ShellToolView(item, display = BlockDisplay.EXPANDED))
+        view.toggle()
+        KiloPluginSettings.setTerminalCommandDisplay(BlockDisplay.COLLAPSED)
+
+        assertFalse(view.syncTranscriptDisplay())
+
+        assertFalse(view.isExpanded())
+    }
+
     fun `test command only shell renders one code surface without labels`() {
         val view = track(ShellToolView(tool().also { it.input = mapOf("command" to "pwd") }))
 

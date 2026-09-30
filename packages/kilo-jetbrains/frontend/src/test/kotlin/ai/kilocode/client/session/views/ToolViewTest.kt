@@ -1,5 +1,6 @@
 package ai.kilocode.client.session.views
 
+import ai.kilocode.client.plugin.KiloPluginSettings
 import ai.kilocode.client.session.model.Content
 import ai.kilocode.client.session.model.Tool
 import ai.kilocode.client.session.model.ToolApproval
@@ -34,6 +35,7 @@ class ToolViewTest : BasePlatformTestCase() {
         try {
             views.forEach(Disposer::dispose)
             views.clear()
+            KiloPluginSettings.unsetMcpToolDisplay()
         } finally {
             super.tearDown()
         }
@@ -68,6 +70,16 @@ class ToolViewTest : BasePlatformTestCase() {
         view.update(tool("p1", "custom_tool", ToolExecState.COMPLETED).also { it.output = "second" })
 
         assertFalse(view.isExpanded())
+    }
+
+    fun `test live setting expands untouched generic tool`() {
+        val item = tool("p1", "custom_tool", ToolExecState.COMPLETED).also { it.output = "done" }
+        val view = track(ToolView(item, display = BlockDisplay.COLLAPSED))
+        KiloPluginSettings.setMcpToolDisplay(BlockDisplay.EXPANDED)
+
+        assertTrue(view.syncTranscriptDisplay())
+
+        assertTrue(view.isExpanded())
     }
 
     // ---- state icons ------

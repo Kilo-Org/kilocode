@@ -9,6 +9,7 @@ import ai.kilocode.client.session.openSessionLink
 import ai.kilocode.client.session.model.Content
 import ai.kilocode.client.session.model.Reasoning
 import ai.kilocode.client.session.settings.ReasoningDisplay
+import ai.kilocode.client.session.settings.TranscriptDisplayTarget
 import ai.kilocode.client.session.ui.popup.HeaderPopupBody
 import ai.kilocode.client.session.ui.popup.HeaderPopupRequest
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
@@ -42,7 +43,7 @@ import javax.swing.SwingUtilities
  *   auto-collapses and releases its body when the block finishes; history starts collapsed.
  * - [ReasoningDisplay.HEADLINE]: never auto-opens; header only until the user expands it.
  *
- * A manual user toggle ([pinned]) always overrides the mode's automatic expand/collapse.
+ * A manual user toggle marks the base view as touched and always overrides later automatic changes.
  */
 class ReasoningView(
     reasoning: Reasoning,
@@ -50,14 +51,14 @@ class ReasoningView(
     private val openUrl: (String) -> Unit = {},
     private val selection: SessionSelection? = null,
     private val parts: ReasoningParts = reasoningParts(selection),
-    private val mode: ReasoningDisplay = KiloPluginSettings.getReasoningDisplay(),
+    private var mode: ReasoningDisplay = KiloPluginSettings.getReasoningDisplay(),
 ) :
     AbstractSessionPartView(
         parts.header,
         { parts.scroll(openFile, openUrl) },
         expanded = initialExpanded(mode, reasoning),
         compact = true,
-    ) {
+    ), TranscriptDisplayTarget {
 
     override val contentId: String = reasoning.id
 
@@ -80,8 +81,6 @@ class ReasoningView(
     private var done = reasoning.done
     private var registered = false
     private var following = false
-    private var pinned = false
-
     init {
         applyStyle(style)
         if (bodyVisible()) syncBody()
@@ -116,7 +115,7 @@ class ReasoningView(
             }
             changed = true
         }
-        if (finishing && !pinned && mode == ReasoningDisplay.PREVIEW) {
+        if (finishing && !touched && mode == ReasoningDisplay.PREVIEW) {
             changed = collapse() || changed
             changed = releaseBody() || changed
         }
@@ -133,11 +132,6 @@ class ReasoningView(
         parts.reset()
         registered = false
         return detached
-    }
-
-    @RequiresEdt
-    override fun userToggled() {
-        pinned = true
     }
 
     @RequiresEdt
@@ -208,11 +202,27 @@ class ReasoningView(
             changed = true
         }
         changed = syncExpandable(canExpand()) || changed
-        if (!pinned && opens(mode, visible, done) && !isExpanded()) {
+        if (!touched && opens(mode, visible, done) && !isExpanded()) {
             changed = expand() || changed
             changed = syncExpandable(canExpand()) || changed
         }
         return changed
+    }
+
+    @RequiresEdt
+    override fun syncTranscriptDisplay(): Boolean {
+        if (touched) return false
+        val next = KiloPluginSettings.getReasoningDisplay()
+        if (mode == next) return false
+        mode = next
+        val visible = source.isNotBlank()
+        if (opens(mode, visible, done)) {
+            expand()
+        } else {
+            collapse()
+            releaseBody()
+        }
+        return true
     }
 
     private fun apply(md: MdView): Boolean {

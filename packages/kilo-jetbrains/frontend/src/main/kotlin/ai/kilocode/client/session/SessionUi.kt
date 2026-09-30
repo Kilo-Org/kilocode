@@ -41,6 +41,7 @@ import ai.kilocode.client.session.ui.prompt.PromptPanel
 import ai.kilocode.client.session.ui.prompt.SlashAction
 import ai.kilocode.client.session.ui.prompt.mentionParts as promptMentionParts
 import ai.kilocode.client.session.settings.ApprovalReasonVisibilityListener
+import ai.kilocode.client.session.settings.TranscriptDisplayListener
 import ai.kilocode.client.session.ui.account.SessionAccountOverlay
 import ai.kilocode.client.session.ui.popup.HeaderPopupController
 import ai.kilocode.client.session.ui.SessionDropOverlay
@@ -915,6 +916,13 @@ class SessionUi(
                 if (disposed) return@invokeLater
                 if (!this::messageBody.isInitialized) return@invokeLater
                 messageBody.syncApprovalReasons(visible)
+            }
+        })
+        bus.subscribe(TranscriptDisplayListener.TOPIC, TranscriptDisplayListener {
+            ApplicationManager.getApplication().invokeLater {
+                if (disposed) return@invokeLater
+                if (!this::messageBody.isInitialized) return@invokeLater
+                messageBody.syncTranscriptDisplay()
             }
         })
         // refreshBranch cancels the in-flight lookup first, so a flip both drops a running gh call

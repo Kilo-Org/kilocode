@@ -11,6 +11,7 @@ import ai.kilocode.client.session.model.StepFinish
 import ai.kilocode.client.session.model.Text
 import ai.kilocode.client.session.model.Tool
 import ai.kilocode.client.session.model.ToolCallRef
+import ai.kilocode.client.session.settings.TranscriptDisplayTarget
 import ai.kilocode.client.session.model.ToolExecState
 import ai.kilocode.client.session.ui.RevertProgress
 import ai.kilocode.client.session.ui.SessionView
@@ -180,6 +181,16 @@ class MessageView(
         var changed = false
         for (view in parts.values) {
             if (view is ApprovalReasonTarget) changed = view.syncApprovalReason(visible) || changed
+        }
+        if (changed) refresh()
+        return changed
+    }
+
+    @RequiresEdt
+    fun syncTranscriptDisplay(): Boolean {
+        var changed = false
+        for (view in parts.values) {
+            if (view is TranscriptDisplayTarget) changed = view.syncTranscriptDisplay() || changed
         }
         if (changed) refresh()
         return changed

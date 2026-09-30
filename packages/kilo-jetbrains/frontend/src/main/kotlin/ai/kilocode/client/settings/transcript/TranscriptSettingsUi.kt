@@ -5,6 +5,7 @@ import ai.kilocode.client.plugin.KiloPluginSettings
 import ai.kilocode.client.session.settings.ApprovalReasonVisibilityListener
 import ai.kilocode.client.session.settings.BlockDisplay
 import ai.kilocode.client.session.settings.ReasoningDisplay
+import ai.kilocode.client.session.settings.TranscriptDisplayListener
 import ai.kilocode.client.settings.base.BaseContentPanel
 import ai.kilocode.client.settings.base.SettingsPanel
 import ai.kilocode.client.settings.base.SettingsRow
@@ -27,13 +28,13 @@ internal class TranscriptSettingsUi : SettingsPanel(), Disposable {
             .syncPublisher(ApprovalReasonVisibilityListener.TOPIC)
             .changed(visible)
     }
-    private val reasoning = reasoningCombo { KiloPluginSettings.setReasoningDisplay(it) }
+    private val reasoning = reasoningCombo(::setReasoning)
         .apply { selectedItem = KiloPluginSettings.getReasoningDisplay() }
-    private val terminal = blockCombo { KiloPluginSettings.setTerminalCommandDisplay(it) }
+    private val terminal = blockCombo(::setTerminal)
         .apply { selectedItem = KiloPluginSettings.getTerminalCommandDisplay() }
-    private val codeEdit = blockCombo { KiloPluginSettings.setCodeEditDisplay(it) }
+    private val codeEdit = blockCombo(::setCodeEdit)
         .apply { selectedItem = KiloPluginSettings.getCodeEditDisplay() }
-    private val mcpTool = blockCombo { KiloPluginSettings.setMcpToolDisplay(it) }
+    private val mcpTool = blockCombo(::setMcpTool)
         .apply { selectedItem = KiloPluginSettings.getMcpToolDisplay() }
     private val hoverPreview = SettingsToggle(KiloPluginSettings.getHoverPreview()) { KiloPluginSettings.setHoverPreview(it) }
 
@@ -90,6 +91,36 @@ internal class TranscriptSettingsUi : SettingsPanel(), Disposable {
         codeEdit.selectedItem = KiloPluginSettings.getCodeEditDisplay()
         mcpTool.selectedItem = KiloPluginSettings.getMcpToolDisplay()
         hoverPreview.isSelected = KiloPluginSettings.getHoverPreview()
+    }
+
+    private fun setReasoning(value: ReasoningDisplay) {
+        if (KiloPluginSettings.getReasoningDisplay() == value) return
+        KiloPluginSettings.setReasoningDisplay(value)
+        displayChanged()
+    }
+
+    private fun setTerminal(value: BlockDisplay) {
+        if (KiloPluginSettings.getTerminalCommandDisplay() == value) return
+        KiloPluginSettings.setTerminalCommandDisplay(value)
+        displayChanged()
+    }
+
+    private fun setCodeEdit(value: BlockDisplay) {
+        if (KiloPluginSettings.getCodeEditDisplay() == value) return
+        KiloPluginSettings.setCodeEditDisplay(value)
+        displayChanged()
+    }
+
+    private fun setMcpTool(value: BlockDisplay) {
+        if (KiloPluginSettings.getMcpToolDisplay() == value) return
+        KiloPluginSettings.setMcpToolDisplay(value)
+        displayChanged()
+    }
+
+    private fun displayChanged() {
+        ApplicationManager.getApplication().messageBus
+            .syncPublisher(TranscriptDisplayListener.TOPIC)
+            .changed()
     }
 
     override fun dispose() = Unit
