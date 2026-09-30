@@ -1286,6 +1286,54 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
         assertSame(item.progress, item.components.last())
     }
 
+    // ------ reveal resync (hidden-session catch-up) ------
+
+    fun `test syncActiveState resurfaces an active question`() {
+        val item = panelWithPrompts()
+        model.setState(SessionState.AwaitingQuestion(question()))
+
+        val qv = find<QuestionView>(item)!!
+        // Directly force-hide the view the way a stale/hidden component might end up, then
+        // resync from the current model state — this is what SessionUi does when a hidden
+        // session's component becomes visible again.
+        qv.hideView()
+        assertFalse(qv.isVisible)
+
+        item.syncActiveState()
+
+        assertTrue(qv.isVisible)
+        assertSame(item.progress, item.components.last())
+        assertTrue(item.components.indexOf(qv) < item.components.indexOf(item.progress))
+    }
+
+    fun `test syncActiveState resurfaces an active permission`() {
+        val item = panelWithPrompts()
+        model.setState(SessionState.AwaitingPermission(permission()))
+
+        val pv = find<PermissionView>(item)!!
+        pv.hideView()
+        assertFalse(pv.isVisible)
+
+        item.syncActiveState()
+
+        assertTrue(pv.isVisible)
+        assertSame(item.progress, item.components.last())
+    }
+
+    fun `test syncActiveState is a no-op when idle`() {
+        val item = panelWithPrompts()
+        model.upsertMessage(msg("u1", "user"))
+
+        val qv = find<QuestionView>(item)!!
+        val pv = find<PermissionView>(item)!!
+
+        item.syncActiveState()
+
+        assertFalse(qv.isVisible)
+        assertFalse(pv.isVisible)
+        assertSame(item.progress, item.components.last())
+    }
+
     fun `test login required state makes LoginRequiredView visible and hides others`() {
         val item = panelWithPrompts()
         model.setState(SessionState.LoginRequired("Sign in required."))
