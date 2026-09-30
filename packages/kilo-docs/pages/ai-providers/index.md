@@ -29,6 +29,7 @@ Major AI companies offering powerful models via API:
 - **[DeepSeek](/docs/ai-providers/deepseek)** - DeepSeek V3., R1
 - **[Mistral](/docs/ai-providers/mistral)** - Mistral Large, Codestral
 - **[Poolside](/docs/ai-providers/poolside)** - Laguna models
+- **[ainetcafe](/docs/ai-providers/ainetcafe)** - Kimi K3 served from a dedicated cluster via an OpenAI-compatible API
 
 ### Local & Self-Hosted
 
