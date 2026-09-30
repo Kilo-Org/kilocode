@@ -286,6 +286,23 @@ class TurnViewTest : BasePlatformTestCase() {
         }
     }
 
+    // Removing the host first used to drop only the alias, leaving the merged child in the known map
+    // where the render plan would resurrect it as a standalone block — showing reasoning text again
+    // that had just been removed with its host.
+    fun `test removing a reasoning host drops its merged children`() {
+        val mv = MessageView(msg("a1", "assistant"), openFile)
+        mv.upsertPart(reasoning("r1", "first "))
+        mv.upsertPart(reasoning("r2", "second"))
+        assertEquals(listOf("r1"), mv.partIds())
+
+        mv.removePart("r1")
+
+        assertTrue("the merged child must not come back", mv.partIds().isEmpty())
+        assertEquals(0, aliasSize(mv))
+        assertEquals(0, sourceSize(mv))
+        assertEquals(0, mv.componentCount)
+    }
+
     fun `test text between reasoning parts keeps separate views`() {
         val message = msg("a1", "assistant")
         message.parts["r1"] = reasoning("r1", "first")

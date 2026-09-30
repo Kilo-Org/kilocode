@@ -286,9 +286,7 @@ class SessionMessageListPanel(
             for (mid in tv.messageIds()) {
                 val mv = tv.messageView(mid)!!
                 appendLine("  ${mv.role}#$mid")
-                for (pid in mv.partIds()) {
-                    appendLine("    ${mv.part(pid)!!.dumpLabel()}")
-                }
+                for (label in mv.dumpLabels()) appendLine("    $label")
             }
         }
     }.trimEnd()
@@ -589,6 +587,27 @@ class SessionMessageListPanel(
     fun syncApprovalReasons(visible: Boolean) {
         var changed = false
         for (mv in msgToView.values) changed = mv.syncApprovalReasons(visible) || changed
+        if (!changed) return
+        reflow()
+        refresh()
+    }
+
+    /**
+     * Re-derive compact-mode tool grouping across the transcript.
+     *
+     * Deliberately not a [rebuild]: that disposes every turn and re-arms the reflow chain, while a
+     * settings flip only moves containment between already-created renderers. Each changed turn has
+     * its cached height dropped — a settled [TurnView] is its own validate root, so `isValid` is not
+     * an honest cache signal — then the panel remeasures once.
+     */
+    @RequiresEdt
+    fun syncCompact() {
+        var changed = false
+        for (view in turnViews.values) {
+            if (!view.syncCompact()) continue
+            (layout as? SessionLayout)?.forget(view)
+            changed = true
+        }
         if (!changed) return
         reflow()
         refresh()
