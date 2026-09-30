@@ -1,6 +1,7 @@
 package ai.kilocode.client.session
 
 import ai.kilocode.client.KiloNotifications
+import ai.kilocode.client.actions.reloadCoreSettings
 import ai.kilocode.client.app.KiloAppService
 import ai.kilocode.client.app.KiloMcpAuthService
 import ai.kilocode.client.app.KiloSessionService
@@ -1079,6 +1080,7 @@ class SessionUi(
             SlashAction.AGENTS to { prompt.mode.open() },
             SlashAction.VARIANT to { prompt.reasoning.open() },
             SlashAction.COMPACT to { controller.compact() },
+            SlashAction.RELOAD to { reloadCoreSettings(workspaces, workspace.directory, project, "slash_command") },
             SlashAction.SETTINGS to { openKiloSettings() },
             SlashAction.HELP to { BrowserUtil.browse(KiloDocs.BASE) },
         )

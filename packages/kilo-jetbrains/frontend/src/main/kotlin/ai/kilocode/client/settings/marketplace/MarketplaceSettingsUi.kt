@@ -191,13 +191,29 @@ internal class MarketplaceSettingsUi(
     }
 
     private fun badges(item: MarketplaceItemDto): List<ActiveListBadge> = listOfNotNull(
-        ActiveListBadge(typeLabel(item.type), typeStyle(item.type)),
+        typeBadge(item),
         ActiveListBadge(KiloBundle.message("settings.marketplace.badge.installedProject"), UiStyle.Badge.Highlight)
             .takeIf { item.installedProject },
         ActiveListBadge(KiloBundle.message("settings.marketplace.badge.installedGlobal"), UiStyle.Badge.Highlight)
             .takeIf { item.installedGlobal },
         ActiveListBadge(item.category, UiStyle.Badge.Secondary).takeIf { item.category.isNotBlank() },
     )
+
+    private fun typeBadge(item: MarketplaceItemDto): ActiveListBadge {
+        if (item.type != "mcp" || item.skills.isEmpty()) {
+            return ActiveListBadge(typeLabel(item.type), typeStyle(item.type))
+        }
+        val mcp = KiloBundle.message("settings.marketplace.tag.mcpShort")
+        val skill = typeLabel("skill")
+        return ActiveListBadge(
+            "$mcp|$skill",
+            typeStyle(item.type),
+            segments = listOf(
+                FilledBadgeIcon.Segment(mcp, typeStyle("mcp")),
+                FilledBadgeIcon.Segment(skill, typeStyle("skill")),
+            ),
+        )
+    }
 
     private fun cells(item: MarketplaceItemDto): List<ActiveListCell> = listOfNotNull(
         ActiveListCell(INSTALL_CELL, KiloBundle.message("settings.marketplace.install"), primary = true)

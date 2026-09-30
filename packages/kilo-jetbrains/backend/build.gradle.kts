@@ -53,7 +53,7 @@ if (repoCli.get() && bundled.get()) {
     error("kilo.cli.bundled=true requires kilo.cli.pinned=true; do not combine release CLI bundling with local repo CLI mode.")
 }
 
-val writeKiloProperties by tasks.registering(WriteProperties::class) {
+val writeKiloProperties = tasks.register<WriteProperties>("writeKiloProperties") {
     description = "Write pinned Kilo CLI properties"
     val out = generatedProps.map { it.file("kilo.properties") }
     destinationFile.set(out)
@@ -61,7 +61,7 @@ val writeKiloProperties by tasks.registering(WriteProperties::class) {
     property("cli.pinned", pinned.map { it.toString() })
 }
 
-val generateOpenApiSpec by tasks.registering(GenerateOpenApiSpecTask::class) {
+val generateOpenApiSpec = tasks.register<GenerateOpenApiSpecTask>("generateOpenApiSpec") {
     description = "Generate CLI OpenAPI spec into the build directory"
     cliVersion.set(pinnedCliVersion)
     repo.set(repoCli)
@@ -75,7 +75,7 @@ val generateOpenApiSpec by tasks.registering(GenerateOpenApiSpecTask::class) {
     bunPath.set(bunPathProvider)
 }
 
-val buildRepoCli by tasks.registering(Exec::class) {
+val buildRepoCli = tasks.register<Exec>("buildRepoCli") {
     description = "Build the local repo CLI for the current platform"
     workingDir = repoRootDir.asFile
     commandLine(bunPathProvider.get(), "run", "script/build.ts", "--single", "--skip-install")
@@ -97,7 +97,7 @@ fun platform(): String {
     return "$name-$arch"
 }
 
-val stageRepoCli by tasks.registering(StageRepoCliTask::class) {
+val stageRepoCli = tasks.register<StageRepoCliTask>("stageRepoCli") {
     description = "Stage the local repo CLI into backend resources"
     val bin = repoRootDir.dir("dist/@kilocode/cli-${platform()}/bin")
     this.bin.set(bin)
@@ -105,7 +105,7 @@ val stageRepoCli by tasks.registering(StageRepoCliTask::class) {
     outputs.upToDateWhen { false }
 }
 
-val stageBundledCli by tasks.registering(StageBundledCliTask::class) {
+val stageBundledCli = tasks.register<StageBundledCliTask>("stageBundledCli") {
     description = "Stage all pinned Kilo CLI release assets into backend resources"
     cliVersion.set(pinnedCliVersion)
     token.set(
@@ -116,7 +116,7 @@ val stageBundledCli by tasks.registering(StageBundledCliTask::class) {
     archive.set(generatedCli.map { it.file("kilo-cli.zip") })
 }
 
-val writeCliChecksums by tasks.registering(WriteCliChecksumsTask::class) {
+val writeCliChecksums = tasks.register<WriteCliChecksumsTask>("writeCliChecksums") {
     description = "Write pinned Kilo CLI checksums"
     cliVersion.set(pinnedCliVersion)
     token.set(
@@ -126,7 +126,7 @@ val writeCliChecksums by tasks.registering(WriteCliChecksumsTask::class) {
     checksums.set(generatedChecksums.map { it.file("kilo-cli-checksums.properties") })
 }
 
-val normalizeOpenApiSpec by tasks.registering(NormalizeOpenApiSpecTask::class) {
+val normalizeOpenApiSpec = tasks.register<NormalizeOpenApiSpecTask>("normalizeOpenApiSpec") {
     description = "Normalize upstream CLI OpenAPI metadata before Kotlin client generation"
     dependsOn(generateOpenApiSpec)
     input.set(rawSpec)
@@ -173,7 +173,7 @@ tasks.named("openApiGenerate") {
     dependsOn(normalizeOpenApiSpec)
 }
 
-val fixGeneratedApi by tasks.registering(FixGeneratedApiTask::class) {
+val fixGeneratedApi = tasks.register<FixGeneratedApiTask>("fixGeneratedApi") {
     dependsOn("openApiGenerate")
     generated.set(generatedApi)
 }
