@@ -128,6 +128,26 @@ class KiloBundleLocaleTest : BasePlatformTestCase() {
         }
     }
 
+    fun `test commands settings and settings info banner keys are mirrored in every locale`() {
+        for (locale in LOCALES) {
+            val props = load(locale)
+            for (key in COMMANDS_AND_INFO) {
+                val value = props.getProperty(key)
+                assertNotNull("$locale: missing $key", value)
+                assertTrue("$locale: $key is blank", value!!.isNotBlank())
+            }
+            val message = props.getProperty("settings.agentBehavior.commands.delete.message")
+            assertNotNull("$locale: missing settings.agentBehavior.commands.delete.message", message)
+            assertEscaped(locale, "settings.agentBehavior.commands.delete.message", message!!)
+            val rendered = format(message, "COMMAND_NAME")
+            assertTrue(
+                "$locale: settings.agentBehavior.commands.delete.message dropped the command name -> $rendered",
+                rendered.contains("COMMAND_NAME"),
+            )
+            assertClean(locale, "settings.agentBehavior.commands.delete.message", rendered)
+        }
+    }
+
     fun `test source bundle literals exist in base bundle`() {
         val base = load("en").stringPropertyNames()
         val missing = bundleKeys().filter { "$" !in it }.filter { it !in base }.sorted()
@@ -354,6 +374,35 @@ class KiloBundleLocaleTest : BasePlatformTestCase() {
             "settings.checkpoints.cleanup.confirm.message",
             "settings.checkpoints.cleanup.error.title",
             "settings.checkpoints.cleanup.error.message",
+        )
+
+        val COMMANDS_AND_INFO = listOf(
+            "settings.info.showMore",
+            "settings.info.showLess",
+            "settings.info.learnMore",
+            "settings.agentBehavior.agents.info",
+            "settings.agentBehavior.agents.info.more",
+            "settings.agentBehavior.mcp.info",
+            "settings.agentBehavior.mcp.info.more",
+            "settings.agentBehavior.skills.info",
+            "settings.agentBehavior.skills.info.more",
+            "settings.agentBehavior.commands.displayName",
+            "settings.agentBehavior.commands.info",
+            "settings.agentBehavior.commands.info.more",
+            "settings.agentBehavior.commands.search",
+            "settings.agentBehavior.commands.empty",
+            "settings.agentBehavior.commands.content.empty",
+            "settings.agentBehavior.commands.load.timeout",
+            "settings.agentBehavior.commands.reload.blocked",
+            "settings.agentBehavior.commands.saved.notification",
+            "settings.agentBehavior.commands.delete.title",
+            "settings.agentBehavior.commands.delete.failed",
+            "settings.agentBehavior.commands.openInEditor",
+            "settings.agentBehavior.commands.openInEditor.pending",
+            "settings.agentBehavior.commands.openInEditor.failed",
+            "settings.rules.info",
+            "settings.rules.info.more",
+            "settings.agentBehavior.description",
         )
 
         val RELEASE_7_1_7 = mapOf(

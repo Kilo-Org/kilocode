@@ -3,8 +3,8 @@ import { RemoteExit } from "@/kilo-sessions/remote-exit"
 import { RemoteModelCatalog } from "@/kilo-sessions/remote-model-catalog"
 import { RemoteSessionLog } from "@/kilo-sessions/remote-session-log"
 import { RemoteProtocol } from "@/kilo-sessions/remote-protocol"
-// kilocode_change - set_pr_link: parse the app-supplied PR URL into the stored override.
-import { parsePrUrl, type PrLinkOverride } from "@/kilo-sessions/pr-link"
+// kilocode_change - set_pr_link: parse the app-supplied PR URL into a per-session link.
+import { parsePrUrl, type PrLink } from "@/kilo-sessions/pr-link"
 import { consumeRenameAdoption, markRenameAdopted } from "@/kilo-sessions/rename-adoptions"
 import type { RemoteWS } from "@/kilo-sessions/remote-ws"
 import { GlobalBus } from "@/bus/global"
@@ -59,8 +59,8 @@ const DropQueuedMessageData = z.object({
   messageID: z.string().startsWith("msg"),
 })
 
-// kilocode_change start - set_pr_link: the app-controlled PR link override.
-// `{ prUrl }` is parsed into a PrLink; `{ cleared: true }` removes the link.
+// kilocode_change start - set_pr_link: the app-controlled per-session PR link.
+// `{ prUrl }` is parsed into a PrLink; `{ cleared: true }` withdraws the link.
 const SetPrLinkData = z.union([z.object({ prUrl: z.string() }), z.object({ cleared: z.literal(true) })])
 // kilocode_change end
 
@@ -262,9 +262,10 @@ export namespace RemoteSender {
     // returns the input so the existing remote-sender suite continues to
     // exercise schema/ordering paths without touching the network.
     attachments?: (sessionID: SessionID) => RemoteAttachments.Result | undefined
-    // kilocode_change - set_pr_link: app-controlled PR link override seam. The
-    // default writes the override for the launch worktree; tests inject this.
-    setPrLink?: (value: PrLinkOverride) => Promise<void>
+    // kilocode_change - set_pr_link: per-session PR link seam. `value` is the
+    // parsed link, or undefined to withdraw the link the session owns. The
+    // default records/clears the command session's own link; tests inject this.
+    setPrLink?: (value: PrLink | undefined, sessionId: SessionID) => Promise<void>
   }
 
   export type Sender = {
@@ -401,21 +402,29 @@ export namespace RemoteSender {
     const commands = options.commands ?? RemoteCommand.live()
     const remoteExit = options.remoteExit ?? RemoteExit
     // kilocode_change end
-    // kilocode_change start - set_pr_link default: write the app-supplied
-    // override for the launch worktree the heartbeat reads. `options.directory`
-    // selects the instance whose `Instance.worktree` is the same one
-    // resolvePrLink reads (kilo-sessions.ts), so the override wins and detection
-    // stops. No timer and no `gh` call is added.
+    // kilocode_change start - set_pr_link default: record the app-supplied link
+    // against the command's own session, never the worktree, so it can never fan
+    // out to another session in the same checkout. `recordSessionLink` refuses a
+    // link whose host/owner/repo is not the session worktree's remote (a fork or
+    // another repo never sticks); `clearSessionLink` withdraws only that session.
     const setPrLink =
       options.setPrLink ??
-      (async (value: PrLinkOverride) => {
+      (async (value: PrLink | undefined, sessionId: SessionID) => {
+        // Resolve the session's own checkout, not the launch directory, so a
+        // session the CLI hosts in another directory is recorded against its
+        // own repository.
+        const info = await session.get(sessionId).catch(() => undefined)
         const run = options.provide ?? provide
         await run({
-          directory: options.directory,
+          directory: info?.directory ?? options.directory,
           fn: async () => {
-            const { writePrLinkOverride } = await import("@/kilo-sessions/pr-link")
+            const { clearSessionLink, recordSessionLink } = await import("@/kilo-sessions/pr-link")
+            if (!value) {
+              await clearSessionLink(sessionId)
+              return
+            }
             const { Instance } = await import("@/kilocode/instance")
-            await writePrLinkOverride(Instance.worktree, value)
+            await recordSessionLink(sessionId, { link: value, evidence: "user" }, Instance.worktree)
           },
         })
       })
@@ -1364,23 +1373,26 @@ export namespace RemoteSender {
         })
         return
       }
-      // kilocode_change start - set_pr_link: the app (or the cloud) knows the
-      // PR; store it as the worktree override so the heartbeat advertises it and
-      // detection stops. An unparseable URL is non-retryable and writes nothing.
+      // kilocode_change start - set_pr_link: the app (or the cloud) knows the PR.
+      // A link is per session, so the command must name the session that owns it:
+      // without one there is no owner, and we fail closed (write nothing) rather
+      // than pin the link to a worktree every session would inherit. A parsed URL
+      // is still checked against the session worktree's own repository.
       if (msg.command === "set_pr_link") {
         const parsed = SetPrLinkData.safeParse(msg.data)
-        if (!parsed.success) {
+        const current = msg.sessionId ? decodeSessionID(msg.sessionId) : Option.none<SessionID>()
+        if (!parsed.success || Option.isNone(current)) {
           options.conn.send({ type: "response", id: msg.id, error: "invalid set_pr_link command" })
           return
         }
-        const value = "cleared" in parsed.data ? ({ cleared: true } as const) : parsePrUrl(parsed.data.prUrl)
-        if (!value) {
+        const value = "cleared" in parsed.data ? undefined : parsePrUrl(parsed.data.prUrl)
+        if (!("cleared" in parsed.data) && !value) {
           options.conn.send({ type: "response", id: msg.id, error: "invalid set_pr_link url" })
           return
         }
         void (async () => {
           try {
-            await setPrLink(value)
+            await setPrLink(value, current.value)
             options.conn.send({ type: "response", id: msg.id, result: {} })
             // Best-effort: let the cloud see the link immediately. Never await
             // the heartbeat before responding (mirror setInstanceAdvertisement).

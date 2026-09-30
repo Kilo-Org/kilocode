@@ -1428,14 +1428,16 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       if (start !== end) return // don't replace active text selection
       const cursor = start
       const direction = e.key === "ArrowUp" ? ("up" as const) : ("down" as const)
-      const entry = history.navigate(direction, text(), cursor)
+      const backing = paste.pastes().map((item) => item.text)
+      const entry = history.navigate(direction, text(), cursor, backing)
       if (entry !== null) {
         e.preventDefault()
-        setText(entry)
+        setText(entry.text)
+        paste.load(entry.text, entry.pastes)
         if (textareaRef) {
-          textareaRef.value = entry
+          textareaRef.value = entry.text
           adjustHeight()
-          const pos = direction === "up" ? 0 : entry.length
+          const pos = direction === "up" ? 0 : entry.text.length
           textareaRef.setSelectionRange(pos, pos)
         }
         return
