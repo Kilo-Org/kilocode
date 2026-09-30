@@ -389,6 +389,15 @@ class MockCliServer : AutoCloseable {
                 }
                 bare == "/global/dispose" && method == "POST" -> respond(output, disposeStatus, "true")
                 path.startsWith("/config/warnings") -> respond(output, warningsStatus, warnings)
+                bare == "/config/overlay" && method == "PATCH" -> {
+                    if (body.contains("\"scope\":\"global\"")) {
+                        lastConfigPatchBody = body
+                    } else {
+                        lastWorkspaceConfigPatchPath = path
+                        lastWorkspaceConfigPatchBody = body
+                    }
+                    respond(output, workspaceConfigStatus, "{}")
+                }
                 bare == "/config" && method == "PATCH" -> {
                     lastWorkspaceConfigPatchPath = path
                     lastWorkspaceConfigPatchBody = body

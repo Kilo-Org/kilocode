@@ -2276,6 +2276,25 @@ class KiloCliDataParserTest {
             assertEquals("HTTP 500", result.error)
         }
 
+        @Test
+        fun `parseMcpStatus - legacy unauthorized failure needs auth`() {
+            val result = KiloCliDataParser.parseMcpStatus(
+                """{"anaconda":{"status":"failed","error":"Unauthorized: authentication required"}}""",
+            ).single()
+
+            assertEquals("needs_auth", result.status)
+            assertEquals("Unauthorized: authentication required", result.error)
+        }
+
+        @Test
+        fun `parseMcpStatus - non-auth failure remains failed`() {
+            val result = KiloCliDataParser.parseMcpStatus(
+                """{"anaconda":{"status":"failed","error":"Connection refused"}}""",
+            ).single()
+
+            assertEquals("failed", result.status)
+        }
+
         // ---- parseMcpBrowserOpenFailed ----
 
         @Test
@@ -2881,6 +2900,28 @@ class KiloCliDataParserTest {
             assertEquals(
                 "{\"mcp\":{\"remote\":{\"type\":\"remote\",\"url\":\"https://mcp.example.test\"}}}",
                 KiloCliDataParser.buildConfigPatch(patch),
+            )
+        }
+
+        @Test
+        fun `buildMcpOverlayPatch - sets a project MCP`() {
+            val result = KiloCliDataParser.buildMcpOverlayPatch(
+                "anaconda",
+                "workspace",
+                McpConfigDto(type = "remote", url = "https://anaconda.com/api/mcp"),
+            )
+
+            assertEquals(
+                "{\"scope\":\"project\",\"set\":{\"mcp\":{\"anaconda\":{\"type\":\"remote\",\"url\":\"https://anaconda.com/api/mcp\"}}}}",
+                result,
+            )
+        }
+
+        @Test
+        fun `buildMcpOverlayPatch - unsets a project MCP`() {
+            assertEquals(
+                "{\"scope\":\"project\",\"unset\":[[\"mcp\",\"anaconda\"]]}",
+                KiloCliDataParser.buildMcpOverlayPatch("anaconda", "workspace", null),
             )
         }
 

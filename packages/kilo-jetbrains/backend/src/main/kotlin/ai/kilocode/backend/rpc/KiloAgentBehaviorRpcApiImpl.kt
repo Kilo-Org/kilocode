@@ -209,12 +209,8 @@ class KiloAgentBehaviorRpcApiImpl(private val backend: KiloBackendAppService? = 
 
     override suspend fun saveMcp(directory: String, name: String, scope: String, config: McpConfigDto?): Boolean {
         app.requireReady()
-        val patch = ConfigPatchDto(mcp = mapOf(name to config))
-        if (scope == "workspace") {
-            patchConfig("/config?directory=${encode(directory)}", KiloCliDataParser.buildConfigPatch(patch))
-        } else {
-            app.updateConfig(patch)
-        }
+        val patch = KiloCliDataParser.buildMcpOverlayPatch(name, scope, config)
+        patchConfig("/config/overlay?directory=${encode(directory)}", patch)
         saveMcpOverride(directory, name, scope, config)
         return true
     }

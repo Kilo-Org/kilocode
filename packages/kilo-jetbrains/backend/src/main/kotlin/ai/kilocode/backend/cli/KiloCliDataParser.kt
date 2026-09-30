@@ -871,11 +871,22 @@ object KiloCliDataParser {
     private fun mcpStatus(item: JsonElement, fallback: String? = null): McpStatusDto? {
         val obj = item.obj() ?: return null
         val name = obj.str("name") ?: fallback ?: return null
+        val error = obj.str("error")
+        val raw = obj.str("status") ?: obj.str("state") ?: "unknown"
+        val status = if (raw == "failed" && error.isMcpAuthFailure()) "needs_auth" else raw
         return McpStatusDto(
             name = name,
-            status = obj.str("status") ?: obj.str("state") ?: "unknown",
-            error = obj.str("error"),
+            status = status,
+            error = error,
         )
+    }
+
+    private fun String?.isMcpAuthFailure(): Boolean {
+        val value = this?.lowercase() ?: return false
+        return value.contains("unauthorized") ||
+            value.contains("authentication required") ||
+            value.contains("needs authentication") ||
+            value.contains("not authenticated")
     }
 
     private fun removable(obj: JsonObject): Boolean {
@@ -1193,6 +1204,20 @@ object KiloCliDataParser {
         }
         return json.encodeToString(JsonObject.serializer(), obj)
     }
+
+    fun buildMcpOverlayPatch(name: String, scope: String, config: McpConfigDto?): String = buildJsonObject {
+        put("scope", if (scope == "workspace") "project" else "global")
+        if (config == null) {
+            put("unset", buildJsonArray {
+                add(buildJsonArray {
+                    add(JsonPrimitive("mcp"))
+                    add(JsonPrimitive(name))
+                })
+            })
+            return@buildJsonObject
+        }
+        put("set", json.parseToJsonElement(buildConfigPatch(ConfigPatchDto(mcp = mapOf(name to config)))))
+    }.toString()
 
     fun buildDisabledProviderPatch(ids: List<String>): String {
         val arr = JsonArray(ids.distinct().sorted().map { JsonPrimitive(it) })
