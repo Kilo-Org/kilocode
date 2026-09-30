@@ -47,7 +47,17 @@ export const layer = Layer.effect(
           directory: event.location?.directory ?? ctx?.directory ?? "global", // kilocode_change - instance-less events are tagged "global" on the wire
           project: ctx?.project.id,
           workspace: workspaceID,
-          payload: { id: event.id, type: event.type, properties: data }, // kilocode_change - encoded
+          // kilocode_change start - preserve encoded data and error phase for legacy consumers
+          payload: {
+            id: event.id,
+            type: event.type,
+            properties: data,
+            ...(event.type === "session.error" &&
+              (event.metadata?.phase === "admission" || event.metadata?.phase === "execution") && {
+                metadata: { phase: event.metadata.phase },
+              }),
+          },
+          // kilocode_change end
         })
         if (event.durable === undefined) return
         GlobalBus.emit("event", {
