@@ -269,12 +269,14 @@ export class BrowserStream {
       // content area, which excludes the browser UI and has a minimum width. Screencast frames then do not match
       // the viewport and are dropped, so a static page stays blank. Wait until the resize reaches the page, then
       // set the painted size to the viewport again. A busy renderer must not block the stream queue.
+      const abort = new AbortController()
       await Promise.race([
         this.page
           .evaluate(() => new Promise<void>((done) => requestAnimationFrame(() => requestAnimationFrame(() => done()))))
           .catch(() => this.report("resize wait failed")),
-        wait(SETTLE),
+        wait(SETTLE, undefined, { signal: abort.signal }).catch(() => undefined),
       ])
+      abort.abort()
       if (this.closed || this.view !== next) return
       await session
         .send("Emulation.setVisibleSize", { width: next.width, height: next.height })
