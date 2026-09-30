@@ -36,6 +36,7 @@ const removed = [
   "automate/tools/write-to-file",
   "kiloclaw/overview",
   "kiloclaw/dashboard",
+  "code-with-ai/app-builder",
 ]
 
 function markdown(dir: string): string[] {
