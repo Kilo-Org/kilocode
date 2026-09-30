@@ -1515,6 +1515,10 @@ export interface FocusMarketplaceItemMessage {
   mpItem: MarketplaceItem
 }
 
+export interface ResetMarketplaceFiltersMessage {
+  type: "resetMarketplaceFilters"
+}
+
 export interface MarketplaceRemoveResultMessage {
   type: "marketplaceRemoveResult"
   success: boolean
@@ -1855,6 +1859,7 @@ export type ExtensionMessage =
   | MarketplaceRemoveResultMessage
   | OpenInstallModalMessage
   | FocusMarketplaceItemMessage
+  | ResetMarketplaceFiltersMessage
   | ProviderOAuthReadyMessage
   | ProviderConnectedMessage
   | ProviderDisconnectedMessage

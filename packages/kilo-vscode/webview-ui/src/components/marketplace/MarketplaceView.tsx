@@ -11,7 +11,7 @@ import type {
   MarketplaceRelevanceMetadata,
 } from "../../types/marketplace"
 import { TelemetryEventName } from "../../../../src/services/telemetry/types"
-import { MarketplaceListView } from "./MarketplaceListView"
+import { MarketplaceListView, type MarketplaceFocus } from "./MarketplaceListView"
 import { InstallModal } from "./InstallModal"
 import { RemoveDialog } from "./RemoveDialog"
 import "./marketplace.css"
@@ -33,7 +33,7 @@ export const MarketplaceView = () => {
   const [pending, setPending] = createSignal<{ item: MarketplaceItem; scope: "project" | "global" } | null>(null)
   const [showMigrationBanner, setShowMigrationBanner] = createSignal(false)
   const [search, setSearch] = createSignal("")
-  const [focusType, setFocusType] = createSignal<MarketplaceItem["type"] | undefined>()
+  const [focus, setFocus] = createSignal<MarketplaceFocus>()
 
   const fetchData = () => {
     setFetching(true)
@@ -57,7 +57,11 @@ export const MarketplaceView = () => {
       }
       if (msg.type === "focusMarketplaceItem") {
         setSearch(msg.mpItem.name)
-        setFocusType(msg.mpItem.type)
+        setFocus((prev) => ({ token: (prev?.token ?? 0) + 1, type: msg.mpItem.type }))
+      }
+      if (msg.type === "resetMarketplaceFilters") {
+        setSearch("")
+        setFocus((prev) => ({ token: (prev?.token ?? 0) + 1 }))
       }
       if (msg.type === "marketplaceRemoveResult") {
         const removed = pending()
@@ -177,7 +181,7 @@ export const MarketplaceView = () => {
         fetching={fetching()}
         search={search()}
         onSearchChange={setSearch}
-        focusType={focusType()}
+        focus={focus()}
         searchPlaceholder={t("marketplace.search")}
         emptyMessage={t("marketplace.empty")}
         relevantEmptyMessage={t("marketplace.empty.relevant")}

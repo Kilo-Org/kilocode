@@ -64,6 +64,7 @@ export class MarketplacePanelProvider implements vscode.Disposable {
     if (this.panel) {
       this.setProjectDirectory(project)
       this.panel.reveal(vscode.ViewColumn.One)
+      this.post({ type: "resetMarketplaceFilters" })
       this.scheduleRefresh()
       return
     }
@@ -164,6 +165,8 @@ export class MarketplacePanelProvider implements vscode.Disposable {
     this.ready = false
     this.generation++
     this.statuses.clear()
+    this.pendingInstall = undefined
+    this.pendingFocus = undefined
   }
 
   private async connect(): Promise<void> {
