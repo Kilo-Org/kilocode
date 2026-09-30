@@ -10,6 +10,7 @@ import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.popup.SidePopupController
 import ai.kilocode.client.ui.popup.SidePopupContent
+import ai.kilocode.client.ui.popup.SidePopupGeometry
 import ai.kilocode.client.ui.popup.SidePopupRequest
 import ai.kilocode.client.ui.popup.SidePopupSpot
 import ai.kilocode.client.util.UiTimerSource
@@ -247,29 +248,49 @@ internal class PromptRailController(
         )
     }
 
-    /** Balloon anchor: to the left of the rail, no callout, vertically centered on the hovered tick. */
-    private fun place(index: Int, body: SidePopupContent): SidePopupSpot? {
+    /**
+     * Anchors the balloon on the left edge of the rail, so the body opens into the transcript and never
+     * covers the ticks it describes. The body is capped to the room between that edge and the window, and
+     * its height is budgeted against the visible session: `BalloonImpl.show` silently re-points a balloon
+     * `ABOVE`/`BELOW` when the requested rectangle does not fit, which would drop it back over the ticks.
+     */
+    private fun place(index: Int, built: SidePopupContent): SidePopupSpot? {
         val pane = SwingUtilities.getRootPane(rail)?.layeredPane ?: return null
         if (!rail.isShowing) return null
-        val railBounds = SwingUtilities.convertRectangle(rail.parent, rail.bounds, pane)
+        val area = SwingUtilities.convertRectangle(root, root.visibleRect, pane)
+        if (area.isEmpty) return null
+        val rect = SwingUtilities.convertRectangle(rail.parent, rail.bounds, pane)
+        val gap = UiStyle.Gap.pad()
         val insets = UiStyle.Balloon.insets()
+        // The shadow is reserved on every side, so it counts twice on each axis. There is no callout
+        // here, so unlike the header popups the pointer adds nothing.
         val shadow = UiStyle.Balloon.shadow()
         val chromeWidth = insets.left + insets.right + shadow * 2
         val chromeHeight = insets.top + insets.bottom + shadow * 2
-        val maxWidth = (railBounds.x - UiStyle.Gap.lg() - chromeWidth)
+        // Room is measured to the window edge rather than the chat panel: the rail hugs the right side of
+        // a narrow sidebar, where the panel alone would leave almost nothing to open into.
+        val maxWidth = (rect.x - chromeWidth - gap)
             .coerceIn(0, JBUI.scale(SessionUiStyle.View.Popup.MAX_WIDTH))
-        val maxHeight = (railBounds.height - UiStyle.Gap.lg() - chromeHeight)
+        val maxHeight = (area.height - gap * 2 - chromeHeight)
             .coerceIn(0, JBUI.scale(SessionUiStyle.View.Popup.MAX_HEIGHT))
         if (maxWidth <= 0 || maxHeight <= 0) return null
-        body.fitWithin(maxWidth, maxHeight)
-        val y = rail.tickCenterY(index.coerceAtLeast(0))
-        val point = SwingUtilities.convertPoint(rail, Point(0, y), pane)
-        val gap = UiStyle.Gap.lg()
+        built.fitWithin(maxWidth, maxHeight)
+        val view = Rectangle(area.x, area.y + shadow, area.width, (area.height - shadow * 2).coerceAtLeast(0))
+        val height = built.component.preferredSize.height + insets.top + insets.bottom
+        val tick = SwingUtilities.convertPoint(rail, Point(0, rail.tickCenterY(index.coerceAtLeast(0))), pane)
+        val aim = SidePopupGeometry.aim(
+            view = view,
+            subject = rect,
+            y = tick.y,
+            height = height,
+            gap = gap,
+            indent = UiStyle.Balloon.arc(),
+        )
         return SidePopupSpot(
             pane = pane,
-            point = Point(point.x - gap, point.y),
+            point = Point(rect.x, aim.y),
             position = Balloon.Position.atLeft,
-            distance = 0,
+            distance = aim.distance,
             callout = false,
         )
     }

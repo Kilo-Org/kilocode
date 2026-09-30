@@ -43,6 +43,9 @@ internal class PromptRailPopup(
     private val model = CollectionListModel(items)
     private val list = JBList(model).apply {
         isOpaque = false
+        // The expandable-item hint paints a truncated row's full text as a strip outside the list, which
+        // escapes the balloon and lands on the ticks. Rows here are meant to read as clamped previews.
+        setExpandableItemsEnabled(false)
         visibleRowCount = items.size.coerceAtMost(8)
         fixedCellHeight = JBUI.scale(ROW_HEIGHT)
         cellRenderer = Renderer()
