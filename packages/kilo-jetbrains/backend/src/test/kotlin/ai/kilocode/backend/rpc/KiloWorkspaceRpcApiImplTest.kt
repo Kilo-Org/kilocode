@@ -19,6 +19,7 @@ import java.nio.file.Files
 import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
@@ -90,6 +91,24 @@ class KiloWorkspaceRpcApiImplTest {
         assertTrue(requireNotNull(mock.lastWorkspaceConfigPatchPath).contains("directory=%2Frepo"))
         assertEquals("{\"snapshot\":true}", mock.lastWorkspaceConfigPatchBody)
         assertEquals(true, config.snapshot)
+    }
+
+    @Test
+    fun `reload core settings calls instance reload for the workspace`() = runBlocking {
+        val app = app()
+
+        assertTrue(KiloWorkspaceRpcApiImpl(app).reloadCoreSettings("/test project"))
+
+        assertEquals(1, mock.requestCount("/instance/reload"))
+        assertTrue(requireNotNull(mock.lastInstanceReloadPath).contains("directory="))
+    }
+
+    @Test
+    fun `reload core settings reports a running session conflict`() = runBlocking {
+        mock.instanceReloadStatus = 409
+        val app = app()
+
+        assertFalse(KiloWorkspaceRpcApiImpl(app).reloadCoreSettings("/repo"))
     }
 
     private suspend fun app(): KiloBackendAppService {
