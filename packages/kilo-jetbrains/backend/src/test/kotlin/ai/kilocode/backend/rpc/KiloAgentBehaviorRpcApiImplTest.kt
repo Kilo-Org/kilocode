@@ -376,6 +376,22 @@ class KiloAgentBehaviorRpcApiImplTest {
         assertEquals("Browser authorization failed: Authorization cancelled", status.error)
     }
 
+    /**
+     * An unauthenticated SSE rejection (anaconda's MCP responds 403 before OAuth) also reaches the
+     * plugin as `failed`. It must normalize to `needs_auth` over the full wire path, or the
+     * post-install sign-in prompt never fires and MCP Settings shows `failed` without Sign In.
+     */
+    @Test
+    fun `mcp status reports an SSE 403 rejection as needing sign in`() = runBlocking {
+        mock.mcp = """{"anaconda":{"status":"failed","error":"SSE error: Non-200 status code (403)"}}"""
+        val rpc = rpc()
+
+        val status = rpc.mcpStatus("/test").single()
+
+        assertEquals("needs_auth", status.status)
+        assertEquals("SSE error: Non-200 status code (403)", status.error)
+    }
+
     @Test
     fun `mcp status keeps unrelated failures failed`() = runBlocking {
         mock.mcp = """{"anaconda":{"status":"failed","error":"Connection closed"}}"""

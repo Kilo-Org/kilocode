@@ -144,8 +144,12 @@ object KiloCliDataParser {
     /** Word-boundary markers, so a hostname or server name that merely contains the text does not match. */
     private val MCP_AUTH_FAILURE_WORD_MARKERS = listOf("oauth").map { Regex("\\b${Regex.escape(it)}\\b") }
 
-    /** An HTTP 401 response, anchored to `http`/`status` so an unrelated port or ID is not mistaken for it. */
-    private val MCP_AUTH_HTTP_401 = Regex("\\b(?:http|status)\\D{0,10}401\\b")
+    /**
+     * An HTTP 401/403 response, anchored to `http`/`status` so an unrelated port or ID is not mistaken
+     * for it. Covers both transports' unauthenticated rejections, e.g. `Error POSTing to endpoint
+     * (HTTP 401): missing bearer token` and `SSE error: Non-200 status code (403)`.
+     */
+    private val MCP_AUTH_HTTP_STATUS = Regex("\\b(?:http|status)\\D{0,10}40[13]\\b")
 
     // ================================================================
     // SSE event parsing
@@ -904,8 +908,10 @@ object KiloCliDataParser {
      *
      * The CLI only reports `needs_auth` when the transport threw `UnauthorizedError` or the message
      * mentions OAuth (`packages/opencode/src/mcp/index.ts`); a rejected browser flow, a failed token
-     * exchange, or an HTTP 401 body fall through to `failed`. Those are all recoverable by signing in
-     * again, so they must still offer sign-in in Settings, Marketplace, and the session prompt.
+     * exchange, or an HTTP 401/403 rejection (`SSE error: Non-200 status code (403)`) fall through to
+     * `failed`. Those are all recoverable by signing in again, so they must still offer sign-in in
+     * Settings, Marketplace, and the session prompt — including the post-install prompt, which only
+     * fires when this normalization reports `needs_auth`.
      *
      * Matched markers are OAuth-specific and word/status-anchored, so an unrelated failure that merely
      * embeds a port number or a server name containing "oauth" is not reclassified.
@@ -914,7 +920,7 @@ object KiloCliDataParser {
         val value = this?.lowercase() ?: return false
         if (MCP_AUTH_FAILURE_MARKERS.any { value.contains(it) }) return true
         if (MCP_AUTH_FAILURE_WORD_MARKERS.any { it.containsMatchIn(value) }) return true
-        return MCP_AUTH_HTTP_401.containsMatchIn(value)
+        return MCP_AUTH_HTTP_STATUS.containsMatchIn(value)
     }
 
     private fun removable(obj: JsonObject): Boolean {

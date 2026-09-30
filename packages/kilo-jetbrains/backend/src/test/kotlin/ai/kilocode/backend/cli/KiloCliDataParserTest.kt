@@ -2307,6 +2307,10 @@ class KiloCliDataParserTest {
                 "Browser authorization was rejected: this request was replaced by another authorization attempt",
                 "Token exchange failed: invalid client",
                 "Error POSTing to endpoint (HTTP 401): missing bearer token",
+                "Error POSTing to endpoint (HTTP 403): Forbidden",
+                // The SSE transport's unauthenticated rejection, as reported for anaconda's MCP.
+                "SSE error: Non-200 status code (403)",
+                "SSE error: Non-200 status code (401)",
                 "OAuth discovery failed",
                 "Server rejected the request: invalid_grant",
                 "Server rejected the request: invalid_token",
@@ -2328,6 +2332,8 @@ class KiloCliDataParserTest {
                 "spawn npx ENOENT",
                 "Invalid MCP URL for \"broken\"",
                 "Error POSTing to endpoint (HTTP 500): server error",
+                "SSE error: Non-200 status code (404)",
+                "SSE error: Non-200 status code (500)",
             )
 
             for (reason in reasons) {
@@ -2338,16 +2344,19 @@ class KiloCliDataParserTest {
         }
 
         /**
-         * The 401/oauth markers are anchored to avoid reclassifying failures that merely embed those
-         * digits/letters as a substring, e.g. a port number or a server hostname.
+         * The 401/403/oauth markers are anchored to avoid reclassifying failures that merely embed
+         * those digits/letters as a substring, e.g. a port number or a server hostname.
          */
         @Test
-        fun `parseMcpStatus - loose 401 and oauth substrings are not reclassified as auth`() {
+        fun `parseMcpStatus - loose status-code and oauth substrings are not reclassified as auth`() {
             val reasons = listOf(
                 "connect ECONNREFUSED 127.0.0.1:40123",
+                "connect ECONNREFUSED 127.0.0.1:40323",
                 "Invalid MCP URL for \"broken401\"",
+                "Invalid MCP URL for \"broken403\"",
                 "Invalid MCP URL for \"oauthserver\"",
                 "Failed to connect to myoauthapp.internal",
+                "Request failed after 403 ms",
             )
 
             for (reason in reasons) {
