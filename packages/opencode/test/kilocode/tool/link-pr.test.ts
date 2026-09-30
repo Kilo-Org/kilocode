@@ -11,25 +11,27 @@ import * as Truncate from "@/tool/truncate"
 import type { Tool } from "@/tool/tool"
 import type { InstanceContext } from "@/project/instance-context"
 
-// Replace the override writer before the tool module loads, keeping the real
-// `parsePrUrl` so the tool still parses the URL for real.
+// Replace the session-link recorder before the tool module loads, keeping the
+// real `parsePrUrl` so the tool still parses the URL for real.
 const realPrLink = await import("@/kilo-sessions/pr-link")
 
-const writes: { worktree: string; link: unknown }[] = []
+const writes: { sessionId: string; record: unknown; worktree: string }[] = []
 let writeError: unknown
+let refuseWrite = false
 
-const writeOverride = mock(async (worktree: string, link: unknown) => {
+const recordSessionLink = mock(async (sessionId: string, record: unknown, worktree: string) => {
   if (writeError) throw writeError
-  writes.push({ worktree, link })
+  if (refuseWrite) return undefined
+  writes.push({ sessionId, record, worktree })
+  return record
 })
 
 void mock.module("@/kilo-sessions/pr-link", () => ({
   ...realPrLink,
-  writePrLinkOverride: writeOverride,
+  recordSessionLink,
 }))
 
 const { LinkPrTool } = await import("@/kilocode/tool/link-pr")
-const { KiloToolRegistry } = await import("@/kilocode/tool/registry")
 
 const agentInfo = {
   name: "code",
@@ -101,7 +103,8 @@ const layer = Layer.mergeAll(
 beforeEach(() => {
   writes.length = 0
   writeError = undefined
-  writeOverride.mockClear()
+  refuseWrite = false
+  recordSessionLink.mockClear()
 })
 
 function run(url: string, dir = worktree) {
@@ -149,11 +152,15 @@ describe("link_pr tool", () => {
     expect(result.output).toContain("https://github.com/owner/repo/pull/123")
 
     expect(writes).toHaveLength(1)
+    expect(writes[0]?.sessionId).toBe("ses_test")
     expect(writes[0]?.worktree).toBe(worktree)
-    expect(writes[0]?.link).toEqual({
-      platform: "github",
-      prUrl: "https://github.com/owner/repo/pull/123",
-      prNumber: 123,
+    expect(writes[0]?.record).toEqual({
+      link: {
+        platform: "github",
+        prUrl: "https://github.com/owner/repo/pull/123",
+        prNumber: 123,
+      },
+      evidence: "user",
     })
   })
 
@@ -163,10 +170,13 @@ describe("link_pr tool", () => {
     expect(result.metadata.ok).toBe(true)
     expect(result.metadata.platform).toBe("gitlab")
     expect(result.metadata.prNumber).toBe(45)
-    expect(writes[0]?.link).toEqual({
-      platform: "gitlab",
-      prUrl: "https://gitlab.com/group/proj/-/merge_requests/45",
-      prNumber: 45,
+    expect(writes[0]?.record).toEqual({
+      link: {
+        platform: "gitlab",
+        prUrl: "https://gitlab.com/group/proj/-/merge_requests/45",
+        prNumber: 45,
+      },
+      evidence: "user",
     })
   })
 
@@ -176,10 +186,13 @@ describe("link_pr tool", () => {
     expect(result.metadata.ok).toBe(true)
     expect(result.metadata.platform).toBe("bitbucket")
     expect(result.metadata.prNumber).toBe(7)
-    expect(writes[0]?.link).toEqual({
-      platform: "bitbucket",
-      prUrl: "https://bitbucket.org/workspace/repo/pull-requests/7",
-      prNumber: 7,
+    expect(writes[0]?.record).toEqual({
+      link: {
+        platform: "bitbucket",
+        prUrl: "https://bitbucket.org/workspace/repo/pull-requests/7",
+        prNumber: 7,
+      },
+      evidence: "user",
     })
   })
 
@@ -215,6 +228,18 @@ describe("link_pr tool", () => {
     expect(writes).toHaveLength(0)
   })
 
+  test("rejects the link when the session store refuses it", async () => {
+    refuseWrite = true
+
+    const result = await run("https://github.com/owner/repo/pull/9")
+
+    expect(result.metadata.ok).toBe(false)
+    expect(result.metadata.reason).toBe("wrong_repo")
+    expect(result.title).toBe("PR link rejected")
+    expect(result.output).toContain("is not a pull request for this repository")
+    expect(writes).toHaveLength(0)
+  })
+
   test("returns a non-retryable failure when the write fails", async () => {
     writeError = new Error("storage unavailable")
 
@@ -228,6 +253,10 @@ describe("link_pr tool", () => {
   })
 
   test("the built registry contains link_pr", async () => {
+    // Imported lazily: the registry pulls the kilo-sessions module, whose own
+    // migration is owned by another slice, so this import must not stop the
+    // session-scoped link_pr tests above from running.
+    const { KiloToolRegistry } = await import("@/kilocode/tool/registry")
     const built = await Effect.runPromise(
       Effect.gen(function* () {
         const linkPr = yield* LinkPrTool
