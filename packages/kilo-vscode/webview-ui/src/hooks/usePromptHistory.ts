@@ -125,8 +125,17 @@ function mutableEntriesFor(key: string): string[] {
 }
 
 export interface PromptHistory {
-  /** Navigate history. Returns the new text value, or null if no navigation occurred. */
-  navigate: (direction: "up" | "down", text: string, cursor: number) => string | null
+  /**
+   * Navigate history. Returns the new text with its collapsed paste contents, or null
+   * if no navigation occurred. `pastes` are the contents of the chips in the current
+   * text, kept with the draft so returning to it brings the chips back.
+   */
+  navigate: (
+    direction: "up" | "down",
+    text: string,
+    cursor: number,
+    pastes: readonly string[],
+  ) => { text: string; pastes: readonly string[] } | null
   /**
    * Append a sent prompt to history (deduplicates consecutive identical entries).
    * Pass `targetKey` to record against a specific conversation instead of whichever
@@ -151,7 +160,7 @@ export interface PromptHistory {
  */
 export function usePromptHistory(key: Accessor<string | undefined>): PromptHistory {
   const [index, setIndex] = createSignal(-1)
-  let saved: string | null = null
+  let saved: { text: string; pastes: readonly string[] } | null = null
   const resolve = () => key() ?? FALLBACK_KEY
   let lastKey = resolve()
 
@@ -166,21 +175,26 @@ export function usePromptHistory(key: Accessor<string | undefined>): PromptHisto
     return current
   }
 
-  function navigate(direction: "up" | "down", text: string, cursor: number): string | null {
+  function navigate(
+    direction: "up" | "down",
+    text: string,
+    cursor: number,
+    pastes: readonly string[],
+  ): { text: string; pastes: readonly string[] } | null {
     const list = entriesFor(syncKey())
     if (!canNavigate(direction, text, cursor, index() >= 0)) return null
 
     if (direction === "up") {
       if (list.length === 0) return null
       if (index() === -1) {
-        saved = text
+        saved = { text, pastes }
         setIndex(0)
-        return list[0]!
+        return { text: list[0]!, pastes: [] }
       }
       const next = index() + 1
       if (next >= list.length) return null
       setIndex(next)
-      return list[next]!
+      return { text: list[next]!, pastes: [] }
     }
 
     // direction === "down"
@@ -189,12 +203,12 @@ export function usePromptHistory(key: Accessor<string | undefined>): PromptHisto
     if (index() > 0) {
       const next = index() - 1
       setIndex(next)
-      return list[next]!
+      return { text: list[next]!, pastes: [] }
     }
 
     // index === 0: return to the saved draft
     setIndex(-1)
-    const draft = saved ?? ""
+    const draft = saved ?? { text: "", pastes: [] }
     saved = null
     return draft
   }

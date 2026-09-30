@@ -221,10 +221,10 @@ describe("usePromptHistory — per-conversation isolation", () => {
       const historyB = usePromptHistory(sidB)
 
       // Session B must not see session A's entries.
-      expect(historyB.navigate("up", "", 0)).toBeNull()
+      expect(historyB.navigate("up", "", 0, [])).toBeNull()
 
       // Session A still sees its own entry.
-      expect(historyA.navigate("up", "", 0)).toBe("hello from A")
+      expect(historyA.navigate("up", "", 0, [])?.text).toBe("hello from A")
 
       dispose()
     })
@@ -235,14 +235,14 @@ describe("usePromptHistory — per-conversation isolation", () => {
       const [sid, setSid] = createSignal<string | undefined>("session-c-unique")
       const history = usePromptHistory(sid)
       history.append("first conversation message")
-      expect(history.navigate("up", "", 0)).toBe("first conversation message")
+      expect(history.navigate("up", "", 0, [])?.text).toBe("first conversation message")
 
       setSid("session-d-unique")
       // Switching keys resets browsing state and reveals the new key's (empty) history.
-      expect(history.navigate("up", "", 0)).toBeNull()
+      expect(history.navigate("up", "", 0, [])).toBeNull()
 
       history.append("second conversation message")
-      expect(history.navigate("up", "", 0)).toBe("second conversation message")
+      expect(history.navigate("up", "", 0, [])?.text).toBe("second conversation message")
 
       dispose()
     })
@@ -254,13 +254,13 @@ describe("usePromptHistory — per-conversation isolation", () => {
       const history = usePromptHistory(sid)
       history.append("a")
       history.append("b")
-      history.navigate("up", "", 0)
+      history.navigate("up", "", 0, [])
       expect(history.index()).toBe(0)
 
       // The reset happens on the next action (navigate/append/seed), not merely by
       // reading `index()` — that accessor is a pure signal read with no side effects.
       setSid("session-f-unique")
-      history.navigate("up", "", 0)
+      history.navigate("up", "", 0, [])
       expect(history.index()).toBe(-1)
 
       dispose()
@@ -272,7 +272,7 @@ describe("usePromptHistory — per-conversation isolation", () => {
       const [sid] = createSignal<string | undefined>(undefined)
       const history = usePromptHistory(sid)
       history.append("draft without a session yet")
-      expect(history.navigate("up", "", 0)).toBe("draft without a session yet")
+      expect(history.navigate("up", "", 0, [])?.text).toBe("draft without a session yet")
       dispose()
     })
   })
@@ -288,10 +288,10 @@ describe("usePromptHistory — per-conversation isolation", () => {
       history.append("sent from session-g-unique", "session-g-unique")
 
       // The now-active conversation (session-h-unique) must not see it.
-      expect(history.navigate("up", "", 0)).toBeNull()
+      expect(history.navigate("up", "", 0, [])).toBeNull()
 
       setSid("session-g-unique")
-      expect(history.navigate("up", "", 0)).toBe("sent from session-g-unique")
+      expect(history.navigate("up", "", 0, [])?.text).toBe("sent from session-g-unique")
 
       dispose()
     })
@@ -301,12 +301,12 @@ describe("usePromptHistory — per-conversation isolation", () => {
     createRoot((dispose) => {
       const [sid] = createSignal<string | undefined>("session-i-unique")
       const history = usePromptHistory(sid)
-      expect(history.navigate("up", "", 0)).toBeNull()
+      expect(history.navigate("up", "", 0, [])).toBeNull()
       // A second, unrelated conversation must not see any entry created by the read above.
       const [sid2] = createSignal<string | undefined>("session-j-unique")
       const other = usePromptHistory(sid2)
       other.append("only in session-j-unique")
-      expect(other.navigate("up", "", 0)).toBe("only in session-j-unique")
+      expect(other.navigate("up", "", 0, [])?.text).toBe("only in session-j-unique")
       dispose()
     })
   })
@@ -324,9 +324,9 @@ describe("usePromptHistory — per-conversation isolation", () => {
       histories.forEach((history, i) => history.append(`msg-${i}`))
 
       // The earliest conversation written in this batch was evicted...
-      expect(histories[0]!.navigate("up", "", 0)).toBeNull()
+      expect(histories[0]!.navigate("up", "", 0, [])).toBeNull()
       // ...while the most recently written one survives.
-      expect(histories.at(-1)!.navigate("up", "", 0)).toBe(`msg-${batch - 1}`)
+      expect(histories.at(-1)!.navigate("up", "", 0, [])?.text).toBe(`msg-${batch - 1}`)
 
       dispose()
     })
