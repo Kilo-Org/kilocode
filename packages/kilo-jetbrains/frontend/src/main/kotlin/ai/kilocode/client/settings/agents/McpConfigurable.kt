@@ -103,6 +103,13 @@ internal class McpSettingsUi(
         if (names.isEmpty()) {
             LOG.warn("mcp settings fetch returned no servers dir=$dir")
         }
+        // A row only has room for the status pill, so the reason a server is unhealthy would otherwise
+        // live solely in its tooltip. Log it too, so a failure is diagnosable from the IDE log alone.
+        for (name in names) {
+            val status = statuses[name] ?: continue
+            if (status.status == CONNECTED || status.status == DISABLED) continue
+            LOG.warn("mcp server unhealthy dir=$dir name=$name status=${status.status} reason=${status.error ?: "unreported"}")
+        }
         return names.map { name -> item(name, cfg[name]?.config, statuses[name]) }
     }
 
@@ -149,7 +156,14 @@ internal class McpSettingsUi(
     }
 
     private fun badges(cfg: McpConfigDto?, status: McpStatusDto?): List<ActiveListBadge> = listOfNotNull(
-        ActiveListBadge(statusLabel(status), statusStyle(status)).takeIf { status != null },
+        // The row hides its description line, which suppresses the row-level tooltip, so the status
+        // pill carries the reason itself. An id is what opts a badge into list hit-testing.
+        ActiveListBadge(
+            statusLabel(status),
+            statusStyle(status),
+            id = STATUS_BADGE,
+            tooltip = statusTooltip(status),
+        ).takeIf { status != null },
         ActiveListBadge(cfg?.type ?: KiloBundle.message("settings.agentBehavior.mcp.configured")).takeIf { cfg != null },
     )
 
@@ -263,6 +277,7 @@ internal class McpSettingsUi(
         const val NEEDS_AUTH = "needs_auth"
         const val NEEDS_REGISTRATION = "needs_client_registration"
         const val DISABLED = "disabled"
+        const val STATUS_BADGE = "status"
         const val CONNECT_CELL = "connect"
         const val DISCONNECT_CELL = "disconnect"
         const val AUTH_CELL = "auth"
@@ -281,6 +296,15 @@ internal class McpSettingsUi(
                 DISABLED -> KiloBundle.message("settings.agentBehavior.mcp.status.disabled")
                 else -> value
             }
+        }
+
+        /**
+         * Why the server is in [status], wrapped for a multi-line tooltip. Null when the pill text
+         * already says everything, so a healthy row does not gain a tooltip that repeats it.
+         */
+        fun statusTooltip(status: McpStatusDto?): String? {
+            val reason = status?.error?.takeIf { it.isNotBlank() } ?: return null
+            return UiStyle.Text.tipLines(listOf(statusLabel(status)) + reason.lines())
         }
 
         fun statusStyle(status: McpStatusDto?): UiStyle.Badge.Style {

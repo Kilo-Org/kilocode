@@ -13,6 +13,7 @@ import ai.kilocode.client.testing.fire
 import ai.kilocode.client.testing.rowLines
 import ai.kilocode.client.ui.list.ActiveListItem
 import ai.kilocode.client.ui.list.activeListCellBounds
+import ai.kilocode.client.ui.list.activeListHits
 import ai.kilocode.rpc.dto.ConfigDto
 import ai.kilocode.rpc.dto.KiloAppStateDto
 import ai.kilocode.rpc.dto.KiloAppStatusDto
@@ -118,6 +119,50 @@ class McpSettingsUiTest : BasePlatformTestCase() {
         edt {
             panel.filter("github")
             assertEquals(listOf("github"), rows(panel).map { it.key })
+            true
+        }
+    }
+
+    fun `test failed status badge carries the failure reason as its tooltip`() {
+        val panel = panel()
+        flushUntil { rows(panel).size == 3 }
+
+        edt {
+            val badge = rows(panel).single { it.key == "runtime" }.badges.first()
+            assertEquals("failed", badge.text)
+            val tooltip = badge.tooltip
+            assertNotNull("the failed badge must explain itself", tooltip)
+            assertTrue("tooltip should carry the reason, got $tooltip", tooltip!!.contains("crashed"))
+            assertTrue("tooltip should name the status, got $tooltip", tooltip.contains("failed"))
+            true
+        }
+    }
+
+    fun `test healthy status badge has no tooltip`() {
+        val panel = panel()
+        flushUntil { rows(panel).size == 3 }
+
+        edt {
+            // The pill already reads "connected"; a tooltip repeating it would be noise.
+            assertNull(rows(panel).single { it.key == "filesystem" }.badges.first().tooltip)
+            true
+        }
+    }
+
+    fun `test failure reason is reachable through list hit testing`() {
+        val panel = panel()
+        flushUntil { rows(panel).size == 3 }
+
+        edt {
+            val list = list(panel)
+            list.size = Dimension(460, 260)
+            list.doLayout()
+            val idx = rows(panel).indexOfFirst { it.key == "runtime" }
+            list.selectedIndex = idx
+            // Proves the badge is hit-tested, so hovering it actually shows the reason rather than
+            // the text merely existing on the model.
+            val hit = activeListHits(list, idx, selected = true).single { it.id == "status" }
+            assertTrue("hovering the badge must reveal the reason", hit.tooltip.orEmpty().contains("crashed"))
             true
         }
     }
