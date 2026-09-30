@@ -33,6 +33,16 @@ describe("reportFailure", () => {
     expect(h.toasts).toEqual([])
   })
 
+  it("leaves a failed revert to the session context, which shows it translated", () => {
+    const h = host()
+
+    expect(
+      reportFailure({ type: "error", message: "Failed to revert session", code: "revert.error.body" }, h),
+    ).toBeUndefined()
+
+    expect(h.toasts).toEqual([])
+  })
+
   it("shows a plain error message and keeps the caller routing", () => {
     const h = host()
 

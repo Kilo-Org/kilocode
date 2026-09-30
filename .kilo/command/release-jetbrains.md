@@ -1,18 +1,17 @@
 ---
-name: release-jetbrains
-description: Use when releasing the Kilo JetBrains plugin -- resolve a version ("next rc" or explicit), run the prepare workflow, edit and commit a filtered human-readable changelog on the release PR, then watch publish to completion.
+description: Release the Kilo JetBrains plugin (resolve version, verify CLI pin, prepare, changelog, publish)
 ---
 
-# JetBrains Release
+Release the Kilo JetBrains plugin for version spec: $1 (default to `next rc` if empty).
 
-Use this skill when releasing the Kilo JetBrains plugin.
+This command drives the existing JetBrains release workflows. It must not move, delete, or recreate JetBrains release tags. It must always confirm the resolved version with the user before dispatching the prepare workflow because the prepare workflow creates an immutable `jetbrains/v<version>` tag.
 
-This skill drives the existing JetBrains release workflows. It must not move, delete, or recreate JetBrains release tags. It must always confirm the resolved version with the user before dispatching the prepare workflow because the prepare workflow creates an immutable `jetbrains/v<version>` tag.
+The helper scripts live at `.kilo/skills/release-jetbrains/script/` (kept there, not under `.kilo/command/`, because `script/publish.ts` in CI and the `jetbrains-cli-pin` skill both call them directly).
 
 ## Preconditions
 
 - Run from the repository root.
-- `gh` must be authenticated for `Kilo-Org/kilocode` with permission to dispatch workflows, read PRs, and write contents. Merge permission is only required if the user asks the skill to merge the release PR automatically.
+- `gh` must be authenticated for `Kilo-Org/kilocode` with permission to dispatch workflows, read PRs, and write contents. Merge permission is only required if the user asks to merge the release PR automatically.
 - Check auth with `gh auth status`. For GitHub CLI OAuth, refresh common release scopes with `gh auth refresh -s repo -s workflow`; `repo` covers private-repo contents and PR operations, and `workflow` allows workflow dispatch. If using a fine-grained token instead, grant repository permissions for Actions read/write, Contents read/write, and Pull requests read/write. Merging still requires normal repository collaborator permission or a token/user allowed by branch protection.
 - Reference `packages/kilo-jetbrains/RELEASING.md` for manual recovery rules.
 - Do not locally check out the generated release branch. The helper scripts update the release branch through GitHub to avoid disturbing the current worktree.
@@ -81,6 +80,8 @@ Local test edit only:
 bun .kilo/skills/release-jetbrains/script/set-pin.ts --latest
 # or
 bun .kilo/skills/release-jetbrains/script/set-pin.ts --version 7.4.1
+# Pre-release versions are also supported:
+bun .kilo/skills/release-jetbrains/script/set-pin.ts --version 7.4.2-rc.1
 ```
 
 Then test from `packages/kilo-jetbrains/`:
@@ -97,6 +98,8 @@ bun .kilo/skills/release-jetbrains/script/set-pin.ts --latest --pr
 # or
 bun .kilo/skills/release-jetbrains/script/set-pin.ts --version 7.4.1 --pr
 ```
+
+Pre-release pin PRs receive both the `jetbrains-cli-pin-bump` and `pre-release` labels. Pass `--pre-release` when the release channel is pre-release but the CLI version is plain semver; the CLI publish workflow does this automatically.
 
 After that PR merges to `main`, re-run `resolve-version.ts`, re-run `check-pin.ts`, confirm `drift=up-to-date`, then dispatch prepare. Do not dispatch prepare from a local-only pin edit; the prepare workflow tags `origin/main`.
 

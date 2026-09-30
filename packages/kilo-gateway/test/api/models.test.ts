@@ -335,6 +335,25 @@ const MIXED_MODALITY_RESPONSE = JSON.stringify({
       },
       supported_parameters: ["tools", "temperature"],
     },
+    {
+      id: "typesafe/jev-router",
+      name: "Jev Router",
+      context_length: 128000,
+      architecture: {
+        input_modalities: ["text"],
+        output_modalities: ["text"],
+      },
+      supported_parameters: [],
+    },
+    {
+      id: "test/no-params",
+      name: "No Params Model",
+      context_length: 128000,
+      architecture: {
+        input_modalities: ["text"],
+        output_modalities: ["text"],
+      },
+    },
   ],
 })
 
@@ -358,6 +377,8 @@ test("keeps image-output models with tools and drops models without tools", asyn
   expect(result.models["black-forest-labs/flux-1.1-pro"]).toBeDefined()
   expect(result.models["test/model-a"]).toBeDefined()
   expect(result.models["test/no-tools"]).toBeUndefined()
+  expect(result.models["typesafe/jev-router"]?.tool_call).toBe(true)
+  expect(result.models["test/no-params"]?.tool_call).toBe(true)
 })
 
 test("fetches and filters the transcription catalog", async () => {
