@@ -1250,7 +1250,6 @@ export const dict = {
   "task.backgroundAgents.continueInBackground": "在背景繼續",
   "task.backgroundAgents.waiting": "背景 Agent 需要你的輸入",
   "task.backgroundAgents.needsInput": "需要輸入",
-  "task.backgroundAgents.dismiss": "關閉",
   "task.backgroundAgents.clearFinished": "清除已完成",
   "task.backgroundAgents.summary": "{{running}}/{{total}} 個背景 Agent 執行中",
   "task.backgroundAgents.status.running": "執行中",

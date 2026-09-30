@@ -1295,7 +1295,6 @@ export const dict = {
   "task.backgroundAgents.continueInBackground": "ทำต่อในเบื้องหลัง",
   "task.backgroundAgents.waiting": "เอเจนต์เบื้องหลังต้องการข้อมูลจากคุณ",
   "task.backgroundAgents.needsInput": "ต้องการข้อมูล",
-  "task.backgroundAgents.dismiss": "ยกเลิก",
   "task.backgroundAgents.clearFinished": "ล้างรายการที่เสร็จแล้ว",
   "task.backgroundAgents.summary": "เอเจนต์เบื้องหลัง {{running}} จาก {{total}} ตัวกำลังทำงาน",
   "task.backgroundAgents.status.running": "กำลังทำงาน",

@@ -1246,7 +1246,6 @@ export const dict = {
   "task.backgroundAgents.continueInBackground": "在后台继续",
   "task.backgroundAgents.waiting": "后台智能体需要你的输入",
   "task.backgroundAgents.needsInput": "需要输入",
-  "task.backgroundAgents.dismiss": "关闭",
   "task.backgroundAgents.clearFinished": "清除已完成",
   "task.backgroundAgents.summary": "{{running}}/{{total}} 个后台智能体运行中",
   "task.backgroundAgents.status.running": "运行中",

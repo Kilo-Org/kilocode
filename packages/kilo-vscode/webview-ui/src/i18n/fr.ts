@@ -1361,7 +1361,6 @@ export const dict = {
   "task.backgroundAgents.continueInBackground": "Continuer en arrière-plan",
   "task.backgroundAgents.waiting": "Un agent en arrière-plan attend votre saisie",
   "task.backgroundAgents.needsInput": "Saisie requise",
-  "task.backgroundAgents.dismiss": "Ignorer",
   "task.backgroundAgents.clearFinished": "Effacer les agents terminés",
   "task.backgroundAgents.summary": "{{running}} agent(s) en arrière-plan sur {{total}} en cours",
   "task.backgroundAgents.status.running": "En cours",

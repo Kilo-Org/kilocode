@@ -1327,7 +1327,6 @@ export const dict = {
   "task.backgroundAgents.continueInBackground": "Nastavi u pozadini",
   "task.backgroundAgents.waiting": "Agent u pozadini treba vaš unos",
   "task.backgroundAgents.needsInput": "Potreban unos",
-  "task.backgroundAgents.dismiss": "Odbaci",
   "task.backgroundAgents.clearFinished": "Obriši završene",
   "task.backgroundAgents.summary": "{{running}} od {{total}} agenata u pozadini radi",
   "task.backgroundAgents.status.running": "Radi",

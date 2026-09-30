@@ -1317,7 +1317,6 @@ export const dict = {
   "task.backgroundAgents.continueInBackground": "ادامه در پس‌زمینه",
   "task.backgroundAgents.waiting": "یک عامل پس‌زمینه به ورودی شما نیاز دارد",
   "task.backgroundAgents.needsInput": "ورودی لازم است",
-  "task.backgroundAgents.dismiss": "رد کردن",
   "task.backgroundAgents.clearFinished": "پاک کردن موارد تکمیل‌شده",
   "task.backgroundAgents.summary": "{{running}} از {{total}} عامل پس‌زمینه در حال اجرا هستند",
   "task.backgroundAgents.status.running": "در حال اجرا",

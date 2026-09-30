@@ -1352,7 +1352,6 @@ export const dict = {
   "task.backgroundAgents.continueInBackground": "Im Hintergrund fortsetzen",
   "task.backgroundAgents.waiting": "Ein Hintergrund-Agent benötigt deine Eingabe",
   "task.backgroundAgents.needsInput": "Eingabe erforderlich",
-  "task.backgroundAgents.dismiss": "Ausblenden",
   "task.backgroundAgents.clearFinished": "Abgeschlossene löschen",
   "task.backgroundAgents.summary": "{{running}} von {{total}} Hintergrund-Agenten aktiv",
   "task.backgroundAgents.status.running": "Läuft",

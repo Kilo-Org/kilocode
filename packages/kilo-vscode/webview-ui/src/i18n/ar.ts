@@ -1289,7 +1289,6 @@ export const dict = {
   "task.backgroundAgents.continueInBackground": "متابعة في الخلفية",
   "task.backgroundAgents.waiting": "وكيل خلفي يحتاج إلى إدخالك",
   "task.backgroundAgents.needsInput": "الإدخال مطلوب",
-  "task.backgroundAgents.dismiss": "تجاهل",
   "task.backgroundAgents.clearFinished": "مسح المكتمل",
   "task.backgroundAgents.summary": "{{running}} من {{total}} وكلاء خلفيين قيد التشغيل",
   "task.backgroundAgents.status.running": "قيد التشغيل",

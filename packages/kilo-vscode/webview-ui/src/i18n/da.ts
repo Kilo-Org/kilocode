@@ -1322,7 +1322,6 @@ export const dict = {
   "task.backgroundAgents.continueInBackground": "Fortsæt i baggrunden",
   "task.backgroundAgents.waiting": "En baggrundsagent har brug for dit input",
   "task.backgroundAgents.needsInput": "Input kræves",
-  "task.backgroundAgents.dismiss": "Afvis",
   "task.backgroundAgents.clearFinished": "Ryd færdige",
   "task.backgroundAgents.summary": "{{running}} af {{total}} baggrundsagenter kører",
   "task.backgroundAgents.status.running": "Kører",

@@ -1309,7 +1309,6 @@ export const dict = {
   "task.backgroundAgents.continueInBackground": "Doorgaan op de achtergrond",
   "task.backgroundAgents.waiting": "Een achtergrondagent heeft je invoer nodig",
   "task.backgroundAgents.needsInput": "Invoer vereist",
-  "task.backgroundAgents.dismiss": "Negeren",
   "task.backgroundAgents.clearFinished": "Voltooide wissen",
   "task.backgroundAgents.summary": "{{running}} van {{total}} achtergrondagenten actief",
   "task.backgroundAgents.status.running": "Actief",

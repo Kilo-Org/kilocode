@@ -1294,7 +1294,6 @@ export const dict = {
   "task.backgroundAgents.continueInBackground": "Продовжити у фоні",
   "task.backgroundAgents.waiting": "Фоновому агенту потрібен ваш ввід",
   "task.backgroundAgents.needsInput": "Потрібен ввід",
-  "task.backgroundAgents.dismiss": "Сховати",
   "task.backgroundAgents.clearFinished": "Очистити завершені",
   "task.backgroundAgents.summary": "Працює {{running}} із {{total}} фонових агентів",
   "task.backgroundAgents.status.running": "Виконується",

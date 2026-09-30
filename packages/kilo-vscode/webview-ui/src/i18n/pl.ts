@@ -1328,7 +1328,6 @@ export const dict = {
   "task.backgroundAgents.continueInBackground": "Kontynuuj w tle",
   "task.backgroundAgents.waiting": "Agent w tle potrzebuje danych wejściowych",
   "task.backgroundAgents.needsInput": "Wymagane dane wejściowe",
-  "task.backgroundAgents.dismiss": "Odrzuć",
   "task.backgroundAgents.clearFinished": "Wyczyść ukończone",
   "task.backgroundAgents.summary": "{{running}} z {{total}} agentów w tle działa",
   "task.backgroundAgents.status.running": "Działa",

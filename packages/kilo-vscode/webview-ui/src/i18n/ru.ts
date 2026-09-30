@@ -1320,7 +1320,6 @@ export const dict = {
   "task.backgroundAgents.continueInBackground": "Продолжить в фоне",
   "task.backgroundAgents.waiting": "Фоновому агенту требуется ваш ввод",
   "task.backgroundAgents.needsInput": "Требуется ввод",
-  "task.backgroundAgents.dismiss": "Скрыть",
   "task.backgroundAgents.clearFinished": "Очистить завершённые",
   "task.backgroundAgents.summary": "Фоновые агенты: {{running}} из {{total}} выполняются",
   "task.backgroundAgents.status.running": "Выполняется",

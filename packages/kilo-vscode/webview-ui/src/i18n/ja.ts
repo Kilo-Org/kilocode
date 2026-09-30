@@ -1314,7 +1314,6 @@ export const dict = {
   "task.backgroundAgents.continueInBackground": "バックグラウンドで続行",
   "task.backgroundAgents.waiting": "バックグラウンドエージェントが入力を待っています",
   "task.backgroundAgents.needsInput": "入力が必要",
-  "task.backgroundAgents.dismiss": "閉じる",
   "task.backgroundAgents.clearFinished": "完了済みを消去",
   "task.backgroundAgents.summary": "{{total}} 件中 {{running}} 件のバックグラウンドエージェントが実行中",
   "task.backgroundAgents.status.running": "実行中",

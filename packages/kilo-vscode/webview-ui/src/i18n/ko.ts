@@ -1298,7 +1298,6 @@ export const dict = {
   "task.backgroundAgents.continueInBackground": "백그라운드에서 계속",
   "task.backgroundAgents.waiting": "백그라운드 에이전트에 입력이 필요합니다",
   "task.backgroundAgents.needsInput": "입력 필요",
-  "task.backgroundAgents.dismiss": "닫기",
   "task.backgroundAgents.clearFinished": "완료된 항목 지우기",
   "task.backgroundAgents.summary": "백그라운드 에이전트 {{total}}개 중 {{running}}개 실행 중",
   "task.backgroundAgents.status.running": "실행 중",

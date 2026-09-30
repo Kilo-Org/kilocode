@@ -1295,7 +1295,6 @@ export const dict = {
   "task.backgroundAgents.continueInBackground": "Arka planda devam et",
   "task.backgroundAgents.waiting": "Bir arka plan ajanı girişinizi bekliyor",
   "task.backgroundAgents.needsInput": "Giriş gerekli",
-  "task.backgroundAgents.dismiss": "Kapat",
   "task.backgroundAgents.clearFinished": "Tamamlananları temizle",
   "task.backgroundAgents.summary": "{{total}} arka plan ajanından {{running}} tanesi çalışıyor",
   "task.backgroundAgents.status.running": "Çalışıyor",

@@ -1,7 +1,5 @@
-/* Reserve the compact badge (28px, 8px of it over the lane) plus an 8px inset
-   from the row edge on both sides, so the lane stays centered. */
 .session-working[data-goal] {
-  max-width: min(var(--session-dock-lane), calc(100% - 56px));
+  max-width: min(var(--session-dock-lane), calc(100% - 40px));
 }
 
 .prompt-goal-header {

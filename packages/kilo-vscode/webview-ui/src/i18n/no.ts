@@ -1318,7 +1318,6 @@ export const dict = {
   "task.backgroundAgents.continueInBackground": "Fortsett i bakgrunnen",
   "task.backgroundAgents.waiting": "En bakgrunnsagent trenger innspill fra deg",
   "task.backgroundAgents.needsInput": "Innspill kreves",
-  "task.backgroundAgents.dismiss": "Avvis",
   "task.backgroundAgents.clearFinished": "Fjern fullførte",
   "task.backgroundAgents.summary": "{{running}} av {{total}} bakgrunnsagenter kjører",
   "task.backgroundAgents.status.running": "Kjører",
