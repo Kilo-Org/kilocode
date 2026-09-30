@@ -1200,10 +1200,30 @@ it.instance(
 it.instance(
   "preserves metadata and paused forks while goal controls leave the transcript and model unchanged",
   Effect.gen(function* () {
-    const { llm, sessions, session, command, metadata } = yield* setup()
+    const stage = <A, E, R>(name: string, work: Effect.Effect<A, E, R>) =>
+      work.pipe(
+        Effect.onError((cause) =>
+          Effect.gen(function* () {
+            const fiber = yield* Effect.fiberId
+            const reasons = cause.reasons
+              .slice(0, 8)
+              .map((reason) =>
+                reason._tag === "Interrupt" ? `Interrupt(${reason.fiberId ?? "unknown"})` : reason._tag,
+              )
+            yield* Effect.sync(() =>
+              console.error(
+                `[goal-controls] stage=${name} fiber=${fiber} cause=${reasons.join(",")} reasons=${cause.reasons.length}`,
+              ),
+            )
+          }),
+        ),
+      )
+    const { llm, sessions, session, command, metadata } = yield* stage("setup", setup())
     const events = yield* EventV2Bridge.Service
     const drain = yield* SessionDrain.Service
+    let turns = 0
     const resume = Effect.gen(function* () {
+      const name = `resume-${++turns}`
       // An HTTP hit does not mean the client has started processing the stream.
       const received = yield* events.subscribe(MessageV2.Event.PartUpdated).pipe(
         Stream.filter((event) => event.data.part.sessionID === session.id && event.data.part.type === "step-start"),
@@ -1211,9 +1231,9 @@ it.instance(
         Stream.runDrain,
         Effect.forkChild({ startImmediately: true }),
       )
-      yield* llm.hang
-      yield* command("resume")
-      yield* awaitWithTimeout(Fiber.join(received), "goal stream did not start", "15 seconds")
+      yield* stage(`${name}:response`, llm.hang)
+      yield* stage(`${name}:command`, command("resume"))
+      yield* stage(`${name}:stream`, awaitWithTimeout(Fiber.join(received), "goal stream did not start", "15 seconds"))
     })
     const selected = {
       agent: "ask",
@@ -1224,29 +1244,34 @@ it.instance(
       },
     }
     const ids = new Set<string>()
+    let calls = 0
     const control = Effect.fnUntraced(function* (args: string) {
-      yield* sessions.setAgentModel({ sessionID: session.id, ...selected, time: Date.now() })
-      const before = yield* sessions.messages({ sessionID: session.id })
+      const name = `control-${++calls}:${args || "status"}`
+      yield* stage(`${name}:model`, sessions.setAgentModel({ sessionID: session.id, ...selected, time: Date.now() }))
+      const before = yield* stage(`${name}:before`, sessions.messages({ sessionID: session.id }))
       const target = KiloSessionContinuation.target(before)
       if (before.length) expect(target).toBeDefined()
       for (const message of before) ids.add(message.info.id)
-      const ack = yield* command(args)
+      const ack = yield* stage(`${name}:command`, command(args))
       // Cancellation can return before the prompt waiter releases its queue slot.
-      yield* awaitWithTimeout(drain.wait(session.id), "goal prompt did not drain")
-      const after = yield* sessions.messages({ sessionID: session.id })
+      yield* stage(`${name}:drain`, awaitWithTimeout(drain.wait(session.id), "goal prompt did not drain"))
+      const after = yield* stage(`${name}:after`, sessions.messages({ sessionID: session.id }))
       expect(after.map((message) => message.info.id)).toEqual(before.map((message) => message.info.id))
       expect(KiloSessionContinuation.target(after)).toBe(target)
-      expect(yield* sessions.get(session.id)).toMatchObject(selected)
+      expect(yield* stage(`${name}:getInfo`, sessions.get(session.id))).toMatchObject(selected)
       expect(ack.info.role).toBe("assistant")
       expect(ids.has(ack.info.id)).toBe(false)
       ids.add(ack.info.id)
       return ack
     })
-    yield* sessions.setMetadata({
-      sessionID: session.id,
-      metadata: { ...retained, "kilo.goal": { text: objective, active: true } },
-    })
-    expect(yield* metadata).toMatchObject({
+    yield* stage(
+      "setMetadata",
+      sessions.setMetadata({
+        sessionID: session.id,
+        metadata: { ...retained, "kilo.goal": { text: objective, active: true } },
+      }),
+    )
+    expect(yield* stage("initial:metadata", metadata)).toMatchObject({
       ...retained,
       "kilo.goal": { text: objective, active: false, status: "paused" },
     })
@@ -1254,31 +1279,31 @@ it.instance(
     expect(status.parts).toEqual(
       expect.arrayContaining([expect.objectContaining({ text: expect.stringContaining("paused") })]),
     )
-    expect(yield* llm.hits).toHaveLength(0)
+    expect(yield* stage("initial:hits", llm.hits)).toHaveLength(0)
     yield* resume
-    const fork = yield* sessions.fork({ sessionID: session.id })
+    const fork = yield* stage("fork", sessions.fork({ sessionID: session.id }))
     expect(fork.metadata).toMatchObject({
       ...retained,
       "kilo.goal": { text: objective, active: false, status: "paused" },
     })
-    expect((yield* sessions.get(fork.id)).metadata).toEqual(fork.metadata)
-    expect(yield* metadata).toMatchObject({
+    expect((yield* stage("fork:getInfo", sessions.get(fork.id))).metadata).toEqual(fork.metadata)
+    expect(yield* stage("active:metadata", metadata)).toMatchObject({
       ...retained,
       "kilo.goal": { text: objective, active: true, status: "active" },
     })
     yield* control("")
     yield* control("pause")
-    expect(yield* metadata).toMatchObject({
+    expect(yield* stage("paused:metadata", metadata)).toMatchObject({
       ...retained,
       "kilo.goal": { text: objective, active: false, status: "paused" },
     })
     yield* control("")
-    expect(yield* llm.hits).toHaveLength(1)
+    expect(yield* stage("paused:hits", llm.hits)).toHaveLength(1)
     yield* resume
     yield* control("clear")
-    expect(yield* metadata).toEqual(retained)
-    yield* Effect.sleep("5200 millis")
-    expect(yield* llm.hits).toHaveLength(2)
+    expect(yield* stage("cleared:metadata", metadata)).toEqual(retained)
+    yield* stage("cleared:wait", Effect.sleep("5200 millis"))
+    expect(yield* stage("cleared:hits", llm.hits)).toHaveLength(2)
   }),
   30_000,
 )
