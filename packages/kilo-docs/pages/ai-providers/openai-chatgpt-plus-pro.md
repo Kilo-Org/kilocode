@@ -18,7 +18,7 @@ An [OpenAI API key](/docs/ai-providers/openai) is different: it uses separate, p
 
 ## Sign in to Kilo with ChatGPT
 
-1. Open [Kilo](https://app.kilo.ai). The sign-in screen lists **Continue with ChatGPT** with the other OAuth providers, so you can choose it without entering your email first.
+1. Open [Kilo](https://app.kilo.ai). Scroll down to the alternative login methods.
 2. Choose **Continue with ChatGPT**.
 3. Sign in to OpenAI, review the permissions shown, and return to Kilo.
 
