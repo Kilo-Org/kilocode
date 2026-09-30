@@ -92,6 +92,7 @@ export const dict = {
   "revert.banner.workspace.legacy": "工作階段已還原。此次先前還原的工作區復原狀態無法取得。",
   "revert.banner.workspace.enableSnapshots": "啟用快照",
   "revert.disabled.agentBusy": "等待 Agent 完成",
+  "revert.error.body": "存放庫可能正在使用中。請重試，或查看 Kilo 記錄以了解詳情。",
   "command.session.compact": "精簡工作階段",
   "command.session.export": "匯出會話紀錄",
 

@@ -1,6 +1,6 @@
 {
   "name": "@kilocode/kilo-docs",
-  "version": "7.7.12",
+  "version": "7.8.1",
   "private": true,
   "scripts": {
     "dev": "next dev --webpack --port 3002",

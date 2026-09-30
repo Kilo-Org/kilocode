@@ -4,33 +4,33 @@ import { buildTelemetryPayload, buildTelemetryAuthHeader } from "../../src/servi
 describe("buildTelemetryPayload", () => {
   it("includes event name in payload", () => {
     const result = buildTelemetryPayload("test.event", {}, undefined)
-    expect(result.event).toBe("test.event")
+    expect(result?.event).toBe("test.event")
   })
 
   it("merges provider properties with event properties", () => {
     const result = buildTelemetryPayload("test.event", { eventProp: "value" }, { providerProp: "providerValue" })
-    expect(result.properties.eventProp).toBe("value")
-    expect(result.properties.providerProp).toBe("providerValue")
+    expect(result?.properties.eventProp).toBe("value")
+    expect(result?.properties.providerProp).toBe("providerValue")
   })
 
   it("event properties override provider properties", () => {
     const result = buildTelemetryPayload("test.event", { shared: "from-event" }, { shared: "from-provider" })
-    expect(result.properties.shared).toBe("from-event")
+    expect(result?.properties.shared).toBe("from-event")
   })
 
   it("handles undefined event properties", () => {
     const result = buildTelemetryPayload("test.event", undefined, { providerProp: "x" })
-    expect(result.properties.providerProp).toBe("x")
+    expect(result?.properties.providerProp).toBe("x")
   })
 
   it("handles undefined provider properties", () => {
     const result = buildTelemetryPayload("test.event", { key: "val" }, undefined)
-    expect(result.properties.key).toBe("val")
+    expect(result?.properties.key).toBe("val")
   })
 
   it("handles both undefined", () => {
     const result = buildTelemetryPayload("test.event", undefined, undefined)
-    expect(result.properties).toEqual({})
+    expect(result?.properties).toEqual({})
   })
 })
 

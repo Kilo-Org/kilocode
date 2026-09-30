@@ -16,6 +16,7 @@ import ai.kilocode.client.onboarding.OnboardingController
 import ai.kilocode.client.onboarding.OnboardingStep
 import ai.kilocode.client.onboarding.ui.OnboardingListCard
 import ai.kilocode.client.plugin.KiloBundle
+import ai.kilocode.client.plugin.KiloDocs
 import ai.kilocode.client.plugin.KiloPluginSettings
 import ai.kilocode.client.session.board.SessionBoardDialog
 import ai.kilocode.client.session.model.FileAttachment
@@ -75,6 +76,7 @@ import ai.kilocode.client.session.views.SessionOutcomeView
 import ai.kilocode.client.session.views.permission.PermissionView
 import ai.kilocode.client.session.views.question.QuestionView
 import ai.kilocode.client.settings.KiloSettingsConfigurable
+import ai.kilocode.client.settings.checkpoints.CheckpointsConfigurable
 import ai.kilocode.client.settings.profile.UserProfileConfigurable
 import ai.kilocode.client.telemetry.Telemetry
 import ai.kilocode.client.util.UiTimerSource
@@ -546,7 +548,14 @@ class SessionUi(
             fork = if (forkSurface) ({ id -> forkMessage(id, "message") }) else null,
             cancelRevert = if (readonly) null else ::cancelRevert,
             deleteQueued = if (readonly) null else { id -> controller.deleteQueuedMessage(id) },
-            banner = if (readonly) null else RevertBanner(controller.model, ::redo, controller::redoAll, ::cancelRevert, focus),
+            banner = if (readonly) null else RevertBanner(
+                controller.model,
+                ::redo,
+                controller::redoAll,
+                ::cancelRevert,
+                focus,
+                openSettingsAction = ::openCheckpointsSettings,
+            ),
             onOpenSubagent = ::openSubagent,
             onPromoteBackgroundAgent = if (readonly) null else BackgroundPromote(
                 available = { app.state.value.backgroundSubagents },
@@ -1061,7 +1070,7 @@ class SessionUi(
             SlashAction.VARIANT to { prompt.reasoning.open() },
             SlashAction.COMPACT to { controller.compact() },
             SlashAction.SETTINGS to { openKiloSettings() },
-            SlashAction.HELP to { BrowserUtil.browse("https://kilo.ai/docs") },
+            SlashAction.HELP to { BrowserUtil.browse(KiloDocs.BASE) },
         )
         return SlashAction.ALL.map { spec -> bind(spec, fns.getValue(spec)) }
     }
@@ -1420,6 +1429,16 @@ class SessionUi(
                 cfg is ConfigurableWithId && cfg.getId() == UserProfileConfigurable.ID
             },
             { cfg: Configurable -> cfg.focusOn(UserProfileConfigurable.FOCUS_ACCOUNT_COMBO) },
+        )
+    }
+
+    private fun openCheckpointsSettings() {
+        ShowSettingsUtil.getInstance().showSettingsDialog(
+            project,
+            Predicate { cfg: Configurable ->
+                cfg is ConfigurableWithId && cfg.getId() == CheckpointsConfigurable.ID
+            },
+            { _: Configurable -> },
         )
     }
 
