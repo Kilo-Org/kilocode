@@ -96,6 +96,8 @@ export const dict = {
     "مکالمه بازگردانده شد. وضعیت بازیابی فضای کاری برای این بازگردانی قدیمی‌تر در دسترس نیست.",
   "revert.banner.workspace.enableSnapshots": "فعال‌سازی اسنپ‌شات‌ها",
   "revert.disabled.agentBusy": "منتظر بمانید تا عامل کارش تمام شود",
+  "revert.error.body":
+    "ممکن است مخزن در حال استفاده باشد. دوباره تلاش کنید یا برای جزئیات گزارش‌های Kilo را بررسی کنید.",
   "command.session.compact": "فشرده‌سازی جلسه",
   "command.session.export": "صدور رونوشت جلسه",
 

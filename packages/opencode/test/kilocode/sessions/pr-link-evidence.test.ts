@@ -59,9 +59,19 @@ afterAll(async () => {
   await Promise.all(created.map((dir) => fs.rm(dir, { recursive: true, force: true })))
 })
 
+let client: string | undefined
+beforeEach(() => {
+  client = process.env.KILO_CLIENT
+  process.env.KILO_CLIENT = "cli"
+})
 afterEach(async () => {
-  const links = await loadSessionLinks()
-  for (const sessionId of links.keys()) await clearSessionLink(sessionId)
+  try {
+    const links = await loadSessionLinks()
+    for (const sessionId of links.keys()) await clearSessionLink(sessionId)
+  } finally {
+    if (client == null) delete process.env.KILO_CLIENT
+    if (client != null) process.env.KILO_CLIENT = client
+  }
 })
 
 async function makeRepo(branch = "feature/x", remote = "https://github.com/owner/repo.git") {

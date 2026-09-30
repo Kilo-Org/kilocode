@@ -92,6 +92,7 @@ export const dict = {
     "Conversation reverted. Workspace restoration status is unavailable for this earlier revert.",
   "revert.banner.workspace.enableSnapshots": "Enable snapshots",
   "revert.disabled.agentBusy": "Wait for agent to finish",
+  "revert.error.body": "The repository may be in use. Try again, or check the Kilo logs for details.",
   "command.session.compact": "Compact session",
   "command.session.export": "Export session transcript",
 

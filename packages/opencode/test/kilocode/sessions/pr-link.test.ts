@@ -105,8 +105,18 @@ afterAll(async () => {
   await Promise.all(created.map((dir) => fs.rm(dir, { recursive: true, force: true })))
 })
 
+let client: string | undefined
+beforeEach(() => {
+  client = process.env.KILO_CLIENT
+  process.env.KILO_CLIENT = "cli"
+})
 afterEach(async () => {
-  await clearAllSessionLinks()
+  try {
+    await clearAllSessionLinks()
+  } finally {
+    if (client == null) delete process.env.KILO_CLIENT
+    if (client != null) process.env.KILO_CLIENT = client
+  }
 })
 
 // A real offline git repo: an origin remote, a committed HEAD, a tracking ref,
@@ -440,10 +450,7 @@ describe("refreshPrLink", () => {
 
   test("refreshPrLink({ sessionId }) queries only the requested session's link", async () => {
     await seedGitHub("ses_a")
-    await writeSessionPrLink(
-      "ses_b",
-      sessionRecord("https://github.com/other/repo/pull/3", "feature/y", "def5678"),
-    )
+    await writeSessionPrLink("ses_b", sessionRecord("https://github.com/other/repo/pull/3", "feature/y", "def5678"))
     responder = (cmd) =>
       cmd.join(" ").includes("repos/other/repo/")
         ? { code: 0, text: JSON.stringify([ghPr("https://github.com/other/repo/pull/3", "feature/y", "other/repo")]) }
@@ -460,10 +467,7 @@ describe("refreshPrLink", () => {
 
   test("a scoped refresh clears only the requested session when its PR closed", async () => {
     await seedGitHub("ses_a")
-    await writeSessionPrLink(
-      "ses_b",
-      sessionRecord("https://github.com/other/repo/pull/3", "feature/y", "def5678"),
-    )
+    await writeSessionPrLink("ses_b", sessionRecord("https://github.com/other/repo/pull/3", "feature/y", "def5678"))
     respondGh([])
 
     await refreshPrLink({ sessionId: "ses_a" })

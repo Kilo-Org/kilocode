@@ -168,6 +168,8 @@ export const PrCheckoutCommand = effectCmd({
 // KILO_SESSION the surrounding process exported. There is deliberately no
 // worktree or branch fallback: guessing the session recreates the fan-out that
 // linked random pull requests to sessions.
+import { enabled as prEnabled } from "@/kilo-sessions/pr-link"
+
 const NO_SESSION = "No session specified. Pass --session <id> or set KILO_SESSION_ID."
 
 function resolveSessionId(explicit?: string): string | undefined {
@@ -175,6 +177,7 @@ function resolveSessionId(explicit?: string): string | undefined {
 }
 
 export const prLinkHandler = Effect.fn("Cli.pr.link")(function* (args: { url: string; session?: string }) {
+  if (!prEnabled()) return yield* fail("PR links are unsupported for this client")
   const ctx = yield* InstanceRef
   if (!ctx) return yield* fail("Could not load instance context")
 
@@ -191,9 +194,7 @@ export const prLinkHandler = Effect.fn("Cli.pr.link")(function* (args: { url: st
   const own = yield* Effect.promise(() => linkMatchesWorktree(link, ctx.worktree))
   if (!own) return yield* fail(`${args.url} is not a pull request for this repository.`)
 
-  const record = yield* Effect.promise(() =>
-    recordSessionLink(sessionId, { link, evidence: "user" }, ctx.worktree),
-  )
+  const record = yield* Effect.promise(() => recordSessionLink(sessionId, { link, evidence: "user" }, ctx.worktree))
   if (!record) return yield* fail(`${args.url} is not a pull request for this repository.`)
 
   UI.println(`Linked PR #${link.prNumber} (${link.platform})`)
@@ -203,6 +204,7 @@ export const prLinkHandler = Effect.fn("Cli.pr.link")(function* (args: { url: st
 export const PrLinkCommand = effectCmd({
   command: "link <url>",
   describe: "link a session to a pull request",
+  instance: () => prEnabled(),
   builder: (yargs) =>
     yargs
       .positional("url", {
@@ -219,6 +221,7 @@ export const PrLinkCommand = effectCmd({
 })
 
 export const prUnlinkHandler = Effect.fn("Cli.pr.unlink")(function* (args: { session?: string }) {
+  if (!prEnabled()) return yield* fail("PR links are unsupported for this client")
   const sessionId = resolveSessionId(args.session)
   if (!sessionId) return yield* fail(NO_SESSION)
 
@@ -240,6 +243,7 @@ export const PrUnlinkCommand = effectCmd({
 })
 
 export const prStatusHandler = Effect.fn("Cli.pr.status")(function* (args: { session?: string }) {
+  if (!prEnabled()) return yield* fail("PR links are unsupported for this client")
   const sessionId = resolveSessionId(args.session)
   if (!sessionId) return yield* fail(NO_SESSION)
 

@@ -16,6 +16,7 @@ import { type Component, type JSX, Show, createEffect, createSignal, onCleanup }
 import { useSession } from "../../context/session"
 import { WorkingIndicator } from "../shared/WorkingIndicator"
 import { showsWorking } from "../shared/working-indicator-utils"
+import { running } from "../../context/session-timing"
 import { useGoalDock } from "./goal/useGoalDock"
 import { AgentStack, useAgentStack } from "./AgentStack"
 import { stackFit, stackPlace, stackWidth } from "./background-agents"
@@ -34,7 +35,13 @@ interface SessionDockProps {
 export const SessionDock: Component<SessionDockProps> = (props) => {
   const session = useSession()
   const stack = useAgentStack()
-  const working = () => showsWorking(session.status(), session.submitting(), !!props.blocked)
+  const working = () =>
+    showsWorking(
+      session.status(),
+      session.submitting(),
+      !!props.blocked,
+      running(session.currentSession()?.goal, session.status(), session.closeReason()),
+    )
   const actions = () => !working() && !props.blocked && (props.hasActions?.() ?? false)
   const visible = () => !props.readonly && stack.shown()
   const agents = () => !working() && !actions() && !props.blocked && visible()

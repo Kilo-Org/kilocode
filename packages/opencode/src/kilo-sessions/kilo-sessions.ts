@@ -31,6 +31,7 @@ import { RemoteProtocol } from "@/kilo-sessions/remote-protocol"
 import { buildInstanceAdvertisement } from "@/kilo-sessions/instance-advertisement"
 import {
   clearSessionLink,
+  enabled as prEnabled,
   loadSessionLinks,
   pruneLegacyWorktreeLinks,
   recordPrCreate,
@@ -753,12 +754,12 @@ export namespace KiloSessions {
           watch(Session.Event.Deleted, (evt) => {
             const sessionID = evt.properties.sessionID
             knownTitles.delete(sessionID)
-            lastPrLinkTriple.delete(sessionID)
-            legacyPruned.delete(sessionID)
-            // Drop the persisted per-session link too: otherwise the record
-            // outlives the session and every heartbeat's read grows with the
-            // sessions ever deleted.
-            void clearSessionLink(sessionID)
+            if (prEnabled()) {
+              lastPrLinkTriple.delete(sessionID)
+              legacyPruned.delete(sessionID)
+              // Drop the persisted link so it does not outlive the session.
+              void clearSessionLink(sessionID)
+            }
             clearRenameMarks(sessionID)
             KiloSessionTitle.clear(sessionID)
             // kilocode_change - detach a locally announced session on dispose.
@@ -776,6 +777,7 @@ export namespace KiloSessions {
           watch(MessageV2.Event.PartUpdated, async (evt) => {
             const part = evt.properties.part
             await ingest.sync(part.sessionID, [{ type: "part", data: part }])
+            if (!prEnabled()) return
             // kilocode_change - A PR is linked only on the session's own hard
             // evidence: the session ran a create command whose output returned
             // the PR URL, or it pushed the PR's head branch. Agent text, a
@@ -874,14 +876,16 @@ export namespace KiloSessions {
 
           // One PR check per instance start plus one every 5 minutes. Never on a
           // session update and never once per heartbeat/request.
-          yield* Effect.acquireRelease(
-            Effect.sync(() =>
-              startPrLinkPoll(async () => {
-                await Instance.restore(ctx, () => refreshPrLink())
-              }),
-            ),
-            (stop) => Effect.sync(stop),
-          )
+          if (prEnabled()) {
+            yield* Effect.acquireRelease(
+              Effect.sync(() =>
+                startPrLinkPoll(async () => {
+                  await Instance.restore(ctx, () => refreshPrLink())
+                }),
+              ),
+              (stop) => Effect.sync(stop),
+            )
+          }
 
           const cfg = yield* config.getGlobal()
           if (remoteEnabled || cfg.remote_control) {
@@ -1076,6 +1080,13 @@ export namespace KiloSessions {
             ...gitPairs.get(r.directory ?? Instance.worktree),
             platform: r.platform,
           }))
+        const instance = instanceAdvertisement && {
+          ...instanceAdvertisement,
+          // Truncate the launch-directory branch without splitting a surrogate pair.
+          gitBranch: gitBranch?.slice(0, 24).replace(/[\uD800-\uDBFF]$/, ""),
+        }
+        if (!prEnabled()) return { type: "heartbeat", sessions, ...(instance ? { instance } : {}) }
+
         // kilocode_change - A PR link is per session and only from that
         // session's own hard evidence (see the PartUpdated watcher). Read the
         // stored links for exactly the advertised rows once and attach each to
@@ -1107,11 +1118,6 @@ export namespace KiloSessions {
           await syncSessionPrLink(row.id, record, pending)
         }
         await settleLegacyPrLinks(pending)
-        const instance = instanceAdvertisement && {
-          ...instanceAdvertisement,
-          // Truncate the launch-directory branch without splitting a surrogate pair.
-          gitBranch: gitBranch?.slice(0, 24).replace(/[\uD800-\uDBFF]$/, ""),
-        }
         return { type: "heartbeat", sessions: advertised, ...(instance ? { instance } : {}) }
       }
 

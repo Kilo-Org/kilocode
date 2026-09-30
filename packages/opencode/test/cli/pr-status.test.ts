@@ -1,11 +1,9 @@
 // kilocode_change - new file
-import { beforeEach, describe, expect, mock, spyOn, test } from "bun:test"
+import { afterAll, afterEach, beforeEach, describe, expect, mock, spyOn, test } from "bun:test"
 import { EOL } from "node:os"
 import { Effect } from "effect"
 
-// Mock @/kilo-sessions/pr-link and the poller before importing the commands so
-// the handlers read and write the session-recorded link from these stubs
-// instead of spawning `gh` or touching real Storage.
+// Restore these spies after the suite so other files use real PR-link helpers.
 const realPrLink = await import("@/kilo-sessions/pr-link")
 const realPoller = await import("@/kilo-sessions/pr-link-poller")
 
@@ -29,24 +27,23 @@ const record = mock(async (_sessionId: string, evidence: Record) => {
 const matches = mock(async (_link: unknown, _worktree: string) => true)
 const refresh = mock(async () => undefined)
 
-void mock.module("@/kilo-sessions/pr-link", () => ({
-  ...realPrLink,
-  readSessionPrLink: read,
-  clearSessionLink: clear,
-  recordSessionLink: record,
-  linkMatchesWorktree: matches,
-}))
-
-void mock.module("@/kilo-sessions/pr-link-poller", () => ({
-  ...realPoller,
-  refreshPrLink: refresh,
-}))
+const spies = [
+  spyOn(realPrLink, "readSessionPrLink").mockImplementation(read),
+  spyOn(realPrLink, "clearSessionLink").mockImplementation(clear),
+  spyOn(realPrLink, "recordSessionLink").mockImplementation(record),
+  spyOn(realPrLink, "linkMatchesWorktree").mockImplementation(matches),
+  spyOn(realPoller, "refreshPrLink").mockImplementation(refresh),
+]
 
 import { prLinkHandler, prStatusHandler, prUnlinkHandler } from "../../src/cli/cmd/pr"
 import { InstanceRef } from "../../src/effect/instance-ref"
 import type { InstanceContext } from "../../src/project/instance-context"
 
 const writeSpy = spyOn(process.stderr, "write")
+afterAll(() => {
+  for (const spy of spies) spy.mockRestore()
+  writeSpy.mockRestore()
+})
 
 function lines() {
   return writeSpy.mock.calls
@@ -76,6 +73,18 @@ function runUnlink(id?: string) {
 function message(err: unknown): string {
   return err instanceof Error ? err.message : String(err)
 }
+
+const client = process.env.KILO_CLIENT
+beforeEach(() => {
+  process.env.KILO_CLIENT = "cli"
+})
+afterEach(() => {
+  if (client == null) {
+    delete process.env.KILO_CLIENT
+    return
+  }
+  process.env.KILO_CLIENT = client
+})
 
 describe("pr status", () => {
   beforeEach(() => {
@@ -206,4 +215,43 @@ describe("pr unlink", () => {
     expect(message(err)).toContain("No session specified")
     expect(clear).not.toHaveBeenCalled()
   })
+})
+
+describe("non-CLI PR-link commands", () => {
+  beforeEach(() => {
+    read.mockClear()
+    clear.mockClear()
+    record.mockClear()
+    matches.mockClear()
+    refresh.mockClear()
+    writeSpy.mockClear()
+  })
+
+  test.each(["vscode", "jetbrains", "desktop", "acp", "custom"])(
+    "%s rejects link, unlink, and status before validation, storage, or git work",
+    async (client) => {
+      process.env.KILO_CLIENT = client
+      for (const effect of [
+        prLinkHandler({ url: "https://github.com/owner/repo/pull/55", session: "ses_alpha" }),
+        prLinkHandler({ url: "invalid" }),
+        prUnlinkHandler({ session: "ses_alpha" }),
+        prUnlinkHandler({}),
+        prStatusHandler({ session: "ses_alpha" }),
+        prStatusHandler({}),
+      ]) {
+        const err = await Effect.runPromise(effect.pipe(Effect.provideService(InstanceRef, undefined))).then(
+          () => undefined,
+          (err) => err,
+        )
+        expect(message(err)).toContain("PR links are unsupported for this client")
+      }
+
+      expect(read).not.toHaveBeenCalled()
+      expect(clear).not.toHaveBeenCalled()
+      expect(record).not.toHaveBeenCalled()
+      expect(matches).not.toHaveBeenCalled()
+      expect(refresh).not.toHaveBeenCalled()
+      expect(lines()).toEqual([])
+    },
+  )
 })

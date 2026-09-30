@@ -55,10 +55,11 @@ function protocol() {
       await hooks.get("resize")?.()
     },
     mainFrame: () => page,
-    evaluate: async (_fn: unknown, opts: { action: string; text?: string }) => ({
-      focused: true,
-      text: opts.action === "paste" ? opts.text : "copied",
-    }),
+    evaluate: async (_fn: unknown, opts?: { action: string; text?: string }) =>
+      opts && {
+        focused: true,
+        text: opts.action === "paste" ? opts.text : "copied",
+      },
   })
   const stream = new BrowserStream(
     page as unknown as Page,

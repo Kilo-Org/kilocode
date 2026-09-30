@@ -37,6 +37,11 @@ describe("showsWorking", () => {
     expect(showsWorking("idle", false, false)).toBe(false)
   })
 
+  it("keeps the working row visible between active goal turns", () => {
+    expect(showsWorking("idle", false, false, true)).toBe(true)
+    expect(showsWorking("idle", false, true, true)).toBe(false)
+  })
+
   it("stays hidden while another surface owns the interaction", () => {
     expect(showsWorking("busy", false, true)).toBe(false)
     expect(showsWorking("idle", true, true)).toBe(false)
@@ -94,7 +99,7 @@ describe("session dock layout", () => {
     const dock = read("webview-ui/src/components/chat/SessionDock.tsx")
     const goal = read("webview-ui/src/components/chat/goal/useGoalDock.tsx")
     const indicator = read("webview-ui/src/components/shared/WorkingIndicator.tsx")
-    expect(indicator).not.toMatch(/goal|DropdownMenu|Tooltip/)
+    expect(indicator).not.toMatch(/DropdownMenu|Tooltip/)
     expect(dock).toContain("<WorkingIndicator onScrollToBottom={props.onScrollToBottom} />")
     expect(goal).toContain('class="session-goal-action"')
     expect(goal).toContain('variant="ghost"')
@@ -105,8 +110,7 @@ describe("session dock layout", () => {
     expect(goal).toContain('session.sendCommand("goal", goal().active ? "pause" : "resume")')
     expect(goal).toContain('session.sendCommand("goal", "clear")')
     expect(read("webview-ui/src/components/chat/PromptInput.tsx")).not.toContain('"session.goal.label"')
-    const working = dock.match(/const working = \(\) =>([^\n]*)/)?.[1]
-    expect(working).not.toContain("goal()")
+    expect(dock).toContain("running(session.currentSession()?.goal, session.status(), session.closeReason())")
     expect(dock).toContain("const active = () => working() || actions()")
     expect(goal).toContain("working() && goal()?.active")
     expect(dock).toContain("{goal.status()}")
@@ -150,7 +154,7 @@ describe("session dock layout", () => {
 
   it("routes both states through the dock so neither can claim the row alone", () => {
     const dock = read("webview-ui/src/components/chat/SessionDock.tsx")
-    expect(dock).toContain("showsWorking(session.status(), session.submitting()")
+    expect(dock).toMatch(/showsWorking\(\s*session.status\(\),\s*session.submitting\(\)/)
     expect(dock).toContain('data-active={working() ? "" : undefined}')
     expect(dock).toContain('data-active={actions() ? "" : undefined}')
     // The indicator must not re-decide its own visibility.
