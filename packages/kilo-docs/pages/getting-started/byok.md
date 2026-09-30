@@ -34,6 +34,7 @@ Use your provider API key to route matching models through your account:
 - Minimax
 - Mistral AI
 - Moonshot AI (Kimi)
+- Nebius Token Factory
 - Novita
 - OpenAI
 - Xiaomi

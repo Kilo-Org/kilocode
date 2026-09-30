@@ -9,8 +9,8 @@ import type { MarketplaceItem } from "./types"
 const DISMISSED_KEY = "kilo.marketplace.dismissedSuggestions"
 const DEBOUNCE = 1500
 
-/** Opens the marketplace install flow for a suggested item. */
-export type InstallHandler = (item: MarketplaceItem) => void
+/** Runs a marketplace action for a suggested item. */
+export type MarketplaceItemHandler = (item: MarketplaceItem) => void
 
 /**
  * Scans the workspace for marketplace items annotated with relevant `suggest_for`
@@ -29,7 +29,8 @@ export class MarketplaceNotifier implements vscode.Disposable {
   constructor(
     private readonly connection: KiloConnectionService,
     private readonly context: vscode.ExtensionContext,
-    private readonly install: InstallHandler,
+    private readonly install: MarketplaceItemHandler,
+    private readonly details: MarketplaceItemHandler,
   ) {
     this.disposables.push(
       vscode.workspace.onDidChangeWorkspaceFolders(() => this.schedule()),
@@ -114,8 +115,15 @@ export class MarketplaceNotifier implements vscode.Disposable {
     this.shown.add(slug)
 
     // A later rescan must never void the user's explicit choice, so only a
-    // disposed notifier short-circuits here — not a bumped generation.
-    const choice = await showSuggestionNotification(item)
+    // disposed notifier short-circuits here, not a bumped generation.
+    // "View details" opens the Marketplace panel, which also closes the toast,
+    // so re-offer the suggestion until the user picks a final action.
+    let choice = await showSuggestionNotification(item)
+    while (choice?.action === "details") {
+      if (this.disposed) return
+      this.details(item)
+      choice = await showSuggestionNotification(item)
+    }
     if (this.disposed) return
     if (choice?.action === "install") this.install(item)
     if (choice?.action === "dismiss") await this.dismiss(slug)
