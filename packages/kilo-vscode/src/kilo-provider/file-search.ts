@@ -1,7 +1,7 @@
 import * as path from "path"
 import * as vscode from "vscode"
 import type { KiloClient } from "@kilocode/sdk/v2/client"
-import { Glob } from "@opencode-ai/core/util/glob"
+import { braceExpand, minimatch } from "minimatch"
 import { mergeFileSearchResults } from "./file-search-results"
 import { mergeFileSearchItems, type FileSearchItem } from "./file-search-items"
 
@@ -172,7 +172,12 @@ async function gatherExternal(
           .get<Record<string, boolean | { when: string }>>("exclude", {}),
       ),
     )
-    const excluded = rules.filter(([, rule]) => rule === true).map(([pattern]) => pattern)
+    const excluded = rules
+      .filter(([, rule]) => rule === true)
+      .flatMap(([pattern]) => braceExpand(pattern))
+      .map((pattern) =>
+        pattern.replace(/(\[[^\]]*\])|[{},]/g, (match, group: string | undefined) => group ?? `[${match}]`),
+      )
     const find = (match: string) =>
       vscode.workspace.findFiles(
         new vscode.RelativePattern(folder, `{**/*${match}*,**/*${match}*/**}`),
@@ -221,7 +226,7 @@ async function gatherExternal(
           for (const [pattern, rule] of rules) {
             if (!rule) continue
             for (const rel of prefixes) {
-              if (!Glob.match(pattern, rel)) continue
+              if (!minimatch(rel, pattern, { dot: true })) continue
               if (rule === true) return []
               const sibling = vscode.Uri.joinPath(
                 folder.uri,

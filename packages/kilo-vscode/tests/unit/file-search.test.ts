@@ -62,7 +62,7 @@ function activeEditor(fsPath: string) {
  * backend.
  */
 function editorIndex(files: Record<string, string[]>, fail?: string) {
-  const calls: Array<{ root: string; pattern: string; max?: number }> = []
+  const calls: Array<{ root: string; pattern: string; exclude?: unknown; max?: number }> = []
   const workspace = vscode.workspace as unknown as {
     workspaceFolders: unknown
     findFiles: (include: unknown, exclude?: unknown, max?: number) => Promise<Array<{ fsPath: string }>>
@@ -70,14 +70,15 @@ function editorIndex(files: Record<string, string[]>, fail?: string) {
   const priorFolders = workspace.workspaceFolders
   const priorFind = workspace.findFiles
   workspace.workspaceFolders = Object.keys(files).map((root) => ({ uri: { fsPath: root } }))
-  workspace.findFiles = async (include, _exclude, max) => {
+  workspace.findFiles = async (include, exclude, max) => {
     const glob = include as Glob
     const root = glob.base.uri.fsPath
-    calls.push({ root, pattern: glob.pattern, max })
+    calls.push({ root, pattern: glob.pattern, exclude, max })
     if (root === fail) throw new Error("EACCES: permission denied")
     const pattern = new Bun.Glob(glob.pattern.toLowerCase())
+    const excluded = typeof exclude === "string" ? new Bun.Glob(exclude.toLowerCase()) : undefined
     return (files[root] ?? [])
-      .filter((rel) => pattern.match(rel.toLowerCase()))
+      .filter((rel) => pattern.match(rel.toLowerCase()) && !excluded?.match(rel.toLowerCase()))
       .slice(0, max ?? Infinity)
       .map((rel) => ({ fsPath: abs(root, rel) }))
   }
@@ -352,8 +353,7 @@ describe("handleFileSearch", () => {
   })
 
   it("drops files an added folder's own ignore rules exclude", async () => {
-    // findFiles honours files.exclude, search.exclude and .gitignore, but knows
-    // nothing of .kilocodeignore.
+    // Editor exclusions and this folder's Kilo ignore rules are separate filters.
     const api = multiClient({ "/repo": { files: [], folders: [] } })
     const index = editorIndex({ "/repo": [], "/other": ["src/keep.ts", "vendor/skip.ts"] })
     const posted: Array<Record<string, unknown>> = []
@@ -376,6 +376,51 @@ describe("handleFileSearch", () => {
     }
 
     expect(posted[0]!.paths).toEqual([abs("/other", "src/keep.ts")])
+  })
+
+  it("applies editor exclusions to search hits and open files", async () => {
+    const api = multiClient({ "/repo": { files: [], folders: [] } })
+    const index = editorIndex({
+      "/repo": [],
+      "/other": ["src/note.ts", "src/note.js", "src/note.css", "src/note.mjs", "src/plain.js"],
+    })
+    const workspace = vscode.workspace as { getConfiguration: typeof vscode.workspace.getConfiguration }
+    const config = workspace.getConfiguration
+    const stat = vscode.workspace.fs.stat
+    const posted: Array<Record<string, unknown>> = []
+    workspace.getConfiguration = (section, scope) => {
+      expect(scope).toMatchObject({ fsPath: "/other" })
+      return {
+        ...config(section, scope),
+        get: <T>() =>
+          (section === "files"
+            ? { "**/*.{css,mjs}": true }
+            : { "**/*.js": { when: "$(basename).ts" }, "**/src/**": false }) as T,
+      }
+    }
+    vscode.workspace.fs.stat = async (uri) => {
+      if (path.resolve(uri.fsPath) !== path.resolve("/other", "src/note.ts")) throw new Error("ENOENT")
+      return stat(uri)
+    }
+    try {
+      await handleFileSearch({
+        client: api.value as never,
+        message: { query: "src", requestId: "request-editor-excluded" },
+        dir: () => "/repo",
+        roots: () => roots,
+        open: async (dir) => new Set(dir === "/other" ? ["src/note.css", "src/note.js"] : []),
+        post: (message) => posted.push(message as Record<string, unknown>),
+      })
+    } finally {
+      workspace.getConfiguration = config
+      vscode.workspace.fs.stat = stat
+      index.restore()
+    }
+    expect(index.calls.at(0)?.exclude).toBe("{**/*.css,**/*.mjs}")
+    expect(posted.at(0)?.paths).toHaveLength(2)
+    expect(posted.at(0)?.paths).toEqual(
+      expect.arrayContaining([abs("/other", "src/note.ts"), abs("/other", "src/plain.js")]),
+    )
   })
 
   it("does not offer a directory that only an ignored file put there", async () => {

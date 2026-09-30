@@ -471,6 +471,7 @@
         "js-tiktoken": "^1.0.18",
         "lru-cache": "^11.0.2",
         "marked": "catalog:",
+        "minimatch": "10.2.6",
         "openai": "^4.85.4",
         "playwright-core": "1.57.0",
         "quick-lru": "^7.0.0",
