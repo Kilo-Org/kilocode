@@ -1,4 +1,4 @@
-import { afterAll, beforeEach, describe, expect, mock, test } from "bun:test"
+import { afterAll, afterEach, beforeEach, describe, expect, mock, spyOn, test } from "bun:test"
 import { Effect, Layer, Schema } from "effect"
 import fs from "node:fs/promises"
 import os from "node:os"
@@ -10,6 +10,7 @@ import { MessageID, SessionID } from "@/session/schema"
 import * as Truncate from "@/tool/truncate"
 import type { Tool } from "@/tool/tool"
 import type { InstanceContext } from "@/project/instance-context"
+import type { SessionPrLink } from "@/kilo-sessions/pr-link"
 
 // Replace the session-link recorder before the tool module loads, keeping the
 // real `parsePrUrl` so the tool still parses the URL for real.
@@ -19,17 +20,14 @@ const writes: { sessionId: string; record: unknown; worktree: string }[] = []
 let writeError: unknown
 let refuseWrite = false
 
-const recordSessionLink = mock(async (sessionId: string, record: unknown, worktree: string) => {
+const recordSessionLink = mock(async (sessionId: string, record: SessionPrLink, worktree: string) => {
   if (writeError) throw writeError
   if (refuseWrite) return undefined
   writes.push({ sessionId, record, worktree })
   return record
 })
 
-void mock.module("@/kilo-sessions/pr-link", () => ({
-  ...realPrLink,
-  recordSessionLink,
-}))
+const recorder = spyOn(realPrLink, "recordSessionLink").mockImplementation(recordSessionLink)
 
 const { LinkPrTool } = await import("@/kilocode/tool/link-pr")
 
@@ -71,6 +69,7 @@ const worktree = "/tmp/link-pr-worktree"
 const created: string[] = []
 
 afterAll(async () => {
+  recorder.mockRestore()
   await Promise.all(created.map((dir) => fs.rm(dir, { recursive: true, force: true })))
 })
 
@@ -95,16 +94,21 @@ async function makeRepo(remote = "https://github.com/owner/repo.git") {
   return dir
 }
 
-const layer = Layer.mergeAll(
-  Layer.succeed(Agent.Service, agents),
-  Layer.succeed(Truncate.Service, truncate),
-)
+const layer = Layer.mergeAll(Layer.succeed(Agent.Service, agents), Layer.succeed(Truncate.Service, truncate))
 
+let client: string | undefined
 beforeEach(() => {
+  client = process.env.KILO_CLIENT
+  process.env.KILO_CLIENT = "cli"
   writes.length = 0
   writeError = undefined
   refuseWrite = false
   recordSessionLink.mockClear()
+})
+
+afterEach(() => {
+  if (client == null) delete process.env.KILO_CLIENT
+  if (client != null) process.env.KILO_CLIENT = client
 })
 
 function run(url: string, dir = worktree) {
@@ -119,6 +123,13 @@ function run(url: string, dir = worktree) {
 }
 
 describe("link_pr tool", () => {
+  test("rejects direct execution outside CLI backends", async () => {
+    process.env.KILO_CLIENT = "vscode"
+    const result = await run("https://github.com/owner/repo/pull/9")
+    expect(result.metadata).toMatchObject({ ok: false, reason: "unsupported_client" })
+    expect(recordSessionLink).not.toHaveBeenCalled()
+  })
+
   test("registers with id and description", async () => {
     const result = await Effect.runPromise(
       Effect.gen(function* () {

@@ -505,7 +505,8 @@ type SyncEvent =
   | SyncEventSessionUpdated
   | SyncEventSessionDeleted
 
-type StreamEvent = Event | SyncEvent
+// Error phase is envelope metadata, not part of the generated legacy SDK event.
+type StreamEvent = (Event | SyncEvent) & { metadata?: { phase?: "admission" | "execution" } }
 
 export type WebviewMessage =
   | PartUpdate
@@ -566,7 +567,7 @@ export type WebviewMessage =
   | { type: "sessionUpdated"; session: ReturnType<typeof sessionToWebview> }
   | { type: "sessionDeleted"; sessionID: string }
   | { type: "messageRemoved"; sessionID: string; messageID: string }
-  | { type: "sessionError"; eventID: string; sessionID?: string; error?: unknown }
+  | { type: "sessionError"; eventID: string; sessionID?: string; error?: unknown; phase?: "admission" | "execution" }
   | {
       type: "sandboxStatus"
       sessionID: string
@@ -751,6 +752,7 @@ export function mapSSEEventToWebviewMessage(event: StreamEvent, sessionID: strin
         eventID: event.id,
         sessionID: event.properties.sessionID,
         error: event.properties.error,
+        ...(event.metadata?.phase ? { phase: event.metadata.phase } : {}),
       }
     }
     case "sandbox.status.changed":

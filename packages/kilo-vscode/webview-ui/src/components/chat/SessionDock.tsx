@@ -10,6 +10,7 @@ import { type Component, type JSX } from "solid-js"
 import { useSession } from "../../context/session"
 import { WorkingIndicator } from "../shared/WorkingIndicator"
 import { showsWorking } from "../shared/working-indicator-utils"
+import { running } from "../../context/session-timing"
 import { useGoalDock } from "./goal/useGoalDock"
 
 interface SessionDockProps {
@@ -25,7 +26,13 @@ interface SessionDockProps {
 
 export const SessionDock: Component<SessionDockProps> = (props) => {
   const session = useSession()
-  const working = () => showsWorking(session.status(), session.submitting(), !!props.blocked)
+  const working = () =>
+    showsWorking(
+      session.status(),
+      session.submitting(),
+      !!props.blocked,
+      running(session.currentSession()?.goal, session.status(), session.closeReason()),
+    )
   const actions = () => !working() && !props.blocked && (props.hasActions?.() ?? false)
   const active = () => working() || actions()
   const goal = useGoalDock({

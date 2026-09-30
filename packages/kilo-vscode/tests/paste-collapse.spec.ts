@@ -186,3 +186,23 @@ test("keeps both chips when a rewrite follows an edit that left the text unchang
   await clickChip(page, 1)
   await expect(input).toHaveValue(`${PLACEHOLDER} ${second}!`)
 })
+
+test("keeps the chip and its backing after browsing prompt history and back", async ({ page }) => {
+  await page.context().grantPermissions(["clipboard-read", "clipboard-write"])
+  await page.addInitScript(() => localStorage.setItem("kilo.prompt-history.v1", JSON.stringify(["say hi"])))
+  const input = await open(page)
+  const log = Array.from({ length: 40 }, (_, index) => `${index + 1}`).join("\n")
+
+  await paste(page, input, log)
+  await expect(input).toHaveValue("[Pasted ~40 lines]")
+
+  // The first press moves the caret to the start; the second opens history.
+  await input.press("ArrowUp")
+  await input.press("ArrowUp")
+  await expect(input).toHaveValue("say hi")
+  await input.press("ArrowDown")
+
+  await expect(page.locator(".prompt-input-paste")).toHaveCount(1)
+  await clickChip(page)
+  await expect(input).toHaveValue(log)
+})
