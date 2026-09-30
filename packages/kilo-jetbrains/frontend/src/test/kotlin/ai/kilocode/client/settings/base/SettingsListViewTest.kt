@@ -588,6 +588,31 @@ class SettingsListViewTest : BasePlatformTestCase() {
         }
     }
 
+    fun `test double click on a tooltip-only badge still activates the row`() {
+        edt {
+            val calls = mutableListOf<String>()
+            val opened = mutableListOf<String>()
+            val view = ActiveListView("Empty", onOpen = { row, _ -> opened += row.key }) { key, id -> calls += "$key:$id" }
+            // A status pill with an id (for tooltip hit-testing) but no action, exactly like the MCP
+            // Settings status badge — it must not swallow the double-click that falls through to the
+            // row's own open/activate handler.
+            val row = object : ActiveListItem {
+                override val key = "with"
+                override val title = "Alpha"
+                override val badges = listOf(ActiveListBadge("needs auth", id = "status", tooltip = "reason"))
+            }
+            view.update(listOf(row))
+            layout(view)
+            val bounds = view.list.getCellBounds(0, 0)
+            val badgeArea = activeListCellBounds(view.list, 0, selected = true).getValue("status")
+
+            fire(view.list, mouse(view, MouseEvent.MOUSE_CLICKED, Point(badgeArea.centerX.toInt(), bounds.y + bounds.height / 2), count = 2))
+
+            assertEquals(listOf("with"), opened)
+            assertTrue("no cell action should fire for a non-actionable badge", calls.isEmpty())
+        }
+    }
+
     fun `test disabled action click does not invoke`() {
         edt {
             val calls = mutableListOf<String>()

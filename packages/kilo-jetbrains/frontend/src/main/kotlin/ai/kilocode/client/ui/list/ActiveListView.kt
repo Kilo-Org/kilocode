@@ -881,10 +881,12 @@ internal class ActiveListView(
         val id = if (enabled) {
             activeListCellAt(list, idx, e.point, selected, menu?.takeIf { it.available(item) } != null)
         } else {
-            activeListCellBounds(list, idx, selected)
-                .entries
-                .firstOrNull { it.value.contains(e.point) }
-                ?.key
+            // A hit-tested region without an action — a status pill with only an id for tooltip
+            // hit-testing — must not swallow a click/double-click that falls through to it; only an
+            // actual action cell (enabled or not) blocks fall-through to row activation.
+            activeListHits(list, idx, selected)
+                .firstOrNull { it.action != null && it.bounds.contains(e.point) }
+                ?.id
         }
         return Hit(item, id)
     }

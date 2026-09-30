@@ -135,13 +135,17 @@ object KiloCliDataParser {
         "authentication required",
         "needs authentication",
         "not authenticated",
-        "oauth",
         "browser authorization",
         "token exchange failed",
         "invalid_token",
         "invalid_grant",
-        "401",
     )
+
+    /** Word-boundary markers, so a hostname or server name that merely contains the text does not match. */
+    private val MCP_AUTH_FAILURE_WORD_MARKERS = listOf("oauth").map { Regex("\\b${Regex.escape(it)}\\b") }
+
+    /** An HTTP 401 response, anchored to `http`/`status` so an unrelated port or ID is not mistaken for it. */
+    private val MCP_AUTH_HTTP_401 = Regex("\\b(?:http|status)\\D{0,10}401\\b")
 
     // ================================================================
     // SSE event parsing
@@ -900,14 +904,17 @@ object KiloCliDataParser {
      *
      * The CLI only reports `needs_auth` when the transport threw `UnauthorizedError` or the message
      * mentions OAuth (`packages/opencode/src/mcp/index.ts`); a rejected browser flow, a failed token
-     * exchange, or a bare 401 body fall through to `failed`. Those are all recoverable by signing in
+     * exchange, or an HTTP 401 body fall through to `failed`. Those are all recoverable by signing in
      * again, so they must still offer sign-in in Settings, Marketplace, and the session prompt.
      *
-     * Matched markers are OAuth-specific, so a non-OAuth server failure is not reclassified.
+     * Matched markers are OAuth-specific and word/status-anchored, so an unrelated failure that merely
+     * embeds a port number or a server name containing "oauth" is not reclassified.
      */
     private fun String?.isMcpAuthFailure(): Boolean {
         val value = this?.lowercase() ?: return false
-        return MCP_AUTH_FAILURE_MARKERS.any { value.contains(it) }
+        if (MCP_AUTH_FAILURE_MARKERS.any { value.contains(it) }) return true
+        if (MCP_AUTH_FAILURE_WORD_MARKERS.any { it.containsMatchIn(value) }) return true
+        return MCP_AUTH_HTTP_401.containsMatchIn(value)
     }
 
     private fun removable(obj: JsonObject): Boolean {

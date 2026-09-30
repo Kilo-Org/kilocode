@@ -2337,6 +2337,26 @@ class KiloCliDataParserTest {
             }
         }
 
+        /**
+         * The 401/oauth markers are anchored to avoid reclassifying failures that merely embed those
+         * digits/letters as a substring, e.g. a port number or a server hostname.
+         */
+        @Test
+        fun `parseMcpStatus - loose 401 and oauth substrings are not reclassified as auth`() {
+            val reasons = listOf(
+                "connect ECONNREFUSED 127.0.0.1:40123",
+                "Invalid MCP URL for \"broken401\"",
+                "Invalid MCP URL for \"oauthserver\"",
+                "Failed to connect to myoauthapp.internal",
+            )
+
+            for (reason in reasons) {
+                val json = """{"broken":{"status":"failed","error":${JsonPrimitive(reason)}}}"""
+                val result = KiloCliDataParser.parseMcpStatus(json).single()
+                assertEquals("failed", result.status, "must stay failed for: $reason")
+            }
+        }
+
         // ---- parseMcpBrowserOpenFailed ----
 
         @Test
