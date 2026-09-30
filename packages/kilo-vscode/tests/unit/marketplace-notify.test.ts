@@ -46,7 +46,10 @@ describe("Marketplace suggestion notification", () => {
   it("builds catalog entry URLs from the item type and id", () => {
     expect(catalogUrl(agent)).toBe("https://github.com/Kilo-Org/kilo-marketplace/tree/main/agents/angular")
     expect(catalogUrl(mcp)).toBe("https://github.com/Kilo-Org/kilo-marketplace/tree/main/mcps/jupyter")
-    expect(catalogUrl(plugin)).toBe("https://github.com/Kilo-Org/kilo-marketplace/tree/main/plugins/%40acme%2Fdeploy")
+    expect(catalogUrl(plugin)).toBe("https://github.com/Kilo-Org/kilo-marketplace/tree/main/plugins/%40acme/deploy")
+    expect(catalogUrl({ type: "plugin", id: "git/github.com/Kilo-Org/kilo-marketplace-test-plugin" })).toBe(
+      "https://github.com/Kilo-Org/kilo-marketplace/tree/main/plugins/git/github.com/Kilo-Org/kilo-marketplace-test-plugin",
+    )
   })
 
   it("selects only relevant, non-dismissed items", () => {

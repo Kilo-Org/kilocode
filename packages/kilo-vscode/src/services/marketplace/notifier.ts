@@ -120,7 +120,15 @@ export class MarketplaceNotifier implements vscode.Disposable {
     let choice = await showSuggestionNotification(item)
     while (choice?.action === "details") {
       if (this.disposed) return
-      if (choice.url) void vscode.env.openExternal(vscode.Uri.parse(choice.url))
+      const url = choice.url
+      if (url) {
+        void vscode.env.openExternal(vscode.Uri.parse(url)).then(
+          (opened) => {
+            if (!opened) console.warn("[Kilo New] No handler opened the marketplace catalog URL:", url)
+          },
+          (err: unknown) => console.warn("[Kilo New] Failed to open the marketplace catalog URL:", err),
+        )
+      }
       choice = await showSuggestionNotification(item)
     }
     if (this.disposed) return

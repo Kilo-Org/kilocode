@@ -41,9 +41,12 @@ const CATALOG_KINDS: Record<MarketplaceItem["type"], string> = {
 /**
  * Build the browser URL for an item's entry in the public marketplace catalog
  * repository (the source the registry API serves). Dynamic for any type and id.
+ * Ids may contain "/" path separators (git-sourced plugins and scoped ids), so
+ * encode each segment while keeping the separators that GitHub resolves.
  */
 export function catalogUrl(item: MarketplaceItemRef): string {
-  return `${CATALOG_BASE_URL}/${CATALOG_KINDS[item.type]}/${encodeURIComponent(item.id)}`
+  const id = item.id.split("/").map(encodeURIComponent).join("/")
+  return `${CATALOG_BASE_URL}/${CATALOG_KINDS[item.type]}/${id}`
 }
 
 function describe(item: MarketplaceItem): string {
@@ -54,9 +57,10 @@ function describe(item: MarketplaceItem): string {
 }
 
 /**
- * Show a native VS Code notification for a matched item, offering a direct install
- * and a persistent "Don't show again" dismissal. Resolves with the user's choice,
- * or `undefined` if the toast was closed without picking an action.
+ * Show a native VS Code notification for a matched item, offering a direct install,
+ * a "View details" link to the catalog entry, and a persistent "Don't show again"
+ * dismissal. Resolves with the user's choice, or `undefined` if the toast was
+ * closed without picking an action.
  */
 export async function showSuggestionNotification(item: MarketplaceItem): Promise<SuggestionChoice | undefined> {
   const install = "Install"
