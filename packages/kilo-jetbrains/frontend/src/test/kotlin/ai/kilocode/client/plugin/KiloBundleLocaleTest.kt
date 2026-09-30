@@ -497,6 +497,7 @@ class KiloBundleLocaleTest : BasePlatformTestCase() {
             "prompt.mcp.needsAuth.many" to listOf("7"),
             "prompt.mcp.signIn" to listOf("SERVER_NAME"),
             "prompt.mcp.signingIn" to listOf("SERVER_NAME"),
+            "prompt.mcp.provider" to listOf("SERVER_NAME"),
         )
     }
 }

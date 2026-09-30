@@ -109,6 +109,17 @@ class McpSettingsUiTest : BasePlatformTestCase() {
         }
     }
 
+    fun `test predefined search filters to one MCP server`() {
+        val panel = panel()
+        flushUntil { rows(panel).size == 3 }
+
+        edt {
+            panel.filter("github")
+            assertEquals(listOf("github"), rows(panel).map { it.key })
+            true
+        }
+    }
+
     fun `test mcp rows keep equal height`() {
         val panel = panel()
         flushUntil { rows(panel).size == 3 }

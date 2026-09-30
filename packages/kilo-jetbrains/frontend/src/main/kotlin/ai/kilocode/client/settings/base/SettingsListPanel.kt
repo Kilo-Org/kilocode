@@ -93,6 +93,15 @@ internal abstract class SettingsListPanel(
         return pending
     }
 
+    /** Pre-populate the list search when another UI opens this settings page for a specific item. */
+    @RequiresEdt
+    internal fun filter(query: String) {
+        checkEdt()
+        search.text = query
+        view.filter(query)
+        search.textEditor.requestFocusInWindow()
+    }
+
     @RequiresEdt
     protected fun mutateAndReload(
         selection: ActiveListSelection = ActiveListSelection.Preserve,

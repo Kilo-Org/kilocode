@@ -40,6 +40,7 @@ import ai.kilocode.client.session.ui.prompt.MentionAction
 import ai.kilocode.client.session.ui.prompt.PromptDataKeys
 import ai.kilocode.client.session.ui.prompt.PromptPanel
 import ai.kilocode.client.session.ui.prompt.SessionIssue
+import ai.kilocode.client.session.ui.prompt.SessionIssueAction
 import ai.kilocode.client.session.ui.prompt.SlashAction
 import ai.kilocode.client.session.ui.prompt.mentionParts as promptMentionParts
 import ai.kilocode.client.session.settings.ApprovalReasonVisibilityListener
@@ -78,6 +79,7 @@ import ai.kilocode.client.session.views.SessionOutcomeView
 import ai.kilocode.client.session.views.permission.PermissionView
 import ai.kilocode.client.session.views.question.QuestionView
 import ai.kilocode.client.settings.KiloSettingsConfigurable
+import ai.kilocode.client.settings.agents.McpConfigurable
 import ai.kilocode.client.settings.checkpoints.CheckpointsConfigurable
 import ai.kilocode.client.settings.profile.UserProfileConfigurable
 import ai.kilocode.client.telemetry.Telemetry
@@ -95,7 +97,6 @@ import ai.kilocode.rpc.dto.SessionRevertDto
 import ai.kilocode.rpc.dto.WorktreePrDto
 import com.intellij.util.ui.JBUI
 import ai.kilocode.log.KiloLog
-import com.intellij.icons.AllIcons
 import com.intellij.ide.BrowserUtil
 import com.intellij.ide.TextCopyProvider
 import com.intellij.openapi.actionSystem.ActionUpdateThread
@@ -1480,11 +1481,27 @@ class SessionUi(
         val display = name.replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
         return SessionIssue(
             id = "mcp-auth:$name",
-            title = KiloBundle.message(if (busy) "prompt.mcp.signingIn" else "prompt.mcp.signIn", display),
-            description = KiloBundle.message("prompt.mcp.needsAuth.one", display),
-            icon = if (busy) SpinnerIcon.icon else AllIcons.General.Warning,
-            enabled = !busy,
-            action = { signInFromPrompt(name) },
+            title = KiloBundle.message("prompt.mcp.provider", display),
+            actions = listOf(
+                SessionIssueAction(
+                    title = KiloBundle.message(if (busy) "prompt.mcp.needsAuth.busy" else "settings.agentBehavior.mcp.signIn"),
+                    enabled = !busy,
+                    action = { signInFromPrompt(name) },
+                ),
+                SessionIssueAction(
+                    title = KiloBundle.message("prompt.mcp.openSettings"),
+                    action = { openMcpSettings(name) },
+                ),
+            ),
+        )
+    }
+
+    @RequiresEdt
+    private fun openMcpSettings(name: String) {
+        ShowSettingsUtil.getInstance().showSettingsDialog(
+            project,
+            Predicate { cfg: Configurable -> cfg is ConfigurableWithId && cfg.getId() == McpConfigurable.ID },
+            { cfg: Configurable -> (cfg as? McpConfigurable)?.filter(name) },
         )
     }
 

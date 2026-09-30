@@ -271,7 +271,7 @@ class PromptPanel(
         isVisible = false
         addActionListener { showIssues() }
     }
-    private val issuesSlot = issuesButton.align(HAlign.RIGHT, VAlign.BOTTOM).apply { isVisible = false }
+    private val issuesSlot = issuesButton.align(HAlign.RIGHT, VAlign.TOP).apply { isVisible = false }
 
     /**
      * Opens the Kilo.Session.PromptMenu popup (auto-approve + sharing). Resolves its context from
@@ -729,7 +729,7 @@ class PromptPanel(
         val group = DefaultActionGroup()
         issueActions().forEach(group::add)
         JBPopupFactory.getInstance().createActionGroupPopup(
-            KiloBundle.message("prompt.issues.title"),
+            null,
             group,
             DataManager.getInstance().getDataContext(issuesButton),
             JBPopupFactory.ActionSelectionAid.SPEEDSEARCH,
@@ -739,13 +739,17 @@ class PromptPanel(
 
     @RequiresEdt
     internal fun issueActions(): List<AnAction> = issues.map { issue ->
-        object : DumbAwareAction(issue.title, issue.description, issue.icon) {
-            override fun update(e: AnActionEvent) {
-                e.presentation.isEnabled = issue.enabled
-            }
+        DefaultActionGroup(issue.title, true).apply {
+            for (item in issue.actions) {
+                add(object : DumbAwareAction(item.title, item.description, null) {
+                    override fun update(e: AnActionEvent) {
+                        e.presentation.isEnabled = item.enabled
+                    }
 
-            override fun actionPerformed(e: AnActionEvent) {
-                issue.action()
+                    override fun actionPerformed(e: AnActionEvent) {
+                        item.action()
+                    }
+                })
             }
         }
     }

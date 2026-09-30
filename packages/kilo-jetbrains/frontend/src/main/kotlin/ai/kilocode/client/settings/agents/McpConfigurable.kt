@@ -38,13 +38,30 @@ import kotlinx.coroutines.withContext
 private val edt = Dispatchers.EDT + ModalityState.any().asContextElement()
 
 class McpConfigurable : DirectoryReadyConfigurable<JComponent>() {
+    private var ui: McpSettingsUi? = null
+    private var query: String? = null
+
     override fun getId(): String = ID
     override fun getDisplayName(): String = KiloBundle.message("settings.agentBehavior.mcp.displayName")
-    override fun create(cs: CoroutineScope, dir: String): JComponent = McpSettingsUi(cs, dir)
+    override fun create(cs: CoroutineScope, dir: String): JComponent = McpSettingsUi(cs, dir).also { panel ->
+        ui = panel
+        query?.let(panel::filter)
+    }
     override fun update(ui: JComponent, dir: String) {
         (ui as? McpSettingsUi)?.setDirectory(dir)
     }
     override fun scrollReadyShell() = false
+
+    @RequiresEdt
+    internal fun filter(query: String) {
+        this.query = query
+        ui?.filter(query)
+    }
+
+    override fun disposeReadyComponent(component: JComponent) {
+        if (ui === component) ui = null
+        query = null
+    }
 
     companion object { const val ID = "ai.kilocode.jetbrains.settings.agentBehavior.mcp" }
 }
