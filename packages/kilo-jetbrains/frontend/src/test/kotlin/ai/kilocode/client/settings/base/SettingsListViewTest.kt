@@ -613,6 +613,39 @@ class SettingsListViewTest : BasePlatformTestCase() {
         }
     }
 
+    fun `test double click on a non-primary onCell action does not also activate the row`() {
+        edt {
+            val calls = mutableListOf<String>()
+            val opened = mutableListOf<String>()
+            // "Connect" has no per-cell `action`, exactly like every real onCell-routed action
+            // (Sign In, Connect, Delete, rename, ...) — the click must fire it once through onCell
+            // and must not also fall through to the row's own open/activate handler.
+            val view = ActiveListView("Empty", onOpen = { row, _ -> opened += row.key }) { key, id -> calls += "$key:$id" }
+            val row = item(
+                "with",
+                "Alpha",
+                null,
+                ActiveListCell("connect", "Connect"),
+                ActiveListCell("edit", "Edit", primary = true),
+            )
+            view.update(listOf(row))
+            layout(view)
+            val area = activeListCellBounds(view.list, 0, selected = true).getValue("connect")
+            val point = center(area)
+
+            click(view, point)
+            fire(view.list, mouse(view, MouseEvent.MOUSE_PRESSED, point, count = 2))
+            fire(view.list, mouse(view, MouseEvent.MOUSE_RELEASED, point, count = 2))
+            fire(view.list, mouse(view, MouseEvent.MOUSE_CLICKED, point, count = 2))
+
+            // Each press/release of the two clicks fires the cell action once, same as two
+            // independent single clicks; the only thing under test is that the trailing
+            // MOUSE_CLICKED(count=2) does not also treat this as row activation.
+            assertEquals(listOf("with:connect", "with:connect"), calls)
+            assertTrue("double-clicking a real action cell must not also open/activate the row", opened.isEmpty())
+        }
+    }
+
     fun `test disabled action click does not invoke`() {
         edt {
             val calls = mutableListOf<String>()

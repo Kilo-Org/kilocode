@@ -882,10 +882,15 @@ internal class ActiveListView(
             activeListCellAt(list, idx, e.point, selected, menu?.takeIf { it.available(item) } != null)
         } else {
             // A hit-tested region without an action — a status pill with only an id for tooltip
-            // hit-testing — must not swallow a click/double-click that falls through to it; only an
-            // actual action cell (enabled or not) blocks fall-through to row activation.
+            // hit-testing — must not swallow a click/double-click that falls through to it. `action`
+            // is only the per-cell handler and is null for every cell routed through the panel-level
+            // `onCell` callback (Sign In, Connect, Delete, rename, the row menu glyph, ...), so
+            // blocking must key off whether the hit id is a real cell/region, not that field.
+            val ids = activeListVisibleCells(item, selected, menu?.takeIf { it.available(item) } != null)
+                .map { it.id }
+                .toSet() + activeListRegions(item).keys
             activeListHits(list, idx, selected)
-                .firstOrNull { it.action != null && it.bounds.contains(e.point) }
+                .firstOrNull { it.id in ids && it.bounds.contains(e.point) }
                 ?.id
         }
         return Hit(item, id)
