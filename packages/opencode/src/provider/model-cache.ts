@@ -244,6 +244,7 @@ export const layer: Layer.Layer<
           const cached = entry.cached
           if (cached && cached.expires > Date.now()) {
             yield* commit(entry.providerID, version, entry, cached.result)
+            yield* recover(entry, cached.result)
             return cached.result
           }
 
@@ -298,7 +299,10 @@ export const layer: Layer.Layer<
       const entry = yield* cell(providerID, options)
       selected.set(providerID, entry)
       const cached = active.get(providerID) === entry ? yield* get(providerID) : undefined
-      if (cached) return cached
+      if (cached) {
+        if (entry.cached) yield* recover(entry, entry.cached.result)
+        return cached
+      }
       const version = (versions.get(providerID) ?? 0) + 1
       versions.set(providerID, version)
       log.info("fetching models", { providerID })
@@ -327,7 +331,8 @@ export const layer: Layer.Layer<
       )
         return
       entry.recovery = yield* Effect.gen(function* () {
-        for (let delay = 30; ; delay = Math.min(delay * 2, 300)) {
+        for (let attempt = 0; attempt < 6; attempt++) {
+          const delay = Math.min(30 * 2 ** attempt, 300)
           yield* Effect.sleep(Duration.seconds(delay))
           // A newer account or endpoint must not be replaced by this retry.
           if (selected.get(entry.providerID) !== entry || active.get(entry.providerID) !== entry) return
@@ -342,6 +347,7 @@ export const layer: Layer.Layer<
           if (retryable(next)) continue
           return
         }
+        log.warn("catalog recovery attempts exhausted", { providerID: entry.providerID, attempts: 6 })
       }).pipe(Effect.ensuring(Effect.sync(() => (entry.recovery = undefined))), Effect.forkIn(scope))
     })
 

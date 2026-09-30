@@ -77,6 +77,7 @@ it.effect("continues catalog recovery after its only caller times out", () =>
         yield* TestClock.adjust("1 second")
         expect(Option.isNone(yield* Fiber.join(caller))).toBe(true)
         yield* Deferred.succeed(wait, undefined)
+        yield* Effect.yieldNow
         yield* TestClock.adjust("30 seconds")
         expect(yield* cache.get("kilo")).toEqual(catalog.models)
         expect(yield* Ref.get(calls)).toEqual([options, options])
@@ -232,6 +233,23 @@ it.effect("selects a new endpoint through fetch and stops the old recovery", () 
   }),
 )
 
+it.effect("restarts recovery when a failed catalog is reselected within its TTL", () =>
+  Effect.gen(function* () {
+    const calls = yield* Ref.make<Options[]>([])
+    yield* ModelCache.Service.use((cache) =>
+      Effect.gen(function* () {
+        yield* cache.fetch("kilo", options)
+        yield* cache.fetch("kilo", { ...options, kilocodeOrganizationId: "org-b" })
+        yield* TestClock.adjust("30 seconds")
+        expect(yield* cache.fetch("kilo", options)).toEqual({})
+        yield* TestClock.adjust("30 seconds")
+        expect(yield* cache.get("kilo")).toEqual(catalog.models)
+        expect((yield* Ref.get(calls)).length).toBe(3)
+      }),
+    ).pipe(Effect.provide(layer(calls, [{ models: {}, error: { kind: "network" } }, catalog, catalog])))
+  }),
+)
+
 it.effect("keys implicit catalog requests by their resolved credentials", () =>
   Effect.gen(function* () {
     const calls = yield* Ref.make<Options[]>([])
@@ -266,8 +284,28 @@ it.effect("caps retry delays at five minutes", () =>
           yield* TestClock.adjust("1 second")
           expect((yield* Ref.get(calls)).length).toBe(count + 1)
         }
+        yield* TestClock.adjust("10 minutes")
+        expect((yield* Ref.get(calls)).length).toBe(7)
       }),
     ).pipe(Effect.provide(layer(calls, [{ models: {}, error: { kind: "network" } }])))
+  }),
+)
+
+it.effect("rearms an exhausted recovery burst on a later explicit fetch", () =>
+  Effect.gen(function* () {
+    const calls = yield* Ref.make<Options[]>([])
+    const failure: KiloModelsResult = { models: {}, error: { kind: "network" } }
+    yield* ModelCache.Service.use((cache) =>
+      Effect.gen(function* () {
+        yield* cache.fetch("kilo", options)
+        yield* TestClock.adjust("1050 seconds")
+        expect((yield* Ref.get(calls)).length).toBe(7)
+        expect(yield* cache.fetch("kilo", options)).toEqual({})
+        yield* TestClock.adjust("30 seconds")
+        expect(yield* cache.get("kilo")).toEqual(catalog.models)
+        expect((yield* Ref.get(calls)).length).toBe(8)
+      }),
+    ).pipe(Effect.provide(layer(calls, [...Array.from({ length: 7 }, () => failure), catalog])))
   }),
 )
 
