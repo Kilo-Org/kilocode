@@ -29,34 +29,45 @@ const LEAVE = 240
 const MAX = 3
 const ROWS = 6
 
-export function useAgentStack() {
+/**
+ * The running background agents of the current session.
+ *
+ * The background agent strip polls the job list every second. This reads the
+ * same replies instead of polling again. Job status is the source of truth.
+ * Child session status is the fallback until a reply arrives or after a failed
+ * one, the same as the strip, because a webview does not always receive status
+ * for every child session.
+ */
+export function useRunningAgents() {
   const session = useSession()
   const vscode = useVSCode()
-  const [items, setItems] = createSignal<PromptAgent[]>([])
-  // The background agent strip polls the job list every second. The stack
-  // reads the same replies instead of polling again. Job status is the source
-  // of truth; child session status is only a fallback until the first reply,
-  // because a webview does not always receive status for every child session.
   const [jobs, setJobs] = createSignal<BackgroundJobInfo[]>()
+  createEffect(on(session.currentSessionID, () => setJobs(undefined), { defer: true }))
   onCleanup(
     vscode.onMessage((message) => {
       if (message.type !== "backgroundJobsLoaded") return
-      if (message.sessionID !== session.currentSessionID() || message.error) return
-      setJobs(message.jobs)
+      if (message.sessionID !== session.currentSessionID()) return
+      setJobs(message.error ? undefined : message.jobs)
     }),
   )
-  const [shown, setShown] = createSignal(false)
-  const [leaving, setLeaving] = createSignal<ReadonlySet<string>>(new Set())
-  const timers = new Map<string, ReturnType<typeof setTimeout>[]>()
-  let enter: ReturnType<typeof setTimeout> | undefined
-
-  const live = createMemo(() => {
+  return createMemo(() => {
     const id = session.currentSessionID()
     if (!id) return []
     const list = jobs()
     if (!list) return backgroundAgents(session.getSessionToolParts(id), session.allStatusMap())
     return backgroundJobAgents(list, id).filter((agent) => agent.status === "running")
   })
+}
+
+export function useAgentStack() {
+  const session = useSession()
+  const [items, setItems] = createSignal<PromptAgent[]>([])
+  const [shown, setShown] = createSignal(false)
+  const [leaving, setLeaving] = createSignal<ReadonlySet<string>>(new Set())
+  const timers = new Map<string, ReturnType<typeof setTimeout>[]>()
+  let enter: ReturnType<typeof setTimeout> | undefined
+
+  const live = useRunningAgents()
 
   const reset = () => {
     for (const list of timers.values()) list.forEach(clearTimeout)
@@ -66,7 +77,6 @@ export function useAgentStack() {
     enter = undefined
     setItems([])
     setShown(false)
-    setJobs(undefined)
   }
 
   createEffect(on(session.currentSessionID, reset, { defer: true }))
