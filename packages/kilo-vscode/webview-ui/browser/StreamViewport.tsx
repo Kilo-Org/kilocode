@@ -118,7 +118,8 @@ export const StreamViewport: Component<{
     props.transport.send({ type: "interact", scope: view.scope, identity: view.identity, event: { kind: "release" } })
   }
 
-  const clear = () => {
+  // Keep the last image on a resize of the same page, so the preview does not go blank until the next frame.
+  const clear = (keep = false) => {
     release()
     const queued = pending
     pending = undefined
@@ -126,7 +127,7 @@ export const StreamViewport: Component<{
     drop(decoding)
     painted = undefined
     sequence = -1
-    if (!canvas) return
+    if (!canvas || keep) return
     canvas.width = 0
     canvas.height = 0
     for (const name of ["browserId", "navigation", "revision", "sequence", "sessionId", "projectId"]) {
@@ -192,7 +193,7 @@ export const StreamViewport: Component<{
       if (next.inspecting) release()
       return
     }
-    clear()
+    clear(unchanged && viewport.active)
     if (previous && !unchanged) publish(previous, { ...previous.viewport, revision: ++revision, active: false })
     const version = ++revision
     current = {
