@@ -646,6 +646,20 @@ runIt.live("cross-process lock prevents scanning until another process releases 
       "child did not acquire the retention lock",
     )
     expect(new TextDecoder().decode(ready.value)).toBe("ready\n")
+    const disabled = Layer.mock(Config.Service, {
+      getGlobal: () => Effect.succeed({ retention: { enabled: false, maxAgeDays: 30 } }),
+    })
+    expect(yield* KiloSessionRetention.run({ force: true }).pipe(Effect.provide(disabled))).toEqual({
+      ran: false,
+      reason: "disabled",
+    })
+    yield* Effect.promise(() =>
+      Bun.write(
+        `${Global.Path.data}/retention/state.json`,
+        JSON.stringify({ at: Date.now(), scanned: 0, deleted: 0, skippedActive: 0, failed: 0, durationMs: 0 }),
+      ),
+    )
+    expect(yield* KiloSessionRetention.run().pipe(Effect.provide(enabled))).toEqual({ ran: false, reason: "recent" })
     let calls = 0
     const config = Layer.mock(Config.Service, {
       getGlobal: () =>
@@ -658,15 +672,46 @@ runIt.live("cross-process lock prevents scanning until another process releases 
     expect(Exit.isFailure(exit)).toBe(true)
     if (Exit.isFailure(exit))
       expect(Cause.pretty(exit.cause)).toContain("Timed out waiting for lock: session-retention")
-    expect(calls).toBe(0)
+    expect(calls).toBe(1)
     expect(yield* KiloSessionRetention.readProgress()).toBeUndefined()
     child.stdin.end()
     expect(yield* Effect.promise(() => child.exited)).toBe(0)
     const outcome = yield* KiloSessionRetention.run({ force: true }).pipe(Effect.provide(config))
-    expect(calls).toBe(1)
+    expect(calls).toBe(3)
     expect(outcome.ran && outcome.result).toMatchObject({ deleted: 1, failed: 0 })
   }),
 )
+
+for (const reason of ["disabled", "recent"] as const)
+  runIt.live(`rechecks ${reason} gate after acquiring the machine-wide lock`, () =>
+    Effect.gen(function* () {
+      const { db } = yield* Database.Service
+      const id = SessionID.make(`ses_retention_recheck_${crypto.randomUUID()}`)
+      yield* seed({
+        directory: "/tmp/retention-recheck",
+        rows: [{ id, updated: Date.now() - 40 * KiloSessionRetention.DAY_MS }],
+      })
+      const file = `${Global.Path.data}/retention/state.json`
+      const state = { at: 0, scanned: 0, deleted: 0, skippedActive: 0, failed: 0, durationMs: 0 }
+      yield* Effect.promise(() => Bun.write(file, JSON.stringify(state)))
+      let calls = 0
+      const config = Layer.mock(Config.Service, {
+        getGlobal: () =>
+          Effect.gen(function* () {
+            if (++calls === 2 && reason === "recent")
+              yield* Effect.promise(() => Bun.write(file, JSON.stringify({ ...state, at: Date.now() })))
+            return { retention: { enabled: reason === "recent" || calls === 1, maxAgeDays: 30 } }
+          }),
+      })
+      expect(yield* KiloSessionRetention.run({ force: reason === "disabled" }).pipe(Effect.provide(config))).toEqual({
+        ran: false,
+        reason,
+      })
+      expect(calls).toBe(2)
+      const row = yield* db.select({ id: SessionTable.id }).from(SessionTable).where(eq(SessionTable.id, id)).get()
+      expect(row?.id).toBe(id)
+    }),
+  )
 
 dbIt.live("run serializes duplicates and clears progress on failure and interruption", () =>
   Effect.gen(function* () {

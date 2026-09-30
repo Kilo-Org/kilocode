@@ -33,6 +33,7 @@ export const ServeCommand = effectCmd({
     const { startParentWatchdog } = yield* Effect.promise(() => import("../../kilocode/parent-watchdog"))
     const { KiloSessions } = yield* Effect.promise(() => import("@/kilo-sessions/kilo-sessions"))
     const retention = yield* KiloRetentionScheduler.Service
+    yield* retention.start()
     yield* Effect.promise(
       () =>
         new Promise<void>((resolve) => {

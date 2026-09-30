@@ -354,11 +354,17 @@ export namespace KiloSessionRetention {
         skippedActive: 0,
       })
       const config = yield* Config.Service
+      const gate = shouldRun(policy(yield* config.getGlobal()), input, yield* readState(), Date.now())
+      if (!gate.ok) return { ran: false as const, reason: gate.reason }
+
+      // VACUUM can block the heartbeat while rebuilding a large database.
+      yield* Flock.effect("session-retention", { timeoutMs: 1000, staleMs: DAY_MS })
+      // Policy and spacing can change while another process owns the lock.
       const active = policy(yield* config.getGlobal())
       const now = Date.now()
       const previous = yield* readState()
-      const gate = shouldRun(active, input, previous, now)
-      if (!gate.ok) return { ran: false as const, reason: gate.reason }
+      const check = shouldRun(active, input, previous, now)
+      if (!check.ok) return { ran: false as const, reason: check.reason }
 
       const { db } = yield* Database.Service
       const rows = yield* db
@@ -475,11 +481,7 @@ export namespace KiloSessionRetention {
     },
     (effect, _input: { force?: boolean } = {}) =>
       lock.withPermit(
-        Effect.gen(function* () {
-          // VACUUM can block the heartbeat while rebuilding a large database.
-          yield* Flock.effect("session-retention", { timeoutMs: 1000, staleMs: DAY_MS })
-          return yield* effect
-        }).pipe(
+        effect.pipe(
           Effect.scoped,
           Effect.ensuring(
             Effect.sync(() => {

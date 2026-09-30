@@ -20,10 +20,31 @@ const it = testEffect(
 )
 const file = path.join(Global.Path.data, "retention", "state.json")
 const reset = Effect.promise(() => rm(file, { force: true }))
-const start = (config: Layer.Layer<Config.Service>) =>
+const load = (config: Layer.Layer<Config.Service>) =>
   Layer.build(KiloRetentionScheduler.layer.pipe(Layer.provide(config))).pipe(
     Effect.map((context) => Context.get(context, KiloRetentionScheduler.Service)),
   )
+const start = (config: Layer.Layer<Config.Service>) => load(config).pipe(Effect.tap((s) => s.start()))
+
+it.effect("building the runtime for a utility command neither starts nor drains cleanup", () =>
+  Effect.gen(function* () {
+    yield* reset
+    let calls = 0
+    const config = Layer.mock(Config.Service, {
+      getGlobal: () =>
+        Effect.sync(() => {
+          calls++
+          return { retention: { enabled: true, maxAgeDays: 90 } }
+        }),
+    })
+    yield* load(config)
+    yield* TestClock.adjust("2 hours")
+    yield* Effect.promise(() => KiloShutdown.run())
+    expect(calls).toBe(0)
+    expect(yield* KiloSessionRetention.readState()).toBeNull()
+    expect(yield* KiloSessionRetention.readProgress()).toBeUndefined()
+  }),
+)
 
 it.effect("startup immediately runs enabled retention without waiting for the hourly timer", () =>
   Effect.gen(function* () {
@@ -38,6 +59,7 @@ it.effect("startup immediately runs enabled retention without waiting for the ho
     })
     const scheduler = yield* start(config)
     expect(calls).toBeGreaterThanOrEqual(1)
+    yield* scheduler.start()
     yield* scheduler.stop(true)
     expect(calls).toBe(2)
     expect(yield* KiloSessionRetention.readState()).toMatchObject({ scanned: 0, deleted: 0 })

@@ -19,7 +19,7 @@ import { KiloRetentionScheduler } from "@/kilocode/session/retention-scheduler" 
 
 ensureProcessMetadata("worker") // kilocode_change - retain worker role and parent run correlation
 await KiloLog.init() // kilocode_change - keep compatibility logs off the TUI terminal
-await AppRuntime.runPromise(Effect.void) // kilocode_change - start core retention in the embedded backend
+await AppRuntime.runPromise(KiloRetentionScheduler.Service.use((s) => s.start())) // kilocode_change
 Heap.start()
 
 // kilocode_change start - keep upstream's keep-alive intent but never swallow the error silently
