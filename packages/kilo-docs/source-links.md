@@ -77,6 +77,8 @@
   <!-- packages/opencode/src/tool/edit.ts -->
 - <https://github.com/Kilo-Org/kilo-marketplace>
   <!-- packages/kilo-vscode/webview-ui/src/components/marketplace/MarketplaceContribute.tsx -->
+- <https://github.com/Kilo-Org/kilo-marketplace/tree/main>
+  <!-- packages/kilo-vscode/src/services/marketplace/notify.ts -->
 - <https://github.com/Kilo-Org/kilocode>
   <!-- packages/kilo-vscode/webview-ui/src/components/settings/AboutKiloCodeTab.tsx -->
   <!-- packages/opencode/src/kilocode/cli/cmd/tui/component/dialog-about.tsx -->

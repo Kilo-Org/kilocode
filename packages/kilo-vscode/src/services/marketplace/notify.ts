@@ -1,5 +1,5 @@
 import * as vscode from "vscode"
-import type { MarketplaceItem, MarketplaceRelevanceMetadata } from "./types"
+import type { MarketplaceItem, MarketplaceItemRef, MarketplaceRelevanceMetadata } from "./types"
 
 /** Stable, discardable identifier for a suggestion. Matches the relevance map key. */
 export function suggestionSlug(item: Pick<MarketplaceItem, "id" | "type">): string {
@@ -23,8 +23,27 @@ export function selectSuggestions(
 }
 
 export interface SuggestionChoice {
-  action: "install" | "dismiss"
+  action: "install" | "dismiss" | "details"
   item: MarketplaceItem
+  /** Browser URL for the item's marketplace catalog entry. Only set for "details". */
+  url?: string
+}
+
+const CATALOG_BASE_URL = "https://github.com/Kilo-Org/kilo-marketplace/tree/main"
+
+const CATALOG_KINDS: Record<MarketplaceItem["type"], string> = {
+  agent: "agents",
+  skill: "skills",
+  plugin: "plugins",
+  mcp: "mcps",
+}
+
+/**
+ * Build the browser URL for an item's entry in the public marketplace catalog
+ * repository (the source the registry API serves). Dynamic for any type and id.
+ */
+export function catalogUrl(item: MarketplaceItemRef): string {
+  return `${CATALOG_BASE_URL}/${CATALOG_KINDS[item.type]}/${encodeURIComponent(item.id)}`
 }
 
 function describe(item: MarketplaceItem): string {
@@ -41,13 +60,16 @@ function describe(item: MarketplaceItem): string {
  */
 export async function showSuggestionNotification(item: MarketplaceItem): Promise<SuggestionChoice | undefined> {
   const install = "Install"
+  const details = "View details"
   const dismiss = "Don't show again"
   const picked = await vscode.window.showInformationMessage(
     `Kilo found ${describe(item)} that matches this workspace. Install it?`,
     install,
+    details,
     dismiss,
   )
   if (picked === install) return { action: "install", item }
+  if (picked === details) return { action: "details", item, url: catalogUrl(item) }
   if (picked === dismiss) return { action: "dismiss", item }
   return undefined
 }

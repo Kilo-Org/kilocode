@@ -115,7 +115,14 @@ export class MarketplaceNotifier implements vscode.Disposable {
 
     // A later rescan must never void the user's explicit choice, so only a
     // disposed notifier short-circuits here — not a bumped generation.
-    const choice = await showSuggestionNotification(item)
+    // "View details" opens the catalog entry in the browser, which also closes
+    // the toast, so re-offer the suggestion until the user picks a final action.
+    let choice = await showSuggestionNotification(item)
+    while (choice?.action === "details") {
+      if (this.disposed) return
+      if (choice.url) void vscode.env.openExternal(vscode.Uri.parse(choice.url))
+      choice = await showSuggestionNotification(item)
+    }
     if (this.disposed) return
     if (choice?.action === "install") this.install(item)
     if (choice?.action === "dismiss") await this.dismiss(slug)
