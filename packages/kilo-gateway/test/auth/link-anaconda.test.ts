@@ -21,12 +21,12 @@ afterEach(() => {
 })
 
 describe("checkAnacondaLogin", () => {
-  test("returns null when no key exists", async () => {
+  test("returns hasKey=false when no key exists", async () => {
     const result = await checkAnacondaLogin()
-    expect(result).toBeNull()
+    expect(result).toEqual({ hasKey: false, email: null })
   })
 
-  test("returns email when key exists and passport succeeds", async () => {
+  test("returns hasKey=true and email when key exists and passport succeeds", async () => {
     saveCredential({ apiKey: "ad-existing-key", domain: "anaconda.com" })
 
     spyOn(globalThis, "fetch").mockResolvedValue(
@@ -37,7 +37,7 @@ describe("checkAnacondaLogin", () => {
     )
 
     const result = await checkAnacondaLogin()
-    expect(result).toBe("user@anaconda.com")
+    expect(result).toEqual({ hasKey: true, email: "user@anaconda.com" })
   })
 
   test("calls passport with the keyring API key as Bearer token", async () => {
@@ -54,16 +54,16 @@ describe("checkAnacondaLogin", () => {
     expect((opts.headers as Record<string, string>).Authorization).toBe("Bearer ad-my-key")
   })
 
-  test("returns null when passport returns HTTP error", async () => {
+  test("returns hasKey=true with null email when passport returns HTTP error", async () => {
     saveCredential({ apiKey: "ad-existing-key", domain: "anaconda.com" })
 
     spyOn(globalThis, "fetch").mockResolvedValue(new Response(null, { status: 401 }))
 
     const result = await checkAnacondaLogin()
-    expect(result).toBeNull()
+    expect(result).toEqual({ hasKey: true, email: null })
   })
 
-  test("returns null when passport returns empty email", async () => {
+  test("returns hasKey=true with null email when passport returns empty email", async () => {
     saveCredential({ apiKey: "ad-existing-key", domain: "anaconda.com" })
 
     spyOn(globalThis, "fetch").mockResolvedValue(
@@ -71,7 +71,7 @@ describe("checkAnacondaLogin", () => {
     )
 
     const result = await checkAnacondaLogin()
-    expect(result).toBeNull()
+    expect(result).toEqual({ hasKey: true, email: null })
   })
 })
 

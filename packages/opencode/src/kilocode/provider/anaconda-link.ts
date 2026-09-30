@@ -26,18 +26,21 @@ import { Telemetry } from "@kilocode/kilo-telemetry"
  * @param kiloToken - The Kilo auth token
  */
 export async function handleAnacondaLink(kiloToken: string): Promise<void> {
-  const anacondaEmail = await checkAnacondaLogin().catch(() => null)
+  const status = await checkAnacondaLogin().catch(() => ({ hasKey: false, email: null }))
 
-  if (anacondaEmail) {
-    // User is already logged into Anaconda — check for email mismatch
-    const profile = await getKiloProfile(kiloToken).catch(() => undefined)
-    if (profile?.email && anacondaEmail !== profile.email) {
-      Telemetry.trackAnacondaEmailMismatch()
+  if (status.hasKey) {
+    // Key exists — check for email mismatch if passport returned an email
+    if (status.email) {
+      const profile = await getKiloProfile(kiloToken).catch(() => undefined)
+      if (profile?.email && status.email !== profile.email) {
+        Telemetry.trackAnacondaEmailMismatch()
+      }
     }
+    // Key exists (even if passport failed) — do not overwrite
     return
   }
 
-  // Not logged into Anaconda — create the link
+  // No key in keyring — create the link
   const linked = await linkAnacondaAccount(kiloToken)
   if (linked) {
     Telemetry.trackAnacondaLinkCreated()

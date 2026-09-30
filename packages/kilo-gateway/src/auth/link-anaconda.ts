@@ -43,17 +43,27 @@ interface PassportResponse {
   profile: PassportProfile
 }
 
+export interface AnacondaLoginStatus {
+  /** Whether an API key exists in the keyring. */
+  hasKey: boolean
+  /** The email from the Anaconda passport, or null if passport call failed or no key. */
+  email: string | null
+}
+
 /**
  * Check if the user is already logged into Anaconda.
  *
  * Reads the keyring for an existing API key. If one exists, calls the
  * Anaconda passport endpoint to retrieve the associated email.
  *
- * @returns The Anaconda account email, or null if not logged in or passport fails
+ * Returns both `hasKey` (whether a keyring entry exists) and `email`
+ * (the passport email) so callers can distinguish "no key" from
+ * "key exists but passport failed" and avoid overwriting credentials
+ * on transient failures.
  */
-export async function checkAnacondaLogin(): Promise<string | null> {
+export async function checkAnacondaLogin(): Promise<AnacondaLoginStatus> {
   const key = getApiKey(ANACONDA_DOMAIN)
-  if (!key) return null
+  if (!key) return { hasKey: false, email: null }
 
   const response = await fetch(PASSPORT_ENDPOINT, {
     headers: {
@@ -62,10 +72,10 @@ export async function checkAnacondaLogin(): Promise<string | null> {
     },
   })
 
-  if (!response.ok) return null
+  if (!response.ok) return { hasKey: true, email: null }
 
   const data = (await response.json()) as PassportResponse
-  return data.profile?.email || null
+  return { hasKey: true, email: data.profile?.email || null }
 }
 
 /**
