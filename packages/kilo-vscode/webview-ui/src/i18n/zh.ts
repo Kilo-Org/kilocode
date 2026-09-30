@@ -92,6 +92,7 @@ export const dict = {
   "revert.banner.workspace.legacy": "会话已还原。此次早期还原的工作区恢复状态不可用。",
   "revert.banner.workspace.enableSnapshots": "启用快照",
   "revert.disabled.agentBusy": "等待智能体完成",
+  "revert.error.body": "仓库可能正在使用中。请重试，或查看 Kilo 日志了解详情。",
   "command.session.compact": "精简会话",
   "command.session.export": "导出会话记录",
 
