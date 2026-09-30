@@ -1,3 +1,4 @@
+import { setTimeout as wait } from "node:timers/promises"
 import type { CDPSession, Frame, Page } from "playwright-core"
 import type { BrowserFrame, BrowserInteraction, BrowserViewport } from "../../shared/browser-stream"
 
@@ -14,6 +15,7 @@ type Cast = {
 
 const PAYLOAD = 2 * 1024 * 1024
 const TEXT = 64 * 1024
+const SETTLE = 250
 const BUTTONS = { left: 1, right: 2, middle: 4 } as const
 const MODIFIERS = [
   { key: "Alt", code: "AltLeft", keyCode: 18, mask: 1 },
@@ -263,6 +265,21 @@ export class BrowserStream {
       if (this.closed || this.view !== next || suspend) return
       await this.page.setViewportSize({ width: next.width, height: next.height })
       if (this.closed || this.view !== next || !next.active) return
+      // Playwright also resizes the headless Chrome window. After that resize, Chrome paints only the window
+      // content area, which excludes the browser UI and has a minimum width. Screencast frames then do not match
+      // the viewport and are dropped, so a static page stays blank. Wait until the resize reaches the page, then
+      // set the painted size to the viewport again. A busy renderer must not block the stream queue.
+      await Promise.race([
+        this.page
+          .evaluate(() => new Promise<void>((done) => requestAnimationFrame(() => requestAnimationFrame(() => done()))))
+          .catch(() => this.report("resize wait failed")),
+        wait(SETTLE),
+      ])
+      if (this.closed || this.view !== next) return
+      await session
+        .send("Emulation.setVisibleSize", { width: next.width, height: next.height })
+        .catch(() => this.report("visible size failed"))
+      if (this.closed || this.view !== next) return
       this.casting = next
       this.started = true
       await session.send("Page.startScreencast", {
