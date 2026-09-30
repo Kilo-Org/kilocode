@@ -164,10 +164,20 @@ export async function activate(context: vscode.ExtensionContext) {
   // the Command Palette still know where to act after it takes focus away.
   const focus = new SurfaceFocus()
 
+  // Remembers the concrete chat webview (sidebar, Kilo editor tab, or Agent
+  // Manager) whose prompt input last had focus. "Add to Context" attaches the
+  // selection there instead of always routing to the sidebar. Kept separate
+  // from SurfaceFocus because that only records the surface kind, which cannot
+  // pick one of several open Kilo editor tabs.
+  let lastChat: KiloProvider | AgentManagerProvider | undefined
+
   // Create the provider with shared service
   const provider = new KiloProvider(context.extensionUri, connectionService, context, {
     focusContext: "kilo-code.new.sidebarFocused",
-    onFocused: () => focus.gained("sidebar"),
+    onFocused: () => {
+      focus.gained("sidebar")
+      lastChat = provider
+    },
     onHidden: () => focus.lost("sidebar"),
   })
   provider.setRemoteService(remoteService)
@@ -267,8 +277,14 @@ export async function activate(context: vscode.ExtensionContext) {
   const binary = process.platform === "win32" ? await git() : git
   const agentManagerHost = new VscodeHost(context.extensionUri, connectionService, context, remoteService, controls)
   agentManagerHost.setFocusListener({
-    gained: () => focus.gained("agentManager"),
-    lost: () => focus.lost("agentManager"),
+    gained: () => {
+      focus.gained("agentManager")
+      if (agentManagerProvider.isActive()) lastChat = agentManagerProvider
+    },
+    lost: () => {
+      focus.lost("agentManager")
+      if (lastChat === agentManagerProvider && !agentManagerProvider.isActive()) lastChat = undefined
+    },
   })
   const agentManagerProvider = new AgentManagerProvider(agentManagerHost, connectionService, binary, browserBroker)
   agentManagerProvider.onPanelVisibilityChange((visible) => remember({ agentManager: visible }))
@@ -364,8 +380,14 @@ export async function activate(context: vscode.ExtensionContext) {
     const tabProvider = new KiloProvider(context.extensionUri, connectionService, context, {
       tabTitle: panelTitleHandler(panel),
       topBarSurface: "tab",
-      onFocused: () => focus.gained("tab"),
-      onHidden: () => focus.lost("tab"),
+      onFocused: () => {
+        focus.gained("tab")
+        lastChat = tabProvider
+      },
+      onHidden: () => {
+        focus.lost("tab")
+        if (lastChat === tabProvider) lastChat = undefined
+      },
     })
     tabProvider.setRemoteService(remoteService)
     tabProvider.setAutoApproveController(autoApprove)
@@ -763,7 +785,7 @@ export async function activate(context: vscode.ExtensionContext) {
   )
 
   // Register code actions (editor context menus, terminal context menus, keyboard shortcuts)
-  registerCodeActions(context, provider, agentManagerProvider, activeTabProvider)
+  registerCodeActions(context, provider, agentManagerProvider, activeTabProvider, () => lastChat)
   registerTerminalActions(context, provider, agentManagerProvider)
 
   // Register CodeActionProvider (lightbulb quick fixes)
