@@ -64,8 +64,11 @@ function ensureDir(dir: string) {
 /** Write file with 0o600 permissions (owner rw only), truncating. */
 function writeSecure(filepath: string, data: string) {
   const fd = fs.openSync(filepath, fs.constants.O_WRONLY | fs.constants.O_CREAT | fs.constants.O_TRUNC, 0o600)
-  fs.writeSync(fd, data)
-  fs.closeSync(fd)
+  try {
+    fs.writeSync(fd, data)
+  } finally {
+    fs.closeSync(fd)
+  }
 }
 
 /**
