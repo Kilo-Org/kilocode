@@ -131,6 +131,30 @@ describe("activateSelection — cross-project selection", () => {
     expect(calls.selected).toEqual([extra])
   })
 
+  it.each([true, false])("ignores a superseded selection when readiness completes with ok=%s", async (ok) => {
+    const gate = Promise.withResolvers<void>()
+    const { contexts, deps, calls, extra } = setup({
+      ready: (ctx) =>
+        ctx.ensureReady(async () => {
+          ctx.stateManager()
+          if (!ctx.pinned) await gate.promise
+          return { ok: ctx.pinned || ok, refsFixed: 0 }
+        }),
+    })
+
+    const pending = handleProjectMessage(activateMsg(extra), deps)
+    await handleProjectMessage(activateMsg(PINNED, { kind: "worktree", worktreeId: "wt1" }), deps)
+    expect(calls.selected).toEqual(["worktree"])
+
+    gate.resolve()
+    await pending
+
+    expect(contexts.active()?.id).toBe(PINNED)
+    expect(calls.selected).toEqual(["worktree"])
+    expect(contexts.get(extra)?.peekState()?.getActiveTarget()).toBeUndefined()
+    expect(calls.error).toEqual([])
+  })
+
   it("falls back to local without an error toast when the target is gone", async () => {
     const { contexts, deps, calls, extra } = setup()
     contexts.activate(PINNED)
