@@ -1,9 +1,11 @@
-// Detection of the pull request (PR) linked to the current worktree, plus the
-// manual override stored in session storage. Detection uses cheap local git
-// signals only; the host is queried by the 5-minute check in
-// `pr-link-poller.ts`, never on this path. The override is the same Storage
-// shape used for `session_share`.
-import { Instance } from "@/kilocode/instance"
+// Hard evidence that a session owns a pull request (PR), stored per session.
+//
+// A wrong link is worse than no link, so a link is created only from evidence
+// the session itself produced: a `gh pr create` (or host-API create) whose
+// output returned the PR URL, a `git push` of the PR's head branch, or an
+// explicit `kilo pr link` by the user. Merely mentioning, listing, viewing or
+// reviewing a PR is never evidence, and a link is never inherited from the
+// worktree, a branch name, or a previous session.
 import { Storage } from "@/storage/storage"
 import * as Log from "@opencode-ai/core/util/log"
 import simpleGit from "simple-git"
@@ -14,7 +16,23 @@ export type PrLink = {
   prNumber: number
 }
 
-export type PrLinkOverride = PrLink | { cleared: true }
+export type Evidence = "pr_create" | "push" | "user"
+
+// What a session owns. `headRef` is the branch the session pushed and
+// `headSha` the commit it pushed; both travel with the link in the
+// `session_pr_link` ingest so a backend can verify the evidence.
+export type SessionPrLink = {
+  link: PrLink
+  headRef?: string
+  headSha?: string
+  evidence: Evidence
+}
+
+const sessionPrefix = "session_pr_link_session"
+
+export function sessionLinkKey(sessionId: string) {
+  return [sessionPrefix, sessionId]
+}
 
 const log = Log.create({ service: "pr-link" })
 
@@ -69,9 +87,7 @@ export function parsePrUrl(url: string): PrLink | undefined {
 // The branch identity a lookup is keyed by: the tracking ref (or the remote plus
 // the current branch when there is no upstream) plus the head commit. It also
 // carries the remote's platform, host and project path so a session-output URL
-// can be matched against the worktree's own repository, plus the remote name,
-// owner/repo and the local head so the 5-minute check can ask the host's API for
-// the branch's open pull request.
+// can be matched against the worktree's own repository.
 export type Identity = {
   key: string
   owner: string
@@ -84,32 +100,15 @@ export type Identity = {
   path: string
 }
 
-// The link a process recorded for a worktree. `source: "poll"` marks a link the
-// 5-minute check wrote, so a session-output record is never overwritten by a
-// clear; `cleared` marks a polled link whose host no longer reports it open.
-export type Recorded = {
-  key: string | undefined
-  link?: PrLink
-  cleared?: true
-  source?: "poll"
-}
+// The repository-only part of an identity, which is all that evidence checks
+// and link matching need. Cached per worktree so a burst of output parts does
+// not re-spawn git for every one.
+type RepoIdentity = { owner: string; repo: string; platform: string; host: string; path: string }
 
-// Session-output links are recorded synchronously from the session's own output
-// (a `gh pr create` line, an agent message). The maps are module-level per
-// worktree, bounded so a long-lived `kilo serve` that visits many worktrees does
-// not grow them without limit.
-type Known = { branch: string; owner: string; repo: string; platform: string; host: string; path: string }
-
-const recordedLinks = new Map<string, Recorded>()
-// The record last written to disk per worktree (keyed by its serialized value),
-// so an output part that carries an already-persisted link does not rewrite it.
-// A failed write leaves no entry, so the next part retries instead of the record
-// being lost.
-const persistedRecords = new Map<string, string>()
-const knownIdentity = new Map<string, Known>()
+const repoCache = new Map<string, RepoIdentity | undefined>()
 
 // Keep at most this many worktrees' state. The least recently used worktree is
-// dropped; losing its state only makes its next detection start fresh.
+// dropped; losing its state only makes its next lookup start fresh.
 const maxWorktrees = 64
 
 function remember<T>(map: Map<string, T>, key: string, value: T) {
@@ -120,22 +119,56 @@ function remember<T>(map: Map<string, T>, key: string, value: T) {
   if (oldest != null) map.delete(oldest)
 }
 
-// The head-independent part of an identity key: the tracking ref
-// (`origin/feature/x`) or the `remote/branch` fallback before the first `|`. A
-// recorded link is kept for the branch, so a later commit on the same branch
-// still matches and no check runs.
-export function branchOf(key: string) {
-  return key.split("|")[0]
+// Run `fn` over `items` with at most `limit` in flight. A listing of thousands of
+// records must not open one file per record (or launch one host query per
+// session) all at once, and awaiting them serially makes a caller's latency grow
+// with the count. Order is preserved in the result.
+export async function mapLimit<T, R>(items: readonly T[], limit: number, fn: (item: T) => Promise<R>): Promise<R[]> {
+  const out: R[] = []
+  let cursor = 0
+  const worker = async () => {
+    for (;;) {
+      const index = cursor++
+      if (index >= items.length) return
+      const item = items[index]
+      if (item === undefined) continue
+      out[index] = await fn(item)
+    }
+  }
+  const size = Math.max(1, Math.min(limit, items.length))
+  await Promise.all(Array.from({ length: size }, worker))
+  return out
+}
+
+// A bounded per-directory identity cache. The repository a worktree points at
+// does not change while a session runs, so this avoids one `git` burst per
+// output part. A worktree whose repository cannot be resolved caches the miss.
+async function repoFor(worktree: string): Promise<RepoIdentity | undefined> {
+  if (repoCache.has(worktree)) {
+    const cached = repoCache.get(worktree)
+    remember(repoCache, worktree, cached)
+    return cached
+  }
+  const identity = await identityFor(worktree).catch(() => undefined)
+  const repo = identity && {
+    owner: identity.owner,
+    repo: identity.repo,
+    platform: identity.platform,
+    host: identity.host,
+    path: identity.path,
+  }
+  remember(repoCache, worktree, repo)
+  return repo
 }
 
 // A session-output URL only counts for this worktree when it points at the
 // worktree's own repository. Anything else the session merely mentions (another
-// repo's PR, a doc link) must not stick to this branch. The project path is
+// repo's PR, a doc link) must not stick to this session. The project path is
 // returned for the three PR shapes the shared matcher recognises: GitHub
 // `/owner/repo/pull/N`, GitLab `/<group>[/<subgroup>...]/<project>/-/merge_requests/N`
 // (and the `-`-less form), and Bitbucket/generic `/<workspace>/<repo>/pull-requests/N`
 // (or `/pull/N` on a custom host). Anything else stays unlinked.
-function urlRepo(link: PrLink) {
+export function urlRepo(link: PrLink): { host: string; path: string } | undefined {
   let url: URL
   try {
     url = new URL(link.prUrl)
@@ -241,11 +274,7 @@ export async function identityFor(worktree: string): Promise<Identity | undefine
 
   const tracking = upstream && !upstream.endsWith("HEAD") ? upstream : undefined
   const remote = tracking ? tracking.split("/")[0] : "origin"
-  const branch = tracking
-    ? tracking.split("/").slice(1).join("/")
-    : current && current !== "HEAD"
-      ? current
-      : undefined
+  const branch = tracking ? tracking.split("/").slice(1).join("/") : current && current !== "HEAD" ? current : undefined
   if (!branch) return undefined
 
   // Read the declared remote URL first: `git remote get-url` applies any
@@ -282,202 +311,236 @@ export async function identityFor(worktree: string): Promise<Identity | undefine
 }
 
 // Whether a parsed link names the worktree's own repository, for the `link_pr`
-// tool. It mirrors the session-output check: when the worktree's own repository
-// is known, a link for another host or project is refused, so an agent cannot
-// pin an unrelated repository's URL (or a phishing one) onto the session. A
-// worktree whose repository cannot be resolved has nothing to compare against,
-// so the link stays accepted the way the session-output path accepts it.
+// tool. It mirrors the session evidence check: when the worktree's own
+// repository is known, a link for another host or project is refused, so an
+// agent cannot pin an unrelated repository's URL (or a phishing one) onto the
+// session. A worktree whose repository cannot be resolved has nothing to
+// compare against, so the link stays accepted the way the session-output path
+// accepts it.
 export async function linkMatchesWorktree(link: PrLink, worktree: string): Promise<boolean> {
-  const identity = await identityFor(worktree)
-  return !identity || sameRepo(link, identity)
+  const repo = await repoFor(worktree)
+  return !repo || sameRepo(link, repo)
 }
 
-function firstPrUrl(text: string): PrLink | undefined {
-  const pattern = /https?:\/\/[^\s"'<>()[\]\\]+/g
-  for (const match of text.matchAll(pattern)) {
-    const link = parsePrUrl(match[0].replace(/[.,;:!?]+$/, ""))
+// The PR URL a create command printed. `gh pr create` / `glab mr create` print
+// the new URL on its own line; a URL embedded in a listing, a sentence or JSON
+// is a mention, not evidence, and is rejected.
+function createdLink(text: string): PrLink | undefined {
+  for (const raw of text.split("\n")) {
+    const line = raw.trim().replace(/[.,;:!?]+$/, "")
+    if (!line) continue
+    const link = parsePrUrl(line)
     if (link) return link
   }
   return undefined
 }
 
-// Record a PR URL printed by the session output. Cheap prefilter first, no
-// spawn. Returns the link only when it is new or changed so a caller syncs once
-// per change. `detectPrLinkState` returns it before any check.
-export function recordPrLinkText(worktree: string, text: string): PrLink | undefined {
-  if (!/\/pull\/|\/pull-requests\/|\/merge_requests\//.test(text)) return undefined
-  const link = firstPrUrl(text)
-  if (!link) return undefined
-
-  const known = knownIdentity.get(worktree)
-  if (known && !sameRepo(link, known)) return undefined
-
-  const key = known?.branch
-  const previous = recordedLinks.get(worktree)
-  if (previous && previous.link?.prUrl === link.prUrl && previous.key === key) return undefined
-
-  remember(recordedLinks, worktree, { key, link })
-  return link
+async function readValue<T>(key: string[]): Promise<T | undefined> {
+  const { AppRuntime } = await import("@/effect/app-runtime")
+  return AppRuntime.runPromise(Storage.Service.use((svc) => svc.read<T>(key))).catch(() => undefined)
 }
 
-// The link currently linked to the worktree's branch, from this process or the
-// last one. It never queries the host. A `cleared` record reports cleared.
-export async function detectPrLinkState(): Promise<{ link?: PrLink; cleared?: boolean }> {
-  const worktree = Instance.worktree
-  const identity = await identityFor(worktree)
-  const branch = identity ? branchOf(identity.key) : undefined
-  if (identity && branch)
-    remember(knownIdentity, worktree, {
-      branch,
-      owner: identity.owner,
-      repo: identity.repo,
-      platform: identity.platform,
-      host: identity.host,
-      path: identity.path,
-    })
+async function writeValue<T>(key: string[], value: T): Promise<void> {
+  const { AppRuntime } = await import("@/effect/app-runtime")
+  await AppRuntime.runPromise(Storage.Service.use((svc) => svc.write(key, value)))
+}
 
-  const recorded = recordedLinks.get(worktree)
-  if (recorded) {
-    const foreign = recorded.link != null && identity != null && !sameRepo(recorded.link, identity)
-    const stale = !foreign && branch != null && recorded.key != null && recorded.key !== branch
-    if (foreign || stale) {
-      // A URL recorded for a different repo or branch must not stick here.
-      recordedLinks.delete(worktree)
-    } else {
-      if (recorded.key == null && branch) {
-        // The link was recorded before detection knew the branch. Bind it now
-        // and persist the verified record so the next process reads a record
-        // keyed to this branch instead of one that matches any branch.
-        recorded.key = branch
-        await persistRecordedPrLink(worktree)
-      }
-      if (recorded.key == null || branch == null || recorded.key === branch) {
-        if (recorded.cleared) return { cleared: true }
-        if (recorded.link) return { link: recorded.link }
-      }
-    }
+async function removeValue(key: string[]): Promise<void> {
+  const { AppRuntime } = await import("@/effect/app-runtime")
+  await AppRuntime.runPromise(Storage.Service.use((svc) => svc.remove(key))).catch(() => undefined)
+}
+
+// Persist the link a session owns. The same-repo check runs here so every hard
+// evidence path funnels through one gate, and a link whose host/owner/repo does
+// not equal the worktree's remote is refused: a fork or another repo with the
+// same branch name never matches.
+export async function recordSessionLink(
+  sessionId: string,
+  evidence: SessionPrLink,
+  worktree: string,
+): Promise<SessionPrLink | undefined> {
+  const repo = await repoFor(worktree)
+  if (!repo || !sameRepo(evidence.link, repo)) return undefined
+  await writeValue(sessionLinkKey(sessionId), evidence)
+  return evidence
+}
+
+export async function clearSessionLink(sessionId: string): Promise<void> {
+  await removeValue(sessionLinkKey(sessionId))
+}
+
+export async function readSessionPrLink(sessionId: string): Promise<SessionPrLink | undefined> {
+  return readValue<SessionPrLink>(sessionLinkKey(sessionId))
+}
+
+// Direct write for a refresh of a link a session already owns. The caller has
+// the session's own URL already, so no worktree or repo re-check is needed.
+export async function writeSessionPrLink(sessionId: string, record: SessionPrLink): Promise<void> {
+  await writeValue(sessionLinkKey(sessionId), record)
+}
+
+// The session links for `ids`, or every stored link when `ids` is omitted. A
+// heartbeat passes exactly the ids it advertises, so its read stays bounded by
+// the live session count instead of growing with every record ever written; the
+// 5-minute check omits `ids` because it must refresh every link. Reads run with
+// a small concurrency bound so a large listing cannot exhaust file handles.
+export async function loadSessionLinks(ids?: Iterable<string>): Promise<Map<string, SessionPrLink>> {
+  const wanted = ids ? [...new Set(ids)] : undefined
+  if (wanted && wanted.length === 0) return new Map()
+  const { AppRuntime } = await import("@/effect/app-runtime")
+  const keys = wanted
+    ? wanted.map((sessionId) => sessionLinkKey(sessionId))
+    : await AppRuntime.runPromise(Storage.Service.use((svc) => svc.list([sessionPrefix]))).catch(
+        () => [] as string[][],
+      )
+  const entries = await mapLimit(keys, 32, async (key) => {
+    const sessionId = key.at(-1)
+    if (!sessionId) return undefined
+    const value = await readValue<SessionPrLink>(key)
+    return value ? ([sessionId, value] as const) : undefined
+  })
+  return new Map(entries.filter((entry): entry is readonly [string, SessionPrLink] => entry !== undefined))
+}
+
+// The output of a push names the branch and, when it is an update, the new
+// commit. A new branch (`[new branch]`) carries no commit, so the caller reads
+// it from git.
+function parsePushOutput(text: string): { branch?: string; sha?: string } {
+  for (const line of text.split("\n")) {
+    const arrow = line.match(/\s(\S+)\s*->\s*(\S+)/)
+    if (!arrow) continue
+    const dest = arrow[2].replace(/[.,;:]+$/, "").replace(/^refs\/heads\//, "")
+    if (!dest || dest === "HEAD") continue
+    const range = line.match(/([0-9a-f]{7,40})\.\.+([0-9a-f]{7,40})/)
+    return { branch: dest, sha: range?.[2] }
   }
-
-  if (!identity) return {}
-
-  // A link another process recorded outlives that process. Return it before the
-  // 5-minute check so a GitLab/Bitbucket worktree — which the check covers too —
-  // still shows the MR/PR the session linked. Drop it when the worktree's repo
-  // or branch no longer matches. A record with no branch key is untrusted: it
-  // was written before detection knew the branch, so returning it would show
-  // that link on whatever branch the next process happens to be on.
-  const stored = await readRecordedPrLink(worktree)
-  if (stored) {
-    const staleBranch = stored.key == null || stored.key !== branch
-    const foreign = stored.link != null && !sameRepo(stored.link, identity)
-    if (foreign || staleBranch) {
-      await forgetRecordedPrLink(worktree)
-    } else if (stored.cleared) {
-      return { cleared: true }
-    } else if (stored.link) {
-      return { link: stored.link }
-    }
-  }
-
   return {}
 }
 
-export async function detectPrLink(): Promise<PrLink | undefined> {
-  return (await detectPrLinkState()).link
+// The branch a `git push` command names, as a fallback when the output did not.
+function parsePushCommand(command: string): string | undefined {
+  const match = command.match(/(?:^|\s)git\s+push\b(.*)$/)
+  if (!match) return undefined
+  const args = match[1]
+    .trim()
+    .split(/\s+/)
+    .filter((arg) => arg && !arg.startsWith("-"))
+  const refspec = args[1]
+  if (!refspec) return undefined
+  const dest = refspec.includes(":") ? refspec.split(":").at(-1) : refspec
+  return dest?.replace(/^refs\/heads\//, "") || undefined
 }
 
-// Encode the worktree so it is a single valid path segment. Storage builds the
-// file as `path.join(dir, ...key) + ".json"`; a raw absolute worktree carries a
-// drive colon and path separators, which Windows rejects in a filename.
-export function overrideKey(worktree: string) {
-  return ["session_pr_link", encodeURIComponent(worktree)]
-}
-
-// The same single-segment encoding for the session-output link a process
-// recorded. It outlives the recording process so a later `kilo pr status`
-// prints the GitLab MR or Bitbucket PR the session linked, the way a GitHub
-// pull request does.
-export function recordedKey(worktree: string) {
-  return ["session_pr_link_recorded", encodeURIComponent(worktree)]
-}
-
-export async function writePrLinkOverride(worktree: string, value: PrLinkOverride) {
-  const { AppRuntime } = await import("@/effect/app-runtime")
-  return AppRuntime.runPromise(Storage.Service.use((svc) => svc.write(overrideKey(worktree), value)))
-}
-
-export async function readPrLinkOverride(worktree: string): Promise<PrLinkOverride | undefined> {
-  const { AppRuntime } = await import("@/effect/app-runtime")
-  return AppRuntime.runPromise(Storage.Service.use((svc) => svc.read<PrLinkOverride>(overrideKey(worktree)))).catch(
-    () => undefined,
-  )
-}
-
-// Record the link the 5-minute check found for the worktree's branch and persist
-// it for the next process. `source: "poll"` marks it so a later clear only
-// removes a polled link, never a session-output one. A session-output record for
-// this branch is the session's own claim and outranks the check, so the check
-// never relabels it `poll` (which would let a later clear remove it, or let a
-// second open pull request replace it); a record for another branch is stale and
-// may be replaced.
-export async function writePolledPrLink(worktree: string, branch: string, link: PrLink) {
-  const current = recordedLinks.get(worktree) ?? (await readRecordedPrLink(worktree))
-  if (current && current.source !== "poll" && (current.key == null || current.key === branch)) return
-  remember(recordedLinks, worktree, { key: branch, link, source: "poll" })
-  await persistRecordedPrLink(worktree)
-}
-
-// Mark a polled link cleared after the host stopped reporting it open. Only a
-// polled record (or none at all) may be cleared, and only for this branch: a
-// session-output record and the `session_pr_link` override are never touched.
-export async function clearPolledPrLink(worktree: string, branch: string) {
-  const current = recordedLinks.get(worktree) ?? (await readRecordedPrLink(worktree))
-  if (current) {
-    if (current.source !== "poll") return
-    if (current.key != null && current.key !== branch) return
+// A command that names a push but never moves the session's evidence must not
+// be read as one: `--dry-run`/`-n` prints the same `old..new  branch -> branch`
+// line without sending anything, and `--delete`/`-d` (or the empty-source
+// refspec `:branch`) removes the branch instead of pushing a commit.
+function pushDeletesOrDryRuns(args: string): boolean {
+  const tokens = args.trim().split(/\s+/).filter(Boolean)
+  for (const token of tokens) {
+    if (!token.startsWith("-")) continue
+    const flag = token.split("=")[0] ?? token
+    if (flag === "--dry-run" || flag === "--delete") return true
+    // A short cluster such as `-fn` carries `-n`; a long flag never matches.
+    if (flag.startsWith("-") && !flag.startsWith("--") && /[nd]/.test(flag.slice(1))) return true
   }
-  remember(recordedLinks, worktree, { key: branch, cleared: true, source: "poll" })
-  await persistRecordedPrLink(worktree)
+  return tokens.some((token) => token.startsWith(":"))
 }
 
-// Persist the link this process recorded from the session's own output, so a
-// later CLI process can return it. `recordedLinks` dies with the process; a
-// GitLab/Bitbucket link has no REST lookup to recover it, so the write here is
-// what keeps `kilo pr status` showing it after the session exits. Callers invoke
-// this for every output part that carries a PR URL: an unchanged record already
-// on disk is a no-op, and a failed write is logged and retried on the next part
-// instead of rejecting into the caller — the session watcher awaits this before
-// the immediate `session_pr_link` ingest, and `recordPrLinkText` reports an
-// unchanged URL only once, so a lost write would never be attempted again. A
-// record written before detection knew the branch carries no key; `detectPrLink`
-// then binds it and rewrites the record with the verified key (a reader treats a
-// keyless record as untrusted). The dedup entry is dropped by
-// `forgetRecordedPrLink`, so a record detection removed is written again by the
-// next persist.
-export async function persistRecordedPrLink(worktree: string) {
-  const recorded = recordedLinks.get(worktree)
-  if (!recorded) return
-  const value = JSON.stringify(recorded)
-  if (persistedRecords.get(worktree) === value) return
-  const { AppRuntime } = await import("@/effect/app-runtime")
-  return AppRuntime.runPromise(Storage.Service.use((svc) => svc.write(recordedKey(worktree), recorded))).then(
-    () => remember(persistedRecords, worktree, value),
-    (err) => log.warn("recording the session PR link failed; retrying on the next output part", { worktree, err }),
+function revParse(worktree: string, ref: string): Promise<string | undefined> {
+  return simpleGit(worktree)
+    .revparse([ref])
+    .then((value) => value.trim() || undefined)
+    .catch(() => undefined)
+}
+
+// True when `ancestor` is reachable from `descendant` in this worktree.
+function isAncestor(worktree: string, ancestor: string, descendant: string): Promise<boolean> {
+  return simpleGit(worktree)
+    .raw(["merge-base", "--is-ancestor", ancestor, descendant])
+    .then(() => true)
+    .catch(() => false)
+}
+
+// Hard evidence (1): the session ran a create command whose output returned the
+// PR URL. The link must name the worktree's own repository; the head ref and
+// head commit are the branch and commit the session created from.
+export async function recordPrCreate(
+  sessionId: string,
+  worktree: string,
+  output: string,
+): Promise<SessionPrLink | undefined> {
+  const link = createdLink(output)
+  if (!link) return undefined
+
+  const repo = await repoFor(worktree)
+  if (!repo || !sameRepo(link, repo)) return undefined
+
+  const git = simpleGit(worktree)
+  const headRef = await git
+    .revparse(["--abbrev-ref", "HEAD"])
+    .then((value) => value.trim())
+    .catch(() => undefined)
+  const headSha = await git
+    .revparse(["HEAD"])
+    .then((value) => value.trim())
+    .catch(() => undefined)
+
+  return recordSessionLink(
+    sessionId,
+    {
+      link,
+      headRef: headRef && headRef !== "HEAD" ? headRef : undefined,
+      headSha: headSha || undefined,
+      evidence: "pr_create",
+    },
+    worktree,
   )
 }
 
-export async function readRecordedPrLink(worktree: string): Promise<Recorded | undefined> {
-  const { AppRuntime } = await import("@/effect/app-runtime")
-  return AppRuntime.runPromise(Storage.Service.use((svc) => svc.read<Recorded>(recordedKey(worktree)))).catch(
-    () => undefined,
-  )
+// Hard evidence (2): the session pushed the PR's head branch. A push keeps the
+// session's existing link, advancing `headSha` to the pushed commit when it
+// equals or descends from the commit already recorded. A push alone does not
+// name a PR, so it never creates a link; the branch, repo and commit must all
+// match what the session already owns.
+export async function recordPush(
+  sessionId: string,
+  worktree: string,
+  command: string,
+  output: string,
+): Promise<SessionPrLink | undefined> {
+  const args = command.match(/(?:^|\s)git\s+push\b(.*)$/)?.[1]
+  if (args === undefined || pushDeletesOrDryRuns(args)) return undefined
+  const current = await readSessionPrLink(sessionId)
+  if (!current) return undefined
+  const repo = await repoFor(worktree)
+  if (!repo || !sameRepo(current.link, repo)) return undefined
+
+  const push = parsePushOutput(output)
+  const headRef = push.branch ?? parsePushCommand(command)
+  if (!headRef || headRef !== current.headRef) return undefined
+
+  const headSha = push.sha ?? (await revParse(worktree, headRef))
+  if (!headSha) return undefined
+  if (current.headSha && current.headSha !== headSha && !(await isAncestor(worktree, current.headSha, headSha))) {
+    return undefined
+  }
+
+  const next: SessionPrLink = { ...current, headRef, headSha }
+  await writeValue(sessionLinkKey(sessionId), next)
+  return next
 }
 
-export async function forgetRecordedPrLink(worktree: string) {
-  // Drop the write-dedup entry as well: it mirrors the on-disk record, and a
-  // later persist of that same link must rewrite the record this call removed
-  // instead of being skipped as an unchanged write.
-  persistedRecords.delete(worktree)
-  const { AppRuntime } = await import("@/effect/app-runtime")
-  return AppRuntime.runPromise(Storage.Service.use((svc) => svc.remove(recordedKey(worktree)))).catch(() => undefined)
+// Drop the per-worktree recorded links an older CLI wrote. Those were not
+// per-session evidence, so they must not survive an upgrade. Returns how many
+// keys were removed.
+export async function pruneLegacyWorktreeLinks(): Promise<number> {
+  const [{ Effect }, { AppRuntime }] = await Promise.all([import("effect"), import("@/effect/app-runtime")])
+  const [recorded, overrides] = await AppRuntime.runPromise(
+    Storage.Service.use((svc) => Effect.all([svc.list(["session_pr_link_recorded"]), svc.list(["session_pr_link"])])),
+  ).catch(() => [[] as string[][], [] as string[][]])
+  const keys = [...recorded, ...overrides]
+  for (const key of keys) await removeValue(key)
+  if (keys.length > 0) log.info("pruned legacy worktree PR links", { count: keys.length })
+  return keys.length
 }

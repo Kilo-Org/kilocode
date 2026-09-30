@@ -6,6 +6,10 @@ export namespace RemoteProtocol {
   export const SessionInfo = z.object({
     id: z.string(),
     status: z.string(),
+    // scheduled wakeups: the ISO-8601 time the session is due to wake. Present
+    // only with status "scheduled". Optional so legacy CLIs (no field) remain
+    // wire-compatible.
+    scheduledAt: z.string().optional(),
     title: z.string(),
     parentSessionId: z.string().optional(),
     gitUrl: z.string().optional(),
@@ -15,15 +19,20 @@ export namespace RemoteProtocol {
     //   KiloSession.resolvePlatform(id) || process.env["KILO_PLATFORM"] || "cli"
     // Optional so legacy CLIs (no field) remain wire-compatible.
     platform: z.string().max(32).optional(),
-    // kilocode_change - PR link: the pull request linked to the worktree this
-    // session is advertised from. Optional so legacy CLIs (no field) remain
-    // wire-compatible. `platform` here is the PR host (e.g. "github"), distinct
-    // from the session's `platform` (client OS) above.
+    // kilocode_change - PR link: the pull request this session owns on hard
+    // evidence (it created the PR or pushed its head branch). Optional so legacy
+    // CLIs (no field) remain wire-compatible. `platform` here is the PR host
+    // (e.g. "github"), distinct from the session's `platform` (client OS) above.
+    // `headRef`/`headSha` are the branch and commit the session pushed and travel
+    // with every link (the shared evidence contract); optional so older backends
+    // and CLIs stay wire-compatible.
     prLink: z
       .object({
         platform: z.string().min(1).max(32),
         prUrl: z.string().max(2048),
         prNumber: z.number().int().positive(),
+        headRef: z.string().max(2048).optional(),
+        headSha: z.string().max(64).optional(),
       })
       .optional(),
   })
