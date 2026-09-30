@@ -1,8 +1,10 @@
 import {
   buildKiloHeaders,
   DEFAULT_KILO_API_URL,
+  ENV_KILO_AI_GATEWAY_URL,
   getDefaultHeaders,
   getKiloUrlFromToken,
+  resolveKiloAiGatewayRoot,
   resolveKiloOpenRouterBaseUrl,
   supportsTools,
 } from "@kilocode/kilo-gateway"
@@ -142,12 +144,32 @@ export namespace CloudCatalog {
       })
     })
 
+    // A dedicated AI gateway serves the models under /api/v1; defaults stay on the Kilo API.
+    const gateway = Effect.fn("CloudCatalog.gateway")(function* () {
+      const raw = env[ENV_KILO_AI_GATEWAY_URL]?.trim()
+      if (!raw) return undefined
+      return yield* Effect.try({
+        try: () => {
+          const url = new URL(resolveKiloAiGatewayRoot({ gateway: raw }) ?? raw)
+          parseServiceOrigin(url.origin, { allowHttpLoopback: true })
+          if (url.username !== "" || url.password !== "") throw new Error("Catalog URL credentials are not allowed")
+          return url
+        },
+        catch: () =>
+          new CatalogError({
+            kind: "schema",
+            message: "Kilo catalog URL must be secure",
+          }),
+      })
+    })
+
     const models = Effect.fn("CloudCatalog.models")(function* (input: Input) {
-      const root = yield* base(input)
-      const path = input.organizationID
-        ? `../organizations/${encodeURIComponent(input.organizationID)}/models`
-        : "models"
-      const result = yield* request(new URL(path, root).toString(), input, Models)
+      const org = input.organizationID ? `organizations/${encodeURIComponent(input.organizationID)}/models` : undefined
+      const dedicated = yield* gateway()
+      const url = dedicated
+        ? new URL(org ?? "models", dedicated)
+        : new URL(org ? `../${org}` : "models", yield* base(input))
+      const result = yield* request(url.toString(), input, Models)
       return [
         ...new Set(
           result.data

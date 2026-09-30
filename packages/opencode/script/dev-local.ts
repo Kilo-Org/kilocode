@@ -3,8 +3,8 @@
 //   bun dev:local <project-dir> [--cloud <dir>] [--no-ingest] [--no-events] [--print] [-- <kilo args>]
 //
 // Reads ports from <cloud>/dev/logs/manifest.json (+ .dev-port), probes the web
-// server, and points the CLI at it (KILO_API_URL / KILO_SESSION_INGEST_URL /
-// EVENT_SERVICE_URL).
+// server, and points the CLI at it (KILO_API_URL / KILO_AI_GATEWAY_URL /
+// KILO_SESSION_INGEST_URL / EVENT_SERVICE_URL).
 // Auth/config/state/cache are isolated under ~/.kilo-dev so it can't clash with
 // your main kilo install; real HOME is kept so git/ssh still work.
 
@@ -66,6 +66,7 @@ async function main() {
   const webPort = Number(read(path.join(cloud, ".dev-port"))) || svc("nextjs")
   const ingestPort = noIngest ? undefined : svc("cloudflare-session-ingest")
   const eventsPort = noEvents ? undefined : svc("event-service")
+  const gatewayPort = svc("ai-gateway")
   if (!webPort) die(`no web port found in ${cloud} — is the dev server started? (pnpm dev:start)`)
 
   const env: NodeJS.ProcessEnv = { ...process.env }
@@ -73,6 +74,9 @@ async function main() {
     const p = path.join(home, d); fs.mkdirSync(p, { recursive: true }); env[k] = p
   }
   env.KILO_API_URL = `http://localhost:${webPort}`
+  // Without the standalone ai-gateway app, the web server serves the AI gateway routes too.
+  if (gatewayPort) env.KILO_AI_GATEWAY_URL = `http://localhost:${gatewayPort}`
+  else delete env.KILO_AI_GATEWAY_URL
   env.KILO_DEV_CWD = project
   env.KILO_DISABLE_AUTOUPDATE = "1"
   if (ingestPort) env.KILO_SESSION_INGEST_URL = `http://localhost:${ingestPort}`
@@ -86,6 +90,7 @@ async function main() {
   const webUp = await alive(webPort)
   console.log(`${dim}project${rst}  ${project}`)
   console.log(`${dim}web${rst}      :${webPort}  ${webUp ? `${grn}up${rst}` : `${red}down${rst}`}`)
+  console.log(`${dim}gateway${rst}  ${gatewayPort ? `:${gatewayPort}` : "web"}`)
   console.log(`${dim}ingest${rst}   ${ingestPort ? `:${ingestPort}` : "off"}`)
   console.log(`${dim}events${rst}   ${eventsPort ? `:${eventsPort}` : "off"}`)
   console.log(`${dim}home${rst}     ${home}`)

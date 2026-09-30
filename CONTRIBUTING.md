@@ -240,6 +240,7 @@ There are also optional overrides for other services:
 | Variable | Default | Purpose |
 |---|---|---|
 | `KILO_API_URL` | `https://api.kilo.ai` | Kilo API (gateway, auth, models, profile) |
+| `KILO_AI_GATEWAY_URL` | unset | Dedicated AI gateway serving models, completions, embeddings, FIM, next-edit and transcriptions under `/api/v1`. When unset, `KILO_API_URL` serves them. |
 | `KILO_SESSION_INGEST_URL` | `https://ingest.kilosessions.ai` | Session export / cloud sync |
 | `KILO_MODELS_URL` | `https://models.dev` | Model metadata |
 
