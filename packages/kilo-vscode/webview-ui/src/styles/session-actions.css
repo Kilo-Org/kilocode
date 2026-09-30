@@ -337,3 +337,334 @@
     opacity: 1;
   }
 }
+
+/* ============================================
+   Background agent stack
+   ============================================ */
+
+/* The mirror of the goal badge: the stack sits out of flow in front of the
+   centered spinner. The lane reserves the measured stack width on both sides,
+   so the spinner stays centered and the label truncates first. */
+.session-working-lead {
+  position: absolute;
+  inset-inline-end: calc(100% - 8px);
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  width: max-content;
+}
+
+/* The stack usually needs more room than the goal badge reserves (28px per
+   side in goal.css, loaded later), so this rule outranks it. Both badges then
+   fit: the goal compacts itself into whatever the reserve leaves on its side. */
+/* The reserve follows the stack width while it opens and collapses. */
+.session-dock-state .session-working {
+  transition: max-width 260ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.session-dock-state .session-working[data-agents] {
+  max-width: min(var(--session-dock-lane), calc(100% - 2 * max(var(--session-lead, 64px), 28px)));
+}
+
+/* Surfaces without session actions keep the dock for the stack alone. */
+.session-agents {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  padding: 6px 12px;
+}
+
+/* Status, not a button: no border, no fill. Hover only brightens the text, the
+   same as the working indicator next to it.
+
+   Every size change animates, so nothing next to the stack jumps: the stack
+   opens from zero width, collapses to zero before it unmounts, and each avatar
+   grows in and collapses out. The one-column grid is what lets the width
+   animate between zero and the content width without measuring it. */
+[data-component="agent-stack"] {
+  --agent-stack-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --agent-stack-open: 260ms;
+  position: relative;
+  display: inline-grid;
+  grid-template-columns: 1fr;
+  align-items: center;
+  height: 24px;
+  padding: 0 4px;
+  border: 0;
+  border-radius: var(--session-action-radius);
+  background: transparent;
+  color: var(--vscode-descriptionForeground);
+  font-family: var(--font-family-sans);
+  font-size: var(--kilo-font-size-12);
+  font-weight: var(--font-weight-medium);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  cursor: default;
+  transition:
+    opacity 200ms ease,
+    color 150ms ease,
+    grid-template-columns var(--agent-stack-open) var(--agent-stack-ease),
+    padding var(--agent-stack-open) var(--agent-stack-ease),
+    margin var(--agent-stack-open) var(--agent-stack-ease);
+
+  /* Opens once. A moved node would replay it, so it stops once ready.
+     Backwards fill only: a held final keyframe would block the idle collapse. */
+  &:not([data-ready]) {
+    animation: agent-stack-in var(--agent-stack-open) var(--agent-stack-ease) backwards;
+  }
+
+  &:hover,
+  &:focus-visible {
+    color: var(--vscode-foreground);
+  }
+
+  &:focus-visible {
+    outline: 1px solid var(--vscode-focusBorder);
+    outline-offset: -1px;
+  }
+
+  /* All agents are done: hold the finished glyphs, fade, then collapse to zero
+     width just before the stack unmounts. A new agent reopens it at once. */
+  &[data-idle="true"] {
+    grid-template-columns: 0fr;
+    padding-inline: 0;
+    margin-inline: 0;
+    opacity: 0;
+    transition:
+      opacity 280ms ease 900ms,
+      grid-template-columns var(--agent-stack-open) var(--agent-stack-ease) 1140ms,
+      padding var(--agent-stack-open) var(--agent-stack-ease) 1140ms,
+      margin var(--agent-stack-open) var(--agent-stack-ease) 1140ms;
+  }
+}
+
+[data-slot="agent-stack-body"] {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  overflow: hidden;
+}
+
+/* A thin rule separates a leading stack from the spinner or the first action.
+   It sits in the gap after the stack, outside the hover area. */
+[data-component="agent-stack"][data-rule] {
+  margin-inline-end: 4px;
+
+  &::after {
+    content: "";
+    position: absolute;
+    inset-inline-end: -3px;
+    top: 50%;
+    width: 1px;
+    height: 14px;
+    transform: translateY(-50%);
+    background: var(--border-weak-base, var(--vscode-panel-border));
+  }
+}
+
+/* The action buttons are 22px tall. A taller stack would make its line 2px
+   taller than the same line without it. */
+.session-actions-row [data-component="agent-stack"] {
+  height: 22px;
+}
+
+/* At the end of an actions line the rule moves in front of the stack. */
+[data-place="end"] > [data-component="agent-stack"][data-rule] {
+  margin-inline: 4px 0;
+
+  &::after {
+    inset-inline: -3px auto;
+  }
+}
+
+/* The idle collapse also closes the rule margin, whichever side it is on. */
+[data-component="agent-stack"][data-rule][data-idle="true"],
+[data-place="end"] > [data-component="agent-stack"][data-rule][data-idle="true"] {
+  margin-inline: 0;
+}
+
+/* The row gap next to the stack opens and closes with it, so the actions
+   beside it slide instead of jumping by the gap. */
+.session-actions-row > [data-component="tooltip-trigger"]:has(> [data-component="agent-stack"]) {
+  transition: margin 260ms cubic-bezier(0.22, 1, 0.36, 1);
+
+  &:has(> :not([data-ready])) {
+    animation: agent-stack-gap-end 260ms cubic-bezier(0.22, 1, 0.36, 1) backwards;
+  }
+
+  &:has(> [data-idle="true"]) {
+    margin-inline-end: -4px;
+    transition-delay: 1140ms;
+  }
+
+  &[data-place="end"]:has(> :not([data-ready])) {
+    animation-name: agent-stack-gap-start;
+  }
+
+  &[data-place="end"] {
+    &:has(> [data-idle="true"]) {
+      margin-inline: -4px 0;
+    }
+  }
+}
+
+/* A small gap keeps each dot glyph separate. Overlapping glyphs merge into one
+   dot field and lose the identity that links them to their cards. */
+[data-slot="agent-stack-avatars"] {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+[data-slot="agent-stack-avatar"] {
+  display: inline-flex;
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  overflow: hidden;
+  transition:
+    opacity 300ms ease,
+    width 240ms cubic-bezier(0.22, 1, 0.36, 1),
+    margin 240ms cubic-bezier(0.22, 1, 0.36, 1);
+
+  &[data-done="true"] {
+    opacity: 0.4;
+  }
+
+  /* A new avatar in a visible stack grows in from zero width. One that only
+     replaces another fades in, so the width does not change. */
+  &[data-enter="grow"] {
+    animation: agent-stack-avatar-in 240ms cubic-bezier(0.22, 1, 0.36, 1) backwards;
+  }
+
+  &[data-enter="fade"] {
+    animation: agent-stack-avatar-fade 240ms ease-out backwards;
+  }
+
+  /* A finished avatar collapses, taking its 3px gap with it. */
+  &[data-leaving] {
+    width: 0;
+    margin-inline-start: -3px;
+    opacity: 0;
+  }
+}
+
+/* The hidden dock state stays mounted, so its stack must not animate. */
+.session-dock-state:not([data-active]) [data-component="agent-stack"] * {
+  animation-play-state: paused;
+}
+
+.agent-stack-tooltip-content {
+  min-width: 200px;
+  max-width: 300px;
+  padding: 10px 12px;
+  white-space: normal;
+}
+
+[data-slot="agent-stack-tooltip"] {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+[data-slot="agent-stack-tooltip-title"] {
+  color: var(--text-invert-strong);
+  font-weight: var(--font-weight-medium);
+}
+
+[data-slot="agent-stack-tooltip-row"] {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-invert-base);
+
+  &[data-done="true"] {
+    opacity: 0.6;
+  }
+}
+
+[data-slot="agent-stack-tooltip-label"] {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+[data-slot="agent-stack-tooltip-status"],
+[data-slot="agent-stack-tooltip-more"] {
+  color: var(--text-invert-weak, var(--text-invert-base));
+}
+
+[data-slot="agent-stack-tooltip-more"] {
+  padding-inline-start: 26px;
+}
+
+[data-slot="agent-stack-tooltip-hint"] {
+  padding-top: 6px;
+  border-top: 1px solid var(--border-weak-base);
+  color: var(--text-invert-weak, var(--text-invert-base));
+}
+
+@keyframes agent-stack-in {
+  from {
+    grid-template-columns: 0fr;
+    padding-inline: 0;
+    margin-inline: 0;
+    opacity: 0;
+  }
+}
+
+@keyframes agent-stack-gap-end {
+  from {
+    margin-inline-end: -4px;
+  }
+}
+
+@keyframes agent-stack-gap-start {
+  from {
+    margin-inline-start: -4px;
+  }
+}
+
+@keyframes agent-stack-avatar-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes agent-stack-avatar-in {
+  from {
+    width: 0;
+    margin-inline-start: -3px;
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-component="agent-stack"],
+  [data-slot="agent-stack-avatar"],
+  .session-actions-row > [data-component="tooltip-trigger"]:has(> [data-component="agent-stack"]) {
+    animation: none;
+    transition: none;
+  }
+
+  /* Without motion, keep the finished stack at full size until it unmounts. */
+  [data-component="agent-stack"][data-idle="true"] {
+    grid-template-columns: 1fr;
+    padding-inline: 4px;
+    opacity: 1;
+  }
+
+  [data-component="agent-stack"][data-rule][data-idle="true"] {
+    margin-inline: 0 4px;
+  }
+
+  [data-place="end"] > [data-component="agent-stack"][data-rule][data-idle="true"] {
+    margin-inline: 4px 0;
+  }
+
+  .session-actions-row > [data-component="tooltip-trigger"]:has(> [data-idle="true"]) {
+    margin-inline: 0;
+  }
+}

@@ -79,10 +79,18 @@ export const BackgroundAgents: Component<{ readonly?: boolean }> = (props) => {
     })
     requestJobs()
     const timer = setInterval(requestJobs, 1000)
+    // The prompt status stack asks to reveal this list for its session.
+    const show = (event: Event) => {
+      const detail = (event as CustomEvent<{ sessionID?: string }>).detail
+      if (detail?.sessionID !== session.currentSessionID()) return
+      setOpen(true)
+    }
+    window.addEventListener("showBackgroundAgents", show)
     onCleanup(() => {
       setMounted(false)
       unsub()
       clearInterval(timer)
+      window.removeEventListener("showBackgroundAgents", show)
     })
   })
 

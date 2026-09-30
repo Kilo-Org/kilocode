@@ -203,6 +203,9 @@ export const dict = {
   "prompt.action.send.blocked": "Bekleyen soruyu önce yanıtlayın veya kapatın",
   "prompt.action.send.recording": "Yazıya dök ve gönder",
   "prompt.action.stop": "Durdur",
+  "prompt.action.stop.background": "Ana ajanı durdur. Arka plan ajanları çalışmaya devam eder.",
+  "prompt.agents.show": "Arka plan ajanlarını göster",
+  "prompt.agents.hint": "Arka plan ajanlarını göstermek ve durdurmak için tıklayın",
   "prompt.action.enhance": "Komutu geliştir",
   "prompt.paste.expand": "Yapıştırılan metni genişletmek için tıklayın",
   "prompt.action.indexing": "İndeksleme ayarları",
@@ -1302,6 +1305,8 @@ export const dict = {
   "task.backgroundAgents.status.error": "Hata",
   "task.backgroundAgents.untitled": "Arka plan ajanı",
   "task.backgroundAgents.stopAll": "Tümünü durdur ({{count}})",
+  "task.backgroundAgents.finished": "Arka plan ajanları tamamlandı",
+  "task.stop": "Alt ajanı durdur",
 
   "settings.saveBar.unsavedChanges": "Kaydedilmemiş değişiklikler",
   "settings.saveBar.discard": "Geri Al",

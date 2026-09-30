@@ -200,6 +200,9 @@ export const dict = {
   "prompt.action.send.blocked": "Answer or dismiss the pending question first",
   "prompt.action.send.recording": "Transcribe and send",
   "prompt.action.stop": "Stop",
+  "prompt.action.stop.background": "Stop main agent. Background agents keep running.",
+  "prompt.agents.show": "Show background agents",
+  "prompt.agents.hint": "Click to show and stop background agents",
   "prompt.action.enhance": "Enhance prompt",
   "prompt.paste.expand": "Click to expand pasted text",
   "prompt.action.indexing": "Indexing settings",
@@ -1315,6 +1318,8 @@ export const dict = {
   "task.backgroundAgents.status.error": "Error",
   "task.backgroundAgents.untitled": "Background agent",
   "task.backgroundAgents.stopAll": "Stop all ({{count}})",
+  "task.backgroundAgents.finished": "Background agents finished",
+  "task.stop": "Stop sub-agent",
 
   "settings.saveBar.unsavedChanges": "Unsaved changes",
   "settings.saveBar.discard": "Discard",

@@ -204,6 +204,9 @@ export const dict = {
   "prompt.action.send.blocked": "Beantwoord of negeer eerst de openstaande vraag",
   "prompt.action.send.recording": "Transcriberen en verzenden",
   "prompt.action.stop": "Stop",
+  "prompt.action.stop.background": "Hoofdagent stoppen. Achtergrondagenten blijven actief.",
+  "prompt.agents.show": "Achtergrondagenten tonen",
+  "prompt.agents.hint": "Klik om achtergrondagenten te tonen en te stoppen",
   "prompt.action.enhance": "Prompt verbeteren",
   "prompt.paste.expand": "Klik om geplakte tekst uit te vouwen",
   "prompt.action.indexing": "Indexeringsinstellingen",
@@ -1316,6 +1319,8 @@ export const dict = {
   "task.backgroundAgents.status.error": "Fout",
   "task.backgroundAgents.untitled": "Achtergrondagent",
   "task.backgroundAgents.stopAll": "Alles stoppen ({{count}})",
+  "task.backgroundAgents.finished": "Achtergrondagenten voltooid",
+  "task.stop": "Subagent stoppen",
 
   "settings.saveBar.unsavedChanges": "Niet-opgeslagen wijzigingen",
   "settings.saveBar.discard": "Verwerpen",

@@ -204,6 +204,9 @@ export const dict = {
   "prompt.action.send.blocked": "Спочатку дайте відповідь або закрийте очікуюче питання",
   "prompt.action.send.recording": "Транскрибувати та надіслати",
   "prompt.action.stop": "Зупинити",
+  "prompt.action.stop.background": "Зупинити головного агента. Фонові агенти продовжать роботу.",
+  "prompt.agents.show": "Показати фонових агентів",
+  "prompt.agents.hint": "Натисніть, щоб показати та зупинити фонових агентів",
   "prompt.action.enhance": "Покращити запит",
   "prompt.paste.expand": "Натисніть, щоб розгорнути вставлений текст",
   "prompt.action.indexing": "Налаштування індексування",
@@ -1301,6 +1304,8 @@ export const dict = {
   "task.backgroundAgents.status.error": "Помилка",
   "task.backgroundAgents.untitled": "Фоновий агент",
   "task.backgroundAgents.stopAll": "Зупинити всіх ({{count}})",
+  "task.backgroundAgents.finished": "Фонові агенти завершили роботу",
+  "task.stop": "Зупинити підагента",
 
   "settings.saveBar.unsavedChanges": "Незбережені зміни",
   "settings.saveBar.discard": "Скасувати",

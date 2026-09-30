@@ -202,6 +202,9 @@ export const dict = {
   "prompt.action.send.blocked": "请先回答或忽略待处理的问题",
   "prompt.action.send.recording": "转录并发送",
   "prompt.action.stop": "停止",
+  "prompt.action.stop.background": "停止主智能体。后台智能体将继续运行。",
+  "prompt.agents.show": "显示后台智能体",
+  "prompt.agents.hint": "点击以显示和停止后台智能体",
   "prompt.action.enhance": "优化提示词",
   "prompt.paste.expand": "点击展开粘贴的文本",
   "prompt.action.enhanceDescription":
@@ -1253,6 +1256,8 @@ export const dict = {
   "task.backgroundAgents.status.error": "错误",
   "task.backgroundAgents.untitled": "后台智能体",
   "task.backgroundAgents.stopAll": "全部停止 ({{count}})",
+  "task.backgroundAgents.finished": "后台智能体已完成",
+  "task.stop": "停止子智能体",
   "settings.saveBar.unsavedChanges": "未保存的更改",
   "settings.saveBar.discard": "放弃",
   "settings.saveBar.save": "保存",

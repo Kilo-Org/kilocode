@@ -86,7 +86,7 @@ describe("session dock layout", () => {
   it("keeps Goal inside the shared session actions", () => {
     const view = read("webview-ui/src/components/chat/ChatView.tsx")
     expect(view).toContain("hasActions={() => !props.readonly && (hasActions(hasMessages()) || !!goal())}")
-    expect(view).toContain("actions={(control) => renderActions(hasMessages(), control)}")
+    expect(view).toContain("actions={(control, agents) => renderActions(hasMessages(), control, agents)}")
     expect(view).toContain("{control()}")
   })
 
@@ -100,7 +100,7 @@ describe("session dock layout", () => {
     expect(goal).toContain('variant="ghost"')
     expect(goal).toContain("disabled={props.readonly || !actions()}")
     expect(goal).toContain("if (!actions() || !goal()) setOpen(false)")
-    expect(dock).toContain("props.actions?.(goal.control)")
+    expect(dock).toContain("props.actions?.(goal.control, idleStack)")
     expect(dock).toContain("const goal = useGoalDock({")
     expect(goal).toContain('session.sendCommand("goal", goal().active ? "pause" : "resume")')
     expect(goal).toContain('session.sendCommand("goal", "clear")')

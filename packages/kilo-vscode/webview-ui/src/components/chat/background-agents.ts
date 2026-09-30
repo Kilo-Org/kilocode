@@ -108,6 +108,70 @@ export function backgroundAgents(tools: ToolPart[], status: Record<string, Sessi
   return agents
 }
 
+/** A background agent shown in the prompt status stack. */
+export interface PromptAgent {
+  id: string
+  description?: string
+  agent?: string
+  done: boolean
+}
+
+/**
+ * Merge the running background agents into the prompt stack. Agents keep their
+ * position, so the stack does not reorder while it is visible. An agent that
+ * stops running stays in the stack as done until the caller removes it.
+ */
+export function mergePromptAgents(prev: PromptAgent[], live: BackgroundAgent[]): PromptAgent[] {
+  const running = new Map(live.map((agent) => [agent.id, agent]))
+  // Unchanged agents keep their object, so keyed lists keep their DOM nodes
+  // and do not replay the enter animation on every status update.
+  const next = prev.map((item) => {
+    const agent = running.get(item.id)
+    if (!agent) return item.done ? item : { ...item, done: true }
+    if (!item.done && item.description === agent.description && item.agent === agent.agent) return item
+    return { id: item.id, description: agent.description, agent: agent.agent, done: false }
+  })
+  for (const agent of live) {
+    if (prev.some((item) => item.id === agent.id)) continue
+    next.push({ id: agent.id, description: agent.description, agent: agent.agent, done: false })
+  }
+  return next
+}
+
+/**
+ * The width of a stack with `n` avatars for `count` agents. Mirrors the stack
+ * CSS: 18px avatars with 3px gaps, 4px side padding, the count text, and the
+ * 4px rule margin. Layout code uses this target width instead of measuring,
+ * because the measured width changes while the stack animates.
+ */
+export function stackWidth(n: number, count: number) {
+  const rest = count - n
+  // One avatar shows the total ("3"), more show the hidden rest ("+7").
+  const text = n === 1 ? String(count) : `+${rest}`
+  const extra = rest > 0 ? 4 + 7 * text.length : 0
+  return 4 + 8 + 18 * n + 3 * (n - 1) + extra
+}
+
+/** How many avatars fit in `space` pixels for `count` agents. At least one always shows. */
+export function stackFit(space: number, count: number) {
+  const top = Math.min(3, Math.max(1, count))
+  for (let n = top; n > 1; n--) if (stackWidth(n, count) <= space) return n
+  return 1
+}
+
+/**
+ * Where the stack goes in the wrapping actions row, so it does not push an
+ * action onto a new line. `used` is the width taken on each line without the
+ * stack. It leads the first line when that line has room, else it ends the
+ * first line with room. When no line has room it leads, and the row wraps.
+ */
+export function stackPlace(used: number[], width: number, need: number) {
+  if (used.length === 0 || width - (used.at(0) ?? 0) >= need) return { line: 0, end: false }
+  const line = used.findIndex((item) => width - item >= need)
+  if (line === -1) return { line: 0, end: false }
+  return { line, end: true }
+}
+
 export function backgroundJobAgents(
   jobs: BackgroundJobInfo[],
   sessionID: string,

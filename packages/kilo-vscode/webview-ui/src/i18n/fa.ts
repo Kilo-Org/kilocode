@@ -204,6 +204,9 @@ export const dict = {
   "prompt.action.send.blocked": "ابتدا به سؤال در انتظار پاسخ دهید یا آن را رد کنید",
   "prompt.action.send.recording": "رونویسی و ارسال",
   "prompt.action.stop": "توقف",
+  "prompt.action.stop.background": "توقف عامل اصلی. عامل‌های پس‌زمینه به اجرا ادامه می‌دهند.",
+  "prompt.agents.show": "نمایش عامل‌های پس‌زمینه",
+  "prompt.agents.hint": "برای نمایش و توقف عامل‌های پس‌زمینه کلیک کنید",
   "prompt.action.enhance": "بهبود پرامپت",
   "prompt.paste.expand": "برای بازکردن متن جایگذاری‌شده کلیک کنید",
   "prompt.action.indexing": "تنظیمات ایندکس‌گذاری",
@@ -1323,6 +1326,8 @@ export const dict = {
   "task.backgroundAgents.status.error": "خطا",
   "task.backgroundAgents.untitled": "عامل پس‌زمینه",
   "task.backgroundAgents.stopAll": "توقف همه ({{count}})",
+  "task.backgroundAgents.finished": "عامل‌های پس‌زمینه به پایان رسیدند",
+  "task.stop": "توقف زیرعامل",
 
   "settings.saveBar.unsavedChanges": "تغییرات ذخیره‌نشده",
   "settings.saveBar.discard": "رد کردن",

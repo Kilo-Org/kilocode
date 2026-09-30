@@ -67,7 +67,9 @@ export function useGoalDock(props: GoalDockProps) {
       const gap = Number.parseFloat(css.getPropertyValue("--goal-label-gap")) || 0
       const padding = Number.parseFloat(css.paddingLeft) + Number.parseFloat(css.paddingRight)
       const required = icon.getBoundingClientRect().width + caption.scrollWidth + gap + padding
-      const available = container.getBoundingClientRect().right - content.getBoundingClientRect().right + 8
+      // The badge overlaps the lane by 8px and keeps 8px clear of the row edge,
+      // the same inset the agent stack keeps on the other side.
+      const available = container.getBoundingClientRect().right - content.getBoundingClientRect().right
       setCompact(container.clientWidth === 0 || required > available + 1)
     }
     const observer = new ResizeObserver(measure)
