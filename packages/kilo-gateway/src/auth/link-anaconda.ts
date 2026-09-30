@@ -1,18 +1,20 @@
 /**
  * Anaconda account linking and login verification.
  *
- * Two entry points consumed by the device-auth callback:
+ * Two entry points:
  *
- * 1. checkAnacondaLogin(domain?) — reads the keyring and, if a key exists,
+ * 1. checkAnacondaLogin() — reads the keyring and, if a key exists,
  *    calls /api/auth/passport to retrieve the associated email.
- *    Returns the email string or null.
+ *    Returns { hasKey, email } so callers can distinguish "no key"
+ *    from "key exists but passport failed".
  *
  * 2. linkAnacondaAccount(kiloToken) — calls /api/auth/kilo/api-key to obtain
  *    an Anaconda API key and writes it to the keyring.
- *    Returns true on success.
+ *    Returns true on success, false on any failure.
  *
- * Telemetry is dispatched by the caller (device-auth-tui) since kilo-gateway
- * cannot depend on kilo-telemetry (circular dependency).
+ * Telemetry is dispatched by the orchestration layer in
+ * packages/opencode/src/kilocode/provider/anaconda-link.ts since
+ * kilo-gateway cannot depend on kilo-telemetry (circular dependency).
  */
 
 import { getApiKey, saveCredential } from "./anaconda-keyring.js"
