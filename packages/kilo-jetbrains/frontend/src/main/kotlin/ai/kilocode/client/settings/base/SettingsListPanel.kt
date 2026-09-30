@@ -139,6 +139,9 @@ internal abstract class SettingsListPanel(
 
     protected open fun toolbarRight(): JComponent? = null
 
+    /** A short explanation of what this page configures, shown above the toolbar. */
+    protected open fun info(): JComponent? = null
+
     protected open fun headerExtras(): JComponent? = null
 
     protected open fun searchPlaceholder(): String = ""
@@ -172,7 +175,9 @@ internal abstract class SettingsListPanel(
                 view.filter(search.text)
             }
         })
-        val stack = Stack.vertical(UiStyle.Gap.sm()).next(toolbarRow())
+        val stack = Stack.vertical(UiStyle.Gap.sm())
+        info()?.let { stack.next(it) }
+        stack.next(toolbarRow())
         headerExtras()?.let { stack.next(it) }
         return stack.next(search)
     }

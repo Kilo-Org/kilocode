@@ -64,6 +64,7 @@ const { initialMessage } = await import("../../webview-ui/agent-manager/initial-
 const { useBaseUpdate } = await import("../../webview-ui/agent-manager/update-from-base")
 const { post } = await import("../../webview-ui/src/utils/webview-message")
 const { terminal } = await import("../../webview-ui/src/context/session-outcome")
+const { active: elapsed } = await import("../../webview-ui/src/context/session-timing")
 const { PromptInput } = await import("../../webview-ui/src/components/chat/PromptInput")
 const { IndexingProvider } = await import("../../webview-ui/src/context/indexing")
 const { MemoryProvider } = await import("../../webview-ui/src/context/memory")
@@ -353,6 +354,66 @@ try {
 
   const value = ref.value
   assert(value)
+  {
+    const original = Date.now
+    const time = { now: 10_000 }
+    Date.now = () => time.now
+    const sid = "goal-timing"
+    const goal = { text: "Finish the task", active: true, status: "active" as const }
+    const error = { name: "UnknownError", data: { message: 'Command not found: "gaol".' } }
+    try {
+      await emit({ type: "sessionCreated", session: { ...info(sid), goal } })
+      value.setCurrentSessionID(sid)
+      await emit({ type: "sessionStatus", sessionID: sid, status: "busy" })
+      const clock = structuredClone(unwrap(value.busyTiming()))
+      assert.deepEqual(clock, { active: 0, since: 10_000 })
+      time.now = 20_000
+      for (const status of ["idle", "busy"] as const) {
+        await emit({ type: "sessionStatus", sessionID: sid, status })
+        assert.deepEqual(unwrap(value.busyTiming()), clock, `${status} preserves the goal clock`)
+        assert.equal(elapsed(value.busyTiming()!, time.now), 10_000)
+        const reason = value.closeReason()
+        await emit({ type: "sessionError", eventID: status, sessionID: sid, error, phase: "admission" })
+        assert.deepEqual(unwrap(value.messages().find((message) => message.sessionErrorID === status)?.error), error)
+        assert.deepEqual(unwrap(value.busyTiming()), clock, `${status} admission error preserves the goal clock`)
+        assert.equal(value.closeReason(), reason)
+        assert.equal(value.activityFor(sid), status)
+      }
+      await emit({ type: "sessionStatus", sessionID: sid, status: "offline" })
+      assert.deepEqual(unwrap(value.busyTiming()), { active: 10_000 }, "Offline keeps banked goal time")
+      await emit({ type: "sessionStatus", sessionID: sid, status: "busy" })
+      assert.equal(value.busyTiming()?.since, 20_000, "Reconnect resumes without resetting")
+      time.now = 30_000
+      await emit({
+        type: "permissionRequest",
+        permission: { id: "goal-permission", sessionID: sid, toolName: "bash", patterns: [], always: [], args: {} },
+      })
+      assert.equal(value.busyTiming()?.since, undefined, "Permission clears the running stretch")
+      assert.equal(value.busyTiming()?.active, 20_000)
+      time.now = 40_000
+      await emit({ type: "permissionResolved", permissionID: "goal-permission" })
+      assert.deepEqual(unwrap(value.busyTiming()), { active: 20_000, since: 40_000 })
+      await emit({ type: "sessionStatus", sessionID: sid, status: "idle" })
+      await emit({ type: "sessionUpdated", session: { id: sid, goal: { ...goal, active: false, status: "complete" } } })
+      assert.equal(value.busyTiming(), undefined, "Goal completion stops the clock without a status event")
+      await emit({ type: "sessionUpdated", session: { id: sid, goal } })
+      assert.deepEqual(unwrap(value.busyTiming()), { active: 0, since: 40_000 })
+      await emit({ type: "sessionStatus", sessionID: sid, status: "busy" })
+      await emit({ type: "sessionError", sessionID: sid, error, phase: "execution" })
+      assert.equal(value.busyTiming(), undefined, "Execution errors stop the goal clock")
+      assert.equal(value.closeReason(), "error")
+      await emit({ type: "sessionStatus", sessionID: sid, status: "idle" })
+      assert.equal(value.busyTiming(), undefined, "Idle does not restart an errored goal")
+      await emit({ type: "sessionUpdated", session: { id: sid, goal: null } })
+      await emit({ type: "sessionStatus", sessionID: sid, status: "busy" })
+      assert.deepEqual(unwrap(value.busyTiming()), { active: 0, since: 40_000 })
+      await emit({ type: "sessionStatus", sessionID: sid, status: "idle" })
+      assert.equal(value.busyTiming(), undefined, "Ordinary idle still clears turn timing")
+      await emit({ type: "sessionDeleted", sessionID: sid })
+    } finally {
+      Date.now = original
+    }
+  }
   const auto = { providerID: "kilo", modelID: "kilo-auto/free" }
   const personal = { providerID: "kilo", modelID: "personal" }
   const first = { providerID: "kilo", modelID: "z-first" }

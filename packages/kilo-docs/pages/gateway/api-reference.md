@@ -279,6 +279,31 @@ curl -X POST "https://api.kilo.ai/api/fim/completions" \
 FIM completions are limited to Mistral models (model IDs starting with `mistralai/`). BYOK is supported with the `codestral` key type.
 {% /callout %}
 
+## TypeSafe System One
+
+Route TypeSafe System One requests through the gateway with your Kilo API key. This endpoint is not OpenAI-compatible; use it with the `@typesafe-ai/sdk` client, which points its base URL at the TypeSafe gateway path.
+
+```
+POST /typesafe/v1/systemone
+```
+
+The gateway forwards each request to OpenRouter using the platform credential, so no OpenRouter key is required. Requests are limited to the pinned `typesafe/jev-1.13` model, and an HTTP request that omits the model defaults to it; the bare `jev-1.13` SDK model ID is also accepted. Gateway authentication, rate limits, balance checks, and organization policy apply, and upstream usage is billed to your Kilo account.
+
+```typescript
+import { TypeSafeClient } from "@typesafe-ai/sdk"
+
+const client = new TypeSafeClient({
+  apiKey: process.env.KILO_API_KEY,
+  baseURL: "https://api.kilo.ai/api/gateway/typesafe",
+  defaultModel: "typesafe/jev-1.13",
+})
+
+const result = await client.systemOne({
+  state: "I was charged twice for my subscription.",
+  questions: { refund: { type: "noul", instructions: "Is the customer asking for money back?" } },
+})
+```
+
 ## List models
 
 Retrieve the list of available models.
@@ -322,6 +347,12 @@ GET /providers
 
 No authentication required.
 
+## Request size limits
+
+Request bodies sent to the gateway are limited to a maximum payload size of 20MB. Requests that exceed this limit fail with an HTTP 413 (Payload Too Large) error.
+
+This most commonly happens when a conversation history contains many large inline images (base64-encoded `image_url` content parts). If you hit this limit, reduce the size or number of inline images in the conversation history -- for example, downscale or compress images before encoding them, or drop older image parts from earlier messages.
+
 ## Error codes
 
 | HTTP Status | Description |
@@ -330,6 +361,7 @@ No authentication required.
 | 401 | Unauthorized -- invalid or missing API key |
 | 402 | Insufficient balance -- add credits to continue |
 | 403 | Forbidden -- model not allowed by organization policy |
+| 413 | Payload too large -- request body exceeds the 20MB limit |
 | 429 | Rate limited -- too many requests |
 | 500 | Internal server error |
 | 502 | Provider error -- upstream provider returned an error |
