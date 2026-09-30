@@ -62,28 +62,14 @@ function sendAllKeybind(t: (key: string) => string): string {
     : t("agentManager.review.sendAllShortcut.other")
 }
 
-function copyText(text: string): void {
-  navigator.clipboard?.writeText(text).catch((err) => console.error("[Kilo New] Failed to copy text:", err))
-}
-
-function copyDocumentContent(
-  text: string,
-  timer: { id?: ReturnType<typeof setTimeout> },
-  setCopied: (value: boolean) => void,
-  active: () => boolean,
-): void {
-  clearTimeout(timer.id)
-  navigator.clipboard
-    ?.writeText(text)
-    .then(() => {
-      if (!active()) return
-      setCopied(true)
-      timer.id = setTimeout(() => setCopied(false), 1500)
-    })
-    .catch((err) => {
-      console.error("[Kilo New] Failed to copy document content:", err)
-      setCopied(false)
-    })
+function copyText(text: string): Promise<boolean> {
+  return (navigator.clipboard?.writeText(text) ?? Promise.reject(new Error("Clipboard unavailable"))).then(
+    () => true,
+    (err) => {
+      console.error("[Kilo New] Failed to copy text:", err)
+      return false
+    },
+  )
 }
 
 function isEditableTarget(target: EventTarget | null): boolean {
@@ -105,8 +91,9 @@ function handleSendAllKeyDown(event: KeyboardEvent, comments: ReviewComment[], s
 // document content so users get just the file's text, matching what
 // the Copy Content action copies.
 function handleSelectAllKeyDown(event: KeyboardEvent, content: HTMLElement | undefined): void {
-  if (event.key.toLowerCase() !== "a" || (!event.metaKey && !event.ctrlKey)) return
-  if (isEditableTarget(event.target) || !content) return
+  if (event.key.toLowerCase() !== "a" || (!event.metaKey && !event.ctrlKey) || event.shiftKey || event.altKey) return
+  // composedPath sees through shadow roots, where event.target is retargeted to the host.
+  if (isEditableTarget(event.composedPath()[0] ?? null) || !content?.isConnected) return
   event.preventDefault()
   const selection = window.getSelection()
   if (!selection) return
@@ -143,12 +130,15 @@ export const DocumentPanel: Component<DocumentPanelProps> = (props) => {
   const content = () => data()?.content ?? ""
   const diff = () => virtualDiff(file(), content())
 
-  const [copied, setCopied] = createSignal(false)
-  const copyTimer: { id?: ReturnType<typeof setTimeout> } = {}
-  onCleanup(() => clearTimeout(copyTimer.id))
-  const copy = () => {
+  const [copied, setCopied] = createSignal("")
+  let copyTimer: ReturnType<typeof setTimeout> | undefined
+  onCleanup(() => clearTimeout(copyTimer))
+  const copy = async () => {
     const path = file()
-    copyDocumentContent(content(), copyTimer, setCopied, () => file() === path)
+    clearTimeout(copyTimer)
+    if (!(await copyText(content()))) return
+    setCopied(path)
+    copyTimer = setTimeout(() => setCopied(""), 1500)
   }
 
   const updateComments = (next: ReviewComment[]) => props.onCommentsChange(next)
@@ -260,8 +250,6 @@ export const DocumentPanel: Component<DocumentPanelProps> = (props) => {
         editMeta = null
         composer.draft = null
         composer.edit = null
-        clearTimeout(copyTimer.id)
-        setCopied(false)
       },
       { defer: true },
     ),
@@ -318,7 +306,7 @@ export const DocumentPanel: Component<DocumentPanelProps> = (props) => {
             <Show when={canCopy()}>
               <Tooltip value={t("agentManager.documents.copy")} placement="top">
                 <IconButton
-                  icon={copied() ? "check" : "copy"}
+                  icon={copied() === file() ? "check" : "copy"}
                   size="small"
                   variant="ghost"
                   label={t("agentManager.documents.copy")}
@@ -378,11 +366,11 @@ export const DocumentPanel: Component<DocumentPanelProps> = (props) => {
                     <Icon name="copy" size="small" />
                     <ContextMenu.ItemLabel>{t("agentManager.documents.copyPath")}</ContextMenu.ItemLabel>
                   </ContextMenu.Item>
-                  <ContextMenu.Item onSelect={() => copyText(path())}>
+                  <ContextMenu.Item onSelect={() => void copyText(path())}>
                     <Icon name="copy" size="small" />
                     <ContextMenu.ItemLabel>{t("agentManager.documents.copyRelativePath")}</ContextMenu.ItemLabel>
                   </ContextMenu.Item>
-                  <ContextMenu.Item onSelect={() => copyText(getFilename(path()))}>
+                  <ContextMenu.Item onSelect={() => void copyText(getFilename(path()))}>
                     <Icon name="copy" size="small" />
                     <ContextMenu.ItemLabel>{t("agentManager.documents.copyFileName")}</ContextMenu.ItemLabel>
                   </ContextMenu.Item>

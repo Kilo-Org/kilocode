@@ -25,8 +25,12 @@ export const SessionTabMenu: ParentComponent<{
       <ContextMenu.Portal>
         <ContextMenu.Content class="session-tab-menu am-ctx-menu">
           <Show when={props.leading}>
-            {props.leading}
-            <ContextMenu.Separator />
+            {(items) => (
+              <>
+                {items()}
+                <ContextMenu.Separator />
+              </>
+            )}
           </Show>
           <Show when={props.showFork}>
             <ContextMenu.Item disabled={!props.onFork} onSelect={() => props.onFork?.()}>
