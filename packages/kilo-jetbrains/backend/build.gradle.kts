@@ -136,7 +136,7 @@ val normalizeOpenApiSpec = tasks.register<NormalizeOpenApiSpecTask>("normalizeOp
 openApiGenerate {
     generatorName.set("kotlin")
     library.set("jvm-okhttp4")
-    inputSpec.set(generatedSpec.map { it.asFile.absolutePath })
+    inputSpec.set(generatedSpec)
     outputDir.set(layout.buildDirectory.dir("generated/openapi").get().asFile.absolutePath)
     packageName.set("ai.kilocode.jetbrains.api")
     apiPackage.set("ai.kilocode.jetbrains.api.client")
