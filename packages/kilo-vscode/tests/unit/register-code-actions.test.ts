@@ -23,7 +23,11 @@ const original = {
   diagnostics: api.languages.getDiagnostics,
 }
 
-function setup(active = false, agentReady = true) {
+function setup(
+  active = false,
+  agentReady = true,
+  lastFocused?: { postMessage: (msg: unknown) => void; waitForReady: () => Promise<unknown> },
+) {
   const commands = new Map<string, Command>()
   const executed: unknown[][] = []
   const events: string[] = []
@@ -74,7 +78,7 @@ function setup(active = false, agentReady = true) {
     },
   }
 
-  registerCodeActions(context, provider as never, agent as never)
+  registerCodeActions(context, provider as never, agent as never, undefined, () => lastFocused as never)
 
   return { commands, events, executed, posts, waits }
 }
@@ -149,5 +153,41 @@ describe("registerCodeActions", () => {
 
     expect(state.events).toEqual(["wait"])
     expect(state.posts).toEqual([])
+  })
+
+  it("adds selected code to the last focused chat instead of the sidebar", async () => {
+    const posts: unknown[] = []
+    const tab = {
+      postMessage: (msg: unknown) => {
+        posts.push(msg)
+      },
+      waitForReady: async () => undefined,
+    }
+    const state = setup(false, true, tab)
+
+    await state.commands.get("kilo-code.new.addToContext")?.()
+
+    expect(posts).toHaveLength(1)
+    expectContextPost(posts[0])
+    // The sidebar is neither revealed nor posted to.
+    expect(state.executed).toEqual([])
+    expect(state.posts).toEqual([])
+  })
+
+  it("keeps routing focus-only commands through the active surface", async () => {
+    const posts: unknown[] = []
+    const tab = {
+      postMessage: (msg: unknown) => {
+        posts.push(msg)
+      },
+      waitForReady: async () => undefined,
+    }
+    const state = setup(false, true, tab)
+
+    await state.commands.get("kilo-code.new.focusChatInput")?.()
+
+    expect(posts).toEqual([])
+    expect(state.executed).toEqual([["kilo-code.SidebarProvider.focus"]])
+    expect(state.posts).toEqual([{ type: "action", action: "focusInput" }])
   })
 })

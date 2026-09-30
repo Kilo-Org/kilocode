@@ -9,8 +9,13 @@ export function registerCodeActions(
   provider: KiloProvider,
   agentManager?: AgentManagerProvider,
   activeTabProvider?: () => KiloProvider | undefined,
+  lastFocusedChat?: () => KiloProvider | AgentManagerProvider | undefined,
 ): void {
   const target = () => (agentManager?.isActive() ? agentManager : (activeTabProvider?.() ?? provider))
+  // "Add to Context" targets the chat the user last typed in, so a selection
+  // lands in the open conversation instead of always going to the sidebar.
+  // TODO: consider whether focusChatInput/toggleChatSearch should follow too.
+  const contextTarget = () => lastFocusedChat?.() ?? target()
   const reveal = async () => {
     await vscode.commands.executeCommand("kilo-code.SidebarProvider.focus")
     await provider.waitForReady()
@@ -86,7 +91,7 @@ export function registerCodeActions(
     vscode.commands.registerCommand("kilo-code.new.addToContext", async () => {
       const ctx = getEditorContext()
       if (!ctx) return
-      const view = target()
+      const view = contextTarget()
       if (!(await revealTarget(view))) return
       view.postMessage({
         type: "appendChatContext",
