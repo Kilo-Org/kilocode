@@ -2,7 +2,9 @@ import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test"
 import { Effect } from "effect"
 import path from "node:path"
 import simpleGit from "simple-git"
-import { AppRuntime } from "@/effect/app-runtime"
+import { LayerNode } from "@opencode-ai/core/effect/layer-node"
+import { FSUtil } from "@opencode-ai/core/fs-util"
+import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
 import {
   clearSessionLink,
   enabled,
@@ -30,6 +32,7 @@ const record: SessionPrLink = {
   evidence: "pr_create",
 }
 const keys: string[][] = []
+const layer = LayerNode.compile(LayerNode.group([Storage.node, FSUtil.node, CrossSpawnSpawner.node]))
 let client: string | undefined
 
 beforeEach(() => {
@@ -39,17 +42,19 @@ beforeEach(() => {
 afterEach(async () => {
   if (client === undefined) delete process.env.KILO_CLIENT
   else process.env.KILO_CLIENT = client
-  await AppRuntime.runPromise(Storage.Service.use((svc) => Effect.all(keys.splice(0).map((key) => svc.remove(key)))))
+  await Effect.runPromise(
+    Storage.Service.use((svc) => Effect.all(keys.splice(0).map((key) => svc.remove(key)))).pipe(Effect.provide(layer)),
+  )
 })
 
 // Seed and inspect old records without passing through the client guard.
 async function seed(key: string[], value: unknown) {
   keys.push(key)
-  await AppRuntime.runPromise(Storage.Service.use((svc) => svc.write(key, value)))
+  await Effect.runPromise(Storage.Service.use((svc) => svc.write(key, value)).pipe(Effect.provide(layer)))
 }
 
 function read(key: string[]) {
-  return AppRuntime.runPromise(Storage.Service.use((svc) => svc.read(key)))
+  return Effect.runPromise(Storage.Service.use((svc) => svc.read(key)).pipe(Effect.provide(layer)))
 }
 
 describe("PR-link client boundary", () => {
@@ -107,7 +112,9 @@ describe("PR-link client boundary", () => {
     const vacant = sessionLinkKey(`${id}_new`)
     keys.push(vacant)
     await writeSessionPrLink(`${id}_new`, record)
-    const stored = await AppRuntime.runPromise(Storage.Service.use((svc) => svc.list(["session_pr_link_session"])))
+    const stored = await Effect.runPromise(
+      Storage.Service.use((svc) => svc.list(["session_pr_link_session"])).pipe(Effect.provide(layer)),
+    )
     expect(stored).not.toContainEqual(vacant)
   })
 
