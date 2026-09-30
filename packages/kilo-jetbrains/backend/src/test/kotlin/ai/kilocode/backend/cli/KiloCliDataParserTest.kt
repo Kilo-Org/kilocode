@@ -2,6 +2,7 @@ package ai.kilocode.backend.cli
 
 import ai.kilocode.backend.workspace.CommandInfo
 import ai.kilocode.backend.workspace.ProviderData
+import kotlinx.serialization.json.JsonPrimitive
 import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.AgentConfigPatchDto
 import ai.kilocode.rpc.dto.CompactionPatchDto
@@ -2293,6 +2294,47 @@ class KiloCliDataParserTest {
             ).single()
 
             assertEquals("failed", result.status)
+        }
+
+        /**
+         * The CLI only reports `needs_auth` for `UnauthorizedError` or an "OAuth" message, so these
+         * recoverable sign-in failures arrive as `failed` and must still offer sign-in.
+         */
+        @Test
+        fun `parseMcpStatus - recoverable oauth failures need auth`() {
+            val reasons = listOf(
+                "Browser authorization failed: Authorization cancelled",
+                "Browser authorization was rejected: this request was replaced by another authorization attempt",
+                "Token exchange failed: invalid client",
+                "Error POSTing to endpoint (HTTP 401): missing bearer token",
+                "OAuth discovery failed",
+                "Server rejected the request: invalid_grant",
+                "Server rejected the request: invalid_token",
+            )
+
+            for (reason in reasons) {
+                val json = """{"anaconda":{"status":"failed","error":${JsonPrimitive(reason)}}}"""
+                val result = KiloCliDataParser.parseMcpStatus(json).single()
+                assertEquals("needs_auth", result.status, "expected sign-in for: $reason")
+                assertEquals(reason, result.error, "the reason must survive normalization")
+            }
+        }
+
+        @Test
+        fun `parseMcpStatus - unrelated failures are not reclassified as auth`() {
+            val reasons = listOf(
+                "Connection closed",
+                "Failed to get tools",
+                "spawn npx ENOENT",
+                "Invalid MCP URL for \"broken\"",
+                "Error POSTing to endpoint (HTTP 500): server error",
+            )
+
+            for (reason in reasons) {
+                val json = """{"broken":{"status":"failed","error":${JsonPrimitive(reason)}}}"""
+                val result = KiloCliDataParser.parseMcpStatus(json).single()
+                assertEquals("failed", result.status, "must stay failed for: $reason")
+            }
         }
 
         // ---- parseMcpBrowserOpenFailed ----

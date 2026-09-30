@@ -123,6 +123,22 @@ class McpSettingsUiTest : BasePlatformTestCase() {
         }
     }
 
+    fun `test a server needing auth offers sign in`() {
+        val panel = panel()
+        flushUntil { rows(panel).size == 3 }
+
+        edt {
+            // github is needs_auth in the fixture; the row must expose sign-in, not just Connect.
+            val cells = rows(panel).single { it.key == "github" }.cells.map { it.id }
+            assertTrue("needs_auth must offer sign-in, got $cells", cells.contains("auth"))
+            val label = rows(panel).single { it.key == "github" }.cells.single { it.id == "auth" }.label
+            assertEquals(KiloBundle.message("settings.agentBehavior.mcp.signIn"), label)
+            // A healthy server must not.
+            assertFalse(rows(panel).single { it.key == "filesystem" }.cells.any { it.id == "auth" })
+            true
+        }
+    }
+
     fun `test failed status badge carries the failure reason as its tooltip`() {
         val panel = panel()
         flushUntil { rows(panel).size == 3 }

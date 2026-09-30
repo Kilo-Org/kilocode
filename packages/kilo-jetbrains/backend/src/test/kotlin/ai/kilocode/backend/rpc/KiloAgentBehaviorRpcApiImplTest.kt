@@ -361,6 +361,29 @@ class KiloAgentBehaviorRpcApiImplTest {
         assertContains(mock.lastMcpActionPath.orEmpty(), "/mcp/local%20server/auth/authenticate")
     }
 
+    /**
+     * A rejected browser flow reaches the plugin as `failed`, but signing in again fixes it, so the
+     * whole wire path must report `needs_auth` for Settings, Marketplace, and the session prompt.
+     */
+    @Test
+    fun `mcp status reports recoverable auth failures as needing sign in`() = runBlocking {
+        mock.mcp = """{"anaconda":{"status":"failed","error":"Browser authorization failed: Authorization cancelled"}}"""
+        val rpc = rpc()
+
+        val status = rpc.mcpStatus("/test").single()
+
+        assertEquals("needs_auth", status.status)
+        assertEquals("Browser authorization failed: Authorization cancelled", status.error)
+    }
+
+    @Test
+    fun `mcp status keeps unrelated failures failed`() = runBlocking {
+        mock.mcp = """{"anaconda":{"status":"failed","error":"Connection closed"}}"""
+        val rpc = rpc()
+
+        assertEquals("failed", rpc.mcpStatus("/test").single().status)
+    }
+
     @Test
     fun `mcp auth remove and browser open failed event`() = runBlocking {
         val rpc = rpc()

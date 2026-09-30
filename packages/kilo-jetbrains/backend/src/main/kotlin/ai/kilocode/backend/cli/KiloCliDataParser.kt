@@ -129,6 +129,20 @@ object KiloCliDataParser {
     private val FIELD_RE = ConcurrentHashMap<String, Regex>()
     private val APPROVAL_SOURCES = setOf("agent", "global", "project", "yolo", "session", "manual", "default")
 
+    /** Lowercase markers that identify a `failed` MCP status as recoverable by signing in again. */
+    private val MCP_AUTH_FAILURE_MARKERS = listOf(
+        "unauthorized",
+        "authentication required",
+        "needs authentication",
+        "not authenticated",
+        "oauth",
+        "browser authorization",
+        "token exchange failed",
+        "invalid_token",
+        "invalid_grant",
+        "401",
+    )
+
     // ================================================================
     // SSE event parsing
     // ================================================================
@@ -881,12 +895,19 @@ object KiloCliDataParser {
         )
     }
 
+    /**
+     * Whether a `failed` MCP status is really "sign-in required".
+     *
+     * The CLI only reports `needs_auth` when the transport threw `UnauthorizedError` or the message
+     * mentions OAuth (`packages/opencode/src/mcp/index.ts`); a rejected browser flow, a failed token
+     * exchange, or a bare 401 body fall through to `failed`. Those are all recoverable by signing in
+     * again, so they must still offer sign-in in Settings, Marketplace, and the session prompt.
+     *
+     * Matched markers are OAuth-specific, so a non-OAuth server failure is not reclassified.
+     */
     private fun String?.isMcpAuthFailure(): Boolean {
         val value = this?.lowercase() ?: return false
-        return value.contains("unauthorized") ||
-            value.contains("authentication required") ||
-            value.contains("needs authentication") ||
-            value.contains("not authenticated")
+        return MCP_AUTH_FAILURE_MARKERS.any { value.contains(it) }
     }
 
     private fun removable(obj: JsonObject): Boolean {
