@@ -52,7 +52,7 @@ function loadKeyring(filepath: string): Keyring {
   return JSON.parse(raw) as Keyring
 }
 
-/** Create directory with 0o700 permissions (owner rwx only). */
+/** Create directory with 0o700 permissions (owner rwx only; no-op on Windows). */
 function ensureDir(dir: string) {
   if (fs.existsSync(dir)) return
   fs.mkdirSync(dir, { recursive: true, mode: 0o700 })
@@ -62,7 +62,7 @@ function ensureDir(dir: string) {
 }
 
 /**
- * Write file with 0o600 permissions (owner rw only), truncating.
+ * Write file with 0o600 permissions (owner rw only; no-op on Windows), truncating.
  * Always enforces permissions even if the file already exists with
  * looser permissions.
  */

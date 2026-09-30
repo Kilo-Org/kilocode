@@ -103,15 +103,17 @@ describe("keyring JSON format", () => {
   })
 })
 
+const unix = process.platform !== "win32"
+
 describe("file permissions", () => {
-  test("keyring file has 0o600 permissions", () => {
+  test.skipIf(!unix)("keyring file has 0o600 permissions", () => {
     saveCredential({ apiKey: "key" })
 
     const stats = fs.statSync(keyringFile)
     expect(stats.mode & 0o777).toBe(0o600)
   })
 
-  test("parent directory has 0o700 permissions", () => {
+  test.skipIf(!unix)("parent directory has 0o700 permissions", () => {
     // Use a nested path so ensureDir creates the parent
     const nested = path.join(tmpdir, "nested", "keyring")
     process.env.ANA_KEYRING_PATH = nested
