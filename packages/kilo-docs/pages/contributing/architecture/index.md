@@ -34,7 +34,7 @@ Architecture pages cross two repositories:
 | Repository | Contents |
 |---|---|
 | [Kilo&#8209;Org/kilocode](https://github.com/Kilo-Org/kilocode) | Kilo CLI runtime, local daemon, Kilo Console, VS Code extension, JetBrains plugin, JavaScript SDK, codebase indexing, Kilo Gateway client, telemetry, docs, and shared UI packages |
-| [Kilo&#8209;Org/cloud](https://github.com/Kilo-Org/cloud) | Web control plane, Kilo Gateway routes, Cloud Agent session runtime, automation, generated-application preview and deployment services, KiloClaw, Gas Town, billing, and supporting Workers |
+| [Kilo&#8209;Org/cloud](https://github.com/Kilo-Org/cloud) | Web control plane, Kilo Gateway routes, Cloud Agent session runtime, automation, Gas Town, billing, and supporting Workers |
 
 ## Three architecture layers
 
@@ -42,7 +42,7 @@ Architecture pages cross two repositories:
 |---|---|---|
 | Local runtime and clients | Runs local coding sessions and connects editor surfaces to one local agent engine | Kilo CLI runtime, `kilo serve` server, local daemon, Kilo Console, VS Code extension, JetBrains plugin |
 | Kilo Cloud shared services | Handles hosted identity, authorization, model routing, billing, orchestration, and shared product services | Web control plane, Kilo Gateway, Workers, queues, Durable Objects, persistence |
-| Hosted product runtimes and automation | Runs scoped cloud work for coding, app generation, assistants, security analysis, and multi-agent orchestration | Cloud Agent, Automation Services, App Builder, Security Agent, KiloClaw, Gas Town, Wasteland |
+| Hosted product runtimes and automation | Runs scoped cloud work for coding, security analysis, and multi-agent orchestration | Cloud Agent, Automation Services, Security Agent, Gas Town, Wasteland |
 
 Local execution and hosted execution are separate boundaries. Editor clients use a local `kilo serve` server. Hosted automation can launch Cloud Agent execution sessions when cloud coding work is required.
 
@@ -119,7 +119,7 @@ flowchart LR
 | Local coding | Kilo CLI, Kilo Console, VS Code, or JetBrains | Kilo CLI runtime on developer machine | Editor clients talk to local `kilo serve` server. Local runtime owns coding session and sends model requests directly or through Kilo Gateway. |
 | Hosted work | Webhook, source-control event, command, schedule, or hosted product | Kilo Cloud services; Cloud Agent when coding is required | Cloud services coordinate work. Only flows that need repository changes launch Cloud Agent execution session. |
 
-This distinction is central: using editor does not move coding session into Cloud Agent. Cloud services also route model requests, deliver chat events, dispatch notifications, serve generated applications, and coordinate adjacent hosted boundaries without launching Cloud Agent.
+This distinction is central: using editor does not move coding session into Cloud Agent. Cloud services also route model requests, deliver chat events, dispatch notifications, and coordinate adjacent hosted boundaries without launching Cloud Agent.
 
 ## Adjacent hosted boundaries
 
@@ -130,32 +130,22 @@ flowchart LR
   web["Web control plane"]
   workers["Automation Services"]
   agent["Cloud Agent"]
-  builder["App Builder"]
-  preview["Generated-application preview"]
-  deploy["Generated-application deployment"]
   security["Security Agent"]
   chat["Kilo Chat, events, and notifications"]
-  claw["KiloClaw"]
   town["Gas Town"]
   wasteland["Wasteland"]
 
   web --> workers --> agent
-  web --> builder --> agent
-  builder --> preview
-  builder --> deploy
   web --> security
   security -->|"optional deep analysis"| agent
-  web --> claw
-  chat --> claw
+  web --> chat
   web --> town --> wasteland
 ```
 
 | Boundary | Role | Topology or workflow | Security review |
 |---|---|---|---|
 | Automation Services | Turns commands, source-control events, labels, webhooks, and schedules into scoped work | [Automation Services](/docs/contributing/architecture/automation-services) | [Trust boundaries](/docs/contributing/architecture/cloud-security#trust-boundaries) |
-| App Builder | Coordinates generated-application coding, preview, build, and deployment boundaries | [Cloud Platform](/docs/contributing/architecture/cloud-platform#app-generation-boundaries) | [Preview and deployment](/docs/contributing/architecture/cloud-security#generated-application-preview-and-deployment) |
 | Security Agent | Syncs findings and analyzes risk; selected deep analysis can launch Cloud Agent | [Cloud Platform](/docs/contributing/architecture/cloud-platform#security-agent) | [Sync and cleanup](/docs/contributing/architecture/cloud-security#security-agent-sync-and-cleanup) |
-| KiloClaw | Coordinates owner-scoped hosted assistant runtimes | [Cloud Platform](/docs/contributing/architecture/cloud-platform#kiloclaw) | [KiloClaw ingress](/docs/contributing/architecture/cloud-security#kiloclaw-ingress) |
 | Gas Town and Wasteland | Coordinate multi-agent repository work and collaborative commons paths | [Cloud Platform](/docs/contributing/architecture/cloud-platform#gas-town-and-wasteland) | [Trust boundaries](/docs/contributing/architecture/cloud-security#trust-boundaries) |
 
 ## Local entry points and clients
@@ -182,7 +172,7 @@ Hosted service families live in [`Kilo-Org/cloud`](https://github.com/Kilo-Org/c
 | Kilo Gateway | `apps/web/src/app/api/gateway/`{% linebreak /%}`apps/web/src/lib/ai-gateway/`{% linebreak /%}Local integration: `Kilo-Org/kilocode/packages/kilo-gateway/` | First-party model-routing boundary and local client integration |
 | Cloud Agent | `services/cloud-agent-next/` | Hosted coding-session capability with policy-selected sandbox allocation |
 | Automation Services | `services/code-review-infra/`{% linebreak /%}`services/auto-triage-infra/`{% linebreak /%}`services/auto-fix-infra/`{% linebreak /%}`services/security-auto-analysis/`{% linebreak /%}`services/security-sync/`{% linebreak /%}`services/webhook-agent-ingest/` | Trigger-driven review, triage, fix, security, and configured webhook flows |
-| Adjacent hosted boundaries | `services/app-builder/`{% linebreak /%}`services/kiloclaw/`{% linebreak /%}`services/gastown/`{% linebreak /%}`services/wasteland/`{% linebreak /%}Supporting services | App Builder, KiloClaw, Gas Town, Wasteland, chat, notifications, and supporting services |
+| Adjacent hosted boundaries | `services/gastown/`{% linebreak /%}`services/wasteland/`{% linebreak /%}Supporting services | Gas Town, Wasteland, chat, notifications, and supporting services |
 
 ## Supporting packages
 
