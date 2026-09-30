@@ -1510,7 +1510,12 @@ export function Session() {
                 </Show>
                 <Show when={session()?.parentID}>
                   {/* kilocode_change start */}
-                  <SubagentFooter interrupt={interrupt.count} exitPress={quit.count} />
+                  <SubagentFooter
+                    interruptible={subagentRunning}
+                    interrupt={interrupt.count}
+                    exitPress={quit.count}
+                    narrow={() => contentWidth() < 96}
+                  />
                   {/* kilocode_change end */}
                 </Show>
                 <Show when={networkVisible()}>
