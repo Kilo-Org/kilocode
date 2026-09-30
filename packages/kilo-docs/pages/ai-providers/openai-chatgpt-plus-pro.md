@@ -68,6 +68,15 @@ Open BYOK and use **Manage usage** to check your allowance and reset time. Wait 
 Requests outside your subscription's supported models or API types use your usual Gateway billing. Separately, if Kilo cannot renew your subscription sign-in before sending a request, some renewal failures can cause it to use a saved API key or Kilo credits instead. This is different from a ChatGPT usage-limit error, which stops the request rather than switching billing.
 {% /callout %}
 
+{% callout type="note" title="OpenAI's per-app usage quota" %}
+OpenAI applies a per-app usage quota to apps signed in with ChatGPT, including Kilo Code. It defaults to 100% of your allowance per app. To view or adjust it, open **Settings → Usage & Billing → App Limits** in the ChatGPT or Codex app. If you hit an unexpected usage limit or refusal while using your ChatGPT subscription with Kilo Code, check this setting before assuming your plan's allowance is exhausted.
+
+Learn more in OpenAI's help articles:
+
+- [Using your ChatGPT plan in other apps and sites](https://help.openai.com/en/articles/20001542-using-your-chatgpt-plan-in-other-apps-and-sites)
+- [Sign in with ChatGPT](https://help.openai.com/en/articles/20001410-sign-in-with-chatgpt)
+{% /callout %}
+
 ### Manage the connection
 
 Return to the BYOK page in the account or organization where you connected:
