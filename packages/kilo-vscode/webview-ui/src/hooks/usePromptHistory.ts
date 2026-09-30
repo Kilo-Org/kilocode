@@ -85,8 +85,17 @@ export function seedEntries(entries: string[], texts: string[], max: number): bo
 const entries: string[] = load()
 
 export interface PromptHistory {
-  /** Navigate history. Returns the new text value, or null if no navigation occurred. */
-  navigate: (direction: "up" | "down", text: string, cursor: number) => string | null
+  /**
+   * Navigate history. Returns the new text with its collapsed paste contents, or null
+   * if no navigation occurred. `pastes` are the contents of the chips in the current
+   * text, kept with the draft so returning to it brings the chips back.
+   */
+  navigate: (
+    direction: "up" | "down",
+    text: string,
+    cursor: number,
+    pastes: readonly string[],
+  ) => { text: string; pastes: readonly string[] } | null
   /** Append a sent prompt to history (deduplicates consecutive identical entries). */
   append: (text: string) => void
   /** Seed history from existing session messages (e.g., when a session is loaded). */
@@ -99,22 +108,27 @@ export interface PromptHistory {
 
 export function usePromptHistory(): PromptHistory {
   const [index, setIndex] = createSignal(-1)
-  let saved: string | null = null
+  let saved: { text: string; pastes: readonly string[] } | null = null
 
-  function navigate(direction: "up" | "down", text: string, cursor: number): string | null {
+  function navigate(
+    direction: "up" | "down",
+    text: string,
+    cursor: number,
+    pastes: readonly string[],
+  ): { text: string; pastes: readonly string[] } | null {
     if (!canNavigate(direction, text, cursor, index() >= 0)) return null
 
     if (direction === "up") {
       if (entries.length === 0) return null
       if (index() === -1) {
-        saved = text
+        saved = { text, pastes }
         setIndex(0)
-        return entries[0]!
+        return { text: entries[0]!, pastes: [] }
       }
       const next = index() + 1
       if (next >= entries.length) return null
       setIndex(next)
-      return entries[next]!
+      return { text: entries[next]!, pastes: [] }
     }
 
     // direction === "down"
@@ -123,12 +137,12 @@ export function usePromptHistory(): PromptHistory {
     if (index() > 0) {
       const next = index() - 1
       setIndex(next)
-      return entries[next]!
+      return { text: entries[next]!, pastes: [] }
     }
 
     // index === 0: return to the saved draft
     setIndex(-1)
-    const draft = saved ?? ""
+    const draft = saved ?? { text: "", pastes: [] }
     saved = null
     return draft
   }
