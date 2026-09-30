@@ -135,8 +135,8 @@ export const DocumentPanel: Component<DocumentPanelProps> = (props) => {
   onCleanup(() => clearTimeout(copyTimer))
   const copy = async () => {
     const path = file()
-    clearTimeout(copyTimer)
     if (!(await copyText(content()))) return
+    clearTimeout(copyTimer)
     setCopied(path)
     copyTimer = setTimeout(() => setCopied(""), 1500)
   }
