@@ -5,6 +5,8 @@ import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.ui.components.JBList
 import java.awt.Component
 import java.awt.Container
+import java.awt.Dimension
+import java.awt.Rectangle
 
 class PromptRailPopupTest : BasePlatformTestCase() {
     /**
@@ -34,6 +36,44 @@ class PromptRailPopupTest : BasePlatformTestCase() {
         assertTrue(popup.component.preferredSize.height <= 400)
 
         Disposer.dispose(popup.disposable)
+    }
+
+    /**
+     * Hovering a tick re-selects in the open balloon, so a row below the fold has to be scrolled to.
+     * Rows already fully visible must not scroll, or the list would jump while the pointer moves.
+     */
+    fun `test selecting an offscreen row scrolls it into view`() {
+        val popup = popup(items(40))
+        popup.fitWithin(320, 220)
+        val root = popup.component
+        // scrollRectToVisible re-lays out the scroll pane, so the tree needs real sizes first or the
+        // viewport collapses to zero and every row counts as off screen.
+        root.size = Dimension(320, 220)
+        layoutAll(root)
+        val port = popup.rows.viewport
+        val list = find(root) ?: error("expected a JBList in the navigator body")
+
+        popup.select(0)
+        assertEquals(0, port.viewPosition.y)
+
+        popup.select(35)
+
+        assertEquals(35, list.selectedIndex)
+        val cell = list.getCellBounds(35, 35)
+        val view = Rectangle(port.viewPosition, port.extentSize)
+        assertTrue("row 35 at $cell must be visible in $view", view.contains(cell))
+
+        // A row already in view must not scroll, or the list would jump as the pointer moves.
+        val settled = port.viewPosition
+        popup.select(35)
+        assertEquals(settled, port.viewPosition)
+
+        Disposer.dispose(popup.disposable)
+    }
+
+    private fun layoutAll(comp: Component) {
+        comp.doLayout()
+        if (comp is Container) comp.components.forEach(::layoutAll)
     }
 
     private fun popup(items: List<PromptRailItem>) = PromptRailPopup(

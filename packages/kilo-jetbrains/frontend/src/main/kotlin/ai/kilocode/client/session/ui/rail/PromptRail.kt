@@ -99,6 +99,9 @@ internal class PromptRail : JComponent() {
 
     fun available(): Boolean = available
 
+    /** Tick under the pointer, or -1. Read when the dwell elapses, so it reflects the current pointer. */
+    fun hover(): Int = hover
+
     /** Center y, in this component's own coordinates, of tick [index] — used to place the popup. */
     fun tickCenterY(index: Int): Int {
         val geo = geometry() ?: return height / 2

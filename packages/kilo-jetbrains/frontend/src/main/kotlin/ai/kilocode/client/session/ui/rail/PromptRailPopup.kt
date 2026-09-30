@@ -21,6 +21,7 @@ import com.intellij.util.ui.UIUtil
 import com.intellij.util.ui.components.BorderLayoutPanel
 import java.awt.BorderLayout
 import java.awt.Component
+import java.awt.Rectangle
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
 import javax.swing.JList
@@ -59,6 +60,16 @@ internal class PromptRailPopup(
         })
     }
 
+    private val scroll = JBScrollPane(
+        list,
+        ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED,
+        ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER,
+    ).apply {
+        isOpaque = false
+        viewport.isOpaque = false
+        border = JBUI.Borders.empty()
+    }
+
     private val first = HoverIcon().apply {
         icon = AllIcons.Actions.MoveUp
         toolTipText = KiloBundle.message("session.prompts.first")
@@ -83,11 +94,27 @@ internal class PromptRailPopup(
 
     override fun fitWithin(width: Int, height: Int) = body.fitWithin(width, height)
 
+    /** The row list, for tests that need to drive layout or inspect selection. */
+    internal val rows get() = scroll
+
     init {
-        if (hovered in 0 until model.size) {
-            list.selectedIndex = hovered
-            list.scrollRectToVisible(list.getCellBounds(hovered, hovered))
-        }
+        select(hovered)
+    }
+
+    /**
+     * Highlights [index] and scrolls it into view when it is not already fully visible. Called while the
+     * balloon stays open and the pointer moves between ticks, so it must not resize the body — a change
+     * in preferred size would make the platform re-place the balloon.
+     */
+    fun select(index: Int) {
+        if (index !in 0 until model.size) return
+        if (list.selectedIndex != index) list.selectedIndex = index
+        val cell = list.getCellBounds(index, index) ?: return
+        // The viewport's own view rect, not list.visibleRect: the latter is derived by walking up to the
+        // window, so it answers empty until the balloon is realised and would scroll on every hover.
+        val view = Rectangle(scroll.viewport.viewPosition, scroll.viewport.extentSize)
+        if (view.contains(cell)) return
+        list.scrollRectToVisible(cell)
     }
 
     private fun content(): BorderLayoutPanel {
@@ -104,15 +131,6 @@ internal class PromptRailPopup(
                 Stack.horizontal(UiStyle.Gap.xs()).next(first).next(latest),
                 BorderLayout.EAST,
             )
-        }
-        val scroll = JBScrollPane(
-            list,
-            ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED,
-            ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER,
-        ).apply {
-            isOpaque = false
-            viewport.isOpaque = false
-            border = JBUI.Borders.empty()
         }
         return BorderLayoutPanel().apply {
             isOpaque = false

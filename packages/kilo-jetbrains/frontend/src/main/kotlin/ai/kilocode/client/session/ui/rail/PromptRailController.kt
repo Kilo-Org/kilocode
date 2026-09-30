@@ -51,7 +51,9 @@ internal class PromptRailController(
     private var style = SessionEditorStyle.current()
     private var dirty = false
     private var dead = false
-    private var target: Any? = null
+
+    /** The live balloon body, so a move between ticks can re-select in place instead of reopening it. */
+    private var body: PromptRailPopup? = null
     private val adjustment = AdjustmentListener { recomputeActive() }
     private val change = ChangeListener { recomputeActive() }
     private val geometry = object : ComponentAdapter() {
@@ -124,9 +126,9 @@ internal class PromptRailController(
 
     @RequiresEdt
     fun hideAll() {
+        // Disposing the body clears `body` and the open tick through the hook registered in `request`.
         popup.hideAll()
         rail.setOpen(-1)
-        target = null
     }
 
     @RequiresEdt
@@ -196,11 +198,15 @@ internal class PromptRailController(
     private fun select(entry: PromptRailEntry) {
         when (entry) {
             is PromptRailEntry.Prompt -> jump(rail.items().getOrNull(entry.index)?.id)
+            // The overflow tick stands in for prompts with no tick of their own, so its only action is
+            // revealing them in the list — without waiting out the hover dwell.
             is PromptRailEntry.Overflow -> {
-                val index = rail.entries().indexOfFirst { it == entry }
-                rail.setOpen(index)
-                target = entry
-                popup.showNow(entry, this) { request(index) }
+                rail.setOpen(rail.entries().indexOf(entry))
+                if (popup.showing()) {
+                    body?.select(item(entry))
+                    return
+                }
+                popup.showNow(rail, this) { request() }
             }
         }
     }
@@ -210,43 +216,46 @@ internal class PromptRailController(
         scroll.scrollMessageTop(id)
     }
 
+    /**
+     * The balloon is keyed on the rail rather than on the hovered tick, so travelling down the ticks
+     * neither restarts the dwell nor rebuilds it somewhere else — only the highlighted row follows the
+     * pointer. The open tick is left alone on exit so the rail stays lit while the pointer is inside the
+     * balloon; it is cleared when the balloon actually goes away.
+     */
     private fun hover(entry: PromptRailEntry?) {
         if (entry == null) {
-            target?.let(popup::notifyExit)
-            rail.setOpen(-1)
+            popup.notifyExit(rail)
             return
         }
-        val index = rail.entries().indexOf(entry)
-        rail.setOpen(index)
-        val showing = popup.showing()
-        target = entry
-        if (showing) {
-            popup.hideAll()
-            target = entry
-            popup.showNow(entry, this) { request(index) }
-            return
-        }
-        popup.show(entry, this) { request(index) }
+        rail.setOpen(rail.entries().indexOf(entry))
+        popup.show(rail, this) { request() }
+        body?.select(item(entry))
     }
 
-    private fun request(hoveredIndex: Int): SidePopupRequest {
-        val hoveredItemIndex = when (val e = rail.entries().getOrNull(hoveredIndex)) {
-            is PromptRailEntry.Prompt -> e.index
-            else -> -1
-        }
-        return SidePopupRequest(
-            build = {
-                PromptRailPopup(
-                    items = rail.items(),
-                    hovered = hoveredItemIndex,
-                    onSelect = { item -> jump(item.id) },
-                    onFirst = { rail.items().firstOrNull()?.let { jump(it.id) } },
-                    onLatest = { rail.items().lastOrNull()?.let { jump(it.id) } },
-                )
-            },
-            place = { built -> place(hoveredIndex, built) },
-        )
+    /** Item the list should highlight for [entry]; an overflow tick points at the first prompt it hides. */
+    private fun item(entry: PromptRailEntry): Int = when (entry) {
+        is PromptRailEntry.Prompt -> entry.index
+        is PromptRailEntry.Overflow -> entry.hidden.first
     }
+
+    private fun request(): SidePopupRequest = SidePopupRequest(
+        build = {
+            PromptRailPopup(
+                items = rail.items(),
+                hovered = rail.entries().getOrNull(rail.hover())?.let(::item) ?: 0,
+                onSelect = { item -> jump(item.id) },
+                onFirst = { rail.items().firstOrNull()?.let { jump(it.id) } },
+                onLatest = { rail.items().lastOrNull()?.let { jump(it.id) } },
+            ).also { built ->
+                body = built
+                Disposer.register(built.disposable) {
+                    if (body === built) body = null
+                    rail.setOpen(-1)
+                }
+            }
+        },
+        place = { built -> place(built) },
+    )
 
     /**
      * Puts the balloon entirely left of the ticks, so the body opens into the transcript instead of
@@ -255,10 +264,10 @@ internal class PromptRailController(
      *
      * The point handed back is the balloon's intended center, not an edge: with the callout off the
      * platform ignores the position and the pointer distance and centers the box on the target (see
-     * [PromptRailPlacement]). [SidePopupGeometry] is deliberately not used here — its `aim` result drives
+     * [PromptRailPlacement]). `SidePopupGeometry` is deliberately not used here — its `aim` result drives
      * `cornerToPointerDistance`, which only applies to balloons that draw a pointer.
      */
-    private fun place(index: Int, built: SidePopupContent): SidePopupSpot? {
+    private fun place(built: SidePopupContent): SidePopupSpot? {
         val pane = SwingUtilities.getRootPane(rail)?.layeredPane ?: return null
         if (!rail.isShowing) return null
         val area = SwingUtilities.convertRectangle(root, root.visibleRect, pane)
@@ -292,14 +301,14 @@ internal class PromptRailController(
             body.width + insets.left + insets.right,
             body.height + insets.top + insets.bottom,
         )
-        val tick = SwingUtilities.convertPoint(rail, Point(0, rail.tickCenterY(index.coerceAtLeast(0))), pane)
         val center = PromptRailPlacement.center(
             railX = rect.x,
             area = area,
             gap = gap,
-            shadow = shadow,
             content = content,
-            tickY = tick.y,
+            // Centred on the rail, not the hovered tick, so the balloon does not drift while the pointer
+            // moves between ticks.
+            anchorY = rect.y + rect.height / 2,
         )
         return SidePopupSpot(
             pane = pane,

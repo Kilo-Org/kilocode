@@ -18,7 +18,10 @@ import java.awt.Rectangle
 internal object PromptRailPlacement {
     /**
      * Largest body that fits between the pane's left edge and [railX], the left edge of the rail.
-     * A gap is kept on both sides, so the balloon clears the ticks and the window edge alike.
+     *
+     * [chrome] must include the drop shadow on both sides even though the shadow is allowed to fall
+     * inside the gap: the platform runs `ScreenUtil.moveToFit` on the shadowed rect, so a body sized to
+     * the border box alone would be nudged back to the right, over the ticks.
      */
     fun maxWidth(railX: Int, gap: Int, chrome: Int, cap: Int): Int =
         (railX - gap * 2 - chrome).coerceIn(0, cap)
@@ -28,16 +31,21 @@ internal object PromptRailPlacement {
         (height - gap * 2 - chrome).coerceIn(0, cap)
 
     /**
-     * Center to hand the platform so the [content] box ends [gap] plus [shadow] left of [railX] — the
-     * shadow is counted too, so nothing the balloon paints reaches the ticks. Vertically the box follows
-     * the hovered tick at [tickY], clamped to keep it inside [area], the visible session.
+     * Center to hand the platform so the [content] box ends exactly [gap] left of [railX], giving the
+     * balloon the same breathing room against the ticks that the rail itself keeps against the scroll
+     * pane. The shadow is deliberately not counted here — it is translucent and reaches into that gap,
+     * and reserving it as well pushed the balloon a full shadow width away from the rail.
+     *
+     * [anchorY] is the center the balloon should sit on, clamped to keep the box inside [area], the
+     * visible session. It is the center of the rail rather than of the hovered tick, so the balloon holds
+     * still while the pointer travels down the ticks.
      */
-    fun center(railX: Int, area: Rectangle, gap: Int, shadow: Int, content: Dimension, tickY: Int): Point {
-        val x = railX - gap - shadow - content.width / 2
-        val min = area.y + gap + shadow + content.height / 2
-        val max = area.y + area.height - gap - shadow - content.height / 2
+    fun center(railX: Int, area: Rectangle, gap: Int, content: Dimension, anchorY: Int): Point {
+        val x = railX - gap - content.width / 2
+        val min = area.y + gap + content.height / 2
+        val max = area.y + area.height - gap - content.height / 2
         // A body taller than the room it was budgeted for can only be centered.
-        val y = if (max < min) area.y + area.height / 2 else tickY.coerceIn(min, max)
+        val y = if (max < min) area.y + area.height / 2 else anchorY.coerceIn(min, max)
         return Point(x, y)
     }
 
