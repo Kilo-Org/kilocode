@@ -201,6 +201,7 @@ export interface SessionErrorMessage {
   eventID: string
   sessionID?: string
   error?: { name: string; data?: Record<string, unknown> }
+  phase?: "admission" | "execution"
 }
 
 export interface PermissionRequestMessage {
