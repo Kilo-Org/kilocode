@@ -34,6 +34,8 @@ class FakeWorkspaceRpcApi : KiloWorkspaceRpcApi {
         private set
     var reloads = 0
         private set
+    val coreReloads = CopyOnWriteArrayList<String>()
+    var coreReloadResult = true
     var models = ModelsWorkspaceDto()
     var config = ConfigDto()
     var configCalls = 0
@@ -99,6 +101,12 @@ class FakeWorkspaceRpcApi : KiloWorkspaceRpcApi {
     override suspend fun reload(directory: String) {
         assertNotEdt("reload")
         reloads += 1
+    }
+
+    override suspend fun reloadCoreSettings(directory: String): Boolean {
+        assertNotEdt("reloadCoreSettings")
+        coreReloads.add(directory)
+        return coreReloadResult
     }
 
     override suspend fun models(directory: String): ModelsWorkspaceDto {
