@@ -241,9 +241,6 @@ export function Prompt(props: PromptProps) {
   // also shows whose input it is (color, label, placeholder) so it does not look like the parent's.
   const subagent = useSubagent(() => props.sessionID)
   const steer = createMemo(() => !!subagent())
-  createEffect(() => {
-    if (steer() && store.mode === "shell") setStore("mode", "normal")
-  })
   // In a subagent view Esc belongs to the session route's `subagent.interrupt`, which stops the
   // subagent tree and shows its hint in the subagent footer; the prompt's own interrupt stays off.
   const interruptible = createMemo(
@@ -989,7 +986,7 @@ export function Prompt(props: PromptProps) {
             if (!item) return false
             input.setText(item.input)
             setStore("prompt", item)
-            setStore("mode", item.mode ?? "normal")
+            setStore("mode", steer() ? "normal" : (item.mode ?? "normal")) // kilocode_change - subagent views have no shell mode
             restoreExtmarksFromParts(item.parts)
             vim.resetVim() // kilocode_change - recalled history starts in insert mode
             input.cursorOffset = 0
@@ -1026,7 +1023,7 @@ export function Prompt(props: PromptProps) {
             if (!item) return false
             input.setText(item.input)
             setStore("prompt", item)
-            setStore("mode", item.mode ?? "normal")
+            setStore("mode", steer() ? "normal" : (item.mode ?? "normal")) // kilocode_change - subagent views have no shell mode
             restoreExtmarksFromParts(item.parts)
             vim.resetVim() // kilocode_change - recalled history starts in insert mode
             input.cursorOffset = input.plainText.length

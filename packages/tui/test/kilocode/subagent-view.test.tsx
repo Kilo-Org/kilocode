@@ -70,11 +70,17 @@ const reply = {
   parts: [],
 }
 
-async function mount(root: string, width = 100) {
+async function mount(
+  root: string,
+  width = 100,
+  agents: object[] = [],
+  options: Parameters<typeof createTuiResolvedConfig>[0] = {},
+) {
   await Bun.write(`${root}/kv.json`, JSON.stringify({ animations_enabled: false, sidebar: "hide", vim_enabled: false }))
   const aborts: URL[] = []
   const exits: unknown[] = []
   const calls = createFetch((url) => {
+    if (url.pathname === "/agent") return json(agents)
     if (url.pathname === "/session") return json([parent, child])
     if (url.pathname === `/session/${child.id}`) return json(child)
     if (url.pathname === `/session/${parent.id}`) return json(parent)
@@ -89,7 +95,7 @@ async function mount(root: string, width = 100) {
     if (url.pathname.startsWith("/background-process/")) return json(true)
     return undefined
   })
-  const config = createTuiResolvedConfig()
+  const config = createTuiResolvedConfig(options)
   const refs: { sync?: ReturnType<typeof useSync> } = {}
 
   function Ready() {
@@ -194,6 +200,7 @@ async function mount(root: string, width = 100) {
       aborts,
       exits,
       frame,
+      spans: () => app.captureSpans(),
       async press(sequence: string) {
         app.renderer.stdin.emit("data", Buffer.from(sequence))
         // a lone ESC is disambiguated from escape sequences after a short delay
@@ -324,5 +331,41 @@ test("Esc closes the mention list before it arms the interrupt", async () => {
   await scene.press("\x1b")
   await scene.press("\x1b")
   await wait(() => scene.aborts.length === 1)
+  await scene.press("\x03")
+})
+
+test("recalling a shell history entry in a subagent view keeps it a plain steer", async () => {
+  await using tmp = await tmpdir()
+  await Bun.write(
+    `${tmp.path}/prompt-history.jsonl`,
+    JSON.stringify({ input: "ls -la", parts: [], mode: "shell" }) + "\n",
+  )
+  // third agent: the palette gives it a color distinct from the shell-mode color
+  const agents = [
+    { name: "build", mode: "primary", permission: [], options: {} },
+    { name: "plan", mode: "primary", permission: [], options: {} },
+    { name: "general", mode: "subagent", permission: [], options: {} },
+  ]
+  // with default keys, up on an empty subagent prompt goes to the parent; a user who unbinds that
+  // reaches prompt history, which is shared across sessions and can hold a shell entry
+  using scene = await mount(tmp.path, 100, agents, { keybinds: { session_parent: "none" } })
+  const color = (row: string, text: string) => {
+    const line = scene.spans().lines.find((item) =>
+      item.spans
+        .map((span) => span.text)
+        .join("")
+        .includes(row),
+    )
+    const span = line?.spans.find((item) => item.text.includes(text))
+    return span ? [span.fg.r, span.fg.g, span.fg.b, span.fg.a] : undefined
+  }
+  const steered = color("Steering General", "┃")
+  expect(steered).toBeDefined()
+  // the steering label is drawn in the subagent's color, and so is the prompt border
+  expect(steered).toEqual(color("Steering General", "Steering"))
+  await scene.press("\x1b[A")
+  expect(scene.frame()).toContain("ls -la")
+  // shell mode would switch the prompt border to the shell color
+  expect(color("ls -la", "┃")).toEqual(steered)
   await scene.press("\x03")
 })
