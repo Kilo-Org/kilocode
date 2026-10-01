@@ -62,6 +62,24 @@ group("network error detection", () => {
   })
 })
 
+group("provider dial", () => {
+  test("opens a listening endpoint and refuses a closed or invalid one", async () => {
+    const server = Bun.serve({ hostname: "127.0.0.1", port: 0, fetch: () => new Response(null) })
+    const origin = server.url.origin
+    expect(await dial(origin)).toBe(true)
+    await server.stop(true)
+    expect(await dial(origin)).toBe(false)
+    expect(await dial("not a url")).toBe(false)
+  })
+
+  test("gives up on an endpoint that silently drops the connection", async () => {
+    // Non-routable: the SYN is dropped, so connect never errors on its own.
+    const started = Date.now()
+    expect(await dial("https://10.255.255.1")).toBe(false)
+    expect(Date.now() - started).toBeLessThan(6_000)
+  }, 10_000)
+})
+
 test("holds a retrying step while offline and resumes after reconnect", async () => {
   await using input = await fixture()
   const provider = await createProvider()

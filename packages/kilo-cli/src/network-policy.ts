@@ -2,7 +2,6 @@ import { define, type Plugin } from "@opencode-ai/plugin/effect/plugin"
 import { NetworkRpc, type NetworkWait } from "@opencode-ai/schema/kilocode/network"
 import type { SessionError } from "@opencode-ai/schema/session-error"
 import { Deferred, Duration, Effect, Exit } from "effect"
-import { connect } from "node:net"
 
 export const NETWORK_POLICY_ID = "kilocode.network-policy"
 
@@ -172,26 +171,23 @@ export async function probeProvider(endpoint: string | undefined) {
   ).catch(() => false)
 }
 
-export function dial(endpoint: string) {
-  return new Promise<boolean>((resolve) => {
-    const target = URL.parse(endpoint)
-    if (!target) return resolve(false)
-    const socket = connect({
-      host: target.hostname,
-      port: Number(target.port) || (target.protocol === "https:" ? 443 : 80),
-    })
-    const timer = setTimeout(() => {
-      socket.destroy()
-      resolve(false)
-    }, PROBE_MS)
-    socket.once("connect", () => {
-      clearTimeout(timer)
-      socket.destroy()
-      resolve(true)
-    })
-    socket.once("error", () => {
-      clearTimeout(timer)
-      resolve(false)
-    })
+export async function dial(endpoint: string) {
+  const target = URL.parse(endpoint)
+  if (!target) return false
+  const connecting = Bun.connect({
+    hostname: target.hostname,
+    port: Number(target.port) || (target.protocol === "https:" ? 443 : 80),
+    socket: { data() {} },
   })
+  // A silently dropped SYN never rejects; only the OS connect timeout (minutes) would end it.
+  const socket = await Promise.race([connecting.catch(() => undefined), Bun.sleep(PROBE_MS).then(() => undefined)])
+  if (socket) {
+    socket.end()
+    return true
+  }
+  connecting.then(
+    (late) => late.end(),
+    () => undefined,
+  )
+  return false
 }
