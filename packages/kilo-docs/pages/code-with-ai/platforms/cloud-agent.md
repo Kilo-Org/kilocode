@@ -262,9 +262,15 @@ The trigger endpoint will return rate limit responses when the number of queued 
 Open a trigger's request history to inspect recent invocations. History entries
 show the source (webhook or scheduled), status such as captured, in progress,
 success, or failed, request metadata, payload details when available, and links
-or sharing actions for the resulting session. Use this view to debug webhook
-payloads, scheduled runs, and organization handoff without changing the trigger
-configuration.
+or sharing actions for the resulting session.
+
+Expand a request row to open its **Execution Logs** panel, which shows the cloud
+agent's transcript for that run without requiring you to share the session.
+Active runs refresh automatically every 3 seconds; after a run finishes, the
+panel keeps refreshing for 30 seconds to capture the final log. Use the refresh
+control to reload manually, and enable auto-scroll to follow new output. Use
+this view to debug webhook payloads, scheduled runs, and organization handoff
+without changing the trigger configuration.
 
 ### Prompt Template Variables
 
