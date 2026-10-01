@@ -13,6 +13,7 @@ import type { ProjectContext, ProjectInitResult } from "./context"
 import { ProjectContexts, type ProjectSnapshot } from "./contexts"
 import type { ProjectMessageDeps } from "./messages"
 import { createSettingsHandler, type SettingsHandler } from "./settings"
+import { poolHome } from "../worktree-pool"
 
 export interface ProjectWiring {
   registry: ProjectRegistry
@@ -66,6 +67,7 @@ export function createProjectWiring(opts: {
       log: opts.output,
       git: opts.git,
       worktreePool: () => opts.host.worktreePool(),
+      poolHome: poolHome(),
       sized: (ctx) => opts.pushState(ctx),
     },
   })
