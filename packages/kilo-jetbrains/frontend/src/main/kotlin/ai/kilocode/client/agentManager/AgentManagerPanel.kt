@@ -70,6 +70,7 @@ import ai.kilocode.rpc.dto.WorktreeStatsDto
 import com.intellij.icons.AllIcons
 import com.intellij.ide.BrowserUtil
 import com.intellij.ide.DeleteProvider
+import com.intellij.ide.actions.RevealFileAction
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.actionSystem.ActionManager
 import com.intellij.openapi.actionSystem.ActionGroup
@@ -470,7 +471,10 @@ class AgentManagerPanel(
         KiloNotifications.error(project, KiloBundle.message("worktree.move.failed.title"), err)
     }
 
-    /** Surfaces a failed removal; offers a force-delete retry when git reported a lock. */
+    /**
+     * Surfaces a failed removal; offers a force-delete retry when git reported a lock, or
+     * copy-path/reveal actions for the blocking worktree(s) when a nested worktree is in the way.
+     */
     private fun notifyFailed(item: WorktreeDto, result: RemoveWorktreeResultDto, forced: Boolean) {
         val title = KiloBundle.message("worktree.delete.failed.title", item.name)
         if (result.locked && !forced) {
@@ -482,8 +486,36 @@ class AgentManagerPanel(
             ) { remove(item, force = true) }
             return
         }
+        if (result.nestedPaths.isNotEmpty()) {
+            KiloNotifications.error(project, title, result.error, nestedPathActions(result.nestedPaths))
+            return
+        }
         KiloNotifications.error(project, title, result.error)
     }
+
+    /**
+     * Copy/reveal actions for the worktree(s) blocking a delete, using the same primitives as the
+     * row context menu (copy) and the orphan-cleanup dialog (reveal, routed through the backend RPC
+     * since split mode runs the frontend on the client machine while the folder lives on the host).
+     * Copy captures every blocking path; reveal opens only the first — the common (and only tested)
+     * case is exactly one nested worktree. `revealPath` answers `false` instead of throwing when the
+     * host can't reveal it (unsupported platform, or the directory is already gone), so that failure
+     * is surfaced as a warning rather than silently doing nothing.
+     */
+    private fun nestedPathActions(paths: List<String>): List<Pair<String, () -> Unit>> = listOf(
+        KiloBundle.message("worktree.delete.nested.copyPath") to {
+            CopyPasteManager.getInstance().setContents(StringSelection(paths.joinToString("\n")))
+        },
+        RevealFileAction.getActionName() to {
+            controller.reveal(paths.first()) {
+                KiloNotifications.warning(
+                    project,
+                    KiloBundle.message("worktree.delete.nested.reveal.failed.title"),
+                    KiloBundle.message("worktree.delete.nested.reveal.failed.detail"),
+                )
+            }
+        },
+    )
 
     private fun bindEditorSelection() {
         val target = project ?: return

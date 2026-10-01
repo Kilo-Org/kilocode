@@ -1286,6 +1286,54 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
         assertSame(item.progress, item.components.last())
     }
 
+    // ------ reveal resync (hidden-session catch-up) ------
+
+    fun `test syncActiveState resurfaces an active question`() {
+        val item = panelWithPrompts()
+        model.setState(SessionState.AwaitingQuestion(question()))
+
+        val qv = find<QuestionView>(item)!!
+        // Directly force-hide the view the way a stale/hidden component might end up, then
+        // resync from the current model state — this is what SessionUi does when a hidden
+        // session's component becomes visible again.
+        qv.hideView()
+        assertFalse(qv.isVisible)
+
+        item.syncActiveState()
+
+        assertTrue(qv.isVisible)
+        assertSame(item.progress, item.components.last())
+        assertTrue(item.components.indexOf(qv) < item.components.indexOf(item.progress))
+    }
+
+    fun `test syncActiveState resurfaces an active permission`() {
+        val item = panelWithPrompts()
+        model.setState(SessionState.AwaitingPermission(permission()))
+
+        val pv = find<PermissionView>(item)!!
+        pv.hideView()
+        assertFalse(pv.isVisible)
+
+        item.syncActiveState()
+
+        assertTrue(pv.isVisible)
+        assertSame(item.progress, item.components.last())
+    }
+
+    fun `test syncActiveState is a no-op when idle`() {
+        val item = panelWithPrompts()
+        model.upsertMessage(msg("u1", "user"))
+
+        val qv = find<QuestionView>(item)!!
+        val pv = find<PermissionView>(item)!!
+
+        item.syncActiveState()
+
+        assertFalse(qv.isVisible)
+        assertFalse(pv.isVisible)
+        assertSame(item.progress, item.components.last())
+    }
+
     fun `test login required state makes LoginRequiredView visible and hides others`() {
         val item = panelWithPrompts()
         model.setState(SessionState.LoginRequired("Sign in required."))
@@ -1399,13 +1447,17 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
         assertNotNull(find<DialogView>(banner))
         assertNotNull(components(banner).filterIsInstance<PartHeader>().singleOrNull())
 
-        val buttons = components(banner).filterIsInstance<JButton>().filter { it.text.isNotEmpty() }
+        val buttons = components(banner).filterIsInstance<JButton>()
+            .filter { it !is ActionLink && it.text.isNotEmpty() }
         assertEquals(
             listOf(KiloBundle.message("revert.banner.redo"), KiloBundle.message("revert.banner.redo.all")),
             buttons.map { it.text },
         )
         assertEquals(listOf(KiloBundle.message("revert.banner.redo")), buttons.filter { it.isVisible }.map { it.text })
-        assertTrue(buttons.all { it.getClientProperty(DarculaButtonUI.DEFAULT_STYLE_KEY) == null })
+        assertEquals(true, buttons.single { it.text == KiloBundle.message("revert.banner.redo") }
+            .getClientProperty(DarculaButtonUI.DEFAULT_STYLE_KEY))
+        assertNull(buttons.single { it.text == KiloBundle.message("revert.banner.redo.all") }
+            .getClientProperty(DarculaButtonUI.DEFAULT_STYLE_KEY))
 
         val hint = components(banner)
             .filterIsInstance<JBLabel>()
@@ -1535,10 +1587,8 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
 
         banner.update()
 
-        val button = components(banner).filterIsInstance<HoverIcon>()
-            .first { it.toolTipText == KiloBundle.message("session.part.tool.openDiff") }
-        assertFalse(button.isVisible)
-        assertFalse(button.isEnabled)
+        assertTrue(components(banner).filterIsInstance<HoverIcon>()
+            .none { it.toolTipText == KiloBundle.message("session.part.tool.openDiff") })
     }
 
     fun `test rollback banner opens session diff when revert diff is absent`() {
@@ -1621,29 +1671,130 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
         assertTrue(components(banner).filterIsInstance<RevertProgress>().isEmpty())
     }
 
-    fun `test rollback banner explains snapshotless history only revert`() {
+    fun `test rollback banner explains legacy revert with no workspace status`() {
         val banner = RevertBanner(model, {}, {}, {})
         model.upsertMessage(msg("u1", "user"))
         model.setRevert(SessionRevertDto("u1", snapshot = null))
         banner.update()
 
         val notice = components(banner).filterIsInstance<JBLabel>()
-            .first { it.text == KiloBundle.message("revert.banner.filesNotRestored") }
+            .single { it.name == "revert-workspace-notice" }
 
         assertTrue(notice.isVisible)
+        assertTrue(notice.text.contains(KiloBundle.message("revert.banner.workspace.legacy")))
         assertTrue(components(banner).filterIsInstance<DiffStatBadge>().isEmpty())
     }
 
-    fun `test rollback banner hides snapshotless notice when snapshot exists`() {
+    fun `test rollback banner hides notice when legacy revert has a snapshot`() {
         val banner = RevertBanner(model, {}, {}, {})
         model.upsertMessage(msg("u1", "user"))
         model.setRevert(SessionRevertDto("u1", snapshot = "snap1"))
         banner.update()
 
         val notice = components(banner).filterIsInstance<JBLabel>()
-            .first { it.text == KiloBundle.message("revert.banner.filesNotRestored") }
-
+            .single { it.name == "revert-workspace-notice" }
         assertFalse(notice.isVisible)
+    }
+
+    fun `test rollback banner hides notice when workspace was restored`() {
+        val banner = RevertBanner(model, {}, {}, {})
+        model.upsertMessage(msg("u1", "user"))
+        model.setRevert(SessionRevertDto("u1", snapshot = "snap1", workspace = "restored"))
+        banner.update()
+
+        val notice = components(banner).filterIsInstance<JBLabel>()
+            .single { it.name == "revert-workspace-notice" }
+        assertFalse(notice.isVisible)
+    }
+
+    fun `test rollback banner explains snapshots disabled`() {
+        val banner = RevertBanner(model, {}, {}, {})
+        model.upsertMessage(msg("u1", "user"))
+        model.setRevert(SessionRevertDto("u1", workspace = "snapshots-disabled"))
+        banner.update()
+
+        val notice = components(banner).filterIsInstance<JBLabel>()
+            .single { it.name == "revert-workspace-notice" }
+
+        assertTrue(notice.isVisible)
+        assertTrue(notice.text.startsWith("<html>"))
+        assertTrue(notice.text.contains(KiloBundle.message("revert.banner.workspace.snapshotsDisabled")))
+    }
+
+    fun `test rollback banner opens checkpoints settings only when snapshots are disabled`() {
+        var opened = false
+        val banner = RevertBanner(model, {}, {}, {}, openSettingsAction = { opened = true })
+        model.upsertMessage(msg("u1", "user"))
+        model.setRevert(SessionRevertDto("u1", workspace = "snapshots-disabled"))
+        banner.update()
+
+        val button = components(banner).filterIsInstance<JButton>()
+            .first { it.text == KiloBundle.message("revert.banner.workspace.enableSnapshots") }
+        assertTrue(button.isVisible)
+        button.doClick(0)
+        assertTrue(opened)
+
+        model.setRevert(SessionRevertDto("u1", workspace = "unavailable"))
+        banner.update()
+
+        assertNull(button.parent)
+
+        model.setRevert(SessionRevertDto("u1", snapshot = "snap1", workspace = "restored"))
+        banner.update()
+
+        assertNull(button.parent)
+    }
+
+    fun `test rollback banner retains latest snapshot action state while reverting`() {
+        val banner = RevertBanner(model, {}, {}, {})
+        model.upsertMessage(msg("u1", "user"))
+        model.setRevert(SessionRevertDto("u1", workspace = "unavailable"))
+        banner.update()
+        banner.setReverting(SessionState.Reverting("Rolling back...", SessionState.Reverting.Kind.ROLLBACK, "u1"))
+
+        model.setRevert(SessionRevertDto("u1", workspace = "snapshots-disabled"))
+        banner.update()
+        assertTrue(components(banner).filterIsInstance<RevertProgress>().isNotEmpty())
+        assertTrue(components(banner).filterIsInstance<JButton>()
+            .none { it.text == KiloBundle.message("revert.banner.workspace.enableSnapshots") })
+
+        banner.setReverting(SessionState.Idle)
+        assertTrue(components(banner).filterIsInstance<JButton>()
+            .any { it.text == KiloBundle.message("revert.banner.workspace.enableSnapshots") })
+
+        banner.setReverting(SessionState.Reverting("Rolling back...", SessionState.Reverting.Kind.ROLLBACK, "u1"))
+        model.setRevert(SessionRevertDto("u1", workspace = "unavailable"))
+        banner.update()
+        banner.setReverting(SessionState.Idle)
+
+        assertTrue(components(banner).filterIsInstance<JButton>()
+            .none { it.text == KiloBundle.message("revert.banner.workspace.enableSnapshots") })
+    }
+
+    fun `test rollback banner explains missing checkpoint`() {
+        val banner = RevertBanner(model, {}, {}, {})
+        model.upsertMessage(msg("u1", "user"))
+        model.setRevert(SessionRevertDto("u1", workspace = "unavailable"))
+        banner.update()
+
+        val notice = components(banner).filterIsInstance<JBLabel>()
+            .single { it.name == "revert-workspace-notice" }
+
+        assertTrue(notice.isVisible)
+        assertTrue(notice.text.contains(KiloBundle.message("revert.banner.workspace.unavailable")))
+    }
+
+    fun `test rollback banner explains non-git workspace`() {
+        val banner = RevertBanner(model, {}, {}, {})
+        model.upsertMessage(msg("u1", "user"))
+        model.setRevert(SessionRevertDto("u1", workspace = "not-a-git-repo"))
+        banner.update()
+
+        val notice = components(banner).filterIsInstance<JBLabel>()
+            .single { it.name == "revert-workspace-notice" }
+
+        assertTrue(notice.isVisible)
+        assertTrue(notice.text.contains(KiloBundle.message("revert.banner.workspace.notAGitRepo")))
     }
 
     // ------ question tool suppression ------

@@ -12,6 +12,7 @@ import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.selection.SessionSelection
 import ai.kilocode.client.session.ui.style.SessionEditorStyleTarget
 import ai.kilocode.client.session.ui.style.SessionUiStyle
+import ai.kilocode.client.session.views.BackgroundPromote
 import ai.kilocode.client.session.views.LoginRequiredView
 import ai.kilocode.client.session.views.MessageView
 import ai.kilocode.client.session.views.SessionOutcomeView
@@ -70,6 +71,7 @@ class SessionMessageListPanel(
     private val deleteQueued: ((String) -> Unit)? = null,
     private val banner: RevertBanner? = null,
     private val onOpenSubagent: ((String, String) -> Unit)? = null,
+    private val onPromoteBackgroundAgent: BackgroundPromote? = null,
 ) : SessionLayoutPanel(
     SessionUiStyle.SessionLayout.GAP,
     Insets(
@@ -161,14 +163,7 @@ class SessionMessageListPanel(
                 is SessionModelEvent.HistoryLoaded -> rebuild()
                 is SessionModelEvent.Cleared -> clear()
 
-                is SessionModelEvent.StateChanged -> {
-                    syncActive(event.state)
-                    syncSettled(event.state)
-                    syncReverted()
-                    syncReverting(event.state)
-                    anchorFooter()
-                    refresh()
-                }
+                is SessionModelEvent.StateChanged -> syncActiveState(event.state)
 
                 is SessionModelEvent.RevertChanged -> {
                     syncReverted()
@@ -186,6 +181,7 @@ class SessionMessageListPanel(
                 is SessionModelEvent.MessageAdded,
                 is SessionModelEvent.MessageRemoved,
                 is SessionModelEvent.TodosUpdated,
+                is SessionModelEvent.BackgroundAgentsUpdated,
                 is SessionModelEvent.SessionUpdated,
                 is SessionModelEvent.HeaderUpdated,
                 is SessionModelEvent.Compacted -> Unit
@@ -308,10 +304,20 @@ class SessionMessageListPanel(
         return after != before
     }
 
+    /**
+     * Sibling color slot for a child session's generated avatar (see
+     * [ai.kilocode.client.session.AgentAvatar]), recomputed from the model's current child spawn
+     * order on each lookup rather than cached, so a foreground task card and a promoted
+     * background-agent row read the same hue without any extra invalidation bookkeeping. Cheap: only
+     * called from task card `sync()`, never from icon paint or animation frames.
+     */
+    private fun avatarColor(childSessionId: String): Int? =
+        ai.kilocode.client.session.AgentAvatarIdentity.palette(model.childSessions())[childSessionId]
+
     // ------ private event handlers ------
 
     private fun onTurnAdded(turn: ai.kilocode.client.session.model.Turn) {
-        val tv = TurnView(turn.id, openFile, style, openUrl, selection, openAttachment, resize, repo, ::hover, revert, fork, deleteQueued, onOpenSubagent).also {
+        val tv = TurnView(turn.id, openFile, style, openUrl, selection, openAttachment, resize, repo, ::hover, revert, fork, deleteQueued, onOpenSubagent, onPromoteBackgroundAgent, ::avatarColor).also {
             it.setDiffOpener(openDiff, sessionId)
         }
         turnViews[turn.id] = tv
@@ -383,7 +389,7 @@ class SessionMessageListPanel(
         removeAll()
 
         for (turn in model.turns()) {
-            val tv = TurnView(turn.id, openFile, style, openUrl, selection, openAttachment, resize, repo, ::hover, revert, fork, deleteQueued, onOpenSubagent).also {
+            val tv = TurnView(turn.id, openFile, style, openUrl, selection, openAttachment, resize, repo, ::hover, revert, fork, deleteQueued, onOpenSubagent, onPromoteBackgroundAgent, ::avatarColor).also {
                 it.setDiffOpener(openDiff, sessionId)
             }
             turnViews[turn.id] = tv
@@ -578,6 +584,22 @@ class SessionMessageListPanel(
         for (mv in msgToView.values) changed = mv.syncApprovalReasons(visible) || changed
         if (!changed) return
         reflow()
+        refresh()
+    }
+
+    /**
+     * Re-apply [state] to the active question/permission/login/outcome footer and turn settling.
+     * Normally driven by [SessionModelEvent.StateChanged]; also called directly when a session's
+     * component becomes visible again after the state changed while it was hidden, so a question or
+     * permission that arrived off-screen is surfaced instead of staying silently active.
+     */
+    @RequiresEdt
+    fun syncActiveState(state: SessionState = model.state) {
+        syncActive(state)
+        syncSettled(state)
+        syncReverted()
+        syncReverting(state)
+        anchorFooter()
         refresh()
     }
 

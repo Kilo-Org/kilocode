@@ -90,10 +90,14 @@ export const dict = {
     "Conversación revertida. Los cambios en los archivos no se restauraron porque las instantáneas están desactivadas.",
   "revert.banner.workspace.unavailable":
     "Conversación revertida. No había ningún punto de control de archivos disponible, por lo que no se restauraron los cambios del espacio de trabajo.",
+  "revert.banner.workspace.notAGitRepo":
+    "Conversación revertida. Los puntos de control de archivos requieren un repositorio Git, por lo que no se restauraron los cambios del espacio de trabajo.",
   "revert.banner.workspace.legacy":
     "Conversación revertida. El estado de restauración del espacio de trabajo no está disponible para esta reversión anterior.",
   "revert.banner.workspace.enableSnapshots": "Activar instantáneas",
   "revert.disabled.agentBusy": "Espera a que el agente termine",
+  "revert.error.body":
+    "Puede que el repositorio esté en uso. Inténtalo de nuevo o consulta los registros de Kilo para más detalles.",
   "command.session.compact": "Compactar sesión",
   "command.session.export": "Exportar transcripción de la sesión",
 
@@ -202,6 +206,8 @@ export const dict = {
   "prompt.action.send.blocked": "Responda o descarte la pregunta pendiente primero",
   "prompt.action.send.recording": "Transcribir y enviar",
   "prompt.action.stop": "Detener",
+  "prompt.action.stop.background": "Detener el agente principal. Los agentes en segundo plano siguen en ejecución.",
+  "prompt.agents.show": "Mostrar agentes en segundo plano",
   "prompt.action.enhance": "Mejorar prompt",
   "prompt.paste.expand": "Haz clic para expandir el texto pegado",
   "prompt.action.autoApprove.enable": "Activar aprobación automática",
@@ -846,7 +852,8 @@ export const dict = {
   "settings.browser.description":
     "Configura la automatización de navegador integrada basada en Playwright. Kilo puede navegar, interactuar y capturar pantallas de páginas web en tus sesiones.",
   "settings.browser.enable.title": "Activar automatización del navegador",
-  "settings.browser.enable.description": "Registrar el servidor Playwright MCP con el backend CLI.",
+  "settings.browser.enable.description":
+    "Activar el navegador de Agent Manager específico de cada sesión para aplicaciones locales y páginas HTTPS públicas.",
   "settings.browser.systemChrome.title": "Usar Chrome del sistema",
   "settings.browser.systemChrome.description":
     "Usar el navegador Chrome instalado en lugar de una instancia separada de Chromium.",
@@ -947,9 +954,6 @@ export const dict = {
     "Importar una vez las instrucciones globales CLAUDE.md compatibles, habilidades simples y definiciones MCP desactivadas. Los archivos originales de Claude no se modifican; reinicia el backend después de activar.",
   "settings.experimental.multiProject.description":
     "Habilitar la gestión de sesiones y worktrees en múltiples repositorios en Agent Manager. El repositorio del workspace actual es siempre el proyecto predeterminado.",
-  "settings.experimental.taskModelSelection.title": "Selección de modelo de subagente de Task",
-  "settings.experimental.taskModelSelection.description":
-    "Permite seleccionar explícitamente el modelo, proveedor y esfuerzo de razonamiento de los subagentes de Task.",
   "settings.experimental.mcpTimeout.title": "Tiempo de espera MCP (ms)",
   "settings.experimental.mcpTimeout.description": "Tiempo de espera para solicitudes del servidor MCP en milisegundos",
   "settings.experimental.remote.title": "Control Remote",
@@ -1158,6 +1162,9 @@ export const dict = {
   "settings.autoCleanup.runNow": "Ejecutar limpieza ahora",
   "settings.autoCleanup.runNow.confirm":
     "¿Eliminar permanentemente las sesiones caducadas en todos los proyectos y en todos los clientes de Kilo de esta máquina?",
+  "settings.autoCleanup.stop": "Detener limpieza",
+  "settings.autoCleanup.progress.cancelling": "Deteniendo la limpieza de sesiones...",
+  "settings.autoCleanup.lastRun.cancelled": "interrumpida",
   "settings.context.autoCompaction.title": "Compactación automática",
   "settings.context.autoCompaction.description": "Compactar automáticamente el contexto antes de que alcance el límite",
   "settings.context.compaction.title": "Compactación",
@@ -1329,14 +1336,12 @@ export const dict = {
   "task.todos.allDone": "{{count}} tareas completadas",
   "task.backgroundAgents.running.one": "1 agente en segundo plano",
   "task.backgroundAgents.running.many": "{{count}} agentes en segundo plano",
-  "task.backgroundAgents.more": "+{{count}} más",
   "task.backgroundAgents.open": "Abrir agente en segundo plano",
   "task.backgroundAgents.openAll": "Abrir todos los agentes en segundo plano",
   "task.backgroundAgents.cancel": "Detener",
   "task.backgroundAgents.continueInBackground": "Continuar en segundo plano",
   "task.backgroundAgents.waiting": "Un agente en segundo plano necesita tu entrada",
   "task.backgroundAgents.needsInput": "Necesita entrada",
-  "task.backgroundAgents.dismiss": "Descartar",
   "task.backgroundAgents.clearFinished": "Borrar completados",
   "task.backgroundAgents.summary": "{{running}} de {{total}} agentes en segundo plano en ejecución",
   "task.backgroundAgents.status.running": "En ejecución",
@@ -1345,6 +1350,8 @@ export const dict = {
   "task.backgroundAgents.status.error": "Error",
   "task.backgroundAgents.untitled": "Agente en segundo plano",
   "task.backgroundAgents.stopAll": "Detener todos ({{count}})",
+  "task.backgroundAgents.finished": "Agentes en segundo plano finalizados",
+  "task.stop": "Detener subagente",
   "settings.saveBar.unsavedChanges": "Cambios sin guardar",
   "settings.saveBar.discard": "Descartar",
   "settings.saveBar.save": "Guardar",

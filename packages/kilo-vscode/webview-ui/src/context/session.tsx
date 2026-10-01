@@ -26,6 +26,7 @@ import { useConfig } from "./config"
 import { useLanguage } from "./language"
 import { createCostAlertHandler } from "./cost-alert"
 import { showToast } from "@kilocode/kilo-ui/toast"
+import { touch } from "@kilocode/kilo-ui/tool-motion"
 import type {
   SessionInfo,
   SessionModelUsage,
@@ -93,6 +94,7 @@ import { preserveVariant, sessionVariantKeys, transferVariants, variantKey } fro
 import { createSessionVariants } from "./session-variants"
 import { KILO_AUTO, KILO_PROVIDER_ID, parseModelString } from "../../../src/shared/provider-model"
 import { type ReviewMessageData } from "../../../src/shared/review-comments"
+import { REVERT_ERROR_CODE } from "../../../src/shared/revert-error"
 import type { BrowserFeedbackData } from "../../../src/shared/browser-feedback"
 import { activeUserMessageID, removeQueuedMessage, visibleMessages as filterVisibleMessages } from "./session-queue"
 import { clearSessionDraftDiscarded, deleteDraftsForSession } from "../utils/draft-store"
@@ -106,7 +108,7 @@ import { createModelSelector } from "./session-model-selector"
 import { createModelPreferences } from "./session-model-preferences"
 import { createPreferenceLoader } from "./session-preference-loader"
 import { activities, blockedSessionIds, type Activity } from "../utils/session-activity"
-import { hold, type Timing } from "./session-timing"
+import { createTiming, running, type Timing } from "./session-timing"
 import type { SessionContextValue } from "./session-types"
 
 const RECENT_LIMIT = 5
@@ -143,6 +145,8 @@ export const SessionProvider: ParentComponent = (props) => {
   const provider = useProvider()
   const { config } = useConfig()
   const language = useLanguage()
+  // The Agent Manager nests a second provider for the subagent inspector; the outer one owns the toasts.
+  const nested = useContext(SessionContext) !== undefined
 
   // Current session ID
   const [currentSessionID, setCurrentSessionID] = createSignal<string | undefined>()
@@ -222,6 +226,7 @@ export const SessionProvider: ParentComponent = (props) => {
     return id ? isSubmitting(id) : false
   }
   const isSubmitting = (id: string) => (submissionMap[id] ?? 0) > 0
+  const goal = (id: string) => running(store.sessions[id]?.goal, statusMap[id]?.type, closeMap[id]?.reason)
 
   const [loading, setLoading] = createSignal(false)
   const [loaded, setLoaded] = createSignal<Set<string>>(new Set())
@@ -370,7 +375,7 @@ export const SessionProvider: ParentComponent = (props) => {
         delete map[sid]
       }),
     )
-    if ((statusMap[sid] ?? idle).type !== "idle") return
+    if ((statusMap[sid] ?? idle).type !== "idle" || goal(sid)) return
     setTimingMap(
       produce((map) => {
         delete map[sid]
@@ -820,6 +825,12 @@ export const SessionProvider: ParentComponent = (props) => {
   function handleError(message: Extract<ExtensionMessage, { type: "error" }>) {
     if (!message.sessionID || message.sessionID === currentSessionID()) setLoading(false)
     if (message.sessionID) patchPage(message.sessionID, { loadingInitial: false, loadingOlder: false })
+    if (message.code !== REVERT_ERROR_CODE || nested) return
+    showToast({
+      variant: "error",
+      title: language.t("common.requestFailed"),
+      description: language.t(REVERT_ERROR_CODE),
+    })
   }
 
   function closed(message: Extract<ExtensionMessage, { type: "sessionTurnClosed" }>) {
@@ -838,7 +849,8 @@ export const SessionProvider: ParentComponent = (props) => {
     })
   }
 
-  function failed(id: string, message: Message) {
+  function failed(id: string, message: Message, phase?: "admission" | "execution") {
+    if (phase === "admission") return
     if (message.error?.name === "ContextOverflowError" && closeMap[id]?.reason !== "error") {
       const ids = recoveries.get(id) ?? new Set<string>()
       ids.add(message.id)
@@ -1013,11 +1025,10 @@ export const SessionProvider: ParentComponent = (props) => {
           error: message.error,
           sessionErrorID: message.eventID,
         }
-        failed(sid, errorMsg)
+        failed(sid, errorMsg, message.phase)
         handleMessageCreated(errorMsg)
         break
       }
-
       case "error":
         handleError(message)
         break
@@ -1468,6 +1479,8 @@ export const SessionProvider: ParentComponent = (props) => {
 
     if (sessionID) patchPage(sessionID, { lastMutation: "update" })
     patchToolPart(sessionID, effectiveMessageID, part)
+    // Tool rows animate only when they mount right after a streamed update.
+    if (part.type === "tool") touch(part.id)
 
     // If the stash has parts for this message, hydrate them first so the
     // SSE update merges into the full part list rather than an empty array.
@@ -1565,11 +1578,12 @@ export const SessionProvider: ParentComponent = (props) => {
     if (newStatus === "busy" || newStatus === "retry") clearClose(sessionID)
     if (prev === "idle" && newStatus !== "idle") startTiming(sessionID)
     if (newStatus === "idle") {
-      setTimingMap(
-        produce((map) => {
-          delete map[sessionID]
-        }),
-      )
+      if (!goal(sessionID))
+        setTimingMap(
+          produce((map) => {
+            delete map[sessionID]
+          }),
+        )
       for (const msg of store.messages[sessionID] ?? []) optimisticParts.delete(msg.id)
       // Session is idle - any remaining pending optimistic IDs are either
       // already confirmed (messageCreated removed them) or orphaned (queued
@@ -1824,12 +1838,12 @@ export const SessionProvider: ParentComponent = (props) => {
     return ids
   })
 
-  /** Whether sid's family (self + subagents) is parked on a user prompt — the
-   *  working timer must pause for as long as this is true. */
+  /** Whether sid's family is parked on a user prompt or a transient offline state,
+   *  so the working timer holds for as long as this is true. */
   const parked = (sid: string) => {
     const family = sessionFamily(sid)
     for (const id of parkedIds()) if (family.has(id)) return true
-    return false
+    return store.sessions[sid]?.goal?.active === true && statusMap[sid]?.type === "offline"
   }
 
   /** Ensure sid has a timing entry and, unless parked, start (or continue) its clock. */
@@ -1839,15 +1853,13 @@ export const SessionProvider: ParentComponent = (props) => {
     setTimingMap(sid, "since", (v) => v ?? Date.now())
   }
 
-  // Pauses every running timing entry whose family is parked on a user prompt,
-  // and resumes any parked entry whose family has been cleared. Reads the map
-  // keys under `untrack` so writing the map here cannot re-trigger this computed.
-  createComputed(() => {
-    const now = Date.now()
-    for (const sid of untrack(() => Object.keys(timingMap))) {
-      if (parked(sid)) setTimingMap(sid, (t) => hold(t, now))
-      else setTimingMap(sid, "since", (v) => v ?? now)
-    }
+  createTiming({
+    sessions: () => Object.keys(store.sessions),
+    timing: timingMap,
+    running: goal,
+    parked,
+    start: startTiming,
+    set: setTimingMap,
   })
 
   const disconnected = createMemo<boolean>((previous) => {
@@ -1908,6 +1920,8 @@ export const SessionProvider: ParentComponent = (props) => {
       loaded,
       preserve,
       append,
+      hasMore,
+      open: paging.open(),
       fresh: freshSessions,
       setSessions: (updater) => setStore("sessions", produce(updater)),
     })
@@ -3047,6 +3061,7 @@ export const SessionProvider: ParentComponent = (props) => {
     loadSessions,
     loadMoreSessions: paging.loadMore,
     sessionsHasMore: paging.hasMore,
+    keepSessions: paging.keep,
     sessionsLoadingMore: paging.loadingMore,
     loadOlderMessages,
     selectSession,

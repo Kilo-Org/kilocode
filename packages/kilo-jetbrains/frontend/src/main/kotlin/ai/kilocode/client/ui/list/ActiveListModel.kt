@@ -1,6 +1,10 @@
 package ai.kilocode.client.ui.list
 
+import ai.kilocode.client.ui.FilledBadgeIcon
+import ai.kilocode.client.ui.LiveBadgeIcon
 import ai.kilocode.client.ui.UiStyle
+import ai.kilocode.client.ui.layout.LayoutPass
+import com.intellij.ui.AnimatedIcon
 import com.intellij.util.ui.JBUI
 import java.awt.Component
 import java.awt.Container
@@ -19,9 +23,10 @@ private const val CELL_GAP = 8
  * A pill or status glyph rendered before or after an [ActiveListItem] title. A non-null [id] opts the
  * badge into hit-testing; [action] requires an id to have any effect.
  *
- * An [icon] replaces the pill rather than joining it, so a badge is either a worded pill or a glyph. The
- * glyph form is how a row shows a status that already has a settled visual language — a CI or review
- * verdict — where a worded pill would only repeat what the icon already says.
+ * [segments] joins multiple worded pills into one badge. An [icon] replaces the pill rather than joining
+ * it, so a badge is either worded or a glyph. The glyph form is how a row shows a status that already has
+ * a settled visual language — a CI or review verdict — where a worded pill would only repeat what the icon
+ * already says.
  *
  * A glyph may still be labelled: an [icon] with a non-blank [text] renders the two side by side, in the
  * muted row color rather than a pill's own. That is the form for a status whose icon says what is being
@@ -35,7 +40,10 @@ internal data class ActiveListBadge(
     val tooltip: String? = null,
     val action: (() -> Unit)? = null,
     val icon: Icon? = null,
-)
+    val segments: List<FilledBadgeIcon.Segment> = emptyList(),
+) {
+    internal fun parts() = segments.ifEmpty { listOf(FilledBadgeIcon.Segment(text, style)) }
+}
 
 /**
  * A row's changes summary: what the row has committed against [base], and what it has left uncommitted.
@@ -66,11 +74,14 @@ internal enum class ActiveListRowHeight { EQUAL, PREFERRED }
 
 internal enum class ActiveListWeight { PLAIN, BOLD }
 
+internal enum class ActiveListIconAlignment { CENTER, TOP }
+
 internal data class ActiveListConfig(
     val height: ActiveListRowHeight = ActiveListRowHeight.EQUAL,
     val description: Boolean = true,
     val descriptionIndent: Boolean = true,
     val tooltip: Boolean = true,
+    val iconAlignment: ActiveListIconAlignment = ActiveListIconAlignment.CENTER,
     val selection: Int = ListSelectionModel.SINGLE_SELECTION,
     val hoverActions: Boolean = false,
     /** Weight used for the primary row title. */
@@ -86,6 +97,12 @@ internal data class ActiveListConfig(
      * title ("builtin", "env"), which read as part of it and would be covered by the hover actions.
      */
     val badgesRight: Boolean = false,
+    /**
+     * Wrap the description line to its full height instead of clipping/fading it to one line.
+     * Only meaningful together with [ActiveListRowHeight.PREFERRED]: a wrapped body under
+     * [ActiveListRowHeight.EQUAL] would still be capped to the shared row height.
+     */
+    val wrapDescription: Boolean = false,
 ) {
     companion object {
         val Equal = ActiveListConfig(ActiveListRowHeight.EQUAL)
@@ -195,6 +212,26 @@ internal fun activeListVisibleCells(item: ActiveListItem, active: Boolean): List
 
 internal fun activeListCellGap() = JBUI.scale(CELL_GAP)
 
+/**
+ * Whether [item] paints an animated glyph anywhere in its row, so an animation frame has to repaint it.
+ *
+ * Runs per visible row on every animation frame, so this checks each badge list directly instead of wrapping
+ * them in a `listOf(...)` first — the wrapper and its iterator would otherwise be allocated every frame.
+ */
+internal fun activeListAnimated(item: ActiveListItem): Boolean {
+    if (animated(item.icon)) return true
+    if (item.cells.any { animated(it.icon) }) return true
+    if (item.leading.any { animated(it.icon) }) return true
+    if (item.badges.any { animated(it.icon) }) return true
+    return item.secondaryBadges.any { animated(it.icon) }
+}
+
+private fun animated(icon: Icon?): Boolean = when (icon) {
+    is AnimatedIcon -> true
+    is LiveBadgeIcon -> animated(icon.icon)
+    else -> false
+}
+
 /** A hit-tested region of a rendered row, in list coordinates, with its interaction metadata. */
 internal class ActiveListHit(
     val id: String,
@@ -284,10 +321,15 @@ internal fun activeListCellAt(
     return activeListCellAt(list, index, point, selected, false)
 }
 
+/** Lays out [component] top-down as one [LayoutPass], so an invalidated stamp is measured once per container. */
 internal fun activeListLayout(component: Component) {
+    LayoutPass.measure { layoutTree(component) }
+}
+
+private fun layoutTree(component: Component) {
     if (component !is Container) return
     component.doLayout()
-    for (child in component.components) activeListLayout(child)
+    for (child in component.components) layoutTree(child)
 }
 
 /**

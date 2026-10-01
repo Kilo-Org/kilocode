@@ -77,6 +77,7 @@ import org.jetbrains.plugins.terminal.TerminalToolWindowFactory
 import java.awt.BorderLayout
 import java.awt.Color
 import java.awt.Frame
+import java.awt.event.HierarchyEvent
 import javax.swing.JComponent
 import javax.swing.JSeparator
 import javax.swing.ListSelectionModel
@@ -180,7 +181,8 @@ class WorktreeSessionEditorPanel @RequiresEdt constructor(
         ActionManager.getInstance().getAction("RenameElement")?.shortcutSet?.let { set ->
             rename.registerCustomShortcutSet(set, list, this)
         }
-        addHierarchyListener {
+        addHierarchyListener { event ->
+            if (event.changeFlags and HierarchyEvent.SHOWING_CHANGED.toLong() == 0L) return@addHierarchyListener
             if (isShowing) {
                 start()
                 project?.service<WorktreeStatusService>()?.refreshStats()

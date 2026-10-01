@@ -216,7 +216,7 @@ mcpTest.instance("failed reauthentication preserves existing credentials", () =>
 
     expect(yield* mcp.finishAuth(name, "invalid-code")).toEqual({
       status: "failed",
-      error: "OAuth completion failed: Token exchange failed",
+      error: "Token exchange failed: Token exchange failed (invalid_grant)", // kilocode_change
     })
     expect((yield* auth.get(name))?.tokens?.accessToken).toBe("working-token")
     expect((yield* auth.get(name))?.clientInfo).toMatchObject({

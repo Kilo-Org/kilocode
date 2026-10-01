@@ -4,15 +4,15 @@ JetBrains releases are locked by an immediate `jetbrains/v<version>` tag, then g
 
 The published code comes from `jetbrains/v<version>`. Marketplace and GitHub release notes come from the reviewed changelog merged in the release PR.
 
-## Skill-Assisted Release
+## Command-Assisted Release
 
-Maintainers can use the Kilo `release-jetbrains` skill to drive this process from a version request such as `next rc` or an explicit version. The skill resolves and confirms the version, dispatches and watches the prepare workflow, helps produce a filtered human-readable JetBrains/CLI changelog draft, commits the reviewed changelog to the release PR, and watches publishing after the PR is merged.
+Maintainers can use the Kilo `/release-jetbrains` command to drive this process from a version request such as `next rc` or an explicit version. The command resolves and confirms the version, dispatches and watches the prepare workflow, helps produce a filtered human-readable JetBrains/CLI changelog draft, commits the reviewed changelog to the release PR, and watches publishing after the PR is merged.
 
 JetBrains plugin builds and runtime downloads use the Kilo Core version pinned in `packages/kilo-jetbrains/package.json`, so verify that pin points at a published `v<version>` release before creating the release tag.
 
 `kilo.cli.pinned=false` in `packages/kilo-jetbrains/gradle.properties` is local development mode only. It generates the client from `packages/opencode/` and bundles a locally built CLI into the plugin; production Gradle builds and release scripts fail until the property is restored to `true`.
 
-The skill lives at `.kilo/skills/release-jetbrains/SKILL.md`. It does not move or recreate release tags, and merge permission is only required if the user explicitly asks the skill to merge the release PR automatically.
+The command lives at `.kilo/command/release-jetbrains.md` and reuses helper scripts at `.kilo/skills/release-jetbrains/script/`. It does not move or recreate release tags, and merge permission is only required if the user explicitly asks it to merge the release PR automatically.
 
 ## CLI Pin Review
 
@@ -48,7 +48,7 @@ bun .kilo/skills/release-jetbrains/script/set-pin.ts --latest --pr
 
 Merge the generated pin PR first, then re-run `check-pin.ts` and dispatch prepare. Do not dispatch prepare from a local-only pin edit.
 
-Stable CLI releases also try to open this pin bump PR automatically after publishing. The PR is labeled `jetbrains-cli-pin-bump`. Release publishing does not fail if creating the PR fails; inspect the publish log for either the PR URL or the warning with manual follow-up instructions.
+CLI releases also try to open this pin bump PR automatically after publishing. The PR is labeled `jetbrains-cli-pin-bump`, and pre-release CLI bump PRs also receive the `pre-release` label, including preview-channel releases with a plain semver version. Release publishing does not fail if creating the PR fails; inspect the publish log for either the PR URL or the warning with manual follow-up instructions.
 
 ## Create Release Tag And PR
 
@@ -184,5 +184,3 @@ git push origin jetbrains/v7.3.13
 | `JETBRAINS_CERTIFICATE_CHAIN` | PEM certificate chain for plugin signing. |
 | `JETBRAINS_PRIVATE_KEY` | PEM private key for plugin signing. |
 | `JETBRAINS_PRIVATE_KEY_PASSWORD` | Password for the private key. |
-
-Before the first publish, complete `RELEASE_TODO.md` to set up these secrets and the Marketplace plugin entry.

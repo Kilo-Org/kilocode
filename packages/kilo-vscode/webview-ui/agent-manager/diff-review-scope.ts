@@ -18,6 +18,8 @@ interface VsCode {
 export interface DiffReviewScopeOptions {
   /** Current diff context (worktree id or the LOCAL pseudo-id). */
   ctx: Accessor<string | undefined>
+  /** Project-namespaced memory key, separate from the protocol context. */
+  key: Accessor<string | undefined>
   /** Active session inside the context; the Session scope follows it. */
   session: Accessor<string | undefined>
   /** Whether the diff side panel is open. */
@@ -29,7 +31,7 @@ export interface DiffReviewScopeOptions {
 }
 
 export function createDiffReviewScope(opts: DiffReviewScopeOptions) {
-  const scope = createDiffScope(opts.ctx)
+  const scope = createDiffScope(opts.key)
   // The composite id (ctx#scope, or ctx#session:<sid>) the extension keys
   // diff data by. Rebuilds when the active session changes while the Session
   // scope is active, so a session tab switch refetches that session's diff.

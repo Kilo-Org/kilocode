@@ -23,7 +23,16 @@ Plugins extend Kilo by hooking into events, adding custom tools, registering aut
 
 ## Use a plugin
 
-There are three ways to load plugins.
+You can load plugins in several ways.
+
+### Install from the Marketplace
+
+Plugins appear in the **Marketplace** panel in the VS Code extension. Select a plugin, then choose a scope:
+
+- **Project** adds the plugin to the `plugin` array in the project config file.
+- **Global** adds the plugin to the `plugin` array in your user config file.
+
+The install dialog shows the destination before it changes anything. You can install registry plugins and git-hosted plugins in the same way.
 
 ### From a config file
 
@@ -304,6 +313,45 @@ const EscapeBash: Plugin = async () => ({
 
 export default { id: "escape-bash", server: EscapeBash }
 ```
+
+## Publish your plugin to the Marketplace
+
+The [Kilo Marketplace](https://github.com/Kilo-Org/kilo-marketplace) lists plugins from two sources:
+
+- **Registry plugins** are published to npm. Set the catalog `content` to the package name, for example `my-plugin` or `my-plugin@^1.2.0`.
+- **Git-hosted plugins** live in a public git repository. Set the catalog `content` to a git spec.
+
+A git spec uses this grammar:
+
+```text
+git:<repo>[@ref][#subpath]
+```
+
+- `repo` is `github.com/owner/repo` or a full URL with an `https`, `http`, `git`, or `ssh` scheme. The repo must not contain `@`.
+- `ref` (optional) is a branch, tag, or commit after the last `@`.
+- `subpath` (optional) is the plugin directory inside the repository, after the first `#`.
+
+The catalog `id` must equal the plugin identity. For a registry plugin, use the npm package name. For a git plugin, use the normalized git identity: `git/` plus the repo without its scheme and without a trailing `.git`, plus the subpath when present. For example, `git:github.com/owner/repo@v1` has the id `git/github.com/owner/repo`.
+
+Git plugins must be self-contained. Kilo clones the repository at the given ref and loads the plugin directly. It does not install npm dependencies for git plugins, so vendor any runtime dependencies into the repository.
+
+The repository or package must contain a `package.json` that declares at least one supported target:
+
+| Target | Manifest entry | Config |
+|---|---|---|
+| Server | `exports["./server"]`, or the legacy `main` entry | `opencode.json` |
+| TUI | `exports["./tui"]`, or `oc-themes` for theme packages | `tui.json` |
+
+For a plugin that supports both targets, use separate `./server` and `./tui` entry modules.
+
+### Submit your plugin
+
+1. Choose the source. Publish and test a registry plugin, or host a self-contained plugin in a public git repository.
+2. Add a `PLUGIN.yaml` entry under `plugins/<id>/PLUGIN.yaml` in the [Kilo Marketplace repository](https://github.com/Kilo-Org/kilo-marketplace). The directory path must equal `id`.
+3. Regenerate `plugins/marketplace.yaml` with the generator in the marketplace repository. Do not edit it manually.
+4. Submit a pull request with the manifest and the regenerated catalog. Describe what the plugin does, its source, and which targets you tested.
+
+See the [plugin README](https://github.com/Kilo-Org/kilo-marketplace/blob/main/plugins/README.md) for the `PLUGIN.yaml` fields and the generator commands, and the [contribution guidelines](https://github.com/Kilo-Org/kilo-marketplace/blob/main/CONTRIBUTING.md) for the review process.
 
 ---
 

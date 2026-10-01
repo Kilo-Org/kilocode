@@ -4,6 +4,8 @@ package ai.kilocode.client.app
 
 import ai.kilocode.rpc.KiloWorkspaceRpcApi
 import ai.kilocode.rpc.dto.ConfigTargetDto
+import ai.kilocode.rpc.dto.ConfigDto
+import ai.kilocode.rpc.dto.ConfigPatchDto
 import ai.kilocode.rpc.dto.DiffFileDto
 import ai.kilocode.rpc.dto.FileSearchResultDto
 import ai.kilocode.rpc.dto.KiloWorkspaceStateDto
@@ -97,6 +99,29 @@ class KiloWorkspaceService internal constructor(
         return workspace
     }
 
+    suspend fun config(directory: String): ConfigDto? {
+        return try {
+            call { config(directory) }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            LOG.warn("Workspace config load failed for directory=$directory", e)
+            null
+        }
+    }
+
+    fun updateConfigAsync(directory: String, patch: ConfigPatchDto, done: (ConfigDto?) -> Unit): Job = cs.launch {
+        val config = try {
+            call { updateConfig(directory, patch) }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            LOG.warn("Workspace config update failed for directory=$directory", e)
+            null
+        }
+        done(config)
+    }
+
     /**
      * Resolve the real project directory from a hint path.
      *
@@ -135,6 +160,18 @@ class KiloWorkspaceService internal constructor(
                 LOG.warn("workspace reload failed for $directory", e)
             }
         }
+    }
+
+    fun reloadCoreSettings(directory: String, done: (CoreReloadResult) -> Unit = {}): Job = cs.launch {
+        val result = try {
+            if (call { reloadCoreSettings(directory) }) CoreReloadResult.SUCCESS else CoreReloadResult.BUSY
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            LOG.warn("Core settings reload failed for directory=$directory", e)
+            CoreReloadResult.FAILED
+        }
+        edt { done(result) }
     }
 
     suspend fun models(directory: String): ModelsWorkspaceDto {
@@ -352,4 +389,10 @@ class KiloWorkspaceService internal constructor(
         edt { found(target) }
     }
 
+}
+
+enum class CoreReloadResult {
+    SUCCESS,
+    BUSY,
+    FAILED,
 }

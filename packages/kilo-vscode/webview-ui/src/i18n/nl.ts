@@ -90,10 +90,13 @@ export const dict = {
     "Conversatie teruggedraaid. Bestandswijzigingen zijn niet hersteld omdat snapshots zijn uitgeschakeld.",
   "revert.banner.workspace.unavailable":
     "Conversatie teruggedraaid. Er was geen bestandscheckpoint beschikbaar, dus wijzigingen in de werkruimte zijn niet hersteld.",
+  "revert.banner.workspace.notAGitRepo":
+    "Conversatie teruggedraaid. Bestandscheckpoints vereisen een Git-repository, dus wijzigingen in de werkruimte zijn niet hersteld.",
   "revert.banner.workspace.legacy":
     "Gesprek teruggedraaid. De herstelstatus van de werkruimte is niet beschikbaar voor deze eerdere terugdraaiing.",
   "revert.banner.workspace.enableSnapshots": "Snapshots inschakelen",
   "revert.disabled.agentBusy": "Wacht tot de agent klaar is",
+  "revert.error.body": "De repository is mogelijk in gebruik. Probeer het opnieuw of bekijk de Kilo-logs voor details.",
   "command.session.compact": "Sessie comprimeren",
   "command.session.export": "Sessietranscript exporteren",
 
@@ -202,6 +205,8 @@ export const dict = {
   "prompt.action.send.blocked": "Beantwoord of negeer eerst de openstaande vraag",
   "prompt.action.send.recording": "Transcriberen en verzenden",
   "prompt.action.stop": "Stop",
+  "prompt.action.stop.background": "Hoofdagent stoppen. Achtergrondagenten blijven actief.",
+  "prompt.agents.show": "Achtergrondagenten tonen",
   "prompt.action.enhance": "Prompt verbeteren",
   "prompt.paste.expand": "Klik om geplakte tekst uit te vouwen",
   "prompt.action.indexing": "Indexeringsinstellingen",
@@ -831,7 +836,8 @@ export const dict = {
   "settings.browser.description":
     "Configureer ingebouwde browserautomatisering mogelijk gemaakt door Playwright. Kilo kan in je sessies door webpagina's navigeren, ermee werken en schermafbeeldingen maken.",
   "settings.browser.enable.title": "Browserautomatisering inschakelen",
-  "settings.browser.enable.description": "Registreer de Playwright MCP-server bij de CLI backend.",
+  "settings.browser.enable.description":
+    "Schakel de sessiegebonden browser van Agent Manager in voor lokale applicaties en openbare HTTPS-pagina's.",
   "settings.browser.systemChrome.title": "Gebruik Systeem Chrome",
   "settings.browser.systemChrome.description":
     "Gebruik je geïnstalleerde Chrome-browser in plaats van een aparte Chromium-instantie.",
@@ -936,9 +942,6 @@ export const dict = {
     "Importeer ondersteunde globale CLAUDE.md-instructies, eenvoudige vaardigheden en uitgeschakelde MCP-definities één keer. Originele Claude-bestanden blijven ongewijzigd; herstart de backend na inschakelen.",
   "settings.experimental.multiProject.description":
     "Schakel het beheren van sessies en worktrees over meerdere repositories in Agent Manager in. De huidige workspace-repository is altijd het standaardproject.",
-  "settings.experimental.taskModelSelection.title": "Task-subagentmodel selecteren",
-  "settings.experimental.taskModelSelection.description":
-    "Sta toe dat je expliciet een model, provider en redeneerinspanning kiest voor Task-subagents.",
   "settings.experimental.mcpTimeout.title": "MCP Timeout (ms)",
   "settings.experimental.mcpTimeout.description": "Timeout voor MCP-serververzoeken in milliseconden",
   "settings.experimental.remote.title": "Remote-bediening",
@@ -1112,6 +1115,9 @@ export const dict = {
   "settings.autoCleanup.runNow": "Opschoning nu uitvoeren",
   "settings.autoCleanup.runNow.confirm":
     "Verlopen sessies definitief verwijderen in alle projecten en alle Kilo-clients op deze machine?",
+  "settings.autoCleanup.stop": "Opschonen stoppen",
+  "settings.autoCleanup.progress.cancelling": "Sessie-opschoning wordt gestopt...",
+  "settings.autoCleanup.lastRun.cancelled": "afgebroken",
 
   "settings.context.autoCompaction.title": "Automatische Compactie",
   "settings.context.autoCompaction.description": "Context automatisch compacteren voordat deze de limiet bereikt",
@@ -1297,14 +1303,12 @@ export const dict = {
   "task.todos.allDone": "{{count}} to-do's voltooid",
   "task.backgroundAgents.running.one": "1 achtergrondagent",
   "task.backgroundAgents.running.many": "{{count}} achtergrondagenten",
-  "task.backgroundAgents.more": "+{{count}} meer",
   "task.backgroundAgents.open": "Achtergrondagent openen",
   "task.backgroundAgents.openAll": "Alle achtergrondagenten openen",
   "task.backgroundAgents.cancel": "Stoppen",
   "task.backgroundAgents.continueInBackground": "Doorgaan op de achtergrond",
   "task.backgroundAgents.waiting": "Een achtergrondagent heeft je invoer nodig",
   "task.backgroundAgents.needsInput": "Invoer vereist",
-  "task.backgroundAgents.dismiss": "Negeren",
   "task.backgroundAgents.clearFinished": "Voltooide wissen",
   "task.backgroundAgents.summary": "{{running}} van {{total}} achtergrondagenten actief",
   "task.backgroundAgents.status.running": "Actief",
@@ -1313,6 +1317,8 @@ export const dict = {
   "task.backgroundAgents.status.error": "Fout",
   "task.backgroundAgents.untitled": "Achtergrondagent",
   "task.backgroundAgents.stopAll": "Alles stoppen ({{count}})",
+  "task.backgroundAgents.finished": "Achtergrondagenten voltooid",
+  "task.stop": "Subagent stoppen",
 
   "settings.saveBar.unsavedChanges": "Niet-opgeslagen wijzigingen",
   "settings.saveBar.discard": "Verwerpen",

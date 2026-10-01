@@ -1,6 +1,7 @@
 package ai.kilocode.client.session
 
 import ai.kilocode.client.KiloNotifications
+import ai.kilocode.client.actions.reloadCoreSettings
 import ai.kilocode.client.app.KiloAppService
 import ai.kilocode.client.app.KiloSessionService
 import ai.kilocode.client.app.KiloWorkspaceService
@@ -16,6 +17,7 @@ import ai.kilocode.client.onboarding.OnboardingController
 import ai.kilocode.client.onboarding.OnboardingStep
 import ai.kilocode.client.onboarding.ui.OnboardingListCard
 import ai.kilocode.client.plugin.KiloBundle
+import ai.kilocode.client.plugin.KiloDocs
 import ai.kilocode.client.plugin.KiloPluginSettings
 import ai.kilocode.client.session.board.SessionBoardDialog
 import ai.kilocode.client.session.model.FileAttachment
@@ -69,11 +71,13 @@ import ai.kilocode.client.session.controller.SessionController
 import ai.kilocode.client.session.controller.SessionControllerEvent
 import ai.kilocode.client.session.context.EditorContextGatherer
 import ai.kilocode.client.session.ui.style.SessionUiStyle
+import ai.kilocode.client.session.views.BackgroundPromote
 import ai.kilocode.client.session.views.LoginRequiredView
 import ai.kilocode.client.session.views.SessionOutcomeView
 import ai.kilocode.client.session.views.permission.PermissionView
 import ai.kilocode.client.session.views.question.QuestionView
 import ai.kilocode.client.settings.KiloSettingsConfigurable
+import ai.kilocode.client.settings.checkpoints.CheckpointsConfigurable
 import ai.kilocode.client.settings.profile.UserProfileConfigurable
 import ai.kilocode.client.telemetry.Telemetry
 import ai.kilocode.client.util.UiTimerSource
@@ -545,14 +549,32 @@ class SessionUi(
             fork = if (forkSurface) ({ id -> forkMessage(id, "message") }) else null,
             cancelRevert = if (readonly) null else ::cancelRevert,
             deleteQueued = if (readonly) null else { id -> controller.deleteQueuedMessage(id) },
-            banner = if (readonly) null else RevertBanner(controller.model, ::redo, controller::redoAll, ::cancelRevert, focus),
+            banner = if (readonly) null else RevertBanner(
+                controller.model,
+                ::redo,
+                controller::redoAll,
+                ::cancelRevert,
+                focus,
+                openSettingsAction = ::openCheckpointsSettings,
+            ),
             onOpenSubagent = ::openSubagent,
+            onPromoteBackgroundAgent = if (readonly) null else BackgroundPromote(
+                available = { app.state.value.backgroundSubagents },
+                promote = controller::promoteBackgroundAgent,
+            ),
         ).also {
             it.outcome = outcome
             it.setDiffOpener(::openInlineDiff, controller.id)
             it.onHover = { view, on -> if (on) popup.show(view) else popup.notifyExit(view) }
         }
-        header = SessionHeaderPanel(controller, this, readonly, boardVisible = { board }, onShowBoard = ::showBoard)
+        header = SessionHeaderPanel(
+            controller,
+            this,
+            readonly,
+            boardVisible = { board },
+            onShowBoard = ::showBoard,
+            onOpenSubagent = ::openSubagent,
+        )
         if (!readonly && showBranchDock()) {
             val owner = manager
             val newWorktree = if (owner?.supportsNewWorktree == true) owner::newWorktree else null
@@ -815,6 +837,7 @@ class SessionUi(
                 is SessionModelEvent.ContentRemoved,
                 is SessionModelEvent.DiffUpdated,
                 is SessionModelEvent.TodosUpdated,
+                is SessionModelEvent.BackgroundAgentsUpdated,
                 is SessionModelEvent.HeaderUpdated,
                 is SessionModelEvent.Compacted -> Unit
             }
@@ -872,7 +895,16 @@ class SessionUi(
     private fun bindStyle() {
         addHierarchyListener { event ->
             if ((event.changeFlags and HierarchyEvent.SHOWING_CHANGED.toLong()) == 0L) return@addHierarchyListener
-            if (isShowing) refreshBranch() else popup.hideAll()
+            if (isShowing) {
+                refreshBranch()
+                // A question/permission asked while this session was hidden is applied immediately
+                // to the model (so history activity stays fresh) but the transcript catch-up flush
+                // is what actually re-renders it. Run after that catch-up is scheduled so the active
+                // prompt is surfaced and scrolled into view rather than left silently active off-screen.
+                ApplicationManager.getApplication().invokeLater { surfaceActivePrompt() }
+            } else {
+                popup.hideAll()
+            }
         }
 
         val bus = ApplicationManager.getApplication().messageBus.connect(this)
@@ -961,7 +993,7 @@ class SessionUi(
         // Only the prompt path uses editor context; gather after the command branches so slash
         // commands and client actions don't pay the editor-context cost or hit its failure modes.
         val editor = EditorContextGatherer.gather(project, workspace.directory)
-        val allFiles = files + listOfNotNull(editor.selection)
+        val allFiles = files + editor.selection
         LOG.debug {
             val parts = buildList {
                 text.takeIf { it.isNotBlank() }?.let { add(PromptPartDto(type = "text", text = it)) }
@@ -1047,8 +1079,9 @@ class SessionUi(
             SlashAction.AGENTS to { prompt.mode.open() },
             SlashAction.VARIANT to { prompt.reasoning.open() },
             SlashAction.COMPACT to { controller.compact() },
+            SlashAction.RELOAD to { reloadCoreSettings(workspaces, workspace.directory, project, "slash_command") },
             SlashAction.SETTINGS to { openKiloSettings() },
-            SlashAction.HELP to { BrowserUtil.browse("https://kilo.ai/docs") },
+            SlashAction.HELP to { BrowserUtil.browse(KiloDocs.BASE) },
         )
         return SlashAction.ALL.map { spec -> bind(spec, fns.getValue(spec)) }
     }
@@ -1139,7 +1172,8 @@ class SessionUi(
 
     @RequiresEdt
     private fun openSubagent(sessionId: String, title: String) {
-        service<SubagentTitleCache>().put(sessionId, title)
+        val color = AgentAvatarIdentity.palette(controller.model.childSessions())[sessionId]
+        service<SubagentTitleCache>().put(sessionId, title, color)
         ensureSubagentSessionEditorKind()
         project.service<KiloVfsManager>().open(
             SubagentSessionEditorKind.ID,
@@ -1378,6 +1412,25 @@ class SessionUi(
         manager?.activityChanged()
     }
 
+    /**
+     * Re-surface an active question or permission after this session's component becomes visible.
+     * `SessionController.handleHidden()` applies `QuestionAsked`/`PermissionAsked` to the model
+     * immediately even while hidden, so history activity stays fresh, but the transcript catch-up
+     * flush only replays buffered message/part events — it does not re-run the state-driven view
+     * sync or scroll. Without this, a prompt that arrived while hidden stays correctly modeled but
+     * invisible/unscrolled when the user reopens the session.
+     */
+    private fun surfaceActivePrompt() {
+        if (disposed || !isShowing) return
+        if (!this::messageBody.isInitialized || !this::scroll.isInitialized) return
+        val state = controller.model.state
+        if (state !is SessionState.AwaitingQuestion && state !is SessionState.AwaitingPermission) return
+        messageBody.syncActiveState(state)
+        scroll.setQuestionPending(questionPending(state))
+        scroll.followBottom(true)
+        refresh()
+    }
+
     private fun refresh() {
         if (disposed) return
         scroll.refresh()
@@ -1406,6 +1459,16 @@ class SessionUi(
                 cfg is ConfigurableWithId && cfg.getId() == UserProfileConfigurable.ID
             },
             { cfg: Configurable -> cfg.focusOn(UserProfileConfigurable.FOCUS_ACCOUNT_COMBO) },
+        )
+    }
+
+    private fun openCheckpointsSettings() {
+        ShowSettingsUtil.getInstance().showSettingsDialog(
+            project,
+            Predicate { cfg: Configurable ->
+                cfg is ConfigurableWithId && cfg.getId() == CheckpointsConfigurable.ID
+            },
+            { _: Configurable -> },
         )
     }
 

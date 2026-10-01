@@ -7,14 +7,16 @@ import ai.kilocode.client.agentManager.SidePanelKeys
 import ai.kilocode.client.agentManager.SidePanelMode
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
-import com.intellij.openapi.actionSystem.ex.ActionUtil
+import com.intellij.openapi.actionSystem.Presentation
+import com.intellij.openapi.actionSystem.ex.CustomComponentAction
 import com.intellij.openapi.project.DumbAware
+import javax.swing.JComponent
 
 class NewSessionAction : AnAction(
     KiloBundle.message("action.Kilo.NewSession.text"),
     KiloBundle.message("action.Kilo.NewSession.description"),
     KiloActionIcons.add,
-), DumbAware {
+), DumbAware, CustomComponentAction {
     override fun actionPerformed(e: AnActionEvent) {
         Telemetry.send("New Session Clicked", mapOf("surface" to "tool_window"))
         e.getData(SessionManager.KEY)?.newSession()
@@ -26,6 +28,8 @@ class NewSessionAction : AnAction(
         e.presentation.icon = KiloActionIcons.add
         if (!e.isFromActionToolbar) return
         e.presentation.text = KiloBundle.message("action.Kilo.NewSession.toolbar")
-        e.presentation.putClientProperty(ActionUtil.SHOW_TEXT_IN_TOOLBAR, true)
     }
+
+    override fun createCustomComponent(presentation: Presentation, place: String): JComponent =
+        titleButton(presentation, place)
 }

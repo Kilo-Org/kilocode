@@ -400,7 +400,7 @@ describe("handleFileSearch", () => {
     }
     vscode.workspace.fs.stat = async (uri) => {
       if (path.resolve(uri.fsPath) !== path.resolve("/other", "src/note.ts")) throw new Error("ENOENT")
-      return stat(uri)
+      return { type: vscode.FileType.File, ctime: 0, mtime: 0, size: 0 }
     }
     try {
       await handleFileSearch({

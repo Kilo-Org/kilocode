@@ -132,6 +132,7 @@ describe("session model usage", () => {
 
       expect(yield* ModelUsage.get(child.id)).toEqual({
         sessionIDs: [root.id, sibling.id, child.id].sort(),
+        sessionCost: 0.75,
         totals: {
           steps: 3,
           cost: 1.125,
@@ -158,6 +159,46 @@ describe("session model usage", () => {
   it.instance("returns undefined for a missing session", () =>
     Effect.gen(function* () {
       expect(yield* ModelUsage.get(SessionID.make("ses_missing"))).toBeUndefined()
+    }),
+  )
+
+  it.instance("scopes persisted cost to a session and its descendants, including reverted history", () =>
+    Effect.gen(function* () {
+      const sessions = yield* Session.Service
+      const root = yield* sessions.create({ title: "root" })
+      const child = yield* sessions.create({ title: "child", parentID: root.id })
+      const sibling = yield* sessions.create({ title: "sibling", parentID: root.id })
+      const grand = yield* sessions.create({ title: "grandchild", parentID: child.id })
+      const model = ref("test", "model")
+      for (const [session, cost] of [
+        [root, 1],
+        [child, 2],
+        [sibling, 4],
+        [grand, 8],
+      ] as const) {
+        const message = yield* seed(session.id, model)
+        yield* step({
+          sessionID: session.id,
+          messageID: message.id,
+          cost,
+          tokens: message.tokens,
+        })
+      }
+
+      expect((yield* ModelUsage.get(root.id))?.sessionCost).toBe(15)
+      expect((yield* ModelUsage.get(child.id))?.sessionCost).toBe(10)
+      expect((yield* ModelUsage.get(grand.id))?.sessionCost).toBe(8)
+      expect((yield* ModelUsage.get(sibling.id))?.sessionCost).toBe(4)
+
+      // Undo hides transcript rows, but does not refund their recorded spend.
+      const messages = yield* sessions.messages({ sessionID: child.id })
+      yield* sessions.setRevert({
+        sessionID: child.id,
+        revert: { messageID: messages.at(0)!.info.id },
+        summary: undefined,
+      })
+      expect((yield* ModelUsage.get(child.id))?.sessionCost).toBe(10)
+      expect((yield* ModelUsage.get(child.id))?.totals.cost).toBe(15)
     }),
   )
 
@@ -192,6 +233,7 @@ describe("session model usage", () => {
       const usage = { steps: 1, cost: part.cost, tokens: part.tokens }
       expect(yield* ModelUsage.get(root.id)).toEqual({
         sessionIDs: [root.id],
+        sessionCost: 0.25,
         totals: usage,
         models: [{ ...model, ...usage }],
       })
@@ -201,6 +243,7 @@ describe("session model usage", () => {
       const totals = { steps: 1, cost: updated.cost, tokens: updated.tokens }
       expect(yield* ModelUsage.get(root.id)).toEqual({
         sessionIDs: [root.id],
+        sessionCost: 0.5,
         totals,
         models: [{ ...model, ...totals }],
       })

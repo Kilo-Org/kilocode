@@ -78,7 +78,7 @@ class ShellToolViewTest : BasePlatformTestCase() {
         assertVisibleSurfaces(view, 2)
     }
 
-    fun `test shell header subtitle is normalized to one html line`() {
+    fun `test shell header subtitle is normalized to one plain line`() {
         val view = track(ShellToolView(tool().also {
             it.input = mapOf("command" to "printf 'one\ntwo'", "description" to "Run first line\nthen second line")
             it.output = "one\ntwo"
@@ -86,7 +86,7 @@ class ShellToolViewTest : BasePlatformTestCase() {
 
         assertTrue(view.labelText().contains("Run first line then second line"))
         assertFalse(view.labelText().contains("\n"))
-        assertTrue(view.subtitleMarkup().contains("<nobr>Run first line then second line</nobr>"))
+        assertEquals("Run first line then second line", view.subtitleValue())
         assertEquals("printf 'one\ntwo'\n\none\ntwo", view.bodyText())
         view.toggle()
 
@@ -562,7 +562,7 @@ class ShellToolViewTest : BasePlatformTestCase() {
         label.setSize(label.preferredSize.width, label.preferredSize.height)
     }
 
-    private fun subtitle(view: ShellToolView): JBLabel = labels(view).first { it.text == view.subtitleMarkup() }
+    private fun subtitle(view: ShellToolView): JBLabel = labels(view).first { it.text == view.subtitleValue() }
 
     private fun labels(root: Container): List<JBLabel> = root.components.flatMap { child ->
         val nested = if (child is Container) labels(child) else emptyList()

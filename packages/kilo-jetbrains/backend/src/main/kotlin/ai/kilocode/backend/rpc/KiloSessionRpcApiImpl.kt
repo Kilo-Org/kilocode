@@ -10,6 +10,7 @@ import ai.kilocode.backend.app.KiloBackendSessionManager
 import ai.kilocode.backend.workspace.KiloBackendWorkspaceManager
 import ai.kilocode.log.ChatLogSummary
 import ai.kilocode.rpc.KiloSessionRpcApi
+import ai.kilocode.rpc.dto.BackgroundJobDto
 import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.CloudSessionListDto
 import ai.kilocode.rpc.dto.DiffFileDto
@@ -301,6 +302,7 @@ class KiloSessionRpcApiImpl internal constructor(
         app.requireReady()
         log.info("replyPermission: requestId=$requestId, reply=${reply.reply}")
         chat.replyPermission(requestId, directory, reply)
+        if (chat.permissionPending(requestId, directory) == false) activity.resolve(requestId)
     }
 
     override suspend fun savePermissionRules(requestId: String, directory: String, rules: PermissionAlwaysRulesDto) {
@@ -313,12 +315,14 @@ class KiloSessionRpcApiImpl internal constructor(
         app.requireReady()
         log.info("replyQuestion: requestId=$requestId, answers=${answers.answers.size}")
         chat.replyQuestion(requestId, directory, answers)
+        if (chat.questionPending(requestId, directory) == false) activity.resolve(requestId)
     }
 
     override suspend fun rejectQuestion(requestId: String, directory: String) {
         app.requireReady()
         log.info("rejectQuestion: requestId=$requestId")
         chat.rejectQuestion(requestId, directory)
+        if (chat.questionPending(requestId, directory) == false) activity.resolve(requestId)
     }
 
     override suspend fun pendingPermissions(directory: String): List<PermissionRequestDto> =
@@ -334,6 +338,17 @@ class KiloSessionRpcApiImpl internal constructor(
 
     override suspend fun resetSessionBoard(sessionID: String, directory: String, revision: Int): SessionBoardDto? =
         ready { withContext(Dispatchers.IO) { sessions.resetSessionBoard(sessionID, directory, revision) } }
+
+    // ------ background subagents ------
+
+    override suspend fun backgroundJobs(id: String, directory: String): Flow<List<BackgroundJobDto>> =
+        sessions.backgroundJobs(id, directory)
+
+    override suspend fun cancelBackgroundJob(id: String, directory: String): Boolean =
+        ready { withContext(Dispatchers.IO) { sessions.cancelBackgroundJob(id, directory) } }
+
+    override suspend fun promoteBackgroundJob(id: String, directory: String): Boolean =
+        ready { withContext(Dispatchers.IO) { sessions.promoteBackgroundJob(id, directory) } }
 
     private suspend fun <T> ready(block: suspend () -> T): T {
         app.requireReady()

@@ -191,6 +191,22 @@
   flex-shrink: 0;
 }
 
+/* A pinned tab has no close button, so the pin marker is the only pin
+   affordance on the tab itself. */
+.session-tab-bar .am-tab-pin {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+  opacity: 0.75;
+}
+
+.session-tab-bar .am-tab-pin [data-component="icon"] {
+  color: currentColor;
+}
+
 .session-tab-bar .am-tab-icon[data-activity="waiting"],
 .session-tab-switcher-popover .search-menu-icon[data-activity="waiting"],
 .session-tab-switcher-popover .session-tab-switcher-meta[data-activity="waiting"] {

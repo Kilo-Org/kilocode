@@ -31,12 +31,21 @@ export interface BrowserController {
   setUrl: (value: string) => void
   open: () => void
   refresh: () => void
+  back: () => void
+  forward: () => void
   close: () => void
   toggleSelecting: () => void
   toggleTools: () => void
   move: (value: BrowserPosition) => void
   select: (value: BrowserPosition) => void
   dispose: () => void
+}
+
+function address(value: string): string {
+  if (/^[a-z][a-z\d+.-]*:\/\//i.test(value)) return value
+  const host = value.replace(/^\/\//, "")
+  const scheme = /^(?:localhost|127\.0\.0\.1|0\.0\.0\.0)(?=[:/?#]|$)/i.test(host) ? "http" : "https"
+  return `${scheme}://${host}`
 }
 
 export function createBrowserController(props: BrowserControllerOptions): BrowserController {
@@ -84,7 +93,7 @@ export function createBrowserController(props: BrowserControllerOptions): Browse
     props.transport.send(command)
   }
 
-  const request = (type: "refresh" | "close" | "state") => {
+  const request = (type: "refresh" | "back" | "forward" | "close" | "state") => {
     sync()
     if (!current) return
     send({ type, scope: current })
@@ -173,7 +182,7 @@ export function createBrowserController(props: BrowserControllerOptions): Browse
   }
 
   const receive = (event: BrowserEvent) => {
-    if (disposed) return
+    if (disposed || event.type === "frame") return
     sync()
     if (!current) return
     if (event.type === "state") return receiveState(event.value)
@@ -231,9 +240,13 @@ export function createBrowserController(props: BrowserControllerOptions): Browse
       if (!sync() || !current) return
       const value = url().trim()
       if (!value) return
-      send({ type: "open", scope: current, url: /^https?:\/\//i.test(value) ? value : `http://${value}` })
+      const target = address(value)
+      setUrl(target)
+      send({ type: "open", scope: current, url: target })
     },
     refresh: () => request("refresh"),
+    back: () => request("back"),
+    forward: () => request("forward"),
     close: () => {
       if (!sync()) return
       stop()

@@ -86,6 +86,13 @@
   scrollbar-gutter: stable;
 }
 
+/* Rows that overflow Virtua's container must not change the scroll height
+   before Virtua measures them. See VirtualBox in MessageList.tsx. `clip` does
+   not create a scroll container, so sticky content keeps working. */
+[data-slot="message-list-virtual"] {
+  overflow: visible clip;
+}
+
 .message-list-loading {
   display: flex;
   flex-direction: column;
@@ -331,6 +338,11 @@
   margin-block: -0.75em;
   overflow: hidden;
   transition: width var(--working-status-glide) var(--working-status-ease);
+}
+
+/* The lock itself is instant. Only the release to the incoming width glides. */
+.working-status[data-lock] {
+  transition: none;
 }
 
 /* Set by StatusText while the label does not fit, so the cut reads as truncation

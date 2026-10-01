@@ -88,9 +88,12 @@ export const dict = {
   "revert.banner.workspace.snapshotsDisabled": "تم التراجع عن المحادثة. لم تُستعَد تغييرات الملفات لأن اللقطات معطّلة.",
   "revert.banner.workspace.unavailable":
     "تم التراجع عن المحادثة. لم تكن هناك نقطة تحقق للملفات، لذا لم تُستعَد تغييرات مساحة العمل.",
+  "revert.banner.workspace.notAGitRepo":
+    "تم التراجع عن المحادثة. تتطلب نقاط تحقق الملفات مستودع Git، لذا لم تُستعَد تغييرات مساحة العمل.",
   "revert.banner.workspace.legacy": "تم التراجع عن المحادثة. حالة استعادة مساحة العمل غير متاحة لهذا التراجع السابق.",
   "revert.banner.workspace.enableSnapshots": "تفعيل اللقطات",
   "revert.disabled.agentBusy": "انتظر انتهاء الوكيل",
+  "revert.error.body": "قد يكون المستودع قيد الاستخدام. أعد المحاولة أو راجع سجلات Kilo للتفاصيل.",
   "command.session.compact": "ضغط الجلسة",
   "command.session.export": "تصدير سجل الجلسة",
 
@@ -197,6 +200,8 @@ export const dict = {
   "prompt.action.send.blocked": "أجب عن السؤال المعلق أو تجاهله أولاً",
   "prompt.action.send.recording": "تفريغ وإرسال",
   "prompt.action.stop": "توقف",
+  "prompt.action.stop.background": "إيقاف الوكيل الرئيسي. يستمر الوكلاء الخلفيون في العمل.",
+  "prompt.agents.show": "إظهار الوكلاء الخلفيين",
   "prompt.action.enhance": "تحسين النص",
   "prompt.paste.expand": "انقر لتوسيع النص الملصق",
   "prompt.action.autoApprove.enable": "تفعيل الموافقة التلقائية",
@@ -819,7 +824,8 @@ export const dict = {
   "settings.browser.description":
     "تكوين أتمتة المتصفح المدمجة المدعومة من Playwright. يمكن لـ Kilo التنقل والتفاعل مع صفحات الويب والتقاط لقطات شاشة لها في جلساتك.",
   "settings.browser.enable.title": "تفعيل أتمتة المتصفح",
-  "settings.browser.enable.description": "تسجيل خادم Playwright MCP مع الواجهة الخلفية لـ CLI.",
+  "settings.browser.enable.description":
+    "تفعيل متصفح Agent Manager الخاص بكل جلسة للتطبيقات المحلية وصفحات HTTPS العامة.",
   "settings.browser.systemChrome.title": "استخدام Chrome النظام",
   "settings.browser.systemChrome.description": "استخدم متصفح Chrome المثبت لديك بدلاً من نسخة Chromium منفصلة.",
   "settings.browser.headless.title": "الوضع بدون واجهة",
@@ -914,9 +920,6 @@ export const dict = {
     "استورد مرة واحدة تعليمات CLAUDE.md العامة المدعومة والمهارات البسيطة وتعريفات MCP المعطلة. تبقى ملفات Claude الأصلية دون تغيير؛ أعد تشغيل الخلفية بعد التفعيل.",
   "settings.experimental.multiProject.description":
     "تفعيل إدارة الجلسات وأشجار العمل عبر مستودعات متعددة في Agent Manager. المستودع الحالي هو دائمًا المشروع الافتراضي.",
-  "settings.experimental.taskModelSelection.title": "اختيار نموذج الوكيل الفرعي لـ Task",
-  "settings.experimental.taskModelSelection.description":
-    "السماح باختيار النموذج والمزوّد ومستوى الاستدلال صراحةً للوكلاء الفرعيين في Task.",
   "settings.experimental.mcpTimeout.title": "مهلة MCP (مللي ثانية)",
   "settings.experimental.mcpTimeout.description": "مهلة طلبات خادم MCP بالمللي ثانية",
   "settings.experimental.remote.title": "التحكم Remote",
@@ -1111,6 +1114,9 @@ export const dict = {
   "settings.autoCleanup.runNow": "شغّل التنظيف الآن",
   "settings.autoCleanup.runNow.confirm":
     "حذف الجلسات المنتهية الصلاحية نهائيًا عبر جميع المشاريع وكل عميل Kilo على هذا الجهاز؟",
+  "settings.autoCleanup.stop": "إيقاف التنظيف",
+  "settings.autoCleanup.progress.cancelling": "جارٍ إيقاف تنظيف الجلسات...",
+  "settings.autoCleanup.lastRun.cancelled": "تمت المقاطعة",
   "settings.context.autoCompaction.title": "ضغط تلقائي",
   "settings.context.autoCompaction.description": "ضغط السياق تلقائياً قبل أن يصل إلى الحد",
   "settings.context.compaction.title": "الضغط",
@@ -1277,14 +1283,12 @@ export const dict = {
   "task.todos.allDone": "{{count}} مهام مكتملة",
   "task.backgroundAgents.running.one": "وكيل خلفي واحد",
   "task.backgroundAgents.running.many": "{{count}} وكلاء خلفيون",
-  "task.backgroundAgents.more": "+{{count}} آخرون",
   "task.backgroundAgents.open": "فتح الوكيل الخلفي",
   "task.backgroundAgents.openAll": "فتح جميع الوكلاء الخلفيين",
   "task.backgroundAgents.cancel": "إيقاف",
   "task.backgroundAgents.continueInBackground": "متابعة في الخلفية",
   "task.backgroundAgents.waiting": "وكيل خلفي يحتاج إلى إدخالك",
   "task.backgroundAgents.needsInput": "الإدخال مطلوب",
-  "task.backgroundAgents.dismiss": "تجاهل",
   "task.backgroundAgents.clearFinished": "مسح المكتمل",
   "task.backgroundAgents.summary": "{{running}} من {{total}} وكلاء خلفيين قيد التشغيل",
   "task.backgroundAgents.status.running": "قيد التشغيل",
@@ -1293,6 +1297,8 @@ export const dict = {
   "task.backgroundAgents.status.error": "خطأ",
   "task.backgroundAgents.untitled": "وكيل خلفي",
   "task.backgroundAgents.stopAll": "إيقاف الكل ({{count}})",
+  "task.backgroundAgents.finished": "انتهى الوكلاء الخلفيون",
+  "task.stop": "إيقاف الوكيل الفرعي",
   "settings.saveBar.unsavedChanges": "تغييرات غير محفوظة",
   "settings.saveBar.discard": "تجاهل",
   "settings.saveBar.save": "حفظ",

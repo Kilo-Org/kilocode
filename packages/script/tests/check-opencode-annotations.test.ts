@@ -194,6 +194,54 @@ describe("CLI worktree mode", () => {
     }
   })
 
+  test("recognizes compatibility branches without depending on the author", () => {
+    const root = repo()
+    try {
+      exec(root, ["checkout", "-B", "merge-author/opencode-v1.18.15"])
+      writeFileSync(path.join(root, "packages/opencode/src/shared.ts"), "export const value = 2\n")
+      exec(root, ["add", "."])
+      exec(root, ["-c", "user.name=Kilo", "-c", "user.email=kilo@example.com", "commit", "-m", "upstream"])
+      exec(root, ["checkout", "main"])
+      exec(root, [
+        "merge",
+        "--no-ff",
+        "-m",
+        "Merge branch 'merge-author/opencode-v1.18.15' into merge-target",
+        "merge-author/opencode-v1.18.15",
+      ])
+
+      const out = check(root)
+      expect(out.status).toBe(0)
+      expect(out.stdout).toContain("Skipping shared upstream annotation check")
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+
+  test("does not exempt ordinary reconciliation on a kilo-opencode branch", () => {
+    const root = repo()
+    try {
+      exec(root, ["checkout", "-B", "update"])
+      writeFileSync(path.join(root, "packages/opencode/src/shared.ts"), "export const value = 2\n")
+      exec(root, ["add", "."])
+      exec(root, ["-c", "user.name=Kilo", "-c", "user.email=kilo@example.com", "commit", "-m", "update"])
+      exec(root, ["checkout", "main"])
+      exec(root, [
+        "merge",
+        "--no-ff",
+        "-m",
+        "Merge remote-tracking branch 'origin/main' into merge-author/kilo-opencode-v1.18.15",
+        "update",
+      ])
+
+      const out = check(root)
+      expect(out.status).toBe(1)
+      expect(out.stderr).toContain("packages/opencode/src/shared.ts:1")
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+
   test("worktree mode rejects base refs", () => {
     const root = repo()
     try {
@@ -211,6 +259,36 @@ describe("CLI worktree mode", () => {
       const local = check(root, ["--worktre"])
       expect(local.status).toBe(1)
       expect(local.stderr).toContain("Unknown argument: --worktre")
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+})
+
+// ─── default mode (--base) ───────────────────────────────────────────────────
+
+describe("CLI default mode", () => {
+  test("judges the committed revision, never a worktree dirty with the round's edits", () => {
+    const root = repo()
+    try {
+      const file = path.join(root, "packages/opencode/src/shared.ts")
+      // A committed Kilo change: two marked lines inserted above the upstream
+      // body. Both added lines are covered in HEAD.
+      writeFileSync(
+        file,
+        "const kilo1 = 1 // kilocode_change\nconst kilo2 = 2 // kilocode_change\nexport const value = 1\n",
+      )
+      exec(root, ["add", "packages/opencode/src/shared.ts"])
+      exec(root, ["-c", "user.name=Kilo", "-c", "user.email=kilo@example.com", "commit", "-m", "kilo change"])
+      // The round's own edits are still uncommitted: one marked line is gone, so
+      // the committed line numbers no longer point at the committed lines. A
+      // checker that reads this file's content while numbering from HEAD accuses
+      // the untouched upstream line that slid into the gap.
+      writeFileSync(file, "const kilo2 = 2 // kilocode_change\nexport const value = 1\n")
+
+      const result = check(root)
+      expect(result.stderr).not.toContain("shared.ts:2")
+      expect(result.status).toBe(0)
     } finally {
       rmSync(root, { recursive: true, force: true })
     }

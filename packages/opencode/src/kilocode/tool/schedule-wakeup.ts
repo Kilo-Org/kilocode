@@ -3,6 +3,7 @@ import { InstanceState } from "@/effect/instance-state"
 import { Tool } from "@/tool/tool"
 import { Effect, Schema } from "effect"
 import DESCRIPTION from "./schedule-wakeup.txt"
+import { relative } from "./wakeup-format"
 
 export const Params = Schema.Struct({
   prompt: Schema.String.annotate({
@@ -24,15 +25,6 @@ export type Meta = {
   id?: Wakeup.ID
   dueAt?: number
   prompt?: string
-}
-
-/** Whole-unit countdown to the due time, e.g. `in 5m`. */
-function relative(dueAt: number, now: number) {
-  const delta = Math.max(0, dueAt - now)
-  if (delta < 60_000) return `in ${Math.max(1, Math.round(delta / 1_000))}s`
-  if (delta < 3_600_000) return `in ${Math.round(delta / 60_000)}m`
-  if (delta < 86_400_000) return `in ${Math.round(delta / 3_600_000)}h`
-  return `in ${Math.round(delta / 86_400_000)}d`
 }
 
 function invalid(message: string) {

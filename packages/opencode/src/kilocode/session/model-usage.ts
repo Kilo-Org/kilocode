@@ -34,6 +34,7 @@ export namespace ModelUsage {
 
   export const Info = Schema.Struct({
     sessionIDs: Schema.Array(SessionID),
+    sessionCost: Schema.optional(Schema.Finite),
     totals: Usage,
     models: Schema.Array(Model),
   })
@@ -54,6 +55,7 @@ export namespace ModelUsage {
     modelID: ModelV2.ID
     steps: number
     cost: number
+    scoped: number
     input: number
     output: number
     reasoning: number
@@ -66,9 +68,10 @@ export namespace ModelUsage {
   // using part_session_idx and forces a full scan of the entire part table
   // (seconds on large histories), which blocks the single-threaded server on
   // every session open. A concrete IN list lets the planner seek the index.
-  const usageSql = (sessionIDs: SessionID[]) => sql`
+  const usageSql = (sessionIDs: SessionID[], subtree: SessionID[]) => sql`
     WITH step AS (
       SELECT
+        part.session_id AS sessionID,
         coalesce(json_extract(part.data, '$.model.providerID'), json_extract(message.data, '$.providerID')) AS providerID,
         coalesce(json_extract(part.data, '$.model.modelID'), json_extract(message.data, '$.modelID')) AS modelID,
         max(0.0, cast(coalesce(json_extract(part.data, '$.cost'), 0) AS REAL)) AS cost,
@@ -92,6 +95,10 @@ export namespace ModelUsage {
       modelID,
       count(*) AS steps,
       coalesce(sum(cost), 0) AS cost,
+      coalesce(sum(CASE WHEN sessionID IN (${sql.join(
+        subtree.map((id) => sql`${id}`),
+        sql`,`,
+      )}) THEN cost ELSE 0 END), 0) AS scoped,
       coalesce(sum(input), 0) AS input,
       coalesce(sum(output), 0) AS output,
       coalesce(sum(reasoning), 0) AS reasoning,
@@ -121,7 +128,8 @@ export namespace ModelUsage {
     if (!anchor) return undefined
 
     const ancestors = yield* db
-      .all<Ancestor>(sql`
+      .all<Ancestor>(
+        sql`
         WITH RECURSIVE ancestor(id, parent_id) AS (
           SELECT id, parent_id
           FROM session
@@ -135,31 +143,34 @@ export namespace ModelUsage {
           WHERE parent.project_id = ${anchor.projectID}
         )
         SELECT id, parent_id AS parentID
-        FROM ancestor`)
+        FROM ancestor`,
+      )
       .pipe(Effect.orDie)
     const ids = new Set(ancestors.map((item) => item.id))
     const rootID = ancestors.find((item) => !item.parentID || !ids.has(item.parentID))?.id ?? sessionID
-    const sessionIDs = (
-      yield* db
-        .all<{ id: SessionID }>(sql`
-          WITH RECURSIVE family(id) AS (
-            SELECT id
+    const family = yield* db
+      .all<{ id: SessionID; scoped: number }>(
+        sql`
+          WITH RECURSIVE family(id, scoped) AS (
+            SELECT id, id = ${sessionID}
             FROM session
             WHERE id = ${rootID} AND project_id = ${anchor.projectID}
 
             UNION
 
-            SELECT child.id
+            SELECT child.id, parent.scoped OR child.id = ${sessionID}
             FROM session AS child
             JOIN family AS parent ON child.parent_id = parent.id
             WHERE child.project_id = ${anchor.projectID}
           )
-          SELECT id
+          SELECT id, scoped
           FROM family
-          ORDER BY id`)
-        .pipe(Effect.orDie)
-    ).map((item) => item.id)
-    const rows = sessionIDs.length === 0 ? [] : yield* db.all<Row>(usageSql(sessionIDs)).pipe(Effect.orDie)
+          ORDER BY id`,
+      )
+      .pipe(Effect.orDie)
+    const sessionIDs = family.map((item) => item.id)
+    const subtree = family.filter((item) => item.scoped).map((item) => item.id)
+    const rows = sessionIDs.length === 0 ? [] : yield* db.all<Row>(usageSql(sessionIDs, subtree)).pipe(Effect.orDie)
     const totals = empty()
     const models = rows.map((row): Model => {
       totals.steps += row.steps
@@ -183,6 +194,9 @@ export namespace ModelUsage {
       }
     })
 
-    return { sessionIDs, totals, models } satisfies Info
+    // The existing totals cover the top-level tree; the header needs only the
+    // requested session and its descendants, without parents or siblings.
+    const sessionCost = rows.reduce((sum, row) => sum + row.scoped, 0)
+    return { sessionIDs, sessionCost, totals, models } satisfies Info
   })
 }

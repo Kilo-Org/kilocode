@@ -1,47 +1,54 @@
 package ai.kilocode.client.session.board
 
+import ai.kilocode.client.session.views.SessionViewIcons
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 
 class BoardAvatarsTest : BasePlatformTestCase() {
 
     fun `test same participant returns the same cached icon`() {
-        val order = listOf("main", "ses_child")
+        val avatars = BoardAvatars(listOf("main", "ses_child"))
 
-        assertSame(BoardAvatars.icon("ses_child", order), BoardAvatars.icon("ses_child", order))
+        assertSame(avatars.icon("ses_child"), avatars.icon("ses_child"))
     }
 
-    fun `test main and a subagent get different icons`() {
-        val order = listOf("main", "ses_child")
+    fun `test main and ALL get the ordinary task glyph, not a generated avatar`() {
+        val avatars = BoardAvatars(listOf("main", "ses_child"))
 
-        assertNotSame(BoardAvatars.icon("main", order), BoardAvatars.icon("ses_child", order))
+        assertSame(SessionViewIcons.task, avatars.icon("main"))
+        assertSame(SessionViewIcons.task, avatars.icon("ALL"))
+        assertNotSame(SessionViewIcons.task, avatars.icon("ses_child"))
     }
 
-    fun `test participants in different slots get different icons`() {
-        val order = listOf("main", "ses_aaa", "ses_bbb")
+    fun `test siblings in the order get distinct avatars`() {
+        val avatars = BoardAvatars(listOf("main", "ses_aaa", "ses_bbb"))
 
-        // Same initial ('S'), different colour slot, so the icons must not be shared.
-        assertNotSame(BoardAvatars.icon("ses_aaa", order), BoardAvatars.icon("ses_bbb", order))
+        assertNotSame(avatars.icon("ses_aaa"), avatars.icon("ses_bbb"))
     }
 
-    /**
-     * Regression: the cache used to be keyed on participant id. Session ids never repeat, so every
-     * board opened leaked another entry for the life of the IDE. Keying on the drawn glyph instead
-     * keeps it bounded, which this asserts by churning many unique ids through it.
-     */
-    fun `test unique session ids do not grow the icon cache without bound`() {
-        val order = listOf("main")
-        val icons = (1..500).map { BoardAvatars.icon("ses_x$it", order) }.toSet()
+    fun `test icons are stable across repeated calls`() {
+        val avatars = BoardAvatars(listOf("main", "ses_one"))
 
-        // All 500 ids are outside `order`, so they share the neutral slot and the same 'S' initial.
-        assertEquals(1, icons.size)
+        val first = avatars.icon("ses_one")
+        repeat(50) { avatars.icon("ses_one") }
+
+        assertSame(first, avatars.icon("ses_one"))
     }
 
-    fun `test icons are stable across repeated calls for ids sharing a glyph`() {
-        val order = listOf("main", "ses_one")
+    fun `test each dialog instance owns its own cache`() {
+        val first = BoardAvatars(listOf("main", "ses_child"))
+        val second = BoardAvatars(listOf("main", "ses_child"))
 
-        val first = BoardAvatars.icon("ses_one", order)
-        repeat(50) { BoardAvatars.icon("ses_one", order) }
+        // Distinct icon instances (no shared/static cache), but still generated identities rather
+        // than the task glyph.
+        assertNotSame(first.icon("ses_child"), second.icon("ses_child"))
+        assertNotSame(SessionViewIcons.task, first.icon("ses_child"))
+    }
 
-        assertSame(first, BoardAvatars.icon("ses_one", order))
+    fun `test a participant outside the order still gets a deterministic avatar`() {
+        val avatars = BoardAvatars(listOf("main"))
+
+        val first = avatars.icon("ses_unlisted")
+        assertSame(first, avatars.icon("ses_unlisted"))
+        assertNotSame(SessionViewIcons.task, first)
     }
 }
