@@ -18,8 +18,8 @@ An [OpenAI API key](/docs/ai-providers/openai) is different: it uses separate, p
 
 ## Sign in to Kilo with ChatGPT
 
-1. Open [Kilo](https://app.kilo.ai) and scroll down to the alternative login methods. If ChatGPT is not shown, enter your email address and continue first.
-2. Choose **Sign in with ChatGPT**.
+1. Open [Kilo](https://app.kilo.ai). Scroll down to the alternative login methods.
+2. Choose **Continue with ChatGPT**.
 3. Sign in to OpenAI, review the permissions shown, and return to Kilo.
 
 To use your subscription for model requests, complete the BYOK connection below as well. You do not have to use ChatGPT as your Kilo login method: if you already use email, GitHub, or another method, sign in as usual and connect your subscription from BYOK.
@@ -66,6 +66,15 @@ Open BYOK and use **Manage usage** to check your allowance and reset time. Wait 
 
 {% callout type="note" title="When paid routing can still apply" %}
 Requests outside your subscription's supported models or API types use your usual Gateway billing. Separately, if Kilo cannot renew your subscription sign-in before sending a request, some renewal failures can cause it to use a saved API key or Kilo credits instead. This is different from a ChatGPT usage-limit error, which stops the request rather than switching billing.
+{% /callout %}
+
+{% callout type="note" title="OpenAI's per-app usage quota" %}
+OpenAI applies a per-app usage quota to apps signed in with ChatGPT, including Kilo Code. It defaults to 100% of your allowance per app. To view or adjust it, open **Settings → Usage & Billing → App Limits** in the ChatGPT or Codex app. If you hit an unexpected usage limit or refusal while using your ChatGPT subscription with Kilo Code, check this setting before assuming your plan's allowance is exhausted.
+
+Learn more in OpenAI's help articles:
+
+- [Using your ChatGPT plan in other apps and sites](https://help.openai.com/en/articles/20001542-using-your-chatgpt-plan-in-other-apps-and-sites)
+- [Sign in with ChatGPT](https://help.openai.com/en/articles/20001410-sign-in-with-chatgpt)
 {% /callout %}
 
 ### Manage the connection
