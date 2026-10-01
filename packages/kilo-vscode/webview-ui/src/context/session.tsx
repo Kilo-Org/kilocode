@@ -500,8 +500,6 @@ export const SessionProvider: ParentComponent = (props) => {
     }
   })
 
-  const currentSelected = createMemo<ModelSelection | null>(() => selected())
-
   // Precedence: Pick(scope, agent) > agent config > global config > org/recents > fallback.
   // The no-session composer keeps its own picks under the reserved COMPOSER scope.
   function selected(sessionID?: string): ModelSelection | null {
