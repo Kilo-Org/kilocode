@@ -48,7 +48,7 @@ export namespace KiloLLM {
    * 32k default can be used up by thinking before any text or tool call is
    * written. For Claude on first-party routes, request the model's output
    * limit instead. `max_tokens` is a ceiling, not a cache key, so this does
-   * not change cost or prompt caching.
+   * not invalidate prompt caching.
    *
    * The shared default stays in place when the user sets
    * KILO_EXPERIMENTAL_OUTPUT_TOKEN_MAX, for small requests, for other
@@ -64,7 +64,8 @@ export namespace KiloLLM {
     const base = ProviderTransform.maxOutputTokens(input.model, input.max)
     if (input.max !== undefined || input.small) return base
     if (!CLAUDE.has(input.model.api.npm)) return base
-    if (!input.model.api.id.toLowerCase().includes("claude")) return base
+    if (!input.model.family?.toLowerCase().startsWith("claude") && !input.model.api.id.toLowerCase().includes("claude"))
+      return base
     if (typeof input.options.thinking?.budgetTokens === "number") return base
     if (typeof input.options.reasoningConfig?.budgetTokens === "number") return base
     return Math.max(base, input.model.limit.output)

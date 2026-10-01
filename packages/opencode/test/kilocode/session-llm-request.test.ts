@@ -179,6 +179,40 @@ describe("LLM request output tokens", () => {
     }),
   )
 
+  it.instance("requests the full output limit for Claude-family aliases", () =>
+    Effect.gen(function* () {
+      for (const npm of ["@kilocode/kilo-gateway", "@ai-sdk/anthropic"]) {
+        for (const family of ["claude", "Claude-Sonnet"]) {
+          const mdl = { ...claude({ id: "kilo-auto/frontier", npm, output: 128_000 }), family }
+          expect(yield* run({ model: mdl })).toBe(128_000)
+        }
+      }
+    }),
+  )
+
+  it.instance("keeps concrete Claude ID detection when family is empty or unrelated", () =>
+    Effect.gen(function* () {
+      for (const family of ["", "custom"]) {
+        const mdl = {
+          ...claude({ id: "claude-sonnet-4-5", npm: "@ai-sdk/anthropic", output: 64_000 }),
+          family,
+        }
+        expect(yield* run({ model: mdl })).toBe(64_000)
+      }
+    }),
+  )
+
+  it.instance("keeps the default for mixed auto routes with a Claude candidate", () =>
+    Effect.gen(function* () {
+      const mdl = {
+        ...claude({ id: "kilo-auto/efficient", npm: "@kilocode/kilo-gateway", output: 65_536 }),
+        family: "kilo-auto",
+        autoRouting: { models: ["anthropic/claude-sonnet-5", "google/gemini-2.5-flash"] },
+      }
+      expect(yield* run({ model: mdl })).toBe(32_000)
+    }),
+  )
+
   it.instance("requests the full output limit for Claude on first-party providers", () =>
     Effect.gen(function* () {
       for (const npm of ["@ai-sdk/anthropic", "@ai-sdk/amazon-bedrock", "@ai-sdk/google-vertex/anthropic"]) {
