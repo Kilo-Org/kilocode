@@ -1,6 +1,7 @@
 import * as path from "path"
 import * as vscode from "vscode"
 import { resolveInside } from "./diff/shared/path"
+import { resolveDocumentPath } from "./documents/document-reader"
 import { inspect } from "util"
 
 export function appendOutput(channel: vscode.OutputChannel, prefix: string, ...args: unknown[]): void {
@@ -41,4 +42,11 @@ export function openRelativeFile(root: string | undefined, relativePath: string,
   const resolved = path.isAbsolute(relativePath) ? relativePath : root && resolveInside(root, relativePath)
   if (!resolved) return
   openFileInEditor(resolved, line, column, vscode.ViewColumn.Beside, "DiffPanel")
+}
+
+export function openDocumentFile(root: string | undefined, file: string, line?: number, column?: number): void {
+  if (!root) return
+  const result = resolveDocumentPath(root, file)
+  if ("error" in result) return
+  openFileInEditor(result.resolved, line, column, vscode.ViewColumn.Beside, "Documents")
 }

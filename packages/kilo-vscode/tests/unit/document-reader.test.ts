@@ -2,7 +2,7 @@ import { describe, expect, it } from "bun:test"
 import * as fs from "node:fs"
 import * as os from "node:os"
 import * as path from "node:path"
-import { isInsideWorktree, readDocument } from "../../src/documents/document-reader"
+import { isInsideWorktree, readDocument, resolveDocumentPath } from "../../src/documents/document-reader"
 
 function workspace() {
   return fs.mkdtempSync(path.join(os.tmpdir(), "kilo-document-"))
@@ -29,6 +29,16 @@ describe("readDocument", () => {
     fs.writeFileSync(path.join(root, "data.bin"), Buffer.from([1, 0, 2]))
 
     expect(readDocument(root, "data.bin")).toEqual({ error: "Binary files cannot be previewed." })
+  })
+})
+
+describe("resolveDocumentPath", () => {
+  it("resolves an absolute file inside the worktree without reading its contents", () => {
+    const root = workspace()
+    const file = path.join(root, "plan.md")
+    fs.writeFileSync(file, "# Plan\n")
+
+    expect(resolveDocumentPath(root, file)).toEqual({ file: "plan.md", resolved: fs.realpathSync(file), size: 7 })
   })
 })
 

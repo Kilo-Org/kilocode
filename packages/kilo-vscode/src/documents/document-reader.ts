@@ -40,7 +40,10 @@ function mime(file: string): string | undefined {
   return undefined
 }
 
-export function readDocument(root: string, file: string): DocumentResult {
+export function resolveDocumentPath(
+  root: string,
+  file: string,
+): { file: string; resolved: string; size: number } | { error: string } {
   if (!file) return { error: "Invalid document path." }
 
   try {
@@ -52,16 +55,28 @@ export function readDocument(root: string, file: string): DocumentResult {
     const stat = fs.statSync(resolved)
     if (!stat.isFile()) return { error: "Document is not a file." }
 
-    const type = mime(resolved)
+    return { file: path.relative(base, resolved).split(path.sep).join("/"), resolved, size: stat.size }
+  } catch (error) {
+    console.error("[Kilo New] AgentManagerProvider: Cannot read document:", error)
+    return { error: "Document could not be read." }
+  }
+}
+
+export function readDocument(root: string, file: string): DocumentResult {
+  const target = resolveDocumentPath(root, file)
+  if ("error" in target) return target
+
+  try {
+    const type = mime(target.resolved)
     const limit = type ? MAX_IMAGE_BYTES : MAX_TEXT_BYTES
-    if (stat.size > limit) return { error: "Document is too large to preview." }
+    if (target.size > limit) return { error: "Document is too large to preview." }
 
-    const relative = path.relative(base, resolved).split(path.sep).join("/")
-    if (type) return { file: relative, kind: "image", mime: type, data: fs.readFileSync(resolved).toString("base64") }
+    if (type)
+      return { file: target.file, kind: "image", mime: type, data: fs.readFileSync(target.resolved).toString("base64") }
 
-    const content = fs.readFileSync(resolved)
+    const content = fs.readFileSync(target.resolved)
     if (content.includes(0)) return { error: "Binary files cannot be previewed." }
-    return { file: relative, kind: "text", content: content.toString("utf8") }
+    return { file: target.file, kind: "text", content: content.toString("utf8") }
   } catch (error) {
     console.error("[Kilo New] AgentManagerProvider: Cannot read document:", error)
     return { error: "Document could not be read." }
