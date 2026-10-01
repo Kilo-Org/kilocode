@@ -1,6 +1,7 @@
 package ai.kilocode.client.session
 
 import ai.kilocode.client.KiloNotifications
+import ai.kilocode.client.actions.reloadCoreSettings
 import ai.kilocode.client.app.KiloAppService
 import ai.kilocode.client.app.KiloSessionService
 import ai.kilocode.client.app.KiloWorkspaceService
@@ -894,7 +895,16 @@ class SessionUi(
     private fun bindStyle() {
         addHierarchyListener { event ->
             if ((event.changeFlags and HierarchyEvent.SHOWING_CHANGED.toLong()) == 0L) return@addHierarchyListener
-            if (isShowing) refreshBranch() else popup.hideAll()
+            if (isShowing) {
+                refreshBranch()
+                // A question/permission asked while this session was hidden is applied immediately
+                // to the model (so history activity stays fresh) but the transcript catch-up flush
+                // is what actually re-renders it. Run after that catch-up is scheduled so the active
+                // prompt is surfaced and scrolled into view rather than left silently active off-screen.
+                ApplicationManager.getApplication().invokeLater { surfaceActivePrompt() }
+            } else {
+                popup.hideAll()
+            }
         }
 
         val bus = ApplicationManager.getApplication().messageBus.connect(this)
@@ -1069,6 +1079,7 @@ class SessionUi(
             SlashAction.AGENTS to { prompt.mode.open() },
             SlashAction.VARIANT to { prompt.reasoning.open() },
             SlashAction.COMPACT to { controller.compact() },
+            SlashAction.RELOAD to { reloadCoreSettings(workspaces, workspace.directory, project, "slash_command") },
             SlashAction.SETTINGS to { openKiloSettings() },
             SlashAction.HELP to { BrowserUtil.browse(KiloDocs.BASE) },
         )
@@ -1399,6 +1410,25 @@ class SessionUi(
     private fun onSessionUpdated() {
         syncDock()
         manager?.activityChanged()
+    }
+
+    /**
+     * Re-surface an active question or permission after this session's component becomes visible.
+     * `SessionController.handleHidden()` applies `QuestionAsked`/`PermissionAsked` to the model
+     * immediately even while hidden, so history activity stays fresh, but the transcript catch-up
+     * flush only replays buffered message/part events — it does not re-run the state-driven view
+     * sync or scroll. Without this, a prompt that arrived while hidden stays correctly modeled but
+     * invisible/unscrolled when the user reopens the session.
+     */
+    private fun surfaceActivePrompt() {
+        if (disposed || !isShowing) return
+        if (!this::messageBody.isInitialized || !this::scroll.isInitialized) return
+        val state = controller.model.state
+        if (state !is SessionState.AwaitingQuestion && state !is SessionState.AwaitingPermission) return
+        messageBody.syncActiveState(state)
+        scroll.setQuestionPending(questionPending(state))
+        scroll.followBottom(true)
+        refresh()
     }
 
     private fun refresh() {
