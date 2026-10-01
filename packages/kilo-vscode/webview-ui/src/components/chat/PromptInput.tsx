@@ -302,7 +302,9 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     ref.focus()
     adjustHeight()
   })
-  const history = usePromptHistory(sid, () => settings().globalPromptHistory === true)
+  // Shared across conversations unless the user opts in to a separate history per conversation.
+  const scoped = () => settings().conversationPromptHistory === true
+  const history = usePromptHistory(sid, () => !scoped())
   let textareaRef: HTMLTextAreaElement | undefined
   let highlightRef: HTMLDivElement | undefined
   let dropdownRef: HTMLDivElement | undefined
@@ -650,7 +652,8 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   const REVIEW_PREFIX = /^## Review Comments\n[\s\S]*?\n\n/
   createEffect(() => {
     const msgs = session.userMessages()
-    if (msgs.length === 0) return
+    // Tracked so a late settings load or a mode switch re-seeds the per-conversation list.
+    if (msgs.length === 0 || !scoped()) return
     const timer = setTimeout(() => {
       const texts = msgs.map((m) => {
         const parts = session.getParts(m.id)

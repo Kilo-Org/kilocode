@@ -961,9 +961,9 @@ export const dict = {
   "settings.sandboxing.writablePaths.description":
     "Chemins système supplémentaires autorisés en écriture par le bac à sable (par ex. /tmp, /var/log). Ils sont fusionnés avec les chemins en écriture par défaut lorsque le bac à sable est actif.",
   "settings.experimental.multiProject.title": "Agent Manager Multi-Projet",
-  "settings.experimental.globalPromptHistory.title": "Historique global des prompts",
-  "settings.experimental.globalPromptHistory.description":
-    "Partager un seul historique de prompts (ArrowUp/ArrowDown) entre toutes les conversations au lieu de le séparer par conversation.",
+  "settings.experimental.conversationPromptHistory.title": "Historique des prompts par conversation",
+  "settings.experimental.conversationPromptHistory.description":
+    "Garder l'historique des prompts (ArrowUp/ArrowDown) séparé pour chaque conversation au lieu de partager un seul historique entre toutes les conversations.",
   "settings.experimental.claudeMigration.title": "Migration Claude Code",
   "settings.experimental.claudeMigration.description":
     "Importer une fois les instructions CLAUDE.md globales prises en charge, les compétences simples et les définitions MCP désactivées. Les fichiers Claude d'origine restent inchangés ; redémarrez le backend après activation.",

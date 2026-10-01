@@ -915,9 +915,9 @@ export const dict = {
   "settings.sandboxing.writablePaths.description":
     "مسارات نظام ملفات إضافية يسمح صندوق الرمل بالكتابة إليها (مثل /tmp، /var/log). يتم دمجها مع مسارات الكتابة الافتراضية عندما يكون صندوق الرمل نشطًا.",
   "settings.experimental.multiProject.title": "إدارة متعددة المشاريع",
-  "settings.experimental.globalPromptHistory.title": "سجل المطالبات العام",
-  "settings.experimental.globalPromptHistory.description":
-    "مشاركة سجل مطالبات واحد (استدعاء بالسهمين لأعلى/لأسفل) بين جميع المحادثات بدلاً من فصله لكل محادثة.",
+  "settings.experimental.conversationPromptHistory.title": "سجل مطالبات لكل محادثة",
+  "settings.experimental.conversationPromptHistory.description":
+    "إبقاء سجل مطالبات الإدخال (استدعاء بالسهمين لأعلى/لأسفل) منفصلاً لكل محادثة بدلاً من مشاركة سجل واحد بين جميع المحادثات.",
   "settings.experimental.claudeMigration.title": "ترحيل Claude Code",
   "settings.experimental.claudeMigration.description":
     "استورد مرة واحدة تعليمات CLAUDE.md العامة المدعومة والمهارات البسيطة وتعريفات MCP المعطلة. تبقى ملفات Claude الأصلية دون تغيير؛ أعد تشغيل الخلفية بعد التفعيل.",

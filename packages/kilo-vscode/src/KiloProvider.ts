@@ -4211,8 +4211,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private claudeMigrationSetting(): boolean {
     return vscode.workspace.getConfiguration("kilo-code.new.experimental").get<boolean>("claudeMigration", false)
   }
-  private globalPromptHistorySetting(): boolean {
-    return vscode.workspace.getConfiguration("kilo-code.new.experimental").get<boolean>("globalPromptHistory", false)
+  private conversationPromptHistorySetting(): boolean {
+    return vscode.workspace
+      .getConfiguration("kilo-code.new.experimental")
+      .get<boolean>("conversationPromptHistory", false)
   }
   private browserAutomationSetting(): boolean {
     return vscode.workspace.getConfiguration("kilo-code.new.experimental").get<boolean>("browserAutomation", false)
@@ -4298,7 +4300,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       multiProject: this.multiProjectSetting(),
       claudeMigration: this.claudeMigrationSetting(),
       browserAutomation: this.browserAutomationSetting(),
-      globalPromptHistory: this.globalPromptHistorySetting(),
+      conversationPromptHistory: this.conversationPromptHistorySetting(),
       agentManagerBrowserUseSystemChrome: integratedBrowserUseSystemChrome(),
       "agentManager.autoBranchNaming": naming.get<boolean>("autoBranchNaming", true),
       "agentManager.branchPrefix": naming.get<string>("branchPrefix", ""),
