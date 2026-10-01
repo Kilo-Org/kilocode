@@ -1,12 +1,12 @@
 // Subagent steering from the TUI.
 //
 // A subagent view mounts the normal prompt so the user can redirect a running
-// child. Every path that sends input to the child (prompt, slash command, shell)
-// must use the child's own agent and model: sending the primary selection would
-// run the child as the primary agent, and the server persists that choice onto
-// the child session. Plain prompts also mark the typed text so the server can
-// tell a human steer apart from the parent's own task-tool prompt and notify the
-// parent over the shared agent board.
+// child with plain steering prompts only: shell mode and slash commands are off
+// there. A steer uses the child's own agent and model, since sending the primary
+// selection would run the child as the primary agent and the server persists
+// that choice onto the child session. The typed text is also marked so the
+// server can tell a human steer apart from the parent's own task-tool prompt and
+// notify the parent over the shared agent board.
 import type { Session } from "@kilocode/sdk/v2"
 import { running } from "../util/session"
 
@@ -18,17 +18,6 @@ type Ref = { focused: boolean; current: { input: string } } | undefined
 
 function child(session: Target) {
   return session?.parentID ? session : undefined
-}
-
-function pick(session: Target) {
-  const target = child(session)
-  if (!target) return undefined
-  const variant = target.model?.variant
-  return {
-    agent: target.agent,
-    model: target.model,
-    variant: variant && variant !== "default" ? variant : undefined,
-  }
 }
 
 /** Whether `session` is a subagent that the TUI prompt would steer. */
@@ -53,33 +42,13 @@ export function mark(session: Target) {
 
 /** `session.prompt` overrides that keep the child's agent, model, and variant. */
 export function prompt(session: Target) {
-  const target = pick(session)
+  const target = child(session)
   if (!target) return {}
+  const variant = target.model?.variant
   return {
     ...(target.agent ? { agent: target.agent } : {}),
     ...(target.model ? { model: { providerID: target.model.providerID, modelID: target.model.id } } : {}),
-    variant: target.variant,
-  }
-}
-
-/** `session.command` overrides that keep the child's agent, model, and variant. */
-export function command(session: Target) {
-  const target = pick(session)
-  if (!target) return {}
-  return {
-    ...(target.agent ? { agent: target.agent } : {}),
-    ...(target.model ? { model: `${target.model.providerID}/${target.model.id}` } : {}),
-    variant: target.variant,
-  }
-}
-
-/** `session.shell` overrides that keep the child's agent and model. */
-export function shell(session: Target) {
-  const target = pick(session)
-  if (!target) return {}
-  return {
-    ...(target.agent ? { agent: target.agent } : {}),
-    ...(target.model ? { model: { providerID: target.model.providerID, modelID: target.model.id } } : {}),
+    variant: variant && variant !== "default" ? variant : undefined,
   }
 }
 

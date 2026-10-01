@@ -236,10 +236,15 @@ export function Prompt(props: PromptProps) {
     bumpCursor: () => setCursorVersion((value) => value + 1),
     cursorVersion: () => cursorVersion(),
   })
-  // Subagent views never interrupt: aborting the child would fail the parent's pending task call.
+  // A subagent view only sends steering prompts: no shell mode, no slash commands, no interrupt.
+  const steer = createMemo(() => KiloSteer.steering(sync.session.get(props.sessionID ?? "")))
+  createEffect(() => {
+    if (steer() && store.mode === "shell") setStore("mode", "normal")
+  })
+  // Aborting the child from its own view would fail the parent's pending task call.
   const interruptible = createMemo(
     () =>
-      !KiloSteer.steering(sync.session.get(props.sessionID ?? "")) &&
+      !steer() &&
       (running(status().type) || (goal()?.active === true && (!vim.vimEnabled() || vim.vimMode() === "normal"))),
   )
   // kilocode_change end
@@ -919,6 +924,7 @@ export function Prompt(props: PromptProps) {
         return (
           inputTarget() !== undefined &&
           !props.disabled &&
+          !steer() && // kilocode_change - no shell mode while steering a subagent
           store.mode === "normal" &&
           !auto()?.visible &&
           input?.visualCursor.offset === 0
@@ -1059,7 +1065,7 @@ export function Prompt(props: PromptProps) {
     if (auto()?.visible) return false
     if (!store.prompt.input) return false
     // kilocode_change start - in-memory cost alert command
-    if (costAlert.handle(store.prompt.input.trim())) return true
+    if (!steer() && costAlert.handle(store.prompt.input.trim())) return true
     // kilocode_change end
     const agent = local.agent.current()
     if (!agent) return false
@@ -1077,6 +1083,7 @@ export function Prompt(props: PromptProps) {
       sessionID: props.sessionID,
       toast,
       dialog,
+      skip: steer(),
       done: () => {
         history.append({
           ...store.prompt,
@@ -1186,7 +1193,7 @@ export function Prompt(props: PromptProps) {
         : []
 
     const target = sync.session.get(sessionID) // kilocode_change - subagent steering target
-    if (store.mode === "shell") {
+    if (store.mode === "shell" && !steer() /* kilocode_change - subagent views never run shell */) {
       move.startSubmit()
       void sdk.client.session.shell({
         sessionID,
@@ -1196,10 +1203,10 @@ export function Prompt(props: PromptProps) {
           modelID: selectedModel.modelID,
         },
         command: inputText,
-        ...KiloSteer.shell(target), // kilocode_change - run subagent shell as the subagent
       })
       setStore("mode", "normal")
     } else if (
+      !steer() && // kilocode_change - subagent views send slash text as a plain steer
       inputText.startsWith("/") &&
       sync.data.command.some((x) => slashMatches(x, inputText.split("\n")[0].split(" ")[0].slice(1))) // kilocode_change
     ) {
@@ -1218,7 +1225,6 @@ export function Prompt(props: PromptProps) {
         agent: local.agent.current()?.name ?? "", // kilocode_change
         model: `${selectedModel.providerID}/${selectedModel.modelID}`,
         variant,
-        ...KiloSteer.command(target), // kilocode_change - run subagent commands as the subagent
         parts: nonTextParts.filter((x) => x.type === "file"),
       }).then((result) => GoalPrompt.feedback(command.slice(1), args, result, toast)) // kilocode_change
     } else {

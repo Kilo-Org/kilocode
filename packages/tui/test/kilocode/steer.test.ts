@@ -8,21 +8,17 @@ const child = {
 }
 const root = { agent: "code", model: { id: "main-model", providerID: "main" } }
 
-test("subagent input keeps the child's agent, model, and variant on every path", () => {
+test("a steering prompt keeps the child's agent, model, and variant", () => {
   expect(KiloSteer.prompt(child)).toEqual({
     agent: "explore",
     model: { providerID: "sub", modelID: "sub-model" },
     variant: "high",
   })
-  expect(KiloSteer.command(child)).toEqual({ agent: "explore", model: "sub/sub-model", variant: "high" })
-  expect(KiloSteer.shell(child)).toEqual({ agent: "explore", model: { providerID: "sub", modelID: "sub-model" } })
 })
 
 test("primary sessions keep the current selection", () => {
   for (const session of [root, undefined]) {
     expect(KiloSteer.prompt(session)).toEqual({})
-    expect(KiloSteer.command(session)).toEqual({})
-    expect(KiloSteer.shell(session)).toEqual({})
     expect(KiloSteer.mark(session)).toEqual({})
     expect(KiloSteer.steering(session)).toBe(false)
   }
