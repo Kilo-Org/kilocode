@@ -465,6 +465,7 @@ export const dict = {
   "provider.custom.models.toggleImages": "Перемкнути зображення для всіх",
   "provider.custom.models.remove": "Видалити модель",
   "provider.custom.models.add": "Додати модель",
+  "provider.custom.models.fetch.button": "Отримати моделі",
   "provider.custom.models.fetch.authError": "Автентифікація не вдалася. Перевірте API-ключ вище і спробуйте ще раз.",
   "provider.custom.models.fetch.empty": "На цьому сервері моделей не знайдено.",
   "provider.custom.models.fetch.added": "Додано {{count}} моделей.",

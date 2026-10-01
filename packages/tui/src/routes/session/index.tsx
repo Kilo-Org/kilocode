@@ -1992,6 +1992,7 @@ function TextPart(props: { last: boolean; part: TextPart; message: AssistantMess
 
 function ToolPart(props: { last: boolean; part: ToolPart; message: AssistantMessage }) {
   const ctx = use()
+  const sync = useSync() // kilocode_change
   const display = createMemo(() => toolDisplay(props.part.tool))
 
   // Hide tool if showDetails is false and tool completed successfully
@@ -2043,6 +2044,16 @@ function ToolPart(props: { last: boolean; part: ToolPart; message: AssistantMess
         </Match>
         <Match when={display() === "semantic_search"}>
           <SemanticSearch {...toolprops} />
+        </Match>
+        <Match when={display() === "suggest"}>
+          <Suggest
+            {...toolprops}
+            InlineTool={InlineTool}
+            BlockTool={BlockTool}
+            pendingRequest={sync.data.suggestion[props.part.sessionID]?.find(
+              (item) => item.tool?.callID === props.part.callID && item.tool?.messageID === props.part.messageID,
+            )}
+          />
         </Match>
         {/* kilocode_change end */}
         <Match when={display() === "webfetch"}>
@@ -3095,6 +3106,7 @@ const toolDisplays = new Set([
   "execute",
   "background_process",
   "semantic_search",
+  "suggest",
   // kilocode_change end
 ])
 
