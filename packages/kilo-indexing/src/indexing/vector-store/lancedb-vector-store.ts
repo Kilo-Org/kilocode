@@ -3,7 +3,12 @@ import * as path from "path"
 import type { Connection, Table, VectorQuery } from "@lancedb/lancedb"
 import type { IVectorStore } from "../interfaces/vector-store"
 import type { Payload, VectorStoreSearchResult } from "../interfaces"
-import { DEFAULT_MAX_SEARCH_RESULTS, DEFAULT_SEARCH_MIN_SCORE } from "../constants"
+import {
+  DEFAULT_MAX_SEARCH_RESULTS,
+  DEFAULT_SEARCH_MIN_SCORE,
+  LANCEDB_CLEANUP_RETENTION_MS,
+  LANCEDB_COMPACT_EVERY_WRITES,
+} from "../constants"
 import fs from "fs"
 import { Log } from "../../util/log"
 import type { EmbeddingProfile } from "../embedding-profile"
@@ -44,6 +49,10 @@ export class LanceDBVectorStore implements IVectorStore {
   private readonly vectorTableName = "vector"
   private readonly metadataTableName = "metadata"
   private lancedbModule: any = null
+  private _writesSinceCompact = 0
+  private compacting = false
+  private compactQueued = false
+  private pending: Promise<void> = Promise.resolve()
 
   constructor(workspacePath: string, vectorSize: number, dbDirectory: string, profile?: EmbeddingProfile) {
     this.vectorSize = vectorSize
@@ -376,24 +385,29 @@ export class LanceDBVectorStore implements IVectorStore {
         endLine: point.payload.endLine,
       }))
 
-      // Delete existing points with same IDs first
-      const existingIds = lanceData.map((d) => d.id)
-      if (existingIds.length > 0) {
-        const bad = existingIds.find((id) => !this.isValidId(id))
-        if (bad) {
-          throw new Error(`Invalid point id format: ${bad}`)
+      // Serialize the delete+add commit against other stores' native work so
+      // concurrent batches cannot race each other or a compaction.
+      await native(async () => {
+        // Delete existing points with same IDs first
+        const existingIds = lanceData.map((d) => d.id)
+        if (existingIds.length > 0) {
+          const bad = existingIds.find((id) => !this.isValidId(id))
+          if (bad) {
+            throw new Error(`Invalid point id format: ${bad}`)
+          }
+          const escapedIds = existingIds.map((id) => `'${this.escapeSqlString(id)}'`).join(", ")
+          const idFilter = `id IN (${escapedIds})`
+          await table.delete(idFilter)
         }
-        const escapedIds = existingIds.map((id) => `'${this.escapeSqlString(id)}'`).join(", ")
-        const idFilter = `id IN (${escapedIds})`
-        await table.delete(idFilter)
-      }
 
-      // Insert new data
-      await table.add(lanceData)
+        // Insert new data
+        await table.add(lanceData)
+      })
     } catch (error) {
       log.error("Failed to upsert points", { error })
       throw error
     }
+    this.noteWrites(2)
   }
 
   // Temporary till lancedb implements parameter support
@@ -491,11 +505,12 @@ export class LanceDBVectorStore implements IVectorStore {
       // Create filter condition for multiple file paths
       const escapedPaths = normalizedPaths.map((fp) => `'${this.escapeSqlString(fp)}'`).join(", ")
       const filterCondition = `\`filePath\` IN (${escapedPaths})`
-      await table.delete(filterCondition)
+      await native(() => table.delete(filterCondition))
     } catch (error) {
       log.error("Failed to delete points by file paths", { error })
       throw error
     }
+    this.noteWrites(1)
   }
 
   async deleteCollection(): Promise<void> {
@@ -559,6 +574,8 @@ export class LanceDBVectorStore implements IVectorStore {
   }
 
   private async closeConnect(): Promise<void> {
+    // Let any background compaction finish before releasing the connection.
+    await this.pending
     if (this.table) {
       this.table = null
     }
@@ -566,6 +583,34 @@ export class LanceDBVectorStore implements IVectorStore {
       await this.db.close()
       this.db = null
     }
+  }
+
+  /**
+   * Counts modification operations and schedules compaction once enough have
+   * accumulated, so a long scan does not produce unbounded fragments and version
+   * manifests. Compaction runs in the background and never overlaps itself, so it
+   * cannot block the write that triggered it.
+   */
+  private noteWrites(ops: number): void {
+    this._writesSinceCompact += ops
+    if (this._writesSinceCompact < LANCEDB_COMPACT_EVERY_WRITES) return
+    this._writesSinceCompact = 0
+    this.queueCompact()
+  }
+
+  private queueCompact(): void {
+    if (this.compacting) {
+      this.compactQueued = true
+      return
+    }
+    this.compacting = true
+    this.pending = this.optimizeTable().finally(() => {
+      this.compacting = false
+      if (this.compactQueued) {
+        this.compactQueued = false
+        this.queueCompact()
+      }
+    })
   }
 
   /**
@@ -577,10 +622,15 @@ export class LanceDBVectorStore implements IVectorStore {
     try {
       const table = await this.getTable()
 
-      await table.optimize({
-        cleanupOlderThan: new Date(),
-        deleteUnverified: false,
-      })
+      await native(() =>
+        table.optimize({
+          // Keep recent versions so concurrent readers/writers never reference a
+          // manifest that was just pruned. A zero-length window (new Date()) makes
+          // every subsequent commit run an auto-cleanup that races other processes.
+          cleanupOlderThan: new Date(Date.now() - LANCEDB_CLEANUP_RETENTION_MS),
+          deleteUnverified: false,
+        }),
+      )
     } catch (error) {
       log.error("Failed to optimize table", { error })
     }
