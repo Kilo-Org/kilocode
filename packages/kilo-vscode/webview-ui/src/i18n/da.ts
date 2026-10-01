@@ -926,6 +926,9 @@ export const dict = {
   "settings.experimental.nativeNotebookTools.title": "Indbyggede notebook-værktøjer",
   "settings.experimental.nativeNotebookTools.description":
     "Aktivér eksperimentelle værktøjer til at læse, redigere og køre VS Code-notebooks",
+  "settings.experimental.globSearchIgnored.title": "Tillad agent at søge i ignorerede mapper og filer",
+  "settings.experimental.globSearchIgnored.description":
+    "Lader agenten bruge glob-værktøjets includeIgnored-indstilling til at søge i filer, der er udelukket af .gitignore og andre ignore-filer. Slået fra som standard.",
   "settings.experimental.continueOnDeny.title": "Fortsæt ved afvisning",
   "settings.experimental.continueOnDeny.description": "Fortsæt agentløkken, når en tilladelse afvises",
   "settings.sandboxing.title": "Sandboxing",

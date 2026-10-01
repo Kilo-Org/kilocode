@@ -922,6 +922,9 @@ export const dict = {
   "settings.experimental.nativeNotebookTools.title": "Нативные инструменты блокнотов",
   "settings.experimental.nativeNotebookTools.description":
     "Включить экспериментальные инструменты для чтения, редактирования и выполнения блокнотов VS Code",
+  "settings.experimental.globSearchIgnored.title": "Разрешить агенту поиск в игнорируемых каталогах и файлах",
+  "settings.experimental.globSearchIgnored.description":
+    "Позволяет агенту использовать параметр includeIgnored инструмента glob для поиска файлов, исключённых .gitignore и другими ignore-файлами. По умолчанию выключено.",
   "settings.experimental.continueOnDeny.title": "Продолжить при отказе",
   "settings.experimental.continueOnDeny.description": "Продолжить цикл агента при отказе в разрешении",
   "settings.sandboxing.title": "Изоляция в песочнице",

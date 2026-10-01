@@ -945,6 +945,9 @@ export const dict = {
   "settings.experimental.nativeNotebookTools.title": "Native Notebook-Tools",
   "settings.experimental.nativeNotebookTools.description":
     "Experimentelle Tools zum Lesen, Bearbeiten und Ausführen von VS Code-Notebooks aktivieren",
+  "settings.experimental.globSearchIgnored.title": "Agent darf ignorierte Verzeichnisse und Dateien durchsuchen",
+  "settings.experimental.globSearchIgnored.description":
+    "Ermöglicht dem Agenten, die includeIgnored-Option des Glob-Tools zu verwenden, um Dateien zu durchsuchen, die durch .gitignore und andere Ignore-Dateien ausgeschlossen sind. Standardmäßig deaktiviert.",
   "settings.experimental.continueOnDeny.title": "Bei Ablehnung fortfahren",
   "settings.experimental.continueOnDeny.description":
     "Agent-Schleife fortsetzen, wenn eine Berechtigung abgelehnt wird",

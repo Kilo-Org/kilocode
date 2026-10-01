@@ -926,6 +926,9 @@ export const dict = {
   "settings.experimental.nativeNotebookTools.title": "Izvorni alati za bilježnice",
   "settings.experimental.nativeNotebookTools.description":
     "Omogući eksperimentalne alate za čitanje, uređivanje i izvršavanje VS Code bilježnica",
+  "settings.experimental.globSearchIgnored.title": "Dozvoli agentu pretragu ignorisanih direktorija i datoteka",
+  "settings.experimental.globSearchIgnored.description":
+    "Omogućava agentu da koristi includeIgnored opciju glob alata za pretragu datoteka isključenih .gitignore i drugim ignore datotekama. Podrazumijevano isključeno.",
   "settings.experimental.continueOnDeny.title": "Nastavi pri odbijanju",
   "settings.experimental.continueOnDeny.description": "Nastavi petlju agenta kada je dozvola odbijena",
   "settings.sandboxing.title": "Rad u izoliranom okruženju",

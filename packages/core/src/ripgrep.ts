@@ -67,6 +67,7 @@ export interface GlobInput {
   readonly limit: number
   readonly hidden?: boolean
   readonly follow?: boolean
+  readonly includeIgnored?: boolean // kilocode_change - opt-in ignore-file bypass, gated by experimental.glob_search_ignored
   readonly signal?: AbortSignal
   readonly validate?: Effect.Effect<void, unknown> // kilocode_change - bind approved searches at spawn
 }
@@ -211,6 +212,9 @@ const layer = Layer.effect(
           args: [
             "--no-config",
             "--files",
+            // kilocode_change start - includeIgnored bypasses ignore files and hidden-file filtering
+            ...(input.includeIgnored ? ["--no-ignore", "--hidden"] : []),
+            // kilocode_change end
             ...(input.hidden ? ["--hidden"] : []),
             ...(input.follow ? ["--follow"] : []),
             `--glob=${input.pattern}`,
