@@ -181,6 +181,18 @@ export function validateFavorites(raw: unknown): Array<{ providerID: string; mod
   return raw.filter(isModelSelection).map((r) => ({ providerID: r.providerID, modelID: r.modelID }))
 }
 
+/** Validate and sanitize per-mode model selections from untrusted sources. */
+export function validateModelSelections(raw: unknown): Record<string, { providerID: string; modelID: string }> {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {}
+  const result: Record<string, { providerID: string; modelID: string }> = {}
+  for (const [key, val] of Object.entries(raw as Record<string, unknown>)) {
+    if (isModelSelection(val)) {
+      result[key] = { providerID: val.providerID, modelID: val.modelID }
+    }
+  }
+  return result
+}
+
 export function computeDefaultSelection(
   cachedConfig: { config?: { model?: string } } | null,
   vscodePID: string,
