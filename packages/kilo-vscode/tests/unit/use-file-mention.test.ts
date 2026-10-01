@@ -132,20 +132,26 @@ describe("useFileMention", () => {
         type: "fileSearchResult",
         requestId: "file-search-1",
         dir: "/repo",
-        paths: ["packages/kilo-vscode/src/extension.ts"],
-        items: [{ path: "packages/kilo-vscode/src/extension.ts", type: "opened-file" }],
+        paths: ["/other/src/extension.ts"],
+        items: [{ path: "/other/src/extension.ts", type: "opened-file", root: "other", relative: "src/extension.ts" }],
       })
     }
 
+    const sessions = posted.find((message) => message.type === "requestSessionSearch")
+    if (sessions?.type !== "requestSessionSearch") throw new Error("Expected a session search")
+    for (const handler of handlers) {
+      handler({ type: "sessionSearchResult", requestId: sessions.requestId, sessions: [] })
+    }
+
     expect(mention.mentionResults()).toEqual([
-      { type: "opened-file", value: "packages/kilo-vscode/src/extension.ts" },
+      { type: "opened-file", value: "/other/src/extension.ts", root: "other", relative: "src/extension.ts" },
       FILE_PICKER_RESULT,
     ])
 
     mention.onInput("@ex", 3)
 
     expect(mention.mentionResults()).toEqual([
-      { type: "opened-file", value: "packages/kilo-vscode/src/extension.ts" },
+      { type: "opened-file", value: "/other/src/extension.ts", root: "other", relative: "src/extension.ts" },
       FILE_PICKER_RESULT,
     ])
 
