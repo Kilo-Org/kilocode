@@ -37,6 +37,7 @@ export class MarketplacePanelProvider implements vscode.Disposable {
   private refresh: ReturnType<typeof setTimeout> | undefined
   private statuses = new Map<string, SessionStatus["type"]>()
   private pendingInstall: MarketplaceItem | undefined
+  private pendingFocus: MarketplaceItem | undefined
   private disposables: vscode.Disposable[] = []
   private subscriptions: Array<() => void> = []
   private readonly marketplace = new MarketplaceService()
@@ -63,6 +64,7 @@ export class MarketplacePanelProvider implements vscode.Disposable {
     if (this.panel) {
       this.setProjectDirectory(project)
       this.panel.reveal(vscode.ViewColumn.One)
+      this.post({ type: "resetMarketplaceFilters" })
       this.scheduleRefresh()
       return
     }
@@ -89,6 +91,13 @@ export class MarketplacePanelProvider implements vscode.Disposable {
     this.openPanel()
     this.pendingInstall = item
     this.flushPendingInstall()
+  }
+
+  /** Open the panel focused on a specific item so it is easy to find. */
+  focusItem(item: MarketplaceItem): void {
+    this.openPanel()
+    this.pendingFocus = item
+    this.flushPendingFocus()
   }
 
   dispose(): void {
@@ -156,6 +165,8 @@ export class MarketplacePanelProvider implements vscode.Disposable {
     this.ready = false
     this.generation++
     this.statuses.clear()
+    this.pendingInstall = undefined
+    this.pendingFocus = undefined
   }
 
   private async connect(): Promise<void> {
@@ -208,6 +219,7 @@ export class MarketplacePanelProvider implements vscode.Disposable {
         else await this.connect()
         await this.fetchData()
         this.flushPendingInstall()
+        this.flushPendingFocus()
         return
       case "retryConnection":
         await this.connect()
@@ -239,6 +251,14 @@ export class MarketplacePanelProvider implements vscode.Disposable {
     const item = this.pendingInstall
     this.pendingInstall = undefined
     this.post({ type: "openInstallModal", mpItem: item })
+  }
+
+  /** Ask the webview to focus a queued item, once it can receive it. */
+  private flushPendingFocus(): void {
+    if (!this.pendingFocus || !this.ready) return
+    const item = this.pendingFocus
+    this.pendingFocus = undefined
+    this.post({ type: "focusMarketplaceItem", mpItem: item })
   }
 
   private scheduleRefresh(): void {
