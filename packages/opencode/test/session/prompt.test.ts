@@ -1365,9 +1365,9 @@ it.instance(
   10_000,
 )
 
-// kilocode_change start - Esc in the subagent view aborts only the child (scope=session)
+// kilocode_change start - TUI subagent-view Esc and the VS Code task-card Stop both abort the child as a tree
 it.instance(
-  "session-scoped child abort reports a resumable user interruption to the parent",
+  "tree abort of a running subagent leaves the parent running and reports the task as cancelled",
   () =>
     Effect.gen(function* () {
       const { llm } = yield* useServerConfig(providerCfg)
@@ -1399,13 +1399,14 @@ it.instance(
         "10 seconds",
       )
 
-      yield* prompt.cancel(child, "session")
+      yield* prompt.cancel(child, "tree")
       const result = yield* awaitWithTimeout(
         Fiber.join(fiber),
         "parent did not continue after child abort",
         "15 seconds",
       )
 
+      // the parent was not aborted: it finished its step and made its next model call
       expect(result.parts.some((part) => part.type === "text" && part.text === "parent recovered")).toBe(true)
       const part = (yield* MessageV2.filterCompactedEffect(chat.id))
         .flatMap((msg) => msg.parts)
@@ -1413,10 +1414,8 @@ it.instance(
           (part): part is ErrorToolPart =>
             part.type === "tool" && part.tool === "task" && part.state.status === "error",
         )
-      expect(part?.state.error).toContain("Interrupted by user")
-      expect(part?.state.error).toContain(`task_id="${child}"`)
-      expect(part?.state.error).not.toContain("look into the cache key path")
-      expect(JSON.stringify((yield* llm.hits).at(-1)?.body)).toContain("Interrupted by user")
+      expect(part?.state.error).toBe("Task cancelled")
+      expect((yield* status.get(child)).type).toBe("idle")
     }),
   30_000,
 )

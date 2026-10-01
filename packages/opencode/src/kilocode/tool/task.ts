@@ -35,32 +35,6 @@ const ModelState = z
   .passthrough()
 
 export namespace KiloTask {
-  /**
-   * Raised by the task tool when the user aborts a foreground subagent's own turn
-   * (a session-scoped abort from the subagent view). The stop was deliberate, so
-   * the message tells the parent not to resume on its own: the generic resume hint
-   * reads as an instruction and models immediately relaunched the subagent. The
-   * task_id stays available for when the user asks to continue. The task prompt is
-   * omitted: the parent already has it in its own tool call.
-   */
-  export class Interrupted extends Error {
-    readonly sessionID: SessionID
-    readonly activity: string
-
-    constructor(input: { sessionID: SessionID; activity: string }) {
-      super(
-        [
-          `Interrupted by user: the user deliberately stopped subagent ${input.sessionID} during "${input.activity}".`,
-          "Do not resume, retry, or replace this subagent on your own. Tell the user it was stopped and wait for their direction.",
-          `If the user asks to continue it, call the task tool with task_id="${input.sessionID}"; its prior context is preserved.`,
-        ].join("\n"),
-      )
-      this.name = "TaskInterrupted"
-      this.sessionID = input.sessionID
-      this.activity = input.activity
-    }
-  }
-
   export const ModelFields = {
     model: Schema.optional(Schema.NullOr(Schema.String)).annotate({
       description:

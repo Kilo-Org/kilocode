@@ -221,7 +221,7 @@ test("running subagent view shows the interrupt shortcut beside the navigation s
   expect(row).toMatch(/Interrupt esc\s+Parent up\s+Prev left\s+Next right/)
 })
 
-test("double Esc interrupts only the running subagent", async () => {
+test("double Esc stops the running subagent like the VS Code task-card Stop", async () => {
   await using tmp = await tmpdir()
   using scene = await mount(tmp.path)
   await scene.press("\x1b")
@@ -229,7 +229,8 @@ test("double Esc interrupts only the running subagent", async () => {
   expect(scene.aborts).toHaveLength(0)
   await scene.press("\x1b")
   await wait(() => scene.aborts.length === 1)
-  expect(scene.aborts[0]?.searchParams.get("scope")).toBe("session")
+  expect(scene.aborts[0]?.pathname).toBe(`/session/${child.id}/abort`)
+  expect(scene.aborts[0]?.searchParams.get("scope")).toBe("tree")
   expect(scene.frame()).not.toContain("esc again")
 })
 

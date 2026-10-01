@@ -355,10 +355,12 @@ export function Session() {
     const status = sync.data.session_status?.[route.sessionID]
     return status ? running(status.type) : false
   })
+  // Same stop as the VS Code task card: this subagent and anything it started. The parent
+  // keeps running and receives the cancelled task result.
   function interruptSubagent() {
     if (!interrupt.press()) return
     const fail = () => toast.show({ message: "Failed to interrupt subagent", variant: "error" })
-    void sdk.client.session.abort({ sessionID: route.sessionID, scope: "session" }).then((res) => {
+    void sdk.client.session.abort({ sessionID: route.sessionID, scope: "tree" }).then((res) => {
       if (res.error) fail()
     }, fail)
   }
@@ -1272,7 +1274,7 @@ export function Session() {
     bindings: tuiConfig.keybinds.get("session.background"),
   }))
 
-  // kilocode_change start - subagent view: double Esc interrupts only this subagent (scope=session),
+  // kilocode_change start - subagent view: double Esc stops this subagent (VS Code's task-card Stop),
   // and the configured exit keys need a second press. `get` (not `gather`) because gather caches by name.
   useBindings(() => ({
     mode: KILO_BASE_MODE,

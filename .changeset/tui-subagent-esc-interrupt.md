@@ -2,4 +2,4 @@
 "@kilocode/cli": minor
 ---
 
-Press Esc twice in a subagent view to stop just that subagent while the parent session keeps working, and press the exit key twice to leave the TUI from a subagent view.
+Press Esc twice in a subagent view to stop that subagent and anything it started while the parent session keeps working, the same as Stop on a VS Code task card. Leaving the TUI from a subagent view now needs a second press of the exit key.
