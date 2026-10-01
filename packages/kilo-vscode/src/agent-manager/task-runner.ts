@@ -24,12 +24,9 @@ export async function executeVscodeTask(config: SetupTaskConfig): Promise<number
 
   // A start failure means the script did not run. Reject so SetupScriptRunner
   // logs and reports it instead of treating the skip as success.
-  const execution = await vscode.tasks.executeTask(task).then(
-    (value) => value,
-    (error: unknown) => {
-      throw new Error(`Failed to start setup task: ${error instanceof Error ? error.message : String(error)}`)
-    },
-  )
+  const execution = await Promise.resolve(vscode.tasks.executeTask(task)).catch((error: unknown) => {
+    throw new Error(`Failed to start setup task: ${error instanceof Error ? error.message : String(error)}`)
+  })
 
   return new Promise((resolve, reject) => {
     let done = false
