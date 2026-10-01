@@ -19,6 +19,7 @@ data class SlashAction(
         val AGENTS = Spec("agents", "prompt.slash.agents", listOf("modes"))
         val VARIANT = Spec("variant", "prompt.slash.variant", listOf("reasoning", "variants", "thinking"))
         val COMPACT = Spec("compact", "prompt.slash.compact", listOf("smol", "condense"))
+        val RELOAD = Spec("reload", "prompt.slash.reload", listOf("refresh"))
         val SETTINGS = Spec("settings", "prompt.slash.settings")
         val HELP = Spec("help", "prompt.slash.help")
 
@@ -29,6 +30,7 @@ data class SlashAction(
             AGENTS,
             VARIANT,
             COMPACT,
+            RELOAD,
             SETTINGS,
             HELP,
         )
