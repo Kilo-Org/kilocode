@@ -3,7 +3,7 @@
  */
 
 import * as vscode from "vscode"
-import type { SetupTaskConfig } from "./SetupScriptRunner"
+import { setupTaskIdentity, type SetupTaskConfig } from "./SetupScriptRunner"
 
 const GRACE_MS = 250
 const TIMEOUT_MS = 5 * 60 * 1000
@@ -13,14 +13,8 @@ export async function executeVscodeTask(config: SetupTaskConfig): Promise<number
     cwd: config.cwd,
     env: config.env,
   })
-  const task = new vscode.Task(
-    { type: "kilo-worktree-setup", script: config.command },
-    vscode.TaskScope.Workspace,
-    "Worktree Setup",
-    "Kilo Code",
-    proc,
-    [],
-  )
+  const identity = setupTaskIdentity(config)
+  const task = new vscode.Task(identity.definition, vscode.TaskScope.Workspace, identity.name, "Kilo Code", proc, [])
   task.presentationOptions = {
     reveal: vscode.TaskRevealKind.Always,
     panel: vscode.TaskPanelKind.Dedicated,
@@ -28,16 +22,14 @@ export async function executeVscodeTask(config: SetupTaskConfig): Promise<number
     showReuseMessage: false,
   }
 
-  let execution: vscode.TaskExecution
-  try {
-    execution = await vscode.tasks.executeTask(task)
-  } catch {
-    // Task type may not be registered in certain VS Code environments
-    // (e.g. remote, codespaces, or if package.json contribution is not loaded yet).
-    // Return undefined so SetupScriptRunner treats it as a non-fatal skip
-    // rather than VS Code surfacing its own error notification.
-    return undefined
-  }
+  // A start failure means the script did not run. Reject so SetupScriptRunner
+  // logs and reports it instead of treating the skip as success.
+  const execution = await vscode.tasks.executeTask(task).then(
+    (value) => value,
+    (error: unknown) => {
+      throw new Error(`Failed to start setup task: ${error instanceof Error ? error.message : String(error)}`)
+    },
+  )
 
   return new Promise((resolve, reject) => {
     let done = false
