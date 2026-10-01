@@ -72,6 +72,10 @@
           "script": {
             "type": "string",
             "description": "The setup script command to execute"
+          },
+          "worktree": {
+            "type": "string",
+            "description": "The worktree directory the setup script runs in"
           }
         }
       }
