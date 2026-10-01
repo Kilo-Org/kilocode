@@ -9,6 +9,7 @@ export function registerCodeActions(
   provider: KiloProvider,
   agentManager?: AgentManagerProvider,
   activeTabProvider?: () => KiloProvider | undefined,
+  lastFocusedChat?: () => KiloProvider | AgentManagerProvider | undefined,
 ): void {
   const target = () => (agentManager?.isActive() ? agentManager : (activeTabProvider?.() ?? provider))
   const reveal = async () => {
@@ -86,7 +87,7 @@ export function registerCodeActions(
     vscode.commands.registerCommand("kilo-code.new.addToContext", async () => {
       const ctx = getEditorContext()
       if (!ctx) return
-      const view = target()
+      const view = lastFocusedChat?.() ?? target()
       if (!(await revealTarget(view))) return
       view.postMessage({
         type: "appendChatContext",

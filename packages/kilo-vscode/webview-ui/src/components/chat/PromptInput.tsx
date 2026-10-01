@@ -247,7 +247,11 @@ function MentionItemContent(props: { item: MentionResult }) {
       <span class="file-mention-name">
         {item.type === "folder" ? `${fileName(item.value)}/` : fileName(item.value)}
       </span>
-      <span class="file-mention-dir">{dirName(item.value)}</span>
+      {/* Without the folder name, two roots holding the same relative path render identically. */}
+      <Show when={item.root}>{(root) => <span class="file-mention-root">{root()}</span>}</Show>
+      {/* Shown relative to its own folder: the badge already names the folder, and
+          the absolute form would spell out the local filesystem layout instead. */}
+      <span class="file-mention-dir">{dirName(item.relative ?? item.value)}</span>
     </>
   )
 }
@@ -1981,6 +1985,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
                     <div
                       class="file-mention-item"
                       data-type={item.type}
+                      title={"root" in item ? item.value : undefined}
                       classList={{ "file-mention-item--active": index() === mention.mentionIndex() }}
                       onMouseDown={(e) => {
                         e.preventDefault()
