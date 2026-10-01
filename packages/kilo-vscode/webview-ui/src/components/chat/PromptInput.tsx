@@ -652,8 +652,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   const REVIEW_PREFIX = /^## Review Comments\n[\s\S]*?\n\n/
   createEffect(() => {
     const msgs = session.userMessages()
-    // Tracked so a late settings load or a mode switch re-seeds the per-conversation list.
-    if (msgs.length === 0 || !scoped()) return
+    if (msgs.length === 0) return
     const timer = setTimeout(() => {
       const texts = msgs.map((m) => {
         const parts = session.getParts(m.id)

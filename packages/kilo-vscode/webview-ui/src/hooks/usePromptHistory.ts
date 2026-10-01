@@ -199,7 +199,7 @@ export interface PromptHistory {
  * session ID). History is isolated per key; an undefined key falls back to a
  * shared bucket for conversations that have not been created yet.
  * @param shared When it returns true, every conversation shares one history and
- * `key` is ignored. Seeding from session messages is skipped in that mode.
+ * `key` is ignored.
  */
 export function usePromptHistory(key: Accessor<string | undefined>, shared?: Accessor<boolean>): PromptHistory {
   const [index, setIndex] = createSignal(-1)
@@ -268,7 +268,7 @@ export function usePromptHistory(key: Accessor<string | undefined>, shared?: Acc
   }
 
   function seed(texts: string[]) {
-    if (shared?.() || !texts.some((t) => t.trim())) return
+    if (!texts.some((t) => t.trim())) return
     if (
       seedEntries(
         mutableEntriesFor(syncKey()),

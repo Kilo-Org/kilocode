@@ -386,12 +386,12 @@ describe("usePromptHistory — global mode", () => {
     })
   })
 
-  it("does not seed from session messages", () => {
+  it("seeds the shared list from session messages", () => {
     createRoot((dispose) => {
       const [sid] = createSignal<string | undefined>("global-d")
       const history = usePromptHistory(sid, () => true)
-      history.seed(["old prompt from a session"])
-      expect(history.navigate("up", "", 0, [])?.text).not.toBe("old prompt from a session")
+      history.seed(["sent in the TUI"])
+      expect(history.navigate("up", "", 0, [])?.text).toBe("sent in the TUI")
       dispose()
     })
   })
