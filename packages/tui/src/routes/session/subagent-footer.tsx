@@ -1,4 +1,5 @@
 import { createMemo, createSignal, Show } from "solid-js"
+import type { Accessor } from "solid-js" // kilocode_change
 import { useRouteData } from "../../context/route"
 import { useSync } from "../../context/sync"
 import { useTheme } from "../../context/theme"
@@ -10,7 +11,16 @@ import { Locale } from "../../util/locale"
 import { useTerminalDimensions } from "@opentui/solid"
 import { useCommandShortcut, useOpencodeKeymap } from "../../keymap"
 
-export function SubagentFooter() {
+// kilocode_change start - double-press counters owned by the session route
+type Props = {
+  interruptible: Accessor<boolean>
+  interrupt: Accessor<number>
+  exitPress: Accessor<number>
+  narrow: Accessor<boolean>
+}
+
+export function SubagentFooter(props: Props) {
+  // kilocode_change end
   const route = useRouteData("session")
   const sync = useSync()
   const local = useLocal() // kilocode_change
@@ -76,7 +86,18 @@ export function SubagentFooter() {
   const parentShortcut = useCommandShortcut("session.parent")
   const previousShortcut = useCommandShortcut("session.child.previous")
   const nextShortcut = useCommandShortcut("session.child.next")
-  const [hover, setHover] = createSignal<"parent" | "prev" | "next" | null>(null)
+  // kilocode_change start - key hints
+  const interruptShortcut = useCommandShortcut("subagent.interrupt")
+  const exitShortcut = useCommandShortcut("app.exit")
+  const interruptKey = createMemo(() => {
+    const key = interruptShortcut()
+    return !key || key === "escape" ? "esc" : key
+  })
+  const armed = createMemo(() => props.interrupt() > 0)
+  // narrow footers drop usage while a key hint is shown so the row does not wrap
+  const crowded = createMemo(() => props.narrow() && (props.interruptible() || props.exitPress() > 0))
+  // kilocode_change end
+  const [hover, setHover] = createSignal<"interrupt" | "parent" | "prev" | "next" | null>(null) // kilocode_change
   useTerminalDimensions()
 
   return (
@@ -107,15 +128,41 @@ export function SubagentFooter() {
               <Spinner color={agentColor()} />
             </Show>
             {/* kilocode_change end */}
-            <Show when={usage()}>
+            {/* kilocode_change - hide usage while a key hint crowds a narrow footer */}
+            <Show when={crowded() ? undefined : usage()}>
               {(item) => (
                 <text fg={theme.textMuted} wrapMode="none">
                   {[item().context, item().cost].filter(Boolean).join(" · ")}
                 </text>
               )}
             </Show>
+            {/* kilocode_change start - transient exit confirmation */}
+            <Show when={props.exitPress() > 0}>
+              <text fg={theme.primary} wrapMode="none" flexShrink={0}>
+                {exitShortcut() || "ctrl+c"} again to exit
+              </text>
+            </Show>
+            {/* kilocode_change end */}
           </box>
           <box flexDirection="row" gap={2}>
+            {/* kilocode_change start - interrupt this subagent, alongside the navigation shortcuts;
+                the brief exit confirmation takes its space so a narrow row never wraps */}
+            <Show when={props.interruptible() && props.exitPress() === 0}>
+              <box
+                onMouseOver={() => setHover("interrupt")}
+                onMouseOut={() => setHover(null)}
+                onMouseUp={() => keymap.dispatchCommand("subagent.interrupt")}
+                backgroundColor={hover() === "interrupt" ? theme.backgroundElement : theme.backgroundPanel}
+              >
+                <text fg={armed() ? theme.primary : theme.text} wrapMode="none">
+                  Interrupt{" "}
+                  <span style={{ fg: armed() ? theme.primary : theme.textMuted }}>
+                    {armed() ? `${interruptKey()} again` : interruptKey()}
+                  </span>
+                </text>
+              </box>
+            </Show>
+            {/* kilocode_change end */}
             <box
               onMouseOver={() => setHover("parent")}
               onMouseOut={() => setHover(null)}
