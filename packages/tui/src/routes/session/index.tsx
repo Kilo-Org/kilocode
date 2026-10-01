@@ -68,6 +68,7 @@ import { usePromptRef } from "../../context/prompt"
 import { ApprovalBadge, describeApproval, stateMetadata } from "../../kilocode/tool-approval" // kilocode_change
 import { BoardTool } from "../../kilocode/board-tool" // kilocode_change
 import { KiloSteer } from "../../kilocode/steer" // kilocode_change
+import { KiloTaskPause } from "../../kilocode/task-pause" // kilocode_change
 import { useEpilogue } from "../../context/epilogue"
 import { normalizePath } from "../../util/path"
 import { PermissionPrompt } from "./permission"
@@ -357,13 +358,17 @@ export function Session() {
     const status = sync.data.session_status?.[route.sessionID]
     return status ? running(status.type) : false
   })
-  // Same stop as the VS Code task card: this subagent and anything it started. The parent
-  // keeps running and receives the cancelled task result.
+  const subagentPaused = createMemo(() => subagentKeys() && !subagentRunning() && KiloTaskPause.paused(session()))
+  // An interrupt, like Esc in any session view: it stops this subagent's turn and pauses the
+  // parent's task, so background work it started keeps running. On an already-paused subagent
+  // the same interrupt returns control to the parent with an interrupted task result.
   function interruptSubagent() {
     if (!interrupt.press()) return
+    const parent = subagentPaused() ? session()?.parentID : undefined
     const fail = () => toast.show({ message: "Failed to interrupt subagent", variant: "error" })
-    void sdk.client.session.abort({ sessionID: route.sessionID, scope: "tree" }).then((res) => {
-      if (res.error) fail()
+    void sdk.client.session.abort({ sessionID: route.sessionID, scope: "session" }).then((res) => {
+      if (res.error) return fail()
+      if (parent) navigate({ type: "session", sessionID: parent })
     }, fail)
   }
   // kilocode_change end
@@ -1285,11 +1290,12 @@ export function Session() {
     bindings: tuiConfig.keybinds.get("session.background"),
   }))
 
-  // kilocode_change start - subagent view: double Esc stops this subagent (VS Code's task-card Stop),
-  // and the configured exit keys need a second press. `get` (not `gather`) because gather caches by name.
+  // kilocode_change start - subagent view: double Esc interrupts this subagent (pausing its task) and,
+  // once paused, returns control to the parent. The configured exit keys need a second press.
+  // `get` (not `gather`) because gather caches by name.
   useBindings(() => ({
     mode: KILO_BASE_MODE,
-    enabled: subagentRunning(),
+    enabled: subagentRunning() || subagentPaused(),
     priority: 1,
     commands: [
       {
@@ -1526,6 +1532,7 @@ export function Session() {
                   {/* kilocode_change start */}
                   <SubagentFooter
                     interruptible={subagentRunning}
+                    paused={subagentPaused}
                     interrupt={interrupt.count}
                     exitPress={quit.count}
                     narrow={() => contentWidth() < 96}
@@ -2636,8 +2643,13 @@ function Task(props: ToolProps) {
   )
 
   const status = createMemo(() => sync.data.session_status[sessionID() ?? ""])
+  // kilocode_change start - a task paused by a subagent-view interrupt waits on the user, not a spinner
+  const paused = createMemo(() => KiloTaskPause.paused(sync.session.get(sessionID() ?? "")))
+  const backgroundKey = useCommandShortcut("session.background")
+  // kilocode_change end
   const isRunning = createMemo(() => {
     const value = status()
+    if (paused()) return false // kilocode_change
     return (
       props.part.state.status === "running" ||
       (props.metadata.background === true && value !== undefined && running(value.type)) // kilocode_change
@@ -2677,17 +2689,25 @@ function Task(props: ToolProps) {
         content.push(`↳ ${Locale.titlecase(current()!.tool)} ${title}`)
       } else content.push(`↳ ${formatSubagentToolcalls(tools().length)}`)
     } else if (isRunning()) content.push(`↳ Starting...`) // kilocode_change
+    // kilocode_change start
+    if (paused()) {
+      const foreground = props.part.state.status === "running" && props.metadata.background !== true
+      content.push(`↳ ${KiloTaskPause.detail(foreground, backgroundKey())}`)
+    }
+    // kilocode_change end
 
-    if (!isRunning() && props.part.state.status === "completed") {
+    // kilocode_change start - a paused background task has not finished
+    if (!isRunning() && !paused() && props.part.state.status === "completed") {
       content.push(`↳ ${formatCompletedSubagentDetail(tools().length, Locale.duration(duration()))}`)
     }
+    // kilocode_change end
 
     return content.join("\n")
   })
 
   return (
     <InlineTool
-      icon={props.part.state.status === "completed" ? "✓" : "│"}
+      icon={props.part.state.status === "completed" && !paused() ? "✓" : "│"} // kilocode_change
       separate={true}
       color={retry() ? theme.error : undefined}
       spinner={isRunning()}

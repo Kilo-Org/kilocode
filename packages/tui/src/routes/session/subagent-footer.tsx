@@ -14,6 +14,7 @@ import { useCommandShortcut, useOpencodeKeymap } from "../../keymap"
 // kilocode_change start - double-press counters owned by the session route
 type Props = {
   interruptible: Accessor<boolean>
+  paused: Accessor<boolean>
   interrupt: Accessor<number>
   exitPress: Accessor<number>
   narrow: Accessor<boolean>
@@ -95,7 +96,11 @@ export function SubagentFooter(props: Props) {
   })
   const armed = createMemo(() => props.interrupt() > 0)
   // narrow footers drop usage while a key hint is shown so the row does not wrap
-  const crowded = createMemo(() => props.narrow() && (props.interruptible() || props.exitPress() > 0))
+  const crowded = createMemo(
+    () => props.paused() || (props.narrow() && (props.interruptible() || props.exitPress() > 0)),
+  )
+  // the paused hint is the longest; a narrow footer drops prev/next while it shows
+  const compact = createMemo(() => props.narrow() && props.paused() && props.exitPress() === 0)
   // kilocode_change end
   const [hover, setHover] = createSignal<"interrupt" | "parent" | "prev" | "next" | null>(null) // kilocode_change
   useTerminalDimensions()
@@ -163,6 +168,23 @@ export function SubagentFooter(props: Props) {
                 </text>
               </box>
             </Show>
+            {/* the parent's task is paused: the same interrupt returns control to the parent */}
+            <Show when={props.paused() && props.exitPress() === 0}>
+              <box
+                onMouseOver={() => setHover("interrupt")}
+                onMouseOut={() => setHover(null)}
+                onMouseUp={() => keymap.dispatchCommand("subagent.interrupt")}
+                backgroundColor={hover() === "interrupt" ? theme.backgroundElement : theme.backgroundPanel}
+              >
+                <text fg={armed() ? theme.primary : theme.text} wrapMode="none">
+                  Interrupted ·{" "}
+                  <span style={{ fg: armed() ? theme.primary : theme.textMuted }}>
+                    {armed() ? `${interruptKey()} again` : `${interruptKey()} ${interruptKey()}`}
+                  </span>{" "}
+                  return to parent
+                </text>
+              </box>
+            </Show>
             {/* kilocode_change end */}
             <box
               onMouseOver={() => setHover("parent")}
@@ -175,6 +197,7 @@ export function SubagentFooter(props: Props) {
               </text>
             </box>
             <box
+              visible={!compact()} // kilocode_change
               onMouseOver={() => setHover("prev")}
               onMouseOut={() => setHover(null)}
               onMouseUp={() => keymap.dispatchCommand("session.child.previous")}
@@ -185,6 +208,7 @@ export function SubagentFooter(props: Props) {
               </text>
             </box>
             <box
+              visible={!compact()} // kilocode_change
               onMouseOver={() => setHover("next")}
               onMouseOut={() => setHover(null)}
               onMouseUp={() => keymap.dispatchCommand("session.child.next")}
