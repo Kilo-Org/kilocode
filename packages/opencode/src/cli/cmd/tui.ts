@@ -25,7 +25,6 @@ import {
 // kilocode_change end
 import type { RemoteExitBridgeClient } from "@/kilocode/cli/cmd/tui/remote-exit-bridge" // kilocode_change - runtime import deferred
 import type { Exit } from "@opencode-ai/tui/context/exit" // kilocode_change
-import { WorkerReady } from "@/kilocode/cli/cmd/tui/worker-ready" // kilocode_change
 
 declare global {
   const KILO_WORKER_PATH: string
@@ -335,7 +334,6 @@ export const TuiThreadCommand = cmd({
         console.error("TUI worker error", e.error ?? e.message)
       }
       const client = Rpc.client<typeof rpc>(worker)
-      const ready = WorkerReady.wait(client) // kilocode_change - subscribe before the worker can signal
       const reload = () => {
         client.call("reload", undefined).catch((err) => console.error("TUI worker reload failed", err))
       }
@@ -419,13 +417,6 @@ export const TuiThreadCommand = cmd({
       orphanWatch.unref()
       // kilocode_change end
 
-      // kilocode_change start - calls sent before the worker listens are dropped, leaving a blank TUI
-      if (!(await ready)) {
-        UI.error(`TUI worker did not start within ${WorkerReady.Timeout / 1000}s`)
-        shutdownAndExit({ reason: "worker-timeout", code: 1 })
-        return
-      }
-      // kilocode_change end
       const prompt = await input(args.prompt)
       const { TuiConfig } = await import("@/config/tui") // kilocode_change
       const config = await TuiConfig.get()

@@ -15,7 +15,6 @@ import { ensureProcessMetadata } from "@opencode-ai/core/util/opencode-process" 
 import { createWorkerRemoteExit } from "@/kilocode/cli/cmd/tui/remote-exit-worker" // kilocode_change
 import { createWorkerShutdown } from "@/cli/tui/worker-shutdown" // kilocode_change
 import { KiloSessions } from "@/kilo-sessions/kilo-sessions" // kilocode_change
-import { WorkerReady } from "@/kilocode/cli/cmd/tui/worker-ready" // kilocode_change
 
 ensureProcessMetadata("worker") // kilocode_change - retain worker role and parent run correlation
 await KiloLog.init() // kilocode_change - keep compatibility logs off the TUI terminal
@@ -115,4 +114,3 @@ export const rpc = {
 }
 
 Rpc.listen(rpc)
-Rpc.emit(WorkerReady.Event, undefined) // kilocode_change - tell the parent it is safe to send RPC calls
