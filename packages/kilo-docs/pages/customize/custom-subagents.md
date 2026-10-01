@@ -258,7 +258,7 @@ This displays each agent's name, mode, and permission configuration.
 
 ## Inspecting delegated sessions in VS Code
 
-When a subagent is delegated from a session in the VS Code extension, open its transcript from the task card or background-agent row. In Agent Manager, the transcript opens in the **Subagents** inspector as a read-only tab. Use the inspector tab strip to switch between multiple child sessions, reorder tabs, or close tabs.
+When a subagent is delegated from a session in the VS Code extension, open its transcript from the task card or the background agent stack. In Agent Manager, the transcript opens in the **Subagents** inspector as a read-only tab. Use the inspector tab strip to switch between multiple child sessions, reorder tabs, or close tabs.
 
 Inspector tabs are scoped to the current project and parent session. When you switch worktrees or sessions, Agent Manager shows the tabs for that project and parent only, so child transcripts from another session are not mixed into the current view.
 

@@ -46,7 +46,7 @@ A `task` subagent is a non-interactive delegate. Non-interactive means that the 
 - **Resume:** If Kilo returns a `task_id` after a failed or interrupted child, pass it back to `task` to continue that child, subject to the current session and permission rules.
 - **Nesting:** A child can delegate again only when its agent permissions and the configured subagent depth allow it.
 
-In the VS Code extension, the background-agent strip shows running, completed, cancelled, and failed children. Open a child transcript from its task card or background-agent row. A running foreground child can also be moved to the background with **Continue in background**.
+In the VS Code extension, the background agent stack in the session dock shows running, completed, cancelled, and failed children. Open a child transcript from its task card or from the agent stack's panel. A running foreground child can also be moved to the background with **Continue in background**.
 
 ### Kilo Swarm communication
 
@@ -350,7 +350,7 @@ Imported work stays associated with its branch or worktree and can be continued 
 
 File mentions, clickable file links, review-comment file links, file-link validation, and native VS Code opening resolve against the referenced session's directory or worktree. If a session ID is present in multiple projects, Kilo rejects the unqualified reference rather than choosing an arbitrary project.
 
-When a session delegates work to a subagent, open the child transcript from its task card or background-agent row. Agent Manager displays it in the read-only **Subagents** inspector. The inspector supports multiple child-session tabs and keeps them scoped to the selected project and parent session. For the difference between Agent Manager inspector tabs and the separate subagent editor tabs used by the sidebar, see [Inspecting delegated sessions in VS Code](/docs/customize/custom-subagents#inspecting-delegated-sessions-in-vs-code).
+When a session delegates work to a subagent, open the child transcript from its task card or the background agent stack. Agent Manager displays it in the read-only **Subagents** inspector. The inspector supports multiple child-session tabs and keeps them scoped to the selected project and parent session. For the difference between Agent Manager inspector tabs and the separate subagent editor tabs used by the sidebar, see [Inspecting delegated sessions in VS Code](/docs/customize/custom-subagents#inspecting-delegated-sessions-in-vs-code).
 
 ### Renaming Worktrees
 

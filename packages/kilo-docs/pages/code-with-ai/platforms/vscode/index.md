@@ -39,7 +39,7 @@ Key features include:
 
 ## Background agents
 
-When Kilo starts an agent in the background, a collapsible status strip appears in the chat header. The strip stays visible while the transcript scrolls, so you can check background work without searching the conversation. Click the strip to expand it and see each agent.
+When Kilo starts an agent in the background, a stack of agent avatars appears in the session dock, the row between the transcript and the prompt input. The stack stays visible while background agents work — during the main agent's turn and after it ends — so you can check background work without searching the conversation. Click the stack to open it.
 
 Each agent shows one of these states:
 
@@ -50,15 +50,16 @@ Each agent shows one of these states:
 | **Cancelled** | The agent was stopped before it completed. |
 | **Error** | The agent stopped because it encountered an error. |
 
-An agent can also show **Needs input** when it is waiting for a permission decision or an answer to a question. Open the agent row to inspect its read-only transcript and handle the request in the child-agent view. In the sidebar and Kilo tab, the transcript opens in a read-only editor tab. In Agent Manager, it opens in the right-hand inspector.
+An agent can also show **Needs input** when it is waiting for a permission decision or an answer to a question.
 
-Use these controls in the background-agent strip:
+The open panel lists the agents started by your current message. Running agents appear first with their controls, and finished agents sit dimmed below them. From the panel you can:
 
+- **Open** an agent to inspect its read-only transcript and handle a pending permission or question. In the sidebar and Kilo tab, the transcript opens in a read-only editor tab. In Agent Manager, it opens in the right-hand inspector. Use **Open all** to open every listed agent.
 - **Stop** cancels a running agent and its child session.
 - **Stop all (N)** cancels every running background agent for the current session without stopping the main session.
-- **Dismiss** hides one finished agent from the strip. It does not delete the transcript or the agent record.
-- **Clear finished** hides all agents that are no longer running.
-- **Continue in background** appears when a foreground subagent is running. It detaches that work so the parent session can continue while the subagent runs in the background.
+- **Clear finished** hides agents that are no longer running. It does not delete the transcript or the agent record.
+
+Each running task card also has a **Stop** button. It cancels only that subagent and anything it started; the parent keeps running and receives a cancelled task result. When background subagents are enabled, a **Continue in background** button on the card detaches a running foreground subagent so the parent session can continue while it runs.
 
 Stopping the main session with **Stop** or `Esc` ends its current response but leaves background agents running. Use **Stop all (N)** or an individual agent's **Stop** to cancel background work. Completed background results are available when you send the next message or use **Continue**.
 

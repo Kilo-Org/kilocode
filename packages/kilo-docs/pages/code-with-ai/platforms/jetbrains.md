@@ -19,6 +19,14 @@ Open **Settings → Tools → Kilo Code** to configure the plugin. Shared agent 
 - **Integrations** - enable or disable the GitHub integration for pull request badges and imports. It requires the GitHub CLI (`gh`) to be installed and authenticated.
 - **Advanced → Index agent worktrees** - include `.kilo/worktrees` in the containing project's index. Worktrees are excluded by default to avoid duplicate search results. Files opened from an excluded worktree in the main IDE window lack code resolution and inspections; open the worktree as its own project for full indexing.
 
+### Reloading Core settings
+
+Kilo reads configuration files, skills, agents, commands, and MCP prompts from disk when Core starts. To apply edits to any of these without restarting Core, enter `/reload` in the prompt, or choose **Reload Core Settings** from the prompt bar's more menu, a session's right-click menu, or the **Core** group in the tool window.
+
+Reload uses the active workspace's project directory and is refused while a session is running in that project. Wait for the session to finish or stop it, then reload again. The CLI exposes the same command — see [Interactive Slash Commands](/docs/code-with-ai/platforms/cli#interactive-slash-commands).
+
+If Core stops responding, **Restart Core** and **Reinstall Core** are still available for recovery. Both cancel every active session, so Kilo asks you to confirm before proceeding.
+
 ## Chat and worktrees
 
 Use **Chat** for the current workspace and **Agents** to manage parallel tasks in isolated git worktrees. **+ Session** starts a conversation; **+ Worktree** opens the worktree creation dialog.
