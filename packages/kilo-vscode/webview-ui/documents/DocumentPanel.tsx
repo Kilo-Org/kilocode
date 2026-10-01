@@ -1,7 +1,7 @@
 import { Dynamic } from "solid-js/web"
-import { Component, Show, Accessor, createMemo, createSignal, createEffect, on } from "solid-js"
+import { Component, Show, Accessor, createMemo, createSignal, createEffect, onCleanup, on } from "solid-js"
 import { MarkdownPane } from "../diff-viewer/MarkdownDiffView"
-import { isMarkdownPath, type DocumentData, type DocumentTab } from "./state"
+import { documentPath, isMarkdownPath, type DocumentData, type DocumentTab } from "./state"
 import { InspectorTabStrip } from "../agent-manager/InspectorTabStrip"
 import { SortableClosableTab } from "../agent-manager/ClosableTab"
 import { useCodeComponent } from "@kilocode/kilo-ui/context/code"
@@ -10,6 +10,7 @@ import { Icon } from "@kilocode/kilo-ui/icon"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Button } from "@kilocode/kilo-ui/button"
 import { Tooltip, TooltipKeybind } from "@kilocode/kilo-ui/tooltip"
+import { ContextMenu } from "@kilocode/kilo-ui/context-menu"
 import type { DiffLineAnnotation, AnnotationSide, SelectedLineRange } from "@pierre/diffs"
 import type { WorktreeFileDiff } from "../src/types/messages"
 import type { ReviewComment } from "../diff-viewer/review-comments"
@@ -37,6 +38,7 @@ export interface DocumentPanelProps {
   onCloseOthers: (id: string) => void
   onReorder: (from: string, to: string) => void
   onOpenFile: (file: string, line?: number, column?: number) => void
+  onCopyPath: (file: string) => void
   onClosePanel: () => void
   onSendAll?: () => void
   activeTerminalId?: string
@@ -60,15 +62,45 @@ function sendAllKeybind(t: (key: string) => string): string {
     : t("agentManager.review.sendAllShortcut.other")
 }
 
+function copyText(text: string): Promise<boolean> {
+  return (navigator.clipboard?.writeText(text) ?? Promise.reject(new Error("Clipboard unavailable"))).then(
+    () => true,
+    (err) => {
+      console.error("[Kilo New] Failed to copy text:", err)
+      return false
+    },
+  )
+}
+
+function isEditableTarget(target: EventTarget | null): boolean {
+  if (target instanceof HTMLTextAreaElement || target instanceof HTMLInputElement) return true
+  return target instanceof HTMLElement && target.isContentEditable
+}
+
 function handleSendAllKeyDown(event: KeyboardEvent, comments: ReviewComment[], send: () => void): void {
   if (event.key !== "Enter" || (!event.metaKey && !event.ctrlKey)) return
-  const target = event.target
-  if (target instanceof HTMLTextAreaElement || target instanceof HTMLInputElement) return
-  if (target instanceof HTMLElement && target.isContentEditable) return
+  if (isEditableTarget(event.target)) return
   if (comments.length === 0) return
   event.preventDefault()
   event.stopPropagation()
   send()
+}
+
+// Cmd/Ctrl+A inside the panel otherwise selects the whole webview DOM
+// (header title, tab labels, action icons). Scope it to the rendered
+// document content so users get just the file's text, matching what
+// the Copy Content action copies.
+function handleSelectAllKeyDown(event: KeyboardEvent, content: HTMLElement | undefined): void {
+  if (event.key.toLowerCase() !== "a" || (!event.metaKey && !event.ctrlKey) || event.shiftKey || event.altKey) return
+  // composedPath sees through shadow roots, where event.target is retargeted to the host.
+  if (isEditableTarget(event.composedPath()[0] ?? null) || !content?.isConnected) return
+  event.preventDefault()
+  const selection = window.getSelection()
+  if (!selection) return
+  const range = document.createRange()
+  range.selectNodeContents(content)
+  selection.removeAllRanges()
+  selection.addRange(range)
 }
 
 export const DocumentPanel: Component<DocumentPanelProps> = (props) => {
@@ -82,6 +114,7 @@ export const DocumentPanel: Component<DocumentPanelProps> = (props) => {
   let editMeta: AnnotationMeta | null = null
   let nextId = 0
   let rootRef: HTMLElement | undefined
+  let contentRef: HTMLDivElement | undefined
 
   const selected = createMemo(() => {
     const id = props.active()
@@ -91,9 +124,22 @@ export const DocumentPanel: Component<DocumentPanelProps> = (props) => {
     const tab = selected()
     return tab ? props.getData(tab.file) : undefined
   }
+  const isImage = () => data()?.kind === "image"
+  const canCopy = () => !isImage() && !data()?.loading && !data()?.error
   const file = () => selected()?.file ?? ""
   const content = () => data()?.content ?? ""
   const diff = () => virtualDiff(file(), content())
+
+  const [copied, setCopied] = createSignal("")
+  let copyTimer: ReturnType<typeof setTimeout> | undefined
+  onCleanup(() => clearTimeout(copyTimer))
+  const copy = async () => {
+    const path = file()
+    if (!(await copyText(content()))) return
+    clearTimeout(copyTimer)
+    setCopied(path)
+    copyTimer = setTimeout(() => setCopied(""), 1500)
+  }
 
   const updateComments = (next: ReviewComment[]) => props.onCommentsChange(next)
   const comments = () => props.comments.filter((item) => item.file === file())
@@ -221,7 +267,10 @@ export const DocumentPanel: Component<DocumentPanelProps> = (props) => {
       aria-label={t("agentManager.documents.title")}
       aria-hidden={!props.visible()}
       inert={!props.visible()}
-      onKeyDown={(event) => handleSendAllKeyDown(event, props.comments, sendAll)}
+      onKeyDown={(event) => {
+        handleSendAllKeyDown(event, props.comments, sendAll)
+        handleSelectAllKeyDown(event, contentRef)
+      }}
       tabIndex={-1}
       ref={rootRef}
     >
@@ -254,6 +303,17 @@ export const DocumentPanel: Component<DocumentPanelProps> = (props) => {
                 onClick={() => props.onOpenFile(file(), selected()?.line, selected()?.column)}
               />
             </Tooltip>
+            <Show when={canCopy()}>
+              <Tooltip value={t("agentManager.documents.copy")} placement="top">
+                <IconButton
+                  icon={copied() === file() ? "check" : "copy"}
+                  size="small"
+                  variant="ghost"
+                  label={t("agentManager.documents.copy")}
+                  onClick={copy}
+                />
+              </Tooltip>
+            </Show>
           </Show>
           <IconButton
             icon="close"
@@ -277,11 +337,12 @@ export const DocumentPanel: Component<DocumentPanelProps> = (props) => {
         }}
         renderTab={(id, api) => {
           const tab = props.tabs().find((item) => item.id === id)!
+          const path = () => documentPath(tab, props.getData)
           return (
             <SortableClosableTab
               id={id}
               class="am-document-tab"
-              label={getFilename(tab.file)}
+              label={getFilename(path())}
               tooltip={tab.file}
               icon="open-file"
               iconNode={<FileIcon node={{ path: tab.file, type: "file" }} class="am-document-tab-icon" />}
@@ -299,6 +360,26 @@ export const DocumentPanel: Component<DocumentPanelProps> = (props) => {
               }}
               onClose={() => close(id, api.focus)}
               onCloseOthers={() => props.onCloseOthers(id)}
+              menuLeading={
+                <>
+                  <ContextMenu.Item onSelect={() => props.onCopyPath(path())}>
+                    <Icon name="copy" size="small" />
+                    <ContextMenu.ItemLabel>{t("agentManager.documents.copyPath")}</ContextMenu.ItemLabel>
+                  </ContextMenu.Item>
+                  <ContextMenu.Item onSelect={() => void copyText(path())}>
+                    <Icon name="copy" size="small" />
+                    <ContextMenu.ItemLabel>{t("agentManager.documents.copyRelativePath")}</ContextMenu.ItemLabel>
+                  </ContextMenu.Item>
+                  <ContextMenu.Item onSelect={() => void copyText(getFilename(path()))}>
+                    <Icon name="copy" size="small" />
+                    <ContextMenu.ItemLabel>{t("agentManager.documents.copyFileName")}</ContextMenu.ItemLabel>
+                  </ContextMenu.Item>
+                  <ContextMenu.Item onSelect={() => props.onOpenFile(tab.file, tab.line, tab.column)}>
+                    <Icon name="go-to-file" size="small" />
+                    <ContextMenu.ItemLabel>{t("agentManager.diff.openFile")}</ContextMenu.ItemLabel>
+                  </ContextMenu.Item>
+                </>
+              }
             />
           )
         }}
@@ -308,13 +389,13 @@ export const DocumentPanel: Component<DocumentPanelProps> = (props) => {
           <div class="am-document-state">{t("agentManager.documents.loading")}</div>
         </Show>
         <Show when={data()?.error}>{(error) => <div class="am-document-state am-document-error">{error()}</div>}</Show>
-        <Show when={!data()?.loading && !data()?.error && data()?.kind === "image"}>
+        <Show when={!data()?.loading && !data()?.error && isImage()}>
           <div class="am-document-image-wrap">
             <img src={`data:${data()?.mime};base64,${data()?.data}`} alt={file()} class="am-document-image" />
           </div>
         </Show>
-        <Show when={!data()?.loading && !data()?.error && data()?.kind !== "image"}>
-          <div class="am-document-content">
+        <Show when={!data()?.loading && !data()?.error && !isImage()}>
+          <div class="am-document-content" ref={contentRef}>
             <Show
               when={!source() && isMarkdownPath(file())}
               fallback={
