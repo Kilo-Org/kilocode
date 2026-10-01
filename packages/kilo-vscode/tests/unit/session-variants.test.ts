@@ -4,7 +4,7 @@ import type { ExtensionMessage, ModelSelection } from "../../webview-ui/src/type
 
 const model: ModelSelection = { providerID: "anthropic", modelID: "claude-sonnet-4" }
 
-function setup(session?: string, configured?: string) {
+function setup(session = "composer", configured?: string) {
   const config = { model: "anthropic/claude-sonnet-4", variant: configured }
   const selections: Record<string, string> = {}
   const messages: Array<{ type: string; key?: string; value?: string }> = []
@@ -21,6 +21,7 @@ function setup(session?: string, configured?: string) {
     agent: () => "code",
     config: () => config,
     find: () => ({ variants: { low: {}, high: {}, max: {} } }),
+    draft: (id) => id === "composer" || /^(?:sidebar-)?pending:/.test(id),
     remember: (agent, model, variant) => remembered.push({ agent, model, variant }),
     post: (message) => {
       order.push("post")
@@ -46,16 +47,16 @@ function setup(session?: string, configured?: string) {
 describe("session variants", () => {
   it("distinguishes an unset effort from an explicit Default selection", () => {
     const state = setup()
-    expect(state.variants.saved(model, "code")).toBeUndefined()
+    expect(state.variants.saved(model, "code", "composer")).toBeUndefined()
     expect(state.variants.choice()).toBeUndefined()
     expect(state.variants.request()).toBe("")
     state.variants.select("")
-    expect(state.variants.saved(model, "code")).toBe("")
+    expect(state.variants.saved(model, "code", "composer")).toBe("")
     expect(state.variants.choice()).toBe("")
     expect(state.variants.request()).toBe("")
   })
 
-  it.each([undefined, "session-a"])("carries explicit Default rather than the target preference for %s", (id) => {
+  it.each(["composer", "session-a"])("carries explicit Default rather than the target preference for %s", (id) => {
     const state = setup(id, "max")
     state.selections["agent/code/anthropic/claude-sonnet-4"] = "high"
     state.variants.carry(model, "", "code", id)
@@ -89,14 +90,14 @@ describe("session variants", () => {
     expect(state.variants.request()).toBe("max")
   })
 
-  it("keeps remembered effort when configuration changes for new tabs", () => {
+  it("uses updated configuration ahead of remembered defaults for new tabs", () => {
     const state = setup("pending-new", "high")
     state.selections["agent/code/anthropic/claude-sonnet-4"] = "low"
-    expect(state.variants.current()).toBe("low")
+    expect(state.variants.current()).toBe("high")
     state.config.variant = "max"
-    expect(state.variants.current()).toBe("low")
-    expect(state.variants.request()).toBe("low")
-    expect(state.variants.agent("code", model)).toBe("low")
+    expect(state.variants.current()).toBe("max")
+    expect(state.variants.request()).toBe("max")
+    expect(state.variants.agent("code", model)).toBe("max")
   })
 
   it("does not apply a configured variant to another model", () => {
@@ -124,10 +125,11 @@ describe("session variants", () => {
     expect(state.messages).toEqual([])
   })
 
-  it("persists global selections but keeps session selections local", () => {
-    const global = setup()
-    global.variants.select("high")
-    expect(global.remembered).toEqual([{ agent: "code", model, variant: "high" }])
+  it("keeps session selections local while drafts remember their effort", () => {
+    const draft = setup()
+    draft.variants.select("high")
+    expect(draft.selections["session/composer/anthropic/claude-sonnet-4"]).toBe("high")
+    expect(draft.remembered).toEqual([{ agent: "code", model, variant: "high" }])
 
     const scoped = setup("session-a")
     scoped.variants.select("low")
@@ -140,7 +142,7 @@ describe("session variants", () => {
     const state = setup()
     state.selections["agent/code/anthropic/claude-sonnet-4"] = "high"
     state.variants.select(undefined)
-    expect(state.selections).toEqual({ "agent/code/anthropic/claude-sonnet-4": "" })
+    expect(state.selections["session/composer/anthropic/claude-sonnet-4"]).toBe("")
     expect(state.variants.current()).toBeUndefined()
     expect(state.remembered).toEqual([{ agent: "code", model, variant: "" }])
   })
@@ -148,7 +150,7 @@ describe("session variants", () => {
   it("does not shadow a cached variant when carrying the model default", () => {
     const global = setup()
     global.selections["agent/code/anthropic/claude-sonnet-4"] = "high"
-    global.variants.carry(model, undefined, "code")
+    global.variants.carry(model, undefined, "code", "composer")
     expect(global.selections).toEqual({ "agent/code/anthropic/claude-sonnet-4": "high" })
     expect(global.messages).toEqual([])
 

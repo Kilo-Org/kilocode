@@ -1183,13 +1183,6 @@ export interface FavoritesLoadedMessage {
   favorites: ModelSelection[]
 }
 
-// Preferred and per-mode model selections loaded from persisted state (extension → webview)
-export interface ModelSelectionsLoadedMessage {
-  type: "modelSelectionsLoaded"
-  selections: Record<string, ModelSelection>
-  preferred?: ModelSelection & { variant?: string }
-}
-
 export interface AgentManagerBranchesMessage {
   type: "agentManager.branches"
   projectId?: string
@@ -1882,7 +1875,6 @@ export type ExtensionMessage =
   | RecentsLoadedMessage
   | ModelSelectorExpandedLoadedMessage
   | FavoritesLoadedMessage
-  | ModelSelectionsLoadedMessage
   | LanguageChangedMessage
   | ContinueInWorktreeProgressMessage
   | WorktreeStatsLoadedMessage

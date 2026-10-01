@@ -1551,19 +1551,6 @@ export interface RequestFavoritesMessage {
   type: "requestFavorites"
 }
 
-// Explicit preferred and per-mode model selection persistence (webview → extension)
-export interface PersistModelSelectionRequest {
-  type: "persistModelSelection"
-  agent: string
-  providerID: string
-  modelID: string
-  variant?: string
-}
-
-export interface RequestModelSelectionsMessage {
-  type: "requestModelSelections"
-}
-
 // Continue in Worktree: transfer sidebar session + git state to an isolated worktree
 export interface ContinueInWorktreeRequest {
   type: "continueInWorktree"
@@ -1882,8 +1869,6 @@ export type WebviewMessage =
   | RequestModelSelectorExpandedMessage
   | ToggleFavoriteRequest
   | RequestFavoritesMessage
-  | PersistModelSelectionRequest
-  | RequestModelSelectionsMessage
   | ToggleRemoteMessage
   | ToggleCaffeinationMessage
   | SetRemoteEnabledMessage

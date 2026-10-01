@@ -3,24 +3,34 @@ import { DEFAULT_VARIANT } from "./session-variant-store"
 
 export interface MessagePrefs {
   agent?: string
-  model?: ModelSelection
-  variant?: string
+  /** agent -> latest user message model + variant for that agent */
+  picks: Record<string, { model: ModelSelection; variant: string; seq: number }>
+  /** Latest user message that names no valid agent, attributed to the session's current agent */
+  unattributed?: { model: ModelSelection; variant: string; seq: number }
 }
 
+/**
+ * Derives per-agent model picks from message history, walking backwards so
+ * each agent keeps the model of its own latest user message.
+ */
 export function resolveMessagePrefs(messages: Message[], names: Set<string>): MessagePrefs {
-  const prefs: MessagePrefs = {}
-  for (let i = messages.length - 1; i >= 0; i--) {
+  const picks: Record<string, { model: ModelSelection; variant: string; seq: number }> = {}
+  let unattributed: MessagePrefs["unattributed"]
+  let agent: string | undefined
+  for (let i = messages.length - 1, seq = 0; i >= 0; i--, seq++) {
     const msg = messages[i]
     if (!msg) continue
-    if (!prefs.agent) {
-      const agent = msg.agent?.trim()
-      if (agent && names.has(agent)) prefs.agent = agent
+    const name = msg.agent?.trim()
+    const valid = name && names.has(name) ? name : undefined
+    if (!agent && valid) agent = valid
+    if (msg.role !== "user" || !msg.model?.providerID || !msg.model.modelID) continue
+    const model = { providerID: msg.model.providerID, modelID: msg.model.modelID }
+    const variant = msg.model.variant ?? DEFAULT_VARIANT
+    if (valid) {
+      if (!picks[valid]) picks[valid] = { model, variant, seq }
+      continue
     }
-    if (!prefs.model && msg.role === "user" && msg.model?.providerID && msg.model.modelID) {
-      prefs.model = { providerID: msg.model.providerID, modelID: msg.model.modelID }
-      prefs.variant = msg.model.variant ?? DEFAULT_VARIANT
-    }
-    if (prefs.agent && prefs.model) break
+    if (!unattributed) unattributed = { model, variant, seq }
   }
-  return prefs
+  return { agent, picks, unattributed }
 }

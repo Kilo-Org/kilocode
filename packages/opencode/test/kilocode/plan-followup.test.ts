@@ -364,7 +364,7 @@ describe("plan follow-up", () => {
       expect(refineOpt?.mode).toBe("plan")
 
       const newOpt = q.options.find((o) => o.label === PlanFollowup.ANSWER_NEW_SESSION)
-      expect(newOpt?.mode).toBe("code")
+      expect(newOpt?.mode).toBeUndefined()
 
       await question.reject(item.id)
       await expect(pending).resolves.toBe("break")
