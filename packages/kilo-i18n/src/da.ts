@@ -61,6 +61,13 @@ export const dict = {
   "marketplace.install.failed": "Installation mislykkedes",
   "marketplace.install.done": "Færdig",
   "marketplace.install.close": "Luk",
+  "marketplace.install.mcp.signIn.message": "{{name}} er installeret, men kræver login, før dens værktøjer kan bruges.",
+  "marketplace.install.mcp.signIn.button": "Log ind",
+  "marketplace.install.mcp.signIn.waiting": "Venter på login via browser…",
+  "marketplace.install.mcp.signIn.cancel": "Annuller",
+  "marketplace.install.mcp.signIn.skip": "Senere",
+  "marketplace.install.mcp.signIn.success": "Logget ind på {{name}}.",
+  "marketplace.install.mcp.signIn.failed": "Login til {{name}} mislykkedes.",
   "marketplace.remove.title": "Fjern {{name}}?",
   "marketplace.remove.confirm":
     "Er du sikker på, at du vil fjerne denne {{type}}? Dette vil fjerne den fra din {{scope}} konfiguration.",

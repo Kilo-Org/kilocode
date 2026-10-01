@@ -17,6 +17,8 @@ import {
 import type { InstallMarketplaceItemOptions, MarketplaceItem } from "./services/marketplace/types"
 import { TelemetryProxy } from "./services/telemetry"
 import { TelemetryEventName } from "./services/telemetry/types"
+import { mcpAuth } from "./services/mcp-auth"
+import { notifySignInResult } from "./kilo-provider/mcp-oauth"
 
 interface MarketplaceMessage {
   type?: string
@@ -25,6 +27,8 @@ interface MarketplaceMessage {
   url?: unknown
   event?: string
   properties?: Record<string, unknown>
+  name?: string
+  notify?: boolean
 }
 
 export class MarketplacePanelProvider implements vscode.Disposable {
@@ -150,6 +154,9 @@ export class MarketplacePanelProvider implements vscode.Disposable {
           if (event.type === "session.status") this.handleStatus(event)
         },
       ),
+      mcpAuth(this.connection).onChange((dir) => {
+        if (dir === this.directory()) this.sendMcpAuthState()
+      }),
     )
     void this.connect()
   }
@@ -242,7 +249,40 @@ export class MarketplacePanelProvider implements vscode.Disposable {
       case "telemetry":
         if (msg.event) TelemetryProxy.capture(msg.event as TelemetryEventName, msg.properties)
         return
+      case "requestMcpAuthState":
+      case "signInMcp":
+      case "cancelMcpSignIn":
+        await this.handleMcpAuth(msg)
+        return
     }
+  }
+
+  /** Dispatch the MCP OAuth sign-in messages, kept off `handle` to bound its complexity. */
+  private async handleMcpAuth(msg: MarketplaceMessage): Promise<void> {
+    if (msg.type === "requestMcpAuthState") {
+      this.sendMcpAuthState()
+      return
+    }
+    if (!msg.name) return
+    if (msg.type === "signInMcp") {
+      await this.signInMcp(msg.name, msg.notify !== false)
+      return
+    }
+    await mcpAuth(this.connection).cancel(this.directory(), msg.name)
+  }
+
+  private sendMcpAuthState(): void {
+    const dir = this.directory()
+    const auth = mcpAuth(this.connection)
+    this.post({ type: "mcpAuthState", directory: dir, needsAuth: auth.needsAuth(dir), busy: auth.busy(dir) })
+  }
+
+  private async signInMcp(name: string, notify: boolean): Promise<void> {
+    const dir = this.directory()
+    const result = await mcpAuth(this.connection).signIn(dir, name)
+    this.post({ type: "mcpAuthResult", name, status: result.status, error: result.error })
+    this.sendMcpAuthState()
+    if (notify) notifySignInResult(name, result)
   }
 
   /** Ask the webview to open the install dialog for a queued suggestion, once it can receive it. */
@@ -301,7 +341,11 @@ export class MarketplacePanelProvider implements vscode.Disposable {
       this.directory(),
     )
     if (result.success) void vscode.window.showInformationMessage(`Successfully installed ${item.name}`)
-    this.post({ type: "marketplaceInstallResult", ...result })
+    const needsAuth =
+      result.success && item.type === "mcp"
+        ? (await mcpAuth(this.connection).refresh(this.directory())).includes(item.id)
+        : false
+    this.post({ type: "marketplaceInstallResult", ...result, needsAuth })
   }
 
   private async remove(item: MarketplaceItem, scope: "project" | "global"): Promise<void> {

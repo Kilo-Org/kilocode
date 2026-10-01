@@ -62,6 +62,13 @@ export const dict = {
   "marketplace.install.failed": "Installation failed",
   "marketplace.install.done": "Done",
   "marketplace.install.close": "Close",
+  "marketplace.install.mcp.signIn.message": "{{name}} is installed but needs sign-in before its tools can be used.",
+  "marketplace.install.mcp.signIn.button": "Sign In",
+  "marketplace.install.mcp.signIn.waiting": "Waiting for browser sign-in…",
+  "marketplace.install.mcp.signIn.cancel": "Cancel",
+  "marketplace.install.mcp.signIn.skip": "Later",
+  "marketplace.install.mcp.signIn.success": "Signed in to {{name}}.",
+  "marketplace.install.mcp.signIn.failed": "Sign-in to {{name}} failed.",
   "marketplace.remove.title": "Remove {{name}}?",
   "marketplace.remove.confirm":
     "Are you sure you want to remove this {{type}}? This will remove it from your {{scope}} configuration.",

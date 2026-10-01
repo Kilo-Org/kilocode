@@ -63,6 +63,13 @@ export const dict = {
   "marketplace.install.failed": "L'installation a échoué",
   "marketplace.install.done": "Terminé",
   "marketplace.install.close": "Fermer",
+  "marketplace.install.mcp.signIn.message": "{{name}} est installé, mais nécessite une connexion avant que ses outils puissent être utilisés.",
+  "marketplace.install.mcp.signIn.button": "Se connecter",
+  "marketplace.install.mcp.signIn.waiting": "En attente de connexion via le navigateur…",
+  "marketplace.install.mcp.signIn.cancel": "Annuler",
+  "marketplace.install.mcp.signIn.skip": "Plus tard",
+  "marketplace.install.mcp.signIn.success": "Connecté à {{name}}.",
+  "marketplace.install.mcp.signIn.failed": "La connexion à {{name}} a échoué.",
   "marketplace.remove.title": "Supprimer {{name}} ?",
   "marketplace.remove.confirm":
     "Êtes-vous sûr de vouloir supprimer ce {{type}} ? Cela le supprimera de votre configuration {{scope}}.",

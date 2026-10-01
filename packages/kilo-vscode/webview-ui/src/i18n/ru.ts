@@ -207,6 +207,10 @@ export const dict = {
   "prompt.agents.show": "Показать фоновых агентов",
   "prompt.action.enhance": "Улучшить промпт",
   "prompt.paste.expand": "Нажмите, чтобы развернуть вставленный текст",
+  "prompt.issues.title": "Проблемы сессии",
+  "prompt.mcp.provider": "MCP {{name}}",
+  "prompt.mcp.openSettings": "Открыть в настройках",
+  "prompt.mcp.signIn.busy": "Выполняется вход…",
   "prompt.action.autoApprove.enable": "Включить автоодобрение",
   "prompt.action.autoApprove.disable": "Отключить автоодобрение",
   "prompt.action.autoApprove.enabled": "Автоодобрение включено. Запросы разрешений будут одобряться автоматически.",
@@ -1029,12 +1033,31 @@ export const dict = {
   "settings.agentBehaviour.removeAgent.button": "Удалить",
   "settings.agentBehaviour.removeMcp.title": "Удалить сервер MCP",
   "settings.agentBehaviour.removeMcp.confirm": 'Удалить сервер MCP "{{name}}"? Это удалит его из вашей конфигурации.',
+  "settings.agentBehaviour.removeMcp.bundleConfirm":
+    'Удалить сервер MCP "{{name}}" и сопутствующие навыки? Это удалит как сервер, так и каждый навык, принадлежащий этой установке Marketplace.',
   "settings.agentBehaviour.removeMcp.button": "Удалить",
   "settings.agentBehaviour.editMcp": "Редактировать сервер MCP",
   "settings.agentBehaviour.editMcp.transportLocal": "Локальный сервер (транспорт stdio)",
   "settings.agentBehaviour.editMcp.transportRemote": "Удалённый сервер (транспорт SSE/HTTP)",
   "settings.agentBehaviour.editMcp.env": "Переменные окружения",
   "settings.agentBehaviour.editMcp.env.help": "Переменные, передаваемые процессу сервера MCP.",
+  "settings.agentBehaviour.editMcp.oauth": "OAuth",
+  "settings.agentBehaviour.editMcp.oauth.help":
+    "Оставьте значение Автоматически, если сервер не требует предварительно зарегистрированного клиента. Секрет клиента хранится в вашем файле конфигурации Kilo.",
+  "settings.agentBehaviour.editMcp.oauth.mode": "Режим",
+  "settings.agentBehaviour.editMcp.oauth.mode.automatic": "Автоматически",
+  "settings.agentBehaviour.editMcp.oauth.mode.disabled": "Отключено",
+  "settings.agentBehaviour.editMcp.oauth.mode.custom": "Пользовательский клиент",
+  "settings.agentBehaviour.editMcp.oauth.clientId": "ID клиента",
+  "settings.agentBehaviour.editMcp.oauth.clientSecret": "Секрет клиента",
+  "settings.agentBehaviour.editMcp.oauth.scope": "Область",
+  "settings.agentBehaviour.editMcp.oauth.callbackPort": "Порт обратного вызова",
+  "settings.agentBehaviour.editMcp.oauth.redirectUri": "URI перенаправления",
+  "settings.agentBehaviour.editMcp.oauth.redirectUri.help":
+    "По умолчанию http://127.0.0.1:19876/mcp/oauth/callback, переопределяет порт обратного вызова.",
+  "settings.agentBehaviour.editMcp.oauth.port.invalid": "Введите порт от 1 до 65535.",
+  "settings.agentBehaviour.editMcp.oauth.secret.invalid": "Для секрета клиента требуется ID клиента.",
+  "settings.agentBehaviour.editMcp.oauth.redirectUri.invalid": "Введите корректный URI перенаправления.",
   "settings.agentBehaviour.addMcp.command": "Команда",
   "settings.agentBehaviour.addMcp.command.placeholder": "e.g. npx",
   "settings.agentBehaviour.addMcp.args": "Аргументы",
@@ -1047,6 +1070,8 @@ export const dict = {
   "settings.agentBehaviour.removeSkill.title": "Удалить навык",
   "settings.agentBehaviour.removeSkill.confirm":
     'Удалить навык "{{name}}"? Это приведет к удалению файлов навыка с диска.',
+  "settings.agentBehaviour.removeSkill.bundleConfirm":
+    'Удалить навык "{{name}}"? Это также удалит сервер MCP {{mcp}} и каждый сопутствующий навык из той же установки Marketplace.',
   "settings.agentBehaviour.removeSkill.button": "Удалить",
   "settings.agentBehaviour.rules.description":
     "Правила — это файлы инструкций, которые направляют поведение агента. Они включаются в системный промпт для каждого разговора. Добавьте пути к файлам ниже, чтобы включить дополнительные правила.",
@@ -1062,6 +1087,11 @@ export const dict = {
   "settings.agentBehaviour.mcpDetail.command": "Команда",
   "settings.agentBehaviour.mcpDetail.args": "Аргументы",
   "settings.agentBehaviour.mcpDetail.env": "Окружение",
+  "settings.agentBehaviour.mcpSignIn.cancel": "Отменить вход",
+  "settings.agentBehaviour.mcpResetAuth": "Сбросить вход",
+  "settings.agentBehaviour.mcpResetAuth.title": "Сбросить вход MCP",
+  "settings.agentBehaviour.mcpResetAuth.confirm":
+    'Очистить сохраненные данные входа для "{{name}}"? Вам нужно будет войти снова.',
   "settings.agentBehaviour.mcpBrowseMarketplace": "Обзор Marketplace",
   "settings.agentBehaviour.mcpEmpty":
     "MCP-серверы не настроены. Добавьте MCP-серверы в kilo.jsonc или попросите агента добавить их.",

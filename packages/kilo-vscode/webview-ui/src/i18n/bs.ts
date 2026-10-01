@@ -209,6 +209,10 @@ export const dict = {
   "prompt.agents.show": "Prikaži agente u pozadini",
   "prompt.action.enhance": "Poboljšaj prompt",
   "prompt.paste.expand": "Kliknite da proširite zalijepljeni tekst",
+  "prompt.issues.title": "Problemi sesije",
+  "prompt.mcp.provider": "MCP {{name}}",
+  "prompt.mcp.openSettings": "Otvori u Postavkama",
+  "prompt.mcp.signIn.busy": "Prijavljivanje u toku…",
   "prompt.action.autoApprove.enable": "Uključi automatsko odobravanje",
   "prompt.action.autoApprove.disable": "Isključi automatsko odobravanje",
   "prompt.action.autoApprove.enabled":
@@ -1033,12 +1037,31 @@ export const dict = {
   "settings.agentBehaviour.removeMcp.title": "Ukloni MCP server",
   "settings.agentBehaviour.removeMcp.confirm":
     'Ukloniti MCP server "{{name}}"? Ovo će ga ukloniti iz vaše konfiguracije.',
+  "settings.agentBehaviour.removeMcp.bundleConfirm":
+    'Ukloniti MCP server "{{name}}" i njegove pratećeg vještine? Ovo uklanja server i svaku vještinu koja pripada ovoj instalaciji sa Marketplace-a.',
   "settings.agentBehaviour.removeMcp.button": "Ukloni",
   "settings.agentBehaviour.editMcp": "Uredi MCP Server",
   "settings.agentBehaviour.editMcp.transportLocal": "Lokalni server (stdio transport)",
   "settings.agentBehaviour.editMcp.transportRemote": "Udaljeni server (SSE/HTTP transport)",
   "settings.agentBehaviour.editMcp.env": "Varijable okruženja",
   "settings.agentBehaviour.editMcp.env.help": "Varijable proslijeđene procesu MCP servera.",
+  "settings.agentBehaviour.editMcp.oauth": "OAuth",
+  "settings.agentBehaviour.editMcp.oauth.help":
+    "Ostavite na Automatski osim ako server ne zahtijeva prethodno registrovanog klijenta. Tajni klijent se čuva u vašoj Kilo konfiguracionoj datoteci.",
+  "settings.agentBehaviour.editMcp.oauth.mode": "Način rada",
+  "settings.agentBehaviour.editMcp.oauth.mode.automatic": "Automatski",
+  "settings.agentBehaviour.editMcp.oauth.mode.disabled": "Onemogućeno",
+  "settings.agentBehaviour.editMcp.oauth.mode.custom": "Prilagođeni klijent",
+  "settings.agentBehaviour.editMcp.oauth.clientId": "ID klijenta",
+  "settings.agentBehaviour.editMcp.oauth.clientSecret": "Tajni klijent",
+  "settings.agentBehaviour.editMcp.oauth.scope": "Opseg",
+  "settings.agentBehaviour.editMcp.oauth.callbackPort": "Povratni port",
+  "settings.agentBehaviour.editMcp.oauth.redirectUri": "URI preusmjeravanja",
+  "settings.agentBehaviour.editMcp.oauth.redirectUri.help":
+    "Zadano je http://127.0.0.1:19876/mcp/oauth/callback i poništava povratni port.",
+  "settings.agentBehaviour.editMcp.oauth.port.invalid": "Unesite port između 1 i 65535.",
+  "settings.agentBehaviour.editMcp.oauth.secret.invalid": "Tajni klijent zahtijeva ID klijenta.",
+  "settings.agentBehaviour.editMcp.oauth.redirectUri.invalid": "Unesite važeći URI preusmjeravanja.",
   "settings.agentBehaviour.addMcp.command": "Naredba",
   "settings.agentBehaviour.addMcp.command.placeholder": "e.g. npx",
   "settings.agentBehaviour.addMcp.args": "Argumenti",
@@ -1051,6 +1074,8 @@ export const dict = {
   "settings.agentBehaviour.removeSkill.title": "Ukloni vještinu",
   "settings.agentBehaviour.removeSkill.confirm":
     'Ukloniti vještinu "{{name}}"? Ovo će obrisati datoteke vještine sa diska.',
+  "settings.agentBehaviour.removeSkill.bundleConfirm":
+    'Ukloniti vještinu "{{name}}"? Ovo će također deinstalirati MCP server {{mcp}} i svaku pratećeg vještinu iz iste instalacije sa Marketplace-a.',
   "settings.agentBehaviour.removeSkill.button": "Ukloni",
   "settings.agentBehaviour.rules.description":
     "Pravila su datoteke uputa koje usmjeravaju ponašanje agenta. Uključena su u sistemski prompt za svaki razgovor. Dodajte putanje datoteka ispod kako biste uključili dodatna pravila.",
@@ -1066,6 +1091,11 @@ export const dict = {
   "settings.agentBehaviour.mcpDetail.command": "Naredba",
   "settings.agentBehaviour.mcpDetail.args": "Argumenti",
   "settings.agentBehaviour.mcpDetail.env": "Okruženje",
+  "settings.agentBehaviour.mcpSignIn.cancel": "Otkaži prijavu",
+  "settings.agentBehaviour.mcpResetAuth": "Resetuj prijavu",
+  "settings.agentBehaviour.mcpResetAuth.title": "Resetuj MCP prijavu",
+  "settings.agentBehaviour.mcpResetAuth.confirm":
+    'Ukloniti sačuvanu prijavu za "{{name}}"? Morat ćete se ponovo prijaviti.',
   "settings.agentBehaviour.mcpBrowseMarketplace": "Pregledaj Marketplace",
   "settings.agentBehaviour.mcpEmpty":
     "Nema konfiguriranih MCP servera. Dodajte MCP servere u kilo.jsonc ili zamolite agenta da ih doda.",

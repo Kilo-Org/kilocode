@@ -210,6 +210,10 @@ export const dict = {
   "prompt.agents.show": "Afficher les agents en arrière-plan",
   "prompt.action.enhance": "Améliorer le prompt",
   "prompt.paste.expand": "Cliquez pour développer le texte collé",
+  "prompt.issues.title": "Problèmes de session",
+  "prompt.mcp.provider": "MCP {{name}}",
+  "prompt.mcp.openSettings": "Ouvrir dans les Paramètres",
+  "prompt.mcp.signIn.busy": "Connexion en cours…",
   "prompt.action.autoApprove.enable": "Activer l'approbation automatique",
   "prompt.action.autoApprove.disable": "Désactiver l'approbation automatique",
   "prompt.action.autoApprove.enabled":
@@ -1058,12 +1062,31 @@ export const dict = {
   "settings.agentBehaviour.removeMcp.title": "Supprimer le serveur MCP",
   "settings.agentBehaviour.removeMcp.confirm":
     'Supprimer le serveur MCP "{{name}}" ? Cela le supprimera de votre configuration.',
+  "settings.agentBehaviour.removeMcp.bundleConfirm":
+    'Supprimer le serveur MCP "{{name}}" et ses compétences associées ? Cela supprimera à la fois le serveur et chaque compétence appartenant à cette installation du Marketplace.',
   "settings.agentBehaviour.removeMcp.button": "Supprimer",
   "settings.agentBehaviour.editMcp": "Modifier le serveur MCP",
   "settings.agentBehaviour.editMcp.transportLocal": "Serveur local (transport stdio)",
   "settings.agentBehaviour.editMcp.transportRemote": "Serveur distant (transport SSE/HTTP)",
   "settings.agentBehaviour.editMcp.env": "Variables d'environnement",
   "settings.agentBehaviour.editMcp.env.help": "Variables transmises au processus du serveur MCP.",
+  "settings.agentBehaviour.editMcp.oauth": "OAuth",
+  "settings.agentBehaviour.editMcp.oauth.help":
+    "Laissez sur Automatique sauf si le serveur nécessite un client préenregistré. Un secret client est stocké dans votre fichier de configuration Kilo.",
+  "settings.agentBehaviour.editMcp.oauth.mode": "Mode",
+  "settings.agentBehaviour.editMcp.oauth.mode.automatic": "Automatique",
+  "settings.agentBehaviour.editMcp.oauth.mode.disabled": "Désactivé",
+  "settings.agentBehaviour.editMcp.oauth.mode.custom": "Client personnalisé",
+  "settings.agentBehaviour.editMcp.oauth.clientId": "ID client",
+  "settings.agentBehaviour.editMcp.oauth.clientSecret": "Secret client",
+  "settings.agentBehaviour.editMcp.oauth.scope": "Portée",
+  "settings.agentBehaviour.editMcp.oauth.callbackPort": "Port de rappel",
+  "settings.agentBehaviour.editMcp.oauth.redirectUri": "URI de redirection",
+  "settings.agentBehaviour.editMcp.oauth.redirectUri.help":
+    "Par défaut http://127.0.0.1:19876/mcp/oauth/callback, remplace le port de rappel.",
+  "settings.agentBehaviour.editMcp.oauth.port.invalid": "Entrez un port entre 1 et 65535.",
+  "settings.agentBehaviour.editMcp.oauth.secret.invalid": "Un secret client nécessite un ID client.",
+  "settings.agentBehaviour.editMcp.oauth.redirectUri.invalid": "Entrez un URI de redirection valide.",
   "settings.agentBehaviour.addMcp.command": "Commande",
   "settings.agentBehaviour.addMcp.command.placeholder": "e.g. npx",
   "settings.agentBehaviour.addMcp.args": "Arguments",
@@ -1077,6 +1100,8 @@ export const dict = {
   "settings.agentBehaviour.removeSkill.title": "Supprimer la compétence",
   "settings.agentBehaviour.removeSkill.confirm":
     'Supprimer la compétence "{{name}}" ? Cela supprimera les fichiers de la compétence du disque.',
+  "settings.agentBehaviour.removeSkill.bundleConfirm":
+    'Supprimer la compétence "{{name}}" ? Cela désinstallera également le serveur MCP {{mcp}} et chaque compétence associée de la même installation du Marketplace.',
   "settings.agentBehaviour.removeSkill.button": "Supprimer",
   "settings.agentBehaviour.rules.description":
     "Les règles sont des fichiers d'instructions qui guident le comportement de l'agent. Elles sont incluses dans le prompt système pour chaque conversation. Ajoutez des chemins de fichiers ci-dessous pour inclure des règles supplémentaires.",
@@ -1092,6 +1117,11 @@ export const dict = {
   "settings.agentBehaviour.mcpDetail.command": "Commande",
   "settings.agentBehaviour.mcpDetail.args": "Arguments",
   "settings.agentBehaviour.mcpDetail.env": "Environnement",
+  "settings.agentBehaviour.mcpSignIn.cancel": "Annuler la connexion",
+  "settings.agentBehaviour.mcpResetAuth": "Réinitialiser la connexion",
+  "settings.agentBehaviour.mcpResetAuth.title": "Réinitialiser la connexion MCP",
+  "settings.agentBehaviour.mcpResetAuth.confirm":
+    'Effacer la connexion enregistrée pour "{{name}}" ? Vous devrez vous reconnecter.',
   "settings.agentBehaviour.mcpBrowseMarketplace": "Parcourir le Marketplace",
   "settings.agentBehaviour.mcpEmpty":
     "Aucun serveur MCP configuré. Ajoutez des serveurs MCP dans kilo.jsonc ou demandez à l'agent de les ajouter.",

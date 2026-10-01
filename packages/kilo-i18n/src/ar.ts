@@ -57,6 +57,13 @@ export const dict = {
   "marketplace.install.failed": "فشل التثبيت",
   "marketplace.install.done": "تم",
   "marketplace.install.close": "إغلاق",
+  "marketplace.install.mcp.signIn.message": "تم تثبيت {{name}} ولكنه يحتاج إلى تسجيل الدخول قبل أن يمكن استخدام أدواته.",
+  "marketplace.install.mcp.signIn.button": "تسجيل الدخول",
+  "marketplace.install.mcp.signIn.waiting": "في انتظار تسجيل الدخول عبر المتصفح…",
+  "marketplace.install.mcp.signIn.cancel": "إلغاء",
+  "marketplace.install.mcp.signIn.skip": "لاحقًا",
+  "marketplace.install.mcp.signIn.success": "تم تسجيل الدخول إلى {{name}}.",
+  "marketplace.install.mcp.signIn.failed": "فشل تسجيل الدخول إلى {{name}}.",
   "marketplace.remove.title": "إزالة {{name}}؟",
   "marketplace.remove.confirm":
     "هل أنت متأكد أنك تريد إزالة هذا الـ {{type}}؟ سيؤدي هذا إلى إزالته من تكوين {{scope}} الخاص بك.",

@@ -66,6 +66,13 @@ export const dict = {
   "marketplace.install.failed": "Instalacija nije uspjela",
   "marketplace.install.done": "Završeno",
   "marketplace.install.close": "Zatvori",
+  "marketplace.install.mcp.signIn.message": "{{name}} je instaliran, ali zahtijeva prijavu prije nego što se njegovi alati mogu koristiti.",
+  "marketplace.install.mcp.signIn.button": "Prijava",
+  "marketplace.install.mcp.signIn.waiting": "Čekanje na prijavu putem preglednika…",
+  "marketplace.install.mcp.signIn.cancel": "Otkaži",
+  "marketplace.install.mcp.signIn.skip": "Kasnije",
+  "marketplace.install.mcp.signIn.success": "Prijavljeni ste na {{name}}.",
+  "marketplace.install.mcp.signIn.failed": "Prijava na {{name}} nije uspjela.",
   "marketplace.remove.title": "Ukloniti {{name}}?",
   "marketplace.remove.confirm":
     "Jeste li sigurni da želite ukloniti ovaj {{type}}? Ovo će ga ukloniti iz vaše {{scope}} konfiguracije.",

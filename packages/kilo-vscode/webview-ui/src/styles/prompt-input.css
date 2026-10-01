@@ -565,15 +565,17 @@
   flex-shrink: 0;
 }
 
-.prompt-indexing-button {
+.prompt-indexing-button,
+.prompt-issues-button {
   position: relative;
 }
 
 /* Shared status dot for prompt hint controls. Pin it to the icon corner and
    give it a surface-colored ring so it reads as a badge instead of sitting on
    the glyph. The same size, ring, and corner offset are used for the indexing,
-   auto-approve, sandbox, and speech controls. */
+   auto-approve, sandbox, speech, and session-issues controls. */
 .prompt-indexing-button::after,
+.prompt-issues-button::after,
 .prompt-status-button--active::after,
 .prompt-speech-button--recording::after {
   content: "";
@@ -585,9 +587,16 @@
   box-shadow: 0 0 0 1px var(--surface-base, var(--vscode-editor-background));
 }
 
-.prompt-indexing-button::after {
+.prompt-indexing-button::after,
+.prompt-issues-button::after {
   top: 1px;
   right: 1px;
+}
+
+/* Only shown when the session has an actionable issue (e.g. an MCP server
+   needing sign-in), so it is always rendered in the warning tone. */
+.prompt-issues-button {
+  color: var(--vscode-charts-yellow, #cca700);
 }
 
 .prompt-indexing-button--muted {

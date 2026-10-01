@@ -63,6 +63,13 @@ export const dict = {
   "marketplace.install.failed": "Installation fehlgeschlagen",
   "marketplace.install.done": "Fertig",
   "marketplace.install.close": "Schließen",
+  "marketplace.install.mcp.signIn.message": "{{name}} ist installiert, benötigt aber eine Anmeldung, bevor die Tools verwendet werden können.",
+  "marketplace.install.mcp.signIn.button": "Anmelden",
+  "marketplace.install.mcp.signIn.waiting": "Warten auf Anmeldung im Browser…",
+  "marketplace.install.mcp.signIn.cancel": "Abbrechen",
+  "marketplace.install.mcp.signIn.skip": "Später",
+  "marketplace.install.mcp.signIn.success": "Bei {{name}} angemeldet.",
+  "marketplace.install.mcp.signIn.failed": "Anmeldung bei {{name}} fehlgeschlagen.",
   "marketplace.remove.title": "{{name}} entfernen?",
   "marketplace.remove.confirm":
     "Soll dieser Eintrag ({{type}}) wirklich entfernt werden? Er wird dadurch aus Ihrer {{scope}}-Konfiguration entfernt.",

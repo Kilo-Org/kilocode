@@ -64,6 +64,13 @@ export const dict = {
   "marketplace.install.failed": "Installatie mislukt",
   "marketplace.install.done": "Klaar",
   "marketplace.install.close": "Sluiten",
+  "marketplace.install.mcp.signIn.message": "{{name}} is geïnstalleerd, maar vereist een login voordat de tools gebruikt kunnen worden.",
+  "marketplace.install.mcp.signIn.button": "Inloggen",
+  "marketplace.install.mcp.signIn.waiting": "Wachten op inloggen via de browser…",
+  "marketplace.install.mcp.signIn.cancel": "Annuleren",
+  "marketplace.install.mcp.signIn.skip": "Later",
+  "marketplace.install.mcp.signIn.success": "Ingelogd bij {{name}}.",
+  "marketplace.install.mcp.signIn.failed": "Inloggen bij {{name}} mislukt.",
   "marketplace.remove.title": "{{name}} verwijderen?",
   "marketplace.remove.confirm":
     "Weet je zeker dat je deze {{type}} wilt verwijderen? Dit verwijdert het uit je {{scope}} configuratie.",

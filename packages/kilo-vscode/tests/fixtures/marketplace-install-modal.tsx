@@ -240,6 +240,35 @@ try {
   }
   await mount("/workspace", plugin, true)
   assert.equal(document.querySelector('[data-slot="marketplace-companion-removal"]'), null)
+
+  // Post-install MCP OAuth sign-in step
+  await mount("/workspace", mcp)
+  complete({ needsAuth: true })
+  assert.equal(
+    document.querySelector(".install-modal-mcp-signin-msg")?.textContent,
+    `${mcp.name} is installed but needs sign-in before its tools can be used.`,
+  )
+  assert.equal(document.querySelector(".install-modal-footer")?.textContent, "LaterSign In")
+  click("Sign In")
+  const signIn = messages.findLast((message) => message.type === "signInMcp")
+  assert.equal(signIn?.name, mcp.id)
+  assert.equal(signIn?.notify, false)
+  post({ type: "mcpAuthState", directory: "/workspace", needsAuth: [], busy: [mcp.id] })
+  await window.happyDOM.waitUntilComplete()
+  assert.equal(document.querySelector(".install-modal-mcp-signin-msg")?.textContent?.includes("Waiting"), true)
+  post({ type: "mcpAuthState", directory: "/workspace", needsAuth: [], busy: [] })
+  post({ type: "mcpAuthResult", name: mcp.id, status: "connected" })
+  await window.happyDOM.waitUntilComplete()
+  assert.equal(document.querySelector(".install-modal-mcp-signin-success")?.textContent, `Signed in to ${mcp.name}.`)
+  assert.equal(document.querySelector(".install-modal-footer")?.textContent, "Done")
+
+  await mount("/workspace", mcp)
+  complete({ needsAuth: true })
+  click("Sign In")
+  post({ type: "mcpAuthResult", name: mcp.id, status: "failed", error: "denied by server" })
+  await window.happyDOM.waitUntilComplete()
+  assert.equal(document.querySelector(".install-modal-error-msg")?.textContent, "denied by server")
+
   assert.deepEqual(errors, [])
 } finally {
   dispose()

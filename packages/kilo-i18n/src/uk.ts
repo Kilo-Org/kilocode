@@ -62,6 +62,13 @@ export const dict = {
   "marketplace.install.failed": "Встановлення не вдалося",
   "marketplace.install.done": "Готово",
   "marketplace.install.close": "Закрити",
+  "marketplace.install.mcp.signIn.message": "{{name}} встановлено, але потрібно увійти, перш ніж можна буде використовувати його інструменти.",
+  "marketplace.install.mcp.signIn.button": "Увійти",
+  "marketplace.install.mcp.signIn.waiting": "Очікування входу через браузер…",
+  "marketplace.install.mcp.signIn.cancel": "Скасувати",
+  "marketplace.install.mcp.signIn.skip": "Пізніше",
+  "marketplace.install.mcp.signIn.success": "Вхід у {{name}} виконано.",
+  "marketplace.install.mcp.signIn.failed": "Не вдалося увійти в {{name}}.",
   "marketplace.remove.title": "Видалити {{name}}?",
   "marketplace.remove.confirm":
     "Ви впевнені, що хочете видалити цей {{type}}? Це видалить його з вашої конфігурації {{scope}}.",

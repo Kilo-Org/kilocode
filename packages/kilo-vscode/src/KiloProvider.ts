@@ -108,6 +108,8 @@ import {
   watchWorkStyleConfig,
 } from "./kilo-provider/work-style"
 import * as McpOAuth from "./kilo-provider/mcp-oauth"
+import { mcpAuth, normalize as normalizeMcpStatus } from "./services/mcp-auth"
+import { marketplaceBundles } from "./services/marketplace/bundles"
 import { retryable, backoff, MAX_RETRIES } from "./util/retry"
 import { hasGit } from "./kilo-provider/git-status"
 import {
@@ -221,6 +223,19 @@ type TypedWebviewMessage = {
 }
 
 type WebviewMessage = Parameters<Parameters<vscode.Webview["onDidReceiveMessage"]>[0]>[0]
+
+/** Webview messages handled by `KiloProvider.handleMcpMessage`, routed ahead of the main message switch. */
+const MCP_MESSAGE_TYPES = new Set([
+  "removeMcp",
+  "requestMcpStatus",
+  "connectMcp",
+  "disconnectMcp",
+  "requestMcpAuthState",
+  "signInMcp",
+  "cancelMcpSignIn",
+  "resetMcpAuth",
+  "requestMcpBundles",
+])
 
 function feedbackMessage(message: { text: string; review?: unknown; browserFeedback?: unknown }) {
   return parseFeedback({ review: message.review, browserFeedback: message.browserFeedback }, message.text)
@@ -443,6 +458,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private cachedImageModelsMessage: unknown = null
   /** Cached mcpStatusLoaded payload so requestMcpStatus can be served before client is ready */
   private cachedMcpStatusMessage: unknown = null
+  /** Cached mcpAuthState payload so requestMcpAuthState can be served before client is ready */
+  private cachedMcpAuthStateMessage: unknown = null
+  /** Cached mcpBundles payload so requestMcpBundles can be served before client is ready */
+  private cachedMcpBundlesMessage: unknown = null
   /** Ref-count of in-flight handleUpdateConfig calls; prevents fetchAndSendConfig from sending stale data */
   private pending = 0
   private configWarningsShown = false
@@ -505,6 +524,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   })
   private unsubscribeEvent: (() => void) | null = null
   private unsubscribeState: (() => void) | null = null
+  private unsubscribeMcpAuth: (() => void) | null = null
   private migrationCache: MigrationContext["migrationCache"] = new Map()
   private unsubscribeNotificationDismiss: (() => void) | null = null
   private unsubscribeAcknowledged: (() => void) | null = null
@@ -580,6 +600,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.slimEditMetadata = opts.slimEditMetadata ?? true
     this.unsubscribeSandboxPreference = this.connectionService.sandboxPreference?.onChange(() => {
       if (this.connectionState === "connected") void this.fetchAndSendSandboxDefault()
+    })
+    this.unsubscribeMcpAuth = mcpAuth(this.connectionService).onChange((dir) => {
+      if (dir === this.getWorkspaceDirectory()) void this.fetchAndSendMcpAuthState()
     })
     TelemetryProxy.getInstance().setProvider(this)
     this.latch = watchRestore({
@@ -778,7 +801,17 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       refresh: async () => {
         this.cachedAgentsMessage = null
         this.cachedConfigMessage = null
-        await Promise.all([this.fetchAndSendAgents(), this.fetchAndSendConfig()])
+        this.cachedSkillsMessage = null
+        this.cachedCommandsMessage = null
+        this.cachedMcpBundlesMessage = null
+        await Promise.all([
+          this.fetchAndSendAgents(),
+          this.fetchAndSendConfig(),
+          this.fetchAndSendSkills(),
+          this.fetchAndSendCommands(),
+          this.fetchAndSendMcpBundles(),
+          this.fetchAndSendMcpStatus(),
+        ])
       },
       storage: this.extensionContext?.globalStorageUri,
     }
@@ -1219,6 +1252,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         return
       }
       if (this.handleEditorOpenMessage(message)) return
+      if (await this.handleMcpMessage(message)) return
       if (await this.handleAgentManagerSettingsMessage(message)) return
       if (await this.handleAutoCleanupMessage(message)) return
       if (
@@ -1445,40 +1479,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         case "removeAgent":
           this.handleRemoveAgent(message.name).catch((e) => console.error("[Kilo New] handleRemoveAgent failed:", e))
           break
-        case "removeMcp":
-          this.handleRemoveMcp(message.name).catch((e) => console.error("[Kilo New] handleRemoveMcp failed:", e))
-          break
-        case "requestMcpStatus":
-          this.fetchAndSendMcpStatus().catch((e) => console.error("[Kilo New] fetchAndSendMcpStatus failed:", e))
-          break
-        case "connectMcp": {
-          const c1 = this.client
-          if (c1) {
-            void McpOAuth.connectMcpServer(c1, message.name, this.getWorkspaceDirectory(), () =>
-              this.refreshMcpStatus(),
-            ).catch((e) => console.error("[Kilo New] connectMcpServer failed:", e))
-          }
-          break
-        }
-        case "disconnectMcp": {
-          const c2 = this.client
-          if (c2) {
-            void McpOAuth.disconnectMcpServer(c2, message.name, this.getWorkspaceDirectory(), () =>
-              this.refreshMcpStatus(),
-            ).catch((e) => console.error("[Kilo New] disconnectMcpServer failed:", e))
-          }
-          break
-        }
-        case "authenticateMcp": {
-          const c = this.client
-          if (c) {
-            void McpOAuth.authenticateMcpServer(c, message.name, this.getWorkspaceDirectory(), () =>
-              this.refreshMcpStatus(),
-            ).catch((e) => console.error("[Kilo New] authenticateMcpServer failed:", e))
-          }
-          break
-        }
-
         case "questionReply":
           this.noteFollowup(message.answers, message.sessionID)
           if (!(await handleQuestionReply(this.questionCtx, message.requestID, message.answers, message.sessionID))) {
@@ -1544,6 +1544,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         case "openSettingsTab":
           if (message.tab === "indexing") {
             await vscode.commands.executeCommand("kilo-code.new.openIndexingSettings")
+          } else if (message.tab === "agentBehaviour" && message.subtab === "mcpServers") {
+            await vscode.commands.executeCommand("kilo-code.new.openMcpSettings", message.focus)
           }
           break
         case "setLanguage":
@@ -3082,12 +3084,92 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       const directory = this.getWorkspaceDirectory()
       const { data } = await retry(() => this.client!.mcp.status({ directory }))
       if (data) {
-        const message = { type: "mcpStatusLoaded", status: data }
+        const message = { type: "mcpStatusLoaded", status: normalizeMcpStatus(data) }
         this.cachedMcpStatusMessage = message
         this.postMessage(message)
       }
     } catch (error) {
       console.error("[Kilo New] KiloProvider: Failed to fetch MCP status:", error)
+    }
+  }
+
+  /**
+   * Handle the MCP status/connect and OAuth sign-in webview messages.
+   * Routed ahead of the main message switch (rather than as cases in it) to
+   * keep that function within its complexity budget.
+   * Returns true when the message belonged to this family and was consumed.
+   */
+  private async handleMcpMessage(message: { type?: unknown; name?: unknown; notify?: unknown }): Promise<boolean> {
+    if (typeof message.type !== "string" || !MCP_MESSAGE_TYPES.has(message.type)) return false
+    await this.routeMcpMessage(message.type, typeof message.name === "string" ? message.name : undefined, message)
+    return true
+  }
+
+  private async routeMcpMessage(type: string, name: string | undefined, message: { notify?: unknown }): Promise<void> {
+    const fail = (e: unknown) => console.error("[Kilo New] handleMcpMessage failed:", type, e)
+    if (type === "requestMcpStatus") return this.fetchAndSendMcpStatus().catch(fail)
+    if (type === "requestMcpAuthState") return this.fetchAndSendMcpAuthState().catch(fail)
+    if (type === "requestMcpBundles") return this.fetchAndSendMcpBundles().catch(fail)
+    if (!name) return
+    if (type === "removeMcp") return this.handleRemoveMcp(name).catch(fail)
+    if (type === "signInMcp") return this.handleSignInMcp(name, message.notify !== false).catch(fail)
+    if (type === "resetMcpAuth") return this.handleResetMcpAuth(name).catch(fail)
+    if (type === "cancelMcpSignIn") {
+      await mcpAuth(this.connectionService).cancel(this.getWorkspaceDirectory(), name).catch(fail)
+      return
+    }
+    const client = this.client
+    if (!client) return
+    const dir = this.getWorkspaceDirectory()
+    const refresh = () => this.refreshMcpStatus()
+    if (type === "connectMcp") return McpOAuth.connectMcpServer(client, name, dir, refresh).catch(fail)
+    await McpOAuth.disconnectMcpServer(client, name, dir, refresh).catch(fail)
+  }
+
+  /** Push the current MCP auth state (needs-auth / busy server names) for this provider's workspace directory. */
+  private async fetchAndSendMcpAuthState(): Promise<void> {
+    const dir = this.getWorkspaceDirectory()
+    const auth = mcpAuth(this.connectionService)
+    const message = {
+      type: "mcpAuthState",
+      directory: dir,
+      needsAuth: auth.needsAuth(dir),
+      busy: auth.busy(dir),
+    }
+    this.cachedMcpAuthStateMessage = message
+    this.postMessage(message)
+    if (this.client) await auth.refresh(dir)
+  }
+
+  private async handleSignInMcp(name: string, notify: boolean): Promise<void> {
+    const dir = this.getWorkspaceDirectory()
+    const result = await mcpAuth(this.connectionService).signIn(dir, name)
+    this.postMessage({ type: "mcpAuthResult", name, status: result.status, error: result.error })
+    if (notify) McpOAuth.notifySignInResult(name, result)
+  }
+
+  private async handleResetMcpAuth(name: string): Promise<void> {
+    const dir = this.getWorkspaceDirectory()
+    const reconnected = await mcpAuth(this.connectionService).reset(dir, name)
+    if (!reconnected) McpOAuth.notifyResetFailed(name)
+  }
+
+  private async fetchAndSendMcpBundles(): Promise<void> {
+    if (!this.client) {
+      if (this.cachedMcpBundlesMessage) {
+        this.postMessage(this.cachedMcpBundlesMessage)
+      }
+      return
+    }
+
+    try {
+      const dir = this.getWorkspaceDirectory()
+      const bundles = await marketplaceBundles(this.client, dir)
+      const message = { type: "mcpBundles", bundles }
+      this.cachedMcpBundlesMessage = message
+      this.postMessage(message)
+    } catch (error) {
+      console.error("[Kilo New] KiloProvider: Failed to fetch MCP bundles:", error)
     }
   }
 
@@ -5341,11 +5423,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       return
     }
 
-    if (event.type === "mcp.browser.open.failed") {
-      McpOAuth.openMcpOAuthUrlOnce(event.properties.url)
-      return
-    }
-
     if (event.type === "message.updated") {
       this.confirmations.confirm(event.properties.info.id)
     }
@@ -6126,6 +6203,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.statsGitOps?.dispose()
     this.unsubscribeEvent?.()
     this.unsubscribeState?.()
+    this.unsubscribeMcpAuth?.()
     this.unsubscribeNotificationDismiss?.()
     this.unsubscribeLanguageChange?.()
     this.unsubscribeProfileChange?.()

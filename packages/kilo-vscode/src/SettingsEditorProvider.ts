@@ -28,6 +28,9 @@ export class SettingsEditorProvider implements vscode.Disposable {
   private panels = new Map<PanelView, vscode.WebviewPanel>()
   private providers = new Map<PanelView, KiloProvider>()
   private tabs = new Map<PanelView, string>()
+  private subtabs = new Map<PanelView, string>()
+  /** Pending deep-link focus (e.g. an MCP server name), consumed after the first navigate it is sent with. */
+  private focuses = new Map<PanelView, string>()
   private projects = new Map<PanelView, string>()
   private remoteService: RemoteStatusService | null = null
 
@@ -57,8 +60,10 @@ export class SettingsEditorProvider implements vscode.Disposable {
     return view
   }
 
-  openPanel(view: PanelView, tab?: string, projectId?: string): void {
+  openPanel(view: PanelView, tab?: string, projectId?: string, subtab?: string, focus?: string): void {
     if (tab) this.tabs.set(view, tab)
+    if (subtab) this.subtabs.set(view, subtab)
+    if (focus) this.focuses.set(view, focus)
     if (projectId) this.projects.set(view, projectId)
     else this.projects.delete(view)
 
@@ -71,8 +76,11 @@ export class SettingsEditorProvider implements vscode.Disposable {
         type: "navigate",
         view,
         ...(tab ? { tab } : {}),
+        ...(subtab ? { subtab } : {}),
+        ...(focus ? { focus } : {}),
         ...(projectId ? { projectId } : {}),
       })
+      this.focuses.delete(view)
       return
     }
 
@@ -131,10 +139,14 @@ export class SettingsEditorProvider implements vscode.Disposable {
       if (msg.type === "webviewReady") {
         // Small delay to let KiloProvider's own webviewReady handler finish first
         setTimeout(() => {
+          const focus = this.focuses.get(view)
+          this.focuses.delete(view)
           provider.postMessage({
             type: "navigate",
             view,
             tab: this.tabs.get(view),
+            subtab: this.subtabs.get(view),
+            focus,
             projectId: this.projects.get(view),
           })
         }, 50)
@@ -161,6 +173,8 @@ export class SettingsEditorProvider implements vscode.Disposable {
       this.panels.delete(view)
       this.providers.delete(view)
       this.tabs.delete(view)
+      this.subtabs.delete(view)
+      this.focuses.delete(view)
       this.projects.delete(view)
     })
   }
@@ -180,6 +194,8 @@ export class SettingsEditorProvider implements vscode.Disposable {
     this.panels.clear()
     this.providers.clear()
     this.tabs.clear()
+    this.subtabs.clear()
+    this.focuses.clear()
     this.projects.clear()
   }
 }

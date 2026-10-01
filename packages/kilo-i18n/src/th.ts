@@ -60,6 +60,13 @@ export const dict = {
   "marketplace.install.failed": "การติดตั้งล้มเหลว",
   "marketplace.install.done": "เสร็จสิ้น",
   "marketplace.install.close": "ปิด",
+  "marketplace.install.mcp.signIn.message": "{{name}} ติดตั้งแล้ว แต่ต้องเข้าสู่ระบบก่อนจึงจะใช้งานเครื่องมือได้",
+  "marketplace.install.mcp.signIn.button": "เข้าสู่ระบบ",
+  "marketplace.install.mcp.signIn.waiting": "กำลังรอการเข้าสู่ระบบผ่านเบราว์เซอร์…",
+  "marketplace.install.mcp.signIn.cancel": "ยกเลิก",
+  "marketplace.install.mcp.signIn.skip": "ไว้ทีหลัง",
+  "marketplace.install.mcp.signIn.success": "เข้าสู่ระบบ {{name}} แล้ว",
+  "marketplace.install.mcp.signIn.failed": "เข้าสู่ระบบ {{name}} ไม่สำเร็จ",
   "marketplace.remove.title": "ลบ {{name}} หรือไม่?",
   "marketplace.remove.confirm":
     "คุณแน่ใจหรือไม่ว่าต้องการลบ {{type}} นี้? สิ่งนี้จะลบออกจากการกำหนดค่า {{scope}} ของคุณ",

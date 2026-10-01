@@ -49,7 +49,14 @@ const builtin = (skill: SkillInfo) => skill.location === "builtin" || skill.loca
 // View states for the agents subtab
 type AgentView = "list" | "create" | "edit"
 
-const AgentBehaviourTab: Component = () => {
+interface Props {
+  /** Deep-linked subtab, e.g. from the prompt's session-issues menu or Settings navigation. */
+  subtab?: string
+  /** Deep-linked row to expand and scroll into view once its subtab is active. The token makes repeat requests for the same name observable. */
+  focus?: { token: number; value: string }
+}
+
+const AgentBehaviourTab: Component<Props> = (props) => {
   const language = useLanguage()
   const { config, collections, settings, updateConfig, updateGlobalConfig, updateProjectConfig, updateSetting } =
     useConfig()
@@ -62,6 +69,25 @@ const AgentBehaviourTab: Component = () => {
   const [newInstruction, setNewInstruction] = createSignal("")
   const [claudeCompat, setClaudeCompat] = createSignal(false)
   const browse = () => vscode.postMessage({ type: "openMarketplacePanel" })
+
+  // MCP row expand/collapse, lifted out of renderMcpSubtab() so a deep-linked
+  // focus request (from the prompt's "Open in Settings" action) can expand
+  // and scroll to a specific server row.
+  const [mcpExpanded, setMcpExpanded] = createSignal<Record<string, boolean>>({})
+  const mcpRowRefs = new Map<string, HTMLElement>()
+
+  createEffect(() => {
+    const subtab = props.subtab
+    if (subtab && subtabs.some((s) => s.id === subtab)) setActiveSubtab(subtab as SubtabId)
+  })
+
+  createEffect(() => {
+    const focus = props.focus
+    if (!focus) return
+    setActiveSubtab("mcpServers")
+    setMcpExpanded((prev) => ({ ...prev, [focus.value]: true }))
+    queueMicrotask(() => mcpRowRefs.get(focus.value)?.scrollIntoView({ block: "nearest" }))
+  })
 
   // Load the VS Code setting for Claude Code compatibility
   vscode.postMessage({ type: "requestClaudeCompatSetting" })
@@ -79,10 +105,20 @@ const AgentBehaviourTab: Component = () => {
   // MCP view state
   const [editingMcp, setEditingMcp] = createSignal<string>("")
 
-  // Fetch skills whenever the skills subtab becomes active
+  // Fetch skills whenever the skills subtab becomes active.
   createEffect(() => {
     if (activeSubtab() === "skills") {
       session.refreshSkills()
+    }
+  })
+
+  // Fetch the marketplace MCP+companion-skill bundles on either subtab that
+  // can trigger a bundle-aware removal confirmation (Skills removes a
+  // companion skill and must offer to uninstall the whole MCP server;
+  // MCP Servers removes a server and must mention the companion skills it owns).
+  createEffect(() => {
+    if (activeSubtab() === "skills" || activeSubtab() === "mcpServers") {
+      session.refreshMcpBundles()
     }
   })
 
@@ -176,10 +212,14 @@ const AgentBehaviourTab: Component = () => {
   }
 
   const confirmRemoveSkill = (skill: SkillInfo) => {
+    const bundle = session.mcpBundles().find((b) => b.skills.includes(skill.location))
+    const message = bundle
+      ? language.t("settings.agentBehaviour.removeSkill.bundleConfirm", { name: skill.name, mcp: bundle.id })
+      : language.t("settings.agentBehaviour.removeSkill.confirm", { name: skill.name })
     dialog.show(() => (
       <Dialog title={language.t("settings.agentBehaviour.removeSkill.title")} fit>
         <div class="dialog-confirm-body">
-          <span>{language.t("settings.agentBehaviour.removeSkill.confirm", { name: skill.name })}</span>
+          <span>{message}</span>
           <div class="dialog-confirm-actions">
             <Button variant="ghost" size="large" onClick={() => dialog.close()}>
               {language.t("common.cancel")}
@@ -188,7 +228,11 @@ const AgentBehaviourTab: Component = () => {
               variant="primary"
               size="large"
               onClick={() => {
-                session.removeSkill(skill.location)
+                if (bundle) {
+                  vscode.postMessage({ type: "removeMcp", name: bundle.id })
+                } else {
+                  session.removeSkill(skill.location)
+                }
                 dialog.close()
               }}
             >
@@ -528,10 +572,14 @@ const AgentBehaviourTab: Component = () => {
   }
 
   const confirmRemoveMcp = (name: string) => {
+    const bundled = session.mcpBundles().some((b) => b.id === name)
+    const message = bundled
+      ? language.t("settings.agentBehaviour.removeMcp.bundleConfirm", { name })
+      : language.t("settings.agentBehaviour.removeMcp.confirm", { name })
     dialog.show(() => (
       <Dialog title={language.t("settings.agentBehaviour.removeMcp.title")} fit>
         <div class="dialog-confirm-body">
-          <span>{language.t("settings.agentBehaviour.removeMcp.confirm", { name })}</span>
+          <span>{message}</span>
           <div class="dialog-confirm-actions">
             <Button variant="ghost" size="large" onClick={() => dialog.close()}>
               {language.t("common.cancel")}
@@ -552,9 +600,35 @@ const AgentBehaviourTab: Component = () => {
     ))
   }
 
+  const confirmResetMcpAuth = (name: string) => {
+    dialog.show(() => (
+      <Dialog title={language.t("settings.agentBehaviour.mcpResetAuth.title")} fit>
+        <div class="dialog-confirm-body">
+          <span>{language.t("settings.agentBehaviour.mcpResetAuth.confirm", { name })}</span>
+          <div class="dialog-confirm-actions">
+            <Button variant="ghost" size="large" onClick={() => dialog.close()}>
+              {language.t("common.cancel")}
+            </Button>
+            <Button
+              variant="primary"
+              size="large"
+              onClick={() => {
+                dialog.close()
+                setTimeout(() => session.resetMcpAuth(name), 150)
+              }}
+            >
+              {language.t("settings.agentBehaviour.mcpResetAuth")}
+            </Button>
+          </div>
+        </div>
+      </Dialog>
+    ))
+  }
+
   const renderMcpSubtab = () => {
     const mcpEntries = createMemo(() => Object.entries(config().mcp ?? {}))
-    const [expanded, setExpanded] = createSignal<Record<string, boolean>>({})
+    const expanded = mcpExpanded
+    const setExpanded = setMcpExpanded
 
     const toggle = (name: string) => {
       setExpanded((prev) => ({ ...prev, [name]: !prev[name] }))
@@ -584,6 +658,8 @@ const AgentBehaviourTab: Component = () => {
     }
 
     const isConnected = (name: string) => session.mcpStatus()[name]?.status === "connected"
+    const needsAuth = (name: string) => session.mcpStatus()[name]?.status === "needs_auth"
+    const isSigningIn = (name: string) => session.mcpAuth().busy.includes(name)
 
     if (editingMcp()) {
       return (
@@ -640,6 +716,7 @@ const AgentBehaviourTab: Component = () => {
                 }
                 return (
                   <div
+                    ref={(el) => mcpRowRefs.set(name, el)}
                     style={{
                       "border-bottom": index() < mcpEntries().length - 1 ? "1px solid var(--border-weak-base)" : "none",
                     }}
@@ -676,49 +753,88 @@ const AgentBehaviourTab: Component = () => {
                           }}
                         />
                         <div style={{ "font-weight": "500" }}>{name}</div>
-                        <span
-                          style={{
-                            "font-size": "var(--kilo-font-size-10)",
-                            color: "var(--text-weak-base, var(--vscode-descriptionForeground))",
-                          }}
+                        <Show
+                          when={error()}
+                          fallback={
+                            <span
+                              style={{
+                                "font-size": "var(--kilo-font-size-10)",
+                                color: "var(--text-weak-base, var(--vscode-descriptionForeground))",
+                              }}
+                            >
+                              {statusLabel(name) || (mcp.url ? "remote" : "stdio")}
+                            </span>
+                          }
                         >
-                          {statusLabel(name) || (mcp.url ? "remote" : "stdio")}
-                        </span>
+                          <Tooltip
+                            value={
+                              <>
+                                {statusLabel(name)}
+                                <br />
+                                {error()}
+                              </>
+                            }
+                            placement="top"
+                          >
+                            <span
+                              style={{
+                                "font-size": "var(--kilo-font-size-10)",
+                                color: "var(--text-weak-base, var(--vscode-descriptionForeground))",
+                                "text-decoration": "underline dotted",
+                              }}
+                            >
+                              {statusLabel(name)}
+                            </span>
+                          </Tooltip>
+                        </Show>
                       </div>
                       <div style={{ display: "flex", gap: "4px", "align-items": "center" }}>
-                        <Show when={session.mcpStatus()[name]?.status === "needs_auth"}>
+                        <Show when={needsAuth(name)}>
                           <div onClick={(e: MouseEvent) => e.stopPropagation()}>
-                            <Button
-                              variant="secondary"
-                              size="small"
-                              disabled={session.mcpLoading() === name}
-                              onClick={() => session.authenticateMcp(name)}
+                            <Show
+                              when={isSigningIn(name)}
+                              fallback={
+                                <Button variant="secondary" size="small" onClick={() => session.signInMcp(name)}>
+                                  {language.t("common.signIn")}
+                                </Button>
+                              }
                             >
-                              {language.t("common.signIn")}
+                              <Button variant="secondary" size="small" onClick={() => session.cancelMcpSignIn(name)}>
+                                {language.t("settings.agentBehaviour.mcpSignIn.cancel")}
+                              </Button>
+                            </Show>
+                          </div>
+                        </Show>
+                        <Show when={!needsAuth(name)}>
+                          <div onClick={(e: MouseEvent) => e.stopPropagation()}>
+                            <Switch
+                              checked={isConnected(name)}
+                              disabled={session.mcpLoading() === name}
+                              onChange={(enabled: boolean) => {
+                                const scope = mcpConfigScope(name, collections())
+                                if (scope) {
+                                  const update = scope === "project" ? updateProjectConfig : updateGlobalConfig
+                                  update(mcpEnabledPatch(name, enabled))
+                                }
+                                if (!enabled) {
+                                  session.disconnectMcp(name)
+                                  return
+                                }
+                                session.connectMcp(name)
+                              }}
+                              hideLabel
+                            >
+                              {name}
+                            </Switch>
+                          </div>
+                        </Show>
+                        <Show when={isConnected(name) && (mcp.type ?? (mcp.url ? "remote" : "local")) === "remote"}>
+                          <div onClick={(e: MouseEvent) => e.stopPropagation()}>
+                            <Button variant="ghost" size="small" onClick={() => confirmResetMcpAuth(name)}>
+                              {language.t("settings.agentBehaviour.mcpResetAuth")}
                             </Button>
                           </div>
                         </Show>
-                        <div onClick={(e: MouseEvent) => e.stopPropagation()}>
-                          <Switch
-                            checked={isConnected(name)}
-                            disabled={session.mcpLoading() === name}
-                            onChange={(enabled: boolean) => {
-                              const scope = mcpConfigScope(name, collections())
-                              if (scope) {
-                                const update = scope === "project" ? updateProjectConfig : updateGlobalConfig
-                                update(mcpEnabledPatch(name, enabled))
-                              }
-                              if (!enabled) {
-                                session.disconnectMcp(name)
-                                return
-                              }
-                              session.connectMcp(name)
-                            }}
-                            hideLabel
-                          >
-                            {name}
-                          </Switch>
-                        </div>
                         <IconButton
                           size="small"
                           variant="ghost"

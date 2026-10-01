@@ -398,6 +398,21 @@
   margin: 0 0 16px;
 }
 
+.install-modal-mcp-signin-msg {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: var(--kilo-font-size-13);
+  margin: 0 0 16px;
+}
+
+.install-modal-mcp-signin-success {
+  color: var(--text-on-success-base);
+  font-size: var(--kilo-font-size-13);
+  margin: 0 0 16px;
+}
+
 /* Error banner */
 
 .marketplace-error-banner {

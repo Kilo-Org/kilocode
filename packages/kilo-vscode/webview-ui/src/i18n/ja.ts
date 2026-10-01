@@ -209,6 +209,10 @@ export const dict = {
   "prompt.agents.show": "バックグラウンドエージェントを表示",
   "prompt.action.enhance": "プロンプトを改善",
   "prompt.paste.expand": "クリックして貼り付けたテキストを展開",
+  "prompt.issues.title": "セッションの問題",
+  "prompt.mcp.provider": "{{name}} MCP",
+  "prompt.mcp.openSettings": "設定で開く",
+  "prompt.mcp.signIn.busy": "サインイン中…",
   "prompt.action.autoApprove.enable": "自動承認を有効化",
   "prompt.action.autoApprove.disable": "自動承認を無効化",
   "prompt.action.autoApprove.enabled": "自動承認が有効です。権限リクエストは自動的に承認されます。",
@@ -1027,12 +1031,31 @@ export const dict = {
   "settings.agentBehaviour.removeAgent.button": "削除",
   "settings.agentBehaviour.removeMcp.title": "MCPサーバーを削除",
   "settings.agentBehaviour.removeMcp.confirm": 'MCPサーバー "{{name}}" を削除しますか？設定から削除されます。',
+  "settings.agentBehaviour.removeMcp.bundleConfirm":
+    'MCPサーバー "{{name}}" と関連スキルを削除しますか？これにより、サーバーとこのMarketplaceインストールが所有するすべてのスキルが削除されます。',
   "settings.agentBehaviour.removeMcp.button": "削除",
   "settings.agentBehaviour.editMcp": "MCPサーバーを編集",
   "settings.agentBehaviour.editMcp.transportLocal": "ローカルサーバー（stdio トランスポート）",
   "settings.agentBehaviour.editMcp.transportRemote": "リモートサーバー（SSE/HTTP トランスポート）",
   "settings.agentBehaviour.editMcp.env": "環境変数",
   "settings.agentBehaviour.editMcp.env.help": "MCPサーバープロセスに渡される変数。",
+  "settings.agentBehaviour.editMcp.oauth": "OAuth",
+  "settings.agentBehaviour.editMcp.oauth.help":
+    "サーバーが事前登録済みのクライアントを必要としない限り、自動のままにしてください。クライアントシークレットはKilo設定ファイルに保存されます。",
+  "settings.agentBehaviour.editMcp.oauth.mode": "モード",
+  "settings.agentBehaviour.editMcp.oauth.mode.automatic": "自動",
+  "settings.agentBehaviour.editMcp.oauth.mode.disabled": "無効",
+  "settings.agentBehaviour.editMcp.oauth.mode.custom": "カスタムクライアント",
+  "settings.agentBehaviour.editMcp.oauth.clientId": "クライアントID",
+  "settings.agentBehaviour.editMcp.oauth.clientSecret": "クライアントシークレット",
+  "settings.agentBehaviour.editMcp.oauth.scope": "スコープ",
+  "settings.agentBehaviour.editMcp.oauth.callbackPort": "コールバックポート",
+  "settings.agentBehaviour.editMcp.oauth.redirectUri": "リダイレクトURI",
+  "settings.agentBehaviour.editMcp.oauth.redirectUri.help":
+    "デフォルトはhttp://127.0.0.1:19876/mcp/oauth/callbackで、コールバックポートを上書きします。",
+  "settings.agentBehaviour.editMcp.oauth.port.invalid": "1から65535の間のポートを入力してください。",
+  "settings.agentBehaviour.editMcp.oauth.secret.invalid": "クライアントシークレットにはクライアントIDが必要です。",
+  "settings.agentBehaviour.editMcp.oauth.redirectUri.invalid": "有効なリダイレクトURIを入力してください。",
   "settings.agentBehaviour.addMcp.command": "コマンド",
   "settings.agentBehaviour.addMcp.command.placeholder": "e.g. npx",
   "settings.agentBehaviour.addMcp.args": "引数",
@@ -1045,6 +1068,8 @@ export const dict = {
   "settings.agentBehaviour.removeSkill.title": "スキルを削除",
   "settings.agentBehaviour.removeSkill.confirm":
     'スキル "{{name}}" を削除しますか？これにより、ディスクからスキルファイルが削除されます。',
+  "settings.agentBehaviour.removeSkill.bundleConfirm":
+    'スキル "{{name}}" を削除しますか？これにより、{{mcp}} MCPサーバーと同じMarketplaceインストールの関連スキルもすべてアンインストールされます。',
   "settings.agentBehaviour.removeSkill.button": "削除",
   "settings.agentBehaviour.rules.description":
     "ルールはエージェントの動作を導く指示ファイルです。すべての会話のシステムプロンプトに含まれます。追加のルールを含めるには、以下にファイルパスを追加してください。",
@@ -1060,6 +1085,11 @@ export const dict = {
   "settings.agentBehaviour.mcpDetail.command": "コマンド",
   "settings.agentBehaviour.mcpDetail.args": "引数",
   "settings.agentBehaviour.mcpDetail.env": "環境",
+  "settings.agentBehaviour.mcpSignIn.cancel": "サインインをキャンセル",
+  "settings.agentBehaviour.mcpResetAuth": "サインインをリセット",
+  "settings.agentBehaviour.mcpResetAuth.title": "MCPサインインをリセット",
+  "settings.agentBehaviour.mcpResetAuth.confirm":
+    '"{{name}}" の保存されたサインイン情報を消去しますか？再度サインインが必要になります。',
   "settings.agentBehaviour.mcpBrowseMarketplace": "マーケットプレイスを閲覧",
   "settings.agentBehaviour.mcpEmpty":
     "MCPサーバーが設定されていません。kilo.jsoncでMCPサーバーを追加するか、エージェントに追加を依頼してください。",

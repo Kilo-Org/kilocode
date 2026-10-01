@@ -211,6 +211,10 @@ export const dict = {
   "prompt.agents.show": "Vis bakgrunnsagenter",
   "prompt.action.enhance": "Forbedre prompt",
   "prompt.paste.expand": "Klikk for å utvide den innlimte teksten",
+  "prompt.issues.title": "Sesjonsproblemer",
+  "prompt.mcp.provider": "{{name}} MCP",
+  "prompt.mcp.openSettings": "Åpne i Innstillinger",
+  "prompt.mcp.signIn.busy": "Logger inn…",
   "prompt.action.autoApprove.enable": "Aktiver automatisk godkjenning",
   "prompt.action.autoApprove.disable": "Deaktiver automatisk godkjenning",
   "prompt.action.autoApprove.enabled":
@@ -1032,12 +1036,31 @@ export const dict = {
   "settings.agentBehaviour.removeMcp.title": "Fjern MCP-server",
   "settings.agentBehaviour.removeMcp.confirm":
     'Vil du fjerne MCP-serveren "{{name}}"? Dette vil fjerne den fra konfigurasjonen din.',
+  "settings.agentBehaviour.removeMcp.bundleConfirm":
+    'Fjerne MCP-serveren "{{name}}" og tilhørende ferdigheter? Dette fjerner både serveren og alle ferdigheter som eies av denne Marketplace-installasjonen.',
   "settings.agentBehaviour.removeMcp.button": "Fjern",
   "settings.agentBehaviour.editMcp": "Rediger MCP-server",
   "settings.agentBehaviour.editMcp.transportLocal": "Lokal server (stdio-transport)",
   "settings.agentBehaviour.editMcp.transportRemote": "Ekstern server (SSE/HTTP-transport)",
   "settings.agentBehaviour.editMcp.env": "Miljøvariabler",
   "settings.agentBehaviour.editMcp.env.help": "Variabler som sendes til MCP-serverprosessen.",
+  "settings.agentBehaviour.editMcp.oauth": "OAuth",
+  "settings.agentBehaviour.editMcp.oauth.help":
+    "La stå på Automatisk med mindre serveren krever en forhåndsregistrert klient. En klienthemmelighet lagres i Kilo-konfigurasjonsfilen din.",
+  "settings.agentBehaviour.editMcp.oauth.mode": "Modus",
+  "settings.agentBehaviour.editMcp.oauth.mode.automatic": "Automatisk",
+  "settings.agentBehaviour.editMcp.oauth.mode.disabled": "Deaktivert",
+  "settings.agentBehaviour.editMcp.oauth.mode.custom": "Egendefinert klient",
+  "settings.agentBehaviour.editMcp.oauth.clientId": "Klient-ID",
+  "settings.agentBehaviour.editMcp.oauth.clientSecret": "Klienthemmelighet",
+  "settings.agentBehaviour.editMcp.oauth.scope": "Omfang",
+  "settings.agentBehaviour.editMcp.oauth.callbackPort": "Callback-port",
+  "settings.agentBehaviour.editMcp.oauth.redirectUri": "Omdirigerings-URI",
+  "settings.agentBehaviour.editMcp.oauth.redirectUri.help":
+    "Standard er http://127.0.0.1:19876/mcp/oauth/callback og overstyrer callback-porten.",
+  "settings.agentBehaviour.editMcp.oauth.port.invalid": "Angi en port mellom 1 og 65535.",
+  "settings.agentBehaviour.editMcp.oauth.secret.invalid": "En klienthemmelighet krever en klient-ID.",
+  "settings.agentBehaviour.editMcp.oauth.redirectUri.invalid": "Angi en gyldig omdirigerings-URI.",
   "settings.agentBehaviour.addMcp.command": "Kommando",
   "settings.agentBehaviour.addMcp.command.placeholder": "e.g. npx",
   "settings.agentBehaviour.addMcp.args": "Argumenter",
@@ -1050,6 +1073,8 @@ export const dict = {
   "settings.agentBehaviour.removeSkill.title": "Fjern ferdighet",
   "settings.agentBehaviour.removeSkill.confirm":
     'Vil du fjerne ferdigheten "{{name}}"? Dette vil slette ferdighetsfilene fra disken.',
+  "settings.agentBehaviour.removeSkill.bundleConfirm":
+    'Fjerne ferdigheten "{{name}}"? Dette avinstallerer også {{mcp}} MCP-serveren og alle tilhørende ferdigheter fra samme Marketplace-installasjon.',
   "settings.agentBehaviour.removeSkill.button": "Fjern",
   "settings.agentBehaviour.rules.description":
     "Regler er instruksjonsfiler som styrer agentens atferd. De inkluderes i systemprompten for hver samtale. Legg til filstier nedenfor for å inkludere ekstra regler.",
@@ -1065,6 +1090,11 @@ export const dict = {
   "settings.agentBehaviour.mcpDetail.command": "Kommando",
   "settings.agentBehaviour.mcpDetail.args": "Argumenter",
   "settings.agentBehaviour.mcpDetail.env": "Miljø",
+  "settings.agentBehaviour.mcpSignIn.cancel": "Avbryt innlogging",
+  "settings.agentBehaviour.mcpResetAuth": "Nullstill innlogging",
+  "settings.agentBehaviour.mcpResetAuth.title": "Nullstill MCP-innlogging",
+  "settings.agentBehaviour.mcpResetAuth.confirm":
+    'Fjerne den lagrede innloggingen for "{{name}}"? Du må logge inn på nytt.',
   "settings.agentBehaviour.mcpBrowseMarketplace": "Bla gjennom Marketplace",
   "settings.agentBehaviour.mcpEmpty":
     "Ingen MCP-servere konfigurert. Legg til MCP-servere i kilo.jsonc, eller be agenten om å legge dem til.",
