@@ -248,11 +248,12 @@ for (const width of [80, 120]) {
   test(`footer stays on one row at ${width} columns in every key-hint state`, async () => {
     await using tmp = await tmpdir()
     using scene = await mount(tmp.path, width)
+    // footer content only: the steering prompt below it also draws "┃" rows with text
     const rows = () =>
       scene
         .frame()
         .split("\n")
-        .filter((row) => row.includes("┃") && row.trim() !== "┃")
+        .filter((row) => /General \(1 of 1\)|Interrupt esc|again to exit|Parent up|Prev left|Next right/.test(row))
     const states = [] as string[][]
     states.push(rows())
     await scene.press("\x1b")
@@ -266,3 +267,62 @@ for (const width of [80, 120]) {
     for (const item of states) expect(item[0]).toContain("Next right")
   })
 }
+
+// The subagent view also mounts the steering prompt: its keys must coexist with the footer's.
+// The prompt keeps an unmounted draft for its next mount, so each test clears what it typed.
+test("the steering prompt names the subagent it steers instead of the parent's agent", async () => {
+  await using tmp = await tmpdir()
+  using scene = await mount(tmp.path)
+  expect(scene.frame()).toContain("Steer the General subagent...")
+  expect(scene.frame()).toContain("Steering General")
+})
+
+test("running subagent view shows the steering prompt without a second interrupt hint", async () => {
+  await using tmp = await tmpdir()
+  using scene = await mount(tmp.path)
+  await scene.press("steer")
+  expect(scene.frame()).toContain("steer")
+  expect(scene.frame()).toContain("Interrupt esc")
+  expect(scene.frame()).not.toContain("esc interrupt")
+  await scene.press("\x03")
+})
+
+test("ctrl+c clears a typed steer before it arms exit", async () => {
+  await using tmp = await tmpdir()
+  using scene = await mount(tmp.path)
+  await scene.press("redirect the worker")
+  expect(scene.frame()).toContain("redirect the worker")
+  await scene.press("\x03")
+  expect(scene.frame()).not.toContain("redirect the worker")
+  expect(scene.frame()).not.toContain("again to exit")
+  await scene.press("\x03")
+  expect(scene.frame()).toContain("again to exit")
+  expect(scene.exits).toHaveLength(0)
+})
+
+test("double Esc still stops the subagent while a steer is typed", async () => {
+  await using tmp = await tmpdir()
+  using scene = await mount(tmp.path)
+  await scene.press("half typed")
+  await scene.press("\x1b")
+  await scene.press("\x1b")
+  await wait(() => scene.aborts.length === 1)
+  expect(scene.aborts[0]?.searchParams.get("scope")).toBe("tree")
+  expect(scene.frame()).toContain("half typed")
+  await scene.press("\x03")
+})
+
+test("Esc closes the mention list before it arms the interrupt", async () => {
+  await using tmp = await tmpdir()
+  using scene = await mount(tmp.path)
+  const before = scene.frame()
+  await scene.press("@")
+  expect(scene.frame()).not.toBe(before)
+  await scene.press("\x1b")
+  expect(scene.frame()).not.toContain("esc again")
+  expect(scene.aborts).toHaveLength(0)
+  await scene.press("\x1b")
+  await scene.press("\x1b")
+  await wait(() => scene.aborts.length === 1)
+  await scene.press("\x03")
+})

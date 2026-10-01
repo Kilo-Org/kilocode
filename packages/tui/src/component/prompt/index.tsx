@@ -60,6 +60,7 @@ import { createCostAlertController } from "@/kilocode/cli/cmd/tui/cost-alert"
 import { MemoryPrompt } from "@/kilocode/cli/cmd/tui/component/memory-prompt"
 import { GoalPrompt } from "@/kilocode/cli/cmd/tui/component/goal"
 import { KiloSteer } from "../../kilocode/steer"
+import { SteerLabel, useSubagent } from "../../kilocode/steer-label"
 // kilocode_change end
 import { KILO_BASE_MODE, useBindings, useCommandShortcut, useLeaderActive, useOpencodeKeymap } from "../../keymap"
 import { useTuiConfig } from "../../config"
@@ -236,12 +237,15 @@ export function Prompt(props: PromptProps) {
     bumpCursor: () => setCursorVersion((value) => value + 1),
     cursorVersion: () => cursorVersion(),
   })
-  // A subagent view only sends steering prompts: no shell mode, no slash commands, no interrupt.
-  const steer = createMemo(() => KiloSteer.steering(sync.session.get(props.sessionID ?? "")))
+  // A subagent view only sends steering prompts: no shell mode and no slash commands. The prompt
+  // also shows whose input it is (color, label, placeholder) so it does not look like the parent's.
+  const subagent = useSubagent(() => props.sessionID)
+  const steer = createMemo(() => !!subagent())
   createEffect(() => {
     if (steer() && store.mode === "shell") setStore("mode", "normal")
   })
-  // Aborting the child from its own view would fail the parent's pending task call.
+  // In a subagent view Esc belongs to the session route's `subagent.interrupt`, which stops the
+  // subagent tree and shows its hint in the subagent footer; the prompt's own interrupt stays off.
   const interruptible = createMemo(
     () =>
       !steer() &&
@@ -1454,6 +1458,7 @@ export function Prompt(props: PromptProps) {
   const highlight = createMemo(() => {
     if (leader()) return theme.border
     if (store.mode === "shell") return theme.primary
+    if (subagent()) return subagent()?.color ?? theme.border // kilocode_change - the subagent's color, as in its footer
     const agent = local.agent.current()
     if (!agent) return theme.border
     return local.agent.color(agent.name ?? "") // kilocode_change
@@ -1476,6 +1481,7 @@ export function Prompt(props: PromptProps) {
 
   const placeholderText = createMemo(() => {
     if (props.showPlaceholder === false) return undefined
+    if (subagent()) return `Steer the ${subagent()?.label} subagent...` // kilocode_change
     if (store.mode === "shell") {
       if (!shell().length) return undefined
       const example = shell()[store.placeholder % shell().length]
@@ -1619,7 +1625,10 @@ export function Prompt(props: PromptProps) {
             />
             <box flexDirection="row" flexShrink={0} paddingTop={1} gap={1} justifyContent="space-between">
               <box flexDirection="row" gap={1}>
-                <Show when={local.agent.current()} fallback={<box height={1} />}>
+                {/* kilocode_change start - a steer runs as the subagent, so show it instead of the primary agent/model */}
+                <Show when={subagent()}>{(item) => <SteerLabel subagent={item()} />}</Show>
+                {/* kilocode_change end */}
+                <Show when={!subagent() && local.agent.current() /* kilocode_change */} fallback={<box height={1} />}>
                   {(agent) => (
                     <>
                       <text fg={fadeColor(highlight(), agentMetaAlpha())}>
@@ -1786,7 +1795,7 @@ export function Prompt(props: PromptProps) {
                     })()}
                   </box>
                 </box>
-                {/* kilocode_change start - subagent views cannot interrupt, so hide the hint */}
+                {/* kilocode_change start - the subagent footer shows the interrupt hint in subagent views */}
                 <Show when={!steer()}>
                   <text fg={store.interrupt > 0 ? theme.primary : theme.text}>
                     esc{" "}

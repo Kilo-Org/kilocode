@@ -612,6 +612,7 @@ export function Autocomplete(props: {
   useBindings(() => ({
     target: props.input,
     enabled: () => Boolean(store.visible),
+    priority: 2, // kilocode_change - an open list outranks priority-1 subagent-view keys (Esc interrupt)
     commands: [
       {
         name: "prompt.autocomplete.prev",

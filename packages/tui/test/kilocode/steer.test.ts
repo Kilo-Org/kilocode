@@ -46,9 +46,31 @@ test("subagent views accept input only while the child is running", () => {
   expect(KiloSteer.open(root, "idle")).toBe(true)
 })
 
-test("navigation keys yield only once the focused prompt has text", () => {
-  expect(KiloSteer.nav(undefined)).toBe(true)
-  expect(KiloSteer.nav({ focused: false, current: { input: "draft" } })).toBe(true)
-  expect(KiloSteer.nav({ focused: true, current: { input: "" } })).toBe(true)
-  expect(KiloSteer.nav({ focused: true, current: { input: "draft" } })).toBe(false)
+test("subagent-view keys yield only once the focused prompt has text", () => {
+  expect(KiloSteer.idle(undefined)).toBe(true)
+  expect(KiloSteer.idle({ focused: false, current: { input: "draft" } })).toBe(true)
+  expect(KiloSteer.idle({ focused: true, current: { input: "" } })).toBe(true)
+  expect(KiloSteer.idle({ focused: true, current: { input: "draft" } })).toBe(false)
+})
+
+test("the steered agent comes from the session, then its latest reply, then the task title", () => {
+  const title = "inspect bug (@explore subagent)"
+  expect(KiloSteer.agent({ agent: "general", title }, "build")).toBe("general")
+  expect(KiloSteer.agent({ title }, "build")).toBe("build")
+  expect(KiloSteer.agent({ title })).toBe("explore")
+  expect(KiloSteer.agent({ title: "untitled" })).toBeUndefined()
+  expect(KiloSteer.agent(undefined)).toBeUndefined()
+})
+
+test("the steered model shows display names and falls back to raw ids", () => {
+  const providers = [{ id: "sub", name: "Sub Provider", models: { "sub-model": { name: "Sub Model" } } }]
+  expect(KiloSteer.model({ id: "sub-model", providerID: "sub" }, providers)).toEqual({
+    name: "Sub Model",
+    provider: "Sub Provider",
+  })
+  expect(KiloSteer.model({ id: "gone", providerID: "missing" }, providers)).toEqual({
+    name: "gone",
+    provider: "missing",
+  })
+  expect(KiloSteer.model(undefined, providers)).toBeUndefined()
 })

@@ -1273,7 +1273,7 @@ export function Session() {
   useBindings(() => ({
     mode: KILO_BASE_MODE,
     priority: 1,
-    enabled: () => KiloSteer.nav(prompt),
+    enabled: () => KiloSteer.idle(prompt),
     bindings: tuiConfig.keybinds.gather("session.nav", sessionNavBindingCommands),
   }))
   // kilocode_change end
@@ -1303,9 +1303,10 @@ export function Session() {
     bindings: tuiConfig.keybinds.get("subagent.interrupt"),
   }))
 
+  // A typed steer keeps the prompt's own ctrl+c (clear) and ctrl+d (delete), as in the main view.
   useBindings(() => ({
     mode: KILO_BASE_MODE,
-    enabled: subagentKeys(),
+    enabled: () => subagentKeys() && KiloSteer.idle(prompt),
     priority: 1,
     bindings: tuiConfig.keybinds.get("app.exit").map((binding) => ({
       ...binding,
