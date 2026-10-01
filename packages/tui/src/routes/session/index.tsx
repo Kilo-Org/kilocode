@@ -361,14 +361,13 @@ export function Session() {
   const subagentPaused = createMemo(() => subagentKeys() && !subagentRunning() && KiloTaskPause.paused(session()))
   // An interrupt, like Esc in any session view: it stops this subagent's turn and pauses the
   // parent's task, so background work it started keeps running. On an already-paused subagent
-  // the same interrupt returns control to the parent with an interrupted task result.
+  // the same interrupt returns control to the parent with an interrupted task result; the view
+  // stays on the subagent.
   function interruptSubagent() {
     if (!interrupt.press()) return
-    const parent = subagentPaused() ? session()?.parentID : undefined
     const fail = () => toast.show({ message: "Failed to interrupt subagent", variant: "error" })
     void sdk.client.session.abort({ sessionID: route.sessionID, scope: "session" }).then((res) => {
-      if (res.error) return fail()
-      if (parent) navigate({ type: "session", sessionID: parent })
+      if (res.error) fail()
     }, fail)
   }
   // kilocode_change end
