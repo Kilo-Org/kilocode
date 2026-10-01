@@ -48,13 +48,25 @@ This is **feature** parity. Code parity is impossible because the v1 and v2 foun
    - One consolidation merge (N1) goes to the **latest upstream v2 release tag at execution start** (v2.0.20 as of 09-29).
    - After that, merge every upstream v2 release tag, at least weekly.
    - Pins are always release tags.
-3. **Staged cutover:** G1 CLI/TUI → G2 VS Code (sidebar, tabs, Agent Manager, settings) → G3 JetBrains. Each surface has its own go/no-go. The IDEs keep bundling or pinning a v1 binary until their gate passes.
+3. **Staged cutover:** G1 CLI/TUI → G2 VS Code (sidebar, tabs, Agent Manager, settings) → G3 JetBrains. Each surface has its own go/no-go. Until their gate passes, the IDEs stay on v1:
+   - VS Code ships from `main` and bundles the CLI built from the same commit. It does not pin a CLI version.
+   - JetBrains pins a CLI version.
+
+   **G2 and G3 are independent client-surface tracks.** Their work is mainly Kilo-specific client code (`packages/kilo-vscode`, `kilo-ide-ui`, `kilo-ui`, `kilo-jetbrains`) that consumes the v2 core through public contracts. They do not block G1, and G1 does not wait for them. Each track can start once its prerequisites land (N1 for both; #14383 for VS Code) and can run in parallel with G1 under its own owner.
+
+   Some client-track items touch core, server or protocol, and must be coordinated with core work:
+   - #14380, the message-deletion runtime operation;
+   - N9, the server side of the capability handshake;
+   - #14416, the FIM/next-edit producer and service contract;
+   - #14391, the Agent Manager control-plane contracts.
+
+   These follow the standing rules: Kilo-owned seams first, then a counted shared patch.
 4. **Storage:**
    - Customer v2 `kilo` uses a distinct v2 data/config location: not preview `kilo2`, not the v1 `kilo` paths.
    - v1 files are never moved or rewritten while any v1 surface ships.
    - Import is opt-in, copies then migrates the copy, and is **re-runnable/idempotent**. Between G1 and G3, history is split between the v2 CLI and the v1 IDEs.
    - Paths are consolidated only after G3.
-5. **Post-cutover (non-gating):** voice/STT; image generation and Claw; team sharing and incremental share sync; legacy TUI theme/binding extras. **Individual snapshot share/unshare/fork-from-share and the public viewer for v2 messages are G1 gates**, because they are v1 CLI features. Team upload stays refused until team sharing ships.
+5. **Post-cutover (non-gating):** voice/STT; image generation (experimental on v1); team sharing and incremental share sync; legacy TUI theme/binding extras. Features behind experimental flags on `main` also default to post-cutover unless explicitly made a gate (N4 keeps the list). KiloClaw is **not needed**, because it has already been removed from the client on `main`. **Individual snapshot share/unshare/fork-from-share and the public viewer for v2 messages are G1 gates**, because they are v1 CLI features. Team upload stays refused until team sharing ships.
 6. **Hard gates:** everything else, including FIM/next-edit (G2, G3). Cloud agents (#14023) and Anaconda Desktop (#14024) gate whichever surface they consume, so their discovery runs first.
 7. **Clients:** never mix v1 and v2 routes within one session. Clients detect the backend through an explicit version/capability handshake.
 8. **Gates override P-labels for surface readiness.** P-labels set the global work order; gates define what a surface needs before it ships. The G1-gating parts of #14018/#14019 are scheduled with G1 despite their P2 labels. Relabel them rather than defer them.
@@ -88,6 +100,13 @@ What changed since those proposals:
   - Touches: packages and paths, so parallel agents don't edit the same files.
   - Verification commands.
   - Owner.
+- **The `Gate` field is single-valued.** Units that run once per gate or per sweep get one child issue per run, with the parent kept as a tracker:
+  - N11 and #14414: one child each for G1, G2 and G3;
+  - N4: one child per sweep;
+  - N3: one child per upstream tag.
+
+  Issues split across gates get one child issue per part: #14378, #14395, #14399, #14419. This keeps "0 open issues per gate before go/no-go" accurate.
+- **Client tracks (G2, G3) run in parallel with G1** once their prerequisites close (Decision 3).
 - **Parallel agents:**
   - Take issues whose "Blocked by" items are all closed.
   - Avoid overlapping "Touches". The TUI issues (#14375–#14379) all touch `packages/tui` and `packages/kilo-cli/src/tui-plugin`, so run them in series or split their files.
@@ -112,8 +131,13 @@ P0. **Lift the implementation pause, after sign-off and before any implementatio
 - replace the working-log header, which calls the file a "local working copy" of #13750, with a statement that it is the tracked milestone history of the migration;
 - set the status line of `kilo-opencode-v2-plan-progress.md` to "Active — see execution plan". The full realignment stays in N7.
 
-P1. **Create one GitHub issue for each of N1–N14** (see "New issues to create").
+P1. **Create one GitHub issue for each of N1–N17** (see "New issues to create"), with N6 created as N6a and N6b.
 - Parent each one as a native sub-issue of #13750, or of the epic named in the table.
+- Create the per-run and per-part child issues listed in the Execution model:
+  - G1/G2/G3 children for N11 and #14414;
+  - part children for #14378, #14395, #14399 and #14419.
+
+  Children for N4 sweeps and N3 upstream tags are created when each run happens.
 - Use the existing body template (Outcome / Scope / Current position / Acceptance / Dependencies / Tracking) plus the required Execution-model fields: Gate, Blocked by, Base, Touches, Verification commands, Owner.
 - Copy Scope and Acceptance from this plan's step for that unit.
 
@@ -162,13 +186,33 @@ The v2 side stays correct without them, because N4 classifies every Kilo change 
 
    The baseline is the post-N1 measurement, recorded in a new dated `marker-audit/` footprint file. Increases fail unless they state the missing seam. Then run #14381 (marker-disposition sweep) against the new base.
 3. **N3 — Sync automation.** A Kilo-owned workflow that dry-run-merges each new upstream `v2.*` tag into `kilo-v2` and reports conflicts by owner, plus a real `e2e` lane for `kilo-v2`. Do not edit upstream's `test.yml`.
+
+   Each new upstream tag is handled individually, as it arrives:
+   - the workflow (or the sync owner) opens one child issue per tag;
+   - the sync owner performs the real merge;
+   - acceptance is the N1 baseline diff, typecheck and `bun run generate` checks.
 4. Start signing/notarization (#14411) now, because of its external lead time.
 
-### Phase C — Re-baseline (read-only; starts now, parallel with B)
+### Phase C — Re-baseline (starts now, parallel with B)
 
-5. **N4 — `main` delta sweep (recurring).** Assess `cutoff..origin/main` over Kilo-owned and marked v1 files, and refresh `marker-audit/v1-kilo-marker-port-assessment.tsv`/`.md`. File new work under the owning epic, then advance the cutoff. Run it now, then before each gate's go/no-go.
-6. **N5 — v1 reference fixtures.** Record v1 behavior at the cutoff for offline wait, overflow accounting, slow snapshot and snapshot retention, so that #14371–#14374 verify against pinned v1 behavior regardless of later upstream merges.
-7. **N6 — Package decisions.** Import `kilo-docs` (needed at G1) and `kilo-jetbrains` (for G3, after N1). Assess `kilo-web-ui` as port or obsolete. Record `kilo-console` as obsolete.
+This phase writes files, so each unit owns fixed paths to avoid colliding with N1:
+- N4 owns `marker-audit/`;
+- N7 owns `plans/kilo-opencode-v2-plan-progress.md` and the test plans;
+- N5 (data part) owns its fixture-data directory.
+
+N1 does not edit these paths, apart from the scope-rename codemod where they name packages.
+
+5. **N4 — `main` delta sweep (recurring).**
+   - Assess `cutoff..origin/main` over Kilo-owned and marked v1 files, and refresh `marker-audit/v1-kilo-marker-port-assessment.tsv`/`.md`.
+   - Also inventory the features behind experimental flags on `main`; these default to post-cutover (Decision 5).
+   - File new work under the owning epic, then advance the cutoff.
+   - Run it now, then before each gate's go/no-go.
+6. **N5 — v1 reference fixtures.** Record v1 behavior at the cutoff for offline wait, overflow accounting, slow snapshot and snapshot retention, so that #14371–#14374 verify against pinned v1 behavior regardless of later upstream merges. It has two parts:
+   - **before N1:** capture the v1 reference data only, with no imports of v2 packages;
+   - **after N1:** land the v2 test harness that consumes the data, so it uses the renamed `@opencode/*` scope.
+7. **N6 — Package decisions**, split into two issues:
+   - **N6a (no blocker):** assess `kilo-docs` (needed at G1) and `kilo-web-ui` (port or obsolete); record `kilo-console` as obsolete.
+   - **N6b (blocked by N1):** import `kilo-docs` and `kilo-jetbrains` (for G3). Importing after N1 avoids applying the scope rename twice.
 8. **Discovery:** #14425 and #14426 (cloud agents) and #14429 and #14430 (Anaconda Desktop). Each one records which binary, protocol and surface it consumes, which sets the gate for #14427/#14428 and #14431/#14432.
 9. **N7 — Alignment.** Align the progress plan and the issue bodies (see "Progress plan alignment" and the register).
 
@@ -179,18 +223,25 @@ The v2 side stays correct without them, because N4 classifies every Kilo change 
     - concrete paths per Decision 4;
     - boot fails closed on v1 or OpenCode stores;
     - assert that upstream `V1Migration` does nothing on an empty store;
-    - verify whether the v1 IDE and CLI currently share one DB/auth file, and if so document the split history for users.
+    - verify whether the v1 IDE and CLI currently share one DB/auth file, and if so document the split history for users;
+    - verify that v1 IDE extensions can never resolve the customer v2 `kilo` binary (via PATH, a global install, or a "latest" download). VS Code does not pin a CLI version. If an extension can resolve the v2 binary, G1 ships v2 under a name or channel that v1 IDEs don't resolve.
 12. #14413 import:
     - covers the DB, `auth.json` and Kilo `kilo.jsonc` keys; originals are untouched;
     - fixtures come from released v1 versions, including the cutoff;
     - a re-run imports only new sessions, never duplicating or overwriting v2-side changes (a test is required).
 13. #14020 distribution: #14408, #14409, #14410, #14411, #14412. v1 and v2 CLIs install side by side.
+13a. **N17 — v2 preview release train** (under #14020):
+    - regular (e.g. weekly) releases from `kilo-v2` under the isolated preview identity, for the team and early adopters;
+    - starts once N1, #14408, #14410 and #14412 land, so that G1 is not the first v2 release;
+    - preview findings feed #14414 and the progress plan.
+
+    G1 is the bar for customers; the preview train is how the team learns when v2 is close enough to that bar.
 14. #14018 sharing: #14396, #14397, #14398, #14401, and the fail-closed part of #14399.
 15. #14019 remote: #14402–#14407, and the host-registration part of #14395.
 16. Any #14427/#14428 or #14431/#14432 that discovery attaches to G1.
 16a. **N12 — TUI picker, dialogs and status/footer**, covering progress-plan rows that have no issue:
     - model picker inline preview and section/search interaction;
-    - provider-specific guidance and failure details in the provider/integration dialogs;
+    - provider-specific guidance, failure details and automatic integration-method presentation in the provider/integration dialogs;
     - version/config guidance and onboarding in the status/footer (the presence part is #14395).
 
     It touches `packages/tui` and `packages/kilo-cli/src/tui-plugin`, so run it in series with #14375–#14379.
@@ -203,8 +254,8 @@ The v2 side stays correct without them, because N4 classifies every Kilo change 
     - Execute every G1-tagged test-plan scenario end to end, including rows already marked "Implemented, full E2E pending": Gateway auth/org/catalog, memory, indexing, sandbox, telemetry, swarm, skills/agents, config, review, headless run, ACP, updater, model info, sidebar.
     - Include external-gated verification where permitted: the deployed Gateway, and `kilo cloud` against the deployed service.
     - Record results with SHA in the progress plan.
-17. **G1 go/no-go (#14414, G1 run):**
-    - N11 (G1) has passed;
+17. **G1 go/no-go (#14414-G1):**
+    - N11-G1 has passed;
     - the canary operates in isolation;
     - N4 has run and its G1 items are dispositioned;
     - rollback is the v1 CLI on untouched v1 files.
@@ -228,14 +279,19 @@ The v2 side stays correct without them, because N4 classifies every Kilo change 
     - the telemetry capture/proxy surface.
 
     It sits under #14016 and touches `packages/kilo-vscode`, so coordinate it with #14386 (settings webview).
-20b. **N11 — G2 acceptance run** of every G2-tagged scenario, including the permission/question UI callers and policy variants.
-21. **G2 go/no-go (#14414, G2 run):** N11 (G2) has passed and N4 has run again. Rollback is the previous extension version on untouched v1 files.
+20b. **N15 — VS Code scenario set.**
+    - The current test plans defer VS Code and contain no IDE scenarios. Write G2 scenarios: sidebar, editor tabs and restore, Agent Manager and worktree routing, settings, terminals, reconnect and interruption, opt-in import, handshake, rollback to the previous extension.
+    - Owned by the VS Code track; it can start now because it does not depend on N1.
+20c. Any #14427/#14428 or #14431/#14432 that discovery attaches to G2.
+20d. **N11 — G2 acceptance run** of every G2-tagged scenario, including the N15 set, the permission/question UI callers and the policy variants.
+21. **G2 go/no-go (#14414-G2):** N11-G2 has passed and N4 has run again. Rollback is the previous extension version on untouched v1 files.
 
 ### Phase F — G3: JetBrains
 
 22. #14022: #14420 → #14421 → #14422 and #14423 (#14423 needs #14416) → #14424. Generate the client from the stable assembled OpenAPI contract, and follow the same import, handshake and rollback rules as G2.
-22a. **N11 — G3 acceptance run** of every G3-tagged scenario.
-23. **G3 go/no-go (#14414, G3 run)** after N11 (G3) passes.
+22a. **N16 — JetBrains scenario set.** Write G3 scenarios for supported IDEs: startup and discovery, authentication, sessions and streaming, permissions, history, terminal and editor services, reconnect, restart and version mismatch. Owned by the JetBrains track; it can start now.
+22b. **N11 — G3 acceptance run** of every G3-tagged scenario, including the N16 set, plus any #14427/#14428 or #14431/#14432 that discovery attaches to G3.
+23. **G3 go/no-go (#14414-G3)** after N11-G3 passes.
 
 ### Phase G — v1 retirement
 
@@ -247,13 +303,14 @@ The v2 side stays correct without them, because N4 classifies every Kilo change 
 ## Dependency order
 
 ```
-Phase 0 (P1–P4: create N1–N14) ──> every N-unit below
-Start after Phase 0 (no other blockers): N4, N5, N6 (kilo-docs, kilo-web-ui), N7
+Phase 0 (P1–P4: create N1–N17 and child issues) ──> every N-unit below
+Start after Phase 0 (no other blockers): N4, N5 (data part), N6a, N7, N15, N16
 Start now (existing issues): #14425/#14426, #14429/#14430, #14415
 N1 ──> N2 ──> #14381
-N1 ──> N3
-N1 ──> N6 (kilo-jetbrains import), N8, and all parity issues below
+N1 ──> N3 (then one child issue per upstream tag)
+N1 ──> N5 (harness part), N6b, N8, and all parity issues below
 N1 + #14411 started early
+N1 + #14408, #14410, #14412 ──> N17 (preview release train)
 
 G1: #14371..#14375, #14377, #14379, #14382 (need N5)
     #14396, #14397 ──> #14398 ──> #14401
@@ -261,14 +318,20 @@ G1: #14371..#14375, #14377, #14379, #14382 (need N5)
     N8 ──> #14413
     #14408, #14409, #14410, #14412, #14411
     N12 (after #14375..#14379, same files), N13
-    all of the above ──> N11 (G1) ──> + N4 run ──> #14414 (G1)
+    #14427/#14428, #14431/#14432 if discovery assigns them to G1
+    all of the above ──> N11-G1 ──> + N4 run ──> #14414-G1
 
-G2: #14383 ──> #14384..#14394, #14380, N14
+G2 (client track, parallel with G1 after N1):
+    #14383 ──> #14384..#14394, #14380, N14
     #14415 ──> #14416, #14417
     N8 + #14387 ──> N9
-    all ──> N11 (G2) ──> + N4 run ──> #14414 (G2)
+    N15 + #14427/#14428, #14431/#14432 if assigned to G2
+    all ──> N11-G2 ──> + N4 run ──> #14414-G2
 
-G3: #14420 ──> #14421 ──> #14422, #14423 (needs #14416) ──> #14424 ──> N11 (G3) ──> #14414 (G3) ──> N10
+G3 (client track, parallel with G1 after N1 and N6b):
+    #14420 ──> #14421 ──> #14422, #14423 (needs #14416) ──> #14424
+    N16 + #14427/#14428, #14431/#14432 if assigned to G3
+    all ──> N11-G3 ──> #14414-G3 ──> N10
 ```
 
 ## Issue register
@@ -285,16 +348,16 @@ Nothing in the tree is skipped. Every issue has a gate, is marked post-cutover w
 | #14375 | TUI notifications | G1 | |
 | #14376 | Legacy theme catalogue | **Post-cutover** | Decision 5 (legacy TUI extras) |
 | #14377 | Session scope switching | G1 | |
-| #14378 | Alerts, tables, bindings, sound | **Split** | Tables and bindings are post-cutover (Decision 5); alerts and sound get a G1 decision |
+| #14378 | Alerts, tables, bindings, sound | **Split** (child per part) | Tables and bindings are post-cutover (Decision 5); alerts and sound get a G1 decision |
 | #14379 | Location/event filtering | G1 | |
-| #14380 | Message deletion | G2 | The consumer is the VS Code client |
+| #14380 | Message deletion | G2 | The consumer is the VS Code client; it touches core/server, so coordinate with core work (Decision 3) |
 | #14381 | Marker-disposition sweep | Phase B, after N2 | Markers change with the merge |
 | #14382 | Plan-to-Code handoff regression | G1 | |
 | **#14018** | Sharing | G1 epic (partly) | |
 | #14396 | Share transport | G1 | |
 | #14397 | Share payload contract | G1 | |
 | #14398 | Public viewer for v2 messages | G1 | Decision 5 |
-| #14399 | Team sharing ownership | **Split** | Fail-closed refusal gates G1; the ownership model is post-cutover |
+| #14399 | Team sharing ownership | **Split** (child per part) | Fail-closed refusal gates G1; the ownership model is post-cutover |
 | #14400 | Incremental sharing | **Post-cutover** | Decision 5 |
 | #14401 | Deployed share contracts (external) | G1 | |
 | **#14019** | Remote | G1 epic | `/remote` is a CLI feature |
@@ -306,17 +369,17 @@ Nothing in the tree is skipped. Every issue has a gate, is marked post-cutover w
 | #14411 | Signing/notarization/hosting | G1 | Starts during Phase B |
 | #14412 | Clean install | G1 | |
 | #14413 | Opt-in import | G1 | Change to the customer v2 store (not `kilo2`), re-runnable/idempotent import, and cutoff fixtures |
-| #14414 | Canary and runbook | G1, G2, G3 | Make it per surface; replace the draft links "#03/#04/#06" with #14410, #14411, #14413 |
+| #14414 | Canary and runbook | Tracker; children G1, G2, G3 | One child issue per surface; replace the draft links "#03/#04/#06" with #14410, #14411, #14413 |
 | **#14016** | VS Code parity | G2 epic | |
 | #14383 | Real typecheck | G2, first | Blocked by N1 (scope rename) |
 | #14384–#14394 | Sidebar, tabs, settings, connection, auth, generation, terminal, Agent Manager, notifications, removal, timeline | G2 | Restricted Mode and Stop verification go under #14384/#14387 |
-| #14395 | Presence registry and relay | **Split** | Host registration is G1 (with remote); VS Code visibility reporting is G2 |
+| #14395 | Presence registry and relay | **Split** (child per part) | Host registration is G1 (with remote); VS Code visibility reporting is G2 |
 | **#14021** | Editor services | G2 epic | |
 | #14415 | Services inventory | G2 | Can start now |
-| #14416 | FIM/next-edit | G2, G3 | Hard gate; starts alongside G1 |
+| #14416 | FIM/next-edit | G2, G3 | Hard gate; starts alongside G1; the producer/service contract touches core, so coordinate with core work (Decision 3) |
 | #14417 | Code actions/generation | G2 | |
 | #14418 | Voice | **Post-cutover** | Decision 5 |
-| #14419 | Image generation and KiloClaw | **Post-cutover** | Decision 5 |
+| #14419 | Image generation and KiloClaw | **Split** (child per part) | Image generation is post-cutover (experimental on v1). KiloClaw is not needed, because it was already removed from the client on `main` (Decision 5) |
 | **#14022** | JetBrains | G3 epic | |
 | #14420–#14424 | Inventory, startup/auth, sessions, terminal and editor services, IDE validation | G3 | #14423 needs #14416 |
 | **#14023** | Cloud agents | Discovery | |
@@ -327,37 +390,45 @@ Nothing in the tree is skipped. Every issue has a gate, is marked post-cutover w
 | #14431, #14432 | Adapt and validate | Gate set by discovery | |
 | N1 | Consolidation merge and scope-rename codemod | Phase B | New, created in Phase 0 |
 | N2 | `kilo-v2` ratchet | Phase B | New, created in Phase 0 |
-| N3 | Sync automation and `e2e` lane | Phase B | New, created in Phase 0 |
-| N4 | Recurring `main` delta sweep | Phase C, each gate | New, created in Phase 0 |
-| N5 | v1 reference fixtures | Phase C | New, created in Phase 0 |
-| N6 | Package decisions | Phase C | New, created in Phase 0 |
+| N3 | Sync automation and `e2e` lane | Phase B; tracker with a child per upstream tag | New, created in Phase 0 |
+| N4 | Recurring `main` delta sweep | Phase C; tracker with a child per sweep | New, created in Phase 0 |
+| N5 | v1 reference fixtures | Phase C (data before N1, harness after N1) | New, created in Phase 0 |
+| N6a | Package assessment | Phase C | New, created in Phase 0 |
+| N6b | Package imports | Phase C, after N1 | New, created in Phase 0 |
 | N7 | Progress-plan and issue-body alignment | Phase C | New, created in Phase 0 |
 | N8 | Customer v2 store identity | G1 | New, created in Phase 0 |
 | N9 | Handshake and extension switch | G2 | New, created in Phase 0 |
 | N10 | v1 retirement | Phase G | New, created in Phase 0 |
-| N11 | Gate acceptance run (G1, G2, G3) | G1, G2, G3 | New, created in Phase 0; covers the "Implemented, E2E pending" rows |
+| N11 | Gate acceptance run | Tracker; children G1, G2, G3 | New, created in Phase 0; covers the "Implemented, E2E pending" rows |
 | N12 | TUI picker, dialogs, status/footer | G1 | New, created in Phase 0; progress-plan rows that had no issue |
 | N13 | Runtime integration remainder | G1 | New, created in Phase 0; progress-plan rows that had no issue |
 | N14 | Original-extension consumers | G2 | New, created in Phase 0; progress-plan rows that had no issue |
+| N15 | VS Code scenario set | G2 | New, created in Phase 0; the test plans have no IDE scenarios today |
+| N16 | JetBrains scenario set | G3 | New, created in Phase 0; the test plans have no IDE scenarios today |
+| N17 | v2 preview release train | G1 (pre-cutover) | New, created in Phase 0; regular releases before G1 |
 
 New issues to create in Phase 0. They are children of #13750 unless the Unit column names another parent. Fill in "Issue #" in P3.
 
 | ID | Issue # | Unit | Gate/Phase | Blocked by | Touches |
 |---|---|---|---|---|---|
-| N1 | TBD | Consolidation merge to the latest v2 tag, including the scope-rename codemod, baseline, doc fixes and re-verification | B | — | Whole repo |
+| N1 | TBD | Consolidation merge to the latest v2 tag, including the scope-rename codemod, baseline, doc fixes and re-verification | B | — | Whole repo, except the Phase C paths owned by N4, N5 and N7 (codemod only there) |
 | N2 | TBD | `kilo-v2` ratchet and post-merge footprint | B | N1 | `migration-tracking/`, script dir |
-| N3 | TBD | Upstream-tag dry-run workflow and `e2e` lane | B | N1 | New `.github/workflows/kilo-*` files |
-| N4 | TBD | Recurring `main` delta sweep from the cutoff | C, each gate | — | `marker-audit/` |
-| N5 | TBD | v1 reference fixtures for #14371–#14374 | C | — | Test fixtures only |
-| N6 | TBD | Package decisions: import `kilo-docs`/`kilo-jetbrains`, assess `kilo-web-ui` | C | N1 (for the imports) | `packages/kilo-docs`, `packages/kilo-jetbrains` |
+| N3 | TBD | Upstream-tag dry-run workflow and `e2e` lane; one child issue per new upstream tag, merged by the sync owner | B | N1 | New `.github/workflows/kilo-*` files |
+| N4 | TBD | Recurring `main` delta sweep from the cutoff, including the experimental-flag inventory; one child issue per sweep | C, each gate | — | `marker-audit/` |
+| N5 | TBD | v1 reference fixtures for #14371–#14374: v1 data before N1, v2 harness after N1 | C | Harness part: N1 | Fixture data, then test harness |
+| N6a | TBD | Package assessment: `kilo-docs`, `kilo-web-ui`; record `kilo-console` obsolete | C | — | `migration-tracking/` notes only |
+| N6b | TBD | Package imports: `kilo-docs` (G1), `kilo-jetbrains` (G3) | C | N1, N6a | `packages/kilo-docs`, `packages/kilo-jetbrains` |
 | N7 | TBD | Align the progress plan and sweep the issue bodies | C | — | `plans/kilo-opencode-v2-plan-progress.md`, test plans, GitHub |
 | N8 | TBD | Customer v2 store identity (under #14020) | G1 | N1 | `packages/kilo-cli` host/paths |
 | N9 | TBD | Capability handshake and extension v2 store/import switch (under #14016) | G2 | N8, #14387 | `packages/kilo-vscode` |
-| N10 | TBD | v1 retirement and storage consolidation | G | #14414 (G3) | Branches, `kilo-cli` paths |
-| N11 | TBD | Gate acceptance run, once per surface: every gate-tagged test-plan scenario including "Implemented, E2E pending" rows, plus external-gated Gateway and `kilo cloud` verification where permitted; results with SHA | G1, G2, G3 | That gate's issues; N7 (test-plan gate tags) | Test plans, progress plan |
+| N10 | TBD | v1 retirement and storage consolidation | G | #14414-G3 | Branches, `kilo-cli` paths |
+| N11 | TBD | Gate acceptance run (tracker; children N11-G1/G2/G3): every gate-tagged test-plan scenario including "Implemented, E2E pending" rows, plus external-gated Gateway and `kilo cloud` verification where permitted; results with SHA | G1, G2, G3 | That gate's issues; N7 (test-plan gate tags) | Test plans, progress plan |
 | N12 | TBD | TUI picker inline preview and search, provider/integration dialog guidance and failure details, status/footer guidance and onboarding (under #14017) | G1 | N1 | `packages/tui`, `packages/kilo-cli/src/tui-plugin` (in series with #14375–#14379) |
 | N13 | TBD | Runtime integration remainder: memory injection indicators, CLI indexing paths, sandbox cross-platform validation and v1 policy variants (under #14017) | G1 | N1 | `packages/kilo-cli`, `packages/kilo-memory`, `packages/kilo-indexing` |
 | N14 | TBD | Original-extension consumers: memory UI, indexing write controls, sandbox controls, telemetry capture/proxy (under #14016) | G2 | #14383 | `packages/kilo-vscode` (coordinate with #14386) |
+| N15 | TBD | VS Code scenario set for N11-G2 (under #14016) | G2 | — | `test-plans/` (coordinate with N7) |
+| N16 | TBD | JetBrains scenario set for N11-G3 (under #14022) | G3 | — | `test-plans/` (coordinate with N7) |
+| N17 | TBD | v2 preview release train from `kilo-v2` under the preview identity (under #14020) | G1 (pre-cutover) | N1, #14408, #14410, #14412 | Release tooling, `packages/kilo-cli` packaging |
 
 ## Progress plan alignment (N7 scope)
 
@@ -420,6 +491,9 @@ New issues to create in Phase 0. They are children of #13750 unless the Unit col
 | First-ever upstream merge, large and cross-cutting | Dedicated worktree, one slice, feature work held until green |
 | `main` keeps changing without labels | N4 sweep runs before every gate, independent of the v1 team's labels |
 | Split history between G1 and G3 | Re-runnable import (#14413); document it if v1 IDE and CLI share storage |
+| A v1 IDE extension picks up the customer v2 `kilo` binary at G1 (VS Code does not pin a CLI version) | N8 check; if needed, G1 ships under a name or channel that v1 IDEs don't resolve |
+| G1 is the first v2 release anyone uses | N17 preview release train starts right after N1 and the build issues |
+| Client tracks drift from core contracts | Decision 3 lists the client items that touch core/server; they follow the standing rules and are coordinated with core work |
 | Parallel agents collide | "Touches" field on every issue; the TUI issues run in series |
 | Stale issue bodies mislead agents | N7 sweep of all 62 bodies |
 | FIM is the largest IDE gate | Starts alongside G1 |
