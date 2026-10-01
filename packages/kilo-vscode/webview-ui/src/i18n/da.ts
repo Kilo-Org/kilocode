@@ -939,6 +939,9 @@ export const dict = {
   "settings.sandboxing.writablePaths.description":
     "Yderligere filsystemstier, som sandkassen tillader skrivning til (f.eks. /tmp, /var/log). Disse flettes med de standardskrivbare stier, når sandkassen er aktiv.",
   "settings.experimental.multiProject.title": "Multi-projekt Agent Manager",
+  "settings.experimental.globalPromptHistory.title": "Global prompthistorik",
+  "settings.experimental.globalPromptHistory.description":
+    "Del én prompthistorik (ArrowUp/ArrowDown) på tværs af alle samtaler i stedet for at holde den adskilt for hver samtale.",
   "settings.experimental.claudeMigration.title": "Claude Code-migrering",
   "settings.experimental.claudeMigration.description":
     "Importér understøttede globale CLAUDE.md-instruktioner, enkle færdigheder og deaktiverede MCP-definitioner én gang. Originale Claude-filer forbliver uændrede; genstart backend efter aktivering.",

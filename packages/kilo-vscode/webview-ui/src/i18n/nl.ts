@@ -937,6 +937,9 @@ export const dict = {
   "settings.sandboxing.writablePaths.description":
     "Extra bestandssysteempaden waar de sandbox schrijftoestemming voor geeft (bijv. /tmp, /var/log). Deze worden samengevoegd met de standaard schrijfbare paden wanneer de sandbox actief is.",
   "settings.experimental.multiProject.title": "Multi-project Agent Manager",
+  "settings.experimental.globalPromptHistory.title": "Globale promptgeschiedenis",
+  "settings.experimental.globalPromptHistory.description":
+    "Deel één promptgeschiedenis (ArrowUp/ArrowDown) over alle gesprekken in plaats van die per gesprek gescheiden te houden.",
   "settings.experimental.claudeMigration.title": "Claude Code-migratie",
   "settings.experimental.claudeMigration.description":
     "Importeer ondersteunde globale CLAUDE.md-instructies, eenvoudige vaardigheden en uitgeschakelde MCP-definities één keer. Originele Claude-bestanden blijven ongewijzigd; herstart de backend na inschakelen.",

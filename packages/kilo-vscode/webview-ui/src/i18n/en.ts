@@ -929,6 +929,9 @@ export const dict = {
   "settings.experimental.browserAutomation.systemChrome.title": "Use System Chrome",
   "settings.experimental.browserAutomation.systemChrome.description":
     "Use installed Google Chrome for the Integrated Browser. Disable only when a compatible Playwright Chromium browser is already installed.",
+  "settings.experimental.globalPromptHistory.title": "Global Prompt History",
+  "settings.experimental.globalPromptHistory.description":
+    "Share one prompt history (ArrowUp/ArrowDown recall) across all conversations instead of keeping it separate for each conversation.",
   "settings.experimental.claudeMigration.title": "Claude Code Migration",
   "settings.experimental.claudeMigration.description":
     "On the next backend start, import supported global CLAUDE.md instructions, simple skills, and disabled MCP definitions. This runs once with no automatic retry; global Claude instructions and skills are then handed off to Kilo. Claude files stay unchanged; keep them if you still use Claude Code.",

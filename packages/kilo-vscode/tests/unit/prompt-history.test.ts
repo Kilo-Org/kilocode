@@ -332,3 +332,69 @@ describe("usePromptHistory — per-conversation isolation", () => {
     })
   })
 })
+
+describe("usePromptHistory — global mode", () => {
+  it("shares one history across conversations while enabled", () => {
+    createRoot((dispose) => {
+      const [sid, setSid] = createSignal<string | undefined>("global-a")
+      const history = usePromptHistory(sid, () => true)
+      history.append("shared prompt")
+
+      setSid("global-b")
+      expect(history.navigate("up", "", 0, [])?.text).toBe("shared prompt")
+      dispose()
+    })
+  })
+
+  it("keeps the global list apart from per-conversation history", () => {
+    createRoot((dispose) => {
+      const [shared, setShared] = createSignal(true)
+      const [sid] = createSignal<string | undefined>("global-c")
+      const history = usePromptHistory(sid, shared)
+      history.append("only global")
+
+      setShared(false)
+      expect(history.navigate("up", "", 0, [])).toBeNull()
+      history.append("only local")
+
+      setShared(true)
+      expect(history.navigate("up", "", 0, [])?.text).toBe("only global")
+      dispose()
+    })
+  })
+
+  it("does not seed from session messages", () => {
+    createRoot((dispose) => {
+      const [sid] = createSignal<string | undefined>("global-d")
+      const history = usePromptHistory(sid, () => true)
+      history.seed(["old prompt from a session"])
+      expect(history.navigate("up", "", 0, [])?.text).not.toBe("old prompt from a session")
+      dispose()
+    })
+  })
+
+  it("records an explicit target key into the shared bucket", () => {
+    createRoot((dispose) => {
+      const [sid, setSid] = createSignal<string | undefined>("global-e")
+      const history = usePromptHistory(sid, () => true)
+      setSid("global-f")
+      history.append("sent from e", "global-e")
+      expect(history.navigate("up", "", 0, [])?.text).toBe("sent from e")
+      dispose()
+    })
+  })
+
+  it("never evicts the global bucket", () => {
+    createRoot((dispose) => {
+      const [sid] = createSignal<string | undefined>("global-g")
+      usePromptHistory(sid, () => true).append("keep me")
+      for (let i = 0; i < MAX_CONVERSATIONS + 20; i++) {
+        const [k] = createSignal<string | undefined>(`churn-${i}`)
+        usePromptHistory(k).append(`m${i}`)
+      }
+      const history = usePromptHistory(sid, () => true)
+      expect(history.navigate("up", "", 0, [])?.text).toBe("keep me")
+      dispose()
+    })
+  })
+})

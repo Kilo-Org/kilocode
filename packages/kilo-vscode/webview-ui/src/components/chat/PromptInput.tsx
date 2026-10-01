@@ -298,7 +298,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     ref.focus()
     adjustHeight()
   })
-  const history = usePromptHistory(sid)
+  const history = usePromptHistory(sid, () => settings().globalPromptHistory === true)
   let textareaRef: HTMLTextAreaElement | undefined
   let highlightRef: HTMLDivElement | undefined
   let dropdownRef: HTMLDivElement | undefined

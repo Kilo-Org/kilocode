@@ -949,6 +949,9 @@ export const dict = {
   "settings.sandboxing.writablePaths.description":
     "Rutas del sistema de archivos adicionales donde el sandbox permite escritura (por ej., /tmp, /var/log). Se combinan con las rutas de escritura predeterminadas cuando el sandbox está activo.",
   "settings.experimental.multiProject.title": "Agent Manager Multi-Proyecto",
+  "settings.experimental.globalPromptHistory.title": "Historial global de prompts",
+  "settings.experimental.globalPromptHistory.description":
+    "Comparte un único historial de prompts (ArrowUp/ArrowDown) entre todas las conversaciones en lugar de mantenerlo separado por conversación.",
   "settings.experimental.claudeMigration.title": "Migración de Claude Code",
   "settings.experimental.claudeMigration.description":
     "Importar una vez las instrucciones globales CLAUDE.md compatibles, habilidades simples y definiciones MCP desactivadas. Los archivos originales de Claude no se modifican; reinicia el backend después de activar.",

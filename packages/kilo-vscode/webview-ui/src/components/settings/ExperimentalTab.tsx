@@ -244,6 +244,19 @@ const ExperimentalTab: Component = () => {
         </SettingsRow>
 
         <SettingsRow
+          title={language.t("settings.experimental.globalPromptHistory.title")}
+          description={language.t("settings.experimental.globalPromptHistory.description")}
+        >
+          <Switch
+            checked={settings().globalPromptHistory === true}
+            onChange={(checked) => applySetting("globalPromptHistory", checked, "experimental.globalPromptHistory")}
+            hideLabel
+          >
+            {language.t("settings.experimental.globalPromptHistory.title")}
+          </Switch>
+        </SettingsRow>
+
+        <SettingsRow
           title={language.t("settings.experimental.browserAutomation.title")}
           description={language.t("settings.experimental.browserAutomation.description")}
         >

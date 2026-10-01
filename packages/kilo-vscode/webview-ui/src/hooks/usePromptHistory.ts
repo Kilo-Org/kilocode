@@ -15,6 +15,10 @@ export const MAX = 100
 const STORAGE_KEY = "kilo.prompt-history.v2"
 /** Bucket for conversations that do not yet have a stable key (e.g. a brand-new tab). */
 const FALLBACK_KEY = "new"
+/** Bucket shared by every conversation when global history is enabled. Never evicted. */
+const GLOBAL_KEY = "global"
+/** Pre-per-conversation storage: one flat list shared by all conversations. */
+const LEGACY_KEY = "kilo.prompt-history.v1"
 /** Cap on remembered conversations, evicting the least recently used once exceeded. */
 export const MAX_CONVERSATIONS = 50
 const EMPTY: string[] = []
@@ -38,6 +42,19 @@ function load(): Store {
   } catch (err) {
     console.warn("[Kilo New] prompt history load failed", err)
     return new Map()
+  }
+}
+
+/** Start the global bucket from the pre-v2 shared list, so enabling global history keeps old prompts. */
+function legacy(store: Store) {
+  if (store.has(GLOBAL_KEY)) return
+  try {
+    const parsed = JSON.parse(localStorage.getItem(LEGACY_KEY) ?? "null")
+    if (!Array.isArray(parsed)) return
+    const list = parsed.filter((e): e is string => typeof e === "string").slice(0, MAX)
+    if (list.length > 0) store.set(GLOBAL_KEY, list)
+  } catch (err) {
+    console.warn("[Kilo New] prompt history legacy load failed", err)
   }
 }
 
@@ -99,6 +116,7 @@ export function seedEntries(entries: string[], texts: string[], max: number): bo
 
 // Module-level: initialized from localStorage, shared across remounts, keyed per conversation.
 const store: Store = load()
+legacy(store)
 
 /** Read-only lookup: never allocates or persists an empty bucket for a key that was merely browsed. */
 function entriesFor(key: string): string[] {
@@ -118,7 +136,7 @@ function mutableEntriesFor(key: string): string[] {
   const created: string[] = []
   store.set(key, created)
   if (store.size > MAX_CONVERSATIONS) {
-    const oldest = store.keys().next().value
+    const oldest = [...store.keys()].find((k) => k !== GLOBAL_KEY)
     if (oldest !== undefined) store.delete(oldest)
   }
   return created
@@ -157,11 +175,13 @@ export interface PromptHistory {
  * @param key Accessor for the current conversation's history key (typically the
  * session ID). History is isolated per key; an undefined key falls back to a
  * shared bucket for conversations that have not been created yet.
+ * @param shared When it returns true, every conversation shares one history and
+ * `key` is ignored. Seeding from session messages is skipped in that mode.
  */
-export function usePromptHistory(key: Accessor<string | undefined>): PromptHistory {
+export function usePromptHistory(key: Accessor<string | undefined>, shared?: Accessor<boolean>): PromptHistory {
   const [index, setIndex] = createSignal(-1)
   let saved: { text: string; pastes: readonly string[] } | null = null
-  const resolve = () => key() ?? FALLBACK_KEY
+  const resolve = () => (shared?.() ? GLOBAL_KEY : (key() ?? FALLBACK_KEY))
   let lastKey = resolve()
 
   // Switching conversations must not carry over browsing position or the saved draft.
@@ -215,14 +235,15 @@ export function usePromptHistory(key: Accessor<string | undefined>): PromptHisto
 
   function append(text: string, targetKey?: string) {
     if (!text.trim()) return
-    // An explicit targetKey (the session the message actually belongs to) bypasses
-    // this hook's own browsing state; it may not match the currently active key.
-    const list = targetKey !== undefined ? mutableEntriesFor(targetKey) : mutableEntriesFor(syncKey())
+    // An explicit targetKey names the session the message actually belongs to; it may
+    // differ from the active key. Shared mode ignores it: there is one bucket.
+    const current = syncKey()
+    const list = mutableEntriesFor(shared?.() || targetKey === undefined ? current : targetKey)
     if (appendEntry(list, text, MAX)) save(store)
   }
 
   function seed(texts: string[]) {
-    if (!texts.some((t) => t.trim())) return
+    if (shared?.() || !texts.some((t) => t.trim())) return
     if (seedEntries(mutableEntriesFor(syncKey()), texts, MAX)) save(store)
   }
 
