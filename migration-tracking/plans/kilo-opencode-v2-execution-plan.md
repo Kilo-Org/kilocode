@@ -1,7 +1,7 @@
 # Kilo v1 → v2 migration plan
 
 Finalized 2026-09-30. Base: opus-55. Merged in: upstream-resync rigor, capability handshake and validation rules from deepseek; VS Code blockers, sharing/remote steps, standing rules and metrics from kimi-k3. Status: not started. First actions:
-- Team sign-off on Decisions 3 and 4.
+- Team sign-off on Decisions 3, 4 and 5.
 - Owners assigned for the upstream-sync lane (N1/N3) and the delta sweep (N4).
 - N7 aligns the progress plan and issue bodies.
 
