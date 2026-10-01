@@ -234,6 +234,9 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
     const key = fetchKey()
     void key // subscribe to key changes without using the value here
 
+    // Invalidate pending requests when the connection details change.
+    fetchVersion++
+    setFetching(false)
     // Clear previous results whenever URL or key changes
     setFetchedModels(undefined)
     setFetchError(undefined)
@@ -242,7 +245,6 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
 
     if (npm === "@ai-sdk/anthropic" || !/^https?:\/\//.test(url.trim())) return
 
-    fetchVersion++
     const version = fetchVersion
     const timer = setTimeout(() => {
       if (version === fetchVersion) doFetch()
@@ -689,6 +691,17 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
                 </Show>
               </div>
               <div style={{ display: "flex", gap: "8px", "align-items": "center", "flex-wrap": "wrap" }}>
+                <Button
+                  type="button"
+                  size="small"
+                  variant="ghost"
+                  onClick={doFetch}
+                  disabled={
+                    fetching() || !/^https?:\/\//.test(fetchURL().trim()) || fetchPackage() === "@ai-sdk/anthropic"
+                  }
+                >
+                  {language.t("provider.custom.models.fetch.manual")}
+                </Button>
                 <Button
                   type="button"
                   size="small"

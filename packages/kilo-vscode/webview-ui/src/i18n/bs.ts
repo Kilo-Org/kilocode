@@ -515,6 +515,7 @@ export const dict = {
   "provider.custom.models.toggleImages": "Uključi/isključi slike za sve",
   "provider.custom.models.remove": "Ukloni model",
   "provider.custom.models.add": "Dodaj model",
+  "provider.custom.models.fetch.manual": "Dohvati modele",
   "provider.custom.models.fetch.authError":
     "Autentifikacija nije uspjela. Provjerite API ključ iznad i pokušajte ponovo.",
   "provider.custom.models.fetch.empty": "Nisu pronađeni modeli na ovom serveru.",

@@ -510,6 +510,7 @@ export const dict = {
   "provider.custom.models.toggleImages": "すべてのモデルの画像を切り替え",
   "provider.custom.models.remove": "モデルを削除",
   "provider.custom.models.add": "モデルを追加",
+  "provider.custom.models.fetch.manual": "モデルを取得",
   "provider.custom.models.fetch.authError": "認証に失敗しました。上記のAPIキーを確認して再試行してください。",
   "provider.custom.models.fetch.empty": "このサーバーにモデルが見つかりません。",
   "provider.custom.models.fetch.added": "{{count}}個のモデルを追加しました。",

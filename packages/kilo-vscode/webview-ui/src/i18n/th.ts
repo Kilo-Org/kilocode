@@ -507,6 +507,7 @@ export const dict = {
   "provider.custom.models.toggleImages": "สลับรูปภาพสำหรับทุกโมเดล",
   "provider.custom.models.remove": "ลบโมเดล",
   "provider.custom.models.add": "เพิ่มโมเดล",
+  "provider.custom.models.fetch.manual": "ดึงโมเดล",
   "provider.custom.models.fetch.authError": "การยืนยันตัวตนล้มเหลว ตรวจสอบคีย์ API ด้านบนแล้วลองอีกครั้ง",
   "provider.custom.models.fetch.empty": "ไม่พบโมเดลบนเซิร์ฟเวอร์นี้",
   "provider.custom.models.fetch.added": "เพิ่มแล้ว {{count}} โมเดล",

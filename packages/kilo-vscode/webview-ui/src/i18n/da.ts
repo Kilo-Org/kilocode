@@ -513,6 +513,7 @@ export const dict = {
   "provider.custom.models.toggleImages": "Slå billede til/fra for alle",
   "provider.custom.models.remove": "Fjern model",
   "provider.custom.models.add": "Tilføj model",
+  "provider.custom.models.fetch.manual": "Hent modeller",
   "provider.custom.models.fetch.authError": "Godkendelse mislykkedes. Kontrollér API-nøglen ovenfor, og prøv igen.",
   "provider.custom.models.fetch.empty": "Ingen modeller fundet på denne server.",
   "provider.custom.models.fetch.added": "{{count}} model(ler) tilføjet.",
