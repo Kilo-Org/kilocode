@@ -386,16 +386,6 @@ describe("usePromptHistory — global mode", () => {
     })
   })
 
-  it("seeds the shared list from session messages", () => {
-    createRoot((dispose) => {
-      const [sid] = createSignal<string | undefined>("global-d")
-      const history = usePromptHistory(sid, () => true)
-      history.seed(["sent in the TUI"])
-      expect(history.navigate("up", "", 0, [])?.text).toBe("sent in the TUI")
-      dispose()
-    })
-  })
-
   it("records an explicit target key into the shared bucket", () => {
     createRoot((dispose) => {
       const [sid, setSid] = createSignal<string | undefined>("global-e")

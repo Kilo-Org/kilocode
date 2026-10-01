@@ -62,6 +62,14 @@ describe("prompt history storage", () => {
     expect(use(mod, "ses-x").navigate("up", "", 0, [])).toBeNull()
   })
 
+  it("seeds the shared list from session messages, like prompts sent in the TUI", async () => {
+    const mod = await load()
+    const history = use(mod, "ses-tui", true)
+    history.seed(["first", "second", "third"])
+    expect(history.navigate("up", "", 0, [])?.text).toBe("third")
+    expect(history.navigate("up", "", 0, [])?.text).toBe("second")
+  })
+
   it("prefers an existing v2 global list over the legacy one", async () => {
     data.set(LEGACY, JSON.stringify(["legacy"]))
     data.set(KEY, JSON.stringify({ global: ["current"] }))
