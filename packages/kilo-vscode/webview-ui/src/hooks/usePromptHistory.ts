@@ -21,6 +21,8 @@ const GLOBAL_KEY = "global"
 const LEGACY_KEY = "kilo.prompt-history.v1"
 /** Cap on remembered conversations, evicting the least recently used once exceeded. */
 export const MAX_CONVERSATIONS = 50
+/** Longer prompts are not remembered: they are rarely recalled and would exhaust the storage quota. */
+export const MAX_ENTRY = 10_000
 const EMPTY: string[] = []
 
 // Insertion order doubles as recency order: touching a key re-inserts it at the end.
@@ -58,11 +60,33 @@ function legacy(store: Store) {
   }
 }
 
-function save(store: Store) {
+function save(store: Store): boolean {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(Object.fromEntries(store)))
-  } catch (err) {
-    console.warn("[Kilo New] prompt history save failed", err)
+    return true
+  } catch {
+    return false
+  }
+}
+
+/** Drop the least recently used conversation (never the global bucket). Returns whether one was dropped. */
+function evict(): boolean {
+  const oldest = [...store.keys()].find((k) => k !== GLOBAL_KEY)
+  if (oldest === undefined) return false
+  store.delete(oldest)
+  return true
+}
+
+/**
+ * Persist the store. When the storage quota is exceeded, write a copy without the
+ * oldest conversations instead; in-memory history is never dropped for a failed write.
+ */
+function persist() {
+  const copy = new Map(store)
+  while (!save(copy)) {
+    const oldest = [...copy.keys()].find((k) => k !== GLOBAL_KEY)
+    if (oldest === undefined) return console.warn("[Kilo New] prompt history save failed")
+    copy.delete(oldest)
   }
 }
 
@@ -135,10 +159,7 @@ function mutableEntriesFor(key: string): string[] {
   }
   const created: string[] = []
   store.set(key, created)
-  if (store.size > MAX_CONVERSATIONS) {
-    const oldest = [...store.keys()].find((k) => k !== GLOBAL_KEY)
-    if (oldest !== undefined) store.delete(oldest)
-  }
+  if (store.size > MAX_CONVERSATIONS) evict()
   return created
 }
 
@@ -165,6 +186,8 @@ export interface PromptHistory {
   seed: (texts: string[]) => void
   /** Reset navigation state. Call when the user types new input. */
   reset: () => void
+  /** Re-key a conversation's history, e.g. when a pending draft becomes a real session. */
+  move: (from: string, to: string) => void
   /** Current history index (-1 = not browsing). Reflects the active conversation
    * only after an action (navigate/append/seed) has synced it; it is a plain
    * signal read with no side effects. */
@@ -234,17 +257,36 @@ export function usePromptHistory(key: Accessor<string | undefined>, shared?: Acc
   }
 
   function append(text: string, targetKey?: string) {
-    if (!text.trim()) return
+    if (!text.trim() || text.length > MAX_ENTRY) return
+    // No conversation key yet: recording would leak into every other brand-new conversation.
+    if (!shared?.() && targetKey === undefined && key() === undefined) return
     // An explicit targetKey names the session the message actually belongs to; it may
     // differ from the active key. Shared mode ignores it: there is one bucket.
     const current = syncKey()
     const list = mutableEntriesFor(shared?.() || targetKey === undefined ? current : targetKey)
-    if (appendEntry(list, text, MAX)) save(store)
+    if (appendEntry(list, text, MAX)) persist()
   }
 
   function seed(texts: string[]) {
     if (shared?.() || !texts.some((t) => t.trim())) return
-    if (seedEntries(mutableEntriesFor(syncKey()), texts, MAX)) save(store)
+    if (
+      seedEntries(
+        mutableEntriesFor(syncKey()),
+        texts.filter((t) => t.length <= MAX_ENTRY),
+        MAX,
+      )
+    )
+      persist()
+  }
+
+  function move(from: string, to: string) {
+    const list = store.get(from)
+    if (!list || from === to) return
+    store.delete(from)
+    const target = store.get(to)
+    if (target) seedEntries(list, [...target].reverse(), MAX)
+    store.set(to, list)
+    persist()
   }
 
   function reset() {
@@ -252,5 +294,5 @@ export function usePromptHistory(key: Accessor<string | undefined>, shared?: Acc
     saved = null
   }
 
-  return { navigate, append, seed, reset, index }
+  return { navigate, append, seed, reset, move, index }
 }

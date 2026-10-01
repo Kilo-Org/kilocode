@@ -7,6 +7,7 @@ import {
   usePromptHistory,
   MAX,
   MAX_CONVERSATIONS,
+  MAX_ENTRY,
 } from "../../webview-ui/src/hooks/usePromptHistory"
 
 describe("canNavigate", () => {
@@ -267,12 +268,48 @@ describe("usePromptHistory — per-conversation isolation", () => {
     })
   })
 
-  it("falls back to a shared bucket when the key is undefined", () => {
+  it("does not record prompts while the conversation has no key", () => {
     createRoot((dispose) => {
       const [sid] = createSignal<string | undefined>(undefined)
       const history = usePromptHistory(sid)
-      history.append("draft without a session yet")
-      expect(history.navigate("up", "", 0, [])?.text).toBe("draft without a session yet")
+      history.append("sent before any session id exists")
+      expect(history.navigate("up", "", 0, [])).toBeNull()
+      dispose()
+    })
+  })
+
+  it("re-keys a pending conversation to its real session", () => {
+    createRoot((dispose) => {
+      const [sid, setSid] = createSignal<string | undefined>("pending-move")
+      const history = usePromptHistory(sid)
+      history.append("first prompt", "pending-move")
+      history.move("pending-move", "ses-move")
+      setSid("ses-move")
+      expect(history.navigate("up", "", 0, [])?.text).toBe("first prompt")
+      dispose()
+    })
+  })
+
+  it("keeps both lists, newest first, when the target already has entries", () => {
+    createRoot((dispose) => {
+      const [sid] = createSignal<string | undefined>("ses-merge")
+      const history = usePromptHistory(sid)
+      history.append("old")
+      history.append("pending one", "pending-merge")
+      history.move("pending-merge", "ses-merge")
+      expect(history.navigate("up", "", 0, [])?.text).toBe("pending one")
+      expect(history.navigate("up", "", 0, [])?.text).toBe("old")
+      dispose()
+    })
+  })
+
+  it("ignores prompts longer than the entry cap", () => {
+    createRoot((dispose) => {
+      const [sid] = createSignal<string | undefined>("ses-long")
+      const history = usePromptHistory(sid)
+      history.append("x".repeat(MAX_ENTRY + 1))
+      history.seed(["y".repeat(MAX_ENTRY + 1)])
+      expect(history.navigate("up", "", 0, [])).toBeNull()
       dispose()
     })
   })
@@ -293,20 +330,6 @@ describe("usePromptHistory — per-conversation isolation", () => {
       setSid("session-g-unique")
       expect(history.navigate("up", "", 0, [])?.text).toBe("sent from session-g-unique")
 
-      dispose()
-    })
-  })
-
-  it("does not create a stored bucket merely from a read (ArrowUp on an empty conversation)", () => {
-    createRoot((dispose) => {
-      const [sid] = createSignal<string | undefined>("session-i-unique")
-      const history = usePromptHistory(sid)
-      expect(history.navigate("up", "", 0, [])).toBeNull()
-      // A second, unrelated conversation must not see any entry created by the read above.
-      const [sid2] = createSignal<string | undefined>("session-j-unique")
-      const other = usePromptHistory(sid2)
-      other.append("only in session-j-unique")
-      expect(other.navigate("up", "", 0, [])?.text).toBe("only in session-j-unique")
       dispose()
     })
   })

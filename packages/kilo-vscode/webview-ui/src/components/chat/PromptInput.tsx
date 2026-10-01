@@ -1122,6 +1122,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     const source = scopeDraftKey(boxKey(), raw)
     const target = scopeDraftKey(boxKey(), sessionDraftKey(message.session.id))
     goal.move(source, target, message.session.id)
+    if (message.draftID) history.move(message.draftID, message.session.id)
     const queued = deferred.get(source)
     if (queued) {
       deferred.set(target, [...queued, ...(deferred.get(target) ?? [])])
