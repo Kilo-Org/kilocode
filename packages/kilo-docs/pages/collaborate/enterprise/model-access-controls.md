@@ -49,6 +49,19 @@ When you toggle a provider off, all models it offers become unavailable to team 
 
 A status bar appears at the bottom of the page whenever you have unsaved changes. Click **Save** to apply your changes, or **Cancel** to discard them. Changes take effect immediately for all team members once saved.
 
+## Virtual models
+
+Some catalog models do not have a provider of their own. They are still listed on the **Providers & Models** page and follow the same controls as any other model:
+
+- **Latest aliases**, such as `~anthropic/claude-sonnet-latest`, appear under every provider that serves the standard model they point to, and use that provider's pricing and data policy. Access, routing, and data-collection rules treat an alias like its target model.
+- **Routers and other provider-less models**, such as `openrouter/auto` or `typesafe/jev-router`, appear under a **Virtual** provider. A router picks a real provider per request, so its price shows as **Varies** instead of a fixed number; free routers are marked as potentially training on data.
+
+Provider controls also decide how a router is routed:
+
+- When your allowed providers include **Virtual**, a router can use the real providers on that same list. If the list has no real provider, the router is denied.
+- With no provider allow list configured, routers are unrestricted, like any other model.
+- **Virtual** is a Kilo-only slug and is never sent upstream; Kilo routes router requests to a real provider.
+
 ## Filtering Options
 
 Use filters to find the models or providers you want to block:
