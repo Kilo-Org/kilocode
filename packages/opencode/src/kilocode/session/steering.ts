@@ -31,15 +31,42 @@ export function text(parts: ReadonlyArray<Part>) {
 }
 
 /** Excerpt the body so its JSON-escaped form fits the board message budget. */
-export function body(value: string) {
+export function body(value: string, prefix = PREFIX) {
   const fit = (bytes: number): string => {
-    const out = BoardStore.excerpt(PREFIX + value, bytes)
+    const out = BoardStore.excerpt(prefix + value, bytes)
     const size = Buffer.byteLength(JSON.stringify(out))
     if (size <= BUDGET || bytes <= 1) return out
     return fit(Math.max(1, Math.min(bytes - 1, Math.floor((bytes * BUDGET) / size))))
   }
   return fit(BUDGET)
 }
+
+/**
+ * Post a shared-board INFO from a subagent to its parent about something a
+ * human did to the subagent. Gated by the board setting; failures are logged
+ * and never fail the caller.
+ */
+export const post = Effect.fn("KiloSessionSteering.post")(function* (input: {
+  from: SessionID
+  to: SessionID
+  messageID: string
+  body: string
+  config: Config.Interface
+  flags: RuntimeFlags.Info
+  database: Database.Interface
+}) {
+  if (!BoardEnabled.on(yield* input.config.get(), input.flags)) return
+  yield* BoardStore.post({
+    sessionID: input.from,
+    messageID: input.messageID,
+    to: input.to,
+    type: "INFO",
+    body: input.body,
+  }).pipe(
+    Effect.provideService(Database.Service, input.database),
+    Effect.catch((err) => Effect.logWarning("subagent board notice failed", { "session.id": input.from, err })),
+  )
+})
 
 /**
  * Post a shared-board message from a steered subagent to its parent so the
@@ -58,19 +85,15 @@ export const notify = Effect.fn("KiloSessionSteering.notify")(function* (input: 
   if (!parent) return
   const steer = text(input.parts)
   if (!steer) return
-  if (!BoardEnabled.on(yield* input.config.get(), input.flags)) return
-  yield* BoardStore.post({
-    sessionID: input.session.id,
-    messageID: input.messageID,
+  yield* post({
+    from: input.session.id,
     to: parent,
-    type: "INFO",
+    messageID: input.messageID,
     body: body(steer),
-  }).pipe(
-    Effect.provideService(Database.Service, input.database),
-    Effect.catch((err) =>
-      Effect.logWarning("subagent steering notification failed", { "session.id": input.session.id, err }),
-    ),
-  )
+    config: input.config,
+    flags: input.flags,
+    database: input.database,
+  })
 })
 
 export * as KiloSessionSteering from "./steering"

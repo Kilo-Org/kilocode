@@ -197,6 +197,7 @@ export const layer = Layer.effect(
         cancel: (sessionID: SessionID) => cancel(sessionID),
         resolvePromptParts: (template: string) => resolvePromptParts(template),
         prompt: GoalPolicy.bind(sessionID, (input) => prompt(input).pipe(Effect.catch(Effect.die))),
+        paused: (id: SessionID) => control.paused(id),
       } satisfies TaskPromptOps
     })
     // kilocode_change end
@@ -219,6 +220,7 @@ export const layer = Layer.effect(
         scope,
         drain,
         events,
+        status,
         cancel: state.cancel,
         stop: (id, work) => control.stop(id, goals.pause(id, preserve && id === sessionID).pipe(Effect.andThen(work))),
       })

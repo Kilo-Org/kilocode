@@ -16,6 +16,7 @@ import type { EventV2 } from "@opencode-ai/core/event"
 import { Interrupted } from "@opencode-ai/schema/kilocode/session-drain"
 import { KiloSessionMessageOrder } from "@/kilocode/session/message-order"
 import { KiloSessionPromptQueue } from "@/kilocode/session/prompt-queue"
+import { KiloTaskPause } from "@/kilocode/tool/task-pause"
 import { Permission } from "@/permission"
 import { PermissionProvenance } from "@/kilocode/permission/provenance"
 import { Question } from "@/question"
@@ -166,8 +167,16 @@ export namespace KiloSessionPrompt {
       events: Pick<EventV2.Interface, "publish">
       cancel: (sessionID: SessionID, opts?: { background?: boolean }) => Effect.Effect<void>
       stop: (sessionID: SessionID, work: Effect.Effect<void>) => Effect.Effect<void>
+      status?: Pick<SessionStatus.Interface, "get">
       scope?: "session" | "tree"
     }) {
+      // Interrupting an idle subagent whose task is already paused returns control to the
+      // parent; a running one (directed again since the pause) is only interrupted.
+      const release =
+        input.scope === "session" &&
+        KiloTaskPause.paused(input.sessionID) &&
+        (input.status ? (yield* input.status.get(input.sessionID)).type === "idle" : true)
+
       function descendants(sessionID: SessionID): Effect.Effect<SessionID[]> {
         return Effect.gen(function* () {
           const children = yield* input.sessions.children(sessionID)
@@ -195,6 +204,7 @@ export namespace KiloSessionPrompt {
           )
         }),
       )
+      if (release) yield* KiloTaskPause.release(input.sessionID)
     },
     (work, input) =>
       input.drain.track(
