@@ -25,6 +25,24 @@ checkout's source and dependencies. It is not a standalone distribution.
 `script/build.ts` produces a separate admission-only preview used by the
 storage/HTTP tests; that compiled binary does not execute conversations.
 
+### Tests
+
+`bun run test` runs the full suite except the live interactive/TUI proofs, which
+depend on the bundled Bun 1.4 runtime under `dist/interactive`. Those proofs are
+reported as skipped (never silently) with a reason naming `bun run build:tui`,
+and the gated set is enforced by `test/interactive-artifact-registry.test.ts`.
+To run them, build the interactive runtime first and use the opt-in script:
+
+```sh
+bun run build:tui
+bun run test:interactive
+```
+
+`test:interactive` fails loudly when the runtime is absent and does not build it.
+Point it at a prebuilt runtime with `KILO_CLI_INTERACTIVE_DIR=/path/to/dist/interactive`.
+The interactive proofs skip on Windows regardless of the artifact, because
+`build-tui.ts` cannot produce `dist/interactive` there.
+
 ## Current interactive UI
 
 `/models` keeps native favorites, recents and search, with Kilo-first provider

@@ -4,9 +4,9 @@ import { NodeFileSystem } from "@effect/platform-node"
 import { FSUtil } from "@opencode-ai/util/fs-util"
 import { mkdir, symlink } from "node:fs/promises"
 import path from "node:path"
-import { fixture, ready } from "./fixture"
+import { fixture, interactiveBun, ready } from "./fixture"
 
-test("explicit Kilo project discovery honors boundary/precedence and never discovers project plugins", async () => {
+test.skipIf(!interactiveBun())("explicit Kilo project discovery honors boundary/precedence and never discovers project plugins", async () => {
   await using input = await fixture()
   const project = path.join(input.home, "workspace", "project")
   await mkdir(path.join(project, ".kilo/skills/local"), { recursive: true })
@@ -76,11 +76,7 @@ test("explicit Kilo project discovery honors boundary/precedence and never disco
     path.join(project, ".opencode/opencode.json"),
     JSON.stringify({ agents: { upstream_leak: {} }, plugins: [poison] }),
   )
-  const bundledBun = path.resolve(import.meta.dir, "../dist/interactive/bun")
-  if (!(await Bun.file(bundledBun).exists())) {
-    console.warn(`Skipping live project-config host test: bundled runtime missing at ${bundledBun}`)
-    return
-  }
+  const bundledBun = interactiveBun()!
   const boot = async (enabled: boolean) => {
     const child = Bun.spawn(
       [

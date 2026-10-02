@@ -223,6 +223,8 @@ The original extension and its six webviews/two workers build. The latest lifecy
 
 No new runtime acceptance is claimed by this document update or by completion of the source audit. External service verification, production distribution, and full platform validation remain open.
 
+The `packages/kilo-cli` test harness is now self-sufficient: interactive/TUI proofs skip with a named reason when `dist/interactive` is absent, and a package-only `test:interactive` script runs them after `bun run build:tui` (see `kilo-opencode-v2-working-log.md`, 2026-09-24).
+
 ## Next steps
 
 1. Resolve the original extension's missing contracts and typecheck failures, then run original-UI acceptance for chat, Stop, reconnect, panels, settings and terminals.

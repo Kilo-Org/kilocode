@@ -1,15 +1,15 @@
 import { expect, test } from "bun:test"
 import { fileURLToPath } from "node:url"
 import path from "node:path"
-import { fixture } from "./fixture"
+import { fixture, interactiveBun } from "./fixture"
 
-test("Kilo TUI account sidebar renders genuine zero and funded Pass rows, masks in privacy, and switches scope", async () => {
+const bundledBun = interactiveBun()
+
+test.skipIf(!bundledBun)("Kilo TUI account sidebar renders genuine zero and funded Pass rows, masks in privacy, and switches scope", async () => {
   await using input = await fixture()
-  const bundledBun = path.resolve(import.meta.dir, "../dist/interactive/bun")
-  expect(await Bun.file(bundledBun).exists(), "Build the bundled Bun runtime before the live TUI proof").toBe(true)
   const child = Bun.spawn(
     [
-      bundledBun,
+      bundledBun!,
       "--no-env-file",
       "--preload",
       fileURLToPath(import.meta.resolve("@opentui/solid/preload")),

@@ -1,6 +1,8 @@
 import { expect, test } from "bun:test"
 import path from "node:path"
-import { fixture } from "./fixture"
+import { fixture, interactiveBun } from "./fixture"
+
+const bundledBun = interactiveBun()
 
 // Positive no-account-data regression over every wire body the launched host sends.
 //
@@ -21,11 +23,11 @@ import { fixture } from "./fixture"
 // request body — title, Auto, compatible Auto, or ordinary — carries reserved
 // account fields. This test must fail normally when the host cannot start or the
 // fixture marker is missing; only a clean all-wire run passes.
-test("title and compatible-Auto requests keep credential metadata out of request bodies", async () => {
+test.skipIf(!bundledBun)("title and compatible-Auto requests keep credential metadata out of request bodies", async () => {
   await using input = await fixture()
   const child = Bun.spawn(
     [
-      path.resolve(import.meta.dir, "../dist/interactive/bun"),
+      bundledBun!,
       "--no-env-file",
       path.join(import.meta.dir, "routed-model-integration-fixture.ts"),
     ],
