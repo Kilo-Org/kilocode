@@ -911,6 +911,9 @@ export const dict = {
   "settings.experimental.nativeNotebookTools.title": "เครื่องมือโน้ตบุ๊กดั้งเดิม",
   "settings.experimental.nativeNotebookTools.description":
     "เปิดใช้งานเครื่องมือทดลองสำหรับการอ่าน แก้ไข และเรียกใช้โน้ตบุ๊ก VS Code",
+  "settings.experimental.globSearchIgnored.title": "อนุญาตให้เอเจนต์ค้นหาไดเรกทอรีและไฟล์ที่ถูกละเว้น",
+  "settings.experimental.globSearchIgnored.description":
+    "อนุญาตให้เอเจนต์ใช้ตัวเลือก includeIgnored ของเครื่องมือ glob เพื่อค้นหาไฟล์ที่ถูกยกเว้นโดย .gitignore และไฟล์ ignore อื่นๆ ปิดเป็นค่าเริ่มต้น",
   "settings.experimental.continueOnDeny.title": "ดำเนินต่อเมื่อถูกปฏิเสธ",
   "settings.experimental.continueOnDeny.description": "ดำเนินลูปเอเจนต์ต่อเมื่อสิทธิ์ถูกปฏิเสธ",
   "settings.sandboxing.title": "การทำงานในแซนด์บ็อกซ์",

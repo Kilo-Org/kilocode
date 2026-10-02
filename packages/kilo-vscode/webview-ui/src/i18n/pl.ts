@@ -884,6 +884,9 @@ export const dict = {
   "settings.experimental.nativeNotebookTools.title": "Natywne narzędzia notatników",
   "settings.experimental.nativeNotebookTools.description":
     "Włącz eksperymentalne narzędzia do odczytu, edycji i uruchamiania notatników VS Code",
+  "settings.experimental.globSearchIgnored.title": "Zezwalaj agentowi na przeszukiwanie ignorowanych katalogów i plików",
+  "settings.experimental.globSearchIgnored.description":
+    "Pozwala agentowi używać opcji includeIgnored narzędzia glob do przeszukiwania plików wykluczonych przez .gitignore i inne pliki ignorowania. Domyślnie wyłączone.",
   "settings.experimental.continueOnDeny.title": "Kontynuuj przy odmowie",
   "settings.experimental.continueOnDeny.description": "Kontynuuj pętlę agenta po odmowie uprawnienia",
   "settings.sandboxing.title": "Izolacja w piaskownicy",

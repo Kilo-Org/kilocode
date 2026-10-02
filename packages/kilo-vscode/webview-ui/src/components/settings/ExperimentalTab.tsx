@@ -192,6 +192,19 @@ const ExperimentalTab: Component = () => {
         </SettingsRow>
 
         <SettingsRow
+          title={language.t("settings.experimental.globSearchIgnored.title")}
+          description={language.t("settings.experimental.globSearchIgnored.description")}
+        >
+          <Switch
+            checked={experimental().glob_search_ignored ?? false}
+            onChange={(checked) => updateExperimental("glob_search_ignored", checked)}
+            hideLabel
+          >
+            {language.t("settings.experimental.globSearchIgnored.title")}
+          </Switch>
+        </SettingsRow>
+
+        <SettingsRow
           title={language.t("settings.experimental.continueOnDeny.title")}
           description={language.t("settings.experimental.continueOnDeny.description")}
         >

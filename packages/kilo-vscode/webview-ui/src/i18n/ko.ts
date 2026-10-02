@@ -916,6 +916,9 @@ export const dict = {
   "settings.experimental.nativeNotebookTools.title": "네이티브 노트북 도구",
   "settings.experimental.nativeNotebookTools.description":
     "VS Code 노트북을 읽고, 편집하고, 실행하는 실험적 도구를 활성화합니다",
+  "settings.experimental.globSearchIgnored.title": "에이전트가 무시된 디렉터리 및 파일을 검색하도록 허용",
+  "settings.experimental.globSearchIgnored.description":
+    "에이전트가 glob 도구의 includeIgnored 옵션을 사용하여 .gitignore 및 기타 무시 파일에서 제외된 파일을 검색할 수 있습니다. 기본적으로 꺼져 있습니다.",
   "settings.experimental.continueOnDeny.title": "거부 시 계속",
   "settings.experimental.continueOnDeny.description": "권한이 거부되면 에이전트 루프 계속",
   "settings.sandboxing.title": "샌드박스",

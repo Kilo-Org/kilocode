@@ -884,6 +884,9 @@ export const dict = {
   "settings.models.speechToTextModel.description": "选择用于语音输入的 Kilo Gateway 转录模型。",
   "settings.experimental.nativeNotebookTools.title": "原生笔记本工具",
   "settings.experimental.nativeNotebookTools.description": "启用用于读取、编辑和执行 VS Code 笔记本的实验性工具",
+  "settings.experimental.globSearchIgnored.title": "允许代理搜索被忽略的目录和文件",
+  "settings.experimental.globSearchIgnored.description":
+    "允许代理使用 glob 工具的 includeIgnored 选项搜索被 .gitignore 及其他忽略文件排除的文件。默认关闭。",
   "settings.experimental.continueOnDeny.title": "拒绝后继续",
   "settings.experimental.continueOnDeny.description": "权限被拒绝时继续智能体循环",
   "settings.sandboxing.title": "沙盒",

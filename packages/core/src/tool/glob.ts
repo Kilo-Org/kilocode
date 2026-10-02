@@ -33,6 +33,12 @@ export const Input = Schema.Struct({
   // kilocode_change end
     description: "Maximum results to return",
   }),
+  // kilocode_change start - opt-in ignore-file bypass gated by experimental.glob_search_ignored
+  includeIgnored: Schema.optional(Schema.Boolean).annotate({
+    description:
+      "Include files and folders excluded by ignore files (e.g. .gitignore). Requires the experimental.glob_search_ignored config setting.",
+  }),
+  // kilocode_change end
 })
 
 // kilocode_change start - retain bounded-search status in tool results and model output
@@ -117,6 +123,7 @@ const layer = Layer.effectDiscard(
                   pattern: input.pattern,
                   // kilocode_change start
                   limit: input.limit ?? FileSystem.DEFAULT_SEARCH_LIMIT,
+                  includeIgnored: input.includeIgnored === true,
                   validate: SearchTarget.validate(fs, target),
                   // kilocode_change end
                 })

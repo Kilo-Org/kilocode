@@ -6,6 +6,7 @@ import { Ripgrep } from "@opencode-ai/core/ripgrep"
 import { assertExternalDirectoryEffect } from "./external-directory"
 import DESCRIPTION from "./glob.txt"
 import * as Tool from "./tool"
+import { Config } from "@/config/config" // kilocode_change - opt-in includeIgnored gating
 
 // kilocode_change start — support absolute glob patterns (e.g. ~/.config/kilo/command/*.md)
 function normalize(p: string) {
@@ -30,6 +31,12 @@ export const Parameters = Schema.Struct({
   path: Schema.optional(Schema.String).annotate({
     description: `The directory to search in. If not specified, the current working directory will be used. IMPORTANT: Omit this field to use the default directory. DO NOT enter "undefined" or "null" - simply omit it for the default behavior. Must be a valid directory path if provided.`,
   }),
+  // kilocode_change start - opt-in ignore-file bypass gated by experimental.glob_search_ignored
+  includeIgnored: Schema.optional(Schema.Boolean).annotate({
+    description:
+      "Include files and folders excluded by ignore files (e.g. .gitignore). Requires the experimental.glob_search_ignored config setting.",
+  }),
+  // kilocode_change end
 })
 
 export const GlobTool = Tool.define(
@@ -40,7 +47,9 @@ export const GlobTool = Tool.define(
     return {
       description: DESCRIPTION,
       parameters: Parameters,
-      execute: (params: { pattern: string; path?: string }, ctx: Tool.Context) =>
+      // kilocode_change start - includeIgnored is a Kilo-gated parameter
+      execute: (params: { pattern: string; path?: string; includeIgnored?: boolean }, ctx: Tool.Context) =>
+        // kilocode_change end
         Effect.gen(function* () {
           const ins = yield* InstanceState.context
           const absolute = split(params.pattern) // kilocode_change
@@ -67,12 +76,25 @@ export const GlobTool = Tool.define(
             kind: "directory",
           })
 
+          // kilocode_change start - includeIgnored requires the user to opt in via config
+          if (params.includeIgnored === true) {
+            const config = yield* Effect.serviceOption(Config.Service)
+            const enabled =
+              config._tag === "Some" ? ((yield* config.value.get()).experimental?.glob_search_ignored ?? false) : false
+            if (!enabled)
+              return yield* Effect.fail(
+                new Error("includeIgnored requires the experimental.glob_search_ignored config setting to be enabled"),
+              )
+          }
+          // kilocode_change end
+
           const limit = 100
           // kilocode_change start - retain bounded-search metadata from Core ripgrep.
           const result = yield* ripgrep.glob({
             cwd: search,
             pattern: absolute?.pattern ?? params.pattern, // kilocode_change - absolute patterns are split into cwd + relative glob
             limit,
+            includeIgnored: params.includeIgnored === true, // kilocode_change
             signal: ctx.abort, // kilocode_change - stop ripgrep when the tool call is cancelled
           })
           const files = result.items

@@ -324,6 +324,10 @@ export const Info = Schema.Struct({
       image_generation_model: Schema.optional(Schema.String).annotate({
         description: "Model ID to use for image generation (default: openrouter/auto)",
       }),
+      glob_search_ignored: Schema.optional(Schema.Boolean).annotate({
+        description:
+          "Allow the agent to search files and folders excluded by ignore files (e.g. .gitignore) via the glob tool's includeIgnored parameter (default: false)",
+      }),
       native_notebook_tools: Schema.optional(Schema.Boolean).annotate({
         description: "Enable native tools for reading, editing, and executing VS Code notebooks",
       }),

@@ -917,6 +917,9 @@ export const dict = {
   "settings.experimental.nativeNotebookTools.title": "Власні інструменти для блокнотів",
   "settings.experimental.nativeNotebookTools.description":
     "Увімкнути експериментальні інструменти для читання, редагування та виконання блокнотів VS Code",
+  "settings.experimental.globSearchIgnored.title": "Дозволити агенту пошук у ігнорованих каталогах і файлах",
+  "settings.experimental.globSearchIgnored.description":
+    "Дозволяє агенту використовувати параметр includeIgnored інструмента glob для пошуку файлів, виключених .gitignore та іншими ignore-файлами. Типово вимкнено.",
   "settings.experimental.continueOnDeny.title": "Продовжувати при відхиленні",
   "settings.experimental.continueOnDeny.description": "Продовжувати цикл агента, коли дозвіл відхилено",
   "settings.sandboxing.title": "Пісочниця",
