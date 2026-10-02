@@ -44,6 +44,7 @@ import {
   publicKiloProvider,
   kiloSmallModelPriority,
   hasKiloCredentials,
+  cheapestSmallModel,
   buildTimeoutSignal,
   requestTimeout,
   wrapFirstByte,
@@ -2124,6 +2125,9 @@ const layer = Layer.effect(
         }
         if (candidates[0]) return candidates[0]
       }
+
+      const cheap = cheapestSmallModel(Object.values(provider.models)) // kilocode_change
+      if (cheap) return cheap // kilocode_change
 
       // kilocode_change start - fall back to kilo's auto small model only when the user actually has
       // kilo credentials. The kilo provider is always autoloaded (anonymous key), so checking it
