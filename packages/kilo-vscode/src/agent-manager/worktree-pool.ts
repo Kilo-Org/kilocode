@@ -8,13 +8,14 @@
  * (small delta). This module is vscode-free so it can be tested with a real
  * temporary git repository.
  *
- * Slots live in a per-user directory outside the project when possible. A slot
- * is a full checkout, and inside the project every tool that walks the tree
- * sees it: `conda-build .` finds a second recipe, test runners collect
- * duplicate tests, file watchers and language servers index a copy. Ignore
- * rules do not help, because these tools do not read them. The claim moves the
- * slot into `.kilo/worktrees/`. `git worktree move` is a plain rename, so the
- * per-user directory is only used on the same filesystem as the project.
+ * Slots only live in a per-user directory outside the project, so pre-warming
+ * never creates `.kilo/worktrees/`. A slot is a full checkout, and inside the
+ * project every tool that walks the tree sees it: `conda-build .` finds a
+ * second recipe, test runners collect duplicate tests, file watchers and
+ * language servers index a copy. Ignore rules do not help, because these tools
+ * do not read them. The claim moves the slot into `.kilo/worktrees/`.
+ * `git worktree move` is a plain rename, so a project on another filesystem
+ * gets no slot and creates its worktrees on demand.
  */
 
 import * as path from "path"
@@ -47,11 +48,11 @@ export function poolDir(home: string, root: string): string {
 }
 
 /**
- * Select the directory for new slots: `shared` when a rename from it into the
- * project can work, otherwise `local`. Creates only the pool home, never
- * anything in the project.
+ * Return `shared` when a rename from it into the project can work, otherwise
+ * undefined, which means no slots for this project. Creates only the pool
+ * home, never anything in the project.
  */
-export async function locate(root: string, shared: string, local: string, log: (msg: string) => void): Promise<string> {
+export async function locate(root: string, shared: string, log: (msg: string) => void): Promise<string | undefined> {
   const home = path.dirname(shared)
   const same = await fs.promises
     .mkdir(home, { recursive: true })
@@ -62,8 +63,8 @@ export async function locate(root: string, shared: string, local: string, log: (
       return false
     })
   if (!same) {
-    log(`worktree pool: ${home} is on another filesystem than ${root}, keeping slots in ${local}`)
-    return local
+    log(`worktree pool: ${home} is not on the filesystem of ${root}, not pre-warming worktrees`)
+    return undefined
   }
   await markNoIndex(home, log)
   return shared
@@ -127,8 +128,11 @@ async function purge(dir: string, log: (msg: string) => void): Promise<void> {
 }
 
 async function subdirs(dir: string): Promise<string[]> {
-  if (!fs.existsSync(dir)) return []
-  const entries = await fs.promises.readdir(dir, { withFileTypes: true })
+  // Another process can remove the directory at any time, for example in its own sweep.
+  const entries = await fs.promises.readdir(dir, { withFileTypes: true }).catch((e: NodeJS.ErrnoException) => {
+    if (e.code === "ENOENT" || e.code === "ENOTDIR") return []
+    throw e
+  })
   return entries.filter((entry) => entry.isDirectory()).map((entry) => entry.name)
 }
 
@@ -172,8 +176,11 @@ export interface PoolStart {
 
 export interface PoolDeps {
   root: string
-  /** Directory for new slots. Resolved on first use, because it depends on the filesystem layout. */
-  dir: () => Promise<string>
+  /**
+   * Directory for new slots, or undefined when this project gets no slots.
+   * Resolved on first use, because it depends on the filesystem layout.
+   */
+  dir: () => Promise<string | undefined>
   /** Every directory that can hold slots of this repository, including the one `dir` resolves to. */
   dirs: string[]
   /** Target slot count. A function is read live so a settings change applies without a restart. */
@@ -302,6 +309,7 @@ export class WorktreePool {
   private async fill(point: PoolStart, oid: string): Promise<void> {
     if (this.size() <= 0) return
     const dir = await this.deps.dir()
+    if (!dir) return
     await fs.promises.mkdir(dir, { recursive: true })
 
     await this.prune()
@@ -398,7 +406,14 @@ export class WorktreePool {
       }
     }
 
-    await this.attempt(() => this.clearMeta(slot.path), `clear metadata ${slot.path}`)
+    // A session worktree that still looks pooled would be removed by a later
+    // reconcile, so a failed write fails the claim.
+    const cleared = await this.attempt(() => this.clearMeta(slot.path), `clear metadata ${slot.path}`)
+    if (!cleared) {
+      await this.discard(slot)
+      await this.deleteBranch(branch)
+      return undefined
+    }
     this.slots = this.slots.filter((known) => known !== slot)
     return { path: slot.path, branch }
   }
@@ -440,6 +455,12 @@ export class WorktreePool {
       const meta = await this.readMeta(slotPath)
       if (!meta?.pooled) continue
       if (meta.owner !== process.pid && alive(meta.owner)) continue
+      // Slots are always detached. A branch means a claim that was interrupted
+      // before it cleared the metadata, so this is a session worktree.
+      if (await this.attached(slotPath)) {
+        this.deps.log(`worktree pool: ${slotPath} has a branch checked out, keeping it`)
+        continue
+      }
       // Turning the feature off must clean slots owned by this or a dead process.
       if (!keep) {
         await this.removePath(slotPath)
@@ -564,8 +585,17 @@ export class WorktreePool {
 
   private async clearMeta(wtPath: string): Promise<void> {
     const file = await this.metaPath(wtPath)
-    if (!file) return
+    if (!file) throw new Error(`git directory not found for ${wtPath}`)
     await fs.promises.writeFile(file, "{}", "utf-8")
+  }
+
+  /** True when the worktree has a branch checked out. Reads HEAD directly to avoid a git process. */
+  private async attached(wtPath: string): Promise<boolean> {
+    const dir = await this.attemptValue(() => this.deps.gitdir(wtPath), `resolve gitdir ${wtPath}`)
+    if (!dir) return false
+    // A missing HEAD leaves nothing git can check out, so it counts as detached.
+    const head = await fs.promises.readFile(path.join(dir, "HEAD"), "utf-8").catch(() => "")
+    return head.startsWith("ref:")
   }
 
   private async readMeta(wtPath: string): Promise<PoolMeta | undefined> {

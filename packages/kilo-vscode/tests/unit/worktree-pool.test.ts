@@ -1,13 +1,21 @@
-import { afterEach, describe, expect, it } from "bun:test"
+import { afterEach, beforeEach, describe, expect, it } from "bun:test"
 import os from "node:os"
 import path from "node:path"
 import fs from "node:fs/promises"
-import { existsSync } from "node:fs"
+import { existsSync, readFileSync } from "node:fs"
 import simpleGit from "simple-git"
 import { WorktreeManager } from "../../src/agent-manager/WorktreeManager"
 import { locate, sweep } from "../../src/agent-manager/worktree-pool"
 
 const tempDirs: string[] = []
+// Pool home for the current test. Slots never live inside the test repository.
+let home = ""
+
+beforeEach(async () => {
+  const dir = await fs.realpath(await fs.mkdtemp(path.join(os.tmpdir(), "kilo-pool-home-")))
+  tempDirs.push(dir)
+  home = path.join(dir, "worktree-pool")
+})
 
 afterEach(async () => {
   await Promise.all(
@@ -37,23 +45,30 @@ async function createTempRepo(): Promise<string> {
   return dir
 }
 
-function createManager(root: string, poolSize = 1, rewarmDelay = 0, logs?: string[], home?: string): WorktreeManager {
+function createManager(root: string, poolSize = 1, rewarmDelay = 0, logs?: string[], dir = home): WorktreeManager {
   const manager = new WorktreeManager(
     root,
     logs ? (msg) => logs.push(msg) : () => undefined,
     undefined,
     undefined,
     poolSize,
-    home,
+    dir,
   )
   manager.rewarmDelay = rewarmDelay
   return manager
 }
 
-async function createHome(): Promise<string> {
-  const dir = await fs.realpath(await fs.mkdtemp(path.join(os.tmpdir(), "kilo-pool-home-")))
-  tempDirs.push(dir)
-  return path.join(dir, "worktree-pool")
+function metaFile(wt: string): string {
+  const pointer = readFileSync(path.join(wt, ".git"), "utf-8")
+  return path.join(path.resolve(wt, pointer.match(/^gitdir:\s*(.+)$/m)![1]!.trim()), "kilo-agent-manager-metadata.json")
+}
+
+/** A slot as older versions created it, inside `.kilo/worktrees/`. */
+async function legacySlot(root: string): Promise<string> {
+  const slot = path.join(root, ".kilo", "worktrees", "legacy-slot")
+  gitExec(["git", "-C", root, "worktree", "add", "--detach", slot, "HEAD"])
+  await fs.writeFile(metaFile(slot), JSON.stringify({ pooled: true, owner: 999999, baseRef: "main" }))
+  return slot
 }
 
 async function clean(root: string): Promise<string> {
@@ -107,21 +122,43 @@ async function waitForPooledSlots(root: string, count: number, timeout = 10000):
 }
 
 describe("WorktreeManager pool warm-up", () => {
-  it("creates a detached slot that discoverWorktrees skips", async () => {
+  it("warms a slot in the pool home without creating anything in the project", async () => {
     const root = await createTempRepo()
     const manager = createManager(root)
 
+    await manager.reconcilePool()
     manager.warmPool()
-    await waitForPooledSlot(root)
+    const slot = await waitForPooledSlot(root)
 
-    const slots = await pooledSlots(root)
-    expect(slots).toHaveLength(1)
+    expect(await pooledSlots(root)).toEqual([slot])
+    expect(slot.startsWith(home + path.sep)).toBe(true)
+    expect(existsSync(path.join(root, ".kilo"))).toBe(false)
+    expect(await clean(root)).toBe("")
     expect(await manager.discoverWorktrees()).toEqual([])
+  })
+
+  it("creates no slot and no .kilo/worktrees when the pool home is unusable", async () => {
+    const root = await createTempRepo()
+    await fs.writeFile(home, "not a directory")
+    const logs: string[] = []
+    const manager = createManager(root, 1, 0, logs)
+
+    await manager.reconcilePool()
+    manager.warmPool()
+    await new Promise((resolve) => setTimeout(resolve, 500))
+
+    expect(await pooledSlots(root)).toEqual([])
+    expect(existsSync(path.join(root, ".kilo"))).toBe(false)
+    expect(logs.some((line) => line.includes("not pre-warming worktrees"))).toBe(true)
+
+    // Worktrees are still created on demand.
+    const result = await manager.createWorktree({ branchName: "cold" })
+    expect(result.path).toBe(path.join(root, ".kilo", "worktrees", "cold"))
   })
 })
 
 describe("WorktreeManager pool claim", () => {
-  it("claims an exact-match slot for a generated name and keeps the slot path", async () => {
+  it("moves an exact-match slot into .kilo/worktrees for a generated name", async () => {
     const root = await createTempRepo()
     const manager = createManager(root)
 
@@ -130,21 +167,19 @@ describe("WorktreeManager pool claim", () => {
 
     const result = await manager.createWorktree({})
 
-    expect(await fs.realpath(result.path)).toBe(await fs.realpath(slot))
     expect(result.branch).toBe(path.basename(slot))
-    expect((await simpleGit(slot).raw(["symbolic-ref", "--short", "HEAD"])).trim()).toBe(result.branch)
+    expect(result.path).toBe(path.join(root, ".kilo", "worktrees", result.branch))
+    expect(existsSync(slot)).toBe(false)
+    expect((await simpleGit(result.path).raw(["symbolic-ref", "--short", "HEAD"])).trim()).toBe(result.branch)
+    expect((await simpleGit(result.path).raw(["status", "--porcelain"])).trim()).toBe("")
     expect(await fs.stat(path.join(result.path, ".git")).then((stat) => stat.isFile())).toBe(true)
+    expect((await slotMeta(result.path))?.pooled).toBeFalsy()
+    expect(await clean(root)).toBe("")
 
-    const raw = await simpleGit(root).raw(["worktree", "list", "--porcelain"])
-    const block = raw.split("\n\n").find((entry) => entry.includes(slot))
-    expect(block).toBeDefined()
-    expect(block).not.toContain("detached")
-
-    expect((await slotMeta(slot))?.pooled).toBeFalsy()
-
-    // A replacement slot is warmed after the claim, off the click path.
+    // A replacement slot is warmed in the pool home after the claim, off the click path.
     const next = await waitForPooledSlot(root)
     expect(next).not.toBe(slot)
+    expect(next.startsWith(home + path.sep)).toBe(true)
   })
 
   it("delays the replacement warm-up so it does not compete with the new session", async () => {
@@ -154,7 +189,7 @@ describe("WorktreeManager pool claim", () => {
     manager.warmPool()
     const slot = await waitForPooledSlot(root)
     const result = await manager.createWorktree({})
-    expect(await fs.realpath(result.path)).toBe(await fs.realpath(slot))
+    expect(result.branch).toBe(path.basename(slot))
 
     await new Promise((resolve) => setTimeout(resolve, 500))
     expect((await pooledSlots(root)).filter((dir) => dir !== slot)).toEqual([])
@@ -256,15 +291,12 @@ describe("WorktreeManager pool stale slot", () => {
     manager.warmPool()
     const original = await waitForPooledSlots(root, 2)
 
-    // The first claim consumes the pool's first slot. Identifying it pins the
-    // creation order, so the slot that stays in the pool is deterministically
-    // the one claim() tries first after the replacement warm.
-    const first = await manager.createWorktree({})
-    const firstReal = await fs.realpath(first.path)
-    const remaining: string[] = []
-    for (const slot of original) {
-      if ((await fs.realpath(slot)) !== firstReal) remaining.push(slot)
-    }
+    // The first claim consumes the pool's first slot and moves it away.
+    // Identifying it pins the creation order, so the slot that stays in the
+    // pool is deterministically the one claim() tries first after the
+    // replacement warm.
+    await manager.createWorktree({})
+    const remaining = original.filter((slot) => existsSync(slot))
     expect(remaining).toHaveLength(1)
     const stale = remaining[0]!
 
@@ -277,7 +309,8 @@ describe("WorktreeManager pool stale slot", () => {
 
     const result = await manager.createWorktree({})
 
-    expect(await fs.realpath(result.path)).toBe(await fs.realpath(healthy!))
+    expect(result.branch).toBe(path.basename(healthy!))
+    expect(existsSync(healthy!)).toBe(false)
     expect(existsSync(stale)).toBe(false)
     expect(logs.some((line) => line.includes("slot missing on disk, evicting"))).toBe(true)
   })
@@ -301,7 +334,7 @@ describe("WorktreeManager pool reconcile", () => {
     await manager.reconcilePool()
     const result = await manager.createWorktree({})
 
-    expect(await fs.realpath(result.path)).toBe(await fs.realpath(slot))
+    expect(result.branch).toBe(path.basename(slot))
     expect((await simpleGit(result.path).revparse(["HEAD"])).trim()).toBe(head)
     expect((await simpleGit(result.path).raw(["status", "--porcelain"])).trim()).toBe("")
   })
@@ -343,43 +376,10 @@ describe("WorktreeManager pool disabled", () => {
 })
 
 describe("WorktreeManager pool home", () => {
-  it("warms slots in the pool home without touching the project", async () => {
-    const root = await createTempRepo()
-    const home = await createHome()
-    const manager = createManager(root, 1, 0, undefined, home)
-
-    await manager.reconcilePool()
-    manager.warmPool()
-    const slot = await waitForPooledSlot(root)
-
-    expect(slot.startsWith(home + path.sep)).toBe(true)
-    expect(existsSync(path.join(root, ".kilo"))).toBe(false)
-    expect(await clean(root)).toBe("")
-    expect(await manager.discoverWorktrees()).toEqual([])
-  })
-
-  it("moves a claimed slot into .kilo/worktrees", async () => {
-    const root = await createTempRepo()
-    const home = await createHome()
-    const manager = createManager(root, 1, 60_000, undefined, home)
-
-    manager.warmPool()
-    const slot = await waitForPooledSlot(root)
-    const result = await manager.createWorktree({})
-
-    expect(result.branch).toBe(path.basename(slot))
-    expect(result.path).toBe(path.join(root, ".kilo", "worktrees", result.branch))
-    expect(existsSync(slot)).toBe(false)
-    expect((await simpleGit(result.path).raw(["symbolic-ref", "--short", "HEAD"])).trim()).toBe(result.branch)
-    expect((await simpleGit(result.path).raw(["status", "--porcelain"])).trim()).toBe("")
-    expect(await clean(root)).toBe("")
-  })
-
   it("discards a slot that cannot be moved and creates the worktree normally", async () => {
     const root = await createTempRepo()
-    const home = await createHome()
     const logs: string[] = []
-    const manager = createManager(root, 1, 60_000, logs, home)
+    const manager = createManager(root, 1, 60_000, logs)
 
     manager.warmPool()
     const slot = await waitForPooledSlot(root)
@@ -400,12 +400,9 @@ describe("WorktreeManager pool home", () => {
 
   it("removes slots an older version left in .kilo/worktrees", async () => {
     const root = await createTempRepo()
-    const home = await createHome()
-    createManager(root).warmPool()
-    const legacy = await waitForPooledSlot(root)
-    expect(legacy.includes(`${path.sep}.kilo${path.sep}worktrees${path.sep}`)).toBe(true)
+    const legacy = await legacySlot(root)
 
-    const manager = createManager(root, 1, 0, undefined, home)
+    const manager = createManager(root)
     await manager.reconcilePool()
 
     expect(existsSync(legacy)).toBe(false)
@@ -414,15 +411,32 @@ describe("WorktreeManager pool home", () => {
 
     manager.warmPool()
     expect((await waitForPooledSlot(root)).startsWith(home + path.sep)).toBe(true)
+    expect(existsSync(path.join(root, ".kilo"))).toBe(false)
+  })
+
+  it("keeps a session worktree whose pooled metadata was never cleared", async () => {
+    const root = await createTempRepo()
+    const manager = createManager(root, 1, 60_000)
+    manager.warmPool()
+    await waitForPooledSlot(root)
+    const result = await manager.createWorktree({})
+    await fs.writeFile(path.join(result.path, "work.txt"), "uncommitted")
+    // Simulate a claim that stopped before it cleared the slot metadata.
+    await fs.writeFile(metaFile(result.path), JSON.stringify({ pooled: true, owner: 999999 }))
+
+    await createManager(root).reconcilePool()
+    await createManager(root, 0).reconcilePool()
+
+    expect(await fs.readFile(path.join(result.path, "work.txt"), "utf-8")).toBe("uncommitted")
+    expect((await simpleGit(result.path).raw(["symbolic-ref", "--short", "HEAD"])).trim()).toBe(result.branch)
   })
 
   it("removes pool home slots when the pool is disabled", async () => {
     const root = await createTempRepo()
-    const home = await createHome()
-    createManager(root, 1, 0, undefined, home).warmPool()
+    createManager(root).warmPool()
     const slot = await waitForPooledSlot(root)
 
-    await createManager(root, 0, 0, undefined, home).reconcilePool()
+    await createManager(root, 0).reconcilePool()
 
     expect(existsSync(slot)).toBe(false)
     expect(await pooledSlots(root)).toEqual([])
@@ -430,50 +444,46 @@ describe("WorktreeManager pool home", () => {
   })
 
   it("sweeps slots of deleted repositories and unused slots", async () => {
-    const home = await createHome()
     const gone = await createTempRepo()
-    createManager(gone, 1, 0, undefined, home).warmPool()
+    createManager(gone).warmPool()
     const orphan = await waitForPooledSlot(gone)
     await fs.rm(gone, { recursive: true, force: true })
 
     const root = await createTempRepo()
-    createManager(root, 1, 0, undefined, home).warmPool()
+    createManager(root).warmPool()
     const unused = await waitForPooledSlot(root)
-    const pointer = await fs.readFile(path.join(unused, ".git"), "utf-8")
-    const file = path.join(pointer.match(/^gitdir:\s*(.+)$/m)![1]!.trim(), "kilo-agent-manager-metadata.json")
-    const meta = JSON.parse(await fs.readFile(file, "utf-8")) as Record<string, unknown>
-    await fs.writeFile(file, JSON.stringify({ ...meta, owner: 999999 }))
+    const file = metaFile(unused)
+    const old = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+    const run = () =>
+      sweep(
+        home,
+        true,
+        (cwd) => simpleGit(cwd),
+        () => undefined,
+      )
 
-    await sweep(
-      home,
-      true,
-      (cwd) => simpleGit(cwd),
-      () => undefined,
-    )
+    // An old slot survives while its owner process is alive.
+    await fs.utimes(file, old, old)
+    await run()
     expect(existsSync(orphan)).toBe(false)
     expect(existsSync(path.dirname(orphan))).toBe(false)
-    // A recently used slot survives even when its owner is gone.
     expect(existsSync(unused)).toBe(true)
 
-    const old = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+    // A recently used slot survives even when its owner is gone.
+    const meta = JSON.parse(await fs.readFile(file, "utf-8")) as Record<string, unknown>
+    await fs.writeFile(file, JSON.stringify({ ...meta, owner: 999999 }))
+    await run()
+    expect(existsSync(unused)).toBe(true)
+
     await fs.utimes(file, old, old)
-    await sweep(
-      home,
-      true,
-      (cwd) => simpleGit(cwd),
-      () => undefined,
-    )
+    await run()
     expect(existsSync(unused)).toBe(false)
     expect(await pooledSlots(root)).toEqual([])
   })
 
-  it.skipIf(process.platform === "win32")("keeps slots in .kilo/worktrees on another filesystem", async () => {
-    const home = await createHome()
-    const local = path.join("/dev", ".kilo", "worktrees")
-    expect(await locate("/dev", path.join(home, "dev"), local, () => undefined)).toBe(local)
-    expect(await locate(path.dirname(home), path.join(home, "repo"), "local", () => undefined)).toBe(
-      path.join(home, "repo"),
-    )
+  it.skipIf(process.platform === "win32")("uses no slot directory on another filesystem", async () => {
+    expect(await locate("/dev", path.join(home, "dev"), () => undefined)).toBeUndefined()
+    expect(await locate(path.dirname(home), path.join(home, "repo"), () => undefined)).toBe(path.join(home, "repo"))
   })
 })
 

@@ -41,7 +41,7 @@ export interface ProjectContextDeps {
   sized?: (ctx: ProjectContext) => void
   /** Whether background worktree pre-warming is enabled for this project. */
   worktreePool?: () => boolean
-  /** Per-user directory for pooled slots. When omitted, slots stay in `.kilo/worktrees/`. */
+  /** Per-user directory for pooled slots. When omitted, no slots are pre-warmed. */
   poolHome?: string
   /** Factory overrides for tests. */
   state?: (root: string, log: (msg: string) => void) => WorktreeStateManager
