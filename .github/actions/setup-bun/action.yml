@@ -102,6 +102,16 @@ runs:
         fi
       shell: bash
 
+    # kilocode_change start
+    # A frozen install validates external deps but not workspace package `version`
+    # fields, so a stale workspace entry in bun.lock (e.g. a JetBrains pin bump that
+    # forgot to re-run install) passes silently. Fail CI when the lockfile drifts
+    # from the workspace, so version drift cannot land silently. # kilocode_change
+    - name: Verify lockfile matches workspace
+      shell: bash
+      run: bun script/check-bun-lock-workspace.ts
+    # kilocode_change end
+
     # Do not upload a Windows cache that Windows jobs intentionally never restore. # kilocode_change
     - name: Save Bun dependencies
       if: runner.os != 'Windows' && steps.bun-cache.outputs.cache-hit != 'true' && github.event_name != 'pull_request' && github.event_name != 'pull_request_target' # kilocode_change
