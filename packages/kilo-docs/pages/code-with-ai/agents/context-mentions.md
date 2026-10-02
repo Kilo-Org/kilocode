@@ -45,6 +45,12 @@ In Agent Manager, choose **Worktrees** to search other worktrees by name, branch
 
 Choose **Model** to insert an inline `@provider/model` reference. Use it to request a particular model for a subagent or Agent Manager session. It does not attach a file or change the current session's model.
 
+### Files in other workspace folders
+
+In a multi-root workspace, `@` file suggestions also search your other open folders, so files in a folder added with **Add Folder to Workspace…** are mentionable without reaching for the file picker. Type at least one character after `@` to include those folders — a bare `@` searches only the current project. Results from another folder carry a badge with that folder's name and are inserted as absolute paths.
+
+A mention from another folder does not attach the file's contents. Kilo reads it only after you approve, under the same external-directory permission check that applies to any file outside the current project. Fan-out stays scoped: a session running in a Git worktree or an Agent Manager project searches only its own project.
+
 ### Drag and Drop
 
 You can also add file mentions by dragging and dropping:

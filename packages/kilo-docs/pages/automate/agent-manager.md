@@ -525,6 +525,7 @@ The Documents inspector previews Markdown file references from Agent Manager cha
 - Markdown files (`.md`, `.mdx`, and `.markdown`) open in rendered view by default. Use the preview/source toggle to switch between rendered Markdown and syntax-highlighted source.
 - The document renderer also supports syntax-highlighted text and inline PNG, JPEG, GIF, WebP, and SVG previews when a document payload is available. Normal Agent Manager file-opening actions route non-Markdown source references to the native VS Code editor.
 - Use **Open file** to open the document in the native VS Code editor. The original line and column are preserved when available.
+- Use **Copy content** in the toolbar to copy the active document's text to the clipboard; a check icon confirms the copy. Image previews have no copy action. The document tab context menu also offers **Copy Path**, **Copy Relative Path**, **Copy File Name**, and **Open in Editor**.
 - Unsupported, binary, missing, out-of-scope, or oversized files show an error fallback in the inspector. Text previews are limited to 2 MB and image previews to 5 MB; open the file in VS Code to inspect larger or unsupported content.
 
 ### Inline document review
