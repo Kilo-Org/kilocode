@@ -63,6 +63,24 @@ describe("checkAnacondaLogin", () => {
     expect(result).toEqual({ hasKey: true, email: null })
   })
 
+  test("returns hasKey=true with null email when passport fetch throws", async () => {
+    saveCredential({ apiKey: "ad-existing-key", domain: "anaconda.com" })
+
+    spyOn(globalThis, "fetch").mockRejectedValue(new TypeError("fetch failed"))
+
+    const result = await checkAnacondaLogin()
+    expect(result).toEqual({ hasKey: true, email: null })
+  })
+
+  test("returns hasKey=true with null email when passport returns malformed JSON", async () => {
+    saveCredential({ apiKey: "ad-existing-key", domain: "anaconda.com" })
+
+    spyOn(globalThis, "fetch").mockResolvedValue(new Response("not json", { status: 200 }))
+
+    const result = await checkAnacondaLogin()
+    expect(result).toEqual({ hasKey: true, email: null })
+  })
+
   test("returns hasKey=true with null email when passport returns empty email", async () => {
     saveCredential({ apiKey: "ad-existing-key", domain: "anaconda.com" })
 

@@ -63,23 +63,31 @@ export interface AnacondaLoginStatus {
  * (the passport email) so callers can distinguish "no key" from
  * "key exists but passport failed" and avoid overwriting credentials
  * on transient failures.
+ *
+ * Once a key has been read, passport failures (HTTP errors, network
+ * errors, timeouts, malformed JSON) resolve to `{ hasKey: true, email: null }`
+ * rather than rejecting, so an existing credential is never treated as missing.
  */
 export async function checkAnacondaLogin(): Promise<AnacondaLoginStatus> {
   const key = getApiKey(ANACONDA_DOMAIN)
   if (!key) return { hasKey: false, email: null }
 
-  const response = await fetch(PASSPORT_ENDPOINT, {
-    headers: {
-      Authorization: `Bearer ${key}`,
-      "Content-Type": "application/json",
-    },
-    signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
-  })
+  try {
+    const response = await fetch(PASSPORT_ENDPOINT, {
+      headers: {
+        Authorization: `Bearer ${key}`,
+        "Content-Type": "application/json",
+      },
+      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+    })
 
-  if (!response.ok) return { hasKey: true, email: null }
+    if (!response.ok) return { hasKey: true, email: null }
 
-  const data = (await response.json()) as PassportResponse
-  return { hasKey: true, email: data.profile?.email || null }
+    const data = (await response.json()) as PassportResponse
+    return { hasKey: true, email: data.profile?.email || null }
+  } catch {
+    return { hasKey: true, email: null }
+  }
 }
 
 /**
