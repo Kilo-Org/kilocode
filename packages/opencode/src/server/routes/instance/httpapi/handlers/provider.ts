@@ -104,7 +104,6 @@ export const providerHandlers = HttpApiBuilder.group(InstanceHttpApi, "provider"
         connected: Object.keys(connected),
         failed: [...failedSet],
       }
-      // kilocode_change end
     })
 
     const auth = Effect.fn("ProviderHttpApi.auth")(function* () {

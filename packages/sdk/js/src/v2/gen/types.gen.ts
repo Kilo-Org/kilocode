@@ -4090,6 +4090,7 @@ export type TuiConfigGetResponse = {
   }
   diff_style?: "auto" | "stacked"
   mouse?: boolean
+  vim?: boolean
   attention?: {
     enabled?: boolean
     notifications?: boolean
@@ -15884,6 +15885,7 @@ export type TuiConfigGetData = {
   query?: {
     directory?: string
     workspace?: string
+    scope?: "project" | "global"
   }
   url: "/tui/config"
 }
@@ -15935,6 +15937,7 @@ export type TuiConfigUpdateData = {
     }
     diff_style?: "auto" | "stacked"
     mouse?: boolean
+    vim?: boolean
     attention?: {
       enabled?: boolean
       notifications?: boolean
@@ -15996,6 +15999,34 @@ export type TuiKeybindListResponses = {
 }
 
 export type TuiKeybindListResponse2 = TuiKeybindListResponses[keyof TuiKeybindListResponses]
+
+export type DisabledProvidersListData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/provider/disabled"
+}
+
+export type DisabledProvidersListErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type DisabledProvidersListError = DisabledProvidersListErrors[keyof DisabledProvidersListErrors]
+
+export type DisabledProvidersListResponses = {
+  /**
+   * Providers hidden by disabled_providers
+   */
+  200: Array<Provider>
+}
+
+export type DisabledProvidersListResponse = DisabledProvidersListResponses[keyof DisabledProvidersListResponses]
 
 export type EnhancePromptEnhanceData = {
   body?: {

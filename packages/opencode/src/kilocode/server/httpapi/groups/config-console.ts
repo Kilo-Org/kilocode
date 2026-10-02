@@ -135,6 +135,7 @@ const TuiConfigShape = {
   scroll_acceleration: Schema.optional(Schema.Struct({ enabled: Schema.Boolean })),
   diff_style: Schema.optional(Schema.Literals(["auto", "stacked"])),
   mouse: Schema.optional(Schema.Boolean),
+  vim: Schema.optional(Schema.Boolean),
   attention: Schema.optional(
     Schema.Struct({
       enabled: Schema.optional(Schema.Boolean),
@@ -251,7 +252,7 @@ export const ConfigConsoleApi = HttpApi.make("config-console")
           }),
         ),
         HttpApiEndpoint.get("tuiConfigGet", ConfigConsolePaths.tuiConfig, {
-          query: WorkspaceRoutingQuery,
+          query: TuiConfigQuery,
           success: described(TuiConfigResponse, "Effective TUI configuration"),
         }).annotateMerge(
           OpenApi.annotations({
