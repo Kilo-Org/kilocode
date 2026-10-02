@@ -1,7 +1,7 @@
 # Kilo v1 → v2 migration plan
 
 Finalized 2026-09-30. Base: opus-55. Merged in: upstream-resync rigor, capability handshake and validation rules from deepseek; VS Code blockers, sharing/remote steps, standing rules and metrics from kimi-k3. Status: not started. First actions:
-- Team sign-off on Decisions 3 and 4.
+- Team sign-off on Decisions 3, 4 and 5.
 - Owners assigned for the upstream-sync lane (N1/N3) and the delta sweep (N4).
 - N7 aligns the progress plan and issue bodies.
 
@@ -52,7 +52,7 @@ This is **feature** parity. Code parity is impossible because the v1 and v2 foun
    - VS Code ships from `main` and bundles the CLI built from the same commit. It does not pin a CLI version.
    - JetBrains pins a CLI version.
 
-   **G2 and G3 are independent client-surface tracks.** Their work is mainly Kilo-specific client code (`packages/kilo-vscode`, `kilo-ide-ui`, `kilo-ui`, `kilo-jetbrains`) that consumes the v2 core through public contracts. They do not block G1, and G1 does not wait for them. Each track can start once its prerequisites land (N1 for both; #14383 for VS Code) and can run in parallel with G1 under its own owner.
+   **G2 and G3 are independent client-surface tracks.** Their work is mainly Kilo-specific client code (`packages/kilo-vscode`, `kilo-ide-ui`, `kilo-ui`, `kilo-jetbrains`) that consumes the v2 core through public contracts. They do not block G1, and G1 does not wait for them. Each track can start once its prerequisites land (N1 for both; #14383 for VS Code; N6b for JetBrains) and can run in parallel with G1 under its own owner.
 
    Some client-track items touch core, server or protocol, and must be coordinated with core work:
    - #14380, the message-deletion runtime operation;
@@ -420,7 +420,7 @@ New issues to create in Phase 0. They are children of #13750 unless the Unit col
 | N6b | TBD | Package imports: `kilo-docs` (G1), `kilo-jetbrains` (G3) | C | N1, N6a | `packages/kilo-docs`, `packages/kilo-jetbrains` |
 | N7 | TBD | Align the progress plan and sweep the issue bodies | C | — | `plans/kilo-opencode-v2-plan-progress.md`, test plans, GitHub |
 | N8 | TBD | Customer v2 store identity (under #14020) | G1 | N1 | `packages/kilo-cli` host/paths |
-| N9 | TBD | Capability handshake and extension v2 store/import switch (under #14016) | G2 | N8, #14387 | `packages/kilo-vscode` |
+| N9 | TBD | Capability handshake and extension v2 store/import switch (under #14016) | G2 | N8, #14387 | `packages/kilo-vscode`; server side of the handshake in `packages/kilo-cli` and `packages/schema/src/kilocode` (shared Server/Protocol files only as a counted patch) |
 | N10 | TBD | v1 retirement and storage consolidation | G | #14414-G3 | Branches, `kilo-cli` paths |
 | N11 | TBD | Gate acceptance run (tracker; children N11-G1/G2/G3): every gate-tagged test-plan scenario including "Implemented, E2E pending" rows, plus external-gated Gateway and `kilo cloud` verification where permitted; results with SHA | G1, G2, G3 | That gate's issues; N7 (test-plan gate tags) | Test plans, progress plan |
 | N12 | TBD | TUI picker inline preview and search, provider/integration dialog guidance and failure details, status/footer guidance and onboarding (under #14017) | G1 | N1 | `packages/tui`, `packages/kilo-cli/src/tui-plugin` (in series with #14375–#14379) |
