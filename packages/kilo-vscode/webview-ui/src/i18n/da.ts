@@ -1091,6 +1091,7 @@ export const dict = {
   "settings.agentBehaviour.mcpDetail.args": "Argumenter",
   "settings.agentBehaviour.mcpDetail.env": "Miljø",
   "settings.agentBehaviour.mcpSignIn.cancel": "Annuller login",
+  "settings.agentBehaviour.mcpRemoving": "Fjerner…",
   "settings.agentBehaviour.mcpResetAuth": "Nulstil login",
   "settings.agentBehaviour.mcpResetAuth.title": "Nulstil MCP-login",
   "settings.agentBehaviour.mcpResetAuth.confirm": 'Fjern det gemte login for "{{name}}"? Du skal logge ind igen.',

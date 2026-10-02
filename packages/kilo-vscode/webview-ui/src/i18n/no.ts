@@ -1091,6 +1091,7 @@ export const dict = {
   "settings.agentBehaviour.mcpDetail.args": "Argumenter",
   "settings.agentBehaviour.mcpDetail.env": "Miljø",
   "settings.agentBehaviour.mcpSignIn.cancel": "Avbryt innlogging",
+  "settings.agentBehaviour.mcpRemoving": "Fjerner…",
   "settings.agentBehaviour.mcpResetAuth": "Nullstill innlogging",
   "settings.agentBehaviour.mcpResetAuth.title": "Nullstill MCP-innlogging",
   "settings.agentBehaviour.mcpResetAuth.confirm":

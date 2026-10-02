@@ -256,6 +256,7 @@ export function mockSessionValue(overrides?: {
     connectMcp: noop,
     disconnectMcp: noop,
     mcpAuth: () => ({ needsAuth: [], busy: [] }),
+    mcpRemoving: () => [],
     signInMcp: noop,
     cancelMcpSignIn: noop,
     resetMcpAuth: noop,

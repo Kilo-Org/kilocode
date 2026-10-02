@@ -18,6 +18,7 @@ import type { InstallMarketplaceItemOptions, MarketplaceItem } from "./services/
 import { TelemetryProxy } from "./services/telemetry"
 import { TelemetryEventName } from "./services/telemetry/types"
 import { mcpAuth } from "./services/mcp-auth"
+import { mcpRemoval } from "./services/mcp-removal"
 import { notifySignInResult } from "./kilo-provider/mcp-oauth"
 
 interface MarketplaceMessage {
@@ -349,6 +350,9 @@ export class MarketplacePanelProvider implements vscode.Disposable {
   }
 
   private async remove(item: MarketplaceItem, scope: "project" | "global"): Promise<void> {
+    const directory = this.directory()
+    const bus = item.type === "mcp" ? mcpRemoval(this.connection) : undefined
+    bus?.emit({ directory, name: item.id, phase: "removing" })
     const result = await removeMarketplaceItem(
       this.marketplaceCtx,
       item,
@@ -357,6 +361,8 @@ export class MarketplacePanelProvider implements vscode.Disposable {
       this.directory(),
     )
     if (result.success) void vscode.window.showInformationMessage(`Successfully removed ${item.name}`)
+    if (result.success) bus?.emit({ directory, name: item.id, phase: "removed" })
+    bus?.emit({ directory, name: item.id, phase: "idle" })
     this.post({ type: "marketplaceRemoveResult", ...result })
   }
 

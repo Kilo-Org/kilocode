@@ -890,6 +890,7 @@ export const dict = {
   "settings.agentBehaviour.mcpDetail.args": "Argomenti",
   "settings.agentBehaviour.mcpDetail.env": "Ambiente",
   "settings.agentBehaviour.mcpSignIn.cancel": "Annulla accesso",
+  "settings.agentBehaviour.mcpRemoving": "Rimozione…",
   "settings.agentBehaviour.mcpResetAuth": "Reimposta accesso",
   "settings.agentBehaviour.mcpResetAuth.title": "Reimposta accesso MCP",
   "settings.agentBehaviour.mcpResetAuth.confirm":

@@ -1025,6 +1025,7 @@ export const dict = {
   "settings.agentBehaviour.mcpDetail.args": "Аргументи",
   "settings.agentBehaviour.mcpDetail.env": "Середовище",
   "settings.agentBehaviour.mcpSignIn.cancel": "Скасувати вхід",
+  "settings.agentBehaviour.mcpRemoving": "Видалення…",
   "settings.agentBehaviour.mcpResetAuth": "Скинути вхід",
   "settings.agentBehaviour.mcpResetAuth.title": "Скинути вхід MCP",
   "settings.agentBehaviour.mcpResetAuth.confirm":

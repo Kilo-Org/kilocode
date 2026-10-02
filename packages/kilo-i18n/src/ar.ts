@@ -47,7 +47,6 @@ export const dict = {
   "marketplace.install.about.plugin": "تضيف إضافة أدوات وتكاملات مخصصة إلى Kilo. تعمل الإضافات بصلاحيات كاملة.",
   "marketplace.install.plugin.warning":
     "تشغّل الإضافات التعليمات البرمجية بصلاحيات كاملة. يمكنها قراءة ملفاتك وتغييرها وتشغيل الأوامر والوصول إلى بيانات اعتمادك وشبكتك. لا تثبّت إلا الإضافات التي تثق بها.",
-  "marketplace.install.installedAt": "تم التثبيت في {{path}}",
   "marketplace.intro": "ثبّت وكلاء ومهارات وأدوات MCP وإضافات قابلة لإعادة الاستخدام لمشروع واحد أو لجميع المشاريع.",
   "marketplace.intro.learnMore": "حول Marketplace",
   "marketplace.install.prerequisites": "المتطلبات الأساسية",

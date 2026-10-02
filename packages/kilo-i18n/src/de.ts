@@ -52,7 +52,6 @@ export const dict = {
     "Ein Plugin fügt Kilo benutzerdefinierte Werkzeuge und Integrationen hinzu. Plugins werden mit vollständigen Berechtigungen ausgeführt.",
   "marketplace.install.plugin.warning":
     "Plugins führen Code mit vollständigen Berechtigungen aus. Sie können Ihre Dateien lesen und ändern, Befehle ausführen und auf Ihre Zugangsdaten und Ihr Netzwerk zugreifen. Installieren Sie nur Plugins, denen Sie vertrauen.",
-  "marketplace.install.installedAt": "Installiert unter {{path}}",
   "marketplace.intro":
     "Installieren Sie wiederverwendbare Agenten, Skills, MCP-Werkzeuge und Plugins für ein Projekt oder für alle Projekte.",
   "marketplace.intro.learnMore": "Über den Marketplace",

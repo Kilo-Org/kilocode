@@ -145,6 +145,7 @@ export interface SessionContextValue {
   // shared by Settings, the chat prompt's session-issues indicator, and the
   // Marketplace install modal.
   mcpAuth: Accessor<{ needsAuth: string[]; busy: string[] }>
+  mcpRemoving: Accessor<string[]>
   signInMcp: (name: string, notify?: boolean) => void
   cancelMcpSignIn: (name: string) => void
   resetMcpAuth: (name: string) => void

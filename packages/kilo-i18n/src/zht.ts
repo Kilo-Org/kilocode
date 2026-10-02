@@ -45,7 +45,6 @@ export const dict = {
   "marketplace.install.about.plugin": "外掛可為 Kilo 新增自訂工具和整合功能。外掛以完整權限執行。",
   "marketplace.install.plugin.warning":
     "外掛以完整權限執行程式碼。它們可以讀取和修改你的檔案、執行命令，以及存取你的憑證和網路。請僅安裝你信任的外掛。",
-  "marketplace.install.installedAt": "已安裝至 {{path}}",
   "marketplace.intro": "為一個專案或所有專案安裝可重複使用的智能體、技能、MCP 工具和外掛。",
   "marketplace.intro.learnMore": "關於 Marketplace",
   "marketplace.install.prerequisites": "先決條件",

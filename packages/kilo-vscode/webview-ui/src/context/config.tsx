@@ -23,6 +23,7 @@ import {
   deepMerge,
   mergeScopedConfig,
   pruneConfigSet,
+  removeMcpConfig,
   stripNulls,
   resolveConfig,
 } from "../utils/config-utils"
@@ -128,6 +129,18 @@ export const ConfigProvider: ParentComponent = (props) => {
   const unsubscribe = vscode.onMessage((message: ExtensionMessage) => {
     const patch = loadedSettings(message)
     if (patch) return mergeSettings(patch)
+    if (message.type === "mcpRemoved") {
+      setConfig((value) => removeMcpConfig(value, message.name))
+      setSaved((value) => removeMcpConfig(value, message.name))
+      setDraft((value) => removeMcpConfig(value as Config, message.name))
+      setGlobalConfig((value) => removeMcpConfig(value, message.name))
+      setSavedGlobal((value) => removeMcpConfig(value, message.name))
+      setGlobalDraft((value) => removeMcpConfig(value as Config, message.name))
+      setProjectConfig((value) => removeMcpConfig(value, message.name))
+      setSavedProject((value) => removeMcpConfig(value, message.name))
+      setProjectDraft((value) => removeMcpConfig(value as Config, message.name))
+      return
+    }
     if (message.type === "configLoaded") {
       // Skip if a save is in-flight — a stale configLoaded must not overwrite
       // the optimistically-updated state while the write is being confirmed.

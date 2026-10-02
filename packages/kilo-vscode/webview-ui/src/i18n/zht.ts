@@ -1002,6 +1002,7 @@ export const dict = {
   "settings.agentBehaviour.mcpDetail.args": "引數",
   "settings.agentBehaviour.mcpDetail.env": "環境",
   "settings.agentBehaviour.mcpSignIn.cancel": "取消登入",
+  "settings.agentBehaviour.mcpRemoving": "正在移除…",
   "settings.agentBehaviour.mcpResetAuth": "重設登入",
   "settings.agentBehaviour.mcpResetAuth.title": "重設 MCP 登入",
   "settings.agentBehaviour.mcpResetAuth.confirm": '要清除 "{{name}}" 的已儲存登入資訊嗎？您需要重新登入。',

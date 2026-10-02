@@ -1075,6 +1075,7 @@ export const dict = {
   "settings.agentBehaviour.mcpDetail.args": "อาร์กิวเมนต์",
   "settings.agentBehaviour.mcpDetail.env": "สภาพแวดล้อม",
   "settings.agentBehaviour.mcpSignIn.cancel": "ยกเลิกการเข้าสู่ระบบ",
+  "settings.agentBehaviour.mcpRemoving": "กำลังนำออก…",
   "settings.agentBehaviour.mcpResetAuth": "รีเซ็ตการเข้าสู่ระบบ",
   "settings.agentBehaviour.mcpResetAuth.title": "รีเซ็ตการเข้าสู่ระบบ MCP",
   "settings.agentBehaviour.mcpResetAuth.confirm":

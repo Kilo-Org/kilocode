@@ -1626,6 +1626,21 @@ export interface McpBundlesMessage {
   bundles: McpBundle[]
 }
 
+export interface McpRemovedMessage {
+  type: "mcpRemoved"
+  name: string
+}
+
+export interface McpRemovalStateMessage {
+  type: "mcpRemovalState"
+  name: string
+  removing: boolean
+}
+
+export interface AgentBehaviourInvalidatedMessage {
+  type: "agentBehaviourInvalidated"
+}
+
 // Continue in Worktree: progress updates (extension → webview)
 export interface ContinueInWorktreeProgressMessage {
   type: "continueInWorktreeProgress"
@@ -1931,6 +1946,9 @@ export type ExtensionMessage =
   | McpAuthStateMessage
   | McpAuthResultMessage
   | McpBundlesMessage
+  | McpRemovedMessage
+  | McpRemovalStateMessage
+  | AgentBehaviourInvalidatedMessage
   | ClearPendingPromptsMessage
   | ExtensionDataReadyMessage
   | TelemetryStateMessage

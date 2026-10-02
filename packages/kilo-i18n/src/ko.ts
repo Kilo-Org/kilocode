@@ -49,7 +49,6 @@ export const dict = {
     "플러그인은 Kilo에 사용자 정의 도구와 통합 기능을 추가합니다. 플러그인은 모든 권한으로 실행됩니다.",
   "marketplace.install.plugin.warning":
     "플러그인은 모든 권한으로 코드를 실행합니다. 사용자의 파일을 읽고 변경하고, 명령을 실행하며, 사용자의 인증 정보와 네트워크에 접근할 수 있습니다. 신뢰할 수 있는 플러그인만 설치하세요.",
-  "marketplace.install.installedAt": "{{path}}에 설치됨",
   "marketplace.intro":
     "재사용 가능한 에이전트, 스킬, MCP 도구 및 플러그인을 하나의 프로젝트 또는 모든 프로젝트에 설치하세요.",
   "marketplace.intro.learnMore": "Marketplace 정보",

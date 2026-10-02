@@ -86,6 +86,16 @@ export function resolveConfig(server: Config, draft: Partial<Config>, dirty: boo
   return server
 }
 
+/** Remove one MCP server from resolved, saved, or draft config state. */
+export function removeMcpConfig(config: Config, name: string): Config {
+  if (!config.mcp || !(name in config.mcp)) return config
+  const mcp = { ...config.mcp }
+  delete mcp[name]
+  const next: Config = { ...config, mcp }
+  if (Object.keys(mcp).length === 0) delete next.mcp
+  return next
+}
+
 /**
  * Plain-object config state machine — mirrors the SolidJS ConfigProvider
  * logic without signals so the message-handling behavior is unit-testable.
@@ -111,6 +121,13 @@ export class ConfigState {
     this.config = resolveConfig(server, this.draft, this.dirty)
     this.saved = server
     this.loading = false
+  }
+
+  removeMcp(name: string) {
+    this.config = removeMcpConfig(this.config, name)
+    this.saved = removeMcpConfig(this.saved, name)
+    this.draft = removeMcpConfig(this.draft as Config, name)
+    this.dirty = Object.keys(this.draft).length > 0
   }
 
   /** Handle an incoming configUpdated push from the extension. */

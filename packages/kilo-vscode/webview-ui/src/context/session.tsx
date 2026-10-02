@@ -2989,6 +2989,7 @@ export const SessionProvider: ParentComponent = (props) => {
     connectMcp: mcp.connect,
     disconnectMcp: mcp.disconnect,
     mcpAuth: mcp.state,
+    mcpRemoving: mcp.removing,
     signInMcp: mcp.signIn,
     cancelMcpSignIn: mcp.cancel,
     resetMcpAuth: mcp.reset,

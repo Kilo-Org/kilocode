@@ -1040,6 +1040,7 @@ export const dict = {
   "settings.agentBehaviour.mcpDetail.args": "参数",
   "settings.agentBehaviour.mcpDetail.env": "环境",
   "settings.agentBehaviour.mcpSignIn.cancel": "取消登录",
+  "settings.agentBehaviour.mcpRemoving": "正在移除…",
   "settings.agentBehaviour.mcpResetAuth": "重置登录",
   "settings.agentBehaviour.mcpResetAuth.title": "重置 MCP 登录",
   "settings.agentBehaviour.mcpResetAuth.confirm": '清除 "{{name}}" 的已保存登录信息吗？您需要重新登录。',

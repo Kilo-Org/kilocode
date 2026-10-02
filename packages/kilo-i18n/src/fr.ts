@@ -52,7 +52,6 @@ export const dict = {
     "Un plugin ajoute des outils et des intégrations personnalisés à Kilo. Les plugins s'exécutent avec toutes les autorisations.",
   "marketplace.install.plugin.warning":
     "Les plugins exécutent du code avec toutes les autorisations. Ils peuvent lire et modifier vos fichiers, exécuter des commandes et accéder à vos identifiants et à votre réseau. Installez uniquement des plugins auxquels vous faites confiance.",
-  "marketplace.install.installedAt": "Installé dans {{path}}",
   "marketplace.intro":
     "Installez des agents, des compétences, des outils MCP et des plugins réutilisables pour un projet ou pour tous vos projets.",
   "marketplace.intro.learnMore": "À propos du Marketplace",

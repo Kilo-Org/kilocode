@@ -50,7 +50,6 @@ export const dict = {
     "Et plugin tilføjer tilpassede værktøjer og integrationer til Kilo. Plugins kører med fulde tilladelser.",
   "marketplace.install.plugin.warning":
     "Plugins kører kode med fulde tilladelser. De kan læse og ændre dine filer, køre kommandoer og få adgang til dine legitimationsoplysninger og dit netværk. Installer kun plugins, du har tillid til.",
-  "marketplace.install.installedAt": "Installeret i {{path}}",
   "marketplace.intro":
     "Installer genanvendelige agenter, færdigheder, MCP-værktøjer og plugins til ét eller alle projekter.",
   "marketplace.intro.learnMore": "Om Marketplace",

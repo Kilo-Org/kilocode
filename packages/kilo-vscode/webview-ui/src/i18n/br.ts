@@ -1103,6 +1103,7 @@ export const dict = {
   "settings.agentBehaviour.mcpDetail.args": "Argumentos",
   "settings.agentBehaviour.mcpDetail.env": "Ambiente",
   "settings.agentBehaviour.mcpSignIn.cancel": "Nullañ ar c'hennaskañ",
+  "settings.agentBehaviour.mcpRemoving": "O tilemel…",
   "settings.agentBehaviour.mcpResetAuth": "Adderaouekaat ar c'hennaskañ",
   "settings.agentBehaviour.mcpResetAuth.title": "Adderaouekaat kennaskañ MCP",
   "settings.agentBehaviour.mcpResetAuth.confirm":

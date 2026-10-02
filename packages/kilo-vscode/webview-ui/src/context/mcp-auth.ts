@@ -20,6 +20,7 @@ export function createMcpAuth(deps: Deps) {
     undefined,
   )
   const [bundles, setBundles] = createSignal<McpBundle[]>([])
+  const [removing, setRemoving] = createSignal<string[]>([])
 
   // Connect/disconnect share one in-flight slot, so the UI can disable the
   // whole row while the backend reconciles. Sign-in tracks busy per server
@@ -37,6 +38,7 @@ export function createMcpAuth(deps: Deps) {
     state,
     result,
     bundles,
+    removing,
     connect: (name: string) => toggle("connectMcp", name),
     disconnect: (name: string) => toggle("disconnectMcp", name),
     remove: (name: string) => deps.post({ type: "removeMcp", name }),
@@ -66,6 +68,17 @@ export function createMcpAuth(deps: Deps) {
       }
       if (message.type === "mcpBundles") {
         setBundles(message.bundles)
+        return true
+      }
+      if (message.type === "mcpRemovalState") {
+        setRemoving((current) => {
+          if (message.removing) return current.includes(message.name) ? current : [...current, message.name]
+          return current.filter((name) => name !== message.name)
+        })
+        return true
+      }
+      if (message.type === "mcpRemoved") {
+        setRemoving((current) => current.filter((name) => name !== message.name))
         return true
       }
       return false

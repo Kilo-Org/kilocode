@@ -53,7 +53,6 @@ export const dict = {
     "Een plugin voegt aangepaste hulpmiddelen en integraties toe aan Kilo. Plugins worden uitgevoerd met volledige machtigingen.",
   "marketplace.install.plugin.warning":
     "Plugins voeren code uit met volledige machtigingen. Ze kunnen je bestanden lezen en wijzigen, opdrachten uitvoeren en toegang krijgen tot je inloggegevens en netwerk. Installeer alleen plugins die je vertrouwt.",
-  "marketplace.install.installedAt": "Geïnstalleerd in {{path}}",
   "marketplace.intro":
     "Installeer herbruikbare agenten, vaardigheden, MCP-hulpmiddelen en plugins voor één project of voor alle projecten.",
   "marketplace.intro.learnMore": "Over Marketplace",

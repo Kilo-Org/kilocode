@@ -1092,6 +1092,7 @@ export const dict = {
   "settings.agentBehaviour.mcpDetail.args": "Argumenti",
   "settings.agentBehaviour.mcpDetail.env": "Okruženje",
   "settings.agentBehaviour.mcpSignIn.cancel": "Otkaži prijavu",
+  "settings.agentBehaviour.mcpRemoving": "Uklanjanje…",
   "settings.agentBehaviour.mcpResetAuth": "Resetuj prijavu",
   "settings.agentBehaviour.mcpResetAuth.title": "Resetuj MCP prijavu",
   "settings.agentBehaviour.mcpResetAuth.confirm":

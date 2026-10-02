@@ -51,7 +51,6 @@ export const dict = {
     "Wtyczka dodaje niestandardowe narzędzia i integracje do Kilo. Wtyczki działają z pełnymi uprawnieniami.",
   "marketplace.install.plugin.warning":
     "Wtyczki wykonują kod z pełnymi uprawnieniami. Mogą odczytywać i zmieniać Twoje pliki, uruchamiać polecenia oraz uzyskiwać dostęp do Twoich danych uwierzytelniających i sieci. Instaluj tylko wtyczki, którym ufasz.",
-  "marketplace.install.installedAt": "Zainstalowano w {{path}}",
   "marketplace.intro":
     "Instaluj agentów, umiejętności, narzędzia MCP i wtyczki wielokrotnego użytku w jednym lub we wszystkich projektach.",
   "marketplace.intro.learnMore": "O Marketplace",

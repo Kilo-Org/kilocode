@@ -1010,6 +1010,7 @@ export const dict = {
   "settings.agentBehaviour.mcpDetail.args": "آرگومان‌ها",
   "settings.agentBehaviour.mcpDetail.env": "محیط",
   "settings.agentBehaviour.mcpSignIn.cancel": "لغو ورود",
+  "settings.agentBehaviour.mcpRemoving": "در حال حذف…",
   "settings.agentBehaviour.mcpResetAuth": "بازنشانی ورود",
   "settings.agentBehaviour.mcpResetAuth.title": "بازنشانی ورود MCP",
   "settings.agentBehaviour.mcpResetAuth.confirm": "ورود ذخیره‌شده برای «{{name}}» پاک شود؟ باید دوباره وارد شوید.",

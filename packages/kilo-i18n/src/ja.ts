@@ -49,7 +49,6 @@ export const dict = {
     "プラグインは、カスタムツールや連携機能をKiloに追加します。プラグインはすべての権限を持って実行されます。",
   "marketplace.install.plugin.warning":
     "プラグインはすべての権限を持ってコードを実行します。ファイルの読み取りや変更、コマンドの実行、認証情報やネットワークへのアクセスが可能です。信頼できるプラグインのみをインストールしてください。",
-  "marketplace.install.installedAt": "{{path}} にインストール済み",
   "marketplace.intro":
     "再利用可能なエージェント、スキル、MCPツール、プラグインを1つのプロジェクトまたはすべてのプロジェクトにインストールできます。",
   "marketplace.intro.learnMore": "Marketplaceについて",

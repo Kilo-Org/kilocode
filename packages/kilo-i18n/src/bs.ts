@@ -56,7 +56,6 @@ export const dict = {
     "Dodatak dodaje prilagođene alate i integracije u Kilo. Dodaci se izvršavaju sa svim dozvolama.",
   "marketplace.install.plugin.warning":
     "Dodaci izvršavaju kod sa svim dozvolama. Mogu čitati i mijenjati vaše datoteke, pokretati naredbe i pristupati vašim pristupnim podacima i mreži. Instalirajte samo dodatke kojima vjerujete.",
-  "marketplace.install.installedAt": "Instalirano u {{path}}",
   "marketplace.intro": "Instalirajte višekratne agente, vještine, MCP alate i dodatke za jedan ili sve projekte.",
   "marketplace.intro.learnMore": "O Marketplaceu",
   "marketplace.install.prerequisites": "Preduslovi",

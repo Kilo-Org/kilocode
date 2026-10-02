@@ -1092,6 +1092,7 @@ export const dict = {
   "settings.agentBehaviour.mcpDetail.args": "Argumenty",
   "settings.agentBehaviour.mcpDetail.env": "Środowisko",
   "settings.agentBehaviour.mcpSignIn.cancel": "Anuluj logowanie",
+  "settings.agentBehaviour.mcpRemoving": "Usuwanie…",
   "settings.agentBehaviour.mcpResetAuth": "Zresetuj logowanie",
   "settings.agentBehaviour.mcpResetAuth.title": "Zresetuj logowanie MCP",
   "settings.agentBehaviour.mcpResetAuth.confirm":

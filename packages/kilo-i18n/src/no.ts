@@ -51,7 +51,6 @@ export const dict = {
     "Et programtillegg legger til tilpassede verktøy og integrasjoner i Kilo. Programtillegg kjører med fulle tillatelser.",
   "marketplace.install.plugin.warning":
     "Programtillegg kjører kode med fulle tillatelser. De kan lese og endre filene dine, kjøre kommandoer og få tilgang til påloggingsopplysningene dine og nettverket ditt. Installer bare programtillegg du stoler på.",
-  "marketplace.install.installedAt": "Installert i {{path}}",
   "marketplace.intro":
     "Installer gjenbrukbare agenter, ferdigheter, MCP-verktøy og programtillegg for ett eller alle prosjekter.",
   "marketplace.intro.learnMore": "Om Marketplace",

@@ -51,7 +51,6 @@ export const dict = {
     "Um plugin adiciona ferramentas e integrações personalizadas ao Kilo. Os plugins são executados com permissões totais.",
   "marketplace.install.plugin.warning":
     "Os plugins executam código com permissões totais. Eles podem ler e alterar seus arquivos, executar comandos e acessar suas credenciais e sua rede. Instale apenas plugins em que você confia.",
-  "marketplace.install.installedAt": "Instalado em {{path}}",
   "marketplace.intro":
     "Instale agentes, habilidades, ferramentas MCP e plugins reutilizáveis em um projeto ou em todos os projetos.",
   "marketplace.intro.learnMore": "Sobre o Marketplace",

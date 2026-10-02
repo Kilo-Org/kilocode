@@ -109,6 +109,7 @@ import {
 } from "./kilo-provider/work-style"
 import * as McpOAuth from "./kilo-provider/mcp-oauth"
 import { mcpAuth } from "./services/mcp-auth"
+import { mcpRemoval } from "./services/mcp-removal"
 import { marketplaceBundles } from "./services/marketplace/bundles"
 import { retryable, backoff, MAX_RETRIES } from "./util/retry"
 import { hasGit } from "./kilo-provider/git-status"
@@ -523,6 +524,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private unsubscribeEvent: (() => void) | null = null
   private unsubscribeState: (() => void) | null = null
   private unsubscribeMcpAuth: (() => void) | null = null
+  private unsubscribeMcpRemoval: (() => void) | null = null
   private migrationCache: MigrationContext["migrationCache"] = new Map()
   private unsubscribeNotificationDismiss: (() => void) | null = null
   private unsubscribeAcknowledged: (() => void) | null = null
@@ -601,6 +603,14 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     })
     this.unsubscribeMcpAuth = mcpAuth(this.connectionService).onChange((dir) => {
       if (dir === this.getWorkspaceDirectory()) void this.fetchAndSendMcpAuthState()
+    })
+    this.unsubscribeMcpRemoval = mcpRemoval(this.connectionService).on((event) => {
+      if (!sameDirectory(event.directory, this.getWorkspaceDirectory())) return
+      if (event.phase === "removed") {
+        this.postMessage({ type: "mcpRemoved", name: event.name })
+        return
+      }
+      this.postMessage({ type: "mcpRemovalState", name: event.name, removing: event.phase === "removing" })
     })
     TelemetryProxy.getInstance().setProvider(this)
     this.latch = watchRestore({
@@ -3060,10 +3070,16 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   }
 
   private async handleRemoveMcp(name: string): Promise<void> {
+    const bus = mcpRemoval(this.connectionService)
+    const directory = this.getWorkspaceDirectory()
+    bus.emit({ directory, name, phase: "removing" })
     const removed = await removeMcp(this.removeConfigItemCtx, name)
     if (!removed) {
       console.error("[Kilo New] KiloProvider: Failed to remove MCP server:", name)
+    } else {
+      bus.emit({ directory, name, phase: "removed" })
     }
+    bus.emit({ directory, name, phase: "idle" })
   }
 
   private async refreshMcpStatus(): Promise<void> {
@@ -5507,7 +5523,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       const dir = typeof props?.directory === "string" ? props.directory : undefined
       if (dir) for (const sid of this.aborts.dispose(dir)) this.sessionStatusMap.set(sid, "idle")
       if (dir && !sameDirectory(dir, this.getWorkspaceDirectory())) return
-      void this.reloadAfterAuthChange()
+      void this.reloadAfterAuthChange().finally(() => this.postMessage({ type: "agentBehaviourInvalidated" }))
       return
     }
 
@@ -5515,7 +5531,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     // Fetch and push the updated config + refresh agents and providers so the
     // Settings panel and mode/model pickers reflect the change.
     if (event.type === "global.config.updated") {
-      void Promise.all([this.fetchAndSendConfigUpdated(), this.fetchAndSendAgents(), this.fetchAndSendProviders()])
+      void Promise.all([
+        this.fetchAndSendConfigUpdated(),
+        this.fetchAndSendAgents(),
+        this.fetchAndSendProviders(),
+      ]).finally(() => this.postMessage({ type: "agentBehaviourInvalidated" }))
       return
     }
 
@@ -6203,6 +6223,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.unsubscribeEvent?.()
     this.unsubscribeState?.()
     this.unsubscribeMcpAuth?.()
+    this.unsubscribeMcpRemoval?.()
     this.unsubscribeNotificationDismiss?.()
     this.unsubscribeLanguageChange?.()
     this.unsubscribeProfileChange?.()

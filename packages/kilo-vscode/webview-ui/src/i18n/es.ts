@@ -1105,6 +1105,7 @@ export const dict = {
   "settings.agentBehaviour.mcpDetail.args": "Argumentos",
   "settings.agentBehaviour.mcpDetail.env": "Entorno",
   "settings.agentBehaviour.mcpSignIn.cancel": "Cancelar inicio de sesión",
+  "settings.agentBehaviour.mcpRemoving": "Eliminando…",
   "settings.agentBehaviour.mcpResetAuth": "Restablecer inicio de sesión",
   "settings.agentBehaviour.mcpResetAuth.title": "Restablecer inicio de sesión de MCP",
   "settings.agentBehaviour.mcpResetAuth.confirm":

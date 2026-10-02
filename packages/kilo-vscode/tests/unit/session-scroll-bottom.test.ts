@@ -113,6 +113,7 @@ describe("the Storybook session mock satisfies what MessageList reads", () => {
 
   it("provides the MCP state and actions read by PromptInput", () => {
     expect(providers).toMatch(/mcpAuth: \(\) =>/)
+    expect(providers).toMatch(/mcpRemoving: \(\) =>/)
     expect(providers).toMatch(/mcpAuthResult: \(\) =>/)
     expect(providers).toMatch(/mcpBundles: \(\) =>/)
     expect(providers).toMatch(/signInMcp: noop/)

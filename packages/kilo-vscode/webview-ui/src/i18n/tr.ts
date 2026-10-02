@@ -1026,6 +1026,7 @@ export const dict = {
   "settings.agentBehaviour.mcpDetail.args": "Argümanlar",
   "settings.agentBehaviour.mcpDetail.env": "Ortam",
   "settings.agentBehaviour.mcpSignIn.cancel": "Oturum açmayı iptal et",
+  "settings.agentBehaviour.mcpRemoving": "Kaldırılıyor…",
   "settings.agentBehaviour.mcpResetAuth": "Oturumu sıfırla",
   "settings.agentBehaviour.mcpResetAuth.title": "MCP oturumunu sıfırla",
   "settings.agentBehaviour.mcpResetAuth.confirm":

@@ -1088,6 +1088,7 @@ export const dict = {
   "settings.agentBehaviour.mcpDetail.args": "Аргументы",
   "settings.agentBehaviour.mcpDetail.env": "Окружение",
   "settings.agentBehaviour.mcpSignIn.cancel": "Отменить вход",
+  "settings.agentBehaviour.mcpRemoving": "Удаление…",
   "settings.agentBehaviour.mcpResetAuth": "Сбросить вход",
   "settings.agentBehaviour.mcpResetAuth.title": "Сбросить вход MCP",
   "settings.agentBehaviour.mcpResetAuth.confirm":

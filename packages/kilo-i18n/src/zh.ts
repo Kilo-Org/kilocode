@@ -46,7 +46,6 @@ export const dict = {
   "marketplace.install.about.plugin": "插件可为 Kilo 添加自定义工具和集成功能。插件以完整权限运行。",
   "marketplace.install.plugin.warning":
     "插件以完整权限运行代码。它们可以读取和修改你的文件、运行命令，以及访问你的凭据和网络。请仅安装你信任的插件。",
-  "marketplace.install.installedAt": "已安装到 {{path}}",
   "marketplace.intro": "为一个项目或所有项目安装可复用的智能体、技能、MCP 工具和插件。",
   "marketplace.intro.learnMore": "关于 Marketplace",
   "marketplace.install.prerequisites": "先决条件",

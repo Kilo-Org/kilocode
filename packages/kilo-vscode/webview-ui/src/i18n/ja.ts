@@ -1086,6 +1086,7 @@ export const dict = {
   "settings.agentBehaviour.mcpDetail.args": "引数",
   "settings.agentBehaviour.mcpDetail.env": "環境",
   "settings.agentBehaviour.mcpSignIn.cancel": "サインインをキャンセル",
+  "settings.agentBehaviour.mcpRemoving": "削除中…",
   "settings.agentBehaviour.mcpResetAuth": "サインインをリセット",
   "settings.agentBehaviour.mcpResetAuth.title": "MCPサインインをリセット",
   "settings.agentBehaviour.mcpResetAuth.confirm":

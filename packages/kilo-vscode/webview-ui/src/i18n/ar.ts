@@ -1067,6 +1067,7 @@ export const dict = {
   "settings.agentBehaviour.mcpDetail.args": "الوسائط",
   "settings.agentBehaviour.mcpDetail.env": "البيئة",
   "settings.agentBehaviour.mcpSignIn.cancel": "إلغاء تسجيل الدخول",
+  "settings.agentBehaviour.mcpRemoving": "جارٍ الإزالة…",
   "settings.agentBehaviour.mcpResetAuth": "إعادة تعيين تسجيل الدخول",
   "settings.agentBehaviour.mcpResetAuth.title": "إعادة تعيين تسجيل دخول MCP",
   "settings.agentBehaviour.mcpResetAuth.confirm":

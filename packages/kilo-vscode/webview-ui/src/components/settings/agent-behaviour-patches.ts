@@ -1,4 +1,4 @@
-import type { AgentInfo, Config, ConfigCollections, McpConfig } from "../../types/messages"
+import type { AgentInfo, Config, ConfigCollections, McpConfig, McpStatusEntry } from "../../types/messages"
 
 export function removable(agent: AgentInfo | undefined): boolean {
   return !!agent && !agent.native && agent.source !== "organization"
@@ -29,6 +29,15 @@ export function pruneMcpExpanded(state: Record<string, boolean>, names: Set<stri
   const next = { ...state }
   for (const name of stale) delete next[name]
   return next
+}
+
+export function mcpStatusDetailVisible(status: McpStatusEntry["status"] | undefined): boolean {
+  return status !== "needs_auth"
+}
+
+export function mcpStatusError(status: McpStatusEntry | undefined): string | undefined {
+  if (status?.status === "failed" || status?.status === "needs_client_registration") return status.error
+  return undefined
 }
 
 export function selectedDefaultAgentValue(value: string): string | null {

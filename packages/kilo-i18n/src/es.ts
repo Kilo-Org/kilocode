@@ -51,7 +51,6 @@ export const dict = {
     "Un complemento añade herramientas e integraciones personalizadas a Kilo. Los complementos se ejecutan con todos los permisos.",
   "marketplace.install.plugin.warning":
     "Los complementos ejecutan código con todos los permisos. Pueden leer y modificar tus archivos, ejecutar comandos y acceder a tus credenciales y a tu red. Instala solo complementos en los que confíes.",
-  "marketplace.install.installedAt": "Instalado en {{path}}",
   "marketplace.intro":
     "Instala agentes, habilidades, herramientas MCP y complementos reutilizables en uno o todos los proyectos.",
   "marketplace.intro.learnMore": "Acerca de Marketplace",

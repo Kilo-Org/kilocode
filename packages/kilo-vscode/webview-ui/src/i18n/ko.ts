@@ -1079,6 +1079,7 @@ export const dict = {
   "settings.agentBehaviour.mcpDetail.args": "인수",
   "settings.agentBehaviour.mcpDetail.env": "환경",
   "settings.agentBehaviour.mcpSignIn.cancel": "로그인 취소",
+  "settings.agentBehaviour.mcpRemoving": "제거 중…",
   "settings.agentBehaviour.mcpResetAuth": "로그인 재설정",
   "settings.agentBehaviour.mcpResetAuth.title": "MCP 로그인 재설정",
   "settings.agentBehaviour.mcpResetAuth.confirm":

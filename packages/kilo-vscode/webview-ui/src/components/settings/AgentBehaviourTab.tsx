@@ -8,12 +8,13 @@ import { Dialog } from "@kilocode/kilo-ui/dialog"
 import { useDialog } from "@kilocode/kilo-ui/context/dialog"
 import { Switch } from "@kilocode/kilo-ui/switch"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
+import { Spinner } from "@kilocode/kilo-ui/spinner"
 
 import { useConfig } from "../../context/config"
 import { useSession } from "../../context/session"
 import { useLanguage } from "../../context/language"
 import { useVSCode } from "../../context/vscode"
-import type { AgentInfo, SkillInfo } from "../../types/messages"
+import type { AgentInfo, ExtensionMessage, SkillInfo } from "../../types/messages"
 import ModeEditView from "./ModeEditView"
 import ModeCreateView from "./ModeCreateView"
 import McpEditView from "./McpEditView"
@@ -21,6 +22,8 @@ import WorkflowsTab from "./agent-behaviour/WorkflowsTab"
 import {
   mcpConfigScope,
   mcpEnabledPatch,
+  mcpStatusDetailVisible,
+  mcpStatusError,
   pruneMcpExpanded,
   removable,
   selectedDefaultAgentValue,
@@ -71,11 +74,39 @@ const AgentBehaviourTab: Component<Props> = (props) => {
   const dialog = useDialog()
   const vscode = useVSCode()
   const [activeSubtab, setActiveSubtab] = createSignal<SubtabId>("agents")
+  const [stale, setStale] = createSignal<Set<SubtabId>>(new Set())
   const [newSkillPath, setNewSkillPath] = createSignal("")
   const [newSkillUrl, setNewSkillUrl] = createSignal("")
   const [newInstruction, setNewInstruction] = createSignal("")
   const [claudeCompat, setClaudeCompat] = createSignal(false)
   const browse = () => vscode.postMessage({ type: "openMarketplacePanel" })
+
+  const unsubscribeInvalidation = vscode.onMessage((message: ExtensionMessage) => {
+    if (message.type !== "agentBehaviourInvalidated") return
+    setStale(new Set(subtabs.map((tab) => tab.id)))
+  })
+  onCleanup(unsubscribeInvalidation)
+
+  createEffect(() => {
+    const tab = activeSubtab()
+    if (!stale().has(tab)) return
+    vscode.postMessage({ type: "requestConfig" })
+    if (tab === "agents") vscode.postMessage({ type: "requestAgents" })
+    if (tab === "mcpServers") {
+      vscode.postMessage({ type: "requestMcpStatus" })
+      session.refreshMcpBundles()
+    }
+    if (tab === "skills") {
+      session.refreshSkills()
+      session.refreshMcpBundles()
+    }
+    if (tab === "workflows") vscode.postMessage({ type: "requestCommands" })
+    setStale((current) => {
+      const next = new Set(current)
+      next.delete(tab)
+      return next
+    })
+  })
 
   // MCP row expand/collapse, lifted out of renderMcpSubtab() so a deep-linked
   // focus request (from the prompt's "Open in Settings" action) can expand
@@ -676,6 +707,7 @@ const AgentBehaviourTab: Component<Props> = (props) => {
     const isConnected = (name: string) => session.mcpStatus()[name]?.status === "connected"
     const needsAuth = (name: string) => session.mcpStatus()[name]?.status === "needs_auth"
     const isSigningIn = (name: string) => session.mcpAuth().busy.includes(name)
+    const isRemoving = (name: string) => session.mcpRemoving().includes(name)
 
     if (editingMcp()) {
       return (
@@ -724,13 +756,8 @@ const AgentBehaviourTab: Component<Props> = (props) => {
               {([name, mcp], index) => {
                 const open = () => expanded()[name] ?? false
                 const env = () => Object.entries(mcp.environment ?? mcp.env ?? {})
-                const error = () => {
-                  const s = session.mcpStatus()[name]
-                  if (s?.status === "failed") return s.error
-                  if (s?.status === "needs_client_registration") return s.error
-                  if (s?.status === "needs_auth" && "error" in s && typeof s.error === "string") return s.error
-                  return undefined
-                }
+                const status = () => session.mcpStatus()[name]
+                const error = () => mcpStatusError(status())
                 return (
                   <div
                     ref={(el) => mcpRowRefs.set(name, el)}
@@ -770,59 +797,75 @@ const AgentBehaviourTab: Component<Props> = (props) => {
                           }}
                         />
                         <div style={{ "font-weight": "500" }}>{name}</div>
-                        <Show
-                          when={error()}
-                          fallback={
-                            <span
-                              style={{
-                                "font-size": "var(--kilo-font-size-10)",
-                                color: "var(--text-weak-base, var(--vscode-descriptionForeground))",
-                              }}
-                            >
-                              {statusLabel(name) || (mcp.url ? "remote" : "stdio")}
-                            </span>
-                          }
-                        >
-                          <Tooltip
-                            value={
-                              <>
-                                {statusLabel(name)}
-                                <br />
-                                {error()}
-                              </>
+                        <Show when={mcpStatusDetailVisible(status()?.status)}>
+                          <Show
+                            when={error()}
+                            fallback={
+                              <span
+                                style={{
+                                  "font-size": "var(--kilo-font-size-10)",
+                                  color: "var(--text-weak-base, var(--vscode-descriptionForeground))",
+                                }}
+                              >
+                                {statusLabel(name) || (mcp.url ? "remote" : "stdio")}
+                              </span>
                             }
-                            placement="top"
                           >
-                            <span
-                              style={{
-                                "font-size": "var(--kilo-font-size-10)",
-                                color: "var(--text-weak-base, var(--vscode-descriptionForeground))",
-                                "text-decoration": "underline dotted",
-                              }}
+                            <Tooltip
+                              value={
+                                <>
+                                  {statusLabel(name)}
+                                  <br />
+                                  {error()}
+                                </>
+                              }
+                              placement="top"
                             >
-                              {statusLabel(name)}
-                            </span>
-                          </Tooltip>
+                              <span
+                                style={{
+                                  "font-size": "var(--kilo-font-size-10)",
+                                  color: "var(--text-weak-base, var(--vscode-descriptionForeground))",
+                                  "text-decoration": "underline dotted",
+                                }}
+                              >
+                                {statusLabel(name)}
+                              </span>
+                            </Tooltip>
+                          </Show>
                         </Show>
                       </div>
                       <div style={{ display: "flex", gap: "4px", "align-items": "center" }}>
-                        <Show when={needsAuth(name)}>
+                        <Show when={isRemoving(name)}>
+                          <div
+                            style={{
+                              display: "flex",
+                              "align-items": "center",
+                              gap: "6px",
+                              color: "var(--text-weak-base, var(--vscode-descriptionForeground))",
+                              "font-size": "var(--kilo-font-size-12)",
+                            }}
+                          >
+                            <Spinner />
+                            <span>{language.t("settings.agentBehaviour.mcpRemoving")}</span>
+                          </div>
+                        </Show>
+                        <Show when={needsAuth(name) && !isRemoving(name)}>
                           <div onClick={(e: MouseEvent) => e.stopPropagation()}>
                             <Show
                               when={isSigningIn(name)}
                               fallback={
-                                <Button variant="secondary" size="small" onClick={() => session.signInMcp(name)}>
+                                <Button variant="primary" size="small" onClick={() => session.signInMcp(name)}>
                                   {language.t("common.signIn")}
                                 </Button>
                               }
                             >
-                              <Button variant="secondary" size="small" onClick={() => session.cancelMcpSignIn(name)}>
+                              <Button variant="ghost" size="small" onClick={() => session.cancelMcpSignIn(name)}>
                                 {language.t("settings.agentBehaviour.mcpSignIn.cancel")}
                               </Button>
                             </Show>
                           </div>
                         </Show>
-                        <Show when={!needsAuth(name)}>
+                        <Show when={!needsAuth(name) && !isRemoving(name)}>
                           <div onClick={(e: MouseEvent) => e.stopPropagation()}>
                             <Switch
                               checked={isConnected(name)}
@@ -845,7 +888,13 @@ const AgentBehaviourTab: Component<Props> = (props) => {
                             </Switch>
                           </div>
                         </Show>
-                        <Show when={isConnected(name) && (mcp.type ?? (mcp.url ? "remote" : "local")) === "remote"}>
+                        <Show
+                          when={
+                            !isRemoving(name) &&
+                            isConnected(name) &&
+                            (mcp.type ?? (mcp.url ? "remote" : "local")) === "remote"
+                          }
+                        >
                           <div onClick={(e: MouseEvent) => e.stopPropagation()}>
                             <Button variant="ghost" size="small" onClick={() => confirmResetMcpAuth(name)}>
                               {language.t("settings.agentBehaviour.mcpResetAuth")}
@@ -856,6 +905,7 @@ const AgentBehaviourTab: Component<Props> = (props) => {
                           size="small"
                           variant="ghost"
                           icon="close"
+                          disabled={isRemoving(name)}
                           onClick={(e: MouseEvent) => {
                             e.stopPropagation()
                             confirmRemoveMcp(name)
@@ -865,6 +915,7 @@ const AgentBehaviourTab: Component<Props> = (props) => {
                           size="small"
                           variant="ghost"
                           icon="chevron-right"
+                          disabled={isRemoving(name)}
                           onClick={(e: MouseEvent) => {
                             e.stopPropagation()
                             setEditingMcp(name)

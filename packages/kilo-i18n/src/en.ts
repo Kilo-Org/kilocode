@@ -52,7 +52,6 @@ export const dict = {
     "Project files may be committed to version control. Do not store secrets here unless the configuration references an environment variable.",
   "marketplace.install.learnMore": "Learn how Marketplace installs work",
   "marketplace.install.learnMcp": "Learn more about MCP",
-  "marketplace.install.installedAt": "Installed to {{path}}",
   "marketplace.intro": "Install reusable agents, skills, MCP tools, and plugins for one project or every project.",
   "marketplace.intro.learnMore": "About Marketplace",
   "marketplace.install.prerequisites": "Prerequisites",

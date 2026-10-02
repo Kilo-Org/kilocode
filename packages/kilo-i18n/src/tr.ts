@@ -51,7 +51,6 @@ export const dict = {
     "Bir eklenti, Kilo'ya özel araçlar ve entegrasyonlar ekler. Eklentiler tam izinlerle çalışır.",
   "marketplace.install.plugin.warning":
     "Eklentiler tam izinlerle kod çalıştırır. Dosyalarınızı okuyup değiştirebilir, komut çalıştırabilir ve kimlik bilgilerinize ve ağınıza erişebilirler. Yalnızca güvendiğiniz eklentileri yükleyin.",
-  "marketplace.install.installedAt": "{{path}} konumuna yüklendi",
   "marketplace.intro":
     "Yeniden kullanılabilir ajanları, yetenekleri, MCP araçlarını ve eklentileri bir proje veya tüm projeler için yükleyin.",
   "marketplace.intro.learnMore": "Marketplace hakkında",
