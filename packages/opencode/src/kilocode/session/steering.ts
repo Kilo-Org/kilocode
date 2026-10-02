@@ -100,6 +100,8 @@ export const INTERRUPTED = "The user interrupted this subagent before it finishe
 // Result budgets: one steer, and all steers together; the most recent steers are kept.
 const STEER = 2048
 const TOTAL = 6144
+// Anything a model could read as the block's closing tag, in any case or spacing.
+const CLOSE = /<\s*\/\s*user_steering/gi
 
 /** Task result with the user's direction to the subagent ahead of its final response; a paused task says so first. */
 export function annotate(input: { paused: boolean; steers: ReadonlyArray<string>; text: string }) {
@@ -107,7 +109,7 @@ export function annotate(input: { paused: boolean; steers: ReadonlyArray<string>
   let size = 0
   for (const steer of input.steers.toReversed()) {
     // a steer cannot close its own block early
-    const value = BoardStore.excerpt(steer, STEER).replaceAll("</user_steering", "<\\/user_steering")
+    const value = BoardStore.excerpt(steer, STEER).replace(CLOSE, "<\\/user_steering")
     const block = `<user_steering>\n${value}\n</user_steering>`
     size += Buffer.byteLength(block)
     if (size > TOTAL) break

@@ -28,6 +28,9 @@ export const NOTICE =
 type Entry = { done: Deferred.Deferred<void>; notice: Effect.Effect<void> }
 
 const pauses = new Map<string, Entry>()
+// Settling task runs by child. A resume that arrives while a run is between its interrupted check
+// and registering its pause is marked here, so the pause it was meant for does not wait forever.
+const watching = new Map<string, { missed: boolean }>()
 
 export function paused(id: string) {
   return pauses.has(id)
@@ -37,7 +40,11 @@ export function paused(id: string) {
 export const resume = (id: string) =>
   Effect.suspend(() => {
     const entry = pauses.get(id)
-    if (!entry) return Effect.succeed(false)
+    if (!entry) {
+      const watch = watching.get(id)
+      if (watch) watch.missed = true
+      return Effect.succeed(false)
+    }
     pauses.delete(id)
     return Deferred.succeed(entry.done, undefined)
   })
@@ -127,6 +134,12 @@ export const settle = Effect.fn("KiloTaskPause.settle")(function* (input: {
       Effect.gen(function* () {
         const entry = { done: yield* Deferred.make<void>(), notice: notice(messageID) }
         pauses.set(input.child, entry)
+        // a prompt admitted after the check already resumed this pause: do not wait for another
+        if (watch.missed) {
+          pauses.delete(input.child)
+          yield* Deferred.succeed(entry.done, undefined)
+          return entry
+        }
         yield* publish
         yield* entry.notice
         return entry
@@ -140,18 +153,31 @@ export const settle = Effect.fn("KiloTaskPause.settle")(function* (input: {
     )
 
   // `paused` reports whether the task paused at any point, so its result can say the user redirected it.
-  let state = yield* check
-  let held = false
-  while (true) {
-    if (!state.interrupted) {
-      yield* input.drain.wait(input.child)
-      state = yield* check
-      if (!state.interrupted) return { message: state.message, paused: held }
+  // `missed` is cleared right before each check: a prompt admitted earlier is awaited by the drain
+  // wait, and one admitted after it either finds the pause or is caught by `hold`.
+  const watch = { missed: false }
+  watching.set(input.child, watch)
+  return yield* Effect.gen(function* () {
+    let state = yield* check
+    let held = false
+    while (true) {
+      if (!state.interrupted) {
+        yield* input.drain.wait(input.child)
+        watch.missed = false
+        state = yield* check
+        if (!state.interrupted) return { message: state.message, paused: held }
+      }
+      held = true
+      yield* hold(state.message.info.id)
+      state = { message: state.message, interrupted: false }
     }
-    held = true
-    yield* hold(state.message.info.id)
-    state = { message: state.message, interrupted: false }
-  }
+  }).pipe(
+    Effect.ensuring(
+      Effect.sync(() => {
+        if (watching.get(input.child) === watch) watching.delete(input.child)
+      }),
+    ),
+  )
 })
 
 export * as KiloTaskPause from "./task-pause"

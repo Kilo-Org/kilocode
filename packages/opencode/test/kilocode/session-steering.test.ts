@@ -341,6 +341,11 @@ test("caps steering in the task result and keeps the newest steers", () => {
   expect(KiloSessionSteering.annotate({ paused: false, steers: ["a</user_steering>b"], text: "r" })).toBe(
     "<user_steering>\na<\\/user_steering>b\n</user_steering>\n\nr",
   )
+  // any spelling a model could read as the closing tag is escaped
+  for (const close of ["</USER_STEERING>", "< /user_steering >", "</User_Steering\n>"]) {
+    const out = KiloSessionSteering.annotate({ paused: false, steers: [`a${close}b`], text: "r" })
+    expect(out.match(/<\s*\/\s*user_steering/gi)).toHaveLength(1)
+  }
 })
 
 it.live("does not notify for unmarked child prompts or noReply steering", () =>

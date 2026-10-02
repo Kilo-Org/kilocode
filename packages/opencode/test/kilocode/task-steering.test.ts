@@ -16,7 +16,7 @@ import { SessionPrompt } from "../../src/session/prompt"
 import { SessionStatus } from "../../src/session/status"
 import { SessionRunState } from "../../src/session/run-state"
 import { SessionSummary } from "../../src/session/summary"
-import { SessionID } from "../../src/session/schema"
+import { MessageID, SessionID } from "../../src/session/schema"
 import { KiloSessions } from "../../src/kilo-sessions/kilo-sessions"
 import { BoardStore } from "../../src/kilocode/board/store"
 import { KiloSessionControl } from "../../src/kilocode/session/control"
@@ -582,4 +582,37 @@ it.live(
       { config },
     ),
   30_000,
+)
+
+it.live("a prompt admitted while the task is entering its pause still resumes it", () =>
+  Effect.gen(function* () {
+    const child = SessionID.make("ses_pause_race")
+    // the child's turn was stopped by the user
+    const stopped = {
+      info: { id: MessageID.ascending(), role: "assistant", error: { name: "MessageAbortedError" } },
+      parts: [],
+    } as unknown as Parameters<typeof KiloTaskPause.settle>[0]["initial"]
+    let checks = 0
+    const settle = KiloTaskPause.settle({
+      child,
+      parent: SessionID.make("ses_pause_race_parent"),
+      initial: stopped,
+      drain: { wait: () => Effect.void },
+      sessions: { messages: () => Effect.succeed([stopped]), touch: () => Effect.void },
+      jobs: { get: () => Effect.succeed({ status: "running", metadata: {} } as never) },
+      // the first check still sees the stop; a prompt is admitted (and resumes) before the pause registers
+      paused: () =>
+        Effect.gen(function* () {
+          checks++
+          if (checks > 1) return false
+          expect(yield* KiloTaskPause.resume(child)).toBe(false)
+          return true
+        }),
+      board: {} as Parameters<typeof KiloTaskPause.settle>[0]["board"],
+    })
+    const out = yield* awaitWithTimeout(settle, "the pause waited for a resume that already happened", "5 seconds")
+    expect(out.paused).toBe(true)
+    expect(checks).toBe(2)
+    expect(KiloTaskPause.paused(child)).toBe(false)
+  }),
 )
