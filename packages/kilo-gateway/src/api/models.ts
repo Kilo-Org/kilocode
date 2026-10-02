@@ -120,7 +120,8 @@ export async function fetchKiloModels(options?: {
   const id = createHash("sha256")
     .update(JSON.stringify([options?.baseURL, options?.kilocodeOrganizationId, options?.kilocodeToken]))
     .digest("hex")
-  const delays = options?.retryDelays ?? MODELS_RETRY_DELAYS_MS
+  // With a cached catalog to fall back on, fail fast instead of waiting on retries.
+  const delays = lastGood.has(id) ? [] : (options?.retryDelays ?? MODELS_RETRY_DELAYS_MS)
   const raw = await fetchWithRetry(options, delays)
   if (raw.error) {
     const last = lastGood.get(id)

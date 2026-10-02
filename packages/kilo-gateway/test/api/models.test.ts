@@ -516,7 +516,7 @@ test("fetchKiloModels retries transient failures and keeps the last known good c
 
     mode = "flaky"
     hits = 0
-    const retried = await fetchKiloModels(opts)
+    const retried = await fetchKiloModels({ ...opts, kilocodeToken: "tok-retry" })
     expect(retried.error).toBeUndefined()
     expect(hits).toBe(2)
 
@@ -524,7 +524,7 @@ test("fetchKiloModels retries transient failures and keeps the last known good c
     mode = "down"
     hits = 0
     const stale = await fetchKiloModels(opts)
-    expect(hits).toBe(2)
+    expect(hits).toBe(1) // cached catalog available: no retries
     expect(stale.error).toBeUndefined()
     expect(Object.keys(stale.models)).toEqual(["test/model-a"])
     expect(stale.models).not.toBe(first.models)
