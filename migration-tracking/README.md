@@ -7,7 +7,7 @@ Planning, progress, validation, and source-parity documentation for the migratio
 ```text
 migration-tracking/
 ├── README.md
-├── plans/             # Public progress plan and detailed working history
+├── plans/             # Execution plan, public progress plan and milestone history
 ├── test-plans/        # Test strategy, runtime checks, and UI scenarios
 ├── marker-audit/      # Source-change inventory and v1-to-v2 assessment
 └── technical-notes/   # Supporting design, parity, and validation material
@@ -18,8 +18,9 @@ migration-tracking/
 
 ## Plans
 
-- [Plan and progress](plans/kilo-opencode-v2-plan-progress.md): the public-facing phased plan, expanded capability inventory, current status, and remaining acceptance requirements. Start here for an overview.
-- [Working log](plans/kilo-opencode-v2-working-log.md): the detailed implementation history, decisions, checkpoints, validation results, and blockers. Historical entries describe their own checkpoints and may be superseded by later entries.
+- [Execution plan](plans/kilo-opencode-v2-execution-plan.md): the index for finishing the migration: decisions, sequencing, gates (G1 CLI/TUI, G2 VS Code, G3 JetBrains), and the issue register. It changes only when a decision changes. Start here for how the remaining work is organized.
+- [Plan and progress](plans/kilo-opencode-v2-plan-progress.md): the public-facing capability inventory, live status per row, and remaining acceptance requirements. Start here for an overview of current status. Its phase table and status line predate the execution plan until the N7 alignment lands.
+- [Working log](plans/kilo-opencode-v2-working-log.md): the migration's milestone history. Under the execution plan, new entries are limited to milestones (upstream tag merges, delta sweeps, gate go/no-go decisions, decision changes, notable incidents) and are written by the coordinator only. Earlier entries hold the detailed implementation history; they describe their own checkpoints and may be superseded by later entries.
 
 The working log retains internal coordination references and machine-local paths. It needs editorial review before publication; it is not the public progress summary.
 
@@ -56,4 +57,4 @@ This directory was assembled by copying existing files. The originals under root
 
 The public progress plan was prepared for external readers. The working log, technical notes, test plans, and audit documents retain their original content and need publication review for internal references, local paths, and outdated statements. Relative links and script paths inherited from the original locations may also need adjustment before the copies become the maintained versions.
 
-When updating this collection, keep capability progress in the public plan, chronological detail in the working log, test execution status in the test plans, and file-level mapping in the marker audit. Preserve the distinction between implemented behavior, source-reviewed equivalence, and verified end-to-end acceptance.
+When updating this collection, keep decisions and sequencing in the execution plan, capability progress in the public plan, milestones in the working log, per-change evidence in the PR and its issue, test execution status in the test plans, and file-level mapping in the marker audit. Preserve the distinction between implemented behavior, source-reviewed equivalence, and verified end-to-end acceptance.
