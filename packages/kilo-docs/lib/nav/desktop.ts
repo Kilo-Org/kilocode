@@ -19,13 +19,16 @@ export const DesktopNav: NavSection[] = [
       { href: "/desktop/features/terminal", children: "Terminal" },
       { href: "/desktop/features/git", children: "Git integration" },
       { href: "/desktop/features/local-inference", children: "Local inference" },
-      { href: "/desktop/features/environments", children: "Environments" },
+      { href: "/desktop/features/environments", children: "Conda environments" },
       { href: "/desktop/features/files", children: "Files" },
     ],
   },
   {
-    title: "Configuration",
-    links: [{ href: "/desktop/settings", children: "Settings" }],
+    title: "Settings",
+    links: [
+      { href: "/desktop/settings/general", children: "General settings" },
+      { href: "/desktop/settings/ai", children: "AI settings" },
+    ],
   },
   {
     title: "Help",

@@ -5,10 +5,17 @@ description: "Run models on your own machine with the local model server in Kilo
 
 # Local inference
 
-<!-- TODO: Expand on the Model Catalog -- what it is, where models come from, what "download"/import means, supported formats (e.g. GGUF), and how catalog models differ from hosted providers. Decide whether this lives here or in Settings > Local model server. -->
+Run models on your own machine through a managed local model server, so you can work with a model without sending your prompts to a hosted provider.
 
-Run models on your own machine through a managed local model server. From **Local Model Server** settings you can enable the server, browse a downloadable model catalog, import GGUF files, and manage installed models. Local models register with the Kilo harness so they appear in the chat model selector alongside hosted providers.
-
-{% callout type="note" %}
-Browsing the downloadable model catalog requires an Anaconda account sign-in. See [Settings](/docs/desktop/settings#accounts-and-authentication).
+{% callout type="info" %}
+The local model server requires a [Kilo account](/docs/desktop/settings/ai#ai-providers). Sign in to use it.
 {% /callout %}
+
+## Set up a local model
+
+Sign in, turn the server on, and import a model from a GGUF file from the [Local Model Server](/docs/desktop/settings/ai#local-model-server) settings. That section covers the full set of server and per-model options.
+
+## Pick it in chat
+
+To use an imported model in a chat, open the model picker, then select {% svgIcon src="/docs/img/desktop/server.svg" /%} **Local Model Server**. Your imported models appear there. Choose one and use it like any other model. 
+

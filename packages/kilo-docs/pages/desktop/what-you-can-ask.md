@@ -9,7 +9,7 @@ Kilo Desktop's agent works across the tools in your workspace. Describe what you
 
 | What you want | Example prompt | Capability |
 |---|---|---|
-| Analyze data interactively | "Load `sales.csv` and plot monthly revenue in a notebook." | [Notebooks](/docs/desktop/features/notebooks) |
+| Analyze data interactively | "Load @sales.csv and plot monthly revenue in a notebook." | [Notebooks](/docs/desktop/features/notebooks) |
 | Look something up on the web | "Open the pandas docs for `groupby` next to this chat." | [In-app browser](/docs/desktop/features/browser) |
 | Run a command | "Run the test suite and show me the failures." | [Terminal](/docs/desktop/features/terminal) |
 | Review and manage changes | "Show me my uncommitted changes and create a branch for this work." | [Git integration](/docs/desktop/features/git) |
@@ -22,4 +22,4 @@ Kilo Desktop's agent works across the tools in your workspace. Describe what you
 
 - Reference workspace files directly with `@` in the chat to point the agent at a specific file.
 - Type `/` in the chat to run slash commands for common actions like starting a new session or switching agents. See [slash commands](/docs/code-with-ai/platforms/cli#interactive-slash-commands).
-- Keep each chat scoped to one workspace so the agent's tools operate on the right folder. Use the **Select workspace** control in the chat to choose the folder you want the agent to work in -- its file, terminal, and git tools all run there.
+- Keep each chat scoped to one workspace so the agent's tools operate on the right folder. Use the **Select workspace** control in the chat to choose the folder you want the agent to work in — its file, terminal, and git tools all run there.
