@@ -1,6 +1,7 @@
 import { createMemo } from "solid-js"
 import { useTuiConfig } from "../config"
 import { useExit } from "../context/exit"
+import { usePromptRef } from "../context/prompt"
 import { useRouteData } from "../context/route"
 import { useSDK } from "../context/sdk"
 import { useSync } from "../context/sync"
@@ -8,13 +9,22 @@ import { KILO_BASE_MODE, useBindings } from "../keymap"
 import { useToast } from "../ui/toast"
 import { running } from "../util/session"
 import { createDoublePress } from "./double-press"
+import { KiloSteer } from "./steer"
+
+// Bare-arrow parent/sibling navigation. The session route no longer binds these: while a steer is
+// typed they must reach the prompt, and the route's layer would outrank the prompt's textarea.
+const NAV = ["session.parent", "session.child.next", "session.child.previous"] as const
 
 /**
- * Subagent-view keys: double Esc stops this subagent, and the configured exit keys need a second
- * press. Call it from a component that is mounted only for subagent sessions (the subagent footer).
+ * Subagent-view keys: double Esc stops this subagent, the configured exit keys need a second
+ * press, and the arrows navigate to the parent and siblings. Navigation and exit act on the view
+ * only while the steering prompt is unfocused or empty, so a typed steer keeps arrow, ctrl+c
+ * (clear) and ctrl+d (delete) editing. Call it from a component that is mounted only for subagent
+ * sessions (the subagent footer).
  */
 export function useSubagentKeys() {
   const route = useRouteData("session")
+  const prompt = usePromptRef()
   const sync = useSync()
   const sdk = useSDK()
   const toast = useToast()
@@ -55,9 +65,18 @@ export function useSubagentKeys() {
     bindings: tuiConfig.keybinds.get("subagent.interrupt"),
   }))
 
+  // Priority 1 also outranks prompt history, so up on an empty prompt goes to the parent.
   useBindings(() => ({
     mode: KILO_BASE_MODE,
     priority: 1,
+    enabled: () => KiloSteer.idle(prompt.current),
+    bindings: tuiConfig.keybinds.gather("subagent.nav", NAV),
+  }))
+
+  useBindings(() => ({
+    mode: KILO_BASE_MODE,
+    priority: 1,
+    enabled: () => KiloSteer.idle(prompt.current),
     bindings: tuiConfig.keybinds.get("app.exit").map((binding) => ({
       ...binding,
       cmd: () => {

@@ -70,11 +70,18 @@ const reply = {
   parts: [],
 }
 
-async function mount(root: string, width = 100, route = child.id) {
+async function mount(
+  root: string,
+  width = 100,
+  opts: { route?: string; agents?: object[]; config?: Parameters<typeof createTuiResolvedConfig>[0] } = {},
+) {
+  const route = opts.route ?? child.id
+  const agents = opts.agents ?? []
   await Bun.write(`${root}/kv.json`, JSON.stringify({ animations_enabled: false, sidebar: "hide", vim_enabled: false }))
   const aborts: URL[] = []
   const exits: unknown[] = []
   const calls = createFetch((url) => {
+    if (url.pathname === "/agent") return json(agents)
     if (url.pathname === "/session") return json([parent, child])
     if (url.pathname === `/session/${child.id}`) return json(child)
     if (url.pathname === `/session/${parent.id}`) return json(parent)
@@ -89,7 +96,7 @@ async function mount(root: string, width = 100, route = child.id) {
     if (url.pathname.startsWith("/background-process/")) return json(true)
     return undefined
   })
-  const config = createTuiResolvedConfig()
+  const config = createTuiResolvedConfig(opts.config)
   const refs: { sync?: ReturnType<typeof useSync>; prompt?: ReturnType<typeof usePromptRef> } = {}
 
   function Ready() {
@@ -199,6 +206,7 @@ async function mount(root: string, width = 100, route = child.id) {
       aborts,
       exits,
       frame,
+      spans: () => app.captureSpans(),
       async press(sequence: string) {
         app.renderer.stdin.emit("data", Buffer.from(sequence))
         // a lone ESC is disambiguated from escape sequences after a short delay
@@ -253,11 +261,12 @@ for (const width of [80, 120]) {
   test(`footer stays on one row at ${width} columns in every key-hint state`, async () => {
     await using tmp = await tmpdir()
     using scene = await mount(tmp.path, width)
+    // footer content only: the steering prompt below it also draws "┃" rows with text
     const rows = () =>
       scene
         .frame()
         .split("\n")
-        .filter((row) => row.includes("┃") && row.trim() !== "┃")
+        .filter((row) => /General \(1 of 1\)|Interrupt esc|again to exit|Parent up|Prev left|Next right/.test(row))
     const states = [] as string[][]
     states.push(rows())
     await scene.press("\x1b")
@@ -272,9 +281,104 @@ for (const width of [80, 120]) {
   })
 }
 
+// The subagent view also mounts the steering prompt: its keys must coexist with the footer's.
+// The prompt keeps an unmounted draft for its next mount, so each test clears what it typed.
+test("the steering prompt names the subagent it steers instead of the parent's agent", async () => {
+  await using tmp = await tmpdir()
+  using scene = await mount(tmp.path)
+  expect(scene.frame()).toContain("Steer the General subagent...")
+  expect(scene.frame()).toContain("Steering General")
+})
+
+test("running subagent view shows the steering prompt without a second interrupt hint", async () => {
+  await using tmp = await tmpdir()
+  using scene = await mount(tmp.path)
+  await scene.press("steer")
+  expect(scene.frame()).toContain("steer")
+  expect(scene.frame()).toContain("Interrupt esc")
+  expect(scene.frame()).not.toContain("esc interrupt")
+  await scene.press("\x03")
+})
+
+test("ctrl+c clears a typed steer before it arms exit", async () => {
+  await using tmp = await tmpdir()
+  using scene = await mount(tmp.path)
+  await scene.press("redirect the worker")
+  expect(scene.frame()).toContain("redirect the worker")
+  await scene.press("\x03")
+  expect(scene.frame()).not.toContain("redirect the worker")
+  expect(scene.frame()).not.toContain("again to exit")
+  await scene.press("\x03")
+  expect(scene.frame()).toContain("again to exit")
+  expect(scene.exits).toHaveLength(0)
+})
+
+test("double Esc still stops the subagent while a steer is typed", async () => {
+  await using tmp = await tmpdir()
+  using scene = await mount(tmp.path)
+  await scene.press("half typed")
+  await scene.press("\x1b")
+  await scene.press("\x1b")
+  await wait(() => scene.aborts.length === 1)
+  expect(scene.aborts[0]?.searchParams.get("scope")).toBe("tree")
+  expect(scene.frame()).toContain("half typed")
+  await scene.press("\x03")
+})
+
+test("Esc closes the mention list before it arms the interrupt", async () => {
+  await using tmp = await tmpdir()
+  using scene = await mount(tmp.path)
+  const before = scene.frame()
+  await scene.press("@")
+  expect(scene.frame()).not.toBe(before)
+  await scene.press("\x1b")
+  expect(scene.frame()).not.toContain("esc again")
+  expect(scene.aborts).toHaveLength(0)
+  await scene.press("\x1b")
+  await scene.press("\x1b")
+  await wait(() => scene.aborts.length === 1)
+  await scene.press("\x03")
+})
+
+test("recalling a shell history entry in a subagent view keeps it a plain steer", async () => {
+  await using tmp = await tmpdir()
+  await Bun.write(
+    `${tmp.path}/prompt-history.jsonl`,
+    JSON.stringify({ input: "ls -la", parts: [], mode: "shell" }) + "\n",
+  )
+  // third agent: the palette gives it a color distinct from the shell-mode color
+  const agents = [
+    { name: "build", mode: "primary", permission: [], options: {} },
+    { name: "plan", mode: "primary", permission: [], options: {} },
+    { name: "general", mode: "subagent", permission: [], options: {} },
+  ]
+  // with default keys, up on an empty subagent prompt goes to the parent; a user who unbinds that
+  // reaches prompt history, which is shared across sessions and can hold a shell entry
+  using scene = await mount(tmp.path, 100, { agents, config: { keybinds: { session_parent: "none" } } })
+  const color = (row: string, text: string) => {
+    const line = scene.spans().lines.find((item) =>
+      item.spans
+        .map((span) => span.text)
+        .join("")
+        .includes(row),
+    )
+    const span = line?.spans.find((item) => item.text.includes(text))
+    return span ? [span.fg.r, span.fg.g, span.fg.b, span.fg.a] : undefined
+  }
+  const steered = color("Steering General", "┃")
+  expect(steered).toBeDefined()
+  // the steering label is drawn in the subagent's color, and so is the prompt border
+  expect(steered).toEqual(color("Steering General", "Steering"))
+  await scene.press("\x1b[A")
+  expect(scene.frame()).toContain("ls -la")
+  // shell mode would switch the prompt border to the shell color
+  expect(color("ls -la", "┃")).toEqual(steered)
+  await scene.press("\x03")
+})
+
 test("the main prompt's exit guard uses the same double press", async () => {
   await using tmp = await tmpdir()
-  using scene = await mount(tmp.path, 100, parent.id)
+  using scene = await mount(tmp.path, 100, { route: parent.id })
   await scene.press("\x03")
   expect(scene.frame()).toContain("again to exit")
   expect(scene.exits).toHaveLength(0)
