@@ -72,6 +72,7 @@ const TSX_FILES = [
   path.join(ROOT, "webview-ui/agent-manager/ProjectList.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/ProjectActions.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/ProjectRowActions.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/ProjectAvatar.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/SidebarBody.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/orphans/OrphanNotice.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/orphans/OrphanDialog.tsx"),

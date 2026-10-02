@@ -58,6 +58,7 @@ export function createProjectWiring(opts: {
     workspaceRoot: () => opts.host.workspacePath(),
     registry,
     enabled: () => opts.host.multiProject(),
+    changed: () => opts.push(),
     remove: (id) => {
       opts.host.unregisterProjectRoutes(id)
       opts.removed?.(id)

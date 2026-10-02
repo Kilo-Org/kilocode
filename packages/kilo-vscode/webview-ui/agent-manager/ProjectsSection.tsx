@@ -7,6 +7,7 @@ import type { AgentProjectSnapshot } from "../src/types/messages"
 import { ProjectsFooter } from "./ProjectsFooter"
 import { SidebarSectionHeader } from "./SidebarSectionHeader"
 import { ProjectRowActions } from "./ProjectRowActions"
+import { ProjectAvatar } from "./ProjectAvatar"
 
 interface ProjectsSectionProps {
   projects: AgentProjectSnapshot[]
@@ -55,6 +56,7 @@ export const ProjectsSection: Component<ProjectsSectionProps> = (props) => (
                 class="am-project-item"
                 expanded={project().expanded}
                 ariaLabel={project().label}
+                icon={<ProjectAvatar label={project().label} src={project().avatar} />}
                 title={project().missing ? props.t("agentManager.project.missing") : project().root}
                 label={
                   <>

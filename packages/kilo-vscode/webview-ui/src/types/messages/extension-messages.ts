@@ -991,6 +991,7 @@ export interface AgentProjectSnapshot {
   expanded: boolean
   initialized: boolean
   missing: boolean
+  avatar?: string
 }
 
 // Project catalog push from extension to webview
