@@ -2,9 +2,12 @@ import { Effect } from "effect"
 import { Database } from "@opencode-ai/core/database/database"
 import type { Config } from "@/config/config"
 import type { RuntimeFlags } from "@/effect/runtime-flags"
-import type { SessionID } from "@/session/schema"
+import type { BackgroundJob } from "@/background/job"
+import type { Session } from "@/session/session"
+import { PartID, type MessageID, type SessionID } from "@/session/schema"
 import { BoardEnabled } from "@/kilocode/board/enabled"
 import { BoardStore } from "@/kilocode/board/store"
+import { KiloTaskPause } from "@/kilocode/tool/task-pause"
 
 /**
  * Metadata kind a client puts on the text part a human typed into a subagent
@@ -68,15 +71,67 @@ export const post = Effect.fn("KiloSessionSteering.post")(function* (input: {
   )
 })
 
+/** Hidden reminder for a child steered while its task runs: the steer redirects, it does not replace, the task. */
+export function running() {
+  return [
+    "<system-reminder>",
+    "The user steered you directly with the message above while you work on the task your parent agent gave you.",
+    "Apply this direction, then continue your original task.",
+    "Your final response is returned to your parent agent, so it must still deliver the result of the original task, not just an acknowledgement of this message.",
+    "</system-reminder>",
+  ].join("\n")
+}
+
+/** Hidden reminder for a child whose task was paused by a user interrupt and is now redirected. */
+export function interrupted(steer: string) {
+  return [
+    "<system-reminder>",
+    "You were interrupted by the user before you finished.",
+    `The user now directs: ${steer}`,
+    "Your final response is returned to your parent agent as the result of its original task.",
+    "</system-reminder>",
+  ].join("\n")
+}
+
+/** First line of a task result whose subagent the user interrupted and then redirected. */
+export const REDIRECTED = "The user interrupted this subagent and redirected it."
+/** First line of a task result whose subagent the user interrupted before it resumed without their direction. */
+export const INTERRUPTED = "The user interrupted this subagent before it finished."
+
+type Message = { info: { id: string; role: string }; parts: ReadonlyArray<Part> }
+
+/** Marked steer text from the user messages after `after` (the task's own prompt), oldest first. */
+export function since(messages: ReadonlyArray<Message>, after: string) {
+  const index = messages.findIndex((message) => message.info.id === after)
+  const later = index === -1 ? messages.filter((message) => message.info.id > after) : messages.slice(index + 1)
+  return later.flatMap((message) => {
+    if (message.info.role !== "user") return []
+    const steer = text(message.parts)
+    return steer ? [steer] : []
+  })
+}
+
+/** Task result with the user's direction to the subagent ahead of its final response; a paused task says so first. */
+export function annotate(input: { paused: boolean; steers: ReadonlyArray<string>; text: string }) {
+  const blocks = input.steers.map((steer) => `<user_steering>\n${steer}\n</user_steering>`)
+  const lead = input.paused ? (blocks.length > 0 ? REDIRECTED : INTERRUPTED) : undefined
+  return [lead, ...blocks, input.text].filter((item) => !!item).join("\n\n")
+}
+
 /**
- * Post a shared-board message from a steered subagent to its parent so the
- * parent learns that a human redirected its child. Failures are logged and
+ * Admit a human steer on a subagent whose task is live. The steer gets a hidden
+ * reminder so the child still answers its original task (worded for a paused
+ * task when it was interrupted; `SessionPrompt.prompt` resumes the pause right
+ * after this), and a background task's parent is told over the shared board (a
+ * foreground parent reads it from the task result). Failures are logged and
  * never fail prompt admission.
  */
-export const notify = Effect.fn("KiloSessionSteering.notify")(function* (input: {
+export const admit = Effect.fn("KiloSessionSteering.admit")(function* (input: {
   session: { id: SessionID; parentID?: SessionID }
   parts: ReadonlyArray<Part>
-  messageID: string
+  messageID: MessageID
+  sessions: Pick<Session.Interface, "updatePart">
+  jobs: Pick<BackgroundJob.Interface, "get">
   config: Config.Interface
   flags: RuntimeFlags.Info
   database: Database.Interface
@@ -85,6 +140,20 @@ export const notify = Effect.fn("KiloSessionSteering.notify")(function* (input: 
   if (!parent) return
   const steer = text(input.parts)
   if (!steer) return
+  const job = yield* input.jobs.get(input.session.id)
+  if (job?.status !== "running") return
+  const paused = KiloTaskPause.paused(input.session.id)
+  yield* input.sessions
+    .updatePart({
+      id: PartID.ascending(),
+      messageID: input.messageID,
+      sessionID: input.session.id,
+      type: "text",
+      text: paused ? interrupted(steer) : running(),
+      synthetic: true,
+    })
+    .pipe(Effect.catchCause((cause) => Effect.logWarning("subagent steering reminder failed", { cause })))
+  if (job.metadata?.background !== true) return
   yield* post({
     from: input.session.id,
     to: parent,

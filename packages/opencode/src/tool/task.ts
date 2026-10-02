@@ -20,6 +20,7 @@ import { KiloSessionProcessor } from "../kilocode/session/processor" // kilocode
 import { KiloSession } from "../kilocode/session" // kilocode_change
 import { resumeHint } from "../kilocode/task-resume" // kilocode_change
 import { KiloTaskPause } from "../kilocode/tool/task-pause" // kilocode_change
+import { KiloSessionSteering } from "../kilocode/session/steering" // kilocode_change
 import { errorMessage } from "@/util/error" // kilocode_change
 import { Effect, Exit, Schema, Scope } from "effect"
 import { Cause } from "effect" // kilocode_change
@@ -260,8 +261,9 @@ export const TaskTool = Tool.define(
           const parts = yield* ops.resolvePromptParts(params.prompt)
           KiloSessionProcessor.markReviewTelemetry(parts, params.command) // kilocode_change - carry review command into child session telemetry
           // kilocode_change start
+          const sent = MessageID.ascending() // steers after this prompt belong to this run
           const initial = yield* ops.prompt({
-            messageID: MessageID.ascending(),
+            messageID: sent,
             sessionID: nextSession.id,
             model: {
               modelID: model.modelID,
@@ -278,7 +280,7 @@ export const TaskTool = Tool.define(
             parts,
           })
           // an interrupted child pauses the task until a new prompt resumes it
-          const result = yield* KiloTaskPause.settle({
+          const settled = yield* KiloTaskPause.settle({
             child: nextSession.id,
             parent: ctx.sessionID,
             initial,
@@ -288,6 +290,9 @@ export const TaskTool = Tool.define(
             paused: ops.paused,
             board: { config, flags, database },
           })
+          // The user's direction to the child, ahead of its result, so the parent knows it was redirected.
+          const steers = KiloSessionSteering.since(yield* sessions.messages({ sessionID: nextSession.id }), sent)
+          const result = settled.message
           // kilocode_change end
           // kilocode_change start - expose terminal child assistant errors through the task tool boundary,
           // including the resumable task_id so the parent agent can continue the subagent (#11620)
@@ -300,11 +305,11 @@ export const TaskTool = Tool.define(
           }
           // kilocode_change end
           // kilocode_change start - ignore synthetic/ignored/empty text parts (e.g. the memory marker) when picking the task result (#13469)
-          return (
+          const text =
             result.parts
               .filter((item): item is MessageV2.TextPart => item.type === "text")
               .findLast((item) => !item.synthetic && !item.ignored && item.text.length > 0)?.text ?? ""
-          )
+          return KiloSessionSteering.annotate({ paused: settled.paused, steers, text })
           // kilocode_change end
         },
         Effect.ensuring(KiloTaskBackgroundProcess.finish(nextSession.id)),

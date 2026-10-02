@@ -150,6 +150,14 @@ function config(url: string) {
 
 const steer = (text: string) => ({ type: "text" as const, text, metadata: { kind: KiloSessionSteering.KIND } })
 
+/** Stand in for the task tool's job on a child, so steering admission sees a live task. */
+const job = (id: string, background: boolean) =>
+  Effect.gen(function* () {
+    const jobs = yield* BackgroundJob.Service
+    yield* jobs.start({ id, type: "task", metadata: background ? { background: true } : {}, run: Effect.never })
+    yield* Effect.addFinalizer(() => jobs.cancel(id))
+  })
+
 test("fits escape-heavy steering text inside the board message budget", () => {
   for (const text of ["\u0001".repeat(3000), '"\\'.repeat(2000), "x".repeat(9000)]) {
     const body = KiloSessionSteering.body(text)
@@ -170,13 +178,14 @@ test("only counts marked human text as steering", () => {
   ).toBe("inspect the parser")
 })
 
-it.live("notifies the parent when a human steers a subagent", () =>
+it.live("notifies the parent when a human steers a background subagent", () =>
   provideTmpdirServer(
     Effect.fnUntraced(function* ({ llm }) {
       const prompt = yield* SessionPrompt.Service
       const sessions = yield* Session.Service
       const chat = yield* sessions.create({ title: "Steering main" })
       const child = yield* sessions.create({ parentID: chat.id, title: "Worker" })
+      yield* job(child.id, true)
 
       yield* llm.push(reply().text("ack").stop())
       yield* prompt.prompt({
@@ -206,6 +215,7 @@ it.live("posts escape-heavy steering that exceeds the raw excerpt size", () =>
       const sessions = yield* Session.Service
       const chat = yield* sessions.create({ title: "Escaped steering" })
       const child = yield* sessions.create({ parentID: chat.id, title: "Worker" })
+      yield* job(child.id, true)
 
       yield* llm.push(reply().text("ack").stop())
       yield* prompt.prompt({ sessionID: child.id, agent: "code", parts: [steer('"\\'.repeat(2000))] })
@@ -216,6 +226,62 @@ it.live("posts escape-heavy steering that exceeds the raw excerpt size", () =>
   ),
 )
 
+it.live("does not notify the parent of a foreground subagent or a subagent with no live task", () =>
+  provideTmpdirServer(
+    Effect.fnUntraced(function* ({ llm }) {
+      const prompt = yield* SessionPrompt.Service
+      const sessions = yield* Session.Service
+      const chat = yield* sessions.create({ title: "Foreground steering" })
+      const front = yield* sessions.create({ parentID: chat.id, title: "Foreground worker" })
+      const done = yield* sessions.create({ parentID: chat.id, title: "Finished worker" })
+      yield* job(front.id, false)
+
+      yield* llm.push(reply().text("ack").stop())
+      yield* prompt.prompt({ sessionID: front.id, agent: "code", parts: [steer("steer the foreground worker")] })
+      yield* llm.push(reply().text("ack").stop())
+      yield* prompt.prompt({ sessionID: done.id, agent: "code", parts: [steer("steer the finished worker")] })
+
+      expect((yield* BoardStore.read({ sessionID: chat.id })).messages).toEqual([])
+      // a live task's steer carries a hidden reminder to keep delivering the original task
+      const reminders = (yield* sessions.messages({ sessionID: front.id })).flatMap((message) =>
+        message.parts.filter((part) => part.type === "text" && part.synthetic),
+      )
+      expect(reminders).toEqual([expect.objectContaining({ text: KiloSessionSteering.running() })])
+      const none = (yield* sessions.messages({ sessionID: done.id })).flatMap((message) =>
+        message.parts.filter((part) => part.type === "text" && part.synthetic),
+      )
+      expect(none).toEqual([])
+    }),
+    { git: true, config },
+  ),
+)
+
+test("annotates a task result with the user's steering", () => {
+  expect(KiloSessionSteering.annotate({ paused: false, steers: [], text: "result" })).toBe("result")
+  expect(KiloSessionSteering.annotate({ paused: true, steers: ["a", "b"], text: "result" })).toBe(
+    `${KiloSessionSteering.REDIRECTED}\n\n<user_steering>\na\n</user_steering>\n\n<user_steering>\nb\n</user_steering>\n\nresult`,
+  )
+  expect(KiloSessionSteering.annotate({ paused: true, steers: [], text: "result" })).toBe(
+    `${KiloSessionSteering.INTERRUPTED}\n\nresult`,
+  )
+})
+
+test("collects marked steers after the task's own prompt only", () => {
+  const user = (id: string, parts: Parameters<typeof KiloSessionSteering.text>[0]) => ({
+    info: { id, role: "user" },
+    parts,
+  })
+  const messages = [
+    user("msg_1", [steer("earlier run")]),
+    user("msg_2", [{ type: "text", text: "task prompt" }]),
+    { info: { id: "msg_3", role: "assistant" }, parts: [steer("not a user message")] },
+    user("msg_4", [steer("first")]),
+    user("msg_5", [{ type: "text", text: "parent follow-up" }]),
+    user("msg_6", [steer("second")]),
+  ]
+  expect(KiloSessionSteering.since(messages, "msg_2")).toEqual(["first", "second"])
+})
+
 it.live("does not notify for unmarked child prompts or noReply steering", () =>
   provideTmpdirServer(
     Effect.fnUntraced(function* ({ llm }) {
@@ -223,6 +289,7 @@ it.live("does not notify for unmarked child prompts or noReply steering", () =>
       const sessions = yield* Session.Service
       const chat = yield* sessions.create({ title: "Unmarked" })
       const child = yield* sessions.create({ parentID: chat.id, title: "Worker" })
+      yield* job(child.id, true)
 
       yield* llm.push(reply().text("ack").stop())
       yield* prompt.prompt({

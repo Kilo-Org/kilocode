@@ -92,7 +92,7 @@ export const settle = Effect.fn("KiloTaskPause.settle")(function* (input: {
   paused?: (id: SessionID) => Effect.Effect<boolean>
   board: Board
 }) {
-  if (yield* Detached) return input.initial
+  if (yield* Detached) return { message: input.initial, paused: false }
   const latest = Effect.gen(function* () {
     const last = (yield* input.sessions.messages({ sessionID: input.child, limit: 1 })).at(-1)
     return last?.info.role === "assistant" && last.info.id > input.initial.info.id ? last : input.initial
@@ -139,13 +139,16 @@ export const settle = Effect.fn("KiloTaskPause.settle")(function* (input: {
         }),
     )
 
+  // `paused` reports whether the task paused at any point, so its result can say the user redirected it.
   let state = yield* check
+  let held = false
   while (true) {
     if (!state.interrupted) {
       yield* input.drain.wait(input.child)
       state = yield* check
-      if (!state.interrupted) return state.message
+      if (!state.interrupted) return { message: state.message, paused: held }
     }
+    held = true
     yield* hold(state.message.info.id)
     state = { message: state.message, interrupted: false }
   }
