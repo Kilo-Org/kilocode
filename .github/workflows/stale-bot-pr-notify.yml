@@ -91,7 +91,9 @@ jobs:
           echo "flagged=$flagged" >> "$GITHUB_OUTPUT"
 
           # Build real JSON via jq instead of splicing PR titles (free text)
-          # into a YAML payload through `${{ }}`.
+          # into the Slack payload through Actions expressions. Do not write
+          # the expression delimiters here: Actions evaluates them even in a
+          # shell comment, and an empty one makes the whole workflow invalid.
           echo "$flagged" | jq '
             if length == 0 then {text: ""} else
               {text: (["*Bot PRs needing attention:*"] + map(
