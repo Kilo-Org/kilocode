@@ -536,6 +536,37 @@ it.live(
   30_000,
 )
 
+// TUI and VS Code cancel: a tree abort of the subagent (VS Code's task-card Stop)
+it.live(
+  "a tree cancel of a running subagent leaves the parent running and reports the task as cancelled",
+  () =>
+    provideTmpdirServer(
+      Effect.fnUntraced(function* () {
+        const svc = yield* services
+        yield* svc.llm.pushMatch(parent, task("CHILD_WORK"), reply().text("parent recovered").stop())
+        yield* svc.llm.pushMatch(child("CHILD_WORK"), reply().hang())
+        const run = yield* launch()
+
+        yield* run.prompt.cancel(run.child, "tree")
+        const result = yield* awaitWithTimeout(Fiber.join(run.fiber), "parent did not continue", "15 seconds")
+        // the parent was not aborted: it finished its step and made its next model call
+        expect(result.parts.some((part) => part.type === "text" && part.text === "parent recovered")).toBe(true)
+        const part = yield* taskPart(run.chat.id)
+        if (part?.type !== "tool" || part.state.status !== "error") throw new Error("task was not cancelled")
+        expect(part.state.error).toBe("Task cancelled by the user")
+        // the reason reaches the parent model, so it does not treat the stop as a failure to retry
+        const hit = (yield* run.llm.hits).findLast((item) => parent(item))
+        expect(JSON.stringify(hit?.body)).toContain("Task cancelled by the user")
+        expect((yield* run.status.get(run.child)).type).toBe("idle")
+        expect((yield* run.jobs.get(run.child))?.status).toBe("cancelled")
+        expect(KiloTaskPause.paused(run.child)).toBe(false)
+        yield* settled()
+      }),
+      { config },
+    ),
+  30_000,
+)
+
 it.live(
   "a tree cancel of a paused subagent cancels its task",
   () =>

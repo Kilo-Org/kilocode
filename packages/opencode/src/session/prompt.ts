@@ -94,8 +94,7 @@ import { SessionResume } from "@/kilocode/session-resume" // kilocode_change
 import { SessionResumeImport } from "@/kilocode/session-resume/import" // kilocode_change
 import { KiloSessionContinuation } from "@/kilocode/session/continuation" // kilocode_change
 import { KiloSessionControl } from "@/kilocode/session/control" // kilocode_change
-import { KiloSessionSteering } from "@/kilocode/session/steering" // kilocode_change
-import { KiloTaskPause } from "@/kilocode/tool/task-pause" // kilocode_change
+import { KiloSessionAdmission } from "@/kilocode/session/admission" // kilocode_change
 import { Goal } from "@/kilocode/session/goal/runner" // kilocode_change
 import { GoalPolicy } from "@/kilocode/session/goal/policy" // kilocode_change
 import { GoalState } from "@/kilocode/session/goal/state" // kilocode_change
@@ -1490,11 +1489,8 @@ export const layer = Layer.effect(
           yield* dismiss
           return message
         }
-        // Tell the parent when a human steers this subagent; only a turn that will run counts.
-        const steer = { session, parts: input.parts, messageID: message.info.id }
-        yield* KiloSessionSteering.notify({ ...steer, config, flags, database })
-        // A turn that will run resumes a task paused by an interrupt; the task awaits this turn.
-        yield* KiloTaskPause.resume(input.sessionID)
+        const admitted = { session, parts: input.parts, messageID: message.info.id }
+        yield* KiloSessionAdmission.admit({ ...admitted, config, flags, database })
         // Queue tails and runner fibers can resume outside the HTTP request's
         // ambient instance context; bridge both Effect refs and legacy ALS.
         const bridge = yield* EffectBridge.make()

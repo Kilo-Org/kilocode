@@ -8,7 +8,7 @@
 // Clients read the pause from the child session's metadata (`KEY`), projected
 // from this live registry on every session read and update, so a marker
 // persisted by a process that died mid-pause is never shown as live.
-import { Deferred, Effect } from "effect"
+import { Context, Deferred, Effect } from "effect"
 import type { SessionV1 } from "@opencode-ai/core/v1/session"
 import type { Database } from "@opencode-ai/core/database/database"
 import type { BackgroundJob } from "@/background/job"
@@ -42,6 +42,29 @@ export const resume = (id: string) =>
     return Deferred.succeed(entry.done, undefined)
   })
 
+// A run that only delivers a prompt to a paused task's child; the paused run awaits the turn.
+const Detached = Context.Reference<boolean>("~kilo/TaskPauseDetached", { defaultValue: () => false })
+
+/**
+ * `BackgroundJob.extend` for the task tool. A paused task's job is still running, so `extend`
+ * would queue behind the pause forever. Instead, `direct` (the task run) sends the prompt to the
+ * child: its admission resumes the paused run, which awaits that turn and delivers the result
+ * through the original job. The detached run returns without waiting.
+ */
+export const extend = Effect.fn("KiloTaskPause.extend")(function* <E, R>(
+  jobs: Pick<BackgroundJob.Interface, "extend">,
+  direct: Effect.Effect<unknown, E, R>,
+  input: Parameters<BackgroundJob.Interface["extend"]>[0],
+) {
+  if (!pauses.has(input.id)) return yield* jobs.extend(input)
+  yield* direct.pipe(
+    Effect.provideService(Detached, true),
+    Effect.catchCause((cause) => Effect.logWarning("paused task prompt failed", { cause })),
+    Effect.forkDetach({ startImmediately: true }),
+  )
+  return true
+})
+
 /** Post the paused notice for a task that is (now) a background task. No-op when not paused. */
 export const announce = (id: string) => Effect.suspend(() => pauses.get(id)?.notice ?? Effect.void)
 
@@ -69,6 +92,7 @@ export const settle = Effect.fn("KiloTaskPause.settle")(function* (input: {
   paused?: (id: SessionID) => Effect.Effect<boolean>
   board: Board
 }) {
+  if (yield* Detached) return input.initial
   const latest = Effect.gen(function* () {
     const last = (yield* input.sessions.messages({ sessionID: input.child, limit: 1 })).at(-1)
     return last?.info.role === "assistant" && last.info.id > input.initial.info.id ? last : input.initial

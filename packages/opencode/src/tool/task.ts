@@ -255,33 +255,29 @@ export const TaskTool = Tool.define(
       const ops = ctx.extra?.promptOps as TaskPromptOps
       if (!ops) return yield* Effect.fail(new Error("TaskTool requires promptOps in ctx.extra"))
 
-      // kilocode_change start - the child prompt is shared with a task_id sent to a paused task
-      const send = Effect.fn("TaskTool.send")(function* () {
-        const parts = yield* ops.resolvePromptParts(params.prompt)
-        KiloSessionProcessor.markReviewTelemetry(parts, params.command) // carry review command into child session telemetry
-        return yield* ops.prompt({
-          messageID: MessageID.ascending(),
-          sessionID: nextSession.id,
-          model: {
-            modelID: model.modelID,
-            providerID: model.providerID,
-          },
-          variant,
-          agent: next.name,
-          tools: {
-            question: false, // subagents cannot prompt the user directly
-            ...(canTodo ? {} : { todowrite: false }),
-            ...(canTask ? {} : { task: false }),
-            ...Object.fromEntries((cfg.experimental?.primary_tools ?? []).map((item) => [item, false])),
-          },
-          parts,
-        })
-      })
-
       const runTask = Effect.fn("TaskTool.runTask")(
         function* () {
-          const initial = yield* send()
-          // An interrupted child pauses the task until a new prompt resumes it; see KiloTaskPause.
+          const parts = yield* ops.resolvePromptParts(params.prompt)
+          KiloSessionProcessor.markReviewTelemetry(parts, params.command) // kilocode_change - carry review command into child session telemetry
+          // kilocode_change start
+          const initial = yield* ops.prompt({
+            messageID: MessageID.ascending(),
+            sessionID: nextSession.id,
+            model: {
+              modelID: model.modelID,
+              providerID: model.providerID,
+            },
+            variant, // kilocode_change
+            agent: next.name,
+            tools: {
+              question: false, // kilocode_change - subagents cannot prompt the user directly
+              ...(canTodo ? {} : { todowrite: false }),
+              ...(canTask ? {} : { task: false }),
+              ...Object.fromEntries((cfg.experimental?.primary_tools ?? []).map((item) => [item, false])),
+            },
+            parts,
+          })
+          // an interrupted child pauses the task until a new prompt resumes it
           const result = yield* KiloTaskPause.settle({
             child: nextSession.id,
             parent: ctx.sessionID,
@@ -397,30 +393,12 @@ export const TaskTool = Tool.define(
         )
 
       const backgroundRun = withCostPropagation(runTask().pipe(Effect.onInterrupt(() => ops.cancel(nextSession.id))))
-
-      // A paused task's job is still running, so `extend` would queue behind the pause forever.
-      // Send the prompt to the child directly: its admission resumes the paused run, which then
-      // awaits this turn and delivers the result through the original job.
-      if (session && KiloTaskPause.paused(nextSession.id)) {
-        yield* send().pipe(
-          Effect.catchCause((cause) => Effect.logWarning("paused task prompt failed", { cause })),
-          Effect.forkIn(scope, { startImmediately: true }),
-        )
-        return {
-          title: params.description,
-          metadata: { ...metadata, background: true, jobId: nextSession.id },
-          output: renderOutput({
-            sessionID: nextSession.id,
-            state: "running",
-            summary: "Background task updated",
-            text: BACKGROUND_UPDATED,
-          }),
-        }
-      }
       // kilocode_change end
 
       if (
-        yield* background.extend({
+        // kilocode_change start - a paused task takes the prompt directly
+        yield* KiloTaskPause.extend(background, runTask(), {
+          // kilocode_change end
           id: nextSession.id,
           // kilocode_change - extended background work also propagates its cost
           run: withCostPropagation(runTask().pipe(Effect.onInterrupt(() => ops.cancel(nextSession.id)))),
@@ -461,7 +439,6 @@ export const TaskTool = Tool.define(
               metadata: { ...metadata, background: true, jobId: nextSession.id },
             }),
           ),
-          Effect.andThen(KiloTaskPause.announce(nextSession.id)), // a task promoted while paused tells the parent
         ),
         // kilocode_change end
         // kilocode_change - only the initial-background start needs its own cost bracket; the
