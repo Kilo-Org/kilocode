@@ -3,6 +3,7 @@ package ai.kilocode.client.session.ui.style
 import ai.kilocode.client.ui.UiStyle
 import com.intellij.ui.JBColor
 import com.intellij.util.ui.JBUI
+import com.intellij.util.ui.NamedColorUtil
 import com.intellij.util.ui.UIUtil
 import java.awt.Color
 import java.awt.Component
@@ -99,6 +100,39 @@ object SessionUiStyle {
             val width = component.getFontMetrics(font).charWidth('0').coerceAtLeast(1)
             return width * READABLE_COLUMNS
         }
+    }
+
+    /** Geometry and colors for the prompt navigator rail and its ticks. */
+    object PromptRail {
+        /** Tick length across the rail, at rest. */
+        const val TICK_REST = 9
+
+        /** Tick length across the rail when active. */
+        const val TICK_ACTIVE = 13
+
+        /** Tick length across the rail at full size (hover or open). */
+        const val TICK_HOVER = 16
+
+        /** Tick thickness on the scroll axis. */
+        const val TICK_THICKNESS = 2
+
+        /** Closest allowed spacing between tick centers. */
+        const val STEP_MIN = 7
+
+        /** Widest allowed spacing between tick centers. */
+        const val STEP_MAX = 14
+
+        /** Total vertical padding reserved across the top and bottom of the rail. */
+        const val RAIL_INSET = 24
+
+        /** Hover dwell, in ms, before the navigator balloon opens. */
+        const val OPEN_MS = 350
+
+        fun restColor(): Color = UIUtil.getContextHelpForeground()
+
+        fun activeColor(): Color = UIUtil.getLabelForeground()
+
+        fun queuedColor(): Color = NamedColorUtil.getInactiveTextColor()
     }
 
     /** Shared tokens for individual transcript views and session views. */
