@@ -4096,10 +4096,10 @@ export type TuiConfigGetResponse = {
     style?: "block" | "underline" | "line" | "default"
     blinking?: boolean
   }
-  leader_timeout?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+  leader_timeout?: number
   prompt?: {
-    max_height?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
-    max_width?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN" | "auto"
+    max_height?: number
+    max_width?: number | "auto"
   }
   attention?: {
     enabled?: boolean
@@ -15952,10 +15952,10 @@ export type TuiConfigUpdateData = {
       style?: "block" | "underline" | "line" | "default"
       blinking?: boolean
     }
-    leader_timeout?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+    leader_timeout?: number
     prompt?: {
-      max_height?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
-      max_width?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN" | "auto"
+      max_height?: number
+      max_width?: number | "auto"
     }
     attention?: {
       enabled?: boolean

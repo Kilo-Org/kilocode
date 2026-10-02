@@ -12491,74 +12491,21 @@
                     "additionalProperties": false
                   },
                   "leader_timeout": {
-                    "anyOf": [
-                      {
-                        "type": "number"
-                      },
-                      {
-                        "type": "string",
-                        "enum": ["NaN"]
-                      },
-                      {
-                        "type": "string",
-                        "enum": ["Infinity"]
-                      },
-                      {
-                        "type": "string",
-                        "enum": ["-Infinity"]
-                      },
-                      {
-                        "type": "string",
-                        "enum": ["Infinity", "-Infinity", "NaN"]
-                      }
-                    ]
+                    "type": "integer",
+                    "exclusiveMinimum": 0
                   },
                   "prompt": {
                     "type": "object",
                     "properties": {
                       "max_height": {
-                        "anyOf": [
-                          {
-                            "type": "number"
-                          },
-                          {
-                            "type": "string",
-                            "enum": ["NaN"]
-                          },
-                          {
-                            "type": "string",
-                            "enum": ["Infinity"]
-                          },
-                          {
-                            "type": "string",
-                            "enum": ["-Infinity"]
-                          },
-                          {
-                            "type": "string",
-                            "enum": ["Infinity", "-Infinity", "NaN"]
-                          }
-                        ]
+                        "type": "integer",
+                        "exclusiveMinimum": 0
                       },
                       "max_width": {
                         "anyOf": [
                           {
-                            "type": "number"
-                          },
-                          {
-                            "type": "string",
-                            "enum": ["NaN"]
-                          },
-                          {
-                            "type": "string",
-                            "enum": ["Infinity"]
-                          },
-                          {
-                            "type": "string",
-                            "enum": ["-Infinity"]
-                          },
-                          {
-                            "type": "string",
-                            "enum": ["Infinity", "-Infinity", "NaN"]
+                            "type": "integer",
+                            "exclusiveMinimum": 0
                           },
                           {
                             "type": "string",
@@ -40313,74 +40260,21 @@
             "additionalProperties": false
           },
           "leader_timeout": {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "string",
-                "enum": ["NaN"]
-              },
-              {
-                "type": "string",
-                "enum": ["Infinity"]
-              },
-              {
-                "type": "string",
-                "enum": ["-Infinity"]
-              },
-              {
-                "type": "string",
-                "enum": ["Infinity", "-Infinity", "NaN"]
-              }
-            ]
+            "type": "integer",
+            "exclusiveMinimum": 0
           },
           "prompt": {
             "type": "object",
             "properties": {
               "max_height": {
-                "anyOf": [
-                  {
-                    "type": "number"
-                  },
-                  {
-                    "type": "string",
-                    "enum": ["NaN"]
-                  },
-                  {
-                    "type": "string",
-                    "enum": ["Infinity"]
-                  },
-                  {
-                    "type": "string",
-                    "enum": ["-Infinity"]
-                  },
-                  {
-                    "type": "string",
-                    "enum": ["Infinity", "-Infinity", "NaN"]
-                  }
-                ]
+                "type": "integer",
+                "exclusiveMinimum": 0
               },
               "max_width": {
                 "anyOf": [
                   {
-                    "type": "number"
-                  },
-                  {
-                    "type": "string",
-                    "enum": ["NaN"]
-                  },
-                  {
-                    "type": "string",
-                    "enum": ["Infinity"]
-                  },
-                  {
-                    "type": "string",
-                    "enum": ["-Infinity"]
-                  },
-                  {
-                    "type": "string",
-                    "enum": ["Infinity", "-Infinity", "NaN"]
+                    "type": "integer",
+                    "exclusiveMinimum": 0
                   },
                   {
                     "type": "string",

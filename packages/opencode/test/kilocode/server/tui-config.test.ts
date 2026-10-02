@@ -288,3 +288,19 @@ describe("TUI config routes", () => {
     expect(saved.vim).toBe(false)
     expect(saved.leader_timeout).toBe(1234)
   })
+
+  test("rejects patching a TUI config value the TUI loader would reject", async () => {
+    await using tmp = await tmpdir()
+
+    const response = await Server.Default().app.request("/tui/config?scope=project", {
+      method: "PATCH",
+      headers: {
+        "content-type": "application/json",
+        "x-kilo-directory": tmp.path,
+      },
+      body: JSON.stringify({ leader_timeout: -5 }),
+    })
+
+    expect(response.status).toBe(400)
+    expect(await Bun.file(path.join(tmp.path, ".kilo", "tui.json")).exists()).toBe(false)
+  })
