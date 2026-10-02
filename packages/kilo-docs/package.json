@@ -12,7 +12,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@docsearch/css": "^4",
+    "@docsearch/css": "^5",
     "@docsearch/js": "^4",
     "@markdoc/markdoc": "^0.5.4",
     "@markdoc/next.js": "^0.5.0",

@@ -258,7 +258,7 @@
       "name": "@kilocode/kilo-docs",
       "version": "7.8.3",
       "dependencies": {
-        "@docsearch/css": "^4",
+        "@docsearch/css": "^5",
         "@docsearch/js": "^4",
         "@markdoc/markdoc": "^0.5.4",
         "@markdoc/next.js": "^0.5.0",
@@ -1454,7 +1454,7 @@
 
     "@cyclonedx/cyclonedx-library": ["@cyclonedx/cyclonedx-library@10.3.0", "", { "peerDependencies": { "ajv": "^8.12.0", "ajv-formats": "^3.0.1", "ajv-formats-draft2019": "^1.6.1", "libxmljs2": "^0.35||^0.37", "packageurl-js": "*", "spdx-expression-parse": "*", "xmlbuilder2": "^3.0.2||^4.0.0" }, "optionalPeers": ["ajv", "ajv-formats", "ajv-formats-draft2019", "libxmljs2", "packageurl-js", "spdx-expression-parse", "xmlbuilder2"] }, "sha512-RIT28sp1U0PCHaaeF3yNRwk6Jig/XJ8UsYAVOMYaHQ+0VVOvsjcp0PTWQFLUqJFF8XMud+Kdq6G+wtDAh+QJFA=="],
 
-    "@docsearch/css": ["@docsearch/css@4.7.0", "", {}, "sha512-Sk5xkdRFeE7PeWjG9l4AfTwdvMfr9wHiwNNCpHXT4v4SNyNMKdHGvEILc31BgaVFGDDNbv5u/a73tofRiwbEZw=="],
+    "@docsearch/css": ["@docsearch/css@5.1.1", "", {}, "sha512-+sPTcGV9QVTB7m9KRl2uym1lY3N3lwV2Y4KRttdZF7MPrS3Wd/Dkp5LarZTk81IpqF3hXxxyxhkl5vwQZGuGUQ=="],
 
     "@docsearch/js": ["@docsearch/js@4.7.0", "", {}, "sha512-x5lCqu1tetgsJFkjQ6VSocbHldsRkGEgwg5N98Vx21sq/V5wcmj4u226PY9k+TEpIgQ772zlYbPLTPicWyGnpA=="],
 
