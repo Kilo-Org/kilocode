@@ -58,22 +58,23 @@ function file(name: string) {
 async function download(name: string, done: () => void, log: (msg: string) => void) {
   if (pending.has(name)) return
   pending.add(name)
-  const res = await fetch(`https://github.com/${encodeURIComponent(name)}.png?size=64`).catch((err) => {
-    // Offline or blocked network is expected; log it so a repeated failure is visible.
-    log(`avatar: failed to download ${name}: ${err}`)
-    return undefined
-  })
-  const type = res?.headers.get("content-type") ?? ""
-  if (!res?.ok || !type.startsWith("image/")) {
+  try {
+    // Request and accept PNG only, so the disk cache matches the image/png data URL.
+    const res = await fetch(`https://github.com/${encodeURIComponent(name)}.png?size=64`)
+    const type = res.headers.get("content-type") ?? ""
+    if (!res.ok || !type.startsWith("image/png")) return
+    const buf = Buffer.from(await res.arrayBuffer())
+    await fs.promises.mkdir(dir(), { recursive: true })
+    await fs.promises.writeFile(file(name), buf)
+    images.set(name, `data:${type};base64,${buf.toString("base64")}`)
+    done()
+  } catch (err) {
+    // Offline or a transient write failure. Clear `pending` in `finally` so a
+    // later render can retry instead of being stuck on the letter tile.
+    log(`avatar: failed to load ${name}: ${err}`)
+  } finally {
     pending.delete(name)
-    return
   }
-  const buf = Buffer.from(await res.arrayBuffer())
-  await fs.promises.mkdir(dir(), { recursive: true })
-  await fs.promises.writeFile(file(name), buf)
-  images.set(name, `data:${type};base64,${buf.toString("base64")}`)
-  pending.delete(name)
-  done()
 }
 
 /**

@@ -29,14 +29,19 @@ export const SidebarSectionHeader: Component<Props> = (props) => {
     >
       <div class="am-sidebar-header-main">
         <Show when={props.onToggle && props.icon}>
-          {/* The whole row toggles. The button only gives keyboard focus and
-              state; its click bubbles to the row handler. */}
+          {/* The project icon takes the chevron's place and is the toggle, so
+              no separate chevron button is needed. The row click stays for
+              activation (see the onClick prop); this click does not bubble. */}
           <button
             type="button"
             class="am-sidebar-header-icon"
             aria-expanded={props.expanded}
             aria-label={props.ariaLabel ?? "Toggle section"}
             disabled={props.disabled}
+            onClick={(event) => {
+              event.stopPropagation()
+              if (!props.disabled) props.onToggle?.()
+            }}
           >
             <span class="am-sidebar-header-icon-image">{props.icon}</span>
             <span class="am-sidebar-header-icon-chevron">

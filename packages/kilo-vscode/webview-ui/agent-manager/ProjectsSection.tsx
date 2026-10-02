@@ -87,9 +87,10 @@ export const ProjectsSection: Component<ProjectsSectionProps> = (props) => (
                   if (project().missing) return
                   const expanded = !project().expanded
                   props.onExpand(project().id, expanded)
-                  // Opening another project also selects it, so the detail pane
-                  // returns to where the user left off in that project.
-                  if (expanded && !project().active) props.onSelect(project().id)
+                }}
+                onClick={() => {
+                  if (project().missing) return
+                  if (!project().active) props.onSelect(project().id)
                 }}
               />
               <Show when={project().expanded}>
