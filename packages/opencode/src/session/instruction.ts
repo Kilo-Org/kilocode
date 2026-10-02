@@ -167,13 +167,7 @@ const layer: Layer.Layer<
           if (raw.startsWith("https://") || raw.startsWith("http://")) continue
           const instruction = raw.startsWith("~/") ? path.join(global.home, raw.slice(2)) : raw
           const matches = yield* (
-            path.isAbsolute(instruction)
-              ? fs.glob(path.basename(instruction), {
-                  cwd: path.dirname(instruction),
-                  absolute: true,
-                  include: "file",
-                })
-              : relative(instruction)
+            path.isAbsolute(instruction) ? KilocodeInstruction.glob(fs, instruction) : relative(instruction)
           ).pipe(Effect.catch(() => Effect.succeed([] as string[])))
           const declared = config.instruction_origins?.[raw] ?? { trusted: false, source: raw, root }
           const trusted = declared.trusted && (path.isAbsolute(instruction) || Flag.KILO_DISABLE_PROJECT_CONFIG)

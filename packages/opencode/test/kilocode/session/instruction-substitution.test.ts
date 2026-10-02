@@ -35,6 +35,128 @@ const write = (filepath: string, content: string) =>
   })
 
 describe("instruction markdown substitutions", () => {
+  for (const relative of [false, true]) {
+    it.live(`loads trusted ${relative ? "home-relative" : "absolute"} recursive instruction globs`, () =>
+      Effect.gen(function* () {
+        const dir = yield* tmpdirScoped()
+        const project = path.join(dir, "project")
+        const home = path.join(dir, "global[profile]{one,two}")
+        const item = path.join(home, ".shared-rules", "nested", "guide.md")
+        const pattern = relative ? "~/.shared-rules/**/*.md" : path.join(home, ".shared-rules", "**", "*.md")
+        yield* write(path.join(project, "README.md"), "project")
+        yield* write(item, "Keep changes focused and verify their behavior.")
+        const config = TestConfig.layer({
+          get: () =>
+            Effect.succeed({
+              instructions: [pattern],
+              instruction_origins: { [pattern]: { trusted: true, source: "global config" } },
+            }),
+        })
+
+        yield* provideInstance(project)(
+          Effect.gen(function* () {
+            const svc = yield* Instruction.Service
+            expect(yield* svc.system()).toEqual([
+              `Instructions from: ${item}\nKeep changes focused and verify their behavior.`,
+            ])
+          }).pipe(Effect.provide(layer(home, config))),
+        )
+      }),
+    )
+  }
+
+  for (const pattern of ["guide.md", "*.md"]) {
+    it.live(`preserves literal ancestor directory names when loading ${pattern}`, () =>
+      Effect.gen(function* () {
+        const dir = yield* tmpdirScoped()
+        const project = path.join(dir, "project")
+        const home = path.join(dir, "global")
+        const folder = path.join(home, "My[Docs]{one,two}")
+        const item = path.join(folder, "guide.md")
+        const extra = path.join(folder, "other.md")
+        const instruction = path.join(folder, pattern)
+        yield* write(path.join(project, "README.md"), "project")
+        yield* write(item, "literal directory instructions")
+        yield* write(extra, "additional instructions")
+        yield* write(path.join(home, "MyDone", "guide.md"), "wrong directory instructions")
+        const config = TestConfig.layer({
+          get: () =>
+            Effect.succeed({
+              instructions: [instruction],
+              instruction_origins: { [instruction]: { trusted: true, source: "global config" } },
+            }),
+        })
+
+        yield* provideInstance(project)(
+          Effect.gen(function* () {
+            const svc = yield* Instruction.Service
+            const expected = [
+              `Instructions from: ${item}\nliteral directory instructions`,
+              ...(pattern === "*.md" ? [`Instructions from: ${extra}\nadditional instructions`] : []),
+            ]
+            expect((yield* svc.system()).toSorted()).toEqual(expected.toSorted())
+          }).pipe(Effect.provide(layer(home, config))),
+        )
+      }),
+    )
+  }
+
+  it.live("expands wildcard directory segments below a literal directory prefix", () =>
+    Effect.gen(function* () {
+      const dir = yield* tmpdirScoped()
+      const project = path.join(dir, "project")
+      const home = path.join(dir, "global[profile]")
+      const pattern = path.join(home, "rules", "team-{a,b}", "*.md")
+      yield* write(path.join(project, "README.md"), "project")
+      const files = ["a", "b"].map((team) => path.join(home, "rules", `team-${team}`, "guide.md"))
+      for (const file of files) yield* write(file, "team instructions")
+      yield* write(path.join(home, "rules", "team-c", "guide.md"), "excluded team")
+      const config = TestConfig.layer({
+        get: () =>
+          Effect.succeed({
+            instructions: [pattern],
+            instruction_origins: { [pattern]: { trusted: true, source: "global config" } },
+          }),
+      })
+
+      yield* provideInstance(project)(
+        Effect.gen(function* () {
+          const svc = yield* Instruction.Service
+          expect((yield* svc.system()).toSorted()).toEqual(
+            files.map((file) => `Instructions from: ${file}\nteam instructions`).toSorted(),
+          )
+        }).pipe(Effect.provide(layer(home, config))),
+      )
+    }),
+  )
+
+  it.live("does not read outside-project files selected by an untrusted recursive instruction glob", () =>
+    Effect.gen(function* () {
+      const dir = yield* tmpdirScoped()
+      const project = path.join(dir, "project")
+      const home = path.join(dir, "global")
+      const pattern = path.join(home, "rules", "**", "*.md")
+      yield* write(path.join(project, "README.md"), "project")
+      yield* write(path.join(home, "rules", "nested", "private.md"), "private global instructions")
+      const config = TestConfig.layer({
+        get: () =>
+          Effect.succeed({
+            instructions: [pattern],
+            instruction_origins: {
+              [pattern]: { trusted: false, source: path.join(project, "kilo.json"), root: project },
+            },
+          }),
+      })
+
+      yield* provideInstance(project)(
+        Effect.gen(function* () {
+          const svc = yield* Instruction.Service
+          expect(yield* svc.system()).toEqual([])
+        }).pipe(Effect.provide(layer(home, config))),
+      )
+    }),
+  )
+
   it.live("preserves trusted relative instructions when project config is disabled", () =>
     Effect.acquireUseRelease(
       Effect.sync(() => {
