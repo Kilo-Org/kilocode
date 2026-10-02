@@ -67,6 +67,28 @@ it.effect("startup immediately runs enabled retention without waiting for the ho
   }),
 )
 
+it.effect("local foreground run defers reclamation until normal shutdown", () =>
+  Effect.gen(function* () {
+    yield* reset
+    let calls = 0
+    const config = Layer.mock(Config.Service, {
+      getGlobal: () =>
+        Effect.sync(() => {
+          calls++
+          return { retention: { enabled: true, maxAgeDays: 30 } }
+        }),
+    })
+    const scheduler = yield* load(config)
+    yield* scheduler.start({ defer: true })
+    // The pass finishes during foreground work, so shutdown only runs the deferred reclaim.
+    while ((yield* KiloSessionRetention.readState()) == null) yield* Effect.promise(() => Bun.sleep(5))
+    yield* scheduler.stop(true)
+    expect(calls).toBe(4)
+    expect(yield* KiloSessionRetention.readState()).toMatchObject({ scanned: 0, deleted: 0 })
+    expect(yield* KiloSessionRetention.readProgress()).toBeUndefined()
+  }),
+)
+
 for (const reason of ["disabled", "recent"] as const) {
   it.effect(`startup skips ${reason} retention without entering the deletion pass`, () =>
     Effect.gen(function* () {
@@ -125,7 +147,7 @@ it.effect("hourly check reloads global policy after disabled startup", () =>
 )
 
 for (const drain of [true, false]) {
-  it.effect(`shutdown ${drain ? "drains" : "interrupts"} the active retention pass`, () =>
+  it.effect(`shutdown ${drain ? "cancels" : "interrupts"} the active retention pass`, () =>
     Effect.gen(function* () {
       yield* reset
       let calls = 0
@@ -151,7 +173,7 @@ for (const drain of [true, false]) {
         expect(stopping.pollUnsafe()).toBeUndefined()
         yield* Deferred.succeed(resume, undefined)
         yield* Fiber.join(stopping)
-        expect(yield* KiloSessionRetention.readState()).toMatchObject({ scanned: 0, deleted: 0 })
+        expect(yield* KiloSessionRetention.readState()).toMatchObject({ scanned: 0, deleted: 0, cancelled: true })
       }
       if (!drain) {
         yield* scheduler.stop()

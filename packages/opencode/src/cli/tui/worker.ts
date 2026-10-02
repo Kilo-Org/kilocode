@@ -16,10 +16,10 @@ import { createWorkerRemoteExit } from "@/kilocode/cli/cmd/tui/remote-exit-worke
 import { createWorkerShutdown } from "@/cli/tui/worker-shutdown" // kilocode_change
 import { KiloSessions } from "@/kilo-sessions/kilo-sessions" // kilocode_change
 import { KiloRetentionScheduler } from "@/kilocode/session/retention-scheduler" // kilocode_change
+import { KiloSessionResume } from "@/kilocode/session/resume" // kilocode_change
 
 ensureProcessMetadata("worker") // kilocode_change - retain worker role and parent run correlation
 await KiloLog.init() // kilocode_change - keep compatibility logs off the TUI terminal
-await AppRuntime.runPromise(KiloRetentionScheduler.Service.use((s) => s.start())) // kilocode_change
 Heap.start()
 
 // kilocode_change start - keep upstream's keep-alive intent but never swallow the error silently
@@ -55,6 +55,16 @@ const runShutdown = createWorkerShutdown({
 // kilocode_change end
 
 export const rpc = {
+  // kilocode_change start - the parent protects resume IDs before activation
+  async retention(input: { session: string } | undefined) {
+    await AppRuntime.runPromise(
+      Effect.gen(function* () {
+        if (input) yield* KiloSessionResume.resolve(input).pipe(Effect.orDie)
+        yield* KiloRetentionScheduler.Service.use((s) => s.start())
+      }),
+    )
+  },
+  // kilocode_change end
   // kilocode_change start - worker lifecycle hooks for remote exit
   tuiReady() {
     remoteExit.ready()

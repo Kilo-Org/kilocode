@@ -12,14 +12,26 @@ export namespace KiloRetentionScheduler {
 
   export class Service extends Context.Service<
     Service,
-    { readonly start: () => Effect.Effect<void>; readonly stop: (drain?: boolean) => Effect.Effect<void> }
+    {
+      readonly start: (input?: { defer?: boolean }) => Effect.Effect<void>
+      readonly stop: (drain?: boolean) => Effect.Effect<void>
+    }
   >()("@kilocode/RetentionScheduler") {}
 
   export const layer = Layer.effect(
     Service,
     Effect.gen(function* () {
       const scope = yield* Scope.Scope
-      const pass = KiloSessionRetention.run().pipe(
+      const config = yield* Config.Service
+      const database = yield* Database.Service
+      let deferred = false
+      let recorded: KiloSessionRetention.State | undefined
+      const pass = Effect.suspend(() => KiloSessionRetention.run({ reclaim: !deferred })).pipe(
+        Effect.tap((outcome) =>
+          Effect.sync(() => {
+            if (outcome.ran) recorded = outcome.result
+          }),
+        ),
         Effect.asVoid,
         Effect.catchCause((cause) =>
           Cause.hasInterrupts(cause)
@@ -43,16 +55,23 @@ export namespace KiloRetentionScheduler {
         }
       }).pipe(Effect.forkIn(scope))
 
-      const start = () =>
-        Deferred.succeed(opened, undefined).pipe(
-          Effect.andThen(Effect.raceFirst(Deferred.await(ready), Fiber.await(loop))),
-          Effect.asVoid,
-        )
+      const start = Effect.fn("KiloRetentionScheduler.start")(function* (input: { defer?: boolean } = {}) {
+        if (!(yield* Deferred.isDone(opened))) deferred = input.defer === true
+        yield* Deferred.succeed(opened, undefined)
+        yield* Effect.raceFirst(Deferred.await(ready), Fiber.await(loop))
+      })
       const stop = Effect.fn("KiloRetentionScheduler.stop")(function* (drain = false) {
         yield* Fiber.interrupt(loop)
         if (!pending) return
         if (drain) {
+          // Exit must not wait for a long pass. Cancel stops between removals and keeps the partial result.
+          KiloSessionRetention.cancel()
           yield* Fiber.await(pending)
+          if (deferred && recorded && !recorded.cancelled)
+            yield* KiloSessionRetention.recover(recorded).pipe(
+              Effect.provideService(Config.Service, config),
+              Effect.provideService(Database.Service, database),
+            )
           return
         }
         yield* Fiber.interrupt(pending)

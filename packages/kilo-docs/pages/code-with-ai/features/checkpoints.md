@@ -78,9 +78,15 @@ The policy lives in the global `kilo.json` under the `retention` key, so it appl
 }
 ```
 
+`maxAgeDays` must be a whole number of 1 or more. Other values use the default of 30.
+
 Once enabled, the core runtime checks for due cleanup when the TUI, a local `kilo run`, or `kilo serve` starts, and periodically while that client is running. Utility commands such as `kilo models` do not start cleanup. Automatic passes are at least 23 hours apart. Cleanup does not run while Kilo is closed. You can also run it immediately with the **Run Cleanup Now** button, which asks for confirmation first because deletion is permanent. A spinner and live status show the scanning or deleting phase and the number of sessions processed out of the total. During deletion, the status also shows deleted and failed counts. Reopening Settings shows the current progress. After each run, the **Last cleanup** line shows how many sessions were deleted, how many were skipped, and whether anything failed.
 
 A long pass can be halted with the **Stop cleanup** button while it runs. Stopping keeps what the pass already deleted and skips the rest; the **Last cleanup** line marks an interrupted run. After a pass frees a large share of the session database, Kilo also reclaims the disk space, so the storage file shrinks instead of keeping its old size.
+
+Database reclamation runs in a separate worker. Local `kilo run` commands defer this step until foreground work finishes. If a pass is still running when `kilo run` exits, Kilo stops it like **Stop cleanup** does, and the next automatic pass waits the normal 23 hours. Sessions selected for resume are protected before automatic cleanup starts.
+
+The CLI has no command to run or stop cleanup. Use the buttons in the VS Code extension for that.
 
 ### What Is Protected
 

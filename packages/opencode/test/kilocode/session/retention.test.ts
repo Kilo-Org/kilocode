@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test"
-import { Cause, Deferred, Effect, Exit, Fiber, Layer, Schema } from "effect"
+import { Deferred, Effect, Exit, Fiber, Layer, Schema } from "effect"
 import { eq, inArray } from "drizzle-orm"
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
@@ -343,6 +343,33 @@ dbIt.live("busySessions flags sessions with recent message or part activity", ()
   }),
 )
 
+runIt.live("resume after scanning protects the refreshed tree from cascades and leftovers", () =>
+  Effect.gen(function* () {
+    const { db } = yield* Database.Service
+    const sessions = yield* Session.Service
+    const prefix = `ses_retention_resumed_${crypto.randomUUID()}`
+    const unrelated = SessionID.make(`${prefix}_unrelated`)
+    const parent = SessionID.make(`${prefix}_parent`)
+    const child = SessionID.make(`${prefix}_child`)
+    const old = Date.now() - 40 * KiloSessionRetention.DAY_MS
+    yield* seed({
+      directory: "/tmp/retention-resumed",
+      rows: [{ id: unrelated, updated: old }, { id: parent, updated: old }, { id: child, parent, updated: old }],
+    })
+    const service = Layer.mock(Session.Service, {
+      remove: (id) =>
+        Effect.gen(function* () {
+          if (id === unrelated) yield* sessions.touch(child)
+          yield* sessions.remove(id)
+        }),
+    })
+    const outcome = yield* KiloSessionRetention.run({ force: true }).pipe(Effect.provide(Layer.merge(enabled, service)))
+    expect(outcome.ran && outcome.result).toMatchObject({ deleted: 1, skippedActive: 2, failed: 0 })
+    const remaining = yield* db.select({ id: SessionTable.id }).from(SessionTable).all()
+    expect(remaining.map((row) => row.id).sort()).toEqual([parent, child].sort())
+  }),
+)
+
 runIt.live("global disabled policy prevents scheduled and forced deletion despite enabled project policy", () =>
   Effect.gen(function* () {
     const { db } = yield* Database.Service
@@ -668,10 +695,10 @@ runIt.live("cross-process lock prevents scanning until another process releases 
           return { retention: { enabled: true, maxAgeDays: 30 } }
         }),
     })
-    const exit = yield* KiloSessionRetention.run({ force: true }).pipe(Effect.provide(config), Effect.exit)
-    expect(Exit.isFailure(exit)).toBe(true)
-    if (Exit.isFailure(exit))
-      expect(Cause.pretty(exit.cause)).toContain("Timed out waiting for lock: session-retention")
+    expect(yield* KiloSessionRetention.run({ force: true }).pipe(Effect.provide(config))).toEqual({
+      ran: false,
+      reason: "busy",
+    })
     expect(calls).toBe(1)
     expect(yield* KiloSessionRetention.readProgress()).toBeUndefined()
     child.stdin.end()
