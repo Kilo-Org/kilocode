@@ -135,15 +135,21 @@ describe("recoveryDirs", () => {
 })
 
 describe("handlePermissionResponse", () => {
-  it("rejects an unknown route without using a workspace fallback", async () => {
-    const { fake, messages, replies } = ctx({ tracked: ["s1"] })
-    const log = spyOn(console, "error").mockImplementation(() => {})
+  it("falls back to the session directory when no permission directory is recorded", async () => {
+    const { fake, messages, replies } = ctx({ tracked: ["child"] })
+    const routed: PermissionContext = {
+      ...fake,
+      getWorkspaceDirectory: (id) => (id === "child" ? "/workspace/.kilo/worktrees/feature" : "/workspace"),
+    }
 
-    await handlePermissionResponse(fake, "missing", "s1", "once", [], [])
-    log.mockRestore()
+    await handlePermissionResponse(routed, "missing", "child", "once", [], [])
 
-    expect(replies).toEqual([])
-    expect(messages).toEqual([{ type: "permissionError", permissionID: "missing" }])
+    expect(replies).toEqual([
+      { requestID: "missing", reply: "once", directory: "/workspace/.kilo/worktrees/feature", interactive: true },
+    ])
+    expect(messages).toEqual([
+      { type: "permissionResolved", permissionID: "missing", sessionID: "child", response: "once" },
+    ])
   })
 
   it("shares one save/reply sequence across concurrent callers", async () => {
