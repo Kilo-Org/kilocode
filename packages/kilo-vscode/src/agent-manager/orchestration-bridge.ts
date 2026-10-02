@@ -425,7 +425,6 @@ export class AgentManagerOrchestrationBridge {
         attribute(reply ? peerReply(input.request, reply) : peerPrompt(input.request, input.origin), source),
         MAX_PROMPT,
       ),
-      messageID: input.request.id,
       signal: input.active.controller.signal,
       ...(reply ? { directory: reply.directory } : {}),
       ...(reply ? {} : { managed: this.options.resolve?.(input.request.targetSessionID, input.origin.directory) }),
