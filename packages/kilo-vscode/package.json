@@ -1350,7 +1350,7 @@
     "@types/ws": "8.18.1",
     "@vscode/test-cli": "^0.0.12",
     "@vscode/test-electron": "^2.5.2",
-    "@vscode/vsce": "^3.7.1",
+    "@vscode/vsce": "^4.0.0",
     "babel-preset-solid": "^1.9.9",
     "esbuild": "^0.27.2",
     "esbuild-plugin-solid": "^0.6.0",
