@@ -2,6 +2,7 @@ package ai.kilocode.backend.testing
 
 import com.intellij.execution.CommonProgramRunConfigurationParameters
 import com.intellij.execution.Executor
+import com.intellij.execution.configurations.ConfigurationType
 import com.intellij.execution.configurations.ConfigurationFactory
 import com.intellij.execution.configurations.ConfigurationTypeBase
 import com.intellij.execution.configurations.ModuleBasedConfiguration
@@ -9,9 +10,12 @@ import com.intellij.execution.configurations.RunConfiguration
 import com.intellij.execution.configurations.RunConfigurationModule
 import com.intellij.execution.configurations.RunProfileState
 import com.intellij.execution.runners.ExecutionEnvironment
+import com.intellij.openapi.Disposable
+import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.module.Module
 import com.intellij.openapi.options.SettingsEditor
 import com.intellij.openapi.project.Project
+import com.intellij.testFramework.ExtensionTestUtil
 import org.jdom.Element
 
 /**
@@ -35,6 +39,34 @@ class PlainApplicationType : ConfigurationTypeBase(ID, "Plain Application", null
 
     companion object {
         const val ID = "Application"
+    }
+}
+
+/**
+ * Run configuration types for one test. Hides any real "Application" type the test platform ships:
+ * older platform plugin versions left the Java plugin out of the test runtime, newer ones put it in,
+ * and tests must not depend on which.
+ *
+ * Types are added through the mask rather than `registerExtension`, because a masked extension point
+ * is read-only. Each [add] re-applies the mask so earlier types stay registered.
+ */
+class ConfigTypes(private val parent: Disposable) {
+    private val types = mutableListOf<ConfigurationType>()
+    private var scope: Disposable? = null
+
+    /** Applies the mask. Call once from `setUp` so the real "Application" type is hidden from the start. */
+    fun apply() {
+        scope?.let { Disposer.dispose(it) }
+        val next = Disposer.newDisposable(parent, "ConfigTypes")
+        scope = next
+        val point = ConfigurationType.CONFIGURATION_TYPE_EP
+        ExtensionTestUtil.maskExtensions(point, point.extensionList.filter { it.id != PlainApplicationType.ID } + types, next)
+    }
+
+    fun <T : ConfigurationType> add(type: T): T {
+        types += type
+        apply()
+        return type
     }
 }
 

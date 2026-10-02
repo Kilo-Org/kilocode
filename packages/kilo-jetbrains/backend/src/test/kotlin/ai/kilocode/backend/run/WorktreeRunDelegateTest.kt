@@ -1,6 +1,7 @@
 package ai.kilocode.backend.run
 
 import ai.kilocode.backend.testing.PlainApplicationConfig
+import ai.kilocode.backend.testing.ConfigTypes
 import ai.kilocode.backend.testing.PlainApplicationType
 import com.intellij.execution.BeforeRunTask
 import com.intellij.execution.CommonProgramRunConfigurationParameters
@@ -27,6 +28,13 @@ import org.jdom.Element
 import java.nio.file.Path
 
 class WorktreeRunDelegateTest : BasePlatformTestCase() {
+    private lateinit var types: ConfigTypes
+
+    override fun setUp() {
+        super.setUp()
+        types = ConfigTypes(testRootDisposable).also { it.apply() }
+    }
+
     fun testSupportNamesTheConfigTypeWhenItIsNotModuleBased() {
         val settings = add(register(paramsType("kilo.test.delegate.plain")), "dev")
         assertEquals(
@@ -178,8 +186,7 @@ class WorktreeRunDelegateTest : BasePlatformTestCase() {
     // ------ fixtures ------
 
     private fun <T : ConfigurationType> register(type: T): T {
-        ConfigurationType.CONFIGURATION_TYPE_EP.point.registerExtension(type, testRootDisposable)
-        return type
+        return types.add(type)
     }
 
     /**
