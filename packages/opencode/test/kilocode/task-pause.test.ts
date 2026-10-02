@@ -553,7 +553,7 @@ it.live(
         expect(result.parts.some((part) => part.type === "text" && part.text === "parent recovered")).toBe(true)
         const part = yield* taskPart(run.chat.id)
         if (part?.type !== "tool" || part.state.status !== "error") throw new Error("task was not cancelled")
-        expect(part.state.error).toBe("Task cancelled")
+        expect(part.state.error).toBe("Task cancelled by the user")
         expect((yield* run.jobs.get(run.child))?.status).toBe("cancelled")
         expect(KiloTaskPause.paused(run.child)).toBe(false)
         yield* settled()
