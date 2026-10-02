@@ -135,6 +135,8 @@ const TuiConfigShape = {
   scroll_acceleration: Schema.optional(Schema.Struct({ enabled: Schema.Boolean })),
   diff_style: Schema.optional(Schema.Literals(["auto", "stacked"])),
   mouse: Schema.optional(Schema.Boolean),
+  swap_enter: Schema.optional(Schema.Boolean), // kilocode_change - swap prompt Enter/Ctrl+Enter keys
+  vim: Schema.optional(Schema.Boolean), // kilocode_change - Kilo prompt editing mode
   attention: Schema.optional(
     Schema.Struct({
       enabled: Schema.optional(Schema.Boolean),

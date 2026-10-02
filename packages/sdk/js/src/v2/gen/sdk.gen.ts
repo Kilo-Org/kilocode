@@ -5662,6 +5662,8 @@ export class Config3 extends HeyApiClient {
       }
       diff_style?: "auto" | "stacked"
       mouse?: boolean
+      swap_enter?: boolean
+      vim?: boolean
       attention?: {
         enabled?: boolean
         notifications?: boolean
@@ -5689,6 +5691,8 @@ export class Config3 extends HeyApiClient {
             { in: "body", key: "scroll_acceleration" },
             { in: "body", key: "diff_style" },
             { in: "body", key: "mouse" },
+            { in: "body", key: "swap_enter" },
+            { in: "body", key: "vim" },
             { in: "body", key: "attention" },
           ],
         },

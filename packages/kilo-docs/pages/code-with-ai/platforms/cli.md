@@ -264,9 +264,9 @@ The `diff_open` and `session_move` TUI keybindings run the same actions and are 
 
 ### Enter Key Behavior
 
-By default, Enter submits the prompt and Ctrl+Enter inserts a newline. To swap these so Enter inserts a newline and Ctrl+Enter submits, run `/swap-enter` (or pick "Use Enter for a new line" in the command palette with Ctrl+P). The choice is saved and used in future sessions.
+By default, Enter submits the prompt and Ctrl+Enter inserts a newline. To swap these so Enter inserts a newline and Ctrl+Enter submits, run `/swap-enter` (or pick "Use Enter for a new line" in the command palette with Ctrl+P). The choice is saved per machine and applies to future sessions in every project.
 
-To make the swap the default in a project or globally, set `swap_enter` in `tui.jsonc`:
+To make the swap the default instead, set `swap_enter` in `tui.jsonc`:
 
 ```jsonc
 {
@@ -274,7 +274,9 @@ To make the swap the default in a project or globally, set `swap_enter` in `tui.
 }
 ```
 
-Note that terminals only distinguish Ctrl+Enter from Enter when they support the Kitty keyboard protocol. Otherwise use `/swap-enter` with the Shift+Enter, Alt+Enter, or Ctrl+J newline keys that work in any terminal.
+A toggle from inside the CLI takes precedence over the `swap_enter` config default and keeps applying until you change the toggle again.
+
+Enable the swap only in terminals that support the Kitty keyboard protocol, which is what lets the terminal tell Enter and Ctrl+Enter apart. In plain terminals Ctrl+Enter arrives as a plain Enter, so the swap would leave no way to submit from the keyboard; keep the default there and use Shift+Enter, Alt+Enter, or Ctrl+J for newlines. Vim mode also keeps its own Enter semantics.
 
 ## Permissions
 

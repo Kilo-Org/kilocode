@@ -4090,6 +4090,8 @@ export type TuiConfigGetResponse = {
   }
   diff_style?: "auto" | "stacked"
   mouse?: boolean
+  swap_enter?: boolean
+  vim?: boolean
   attention?: {
     enabled?: boolean
     notifications?: boolean
@@ -15935,6 +15937,8 @@ export type TuiConfigUpdateData = {
     }
     diff_style?: "auto" | "stacked"
     mouse?: boolean
+    swap_enter?: boolean
+    vim?: boolean
     attention?: {
       enabled?: boolean
       notifications?: boolean

@@ -64,7 +64,13 @@ import { KILO_BASE_MODE, useBindings, useCommandShortcut, useLeaderActive, useOp
 import { useTuiConfig } from "../../config"
 // kilocode_change start - vim modal editing for the prompt
 import { useVim, VimModeIndicator, vimToggleCommand } from "@/kilocode/cli/cmd/tui/component/prompt"
-import { swapEnterToggleCommand, useSwapEnter } from "@/kilocode/cli/cmd/tui/component/prompt/swap-enter"
+// kilocode_change end
+// kilocode_change start - swap Enter (newline) / Ctrl+Enter (submit) prompt setting
+import {
+  SWAP_ENTER_KV_KEY,
+  swapEnterToggleCommand,
+  useSwapEnter,
+} from "@/kilocode/cli/cmd/tui/component/prompt/swap-enter"
 // kilocode_change end
 import { usePromptWorkspace } from "./workspace"
 import { usePromptMove } from "./move"
@@ -333,9 +339,13 @@ export function Prompt(props: PromptProps) {
   // kilocode_change start - swap Enter (newline) and Ctrl+Enter (submit) in the prompt
   useSwapEnter({
     target: inputTarget,
-    disabled: () => props.disabled ?? false,
-    shellMode: () => store.mode === "shell",
-    enabled: () => Boolean(kv.get("swap_enter", tuiConfig.swap_enter ?? false)),
+    // Keep native semantics while the prompt is disabled, in shell mode, or in
+    // vim NORMAL/VISUAL mode where Enter deliberately keeps submitting.
+    blocked: () =>
+      Boolean(props.disabled ?? false) ||
+      store.mode === "shell" ||
+      (vim.vimEnabled() && vim.vimMode() !== "insert"),
+    enabled: () => Boolean(kv.get(SWAP_ENTER_KV_KEY, tuiConfig.swap_enter ?? false)),
   })
   // kilocode_change end
 
@@ -579,9 +589,11 @@ export function Prompt(props: PromptProps) {
         clearDialog: () => dialog.clear(),
         showToast: (message) => toast.show({ message, variant: "info" }),
       }),
+      // kilocode_change end
+      // kilocode_change start - Enter/Ctrl+Enter swap toggle (palette + /swap-enter)
       swapEnterToggleCommand({
-        swapEnabled: () => Boolean(kv.get("swap_enter", tuiConfig.swap_enter ?? false)),
-        setSwapEnabled: (value) => kv.set("swap_enter", value),
+        swapEnabled: () => Boolean(kv.get(SWAP_ENTER_KV_KEY, tuiConfig.swap_enter ?? false)),
+        setSwapEnabled: (value) => kv.set(SWAP_ENTER_KV_KEY, value),
         clearDialog: () => dialog.clear(),
         showToast: (message) => toast.show({ message, variant: "info" }),
       }),

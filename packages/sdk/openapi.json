@@ -12471,6 +12471,12 @@
                   "mouse": {
                     "type": "boolean"
                   },
+                  "swap_enter": {
+                    "type": "boolean"
+                  },
+                  "vim": {
+                    "type": "boolean"
+                  },
                   "attention": {
                     "type": "object",
                     "properties": {
@@ -40193,6 +40199,12 @@
             "enum": ["auto", "stacked"]
           },
           "mouse": {
+            "type": "boolean"
+          },
+          "swap_enter": {
+            "type": "boolean"
+          },
+          "vim": {
             "type": "boolean"
           },
           "attention": {

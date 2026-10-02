@@ -1,26 +1,28 @@
 import { type TextareaRenderable } from "@opentui/core"
-import { useBindings } from "@tui/keymap"
+import { KILO_BASE_MODE, useBindings } from "@tui/keymap"
 
 /** KV key holding the user's in-TUI choice (tui.json `swap_enter` is the default). */
 export const SWAP_ENTER_KV_KEY = "swap_enter"
 
 /**
  * Targeted keymap layer for the prompt textarea that rebinds Enter to insert a
- * newline and Ctrl+Enter to submit. Inactive unless the swap is enabled, the
- * prompt is editable and not in shell mode, so Enter keeps submitting shell
- * commands and other textareas (dialogs, message editor) keep default behavior.
+ * newline and Ctrl+Enter to submit. Registered once; `enabled` is read lazily
+ * at dispatch time so re-registration cannot reorder this layer against other
+ * targeted layers like the autocomplete select binding. Pinned to the base
+ * mode, overlays that push a mode (autocomplete popups, the palette) suppress
+ * it regardless of layer order.
  */
 export function useSwapEnter(deps: {
   target: () => TextareaRenderable | undefined
-  disabled: () => boolean
-  shellMode: () => boolean
+  blocked: () => boolean
   enabled: () => boolean
 }) {
   useBindings(() => {
     const target = deps.target()
     return {
       target: () => target,
-      enabled: target !== undefined && !deps.disabled() && !deps.shellMode() && deps.enabled(),
+      mode: KILO_BASE_MODE,
+      enabled: () => target !== undefined && !deps.blocked() && deps.enabled(),
       bindings: [
         {
           key: "return",
