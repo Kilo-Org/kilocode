@@ -1414,7 +1414,9 @@ it.instance(
           (part): part is ErrorToolPart =>
             part.type === "tool" && part.tool === "task" && part.state.status === "error",
         )
-      expect(part?.state.error).toBe("Task cancelled")
+      expect(part?.state.error).toBe("Task cancelled by the user")
+      // the reason reaches the parent model, so it does not treat the stop as a failure to retry
+      expect(JSON.stringify((yield* llm.hits).at(-1)?.body)).toContain("Task cancelled by the user")
       expect((yield* status.get(child)).type).toBe("idle")
     }),
   30_000,
