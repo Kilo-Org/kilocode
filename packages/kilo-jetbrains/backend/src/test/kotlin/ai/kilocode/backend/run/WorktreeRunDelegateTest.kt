@@ -32,7 +32,7 @@ class WorktreeRunDelegateTest : BasePlatformTestCase() {
 
     override fun setUp() {
         super.setUp()
-        types = ConfigTypes(testRootDisposable).also { it.apply() }
+        types = ConfigTypes(testRootDisposable).also { it.mask() }
     }
 
     fun testSupportNamesTheConfigTypeWhenItIsNotModuleBased() {
@@ -168,8 +168,7 @@ class WorktreeRunDelegateTest : BasePlatformTestCase() {
 
     fun testPlainIsUnavailableWithoutTheApplicationConfigurationType() {
         // The non-JVM IDE case: no "Application" type is registered, so there is nothing to copy into
-        // and the fallback declines instead of failing. This is also the default test platform, which
-        // ships without the Java plugin.
+        // and the fallback declines instead of failing. setUp hides any real one the test platform ships.
         val settings = add(register(frameworkType("kilo.test.delegate.plain.nojava")), "app")
         val source = settings.configuration as FrameworkConfig
         source.setModule(module)

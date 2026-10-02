@@ -19,8 +19,9 @@ import com.intellij.testFramework.ExtensionTestUtil
 import org.jdom.Element
 
 /**
- * Stand-in for the Java plugin's plain application run configuration type, which the platform test
- * fixture does not ship. `WorktreeRunDelegate.plain` looks the real one up by this id, so any test of
+ * Stand-in for the Java plugin's plain application run configuration type. Whether the platform test
+ * fixture ships the real one depends on the platform plugin version, so tests hide it with [ConfigTypes]
+ * and register this instead. `WorktreeRunDelegate.plain` looks the type up by this id, so any test of
  * the plain-application fallback must register a type under it.
  *
  * Shared rather than duplicated per test class on purpose: the lookup takes the first type with this
@@ -48,14 +49,15 @@ class PlainApplicationType : ConfigurationTypeBase(ID, "Plain Application", null
  * and tests must not depend on which.
  *
  * Types are added through the mask rather than `registerExtension`, because a masked extension point
- * is read-only. Each [add] re-applies the mask so earlier types stay registered.
+ * is read-only. [mask] runs once from `setUp`, and each [add] runs it again so earlier types stay
+ * registered.
  */
 class ConfigTypes(private val parent: Disposable) {
     private val types = mutableListOf<ConfigurationType>()
     private var scope: Disposable? = null
 
-    /** Applies the mask. Call once from `setUp` so the real "Application" type is hidden from the start. */
-    fun apply() {
+    /** Hides the real "Application" type and registers the types added so far. Replaces the previous mask. */
+    fun mask() {
         scope?.let { Disposer.dispose(it) }
         val next = Disposer.newDisposable(parent, "ConfigTypes")
         scope = next
@@ -65,7 +67,7 @@ class ConfigTypes(private val parent: Disposable) {
 
     fun <T : ConfigurationType> add(type: T): T {
         types += type
-        apply()
+        mask()
         return type
     }
 }

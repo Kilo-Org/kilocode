@@ -75,7 +75,7 @@ class WorktreeRunManagerTest : BasePlatformTestCase() {
 
     override fun setUp() {
         super.setUp()
-        types = ConfigTypes(testRootDisposable).also { it.apply() }
+        types = ConfigTypes(testRootDisposable).also { it.mask() }
         cs = CoroutineScope(SupervisorJob() + Dispatchers.Default)
         launched.clear()
     }
