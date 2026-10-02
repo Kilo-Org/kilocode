@@ -1,0 +1,53 @@
+# kilocode_change - new file
+name: Outdated Kilo dependencies
+
+# Dependabot's root `bun` scan has version updates turned off (it mostly
+# touched upstream files), so nothing else says when a Kilo-owned package falls
+# behind. Once a month, list what `bun outdated` finds for packages/kilo-*
+# (kilo-docs and kilo-jetbrains keep their own Dependabot blocks) and post a
+# short summary to Slack. Read-only: it never opens a PR.
+
+on:
+  schedule:
+    - cron: "23 9 1 * *" # 1st of the month, offset to avoid the top of the hour
+  workflow_dispatch:
+
+concurrency:
+  group: outdated-kilo-deps
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  report:
+    if: github.repository == 'Kilo-Org/kilocode'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+
+      - id: report
+        env:
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          mkdir -p .cache
+          bun run script/kilocode/outdated.ts > .cache/report.json
+          echo "count=$(jq -r .count .cache/report.json)" >> "$GITHUB_OUTPUT"
+          jq -r '.full' .cache/report.json >> "$GITHUB_STEP_SUMMARY"
+          # Build real JSON via jq instead of splicing text into a YAML payload.
+          jq '{text}' .cache/report.json > .cache/slack-payload.json
+
+      - if: steps.report.outputs.count != '0'
+        name: Notify Slack
+        uses: slackapi/slack-github-action@v2.0.0
+        with:
+          webhook: ${{ secrets.SECURITY_ALERTS_SLACK_WEBHOOK }}
+          webhook-type: incoming-webhook
+          payload-file-path: .cache/slack-payload.json
