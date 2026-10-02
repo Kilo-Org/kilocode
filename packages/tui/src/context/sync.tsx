@@ -168,7 +168,7 @@ export const {
     // Navigation eviction only drops data that session.sync() re-hydrates. Status and pending
     // requests are live, event-driven state that is never re-fetched, so they are kept until the
     // session is deleted.
-    function evict(sessionID: string, deleted = false) {
+    function evict(sessionID: string, purge = false) {
       const children = store.session.filter((session) => session.parentID === sessionID).map((session) => session.id)
       setStore(
         produce((draft) => {
@@ -179,7 +179,7 @@ export const {
           const processes = draft.background_process[sessionID]?.filter((item) => item.lifetime === "persistent")
           if (processes?.length) draft.background_process[sessionID] = processes
           else delete draft.background_process[sessionID]
-          if (!deleted) return
+          if (!purge) return
           delete draft.session_status[sessionID]
           delete draft.permission[sessionID]
           delete draft.question[sessionID]
@@ -188,7 +188,7 @@ export const {
         }),
       )
       fullSyncedSessions.delete(sessionID)
-      for (const child of children) evict(child, deleted)
+      for (const child of children) evict(child, purge)
     }
 
     function strip(message: Message): Message {
