@@ -32,6 +32,7 @@ import { registerCodeActions, registerTerminalActions, KiloCodeActionProvider } 
 import { closeTaskTarget, SurfaceFocus } from "./commands/close-task-target"
 import { registerToggleAutoApprove } from "./commands/toggle-auto-approve"
 import { registerHeapSnapshot } from "./commands/heap-snapshot"
+import { TaskStateBridge, type KiloExtensionApi } from "./services/public-api/task-state"
 import { RemoteStatusService } from "./services/RemoteStatusService"
 import { markWorkspace } from "./util/spotlight"
 import { createNotebookBridge } from "./services/notebook"
@@ -57,7 +58,7 @@ const panelTitleHandler = (panel: vscode.WebviewPanel) => (title: string) => {
 // keybindings, autocomplete, commit-message generation, and URI deep links all work immediately —
 // without requiring the user to open a Kilo sidebar or panel first. The CLI backend is NOT spawned here;
 // it starts lazily when a webview connects or when ensureBackendForAutocomplete() triggers it.
-export async function activate(context: vscode.ExtensionContext) {
+export async function activate(context: vscode.ExtensionContext): Promise<KiloExtensionApi> {
   console.log("Kilo Code extension is now active")
   shuttingDown = false
 
@@ -351,6 +352,14 @@ export async function activate(context: vscode.ExtensionContext) {
 
   // Prewarm only after all global event consumers are ready.
   ensureBackendForAutocomplete(connectionService)
+
+  // Versioned, read-only public API for companion extensions. Purely
+  // additive: it only observes the same connection events as the attention
+  // service and changes nothing until another extension subscribes.
+  const taskStateBridge = new TaskStateBridge(connectionService, {
+    approve: (event, directory) => autoApprove.approve(event, directory),
+  })
+  context.subscriptions.push(taskStateBridge)
 
   provider.setAutoApproveController(autoApprove)
   agentManagerHost.setAutoApproveController(autoApprove)
@@ -815,6 +824,8 @@ export async function activate(context: vscode.ExtensionContext) {
       connectionService.dispose()
     },
   })
+
+  return taskStateBridge.api
 }
 
 export async function deactivate() {
