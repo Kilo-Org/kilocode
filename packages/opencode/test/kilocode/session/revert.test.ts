@@ -14,11 +14,12 @@ import { MessageV2 } from "@/session/message-v2"
 import { Instance } from "@/kilocode/instance"
 import { KiloSessionRevert } from "@/kilocode/session/revert"
 import { SessionRevert } from "@/session/revert"
-import { MessageID, PartID } from "@/session/schema"
+import { MessageID, PartID, SessionID } from "@/session/schema"
 import { Session } from "@/session/session"
+import { SessionRunState } from "@/session/run-state"
 import { Snapshot } from "@/snapshot"
 import { provideInstance, provideTmpdirInstance } from "../../fixture/fixture"
-import { testEffect } from "../../lib/effect"
+import { pollWithTimeout, testEffect } from "../../lib/effect"
 
 // plant an index.lock the way a concurrent git write would
 const snapshotGitdir = () => path.join(Global.Path.data, "snapshot", Instance.project.id, Hash.fast(Instance.worktree))
@@ -36,6 +37,7 @@ const env = LayerNode.compile(
     Session.node,
     SessionProjector.node,
     SessionRevert.node,
+    SessionRunState.node,
     Snapshot.node,
     CrossSpawnSpawner.node,
   ]),
@@ -668,6 +670,639 @@ describe("workspace revert status", () => {
             protected: yield* Effect.promise(() => fs.readFile(item.protected, "utf8")),
             writable: yield* Effect.promise(() => fs.readFile(item.writable, "utf8")),
           }).toEqual({ reverted: false, protected: "after", writable: "after" })
+        }),
+      { git: true },
+    ),
+    30_000,
+  )
+})
+
+describe("sub-agent revert", () => {
+  it.live(
+    "restores a file a child session recorded after the revert point",
+    provideTmpdirInstance(
+      (dir) =>
+        Effect.gen(function* () {
+          const sessions = yield* Session.Service
+          const revert = yield* SessionRevert.Service
+          const snapshot = yield* Snapshot.Service
+          const providerID = ProviderV2.ID.make("test")
+          const file = path.join(dir, "child.txt")
+          yield* Effect.promise(() => fs.writeFile(file, "before"))
+
+          const session = yield* sessions.create({})
+          const user = yield* sessions.updateMessage({
+            id: MessageID.ascending(),
+            sessionID: session.id,
+            role: "user",
+            agent: "default",
+            model: { providerID, modelID: ModelV2.ID.make("test") },
+            time: { created: Date.now() },
+          })
+          yield* sessions.updatePart({
+            id: PartID.ascending(),
+            messageID: user.id,
+            sessionID: session.id,
+            type: "text",
+            text: "delegate the edit",
+          })
+
+          const before = yield* snapshot.track()
+          if (!before) throw new Error("expected snapshot")
+          yield* Effect.promise(() => fs.writeFile(file, "after"))
+          const after = yield* snapshot.track()
+          if (!after) throw new Error("expected snapshot")
+          const patch = yield* snapshot.patch(before)
+
+          const child = yield* sessions.create({ parentID: session.id })
+          const assistant = yield* sessions.updateMessage({
+            id: MessageID.ascending(),
+            sessionID: child.id,
+            role: "assistant",
+            parentID: user.id,
+            mode: "default",
+            agent: "default",
+            path: { cwd: dir, root: dir },
+            cost: 0,
+            tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
+            modelID: ModelV2.ID.make("test"),
+            providerID,
+            time: { created: Date.now() },
+            finish: "end_turn",
+          })
+          yield* sessions.updatePart({
+            id: PartID.ascending(),
+            messageID: assistant.id,
+            sessionID: child.id,
+            type: "patch",
+            hash: patch.hash,
+            files: patch.files,
+          })
+
+          const reverted = yield* revert.revert({ sessionID: session.id, messageID: user.id })
+
+          expect({
+            workspace: reverted.revert?.workspace,
+            file: yield* Effect.promise(() => fs.readFile(file, "utf8")),
+          }).toEqual({ workspace: "restored", file: "before" })
+        }),
+      { git: true },
+    ),
+    30_000,
+  )
+})
+
+describe("sub-agent revert and redo", () => {
+  it.live(
+    "restores a child-recorded file on redo",
+    provideTmpdirInstance(
+      (dir) =>
+        Effect.gen(function* () {
+          const sessions = yield* Session.Service
+          const revert = yield* SessionRevert.Service
+          const snapshot = yield* Snapshot.Service
+          const providerID = ProviderV2.ID.make("test")
+          const file = path.join(dir, "child.txt")
+          yield* Effect.promise(() => fs.writeFile(file, "before"))
+
+          const session = yield* sessions.create({})
+          const user = yield* sessions.updateMessage({
+            id: MessageID.ascending(),
+            sessionID: session.id,
+            role: "user",
+            agent: "default",
+            model: { providerID, modelID: ModelV2.ID.make("test") },
+            time: { created: Date.now() },
+          })
+          yield* sessions.updatePart({
+            id: PartID.ascending(),
+            messageID: user.id,
+            sessionID: session.id,
+            type: "text",
+            text: "delegate the edit",
+          })
+
+          const before = yield* snapshot.track()
+          if (!before) throw new Error("expected snapshot")
+          yield* Effect.promise(() => fs.writeFile(file, "after"))
+          const after = yield* snapshot.track()
+          if (!after) throw new Error("expected snapshot")
+          const patch = yield* snapshot.patch(before)
+
+          const child = yield* sessions.create({ parentID: session.id })
+          const assistant = yield* sessions.updateMessage({
+            id: MessageID.ascending(),
+            sessionID: child.id,
+            role: "assistant",
+            parentID: user.id,
+            mode: "default",
+            agent: "default",
+            path: { cwd: dir, root: dir },
+            cost: 0,
+            tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
+            modelID: ModelV2.ID.make("test"),
+            providerID,
+            time: { created: Date.now() },
+            finish: "end_turn",
+          })
+          yield* sessions.updatePart({
+            id: PartID.ascending(),
+            messageID: assistant.id,
+            sessionID: child.id,
+            type: "patch",
+            hash: patch.hash,
+            files: patch.files,
+          })
+
+          yield* revert.revert({ sessionID: session.id, messageID: user.id })
+          const undone = yield* Effect.promise(() => fs.readFile(file, "utf8"))
+
+          yield* revert.unrevert({ sessionID: session.id })
+          const redone = yield* Effect.promise(() => fs.readFile(file, "utf8"))
+
+          expect({ undone, redone }).toEqual({ undone: "before", redone: "after" })
+        }),
+      { git: true },
+    ),
+    30_000,
+  )
+
+  it.live(
+    "keeps the earliest snapshot when two descendants touch one file",
+    provideTmpdirInstance(
+      (dir) =>
+        Effect.gen(function* () {
+          const sessions = yield* Session.Service
+          const revert = yield* SessionRevert.Service
+          const snapshot = yield* Snapshot.Service
+          const providerID = ProviderV2.ID.make("test")
+          const file = path.join(dir, "shared.txt")
+          yield* Effect.promise(() => fs.writeFile(file, "before"))
+
+          const session = yield* sessions.create({})
+          const user = yield* sessions.updateMessage({
+            id: MessageID.ascending(),
+            sessionID: session.id,
+            role: "user",
+            agent: "default",
+            model: { providerID, modelID: ModelV2.ID.make("test") },
+            time: { created: Date.now() },
+          })
+          yield* sessions.updatePart({
+            id: PartID.ascending(),
+            messageID: user.id,
+            sessionID: session.id,
+            type: "text",
+            text: "delegate two edits",
+          })
+
+          const child = yield* sessions.create({ parentID: session.id })
+          const grandchild = yield* sessions.create({ parentID: child.id })
+
+          const record = (sessionID: SessionID, text: string) =>
+            Effect.gen(function* () {
+              const before = yield* snapshot.track()
+              if (!before) throw new Error("expected snapshot")
+              yield* Effect.promise(() => fs.writeFile(file, text))
+              const after = yield* snapshot.track()
+              if (!after) throw new Error("expected snapshot")
+              const patch = yield* snapshot.patch(before)
+              const message = yield* sessions.updateMessage({
+                id: MessageID.ascending(),
+                sessionID,
+                role: "assistant",
+                parentID: user.id,
+                mode: "default",
+                agent: "default",
+                path: { cwd: dir, root: dir },
+                cost: 0,
+                tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
+                modelID: ModelV2.ID.make("test"),
+                providerID,
+                time: { created: Date.now() },
+                finish: "end_turn",
+              })
+              yield* sessions.updatePart({
+                id: PartID.ascending(),
+                messageID: message.id,
+                sessionID,
+                type: "patch",
+                hash: patch.hash,
+                files: patch.files,
+              })
+            })
+
+          yield* record(child.id, "first")
+          yield* record(grandchild.id, "second")
+
+          yield* revert.revert({ sessionID: session.id, messageID: user.id })
+
+          expect(yield* Effect.promise(() => fs.readFile(file, "utf8"))).toBe("before")
+        }),
+      { git: true },
+    ),
+    30_000,
+  )
+})
+
+describe("sub-agent revert ordering", () => {
+  it.live(
+    "keeps the child snapshot when a later parent step reports the same file",
+    provideTmpdirInstance(
+      (dir) =>
+        Effect.gen(function* () {
+          const sessions = yield* Session.Service
+          const revert = yield* SessionRevert.Service
+          const snapshot = yield* Snapshot.Service
+          const providerID = ProviderV2.ID.make("test")
+          const file = path.join(dir, "shared.txt")
+          yield* Effect.promise(() => fs.writeFile(file, "before"))
+
+          const session = yield* sessions.create({})
+          const user = yield* sessions.updateMessage({
+            id: MessageID.ascending(),
+            sessionID: session.id,
+            role: "user",
+            agent: "default",
+            model: { providerID, modelID: ModelV2.ID.make("test") },
+            time: { created: Date.now() },
+          })
+          yield* sessions.updatePart({
+            id: PartID.ascending(),
+            messageID: user.id,
+            sessionID: session.id,
+            type: "text",
+            text: "delegate first, then report the file",
+          })
+
+          const child = yield* sessions.create({ parentID: session.id })
+
+          const record = (sessionID: SessionID, text: string) =>
+            Effect.gen(function* () {
+              const before = yield* snapshot.track()
+              if (!before) throw new Error("expected snapshot")
+              yield* Effect.promise(() => fs.writeFile(file, text))
+              const after = yield* snapshot.track()
+              if (!after) throw new Error("expected snapshot")
+              const patch = yield* snapshot.patch(before)
+              const message = yield* sessions.updateMessage({
+                id: MessageID.ascending(),
+                sessionID,
+                role: "assistant",
+                parentID: user.id,
+                mode: "default",
+                agent: "default",
+                path: { cwd: dir, root: dir },
+                cost: 0,
+                tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
+                modelID: ModelV2.ID.make("test"),
+                providerID,
+                time: { created: Date.now() },
+                finish: "end_turn",
+              })
+              yield* sessions.updatePart({
+                id: PartID.ascending(),
+                messageID: message.id,
+                sessionID,
+                type: "patch",
+                hash: patch.hash,
+                files: patch.files,
+              })
+            })
+
+          yield* record(child.id, "first")
+          yield* record(session.id, "second")
+
+          yield* revert.revert({ sessionID: session.id, messageID: user.id })
+
+          expect(yield* Effect.promise(() => fs.readFile(file, "utf8"))).toBe("before")
+        }),
+      { git: true },
+    ),
+    30_000,
+  )
+})
+
+describe("sub-agent revert chronological boundaries", () => {
+  it.live(
+    "orders patch parts by message time when message ids do not sort chronologically",
+    provideTmpdirInstance(
+      (dir) =>
+        Effect.gen(function* () {
+          const sessions = yield* Session.Service
+          const revert = yield* SessionRevert.Service
+          const snapshot = yield* Snapshot.Service
+          const providerID = ProviderV2.ID.make("test")
+          const file = path.join(dir, "shared.txt")
+          yield* Effect.promise(() => fs.writeFile(file, "before"))
+
+          const session = yield* sessions.create({})
+          const user = yield* sessions.updateMessage({
+            id: MessageID.make("msg_z9-user"),
+            sessionID: session.id,
+            role: "user",
+            agent: "default",
+            model: { providerID, modelID: ModelV2.ID.make("test") },
+            time: { created: 1 },
+          })
+          yield* sessions.updatePart({
+            id: PartID.ascending(),
+            messageID: user.id,
+            sessionID: session.id,
+            type: "text",
+            text: "delegate first, then report the file",
+          })
+
+          const child = yield* sessions.create({ parentID: session.id })
+
+          const record = (sessionID: SessionID, id: string, created: number, text: string) =>
+            Effect.gen(function* () {
+              const before = yield* snapshot.track()
+              if (!before) throw new Error("expected snapshot")
+              yield* Effect.promise(() => fs.writeFile(file, text))
+              const after = yield* snapshot.track()
+              if (!after) throw new Error("expected snapshot")
+              const patch = yield* snapshot.patch(before)
+              const message = yield* sessions.updateMessage({
+                id: MessageID.make(id),
+                sessionID,
+                role: "assistant",
+                parentID: user.id,
+                mode: "default",
+                agent: "default",
+                path: { cwd: dir, root: dir },
+                cost: 0,
+                tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
+                modelID: ModelV2.ID.make("test"),
+                providerID,
+                time: { created },
+                finish: "end_turn",
+              })
+              yield* sessions.updatePart({
+                id: PartID.ascending(),
+                messageID: message.id,
+                sessionID,
+                type: "patch",
+                hash: patch.hash,
+                files: patch.files,
+              })
+            })
+
+          // The child edits first but carries the larger id, so an id-ordered walk hands the file to
+          // the parent's later patch and the child's edit survives the revert.
+          yield* record(child.id, "msg_z9-child", 2, "first")
+          yield* record(session.id, "msg_a0-parent", 3, "second")
+
+          yield* revert.revert({ sessionID: session.id, messageID: user.id })
+
+          expect(yield* Effect.promise(() => fs.readFile(file, "utf8"))).toBe("before")
+        }),
+      { git: true },
+    ),
+    30_000,
+  )
+})
+
+describe("sub-agent revert summary", () => {
+  it.live(
+    "reports a child-recorded file in the revert summary",
+    provideTmpdirInstance(
+      (dir) =>
+        Effect.gen(function* () {
+          const sessions = yield* Session.Service
+          const revert = yield* SessionRevert.Service
+          const snapshot = yield* Snapshot.Service
+          const providerID = ProviderV2.ID.make("test")
+          const file = path.join(dir, "child.txt")
+          yield* Effect.promise(() => fs.writeFile(file, "before"))
+
+          const session = yield* sessions.create({})
+          const user = yield* sessions.updateMessage({
+            id: MessageID.ascending(),
+            sessionID: session.id,
+            role: "user",
+            agent: "default",
+            model: { providerID, modelID: ModelV2.ID.make("test") },
+            time: { created: Date.now() },
+          })
+          yield* sessions.updatePart({
+            id: PartID.ascending(),
+            messageID: user.id,
+            sessionID: session.id,
+            type: "text",
+            text: "delegate the edit",
+          })
+
+          const child = yield* sessions.create({ parentID: session.id })
+
+          const step = (sessionID: SessionID, edit?: string) =>
+            Effect.gen(function* () {
+              const before = yield* snapshot.track()
+              if (!before) throw new Error("expected snapshot")
+              if (edit) yield* Effect.promise(() => fs.writeFile(file, edit))
+              const after = yield* snapshot.track()
+              if (!after) throw new Error("expected snapshot")
+              const message = yield* sessions.updateMessage({
+                id: MessageID.ascending(),
+                sessionID,
+                role: "assistant",
+                parentID: user.id,
+                mode: "default",
+                agent: "default",
+                path: { cwd: dir, root: dir },
+                cost: 0,
+                tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
+                modelID: ModelV2.ID.make("test"),
+                providerID,
+                time: { created: Date.now() },
+                finish: "end_turn",
+              })
+              yield* sessions.updatePart({
+                id: PartID.ascending(),
+                messageID: message.id,
+                sessionID,
+                type: "step-start",
+                snapshot: before,
+              })
+              yield* sessions.updatePart({
+                id: PartID.ascending(),
+                messageID: message.id,
+                sessionID,
+                type: "step-finish",
+                reason: "stop",
+                snapshot: after,
+                cost: 0,
+                tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
+              })
+              if (!edit) return
+              const patch = yield* snapshot.patch(before)
+              yield* sessions.updatePart({
+                id: PartID.ascending(),
+                messageID: message.id,
+                sessionID,
+                type: "patch",
+                hash: patch.hash,
+                files: patch.files,
+              })
+            })
+
+          // The parent delegates and records no edit of its own, so its own step window ends
+          // before the child writes.
+          yield* step(session.id)
+          yield* step(child.id, "after")
+
+          const result = yield* revert.revert({ sessionID: session.id, messageID: user.id })
+
+          expect({
+            workspace: result.revert?.workspace,
+            file: yield* Effect.promise(() => fs.readFile(file, "utf8")),
+            files: result.summary?.files,
+            child: result.summary?.diffs?.some((item) => item.file?.endsWith("child.txt")),
+          }).toEqual({ workspace: "restored", file: "before", files: 1, child: true })
+        }),
+      { git: true },
+    ),
+    30_000,
+  )
+})
+
+describe("sub-agent revert tie breaks", () => {
+  it.live(
+    "keeps the earlier snapshot when a descendant and its own child share a message time",
+    provideTmpdirInstance(
+      (dir) =>
+        Effect.gen(function* () {
+          const sessions = yield* Session.Service
+          const revert = yield* SessionRevert.Service
+          const snapshot = yield* Snapshot.Service
+          const providerID = ProviderV2.ID.make("test")
+          const file = path.join(dir, "shared.txt")
+          yield* Effect.promise(() => fs.writeFile(file, "before"))
+
+          const session = yield* sessions.create({})
+          const user = yield* sessions.updateMessage({
+            id: MessageID.make("msg_t0-user"),
+            sessionID: session.id,
+            role: "user",
+            agent: "default",
+            model: { providerID, modelID: ModelV2.ID.make("test") },
+            time: { created: 1 },
+          })
+          yield* sessions.updatePart({
+            id: PartID.ascending(),
+            messageID: user.id,
+            sessionID: session.id,
+            type: "text",
+            text: "delegate twice",
+          })
+
+          const child = yield* sessions.create({ parentID: session.id })
+          const grandchild = yield* sessions.create({ parentID: child.id })
+
+          const record = (sessionID: SessionID, id: string, text: string) =>
+            Effect.gen(function* () {
+              const before = yield* snapshot.track()
+              if (!before) throw new Error("expected snapshot")
+              yield* Effect.promise(() => fs.writeFile(file, text))
+              const after = yield* snapshot.track()
+              if (!after) throw new Error("expected snapshot")
+              const patch = yield* snapshot.patch(before)
+              const message = yield* sessions.updateMessage({
+                id: MessageID.make(id),
+                sessionID,
+                role: "assistant",
+                parentID: user.id,
+                mode: "default",
+                agent: "default",
+                path: { cwd: dir, root: dir },
+                cost: 0,
+                tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
+                modelID: ModelV2.ID.make("test"),
+                providerID,
+                time: { created: 5 },
+                finish: "end_turn",
+              })
+              yield* sessions.updatePart({
+                id: PartID.ascending(),
+                messageID: message.id,
+                sessionID,
+                type: "patch",
+                hash: patch.hash,
+                files: patch.files,
+              })
+            })
+
+          // Both messages carry the same millisecond. The child edits first under the smaller id,
+          // its own child edits second under the larger id, so a depth-first walk that leaves ties
+          // to traversal order hands the file to the grandchild's later snapshot.
+          yield* record(child.id, "msg_a1-child", "first")
+          yield* record(grandchild.id, "msg_b2-grandchild", "second")
+
+          yield* revert.revert({ sessionID: session.id, messageID: user.id })
+
+          expect(yield* Effect.promise(() => fs.readFile(file, "utf8"))).toBe("before")
+        }),
+      { git: true },
+    ),
+    30_000,
+  )
+})
+
+describe("sub-agent revert busy guard", () => {
+  it.live(
+    "refuses to revert while a descendant session is running",
+    provideTmpdirInstance(
+      (dir) =>
+        Effect.gen(function* () {
+          const sessions = yield* Session.Service
+          const revert = yield* SessionRevert.Service
+          const run = yield* SessionRunState.Service
+          const providerID = ProviderV2.ID.make("test")
+          yield* Effect.promise(() => fs.writeFile(path.join(dir, "child.txt"), "before"))
+
+          const session = yield* sessions.create({})
+          const user = yield* sessions.updateMessage({
+            id: MessageID.ascending(),
+            sessionID: session.id,
+            role: "user",
+            agent: "default",
+            model: { providerID, modelID: ModelV2.ID.make("test") },
+            time: { created: Date.now() },
+          })
+          yield* sessions.updatePart({
+            id: PartID.ascending(),
+            messageID: user.id,
+            sessionID: session.id,
+            type: "text",
+            text: "delegate the edit",
+          })
+
+          const child = yield* sessions.create({ parentID: session.id })
+          // Start the run later than any single fixed sleep would cover, so wall-clock
+          // synchronization would fail here rather than flake on a loaded host.
+          const fiber = yield* Effect.gen(function* () {
+            yield* Effect.sleep("250 millis")
+            return yield* run.ensureRunning(child.id, Effect.never, Effect.never)
+          }).pipe(Effect.forkChild)
+          // Wait for the run to publish busy instead of racing the scheduler with a fixed sleep. The
+          // runner only starts the work after it commits to "Running", which is what makes
+          // `assertNotBusy` fail; it does not publish `SessionStatus` busy on this path (the prompt
+          // loop and `startShell` do that), so the runner's own state is the readiness signal here.
+          yield* pollWithTimeout(
+            run.assertNotBusy(child.id).pipe(
+              Effect.as(undefined),
+              Effect.catchTag("SessionBusyError", () => Effect.succeed(true)),
+            ),
+            "child session never became busy",
+          )
+          expect(Exit.isFailure(yield* run.assertNotBusy(child.id).pipe(Effect.exit))).toBe(true)
+
+          const exit = yield* revert.revert({ sessionID: session.id, messageID: user.id }).pipe(Effect.exit)
+          expect(Exit.isFailure(exit)).toBe(true)
+          if (Exit.isFailure(exit)) expect(Cause.squash(exit.cause)).toBeInstanceOf(Session.BusyError)
+
+          yield* run.cancel(child.id)
+          yield* Fiber.interrupt(fiber)
         }),
       { git: true },
     ),
