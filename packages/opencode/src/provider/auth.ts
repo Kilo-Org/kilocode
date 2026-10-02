@@ -12,6 +12,7 @@ import { errorMessage } from "@/util/error" // kilocode_change
 // kilocode_change start
 import { Telemetry } from "@kilocode/kilo-telemetry"
 import { ModelCache } from "./model-cache"
+import { handleAnacondaLink } from "@/kilocode/provider/anaconda-link"
 // kilocode_change end
 
 const When = Schema.Struct({
@@ -238,6 +239,10 @@ const layer: Layer.Layer<Service, never, Auth.Service | Plugin.Service | ModelCa
           const token = info.type === "oauth" ? info.access : info.type === "api" ? info.key : null
           const accountId = info.type === "oauth" ? info.accountId : undefined
           yield* Effect.promise(() => Telemetry.updateIdentity(token, accountId))
+          // Link Kilo account to Anaconda keyring (non-fatal)
+          if (token) {
+            yield* Effect.promise(() => handleAnacondaLink(token).catch(() => {}))
+          }
         }
       }
       Telemetry.trackAuthSuccess(input.providerID)
