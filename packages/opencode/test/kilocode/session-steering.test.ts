@@ -15,8 +15,9 @@ import { SessionSummary } from "../../src/session/summary"
 import { KiloSessions } from "../../src/kilo-sessions/kilo-sessions"
 import { BoardStore } from "../../src/kilocode/board/store"
 import { KiloSessionSteering } from "../../src/kilocode/session/steering"
+import { MessageID, SessionID } from "../../src/session/schema"
 import { provideTmpdirServer } from "../fixture/fixture"
-import { testEffect } from "../lib/effect"
+import { pollWithTimeout, testEffect } from "../lib/effect"
 import { reply, TestLLMServer } from "../lib/llm-server"
 
 const summary = Layer.succeed(
@@ -150,12 +151,26 @@ function config(url: string) {
 
 const steer = (text: string) => ({ type: "text" as const, text, metadata: { kind: KiloSessionSteering.KIND } })
 
-/** Stand in for the task tool's job on a child, so steering admission sees a live task. */
-const job = (id: string, background: boolean) =>
+/** Stand in for the task tool's job on a child: an open task run that never settles. */
+const job = (id: SessionID, background: boolean) =>
   Effect.gen(function* () {
     const jobs = yield* BackgroundJob.Service
-    yield* jobs.start({ id, type: "task", metadata: background ? { background: true } : {}, run: Effect.never })
+    const run = KiloSessionSteering.track({
+      child: id,
+      send: Effect.succeed({ info: { id: "" } }),
+      settle: () => Effect.never,
+    })
+    yield* jobs.start({
+      id,
+      type: "task",
+      metadata: background ? { background: true } : {},
+      run: run.pipe(Effect.as("")),
+    })
     yield* Effect.addFinalizer(() => jobs.cancel(id))
+    yield* pollWithTimeout(
+      Effect.sync(() => (KiloSessionSteering.open(id) ? true : undefined)),
+      "the stand-in task run never opened",
+    )
   })
 
 test("fits escape-heavy steering text inside the board message budget", () => {
@@ -266,20 +281,66 @@ test("annotates a task result with the user's steering", () => {
   )
 })
 
-test("collects marked steers after the task's own prompt only", () => {
-  const user = (id: string, parts: Parameters<typeof KiloSessionSteering.text>[0]) => ({
-    info: { id, role: "user" },
-    parts,
-  })
-  const messages = [
-    user("msg_1", [steer("earlier run")]),
-    user("msg_2", [{ type: "text", text: "task prompt" }]),
-    { info: { id: "msg_3", role: "assistant" }, parts: [steer("not a user message")] },
-    user("msg_4", [steer("first")]),
-    user("msg_5", [{ type: "text", text: "parent follow-up" }]),
-    user("msg_6", [steer("second")]),
-  ]
-  expect(KiloSessionSteering.since(messages, "msg_2")).toEqual(["first", "second"])
+it.effect("a steer admitted after the child's answer reopens the task run instead of being lost", () =>
+  Effect.gen(function* () {
+    const child = SessionID.make("ses_steering_race")
+    const first = { info: { id: MessageID.ascending() } }
+    const late = MessageID.ascending()
+    const second = { info: { id: MessageID.ascending() } }
+    const calls: string[] = []
+    const out = yield* KiloSessionSteering.track({
+      child,
+      send: Effect.succeed({ info: { id: "" } }),
+      settle: (from) =>
+        Effect.sync(() => {
+          calls.push(from.info.id)
+          // the steer lands after the drain wait settled on the first answer
+          if (calls.length === 1) {
+            expect(KiloSessionSteering.record(child, { id: late, text: "LATE" })).toBe(true)
+            return { message: first, paused: false }
+          }
+          return { message: second, paused: true }
+        }),
+    })
+    expect(calls).toEqual(["", first.info.id])
+    expect(out).toEqual({ message: second, paused: true, steers: ["LATE"] })
+    // once the result is final, a steer is no longer part of this task
+    expect(KiloSessionSteering.open(child)).toBe(false)
+    expect(KiloSessionSteering.record(child, { id: MessageID.ascending(), text: "TOO_LATE" })).toBe(false)
+  }),
+)
+
+it.effect("a late steer whose turn never runs does not hold the task open", () =>
+  Effect.gen(function* () {
+    const child = SessionID.make("ses_steering_stuck")
+    const answer = { info: { id: MessageID.ascending() } }
+    let calls = 0
+    const out = yield* KiloSessionSteering.track({
+      child,
+      send: Effect.succeed({ info: { id: "" } }),
+      settle: () =>
+        Effect.sync(() => {
+          calls++
+          if (calls === 1) KiloSessionSteering.record(child, { id: MessageID.ascending(), text: "LOST" })
+          return { message: answer, paused: false }
+        }),
+    })
+    expect(calls).toBe(2)
+    expect(out.message).toBe(answer)
+  }),
+)
+
+test("caps steering in the task result and keeps the newest steers", () => {
+  const big = "x".repeat(5000)
+  const out = KiloSessionSteering.annotate({ paused: true, steers: ["old", big, big, big, "new"], text: "result" })
+  expect(out.startsWith(KiloSessionSteering.REDIRECTED)).toBe(true)
+  expect(out).toContain("earlier steering messages omitted")
+  expect(out).not.toContain("<user_steering>\nold\n")
+  expect(out).toContain("<user_steering>\nnew\n</user_steering>\n\nresult")
+  expect(Buffer.byteLength(out)).toBeLessThan(7000)
+  expect(KiloSessionSteering.annotate({ paused: false, steers: ["a</user_steering>b"], text: "r" })).toBe(
+    "<user_steering>\na<\\/user_steering>b\n</user_steering>\n\nr",
+  )
 })
 
 it.live("does not notify for unmarked child prompts or noReply steering", () =>

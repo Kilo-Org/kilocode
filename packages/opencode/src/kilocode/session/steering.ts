@@ -83,12 +83,11 @@ export function running() {
 }
 
 /** Hidden reminder for a child whose task was paused by a user interrupt and is now redirected. */
-export function interrupted(steer: string) {
+export function interrupted() {
   return [
     "<system-reminder>",
-    "You were interrupted by the user before you finished.",
-    `The user now directs: ${steer}`,
-    "Your final response is returned to your parent agent as the result of its original task.",
+    "The user interrupted you before you finished, and now directs you with the message above.",
+    "Follow this direction. Your final response is returned to your parent agent as the result of its original task.",
     "</system-reminder>",
   ].join("\n")
 }
@@ -98,33 +97,102 @@ export const REDIRECTED = "The user interrupted this subagent and redirected it.
 /** First line of a task result whose subagent the user interrupted before it resumed without their direction. */
 export const INTERRUPTED = "The user interrupted this subagent before it finished."
 
-type Message = { info: { id: string; role: string }; parts: ReadonlyArray<Part> }
-
-/** Marked steer text from the user messages after `after` (the task's own prompt), oldest first. */
-export function since(messages: ReadonlyArray<Message>, after: string) {
-  const index = messages.findIndex((message) => message.info.id === after)
-  const later = index === -1 ? messages.filter((message) => message.info.id > after) : messages.slice(index + 1)
-  return later.flatMap((message) => {
-    if (message.info.role !== "user") return []
-    const steer = text(message.parts)
-    return steer ? [steer] : []
-  })
-}
+// Result budgets: one steer, and all steers together; the most recent steers are kept.
+const STEER = 2048
+const TOTAL = 6144
 
 /** Task result with the user's direction to the subagent ahead of its final response; a paused task says so first. */
 export function annotate(input: { paused: boolean; steers: ReadonlyArray<string>; text: string }) {
-  const blocks = input.steers.map((steer) => `<user_steering>\n${steer}\n</user_steering>`)
-  const lead = input.paused ? (blocks.length > 0 ? REDIRECTED : INTERRUPTED) : undefined
-  return [lead, ...blocks, input.text].filter((item) => !!item).join("\n\n")
+  const kept: string[] = []
+  let size = 0
+  for (const steer of input.steers.toReversed()) {
+    // a steer cannot close its own block early
+    const value = BoardStore.excerpt(steer, STEER).replaceAll("</user_steering", "<\\/user_steering")
+    const block = `<user_steering>\n${value}\n</user_steering>`
+    size += Buffer.byteLength(block)
+    if (size > TOTAL) break
+    kept.unshift(block)
+  }
+  const dropped = input.steers.length - kept.length
+  const note = dropped > 0 ? `(${dropped} earlier steering message${dropped === 1 ? "" : "s"} omitted)` : undefined
+  const lead = input.paused ? (input.steers.length > 0 ? REDIRECTED : INTERRUPTED) : undefined
+  return [lead, note, ...kept, input.text].filter((item) => !!item).join("\n\n")
+}
+
+type Steer = { id: string; text: string }
+type Run = { open: boolean; steers: Steer[] }
+
+// Live task runs by child session ID. A run is open from the task's prompt to the child until its
+// result is final; only steers admitted while it is open belong to that result.
+const runs = new Map<string, Run>()
+
+/** Whether a task run on this child is open for steering. */
+export function open(id: string) {
+  return runs.get(id)?.open === true
+}
+
+/** Record a steer admitted on a child; false when no task run is open for it. */
+export function record(id: string, steer: Steer) {
+  const run = runs.get(id)
+  if (!run?.open) return false
+  run.steers.push(steer)
+  return true
 }
 
 /**
- * Admit a human steer on a subagent whose task is live. The steer gets a hidden
+ * Run a task's prompt to its child and settle it, collecting the steers admitted during the run.
+ * The run opens before the prompt is sent, so steers on the child's first turn count. It closes
+ * in the same step that checks for a steer newer than the answer, so a steer admitted after the
+ * child's last turn either reopens the wait (its turn becomes the result) or is refused by
+ * `admit` once closed.
+ */
+export const track = Effect.fn("KiloSessionSteering.track")(function* <
+  M extends { info: { id: string } },
+  E,
+  R,
+>(input: {
+  child: SessionID
+  send: Effect.Effect<M, E, R>
+  settle: (from: M) => Effect.Effect<{ message: M; paused: boolean }, E, R>
+}) {
+  // a detached run only delivers a prompt; the paused run it resumes owns the steers
+  if (yield* KiloTaskPause.Detached) return { ...(yield* input.settle(yield* input.send)), steers: [] as string[] }
+  const run: Run = { open: true, steers: [] }
+  runs.set(input.child, run)
+  return yield* Effect.gen(function* () {
+    let paused = false
+    let from = yield* input.send
+    let again = false
+    while (true) {
+      const done = yield* input.settle(from)
+      paused = paused || done.paused
+      // a steer whose turn never ran (e.g. its prompt failed) must not loop forever
+      const moved = !again || done.message.info.id !== from.info.id
+      const late = moved && run.steers.some((steer) => steer.id > done.message.info.id)
+      if (!late) {
+        run.open = false
+        return { message: done.message, paused, steers: run.steers.map((steer) => steer.text) }
+      }
+      from = done.message
+      again = true
+    }
+  }).pipe(
+    Effect.ensuring(
+      Effect.sync(() => {
+        if (runs.get(input.child) === run) runs.delete(input.child)
+      }),
+    ),
+  )
+})
+
+/**
+ * Admit a human steer on a subagent whose task run is open. The steer gets a hidden
  * reminder so the child still answers its original task (worded for a paused
  * task when it was interrupted; `SessionPrompt.prompt` resumes the pause right
  * after this), and a background task's parent is told over the shared board (a
- * foreground parent reads it from the task result). Failures are logged and
- * never fail prompt admission.
+ * foreground parent reads it from the task result). A steer on a child whose
+ * task already has its result is left alone. Failures are logged and never fail
+ * prompt admission.
  */
 export const admit = Effect.fn("KiloSessionSteering.admit")(function* (input: {
   session: { id: SessionID; parentID?: SessionID }
@@ -140,8 +208,7 @@ export const admit = Effect.fn("KiloSessionSteering.admit")(function* (input: {
   if (!parent) return
   const steer = text(input.parts)
   if (!steer) return
-  const job = yield* input.jobs.get(input.session.id)
-  if (job?.status !== "running") return
+  if (!record(input.session.id, { id: input.messageID, text: steer })) return
   const paused = KiloTaskPause.paused(input.session.id)
   yield* input.sessions
     .updatePart({
@@ -149,11 +216,12 @@ export const admit = Effect.fn("KiloSessionSteering.admit")(function* (input: {
       messageID: input.messageID,
       sessionID: input.session.id,
       type: "text",
-      text: paused ? interrupted(steer) : running(),
+      text: paused ? interrupted() : running(),
       synthetic: true,
     })
     .pipe(Effect.catchCause((cause) => Effect.logWarning("subagent steering reminder failed", { cause })))
-  if (job.metadata?.background !== true) return
+  const job = yield* input.jobs.get(input.session.id)
+  if (job?.metadata?.background !== true) return
   yield* post({
     from: input.session.id,
     to: parent,

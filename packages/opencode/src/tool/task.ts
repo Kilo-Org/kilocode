@@ -261,47 +261,53 @@ export const TaskTool = Tool.define(
           const parts = yield* ops.resolvePromptParts(params.prompt)
           KiloSessionProcessor.markReviewTelemetry(parts, params.command) // kilocode_change - carry review command into child session telemetry
           // kilocode_change start
-          const sent = MessageID.ascending() // steers after this prompt belong to this run
-          const initial = yield* ops.prompt({
-            messageID: sent,
-            sessionID: nextSession.id,
-            model: {
-              modelID: model.modelID,
-              providerID: model.providerID,
-            },
-            variant, // kilocode_change
-            agent: next.name,
-            tools: {
-              question: false, // kilocode_change - subagents cannot prompt the user directly
-              ...(canTodo ? {} : { todowrite: false }),
-              ...(canTask ? {} : { task: false }),
-              ...Object.fromEntries((cfg.experimental?.primary_tools ?? []).map((item) => [item, false])),
-            },
-            parts,
-          })
-          // an interrupted child pauses the task until a new prompt resumes it
-          const settled = yield* KiloTaskPause.settle({
+          // an interrupted child pauses the task until a new prompt resumes it; the user's steers
+          // during the run go ahead of its result, so the parent knows it was redirected
+          const settled = yield* KiloSessionSteering.track({
             child: nextSession.id,
-            parent: ctx.sessionID,
-            initial,
-            drain,
-            sessions,
-            jobs: background,
-            paused: ops.paused,
-            board: { config, flags, database },
+            send: ops.prompt({
+              messageID: MessageID.ascending(),
+              sessionID: nextSession.id,
+              model: {
+                modelID: model.modelID,
+                providerID: model.providerID,
+              },
+              variant, // kilocode_change
+              agent: next.name,
+              tools: {
+                question: false, // kilocode_change - subagents cannot prompt the user directly
+                ...(canTodo ? {} : { todowrite: false }),
+                ...(canTask ? {} : { task: false }),
+                ...Object.fromEntries((cfg.experimental?.primary_tools ?? []).map((item) => [item, false])),
+              },
+              parts,
+            }),
+            settle: (from) =>
+              KiloTaskPause.settle({
+                child: nextSession.id,
+                parent: ctx.sessionID,
+                initial: from,
+                drain,
+                sessions,
+                jobs: background,
+                paused: ops.paused,
+                board: { config, flags, database },
+              }),
           })
-          // The user's direction to the child, ahead of its result, so the parent knows it was redirected.
-          const steers = KiloSessionSteering.since(yield* sessions.messages({ sessionID: nextSession.id }), sent)
           const result = settled.message
+          const steering = (text: string) =>
+            KiloSessionSteering.annotate({ paused: settled.paused, steers: settled.steers, text })
           // kilocode_change end
           // kilocode_change start - expose terminal child assistant errors through the task tool boundary,
           // including the resumable task_id so the parent agent can continue the subagent (#11620)
           if (result.info.role === "assistant" && result.info.error) {
-            return yield* Effect.fail(new Error(`${errorMessage(result.info.error)}\n${resumeHint(nextSession.id)}`))
+            return yield* Effect.fail(
+              new Error(steering(`${errorMessage(result.info.error)}\n${resumeHint(nextSession.id)}`)),
+            )
           }
           const failed = result.parts.findLast((item) => item.type === "tool" && item.state.status === "error")
           if (failed?.type === "tool" && failed.state.status === "error") {
-            return yield* Effect.fail(new Error(`${failed.state.error}\n${resumeHint(nextSession.id)}`))
+            return yield* Effect.fail(new Error(steering(`${failed.state.error}\n${resumeHint(nextSession.id)}`)))
           }
           // kilocode_change end
           // kilocode_change start - ignore synthetic/ignored/empty text parts (e.g. the memory marker) when picking the task result (#13469)
@@ -309,7 +315,7 @@ export const TaskTool = Tool.define(
             result.parts
               .filter((item): item is MessageV2.TextPart => item.type === "text")
               .findLast((item) => !item.synthetic && !item.ignored && item.text.length > 0)?.text ?? ""
-          return KiloSessionSteering.annotate({ paused: settled.paused, steers, text })
+          return steering(text)
           // kilocode_change end
         },
         Effect.ensuring(KiloTaskBackgroundProcess.finish(nextSession.id)),

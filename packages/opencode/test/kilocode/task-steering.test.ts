@@ -24,7 +24,7 @@ import { KiloTaskPause } from "../../src/kilocode/tool/task-pause"
 import { KiloSessionSteering } from "../../src/kilocode/session/steering"
 import { disposeAllInstancesEffect, provideTmpdirServer } from "../fixture/fixture"
 import { awaitWithTimeout, pollWithTimeout, testEffect } from "../lib/effect"
-import { reply, TestLLMServer } from "../lib/llm-server"
+import { httpError, reply, TestLLMServer } from "../lib/llm-server"
 
 const summary = Layer.succeed(
   SessionSummary.Service,
@@ -311,8 +311,9 @@ it.live(
         expect(text).toContain(`${KiloSessionSteering.REDIRECTED}\n\n${block("STEER_LEXER")}\n\nlexer report`)
         // the steered child turn was told it was interrupted and that its answer goes to the parent
         const body = yield* request("STEER_LEXER")
-        expect(body).toContain("You were interrupted by the user")
-        expect(body).toContain("The user now directs: STEER_LEXER")
+        expect(body).toContain("The user interrupted you before you finished")
+        // the reminder points at the steer instead of repeating it
+        expect(body.split("STEER_LEXER")).toHaveLength(2)
         // the reminder is hidden from the user
         const users = (yield* run.sessions.messages({ sessionID: run.child })).filter(
           (message) => message.info.role === "user",
@@ -509,6 +510,73 @@ it.live(
         yield* awaitWithTimeout(Fiber.join(run.fiber), "the original task call never returned", "15 seconds")
         expect(yield* request("STEER_USE")).toContain("GRAND_RESULT")
         expect(yield* output(run.chat.id)).toContain(`${block("STEER_USE")}\n\nused the grandchild`)
+        yield* settled()
+      }),
+      { config },
+    ),
+  30_000,
+)
+
+it.live(
+  "a steer after the task delivered its result gets no reminder and never reaches the parent",
+  () =>
+    provideTmpdirServer(
+      Effect.fnUntraced(function* () {
+        const svc = yield* services
+        yield* svc.llm.pushMatch(parent, task("CHILD_WORK"))
+        yield* svc.llm.pushMatch(child("CHILD_WORK"), reply().text("done work").stop())
+        yield* svc.llm.pushMatch(parent, reply().text("parent done").stop())
+        const chat = yield* svc.sessions.create({ title: "Steering parent" })
+        yield* awaitWithTimeout(
+          svc.prompt.prompt({ sessionID: chat.id, agent: "code", parts: [{ type: "text", text: "PARENT_REQUEST" }] }),
+          "the task call never returned",
+          "15 seconds",
+        )
+        const found = (yield* svc.sessions.children(chat.id)).at(0)
+        if (!found) throw new Error("the task never created a child")
+        const run = { ...svc, chat, child: found.id }
+        expect(yield* output(run.chat.id)).toContain("done work")
+        expect(KiloSessionSteering.open(run.child)).toBe(false)
+
+        yield* run.llm.pushMatch(child("STEER_AFTER"), reply().text("ack").stop())
+        yield* direct(run.child, "STEER_AFTER")
+        const users = (yield* run.sessions.messages({ sessionID: run.child })).filter(
+          (message) => message.info.role === "user",
+        )
+        expect(users.at(-1)?.parts.some((part) => part.type === "text" && part.synthetic)).toBe(false)
+        expect((yield* BoardStore.read({ sessionID: run.chat.id })).messages).toEqual([])
+        yield* settled()
+      }),
+      { config },
+    ),
+  30_000,
+)
+
+it.live(
+  "a steered subagent that then errors keeps the steering in the error result",
+  () =>
+    provideTmpdirServer(
+      Effect.fnUntraced(function* () {
+        const svc = yield* services
+        yield* svc.llm.pushMatch(parent, task("CHILD_WORK"))
+        yield* svc.llm.pushMatch(child("CHILD_WORK"), reply().hang())
+        yield* svc.llm.pushMatch(
+          child("STEER_BREAK"),
+          httpError(400, { error: { message: "provider rejected the steer" } }),
+        )
+        yield* svc.llm.pushMatch(parent, reply().text("parent recovered").stop())
+        const run = yield* launch()
+        yield* run.prompt.cancel(run.child, "session")
+        yield* paused(run.child)
+
+        yield* direct(run.child, "STEER_BREAK")
+        yield* awaitWithTimeout(Fiber.join(run.fiber), "the original task call never returned", "15 seconds")
+        const part = yield* taskPart(run.chat.id)
+        if (part?.type !== "tool" || part.state.status !== "error")
+          throw new Error(`task did not fail: ${JSON.stringify(part)}`)
+        expect(part.state.error).toContain(`${KiloSessionSteering.REDIRECTED}\n\n${block("STEER_BREAK")}`)
+        expect(part.state.error).toContain("provider rejected the steer")
+        expect(part.state.error).toContain(`task_id="${run.child}"`)
         yield* settled()
       }),
       { config },

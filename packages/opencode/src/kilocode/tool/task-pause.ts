@@ -43,7 +43,7 @@ export const resume = (id: string) =>
   })
 
 // A run that only delivers a prompt to a paused task's child; the paused run awaits the turn.
-const Detached = Context.Reference<boolean>("~kilo/TaskPauseDetached", { defaultValue: () => false })
+export const Detached = Context.Reference<boolean>("~kilo/TaskPauseDetached", { defaultValue: () => false })
 
 /**
  * `BackgroundJob.extend` for the task tool. A paused task's job is still running, so `extend`
