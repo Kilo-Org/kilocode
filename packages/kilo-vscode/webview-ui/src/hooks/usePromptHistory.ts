@@ -4,32 +4,94 @@
  * matching the behavior of the CLI TUI.
  *
  * Entries persist via localStorage, surviving webview hide/show cycles.
+ * History is scoped per conversation key (typically the session ID), so
+ * switching conversations does not mix unrelated prompt history.
  */
 
 import { createSignal } from "solid-js"
 import type { Accessor } from "solid-js"
 
 export const MAX = 100
-const STORAGE_KEY = "kilo.prompt-history.v1"
+/** The shared list: a flat array, stored exactly as before per-conversation history existed. */
+const SHARED_STORAGE_KEY = "kilo.prompt-history.v1"
+/** Per-conversation lists: a map of conversation key to list. */
+const SCOPED_STORAGE_KEY = "kilo.prompt-history.v2"
+/** Bucket for conversations that do not yet have a stable key (e.g. a brand-new tab). */
+const FALLBACK_KEY = "new"
+/** In-memory bucket for the shared list. Never evicted. */
+const GLOBAL_KEY = "global"
+/** Cap on remembered conversations, evicting the least recently used once exceeded. */
+export const MAX_CONVERSATIONS = 50
+/** Per-conversation mode only: longer prompts are not remembered, to protect the storage quota. */
+export const MAX_ENTRY = 10_000
+const EMPTY: string[] = []
 
-function load(): string[] {
+// Insertion order doubles as recency order: touching a key re-inserts it at the end.
+type Store = Map<string, string[]>
+
+function strings(value: unknown): string[] {
+  if (!Array.isArray(value)) return []
+  return value.filter((e): e is string => typeof e === "string").slice(0, MAX)
+}
+
+function read(key: string): unknown {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    if (!raw) return []
-    const parsed = JSON.parse(raw)
-    if (!Array.isArray(parsed)) return []
-    return parsed.filter((e): e is string => typeof e === "string").slice(0, MAX)
+    const raw = localStorage.getItem(key)
+    return raw ? JSON.parse(raw) : undefined
   } catch (err) {
     console.warn("[Kilo New] prompt history load failed", err)
-    return []
+    return undefined
   }
 }
 
-function save(items: string[]) {
+function load(): Store {
+  const store: Store = new Map()
+  const scoped = read(SCOPED_STORAGE_KEY)
+  if (typeof scoped === "object" && scoped !== null && !Array.isArray(scoped)) {
+    for (const [key, value] of Object.entries(scoped)) {
+      const list = strings(value)
+      if (key !== GLOBAL_KEY && list.length > 0) store.set(key, list)
+    }
+  }
+  const shared = strings(read(SHARED_STORAGE_KEY))
+  if (shared.length > 0) store.set(GLOBAL_KEY, shared)
+  return store
+}
+
+function write(key: string, value: unknown): boolean {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(items))
-  } catch (err) {
-    console.warn("[Kilo New] prompt history save failed", err)
+    localStorage.setItem(key, JSON.stringify(value))
+    return true
+  } catch {
+    return false
+  }
+}
+
+/** Drop the least recently used conversation (never the shared list). Returns whether one was dropped. */
+function evict(): boolean {
+  const oldest = [...store.keys()].find((k) => k !== GLOBAL_KEY)
+  if (oldest === undefined) return false
+  store.delete(oldest)
+  return true
+}
+
+/**
+ * Persist one side of the store, so a shared-list change never rewrites the
+ * per-conversation lists and the reverse. When the storage quota is exceeded, the
+ * per-conversation write drops the oldest conversations from a copy only;
+ * in-memory history is never dropped for a failed write.
+ */
+function persist(key: string) {
+  if (key === GLOBAL_KEY) {
+    if (!write(SHARED_STORAGE_KEY, store.get(GLOBAL_KEY) ?? [])) console.warn("[Kilo New] prompt history save failed")
+    return
+  }
+  const copy = new Map(store)
+  copy.delete(GLOBAL_KEY)
+  while (!write(SCOPED_STORAGE_KEY, Object.fromEntries(copy))) {
+    const oldest = copy.keys().next().value
+    if (oldest === undefined) return console.warn("[Kilo New] prompt history save failed")
+    copy.delete(oldest)
   }
 }
 
@@ -81,8 +143,29 @@ export function seedEntries(entries: string[], texts: string[], max: number): bo
   return true
 }
 
-// Module-level: initialized from localStorage, shared across remounts
-const entries: string[] = load()
+// Module-level: initialized from localStorage, shared across remounts, keyed per conversation.
+const store: Store = load()
+
+/** Read-only lookup: never allocates or persists an empty bucket for a key that was merely browsed. */
+function entriesFor(key: string): string[] {
+  return store.get(key) ?? EMPTY
+}
+
+/** Get-or-create the mutable bucket for `key`, marking it most-recently-used and
+ * evicting the oldest conversation once the cap is exceeded. Only call this when
+ * about to write, so reads never grow the store. */
+function mutableEntriesFor(key: string): string[] {
+  const existing = store.get(key)
+  if (existing) {
+    store.delete(key)
+    store.set(key, existing)
+    return existing
+  }
+  const created: string[] = []
+  store.set(key, created)
+  if (store.size > MAX_CONVERSATIONS) evict()
+  return created
+}
 
 export interface PromptHistory {
   /**
@@ -96,19 +179,48 @@ export interface PromptHistory {
     cursor: number,
     pastes: readonly string[],
   ) => { text: string; pastes: readonly string[] } | null
-  /** Append a sent prompt to history (deduplicates consecutive identical entries). */
-  append: (text: string) => void
+  /**
+   * Append a sent prompt to history (deduplicates consecutive identical entries).
+   * Pass `targetKey` to record against a specific conversation instead of whichever
+   * conversation is currently active — required when the send may complete after
+   * the user has already switched to a different conversation.
+   */
+  append: (text: string, targetKey?: string) => void
   /** Seed history from existing session messages (e.g., when a session is loaded). */
   seed: (texts: string[]) => void
   /** Reset navigation state. Call when the user types new input. */
   reset: () => void
-  /** Current history index (-1 = not browsing). */
+  /** Re-key a conversation's history, e.g. when a pending draft becomes a real session. */
+  move: (from: string, to: string) => void
+  /** Current history index (-1 = not browsing). Reflects the active conversation
+   * only after an action (navigate/append/seed) has synced it; it is a plain
+   * signal read with no side effects. */
   index: Accessor<number>
 }
 
-export function usePromptHistory(): PromptHistory {
+/**
+ * @param key Accessor for the current conversation's history key (typically the
+ * session ID). History is isolated per key; an undefined key falls back to a
+ * shared bucket for conversations that have not been created yet.
+ * @param shared When it returns true, every conversation shares one history and
+ * `key` is ignored.
+ */
+export function usePromptHistory(key: Accessor<string | undefined>, shared?: Accessor<boolean>): PromptHistory {
   const [index, setIndex] = createSignal(-1)
   let saved: { text: string; pastes: readonly string[] } | null = null
+  const resolve = () => (shared?.() ? GLOBAL_KEY : (key() ?? FALLBACK_KEY))
+  let lastKey = resolve()
+
+  // Switching conversations must not carry over browsing position or the saved draft.
+  // Only action methods call this — reading `index` never triggers it.
+  function syncKey(): string {
+    const current = resolve()
+    if (current === lastKey) return current
+    lastKey = current
+    setIndex(-1)
+    saved = null
+    return current
+  }
 
   function navigate(
     direction: "up" | "down",
@@ -116,19 +228,20 @@ export function usePromptHistory(): PromptHistory {
     cursor: number,
     pastes: readonly string[],
   ): { text: string; pastes: readonly string[] } | null {
+    const list = entriesFor(syncKey())
     if (!canNavigate(direction, text, cursor, index() >= 0)) return null
 
     if (direction === "up") {
-      if (entries.length === 0) return null
+      if (list.length === 0) return null
       if (index() === -1) {
         saved = { text, pastes }
         setIndex(0)
-        return { text: entries[0]!, pastes: [] }
+        return { text: list[0]!, pastes: [] }
       }
       const next = index() + 1
-      if (next >= entries.length) return null
+      if (next >= list.length) return null
       setIndex(next)
-      return { text: entries[next]!, pastes: [] }
+      return { text: list[next]!, pastes: [] }
     }
 
     // direction === "down"
@@ -137,7 +250,7 @@ export function usePromptHistory(): PromptHistory {
     if (index() > 0) {
       const next = index() - 1
       setIndex(next)
-      return { text: entries[next]!, pastes: [] }
+      return { text: list[next]!, pastes: [] }
     }
 
     // index === 0: return to the saved draft
@@ -147,12 +260,34 @@ export function usePromptHistory(): PromptHistory {
     return draft
   }
 
-  function append(text: string) {
-    if (appendEntry(entries, text, MAX)) save(entries)
+  function append(text: string, targetKey?: string) {
+    const all = shared?.() === true
+    if (!text.trim() || (!all && text.length > MAX_ENTRY)) return
+    // No conversation key yet: recording would leak into every other brand-new conversation.
+    if (!all && targetKey === undefined && key() === undefined) return
+    // An explicit targetKey names the session the message actually belongs to; it may
+    // differ from the active key. Shared mode ignores it: there is one bucket.
+    const current = syncKey()
+    const name = all || targetKey === undefined ? current : targetKey
+    if (appendEntry(mutableEntriesFor(name), text, MAX)) persist(name)
   }
 
   function seed(texts: string[]) {
-    if (seedEntries(entries, texts, MAX)) save(entries)
+    const all = shared?.() === true
+    const fit = all ? texts : texts.filter((t) => t.length <= MAX_ENTRY)
+    if (!fit.some((t) => t.trim())) return
+    const name = syncKey()
+    if (seedEntries(mutableEntriesFor(name), fit, MAX)) persist(name)
+  }
+
+  function move(from: string, to: string) {
+    const list = store.get(from)
+    if (!list || from === to || from === GLOBAL_KEY || to === GLOBAL_KEY) return
+    store.delete(from)
+    const target = store.get(to)
+    if (target) seedEntries(list, [...target].reverse(), MAX)
+    store.set(to, list)
+    persist(to)
   }
 
   function reset() {
@@ -160,5 +295,5 @@ export function usePromptHistory(): PromptHistory {
     saved = null
   }
 
-  return { navigate, append, seed, reset, index }
+  return { navigate, append, seed, reset, move, index }
 }
