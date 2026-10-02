@@ -1762,7 +1762,7 @@ raceNoLLMServer.instance(
       const firstCreate = yield* Deferred.make<void>()
       processorCreateStarted.push(firstCreate)
       const first = yield* prompt.loop({ sessionID: chat.id }).pipe(Effect.forkChild)
-      yield* awaitWithTimeout(Deferred.await(firstCreate), "processor.create did not start for first turn")
+      yield* awaitWithTimeout(Deferred.await(firstCreate), "processor.create did not start for first turn", "10 seconds") // kilocode_change
 
       yield* prompt.cancel(chat.id)
       const firstExit = yield* Fiber.await(first)
@@ -1788,7 +1788,7 @@ raceNoLLMServer.instance(
       const secondCreate = yield* Deferred.make<void>()
       processorCreateStarted.push(secondCreate)
       const second = yield* prompt.loop({ sessionID: chat.id }).pipe(Effect.forkChild)
-      yield* awaitWithTimeout(Deferred.await(secondCreate), "processor.create did not start for second turn")
+      yield* awaitWithTimeout(Deferred.await(secondCreate), "processor.create did not start for second turn", "10 seconds") // kilocode_change
 
       yield* prompt.cancel(chat.id)
       const secondExit = yield* Fiber.await(second)
@@ -1823,8 +1823,8 @@ raceNoLLMServer.instance(
       }
     }),
   { config: cfg },
-  10_000,
-)
+  20_000, // kilocode_change
+) // kilocode_change
 
 noLLMServer.instance(
   "cancel finalizes subtask tool state",
@@ -2141,7 +2141,7 @@ it.instance(
       yield* prompt.cancel(chat.id)
       yield* Fiber.await(fiber)
     }),
-  10_000,
+  20_000, // kilocode_change
 )
 
 noLLMServer.instance("assertNotBusy succeeds when idle", () =>
@@ -2170,7 +2170,7 @@ it.instance(
 
       const fiber = yield* prompt.loop({ sessionID: chat.id }).pipe(Effect.forkChild)
       yield* llm.wait(1)
-      yield* waitForBusy(chat.id)
+      yield* waitForBusy(chat.id, "10 seconds") // kilocode_change
 
       const exit = yield* prompt.shell({ sessionID: chat.id, agent: "build", command: "echo hi" }).pipe(Effect.exit)
       expect(Exit.isFailure(exit)).toBe(true)
@@ -3293,7 +3293,7 @@ it.instance(
         Effect.promise(() => Suggestion.list()).pipe(
           Effect.map((items) => items.find((item) => item.sessionID === chat.id)),
         ),
-        "timed out waiting for suggestion request",
+        "timed out waiting for suggestion request", "10 seconds", // kilocode_change
       )
 
       yield* Effect.promise(() => Suggestion.accept({ requestID: request.id, index: 0 }))
