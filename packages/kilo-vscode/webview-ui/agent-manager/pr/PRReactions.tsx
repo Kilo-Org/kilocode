@@ -10,7 +10,7 @@ import { PR_REACTION_CONTENT, type PRReaction, type PRReactionContent } from "./
 const EMOJI: Record<PRReactionContent, string> = {
   THUMBS_UP: "👍",
   THUMBS_DOWN: "👎",
-  LAUGH: "😂",
+  LAUGH: "😄",
   HOORAY: "🎉",
   CONFUSED: "😕",
   HEART: "❤️",
@@ -53,7 +53,9 @@ export function PRReactions(props: Props) {
               aria-busy={busy()}
               onClick={() => toggle(content)}
             >
-              <span aria-hidden="true">{EMOJI[content]}</span>
+              <span class="am-pr-reaction-emoji" aria-hidden="true">
+                {EMOJI[content]}
+              </span>
               {/* Fixed-width slot: the spinner takes the count's place instead of resizing the pill. */}
               <span class="am-pr-reaction-count">
                 <Show when={busy()} fallback={find(content)?.count}>
@@ -67,6 +69,7 @@ export function PRReactions(props: Props) {
       <Popover
         open={open()}
         onOpenChange={setOpen}
+        class="am-pr-reaction-popover"
         contentLabel={t("agentManager.pr.comment.reactionPicker")}
         trigger={
           <IconButton icon="plus-small" size="small" variant="ghost" label={t("agentManager.pr.comment.react")} />
@@ -86,7 +89,9 @@ export function PRReactions(props: Props) {
                   toggle(content)
                 }}
               >
-                <span aria-hidden="true">{EMOJI[content]}</span>
+                <span class="am-pr-reaction-emoji" aria-hidden="true">
+                  {EMOJI[content]}
+                </span>
               </Button>
             )}
           </For>
