@@ -56,6 +56,22 @@ export function injectedPreview(text: string): string | undefined {
   return first && first !== body ? first : undefined
 }
 
+const SCHEDULED = [
+  { tag: "[scheduled cron task]", label: "Scheduled cron task" },
+  { tag: "[scheduled wakeup]", label: "Scheduled wakeup" },
+]
+
+/**
+ * Prompts the runtime injects when a cron or wakeup task fires. They carry
+ * no user text, so they are labeled as scheduled instead of looking typed.
+ */
+function scheduled(body: string): InjectedView | undefined {
+  const hit = SCHEDULED.find((item) => body.startsWith(item.tag))
+  if (!hit) return undefined
+  const first = body.slice(hit.tag.length).trim().split(/\n\s*\n/, 1)[0]?.trim()
+  return { label: hit.label, preview: first || undefined }
+}
+
 /**
  * Resolve the header and collapsed body for a user message. `text` is the
  * message body after review and browser feedback sections were removed.
@@ -65,6 +81,8 @@ export function injectedView(metadata: unknown, text: string): InjectedView | un
   const marked = partInjected(metadata)
   if (marked) return { label: `Sent by Kilo \u00B7 ${marked.title}`, preview: injectedPreview(text) }
   const body = text.trim()
+  const sched = scheduled(body)
+  if (sched) return sched
   if (!body.startsWith(PUSH_INSTRUCTION)) return undefined
   const rest = body.slice(PUSH_INSTRUCTION.length).trim()
   if (!rest) return { label: "Sent by Kilo \u00B7 Fix pull request feedback" }
