@@ -45,6 +45,7 @@ const active = new Set([
   "kilo-auto-close.yml",
   "nix-eval.yml",
   "nix-hashes.yml",
+  "outdated-kilo-deps.yml",
   "prepare-jetbrains-release.yml",
   "publish-jetbrains-bundled.yml",
   "publish-jetbrains.yml",
