@@ -43,9 +43,9 @@ updates:
       - "dependencies"
     commit-message:
       prefix: "chore(kilo-docs)"
-    # Majors are never proposed. They change peer/provider specs and break
-    # typecheck (see the @ai-sdk/* 2.x -> 3.x and @types/node 24 -> 26 PRs).
-    # Bump them by hand, on purpose.
+    # Majors are never proposed. They can change peer specs or type targets
+    # (for example the @types/node major, which no longer matched the Node
+    # versions we target). Bump them by hand, on purpose.
     ignore:
       - dependency-name: "*"
         update-types:
@@ -87,9 +87,10 @@ updates:
       - "dependencies"
     commit-message:
       prefix: "chore(jetbrains)"
-    # Majors are never proposed. They change peer/provider specs and break
-    # typecheck (see the @ai-sdk/* 2.x -> 3.x and @types/node 24 -> 26 PRs).
-    # Bump them by hand, on purpose.
+    # Majors are never proposed. They can change the build tooling or test
+    # APIs (for example okhttp 4 -> 5 deprecates mockwebserver, and a Gradle
+    # wrapper or Kotlin plugin major changes the build itself). Bump them by
+    # hand, on purpose.
     ignore:
       - dependency-name: "*"
         update-types:
