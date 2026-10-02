@@ -29,14 +29,16 @@ export async function handleAnacondaLink(kiloToken: string): Promise<void> {
   const status = await checkAnacondaLogin().catch(() => ({ hasKey: false, email: null }))
 
   if (status.hasKey) {
-    // Key exists — check for email mismatch if passport returned an email
-    if (status.email) {
-      const profile = await getKiloProfile(kiloToken).catch(() => undefined)
-      if (profile?.email && status.email !== profile.email) {
-        Telemetry.trackAnacondaEmailMismatch()
-      }
+    // Key exists (even if passport failed) — never overwrite it
+    if (!status.email) {
+      Telemetry.trackAnacondaLinkFailed("passport")
+      return
     }
-    // Key exists (even if passport failed) — do not overwrite
+    // Passport returned an email — check it matches the Kilo account
+    const profile = await getKiloProfile(kiloToken).catch(() => undefined)
+    if (profile?.email && status.email !== profile.email) {
+      Telemetry.trackAnacondaEmailMismatch()
+    }
     return
   }
 
@@ -44,5 +46,7 @@ export async function handleAnacondaLink(kiloToken: string): Promise<void> {
   const linked = await linkAnacondaAccount(kiloToken)
   if (linked) {
     Telemetry.trackAnacondaLinkCreated()
+    return
   }
+  Telemetry.trackAnacondaLinkFailed("link")
 }

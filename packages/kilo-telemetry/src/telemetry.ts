@@ -295,6 +295,14 @@ export namespace Telemetry {
     track(TelemetryEvent.ANACONDA_LINK_CREATED)
   }
 
+  /**
+   * @param step - "passport" when an existing key could not be verified,
+   *               "link" when creating a new link failed
+   */
+  export function trackAnacondaLinkFailed(step: "passport" | "link") {
+    track(TelemetryEvent.ANACONDA_LINK_FAILED, { step })
+  }
+
   export function trackAnacondaEmailMismatch() {
     track(TelemetryEvent.ANACONDA_EMAIL_MISMATCH)
   }

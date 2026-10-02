@@ -2,6 +2,7 @@ import fs from "node:fs"
 import os from "node:os"
 import path from "node:path"
 import { afterEach, beforeEach, expect, mock, spyOn, test } from "bun:test"
+import { Telemetry } from "@kilocode/kilo-telemetry"
 import { handleAnacondaLink } from "@/kilocode/provider/anaconda-link"
 
 let file: string
@@ -44,11 +45,13 @@ const route = (passport: () => Promise<Response>) =>
 test("keeps an existing key when the passport fetch throws", async () => {
   write("ad-existing-key")
   const request = route(() => Promise.reject(new TypeError("fetch failed")))
+  const failed = spyOn(Telemetry, "trackAnacondaLinkFailed")
 
   await handleAnacondaLink("kilo-token")
 
   expect(read()).toBe("ad-existing-key")
   expect(request.mock.calls.map((call) => String(call[0]))).toEqual(["https://anaconda.com/api/auth/passport"])
+  expect(failed.mock.calls).toEqual([["passport"]])
 })
 
 test("keeps an existing key when the passport returns malformed JSON", async () => {
@@ -62,8 +65,24 @@ test("keeps an existing key when the passport returns malformed JSON", async () 
 
 test("links and saves a key when none exists", async () => {
   route(() => Promise.reject(new Error("passport should not be called")))
+  const created = spyOn(Telemetry, "trackAnacondaLinkCreated")
+  const failed = spyOn(Telemetry, "trackAnacondaLinkFailed")
 
   await handleAnacondaLink("kilo-token")
 
   expect(read()).toBe("ad-new-key")
+  expect(created).toHaveBeenCalledTimes(1)
+  expect(failed).not.toHaveBeenCalled()
+})
+
+test("tracks a link failure when the link endpoint errors", async () => {
+  spyOn(globalThis, "fetch").mockResolvedValue(new Response(null, { status: 500 }))
+  const created = spyOn(Telemetry, "trackAnacondaLinkCreated")
+  const failed = spyOn(Telemetry, "trackAnacondaLinkFailed")
+
+  await handleAnacondaLink("kilo-token")
+
+  expect(read()).toBeUndefined()
+  expect(created).not.toHaveBeenCalled()
+  expect(failed.mock.calls).toEqual([["link"]])
 })

@@ -43,6 +43,7 @@ export enum TelemetryEvent {
 
   // Anaconda Integration Events
   ANACONDA_LINK_CREATED = "Anaconda Link Created",
+  ANACONDA_LINK_FAILED = "Anaconda Link Failed",
   ANACONDA_EMAIL_MISMATCH = "Anaconda Email Mismatch",
 
   // Config Events
