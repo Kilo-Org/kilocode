@@ -56,7 +56,7 @@ function rules() {
   const items: Parameters<typeof patchAgents>[0] = Object.fromEntries(
     ["build", "plan", "explore"].map((name) => [name, { name, mode: "primary", options: {}, permission: [] }]),
   )
-  patchAgents(items, [], [], { mcpRules: {}, defaultsPatch: [], board: false }, "/repo", [])
+  patchAgents(items, [], [], { mcpRules: {}, defaultsPatch: [], board: false, autonomous: false }, "/repo", [])
   hardenExplore("explore", items.explore, [])
   return { plan: items.plan.permission, explore: items.explore.permission }
 }

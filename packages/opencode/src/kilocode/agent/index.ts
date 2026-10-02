@@ -12,6 +12,8 @@ import { Flag } from "@opencode-ai/core/flag/flag"
 import { applyEdits, modify, parse as parseJsonc } from "jsonc-parser"
 import type { RuntimeFlags } from "@/effect/runtime-flags"
 import { BoardEnabled } from "@/kilocode/board/enabled"
+import { AutonomousAgents } from "@/kilocode/autonomous/agents"
+import { AutonomousConfig } from "@/kilocode/autonomous/config"
 import { KilocodeConfigSources } from "../config/sources"
 
 import PROMPT_DEBUG from "../../agent/prompt/debug.txt"
@@ -369,6 +371,7 @@ export interface KiloData {
   mcpRules: Record<string, "allow" | "ask" | "deny">
   defaultsPatch: Permission.Ruleset
   board: boolean
+  autonomous: boolean
 }
 
 // Prepare kilo-specific data derived from config. Call once per state initialization.
@@ -386,7 +389,7 @@ export function prepare(cfg: Config.Info, flags: Pick<RuntimeFlags.Info, "experi
     kilo_memory_recall: "ask",
     kilo_memory_save: "ask",
   })
-  return { mcpRules, defaultsPatch, board: enabled }
+  return { mcpRules, defaultsPatch, board: enabled, autonomous: AutonomousConfig.enabled(cfg) }
 }
 
 export function cacheKey(cfg: Config.Info) {
@@ -398,6 +401,7 @@ export function cacheKey(cfg: Config.Info) {
     permission: cfg.permission,
     native_notebook_tools: cfg.experimental?.native_notebook_tools,
     shared_agent_board: cfg.shared_agent_board,
+    autonomous_goal: cfg.autonomous_goal?.enabled,
     references: cfg.references,
     reference: cfg.reference,
   })
@@ -658,6 +662,8 @@ export function patchAgents(
     mode: "primary",
     native: true,
   }
+
+  if (kilo.autonomous) AutonomousAgents.register(agents, { defaults, user, readOnlyBash, whitelistedDirs })
 
   hardenSystemAgents(agents)
 }
