@@ -1,3 +1,9 @@
+import * as fs from "fs"
+
+export function ensureServerCwd(dir: string): void {
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true })
+}
+
 /**
  * Parse the port number from CLI server startup output.
  * Matches lines like: "kilo server listening on http://127.0.0.1:12345"
