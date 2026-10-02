@@ -111,12 +111,17 @@ abstract class AbstractSessionPartView(
      */
     protected fun expandedGap(): Int = if (isExpanded()) SessionUiStyle.View.contentGap() else 0
 
+    /** Once true, transcript appearance changes must not override this card's user-chosen state. */
+    protected var touched = false
+        private set
+
     fun isExpanded(): Boolean = body?.parent === this
 
     fun toggle() {
         if (!expandable || !arrow.isVisible) return
         val changed = toggleLocal()
         if (!changed) return
+        touched = true
         userToggled()
         syncArrow()
         refresh()

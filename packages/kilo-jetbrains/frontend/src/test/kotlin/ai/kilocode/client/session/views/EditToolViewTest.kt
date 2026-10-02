@@ -1,8 +1,10 @@
 package ai.kilocode.client.session.views
 
+import ai.kilocode.client.plugin.KiloPluginSettings
 import ai.kilocode.client.session.model.Tool
 import ai.kilocode.client.session.model.ToolExecState
 import ai.kilocode.client.session.model.toolKind
+import ai.kilocode.client.session.settings.BlockDisplay
 import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.session.views.tool.EditToolView
 import ai.kilocode.client.session.views.tool.FileLinkLabel
@@ -36,9 +38,52 @@ class EditToolViewTest : BasePlatformTestCase() {
     private val views = mutableListOf<EditToolView>()
 
     override fun tearDown() {
-        views.forEach { Disposer.dispose(it) }
-        views.clear()
-        super.tearDown()
+        try {
+            views.forEach { Disposer.dispose(it) }
+            views.clear()
+            KiloPluginSettings.unsetCodeEditDisplay()
+        } finally {
+            super.tearDown()
+        }
+    }
+
+    fun `test expanded display opens edit when diff is available`() {
+        val view = track(EditToolView(tool(), display = BlockDisplay.EXPANDED))
+
+        assertTrue(view.isExpanded())
+        assertTrue(view.bodyCreated())
+    }
+
+    fun `test expanded display waits for diff then opens once expandable`() {
+        val initial = Tool("p1", "edit", toolKind("edit")).also {
+            it.state = ToolExecState.RUNNING
+            it.input = mapOf("filePath" to "/repo/src/App.kt")
+        }
+        val view = track(EditToolView(initial, display = BlockDisplay.EXPANDED))
+
+        assertFalse(view.isExpanded())
+
+        view.update(tool())
+
+        assertTrue(view.isExpanded())
+    }
+
+    fun `test manual edit collapse is not undone by later updates`() {
+        val view = track(EditToolView(tool(), display = BlockDisplay.EXPANDED))
+
+        view.toggle()
+        view.update(tool().also { it.output = "Updated again" })
+
+        assertFalse(view.isExpanded())
+    }
+
+    fun `test live setting expands untouched edit`() {
+        val view = track(EditToolView(tool(), display = BlockDisplay.COLLAPSED))
+        KiloPluginSettings.setCodeEditDisplay(BlockDisplay.EXPANDED)
+
+        assertTrue(view.syncTranscriptDisplay())
+
+        assertTrue(view.isExpanded())
     }
 
     fun `test edit tool shows Edit title and clickable file link`() {

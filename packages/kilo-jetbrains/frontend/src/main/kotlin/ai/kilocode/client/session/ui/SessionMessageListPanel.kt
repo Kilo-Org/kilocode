@@ -587,6 +587,15 @@ class SessionMessageListPanel(
         refresh()
     }
 
+    @RequiresEdt
+    fun syncTranscriptDisplay() {
+        var changed = false
+        for (mv in msgToView.values) changed = mv.syncTranscriptDisplay() || changed
+        if (!changed) return
+        reflow()
+        refresh()
+    }
+
     /**
      * Re-apply [state] to the active question/permission/login/outcome footer and turn settling.
      * Normally driven by [SessionModelEvent.StateChanged]; also called directly when a session's

@@ -1,8 +1,11 @@
 package ai.kilocode.client.session.views.tool
 
+import ai.kilocode.client.plugin.KiloPluginSettings
 import ai.kilocode.client.session.model.Content
 import ai.kilocode.client.session.model.Tool
 import ai.kilocode.client.session.model.ToolExecState
+import ai.kilocode.client.session.settings.BlockDisplay
+import ai.kilocode.client.session.settings.TranscriptDisplayTarget
 import ai.kilocode.client.session.ui.popup.HeaderPopupRequest
 import ai.kilocode.client.session.ui.selection.SessionSelection
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
@@ -23,7 +26,9 @@ class ToolView(
     private val selection: SessionSelection? = null,
     private val parts: ToolParts = toolParts(tool, mode = ToolBodyMode.EDITOR),
     private val footer: ToolApprovalFooter = ToolApprovalFooter(),
-) : AbstractSessionPartView(parts.header, { parts.scroll(tool) }, { footer }), UiDataProvider, ApprovalReasonTarget {
+    private var display: BlockDisplay = KiloPluginSettings.getMcpToolDisplay(),
+) : AbstractSessionPartView(parts.header, { parts.scroll(tool) }, { footer }), UiDataProvider, ApprovalReasonTarget,
+    TranscriptDisplayTarget {
 
     override val contentId: String = tool.id
 
@@ -149,6 +154,13 @@ class ToolView(
         val expand = canExpand(item)
         var changed = false
         changed = syncExpandable(expand) || changed
+        if (!touched) {
+            changed = if (display == BlockDisplay.EXPANDED && expand) {
+                expand() || changed
+            } else {
+                collapse() || changed
+            }
+        }
         changed = setVisible(parts.state, !expand) || changed
         changed = syncLabels() || changed
         val body = parts.content
@@ -158,6 +170,16 @@ class ToolView(
         }
         changed = footer.update(item, approvalReasonsVisible()) || changed
         return changed
+    }
+
+    @RequiresEdt
+    override fun syncTranscriptDisplay(): Boolean {
+        if (touched) return false
+        val next = KiloPluginSettings.getMcpToolDisplay()
+        if (display == next) return false
+        display = next
+        sync()
+        return true
     }
 
     private fun syncLabels(): Boolean {
