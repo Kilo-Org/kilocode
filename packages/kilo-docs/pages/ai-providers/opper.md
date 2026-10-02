@@ -1,12 +1,12 @@
 ---
 title: "Using Opper with Kilo Code"
-description: "Route AI model requests through Opper in Kilo Code for access to 700+ models from 30+ providers through one EU-hosted, OpenAI-compatible API."
+description: "Route AI model requests through Opper in Kilo Code for access to 700+ models from 50+ providers through one EU-hosted, OpenAI-compatible API."
 sidebar_label: Opper
 ---
 
 # Using Opper With Kilo Code
 
-Kilo Code supports accessing models through the [Opper](https://opper.ai/) AI gateway. Opper is a European AI gateway serving 700+ models from 30+ providers, including Claude, GPT, Gemini, Grok, Mistral and leading open-weight models, through one API key, hosted in the EU.
+Kilo Code supports accessing models through the [Opper](https://opper.ai/) AI gateway. Opper is a European AI gateway serving 700+ models from 50+ providers, including Claude, GPT, Gemini, Grok, Mistral and leading open-weight models, through one API key, hosted in the EU.
 
 **Website:** [https://opper.ai/](https://opper.ai/)
 
