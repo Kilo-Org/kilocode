@@ -398,6 +398,8 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   const [contexts, setContexts] = createSignal<CodeContext[]>([])
   const [enhancing, setEnhancing] = createSignal(false)
   const [autoApprove, setAutoApprove] = createSignal(false)
+  const [approveForMe, setApproveForMe] = createSignal(false)
+  const [approveForMeVisible, setApproveForMeVisible] = createSignal(false)
   const [sandboxes, setSandboxes] = createSignal<Record<string, SandboxState>>({})
   const [sandboxDefault, setSandboxDefault] = createSignal<SandboxDefaultState>()
   const [sandboxRequests, setSandboxRequests] = createSignal<Record<string, string>>({})
@@ -923,6 +925,10 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     if (message.type === "autoApproveState") {
       setAutoApprove(message.active)
     }
+    if (message.type === "approveForMeState") {
+      setApproveForMe(message.active)
+      setApproveForMeVisible(message.visible)
+    }
   })
 
   const restoreFailed = (failed: SendMessageFailedMessage) => {
@@ -1242,6 +1248,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     }
   })
   vscode.postMessage({ type: "requestAutoApproveState" })
+  vscode.postMessage({ type: "requestApproveForMeState" })
 
   onCleanup(() => {
     props.onEditReady?.(false)
@@ -2240,6 +2247,29 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
               class={`prompt-status-button ${autoApprove() ? "prompt-status-button--active" : ""}`}
             />
           </Tooltip>
+          <Show when={approveForMeVisible()}>
+            <Tooltip
+              value={language.t(
+                approveForMe() ? "prompt.action.approveForMe.enabled" : "prompt.action.approveForMe.disabled",
+              )}
+              placement="top"
+              openDelay={0}
+            >
+              <IconButton
+                icon="gauge"
+                variant="ghost"
+                size="small"
+                onClick={() => vscode.postMessage({ type: "toggleApproveForMe" })}
+                aria-label={
+                  approveForMe()
+                    ? language.t("prompt.action.approveForMe.disable")
+                    : language.t("prompt.action.approveForMe.enable")
+                }
+                aria-pressed={approveForMe()}
+                class={`prompt-status-button ${approveForMe() ? "prompt-status-button--active" : ""}`}
+              />
+            </Tooltip>
+          </Show>
           <Show when={sandboxVisible()}>
             <SandboxButtonBase
               enabled={sandboxEnabled()}

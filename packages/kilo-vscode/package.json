@@ -469,6 +469,11 @@
         "category": "Kilo Code"
       },
       {
+        "command": "kilo-code.new.toggleApproveForMe",
+        "title": "Toggle Approve for Me",
+        "category": "Kilo Code"
+      },
+      {
         "command": "kilo-code.new.generateTerminalCommand",
         "title": "Generate Terminal Command",
         "category": "Kilo Code"
@@ -523,6 +528,10 @@
         {
           "command": "kilo-code.new.sidebarTitle.settingsButtonClicked",
           "when": "false"
+        },
+        {
+          "command": "kilo-code.new.toggleApproveForMe",
+          "when": "config.kilo-code.new.experimental.approveForMe"
         }
       ],
       "view/title": [
@@ -1099,6 +1108,12 @@
           "scope": "application",
           "description": "Experimental one-time import of supported global Claude Code instructions, simple skills, and disabled MCP definitions into Kilo. The original Claude files are never changed."
         },
+        "kilo-code.new.experimental.approveForMe": {
+          "type": "boolean",
+          "default": false,
+          "scope": "application",
+          "description": "Show the experimental 'Approve for me' toggle in the composer, next to auto-approve and sandbox. Entry point only: toggling it does not change approval behavior yet."
+        },
         "kilo-code.new.agentManager.terminalButtonDestination": {
           "type": "string",
           "scope": "application",
@@ -1133,6 +1148,11 @@
           "type": "boolean",
           "default": false,
           "description": "Start Kilo Code with the main auto-approve toggle enabled. When enabled, permission prompts are approved automatically. Sandbox escalation prompts are always excluded."
+        },
+        "kilo-code.new.approveForMe.enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Start Kilo Code with the experimental 'Approve for me' toggle enabled. Requires kilo-code.new.experimental.approveForMe. Entry point only: does not change approval behavior yet."
         },
         "kilo-code.new.maxCost": {
           "type": "number",

@@ -1425,6 +1425,14 @@ export interface ToggleAutoApproveMessage {
   type: "toggleAutoApprove"
 }
 
+export interface RequestApproveForMeStateMessage {
+  type: "requestApproveForMeState"
+}
+
+export interface ToggleApproveForMeMessage {
+  type: "toggleApproveForMe"
+}
+
 export interface RequestSandboxStatusMessage {
   type: "requestSandboxStatus"
   sessionID: string
@@ -1873,6 +1881,8 @@ export type WebviewMessage =
   | AgentManagerBrowserRequestMessage
   | RequestAutoApproveStateMessage
   | ToggleAutoApproveMessage
+  | RequestApproveForMeStateMessage
+  | ToggleApproveForMeMessage
   | RequestSandboxStatusMessage
   | RequestSandboxDefaultMessage
   | SetSandboxDefaultMessage

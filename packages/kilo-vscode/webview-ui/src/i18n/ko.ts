@@ -216,6 +216,11 @@ export const dict = {
   "prompt.action.autoApprove.enabled": "자동 승인이 켜져 있습니다. 권한 요청이 자동으로 승인됩니다.",
   "prompt.action.autoApprove.disabled": "자동 승인이 꺼져 있습니다. 클릭하면 권한 요청을 자동으로 승인합니다.",
   "prompt.action.autoApprove.sandboxExcluded": "샌드박스 에스컬레이션 프롬프트는 항상 제외됩니다.",
+  "prompt.action.approveForMe.enable": "나 대신 승인 활성화(실험적)",
+  "prompt.action.approveForMe.disable": "나 대신 승인 비활성화(실험적)",
+  "prompt.action.approveForMe.enabled":
+    "나 대신 승인이 활성화되었습니다. 초기 미리보기이며 아직 승인 동작을 변경하지 않습니다.",
+  "prompt.action.approveForMe.disabled": "나 대신 승인이 비활성화되었습니다. 실험적 미리보기이며 아직 효과가 없습니다.",
   "prompt.action.enhanceDescription":
     "'프롬프트 향상' 버튼은 추가 컨텍스트, 명확화 또는 재구성을 제공하여 요청을 개선합니다. 여기에 요청을 입력한 다음 버튼을 다시 클릭하여 작동 방식을 확인해보세요.",
   "prompt.action.sandbox.enable": "샌드박스 활성화",

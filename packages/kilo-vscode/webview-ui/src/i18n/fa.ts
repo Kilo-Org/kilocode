@@ -216,6 +216,11 @@ export const dict = {
   "prompt.action.autoApprove.enabled": "تأیید خودکار فعال است. درخواست‌های مجوز به‌صورت خودکار تأیید می‌شوند.",
   "prompt.action.autoApprove.disabled": "تأیید خودکار غیرفعال است. برای تأیید خودکار درخواست‌های مجوز کلیک کنید.",
   "prompt.action.autoApprove.sandboxExcluded": "درخواست‌های خروج از sandbox همیشه مستثنا هستند.",
+  "prompt.action.approveForMe.enable": "فعال‌سازی تأیید به‌جای من (آزمایشی)",
+  "prompt.action.approveForMe.disable": "غیرفعال‌سازی تأیید به‌جای من (آزمایشی)",
+  "prompt.action.approveForMe.enabled":
+    "تأیید به‌جای من فعال است. این یک پیش‌نمایش اولیه است: هنوز رفتار تأیید را تغییر نمی‌دهد.",
+  "prompt.action.approveForMe.disabled": "تأیید به‌جای من غیرفعال است. پیش‌نمایش آزمایشی، هنوز بدون اثر.",
   "prompt.action.sandbox.enable": "فعال‌سازی سندباکس",
   "prompt.action.sandbox.disable": "غیرفعال‌سازی سندباکس",
   "prompt.action.sandbox.enabled": "سندباکس فعال است. دستورات شل عامل به پوشه‌های پروژه و Kilo محدود شده‌اند.",

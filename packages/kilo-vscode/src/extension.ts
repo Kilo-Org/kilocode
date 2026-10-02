@@ -31,6 +31,7 @@ import { registerCommitMessageService } from "./services/commit-message"
 import { registerCodeActions, registerTerminalActions, KiloCodeActionProvider } from "./services/code-actions"
 import { closeTaskTarget, SurfaceFocus } from "./commands/close-task-target"
 import { registerToggleAutoApprove } from "./commands/toggle-auto-approve"
+import { registerToggleApproveForMe } from "./commands/toggle-approve-for-me"
 import { registerHeapSnapshot } from "./commands/heap-snapshot"
 import { RemoteStatusService } from "./services/RemoteStatusService"
 import { markWorkspace } from "./util/spotlight"
@@ -355,6 +356,11 @@ export async function activate(context: vscode.ExtensionContext) {
   provider.setAutoApproveController(autoApprove)
   agentManagerHost.setAutoApproveController(autoApprove)
 
+  // Entry point for the experimental "approve for me" composer toggle (issue #7684).
+  const approveForMe = registerToggleApproveForMe(context)
+  provider.setApproveForMeController(approveForMe)
+  agentManagerHost.setApproveForMeController(approveForMe)
+
   // Register serializer so Agent Manager restores when VS Code restarts
   context.subscriptions.push(
     vscode.window.registerWebviewPanelSerializer(AgentManagerProvider.viewType, {
@@ -390,6 +396,7 @@ export async function activate(context: vscode.ExtensionContext) {
     })
     tabProvider.setRemoteService(remoteService)
     tabProvider.setAutoApproveController(autoApprove)
+    tabProvider.setApproveForMeController(approveForMe)
     tabProvider.setContinueInWorktreeHandler((sessionId, progress) =>
       agentManagerProvider.continueFromSidebar(sessionId, progress),
     )

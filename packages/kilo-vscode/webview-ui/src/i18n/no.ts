@@ -218,6 +218,12 @@ export const dict = {
   "prompt.action.autoApprove.disabled":
     "Automatisk godkjenning er deaktivert. Klikk for å godkjenne tillatelsesforespørsler automatisk.",
   "prompt.action.autoApprove.sandboxExcluded": "Sandbox-eskaleringsforespørsler er alltid ekskludert.",
+  "prompt.action.approveForMe.enable": "Aktiver godkjenn for meg (eksperimentell)",
+  "prompt.action.approveForMe.disable": "Deaktiver godkjenn for meg (eksperimentell)",
+  "prompt.action.approveForMe.enabled":
+    "Godkjenn for meg er aktivert. Dette er en tidlig forhåndsvisning: endrer ikke godkjenningsoppførselen ennå.",
+  "prompt.action.approveForMe.disabled":
+    "Godkjenn for meg er deaktivert. Eksperimentell forhåndsvisning, ingen effekt ennå.",
   "prompt.action.indexing": "Indekseringsinnstillinger",
   "prompt.action.enhanceDescription":
     "Knappen 'Forbedre prompt' hjelper med å forbedre forespørselen din ved å gi ekstra kontekst, avklaring eller omformulering. Prøv å skrive en forespørsel her og klikk på knappen igjen for å se hvordan det fungerer.",

@@ -216,6 +216,12 @@ export const dict = {
   "prompt.action.autoApprove.disabled":
     "A aprovação automática está desativada. Clique para aprovar solicitações de permissão automaticamente.",
   "prompt.action.autoApprove.sandboxExcluded": "Solicitações de escalonamento da sandbox são sempre excluídas.",
+  "prompt.action.approveForMe.enable": "Ativar aprovar para mim (experimental)",
+  "prompt.action.approveForMe.disable": "Desativar aprovar para mim (experimental)",
+  "prompt.action.approveForMe.enabled":
+    "Aprovar para mim está ativado. Pré-visualização inicial: ainda não altera o comportamento de aprovação.",
+  "prompt.action.approveForMe.disabled":
+    "Aprovar para mim está desativado. Pré-visualização experimental, sem efeito por enquanto.",
   "prompt.action.enhanceDescription":
     "O botão 'Aprimorar prompt' ajuda a melhorar seu pedido fornecendo contexto adicional, esclarecimentos ou reformulações. Tente digitar um pedido aqui e clique no botão novamente para ver como funciona.",
   "prompt.action.indexing": "Configurações de indexação",

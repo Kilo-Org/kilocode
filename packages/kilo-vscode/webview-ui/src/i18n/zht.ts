@@ -206,6 +206,10 @@ export const dict = {
   "prompt.action.autoApprove.enabled": "自動核准已啟用。權限請求將自動獲准。",
   "prompt.action.autoApprove.disabled": "自動核准已停用。點擊以自動核准權限請求。",
   "prompt.action.autoApprove.sandboxExcluded": "離開沙盒的提示一律被排除。",
+  "prompt.action.approveForMe.enable": "啟用自動為我核准（實驗性）",
+  "prompt.action.approveForMe.disable": "關閉自動為我核准（實驗性）",
+  "prompt.action.approveForMe.enabled": "自動為我核准已啟用。這是早期預覽版：目前尚不會改變核准行為。",
+  "prompt.action.approveForMe.disabled": "自動為我核准已關閉。實驗性預覽，目前尚無實際效果。",
   "prompt.action.enhanceDescription":
     "「強化提示詞」按鈕可透過提供額外內容、說明或改寫來協助改善提示詞。試著在這裡輸入提示詞，再點選一次按鈕以了解其運作方式。",
   "prompt.action.sandbox.enable": "啟用沙盒",
