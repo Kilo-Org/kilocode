@@ -1,4 +1,5 @@
 import type { GoalLink } from "./link"
+import { KiloTaskPause } from "@/kilocode/tool/task-pause"
 
 /** A persisted goal wait survives the status mapping only as a record shape we understand. */
 function asWait(value: unknown): GoalLink.Wait | undefined {
@@ -123,7 +124,13 @@ export namespace GoalState {
     return active(id) || waiting(id)
   }
 
+  // Every session read and update projects its live runtime metadata here, so the
+  // paused-task marker rides the same hook as the goal state.
   export function project(id: string, metadata?: Record<string, unknown> | null) {
+    return KiloTaskPause.project(id, projectGoal(id, metadata))
+  }
+
+  function projectGoal(id: string, metadata?: Record<string, unknown> | null) {
     const goal = read(metadata)
     if (!goal) return metadata ?? undefined
     const status = active(id) ? "active" : goal.status === "active" ? "paused" : goal.status
