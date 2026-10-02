@@ -738,6 +738,7 @@ export interface ExtensionSettings {
   maxCost?: number
   multiProject?: boolean
   claudeMigration?: boolean
+  conversationPromptHistory?: boolean
   [key: string]: unknown
 }
 
