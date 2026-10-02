@@ -15,7 +15,7 @@ import { LocalProvider } from "../../src/context/local"
 import { LocationProvider } from "../../src/context/location"
 import { PermissionProvider } from "../../src/context/permission"
 import { ProjectProvider } from "../../src/context/project"
-import { PromptRefProvider } from "../../src/context/prompt"
+import { PromptRefProvider, usePromptRef } from "../../src/context/prompt"
 import { RouteProvider } from "../../src/context/route"
 import { TuiTerminalEnvironmentProvider } from "../../src/context/runtime"
 import { SDKProvider } from "../../src/context/sdk"
@@ -73,9 +73,10 @@ const reply = {
 async function mount(
   root: string,
   width = 100,
-  agents: object[] = [],
-  options: Parameters<typeof createTuiResolvedConfig>[0] = {},
+  opts: { route?: string; agents?: object[]; config?: Parameters<typeof createTuiResolvedConfig>[0] } = {},
 ) {
+  const route = opts.route ?? child.id
+  const agents = opts.agents ?? []
   await Bun.write(`${root}/kv.json`, JSON.stringify({ animations_enabled: false, sidebar: "hide", vim_enabled: false }))
   const aborts: URL[] = []
   const exits: unknown[] = []
@@ -95,8 +96,8 @@ async function mount(
     if (url.pathname.startsWith("/background-process/")) return json(true)
     return undefined
   })
-  const config = createTuiResolvedConfig(options)
-  const refs: { sync?: ReturnType<typeof useSync> } = {}
+  const config = createTuiResolvedConfig(opts.config)
+  const refs: { sync?: ReturnType<typeof useSync>; prompt?: ReturnType<typeof usePromptRef> } = {}
 
   function Ready() {
     const sync = useSync()
@@ -129,6 +130,7 @@ async function mount(
   }
 
   function Content() {
+    refs.prompt = usePromptRef()
     const dimensions = useTerminalDimensions()
     return (
       <box width={dimensions().width} height={dimensions().height} flexDirection="column">
@@ -155,7 +157,7 @@ async function mount(
               <ArgsProvider>
                 <KVProvider>
                   <ToastProvider>
-                    <RouteProvider initialRoute={{ type: "session", sessionID: child.id }}>
+                    <RouteProvider initialRoute={{ type: "session", sessionID: route }}>
                       <TuiConfigProvider config={config}>
                         <PluginRuntimeProvider value={runtime}>
                           <SDKProvider
@@ -194,7 +196,11 @@ async function mount(
   const app = await testRender(() => <Harness />, { width, height: 30 })
   const frame = () => app.captureCharFrame()
   try {
-    await wait(() => refs.sync?.data.session_status?.[child.id]?.type === "busy" && frame().includes("General"))
+    await wait(() =>
+      route === child.id
+        ? refs.sync?.data.session_status?.[child.id]?.type === "busy" && frame().includes("General")
+        : !!refs.prompt?.current?.focused,
+    )
     await app.flush()
     return {
       aborts,
@@ -348,7 +354,7 @@ test("recalling a shell history entry in a subagent view keeps it a plain steer"
   ]
   // with default keys, up on an empty subagent prompt goes to the parent; a user who unbinds that
   // reaches prompt history, which is shared across sessions and can hold a shell entry
-  using scene = await mount(tmp.path, 100, agents, { keybinds: { session_parent: "none" } })
+  using scene = await mount(tmp.path, 100, { agents, config: { keybinds: { session_parent: "none" } } })
   const color = (row: string, text: string) => {
     const line = scene.spans().lines.find((item) =>
       item.spans
@@ -368,4 +374,15 @@ test("recalling a shell history entry in a subagent view keeps it a plain steer"
   // shell mode would switch the prompt border to the shell color
   expect(color("ls -la", "┃")).toEqual(steered)
   await scene.press("\x03")
+})
+
+test("the main prompt's exit guard uses the same double press", async () => {
+  await using tmp = await tmpdir()
+  using scene = await mount(tmp.path, 100, { route: parent.id })
+  await scene.press("\x03")
+  expect(scene.frame()).toContain("again to exit")
+  expect(scene.exits).toHaveLength(0)
+  await scene.press("\x03")
+  expect(scene.exits).toHaveLength(1)
+  expect(scene.frame()).not.toContain("again to exit")
 })
