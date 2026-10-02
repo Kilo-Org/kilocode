@@ -1,7 +1,7 @@
 import { Effect, Exit, Schema } from "effect"
 import type { BackgroundJob } from "@/background/job"
 import type { SessionID } from "@/session/schema"
-import { KiloTaskPause } from "./task-pause"
+import { KiloTaskPauseState } from "./task-pause-state"
 import path from "path"
 import { Permission } from "@/permission"
 import { guarded } from "../agent"
@@ -76,7 +76,7 @@ export namespace KiloTask {
             ...input,
             run: Effect.interruptible(input.run),
             // a task promoted while paused tells the parent it awaits the user
-            onPromote: input.onPromote?.pipe(Effect.andThen(KiloTaskPause.announce(input.id))),
+            onPromote: input.onPromote?.pipe(Effect.andThen(KiloTaskPauseState.announce(input.id))),
           })
           .pipe(Effect.tap((job) => (notify ? notify(job.id) : Effect.void))),
         (_, exit) =>

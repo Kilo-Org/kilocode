@@ -6,76 +6,68 @@
 // child, deleting it, or disposing the instance) ends a paused task early.
 //
 // Clients read the pause from the child session's metadata (`KEY`), projected
-// from this live registry on every session read and update, so a marker
-// persisted by a process that died mid-pause is never shown as live.
-import { Context, Deferred, Effect } from "effect"
+// from the live registry in ./task-pause-state on every session read and
+// update, so a marker persisted by a process that died mid-pause is never shown.
+import { Context, Deferred, Effect, Scope } from "effect"
 import type { SessionV1 } from "@opencode-ai/core/v1/session"
 import type { Database } from "@opencode-ai/core/database/database"
 import type { BackgroundJob } from "@/background/job"
 import type { Config } from "@/config/config"
 import type { RuntimeFlags } from "@/effect/runtime-flags"
 import type { Session } from "@/session/session"
-import type { SessionID } from "@/session/schema"
+import { SessionID } from "@/session/schema"
 import type { SessionDrain } from "@/kilocode/session/drain"
-import { KiloSessionSteering } from "@/kilocode/session/steering"
+import { KiloSubagentNotice } from "@/kilocode/board/subagent-notice"
+import { KiloTaskPauseState as State } from "./task-pause-state"
 
-/** Child session metadata key that marks a task paused by the user. Must match the TUI. */
-export const KEY = "kilo.task"
+export const KEY = State.KEY
+export const paused = State.paused
+export const announce = State.announce
 
 export const NOTICE =
   "The user interrupted this subagent; it is paused awaiting their direction. Its result will still be delivered."
 
-type Entry = { done: Deferred.Deferred<void>; notice: Effect.Effect<void> }
+// The child whose task run only delivers a prompt to a paused task; the paused run awaits the
+// turn. Keyed by child ID: the delivered turn inherits this fiber's context, so a boolean would
+// also detach every nested task that turn starts.
+const Detached = Context.Reference<string | undefined>("~kilo/TaskPauseDetached", { defaultValue: () => undefined })
 
-const pauses = new Map<string, Entry>()
-
-export function paused(id: string) {
-  return pauses.has(id)
-}
-
-/** The paused child was directed again: the task waits for its next turn. */
-export const resume = (id: string) =>
-  Effect.suspend(() => {
-    const entry = pauses.get(id)
-    if (!entry) return Effect.succeed(false)
-    pauses.delete(id)
-    return Deferred.succeed(entry.done, undefined)
-  })
-
-// A run that only delivers a prompt to a paused task's child; the paused run awaits the turn.
-const Detached = Context.Reference<boolean>("~kilo/TaskPauseDetached", { defaultValue: () => false })
+type Paused = (id: SessionID) => Effect.Effect<boolean>
 
 /**
  * `BackgroundJob.extend` for the task tool. A paused task's job is still running, so `extend`
  * would queue behind the pause forever. Instead, `direct` (the task run) sends the prompt to the
  * child: its admission resumes the paused run, which awaits that turn and delivers the result
  * through the original job. The detached run returns without waiting.
+ *
+ * A child stopped by the user whose task has not reached its pause yet takes the same path, so a
+ * `task_id` that lands between the interrupt and the pause cannot queue behind it.
  */
 export const extend = Effect.fn("KiloTaskPause.extend")(function* <E, R>(
-  jobs: Pick<BackgroundJob.Interface, "extend">,
-  direct: Effect.Effect<unknown, E, R>,
-  input: Parameters<BackgroundJob.Interface["extend"]>[0],
+  input: {
+    jobs: Pick<BackgroundJob.Interface, "extend" | "get">
+    direct: Effect.Effect<unknown, E, R>
+    paused?: Paused
+    scope: Scope.Scope
+  },
+  job: Parameters<BackgroundJob.Interface["extend"]>[0],
 ) {
-  if (!pauses.has(input.id)) return yield* jobs.extend(input)
-  yield* direct.pipe(
-    Effect.provideService(Detached, true),
+  const id = SessionID.make(job.id)
+  const waiting =
+    State.paused(id) ||
+    (input.paused !== undefined && (yield* input.paused(id)) && (yield* input.jobs.get(id))?.status === "running")
+  if (!waiting) return yield* input.jobs.extend(job)
+  yield* input.direct.pipe(
+    Effect.provideService(Detached, id),
     Effect.catchCause((cause) => Effect.logWarning("paused task prompt failed", { cause })),
-    Effect.forkDetach({ startImmediately: true }),
+    Effect.forkIn(input.scope, { startImmediately: true }),
   )
   return true
 })
 
-/** Post the paused notice for a task that is (now) a background task. No-op when not paused. */
-export const announce = (id: string) => Effect.suspend(() => pauses.get(id)?.notice ?? Effect.void)
-
-/** Session metadata as clients should see it: the pause marker exactly while the pause is live. */
-export function project(id: string, metadata?: Record<string, unknown> | null) {
-  if (pauses.has(id)) return { ...metadata, [KEY]: { status: "paused" } }
-  if (!metadata || !(KEY in metadata)) return metadata ?? undefined
-  return Object.fromEntries(Object.entries(metadata).filter(([key]) => key !== KEY))
-}
-
 type Board = { config: Config.Interface; flags: RuntimeFlags.Info; database: Database.Interface }
+
+type Check = { message: SessionV1.WithParts; interrupted: boolean }
 
 /**
  * Settle a task run after its prompt to the child returned. An interrupted turn
@@ -89,10 +81,11 @@ export const settle = Effect.fn("KiloTaskPause.settle")(function* (input: {
   drain: Pick<SessionDrain.Interface, "wait">
   sessions: Pick<Session.Interface, "messages" | "touch">
   jobs: Pick<BackgroundJob.Interface, "get">
-  paused?: (id: SessionID) => Effect.Effect<boolean>
+  paused?: Paused
   board: Board
 }) {
-  if (yield* Detached) return input.initial
+  if ((yield* Detached) === input.child) return input.initial
+  const stopped = Effect.suspend(() => (input.paused ? input.paused(input.child) : Effect.succeed(false)))
   const latest = Effect.gen(function* () {
     const last = (yield* input.sessions.messages({ sessionID: input.child, limit: 1 })).at(-1)
     return last?.info.role === "assistant" && last.info.id > input.initial.info.id ? last : input.initial
@@ -103,9 +96,9 @@ export const settle = Effect.fn("KiloTaskPause.settle")(function* (input: {
     const message = yield* latest
     if (message.info.role !== "assistant" || message.info.error?.name !== "MessageAbortedError")
       return { message, interrupted: false }
-    if (!input.paused || !(yield* input.paused(input.child))) return { message, interrupted: false }
+    if (!(yield* stopped)) return { message, interrupted: false }
     const job = yield* input.jobs.get(input.child)
-    return { message, interrupted: job?.status === "running" }
+    return { message, interrupted: job?.status === "running" } satisfies Check
   })
   const publish = input.sessions
     .touch(input.child)
@@ -114,11 +107,12 @@ export const settle = Effect.fn("KiloTaskPause.settle")(function* (input: {
     Effect.gen(function* () {
       const job = yield* input.jobs.get(input.child)
       if (job?.status !== "running" || job.metadata?.background !== true) return
-      yield* KiloSessionSteering.post({
+      yield* KiloSubagentNotice.post({
         from: input.child,
         to: input.parent,
         messageID,
-        body: KiloSessionSteering.body(NOTICE, ""),
+        body: NOTICE,
+        label: "subagent pause notice failed",
         ...input.board,
       })
     })
@@ -126,7 +120,13 @@ export const settle = Effect.fn("KiloTaskPause.settle")(function* (input: {
     Effect.acquireUseRelease(
       Effect.gen(function* () {
         const entry = { done: yield* Deferred.make<void>(), notice: notice(messageID) }
-        pauses.set(input.child, entry)
+        State.set(input.child, entry)
+        // A prompt admitted between the check and this registration found no pause to resume;
+        // it already cleared the stop, so the task resumes right away.
+        if (!(yield* stopped)) {
+          yield* State.resume(input.child)
+          return entry
+        }
         yield* publish
         yield* entry.notice
         return entry
@@ -134,21 +134,24 @@ export const settle = Effect.fn("KiloTaskPause.settle")(function* (input: {
       (entry) => Deferred.await(entry.done),
       (entry) =>
         Effect.gen(function* () {
-          if (pauses.get(input.child) === entry) pauses.delete(input.child)
+          State.remove(input.child, entry)
           yield* publish
         }),
     )
 
-  let state = yield* check
-  while (true) {
-    if (!state.interrupted) {
+  // Wait for the child's work, pausing whenever its turn ended in a user interrupt.
+  const run = (state: Check): Effect.Effect<SessionV1.WithParts, Effect.Error<typeof check>> =>
+    Effect.gen(function* () {
+      if (state.interrupted) {
+        yield* hold(state.message.info.id)
+        return yield* run({ message: state.message, interrupted: false })
+      }
       yield* input.drain.wait(input.child)
-      state = yield* check
-      if (!state.interrupted) return state.message
-    }
-    yield* hold(state.message.info.id)
-    state = { message: state.message, interrupted: false }
-  }
+      const next = yield* check
+      if (!next.interrupted) return next.message
+      return yield* run(next)
+    })
+  return yield* run(yield* check)
 })
 
 export * as KiloTaskPause from "./task-pause"

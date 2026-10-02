@@ -1,10 +1,12 @@
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { SessionProjector } from "@opencode-ai/core/session/projector"
 import { expect } from "bun:test"
-import { Effect, Fiber, Layer } from "effect"
+import { Deferred, Effect, Fiber, Layer, Scope } from "effect"
 import { Database } from "@opencode-ai/core/database/database"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
 import { MemoryService } from "@kilocode/kilo-memory/effect/service"
+import { ModelV2 } from "@opencode-ai/core/model"
+import { ProviderV2 } from "@opencode-ai/core/provider"
 import { BackgroundJob } from "../../src/background/job"
 import { LSP } from "../../src/lsp/lsp"
 import { MCP } from "../../src/mcp"
@@ -14,7 +16,10 @@ import { SessionPrompt } from "../../src/session/prompt"
 import { SessionStatus } from "../../src/session/status"
 import { SessionRunState } from "../../src/session/run-state"
 import { SessionSummary } from "../../src/session/summary"
-import { SessionID } from "../../src/session/schema"
+import { MessageID, SessionID } from "../../src/session/schema"
+import { MessageV2 } from "../../src/session/message-v2"
+import { Config } from "../../src/config/config"
+import { RuntimeFlags } from "../../src/effect/runtime-flags"
 import { KiloSessions } from "../../src/kilo-sessions/kilo-sessions"
 import { BoardStore } from "../../src/kilocode/board/store"
 import { KiloSessionControl } from "../../src/kilocode/session/control"
@@ -91,6 +96,8 @@ const root = LayerNode.group([
   Session.node,
   SessionStatus.node,
   SessionRunState.node,
+  Config.node,
+  RuntimeFlags.node,
   SessionProjector.node,
   BackgroundJob.node,
   Database.node,
@@ -225,6 +232,26 @@ const steer = (id: SessionID, text: string) =>
       parts: [{ type: "text", text, metadata: { kind: KiloSessionSteering.KIND } }],
     })
   })
+
+/** The finalized assistant message of a turn the user interrupted. */
+function aborted(sessionID: SessionID) {
+  const message: MessageV2.Assistant = {
+    id: MessageID.ascending(),
+    sessionID,
+    role: "assistant",
+    parentID: MessageID.ascending(),
+    modelID: ModelV2.ID.make("child-model"),
+    providerID: ProviderV2.ID.make("test"),
+    mode: "general",
+    agent: "general",
+    path: { cwd: "/", root: "/" },
+    cost: 0,
+    tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
+    time: { created: 1, completed: 2 },
+    error: new MessageV2.AbortedError({ message: "aborted" }).toObject(),
+  }
+  return { info: message, parts: [] }
+}
 
 const injected = (id: SessionID, text: string) =>
   Effect.gen(function* () {
@@ -502,6 +529,121 @@ it.live(
         expect(KiloTaskPause.paused(run.child)).toBe(false)
         expect((yield* run.jobs.get(run.child))?.status).toBe("completed")
         yield* settled()
+      }),
+      { config },
+    ),
+  30_000,
+)
+
+it.live(
+  "a grandchild interrupted during a task_id-resumed turn pauses its own task",
+  () =>
+    provideTmpdirServer(
+      Effect.fnUntraced(function* () {
+        const svc = yield* services
+        yield* svc.llm.pushMatch(parent, task("CHILD_WORK", { background: true }), reply().text("launched").stop())
+        yield* svc.llm.pushMatch(child("CHILD_WORK"), reply().hang())
+        const run = yield* launch()
+        yield* awaitWithTimeout(Fiber.join(run.fiber), "parent did not finish its launch turn", "15 seconds")
+        yield* run.prompt.cancel(run.child, "session")
+        yield* paused(run.child)
+
+        // the parent's task_id resumes the child, whose new turn starts a foreground grandchild
+        yield* run.llm.pushMatch(parent, task("FOLLOW_UP", { task_id: run.child }), reply().text("sent").stop())
+        yield* run.llm.pushMatch(child("FOLLOW_UP"), task("GRAND_WORK"), reply().text("child final").stop())
+        yield* run.llm.pushMatch(child("GRAND_WORK"), reply().hang())
+        yield* run.llm.pushMatch(parent, reply().text("got it").stop())
+        yield* run.prompt.prompt({ sessionID: run.chat.id, parts: [{ type: "text", text: "nudge the worker" }] })
+        const grand = yield* pollWithTimeout(
+          Effect.gen(function* () {
+            const found = (yield* run.sessions.children(run.child))[0]?.id
+            if (!found) return undefined
+            const hits = yield* run.llm.hits
+            return hits.some((hit) => child("GRAND_WORK")(hit)) ? found : undefined
+          }),
+          "grandchild never started",
+          "10 seconds",
+        )
+
+        // interrupting the grandchild pauses its task; the resumed child keeps waiting on it
+        yield* run.prompt.cancel(grand, "session")
+        yield* paused(grand)
+        expect((yield* run.jobs.get(grand))?.status).toBe("running")
+        expect((yield* run.status.get(run.child)).type).toBe("busy")
+
+        yield* run.llm.pushMatch(child("STEER_ON"), reply().text("grand result").stop())
+        yield* steer(grand, "STEER_ON")
+        yield* injected(run.chat.id, "child final")
+        expect((yield* run.jobs.get(grand))?.status).toBe("completed")
+        yield* settled()
+      }),
+      { config },
+    ),
+  30_000,
+)
+
+it.live(
+  "a task_id between the interrupt and the pause reaches the child instead of queueing",
+  () =>
+    provideTmpdirServer(
+      Effect.fnUntraced(function* () {
+        const jobs = yield* BackgroundJob.Service
+        const id = SessionID.descending()
+        // the task's run is still settling: its job runs, the child is stopped, no pause is registered yet
+        yield* jobs.start({ id, type: "task", metadata: {}, run: Effect.never })
+        const sent = yield* Deferred.make<void>()
+        const queued = yield* Deferred.make<void>()
+        const extended = yield* KiloTaskPause.extend(
+          {
+            jobs,
+            direct: Deferred.succeed(sent, undefined),
+            paused: () => Effect.succeed(true),
+            scope: yield* Scope.Scope,
+          },
+          { id, run: Deferred.succeed(queued, undefined).pipe(Effect.as("")) },
+        )
+        expect(extended).toBe(true)
+        yield* awaitWithTimeout(Deferred.await(sent), "the prompt queued behind the paused run", "5 seconds")
+        expect(yield* Deferred.isDone(queued)).toBe(false)
+        yield* jobs.cancel(id)
+      }),
+      { config },
+    ),
+  30_000,
+)
+
+it.live(
+  "a prompt admitted while the task is entering its pause resumes it",
+  () =>
+    provideTmpdirServer(
+      Effect.fnUntraced(function* () {
+        const svc = yield* services
+        const id = SessionID.descending()
+        yield* svc.jobs.start({ id, type: "task", metadata: {}, run: Effect.never })
+        // the check sees the user stop; by the time the pause registers, a prompt has cleared it
+        const checks = { count: 0 }
+        const initial = aborted(id)
+        const result = yield* awaitWithTimeout(
+          KiloTaskPause.settle({
+            child: id,
+            parent: SessionID.descending(),
+            initial,
+            drain: { wait: () => Effect.void },
+            sessions: { messages: () => Effect.succeed([]), touch: () => Effect.void },
+            jobs: svc.jobs,
+            paused: () => Effect.sync(() => checks.count++ === 0),
+            board: {
+              config: yield* Config.Service,
+              flags: yield* RuntimeFlags.Service,
+              database: yield* Database.Service,
+            },
+          }),
+          "the task stayed paused after the prompt was admitted",
+          "5 seconds",
+        )
+        expect(result).toBe(initial)
+        expect(KiloTaskPause.paused(id)).toBe(false)
+        yield* svc.jobs.cancel(id)
       }),
       { config },
     ),

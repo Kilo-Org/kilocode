@@ -393,11 +393,12 @@ export const TaskTool = Tool.define(
         )
 
       const backgroundRun = withCostPropagation(runTask().pipe(Effect.onInterrupt(() => ops.cancel(nextSession.id))))
+      const pause = { jobs: background, direct: runTask(), paused: ops.paused, scope }
       // kilocode_change end
 
       if (
         // kilocode_change start - a paused task takes the prompt directly
-        yield* KiloTaskPause.extend(background, runTask(), {
+        yield* KiloTaskPause.extend(pause, {
           // kilocode_change end
           id: nextSession.id,
           // kilocode_change - extended background work also propagates its cost

@@ -13950,7 +13950,7 @@ export type SessionAbortData = {
     directory?: string
     workspace?: string
     /**
-     * Abort scope. Defaults to tree, which stops the session and all descendants. Session stops the current agent and foreground work, but keeps asynchronous subagents and stores their results without resuming until the user continues.
+     * Abort scope. Defaults to tree, which stops the session and all descendants; on a subagent, this cancels the parent's task. Session stops the current agent and foreground work, but keeps asynchronous subagents and stores their results without resuming until the user continues; on a subagent, this pauses the parent's task, which waits with no time limit until a new prompt to the subagent resumes it.
      */
     scope?: "session" | "tree"
   }

@@ -2,7 +2,7 @@
 // once the prompt is admitted (not paused, not `noReply`).
 import { Effect } from "effect"
 import { KiloSessionSteering } from "@/kilocode/session/steering"
-import { KiloTaskPause } from "@/kilocode/tool/task-pause"
+import { KiloTaskPauseState } from "@/kilocode/tool/task-pause-state"
 
 export const admit = Effect.fn("KiloSessionAdmission.admit")(function* (
   input: Parameters<typeof KiloSessionSteering.notify>[0],
@@ -10,7 +10,7 @@ export const admit = Effect.fn("KiloSessionAdmission.admit")(function* (
   // tell the parent when a human steers this subagent
   yield* KiloSessionSteering.notify(input)
   // resume a task paused by an interrupt; the task awaits this turn
-  yield* KiloTaskPause.resume(input.session.id)
+  yield* KiloTaskPauseState.resume(input.session.id)
 })
 
 export * as KiloSessionAdmission from "./admission"
