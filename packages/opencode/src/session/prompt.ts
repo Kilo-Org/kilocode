@@ -1097,6 +1097,7 @@ export const layer = Layer.effect(
                     request: {
                       ...request,
                       sessionID: input.sessionID,
+                      metadata: { ...request.metadata, description: "Access an attachment from the user message" },
                     },
                   })
                 }).pipe(Effect.orDie)
