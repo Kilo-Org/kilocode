@@ -39,6 +39,7 @@ import * as SandboxInheritance from "@/kilocode/sandbox/inheritance"
 import { KiloSession } from "@/kilocode/session"
 import { forkWriter } from "@/kilocode/session/fork"
 import { GoalState } from "@/kilocode/session/goal/state"
+import { KiloSessionMetadata } from "@/kilocode/session/metadata"
 import { kiloSessionFork } from "@/kilocode/session/fork-command"
 import { KiloSessionEvent } from "@/kilocode/session/event"
 import { SessionExport } from "@/kilocode/session-export"
@@ -117,7 +118,7 @@ export function fromRow(row: SessionRow): Info {
       },
     },
     share,
-    metadata: GoalState.project(row.id, row.metadata), // kilocode_change
+    metadata: KiloSessionMetadata.project(row.id, row.metadata), // kilocode_change
     revert,
     permission: row.permission ? [...row.permission] : undefined,
     time: {
@@ -661,7 +662,7 @@ export const layer: Layer.Layer<
       if (source) yield* SandboxPolicy.inherit(source, result.id, input.sandboxFallback, input.sourceDirectory)
       // kilocode_change end
 
-      result.metadata = GoalState.project(result.id, result.metadata) // kilocode_change
+      result.metadata = KiloSessionMetadata.project(result.id, result.metadata) // kilocode_change
       yield* events.publish(SessionV1.Event.Created, { sessionID: result.id, info: result })
 
       return result
@@ -936,7 +937,7 @@ export const layer: Layer.Layer<
           revert: info.revert === null ? undefined : (info.revert ?? current.revert),
           permission: info.permission === null ? undefined : (info.permission ?? current.permission),
         } as Info
-        next.metadata = GoalState.project(sessionID, next.metadata) // kilocode_change
+        next.metadata = KiloSessionMetadata.project(sessionID, next.metadata) // kilocode_change
         yield* events.publish(SessionV1.Event.Updated, { sessionID, info: next })
       })
 

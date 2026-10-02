@@ -19,6 +19,7 @@ import { KiloCostPropagation } from "../kilocode/session/cost-propagation" // ki
 import { KiloSessionProcessor } from "../kilocode/session/processor" // kilocode_change
 import { KiloSession } from "../kilocode/session" // kilocode_change
 import { resumeHint } from "../kilocode/task-resume" // kilocode_change
+import { KiloTaskPause } from "../kilocode/tool/task-pause" // kilocode_change
 import { errorMessage } from "@/util/error" // kilocode_change
 import { Effect, Exit, Schema, Scope } from "effect"
 import { Cause } from "effect" // kilocode_change
@@ -31,6 +32,7 @@ export interface TaskPromptOps {
   cancel(sessionID: SessionID): Effect.Effect<void>
   resolvePromptParts(template: string): Effect.Effect<SessionPrompt.PromptInput["parts"]>
   prompt(input: SessionPrompt.PromptInput): Effect.Effect<SessionV1.WithParts>
+  readonly paused?: (sessionID: SessionID) => Effect.Effect<boolean> // kilocode_change - a user stop pauses the child task
 }
 
 const id = "task"
@@ -275,9 +277,17 @@ export const TaskTool = Tool.define(
             },
             parts,
           })
-          yield* drain.wait(nextSession.id)
-          const latest = (yield* sessions.messages({ sessionID: nextSession.id, limit: 1 })).at(-1)
-          const result = latest?.info.role === "assistant" && latest.info.id > initial.info.id ? latest : initial
+          // an interrupted child pauses the task until a new prompt resumes it
+          const result = yield* KiloTaskPause.settle({
+            child: nextSession.id,
+            parent: ctx.sessionID,
+            initial,
+            drain,
+            sessions,
+            jobs: background,
+            paused: ops.paused,
+            board: { config, flags, database },
+          })
           // kilocode_change end
           // kilocode_change start - expose terminal child assistant errors through the task tool boundary,
           // including the resumable task_id so the parent agent can continue the subagent (#11620)
@@ -383,10 +393,13 @@ export const TaskTool = Tool.define(
         )
 
       const backgroundRun = withCostPropagation(runTask().pipe(Effect.onInterrupt(() => ops.cancel(nextSession.id))))
+      const pause = { jobs: background, direct: runTask(), paused: ops.paused, scope }
       // kilocode_change end
 
       if (
-        yield* background.extend({
+        // kilocode_change start - a paused task takes the prompt directly
+        yield* KiloTaskPause.extend(pause, {
+          // kilocode_change end
           id: nextSession.id,
           // kilocode_change - extended background work also propagates its cost
           run: withCostPropagation(runTask().pipe(Effect.onInterrupt(() => ops.cancel(nextSession.id)))),

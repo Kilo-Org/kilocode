@@ -10,13 +10,14 @@ import { useToast } from "../ui/toast"
 import { running } from "../util/session"
 import { createDoublePress } from "./double-press"
 import { KiloSteer } from "./steer"
+import { KiloTaskPause } from "./task-pause"
 
 // Bare-arrow parent/sibling navigation. The session route no longer binds these: while a steer is
 // typed they must reach the prompt, and the route's layer would outrank the prompt's textarea.
 const NAV = ["session.parent", "session.child.next", "session.child.previous"] as const
 
 /**
- * Subagent-view keys: double Esc stops this subagent, the configured exit keys need a second
+ * Subagent-view keys: double Esc interrupts this subagent, the configured exit keys need a second
  * press, and the arrows navigate to the parent and siblings. Navigation and exit act on the view
  * only while the steering prompt is unfocused or empty, so a typed steer keeps arrow, ctrl+c
  * (clear) and ctrl+d (delete) editing. Call it from a component that is mounted only for subagent
@@ -38,12 +39,15 @@ export function useSubagentKeys() {
     return status ? running(status.type) : false
   })
 
-  // Same stop as the VS Code task card: this subagent and anything it started. The parent
-  // keeps running and receives the cancelled task result.
+  // The parent's task waits on the user after an interrupt; a new prompt resumes it.
+  const paused = createMemo(() => !interruptible() && KiloTaskPause.paused(sync.session.get(route.sessionID)))
+
+  // An interrupt, like Esc in any session view: it stops this subagent's turn and pauses the
+  // parent's task, so background work it started keeps running. A new prompt resumes the task.
   function stop() {
     if (!interrupt.press()) return
     const fail = () => toast.show({ message: "Failed to interrupt subagent", variant: "error" })
-    void sdk.client.session.abort({ sessionID: route.sessionID, scope: "tree" }).then((res) => {
+    void sdk.client.session.abort({ sessionID: route.sessionID, scope: "session" }).then((res) => {
       if (res.error) fail()
     }, fail)
   }
@@ -87,6 +91,7 @@ export function useSubagentKeys() {
 
   return {
     interruptible,
+    paused,
     interrupt: interrupt.count,
     exit: quit.count,
   }

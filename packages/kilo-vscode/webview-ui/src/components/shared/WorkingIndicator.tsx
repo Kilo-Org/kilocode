@@ -15,7 +15,7 @@ import { useSession } from "../../context/session"
 import { useLanguage } from "../../context/language"
 import { useVSCode } from "../../context/vscode"
 import { StatusText } from "./StatusText"
-import { tracksElapsed } from "./working-indicator-utils"
+import { cancelScope, tracksElapsed } from "./working-indicator-utils"
 import { active as activeTiming, running } from "../../context/session-timing"
 
 interface WorkingIndicatorProps {
@@ -99,7 +99,7 @@ export const WorkingIndicator: Component<WorkingIndicatorProps> = (props) => {
   const handleCancelRetry = () => {
     const sid = session.currentSessionID()
     if (sid) {
-      vscode.postMessage({ type: "abort", sessionID: sid, scope: "session" })
+      vscode.postMessage({ type: "abort", sessionID: sid, scope: cancelScope(session.currentSession()?.parentID) })
     }
   }
 

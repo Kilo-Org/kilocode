@@ -459,6 +459,7 @@ export function Prompt(props: PromptProps) {
           if (store.interrupt >= 2) {
             void sdk.client.session.abort({
               sessionID: props.sessionID,
+              scope: "session", // kilocode_change - interrupt this turn; background tasks keep running (VS Code Stop)
             })
             setStore("interrupt", 0)
           }

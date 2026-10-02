@@ -23,3 +23,11 @@ export function showsWorking(status: SessionStatus, submitting: boolean, blocked
   if (blocked) return false
   return submitting || status !== "idle" || goal
 }
+
+/**
+ * Abort scope for the indicator's Cancel. A subagent's own view stops it as a cancel (`tree`):
+ * an interrupt (`session`) would pause the parent's task, and this view has no prompt to resume it.
+ */
+export function cancelScope(parentID: string | null | undefined): "session" | "tree" {
+  return parentID ? "tree" : "session"
+}
