@@ -80,19 +80,23 @@ async function mount(
     status?: Record<string, { type: string }>
     metadata?: Record<string, unknown>
     messages?: Record<string, unknown[]>
+    session?: Record<string, unknown>
+    providers?: object
   } = {},
 ) {
   const route = opts.route ?? child.id
   const agents = opts.agents ?? []
   const status = opts.status ?? { [child.id]: { type: "busy" } }
-  const target = { ...child, ...(opts.metadata ? { metadata: opts.metadata } : {}) }
+  const target = { ...child, ...opts.session, ...(opts.metadata ? { metadata: opts.metadata } : {}) }
   const messages = opts.messages ?? { [child.id]: [reply] }
   await Bun.write(`${root}/kv.json`, JSON.stringify({ animations_enabled: false, sidebar: "hide", vim_enabled: false }))
   const aborts: URL[] = []
   const backgrounds: URL[] = []
   const exits: unknown[] = []
+  const prompts: Record<string, unknown>[] = []
   const calls = createFetch((url) => {
     if (url.pathname === "/agent") return json(agents)
+    if (opts.providers && url.pathname === "/config/providers") return json(opts.providers)
     if (url.pathname === "/session") return json([parent, target])
     if (url.pathname === `/session/${child.id}`) return json(target)
     if (url.pathname === `/session/${parent.id}`) return json(parent)
@@ -114,6 +118,15 @@ async function mount(
     if (url.pathname.startsWith("/background-process/")) return json(true)
     return undefined
   })
+  // record prompts sent to the child before the stubbed routes answer them
+  const fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    const request = input instanceof Request ? input : new Request(input, init)
+    if (request.method === "POST" && new URL(request.url).pathname === `/session/${child.id}/message`) {
+      prompts.push(await request.clone().json())
+      return json({ info: reply.info, parts: [] })
+    }
+    return calls.fetch(input, init)
+  }) as typeof globalThis.fetch
   const config = createTuiResolvedConfig(opts.config)
   const refs: {
     sync?: ReturnType<typeof useSync>
@@ -183,12 +196,7 @@ async function mount(
                     <RouteProvider initialRoute={{ type: "session", sessionID: route }}>
                       <TuiConfigProvider config={config}>
                         <PluginRuntimeProvider value={runtime}>
-                          <SDKProvider
-                            url="http://test"
-                            directory={directory}
-                            fetch={calls.fetch}
-                            events={eventSource()}
-                          >
+                          <SDKProvider url="http://test" directory={directory} fetch={fetch} events={eventSource()}>
                             <PermissionProvider>
                               <ProjectProvider>
                                 <ExitProvider exit={(reason) => exits.push(reason)}>
@@ -230,6 +238,11 @@ async function mount(
       aborts,
       backgrounds,
       exits,
+      prompts,
+      async type(text: string) {
+        for (const char of text) app.renderer.stdin.emit("data", Buffer.from(char))
+        await app.flush()
+      },
       frame,
       route: () => refs.route?.data,
       spans: () => app.captureSpans(),
@@ -570,4 +583,58 @@ test("double Esc in the parent prompt interrupts with session scope", async () =
   await wait(() => scene.aborts.length === 1)
   expect(scene.aborts[0]?.pathname).toBe(`/session/${parent.id}/abort`)
   expect(scene.aborts[0]?.searchParams.get("scope")).toBe("session")
+})
+
+// a primary agent and a model so the prompt can submit
+const catalog = {
+  agents: [{ name: "code", mode: "primary", permission: [], options: {} }],
+  providers: {
+    providers: [
+      {
+        id: "main",
+        name: "Main",
+        source: "config",
+        env: [],
+        options: {},
+        models: { "main-model": { id: "main-model", providerID: "main", name: "Main model", capabilities: {} } },
+      },
+    ],
+    default: { main: "main-model" },
+  },
+}
+
+test("a steer typed into a paused subagent goes to the child with its agent and model, marked", async () => {
+  await using tmp = await tmpdir()
+  using scene = await mount(tmp.path, 100, {
+    status: { [child.id]: { type: "idle" } },
+    metadata: paused,
+    messages: { [child.id]: [stopped] },
+    session: { agent: "general", model: { providerID: "sub", id: "sub-model", variant: "high" } },
+    agents: catalog.agents,
+    providers: catalog.providers,
+  })
+  await scene.type("focus on the lexer")
+  await wait(() => scene.frame().includes("focus on the lexer"))
+  await scene.press("\r")
+  await wait(() => scene.prompts.length === 1)
+  const body = scene.prompts[0]
+  expect(body?.agent).toBe("general")
+  expect(body?.model).toEqual({ providerID: "sub", modelID: "sub-model" })
+  expect(body?.variant).toBe("high")
+  expect(body?.parts).toEqual([
+    expect.objectContaining({ type: "text", text: "focus on the lexer", metadata: { kind: "subagent_steer" } }),
+  ])
+})
+
+test("an idle subagent without a paused task keeps the steer prompt closed", async () => {
+  await using tmp = await tmpdir()
+  using scene = await mount(tmp.path, 100, {
+    status: { [child.id]: { type: "idle" } },
+    messages: { [child.id]: [stopped] },
+    agents: catalog.agents,
+    providers: catalog.providers,
+  })
+  await scene.type("focus on the lexer")
+  expect(scene.frame()).not.toContain("focus on the lexer")
+  expect(scene.prompts).toHaveLength(0)
 })
