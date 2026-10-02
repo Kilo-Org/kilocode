@@ -1,4 +1,4 @@
-import { KILO_API_BASE } from "./api/constants.js"
+import { resolveKiloAiGatewayUrl } from "./api/url.js"
 import { getAutocompleteModel, type DirectAutocompleteProviderID } from "./autocomplete.js"
 
 /**
@@ -21,7 +21,7 @@ export interface EditUpstreamResponse {
 }
 
 const INCEPTION_EDIT_URL = "https://api.inceptionlabs.ai/v1/edit/completions"
-const KILO_NEXTEDIT_URL = KILO_API_BASE + "/api/edit/completions"
+const KILO_NEXTEDIT_URL = resolveKiloAiGatewayUrl("edit/completions", "/api/edit/completions")
 
 /**
  * Pick the upstream edit endpoint for a (provider, model) pair. Today this is

@@ -1,8 +1,8 @@
 import { z } from "zod"
 import { getKiloUrlFromToken } from "../auth/token.js"
 import { getDefaultHeaders, buildKiloHeaders } from "../headers.js"
-import { resolveKiloGatewayBaseUrl } from "./url.js"
-import { KILO_API_BASE, KILO_OPENROUTER_BASE, MODELS_FETCH_TIMEOUT_MS, PROMPTS, AI_SDK_PROVIDERS } from "./constants.js"
+import { KILO_OPENROUTER_BASE, resolveKiloAiGatewayRoot, resolveKiloGatewayBaseUrl } from "./url.js"
+import { KILO_API_BASE, MODELS_FETCH_TIMEOUT_MS, PROMPTS, AI_SDK_PROVIDERS } from "./constants.js"
 
 export type KiloModelsResult = {
   models: Record<string, any>
@@ -220,8 +220,12 @@ async function fetchRawKiloModels(options?: {
   // Transform URL with token if available
   const finalBaseURL = token ? getKiloUrlFromToken(baseURL, token) : baseURL
 
-  // Construct models endpoint
-  const modelsURL = `${finalBaseURL}/models`
+  // Construct models endpoint. A dedicated AI gateway serves it under /api/v1 unless an explicit baseURL is set.
+  const gateway = resolveKiloAiGatewayRoot({ baseURL: options?.baseURL })
+  const org = organizationId ?? finalBaseURL.match(/\/api(?:\/v1)?\/organizations\/([^/]+)/)?.at(1)
+  const modelsURL = gateway
+    ? new URL(org ? `organizations/${encodeURIComponent(org)}/models` : "models", gateway).toString()
+    : `${finalBaseURL}/models`
 
   const response = await fetch(modelsURL, {
     headers: {

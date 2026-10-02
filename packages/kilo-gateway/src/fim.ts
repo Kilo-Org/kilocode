@@ -1,4 +1,4 @@
-import { KILO_API_BASE } from "./api/constants.js"
+import { resolveKiloAiGatewayUrl } from "./api/url.js"
 import { getAutocompleteModel, type DirectAutocompleteProviderID } from "./autocomplete.js"
 
 export { requestMistralFim } from "./mistral-fim-endpoint.js"
@@ -13,7 +13,7 @@ export type FimTarget =
   | { provider: "inception"; model: string; url: string }
   | { provider: "mistral"; model: string }
 
-const KILO_FIM_URL = KILO_API_BASE + "/api/fim/completions"
+const KILO_FIM_URL = resolveKiloAiGatewayUrl("fim/completions", "/api/fim/completions")
 const INCEPTION_FIM_URL = "https://api.inceptionlabs.ai/v1/fim/completions"
 
 function kiloTarget(model?: string): FimTarget {

@@ -53,7 +53,13 @@ export {
   type KiloEmbeddingModelCatalog,
   type KiloEmbeddingModelCatalogIssue,
 } from "./api/embedding-models.js"
-export { resolveKiloGatewayBaseUrl, resolveKiloOpenRouterBaseUrl } from "./api/url.js"
+export {
+  KILO_OPENROUTER_BASE,
+  resolveKiloAiGatewayRoot,
+  resolveKiloAiGatewayUrl,
+  resolveKiloGatewayBaseUrl,
+  resolveKiloOpenRouterBaseUrl,
+} from "./api/url.js"
 export {
   AUTOCOMPLETE_MODELS,
   DEFAULT_AUTOCOMPLETE_MODEL,
@@ -137,8 +143,9 @@ export {
   ENV_KILO_API_URL,
   DEFAULT_KILO_API_URL,
   KILO_API_BASE,
+  ENV_KILO_AI_GATEWAY_URL,
+  KILO_AI_GATEWAY_BASE,
   KILO_EVENT_SERVICE_URL,
-  KILO_OPENROUTER_BASE,
   POLL_INTERVAL_MS,
   DEFAULT_MODEL,
   DEFAULT_FREE_MODEL,

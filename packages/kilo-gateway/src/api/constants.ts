@@ -12,6 +12,19 @@ export const DEFAULT_KILO_API_URL = "https://api.kilo.ai"
 /** Base URL for Kilo API - can be overridden by KILO_API_URL env var */
 export const KILO_API_BASE = process.env[ENV_KILO_API_URL] || DEFAULT_KILO_API_URL
 
+/** Environment variable for a dedicated Kilo AI Gateway URL */
+export const ENV_KILO_AI_GATEWAY_URL = "KILO_AI_GATEWAY_URL"
+
+const gateway = process.env[ENV_KILO_AI_GATEWAY_URL]?.trim()
+
+/**
+ * Base URL of a dedicated Kilo AI Gateway, which serves the AI endpoints (models, completions,
+ * embeddings, FIM, next-edit, transcriptions) under `/api/v1`. When unset, the Kilo API at
+ * KILO_API_BASE serves them under their legacy paths (`/api/openrouter`, `/api/gateway`, ...).
+ * Other cloud endpoints (auth, profile, defaults, sessions, ...) always use KILO_API_BASE.
+ */
+export const KILO_AI_GATEWAY_BASE = gateway && URL.canParse(gateway) ? gateway : undefined
+
 /** Environment variable for custom Event Service URL */
 export const KILO_EVENT_SERVICE_URL_ENV = "EVENT_SERVICE_URL"
 
@@ -20,9 +33,6 @@ export const KILO_DEFAULT_EVENT_SERVICE_URL = "wss://events.kiloapps.io"
 
 /** Base URL for Event Service - can be overridden by EVENT_SERVICE_URL env var */
 export const KILO_EVENT_SERVICE_URL = process.env[KILO_EVENT_SERVICE_URL_ENV] || KILO_DEFAULT_EVENT_SERVICE_URL
-
-/** Default base URL for OpenRouter-compatible endpoint */
-export const KILO_OPENROUTER_BASE = `${KILO_API_BASE}/api/openrouter`
 
 /** Device auth polling interval in milliseconds */
 export const POLL_INTERVAL_MS = 3000
