@@ -135,6 +135,25 @@ const TuiConfigShape = {
   scroll_acceleration: Schema.optional(Schema.Struct({ enabled: Schema.Boolean })),
   diff_style: Schema.optional(Schema.Literals(["auto", "stacked"])),
   mouse: Schema.optional(Schema.Boolean),
+  swap_enter: Schema.optional(Schema.Boolean), // kilocode_change - swap prompt Enter/Ctrl+Enter keys
+  vim: Schema.optional(Schema.Boolean), // kilocode_change - Kilo prompt editing mode
+  cursor: Schema.optional(
+    Schema.Struct({
+      style: Schema.optional(Schema.Literals(["block", "underline", "line", "default"])),
+      blinking: Schema.optional(Schema.Boolean),
+    }),
+  ), // kilocode_change - cursor survives hot reload
+  // kilocode_change start - mirror TuiConfig.Info constraints so patching an
+  // out-of-range value fails at the API boundary instead of persisting a value
+  // the TUI config loader would reject
+  leader_timeout: Schema.optional(Schema.Int.check(Schema.isGreaterThan(0))),
+  prompt: Schema.optional(
+    Schema.Struct({
+      max_height: Schema.optional(Schema.Int.check(Schema.isGreaterThan(0))),
+      max_width: Schema.optional(Schema.Union([Schema.Int.check(Schema.isGreaterThan(0)), Schema.Literal("auto")])),
+    }),
+  ),
+  // kilocode_change end
   attention: Schema.optional(
     Schema.Struct({
       enabled: Schema.optional(Schema.Boolean),

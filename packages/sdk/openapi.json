@@ -12471,6 +12471,51 @@
                   "mouse": {
                     "type": "boolean"
                   },
+                  "swap_enter": {
+                    "type": "boolean"
+                  },
+                  "vim": {
+                    "type": "boolean"
+                  },
+                  "cursor": {
+                    "type": "object",
+                    "properties": {
+                      "style": {
+                        "type": "string",
+                        "enum": ["block", "underline", "line", "default"]
+                      },
+                      "blinking": {
+                        "type": "boolean"
+                      }
+                    },
+                    "additionalProperties": false
+                  },
+                  "leader_timeout": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0
+                  },
+                  "prompt": {
+                    "type": "object",
+                    "properties": {
+                      "max_height": {
+                        "type": "integer",
+                        "exclusiveMinimum": 0
+                      },
+                      "max_width": {
+                        "anyOf": [
+                          {
+                            "type": "integer",
+                            "exclusiveMinimum": 0
+                          },
+                          {
+                            "type": "string",
+                            "enum": ["auto"]
+                          }
+                        ]
+                      }
+                    },
+                    "additionalProperties": false
+                  },
                   "attention": {
                     "type": "object",
                     "properties": {
@@ -40194,6 +40239,51 @@
           },
           "mouse": {
             "type": "boolean"
+          },
+          "swap_enter": {
+            "type": "boolean"
+          },
+          "vim": {
+            "type": "boolean"
+          },
+          "cursor": {
+            "type": "object",
+            "properties": {
+              "style": {
+                "type": "string",
+                "enum": ["block", "underline", "line", "default"]
+              },
+              "blinking": {
+                "type": "boolean"
+              }
+            },
+            "additionalProperties": false
+          },
+          "leader_timeout": {
+            "type": "integer",
+            "exclusiveMinimum": 0
+          },
+          "prompt": {
+            "type": "object",
+            "properties": {
+              "max_height": {
+                "type": "integer",
+                "exclusiveMinimum": 0
+              },
+              "max_width": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "exclusiveMinimum": 0
+                  },
+                  {
+                    "type": "string",
+                    "enum": ["auto"]
+                  }
+                ]
+              }
+            },
+            "additionalProperties": false
           },
           "attention": {
             "type": "object",

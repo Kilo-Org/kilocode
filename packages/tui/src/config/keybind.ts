@@ -223,6 +223,7 @@ export const Definitions = {
   "prompt.autocomplete.complete": keybind("tab", "Complete autocomplete item"),
   "permission.prompt.fullscreen": keybind("ctrl+f", "Toggle permission prompt fullscreen"),
   "prompt.vim.toggle": keybind("none", "Toggle vim modal editing in the prompt input"), // kilocode_change
+  "prompt.swap_enter.toggle": keybind("none", "Toggle Enter = newline and Ctrl+Enter = submit in the prompt"), // kilocode_change
   "plugins.toggle": keybind("space", "Toggle plugin"),
   "dialog.plugins.install": keybind("shift+i", "Install plugin from plugin dialog"),
 

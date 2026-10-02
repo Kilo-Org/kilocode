@@ -5662,6 +5662,17 @@ export class Config3 extends HeyApiClient {
       }
       diff_style?: "auto" | "stacked"
       mouse?: boolean
+      swap_enter?: boolean
+      vim?: boolean
+      cursor?: {
+        style?: "block" | "underline" | "line" | "default"
+        blinking?: boolean
+      }
+      leader_timeout?: number
+      prompt?: {
+        max_height?: number
+        max_width?: number | "auto"
+      }
       attention?: {
         enabled?: boolean
         notifications?: boolean
@@ -5689,6 +5700,11 @@ export class Config3 extends HeyApiClient {
             { in: "body", key: "scroll_acceleration" },
             { in: "body", key: "diff_style" },
             { in: "body", key: "mouse" },
+            { in: "body", key: "swap_enter" },
+            { in: "body", key: "vim" },
+            { in: "body", key: "cursor" },
+            { in: "body", key: "leader_timeout" },
+            { in: "body", key: "prompt" },
             { in: "body", key: "attention" },
           ],
         },

@@ -4090,6 +4090,17 @@ export type TuiConfigGetResponse = {
   }
   diff_style?: "auto" | "stacked"
   mouse?: boolean
+  swap_enter?: boolean
+  vim?: boolean
+  cursor?: {
+    style?: "block" | "underline" | "line" | "default"
+    blinking?: boolean
+  }
+  leader_timeout?: number
+  prompt?: {
+    max_height?: number
+    max_width?: number | "auto"
+  }
   attention?: {
     enabled?: boolean
     notifications?: boolean
@@ -15935,6 +15946,17 @@ export type TuiConfigUpdateData = {
     }
     diff_style?: "auto" | "stacked"
     mouse?: boolean
+    swap_enter?: boolean
+    vim?: boolean
+    cursor?: {
+      style?: "block" | "underline" | "line" | "default"
+      blinking?: boolean
+    }
+    leader_timeout?: number
+    prompt?: {
+      max_height?: number
+      max_width?: number | "auto"
+    }
     attention?: {
       enabled?: boolean
       notifications?: boolean

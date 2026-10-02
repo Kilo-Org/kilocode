@@ -232,3 +232,75 @@ describe("TUI config routes", () => {
     expect(events.some((event) => event.payload?.type === "global.config.updated")).toBe(true)
   })
 })
+
+  test("keeps Kilo settings in the GET response body so TUI hot reload keeps them", async () => {
+    await using tmp = await tmpdir({
+      init: async (dir) => {
+        const cfg = path.join(dir, ".kilo")
+        await fs.mkdir(cfg, { recursive: true })
+        await Bun.write(
+          path.join(cfg, "tui.json"),
+          JSON.stringify(
+            {
+              swap_enter: true,
+              vim: true,
+              cursor: { style: "underline", blinking: true },
+              leader_timeout: 1234,
+              prompt: { max_height: 12, max_width: 80 },
+            },
+            null,
+            2,
+          ),
+        )
+      },
+    })
+
+    const response = await Server.Default().app.request("/tui/config", {
+      headers: { "x-kilo-directory": tmp.path },
+    })
+
+    expect(response.status).toBe(200)
+    const body = (await response.json()) as Record<string, unknown>
+    // if any of these regress, running TUIs silently lose the setting on the
+    // next config update because the response schema strips unknown keys
+    expect(body.swap_enter).toBe(true)
+    expect(body.vim).toBe(true)
+    expect(body.cursor).toEqual({ style: "underline", blinking: true })
+    expect(body.leader_timeout).toBe(1234)
+    expect(body.prompt).toEqual({ max_height: 12, max_width: 80 })
+
+    const patched = await Server.Default().app.request("/tui/config?scope=project", {
+      method: "PATCH",
+      headers: {
+        "content-type": "application/json",
+        "x-kilo-directory": tmp.path,
+      },
+      body: JSON.stringify({ swap_enter: false, vim: false }),
+    })
+
+    expect(patched.status).toBe(200)
+    const patchedBody = (await patched.json()) as Record<string, unknown>
+    expect(patchedBody.swap_enter).toBe(false)
+    expect(patchedBody.vim).toBe(false)
+
+    const saved = await Bun.file(path.join(tmp.path, ".kilo", "tui.json")).json()
+    expect(saved.swap_enter).toBe(false)
+    expect(saved.vim).toBe(false)
+    expect(saved.leader_timeout).toBe(1234)
+  })
+
+  test("rejects patching a TUI config value the TUI loader would reject", async () => {
+    await using tmp = await tmpdir()
+
+    const response = await Server.Default().app.request("/tui/config?scope=project", {
+      method: "PATCH",
+      headers: {
+        "content-type": "application/json",
+        "x-kilo-directory": tmp.path,
+      },
+      body: JSON.stringify({ leader_timeout: -5 }),
+    })
+
+    expect(response.status).toBe(400)
+    expect(await Bun.file(path.join(tmp.path, ".kilo", "tui.json")).exists()).toBe(false)
+  })

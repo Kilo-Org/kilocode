@@ -75,6 +75,7 @@ export const Info = Schema.Struct({
   cursor: Schema.optional(Cursor),
   mouse: Schema.optional(Schema.Boolean).annotate({ description: "Enable or disable mouse capture (default: true)" }),
   vim: Schema.optional(Schema.Boolean), // kilocode_change - retain Kilo prompt editing mode
+  swap_enter: Schema.optional(Schema.Boolean), // kilocode_change - Enter inserts newline, Ctrl+Enter submits
 })
 export type Info = Schema.Schema.Type<typeof Info>
 

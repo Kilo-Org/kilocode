@@ -68,6 +68,13 @@ import { useTuiConfig } from "../../config"
 // kilocode_change start - vim modal editing for the prompt
 import { useVim, VimModeIndicator, vimToggleCommand } from "@/kilocode/cli/cmd/tui/component/prompt"
 // kilocode_change end
+// kilocode_change start - swap Enter (newline) / Ctrl+Enter (submit) prompt setting
+import {
+  SWAP_ENTER_KV_KEY,
+  swapEnterToggleCommand,
+  useSwapEnter,
+} from "@/kilocode/cli/cmd/tui/component/prompt/swap-enter"
+// kilocode_change end
 import { usePromptWorkspace } from "./workspace"
 import { usePromptMove } from "./move"
 import { readLocalAttachment } from "./local-attachment"
@@ -339,6 +346,19 @@ export function Prompt(props: PromptProps) {
     interrupt: 0,
   })
 
+  // kilocode_change start - swap Enter (newline) and Ctrl+Enter (submit) in the prompt
+  useSwapEnter({
+    target: inputTarget,
+    // Keep native semantics while the prompt is disabled, in shell mode, or in
+    // vim NORMAL/VISUAL mode where Enter deliberately keeps submitting.
+    blocked: () =>
+      Boolean(props.disabled ?? false) ||
+      store.mode === "shell" ||
+      (vim.vimEnabled() && vim.vimMode() !== "insert"),
+    enabled: () => Boolean(kv.get(SWAP_ENTER_KV_KEY, tuiConfig.swap_enter ?? false)),
+  })
+  // kilocode_change end
+
   createEffect(
     on(
       () => props.sessionID,
@@ -580,6 +600,14 @@ export function Prompt(props: PromptProps) {
         showToast: (message) => toast.show({ message, variant: "info" }),
       }),
       // kilocode_change end
+      // kilocode_change start - Enter/Ctrl+Enter swap toggle (palette + /swap-enter)
+      swapEnterToggleCommand({
+        swapEnabled: () => Boolean(kv.get(SWAP_ENTER_KV_KEY, tuiConfig.swap_enter ?? false)),
+        setSwapEnabled: (value) => kv.set(SWAP_ENTER_KV_KEY, value),
+        clearDialog: () => dialog.clear(),
+        showToast: (message) => toast.show({ message, variant: "info" }),
+      }),
+      // kilocode_change end
       {
         title: "Skills",
         name: "prompt.skills",
@@ -641,6 +669,7 @@ export function Prompt(props: PromptProps) {
       "prompt.stash.pop",
       "prompt.stash.list",
       "prompt.vim.toggle", // kilocode_change
+      "prompt.swap_enter.toggle", // kilocode_change
       "prompt.skills", // kilocode_change
       "session.interrupt",
       "workspace.set",
