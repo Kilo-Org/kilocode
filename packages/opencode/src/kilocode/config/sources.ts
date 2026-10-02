@@ -1,5 +1,6 @@
 import os from "os"
 import path from "path"
+import * as jsonc from "jsonc-parser"
 import { unique } from "remeda"
 import z from "zod"
 import { Flag } from "@opencode-ai/core/flag/flag"
@@ -310,6 +311,63 @@ export namespace KilocodeConfigSources {
       exists: await Bun.file(input.file).exists(),
       editable: input.editable ?? true,
       reason: input.reason,
+    }
+  }
+
+  const FILE_KINDS: ReadonlySet<Kind> = new Set(["global-file", "project-file", "config-dir-file"])
+
+  // After writing `target`, find the highest-priority existing config file that still defines a
+  // value for a key the patch writes, so the effective setting does not change. The sources
+  // list mirrors the loader's merge order (later sources win), so only files that sort after
+  // the target can shadow it. Values are compared structurally (JSONC), not via the schema: a
+  // shadowing file may use a different shape (e.g. scalar permission vs. pattern map) and
+  // still win the merge. Non-file sources (env flags, cloud org config, MDM preferences) are
+  // not parsed here; they are already listed with a reason in the sources response.
+  export async function conflicting(input: {
+    directory: string
+    worktree?: string
+    target: string
+    patch: Record<string, unknown>
+  }): Promise<string | undefined> {
+    const { sources } = await list({ directory: input.directory, worktree: input.worktree })
+    const files = sources.filter((item) => item.exists && item.path && FILE_KINDS.has(item.kind))
+    const orders = files.filter((item) => item.path === input.target).map((item) => item.order)
+    if (orders.length === 0) return undefined
+    const base = Math.min(...orders)
+    const candidates = files.filter((item) => item.path !== input.target && item.order > base)
+    for (const item of [...candidates].reverse()) {
+      if (!item.path) continue
+      const text = await Filesystem.readText(item.path).catch(() => undefined)
+      if (text === undefined) continue
+      const raw = parseJsonc(text)
+      if (!raw) continue
+      if (clashes(raw, input.patch)) return item.path
+    }
+    return undefined
+  }
+
+  // A candidate file shadows the patch when it defines a value for any leaf the patch writes.
+  // Nulls in the patch are unsets; an unset inherits the candidate value, which is expected.
+  function clashes(candidate: Record<string, unknown>, patch: Record<string, unknown>): boolean {
+    return Object.entries(patch).some(([key, value]) => {
+      if (value === null) return false
+      const next = candidate[key]
+      if (next === undefined) return false
+      if (isPlain(value) && isPlain(next)) return clashes(next, value)
+      return true
+    })
+  }
+
+  function isPlain(value: unknown): value is Record<string, unknown> {
+    return typeof value === "object" && value !== null && !Array.isArray(value)
+  }
+
+  function parseJsonc(text: string): Record<string, unknown> | undefined {
+    try {
+      const raw: unknown = jsonc.parse(text)
+      return isPlain(raw) ? raw : undefined
+    } catch {
+      return undefined
     }
   }
 }
