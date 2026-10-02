@@ -1,5 +1,4 @@
 import { createMemo, createSignal, Show } from "solid-js"
-import type { Accessor } from "solid-js" // kilocode_change
 import { useRouteData } from "../../context/route"
 import { useSync } from "../../context/sync"
 import { useTheme } from "../../context/theme"
@@ -10,18 +9,10 @@ import type { AssistantMessage } from "@kilocode/sdk/v2"
 import { Locale } from "../../util/locale"
 import { useTerminalDimensions } from "@opentui/solid"
 import { useCommandShortcut, useOpencodeKeymap } from "../../keymap"
+import { useSubagentKeys } from "../../kilocode/subagent-keys" // kilocode_change
+import { PausedHint } from "../../kilocode/task-pause-view" // kilocode_change
 
-// kilocode_change start - double-press counters owned by the session route
-type Props = {
-  interruptible: Accessor<boolean>
-  paused: Accessor<boolean>
-  interrupt: Accessor<number>
-  exitPress: Accessor<number>
-  narrow: Accessor<boolean>
-}
-
-export function SubagentFooter(props: Props) {
-  // kilocode_change end
+export function SubagentFooter() {
   const route = useRouteData("session")
   const sync = useSync()
   const local = useLocal() // kilocode_change
@@ -88,19 +79,21 @@ export function SubagentFooter(props: Props) {
   const previousShortcut = useCommandShortcut("session.child.previous")
   const nextShortcut = useCommandShortcut("session.child.next")
   // kilocode_change start - key hints
+  const keys = useSubagentKeys()
+  const dimensions = useTerminalDimensions()
+  // the subagent view never shows the sidebar, so the footer spans the terminal width minus padding
+  const narrow = createMemo(() => dimensions().width - 4 < 96)
   const interruptShortcut = useCommandShortcut("subagent.interrupt")
   const exitShortcut = useCommandShortcut("app.exit")
   const interruptKey = createMemo(() => {
     const key = interruptShortcut()
     return !key || key === "escape" ? "esc" : key
   })
-  const armed = createMemo(() => props.interrupt() > 0)
+  const armed = createMemo(() => keys.interrupt() > 0)
   // narrow footers drop usage while a key hint is shown so the row does not wrap
-  const crowded = createMemo(
-    () => props.paused() || (props.narrow() && (props.interruptible() || props.exitPress() > 0)),
-  )
+  const crowded = createMemo(() => keys.paused() || (narrow() && (keys.interruptible() || keys.exit() > 0)))
   // the paused hint is the longest; a narrow footer drops prev/next while it shows
-  const compact = createMemo(() => props.narrow() && props.paused() && props.exitPress() === 0)
+  const compact = createMemo(() => narrow() && keys.paused() && keys.exit() === 0)
   // kilocode_change end
   const [hover, setHover] = createSignal<"interrupt" | "parent" | "prev" | "next" | null>(null) // kilocode_change
   useTerminalDimensions()
@@ -143,7 +136,7 @@ export function SubagentFooter(props: Props) {
             </Show>
             {/* kilocode_change end */}
             {/* kilocode_change start - transient exit confirmation */}
-            <Show when={props.exitPress() > 0}>
+            <Show when={keys.exit() > 0}>
               <text fg={theme.primary} wrapMode="none" flexShrink={0}>
                 {exitShortcut() || "ctrl+c"} again to exit
               </text>
@@ -153,7 +146,7 @@ export function SubagentFooter(props: Props) {
           <box flexDirection="row" gap={2}>
             {/* kilocode_change start - interrupt this subagent, alongside the navigation shortcuts;
                 the brief exit confirmation takes its space so a narrow row never wraps */}
-            <Show when={props.interruptible() && props.exitPress() === 0}>
+            <Show when={keys.interruptible() && keys.exit() === 0}>
               <box
                 onMouseOver={() => setHover("interrupt")}
                 onMouseOut={() => setHover(null)}
@@ -168,12 +161,7 @@ export function SubagentFooter(props: Props) {
                 </text>
               </box>
             </Show>
-            {/* the parent's task is paused until a new prompt resumes it */}
-            <Show when={props.paused() && props.exitPress() === 0}>
-              <text fg={theme.text} wrapMode="none">
-                Interrupted · <span style={{ fg: theme.textMuted }}>send a prompt to resume</span>
-              </text>
-            </Show>
+            <PausedHint when={keys.paused() && keys.exit() === 0} />
             {/* kilocode_change end */}
             <box
               onMouseOver={() => setHover("parent")}

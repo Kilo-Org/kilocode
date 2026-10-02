@@ -20,13 +20,11 @@ import { useRoute, useRouteData } from "../../context/route"
 import { useProject } from "../../context/project"
 import { useSync } from "../../context/sync"
 import { useEvent } from "../../context/event"
-import { useExit } from "../../context/exit" // kilocode_change
 import { SplitBorder } from "../../ui/border"
 import { useTuiPaths, useTuiTerminalEnvironment } from "../../context/runtime"
 import { Spinner } from "../../component/spinner"
 import { createSyntaxStyleMemo, generateSubtleSyntax, selectedForeground, useTheme } from "../../context/theme"
 import { BoxRenderable, ScrollBoxRenderable, addDefaultParsers, TextAttributes, RGBA } from "@opentui/core"
-import { createDoublePress } from "../../kilocode/double-press" // kilocode_change
 import { Prompt, type PromptRef } from "../../component/prompt"
 import type {
   AssistantMessage,
@@ -68,7 +66,7 @@ import { usePromptRef } from "../../context/prompt"
 import { ApprovalBadge, describeApproval, stateMetadata } from "../../kilocode/tool-approval" // kilocode_change
 import { BoardTool } from "../../kilocode/board-tool" // kilocode_change
 import { KiloSteer } from "../../kilocode/steer" // kilocode_change
-import { KiloTaskPause } from "../../kilocode/task-pause" // kilocode_change
+import { useTaskCard } from "../../kilocode/task-pause-view" // kilocode_change
 import { useEpilogue } from "../../context/epilogue"
 import { normalizePath } from "../../util/path"
 import { PermissionPrompt } from "./permission"
@@ -164,10 +162,6 @@ const sessionBindingCommands = [
   "session.export",
   "session.child.first",
 ] as const
-
-// kilocode_change start - subagent navigation keys (bare arrows) yield to a steering prompt with text
-const sessionNavBindingCommands = ["session.parent", "session.child.next", "session.child.previous"] as const
-// kilocode_change end
 
 const sessionGlobalBindingCommands = [
   "session.page.up",
@@ -347,28 +341,6 @@ export function Session() {
   const toast = useToast()
   const sdk = useSDK()
   const editor = useEditorContext()
-  const exit = useExit() // kilocode_change
-  // kilocode_change start - subagent-view interrupt and exit double-press state
-  const interrupt = createDoublePress(5000)
-  const quit = createDoublePress(1000)
-  // Pending permission/question/network prompts own escape and the exit keys.
-  const subagentKeys = createMemo(() => !!session()?.parentID && !disabled())
-  const subagentRunning = createMemo(() => {
-    if (!subagentKeys()) return false
-    const status = sync.data.session_status?.[route.sessionID]
-    return status ? running(status.type) : false
-  })
-  const subagentPaused = createMemo(() => subagentKeys() && !subagentRunning() && KiloTaskPause.paused(session()))
-  // An interrupt, like Esc in any session view: it stops this subagent's turn and pauses the
-  // parent's task, so background work it started keeps running. A new prompt resumes the task.
-  function interruptSubagent() {
-    if (!interrupt.press()) return
-    const fail = () => toast.show({ message: "Failed to interrupt subagent", variant: "error" })
-    void sdk.client.session.abort({ sessionID: route.sessionID, scope: "session" }).then((res) => {
-      if (res.error) fail()
-    }, fail)
-  }
-  // kilocode_change end
   onCleanup(MemorySessionTui.attach({ event, toast, sessionID: route.sessionID })) // kilocode_change
 
   // kilocode_change start - background processes are scoped to the visible session
@@ -1271,54 +1243,12 @@ export function Session() {
     bindings: tuiConfig.keybinds.gather("session", sessionBindingCommands),
   }))
 
-  // kilocode_change start - outrank prompt history on an empty prompt; step aside once a steer is typed
-  useBindings(() => ({
-    mode: KILO_BASE_MODE,
-    priority: 1,
-    enabled: () => KiloSteer.idle(prompt),
-    bindings: tuiConfig.keybinds.gather("session.nav", sessionNavBindingCommands),
-  }))
-  // kilocode_change end
-
   useBindings(() => ({
     mode: KILO_BASE_MODE,
     enabled: foregroundTasks().length > 0,
     priority: 1,
     bindings: tuiConfig.keybinds.get("session.background"),
   }))
-
-  // kilocode_change start - subagent view: double Esc interrupts this subagent, pausing its task until a
-  // new prompt resumes it. The configured exit keys need a second press.
-  // `get` (not `gather`) because gather caches by name.
-  useBindings(() => ({
-    mode: KILO_BASE_MODE,
-    enabled: subagentRunning(),
-    priority: 1,
-    commands: [
-      {
-        name: "subagent.interrupt",
-        title: "Interrupt subagent",
-        category: "Session",
-        hidden: true,
-        run: interruptSubagent,
-      },
-    ],
-    bindings: tuiConfig.keybinds.get("subagent.interrupt"),
-  }))
-
-  // A typed steer keeps the prompt's own ctrl+c (clear) and ctrl+d (delete), as in the main view.
-  useBindings(() => ({
-    mode: KILO_BASE_MODE,
-    enabled: () => subagentKeys() && KiloSteer.idle(prompt),
-    priority: 1,
-    bindings: tuiConfig.keybinds.get("app.exit").map((binding) => ({
-      ...binding,
-      cmd: () => {
-        if (quit.press()) exit()
-      },
-    })),
-  }))
-  // kilocode_change end
 
   const revertInfo = createMemo(() => session()?.revert)
   const revertMessageID = createMemo(() => revertInfo()?.messageID)
@@ -1526,15 +1456,7 @@ export function Session() {
                   </Show>
                 </Show>
                 <Show when={session()?.parentID}>
-                  {/* kilocode_change start */}
-                  <SubagentFooter
-                    interruptible={subagentRunning}
-                    paused={subagentPaused}
-                    interrupt={interrupt.count}
-                    exitPress={quit.count}
-                    narrow={() => contentWidth() < 96}
-                  />
-                  {/* kilocode_change end */}
+                  <SubagentFooter />
                 </Show>
                 <Show when={networkVisible()}>
                   <NetworkPrompt request={network()[0]} />
@@ -2640,13 +2562,10 @@ function Task(props: ToolProps) {
   )
 
   const status = createMemo(() => sync.data.session_status[sessionID() ?? ""])
-  // kilocode_change start - a task paused by a subagent-view interrupt waits on the user, not a spinner
-  const paused = createMemo(() => KiloTaskPause.paused(sync.session.get(sessionID() ?? "")))
-  const backgroundKey = useCommandShortcut("session.background")
-  // kilocode_change end
+  const pause = useTaskCard(sessionID, props) // kilocode_change
   const isRunning = createMemo(() => {
     const value = status()
-    if (paused()) return false // kilocode_change
+    if (pause.paused()) return false // kilocode_change
     return (
       props.part.state.status === "running" ||
       (props.metadata.background === true && value !== undefined && running(value.type)) // kilocode_change
@@ -2686,15 +2605,10 @@ function Task(props: ToolProps) {
         content.push(`↳ ${Locale.titlecase(current()!.tool)} ${title}`)
       } else content.push(`↳ ${formatSubagentToolcalls(tools().length)}`)
     } else if (isRunning()) content.push(`↳ Starting...`) // kilocode_change
-    // kilocode_change start
-    if (paused()) {
-      const foreground = props.part.state.status === "running" && props.metadata.background !== true
-      content.push(`↳ ${KiloTaskPause.detail(foreground, backgroundKey())}`)
-    }
-    // kilocode_change end
+    if (pause.paused()) content.push(pause.line()) // kilocode_change
 
     // kilocode_change start - a paused background task has not finished
-    if (!isRunning() && !paused() && props.part.state.status === "completed") {
+    if (!isRunning() && !pause.paused() && props.part.state.status === "completed") {
       content.push(`↳ ${formatCompletedSubagentDetail(tools().length, Locale.duration(duration()))}`)
     }
     // kilocode_change end
@@ -2704,7 +2618,7 @@ function Task(props: ToolProps) {
 
   return (
     <InlineTool
-      icon={props.part.state.status === "completed" && !paused() ? "✓" : "│"} // kilocode_change
+      icon={props.part.state.status === "completed" && !pause.paused() ? "✓" : "│"} // kilocode_change
       separate={true}
       color={retry() ? theme.error : undefined}
       spinner={isRunning()}
