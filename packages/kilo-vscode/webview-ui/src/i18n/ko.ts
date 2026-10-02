@@ -694,6 +694,7 @@ export const dict = {
   "settings.aboutKiloCode.title": "Kilo Code 정보",
 
   "prompt.action.indexing": "인덱싱 설정",
+  "prompt.folder.label": "다음 세션의 작업 영역 폴더",
   "settings.indexing.dimension.description": "비워두면 모델에서 임베딩 차원을 자동으로 감지합니다.",
   "settings.indexing.dimension.placeholder": "자동",
   "settings.indexing.dimension.title": "벡터 차원",

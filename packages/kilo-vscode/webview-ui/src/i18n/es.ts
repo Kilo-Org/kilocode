@@ -220,6 +220,7 @@ export const dict = {
   "prompt.action.enhanceDescription":
     "El botón 'Mejorar el mensaje' ayuda a mejorar tu petición proporcionando contexto adicional, aclaraciones o reformulaciones. Intenta escribir una petición aquí y haz clic en el botón nuevamente para ver cómo funciona.",
   "prompt.action.indexing": "Configuración de indexación",
+  "prompt.folder.label": "Carpeta del espacio de trabajo para la próxima sesión",
   "prompt.action.sandbox.enable": "Activar sandbox",
   "prompt.action.sandbox.disable": "Desactivar sandbox",
   "prompt.action.sandbox.enabled":

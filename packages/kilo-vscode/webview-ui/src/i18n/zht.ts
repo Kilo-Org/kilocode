@@ -1155,6 +1155,7 @@ export const dict = {
   "profile.switchingAccount": "正在切換帳戶…",
 
   "prompt.action.indexing": "索引設定",
+  "prompt.folder.label": "下一個工作階段的工作區資料夾",
 
   "settings.indexing.dimension.description": "留空以自動從模型偵測嵌入維度。",
   "settings.indexing.dimension.placeholder": "自動",

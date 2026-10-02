@@ -419,6 +419,7 @@ export const dict = {
   "sound.option.yup06": "Ja 06",
 
   "prompt.action.indexing": "Indekseringsindstillinger",
+  "prompt.folder.label": "Arbejdsområdemappe til næste session",
 
   "settings.indexing.title": "Indeksering",
   "settings.indexing.enable.title": "Aktivér indeksering",

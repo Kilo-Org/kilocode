@@ -215,6 +215,7 @@ export const dict = {
   "prompt.action.enhanceDescription":
     "ปุ่ม 'ปรับปรุงพรอมต์' ช่วยปรับปรุงพรอมต์ของคุณโดยให้บริบทเพิ่มเติม ชี้แจง หรือเขียนใหม่ ลองพิมพ์พรอมต์ที่นี่และคลิกปุ่มอีกครั้งเพื่อดูว่ามันทำงานอย่างไร",
   "prompt.action.indexing": "การตั้งค่าการสร้างดัชนี",
+  "prompt.folder.label": "โฟลเดอร์พื้นที่ทำงานสำหรับเซสชันถัดไป",
   "prompt.action.sandbox.enable": "เปิดใช้งาน sandbox",
   "prompt.action.sandbox.disable": "ปิดใช้งาน sandbox",
   "prompt.action.sandbox.enabled":

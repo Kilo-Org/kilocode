@@ -210,6 +210,7 @@ export const dict = {
   "prompt.action.enhance": "Покращити запит",
   "prompt.paste.expand": "Натисніть, щоб розгорнути вставлений текст",
   "prompt.action.indexing": "Налаштування індексування",
+  "prompt.folder.label": "Тека робочої області для наступного сеансу",
   "prompt.action.autoApprove.enable": "Увімкнути автоматичне схвалення",
   "prompt.action.autoApprove.disable": "Вимкнути автоматичне схвалення",
   "prompt.action.autoApprove.enabled": "Автоматичне схвалення увімкнено. Запити дозволів схвалюватимуться автоматично.",

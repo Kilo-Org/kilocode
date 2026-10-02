@@ -120,6 +120,18 @@ export interface WorkspaceDirectoryChangedMessage {
   directory: string
 }
 
+export interface WorkspaceFolder {
+  path: string
+  name: string
+}
+
+/** The editor's workspace folders and the one a new session would start in. */
+export interface WorkspaceFoldersLoadedMessage {
+  type: "workspaceFoldersLoaded"
+  folders: WorkspaceFolder[]
+  selected: string
+}
+
 export interface LanguageChangedMessage {
   type: "languageChanged"
   locale: string
@@ -1824,6 +1836,7 @@ export type ExtensionMessage =
   | AgentManagerBranchesMessage
   | AgentManagerImportResultMessage
   | WorkspaceDirectoryChangedMessage
+  | WorkspaceFoldersLoadedMessage
   | AgentManagerWorktreeDiffMessage
   | AgentManagerWorktreeDiffFileMessage
   | AgentManagerDocumentMessage

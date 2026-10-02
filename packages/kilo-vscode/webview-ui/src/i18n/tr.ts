@@ -209,6 +209,7 @@ export const dict = {
   "prompt.action.enhance": "Komutu geliştir",
   "prompt.paste.expand": "Yapıştırılan metni genişletmek için tıklayın",
   "prompt.action.indexing": "İndeksleme ayarları",
+  "prompt.folder.label": "Sonraki oturum için çalışma alanı klasörü",
   "prompt.action.autoApprove.enable": "Otomatik onayı etkinleştir",
   "prompt.action.autoApprove.disable": "Otomatik onayı devre dışı bırak",
   "prompt.action.autoApprove.enabled": "Otomatik onay etkin. İzin istekleri otomatik olarak onaylanacak.",

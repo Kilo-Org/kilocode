@@ -211,6 +211,7 @@ export const dict = {
   "prompt.action.enhance": "بهبود پرامپت",
   "prompt.paste.expand": "برای بازکردن متن جایگذاری‌شده کلیک کنید",
   "prompt.action.indexing": "تنظیمات ایندکس‌گذاری",
+  "prompt.folder.label": "پوشه فضای کاری برای جلسه بعدی",
   "prompt.action.autoApprove.enable": "فعال‌سازی تأیید خودکار",
   "prompt.action.autoApprove.disable": "غیرفعال‌سازی تأیید خودکار",
   "prompt.action.autoApprove.enabled": "تأیید خودکار فعال است. درخواست‌های مجوز به‌صورت خودکار تأیید می‌شوند.",

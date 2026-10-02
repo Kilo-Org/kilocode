@@ -264,6 +264,8 @@ export interface SessionRefreshContext {
   page?: SessionPageState
   sessionDirectories: Map<string, string>
   worktreeDirectories?: () => string[]
+  /** Every folder of a multi-root workspace; their sessions are listed together. */
+  workspaceFolders?: () => string[]
   workspaceDirectory: string
   isCurrent?: () => boolean
   postMessage(message: unknown): void
@@ -277,11 +279,14 @@ function pageSource(ctx: SessionRefreshContext): ((dir: string, cursor?: number)
   return (dir) => list(dir).then((sessions) => ({ sessions }))
 }
 
-/** Workspace root plus every registered worktree directory, deduplicated. */
+/** Workspace root, every other workspace folder, and every registered worktree directory, deduplicated. */
 function sessionDirs(ctx: SessionRefreshContext): string[] {
   const dirs = [ctx.workspaceDirectory]
   const seen = new Set(dirs)
-  const extra = ctx.worktreeDirectories ? ctx.worktreeDirectories() : [...ctx.sessionDirectories.values()]
+  const extra = [
+    ...(ctx.workspaceFolders ? ctx.workspaceFolders() : []),
+    ...(ctx.worktreeDirectories ? ctx.worktreeDirectories() : [...ctx.sessionDirectories.values()]),
+  ]
   for (const dir of extra) {
     if (seen.has(dir)) continue
     seen.add(dir)

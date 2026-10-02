@@ -187,6 +187,7 @@ export const dict = {
   "prompt.action.enhance": "Migliora prompt",
   "prompt.paste.expand": "Fai clic per espandere il testo incollato",
   "prompt.action.indexing": "Impostazioni indicizzazione",
+  "prompt.folder.label": "Cartella dell'area di lavoro per la prossima sessione",
   "prompt.action.autoApprove.enable": "Abilita approvazione automatica",
   "prompt.action.autoApprove.disable": "Disabilita approvazione automatica",
   "prompt.action.autoApprove.enabled":

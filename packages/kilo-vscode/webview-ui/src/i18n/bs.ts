@@ -421,6 +421,7 @@ export const dict = {
   "sound.option.yup06": "Da 06",
 
   "prompt.action.indexing": "Postavke indeksiranja",
+  "prompt.folder.label": "Folder radnog prostora za sljedeću sesiju",
   "settings.indexing.dimension.description":
     "Ostavite prazno za automatsko prepoznavanje dimenzije embeddinga iz modela.",
   "settings.indexing.dimension.placeholder": "Auto",

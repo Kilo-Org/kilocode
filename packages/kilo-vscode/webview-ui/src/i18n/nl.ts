@@ -210,6 +210,7 @@ export const dict = {
   "prompt.action.enhance": "Prompt verbeteren",
   "prompt.paste.expand": "Klik om geplakte tekst uit te vouwen",
   "prompt.action.indexing": "Indexeringsinstellingen",
+  "prompt.folder.label": "Werkruimtemap voor de volgende sessie",
   "prompt.action.autoApprove.enable": "Automatisch goedkeuren inschakelen",
   "prompt.action.autoApprove.disable": "Automatisch goedkeuren uitschakelen",
   "prompt.action.autoApprove.enabled":

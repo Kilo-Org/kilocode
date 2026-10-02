@@ -219,6 +219,7 @@ export const dict = {
   "prompt.action.enhanceDescription":
     "O botão 'Aprimorar prompt' ajuda a melhorar seu pedido fornecendo contexto adicional, esclarecimentos ou reformulações. Tente digitar um pedido aqui e clique no botão novamente para ver como funciona.",
   "prompt.action.indexing": "Configurações de indexação",
+  "prompt.folder.label": "Pasta do espaço de trabalho para a próxima sessão",
   "prompt.action.sandbox.enable": "Ativar sandbox",
   "prompt.action.sandbox.disable": "Desativar sandbox",
   "prompt.action.sandbox.enabled":

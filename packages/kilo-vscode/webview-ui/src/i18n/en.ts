@@ -206,6 +206,7 @@ export const dict = {
   "prompt.action.enhance": "Enhance prompt",
   "prompt.paste.expand": "Click to expand pasted text",
   "prompt.action.indexing": "Indexing settings",
+  "prompt.folder.label": "Workspace folder for the next session",
   "prompt.action.autoApprove.enable": "Enable auto-approve",
   "prompt.action.autoApprove.disable": "Disable auto-approve",
   "prompt.action.autoApprove.enabled": "Auto-approve is enabled. Permission prompts will be approved automatically.",
