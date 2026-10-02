@@ -316,6 +316,8 @@ class KiloAgentBehaviorRpcApiImplTest {
             command = listOf("node", "server.js"),
             environment = mapOf("TOKEN" to "x"),
         )))
+        assertContains(mock.lastConfigPatchBody.orEmpty(), "\"scope\":\"global\"")
+        assertContains(mock.lastConfigPatchBody.orEmpty(), "\"set\":{\"mcp\"")
         assertContains(mock.lastConfigPatchBody.orEmpty(), "\"global-added\"")
         assertContains(mock.lastConfigPatchBody.orEmpty(), "\"environment\":{\"TOKEN\":\"x\"}")
         assertEquals("local", rpc.mcpConfig("/test dir")["global"]?.config?.type)
@@ -326,7 +328,8 @@ class KiloAgentBehaviorRpcApiImplTest {
             url = "https://mcp.example.test",
             headers = mapOf("Authorization" to "Bearer t"),
         )))
-        assertEquals("/config?directory=%2Ftest+dir", mock.lastWorkspaceConfigPatchPath)
+        assertEquals("/config/overlay?directory=%2Ftest+dir", mock.lastWorkspaceConfigPatchPath)
+        assertContains(mock.lastWorkspaceConfigPatchBody.orEmpty(), "\"scope\":\"project\"")
         assertContains(mock.lastWorkspaceConfigPatchBody.orEmpty(), "\"workspace-added\"")
         assertEquals("workspace", rpc.mcpConfig("/test dir")["workspace-added"]?.scope)
 
@@ -336,7 +339,7 @@ class KiloAgentBehaviorRpcApiImplTest {
         assertEquals("global", rpc.mcpConfig("/test dir")["shared"]?.scope)
 
         assertTrue(rpc.saveMcp("/test dir", "workspace-added", "workspace", null))
-        assertContains(mock.lastWorkspaceConfigPatchBody.orEmpty(), "\"workspace-added\":null")
+        assertContains(mock.lastWorkspaceConfigPatchBody.orEmpty(), "\"unset\":[[\"mcp\",\"workspace-added\"]]")
         assertFalse(rpc.mcpConfig("/test dir").containsKey("workspace-added"))
     }
 
@@ -353,8 +356,73 @@ class KiloAgentBehaviorRpcApiImplTest {
         assertContains(mock.lastMcpActionPath.orEmpty(), "/mcp/local%20server/connect")
         assertTrue(rpc.mcpDisconnect("/test", "local server"))
         assertContains(mock.lastMcpActionPath.orEmpty(), "/mcp/local%20server/disconnect")
-        assertTrue(rpc.mcpAuthenticate("/test", "local server"))
+        val authResult = rpc.mcpAuthenticate("/test", "local server")
+        assertEquals("connected", authResult.status)
         assertContains(mock.lastMcpActionPath.orEmpty(), "/mcp/local%20server/auth/authenticate")
+    }
+
+    /**
+     * A rejected browser flow reaches the plugin as `failed`, but signing in again fixes it, so the
+     * whole wire path must report `needs_auth` for Settings, Marketplace, and the session prompt.
+     */
+    @Test
+    fun `mcp status reports recoverable auth failures as needing sign in`() = runBlocking {
+        mock.mcp = """{"anaconda":{"status":"failed","error":"Browser authorization failed: Authorization cancelled"}}"""
+        val rpc = rpc()
+
+        val status = rpc.mcpStatus("/test").single()
+
+        assertEquals("needs_auth", status.status)
+        assertEquals("Browser authorization failed: Authorization cancelled", status.error)
+    }
+
+    /**
+     * An unauthenticated SSE rejection (anaconda's MCP responds 403 before OAuth) also reaches the
+     * plugin as `failed`. It must normalize to `needs_auth` over the full wire path, or the
+     * post-install sign-in prompt never fires and MCP Settings shows `failed` without Sign In.
+     */
+    @Test
+    fun `mcp status reports an SSE 403 rejection as needing sign in`() = runBlocking {
+        mock.mcp = """{"anaconda":{"status":"failed","error":"SSE error: Non-200 status code (403)"}}"""
+        val rpc = rpc()
+
+        val status = rpc.mcpStatus("/test").single()
+
+        assertEquals("needs_auth", status.status)
+        assertEquals("SSE error: Non-200 status code (403)", status.error)
+    }
+
+    @Test
+    fun `mcp status keeps unrelated failures failed`() = runBlocking {
+        mock.mcp = """{"anaconda":{"status":"failed","error":"Connection closed"}}"""
+        val rpc = rpc()
+
+        assertEquals("failed", rpc.mcpStatus("/test").single().status)
+    }
+
+    @Test
+    fun `mcp auth remove and browser open failed event`() = runBlocking {
+        val rpc = rpc()
+
+        mock.mcpAuthRemoveStatus = 200
+        assertTrue(rpc.mcpAuthRemove("/test", "linear"))
+        assertContains(mock.lastMcpAuthDeletePath.orEmpty(), "/mcp/linear/auth")
+
+        mock.mcpAuthRemoveStatus = 404
+        assertFalse(rpc.mcpAuthRemove("/test", "missing"))
+    }
+
+    @Test
+    fun `mcp authenticate maps failure statuses`() = runBlocking {
+        val rpc = rpc()
+
+        mock.mcpActionStatus = 400
+        mock.mcpAuthenticateResponse = """{"error":"unsupported"}"""
+        assertEquals("unsupported", rpc.mcpAuthenticate("/test", "linear").status)
+
+        mock.mcpActionStatus = 404
+        mock.mcpAuthenticateResponse = """{"error":"not found"}"""
+        assertEquals("not_found", rpc.mcpAuthenticate("/test", "linear").status)
     }
 
     private suspend fun rpc(): KiloAgentBehaviorRpcApiImpl = KiloAgentBehaviorRpcApiImpl(app())

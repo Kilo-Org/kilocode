@@ -33,7 +33,10 @@ import ai.kilocode.rpc.dto.MessageErrorDto
 import ai.kilocode.rpc.dto.MessageSummaryDto
 import ai.kilocode.rpc.dto.MessageTimeDto
 import ai.kilocode.rpc.dto.MessageWithPartsDto
+import ai.kilocode.rpc.dto.McpAuthEventDto
+import ai.kilocode.rpc.dto.McpAuthResultDto
 import ai.kilocode.rpc.dto.McpConfigDto
+import ai.kilocode.rpc.dto.McpOAuthDto
 import ai.kilocode.rpc.dto.McpStatusDto
 import ai.kilocode.rpc.dto.ModelAutoRoutingDto
 import ai.kilocode.rpc.dto.ModelCacheCostDto
@@ -125,6 +128,28 @@ object KiloCliDataParser {
     private val READ_TOOL_PATH = Regex("\"(?:filePath|path)\"\\s*:")
     private val FIELD_RE = ConcurrentHashMap<String, Regex>()
     private val APPROVAL_SOURCES = setOf("agent", "global", "project", "yolo", "session", "manual", "default")
+
+    /** Lowercase markers that identify a `failed` MCP status as recoverable by signing in again. */
+    private val MCP_AUTH_FAILURE_MARKERS = listOf(
+        "unauthorized",
+        "authentication required",
+        "needs authentication",
+        "not authenticated",
+        "browser authorization",
+        "token exchange failed",
+        "invalid_token",
+        "invalid_grant",
+    )
+
+    /** Word-boundary markers, so a hostname or server name that merely contains the text does not match. */
+    private val MCP_AUTH_FAILURE_WORD_MARKERS = listOf("oauth").map { Regex("\\b${Regex.escape(it)}\\b") }
+
+    /**
+     * An HTTP 401/403 response, anchored to `http`/`status` so an unrelated port or ID is not mistaken
+     * for it. Covers both transports' unauthenticated rejections, e.g. `Error POSTing to endpoint
+     * (HTTP 401): missing bearer token` and `SSE error: Non-200 status code (403)`.
+     */
+    private val MCP_AUTH_HTTP_STATUS = Regex("\\b(?:http|status)\\D{0,10}40[13]\\b")
 
     // ================================================================
     // SSE event parsing
@@ -692,8 +717,23 @@ object KiloCliDataParser {
                 headers = item.map("headers").takeIf { it.isNotEmpty() },
                 enabled = item.flagOrNull("enabled"),
                 timeout = item.long("timeout"),
+                oauth = parseMcpOAuth(item["oauth"]),
             )
         }.toMap()
+    }
+
+    private fun parseMcpOAuth(elem: JsonElement?): McpOAuthDto? {
+        if (elem == null || elem is JsonNull) return null
+        runCatching { elem.jsonPrimitive.booleanOrNull }.getOrNull()?.let { return McpOAuthDto(enabled = it) }
+        val obj = elem.obj() ?: return null
+        return McpOAuthDto(
+            enabled = true,
+            clientId = obj.str("clientId"),
+            clientSecret = obj.str("clientSecret"),
+            scope = obj.str("scope"),
+            callbackPort = obj.long("callbackPort")?.toInt(),
+            redirectUri = obj.str("redirectUri"),
+        )
     }
 
     private fun parseAgentConfig(obj: JsonObject?): Map<String, AgentConfigDto> {
@@ -819,6 +859,28 @@ object KiloCliDataParser {
         }
     }
 
+    fun parseMcpAuthResult(code: Int, raw: String): McpAuthResultDto {
+        val obj = tryParseObject(raw)
+        if (code in 200..299) {
+            return McpAuthResultDto(status = obj?.str("status") ?: "failed", error = obj?.str("error"))
+        }
+        val status = when (code) {
+            400 -> "unsupported"
+            404 -> "not_found"
+            else -> "failed"
+        }
+        return McpAuthResultDto(status = status, error = obj?.str("error") ?: obj?.str("message") ?: "HTTP $code")
+    }
+
+    fun parseMcpBrowserOpenFailed(raw: String): McpAuthEventDto? {
+        val obj = tryParseObject(raw) ?: return null
+        val payload = obj["payload"]?.jsonObject ?: obj
+        val props = payload["properties"]?.jsonObject ?: obj
+        val name = props.str("mcpName") ?: return null
+        val url = props.str("url") ?: return null
+        return McpAuthEventDto(name = name, url = url)
+    }
+
     private fun String.array(): JsonArray {
         val root = runCatching { json.parseToJsonElement(this) }.getOrNull()
         return when (root) {
@@ -831,11 +893,34 @@ object KiloCliDataParser {
     private fun mcpStatus(item: JsonElement, fallback: String? = null): McpStatusDto? {
         val obj = item.obj() ?: return null
         val name = obj.str("name") ?: fallback ?: return null
+        val error = obj.str("error")
+        val raw = obj.str("status") ?: obj.str("state") ?: "unknown"
+        val status = if (raw == "failed" && error.isMcpAuthFailure()) "needs_auth" else raw
         return McpStatusDto(
             name = name,
-            status = obj.str("status") ?: obj.str("state") ?: "unknown",
-            error = obj.str("error"),
+            status = status,
+            error = error,
         )
+    }
+
+    /**
+     * Whether a `failed` MCP status is really "sign-in required".
+     *
+     * The CLI only reports `needs_auth` when the transport threw `UnauthorizedError` or the message
+     * mentions OAuth (`packages/opencode/src/mcp/index.ts`); a rejected browser flow, a failed token
+     * exchange, or an HTTP 401/403 rejection (`SSE error: Non-200 status code (403)`) fall through to
+     * `failed`. Those are all recoverable by signing in again, so they must still offer sign-in in
+     * Settings, Marketplace, and the session prompt — including the post-install prompt, which only
+     * fires when this normalization reports `needs_auth`.
+     *
+     * Matched markers are OAuth-specific and word/status-anchored, so an unrelated failure that merely
+     * embeds a port number or a server name containing "oauth" is not reclassified.
+     */
+    private fun String?.isMcpAuthFailure(): Boolean {
+        val value = this?.lowercase() ?: return false
+        if (MCP_AUTH_FAILURE_MARKERS.any { value.contains(it) }) return true
+        if (MCP_AUTH_FAILURE_WORD_MARKERS.any { it.containsMatchIn(value) }) return true
+        return MCP_AUTH_HTTP_STATUS.containsMatchIn(value)
     }
 
     private fun removable(obj: JsonObject): Boolean {
@@ -1065,6 +1150,19 @@ object KiloCliDataParser {
                             }
                             if (it.enabled != null) put("enabled", it.enabled)
                             if (it.timeout != null) put("timeout", it.timeout)
+                            val oauth = it.oauth
+                            when {
+                                oauth == null -> Unit
+                                oauth.clear -> put("oauth", JsonNull)
+                                oauth.enabled == false -> put("oauth", JsonPrimitive(false))
+                                else -> put("oauth", buildJsonObject {
+                                    if (oauth.clientId != null) put("clientId", oauth.clientId)
+                                    if (oauth.clientSecret != null) put("clientSecret", oauth.clientSecret)
+                                    if (oauth.scope != null) put("scope", oauth.scope)
+                                    if (oauth.callbackPort != null) put("callbackPort", oauth.callbackPort)
+                                    if (oauth.redirectUri != null) put("redirectUri", oauth.redirectUri)
+                                })
+                            }
                         }
                     } ?: JsonNull)
                 })
@@ -1140,6 +1238,20 @@ object KiloCliDataParser {
         }
         return json.encodeToString(JsonObject.serializer(), obj)
     }
+
+    fun buildMcpOverlayPatch(name: String, scope: String, config: McpConfigDto?): String = buildJsonObject {
+        put("scope", if (scope == "workspace") "project" else "global")
+        if (config == null) {
+            put("unset", buildJsonArray {
+                add(buildJsonArray {
+                    add(JsonPrimitive("mcp"))
+                    add(JsonPrimitive(name))
+                })
+            })
+            return@buildJsonObject
+        }
+        put("set", json.parseToJsonElement(buildConfigPatch(ConfigPatchDto(mcp = mapOf(name to config)))))
+    }.toString()
 
     fun buildDisabledProviderPatch(ids: List<String>): String {
         val arr = JsonArray(ids.distinct().sorted().map { JsonPrimitive(it) })

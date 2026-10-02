@@ -11,12 +11,16 @@ import ai.kilocode.client.ui.layout.StackAxis
 import ai.kilocode.client.ui.list.ActiveListActionCell
 import ai.kilocode.client.ui.list.ActiveListCell
 import ai.kilocode.rpc.dto.McpConfigDto
+import ai.kilocode.rpc.dto.McpOAuthDto
 import com.intellij.icons.AllIcons
+import com.intellij.openapi.ui.ComboBox
 import com.intellij.openapi.ui.DialogWrapper
+import com.intellij.openapi.ui.ValidationInfo
 import com.intellij.ui.CollectionListModel
 import com.intellij.ui.ScrollingUtil
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBList
+import com.intellij.ui.components.JBPasswordField
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.components.JBTextArea
 import com.intellij.ui.components.JBTextField
@@ -29,6 +33,8 @@ import java.awt.Dimension
 import java.awt.Rectangle
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
+import java.net.URI
+import java.net.URISyntaxException
 import javax.swing.JButton
 import javax.swing.JComponent
 import javax.swing.JPanel
@@ -63,6 +69,31 @@ internal class McpEditDialog(
         columns = FIELD_COLUMNS
         emptyText.text = KiloBundle.message("settings.agentBehavior.mcp.edit.url.placeholder")
     }
+    private val oauthMode = ComboBox(arrayOf(OAUTH_AUTOMATIC, OAUTH_DISABLED, OAUTH_CUSTOM)).apply {
+        selectedItem = oauthModeFor(cfg.oauth)
+        addActionListener { syncOauthFields() }
+    }
+    private val oauthClientId = JBTextField(cfg.oauth?.clientId.orEmpty()).apply {
+        columns = FIELD_COLUMNS
+        emptyText.text = KiloBundle.message("settings.agentBehavior.mcp.edit.oauth.clientId")
+    }
+    private val oauthClientSecret = JBPasswordField().apply {
+        columns = FIELD_COLUMNS
+        text = cfg.oauth?.clientSecret.orEmpty()
+    }
+    private val oauthScope = JBTextField(cfg.oauth?.scope.orEmpty()).apply {
+        columns = FIELD_COLUMNS
+        emptyText.text = KiloBundle.message("settings.agentBehavior.mcp.edit.oauth.scope")
+    }
+    private val oauthCallbackPort = JBTextField(cfg.oauth?.callbackPort?.toString().orEmpty()).apply {
+        columns = ENV_COLUMNS
+        emptyText.text = KiloBundle.message("settings.agentBehavior.mcp.edit.oauth.callbackPort")
+    }
+    private val oauthRedirectUri = JBTextField(cfg.oauth?.redirectUri.orEmpty()).apply {
+        columns = FIELD_COLUMNS
+        emptyText.text = KiloBundle.message("settings.agentBehavior.mcp.edit.oauth.redirectUri")
+    }
+    private var oauthCustomRows: SettingsRows? = null
     private val env = linkedMapOf<String, String>().apply { putAll(cfg.environment.orEmpty()) }
     private val key = JBTextField().apply {
         columns = ENV_COLUMNS
@@ -83,12 +114,25 @@ internal class McpEditDialog(
     internal fun centerComponent(): JComponent = center ?: error("center panel not built")
 
     override fun result(): McpConfigDto {
-        if (type == REMOTE) return cfg.copy(url = text(url.text))
+        if (type == REMOTE) return cfg.copy(url = text(url.text), oauth = oauthResult())
         return cfg.copy(
             type = LOCAL,
             command = listOf(command.text.trim()) + args.text.lines().map { it.trim() }.filter { it.isNotEmpty() },
             environment = env.toMap(),
         )
+    }
+
+    private fun oauthResult(): McpOAuthDto? = when (oauthMode.selectedItem) {
+        OAUTH_DISABLED -> McpOAuthDto(enabled = false)
+        OAUTH_CUSTOM -> McpOAuthDto(
+            enabled = true,
+            clientId = text(oauthClientId.text),
+            clientSecret = String(oauthClientSecret.password).takeIf { it.isNotBlank() },
+            scope = text(oauthScope.text),
+            callbackPort = oauthCallbackPort.text.trim().toIntOrNull(),
+            redirectUri = text(oauthRedirectUri.text),
+        )
+        else -> if (cfg.oauth != null) McpOAuthDto(clear = true) else null
     }
 
     override fun createCenterPanel(): JComponent {
@@ -112,6 +156,25 @@ internal class McpEditDialog(
                 ))
                 panel.next(this)
             }
+            panel.section(
+                KiloBundle.message("settings.agentBehavior.mcp.edit.oauth"),
+                KiloBundle.message("settings.agentBehavior.mcp.edit.oauth.help"),
+            ).apply {
+                row(SettingsRow(KiloBundle.message("settings.agentBehavior.mcp.edit.oauth.mode"), null, oauthMode))
+                oauthCustomRows = SettingsRows().apply {
+                    row(SettingsStackedRow(KiloBundle.message("settings.agentBehavior.mcp.edit.oauth.clientId"), null, oauthClientId))
+                    row(SettingsStackedRow(KiloBundle.message("settings.agentBehavior.mcp.edit.oauth.clientSecret"), null, oauthClientSecret))
+                    row(SettingsStackedRow(KiloBundle.message("settings.agentBehavior.mcp.edit.oauth.scope"), null, oauthScope))
+                    row(SettingsStackedRow(KiloBundle.message("settings.agentBehavior.mcp.edit.oauth.callbackPort"), null, oauthCallbackPort))
+                    row(SettingsStackedRow(
+                        KiloBundle.message("settings.agentBehavior.mcp.edit.oauth.redirectUri"),
+                        KiloBundle.message("settings.agentBehavior.mcp.edit.oauth.redirectUri.help"),
+                        oauthRedirectUri,
+                    ))
+                }
+                row(oauthCustomRows!!)
+            }
+            syncOauthFields()
         } else {
             SettingsRows().apply {
                 row(SettingsStackedRow(
@@ -142,6 +205,32 @@ internal class McpEditDialog(
     override fun getPreferredFocusedComponent(): JComponent = if (type == REMOTE) url else command
 
     override fun getDimensionServiceKey(): String = "Kilo.McpEditDialog"
+
+    override fun doValidate(): ValidationInfo? {
+        if (type != REMOTE || oauthMode.selectedItem != OAUTH_CUSTOM) return null
+        val port = oauthCallbackPort.text.trim()
+        if (port.isNotEmpty() && (port.toIntOrNull() == null || port.toInt() !in 1..65535)) {
+            return ValidationInfo(KiloBundle.message("settings.agentBehavior.mcp.edit.oauth.port.invalid"), oauthCallbackPort)
+        }
+        if (String(oauthClientSecret.password).isNotBlank() && text(oauthClientId.text) == null) {
+            return ValidationInfo(KiloBundle.message("settings.agentBehavior.mcp.edit.oauth.secret.invalid"), oauthClientId)
+        }
+        val redirect = oauthRedirectUri.text.trim()
+        if (redirect.isNotEmpty()) {
+            val valid = try {
+                URI(redirect).isAbsolute
+            } catch (_: URISyntaxException) {
+                false
+            }
+            if (!valid) return ValidationInfo(KiloBundle.message("settings.agentBehavior.mcp.edit.oauth.redirectUri.invalid"), oauthRedirectUri)
+        }
+        return null
+    }
+
+    private fun syncOauthFields() {
+        val custom = oauthMode.selectedItem == OAUTH_CUSTOM
+        oauthCustomRows?.isVisible = custom
+    }
 
     private fun envEditor(): JComponent = Stack.vertical(UiStyle.Gap.sm())
         .next(Stack.horizontal(UiStyle.Gap.sm())
@@ -304,6 +393,15 @@ internal class McpEditDialog(
         const val FIELD_COLUMNS = 36
         const val ENV_COLUMNS = 14
         const val ENV_ROWS = 4
+        val OAUTH_AUTOMATIC get() = KiloBundle.message("settings.agentBehavior.mcp.edit.oauth.mode.automatic")
+        val OAUTH_DISABLED get() = KiloBundle.message("settings.agentBehavior.mcp.edit.oauth.mode.disabled")
+        val OAUTH_CUSTOM get() = KiloBundle.message("settings.agentBehavior.mcp.edit.oauth.mode.custom")
+
+        fun oauthModeFor(oauth: McpOAuthDto?): String = when {
+            oauth == null -> OAUTH_AUTOMATIC
+            oauth.enabled == false -> OAUTH_DISABLED
+            else -> OAUTH_CUSTOM
+        }
     }
 }
 

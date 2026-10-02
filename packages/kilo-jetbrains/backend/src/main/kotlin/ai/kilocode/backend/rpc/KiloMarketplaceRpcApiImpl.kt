@@ -5,6 +5,7 @@ package ai.kilocode.backend.rpc
 import ai.kilocode.backend.app.KiloBackendAppService
 import ai.kilocode.backend.marketplace.KiloBackendMarketplaceManager
 import ai.kilocode.rpc.KiloMarketplaceRpcApi
+import ai.kilocode.rpc.dto.MarketplaceBundleDto
 import ai.kilocode.rpc.dto.MarketplaceItemDto
 import ai.kilocode.rpc.dto.MarketplaceListDto
 import ai.kilocode.rpc.dto.MarketplaceResultDto
@@ -14,6 +15,8 @@ class KiloMarketplaceRpcApiImpl(
     private val manager: KiloBackendMarketplaceManager = KiloBackendMarketplaceManager(backend),
 ) : KiloMarketplaceRpcApi {
     override suspend fun list(directory: String): MarketplaceListDto = manager.list(directory)
+
+    override suspend fun bundles(directory: String): List<MarketplaceBundleDto> = manager.bundles(directory)
 
     override suspend fun install(
         directory: String,

@@ -149,8 +149,8 @@ internal interface ActiveListHitCell {
  * list, and the session history stack: a leading icon, a title whose weight follows
  * [ActiveListConfig.title] with an inline [note], a secondary [description] line, [leading] badges
  * before the title, inline [badges] after it, optional right-aligned [trailing] text, and action
- * [cells]. Action cells are shown only for the active focused selection unless
- * [ActiveListCell.alwaysVisible] is true.
+ * [cells]. Action cells are shown for the selected row, including while the list is unfocused.
+ * [ActiveListCell.alwaysVisible] also exposes an action on unselected rows.
  */
 internal interface ActiveListItem {
     val key: String
@@ -259,9 +259,8 @@ internal fun activeListHits(
     @Suppress("UNCHECKED_CAST")
     val renderer = list.cellRenderer as? ListCellRenderer<Any?> ?: return emptyList()
     val cell = list.getCellBounds(index, index) ?: return emptyList()
-    // Render as focused so the region geometry is available for hit-testing even when the list is
-    // not the focus owner. Painting still hides the cells on an unfocused list; this only resolves
-    // hit targets and keeps them stable regardless of focus.
+    // Render as focused so the region geometry and focused/unfocused selection state never alter
+    // hit targets.
     val comp = renderer.getListCellRendererComponent(list, model.getElementAt(index), index, selected, true)
     comp.setBounds(0, 0, cell.width, cell.height)
     activeListLayout(comp)

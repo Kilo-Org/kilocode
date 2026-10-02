@@ -358,7 +358,7 @@ internal class ActiveListRenderer(
         trail.foreground = weak
 
         val hovered = (list as? ActiveListActive)?.hoveredIndex() == index
-        val show = if (cfg.hoverActions) list.isEnabled && selected && hovered else active && list.isEnabled
+        val show = if (cfg.hoverActions) list.isEnabled && selected && hovered else selected && list.isEnabled
         syncCells(value, show)
         cellPane.isVisible = cells.isVisible
         pill.isVisible = cells.isVisible

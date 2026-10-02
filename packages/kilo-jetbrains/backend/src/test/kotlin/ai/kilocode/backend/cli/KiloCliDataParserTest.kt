@@ -2,6 +2,7 @@ package ai.kilocode.backend.cli
 
 import ai.kilocode.backend.workspace.CommandInfo
 import ai.kilocode.backend.workspace.ProviderData
+import kotlinx.serialization.json.JsonPrimitive
 import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.AgentConfigPatchDto
 import ai.kilocode.rpc.dto.CompactionPatchDto
@@ -12,6 +13,7 @@ import ai.kilocode.rpc.dto.CustomModelDto
 import ai.kilocode.rpc.dto.CustomProviderSaveDto
 import ai.kilocode.rpc.dto.EditorContextDto
 import ai.kilocode.rpc.dto.McpConfigDto
+import ai.kilocode.rpc.dto.McpOAuthDto
 import ai.kilocode.rpc.dto.PermissionAlwaysRulesDto
 import ai.kilocode.rpc.dto.PermissionReplyDto
 import ai.kilocode.rpc.dto.PermissionRuleDto
@@ -1296,6 +1298,43 @@ class KiloCliDataParserTest {
         }
 
         @Test
+        fun `parseConfig - mcp oauth absent`() {
+            val cfg = KiloCliDataParser.parseConfig(
+                """{"mcp":{"remote":{"type":"remote","url":"https://mcp.example.test"}}}"""
+            )
+
+            assertNull(cfg.mcp["remote"]?.oauth)
+        }
+
+        @Test
+        fun `parseConfig - mcp oauth disabled`() {
+            val cfg = KiloCliDataParser.parseConfig(
+                """{"mcp":{"remote":{"type":"remote","url":"https://mcp.example.test","oauth":false}}}"""
+            )
+            val oauth = cfg.mcp["remote"]?.oauth
+
+            assertNotNull(oauth)
+            assertEquals(false, oauth.enabled)
+            assertNull(oauth.clientId)
+        }
+
+        @Test
+        fun `parseConfig - mcp oauth custom client object`() {
+            val cfg = KiloCliDataParser.parseConfig(
+                """{"mcp":{"remote":{"type":"remote","url":"https://mcp.example.test","oauth":{"clientId":"abc","clientSecret":"shh","scope":"read","callbackPort":19999,"redirectUri":"http://127.0.0.1:19999/cb"}}}}"""
+            )
+            val oauth = cfg.mcp["remote"]?.oauth
+
+            assertNotNull(oauth)
+            assertEquals(true, oauth.enabled)
+            assertEquals("abc", oauth.clientId)
+            assertEquals("shh", oauth.clientSecret)
+            assertEquals("read", oauth.scope)
+            assertEquals(19999, oauth.callbackPort)
+            assertEquals("http://127.0.0.1:19999/cb", oauth.redirectUri)
+        }
+
+        @Test
         fun `parseConfig - scalars instructions and skills`() {
             val cfg = KiloCliDataParser.parseConfig(
                 """{
@@ -2193,6 +2232,179 @@ class KiloCliDataParserTest {
         }
     }
 
+    @Nested
+    inner class McpAuth {
+
+        // ---- parseMcpAuthResult ----
+
+        @Test
+        fun `parseMcpAuthResult - 200 with connected status`() {
+            val result = KiloCliDataParser.parseMcpAuthResult(200, """{"status":"connected"}""")
+
+            assertEquals("connected", result.status)
+            assertNull(result.error)
+        }
+
+        @Test
+        fun `parseMcpAuthResult - 200 with failed status and error`() {
+            val result = KiloCliDataParser.parseMcpAuthResult(200, """{"status":"failed","error":"denied"}""")
+
+            assertEquals("failed", result.status)
+            assertEquals("denied", result.error)
+        }
+
+        @Test
+        fun `parseMcpAuthResult - 400 maps to unsupported`() {
+            val result = KiloCliDataParser.parseMcpAuthResult(400, """{"error":"UnsupportedOAuthError"}""")
+
+            assertEquals("unsupported", result.status)
+            assertEquals("UnsupportedOAuthError", result.error)
+        }
+
+        @Test
+        fun `parseMcpAuthResult - 404 maps to not_found`() {
+            val result = KiloCliDataParser.parseMcpAuthResult(404, """{"message":"no such server"}""")
+
+            assertEquals("not_found", result.status)
+            assertEquals("no such server", result.error)
+        }
+
+        @Test
+        fun `parseMcpAuthResult - non-JSON body falls back to HTTP status`() {
+            val result = KiloCliDataParser.parseMcpAuthResult(500, "not json")
+
+            assertEquals("failed", result.status)
+            assertEquals("HTTP 500", result.error)
+        }
+
+        @Test
+        fun `parseMcpStatus - legacy unauthorized failure needs auth`() {
+            val result = KiloCliDataParser.parseMcpStatus(
+                """{"anaconda":{"status":"failed","error":"Unauthorized: authentication required"}}""",
+            ).single()
+
+            assertEquals("needs_auth", result.status)
+            assertEquals("Unauthorized: authentication required", result.error)
+        }
+
+        @Test
+        fun `parseMcpStatus - non-auth failure remains failed`() {
+            val result = KiloCliDataParser.parseMcpStatus(
+                """{"anaconda":{"status":"failed","error":"Connection refused"}}""",
+            ).single()
+
+            assertEquals("failed", result.status)
+        }
+
+        /**
+         * The CLI only reports `needs_auth` for `UnauthorizedError` or an "OAuth" message, so these
+         * recoverable sign-in failures arrive as `failed` and must still offer sign-in.
+         */
+        @Test
+        fun `parseMcpStatus - recoverable oauth failures need auth`() {
+            val reasons = listOf(
+                "Browser authorization failed: Authorization cancelled",
+                "Browser authorization was rejected: this request was replaced by another authorization attempt",
+                "Token exchange failed: invalid client",
+                "Error POSTing to endpoint (HTTP 401): missing bearer token",
+                "Error POSTing to endpoint (HTTP 403): Forbidden",
+                // The SSE transport's unauthenticated rejection, as reported for anaconda's MCP.
+                "SSE error: Non-200 status code (403)",
+                "SSE error: Non-200 status code (401)",
+                "OAuth discovery failed",
+                "Server rejected the request: invalid_grant",
+                "Server rejected the request: invalid_token",
+            )
+
+            for (reason in reasons) {
+                val json = """{"anaconda":{"status":"failed","error":${JsonPrimitive(reason)}}}"""
+                val result = KiloCliDataParser.parseMcpStatus(json).single()
+                assertEquals("needs_auth", result.status, "expected sign-in for: $reason")
+                assertEquals(reason, result.error, "the reason must survive normalization")
+            }
+        }
+
+        @Test
+        fun `parseMcpStatus - unrelated failures are not reclassified as auth`() {
+            val reasons = listOf(
+                "Connection closed",
+                "Failed to get tools",
+                "spawn npx ENOENT",
+                "Invalid MCP URL for \"broken\"",
+                "Error POSTing to endpoint (HTTP 500): server error",
+                "SSE error: Non-200 status code (404)",
+                "SSE error: Non-200 status code (500)",
+            )
+
+            for (reason in reasons) {
+                val json = """{"broken":{"status":"failed","error":${JsonPrimitive(reason)}}}"""
+                val result = KiloCliDataParser.parseMcpStatus(json).single()
+                assertEquals("failed", result.status, "must stay failed for: $reason")
+            }
+        }
+
+        /**
+         * The 401/403/oauth markers are anchored to avoid reclassifying failures that merely embed
+         * those digits/letters as a substring, e.g. a port number or a server hostname.
+         */
+        @Test
+        fun `parseMcpStatus - loose status-code and oauth substrings are not reclassified as auth`() {
+            val reasons = listOf(
+                "connect ECONNREFUSED 127.0.0.1:40123",
+                "connect ECONNREFUSED 127.0.0.1:40323",
+                "Invalid MCP URL for \"broken401\"",
+                "Invalid MCP URL for \"broken403\"",
+                "Invalid MCP URL for \"oauthserver\"",
+                "Failed to connect to myoauthapp.internal",
+                "Request failed after 403 ms",
+            )
+
+            for (reason in reasons) {
+                val json = """{"broken":{"status":"failed","error":${JsonPrimitive(reason)}}}"""
+                val result = KiloCliDataParser.parseMcpStatus(json).single()
+                assertEquals("failed", result.status, "must stay failed for: $reason")
+            }
+        }
+
+        // ---- parseMcpBrowserOpenFailed ----
+
+        @Test
+        fun `parseMcpBrowserOpenFailed - wrapped payload shape`() {
+            val event = KiloCliDataParser.parseMcpBrowserOpenFailed(
+                """{"directory":"/test","payload":{"type":"mcp.browser.open.failed","properties":{"mcpName":"linear","url":"https://auth.example.test/authorize"}}}"""
+            )
+
+            assertNotNull(event)
+            assertEquals("linear", event.name)
+            assertEquals("https://auth.example.test/authorize", event.url)
+        }
+
+        @Test
+        fun `parseMcpBrowserOpenFailed - flat payload shape`() {
+            val event = KiloCliDataParser.parseMcpBrowserOpenFailed(
+                """{"properties":{"mcpName":"linear","url":"https://auth.example.test/authorize"}}"""
+            )
+
+            assertNotNull(event)
+            assertEquals("linear", event.name)
+            assertEquals("https://auth.example.test/authorize", event.url)
+        }
+
+        @Test
+        fun `parseMcpBrowserOpenFailed - missing url returns null`() {
+            val event = KiloCliDataParser.parseMcpBrowserOpenFailed(
+                """{"properties":{"mcpName":"linear"}}"""
+            )
+
+            assertNull(event)
+        }
+
+        @Test
+        fun `parseMcpBrowserOpenFailed - malformed JSON returns null`() {
+            assertNull(KiloCliDataParser.parseMcpBrowserOpenFailed("not json"))
+        }
+    }
+
     // ================================================================
     // Group 3 — Request / body builders and local model state
     // ================================================================
@@ -2699,6 +2911,88 @@ class KiloCliDataParserTest {
             assertEquals(
                 "{\"mcp\":{\"local\":{\"type\":\"local\",\"command\":[\"node\",\"server.js\"],\"environment\":{\"TOKEN\":\"x\"},\"headers\":{\"X-Test\":\"1\"},\"enabled\":false,\"timeout\":12000},\"old\":null}}",
                 KiloCliDataParser.buildConfigPatch(patch),
+            )
+        }
+
+        @Test
+        fun `buildConfigPatch - mcp oauth disabled writes false`() {
+            val patch = ConfigPatchDto(mcp = linkedMapOf(
+                "remote" to McpConfigDto(
+                    type = "remote",
+                    url = "https://mcp.example.test",
+                    oauth = McpOAuthDto(enabled = false),
+                ),
+            ))
+
+            assertEquals(
+                "{\"mcp\":{\"remote\":{\"type\":\"remote\",\"url\":\"https://mcp.example.test\",\"oauth\":false}}}",
+                KiloCliDataParser.buildConfigPatch(patch),
+            )
+        }
+
+        @Test
+        fun `buildConfigPatch - mcp oauth custom client writes object`() {
+            val patch = ConfigPatchDto(mcp = linkedMapOf(
+                "remote" to McpConfigDto(
+                    type = "remote",
+                    url = "https://mcp.example.test",
+                    oauth = McpOAuthDto(enabled = true, clientId = "abc", scope = "read"),
+                ),
+            ))
+
+            assertEquals(
+                "{\"mcp\":{\"remote\":{\"type\":\"remote\",\"url\":\"https://mcp.example.test\",\"oauth\":{\"clientId\":\"abc\",\"scope\":\"read\"}}}}",
+                KiloCliDataParser.buildConfigPatch(patch),
+            )
+        }
+
+        @Test
+        fun `buildConfigPatch - mcp oauth clear writes null`() {
+            val patch = ConfigPatchDto(mcp = linkedMapOf(
+                "remote" to McpConfigDto(
+                    type = "remote",
+                    url = "https://mcp.example.test",
+                    oauth = McpOAuthDto(clear = true),
+                ),
+            ))
+
+            assertEquals(
+                "{\"mcp\":{\"remote\":{\"type\":\"remote\",\"url\":\"https://mcp.example.test\",\"oauth\":null}}}",
+                KiloCliDataParser.buildConfigPatch(patch),
+            )
+        }
+
+        @Test
+        fun `buildConfigPatch - mcp without oauth omits the key`() {
+            val patch = ConfigPatchDto(mcp = linkedMapOf(
+                "remote" to McpConfigDto(type = "remote", url = "https://mcp.example.test"),
+            ))
+
+            assertEquals(
+                "{\"mcp\":{\"remote\":{\"type\":\"remote\",\"url\":\"https://mcp.example.test\"}}}",
+                KiloCliDataParser.buildConfigPatch(patch),
+            )
+        }
+
+        @Test
+        fun `buildMcpOverlayPatch - sets a project MCP`() {
+            val result = KiloCliDataParser.buildMcpOverlayPatch(
+                "anaconda",
+                "workspace",
+                McpConfigDto(type = "remote", url = "https://anaconda.com/api/mcp"),
+            )
+
+            assertEquals(
+                "{\"scope\":\"project\",\"set\":{\"mcp\":{\"anaconda\":{\"type\":\"remote\",\"url\":\"https://anaconda.com/api/mcp\"}}}}",
+                result,
+            )
+        }
+
+        @Test
+        fun `buildMcpOverlayPatch - unsets a project MCP`() {
+            assertEquals(
+                "{\"scope\":\"project\",\"unset\":[[\"mcp\",\"anaconda\"]]}",
+                KiloCliDataParser.buildMcpOverlayPatch("anaconda", "workspace", null),
             )
         }
 

@@ -1,6 +1,7 @@
 package ai.kilocode.rpc
 
 import ai.kilocode.rpc.dto.MarketplaceItemDto
+import ai.kilocode.rpc.dto.MarketplaceBundleDto
 import ai.kilocode.rpc.dto.MarketplaceListDto
 import ai.kilocode.rpc.dto.MarketplaceResultDto
 import com.intellij.platform.rpc.RemoteApiProviderService
@@ -17,6 +18,8 @@ interface KiloMarketplaceRpcApi : RemoteApi<Unit> {
     }
 
     suspend fun list(directory: String): MarketplaceListDto
+
+    suspend fun bundles(directory: String): List<MarketplaceBundleDto>
 
     suspend fun install(
         directory: String,

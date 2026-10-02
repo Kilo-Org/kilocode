@@ -3,6 +3,7 @@ package ai.kilocode.client.session
 import ai.kilocode.client.KiloNotifications
 import ai.kilocode.client.actions.reloadCoreSettings
 import ai.kilocode.client.app.KiloAppService
+import ai.kilocode.client.app.KiloMcpAuthService
 import ai.kilocode.client.app.KiloSessionService
 import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.app.Workspace
@@ -39,6 +40,8 @@ import ai.kilocode.client.session.ui.prompt.KiloPromptCompletionProvider
 import ai.kilocode.client.session.ui.prompt.MentionAction
 import ai.kilocode.client.session.ui.prompt.PromptDataKeys
 import ai.kilocode.client.session.ui.prompt.PromptPanel
+import ai.kilocode.client.session.ui.prompt.SessionIssue
+import ai.kilocode.client.session.ui.prompt.SessionIssueAction
 import ai.kilocode.client.session.ui.prompt.SlashAction
 import ai.kilocode.client.session.ui.prompt.mentionParts as promptMentionParts
 import ai.kilocode.client.session.settings.ApprovalReasonVisibilityListener
@@ -77,6 +80,7 @@ import ai.kilocode.client.session.views.SessionOutcomeView
 import ai.kilocode.client.session.views.permission.PermissionView
 import ai.kilocode.client.session.views.question.QuestionView
 import ai.kilocode.client.settings.KiloSettingsConfigurable
+import ai.kilocode.client.settings.agents.McpConfigurable
 import ai.kilocode.client.settings.checkpoints.CheckpointsConfigurable
 import ai.kilocode.client.settings.profile.UserProfileConfigurable
 import ai.kilocode.client.telemetry.Telemetry
@@ -104,6 +108,7 @@ import com.intellij.ide.ui.LafManagerListener
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.ide.CopyPasteManager
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.application.EDT
 import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.components.service
 import com.intellij.openapi.editor.colors.EditorColorsListener
@@ -121,6 +126,8 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.awt.BorderLayout
@@ -253,6 +260,7 @@ class SessionUi(
     private var refreshJob: Job? = null
     private var branchJob: Job? = null
     private var boardJob: Job? = null
+    private var issuesJob: Job? = null
     private var boardHasMessages = false
     private var disposed = false
 
@@ -712,6 +720,7 @@ class SessionUi(
             prompt.onChange = { scroll.refresh() }
             prompt.onAutoApproveToggle = ::setAuto
             prompt.setAutoApprove(controller.autoApprove)
+            startMcpAuthTracking()
             prompt.model.favorites = { app.favorites.value }
             prompt.model.onFavoriteToggle = { item ->
                 Telemetry.send(
@@ -769,6 +778,7 @@ class SessionUi(
                     prompt.setResetVisible(m.modelOverride)
                     prompt.setReady(m.isReady())
                     prompt.refreshHighlights()
+                    cs.launch { service<KiloMcpAuthService>().refresh(workspace.directory) }
                 }
 
                 is SessionControllerEvent.ViewChanged.ShowProgress -> {
@@ -1472,6 +1482,67 @@ class SessionUi(
         )
     }
 
+    /**
+     * Collects [KiloMcpAuthService] state for this session's directory and reflects it on the prompt
+     * issue actions. Refresh is event-driven (workspace ready, after a sign-in attempt) rather
+     * than polled.
+     */
+    private fun startMcpAuthTracking() {
+        val auth = service<KiloMcpAuthService>()
+        issuesJob?.cancel()
+        issuesJob = cs.launch {
+            auth.needsAuth.combine(auth.busy) { needs, busy ->
+                val servers = needs[workspace.directory].orEmpty()
+                val prefix = "${workspace.directory}\u0000"
+                val active = busy.mapNotNull { key -> if (key.startsWith(prefix)) key.removePrefix(prefix) else null }.toSet()
+                servers to active
+            }
+                .distinctUntilChanged()
+                .collect { (servers, active) ->
+                    withContext(Dispatchers.EDT) {
+                        prompt.setIssues(servers.sorted().map { name -> mcpAuthIssue(name, name in active) })
+                    }
+                }
+        }
+    }
+
+    @RequiresEdt
+    private fun mcpAuthIssue(name: String, busy: Boolean): SessionIssue {
+        val display = name.replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
+        return SessionIssue(
+            id = "mcp-auth:$name",
+            title = KiloBundle.message("prompt.mcp.provider", display),
+            actions = listOf(
+                SessionIssueAction(
+                    title = KiloBundle.message(if (busy) "prompt.mcp.needsAuth.busy" else "settings.agentBehavior.mcp.signIn"),
+                    enabled = !busy,
+                    action = { signInFromPrompt(name) },
+                ),
+                SessionIssueAction(
+                    title = KiloBundle.message("prompt.mcp.openSettings"),
+                    action = { openMcpSettings(name) },
+                ),
+            ),
+        )
+    }
+
+    @RequiresEdt
+    private fun openMcpSettings(name: String) {
+        ShowSettingsUtil.getInstance().showSettingsDialog(
+            project,
+            Predicate { cfg: Configurable -> cfg is ConfigurableWithId && cfg.getId() == McpConfigurable.ID },
+            { cfg: Configurable -> (cfg as? McpConfigurable)?.filter(name) },
+        )
+    }
+
+    private fun signInFromPrompt(name: String) {
+        val auth = service<KiloMcpAuthService>()
+        cs.launch {
+            val result = auth.signIn(workspace.directory, name)
+            withContext(Dispatchers.EDT) { auth.report(name, result) }
+        }
+    }
+
     private fun openKiloSettings() {
         ShowSettingsUtil.getInstance().showSettingsDialog(
             project,
@@ -1486,6 +1557,7 @@ class SessionUi(
         disposed = true
         refreshJob?.cancel()
         branchJob?.cancel()
+        issuesJob?.cancel()
         hide.stop()
         popup.hideAll()
         modalFocus = null
