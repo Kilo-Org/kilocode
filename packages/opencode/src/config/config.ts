@@ -439,7 +439,7 @@ const layer = Layer.effect(
             ),
           )
       }
-      globalStamp = yield* KilocodeGlobalConfigStamp.read(fs, Global.Path.config)
+      globalStamp = yield* KilocodeGlobalConfigStamp.read(Global.Path.config)
       // kilocode_change end
       let result: Info = {}
       // Seed the default global config with the schema for editor completion, but avoid writing when the user
@@ -492,7 +492,7 @@ const layer = Layer.effect(
         )
       }
 
-      globalStamp = yield* KilocodeGlobalConfigStamp.read(fs, Global.Path.config) // kilocode_change
+      globalStamp = yield* KilocodeGlobalConfigStamp.read(Global.Path.config) // kilocode_change
       return result
     })
 
@@ -516,7 +516,7 @@ const layer = Layer.effect(
 
     // kilocode_change start - detect global config edits made by other Kilo processes
     const refreshGlobal = Effect.fnUntraced(function* () {
-      const stamp = yield* KilocodeGlobalConfigStamp.read(fs, Global.Path.config)
+      const stamp = yield* KilocodeGlobalConfigStamp.read(Global.Path.config)
       if (!globalStamp || stamp === globalStamp) return false
       // Keep globalStamp tied to config that loadGlobal completed. Advancing it
       // before invalidation reloads can hide a stale cached value from the next check.
