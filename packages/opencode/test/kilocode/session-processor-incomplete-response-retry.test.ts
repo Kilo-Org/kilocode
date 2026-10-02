@@ -17,6 +17,7 @@ import { Image } from "../../src/image/image"
 import { KiloSessionProcessor } from "../../src/kilocode/session/processor"
 import { Permission } from "../../src/permission"
 import { Plugin } from "../../src/plugin"
+import { ProviderError } from "../../src/provider/error"
 import type { Provider } from "../../src/provider/provider"
 import { ProviderV2 } from "@opencode-ai/core/provider"
 import { ModelV2 } from "@opencode-ai/core/model"
@@ -569,6 +570,82 @@ describe("session processor incomplete response retry", () => {
 
           expect(yield* ctx.test.calls).toBe(4)
           expect(ctx.handle.message.finish).toBe("stop")
+        }),
+      { git: true },
+    ),
+  )
+
+  it.live("finishes opaque reasoning from dropped attempts before each retry", () =>
+    provideTmpdirProject(
+      (dir) =>
+        Effect.gen(function* () {
+          const ctx = yield* setup(dir)
+          const db = yield* Database.Service
+          const seen: { reasoning: number; open: number; completed: boolean }[] = []
+          // Snapshot persisted state as each scripted attempt starts streaming.
+          const snap = Stream.fromEffectDrain(
+            Effect.gen(function* () {
+              const parts = yield* MessageV2.parts(ctx.msg.id)
+              const info = (yield* MessageV2.get({ sessionID: ctx.msg.sessionID, messageID: ctx.msg.id })).info
+              const reasoning = parts.filter((part) => part.type === "reasoning")
+              seen.push({
+                reasoning: reasoning.length,
+                open: reasoning.filter((part) => part.time.end === undefined).length,
+                completed: info.role === "assistant" && info.time.completed !== undefined,
+              })
+            }).pipe(Effect.provideService(Database.Service, db), Effect.orDie),
+          )
+          const drop = (item: string) =>
+            snap.pipe(
+              Stream.concat(
+                Stream.make(
+                  LLMEvent.stepStart({ index: 0 }),
+                  LLMEvent.reasoningStart({ id: "reasoning", providerMetadata: { openai: { itemId: item } } }),
+                ),
+              ),
+              Stream.concat(Stream.fail(new ProviderError.ResponseStreamError("stream dropped"))),
+            )
+          yield* ctx.test.push(drop("rs_1"))
+          yield* ctx.test.push(drop("rs_2"))
+          yield* ctx.test.push(
+            snap.pipe(
+              Stream.concat(
+                Stream.make(
+                  LLMEvent.stepStart({ index: 0 }),
+                  LLMEvent.reasoningStart({ id: "reasoning" }),
+                  LLMEvent.reasoningDelta({ id: "reasoning", text: "Thought" }),
+                  LLMEvent.reasoningEnd({ id: "reasoning" }),
+                  ...success().slice(1),
+                ),
+              ),
+            ),
+          )
+          const delay = spyOn(SessionRetry, "delay").mockReturnValue(0)
+
+          try {
+            expect(yield* ctx.handle.process(ctx.input)).toBe("continue")
+          } finally {
+            delay.mockRestore()
+          }
+
+          expect(yield* ctx.test.calls).toBe(3)
+          expect(seen).toEqual([
+            { reasoning: 0, open: 0, completed: false },
+            { reasoning: 1, open: 0, completed: false },
+            { reasoning: 2, open: 0, completed: false },
+          ])
+          const info = (yield* MessageV2.get({ sessionID: ctx.msg.sessionID, messageID: ctx.msg.id })).info
+          expect(info.role === "assistant" && info.time.completed).toBeNumber()
+          const parts = yield* MessageV2.parts(ctx.msg.id)
+          expect(parts.find((part) => part.type === "text")?.text).toBe("Recovered")
+          const reasoning = parts.filter((part) => part.type === "reasoning")
+          expect(reasoning.map((part) => [part.text, part.metadata])).toEqual([
+            ["", { openai: { itemId: "rs_1" } }],
+            ["", { openai: { itemId: "rs_2" } }],
+            ["Thought", undefined],
+          ])
+          expect(new Set(reasoning.map((part) => part.id)).size).toBe(3)
+          for (const part of reasoning) expect(part.time.end ?? 0).toBeGreaterThanOrEqual(part.time.start)
         }),
       { git: true },
     ),
