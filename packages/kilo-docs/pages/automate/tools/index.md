@@ -82,7 +82,7 @@ In the VS Code extension, the same option lives under **Settings → Web Tools �
 
 #### Web Search Providers
 
-`websearch` routes through the Exa or Parallel search providers. When the Exa provider is used and you are signed into Kilo, requests go through the Kilo proxy automatically — no separate Exa API key is required. Setting `EXA_API_KEY` uses your own Exa key instead. Exa searches return at most 10 results.
+`websearch` routes through Exa or Parallel by default. When the Exa provider is used and you are signed into Kilo, requests go through the Kilo proxy automatically — no separate Exa API key is required. Setting `EXA_API_KEY` uses your own Exa key instead. Exa searches return at most 10 results.
 
 Set the `KILO_WEBSEARCH_PROVIDER` environment variable to force a provider:
 
@@ -91,6 +91,9 @@ Set the `KILO_WEBSEARCH_PROVIDER` environment variable to force a provider:
 | `exa` | Use Exa — through the Kilo proxy when signed in, through `EXA_API_KEY` when set |
 | `parallel` | Use Parallel |
 | `kilo-exa` | Always route Exa searches through the Kilo proxy (requires Kilo sign-in) |
+| `anysearch` | Use AnySearch anonymously, or with `ANYSEARCH_API_KEY` when set |
+
+AnySearch sends no Authorization header unless `ANYSEARCH_API_KEY` is set, in which case it sends that key as a Bearer token. It supports the query and up to 10 results. The `livecrawl`, `type`, and `contextMaxCharacters` controls are not supported with AnySearch; requests specifying them return an error.
 
 ### Browser Tools
 
