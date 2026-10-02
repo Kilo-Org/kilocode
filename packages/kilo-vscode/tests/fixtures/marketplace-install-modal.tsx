@@ -265,6 +265,12 @@ try {
   await mount("/workspace", mcp)
   complete({ needsAuth: true })
   click("Sign In")
+  await window.happyDOM.waitUntilComplete()
+  assert.equal(document.querySelector(".install-modal-mcp-signin-success"), null)
+  assert.equal(
+    document.querySelector(".install-modal-mcp-signin-msg")?.textContent,
+    `${mcp.name} is installed but needs sign-in before its tools can be used.`,
+  )
   post({ type: "mcpAuthResult", name: mcp.id, status: "failed", error: "denied by server" })
   await window.happyDOM.waitUntilComplete()
   assert.equal(document.querySelector(".install-modal-error-msg")?.textContent, "denied by server")

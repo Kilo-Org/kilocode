@@ -210,6 +210,7 @@ export const InstallModal = (props: Props) => {
   const startSignIn = () => {
     setSignInOutcome(null)
     setSignInError(undefined)
+    session.resetMcpAuthResult()
     setWatchingSignIn(true)
     session.signInMcp(props.item.id, false)
   }

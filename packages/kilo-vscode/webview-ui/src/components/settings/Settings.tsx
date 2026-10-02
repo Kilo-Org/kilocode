@@ -51,6 +51,7 @@ export interface SettingsProps {
   agentManagerProjectId?: string
   agentManagerSettings?: boolean
   onTabChange?: (tab: string) => void
+  onAgentBehaviourNavigationConsumed?: () => void
   onMigrationClick?: (source: MigrationSource) => void
 }
 
@@ -443,7 +444,11 @@ const Settings: Component<SettingsProps> = (props) => {
         </Tabs.Content>
         <Tabs.Content value="agentBehaviour">
           <h3>{language.t("settings.agentBehaviour.title")}</h3>
-          <AgentBehaviourTab subtab={props.subtab} focus={props.focus} />
+          <AgentBehaviourTab
+            subtab={props.subtab}
+            focus={props.focus}
+            onNavigationConsumed={props.onAgentBehaviourNavigationConsumed}
+          />
         </Tabs.Content>
         <Tabs.Content value="autoApprove">
           <h3>{language.t("settings.autoApprove.title")}</h3>

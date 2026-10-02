@@ -1,6 +1,6 @@
 import { expect } from "bun:test"
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
-import { Effect, Layer } from "effect"
+import { Cause, Effect, Exit, Layer } from "effect"
 import { Config } from "@/config/config"
 import { EventV2Bridge } from "@/event-v2-bridge"
 import { McpAuth } from "@/mcp/auth"
@@ -40,5 +40,28 @@ it.instance("classifies remote HTTP authentication failures as needs_auth with t
 
     expect(status?.status).toBe("needs_auth")
     expect(status && "error" in status ? status.error : undefined).toContain("403")
+  }),
+)
+
+it.instance("leaves OAuth-disabled HTTP authentication failures failed without a pending auth flow", () =>
+  Effect.gen(function* () {
+    const server = yield* serve
+    const mcp = yield* MCP.Service
+    const name = "oauth-disabled-403"
+
+    const result = yield* mcp.add(name, {
+      type: "remote",
+      url: new URL("/mcp", server.url).toString(),
+      oauth: false,
+    })
+    const status = "status" in result.status ? result.status : result.status[name]
+
+    expect(status?.status).toBe("failed")
+    expect(status && "error" in status ? status.error : undefined).toContain("403")
+
+    const exit = yield* Effect.exit(mcp.finishAuth(name, "unused-code"))
+    expect(Exit.isFailure(exit) ? Cause.pretty(exit.cause) : "an auth flow was unexpectedly pending").toContain(
+      "No pending OAuth flow",
+    )
   }),
 )

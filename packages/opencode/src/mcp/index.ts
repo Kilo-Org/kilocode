@@ -365,11 +365,10 @@ const layer = Layer.effect(
             // kilocode_change start - classify remote authentication failures centrally
             const isAuthError =
               error instanceof UnauthorizedError ||
-              (authProvider && lastError.message.includes("OAuth")) ||
-              authFailure(lastError.message)
+              (authProvider && (lastError.message.includes("OAuth") || authFailure(lastError.message)))
             // kilocode_change end
 
-            if (isAuthError) {
+            if (isAuthError && authProvider) { // kilocode_change
               if (lastError.message.includes("registration") || lastError.message.includes("client_id")) {
                 lastStatus = {
                   status: "needs_client_registration" as const,

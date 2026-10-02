@@ -102,7 +102,7 @@ export class McpAuthService {
   /** Refresh `needsAuth` for a directory from the CLI. Returns the resulting sorted list. */
   async refresh(dir: string): Promise<string[]> {
     if (!dir) return []
-    const names = await this.attempt(`mcp status for ${dir}`, [] as string[], async () => {
+    const names = await this.attempt(`mcp status for ${dir}`, this.needsAuth(dir), async () => {
       const client = await this.connection.getClientAsync(dir)
       const { data } = await client.mcp.status({ directory: dir })
       return needsAuthNames(data ?? {})

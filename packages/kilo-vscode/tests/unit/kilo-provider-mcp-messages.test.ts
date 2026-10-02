@@ -1,4 +1,5 @@
 import { describe, expect, it } from "bun:test"
+import { mcpAuth } from "../../src/services/mcp-auth"
 
 const { KiloProvider } = await import("../../src/KiloProvider")
 
@@ -10,6 +11,28 @@ type Internals = {
   handleRemoveMcp(name: string): Promise<void>
   handleSignInMcp(name: string, notify: boolean): Promise<void>
   handleResetMcpAuth(name: string): Promise<void>
+}
+
+function actions() {
+  const connection = {
+    getClient: () => undefined,
+    getClientAsync: async () => ({}),
+  } as never
+  const provider = new KiloProvider({} as never, connection)
+  const internal = provider as unknown as Internals
+  const calls: string[] = []
+  const auth = mcpAuth(connection)
+  auth.signIn = async (_dir, name) => {
+    calls.push(`signIn:${name}`)
+    return { status: "connected" }
+  }
+  auth.reset = async (_dir, name) => {
+    calls.push(`reset:${name}`)
+    return true
+  }
+  internal.fetchAndSendMcpStatus = async () => void calls.push("status")
+  provider.postMessage = (message) => calls.push(`post:${(message as { type: string }).type}`)
+  return { internal, calls }
 }
 
 /**
@@ -91,5 +114,17 @@ describe("KiloProvider MCP message routing", () => {
     expect(await internal.handleMcpMessage({ type: "signInMcp" })).toBe(true)
     expect(await internal.handleMcpMessage({ type: "removeMcp" })).toBe(true)
     expect(calls).toEqual([])
+  })
+
+  it("refreshes MCP status after sign-in", async () => {
+    const { internal, calls } = actions()
+    await internal.handleSignInMcp("anaconda", false)
+    expect(calls).toEqual(["signIn:anaconda", "post:mcpAuthResult", "status"])
+  })
+
+  it("refreshes MCP status after resetting auth", async () => {
+    const { internal, calls } = actions()
+    await internal.handleResetMcpAuth("anaconda")
+    expect(calls).toEqual(["reset:anaconda", "status"])
   })
 })

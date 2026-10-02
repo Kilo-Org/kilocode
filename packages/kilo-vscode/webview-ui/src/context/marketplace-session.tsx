@@ -6,6 +6,7 @@ interface MarketplaceSessionContextValue {
   allStatusMap: () => Record<string, SessionStatusInfo>
   mcpAuth: () => { needsAuth: string[]; busy: string[] }
   mcpAuthResult: () => { name: string; status: McpAuthStatus; error?: string } | undefined
+  resetMcpAuthResult: () => void
   signInMcp: (name: string, notify?: boolean) => void
   cancelMcpSignIn: (name: string) => void
 }
@@ -55,13 +56,22 @@ export const MarketplaceSessionProvider: ParentComponent = (props) => {
     vscode.postMessage({ type: "signInMcp", name, notify })
   }
 
+  const resetMcpAuthResult = () => setMcpAuthResult(undefined)
+
   const cancelMcpSignIn = (name: string) => {
     vscode.postMessage({ type: "cancelMcpSignIn", name })
   }
 
   return (
     <MarketplaceSessionContext.Provider
-      value={{ allStatusMap: statuses, mcpAuth: mcpAuthState, mcpAuthResult, signInMcp, cancelMcpSignIn }}
+      value={{
+        allStatusMap: statuses,
+        mcpAuth: mcpAuthState,
+        mcpAuthResult,
+        resetMcpAuthResult,
+        signInMcp,
+        cancelMcpSignIn,
+      }}
     >
       {props.children}
     </MarketplaceSessionContext.Provider>

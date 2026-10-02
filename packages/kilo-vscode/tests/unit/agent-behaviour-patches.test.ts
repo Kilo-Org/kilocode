@@ -1,7 +1,9 @@
 import { describe, expect, it } from "bun:test"
 import {
   mcpConfigScope,
+  mcpEditPatch,
   mcpEnabledPatch,
+  pruneMcpExpanded,
   removable,
   selectedAgentNumberOverrideValue,
   selectedAgentTextOverrideValue,
@@ -54,6 +56,24 @@ describe("mcpEnabledPatch", () => {
     expect(mcpConfigScope("legacy", collections)).toBeUndefined()
     expect(mcpConfigScope("builtin", collections)).toBeUndefined()
     expect(mcpConfigScope("unknown", collections)).toBeUndefined()
+  })
+})
+
+describe("mcpEditPatch", () => {
+  it("writes only the selected server while preserving its current fields", () => {
+    expect(
+      mcpEditPatch("docs", { type: "remote", url: "https://old.test", enabled: true }, { url: "https://new.test" }),
+    ).toEqual({
+      mcp: {
+        docs: { type: "remote", url: "https://new.test", enabled: true },
+      },
+    })
+  })
+})
+
+describe("pruneMcpExpanded", () => {
+  it("removes expansion state for deleted servers", () => {
+    expect(pruneMcpExpanded({ docs: true, removed: true }, new Set(["docs"]))).toEqual({ docs: true })
   })
 })
 

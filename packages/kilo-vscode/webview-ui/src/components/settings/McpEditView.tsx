@@ -8,7 +8,7 @@ import { Select } from "@kilocode/kilo-ui/select"
 import { useConfig } from "../../context/config"
 import { useLanguage } from "../../context/language"
 import type { McpConfig } from "../../types/messages"
-import { mcpConfigScope } from "./agent-behaviour-patches"
+import { mcpConfigScope, mcpEditPatch } from "./agent-behaviour-patches"
 import { oauthMode, oauthPatch, validateOauth, type OauthFields, type OauthMode } from "./mcp-oauth-config"
 import SettingsRow from "./SettingsRow"
 
@@ -34,9 +34,14 @@ function oauthFieldsOf(cfg: McpConfig): OauthFields {
 
 const McpEditView: Component<Props> = (props) => {
   const language = useLanguage()
-  const { config, collections, updateConfig, updateGlobalConfig, updateProjectConfig } = useConfig()
+  const { config, globalConfig, projectConfig, collections, updateConfig, updateGlobalConfig, updateProjectConfig } =
+    useConfig()
 
-  const cfg = createMemo<McpConfig>(() => config().mcp?.[props.name] ?? {})
+  const target = () => mcpConfigScope(props.name, collections())
+  const cfg = createMemo<McpConfig>(() => {
+    const scoped = target() === "project" ? projectConfig() : target() === "global" ? globalConfig() : config()
+    return scoped.mcp?.[props.name] ?? config().mcp?.[props.name] ?? {}
+  })
   const initialOauth = oauthFieldsOf(cfg())
 
   const [envKey, setEnvKey] = createSignal("")
@@ -55,15 +60,12 @@ const McpEditView: Component<Props> = (props) => {
   // project-scoped server's edits from being silently relocated to the
   // global config file.
   const update = (partial: Partial<McpConfig>) => {
-    const existing = config().mcp ?? {}
-    const current = existing[props.name] ?? {}
-    const next = { mcp: { ...existing, [props.name]: { ...current, ...partial } } }
-    const target = mcpConfigScope(props.name, collections())
-    if (target === "project") {
+    const next = mcpEditPatch(props.name, cfg(), partial)
+    if (target() === "project") {
       updateProjectConfig(next)
       return
     }
-    if (target === "global") {
+    if (target() === "global") {
       updateGlobalConfig(next)
       return
     }

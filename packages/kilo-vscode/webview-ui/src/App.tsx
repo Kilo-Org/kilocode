@@ -464,6 +464,10 @@ const AppContent: Component = () => {
                 agentManagerProjectId={agentManagerProjectId()}
                 agentManagerSettings={host.KILO_AGENT_MANAGER_SETTINGS === true}
                 onTabChange={setSettingsTab}
+                onAgentBehaviourNavigationConsumed={() => {
+                  setSettingsSubtab(undefined)
+                  setSettingsFocus(undefined)
+                }}
                 onMigrationClick={() => setMigration(true)}
               />
             </Match>

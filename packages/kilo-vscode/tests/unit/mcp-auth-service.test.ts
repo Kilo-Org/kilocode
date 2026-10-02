@@ -21,7 +21,9 @@ interface FakeClient {
 
 /** Minimal fake satisfying McpAuthConnection, with per-call hooks for assertions and controllable behaviour. */
 function fakeConnection(opts: {
-  status?: Record<string, { status: string; error?: string }>
+  status?:
+    | Record<string, { status: string; error?: string }>
+    | (() => Promise<Record<string, { status: string; error?: string }>>)
   authenticate?: (name: string) => Promise<{
     data?: { status: string; error?: string }
     error?: unknown
@@ -49,7 +51,7 @@ function fakeConnection(opts: {
     mcp: {
       status: async () => {
         calls.status++
-        return { data: opts.status ?? {} }
+        return { data: typeof opts.status === "function" ? await opts.status() : (opts.status ?? {}) }
       },
       connect: async ({ name }) => {
         calls.connect.push(name)
@@ -129,15 +131,28 @@ describe("McpAuthService.refresh", () => {
   })
 
   it("bounds directory state to 64 entries, evicting the oldest", async () => {
-    const { connection } = fakeConnection({ status: {} })
+    const { connection } = fakeConnection({ status: { anaconda: { status: "needs_auth" } } })
     const service = new McpAuthService(connection)
     for (let i = 0; i < 65; i++) await service.refresh(`/test/${i}`)
     expect(service.needsAuth("/test/0")).toEqual([])
-    // Oldest directory should have been evicted from internal bookkeeping, but
-    // needsAuth() returns [] either way when empty — verify through onChange churn
-    // by refreshing a fresh dir and confirming the map didn't grow unbounded.
-    await service.refresh("/test/65")
-    expect(service.needsAuth("/test/64")).toEqual([])
+    expect(service.needsAuth("/test/1")).toEqual(["anaconda"])
+    expect(service.needsAuth("/test/64")).toEqual(["anaconda"])
+  })
+
+  it("preserves prior needs-auth state when status refresh fails", async () => {
+    let fail = false
+    const { connection } = fakeConnection({
+      status: async () => {
+        if (fail) throw new Error("temporary failure")
+        return { anaconda: { status: "needs_auth" } }
+      },
+    })
+    const service = new McpAuthService(connection)
+    await service.refresh("/test")
+    fail = true
+
+    expect(await service.refresh("/test")).toEqual(["anaconda"])
+    expect(service.needsAuth("/test")).toEqual(["anaconda"])
   })
 })
 

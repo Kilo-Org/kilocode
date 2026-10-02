@@ -18,7 +18,13 @@ import ModeEditView from "./ModeEditView"
 import ModeCreateView from "./ModeCreateView"
 import McpEditView from "./McpEditView"
 import WorkflowsTab from "./agent-behaviour/WorkflowsTab"
-import { mcpConfigScope, mcpEnabledPatch, removable, selectedDefaultAgentValue } from "./agent-behaviour-patches"
+import {
+  mcpConfigScope,
+  mcpEnabledPatch,
+  pruneMcpExpanded,
+  removable,
+  selectedDefaultAgentValue,
+} from "./agent-behaviour-patches"
 import { parseImport, MAX_IMPORT_SIZE } from "./mode-io"
 import type { ImportError } from "./mode-io"
 
@@ -54,6 +60,7 @@ interface Props {
   subtab?: string
   /** Deep-linked row to expand and scroll into view once its subtab is active. The token makes repeat requests for the same name observable. */
   focus?: { token: number; value: string }
+  onNavigationConsumed?: () => void
 }
 
 const AgentBehaviourTab: Component<Props> = (props) => {
@@ -78,16 +85,25 @@ const AgentBehaviourTab: Component<Props> = (props) => {
 
   createEffect(() => {
     const subtab = props.subtab
-    if (subtab && subtabs.some((s) => s.id === subtab)) setActiveSubtab(subtab as SubtabId)
+    const focus = props.focus
+    if (!subtab && !focus) return
+    if (subtab && subtabs.some((entry) => entry.id === subtab)) setActiveSubtab(subtab as SubtabId)
+    if (focus) {
+      setActiveSubtab("mcpServers")
+      setMcpExpanded((prev) => ({ ...prev, [focus.value]: true }))
+      queueMicrotask(() => mcpRowRefs.get(focus.value)?.scrollIntoView({ block: "nearest" }))
+    }
+    props.onNavigationConsumed?.()
   })
 
   createEffect(() => {
-    const focus = props.focus
-    if (!focus) return
-    setActiveSubtab("mcpServers")
-    setMcpExpanded((prev) => ({ ...prev, [focus.value]: true }))
-    queueMicrotask(() => mcpRowRefs.get(focus.value)?.scrollIntoView({ block: "nearest" }))
+    const names = new Set(Object.keys(config().mcp ?? {}))
+    for (const name of mcpRowRefs.keys()) {
+      if (!names.has(name)) mcpRowRefs.delete(name)
+    }
+    setMcpExpanded((prev) => pruneMcpExpanded(prev, names))
   })
+  onCleanup(() => mcpRowRefs.clear())
 
   // Load the VS Code setting for Claude Code compatibility
   vscode.postMessage({ type: "requestClaudeCompatSetting" })

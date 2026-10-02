@@ -458,8 +458,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private cachedImageModelsMessage: unknown = null
   /** Cached mcpStatusLoaded payload so requestMcpStatus can be served before client is ready */
   private cachedMcpStatusMessage: unknown = null
-  /** Cached mcpAuthState payload so requestMcpAuthState can be served before client is ready */
-  private cachedMcpAuthStateMessage: unknown = null
   /** Cached mcpBundles payload so requestMcpBundles can be served before client is ready */
   private cachedMcpBundlesMessage: unknown = null
   /** Ref-count of in-flight handleUpdateConfig calls; prevents fetchAndSendConfig from sending stale data */
@@ -3136,7 +3134,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       needsAuth: auth.needsAuth(dir),
       busy: auth.busy(dir),
     }
-    this.cachedMcpAuthStateMessage = message
     this.postMessage(message)
     if (this.client) await auth.refresh(dir)
   }
@@ -3145,12 +3142,14 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     const dir = this.getWorkspaceDirectory()
     const result = await mcpAuth(this.connectionService).signIn(dir, name)
     this.postMessage({ type: "mcpAuthResult", name, status: result.status, error: result.error })
+    await this.fetchAndSendMcpStatus()
     if (notify) McpOAuth.notifySignInResult(name, result)
   }
 
   private async handleResetMcpAuth(name: string): Promise<void> {
     const dir = this.getWorkspaceDirectory()
     const reconnected = await mcpAuth(this.connectionService).reset(dir, name)
+    await this.fetchAndSendMcpStatus()
     if (!reconnected) McpOAuth.notifyResetFailed(name)
   }
 
