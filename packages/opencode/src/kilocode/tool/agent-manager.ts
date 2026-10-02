@@ -152,7 +152,8 @@ export const Params = Schema.Union([
   }).check(
     Schema.makeFilter((params) => {
       if (params.worktreeID == null) return undefined
-      if (params.mode !== "local") return "worktreeID requires mode local"
+      if (params.mode !== "local")
+        return `worktreeID ${JSON.stringify(params.worktreeID)} requires mode local. To start a new worktree, omit worktreeID or send JSON null`
       if (params.versions === true) return "worktreeID cannot be combined with versions true"
       if (params.tasks.some((task) => task.branchName != null)) return "worktreeID cannot be combined with branchName"
       return undefined
