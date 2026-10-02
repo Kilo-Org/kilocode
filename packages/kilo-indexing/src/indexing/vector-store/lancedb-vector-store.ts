@@ -617,6 +617,20 @@ export class LanceDBVectorStore implements IVectorStore {
     }
   }
 
+  async hasPoints(): Promise<boolean> {
+    try {
+      const table = await this.getTable()
+      const pointCount = await table.countRows()
+      return pointCount > 0
+    } catch (error) {
+      if (error instanceof Error && error.message.includes("does not exist")) {
+        return false
+      }
+      log.error("Failed to check if collection has points", { error })
+      throw error
+    }
+  }
+
   private async _upsertMetadata(metadataTable: Table, key: string, value: unknown): Promise<void> {
     if (!this.isValidMetadataKey(key)) {
       throw new Error(`Invalid metadata key: ${key}`)

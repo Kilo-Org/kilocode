@@ -12,6 +12,7 @@ const mockUpsert = mock()
 const mockQuery = mock()
 const mockDelete = mock()
 const mockRetrieve = mock()
+const mockCount = mock()
 
 const mockQdrantClientInstance = {
   getCollection: mockGetCollection,
@@ -22,6 +23,7 @@ const mockQdrantClientInstance = {
   query: mockQuery,
   delete: mockDelete,
   retrieve: mockRetrieve,
+  count: mockCount,
 }
 
 const MockQdrantClientConstructor = mock(() => mockQdrantClientInstance)
@@ -53,6 +55,7 @@ describe("QdrantVectorStore", () => {
     mockQuery.mockReset()
     mockDelete.mockReset()
     mockRetrieve.mockReset()
+    mockCount.mockReset()
 
     vectorStore = new QdrantVectorStore(mockWorkspacePath, mockQdrantUrl, mockVectorSize, mockApiKey)
   })
@@ -67,6 +70,7 @@ describe("QdrantVectorStore", () => {
     mockQuery.mockReset()
     mockDelete.mockReset()
     mockRetrieve.mockReset()
+    mockCount.mockReset()
   })
 
   test("should correctly initialize QdrantClient and collectionName in constructor", () => {
@@ -1829,6 +1833,49 @@ describe("QdrantVectorStore", () => {
           ],
           must_not: [{ key: "type", match: { value: "metadata" } }],
         })
+      })
+    })
+
+    describe("hasPoints", () => {
+      test("should return false when collection does not exist", async () => {
+        mockGetCollection.mockRejectedValue({ status: 404, message: "Not found" })
+        const result = await vectorStore.hasPoints()
+        expect(result).toBe(false)
+      })
+
+      test("should return true when count excluding metadata is greater than 0", async () => {
+        mockGetCollection.mockResolvedValue({ points_count: 5 })
+        mockCount.mockResolvedValue({ count: 4 })
+
+        const result = await vectorStore.hasPoints()
+        expect(result).toBe(true)
+        expect(mockCount).toHaveBeenCalledWith((vectorStore as any).collectionName, {
+          filter: {
+            must_not: [{ key: "type", match: { value: "metadata" } }],
+          },
+          exact: true,
+        })
+      })
+
+      test("should return false when only metadata point exists", async () => {
+        mockGetCollection.mockResolvedValue({ points_count: 1 })
+        mockCount.mockResolvedValue({ count: 0 })
+
+        const result = await vectorStore.hasPoints()
+        expect(result).toBe(false)
+      })
+
+      test("should propagate error when count operation fails", async () => {
+        mockGetCollection.mockResolvedValue({ points_count: 2 })
+        mockCount.mockRejectedValue(new Error("network failure"))
+
+        await expect(vectorStore.hasPoints()).rejects.toThrow("network failure")
+      })
+
+      test("should propagate error when getCollection fails with non-404 error", async () => {
+        mockGetCollection.mockRejectedValue(new Error("transient network failure"))
+
+        await expect(vectorStore.hasPoints()).rejects.toThrow("transient network failure")
       })
     })
   })
