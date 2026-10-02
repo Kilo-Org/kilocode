@@ -78,6 +78,7 @@ const PROVIDER_FIELDS: Record<EmbeddingProvider, ProviderFieldDef[]> = {
 const VECTOR_STORE_LABELS: Record<string, string> = {
   lancedb: "LanceDB (default)",
   qdrant: "Qdrant",
+  valkey: "Valkey",
 }
 
 function maskSecret(value: string | undefined): string {
@@ -315,9 +316,11 @@ function VectorStoreSelect(props: SubDialogProps) {
       options={options}
       current={indexing.vectorStore ?? DEFAULT_VECTOR_STORE}
       onSelect={async (option) => {
-        const store = option.value as "lancedb" | "qdrant"
+        const store = option.value as "lancedb" | "qdrant" | "valkey"
         if (store === "lancedb") {
           await showLancedbSettings(dialog, sync, sdk, toast, props.useSDK, props.scope, indexing, props.raw)
+        } else if (store === "valkey") {
+          await showValkeySettings(dialog, sync, sdk, toast, props.useSDK, props.scope, indexing, props.raw)
         } else {
           await showQdrantSettings(dialog, sync, sdk, toast, props.useSDK, props.scope, indexing, props.raw)
         }
@@ -390,6 +393,58 @@ async function showQdrantSettings(
       url: url.trim() || undefined,
       apiKey: apiKey.trim() || undefined,
     },
+  }
+  await saveScopedIndexing(sdk, sync, scope, raw, updated, toast)
+  dialog.replace(() => <DialogIndexing useSDK={useSDK} scope={scope} />)
+}
+
+async function showValkeySettings(
+  dialog: ReturnType<typeof useDialog>,
+  sync: ReturnType<typeof useSync>,
+  sdk: SDK,
+  toast: ReturnType<typeof useToast>,
+  useSDK: () => UseSDK,
+  scope: IndexingScope,
+  indexing: IndexingConfig,
+  raw: IndexingConfig,
+) {
+  const currentSettings = indexing.valkey ?? {}
+
+  const url = await DialogPrompt.show(dialog, "Valkey — URL", {
+    value: currentSettings.url ?? "",
+    placeholder: "redis://localhost:6379",
+  })
+  if (url === null) {
+    dialog.replace(() => <DialogIndexing useSDK={useSDK} scope={scope} />)
+    return
+  }
+
+  const password = await DialogPrompt.show(dialog, "Valkey — Password", {
+    value: "",
+    placeholder: currentSettings.password ? "••• (press enter to keep)" : "Optional password",
+  })
+  if (password === null) {
+    dialog.replace(() => <DialogIndexing useSDK={useSDK} scope={scope} />)
+    return
+  }
+
+  // Only persist password if the user explicitly typed a new one.
+  // An empty submission preserves the existing project-local value (if any)
+  // without copying an inherited global password into the project config.
+  const trimmed = password.trim()
+  const valkey: NonNullable<IndexingConfig["valkey"]> = {
+    url: url.trim() || undefined,
+  }
+  if (trimmed) {
+    valkey.password = trimmed
+  } else if (raw.valkey?.password !== undefined) {
+    valkey.password = raw.valkey.password
+  }
+
+  const updated: IndexingConfig = {
+    ...raw,
+    vectorStore: "valkey",
+    valkey,
   }
   await saveScopedIndexing(sdk, sync, scope, raw, updated, toast)
   dialog.replace(() => <DialogIndexing useSDK={useSDK} scope={scope} />)
