@@ -360,9 +360,7 @@ export function Session() {
   })
   const subagentPaused = createMemo(() => subagentKeys() && !subagentRunning() && KiloTaskPause.paused(session()))
   // An interrupt, like Esc in any session view: it stops this subagent's turn and pauses the
-  // parent's task, so background work it started keeps running. On an already-paused subagent
-  // the same interrupt returns control to the parent with an interrupted task result; the view
-  // stays on the subagent.
+  // parent's task, so background work it started keeps running. A new prompt resumes the task.
   function interruptSubagent() {
     if (!interrupt.press()) return
     const fail = () => toast.show({ message: "Failed to interrupt subagent", variant: "error" })
@@ -1289,12 +1287,12 @@ export function Session() {
     bindings: tuiConfig.keybinds.get("session.background"),
   }))
 
-  // kilocode_change start - subagent view: double Esc interrupts this subagent (pausing its task) and,
-  // once paused, returns control to the parent. The configured exit keys need a second press.
+  // kilocode_change start - subagent view: double Esc interrupts this subagent, pausing its task until a
+  // new prompt resumes it. The configured exit keys need a second press.
   // `get` (not `gather`) because gather caches by name.
   useBindings(() => ({
     mode: KILO_BASE_MODE,
-    enabled: subagentRunning() || subagentPaused(),
+    enabled: subagentRunning(),
     priority: 1,
     commands: [
       {

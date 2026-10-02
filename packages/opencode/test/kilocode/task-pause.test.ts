@@ -18,6 +18,7 @@ import { SessionID } from "../../src/session/schema"
 import { KiloSessions } from "../../src/kilo-sessions/kilo-sessions"
 import { BoardStore } from "../../src/kilocode/board/store"
 import { KiloSessionControl } from "../../src/kilocode/session/control"
+import { KiloSessionSteering } from "../../src/kilocode/session/steering"
 import { KiloTaskPause } from "../../src/kilocode/tool/task-pause"
 import { disposeAllInstancesEffect, provideTmpdirServer } from "../fixture/fixture"
 import { awaitWithTimeout, pollWithTimeout, testEffect } from "../lib/effect"
@@ -214,6 +215,17 @@ const taskPart = Effect.fn("TaskPauseTest.taskPart")(function* (id: SessionID) {
     .find((part) => part.type === "tool" && part.tool === "task")
 })
 
+/** A human steering prompt in the subagent view, the way the TUI sends it. */
+const steer = (id: SessionID, text: string) =>
+  Effect.gen(function* () {
+    const prompt = yield* SessionPrompt.Service
+    return yield* prompt.prompt({
+      sessionID: id,
+      agent: "general",
+      parts: [{ type: "text", text, metadata: { kind: KiloSessionSteering.KIND } }],
+    })
+  })
+
 const injected = (id: SessionID, text: string) =>
   Effect.gen(function* () {
     const sessions = yield* Session.Service
@@ -235,7 +247,7 @@ const injected = (id: SessionID, text: string) =>
   })
 
 it.live(
-  "a subagent-view interrupt pauses a foreground task and return to parent ends it",
+  "a subagent-view interrupt pauses a foreground task until a prompt resumes it",
   () =>
     provideTmpdirServer(
       Effect.fnUntraced(function* () {
@@ -257,26 +269,22 @@ it.live(
         // foreground pauses never post to the board
         expect((yield* BoardStore.read({ sessionID: run.chat.id })).messages).toEqual([])
 
-        // a later task_id resume reaches the same child
-        yield* run.llm.pushMatch(parent, task("CONTINUE_WORK", { task_id: run.child }))
-        yield* run.llm.pushMatch(child("CONTINUE_WORK"), reply().text("resumed result").stop())
-        yield* run.llm.pushMatch(parent, reply().text("parent done").stop())
-
-        // return to parent: the second interrupt of the idle, paused subagent releases the task
+        // interrupting the idle, paused subagent again does not end the task
         yield* run.prompt.cancel(run.child, "session")
+        expect(KiloTaskPause.paused(run.child)).toBe(true)
+        expect((yield* run.jobs.get(run.child))?.status).toBe("running")
+        expect((yield* run.status.get(run.chat.id)).type).toBe("busy")
+
+        // a steering prompt resumes the task, which completes with that turn's result
+        yield* run.llm.pushMatch(child("STEER_ON"), reply().text("resumed result").stop())
+        yield* run.llm.pushMatch(parent, reply().text("parent done").stop())
+        yield* steer(run.child, "STEER_ON")
         const result = yield* awaitWithTimeout(Fiber.join(run.fiber), "parent stayed blocked", "15 seconds")
         expect(result.parts.some((part) => part.type === "text" && part.text === "parent done")).toBe(true)
-        const parts = (yield* run.sessions.messages({ sessionID: run.chat.id }))
-          .flatMap((message) => message.parts)
-          .filter((part) => part.type === "tool" && part.tool === "task")
-        const first = parts.at(0)
+        const first = yield* taskPart(run.chat.id)
         if (first?.type !== "tool" || first.state.status !== "completed") throw new Error("task did not complete")
-        expect(first.state.output).toContain('state="interrupted"')
-        expect(first.state.output).toContain("The user interrupted this subagent")
-        expect(first.state.output).toContain(`task_id="${run.child}"`)
-        const second = parts.at(1)
-        if (second?.type !== "tool" || second.state.status !== "completed") throw new Error("resume did not complete")
-        expect(second.state.output).toContain("resumed result")
+        expect(first.state.output).toContain('state="completed"')
+        expect(first.state.output).toContain("resumed result")
         expect(KiloTaskPause.paused(run.child)).toBe(false)
         expect((yield* run.sessions.get(run.child)).metadata?.[KiloTaskPause.KEY]).toBeUndefined()
         yield* settled()
@@ -297,6 +305,7 @@ it.live(
         yield* svc.llm.pushMatch(child("CHILD_WORK"), task("GRAND_WORK", { background: true }), reply().hang())
         yield* svc.llm.pushMatch(child("GRAND_WORK"), reply().wait(done.promise).text("GRAND_RESULT").stop())
         yield* svc.llm.pushMatch(parent, reply().text("parent done").stop())
+
         const run = yield* launch()
         const grand = yield* pollWithTimeout(
           Effect.gen(function* () {
@@ -319,16 +328,22 @@ it.live(
         expect((yield* run.jobs.get(grand))?.status).toBe("running")
         expect((yield* run.status.get(grand)).type).toBe("busy")
 
-        yield* run.prompt.cancel(run.child, "session")
-        yield* awaitWithTimeout(Fiber.join(run.fiber), "parent was blocked by the grandchild", "15 seconds")
-        expect((yield* run.jobs.get(grand))?.status).toBe("running")
         const calls = yield* run.llm.calls
 
+        // the grandchild's result is stored in the paused child without starting a child turn
         done.resolve()
         yield* injected(run.child, "GRAND_RESULT")
         expect((yield* run.jobs.get(grand))?.status).toBe("completed")
         expect((yield* run.status.get(run.child)).type).toBe("idle")
         expect(yield* run.llm.calls).toBe(calls)
+        expect(KiloTaskPause.paused(run.child)).toBe(true)
+
+        // the resumed turn sees the stored result and completes the task
+        yield* run.llm.pushMatch(child("STEER_ON"), reply().text("child result").stop())
+        yield* steer(run.child, "STEER_ON")
+        yield* awaitWithTimeout(Fiber.join(run.fiber), "parent stayed blocked", "15 seconds")
+        const hit = (yield* run.llm.hits).find((item) => child("STEER_ON")(item))
+        expect(JSON.stringify(hit?.body)).toContain("GRAND_RESULT")
         yield* settled()
       }),
       { config },
@@ -364,7 +379,8 @@ it.live(
         expect((yield* run.status.get(grand)).type).toBe("idle")
         expect((yield* run.jobs.get(run.child))?.status).toBe("running")
 
-        yield* run.prompt.cancel(run.child, "session")
+        // a tree cancel is the only way to end the paused task early
+        yield* run.prompt.cancel(run.child, "tree")
         yield* awaitWithTimeout(Fiber.join(run.fiber), "parent stayed blocked", "15 seconds")
         yield* settled()
       }),
@@ -374,7 +390,7 @@ it.live(
 )
 
 it.live(
-  "a background task interrupt posts a board notice and injects only after release",
+  "a background task interrupt posts a board notice and injects only after a prompt resumes it",
   () =>
     provideTmpdirServer(
       Effect.fnUntraced(function* () {
@@ -394,12 +410,14 @@ it.live(
         expect(messages.some((message) => KiloSessionControl.background(message.parts))).toBe(false)
         expect((yield* run.jobs.get(run.child))?.status).toBe("running")
 
-        yield* run.llm.pushMatch(parent, reply().text("noted").stop())
         yield* run.prompt.cancel(run.child, "session")
-        const delivered = yield* injected(run.chat.id, "Background task interrupted by the user")
-        const text = JSON.stringify(delivered)
-        expect(text).not.toContain("Background task failed")
-        expect(text).toContain(`task_id=\\"${run.child}\\"`)
+        expect(KiloTaskPause.paused(run.child)).toBe(true)
+
+        yield* run.llm.pushMatch(child("STEER_ON"), reply().text("child result").stop())
+        yield* run.llm.pushMatch(parent, reply().text("noted").stop())
+        yield* steer(run.child, "STEER_ON")
+        const delivered = yield* injected(run.chat.id, "Background task completed")
+        expect(JSON.stringify(delivered)).toContain("child result")
         yield* settled()
       }),
       { config },
@@ -440,9 +458,10 @@ it.live(
         )
         expect(KiloTaskPause.paused(run.child)).toBe(true)
 
+        yield* run.llm.pushMatch(child("STEER_ON"), reply().text("child result").stop())
         yield* run.llm.pushMatch(parent, reply().text("noted").stop())
-        yield* run.prompt.cancel(run.child, "session")
-        yield* injected(run.chat.id, "Background task interrupted by the user")
+        yield* steer(run.child, "STEER_ON")
+        yield* injected(run.chat.id, "child result")
         yield* settled()
       }),
       { config },
@@ -583,7 +602,7 @@ it.live(
         yield* paused(run.child)
 
         // provideTmpdirServer runs this body inside its own InstanceStore; its type does not say so
-        yield* (disposeAllInstancesEffect as Effect.Effect<void>)
+        yield* disposeAllInstancesEffect as Effect.Effect<void>
         yield* awaitWithTimeout(Fiber.await(run.fiber), "parent survived the dispose", "15 seconds")
         expect(KiloTaskPause.paused(run.child)).toBe(false)
       }),
@@ -646,9 +665,10 @@ it.live(
         const notices = (yield* BoardStore.read({ sessionID: run.chat.id })).messages
         expect(notices.filter((item) => item.body === KiloTaskPause.NOTICE)).toHaveLength(2)
 
+        yield* run.llm.pushMatch(child("STEER_ON"), reply().text("child result").stop())
         yield* run.llm.pushMatch(parent, reply().text("noted").stop())
-        yield* run.prompt.cancel(run.child, "session")
-        yield* injected(run.chat.id, "Background task interrupted by the user")
+        yield* steer(run.child, "STEER_ON")
+        yield* injected(run.chat.id, "child result")
         yield* settled()
       }),
       { config },

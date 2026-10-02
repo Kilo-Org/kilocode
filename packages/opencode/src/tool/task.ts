@@ -77,7 +77,7 @@ export const Parameters = Schema.Struct({
 
 function renderOutput(input: {
   sessionID: SessionID
-  state: "running" | "completed" | "error" | "interrupted" // kilocode_change - interrupted by the user
+  state: "running" | "completed" | "error"
   summary?: string
   text: string
 }) {
@@ -281,8 +281,8 @@ export const TaskTool = Tool.define(
       const runTask = Effect.fn("TaskTool.runTask")(
         function* () {
           const initial = yield* send()
-          // An interrupted child pauses the task instead of draining it; see KiloTaskPause.
-          const settled = yield* KiloTaskPause.settle({
+          // An interrupted child pauses the task until a new prompt resumes it; see KiloTaskPause.
+          const result = yield* KiloTaskPause.settle({
             child: nextSession.id,
             parent: ctx.sessionID,
             initial,
@@ -292,8 +292,6 @@ export const TaskTool = Tool.define(
             paused: ops.paused,
             board: { config, flags, database },
           })
-          if (settled.interrupted) return KiloTaskPause.text(nextSession.id)
-          const result = settled.message
           // kilocode_change end
           // kilocode_change start - expose terminal child assistant errors through the task tool boundary,
           // including the resumable task_id so the parent agent can continue the subagent (#11620)
@@ -318,7 +316,7 @@ export const TaskTool = Tool.define(
 
       // kilocode_change start - inject completed background task results into the parent session
       const inject = Effect.fn("TaskTool.injectBackgroundResult")(function* (
-        state: "completed" | "error" | "interrupted",
+        state: "completed" | "error",
         text: string,
       ) {
         const currentParent = yield* sessions.get(ctx.sessionID)
@@ -340,9 +338,7 @@ export const TaskTool = Tool.define(
                 summary:
                   state === "completed"
                     ? `Background task completed: ${params.description}`
-                    : state === "interrupted"
-                      ? `Background task interrupted by the user: ${params.description}`
-                      : `Background task failed: ${params.description}`,
+                    : `Background task failed: ${params.description}`,
                 text,
               }),
             },
@@ -363,8 +359,7 @@ export const TaskTool = Tool.define(
             yield* Scope.addFinalizer(owner, Effect.sync(release))
             yield* background.wait({ id: jobID }).pipe(
               Effect.flatMap((result) => {
-                if (result.info?.status === "completed")
-                  return inject(KiloTaskPause.take(jobID) ? "interrupted" : "completed", result.info.output ?? "")
+                if (result.info?.status === "completed") return inject("completed", result.info.output ?? "")
                 if (result.info?.status === "error") return inject("error", result.info.error ?? "")
                 if (result.info?.status === "cancelled") return Effect.void
                 return Effect.die(new Error("Background task result is unavailable"))
@@ -404,15 +399,13 @@ export const TaskTool = Tool.define(
       const backgroundRun = withCostPropagation(runTask().pipe(Effect.onInterrupt(() => ops.cancel(nextSession.id))))
 
       // A paused task's job is still running, so `extend` would queue behind the pause forever.
-      // Send the prompt to the child directly and resume the paused run, which then awaits this turn.
+      // Send the prompt to the child directly: its admission resumes the paused run, which then
+      // awaits this turn and delivers the result through the original job.
       if (session && KiloTaskPause.paused(nextSession.id)) {
-        const release = yield* drain.hold(nextSession.id)
         yield* send().pipe(
-          Effect.ensuring(Effect.sync(release)),
           Effect.catchCause((cause) => Effect.logWarning("paused task prompt failed", { cause })),
           Effect.forkIn(scope, { startImmediately: true }),
         )
-        yield* KiloTaskPause.resume(nextSession.id)
         return {
           title: params.description,
           metadata: { ...metadata, background: true, jobId: nextSession.id },
@@ -526,11 +519,10 @@ export const TaskTool = Tool.define(
             // without that reason, models treat the result as a failure and start a new subagent right away
             if (result?.status === "cancelled") return yield* Effect.fail(new Error("Task cancelled by the user"))
             // kilocode_change end
-            const state = KiloTaskPause.take(nextSession.id) ? "interrupted" : "completed" // kilocode_change
             return {
               title: params.description,
               metadata,
-              output: renderOutput({ sessionID: nextSession.id, state, text: result?.output ?? "" }), // kilocode_change
+              output: renderOutput({ sessionID: nextSession.id, state: "completed", text: result?.output ?? "" }),
             }
           }),
         // kilocode_change start - propagate subagent cost delta to parent on every exit path (#6321)

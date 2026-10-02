@@ -168,22 +168,11 @@ export function SubagentFooter(props: Props) {
                 </text>
               </box>
             </Show>
-            {/* the parent's task is paused: the same interrupt returns control to the parent */}
+            {/* the parent's task is paused until a new prompt resumes it */}
             <Show when={props.paused() && props.exitPress() === 0}>
-              <box
-                onMouseOver={() => setHover("interrupt")}
-                onMouseOut={() => setHover(null)}
-                onMouseUp={() => keymap.dispatchCommand("subagent.interrupt")}
-                backgroundColor={hover() === "interrupt" ? theme.backgroundElement : theme.backgroundPanel}
-              >
-                <text fg={armed() ? theme.primary : theme.text} wrapMode="none">
-                  Interrupted ·{" "}
-                  <span style={{ fg: armed() ? theme.primary : theme.textMuted }}>
-                    {armed() ? `${interruptKey()} again` : `${interruptKey()} ${interruptKey()}`}
-                  </span>{" "}
-                  return to parent
-                </text>
-              </box>
+              <text fg={theme.text} wrapMode="none">
+                Interrupted · <span style={{ fg: theme.textMuted }}>send a prompt to resume</span>
+              </text>
             </Show>
             {/* kilocode_change end */}
             <box

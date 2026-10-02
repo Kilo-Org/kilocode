@@ -9,11 +9,12 @@
 // notify the parent over the shared agent board.
 import type { Session } from "@kilocode/sdk/v2"
 import { running } from "../util/session"
+import { KiloTaskPause } from "./task-pause"
 
 // Must match `KIND` in packages/opencode/src/kilocode/session/steering.ts.
 export const KIND = "subagent_steer"
 
-type Target = Pick<Session, "parentID" | "agent" | "model"> | undefined
+type Target = Pick<Session, "parentID" | "agent" | "model" | "metadata"> | undefined
 type Ref = { focused: boolean; current: { input: string } } | undefined
 
 function child(session: Target) {
@@ -42,9 +43,12 @@ export function steering(session: Target) {
   return !!child(session)
 }
 
-/** Subagent views accept input only while the child runs; a finished child's new turn never reaches the parent. */
+/**
+ * Subagent views accept input while the child runs, and while its task is paused by an
+ * interrupt, where the prompt resumes the task. A finished child's new turn never reaches the parent.
+ */
 export function open(session: Target, status: string | undefined) {
-  return !child(session) || running(status ?? "idle")
+  return !child(session) || running(status ?? "idle") || KiloTaskPause.paused(session)
 }
 
 /**
