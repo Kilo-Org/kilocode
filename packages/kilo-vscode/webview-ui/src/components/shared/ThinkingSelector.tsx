@@ -14,6 +14,7 @@ import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { useSession } from "../../context/session"
 import { useConfig } from "../../context/config"
 import { useLanguage } from "../../context/language"
+import { variantLabel } from "../../context/session-variant-store"
 import { isEnterKeyCommitNotIme } from "../../utils/ime-enter"
 import { createTypeahead, isTypeaheadChar } from "../../utils/typeahead"
 
@@ -66,7 +67,7 @@ export const ThinkingSelectorBase: Component<ThinkingSelectorBaseProps> = (props
 
   function display(value: string | undefined) {
     if (!value) return clearLabel()
-    return value.charAt(0).toUpperCase() + value.slice(1)
+    return variantLabel(value)
   }
 
   function focusItem(idx: number) {

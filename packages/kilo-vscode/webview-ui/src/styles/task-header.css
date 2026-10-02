@@ -50,6 +50,45 @@
   white-space: nowrap;
 }
 
+/* Read-only chats show their model at the end of the title slot, next to the
+   stats. The title yields space first, down to 64px, because the inspector tab
+   above it already names the subagent. Past that the model name truncates, and
+   the reasoning variant never does. */
+[data-slot="task-header-title"]:has([data-slot="task-header-model"]) [data-slot="task-header-title-trigger"] {
+  flex: 1 1 0;
+  min-width: 64px;
+}
+
+[data-slot="task-header-model"] {
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 180px;
+  /* 12px on both sides, matching the gap between the stats after it. The
+     header already puts 8px between the title slot and the stats. */
+  padding-left: 12px;
+  padding-right: 4px;
+  font-size: var(--kilo-font-size-13);
+  font-weight: normal;
+  color: var(--text-weak);
+}
+
+[data-slot="task-header-model-label"] {
+  display: flex;
+  min-width: 0;
+  white-space: nowrap;
+}
+
+[data-slot="task-header-model-name"] {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+[data-slot="task-header-model-variant"] {
+  flex-shrink: 0;
+  white-space: pre;
+}
+
 @media (max-width: 360px) {
   [data-component="task-header"] {
     padding-inline: 8px;

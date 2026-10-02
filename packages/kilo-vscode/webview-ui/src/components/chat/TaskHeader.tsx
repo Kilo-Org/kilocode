@@ -16,14 +16,16 @@ import { Checkbox } from "@kilocode/kilo-ui/checkbox"
 import { useSession } from "../../context/session"
 import { calcTokenUsage, collapseCostBreakdown, sessionCost } from "../../context/session-utils"
 import { useLanguage } from "../../context/language"
+import { useProvider } from "../../context/provider"
 import { useVSCode } from "../../context/vscode"
+import { variantLabel } from "../../context/session-variant-store"
 import { TaskTimeline } from "./TaskTimeline"
 import { SwarmBoard } from "./SwarmBoard"
 import { ContextProgress } from "./ContextProgress"
 import { TaskUsage } from "./TaskUsage"
 import { TranscriptSearch } from "./TranscriptSearch"
 import { useTranscriptSearch } from "../../context/transcript-search"
-import { hasModelUsage, tokenSummary } from "../../context/model-usage"
+import { hasModelUsage, modelUsageName, tokenSummary, turnModel } from "../../context/model-usage"
 import { SessionRenameEditor } from "../shared/SessionRenameEditor"
 import { target as todoTarget } from "../../context/todo-revert"
 import type { Part, TodoItem, ExtensionMessage } from "../../types/messages"
@@ -81,6 +83,11 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
     const usage = session.modelUsage()
     return hasModelUsage(usage) ? tokenSummary(usage) : calcTokenUsage(session.visibleMessages())
   })
+
+  // Read-only chats (subagents) have no prompt box, so its model and reasoning
+  // pickers are gone. Show what the session actually ran with instead.
+  const provider = useProvider()
+  const model = createMemo(() => (props.readonly ? turnModel(session.visibleMessages()) : undefined))
 
   const hasTimeline = createMemo(() => {
     for (const m of session.visibleMessages()) {
@@ -221,6 +228,33 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
                 {title()}
               </span>
             </span>
+          </Show>
+          {/* Lives in the title slot rather than the fixed-width stats so the
+              title and the model shrink together in a narrow inspector. */}
+          <Show when={model()}>
+            {(m) => (
+              <div data-slot="task-header-model">
+                <Tooltip
+                  value={
+                    <div style={{ "text-align": "left", "white-space": "nowrap" }}>
+                      <div>{provider.providers()[m().providerID]?.name ?? m().providerID}</div>
+                      <div>{`${m().providerID}/${m().modelID}`}</div>
+                      <Show when={m().variant}>
+                        {(v) => <div>{`${language.t("prompt.thinking.tooltip")}: ${variantLabel(v())}`}</div>}
+                      </Show>
+                    </div>
+                  }
+                  placement="bottom"
+                >
+                  <span data-slot="task-header-model-label">
+                    <span data-slot="task-header-model-name">{modelUsageName(m(), provider.providers())}</span>
+                    <Show when={m().variant}>
+                      {(v) => <span data-slot="task-header-model-variant">{` · ${variantLabel(v())}`}</span>}
+                    </Show>
+                  </span>
+                </Tooltip>
+              </div>
+            )}
           </Show>
         </div>
         <div data-slot="task-header-stats">
