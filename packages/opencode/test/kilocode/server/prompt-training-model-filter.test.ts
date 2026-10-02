@@ -73,7 +73,8 @@ for (const scenario of [
           process.env.KILO_AUTH_CONTENT = JSON.stringify({
             kilo: {
               type: "oauth",
-              access: "test-token",
+              // Unique per scenario: the gateway keeps a last-known-good catalog per token.
+              access: `test-token-${scenario}`,
               refresh: "test-refresh",
               expires: 0,
               accountId: "org-oauth",
@@ -178,7 +179,10 @@ for (const scenario of [
       expect(connected.default.external).toBe("independent")
       expect(all.default.external).toBe("independent")
       expect(all.connected).toContain("external")
-      expect(paths.filter((path) => path.endsWith("/models"))).toEqual(["/api/organizations/org-env/models"])
+      // A failing fetch with no cached catalog is retried once.
+      expect(paths.filter((path) => path.endsWith("/models"))).toEqual(
+        Array(scenario === "error" ? 2 : 1).fill("/api/organizations/org-env/models"),
+      )
       expect(paths.filter((path) => path.endsWith("/defaults"))).toEqual(
         unavailable ? [] : ["/api/organizations/org-env/defaults", "/api/organizations/org-env/defaults"],
       )

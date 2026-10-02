@@ -495,3 +495,46 @@ test("omits cost when pricing contains negative values (dynamic/auto-routed pric
     cache_read: 0.3,
   })
 })
+
+test("fetchKiloModels retries transient failures and keeps the last known good catalog", async () => {
+  let mode: "ok" | "flaky" | "down" = "ok"
+  let hits = 0
+  const server = Bun.serve({
+    port: 0,
+    fetch() {
+      hits++
+      if (mode === "down") return new Response("boom", { status: 503 })
+      if (mode === "flaky" && hits % 2 === 1) return new Response("boom", { status: 502 })
+      return new Response(VALID_RESPONSE, { headers: { "content-type": "application/json" } })
+    },
+  })
+  const warn = spyOn(console, "warn").mockImplementation(() => {})
+  try {
+    const opts = { baseURL: `http://localhost:${server.port}`, kilocodeToken: "tok-resilient", retryDelays: [1] }
+    const first = await fetchKiloModels(opts)
+    expect(Object.keys(first.models)).toEqual(["test/model-a"])
+
+    mode = "flaky"
+    hits = 0
+    const retried = await fetchKiloModels({ ...opts, kilocodeToken: "tok-retry" })
+    expect(retried.error).toBeUndefined()
+    expect(hits).toBe(2)
+
+    delete first.models["test/model-a"] // callers mutate results; must not poison the fallback
+    mode = "down"
+    hits = 0
+    const stale = await fetchKiloModels(opts)
+    expect(hits).toBe(1) // cached catalog available: no retries
+    expect(stale.error).toBeUndefined()
+    expect(Object.keys(stale.models)).toEqual(["test/model-a"])
+    expect(stale.models).not.toBe(first.models)
+    expect(warn).toHaveBeenCalled()
+
+    const other = await fetchKiloModels({ ...opts, kilocodeToken: "tok-other" })
+    expect(other.models).toEqual({})
+    expect(other.error?.kind).toBe("http")
+  } finally {
+    warn.mockRestore()
+    server.stop(true)
+  }
+})
