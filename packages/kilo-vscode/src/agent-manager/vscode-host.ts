@@ -86,6 +86,7 @@ export class VscodeHost implements Host {
       worktreeDirectories?: () => string[]
       workspaceRoot?: () => string | undefined
       projectId?: () => string | undefined
+      sessionProject?: () => string | undefined
     },
   ): PanelContext {
     return this.wirePanel(panel, opts)
@@ -98,6 +99,7 @@ export class VscodeHost implements Host {
       worktreeDirectories?: () => string[]
       workspaceRoot?: () => string | undefined
       projectId?: () => string | undefined
+      sessionProject?: () => string | undefined
     },
   ): PanelContext {
     panel.webview.options = {
@@ -191,7 +193,7 @@ export class VscodeHost implements Host {
       listSessions: (dir) => this.listProjectSessions(dir),
       trackSession: (id) => provider.trackSession(id),
       refreshSessions: () => provider.refreshSessions(),
-      registerSession: (s) => provider.registerSession(s),
+      registerSession: (s) => provider.registerSession(s, false, opts.sessionProject?.()),
       recoverPendingPrompts: () => provider.recoverPendingPrompts(),
       onFollowupAdopted: (cb) => provider.onFollowupAdopted(cb),
       acknowledgeDraft: (draftID, sessionID) => provider.acknowledgeDraft(draftID, sessionID),
@@ -350,13 +352,6 @@ export class VscodeHost implements Host {
     if (invalid) throw new Error(vscode.l10n.t(invalid))
     const git = await this.git()
     const selected = await this.directory(parent, vscode.l10n.t("Select a parent folder for the cloned repository."))
-    if (!this.multiProject() || !vscode.workspace.isTrusted) {
-      throw new Error(
-        vscode.l10n.t(
-          "Cloning was cancelled because multi-project Agent Manager is disabled or the window is not trusted.",
-        ),
-      )
-    }
     // Opening an existing checkout beats failing a clone into an occupied folder.
     const name = repoName(url)
     const existing = await this.existingCheckout(name, selected)
@@ -410,10 +405,6 @@ export class VscodeHost implements Host {
     return root
   }
 
-  multiProject(): boolean {
-    return vscode.workspace.getConfiguration("kilo-code.new.experimental").get("multiProject", false)
-  }
-
   browserAutomation(): boolean {
     return vscode.workspace.getConfiguration("kilo-code.new.experimental").get("browserAutomation", false)
   }
@@ -457,12 +448,6 @@ export class VscodeHost implements Host {
 
   onDidChangeWorkspaceFolders(cb: () => void): Disposable {
     return vscode.workspace.onDidChangeWorkspaceFolders(() => cb())
-  }
-
-  onDidChangeMultiProject(cb: (enabled: boolean) => void): Disposable {
-    return vscode.workspace.onDidChangeConfiguration((e) => {
-      if (e.affectsConfiguration("kilo-code.new.experimental.multiProject")) cb(this.multiProject())
-    })
   }
 
   onDidChangeWorktreePool(cb: (enabled: boolean) => void): Disposable {

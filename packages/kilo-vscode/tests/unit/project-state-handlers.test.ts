@@ -19,7 +19,6 @@ describe("createProjectStateHandlers", () => {
     const applied: AgentManagerStateMessage[] = []
     const routed: AgentManagerStateMessage[] = []
     const handler = createProjectStateHandlers({
-      setMulti: () => {},
       setProjects: () => {},
       setStates: (update) => Object.assign(stored, update(stored)),
       prune: () => {},
@@ -28,9 +27,6 @@ describe("createProjectStateHandlers", () => {
       routeCatalog: () => {},
       routeState: (value) => routed.push(value),
       isActive: () => true,
-      pending: () => false,
-      setPending: () => {},
-      rename: () => {},
       font: () => {},
       browser: () => {},
       current: () => "session-a",
@@ -52,7 +48,6 @@ describe("createProjectStateHandlers", () => {
     let closed = 0
     let enabled = false
     const handler = createProjectStateHandlers({
-      setMulti: () => {},
       setProjects: () => {},
       setStates: () => {},
       prune: () => {},
@@ -61,9 +56,6 @@ describe("createProjectStateHandlers", () => {
       routeCatalog: () => {},
       routeState: () => {},
       isActive: (project) => project === "project-a",
-      pending: () => false,
-      setPending: () => {},
-      rename: () => {},
       font: () => {},
       browser: (value) => {
         enabled = value
@@ -142,7 +134,6 @@ describe("createProjectStateHandlers", () => {
             )
             const binding = browser.bind(current)
             const handler = createProjectStateHandlers({
-              setMulti: () => {},
               setProjects: () => {},
               setStates: () => {},
               prune: () => {},
@@ -151,9 +142,6 @@ describe("createProjectStateHandlers", () => {
               routeCatalog: () => {},
               routeState: () => {},
               isActive: (project) => project === "project-a",
-              pending: () => false,
-              setPending: () => {},
-              rename: () => {},
               font: () => {},
               ...binding,
             })

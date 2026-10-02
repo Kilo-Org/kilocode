@@ -32,7 +32,6 @@ export const dict = {
   "agentManager.local": "local",
   "agentManager.sidebar.collapse": "Recolher barra lateral",
   "agentManager.sidebar.expand": "Mostrar barra lateral",
-  "agentManager.section.worktrees": "WORKTREES",
   "agentManager.section.sessions": "SESSÕES",
   "agentManager.projects": "PROJETOS",
   "agentManager.settings.title": "Agent Manager",
@@ -73,12 +72,9 @@ export const dict = {
   "agentManager.project.settings": "Configurações do projeto",
   "agentManager.project.restricted":
     "Seu espaço de trabalho atual do VS Code é sua pasta pessoal ou a raiz do sistema de arquivos. Abra uma pasta de projeto específica no VS Code para usar o Agent Manager.",
-  "agentManager.notGitRepo": "Não é um repositório git",
-
   "agentManager.updateBase.title": "Atualizar a partir da base",
   "agentManager.updateBase.selectWorktree": "Selecione primeiro um worktree gerenciado.",
 
-  "agentManager.worktree.settings": "Configurações do Worktree",
   "agentManager.worktree.new": "Novo Worktree",
   "agentManager.worktree.setupScript": "Script de configuração do Worktree",
   "agentManager.worktree.delete": "Excluir Worktree",
@@ -187,13 +183,6 @@ export const dict = {
   "agentManager.shortcuts.cycleAgentMode": "Próximo modo de agente",
   "agentManager.shortcuts.cyclePreviousAgentMode": "Modo de agente anterior",
   "agentManager.shortcuts.showShortcuts": "Mostrar atalhos de teclado",
-  "agentManager.dialog.removeStaleWorktree.title": "Remover Worktree obsoleto",
-  "agentManager.dialog.removeStaleWorktree.messagePre": "Remover Worktree obsoleto ",
-  "agentManager.dialog.removeStaleWorktree.messagePost":
-    "? Isso remove apenas o mapeamento no Agent Manager e não altera os arquivos no disco.",
-  "agentManager.dialog.removeStaleWorktree.cancel": "Cancelar",
-  "agentManager.dialog.removeStaleWorktree.confirm": "Remover Worktree obsoleto",
-
   "agentManager.dialog.project.select": "Selecionar projeto",
   "agentManager.dialog.project.missing": "Repositório não encontrado",
   "agentManager.dialog.openWorktree": "Novo Worktree",
