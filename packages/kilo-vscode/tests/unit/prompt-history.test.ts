@@ -303,7 +303,7 @@ describe("usePromptHistory — per-conversation isolation", () => {
     })
   })
 
-  it("ignores prompts longer than the entry cap", () => {
+  it("ignores prompts longer than the entry cap in per-conversation mode", () => {
     createRoot((dispose) => {
       const [sid] = createSignal<string | undefined>("ses-long")
       const history = usePromptHistory(sid)

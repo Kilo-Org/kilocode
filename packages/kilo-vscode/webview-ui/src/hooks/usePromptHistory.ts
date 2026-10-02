@@ -12,64 +12,62 @@ import { createSignal } from "solid-js"
 import type { Accessor } from "solid-js"
 
 export const MAX = 100
-const STORAGE_KEY = "kilo.prompt-history.v2"
+/** The shared list: a flat array, stored exactly as before per-conversation history existed. */
+const SHARED_STORAGE_KEY = "kilo.prompt-history.v1"
+/** Per-conversation lists: a map of conversation key to list. */
+const SCOPED_STORAGE_KEY = "kilo.prompt-history.v2"
 /** Bucket for conversations that do not yet have a stable key (e.g. a brand-new tab). */
 const FALLBACK_KEY = "new"
-/** Bucket shared by every conversation when global history is enabled. Never evicted. */
+/** In-memory bucket for the shared list. Never evicted. */
 const GLOBAL_KEY = "global"
-/** Pre-per-conversation storage: one flat list shared by all conversations. */
-const LEGACY_KEY = "kilo.prompt-history.v1"
 /** Cap on remembered conversations, evicting the least recently used once exceeded. */
 export const MAX_CONVERSATIONS = 50
-/** Longer prompts are not remembered: they are rarely recalled and would exhaust the storage quota. */
+/** Per-conversation mode only: longer prompts are not remembered, to protect the storage quota. */
 export const MAX_ENTRY = 10_000
 const EMPTY: string[] = []
 
 // Insertion order doubles as recency order: touching a key re-inserts it at the end.
 type Store = Map<string, string[]>
 
-function load(): Store {
+function strings(value: unknown): string[] {
+  if (!Array.isArray(value)) return []
+  return value.filter((e): e is string => typeof e === "string").slice(0, MAX)
+}
+
+function read(key: string): unknown {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    if (!raw) return new Map()
-    const parsed = JSON.parse(raw)
-    if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) return new Map()
-    const store: Store = new Map()
-    for (const [key, value] of Object.entries(parsed as Record<string, unknown>)) {
-      if (!Array.isArray(value)) continue
-      const list = value.filter((e): e is string => typeof e === "string").slice(0, MAX)
-      if (list.length > 0) store.set(key, list)
-    }
-    return store
+    const raw = localStorage.getItem(key)
+    return raw ? JSON.parse(raw) : undefined
   } catch (err) {
     console.warn("[Kilo New] prompt history load failed", err)
-    return new Map()
+    return undefined
   }
 }
 
-/** Start the global bucket from the pre-v2 shared list, so enabling global history keeps old prompts. */
-function legacy(store: Store) {
-  if (store.has(GLOBAL_KEY)) return
-  try {
-    const parsed = JSON.parse(localStorage.getItem(LEGACY_KEY) ?? "null")
-    if (!Array.isArray(parsed)) return
-    const list = parsed.filter((e): e is string => typeof e === "string").slice(0, MAX)
-    if (list.length > 0) store.set(GLOBAL_KEY, list)
-  } catch (err) {
-    console.warn("[Kilo New] prompt history legacy load failed", err)
+function load(): Store {
+  const store: Store = new Map()
+  const scoped = read(SCOPED_STORAGE_KEY)
+  if (typeof scoped === "object" && scoped !== null && !Array.isArray(scoped)) {
+    for (const [key, value] of Object.entries(scoped)) {
+      const list = strings(value)
+      if (key !== GLOBAL_KEY && list.length > 0) store.set(key, list)
+    }
   }
+  const shared = strings(read(SHARED_STORAGE_KEY))
+  if (shared.length > 0) store.set(GLOBAL_KEY, shared)
+  return store
 }
 
-function save(store: Store): boolean {
+function write(key: string, value: unknown): boolean {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(Object.fromEntries(store)))
+    localStorage.setItem(key, JSON.stringify(value))
     return true
   } catch {
     return false
   }
 }
 
-/** Drop the least recently used conversation (never the global bucket). Returns whether one was dropped. */
+/** Drop the least recently used conversation (never the shared list). Returns whether one was dropped. */
 function evict(): boolean {
   const oldest = [...store.keys()].find((k) => k !== GLOBAL_KEY)
   if (oldest === undefined) return false
@@ -78,13 +76,20 @@ function evict(): boolean {
 }
 
 /**
- * Persist the store. When the storage quota is exceeded, write a copy without the
- * oldest conversations instead; in-memory history is never dropped for a failed write.
+ * Persist one side of the store, so a shared-list change never rewrites the
+ * per-conversation lists and the reverse. When the storage quota is exceeded, the
+ * per-conversation write drops the oldest conversations from a copy only;
+ * in-memory history is never dropped for a failed write.
  */
-function persist() {
+function persist(key: string) {
+  if (key === GLOBAL_KEY) {
+    if (!write(SHARED_STORAGE_KEY, store.get(GLOBAL_KEY) ?? [])) console.warn("[Kilo New] prompt history save failed")
+    return
+  }
   const copy = new Map(store)
-  while (!save(copy)) {
-    const oldest = [...copy.keys()].find((k) => k !== GLOBAL_KEY)
+  copy.delete(GLOBAL_KEY)
+  while (!write(SCOPED_STORAGE_KEY, Object.fromEntries(copy))) {
+    const oldest = copy.keys().next().value
     if (oldest === undefined) return console.warn("[Kilo New] prompt history save failed")
     copy.delete(oldest)
   }
@@ -140,7 +145,6 @@ export function seedEntries(entries: string[], texts: string[], max: number): bo
 
 // Module-level: initialized from localStorage, shared across remounts, keyed per conversation.
 const store: Store = load()
-legacy(store)
 
 /** Read-only lookup: never allocates or persists an empty bucket for a key that was merely browsed. */
 function entriesFor(key: string): string[] {
@@ -257,36 +261,33 @@ export function usePromptHistory(key: Accessor<string | undefined>, shared?: Acc
   }
 
   function append(text: string, targetKey?: string) {
-    if (!text.trim() || text.length > MAX_ENTRY) return
+    const all = shared?.() === true
+    if (!text.trim() || (!all && text.length > MAX_ENTRY)) return
     // No conversation key yet: recording would leak into every other brand-new conversation.
-    if (!shared?.() && targetKey === undefined && key() === undefined) return
+    if (!all && targetKey === undefined && key() === undefined) return
     // An explicit targetKey names the session the message actually belongs to; it may
     // differ from the active key. Shared mode ignores it: there is one bucket.
     const current = syncKey()
-    const list = mutableEntriesFor(shared?.() || targetKey === undefined ? current : targetKey)
-    if (appendEntry(list, text, MAX)) persist()
+    const name = all || targetKey === undefined ? current : targetKey
+    if (appendEntry(mutableEntriesFor(name), text, MAX)) persist(name)
   }
 
   function seed(texts: string[]) {
-    if (!texts.some((t) => t.trim())) return
-    if (
-      seedEntries(
-        mutableEntriesFor(syncKey()),
-        texts.filter((t) => t.length <= MAX_ENTRY),
-        MAX,
-      )
-    )
-      persist()
+    const all = shared?.() === true
+    const fit = all ? texts : texts.filter((t) => t.length <= MAX_ENTRY)
+    if (!fit.some((t) => t.trim())) return
+    const name = syncKey()
+    if (seedEntries(mutableEntriesFor(name), fit, MAX)) persist(name)
   }
 
   function move(from: string, to: string) {
     const list = store.get(from)
-    if (!list || from === to) return
+    if (!list || from === to || from === GLOBAL_KEY || to === GLOBAL_KEY) return
     store.delete(from)
     const target = store.get(to)
     if (target) seedEntries(list, [...target].reverse(), MAX)
     store.set(to, list)
-    persist()
+    persist(to)
   }
 
   function reset() {

@@ -53,12 +53,14 @@ describe("prompt history storage", () => {
     }
   })
 
-  it("starts the global list from the pre-v2 shared list", async () => {
+  it("keeps the shared list in the original v1 key, written as a flat array", async () => {
     data.set(LEGACY, JSON.stringify(["newest", "oldest"]))
     const mod = await load()
     const history = use(mod, "ses-x", true)
     expect(history.navigate("up", "", 0, [])?.text).toBe("newest")
-    expect(history.navigate("up", "", 0, [])?.text).toBe("oldest")
+    history.append("latest")
+    expect(JSON.parse(data.get(LEGACY) ?? "[]")).toEqual(["latest", "newest", "oldest"])
+    expect(data.has(KEY)).toBe(false)
     expect(use(mod, "ses-x").navigate("up", "", 0, [])).toBeNull()
   })
 
@@ -68,13 +70,29 @@ describe("prompt history storage", () => {
     history.seed(["first", "second", "third"])
     expect(history.navigate("up", "", 0, [])?.text).toBe("third")
     expect(history.navigate("up", "", 0, [])?.text).toBe("second")
+    expect(JSON.parse(data.get(LEGACY) ?? "[]")).toEqual(["third", "second", "first"])
   })
 
-  it("prefers an existing v2 global list over the legacy one", async () => {
-    data.set(LEGACY, JSON.stringify(["legacy"]))
-    data.set(KEY, JSON.stringify({ global: ["current"] }))
+  it("remembers long prompts in the shared list, as before", async () => {
     const mod = await load()
-    expect(use(mod, "ses-x", true).navigate("up", "", 0, [])?.text).toBe("current")
+    const long = "x".repeat(mod.MAX_ENTRY * 3)
+    use(mod, "ses-x", true).append(long)
+    use(mod, "ses-x", true).seed([long + "!"])
+
+    const again = await load()
+    const history = use(again, "ses-x", true)
+    expect(history.navigate("up", "", 0, [])?.text).toBe(long)
+    expect(history.navigate("up", "", 0, [])?.text).toBe(long + "!")
+  })
+
+  it("does not rewrite the shared list when a conversation list changes", async () => {
+    data.set(LEGACY, JSON.stringify(["shared"]))
+    const mod = await load()
+    use(mod, "ses-a").append("scoped")
+    data.set(LEGACY, JSON.stringify(["changed by another window"]))
+    use(mod, "ses-a").append("scoped again")
+    expect(JSON.parse(data.get(LEGACY) ?? "[]")).toEqual(["changed by another window"])
+    expect(JSON.parse(data.get(KEY) ?? "{}")["ses-a"]).toEqual(["scoped again", "scoped"])
   })
 
   it("persists the cap on conversations and keeps the global list", async () => {
@@ -84,7 +102,8 @@ describe("prompt history storage", () => {
 
     const saved = JSON.parse(data.get(KEY) ?? "{}") as Record<string, string[]>
     expect(Object.keys(saved).length).toBeLessThanOrEqual(mod.MAX_CONVERSATIONS)
-    expect(saved.global).toEqual(["keep global"])
+    expect(saved.global).toBeUndefined()
+    expect(JSON.parse(data.get(LEGACY) ?? "[]")).toEqual(["keep global"])
     expect(saved["ses-0"]).toBeUndefined()
     expect(saved[`ses-${mod.MAX_CONVERSATIONS + 9}`]).toEqual([`m${mod.MAX_CONVERSATIONS + 9}`])
   })
