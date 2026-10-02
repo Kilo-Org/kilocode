@@ -288,6 +288,13 @@ export const RunCommand = effectCmd({
     const { KiloRunDrain } = yield* Effect.promise(() => import("@/kilocode/cli/run-drain"))
     const { KiloHeadless } = yield* Effect.promise(() => import("@/kilocode/permission/headless"))
     const { KiloRun, KiloRunDaemon } = yield* Effect.promise(() => import("@/kilocode/cli/cmd/run"))
+    if (!args.attach) {
+      const { KiloSessionResume } = yield* Effect.promise(() => import("@/kilocode/session/resume"))
+      const id = yield* KiloSessionResume.run({ ...args, cloudFork: args["cloud-fork"] })
+      if (id) args.session = id
+      const { KiloRetentionScheduler } = yield* Effect.promise(() => import("@/kilocode/session/retention-scheduler"))
+      yield* KiloRetentionScheduler.Service.use((s) => s.start({ defer: true }))
+    }
     // kilocode_change end
     const agentSvc = yield* Agent.Service
     const flags = yield* RuntimeFlags.Service

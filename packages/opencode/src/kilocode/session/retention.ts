@@ -1,20 +1,22 @@
 import { Cause, Effect, Semaphore } from "effect"
-import { and, eq, gt, inArray } from "drizzle-orm"
+import { and, eq, gt, inArray, sql } from "drizzle-orm"
 import { Database } from "@opencode-ai/core/database/database"
 import { Global } from "@opencode-ai/core/global"
 import { MessageTable, PartTable, SessionTable } from "@opencode-ai/core/session/sql"
 import * as Log from "@opencode-ai/core/util/log"
+import { Flock } from "@opencode-ai/core/util/flock"
 import { Config } from "@/config/config"
 import { Session } from "@/session/session"
 import { SessionID } from "@/session/schema"
 import { SessionStatus } from "@/session/status"
+import { KiloReclaim } from "./reclaim"
 import path from "path"
 
 /**
  * Backend-owned session retention. The policy lives in kilo.json
  * (`retention.enabled` / `retention.maxAgeDays`), selection and deletion run
- * here against the machine-wide database, and clients only trigger a pass or
- * read the last-run state. Deletion is fail-closed: a pass does nothing unless
+ * here against the machine-wide database. Core schedules passes; clients can
+ * also trigger a pass or read its state. A pass does nothing unless
  * the policy is explicitly enabled.
  */
 export namespace KiloSessionRetention {
@@ -54,8 +56,8 @@ export namespace KiloSessionRetention {
   }
 
   /** Free pages must clear both floors before a pass pays for a full database rebuild. */
-  export const VACUUM_MIN_FREE_BYTES = 16 * 1024 * 1024
-  export const VACUUM_MIN_FREE_RATIO = 0.2
+  export const VACUUM_MIN_FREE_BYTES = KiloReclaim.minimum
+  export const VACUUM_MIN_FREE_RATIO = KiloReclaim.ratio
 
   export interface Progress {
     phase: "scanning" | "deleting" | "cancelling"
@@ -132,7 +134,7 @@ export namespace KiloSessionRetention {
     } satisfies Progress
   })
 
-  export type Outcome = { ran: false; reason: "disabled" | "recent" } | { ran: true; result: State }
+  export type Outcome = { ran: false; reason: "disabled" | "recent" | "busy" } | { ran: true; result: State }
 
   /**
    * Whether a pass may delete anything. Pure so the fail-closed rules are
@@ -155,9 +157,7 @@ export namespace KiloSessionRetention {
   }
 
   export function worthVacuuming(pageCount: number, freePages: number, pageSize: number): boolean {
-    if (!pageCount || !pageSize || freePages <= 0) return false
-    const free = freePages * pageSize
-    return free >= VACUUM_MIN_FREE_BYTES && free / (pageCount * pageSize) >= VACUUM_MIN_FREE_RATIO
+    return KiloReclaim.worth(pageCount, freePages, pageSize)
   }
 
   export function policy(info: { retention?: { enabled?: boolean; maxAgeDays?: number } } | undefined): Policy {
@@ -313,15 +313,41 @@ export namespace KiloSessionRetention {
     if (!page?.file) return { vacuumed: false as const, reclaimedBytes: 0 }
     if (!worthVacuuming(page.page_count, page.freelist_count, page.page_size))
       return { vacuumed: false as const, reclaimedBytes: 0 }
-    yield* db.run("VACUUM").pipe(Effect.orDie)
-    // The rebuild lands in the WAL first; truncate it so both files shrink.
-    yield* db.run("PRAGMA wal_checkpoint(TRUNCATE)").pipe(Effect.orDie)
-    const after = yield* db.get<{ page_count: number }>("PRAGMA page_count").pipe(Effect.orDie)
-    const reclaimedBytes = Math.max(0, page.page_count - (after?.page_count ?? page.page_count)) * page.page_size
+    const result = yield* KiloReclaim.run(page.file)
+    const reclaimedBytes = result.reclaimedBytes
     if (reclaimedBytes > 0)
       log.info("retention vacuum reclaimed database space", { reclaimedBytes, freePagesBefore: page.freelist_count })
-    return { vacuumed: true as const, reclaimedBytes }
+    return result
   })
+
+  export const recover = Effect.fn("KiloSessionRetention.recover")(
+    function* (state: State) {
+      const config = yield* Config.Service
+      if (!policy(yield* config.getGlobal()).enabled || (yield* SessionStatus.busyAll()).size > 0) return
+      yield* Flock.effect("session-retention", { timeoutMs: 1000, staleMs: DAY_MS, owner: true })
+      const latest = yield* readState()
+      if (!latest || latest.at !== state.at || !policy(yield* config.getGlobal()).enabled) return
+      const started = Date.now()
+      const back = yield* reclaim()
+      if (!back.reclaimedBytes) return
+      yield* writeState({
+        ...latest,
+        durationMs: latest.durationMs + Date.now() - started,
+        reclaimedBytes: (latest.reclaimedBytes ?? 0) + back.reclaimedBytes,
+      })
+    },
+    (effect) =>
+      lock.withPermit(
+        effect.pipe(
+          Effect.scoped,
+          Effect.catchCause((cause) =>
+            Cause.hasInterrupts(cause)
+              ? Effect.interrupt
+              : Effect.sync(() => log.warn("deferred retention reclaim failed", { cause: Cause.pretty(cause) })),
+          ),
+        ),
+      ),
+  )
 
   const statePath = path.join(Global.Path.data, "retention", "state.json")
 
@@ -341,7 +367,7 @@ export namespace KiloSessionRetention {
   })
 
   export const run = Effect.fn("KiloSessionRetention.run")(
-    function* (input: { force?: boolean } = {}) {
+    function* (input: { force?: boolean; reclaim?: boolean } = {}) {
       const started = Date.now()
       halting = false
       sealed = false
@@ -353,11 +379,26 @@ export namespace KiloSessionRetention {
         skippedActive: 0,
       })
       const config = yield* Config.Service
-      const active = policy(yield* config.get())
+      const gate = shouldRun(policy(yield* config.getGlobal()), input, yield* readState(), Date.now())
+      if (!gate.ok) return { ran: false as const, reason: gate.reason }
+
+      // Keep live maintenance owners safe and recover dead owners immediately.
+      // Another process that holds the lock is running a pass, so report it as busy.
+      const held = yield* Flock.effect("session-retention", { timeoutMs: 1000, staleMs: DAY_MS, owner: true }).pipe(
+        Effect.as(true),
+        Effect.catchCause((cause) => {
+          if (Cause.hasInterrupts(cause)) return Effect.interrupt
+          log.warn("retention lock unavailable", { cause: Cause.pretty(cause) })
+          return Effect.succeed(false)
+        }),
+      )
+      if (!held) return { ran: false as const, reason: "busy" as const }
+      // Policy and spacing can change while another process owns the lock.
+      const active = policy(yield* config.getGlobal())
       const now = Date.now()
       const previous = yield* readState()
-      const gate = shouldRun(active, input, previous, now)
-      if (!gate.ok) return { ran: false as const, reason: gate.reason }
+      const check = shouldRun(active, input, previous, now)
+      if (!check.ok) return { ran: false as const, reason: check.reason }
 
       const { db } = yield* Database.Service
       const rows = yield* db
@@ -391,8 +432,36 @@ export namespace KiloSessionRetention {
       if (!halting) progress.phase = "deleting"
 
       const sessions = yield* Session.Service
+      const protectedIds = new Set<SessionID>()
       const remove = Effect.fn("KiloSessionRetention.remove")(function* (id: SessionID) {
-        yield* sessions.remove(id).pipe(
+        if (protectedIds.has(id)) return
+        yield* Effect.gen(function* () {
+          // A resume can refresh a tree after scanning. Recheck before the
+          // cascade without holding a connection across async session cleanup.
+          const latest = yield* db.all<{ id: string; parent: string | null; updated: number }>(sql`
+              WITH RECURSIVE tree(id, parent, updated) AS (
+                SELECT id, parent_id, time_updated FROM session WHERE id = ${id}
+                UNION
+                SELECT s.id, s.parent_id, s.time_updated FROM session s JOIN tree t
+                  ON s.parent_id = t.id OR s.id = t.parent
+              ) SELECT id, parent, updated FROM tree
+            `)
+          const selected = expiredRoots(
+            latest.map((row) => ({ id: row.id, parentID: row.parent ?? undefined, updated: row.updated })),
+            { maxAgeDays: active.maxAgeDays, busy: new Set(), now: Date.now() },
+          )
+          if (!selected.expired.has(id)) {
+            for (const row of latest) {
+              const key = SessionID.make(row.id)
+              if (!expired.has(key) || protectedIds.has(key)) continue
+              protectedIds.add(key)
+              progress.failed.delete(key)
+              progress.skippedActive++
+            }
+            return
+          }
+          yield* sessions.remove(id)
+        }).pipe(
           Effect.catchCause((cause) => {
             if (Cause.hasInterrupts(cause)) return Effect.interrupt
             return Effect.sync(() => {
@@ -400,6 +469,7 @@ export namespace KiloSessionRetention {
             })
           }),
         )
+        if (protectedIds.has(id)) return
         // Session.remove can swallow failures. Only a missing row is success.
         const row = yield* db
           .select({ id: SessionTable.id })
@@ -444,7 +514,7 @@ export namespace KiloSessionRetention {
 
       yield* readProgress()
       const cancelled = halting
-      const back = yield* cancelled
+      const back = yield* cancelled || input.reclaim === false || (yield* SessionStatus.busyAll()).size > 0
         ? Effect.succeed({ vacuumed: false as const, reclaimedBytes: 0 })
         : reclaim().pipe(
             Effect.catchCause((cause) =>
@@ -460,10 +530,10 @@ export namespace KiloSessionRetention {
         at: started,
         scanned: mapped.length,
         deleted: progress.total - progress.pending.size,
-        skippedActive: skipped.length,
+        skippedActive: progress.skippedActive,
         // A swept pass counts every outstanding row as failed; a cancelled
         // pass only counts rows it actually tried and lost.
-        failed: cancelled ? progress.failed.size : progress.pending.size,
+        failed: cancelled ? progress.failed.size : Math.max(0, progress.pending.size - protectedIds.size),
         durationMs: Date.now() - started,
         ...(cancelled ? { cancelled: true } : {}),
         ...(back.reclaimedBytes > 0 ? { reclaimedBytes: back.reclaimedBytes } : {}),
@@ -475,6 +545,7 @@ export namespace KiloSessionRetention {
     (effect, _input: { force?: boolean } = {}) =>
       lock.withPermit(
         effect.pipe(
+          Effect.scoped,
           Effect.ensuring(
             Effect.sync(() => {
               halting = false

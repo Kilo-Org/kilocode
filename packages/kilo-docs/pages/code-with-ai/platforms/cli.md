@@ -385,7 +385,7 @@ The Kilo CLI is a fork of [OpenCode](https://opencode.ai) and supports the same 
 | **Global** | `~/.config/kilo/kilo.json[c]` or legacy `opencode.json[c]` (Windows config dir may vary) |
 | **Project** | `./kilo.json[c]`, legacy `./opencode.json[c]`, or config inside `./.kilo/` (legacy `./.kilocode/` is also read) |
 
-Project-level configuration takes precedence over global settings.
+Project-level configuration takes precedence over global settings. The exception is `retention`, which Kilo reads only from the global config.
 
 {% callout type="warning" %}
 **Migrating from opencode?** Kilo no longer falls back to opencode configuration stored in `.opencode` directories (such as `~/.config/opencode` or a project `./.opencode/`). To keep using it, move your global config into `~/.config/kilo/` and any project config into `./.kilo/`.
@@ -417,6 +417,7 @@ Common configuration options include:
 - **`formatter`** - Code formatter configuration (`true`, `false`, or formatter-specific entries)
 - **`lsp`** - Language server configuration (`true`, `false`, or server-specific entries)
 - **`disabled_providers`** / **`enabled_providers`** - Control which providers are available
+- **`retention`** - Automatic deletion of old sessions on this machine, global config only (e.g., `{ "enabled": true, "maxAgeDays": 30 }`). See [Automatic Session Cleanup](/docs/code-with-ai/features/checkpoints#automatic-session-cleanup).
 - **`privacy_mode`** - Blur PII in the TUI (balance, team name, Kilo Pass usage) and require confirmation before `/profile` reveals account details — see [Privacy Mode](#privacy-mode)
 
 {% callout type="tip" %}

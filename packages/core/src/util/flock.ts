@@ -46,6 +46,7 @@ export namespace Flock {
     baseDelayMs?: number
     maxDelayMs?: number
     onWait?: Wait
+    owner?: boolean // kilocode_change - check same-host owner liveness before heartbeat age
   }
 
   type Opts = {
@@ -53,6 +54,7 @@ export namespace Flock {
     timeoutMs: number
     baseDelayMs: number
     maxDelayMs: number
+    owner?: boolean // kilocode_change
   }
 
   type Owned = {
@@ -124,7 +126,41 @@ export namespace Flock {
     }
   }
 
-  async function stale(lockDir: string, heartbeatPath: string, metaPath: string, staleMs: number) {
+  // kilocode_change start
+  async function stale(lockDir: string, heartbeatPath: string, metaPath: string, staleMs: number, owner?: boolean) {
+    if (owner) {
+      // Missing or untrusted metadata cannot prove that a local owner is dead.
+      const meta = await readFile(metaPath, "utf8")
+        .then((raw): unknown => JSON.parse(raw))
+        .catch(() => undefined)
+      if (
+        meta &&
+        typeof meta === "object" &&
+        "hostname" in meta &&
+        meta.hostname === os.hostname() &&
+        "token" in meta &&
+        typeof meta.token === "string" &&
+        meta.token.length > 0 &&
+        "pid" in meta &&
+        typeof meta.pid === "number" &&
+        Number.isSafeInteger(meta.pid) &&
+        meta.pid > 0
+      ) {
+        // A dead owner is stale at once. A live PID can be reused by another process,
+        // so it still falls through to the heartbeat age check below.
+        const pid = meta.pid
+        const dead = (() => {
+          try {
+            process.kill(pid, 0)
+            return false
+          } catch (err) {
+            return code(err) === "ESRCH"
+          }
+        })()
+        if (dead) return true
+      }
+    }
+    // kilocode_change end
     // Stale detection allows automatic recovery after crashed owners.
     const now = wall()
     const heartbeat = await stats(heartbeatPath)
@@ -157,9 +193,11 @@ export namespace Flock {
         throw err
       }
 
-      if (!(await stale(lockDir, heartbeatPath, metaPath, opts.staleMs))) {
+      // kilocode_change start
+      if (!(await stale(lockDir, heartbeatPath, metaPath, opts.staleMs, opts.owner))) {
         return { acquired: false }
       }
+      // kilocode_change end
 
       const breakerPath = lockDir + ".breaker"
       try {
@@ -183,9 +221,11 @@ export namespace Flock {
 
       try {
         // Breaker ownership ensures only one contender performs stale cleanup.
-        if (!(await stale(lockDir, heartbeatPath, metaPath, opts.staleMs))) {
+        // kilocode_change start
+        if (!(await stale(lockDir, heartbeatPath, metaPath, opts.staleMs, opts.owner))) {
           return { acquired: false }
         }
+        // kilocode_change end
 
         await rm(lockDir, { recursive: true, force: true })
 
@@ -314,6 +354,7 @@ export namespace Flock {
       timeoutMs: input.timeoutMs ?? defaultOpts.timeoutMs,
       baseDelayMs: input.baseDelayMs ?? defaultOpts.baseDelayMs,
       maxDelayMs: input.maxDelayMs ?? defaultOpts.maxDelayMs,
+      owner: input.owner, // kilocode_change
     }
     const dir = input.dir ?? root()
 

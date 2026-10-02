@@ -315,6 +315,12 @@ export const TuiThreadCommand = cmd({
       }
       const cwd = Filesystem.resolve(process.cwd())
       // kilocode_change start - default TUI sessions attach to the daemon unless explicitly disabled
+      const { KiloSessionResume } = await import("@/kilocode/session/resume")
+      const resumed = await KiloSessionResume.local(args, cwd)
+      if (resumed) {
+        args.session = resumed
+        args.continue = false
+      }
       if (await KiloTuiThreadDaemon.attach({ args, cwd, input: () => input(args.prompt), start })) return
       // kilocode_change end
       const auth = KiloTuiThreadDaemon.workerAuth() // kilocode_change - protect TUI-owned HTTP routes from unauthenticated local callers
@@ -417,6 +423,7 @@ export const TuiThreadCommand = cmd({
       orphanWatch.unref()
       // kilocode_change end
 
+      if (!args.cloudFork) await client.call("retention", undefined) // kilocode_change - activate only after resume protection and RPC readiness
       const prompt = await input(args.prompt)
       const { TuiConfig } = await import("@/config/tui") // kilocode_change
       const config = await TuiConfig.get()
@@ -459,6 +466,7 @@ export const TuiThreadCommand = cmd({
             const id = await importCloudSession(sdk, args.session)
             args.session = id
             args.cloudFork = false
+            await client.call("retention", { session: id }) // kilocode_change - protect imported history before activation
           } catch (err) {
             reportCloudImportError(err)
             shutdownAndExit({ reason: "cloud-fork-failed", code: 1 })
