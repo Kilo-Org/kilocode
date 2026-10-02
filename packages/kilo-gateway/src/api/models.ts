@@ -80,6 +80,27 @@ function parseApiPrice(price: string | null | undefined): number | undefined {
   return parsed * 1_000_000 // Convert $/token → $/M tokens
 }
 
+/** Backoff delays between retries of a transient catalog fetch failure. */
+export const MODELS_RETRY_DELAYS_MS = [500, 1500]
+
+const lastGood = new Map<string, Record<string, any>>()
+
+type Failure = NonNullable<KiloModelsResult["error"]>
+
+function transient(err: Failure) {
+  if (err.kind === "network") return true
+  if (err.kind === "http") return err.status === undefined || err.status === 429 || err.status >= 500
+  return false
+}
+
+async function fetchWithRetry(options: Parameters<typeof fetchRawKiloModels>[0], delays: number[], attempt = 0) {
+  const result = await fetchRawKiloModels(options)
+  const delay = delays.at(attempt)
+  if (!result.error || !transient(result.error) || delay === undefined) return result
+  await new Promise((resolve) => setTimeout(resolve, delay))
+  return fetchWithRetry(options, delays, attempt + 1)
+}
+
 /**
  * Fetch models from Kilo API (OpenRouter-compatible endpoint)
  *
@@ -90,9 +111,25 @@ export async function fetchKiloModels(options?: {
   kilocodeToken?: string
   kilocodeOrganizationId?: string
   baseURL?: string
+  /** Backoff delays (ms) between retries of transient failures. Defaults to {@link MODELS_RETRY_DELAYS_MS}. */
+  retryDelays?: number[]
 }): Promise<KiloModelsResult> {
-  const raw = await fetchRawKiloModels(options)
-  if (raw.error) return { models: {}, error: raw.error }
+  const id = JSON.stringify([options?.baseURL, options?.kilocodeOrganizationId, options?.kilocodeToken])
+  const delays = options?.retryDelays ?? MODELS_RETRY_DELAYS_MS
+  const raw = await fetchWithRetry(options, delays)
+  if (raw.error) {
+    const last = lastGood.get(id)
+    // Transient failures must not drop the provider: serve the last known good catalog.
+    if (last && transient(raw.error)) {
+      console.warn("[kilo-gateway] model catalog fetch failed, using last known good catalog", {
+        error: raw.error,
+        models: Object.keys(last).length,
+      })
+      return { models: last }
+    }
+    console.warn("[kilo-gateway] model catalog fetch failed", { error: raw.error })
+    return { models: {}, error: raw.error }
+  }
 
   // Transform models to ModelsDev.Model format
   const models: Record<string, any> = {}
@@ -105,6 +142,7 @@ export async function fetchKiloModels(options?: {
     models[model.id] = transformedModel
   }
 
+  if (Object.keys(models).length > 0) lastGood.set(id, models)
   return { models }
 }
 
