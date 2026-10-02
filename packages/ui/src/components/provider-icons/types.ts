@@ -83,6 +83,7 @@ export const iconNames = [
   "google",
   "google-vertex",
   "google-vertex-anthropic",
+  "gmicloud", // kilocode_change
   "gitlab",
   "github-models",
   "github-copilot",
