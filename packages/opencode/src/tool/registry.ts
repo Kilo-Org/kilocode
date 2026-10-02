@@ -61,6 +61,7 @@ import { Todo } from "../session/todo"
 import { LSP } from "@/lsp/lsp"
 import { Instruction } from "../session/instruction"
 import { FSUtil } from "@opencode-ai/core/fs-util"
+import { Global } from "@opencode-ai/core/global" // kilocode_change - bundled skill reference files
 import { EventV2Bridge } from "@/event-v2-bridge"
 import { Bus } from "../bus"
 import { Agent } from "../agent/agent"
@@ -552,6 +553,7 @@ export const node = LayerNode.suspend(() =>
       LSP.node,
       Instruction.node,
       FSUtil.node,
+      Global.node,
       EventV2Bridge.node,
       network,
       CrossSpawnSpawner.node,
