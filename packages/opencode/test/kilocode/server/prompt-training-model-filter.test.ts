@@ -73,7 +73,8 @@ for (const scenario of [
           process.env.KILO_AUTH_CONTENT = JSON.stringify({
             kilo: {
               type: "oauth",
-              access: "test-token",
+              // Unique per scenario: the gateway keeps a last-known-good catalog per token.
+              access: `test-token-${scenario}`,
               refresh: "test-refresh",
               expires: 0,
               accountId: "org-oauth",
