@@ -137,6 +137,14 @@ const TuiConfigShape = {
   mouse: Schema.optional(Schema.Boolean),
   swap_enter: Schema.optional(Schema.Boolean), // kilocode_change - swap prompt Enter/Ctrl+Enter keys
   vim: Schema.optional(Schema.Boolean), // kilocode_change - Kilo prompt editing mode
+  cursor: Schema.optional(
+    Schema.Struct({
+      style: Schema.optional(Schema.Literals(["block", "underline", "line", "default"])),
+      blinking: Schema.optional(Schema.Boolean),
+    }),
+  ), // kilocode_change - cursor survives hot reload
+  leader_timeout: Schema.optional(Schema.Number), // kilocode_change - leader timeout survives hot reload
+  prompt: Schema.optional(Schema.Struct({ max_height: Schema.optional(Schema.Number), max_width: Schema.optional(Schema.Union([Schema.Number, Schema.Literal("auto")])) })), // kilocode_change - prompt survives hot reload
   attention: Schema.optional(
     Schema.Struct({
       enabled: Schema.optional(Schema.Boolean),

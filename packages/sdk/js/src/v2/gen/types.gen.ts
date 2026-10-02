@@ -4092,6 +4092,15 @@ export type TuiConfigGetResponse = {
   mouse?: boolean
   swap_enter?: boolean
   vim?: boolean
+  cursor?: {
+    style?: "block" | "underline" | "line" | "default"
+    blinking?: boolean
+  }
+  leader_timeout?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+  prompt?: {
+    max_height?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+    max_width?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN" | "auto"
+  }
   attention?: {
     enabled?: boolean
     notifications?: boolean
@@ -15939,6 +15948,15 @@ export type TuiConfigUpdateData = {
     mouse?: boolean
     swap_enter?: boolean
     vim?: boolean
+    cursor?: {
+      style?: "block" | "underline" | "line" | "default"
+      blinking?: boolean
+    }
+    leader_timeout?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+    prompt?: {
+      max_height?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+      max_width?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN" | "auto"
+    }
     attention?: {
       enabled?: boolean
       notifications?: boolean

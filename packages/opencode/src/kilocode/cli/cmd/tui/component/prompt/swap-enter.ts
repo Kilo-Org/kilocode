@@ -2,7 +2,7 @@ import { type TextareaRenderable } from "@opentui/core"
 import { KILO_BASE_MODE, useBindings } from "@tui/keymap"
 
 /** KV key holding the user's in-TUI choice (tui.json `swap_enter` is the default). */
-export const SWAP_ENTER_KV_KEY = "swap_enter"
+export const SWAP_ENTER_KV_KEY = "swap_enter_enabled"
 
 /**
  * Targeted keymap layer for the prompt textarea that rebinds Enter to insert a

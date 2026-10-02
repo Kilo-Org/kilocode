@@ -12477,6 +12477,98 @@
                   "vim": {
                     "type": "boolean"
                   },
+                  "cursor": {
+                    "type": "object",
+                    "properties": {
+                      "style": {
+                        "type": "string",
+                        "enum": ["block", "underline", "line", "default"]
+                      },
+                      "blinking": {
+                        "type": "boolean"
+                      }
+                    },
+                    "additionalProperties": false
+                  },
+                  "leader_timeout": {
+                    "anyOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["NaN"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["Infinity"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["-Infinity"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["Infinity", "-Infinity", "NaN"]
+                      }
+                    ]
+                  },
+                  "prompt": {
+                    "type": "object",
+                    "properties": {
+                      "max_height": {
+                        "anyOf": [
+                          {
+                            "type": "number"
+                          },
+                          {
+                            "type": "string",
+                            "enum": ["NaN"]
+                          },
+                          {
+                            "type": "string",
+                            "enum": ["Infinity"]
+                          },
+                          {
+                            "type": "string",
+                            "enum": ["-Infinity"]
+                          },
+                          {
+                            "type": "string",
+                            "enum": ["Infinity", "-Infinity", "NaN"]
+                          }
+                        ]
+                      },
+                      "max_width": {
+                        "anyOf": [
+                          {
+                            "type": "number"
+                          },
+                          {
+                            "type": "string",
+                            "enum": ["NaN"]
+                          },
+                          {
+                            "type": "string",
+                            "enum": ["Infinity"]
+                          },
+                          {
+                            "type": "string",
+                            "enum": ["-Infinity"]
+                          },
+                          {
+                            "type": "string",
+                            "enum": ["Infinity", "-Infinity", "NaN"]
+                          },
+                          {
+                            "type": "string",
+                            "enum": ["auto"]
+                          }
+                        ]
+                      }
+                    },
+                    "additionalProperties": false
+                  },
                   "attention": {
                     "type": "object",
                     "properties": {
@@ -40206,6 +40298,98 @@
           },
           "vim": {
             "type": "boolean"
+          },
+          "cursor": {
+            "type": "object",
+            "properties": {
+              "style": {
+                "type": "string",
+                "enum": ["block", "underline", "line", "default"]
+              },
+              "blinking": {
+                "type": "boolean"
+              }
+            },
+            "additionalProperties": false
+          },
+          "leader_timeout": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string",
+                "enum": ["NaN"]
+              },
+              {
+                "type": "string",
+                "enum": ["Infinity"]
+              },
+              {
+                "type": "string",
+                "enum": ["-Infinity"]
+              },
+              {
+                "type": "string",
+                "enum": ["Infinity", "-Infinity", "NaN"]
+              }
+            ]
+          },
+          "prompt": {
+            "type": "object",
+            "properties": {
+              "max_height": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "string",
+                    "enum": ["NaN"]
+                  },
+                  {
+                    "type": "string",
+                    "enum": ["Infinity"]
+                  },
+                  {
+                    "type": "string",
+                    "enum": ["-Infinity"]
+                  },
+                  {
+                    "type": "string",
+                    "enum": ["Infinity", "-Infinity", "NaN"]
+                  }
+                ]
+              },
+              "max_width": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "string",
+                    "enum": ["NaN"]
+                  },
+                  {
+                    "type": "string",
+                    "enum": ["Infinity"]
+                  },
+                  {
+                    "type": "string",
+                    "enum": ["-Infinity"]
+                  },
+                  {
+                    "type": "string",
+                    "enum": ["Infinity", "-Infinity", "NaN"]
+                  },
+                  {
+                    "type": "string",
+                    "enum": ["auto"]
+                  }
+                ]
+              }
+            },
+            "additionalProperties": false
           },
           "attention": {
             "type": "object",

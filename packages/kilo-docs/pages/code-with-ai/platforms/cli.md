@@ -276,7 +276,7 @@ To make the swap the default instead, set `swap_enter` in `tui.jsonc`:
 
 A toggle from inside the CLI takes precedence over the `swap_enter` config default and keeps applying until you change the toggle again.
 
-Enable the swap only in terminals that support the Kitty keyboard protocol, which is what lets the terminal tell Enter and Ctrl+Enter apart. In plain terminals Ctrl+Enter arrives as a plain Enter, so the swap would leave no way to submit from the keyboard; keep the default there and use Shift+Enter, Alt+Enter, or Ctrl+J for newlines. Vim mode also keeps its own Enter semantics.
+Enable the swap only in terminals that support the Kitty keyboard protocol, which is what lets the terminal tell Enter and Ctrl+Enter apart. In plain terminals Ctrl+Enter arrives as a plain Enter, so the only keyboard way back is running `/swap-enter` again; otherwise keep the default and use Shift+Enter, Alt+Enter, or Ctrl+J for newlines. Vim normal and visual modes keep their Enter-to-submit behavior; vim insert mode follows the swap.
 
 ## Permissions
 

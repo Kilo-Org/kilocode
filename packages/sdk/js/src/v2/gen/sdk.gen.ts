@@ -5664,6 +5664,15 @@ export class Config3 extends HeyApiClient {
       mouse?: boolean
       swap_enter?: boolean
       vim?: boolean
+      cursor?: {
+        style?: "block" | "underline" | "line" | "default"
+        blinking?: boolean
+      }
+      leader_timeout?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+      prompt?: {
+        max_height?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+        max_width?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN" | "auto"
+      }
       attention?: {
         enabled?: boolean
         notifications?: boolean
@@ -5693,6 +5702,9 @@ export class Config3 extends HeyApiClient {
             { in: "body", key: "mouse" },
             { in: "body", key: "swap_enter" },
             { in: "body", key: "vim" },
+            { in: "body", key: "cursor" },
+            { in: "body", key: "leader_timeout" },
+            { in: "body", key: "prompt" },
             { in: "body", key: "attention" },
           ],
         },

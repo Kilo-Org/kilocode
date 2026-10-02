@@ -278,6 +278,77 @@ test("swap layer is suppressed while an overlay pushes a mode", async () => {
   }
 })
 
+test("swap layer registered disabled starts obeying swap on an enable flip", async () => {
+  await using tmp = await tmpdir()
+  const submitted: string[] = []
+  let target: TextareaRenderable | undefined
+  const [swapOn, setSwapOn] = createSignal(false)
+
+  function Editor() {
+    const [textarea, setTextarea] = createSignal<TextareaRenderable | undefined>()
+    useSwapEnter({
+      target: textarea,
+      blocked: () => false,
+      enabled: () => swapOn(),
+    })
+    return (
+      <textarea
+        height={3}
+        ref={(r: TextareaRenderable) => {
+          target = r
+          setTextarea(r)
+          r.focus()
+        }}
+        onSubmit={() => submitted.push(target?.plainText ?? "")}
+      />
+    )
+  }
+
+  function Harness() {
+    const renderer = useRenderer()
+    const keymap = createDefaultOpenTuiKeymap(renderer)
+    const config = resolve({ swap_enter: true }, { terminalSuspend: false })
+    onCleanup(registerOpencodeKeymap(keymap, renderer, config))
+    return (
+      <TestTuiContexts directory={tmp.path} paths={{ state: tmp.path }}>
+        <OpencodeKeymapProvider keymap={keymap}>
+          <TuiConfigProvider config={config}>
+            <Editor />
+          </TuiConfigProvider>
+        </OpencodeKeymapProvider>
+      </TestTuiContexts>
+    )
+  }
+
+  const app = await testRender(() => <Harness />, { kittyKeyboard: true })
+
+  try {
+    await wait(() => target !== undefined)
+    const textarea = target!
+    if (!(textarea instanceof TextareaRenderable)) throw new Error("expected focused textarea")
+
+    textarea.insertText("hello")
+
+    // registered while disabled: native Enter-to-submit applies
+    app.mockInput.pressEnter()
+    await wait(() => submitted.length > 0)
+    expect(textarea.plainText).toBe("hello")
+
+    // mid-session enable flip is honored without re-registration
+    setSwapOn(true)
+    await Bun.sleep(10)
+    app.mockInput.pressEnter()
+    await wait(() => textarea.plainText.includes("\n"))
+    expect(textarea.plainText).toBe("hello\n")
+
+    app.mockInput.pressEnter({ ctrl: true })
+    await wait(() => submitted.length > 1)
+    expect(submitted.length).toBe(2)
+  } finally {
+    app.renderer.destroy()
+  }
+})
+
 test("swap toggle command flips state and reports the change", () => {
   let value = false
   const toasts: string[] = []
