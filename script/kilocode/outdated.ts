@@ -6,8 +6,9 @@
 // JSON report `{ count, text, full }`: `text` is the short Slack message and
 // `full` the complete list for the job summary.
 //
-// kilo-docs and kilo-jetbrains are left out: Dependabot still has its own
-// block for each of them.
+// kilo-docs is left out because Dependabot still has its own block for it.
+// kilo-jetbrains has no bun dependencies (its Gradle ones are covered by the
+// Dependabot gradle block), so the filter matches it but finds nothing.
 
 export type Row = {
   name: string
@@ -33,7 +34,7 @@ export function parse(text: string): Row[] {
       .map((cell) => cell.trim())
     if (cells.length !== 5) return []
     if (cells[0] === "Package" || /^-+$/.test(cells[0])) return []
-    // "*" marks a version bun flags as beyond the current range.
+    // bun appends "*" to some versions. It is not part of the version.
     const version = (cell: string) => cell.replace(/\s*\*$/, "")
     const where = cells[4]
     return [
@@ -66,38 +67,57 @@ export function kind(current: string, latest: string): Kind | undefined {
   return undefined
 }
 
-export function report(rows: Row[], url?: string, limit = Infinity) {
+type Options = { url?: string; limit?: number; patch?: boolean }
+
+// `limit` caps the rows printed per section. `patch` lists patch updates too
+// (the full report); otherwise they are only counted.
+export function report(rows: Row[], opts: Options = {}) {
+  const limit = opts.limit ?? Infinity
   const found = rows.flatMap((row) => {
     const level = kind(row.current, row.latest)
     return level ? [{ ...row, level }] : []
   })
-  const count = (level: Kind) => found.filter((row) => row.level === level).length
   if (found.length === 0) return { count: 0, text: "" }
 
+  const levels: Kind[] = opts.patch ? ["major", "minor", "patch"] : ["major", "minor"]
+  const count = (level: Kind) => found.filter((row) => row.level === level).length
+  const sections = levels.flatMap((level) => {
+    const list = found.filter((row) => row.level === level)
+    return list.length ? [{ level, list, shown: list.slice(0, limit) }] : []
+  })
   const line = (row: (typeof found)[number]) =>
     `- \`${row.name}\` ${row.current} -> ${row.latest} (${row.where.replace(/^catalog \((.*)\)$/, "$1")})${row.catalog ? " [root catalog]" : ""}`
-  const section = (level: Kind) => {
-    const list = found.filter((row) => row.level === level)
-    if (list.length === 0) return []
-    const shown = list.slice(0, limit).map(line)
-    const more = list.length > limit ? [`- ...and ${list.length - limit} more (see the job summary)`] : []
-    return [`*${level[0].toUpperCase()}${level.slice(1)}*`, ...shown, ...more]
-  }
+  const block = (item: (typeof sections)[number]) => [
+    `*${item.level[0].toUpperCase()}${item.level.slice(1)}*`,
+    ...item.shown.map(line),
+    ...(item.list.length > item.shown.length
+      ? [`- ...and ${item.list.length - item.shown.length} more (see the job summary)`]
+      : []),
+  ]
+  const unlisted = opts.patch ? 0 : count("patch")
 
-  const shown = [...found.filter((row) => row.level === "major"), ...found.filter((row) => row.level === "minor")]
   const text = [
     `*Outdated Kilo-owned dependencies: ${count("major")} major, ${count("minor")} minor, ${count("patch")} patch*`,
-    ...section("major"),
-    ...section("minor"),
-    count("patch") > 0 ? `${count("patch")} patch updates not listed.` : "",
-    shown.slice(0, limit).some((row) => row.catalog)
+    ...sections.flatMap(block),
+    unlisted > 0 ? `${unlisted} patch update${unlisted === 1 ? "" : "s"} not listed.` : "",
+    // Derived from the rows actually printed, so the label and the note agree.
+    sections.some((item) => item.shown.some((row) => row.catalog))
       ? "[root catalog] entries are pinned in the root package.json, which is shared with upstream. Bump them with care."
       : "",
-    url ? `<${url}|Workflow run>` : "",
+    opts.url ? `<${opts.url}|Workflow run>` : "",
   ]
     .filter(Boolean)
     .join("\n")
   return { count: found.length, text }
+}
+
+// `bun outdated` exits 0 even when it fails, and prints nothing but a banner
+// when everything is current. Reject the two cases that would otherwise look
+// like "nothing outdated": an error line, and a table that no longer parses.
+export function verify(text: string, rows: Row[]) {
+  const bad = text.split("\n").find((line) => /^error/i.test(line))
+  if (bad) throw new Error(`bun outdated failed: ${bad}`)
+  if (text.includes("| Package") && rows.length === 0) throw new Error("bun outdated table format changed")
 }
 
 async function run() {
@@ -110,14 +130,15 @@ async function run() {
     new Response(proc.stderr).text(),
     proc.exited,
   ])
-  // A clean workspace prints no table at all, so only a non-zero exit is an error.
   if (code !== 0) {
     console.error(err || out)
     process.exit(code)
   }
-  const rows = parse(out + "\n" + err)
-  const short = report(rows, process.env.RUN_URL, LIMIT)
-  console.log(JSON.stringify({ count: short.count, text: short.text, full: report(rows).text }))
+  const all = out + "\n" + err
+  const rows = parse(all)
+  verify(all, rows)
+  const short = report(rows, { url: process.env.RUN_URL, limit: LIMIT })
+  console.log(JSON.stringify({ count: short.count, text: short.text, full: report(rows, { patch: true }).text }))
 }
 
 if (import.meta.main) await run()
