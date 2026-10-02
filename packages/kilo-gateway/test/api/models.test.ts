@@ -510,7 +510,7 @@ test("fetchKiloModels retries transient failures and keeps the last known good c
   })
   const warn = spyOn(console, "warn").mockImplementation(() => {})
   try {
-    const opts = { baseURL: `http://localhost:${server.port}`, kilocodeToken: "tok-resilient", retryDelays: [1, 1] }
+    const opts = { baseURL: `http://localhost:${server.port}`, kilocodeToken: "tok-resilient", retryDelays: [1] }
     const first = await fetchKiloModels(opts)
     expect(Object.keys(first.models)).toEqual(["test/model-a"])
 
@@ -520,12 +520,14 @@ test("fetchKiloModels retries transient failures and keeps the last known good c
     expect(retried.error).toBeUndefined()
     expect(hits).toBe(2)
 
+    delete first.models["test/model-a"] // callers mutate results; must not poison the fallback
     mode = "down"
     hits = 0
     const stale = await fetchKiloModels(opts)
-    expect(hits).toBe(3)
+    expect(hits).toBe(2)
     expect(stale.error).toBeUndefined()
     expect(Object.keys(stale.models)).toEqual(["test/model-a"])
+    expect(stale.models).not.toBe(first.models)
     expect(warn).toHaveBeenCalled()
 
     const other = await fetchKiloModels({ ...opts, kilocodeToken: "tok-other" })

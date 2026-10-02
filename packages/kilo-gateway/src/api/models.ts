@@ -81,8 +81,10 @@ function parseApiPrice(price: string | null | undefined): number | undefined {
 }
 
 /** Backoff delays between retries of a transient catalog fetch failure. */
-export const MODELS_RETRY_DELAYS_MS = [500, 1500]
+export const MODELS_RETRY_DELAYS_MS = [500]
 
+// Bounded (oldest evicted) so token rotation cannot grow it forever.
+const MAX_LAST_GOOD = 8
 const lastGood = new Map<string, Record<string, any>>()
 
 type Failure = NonNullable<KiloModelsResult["error"]>
@@ -114,7 +116,7 @@ export async function fetchKiloModels(options?: {
   /** Backoff delays (ms) between retries of transient failures. Defaults to {@link MODELS_RETRY_DELAYS_MS}. */
   retryDelays?: number[]
 }): Promise<KiloModelsResult> {
-  const id = JSON.stringify([options?.baseURL, options?.kilocodeOrganizationId, options?.kilocodeToken])
+  const id = String(Bun.hash(JSON.stringify([options?.baseURL, options?.kilocodeOrganizationId, options?.kilocodeToken])))
   const delays = options?.retryDelays ?? MODELS_RETRY_DELAYS_MS
   const raw = await fetchWithRetry(options, delays)
   if (raw.error) {
@@ -125,7 +127,7 @@ export async function fetchKiloModels(options?: {
         error: raw.error,
         models: Object.keys(last).length,
       })
-      return { models: last }
+      return { models: structuredClone(last) }
     }
     console.warn("[kilo-gateway] model catalog fetch failed", { error: raw.error })
     return { models: {}, error: raw.error }
@@ -142,7 +144,12 @@ export async function fetchKiloModels(options?: {
     models[model.id] = transformedModel
   }
 
-  if (Object.keys(models).length > 0) lastGood.set(id, models)
+  if (Object.keys(models).length > 0) {
+    // Snapshot: callers mutate the returned models.
+    lastGood.delete(id)
+    lastGood.set(id, structuredClone(models))
+    if (lastGood.size > MAX_LAST_GOOD) lastGood.delete(lastGood.keys().next().value!)
+  }
   return { models }
 }
 
