@@ -17,10 +17,50 @@ import PROMPT_CODEX from "../../src/session/prompt/codex.txt"
 import PROMPT_GEMINI from "../../src/session/prompt/gemini.txt"
 import PROMPT_GPT from "../../src/session/prompt/gpt.txt"
 import PROMPT_GPT55 from "../../src/session/prompt/kilocode-gpt-5.5.txt"
+import PROMPT_GPT6 from "../../src/session/prompt/kilocode-gpt-6.txt"
 import PROMPT_LING from "../../src/session/prompt/ling.txt"
 import PROMPT_TRINITY from "../../src/session/prompt/trinity.txt"
 
 describe("SystemPrompt.provider", () => {
+  describe("GPT-6 and newer", () => {
+    test.each([
+      "gpt-6",
+      "gpt-6-astra",
+      "gpt-6.0-astra",
+      "gpt-6.1",
+      "gpt-6.1-astra",
+      "openai/gpt-6-astra-pro",
+      "~openai/gpt-astra-latest",
+      "gpt-7",
+      "provider/GPT-10.2",
+    ])("selects the dedicated prompt for %s", (id) => {
+      const model = ProviderTest.model({
+        prompt: undefined,
+        api: { id, url: "https://example.com", npm: "@ai-sdk/openai" },
+      })
+      expect(SystemPrompt.provider(model)).toEqual([PROMPT_GPT6])
+    })
+
+    test.each(["gpt-5.5", "gpt-5.6-sol", "gpt-6garbage", "custom-gpt-6", "gpt-6.x"])(
+      "keeps the existing GPT fallback for %s",
+      (id) => {
+        const model = ProviderTest.model({
+          prompt: undefined,
+          api: { id, url: "https://example.com", npm: "@ai-sdk/openai" },
+        })
+        expect(SystemPrompt.provider(model)).toEqual([PROMPT_GPT])
+      },
+    )
+
+    test.each(["codex", "gpt55"] as const)("preserves the explicit %s metadata override", (prompt) => {
+      const model = ProviderTest.model({
+        prompt,
+        api: { id: "gpt-6-astra", url: "https://example.com", npm: "@ai-sdk/openai" },
+      })
+      expect(SystemPrompt.provider(model)).toEqual([prompt === "codex" ? PROMPT_CODEX : PROMPT_GPT55])
+    })
+  })
+
   describe("model.prompt override", () => {
     test("anthropic prompt is selected when model.prompt is 'anthropic'", () => {
       const model = ProviderTest.model({ prompt: "anthropic" })

@@ -9,6 +9,7 @@ import PROMPT_BEAST from "./prompt/beast.txt"
 import PROMPT_GEMINI from "./prompt/gemini.txt"
 import PROMPT_GPT from "./prompt/gpt.txt"
 import PROMPT_GPT55 from "./prompt/kilocode-gpt-5.5.txt" // kilocode_change
+import PROMPT_GPT6 from "./prompt/kilocode-gpt-6.txt" // kilocode_change
 import PROMPT_KIMI from "./prompt/kimi.txt"
 import PROMPT_LING from "./prompt/ling.txt" // kilocode_change
 import PROMPT_META from "./prompt/meta.txt"
@@ -28,7 +29,7 @@ import { PermissionV1 } from "@opencode-ai/core/v1/permission"
 import SOUL from "../kilocode/soul.txt"
 import type { EditorContext } from "../kilocode/editor-context"
 import { KilocodeSystemPrompt } from "../kilocode/system-prompt"
-import { isLing } from "../kilocode/model-match"
+import { isGpt6, isLing } from "../kilocode/model-match"
 import { Config } from "@/config/config"
 import * as KiloReference from "@/kilocode/reference"
 // kilocode_change end
@@ -69,6 +70,7 @@ export function provider(model: Provider.Model) {
 
   const kilo = prompt()
   if (kilo) return kilo
+  if (isGpt6(model.api.id)) return [PROMPT_GPT6]
   // kilocode_change end
   if (model.api.id.includes("muse")) {
     const name = model.api.id.includes("muse-glimmer") ? "Muse Glimmer" : "Muse Spark"
