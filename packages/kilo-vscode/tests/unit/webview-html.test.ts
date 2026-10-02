@@ -48,6 +48,13 @@ describe("buildCspString", () => {
     expect(result).toContain(`font-src ${cspSource}`)
   })
 
+  it("allows audio only from webview resources", () => {
+    const result = buildCspString(cspSource, nonce)
+    expect(result).toContain(`media-src ${cspSource}`)
+    expect(result).not.toContain("media-src *")
+    expect(result).not.toContain("media-src file:")
+  })
+
   it("allows only webview resources for the Shiki worker", () => {
     const result = buildCspString(cspSource, nonce)
     expect(result).toContain(`worker-src ${cspSource}`)
