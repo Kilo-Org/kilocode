@@ -1445,6 +1445,32 @@ describe("project config directory precedence", () => {
       },
     })
   })
+
+  test("kilo config files win over opencode config files in the same directory", async () => {
+    await using tmp = await tmpdir()
+    const dir = path.join(tmp.path, ".kilo")
+    await writeConfig(dir, { model: "kilo/from-kilo-jsonc" }, "kilo.jsonc")
+    await writeConfig(dir, { model: "kilo/from-kilo-json", username: "kilo-json" }, "kilo.json")
+    await writeConfig(dir, { model: "opencode/from-opencode-jsonc", username: "opencode-jsonc" }, "opencode.jsonc")
+    await writeConfig(
+      dir,
+      { model: "opencode/from-opencode-json", username: "opencode-json", small_model: "opencode/small" },
+      "opencode.json",
+    )
+
+    await provideTestInstance({
+      directory: tmp.path,
+      fn: async () => {
+        const config = await load()
+
+        // Highest precedence first: kilo.jsonc, kilo.json, opencode.jsonc, opencode.json.
+        expect(config.model).toBe("kilo/from-kilo-jsonc")
+        expect(config.username).toBe("kilo-json")
+        // Keys only set by opencode files still merge in.
+        expect(config.small_model).toBe("opencode/small")
+      },
+    })
+  })
 })
 
 describe("linked worktree config", () => {

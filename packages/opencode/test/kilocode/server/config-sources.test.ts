@@ -84,6 +84,8 @@ describe("config source routes", () => {
           await Bun.write(path.join(local, "kilo.jsonc"), "{}")
         }
 
+        await Bun.write(path.join(dir, ".kilo", "opencode.json"), "{}")
+
         const extra = path.join(dir, "extra")
         await fs.mkdir(extra, { recursive: true })
         await Bun.write(path.join(extra, "opencode.json"), "{}")
@@ -99,6 +101,7 @@ describe("config source routes", () => {
     const opencodeFile = path.join(tmp.path, ".opencode", "kilo.jsonc")
     const kilocodeFile = path.join(tmp.path, ".kilocode", "kilo.jsonc")
     const configFile = path.join(tmp.path, ".kilo", "kilo.jsonc")
+    const shadowedFile = path.join(tmp.path, ".kilo", "opencode.json")
     const extraFile = path.join(tmp.path, "extra", "opencode.json")
     const managedFile = path.join(tmp.path, "managed", "kilo.json")
 
@@ -114,6 +117,7 @@ describe("config source routes", () => {
     expect(order(body, envFile)).toBeLessThan(order(body, projectFile))
     expect(order(body, projectFile)).toBeLessThan(order(body, kilocodeFile))
     expect(order(body, kilocodeFile)).toBeLessThan(order(body, configFile))
+    expect(order(body, shadowedFile)).toBeLessThan(order(body, configFile))
     expect(body.sources.some((source) => source.path === opencodeFile)).toBe(false)
     expect(order(body, configFile)).toBeLessThan(order(body, extraFile))
     expect(inline?.order).toBeGreaterThan(order(body, extraFile))
