@@ -15,7 +15,7 @@ function msg(input: Partial<Message>): Message {
 const agents = new Set(["code", "ask"])
 
 describe("session preference recovery", () => {
-  it("recovers model, variant, and agent from the latest user message", () => {
+  it("recovers each agent's latest user message", () => {
     const prefs = resolveMessagePrefs(
       [
         msg({
@@ -32,23 +32,23 @@ describe("session preference recovery", () => {
       agents,
     )
 
-    expect(prefs).toEqual({
-      agent: "code",
-      model: { providerID: "openai", modelID: "gpt-5.5" },
-      variant: "medium",
+    expect(prefs.agent).toBe("code")
+    expect(prefs.picks).toEqual({
+      ask: { model: { providerID: "anthropic", modelID: "claude-sonnet-4" }, variant: "low", seq: 1 },
+      code: { model: { providerID: "openai", modelID: "gpt-5.5" }, variant: "medium", seq: 0 },
     })
   })
 
   it.each([undefined, ""])("restores model default %s instead of an older effort", (variant) => {
     const prefs = resolveMessagePrefs(
       [
-        msg({ model: { providerID: "anthropic", modelID: "claude-sonnet-4", variant: "high" } }),
-        msg({ model: { providerID: "anthropic", modelID: "claude-sonnet-4", variant } }),
+        msg({ agent: "code", model: { providerID: "anthropic", modelID: "claude-sonnet-4", variant: "high" } }),
+        msg({ agent: "code", model: { providerID: "anthropic", modelID: "claude-sonnet-4", variant } }),
       ],
       agents,
     )
 
-    expect(prefs.variant).toBe("")
+    expect(prefs.picks.code?.variant).toBe("")
   })
 
   it("ignores assistant-only model data and invalid agents", () => {
@@ -63,7 +63,22 @@ describe("session preference recovery", () => {
       agents,
     )
 
-    expect(prefs).toEqual({})
+    expect(prefs.agent).toBeUndefined()
+    expect(prefs.picks).toEqual({})
+    expect(prefs.unattributed).toBeUndefined()
+  })
+
+  it("keeps agentless user messages for the session's current agent", () => {
+    const prefs = resolveMessagePrefs(
+      [msg({ model: { providerID: "anthropic", modelID: "claude-sonnet-4", variant: "high" } })],
+      agents,
+    )
+
+    expect(prefs.unattributed).toEqual({
+      model: { providerID: "anthropic", modelID: "claude-sonnet-4" },
+      variant: "high",
+      seq: 0,
+    })
   })
 
   it("can recover the latest valid agent separately from the latest user model", () => {
@@ -75,10 +90,23 @@ describe("session preference recovery", () => {
       agents,
     )
 
-    expect(prefs).toEqual({
-      agent: "code",
-      model: { providerID: "anthropic", modelID: "claude-sonnet-4" },
-      variant: "",
+    expect(prefs.agent).toBe("code")
+    expect(prefs.picks).toEqual({
+      ask: { model: { providerID: "anthropic", modelID: "claude-sonnet-4" }, variant: "", seq: 1 },
     })
+  })
+
+  it("prefers the newer agentless message over an older attributed one", () => {
+    const prefs = resolveMessagePrefs(
+      [
+        msg({ agent: "code", model: { providerID: "openai", modelID: "gpt-5.5" } }),
+        msg({ model: { providerID: "anthropic", modelID: "claude-sonnet-4", variant: "high" } }),
+      ],
+      agents,
+    )
+
+    expect(prefs.agent).toBe("code")
+    expect(prefs.picks.code?.seq).toBe(1)
+    expect(prefs.unattributed?.seq).toBe(0)
   })
 })

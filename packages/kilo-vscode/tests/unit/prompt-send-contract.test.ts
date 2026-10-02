@@ -86,12 +86,14 @@ describe("sendCommand dismisses pending tool requests", () => {
   })
 
   it("applies model, agent, and variant overrides when provided by a command", () => {
-    expect(body).toContain("if (overrides?.agent)")
-    expect(body).toContain("selectAgent(overrides.agent, scope)")
-    expect(body).toContain("if (overrides?.model)")
-    expect(body).toContain("selectModel(effectiveSelection.providerID, effectiveSelection.modelID, scope)")
-    expect(body).toContain("if (overrides?.variant !== undefined)")
-    expect(body).toContain("selectVariant(overrides.variant, scope)")
+    const overrides = extractFunctionBody(source, "applyOverrides")
+    expect(overrides).toContain("if (overrides?.agent)")
+    expect(overrides).toContain("selectAgent(overrides.agent, scope)")
+    expect(overrides).toContain("if (overrides?.model)")
+    expect(overrides).toContain("selectModel(selection.providerID, selection.modelID, scope)")
+    expect(overrides).toContain("if (overrides?.variant !== undefined)")
+    expect(overrides).toContain("selectVariant(overrides.variant, scope)")
+    expect(body).toContain("if (effectiveSelection) applyOverrides(overrides, scope, effectiveSelection)")
   })
 })
 
@@ -300,12 +302,13 @@ describe("sendMessage / sendCommand draft id contract", () => {
     // from ":pending:<id>" to ":session:<newSessionId>". The user loses the
     // typed message and the new session starts empty.
     const body = extractFunctionBody(source, "sendMessage")
-    expect(body).toMatch(/const effectiveDraftID = !sid && !draftID \? crypto\.randomUUID\(\) : draftID/)
+    expect(body).toContain("const effectiveDraftID = mintDraft(sid, draftID, false)")
   })
 
   it("sendCommand mints a draftID when there is no current session and none was supplied", () => {
     const body = extractFunctionBody(source, "sendCommand")
-    expect(body).toMatch(/const effectiveDraftID = !sid && !draftID \? crypto\.randomUUID\(\) : draftID/)
+    expect(body).toContain("const effectiveDraftID = mintDraft(sid, draftID, true)")
+    expect(extractFunctionBody(source, "mintDraft")).toMatch(/if \(sid \|\| draftID\) return draftID/)
   })
 
   it("sendMessage seeds the pending agent before resolving draft-scoped settings", () => {
@@ -315,14 +318,15 @@ describe("sendMessage / sendCommand draft id contract", () => {
     // model with the default agent's system prompt.
     const body = extractFunctionBody(source, "sendMessage")
     expect(body).toMatch(
-      /if \(!sid && !draftID && effectiveDraftID\) agentDrafts\.seed\(effectiveDraftID\)[\s\S]*const settings = submission\(scope, selection\)/,
+      /const effectiveDraftID = mintDraft\(sid, draftID, false\)[\s\S]*const settings = submission\(scope, selection\)/,
     )
+    expect(extractFunctionBody(source, "mintDraft")).toMatch(/agentDrafts\.seed\(id\)/)
   })
 
   it("sendCommand seeds the pending agent before resolving draft-scoped settings", () => {
     const body = extractFunctionBody(source, "sendCommand")
     expect(body).toMatch(
-      /if \(!sid && !draftID && effectiveDraftID\) \{\s*agentDrafts\.seed\(effectiveDraftID\)[\s\S]*submission\(scope, effectiveSelection\)/,
+      /const effectiveDraftID = mintDraft\(sid, draftID, true\)[\s\S]*submission\(scope, effectiveSelection\)/,
     )
   })
 

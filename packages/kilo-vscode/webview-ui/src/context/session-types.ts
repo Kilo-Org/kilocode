@@ -108,13 +108,10 @@ export interface SessionContextValue {
   scopedQuestions: (sessionID: string | undefined) => QuestionRequest[]
   scopedSuggestions: (sessionID: string | undefined) => SuggestionRequest[]
 
-  // Model selection (global, extension-lifetime)
+  // Model selection (per-scope picks over per-agent config)
   selected: (sessionID?: string) => ModelSelection | null
   modelForAgent: (agent: string) => ModelSelection | null
   selectModel: (providerID: string, modelID: string, sessionID?: string) => void
-  preferredSelection: Accessor<(ModelSelection & { variant?: string }) | undefined>
-  preferencesReady: Accessor<boolean>
-  rememberSelection: (agent: string, model: ModelSelection, variant?: string) => void
   trackScopes: (ids: Accessor<readonly string[]>) => () => void
 
   // Cost and context usage for the current session
