@@ -38,4 +38,12 @@ describe("project avatar", () => {
     )
     expect(avatar(repo("git@gitlab.com:team/private.git"))).toBeUndefined()
   })
+
+  it("returns undefined instead of throwing when git config cannot be read", () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "avatar-"))
+    // A directory named config makes readFileSync throw (EISDIR).
+    fs.mkdirSync(path.join(root, ".git", "config"), { recursive: true })
+    expect(() => avatar(root)).not.toThrow()
+    expect(avatar(root)).toBeUndefined()
+  })
 })
