@@ -128,7 +128,7 @@ export function SubagentFooter(props: Props) {
               <Spinner color={agentColor()} />
             </Show>
             {/* kilocode_change end */}
-            {/* kilocode_change - hide usage while a key hint crowds a narrow footer */}
+            {/* kilocode_change start - hide usage while a key hint crowds a narrow footer */}
             <Show when={crowded() ? undefined : usage()}>
               {(item) => (
                 <text fg={theme.textMuted} wrapMode="none">
@@ -136,6 +136,7 @@ export function SubagentFooter(props: Props) {
                 </text>
               )}
             </Show>
+            {/* kilocode_change end */}
             {/* kilocode_change start - transient exit confirmation */}
             <Show when={props.exitPress() > 0}>
               <text fg={theme.primary} wrapMode="none" flexShrink={0}>
