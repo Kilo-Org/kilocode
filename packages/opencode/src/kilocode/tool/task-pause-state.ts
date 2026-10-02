@@ -26,6 +26,26 @@ export function remove(id: string, entry: Entry) {
   if (pauses.get(id) === entry) pauses.delete(id)
 }
 
+const watchers = new Map<string, Set<Deferred.Deferred<void>>>()
+
+/** Signal `done` when a prompt to `id` is admitted. Returns the unwatch function. */
+export function watch(id: string, done: Deferred.Deferred<void>) {
+  const set = watchers.get(id) ?? new Set()
+  set.add(done)
+  watchers.set(id, set)
+  return () => {
+    set.delete(done)
+    if (set.size === 0 && watchers.get(id) === set) watchers.delete(id)
+  }
+}
+
+/** A prompt to `id` was admitted and will run a turn: resume its paused task and tell watchers. */
+export const admit = (id: string) =>
+  Effect.gen(function* () {
+    yield* resume(id)
+    for (const done of watchers.get(id) ?? []) yield* Deferred.succeed(done, undefined)
+  })
+
 /** The paused child was directed again: the task waits for its next turn. */
 export const resume = (id: string) =>
   Effect.suspend(() => {

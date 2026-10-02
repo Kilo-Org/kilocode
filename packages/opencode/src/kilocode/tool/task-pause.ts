@@ -8,7 +8,7 @@
 // Clients read the pause from the child session's metadata (`KEY`), projected
 // from the live registry in ./task-pause-state on every session read and
 // update, so a marker persisted by a process that died mid-pause is never shown.
-import { Context, Deferred, Effect, Scope } from "effect"
+import { Cause, Context, Deferred, Effect, Exit, Fiber, Scope } from "effect"
 import type { SessionV1 } from "@opencode-ai/core/v1/session"
 import type { Database } from "@opencode-ai/core/database/database"
 import type { BackgroundJob } from "@/background/job"
@@ -57,12 +57,29 @@ export const extend = Effect.fn("KiloTaskPause.extend")(function* <E, R>(
     State.paused(id) ||
     (input.paused !== undefined && (yield* input.paused(id)) && (yield* input.jobs.get(id))?.status === "running")
   if (!waiting) return yield* input.jobs.extend(job)
-  yield* input.direct.pipe(
-    Effect.provideService(Detached, id),
-    Effect.catchCause((cause) => Effect.logWarning("paused task prompt failed", { cause })),
-    Effect.forkIn(input.scope, { startImmediately: true }),
+  // Report success only once the child admitted the prompt: a run that fails before then
+  // resumed nothing, so the caller gets that failure instead of "sent".
+  const admitted = yield* Deferred.make<void>()
+  return yield* Effect.acquireUseRelease(
+    Effect.sync(() => State.watch(id, admitted)),
+    () =>
+      Effect.gen(function* () {
+        const fiber = yield* input.direct.pipe(
+          Effect.provideService(Detached, id),
+          Effect.tapCause((cause) => Effect.logWarning("paused task prompt failed", { cause })),
+          Effect.forkIn(input.scope, { startImmediately: true }),
+        )
+        const sent = Fiber.await(fiber).pipe(
+          Effect.flatMap((exit) =>
+            Exit.isSuccess(exit)
+              ? Effect.succeed(true)
+              : Effect.fail(new Error(`The prompt did not reach the paused task: ${Cause.pretty(exit.cause)}`)),
+          ),
+        )
+        return yield* Effect.raceFirst(Deferred.await(admitted).pipe(Effect.as(true)), sent)
+      }),
+    (unwatch) => Effect.sync(unwatch),
   )
-  return true
 })
 
 type Board = { config: Config.Interface; flags: RuntimeFlags.Info; database: Database.Interface }
@@ -116,22 +133,29 @@ export const settle = Effect.fn("KiloTaskPause.settle")(function* (input: {
         ...input.board,
       })
     })
+  // Registration is the only acquire step, so the release always unregisters; the notice and
+  // the publish run in `use`, and the marker is published last so it implies the notice ran.
   const hold = (messageID: string) =>
     Effect.acquireUseRelease(
       Effect.gen(function* () {
-        const entry = { done: yield* Deferred.make<void>(), notice: notice(messageID) }
-        State.set(input.child, entry)
-        // A prompt admitted between the check and this registration found no pause to resume;
-        // it already cleared the stop, so the task resumes right away.
-        if (!(yield* stopped)) {
-          yield* State.resume(input.child)
-          return entry
+        const entry = {
+          done: yield* Deferred.make<void>(),
+          notice: notice(messageID).pipe(
+            Effect.catchCause((cause) => Effect.logWarning("subagent pause notice failed", { cause })),
+          ),
         }
-        yield* publish
-        yield* entry.notice
+        State.set(input.child, entry)
         return entry
       }),
-      (entry) => Deferred.await(entry.done),
+      (entry) =>
+        Effect.gen(function* () {
+          // A prompt admitted between the check and the registration found no pause to resume;
+          // it already cleared the stop, so the task resumes right away.
+          if (!(yield* stopped)) return
+          yield* entry.notice
+          yield* publish
+          yield* Deferred.await(entry.done)
+        }),
       (entry) =>
         Effect.gen(function* () {
           State.remove(input.child, entry)

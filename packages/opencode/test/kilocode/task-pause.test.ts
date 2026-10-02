@@ -1,7 +1,7 @@
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { SessionProjector } from "@opencode-ai/core/session/projector"
 import { expect } from "bun:test"
-import { Deferred, Effect, Fiber, Layer, Scope } from "effect"
+import { Cause, Deferred, Effect, Exit, Fiber, Layer, Scope } from "effect"
 import { Database } from "@opencode-ai/core/database/database"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
 import { MemoryService } from "@kilocode/kilo-memory/effect/service"
@@ -203,6 +203,19 @@ const paused = (id: SessionID) =>
   pollWithTimeout(
     Effect.sync(() => (KiloTaskPause.paused(id) ? true : undefined)),
     "task never paused",
+    "10 seconds",
+  )
+
+/** Wait for `count` pause notices on the parent's board; the notice posts just after the pause registers. */
+const notices = (parent: SessionID, count: number) =>
+  pollWithTimeout(
+    BoardStore.read({ sessionID: parent }).pipe(
+      Effect.map((board) => {
+        const list = board.messages.filter((item) => item.body === KiloTaskPause.NOTICE)
+        return list.length >= count ? board.messages : undefined
+      }),
+    ),
+    "the pause notice was not posted",
     "10 seconds",
   )
 
@@ -429,8 +442,7 @@ it.live(
 
         yield* run.prompt.cancel(run.child, "session")
         yield* paused(run.child)
-        const board = yield* BoardStore.read({ sessionID: run.chat.id })
-        expect(board.messages).toEqual([
+        expect(yield* notices(run.chat.id, 1)).toEqual([
           expect.objectContaining({ from: run.child, to: "main", type: "INFO", body: KiloTaskPause.NOTICE }),
         ])
         const messages = yield* run.sessions.messages({ sessionID: run.chat.id })
@@ -605,6 +617,32 @@ it.live(
         expect(extended).toBe(true)
         yield* awaitWithTimeout(Deferred.await(sent), "the prompt queued behind the paused run", "5 seconds")
         expect(yield* Deferred.isDone(queued)).toBe(false)
+        yield* jobs.cancel(id)
+      }),
+      { config },
+    ),
+  30_000,
+)
+
+it.live(
+  "a task_id whose prompt fails before admission reports the failure",
+  () =>
+    provideTmpdirServer(
+      Effect.fnUntraced(function* () {
+        const jobs = yield* BackgroundJob.Service
+        const id = SessionID.descending()
+        yield* jobs.start({ id, type: "task", metadata: {}, run: Effect.never })
+        const exit = yield* KiloTaskPause.extend(
+          {
+            jobs,
+            direct: Effect.fail(new Error("no such prompt")),
+            paused: () => Effect.succeed(true),
+            scope: yield* Scope.Scope,
+          },
+          { id, run: Effect.succeed("") },
+        ).pipe(Effect.exit)
+        expect(Exit.isFailure(exit)).toBe(true)
+        expect(String(Exit.isFailure(exit) ? Cause.squash(exit.cause) : "")).toContain("no such prompt")
         yield* jobs.cancel(id)
       }),
       { config },
@@ -835,8 +873,8 @@ it.live(
         yield* run.prompt.cancel(run.child, "session")
         yield* paused(run.child)
         expect((yield* run.jobs.get(run.child))?.status).toBe("running")
-        const notices = (yield* BoardStore.read({ sessionID: run.chat.id })).messages
-        expect(notices.filter((item) => item.body === KiloTaskPause.NOTICE)).toHaveLength(2)
+        const posted = yield* notices(run.chat.id, 2)
+        expect(posted.filter((item) => item.body === KiloTaskPause.NOTICE)).toHaveLength(2)
 
         yield* run.llm.pushMatch(child("STEER_ON"), reply().text("child result").stop())
         yield* run.llm.pushMatch(parent, reply().text("noted").stop())

@@ -468,7 +468,7 @@ for (const width of [80, 120]) {
     expect(row).not.toContain("⋯")
     expect(row).toContain("Parent up")
     // a narrow footer drops prev/next while the paused hint shows
-    expect(row?.includes("Next right")).toBe(width >= 96)
+    expect(row?.includes("Next right")).toBe(width - 4 >= 96)
   })
 }
 
