@@ -128,6 +128,7 @@ export namespace KilocodeConfigOverlay {
     ["indexing", "embeddingBatchSize"],
     ["indexing", "scannerMaxBatchRetries"],
     ["indexing", "fileExtensions"],
+    ["require_approval_for_config_edits"],
   ] as const
 
   const collectionPaths = ["provider", "mcp", "permission", "agent", "formatter", "lsp"] as const
