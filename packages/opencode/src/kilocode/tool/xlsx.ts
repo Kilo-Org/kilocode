@@ -7,9 +7,11 @@ const ROW_LIMIT = 50_000
 const MAX_SIZE = 50 * 1024 * 1024
 const MAX_SIZE_LABEL = `${MAX_SIZE / (1024 * 1024)} MB`
 
+const EXTENSIONS = new Set([".xlsx", ".xlsm", ".xlsb", ".xls", ".ods"])
+
 export function is(filepath: string) {
   const ext = path.extname(filepath).toLowerCase()
-  return ext === ".xlsx" || ext === ".ods"
+  return EXTENSIONS.has(ext)
 }
 
 export function limit() {
@@ -17,12 +19,15 @@ export function limit() {
 }
 
 export async function open(filepath: string, input: Buffer) {
-  const ods = path.extname(filepath).toLowerCase() === ".ods"
+  const ext = path.extname(filepath).toLowerCase()
+  const ods = ext === ".ods"
   if (input.byteLength > MAX_SIZE) {
     throw new Error(`Cannot read spreadsheet file: ${filepath} exceeds the ${MAX_SIZE_LABEL} size limit`)
   }
   const bytes = new Uint8Array(input.buffer, input.byteOffset, input.byteLength)
-  if (bytes[0] !== 0x50 || bytes[1] !== 0x4b) {
+  const zip = bytes[0] === 0x50 && bytes[1] === 0x4b
+  const cfb = bytes[0] === 0xd0 && bytes[1] === 0xcf && bytes[2] === 0x11 && bytes[3] === 0xe0
+  if (!zip && !cfb) {
     throw new Error(`Cannot read spreadsheet file: ${filepath} is not a valid spreadsheet`)
   }
 

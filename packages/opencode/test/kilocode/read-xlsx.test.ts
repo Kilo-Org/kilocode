@@ -72,6 +72,18 @@ function bytesODS(book: WorkBook) {
   return new Uint8Array(write(book, { bookType: "ods", type: "buffer" }) as Uint8Array)
 }
 
+function bytesXLS(book: WorkBook) {
+  return new Uint8Array(write(book, { bookType: "xls", type: "buffer" }) as Uint8Array)
+}
+
+function bytesXLSM(book: WorkBook) {
+  return new Uint8Array(write(book, { bookType: "xlsm", type: "buffer" }) as Uint8Array)
+}
+
+function bytesXLSB(book: WorkBook) {
+  return new Uint8Array(write(book, { bookType: "xlsb", type: "buffer" }) as Uint8Array)
+}
+
 function fixture(name: string) {
   return Bun.file(path.join(import.meta.dir, "../fixture/spreadsheet", name)).bytes()
 }
@@ -223,11 +235,78 @@ describe("kilocode XLSX reads", () => {
     }),
   )
 
-  it.live("continues rejecting unsupported workbook formats as binary", () =>
+  it.live("extracts labelled formatted content from legacy XLS files", () =>
     Effect.gen(function* () {
       const dir = yield* tmpdirScoped()
+      const sheet = utils.aoa_to_sheet([
+        ["Title", "Value"],
+        ["Legacy", 42],
+      ])
       const file = path.join(dir, "legacy.xls")
-      yield* put(file, bytes(book(utils.aoa_to_sheet([["ignored"]]))))
+      yield* put(file, bytesXLS(book(sheet)))
+
+      const result = yield* run(dir, file)
+
+      expect(result.output).toContain("--- Sheet: Visible ---")
+      expect(result.output).toContain("Title\tValue")
+      expect(result.output).toContain("Legacy\t42")
+    }),
+  )
+
+  it.live("extracts labelled formatted content from XLSM macro-enabled files", () =>
+    Effect.gen(function* () {
+      const dir = yield* tmpdirScoped()
+      const sheet = utils.aoa_to_sheet([
+        ["Macro", "Enabled"],
+        ["Run", "Yes"],
+      ])
+      const file = path.join(dir, "macro.xlsm")
+      yield* put(file, bytesXLSM(book(sheet)))
+
+      const result = yield* run(dir, file)
+
+      expect(result.output).toContain("--- Sheet: Visible ---")
+      expect(result.output).toContain("Macro\tEnabled")
+      expect(result.output).toContain("Run\tYes")
+    }),
+  )
+
+  it.live("extracts labelled formatted content from XLSB binary workbook files", () =>
+    Effect.gen(function* () {
+      const dir = yield* tmpdirScoped()
+      const sheet = utils.aoa_to_sheet([
+        ["Binary", "Score"],
+        ["Data", 99],
+      ])
+      const file = path.join(dir, "binary.xlsb")
+      yield* put(file, bytesXLSB(book(sheet)))
+
+      const result = yield* run(dir, file)
+
+      expect(result.output).toContain("--- Sheet: Visible ---")
+      expect(result.output).toContain("Binary\tScore")
+      expect(result.output).toContain("Data\t99")
+    }),
+  )
+
+  it.live("fails clearly for invalid spreadsheet input in XLS files", () =>
+    Effect.gen(function* () {
+      const dir = yield* tmpdirScoped()
+      const file = path.join(dir, "invalid.xls")
+      yield* put(file, "not an xls workbook")
+
+      const err = yield* fail(dir, file)
+
+      expect(err.message).toContain("Cannot read spreadsheet file")
+      expect(err.message).toContain("not a valid spreadsheet")
+    }),
+  )
+
+  it.live("continues rejecting unsupported non-spreadsheet binary formats as binary", () =>
+    Effect.gen(function* () {
+      const dir = yield* tmpdirScoped()
+      const file = path.join(dir, "unsupported.bin")
+      yield* put(file, new Uint8Array([0x00, 0x01, 0x02, 0x03, 0x00, 0x00]))
 
       const err = yield* fail(dir, file)
 
