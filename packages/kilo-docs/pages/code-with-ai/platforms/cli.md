@@ -262,6 +262,20 @@ The `diff_open` and `session_move` TUI keybindings run the same actions and are 
 }
 ```
 
+### Enter Key Behavior
+
+By default, Enter submits the prompt and Ctrl+Enter inserts a newline. To swap these so Enter inserts a newline and Ctrl+Enter submits, run `/swap-enter` (or pick "Use Enter for a new line" in the command palette with Ctrl+P). The choice is saved and used in future sessions.
+
+To make the swap the default in a project or globally, set `swap_enter` in `tui.jsonc`:
+
+```jsonc
+{
+  "swap_enter": true,
+}
+```
+
+Note that terminals only distinguish Ctrl+Enter from Enter when they support the Kitty keyboard protocol. Otherwise use `/swap-enter` with the Shift+Enter, Alt+Enter, or Ctrl+J newline keys that work in any terminal.
+
 ## Permissions
 
 Kilo Code uses the permission config to decide whether a given action should run automatically, prompt you, or be blocked.

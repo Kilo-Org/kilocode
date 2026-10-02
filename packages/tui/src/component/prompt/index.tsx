@@ -64,6 +64,7 @@ import { KILO_BASE_MODE, useBindings, useCommandShortcut, useLeaderActive, useOp
 import { useTuiConfig } from "../../config"
 // kilocode_change start - vim modal editing for the prompt
 import { useVim, VimModeIndicator, vimToggleCommand } from "@/kilocode/cli/cmd/tui/component/prompt"
+import { swapEnterToggleCommand, useSwapEnter } from "@/kilocode/cli/cmd/tui/component/prompt/swap-enter"
 // kilocode_change end
 import { usePromptWorkspace } from "./workspace"
 import { usePromptMove } from "./move"
@@ -329,6 +330,15 @@ export function Prompt(props: PromptProps) {
     exitPress: 0, // kilocode_change
   })
 
+  // kilocode_change start - swap Enter (newline) and Ctrl+Enter (submit) in the prompt
+  useSwapEnter({
+    target: inputTarget,
+    disabled: () => props.disabled ?? false,
+    shellMode: () => store.mode === "shell",
+    enabled: () => Boolean(kv.get("swap_enter", tuiConfig.swap_enter ?? false)),
+  })
+  // kilocode_change end
+
   createEffect(
     on(
       () => props.sessionID,
@@ -569,6 +579,12 @@ export function Prompt(props: PromptProps) {
         clearDialog: () => dialog.clear(),
         showToast: (message) => toast.show({ message, variant: "info" }),
       }),
+      swapEnterToggleCommand({
+        swapEnabled: () => Boolean(kv.get("swap_enter", tuiConfig.swap_enter ?? false)),
+        setSwapEnabled: (value) => kv.set("swap_enter", value),
+        clearDialog: () => dialog.clear(),
+        showToast: (message) => toast.show({ message, variant: "info" }),
+      }),
       // kilocode_change end
       {
         title: "Skills",
@@ -631,6 +647,7 @@ export function Prompt(props: PromptProps) {
       "prompt.stash.pop",
       "prompt.stash.list",
       "prompt.vim.toggle", // kilocode_change
+      "prompt.swap_enter.toggle", // kilocode_change
       "prompt.skills", // kilocode_change
       "session.interrupt",
       "workspace.set",
