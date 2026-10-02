@@ -7,6 +7,7 @@ import type { AgentProjectSnapshot } from "../src/types/messages"
 import { ProjectsFooter } from "./ProjectsFooter"
 import { SidebarSectionHeader } from "./SidebarSectionHeader"
 import { ProjectRowActions } from "./ProjectRowActions"
+import { ProjectAvatar } from "./ProjectAvatar"
 
 interface ProjectsSectionProps {
   projects: AgentProjectSnapshot[]
@@ -55,6 +56,7 @@ export const ProjectsSection: Component<ProjectsSectionProps> = (props) => (
                 class="am-project-item"
                 expanded={project().expanded}
                 ariaLabel={project().label}
+                icon={<ProjectAvatar label={project().label} src={project().avatar} />}
                 title={project().missing ? props.t("agentManager.project.missing") : project().root}
                 label={
                   <>
@@ -85,10 +87,9 @@ export const ProjectsSection: Component<ProjectsSectionProps> = (props) => (
                   if (project().missing) return
                   const expanded = !project().expanded
                   props.onExpand(project().id, expanded)
-                }}
-                onClick={() => {
-                  if (project().missing) return
-                  if (!project().active) props.onSelect(project().id)
+                  // Opening another project also selects it, so the detail pane
+                  // returns to where the user left off in that project.
+                  if (expanded && !project().active) props.onSelect(project().id)
                 }}
               />
               <Show when={project().expanded}>

@@ -1,8 +1,11 @@
 import { Show, type Component, type JSX } from "solid-js"
+import { Icon } from "@kilocode/kilo-ui/icon"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 
 interface Props {
   label: JSX.Element
+  /** Leading icon that takes the chevron's place. On hover it turns into the chevron. */
+  icon?: JSX.Element
   expanded?: boolean
   onToggle?: () => void
   onClick?: () => void
@@ -25,7 +28,23 @@ export const SidebarSectionHeader: Component<Props> = (props) => {
       }}
     >
       <div class="am-sidebar-header-main">
-        <Show when={props.onToggle}>
+        <Show when={props.onToggle && props.icon}>
+          {/* The whole row toggles. The button only gives keyboard focus and
+              state; its click bubbles to the row handler. */}
+          <button
+            type="button"
+            class="am-sidebar-header-icon"
+            aria-expanded={props.expanded}
+            aria-label={props.ariaLabel ?? "Toggle section"}
+            disabled={props.disabled}
+          >
+            <span class="am-sidebar-header-icon-image">{props.icon}</span>
+            <span class="am-sidebar-header-icon-chevron">
+              <Icon name="chevron-right" size="small" />
+            </span>
+          </button>
+        </Show>
+        <Show when={props.onToggle && !props.icon}>
           <IconButton
             icon="chevron-right"
             variant="ghost"
