@@ -26,6 +26,7 @@ import type {
 import type { Activity } from "../utils/session-activity"
 import type { Timing } from "./session-timing"
 import type { MessageMutation } from "./session-utils"
+import type { CostNotice } from "./cost-notice"
 
 export interface SessionContextValue {
   // Current session
@@ -119,6 +120,8 @@ export interface SessionContextValue {
 
   // Cost and context usage for the current session
   costBreakdown: Accessor<Array<{ label: string; cost: number }>>
+  costNotice: Accessor<CostNotice | undefined>
+  dismissCostNotice: (id: string) => void
   contextUsage: Accessor<ContextUsage | undefined>
   modelUsage: Accessor<SessionModelUsage | undefined>
 

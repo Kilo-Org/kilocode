@@ -7,6 +7,7 @@ import { useLanguage } from "../../context/language"
 import PermissionEditor from "./PermissionEditor"
 import { DEFAULT_RULES } from "./permission-utils"
 import SettingsRow from "./SettingsRow"
+import { idleMinutes, noticeThreshold } from "../../context/cost-notice"
 
 const AutoApproveTab: Component = () => {
   const { config, settings, updateConfig, updateSetting } = useConfig()
@@ -17,6 +18,15 @@ const AutoApproveTab: Component = () => {
     const value = settings().maxCost
     return typeof value === "number" && Number.isFinite(value) && value > 0 ? Math.ceil(value) : 0
   })
+
+  const notice = createMemo(() => noticeThreshold(settings().requestCostNotice))
+  const idle = createMemo(() => idleMinutes(settings().cacheIdleNotice))
+
+  const update = (key: string, value: string) => {
+    const trimmed = value.trim()
+    const next = trimmed ? Number(trimmed) : 0
+    if (Number.isFinite(next) && next >= 0) updateSetting(key, next)
+  }
 
   const updateCost = (value: string) => {
     const trimmed = value.trim()
@@ -35,7 +45,6 @@ const AutoApproveTab: Component = () => {
         <SettingsRow
           title={language.t("settings.autoApprove.maxCost.title")}
           description={language.t("settings.autoApprove.maxCost.description")}
-          last
         >
           <TextField
             type="number"
@@ -47,6 +56,37 @@ const AutoApproveTab: Component = () => {
             onChange={updateCost}
             hideLabel
             label={language.t("settings.autoApprove.maxCost.title")}
+          />
+        </SettingsRow>
+        <SettingsRow
+          title={language.t("settings.autoApprove.requestCost.title")}
+          description={language.t("settings.autoApprove.requestCost.description")}
+        >
+          <TextField
+            type="number"
+            inputMode="decimal"
+            min="0"
+            step="0.5"
+            value={String(notice())}
+            onChange={(value) => update("requestCostNotice", value)}
+            hideLabel
+            label={language.t("settings.autoApprove.requestCost.title")}
+          />
+        </SettingsRow>
+        <SettingsRow
+          title={language.t("settings.autoApprove.cacheIdle.title")}
+          description={language.t("settings.autoApprove.cacheIdle.description")}
+          last
+        >
+          <TextField
+            type="number"
+            inputMode="numeric"
+            min="0"
+            step="1"
+            value={String(idle())}
+            onChange={(value) => update("cacheIdleNotice", value)}
+            hideLabel
+            label={language.t("settings.autoApprove.cacheIdle.title")}
           />
         </SettingsRow>
       </Card>
