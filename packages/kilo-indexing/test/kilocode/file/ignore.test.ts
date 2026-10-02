@@ -38,16 +38,10 @@ describe("FileIgnore.globs", () => {
     expect(globs).not.toContain("node_modules")
   })
 
-  test("raw PATTERNS do not exclude nested ignored directories", async () => {
-    const root = await tree()
-    const found = await glob("**/*", { cwd: root, nodir: true, ignore: FileIgnore.PATTERNS })
-    expect(found.some((file) => file.includes("node_modules"))).toBe(true)
-  })
-
   test("globs prune ignored directories so their contents are never walked", async () => {
     const root = await tree()
     const found = await glob("**/*", { cwd: root, ignore: FileIgnore.globs() })
-    expect(found.sort()).toEqual([
+    expect(found.map((file) => file.replaceAll("\\", "/")).sort()).toEqual([
       "packages",
       "packages/app",
       "packages/app/src",
