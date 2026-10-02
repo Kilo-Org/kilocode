@@ -15,7 +15,7 @@ import { LocalProvider } from "../../src/context/local"
 import { LocationProvider } from "../../src/context/location"
 import { PermissionProvider } from "../../src/context/permission"
 import { ProjectProvider } from "../../src/context/project"
-import { PromptRefProvider } from "../../src/context/prompt"
+import { PromptRefProvider, usePromptRef } from "../../src/context/prompt"
 import { RouteProvider } from "../../src/context/route"
 import { TuiTerminalEnvironmentProvider } from "../../src/context/runtime"
 import { SDKProvider } from "../../src/context/sdk"
@@ -70,7 +70,7 @@ const reply = {
   parts: [],
 }
 
-async function mount(root: string, width = 100) {
+async function mount(root: string, width = 100, route = child.id) {
   await Bun.write(`${root}/kv.json`, JSON.stringify({ animations_enabled: false, sidebar: "hide", vim_enabled: false }))
   const aborts: URL[] = []
   const exits: unknown[] = []
@@ -90,7 +90,7 @@ async function mount(root: string, width = 100) {
     return undefined
   })
   const config = createTuiResolvedConfig()
-  const refs: { sync?: ReturnType<typeof useSync> } = {}
+  const refs: { sync?: ReturnType<typeof useSync>; prompt?: ReturnType<typeof usePromptRef> } = {}
 
   function Ready() {
     const sync = useSync()
@@ -123,6 +123,7 @@ async function mount(root: string, width = 100) {
   }
 
   function Content() {
+    refs.prompt = usePromptRef()
     const dimensions = useTerminalDimensions()
     return (
       <box width={dimensions().width} height={dimensions().height} flexDirection="column">
@@ -149,7 +150,7 @@ async function mount(root: string, width = 100) {
               <ArgsProvider>
                 <KVProvider>
                   <ToastProvider>
-                    <RouteProvider initialRoute={{ type: "session", sessionID: child.id }}>
+                    <RouteProvider initialRoute={{ type: "session", sessionID: route }}>
                       <TuiConfigProvider config={config}>
                         <PluginRuntimeProvider value={runtime}>
                           <SDKProvider
@@ -188,7 +189,11 @@ async function mount(root: string, width = 100) {
   const app = await testRender(() => <Harness />, { width, height: 30 })
   const frame = () => app.captureCharFrame()
   try {
-    await wait(() => refs.sync?.data.session_status?.[child.id]?.type === "busy" && frame().includes("General"))
+    await wait(() =>
+      route === child.id
+        ? refs.sync?.data.session_status?.[child.id]?.type === "busy" && frame().includes("General")
+        : !!refs.prompt?.current?.focused,
+    )
     await app.flush()
     return {
       aborts,
@@ -266,3 +271,14 @@ for (const width of [80, 120]) {
     for (const item of states) expect(item[0]).toContain("Next right")
   })
 }
+
+test("the main prompt's exit guard uses the same double press", async () => {
+  await using tmp = await tmpdir()
+  using scene = await mount(tmp.path, 100, parent.id)
+  await scene.press("\x03")
+  expect(scene.frame()).toContain("again to exit")
+  expect(scene.exits).toHaveLength(0)
+  await scene.press("\x03")
+  expect(scene.exits).toHaveLength(1)
+  expect(scene.frame()).not.toContain("again to exit")
+})

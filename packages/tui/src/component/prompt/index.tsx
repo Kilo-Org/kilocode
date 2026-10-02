@@ -29,6 +29,7 @@ import { useEvent } from "../../context/event"
 import { editorSelectionKey, useEditorContext, type EditorSelection } from "../../context/editor"
 import { normalizePromptContent, openEditor } from "../../editor"
 import { useExit } from "../../context/exit"
+import { createDoublePress } from "../../kilocode/double-press" // kilocode_change
 import { promptOffsetWidth } from "../../prompt/display"
 import { createStore, produce, unwrap } from "solid-js/store"
 import { usePromptHistory, type PromptInfo } from "../../prompt/history"
@@ -184,6 +185,7 @@ export function Prompt(props: PromptProps) {
   const variantShortcut = useCommandShortcut("variant.cycle")
   const renderer = useRenderer()
   const exit = useExit()
+  const quit = createDoublePress(1000) // kilocode_change - double Ctrl+C to exit, shared with the subagent view
   const dimensions = useTerminalDimensions()
   const { theme, syntax } = useTheme()
   const kv = useKV()
@@ -315,7 +317,6 @@ export function Prompt(props: PromptProps) {
     mode: "normal" | "shell"
     extmarkToPartIndex: Map<number, number>
     interrupt: number
-    exitPress: number // kilocode_change - track double ctrl+c to exit
     placeholder: number
   }>({
     placeholder: randomIndex(list().length),
@@ -326,7 +327,6 @@ export function Prompt(props: PromptProps) {
     mode: "normal",
     extmarkToPartIndex: new Map(),
     interrupt: 0,
-    exitPress: 0, // kilocode_change
   })
 
   createEffect(
@@ -898,9 +898,7 @@ export function Prompt(props: PromptProps) {
         cmd: (ctx: CommandContext<Renderable, KeyEvent>) => {
           ctx.event.preventDefault()
           ctx.event.stopPropagation()
-          setStore("exitPress", store.exitPress + 1)
-          setTimeout(() => setStore("exitPress", 0), 1000)
-          if (store.exitPress >= 2) void exit()
+          if (quit.press()) void exit()
         },
       },
     ],
@@ -1836,7 +1834,7 @@ export function Prompt(props: PromptProps) {
           <Show when={status().type !== "retry"}>
             <box gap={2} flexDirection="row">
               {/* kilocode_change start - show "ctrl+c again to exit" hint */}
-              <Show when={store.exitPress > 0}>
+              <Show when={quit.count() > 0}>
                 <text fg={theme.primary}>
                   ctrl+c <span style={{ fg: theme.primary }}>again to exit</span>
                 </text>
