@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto"
 import { z } from "zod"
 import { getKiloUrlFromToken } from "../auth/token.js"
 import { getDefaultHeaders, buildKiloHeaders } from "../headers.js"
@@ -116,7 +117,9 @@ export async function fetchKiloModels(options?: {
   /** Backoff delays (ms) between retries of transient failures. Defaults to {@link MODELS_RETRY_DELAYS_MS}. */
   retryDelays?: number[]
 }): Promise<KiloModelsResult> {
-  const id = String(Bun.hash(JSON.stringify([options?.baseURL, options?.kilocodeOrganizationId, options?.kilocodeToken])))
+  const id = createHash("sha256")
+    .update(JSON.stringify([options?.baseURL, options?.kilocodeOrganizationId, options?.kilocodeToken]))
+    .digest("hex")
   const delays = options?.retryDelays ?? MODELS_RETRY_DELAYS_MS
   const raw = await fetchWithRetry(options, delays)
   if (raw.error) {
