@@ -66,6 +66,7 @@ import { usePromptRef } from "../../context/prompt"
 import { ApprovalBadge, describeApproval, stateMetadata } from "../../kilocode/tool-approval" // kilocode_change
 import { BoardTool } from "../../kilocode/board-tool" // kilocode_change
 import { KiloSteer } from "../../kilocode/steer" // kilocode_change
+import { useTaskCard } from "../../kilocode/task-pause-view" // kilocode_change
 import { useEpilogue } from "../../context/epilogue"
 import { normalizePath } from "../../util/path"
 import { PermissionPrompt } from "./permission"
@@ -2561,8 +2562,10 @@ function Task(props: ToolProps) {
   )
 
   const status = createMemo(() => sync.data.session_status[sessionID() ?? ""])
+  const pause = useTaskCard(sessionID, props) // kilocode_change
   const isRunning = createMemo(() => {
     const value = status()
+    if (pause.paused()) return false // kilocode_change
     return (
       props.part.state.status === "running" ||
       (props.metadata.background === true && value !== undefined && running(value.type)) // kilocode_change
@@ -2602,17 +2605,20 @@ function Task(props: ToolProps) {
         content.push(`↳ ${Locale.titlecase(current()!.tool)} ${title}`)
       } else content.push(`↳ ${formatSubagentToolcalls(tools().length)}`)
     } else if (isRunning()) content.push(`↳ Starting...`) // kilocode_change
+    if (pause.paused()) content.push(pause.line()) // kilocode_change
 
-    if (!isRunning() && props.part.state.status === "completed") {
+    // kilocode_change start - a paused background task has not finished
+    if (!isRunning() && !pause.paused() && props.part.state.status === "completed") {
       content.push(`↳ ${formatCompletedSubagentDetail(tools().length, Locale.duration(duration()))}`)
     }
+    // kilocode_change end
 
     return content.join("\n")
   })
 
   return (
     <InlineTool
-      icon={props.part.state.status === "completed" ? "✓" : "│"}
+      icon={props.part.state.status === "completed" && !pause.paused() ? "✓" : "│"} // kilocode_change
       separate={true}
       color={retry() ? theme.error : undefined}
       spinner={isRunning()}
