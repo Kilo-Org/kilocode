@@ -16,7 +16,7 @@ import { execWithShellEnv } from "./shell-env"
 import { execGhRead } from "./gh"
 import { markNoIndex } from "../util/spotlight"
 import { BUDGET, isTimeout } from "./command-budget"
-import { WorktreePool, locate, poolDir, sweep, type PoolStart } from "./worktree-pool"
+import { WorktreePool, type PoolStart } from "./pool/pool"
 import {
   parsePRUrl,
   localBranchName,
@@ -136,12 +136,6 @@ export class WorktreeManager {
   private readonly binary: string
   private readonly log: (msg: string) => void
   private readonly pool: WorktreePool
-  /** Per-user pool home shared by every repository. Without it, no slots are pre-warmed. */
-  private readonly home: string | undefined
-  /** This repository's slot directory under {@link home}. */
-  private readonly shared: string | undefined
-  /** Resolved directory for new slots, see {@link slotDir}. */
-  private place: Promise<string | undefined> | undefined
   /** Deferred git bookkeeping from `detachWorktree`, flushed by `settle()`. */
   private readonly pending = new Set<Promise<void>>()
   /**
@@ -171,13 +165,13 @@ export class WorktreeManager {
     this.binary = binary ?? ops?.path ?? "git"
     this.git = this.client(root)
     this.log = log
-    this.home = home
-    this.shared = home ? poolDir(home, root) : undefined
     this.pool = new WorktreePool({
       root,
-      dir: () => this.slotDir(),
-      dirs: this.shared ? [this.shared, this.dir] : [this.dir],
+      home,
+      local: this.dir,
+      folder: directory,
       poolSize,
+      rewarm: () => this.rewarmDelay,
       log,
       client: (cwd) => this.client(cwd),
       lock: (fn) => this.withGitLock(fn),
@@ -207,8 +201,6 @@ export class WorktreeManager {
   // Key: `${root}:${remote}:${branch}`, Value: timestamp when fetch was done
   private static fetchCache = new Map<string, number>()
   private static readonly FETCH_CACHE_TTL = 60_000 // 1 minute
-  // Pool homes already swept by this process, keyed by home and pool state.
-  private static swept = new Set<string>()
   private gitAvailable = false
   private probeFailed = false
   private lfsAvailable: boolean | undefined
@@ -287,70 +279,15 @@ export class WorktreeManager {
     this.pool.warm(base)
   }
 
-  /** Adopt leftover pooled slots at startup and discard broken ones. */
+  /** Adopt leftover pooled slots at startup and discard broken ones. Never creates `.kilo/worktrees/`. */
   async reconcilePool(): Promise<void> {
     await this.ensureMigrated()
-    // Slots never live in the project, so this never creates `.kilo/worktrees/`.
-    // Slots that older versions left there are removed.
-    await this.pool.reconcile()
-    await this.withGitLock(() => this.tidy())
-    this.sweepPool()
+    return this.pool.reconcile()
   }
 
   /** Remove idle pooled slots when the feature is turned off. */
   async disposePool(): Promise<void> {
-    await this.pool.dispose()
-    this.sweepPool()
-  }
-
-  /**
-   * Directory for new pool slots: this repository's directory in the pool home
-   * when it is on the same filesystem, otherwise undefined and no slots.
-   */
-  private slotDir(): Promise<string | undefined> {
-    if (!this.shared) return Promise.resolve(undefined)
-    this.place ??= locate(this.root, this.shared, this.log)
-    return this.place
-  }
-
-  /** Clean slots of every repository in the pool home, once per process and pool state. */
-  private sweepPool(): void {
-    if (!this.home) return
-    const enabled = this.pool.enabled()
-    const key = `${this.home}\0${enabled}`
-    if (WorktreeManager.swept.has(key)) return
-    WorktreeManager.swept.add(key)
-    void sweep(this.home, enabled, (cwd) => this.client(cwd), this.log).catch((err: unknown) =>
-      this.log(`worktree pool: sweep failed: ${err}`),
-    )
-  }
-
-  /**
-   * Remove a `.kilo/worktrees/` that holds no worktree, for example after the
-   * slot of an older version was removed, so the project is clean again.
-   * The git lock covers this extension host only, so only the marker file is
-   * deleted and the directories are removed with `rmdir`, which fails as soon
-   * as another process puts a worktree there.
-   */
-  private async tidy(): Promise<void> {
-    // A missing directory is the normal case.
-    const names = await fs.promises.readdir(this.dir).catch(() => undefined)
-    if (!names || names.some((name) => name !== ".metadata_never_index")) return
-    const quiet = (err: NodeJS.ErrnoException) => ["ENOENT", "ENOTEMPTY", "EEXIST"].includes(err.code ?? "")
-    const remove = (dir: string) =>
-      fs.promises.rmdir(dir).then(
-        () => true,
-        (err: NodeJS.ErrnoException) => {
-          if (!quiet(err)) this.log(`tidy: failed to remove ${dir}: ${err}`)
-          return false
-        },
-      )
-    const marker = path.join(this.dir, ".metadata_never_index")
-    await fs.promises.rm(marker, { force: true }).catch((err) => this.log(`tidy: failed to remove ${marker}: ${err}`))
-    if (!(await remove(this.dir))) return
-    this.log(`Removed empty ${this.dir}`)
-    // `.kilo/` usually holds project config, so only an empty one is removed.
-    await remove(path.dirname(this.dir))
+    return this.pool.dispose()
   }
 
   private async poolStart(base?: string): Promise<PoolStart> {
@@ -391,38 +328,16 @@ export class WorktreeManager {
     return { resolvedRemote }
   }
 
-  /** Claim a pooled slot for a new branch and schedule a replacement warm-up. */
+  /** Claim a pooled slot for a new branch. The pool moves it into `.kilo/worktrees/` and warms a replacement. */
   private async tryClaimPool(
     branch: string,
     oid: string,
     auto: boolean,
     base?: string,
   ): Promise<{ path: string; branch: string } | undefined> {
-    const slot = await this.pool.claim(branch, oid, auto)
-    if (!slot) return undefined
-    setTimeout(() => this.pool.warm(base), this.rewarmDelay)
-
-    // Keep the folder name aligned with the branch, as the normal path does.
-    const target = path.join(this.dir, directory(slot.branch))
-    const error = fs.existsSync(target)
-      ? new Error(`${target} already exists`)
-      : await this.git.raw(["worktree", "move", slot.path, target]).then(
-          () => undefined,
-          (err: unknown) => err,
-        )
-    if (!error) {
-      this.log(`Reused pooled worktree: ${target} (branch: ${slot.branch})`)
-      return { path: target, branch: slot.branch }
-    }
-    // A slot in the pool home must never become a session worktree. Remove it
-    // and its new branch, then fall back to a normal `git worktree add`.
-    this.log(`Pooled worktree move failed, discarding ${slot.path}: ${error}`)
-    // A device check cannot see every mount layout, for example two bind
-    // mounts of one disk. Stop pre-warming this project for the session.
-    if (/cross-device/i.test(String(error))) this.place = Promise.resolve(undefined)
-    await this.pool.drop(slot.path)
-    await this.deleteBranch(slot.branch)
-    return undefined
+    const slot = await this.pool.claim(branch, oid, auto, base)
+    if (slot) this.log(`Reused pooled worktree: ${slot.path} (branch: ${slot.branch})`)
+    return slot
   }
 
   async renameBranch(worktreePath: string, current: string, requested: string): Promise<string> {

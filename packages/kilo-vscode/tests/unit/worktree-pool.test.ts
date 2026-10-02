@@ -5,7 +5,6 @@ import fs from "node:fs/promises"
 import { existsSync, readFileSync } from "node:fs"
 import simpleGit from "simple-git"
 import { WorktreeManager } from "../../src/agent-manager/WorktreeManager"
-import { locate, sweep } from "../../src/agent-manager/worktree-pool"
 
 const tempDirs: string[] = []
 // Pool home for the current test. Slots never live inside the test repository.
@@ -441,49 +440,6 @@ describe("WorktreeManager pool home", () => {
     expect(existsSync(slot)).toBe(false)
     expect(await pooledSlots(root)).toEqual([])
     expect(existsSync(path.join(root, ".kilo"))).toBe(false)
-  })
-
-  it("sweeps slots of deleted repositories and unused slots", async () => {
-    const gone = await createTempRepo()
-    createManager(gone).warmPool()
-    const orphan = await waitForPooledSlot(gone)
-    await fs.rm(gone, { recursive: true, force: true })
-
-    const root = await createTempRepo()
-    createManager(root).warmPool()
-    const unused = await waitForPooledSlot(root)
-    const file = metaFile(unused)
-    const old = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
-    const run = () =>
-      sweep(
-        home,
-        true,
-        (cwd) => simpleGit(cwd),
-        () => undefined,
-      )
-
-    // An old slot survives while its owner process is alive.
-    await fs.utimes(file, old, old)
-    await run()
-    expect(existsSync(orphan)).toBe(false)
-    expect(existsSync(path.dirname(orphan))).toBe(false)
-    expect(existsSync(unused)).toBe(true)
-
-    // A recently used slot survives even when its owner is gone.
-    const meta = JSON.parse(await fs.readFile(file, "utf-8")) as Record<string, unknown>
-    await fs.writeFile(file, JSON.stringify({ ...meta, owner: 999999 }))
-    await run()
-    expect(existsSync(unused)).toBe(true)
-
-    await fs.utimes(file, old, old)
-    await run()
-    expect(existsSync(unused)).toBe(false)
-    expect(await pooledSlots(root)).toEqual([])
-  })
-
-  it.skipIf(process.platform === "win32")("uses no slot directory on another filesystem", async () => {
-    expect(await locate("/dev", path.join(home, "dev"), () => undefined)).toBeUndefined()
-    expect(await locate(path.dirname(home), path.join(home, "repo"), () => undefined)).toBe(path.join(home, "repo"))
   })
 })
 

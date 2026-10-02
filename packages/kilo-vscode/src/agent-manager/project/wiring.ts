@@ -13,7 +13,7 @@ import type { ProjectContext, ProjectInitResult } from "./context"
 import { ProjectContexts, type ProjectSnapshot } from "./contexts"
 import type { ProjectMessageDeps } from "./messages"
 import { createSettingsHandler, type SettingsHandler } from "./settings"
-import { poolHome } from "../worktree-pool"
+import { poolHome } from "../pool/home"
 
 export interface ProjectWiring {
   registry: ProjectRegistry
