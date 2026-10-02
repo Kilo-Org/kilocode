@@ -20,7 +20,7 @@ Workflows that automate dependency remediation and give the team Slack visibilit
 
 `dependabot.yml` is not a workflow — it's a config file that GitHub's Dependabot backend reads directly. None of the 3 workflow files in this directory ever open a PR; they only act on PRs that already exist.
 
-Dependabot re-scans on the `schedule: interval` set per ecosystem block, and once immediately whenever `dependabot.yml` itself changes on the default branch. Per ecosystem (`npm` for kilo-docs, `gradle` for kilo-jetbrains), it checks each dependency for updates, bundles minor and patch bumps into `groups: *-minor-patch` PRs (related packages share a group, so they move together), and ignores every major bump. Majors are bumped by hand. The `bun` block has `open-pull-requests-limit: 0`, so it opens no version-update PRs, only security-alert PRs. These are normal PRs from that point on — required CI and branch protection apply like any other PR.
+Dependabot re-scans on the `schedule: interval` set per ecosystem block, and once immediately whenever `dependabot.yml` itself changes on the default branch. Per ecosystem (`npm` for kilo-docs, `gradle` for kilo-jetbrains), it checks each dependency for updates, bundles minor and patch bumps into `groups: *-minor-patch` PRs (related packages share a group, so they move together), and ignores every major bump. Majors are bumped by hand. The `bun` block has `open-pull-requests-limit: 0`, so it opens no version-update PRs, only security-alert PRs, which a `security-updates` group bundles into one PR. These are normal PRs from that point on — required CI and branch protection apply like any other PR.
 
 ### The 3 workflows each poll independently on their own schedule
 

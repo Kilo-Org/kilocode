@@ -7,8 +7,11 @@ updates:
   # touched upstream files and was closed by hand (dependabot-auto-merge.yml
   # skips them by design). Those dependencies come in with upstream merges.
   # A limit of 0 does not disable security updates: alerts still open PRs, and
-  # security-findings-notify.yml reports them. packages/kilo-docs has its own
-  # block below, since this scan can't see its separate pnpm-lock.yaml.
+  # security-findings-notify.yml reports them. Those PRs mostly edit upstream
+  # manifests, and a root `overrides` or catalog pin can make them a no-op
+  # (check the resolved version in bun.lock before merging). packages/kilo-docs
+  # has its own block below, since this scan can't see its separate
+  # pnpm-lock.yaml.
   - package-ecosystem: "bun"
     directory: "/"
     schedule:
@@ -19,6 +22,14 @@ updates:
     commit-message:
       prefix: "chore"
       include: "scope"
+    # One PR for all security fixes in this scan, instead of one per alert.
+    # Deliberately not named "*-minor-patch": these PRs are never auto-merged,
+    # and this group has no update-types filter because a fix may need a major.
+    groups:
+      security-updates:
+        applies-to: security-updates
+        patterns:
+          - "*"
 
   # packages/kilo-docs deploys separately via pnpm; see note above.
   - package-ecosystem: "npm"
@@ -70,7 +81,8 @@ updates:
       interval: "weekly"
     cooldown:
       default-days: 7
-    open-pull-requests-limit: 5
+    # One slot per group below (6), so no group waits for another to merge.
+    open-pull-requests-limit: 6
     labels:
       - "dependencies"
     commit-message:
