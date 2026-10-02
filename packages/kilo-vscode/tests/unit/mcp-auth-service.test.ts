@@ -1,4 +1,5 @@
-import { describe, expect, it } from "bun:test"
+import { afterEach, describe, expect, it, mock, spyOn } from "bun:test"
+import * as vscode from "vscode"
 import { McpAuthService, type McpAuthConnection } from "../../src/services/mcp-auth/service"
 
 interface FakeClient {
@@ -7,14 +8,12 @@ interface FakeClient {
     connect(params: { name: string; directory?: string }): Promise<{ data: boolean }>
     disconnect(params: { name: string; directory?: string }): Promise<{ data: boolean }>
     auth: {
-      authenticate(params: {
-        name: string
-        directory?: string
-      }): Promise<{
+      authenticate(params: { name: string; directory?: string; external?: boolean }): Promise<{
         data?: { status: string; error?: string }
         error?: unknown
         response?: { ok: boolean; status: number }
       }>
+      cancel(params: { name: string; directory?: string }): Promise<{ response?: { ok: boolean; status: number } }>
       remove(params: { name: string; directory?: string }): Promise<{ response?: { ok: boolean; status: number } }>
     }
   }
@@ -23,23 +22,24 @@ interface FakeClient {
 /** Minimal fake satisfying McpAuthConnection, with per-call hooks for assertions and controllable behaviour. */
 function fakeConnection(opts: {
   status?: Record<string, { status: string; error?: string }>
-  authenticate?: (
-    name: string,
-  ) => Promise<{
+  authenticate?: (name: string) => Promise<{
     data?: { status: string; error?: string }
     error?: unknown
     response?: { ok: boolean; status: number }
   }>
+  onAuthCancel?: (name: string) => void
   onAuthRemove?: (name: string) => void
   onConnect?: (name: string) => void
   onDisconnect?: (name: string) => void
   connectResult?: boolean
   disconnectResult?: boolean
+  authCancelOk?: boolean
   authRemoveOk?: boolean
 }) {
   const calls = {
     status: 0,
-    authenticate: [] as string[],
+    authenticate: [] as Array<{ name: string; external?: boolean }>,
+    authCancel: [] as string[],
     authRemove: [] as string[],
     connect: [] as string[],
     disconnect: [] as string[],
@@ -62,10 +62,15 @@ function fakeConnection(opts: {
         return { data: opts.disconnectResult ?? true }
       },
       auth: {
-        authenticate: async ({ name }) => {
-          calls.authenticate.push(name)
+        authenticate: async ({ name, external }) => {
+          calls.authenticate.push({ name, external })
           if (opts.authenticate) return opts.authenticate(name)
           return { data: { status: "connected" }, response: { ok: true, status: 200 } }
+        },
+        cancel: async ({ name }) => {
+          calls.authCancel.push(name)
+          opts.onAuthCancel?.(name)
+          return { response: { ok: opts.authCancelOk ?? true, status: opts.authCancelOk === false ? 404 : 200 } }
         },
         remove: async ({ name }) => {
           calls.authRemove.push(name)
@@ -88,8 +93,8 @@ function fakeConnection(opts: {
   return {
     connection,
     calls,
-    emit: (event: unknown) => {
-      for (const listener of listeners) listener(event)
+    emit: (event: unknown, directory?: string) => {
+      for (const listener of listeners) listener(event, directory)
     },
   }
 }
@@ -97,6 +102,8 @@ function fakeConnection(opts: {
 function neverResolves<T>(): Promise<T> {
   return new Promise(() => {})
 }
+
+afterEach(() => mock.restore())
 
 describe("McpAuthService.refresh", () => {
   it("collects only needs_auth servers for a directory", async () => {
@@ -136,13 +143,14 @@ describe("McpAuthService.refresh", () => {
 
 describe("McpAuthService.signIn", () => {
   it("returns connected and clears needs_auth after a trailing refresh", async () => {
-    const { connection } = fakeConnection({
+    const { connection, calls } = fakeConnection({
       status: { anaconda: { status: "connected" } },
       authenticate: async () => ({ data: { status: "connected" }, response: { ok: true, status: 200 } }),
     })
     const service = new McpAuthService(connection)
     const result = await service.signIn("/test", "anaconda")
     expect(result).toEqual({ status: "connected", error: undefined })
+    expect(calls.authenticate).toEqual([{ name: "anaconda", external: true }])
     expect(service.needsAuth("/test")).toEqual([])
   })
 
@@ -161,7 +169,7 @@ describe("McpAuthService.signIn", () => {
     void first
   })
 
-  it("removes credentials and reports timeout when authenticate never returns", async () => {
+  it("cancels auth without removing credentials and reports timeout when authenticate never returns", async () => {
     const { connection, calls } = fakeConnection({
       status: {},
       authenticate: () => neverResolves(),
@@ -169,7 +177,8 @@ describe("McpAuthService.signIn", () => {
     const service = new McpAuthService(connection, { timeout: 20 })
     const result = await service.signIn("/test", "anaconda")
     expect(result).toEqual({ status: "timeout" })
-    expect(calls.authRemove).toEqual(["anaconda"])
+    expect(calls.authCancel).toEqual(["anaconda"])
+    expect(calls.authRemove).toEqual([])
   })
 
   it("rewrites a quietly cancelled sign-in to cancelled, and a subsequent sign-in still succeeds", async () => {
@@ -214,12 +223,13 @@ describe("McpAuthService.signIn", () => {
 })
 
 describe("McpAuthService.cancel", () => {
-  it("removes stored credentials", async () => {
+  it("cancels the flow without removing stored credentials", async () => {
     const { connection, calls } = fakeConnection({ status: {} })
     const service = new McpAuthService(connection)
-    const removed = await service.cancel("/test", "anaconda")
-    expect(removed).toBe(true)
-    expect(calls.authRemove).toEqual(["anaconda"])
+    const cancelled = await service.cancel("/test", "anaconda")
+    expect(cancelled).toBe(true)
+    expect(calls.authCancel).toEqual(["anaconda"])
+    expect(calls.authRemove).toEqual([])
   })
 })
 
@@ -280,5 +290,78 @@ describe("McpAuthService browser-open-failed dedupe", () => {
     emit({ type: "mcp.browser.open.failed", properties: { mcpName: "anaconda", url: "https://x/auth?a=1" } })
     emit({ type: "mcp.browser.open.failed", properties: { mcpName: "anaconda", url: "https://x/auth?a=2" } })
     expect(urls.length).toBe(2)
+  })
+})
+
+describe("McpAuthService auth URL handling", () => {
+  it("opens an owned auth URL through VS Code and ignores other directories", async () => {
+    const opened = spyOn(vscode.env, "openExternal").mockResolvedValue(true)
+    const urls: Array<{ name: string; url: string }> = []
+    const auth = Promise.withResolvers<{
+      data: { status: string }
+      response: { ok: boolean; status: number }
+    }>()
+    const { connection, emit } = fakeConnection({ status: {}, authenticate: () => auth.promise })
+    const service = new McpAuthService(connection, { onUrl: (name, url) => urls.push({ name, url }) })
+    const pending = service.signIn("/owned", "anaconda")
+
+    emit({ type: "mcp.auth.url", properties: { mcpName: "anaconda", url: "https://x/ignored" } }, "/other")
+    emit({ type: "mcp.auth.url", properties: { mcpName: "other", url: "https://x/ignored" } }, "/owned")
+    emit({ type: "mcp.auth.url", properties: { mcpName: "anaconda", url: "https://x/auth" } }, "/owned")
+    await Bun.sleep(0)
+
+    expect(opened).toHaveBeenCalledTimes(1)
+    expect(opened.mock.calls[0]?.[0]).toMatchObject({ fsPath: "https://x/auth" })
+    expect(urls).toEqual([])
+    auth.resolve({ data: { status: "connected" }, response: { ok: true, status: 200 } })
+    await pending
+  })
+
+  it("uses onUrl only when VS Code declines or fails to open the URL", async () => {
+    const opened = spyOn(vscode.env, "openExternal")
+      .mockResolvedValueOnce(false)
+      .mockRejectedValueOnce(new Error("no browser"))
+    const urls: Array<{ name: string; url: string }> = []
+    const auth = Promise.withResolvers<{
+      data: { status: string }
+      response: { ok: boolean; status: number }
+    }>()
+    const { connection, emit } = fakeConnection({ status: {}, authenticate: () => auth.promise })
+    const service = new McpAuthService(connection, {
+      dedupe: 0,
+      onUrl: (name, url) => urls.push({ name, url }),
+    })
+    const pending = service.signIn("/test", "anaconda")
+
+    emit({ type: "mcp.auth.url", properties: { mcpName: "anaconda", url: "https://x/declined" } }, "/test")
+    emit({ type: "mcp.auth.url", properties: { mcpName: "anaconda", url: "https://x/failed" } }, "/test")
+    await Bun.sleep(0)
+
+    expect(urls).toEqual([
+      { name: "anaconda", url: "https://x/declined" },
+      { name: "anaconda", url: "https://x/failed" },
+    ])
+    auth.resolve({ data: { status: "connected" }, response: { ok: true, status: 200 } })
+    await pending
+  })
+
+  it("deduplicates repeated owned auth URL events", async () => {
+    const opened = spyOn(vscode.env, "openExternal").mockResolvedValue(true)
+    const auth = Promise.withResolvers<{
+      data: { status: string }
+      response: { ok: boolean; status: number }
+    }>()
+    const { connection, emit } = fakeConnection({ status: {}, authenticate: () => auth.promise })
+    const service = new McpAuthService(connection, { dedupe: 60_000 })
+    const pending = service.signIn("/test", "anaconda")
+    const event = { type: "mcp.auth.url", properties: { mcpName: "anaconda", url: "https://x/auth" } }
+
+    emit(event, "/test")
+    emit(event, "/test")
+    await Bun.sleep(0)
+
+    expect(opened).toHaveBeenCalledTimes(1)
+    auth.resolve({ data: { status: "connected" }, response: { ok: true, status: 200 } })
+    await pending
   })
 })

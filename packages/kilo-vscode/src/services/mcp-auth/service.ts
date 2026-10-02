@@ -1,4 +1,5 @@
 import type { KiloClient } from "@kilocode/sdk/v2/client"
+import * as vscode from "vscode"
 import type { SSEPayload } from "../cli-backend/sdk-sse-adapter"
 import { needsAuthNames } from "./status"
 
@@ -31,9 +32,9 @@ export interface McpAuthResult {
 export interface McpAuthOpts {
   /** Milliseconds before a sign-in attempt is abandoned client-side. Default 6 minutes, kept above the CLI's 5-minute OAuth callback timeout so the CLI's own error reaches the user first. */
   timeout?: number
-  /** Milliseconds within which repeated `mcp.browser.open.failed` events for the same URL are collapsed. Default 4 seconds. */
+  /** Milliseconds within which repeated browser URL events for the same URL are collapsed. Default 4 seconds. */
   dedupe?: number
-  /** Called when the CLI could not open a browser for an in-progress sign-in. */
+  /** Fallback used when VS Code cannot open an authorization URL. */
   onUrl?: (name: string, url: string) => void
 }
 
@@ -124,11 +125,7 @@ export class McpAuthService {
     try {
       const result = await this.race(dir, name)
       if (result === "timeout") {
-        await this.attempt(`mcp auth remove for ${name}`, false, async () => {
-          const client = await this.connection.getClientAsync(dir)
-          const { response } = await client.mcp.auth.remove({ name, directory: dir })
-          return response?.ok === true
-        })
+        await this.cancel(dir, name)
         return { status: "timeout" }
       }
       if (this.cancelled.has(token)) return { status: "cancelled" }
@@ -141,17 +138,17 @@ export class McpAuthService {
     }
   }
 
-  /** Cancel an in-flight sign-in. There is no cancel endpoint — deleting the stored credentials is what rejects the CLI's pending OAuth callback. */
+  /** Cancel an in-flight sign-in without deleting stored credentials. */
   async cancel(dir: string, name: string): Promise<boolean> {
     const token = this.active.get(busyKey(dir, name))
     if (token) this.cancelled.add(token)
-    const removed = await this.attempt(`mcp auth cancel for ${name}`, false, async () => {
+    const cancelled = await this.attempt(`mcp auth cancel for ${name}`, false, async () => {
       const client = await this.connection.getClientAsync(dir)
-      const { response } = await client.mcp.auth.remove({ name, directory: dir })
+      const { response } = await client.mcp.auth.cancel({ name, directory: dir })
       return response?.ok === true
     })
-    if (!removed && token) this.cancelled.delete(token)
-    return removed
+    if (!cancelled && token) this.cancelled.delete(token)
+    return cancelled
   }
 
   /** Clear stored credentials and reconnect so the server reports `needs_auth` again immediately. */
@@ -215,7 +212,7 @@ export class McpAuthService {
   private async authenticate(dir: string, name: string): Promise<McpAuthResult> {
     return this.attempt(`mcp authenticate for ${name}`, { status: "failed" }, async (): Promise<McpAuthResult> => {
       const client = await this.connection.getClientAsync(dir)
-      const { data, error, response } = await client.mcp.auth.authenticate({ name, directory: dir })
+      const { data, error, response } = await client.mcp.auth.authenticate({ name, directory: dir, external: true })
       if (response?.ok && data) {
         const status: McpAuthStatus = data.status
         return { status, error: "error" in data ? data.error : undefined }
@@ -260,21 +257,43 @@ export class McpAuthService {
   private start(): void {
     // Defensive: some callers (notably test doubles for KiloConnectionService)
     // implement only the client-fetching surface, not events. Skipping the
-    // subscription there is harmless — it only feeds the browser-open-failed
-    // fallback, which those callers don't exercise.
+    // subscription there is harmless — it only handles authorization URLs,
+    // which those callers don't exercise.
     if (typeof this.connection.onEvent !== "function") return
-    this.unsubEvent = this.connection.onEvent((event) => {
-      if (event.type !== "mcp.browser.open.failed") return
-      this.onBrowserOpenFailed(event.properties.mcpName, event.properties.url)
+    this.unsubEvent = this.connection.onEvent((event, dir) => {
+      if (event.type === "mcp.browser.open.failed") {
+        this.onBrowserOpenFailed(event.properties.mcpName, event.properties.url)
+        return
+      }
+      if (event.type !== "mcp.auth.url" || !dir) return
+      this.onAuthUrl(dir, event.properties.mcpName, event.properties.url)
     })
   }
 
   private onBrowserOpenFailed(name: string, url: string): void {
+    if (!this.acceptUrl(url)) return
+    this.onUrl?.(name, url)
+  }
+
+  private onAuthUrl(dir: string, name: string, url: string): void {
+    if (!this.active.has(busyKey(dir, name))) return
+    if (!this.acceptUrl(url)) return
+    void Promise.resolve()
+      .then(() => vscode.env.openExternal(vscode.Uri.parse(url)))
+      .then(
+        (opened) => {
+          if (!opened) this.onUrl?.(name, url)
+        },
+        () => this.onUrl?.(name, url),
+      )
+  }
+
+  private acceptUrl(url: string): boolean {
     const now = Date.now()
-    if (url === this.lastUrl && now - this.lastUrlAt < this.dedupeWindow) return
+    if (url === this.lastUrl && now - this.lastUrlAt < this.dedupeWindow) return false
     this.lastUrl = url
     this.lastUrlAt = now
-    this.onUrl?.(name, url)
+    return true
   }
 
   private async attempt<T>(message: string, fallback: T, block: () => Promise<T>): Promise<T> {

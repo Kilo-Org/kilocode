@@ -20,7 +20,15 @@ type Internals = {
  */
 function setup() {
   const calls: string[] = []
-  const provider = new KiloProvider({} as never, { getClient: () => undefined } as never)
+  const provider = new KiloProvider(
+    {} as never,
+    {
+      getClient: () => undefined,
+      getClientAsync: async () => ({
+        mcp: { auth: { cancel: async () => ({ response: { ok: true } }) } },
+      }),
+    } as never,
+  )
   const internal = provider as unknown as Internals
   Object.assign(internal, {
     fetchAndSendMcpStatus: async () => void calls.push("status"),

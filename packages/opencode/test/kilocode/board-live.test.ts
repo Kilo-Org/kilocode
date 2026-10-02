@@ -55,6 +55,7 @@ const mcp = Layer.succeed(
     authenticate: () => Effect.die("unexpected MCP auth in board live test"),
     finishAuth: () => Effect.die("unexpected MCP auth in board live test"),
     removeAuth: () => Effect.void,
+    cancelAuth: () => Effect.void,
     supportsOAuth: () => Effect.succeed(false),
     hasStoredTokens: () => Effect.succeed(false),
     getAuthStatus: () => Effect.succeed("not_authenticated" as const),

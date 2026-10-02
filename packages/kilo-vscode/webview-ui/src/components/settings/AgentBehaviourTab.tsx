@@ -712,6 +712,7 @@ const AgentBehaviourTab: Component<Props> = (props) => {
                   const s = session.mcpStatus()[name]
                   if (s?.status === "failed") return s.error
                   if (s?.status === "needs_client_registration") return s.error
+                  if (s?.status === "needs_auth" && "error" in s && typeof s.error === "string") return s.error
                   return undefined
                 }
                 return (

@@ -2,7 +2,7 @@ import type { KiloConnectionService } from "../cli-backend/connection-service"
 import { McpAuthService, type McpAuthOpts, type McpAuthResult, type McpAuthStatus } from "./service"
 
 export { McpAuthService, type McpAuthOpts, type McpAuthResult, type McpAuthStatus }
-export { authFailure, needsAuthNames, normalize } from "./status"
+export { needsAuthNames } from "./status"
 
 const instances = new WeakMap<KiloConnectionService, McpAuthService>()
 

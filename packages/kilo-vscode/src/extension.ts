@@ -88,8 +88,8 @@ export async function activate(context: vscode.ExtensionContext) {
   )
 
   // One MCP OAuth sign-in service for the whole extension (sidebar, Kilo tabs, Settings, Marketplace).
-  // Initialize it eagerly so its `mcp.browser.open.failed` SSE subscription and
-  // `onUrl` fallback are wired up exactly once, instead of racing whichever
+  // Initialize it eagerly so its MCP OAuth URL subscriptions and `onUrl`
+  // fallback are wired up exactly once, instead of racing whichever
   // KiloProvider happens to construct first.
   mcpAuth(connectionService, { onUrl: showAuthUrl })
 

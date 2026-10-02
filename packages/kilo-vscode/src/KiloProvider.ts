@@ -108,7 +108,7 @@ import {
   watchWorkStyleConfig,
 } from "./kilo-provider/work-style"
 import * as McpOAuth from "./kilo-provider/mcp-oauth"
-import { mcpAuth, normalize as normalizeMcpStatus } from "./services/mcp-auth"
+import { mcpAuth } from "./services/mcp-auth"
 import { marketplaceBundles } from "./services/marketplace/bundles"
 import { retryable, backoff, MAX_RETRIES } from "./util/retry"
 import { hasGit } from "./kilo-provider/git-status"
@@ -3084,7 +3084,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       const directory = this.getWorkspaceDirectory()
       const { data } = await retry(() => this.client!.mcp.status({ directory }))
       if (data) {
-        const message = { type: "mcpStatusLoaded", status: normalizeMcpStatus(data) }
+        const message = { type: "mcpStatusLoaded", status: data }
         this.cachedMcpStatusMessage = message
         this.postMessage(message)
       }
