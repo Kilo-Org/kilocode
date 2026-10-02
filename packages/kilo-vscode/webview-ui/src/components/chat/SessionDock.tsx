@@ -121,8 +121,11 @@ export const SessionDock: Component<SessionDockProps> = (props) => {
       const width = row.clientWidth
       // Lines from layout boxes, not painted ones: offset metrics ignore the
       // glide transforms, so a running glide cannot feed back into placement.
-      const prev = item.style.display
-      item.style.display = "none"
+      // Take the stack out of flow with `position`, not `display: none`. A
+      // forced layout under `display: none` cancels the avatar pulses, so they
+      // restart and jump out of phase on every pass.
+      const prev = item.style.position
+      item.style.position = "absolute"
       const lines: { last: number; used: number; top: number }[] = []
       kids.forEach((child, index) => {
         const line = lines.at(-1)
@@ -135,7 +138,7 @@ export const SessionDock: Component<SessionDockProps> = (props) => {
         }
         lines.push({ last: index, used: child.offsetWidth, top: child.offsetTop })
       })
-      item.style.display = prev
+      item.style.position = prev
       // Show only as many avatars as the roomiest line can take. Plan with the
       // target width, not the measured one, which changes while it animates.
       const count = stack.items().length
