@@ -50,6 +50,10 @@ export interface TerminalManagerDeps {
 interface Entry {
   terminalId: string
   ptyID: string
+  /** Includes replacements and exited PTYs until their removal succeeds. */
+  ptys: Set<string>
+  revision: number
+  closing?: Promise<boolean>
   worktreeId: string | null
   cwd: string
   title: string
@@ -57,7 +61,9 @@ interface Entry {
 
 export class TerminalManager {
   private readonly entries = new Map<string, Entry>()
-  private readonly restarts = new Map<string, Promise<void>>()
+  /** Also retains closed entries with pending restarts or failed cleanup. */
+  private readonly owned = new Set<Entry>()
+  private readonly restarts = new Map<Entry, Promise<boolean>>()
   private readonly pending = new Map<string, { cols: number; rows: number }>()
   private readonly creates = new Map<string, Set<Promise<unknown>>>()
   private readonly blocked = new Map<string, number>()
@@ -136,11 +142,14 @@ export class TerminalManager {
     const entry: Entry = {
       terminalId: params.terminalId,
       ptyID: data.id,
+      ptys: new Set([data.id]),
+      revision: 0,
       worktreeId: params.worktreeId,
       cwd: params.cwd,
       title: data.title ?? params.title,
     }
     this.entries.set(params.terminalId, entry)
+    this.owned.add(entry)
     // If a resize arrived while pty.create was in flight that differed from `initial`, apply it now.
     const latest = this.pending.get(params.terminalId)
     if (latest && (latest.cols !== initial?.cols || latest.rows !== initial?.rows)) {
@@ -203,45 +212,55 @@ export class TerminalManager {
    *  the server-side PTY would linger until `kilo serve` exits. */
   async close(terminalId: string): Promise<boolean> {
     this.pending.delete(terminalId)
-    const entry = this.entries.get(terminalId)
-    if (!entry) return true
+    const entries = [...this.owned].filter((entry) => entry.terminalId === terminalId)
+    const results = await Promise.all(entries.map((entry) => this.closeEntry(entry)))
+    return results.every((ok) => ok)
+  }
+
+  private closeEntry(entry: Entry): Promise<boolean> {
+    if (entry.closing) return entry.closing
+    // Invalidate the restart even if cleanup fails and the entry is reopened.
+    entry.revision++
+    const task = this.cleanup(entry)
+    entry.closing = task
+    return task.finally(() => {
+      entry.closing = undefined
+      this.release(entry)
+    })
+  }
+
+  private async cleanup(entry: Entry): Promise<boolean> {
+    // Do not wait for a pending create: a stalled request must not block panel
+    // teardown. Its late allocation is still owned and cleaned by restartEntry.
     try {
-      const client = this.deps.getClient()
-      const { error } = await client.pty.remove({ directory: entry.cwd, ptyID: entry.ptyID })
-      if (error) {
-        const msg = error instanceof Error ? error.message : String(error)
-        this.deps.log(`Terminal close failed (${terminalId}): ${msg} — PTY may linger until kilo serve exits`)
-        return false
+      const client = entry.ptys.size > 0 ? this.deps.getClient() : undefined
+      const results = client ? await Promise.all([...entry.ptys].map((id) => this.remove(client, entry, id))) : []
+      if (results.some((ok) => !ok)) return false
+      if (this.entries.get(entry.terminalId) === entry) {
+        this.entries.delete(entry.terminalId)
       }
-      this.entries.delete(terminalId)
-      this.deps.log(`Terminal closed: ${terminalId} (pty ${entry.ptyID})`)
+      this.deps.log(`Terminal closed: ${entry.terminalId} (pty ${entry.ptyID})`)
       return true
     } catch (err) {
-      // Thrown errors are reserved for transport-level failures (no
-      // response from the server at all); API-level errors arrive via
-      // the `error` field checked above.
       const msg = err instanceof Error ? err.message : String(err)
-      this.deps.log(`Terminal close transport error (${terminalId}): ${msg}`)
+      this.deps.log(`Terminal close failed (${entry.terminalId}): ${msg}`)
       return false
     }
   }
 
   async restart(terminalId: string, cols?: number, rows?: number): Promise<string | undefined> {
     const entry = this.entries.get(terminalId)
-    if (!entry) return
-    const prior = this.restarts.get(terminalId)
-    if (prior) {
-      await prior
-      const current = this.entries.get(terminalId)
-      return current ? this.deps.buildWsUrl(current.ptyID, current.cwd) : undefined
+    if (!entry || entry.closing) return
+    const task = this.restarts.get(entry) ?? this.restartEntry(entry, entry.revision, cols, rows)
+    this.restarts.set(entry, task)
+    try {
+      const restarted = await task
+      if (!restarted || entry.closing || this.entries.get(terminalId) !== entry) return
+      return this.deps.buildWsUrl(entry.ptyID, entry.cwd)
+    } finally {
+      if (this.restarts.get(entry) === task) this.restarts.delete(entry)
+      this.release(entry)
     }
-    const task = this.restartEntry(entry, cols, rows)
-    this.restarts.set(terminalId, task)
-    await task.finally(() => {
-      if (this.restarts.get(terminalId) === task) this.restarts.delete(terminalId)
-    })
-    const current = this.entries.get(terminalId)
-    return current ? this.deps.buildWsUrl(current.ptyID, current.cwd) : undefined
   }
 
   /**
@@ -249,75 +268,45 @@ export class TerminalManager {
    * so PTYs do not outlive a webview drop that bypasses the explicit close
    * messages.
    *
-   * Failure modes we surface in the log:
-   *   - The SDK client is unavailable (connection service already torn
-   *     down). We can't reach the server to call `pty.remove`; the
-   *     server-side PTYs are then only reaped when `kilo serve` itself
-   *     dies, which ServerManager does on extension deactivate via
-   *     SIGTERM → SIGKILL on the process group. OS kills every child.
-   *   - Individual `pty.remove` requests error (404 because the server
-   *     already cleaned up, or network blip). Logged per-entry and then
-   *     summarized with a "may leak" notice so it's obvious something
-   *     slipped through.
-   *
-   * In-memory `entries` is cleared only at the end — we want to hold
-   * onto the records while the async removal is in flight so we don't
-   * lose track if dispose() is called twice concurrently or the process
-   * is sampled mid-shutdown.
+   * Closing intent is set synchronously for every owned entry. Late restart
+   * allocations clean themselves up without blocking disposal. Failed removals
+   * stay owned for a later retry; process-group shutdown is the final fallback
+   * when the SDK is unavailable.
    */
   async dispose(): Promise<void> {
     this.pending.clear()
-    const snapshot = [...this.entries.values()]
-    if (snapshot.length === 0) {
-      this.entries.clear()
-      return
-    }
+    const snapshot = [...this.owned]
+    if (snapshot.length === 0) return
     this.deps.log(`Disposing ${snapshot.length} terminal(s)`)
-    const client = (() => {
-      try {
-        return this.deps.getClient()
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err)
-        this.deps.log(
-          `Terminal dispose: SDK client unavailable (${msg}); relying on kilo serve process-group kill to reap PTYs`,
-        )
-        return undefined
-      }
-    })()
-    if (!client) {
-      return
-    }
-    const results = await Promise.all(
-      snapshot.map(async (entry) => {
-        try {
-          // Same reasoning as `close()`: the SDK surfaces API errors
-          // through the response's `error` field, not an exception.
-          const { error } = await client.pty.remove({ directory: entry.cwd, ptyID: entry.ptyID })
-          if (error) return { ok: false as const, entry, err: error }
-          return { ok: true as const, entry }
-        } catch (err) {
-          return { ok: false as const, entry, err }
-        }
-      }),
-    )
-    let failed = 0
-    for (const r of results) {
-      if (r.ok) continue
-      failed++
-      const msg = r.err instanceof Error ? r.err.message : String(r.err)
-      this.deps.log(`Terminal dispose cleanup failed (${r.entry.terminalId}): ${msg}`)
-    }
+    const results = await Promise.all(snapshot.map((entry) => this.closeEntry(entry)))
+    const failed = results.filter((ok) => !ok).length
     if (failed > 0) {
-      this.deps.log(`Terminal dispose: ${failed}/${snapshot.length} PTYs may linger until kilo serve exits`)
-    }
-    for (const result of results) {
-      if (result.ok && this.entries.get(result.entry.terminalId) === result.entry) {
-        this.entries.delete(result.entry.terminalId)
-      }
+      this.deps.log(`Terminal dispose: ${failed}/${snapshot.length} terminal(s) may retain PTYs until kilo serve exits`)
     }
   }
 
-  private async restartEntry(entry: Entry, cols?: number, rows?: number): Promise<void> {
+  private release(entry: Entry): void {
+    if (entry.ptys.size > 0 || this.restarts.has(entry)) return
+    this.owned.delete(entry)
+    if (this.entries.get(entry.terminalId) === entry) this.entries.delete(entry.terminalId)
+  }
+
+  private async remove(client: KiloClient, entry: Entry, id: string): Promise<boolean> {
+    if (!entry.ptys.has(id)) return true
+    try {
+      const { error } = await client.pty.remove({ directory: entry.cwd, ptyID: id })
+      // Removal may have succeeded remotely before a response was lost.
+      if (error && !("_tag" in error && error._tag === "PtyNotFoundError" && error.ptyID === id)) throw error
+      entry.ptys.delete(id)
+      return true
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      this.deps.log(`Terminal PTY cleanup failed (${entry.terminalId} pty=${id}): ${msg}`)
+      return false
+    }
+  }
+
+  private async restartEntry(entry: Entry, revision: number, cols?: number, rows?: number): Promise<boolean> {
     try {
       const client = this.deps.getClient()
       const old = entry.ptyID
@@ -330,18 +319,26 @@ export class TerminalManager {
       const info = created.data
       if (created.error || !info)
         throw new Error(created.error ? String(created.error) : "PTY create returned no session")
-      if (cols !== undefined && rows !== undefined) {
-        await client.pty.update({
-          ptyID: info.id,
-          directory: entry.cwd,
-          size: { cols, rows },
-        })
+      entry.ptys.add(info.id)
+      try {
+        if (entry.revision !== revision || this.entries.get(entry.terminalId) !== entry) return false
+        if (cols !== undefined && rows !== undefined) {
+          const { error } = await client.pty.update({
+            ptyID: info.id,
+            directory: entry.cwd,
+            size: { cols, rows },
+          })
+          if (error) throw new Error(`Failed to resize replacement PTY: ${String(error)}`)
+        }
+        if (entry.revision !== revision || this.entries.get(entry.terminalId) !== entry) return false
+        entry.ptyID = info.id
+        await this.remove(client, entry, old)
+        if (entry.revision !== revision || this.entries.get(entry.terminalId) !== entry) return false
+        this.deps.log(`Terminal restarted (${entry.terminalId} pty=${entry.ptyID})`)
+        return true
+      } finally {
+        if (entry.ptyID !== info.id) await this.remove(client, entry, info.id)
       }
-      entry.ptyID = info.id
-      await client.pty.remove({ directory: entry.cwd, ptyID: old }).catch((error: unknown) => {
-        this.deps.log(`Failed to remove exited PTY (${old}): ${error instanceof Error ? error.message : String(error)}`)
-      })
-      this.deps.log(`Terminal restarted (${entry.terminalId} pty=${entry.ptyID})`)
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error)
       this.deps.log(`Terminal restart failed (${entry.terminalId}): ${msg}`)
