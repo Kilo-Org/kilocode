@@ -275,6 +275,7 @@ Available experimental settings include:
 - **Paste summary** - summarize large clipboard pastes before including them
 - **Batch tool** - allow the agent to batch multiple tool calls in one step
 - **Claude Code Migration** - import supported global Claude Code configuration once (off by default)
+- **Per-Conversation Prompt History** - keep the ArrowUp/ArrowDown prompt recall history separate for each conversation instead of sharing one list across all chats, so recalling an earlier prompt only pulls from the current chat (off by default)
 - **OpenTelemetry** - enable Kilo telemetry and optional OTLP export when configured
 
 Advanced options not exposed in the UI can be configured via the `experimental` key in `kilo.jsonc`:

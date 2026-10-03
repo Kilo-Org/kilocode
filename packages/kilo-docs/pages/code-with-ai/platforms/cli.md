@@ -572,6 +572,21 @@ Kilo only saves the pattern you select. Approving a specific command does not ap
 
 Pasting a large block of text (five or more lines, or over 800 characters) into the prompt collapses it into a placeholder such as `[Pasted ~6 lines]` to keep the prompt readable. To view or edit the pasted text, paste the same text again — the matching placeholder expands in place.
 
+### Subagent View
+
+When an agent delegates work to a subagent with the `task` tool, a **view subagents** hint appears under that message. Press it (default `Ctrl+X` then `↓`) or click it to open the first child session.
+
+A subagent view opens the child's transcript with a footer for navigating and controlling the subagent:
+
+- **Parent** (`↑`) / **Prev** (`←`) / **Next** (`→`) — switch between the parent session and the subagent's siblings.
+- **Interrupt** (`Esc`) — stop the subagent and anything it started without aborting the parent. Press `Esc` twice: the first press arms the control and the second stops the child, so a single stray press does not cancel work. The parent finishes its current step and receives a cancelled task result, so it does not immediately start a replacement. This is the same abort as **Stop** on a VS Code task card.
+
+While the subagent is running, the prompt in its view steers that subagent directly. The prompt takes the subagent's color, shows `Steering <agent> · <model>` instead of the primary agent row, and runs your message as that subagent's own agent and model. The parent is notified of the steer on the shared agent board, so it does not keep planning as if the child still followed its previous instructions. Shell mode and slash commands are off in a subagent view: `!` and `/` are sent as plain text and the command list does not open. Steering is available only while the subagent runs.
+
+From a subagent view, leaving the TUI needs a second press of the exit key (`Ctrl+C` by default) — the footer shows `again to exit` after the first press. Arrow navigation and the exit confirmation act on the view only while the steer prompt is empty; while you are typing, the arrow, `Ctrl+C`, and `Ctrl+D` keys keep their normal text-editing behavior.
+
+Change these bindings under `keybinds` in `tui.jsonc`: `subagent_interrupt` (default `escape`), `session_parent` (default `up`), and `session_child_cycle` / `session_child_cycle_reverse` (default `right` / `left`). The exit guard follows the `app_exit` binding.
+
 ## Autonomous Mode (Non-Interactive)
 
 Autonomous mode allows Kilo Code to run in automated environments like CI/CD pipelines without requiring user interaction.

@@ -46,7 +46,7 @@ You get lean costs on routine work and stronger models when the work demands it 
 You can constrain `kilo-auto/efficient` to the exact models you trust by configuring an **Efficient model pool** on the **Auto routing** card:
 
 - **Personal** — your [profile page](https://app.kilo.ai/profile)
-- **Organization** — your organization's **Providers & Models** page. Owners and billing managers can edit; members see a read-only view.
+- **Organization** — the **Auto routing** tab of your organization's **Providers & Models** page. Owners, admins, and billing managers can edit; members see a read-only view.
 
 A pool holds 1–10 exact model and thinking-variant pairs. Variants stay distinct, so the same model with different thinking variants (for example `max` and `xhigh`) counts as separate entries. Leave the pool empty to inherit: an organization without a pool uses each member's personal pool, and a member without a personal pool uses the platform pool.
 
