@@ -2421,6 +2421,7 @@ ToolRegistry.register({
   name: "grep",
   render(props) {
     const i18n = useI18n()
+    const data = useData()
     const args: string[] = []
     if (props.input.pattern) args.push("pattern=" + props.input.pattern)
     if (props.input.include) args.push("include=" + props.input.include)
@@ -2433,7 +2434,7 @@ ToolRegistry.register({
           <ToolTriggerRow
             title={i18n.t("ui.tool.grep")}
             pending={pending()}
-            subtitle={getDirectory(props.input.path)}
+            subtitle={relativizeProjectPath(props.input.path, data.directory)}
             args={args}
           />
         }
