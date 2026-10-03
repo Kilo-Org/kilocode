@@ -38,7 +38,7 @@ export namespace MemoryTurn {
     sessions: Session.Interface
     summary: SessionSummary.Interface
     provider: Provider.Interface
-    config: Config.Interface
+    config: Pick<Config.Interface, "get">
   }) {
     const ctx = yield* InstanceState.context
     const root = MemoryPaths.root({ ctx })
@@ -62,7 +62,7 @@ export namespace MemoryLifecycle {
     sessions: Session.Interface
     summary: SessionSummary.Interface
     provider: Provider.Interface
-    config: Config.Interface
+    config: Pick<Config.Interface, "get">
     memory: MemoryService.Interface
   }) {
     const bridge = yield* EffectBridge.make()

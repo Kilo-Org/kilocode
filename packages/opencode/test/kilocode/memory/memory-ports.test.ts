@@ -14,7 +14,6 @@ import type { Snapshot } from "../../../src/snapshot"
 import { MemoryModel, MemorySession } from "../../../src/kilocode/memory/ports"
 import { MemoryTurn } from "../../../src/kilocode/memory/turn"
 import { installMemoryRuntime } from "../../../src/kilocode/memory/runtime"
-import type { Config } from "../../../src/config/config"
 import { InstanceRef } from "../../../src/effect/instance-ref"
 import { KiloMemory } from "@kilocode/kilo-memory/effect"
 import { MemoryService } from "@kilocode/kilo-memory/effect/service"
@@ -505,7 +504,7 @@ describe("memory ports", () => {
 
 describe("memory turn", () => {
   function config(model?: string | null) {
-    return { get: () => Effect.succeed({ memory_model: model }) } as unknown as Config.Interface
+    return { get: () => Effect.succeed({ memory_model: model }) }
   }
 
   async function close(model?: string | null) {
