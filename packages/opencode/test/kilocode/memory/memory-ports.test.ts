@@ -504,11 +504,11 @@ describe("memory ports", () => {
 })
 
 describe("memory turn", () => {
-  function config(model?: string) {
+  function config(model?: string | null) {
     return { get: () => Effect.succeed({ memory_model: model }) } as unknown as Config.Interface
   }
 
-  async function close(model?: string) {
+  async function close(model?: string | null) {
     await using tmp = await tmpdir({ git: true })
     const sessionID = SessionID.make("ses_memory_turn")
     const uid = MessageID.make("msg_turn_user")
@@ -564,5 +564,17 @@ describe("memory turn", () => {
 
   test("close uses the session model when memory_model is unset", async () => {
     expect(await close()).toEqual(["fake-memory-model"])
+  })
+
+  test("close uses the session model when memory_model is null", async () => {
+    expect(await close(null)).toEqual(["fake-memory-model"])
+  })
+
+  test("close falls back to the session model when memory_model is malformed", async () => {
+    expect(await close("memory-config-model")).toEqual(["fake-memory-model"])
+  })
+
+  test("close falls back to the session model when memory_model is unavailable", async () => {
+    expect(await close("test/missing-memory-model")).toEqual(["fake-memory-model"])
   })
 })
