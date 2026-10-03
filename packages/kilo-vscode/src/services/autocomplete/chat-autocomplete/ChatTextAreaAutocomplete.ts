@@ -36,7 +36,12 @@ export class ChatTextAreaAutocomplete {
   private dir = ""
   private watcher: vscode.FileSystemWatcher | undefined
 
-  constructor(connectionService: KiloConnectionService, telemetry?: AutocompleteTelemetry) {
+  /** `root` is the folder the chat works in; its ignore rules and visible files apply. */
+  constructor(
+    connectionService: KiloConnectionService,
+    telemetry?: AutocompleteTelemetry,
+    private readonly root: () => string | undefined = () => vscode.workspace.workspaceFolders?.[0]?.uri.fsPath,
+  ) {
     this.connection = connectionService
     this.telemetry = telemetry ?? new AutocompleteTelemetry("chat-textarea")
     this.watcher = vscode.workspace.createFileSystemWatcher("**/{.kilocodeignore,.gitignore}")
@@ -58,7 +63,7 @@ export class ChatTextAreaAutocomplete {
     const { text, requestId } = message
     if (!text || !requestId) return
 
-    const workspace = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? ""
+    const workspace = this.root() ?? ""
 
     // Re-initialize the ignore controller only when the workspace changes
     if (!this.ignore || this.dir !== workspace) {

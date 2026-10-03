@@ -56,6 +56,7 @@ const mockVscode = {
     onDidSaveTextDocument: () => ({ dispose: noop }),
     onDidCloseTextDocument: () => ({ dispose: noop }),
     onDidChangeConfiguration: () => ({ dispose: noop }),
+    onDidChangeWorkspaceFolders: () => ({ dispose: noop }),
     openTextDocument: async (input: { content?: string; language?: string }) => ({
       getText: () => input.content ?? "",
       languageId: input.language ?? "plaintext",

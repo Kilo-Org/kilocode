@@ -169,7 +169,7 @@ export class AgentManagerProvider implements Disposable {
     this.outputChannel = host.createOutput("Kilo Agent Manager")
     this.terminalManager = new SessionTerminalManager(
       (msg) => this.outputChannel.appendLine(`[SessionTerminal] ${msg}`),
-      createTerminalHost(),
+      createTerminalHost(() => this.getRoot()),
     )
     this.terminalRouter = new TerminalRouter({
       getClient: () => this.connectionService.getClient(),

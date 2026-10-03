@@ -2,6 +2,7 @@ import * as vscode from "vscode"
 import type { KiloProvider } from "../../KiloProvider"
 import type { AgentManagerProvider } from "../../agent-manager/AgentManagerProvider"
 import { getEditorContext } from "./editor-utils"
+import { selectedRoot } from "../../workspace-root"
 import { createPrompt } from "./support-prompt"
 
 export function registerCodeActions(
@@ -42,7 +43,7 @@ export function registerCodeActions(
 
   context.subscriptions.push(
     vscode.commands.registerCommand("kilo-code.new.explainCode", async () => {
-      const ctx = getEditorContext()
+      const ctx = getEditorContext(selectedRoot(context))
       if (!ctx) return
       const prompt = createPrompt("EXPLAIN", {
         filePath: ctx.filePath,
@@ -56,7 +57,7 @@ export function registerCodeActions(
     }),
 
     vscode.commands.registerCommand("kilo-code.new.fixCode", async () => {
-      const ctx = getEditorContext()
+      const ctx = getEditorContext(selectedRoot(context))
       if (!ctx) return
       const prompt = createPrompt("FIX", {
         filePath: ctx.filePath,
@@ -71,7 +72,7 @@ export function registerCodeActions(
     }),
 
     vscode.commands.registerCommand("kilo-code.new.improveCode", async () => {
-      const ctx = getEditorContext()
+      const ctx = getEditorContext(selectedRoot(context))
       if (!ctx) return
       const prompt = createPrompt("IMPROVE", {
         filePath: ctx.filePath,
@@ -85,6 +86,7 @@ export function registerCodeActions(
     }),
 
     vscode.commands.registerCommand("kilo-code.new.addToContext", async () => {
+      // The target chat may work in any folder, so multi-root windows get an absolute path.
       const ctx = getEditorContext()
       if (!ctx) return
       const view = lastFocusedChat?.() ?? target()

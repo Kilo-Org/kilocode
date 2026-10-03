@@ -5,6 +5,7 @@
 [data-slot="task-header-title"] {
   display: flex;
   align-items: center;
+  gap: 6px;
   min-width: 0;
 }
 

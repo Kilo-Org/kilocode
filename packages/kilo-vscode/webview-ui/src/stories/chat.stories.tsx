@@ -1619,6 +1619,9 @@ const mockServer = {
   vscodeLanguage: () => "en",
   languageOverride: () => undefined,
   workspaceDirectory: () => "/project",
+  workspaceFolders: () => [],
+  selectedFolder: () => "",
+  selectFolder: () => {},
   gitInstalled: () => true,
 }
 

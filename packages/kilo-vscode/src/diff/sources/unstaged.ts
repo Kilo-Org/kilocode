@@ -1,7 +1,8 @@
 import * as fs from "fs/promises"
 import * as vscode from "vscode"
 import { GitOps } from "../../agent-manager/GitOps"
-import { appendOutput, getWorkspaceRoot } from "../../review-utils"
+import { appendOutput } from "../../review-utils"
+import { selectedRoot } from "../../workspace-root"
 import { binaryFile } from "../shared/binary"
 import { imageMime, loadImage } from "../shared/image"
 import { resolveInside } from "../shared/path"
@@ -68,7 +69,7 @@ export function createUnstagedDiffSource(opts: UnstagedDiffSourceOptions = {}): 
     const dir = opts.dir?.()
     if (dir) return dir
     if (opts.strictDir) return undefined
-    return getWorkspaceRoot()
+    return selectedRoot()
   }
 
   const listTracked = async (dir: string): Promise<FileEntry[]> => {

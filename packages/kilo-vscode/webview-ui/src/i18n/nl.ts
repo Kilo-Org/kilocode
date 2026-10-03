@@ -210,6 +210,7 @@ export const dict = {
   "prompt.action.enhance": "Prompt verbeteren",
   "prompt.paste.expand": "Klik om geplakte tekst uit te vouwen",
   "prompt.action.indexing": "Indexeringsinstellingen",
+  "prompt.folder.label": "Werkruimtemap voor de volgende sessie",
   "prompt.action.autoApprove.enable": "Automatisch goedkeuren inschakelen",
   "prompt.action.autoApprove.disable": "Automatisch goedkeuren uitschakelen",
   "prompt.action.autoApprove.enabled":
@@ -495,6 +496,8 @@ export const dict = {
   "provider.custom.error.required": "Vereist",
   "provider.custom.error.duplicate": "Duplicaat",
   "settings.openLocalConfig": "Lokale config",
+  "settings.folder.label": "Werkruimtemap waarop deze instellingen van toepassing zijn",
+  "settings.folder.placeholder": "Kies een map",
   "settings.openGlobalConfig": "Globale config",
   "settings.config.scope.local": "Lokaal",
   "settings.config.scope.global": "Globaal",

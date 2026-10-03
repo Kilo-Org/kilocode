@@ -42,6 +42,7 @@ import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { Switch } from "@kilocode/kilo-ui/switch"
 import { TextField } from "@kilocode/kilo-ui/text-field"
 import SettingsRow from "./SettingsRow"
+import { FolderSelect } from "../shared/FolderSelect"
 import { ProjectBranchDialog } from "../../../agent-manager/ProjectBranchDialog"
 
 export interface SettingsProps {
@@ -331,7 +332,20 @@ const Settings: Component<SettingsProps> = (props) => {
         <h2 style={{ "font-size": "var(--kilo-font-size-16)", "font-weight": "600", margin: 0, flex: 1 }}>
           {language.t("sidebar.settings")}
         </h2>
-        <Button variant="secondary" size="small" icon="edit" onClick={() => open("local")}>
+        <Show when={server.workspaceFolders().length > 1}>
+          <FolderSelect
+            label={language.t("settings.folder.label")}
+            placeholder={language.t("settings.folder.placeholder")}
+            variant="secondary"
+          />
+        </Show>
+        <Button
+          variant="secondary"
+          size="small"
+          icon="edit"
+          disabled={server.workspaceFolders().length > 1 && !server.selectedFolder()}
+          onClick={() => open("local")}
+        >
           {language.t("settings.openLocalConfig")}
         </Button>
         <Button variant="secondary" size="small" icon="edit" onClick={() => open("global")}>

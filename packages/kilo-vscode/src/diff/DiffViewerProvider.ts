@@ -3,7 +3,8 @@ import { randomUUID } from "node:crypto"
 import { isHttpsUrl, type PRReviewCommentData } from "../shared/review-comments"
 import { thread } from "../shared/pr-review"
 import type { KiloConnectionService } from "../services/cli-backend"
-import { appendOutput, getWorkspaceRoot, openRelativeFile } from "../review-utils"
+import { appendOutput, openRelativeFile } from "../review-utils"
+import { selectedRoot } from "../workspace-root"
 import { getDiffMarkdownRender, getUserDiffStyle, setDiffMarkdownRender, setUserDiffStyle } from "../review-settings"
 import { buildWebviewHtml, getWebviewFontSize } from "../utils"
 import { watchFontSizeConfig } from "../kilo-provider/font-size"
@@ -81,7 +82,7 @@ function context(
   source: string | undefined,
 ): PanelContext {
   const ctx: PanelContext = {
-    workspaceRoot: getWorkspaceRoot(),
+    workspaceRoot: selectedRoot(),
     sessionId,
     dir,
     comment: arg?.comment,
@@ -325,7 +326,7 @@ export class DiffViewerProvider implements vscode.Disposable {
       result(false, "PR comment not found. Refresh and try again.")
       return
     }
-    const dir = this.ctx?.dir ?? this.ctx?.workspaceRoot ?? getWorkspaceRoot()
+    const dir = this.ctx?.dir ?? this.ctx?.workspaceRoot ?? selectedRoot()
     if (!dir) {
       result(false, "The PR comment directory is unavailable.")
       return
@@ -425,7 +426,7 @@ export class DiffViewerProvider implements vscode.Disposable {
       vscodeLanguage: vscode.env.language,
       languageOverride: vscode.workspace.getConfiguration("kilo-code.new").get<string>("language"),
       fontSize: getWebviewFontSize(),
-      workspaceDirectory: this.ctx?.dir ?? getWorkspaceRoot(),
+      workspaceDirectory: this.ctx?.dir ?? selectedRoot(),
     })
     void this.panel.webview.postMessage({ type: "diffViewer.markdownRender", render: getDiffMarkdownRender() })
     const style = getUserDiffStyle()

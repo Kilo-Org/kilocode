@@ -48,9 +48,11 @@
   max-width: 180px;
 }
 
-/* Owning workspace folder badge, shown only in multi-root workspaces so
-   identical relative paths in two folders stay distinguishable. */
-.file-mention-root {
+/* Owning workspace folder badge (file mentions, session header, history),
+   shown only in multi-root workspaces so
+   identical names in two folders stay distinguishable. */
+.file-mention-root,
+.workspace-folder-badge {
   flex-shrink: 0;
   padding: 0 4px;
   border-radius: 3px;
@@ -239,4 +241,13 @@
   letter-spacing: 0.5px;
   color: var(--vscode-descriptionForeground);
   opacity: 0.7;
+}
+
+/* Workspace root menu (prompt bar, multi-root workspaces only) */
+.prompt-folder-menu[data-component="dropdown-menu-content"] {
+  box-sizing: border-box;
+  min-width: 160px;
+  max-width: calc(100vw - 24px);
+  padding: 6px;
+  border-radius: var(--radius-xl);
 }

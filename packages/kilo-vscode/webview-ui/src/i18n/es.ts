@@ -220,6 +220,7 @@ export const dict = {
   "prompt.action.enhanceDescription":
     "El botón 'Mejorar el mensaje' ayuda a mejorar tu petición proporcionando contexto adicional, aclaraciones o reformulaciones. Intenta escribir una petición aquí y haz clic en el botón nuevamente para ver cómo funciona.",
   "prompt.action.indexing": "Configuración de indexación",
+  "prompt.folder.label": "Carpeta del espacio de trabajo para la próxima sesión",
   "prompt.action.sandbox.enable": "Activar sandbox",
   "prompt.action.sandbox.disable": "Desactivar sandbox",
   "prompt.action.sandbox.enabled":
@@ -546,6 +547,8 @@ export const dict = {
   "provider.custom.error.required": "Obligatorio",
   "provider.custom.error.duplicate": "Duplicado",
   "settings.openLocalConfig": "Config local",
+  "settings.folder.label": "Carpeta del espacio de trabajo a la que se aplica esta configuración",
+  "settings.folder.placeholder": "Elige una carpeta",
   "settings.openGlobalConfig": "Config global",
   "settings.config.scope.local": "Local",
   "settings.config.scope.global": "Global",

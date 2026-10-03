@@ -111,6 +111,12 @@ export interface ClearSessionRequest {
   type: "clearSession"
 }
 
+/** Pick the workspace folder new sessions start in; no directory goes back to following the active editor. */
+export interface SelectWorkspaceFolderRequest {
+  type: "selectWorkspaceFolder"
+  directory?: string
+}
+
 export interface LoadMessagesRequest {
   type: "loadMessages"
   sessionID: string
@@ -1675,6 +1681,7 @@ export type WebviewMessage =
   | PermissionResponseRequest
   | CreateSessionRequest
   | ClearSessionRequest
+  | SelectWorkspaceFolderRequest
   | LoadMessagesRequest
   | LoadSessionsRequest
   | RequestSessionModelUsageMessage

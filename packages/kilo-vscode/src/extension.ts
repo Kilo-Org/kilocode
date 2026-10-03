@@ -1,6 +1,7 @@
 import * as vscode from "vscode"
 import { basename } from "node:path"
 import { KiloProvider } from "./KiloProvider"
+import { bindRootState, selectedRoot } from "./workspace-root"
 import { AgentManagerProvider } from "./agent-manager/AgentManagerProvider"
 import { VscodeHost } from "./agent-manager/vscode-host"
 import { DiffViewerProvider } from "./diff/DiffViewerProvider"
@@ -60,6 +61,7 @@ const panelTitleHandler = (panel: vscode.WebviewPanel) => (title: string) => {
 export async function activate(context: vscode.ExtensionContext) {
   console.log("Kilo Code extension is now active")
   shuttingDown = false
+  bindRootState(context)
 
   // Drives the "!kilo-code.new.isCursor" guards on the native view/title and
   // editor/title menu contributions — see isCursorHost() for why.
@@ -306,7 +308,7 @@ export async function activate(context: vscode.ExtensionContext) {
   )
 
   // Register toggle auto-approve shortcut (Ctrl+Alt+A / Cmd+Alt+A)
-  const defaultDir = () => vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? process.cwd()
+  const defaultDir = () => selectedRoot(context) ?? process.cwd()
   const autoApprove = registerToggleAutoApprove(
     context,
     connectionService,

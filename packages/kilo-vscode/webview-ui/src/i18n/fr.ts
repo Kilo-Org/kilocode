@@ -220,6 +220,7 @@ export const dict = {
   "prompt.action.enhanceDescription":
     "Le bouton 'Améliorer la requête' aide à améliorer votre demande en fournissant un contexte supplémentaire, des clarifications ou des reformulations. Essayez de taper une demande ici et cliquez à nouveau sur le bouton pour voir comment cela fonctionne.",
   "prompt.action.indexing": "Paramètres d'indexation",
+  "prompt.folder.label": "Dossier de l'espace de travail pour la prochaine session",
   "prompt.action.sandbox.enable": "Activer le sandbox",
   "prompt.action.sandbox.disable": "Désactiver le sandbox",
   "prompt.action.sandbox.enabled":
@@ -548,6 +549,8 @@ export const dict = {
   "provider.custom.error.required": "Requis",
   "provider.custom.error.duplicate": "Doublon",
   "settings.openLocalConfig": "Config locale",
+  "settings.folder.label": "Dossier de l'espace de travail auquel ces paramètres s'appliquent",
+  "settings.folder.placeholder": "Choisir un dossier",
   "settings.openGlobalConfig": "Config globale",
   "settings.config.scope.local": "Local",
   "settings.config.scope.global": "Global",

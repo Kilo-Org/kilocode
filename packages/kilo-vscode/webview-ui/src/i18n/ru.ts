@@ -214,6 +214,7 @@ export const dict = {
     "Автоодобрение отключено. Нажмите, чтобы автоматически одобрять запросы разрешений.",
   "prompt.action.autoApprove.sandboxExcluded": "Запросы на выход из песочницы всегда исключены.",
   "prompt.action.indexing": "Настройки индексации",
+  "prompt.folder.label": "Папка рабочей области для следующего сеанса",
   "prompt.action.enhanceDescription":
     "Кнопка 'Улучшить запрос' помогает сделать ваш запрос лучше, предоставляя дополнительный контекст, уточнения или переформулировку. Попробуйте ввести запрос и снова нажать кнопку, чтобы увидеть, как это работает.",
   "prompt.action.sandbox.enable": "Включить песочницу",
@@ -539,6 +540,8 @@ export const dict = {
   "provider.custom.error.required": "Обязательно",
   "provider.custom.error.duplicate": "Дубликат",
   "settings.openLocalConfig": "Локальный конфиг",
+  "settings.folder.label": "Папка рабочей области, к которой применяются эти настройки",
+  "settings.folder.placeholder": "Выберите папку",
   "settings.openGlobalConfig": "Глобальный конфиг",
   "settings.config.scope.local": "Локальный",
   "settings.config.scope.global": "Глобальный",

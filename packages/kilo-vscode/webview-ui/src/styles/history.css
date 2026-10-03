@@ -17,6 +17,10 @@
   text-align: left;
 }
 
+.session-list .workspace-folder-badge {
+  margin-left: 8px;
+}
+
 .session-list [data-slot="list-item-description"],
 .cloud-session-list [data-slot="list-item-description"] {
   flex-shrink: 0;
