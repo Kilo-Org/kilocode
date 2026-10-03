@@ -1259,13 +1259,14 @@ export const layer = Layer.effect(
                   metadata: {},
                 })
 
-                // kilocode_change start - only raster images go through the base64 cap + Photon normalize; markup "images" (SVG) are plain source
+                // kilocode_change start - every image/* attachment keeps the base64 cap it had before, so a
+                // huge .svg or .ico cannot be read unbounded into memory; only Photon normalization below is
+                // restricted to rasters, since that is the part that cannot decode markup/icon formats.
                 return yield* KiloReadObject.use(file, (bound) =>
                   Effect.gen(function* () {
-                    const limit =
-                      kind === "raster"
-                        ? ((yield* config.get()).attachment?.image?.max_base64_bytes ?? Image.MAX_BASE64_BYTES)
-                        : undefined
+                    const limit = mime.startsWith("image/")
+                      ? ((yield* config.get()).attachment?.image?.max_base64_bytes ?? Image.MAX_BASE64_BYTES)
+                      : undefined
                     const raw = limit === undefined ? undefined : Math.floor(limit / 4) * 3 + 1
                     const bytes = yield* Effect.tryPromise({
                       try: (signal) => bound.read(raw, AbortSignal.any([context.abort, signal])),

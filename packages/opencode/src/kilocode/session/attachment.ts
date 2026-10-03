@@ -31,15 +31,22 @@ export namespace KiloAttachment {
    * promises acceptance, instead of surfacing as an async `session.error`
    * after the client has already cleared its draft.
    *
-   * Only validates "raster"-classified `data:` parts; everything else (text,
-   * markup/SVG, `file://` attachments, non-`data:` URLs) is left to the normal
-   * prompt pipeline, which already has the context (permissions, config
-   * limits) needed to resolve those. Returns a human-readable rejection
-   * reason, or `undefined` when the attachment looks fine.
+   * Only validates "raster"-classified `data:` parts, which is everything that
+   * can be checked without touching the filesystem. A `file://` attachment is
+   * deliberately left to the prompt pipeline: reading it here would bypass the
+   * `permission: "read"` prompt and the `KiloReadObject` binding that
+   * `prompt.ts` performs, so it cannot be pre-validated at the HTTP boundary.
+   *
+   * Returns a human-readable rejection reason, or `undefined` when the
+   * attachment looks fine.
    */
   export function precheck(part: { mime: string; url: string }): string | undefined {
     if (classify(part.mime) !== "raster") return undefined
-    if (!part.url.startsWith("data:") || !part.url.includes(";base64,")) return undefined
+    if (!part.url.startsWith("data:")) return undefined
+    // `Image.normalize` only accepts base64 data URLs and fails any other form with
+    // InvalidDataUrlError, which the prompt pipeline turns into a defect. Reject it here
+    // instead so the caller gets a 400 rather than a lost message.
+    if (!part.url.includes(";base64,")) return `${part.mime} attachment must be a base64 data URL`
     const base64 = part.url.slice(part.url.indexOf(";base64,") + ";base64,".length)
     const data = Buffer.from(base64, "base64")
     const canonical = data.toString("base64").replace(/=+$/, "") === base64.replace(/=+$/, "")

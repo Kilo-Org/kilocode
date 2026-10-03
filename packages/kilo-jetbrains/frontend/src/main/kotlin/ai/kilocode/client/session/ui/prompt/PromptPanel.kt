@@ -605,6 +605,14 @@ class PromptPanel(
         items.forEach(::addAttachment)
     }
 
+    // Drops the retained submission once the send is confirmed. A pasted image is held as a full
+    // base64 data URL, so keeping it past the point where it could still be restored would pin
+    // megabytes per send for the lifetime of the panel.
+    @RequiresEdt
+    fun clearLastSubmission() {
+        lastSubmission = null
+    }
+
     @RequiresEdt
     fun clear() {
         editor.text = ""

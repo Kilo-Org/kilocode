@@ -870,6 +870,39 @@ describe("HttpApi SDK", () => {
       }),
     ),
   )
+  serverPathParity("applies the image base64 cap to oversized SVG files too", (serverPath) =>
+    withProject(serverPath, { config: { attachment: { image: { max_base64_bytes: 4 } } } }, ({ sdk, directory }) =>
+      Effect.gen(function* () {
+        // Routing SVG away from the raster decoder must not also drop the size cap: without it,
+        // `bound.read` would pull an arbitrarily large .svg fully into memory and base64 it.
+        const filepath = path.join(directory, "oversized.svg")
+        yield* call(() => Bun.write(filepath, `<svg xmlns="http://www.w3.org/2000/svg">${"x".repeat(2048)}</svg>`))
+        const session = yield* capture(() => sdk.session.create({ title: "oversized svg" }))
+        const sessionID = String(record(session.data).id)
+        const prompt = yield* capture(() =>
+          sdk.session.prompt({
+            sessionID,
+            agent: "build",
+            noReply: true,
+            parts: [
+              {
+                type: "file",
+                mime: "image/svg+xml",
+                filename: "oversized.svg",
+                url: `file://${filepath}`,
+              },
+            ],
+          }),
+        )
+        const messages = yield* capture(() => sdk.session.messages({ sessionID }))
+
+        expect(prompt.status).toBe(400)
+        expect(JSON.stringify(messages.data)).not.toContain("oversized.svg")
+
+        return { promptStatus: prompt.status, persisted: JSON.stringify(messages.data).includes("oversized.svg") }
+      }),
+    ),
+  )
   serverPathParity("rejects malformed user image data synchronously through prompt_async", (serverPath) =>
     withStandardProject(serverPath, ({ sdk }) =>
       Effect.gen(function* () {

@@ -167,10 +167,12 @@ class SessionUi(
     private var revertPrompt: String? = null
     private var pendingRollback: String? = null
     private var pendingRedo: String? = null
-    // See sendPrompt()/onStateChanged(): true from the moment a prompt is dispatched until
-    // either a message lands in the model (successful send) or the state errors out (failed
-    // send, draft gets restored).
-    private var awaitingFirstMessage = false
+    // See sendPrompt()/onStateChanged(): the number of user messages present when a prompt was
+    // dispatched, or null when nothing is in flight. Comparing against a baseline rather than
+    // using a plain boolean is what makes the restore reliable while a turn is streaming: the
+    // prompt box stays enabled during a busy turn, so a queued send must not treat the *previous*
+    // turn's message as confirmation of its own.
+    private var pendingSend: Int? = null
     private val flushMs =
         Registry.intValue("kilo.session.flushMs", EVENT_FLUSH_MS.toInt())
             .takeIf { it > 0 }
@@ -821,7 +823,7 @@ class SessionUi(
                 is SessionModelEvent.RevertChanged -> onRevertChanged(event.revert)
 
                 is SessionModelEvent.MessageAdded -> {
-                    awaitingFirstMessage = false
+                    confirmPendingSend()
                     syncDock()
                     refreshBoardIfEmpty()
                 }
@@ -1013,13 +1015,30 @@ class SessionUi(
             val model = controller.model.model ?: "none"
             "${ChatLogSummary.prompt(PromptDto(parts = parts, editorContext = editor.context))} agent=$agent model=$model ready=${controller.ready}"
         }
-        // No message is in the model yet for this send; onStateChanged uses this to tell a prompt
-        // that failed before the server ever created a message (restore the draft) apart from a
-        // turn that failed after a message was already persisted (nothing to restore -- it's in
-        // the transcript already).
-        awaitingFirstMessage = true
+        // Baseline the user-message count for this send. onStateChanged uses it to tell a prompt
+        // that failed before the server ever created its message (restore the draft) apart from a
+        // turn that failed after the message was already persisted (nothing to restore -- it's in
+        // the transcript already). A queued send baselines above the in-flight turn's message, so
+        // that turn cannot be mistaken for confirmation of this one.
+        pendingSend = userMessages()
         controller.prompt(text, allFiles, editor.context, select)
         scroll.followBottom(follow)
+    }
+
+    @RequiresEdt
+    private fun userMessages() = controller.model.messages().count { it.info.role == "user" }
+
+    /**
+     * Marks the in-flight send as accepted once its own user message is persisted, which releases
+     * the retained draft. Scoped by the dispatch-time baseline so a message belonging to an earlier,
+     * still-streaming turn cannot confirm a queued send that has not landed yet.
+     */
+    @RequiresEdt
+    private fun confirmPendingSend() {
+        val baseline = pendingSend ?: return
+        if (userMessages() <= baseline) return
+        pendingSend = null
+        prompt.clearLastSubmission()
     }
 
     @RequiresEdt
@@ -1413,16 +1432,15 @@ class SessionUi(
             pendingRollback = null
             pendingRedo = null
         }
-        // kilocode_change start - restore the typed prompt when the send never produced a persisted
-        // message (rejected synchronously, or prompt_async's 204-then-session.error case). A turn that
-        // fails after its user message was already persisted has nothing to restore -- it's in the
-        // transcript -- so this only fires while still awaiting that first message. A user-initiated
-        // stop (TurnEnded) clears the flag without restoring; that was a deliberate cancel, not a failure.
-        if (awaitingFirstMessage && (state is SessionState.Error || state is SessionState.TurnEnded)) {
-            awaitingFirstMessage = false
-            if (state is SessionState.Error) prompt.restoreLastSubmission()
+        // Restore the typed prompt when the send never produced a persisted message (rejected
+        // synchronously, or prompt_async's 204-then-session.error case). A turn that fails after its
+        // user message was already persisted has nothing to restore -- it's in the transcript -- so
+        // this only fires while a send is still pending. A user-initiated stop (TurnEnded) drops the
+        // pending send without restoring; that was a deliberate cancel, not a failure.
+        if (pendingSend != null && (state is SessionState.Error || state is SessionState.TurnEnded)) {
+            pendingSend = null
+            if (state is SessionState.Error) prompt.restoreLastSubmission() else prompt.clearLastSubmission()
         }
-        // kilocode_change end
         prompt.setBusy(busy)
         dock?.setBusy(busy)
         load.setState(state)

@@ -51,6 +51,13 @@ describe("KiloAttachment.precheck", () => {
     expect(KiloAttachment.precheck({ mime: "image/svg+xml", url: svg })).toBeUndefined()
   })
 
+  test("rejects a raster data URL that is not base64 encoded", () => {
+    // Image.normalize only accepts base64 data URLs (image.ts) and fails anything else with
+    // InvalidDataUrlError, which the prompt pipeline turns into a defect.
+    const reason = KiloAttachment.precheck({ mime: "image/png", url: "data:image/png,%89PNG%0D%0A" })
+    expect(reason).toBeDefined()
+  })
+
   test("ignores file:// urls (resolved later, with permission context)", () => {
     expect(KiloAttachment.precheck({ mime: "image/png", url: "file:///tmp/pixel.png" })).toBeUndefined()
   })
