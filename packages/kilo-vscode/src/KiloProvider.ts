@@ -56,7 +56,7 @@ import { removeMcp } from "./kilo-provider/remove-config-item"
 import { MarketplaceService } from "./services/marketplace"
 import type { RemoteStatusService } from "./services/RemoteStatusService"
 import { resolveProjectDirectory } from "./project-directory"
-import { folderFor } from "./workspace-folders"
+import { folderFor, within } from "./workspace-folders"
 import { selectRoot, selectedRoot, watchRoot, workspaceRoots } from "./workspace-root"
 import { seedSessionStatuses, seedSessionWakeups, clientSessionStatus } from "./session-status"
 import { normalizeEnhancePromptErrorMessage } from "./enhance-prompt-error"
@@ -5723,21 +5723,57 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private async getOpenTabPaths(dir: string): Promise<Set<string>> {
     const controller = await this.getIgnoreController(dir)
     const result = new Set<string>()
-    for (const group of vscode.window.tabGroups.all) {
-      for (const tab of group.tabs) {
+    for (const uri of this.openTabUris()) {
+      const rel = path.relative(dir, uri.fsPath)
+      if (!rel.startsWith("..") && !path.isAbsolute(rel) && controller.validateAccess(uri.fsPath)) {
+        result.add(rel.replaceAll("\\", "/"))
+      }
+    }
+    return result
+  }
+
+  /** Files open as text or notebook tabs; diffs and custom editors are excluded. */
+  private openTabUris(): vscode.Uri[] {
+    return vscode.window.tabGroups.all.flatMap((group) =>
+      group.tabs.flatMap((tab) => {
         const uri =
           tab.input instanceof vscode.TabInputText || tab.input instanceof vscode.TabInputNotebook
             ? tab.input.uri
             : undefined
-        if (uri?.scheme !== "file") continue
+        return uri?.scheme === "file" ? [uri] : []
+      }),
+    )
+  }
 
-        const rel = path.relative(dir, uri.fsPath)
-        if (!rel.startsWith("..") && !path.isAbsolute(rel) && controller.validateAccess(uri.fsPath)) {
-          result.add(rel.replaceAll("\\", "/"))
-        }
-      }
-    }
-    return result
+  /**
+   * Open tabs in the session folder (relative) and in the other workspace
+   * folders of a multi-root window (absolute), each through its own folder's
+   * .kilocodeignore.
+   */
+  private async getContextTabs(dir: string): Promise<string[]> {
+    const inside = [...(await this.getOpenTabPaths(dir))]
+    const outside = await Promise.all(
+      this.openTabUris()
+        .filter((uri) => !within(dir, uri.fsPath))
+        .map((uri) => this.otherFolderPath(uri.fsPath, dir)),
+    )
+    return [...new Set([...inside, ...outside.filter((file): file is string => file !== undefined)])]
+  }
+
+  /**
+   * Absolute path of a file in another workspace folder of a multi-root
+   * window, when that folder's .kilocodeignore permits it. Files outside every
+   * workspace folder stay out of the editor context, and so does the folder
+   * holding the session itself: a worktree session must not be pointed at the
+   * main checkout's copies of its files.
+   */
+  private async otherFolderPath(fsPath: string, dir: string): Promise<string | undefined> {
+    const roots = this.folderPaths()
+    if (roots.length < 2) return undefined
+    const owner = folderFor(fsPath, roots)
+    if (!owner || within(owner, dir)) return undefined
+    const controller = await this.getIgnoreController(owner)
+    return controller.validateAccess(fsPath) ? fsPath.replaceAll("\\", "/") : undefined
   }
 
   /**
@@ -5820,31 +5856,34 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       return relative
     }
 
+    // Files in the session folder are relative; files in another workspace
+    // folder of a multi-root window are absolute (see otherFolderPath).
+    const toContext = (fsPath: string): Promise<string | undefined> => {
+      const rel = toRelative(fsPath)
+      if (rel === undefined) return this.otherFolderPath(fsPath, workspaceDir)
+      return Promise.resolve(controller.validateAccess(fsPath) ? rel : undefined)
+    }
+
     // Visible files (capped to avoid bloating context, filtered through .kilocodeignore)
-    const visibleFiles = [
-      ...new Set(
-        [
-          ...vscode.window.visibleTextEditors.map((editor) => notebookUri(editor.document.uri)),
-          ...vscode.window.visibleNotebookEditors.map((editor) => editor.notebook.uri),
-        ]
-          .filter((uri): uri is vscode.Uri => uri?.scheme === "file")
-          .map((uri) => toRelative(uri.fsPath))
-          .filter(
-            (file): file is string => file !== undefined && controller.validateAccess(path.resolve(workspaceDir, file)),
-          ),
-      ),
-    ].slice(0, 200)
+    const visible = await Promise.all(
+      [
+        ...vscode.window.visibleTextEditors.map((editor) => notebookUri(editor.document.uri)),
+        ...vscode.window.visibleNotebookEditors.map((editor) => editor.notebook.uri),
+      ]
+        .filter((uri): uri is vscode.Uri => uri?.scheme === "file")
+        .map((uri) => toContext(uri.fsPath)),
+    )
+    const visibleFiles = [...new Set(visible.filter((file): file is string => file !== undefined))].slice(0, 200)
 
     // Open tabs — text and notebook files only; exclude diffs and custom editors
-    const openTabs = [...(await this.getOpenTabPaths(workspaceDir))].slice(0, 20)
+    const openTabs = (await this.getContextTabs(workspaceDir)).slice(0, 20)
 
     // Active file (also filtered through .kilocodeignore)
     const activeEditor = vscode.window.activeTextEditor
     const activeUri = activeEditor
       ? notebookUri(activeEditor.document.uri)
       : vscode.window.activeNotebookEditor?.notebook.uri
-    const activeRel = activeUri ? toRelative(activeUri.fsPath) : undefined
-    const activeFile = activeRel && activeUri && controller.validateAccess(activeUri.fsPath) ? activeRel : undefined
+    const activeFile = activeUri?.scheme === "file" ? await toContext(activeUri.fsPath) : undefined
 
     // Shell
     const shell = vscode.env.shell || undefined
