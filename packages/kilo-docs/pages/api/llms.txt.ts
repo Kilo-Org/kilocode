@@ -125,6 +125,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       { title: "Contributing", nav: Nav.ContributingNav },
       { title: "AI Providers", nav: Nav.AiProvidersNav },
       { title: "Gateway", nav: Nav.GatewayNav },
+      { title: "Desktop", nav: Nav.DesktopNav },
       { title: "Tools", nav: Nav.ToolsNav },
     ]
 
