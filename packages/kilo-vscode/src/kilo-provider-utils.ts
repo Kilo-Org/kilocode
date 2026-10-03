@@ -201,11 +201,15 @@ export async function runWithMessageConfirmation<T>(
 }
 
 export function sessionToWebview(
-  session: Pick<Session, "id" | "parentID" | "title" | "time" | "summary" | "revert" | "metadata">,
+  session: Pick<Session, "id" | "parentID" | "title" | "time" | "summary" | "revert" | "metadata"> & {
+    directory?: string
+  },
 ) {
   const goal = session.metadata?.["kilo.goal"]
   return {
     id: session.id,
+    // Lets multi-root windows show which workspace folder a session belongs to.
+    ...(session.directory ? { directory: session.directory } : {}),
     parentID: session.parentID ?? null,
     title: session.title,
     createdAt: new Date(session.time.created).toISOString(),

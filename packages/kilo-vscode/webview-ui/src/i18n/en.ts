@@ -455,6 +455,8 @@ export const dict = {
   "provider.custom.error.required": "Required",
   "provider.custom.error.duplicate": "Duplicate",
   "settings.openLocalConfig": "Local Config",
+  "settings.folder.label": "Workspace folder these settings apply to",
+  "settings.folder.placeholder": "Choose a folder",
   "settings.openGlobalConfig": "Global Config",
   "settings.config.scope.local": "Local",
   "settings.config.scope.global": "Global",

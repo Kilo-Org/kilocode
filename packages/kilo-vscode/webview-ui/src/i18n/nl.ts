@@ -496,6 +496,8 @@ export const dict = {
   "provider.custom.error.required": "Vereist",
   "provider.custom.error.duplicate": "Duplicaat",
   "settings.openLocalConfig": "Lokale config",
+  "settings.folder.label": "Werkruimtemap waarop deze instellingen van toepassing zijn",
+  "settings.folder.placeholder": "Kies een map",
   "settings.openGlobalConfig": "Globale config",
   "settings.config.scope.local": "Lokaal",
   "settings.config.scope.global": "Globaal",

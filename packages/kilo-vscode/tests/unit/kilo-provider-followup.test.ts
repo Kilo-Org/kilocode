@@ -380,6 +380,7 @@ describe("KiloProvider follow-up sessions", () => {
       type: "sessionCreated",
       session: {
         id: sharedID,
+        directory: "/repo/project-b",
         title: "Session",
         createdAt: new Date(1).toISOString(),
         updatedAt: new Date(1).toISOString(),
@@ -549,6 +550,7 @@ describe("KiloProvider follow-up sessions", () => {
         type: "sessionCreated",
         session: {
           id: "ses-followup",
+          directory: "/repo",
           title: "Session",
           createdAt: new Date(1).toISOString(),
           updatedAt: new Date(1).toISOString(),

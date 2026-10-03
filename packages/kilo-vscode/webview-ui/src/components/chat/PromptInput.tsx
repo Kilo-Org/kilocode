@@ -40,7 +40,7 @@ import { useVSCode } from "../../context/vscode"
 import { useConfig } from "../../context/config"
 import { useProvider } from "../../context/provider"
 import { ModelSelector, ModelSelectorBase } from "../shared/ModelSelector"
-import { FolderSelect } from "../shared/FolderSelect"
+import { FolderMenu } from "../shared/FolderSelect"
 import { ModeSwitcher } from "../shared/ModeSwitcher"
 import { SandboxButtonBase, SandboxTooltipContent } from "../shared/SandboxButton"
 import { SpeechToTextButton } from "../speech-to-text/SpeechToTextButton"
@@ -2206,11 +2206,11 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
           <ModeSwitcher sessionID={sid} blocked={props.blocked?.() ?? false} />
           <ModelSelector sessionID={sid} blocked={props.blocked?.() ?? false} />
           <ThinkingSelector sessionID={sid} blocked={props.blocked?.() ?? false} />
-          <Show when={server.workspaceFolders().length > 1 && !session.currentSessionID()}>
-            <FolderSelect />
-          </Show>
         </div>
         <div class="prompt-input-hint-actions">
+          <Show when={server.workspaceFolders().length > 1 && !session.currentSessionID()}>
+            <FolderMenu label={language.t("prompt.folder.label")} />
+          </Show>
           <Show when={showIndexing()}>
             <Tooltip value={indexing.status().message || indexing.label()} placement="top" openDelay={0}>
               <IconButton

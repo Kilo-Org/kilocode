@@ -460,6 +460,8 @@ export const dict = {
   "provider.custom.error.required": "الزامی",
   "provider.custom.error.duplicate": "تکراری",
   "settings.openLocalConfig": "پیکربندی محلی",
+  "settings.folder.label": "پوشه فضای کاری که این تنظیمات برای آن اعمال می‌شود",
+  "settings.folder.placeholder": "یک پوشه انتخاب کنید",
   "settings.openGlobalConfig": "پیکربندی سراسری",
   "settings.config.scope.local": "محلی",
   "settings.config.scope.global": "سراسری",

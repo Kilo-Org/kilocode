@@ -492,6 +492,8 @@ export const dict = {
   "provider.custom.error.required": "Gerekli",
   "provider.custom.error.duplicate": "Tekrar",
   "settings.openLocalConfig": "Yerel Config",
+  "settings.folder.label": "Bu ayarların uygulandığı çalışma alanı klasörü",
+  "settings.folder.placeholder": "Bir klasör seçin",
   "settings.openGlobalConfig": "Global Config",
   "settings.config.scope.local": "Yerel",
   "settings.config.scope.global": "Küresel",

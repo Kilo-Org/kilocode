@@ -540,6 +540,8 @@ export const dict = {
   "provider.custom.error.required": "必須",
   "provider.custom.error.duplicate": "重複",
   "settings.openLocalConfig": "ローカル設定",
+  "settings.folder.label": "これらの設定を適用するワークスペースフォルダー",
+  "settings.folder.placeholder": "フォルダーを選択",
   "settings.openGlobalConfig": "グローバル設定",
   "settings.config.scope.local": "ローカル",
   "settings.config.scope.global": "グローバル",

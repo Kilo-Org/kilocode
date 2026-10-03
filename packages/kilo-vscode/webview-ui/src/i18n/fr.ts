@@ -549,6 +549,8 @@ export const dict = {
   "provider.custom.error.required": "Requis",
   "provider.custom.error.duplicate": "Doublon",
   "settings.openLocalConfig": "Config locale",
+  "settings.folder.label": "Dossier de l'espace de travail auquel ces paramètres s'appliquent",
+  "settings.folder.placeholder": "Choisir un dossier",
   "settings.openGlobalConfig": "Config globale",
   "settings.config.scope.local": "Local",
   "settings.config.scope.global": "Global",

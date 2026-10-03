@@ -546,6 +546,8 @@ export const dict = {
   "provider.custom.error.required": "Obavezno",
   "provider.custom.error.duplicate": "Duplikat",
   "settings.openLocalConfig": "Lokalna konfig.",
+  "settings.folder.label": "Folder radnog prostora na koji se ove postavke odnose",
+  "settings.folder.placeholder": "Odaberite folder",
   "settings.openGlobalConfig": "Globalna konfig.",
   "settings.config.scope.local": "Lokalno",
   "settings.config.scope.global": "Globalno",

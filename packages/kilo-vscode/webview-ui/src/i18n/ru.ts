@@ -540,6 +540,8 @@ export const dict = {
   "provider.custom.error.required": "Обязательно",
   "provider.custom.error.duplicate": "Дубликат",
   "settings.openLocalConfig": "Локальный конфиг",
+  "settings.folder.label": "Папка рабочей области, к которой применяются эти настройки",
+  "settings.folder.placeholder": "Выберите папку",
   "settings.openGlobalConfig": "Глобальный конфиг",
   "settings.config.scope.local": "Локальный",
   "settings.config.scope.global": "Глобальный",

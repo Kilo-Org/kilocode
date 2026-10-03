@@ -1,5 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it } from "bun:test"
 import * as vscode from "vscode"
+import { mkdirSync, mkdtempSync, rmSync } from "fs"
+import { tmpdir } from "os"
+import * as path from "path"
 
 const { KiloProvider } = await import("../../src/KiloProvider")
 
@@ -51,15 +54,15 @@ afterEach(() => {
 })
 
 describe("KiloProvider workspace folders", () => {
-  it("starts new work in the active editor's folder", () => {
+  it("starts in the first folder until a root is picked, whatever the editor shows", () => {
     open("/b/src/x.ts")
     const { internal, messages } = setup()
 
     internal.announceFolder(true)
 
-    expect(internal.getRootDirectory()).toBe("/b")
+    expect(internal.getRootDirectory()).toBe("/a")
     expect(last(messages, "workspaceFoldersLoaded")).toMatchObject({
-      selected: "/b",
+      selected: "/a",
       folders: [
         { path: "/a", name: "a" },
         { path: "/b", name: "b" },
@@ -68,31 +71,48 @@ describe("KiloProvider workspace folders", () => {
     })
   })
 
-  it("lets the picker override the editor and reloads folder-scoped lists", () => {
-    open("/b/src/x.ts")
+  it("switches to the picked root and reloads folder-scoped lists", () => {
     const { internal, messages, calls } = setup()
     internal.announceFolder(true)
 
-    internal.handleFolderMessage({ type: "selectWorkspaceFolder", directory: "/a" })
+    internal.handleFolderMessage({ type: "selectWorkspaceFolder", directory: "/b" })
 
-    expect(internal.getRootDirectory()).toBe("/a")
-    expect(last(messages, "workspaceDirectoryChanged")).toEqual({ type: "workspaceDirectoryChanged", directory: "/a" })
+    expect(internal.getRootDirectory()).toBe("/b")
+    expect(last(messages, "workspaceDirectoryChanged")).toEqual({ type: "workspaceDirectoryChanged", directory: "/b" })
     expect(last(messages, "configBindingExpired")).toBeDefined()
     expect(calls.reload).toBe(1)
     expect(calls.sessions).toBe(1)
   })
 
+  it("keeps the picked root when the editor moves to another folder", () => {
+    const { internal, calls } = setup()
+    internal.announceFolder(true)
+    internal.handleFolderMessage({ type: "selectWorkspaceFolder", directory: "/b" })
+
+    open("/c/src/x.ts")
+    internal.announceFolder()
+
+    expect(internal.getRootDirectory()).toBe("/b")
+    expect(calls.reload).toBe(1)
+  })
+
+  it("ignores a picked directory outside the workspace", () => {
+    const { internal } = setup()
+
+    internal.handleFolderMessage({ type: "selectWorkspaceFolder", directory: "/elsewhere" })
+
+    expect(internal.getRootDirectory()).toBe("/a")
+  })
+
   it("lists history only for folders that new work has targeted", () => {
-    open("/b/src/x.ts")
     const { internal } = setup()
     internal.announceFolder(true)
-    internal.handleFolderMessage({ type: "selectWorkspaceFolder", directory: "/a" })
+    internal.handleFolderMessage({ type: "selectWorkspaceFolder", directory: "/b" })
 
     expect(internal.getSessionRefreshContext(0).workspaceFolders?.()).toEqual(["/a", "/b"])
   })
 
-  it("keeps an open session's folder regardless of the editor", () => {
-    open("/b/src/x.ts")
+  it("keeps an open session's folder regardless of the picked root", () => {
     const { internal } = setup()
     internal.sessionDirectories.set("ses_1", "/c")
     internal.contextSessionID = "ses_1"
@@ -100,13 +120,11 @@ describe("KiloProvider workspace folders", () => {
     expect(internal.getRootDirectory()).toBe("/c")
   })
 
-  it("does not reload when the folder stays the same", () => {
-    open("/b/src/x.ts")
+  it("does not reload when the same root is picked again", () => {
     const { internal, calls } = setup()
     internal.announceFolder(true)
 
-    open("/b/src/y.ts")
-    internal.announceFolder()
+    internal.handleFolderMessage({ type: "selectWorkspaceFolder", directory: "/a" })
 
     expect(calls.reload).toBe(0)
   })
@@ -121,7 +139,81 @@ describe("KiloProvider workspace folders", () => {
 
     expect(manager.internal.getRootDirectory()).toBe("/a")
     expect(last(manager.messages, "workspaceFoldersLoaded")).toBeUndefined()
-    expect(last(settings.messages, "workspaceFoldersLoaded")).toBeUndefined()
+    // Settings panels list the folders, but keep their own project selected.
+    expect(last(settings.messages, "workspaceFoldersLoaded")).toMatchObject({ selected: "/a" })
+    expect(settings.calls.reload).toBe(0)
     expect(manager.internal.getSessionRefreshContext(0).workspaceFolders).toBeUndefined()
+  })
+})
+
+describe("KiloProvider Settings panel folders", () => {
+  type Panel = Internals & {
+    projectDirectory: string | null | undefined
+    configProject: (dir: string) => { root: string } | undefined
+    validConfigProject: (project: { id: string; root: string; generation: number; pinned: boolean }) => boolean
+    bindingsFor: (
+      dir: string,
+      targets: { global: unknown; project: unknown },
+    ) => { global?: unknown; project?: { directory: string } }
+  }
+
+  const target = { file: "kilo.json", raw: {} }
+
+  it("lists the folders with the panel's own project selected", () => {
+    const { internal, messages } = setup({ projectDirectory: "/b" })
+
+    internal.announceFolder()
+
+    expect(last(messages, "workspaceFoldersLoaded")).toMatchObject({ selected: "/b" })
+  })
+
+  it("switches the panel's project when a folder is chosen", () => {
+    const { internal, messages } = setup({ projectDirectory: "/b" })
+    const panel = internal as unknown as Panel
+
+    internal.handleFolderMessage({ type: "selectWorkspaceFolder", directory: "/a" })
+
+    expect(panel.projectDirectory).toBe("/a")
+    expect(last(messages, "workspaceDirectoryChanged")).toEqual({ type: "workspaceDirectoryChanged", directory: "/a" })
+    expect(last(messages, "configBindingExpired")).toBeDefined()
+    expect(last(messages, "workspaceFoldersLoaded")).toMatchObject({ selected: "/a" })
+  })
+
+  it("ignores a chosen directory outside the workspace", () => {
+    const { internal } = setup({ projectDirectory: "/b" })
+
+    internal.handleFolderMessage({ type: "selectWorkspaceFolder", directory: "/elsewhere" })
+
+    expect((internal as unknown as Panel).projectDirectory).toBe("/b")
+  })
+
+  it("binds Local Config to any workspace folder, not only the first", () => {
+    const root = mkdtempSync(path.join(tmpdir(), "kilo-mr-"))
+    const dirs = ["alpha", "beta"].map((name) => path.join(root, name))
+    dirs.forEach((dir) => mkdirSync(dir))
+    workspace.workspaceFolders = dirs.map((fsPath) => ({ uri: { fsPath }, name: path.basename(fsPath) }))
+    open(path.join(dirs[0]!, "a.ts"))
+    const { internal } = setup({ projectDirectory: dirs[1] })
+    const panel = internal as unknown as Panel
+
+    const project = panel.configProject(dirs[1]!)
+
+    expect(project).toBeDefined()
+    expect(panel.validConfigProject(project as never)).toBe(true)
+    expect(panel.configProject(root)).toBeUndefined()
+    rmSync(root, { recursive: true, force: true })
+  })
+
+  it("edits global config only while no folder is chosen", () => {
+    const root = mkdtempSync(path.join(tmpdir(), "kilo-mr-"))
+    workspace.workspaceFolders = [{ uri: { fsPath: root }, name: "root" }]
+    const { internal } = setup({ projectDirectory: null })
+    const panel = internal as unknown as Panel
+
+    const bindings = panel.bindingsFor(root, { global: target, project: target })
+
+    expect(bindings.global).toBeDefined()
+    expect(bindings.project).toBeUndefined()
+    rmSync(root, { recursive: true, force: true })
   })
 })

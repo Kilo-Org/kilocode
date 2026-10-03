@@ -499,6 +499,8 @@ export const dict = {
   "provider.custom.error.required": "필수",
   "provider.custom.error.duplicate": "중복",
   "settings.openLocalConfig": "로컬 설정",
+  "settings.folder.label": "이 설정이 적용되는 작업 영역 폴더",
+  "settings.folder.placeholder": "폴더 선택",
   "settings.openGlobalConfig": "전역 설정",
   "settings.config.scope.local": "로컬",
   "settings.config.scope.global": "글로벌",

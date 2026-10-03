@@ -554,6 +554,8 @@ export const dict = {
   "provider.custom.error.required": "Erforderlich",
   "provider.custom.error.duplicate": "Duplikat",
   "settings.openLocalConfig": "Lokale Config",
+  "settings.folder.label": "Arbeitsbereichsordner, für den diese Einstellungen gelten",
+  "settings.folder.placeholder": "Ordner auswählen",
   "settings.openGlobalConfig": "Globale Config",
   "settings.config.scope.local": "Lokal",
   "settings.config.scope.global": "Global",

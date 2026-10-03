@@ -2,8 +2,8 @@
  * Folder resolution for multi-root VS Code workspaces.
  *
  * A window can hold several workspace folders. These helpers answer "which
- * folder does this path belong to" and "which folder should new work target"
- * without importing vscode, so the rules stay unit-testable.
+ * folder does this path belong to" without importing vscode, so the rules
+ * stay unit-testable.
  */
 
 import * as path from "path"
@@ -25,28 +25,6 @@ export function folderFor(target: string, roots: readonly string[]): string | un
     if (best && within(root, best)) return best
     return root
   }, undefined)
-}
-
-/**
- * The folder new work should target.
- *
- * An explicit pick wins, then the folder of the active editor, then the folder
- * of the last editor that had one (the active editor is empty while a webview
- * has focus), then the first folder.
- */
-export function activeFolder(input: {
-  roots: readonly string[]
-  picked?: string
-  active?: string
-  last?: string
-}): string | undefined {
-  const pick = input.picked ? folderFor(input.picked, input.roots) : undefined
-  if (pick) return pick
-  const open = input.active ? folderFor(input.active, input.roots) : undefined
-  if (open) return open
-  const prior = input.last ? folderFor(input.last, input.roots) : undefined
-  if (prior) return prior
-  return input.roots.at(0)
 }
 
 /** `target` relative to the folder that owns it, with forward slashes; undefined outside every folder. */

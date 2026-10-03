@@ -4,7 +4,7 @@ import type { GlobalEvent, SessionStatus } from "@kilocode/sdk/v2/client"
 import { buildWebviewHtml, getWebviewFontSize } from "./utils"
 import { watchFontSizeConfig } from "./kilo-provider/font-size"
 import { mapSSEEventToWebviewMessage } from "./kilo-provider-utils"
-import { resolvePanelProjectDirectory } from "./project-directory"
+import { selectedRoot } from "./workspace-root"
 import { seedSessionStatuses } from "./session-status"
 import { type KiloConnectionService, ServerStartupError } from "./services/cli-backend"
 import { MarketplaceService } from "./services/marketplace"
@@ -330,13 +330,9 @@ export class MarketplacePanelProvider implements vscode.Disposable {
     this.post({ type: "workspaceDirectoryChanged", directory: project ?? "" })
   }
 
+  /** Project installs target the root picked in the chat input; null without workspace folders. */
   private resolveProject(): string | null {
-    const editor = vscode.window.activeTextEditor
-    const active =
-      editor?.document.uri.scheme === "file"
-        ? vscode.workspace.getWorkspaceFolder(editor.document.uri)?.uri.fsPath
-        : undefined
-    return resolvePanelProjectDirectory(active, vscode.workspace.workspaceFolders)
+    return selectedRoot(this.context) ?? null
   }
 
   private directory(): string {

@@ -2,4 +2,4 @@
 "kilo-code": minor
 ---
 
-Start new sessions in the folder of the active editor in multi-root VS Code workspaces, with a folder picker in the prompt bar to choose another one, and list sessions from every workspace folder in the history.
+Support multi-root VS Code workspaces beyond the first folder: pick the workspace folder new sessions work in from the prompt bar, see which folder each session belongs to in the session header and history, and edit the project configuration of any workspace folder in Settings.

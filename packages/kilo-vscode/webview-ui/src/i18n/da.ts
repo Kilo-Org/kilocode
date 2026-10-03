@@ -543,6 +543,8 @@ export const dict = {
   "provider.custom.error.required": "Påkrævet",
   "provider.custom.error.duplicate": "Duplikat",
   "settings.openLocalConfig": "Lokal konfig",
+  "settings.folder.label": "Arbejdsområdemappe, som disse indstillinger gælder for",
+  "settings.folder.placeholder": "Vælg en mappe",
   "settings.openGlobalConfig": "Global konfig",
   "settings.config.scope.local": "Lokal",
   "settings.config.scope.global": "Global",

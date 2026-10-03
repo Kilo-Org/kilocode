@@ -503,6 +503,8 @@ export const dict = {
   "provider.custom.error.required": "Wymagane",
   "provider.custom.error.duplicate": "Duplikat",
   "settings.openLocalConfig": "Konfig. lokalna",
+  "settings.folder.label": "Folder obszaru roboczego, którego dotyczą te ustawienia",
+  "settings.folder.placeholder": "Wybierz folder",
   "settings.openGlobalConfig": "Konfig. globalna",
   "settings.config.scope.local": "Lokalne",
   "settings.config.scope.global": "Globalne",

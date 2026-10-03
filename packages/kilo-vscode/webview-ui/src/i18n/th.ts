@@ -537,6 +537,8 @@ export const dict = {
   "provider.custom.error.required": "จำเป็น",
   "provider.custom.error.duplicate": "ซ้ำ",
   "settings.openLocalConfig": "คอนฟิก Local",
+  "settings.folder.label": "โฟลเดอร์พื้นที่ทำงานที่ใช้การตั้งค่าเหล่านี้",
+  "settings.folder.placeholder": "เลือกโฟลเดอร์",
   "settings.openGlobalConfig": "คอนฟิก Global",
   "settings.config.scope.local": "ภายใน",
   "settings.config.scope.global": "ทั่วโลก",

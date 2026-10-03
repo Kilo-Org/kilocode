@@ -389,6 +389,8 @@ export const dict = {
   "provider.custom.error.required": "Obbligatorio",
   "provider.custom.error.duplicate": "Duplicato",
   "settings.openLocalConfig": "Config locale",
+  "settings.folder.label": "Cartella dell'area di lavoro a cui si applicano queste impostazioni",
+  "settings.folder.placeholder": "Scegli una cartella",
   "settings.openGlobalConfig": "Config globale",
   "settings.config.scope.local": "Locale",
   "settings.config.scope.global": "Globale",

@@ -495,6 +495,8 @@ export const dict = {
   "provider.custom.error.required": "Обов'язкове поле",
   "provider.custom.error.duplicate": "Дублікат",
   "settings.openLocalConfig": "Локальний конфіг",
+  "settings.folder.label": "Тека робочої області, до якої застосовуються ці налаштування",
+  "settings.folder.placeholder": "Виберіть теку",
   "settings.openGlobalConfig": "Глобальний конфіг",
   "settings.config.scope.local": "Локальний",
   "settings.config.scope.global": "Глобальний",

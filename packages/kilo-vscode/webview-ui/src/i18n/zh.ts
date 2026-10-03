@@ -519,6 +519,8 @@ export const dict = {
   "provider.custom.error.required": "必填",
   "provider.custom.error.duplicate": "重复",
   "settings.openLocalConfig": "本地配置",
+  "settings.folder.label": "这些设置所应用的工作区文件夹",
+  "settings.folder.placeholder": "选择文件夹",
   "settings.openGlobalConfig": "全局配置",
   "settings.config.scope.local": "本地",
   "settings.config.scope.global": "全局",

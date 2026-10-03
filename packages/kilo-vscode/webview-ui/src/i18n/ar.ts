@@ -491,6 +491,8 @@ export const dict = {
   "provider.custom.error.required": "مطلوب",
   "provider.custom.error.duplicate": "مكرر",
   "settings.openLocalConfig": "تكوين محلي",
+  "settings.folder.label": "مجلد مساحة العمل الذي تنطبق عليه هذه الإعدادات",
+  "settings.folder.placeholder": "اختر مجلدًا",
   "settings.openGlobalConfig": "تكوين عام",
   "settings.config.scope.local": "محلي",
   "settings.config.scope.global": "عالمي",

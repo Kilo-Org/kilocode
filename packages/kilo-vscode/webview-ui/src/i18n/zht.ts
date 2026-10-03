@@ -478,6 +478,8 @@ export const dict = {
   "provider.custom.error.required": "必填",
   "provider.custom.error.duplicate": "重複",
   "settings.openLocalConfig": "本機設定",
+  "settings.folder.label": "這些設定所套用的工作區資料夾",
+  "settings.folder.placeholder": "選擇資料夾",
   "settings.openGlobalConfig": "全域設定",
   "settings.config.scope.local": "本地",
   "settings.config.scope.global": "全域",

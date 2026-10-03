@@ -504,6 +504,8 @@ export const dict = {
   "provider.custom.error.required": "Obrigatório",
   "provider.custom.error.duplicate": "Duplicado",
   "settings.openLocalConfig": "Config Local",
+  "settings.folder.label": "Pasta do espaço de trabalho à qual estas configurações se aplicam",
+  "settings.folder.placeholder": "Escolha uma pasta",
   "settings.openGlobalConfig": "Config Global",
   "settings.config.scope.local": "Local",
   "settings.config.scope.global": "Global",

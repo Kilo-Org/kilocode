@@ -56,7 +56,8 @@ import { removeMcp } from "./kilo-provider/remove-config-item"
 import { MarketplaceService } from "./services/marketplace"
 import type { RemoteStatusService } from "./services/RemoteStatusService"
 import { resolveProjectDirectory } from "./project-directory"
-import { activeFolder, folderFor } from "./workspace-folders"
+import { folderFor } from "./workspace-folders"
+import { selectRoot, selectedRoot, watchRoot, workspaceRoots } from "./workspace-root"
 import { seedSessionStatuses, seedSessionWakeups, clientSessionStatus } from "./session-status"
 import { normalizeEnhancePromptErrorMessage } from "./enhance-prompt-error"
 import { retry } from "./services/cli-backend/retry"
@@ -538,9 +539,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private readonly ignoreControllers = new Map<string, Promise<FileIgnoreController>>()
   private chatAutocomplete: ChatTextAreaAutocomplete | null = null
   private projectDirectory: string | null | undefined
-  /** Multi-root: explicit folder for new sessions, the last editor's path, and the directory last announced. */
+  /** Multi-root: the picked root when there is no extension context to store it, and what was last announced. */
   private pickedFolder: string | undefined
-  private lastPath: string | undefined
   private announcedDirectory: string | undefined
   private announcedRoot: string | undefined
   private readonly visitedFolders = new Set<string>()
@@ -689,6 +689,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.cachedConfigMessage = null
     this.postMessage({ type: "workspaceDirectoryChanged", directory: directory ?? "" })
     this.postMessage({ type: "configBindingExpired", reason: "project-changed" })
+    this.announceFolder()
   }
 
   public setDiffVirtualProvider(provider: import("./DiffVirtualProvider").DiffVirtualProvider): void {
@@ -1339,6 +1340,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           this.contextSessionID = undefined
           this.setCurrentSession(null)
           this.focusSession()
+          // A new task returns to the picked root, leaving the cleared session's folder.
           this.announceFolder()
           break
         case "loadMessages":
@@ -1762,7 +1764,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
   private handleFolderMessage(message: TypedWebviewMessage & { directory?: unknown }): void {
     if (message.type !== "selectWorkspaceFolder") return
-    this.pickFolder(typeof message.directory === "string" ? message.directory : undefined)
+    if (typeof message.directory !== "string") return
+    if (this.projectDirectory !== undefined) return this.choosePanelFolder(message.directory)
+    this.pickFolder(message.directory)
   }
 
   private handleWebviewFocusMessage(message: TypedWebviewMessage & { focused?: unknown; target?: unknown }): void {
@@ -3892,7 +3896,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         )
       : undefined
     if ((hasGlobal && !globalBinding) || (hasProject && !projectBinding)) {
-      this.postMessage({ type: "configUpdateFailed", message: "Settings changed or expired. Reload before saving." })
+      const message =
+        hasProject && this.projectDirectory === null
+          ? "Choose a workspace folder at the top of Settings to save project settings."
+          : "Settings changed or expired. Reload before saving."
+      this.postMessage({ type: "configUpdateFailed", message })
       return
     }
 
@@ -4432,7 +4440,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       | undefined,
   ): { global?: ConfigBinding; project?: ConfigBinding } {
     if (!targets) return {}
-    const project = this.configProject(directory)
+    // A panel without a project (several folders, none chosen yet) edits global config only.
+    const project = this.projectDirectory === null ? undefined : this.configProject(directory)
     return {
       global: this.configBindings.create({
         connection: this.connectionGeneration,
@@ -4459,7 +4468,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private configProject(directory: string): ConfigProject | undefined {
     const root = canonicalizePath(directory)
     const pinned = canonicalizePath(this.getRootDirectory())
-    if (samePath(root, pinned)) {
+    // Every folder of a multi-root workspace is a project the user can configure.
+    if (samePath(root, pinned) || this.workspaceFolder(root)) {
       return { id: projectIdFor(root), root, generation: 0, pinned: true }
     }
     if (!this.extensionContext) return undefined
@@ -4468,9 +4478,16 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     return { id: project.id, root: project.root, generation: 0, pinned: false }
   }
 
+  /** Whether `root` (canonical) is one of the open workspace folders. */
+  private workspaceFolder(root: string): boolean {
+    return this.folderPaths().some((dir) => samePath(canonicalizePath(dir), root))
+  }
+
   private validConfigProject(project: ConfigProject): boolean {
     if (project.pinned) {
-      return samePath(project.root, canonicalizePath(this.getRootDirectory())) && existsSync(project.root)
+      const open =
+        samePath(project.root, canonicalizePath(this.getRootDirectory())) || this.workspaceFolder(project.root)
+      return open && existsSync(project.root)
     }
     if (!this.extensionContext) return false
     const current = registeredProjects(this.extensionContext).find((item) => item.id === project.id)
@@ -6012,57 +6029,47 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private getRootDirectory(): string {
     const override = this.opts.rootDirectory?.()
     if (override) return override
-    return (
-      activeFolder({
-        roots: this.folderPaths(),
-        // An open session keeps its own folder, so agents and commands match it.
-        picked: (this.contextSessionID && this.sessionDirectories.get(this.contextSessionID)) || this.pickedFolder,
-        active: this.activePath(),
-        last: this.lastPath,
-      }) ?? process.cwd()
-    )
+    // An open session keeps its own folder, so agents and commands match it.
+    const session = this.contextSessionID && this.sessionDirectories.get(this.contextSessionID)
+    const own = session ? folderFor(session, this.folderPaths()) : undefined
+    return own ?? selectedRoot(this.extensionContext, this.pickedFolder) ?? process.cwd()
   }
 
   private folderPaths(): string[] {
-    return (vscode.workspace.workspaceFolders ?? []).map((folder) => folder.uri.fsPath)
+    return workspaceRoots()
   }
 
-  private activePath(): string | undefined {
-    const uri = vscode.window.activeTextEditor?.document.uri
-    return uri?.scheme === "file" ? uri.fsPath : undefined
-  }
-
-  /** Pick the folder new sessions start in; undefined goes back to following the active editor. */
-  private pickFolder(dir: string | undefined) {
-    this.pickedFolder = dir
-    this.announceFolder()
+  /** Pick the root new sessions start in, for every Kilo panel in this window. */
+  private pickFolder(dir: string) {
+    const root = folderFor(dir, this.folderPaths())
+    if (!root) return
+    this.pickedFolder = root
+    if (!this.extensionContext) return this.announceFolder()
+    void selectRoot(this.extensionContext, root)
   }
 
   /**
    * Tell the webview which folder a new session would use, and which folders exist.
    *
-   * When the root folder changes (a draft follows the editor into another folder,
-   * or a session from another folder is opened), the config, agents and commands
+   * When the root folder changes (another root is picked, or a session from
+   * another folder is opened), the config, agents and commands
    * the webview shows belong to the old folder, so they are reloaded like a
    * project switch. A folder seen for the first time also refreshes history so
    * its sessions appear.
    */
   private announceFolder(quiet = false, sessionID = this.contextSessionID) {
-    if (!this.followsEditor()) return
+    // Agent Manager panels follow their project, not the editor.
+    if (this.opts.rootDirectory) return
+    // Settings panels list the folders so the user can choose which one they edit.
+    if (this.projectDirectory !== undefined) {
+      this.postFolders(this.projectDirectory ?? "")
+      return
+    }
     const root = this.getRootDirectory()
-    const folders = (vscode.workspace.workspaceFolders ?? []).map((folder) => ({
-      path: folder.uri.fsPath,
-      name: folder.name,
-    }))
-    // Single-folder windows keep their existing behaviour; only report the
-    // folder list when there is a choice, or to clear a picker that had one.
-    const multi = folders.length > 1
-    if (!multi && !this.multiRoot) return
-    this.multiRoot = multi
+    if (!this.postFolders(root)) return
     // The first folder's history is loaded by the webview itself.
     const fresh = this.visitedFolders.size > 0 && !this.visitedFolders.has(root)
     this.visitedFolders.add(root)
-    this.postMessage({ type: "workspaceFoldersLoaded", folders, selected: root })
     const dir = this.getWorkspaceDirectory(sessionID)
     const moved = this.announcedRoot !== undefined && root !== this.announcedRoot
     this.announcedRoot = root
@@ -6082,13 +6089,37 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     void this.reloadAfterAuthChange()
   }
 
-  /** Agent Manager panels follow their project and Settings panels their chosen directory, not the editor. */
-  private followsEditor(): boolean {
-    return !this.opts.rootDirectory && this.projectDirectory === undefined
+  /**
+   * Post the workspace folders with `selected` marked. Single-folder windows
+   * keep their existing behaviour: the list is only sent when there is a
+   * choice, or once more to clear a picker that had one. Returns whether the
+   * window offers a choice.
+   */
+  private postFolders(selected: string): boolean {
+    const folders = (vscode.workspace.workspaceFolders ?? []).map((folder) => ({
+      path: folder.uri.fsPath,
+      name: folder.name,
+    }))
+    const multi = folders.length > 1
+    if (!multi && !this.multiRoot) return false
+    this.multiRoot = multi
+    this.postMessage({ type: "workspaceFoldersLoaded", folders, selected })
+    return multi
+  }
+
+  /** Point a Settings panel at another workspace folder. */
+  private choosePanelFolder(dir: string | undefined) {
+    const root = dir ? folderFor(dir, this.folderPaths()) : undefined
+    if (!root) return
+    this.setProjectDirectory(root)
   }
 
   /** Report the directory of a session being opened; crossing folders also reloads folder-scoped lists. */
   private postSessionDirectory(sessionID: string) {
+    if (this.projectDirectory !== undefined) {
+      this.postMessage({ type: "workspaceDirectoryChanged", directory: this.getWorkspaceDirectory(sessionID) })
+      return
+    }
     this.announcedDirectory = this.getWorkspaceDirectory(sessionID)
     this.postMessage({ type: "workspaceDirectoryChanged", directory: this.announcedDirectory })
     this.announceFolder(false, sessionID)
@@ -6111,15 +6142,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
   private watchFolders(): vscode.Disposable {
     return vscode.Disposable.from(
-      vscode.window.onDidChangeActiveTextEditor(() => {
-        const open = this.activePath()
-        if (!open) return
-        const next = folderFor(open, this.folderPaths())
-        if (!next) return
-        if (this.lastPath && folderFor(this.lastPath, this.folderPaths()) !== next) this.pickedFolder = undefined
-        this.lastPath = open
-        this.announceFolder()
-      }),
+      watchRoot(() => this.announceFolder()),
       vscode.workspace.onDidChangeWorkspaceFolders(() => this.announceFolder()),
     )
   }
