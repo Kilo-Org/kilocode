@@ -51,7 +51,6 @@ export const dict = {
     "Bir eklenti, Kilo'ya özel araçlar ve entegrasyonlar ekler. Eklentiler tam izinlerle çalışır.",
   "marketplace.install.plugin.warning":
     "Eklentiler tam izinlerle kod çalıştırır. Dosyalarınızı okuyup değiştirebilir, komut çalıştırabilir ve kimlik bilgilerinize ve ağınıza erişebilirler. Yalnızca güvendiğiniz eklentileri yükleyin.",
-  "marketplace.install.installedAt": "{{path}} konumuna yüklendi",
   "marketplace.intro":
     "Yeniden kullanılabilir ajanları, yetenekleri, MCP araçlarını ve eklentileri bir proje veya tüm projeler için yükleyin.",
   "marketplace.intro.learnMore": "Marketplace hakkında",
@@ -62,6 +61,13 @@ export const dict = {
   "marketplace.install.failed": "Yükleme başarısız oldu",
   "marketplace.install.done": "Bitti",
   "marketplace.install.close": "Kapat",
+  "marketplace.install.mcp.signIn.message": "{{name}} yüklendi, ancak araçlarının kullanılabilmesi için önce oturum açılması gerekiyor.",
+  "marketplace.install.mcp.signIn.button": "Giriş Yap",
+  "marketplace.install.mcp.signIn.waiting": "Tarayıcıda oturum açma bekleniyor…",
+  "marketplace.install.mcp.signIn.cancel": "İptal",
+  "marketplace.install.mcp.signIn.skip": "Daha sonra",
+  "marketplace.install.mcp.signIn.success": "{{name}} oturumu açıldı.",
+  "marketplace.install.mcp.signIn.failed": "{{name}} oturumu açılamadı.",
   "marketplace.remove.title": "{{name}} kaldırılsın mı?",
   "marketplace.remove.confirm":
     "Bu {{type}} öğesini kaldırmak istediğinizden emin misiniz? Bu, {{scope}} yapılandırmanızdan kaldırılacaktır.",

@@ -209,6 +209,10 @@ export const dict = {
   "prompt.agents.show": "Pokaż agentów w tle",
   "prompt.action.enhance": "Ulepsz prompt",
   "prompt.paste.expand": "Kliknij, aby rozwinąć wklejony tekst",
+  "prompt.issues.title": "Problemy sesji",
+  "prompt.mcp.provider": "MCP {{name}}",
+  "prompt.mcp.openSettings": "Otwórz w Ustawieniach",
+  "prompt.mcp.signIn.busy": "Logowanie…",
   "prompt.action.autoApprove.enable": "Włącz automatyczne zatwierdzanie",
   "prompt.action.autoApprove.disable": "Wyłącz automatyczne zatwierdzanie",
   "prompt.action.autoApprove.enabled":
@@ -1035,12 +1039,31 @@ export const dict = {
   "settings.agentBehaviour.removeMcp.title": "Usuń serwer MCP",
   "settings.agentBehaviour.removeMcp.confirm":
     'Usunąć serwer MCP "{{name}}"? Spowoduje to usunięcie go z konfiguracji.',
+  "settings.agentBehaviour.removeMcp.bundleConfirm":
+    'Usunąć serwer MCP "{{name}}" i powiązane z nim umiejętności? Spowoduje to usunięcie serwera oraz każdej umiejętności należącej do tej instalacji Marketplace.',
   "settings.agentBehaviour.removeMcp.button": "Usuń",
   "settings.agentBehaviour.editMcp": "Edytuj serwer MCP",
   "settings.agentBehaviour.editMcp.transportLocal": "Serwer lokalny (transport stdio)",
   "settings.agentBehaviour.editMcp.transportRemote": "Serwer zdalny (transport SSE/HTTP)",
   "settings.agentBehaviour.editMcp.env": "Zmienne środowiskowe",
   "settings.agentBehaviour.editMcp.env.help": "Zmienne przekazywane do procesu serwera MCP.",
+  "settings.agentBehaviour.editMcp.oauth": "OAuth",
+  "settings.agentBehaviour.editMcp.oauth.help":
+    "Pozostaw na Automatycznie, jeśli serwer nie wymaga wcześniej zarejestrowanego klienta. Sekret klienta jest przechowywany w pliku konfiguracyjnym Kilo.",
+  "settings.agentBehaviour.editMcp.oauth.mode": "Tryb",
+  "settings.agentBehaviour.editMcp.oauth.mode.automatic": "Automatyczny",
+  "settings.agentBehaviour.editMcp.oauth.mode.disabled": "Wyłączony",
+  "settings.agentBehaviour.editMcp.oauth.mode.custom": "Klient niestandardowy",
+  "settings.agentBehaviour.editMcp.oauth.clientId": "ID klienta",
+  "settings.agentBehaviour.editMcp.oauth.clientSecret": "Sekret klienta",
+  "settings.agentBehaviour.editMcp.oauth.scope": "Zakres",
+  "settings.agentBehaviour.editMcp.oauth.callbackPort": "Port zwrotny",
+  "settings.agentBehaviour.editMcp.oauth.redirectUri": "URI przekierowania",
+  "settings.agentBehaviour.editMcp.oauth.redirectUri.help":
+    "Domyślnie http://127.0.0.1:19876/mcp/oauth/callback i zastępuje port zwrotny.",
+  "settings.agentBehaviour.editMcp.oauth.port.invalid": "Wprowadź port z zakresu od 1 do 65535.",
+  "settings.agentBehaviour.editMcp.oauth.secret.invalid": "Sekret klienta wymaga ID klienta.",
+  "settings.agentBehaviour.editMcp.oauth.redirectUri.invalid": "Wprowadź prawidłowy URI przekierowania.",
   "settings.agentBehaviour.addMcp.command": "Polecenie",
   "settings.agentBehaviour.addMcp.command.placeholder": "e.g. npx",
   "settings.agentBehaviour.addMcp.args": "Argumenty",
@@ -1053,6 +1076,8 @@ export const dict = {
   "settings.agentBehaviour.removeSkill.title": "Usuń umiejętność",
   "settings.agentBehaviour.removeSkill.confirm":
     'Usunąć umiejętność "{{name}}"? Spowoduje to usunięcie plików umiejętności z dysku.',
+  "settings.agentBehaviour.removeSkill.bundleConfirm":
+    'Usunąć umiejętność "{{name}}"? Spowoduje to również odinstalowanie serwera MCP {{mcp}} i każdej powiązanej umiejętności z tej samej instalacji Marketplace.',
   "settings.agentBehaviour.removeSkill.button": "Usuń",
   "settings.agentBehaviour.rules.description":
     "Reguły to pliki instrukcji, które kierują zachowaniem agenta. Są one dołączane do promptu systemowego dla każdej rozmowy. Dodaj poniżej ścieżki plików, aby dołączyć dodatkowe reguły.",
@@ -1069,6 +1094,12 @@ export const dict = {
   "settings.agentBehaviour.mcpDetail.command": "Polecenie",
   "settings.agentBehaviour.mcpDetail.args": "Argumenty",
   "settings.agentBehaviour.mcpDetail.env": "Środowisko",
+  "settings.agentBehaviour.mcpSignIn.cancel": "Anuluj logowanie",
+  "settings.agentBehaviour.mcpRemoving": "Usuwanie…",
+  "settings.agentBehaviour.mcpResetAuth": "Zresetuj logowanie",
+  "settings.agentBehaviour.mcpResetAuth.title": "Zresetuj logowanie MCP",
+  "settings.agentBehaviour.mcpResetAuth.confirm":
+    'Wyczyścić zapisane logowanie dla "{{name}}"? Będziesz musiał zalogować się ponownie.',
   "settings.agentBehaviour.mcpBrowseMarketplace": "Przeglądaj Marketplace",
   "settings.agentBehaviour.mcpEmpty":
     "Brak skonfigurowanych serwerów MCP. Dodaj serwery MCP w kilo.jsonc lub poproś agenta o ich dodanie.",

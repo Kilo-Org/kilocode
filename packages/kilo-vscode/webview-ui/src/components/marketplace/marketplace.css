@@ -375,27 +375,31 @@
   gap: 8px;
 }
 
-.install-modal-result {
-  text-align: center;
-  padding: 12px 20px 20px;
-}
-
 .install-modal-success {
   color: var(--text-on-success-base);
   font-size: var(--kilo-font-size-14);
   font-weight: 600;
-  margin: 0 0 6px;
-}
-
-.install-modal-result-path {
-  margin-bottom: 16px;
-  overflow-wrap: anywhere;
+  margin: 0;
 }
 
 .install-modal-error-msg {
   color: var(--text-on-critical-base);
   font-size: var(--kilo-font-size-13);
-  margin: 0 0 16px;
+  margin: 0;
+}
+
+.install-modal-mcp-signin-msg {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--kilo-font-size-13);
+  margin: 0;
+}
+
+.install-modal-mcp-signin-success {
+  color: var(--text-on-success-base);
+  font-size: var(--kilo-font-size-13);
+  margin: 0;
 }
 
 /* Error banner */

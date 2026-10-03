@@ -472,6 +472,16 @@ const scenarios: Scenario[] = [
       headers: ctx.headers(),
     }))
     .json(404, object, "status"),
+  // kilocode_change start - exercise non-destructive MCP OAuth cancellation
+  http.protected
+    .post("/mcp/{name}/auth/cancel", "mcp.auth.cancel")
+    .mutating()
+    .at((ctx) => ({
+      path: route("/mcp/{name}/auth/cancel", { name: "httpapi-missing" }),
+      headers: ctx.headers(),
+    }))
+    .json(404, object, "status"),
+  // kilocode_change end
   http.protected
     .post("/mcp/{name}/auth/callback", "mcp.auth.callback")
     .at((ctx) => ({

@@ -52,6 +52,7 @@ const mcp = Layer.succeed(
     startAuth: () => Effect.die("unexpected MCP auth in steering test"),
     authenticate: () => Effect.die("unexpected MCP auth in steering test"),
     finishAuth: () => Effect.die("unexpected MCP auth in steering test"),
+    cancelAuth: () => Effect.void,
     removeAuth: () => Effect.void,
     supportsOAuth: () => Effect.succeed(false),
     hasStoredTokens: () => Effect.succeed(false),

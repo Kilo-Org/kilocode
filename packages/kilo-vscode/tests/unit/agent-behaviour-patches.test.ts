@@ -1,7 +1,11 @@
 import { describe, expect, it } from "bun:test"
 import {
   mcpConfigScope,
+  mcpEditPatch,
+  mcpStatusDetailVisible,
+  mcpStatusError,
   mcpEnabledPatch,
+  pruneMcpExpanded,
   removable,
   selectedAgentNumberOverrideValue,
   selectedAgentTextOverrideValue,
@@ -54,6 +58,36 @@ describe("mcpEnabledPatch", () => {
     expect(mcpConfigScope("legacy", collections)).toBeUndefined()
     expect(mcpConfigScope("builtin", collections)).toBeUndefined()
     expect(mcpConfigScope("unknown", collections)).toBeUndefined()
+  })
+})
+
+describe("mcpEditPatch", () => {
+  it("writes only the selected server while preserving its current fields", () => {
+    expect(
+      mcpEditPatch("docs", { type: "remote", url: "https://old.test", enabled: true }, { url: "https://new.test" }),
+    ).toEqual({
+      mcp: {
+        docs: { type: "remote", url: "https://new.test", enabled: true },
+      },
+    })
+  })
+})
+
+describe("pruneMcpExpanded", () => {
+  it("removes expansion state for deleted servers", () => {
+    expect(pruneMcpExpanded({ docs: true, removed: true }, new Set(["docs"]))).toEqual({ docs: true })
+  })
+})
+
+describe("MCP status presentation", () => {
+  it("hides redundant needs-auth details", () => {
+    expect(mcpStatusDetailVisible("needs_auth")).toBe(false)
+    expect(mcpStatusError({ status: "needs_auth", error: "Unauthorized" })).toBeUndefined()
+  })
+
+  it("keeps diagnostic errors for actual failures", () => {
+    expect(mcpStatusDetailVisible("failed")).toBe(true)
+    expect(mcpStatusError({ status: "failed", error: "Connection refused" })).toBe("Connection refused")
   })
 })
 

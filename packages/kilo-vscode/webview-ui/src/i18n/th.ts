@@ -207,6 +207,10 @@ export const dict = {
   "prompt.agents.show": "แสดงเอเจนต์เบื้องหลัง",
   "prompt.action.enhance": "ปรับปรุงพรอมต์",
   "prompt.paste.expand": "คลิกเพื่อขยายข้อความที่วาง",
+  "prompt.issues.title": "ปัญหาของเซสชัน",
+  "prompt.mcp.provider": "MCP {{name}}",
+  "prompt.mcp.openSettings": "เปิดในการตั้งค่า",
+  "prompt.mcp.signIn.busy": "กำลังเข้าสู่ระบบ…",
   "prompt.action.autoApprove.enable": "เปิดใช้การอนุมัติอัตโนมัติ",
   "prompt.action.autoApprove.disable": "ปิดใช้การอนุมัติอัตโนมัติ",
   "prompt.action.autoApprove.enabled": "เปิดใช้การอนุมัติอัตโนมัติแล้ว คำขอสิทธิ์จะได้รับการอนุมัติโดยอัตโนมัติ",
@@ -1019,12 +1023,31 @@ export const dict = {
   "settings.agentBehaviour.removeMcp.title": "ลบเซิร์ฟเวอร์ MCP",
   "settings.agentBehaviour.removeMcp.confirm":
     'ต้องการลบเซิร์ฟเวอร์ MCP "{{name}}" หรือไม่? การดำเนินการนี้จะลบออกจากการกำหนดค่าของคุณ',
+  "settings.agentBehaviour.removeMcp.bundleConfirm":
+    'ลบเซิร์ฟเวอร์ MCP "{{name}}" และทักษะคู่กันหรือไม่? การดำเนินการนี้จะลบทั้งเซิร์ฟเวอร์และทักษะทั้งหมดที่เป็นของการติดตั้ง Marketplace นี้',
   "settings.agentBehaviour.removeMcp.button": "ลบ",
   "settings.agentBehaviour.editMcp": "แก้ไขเซิร์ฟเวอร์ MCP",
   "settings.agentBehaviour.editMcp.transportLocal": "เซิร์ฟเวอร์ภายใน (การขนส่ง stdio)",
   "settings.agentBehaviour.editMcp.transportRemote": "เซิร์ฟเวอร์ระยะไกล (การขนส่ง SSE/HTTP)",
   "settings.agentBehaviour.editMcp.env": "ตัวแปรสภาพแวดล้อม",
   "settings.agentBehaviour.editMcp.env.help": "ตัวแปรที่ส่งไปยังกระบวนการเซิร์ฟเวอร์ MCP",
+  "settings.agentBehaviour.editMcp.oauth": "OAuth",
+  "settings.agentBehaviour.editMcp.oauth.help":
+    "ปล่อยไว้ที่อัตโนมัติ เว้นแต่เซิร์ฟเวอร์ต้องการไคลเอ็นต์ที่ลงทะเบียนไว้ล่วงหน้า ไคลเอ็นต์ซีเคร็ตจะถูกจัดเก็บไว้ในไฟล์การกำหนดค่า Kilo ของคุณ",
+  "settings.agentBehaviour.editMcp.oauth.mode": "โหมด",
+  "settings.agentBehaviour.editMcp.oauth.mode.automatic": "อัตโนมัติ",
+  "settings.agentBehaviour.editMcp.oauth.mode.disabled": "ปิดใช้งาน",
+  "settings.agentBehaviour.editMcp.oauth.mode.custom": "ไคลเอ็นต์กำหนดเอง",
+  "settings.agentBehaviour.editMcp.oauth.clientId": "ไคลเอ็นต์ไอดี",
+  "settings.agentBehaviour.editMcp.oauth.clientSecret": "ไคลเอ็นต์ซีเคร็ต",
+  "settings.agentBehaviour.editMcp.oauth.scope": "สโคป",
+  "settings.agentBehaviour.editMcp.oauth.callbackPort": "พอร์ตคอลแบ็ก",
+  "settings.agentBehaviour.editMcp.oauth.redirectUri": "URI การเปลี่ยนเส้นทาง",
+  "settings.agentBehaviour.editMcp.oauth.redirectUri.help":
+    "ค่าเริ่มต้นคือ http://127.0.0.1:19876/mcp/oauth/callback และจะแทนที่พอร์ตคอลแบ็ก",
+  "settings.agentBehaviour.editMcp.oauth.port.invalid": "ป้อนพอร์ตระหว่าง 1 ถึง 65535",
+  "settings.agentBehaviour.editMcp.oauth.secret.invalid": "ไคลเอ็นต์ซีเคร็ตต้องมีไคลเอ็นต์ไอดี",
+  "settings.agentBehaviour.editMcp.oauth.redirectUri.invalid": "ป้อน URI การเปลี่ยนเส้นทางที่ถูกต้อง",
   "settings.agentBehaviour.addMcp.command": "คำสั่ง",
   "settings.agentBehaviour.addMcp.command.placeholder": "e.g. npx",
   "settings.agentBehaviour.addMcp.args": "อาร์กิวเมนต์",
@@ -1037,6 +1060,8 @@ export const dict = {
   "settings.agentBehaviour.removeSkill.title": "ลบทักษะ",
   "settings.agentBehaviour.removeSkill.confirm":
     'ต้องการลบทักษะ "{{name}}" หรือไม่? การดำเนินการนี้จะลบไฟล์ทักษะออกจากดิสก์',
+  "settings.agentBehaviour.removeSkill.bundleConfirm":
+    'ลบทักษะ "{{name}}" หรือไม่? การดำเนินการนี้จะถอนการติดตั้งเซิร์ฟเวอร์ MCP {{mcp}} และทักษะคู่กันทั้งหมดจากการติดตั้ง Marketplace เดียวกันด้วย',
   "settings.agentBehaviour.removeSkill.button": "ลบ",
   "settings.agentBehaviour.rules.description":
     "กฎคือไฟล์คำสั่งที่แนะนำพฤติกรรมของเอเจนต์ กฎเหล่านี้จะถูกรวมอยู่ในพรอมต์ระบบสำหรับทุกการสนทนา เพิ่มเส้นทางไฟล์ด้านล่างเพื่อรวมกฎเพิ่มเติม",
@@ -1052,6 +1077,12 @@ export const dict = {
   "settings.agentBehaviour.mcpDetail.command": "คำสั่ง",
   "settings.agentBehaviour.mcpDetail.args": "อาร์กิวเมนต์",
   "settings.agentBehaviour.mcpDetail.env": "สภาพแวดล้อม",
+  "settings.agentBehaviour.mcpSignIn.cancel": "ยกเลิกการเข้าสู่ระบบ",
+  "settings.agentBehaviour.mcpRemoving": "กำลังนำออก…",
+  "settings.agentBehaviour.mcpResetAuth": "รีเซ็ตการเข้าสู่ระบบ",
+  "settings.agentBehaviour.mcpResetAuth.title": "รีเซ็ตการเข้าสู่ระบบ MCP",
+  "settings.agentBehaviour.mcpResetAuth.confirm":
+    'ล้างข้อมูลการเข้าสู่ระบบที่บันทึกไว้สำหรับ "{{name}}" หรือไม่? คุณจะต้องเข้าสู่ระบบอีกครั้ง',
   "settings.agentBehaviour.mcpBrowseMarketplace": "เรียกดู Marketplace",
   "settings.agentBehaviour.mcpEmpty":
     "ไม่ได้กำหนดค่าเซิร์ฟเวอร์ MCP เพิ่มเซิร์ฟเวอร์ MCP ใน kilo.jsonc หรือขอให้เอเจนต์เพิ่มให้คุณ",

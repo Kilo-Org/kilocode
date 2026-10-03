@@ -51,7 +51,6 @@ export const dict = {
     "Um plugin adiciona ferramentas e integrações personalizadas ao Kilo. Os plugins são executados com permissões totais.",
   "marketplace.install.plugin.warning":
     "Os plugins executam código com permissões totais. Eles podem ler e alterar seus arquivos, executar comandos e acessar suas credenciais e sua rede. Instale apenas plugins em que você confia.",
-  "marketplace.install.installedAt": "Instalado em {{path}}",
   "marketplace.intro":
     "Instale agentes, habilidades, ferramentas MCP e plugins reutilizáveis em um projeto ou em todos os projetos.",
   "marketplace.intro.learnMore": "Sobre o Marketplace",
@@ -62,6 +61,13 @@ export const dict = {
   "marketplace.install.failed": "Falha na instalação",
   "marketplace.install.done": "Concluído",
   "marketplace.install.close": "Fechar",
+  "marketplace.install.mcp.signIn.message": "{{name}} está instalado, mas precisa de login antes que suas ferramentas possam ser usadas.",
+  "marketplace.install.mcp.signIn.button": "Entrar",
+  "marketplace.install.mcp.signIn.waiting": "Aguardando login pelo navegador…",
+  "marketplace.install.mcp.signIn.cancel": "Cancelar",
+  "marketplace.install.mcp.signIn.skip": "Mais tarde",
+  "marketplace.install.mcp.signIn.success": "Login realizado em {{name}}.",
+  "marketplace.install.mcp.signIn.failed": "Falha ao fazer login em {{name}}.",
   "marketplace.remove.title": "Remover {{name}}?",
   "marketplace.remove.confirm":
     "Tem certeza que deseja remover este {{type}}? Isso o removerá da sua configuração {{scope}}.",

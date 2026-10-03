@@ -38,6 +38,8 @@ import { createNotebookBridge } from "./services/notebook"
 import { createGitExecutable } from "./util/git-executable"
 import { isCursorHost } from "./utils"
 import { sameDirectory } from "./kilo-provider-utils"
+import { mcpAuth } from "./services/mcp-auth"
+import { showAuthUrl } from "./kilo-provider/mcp-oauth"
 
 let agentManager: AgentManagerProvider | undefined
 let caffeination: CaffeinationService | undefined
@@ -84,6 +86,12 @@ export async function activate(context: vscode.ExtensionContext) {
     () => browserBroker.env(),
     (dir): Promise<void> => browserAutomationService.ready(dir),
   )
+
+  // One MCP OAuth sign-in service for the whole extension (sidebar, Kilo tabs, Settings, Marketplace).
+  // Initialize it eagerly so its MCP OAuth URL subscriptions and `onUrl`
+  // fallback are wired up exactly once, instead of racing whichever
+  // KiloProvider happens to construct first.
+  mcpAuth(connectionService, { onUrl: showAuthUrl })
 
   // Manages the built-in Playwright MCP server for ordinary sessions. This is
   // independent from the Agent Manager browser broker above.
@@ -603,6 +611,9 @@ export async function activate(context: vscode.ExtensionContext) {
     }),
     vscode.commands.registerCommand("kilo-code.new.openIndexingSettings", () => {
       settingsEditorProvider.openPanel("settings", "indexing")
+    }),
+    vscode.commands.registerCommand("kilo-code.new.openMcpSettings", (focus?: string) => {
+      settingsEditorProvider.openPanel("settings", "agentBehaviour", undefined, "mcpServers", focus)
     }),
     vscode.commands.registerCommand("kilo-code.new.showMemory", async () => {
       if (agentManagerProvider.isActive()) {

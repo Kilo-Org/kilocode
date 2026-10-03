@@ -49,7 +49,6 @@ export const dict = {
     "플러그인은 Kilo에 사용자 정의 도구와 통합 기능을 추가합니다. 플러그인은 모든 권한으로 실행됩니다.",
   "marketplace.install.plugin.warning":
     "플러그인은 모든 권한으로 코드를 실행합니다. 사용자의 파일을 읽고 변경하고, 명령을 실행하며, 사용자의 인증 정보와 네트워크에 접근할 수 있습니다. 신뢰할 수 있는 플러그인만 설치하세요.",
-  "marketplace.install.installedAt": "{{path}}에 설치됨",
   "marketplace.intro":
     "재사용 가능한 에이전트, 스킬, MCP 도구 및 플러그인을 하나의 프로젝트 또는 모든 프로젝트에 설치하세요.",
   "marketplace.intro.learnMore": "Marketplace 정보",
@@ -60,6 +59,13 @@ export const dict = {
   "marketplace.install.failed": "설치 실패",
   "marketplace.install.done": "완료",
   "marketplace.install.close": "닫기",
+  "marketplace.install.mcp.signIn.message": "{{name}}이(가) 설치되었지만, 도구를 사용하려면 먼저 로그인해야 합니다.",
+  "marketplace.install.mcp.signIn.button": "로그인",
+  "marketplace.install.mcp.signIn.waiting": "브라우저 로그인을 기다리는 중…",
+  "marketplace.install.mcp.signIn.cancel": "취소",
+  "marketplace.install.mcp.signIn.skip": "나중에",
+  "marketplace.install.mcp.signIn.success": "{{name}}에 로그인했습니다.",
+  "marketplace.install.mcp.signIn.failed": "{{name}} 로그인에 실패했습니다.",
   "marketplace.remove.title": "{{name}}을(를) 제거하시겠습니까?",
   "marketplace.remove.confirm": "이 {{type}}을(를) 제거하시겠습니까? {{scope}} 구성에서 제거됩니다.",
   "marketplace.remove.cancel": "취소",

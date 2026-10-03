@@ -215,6 +215,10 @@ export const dict = {
   "prompt.agents.show": "Hintergrund-Agenten anzeigen",
   "prompt.action.enhance": "Prompt verbessern",
   "prompt.paste.expand": "Klicken, um eingefügten Text zu erweitern",
+  "prompt.issues.title": "Sitzungsprobleme",
+  "prompt.mcp.provider": "{{name}} MCP",
+  "prompt.mcp.openSettings": "In den Einstellungen öffnen",
+  "prompt.mcp.signIn.busy": "Anmeldung läuft…",
   "prompt.action.autoApprove.enable": "Automatische Genehmigung aktivieren",
   "prompt.action.autoApprove.disable": "Automatische Genehmigung deaktivieren",
   "prompt.action.autoApprove.enabled":
@@ -1057,12 +1061,31 @@ export const dict = {
   "settings.agentBehaviour.removeMcp.title": "MCP-Server entfernen",
   "settings.agentBehaviour.removeMcp.confirm":
     'MCP-Server "{{name}}" entfernen? Dadurch wird er aus Ihrer Konfiguration entfernt.',
+  "settings.agentBehaviour.removeMcp.bundleConfirm":
+    'MCP-Server "{{name}}" und seine Begleit-Skills entfernen? Dadurch werden sowohl der Server als auch jeder Skill entfernt, der dieser Marketplace-Installation gehört.',
   "settings.agentBehaviour.removeMcp.button": "Entfernen",
   "settings.agentBehaviour.editMcp": "MCP-Server bearbeiten",
   "settings.agentBehaviour.editMcp.transportLocal": "Lokaler Server (stdio-Transport)",
   "settings.agentBehaviour.editMcp.transportRemote": "Remote-Server (SSE/HTTP-Transport)",
   "settings.agentBehaviour.editMcp.env": "Umgebungsvariablen",
   "settings.agentBehaviour.editMcp.env.help": "Variablen, die an den MCP-Serverprozess übergeben werden.",
+  "settings.agentBehaviour.editMcp.oauth": "OAuth",
+  "settings.agentBehaviour.editMcp.oauth.help":
+    "Belassen Sie es bei Automatisch, außer der Server erfordert einen vorregistrierten Client. Ein Client-Secret wird in Ihrer Kilo-Konfigurationsdatei gespeichert.",
+  "settings.agentBehaviour.editMcp.oauth.mode": "Modus",
+  "settings.agentBehaviour.editMcp.oauth.mode.automatic": "Automatisch",
+  "settings.agentBehaviour.editMcp.oauth.mode.disabled": "Deaktiviert",
+  "settings.agentBehaviour.editMcp.oauth.mode.custom": "Benutzerdefinierter Client",
+  "settings.agentBehaviour.editMcp.oauth.clientId": "Client-ID",
+  "settings.agentBehaviour.editMcp.oauth.clientSecret": "Client-Secret",
+  "settings.agentBehaviour.editMcp.oauth.scope": "Bereich",
+  "settings.agentBehaviour.editMcp.oauth.callbackPort": "Callback-Port",
+  "settings.agentBehaviour.editMcp.oauth.redirectUri": "Weiterleitungs-URI",
+  "settings.agentBehaviour.editMcp.oauth.redirectUri.help":
+    "Standardmäßig http://127.0.0.1:19876/mcp/oauth/callback, überschreibt den Callback-Port.",
+  "settings.agentBehaviour.editMcp.oauth.port.invalid": "Geben Sie einen Port zwischen 1 und 65535 ein.",
+  "settings.agentBehaviour.editMcp.oauth.secret.invalid": "Ein Client-Secret erfordert eine Client-ID.",
+  "settings.agentBehaviour.editMcp.oauth.redirectUri.invalid": "Geben Sie eine gültige Weiterleitungs-URI ein.",
   "settings.agentBehaviour.addMcp.command": "Befehl",
   "settings.agentBehaviour.addMcp.command.placeholder": "e.g. npx",
   "settings.agentBehaviour.addMcp.args": "Argumente",
@@ -1076,6 +1099,8 @@ export const dict = {
   "settings.agentBehaviour.removeSkill.title": "Skill entfernen",
   "settings.agentBehaviour.removeSkill.confirm":
     'Skill "{{name}}" entfernen? Dadurch werden die Skill-Dateien vom Datenträger gelöscht.',
+  "settings.agentBehaviour.removeSkill.bundleConfirm":
+    'Skill "{{name}}" entfernen? Dadurch wird auch der {{mcp}} MCP-Server und jeder Begleit-Skill aus derselben Marketplace-Installation deinstalliert.',
   "settings.agentBehaviour.removeSkill.button": "Entfernen",
   "settings.agentBehaviour.rules.description":
     "Regeln sind Anweisungsdateien, die das Verhalten des Agenten steuern. Sie werden in den System-Prompt für jede Konversation eingebunden. Fügen Sie unten Dateipfade hinzu, um zusätzliche Regeln einzubinden.",
@@ -1091,6 +1116,12 @@ export const dict = {
   "settings.agentBehaviour.mcpDetail.command": "Befehl",
   "settings.agentBehaviour.mcpDetail.args": "Argumente",
   "settings.agentBehaviour.mcpDetail.env": "Umgebung",
+  "settings.agentBehaviour.mcpSignIn.cancel": "Anmeldung abbrechen",
+  "settings.agentBehaviour.mcpRemoving": "Wird entfernt…",
+  "settings.agentBehaviour.mcpResetAuth": "Anmeldung zurücksetzen",
+  "settings.agentBehaviour.mcpResetAuth.title": "MCP-Anmeldung zurücksetzen",
+  "settings.agentBehaviour.mcpResetAuth.confirm":
+    'Die gespeicherte Anmeldung für "{{name}}" löschen? Sie müssen sich erneut anmelden.',
   "settings.agentBehaviour.mcpBrowseMarketplace": "Marketplace durchsuchen",
   "settings.agentBehaviour.mcpEmpty":
     "Keine MCP-Server konfiguriert. Fügen Sie MCP-Server in kilo.jsonc hinzu oder bitten Sie den Agenten, sie hinzuzufügen.",

@@ -3,10 +3,13 @@ import { TextField } from "@kilocode/kilo-ui/text-field"
 import { Card } from "@kilocode/kilo-ui/card"
 import { Button } from "@kilocode/kilo-ui/button"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
+import { Select } from "@kilocode/kilo-ui/select"
 
 import { useConfig } from "../../context/config"
 import { useLanguage } from "../../context/language"
 import type { McpConfig } from "../../types/messages"
+import { mcpConfigScope, mcpEditPatch } from "./agent-behaviour-patches"
+import { oauthMode, oauthPatch, validateOauth, type OauthFields, type OauthMode } from "./mcp-oauth-config"
 import SettingsRow from "./SettingsRow"
 
 interface Props {
@@ -15,21 +18,58 @@ interface Props {
   onRemove: (name: string) => void
 }
 
+const EMPTY_OAUTH_FIELDS: OauthFields = { clientId: "", clientSecret: "", scope: "", callbackPort: "", redirectUri: "" }
+
+function oauthFieldsOf(cfg: McpConfig): OauthFields {
+  const oauth = cfg.oauth
+  if (!oauth) return EMPTY_OAUTH_FIELDS
+  return {
+    clientId: oauth.clientId ?? "",
+    clientSecret: oauth.clientSecret ?? "",
+    scope: oauth.scope ?? "",
+    callbackPort: oauth.callbackPort ? String(oauth.callbackPort) : "",
+    redirectUri: oauth.redirectUri ?? "",
+  }
+}
+
 const McpEditView: Component<Props> = (props) => {
   const language = useLanguage()
-  const { config, updateConfig } = useConfig()
+  const { config, globalConfig, projectConfig, collections, updateConfig, updateGlobalConfig, updateProjectConfig } =
+    useConfig()
 
-  const cfg = createMemo<McpConfig>(() => config().mcp?.[props.name] ?? {})
+  const target = () => mcpConfigScope(props.name, collections())
+  const cfg = createMemo<McpConfig>(() => {
+    const scoped = target() === "project" ? projectConfig() : target() === "global" ? globalConfig() : config()
+    return scoped.mcp?.[props.name] ?? config().mcp?.[props.name] ?? {}
+  })
+  const initialOauth = oauthFieldsOf(cfg())
 
   const [envKey, setEnvKey] = createSignal("")
   const [envVal, setEnvVal] = createSignal("")
+  const [mode, setMode] = createSignal<OauthMode>(oauthMode(cfg().oauth))
+  const [clientId, setClientId] = createSignal(initialOauth.clientId)
+  const [clientSecret, setClientSecret] = createSignal(initialOauth.clientSecret)
+  const [scope, setScope] = createSignal(initialOauth.scope)
+  const [callbackPort, setCallbackPort] = createSignal(initialOauth.callbackPort)
+  const [redirectUri, setRedirectUri] = createSignal(initialOauth.redirectUri)
+  const [oauthErrors, setOauthErrors] = createSignal<ReturnType<typeof validateOauth>>({})
 
+  // The server's declaring config scope (project/global). Routing writes
+  // through the matching updateProjectConfig/updateGlobalConfig call, rather
+  // than always through the global-biased updateConfig, is what keeps a
+  // project-scoped server's edits from being silently relocated to the
+  // global config file.
   const update = (partial: Partial<McpConfig>) => {
-    const existing = config().mcp ?? {}
-    const current = existing[props.name] ?? {}
-    updateConfig({
-      mcp: { ...existing, [props.name]: { ...current, ...partial } },
-    })
+    const next = mcpEditPatch(props.name, cfg(), partial)
+    if (target() === "project") {
+      updateProjectConfig(next)
+      return
+    }
+    if (target() === "global") {
+      updateGlobalConfig(next)
+      return
+    }
+    updateConfig(next)
   }
 
   const transport = () => cfg().type ?? (cfg().url ? "remote" : "local")
@@ -62,6 +102,32 @@ const McpEditView: Component<Props> = (props) => {
     const existing = { ...(cfg().environment ?? cfg().env ?? {}) }
     delete existing[key]
     update({ environment: existing })
+  }
+
+  const modeOptions: OauthMode[] = ["automatic", "disabled", "custom"]
+  const modeLabel = (value: OauthMode) => language.t(`settings.agentBehaviour.editMcp.oauth.mode.${value}` as const)
+
+  const currentFields = (): OauthFields => ({
+    clientId: clientId(),
+    clientSecret: clientSecret(),
+    scope: scope(),
+    callbackPort: callbackPort(),
+    redirectUri: redirectUri(),
+  })
+
+  const applyOauth = () => {
+    const current = mode()
+    const errors = validateOauth(current, currentFields())
+    setOauthErrors(errors)
+    if (Object.keys(errors).length > 0) return
+    update({ oauth: oauthPatch(current, currentFields()) })
+  }
+
+  const selectMode = (next: OauthMode | undefined) => {
+    if (!next) return
+    setMode(next)
+    setOauthErrors({})
+    if (next !== "custom") applyOauth()
   }
 
   return (
@@ -143,6 +209,84 @@ const McpEditView: Component<Props> = (props) => {
             placeholder={language.t("settings.agentBehaviour.addMcp.url.placeholder")}
             onChange={(val) => update({ url: val.trim() || undefined })}
           />
+        </Card>
+
+        {/* OAuth configuration (remote servers only) */}
+        <Card style={{ "margin-bottom": "12px" }}>
+          <div data-slot="settings-row-label-title" style={{ "margin-bottom": "4px" }}>
+            {language.t("settings.agentBehaviour.editMcp.oauth")}
+          </div>
+          <div data-slot="settings-row-label-subtitle" style={{ "margin-bottom": "8px" }}>
+            {language.t("settings.agentBehaviour.editMcp.oauth.help")}
+          </div>
+          <div style={{ "margin-bottom": "8px" }}>
+            <div data-slot="settings-row-label-title" style={{ "margin-bottom": "4px" }}>
+              {language.t("settings.agentBehaviour.editMcp.oauth.mode")}
+            </div>
+            <Select
+              options={modeOptions}
+              current={mode()}
+              value={(m: OauthMode) => m}
+              label={modeLabel}
+              onSelect={selectMode}
+            />
+          </div>
+
+          <Show when={mode() === "custom"}>
+            <div style={{ "margin-bottom": "8px" }}>
+              <div data-slot="settings-row-label-title" style={{ "margin-bottom": "4px" }}>
+                {language.t("settings.agentBehaviour.editMcp.oauth.clientId")}
+              </div>
+              <TextField value={clientId()} onChange={setClientId} onBlur={applyOauth} />
+              <Show when={oauthErrors().clientId}>
+                <div style={{ color: "var(--vscode-errorForeground)", "font-size": "var(--kilo-font-size-11)" }}>
+                  {language.t(oauthErrors().clientId!)}
+                </div>
+              </Show>
+            </div>
+            <div style={{ "margin-bottom": "8px" }}>
+              <div data-slot="settings-row-label-title" style={{ "margin-bottom": "4px" }}>
+                {language.t("settings.agentBehaviour.editMcp.oauth.clientSecret")}
+              </div>
+              <TextField type="password" value={clientSecret()} onChange={setClientSecret} onBlur={applyOauth} />
+              <Show when={oauthErrors().secret}>
+                <div style={{ color: "var(--vscode-errorForeground)", "font-size": "var(--kilo-font-size-11)" }}>
+                  {language.t(oauthErrors().secret!)}
+                </div>
+              </Show>
+            </div>
+            <div style={{ "margin-bottom": "8px" }}>
+              <div data-slot="settings-row-label-title" style={{ "margin-bottom": "4px" }}>
+                {language.t("settings.agentBehaviour.editMcp.oauth.scope")}
+              </div>
+              <TextField value={scope()} onChange={setScope} onBlur={applyOauth} />
+            </div>
+            <div style={{ "margin-bottom": "8px" }}>
+              <div data-slot="settings-row-label-title" style={{ "margin-bottom": "4px" }}>
+                {language.t("settings.agentBehaviour.editMcp.oauth.callbackPort")}
+              </div>
+              <TextField value={callbackPort()} onChange={setCallbackPort} onBlur={applyOauth} />
+              <Show when={oauthErrors().callbackPort}>
+                <div style={{ color: "var(--vscode-errorForeground)", "font-size": "var(--kilo-font-size-11)" }}>
+                  {language.t(oauthErrors().callbackPort!)}
+                </div>
+              </Show>
+            </div>
+            <div>
+              <div data-slot="settings-row-label-title" style={{ "margin-bottom": "4px" }}>
+                {language.t("settings.agentBehaviour.editMcp.oauth.redirectUri")}
+              </div>
+              <div data-slot="settings-row-label-subtitle" style={{ "margin-bottom": "4px" }}>
+                {language.t("settings.agentBehaviour.editMcp.oauth.redirectUri.help")}
+              </div>
+              <TextField value={redirectUri()} onChange={setRedirectUri} onBlur={applyOauth} />
+              <Show when={oauthErrors().redirectUri}>
+                <div style={{ color: "var(--vscode-errorForeground)", "font-size": "var(--kilo-font-size-11)" }}>
+                  {language.t(oauthErrors().redirectUri!)}
+                </div>
+              </Show>
+            </div>
+          </Show>
         </Card>
       </Show>
 

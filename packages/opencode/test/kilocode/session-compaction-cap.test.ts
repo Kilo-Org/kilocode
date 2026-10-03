@@ -102,6 +102,7 @@ const mcp = Layer.succeed(
     authenticate: () => Effect.die("unexpected MCP auth in compaction cap tests"),
     finishAuth: () => Effect.die("unexpected MCP auth in compaction cap tests"),
     removeAuth: () => Effect.void,
+    cancelAuth: () => Effect.void,
     supportsOAuth: () => Effect.succeed(false),
     hasStoredTokens: () => Effect.succeed(false),
     getAuthStatus: () => Effect.succeed("not_authenticated" as const),

@@ -464,6 +464,8 @@ export interface NavigateMessage {
   type: "navigate"
   view: "newTask" | "marketplace" | "history" | "profile" | "settings" | "subAgentViewer"
   tab?: string
+  subtab?: string
+  focus?: string
   projectId?: string
 }
 
@@ -1517,6 +1519,8 @@ export interface MarketplaceInstallResultMessage {
   error?: string
   filePath?: string
   filePaths?: string[]
+  /** True when the installed MCP server reports `needs_auth` right after install (success only). */
+  needsAuth?: boolean
 }
 
 export interface OpenInstallModalMessage {
@@ -1584,6 +1588,63 @@ export interface McpStatusEntry {
 export interface McpStatusLoadedMessage {
   type: "mcpStatusLoaded"
   status: Record<string, McpStatusEntry>
+}
+
+/** The status tags an MCP sign-in attempt can resolve to: the CLI's `McpStatus` tags, plus client-synthesized `cancelled`/`timeout` and HTTP-derived `unsupported`/`not_found`. */
+export type McpAuthStatus =
+  | "connected"
+  | "failed"
+  | "cancelled"
+  | "timeout"
+  | "unsupported"
+  | "not_found"
+  | "disabled"
+  | "needs_auth"
+  | "needs_client_registration"
+
+export interface McpAuthStateMessage {
+  type: "mcpAuthState"
+  directory: string
+  needsAuth: string[]
+  busy: string[]
+}
+
+export interface McpAuthResultMessage {
+  type: "mcpAuthResult"
+  name: string
+  status: McpAuthStatus
+  error?: string
+}
+
+export interface McpBundle {
+  id: string
+  scope: "project" | "global"
+  skills: string[]
+}
+
+export interface McpBundlesMessage {
+  type: "mcpBundles"
+  bundles: McpBundle[]
+}
+
+export interface McpRemovedMessage {
+  type: "mcpRemoved"
+  name: string
+}
+
+export interface McpInstalledMessage {
+  type: "mcpInstalled"
+  name: string
+}
+
+export interface McpRemovalStateMessage {
+  type: "mcpRemovalState"
+  name: string
+  removing: boolean
+}
+
+export interface AgentBehaviourInvalidatedMessage {
+  type: "agentBehaviourInvalidated"
 }
 
 // Continue in Worktree: progress updates (extension → webview)
@@ -1888,6 +1949,13 @@ export type ExtensionMessage =
   | ContinueInWorktreeProgressMessage
   | WorktreeStatsLoadedMessage
   | McpStatusLoadedMessage
+  | McpAuthStateMessage
+  | McpAuthResultMessage
+  | McpBundlesMessage
+  | McpRemovedMessage
+  | McpInstalledMessage
+  | McpRemovalStateMessage
+  | AgentBehaviourInvalidatedMessage
   | ClearPendingPromptsMessage
   | ExtensionDataReadyMessage
   | TelemetryStateMessage

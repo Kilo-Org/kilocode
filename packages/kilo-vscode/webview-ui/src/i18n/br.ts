@@ -209,6 +209,10 @@ export const dict = {
   "prompt.agents.show": "Mostrar agentes em segundo plano",
   "prompt.action.enhance": "Melhorar prompt",
   "prompt.paste.expand": "Clique para expandir o texto colado",
+  "prompt.issues.title": "Kudennoù estez",
+  "prompt.mcp.provider": "MCP {{name}}",
+  "prompt.mcp.openSettings": "Digeriñ en Arventennoù",
+  "prompt.mcp.signIn.busy": "O kennaskañ…",
   "prompt.action.autoApprove.enable": "Ativar aprovação automática",
   "prompt.action.autoApprove.disable": "Desativar aprovação automática",
   "prompt.action.autoApprove.enabled":
@@ -1045,12 +1049,31 @@ export const dict = {
   "settings.agentBehaviour.removeMcp.title": "Remover servidor MCP",
   "settings.agentBehaviour.removeMcp.confirm":
     'Remover o servidor MCP "{{name}}"? Isso o removerá da sua configuração.',
+  "settings.agentBehaviour.removeMcp.bundleConfirm":
+    "Dilemel an dafariad MCP \"{{name}}\" hag e giz kenseurt? Dilemel a raio an dafariad ha pep c'hiz dalc'het gant an staliadur Marc'had-mañ.",
   "settings.agentBehaviour.removeMcp.button": "Remover",
   "settings.agentBehaviour.editMcp": "Editar Servidor MCP",
   "settings.agentBehaviour.editMcp.transportLocal": "Servidor local (transporte stdio)",
   "settings.agentBehaviour.editMcp.transportRemote": "Servidor remoto (transporte SSE/HTTP)",
   "settings.agentBehaviour.editMcp.env": "Variáveis de Ambiente",
   "settings.agentBehaviour.editMcp.env.help": "Variáveis passadas para o processo do servidor MCP.",
+  "settings.agentBehaviour.editMcp.oauth": "OAuth",
+  "settings.agentBehaviour.editMcp.oauth.help":
+    "Laoskit war Emgefreek nemet ma ranka an dafariad ur c'hliant enrollet a-raok. Un arvar kliant a vez kadavet en ho restr kefluniañ Kilo.",
+  "settings.agentBehaviour.editMcp.oauth.mode": "Mod",
+  "settings.agentBehaviour.editMcp.oauth.mode.automatic": "Emgefreek",
+  "settings.agentBehaviour.editMcp.oauth.mode.disabled": "Dizweredekaet",
+  "settings.agentBehaviour.editMcp.oauth.mode.custom": "Kliant personelaet",
+  "settings.agentBehaviour.editMcp.oauth.clientId": "ID kliant",
+  "settings.agentBehaviour.editMcp.oauth.clientSecret": "Arvar kliant",
+  "settings.agentBehaviour.editMcp.oauth.scope": "Ledenn",
+  "settings.agentBehaviour.editMcp.oauth.callbackPort": "Porzh distro",
+  "settings.agentBehaviour.editMcp.oauth.redirectUri": "URI adkas",
+  "settings.agentBehaviour.editMcp.oauth.redirectUri.help":
+    "Dre ziouer: http://127.0.0.1:19876/mcp/oauth/callback, a zilez ar porzh distro.",
+  "settings.agentBehaviour.editMcp.oauth.port.invalid": "Roit ur porzh etre 1 ha 65535.",
+  "settings.agentBehaviour.editMcp.oauth.secret.invalid": "Un arvar kliant a c'houlenn un ID kliant.",
+  "settings.agentBehaviour.editMcp.oauth.redirectUri.invalid": "Roit un URI adkas reizh.",
   "settings.agentBehaviour.addMcp.command": "Comando",
   "settings.agentBehaviour.addMcp.command.placeholder": "e.g. npx",
   "settings.agentBehaviour.addMcp.args": "Argumentos",
@@ -1064,6 +1087,8 @@ export const dict = {
   "settings.agentBehaviour.removeSkill.title": "Remover habilidade",
   "settings.agentBehaviour.removeSkill.confirm":
     'Remover a habilidade "{{name}}"? Isso excluirá os arquivos da habilidade do disco.',
+  "settings.agentBehaviour.removeSkill.bundleConfirm":
+    "Dilemel ar c'hiz \"{{name}}\"? Dizentus ivez a raio an dafariad MCP {{mcp}} ha pep c'hiz kenseurt eus an hevelep staliadur Marc'had.",
   "settings.agentBehaviour.removeSkill.button": "Remover",
   "settings.agentBehaviour.rules.description":
     "Regras são arquivos de instrução que orientam o comportamento do agente. Elas são incluídas no prompt do sistema para cada conversa. Adicione caminhos de arquivos abaixo para incluir regras adicionais.",
@@ -1080,6 +1105,12 @@ export const dict = {
   "settings.agentBehaviour.mcpDetail.command": "Comando",
   "settings.agentBehaviour.mcpDetail.args": "Argumentos",
   "settings.agentBehaviour.mcpDetail.env": "Ambiente",
+  "settings.agentBehaviour.mcpSignIn.cancel": "Nullañ ar c'hennaskañ",
+  "settings.agentBehaviour.mcpRemoving": "O tilemel…",
+  "settings.agentBehaviour.mcpResetAuth": "Adderaouekaat ar c'hennaskañ",
+  "settings.agentBehaviour.mcpResetAuth.title": "Adderaouekaat kennaskañ MCP",
+  "settings.agentBehaviour.mcpResetAuth.confirm":
+    "Skarzhañ ar c'hennaskañ kadaviet evit \"{{name}}\"? Ret e vo deoc'h kennaskañ en-dro.",
   "settings.agentBehaviour.mcpBrowseMarketplace": "Explorar Marketplace",
   "settings.agentBehaviour.mcpEmpty":
     "Nenhum servidor MCP configurado. Adicione servidores MCP em kilo.jsonc ou peça ao agente para adicioná-los.",

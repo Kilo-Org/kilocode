@@ -565,15 +565,17 @@
   flex-shrink: 0;
 }
 
-.prompt-indexing-button {
+.prompt-indexing-button,
+.prompt-issues-button {
   position: relative;
 }
 
 /* Shared status dot for prompt hint controls. Pin it to the icon corner and
    give it a surface-colored ring so it reads as a badge instead of sitting on
    the glyph. The same size, ring, and corner offset are used for the indexing,
-   auto-approve, sandbox, and speech controls. */
+   auto-approve, sandbox, speech, and session-issues controls. */
 .prompt-indexing-button::after,
+.prompt-issues-button::after,
 .prompt-status-button--active::after,
 .prompt-speech-button--recording::after {
   content: "";
@@ -585,9 +587,76 @@
   box-shadow: 0 0 0 1px var(--surface-base, var(--vscode-editor-background));
 }
 
-.prompt-indexing-button::after {
+.prompt-indexing-button::after,
+.prompt-issues-button::after {
   top: 1px;
   right: 1px;
+}
+
+/* Only shown when the session has an actionable issue (e.g. an MCP server
+   needing sign-in), so it is always rendered in the warning tone. */
+.prompt-issues-button {
+  color: var(--vscode-charts-yellow, #cca700);
+}
+
+/* Match VS Code's native menu chrome so the session-issues popup reads as a
+   platform menu rather than a webview surface. Items span the full width and
+   the container carries no horizontal padding, as in the editor's own menus. */
+.prompt-issues-menu[data-component="dropdown-menu-content"] {
+  min-width: 180px;
+  max-width: calc(100vw - 24px);
+  padding: 4px 0;
+  border-radius: 5px;
+  border: 1px solid var(--vscode-menu-border, var(--vscode-editorWidget-border, transparent));
+  background-color: var(--vscode-menu-background, var(--vscode-editorWidget-background));
+  color: var(--vscode-menu-foreground, var(--vscode-editorWidget-foreground));
+  box-shadow: 0 2px 8px var(--vscode-widget-shadow, rgb(0 0 0 / 36%));
+}
+
+.prompt-issues-menu[data-component="dropdown-menu-content"] [data-slot="dropdown-menu-item"] {
+  min-height: 22px;
+  padding: 2px 10px;
+  border-radius: 0;
+  font-size: var(--kilo-font-size-13);
+  font-weight: var(--font-weight-normal);
+  color: var(--vscode-menu-foreground, var(--vscode-editorWidget-foreground));
+}
+
+.prompt-issues-menu[data-component="dropdown-menu-content"] [data-slot="dropdown-menu-item"][data-highlighted] {
+  background-color: var(--vscode-menu-selectionBackground, var(--vscode-list-activeSelectionBackground));
+  color: var(--vscode-menu-selectionForeground, var(--vscode-list-activeSelectionForeground));
+  outline: 1px solid var(--vscode-menu-selectionBorder, transparent);
+  outline-offset: -1px;
+}
+
+.prompt-issues-menu[data-component="dropdown-menu-content"] [data-slot="dropdown-menu-item"][data-disabled] {
+  color: var(--vscode-disabledForeground, var(--vscode-descriptionForeground));
+}
+
+/* VS Code labels menu sections in the description tone, not as a clickable row. */
+.prompt-issues-menu[data-component="dropdown-menu-content"] [data-slot="dropdown-menu-group-label"] {
+  padding: 2px 10px;
+  font-size: var(--kilo-font-size-10);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--vscode-descriptionForeground);
+}
+
+.prompt-issues-menu[data-component="dropdown-menu-content"] [data-slot="dropdown-menu-separator"] {
+  margin: 4px 0;
+  border-top-color: var(--vscode-menu-separatorBackground, var(--vscode-editorWidget-border));
+}
+
+body.vscode-reduce-motion .prompt-issues-menu {
+  animation: none;
+  transition: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .prompt-issues-menu {
+    animation: none;
+    transition: none;
+  }
 }
 
 .prompt-indexing-button--muted {
