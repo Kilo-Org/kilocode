@@ -26,10 +26,3 @@ export function folderFor(target: string, roots: readonly string[]): string | un
     return root
   }, undefined)
 }
-
-/** `target` relative to the folder that owns it, with forward slashes; undefined outside every folder. */
-export function relativeIn(target: string, roots: readonly string[]): string | undefined {
-  const root = folderFor(target, roots)
-  if (!root) return undefined
-  return path.relative(path.resolve(root), path.resolve(target)).replaceAll("\\", "/")
-}

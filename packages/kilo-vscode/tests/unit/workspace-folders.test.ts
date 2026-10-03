@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test"
 import * as path from "path"
-import { folderFor, relativeIn, within } from "../../src/workspace-folders"
+import { folderFor, within } from "../../src/workspace-folders"
 
 const abs = (...parts: string[]) => path.resolve("/ws", ...parts)
 const a = abs("a")
@@ -31,15 +31,5 @@ describe("folderFor", () => {
 
   it("returns undefined outside every folder", () => {
     expect(folderFor(abs("c", "x.ts"), [a, b])).toBeUndefined()
-  })
-})
-
-describe("relativeIn", () => {
-  it("is relative to the owning folder, without the folder name", () => {
-    expect(relativeIn(abs("b", "src", "x.ts"), [a, b])).toBe("src/x.ts")
-  })
-
-  it("is undefined outside every folder", () => {
-    expect(relativeIn(abs("c", "x.ts"), [a, b])).toBeUndefined()
   })
 })

@@ -1,7 +1,8 @@
 import * as vscode from "vscode"
 import { buildWebviewHtml, getWebviewFontSize } from "./utils"
 import { watchFontSizeConfig } from "./kilo-provider/font-size"
-import { appendOutput, getWorkspaceRoot } from "./review-utils"
+import { appendOutput } from "./review-utils"
+import { selectedRoot } from "./workspace-root"
 import { getDiffMarkdownRender, getUserDiffStyle, setDiffMarkdownRender, setUserDiffStyle } from "./review-settings"
 
 export interface DiffVirtualFile {
@@ -83,7 +84,7 @@ export class DiffVirtualProvider implements vscode.Disposable {
         vscodeLanguage: vscode.env.language,
         languageOverride: vscode.workspace.getConfiguration("kilo-code.new").get<string>("language"),
         fontSize: getWebviewFontSize(),
-        workspaceDirectory: getWorkspaceRoot(),
+        workspaceDirectory: selectedRoot(),
       })
       this.pushData()
       return

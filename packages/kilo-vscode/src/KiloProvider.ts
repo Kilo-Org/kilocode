@@ -1569,7 +1569,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           break
         case "requestChatCompletion": {
           if (!this.chatAutocomplete) {
-            this.chatAutocomplete = new ChatTextAreaAutocomplete(this.connectionService)
+            this.chatAutocomplete = new ChatTextAreaAutocomplete(this.connectionService, undefined, () =>
+              this.getWorkspaceDirectory(this.currentSession?.id),
+            )
           }
           void this.chatAutocomplete.handle(
             { type: "requestChatCompletion", text: message.text, requestId: message.requestId },

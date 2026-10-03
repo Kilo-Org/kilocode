@@ -5,7 +5,8 @@
 import * as vscode from "vscode"
 import type { TerminalHost, TerminalHandle } from "./SessionTerminalManager"
 
-export function createTerminalHost(): TerminalHost {
+/** `root` is the Agent Manager project new terminals open in when a session has no worktree. */
+export function createTerminalHost(root?: () => string | undefined): TerminalHost {
   const terminalMap = new WeakMap<vscode.Terminal, TerminalHandle>()
 
   const wrap = (terminal: vscode.Terminal): TerminalHandle => {
@@ -35,7 +36,7 @@ export function createTerminalHost(): TerminalHost {
       const t = vscode.window.activeTerminal
       return t ? wrap(t) : undefined
     },
-    repoPath: () => vscode.workspace.workspaceFolders?.[0]?.uri.fsPath,
+    repoPath: () => root?.() ?? vscode.workspace.workspaceFolders?.[0]?.uri.fsPath,
     showWarning: (msg) => void vscode.window.showWarningMessage(msg),
     setContext: (key, value) => void vscode.commands.executeCommand("setContext", key, value),
     onTerminalClosed: (cb) => vscode.window.onDidCloseTerminal((terminal) => cb(wrap(terminal))),

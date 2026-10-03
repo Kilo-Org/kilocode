@@ -5,6 +5,7 @@ import { fetchMarketplaceData, type MarketplaceActionContext } from "./actions"
 import { selectSuggestions, showSuggestionNotification, suggestionSlug } from "./notify"
 import type { KiloConnectionService } from "../cli-backend"
 import type { MarketplaceItem } from "./types"
+import { selectedRoot } from "../../workspace-root"
 
 const DISMISSED_KEY = "kilo.marketplace.dismissedSuggestions"
 const DEBOUNCE = 1500
@@ -72,8 +73,9 @@ export class MarketplaceNotifier implements vscode.Disposable {
     await this.context.globalState.update(DISMISSED_KEY, [...existing, slug])
   }
 
+  /** Installed-in-project checks use the root picked in the chat input. */
   private project(): string | undefined {
-    return vscode.workspace.workspaceFolders?.[0]?.uri.fsPath
+    return selectedRoot(this.context)
   }
 
   private directory(): string {

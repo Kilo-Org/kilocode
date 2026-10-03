@@ -13,15 +13,21 @@ import { folderFor } from "./workspace-folders"
 
 const KEY = "kilo.workspaceRoot"
 const listeners = new Set<() => void>()
+let bound: vscode.Memento | undefined
 
 export function workspaceRoots(): string[] {
   return (vscode.workspace.workspaceFolders ?? []).map((folder) => folder.uri.fsPath)
 }
 
-/** The selected root, or the first folder; `fallback` stands in for the stored choice when there is no context. */
-export function selectedRoot(context: vscode.ExtensionContext | undefined, fallback?: string): string | undefined {
+/** Bind the window's workspace state once at activation, for callers that have no extension context. */
+export function bindRootState(context: vscode.ExtensionContext): void {
+  bound = context.workspaceState
+}
+
+/** The selected root, or the first folder; `fallback` stands in for the stored choice when there is no state. */
+export function selectedRoot(context?: vscode.ExtensionContext, fallback?: string): string | undefined {
   const roots = workspaceRoots()
-  const saved = context?.workspaceState?.get<string>(KEY) ?? fallback
+  const saved = (context?.workspaceState ?? bound)?.get<string>(KEY) ?? fallback
   return (saved ? folderFor(saved, roots) : undefined) ?? roots.at(0)
 }
 

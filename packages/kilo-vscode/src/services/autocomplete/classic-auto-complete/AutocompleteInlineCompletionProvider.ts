@@ -32,6 +32,7 @@ import type { AutocompleteServiceSettings } from "../AutocompleteServiceManager"
 import { postprocessAutocompleteSuggestion } from "./uselessSuggestionFilter"
 import { shouldSkipAutocomplete } from "./contextualSkip"
 import { FileIgnoreController } from "../shims/FileIgnoreController"
+import { WorkspaceIgnoreController } from "../shims/WorkspaceIgnoreController"
 import { AutocompleteTelemetry } from "./AutocompleteTelemetry"
 import {
   autocompleteScope,
@@ -153,7 +154,8 @@ export class AutocompleteInlineCompletionProvider implements vscode.InlineComple
     connectionService: KiloConnectionService,
     costTrackingCallback: CostTrackingCallback,
     getSettings: () => AutocompleteServiceSettings | null,
-    workspacePath: string,
+    /** A folder, or every workspace folder (each with its own ignore rules). */
+    workspacePath: string | (() => string[]),
     telemetry: AutocompleteTelemetry | null = null,
     onFatalError?: (status: number | null) => void,
   ) {
@@ -164,7 +166,10 @@ export class AutocompleteInlineCompletionProvider implements vscode.InlineComple
     this.onFatalError = onFatalError ?? null
 
     this.ignoreController = (async () => {
-      const ignoreController = new FileIgnoreController(workspacePath)
+      const ignoreController =
+        typeof workspacePath === "function"
+          ? new WorkspaceIgnoreController(workspacePath)
+          : new FileIgnoreController(workspacePath)
       await ignoreController.initialize()
       return ignoreController
     })()
