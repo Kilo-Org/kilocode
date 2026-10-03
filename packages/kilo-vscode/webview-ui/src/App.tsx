@@ -304,6 +304,10 @@ const AppContent: Component = () => {
         setCurrentView("newTask")
         window.dispatchEvent(new CustomEvent("focusTranscriptSearch"))
         break
+      case "showOpenTabs":
+        setCurrentView("newTask")
+        window.dispatchEvent(new CustomEvent("showOpenTabs"))
+        break
     }
   }
 

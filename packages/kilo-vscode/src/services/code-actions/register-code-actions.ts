@@ -118,5 +118,13 @@ export function registerCodeActions(
       if (!(await revealTarget(view))) return
       view.postMessage({ type: "action", action: "focusSearch" })
     }),
+
+    // The open-tabs switcher only exists in the sidebar and editor-tab chats;
+    // Agent Manager has its own tab bar, so never route this to it.
+    vscode.commands.registerCommand("kilo-code.new.showOpenTabs", async () => {
+      const view = activeTabProvider?.() ?? provider
+      await revealTarget(view)
+      view.postMessage({ type: "action", action: "showOpenTabs" })
+    }),
   )
 }

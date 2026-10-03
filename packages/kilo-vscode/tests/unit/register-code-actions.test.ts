@@ -209,6 +209,16 @@ describe("registerCodeActions", () => {
     expect(state.posts).toEqual([{ type: "action", action: "focusSearch" }])
   })
 
+  it("shows open tabs in the sidebar even when Agent Manager is active", async () => {
+    const state = setup(true)
+
+    await state.commands.get("kilo-code.new.showOpenTabs")?.()
+
+    expect(state.recipients).toEqual(["sidebar"])
+    expect(state.executed).toEqual([["kilo-code.SidebarProvider.focus"]])
+    expect(state.posts).toEqual([{ type: "action", action: "showOpenTabs" }])
+  })
+
   it("does not toggle chat search when Agent Manager readiness is cancelled", async () => {
     const state = setup(true, false)
 
