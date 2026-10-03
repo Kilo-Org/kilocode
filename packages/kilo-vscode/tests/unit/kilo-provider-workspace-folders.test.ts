@@ -217,3 +217,91 @@ describe("KiloProvider Settings panel folders", () => {
     rmSync(root, { recursive: true, force: true })
   })
 })
+
+describe("KiloProvider Settings › Indexing folders", () => {
+  type Indexing = Internals & {
+    projectDirectory: string | null | undefined
+    fetchAndSendIndexingStatus: (dir?: string, id?: string) => Promise<void>
+    sendIndexingSettings: (id?: string) => Promise<{ id: string; root: string } | undefined>
+    selectIndexingProject: (id?: string) => Promise<void>
+  }
+  type Loaded = { settings: { projects: Array<{ id: string; root: string; label: string }>; projectId?: string } }
+
+  function panel(dir: string, dirs: string[]) {
+    const store = new Map<string, unknown>()
+    const context = {
+      globalState: {
+        get: (key: string) => store.get(key),
+        update: async (key: string, value: unknown) => void store.set(key, value),
+      },
+      workspaceState: { get: () => undefined, update: async () => {} },
+    }
+    workspace.workspaceFolders = dirs.map((fsPath) => ({ uri: { fsPath }, name: path.basename(fsPath) }))
+    const messages: Array<{ type?: string; [key: string]: unknown }> = []
+    const statuses: Array<string | undefined> = []
+    const provider = new KiloProvider(
+      {} as never,
+      { getClient: () => undefined } as never,
+      context as never,
+      { projectDirectory: dir } as never,
+    )
+    const internal = provider as unknown as Indexing
+    internal.postMessage = (message) => messages.push(message as { type?: string })
+    internal.reloadAfterAuthChange = async () => {}
+    internal.fetchAndSendIndexingStatus = async (target) => void statuses.push(target)
+    return { internal, messages, statuses }
+  }
+
+  const loaded = (messages: Array<{ type?: string }>) => last(messages, "indexingSettingsLoaded") as unknown as Loaded
+
+  it("lists every workspace folder and starts on the panel's folder", async () => {
+    const root = mkdtempSync(path.join(tmpdir(), "kilo-mr-"))
+    const dirs = ["alpha", "beta"].map((name) => path.join(root, name))
+    dirs.forEach((dir) => mkdirSync(dir))
+    const { internal, messages } = panel(dirs[1]!, dirs)
+
+    await internal.sendIndexingSettings()
+
+    const settings = loaded(messages).settings
+    expect(settings.projects.map((item) => item.label)).toEqual(["beta", "alpha"])
+    expect(settings.projectId).toBe(settings.projects[0]!.id)
+    rmSync(root, { recursive: true, force: true })
+  })
+
+  it("moves the Settings folder when another folder is chosen for indexing", async () => {
+    const root = mkdtempSync(path.join(tmpdir(), "kilo-mr-"))
+    const dirs = ["alpha", "beta"].map((name) => path.join(root, name))
+    dirs.forEach((dir) => mkdirSync(dir))
+    const { internal, messages, statuses } = panel(dirs[1]!, dirs)
+    await internal.sendIndexingSettings()
+    const alpha = loaded(messages).settings.projects.find((item) => item.label === "alpha")!
+
+    await internal.selectIndexingProject(alpha.id)
+
+    expect(internal.projectDirectory).toBe(dirs[0])
+    expect(statuses).toContain(alpha.root)
+    expect(loaded(messages).settings.projectId).toBe(alpha.id)
+    rmSync(root, { recursive: true, force: true })
+  })
+
+  it("follows the Settings folder dropdown", async () => {
+    const root = mkdtempSync(path.join(tmpdir(), "kilo-mr-"))
+    const dirs = ["alpha", "beta"].map((name) => path.join(root, name))
+    dirs.forEach((dir) => mkdirSync(dir))
+    const { internal, messages } = panel(dirs[1]!, dirs)
+    await internal.sendIndexingSettings()
+
+    const before = messages.length
+    internal.handleFolderMessage({ type: "selectWorkspaceFolder", directory: dirs[0] })
+    // The project list resolves Git roots in a subprocess, so wait for the refreshed list.
+    for (let tries = 0; tries < 200; tries++) {
+      if (messages.slice(before).some((item) => item.type === "indexingSettingsLoaded")) break
+      await Bun.sleep(10)
+    }
+
+    const settings = loaded(messages).settings
+    expect(settings.projects[0]!.label).toBe("alpha")
+    expect(settings.projectId).toBe(settings.projects[0]!.id)
+    rmSync(root, { recursive: true, force: true })
+  })
+})

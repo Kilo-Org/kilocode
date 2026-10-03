@@ -690,6 +690,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.postMessage({ type: "workspaceDirectoryChanged", directory: directory ?? "" })
     this.postMessage({ type: "configBindingExpired", reason: "project-changed" })
     this.announceFolder()
+    void this.followIndexingFolder()
   }
 
   public setDiffVirtualProvider(provider: import("./DiffVirtualProvider").DiffVirtualProvider): void {
@@ -1531,11 +1532,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
             console.error("[Kilo New] fetchAndSendIndexingStatus failed:", e),
           )
           break
-        case "requestIndexingSettings": {
-          const project = await this.sendIndexingSettings(message.projectId)
-          if (message.projectId && project) await this.fetchAndSendIndexingStatus(project.root, project.id)
+        case "requestIndexingSettings":
+          await this.selectIndexingProject(message.projectId)
           break
-        }
         case "setIndexingConsent":
           await this.setIndexingConsent(message.projectId, message.enabled)
           break
@@ -3174,7 +3173,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     const config = this.connectionService.getServerConfig()
     if (!config) return
     const source = this.getWorkspaceDirectory(this.currentSession?.id)
-    const dir = directory ?? source
+    // A Settings panel shows its own folder's status, not the chat root's.
+    const dir = directory ?? this.projectDirectory ?? source
     if (!dir) return
     const target = { source, directory: dir, projectId }
     this.indexingTarget = target
@@ -3190,7 +3190,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       const message = {
         type: "indexingStatusLoaded",
         status,
-        projectId,
+        // Tag panel statuses so the webview drops them once another project is selected.
+        projectId: projectId ?? (this.projectDirectory ? project.id : undefined),
       }
       this.cachedIndexingStatusMessage = message
       this.postMessage(message)
@@ -4249,6 +4250,37 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     return vscode.workspace.getConfiguration("kilo-code.new.experimental").get<boolean>("browserAutomation", false)
   }
 
+  /**
+   * Projects offered in Settings › Indexing: the folder this panel shows first,
+   * then every workspace folder, then Agent Manager projects, de-duplicated by
+   * repository (consent is stored per repository).
+   */
+  private indexingProjects(store: ReturnType<typeof indexingConsentStore>) {
+    const folders = (vscode.workspace.workspaceFolders ?? []).map((folder) => ({
+      root: folder.uri.fsPath,
+      label: folder.name,
+    }))
+    const extras = this.extensionContext ? registeredProjects(this.extensionContext) : []
+    return store.list(this.settingsDirectory(), [...folders, ...extras])
+  }
+
+  /** Select a project in Settings › Indexing and keep the Settings folder in step with it. */
+  private async selectIndexingProject(id?: string) {
+    const project = await this.sendIndexingSettings(id)
+    if (!id || !project) return
+    await this.fetchAndSendIndexingStatus(project.root, project.id)
+    if (this.projectDirectory === undefined) return
+    const folder = this.folderPaths().find((dir) => samePath(canonicalizePath(dir), project.root))
+    if (folder) this.setProjectDirectory(folder)
+  }
+
+  /** Point Settings › Indexing at the folder this panel now shows. */
+  private async followIndexingFolder() {
+    this.indexingProjectId = undefined
+    const project = await this.sendIndexingSettings()
+    if (project) await this.fetchAndSendIndexingStatus(project.root, project.id)
+  }
+
   private async sendIndexingSettings(projectId?: string) {
     if (!this.extensionContext) {
       this.postMessage(buildIndexingSettingsMessage())
@@ -4256,7 +4288,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     }
     const request = ++this.indexingSettingsRequest
     const store = indexingConsentStore(this.extensionContext)
-    const projects = await store.list(this.getRootDirectory(), registeredProjects(this.extensionContext))
+    const projects = await this.indexingProjects(store)
     if (request !== this.indexingSettingsRequest) return undefined
     const id = projects.some((project) => project.id === projectId)
       ? projectId
@@ -4271,7 +4303,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private async setIndexingConsent(projectId: string, enabled: boolean): Promise<void> {
     if (!this.extensionContext) return
     const store = indexingConsentStore(this.extensionContext)
-    const projects = await store.list(this.getRootDirectory(), registeredProjects(this.extensionContext))
+    const projects = await this.indexingProjects(store)
     const project = projects.find((item) => item.id === projectId)
     if (!project) return
     await store.set(project.id, enabled)
