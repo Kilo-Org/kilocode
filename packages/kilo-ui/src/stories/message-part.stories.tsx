@@ -1,6 +1,8 @@
 /** @jsxImportSource solid-js */
 import type { Meta, StoryObj } from "storybook-solidjs-vite"
-import { UserMessageDisplay, AssistantParts } from "../components/message-part"
+import { For } from "solid-js"
+import { Dynamic } from "solid-js/web"
+import { UserMessageDisplay, AssistantParts, ToolRegistry } from "../components/message-part"
 import { AgentAvatarPalette } from "../components/agent-avatar"
 import { DataProvider } from "@opencode-ai/ui/context/data"
 import { DiffComponentProvider } from "@kilocode/kilo-ui/context/diff"
@@ -366,6 +368,49 @@ const meta: Meta = {
 
 export default meta
 type Story = StoryObj
+
+export const GrepTargets: Story = {
+  render: () => (
+    <AllProviders>
+      <For each={["pending", "running", "completed"]}>
+        {(status) => (
+          <section data-status={status}>
+            <h3>{status}</h3>
+            <For
+              each={[
+                "C:\\Sources",
+                "C:\\Sources\\Program.cs",
+                "C:/Sources/",
+                "C:\\",
+                "\\\\server\\share\\Sources",
+                "/project/src",
+                "/project/src/index.ts",
+                "/project",
+                "/",
+                "src",
+                "src/nested",
+                ".",
+                undefined,
+              ]}
+            >
+              {(path) => (
+                <div data-target={path ?? "omitted"}>
+                  <Dynamic
+                    component={ToolRegistry.render("grep")}
+                    tool="grep"
+                    status={status}
+                    input={{ path, pattern: "Понятно", include: "*.cs" }}
+                    metadata={{}}
+                  />
+                </div>
+              )}
+            </For>
+          </section>
+        )}
+      </For>
+    </AllProviders>
+  ),
+}
 
 // --- User message bubble ---
 
