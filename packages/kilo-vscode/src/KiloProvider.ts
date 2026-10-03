@@ -602,12 +602,17 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       if (this.connectionState === "connected") void this.fetchAndSendSandboxDefault()
     })
     this.unsubscribeMcpAuth = mcpAuth(this.connectionService).onChange((dir) => {
-      if (dir === this.getWorkspaceDirectory()) void this.fetchAndSendMcpAuthState()
+      if (dir === this.getWorkspaceDirectory()) void this.refreshMcpAuthConsumers()
     })
     this.unsubscribeMcpRemoval = mcpRemoval(this.connectionService).on((event) => {
       if (!sameDirectory(event.directory, this.getWorkspaceDirectory())) return
       if (event.phase === "removed") {
         this.postMessage({ type: "mcpRemoved", name: event.name })
+        return
+      }
+      if (event.phase === "installed") {
+        this.postMessage({ type: "mcpInstalled", name: event.name })
+        this.postMessage({ type: "agentBehaviourInvalidated" })
         return
       }
       this.postMessage({ type: "mcpRemovalState", name: event.name, removing: event.phase === "removing" })
@@ -3152,6 +3157,12 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     }
     this.postMessage(message)
     if (this.client) await auth.refresh(dir)
+  }
+
+  /** Keep Settings and prompt consumers synchronized when any webview completes MCP authentication. */
+  private async refreshMcpAuthConsumers(): Promise<void> {
+    await Promise.all([this.fetchAndSendMcpAuthState(), this.fetchAndSendMcpStatus()])
+    this.postMessage({ type: "agentBehaviourInvalidated" })
   }
 
   private async handleSignInMcp(name: string, notify: boolean): Promise<void> {

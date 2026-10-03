@@ -3,9 +3,11 @@ import {
   configUnsetPaths,
   ConfigState,
   deepMerge,
+  hideRemovedMcp,
   mergeScopedConfig,
   pruneConfigSet,
   removeMcpConfig,
+  retainUnconfirmedMcpRemovals,
   stripNulls,
 } from "../../webview-ui/src/utils/config-utils"
 import type { Config } from "../../webview-ui/src/types/messages"
@@ -113,6 +115,14 @@ describe("removeMcpConfig", () => {
 
   it("removes the empty MCP collection", () => {
     expect(removeMcpConfig({ mcp: { anaconda: { type: "remote" } } }, "anaconda")).toEqual({})
+  })
+
+  it("keeps a removed MCP hidden from stale server snapshots", () => {
+    const config = { mcp: { anaconda: { type: "remote" as const }, docs: { type: "remote" as const } } }
+
+    expect(hideRemovedMcp(config, new Set(["anaconda"]))).toEqual({ mcp: { docs: { type: "remote" } } })
+    expect(retainUnconfirmedMcpRemovals(new Set(["anaconda"]), config)).toEqual(new Set(["anaconda"]))
+    expect(retainUnconfirmedMcpRemovals(new Set(["anaconda"]), {})).toEqual(new Set())
   })
 })
 

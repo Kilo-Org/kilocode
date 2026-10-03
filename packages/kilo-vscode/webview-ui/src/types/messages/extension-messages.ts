@@ -1632,6 +1632,11 @@ export interface McpRemovedMessage {
   name: string
 }
 
+export interface McpInstalledMessage {
+  type: "mcpInstalled"
+  name: string
+}
+
 export interface McpRemovalStateMessage {
   type: "mcpRemovalState"
   name: string
@@ -1948,6 +1953,7 @@ export type ExtensionMessage =
   | McpAuthResultMessage
   | McpBundlesMessage
   | McpRemovedMessage
+  | McpInstalledMessage
   | McpRemovalStateMessage
   | AgentBehaviourInvalidatedMessage
   | ClearPendingPromptsMessage

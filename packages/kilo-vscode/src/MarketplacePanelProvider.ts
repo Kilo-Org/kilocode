@@ -3,7 +3,7 @@ import * as vscode from "vscode"
 import type { GlobalEvent, SessionStatus } from "@kilocode/sdk/v2/client"
 import { buildWebviewHtml, getWebviewFontSize } from "./utils"
 import { watchFontSizeConfig } from "./kilo-provider/font-size"
-import { mapSSEEventToWebviewMessage } from "./kilo-provider-utils"
+import { mapSSEEventToWebviewMessage, sameDirectory } from "./kilo-provider-utils"
 import { resolvePanelProjectDirectory } from "./project-directory"
 import { seedSessionStatuses } from "./session-status"
 import { type KiloConnectionService, ServerStartupError } from "./services/cli-backend"
@@ -157,6 +157,10 @@ export class MarketplacePanelProvider implements vscode.Disposable {
       ),
       mcpAuth(this.connection).onChange((dir) => {
         if (dir === this.directory()) this.sendMcpAuthState()
+      }),
+      mcpRemoval(this.connection).on((event) => {
+        if (!sameDirectory(event.directory, this.directory())) return
+        if (event.phase === "removed" || event.phase === "installed") void this.fetchData()
       }),
     )
     void this.connect()
@@ -342,6 +346,9 @@ export class MarketplacePanelProvider implements vscode.Disposable {
       this.directory(),
     )
     if (result.success) void vscode.window.showInformationMessage(`Successfully installed ${item.name}`)
+    if (result.success && item.type === "mcp") {
+      mcpRemoval(this.connection).emit({ directory: this.directory(), name: item.id, phase: "installed" })
+    }
     const needsAuth =
       result.success && item.type === "mcp"
         ? (await mcpAuth(this.connection).refresh(this.directory())).includes(item.id)

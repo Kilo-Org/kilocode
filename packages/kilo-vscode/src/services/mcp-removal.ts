@@ -3,7 +3,7 @@ import type { KiloConnectionService } from "./cli-backend/connection-service"
 export type McpRemovalEvent = {
   directory: string
   name: string
-  phase: "removing" | "removed" | "idle"
+  phase: "removing" | "removed" | "installed" | "idle"
 }
 
 class McpRemovalBus {

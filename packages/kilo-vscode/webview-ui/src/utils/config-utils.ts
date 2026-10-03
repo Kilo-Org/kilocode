@@ -96,6 +96,16 @@ export function removeMcpConfig(config: Config, name: string): Config {
   return next
 }
 
+export function hideRemovedMcp(config: Config, names: Iterable<string>): Config {
+  let next = config
+  for (const name of names) next = removeMcpConfig(next, name)
+  return next
+}
+
+export function retainUnconfirmedMcpRemovals(names: Iterable<string>, config: Config): Set<string> {
+  return new Set([...names].filter((name) => Boolean(config.mcp?.[name])))
+}
+
 /**
  * Plain-object config state machine — mirrors the SolidJS ConfigProvider
  * logic without signals so the message-handling behavior is unit-testable.

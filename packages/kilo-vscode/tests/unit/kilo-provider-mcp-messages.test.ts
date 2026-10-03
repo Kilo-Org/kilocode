@@ -8,6 +8,7 @@ type Internals = {
   fetchAndSendMcpStatus(): Promise<void>
   fetchAndSendMcpAuthState(): Promise<void>
   fetchAndSendMcpBundles(): Promise<void>
+  refreshMcpAuthConsumers(): Promise<void>
   handleRemoveMcp(name: string): Promise<void>
   handleSignInMcp(name: string, notify: boolean): Promise<void>
   handleResetMcpAuth(name: string): Promise<void>
@@ -126,5 +127,15 @@ describe("KiloProvider MCP message routing", () => {
     const { internal, calls } = actions()
     await internal.handleResetMcpAuth("anaconda")
     expect(calls).toEqual(["reset:anaconda", "status"])
+  })
+
+  it("refreshes status and invalidates Agent Behaviour after shared auth changes", async () => {
+    const { internal, calls } = setup()
+    ;(internal as unknown as { postMessage(message: unknown): void }).postMessage = (message) =>
+      calls.push(`post:${(message as { type: string }).type}`)
+
+    await internal.refreshMcpAuthConsumers()
+
+    expect(calls).toEqual(["authState", "status", "post:agentBehaviourInvalidated"])
   })
 })

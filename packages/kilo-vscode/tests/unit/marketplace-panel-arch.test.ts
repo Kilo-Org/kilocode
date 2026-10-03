@@ -39,6 +39,8 @@ describe("standalone Marketplace architecture", () => {
 
   it("broadcasts MCP removals from Marketplace to every Kilo provider", () => {
     expect(panel).toContain("mcpRemoval(this.connection)")
+    expect(panel).toContain('phase: "installed"')
+    expect(panel).toContain('event.phase === "removed" || event.phase === "installed"')
     expect(kilo).toContain("mcpRemoval(this.connectionService).on")
     expect(kilo).toContain('type: "mcpRemoved"')
     expect(kilo).toContain('type: "mcpRemovalState"')
