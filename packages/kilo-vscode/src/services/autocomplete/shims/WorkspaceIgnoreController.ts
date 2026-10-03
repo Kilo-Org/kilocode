@@ -34,6 +34,8 @@ export class WorkspaceIgnoreController extends FileIgnoreController {
 
   override validateAccess(filePath: string): boolean {
     const roots = this.roots()
+    // A single folder behaves exactly like its own FileIgnoreController.
+    if (roots.length < 2) return this.single(roots.at(0), filePath)
     const plain = filePath.replace(/^file:\/\/\/?(?=[a-zA-Z]:|\/)/, "")
     const target =
       path.isAbsolute(plain) || /^[a-zA-Z]:[/\\]/.test(plain) ? plain : path.resolve(roots.at(0) ?? "", plain)
@@ -48,6 +50,14 @@ export class WorkspaceIgnoreController extends FileIgnoreController {
   override dispose(): void {
     for (const controller of this.folders.values()) controller.dispose()
     this.folders.clear()
+  }
+
+  private single(root: string | undefined, filePath: string): boolean {
+    if (!root) return false
+    const controller = this.folders.get(root)
+    if (controller) return controller.validateAccess(filePath)
+    this.load(root)
+    return false
   }
 
   private load(root: string) {

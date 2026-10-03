@@ -239,7 +239,8 @@ function openFile(dir: string, filePath: string, line?: number, column?: number)
       show(uri, line, column)
     },
     () => {
-      if (isAbsolutePath(filePath)) return findFallback(dir, filePath, line, column)
+      const multi = (vscode.workspace.workspaceFolders?.length ?? 0) > 1
+      if (!multi || isAbsolutePath(filePath)) return findFallback(dir, filePath, line, column)
       openInFolders(dir, filePath, line, column).catch((err: unknown) =>
         console.error("[Kilo New] KiloProvider: Failed to open file from workspace folders:", err),
       )

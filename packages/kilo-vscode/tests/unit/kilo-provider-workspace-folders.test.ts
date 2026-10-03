@@ -151,13 +151,7 @@ describe("KiloProvider Settings panel folders", () => {
     projectDirectory: string | null | undefined
     configProject: (dir: string) => { root: string } | undefined
     validConfigProject: (project: { id: string; root: string; generation: number; pinned: boolean }) => boolean
-    bindingsFor: (
-      dir: string,
-      targets: { global: unknown; project: unknown },
-    ) => { global?: unknown; project?: { directory: string } }
   }
-
-  const target = { file: "kilo.json", raw: {} }
 
   it("lists the folders with the panel's own project selected", () => {
     const { internal, messages } = setup({ projectDirectory: "/b" })
@@ -201,19 +195,6 @@ describe("KiloProvider Settings panel folders", () => {
     expect(project).toBeDefined()
     expect(panel.validConfigProject(project as never)).toBe(true)
     expect(panel.configProject(root)).toBeUndefined()
-    rmSync(root, { recursive: true, force: true })
-  })
-
-  it("edits global config only while no folder is chosen", () => {
-    const root = mkdtempSync(path.join(tmpdir(), "kilo-mr-"))
-    workspace.workspaceFolders = [{ uri: { fsPath: root }, name: "root" }]
-    const { internal } = setup({ projectDirectory: null })
-    const panel = internal as unknown as Panel
-
-    const bindings = panel.bindingsFor(root, { global: target, project: target })
-
-    expect(bindings.global).toBeDefined()
-    expect(bindings.project).toBeUndefined()
     rmSync(root, { recursive: true, force: true })
   })
 })

@@ -3,7 +3,7 @@ import type { KiloConnectionService } from "../cli-backend/connection-service"
 import { getErrorMessage } from "../../kilo-provider-utils"
 import { getCommitMessageLanguage } from "../i18n"
 import { folderFor } from "../../workspace-folders"
-import { selectedRoot } from "../../workspace-root"
+import { selectedRoot, workspaceRoots } from "../../workspace-root"
 
 let lastGeneratedMessage: string | undefined
 let lastWorkspacePath: string | undefined
@@ -64,7 +64,9 @@ export function registerCommitMessageService(
       }
 
       const git = extension.exports?.getAPI(1)
-      const repository = findRepository(git?.repositories ?? [], arg, selectedRoot(context))
+      // Only multi-root windows prefer the picked root; single-root keeps the first repository.
+      const root = workspaceRoots().length > 1 ? selectedRoot(context) : undefined
+      const repository = findRepository(git?.repositories ?? [], arg, root)
       if (!repository) {
         vscode.window.showErrorMessage("No Git repository found")
         return

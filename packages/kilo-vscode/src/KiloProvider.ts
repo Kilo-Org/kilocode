@@ -690,7 +690,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.postMessage({ type: "workspaceDirectoryChanged", directory: directory ?? "" })
     this.postMessage({ type: "configBindingExpired", reason: "project-changed" })
     this.announceFolder()
-    void this.followIndexingFolder()
+    if (this.multiRootWindow()) void this.followIndexingFolder()
   }
 
   public setDiffVirtualProvider(provider: import("./DiffVirtualProvider").DiffVirtualProvider): void {
@@ -1570,7 +1570,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         case "requestChatCompletion": {
           if (!this.chatAutocomplete) {
             this.chatAutocomplete = new ChatTextAreaAutocomplete(this.connectionService, undefined, () =>
-              this.getWorkspaceDirectory(this.currentSession?.id),
+              this.multiRootWindow() ? this.getWorkspaceDirectory(this.currentSession?.id) : this.folderPaths().at(0),
             )
           }
           void this.chatAutocomplete.handle(
@@ -3175,8 +3175,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     const config = this.connectionService.getServerConfig()
     if (!config) return
     const source = this.getWorkspaceDirectory(this.currentSession?.id)
-    // A Settings panel shows its own folder's status, not the chat root's.
-    const dir = directory ?? this.projectDirectory ?? source
+    // In a multi-root window a Settings panel shows its own folder's status, not the chat root's.
+    const dir = directory ?? (this.multiRootWindow() ? this.projectDirectory : undefined) ?? source
     if (!dir) return
     const target = { source, directory: dir, projectId }
     this.indexingTarget = target
@@ -3192,8 +3192,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       const message = {
         type: "indexingStatusLoaded",
         status,
-        // Tag panel statuses so the webview drops them once another project is selected.
-        projectId: projectId ?? (this.projectDirectory ? project.id : undefined),
+        projectId,
       }
       this.cachedIndexingStatusMessage = message
       this.postMessage(message)
@@ -3899,11 +3898,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         )
       : undefined
     if ((hasGlobal && !globalBinding) || (hasProject && !projectBinding)) {
-      const message =
-        hasProject && this.projectDirectory === null
-          ? "Choose a workspace folder at the top of Settings to save project settings."
-          : "Settings changed or expired. Reload before saving."
-      this.postMessage({ type: "configUpdateFailed", message })
+      this.postMessage({ type: "configUpdateFailed", message: "Settings changed or expired. Reload before saving." })
       return
     }
 
@@ -4263,6 +4258,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       label: folder.name,
     }))
     const extras = this.extensionContext ? registeredProjects(this.extensionContext) : []
+    if (!this.multiRootWindow()) return store.list(this.getRootDirectory(), extras)
     return store.list(this.settingsDirectory(), [...folders, ...extras])
   }
 
@@ -4271,7 +4267,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     const project = await this.sendIndexingSettings(id)
     if (!id || !project) return
     await this.fetchAndSendIndexingStatus(project.root, project.id)
-    if (this.projectDirectory === undefined) return
+    if (this.projectDirectory === undefined || !this.multiRootWindow()) return
     const folder = this.folderPaths().find((dir) => samePath(canonicalizePath(dir), project.root))
     if (folder) this.setProjectDirectory(folder)
   }
@@ -4474,8 +4470,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       | undefined,
   ): { global?: ConfigBinding; project?: ConfigBinding } {
     if (!targets) return {}
-    // A panel without a project (several folders, none chosen yet) edits global config only.
-    const project = this.projectDirectory === null ? undefined : this.configProject(directory)
+    const project = this.configProject(directory)
     return {
       global: this.configBindings.create({
         connection: this.connectionGeneration,
@@ -5885,7 +5880,15 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     const activeUri = activeEditor
       ? notebookUri(activeEditor.document.uri)
       : vscode.window.activeNotebookEditor?.notebook.uri
-    const activeFile = activeUri?.scheme === "file" ? await toContext(activeUri.fsPath) : undefined
+    const activeRel = activeUri ? toRelative(activeUri.fsPath) : undefined
+    const activeFile =
+      activeRel !== undefined
+        ? activeRel && activeUri && controller.validateAccess(activeUri.fsPath)
+          ? activeRel
+          : undefined
+        : activeUri?.scheme === "file"
+          ? await this.otherFolderPath(activeUri.fsPath, workspaceDir)
+          : undefined
 
     // Shell
     const shell = vscode.env.shell || undefined
@@ -6110,6 +6113,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
   private folderPaths(): string[] {
     return workspaceRoots()
+  }
+
+  /** Multi-root behaviour only switches on when the window has more than one folder. */
+  private multiRootWindow(): boolean {
+    return this.folderPaths().length > 1
   }
 
   /** Pick the root new sessions start in, for every Kilo panel in this window. */
