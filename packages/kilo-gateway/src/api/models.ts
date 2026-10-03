@@ -241,7 +241,7 @@ async function fetchRawKiloModels(options?: {
       return fetchRawKiloModels({})
     }
     const kind = response.status === 401 || response.status === 403 ? "unauthorized" : "http"
-    const header = response.status === 429 ? response.headers.get("retry-after") : null
+    const header = response.headers.get("retry-after")
     const seconds =
       header == null ? NaN : /^\d+$/.test(header) ? Number(header) : (Date.parse(header) - Date.now()) / 1000
     const retryAfter = Number.isFinite(seconds) ? Math.max(0, seconds) : undefined
