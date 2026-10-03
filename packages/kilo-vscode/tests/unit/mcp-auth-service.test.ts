@@ -122,6 +122,17 @@ describe("McpAuthService.refresh", () => {
     expect(service.needsAuth("/test")).toEqual(["anaconda"])
   })
 
+  it("shares one status request across concurrent auth refreshes", async () => {
+    const { connection, calls } = fakeConnection({ status: { anaconda: { status: "needs_auth" } } })
+    const service = new McpAuthService(connection)
+
+    const [first, second] = await Promise.all([service.refreshStatus("/test"), service.refreshStatus("/test")])
+
+    expect(first).toEqual({ anaconda: { status: "needs_auth" } })
+    expect(second).toEqual(first)
+    expect(calls.status).toBe(1)
+  })
+
   it("returns empty and does not call the client for a blank directory", async () => {
     const { connection, calls } = fakeConnection({ status: { anaconda: { status: "needs_auth" } } })
     const service = new McpAuthService(connection)

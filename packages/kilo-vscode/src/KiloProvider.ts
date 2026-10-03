@@ -524,6 +524,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private unsubscribeEvent: (() => void) | null = null
   private unsubscribeState: (() => void) | null = null
   private unsubscribeMcpAuth: (() => void) | null = null
+  private mcpAuthRefresh: Promise<void> | undefined
   private unsubscribeMcpRemoval: (() => void) | null = null
   private migrationCache: MigrationContext["migrationCache"] = new Map()
   private unsubscribeNotificationDismiss: (() => void) | null = null
@@ -3127,7 +3128,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private async routeMcpMessage(type: string, name: string | undefined, message: { notify?: unknown }): Promise<void> {
     const fail = (e: unknown) => console.error("[Kilo New] handleMcpMessage failed:", type, e)
     if (type === "requestMcpStatus") return this.fetchAndSendMcpStatus().catch(fail)
-    if (type === "requestMcpAuthState") return this.fetchAndSendMcpAuthState().catch(fail)
+    if (type === "requestMcpAuthState") return this.refreshMcpAuthConsumers().catch(fail)
     if (type === "requestMcpBundles") return this.fetchAndSendMcpBundles().catch(fail)
     if (!name) return
     if (type === "removeMcp") return this.handleRemoveMcp(name).catch(fail)
@@ -3146,7 +3147,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   }
 
   /** Push the current MCP auth state (needs-auth / busy server names) for this provider's workspace directory. */
-  private async fetchAndSendMcpAuthState(): Promise<void> {
+  private fetchAndSendMcpAuthState(): void {
     const dir = this.getWorkspaceDirectory()
     const auth = mcpAuth(this.connectionService)
     const message = {
@@ -3156,12 +3157,28 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       busy: auth.busy(dir),
     }
     this.postMessage(message)
-    if (this.client) await auth.refresh(dir)
   }
 
   /** Keep Settings and prompt consumers synchronized when any webview completes MCP authentication. */
-  private async refreshMcpAuthConsumers(): Promise<void> {
-    await Promise.all([this.fetchAndSendMcpAuthState(), this.fetchAndSendMcpStatus()])
+  private refreshMcpAuthConsumers(): Promise<void> {
+    const active = this.mcpAuthRefresh
+    if (active) return active
+    const refresh = this.performMcpAuthRefresh().finally(() => {
+      if (this.mcpAuthRefresh === refresh) this.mcpAuthRefresh = undefined
+    })
+    this.mcpAuthRefresh = refresh
+    return refresh
+  }
+
+  private async performMcpAuthRefresh(): Promise<void> {
+    const dir = this.getWorkspaceDirectory()
+    const status = await mcpAuth(this.connectionService).refreshStatus(dir)
+    this.fetchAndSendMcpAuthState()
+    if (status) {
+      const message = { type: "mcpStatusLoaded", status }
+      this.cachedMcpStatusMessage = message
+      this.postMessage(message)
+    }
     this.postMessage({ type: "agentBehaviourInvalidated" })
   }
 
@@ -3169,14 +3186,14 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     const dir = this.getWorkspaceDirectory()
     const result = await mcpAuth(this.connectionService).signIn(dir, name)
     this.postMessage({ type: "mcpAuthResult", name, status: result.status, error: result.error })
-    await this.fetchAndSendMcpStatus()
+    await this.refreshMcpAuthConsumers()
     if (notify) McpOAuth.notifySignInResult(name, result)
   }
 
   private async handleResetMcpAuth(name: string): Promise<void> {
     const dir = this.getWorkspaceDirectory()
     const reconnected = await mcpAuth(this.connectionService).reset(dir, name)
-    await this.fetchAndSendMcpStatus()
+    await this.refreshMcpAuthConsumers()
     if (!reconnected) McpOAuth.notifyResetFailed(name)
   }
 

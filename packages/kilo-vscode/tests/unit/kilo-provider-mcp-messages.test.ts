@@ -1,4 +1,4 @@
-import { describe, expect, it } from "bun:test"
+import { describe, expect, it, mock } from "bun:test"
 import { mcpAuth } from "../../src/services/mcp-auth"
 
 const { KiloProvider } = await import("../../src/KiloProvider")
@@ -6,7 +6,7 @@ const { KiloProvider } = await import("../../src/KiloProvider")
 type Internals = {
   handleMcpMessage(message: unknown): Promise<boolean>
   fetchAndSendMcpStatus(): Promise<void>
-  fetchAndSendMcpAuthState(): Promise<void>
+  fetchAndSendMcpAuthState(): void
   fetchAndSendMcpBundles(): Promise<void>
   refreshMcpAuthConsumers(): Promise<void>
   handleRemoveMcp(name: string): Promise<void>
@@ -31,7 +31,7 @@ function actions() {
     calls.push(`reset:${name}`)
     return true
   }
-  internal.fetchAndSendMcpStatus = async () => void calls.push("status")
+  internal.refreshMcpAuthConsumers = async () => void calls.push("status")
   provider.postMessage = (message) => calls.push(`post:${(message as { type: string }).type}`)
   return { internal, calls }
 }
@@ -57,6 +57,7 @@ function setup() {
   Object.assign(internal, {
     fetchAndSendMcpStatus: async () => void calls.push("status"),
     fetchAndSendMcpAuthState: async () => void calls.push("authState"),
+    refreshMcpAuthConsumers: async () => void calls.push("authConsumers"),
     fetchAndSendMcpBundles: async () => void calls.push("bundles"),
     handleRemoveMcp: async (name: string) => void calls.push(`remove:${name}`),
     handleSignInMcp: async (name: string, notify: boolean) => void calls.push(`signIn:${name}:${notify}`),
@@ -98,7 +99,7 @@ describe("KiloProvider MCP message routing", () => {
     await internal.handleMcpMessage({ type: "requestMcpStatus" })
     await internal.handleMcpMessage({ type: "requestMcpAuthState" })
     await internal.handleMcpMessage({ type: "requestMcpBundles" })
-    expect(calls).toEqual(["status", "authState", "bundles"])
+    expect(calls).toEqual(["status", "authConsumers", "bundles"])
   })
 
   it("routes named actions and defaults signInMcp to notifying", async () => {
@@ -130,12 +131,22 @@ describe("KiloProvider MCP message routing", () => {
   })
 
   it("refreshes status and invalidates Agent Behaviour after shared auth changes", async () => {
-    const { internal, calls } = setup()
+    const status = mock(async () => ({ data: { anaconda: { status: "connected" as const } } }))
+    const client = { mcp: { status } }
+    const connection = {
+      getClient: () => client,
+      getClientAsync: async () => client,
+      onEvent: () => () => {},
+    }
+    const provider = new KiloProvider({} as never, connection as never)
+    const internal = provider as unknown as Internals
+    const messages: string[] = []
     ;(internal as unknown as { postMessage(message: unknown): void }).postMessage = (message) =>
-      calls.push(`post:${(message as { type: string }).type}`)
+      messages.push((message as { type: string }).type)
 
-    await internal.refreshMcpAuthConsumers()
+    await Promise.all([internal.refreshMcpAuthConsumers(), internal.refreshMcpAuthConsumers()])
 
-    expect(calls).toEqual(["authState", "status", "post:agentBehaviourInvalidated"])
+    expect(status).toHaveBeenCalledTimes(1)
+    expect(messages).toEqual(["mcpAuthState", "mcpStatusLoaded", "agentBehaviourInvalidated"])
   })
 })

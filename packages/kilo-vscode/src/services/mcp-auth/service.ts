@@ -1,4 +1,4 @@
-import type { KiloClient } from "@kilocode/sdk/v2/client"
+import type { KiloClient, McpStatus } from "@kilocode/sdk/v2/client"
 import * as vscode from "vscode"
 import type { SSEPayload } from "../cli-backend/sdk-sse-adapter"
 import { needsAuthNames } from "./status"
@@ -63,6 +63,7 @@ export class McpAuthService {
   private needsAuthByDir = new Map<string, Set<string>>()
   private busyKeys = new Set<string>()
   private active = new Map<string, object>()
+  private refreshes = new Map<string, Promise<Record<string, McpStatus> | undefined>>()
   private cancelled = new Set<object>()
   private listeners = new Set<(dir: string) => void>()
   private lastUrl: string | undefined
@@ -101,14 +102,35 @@ export class McpAuthService {
 
   /** Refresh `needsAuth` for a directory from the CLI. Returns the resulting sorted list. */
   async refresh(dir: string): Promise<string[]> {
-    if (!dir) return []
-    const names = await this.attempt(`mcp status for ${dir}`, this.needsAuth(dir), async () => {
-      const client = await this.connection.getClientAsync(dir)
-      const { data } = await client.mcp.status({ directory: dir })
-      return needsAuthNames(data ?? {})
+    await this.refreshStatus(dir)
+    return this.needsAuth(dir)
+  }
+
+  /** Refresh auth state and return the same MCP status snapshot used to derive it. */
+  refreshStatus(dir: string): Promise<Record<string, McpStatus> | undefined> {
+    if (!dir) return Promise.resolve({})
+    const active = this.refreshes.get(dir)
+    if (active) return active
+    const refresh = this.performStatusRefresh(dir).finally(() => {
+      if (this.refreshes.get(dir) === refresh) this.refreshes.delete(dir)
     })
-    this.updateNeedsAuth(dir, new Set(names))
-    return names
+    this.refreshes.set(dir, refresh)
+    return refresh
+  }
+
+  private async performStatusRefresh(dir: string): Promise<Record<string, McpStatus> | undefined> {
+    const status = await this.attempt<Record<string, McpStatus> | undefined>(
+      `mcp status for ${dir}`,
+      undefined,
+      async () => {
+        const client = await this.connection.getClientAsync(dir)
+        const { data } = await client.mcp.status({ directory: dir })
+        return data ?? {}
+      },
+    )
+    if (!status) return undefined
+    this.updateNeedsAuth(dir, new Set(needsAuthNames(status)))
+    return status
   }
 
   /**
