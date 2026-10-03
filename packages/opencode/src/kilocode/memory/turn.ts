@@ -38,13 +38,10 @@ export namespace MemoryTurn {
     sessions: Session.Interface
     summary: SessionSummary.Interface
     provider: Provider.Interface
-    // Only `get` is required: memory reads config and never writes it.
     config: Pick<Config.Interface, "get">
   }) {
     const ctx = yield* InstanceState.context
     const root = MemoryPaths.root({ ctx })
-    // Read at turn close rather than at subscribe time: config is per directory, and one server
-    // serves several directories.
     const cfg = yield* input.config.get()
     return yield* TurnCore.close({
       root,
@@ -52,8 +49,6 @@ export namespace MemoryTurn {
       reason: input.reason,
       session: MemorySession.port({ sessions: input.sessions, summary: input.summary }),
       model: MemoryModel.port({ provider: input.provider }),
-      // Passed through unvalidated: MemoryModel.port().resolve rejects malformed or unavailable
-      // values and falls back to the session model.
       memoryModel: cfg.memory_model ?? undefined,
     })
   })
@@ -67,7 +62,6 @@ export namespace MemoryLifecycle {
     sessions: Session.Interface
     summary: SessionSummary.Interface
     provider: Provider.Interface
-    // Not used here; forwarded to MemoryTurn.close on each turn-close event.
     config: Pick<Config.Interface, "get">
     memory: MemoryService.Interface
   }) {
