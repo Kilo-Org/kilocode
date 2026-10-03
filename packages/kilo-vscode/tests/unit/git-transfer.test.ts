@@ -128,6 +128,98 @@ describe("git-transfer", () => {
       expect(status).toContain("M  init.txt")
     })
 
+    it("preserves both sides of a staged rename and later unstaged edits", async () => {
+      await git(["mv", "init.txt", "renamed.txt"], dir)
+      await fs.writeFile(path.join(dir, "renamed.txt"), "unstaged after rename\n")
+      const tree = await git(["write-tree"], dir)
+      const status = await git(["status", "--porcelain"], dir)
+      const snapshot = await capture(dir, noop)
+
+      expect(await apply(snapshot, target, noop)).toEqual({ ok: true })
+
+      expect(await git(["write-tree"], target)).toBe(tree)
+      expect(await git(["ls-files"], target)).toBe("renamed.txt")
+      expect(await git(["show", ":renamed.txt"], target)).toBe("init")
+      expect(await fs.readFile(path.join(target, "renamed.txt"), "utf8")).toBe("unstaged after rename\n")
+      expect(await git(["status", "--porcelain"], target)).toBe(status)
+      expect(await git(["write-tree"], dir)).toBe(tree)
+      expect(await git(["status", "--porcelain"], dir)).toBe(status)
+      expect(await fs.readFile(path.join(dir, "renamed.txt"), "utf8")).toBe("unstaged after rename\n")
+    })
+
+    it("preserves a staged deletion", async () => {
+      await git(["rm", "init.txt"], dir)
+      const tree = await git(["write-tree"], dir)
+      const status = await git(["status", "--porcelain"], dir)
+      const snapshot = await capture(dir, noop)
+
+      expect(await apply(snapshot, target, noop)).toEqual({ ok: true })
+
+      expect(await git(["write-tree"], target)).toBe(tree)
+      expect(await git(["diff"], target)).toBe("")
+      expect(await git(["status", "--porcelain"], target)).toBe(status)
+      await expect(fs.stat(path.join(target, "init.txt"))).rejects.toThrow()
+      expect(await git(["write-tree"], dir)).toBe(tree)
+      expect(await git(["status", "--porcelain"], dir)).toBe(status)
+    })
+
+    it.skipIf(process.platform === "win32")("preserves a staged executable mode change", async () => {
+      await git(["config", "core.fileMode", "true"], dir)
+      await fs.chmod(path.join(dir, "init.txt"), 0o755)
+      await git(["add", "init.txt"], dir)
+      const tree = await git(["write-tree"], dir)
+      const status = await git(["status", "--porcelain"], dir)
+      const snapshot = await capture(dir, noop)
+
+      expect(await apply(snapshot, target, noop)).toEqual({ ok: true })
+
+      expect(await git(["write-tree"], target)).toBe(tree)
+      expect(await git(["ls-files", "--stage"], target)).toStartWith("100755 ")
+      expect((await fs.stat(path.join(target, "init.txt"))).mode & 0o111).toBe(0o111)
+      expect(await git(["diff"], target)).toBe("")
+      expect(await git(["write-tree"], dir)).toBe(tree)
+      expect(await git(["status", "--porcelain"], dir)).toBe(status)
+    })
+
+    it("preserves separate staged and unstaged binary contents", async () => {
+      const staged = Buffer.from([0, 1, 2, 3, 255])
+      const unstaged = Buffer.from([0, 1, 4, 255])
+      await fs.writeFile(path.join(dir, "binary.dat"), staged)
+      await git(["add", "binary.dat"], dir)
+      await fs.writeFile(path.join(dir, "binary.dat"), unstaged)
+      const tree = await git(["write-tree"], dir)
+      const status = await git(["status", "--porcelain"], dir)
+      const snapshot = await capture(dir, noop)
+
+      expect(snapshot.staged).toContain("GIT binary patch")
+      expect(snapshot.unstaged).toContain("GIT binary patch")
+      expect(await apply(snapshot, target, noop)).toEqual({ ok: true })
+
+      expect(await git(["write-tree"], target)).toBe(tree)
+      expect(await fs.readFile(path.join(target, "binary.dat"))).toEqual(unstaged)
+      expect(await git(["status", "--porcelain"], target)).toBe(status)
+      expect(await git(["write-tree"], dir)).toBe(tree)
+      expect(await git(["status", "--porcelain"], dir)).toBe(status)
+      expect(await fs.readFile(path.join(dir, "binary.dat"))).toEqual(unstaged)
+    })
+
+    it("rejects a staged transfer when the destination index and working tree disagree", async () => {
+      await fs.writeFile(path.join(dir, "init.txt"), "staged\n")
+      await git(["add", "init.txt"], dir)
+      const snapshot = await capture(dir, noop)
+      await fs.writeFile(path.join(target, "init.txt"), "destination changes\n")
+      const tree = await git(["write-tree"], target)
+
+      const result = await apply(snapshot, target, noop)
+
+      expect(result.ok).toBe(false)
+      expect(result.error).toContain("Staged patch failed")
+      expect(await git(["write-tree"], target)).toBe(tree)
+      expect(await fs.readFile(path.join(target, "init.txt"), "utf8")).toBe("destination changes\n")
+      expect(await git(["show", ":init.txt"], dir)).toBe("staged")
+      expect(await fs.readFile(path.join(dir, "init.txt"), "utf8")).toBe("staged\n")
+    })
+
     it("writes untracked files", async () => {
       await fs.writeFile(path.join(dir, "new.txt"), "brand new\n")
       const snapshot = await capture(dir, noop)
@@ -187,6 +279,8 @@ describe("git-transfer", () => {
       await fs.writeFile(path.join(dir, "init.txt"), "unstaged version\n")
       // Add an untracked file
       await fs.writeFile(path.join(dir, "extra.txt"), "extra\n")
+      const tree = await git(["write-tree"], dir)
+      const status = await git(["status", "--porcelain"], dir)
 
       const snapshot = await capture(dir, noop)
       const result = await apply(snapshot, target, noop)
@@ -199,6 +293,13 @@ describe("git-transfer", () => {
       // Untracked file should exist
       const extra = await fs.readFile(path.join(target, "extra.txt"), "utf8")
       expect(extra).toBe("extra\n")
+      expect(await git(["show", ":init.txt"], target)).toBe("staged version")
+      expect(await git(["write-tree"], target)).toBe(tree)
+      expect(await git(["status", "--porcelain"], target)).toBe(status)
+      expect(await git(["write-tree"], dir)).toBe(tree)
+      expect(await git(["status", "--porcelain"], dir)).toBe(status)
+      expect(await fs.readFile(path.join(dir, "init.txt"), "utf8")).toBe("unstaged version\n")
+      expect(await fs.readFile(path.join(dir, "extra.txt"), "utf8")).toBe("extra\n")
     })
 
     it("does not modify the source directory", async () => {
