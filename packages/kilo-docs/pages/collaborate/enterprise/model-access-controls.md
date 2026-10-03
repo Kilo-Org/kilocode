@@ -25,7 +25,7 @@ This means newly added models and providers are automatically available to your 
 
 Navigate to your organization's **Providers & Models** page to configure access controls.
 
-The page has two tabs:
+The page has three tabs:
 
 ### Models Tab
 
@@ -45,9 +45,26 @@ Lists all providers. For each provider you can:
 
 When you toggle a provider off, all models it offers become unavailable to team members. Re-enabling the provider restores access to all its models.
 
+### Auto routing Tab
+
+Holds your organization's Auto routing settings, including the Efficient model pool that constrains `kilo-auto/efficient` to specific model and thinking-variant pairs. Owners, admins, and billing managers can edit these settings; members see a read-only view. See [Custom Efficient pools](/docs/code-with-ai/agents/auto-model#custom-efficient-pools) for how the pool is benchmarked and routed.
+
 ### Saving Changes
 
 A status bar appears at the bottom of the page whenever you have unsaved changes. Click **Save** to apply your changes, or **Cancel** to discard them. Changes take effect immediately for all team members once saved.
+
+## Virtual models
+
+Some catalog models do not have a provider of their own. They are still listed on the **Providers & Models** page and follow the same controls as any other model:
+
+- **Latest aliases**, such as `~anthropic/claude-sonnet-latest`, appear under every provider that serves the standard model they point to, and use that provider's pricing and data policy. Access, routing, and data-collection rules treat an alias like its target model.
+- **Routers and other provider-less models**, such as `openrouter/auto` or `typesafe/jev-router`, appear under a **Virtual** provider. A router picks a real provider per request, so its price shows as **Varies** instead of a fixed number; free routers are marked as potentially training on data.
+
+Provider controls also decide how a router is routed:
+
+- When your allowed providers include **Virtual**, a router can use the real providers on that same list. If the list has no real provider, the router is denied.
+- With no provider allow list configured, routers are unrestricted, like any other model.
+- **Virtual** is a Kilo-only slug and is never sent upstream; Kilo routes router requests to a real provider.
 
 ## Filtering Options
 
