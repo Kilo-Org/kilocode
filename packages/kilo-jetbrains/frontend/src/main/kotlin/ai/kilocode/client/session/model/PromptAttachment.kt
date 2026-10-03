@@ -66,7 +66,14 @@ object PromptAttachmentExtractor {
             )
         }
 
-    fun image(mime: String): Boolean = mime.startsWith("image/")
+    // Only bitmap formats the server can actually decode and resize (Photon) and that
+    // model providers accept as an inline image. SVG and other non-raster "image/*" mimes
+    // are not in this set -- they're treated as source text instead (see mime() below) so
+    // an unsupported format cannot kill the whole prompt after the message is sent
+    // (ImageDecodeError used to die the request before the user's text was persisted).
+    private val RASTER_IMAGE_MIMES = setOf("image/png", "image/jpeg", "image/gif", "image/webp")
+
+    fun image(mime: String): Boolean = mime in RASTER_IMAGE_MIMES
 
     fun image(raw: Any): PromptAttachment? {
         val image = when (raw) {
@@ -94,10 +101,10 @@ object PromptAttachmentExtractor {
             "jpg", "jpeg" -> "image/jpeg"
             "gif" -> "image/gif"
             "webp" -> "image/webp"
-            "bmp" -> "image/bmp"
-            "svg" -> "image/svg+xml"
             "pdf" -> "application/pdf"
-            "txt", "md", "kt", "kts", "java", "js", "jsx", "ts", "tsx", "json", "xml", "html", "css", "scss", "yml", "yaml", "toml", "sh", "py", "rb", "go", "rs", "c", "cc", "cpp", "h", "hpp" -> "text/plain"
+            // bmp and svg are not in RASTER_IMAGE_MIMES (bmp: the server's decoder can't open it and no
+            // provider accepts it as an image mime; svg: it's markup, not a raster), so attach their source as text
+            "txt", "md", "kt", "kts", "java", "js", "jsx", "ts", "tsx", "json", "xml", "html", "css", "scss", "yml", "yaml", "toml", "sh", "py", "rb", "go", "rs", "c", "cc", "cpp", "h", "hpp", "svg", "bmp" -> "text/plain"
             else -> "application/octet-stream"
         }
     }

@@ -6,6 +6,7 @@ import fs from "node:fs" // kilocode_change
 import { SessionV1 } from "@opencode-ai/core/v1/session"
 import os from "os"
 import { KiloSessionPrompt } from "@/kilocode/session/prompt" // kilocode_change
+import { KiloAttachment } from "@/kilocode/session/attachment" // kilocode_change
 import { BoardContext } from "@/kilocode/board/context" // kilocode_change
 import { SKILL_SHELL_DISABLED, SKILL_SHELL_UNTRUSTED } from "@/kilocode/skills/display" // kilocode_change
 import { KiloSessionMessageOrder } from "@/kilocode/session/message-order" // kilocode_change
@@ -1035,7 +1036,8 @@ export const layer = Layer.effect(
           const url = new URL(part.url)
           switch (url.protocol) {
             case "data:":
-              if (part.mime === "text/plain") {
+              // kilocode_change start - markup "images" (SVG) are source text, not rasters Photon can decode
+              if (part.mime === "text/plain" || KiloAttachment.classify(part.mime) === "markup") {
                 return [
                   {
                     messageID: info.id,
@@ -1054,8 +1056,9 @@ export const layer = Layer.effect(
                   { ...part, messageID: info.id, sessionID: input.sessionID },
                 ]
               }
+              // kilocode_change end
               // kilocode_change start - normalize user image data before persistence
-              if (part.mime.startsWith("image/")) {
+              if (KiloAttachment.classify(part.mime) === "raster") {
                 const file: MessageV2.FilePart = {
                   ...part,
                   id: part.id ? PartID.make(part.id) : PartID.ascending(),
@@ -1081,6 +1084,7 @@ export const layer = Layer.effect(
               const reference = yield* referenceContextFromFilePart(part, filepath)
               // kilocode_change end
               const mime = (yield* fsys.isDir(filepath)) ? "application/x-directory" : part.mime
+              const kind = KiloAttachment.classify(mime) // kilocode_change - raster vs markup vs other, shared by the base64 cap, normalize call, and the post-read branch below
 
               const { read } = yield* registry.named()
               // kilocode_change start - authorize prompt attachments like model-issued read calls
@@ -1256,6 +1260,9 @@ export const layer = Layer.effect(
                   metadata: {},
                 })
 
+                // kilocode_change start - every image/* attachment keeps the base64 cap it had before, so a
+                // huge .svg or .ico cannot be read unbounded into memory; only Photon normalization below is
+                // restricted to rasters, since that is the part that cannot decode markup/icon formats.
                 return yield* KiloReadObject.use(file, (bound) =>
                   Effect.gen(function* () {
                     const limit = mime.startsWith("image/")
@@ -1291,9 +1298,10 @@ export const layer = Layer.effect(
                       filename: part.filename!,
                       source: part.source,
                     }
-                    return mime.startsWith("image/") ? yield* image.normalize(file) : file
+                    return kind === "raster" ? yield* image.normalize(file) : file
                   }),
                 )
+                // kilocode_change end
               }).pipe(Effect.exit)
               if (Exit.isFailure(access)) {
                 if (defer && isInterrupted(access.cause)) return yield* Effect.interrupt
@@ -1319,6 +1327,27 @@ export const layer = Layer.effect(
                     synthetic: true,
                     text: `Read tool failed to read ${filepath} with the following error: ${message}`,
                   },
+                ]
+              }
+              // kilocode_change end
+              // kilocode_change start - decode markup "images" (SVG) into readable source instead of leaving them as a binary file part
+              if (kind === "markup") {
+                return [
+                  {
+                    messageID: info.id,
+                    sessionID: input.sessionID,
+                    type: "text",
+                    synthetic: true,
+                    text: `Called the Read tool with the following input: {"filePath":"${filepath}"}`,
+                  },
+                  {
+                    messageID: info.id,
+                    sessionID: input.sessionID,
+                    type: "text",
+                    synthetic: true,
+                    text: decodeDataUrl(access.value.url),
+                  },
+                  access.value,
                 ]
               }
               // kilocode_change end

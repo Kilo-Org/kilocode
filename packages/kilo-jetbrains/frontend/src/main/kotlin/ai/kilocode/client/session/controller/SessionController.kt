@@ -2634,6 +2634,18 @@ class SessionController(
         }
     }
 
+    /**
+     * Clears a standalone error card (one with no transcript tail to Retry -- see [canRetry] /
+     * [retryTarget]) back to idle. Without this, a send that failed before any message was
+     * created (a rejected attachment, or a prompt_async send that failed asynchronously) has no
+     * action that ever dismisses it: it just sits there until the next unrelated state change.
+     */
+    fun dismissError() {
+        assertEdt()
+        if (model.state !is SessionState.Error) return
+        updateModel { model.setState(SessionState.Idle) }
+    }
+
     private fun accountSnapshot(): SessionControllerEvent.AccountOverlaySnapshot {
         val state = model.app
         val prof = state.profile

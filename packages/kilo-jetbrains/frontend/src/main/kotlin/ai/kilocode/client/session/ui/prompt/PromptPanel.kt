@@ -167,6 +167,12 @@ class PromptPanel(
         )
     }
     private val attachments = mutableListOf<PromptAttachment>()
+    // The most recently submitted text + attachments, kept around so a send that the server
+    // rejects or that fails after the client already got a 2xx (prompt_async's async
+    // session.error) can be put back in the editor. Without this, clear() on submit followed
+    // by a failure permanently loses whatever the user typed -- there is no draft store or
+    // prompt history to fall back on.
+    private var lastSubmission: Pair<String, List<PromptAttachment>>? = null
     private val highlighters = mutableListOf<RangeHighlighter>()
     private val folds: EditorFolds = EditorFolds(live = { editor.getEditor(false) }, resize = ::syncEditorHeight)
     private val strip = PromptAttachmentStrip(project) { removeAttachment(it) }
@@ -587,6 +593,26 @@ class PromptPanel(
         syncHighlights()
     }
 
+    // Puts the most recently submitted prompt back in the editor after the server rejected it
+    // or the send failed, so the user doesn't lose what they typed. A no-op once consumed, or
+    // if the user already started a new draft in the meantime (we must not clobber that).
+    @RequiresEdt
+    fun restoreLastSubmission() {
+        val (text, items) = lastSubmission ?: return
+        lastSubmission = null
+        if (hasDraft()) return
+        setText(text)
+        items.forEach(::addAttachment)
+    }
+
+    // Drops the retained submission once the send is confirmed. A pasted image is held as a full
+    // base64 data URL, so keeping it past the point where it could still be restored would pin
+    // megabytes per send for the lifetime of the panel.
+    @RequiresEdt
+    fun clearLastSubmission() {
+        lastSubmission = null
+    }
+
     @RequiresEdt
     fun clear() {
         editor.text = ""
@@ -763,6 +789,7 @@ class PromptPanel(
                     if (project.isDisposed) return@withContext
                     val parts = files + mentioned
                     LOG.debug { "${ChatLogSummary.prompt(promptDto(txt, parts))} src=$src busy=$busy" }
+                    lastSubmission = txt to items
                     onSend(txt, parts)
                 }
             } catch (e: CancellationException) {
