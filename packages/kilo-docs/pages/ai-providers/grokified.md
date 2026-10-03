@@ -9,7 +9,9 @@ sidebar_label: Grokified
 [Grokified](https://grokified.com) is an OpenAI-compatible API for Grok models. Every request is charged at 50% of the list price. Grokified is not a built-in provider in Kilo Code, so you connect it as a custom provider using the OpenAI-compatible protocol.
 
 **Website:** [https://grokified.com](https://grokified.com)
+
 **API base URL:** `https://api.grokified.com/v1`
+
 **Docs:** [https://grokified.com/docs](https://grokified.com/docs)
 
 ## Getting an API key
@@ -77,7 +79,7 @@ Declare the provider in `~/.config/kilo/kilo.json` or `./kilo.json`:
 }
 ```
 
-The `output` value is the maximum Kilo Code requests per reply. It is a client setting, not a published model limit, so raise or lower it to taste.
+The `output` value is the maximum number of output tokens Kilo Code requests per reply. It is a client setting, not a published model limit, so raise or lower it to taste.
 
 {% /tab %}
 {% /tabs %}
