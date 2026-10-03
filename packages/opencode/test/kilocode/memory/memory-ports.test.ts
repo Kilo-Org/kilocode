@@ -503,10 +503,13 @@ describe("memory ports", () => {
 })
 
 describe("memory turn", () => {
+  // Stands in for Config.Service; MemoryTurn.close only needs `get`.
   function config(model?: string | null) {
     return { get: () => Effect.succeed({ memory_model: model }) }
   }
 
+  // Closes one completed turn through the real MemoryTurn.close and returns the model ids the
+  // provider was asked for, so each test can assert which model ran the automatic save.
   async function close(model?: string | null) {
     await using tmp = await tmpdir({ git: true })
     const sessionID = SessionID.make("ses_memory_turn")
@@ -523,6 +526,7 @@ describe("memory turn", () => {
       }),
     ]
     const seen: string[] = []
+    // Keep memory files inside the temp dir instead of the real data directory.
     const prior = Global.Path.data
     ;(Global.Path as { data: string }).data = path.join(tmp.path, "data")
     installMemoryRuntime()
@@ -569,6 +573,7 @@ describe("memory turn", () => {
     expect(await close(null)).toEqual(["fake-memory-model"])
   })
 
+  // A known model id without its provider prefix: the provider must not be guessed.
   test("close falls back to the session model when memory_model is malformed", async () => {
     expect(await close("memory-config-model")).toEqual(["fake-memory-model"])
   })

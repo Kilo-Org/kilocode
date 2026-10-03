@@ -556,6 +556,7 @@ describe("kilocode tool registry indexing", () => {
     const session = Layer.succeed(Session.Service, {} as Session.Interface)
     const summary = Layer.succeed(SessionSummary.Service, {} as SessionSummary.Interface)
     const provider = Layer.succeed(Provider.Service, {} as Provider.Interface)
+    // Required by the bootstrap layer; never read here because no turn closes in this test.
     const config = Layer.succeed(Config.Service, {} as Config.Interface)
     const watcher = Layer.succeed(KilocodeWatcher.Service, KilocodeWatcher.Service.of({ init: () => Effect.void }))
     const wakeup = Layer.succeed(
