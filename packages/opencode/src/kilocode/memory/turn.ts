@@ -5,6 +5,7 @@ import { MemoryRedact } from "@kilocode/kilo-memory/redact"
 import { MemoryService } from "@kilocode/kilo-memory/effect/service"
 import * as Log from "@opencode-ai/core/util/log"
 import type { Bus } from "@/bus"
+import type { Config } from "@/config/config"
 import { EffectBridge } from "@/effect/bridge"
 import { InstanceState } from "@/effect/instance-state"
 import type { Provider } from "@/provider/provider"
@@ -37,15 +38,18 @@ export namespace MemoryTurn {
     sessions: Session.Interface
     summary: SessionSummary.Interface
     provider: Provider.Interface
+    config: Config.Interface
   }) {
     const ctx = yield* InstanceState.context
     const root = MemoryPaths.root({ ctx })
+    const cfg = yield* input.config.get()
     return yield* TurnCore.close({
       root,
       sessionID: input.sessionID,
       reason: input.reason,
       session: MemorySession.port({ sessions: input.sessions, summary: input.summary }),
       model: MemoryModel.port({ provider: input.provider }),
+      memoryModel: cfg.memory_model ?? undefined,
     })
   })
 }
@@ -58,6 +62,7 @@ export namespace MemoryLifecycle {
     sessions: Session.Interface
     summary: SessionSummary.Interface
     provider: Provider.Interface
+    config: Config.Interface
     memory: MemoryService.Interface
   }) {
     const bridge = yield* EffectBridge.make()
@@ -84,6 +89,7 @@ export namespace MemoryLifecycle {
             sessions: input.sessions,
             summary: input.summary,
             provider: input.provider,
+            config: input.config,
           }).pipe(Effect.provideService(MemoryService.Service, input.memory), Effect.ignore)
         }).pipe(
           Effect.catchCause((cause) =>
