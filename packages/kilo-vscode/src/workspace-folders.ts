@@ -15,7 +15,8 @@ const fold = (value: string) =>
 export function within(root: string, target: string): boolean {
   const rel = path.relative(fold(path.resolve(root)), fold(path.resolve(target)))
   if (rel === "") return true
-  return !rel.startsWith("..") && !path.isAbsolute(rel)
+  // A child named "..foo" is inside; only ".." itself or "../…" leaves the root.
+  return rel !== ".." && !rel.startsWith(`..${path.sep}`) && !path.isAbsolute(rel)
 }
 
 /** The deepest folder containing `target`, so nested folders win over their parents. */

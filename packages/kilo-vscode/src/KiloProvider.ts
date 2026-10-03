@@ -6143,11 +6143,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     if (this.opts.rootDirectory) return
     // Settings panels list the folders so the user can choose which one they edit.
     if (this.projectDirectory !== undefined) {
-      this.postFolders(this.projectDirectory ?? "")
+      this.postFolders(this.projectDirectory ?? "", "settings")
       return
     }
     const root = this.getRootDirectory()
-    if (!this.postFolders(root)) return
+    if (!this.postFolders(root, "session")) return
     // The first folder's history is loaded by the webview itself.
     const fresh = this.visitedFolders.size > 0 && !this.visitedFolders.has(root)
     this.visitedFolders.add(root)
@@ -6176,7 +6176,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
    * choice, or once more to clear a picker that had one. Returns whether the
    * window offers a choice.
    */
-  private postFolders(selected: string): boolean {
+  private postFolders(selected: string, scope: "session" | "settings"): boolean {
     const folders = (vscode.workspace.workspaceFolders ?? []).map((folder) => ({
       path: folder.uri.fsPath,
       name: folder.name,
@@ -6184,7 +6184,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     const multi = folders.length > 1
     if (!multi && !this.multiRoot) return false
     this.multiRoot = multi
-    this.postMessage({ type: "workspaceFoldersLoaded", folders, selected })
+    this.postMessage({ type: "workspaceFoldersLoaded", folders, selected, scope })
     return multi
   }
 
@@ -6209,6 +6209,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   /** Whether config, agents and commands shown in this panel come from `dir`. */
   private shownDirectory(dir: string): boolean {
     if (sameDirectory(dir, this.getWorkspaceDirectory())) return true
+    // In a multi-root window a Settings panel shows the folder chosen in its own dropdown.
+    if (this.multiRootWindow() && this.projectDirectory && sameDirectory(dir, this.projectDirectory)) return true
     return sameDirectory(dir, this.getWorkspaceDirectory(this.currentSession?.id))
   }
 

@@ -111,10 +111,13 @@ export interface ClearSessionRequest {
   type: "clearSession"
 }
 
-/** Pick the workspace folder new sessions start in; no directory goes back to following the active editor. */
+/**
+ * Pick a workspace folder: the root new sessions start in (prompt bar), or the
+ * project a Settings panel edits. `directory` must be a workspace folder path.
+ */
 export interface SelectWorkspaceFolderRequest {
   type: "selectWorkspaceFolder"
-  directory?: string
+  directory: string
 }
 
 export interface LoadMessagesRequest {

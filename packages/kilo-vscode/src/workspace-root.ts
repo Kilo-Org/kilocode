@@ -31,6 +31,12 @@ export function selectedRoot(context?: vscode.ExtensionContext, fallback?: strin
   return (saved ? folderFor(saved, roots) : undefined) ?? roots.at(0)
 }
 
+/** The root the user explicitly picked, while it is still a workspace folder; no first-folder fallback. */
+export function pickedRoot(context?: vscode.ExtensionContext): string | undefined {
+  const saved = (context?.workspaceState ?? bound)?.get<string>(KEY)
+  return saved ? folderFor(saved, workspaceRoots()) : undefined
+}
+
 export async function selectRoot(context: vscode.ExtensionContext | undefined, dir: string): Promise<void> {
   await context?.workspaceState?.update(KEY, dir)
   for (const fn of listeners) fn()

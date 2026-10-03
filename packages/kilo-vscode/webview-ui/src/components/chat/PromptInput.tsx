@@ -2208,7 +2208,11 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
           <ThinkingSelector sessionID={sid} blocked={props.blocked?.() ?? false} />
         </div>
         <div class="prompt-input-hint-actions">
-          <Show when={server.workspaceFolders().length > 1 && !session.currentSessionID()}>
+          <Show
+            when={
+              server.workspaceFolders().length > 1 && server.folderScope() === "session" && !session.currentSessionID()
+            }
+          >
             <FolderMenu label={language.t("prompt.folder.label")} />
           </Show>
           <Show when={showIndexing()}>

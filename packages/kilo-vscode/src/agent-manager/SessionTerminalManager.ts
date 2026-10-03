@@ -114,7 +114,7 @@ export class SessionTerminalManager {
    * Used when the user triggers a terminal in local mode without an active session.
    */
   showLocalTerminal(): void {
-    if (this.showExistingKey(SessionTerminalManager.LOCAL_KEY, false)) return
+    if (this.currentLocal() && this.showExistingKey(SessionTerminalManager.LOCAL_KEY, false)) return
 
     const cwd = this.host.repoPath()
     if (!cwd) {
@@ -151,7 +151,19 @@ export class SessionTerminalManager {
    * Show the existing local terminal if one was previously created (used on context switch).
    */
   showExistingLocal(): boolean {
-    return this.showExistingKey(SessionTerminalManager.LOCAL_KEY)
+    return this.currentLocal() && this.showExistingKey(SessionTerminalManager.LOCAL_KEY)
+  }
+
+  /**
+   * Whether a cached local terminal still matches the repo folder. In a
+   * multi-root window the folder follows the Agent Manager project, so a
+   * terminal from another project is recreated instead of revealed.
+   */
+  private currentLocal(): boolean {
+    const entry = this.terminals.get(SessionTerminalManager.LOCAL_KEY)
+    if (!entry) return true
+    const cwd = this.host.repoPath()
+    return !cwd || entry.cwd === cwd
   }
 
   /**

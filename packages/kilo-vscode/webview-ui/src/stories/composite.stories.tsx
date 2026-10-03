@@ -1587,6 +1587,7 @@ export const DiffSummaryCollapsed: Story = {
       workspaceDirectory: () => "/project",
       workspaceFolders: () => [],
       selectedFolder: () => "",
+      folderScope: () => "session" as const,
       selectFolder: () => {},
       gitInstalled: () => true,
     }

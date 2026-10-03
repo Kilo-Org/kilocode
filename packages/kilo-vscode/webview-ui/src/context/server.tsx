@@ -38,6 +38,8 @@ interface ServerContextValue {
   /** Folders of a multi-root workspace and the one a new session starts in. */
   workspaceFolders: Accessor<WorkspaceFolder[]>
   selectedFolder: Accessor<string>
+  /** "settings" when the folders belong to a Settings panel; "session" in chat views. */
+  folderScope: Accessor<"session" | "settings">
   selectFolder: (directory: string) => void
   gitInstalled: Accessor<boolean>
 }
@@ -64,6 +66,7 @@ export const ServerProvider: ParentComponent = (props) => {
   const [workspaceDirectory, setWorkspaceDirectory] = createSignal<string>("")
   const [workspaceFolders, setWorkspaceFolders] = createSignal<WorkspaceFolder[]>([])
   const [selectedFolder, setSelectedFolder] = createSignal<string>("")
+  const [folderScope, setFolderScope] = createSignal<"session" | "settings">("session")
   const [gitInstalled, setGitInstalled] = createSignal<boolean>(false)
 
   const gitSub = vscode.onMessage((m: ExtensionMessage) => {
@@ -74,6 +77,7 @@ export const ServerProvider: ParentComponent = (props) => {
     if (m.type !== "workspaceFoldersLoaded") return
     setWorkspaceFolders(m.folders)
     setSelectedFolder(m.selected)
+    setFolderScope(m.scope)
   })
 
   const fontSub = vscode.onMessage((m: ExtensionMessage) => {
@@ -256,6 +260,7 @@ export const ServerProvider: ParentComponent = (props) => {
     workspaceDirectory,
     workspaceFolders,
     selectedFolder,
+    folderScope,
     selectFolder: (directory) => vscode.postMessage({ type: "selectWorkspaceFolder", directory }),
     gitInstalled,
   }

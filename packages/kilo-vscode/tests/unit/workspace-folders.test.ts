@@ -13,6 +13,11 @@ describe("within", () => {
     expect(within(a, abs("a", "src", "x.ts"))).toBe(true)
   })
 
+  it("accepts a child whose name starts with two dots", () => {
+    expect(within(a, abs("a", "..foo", "x.ts"))).toBe(true)
+    expect(within(a, abs("a", ".."))).toBe(false)
+  })
+
   it("rejects siblings that share a name prefix", () => {
     expect(within(a, abs("a-other", "x.ts"))).toBe(false)
     expect(within(a, b)).toBe(false)

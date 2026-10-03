@@ -332,7 +332,8 @@ const Settings: Component<SettingsProps> = (props) => {
         <h2 style={{ "font-size": "var(--kilo-font-size-16)", "font-weight": "600", margin: 0, flex: 1 }}>
           {language.t("sidebar.settings")}
         </h2>
-        <Show when={server.workspaceFolders().length > 1}>
+        {/* Only Settings panels choose a folder; the sidebar view follows the chat root. */}
+        <Show when={server.workspaceFolders().length > 1 && server.folderScope() === "settings"}>
           <FolderSelect
             label={language.t("settings.folder.label")}
             placeholder={language.t("settings.folder.placeholder")}
@@ -343,7 +344,9 @@ const Settings: Component<SettingsProps> = (props) => {
           variant="secondary"
           size="small"
           icon="edit"
-          disabled={server.workspaceFolders().length > 1 && !server.selectedFolder()}
+          disabled={
+            server.folderScope() === "settings" && server.workspaceFolders().length > 1 && !server.selectedFolder()
+          }
           onClick={() => open("local")}
         >
           {language.t("settings.openLocalConfig")}

@@ -125,11 +125,16 @@ export interface WorkspaceFolder {
   name: string
 }
 
-/** The editor's workspace folders and the one a new session would start in. */
+/**
+ * The editor's workspace folders and the selected one: the root new sessions
+ * start in ("session", chat views) or the project a Settings panel edits
+ * ("settings").
+ */
 export interface WorkspaceFoldersLoadedMessage {
   type: "workspaceFoldersLoaded"
   folders: WorkspaceFolder[]
   selected: string
+  scope: "session" | "settings"
 }
 
 export interface LanguageChangedMessage {

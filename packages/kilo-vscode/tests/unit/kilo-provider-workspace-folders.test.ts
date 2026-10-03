@@ -63,6 +63,7 @@ describe("KiloProvider workspace folders", () => {
     expect(internal.getRootDirectory()).toBe("/a")
     expect(last(messages, "workspaceFoldersLoaded")).toMatchObject({
       selected: "/a",
+      scope: "session",
       folders: [
         { path: "/a", name: "a" },
         { path: "/b", name: "b" },
@@ -140,7 +141,7 @@ describe("KiloProvider workspace folders", () => {
     expect(manager.internal.getRootDirectory()).toBe("/a")
     expect(last(manager.messages, "workspaceFoldersLoaded")).toBeUndefined()
     // Settings panels list the folders, but keep their own project selected.
-    expect(last(settings.messages, "workspaceFoldersLoaded")).toMatchObject({ selected: "/a" })
+    expect(last(settings.messages, "workspaceFoldersLoaded")).toMatchObject({ selected: "/a", scope: "settings" })
     expect(settings.calls.reload).toBe(0)
     expect(manager.internal.getSessionRefreshContext(0).workspaceFolders).toBeUndefined()
   })
@@ -158,7 +159,7 @@ describe("KiloProvider Settings panel folders", () => {
 
     internal.announceFolder()
 
-    expect(last(messages, "workspaceFoldersLoaded")).toMatchObject({ selected: "/b" })
+    expect(last(messages, "workspaceFoldersLoaded")).toMatchObject({ selected: "/b", scope: "settings" })
   })
 
   it("switches the panel's project when a folder is chosen", () => {
@@ -171,6 +172,14 @@ describe("KiloProvider Settings panel folders", () => {
     expect(last(messages, "workspaceDirectoryChanged")).toEqual({ type: "workspaceDirectoryChanged", directory: "/a" })
     expect(last(messages, "configBindingExpired")).toBeDefined()
     expect(last(messages, "workspaceFoldersLoaded")).toMatchObject({ selected: "/a" })
+  })
+
+  it("treats the folder chosen in its own dropdown as shown, so its restarts reload the panel", () => {
+    const { internal } = setup({ projectDirectory: "/b" })
+    const shown = (internal as unknown as { shownDirectory: (dir: string) => boolean }).shownDirectory
+
+    expect(shown.call(internal, "/b")).toBe(true)
+    expect(shown.call(internal, "/c")).toBe(false)
   })
 
   it("ignores a chosen directory outside the workspace", () => {

@@ -217,7 +217,14 @@ async function openInFolders(dir: string, filePath: string, line?: number, colum
   const found = await Promise.all(
     folders.map(async (folder) => {
       const uri = vscode.Uri.joinPath(folder.uri, filePath)
-      const stat = await Promise.resolve(vscode.workspace.fs.stat(uri)).catch(() => undefined)
+      const stat = await Promise.resolve(vscode.workspace.fs.stat(uri)).catch((err: unknown) => {
+        // A missing file is expected here; anything else (permissions, IO) is worth surfacing.
+        const code = err && typeof err === "object" && "code" in err ? err.code : undefined
+        if (code !== "FileNotFound" && code !== "ENOENT") {
+          console.warn("[Kilo New] KiloProvider: Failed to stat file link candidate:", uri.fsPath, err)
+        }
+        return undefined
+      })
       return stat && !(stat.type & vscode.FileType.Directory) ? { label: `${folder.name}/${filePath}`, uri } : undefined
     }),
   )

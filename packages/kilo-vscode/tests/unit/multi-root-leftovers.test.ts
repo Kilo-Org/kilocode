@@ -6,6 +6,7 @@ import * as path from "path"
 import { WorkspaceIgnoreController } from "../../src/services/autocomplete/shims/WorkspaceIgnoreController"
 import { findRepository } from "../../src/services/commit-message"
 import { createTerminalHost } from "../../src/agent-manager/terminal-host"
+import { SessionTerminalManager, type TerminalHost } from "../../src/agent-manager/SessionTerminalManager"
 
 const workspace = vscode.workspace as unknown as { workspaceFolders?: unknown }
 const folders = workspace.workspaceFolders
@@ -95,5 +96,53 @@ describe("Agent Manager terminal fallback", () => {
     expect(createTerminalHost(() => beta).repoPath()).toBe(beta)
     expect(createTerminalHost(() => undefined).repoPath()).toBe(alpha)
     expect(createTerminalHost().repoPath()).toBe(alpha)
+  })
+})
+
+describe("Agent Manager local terminal", () => {
+  function host(repo: () => string) {
+    const created: string[] = []
+    const shown: string[] = []
+    const off = { dispose: () => {} }
+    const value: TerminalHost = {
+      createTerminal: (opts) => {
+        created.push(opts.cwd)
+        return { show: () => void shown.push(opts.cwd), dispose: () => {}, exitStatus: undefined }
+      },
+      activeTerminal: () => undefined,
+      repoPath: repo,
+      showWarning: () => {},
+      setContext: () => {},
+      onTerminalClosed: () => off,
+      onActiveTerminalChanged: () => off,
+      registerCommand: () => off,
+      executeCommand: async () => undefined,
+    }
+    return { value, created, shown }
+  }
+
+  it("reuses the local terminal while the project folder is unchanged", () => {
+    const fake = host(() => alpha)
+    const manager = new SessionTerminalManager(() => {}, fake.value)
+
+    manager.showLocalTerminal()
+    manager.showLocalTerminal()
+
+    expect(fake.created).toEqual([alpha])
+  })
+
+  it("recreates the local terminal after the Agent Manager project moves to another folder", () => {
+    let repo = alpha
+    const fake = host(() => repo)
+    const manager = new SessionTerminalManager(() => {}, fake.value)
+
+    manager.showLocalTerminal()
+    repo = beta
+    manager.showLocalTerminal()
+
+    expect(fake.created).toEqual([alpha, beta])
+    expect(manager.showExistingLocal()).toBe(true)
+    repo = alpha
+    expect(manager.showExistingLocal()).toBe(false)
   })
 })

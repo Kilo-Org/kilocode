@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from "bun:test"
 import * as vscode from "vscode"
 import { resolveProjectDirectory } from "../../src/project-directory"
-import { selectRoot, selectedRoot, watchRoot } from "../../src/workspace-root"
+import { pickedRoot, selectRoot, selectedRoot, watchRoot } from "../../src/workspace-root"
 
 const workspace = vscode.workspace as unknown as { workspaceFolders?: unknown }
 const original = workspace.workspaceFolders
@@ -61,5 +61,23 @@ describe("selected workspace root", () => {
   it("is undefined without workspace folders", () => {
     use()
     expect(selectedRoot(context())).toBeUndefined()
+  })
+})
+
+describe("explicitly picked root", () => {
+  it("is undefined until the user picks a folder", async () => {
+    use("/repo-a", "/repo-b")
+    const ctx = context()
+    expect(pickedRoot(ctx)).toBeUndefined()
+    await selectRoot(ctx, "/repo-b")
+    expect(pickedRoot(ctx)).toBe("/repo-b")
+  })
+
+  it("is undefined again once the picked folder leaves the workspace", async () => {
+    use("/repo-a", "/repo-b")
+    const ctx = context()
+    await selectRoot(ctx, "/repo-b")
+    use("/repo-a")
+    expect(pickedRoot(ctx)).toBeUndefined()
   })
 })
