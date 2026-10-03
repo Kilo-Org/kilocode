@@ -6,7 +6,7 @@ import { KILO_API_BASE, KILO_OPENROUTER_BASE, MODELS_FETCH_TIMEOUT_MS, PROMPTS, 
 
 export type KiloModelsResult = {
   models: Record<string, any>
-  error?: { kind: "unauthorized" | "network" | "schema" | "http"; status?: number }
+  error?: { kind: "unauthorized" | "network" | "schema" | "http"; status?: number; retryAfter?: number }
 }
 
 /**
@@ -241,7 +241,11 @@ async function fetchRawKiloModels(options?: {
       return fetchRawKiloModels({})
     }
     const kind = response.status === 401 || response.status === 403 ? "unauthorized" : "http"
-    return { error: { kind, status: response.status } }
+    const header = response.headers.get("retry-after")
+    const seconds =
+      header == null ? NaN : /^\d+$/.test(header) ? Number(header) : (Date.parse(header) - Date.now()) / 1000
+    const retryAfter = Number.isFinite(seconds) ? Math.max(0, seconds) : undefined
+    return { error: { kind, status: response.status, ...(retryAfter == null ? {} : { retryAfter }) } }
   }
 
   const json = await response.json().catch(() => null)

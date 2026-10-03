@@ -1,6 +1,7 @@
 import { NamedError } from "@opencode-ai/core/util/error"
 import { errorFormat } from "@/util/error"
 import { isRecord } from "@/util/record"
+import { unavailable } from "@/kilocode/provider/catalog-recovery" // kilocode_change
 
 type ConfigIssue = { message: string; path: string[] }
 
@@ -64,7 +65,7 @@ export function FormatError(input: unknown): string | undefined {
     return [
       `Model not found: ${stringField(providerModelNotFound, "providerID")}/${stringField(providerModelNotFound, "modelID")}`,
       ...(suggestions.length ? ["Did you mean: " + suggestions.join(", ")] : []),
-      ...(providerModelNotFound.modelsEmpty === true ? ["No models are currently available."] : []), // kilocode_change
+      ...(unavailable(providerModelNotFound) ? [unavailable(providerModelNotFound)] : []), // kilocode_change
       `Try: \`kilo models\` to list available models`, // kilocode_change
       `Or check your kilo.json provider/model names`, // kilocode_change
     ].join("\n")
