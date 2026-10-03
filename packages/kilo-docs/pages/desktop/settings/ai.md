@@ -45,7 +45,7 @@ For details on the gateway itself, see [Models & Providers](/docs/gateway/models
 
 ## Local model server
 
-The **Local Model Server** section runs models on your own machine and exposes them to Kilo through an OpenAI-compatible endpoint. Using it requires a Kilo account. The toggle at the top starts and stops the server; the status beside it reads **Idle**, **Starting…**, or **Running**.
+The **Local Model Server** section runs models on your own machine and exposes them to Kilo through an OpenAI-compatible endpoint. The toggle at the top starts and stops the server; the status beside it reads **Idle**, **Starting…**, or **Running**.
 
 **System Monitor** shows live **CPU**, **RAM**, and **GPU** usage so you can gauge how much headroom a model has.
 
@@ -59,7 +59,7 @@ Select a model to open its settings, grouped into **General**, **Sampling**, and
 
 **General**
 
-- **Coding tools and instructions** — off by default for faster local inference. Turn it on to give the model the coding instructions and tools it would have in a normal chat.
+- **Coding tools and instructions** — off by default for faster local inference. Turn it on to give the model the full context and tools that Kilo Code uses by default. This is not advised for the smallest of models and should only be used with models that support tool-calling.
 - **Context length** — the maximum number of tokens the model holds at once, including the conversation so far and the response being generated. Larger values use more memory and can slow generation. Ranges from **256** to **1,048,576** tokens.
 - **Temperature** — how random the output is. Lower values are more predictable and focused; higher values are more varied and creative. Ranges from **0** to **2**.
 - **Max tokens** — the maximum number of tokens the model generates in a single response. Unlimited by default; ranges from **1** to **1,048,576**.
