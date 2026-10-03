@@ -19,7 +19,7 @@ The mobile app lets you:
 - Spawn Cloud Agents and code directly from the app.
 - Monitor and view all non-remote sessions in one place.
 - Send follow-up messages while a session is still running — they are queued and processed in order.
-- Run slash commands (like `/compact`) on connected remote CLI sessions, and start a new session in the same workspace with `/new`. The new session inherits the current session's mode and model. Older CLI versions that do not support remote commands prompt you to upgrade.
+- Run slash commands (like `/compact`) on connected remote CLI sessions, and start a new session in the same workspace with `/new`. Typing `/` also lists the session's [skills](/docs/customize/skills) next to the commands; a skill row carries a **Skill** badge, and selecting it invokes that skill in the session. The new session inherits the current session's mode and model. Older CLI versions that do not support remote commands prompt you to upgrade.
 - Track a session's [goal](/docs/code-with-ai/agents/goals) from a fixed section under the session header, and start or control one with `/goal`.
 - Clear the visible transcript of a remote CLI session with `/clear`. Clearing is client-side only, so it works on any CLI version; server history is kept and may reappear when you re-enter the session.
 - Rename a remote CLI session from the app or the CLI — renames sync in both directions.

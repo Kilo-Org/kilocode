@@ -1,5 +1,6 @@
 package ai.kilocode.client.ui.list
 
+import ai.kilocode.client.ui.FilledBadgeIcon
 import ai.kilocode.client.ui.LiveBadgeIcon
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.layout.LayoutPass
@@ -22,9 +23,10 @@ private const val CELL_GAP = 8
  * A pill or status glyph rendered before or after an [ActiveListItem] title. A non-null [id] opts the
  * badge into hit-testing; [action] requires an id to have any effect.
  *
- * An [icon] replaces the pill rather than joining it, so a badge is either a worded pill or a glyph. The
- * glyph form is how a row shows a status that already has a settled visual language — a CI or review
- * verdict — where a worded pill would only repeat what the icon already says.
+ * [segments] joins multiple worded pills into one badge. An [icon] replaces the pill rather than joining
+ * it, so a badge is either worded or a glyph. The glyph form is how a row shows a status that already has
+ * a settled visual language — a CI or review verdict — where a worded pill would only repeat what the icon
+ * already says.
  *
  * A glyph may still be labelled: an [icon] with a non-blank [text] renders the two side by side, in the
  * muted row color rather than a pill's own. That is the form for a status whose icon says what is being
@@ -38,7 +40,10 @@ internal data class ActiveListBadge(
     val tooltip: String? = null,
     val action: (() -> Unit)? = null,
     val icon: Icon? = null,
-)
+    val segments: List<FilledBadgeIcon.Segment> = emptyList(),
+) {
+    internal fun parts() = segments.ifEmpty { listOf(FilledBadgeIcon.Segment(text, style)) }
+}
 
 /**
  * A row's changes summary: what the row has committed against [base], and what it has left uncommitted.
