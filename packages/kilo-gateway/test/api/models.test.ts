@@ -84,6 +84,30 @@ function stubFetch(fn: (input: string | URL | Request, init?: RequestInit) => Pr
   ;(globalThis as any).fetch = fn
 }
 
+for (const [header, expected] of [
+  ["90", 90],
+  ["Thu, 01 Jan 1970 00:02:00 GMT", 120],
+  ["invalid", undefined],
+  [undefined, undefined],
+] as const) {
+  test(`preserves valid Retry-After from a rate-limited model catalog: ${header}`, async () => {
+    const clock = spyOn(Date, "now").mockReturnValue(0)
+    const fetch = spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response("Rate limited", { status: 429, headers: header == null ? {} : { "retry-after": header } }),
+    )
+    try {
+      const result = await fetchKiloModels({ kilocodeOrganizationId: "org-a" })
+      expect(result.error?.kind).toBe("http")
+      expect(result.error?.status).toBe(429)
+      expect(result.error?.retryAfter).toBe(expected)
+      expect(fetch).toHaveBeenCalledTimes(1)
+    } finally {
+      fetch.mockRestore()
+      clock.mockRestore()
+    }
+  })
+}
+
 test("returns empty models and error when both auth and public requests return 401", async () => {
   const orig = globalThis.fetch
   stubFetch(async () => new Response("Unauthorized", { status: 401, statusText: "Unauthorized" }))

@@ -5,7 +5,7 @@ import { FetchHttpClient, HttpClient, HttpClientRequest, HttpClientResponse } fr
 import { Config } from "../config/config"
 import { Auth } from "../auth"
 import { compatible, organization, token } from "@/kilocode/provider/catalog"
-import { retryable } from "@/kilocode/provider/catalog-recovery"
+import { delay, retryable } from "@/kilocode/provider/catalog-recovery"
 import * as ModelsRefresh from "@opencode-ai/core/kilocode/models-refresh"
 import type { Provider } from "@opencode-ai/core/models-dev"
 import * as Log from "@opencode-ai/core/util/log"
@@ -331,23 +331,22 @@ export const layer: Layer.Layer<
       )
         return
       entry.recovery = yield* Effect.gen(function* () {
-        for (let attempt = 0; attempt < 6; attempt++) {
-          const delay = Math.min(30 * 2 ** attempt, 300)
-          yield* Effect.sleep(Duration.seconds(delay))
+        let next = result
+        for (let attempt = 0; ; attempt++) {
+          yield* Effect.sleep(Duration.seconds(delay(next, attempt)))
           // A newer account or endpoint must not be replaced by this retry.
           if (selected.get(entry.providerID) !== entry || active.get(entry.providerID) !== entry) return
           if (entry.cached && !retryable(entry.cached.result)) return
           yield* invalidate(entry)
           const version = (versions.get(entry.providerID) ?? 0) + 1
           versions.set(entry.providerID, version)
-          const next = yield* evaluate(entry, version).pipe(
+          next = yield* evaluate(entry, version).pipe(
             Effect.catch(() => Effect.succeed({ models: {}, error: { kind: "network" as const } })),
           )
           if (selected.get(entry.providerID) !== entry || active.get(entry.providerID) !== entry) return
           if (retryable(next)) continue
           return
         }
-        log.warn("catalog recovery attempts exhausted", { providerID: entry.providerID, attempts: 6 })
       }).pipe(Effect.ensuring(Effect.sync(() => (entry.recovery = undefined))), Effect.forkIn(scope))
     })
 
