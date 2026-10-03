@@ -25,7 +25,7 @@ This means newly added models and providers are automatically available to your 
 
 Navigate to your organization's **Providers & Models** page to configure access controls.
 
-The page has two tabs:
+The page has three tabs:
 
 ### Models Tab
 
@@ -44,6 +44,10 @@ Lists all providers. For each provider you can:
 - Filter by provider location / datacenter region
 
 When you toggle a provider off, all models it offers become unavailable to team members. Re-enabling the provider restores access to all its models.
+
+### Auto routing Tab
+
+Holds your organization's Auto routing settings, including the Efficient model pool that constrains `kilo-auto/efficient` to specific model and thinking-variant pairs. Owners, admins, and billing managers can edit these settings; members see a read-only view. See [Custom Efficient pools](/docs/code-with-ai/agents/auto-model#custom-efficient-pools) for how the pool is benchmarked and routed.
 
 ### Saving Changes
 
