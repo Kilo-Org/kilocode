@@ -50,10 +50,24 @@ export const SessionTabSwitcher: Component<SessionTabSwitcherProps> = (props) =>
     if (open()) focus(true)
   })
 
-  // "Kilo Code: Show Open Tabs" (Command Palette) opens the switcher.
-  const show = () => setOpen(true)
+  // "Kilo Code: Show Open Tabs" (Command Palette) opens the switcher. The
+  // command runs while the palette still owns focus; when VS Code hands focus
+  // back, the webview re-focuses the prompt, and the Popover dismisses on that
+  // focusin outside its content. So open only once this webview has focus.
+  const reveal = () => requestAnimationFrame(() => setOpen(true))
+  const show = () => {
+    window.removeEventListener("focus", reveal)
+    if (document.hasFocus()) {
+      setOpen(true)
+      return
+    }
+    window.addEventListener("focus", reveal, { once: true })
+  }
   window.addEventListener("showOpenTabs", show)
-  onCleanup(() => window.removeEventListener("showOpenTabs", show))
+  onCleanup(() => {
+    window.removeEventListener("showOpenTabs", show)
+    window.removeEventListener("focus", reveal)
+  })
 
   const select = (item: SessionTabSwitcherItem) => {
     setOpen(false)
