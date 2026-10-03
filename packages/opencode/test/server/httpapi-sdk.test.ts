@@ -870,6 +870,42 @@ describe("HttpApi SDK", () => {
       }),
     ),
   )
+  serverPathParity("rejects malformed user image data synchronously through prompt_async", (serverPath) =>
+    withStandardProject(serverPath, ({ sdk }) =>
+      Effect.gen(function* () {
+        // Regression test: prompt_async must reject a bad attachment with a synchronous
+        // 400 instead of returning 204 and failing later with an async session.error,
+        // which left the client with no way to recover the typed message (see prompt.ts
+        // Image.DecodeError handling and the HTTP handler's rejectBadAttachments precheck).
+        const session = yield* capture(() => sdk.session.create({ title: "invalid async image" }))
+        const sessionID = String(record(session.data).id)
+        const prompt = yield* capture(() =>
+          sdk.session.promptAsync({
+            sessionID,
+            agent: "build",
+            noReply: true,
+            parts: [
+              {
+                type: "file",
+                mime: "image/png",
+                filename: "not-an-image.png",
+                url: "data:image/png;base64,bm90LWltYWdl",
+              },
+            ],
+          }),
+        )
+        const messages = yield* capture(() => sdk.session.messages({ sessionID }))
+
+        expect(prompt.status).toBe(400)
+        expect(JSON.stringify(messages.data)).not.toContain("not-an-image.png")
+
+        return {
+          promptStatus: prompt.status,
+          persisted: JSON.stringify(messages.data).includes("not-an-image.png"),
+        }
+      }),
+    ),
+  )
   // kilocode_change end
 
   serverPathParity("matches generated SDK prompt streaming through fake LLM", (serverPath) =>

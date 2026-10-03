@@ -167,6 +167,10 @@ class SessionUi(
     private var revertPrompt: String? = null
     private var pendingRollback: String? = null
     private var pendingRedo: String? = null
+    // See sendPrompt()/onStateChanged(): true from the moment a prompt is dispatched until
+    // either a message lands in the model (successful send) or the state errors out (failed
+    // send, draft gets restored).
+    private var awaitingFirstMessage = false
     private val flushMs =
         Registry.intValue("kilo.session.flushMs", EVENT_FLUSH_MS.toInt())
             .takeIf { it > 0 }
@@ -532,6 +536,7 @@ class SessionUi(
             focus = focus,
             retry = if (readonly) null else controller::retry,
             retryable = controller::canRetry,
+            dismiss = if (readonly) null else controller::dismissError,
         )
         messageBody = SessionMessageListPanel(
             controller.model,
@@ -815,7 +820,12 @@ class SessionUi(
 
                 is SessionModelEvent.RevertChanged -> onRevertChanged(event.revert)
 
-                is SessionModelEvent.MessageAdded,
+                is SessionModelEvent.MessageAdded -> {
+                    awaitingFirstMessage = false
+                    syncDock()
+                    refreshBoardIfEmpty()
+                }
+
                 is SessionModelEvent.MessageRemoved,
                 is SessionModelEvent.HistoryLoaded,
                 is SessionModelEvent.Cleared -> {
@@ -1003,6 +1013,11 @@ class SessionUi(
             val model = controller.model.model ?: "none"
             "${ChatLogSummary.prompt(PromptDto(parts = parts, editorContext = editor.context))} agent=$agent model=$model ready=${controller.ready}"
         }
+        // No message is in the model yet for this send; onStateChanged uses this to tell a prompt
+        // that failed before the server ever created a message (restore the draft) apart from a
+        // turn that failed after a message was already persisted (nothing to restore -- it's in
+        // the transcript already).
+        awaitingFirstMessage = true
         controller.prompt(text, allFiles, editor.context, select)
         scroll.followBottom(follow)
     }
@@ -1398,6 +1413,16 @@ class SessionUi(
             pendingRollback = null
             pendingRedo = null
         }
+        // kilocode_change start - restore the typed prompt when the send never produced a persisted
+        // message (rejected synchronously, or prompt_async's 204-then-session.error case). A turn that
+        // fails after its user message was already persisted has nothing to restore -- it's in the
+        // transcript -- so this only fires while still awaiting that first message. A user-initiated
+        // stop (TurnEnded) clears the flag without restoring; that was a deliberate cancel, not a failure.
+        if (awaitingFirstMessage && (state is SessionState.Error || state is SessionState.TurnEnded)) {
+            awaitingFirstMessage = false
+            if (state is SessionState.Error) prompt.restoreLastSubmission()
+        }
+        // kilocode_change end
         prompt.setBusy(busy)
         dock?.setBusy(busy)
         load.setState(state)

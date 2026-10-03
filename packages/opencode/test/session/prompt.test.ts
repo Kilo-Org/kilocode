@@ -813,6 +813,69 @@ noLLMServer.instance(
   { config: cfg },
 )
 
+// kilocode_change start - SVG "images" are markup, not rasters Photon can decode; they must not die the prompt
+noLLMServer.instance(
+  "decodes a user SVG data image into readable source instead of normalizing it",
+  () =>
+    Effect.gen(function* () {
+      const prompt = yield* SessionPrompt.Service
+      const sessions = yield* Session.Service
+      const chat = yield* sessions.create({ title: "User SVG data" })
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg"><circle r="1"/></svg>`
+      const url = `data:image/svg+xml;base64,${Buffer.from(svg).toString("base64")}`
+
+      const result = yield* prompt.prompt({
+        sessionID: chat.id,
+        agent: "build",
+        model: ref,
+        noReply: true,
+        parts: [{ type: "file", mime: "image/svg+xml", filename: "icon.svg", url }],
+      })
+
+      expect(result.parts).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ type: "text", synthetic: true, text: svg }),
+          expect.objectContaining({ type: "file", mime: "image/svg+xml", url }),
+        ]),
+      )
+
+      const saved = yield* sessions.messages({ sessionID: chat.id })
+      expect(saved.flatMap((message) => message.parts).some((part) => part.type === "file")).toBe(true)
+    }),
+  { config: cfg },
+)
+
+noLLMServer.instance(
+  "decodes a user SVG file URL into readable source instead of normalizing it",
+  () =>
+    Effect.gen(function* () {
+      const test = yield* TestInstance
+      const prompt = yield* SessionPrompt.Service
+      const sessions = yield* Session.Service
+      const chat = yield* sessions.create({ title: "User SVG file" })
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg"><rect width="1" height="1"/></svg>`
+      const file = path.join(test.directory, "icon.svg")
+      yield* Effect.promise(() => Bun.write(file, svg))
+
+      const result = yield* prompt.prompt({
+        sessionID: chat.id,
+        agent: "build",
+        model: ref,
+        noReply: true,
+        parts: [{ type: "file", mime: "image/svg+xml", filename: "icon.svg", url: pathToFileURL(file).href }],
+      })
+
+      expect(result.parts).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ type: "text", synthetic: true, text: svg }),
+          expect.objectContaining({ type: "file", mime: "image/svg+xml" }),
+        ]),
+      )
+    }),
+  { config: cfg },
+)
+// kilocode_change end
+
 it.instance("loop surfaces content-filter finishes as session errors", () =>
   Effect.gen(function* () {
     const { llm } = yield* useServerConfig(providerCfg)

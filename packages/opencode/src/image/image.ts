@@ -12,8 +12,8 @@ const MAX_WIDTH = 2000
 const MAX_HEIGHT = 2000
 const AUTO_RESIZE = true
 const JPEG_QUALITIES = [80, 85, 70, 55, 40]
-// kilocode_change start - preserve valid in-limit images when Photon is unavailable
-function dimensions(mime: string, data: Buffer) {
+// kilocode_change start - preserve valid in-limit images when Photon is unavailable; exported for the HTTP-boundary precheck in kilocode/session/attachment.ts
+export function dimensions(mime: string, data: Buffer) {
   if (
     mime === "image/png" &&
     data.length >= 24 &&

@@ -22,6 +22,7 @@ class SessionOutcomeView(
     focus: (() -> Unit)? = null,
     private val retry: (() -> Unit)? = null,
     private val retryable: (() -> Boolean)? = null,
+    private val dismiss: (() -> Unit)? = null,
 ) : DialogView(selection, focus), SessionView {
 
     override val sessionViewKind = SessionView.Kind.Default
@@ -42,7 +43,7 @@ class SessionOutcomeView(
         error.text = message
         setContentPadding(left = false, right = false)
         setContent(error.scroll)
-        syncRetry(true)
+        syncRetry(true, dismissible = true)
         isVisible = true
         refresh()
     }
@@ -116,24 +117,26 @@ class SessionOutcomeView(
      *
      * [retryable] is asked on every show because the answer depends on the transcript tail, not on the
      * outcome alone: a session-level error that arrived after a completed turn has nothing to replay.
+     *
+     * [dismissible] is only true for [showError]: a send that failed before any message was created
+     * (see [ai.kilocode.client.session.SessionUi.restoreLastSubmission]) has no transcript entry for
+     * Retry to continue, so without a dismiss action the card would stay up until the next unrelated
+     * state change. The other two card shapes ([showRetry], [showOutcome]) describe a transcript tail
+     * that already exists, so Retry (or nothing, for an interrupted/incomplete note) is enough.
      */
     @RequiresEdt
-    private fun syncRetry(show: Boolean) {
-        val run = retry
-        if (run == null || !show || retryable?.invoke() == false) {
-            setActions(emptyList())
-            return
+    private fun syncRetry(show: Boolean, dismissible: Boolean = false) {
+        val actions = buildList {
+            val run = retry
+            if (run != null && show && retryable?.invoke() != false) {
+                add(Action(id = RETRY_ACTION, text = KiloBundle.message("session.outcome.retry"), primary = true, handler = run))
+            }
+            val clear = dismiss
+            if (clear != null && dismissible) {
+                add(Action(id = DISMISS_ACTION, text = KiloBundle.message("session.outcome.dismiss"), primary = isEmpty(), handler = clear))
+            }
         }
-        setActions(
-            listOf(
-                Action(
-                    id = RETRY_ACTION,
-                    text = KiloBundle.message("session.outcome.retry"),
-                    primary = true,
-                    handler = run,
-                ),
-            ),
-        )
+        setActions(actions)
     }
 
     @RequiresEdt
@@ -151,6 +154,7 @@ class SessionOutcomeView(
 
     private companion object {
         const val RETRY_ACTION = "retry"
+        const val DISMISS_ACTION = "dismiss"
     }
 }
 
