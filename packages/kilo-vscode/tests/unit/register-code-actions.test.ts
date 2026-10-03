@@ -23,7 +23,7 @@ const original = {
   diagnostics: api.languages.getDiagnostics,
 }
 
-function setup(active = false, agentReady = true, last?: "sidebar" | "agent" | "tab") {
+function setup(active = false, agentReady = true, last?: "sidebar" | "agent" | "tab", tabbed = false) {
   const commands = new Map<string, Command>()
   const executed: unknown[][] = []
   const events: string[] = []
@@ -88,7 +88,7 @@ function setup(active = false, agentReady = true, last?: "sidebar" | "agent" | "
   }
 
   const views = { sidebar: provider, agent, tab }
-  registerCodeActions(context, provider as never, agent as never, undefined, () =>
+  registerCodeActions(context, provider as never, agent as never, tabbed ? () => tab as never : undefined, () =>
     focused.current ? (views[focused.current] as never) : undefined,
   )
 
@@ -216,6 +216,17 @@ describe("registerCodeActions", () => {
 
     expect(state.recipients).toEqual(["sidebar"])
     expect(state.executed).toEqual([["kilo-code.SidebarProvider.focus"]])
+    expect(state.posts).toEqual([{ type: "action", action: "showOpenTabs" }])
+  })
+
+  it("shows open tabs in the active Kilo editor tab without revealing the sidebar", async () => {
+    const state = setup(true, true, undefined, true)
+
+    await state.commands.get("kilo-code.new.showOpenTabs")?.()
+
+    expect(state.recipients).toEqual(["tab"])
+    expect(state.waits).toEqual(["tab"])
+    expect(state.executed).toEqual([])
     expect(state.posts).toEqual([{ type: "action", action: "showOpenTabs" }])
   })
 

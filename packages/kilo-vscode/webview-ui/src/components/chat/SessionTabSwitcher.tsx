@@ -54,19 +54,30 @@ export const SessionTabSwitcher: Component<SessionTabSwitcherProps> = (props) =>
   // command runs while the palette still owns focus; when VS Code hands focus
   // back, the webview re-focuses the prompt, and the Popover dismisses on that
   // focusin outside its content. So open only once this webview has focus.
-  const reveal = () => requestAnimationFrame(() => setOpen(true))
-  const show = () => {
+  // VS Code returns focus right after the palette closes; if it never does,
+  // drop the request so a later, unrelated focus doesn't pop the switcher open.
+  let timer: ReturnType<typeof setTimeout> | undefined
+  const cancel = () => {
+    clearTimeout(timer)
     window.removeEventListener("focus", reveal)
+  }
+  const reveal = () => {
+    cancel()
+    requestAnimationFrame(() => setOpen(true))
+  }
+  const show = () => {
+    cancel()
     if (document.hasFocus()) {
       setOpen(true)
       return
     }
-    window.addEventListener("focus", reveal, { once: true })
+    window.addEventListener("focus", reveal)
+    timer = setTimeout(cancel, 1000)
   }
   window.addEventListener("showOpenTabs", show)
   onCleanup(() => {
     window.removeEventListener("showOpenTabs", show)
-    window.removeEventListener("focus", reveal)
+    cancel()
   })
 
   const select = (item: SessionTabSwitcherItem) => {
