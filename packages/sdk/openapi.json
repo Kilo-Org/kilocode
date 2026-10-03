@@ -35607,6 +35607,9 @@
               "type": "string"
             }
           },
+          "memory_model": {
+            "type": "string"
+          },
           "default_agent": {
             "type": "string"
           },

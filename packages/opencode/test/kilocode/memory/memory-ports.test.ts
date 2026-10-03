@@ -12,6 +12,15 @@ import type { Session } from "../../../src/session/session"
 import type { SessionSummary } from "../../../src/session/summary"
 import type { Snapshot } from "../../../src/snapshot"
 import { MemoryModel, MemorySession } from "../../../src/kilocode/memory/ports"
+import { MemoryTurn } from "../../../src/kilocode/memory/turn"
+import { installMemoryRuntime } from "../../../src/kilocode/memory/runtime"
+import type { Config } from "../../../src/config/config"
+import { InstanceRef } from "../../../src/effect/instance-ref"
+import { KiloMemory } from "@kilocode/kilo-memory/effect"
+import { MemoryService } from "@kilocode/kilo-memory/effect/service"
+import { Global } from "@opencode-ai/core/global"
+import path from "path"
+import { provideTestInstance, tmpdir } from "../../fixture/fixture"
 
 const pid = ProviderV2.ID.make("test")
 const mid = ModelV2.ID.make("fake-memory-model")
@@ -491,5 +500,81 @@ describe("memory ports", () => {
 
     expect(handles.size).toBe(1)
     expect(cleared.size).toBe(1)
+  })
+})
+
+describe("memory turn", () => {
+  function config(model?: string | null) {
+    return { get: () => Effect.succeed({ memory_model: model }) } as unknown as Config.Interface
+  }
+
+  async function close(model?: string | null) {
+    await using tmp = await tmpdir({ git: true })
+    const sessionID = SessionID.make("ses_memory_turn")
+    const uid = MessageID.make("msg_turn_user")
+    const final = MessageID.make("msg_turn_final")
+    const messages = [
+      user({ sessionID, id: uid, body: "Which command runs the CLI memory tests?" }),
+      assistant({
+        sessionID,
+        id: final,
+        parentID: uid,
+        time: 2,
+        parts: [text(sessionID, final, "Run bun test from packages/opencode for CLI memory tests.")],
+      }),
+    ]
+    const seen: string[] = []
+    const prior = Global.Path.data
+    ;(Global.Path as { data: string }).data = path.join(tmp.path, "data")
+    installMemoryRuntime()
+    try {
+      await provideTestInstance({
+        directory: tmp.path,
+        fn: async (ctx) => {
+          await KiloMemory.enable({ ctx })
+          await Effect.runPromise(
+            MemoryTurn.close({
+              sessionID,
+              reason: "completed",
+              sessions: sessions(messages),
+              summary: summary({ seen: [], diffs: [] }),
+              provider: provider({
+                seen,
+                outputs: [
+                  '{"topic":"memory","summary":"Found the CLI memory test command.","operations":[],"skipped":[]}',
+                ],
+              }),
+              config: config(model),
+            }).pipe(
+              Effect.provideService(InstanceRef, ctx),
+              Effect.provideService(MemoryService.Service, MemoryService.make()),
+            ),
+          )
+        },
+      })
+    } finally {
+      ;(Global.Path as { data: string }).data = prior
+    }
+    return seen
+  }
+
+  test("close runs automatic saves on the configured memory_model", async () => {
+    expect(await close("test/memory-config-model")).toEqual(["memory-config-model"])
+  })
+
+  test("close uses the session model when memory_model is unset", async () => {
+    expect(await close()).toEqual(["fake-memory-model"])
+  })
+
+  test("close uses the session model when memory_model is null", async () => {
+    expect(await close(null)).toEqual(["fake-memory-model"])
+  })
+
+  test("close falls back to the session model when memory_model is malformed", async () => {
+    expect(await close("memory-config-model")).toEqual(["fake-memory-model"])
+  })
+
+  test("close falls back to the session model when memory_model is unavailable", async () => {
+    expect(await close("test/missing-memory-model")).toEqual(["fake-memory-model"])
   })
 })
