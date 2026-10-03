@@ -337,6 +337,21 @@ describe("agent_manager tool", () => {
     )
   })
 
+  // Some models send the string "null" (#14725). The error must tell them how to recover.
+  test("explains how to recover from a worktreeID in worktree mode", async () => {
+    const tool: Tool.Def = await init()
+    const result = await runtime.runPromise(
+      tool.execute({ mode: "worktree", worktreeID: "null", tasks: [{ name: "test" }] }, ctx).pipe(Effect.exit),
+    )
+    expect(Exit.isFailure(result)).toBe(true)
+    if (Exit.isFailure(result)) {
+      const err = Cause.squash(result.cause)
+      expect(err).toBeInstanceOf(Tool.InvalidArgumentsError)
+      expect(String((err as Error).message)).toContain('worktreeID "null" requires mode local')
+      expect(String((err as Error).message)).toContain("omit worktreeID or send JSON null")
+    }
+  })
+
   test("keeps session ID validation local", () => {
     expect(Schema.is(Params)({ action: "stop", sessionID: "ses_target" })).toBe(true)
     expect(Schema.is(Params)({ action: "stop", sessionID: "invalid" })).toBe(false)
