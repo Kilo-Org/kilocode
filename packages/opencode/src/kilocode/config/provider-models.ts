@@ -16,7 +16,12 @@ export namespace ProviderModels {
       const models: Record<string, unknown> = {}
       for (const [modelID, model] of Object.entries(value.models)) {
         if (model === null || isModel(model)) {
-          models[modelID] = model
+          Object.defineProperty(models, modelID, {
+            value: model,
+            enumerable: true,
+            configurable: true,
+            writable: true,
+          })
           continue
         }
 
