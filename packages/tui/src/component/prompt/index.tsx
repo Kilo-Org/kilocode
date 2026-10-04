@@ -29,6 +29,7 @@ import { useEvent } from "../../context/event"
 import { editorSelectionKey, useEditorContext, type EditorSelection } from "../../context/editor"
 import { normalizePromptContent, openEditor } from "../../editor"
 import { useExit } from "../../context/exit"
+import { createDoublePress } from "../../kilocode/double-press" // kilocode_change
 import { promptOffsetWidth } from "../../prompt/display"
 import { createStore, produce, unwrap } from "solid-js/store"
 import { usePromptHistory, type PromptInfo } from "../../prompt/history"
@@ -59,6 +60,8 @@ import { slashMatches } from "@/kilocode/cli/cmd/command-display"
 import { createCostAlertController } from "@/kilocode/cli/cmd/tui/cost-alert"
 import { MemoryPrompt } from "@/kilocode/cli/cmd/tui/component/memory-prompt"
 import { GoalPrompt } from "@/kilocode/cli/cmd/tui/component/goal"
+import { KiloSteer } from "../../kilocode/steer"
+import { SteerLabel, useSubagent } from "../../kilocode/steer-label"
 // kilocode_change end
 import { KILO_BASE_MODE, useBindings, useCommandShortcut, useLeaderActive, useOpencodeKeymap } from "../../keymap"
 import { useTuiConfig } from "../../config"
@@ -184,6 +187,7 @@ export function Prompt(props: PromptProps) {
   const variantShortcut = useCommandShortcut("variant.cycle")
   const renderer = useRenderer()
   const exit = useExit()
+  const quit = createDoublePress(1000) // kilocode_change - double Ctrl+C to exit, shared with the subagent view
   const dimensions = useTerminalDimensions()
   const { theme, syntax } = useTheme()
   const kv = useKV()
@@ -235,8 +239,16 @@ export function Prompt(props: PromptProps) {
     bumpCursor: () => setCursorVersion((value) => value + 1),
     cursorVersion: () => cursorVersion(),
   })
+  // A subagent view only sends steering prompts: no shell mode and no slash commands. The prompt
+  // also shows whose input it is (color, label, placeholder) so it does not look like the parent's.
+  const subagent = useSubagent(() => props.sessionID)
+  const steer = createMemo(() => !!subagent())
+  // In a subagent view Esc belongs to the session route's `subagent.interrupt`, which stops the
+  // subagent tree and shows its hint in the subagent footer; the prompt's own interrupt stays off.
   const interruptible = createMemo(
-    () => running(status().type) || (goal()?.active === true && (!vim.vimEnabled() || vim.vimMode() === "normal")),
+    () =>
+      !steer() &&
+      (running(status().type) || (goal()?.active === true && (!vim.vimEnabled() || vim.vimMode() === "normal"))),
   )
   // kilocode_change end
   const currentProviderLabel = createMemo(() => local.model.parsed().provider)
@@ -315,7 +327,6 @@ export function Prompt(props: PromptProps) {
     mode: "normal" | "shell"
     extmarkToPartIndex: Map<number, number>
     interrupt: number
-    exitPress: number // kilocode_change - track double ctrl+c to exit
     placeholder: number
   }>({
     placeholder: randomIndex(list().length),
@@ -326,7 +337,6 @@ export function Prompt(props: PromptProps) {
     mode: "normal",
     extmarkToPartIndex: new Map(),
     interrupt: 0,
-    exitPress: 0, // kilocode_change
   })
 
   createEffect(
@@ -898,9 +908,7 @@ export function Prompt(props: PromptProps) {
         cmd: (ctx: CommandContext<Renderable, KeyEvent>) => {
           ctx.event.preventDefault()
           ctx.event.stopPropagation()
-          setStore("exitPress", store.exitPress + 1)
-          setTimeout(() => setStore("exitPress", 0), 1000)
-          if (store.exitPress >= 2) void exit()
+          if (quit.press()) void exit()
         },
       },
     ],
@@ -915,6 +923,7 @@ export function Prompt(props: PromptProps) {
         return (
           inputTarget() !== undefined &&
           !props.disabled &&
+          !steer() && // kilocode_change - no shell mode while steering a subagent
           store.mode === "normal" &&
           !auto()?.visible &&
           input?.visualCursor.offset === 0
@@ -975,7 +984,7 @@ export function Prompt(props: PromptProps) {
             if (!item) return false
             input.setText(item.input)
             setStore("prompt", item)
-            setStore("mode", item.mode ?? "normal")
+            setStore("mode", steer() ? "normal" : (item.mode ?? "normal")) // kilocode_change - subagent views have no shell mode
             restoreExtmarksFromParts(item.parts)
             vim.resetVim() // kilocode_change - recalled history starts in insert mode
             input.cursorOffset = 0
@@ -1012,7 +1021,7 @@ export function Prompt(props: PromptProps) {
             if (!item) return false
             input.setText(item.input)
             setStore("prompt", item)
-            setStore("mode", item.mode ?? "normal")
+            setStore("mode", steer() ? "normal" : (item.mode ?? "normal")) // kilocode_change - subagent views have no shell mode
             restoreExtmarksFromParts(item.parts)
             vim.resetVim() // kilocode_change - recalled history starts in insert mode
             input.cursorOffset = input.plainText.length
@@ -1055,7 +1064,7 @@ export function Prompt(props: PromptProps) {
     if (auto()?.visible) return false
     if (!store.prompt.input) return false
     // kilocode_change start - in-memory cost alert command
-    if (costAlert.handle(store.prompt.input.trim())) return true
+    if (!steer() && costAlert.handle(store.prompt.input.trim())) return true
     // kilocode_change end
     const agent = local.agent.current()
     if (!agent) return false
@@ -1073,6 +1082,7 @@ export function Prompt(props: PromptProps) {
       sessionID: props.sessionID,
       toast,
       dialog,
+      skip: steer(),
       done: () => {
         history.append({
           ...store.prompt,
@@ -1181,7 +1191,8 @@ export function Prompt(props: PromptProps) {
           ]
         : []
 
-    if (store.mode === "shell") {
+    const target = sync.session.get(sessionID) // kilocode_change - subagent steering target
+    if (store.mode === "shell" && !steer() /* kilocode_change - subagent views never run shell */) {
       move.startSubmit()
       void sdk.client.session.shell({
         sessionID,
@@ -1194,6 +1205,7 @@ export function Prompt(props: PromptProps) {
       })
       setStore("mode", "normal")
     } else if (
+      !steer() && // kilocode_change - subagent views send slash text as a plain steer
       inputText.startsWith("/") &&
       sync.data.command.some((x) => slashMatches(x, inputText.split("\n")[0].split(" ")[0].slice(1))) // kilocode_change
     ) {
@@ -1224,11 +1236,13 @@ export function Prompt(props: PromptProps) {
             agent: agent.name,
             model: selectedModel,
             variant,
+            ...KiloSteer.prompt(target), // kilocode_change - steer a subagent with its own agent/model
             parts: [
               ...editorParts,
               {
                 type: "text",
                 text: inputText,
+                ...KiloSteer.mark(target), // kilocode_change - mark human steering for the parent notice
               },
               ...nonTextParts,
             ],
@@ -1439,6 +1453,7 @@ export function Prompt(props: PromptProps) {
   const highlight = createMemo(() => {
     if (leader()) return theme.border
     if (store.mode === "shell") return theme.primary
+    if (subagent()) return subagent()?.color ?? theme.border // kilocode_change - the subagent's color, as in its footer
     const agent = local.agent.current()
     if (!agent) return theme.border
     return local.agent.color(agent.name ?? "") // kilocode_change
@@ -1461,6 +1476,7 @@ export function Prompt(props: PromptProps) {
 
   const placeholderText = createMemo(() => {
     if (props.showPlaceholder === false) return undefined
+    if (subagent()) return `Steer the ${subagent()?.label} subagent...` // kilocode_change
     if (store.mode === "shell") {
       if (!shell().length) return undefined
       const example = shell()[store.placeholder % shell().length]
@@ -1604,7 +1620,10 @@ export function Prompt(props: PromptProps) {
             />
             <box flexDirection="row" flexShrink={0} paddingTop={1} gap={1} justifyContent="space-between">
               <box flexDirection="row" gap={1}>
-                <Show when={local.agent.current()} fallback={<box height={1} />}>
+                {/* kilocode_change start - a steer runs as the subagent, so show it instead of the primary agent/model */}
+                <Show when={subagent()}>{(item) => <SteerLabel subagent={item()} />}</Show>
+                {/* kilocode_change end */}
+                <Show when={!subagent() && local.agent.current() /* kilocode_change */} fallback={<box height={1} />}>
                   {(agent) => (
                     <>
                       <text fg={fadeColor(highlight(), agentMetaAlpha())}>
@@ -1771,12 +1790,16 @@ export function Prompt(props: PromptProps) {
                     })()}
                   </box>
                 </box>
-                <text fg={store.interrupt > 0 ? theme.primary : theme.text}>
-                  esc{" "}
-                  <span style={{ fg: store.interrupt > 0 ? theme.primary : theme.textMuted }}>
-                    {store.interrupt > 0 ? "again to interrupt" : "interrupt"}
-                  </span>
-                </text>
+                {/* kilocode_change start - the subagent footer shows the interrupt hint in subagent views */}
+                <Show when={!steer()}>
+                  <text fg={store.interrupt > 0 ? theme.primary : theme.text}>
+                    esc{" "}
+                    <span style={{ fg: store.interrupt > 0 ? theme.primary : theme.textMuted }}>
+                      {store.interrupt > 0 ? "again to interrupt" : "interrupt"}
+                    </span>
+                  </text>
+                </Show>
+                {/* kilocode_change end */}
               </box>
             </Match>
             <Match when={workspace.notice()}>
@@ -1836,7 +1859,7 @@ export function Prompt(props: PromptProps) {
           <Show when={status().type !== "retry"}>
             <box gap={2} flexDirection="row">
               {/* kilocode_change start - show "ctrl+c again to exit" hint */}
-              <Show when={store.exitPress > 0}>
+              <Show when={quit.count() > 0}>
                 <text fg={theme.primary}>
                   ctrl+c <span style={{ fg: theme.primary }}>again to exit</span>
                 </text>

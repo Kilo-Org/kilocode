@@ -1,5 +1,6 @@
 package ai.kilocode.client.ui.list
 
+import ai.kilocode.client.ui.FilledBadgeIcon
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.layout.Stack
 import ai.kilocode.client.ui.layout.StackAxis
@@ -1036,6 +1037,7 @@ private data class ActiveListHeightBadge(
     val style: UiStyle.Badge.Style,
     val id: String?,
     val icon: Any?,
+    val segments: List<FilledBadgeIcon.Segment>,
 )
 
 private fun activeListHeightRow(item: ActiveListItem): ActiveListHeightRow {
@@ -1046,7 +1048,7 @@ private fun activeListHeightRow(item: ActiveListItem): ActiveListHeightRow {
         item.description,
         item.icon,
         item.section,
-        item.badges.map { ActiveListHeightBadge(it.text, it.style, it.id, it.icon) },
+        item.badges.map { ActiveListHeightBadge(it.text, it.style, it.id, it.icon, it.segments) },
         item.trailing,
         item.cells,
         item.disabled,

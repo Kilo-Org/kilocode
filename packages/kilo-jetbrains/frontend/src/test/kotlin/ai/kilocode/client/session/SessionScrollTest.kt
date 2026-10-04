@@ -41,6 +41,7 @@ import java.awt.Point
 import javax.swing.AbstractButton
 import javax.swing.JButton
 import javax.swing.JComponent
+import javax.swing.JPanel
 import javax.swing.Scrollable
 import javax.swing.SwingConstants
 import javax.swing.JTextArea
@@ -1127,6 +1128,48 @@ class SessionScrollTest : SessionUiTestBase() {
 
         assertEquals(value, bar.value)
         assertTrue(jumpButton().isVisible)
+    }
+
+    fun `test hidden question is followed when session is revealed`() {
+        val host = JPanel()
+        host.setSize(800, 600)
+        host.add(ui)
+
+        try {
+            host.addNotify()
+            ui.setSize(800, 600)
+            showMessages()
+            fillTranscript(24)
+            val bar = scrollBar()
+            setValue(bar, bottom(bar) / 2)
+            val value = bar.value
+            drainScroll()
+
+            assertEquals(value, bar.value)
+            assertFalse(ui.scroll.following())
+            assertTrue(jumpButton().isVisible)
+
+            host.remove(ui)
+            UIUtil.dispatchAllInvocationEvents()
+            assertFalse(ui.isShowing)
+
+            emit(ChatEventDto.QuestionAsked("ses_test", question("q_hidden_reveal")))
+            drainScroll()
+
+            assertEquals(value, bar.value)
+            assertFalse("Hidden metadata update alone must not resume following", ui.scroll.following())
+            assertTrue(jumpButton().isVisible)
+
+            host.add(ui)
+            drainScroll()
+
+            assertTrue(ui.isShowing)
+            assertBottom(bar)
+            assertTrue(ui.scroll.following())
+            assertFalse(jumpButton().isVisible)
+        } finally {
+            host.removeNotify()
+        }
     }
 
     fun `test question overlay replaces scroll icon and still jumps to bottom`() {

@@ -23,11 +23,20 @@ interface StatusOption {
   label: string
 }
 
+/** Focus request for a suggested item. `token` makes repeated focus of the same type observable. */
+export interface MarketplaceFocus {
+  token: number
+  type?: MarketplaceItem["type"]
+}
+
 interface Props {
   items: MarketplaceItem[]
   metadata: MarketplaceInstalledMetadata
   relevance: MarketplaceRelevanceMetadata
   fetching: boolean
+  search?: string
+  onSearchChange?: (value: string) => void
+  focus?: MarketplaceFocus
   searchPlaceholder: string
   emptyMessage: string
   relevantEmptyMessage: string
@@ -39,7 +48,12 @@ interface Props {
 export const MarketplaceListView = (props: Props) => {
   const { t } = useLanguage()
   const vscode = useVSCode()
-  const [search, setSearch] = createSignal("")
+  const [internalSearch, setInternalSearch] = createSignal("")
+  const search = () => (props.onSearchChange ? (props.search ?? "") : internalSearch())
+  const setSearch = (value: string) => {
+    if (props.onSearchChange) props.onSearchChange(value)
+    else setInternalSearch(value)
+  }
   const [status, setStatus] = createSignal<StatusOption>({ value: "all", label: t("marketplace.filter.all") })
   const [types, setTypes] = createSignal<MarketplaceItem["type"][]>([])
   const [categories, setCategories] = createSignal<string[]>([])
@@ -73,6 +87,17 @@ export const MarketplaceListView = (props: Props) => {
   createEffect(() => {
     setTypes((current) => retain(current, allTypes()))
     setCategories((current) => retain(current, allCategories()))
+  })
+
+  // Reset filters on every focus or reset request so the suggested item cannot be
+  // hidden by a previously selected status, category, or the relevant checkbox.
+  createEffect(() => {
+    const focus = props.focus
+    if (!focus) return
+    setStatus({ value: "all", label: t("marketplace.filter.all") })
+    setCategories([])
+    setRelevant(false)
+    setTypes(focus.type ? [focus.type] : [])
   })
 
   const toggleType = (type: MarketplaceItem["type"]) => {
