@@ -75,7 +75,7 @@ export const dict: Record<string, string> = {
 
   "dialog.usageExceeded.freeTier.title": "Free limit reached",
   "dialog.usageExceeded.freeTier.description":
-    "Subscribe to Kilo Go for reliable access to the best open-source models, starting at $5/month.", // kilocode_change
+    "Subscribe to Kilo Go for reliable access to the best open-source models for $10/month.", // kilocode_change
   "dialog.usageExceeded.freeTier.actionLabel": "Subscribe",
   "dialog.usageExceeded.accountRateLimit.title": "Go limit reached",
   "dialog.usageExceeded.accountRateLimit.description":
@@ -170,6 +170,10 @@ export const dict: Record<string, string> = {
   "ui.mermaid.copyPng": "Copy PNG",
   "ui.mermaid.downloadSvg": "Download SVG",
   "ui.mermaid.downloadPng": "Download PNG",
+  "ui.mermaid.zoom": "Zoom",
+  "ui.mermaid.zoomIn": "Zoom in",
+  "ui.mermaid.zoomOut": "Zoom out",
+  "ui.mermaid.zoomReset": "Reset zoom",
   // kilocode_change end
   "ui.scrollView.ariaLabel": "scrollable content",
 

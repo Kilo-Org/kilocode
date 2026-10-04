@@ -47,7 +47,7 @@ describe("AgentManagerOrchestrationBridge", () => {
       event?: (event: SSEPayload, directory?: string) => void
       state?: (state: "connecting" | "connected" | "disconnected" | "error") => void
     } = {}
-    const status = { failList: "", failReply: false }
+    const status = { failList: "", failReply: false, failClient: false }
     const managed = new Set(["ses_caller", "ses_target"])
     const promptAsync = mock(async () => ({ data: undefined }))
     const close = mock(async () => undefined)
@@ -105,7 +105,14 @@ describe("AgentManagerOrchestrationBridge", () => {
         return () => providers.delete(provider)
       },
       getKnownDirectories: () => [...new Set([...providers].flatMap((provider) => provider()))],
-      getClient: () => client,
+      getClient: () => {
+        if (status.failClient) throw new Error("Not connected — call connect() first")
+        return client
+      },
+      getClientAsync: async () => {
+        status.failClient = false
+        return client
+      },
     }
     const bridge = new AgentManagerOrchestrationBridge(connection as never, {
       root: (dir) => (overrides?.root ? overrides.root(dir) : root),
@@ -780,6 +787,34 @@ describe("AgentManagerOrchestrationBridge", () => {
     expect(test.client.kilocode.agentManager.list).toHaveBeenCalledWith({ directory: root })
     expect(test.client.kilocode.agentManager.list).toHaveBeenCalledWith({ directory: dir })
     expect(test.promptAsync).toHaveBeenCalledTimes(1)
+    test.bridge.dispose()
+  })
+
+  it("recovers after the client goes away during state initialization", async () => {
+    let drop = true
+    const test = harness({
+      ready: async () => {
+        // The backend drops while Agent Manager state loads, the way an unstable
+        // startup connect does. Recovery must reconnect on demand instead of
+        // failing once and never retrying.
+        if (drop) {
+          drop = false
+          test.status.failClient = true
+        }
+        return state
+      },
+    })
+    test.lists.set(dir, [request])
+
+    test.handlers.state?.("connected")
+    await waitFor(() => test.promptAsync.mock.calls.length === 1)
+
+    expect(test.promptAsync).toHaveBeenCalledTimes(1)
+    expect(test.replies[0]).toEqual({
+      requestID: "amr_prompt",
+      directory: dir,
+      result: { operation: "prompt", sessionID: "ses_target", delivered: true },
+    })
     test.bridge.dispose()
   })
 

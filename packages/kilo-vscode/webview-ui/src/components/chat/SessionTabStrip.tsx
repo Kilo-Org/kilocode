@@ -46,7 +46,7 @@ export const SessionTabStrip: Component = () => {
       (event.key === "ArrowLeft" || event.key === "ArrowRight")
     ) {
       event.preventDefault()
-      const ids = tabs.ids()
+      const ids = tabs.display()
       const target = tabs.move(id, event.key === "ArrowLeft" ? -1 : 1)
       if (target === undefined) return
       tabs.persist()
@@ -54,11 +54,11 @@ export const SessionTabStrip: Component = () => {
       focusTabElement(root, id)
       return
     }
-    handleTabKey({ ids: tabs.ids(), id, event, select: tabs.select, root })
+    handleTabKey({ ids: tabs.display(), id, event, select: tabs.select, root })
   }
-  const scroll = useTabScroll(tabs.ids, tabs.active)
+  const scroll = useTabScroll(tabs.display, tabs.active)
   const rows = createMemo(() =>
-    tabs.ids().map((id) => ({
+    tabs.display().map((id) => ({
       id,
       title: title(id),
       active: tabs.active() === id,
@@ -80,6 +80,13 @@ export const SessionTabStrip: Component = () => {
     freeze()
     tabs.closeOthers(id)
     focusTabElement(document, id, focusPrompt)
+    requestAnimationFrame(release)
+  }
+  const closeRight = (id: string) => {
+    freeze()
+    tabs.closeToRight(id)
+    if (tabs.active() === id) focusTabElement(document, id, focusPrompt)
+    else focusSelectedTab(document, focusPrompt)
     requestAnimationFrame(release)
   }
   const dragStart = (event: DragEvent) => {
@@ -129,10 +136,10 @@ export const SessionTabStrip: Component = () => {
               class="am-tab-list"
               ref={scroll.setRef}
               role="tablist"
-              style={{ "--tab-count": `${tabs.ids().length}` } as JSX.CSSProperties}
+              style={{ "--tab-count": `${tabs.display().length}` } as JSX.CSSProperties}
             >
-              <SortableProvider ids={tabs.ids()}>
-                <For each={tabs.ids()}>
+              <SortableProvider ids={tabs.display()}>
+                <For each={tabs.display()}>
                   {(id) => (
                     <SortableTabContainer id={id}>
                       <SessionTabMenu
@@ -143,11 +150,16 @@ export const SessionTabStrip: Component = () => {
                             : undefined
                         }
                         onClose={() => close(id)}
-                        onCloseOthers={tabs.ids().length > 1 ? () => closeOthers(id) : undefined}
+                        onCloseOthers={tabs.display().length > 1 ? () => closeOthers(id) : undefined}
+                        onCloseToRight={tabs.closableRight(id).length ? () => closeRight(id) : undefined}
+                        pinned={tabs.isPinned(id)}
+                        onTogglePin={isPendingTab(id) ? undefined : () => tabs.togglePinned(id)}
                       >
                         <SessionTab
                           title={title(id)}
                           active={tabs.active() === id}
+                          pinned={tabs.isPinned(id)}
+                          pinnedLabel={language.t("agentManager.tab.pinned")}
                           state={state(id)}
                           stateLabel={language.t(label(state(id)))}
                           closeTitle={language.t("common.closeTab")}

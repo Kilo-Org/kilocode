@@ -97,13 +97,19 @@ internal abstract class SettingsListPanel(
     protected fun mutateAndReload(
         selection: ActiveListSelection = ActiveListSelection.Preserve,
         text: String = loadingText(),
+        overlay: Boolean = true,
         block: suspend () -> Boolean,
-    ) = mutateAndReload({ selection }, text, block)
+    ) = mutateAndReload({ selection }, text, overlay, block)
 
+    /**
+     * [overlay] draws the panel-level progress strip. Pass `false` when the list already shows the work
+     * in flight on the affected row, where a second indicator saying the same thing is just noise.
+     */
     @RequiresEdt
     protected fun mutateAndReload(
         selection: suspend () -> ActiveListSelection,
         text: String = loadingText(),
+        overlay: Boolean = true,
         block: suspend () -> Boolean,
     ) {
         checkEdt()
@@ -117,7 +123,7 @@ internal abstract class SettingsListPanel(
             val items = fetch()
             apply(id, items, selection())
         }) return
-        showProgress(text)
+        if (overlay) showProgress(text)
     }
 
     protected abstract suspend fun fetch(): List<ActiveListItem>
@@ -126,7 +132,15 @@ internal abstract class SettingsListPanel(
 
     protected open fun extraActions(): List<AnAction> = emptyList()
 
+    protected open fun tailActions(): List<AnAction> = emptyList()
+
+    /** Controls placed immediately after the action toolbar, sharing its row and left edge. */
+    protected open fun toolbarLeft(): JComponent? = null
+
     protected open fun toolbarRight(): JComponent? = null
+
+    /** A short explanation of what this page configures, shown above the toolbar. */
+    protected open fun info(): JComponent? = null
 
     protected open fun headerExtras(): JComponent? = null
 
@@ -161,7 +175,9 @@ internal abstract class SettingsListPanel(
                 view.filter(search.text)
             }
         })
-        val stack = Stack.vertical(UiStyle.Gap.sm()).next(toolbarRow())
+        val stack = Stack.vertical(UiStyle.Gap.sm())
+        info()?.let { stack.next(it) }
+        stack.next(toolbarRow())
         headerExtras()?.let { stack.next(it) }
         return stack.next(search)
     }
@@ -169,26 +185,39 @@ internal abstract class SettingsListPanel(
     private fun toolbarRow(): JComponent {
         val row = JPanel(BorderLayout())
         UiStyle.Components.transparent(row)
-        row.add(toolbar(), BorderLayout.WEST)
+        row.add(leading(), BorderLayout.WEST)
         toolbarRight()?.let { row.add(it, BorderLayout.EAST) }
         return row
+    }
+
+    private fun leading(): JComponent {
+        val bar = toolbar()
+        val extra = toolbarLeft() ?: return bar
+        return Stack.horizontal(UiStyle.Gap.sm()).next(bar).next(extra)
     }
 
     private fun toolbar(): JComponent {
         val actions = mutableListOf<AnAction>()
         actions += extraActions()
+        var refresh: SettingsToolbarAction? = null
         if (showRefresh()) {
             if (actions.isNotEmpty()) actions += Separator.getInstance()
-            actions += SettingsToolbarAction(
+            refresh = SettingsToolbarAction(
                 KiloBundle.message("settings.agentBehavior.refresh"),
                 KiloBundle.message("settings.agentBehavior.refresh.description"),
                 AllIcons.Actions.Refresh,
                 { !busy },
             ) { reload() }
+            actions += refresh
+        }
+        val tail = tailActions()
+        if (tail.isNotEmpty()) {
+            if (actions.isNotEmpty()) actions += Separator.getInstance()
+            actions += tail
         }
         actions.firstOrNull()?.registerCustomShortcutSet(CommonShortcuts.getNewForDialogs(), this)
         ActionManager.getInstance().getAction("Refresh")?.shortcutSet?.let { set ->
-            actions.filterIsInstance<SettingsToolbarAction>().lastOrNull()?.registerCustomShortcutSet(set, this)
+            refresh?.registerCustomShortcutSet(set, this)
         }
         val toolbar = ActionManager.getInstance().createActionToolbar(ActionPlaces.TOOLBAR, DefaultActionGroup(actions), true)
         toolbar.targetComponent = this

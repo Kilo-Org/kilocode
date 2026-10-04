@@ -128,8 +128,11 @@ describe("PRStatusPoller batched GitHub queries", () => {
         headRefOid: exact ? refs.headRefOid : refs.baseRefOid,
       }
       if (args.at(1) === "view") {
-        if (lookup === "tracking" || (lookup === "branch" && args.at(2) === "feature"))
-          return { stdout: JSON.stringify(data), stderr: "" }
+        // Explicit-branch form names the branch; the bare form resolves the tracking ref, which is
+        // the only thing that identifies a fork PR checked out with `gh pr checkout`.
+        const explicit = args.at(2) === "feature"
+        if (lookup === "branch" && explicit) return { stdout: JSON.stringify(data), stderr: "" }
+        if (lookup === "tracking" && !explicit) return { stdout: JSON.stringify(data), stderr: "" }
         throw new Error("no pull requests found for branch")
       }
       const filter = args.at(args.indexOf("--state") + 1)
@@ -138,17 +141,19 @@ describe("PRStatusPoller batched GitHub queries", () => {
 
     const result = await internal.fetchPRForBranch("feature", "/repo")
     expect(result?.state ?? null).toBe(expected)
+    // Explicit branch first: the bare current-branch form has been observed hanging indefinitely in
+    // a worktree, so it is only reached when naming the branch found nothing.
     expect(calls.map((args) => args.slice(0, 3))).toEqual(
-      lookup === "tracking"
-        ? [["pr", "view", "--json"]]
-        : lookup === "branch"
+      lookup === "branch"
+        ? [["pr", "view", "feature"]]
+        : lookup === "tracking"
           ? [
-              ["pr", "view", "--json"],
               ["pr", "view", "feature"],
+              ["pr", "view", "--json"],
             ]
           : [
-              ["pr", "view", "--json"],
               ["pr", "view", "feature"],
+              ["pr", "view", "--json"],
               ["pr", "list", "--state"],
             ],
     )
@@ -252,6 +257,7 @@ describe("PRStatusPoller batched GitHub queries", () => {
     const internal = poller as unknown as {
       fetchOne: (id: string) => Promise<void>
       gh: (args: string[]) => Promise<{ stdout: string; stderr: string }>
+      quarantine: { clear: (id: string) => void }
     }
     internal.gh = async () => {
       throw new Error("offline")
@@ -260,6 +266,8 @@ describe("PRStatusPoller batched GitHub queries", () => {
     for (const name of ["feature/a", "feature/a", "feature/b", undefined, "feature/c", new Error("offline")]) {
       branch = name
       await expect(internal.fetchOne("wt1")).rejects.toThrow("offline")
+      // Error reporting is independent of failure isolation; quarantine has its own test below.
+      internal.quarantine.clear("wt1")
     }
 
     expect(values).toEqual([

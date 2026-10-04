@@ -217,8 +217,11 @@ it.instance(
         expect(Permission.evaluate("bash", command, rules).action).toBe("deny")
       }
 
-      // Delegated agents cannot answer an `ask`, and raw find can mutate via -exec/-delete.
-      expect(Permission.evaluate("bash", "gh repo view", rules).action).toBe("deny")
+      // Delegated agents cannot answer an `ask`: read-only gh forms are allowed outright,
+      // every other gh form is denied, and raw find can mutate via -exec/-delete.
+      expect(Permission.evaluate("bash", "gh repo view", rules).action).toBe("allow")
+      expect(Permission.evaluate("bash", "gh pr create --fill", rules).action).toBe("deny")
+      expect(Permission.evaluate("bash", "gh auth status --show-token", rules).action).toBe("deny")
       expect(Permission.evaluate("bash", "find . -name '*.ts'", rules).action).toBe("deny")
       expect(Permission.evaluate("bash", "touch output.txt", effective(orchestrator!)).action).toBe("deny")
     }),

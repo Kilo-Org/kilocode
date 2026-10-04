@@ -20,7 +20,7 @@ export interface CommentsGithub {
   send: (comment: ReviewComment) => Promise<{ success: boolean; error?: string }>
 }
 
-function side(value: ReviewComment["side"]): "LEFT" | "RIGHT" {
+export function side(value: ReviewComment["side"]): "LEFT" | "RIGHT" {
   return value === "deletions" ? "LEFT" : "RIGHT"
 }
 

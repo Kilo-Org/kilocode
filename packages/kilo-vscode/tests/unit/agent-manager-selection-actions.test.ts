@@ -2,6 +2,8 @@ import { describe, expect, it } from "bun:test"
 import { createRoot, createSignal } from "solid-js"
 import { needsLocalDraft } from "../../webview-ui/agent-manager/project/local-tabs"
 import { createTerminalState } from "../../webview-ui/agent-manager/terminal/state"
+import { createSidePanel } from "../../webview-ui/agent-manager/side-panel-state"
+import { SidePanel } from "../../webview-ui/agent-manager/side-panel-layout"
 import {
   createTabMemory,
   rememberSelectionTab,
@@ -69,9 +71,8 @@ describe("selectLocalAction", () => {
       applied: () => "project-a",
       active: () => "project-a",
       owns: () => false,
-      pending: (id) => id.startsWith("pending:"),
-      locals: () => ["ses-a1", "ses-a2"],
-      localTab: (id) => id === "review" || id.startsWith("terminal:"),
+      locals: () => ["ses-a1", "ses-a2", "pending:draft"],
+      localTab: (id) => id === "review" || id === "terminal:1",
       set: (key, id) => {
         memory[key] = id
       },
@@ -95,6 +96,94 @@ describe("selectLocalAction", () => {
     expect(result.calls).toContain("local:ses-a2")
   })
 
+  it("saves the outgoing view before applying a host-driven project switch", () => {
+    const memory: Record<string, string> = { local: "review" }
+    const sessions: Record<string, string> = {}
+    const save = createTabMemory({
+      selection: () => "local",
+      tab: () => "terminal:a",
+      multi: () => true,
+      applied: () => "a",
+      active: () => "b",
+      owns: () => false,
+      locals: () => ["ses-a"],
+      localTab: (id) => id === "terminal:a",
+      session: () => "ses-a",
+      rememberSession: (key, id) => {
+        sessions[key] = id
+      },
+      set: (key, id) => {
+        memory[key] = id
+      },
+    })
+
+    save()
+    expect(memory.local).toBe("review")
+    save(true)
+    expect(memory.local).toBe("terminal:a")
+    expect(sessions.local).toBe("ses-a")
+  })
+
+  it("does not replace destination memory with a foreign terminal", () => {
+    const memory: Record<string, string> = { local: "ses-b2" }
+    const result = deps()
+    result.value.tabMemory = () => memory
+    result.value.saveTabMemory = createTabMemory({
+      selection: () => "local",
+      tab: () => "terminal:a",
+      multi: () => true,
+      applied: () => "b",
+      active: () => "b",
+      owns: () => false,
+      locals: () => ["ses-b1", "ses-b2"],
+      localTab: (id) => id === "terminal:b",
+      set: (key, id) => {
+        memory[key] = id
+      },
+    })
+    selectLocalAction(result.value, [{ id: "ses-b1" }, { id: "ses-b2" }])
+    expect(memory.local).toBe("ses-b2")
+    expect(result.calls).toEqual(["local:ses-b2"])
+  })
+
+  it.each(["ses-a2", "pending:a"])("restores %s after leaving a fresh project's draft", (tab) => {
+    const memory: Record<string, string> = { local: tab }
+    const ids = ["ses-a1", tab]
+    const result = deps()
+    result.value.isPending = (id) => id.startsWith("pending:")
+    result.value.setActivePendingId = (id) => {
+      if (id) result.calls.push(`draft:${id}`)
+    }
+    result.value.tabMemory = () => memory
+    result.value.saveTabMemory = createTabMemory({
+      selection: () => "local",
+      tab: () => "pending:b",
+      multi: () => true,
+      applied: () => "project-a",
+      active: () => "project-a",
+      owns: () => false,
+      locals: () => ids,
+      set: (key, id) => {
+        memory[key] = id
+      },
+    })
+
+    selectLocalAction(result.value, [{ id: "ses-a1" }], ids)
+
+    expect(memory.local).toBe(tab)
+    expect(result.calls).toEqual([`${result.value.isPending(tab) ? "draft" : "local"}:${tab}`])
+  })
+
+  it("ignores a remembered draft that does not belong to Local", () => {
+    const result = deps()
+    result.value.isPending = (id) => id.startsWith("pending:")
+    result.value.tabMemory = () => ({ local: "pending:b" })
+
+    selectLocalAction(result.value, [{ id: "ses-a" }], ["ses-a"])
+
+    expect(result.calls).toEqual(["local:ses-a"])
+  })
+
   it("focuses a project session when shared session metadata is stale", () => {
     const result = deps()
 
@@ -106,6 +195,32 @@ describe("selectLocalAction", () => {
 
 for (const target of ["local", "wt-b"]) {
   describe(`${target} terminal restoration`, () => {
+    it("restores Review's backing session and contextual panel", () => {
+      createRoot((dispose) => {
+        const [current, setCurrent] = createSignal<string | undefined>("ses-2")
+        const panels = createSidePanel({ project: () => "a", selection: () => target, current })
+        panels.open(SidePanel.EditPreview)
+        setCurrent("other")
+        expect(panels.panel()).toBeNull()
+        const result = deps()
+        result.value.tabMemory = () => ({ [target]: "review" })
+        result.value.sessionMemory = () => "ses-2"
+        result.value.isReviewTab = (id) => id === "review"
+        result.value.focusLocal = setCurrent
+        result.value.selectSession = setCurrent
+        result.value.setReviewActive = (active) => {
+          if (active) result.calls.push("review")
+        }
+        const sessions = [{ id: "ses-1" }, { id: "ses-2" }]
+        if (target === "local") selectLocalAction(result.value, sessions)
+        else selectWorktreeAction(result.value, target, sessions)
+        expect(current()).toBe("ses-2")
+        expect(panels.panel()).toBe(SidePanel.EditPreview)
+        expect(result.calls).toEqual(["review"])
+        dispose()
+      })
+    })
+
     it.each([
       { remembered: undefined, ids: [] },
       { remembered: "terminal:closed", ids: [] },

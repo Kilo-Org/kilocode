@@ -1,3 +1,5 @@
+import { complete } from "../context/session-paging"
+
 export const PENDING_TAB_PREFIX = "sidebar-pending:"
 
 export interface LocalTabState {
@@ -139,9 +141,14 @@ export function closeTab(state: LocalTabState, id: string, pending: PendingTabFa
   return normalize(ids, nextTabAfterClose(state.ids, id), pending)
 }
 
-export function closeOtherTabs(state: LocalTabState, id: string): LocalTabState {
+export function closeAllTabs(pending: PendingTabFactory): LocalTabState {
+  return normalize([], undefined, pending)
+}
+
+export function closeOtherTabs(state: LocalTabState, id: string, pinned: readonly string[] = []): LocalTabState {
   if (!state.ids.includes(id)) return state
-  return { ids: [id], active: id }
+  const keep = new Set([id, ...pinned])
+  return { ids: state.ids.filter((tab) => keep.has(tab)), active: id }
 }
 
 export function addSessionTab(state: LocalTabState, id: string): LocalTabState {
@@ -157,6 +164,21 @@ export function reconcileTabs(
   const seen = new Set(loaded)
   const ids = state.ids.filter((id) => check(id) || seen.has(id))
   return normalize(ids, state.active, pending)
+}
+
+// Tab outcome for a `sessionsLoaded` message. A paged list leaves out older
+// sessions, including tabs opened from "Load more"; reconciling against it
+// would close tabs for sessions that are still valid, so only a complete list
+// closes tabs.
+export function tabsForLoadedSessions(
+  state: LocalTabState,
+  message: { sessions: { id: string }[]; preserveSessionIds?: string[]; append?: boolean; hasMore?: boolean },
+  fresh: Iterable<string>,
+  pending: PendingTabFactory,
+): LocalTabState | undefined {
+  if (!complete(message)) return undefined
+  const loaded = [...message.sessions.map((item) => item.id), ...(message.preserveSessionIds ?? []), ...fresh]
+  return reconcileTabs(state, loaded, pending)
 }
 
 export function restoreTrackedTabs(

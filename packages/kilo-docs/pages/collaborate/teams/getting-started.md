@@ -66,7 +66,7 @@ Team members receive invitation emails with these steps:
 ## First Steps for Your Team
 
 1. **Try basic tasks** - code generation, debugging, documentation
-2. **Explore different modes** - Code, Architect, Ask, Debug
+2. **Explore different agents** - Code, Plan, Ask, Debug
 3. **Set personal preferences** - model selection, auto-approval settings
 4. **Review usage patterns** in the dashboard after first week
 

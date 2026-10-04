@@ -12,10 +12,11 @@ const isPending = (id: string) => id.startsWith("sidebar-pending:")
  * the active terminal (the app relies on `deactivateTerminal` for that), and a
  * script terminal survives `closeTerminal` until the host confirms closure.
  */
-function scene(ids: string[], opts: { active?: string; term?: string; keep?: string[] } = {}) {
+function scene(ids: string[], opts: { active?: string; term?: string; keep?: string[]; pins?: string[] } = {}) {
   const open = [...ids]
   const calls: string[] = []
   const keep = new Set(opts.keep ?? [])
+  const pins = new Set(opts.pins ?? [])
   let termActive = opts.term
   let session = opts.active
   let pending: string | undefined
@@ -28,6 +29,7 @@ function scene(ids: string[], opts: { active?: string; term?: string; keep?: str
     REVIEW_TAB_ID: REVIEW,
     tabIds: () => [...open],
     isPending,
+    isPinned: (id) => pins.has(id),
     activateTerminal: (id) => {
       calls.push(`activate:${id}`)
       termActive = id
@@ -175,5 +177,15 @@ describe("agent manager close others", () => {
     expect(s.calls[0]).toBe("deactivate")
     expect(s.open).toEqual(["ses:a", TERM_1])
     expect(s.visible()).toBe("ses:a")
+  })
+
+  it("keeps pinned tabs open when closing the others", () => {
+    const s = scene(["ses:a", "ses:b", "ses:c"], { active: "ses:a", pins: ["ses:b"] })
+
+    closeOthers("ses:a", s.deps)
+
+    expect(s.calls).not.toContain("sessionClose:ses:b")
+    expect(s.calls).toContain("sessionClose:ses:c")
+    expect(s.open).toEqual(["ses:a", "ses:b"])
   })
 })

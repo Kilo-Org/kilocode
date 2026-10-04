@@ -73,12 +73,21 @@ function setup(
     contexts,
     enabled: () => opts.enabled ?? true,
     pickFolder: async () => undefined,
+    onboarding: {
+      input: async () => undefined,
+      confirm: async () => false,
+      cloneRepository: async () => undefined,
+      isTrusted: () => true,
+      notify: () => {},
+    },
     activate: (ctx) => calls.activate.push(ctx.id),
     expand: (ctx) => calls.expand.push(ctx.id),
     push: () => calls.push++,
     error: (message) => calls.error.push(message),
     ready: readyImpl,
     selected: (target) => calls.selected.push(target.kind === "local" ? target.projectId : target.kind),
+    post: () => {},
+    openSettings: () => {},
     log: () => {},
   }
   return { contexts, deps, calls, extra }
@@ -119,6 +128,53 @@ describe("activateSelection — cross-project selection", () => {
     expect(contexts.active()?.id).toBe(extra)
     expect(calls.ready).toEqual([extra])
     expect(calls.activate).toEqual([extra])
+    expect(calls.selected).toEqual([extra])
+  })
+
+  it.each([true, false])("ignores a superseded selection when readiness completes with ok=%s", async (ok) => {
+    const gate = Promise.withResolvers<void>()
+    const { contexts, deps, calls, extra } = setup({
+      ready: (ctx) =>
+        ctx.ensureReady(async () => {
+          ctx.stateManager()
+          if (!ctx.pinned) await gate.promise
+          return { ok: ctx.pinned || ok, refsFixed: 0 }
+        }),
+    })
+
+    const pending = handleProjectMessage(activateMsg(extra), deps)
+    await handleProjectMessage(activateMsg(PINNED, { kind: "worktree", worktreeId: "wt1" }), deps)
+    expect(calls.selected).toEqual(["worktree"])
+
+    gate.resolve()
+    await pending
+
+    expect(contexts.active()?.id).toBe(PINNED)
+    expect(calls.selected).toEqual(["worktree"])
+    expect(contexts.get(extra)?.peekState()?.getActiveTarget()).toBeUndefined()
+    expect(calls.error).toEqual([])
+  })
+
+  it("keeps a pending selection when a newer click targets an unavailable project", async () => {
+    const gate = Promise.withResolvers<void>()
+    const { contexts, deps, calls, extra } = setup({
+      ready: (ctx) =>
+        ctx.ensureReady(async () => {
+          ctx.stateManager()
+          if (!ctx.pinned) await gate.promise
+          return { ok: true, refsFixed: 0 }
+        }),
+    })
+
+    const pending = handleProjectMessage(activateMsg(extra), deps)
+    await handleProjectMessage(activateMsg("prj-missing"), deps)
+    expect(calls.selected).toEqual([])
+    expect(calls.error.length).toBe(1)
+
+    gate.resolve()
+    await pending
+
+    expect(contexts.active()?.id).toBe(extra)
     expect(calls.selected).toEqual([extra])
   })
 

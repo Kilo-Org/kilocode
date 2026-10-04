@@ -15,6 +15,9 @@ export const ActivityIcon: Component<{
     <Match when={props.state === "waiting" || props.state === "error"}>
       <Icon name="warning" size="small" />
     </Match>
+    <Match when={props.state === "scheduled"}>
+      <Icon name="clock" size="small" />
+    </Match>
     <Match when={props.state === "done"}>
       <Icon name="circle-check" size="small" />
     </Match>

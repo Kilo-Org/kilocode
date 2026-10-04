@@ -1265,7 +1265,7 @@ class PromptPanelTest : BasePlatformTestCase() {
         val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> })
         val ed = realizedEditor(panel)
         val provider = PromptTextPasteProvider()
-        val piles = (1..3).map { pile -> (1..10).joinToString("\n") { "pile $pile line $it" } }
+        val piles = (1..3).map { pile -> (1..20).joinToString("\n") { "pile $pile line $it" } }
 
         piles.forEach { provider.performPaste(pasteContext(ed, StringSelection(it))) }
 
@@ -1273,14 +1273,14 @@ class PromptPanelTest : BasePlatformTestCase() {
         val regions = ed.foldingModel.allFoldRegions.sortedBy { it.startOffset }
         assertEquals(3, regions.size)
         assertEquals(listOf(false, false, false), regions.map { it.isExpanded })
-        assertEquals(piles.map { KiloBundle.message("prompt.paste.collapsed", 10) }, regions.map { it.placeholderText })
+        assertEquals(piles.map { KiloBundle.message("prompt.paste.collapsed", 20) }, regions.map { it.placeholderText })
     }
 
     fun `test pasting the same large text repeatedly keeps every copy folded`() {
         val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> })
         val ed = realizedEditor(panel)
         val provider = PromptTextPasteProvider()
-        val text = (1..10).joinToString("\n") { "same $it" }
+        val text = (1..20).joinToString("\n") { "same $it" }
 
         repeat(3) { provider.performPaste(pasteContext(ed, StringSelection(text))) }
 
@@ -1294,7 +1294,7 @@ class PromptPanelTest : BasePlatformTestCase() {
         val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> })
         val ed = realizedEditor(panel)
         val provider = PromptTextPasteProvider()
-        repeat(3) { pile -> provider.performPaste(pasteContext(ed, StringSelection((1..10).joinToString("\n") { "pile $pile line $it" }))) }
+        repeat(3) { pile -> provider.performPaste(pasteContext(ed, StringSelection((1..20).joinToString("\n") { "pile $pile line $it" }))) }
         val middle = ed.foldingModel.allFoldRegions.sortedBy { it.startOffset }[1]
 
         ed.foldingModel.runBatchFoldingOperation { middle.setExpanded(true) }
@@ -1310,7 +1310,7 @@ class PromptPanelTest : BasePlatformTestCase() {
         val field = panel.defaultFocusedComponent as EditorTextField
         val provider = PromptTextPasteProvider()
         repeat(3) { pile ->
-            provider.performPaste(pasteContext(field.getEditor(true)!!, StringSelection((1..10).joinToString("\n") { "pile $pile line $it" })))
+            provider.performPaste(pasteContext(field.getEditor(true)!!, StringSelection((1..20).joinToString("\n") { "pile $pile line $it" })))
         }
         val before = field.getEditor(true)!!
         val middle = before.foldingModel.allFoldRegions.sortedBy { it.startOffset }[1]
@@ -1405,7 +1405,7 @@ class PromptPanelTest : BasePlatformTestCase() {
         val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> })
         val ed = realizedEditor(panel)
 
-        PromptTextPasteProvider().performPaste(pasteContext(ed, StringSelection("x".repeat(900))))
+        PromptTextPasteProvider().performPaste(pasteContext(ed, StringSelection("x".repeat(4001))))
 
         assertEquals(1, ed.foldingModel.allFoldRegions.size)
         assertTrue(ed.foldingModel.allFoldRegions.single().isGutterMarkEnabledForSingleLine)

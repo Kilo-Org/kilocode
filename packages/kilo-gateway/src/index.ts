@@ -44,6 +44,7 @@ export {
   fetchKiloTranscriptionModels,
   type KiloTranscriptionModel,
   type KiloTranscriptionModelsResult,
+  supportsTools,
 } from "./api/models.js"
 export {
   EMPTY_KILO_EMBEDDING_MODEL_CATALOG,
@@ -94,13 +95,10 @@ export {
   GatewayError,
   UnauthorizedError,
   getOrganizationId,
-  getClawChatCredentials,
-  getClawStatus,
   getCloudSessions,
   getNotifications,
   getProfile,
   getToken,
-  normalizeClawStatus,
   setOrganization,
 } from "./server/handlers.js"
 
@@ -139,7 +137,6 @@ export {
   ENV_KILO_API_URL,
   DEFAULT_KILO_API_URL,
   KILO_API_BASE,
-  KILO_CHAT_URL,
   KILO_EVENT_SERVICE_URL,
   KILO_OPENROUTER_BASE,
   POLL_INTERVAL_MS,

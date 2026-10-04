@@ -21,8 +21,11 @@ import type { LanguageContextValue } from "../src/context/language"
 import { LocalActivity } from "../src/components/shared/ActivityIcon"
 import { label, type Activity } from "../src/utils/session-activity"
 import { useVSCode } from "../src/context/vscode"
+import { useDialog } from "@kilocode/kilo-ui/context/dialog"
 import SectionHeader from "./SectionHeader"
-import { WorktreeItem } from "./WorktreeItem"
+import { OrphanNotice } from "./orphans/OrphanNotice"
+import { OrphanDialog } from "./orphans/OrphanDialog"
+import { WorktreeItem, actionable } from "./WorktreeItem"
 import { useBaseUpdate } from "./update-from-base"
 import { StatsSkeleton, WorktreeSkeleton } from "./Skeleton"
 import { applyTabOrder, firstOrderedTitle, reorderTabs } from "./tab-order"
@@ -75,6 +78,7 @@ interface Props {
 /** Permanent real sidebar body for one expanded project. */
 export const ProjectSidebarBody: Component<Props> = (props) => {
   const vscode = useVSCode()
+  const dialog = useDialog()
   const updateBase = useBaseUpdate()
   const store = props.store ?? createProjectStore(props.project.id)
   if (!props.store) {
@@ -124,6 +128,18 @@ export const ProjectSidebarBody: Component<Props> = (props) => {
   const sidebarOrder = createMemo(() => projectSidebarOrder(top(), sorted(), sections(), members))
   const post = (message: Record<string, unknown>) =>
     vscode.postMessage({ ...message, projectId: props.project.id } as never)
+  const openOrphanDialog = () =>
+    dialog.show(() => (
+      <OrphanDialog
+        orphans={store.orphanDirectories()}
+        onReveal={(path) => post({ type: "agentManager.revealPath", path })}
+        onDelete={(paths) => {
+          post({ type: "agentManager.cleanOrphanDirectories", paths })
+          dialog.close()
+        }}
+        onClose={() => dialog.close()}
+      />
+    ))
   const localState = () => props.activityFor(null)
 
   const selectAfterDelete = (id: string) => {
@@ -278,7 +294,11 @@ export const ProjectSidebarBody: Component<Props> = (props) => {
           busy={props.busy(worktree.id)}
           activity={props.activityFor(worktree.id)}
           blocked={props.blocked(worktree.id)}
-          stale={state()?.staleWorktreeIds?.includes(worktree.id) === true}
+          stale={
+            state()?.staleWorktreeIds?.includes(worktree.id) === true ||
+            actionable(state()?.worktreeHealth?.[worktree.id])
+          }
+          health={state()?.worktreeHealth?.[worktree.id]}
           stats={props.stats?.[worktree.id]}
           shortcut={values().shortcut}
           navHint={values().navHint}
@@ -316,6 +336,11 @@ export const ProjectSidebarBody: Component<Props> = (props) => {
             post({ type: "agentManager.removeStaleWorktree", worktreeId: worktree.id })
             selectAfterDelete(worktree.id)
           }}
+          onRemoveKeepSessions={() => {
+            post({ type: "agentManager.removeStaleWorktree", worktreeId: worktree.id, keepSessions: true })
+            selectAfterDelete(worktree.id)
+          }}
+          onRestore={() => post({ type: "agentManager.restoreWorktree", worktreeId: worktree.id })}
           onUpdateBase={() =>
             updateBase(
               worktree.id,
@@ -391,6 +416,7 @@ export const ProjectSidebarBody: Component<Props> = (props) => {
 
       <div class="am-section">
         <div class="am-worktree-list">
+          <OrphanNotice orphans={store.orphanDirectories()} onResolve={openOrphanDialog} />
           <Show when={state()} fallback={<WorktreeSkeleton />}>
             <DragDropProvider
               onDragStart={onDragStart}

@@ -261,7 +261,7 @@ describe("Bash tool static terminal preview (source)", () => {
 
   it("BashHighlightedOutput syntax highlights log output", () => {
     expect(src).toContain('data-slot="bash-terminal" data-kind="output"')
-    expect(src).toContain('data-slot="bash-section-code" data-scrollable ref={outRef}')
+    expect(src).toContain('data-slot="bash-section-code" data-scrollable ref={bindOutput}')
     expect(src).toContain('data-lang="log"')
     expect(src).toContain("escapeHtml(out)")
   })
@@ -305,7 +305,7 @@ describe("Expanded tool motion and typography (source)", () => {
   const reasoning =
     fs
       .readFileSync(KILO_MESSAGE_PART_FILE, "utf-8")
-      .match(/PART_MAPPING\["reasoning"\][\s\S]*?(?=\nfunction useToolReveal)/)?.[0] ?? ""
+      .match(/PART_MAPPING\["reasoning"\][\s\S]*?(?=\nfunction WebfetchMeta)/)?.[0] ?? ""
 
   it("animates completed rolling shell details", () => {
     const src = fs.readFileSync(SHELL_ROLLING_FILE, "utf-8")
@@ -421,9 +421,14 @@ describe("AssistantMessage visible row contract (source)", () => {
     expect(parts).toContain('part.state.status === "completed" && !!ToolRegistry.render(part.tool)')
   })
 
-  it("filters pending questions until their dock request exists", () => {
-    expect(src).toContain('part.state.status !== "pending" && part.state.status !== "running"')
-    expect(src).toContain('matchToolRequest(part, "question", session.questions())')
+  it("holds a resolving question dock until its tool part completes", () => {
+    // The backend publishes question.replied before the tool part completes, so
+    // dropping the row the moment the request disappears collapsed the
+    // transcript for a frame. The dock now stays mounted while the part is busy.
+    expect(src).toContain(
+      'const liveQuestion = createMemo(() => matchToolRequest(part, "question", session.questions()))',
+    )
+    expect(src).toContain("liveQuestion() ?? (questionBusy(part) ? heldQuestion() : undefined)")
   })
 
   it("filters completed synthetic text and redaction-only reasoning", () => {
@@ -564,5 +569,39 @@ describe("Collapsed deferred tool details contract (source)", () => {
     expect(block).toMatch(/if \(open\(\) \|\| pending\(\) \|\| props\.forceOpen\) setMounted\(true\)/)
     expect(block).toContain("hasDetails")
     expect(block).toMatch(/<Show when=\{mounted\(\)\}>[\s\S]*?<BashHighlightedOutput/)
+  })
+})
+
+describe("Deferred tool card remount contract (source)", () => {
+  const wrapper = fs.readFileSync(path.join(MONOREPO_ROOT, "packages/kilo-ui/src/components/basic-tool.tsx"), "utf-8")
+  const scroll = fs.readFileSync(path.join(MONOREPO_ROOT, "packages/kilo-ui/src/hooks/create-auto-scroll.tsx"), "utf-8")
+
+  it("mounts a remembered-open deferred card with its body in the same frame", () => {
+    // Otherwise every virtualizer remount of an expanded diff paints a
+    // collapsed frame, then grows by the full diff height and the pinned
+    // transcript jumps (and can loop through the virtualizer's range).
+    expect(wrapper).toContain("const defer = () => props.defer && !(remount && initial())")
+    // The memory is separate from the user preference map: a display setting
+    // or search forceOpen must not become a durable per-card open state.
+    expect(wrapper).toContain("if (initial() && !props.forceOpen) remember(id)")
+    expect(wrapper).not.toContain("writeToolOpen(key(), true)")
+    // Remembering must happen after the remount check, or an initially-open
+    // card would skip deferral on its very first mount too.
+    expect(wrapper.indexOf("const remount = id !== undefined && mounted.has(id)")).toBeGreaterThan(-1)
+    expect(wrapper.indexOf("const remount = id !== undefined && mounted.has(id)")).toBeLessThan(
+      wrapper.indexOf("remember(id)"),
+    )
+  })
+
+  it("keeps the bottom independent of the working state", () => {
+    // A session waiting on a permission reports idle while its transcript
+    // still changes; corrections must not be gated on `active()`.
+    const scrollHandler = scroll.slice(scroll.indexOf("const handleScroll"), scroll.indexOf("const onContentResize"))
+    expect(scrollHandler).not.toContain("if (active()) bottom()")
+    const viewport = scroll.slice(scroll.indexOf("const onViewportResize"), scroll.indexOf("// Effects"))
+    // The post-click grace window must not block a resize re-pin, but a gesture
+    // in progress must still be protected.
+    expect(viewport).not.toContain("isRecent()")
+    expect(viewport).toContain("userActivity.isDragging()")
   })
 })

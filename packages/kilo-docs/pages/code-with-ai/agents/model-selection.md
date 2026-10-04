@@ -154,9 +154,9 @@ The Settings UI writes the same `agent.<name>.model` entry, so either method pro
 
 For details on configuring subagent models, see [Custom Subagents](/docs/customize/custom-subagents).
 
-### Per-task model selection (experimental)
+### Per-task model selection
 
-Enable [Task Subagent Model Selection](/docs/getting-started/settings#task-subagent-model-selection) to request a different model, provider, or reasoning effort for an individual subagent task. It is off by default. Overrides require your explicit request; the agent does not choose a different model on its own based on task complexity, cost, or latency.
+Request a different model, provider, or reasoning effort for an individual subagent task. Overrides require your explicit request; the agent does not choose a different model on its own based on task complexity, cost, or latency.
 
 Invalid selections fail instead of silently falling back. Resumed tasks keep their last model and reasoning effort unless you request an override.
 

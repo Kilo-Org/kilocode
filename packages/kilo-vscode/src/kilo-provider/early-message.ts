@@ -8,7 +8,7 @@ import type { KiloClient } from "@kilocode/sdk/v2/client"
 import { buildChatSettingsMessage } from "./chat-settings"
 import { buildThroughputSettingMessage } from "./throughput-settings"
 import { buildAutoApprovalReasonSettingMessage } from "./auto-approval-reason-settings"
-import { handleModelUsageMessage, type ModelUsageMessage } from "./model-usage"
+import type { ModelUsageMessage } from "./model-usage"
 
 type Ctx = {
   question: SuggestionContext

@@ -43,10 +43,164 @@ const MUTATING = new Set([
   "reset",
   "restore",
   "rm",
-  "stash",
   "switch",
   "update-index",
 ])
+
+const BRANCH_WRITE = new Set([
+  "-c",
+  "-C",
+  "-d",
+  "-D",
+  "-f",
+  "-m",
+  "-M",
+  "-t",
+  "-u",
+  "--copy",
+  "--create-reflog",
+  "--delete",
+  "--edit-description",
+  "--force",
+  "--move",
+  "--set-upstream",
+  "--set-upstream-to",
+  "--track",
+  "--unset-upstream",
+])
+
+const BRANCH_READ = new Set([
+  "-a",
+  "-l",
+  "-r",
+  "-v",
+  "--all",
+  "--column",
+  "--contains",
+  "--format",
+  "--list",
+  "--merged",
+  "--no-merged",
+  "--points-at",
+  "--remotes",
+  "--show-current",
+  "--sort",
+  "--verbose",
+])
+
+const BRANCH_CONSUME = new Set(["--contains", "--format", "--merged", "--no-merged", "--points-at", "--sort"])
+const BRANCH_PATTERN = new Set(["-l", "--list"])
+
+const TAG_WRITE = new Set([
+  "-F",
+  "-a",
+  "-d",
+  "-e",
+  "-f",
+  "-m",
+  "-s",
+  "-u",
+  "--annotate",
+  "--cleanup",
+  "--create-reflog",
+  "--delete",
+  "--edit",
+  "--file",
+  "--force",
+  "--local-user",
+  "--message",
+  "--sign",
+])
+
+const TAG_READ = new Set([
+  "-l",
+  "-n",
+  "-v",
+  "--column",
+  "--contains",
+  "--format",
+  "--list",
+  "--merged",
+  "--no-merged",
+  "--points-at",
+  "--sort",
+  "--verbose",
+  "--verify",
+])
+
+const TAG_CONSUME = new Set([
+  "-v",
+  "--contains",
+  "--format",
+  "--merged",
+  "--no-merged",
+  "--points-at",
+  "--sort",
+  "--verify",
+])
+const TAG_PATTERN = new Set(["-l", "-n", "--list"])
+
+const REMOTE_READ = new Set(["get-url", "show"])
+const REMOTE_FLAGS = new Set(["-v", "--verbose"])
+const STASH_READ = new Set(["list", "show"])
+const REFLOG_READ = new Set(["exists", "show"])
+const NOTES_READ = new Set(["get-ref", "list", "show"])
+const NOTES_FLAGS = new Set(["--ref"])
+
+function flag(value: string) {
+  return value.split("=")[0]
+}
+
+// Git clusters short flags (`-avv` is `-a -v -v`) and attaches numeric values to them
+// (`-n5` is `-n 5`). Classification matches single flag names, so split each cluster into
+// separate tokens and drop any attached numeric value.
+function expand(values: string[]) {
+  return values.flatMap((value) => {
+    if (/^-[A-Za-z]{2,}\d*$/.test(value)) return Array.from(value.slice(1).replace(/\d+$/, ""), (char) => `-${char}`)
+    if (/^-[A-Za-z]\d+$/.test(value)) return [value.slice(0, 2)]
+    return [value]
+  })
+}
+
+function strip(values: string[], consume: Set<string>) {
+  const out: string[] = []
+  let skip = false
+  for (const value of values) {
+    if (skip) {
+      skip = false
+      continue
+    }
+    out.push(value)
+    skip = consume.has(flag(value)) && !value.includes("=")
+  }
+  return out
+}
+
+function scan(values: string[], write: Set<string>, read: Set<string>, consume: Set<string>, pattern: Set<string>) {
+  if (values.length === 1) return false
+  const tokens = expand(values.slice(1))
+  if (tokens.some((token) => write.has(flag(token)))) return true
+  const rest = strip(tokens, consume)
+  if (!rest.some((token) => read.has(flag(token)))) return true
+  if (rest.some((token) => pattern.has(flag(token)))) return false
+  return rest.some((token) => !token.startsWith("-"))
+}
+
+function verb(values: string[], takes: Set<string> = new Set()) {
+  let skip = false
+  for (const value of values.slice(1)) {
+    if (skip) {
+      skip = false
+      continue
+    }
+    if (value.startsWith("-")) {
+      skip = takes.has(flag(value)) && !value.includes("=")
+      continue
+    }
+    return value
+  }
+  return
+}
 
 function args(text: string) {
   const match = text
@@ -69,26 +223,8 @@ export function mutates(text: string) {
   }
   const subcommand = values[0]?.toLowerCase()
   if (!subcommand) return false
-  if (subcommand === "branch") {
-    return (
-      values.length > 1 &&
-      !values
-        .slice(1)
-        .some((value) =>
-          ["-a", "-r", "-l", "--all", "--list", "--show-current", "--contains", "--merged", "--no-merged"].includes(
-            value,
-          ),
-        )
-    )
-  }
-  if (subcommand === "tag") {
-    return (
-      values.length > 1 &&
-      !values
-        .slice(1)
-        .some((value) => ["-l", "--list", "--contains", "--points-at", "--merged", "--no-merged"].includes(value))
-    )
-  }
+  if (subcommand === "branch") return scan(values, BRANCH_WRITE, BRANCH_READ, BRANCH_CONSUME, BRANCH_PATTERN)
+  if (subcommand === "tag") return scan(values, TAG_WRITE, TAG_READ, TAG_CONSUME, TAG_PATTERN)
   if (subcommand === "config") {
     if (values.length === 1) return false
     return !values
@@ -106,6 +242,32 @@ export function mutates(text: string) {
           "--show-names",
         ].includes(value),
       )
+  }
+  if (subcommand === "remote") {
+    if (values.length === 1) return false
+    const name = verb(values)
+    if (name) return !REMOTE_READ.has(name)
+    return values.slice(1).some((value) => !REMOTE_FLAGS.has(value))
+  }
+  if (subcommand === "stash") {
+    const rest = values.slice(1)
+    if (rest.some((value) => value === "-m" || value.startsWith("--message"))) return true
+    const name = rest.find((value) => !value.startsWith("-"))
+    if (!name) return true
+    return !STASH_READ.has(name)
+  }
+  if (subcommand === "worktree") {
+    return verb(values) !== "list"
+  }
+  if (subcommand === "reflog") {
+    const name = verb(values)
+    if (!name) return false
+    return !REFLOG_READ.has(name)
+  }
+  if (subcommand === "notes") {
+    const name = verb(values, NOTES_FLAGS)
+    if (!name) return false
+    return !NOTES_READ.has(name)
   }
   if (READONLY.has(subcommand)) return false
   if (MUTATING.has(subcommand)) return true

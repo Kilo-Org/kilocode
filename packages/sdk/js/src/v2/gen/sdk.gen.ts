@@ -155,10 +155,6 @@ import type {
   KiloAudioTranscriptionsResponses,
   KiloAuthStatusErrors,
   KiloAuthStatusResponses,
-  KiloClawChatCredentialsErrors,
-  KiloClawChatCredentialsResponses,
-  KiloClawStatusErrors,
-  KiloClawStatusResponses,
   KiloCloudSessionGetErrors,
   KiloCloudSessionGetResponses,
   KiloCloudSessionImportErrors,
@@ -215,6 +211,12 @@ import type {
   KilocodeResetSessionBoardResponses,
   KilocodeResumeSessionErrors,
   KilocodeResumeSessionResponses,
+  KilocodeRetentionCancelErrors,
+  KilocodeRetentionCancelResponses,
+  KilocodeRetentionRunErrors,
+  KilocodeRetentionRunResponses,
+  KilocodeRetentionStatusErrors,
+  KilocodeRetentionStatusResponses,
   KilocodeSessionBoardErrors,
   KilocodeSessionBoardResponses,
   KilocodeSessionImportMessageErrors,
@@ -229,6 +231,8 @@ import type {
   KilocodeSessionModelUsageResponses,
   KilocodeSnapshotPrepareErrors,
   KilocodeSnapshotPrepareResponses,
+  KilocodeTeardownWorktreeErrors,
+  KilocodeTeardownWorktreeResponses,
   KilocodeWakeupsErrors,
   KilocodeWakeupsResponses,
   KiloEditErrors,
@@ -6894,72 +6898,6 @@ export class Organization extends HeyApiClient {
   }
 }
 
-export class Claw extends HeyApiClient {
-  /**
-   * Get KiloClaw instance status
-   *
-   * Fetch the user's KiloClaw instance status via the KiloClaw worker
-   */
-  public status<ThrowOnError extends boolean = false>(
-    parameters?: {
-      directory?: string
-      workspace?: string
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "query", key: "directory" },
-            { in: "query", key: "workspace" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).get<KiloClawStatusResponses, KiloClawStatusErrors, ThrowOnError>({
-      url: "/kilo/claw/status",
-      ...options,
-      ...params,
-    })
-  }
-
-  /**
-   * Get KiloClaw chat credentials
-   *
-   * Returns the bearer token and endpoint URLs the client uses to talk to the Kilo Chat worker and the Event Service. The bearer is the user's existing long-lived Kilo JWT — kilo-chat and event-service both verify it directly with NEXTAUTH_SECRET, so no separate token mint is needed.
-   */
-  public chatCredentials<ThrowOnError extends boolean = false>(
-    parameters?: {
-      directory?: string
-      workspace?: string
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "query", key: "directory" },
-            { in: "query", key: "workspace" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).get<
-      KiloClawChatCredentialsResponses,
-      KiloClawChatCredentialsErrors,
-      ThrowOnError
-    >({
-      url: "/kilo/claw/chat-credentials",
-      ...options,
-      ...params,
-    })
-  }
-}
-
 export class Session3 extends HeyApiClient {
   /**
    * Get cloud session
@@ -7321,11 +7259,6 @@ export class Kilo extends HeyApiClient {
     return (this._organization ??= new Organization({ client: this.client }))
   }
 
-  private _claw?: Claw
-  get claw(): Claw {
-    return (this._claw ??= new Claw({ client: this.client }))
-  }
-
   private _cloud?: Cloud
   get cloud(): Cloud {
     return (this._cloud ??= new Cloud({ client: this.client }))
@@ -7406,7 +7339,7 @@ export class Marketplace extends HeyApiClient {
   /**
    * Install a marketplace item
    *
-   * Install a marketplace MCP server, agent, or skill into project or global Kilo config.
+   * Install a marketplace MCP server, agent, skill, or plugin into project or global Kilo config.
    */
   public install<ThrowOnError extends boolean = false>(
     parameters: {
@@ -7453,7 +7386,7 @@ export class Marketplace extends HeyApiClient {
   /**
    * Remove a marketplace item
    *
-   * Remove a marketplace MCP server, agent, or skill from project or global Kilo config.
+   * Remove a marketplace MCP server, agent, skill, or plugin from project or global Kilo config.
    */
   public remove<ThrowOnError extends boolean = false>(
     parameters: {
@@ -7918,6 +7851,117 @@ export class BackgroundJob extends HeyApiClient {
   }
 }
 
+export class Retention extends HeyApiClient {
+  /**
+   * Get session retention status
+   *
+   * Read the machine-wide session retention policy and the state of the most recent cleanup pass.
+   */
+  public status<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<
+      KilocodeRetentionStatusResponses,
+      KilocodeRetentionStatusErrors,
+      ThrowOnError
+    >({
+      url: "/kilocode/retention",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Run session retention
+   *
+   * Run one machine-wide session retention pass. Does nothing unless the retention policy is enabled in kilo.json; `force` bypasses the minimum spacing between scheduled passes, never the enable check.
+   */
+  public run<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+      force?: boolean
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { in: "body", key: "force" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<
+      KilocodeRetentionRunResponses,
+      KilocodeRetentionRunErrors,
+      ThrowOnError
+    >({
+      url: "/kilocode/retention/run",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+
+  /**
+   * Stop the active session retention pass
+   *
+   * Ask the machine-wide retention pass to stop before deleting more sessions. Already-deleted sessions stay deleted; the interrupted pass still records its partial result and honors the spacing window.
+   */
+  public cancel<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<
+      KilocodeRetentionCancelResponses,
+      KilocodeRetentionCancelErrors,
+      ThrowOnError
+    >({
+      url: "/kilocode/retention/cancel",
+      ...options,
+      ...params,
+    })
+  }
+}
+
 export class Migrate extends HeyApiClient {
   /**
    * Migrate external sessions into Kilo
@@ -8110,7 +8154,7 @@ export class SessionImport extends HeyApiClient {
         partID?: string
         snapshot?: string
         diff?: string
-        workspace?: "restored" | "snapshots-disabled" | "unavailable"
+        workspace?: "restored" | "snapshots-disabled" | "unavailable" | "not-a-git-repo"
       }
       permission?: {
         [key: string]: unknown
@@ -8768,6 +8812,47 @@ export class Kilocode extends HeyApiClient {
   }
 
   /**
+   * Tear down backend state for a managed worktree
+   *
+   * Kill the PTYs rooted in an Agent Manager worktree and dispose its backend instance when one is loaded, without booting an instance for the directory.
+   */
+  public teardownWorktree<ThrowOnError extends boolean = false>(
+    parameters: {
+      directory?: string
+      workspace?: string
+      worktree: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { in: "body", key: "worktree" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<
+      KilocodeTeardownWorktreeResponses,
+      KilocodeTeardownWorktreeErrors,
+      ThrowOnError
+    >({
+      url: "/kilocode/worktree/teardown",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+
+  /**
    * Get session model usage
    *
    * Get token usage and direct cost by model for the complete top-level session tree.
@@ -8902,6 +8987,11 @@ export class Kilocode extends HeyApiClient {
   private _backgroundJob?: BackgroundJob
   get backgroundJob(): BackgroundJob {
     return (this._backgroundJob ??= new BackgroundJob({ client: this.client }))
+  }
+
+  private _retention?: Retention
+  get retention(): Retention {
+    return (this._retention ??= new Retention({ client: this.client }))
   }
 
   private _migrate?: Migrate

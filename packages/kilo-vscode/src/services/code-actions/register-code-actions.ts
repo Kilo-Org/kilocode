@@ -9,6 +9,7 @@ export function registerCodeActions(
   provider: KiloProvider,
   agentManager?: AgentManagerProvider,
   activeTabProvider?: () => KiloProvider | undefined,
+  lastFocusedChat?: () => KiloProvider | AgentManagerProvider | undefined,
 ): void {
   const target = () => (agentManager?.isActive() ? agentManager : (activeTabProvider?.() ?? provider))
   const reveal = async () => {
@@ -51,7 +52,7 @@ export function registerCodeActions(
         userInput: "",
       })
       await reveal()
-      provider.postMessage({ type: "triggerTask", text: prompt })
+      provider.postMessage({ type: "triggerTask", text: prompt, injectedTitle: "Explain selected code" })
     }),
 
     vscode.commands.registerCommand("kilo-code.new.fixCode", async () => {
@@ -66,7 +67,7 @@ export function registerCodeActions(
         userInput: "",
       })
       await reveal()
-      provider.postMessage({ type: "triggerTask", text: prompt })
+      provider.postMessage({ type: "triggerTask", text: prompt, injectedTitle: "Fix code problems" })
     }),
 
     vscode.commands.registerCommand("kilo-code.new.improveCode", async () => {
@@ -80,13 +81,13 @@ export function registerCodeActions(
         userInput: "",
       })
       await reveal()
-      provider.postMessage({ type: "triggerTask", text: prompt })
+      provider.postMessage({ type: "triggerTask", text: prompt, injectedTitle: "Improve selected code" })
     }),
 
     vscode.commands.registerCommand("kilo-code.new.addToContext", async () => {
       const ctx = getEditorContext()
       if (!ctx) return
-      const view = target()
+      const view = lastFocusedChat?.() ?? target()
       if (!(await revealTarget(view))) return
       view.postMessage({
         type: "appendChatContext",

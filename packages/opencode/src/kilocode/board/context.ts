@@ -59,12 +59,7 @@ export namespace BoardContext {
       Effect.gen(function* () {
         if (signal?.aborted) return output
         const cfg = yield* config.get()
-        if (
-          !BoardEnabled.resolve({
-            config: cfg.shared_agent_board,
-            flag: flags.experimentalSharedAgentBoard,
-          })
-        ) {
+        if (!BoardEnabled.on(cfg, flags)) {
           return output
         }
         const session = yield* sessions.get(input.session.id)

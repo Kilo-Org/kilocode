@@ -16,6 +16,7 @@ import type { Snapshot } from "@/snapshot"
 import { ProviderV2 } from "@opencode-ai/core/provider"
 import { ModelV2 } from "@opencode-ai/core/model"
 import { SessionID } from "@/session/schema"
+import { opencodeSessionHeaders } from "@/kilocode/provider/opencode-session-headers"
 
 const log = Log.create({ service: "memory.ports" })
 
@@ -174,6 +175,7 @@ async function memoryText(input: {
   system: string
   prompt: string
   timeoutMs: number
+  sessionID: string
   temperature?: number
   topP?: number
   topK?: number
@@ -193,6 +195,7 @@ async function memoryText(input: {
     topP: input.topP,
     topK: input.topK,
     maxRetries: 1,
+    headers: opencodeSessionHeaders({ providerID: input.source.providerID, sessionID: input.sessionID }),
   }
   const work = async () => {
     if (!openai) return generateText(common)
@@ -314,7 +317,7 @@ export namespace MemoryModel {
           const language = yield* input.provider.getLanguage(source)
           return { handle: modelOptions(source, language), ...(reason ? { fallback: { reason } } : {}) }
         }).pipe(Effect.mapError(MemoryError.from)),
-      run: ({ handle, system, prompt, timeoutMs, signal }) => {
+      run: ({ handle, sessionID, system, prompt, timeoutMs, signal }) => {
         const resolved = handle as ModelHandle
         return memoryText({
           source: resolved.source,
@@ -323,6 +326,7 @@ export namespace MemoryModel {
           system,
           prompt,
           timeoutMs,
+          sessionID,
           temperature: resolved.temperature,
           topP: resolved.topP,
           topK: resolved.topK,

@@ -51,7 +51,7 @@ export const InstallModal = (props: Props) => {
     success: boolean
     error?: string
     scope: "project" | "global"
-    path: string
+    paths: string[]
     hasParameters: boolean
     method?: string
   } | null>(null)
@@ -67,10 +67,12 @@ export const InstallModal = (props: Props) => {
     const base = target === "project" ? ".kilo" : "~/.config/kilo"
     if (props.item.type === "mcp") return `${base}/kilo.json`
     if (props.item.type === "agent") return `${base}/agents/${props.item.id}.md`
+    if (props.item.type === "plugin") return `${base}/`
     if (target === "project") return `.kilo/skills/${props.item.id}/`
     return `~/.kilo/skills/${props.item.id}/`
   }
   const about = () => t(`marketplace.install.about.${props.item.type}`)
+  const skills = () => (props.item.type === "mcp" ? (props.item.skills ?? []) : [])
   const scopeDescription = () => t(`marketplace.install.scope.${scope().value}.description`)
   const openDocs = (url: string) => vscode.postMessage({ type: "openExternal", url })
 
@@ -112,7 +114,12 @@ export const InstallModal = (props: Props) => {
         const request = pending()
         setInstalling(false)
         if (!request) return
-        setResult({ success: msg.success, error: msg.error, ...request })
+        setResult({
+          ...request,
+          success: msg.success,
+          error: msg.error,
+          paths: msg.filePaths?.length ? msg.filePaths : [msg.filePath || request.path],
+        })
         props.onInstallResult(msg.success, request.scope, {
           hasParameters: request.hasParameters,
           installationMethodName: request.method,
@@ -199,10 +206,27 @@ export const InstallModal = (props: Props) => {
             </div>
           </div>
 
-          <Show when={props.item.type === "mcp" || scope().value === "project"}>
+          <Show when={skills().length > 0}>
+            <div class="install-modal-section" data-slot="marketplace-companion-skills">
+              <span class="install-modal-label">{t("marketplace.install.includedSkills")}</span>
+              <For each={skills()}>
+                {(skill) => (
+                  <div class="install-modal-destination">
+                    <span>{skill.id}</span>
+                    <code>{`${scope().value === "global" ? "~/" : ""}.kilo/skills/${skill.id}/`}</code>
+                  </div>
+                )}
+              </For>
+            </div>
+          </Show>
+
+          <Show when={props.item.type === "mcp" || props.item.type === "plugin" || scope().value === "project"}>
             <div class="install-modal-warning">
               <Show when={props.item.type === "mcp"}>
                 <p>{t("marketplace.install.mcp.warning")}</p>
+              </Show>
+              <Show when={props.item.type === "plugin"}>
+                <p>{t("marketplace.install.plugin.warning")}</p>
               </Show>
               <Show when={scope().value === "project"}>
                 <p>{t("marketplace.install.project.warning")}</p>
@@ -283,7 +307,9 @@ export const InstallModal = (props: Props) => {
               }
             >
               <p class="install-modal-success">{t("marketplace.install.success")}</p>
-              <p class="install-modal-result-path">{t("marketplace.install.installedAt", { path: r().path })}</p>
+              <For each={r().paths}>
+                {(path) => <p class="install-modal-result-path">{t("marketplace.install.installedAt", { path })}</p>}
+              </For>
               <div class="install-modal-footer">
                 <Button onClick={props.onClose}>{t("marketplace.install.done")}</Button>
               </div>

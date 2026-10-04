@@ -2380,7 +2380,7 @@ function RemoteReviewStory(props: { full?: boolean }) {
   const [style, setStyle] = createSignal<"unified" | "split">("unified")
   const [comments, setComments] = createSignal<ReviewComment[]>([
     {
-      id: "local-review",
+      id: "review-note",
       file: tail.file,
       side: "additions",
       line: 1,

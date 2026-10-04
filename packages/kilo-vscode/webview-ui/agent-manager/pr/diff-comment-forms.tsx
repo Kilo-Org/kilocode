@@ -3,9 +3,9 @@ import { render as mount } from "solid-js/web"
 import { PRCommentForm } from "./PRCommentForm"
 import { useVSCode } from "../../src/context/vscode"
 import { extractLines } from "../../diff-viewer/review-comments"
-import { createCommentsGithub, resolveGithubContext } from "../../diff-viewer/comments-github"
+import { createCommentsGithub, resolveGithubContext, side } from "../../diff-viewer/comments-github"
 import { parsePatch } from "../../../src/shared/pr-patch"
-import type { AnnotationMeta, CommentFormMount } from "../../diff-viewer/review-annotations"
+import type { CommentFormMount } from "../../diff-viewer/review-annotations"
 import type { WorktreeFileDiff } from "../../src/types/messages"
 import type { PRDiffSnapshot, PRTarget } from "../../../src/shared/pr-comment-actions"
 
@@ -16,10 +16,6 @@ interface Options {
   worktree: Accessor<string>
   /** Gate GitHub publication, for example when only a local diff source is shown. */
   canPublish?: Accessor<boolean>
-}
-
-function side(value: AnnotationMeta["side"]): "LEFT" | "RIGHT" {
-  return value === "deletions" ? "LEFT" : "RIGHT"
 }
 
 export function createDiffCommentForms(opts: Options) {

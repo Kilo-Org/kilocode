@@ -6,6 +6,7 @@ import ai.kilocode.log.ChatLogSummary
 import ai.kilocode.rpc.KiloSessionRpcApi
 import ai.kilocode.client.session.SessionActivityKind
 import ai.kilocode.client.session.toKind
+import ai.kilocode.rpc.dto.BackgroundJobDto
 import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.CloudSessionListDto
 import ai.kilocode.rpc.dto.DiffFileDto
@@ -19,6 +20,7 @@ import ai.kilocode.rpc.dto.PromptDto
 import ai.kilocode.rpc.dto.QuestionReplyDto
 import ai.kilocode.rpc.dto.QuestionRequestDto
 import ai.kilocode.rpc.dto.SessionActivityDto
+import ai.kilocode.rpc.dto.SessionBoardDto
 import ai.kilocode.rpc.dto.SessionActivityKindDto
 import ai.kilocode.rpc.dto.SessionChangeDto
 import ai.kilocode.rpc.dto.SessionDto
@@ -362,6 +364,14 @@ class KiloSessionService internal constructor(
     suspend fun attachmentPart(id: String, dir: String, message: String, part: String, key: String?): PartDto? =
         call { attachmentPart(id, dir, message, part, key) }
 
+    /** Load the shared agent board for root session [id], paging backward from [before]. */
+    suspend fun sessionBoard(id: String, dir: String, before: String?, limit: Int?): SessionBoardDto =
+        call { sessionBoard(id, dir, before, limit) }
+
+    /** Clear the shared agent board for root session [id]. Null means [revision] is stale. */
+    suspend fun resetSessionBoard(id: String, dir: String, revision: Int): SessionBoardDto? =
+        call { resetSessionBoard(id, dir, revision) }
+
     /** Subscribe to streaming chat events for a session. */
     fun events(id: String, dir: String): Flow<ChatEventDto> {
         val api = rpc
@@ -390,6 +400,37 @@ class KiloSessionService internal constructor(
                 log.warn("${ChatLogSummary.sid(id)} kind=subscription route=client-events stop=true failed message=${cause.message}", cause)
             }
     }
+
+    // ------ background subagents ------
+
+    /** Observe background subagent jobs owned by root session [id]. */
+    fun backgroundJobs(id: String, dir: String): Flow<List<BackgroundJobDto>> {
+        val api = rpc
+        val jobs = if (api != null) flow {
+            api.backgroundJobs(id, dir).collect { emit(it) }
+        } else flow {
+            durable {
+                KiloSessionRpcApi.getInstance().backgroundJobs(id, dir).collect { emit(it) }
+            }
+        }
+        return jobs
+            .onStart { log.debug { "${ChatLogSummary.sid(id)} kind=subscription route=background-jobs start=true dir=${ChatLogSummary.dir(dir)}" } }
+            .onCompletion { cause ->
+                if (cause == null || cause is CancellationException) {
+                    log.debug { "${ChatLogSummary.sid(id)} kind=subscription route=background-jobs stop=true cancelled=${cause is CancellationException}" }
+                    return@onCompletion
+                }
+                log.warn("${ChatLogSummary.sid(id)} kind=subscription route=background-jobs stop=true failed message=${cause.message}", cause)
+            }
+    }
+
+    /** Cancel one background subagent job and its child session tree. */
+    suspend fun cancelBackgroundJob(id: String, dir: String): Boolean =
+        call { cancelBackgroundJob(id, dir) }
+
+    /** Continue one foreground subagent job in the background. Returns false when the CLI's background-subagent kill switch is off. */
+    suspend fun promoteBackgroundJob(id: String, dir: String): Boolean =
+        call { promoteBackgroundJob(id, dir) }
 
     // ------ permission / question resolution ------
 

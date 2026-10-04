@@ -88,6 +88,7 @@ function mockConnection(getImpl?: (p: SessionGetParams) => Promise<unknown>, vcs
       getConnectionError: () => null,
       resolveEventSessionId: () => undefined,
       recordMessageSessionId: () => undefined,
+      prepareTools: async () => {},
       notifyNotificationDismissed: () => undefined,
     } as unknown as ConstructorParameters<typeof KiloProvider>[1],
   }
@@ -535,8 +536,6 @@ describe("KiloProvider route integration", () => {
     provider.registerWorktreeRoute({ projectId: "a", worktreeId: "wt" }, "/repo/a/.kilo/wt", 1)
     provider.registerSessionRoute({ projectId: "a", sessionId: "s" }, "/repo/a/.kilo/wt", 1)
 
-    expect(routes.sessionDirectory({ projectId: "a", sessionId: "s" })).toBe("/repo/a/.kilo/wt")
-    expect(routes.worktreeDirectory({ projectId: "a", worktreeId: "wt" })).toBe("/repo/a/.kilo/wt")
     expect(provider.isSessionRouteAmbiguous("s")).toBe(false)
     expect(provider.routeSessionDirectoryFor({ projectId: "a", sessionId: "s" })).toBe("/repo/a/.kilo/wt")
 

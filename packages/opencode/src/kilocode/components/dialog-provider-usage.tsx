@@ -22,6 +22,9 @@ function Item(props: { item: ProviderUsageSnapshot }) {
       <text fg={props.item.fetchState === "ready" ? theme.textMuted : theme.warning}>
         {props.item.fetchState === "ready" ? props.item.planState : props.item.fetchState}
       </text>
+      <Show when={props.item.fetchState === "ready" && props.item.windows.length === 0}>
+        <text fg={theme.textMuted}>No usage limits reported.</text>
+      </Show>
       <For each={props.item.windows}>
         {(window) => (
           <box>

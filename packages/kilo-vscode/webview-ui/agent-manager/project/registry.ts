@@ -51,18 +51,30 @@ export function createProjectRegistry(opts: { persisted: PersistedProjectTabs; a
   /** The store of the project whose state is currently applied. */
   const active = (): ProjectStore => ensure(opts.activeId())
   const all = (): ProjectStore[] => [...stores.values()]
+  const scopes = () => {
+    version()
+    return all().flatMap((store) => [
+      ...store.tabs.ids(),
+      ...store
+        .managedSessions()
+        .filter((item) => item.worktreeId)
+        .map((item) => item.id),
+    ])
+  }
 
   /** Drop stores for projects that left the catalog (keeps "single" for legacy). */
   const prune = (ids: Set<string>): void => {
+    const size = stores.size
     for (const id of [...stores.keys()]) {
       if (id === "single") continue
       if (!ids.has(id)) stores.delete(id)
     }
+    if (size !== stores.size) bump((n) => n + 1)
   }
 
   // Materialize the legacy bucket eagerly so migration works regardless of
   // which project is ensured first.
   if (opts.persisted.localSessionIDs?.length) ensure("single")
 
-  return { ensure, active, all, prune, version }
+  return { ensure, active, all, prune, version, scopes }
 }

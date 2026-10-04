@@ -73,6 +73,7 @@ interface Connection {
   registerDirectoryProvider(provider: () => string[]): () => void
   getKnownDirectories(): string[]
   getClient(): KiloClient
+  getClientAsync(directory?: string): Promise<KiloClient>
 }
 
 interface Active {
@@ -575,7 +576,14 @@ export class AgentManagerOrchestrationBridge {
 
   private async recover(revision: number): Promise<void> {
     await this.options.ready()
-    const client = this.connection.getClient()
+    if (this.disposed || revision !== this.revision) return
+    // The backend can go down while state initializes. A plain getClient() would
+    // then fail recovery with no retry, because no new "connected" event comes.
+    // Connect on demand instead. This can restart a backend that exited.
+    const client = await this.connection.getClientAsync(this.connection.getKnownDirectories().at(0))
+    if (this.disposed || revision !== this.revision) return
+    if (this.backend !== client) this.reset()
+    this.backend = client
     await Promise.all(
       this.connection.getKnownDirectories().map(async (directory) => {
         const response = await client.kilocode.agentManager.list({ directory }).catch((error: unknown) => {

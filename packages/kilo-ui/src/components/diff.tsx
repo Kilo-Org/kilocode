@@ -40,8 +40,12 @@ function remember(key: object | undefined, width: number, height: number) {
 }
 
 function reserved(key: object | undefined, width: number) {
-  if (!key || width <= 0) return
-  return sizes.get(key)?.get(width)
+  if (!key) return undefined
+  const widths = sizes.get(key)
+  if (!widths) return undefined
+  // Preserve the last measured height at a new width. The capped estimate
+  // would shrink a tall remounted row and move the scroll position.
+  return widths.get(width) ?? Array.from(widths.values()).at(-1)
 }
 
 // A review can contain many expanded diff components. Creating one

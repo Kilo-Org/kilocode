@@ -1,19 +1,19 @@
 ﻿---
 title: "Customize"
-description: "Make Kilo Code work your way with custom modes, rules, instructions, and more"
+description: "Make Kilo Code work your way with custom agents, rules, instructions, and more"
 ---
 
 # {% $markdoc.frontmatter.title %}
 
 {% callout type="generic" %}
-Kilo Code is highly customizable. Tailor its behavior to match your workflow, team standards, and project requirements with custom modes, rules, instructions, and more.
+Kilo Code is highly customizable. Tailor its behavior to match your workflow, team standards, and project requirements with custom agents, rules, instructions, and more.
 {% /callout %}
 
 ## Customization
 
 Configure how Kilo Code behaves and responds:
 
-- [**Custom Modes**](/docs/customize/custom-modes) - Create specialized modes for different tasks (code review, documentation, testing, etc.)
+- [**Custom Modes**](/docs/customize/custom-modes) - Create specialized agents for different tasks (code review, documentation, testing, etc.)
 - [**Custom Rules**](/docs/customize/custom-rules) - Define rules that apply to specific file types or situations
 - [**Custom Instructions**](/docs/customize/custom-instructions) - Add project-specific guidelines and context
 - [**Custom Subagents**](/docs/customize/custom-subagents) - Create specialized subagents with custom prompts, models, and permissions
@@ -29,6 +29,7 @@ Help Kilo understand your codebase better:
 
 - [**Codebase Indexing**](/docs/customize/context/codebase-indexing) - Build a semantic index of your code for better context awareness
 - [**Context Condensing**](/docs/customize/context/context-condensing) - Summarize older context to stay within limits
+- [**Memory**](/docs/customize/context/memory) - Store useful project details that Kilo remembers across sessions
 - [**AGENTS.md**](/docs/customize/agents-md) - Store project context, decisions, and important information
 
 ## Getting Started
@@ -36,14 +37,14 @@ Help Kilo understand your codebase better:
 New to customization? Here's where to start:
 
 1. **Start with Custom Instructions** — Set up instructions in the [Custom Instructions](/docs/customize/custom-instructions) section to guide Kilo Code's behavior
-2. **Explore Custom Modes** — Try the built-in modes first, then create your own
+2. **Explore Custom Agents** — Try the built-in agents first, then create your own
 3. **Enable Codebase Indexing** — Help Kilo understand your project structure
 
 ## Best Practices
 
 - Keep custom instructions concise and actionable
-- Use custom modes for repetitive tasks
-- Combine rules with modes for powerful workflows
+- Use custom agents for repetitive tasks
+- Combine rules with agents for powerful workflows
 
 ## Next Steps
 

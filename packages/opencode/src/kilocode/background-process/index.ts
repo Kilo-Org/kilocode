@@ -36,6 +36,10 @@ export namespace BackgroundProcess {
   const KILL_MS = 3_000
   const READY_MS = 30_000
   const PUBLISH_MS = 500
+  // How long after `exit` a non-persistent process waits for its stdio pipes
+  // to drain before finalizing, so a descendant holding them cannot keep it
+  // non-terminal.
+  const DRAIN_MS = 500
   const PORT_START_MS = 500
   const PORT_MS = 5_000
   const PORT_LIMIT_MS = 30_000
@@ -152,6 +156,7 @@ export namespace BackgroundProcess {
     poll?: ReturnType<typeof setTimeout>
     watch?: ReturnType<typeof setTimeout>
     retry?: ReturnType<typeof setTimeout>
+    drain?: ReturnType<typeof setTimeout>
     scan?: Promise<boolean>
     log?: string
     control?: string
@@ -491,8 +496,10 @@ export namespace BackgroundProcess {
     if (terminal(active.info.status)) return
     if (active.notify) clearTimeout(active.notify)
     if (active.poll) clearTimeout(active.poll)
+    if (active.drain) clearTimeout(active.drain)
     active.notify = undefined
     active.poll = undefined
+    active.drain = undefined
     if (code === null) delete active.info.exitCode
     else active.info.exitCode = code
     if (signal === null) delete active.info.signal
@@ -802,6 +809,7 @@ export namespace BackgroundProcess {
     if (active.notify) clearTimeout(active.notify)
     if (active.poll) clearTimeout(active.poll)
     if (active.watch) clearTimeout(active.watch)
+    if (active.drain) clearTimeout(active.drain)
     active.resolve?.(false)
     active.resolve = undefined
     if (active.info.lifetime === "persistent") await forget(state.shared, active)
@@ -972,7 +980,11 @@ export namespace BackgroundProcess {
     proc.once("exit", (code, signal) => {
       if (processes.get(id) !== active || active.disposed) return
       if (lifetime !== "persistent") {
-        exited(active, code, signal)
+        // `exit` can arrive before the stdio pipes hand over their final chunk,
+        // so `close` normally finalizes. A descendant that inherited the pipes
+        // can hold them open forever, so finalize after a bounded drain either
+        // way rather than leaving a dead process non-terminal.
+        if (!terminal(active.info.status)) active.drain = setTimeout(() => exited(active, code, signal), DRAIN_MS)
         return
       }
       void output(active)
@@ -986,6 +998,14 @@ export namespace BackgroundProcess {
           await forget(state.shared, active)
         })
         .catch((err) => log.warn("failed to finalize persistent process", { err, id }))
+    })
+    // A non-persistent process normally finalizes on `close`, which fires after
+    // its stdio pipes drain; the exit handler's bounded drain covers a
+    // descendant that keeps the pipes open.
+    proc.once("close", (code, signal) => {
+      if (processes.get(id) !== active || active.disposed) return
+      if (lifetime === "persistent") return
+      exited(active, code, signal)
     })
     try {
       if (lifetime === "persistent") {
@@ -1005,6 +1025,7 @@ export namespace BackgroundProcess {
       if (active.notify) clearTimeout(active.notify)
       if (active.poll) clearTimeout(active.poll)
       if (active.watch) clearTimeout(active.watch)
+      if (active.drain) clearTimeout(active.drain)
       const stopped = await rollback(active).catch((cause) => {
         log.error("failed to roll back persistent process", { cause, id })
         return false
@@ -1142,6 +1163,7 @@ export namespace BackgroundProcess {
                 if (active.poll) clearTimeout(active.poll)
                 if (active.watch) clearTimeout(active.watch)
                 if (active.retry) clearTimeout(active.retry)
+                if (active.drain) clearTimeout(active.drain)
                 active.proc?.removeAllListeners()
                 active.proc?.stdout?.destroy()
                 active.proc?.stderr?.destroy()

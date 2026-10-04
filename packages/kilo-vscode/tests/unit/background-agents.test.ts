@@ -2,8 +2,10 @@ import { describe, expect, it } from "bun:test"
 import {
   backgroundAgents,
   backgroundJobAgents,
-  children,
-  fitBackgroundAgents,
+  taskChildren,
+  mergePromptAgents,
+  stackFit,
+  stackPlace,
   showBackgroundAgent,
 } from "../../webview-ui/src/components/chat/background-agents"
 import { childForeground, showChildPromotion } from "../../webview-ui/src/components/chat/task-tool-state"
@@ -51,29 +53,6 @@ function taskPart(opts: TaskOptions = {}): ToolPart {
 const busy: SessionStatusInfo = { type: "busy" }
 const idle: SessionStatusInfo = { type: "idle" }
 
-describe("fitBackgroundAgents", () => {
-  it("uses the full width when all agents fit without an overflow button", () => {
-    expect(fitBackgroundAgents([30, 30], 66, 80, 6)).toBe(2)
-  })
-
-  it("reserves the overflow button and spacing while fitting a prefix", () => {
-    expect(fitBackgroundAgents([100, 120, 80], 285, 50, 6)).toBe(2)
-    expect(fitBackgroundAgents([100, 120, 80], 281, 50, 6)).toBe(1)
-  })
-
-  it("falls back to the summary when no agent fits with the overflow button", () => {
-    expect(fitBackgroundAgents([100, 120], 155, 50, 6)).toBe(0)
-    expect(fitBackgroundAgents([100, 120], 156, 50, 6)).toBe(1)
-  })
-
-  it("handles single agents, empty lists, and hidden containers", () => {
-    expect(fitBackgroundAgents([100], 100, 50, 6)).toBe(1)
-    expect(fitBackgroundAgents([100], 99, 50, 6)).toBe(0)
-    expect(fitBackgroundAgents([], 100, 50, 6)).toBe(0)
-    expect(fitBackgroundAgents([100, 120], 0, 50, 6)).toBe(0)
-  })
-})
-
 describe("children", () => {
   it("keeps background children while listing each task child once in spawn order", () => {
     const tools = [
@@ -82,13 +61,13 @@ describe("children", () => {
       taskPart({ id: "part_3", child: "ses_a" }),
     ]
 
-    expect(children(tools)).toEqual(["ses_a", "ses_b"])
+    expect(taskChildren(tools)).toEqual(["ses_a", "ses_b"])
   })
 
   it("ignores non-task tools and parts without a child session", () => {
     const bash = { id: "part_3", type: "tool", tool: "bash", state: { status: "running", input: {} } } as ToolPart
 
-    expect(children([bash, taskPart({ id: "part_4", background: true })])).toEqual([])
+    expect(taskChildren([bash, taskPart({ id: "part_4", background: true })])).toEqual([])
   })
 })
 
@@ -336,5 +315,78 @@ describe("backgroundAgents", () => {
 
     expect(showBackgroundAgent(agent, hidden)).toBe(true)
     expect(showBackgroundAgent({ ...agent, status: "completed" }, hidden)).toBe(false)
+  })
+})
+
+describe("mergePromptAgents", () => {
+  const live = (id: string, description?: string) => ({
+    id,
+    description,
+    agent: "general",
+    status: "running" as const,
+    startedAt: 0,
+    jobID: id,
+  })
+
+  it("appends new agents and keeps the existing order", () => {
+    const first = mergePromptAgents([], [live("ses_a")])
+    const next = mergePromptAgents(first, [live("ses_b"), live("ses_a")])
+
+    expect(next.map((item) => item.id)).toEqual(["ses_a", "ses_b"])
+    expect(next.every((item) => !item.done)).toBe(true)
+  })
+
+  it("keeps the same object for an unchanged running agent", () => {
+    const prev = mergePromptAgents([], [live("ses_a", "Task")])
+
+    expect(mergePromptAgents(prev, [live("ses_a", "Task")]).at(0)).toBe(prev.at(0))
+  })
+
+  it("marks agents that stop running as done instead of removing them", () => {
+    const prev = mergePromptAgents([], [live("ses_a"), live("ses_b")])
+
+    expect(mergePromptAgents(prev, [live("ses_b")])).toMatchObject([
+      { id: "ses_a", done: true },
+      { id: "ses_b", done: false },
+    ])
+  })
+
+  it("revives a done agent that runs again and refreshes its label", () => {
+    const prev = mergePromptAgents(mergePromptAgents([], [live("ses_a", "Old")]), [])
+
+    expect(mergePromptAgents(prev, [live("ses_a", "New")])).toEqual([
+      { id: "ses_a", description: "New", agent: "general", done: false },
+    ])
+  })
+})
+
+describe("stackFit", () => {
+  it("shows up to three avatars when there is room", () => {
+    expect(stackFit(500, 10)).toBe(3)
+    expect(stackFit(500, 2)).toBe(2)
+  })
+
+  it("drops avatars before it overflows and keeps at least one", () => {
+    // Three avatars and "+7" need 90px, two avatars and "+8" need 69px.
+    expect(stackFit(90, 10)).toBe(3)
+    expect(stackFit(89, 10)).toBe(2)
+    expect(stackFit(68, 10)).toBe(1)
+    expect(stackFit(0, 10)).toBe(1)
+  })
+})
+
+describe("stackPlace", () => {
+  it("leads the first line when it has room", () => {
+    expect(stackPlace([200, 150], 263, 45)).toEqual({ line: 0, end: false })
+    expect(stackPlace([], 263, 45)).toEqual({ line: 0, end: false })
+  })
+
+  it("ends the first later line with room instead of adding a line", () => {
+    expect(stackPlace([240, 180], 263, 45)).toEqual({ line: 1, end: true })
+    expect(stackPlace([240, 250, 100], 263, 45)).toEqual({ line: 2, end: true })
+  })
+
+  it("leads and lets the row wrap when no line has room", () => {
+    expect(stackPlace([240, 250], 263, 45)).toEqual({ line: 0, end: false })
   })
 })

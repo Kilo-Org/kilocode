@@ -67,6 +67,7 @@ describe("PromptInput sandbox toggle", () => {
     expect(move).toBeGreaterThan(save)
     expect(created).toContain("text: drafts,")
     expect(created).toContain("browsers: references,")
+    expect(created).toContain("pastes: pasteDrafts,")
     expect(created).toContain("contexts: contextDrafts,")
     expect(created).toContain("saveDraft(source, text(), reviewComments(), imageAttach.images())")
   })
@@ -78,7 +79,7 @@ describe("PromptInput sandbox toggle", () => {
     expect(src).toContain("if (highlightRef) highlightRef.scrollTop = scroll")
     expect(src).toContain("scrollDrafts.set(draftKey(), textareaRef.scrollTop)")
     expect(src).toContain(
-      "images: imageAttach.images(),\n    browsers: browsers(),\n    contexts: contexts(),\n    scroll: textareaRef?.scrollTop",
+      "images: imageAttach.images(),\n    browsers: browsers(),\n    pastes: paste.pastes().map((item) => item.text),\n    contexts: contexts(),\n    scroll: textareaRef?.scrollTop",
     )
     expect(src).toContain("draft.text,")
     expect(src).toContain("draft.comments,")

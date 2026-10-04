@@ -19,6 +19,7 @@ import type { AgentManagerSidebarTarget } from "./webview-messages"
 import type { PermissionRequest } from "./permissions"
 import type { AnacondaDesktopExtensionMessage } from "../../../../src/shared/anaconda-desktop-messages"
 import type { BrowserFeedbackData, BrowserReference } from "../../../../src/shared/browser-feedback"
+import type { BrowserFrame } from "../../../../src/shared/browser-stream"
 import type { CodeContext } from "../../../../src/shared/code-context"
 import type { PRMergeResult, PRReviewResult } from "../../../../src/shared/pr-comment-actions"
 
@@ -181,6 +182,12 @@ export interface SessionStatusMessage {
   next?: number
 }
 
+export interface SessionWakeupMessage {
+  type: "sessionWakeup"
+  sessionID: string
+  pending: number
+}
+
 export interface SessionTurnClosedMessage {
   type: "sessionTurnClosed"
   sessionID: string
@@ -194,6 +201,7 @@ export interface SessionErrorMessage {
   eventID: string
   sessionID?: string
   error?: { name: string; data?: Record<string, unknown> }
+  phase?: "admission" | "execution"
 }
 
 export interface PermissionRequestMessage {
@@ -288,6 +296,8 @@ export interface SessionsLoadedMessage {
   type: "sessionsLoaded"
   sessions: SessionInfo[]
   preserveSessionIds?: string[]
+  append?: boolean
+  hasMore?: boolean
 }
 
 export interface CloudSessionsLoadedMessage {
@@ -421,6 +431,8 @@ export interface AppendReviewCommentsToTerminalMessage {
 export interface TriggerTaskMessage {
   type: "triggerTask"
   text: string
+  /** Label for a prompt Kilo composed, such as an editor code action. */
+  injectedTitle?: string
 }
 
 export interface ProfileDataMessage {
@@ -600,6 +612,19 @@ export interface SpeechToTextErrorMessage {
 export interface FileSearchItem {
   path: string
   type: "file" | "folder" | "opened-file"
+  /**
+   * Owning workspace folder name, set only when the workspace has more than one
+   * folder. Entries outside the session's own project carry an absolute path and
+   * are mention-only: they are never auto-attached, so the agent must Read them
+   * under the normal external-directory permission check.
+   */
+  root?: string
+  /**
+   * Path within the owning folder, set only when `path` is absolute. The `@`
+   * menu is ranked again in the webview, and scoring an absolute path there
+   * would let the filesystem prefix match every entry under that folder.
+   */
+  relative?: string
 }
 
 export interface FileSearchResultMessage {
@@ -713,6 +738,7 @@ export interface ExtensionSettings {
   maxCost?: number
   multiProject?: boolean
   claudeMigration?: boolean
+  conversationPromptHistory?: boolean
   [key: string]: unknown
 }
 
@@ -793,6 +819,33 @@ export interface OSNotificationTestResultMessage {
 export interface TimelineSettingLoadedMessage {
   type: "timelineSettingLoaded"
   visible: boolean
+}
+
+export interface AutoCleanupLastResult {
+  at: number
+  scanned: number
+  deleted: number
+  skippedActive: number
+  failed: number
+  durationMs: number
+  cancelled?: boolean
+  reclaimedBytes?: number
+}
+
+export interface AutoCleanupStateLoadedMessage {
+  type: "autoCleanupStateLoaded"
+  last: AutoCleanupLastResult | null
+  requestID?: string
+  pending?: boolean
+  error?: "status" | "timeout" | "run"
+  progress?: {
+    phase: "scanning" | "deleting" | "cancelling"
+    total: number
+    processed: number
+    deleted: number
+    failed: number
+    skippedActive: number
+  }
 }
 
 export interface ThroughputSettingLoadedMessage {
@@ -894,7 +947,20 @@ export interface AgentManagerStateMessage {
   sessions: ManagedSessionState[]
   sections?: SectionState[]
   staleWorktreeIds?: string[]
+  /** Why each unhealthy worktree is unhealthy; healthy worktrees are omitted. */
+  worktreeHealth?: Record<string, "absent-restorable" | "absent-gone" | "unregistered" | "unavailable">
+  /**
+   * Directories under `.kilo/worktrees/` that no worktree claims.
+   *
+   * `broken` still holds a git checkout, so it can contain work that exists nowhere else; `leftover`
+   * is a bare directory. The notice says which, because the two do not deserve the same warning.
+   *
+   * `sized` is set once the size pass is done with a folder; without `bytes` it means the folder
+   * could not be measured, which is how the UI knows to stop saying it is still calculating.
+   */
+  orphanDirectories?: { path: string; kind: "broken" | "leftover"; bytes?: number; sized?: boolean }[]
   tabOrder?: Record<string, string[]>
+  pinnedTabs?: Record<string, string[]>
   worktreeOrder?: string[]
   sessionsCollapsed?: boolean
   sidebarCollapsed?: boolean
@@ -932,6 +998,13 @@ export interface AgentManagerProjectsMessage {
   type: "agentManager.projects"
   multiProject: boolean
   projects: AgentProjectSnapshot[]
+}
+
+// Default (or picked) parent folder for the new-project dialog
+export interface AgentManagerProjectParentMessage {
+  type: "agentManager.projectParent"
+  /** Omitted when the user cancelled the native folder picker. */
+  parent?: string
 }
 
 export interface AgentManagerSelectionActivatedMessage {
@@ -1111,10 +1184,11 @@ export interface FavoritesLoadedMessage {
   favorites: ModelSelection[]
 }
 
-// Per-mode model selections loaded from model.json (extension → webview)
+// Preferred and per-mode model selections loaded from persisted state (extension → webview)
 export interface ModelSelectionsLoadedMessage {
   type: "modelSelectionsLoaded"
   selections: Record<string, ModelSelection>
+  preferred?: ModelSelection & { variant?: string }
 }
 
 export interface AgentManagerBranchesMessage {
@@ -1280,6 +1354,9 @@ export interface AgentManagerSendInitialMessage {
   sessionId: string
   worktreeId: string
   text?: string
+  /** When set, run a slash command instead of sending the text as a prompt. */
+  command?: string
+  arguments?: string
   providerID?: string
   modelID?: string
   agent?: string
@@ -1352,6 +1429,11 @@ export interface DiffViewerDiffFileMessage {
 export interface DiffViewerMarkdownRenderMessage {
   type: "diffViewer.markdownRender"
   render: boolean
+}
+
+export interface DiffViewerInitialDiffStyleMessage {
+  type: "diffViewer.initialDiffStyle"
+  style: "unified" | "split"
 }
 
 export interface DiffViewerInitialFileMessage {
@@ -1433,11 +1515,22 @@ export interface MarketplaceInstallResultMessage {
   success: boolean
   slug: string
   error?: string
+  filePath?: string
+  filePaths?: string[]
 }
 
 export interface OpenInstallModalMessage {
   type: "openInstallModal"
   mpItem: MarketplaceItem
+}
+
+export interface FocusMarketplaceItemMessage {
+  type: "focusMarketplaceItem"
+  mpItem: MarketplaceItem
+}
+
+export interface ResetMarketplaceFiltersMessage {
+  type: "resetMarketplaceFilters"
 }
 
 export interface MarketplaceRemoveResultMessage {
@@ -1537,7 +1630,10 @@ export interface AgentManagerBrowserStateMessage {
   errors: number
   logs?: string[]
   error?: string
+  missing?: "chrome" | "chromium"
   frameError?: string
+  back?: boolean
+  forward?: boolean
 }
 
 export interface AgentManagerBrowserInspectionMessage {
@@ -1562,6 +1658,12 @@ export interface AgentManagerBrowserInspectionMessage {
   }
   logs: string[]
   hover?: boolean
+}
+
+interface AgentManagerBrowserFrameMessage extends BrowserFrame {
+  type: "agentManager.browserFrame"
+  projectId?: string
+  sessionId: string
 }
 
 export interface AgentManagerBrowserDevtoolsMessage {
@@ -1589,6 +1691,7 @@ export type ExtensionMessage =
   | AgentManagerBrowserStateMessage
   | AgentManagerBrowserInspectionMessage
   | AgentManagerBrowserDevtoolsMessage
+  | AgentManagerBrowserFrameMessage
   | ReadyMessage
   | FontSizeChangedMessage
   | GitStatusMessage
@@ -1601,6 +1704,7 @@ export type ExtensionMessage =
   | PartsUpdatedMessage
   | PartRemovedMessage
   | SessionStatusMessage
+  | SessionWakeupMessage
   | SessionTurnClosedMessage
   | SessionErrorMessage
   | PermissionRequestMessage
@@ -1673,6 +1777,7 @@ export type ExtensionMessage =
   | NotificationSettingsLoadedMessage
   | OSNotificationTestResultMessage
   | TimelineSettingLoadedMessage
+  | AutoCleanupStateLoadedMessage
   | ThroughputSettingLoadedMessage
   | AutoApprovalReasonSettingLoadedMessage
   | PushFixesSettingLoadedMessage
@@ -1689,6 +1794,7 @@ export type ExtensionMessage =
   | AgentManagerStateMessage
   | AgentManagerWorktreeDeletedMessage
   | AgentManagerProjectsMessage
+  | AgentManagerProjectParentMessage
   | AgentManagerSelectionActivatedMessage
   | AgentManagerRevealSessionMessage
   | AgentManagerProjectSessionsMessage
@@ -1755,6 +1861,7 @@ export type ExtensionMessage =
   | DiffViewerRevertFileResultMessage
   | DiffViewerDiffFileMessage
   | DiffViewerMarkdownRenderMessage
+  | DiffViewerInitialDiffStyleMessage
   | DiffViewerInitialFileMessage
   | DiffViewerInitialMarkdownMessage
   | SetAvailableSourcesMessage
@@ -1765,6 +1872,8 @@ export type ExtensionMessage =
   | MarketplaceInstallResultMessage
   | MarketplaceRemoveResultMessage
   | OpenInstallModalMessage
+  | FocusMarketplaceItemMessage
+  | ResetMarketplaceFiltersMessage
   | ProviderOAuthReadyMessage
   | ProviderConnectedMessage
   | ProviderDisconnectedMessage

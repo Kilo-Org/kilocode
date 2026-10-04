@@ -102,6 +102,7 @@ The feature includes real-time audio level visualization and voice activity dete
 **Microphone button not appearing:**
 
 - Enable and sign in to the Kilo provider, or set a custom transcription base URL
+- Confirm you are in a local VS Code window. Voice input is unavailable in remote windows such as Remote-SSH, WSL, and dev containers, because audio capture runs on the machine that hosts the extension
 
 **Transcription errors:**
 
@@ -118,5 +119,6 @@ The feature includes real-time audio level visualization and voice activity dete
 Voice transcription has these requirements:
 
 - Requires an active internet connection, unless your custom base URL points at a local service
+- Requires a local VS Code window. In remote windows audio capture runs on the remote machine, which usually has no microphone
 - Requires Kilo Gateway access through your Kilo account, or a custom OpenAI-compatible base URL
 - Transcription accuracy depends on audio quality and speech clarity

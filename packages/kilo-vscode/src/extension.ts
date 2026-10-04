@@ -3,7 +3,6 @@ import { basename } from "node:path"
 import { KiloProvider } from "./KiloProvider"
 import { AgentManagerProvider } from "./agent-manager/AgentManagerProvider"
 import { VscodeHost } from "./agent-manager/vscode-host"
-import { KiloClawProvider } from "./kiloclaw/KiloClawProvider"
 import { DiffViewerProvider } from "./diff/DiffViewerProvider"
 import { DocumentViewerProvider } from "./DocumentViewerProvider"
 import { DiffSourceCatalog } from "./diff/sources/catalog"
@@ -14,6 +13,7 @@ import { MarketplaceNotifier } from "./services/marketplace/notifier"
 import { SubAgentViewerProvider } from "./SubAgentViewerProvider"
 import { EXTENSION_DISPLAY_NAME } from "./constants"
 import { KiloConnectionService } from "./services/cli-backend"
+import { retention } from "./services/task-cleanup/retention"
 import { registerAutocompleteProvider } from "./services/autocomplete"
 import { ensureBackendForAutocomplete } from "./services/autocomplete/ensure-backend"
 import { AutocompleteServiceManager } from "./services/autocomplete/AutocompleteServiceManager"
@@ -21,10 +21,15 @@ import { AttentionService, showOSNotification } from "./services/attention"
 import { CaffeinationService } from "./services/caffeination"
 import { confirmCaffeination } from "./services/caffeination/confirm"
 import { createCaffeinationDriver } from "./services/caffeination/inhibitor"
-import { BrowserBroker } from "./services/browser-automation"
+import { BrowserAutomationService, BrowserBroker } from "./services/browser-automation"
+import {
+  integratedBrowserUseSystemChrome,
+  migrateIntegratedBrowserUseSystemChrome,
+} from "./services/browser-automation/chrome-setting"
 import { TelemetryEventName, TelemetryProxy } from "./services/telemetry"
 import { registerCommitMessageService } from "./services/commit-message"
 import { registerCodeActions, registerTerminalActions, KiloCodeActionProvider } from "./services/code-actions"
+import { closeTaskTarget, SurfaceFocus } from "./commands/close-task-target"
 import { registerToggleAutoApprove } from "./commands/toggle-auto-approve"
 import { registerHeapSnapshot } from "./commands/heap-snapshot"
 import { RemoteStatusService } from "./services/RemoteStatusService"
@@ -62,16 +67,28 @@ export async function activate(context: vscode.ExtensionContext) {
 
   const telemetry = TelemetryProxy.getInstance()
 
+  await migrateIntegratedBrowserUseSystemChrome().catch((error: unknown) =>
+    console.warn("[Kilo New] Integrated Browser Chrome preference migration failed:", error),
+  )
+
   const browserBroker = new BrowserBroker({
     log: (...args) => console.warn("[Kilo New] BrowserBroker:", ...args),
     enabled: () => vscode.workspace.getConfiguration("kilo-code.new.experimental").get("browserAutomation", false),
     trusted: () => vscode.workspace.isTrusted,
-    useSystemChrome: () =>
-      vscode.workspace.getConfiguration("kilo-code.new.browserAutomation").get("useSystemChrome", true),
+    useSystemChrome: () => integratedBrowserUseSystemChrome(),
   })
 
   // Create shared connection service (one server for all webviews)
-  const connectionService = new KiloConnectionService(context, () => browserBroker.env())
+  const connectionService = new KiloConnectionService(
+    context,
+    () => browserBroker.env(),
+    (dir): Promise<void> => browserAutomationService.ready(dir),
+  )
+
+  // Manages the built-in Playwright MCP server for ordinary sessions. This is
+  // independent from the Agent Manager browser broker above.
+  const browserAutomationService = new BrowserAutomationService(connectionService)
+  void browserAutomationService.syncWithSettings()
   const notebookBridge = createNotebookBridge(connectionService)
   let restore = context.workspaceState.get<RestoreState>(RESTORE_KEY) ?? {}
   const remember = (patch: RestoreState) => {
@@ -86,8 +103,16 @@ export async function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(remoteService)
   connectionService.setRemoteService(remoteService)
 
+  // Daily trigger for the backend-owned session retention pass (Settings → Checkpoints)
+  const cleanup = retention(connectionService, context)
+  cleanup.start()
+  context.subscriptions.push({ dispose: () => cleanup.dispose() })
+
   const unsubscribeStateChange = connectionService.onStateChange((state) => {
     if (state === "connected") {
+      void browserAutomationService
+        .reregisterIfEnabled()
+        .catch((error) => console.warn("[Kilo New] Playwright MCP re-registration failed:", error))
       const config = connectionService.getServerConfig()
       if (config) {
         telemetry.configure(config.baseUrl, config.password)
@@ -135,9 +160,22 @@ export async function activate(context: vscode.ExtensionContext) {
     return undefined
   }
 
+  // Tracks the Kilo surface the user last worked in, so commands invoked from
+  // the Command Palette still know where to act after it takes focus away.
+  const focus = new SurfaceFocus()
+
+  // Keep the concrete chat when focus moves to the editor to select code.
+  // SurfaceFocus alone cannot distinguish multiple Kilo editor tabs.
+  let chat: KiloProvider | AgentManagerProvider | undefined
+
   // Create the provider with shared service
   const provider = new KiloProvider(context.extensionUri, connectionService, context, {
     focusContext: "kilo-code.new.sidebarFocused",
+    onFocused: () => {
+      focus.gained("sidebar")
+      chat = provider
+    },
+    onHidden: () => focus.lost("sidebar"),
   })
   provider.setRemoteService(remoteService)
 
@@ -176,10 +214,6 @@ export async function activate(context: vscode.ExtensionContext) {
   ]
   if (process.platform === "darwin") skip.push("kilo-code.new.agentManager.runScript")
   ensureCommandsSkipShell(skip)
-
-  // Create KiloClaw chat provider for editor panel
-  const kiloClawProvider = new KiloClawProvider(context.extensionUri, connectionService)
-  context.subscriptions.push(kiloClawProvider)
 
   // Create Agent Manager provider for editor panel
   const reason = vscode.env.remoteName ? "Keep Awake is only available in a local VS Code window." : undefined
@@ -240,6 +274,18 @@ export async function activate(context: vscode.ExtensionContext) {
   const binary = process.platform === "win32" ? await git() : git
   const agentManagerHost = new VscodeHost(context.extensionUri, connectionService, context, remoteService, controls)
   const agentManagerProvider = new AgentManagerProvider(agentManagerHost, connectionService, binary, browserBroker)
+  agentManagerHost.setFocusListener({
+    gained: () => {
+      focus.gained("agentManager")
+      // Webview focus messages can arrive after the panel's active state changes.
+      chat = agentManagerProvider
+    },
+    lost: () => {
+      focus.lost("agentManager")
+      // The host reports lost on panel disposal, not when switching to an editor.
+      if (chat === agentManagerProvider) chat = undefined
+    },
+  })
   agentManagerProvider.onPanelVisibilityChange((visible) => remember({ agentManager: visible }))
   agentManager = agentManagerProvider
   context.subscriptions.push(
@@ -329,20 +375,18 @@ export async function activate(context: vscode.ExtensionContext) {
     }),
   )
 
-  // Register serializer so KiloClaw panel restores when VS Code restarts
-  context.subscriptions.push(
-    vscode.window.registerWebviewPanelSerializer(KiloClawProvider.viewType, {
-      deserializeWebviewPanel(panel: vscode.WebviewPanel) {
-        kiloClawProvider.restorePanel(panel)
-        return Promise.resolve()
-      },
-    }),
-  )
-
   const attach = (panel: vscode.WebviewPanel) => {
     const tabProvider = new KiloProvider(context.extensionUri, connectionService, context, {
       tabTitle: panelTitleHandler(panel),
       topBarSurface: "tab",
+      onFocused: () => {
+        focus.gained("tab")
+        chat = tabProvider
+      },
+      onHidden: () => {
+        focus.lost("tab")
+        if (chat === tabProvider) chat = undefined
+      },
     })
     tabProvider.setRemoteService(remoteService)
     tabProvider.setAutoApproveController(autoApprove)
@@ -412,8 +456,11 @@ export async function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(settingsEditorProvider, marketplacePanelProvider)
 
   // Surface a discardable notification when a marketplace item matches the workspace.
-  const marketplaceNotifier = new MarketplaceNotifier(connectionService, context, (item) =>
-    marketplacePanelProvider.openInstall(item),
+  const marketplaceNotifier = new MarketplaceNotifier(
+    connectionService,
+    context,
+    (item) => marketplacePanelProvider.openInstall(item),
+    (item) => marketplacePanelProvider.focusItem(item),
   )
   context.subscriptions.push(marketplaceNotifier)
   marketplaceNotifier.start()
@@ -473,6 +520,17 @@ export async function activate(context: vscode.ExtensionContext) {
     }),
   )
 
+  // Task-close commands stop work on whichever surface the user is on, so they
+  // resolve their target from the last focused surface rather than from panel
+  // activation alone.
+  const taskTarget = () =>
+    closeTaskTarget<KiloProvider | AgentManagerProvider>({
+      focused: focus.current(),
+      sidebar: provider,
+      tab: activeTabProvider(),
+      agentManager: agentManagerProvider.isActive() ? agentManagerProvider : undefined,
+    })
+
   // Sidebar menus use wrapper commands so this event measures real title button presses,
   // not programmatic opens, shortcuts, or editor title commands.
   const track = (button: string, command: string) => {
@@ -494,9 +552,6 @@ export async function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand("kilo-code.new.sidebarTitle.agentManagerOpen", () => {
       track("agent_manager", "kilo-code.new.agentManagerOpen")
     }),
-    vscode.commands.registerCommand("kilo-code.new.sidebarTitle.kiloClawOpen", () => {
-      track("kiloclaw", "kilo-code.new.kiloClawOpen")
-    }),
     vscode.commands.registerCommand("kilo-code.new.sidebarTitle.marketplaceButtonClicked", () => {
       track("marketplace", "kilo-code.new.marketplaceButtonClicked")
     }),
@@ -511,14 +566,17 @@ export async function activate(context: vscode.ExtensionContext) {
       if (tab) tab.postMessage({ type: "action", action: "plusButtonClicked" })
       else provider.postMessage({ type: "action", action: "plusButtonClicked" })
     }),
+    vscode.commands.registerCommand("kilo-code.new.closeTask", () => {
+      taskTarget().postMessage({ type: "action", action: "closeTask" })
+    }),
+    vscode.commands.registerCommand("kilo-code.new.closeAllTasks", () => {
+      taskTarget().postMessage({ type: "action", action: "closeAllTasks" })
+    }),
     vscode.commands.registerCommand("kilo-code.new.agentManagerOpen", () => {
       agentManagerProvider.openPanel()
     }),
     vscode.commands.registerCommand("kilo-code.new.marketplaceButtonClicked", (directory?: string | null) => {
       marketplacePanelProvider.openPanel(directory)
-    }),
-    vscode.commands.registerCommand("kilo-code.new.kiloClawOpen", () => {
-      kiloClawProvider.openPanel()
     }),
     vscode.commands.registerCommand("kilo-code.new.historyButtonClicked", () => {
       const tab = activeTabProvider()
@@ -582,7 +640,11 @@ export async function activate(context: vscode.ExtensionContext) {
       if (!input) return
       await vscode.commands.executeCommand("kilo-code.SidebarProvider.focus")
       await provider.waitForReady()
-      provider.postMessage({ type: "triggerTask", text: `Generate a terminal command: ${input}` })
+      provider.postMessage({
+        type: "triggerTask",
+        text: `Generate a terminal command: ${input}`,
+        injectedTitle: "Generate terminal command",
+      })
     }),
     vscode.commands.registerCommand("kilo-code.new.toggleRemote", () => {
       remoteService.toggle().catch((err) => console.error("[Kilo New] toggleRemote command failed:", err))
@@ -619,6 +681,13 @@ export async function activate(context: vscode.ExtensionContext) {
     }),
     vscode.commands.registerCommand("kilo-code.new.agentManager.nextTerminal", () => {
       agentManagerProvider.postMessage({ type: "action", action: "terminalNext" })
+    }),
+    vscode.commands.registerCommand("kilo-code.new.agentManager.diagnostics", () => {
+      // diagnose() spawns git/gh probes and writes to the output channel; a rejection (disposed
+      // channel, disposed context mid-probe) would otherwise be an invisible unhandled rejection.
+      void agentManagerProvider.diagnose().catch((err: unknown) => {
+        console.error("[Kilo New] Agent Manager diagnostics failed:", err)
+      })
     }),
     vscode.commands.registerCommand("kilo-code.new.agentManager.search", () => {
       agentManagerProvider.postMessage({ type: "action", action: "search" })
@@ -718,7 +787,7 @@ export async function activate(context: vscode.ExtensionContext) {
   )
 
   // Register code actions (editor context menus, terminal context menus, keyboard shortcuts)
-  registerCodeActions(context, provider, agentManagerProvider, activeTabProvider)
+  registerCodeActions(context, provider, agentManagerProvider, activeTabProvider, () => chat)
   registerTerminalActions(context, provider, agentManagerProvider)
 
   // Register CodeActionProvider (lightbulb quick fixes)
@@ -740,6 +809,7 @@ export async function activate(context: vscode.ExtensionContext) {
       unsubscribeStateChange()
       attention.dispose()
       browserBroker.dispose()
+      browserAutomationService.dispose()
       provider.dispose()
       notebookBridge.dispose()
       connectionService.dispose()

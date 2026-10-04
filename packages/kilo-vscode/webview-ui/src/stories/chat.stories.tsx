@@ -13,6 +13,8 @@ import { batch, createEffect, createSignal, onCleanup, onMount } from "solid-js"
 import { StoryProviders, defaultMockData, mockSessionValue } from "./StoryProviders"
 import { ChatView } from "../components/chat/ChatView"
 import { ErrorDisplay } from "../components/chat/ErrorDisplay"
+import { AgentStack, useAgentStack } from "../components/chat/AgentStack"
+import { pollBackgroundJobs } from "../components/chat/background-jobs"
 import { TaskHeader } from "../components/chat/TaskHeader"
 import { TaskUsage } from "../components/chat/TaskUsage"
 import { QuestionDock } from "../components/chat/QuestionDock"
@@ -46,7 +48,8 @@ import type {
 } from "../types/messages"
 import { formatReviewCommentsMarkdown } from "../utils/review-comment-markdown"
 import { feedbackMetadata, formatBrowserFeedback } from "../../../src/shared/browser-feedback"
-import { reviewMetadata } from "../../../src/shared/review-comments"
+import { PUSH_INSTRUCTION } from "../../../src/shared/review-comments"
+import { injectedMetadata } from "../../../src/shared/injected-prompt"
 
 const SESSION_ID = "story-session-chat-001"
 
@@ -273,7 +276,7 @@ function reviewMessage(comments: ReviewCommentEntry[]) {
       messageID: message.id,
       type: "text",
       text: `${prefix}\n\nPlease address these review comments.`,
-      metadata: reviewMetadata({ version: 1, comments }),
+      metadata: { kilo: { review: { version: 1, comments } } },
     },
   ]
   return <VscodeUserMessage message={message} parts={parts} />
@@ -425,6 +428,91 @@ export const UserMessageBrowserFeedback: Story = {
       </div>
     </StoryProviders>
   ),
+}
+
+/**
+ * Builds the user message a prompt Kilo composed produces. `title` marks the
+ * part through `metadata.kilo.injected`; without a title the body itself is
+ * inspected, which is how the pull request fix instruction is recognised.
+ */
+function injectedMessage(text: string, title?: string) {
+  const id = `injected-user-message-${title ?? "body"}`
+  const message: Message = {
+    id,
+    sessionID: SESSION_ID,
+    role: "user",
+    createdAt: new Date(0).toISOString(),
+    time: { created: 0 },
+  }
+  const parts: Part[] = [
+    {
+      id: `${id}-part`,
+      sessionID: SESSION_ID,
+      messageID: id,
+      type: "text",
+      text,
+      metadata: title ? injectedMetadata(title) : undefined,
+    },
+  ]
+  return <VscodeUserMessage message={message} parts={parts} />
+}
+
+function InjectedStory(props: { text: string; title?: string }) {
+  return (
+    <StoryProviders sessionID={SESSION_ID} status="idle">
+      <div style={{ "max-height": "620px", padding: "12px" }}>{injectedMessage(props.text, props.title)}</div>
+    </StoryProviders>
+  )
+}
+
+const REVIEW_TEMPLATE_BODY = [
+  "You are Kilo Code, an expert code reviewer focused on high-confidence security, performance, business logic, deploy safety, duplication, and dead-code findings.",
+  "",
+  "During the initial review phase, your role is advisory: provide clear, actionable feedback but DO NOT modify any files.",
+  "",
+  "Report each finding with a file and line reference.",
+].join("\n")
+
+/** Long marked prompt with blank-line paragraphs: collapses to the first paragraph. */
+export const UserMessageInjectedCommand: Story = {
+  name: "User message — injected slash command",
+  render: () => <InjectedStory text={REVIEW_TEMPLATE_BODY} title="/review worktree" />,
+}
+
+/** Short marked prompt: shows the header and the full text, no toggle. */
+export const UserMessageInjectedShort: Story = {
+  name: "User message — injected short prompt",
+  render: () => (
+    <InjectedStory text="Update the current branch from its saved base branch main." title="Update from main" />
+  ),
+}
+
+/**
+ * Long marked prompt with no blank-line paragraph. The first paragraph is the
+ * whole body, so it must render in full with no fade or toggle.
+ */
+export const UserMessageInjectedSingleParagraph: Story = {
+  name: "User message — injected single paragraph",
+  render: () => (
+    <InjectedStory
+      text={
+        "Step one of the instructions.\nStep two of the instructions.\nStep three of the instructions.\nStep four of the instructions.\nStep five of the instructions."
+      }
+      title="/demo"
+    />
+  ),
+}
+
+/** Auto-sent pull request fix: the body is only the push instruction. */
+export const UserMessagePushAutoSent: Story = {
+  name: "User message — auto-sent PR fix",
+  render: () => <InjectedStory text={PUSH_INSTRUCTION} />,
+}
+
+/** User text with the push instruction prepended: user text visible, instruction behind the toggle. */
+export const UserMessagePushMixed: Story = {
+  name: "User message — user text with added PR push",
+  render: () => <InjectedStory text={`${PUSH_INSTRUCTION}\n\nPlease also rename the helper.`} />,
 }
 
 /**
@@ -909,6 +997,8 @@ export const MessageListLayoutCorrection: Story = {
   render: () => {
     const [output, setOutput] = createSignal("Initial streamed response.")
     const [status, setStatus] = createSignal<"idle" | "busy">("busy")
+    // Simulates the composer or a dock growing below the transcript.
+    const [spacer, setSpacer] = createSignal(0)
     const session = {
       ...mockSessionValue({ id: SESSION_ID, status: "busy" }),
       status,
@@ -954,8 +1044,12 @@ export const MessageListLayoutCorrection: Story = {
               >
                 Toggle status
               </button>
+              <button type="button" data-testid="grow-viewport-spacer" onClick={() => setSpacer((v) => v + 160)}>
+                Grow spacer
+              </button>
             </div>
             <ChatView />
+            <div data-testid="viewport-spacer" style={{ height: `${spacer()}px`, "flex-shrink": "0" }} />
           </div>
         </SessionContext.Provider>
       </StoryProviders>
@@ -1347,8 +1441,8 @@ export const TaskHeaderSkeleton: Story = {
   },
 }
 
-export const TaskHeaderBackgroundAgents1280: Story = {
-  name: "TaskHeader background agents, wide",
+export const BackgroundAgentPanel: Story = {
+  name: "Background agent stack and panel",
   args: { names: ["Trace overflow recovery", "Trace outbound request size", "Check request limits"] },
   render: (args: { names: string[] }) => {
     const tools: ToolPart[] = args.names.map((description, index) => ({
@@ -1360,44 +1454,29 @@ export const TaskHeaderBackgroundAgents1280: Story = {
       state: { status: "completed", input: { description }, output: "Started background agent", title: description },
       metadata: { sessionId: `child-${index}`, background: true },
     }))
+    const [hidden, setHidden] = createSignal<ReadonlySet<string>>(new Set())
     const session = {
       ...mockSessionValue({ id: SESSION_ID }),
-      messages: () => headerMessages,
-      visibleMessages: () => headerMessages,
-      getParts: (id: string) => headerParts[id] ?? [],
-      currentSession: () => ({
-        id: SESSION_ID,
-        title: "Investigate request size limits",
-        createdAt: new Date(headerNow).toISOString(),
-        updatedAt: new Date(headerNow).toISOString(),
-      }),
       getSessionToolParts: () => tools,
       allStatusMap: () => Object.fromEntries(tools.map((_, index) => [`child-${index}`, { type: "busy" as const }])),
+      dismissedBackgroundJobs: () => hidden(),
+      dismissBackgroundJobs: (_: string, ids: string[]) => setHidden(new Set([...hidden(), ...ids])),
+    }
+    const Stack = () => {
+      pollBackgroundJobs()
+      const state = useAgentStack()
+      return <AgentStack state={state} label />
     }
     return (
       <StoryProviders sessionID={SESSION_ID} noPadding>
         <SessionContext.Provider value={session as unknown as SessionContextValue}>
-          <TaskHeader />
+          <div style={{ padding: "160px 12px 12px" }}>
+            <Stack />
+          </div>
         </SessionContext.Provider>
       </StoryProviders>
     )
   },
-}
-
-export const TaskHeaderBackgroundAgents420: Story = {
-  ...TaskHeaderBackgroundAgents1280,
-  name: "TaskHeader background agents, narrow",
-}
-
-export const TaskHeaderBackgroundAgents200: Story = {
-  ...TaskHeaderBackgroundAgents1280,
-  name: "TaskHeader background agents, compact",
-}
-
-export const TaskHeaderSingleBackgroundAgent420: Story = {
-  ...TaskHeaderBackgroundAgents1280,
-  name: "TaskHeader single background agent, narrow",
-  args: { names: ["Check request limits"] },
 }
 
 export const TaskHeaderWithTodosAllDone: Story = {

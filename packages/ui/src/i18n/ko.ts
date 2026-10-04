@@ -49,7 +49,7 @@ export const dict = {
 
   "dialog.usageExceeded.freeTier.title": "무료 한도에 도달했습니다",
   "dialog.usageExceeded.freeTier.description":
-    "Kilo Go를 구독하여 최고의 오픈 소스 모델에 안정적으로 액세스하세요. 월 $5부터 시작합니다.", // kilocode_change
+    "월 $10로 Kilo Go를 구독하여 최고의 오픈 소스 모델에 안정적으로 액세스하세요.", // kilocode_change
   "dialog.usageExceeded.freeTier.actionLabel": "구독",
   "dialog.usageExceeded.accountRateLimit.title": "Go 한도에 도달했습니다",
   "dialog.usageExceeded.accountRateLimit.description":
@@ -223,6 +223,10 @@ export const dict = {
   "ui.mermaid.copySvg": "SVG 복사",
   "ui.mermaid.download": "다운로드",
   "ui.mermaid.downloadPng": "PNG 다운로드",
+  "ui.mermaid.zoom": "확대/축소",
+  "ui.mermaid.zoomIn": "확대",
+  "ui.mermaid.zoomOut": "축소",
+  "ui.mermaid.zoomReset": "확대/축소 초기화",
   "ui.mermaid.downloadSvg": "SVG 다운로드",
   "ui.mermaid.errorDefault": "Mermaid 다이어그램을 렌더링할 수 없습니다.",
   "ui.mermaid.errorEmpty": "Mermaid가 빈 다이어그램을 렌더링했습니다.",

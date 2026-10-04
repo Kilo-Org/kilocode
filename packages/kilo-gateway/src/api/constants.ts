@@ -12,15 +12,6 @@ export const DEFAULT_KILO_API_URL = "https://api.kilo.ai"
 /** Base URL for Kilo API - can be overridden by KILO_API_URL env var */
 export const KILO_API_BASE = process.env[ENV_KILO_API_URL] || DEFAULT_KILO_API_URL
 
-/** Environment variable for custom Kilo Chat URL */
-export const KILO_CHAT_URL_ENV = "KILO_CHAT_URL"
-
-/** Default Kilo Chat URL (REST endpoint for messages, conversations, etc.) */
-export const KILO_DEFAULT_CHAT_URL = "https://chat.kiloapps.io"
-
-/** Base URL for Kilo Chat - can be overridden by KILO_CHAT_URL env var */
-export const KILO_CHAT_URL = process.env[KILO_CHAT_URL_ENV] || KILO_DEFAULT_CHAT_URL
-
 /** Environment variable for custom Event Service URL */
 export const KILO_EVENT_SERVICE_URL_ENV = "EVENT_SERVICE_URL"
 

@@ -71,7 +71,7 @@ export const dict: Record<string, string> = {
   "ui.sessionTurn.error.addCredits": "Aggiungi crediti",
   "dialog.usageExceeded.freeTier.title": "Limite gratuito raggiunto",
   "dialog.usageExceeded.freeTier.description":
-    "Abbonati a Kilo Go per un accesso affidabile ai migliori modelli open source, a partire da 5 $ al mese.", // kilocode_change
+    "Abbonati a Kilo Go per 10 $ al mese e accedi in modo affidabile ai migliori modelli open source.", // kilocode_change
   "dialog.usageExceeded.freeTier.actionLabel": "Iscriviti",
   "dialog.usageExceeded.accountRateLimit.title": "Limite Go raggiunto",
   "dialog.usageExceeded.accountRateLimit.description":
@@ -207,6 +207,10 @@ export const dict: Record<string, string> = {
   "ui.mermaid.copySvg": "Copia SVG",
   "ui.mermaid.download": "Download",
   "ui.mermaid.downloadPng": "Scarica PNG",
+  "ui.mermaid.zoom": "Zoom",
+  "ui.mermaid.zoomIn": "Ingrandisci",
+  "ui.mermaid.zoomOut": "Riduci",
+  "ui.mermaid.zoomReset": "Reimposta zoom",
   "ui.mermaid.downloadSvg": "Scarica SVG",
   "ui.mermaid.errorDefault": "Impossibile renderizzare il diagramma Mermaid.",
   "ui.mermaid.errorEmpty": "Mermaid ha generato un diagramma vuoto.",

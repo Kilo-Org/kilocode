@@ -132,20 +132,26 @@ describe("useFileMention", () => {
         type: "fileSearchResult",
         requestId: "file-search-1",
         dir: "/repo",
-        paths: ["packages/kilo-vscode/src/extension.ts"],
-        items: [{ path: "packages/kilo-vscode/src/extension.ts", type: "opened-file" }],
+        paths: ["/other/src/extension.ts"],
+        items: [{ path: "/other/src/extension.ts", type: "opened-file", root: "other", relative: "src/extension.ts" }],
       })
     }
 
+    const sessions = posted.find((message) => message.type === "requestSessionSearch")
+    if (sessions?.type !== "requestSessionSearch") throw new Error("Expected a session search")
+    for (const handler of handlers) {
+      handler({ type: "sessionSearchResult", requestId: sessions.requestId, sessions: [] })
+    }
+
     expect(mention.mentionResults()).toEqual([
-      { type: "opened-file", value: "packages/kilo-vscode/src/extension.ts" },
+      { type: "opened-file", value: "/other/src/extension.ts", root: "other", relative: "src/extension.ts" },
       FILE_PICKER_RESULT,
     ])
 
     mention.onInput("@ex", 3)
 
     expect(mention.mentionResults()).toEqual([
-      { type: "opened-file", value: "packages/kilo-vscode/src/extension.ts" },
+      { type: "opened-file", value: "/other/src/extension.ts", root: "other", relative: "src/extension.ts" },
       FILE_PICKER_RESULT,
     ])
 
@@ -401,6 +407,59 @@ describe("useFileMention", () => {
     expect(mention.parseFileAttachments("use @anthropic/claude-sonnet-4 for the subagent")).toEqual([])
 
     dispose.fn?.()
+  })
+
+  it("clears an empty draft without catalog work and keeps known mentions for restore", () => {
+    const ctx = { postMessage: () => {}, onMessage: () => () => {} }
+    let reads = 0
+    const keys = () => {
+      reads++
+      return new Set(["anthropic/claude-sonnet-4"])
+    }
+    createRoot((dispose) => {
+      const mention = useFileMention(ctx, undefined, undefined, undefined, keys)
+      const text = "@src/my file.ts @Earlier chat @anthropic/claude-sonnet-4"
+      mention.seedFromText("@anthropic/claude-sonnet-4")
+      mention.seedFromParts(["src/my file.ts"], text)
+      mention.seedSessions([{ id: "ses_earlier", title: "Earlier chat", directory: "/repo", updated: 1 }], text)
+      const count = reads
+
+      mention.seedFromText("")
+      expect(mention.mentionedPaths().size).toBe(0)
+      expect(mention.mentionedSessions().size).toBe(0)
+      expect(mention.mentionedModels().size).toBe(0)
+      const paths = mention.mentionedPaths()
+      const sessions = mention.mentionedSessions()
+      const models = mention.mentionedModels()
+      mention.seedFromText("")
+      expect(mention.mentionedPaths()).toBe(paths)
+      expect(mention.mentionedSessions()).toBe(sessions)
+      expect(mention.mentionedModels()).toBe(models)
+      expect(mention.parseFileAttachments("")).toEqual([])
+      expect(reads).toBe(count)
+
+      mention.onInput(text, text.length)
+      expect([...mention.mentionedPaths()]).toEqual(["src/my file.ts"])
+      expect([...mention.mentionedSessions().keys()]).toEqual(["Earlier chat"])
+      expect([...mention.mentionedModels()]).toEqual(["anthropic/claude-sonnet-4"])
+      dispose()
+    })
+  })
+
+  it("checks known paths without iterating the model catalog", () => {
+    const ctx = { postMessage: () => {}, onMessage: () => () => {} }
+    const catalog = new Set(["anthropic/claude-sonnet-4"])
+    catalog[Symbol.iterator] = () => {
+      throw new Error("Mention classification must not scan the model catalog")
+    }
+    createRoot((dispose) => {
+      const mention = useFileMention(ctx, undefined, undefined, undefined, () => catalog)
+      const text = "@src/file.ts @anthropic/claude-sonnet-4"
+      mention.seedFromParts(["src/file.ts", "anthropic/claude-sonnet-4"], text)
+      expect([...mention.mentionedPaths()]).toEqual(["src/file.ts"])
+      expect([...mention.mentionedModels()]).toEqual(["anthropic/claude-sonnet-4"])
+      dispose()
+    })
   })
 
   it("reclassifies a restored model reference once the catalog loads after seeding", () => {

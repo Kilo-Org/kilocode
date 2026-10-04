@@ -18,11 +18,13 @@ function loadDeps() {
     import("../../../provider/provider"),
     import("../../../effect/runtime-flags"),
     import("ai"),
-  ]).then(([runtime, provider, flags, ai]) => ({
+    import("../../provider/opencode-session-headers"),
+  ]).then(([runtime, provider, flags, ai, headers]) => ({
     AppRuntime: runtime.AppRuntime,
     Provider: provider.Provider,
     RuntimeFlags: flags.RuntimeFlags,
     generateText: ai.generateText,
+    opencodeSessionHeaders: headers.opencodeSessionHeaders,
   }))
 }
 function deps() {
@@ -310,7 +312,7 @@ async function call(
   start: number,
 ): Promise<Omit<Result, "model">> {
   try {
-    const { AppRuntime, RuntimeFlags, generateText } = await deps()
+    const { AppRuntime, RuntimeFlags, generateText, opencodeSessionHeaders } = await deps()
     const language = await lang(model)
     const sessionID = randomUUID()
     const options = ProviderTransform.options({ model, sessionID })
@@ -332,6 +334,7 @@ async function call(
       topP,
       topK,
       providerOptions,
+      headers: opencodeSessionHeaders({ providerID: model.providerID, sessionID }),
     })
 
     return {

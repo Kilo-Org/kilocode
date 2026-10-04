@@ -3,6 +3,7 @@ import { Effect, Layer, Context, Schema } from "effect"
 import { SessionV1 } from "@opencode-ai/core/v1/session"
 import { EventV2Bridge } from "@/event-v2-bridge"
 import { Config } from "@/config/config" // kilocode_change
+import { InstanceState } from "@/effect/instance-state" // kilocode_change
 import { Snapshot } from "../snapshot"
 import { Storage } from "@/storage/storage"
 import { Session } from "./session"
@@ -73,13 +74,17 @@ const layer = Layer.effect(
       // kilocode_change start
       // A fresh snapshot only preserves the state needed for redo. File restoration
       // is possible only when the historical turn retained checkpoint data.
-      const range = all.filter((msg) => msg.info.id >= rev.messageID)
+      const index = all.findIndex((msg) => msg.info.id === rev.messageID)
+      const range = index < 0 ? [] : all.slice(index)
       const checkpoint = patches.length > 0
+      const ctx = yield* InstanceState.context
       rev.workspace = checkpoint
         ? "restored"
-        : (yield* config.get()).snapshot === false
-          ? "snapshots-disabled"
-          : "unavailable"
+        : ctx.project.vcs !== "git"
+          ? "not-a-git-repo"
+          : (yield* config.get()).snapshot === false
+            ? "snapshots-disabled"
+            : "unavailable"
       // kilocode_change end
       rev.snapshot = session.revert?.snapshot ?? (yield* snap.track())
       // kilocode_change start - keep the entire workspace transition atomic
@@ -158,9 +163,13 @@ const layer = Layer.effect(
       const messageID = session.revert.messageID
       const remove = [] as SessionV1.WithParts[]
       let target: SessionV1.WithParts | undefined
-      for (const msg of msgs) {
-        if (msg.info.id < messageID) continue
-        if (msg.info.id > messageID) {
+      const index = msgs.findIndex((msg) => msg.info.id === messageID)
+      if (index < 0) {
+        yield* sessions.clearRevert(sessionID)
+        return
+      }
+      for (const msg of msgs.slice(index)) {
+        if (msg.info.id !== messageID) {
           remove.push(msg)
           continue
         }
