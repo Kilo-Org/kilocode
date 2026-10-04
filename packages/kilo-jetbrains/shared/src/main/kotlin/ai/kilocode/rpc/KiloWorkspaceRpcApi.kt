@@ -46,6 +46,9 @@ interface KiloWorkspaceRpcApi : RemoteApi<Unit> {
     /** Trigger a full reload of workspace data. */
     suspend fun reload(directory: String)
 
+    /** Reload project config, skills, agents, commands, and MCP prompts from disk. */
+    suspend fun reloadCoreSettings(directory: String): Boolean
+
     /** Fetch only the providers and agents needed by Models settings. */
     suspend fun models(directory: String): ModelsWorkspaceDto
 

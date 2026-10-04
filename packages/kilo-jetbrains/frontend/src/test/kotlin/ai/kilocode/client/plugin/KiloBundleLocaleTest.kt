@@ -148,6 +148,17 @@ class KiloBundleLocaleTest : BasePlatformTestCase() {
         }
     }
 
+    fun `test core reload keys are translated in every locale`() {
+        for (locale in LOCALES) {
+            val props = load(locale)
+            for (key in CORE_RELOAD) {
+                val value = props.getProperty(key)
+                assertNotNull("$locale: missing $key", value)
+                assertTrue("$locale: $key is blank", value!!.isNotBlank())
+            }
+        }
+    }
+
     fun `test source bundle literals exist in base bundle`() {
         val base = load("en").stringPropertyNames()
         val missing = bundleKeys().filter { "$" !in it }.filter { it !in base }.sorted()
@@ -403,6 +414,16 @@ class KiloBundleLocaleTest : BasePlatformTestCase() {
             "settings.rules.info",
             "settings.rules.info.more",
             "settings.agentBehavior.description",
+        )
+
+        val CORE_RELOAD = listOf(
+            "prompt.slash.reload",
+            "action.Kilo.ReloadCoreSettings.text",
+            "action.Kilo.ReloadCoreSettings.description",
+            "action.Kilo.ReloadCoreSettings.busy",
+            "action.Kilo.ReloadCoreSettings.failed",
+            "action.Kilo.CoreLifecycle.confirm.title",
+            "action.Kilo.CoreLifecycle.confirm.message",
         )
 
         val RELEASE_7_1_7 = mapOf(

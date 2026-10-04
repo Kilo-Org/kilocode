@@ -96,6 +96,7 @@ export const dict = {
     "Konuşma geri alındı. Bu önceki geri alma için çalışma alanı geri yükleme durumu kullanılamıyor.",
   "revert.banner.workspace.enableSnapshots": "Anlık Görüntüleri Etkinleştir",
   "revert.disabled.agentBusy": "Ajanın bitmesini bekleyin",
+  "revert.error.body": "Depo kullanımda olabilir. Tekrar deneyin veya ayrıntılar için Kilo günlüklerine bakın.",
   "command.session.compact": "Oturumu sıkıştır",
   "command.session.export": "Oturum dökümünü dışa aktar",
 
@@ -203,6 +204,8 @@ export const dict = {
   "prompt.action.send.blocked": "Bekleyen soruyu önce yanıtlayın veya kapatın",
   "prompt.action.send.recording": "Yazıya dök ve gönder",
   "prompt.action.stop": "Durdur",
+  "prompt.action.stop.background": "Ana ajanı durdur. Arka plan ajanları çalışmaya devam eder.",
+  "prompt.agents.show": "Arka plan ajanlarını göster",
   "prompt.action.enhance": "Komutu geliştir",
   "prompt.paste.expand": "Yapıştırılan metni genişletmek için tıklayın",
   "prompt.action.indexing": "İndeksleme ayarları",
@@ -458,6 +461,7 @@ export const dict = {
   "provider.custom.models.toggleImages": "Tüm modeller için görüntüyü aç/kapat",
   "provider.custom.models.remove": "Modeli kaldır",
   "provider.custom.models.add": "Model ekle",
+  "provider.custom.models.fetch.button": "Modelleri getir",
   "provider.custom.models.fetch.authError":
     "Kimlik doğrulama başarısız oldu. Yukarıdaki API anahtarını kontrol edin ve tekrar deneyin.",
   "provider.custom.models.fetch.empty": "Bu sunucuda model bulunamadı.",
@@ -926,6 +930,9 @@ export const dict = {
   "settings.sandboxing.writablePaths.description":
     "Sandığın yazılmasına izin veren ek dosya sistemi yolları (ör. /tmp, /var/log). Sandık etkinken varsayılan yazılabilir yollarla birleştirilir.",
   "settings.experimental.multiProject.title": "Çoklu Proje Agent Manager",
+  "settings.experimental.conversationPromptHistory.title": "Sohbet başına istem geçmişi",
+  "settings.experimental.conversationPromptHistory.description":
+    "İstem geçmişini (ArrowUp/ArrowDown) tüm sohbetlerde tek bir geçmiş paylaşmak yerine her sohbet için ayrı tutun.",
   "settings.experimental.claudeMigration.title": "Claude Code Geçişi",
   "settings.experimental.claudeMigration.description":
     "Desteklenen genel CLAUDE.md talimatlarını, basit becerileri ve devre dışı MCP tanımlarını bir kez içe aktarın. Orijinal Claude dosyaları değiştirilmez; etkinleştirdikten sonra arka ucu yeniden başlatın.",
@@ -1286,14 +1293,12 @@ export const dict = {
   "task.todos.allDone": "{{count}} görev tamamlandı",
   "task.backgroundAgents.running.one": "1 arka plan ajanı",
   "task.backgroundAgents.running.many": "{{count}} arka plan ajanı",
-  "task.backgroundAgents.more": "+{{count}} tane daha",
   "task.backgroundAgents.open": "Arka plan ajanını aç",
   "task.backgroundAgents.openAll": "Tüm arka plan ajanlarını aç",
   "task.backgroundAgents.cancel": "Durdur",
   "task.backgroundAgents.continueInBackground": "Arka planda devam et",
   "task.backgroundAgents.waiting": "Bir arka plan ajanı girişinizi bekliyor",
   "task.backgroundAgents.needsInput": "Giriş gerekli",
-  "task.backgroundAgents.dismiss": "Kapat",
   "task.backgroundAgents.clearFinished": "Tamamlananları temizle",
   "task.backgroundAgents.summary": "{{total}} arka plan ajanından {{running}} tanesi çalışıyor",
   "task.backgroundAgents.status.running": "Çalışıyor",
@@ -1302,6 +1307,8 @@ export const dict = {
   "task.backgroundAgents.status.error": "Hata",
   "task.backgroundAgents.untitled": "Arka plan ajanı",
   "task.backgroundAgents.stopAll": "Tümünü durdur ({{count}})",
+  "task.backgroundAgents.finished": "Arka plan ajanları tamamlandı",
+  "task.stop": "Alt ajanı durdur",
 
   "settings.saveBar.unsavedChanges": "Kaydedilmemiş değişiklikler",
   "settings.saveBar.discard": "Geri Al",
