@@ -70,7 +70,7 @@ Auto-save can use a different model than your main session. By default it runs o
 
 ```jsonc
 {
-  "memory_model": "kilo-auto/small"
+  "memory_model": "kilo/kilo-auto/small"
 }
 ```
 
