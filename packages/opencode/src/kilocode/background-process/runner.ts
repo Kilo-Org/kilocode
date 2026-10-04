@@ -93,7 +93,47 @@ export namespace BackgroundProcessRunner {
     }
   }
 
-  async function descendants(root: number, seen: Map<number, string>, active: boolean) {
+  export type Row = { pid: number; parent: number; birth: string }
+  export type Root = { pid: number; start: number; end?: number }
+
+  // Win32_Process CreationDate as epoch ms. Windows PowerShell 5.1 emits "/Date(ms)/".
+  function time(birth: string) {
+    const ms = /Date\((\d+)\)/.exec(birth)?.[1]
+    return ms ? Number(ms) : Date.parse(birth)
+  }
+
+  // Windows keeps a dead parent's PID in ParentProcessId and reuses PIDs, so a row whose
+  // parent matches a tracked PID is not necessarily its child. A real child is created after
+  // its parent, and a child of the leader is created between spawn and exit. Anything else
+  // belongs to an earlier or later process with the same PID and must not be adopted, or the
+  // runner keeps polling for it and the stop path kills it.
+  export function walk(rows: Row[], seen: Map<number, string>, root?: Root) {
+    const live = new Map(rows.map((item) => [item.pid, item.birth]))
+    const children = new Map<number, Row[]>()
+    for (const row of rows) {
+      children.set(row.parent, [...(children.get(row.parent) ?? []), row])
+    }
+    const result = new Map(Array.from(seen).filter(([pid, birth]) => live.get(pid) === birth))
+    const stack: Root[] = [
+      ...(root ? [root] : []),
+      ...Array.from(result, ([pid, birth]) => ({ pid, start: time(birth) })),
+    ]
+    while (stack.length > 0) {
+      const parent = stack.pop()
+      if (!parent) continue
+      for (const child of children.get(parent.pid) ?? []) {
+        if (result.has(child.pid)) continue
+        const birth = time(child.birth)
+        if (!(birth >= parent.start)) continue
+        if (parent.end !== undefined && birth > parent.end) continue
+        result.set(child.pid, child.birth)
+        stack.push({ pid: child.pid, start: birth })
+      }
+    }
+    return result
+  }
+
+  async function descendants(seen: Map<number, string>, root?: Root) {
     const query =
       "Get-CimInstance Win32_Process | Select-Object ProcessId,ParentProcessId,CreationDate | ConvertTo-Json -Compress"
     const out = await Process.text(["powershell.exe", "-NoProfile", "-NonInteractive", "-Command", query], {
@@ -114,23 +154,7 @@ export namespace BackgroundProcessRunner {
         return []
       return [{ pid: item.ProcessId, parent: item.ParentProcessId, birth: item.CreationDate }]
     })
-    const live = new Map(rows.map((item) => [item.pid, item.birth]))
-    const children = new Map<number, Array<{ pid: number; birth: string }>>()
-    for (const row of rows) {
-      children.set(row.parent, [...(children.get(row.parent) ?? []), { pid: row.pid, birth: row.birth }])
-    }
-    const result = new Map(Array.from(seen).filter(([pid, birth]) => live.get(pid) === birth))
-    const stack = [...(active ? [root] : []), ...result.keys()]
-    while (stack.length > 0) {
-      const pid = stack.pop()
-      if (!pid) continue
-      for (const child of children.get(pid) ?? []) {
-        if (result.has(child.pid)) continue
-        result.set(child.pid, child.birth)
-        stack.push(child.pid)
-      }
-    }
-    return result
+    return walk(rows, seen, root)
   }
 
   // Grace window after the leader exits during which we keep walking from its
@@ -140,7 +164,7 @@ export namespace BackgroundProcessRunner {
   // window lets us capture it before concluding the tree is empty.
   const GRACE = 1_000
 
-  async function windows(input: Input, child: ReturnType<typeof spawn>, done: Promise<number>) {
+  async function windows(input: Input, child: ReturnType<typeof spawn>, done: Promise<number>, start: number) {
     const pid = child.pid
     if (!pid) throw new Error("Background process runner child did not provide a pid")
     let code: number | undefined
@@ -159,7 +183,7 @@ export namespace BackgroundProcessRunner {
     while (true) {
       if (failure) throw failure
       const active = code === undefined || (exited !== undefined && Date.now() - exited < GRACE)
-      seen = await descendants(pid, seen, active)
+      seen = await descendants(seen, active ? { pid, start, end: exited } : undefined)
       if (await Bun.file(input.control).exists()) {
         await Promise.all(
           [pid, ...seen.keys()].map((item) =>
@@ -169,7 +193,7 @@ export namespace BackgroundProcessRunner {
         await rm(input.control, { force: true })
         const end = Date.now() + 5_000
         while (Date.now() < end) {
-          seen = await descendants(pid, seen, false)
+          seen = await descendants(seen)
           if (code !== undefined && seen.size === 0) return code
           await Bun.sleep(100)
         }
@@ -185,6 +209,7 @@ export namespace BackgroundProcessRunner {
     await mkdir(path.dirname(input.log), { recursive: true, mode: 0o700 })
     await Promise.all([Filesystem.write(input.log, "", MODE), rm(input.control, { force: true })])
     const output = await writer(input)
+    const start = Date.now()
     const child = spawn(input.shell, input.args, {
       cwd: input.cwd,
       env: process.env,
@@ -198,7 +223,7 @@ export namespace BackgroundProcessRunner {
       child.once("exit", (code, signal) => resolve(code ?? (signal ? 1 : 0)))
     })
     try {
-      if (process.platform === "win32") return await windows(input, child, done)
+      if (process.platform === "win32") return await windows(input, child, done, start)
       return await done
     } finally {
       await output.close()
