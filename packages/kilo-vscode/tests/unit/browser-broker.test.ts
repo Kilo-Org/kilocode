@@ -820,6 +820,7 @@ describe("BrowserBroker", () => {
         await resize.promise
         order.push("resized")
       },
+      evaluate: async () => undefined,
       screenshot: async () => {
         order.push("screenshot")
         return Buffer.from("jpeg")
@@ -1333,6 +1334,7 @@ describe("BrowserBroker", () => {
       setViewportSize: async (size: { width: number; height: number }) => {
         calls.push({ method: "resize", params: size })
       },
+      evaluate: async () => undefined,
     })
     const broker = fixture(page)
     const route = { projectId: "project", sessionId: "session", directory: "/tmp/project" }

@@ -1,6 +1,6 @@
 {
   "$schema": "https://json.schemastore.org/package.json",
-  "version": "7.8.1",
+  "version": "7.8.3",
   "name": "@kilocode/cli",
   "type": "module",
   "license": "MIT",
@@ -130,8 +130,8 @@
     "@opentui/solid": "catalog:",
     "@parcel/watcher": "2.5.1",
     "@pierre/diffs": "catalog:",
-    "@secretlint/core": "10.2.2",
-    "@secretlint/secretlint-rule-preset-recommend": "10.2.2",
+    "@secretlint/core": "13.0.5",
+    "@secretlint/secretlint-rule-preset-recommend": "13.0.5",
     "@silvia-odwyer/photon-node": "0.3.4",
     "@solid-primitives/event-bus": "1.1.2",
     "@solid-primitives/scheduled": "1.5.2",

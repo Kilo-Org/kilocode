@@ -424,8 +424,8 @@ describe("PromptInput send origin contract", () => {
     const end = source.indexOf("\n  return (", start)
     const body = source.slice(start, end)
     const send = Math.max(body.indexOf("session.sendMessage("), body.indexOf("session.sendCommand("))
-    const clear = body.indexOf("clearDraft(key, draft)")
-    const append = body.lastIndexOf("history.append(value)")
+    const clear = body.indexOf("clearDraft(key, draft, id)")
+    const append = body.lastIndexOf("history.append(value, historyKey)")
     const guard = body.indexOf("if (draftKey() !== key) return")
 
     expect(send).toBeGreaterThan(-1)
@@ -433,6 +433,16 @@ describe("PromptInput send origin contract", () => {
     expect(append).toBeGreaterThan(clear)
     expect(append).toBeLessThan(guard)
     expect(body.indexOf('setText("")', guard)).toBeGreaterThan(guard)
+  })
+
+  it("appends to history against the origin captured before the async attachment resolution, not whatever conversation is active when the send resolves", () => {
+    // `id` (origin ?? pendingId) is captured before the terminal/git awaits, then
+    // threaded through clearDraft into history.append so a completed send always
+    // credits the conversation it was actually sent to.
+    expect(source).toMatch(/clearDraft\(key, draft, id\)/)
+    expect(source).toMatch(
+      /const clearDraft = \(key: string, value\?: string, historyKey\?: string\) => \{[\s\S]*history\.append\(value, historyKey\)/,
+    )
   })
 })
 

@@ -994,6 +994,12 @@ interface OpenFileIn {
   column?: number
 }
 
+interface CopyFilePathIn {
+  type: "agentManager.copyFilePath"
+  sessionId: string
+  filePath: string
+}
+
 interface RequestDocumentIn {
   type: "agentManager.requestDocument"
   sessionId: string
@@ -1330,6 +1336,7 @@ export type AgentManagerInMessage =
   | OpenSessionsIn
   | VisibleSessionIn
   | OpenFileIn
+  | CopyFilePathIn
   | RequestDocumentIn
   | GenericOpenFileIn
   | PreviewImageIn

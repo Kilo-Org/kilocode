@@ -112,6 +112,26 @@ class KiloWorkspaceServiceTest : BasePlatformTestCase() {
         assertEquals(0, rpc.globalConfigPathCalls)
     }
 
+    fun `test reloadCoreSettings calls core for the requested workspace`() = runBlocking {
+        var result: CoreReloadResult? = null
+
+        service.reloadCoreSettings("/test worktree") { result = it }.join()
+        pumpEdt()
+
+        assertEquals(listOf("/test worktree"), rpc.coreReloads.toList())
+        assertEquals(CoreReloadResult.SUCCESS, result)
+    }
+
+    fun `test reloadCoreSettings reports an active session conflict`() = runBlocking {
+        rpc.coreReloadResult = false
+        var result: CoreReloadResult? = null
+
+        service.reloadCoreSettings("/test") { result = it }.join()
+        pumpEdt()
+
+        assertEquals(CoreReloadResult.BUSY, result)
+    }
+
     fun `test comparison wrappers preserve contents and patches flags`() = runBlocking {
         val base = DiffFileDto("src/Base.kt", 1, 1, before = "base", after = "head")
         val local = DiffFileDto("src/Local.kt", 2, 1, before = "head", after = "working")
