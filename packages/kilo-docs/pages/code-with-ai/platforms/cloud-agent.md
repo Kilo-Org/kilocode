@@ -50,6 +50,10 @@ If a compute billing check fails, follow the recovery action next to the compose
 
 Automatic commit and push depends on your session settings. If it is disabled, review, commit, and push the changes you want to keep.
 
+## Queueing follow-up messages
+
+The composer stays editable while a session is being prepared or finalized, so you can keep typing and send follow-up messages without waiting for the current turn to finish. Sent messages are queued and processed in order, and the composer shows the current phase while it waits. While a session is still loading, when its connection is unresolved, or when a chat is read-only, the composer does not accept submissions, but anything you have typed is preserved.
+
 ## Starting Tasks from the CLI
 
 Use the `kilo cloud` command to run Cloud Agent tasks without opening the browser:
