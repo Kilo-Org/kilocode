@@ -878,6 +878,14 @@ export class AgentManagerProvider implements Disposable {
       this.openWorktreeFile(m.sessionId, m.filePath, m.line, m.column)
       return null
     }
+    if (m.type === "agentManager.copyFilePath") {
+      const target = resolveWorktreeFile(this.getStateManager(), m.sessionId, m.filePath, this.getRoot())
+      if (target)
+        void Promise.resolve(this.host.copyToClipboard(target)).catch((err) =>
+          this.log("Failed to copy file path:", err instanceof Error ? err.message : String(err)),
+        )
+      return null
+    }
     if (m.type === "agentManager.requestDocument") return this.diffs.document(m.sessionId, m.file, m.contextKey)
   }
 

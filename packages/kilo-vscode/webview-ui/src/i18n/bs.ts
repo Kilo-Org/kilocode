@@ -96,6 +96,7 @@ export const dict = {
     "Razgovor je vraćen. Status vraćanja radnog prostora nije dostupan za ovo ranije vraćanje.",
   "revert.banner.workspace.enableSnapshots": "Omogući snimke stanja",
   "revert.disabled.agentBusy": "Sačekajte da agent završi",
+  "revert.error.body": "Repozitorij je možda u upotrebi. Pokušajte ponovo ili pogledajte Kilo zapise za detalje.",
   "command.session.compact": "Sažmi sesiju",
   "command.session.export": "Izvezi transkript sesije",
 
@@ -204,6 +205,8 @@ export const dict = {
   "prompt.action.send.blocked": "Prvo odgovorite ili odbacite pitanje na čekanju",
   "prompt.action.send.recording": "Transkribuj i pošalji",
   "prompt.action.stop": "Zaustavi",
+  "prompt.action.stop.background": "Zaustavi glavnog agenta. Agenti u pozadini nastavljaju raditi.",
+  "prompt.agents.show": "Prikaži agente u pozadini",
   "prompt.action.enhance": "Poboljšaj prompt",
   "prompt.paste.expand": "Kliknite da proširite zalijepljeni tekst",
   "prompt.action.autoApprove.enable": "Uključi automatsko odobravanje",
@@ -512,6 +515,7 @@ export const dict = {
   "provider.custom.models.toggleImages": "Uključi/isključi slike za sve",
   "provider.custom.models.remove": "Ukloni model",
   "provider.custom.models.add": "Dodaj model",
+  "provider.custom.models.fetch.button": "Dohvati modele",
   "provider.custom.models.fetch.authError":
     "Autentifikacija nije uspjela. Provjerite API ključ iznad i pokušajte ponovo.",
   "provider.custom.models.fetch.empty": "Nisu pronađeni modeli na ovom serveru.",
@@ -936,6 +940,9 @@ export const dict = {
   "settings.sandboxing.writablePaths.description":
     "Dodatne putanje sistema datoteka u koje sandbox dozvoljava upis (npr. /tmp, /var/log). Spajaju se sa zadanim upisivim putanjama kada je sandbox aktivan.",
   "settings.experimental.multiProject.title": "Višeprojektni Agent Manager",
+  "settings.experimental.conversationPromptHistory.title": "Historija upita po razgovoru",
+  "settings.experimental.conversationPromptHistory.description":
+    "Čuvajte historiju upita (ArrowUp/ArrowDown) zasebno za svaki razgovor umjesto da dijelite jednu historiju među svim razgovorima.",
   "settings.experimental.claudeMigration.title": "Claude Code migracija",
   "settings.experimental.claudeMigration.description":
     "Jednom uvezite podržane globalne CLAUDE.md upute, jednostavne vještine i onemogućene MCP definicije. Originalne Claude datoteke ostaju nepromijenjene; ponovo pokrenite backend nakon uključivanja.",
@@ -1318,14 +1325,12 @@ export const dict = {
   "task.todos.allDone": "{{count}} zadataka završeno",
   "task.backgroundAgents.running.one": "1 agent u pozadini",
   "task.backgroundAgents.running.many": "{{count}} agenata u pozadini",
-  "task.backgroundAgents.more": "+{{count}} još",
   "task.backgroundAgents.open": "Otvori agenta u pozadini",
   "task.backgroundAgents.openAll": "Otvori sve agente u pozadini",
   "task.backgroundAgents.cancel": "Zaustavi",
   "task.backgroundAgents.continueInBackground": "Nastavi u pozadini",
   "task.backgroundAgents.waiting": "Agent u pozadini treba vaš unos",
   "task.backgroundAgents.needsInput": "Potreban unos",
-  "task.backgroundAgents.dismiss": "Odbaci",
   "task.backgroundAgents.clearFinished": "Obriši završene",
   "task.backgroundAgents.summary": "{{running}} od {{total}} agenata u pozadini radi",
   "task.backgroundAgents.status.running": "Radi",
@@ -1334,6 +1339,8 @@ export const dict = {
   "task.backgroundAgents.status.error": "Greška",
   "task.backgroundAgents.untitled": "Agent u pozadini",
   "task.backgroundAgents.stopAll": "Zaustavi sve ({{count}})",
+  "task.backgroundAgents.finished": "Agenti u pozadini su završili",
+  "task.stop": "Zaustavi podagenta",
   "settings.saveBar.unsavedChanges": "Nespremljene promjene",
   "settings.saveBar.discard": "Odbaci",
   "settings.saveBar.save": "Spremi",
