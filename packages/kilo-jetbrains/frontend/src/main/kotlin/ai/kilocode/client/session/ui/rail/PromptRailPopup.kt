@@ -63,6 +63,9 @@ internal class PromptRailPopup(
             // A prompt and the start of its answer both need their own line, and the answer wraps.
             height = ActiveListRowHeight.PREFERRED,
             wrapDescription = true,
+            // The row already shows the answer preview it would repeat, and a tooltip inside a balloon
+            // that itself opened on hover reads as a surface stacked on a surface.
+            tooltip = false,
         ),
         showSearch = false,
         // Left at open-on-click so a single click reaches onOpen. With it off, ActiveListView's click
@@ -75,15 +78,17 @@ internal class PromptRailPopup(
         update(items.map(::row))
     }
 
+    // Labelled for screen readers but deliberately without tooltips: the navigator opens on hover, so a
+    // tooltip here would pop a second floating surface over the card the pointer is already inside.
     private val first = HoverIcon().apply {
         icon = AllIcons.Actions.MoveUp
-        toolTipText = KiloBundle.message("session.prompts.first")
+        accessibleContext.accessibleName = KiloBundle.message("session.prompts.first")
         addActionListener { onFirst() }
     }
 
     private val latest = HoverIcon().apply {
         icon = AllIcons.Actions.MoveDown
-        toolTipText = KiloBundle.message("session.prompts.latest")
+        accessibleContext.accessibleName = KiloBundle.message("session.prompts.latest")
         addActionListener { onLatest() }
     }
 
@@ -133,12 +138,24 @@ internal class PromptRailPopup(
     }
 
     /**
-     * Highlights the prompt at [index] and brings its row into view. Safe before the balloon has been
-     * laid out and safe to repeat with the same row, so it can be called on every tick hover.
+     * Highlights the prompt at [index], and brings its row into view when [scroll] is set. Safe before
+     * the balloon has been laid out and safe to repeat with the same row, so it can be called on every
+     * tick hover.
+     *
+     * Clicking a row passes `scroll = false`. The row was reachable under the pointer, so moving the
+     * list to re-centre it would shift the content out from under a deliberate click; the list is only
+     * scrolled for navigation the user cannot aim, which is a tick hover or a first/latest jump.
      */
     @RequiresEdt
-    fun select(index: Int) {
-        if (index !in items.indices) return
+    fun select(index: Int, scroll: Boolean = true) {
+        val key = items.getOrNull(index)?.id ?: return
+        if (!scroll) {
+            // Also drops any deferred reveal, so an earlier request cannot fire on the next layout and
+            // move the list after the click.
+            pending = -1
+            rows.select(key, scroll = false)
+            return
+        }
         pending = index
         reveal()
     }

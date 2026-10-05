@@ -123,6 +123,49 @@ class PromptRailPopupTest : BasePlatformTestCase() {
     }
 
     /**
+     * A clicked row was reachable under the pointer, so the list must not move: re-centring it would
+     * shift content out from under a deliberate click. Only tick hovers and the buttons scroll it.
+     */
+    fun `test selecting without scroll highlights but never moves the list`() {
+        val fix = shown(40)
+        val list = findList(fix.popup.component) ?: error("expected a JList of rows")
+
+        // Park the list somewhere mid-range so a re-centre would be visible either way.
+        fix.popup.select(20)
+        val parked = fix.port.viewPosition
+
+        // A row far outside the view: still no movement, because the click came from the user.
+        fix.popup.select(39, scroll = false)
+        assertEquals(39, list.selectedIndex)
+        assertEquals("a clicked row must not move the list", parked, fix.port.viewPosition)
+
+        fix.popup.select(0, scroll = false)
+        assertEquals(0, list.selectedIndex)
+        assertEquals(parked, fix.port.viewPosition)
+
+        // A later layout must not replay a reveal the click suppressed.
+        layoutAll(fix.popup.component)
+        assertEquals(parked, fix.port.viewPosition)
+
+        Disposer.dispose(fix.popup.disposable)
+    }
+
+    /** The navigator opens on hover, so a tooltip would stack a second floating surface over it. */
+    fun `test the popup shows no tooltips`() {
+        val fix = shown(40)
+        val list = findList(fix.popup.component) ?: error("expected a JList of rows")
+
+        assertNull(list.toolTipText)
+        for (button in findButtons(fix.popup.component)) {
+            assertNull("header buttons must not carry a tooltip", button.toolTipText)
+            // Still labelled for screen readers.
+            assertNotNull(button.accessibleContext.accessibleName)
+        }
+
+        Disposer.dispose(fix.popup.disposable)
+    }
+
+    /**
      * The header buttons have to drive the same navigation the ticks do. Scrolling the transcript alone
      * would leave the open card pointing at whichever row was last hovered.
      */

@@ -228,19 +228,19 @@ internal class PromptRailController(
     }
 
     /**
-     * Navigates to the prompt at [index]: scrolls the transcript to it, and moves the navigator with it
-     * so the list highlights and reveals that row and the rail emphasises its tick.
+     * Navigates to the prompt at [index]: scrolls the transcript to it, highlights its row, and moves
+     * the rail's tick emphasis to it. [scroll] additionally brings the row into view in the list.
      *
      * The first/latest buttons and a row click all route through here. Scrolling the transcript alone
      * would leave the open card still pointing at whichever row the pointer last hovered, so the
      * navigator would disagree with what the transcript is showing.
      */
     @RequiresEdt
-    private fun go(index: Int) {
+    private fun go(index: Int, scroll: Boolean = true) {
         val item = rail.items().getOrNull(index) ?: return
         pending = index
         rail.setOpen(tick(index))
-        body?.select(index)
+        body?.select(index, scroll)
         jump(item.id)
     }
 
@@ -281,7 +281,9 @@ internal class PromptRailController(
             PromptRailPopup(
                 items = rail.items(),
                 hovered = pending,
-                onSelect = { item -> go(rail.items().indexOfFirst { it.id == item.id }) },
+                // A clicked row is already under the pointer, so it is navigated to without moving the
+                // list; only the buttons and tick hovers, which the user cannot aim, scroll it.
+                onSelect = { item -> go(rail.items().indexOfFirst { it.id == item.id }, scroll = false) },
                 onFirst = { go(0) },
                 onLatest = { go(rail.items().lastIndex) },
             ).also { built ->
