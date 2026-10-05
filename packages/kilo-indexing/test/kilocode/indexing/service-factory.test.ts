@@ -181,6 +181,12 @@ describe("CodeIndexServiceFactory", () => {
     expect(store.dbPath).toContain(dir)
   })
 
+  test("requires a Valkey URL for the Valkey vector store", () => {
+    const factory = createFactory({ vectorStoreProvider: "valkey", valkeyUrl: undefined })
+
+    expect(() => factory.createVectorStore()).toThrow("Valkey URL is required.")
+  })
+
   test("passes configured dimension to Ollama embed requests", async () => {
     const fn = mock(() =>
       Promise.resolve({

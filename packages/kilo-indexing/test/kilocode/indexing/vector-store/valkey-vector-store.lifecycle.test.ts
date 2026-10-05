@@ -408,19 +408,6 @@ describe("ValkeyVectorStore - Lifecycle, Metadata, Error Handling, and Service F
       // Collection name is deterministic based on workspace path
       expect(store.getCollectionName()).toMatch(/^ws-[a-f0-9]{16}$/)
     })
-
-    test("service factory throws when valkeyUrl is missing", () => {
-      // This tests the factory's validation logic inline
-      // The factory does: if (!config.valkeyUrl) throw new Error("Valkey URL is required.")
-      const createVectorStoreWithMissingUrl = () => {
-        const config = { vectorStoreProvider: "valkey" as const, valkeyUrl: undefined }
-        if (!config.valkeyUrl) {
-          throw new Error("Valkey URL is required.")
-        }
-      }
-
-      expect(createVectorStoreWithMissingUrl).toThrow("Valkey URL is required.")
-    })
   })
 
   describe("Client lifecycle", () => {
