@@ -431,9 +431,13 @@ async function showValkeySettings(
   // Only persist password if the user explicitly typed a new one.
   // An empty submission preserves the existing project-local value (if any)
   // without copying an inherited global password into the project config.
+  // The URL follows the same rule: an unchanged inherited URL (which may embed
+  // credentials) is left inherited rather than copied into this scope.
   const trimmed = password.trim()
+  const next = url.trim() || undefined
+  const inherited = raw.valkey?.url === undefined && next === currentSettings.url
   const valkey: NonNullable<IndexingConfig["valkey"]> = {
-    url: url.trim() || undefined,
+    url: inherited ? undefined : next,
   }
   if (trimmed) {
     valkey.password = trimmed
