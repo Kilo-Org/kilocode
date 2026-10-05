@@ -771,6 +771,7 @@ export const dict = {
   "ui.sessionTurn.status.consideringNextSteps": "Sonraki adımları değerlendiriyor...",
 
   "dialog.model.noProviders": "Sağlayıcı yok",
+  "dialog.model.unavailable": "Kilo modelleri kullanılamıyor",
 
   "prompt.placeholder.connecting": "Sunucuya bağlanılıyor...",
   "prompt.placeholder.default":
@@ -929,15 +930,12 @@ export const dict = {
   "settings.sandboxing.writablePaths.title": "Ek Yazılabilir Yollar",
   "settings.sandboxing.writablePaths.description":
     "Sandığın yazılmasına izin veren ek dosya sistemi yolları (ör. /tmp, /var/log). Sandık etkinken varsayılan yazılabilir yollarla birleştirilir.",
-  "settings.experimental.multiProject.title": "Çoklu Proje Agent Manager",
   "settings.experimental.conversationPromptHistory.title": "Sohbet başına istem geçmişi",
   "settings.experimental.conversationPromptHistory.description":
     "İstem geçmişini (ArrowUp/ArrowDown) tüm sohbetlerde tek bir geçmiş paylaşmak yerine her sohbet için ayrı tutun.",
   "settings.experimental.claudeMigration.title": "Claude Code Geçişi",
   "settings.experimental.claudeMigration.description":
     "Desteklenen genel CLAUDE.md talimatlarını, basit becerileri ve devre dışı MCP tanımlarını bir kez içe aktarın. Orijinal Claude dosyaları değiştirilmez; etkinleştirdikten sonra arka ucu yeniden başlatın.",
-  "settings.experimental.multiProject.description":
-    "Agent Manager'da birden fazla depo genelinde oturum ve worktree yönetimini etkinleştirin. Mevcut çalışma alanı deposu her zaman varsayılan projedir.",
   "settings.experimental.mcpTimeout.title": "MCP Zaman Aşımı (ms)",
   "settings.experimental.mcpTimeout.description": "MCP sunucu istekleri için milisaniye cinsinden zaman aşımı",
   "settings.experimental.remote.title": "Remote Kontrolü",

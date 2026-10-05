@@ -713,6 +713,7 @@ export const dict = {
   "ui.sessionTurn.status.consideringNextSteps": "正在考慮下一步...",
 
   "dialog.model.noProviders": "沒有供應商",
+  "dialog.model.unavailable": "Kilo 模型無法使用",
 
   "prompt.placeholder.connecting": "正在連線至伺服器...",
   "prompt.placeholder.error": "連線失敗。請檢查輸出面板或重新啟動擴充功能。",
@@ -857,15 +858,12 @@ export const dict = {
   "settings.sandboxing.writablePaths.title": "額外可寫路徑",
   "settings.sandboxing.writablePaths.description":
     "沙盒允許寫入的額外檔案系統路徑（例如 /tmp、/var/log）。沙盒啟用後，這些路徑會與預設可寫路徑合併。",
-  "settings.experimental.multiProject.title": "多專案 Agent Manager",
   "settings.experimental.conversationPromptHistory.title": "依對話區分的提示歷史",
   "settings.experimental.conversationPromptHistory.description":
     "為每個對話單獨保存提示歷史(ArrowUp/ArrowDown),而不是在所有對話間共用同一份。",
   "settings.experimental.claudeMigration.title": "Claude Code 遷移",
   "settings.experimental.claudeMigration.description":
     "一次性匯入受支援的全域 CLAUDE.md 指示、簡單技能和已停用的 MCP 定義。不會修改原始 Claude 檔案；啟用後請重新啟動後端。",
-  "settings.experimental.multiProject.description":
-    "在 Agent Manager 中啟用跨多個儲存庫的工作階段和工作樹管理。當前工作區儲存庫始終是預設專案。",
   "settings.experimental.mcpTimeout.title": "MCP 逾時（毫秒）",
   "settings.experimental.mcpTimeout.description": "MCP 伺服器請求的逾時時間（毫秒）",
   "settings.experimental.remote.title": "Remote 控制",

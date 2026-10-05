@@ -767,6 +767,7 @@ export const dict = {
   "ui.sessionTurn.status.consideringNextSteps": "...جارٍ التفكير في الخطوات التالية",
 
   "dialog.model.noProviders": "لا يوجد موفرون",
+  "dialog.model.unavailable": "نماذج Kilo غير متاحة",
 
   "prompt.placeholder.connecting": "جارٍ الاتصال بالخادم...",
   "prompt.placeholder.error": "فشل الاتصال. تحقق من لوحة الإخراج أو أعد تشغيل الإضافة.",
@@ -915,15 +916,12 @@ export const dict = {
   "settings.sandboxing.writablePaths.title": "مسارات قابلة للكتابة إضافية",
   "settings.sandboxing.writablePaths.description":
     "مسارات نظام ملفات إضافية يسمح صندوق الرمل بالكتابة إليها (مثل /tmp، /var/log). يتم دمجها مع مسارات الكتابة الافتراضية عندما يكون صندوق الرمل نشطًا.",
-  "settings.experimental.multiProject.title": "إدارة متعددة المشاريع",
   "settings.experimental.conversationPromptHistory.title": "سجل مطالبات لكل محادثة",
   "settings.experimental.conversationPromptHistory.description":
     "إبقاء سجل مطالبات الإدخال (استدعاء بالسهمين لأعلى/لأسفل) منفصلاً لكل محادثة بدلاً من مشاركة سجل واحد بين جميع المحادثات.",
   "settings.experimental.claudeMigration.title": "ترحيل Claude Code",
   "settings.experimental.claudeMigration.description":
     "استورد مرة واحدة تعليمات CLAUDE.md العامة المدعومة والمهارات البسيطة وتعريفات MCP المعطلة. تبقى ملفات Claude الأصلية دون تغيير؛ أعد تشغيل الخلفية بعد التفعيل.",
-  "settings.experimental.multiProject.description":
-    "تفعيل إدارة الجلسات وأشجار العمل عبر مستودعات متعددة في Agent Manager. المستودع الحالي هو دائمًا المشروع الافتراضي.",
   "settings.experimental.mcpTimeout.title": "مهلة MCP (مللي ثانية)",
   "settings.experimental.mcpTimeout.description": "مهلة طلبات خادم MCP بالمللي ثانية",
   "settings.experimental.remote.title": "التحكم Remote",

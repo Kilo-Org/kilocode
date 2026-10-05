@@ -773,6 +773,7 @@ export const dict = {
   "ui.sessionTurn.status.consideringNextSteps": "กำลังพิจารณาขั้นตอนถัดไป...",
 
   "dialog.model.noProviders": "ไม่มีผู้ให้บริการ",
+  "dialog.model.unavailable": "ไม่สามารถใช้โมเดล Kilo ได้",
 
   "prompt.placeholder.connecting": "กำลังเชื่อมต่อกับเซิร์ฟเวอร์...",
   "prompt.placeholder.error": "การเชื่อมต่อล้มเหลว ตรวจสอบแผงเอาต์พุตหรือรีสตาร์ทส่วนขยาย",
@@ -924,15 +925,12 @@ export const dict = {
   "settings.sandboxing.writablePaths.title": "เส้นทางที่เขียนได้เพิ่มเติม",
   "settings.sandboxing.writablePaths.description":
     "เส้นทางระบบไฟล์เพิ่มเติมที่แซนด์บ็อกซ์อนุญาตให้เขียนได้ (เช่น /tmp, /var/log) จะถูกรวมเข้ากับเส้นทางที่เขียนได้เริ่มต้นเมื่อแซนด์บ็อกซ์เปิดใช้งาน",
-  "settings.experimental.multiProject.title": "Agent Manager หลายโปรเจกต์",
   "settings.experimental.conversationPromptHistory.title": "ประวัติพรอมต์แยกตามการสนทนา",
   "settings.experimental.conversationPromptHistory.description":
     "แยกประวัติพรอมต์ (ArrowUp/ArrowDown) ตามแต่ละการสนทนา แทนการใช้ประวัติเดียวร่วมกันในทุกการสนทนา",
   "settings.experimental.claudeMigration.title": "การย้าย Claude Code",
   "settings.experimental.claudeMigration.description":
     "นำเข้าคำสั่ง CLAUDE.md ระดับโลกที่รองรับ ทักษะอย่างง่าย และคำจำกัดความ MCP ที่ปิดใช้งานเพียงครั้งเดียว ไฟล์ Claude ต้นฉบับจะไม่ถูกแก้ไข ให้เริ่มแบ็กเอนด์ใหม่หลังเปิดใช้งาน",
-  "settings.experimental.multiProject.description":
-    "เปิดใช้งานการจัดการเซสชันและเวิร์กทรีข้ามหลาย Repository ใน Agent Manager Repository ของ workspace ปัจจุบันเป็นโปรเจกต์เริ่มต้นเสมอ",
   "settings.experimental.mcpTimeout.title": "หมดเวลา MCP (มิลลิวินาที)",
   "settings.experimental.mcpTimeout.description": "หมดเวลาสำหรับคำขอเซิร์ฟเวอร์ MCP เป็นมิลลิวินาที",
   "settings.experimental.remote.title": "การควบคุม Remote",

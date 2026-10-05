@@ -213,8 +213,12 @@ html[data-theme="kilo-vscode"] [data-component="tool-part-wrapper"][data-part-ty
       overflow: visible;
       clip-path: inset(0 -6px);
 
+      /* min-width: 0 keeps the grid track at the card width. Otherwise the track
+         grows to the content's min-content width, so wide code blocks get
+         clipped instead of scrolling, and tables collapse to one letter per line. */
       > * {
         min-height: 0;
+        min-width: 0;
       }
     }
 
@@ -411,6 +415,20 @@ html[data-theme="kilo-vscode"] [data-component="tool-part-wrapper"][data-part-ty
 
     [data-component="markdown"] :is(a, code, span, [data-highlight="file"]) {
       color: inherit;
+    }
+
+    /* Tool output inherits word-break: break-word, which would let table cells
+       shrink to a single character. Wrap only at spaces so wide tables scroll. */
+    table {
+      margin: 0;
+      scrollbar-width: thin;
+      scrollbar-color: var(--border-weak-base) transparent;
+    }
+
+    :is(th, td) {
+      padding: 6px 12px 6px 0;
+      word-break: normal;
+      overflow-wrap: normal;
     }
   }
 

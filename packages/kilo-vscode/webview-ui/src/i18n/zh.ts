@@ -753,6 +753,7 @@ export const dict = {
   "ui.sessionTurn.status.consideringNextSteps": "正在考虑下一步...",
 
   "dialog.model.noProviders": "无供应商",
+  "dialog.model.unavailable": "Kilo 模型不可用",
 
   "prompt.placeholder.connecting": "正在连接服务器...",
   "prompt.placeholder.error": "连接失败。请检查输出面板或重启扩展。",
@@ -897,15 +898,12 @@ export const dict = {
   "settings.sandboxing.writablePaths.title": "额外可写路径",
   "settings.sandboxing.writablePaths.description":
     "沙盒允许写入的额外文件系统路径（例如 /tmp、/var/log）。沙盒启用后，这些路径会与默认可写路径合并。",
-  "settings.experimental.multiProject.title": "多项目 Agent Manager",
   "settings.experimental.conversationPromptHistory.title": "按对话区分的提示历史",
   "settings.experimental.conversationPromptHistory.description":
     "为每个对话单独保存提示历史(ArrowUp/ArrowDown),而不是在所有对话间共享同一份。",
   "settings.experimental.claudeMigration.title": "Claude Code 迁移",
   "settings.experimental.claudeMigration.description":
     "一次性导入受支持的全局 CLAUDE.md 指令、简单技能和已禁用的 MCP 定义。不会修改原始 Claude 文件；启用后请重启后端。",
-  "settings.experimental.multiProject.description":
-    "在 Agent Manager 中启用跨多个仓库的会话和工作树管理。当前工作区仓库始终是默认项目。",
   "settings.experimental.mcpTimeout.title": "MCP 超时（毫秒）",
   "settings.experimental.mcpTimeout.description": "MCP 服务器请求的超时时间（毫秒）",
   "settings.experimental.remote.title": "Remote 控制",

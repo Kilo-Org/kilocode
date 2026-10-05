@@ -759,6 +759,7 @@ export const dict = {
   "ui.sessionTurn.status.consideringNextSteps": "Considering next steps...",
 
   "dialog.model.noProviders": "No providers",
+  "dialog.model.unavailable": "Kilo models unavailable",
 
   "prompt.placeholder.connecting": "Connecting to server...",
   "prompt.placeholder.default": "Type a message, @ to mention files... (Enter to send, Shift+Enter for new line)",
@@ -921,9 +922,6 @@ export const dict = {
   "settings.sandboxing.writablePaths.title": "Additional Writable Paths",
   "settings.sandboxing.writablePaths.description":
     "Extra filesystem paths the sandbox allows writes to (e.g. /tmp, /var/log). These are merged with the default writable paths when the sandbox is active.",
-  "settings.experimental.multiProject.title": "Multi-Project Agent Manager",
-  "settings.experimental.multiProject.description":
-    "Enable managing sessions and worktrees across multiple repositories in Agent Manager. The current workspace repository is always the default project.",
   "settings.experimental.browserAutomation.title": "Integrated Browser",
   "settings.experimental.browserAutomation.description":
     "Preview local applications and public HTTPS pages in Agent Manager and expose the browser_open tool to Agent Manager sessions.",

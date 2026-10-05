@@ -795,6 +795,7 @@ export const dict = {
   "ui.sessionTurn.status.consideringNextSteps": "Überlege nächste Schritte...",
 
   "dialog.model.noProviders": "Keine Anbieter",
+  "dialog.model.unavailable": "Kilo-Modelle nicht verfügbar",
 
   "prompt.placeholder.connecting": "Verbindung zum Server wird hergestellt...",
   "prompt.placeholder.error":
@@ -959,15 +960,12 @@ export const dict = {
   "settings.sandboxing.writablePaths.title": "Zusätzliche schreibbare Pfade",
   "settings.sandboxing.writablePaths.description":
     "Zusätzliche Dateisystempfade, in die die Sandbox Schreibvorgänge erlaubt (z. B. /tmp, /var/log). Diese werden mit den Standard-Schreibpfaden zusammengeführt, wenn die Sandbox aktiv ist.",
-  "settings.experimental.multiProject.title": "Multi-Projekt Agent Manager",
   "settings.experimental.conversationPromptHistory.title": "Prompt-Verlauf pro Unterhaltung",
   "settings.experimental.conversationPromptHistory.description":
     "Den Prompt-Verlauf (ArrowUp/ArrowDown) für jede Unterhaltung getrennt halten, statt einen gemeinsamen Verlauf für alle Unterhaltungen zu nutzen.",
   "settings.experimental.claudeMigration.title": "Claude-Code-Migration",
   "settings.experimental.claudeMigration.description":
     "Unterstützte globale CLAUDE.md-Anweisungen, einfache Skills und deaktivierte MCP-Definitionen einmalig importieren. Originale Claude-Dateien bleiben unverändert; Backend nach dem Aktivieren neu starten.",
-  "settings.experimental.multiProject.description":
-    "Aktivieren Sie die Verwaltung von Sitzungen und Worktrees über mehrere Repositories im Agent Manager. Das aktuelle Workspace-Repository ist immer das Standardprojekt.",
   "settings.experimental.mcpTimeout.title": "MCP-Zeitlimit (ms)",
   "settings.experimental.mcpTimeout.description": "Zeitlimit für MCP-Server-Anfragen in Millisekunden",
   "settings.experimental.remote.title": "Remote-Steuerung",

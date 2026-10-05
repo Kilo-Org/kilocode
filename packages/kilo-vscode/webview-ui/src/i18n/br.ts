@@ -786,6 +786,7 @@ export const dict = {
   "ui.sessionTurn.status.consideringNextSteps": "Considerando próximos passos...",
 
   "dialog.model.noProviders": "Nenhum provedor",
+  "dialog.model.unavailable": "Modelos Kilo indisponíveis",
 
   "prompt.placeholder.connecting": "Conectando ao servidor...",
   "prompt.placeholder.error": "Conexão falhou. Verifique o painel de saída ou reinicie a extensão.",
@@ -947,15 +948,12 @@ export const dict = {
   "settings.sandboxing.writablePaths.title": "Caminhos graváveis adicionais",
   "settings.sandboxing.writablePaths.description":
     "Caminhos adicionais do sistema de arquivos onde o sandbox permite gravação (por exemplo, /tmp, /var/log). Eles são mesclados com os caminhos graváveis padrão quando o sandbox está ativo.",
-  "settings.experimental.multiProject.title": "Agent Manager Multi-Projeto",
   "settings.experimental.conversationPromptHistory.title": "Histórico de prompts por conversa",
   "settings.experimental.conversationPromptHistory.description":
     "Mantenha o histórico de prompts (ArrowUp/ArrowDown) separado para cada conversa, em vez de compartilhar um único histórico entre todas as conversas.",
   "settings.experimental.claudeMigration.title": "Migração do Claude Code",
   "settings.experimental.claudeMigration.description":
     "Importe uma vez instruções globais CLAUDE.md compatíveis, habilidades simples e definições MCP desativadas. Os arquivos originais do Claude permanecem inalterados; reinicie o backend após ativar.",
-  "settings.experimental.multiProject.description":
-    "Ativar gerenciamento de sessões e worktrees em múltiplos repositórios no Agent Manager. O repositório do workspace atual é sempre o projeto padrão.",
   "settings.experimental.mcpTimeout.title": "Tempo limite MCP (ms)",
   "settings.experimental.mcpTimeout.description": "Tempo limite para solicitações do servidor MCP em milissegundos",
   "settings.experimental.remote.title": "Controle Remote",

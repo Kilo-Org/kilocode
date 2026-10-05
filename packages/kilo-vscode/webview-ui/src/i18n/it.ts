@@ -653,6 +653,7 @@ export const dict = {
   "ui.sessionTurn.status.thinking": "Sto pensando...",
   "ui.sessionTurn.status.consideringNextSteps": "Valutazione prossimi passi...",
   "dialog.model.noProviders": "Nessun provider",
+  "dialog.model.unavailable": "Modelli Kilo non disponibili",
   "prompt.placeholder.connecting": "Connessione al server...",
   "prompt.placeholder.default":
     "Scrivi un messaggio, @ per menzionare i file... (Invio per inviare, Maiusc+Invio per nuova riga)",
@@ -786,15 +787,12 @@ export const dict = {
   "settings.sandboxing.writablePaths.title": "Percorsi di scrittura aggiuntivi",
   "settings.sandboxing.writablePaths.description":
     "Percorsi aggiuntivi del file system in cui la sandbox consente la scrittura (es. /tmp, /var/log). Vengono uniti con i percorsi di scrittura predefiniti quando la sandbox è attiva.",
-  "settings.experimental.multiProject.title": "Agent Manager Multi-Progetto",
   "settings.experimental.conversationPromptHistory.title": "Cronologia dei prompt per conversazione",
   "settings.experimental.conversationPromptHistory.description":
     "Mantieni la cronologia dei prompt (ArrowUp/ArrowDown) separata per ogni conversazione invece di condividerne una sola tra tutte le conversazioni.",
   "settings.experimental.claudeMigration.title": "Migrazione Claude Code",
   "settings.experimental.claudeMigration.description":
     "Importa una volta le istruzioni globali CLAUDE.md supportate, le competenze semplici e le definizioni MCP disabilitate. I file Claude originali restano invariati; riavvia il backend dopo l'attivazione.",
-  "settings.experimental.multiProject.description":
-    "Abilita la gestione di sessioni e worktree su più repository in Agent Manager. Il repository dell'area di lavoro corrente è sempre il progetto predefinito.",
   "settings.experimental.mcpTimeout.title": "Timeout MCP (ms)",
   "settings.experimental.mcpTimeout.description": "Timeout per richieste server MCP in millisecondi",
   "settings.experimental.remote.title": "Controllo remoto",

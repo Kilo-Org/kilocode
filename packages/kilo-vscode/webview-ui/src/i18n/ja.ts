@@ -778,6 +778,7 @@ export const dict = {
   "ui.sessionTurn.status.consideringNextSteps": "次のステップを検討中...",
 
   "dialog.model.noProviders": "プロバイダーなし",
+  "dialog.model.unavailable": "Kilo モデルを利用できません",
 
   "prompt.placeholder.connecting": "サーバーに接続中...",
   "prompt.placeholder.error": "接続に失敗しました。出力パネルを確認するか、拡張機能を再起動してください。",
@@ -933,15 +934,12 @@ export const dict = {
   "settings.sandboxing.writablePaths.title": "追加の書き込み可能パス",
   "settings.sandboxing.writablePaths.description":
     "サンドボックスでの書き込みを許可する追加のファイルシステムパス（例: /tmp、/var/log）。サンドボックス有効時、デフォルトの書き込み可能パスと統合されます。",
-  "settings.experimental.multiProject.title": "マルチプロジェクト Agent Manager",
   "settings.experimental.conversationPromptHistory.title": "会話ごとのプロンプト履歴",
   "settings.experimental.conversationPromptHistory.description":
     "プロンプト履歴 (ArrowUp/ArrowDown) をすべての会話で共有せず、会話ごとに分けて保持します。",
   "settings.experimental.claudeMigration.title": "Claude Code 移行",
   "settings.experimental.claudeMigration.description":
     "サポートされるグローバル CLAUDE.md 命令、簡単なスキル、無効化された MCP 定義を一度だけインポートします。元の Claude ファイルは変更されません。有効化後にバックエンドを再起動してください。",
-  "settings.experimental.multiProject.description":
-    "Agent Managerで複数のリポジトリにまたがるセッションとワークツリーの管理を有効にします。現在のワークスペースリポジトリは常にデフォルトプロジェクトです。",
   "settings.experimental.mcpTimeout.title": "MCPタイムアウト（ミリ秒）",
   "settings.experimental.mcpTimeout.description": "MCPサーバーリクエストのタイムアウト（ミリ秒）",
   "settings.experimental.remote.title": "Remote コントロール",
