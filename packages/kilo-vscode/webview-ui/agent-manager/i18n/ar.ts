@@ -42,6 +42,7 @@ export const dict = {
   "agentManager.settings.worktreePool.title": "تسخين Worktrees مسبقًا",
   "agentManager.settings.worktreePool.description":
     "جهّز worktree جاهزًا في الخلفية حتى تبدأ جلسات Agent Manager الجديدة بشكل أسرع. يستخدم مساحة إضافية على القرص مقابل checkout واحد لكل مشروع مفتوح.",
+  "agentManager.hints.switchSession": "تبديل الجلسة",
   "agentManager.settings.project.title": "المشروع",
   "agentManager.settings.project.description": "اختر repository الذي تريد تعديل إعدادات worktree الخاصة به.",
   "agentManager.settings.project.empty": "لا تتوفر أي مشاريع في Agent Manager.",

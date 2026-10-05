@@ -47,6 +47,8 @@ interface ConfigContextValue {
   projectConfig: Accessor<Config>
   collections: Accessor<ConfigCollections>
   settings: Accessor<Record<string, unknown>>
+  /** Shortcut labels and editor state for prompt shortcut hints. */
+  shortcuts: Accessor<{ bindings: Record<string, string>; selection: boolean }>
   features: Accessor<FeatureFlags>
   loading: Accessor<boolean>
   isDirty: Accessor<boolean>
@@ -82,6 +84,7 @@ function loadedSettings(message: ExtensionMessage): Record<string, unknown> | un
   if (message.type === "throughputSettingLoaded") return { showTokenThroughput: message.visible }
   if (message.type === "autoApprovalReasonSettingLoaded") return { showAutoApprovalReason: message.visible }
   if (message.type === "pushFixesSettingLoaded") return { "agentManager.pushFixes": message.enabled }
+  if (message.type === "shortcutHintsSettingLoaded") return { showShortcutHints: message.visible }
 }
 
 export const ConfigProvider: ParentComponent = (props) => {
@@ -92,6 +95,7 @@ export const ConfigProvider: ParentComponent = (props) => {
   const [projectConfig, setProjectConfig] = createSignal<Config>({})
   const [collections, setCollections] = createSignal<ConfigCollections>({})
   const [settings, setSettings] = createSignal<Record<string, unknown>>({})
+  const [shortcuts, setShortcuts] = createSignal({ bindings: {} as Record<string, string>, selection: false })
   const [features, setFeatures] = createSignal<FeatureFlags>({
     indexing: false,
     sandboxControls: false,
@@ -155,6 +159,10 @@ export const ConfigProvider: ParentComponent = (props) => {
       })
       vscode.postMessage({ type: "requestConfig" })
     }
+  })
+  const unsubscribeShortcuts = vscode.onMessage((message: ExtensionMessage) => {
+    if (message.type !== "shortcutContext") return
+    setShortcuts({ bindings: message.bindings, selection: message.selection })
   })
   const unsubscribe = vscode.onMessage((message: ExtensionMessage) => {
     if (message.type === "configLoaded") {
@@ -307,6 +315,7 @@ export const ConfigProvider: ParentComponent = (props) => {
   onCleanup(() => {
     unsubscribeSettings()
     unsubscribeMcpLifecycle()
+    unsubscribeShortcuts()
     unsubscribe()
     unsubscribeExpired()
     unsubscribeFailure()
@@ -458,6 +467,7 @@ export const ConfigProvider: ParentComponent = (props) => {
     projectConfig,
     collections,
     settings,
+    shortcuts,
     features,
     loading,
     isDirty,

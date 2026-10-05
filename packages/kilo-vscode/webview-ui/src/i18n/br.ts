@@ -200,6 +200,14 @@ export const dict = {
   "prompt.worktrees.title": "Worktrees",
   "prompt.worktrees.search": "Pesquisar Worktrees",
   "prompt.thinking.tooltip": "Esforço de raciocínio",
+  "prompt.shortcutHint.addSelection": "para adicionar a seleção",
+  "prompt.shortcutHint.waiting": "para responder a uma sessão em espera",
+  "prompt.shortcutHint.type": "para digitar",
+  "prompt.shortcutHint.sessions": "para trocar de sessão",
+  "prompt.shortcutHint.stop": "para parar",
+  "prompt.shortcutHint.changes": "para revisar as alterações",
+  "prompt.shortcutHint.pr": "para abrir o PR",
+  "prompt.shortcutHint.mode": "Próximo modo",
   "prompt.action.send": "Enviar",
   "prompt.action.continue": "Continuar",
   "prompt.action.send.blocked": "Responda ou feche a pergunta pendente primeiro",
@@ -796,6 +804,7 @@ export const dict = {
   "prompt.placeholder.error": "Conexão falhou. Verifique o painel de saída ou reinicie a extensão.",
   "prompt.placeholder.default":
     "Digite uma mensagem, @ para mencionar arquivos... (Enter para enviar, Shift+Enter para nova linha)",
+  "prompt.placeholder.hint": "Digite uma mensagem, @ para mencionar arquivos... ({{key}} {{action}})",
 
   "context.usage.sessionCost": "Custo da sessão",
   "context.usage.olderSessions": "{{count}} sessões anteriores",
@@ -1286,6 +1295,9 @@ export const dict = {
   "settings.display.mcpTool.expanded": "Expandidos",
   "settings.display.mcpTool.collapsed": "Recolhidos",
 
+  "settings.display.shortcutHints.title": "Mostrar dicas de atalhos",
+  "settings.display.shortcutHints.description":
+    "Mostra no prompt vazio o atalho de teclado adequado ao que você faz agora, por exemplo como adicionar o código selecionado ou voltar ao prompt.",
   "settings.display.tokenThroughput.title": "Mostrar taxa de tokens",
   "settings.display.tokenThroughput.description":
     "Exibir a taxa de geração de texto (tokens/sec) na mensagem mais recente do assistente e no cabeçalho da tarefa. Exibida por padrão; desative esta configuração para ocultá-la quando necessário.",

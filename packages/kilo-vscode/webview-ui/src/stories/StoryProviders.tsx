@@ -380,6 +380,7 @@ const ConfigWrapper: ParentComponent<{
       projectConfig: createMemo(() => (scoped ? project() : cfg())),
       collections: () => ({}),
       settings,
+      shortcuts: () => ({ bindings: {}, selection: false }),
       features,
       loading: () => false,
       isDirty: dirty,

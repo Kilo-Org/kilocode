@@ -866,6 +866,19 @@ export interface PushFixesSettingLoadedMessage {
   enabled: boolean
 }
 
+export interface ShortcutHintsSettingLoadedMessage {
+  type: "shortcutHintsSettingLoaded"
+  visible: boolean
+}
+
+/** Shortcut labels (user keybindings applied) and editor state for prompt hints. */
+export interface ShortcutContextMessage {
+  type: "shortcutContext"
+  bindings: Record<string, string>
+  /** The active text editor has selected text. */
+  selection: boolean
+}
+
 export interface WorkStyleLoadedMessage {
   type: "workStyleLoaded"
   style: WorkStyleState
@@ -1836,6 +1849,8 @@ export type ExtensionMessage =
   | ThroughputSettingLoadedMessage
   | AutoApprovalReasonSettingLoadedMessage
   | PushFixesSettingLoadedMessage
+  | ShortcutHintsSettingLoadedMessage
+  | ShortcutContextMessage
   | WorkStyleLoadedMessage
   | WorkStyleAppliedMessage
   | WorkStyleApplyFailedMessage

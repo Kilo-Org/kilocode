@@ -200,6 +200,14 @@ export const dict = {
   "prompt.worktrees.title": "Worktrees",
   "prompt.worktrees.search": "Wyszukaj Worktree",
   "prompt.thinking.tooltip": "Wysiłek rozumowania",
+  "prompt.shortcutHint.addSelection": "aby dodać zaznaczenie",
+  "prompt.shortcutHint.waiting": "aby odpowiedzieć oczekującej sesji",
+  "prompt.shortcutHint.type": "aby pisać",
+  "prompt.shortcutHint.sessions": "aby przełączyć sesję",
+  "prompt.shortcutHint.stop": "aby zatrzymać",
+  "prompt.shortcutHint.changes": "aby przejrzeć zmiany",
+  "prompt.shortcutHint.pr": "aby otworzyć PR",
+  "prompt.shortcutHint.mode": "Następny tryb",
   "prompt.action.send": "Wyślij",
   "prompt.action.continue": "Kontynuuj",
   "prompt.action.send.blocked": "Najpierw odpowiedz na oczekujące pytanie lub je odrzuć",
@@ -751,6 +759,7 @@ export const dict = {
   "prompt.placeholder.error": "Połączenie nie powiodło się. Sprawdź panel wyjściowy lub uruchom ponownie rozszerzenie.",
   "prompt.placeholder.default":
     "Wpisz wiadomość, @ aby wspomnieć pliki... (Enter, aby wysłać, Shift+Enter dla nowej linii)",
+  "prompt.placeholder.hint": "Wpisz wiadomość, @ aby wspomnieć pliki... ({{key}} {{action}})",
 
   "context.usage.sessionCost": "Koszt sesji",
   "context.usage.olderSessions": "{{count}} starszych sesji",
@@ -1277,6 +1286,9 @@ export const dict = {
   "settings.display.mcpTool.expanded": "Rozwinięte",
   "settings.display.mcpTool.collapsed": "Zwinięte",
 
+  "settings.display.shortcutHints.title": "Pokaż podpowiedzi skrótów",
+  "settings.display.shortcutHints.description":
+    "Pokazuje w pustym polu promptu skrót klawiszowy pasujący do tego, co teraz robisz, na przykład jak dodać zaznaczony kod lub wrócić do promptu.",
   "settings.display.tokenThroughput.title": "Pokaż przepustowość tokenów",
   "settings.display.tokenThroughput.description":
     "Wyświetlaj szybkość generowania tekstu (tokens/sec) w najnowszej wiadomości asystenta i nagłówku zadania. Domyślnie jest wyświetlana; wyłącz to ustawienie, aby w razie potrzeby ją ukryć.",

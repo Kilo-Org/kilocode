@@ -43,6 +43,7 @@ export const dict = {
   "agentManager.settings.worktreePool.title": "อุ่นเครื่อง Worktree ล่วงหน้า",
   "agentManager.settings.worktreePool.description":
     "เตรียม Worktree ที่พร้อมใช้งานไว้ในเบื้องหลังเพื่อให้เซสชัน Agent Manager ใหม่เริ่มได้เร็วขึ้น ใช้พื้นที่ดิสก์เพิ่มขึ้นสำหรับหนึ่ง checkout ต่อโปรเจกต์ที่เปิดอยู่",
+  "agentManager.hints.switchSession": "สลับเซสชัน",
   "agentManager.settings.project.title": "โปรเจกต์",
   "agentManager.settings.project.description": "เลือก repository ที่มีการตั้งค่า worktree ที่คุณต้องการแก้ไข",
   "agentManager.settings.project.empty": "ไม่มีโปรเจกต์ Agent Manager ที่พร้อมใช้งาน",

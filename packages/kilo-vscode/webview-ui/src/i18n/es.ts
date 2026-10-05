@@ -201,6 +201,14 @@ export const dict = {
   "prompt.worktrees.title": "Worktrees",
   "prompt.worktrees.search": "Buscar Worktrees",
   "prompt.thinking.tooltip": "Esfuerzo de razonamiento",
+  "prompt.shortcutHint.addSelection": "para añadir la selección",
+  "prompt.shortcutHint.waiting": "para responder a una sesión en espera",
+  "prompt.shortcutHint.type": "para escribir",
+  "prompt.shortcutHint.sessions": "para cambiar de sesión",
+  "prompt.shortcutHint.stop": "para detener",
+  "prompt.shortcutHint.changes": "para revisar los cambios",
+  "prompt.shortcutHint.pr": "para abrir la PR",
+  "prompt.shortcutHint.mode": "Siguiente modo",
   "prompt.action.send": "Enviar",
   "prompt.action.continue": "Continuar",
   "prompt.action.send.blocked": "Responda o descarte la pregunta pendiente primero",
@@ -800,6 +808,7 @@ export const dict = {
   "prompt.placeholder.error": "Conexión fallida. Revisa el panel de salida o reinicia la extensión.",
   "prompt.placeholder.default":
     "Escribe un mensaje, @ para mencionar archivos... (Enter para enviar, Shift+Enter para nueva línea)",
+  "prompt.placeholder.hint": "Escribe un mensaje, @ para mencionar archivos... ({{key}} {{action}})",
 
   "context.usage.sessionCost": "Coste de la sesión",
   "context.usage.olderSessions": "{{count}} sesiones anteriores",
@@ -1291,6 +1300,9 @@ export const dict = {
   "settings.display.mcpTool.expanded": "Expandidos",
   "settings.display.mcpTool.collapsed": "Contraídos",
 
+  "settings.display.shortcutHints.title": "Mostrar sugerencias de atajos",
+  "settings.display.shortcutHints.description":
+    "Muestra en el prompt vacío el atajo de teclado adecuado a lo que hace ahora, por ejemplo cómo añadir el código seleccionado o volver al prompt.",
   "settings.display.tokenThroughput.title": "Mostrar rendimiento de tokens",
   "settings.display.tokenThroughput.description":
     "Mostrar la velocidad de generación de texto (tokens/sec) en el último mensaje del asistente y en el encabezado de la tarea. Se muestra de forma predeterminada; desactiva esta opción para ocultarla cuando sea necesario.",

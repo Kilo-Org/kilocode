@@ -43,6 +43,7 @@ export const dict = {
   "agentManager.settings.worktreePool.title": "Forvarm worktrees",
   "agentManager.settings.worktreePool.description":
     "Forbered et klart worktree i baggrunden, så nye Agent Manager-sessioner starter hurtigere. Bruger ekstra diskplads til ét checkout pr. åbent projekt.",
+  "agentManager.hints.switchSession": "Skift session",
   "agentManager.settings.project.title": "Projekt",
   "agentManager.settings.project.description": "Vælg det repository, hvis worktree-indstillinger du vil redigere.",
   "agentManager.settings.project.empty": "Der er ingen tilgængelige projekter i Agent Manager.",

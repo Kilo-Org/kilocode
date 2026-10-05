@@ -69,6 +69,7 @@ import { ChatView } from "../src/components/chat"
 import HistoryView from "../src/components/history/HistoryView"
 import { NewWorktreeDialog } from "./NewWorktreeDialog"
 import { createIntro } from "./intro/AgentManagerIntro"
+import { createShortcutHints } from "./ShortcutHints"
 import { useBaseUpdate } from "./update-from-base"
 import { createModeRouter } from "./mode-router"
 import * as modifier from "./modifier"
@@ -1785,7 +1786,18 @@ const AgentManagerContent: Component = () => {
     requestChatFocus()
   }
 
+  const hints = createShortcutHints({
+    kb,
+    selection,
+    registry,
+    activePR,
+    sidePanel,
+    nav: () => buildProjectNavEntries(projectList(), projectStates()),
+    activeProjectId,
+    activity,
+  })
   const intro = createIntro({
+    hints: hints.list,
     base: repoDefaultBranch,
     git: isGitRepo,
     onCreateWorktree: showNewWorktreeDialog,
@@ -2309,6 +2321,7 @@ const AgentManagerContent: Component = () => {
                     focusOnDraftChange={focusOnDraftChange}
                     onFocusChange={focusCtl.prompt}
                     resolveEmbeddedTerminal={resolveTerminal}
+                    manager={hints.manager}
                   />
                   <Show when={readOnly()}>
                     <div class="am-readonly-banner">

@@ -196,6 +196,14 @@ export const dict = {
   "prompt.worktrees.title": "Worktrees",
   "prompt.worktrees.search": "Search worktrees",
   "prompt.thinking.tooltip": "Reasoning effort",
+  "prompt.shortcutHint.addSelection": "to add the selection",
+  "prompt.shortcutHint.waiting": "to answer a waiting session",
+  "prompt.shortcutHint.type": "to type",
+  "prompt.shortcutHint.sessions": "to switch session",
+  "prompt.shortcutHint.stop": "to stop",
+  "prompt.shortcutHint.changes": "to review changes",
+  "prompt.shortcutHint.pr": "to open the PR",
+  "prompt.shortcutHint.mode": "Next mode",
   "prompt.action.send": "Send",
   "prompt.action.continue": "Continue",
   "prompt.action.send.blocked": "Answer or dismiss the pending question first",
@@ -767,6 +775,7 @@ export const dict = {
 
   "prompt.placeholder.connecting": "Connecting to server...",
   "prompt.placeholder.default": "Type a message, @ to mention files... (Enter to send, Shift+Enter for new line)",
+  "prompt.placeholder.hint": "Type a message, @ to mention files... ({{key}} {{action}})",
   "prompt.placeholder.error": "Connection failed. Check the output panel or restart the extension.",
 
   "context.usage.sessionCost": "Session cost",
@@ -1247,6 +1256,9 @@ export const dict = {
   "settings.display.mcpTool.description": "Choose whether MCP and generic tool blocks start expanded or collapsed.",
   "settings.display.mcpTool.expanded": "Expanded",
   "settings.display.mcpTool.collapsed": "Collapsed",
+  "settings.display.shortcutHints.title": "Show shortcut hints",
+  "settings.display.shortcutHints.description":
+    "Show the keyboard shortcut that fits what you do now in the empty prompt, for example how to add selected code or return to the prompt.",
   "settings.display.tokenThroughput.title": "Show Token Throughput",
   "settings.display.tokenThroughput.description":
     "Display the text-generation rate (tokens/sec) on the latest assistant message and in the task header. Shown by default; disable this setting to hide it when needed.",

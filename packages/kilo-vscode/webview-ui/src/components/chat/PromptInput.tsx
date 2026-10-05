@@ -40,6 +40,7 @@ import { SessionIssues } from "./SessionIssues"
 import { useLanguage } from "../../context/language"
 import { useVSCode } from "../../context/vscode"
 import { useConfig } from "../../context/config"
+import { recommend, type ManagerContext } from "../../utils/shortcut-hint"
 import { useProvider } from "../../context/provider"
 import { ModelSelector, ModelSelectorBase } from "../shared/ModelSelector"
 import { ModeSwitcher } from "../shared/ModeSwitcher"
@@ -176,6 +177,8 @@ interface PromptInputProps {
   focusOnDraftChange?: () => boolean
   onFocusChange?: (focused: boolean) => void
   resolveEmbeddedTerminal?: (context?: string) => Promise<string | undefined>
+  /** Agent Manager state for the shortcut hint. Omitted in the sidebar and editor tabs. */
+  manager?: () => ManagerContext | undefined
 }
 
 // The `@` model entry reopens the shared model selector through its
@@ -263,7 +266,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   const tabs = useLocalTabs()
   const server = useServer()
   const indexing = useIndexing()
-  const { config, globalConfig, settings, features } = useConfig()
+  const { config, globalConfig, settings, features, shortcuts } = useConfig()
   const provider = useProvider()
   const language = useLanguage()
   const vscode = useVSCode()
@@ -389,6 +392,32 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   })
 
   const [text, setText] = createSignal("")
+  const [focused, setFocused] = createSignal(false)
+  const [away, setAway] = createSignal(!document.hasFocus())
+  const onWindowFocus = () => setAway(false)
+  const onWindowBlur = () => setAway(true)
+  window.addEventListener("focus", onWindowFocus)
+  window.addEventListener("blur", onWindowBlur)
+  onCleanup(() => {
+    window.removeEventListener("focus", onWindowFocus)
+    window.removeEventListener("blur", onWindowBlur)
+  })
+  const hint = () => {
+    if (settings().showShortcutHints === false || readonly() || props.blocked?.()) return undefined
+    return recommend({
+      bindings: shortcuts().bindings,
+      focused: focused(),
+      away: away(),
+      draft: !!text(),
+      busy: isBusy(),
+      selection: shortcuts().selection,
+      manager: props.manager?.(),
+    })
+  }
+  const modeHint = () => {
+    const keybind = shortcuts().bindings.cycleAgentMode
+    return keybind ? { title: language.t("prompt.shortcutHint.mode"), keybind } : undefined
+  }
   const [reviewComments, setReviewComments] = createSignal<ReviewCommentEntry[]>([])
   const [browsers, setBrowsers] = createSignal<BrowserReference[]>([])
   // Large pastes collapse into a `[Pasted ~N lines]` chip, matching the CLI and
@@ -853,8 +882,16 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
         return language.t("prompt.placeholder.connecting")
       case "error":
         return language.t("prompt.placeholder.error")
-      default:
-        return language.t("prompt.placeholder.default")
+      default: {
+        // The contextual shortcut replaces the generic key help in the same template.
+        const next = hint()
+        if (!next) return language.t("prompt.placeholder.default")
+        return language.t("prompt.placeholder.hint", {
+          // Keep chords like "⌘K ⌘A" on one line.
+          key: next.binding.replaceAll(" ", "\u00a0"),
+          action: language.t(`prompt.shortcutHint.${next.label}`),
+        })
+      }
     }
   }
 
@@ -2167,6 +2204,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
             ref={textareaRef}
             class="prompt-input"
             classList={{ "prompt-input--disabled": !server.isConnected() || readonly() }}
+            data-hint={hint()?.label}
             placeholder={placeholder()}
             value={text()}
             onBeforeInput={(e) => paste.beforeInput(e, textareaRef)}
@@ -2194,11 +2232,13 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
             onFocus={() => {
               hold.claim()
               syncGhost()
+              setFocused(true)
               props.onFocusChange?.(true)
             }}
             onBlur={() => {
               hold.release()
               syncGhost()
+              setFocused(false)
               props.onFocusChange?.(false)
             }}
             onSelect={() => {
@@ -2215,7 +2255,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       </div>
       <div class="prompt-input-hint">
         <div class="prompt-input-hint-selectors">
-          <ModeSwitcher sessionID={sid} blocked={props.blocked?.() ?? false} />
+          <ModeSwitcher sessionID={sid} blocked={props.blocked?.() ?? false} hint={modeHint()} />
           <ModelSelector sessionID={sid} blocked={props.blocked?.() ?? false} />
           <ThinkingSelector sessionID={sid} blocked={props.blocked?.() ?? false} />
         </div>

@@ -22,6 +22,7 @@ export function createIntro(opts: {
   onShowHistory?: () => void
   reveal: () => void
   focus: () => void
+  hints?: () => JSX.Element
 }) {
   const vscode = useVSCode()
   const [dismissed, setDismissed] = createSignal(
@@ -53,6 +54,7 @@ export function createIntro(opts: {
         onCreateWorktree={opts.onCreateWorktree}
         onSelectSession={opts.onSelectSession}
         onShowHistory={opts.onShowHistory}
+        hints={opts.hints}
       />
     ),
   }
@@ -62,6 +64,7 @@ interface EmptyProps extends Omit<IntroProps, "onDismiss"> {
   intro: Pick<ReturnType<typeof createIntro>, "visible" | "open" | "dismiss">
   onSelectSession?: (id: string) => void
   onShowHistory?: () => void
+  hints?: () => JSX.Element
 }
 
 function AgentManagerEmptyState(props: EmptyProps) {
@@ -74,15 +77,18 @@ function AgentManagerEmptyState(props: EmptyProps) {
           onSelectSession={props.onSelectSession}
           onShowHistory={props.onShowHistory}
           footer={
-            <Button
-              variant="ghost"
-              size="small"
-              icon="help"
-              data-action="agent-manager-intro"
-              onClick={props.intro.open}
-            >
-              {t("agentManager.intro.reopen")}
-            </Button>
+            <>
+              {props.hints?.()}
+              <Button
+                variant="ghost"
+                size="small"
+                icon="help"
+                data-action="agent-manager-intro"
+                onClick={props.intro.open}
+              >
+                {t("agentManager.intro.reopen")}
+              </Button>
+            </>
           }
         />
       }
