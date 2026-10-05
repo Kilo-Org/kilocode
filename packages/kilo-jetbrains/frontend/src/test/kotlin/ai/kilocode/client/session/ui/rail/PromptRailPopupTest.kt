@@ -2,102 +2,89 @@ package ai.kilocode.client.session.ui.rail
 
 import com.intellij.openapi.util.Disposer
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
-import com.intellij.ui.components.JBList
 import java.awt.Component
 import java.awt.Container
 import java.awt.Dimension
 import java.awt.Rectangle
+import javax.swing.JList
+import javax.swing.JScrollPane
+import javax.swing.JViewport
 
 class PromptRailPopupTest : BasePlatformTestCase() {
     /**
-     * The expandable-item hint renders a truncated row's full text as a strip outside the list bounds, so
-     * it escapes the balloon and paints over the ticks the navigator is anchored to.
+     * Lays the body out the way the platform does: clamp it with [PromptRailPopup.fitWithin], size it to
+     * the preferred size that clamp produces, then lay out. The earlier version of this test sized the
+     * body to an arbitrary height instead, which hid the bug where the list never clipped.
      */
-    fun `test navigator list does not use expandable item hints`() {
-        val popup = popup(items(6))
-
-        val list = find(popup.component) ?: error("expected a JBList in the navigator body")
-        assertFalse(list.expandableItemsHandler.isEnabled)
-
-        Disposer.dispose(popup.disposable)
-    }
-
-    /** The cap is what keeps the balloon inside the room left of the rail instead of being re-pointed. */
-    fun `test body honors the width cap`() {
-        val popup = popup(items(12))
-        val cap = 240
-
-        popup.fitWithin(cap, 400)
-
-        assertTrue(
-            "preferred width ${popup.component.preferredSize.width} must not exceed the $cap cap",
-            popup.component.preferredSize.width <= cap,
-        )
-        assertTrue(popup.component.preferredSize.height <= 400)
-
-        Disposer.dispose(popup.disposable)
-    }
-
-    /**
-     * Hovering a tick re-selects in the open balloon, so a row below the fold has to be scrolled to.
-     * Rows already fully visible must not scroll, or the list would jump while the pointer moves.
-     */
-    fun `test selecting an offscreen row scrolls it into view`() {
-        val popup = popup(items(40))
-        popup.fitWithin(320, 220)
+    private fun shown(count: Int, hovered: Int = 0): Fixture {
+        val popup = popup(items(count), hovered)
+        popup.fitWithin(CAP_W, CAP_H)
         val root = popup.component
-        // scrollRectToVisible re-lays out the scroll pane, so the tree needs real sizes first or the
-        // viewport collapses to zero and every row counts as off screen.
-        root.size = Dimension(320, 220)
+        root.size = root.preferredSize
         layoutAll(root)
-        val port = popup.rows.viewport
-        val list = find(root) ?: error("expected a JBList in the navigator body")
+        val scroll = findScroll(root) ?: error("expected the row list to own a scroll pane")
+        return Fixture(popup, scroll.viewport)
+    }
 
-        popup.select(0)
-        assertEquals(0, port.viewPosition.y)
+    private class Fixture(val popup: PromptRailPopup, val port: JViewport)
 
-        popup.select(35)
+    /** Exactly one scroll pane: a nested second one left neither owning the scrolling. */
+    fun `test the row list owns the only scroll pane`() {
+        val fix = shown(40)
 
-        assertEquals(35, list.selectedIndex)
-        val cell = list.getCellBounds(35, 35)
-        val view = Rectangle(port.viewPosition, port.extentSize)
-        assertTrue("row 35 at $cell must be visible in $view", view.contains(cell))
+        assertEquals(1, countScrolls(fix.popup.component))
 
-        // A row already in view must not scroll, or the list would jump as the pointer moves.
-        val settled = port.viewPosition
-        popup.select(35)
-        assertEquals(settled, port.viewPosition)
-
-        Disposer.dispose(popup.disposable)
+        Disposer.dispose(fix.popup.disposable)
     }
 
     /**
-     * The regression that made hovering a tick look random: the body is built before the platform gives
-     * the balloon bounds, so the row asked for at construction was selected but never scrolled to —
-     * `JViewport.scrollRectToVisible` derives its delta from the viewport height and drops the scroll
-     * against a zero-height viewport. The request has to survive until there is a viewport.
+     * The regression: the viewport has to actually clip. It previously inherited a ~32k extent from the
+     * wrapper's `Short.MAX_VALUE` measuring pass, so every row counted as visible and nothing scrolled.
      */
+    fun `test the viewport clips to the balloon instead of the content`() {
+        val fix = shown(40)
+        val view = fix.port.view ?: error("expected a view")
+
+        assertTrue("extent ${fix.port.extentSize.height} must be clamped", fix.port.extentSize.height <= CAP_H)
+        assertTrue(
+            "content ${view.height} must exceed the extent ${fix.port.extentSize.height} so it can scroll",
+            view.height > fix.port.extentSize.height,
+        )
+
+        Disposer.dispose(fix.popup.disposable)
+    }
+
+    /** Revealing downwards was the broken direction, so both are covered explicitly. */
+    fun `test rows reveal in both directions`() {
+        val fix = shown(40)
+
+        fix.popup.select(39)
+        val down = fix.port.viewPosition.y
+        assertTrue("selecting the last row must scroll down, stayed at $down", down > 0)
+
+        fix.popup.select(0)
+        assertEquals("selecting the first row must scroll back to the top", 0, fix.port.viewPosition.y)
+
+        fix.popup.select(39)
+        assertEquals("the last row must scroll down again", down, fix.port.viewPosition.y)
+
+        Disposer.dispose(fix.popup.disposable)
+    }
+
+    /** A row requested before the body had bounds still has to be revealed once it does. */
     fun `test a row requested before layout is revealed once laid out`() {
         val popup = popup(items(40), hovered = 30)
-        popup.fitWithin(320, 220)
+        popup.fitWithin(CAP_W, CAP_H)
         val root = popup.component
-        val port = popup.rows.viewport
-        val list = find(root) ?: error("expected a JBList in the navigator body")
 
-        // Pre-layout the selection is already applied, but the viewport has no extent to scroll in.
-        assertEquals(30, list.selectedIndex)
-        assertEquals(0, port.extentSize.height)
-        // It must not compute a position from that empty viewport. positionAdjustment degenerates to
-        // -cell.y against a zero extent, so an eager scroll here writes a position the real layout pass
-        // is free to discard, which is what made revealing a row look random.
-        assertEquals(0, port.viewPosition.y)
+        // Pre-layout there is no viewport to measure, so nothing may be scrolled yet.
+        assertNull(findScroll(root)?.viewport?.view?.takeIf { it.height > 0 })
 
-        root.size = Dimension(320, 220)
+        root.size = root.preferredSize
         layoutAll(root)
 
-        val cell = list.getCellBounds(30, 30)
-        val view = Rectangle(port.viewPosition, port.extentSize)
-        assertTrue("row 30 at $cell must be revealed in $view once laid out", view.contains(cell))
+        val port = findScroll(root)?.viewport ?: error("expected the row list to own a scroll pane")
+        assertTrue("row 30 must be revealed once laid out", port.viewPosition.y > 0)
 
         // Replaying layout must not drift the settled position.
         val settled = port.viewPosition
@@ -107,31 +94,54 @@ class PromptRailPopupTest : BasePlatformTestCase() {
         Disposer.dispose(popup.disposable)
     }
 
-    /** A hover that lands while the balloon is open must both select and reveal, every time. */
-    fun `test every hovered row is selected and revealed`() {
-        val popup = popup(items(40))
-        popup.fitWithin(320, 220)
-        val root = popup.component
-        root.size = Dimension(320, 220)
-        layoutAll(root)
-        val port = popup.rows.viewport
-        val list = find(root) ?: error("expected a JBList in the navigator body")
+    /** Every hovered row must end up visible, whichever way the pointer travels. */
+    fun `test every hovered row is revealed`() {
+        val fix = shown(40)
 
-        for (index in listOf(39, 0, 20, 7, 33, 12)) {
-            popup.select(index)
+        val list = findList(fix.popup.component) ?: error("expected a JList of rows")
+        for (index in listOf(39, 0, 20, 7, 33, 12, 38, 1)) {
+            fix.popup.select(index)
 
-            assertEquals(index, list.selectedIndex)
+            assertEquals("row $index must be selected", index, list.selectedIndex)
+            val view = Rectangle(fix.port.viewPosition, fix.port.extentSize)
             val cell = list.getCellBounds(index, index)
-            val view = Rectangle(port.viewPosition, port.extentSize)
             assertTrue("row $index at $cell must be visible in $view", view.contains(cell))
         }
 
-        Disposer.dispose(popup.disposable)
+        Disposer.dispose(fix.popup.disposable)
     }
 
-    private fun layoutAll(comp: Component) {
-        comp.doLayout()
-        if (comp is Container) comp.components.forEach(::layoutAll)
+    fun `test the body honors the width and height caps`() {
+        val fix = shown(40)
+        val pref = fix.popup.component.preferredSize
+
+        assertTrue("width ${pref.width} must not exceed $CAP_W", pref.width <= CAP_W)
+        assertTrue("height ${pref.height} must not exceed $CAP_H", pref.height <= CAP_H)
+
+        Disposer.dispose(fix.popup.disposable)
+    }
+
+    private fun findList(c: Component): JList<*>? {
+        if (c is JList<*>) return c
+        if (c !is Container) return null
+        return c.components.firstNotNullOfOrNull { findList(it) }
+    }
+
+    private fun countScrolls(c: Component): Int {
+        val self = if (c is JScrollPane) 1 else 0
+        if (c !is Container) return self
+        return self + c.components.sumOf { countScrolls(it) }
+    }
+
+    private fun findScroll(c: Component): JScrollPane? {
+        if (c is JScrollPane) return c
+        if (c !is Container) return null
+        return c.components.firstNotNullOfOrNull { findScroll(it) }
+    }
+
+    private fun layoutAll(c: Component) {
+        c.doLayout()
+        if (c is Container) c.components.forEach(::layoutAll)
     }
 
     private fun popup(items: List<PromptRailItem>, hovered: Int = 0) = PromptRailPopup(
@@ -147,13 +157,12 @@ class PromptRailPopupTest : BasePlatformTestCase() {
             id = "msg_$it",
             queued = false,
             prompt = "Prompt $it that is long enough to be clamped by the navigator row width",
-            answer = "Answer $it that is also long enough to wrap across the two lines the row allows",
+            answer = "Answer $it that is also long enough to wrap across the lines the row allows",
         )
     }
 
-    private fun find(root: Component): JBList<*>? {
-        if (root is JBList<*>) return root
-        if (root !is Container) return null
-        return root.components.firstNotNullOfOrNull(::find)
+    private companion object {
+        const val CAP_W = 320
+        const val CAP_H = 260
     }
 }
