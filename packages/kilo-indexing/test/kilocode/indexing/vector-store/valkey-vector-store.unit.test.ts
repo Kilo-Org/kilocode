@@ -229,6 +229,7 @@ describe("ValkeyVectorStore Unit Tests", () => {
           { field: "embedding_provider", value: "openai" },
           { field: "embedding_model_id", value: "text-embedding-3-small" },
           { field: "embedding_dimension", value: "1536" },
+          { field: "index_schema", value: "1" },
         ]),
       )
 
@@ -237,6 +238,63 @@ describe("ValkeyVectorStore Unit Tests", () => {
       expect(result).toBe(false)
       expect(mockFtCreate).not.toHaveBeenCalled()
       expect(mockFtDropindex).not.toHaveBeenCalled()
+    })
+
+    test("drops and recreates index when stored schema version differs", async () => {
+      const store = createStore(TEST_PROFILE)
+
+      let infoCallCount = 0
+      mockFtInfo.mockImplementation(() => {
+        infoCallCount++
+        if (infoCallCount <= 2) {
+          return Promise.resolve({
+            fields: [{ type: "VECTOR", vector_params: { dimension: TEST_VECTOR_SIZE } }],
+            num_docs: 5,
+          })
+        }
+        throw new MockRequestError("Unknown index name")
+      })
+
+      // Matching profile but no schema marker (pre-versioning layout)
+      mockHgetall.mockImplementation(() =>
+        Promise.resolve([
+          { field: "type", value: "metadata" },
+          { field: "indexing_complete", value: "true" },
+          { field: "embedding_provider", value: "openai" },
+          { field: "embedding_model_id", value: "text-embedding-3-small" },
+          { field: "embedding_dimension", value: "1536" },
+        ]),
+      )
+      mockScan.mockImplementation(() => Promise.resolve(["0", []]))
+
+      const result = await store.initialize()
+
+      expect(result).toBe(true)
+      expect(mockFtDropindex).toHaveBeenCalledTimes(1)
+      expect(mockFtCreate).toHaveBeenCalledTimes(1)
+    })
+
+    test("openExisting rejects a baseline with a different schema version", async () => {
+      const store = createStore(TEST_PROFILE)
+
+      mockFtInfo.mockImplementation(() =>
+        Promise.resolve({
+          fields: [{ type: "VECTOR", vector_params: { dimension: TEST_VECTOR_SIZE } }],
+          num_docs: 5,
+        }),
+      )
+      mockHgetall.mockImplementation(() =>
+        Promise.resolve([
+          { field: "type", value: "metadata" },
+          { field: "indexing_complete", value: "true" },
+          { field: "embedding_provider", value: "openai" },
+          { field: "embedding_model_id", value: "text-embedding-3-small" },
+          { field: "embedding_dimension", value: "1536" },
+          { field: "index_schema", value: "0" },
+        ]),
+      )
+
+      await expect(store.openExisting()).rejects.toThrow("Baseline Valkey index schema does not match the worktree")
     })
 
     test("drops and recreates index when stored profile has no metadata (legacy collection)", async () => {

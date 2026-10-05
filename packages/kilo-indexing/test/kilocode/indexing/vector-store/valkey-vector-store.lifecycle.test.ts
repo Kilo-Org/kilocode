@@ -203,6 +203,7 @@ describe("ValkeyVectorStore - Lifecycle, Metadata, Error Handling, and Service F
       expect(fields["embedding_provider"]).toBe("openai")
       expect(fields["embedding_model_id"]).toBe("text-embedding-3-small")
       expect(fields["embedding_dimension"]).toBe("1536")
+      expect(fields["index_schema"]).toBe("1")
     })
   })
 

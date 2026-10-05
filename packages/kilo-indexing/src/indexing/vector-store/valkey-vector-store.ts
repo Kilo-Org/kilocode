@@ -9,11 +9,13 @@ import { Log } from "../../util/log"
 
 const log = Log.create({ service: "valkey-store" })
 
+const SCHEMA = "1"
 const KEY = {
   complete: "indexing_complete",
   provider: "embedding_provider",
   model: "embedding_model_id",
   dimension: "embedding_dimension",
+  schema: "index_schema",
 }
 
 /**
@@ -131,6 +133,18 @@ export class ValkeyVectorStore implements IVectorStore {
         return true
       }
 
+      const metadata = await this.getMetadataHash()
+      if (metadata?.[KEY.schema] !== SCHEMA) {
+        log.info("Index schema mismatch, recreating index", {
+          collection: this.collectionName,
+          stored: metadata?.[KEY.schema],
+          current: SCHEMA,
+        })
+        await this.dropIndex()
+        await this.createIndex()
+        return true
+      }
+
       return false
     } catch (error) {
       // Re-throw already-enriched connection errors from ensureConnected()
@@ -185,6 +199,7 @@ export class ValkeyVectorStore implements IVectorStore {
       [KEY.provider]: this.profile.provider,
       [KEY.model]: this.profile.modelId,
       [KEY.dimension]: String(this.profile.dimension),
+      [KEY.schema]: SCHEMA,
     }
     await client.hset(this.metadataKey, fields)
   }
@@ -576,6 +591,7 @@ export class ValkeyVectorStore implements IVectorStore {
     }
 
     const metadata = await this.getMetadata()
+    if (metadata?.[KEY.schema] !== SCHEMA) throw new Error("Baseline Valkey index schema does not match the worktree")
     if (!metadata || metadata[KEY.complete] !== "true") {
       throw new Error("Baseline Valkey index is not complete")
     }
