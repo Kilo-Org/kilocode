@@ -2,7 +2,7 @@ import { createHash } from "crypto"
 import * as path from "path"
 import type { Connection, Table, VectorQuery } from "@lancedb/lancedb"
 import type { IVectorStore } from "../interfaces/vector-store"
-import type { Payload, VectorStoreSearchResult } from "../interfaces"
+import type { Payload, StoreState, VectorStoreSearchResult } from "../interfaces"
 import { DEFAULT_MAX_SEARCH_RESULTS, DEFAULT_SEARCH_MIN_SCORE } from "../constants"
 import fs from "fs"
 import { Log } from "../../util/log"
@@ -590,31 +590,37 @@ export class LanceDBVectorStore implements IVectorStore {
    * Checks if the collection exists and has indexed points
    * @returns Promise resolving to boolean indicating if the collection exists and has points
    */
-  async hasIndexedData(): Promise<boolean> {
-    try {
-      const db = await this.getDb()
-      const table = await this.getTable()
-      const pointCount = await table.countRows()
-      if (pointCount === 0) {
-        log.info("LanceDB has no indexed data", {
-          workspacePath: this.workspacePath,
-          reason: "points_zero",
-        })
-        return false
-      }
-      const metadataTable = await native(() => db.openTable(this.metadataTableName))
-      const metadataResults = await metadataTable.query().where(`key = '${KEY.complete}'`).toArray()
-      const indexed = metadataResults.length > 0 ? String(metadataResults[0].value) === "true" : false
-      log.info("LanceDB indexing metadata evaluated", {
+  async state(): Promise<StoreState> {
+    const db = await this.getDb()
+    const tables = await db.tableNames()
+    if (!tables.includes(this.vectorTableName)) return { status: "empty" }
+
+    const table = await native(() => db.openTable(this.vectorTableName))
+    const points = await table.countRows()
+    if (points === 0) {
+      log.info("LanceDB has no indexed data", {
         workspacePath: this.workspacePath,
-        pointCount,
-        indexed,
+        reason: "points_zero",
       })
-      return indexed
-    } catch (error) {
-      log.error("Failed to check if collection has data", { error })
-      throw error
+      return { status: "empty", points }
     }
+
+    if (!tables.includes(this.metadataTableName)) {
+      log.info("LanceDB index has points but no metadata table", {
+        workspacePath: this.workspacePath,
+        points,
+      })
+      return { status: "partial", points }
+    }
+
+    const rows = (await this._getMetadataValue(db, KEY.complete)) ?? "false"
+    const status = String(rows) === "true" ? "complete" : "partial"
+    log.info("LanceDB indexing metadata evaluated", {
+      workspacePath: this.workspacePath,
+      points,
+      status,
+    })
+    return { status, points }
   }
 
   private async _upsertMetadata(metadataTable: Table, key: string, value: unknown): Promise<void> {

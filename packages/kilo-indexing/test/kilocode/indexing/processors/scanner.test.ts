@@ -12,6 +12,7 @@ import type {
   IndexingTelemetryEvent,
   IVectorStore,
   PointStruct,
+  StoreState,
   VectorStoreSearchResult,
 } from "../../../../src/indexing/interfaces"
 import { loadIgnore } from "../../../../src/indexing/shared/load-ignore"
@@ -138,8 +139,8 @@ class Store implements IVectorStore {
     return true
   }
 
-  public async hasIndexedData(): Promise<boolean> {
-    return false
+  public async state(): Promise<StoreState> {
+    return { status: "empty" }
   }
 
   public async markIndexingComplete(): Promise<void> {}

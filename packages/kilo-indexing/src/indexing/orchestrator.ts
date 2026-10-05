@@ -11,6 +11,7 @@ import type {
   IndexingTelemetryTrigger,
 } from "./interfaces/telemetry"
 import type { IVectorStore } from "./interfaces/vector-store"
+import type { StoreState } from "./interfaces"
 import { DirectoryScanner } from "./processors"
 import type { CacheManager } from "./cache-manager"
 import type { Disposable } from "./runtime"
@@ -18,8 +19,11 @@ import { Log } from "../util/log"
 import { sanitizeErrorMessage } from "./shared/validation-helpers"
 import { DEFAULT_VECTOR_STORE } from "./constants"
 import type { WorktreeOverlay } from "./worktree-overlay"
+import { acquire, type Writer } from "./writer-lock"
 
 const log = Log.create({ service: "indexing-orchestrator" })
+
+const EMPTY: StoreState = { status: "empty" }
 
 export class CodeIndexOrchestrator {
   private _fileWatcherSubscriptions: Disposable[] = []
@@ -145,6 +149,26 @@ export class CodeIndexOrchestrator {
     return task
   }
 
+  /**
+   * Only one session may write a workspace's index. Without this, a second
+   * session starts a scan against a store the first one is still filling,
+   * clears it as unusable, and leaves both sessions committing to the same
+   * table.
+   */
+  private async _acquire(): Promise<Writer | undefined> {
+    const dir = this.cacheManager.dir
+    if (!dir) {
+      log.warn("no cache directory for the writer lock, proceeding unlocked", {
+        workspacePath: this.workspacePath,
+      })
+      return { release: async () => {} }
+    }
+    const writer = await acquire(dir, this.workspacePath)
+    if (writer) return writer
+    log.info("writer lock is held elsewhere", { workspacePath: this.workspacePath })
+    return undefined
+  }
+
   private async runIndexing(trigger: IndexingTelemetryTrigger): Promise<void> {
     log.info("indexing start requested", {
       workspacePath: this.workspacePath,
@@ -176,6 +200,13 @@ export class CodeIndexOrchestrator {
     }
 
     this._cancelRequested = false
+
+    const writer = await this._acquire()
+    if (!writer) {
+      this.stateManager.setSystemState("Standby", "Another session is indexing this workspace.")
+      return
+    }
+
     this._isProcessing = true
     this.stateManager.setSystemState("Indexing", "Initializing services...")
 
@@ -214,8 +245,11 @@ export class CodeIndexOrchestrator {
         })
       }
 
-      const hasExistingData = this.overlay ? false : await this.vectorStore.hasIndexedData()
-      if (!this.overlay && !hasExistingData) {
+      const index = this.overlay ? EMPTY : await this.vectorStore.state()
+      // Only an empty store is safe to clear. A partial one belongs to a run
+      // that died or is still going, and clearing it throws away every point
+      // it managed to embed.
+      if (!this.overlay && index.status === "empty") {
         if (!collectionCreated) await this.vectorStore.clearCollection()
         await this.cacheManager.clearCacheFile()
         log.info("cleared indexing cache before full scan", {
@@ -225,7 +259,7 @@ export class CodeIndexOrchestrator {
       }
       log.info("checked vector store indexed data", {
         workspacePath: this.workspacePath,
-        hasExistingData,
+        status: index.status,
         collectionCreated,
       })
 
@@ -234,7 +268,7 @@ export class CodeIndexOrchestrator {
         return
       }
 
-      mode = hasExistingData && !collectionCreated ? "incremental" : "full"
+      mode = index.status === "complete" && !collectionCreated ? "incremental" : "full"
 
       if (mode === "incremental") {
         log.info("collection has existing data, running incremental scan")
@@ -245,7 +279,7 @@ export class CodeIndexOrchestrator {
       } else {
         log.info("running full scan", {
           workspacePath: this.workspacePath,
-          hasExistingData,
+          status: index.status,
           collectionCreated,
         })
         this.stateManager.setSystemState("Indexing", "Services ready. Starting workspace scan...")
@@ -267,6 +301,7 @@ export class CodeIndexOrchestrator {
       this.stopWatcher()
     } finally {
       this._isProcessing = false
+      await writer.release()
       log.info("indexing start flow finished", {
         workspacePath: this.workspacePath,
         state: this.stateManager.state,
@@ -420,6 +455,12 @@ export class CodeIndexOrchestrator {
   }
 
   public async clearIndexData(): Promise<void> {
+    const writer = await this._acquire()
+    if (!writer) {
+      this.stateManager.setSystemState("Standby", "Another session is indexing this workspace.")
+      return
+    }
+
     this._isProcessing = true
     log.info("clearing index data", { workspacePath: this.workspacePath })
 
@@ -444,6 +485,7 @@ export class CodeIndexOrchestrator {
       }
     } finally {
       this._isProcessing = false
+      await writer.release()
       log.info("finished clearing index data", {
         workspacePath: this.workspacePath,
         state: this.stateManager.state,
