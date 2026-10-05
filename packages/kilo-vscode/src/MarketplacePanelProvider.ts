@@ -367,6 +367,10 @@ export class MarketplacePanelProvider implements vscode.Disposable {
       this.directory(),
     )
     if (result.success) void vscode.window.showInformationMessage(`Successfully removed ${item.name}`)
+    // Mirror install()'s auth refresh so a removed server's stale "needs
+    // sign-in" state clears for every provider sharing this McpAuthService
+    // (sidebar, chat tabs, Settings) via its onChange broadcast.
+    if (result.success && item.type === "mcp") await mcpAuth(this.connection).refresh(directory)
     if (result.success) bus?.emit({ directory, name: item.id, phase: "removed" })
     bus?.emit({ directory, name: item.id, phase: "idle" })
     this.post({ type: "marketplaceRemoveResult", ...result })

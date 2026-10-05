@@ -1,6 +1,9 @@
 import { describe, expect, it, mock } from "bun:test"
 import { mcpAuth } from "../../src/services/mcp-auth"
 
+const removeMcp = mock(async () => true)
+mock.module("../../src/kilo-provider/remove-config-item", () => ({ removeMcp }))
+
 const { KiloProvider } = await import("../../src/KiloProvider")
 
 type Internals = {
@@ -128,6 +131,20 @@ describe("KiloProvider MCP message routing", () => {
     const { internal, calls } = actions()
     await internal.handleResetMcpAuth("anaconda")
     expect(calls).toEqual(["reset:anaconda", "status"])
+  })
+
+  it("refreshes MCP auth consumers after removing a server, clearing its stale needs-auth state", async () => {
+    removeMcp.mockResolvedValueOnce(true)
+    const { internal, calls } = actions()
+    await internal.handleRemoveMcp("anaconda")
+    expect(calls).toEqual(["post:mcpRemovalState", "post:mcpRemoved", "status", "post:mcpRemovalState"])
+  })
+
+  it("does not refresh MCP auth consumers when removal fails", async () => {
+    removeMcp.mockResolvedValueOnce(false)
+    const { internal, calls } = actions()
+    await internal.handleRemoveMcp("anaconda")
+    expect(calls).toEqual(["post:mcpRemovalState", "post:mcpRemovalState"])
   })
 
   it("refreshes status and invalidates Agent Behaviour after shared auth changes", async () => {

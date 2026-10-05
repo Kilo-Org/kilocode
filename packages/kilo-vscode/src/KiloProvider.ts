@@ -3112,6 +3112,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       console.error("[Kilo New] KiloProvider: Failed to remove MCP server:", name)
     } else {
       bus.emit({ directory, name, phase: "removed" })
+      // Clears the removed server's stale "needs sign-in" state via the same
+      // mcpAuth broadcast handleSignInMcp/handleResetMcpAuth already use.
+      await this.refreshMcpAuthConsumers()
     }
     bus.emit({ directory, name, phase: "idle" })
   }
