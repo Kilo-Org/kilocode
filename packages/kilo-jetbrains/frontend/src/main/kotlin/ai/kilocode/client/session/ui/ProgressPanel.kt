@@ -8,9 +8,8 @@ import ai.kilocode.client.session.model.SessionState
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionEditorStyleTarget
 import ai.kilocode.client.session.ui.style.SessionUiStyle
+import ai.kilocode.client.ui.ShimmerLabel
 import ai.kilocode.client.ui.UiStyle
-import ai.kilocode.client.ui.layout.Stack
-import ai.kilocode.client.ui.layout.StackAxis
 import ai.kilocode.client.util.UiTimerSource
 import ai.kilocode.client.util.UiTimers
 import com.intellij.openapi.Disposable
@@ -19,10 +18,15 @@ import com.intellij.ui.components.JBLabel
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.components.BorderLayoutPanel
 import java.awt.Color
+import java.awt.Component
+import java.awt.Container
+import java.awt.Dimension
+import javax.swing.JPanel
 
 /**
  * Progress footer rendered at the bottom of the session transcript while the
- * agent is working.
+ * agent is working. The spinner, status text, and elapsed counter sit in one
+ * horizontally centered row.
  *
  * Reacts to [SessionModelEvent.StateChanged]:
  * - [SessionState.Busy] → shows an animated spinner and [SessionState.Busy.text]
@@ -52,13 +56,18 @@ class ProgressPanel(
     // without losing — or over-counting — the turn's active working time.
     private var accrued = 0L
     private var began: Long? = null
-    private val label = JBLabel().apply {
+    private var text = ""
+    private val busy = ShimmerLabel().apply {
         foreground = style.editorForeground
+    }
+    private val status = StatusLabel().apply {
+        isVisible = false
     }
     private val elapsed = JBLabel().apply {
         foreground = SessionUiStyle.Text.Secondary.foreground()
     }
     private val spinner = JBLabel(SpinnerIcon.icon)
+    private val footer = Footer(spinner, busy, status, elapsed)
     private val tick = clock.timer(1000) { syncElapsed() }
 
     init {
@@ -72,12 +81,7 @@ class ProgressPanel(
         )
         applyStyle(SessionEditorStyle.current())
 
-        addToLeft(
-            Stack(StackAxis.HORIZONTAL, UiStyle.Gap.md())
-                .next(spinner)
-                .next(label),
-        )
-        addToRight(elapsed)
+        addToCenter(footer)
         Disposer.register(parent) { tick.stop() }
 
         model.addListener(parent) { event ->
@@ -86,13 +90,13 @@ class ProgressPanel(
     }
 
     /** Exposed for test assertions. */
-    fun labelText(): String = label.text
+    fun labelText(): String = text
 
     /** Exposed for test assertions. */
     fun elapsedText(): String = elapsed.text
 
     /** Exposed for test assertions. */
-    fun labelForeground() = label.foreground
+    fun labelForeground() = if (status.isVisible) status.foreground else busy.foreground
 
     override fun getBackground(): Color = SessionUiStyle.Colors.sessionBackground()
 
@@ -100,34 +104,48 @@ class ProgressPanel(
         this.state = state
         when (state) {
             is SessionState.Busy -> {
+                text = state.text
                 spinner.isVisible = true
-                label.text = state.text
-                label.foreground = style.editorForeground
+                status.isVisible = false
+                busy.isVisible = true
+                busy.text = text
+                busy.foreground = style.editorForeground
+                busy.isShimmering = true
                 resume()
                 showProgress()
             }
             is SessionState.Retry -> {
+                text = retryText(state)
                 spinner.isVisible = true
-                label.text = retryText(state)
-                label.foreground = UiStyle.Colors.warningLabelForeground()
+                busy.isShimmering = false
+                busy.isVisible = false
+                status.isVisible = true
+                status.foreground = UiStyle.Colors.warningLabelForeground()
+                status.sync(text)
                 resume()
                 showProgress()
             }
             is SessionState.Offline -> {
+                text = state.message.ifBlank { KiloBundle.message("session.status.offline") }
                 spinner.isVisible = false
-                label.text = state.message.ifBlank { KiloBundle.message("session.status.offline") }
-                label.foreground = UiStyle.Colors.errorLabelForeground()
+                busy.isShimmering = false
+                busy.isVisible = false
+                status.isVisible = true
+                status.foreground = UiStyle.Colors.errorLabelForeground()
+                status.sync(text)
                 resume()
                 showProgress()
             }
             // Waiting on the user: the turn is still active, so keep the banked
             // time but stop the clock and hide the footer, same as idle.
             is SessionState.AwaitingPermission, is SessionState.AwaitingQuestion, is SessionState.Reverting -> {
+                busy.isShimmering = false
                 pause()
                 hideProgress()
             }
             // Turn boundaries: the next turn starts its own counter at zero.
             else -> {
+                busy.isShimmering = false
                 reset()
                 hideProgress()
             }
@@ -182,10 +200,11 @@ class ProgressPanel(
 
     override fun applyStyle(style: SessionEditorStyle) {
         this.style = style
-        label.font = style.regularFont
+        busy.font = style.regularFont
+        status.font = style.regularFont
         elapsed.font = style.regularFont
         elapsed.foreground = SessionUiStyle.Text.Secondary.foreground()
-        if (state is SessionState.Busy) label.foreground = style.editorForeground
+        if (state is SessionState.Busy) busy.foreground = style.editorForeground
         revalidate()
         repaint()
     }
@@ -199,4 +218,167 @@ class ProgressPanel(
         if (min > 0) return "${min}m ${sec}s"
         return "${sec}s"
     }
+}
+
+/** Copyable HTML label whose preferred height follows its assigned width. */
+internal class StatusLabel(private val centered: Boolean = false) : JBLabel() {
+    private var content = ""
+
+    init {
+        verticalTextPosition = TOP
+        setCopyable(true)
+        setAllowAutoWrapping(true)
+    }
+
+    fun sync(value: String) {
+        if (content == value) return
+        content = value
+        text = markup(value, centered)
+        accessibleContext?.accessibleName = value
+    }
+
+    fun natural(): Dimension = probe(Short.MAX_VALUE.toInt())
+
+    fun measure(width: Int): Dimension {
+        if (width <= 0) return Dimension(0, natural().height)
+        return Dimension(width, probe(width).height)
+    }
+
+    override fun getPreferredSize(): Dimension {
+        if (width <= 0) return super.getPreferredSize()
+        return measure(width)
+    }
+
+    private fun probe(width: Int): Dimension {
+        val old = size
+        setSize(width.coerceAtLeast(1), Short.MAX_VALUE.toInt())
+        doLayout()
+        val pref = super.getPreferredSize()
+        setSize(old)
+        doLayout()
+        return pref
+    }
+}
+
+private class Footer(
+    private val spinner: JBLabel,
+    private val busy: ShimmerLabel,
+    private val status: StatusLabel,
+    private val elapsed: JBLabel,
+) : JPanel(null) {
+
+    init {
+        isOpaque = false
+        add(spinner)
+        add(busy)
+        add(status)
+        add(elapsed)
+    }
+
+    override fun getPreferredSize(): Dimension {
+        val ins = insets
+        val metrics = measure(space())
+        return Dimension(
+            metrics.width + ins.left + ins.right,
+            metrics.height + ins.top + ins.bottom,
+        )
+    }
+
+    override fun doLayout() {
+        val ins = insets
+        val space = (width - ins.left - ins.right).coerceAtLeast(0)
+        val metrics = measure(space)
+        var x = ins.left + (space - metrics.width) / 2
+
+        if (spinner.isVisible) {
+            spinner.setBounds(
+                x,
+                ins.top + (metrics.height - metrics.spinner.height) / 2,
+                metrics.spinner.width,
+                metrics.spinner.height,
+            )
+            x += metrics.spinner.width + metrics.before
+        }
+
+        val label = active()
+        label.setBounds(
+            x,
+            ins.top + (metrics.height - metrics.label.height) / 2,
+            metrics.label.width,
+            metrics.label.height,
+        )
+        x += metrics.label.width + metrics.after
+
+        elapsed.setBounds(
+            x,
+            ins.top + (metrics.height - metrics.elapsed.height) / 2,
+            metrics.elapsed.width,
+            metrics.elapsed.height,
+        )
+    }
+
+    private fun measure(space: Int): Metrics {
+        val label = active()
+        val text = if (label is StatusLabel) label.natural() else label.preferredSize
+        val spin = if (spinner.isVisible) spinner.preferredSize else Dimension()
+        val time = elapsed.preferredSize
+        val slots = if (spinner.isVisible) 2 else 1
+        val gap = UiStyle.Gap.md()
+        val natural = spin.width + text.width + time.width + gap * slots
+        val width = if (space > 0) minOf(space, natural) else natural
+        var rest = width
+        val sw = minOf(spin.width, rest)
+        rest -= sw
+        val ew = minOf(time.width, rest)
+        rest -= ew
+        val gaps = minOf(gap * slots, rest)
+        val before = if (spinner.isVisible) minOf(gap, (gaps + slots - 1) / slots) else 0
+        val after = gaps - before
+        val room = (rest - gaps).coerceAtLeast(0)
+        val body = if (label is StatusLabel) {
+            label.measure(room)
+        } else {
+            Dimension(minOf(text.width, room), text.height)
+        }
+        val glyph = Dimension(sw, spin.height)
+        val timer = Dimension(ew, time.height)
+        val height = maxOf(glyph.height, body.height, timer.height)
+        return Metrics(width, height, glyph, body, timer, before, after)
+    }
+
+    private fun active(): Component = if (status.isVisible) status else busy
+
+    // `SessionLayout` resizes the immediate parent to its target width before
+    // reading `preferredSize`, but Swing only propagates that size to this
+    // footer via `doLayout()`, which hasn't run yet at that point. Reading the
+    // parent chain's width first (instead of this component's own, still-stale
+    // width) keeps `getPreferredSize()` in sync with the width the parent is
+    // about to assign. During an actual `doLayout()` pass the two are already
+    // identical, so preferring the ancestor is safe there too.
+    private fun space(): Int {
+        var node: Container? = parent
+        while (node != null) {
+            if (node.width > 0) {
+                val ins = node.insets
+                return (node.width - ins.left - ins.right).coerceAtLeast(0)
+            }
+            node = node.parent
+        }
+        return (width - insets.left - insets.right).coerceAtLeast(0)
+    }
+
+    private data class Metrics(
+        val width: Int,
+        val height: Int,
+        val spinner: Dimension,
+        val label: Dimension,
+        val elapsed: Dimension,
+        val before: Int,
+        val after: Int,
+    )
+}
+
+private fun markup(value: String, centered: Boolean): String {
+    val lines = value.replace("\r\n", "\n").replace('\r', '\n').split('\n')
+    return UiStyle.Text.wrapLines(lines, centered)
 }

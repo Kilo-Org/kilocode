@@ -60,7 +60,9 @@ const snapshot = Effect.fn("BoardTools.snapshot")(function* (
     sessions.set(job.id, { state: job.status, updated: job.started_at })
   }
   for (const [id, value] of yield* status.list()) {
-    if (value.type === "idle") continue
+    // `scheduled` is derived at the status endpoint, never stored, but it
+    // describes a session doing nothing now like `idle`.
+    if (value.type === "idle" || value.type === "scheduled") continue
     sessions.set(id, { state: value.type, updated: sessions.get(id)?.updated })
   }
   return { observedAt: Date.now(), sessions } satisfies BoardStore.Snapshot
@@ -96,12 +98,7 @@ export const BoardReadTool = Tool.define<
       execute: (params, ctx) =>
         Effect.gen(function* () {
           const cfg = yield* config.get()
-          if (
-            !BoardEnabled.resolve({
-              config: cfg.shared_agent_board,
-              flag: flags.experimentalSharedAgentBoard,
-            })
-          ) {
+          if (!BoardEnabled.on(cfg, flags)) {
             return yield* Effect.fail(
               new Error("The shared agent board is disabled. Enable Kilo Swarm in Agent Behaviour settings."),
             )
@@ -166,12 +163,7 @@ export const BoardPostTool = Tool.define<
       execute: (params, ctx) =>
         Effect.gen(function* () {
           const cfg = yield* config.get()
-          if (
-            !BoardEnabled.resolve({
-              config: cfg.shared_agent_board,
-              flag: flags.experimentalSharedAgentBoard,
-            })
-          ) {
+          if (!BoardEnabled.on(cfg, flags)) {
             return yield* Effect.fail(
               new Error("The shared agent board is disabled. Enable Kilo Swarm in Agent Behaviour settings."),
             )

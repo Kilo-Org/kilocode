@@ -12,4 +12,8 @@ export namespace BoardEnabled {
     if (input.flag === false) return false
     return true
   }
+
+  export function on(cfg: { shared_agent_board?: boolean }, flags: { experimentalSharedAgentBoard?: boolean }) {
+    return resolve({ config: cfg.shared_agent_board, flag: flags.experimentalSharedAgentBoard })
+  }
 }

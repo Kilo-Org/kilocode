@@ -1,5 +1,6 @@
 package ai.kilocode.rpc.dto
 
+import ai.kilocode.rpc.dto.orphans.OrphanDto
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -22,7 +23,7 @@ data class WorktreeListDto(
      * deletes or hand-removed metadata. Reported so they can be surfaced and cleaned deliberately;
      * nothing removes them automatically.
      */
-    val orphans: List<String> = emptyList(),
+    val orphans: List<OrphanDto> = emptyList(),
 )
 
 @Serializable
@@ -248,6 +249,7 @@ data class RemoveWorktreeResultDto(
     val ok: Boolean = false,
     val error: String? = null,
     val locked: Boolean = false, // removal was blocked by a worktree lock; retry with force
+    val nestedPaths: List<String> = emptyList(), // live nested worktrees blocking removal; see error
 )
 
 @Serializable

@@ -84,15 +84,6 @@
       "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
     },
     {
-      "files": ["packages/kilo-ui/src/components/message-part.tsx", "packages/kilo-ui/src/components/message-part.tsx"],
-      "fingerprint": "e4dd50a081850b7d",
-      "maxMatches": 1,
-      "maxTokens": 214,
-      "kind": "legacy",
-      "owner": "kilo-ui",
-      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
-    },
-    {
       "files": [
         "packages/kilo-vscode/src/agent-manager/orchestration-bridge.ts",
         "packages/kilo-vscode/src/services/notebook/bridge.ts"
@@ -142,18 +133,6 @@
       "fingerprint": "dda23e2fc1e7c4f3",
       "maxMatches": 1,
       "maxTokens": 111,
-      "kind": "legacy",
-      "owner": "opencode",
-      "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."
-    },
-    {
-      "files": [
-        "packages/opencode/src/kilocode/tool/agent-manager.ts",
-        "packages/opencode/src/kilocode/tool/notebook-host.ts"
-      ],
-      "fingerprint": "a1b1dcac57a91162",
-      "maxMatches": 1,
-      "maxTokens": 110,
       "kind": "legacy",
       "owner": "opencode",
       "reason": "Existing duplication before the ratchet; remove through a focused, behavior-preserving extraction."

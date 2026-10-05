@@ -16,6 +16,7 @@ import type {
   SkillMarketplaceItem,
   McpMarketplaceItem,
   AgentMarketplaceItem,
+  PluginMarketplaceItem,
   MarketplaceInstalledMetadata,
 } from "../types/marketplace"
 import "../components/marketplace/marketplace.css"
@@ -273,6 +274,19 @@ const MOCK_AGENTS: AgentMarketplaceItem[] = [
   },
 ]
 
+const MOCK_PLUGINS: PluginMarketplaceItem[] = [
+  {
+    type: "plugin",
+    id: "@acme/kilo-deploy",
+    name: "Deploy Toolkit",
+    description: "Adds deployment commands and cloud provider integrations to Kilo.",
+    url: "https://github.com/acme/kilo-deploy",
+    content: "@acme/kilo-deploy",
+    author: "Acme",
+    category: "devops",
+  },
+]
+
 const EMPTY_METADATA: MarketplaceInstalledMetadata = { project: {}, global: {} }
 const RELEVANCE = {
   "agent:architect": { filename: ["*.architecture.md"] },
@@ -314,7 +328,7 @@ export const MixedListWithItems: Story = {
     <StoryProviders>
       <div style={{ "max-height": "700px", overflow: "auto", padding: "12px" }}>
         <MarketplaceListView
-          items={[...MOCK_AGENTS, ...MOCK_MCPS, ...MOCK_SKILLS]}
+          items={[...MOCK_AGENTS, ...MOCK_MCPS, ...MOCK_SKILLS, ...MOCK_PLUGINS]}
           metadata={PARTIAL_INSTALLED_MIXED}
           relevance={RELEVANCE}
           fetching={false}
@@ -335,7 +349,7 @@ export const RelevantItems: Story = {
     <StoryProviders>
       <div style={{ "max-height": "700px", overflow: "auto", padding: "12px" }}>
         <MarketplaceListView
-          items={[...MOCK_AGENTS, ...MOCK_MCPS, ...MOCK_SKILLS]}
+          items={[...MOCK_AGENTS, ...MOCK_MCPS, ...MOCK_SKILLS, ...MOCK_PLUGINS]}
           metadata={PARTIAL_INSTALLED_MIXED}
           relevance={RELEVANCE}
           fetching={false}
@@ -481,6 +495,36 @@ export const InstalledAgentCard: Story = {
       <div style={{ width: "420px", padding: "12px" }}>
         <ItemCard item={MOCK_AGENTS[0]} metadata={PARTIAL_INSTALLED_AGENTS} onInstall={noop} onRemove={noop} />
       </div>
+    </StoryProviders>
+  ),
+}
+
+export const SinglePluginCard: Story = {
+  name: "ItemCard — single plugin not installed",
+  render: () => (
+    <StoryProviders>
+      <div style={{ width: "420px", padding: "12px" }}>
+        <ItemCard
+          item={MOCK_PLUGINS[0]}
+          metadata={EMPTY_METADATA}
+          linkUrl={MOCK_PLUGINS[0].url}
+          onInstall={noop}
+          onRemove={noop}
+        />
+      </div>
+    </StoryProviders>
+  ),
+}
+
+export const InstallPluginModal: Story = {
+  name: "InstallModal — plugin permission warning and destination",
+  render: () => (
+    <StoryProviders>
+      <MarketplaceSessionProvider>
+        <div style={{ "max-height": "700px", overflow: "auto", padding: "12px" }}>
+          <InstallModal item={MOCK_PLUGINS[0]} onClose={noop} onInstallResult={noop} />
+        </div>
+      </MarketplaceSessionProvider>
     </StoryProviders>
   ),
 }

@@ -47,6 +47,12 @@ export function summarize(meta: Meta): WorktreeDiffEntry {
   }
 }
 
+/**
+ * Size of the working-tree entry at `file`. Uses `lstat` so symlinks report
+ * the link's own size (length of the target string) instead of resolving to
+ * whatever the link points at. `git-status.ts` re-exports this for the diff
+ * sources, so keep the definition here to avoid an import cycle.
+ */
 export async function fileSize(dir: string, file: string): Promise<number> {
   const full = resolveInside(dir, file)
   if (!full) return 0

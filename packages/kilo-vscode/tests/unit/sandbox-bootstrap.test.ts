@@ -124,7 +124,7 @@ describe("Agent Manager sandbox startup", () => {
 
     // The created sessions feed the initial prompt phase.
     const prompts = flow.slice(flow.indexOf("function sendInitialPrompt"))
-    expect(prompts).toContain("buildInitialMessages([created]")
+    expect(prompts).toMatch(/buildInitialMessages\(\s*\[created\]/)
     expect(prompts).toContain('type: "agentManager.sendInitialMessage"')
   })
 

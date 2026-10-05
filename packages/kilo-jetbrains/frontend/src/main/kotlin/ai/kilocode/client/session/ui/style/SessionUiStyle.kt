@@ -187,6 +187,17 @@ object SessionUiStyle {
             fun headerHoverBgColor(): Color = JBColor.lazy {
                 UiStyle.Colors.blend(Colors.sessionBackground(), Outline.hoverColor(), HOVER_FILL_ALPHA)
             }
+
+            /**
+             * The same hover recipe as [headerHoverBgColor] for rows that sit on a raised block
+             * surface (the to-do list, background-agent rows) rather than on the backdrop. Blending
+             * off [Colors.codeBlockBackground] keeps the tint reading as a highlight of the row's own
+             * base; reusing the backdrop-based [headerHoverBgColor] there would punch a
+             * backdrop-coloured patch through the raised surface.
+             */
+            fun blockHoverBgColor(): Color = JBColor.lazy {
+                UiStyle.Colors.blend(Colors.codeBlockBackground(), Outline.hoverColor(), HOVER_FILL_ALPHA)
+            }
         }
 
         object Outline {

@@ -29,6 +29,7 @@ import { createDiffViewport } from "./diff-requests"
 import { RemoteCommentsOutside } from "./remote-comment-renderer"
 import { ReviewDiffItem } from "./ReviewDiffItem"
 import { type ReviewViewProps } from "./review-controller"
+import { focusDiff, pageDiff } from "./review-scroll"
 import { createReviewSurface } from "./review-surface"
 import { SendAllButton } from "./SendAllButton"
 import type { PRDiffSnapshot, PRTarget } from "../../src/shared/pr-comment-actions"
@@ -77,7 +78,6 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
     pinned,
     render,
     request,
-    handleRootMouseDown,
     handleKeyDown,
     commentsByFile,
     handleGutterClick,
@@ -190,13 +190,7 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
   const openLabel = () => (allOpen() ? t("ui.sessionReview.collapseAll") : t("ui.sessionReview.expandAll"))
 
   return (
-    <div
-      class="am-review-layout"
-      onKeyDown={handleKeyDown}
-      onMouseDown={handleRootMouseDown}
-      tabIndex={-1}
-      ref={rootRef}
-    >
+    <div class="am-review-layout" onKeyDown={handleKeyDown} tabIndex={-1} ref={rootRef}>
       {/* Toolbar */}
       <div class="am-review-toolbar">
         <div class="am-review-toolbar-left">
@@ -288,67 +282,78 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
             onResize={(w) => setTreeWidth(Math.max(160, Math.min(w, 400)))}
           />
         </div>
-        <div class="am-review-diff" ref={setScroller}>
-          <DiffViewerNotice text={noticeText()} role="status" />
+        <div class="am-diff-viewport">
+          <div
+            class="am-review-diff"
+            onKeyDown={pageDiff}
+            onClick={focusDiff}
+            data-focus-region
+            tabIndex={0}
+            role="region"
+            aria-label={t("agentManager.hoverCard.changes")}
+            ref={setScroller}
+          >
+            <DiffViewerNotice text={noticeText()} role="status" />
 
-          <Show when={props.loading && props.diffs.length === 0}>
-            <div class="am-diff-loading">
-              <Spinner />
-              <span>{t("session.review.loadingChanges")}</span>
-            </div>
-          </Show>
+            <Show when={props.loading && props.diffs.length === 0}>
+              <div class="am-diff-loading">
+                <Spinner />
+                <span>{t("session.review.loadingChanges")}</span>
+              </div>
+            </Show>
 
-          <Show when={!props.loading && props.diffs.length === 0 && !noticeText()}>
-            <div class="am-diff-empty">
-              <span>{t("session.review.noChanges")}</span>
-            </div>
-          </Show>
+            <Show when={!props.loading && props.diffs.length === 0 && !noticeText()}>
+              <div class="am-diff-empty">
+                <span>{t("session.review.noChanges")}</span>
+              </div>
+            </Show>
 
-          <Show when={props.diffs.length > 0}>
-            <div class="am-review-diff-content" data-component="session-review">
-              <Accordion multiple value={open()} onChange={(files) => setOpen(sanitizeOpenFiles(props.diffs, files))}>
-                <VirtualDiffList
-                  context={props.sessionKey}
-                  data={rows()}
-                  scroll={scroller()}
-                  keep={pinned()}
-                  onReady={setVirtualizer}
-                  render={(diff) => {
-                    const viewport = createDiffViewport(scroller)
-                    const annotations = remote.annotations(diff.file)
-                    return (
-                      <ReviewDiffItem
-                        diff={diff}
-                        open={open}
-                        viewport={viewport}
-                        request={props.onRequestDiff ? request : undefined}
-                        loading={() => props.loadingFiles?.has(diff.file) ?? false}
-                        comments={() => (commentsByFile().get(diff.file) ?? []).length + remote.fileCount(diff.file)}
-                        diffStyle={() => props.diffStyle}
-                        markdownRender={() => props.markdownRender ?? false}
-                        handle={(handle) => register(diff.file, handle)}
-                        scrollTo={(offset) => virtualizer()?.scrollTo(offset)}
-                        annotations={() => [...review.annotationsForFile(diff.file), ...annotations()]}
-                        renderAnnotation={render}
-                        onGutterUtilityClick={(result) => handleGutterClick(diff.file, result)}
-                        onOpenFile={props.onOpenFile}
-                        onRevertFile={props.canRevert !== false ? props.onRevertFile : undefined}
-                        reverting={() => props.revertingFiles?.has(diff.file) ?? false}
-                        onMarkdownRenderChange={props.onMarkdownRenderChange}
-                        canComment={() => props.canComment !== false}
-                        sessionKey={props.sessionKey}
-                        showLoadingSpinner
-                      />
-                    )
-                  }}
-                />
-              </Accordion>
-              <Show when={props.diffs.length > LONG_DIFF_MARKER_FILE_COUNT}>
-                <DiffEndMarker />
-              </Show>
-            </div>
-          </Show>
-          <RemoteCommentsOutside controller={remote} />
+            <Show when={props.diffs.length > 0}>
+              <div class="am-review-diff-content" data-component="session-review">
+                <Accordion multiple value={open()} onChange={(files) => setOpen(sanitizeOpenFiles(props.diffs, files))}>
+                  <VirtualDiffList
+                    context={props.sessionKey}
+                    data={rows()}
+                    scroll={scroller()}
+                    keep={pinned()}
+                    onReady={setVirtualizer}
+                    render={(diff) => {
+                      const viewport = createDiffViewport(scroller)
+                      const annotations = remote.annotations(diff.file)
+                      return (
+                        <ReviewDiffItem
+                          diff={diff}
+                          open={open}
+                          viewport={viewport}
+                          request={props.onRequestDiff ? request : undefined}
+                          loading={() => props.loadingFiles?.has(diff.file) ?? false}
+                          comments={() => (commentsByFile().get(diff.file) ?? []).length + remote.fileCount(diff.file)}
+                          diffStyle={() => props.diffStyle}
+                          markdownRender={() => props.markdownRender ?? false}
+                          handle={(handle) => register(diff.file, handle)}
+                          scrollTo={(offset) => virtualizer()?.scrollTo(offset)}
+                          annotations={() => [...review.annotationsForFile(diff.file), ...annotations()]}
+                          renderAnnotation={render}
+                          onGutterUtilityClick={(result) => handleGutterClick(diff.file, result)}
+                          onOpenFile={props.onOpenFile}
+                          onRevertFile={props.canRevert !== false ? props.onRevertFile : undefined}
+                          reverting={() => props.revertingFiles?.has(diff.file) ?? false}
+                          onMarkdownRenderChange={props.onMarkdownRenderChange}
+                          canComment={() => props.canComment !== false}
+                          sessionKey={props.sessionKey}
+                          showLoadingSpinner
+                        />
+                      )
+                    }}
+                  />
+                </Accordion>
+                <Show when={props.diffs.length > LONG_DIFF_MARKER_FILE_COUNT}>
+                  <DiffEndMarker />
+                </Show>
+              </div>
+            </Show>
+            <RemoteCommentsOutside controller={remote} />
+          </div>
         </div>
       </div>
     </div>

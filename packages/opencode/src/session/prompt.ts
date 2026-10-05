@@ -6,6 +6,7 @@ import fs from "node:fs" // kilocode_change
 import { SessionV1 } from "@opencode-ai/core/v1/session"
 import os from "os"
 import { KiloSessionPrompt } from "@/kilocode/session/prompt" // kilocode_change
+import { unavailable } from "@/kilocode/provider/catalog-recovery" // kilocode_change
 import { BoardContext } from "@/kilocode/board/context" // kilocode_change
 import { SKILL_SHELL_DISABLED, SKILL_SHELL_UNTRUSTED } from "@/kilocode/skills/display" // kilocode_change
 import { KiloSessionMessageOrder } from "@/kilocode/session/message-order" // kilocode_change
@@ -96,6 +97,7 @@ import { isBtwCommand } from "@/kilocode/command/btw" // kilocode_change
 import { SessionResumeImport } from "@/kilocode/session-resume/import" // kilocode_change
 import { KiloSessionContinuation } from "@/kilocode/session/continuation" // kilocode_change
 import { KiloSessionControl } from "@/kilocode/session/control" // kilocode_change
+import { KiloSessionSteering } from "@/kilocode/session/steering" // kilocode_change
 import { Goal } from "@/kilocode/session/goal/runner" // kilocode_change
 import { GoalPolicy } from "@/kilocode/session/goal/policy" // kilocode_change
 import { GoalState } from "@/kilocode/session/goal/state" // kilocode_change
@@ -801,7 +803,7 @@ export const layer = Layer.effect(
       const err = Cause.squash(exit.cause)
       if (Provider.ModelNotFoundError.isInstance(err)) {
         const hint = err.suggestions?.length ? ` Did you mean: ${err.suggestions.join(", ")}?` : ""
-        const empty = err.modelsEmpty ? " No models are currently available." : "" // kilocode_change
+        const empty = unavailable(err) ? ` ${unavailable(err)}` : "" // kilocode_change
         yield* events.publish(Session.Event.Error, {
           sessionID,
           error: new NamedError.Unknown({
@@ -1489,6 +1491,9 @@ export const layer = Layer.effect(
           yield* dismiss
           return message
         }
+        // Tell the parent when a human steers this subagent; only a turn that will run counts.
+        const steer = { session, parts: input.parts, messageID: message.info.id }
+        yield* KiloSessionSteering.notify({ ...steer, config, flags, database })
         // Queue tails and runner fibers can resume outside the HTTP request's
         // ambient instance context; bridge both Effect refs and legacy ALS.
         const bridge = yield* EffectBridge.make()
@@ -1644,8 +1649,9 @@ export const layer = Layer.effect(
             auto: task.auto,
             overflow: task.overflow,
           })
-          // kilocode_change start - compaction.process only returns "stop" after
-          // setting ContextOverflowError on the summary message; surface as turn error
+          // kilocode_change start - compaction.process returns "stop" after
+          // setting a terminal error on the summary message: either a
+          // ContextOverflowError or the empty-summary APIError; surface as turn error
           if (result === "stop") {
             closeReasons.set(sessionID, "error")
             break
@@ -1760,6 +1766,7 @@ export const layer = Layer.effect(
             bypassAgentCheck,
             messages: msgs,
             promptOps,
+            goalOps: goals, // kilocode_change
             memoryCache, // kilocode_change
             notify, // kilocode_change
           }).pipe(
@@ -1856,15 +1863,12 @@ export const layer = Layer.effect(
             tools,
             model,
             toolChoice: format.type === "json_schema" ? "required" : undefined,
-            // kilocode_change start - feed the provider-reported context size from the last finished
-            // turn into the output-token cap, so image/vision input is measured by the provider
-            // rather than by encoded payload bytes (see KiloLLM.capOutputTokens). Summary messages
-            // are skipped like in the isOverflow check above: their reported input reflects the
-            // pre-compaction history, not the trimmed context of the next request.
-            reportedContextTokens:
-              lastFinished && lastFinished.summary !== true
-                ? KiloSessionOverflow.count(lastFinished.tokens)
-                : undefined,
+            // kilocode_change start - provider-reported context size feeds the output-token cap
+            // (see KiloLLM.capOutputTokens); summaries and trailing unfinished assistants invalidate it.
+            reportedContextTokens: KiloSessionOverflow.baseline({
+              assistant: lastAssistant,
+              finished: lastFinished,
+            }),
             // kilocode_change end
           })
 
@@ -2442,7 +2446,10 @@ export const layer = Layer.effect(
       // kilocode_change end
 
       const templateParts = yield* resolvePromptParts(template)
-      KiloSessionProcessor.markReviewTelemetry(templateParts, input.command) // kilocode_change - mark review commands for completion telemetry
+      // kilocode_change start - mark review commands for completion telemetry and label the expanded template for clients
+      KiloSessionProcessor.markReviewTelemetry(templateParts, input.command)
+      KiloSessionProcessor.markCommand(templateParts, input.command, input.arguments)
+      // kilocode_change end
       const inputFiles = new Set(
         input.parts?.filter((part) => new URL(part.url).protocol === "file:").map((part) => fileURLToPath(part.url)),
       )

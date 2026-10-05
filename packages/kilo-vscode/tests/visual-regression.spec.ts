@@ -85,6 +85,8 @@ async function settle(page: Page) {
 // not a meaningful appearance baseline.
 // The diff-panel scroll-up story settles at a slightly different scroll offset
 // between runs, so its baseline flips by a few pixels even without source changes.
+// The Display session preview plays a continuous streaming loop, so captures land
+// on an indeterminate frame.
 const SKIP = new Set<string>([
   "chat--chat-view-session-dock-stability",
   "labs-tool-call-lab--question-resolve-stability",
@@ -99,6 +101,7 @@ const SKIP = new Set<string>([
   "composite-webview--permission-dock-config-preloaded",
   "settings--sandboxing-allowlist",
   "settings--sandboxing-panel",
+  "settings--display-preview",
 ])
 
 const DOCS = new Map<string, string[]>([

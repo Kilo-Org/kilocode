@@ -10,13 +10,13 @@ import type {
   PRMergeMethod,
   PRMergeState,
   PRReaction,
-  PRReactionContent,
   PRReviewer,
   PRStatus,
   ReviewDecision,
   ReviewerState,
 } from "../types"
-import { PR_REACTION_CONTENT, isConversationComment } from "../../../webview-ui/agent-manager/pr/pr-types"
+import { isConversationComment } from "../../../webview-ui/agent-manager/pr/pr-types"
+import { isPRReactionContent } from "./PRActions"
 import type {
   PRResult,
   GhAuthor,
@@ -218,22 +218,20 @@ const REVIEWER_STATE: Record<string, ReviewerState> = {
   COMMENTED: "commented",
 }
 
-const REACTION_CONTENT = new Set<string>(PR_REACTION_CONTENT)
-
 export function parseReactions(groups?: GhReactionGroup[]): PRReaction[] {
   return (groups ?? []).flatMap((group) => {
     const content = group.content
     const count = group.reactors?.totalCount ?? group.users?.totalCount
     if (
       !content ||
-      !REACTION_CONTENT.has(content) ||
+      !isPRReactionContent(content) ||
       typeof count !== "number" ||
       !Number.isSafeInteger(count) ||
       count < 1
     ) {
       return []
     }
-    return [{ content: content as PRReactionContent, count, viewerHasReacted: group.viewerHasReacted === true }]
+    return [{ content, count, viewerHasReacted: group.viewerHasReacted === true }]
   })
 }
 

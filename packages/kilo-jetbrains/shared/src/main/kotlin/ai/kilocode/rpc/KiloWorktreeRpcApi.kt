@@ -12,6 +12,7 @@ import ai.kilocode.rpc.dto.WorktreeDirtyListDto
 import ai.kilocode.rpc.dto.WorktreeListDto
 import ai.kilocode.rpc.dto.WorktreePrListDto
 import ai.kilocode.rpc.dto.WorktreeStatsListDto
+import ai.kilocode.rpc.dto.orphans.RemoveOrphansResultDto
 import com.intellij.platform.rpc.RemoteApiProviderService
 import fleet.rpc.RemoteApi
 import fleet.rpc.Rpc
@@ -124,4 +125,29 @@ interface KiloWorktreeRpcApi : RemoteApi<Unit> {
 
     /** Records the session-list visibility for [directory]. Returns true when written. */
     suspend fun setSessionList(directory: String, visible: Boolean): Boolean
+
+    /**
+     * Apparent size (sum of regular-file sizes, never following symlinks) of every [paths] entry
+     * under [directory]'s repository. A path that fails to walk (permission error, disappeared mid
+     * walk) is simply omitted from the result rather than failing the whole batch.
+     */
+    suspend fun orphanSizes(directory: String, paths: List<String>): Map<String, Long>
+
+    /**
+     * Removes every one of [paths] — directories under `.kilo/worktrees/` that git does not track
+     * (see [ai.kilocode.rpc.dto.orphans.OrphanDto]) — from [directory]'s repository. Each path is
+     * re-validated against a fresh scan immediately before it is touched and reported independently,
+     * so a stale selection or a path that is no longer an orphan is skipped rather than deleted.
+     * Deletion is a stage-rename followed by a background recursive delete, the same primitive
+     * [remove] uses for a managed worktree — this call returns as soon as every path has been
+     * staged, not after the background delete finishes.
+     */
+    suspend fun removeOrphans(directory: String, paths: List<String>): RemoveOrphansResultDto
+
+    /**
+     * Reveals [path] in the host OS's file manager. Backend-only: in split mode the frontend runs on
+     * the client machine while the worktree lives on the host, the same reason [open] is backend
+     * (see its doc). Returns false when reveal is unsupported on this OS or [path] does not exist.
+     */
+    suspend fun revealPath(path: String): Boolean
 }

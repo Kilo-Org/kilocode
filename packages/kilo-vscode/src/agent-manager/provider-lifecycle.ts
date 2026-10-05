@@ -1,5 +1,6 @@
 import type { KiloClient, Session } from "@kilocode/sdk/v2/client"
 import { getErrorMessage } from "../kilo-provider-utils"
+import { isRunningStatus } from "../session-status"
 import type { AgentManagerOutMessage } from "./types"
 import { PLATFORM } from "./constants"
 import { initContextState } from "./project/init"
@@ -15,6 +16,7 @@ import { plan, type Start } from "./creation-plan"
 import { copyEnvFiles } from "./env-copy"
 import { runWorktreeSetupScript } from "./setup-script-task"
 import { broken } from "./worktree-reconcile"
+import type { PanelContext } from "./host"
 
 export async function runLifecycleSetup(
   input: Parameters<typeof runWorktreeSetupScript>[0],
@@ -133,6 +135,29 @@ export interface LifecycleHost {
   post: (message: AgentManagerOutMessage) => void
   notify: (message: string) => void
   log: (...args: unknown[]) => void
+}
+
+/**
+ * Build the `sessions` sub-object of {@link LifecycleHost} from the panel and its supporting state.
+ *
+ * Every call routes through the panel's `SessionProvider` (or is a safe no-op without one), closing
+ * a directory-scoped browser session first so a session move or removal never leaves a stale browser
+ * tab pointed at a directory it no longer owns.
+ */
+export function lifecycleSessions(
+  panel: PanelContext | undefined,
+  browserLifecycle: { close: (sessionId: string) => void } | undefined,
+  panelSessions: Set<string>,
+): LifecycleHost["sessions"] {
+  return {
+    register: (session) => panel?.sessions.registerSession(session),
+    clearDirectory: (sid) => (browserLifecycle?.close(sid), panel?.sessions.clearSessionDirectory(sid)),
+    setSessionDirectory: (sid, dir) => (browserLifecycle?.close(sid), panel?.sessions.setSessionDirectory(sid, dir)),
+    registerSessionRoute: (ref, dir, gen) => panel?.sessions.registerSessionRoute?.(ref, dir, gen),
+    directories: () => panel?.sessions.getSessionDirectories(),
+    abort: (ids) => panel?.sessions.abortSessions(ids) ?? Promise.resolve(),
+    forget: (sid) => void panelSessions.delete(sid),
+  }
 }
 
 /** Create a new worktree with an auto-created first session. */
@@ -287,7 +312,7 @@ export async function deleteLifecycleWorktree(
     )
       throw new Error("Deletion safety checks returned no data")
     sessions.data.forEach((session) => retained.add(session.id))
-    const active = Object.values(status.data).some((value) => value.type !== "idle")
+    const active = Object.values(status.data).some((value) => isRunningStatus(value.type))
     if (active || permissions.data.length > 0 || questions.data.length > 0)
       return fail("Cannot delete a worktree while a session is active or waiting for input")
   } catch (error) {
@@ -542,16 +567,19 @@ export async function closeLifecycleSession(
   const state = ctx.peekState()
   const dir = state?.directoryFor(sessionId) ?? host.sessions.directories()?.get(sessionId) ?? ctx.root ?? process.cwd()
   await host.sessions.abort([sessionId])
+  // Drop the session from state before stopping its processes. Process shutdown
+  // can be slow or unavailable, and while a closed session is still listed here
+  // any concurrent state push would restore the tab the user just closed,
+  // because a webview with no remaining real tabs looks like a reload.
   host.sessions.forget(sessionId)
+  state?.removeSession(sessionId)
+  host.sessions.clearDirectory(sessionId)
+  if (state) host.push()
   try {
     await stopSessionProcesses(host.client(), sessionId, dir)
   } catch (err) {
     host.log("onCloseSession: client not available:", err)
   }
-
-  state?.removeSession(sessionId)
-  host.sessions.clearDirectory(sessionId)
-  if (state) host.push()
   host.log(`Closed session ${sessionId}`)
   return null
 }

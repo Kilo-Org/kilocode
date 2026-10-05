@@ -42,6 +42,16 @@ export type OrphanDirectory = {
   path: string
   /** `broken` still has a `.git` file; `leftover` is a bare directory, e.g. only `.kilo-dev/`. */
   kind: "broken" | "leftover"
+  /** Apparent size in bytes, filled in asynchronously by orphans/sizing.ts. Absent until it lands. */
+  bytes?: number
+  /**
+   * True once a size pass has finished with this directory, whether or not it produced a number.
+   *
+   * `bytes` alone cannot answer "is a size still coming?": a directory that could not be walked
+   * (permissions, or it vanished mid-pass) never gets one, and the UI would otherwise claim to be
+   * calculating forever. `sized` without `bytes` means the answer is in and it is "unknown".
+   */
+  sized?: boolean
 }
 
 export type WorktreeHealthReport = {

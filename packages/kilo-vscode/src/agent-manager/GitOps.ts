@@ -646,7 +646,7 @@ export class GitOps {
   execGit(
     args: string[],
     cwd: string,
-    options?: { stdin?: string; signal?: AbortSignal; priority?: boolean },
+    options?: { stdin?: string; signal?: AbortSignal; priority?: boolean; env?: NodeJS.ProcessEnv },
   ): Promise<ExecResult> {
     return this.exec(args, cwd, options)
   }

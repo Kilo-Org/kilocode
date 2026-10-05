@@ -14,6 +14,12 @@ module.exports = withMarkdoc(/* config: https://markdoc.io/docs/nextjs#options *
         basePath: false,
         permanent: true,
       },
+      {
+        source: "/llms.txt",
+        destination: "/docs/llms.txt",
+        basePath: false,
+        permanent: true,
+      },
       ...previousDocsRedirects,
     ]
   },

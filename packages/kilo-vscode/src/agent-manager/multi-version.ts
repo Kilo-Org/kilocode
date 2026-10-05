@@ -66,6 +66,8 @@ export interface InitialMessage {
   sessionId: string
   worktreeId: string
   text?: string
+  command?: string
+  arguments?: string
   providerID?: string
   modelID?: string
   agent?: string
@@ -86,6 +88,7 @@ export function buildInitialMessages(
   agent?: string,
   variant?: string,
   files?: Array<{ mime: string; url: string }>,
+  command?: { command: string; arguments: string },
 ): InitialMessage[] {
   return created.map((entry) => {
     const model = models[entry.versionIndex]
@@ -100,7 +103,11 @@ export function buildInitialMessages(
       // A per-allocation effort pick wins even when preparing an empty session.
       variant: model?.variant ?? variant,
     }
-    if (prompt) {
+    if (command) {
+      msg.command = command.command
+      msg.arguments = command.arguments
+      msg.files = files
+    } else if (prompt) {
       msg.text = prompt
       msg.files = files
     }

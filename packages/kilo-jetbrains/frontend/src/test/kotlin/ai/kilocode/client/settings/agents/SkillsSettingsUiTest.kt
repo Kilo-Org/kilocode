@@ -4,6 +4,8 @@ import ai.kilocode.client.util.edtWait
 import ai.kilocode.client.app.KiloAgentBehaviorService
 import ai.kilocode.client.app.KiloAppService
 import ai.kilocode.client.app.KiloWorkspaceService
+import ai.kilocode.client.plugin.KiloBundle
+import ai.kilocode.client.settings.base.SettingsInfo
 import ai.kilocode.client.settings.base.SettingsPathDialogHandle
 import ai.kilocode.client.testing.FakeAgentBehaviorRpcApi
 import ai.kilocode.client.testing.FakeAppRpcApi
@@ -69,6 +71,17 @@ class SkillsSettingsUiTest : BasePlatformTestCase() {
         }
     }
 
+    fun `test page shows exactly one info banner explaining skills`() {
+        val panel = panel()
+        flushUntil { rows(panel).size == 3 }
+
+        edt {
+            val info = components(panel).filterIsInstance<SettingsInfo>().single()
+            assertEquals(KiloBundle.message("settings.agentBehavior.skills.info"), bannerIntro(info))
+            true
+        }
+    }
+
     fun `test loads skills with location note and builtins have no actions`() {
         val panel = panel()
 
@@ -115,6 +128,16 @@ class SkillsSettingsUiTest : BasePlatformTestCase() {
             assertFalse(view.getScrollableTracksViewportHeight())
             assertSame(pane, layout.getLayoutComponent(BorderLayout.CENTER))
             assertSame(panel.sources, layout.getLayoutComponent(BorderLayout.SOUTH))
+            true
+        }
+    }
+
+    fun `test toolbar offers marketplace as final button after separator`() {
+        val panel = panel()
+        flushUntil { rows(panel).size == 3 }
+
+        edt {
+            assertMarketplaceToolbarButton(panel)
             true
         }
     }
@@ -544,6 +567,11 @@ class SkillsSettingsUiTest : BasePlatformTestCase() {
     }
 
     private fun skillsList(panel: SkillsSettingsUi) = components(panel).filterIsInstance<JBList<ActiveListItem>>().first()
+
+    private fun bannerIntro(info: SettingsInfo): String {
+        val pane = UIUtil.findComponentOfType(info, javax.swing.JEditorPane::class.java) ?: error("no banner text")
+        return pane.text.replace(Regex("<[^>]+>"), "").replace(Regex("\\s+"), " ").trim()
+    }
 
     private fun sourceList(panel: SkillsSettingsUi) = components(panel).filterIsInstance<JBList<ActiveListItem>>().last()
 

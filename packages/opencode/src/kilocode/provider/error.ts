@@ -53,7 +53,8 @@ const RETRYABLE = /rate.?limit|too.?many.?requests|rate increased too quickly|ex
 // Keep free-form message matching narrow: Session.retryable only applied
 // rate-limit phrases to prose; the wider pattern above is for structured
 // code/type fields only
-const RETRYABLE_TEXT = /rate increased too quickly|rate.?limit|too.?many.?requests/i
+const RETRYABLE_TEXT =
+  /rate increased too quickly|rate.?limit|too.?many.?requests|try again (?:later|in\b)|(?:currently|temporarily) at capacity|temporarily unavailable/i
 
 // Must stay at least as permissive as the Session.retryable heuristics that
 // applied when these frames still surfaced as NamedError.Unknown, or

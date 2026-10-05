@@ -102,6 +102,26 @@ class PromptLifecycleTest : SessionControllerTestBase() {
         assertFalse(message.properties.containsValue("git-changes"))
     }
 
+    fun `test prompt telemetry excludes synthetic parts from attachment and mention counts`() {
+        appRpc.state.value = KiloAppStateDto(KiloAppStatusDto.READY, config = ConfigDto(model = "kilo/gpt-5"))
+        projectRpc.state.value = workspaceReady()
+        val m = controller()
+        // Mirrors what EditorContextGatherer sends for an automatic selection: a hidden synthetic
+        // grounding note immediately followed by the real ranged file attachment.
+        val files = listOf(
+            PromptPartDto(type = "text", text = "<system-reminder>Note: the user selected...</system-reminder>", synthetic = true),
+            PromptPartDto(type = "file", mime = "text/plain", url = "file:///repo/src/A.kt?start=1&end=2", filename = "A.kt"),
+        )
+
+        flush()
+        edt { m.prompt("explain this", files) }
+        flush()
+
+        val sent = appRpc.telemetry.single { it.event == "Conversation Send Clicked" }
+        assertEquals("1", sent.properties["attachmentCount"])
+        assertFalse(sent.properties.containsKey("hasMentions"))
+    }
+
     fun `test session queue changed updates queued set`() {
         val (c, _, modelEvents) = prompted()
 
@@ -264,6 +284,21 @@ class PromptLifecycleTest : SessionControllerTestBase() {
             ChatEventDto.PermissionAsked(
                 "ses_test",
                 permission("perm1").copy(metadata = mapOf("skillShell" to "true")),
+            ),
+        )
+
+        assertTrue(rpc.permissionReplies.isEmpty())
+        assertTrue(m.model.state is SessionState.AwaitingPermission)
+    }
+
+    fun `test auto approve surfaces sandbox escalation for a human reply`() {
+        val (m, _, _) = prompted()
+
+        edt { m.setAutoApprove(true) }
+        emit(
+            ChatEventDto.PermissionAsked(
+                "ses_test",
+                permission("perm1").copy(metadata = mapOf("sandboxEscalation" to "true")),
             ),
         )
 

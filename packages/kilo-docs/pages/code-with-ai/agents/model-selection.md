@@ -57,8 +57,8 @@ While the specifics change constantly, some principles stay consistent:
 - When the selected model supports variants, type `/variant` to open the reasoning effort selector.
 - Press `Shift+Tab` in the prompt input to cycle to the next reasoning effort variant, wrapping after the last one. This works in the sidebar chat, the Agent Manager prompt, and the New Worktree dialog, and the variant selector tooltip shows the shortcut on hover. To keep `Shift+Tab` for keyboard focus navigation instead, disable the `kilo-code.new.chat.shiftTabCyclesVariant` setting (also available under **Settings → Display**).
 - Set per-agent defaults and a global default in the **Settings** panel (Models tab), or directly in the `kilo.jsonc` config file.
-- **Model precedence:** Session override → Last picked per agent → Per-agent config → Global config → [Auto Free](/docs/code-with-ai/agents/auto-model#tiers) (note: Auto Free may route to providers that log prompts — see the Auto Model page for details).
-- The model selector remembers the last model you picked for each agent, so switching agents restores your previous choice. A manual pick always beats config settings.
+- **Model precedence:** Pick for the current session or draft and agent → Per-agent config → Global config → Organization recommendation (then the first available Kilo model), or the most recently used available model for individual users → [Auto Free](/docs/code-with-ai/agents/auto-model#tiers) (note: Auto Free may route to providers that log prompts — see the Auto Model page for details).
+- The model selector remembers the model you picked for each agent within a session or draft, so switching agents and back restores your choice. New sessions start from config or the default; existing sessions recover each agent's model and reasoning effort from its latest user message. A manual pick beats config only within the session or draft and agent where it was made.
 
 {% /tab %}
 {% tab label="CLI" %}
@@ -154,9 +154,9 @@ The Settings UI writes the same `agent.<name>.model` entry, so either method pro
 
 For details on configuring subagent models, see [Custom Subagents](/docs/customize/custom-subagents).
 
-### Per-task model selection (experimental)
+### Per-task model selection
 
-Enable [Task Subagent Model Selection](/docs/getting-started/settings#task-subagent-model-selection) to request a different model, provider, or reasoning effort for an individual subagent task. It is off by default. Overrides require your explicit request; the agent does not choose a different model on its own based on task complexity, cost, or latency.
+Request a different model, provider, or reasoning effort for an individual subagent task. Overrides require your explicit request; the agent does not choose a different model on its own based on task complexity, cost, or latency.
 
 Invalid selections fail instead of silently falling back. Resumed tasks keep their last model and reasoning effort unless you request an override.
 

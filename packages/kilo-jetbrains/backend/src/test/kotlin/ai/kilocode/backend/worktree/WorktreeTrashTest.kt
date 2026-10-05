@@ -132,6 +132,29 @@ class WorktreeTrashTest {
     }
 
     @Test
+    fun `reap with onDone runs the callback once the delete settles`() = runBlocking {
+        val dir = root.resolve("${WorktreeTrash.PREFIX}reap-onDone")
+        Files.createDirectories(dir)
+        var ran = false
+
+        trash.reap(dir) { ran = true }
+        trash.drain()
+
+        assertFalse(Files.exists(dir))
+        assertTrue(ran, "onDone must run after the reap attempt finishes")
+    }
+
+    @Test
+    fun `reap with onDone still runs the callback when the directory never existed`() = runBlocking {
+        var ran = false
+
+        trash.reap(root.resolve("${WorktreeTrash.PREFIX}never-existed-onDone")) { ran = true }
+        trash.drain()
+
+        assertTrue(ran, "onDone must run even when there was nothing to delete")
+    }
+
+    @Test
     fun `sweep reaps every delete-prefixed directory and ignores ordinary ones`() = runBlocking {
         val orphanA = root.resolve("${WorktreeTrash.PREFIX}a").also { Files.createDirectories(it) }
         val orphanB = root.resolve("${WorktreeTrash.PREFIX}b").also { Files.createDirectories(it) }

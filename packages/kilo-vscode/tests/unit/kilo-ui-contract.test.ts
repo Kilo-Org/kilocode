@@ -261,7 +261,7 @@ describe("Bash tool static terminal preview (source)", () => {
 
   it("BashHighlightedOutput syntax highlights log output", () => {
     expect(src).toContain('data-slot="bash-terminal" data-kind="output"')
-    expect(src).toContain('data-slot="bash-section-code" data-scrollable ref={outRef}')
+    expect(src).toContain('data-slot="bash-section-code" data-scrollable ref={bindOutput}')
     expect(src).toContain('data-lang="log"')
     expect(src).toContain("escapeHtml(out)")
   })
@@ -305,7 +305,7 @@ describe("Expanded tool motion and typography (source)", () => {
   const reasoning =
     fs
       .readFileSync(KILO_MESSAGE_PART_FILE, "utf-8")
-      .match(/PART_MAPPING\["reasoning"\][\s\S]*?(?=\nfunction useToolReveal)/)?.[0] ?? ""
+      .match(/PART_MAPPING\["reasoning"\][\s\S]*?(?=\nfunction WebfetchMeta)/)?.[0] ?? ""
 
   it("animates completed rolling shell details", () => {
     const src = fs.readFileSync(SHELL_ROLLING_FILE, "utf-8")

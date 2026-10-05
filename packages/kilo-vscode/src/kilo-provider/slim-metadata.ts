@@ -38,6 +38,20 @@ function cap(v: unknown, limit = OUTPUT_CAP): string | undefined {
   return v.slice(0, limit) + `\n… (truncated, ${v.length - limit} chars omitted)`
 }
 
+/**
+ * Keep the end of a long output, dropping the partial first line so the
+ * first visible line is always a whole line. Bash streams a rolling tail
+ * preview, so keeping the tail shows the lines the user is waiting for.
+ */
+function tailCap(v: unknown, limit = OUTPUT_CAP): string | undefined {
+  if (typeof v !== "string") return undefined
+  if (v.length <= limit) return v
+  const tail = v.slice(-limit)
+  const nl = tail.indexOf("\n")
+  const whole = nl >= 0 ? tail.slice(nl + 1) : tail
+  return whole || tail
+}
+
 function patch(v: unknown): string | undefined {
   if (typeof v !== "string") return undefined
   if (v.length > PATCH_CAP) return undefined
@@ -176,12 +190,15 @@ function slimOutput(state: Record<string, unknown>): Record<string, unknown> {
   return next
 }
 
-/** bash: truncate metadata.output and state.output. */
+/** bash: keep the end of metadata.output and state.output so live output shows the latest lines. */
 function slimBash(state: Record<string, unknown>): Record<string, unknown> {
-  const next = slimOutput(state)
+  const next = { ...state }
+  if (typeof state.output === "string" && state.output.length > OUTPUT_CAP) {
+    next.output = tailCap(state.output)
+  }
   const meta = state.metadata
   if (isObj(meta) && typeof meta.output === "string" && meta.output.length > OUTPUT_CAP) {
-    next.metadata = { ...meta, output: cap(meta.output) }
+    next.metadata = { ...meta, output: tailCap(meta.output) }
   }
   return next
 }

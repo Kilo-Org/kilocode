@@ -10,6 +10,7 @@ import { Global } from "@opencode-ai/core/global"
 import { ConfigAgent } from "@/config/agent"
 import { Config } from "@/config/config"
 import { ConfigParse } from "@/config/parse"
+import { ConfigV2Compat } from "@/config/v2-compat"
 import { ConfigVariable } from "@/config/variable"
 import { Filesystem } from "@/util/filesystem"
 import { isRecord } from "@/util/record"
@@ -283,7 +284,7 @@ export namespace KilocodeConfigOverlay {
     if (!isRecord(parsed)) return {}
     for (const warning of sanitized.warnings) log.warn(warning.message, { path: warning.path })
     // kilocode_change end
-    return ConfigParse.schema(Config.Info, parsed, file) as Config.Info
+    return ConfigParse.schema(Config.Info, ConfigV2Compat.lower(parsed, file).value, file) as Config.Info
   }
 
   function field(

@@ -4,8 +4,6 @@ import type { KiloConnectionService } from "../cli-backend"
 import { playwrightCommand } from "./settings"
 import { canonicalizePath, samePath } from "../../agent-manager/project/paths"
 
-type BrowserAutomationState = "disabled" | "registering" | "connected" | "failed" | "disconnected"
-
 /**
  * Manages the built-in Playwright MCP browser server for ordinary Kilo sessions.
  *
@@ -19,7 +17,6 @@ export class BrowserAutomationService implements vscode.Disposable {
   private readonly registered = new Set<string>()
   private queue: Promise<void> = Promise.resolve()
   private disposed = false
-  private state: BrowserAutomationState = "disabled"
 
   constructor(
     private readonly connectionService: KiloConnectionService,
@@ -140,7 +137,6 @@ export class BrowserAutomationService implements vscode.Disposable {
     }
     if (!vscode.workspace.isTrusted) {
       console.warn("[Kilo New] BrowserAutomationService: Workspace is not trusted, skipping Playwright MCP")
-      this.setState("disabled")
       return
     }
     const dirs = this.directories()
@@ -169,12 +165,8 @@ export class BrowserAutomationService implements vscode.Disposable {
 
   private async register(dirs: string[]): Promise<void> {
     const client = this.getClient()
-    if (!client) {
-      this.setState("failed")
-      return
-    }
+    if (!client) return
     const command = this.command()
-    this.setState("registering")
     let failure: unknown
     for (const directory of dirs) {
       try {
@@ -206,16 +198,8 @@ export class BrowserAutomationService implements vscode.Disposable {
         failure = error
       }
     }
-    if (this.registered.size > 0) {
-      this.setState("connected")
-      return
-    }
-    if (failure) {
-      console.error("[Kilo New] BrowserAutomationService: Failed to register MCP server:", failure)
-      this.setState("failed")
-      return
-    }
-    this.setState("disconnected")
+    if (this.registered.size > 0) return
+    if (failure) console.error("[Kilo New] BrowserAutomationService: Failed to register MCP server:", failure)
   }
 
   private async unregister(dirs = [...this.registered]): Promise<void> {
@@ -233,7 +217,6 @@ export class BrowserAutomationService implements vscode.Disposable {
         }
       }
     }
-    this.setState("disabled")
   }
 
   private getClient(): KiloClient | null {
@@ -242,12 +225,6 @@ export class BrowserAutomationService implements vscode.Disposable {
     } catch {
       return null
     }
-  }
-
-  private setState(state: BrowserAutomationState): void {
-    if (this.state === state) return
-    console.log(`[Kilo New] BrowserAutomationService: State ${this.state} -> ${state}`)
-    this.state = state
   }
 
   dispose(): void {

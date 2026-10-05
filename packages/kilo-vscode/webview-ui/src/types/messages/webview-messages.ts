@@ -1,4 +1,4 @@
-import type { InstallMarketplaceItemOptions, MarketplaceFilters, MarketplaceItem } from "../marketplace"
+import type { InstallMarketplaceItemOptions, MarketplaceItem } from "../marketplace"
 import type { FileAttachment } from "./parts"
 import type { MessageLoadMode } from "./sessions"
 import type { PermissionFileDiff } from "./permissions"
@@ -7,6 +7,7 @@ import type { Config } from "./config"
 import type { ModelAllocation, ReviewCommentEntry, TerminalDestination, TerminalPlacement } from "./agent-manager"
 import type { PRReviewCommentData, ReviewMessageData } from "../../../../src/shared/review-comments"
 import type { BrowserFeedbackData } from "../../../../src/shared/browser-feedback"
+import type { BrowserInteraction, BrowserViewport, BrowserViewIdentity } from "../../../../src/shared/browser-stream"
 import type { WorkStyle, WorkStyleState } from "../../../../src/shared/work-style-presets"
 import type { RefreshProviderUsageMessage, RequestProviderUsageMessage } from "./provider-usage"
 import type { AnacondaDesktopWebviewMessage } from "../../../../src/shared/anaconda-desktop-messages"
@@ -37,6 +38,8 @@ export interface SendMessageRequest {
   browserFeedback?: BrowserFeedbackData
   agentManagerContext?: string
   contextDirectory?: string
+  /** Label for a prompt Kilo composed, such as an editor code action. */
+  injectedTitle?: string
 }
 
 export interface ResumeSessionRequest {
@@ -119,6 +122,7 @@ export interface LoadMessagesRequest {
 
 export interface LoadSessionsRequest {
   type: "loadSessions"
+  more?: boolean
 }
 
 export interface RequestSessionModelUsageMessage {
@@ -157,6 +161,8 @@ export interface ImportAndSendMessage {
   browserFeedback?: BrowserFeedbackData
   command?: string
   commandArgs?: string
+  /** Label for a prompt Kilo composed, such as an editor code action. */
+  injectedTitle?: string
 }
 
 export interface LoginRequest {
@@ -337,6 +343,7 @@ export interface RequestCommandsMessage {
 
 export interface SendCommandRequest {
   type: "sendCommand"
+  projectId?: string
   command: string
   arguments: string
   messageID?: string
@@ -516,6 +523,21 @@ export interface RequestTimelineSettingMessage {
   type: "requestTimelineSetting"
 }
 
+export interface RequestAutoCleanupStateMessage {
+  type: "requestAutoCleanupState"
+  requestID: string
+}
+
+export interface RunAutoCleanupNowMessage {
+  type: "runAutoCleanupNow"
+  requestID: string
+}
+
+export interface StopAutoCleanupNowMessage {
+  type: "stopAutoCleanupNow"
+  requestID: string
+}
+
 export interface RequestThroughputSettingMessage {
   type: "requestThroughputSetting"
 }
@@ -656,16 +678,6 @@ export interface UnsyncSessionRequest {
   scope?: "task" | "inspector"
 }
 
-// Agent Manager worktree messages
-export interface CreateWorktreeSessionRequest {
-  type: "agentManager.createWorktreeSession"
-  text: string
-  providerID?: string
-  modelID?: string
-  agent?: string
-  files?: FileAttachment[]
-}
-
 export interface TelemetryRequest {
   type: "telemetry"
   event: string
@@ -709,6 +721,13 @@ export interface CleanOrphanDirectoriesRequest {
   type: "agentManager.cleanOrphanDirectories"
   projectId?: string
   paths: string[]
+}
+
+// Reveal an orphaned directory in the OS file manager
+export interface RevealPathRequest {
+  type: "agentManager.revealPath"
+  projectId?: string
+  path: string
 }
 
 // Promote a session: create a worktree and move the session into it
@@ -762,6 +781,7 @@ export interface CloseSessionRequest {
 /** Persist a non-worktree session to agent-manager.json (worktreeId = null). */
 export interface PersistSessionRequest {
   type: "agentManager.persistSession"
+  projectId?: string
   sessionId: string
   draftID?: string
 }
@@ -796,6 +816,31 @@ export interface RequestProjectsMessage {
 // Add a repository as a project via the host folder picker
 export interface AddProjectMessage {
   type: "agentManager.addProject"
+}
+
+// Create a local project in the given parent folder
+export interface CreateProjectMessage {
+  type: "agentManager.createProject"
+  parent: string
+  name: string
+}
+
+// Clone a repository into the given parent folder
+export interface CloneProjectMessage {
+  type: "agentManager.cloneProject"
+  url: string
+  parent: string
+}
+
+// Request the default parent folder for a new project
+export interface RequestProjectParentMessage {
+  type: "agentManager.requestProjectParent"
+}
+
+// Pick a parent folder through the native folder picker
+export interface PickProjectParentMessage {
+  type: "agentManager.pickProjectParent"
+  defaultPath?: string
 }
 
 // Remove a project from the catalog (never deletes repository data)
@@ -957,6 +1002,13 @@ export interface AgentManagerOpenFileRequest {
   column?: number
 }
 
+// Copy a file's absolute path to the clipboard for a specific session
+export interface AgentManagerCopyFilePathRequest {
+  type: "agentManager.copyFilePath"
+  sessionId: string
+  filePath: string
+}
+
 export interface AgentManagerRequestDocumentMessage {
   type: "agentManager.requestDocument"
   sessionId: string
@@ -982,6 +1034,11 @@ export interface DocumentCloseMessage {
   type: "document.close"
 }
 
+export interface DocumentCopyPathMessage {
+  type: "document.copyPath"
+  file: string
+}
+
 export interface DocumentSendCommentsMessage {
   type: "document.sendComments"
   comments: ReviewCommentEntry[]
@@ -993,6 +1050,9 @@ export interface CreateMultiVersionRequest {
   type: "agentManager.createMultiVersion"
   projectId?: string
   text?: string
+  // When set, the first prompt runs this server command instead of `text`.
+  command?: string
+  arguments?: string
   name?: string
   versions: number
   providerID?: string
@@ -1016,6 +1076,13 @@ export interface SetTabOrderRequest {
   type: "agentManager.setTabOrder"
   key: string
   order: string[]
+}
+
+// Persist pinned session tabs for a context (worktree ID or "local"), in pin order
+export interface SetPinnedTabsRequest {
+  type: "agentManager.setPinnedTabs"
+  key: string
+  ids: string[]
 }
 
 // Persist sidebar worktree order
@@ -1260,6 +1327,11 @@ export interface DiffVirtualSetMarkdownRenderRequest {
   render: boolean
 }
 
+export interface DiffVirtualSetDiffStyleRequest {
+  type: "diffVirtual.setDiffStyle"
+  style: "unified" | "split"
+}
+
 export interface RetryConnectionRequest {
   type: "retryConnection"
 }
@@ -1317,13 +1389,24 @@ export interface AgentManagerBrowserRequestMessage {
   type:
     | "agentManager.browser.open"
     | "agentManager.browser.refresh"
+    | "agentManager.browser.back"
+    | "agentManager.browser.forward"
     | "agentManager.browser.close"
     | "agentManager.browser.state"
     | "agentManager.browser.inspect"
     | "agentManager.browser.input"
     | "agentManager.browser.devtools"
+    | "agentManager.browser.viewport"
+    | "agentManager.browser.interact"
+    | "agentManager.browser.acknowledge"
   sessionId: string
   projectId?: string
+  browserId?: string
+  navigation?: number
+  viewport?: BrowserViewport
+  identity?: BrowserViewIdentity
+  event?: BrowserInteraction
+  sequence?: number
   url?: string
   requestId?: string
   x?: number
@@ -1401,6 +1484,7 @@ export interface AuthorizeProviderOAuthMessage {
   requestId: string
   providerID: string
   method: number
+  inputs?: Record<string, string>
 }
 
 export interface CompleteProviderOAuthMessage {
@@ -1480,19 +1564,6 @@ export interface RequestFavoritesMessage {
   type: "requestFavorites"
 }
 
-// Explicit preferred and per-mode model selection persistence (webview → extension)
-export interface PersistModelSelectionRequest {
-  type: "persistModelSelection"
-  agent: string
-  providerID: string
-  modelID: string
-  variant?: string
-}
-
-export interface RequestModelSelectionsMessage {
-  type: "requestModelSelections"
-}
-
 // Continue in Worktree: transfer sidebar session + git state to an isolated worktree
 export interface ContinueInWorktreeRequest {
   type: "continueInWorktree"
@@ -1552,11 +1623,6 @@ export interface FetchMarketplaceDataMessage {
   type: "fetchMarketplaceData"
 }
 
-export interface FilterMarketplaceItemsMessage {
-  type: "filterMarketplaceItems"
-  filters: MarketplaceFilters
-}
-
 export interface InstallMarketplaceItemMessage {
   type: "installMarketplaceItem"
   mpItem: MarketplaceItem
@@ -1580,6 +1646,7 @@ export type WebviewMessage =
   | { type: "acknowledgeSession"; sessionID: string; eventID: string }
   | DocumentRequestMessage
   | DocumentOpenFileMessage
+  | DocumentCopyPathMessage
   | DocumentCloseMessage
   | DocumentSendCommentsMessage
   | SendMessageRequest
@@ -1662,6 +1729,9 @@ export type WebviewMessage =
   | ChatCompletionAcceptedMessage
   | UpdateSettingRequest
   | RequestTimelineSettingMessage
+  | RequestAutoCleanupStateMessage
+  | RunAutoCleanupNowMessage
+  | StopAutoCleanupNowMessage
   | RequestThroughputSettingMessage
   | RequestAutoApprovalReasonSettingMessage
   | RequestWorkStyleMessage
@@ -1687,7 +1757,6 @@ export type WebviewMessage =
   | SettingsTabChangedMessage
   | SyncSessionRequest
   | UnsyncSessionRequest
-  | CreateWorktreeSessionRequest
   | RequestNotificationsMessage
   | DismissNotificationMessage
   | CreateWorktreeRequest
@@ -1695,6 +1764,7 @@ export type WebviewMessage =
   | RemoveStaleWorktreeRequest
   | RestoreWorktreeRequest
   | CleanOrphanDirectoriesRequest
+  | RevealPathRequest
   | PromoteSessionRequest
   | OpenLocallyRequest
   | OpenSessionLocallyRequest
@@ -1710,6 +1780,10 @@ export type WebviewMessage =
   | RequestStateMessage
   | RequestProjectsMessage
   | AddProjectMessage
+  | CreateProjectMessage
+  | CloneProjectMessage
+  | RequestProjectParentMessage
+  | PickProjectParentMessage
   | RemoveProjectMessage
   | SelectProjectMessage
   | ActivateSelectionMessage
@@ -1728,9 +1802,11 @@ export type WebviewMessage =
   | CopyToClipboardRequest
   | ShowExistingLocalTerminalRequest
   | AgentManagerOpenFileRequest
+  | AgentManagerCopyFilePathRequest
   | AgentManagerRequestDocumentMessage
   | CreateMultiVersionRequest
   | SetTabOrderRequest
+  | SetPinnedTabsRequest
   | SetWorktreeOrderRequest
   | SetSessionsCollapsedRequest
   | SetSidebarCollapsedRequest
@@ -1772,6 +1848,7 @@ export type WebviewMessage =
   | DiffViewerRequestBranchesRequest
   | DiffViewerSetBaseBranchRequest
   | DiffVirtualSetMarkdownRenderRequest
+  | DiffVirtualSetDiffStyleRequest
   | RetryConnectionRequest
   | ReloadRequest
   | OpenSubAgentViewerRequest
@@ -1789,7 +1866,6 @@ export type WebviewMessage =
   | SetSandboxDefaultMessage
   | ToggleSandboxMessage
   | FetchMarketplaceDataMessage
-  | FilterMarketplaceItemsMessage
   | InstallMarketplaceItemMessage
   | RemoveInstalledMarketplaceItemMessage
   | DismissAgentMigrationBannerMessage
@@ -1808,8 +1884,6 @@ export type WebviewMessage =
   | RequestModelSelectorExpandedMessage
   | ToggleFavoriteRequest
   | RequestFavoritesMessage
-  | PersistModelSelectionRequest
-  | RequestModelSelectionsMessage
   | ToggleRemoteMessage
   | ToggleCaffeinationMessage
   | SetRemoteEnabledMessage

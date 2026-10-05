@@ -108,13 +108,10 @@ export interface SessionContextValue {
   scopedQuestions: (sessionID: string | undefined) => QuestionRequest[]
   scopedSuggestions: (sessionID: string | undefined) => SuggestionRequest[]
 
-  // Model selection (global, extension-lifetime)
+  // Model selection (per-scope picks over per-agent config)
   selected: (sessionID?: string) => ModelSelection | null
   modelForAgent: (agent: string) => ModelSelection | null
   selectModel: (providerID: string, modelID: string, sessionID?: string) => void
-  preferredSelection: Accessor<(ModelSelection & { variant?: string }) | undefined>
-  preferencesReady: Accessor<boolean>
-  rememberSelection: (agent: string, model: ModelSelection, variant?: string) => void
   trackScopes: (ids: Accessor<readonly string[]>) => () => void
 
   // Cost and context usage for the current session
@@ -183,6 +180,7 @@ export interface SessionContextValue {
     review?: ReviewMessageData,
     origin?: string | null,
     browserFeedback?: BrowserFeedbackData,
+    injectedTitle?: string,
   ) => boolean
   sendCommand: (
     command: string,
@@ -194,6 +192,7 @@ export interface SessionContextValue {
     context?: string,
     origin?: string | null,
     overrides?: { agent?: string; model?: string; variant?: string; messageID?: string },
+    projectId?: string,
   ) => boolean
   abort: () => void
   compact: () => void
@@ -212,6 +211,11 @@ export interface SessionContextValue {
   createSession: () => void
   clearCurrentSession: () => void
   loadSessions: () => void
+  loadMoreSessions: () => void
+  sessionsHasMore: Accessor<boolean>
+  /** Keep these sessions in the store when a full load lists only its first page. */
+  keepSessions: (ids: Accessor<readonly string[]>) => () => void
+  sessionsLoadingMore: Accessor<boolean>
   loadOlderMessages: () => boolean
   selectSession: (id: string, options?: { focus?: boolean; scrollToBottom?: boolean }) => void
   scrollBottomID: Accessor<string | undefined>

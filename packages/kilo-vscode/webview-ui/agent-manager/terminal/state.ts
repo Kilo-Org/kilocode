@@ -25,12 +25,10 @@ import type { TerminalDestination, TerminalFont, TerminalPlacement } from "../..
 
 export type { TerminalFont }
 
-/** Prefix used for terminal tab IDs in the webview (mirrors terminal-manager.ts). */
-export const TERMINAL_PREFIX = "terminal:"
-export const SCRIPT_TERMINAL_PREFIX = "script:"
+/** Shared terminal tab id helpers. Re-exported so existing callers keep working. */
+import { isTerminalTabId, SCRIPT_TERMINAL_PREFIX, TERMINAL_PREFIX } from "../../src/utils/terminal-tab-id"
 
-export const isTerminalTabId = (id: string): boolean =>
-  id.startsWith(TERMINAL_PREFIX) || id.startsWith(SCRIPT_TERMINAL_PREFIX)
+export { isTerminalTabId, SCRIPT_TERMINAL_PREFIX, TERMINAL_PREFIX }
 
 /** Status is separate from mounted xterm records so snapshot updates never remount them. */
 export type ScriptTerminalStatus = Pick<ScriptTerminalView, "state" | "exitCode" | "kind">
@@ -937,12 +935,12 @@ export interface TerminalMessageHandlerDeps {
   postMessage: (message: unknown) => void
   /**
    * Called with the context key ("local" or worktree id) and the new
-   * terminal id once a `terminal.created` message lands. The main
+   * terminal id and owning project once a `terminal.created` message lands. The main
    * component uses this hook to append the id to its per-context tab
    * order so the terminal renders at the end of the tab bar rather
    * than wherever `tabIds()`'s base composition happens to put it.
    */
-  onCreated?: (contextKey: string, terminalId: string) => void
+  onCreated?: (contextKey: string, terminalId: string, projectId?: string) => void
   /** Side terminal create failed for a context. */
   onSideError?: (contextKey: string) => void
   /** Side terminal was closed (locally or by the extension). */
@@ -986,9 +984,11 @@ function handleCreated(deps: TerminalMessageHandlerDeps, msg: CreatedMessage) {
     }
     return
   }
-  deps.rememberSession?.()
   deps.state.add(key === LOCAL ? null : key, term)
-  deps.onCreated?.(target, msg.terminalId)
+  deps.onCreated?.(target, msg.terminalId, msg.projectId)
+  // A late reply belongs in its owner's tab strip, not the visible context.
+  if (deps.state.currentKey() !== key) return
+  deps.rememberSession?.()
   deps.saveTabMemory()
   deps.setSelection(target)
   deps.activate(msg.terminalId)

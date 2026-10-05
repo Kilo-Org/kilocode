@@ -16,7 +16,7 @@ import { execWithShellEnv } from "./shell-env"
 import { execGhRead } from "./gh"
 import { markNoIndex } from "../util/spotlight"
 import { BUDGET, isTimeout } from "./command-budget"
-import { WorktreePool, type PoolStart } from "./worktree-pool"
+import { WorktreePool, type PoolStart } from "./pool/pool"
 import {
   parsePRUrl,
   localBranchName,
@@ -32,6 +32,7 @@ import {
   type BranchListItem,
 } from "./git-import"
 import { pathKey } from "./project/paths"
+import { MISSING_GIT } from "./git-errors"
 import { Semaphore } from "./semaphore"
 
 const TEMP_PREFIX = ".kilo-delete-"
@@ -156,6 +157,7 @@ export class WorktreeManager {
     ops?: GitOps,
     binary?: string,
     poolSize: number | (() => number) = 1,
+    home?: string,
   ) {
     this.root = root
     this.dir = path.join(root, KILO_DIR, "worktrees")
@@ -165,8 +167,11 @@ export class WorktreeManager {
     this.log = log
     this.pool = new WorktreePool({
       root,
-      dir: this.dir,
+      home,
+      local: this.dir,
+      folder: directory,
       poolSize,
+      rewarm: () => this.rewarmDelay,
       log,
       client: (cwd) => this.client(cwd),
       lock: (fn) => this.withGitLock(fn),
@@ -274,11 +279,9 @@ export class WorktreeManager {
     this.pool.warm(base)
   }
 
-  /** Adopt leftover pooled slots at startup and discard broken ones. */
+  /** Adopt leftover pooled slots at startup and discard broken ones. Never creates `.kilo/worktrees/`. */
   async reconcilePool(): Promise<void> {
     await this.ensureMigrated()
-    await this.ensureDir()
-    await this.ensureGitExclude()
     return this.pool.reconcile()
   }
 
@@ -325,33 +328,16 @@ export class WorktreeManager {
     return { resolvedRemote }
   }
 
-  /** Claim a pooled slot for a new branch and schedule a replacement warm-up. */
+  /** Claim a pooled slot for a new branch. The pool moves it into `.kilo/worktrees/` and warms a replacement. */
   private async tryClaimPool(
     branch: string,
     oid: string,
     auto: boolean,
     base?: string,
   ): Promise<{ path: string; branch: string } | undefined> {
-    const slot = await this.pool.claim(branch, oid, auto)
-    if (!slot) return undefined
-    setTimeout(() => this.pool.warm(base), this.rewarmDelay)
-
-    // Keep the folder name aligned with the branch, as the normal path does.
-    const target = path.join(this.dir, directory(slot.branch))
-    if (target === slot.path || fs.existsSync(target)) {
-      this.log(`Reused pooled worktree: ${slot.path} (branch: ${slot.branch})`)
-      return slot
-    }
-    const moved = await this.git
-      .raw(["worktree", "move", slot.path, target])
-      .then(() => true)
-      .catch((error: unknown) => {
-        this.log(`Pooled worktree move failed, keeping ${slot.path}: ${error}`)
-        return false
-      })
-    const result = moved ? { path: target, branch: slot.branch } : slot
-    this.log(`Reused pooled worktree: ${result.path} (branch: ${result.branch})`)
-    return result
+    const slot = await this.pool.claim(branch, oid, auto, base)
+    if (slot) this.log(`Reused pooled worktree: ${slot.path} (branch: ${slot.branch})`)
+    return slot
   }
 
   async renameBranch(worktreePath: string, current: string, requested: string): Promise<string> {
@@ -391,9 +377,7 @@ export class WorktreeManager {
       if (error instanceof Error && "code" in error && (error as NodeJS.ErrnoException).code === "ENOENT") {
         // The probe runs without a cwd, so ENOENT here can only mean the binary is missing.
         this.probeFailed = true
-        throw new Error(
-          "Git is not installed or not found in PATH. Please install Git (https://git-scm.com) and restart VS Code.",
-        )
+        throw new Error(MISSING_GIT)
       }
       throw error
     }
@@ -427,7 +411,8 @@ export class WorktreeManager {
 
     const requested = params.existingBranch ?? params.branchName
     const { resolvedRemote } = await this.preflight(params, requested)
-    await Promise.all([this.ensureDir(), this.ensureGitExclude()])
+    await this.ensureGitExclude()
+    await this.ensureDir()
 
     // Resolve start point (parent branch + remote)
     let parent: string
@@ -740,14 +725,17 @@ export class WorktreeManager {
    * Delete a directory under `.kilo/worktrees/` that git no longer tracks.
    *
    * Only ever called for a user-confirmed cleanup of an orphaned directory: there is no worktree
-   * left to remove, so this is a plain recursive delete behind the managed-path guard.
+   * left to remove, so this stages the same rename-then-background-reap `detachWorktree` uses
+   * instead of a blocking `fs.rm` — a large `.kilo-dev`/`node_modules` tree cannot freeze the caller.
+   * Guards are identical to the ones `removeWorktree` relies on for a real worktree: a managed-path
+   * check, then a fail-closed `git worktree list` re-check immediately before the rename, because the
+   * worktree pool creates and removes slot checkouts on a timer and a stale webview orphan list must
+   * never be trusted over what git says right now.
    */
-  async removeOrphanDirectory(target: string): Promise<void> {
+  async detachOrphanDirectory(target: string): Promise<{ done: Promise<void> }> {
     if (!this.isManagedPath(target)) {
       throw new Error(`Refusing to remove a path outside the worktrees directory: ${target}`)
     }
-    // Fail closed: an unanswerable `git worktree list` is not evidence the path is orphaned, and
-    // this is the only re-check between a stale webview orphan list and a recursive delete.
     const registered = await this.registeredPaths()
     if (!registered) {
       throw new Error(`Refusing to remove a worktree directory while git cannot list worktrees: ${target}`)
@@ -755,8 +743,29 @@ export class WorktreeManager {
     if (registered.has(pathKey(target))) {
       throw new Error(`Refusing to remove a live worktree: ${target}`)
     }
-    await fs.promises.rm(target, RM_OPTS)
-    this.log(`Removed orphaned worktree directory: ${target}`)
+    const temp = await this.detach(target)
+    if (!temp) throw new Error(`Refusing to remove ${target}: rename failed`)
+    return { done: this.defer(target, this.reapOrphan(target, temp)) }
+  }
+
+  /**
+   * Background reap for a staged orphan directory, with one reappearance retry.
+   *
+   * A dev backend or the worktree pool can recreate a directory moments after it was renamed away
+   * (e.g. `.kilo-dev` from a running JetBrains dev instance). One retry self-heals that race without
+   * looping forever: anything that survives the retry simply reappears in the next reconcile.
+   */
+  private async reapOrphan(original: string, temp: string): Promise<void> {
+    await fs.promises.rm(temp, RM_OPTS).catch((err: unknown) => {
+      this.log(`Background cleanup failed for ${temp}: ${err}`)
+    })
+    if (!fs.existsSync(original)) return
+    this.log(`Orphaned directory reappeared after removal, retrying once: ${original}`)
+    const retry = await this.detach(original)
+    if (!retry) return
+    await fs.promises.rm(retry, RM_OPTS).catch((err: unknown) => {
+      this.log(`Background cleanup failed for ${retry}: ${err}`)
+    })
   }
 
   /**
@@ -1033,8 +1042,7 @@ export class WorktreeManager {
   // ---------------------------------------------------------------------------
 
   async ensureGitExclude(): Promise<void> {
-    const gitDir = await resolveGitDir(this.root)
-    const excludePath = path.join(gitDir, "info", "exclude")
+    const target = await this.excludeTarget()
     const items = [
       [".kilo/worktrees/", "Kilo Code agent worktrees"],
       [".kilo/agent-manager.json", "Kilo Agent Manager state"],
@@ -1053,8 +1061,34 @@ export class WorktreeManager {
     ] as const
 
     for (const [entry, comment] of items) {
-      await this.addExcludeEntry(excludePath, entry, comment)
+      await this.addExcludeEntry(target.file, `${target.prefix}${entry}`, comment)
     }
+  }
+
+  /**
+   * Resolve the repository exclude file and the repository-relative path to
+   * this manager's root.
+   *
+   * Git answers both questions for a linked worktree and for a workspace that
+   * is a subdirectory of a repository. `--show-prefix` is already relative and
+   * uses forward slashes, so it avoids symlink mismatches such as macOS
+   * `/var` versus `/private/var`. The anchored ignore patterns then point at
+   * the real `.kilo` directory instead of the repository root.
+   *
+   * `--git-path` is used without `--path-format=absolute`, because older Git
+   * echoes unsupported rev-parse flags to stdout with exit code 0, which would
+   * silently corrupt the path. Its result is relative to this command's cwd,
+   * so it is resolved against this root.
+   *
+   * Failures propagate: callers decide whether to continue without excludes.
+   * There is deliberately no silent fallback, because a guessed prefix would
+   * write ignore patterns anchored to the wrong directory.
+   */
+  private async excludeTarget(): Promise<{ file: string; prefix: string }> {
+    const exclude = (await this.git.raw(["rev-parse", "--git-path", "info/exclude"])).trim()
+    if (!exclude || exclude.startsWith("--")) throw new Error("git rev-parse did not return an exclude path")
+    const prefix = (await this.git.raw(["rev-parse", "--show-prefix"])).trim()
+    return { file: path.resolve(this.root, exclude), prefix }
   }
 
   /**
@@ -1078,7 +1112,7 @@ export class WorktreeManager {
     let content = ""
     if (fs.existsSync(excludePath)) {
       content = await fs.promises.readFile(excludePath, "utf-8")
-      if (content.includes(entry)) return
+      if (content.split(/\r?\n/).includes(entry)) return
     }
 
     const pad = content.endsWith("\n") || content === "" ? "" : "\n"

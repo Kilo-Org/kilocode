@@ -93,6 +93,8 @@ The panel opens as an editor tab and stays active across focus changes.
 - Use a git repository for worktree features
 - Open the main repository, not an existing worktree checkout, when creating new worktrees
 
+To manage several Git repositories in one panel, see [Multi-project Agent Manager](/docs/automate/agent-manager-projects).
+
 ## Project-scoped settings
 
 Agent Manager worktree defaults belong to a repository. Open a project's settings button, then select the **Agent Manager** tab in Kilo Settings. The repository selector controls which project's default base branch and setup script you edit.

@@ -51,7 +51,7 @@ internal object WorktreeDiagnosticsAction {
                 root = root,
                 gh = service.ghStatus(root),
                 worktrees = listed.worktrees,
-                orphans = listed.orphans,
+                orphans = listed.orphans.map { it.path },
                 stats = service.stats(root).items.associateBy { normalizeWorktreePath(it.path) },
                 dirty = service.dirty(root).items.associateBy { normalizeWorktreePath(it.path) },
             ),

@@ -74,6 +74,7 @@ export const dict = {
   "session.activity.error": "Hata veya bağlantı kaybı.",
   "session.activity.retry": "Otomatik olarak yeniden deneniyor.",
   "session.activity.busy": "Devam ediyor.",
+  "session.activity.scheduled": "Zamanlanmış bir uyandırmayı bekliyor.",
   "session.activity.done": "Tur tamamlandı.",
   "session.activity.idle": "Çalışmıyor.",
 
@@ -89,10 +90,13 @@ export const dict = {
     "Konuşma geri alındı. Anlık görüntüler devre dışı olduğu için dosya değişiklikleri geri yüklenmedi.",
   "revert.banner.workspace.unavailable":
     "Konuşma geri alındı. Dosya kontrol noktası olmadığından çalışma alanı değişiklikleri geri yüklenmedi.",
+  "revert.banner.workspace.notAGitRepo":
+    "Konuşma geri alındı. Dosya kontrol noktaları bir Git deposu gerektirir, bu nedenle çalışma alanı değişiklikleri geri yüklenmedi.",
   "revert.banner.workspace.legacy":
     "Konuşma geri alındı. Bu önceki geri alma için çalışma alanı geri yükleme durumu kullanılamıyor.",
   "revert.banner.workspace.enableSnapshots": "Anlık Görüntüleri Etkinleştir",
   "revert.disabled.agentBusy": "Ajanın bitmesini bekleyin",
+  "revert.error.body": "Depo kullanımda olabilir. Tekrar deneyin veya ayrıntılar için Kilo günlüklerine bakın.",
   "command.session.compact": "Oturumu sıkıştır",
   "command.session.export": "Oturum dökümünü dışa aktar",
 
@@ -200,6 +204,8 @@ export const dict = {
   "prompt.action.send.blocked": "Bekleyen soruyu önce yanıtlayın veya kapatın",
   "prompt.action.send.recording": "Yazıya dök ve gönder",
   "prompt.action.stop": "Durdur",
+  "prompt.action.stop.background": "Ana ajanı durdur. Arka plan ajanları çalışmaya devam eder.",
+  "prompt.agents.show": "Arka plan ajanlarını göster",
   "prompt.action.enhance": "Komutu geliştir",
   "prompt.paste.expand": "Yapıştırılan metni genişletmek için tıklayın",
   "prompt.action.indexing": "İndeksleme ayarları",
@@ -309,7 +315,7 @@ export const dict = {
   "ui.approval.source.agent.default": "aracı tarafından",
   "ui.approval.source.global": "genel yapılandırmanız tarafından",
   "ui.approval.source.project": "proje yapılandırması tarafından",
-  "ui.approval.source.yolo": "otomatik onay (YOLO) modu tarafından",
+  "ui.approval.source.yolo": "otomatik onay modu tarafından",
   "ui.approval.source.session": "bir oturum otomatik onay kuralı tarafından",
   "ui.approval.source.default": "varsayılan olarak",
   "ui.approval.outsideWorkspace": "(çalışma alanınızın dışında: {{file}})",
@@ -455,6 +461,7 @@ export const dict = {
   "provider.custom.models.toggleImages": "Tüm modeller için görüntüyü aç/kapat",
   "provider.custom.models.remove": "Modeli kaldır",
   "provider.custom.models.add": "Model ekle",
+  "provider.custom.models.fetch.button": "Modelleri getir",
   "provider.custom.models.fetch.authError":
     "Kimlik doğrulama başarısız oldu. Yukarıdaki API anahtarını kontrol edin ve tekrar deneyin.",
   "provider.custom.models.fetch.empty": "Bu sunucuda model bulunamadı.",
@@ -511,37 +518,21 @@ export const dict = {
 
   "settings.permissions.toast.updateFailed.title": "İzinler güncellenemedi",
 
-  "settings.permissions.tool.read.title": "Oku",
   "settings.permissions.tool.read.description": "Bir dosyayı okuma (dosya yoluyla eşleşir)",
-  "settings.permissions.tool.edit.title": "Düzenle",
   "settings.permissions.tool.edit.description": "Düzenleme, yazma, yama ve çoklu düzenleme dahil dosyaları değiştir",
-  "settings.permissions.tool.glob.title": "Glob",
   "settings.permissions.tool.glob.description": "Glob kalıpları kullanarak dosyaları eşle",
-  "settings.permissions.tool.grep.title": "Grep",
   "settings.permissions.tool.grep.description": "Düzenli ifadeler kullanarak dosya içerikleri ara",
-  "settings.permissions.tool.list.title": "Listele",
   "settings.permissions.tool.list.description": "Bir dizindeki dosyaları listele",
-  "settings.permissions.tool.bash.title": "Bash",
   "settings.permissions.tool.bash.description": "Kabuk komutları çalıştır",
-  "settings.permissions.tool.task.title": "Görev",
   "settings.permissions.tool.task.description": "Alt ajanlar başlat",
-  "settings.permissions.tool.skill.title": "Beceri",
   "settings.permissions.tool.skill.description": "Ada göre bir beceri yükle",
-  "settings.permissions.tool.lsp.title": "LSP",
   "settings.permissions.tool.lsp.description": "Dil sunucusu sorguları çalıştır",
-  "settings.permissions.tool.todoread.title": "Görev Oku",
   "settings.permissions.tool.todoread.description": "Görev listesini oku",
-  "settings.permissions.tool.todowrite.title": "Görev Yaz",
   "settings.permissions.tool.todowrite.description": "Görev listesini güncelle",
-  "settings.permissions.tool.webfetch.title": "Web Getir",
   "settings.permissions.tool.webfetch.description": "Bir URL'den içerik getir",
-  "settings.permissions.tool.websearch.title": "Web Ara",
   "settings.permissions.tool.websearch.description": "Web'de ara",
-  "settings.permissions.tool.codesearch.title": "Kod Ara",
   "settings.permissions.tool.codesearch.description": "Web'de kod ara",
-  "settings.permissions.tool.external_directory.title": "Harici Dizin",
   "settings.permissions.tool.external_directory.description": "Proje dizini dışındaki dosyalara eriş",
-  "settings.permissions.tool.doom_loop.title": "Sonsuz Döngü",
   "settings.permissions.tool.doom_loop.description": "Aynı girdiyle tekrarlanan araç çağrılarını algıla",
 
   "session.delete.title": "Oturumu sil",
@@ -559,6 +550,7 @@ export const dict = {
   "session.tabs.switcher.current": "Geçerli",
   "session.tabs.switcher.pending": "Yeni",
   "session.tabs.switcher.busy": "Çalışıyor",
+  "session.tabs.switcher.scheduled": "Zamanlandı",
   "session.tab.local": "Local",
   "session.tab.cloud": "Cloud",
   "session.tab.worktree": "Çalışma ağacı",
@@ -584,14 +576,16 @@ export const dict = {
   "workStyle.choice.human-in-the-loop.permissions":
     "Dosyaları düzenlemeden veya komutları çalıştırmadan önce izin ister.",
   "workStyle.choice.human-in-the-loop.bash": "Her terminal komutunu çalıştırmadan önce izin ister.",
-  "workStyle.choice.human-in-the-loop.visibility": "Akıl yürütme dahil tüm konuşma ayrıntılarını gösterir.",
+  "workStyle.choice.human-in-the-loop.visibility":
+    "İnceleme için akıl yürütmeyi, komutları ve düzenlemeleri genişletir.",
   "workStyle.choice.autonomous.eyebrow": "Daha az kesinti",
   "workStyle.choice.autonomous.title": "Yüksek özerklik",
   "workStyle.choice.autonomous.description": "Daha az kesinti, daha sade bir arayüz.",
   "workStyle.choice.autonomous.permissions":
     "Çalışma alanındaki dosyaları izin istemeden düzenler ve komutları çalıştırır.",
   "workStyle.choice.autonomous.bash": "Çalışma alanında terminal komutlarını onay almadan çalıştırabilir.",
-  "workStyle.choice.autonomous.visibility": "Ayrıntılar siz genişletene kadar daraltılmış olarak kalır.",
+  "workStyle.choice.autonomous.visibility":
+    "Araç ayrıntılarını daraltır, akıl yürütmeyi kompakt bir önizleme olarak gösterir.",
   "session.cloud.import.title": "Buluttan içe aktar",
   "session.cloud.import.placeholder": "Oturum kimliği, URL veya kilo import komutu",
   "session.cloud.import.button": "İçe Aktar",
@@ -777,6 +771,7 @@ export const dict = {
   "ui.sessionTurn.status.consideringNextSteps": "Sonraki adımları değerlendiriyor...",
 
   "dialog.model.noProviders": "Sağlayıcı yok",
+  "dialog.model.unavailable": "Kilo modelleri kullanılamıyor",
 
   "prompt.placeholder.connecting": "Sunucuya bağlanılıyor...",
   "prompt.placeholder.default":
@@ -839,7 +834,8 @@ export const dict = {
   "settings.browser.description":
     "Playwright ile çalışan yerleşik tarayıcı otomasyonunu yapılandırın. Kilo, oturumlarınızda web sayfalarında gezinebilir, bunlarla etkileşime girebilir ve ekran görüntüsü alabilir.",
   "settings.browser.enable.title": "Tarayıcı Otomasyonunu Etkinleştir",
-  "settings.browser.enable.description": "Playwright MCP sunucusunu CLI arka ucuyla kaydet.",
+  "settings.browser.enable.description":
+    "Yerel uygulamalar ve herkese açık HTTPS sayfaları için oturuma özel Agent Manager tarayıcısını etkinleştir.",
   "settings.browser.systemChrome.title": "Sistem Chrome'unu Kullan",
   "settings.browser.systemChrome.description": "Ayrı bir Chromium örneği yerine yüklü Chrome tarayıcınızı kullanın.",
   "settings.browser.headless.title": "Başsız Mod",
@@ -934,15 +930,12 @@ export const dict = {
   "settings.sandboxing.writablePaths.title": "Ek Yazılabilir Yollar",
   "settings.sandboxing.writablePaths.description":
     "Sandığın yazılmasına izin veren ek dosya sistemi yolları (ör. /tmp, /var/log). Sandık etkinken varsayılan yazılabilir yollarla birleştirilir.",
-  "settings.experimental.multiProject.title": "Çoklu Proje Agent Manager",
+  "settings.experimental.conversationPromptHistory.title": "Sohbet başına istem geçmişi",
+  "settings.experimental.conversationPromptHistory.description":
+    "İstem geçmişini (ArrowUp/ArrowDown) tüm sohbetlerde tek bir geçmiş paylaşmak yerine her sohbet için ayrı tutun.",
   "settings.experimental.claudeMigration.title": "Claude Code Geçişi",
   "settings.experimental.claudeMigration.description":
     "Desteklenen genel CLAUDE.md talimatlarını, basit becerileri ve devre dışı MCP tanımlarını bir kez içe aktarın. Orijinal Claude dosyaları değiştirilmez; etkinleştirdikten sonra arka ucu yeniden başlatın.",
-  "settings.experimental.multiProject.description":
-    "Agent Manager'da birden fazla depo genelinde oturum ve worktree yönetimini etkinleştirin. Mevcut çalışma alanı deposu her zaman varsayılan projedir.",
-  "settings.experimental.taskModelSelection.title": "Task Alt Aracı Modeli Seçimi",
-  "settings.experimental.taskModelSelection.description":
-    "Task alt aracıları için model, sağlayıcı ve akıl yürütme çabasını açıkça seçmeye izin verin.",
   "settings.experimental.mcpTimeout.title": "MCP Zaman Aşımı (ms)",
   "settings.experimental.mcpTimeout.description": "MCP sunucu istekleri için milisaniye cinsinden zaman aşımı",
   "settings.experimental.remote.title": "Remote Kontrolü",
@@ -1091,6 +1084,30 @@ export const dict = {
   "settings.checkpoints.enable.title": "Anlık Görüntüleri Etkinleştir",
   "settings.checkpoints.enable.description":
     "Dosya düzenlemelerinden önce kontrol noktaları oluştur, böylece önceki durumları geri yükleyebilirsiniz",
+  "settings.autoCleanup.enable.title": "Otomatik oturum temizliğini etkinleştir",
+  "settings.autoCleanup.enable.description":
+    "Belirli bir gün sayısından sonra eski oturum geçmişini otomatik olarak siler, bu bilgisayardaki tüm projelerde ve tüm Kilo istemcilerinde, yalnızca bu pencerede değil. Şu anda çalışan oturumlar ve yeni çatallaması olan oturumlar asla silinmez. Silme kalıcıdır.",
+  "settings.autoCleanup.defaultRetention.title": "Oturumları saklama süresi (gün)",
+  "settings.autoCleanup.defaultRetention.description":
+    "Otomatik temizlik, oturum geçmişini silmeden önce ne kadar süreyle saklanır.",
+  "settings.autoCleanup.lastRun.title": "Son temizlik",
+  "settings.autoCleanup.lastRun.never": "Hiç çalıştırılmadı",
+  "settings.autoCleanup.result":
+    "{{date}}: {{scanned}} oturumdan {{deleted}} tanesi silindi ({{active}} etkin atlandı, {{failed}} başarısız) {{seconds}} sn içinde",
+  "settings.autoCleanup.starting": "Oturum temizliği başlatılıyor...",
+  "settings.autoCleanup.error.status": "Oturum temizliği durumu geçici olarak kullanılamıyor. Yeniden deneniyor...",
+  "settings.autoCleanup.error.timeout": "Temizlik durumu bekleniyor. Arka uç beklenenden uzun sürüyor.",
+  "settings.autoCleanup.error.run":
+    "Oturum temizliğinin tamamlandığı doğrulanamadı. Yeniden denemeden önce son temizlik sonucunu kontrol edin.",
+  "settings.autoCleanup.progress.scanning": "Oturumlar taranıyor: {{processed}}/{{total}} işlendi",
+  "settings.autoCleanup.progress.deleting":
+    "Oturumlar siliniyor: {{processed}}/{{total}} işlendi ({{deleted}} silindi, {{failed}} başarısız)",
+  "settings.autoCleanup.runNow": "Temizliği şimdi çalıştır",
+  "settings.autoCleanup.runNow.confirm":
+    "Süresi dolmuş oturumlar bu bilgisayardaki tüm projelerde ve tüm Kilo istemcilerinde kalıcı olarak silinsin mi?",
+  "settings.autoCleanup.stop": "Temizliği durdur",
+  "settings.autoCleanup.progress.cancelling": "Oturum temizliği durduruluyor...",
+  "settings.autoCleanup.lastRun.cancelled": "kesintiye uğradı",
 
   "settings.context.autoCompaction.title": "Otomatik Sıkıştırma",
   "settings.context.autoCompaction.description": "Bağlam sınıra ulaşmadan önce otomatik olarak sıkıştır",
@@ -1140,6 +1157,21 @@ export const dict = {
   "settings.commitMessage.language.description":
     "AI tarafından oluşturulan commit mesajları için hangi dili kullanacağınızı seçin:",
 
+  "settings.display.preview.title": "Önizleme",
+  "settings.display.presets.title": "Görüntüleme ön ayarları",
+  "settings.display.presets.description":
+    "Aşağıdaki görüntüleme seçeneklerini değiştirir, izinleri değil. Uygulamak için kaydedin.",
+  "settings.display.preview.model": "Örnek model",
+  "settings.display.preview.prompt": "Selamlamadaki fazla boşlukları kaldırın ve testleri kontrol edin.",
+  "settings.display.preview.reasoning":
+    "**Selamlamayı kontrol et.** İşlev, düz bir ad ve iki ucunda fazla boşluk bulunan bir ad için aynı selamlamayı üretmelidir. Mevcut işlev imzasını ve selamlama biçimini koruyacağım ve yalnızca adın döndürülen dizeye nasıl girdiğini değiştireceğim.\n\n`  Ada  ` gibi bir girdide istenmeyen boşluklar girdiye aittir, selamlama şablonuna değil. Tamamlanmış selamlamayı kırpmak, adın yanında boşluk bırakırdı. Bu nedenle kırpma işlemi, ad eklenmeden önce yapılmalıdır.\n\n`trim()` işlevinin her iki uçtaki boşlukları kaldırdığını ve yeni bir dize döndürdüğünü doğrulamak için dize belgelerini kontrol edeceğim. Özgün girdiyi değiştirmeden bırakmalıdır. Bu değişiklik için düzenli ifade, ek bağımlılık veya ayrı bir yardımcı işleve gerek yoktur.\n\nBir adın içindeki boşluklar bozulmadan kalmalıdır. `Ada Lovelace` gibi bir ad `AdaLovelace` olmamalı ve büyük/küçük harf durumu değişmemelidir. Boş veya yalnızca boşluk içeren bir girdi, bu odaklı düzeltmenin parçası olarak yeni bir yedek selamlama gerektirmez.\n\nDeğişiklik, şablonun şu anda `name` kullandığı yerde `name.trim()` kullanılarak return ifadesinde kalabilir. Çevredeki noktalama işaretlerini ve selamlamadan sonraki kasıtlı boşluğu koruyacağım. Bu, diff'i küçük tutar ve davranışın incelenmesini kolaylaştırır.\n\nSon olarak `bun test greeting.test.ts` komutunu çalıştıracağım ve iki sonucu da kontrol edeceğim. Boşluklu ad durumu fazla boşlukların kaldırıldığını doğrulamalı, düz ad durumu ise mevcut çıktıyı korumalıdır. Değişikliği ve test sonuçlarını yalnızca komut tamamlandıktan sonra bildireceğim.",
+  "settings.display.preview.shell": "Selamlama testini kontrol et",
+  "settings.display.preview.shellOutput":
+    "bun test greeting.test.ts\n\n[pass] fazla boşlukları kaldırır\n[pass] düz bir adı korur\n\n2 test geçti",
+  "settings.display.preview.query": "Dize kırpma",
+  "settings.display.preview.result": "trim() bir dizenin her iki ucundaki boşlukları kaldırır.",
+  "settings.display.preview.answer":
+    "Selamlama, fazla boşlukları kaldıracak şekilde güncellendi. Her iki test de geçiyor.",
   "settings.display.username.title": "Kullanıcı Adı",
   "settings.display.username.description": "Sohbetlerde görüntülenen özel kullanıcı adı",
   "settings.display.fontSize.title": "Yazı Tipi Boyutu",
@@ -1174,7 +1206,7 @@ export const dict = {
     "En son asistan mesajında ve görev başlığında metin oluşturma hızını (tokens/sec) gösterin. Varsayılan olarak gösterilir; gerektiğinde gizlemek için bu ayarı devre dışı bırakın.",
   "settings.display.autoApprovalReason.title": "Otomatik Onay Nedenini Göster",
   "settings.display.autoApprovalReason.description":
-    "Araç çağrılarının neden otomatik olarak onaylandığını açıklayan bir satır gösterir (eşleşen kural, aracı varsayılanı, YOLO modu vb.).",
+    "Bir araç çağrısının neden otomatik olarak onaylandığını gösterir; örneğin eşleşen bir izin kuralı veya aracı varsayılanı.",
 
   "chat.throughput.tooltip":
     "Average {{speed}} tokens/s for this turn. Includes output and reasoning tokens; excludes tool execution and waiting time.",
@@ -1259,14 +1291,12 @@ export const dict = {
   "task.todos.allDone": "{{count}} görev tamamlandı",
   "task.backgroundAgents.running.one": "1 arka plan ajanı",
   "task.backgroundAgents.running.many": "{{count}} arka plan ajanı",
-  "task.backgroundAgents.more": "+{{count}} tane daha",
   "task.backgroundAgents.open": "Arka plan ajanını aç",
   "task.backgroundAgents.openAll": "Tüm arka plan ajanlarını aç",
   "task.backgroundAgents.cancel": "Durdur",
   "task.backgroundAgents.continueInBackground": "Arka planda devam et",
   "task.backgroundAgents.waiting": "Bir arka plan ajanı girişinizi bekliyor",
   "task.backgroundAgents.needsInput": "Giriş gerekli",
-  "task.backgroundAgents.dismiss": "Kapat",
   "task.backgroundAgents.clearFinished": "Tamamlananları temizle",
   "task.backgroundAgents.summary": "{{total}} arka plan ajanından {{running}} tanesi çalışıyor",
   "task.backgroundAgents.status.running": "Çalışıyor",
@@ -1275,6 +1305,8 @@ export const dict = {
   "task.backgroundAgents.status.error": "Hata",
   "task.backgroundAgents.untitled": "Arka plan ajanı",
   "task.backgroundAgents.stopAll": "Tümünü durdur ({{count}})",
+  "task.backgroundAgents.finished": "Arka plan ajanları tamamlandı",
+  "task.stop": "Alt ajanı durdur",
 
   "settings.saveBar.unsavedChanges": "Kaydedilmemiş değişiklikler",
   "settings.saveBar.discard": "Geri Al",
@@ -1345,8 +1377,6 @@ export const dict = {
     "Geçerli oturum sırasında Kilo tarafından değiştirilen dosyalar, tur başı anlık görüntülere dayanır. Yeni bir oturum başlatıldığında sıfırlanır.",
   "diffViewer.group.session": "Oturum",
   "diffViewer.group.git": "Git",
-  "diffViewer.comment.saveLocal": "Yerel olarak kaydet",
-  "diffViewer.comment.sendToAgent": "Ajana gönder",
   "diffViewer.comment.postToGithub": "GitHub'da paylaş",
   "diffViewer.comment.loadFailed": "Çekme isteğindeki değişiklikler yüklenemedi.",
   "diffViewer.comment.unavailable": "Bu satır, çekme isteğinin mevcut anlık görüntüsünde bulunmuyor.",

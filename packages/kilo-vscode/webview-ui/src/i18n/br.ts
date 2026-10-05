@@ -74,6 +74,7 @@ export const dict = {
   "session.activity.error": "Erro ou conexão perdida.",
   "session.activity.retry": "Tentando novamente automaticamente.",
   "session.activity.busy": "Em andamento.",
+  "session.activity.scheduled": "Aguardando um despertar agendado.",
   "session.activity.done": "Turno concluído.",
   "session.activity.idle": "Não está em execução.",
 
@@ -89,10 +90,14 @@ export const dict = {
     "Conversa revertida. As alterações nos arquivos não foram restauradas porque os snapshots estão desativados.",
   "revert.banner.workspace.unavailable":
     "Conversa revertida. Nenhum ponto de restauração dos arquivos estava disponível, portanto as alterações no espaço de trabalho não foram restauradas.",
+  "revert.banner.workspace.notAGitRepo":
+    "Conversa revertida. Os pontos de restauração dos arquivos exigem um repositório Git, portanto as alterações no espaço de trabalho não foram restauradas.",
   "revert.banner.workspace.legacy":
     "Conversa revertida. O status da restauração do espaço de trabalho não está disponível para esta reversão anterior.",
   "revert.banner.workspace.enableSnapshots": "Ativar snapshots",
   "revert.disabled.agentBusy": "Aguarde o agente terminar",
+  "revert.error.body":
+    "O repositório pode estar em uso. Tente novamente ou consulte os logs do Kilo para mais detalhes.",
   "command.session.compact": "Compactar sessão",
   "command.session.export": "Exportar transcrição da sessão",
 
@@ -200,6 +205,8 @@ export const dict = {
   "prompt.action.send.blocked": "Responda ou feche a pergunta pendente primeiro",
   "prompt.action.send.recording": "Transcrever e enviar",
   "prompt.action.stop": "Parar",
+  "prompt.action.stop.background": "Parar o agente principal. Os agentes em segundo plano continuam em execução.",
+  "prompt.agents.show": "Mostrar agentes em segundo plano",
   "prompt.action.enhance": "Melhorar prompt",
   "prompt.paste.expand": "Clique para expandir o texto colado",
   "prompt.action.autoApprove.enable": "Ativar aprovação automática",
@@ -313,7 +320,7 @@ export const dict = {
   "ui.approval.source.agent.default": "pelo agente",
   "ui.approval.source.global": "pela configuração global",
   "ui.approval.source.project": "pela configuração do projeto",
-  "ui.approval.source.yolo": "pelo modo de aprovação automática (YOLO)",
+  "ui.approval.source.yolo": "pelo modo de aprovação automática",
   "ui.approval.source.session": "por uma regra de aprovação automática da sessão",
   "ui.approval.source.default": "por padrão",
   "ui.approval.outsideWorkspace": "(fora do seu espaço de trabalho: {{file}})",
@@ -467,6 +474,7 @@ export const dict = {
   "provider.custom.models.toggleImages": "Alternar imagem para todos",
   "provider.custom.models.remove": "Remover modelo",
   "provider.custom.models.add": "Adicionar modelo",
+  "provider.custom.models.fetch.button": "Buscar modelos",
   "provider.custom.models.fetch.authError": "Falha na autenticação. Verifique a chave de API acima e tente novamente.",
   "provider.custom.models.fetch.empty": "Nenhum modelo encontrado neste servidor.",
   "provider.custom.models.fetch.added": "{{count}} modelo(s) adicionado(s).",
@@ -523,38 +531,22 @@ export const dict = {
 
   "settings.permissions.toast.updateFailed.title": "Falha ao atualizar permissões",
 
-  "settings.permissions.tool.read.title": "Ler",
   "settings.permissions.tool.read.description": "Ler um arquivo (corresponde ao caminho do arquivo)",
-  "settings.permissions.tool.edit.title": "Editar",
   "settings.permissions.tool.edit.description":
     "Modificar arquivos, incluindo edições, escritas, patches e multi-edições",
-  "settings.permissions.tool.glob.title": "Glob",
   "settings.permissions.tool.glob.description": "Corresponder arquivos usando padrões glob",
-  "settings.permissions.tool.grep.title": "Grep",
   "settings.permissions.tool.grep.description": "Buscar conteúdo de arquivos usando expressões regulares",
-  "settings.permissions.tool.list.title": "Listar",
   "settings.permissions.tool.list.description": "Listar arquivos dentro de um diretório",
-  "settings.permissions.tool.bash.title": "Bash",
   "settings.permissions.tool.bash.description": "Executar comandos shell",
-  "settings.permissions.tool.task.title": "Tarefa",
   "settings.permissions.tool.task.description": "Lançar sub-agentes",
-  "settings.permissions.tool.skill.title": "Habilidade",
   "settings.permissions.tool.skill.description": "Carregar uma habilidade por nome",
-  "settings.permissions.tool.lsp.title": "LSP",
   "settings.permissions.tool.lsp.description": "Executar consultas de servidor de linguagem",
-  "settings.permissions.tool.todoread.title": "Ler Tarefas",
   "settings.permissions.tool.todoread.description": "Ler a lista de tarefas",
-  "settings.permissions.tool.todowrite.title": "Escrever Tarefas",
   "settings.permissions.tool.todowrite.description": "Atualizar a lista de tarefas",
-  "settings.permissions.tool.webfetch.title": "Buscar Web",
   "settings.permissions.tool.webfetch.description": "Buscar conteúdo de uma URL",
-  "settings.permissions.tool.websearch.title": "Pesquisa Web",
   "settings.permissions.tool.websearch.description": "Pesquisar na web",
-  "settings.permissions.tool.codesearch.title": "Pesquisa de Código",
   "settings.permissions.tool.codesearch.description": "Pesquisar código na web",
-  "settings.permissions.tool.external_directory.title": "Diretório Externo",
   "settings.permissions.tool.external_directory.description": "Acessar arquivos fora do diretório do projeto",
-  "settings.permissions.tool.doom_loop.title": "Loop Infinito",
   "settings.permissions.tool.doom_loop.description": "Detectar chamadas de ferramentas repetidas com entrada idêntica",
 
   "session.delete.title": "Excluir sessão",
@@ -572,6 +564,7 @@ export const dict = {
   "session.tabs.switcher.current": "Atual",
   "session.tabs.switcher.pending": "Nova",
   "session.tabs.switcher.busy": "Trabalhando",
+  "session.tabs.switcher.scheduled": "Agendado",
   "session.tab.local": "Local",
   "session.tab.cloud": "Nuvem",
   "session.tab.worktree": "Árvore de trabalho",
@@ -596,14 +589,15 @@ export const dict = {
   "workStyle.choice.human-in-the-loop.description": "O Kilo pausa e mostra o plano enquanto trabalha.",
   "workStyle.choice.human-in-the-loop.permissions": "Pede permissão antes de editar arquivos ou executar comandos.",
   "workStyle.choice.human-in-the-loop.bash": "Pede permissão para executar qualquer comando no terminal.",
-  "workStyle.choice.human-in-the-loop.visibility": "Exibe todos os detalhes da conversa, incluindo o raciocínio.",
+  "workStyle.choice.human-in-the-loop.visibility": "Expande raciocínio, comandos e edições para revisão.",
   "workStyle.choice.autonomous.eyebrow": "Menos interrupções",
   "workStyle.choice.autonomous.title": "Alta autonomia",
   "workStyle.choice.autonomous.description": "Menos interrupções e uma interface simplificada.",
   "workStyle.choice.autonomous.permissions":
     "Edita arquivos e executa comandos no espaço de trabalho sem pedir permissão.",
   "workStyle.choice.autonomous.bash": "Pode executar comandos do terminal no espaço de trabalho sem aprovação.",
-  "workStyle.choice.autonomous.visibility": "Os detalhes permanecem recolhidos até você expandi-los.",
+  "workStyle.choice.autonomous.visibility":
+    "Recolhe os detalhes das ferramentas, com uma prévia compacta do raciocínio.",
   "session.cloud.import.title": "Importar da nuvem",
   "session.cloud.import.placeholder": "ID da sessão, URL ou comando kilo import",
   "session.cloud.import.button": "Importar",
@@ -792,6 +786,7 @@ export const dict = {
   "ui.sessionTurn.status.consideringNextSteps": "Considerando próximos passos...",
 
   "dialog.model.noProviders": "Nenhum provedor",
+  "dialog.model.unavailable": "Modelos Kilo indisponíveis",
 
   "prompt.placeholder.connecting": "Conectando ao servidor...",
   "prompt.placeholder.error": "Conexão falhou. Verifique o painel de saída ou reinicie a extensão.",
@@ -856,7 +851,8 @@ export const dict = {
   "settings.browser.description":
     "Configure a automação de navegador integrada com tecnologia Playwright. O Kilo pode navegar, interagir e capturar telas de páginas da web nas suas sessões.",
   "settings.browser.enable.title": "Ativar Automação do Navegador",
-  "settings.browser.enable.description": "Registrar o servidor Playwright MCP no backend CLI.",
+  "settings.browser.enable.description":
+    "Ativar o navegador do Agent Manager específico de cada sessão para aplicações locais e páginas HTTPS públicas.",
   "settings.browser.systemChrome.title": "Usar Chrome do Sistema",
   "settings.browser.systemChrome.description":
     "Usar o navegador Chrome instalado em vez de uma instância separada do Chromium.",
@@ -952,15 +948,12 @@ export const dict = {
   "settings.sandboxing.writablePaths.title": "Caminhos graváveis adicionais",
   "settings.sandboxing.writablePaths.description":
     "Caminhos adicionais do sistema de arquivos onde o sandbox permite gravação (por exemplo, /tmp, /var/log). Eles são mesclados com os caminhos graváveis padrão quando o sandbox está ativo.",
-  "settings.experimental.multiProject.title": "Agent Manager Multi-Projeto",
+  "settings.experimental.conversationPromptHistory.title": "Histórico de prompts por conversa",
+  "settings.experimental.conversationPromptHistory.description":
+    "Mantenha o histórico de prompts (ArrowUp/ArrowDown) separado para cada conversa, em vez de compartilhar um único histórico entre todas as conversas.",
   "settings.experimental.claudeMigration.title": "Migração do Claude Code",
   "settings.experimental.claudeMigration.description":
     "Importe uma vez instruções globais CLAUDE.md compatíveis, habilidades simples e definições MCP desativadas. Os arquivos originais do Claude permanecem inalterados; reinicie o backend após ativar.",
-  "settings.experimental.multiProject.description":
-    "Ativar gerenciamento de sessões e worktrees em múltiplos repositórios no Agent Manager. O repositório do workspace atual é sempre o projeto padrão.",
-  "settings.experimental.taskModelSelection.title": "Seleção de modelo de subagente do Task",
-  "settings.experimental.taskModelSelection.description":
-    "Permite selecionar explicitamente o modelo, o provedor e o esforço de raciocínio dos subagentes do Task.",
   "settings.experimental.mcpTimeout.title": "Tempo limite MCP (ms)",
   "settings.experimental.mcpTimeout.description": "Tempo limite para solicitações do servidor MCP em milissegundos",
   "settings.experimental.remote.title": "Controle Remote",
@@ -1146,6 +1139,31 @@ export const dict = {
     "Prevenir ações idênticas repetidas. Acionado quando a mesma chamada de ferramenta se repete com entrada idêntica.",
   "settings.checkpoints.enable.title": "Ativar snapshots",
   "settings.checkpoints.enable.description": "Criar pontos de verificação antes de editar arquivos",
+  "settings.autoCleanup.enable.title": "Ativar limpeza automática de sessões",
+  "settings.autoCleanup.enable.description":
+    "Exclui automaticamente o histórico de sessões antigo após um número fixo de dias, em todos os projetos e em todos os clientes Kilo desta máquina, não apenas nesta janela. Sessões em execução e sessões com fork recente nunca são excluídas. A exclusão é permanente.",
+  "settings.autoCleanup.defaultRetention.title": "Manter sessões por (dias)",
+  "settings.autoCleanup.defaultRetention.description":
+    "Por quanto tempo o histórico de sessões é mantido antes da limpeza automática excluí-lo.",
+  "settings.autoCleanup.lastRun.title": "Última limpeza",
+  "settings.autoCleanup.lastRun.never": "Nunca executada",
+  "settings.autoCleanup.result":
+    "{{date}}: excluídas {{deleted}} de {{scanned}} sessões ({{active}} ativas ignoradas, {{failed}} falharam) em {{seconds}}s",
+  "settings.autoCleanup.starting": "Iniciando a limpeza de sessões...",
+  "settings.autoCleanup.error.status":
+    "O status da limpeza de sessões está temporariamente indisponível. Tentando novamente...",
+  "settings.autoCleanup.error.timeout": "Aguardando o status da limpeza. O backend está demorando mais que o esperado.",
+  "settings.autoCleanup.error.run":
+    "Não foi possível confirmar a conclusão da limpeza de sessões. Verifique o resultado da última limpeza antes de tentar novamente.",
+  "settings.autoCleanup.progress.scanning": "Verificando sessões: {{processed}}/{{total}} processadas",
+  "settings.autoCleanup.progress.deleting":
+    "Excluindo sessões: {{processed}}/{{total}} processadas ({{deleted}} excluídas, {{failed}} falharam)",
+  "settings.autoCleanup.runNow": "Executar limpeza agora",
+  "settings.autoCleanup.runNow.confirm":
+    "Excluir permanentemente as sessões expiradas em todos os projetos e em todos os clientes Kilo desta máquina?",
+  "settings.autoCleanup.stop": "Parar a limpeza",
+  "settings.autoCleanup.progress.cancelling": "Parando a limpeza de sessões...",
+  "settings.autoCleanup.lastRun.cancelled": "interrompida",
   "settings.context.autoCompaction.title": "Compactação automática",
   "settings.context.autoCompaction.description": "Compactar automaticamente o contexto antes que atinja o limite",
   "settings.context.compaction.title": "Compactação",
@@ -1194,6 +1212,19 @@ export const dict = {
   "settings.commitMessage.language.sync": "Sincronizar com idioma da interface",
   "settings.commitMessage.language.description": "Escolha qual idioma usar para as mensagens de commit geradas por AI:",
 
+  "settings.display.preview.title": "Prévia",
+  "settings.display.presets.title": "Predefinições de exibição",
+  "settings.display.presets.description": "Altera as opções de exibição abaixo, não as permissões. Salve para aplicar.",
+  "settings.display.preview.model": "Modelo de exemplo",
+  "settings.display.preview.prompt": "Remova os espaços extras da saudação e verifique os testes.",
+  "settings.display.preview.reasoning":
+    "**Verifique a saudação.** A função deve produzir a mesma saudação para um nome simples e para um nome com espaços extras em qualquer das extremidades. Vou manter a assinatura da função e o formato da saudação existentes e alterar apenas como o nome entra na string retornada.\n\nPara uma entrada como `  Ada  `, os espaços indesejados pertencem à entrada, não ao modelo da saudação. Aparar a saudação completa deixaria espaços ao lado do nome. Portanto, a operação de apara precisa acontecer antes de o nome ser inserido.\n\nVou consultar a documentação de strings para confirmar que `trim()` remove espaços em branco das duas extremidades e retorna uma nova string. Ela deve deixar a entrada original inalterada. Não é necessário usar expressão regular, outra dependência nem uma função auxiliar separada para essa alteração.\n\nOs espaços dentro de um nome devem permanecer intactos. Um nome como `Ada Lovelace` não deve virar `AdaLovelace`, e o uso de maiúsculas e minúsculas não deve mudar. Uma entrada vazia ou composta apenas por espaços não exige uma nova saudação padrão como parte desta correção pontual.\n\nA alteração pode ficar na expressão de retorno usando `name.trim()` onde o modelo atualmente usa `name`. Vou preservar a pontuação ao redor e o espaço intencional após a saudação. Isso mantém o diff pequeno e facilita a revisão do comportamento.\n\nPor fim, vou executar `bun test greeting.test.ts` e verificar os dois resultados. O caso do nome com espaços deve confirmar que os espaços extras são removidos, enquanto o caso do nome simples protege a saída existente. Vou relatar a alteração e os resultados dos testes somente após o comando terminar.",
+  "settings.display.preview.shell": "Verifique o teste da saudação",
+  "settings.display.preview.shellOutput":
+    "bun test greeting.test.ts\n\n[pass] remove espaços extras\n[pass] preserva um nome simples\n\n2 testes aprovados",
+  "settings.display.preview.query": "Aparo de strings",
+  "settings.display.preview.result": "trim() remove espaços das duas extremidades de uma string.",
+  "settings.display.preview.answer": "Saudação atualizada para remover espaços extras. Os dois testes passam.",
   "settings.display.username.title": "Nome de usuário",
   "settings.display.username.description": "Nome de usuário personalizado nas conversas",
   "settings.display.fontSize.title": "Tamanho da fonte",
@@ -1229,7 +1260,7 @@ export const dict = {
     "Exibir a taxa de geração de texto (tokens/sec) na mensagem mais recente do assistente e no cabeçalho da tarefa. Exibida por padrão; desative esta configuração para ocultá-la quando necessário.",
   "settings.display.autoApprovalReason.title": "Mostrar motivo da aprovação automática",
   "settings.display.autoApprovalReason.description":
-    "Mostra uma linha nas chamadas de ferramentas explicando por que foram aprovadas automaticamente (regra correspondente, padrão do agente, modo YOLO, etc.).",
+    "Mostra por que uma chamada de ferramenta foi aprovada automaticamente, como uma regra de permissão correspondente ou um padrão do agente.",
 
   "chat.throughput.tooltip":
     "Average {{speed}} tokens/s for this turn. Includes output and reasoning tokens; excludes tool execution and waiting time.",
@@ -1303,14 +1334,12 @@ export const dict = {
   "task.todos.allDone": "{{count}} tarefas concluídas",
   "task.backgroundAgents.running.one": "1 agente em segundo plano",
   "task.backgroundAgents.running.many": "{{count}} agentes em segundo plano",
-  "task.backgroundAgents.more": "+{{count}} mais",
   "task.backgroundAgents.open": "Abrir agente em segundo plano",
   "task.backgroundAgents.openAll": "Abrir todos os agentes em segundo plano",
   "task.backgroundAgents.cancel": "Parar",
   "task.backgroundAgents.continueInBackground": "Continuar em segundo plano",
   "task.backgroundAgents.waiting": "Um agente em segundo plano precisa da sua entrada",
   "task.backgroundAgents.needsInput": "Entrada necessária",
-  "task.backgroundAgents.dismiss": "Dispensar",
   "task.backgroundAgents.clearFinished": "Limpar concluídos",
   "task.backgroundAgents.summary": "{{running}} de {{total}} agentes em segundo plano em execução",
   "task.backgroundAgents.status.running": "Em execução",
@@ -1319,6 +1348,8 @@ export const dict = {
   "task.backgroundAgents.status.error": "Erro",
   "task.backgroundAgents.untitled": "Agente em segundo plano",
   "task.backgroundAgents.stopAll": "Parar todos ({{count}})",
+  "task.backgroundAgents.finished": "Agentes em segundo plano concluídos",
+  "task.stop": "Parar subagente",
   "settings.saveBar.unsavedChanges": "Alterações não salvas",
   "settings.saveBar.discard": "Descartar",
   "settings.saveBar.save": "Salvar",
@@ -1346,8 +1377,6 @@ export const dict = {
     "Arquivos modificados pelo Kilo durante a sessão atual, com base em snapshots por turno. Reinicia ao começar uma nova sessão.",
   "diffViewer.group.session": "Sessão",
   "diffViewer.group.git": "Git",
-  "diffViewer.comment.saveLocal": "Salvar localmente",
-  "diffViewer.comment.sendToAgent": "Enviar para o agente",
   "diffViewer.comment.postToGithub": "Publicar no GitHub",
   "diffViewer.comment.loadFailed": "Não foi possível carregar as alterações da solicitação de extração.",
   "diffViewer.comment.unavailable": "Esta linha não está disponível no snapshot atual da solicitação de extração.",

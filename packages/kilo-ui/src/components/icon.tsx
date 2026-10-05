@@ -99,6 +99,10 @@ const icons: Record<string, { path: string; viewBox: string }> = {
     viewBox: "0 0 20 20",
     path: `<circle cx="10" cy="10" r="7.5" stroke="currentColor"/><circle cx="10" cy="10" r="4.5" stroke="currentColor"/><circle cx="10" cy="10" r="1.5" fill="currentColor"/>`,
   },
+  clock: {
+    viewBox: "0 0 20 20",
+    path: `<circle cx="10" cy="10" r="7" stroke="currentColor" stroke-width="1.25"/><path d="M10 5.75V10L13.25 11.75" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>`,
+  },
   local: {
     viewBox: "0 0 20 20",
     path: `<rect x="2.5" y="3.5" width="15" height="10" rx="1" stroke="currentColor"/><path d="M6 16.5H14" stroke="currentColor" stroke-linecap="square"/><path d="M10 13.5V16.5" stroke="currentColor"/>`,
@@ -122,6 +126,14 @@ const icons: Record<string, { path: string; viewBox: string }> = {
   smile: {
     viewBox: "0 0 20 20",
     path: `<circle cx="10" cy="10" r="7.5" stroke="currentColor" stroke-width="1.25"/><path d="M7 8h.01M13 8h.01M7 12c.9 1.2 2 1.8 3 1.8s2.1-.6 3-1.8" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>`,
+  },
+  pin: {
+    viewBox: "0 0 24 24",
+    path: `<path d="M9.5 14.5L3 21" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M5.00007 9.48528L14.1925 18.6777L15.8895 16.9806L15.4974 13.1944L21.0065 8.5211L15.1568 2.67141L10.4834 8.18034L6.69713 7.78823L5.00007 9.48528Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>`,
+  },
+  "pin-filled": {
+    viewBox: "0 0 24 24",
+    path: `<path d="M9.5 14.5L3 21" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M5.00007 9.48528L14.1925 18.6777L15.8895 16.9806L15.4974 13.1944L21.0065 8.5211L15.1568 2.67141L10.4834 8.18034L6.69713 7.78823L5.00007 9.48528Z" fill="currentColor" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>`,
   },
 }
 

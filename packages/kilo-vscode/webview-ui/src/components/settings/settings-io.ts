@@ -1,5 +1,4 @@
 import type { Config } from "../../types/messages"
-import { deepMerge } from "../../utils/config-utils"
 
 /** Maximum import file size in bytes (1 MB). */
 export const MAX_IMPORT_SIZE = 1_048_576
@@ -25,6 +24,7 @@ export const KNOWN_KEYS: ReadonlyArray<string> = [
   "instructions",
   "skills",
   "snapshot",
+  "retention",
   "remote_control",
   "share",
   "username",
@@ -129,16 +129,4 @@ export function parseImport(json: string): ImportResult {
   }
 
   return warning ? { ok: true, config: config as Config, warning } : { ok: true, config: config as Config }
-}
-
-// ---------------------------------------------------------------------------
-// Merge
-// ---------------------------------------------------------------------------
-
-/**
- * Deep-merge imported config on top of existing config.
- * Imported values take precedence; existing values not in import are preserved.
- */
-export function mergeConfig(existing: Config, imported: Config): Config {
-  return deepMerge(existing, imported)
 }

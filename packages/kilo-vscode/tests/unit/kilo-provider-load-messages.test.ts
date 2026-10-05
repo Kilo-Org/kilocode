@@ -3,6 +3,7 @@ import type { SessionStatus } from "@kilocode/sdk/v2/client"
 import * as vscode from "vscode"
 import type { PartUpdate } from "../../src/shared/stream-messages"
 import type { AbortRequest } from "../../webview-ui/src/types/messages/webview-messages"
+import { REVERT_ERROR_CODE } from "../../src/shared/revert-error"
 
 // vscode mock is provided by the shared preload (tests/setup/vscode-mock.ts)
 const { KiloProvider, unwrapSyncEvent } = await import("../../src/KiloProvider")
@@ -67,6 +68,7 @@ function createClient(options?: {
   messagesData?: unknown[]
   deleteDeferred?: Deferred<unknown>
   revertDeferred?: Deferred<{ data?: unknown; error?: unknown }>
+  unrevertResult?: { data?: unknown; error?: unknown }
   sessionData?: unknown
   sessionGet?: (params: { sessionID: string; directory?: string }) => Promise<{ data: unknown }>
   status?: (params: { directory?: string }) => Promise<{ data: Record<string, SessionStatus> | null }>
@@ -125,6 +127,7 @@ function createClient(options?: {
         if (options?.revertDeferred) return options.revertDeferred.promise
         return { data: mkSession({ messageID: String(params.messageID) }) }
       },
+      unrevert: async () => options?.unrevertResult ?? { data: mkSession() },
       promptAsync: async (params: Record<string, unknown>) => {
         prompted.push(params)
         return { data: undefined }
@@ -265,6 +268,7 @@ type ProviderInternals = {
   handleCostAlertResponse: (sid: string, limit: number, response: "continue" | "stop") => Promise<void>
   setMaxCost: (value: unknown) => void
   handleRevertSession: (sid: string, messageID: string) => Promise<void>
+  handleUnrevertSession: (sid: string) => Promise<void>
   handleSendMessage: (text: string, messageID?: string, sessionID?: string, draftID?: string) => Promise<void>
   trackOpenSessions: (ids: string[]) => void
   fetchAndSendSandboxDefault: (directory?: string, requestID?: string) => Promise<void>
@@ -582,7 +586,9 @@ describe("KiloProvider session status reconciliation", () => {
   })
 
   it("does not idle a worktree session from a root snapshot", async () => {
-    const client = createClient()
+    const client = createClient({
+      status: async ({ directory }) => ({ data: directory === "/repo/worktree" ? { s1: { type: "busy" } } : {} }),
+    })
     const { provider, internal } = makeProvider(client)
     provider.setSessionDirectory("s1", "/repo/worktree")
     internal.trackedSessionIds.add("s1")
@@ -591,6 +597,74 @@ describe("KiloProvider session status reconciliation", () => {
     await internal.seedSessionStatusMap()
 
     expect(internal.sessionStatusMap.get("s1")).toBe("busy")
+  })
+
+  it("reconciles retained sessions from each owning directory after a project switch", async () => {
+    const calls: string[] = []
+    const pending = Promise.withResolvers<{ data: Record<string, SessionStatus> }>()
+    const client = createClient({
+      status: async ({ directory }) => {
+        calls.push(directory!)
+        if (directory === "/repo/project-a") return pending.promise
+        return { data: {} }
+      },
+    })
+    const routes = new ProjectRouteService()
+    routes.registerProject("a", "/repo/project-a", 1)
+    routes.registerSession({ projectId: "a", sessionId: "routed" }, "/repo/project-a", 1)
+    const { internal, sent } = makeProvider(client, {
+      rootDirectory: () => "/repo/project-b",
+      projectQualifier: () => ({ projectId: "b" }),
+      routeService: routes,
+    })
+    internal.trackedSessionIds.add("routed")
+    internal.trackedSessionIds.add("worktree")
+    internal.sessionDirectories.set("worktree", "/repo/project-a/worktree")
+    internal.owners.set("released", { dir: "/repo/project-a/worktree", project: "a" })
+    for (const id of ["routed", "worktree", "released"]) internal.sessionStatusMap.set(id, "busy")
+
+    const recovering = internal.seedSessionStatusMap()
+    await Bun.sleep(0)
+    expect(internal.sessionStatusMap.get("routed")).toBe("busy")
+    expect(internal.sessionStatusMap.get("worktree")).toBe("idle")
+    expect(internal.sessionStatusMap.get("released")).toBe("idle")
+
+    pending.resolve({ data: {} })
+    await recovering
+
+    expect(calls.sort()).toEqual(["/repo/project-a", "/repo/project-a/worktree", "/repo/project-b"])
+    for (const id of ["routed", "worktree", "released"]) {
+      expect(internal.sessionStatusMap.get(id)).toBe("idle")
+      expect(sent).toContainEqual({ type: "sessionStatus", sessionID: id, status: "idle" })
+    }
+  })
+
+  it.each(["missing", "error"])("preserves status in a directory with a %s snapshot", async (failure) => {
+    const log = spyOn(console, "error").mockImplementation(() => {})
+    const client = createClient({
+      status: async ({ directory }) => {
+        if (directory === "/repo/project-a") return { data: {} }
+        if (failure === "error") throw new Error("status unavailable")
+        return { data: null }
+      },
+    })
+    const { internal } = makeProvider(client, {
+      rootDirectory: () => "/repo/project-b",
+      projectQualifier: () => ({ projectId: "b" }),
+    })
+    for (const id of ["a", "b"]) {
+      internal.trackedSessionIds.add(id)
+      internal.sessionDirectories.set(id, `/repo/project-${id}`)
+      internal.sessionStatusMap.set(id, "busy")
+    }
+
+    try {
+      await internal.seedSessionStatusMap()
+      expect(internal.sessionStatusMap.get("a")).toBe("idle")
+      expect(internal.sessionStatusMap.get("b")).toBe("busy")
+    } finally {
+      log.mockRestore()
+    }
   })
 
   it("reconciles a released child from its owning directory snapshot", async () => {
@@ -1030,6 +1104,42 @@ describe("KiloProvider revert ordering", () => {
     await Bun.sleep(0)
 
     expect(internal.currentSession?.revert).toEqual({ messageID: "m1" })
+  })
+})
+
+describe("KiloProvider revert failure reporting", () => {
+  it("tags a failed revert with the code the webview translates", async () => {
+    const logged = spyOn(console, "error").mockImplementation(() => {})
+    const revert = defer<{ data?: unknown; error?: unknown }>()
+    revert.resolve({ error: new Error("revert failed") })
+    const client = createClient({ revertDeferred: revert })
+    const { internal, sent } = makeProvider(client)
+
+    await expect(internal.handleRevertSession("s1", "m1")).rejects.toThrow("revert failed")
+
+    expect(sent).toContainEqual({
+      type: "error",
+      message: "revert failed",
+      code: REVERT_ERROR_CODE,
+      sessionID: "s1",
+    })
+    logged.mockRestore()
+  })
+
+  it("tags a failed redo the same way", async () => {
+    const logged = spyOn(console, "error").mockImplementation(() => {})
+    const client = createClient({ unrevertResult: { error: new Error("redo failed") } })
+    const { internal, sent } = makeProvider(client)
+
+    await expect(internal.handleUnrevertSession("s1")).rejects.toThrow("redo failed")
+
+    expect(sent).toContainEqual({
+      type: "error",
+      message: "redo failed",
+      code: REVERT_ERROR_CODE,
+      sessionID: "s1",
+    })
+    logged.mockRestore()
   })
 })
 

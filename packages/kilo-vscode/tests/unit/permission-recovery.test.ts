@@ -4,10 +4,16 @@ import {
   handlePermissionResponse,
   recoverablePermissions,
   recoveryDirs,
+  replyOnce,
   type RecoverablePermission,
   type PermissionContext,
 } from "../../src/kilo-provider/handlers/permission-handler"
 import { KiloConnectionService } from "../../src/services/cli-backend/connection-service"
+
+/** Transient transport failures carry no HTTP status and are safe to retry. */
+function terminated() {
+  return new TypeError("terminated")
+}
 
 /** Minimal permission shape returned by the SDK's permission.list(). */
 function pending(id: string, sessionID: string, permission = "bash"): RecoverablePermission {
@@ -35,7 +41,7 @@ function permissionClient(
         const dir = args?.directory ?? ""
         queries.push(dir)
         const error = errors?.list?.[dir]
-        if (error) return { data: undefined, error }
+        if (error) throw error
         return { data: permsPerDir[dir] ?? [] }
       },
       saveAlwaysRules: async (args: unknown) => {
@@ -294,6 +300,107 @@ describe("handlePermissionResponse", () => {
     expect(permDirs.has("p1")).toBe(true)
     expect(messages).toEqual([{ type: "permissionError", permissionID: "p1" }])
   })
+
+  it("treats an aborted rule save as stale once the request is settled", async () => {
+    const error = new Error("The operation was aborted due to timeout")
+    const { fake, messages, permDirs, queries } = ctx({ tracked: ["s1"], errors: { save: error } })
+    const spy = spyOn(console, "error").mockImplementation(() => {})
+    permDirs.set("p1", "/workspace/.kilo/worktrees/feature")
+
+    await handlePermissionResponse(fake, "p1", "s1", "once", ["bun *"], [])
+    spy.mockRestore()
+
+    expect(queries).toContain("/workspace/.kilo/worktrees/feature")
+    expect(permDirs.has("p1")).toBe(false)
+    expect(messages).toEqual([{ type: "permissionError", permissionID: "p1", stale: true }])
+  })
+
+  it("keeps an aborted rule save retryable while the request is still pending", async () => {
+    const error = new Error("The operation was aborted due to timeout")
+    const dir = "/workspace/.kilo/worktrees/feature"
+    const { fake, messages, permDirs } = ctx({
+      tracked: ["s1"],
+      errors: { save: error },
+      permsPerDir: { [dir]: [pending("p1", "s1")] },
+    })
+    const spy = spyOn(console, "error").mockImplementation(() => {})
+    permDirs.set("p1", dir)
+
+    await handlePermissionResponse(fake, "p1", "s1", "once", ["bun *"], [])
+    spy.mockRestore()
+
+    expect(permDirs.has("p1")).toBe(true)
+    expect(messages).toEqual([{ type: "permissionError", permissionID: "p1" }])
+  })
+})
+
+describe("replyOnce", () => {
+  it("retries a transient transport drop", async () => {
+    let calls = 0
+    const client = {
+      permission: {
+        reply: async () => {
+          calls += 1
+          if (calls === 1) throw terminated()
+          return { data: true }
+        },
+      },
+    }
+    const log = spyOn(console, "error").mockImplementation(() => {})
+    try {
+      expect(await replyOnce(client as never, "p1", "/workspace")).toBe(true)
+    } finally {
+      log.mockRestore()
+    }
+    expect(calls).toBe(2)
+  })
+
+  it("does not retry a decisive not-found reply", async () => {
+    let calls = 0
+    const client = {
+      permission: {
+        reply: async () => {
+          calls += 1
+          throw new Error("Permission request not found: p1", { cause: { status: 404 } })
+        },
+      },
+    }
+    const log = spyOn(console, "error").mockImplementation(() => {})
+    try {
+      expect(await replyOnce(client as never, "p1", "/workspace")).toBe(false)
+    } finally {
+      log.mockRestore()
+    }
+    expect(calls).toBe(1)
+  })
+
+  it("stops retrying when the caller cancels", async () => {
+    let calls = 0
+    let checks = 0
+    let allowed = true
+    const client = {
+      permission: {
+        reply: async () => {
+          calls += 1
+          allowed = false
+          throw terminated()
+        },
+      },
+    }
+    const log = spyOn(console, "error").mockImplementation(() => {})
+    try {
+      expect(
+        await replyOnce(client as never, "p1", "/workspace", () => {
+          checks += 1
+          return allowed
+        }),
+      ).toBe(false)
+    } finally {
+      log.mockRestore()
+    }
+    expect(calls).toBe(1)
+    expect(checks).toBe(2)
+  })
 })
 
 describe("recoverablePermissions", () => {
@@ -385,6 +492,39 @@ describe("fetchAndSendPendingPermissions", () => {
 
     expect(permDirs.has("workspace-stale")).toBe(false)
     expect(permDirs.get("worktree-pending")).toBe("/workspace/.kilo/worktrees/failing")
+  })
+
+  it("retries a transient list failure during recovery", async () => {
+    const messages: unknown[] = []
+    let calls = 0
+    const client = {
+      permission: {
+        list: async () => {
+          calls += 1
+          if (calls === 1) throw terminated()
+          return { data: [pending("p1", "s1")] }
+        },
+      },
+    }
+    const fake: PermissionContext = {
+      client: client as unknown as PermissionContext["client"],
+      currentSessionId: undefined,
+      trackedSessionIds: new Set(["s1"]),
+      sessionDirectories: new Map(),
+      extraDirectories: () => [],
+      postMessage: (msg) => messages.push(msg),
+      getWorkspaceDirectory: () => "/workspace",
+      recordPermissionDirectory: () => {},
+      getPermissionDirectory: () => undefined,
+      clearPermissionDirectory: () => {},
+      getPermissionRevision: () => 0,
+      prunePermissionDirectories: () => {},
+    }
+
+    await fetchAndSendPendingPermissions(fake)
+
+    expect(calls).toBe(2)
+    expect(messages).toHaveLength(1)
   })
 
   it("deduplicates directories", async () => {

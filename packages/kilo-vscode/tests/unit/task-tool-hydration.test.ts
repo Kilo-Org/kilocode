@@ -39,7 +39,11 @@ describe("completed task hydration", () => {
     expect(taskBackground({}, undefined, { background: true })).toBe(true)
     // partMetadata false shadows later state metadata, matching the original lookup
     expect(taskBackground({}, { background: false }, { background: true })).toBe(false)
+    expect(taskBackground({}, { background: true }, { background: false })).toBe(true)
     expect(taskBackground({}, undefined, undefined)).toBe(false)
+    expect(taskBackground(undefined, undefined, undefined)).toBe(false)
+    expect(taskBackground({}, {}, {})).toBe(false)
+    expect(taskBackground({ background: "yes" }, {}, {})).toBe(false)
   })
 
   it("keeps expansion state isolated by copied part ID", () => {

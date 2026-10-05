@@ -58,6 +58,6 @@ function stripMarkdownLinkUrls(text: string): string {
   return segments.map((segment, i) => (i % 2 === 1 ? segment : stripLinks(segment))).join("")
 }
 
-function stripLinks(text: string): string {
+export function stripLinks(text: string): string {
   return text.replace(/!\[[^\]]*\]\([^)]*\)/g, "").replace(/\[([^\]]*)\]\([^)]*\)/g, "$1")
 }

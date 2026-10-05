@@ -118,6 +118,7 @@ const MockProviderProvider: ParentComponent<{ kiloAuth?: boolean; training?: boo
     authMethods: () => ({}),
     authStates: () => (props.kiloAuth ? { kilo: "oauth" } : {}) as Record<string, ProviderAuthState>,
     isModelValid: () => true,
+    kiloUnavailable: () => false,
   }
   return <ProviderContext.Provider value={value}>{props.children}</ProviderContext.Provider>
 }
@@ -237,9 +238,6 @@ export function mockSessionValue(overrides?: {
     selected: () => ({ providerID: "kilo", modelID: "anthropic/claude-sonnet-4-6" }),
     modelForAgent: () => ({ providerID: "kilo", modelID: "anthropic/claude-sonnet-4-6" }),
     selectModel: noop,
-    preferredSelection: () => undefined,
-    preferencesReady: () => true,
-    rememberSelection: noop,
     trackScopes: () => noop,
     costBreakdown: () => [],
     contextUsage: () => undefined,
@@ -284,6 +282,10 @@ export function mockSessionValue(overrides?: {
     createSession: noop,
     clearCurrentSession: noop,
     loadSessions: noop,
+    loadMoreSessions: noop,
+    sessionsHasMore: () => false,
+    keepSessions: () => noop,
+    sessionsLoadingMore: () => false,
     loadOlderMessages: () => false,
     selectSession: noop,
     // MessageList reads both on mount: `scrollBottomID` must be an accessor
