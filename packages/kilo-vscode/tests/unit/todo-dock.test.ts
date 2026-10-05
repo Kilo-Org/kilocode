@@ -8,7 +8,8 @@ import {
 } from "../../webview-ui/src/components/chat/todo/todo-dock"
 import type { TodoItem } from "../../webview-ui/src/types/messages"
 
-const item = (id: string, status: TodoItem["status"]): TodoItem => ({ id, content: `Item ${id}`, status })
+// Same shape as the backend sends: no ID, the text is the identity.
+const item = (name: string, status: TodoItem["status"]): TodoItem => ({ content: `Item ${name}`, status })
 
 describe("todoStats", () => {
   it("leaves cancelled items out of the total", () => {
@@ -16,11 +17,11 @@ describe("todoStats", () => {
     expect(stats.done).toBe(1)
     expect(stats.total).toBe(2)
     expect(stats.all).toBe(false)
-    expect(stats.active?.id).toBe("3")
+    expect(stats.active?.content).toBe("Item 3")
   })
 
   it("prefers the item in progress over the next pending one", () => {
-    expect(todoStats([item("1", "pending"), item("2", "in_progress")]).active?.id).toBe("2")
+    expect(todoStats([item("1", "pending"), item("2", "in_progress")]).active?.content).toBe("Item 2")
   })
 
   it("treats a list of only cancelled items as empty", () => {
@@ -62,8 +63,14 @@ describe("todoFinished", () => {
   })
 
   it("does not fire when a done list replaces another list", () => {
-    const prev = todoStats([item("1", "pending")])
-    const next = todoStats([item("a", "completed")])
+    const prev = todoStats([item("1", "completed"), item("2", "pending")])
+    const next = todoStats([item("a", "completed"), item("b", "completed")])
+    expect(todoFinished(prev, next)).toBe(false)
+  })
+
+  it("does not fire when the replaced list only shares items that were already done", () => {
+    const prev = todoStats([item("1", "completed"), item("2", "pending")])
+    const next = todoStats([item("1", "completed"), item("b", "completed")])
     expect(todoFinished(prev, next)).toBe(false)
   })
 })

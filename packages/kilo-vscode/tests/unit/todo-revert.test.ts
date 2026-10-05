@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test"
-import { state, target } from "../../webview-ui/src/context/todo-revert"
+import { state } from "../../webview-ui/src/context/todo-revert"
 import type { Message, Part, TodoItem } from "../../webview-ui/src/types/messages"
 
 const base = {
@@ -48,12 +48,6 @@ describe("todo revert helpers", () => {
 
   it("restores the latest todo state on redo", () => {
     expect(state({ messages, parts })).toEqual(todos("completed", "completed", "pending"))
-  })
-
-  it("targets the todowrite part that first completed the clicked todo", () => {
-    expect(target({ messages, parts }, 0)?.id).toBe("part_2")
-    expect(target({ messages, parts }, 1)?.id).toBe("part_3")
-    expect(target({ messages, parts }, 2)).toBeUndefined()
   })
 
   it("uses normal part ordering inside the revert boundary message", () => {

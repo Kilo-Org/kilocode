@@ -7,7 +7,7 @@
  * count, and the item the agent works on now. It trails the working spinner
  * while a turn runs and sits next to the Goal control when the session is
  * idle, so the list stays in view without a header row. A click opens the
- * full list.
+ * full list, which is read-only.
  *
  * Changes animate only while the user watches them. A finished item strikes
  * through and the next one slides in, the count rolls, and its ring segment
@@ -32,10 +32,8 @@ import {
 } from "solid-js"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { Popover } from "@kilocode/kilo-ui/popover"
-import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { useLanguage } from "../../../context/language"
 import { useSession } from "../../../context/session"
-import { target } from "../../../context/todo-revert"
 import type { TodoItem } from "../../../types/messages"
 import { TODO_TITLE_MAX, todoFinished, todoStats, todoVisible, type TodoStats } from "./todo-dock"
 
@@ -164,10 +162,11 @@ const Segment: Component<{ item: Accessor<TodoItem>; index: number; count: numbe
   const turn = () => -90 + (props.index * 360) / props.count + (gap() / C) * 180
   let el: SVGCircleElement | undefined
   // Pulse a segment when its own item finishes, not when a replaced list puts
-  // a done item in the same place.
+  // a done item in the same place. Todo items have no ID, so the text is the
+  // identity.
   createEffect(
     on(
-      () => [props.item().id, props.item().status] as const,
+      () => [props.item().content, props.item().status] as const,
       (next, prev) => {
         if (!prev || !props.live || !el || !motion()) return
         if (next[0] !== prev[0] || next[1] !== "completed" || prev[1] === "completed") return
@@ -301,7 +300,6 @@ interface TodoChipProps {
   width?: number
   /** False hides the count when the dock runs out of room. */
   count?: boolean
-  readonly?: boolean
 }
 
 export const TodoChip: Component<TodoChipProps> = (props) => {
@@ -316,7 +314,7 @@ export const TodoChip: Component<TodoChipProps> = (props) => {
   const [strike, setStrike] = createSignal(false)
   createEffect(
     on(
-      () => [stats().done, stats().active?.id] as const,
+      () => [stats().done, stats().active?.content] as const,
       (next, prev) => {
         if (!prev) return
         setDir(next[0] < prev[0] ? -1 : 1)
@@ -339,17 +337,6 @@ export const TodoChip: Component<TodoChipProps> = (props) => {
   })
 
   const items = () => session.todos()
-  const done = (idx: number) =>
-    items().at(idx)?.status === "completed"
-      ? target({ messages: session.messages(), parts: session.allParts() }, idx)
-      : undefined
-  const revert = (idx: number) => {
-    if (props.readonly || session.status() !== "idle") return
-    const part = done(idx)
-    if (part?.type !== "tool" || !part.messageID) return
-    setOpen(false)
-    session.revertSession(part.messageID, part.id)
-  }
 
   const attrs = createMemo(
     () =>
@@ -422,50 +409,27 @@ export const TodoChip: Component<TodoChipProps> = (props) => {
         </div>
         <div data-slot="todo-panel-list">
           <For each={items()}>
-            {(item, idx) => {
-              const part = createMemo(() => (props.readonly ? undefined : done(idx())))
-              const row = (
-                <div
-                  data-slot="todo-panel-row"
-                  data-status={item.status}
-                  data-revert={part() ? "" : undefined}
-                  style={{ "--todo-i": String(idx()) }}
-                  role={part() ? "button" : undefined}
-                  tabIndex={part() ? 0 : undefined}
-                  onClick={() => revert(idx())}
-                  onKeyDown={(event) => {
-                    if (event.key !== "Enter" && event.key !== " ") return
-                    event.preventDefault()
-                    revert(idx())
-                  }}
-                >
-                  <span data-slot="todo-panel-icon">
-                    <Show when={item.status === "completed"}>
-                      <Icon name="check-small" size="small" />
-                    </Show>
-                    <Show when={item.status === "cancelled"}>
-                      <Icon name="close-small" size="small" />
-                    </Show>
-                    <Show when={item.status === "in_progress"}>
-                      <span data-slot="todo-panel-spin" />
-                    </Show>
-                    <Show when={item.status === "pending"}>
-                      <span data-slot="todo-panel-open" />
-                    </Show>
-                  </span>
-                  <span data-slot="todo-panel-text" dir="auto">
-                    {item.content}
-                  </span>
-                </div>
-              )
-              return (
-                <Show when={part()} fallback={row}>
-                  <Tooltip value={language.t("settings.checkpoints.title")} placement="left">
-                    {row}
-                  </Tooltip>
-                </Show>
-              )
-            }}
+            {(item, idx) => (
+              <div data-slot="todo-panel-row" data-status={item.status} style={{ "--todo-i": String(idx()) }}>
+                <span data-slot="todo-panel-icon">
+                  <Show when={item.status === "completed"}>
+                    <Icon name="check-small" size="small" />
+                  </Show>
+                  <Show when={item.status === "cancelled"}>
+                    <Icon name="close-small" size="small" />
+                  </Show>
+                  <Show when={item.status === "in_progress"}>
+                    <span data-slot="todo-panel-spin" />
+                  </Show>
+                  <Show when={item.status === "pending"}>
+                    <span data-slot="todo-panel-open" />
+                  </Show>
+                </span>
+                <span data-slot="todo-panel-text" dir="auto">
+                  {item.content}
+                </span>
+              </div>
+            )}
           </For>
         </div>
       </div>

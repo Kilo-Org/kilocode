@@ -376,19 +376,6 @@
   &[data-status="in_progress"] {
     background: color-mix(in srgb, var(--todo-accent) 10%, transparent);
   }
-
-  &[data-revert] {
-    cursor: pointer;
-  }
-
-  &[data-revert]:hover,
-  &[data-revert]:focus-visible {
-    background: var(--surface-raised-base-hover);
-  }
-
-  &:focus-visible {
-    outline: 1px solid var(--vscode-focusBorder);
-  }
 }
 
 [data-slot="todo-panel-text"] {

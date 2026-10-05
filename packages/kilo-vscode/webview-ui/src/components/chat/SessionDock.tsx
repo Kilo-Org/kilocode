@@ -150,6 +150,10 @@ export const SessionDock: Component<SessionDockProps> = (props) => {
     const mutate = new MutationObserver(measure)
     resize.observe(el)
     mutate.observe(box, { childList: true, subtree: true, characterData: true })
+    // The status label is a sibling of the trail. Its width sets the room, so a
+    // new label must plan again.
+    const status = lane()?.querySelector(".working-status")
+    if (status) mutate.observe(status, { childList: true, subtree: true, characterData: true })
     onCleanup(() => {
       resize.disconnect()
       mutate.disconnect()
@@ -168,7 +172,6 @@ export const SessionDock: Component<SessionDockProps> = (props) => {
           title={title}
           width={title ? fit().title : undefined}
           count={title ? fit().count : true}
-          readonly={props.readonly}
         />
       )}
     </Show>

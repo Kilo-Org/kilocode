@@ -44,12 +44,13 @@ export function todoVisible(stats: TodoStats, last: string | undefined, user: st
 /**
  * The list of one session went from open items to all done. A list that
  * arrives already done (a reload, a session switch, a replaced list) is not a
- * finish, so it does not celebrate.
+ * finish, so it does not celebrate. Todo items have no ID, so a list counts
+ * as the same list when an item that was open is now done with the same text.
  */
 export function todoFinished(prev: TodoStats, next: TodoStats) {
   if (prev.total === 0 || prev.all || !next.all) return false
-  const ids = new Set(prev.live.map((item) => item.id))
-  return next.live.some((item) => ids.has(item.id))
+  const open = new Set(prev.live.filter((item) => item.status !== "completed").map((item) => item.content))
+  return next.live.some((item) => open.has(item.content))
 }
 
 /** Widest title the chip shows, so a long item does not take the whole row. */

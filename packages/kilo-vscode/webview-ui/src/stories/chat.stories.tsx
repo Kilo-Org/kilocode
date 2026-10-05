@@ -269,7 +269,6 @@ const dockTodoNames = [
 
 function dockTodos(done: number): TodoItem[] {
   return dockTodoNames.map((content, i) => ({
-    id: String(i + 1),
     content,
     status: i < done ? "completed" : i === done ? "in_progress" : "pending",
   }))
@@ -372,10 +371,11 @@ export const ChatViewSessionDockTodoStates: Story = {
     <StoryProviders sessionID={SESSION_ID} status="idle" noPadding>
       <ServerContext.Provider value={mockServer as any}>
         <div style={{ display: "grid", gap: "8px" }}>
-          {dockFrame({ busy: true, goal: true, done: 2, width: 720, label: "Working, with goal" })}
-          {dockFrame({ busy: true, goal: true, done: 2, width: 380, label: "Working, narrow" })}
-          {dockFrame({ busy: false, goal: true, done: 3, width: 720, label: "Idle" })}
-          {dockFrame({ busy: false, goal: false, done: 5, width: 720, label: "Idle, all done" })}
+          {dockFrame({ busy: true, goal: false, done: 2, width: 420, label: "Working" })}
+          {dockFrame({ busy: true, goal: true, done: 2, width: 420, label: "Working, with goal" })}
+          {dockFrame({ busy: true, goal: true, done: 2, width: 300, label: "Working, narrow, with goal" })}
+          {dockFrame({ busy: false, goal: true, done: 3, width: 420, label: "Idle" })}
+          {dockFrame({ busy: false, goal: false, done: 5, width: 420, label: "Idle, all done" })}
         </div>
       </ServerContext.Provider>
     </StoryProviders>

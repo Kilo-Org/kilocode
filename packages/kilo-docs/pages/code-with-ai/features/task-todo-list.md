@@ -55,7 +55,7 @@ A progress chip above the prompt shows how many items are done and the item Kilo
 
 {% image src="/docs/img/screenshot-tests/kilo-vscode/visual-regression/chat/chat-view-session-dock-todo-states-chromium-linux.png" alt="Todo progress chip in the session dock, next to the working indicator and the session actions" width="420" /%}
 
-While Kilo works, the chip sits next to the working indicator. When the session is idle, it sits next to the session actions. Click the chip to see the full list. Click a completed item to revert the session to that point.
+While Kilo works, the chip sits next to the working indicator. When the session is idle, it sits next to the session actions. Click the chip to see the full list.
 
 **2. Interactive Tool Block**
 Full todo interface in chat where you can:
