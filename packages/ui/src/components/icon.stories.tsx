@@ -107,7 +107,7 @@ const names = [
   "selector",
   "arrow-down-to-line",
   "warning",
-  "warning-filled",
+  "warning-filled", // kilocode_change
   "link",
   "providers",
   "models",
