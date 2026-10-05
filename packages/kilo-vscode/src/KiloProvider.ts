@@ -6163,7 +6163,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.pushFixesConfigDisposable?.dispose()
     this.telemetryStateDisposable?.dispose()
     this.autoApproveBridge?.dispose()
-    this.marketplace.dispose()
     this.visibleTaskStreams.clear()
     this.inputs.dispose()
     this.streams.dispose()
