@@ -274,64 +274,6 @@ function dockTodos(done: number): TodoItem[] {
   }))
 }
 
-/**
- * The todo chip in the session dock: it trails the spinner while a turn runs
- * and sits next to the session actions when idle. `advance` finishes the
- * current item, so the last step plays the finished state.
- */
-export const ChatViewSessionDockTodos: Story = {
-  name: "ChatView — session dock todos",
-  render: () => {
-    const [busy, setBusy] = createSignal(true)
-    const [goal, setGoal] = createSignal(true)
-    const [done, setDone] = createSignal(2)
-    const status = () => (busy() ? "busy" : "idle")
-    const base = mockSessionValue({ id: SESSION_ID, status: "idle", closeReason: "completed" })
-    const session = {
-      ...base,
-      currentSession: () => ({
-        ...base.currentSession(),
-        goal: goal() ? { text: "Ship the todo chip in the session dock", active: busy() } : undefined,
-      }),
-      status,
-      statusInfo: () => ({ type: status() }),
-      statusText: () => (busy() ? "Making edits" : undefined),
-      busyTiming: () => (busy() ? { active: 2000, since: Date.now() } : undefined),
-      submitting: () => false,
-      isSubmitting: () => false,
-      messages: () => [{ id: "msg-001" }] as any[],
-      todos: () => dockTodos(done()),
-    }
-    return (
-      <StoryProviders sessionID={SESSION_ID} status="idle" noPadding>
-        <ServerContext.Provider value={mockServer as any}>
-          <SessionContext.Provider value={session as any}>
-            <WorktreeModeProvider>
-              <div style={{ height: "320px", display: "flex", "flex-direction": "column" }}>
-                <div style={{ display: "flex", gap: "4px" }}>
-                  <button data-testid="toggle-busy" onClick={() => setBusy(!busy())}>
-                    toggle busy
-                  </button>
-                  <button data-testid="advance" onClick={() => setDone(Math.min(done() + 1, dockTodoNames.length))}>
-                    advance
-                  </button>
-                  <button data-testid="back" onClick={() => setDone(Math.max(done() - 1, 0))}>
-                    back
-                  </button>
-                  <button data-testid="toggle-goal" onClick={() => setGoal(!goal())}>
-                    toggle goal
-                  </button>
-                </div>
-                <ChatView onForkSession={() => undefined} />
-              </div>
-            </WorktreeModeProvider>
-          </SessionContext.Provider>
-        </ServerContext.Provider>
-      </StoryProviders>
-    )
-  },
-}
-
 function dockFrame(opts: { busy: boolean; goal: boolean; done: number; width: number; label: string }) {
   const status = opts.busy ? "busy" : "idle"
   const base = mockSessionValue({ id: SESSION_ID, status, closeReason: "completed" })

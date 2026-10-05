@@ -56,7 +56,7 @@ export function todoFinished(prev: TodoStats, next: TodoStats) {
 /** Widest title the chip shows, so a long item does not take the whole row. */
 export const TODO_TITLE_MAX = 200
 /** Narrowest title worth showing. Below this the title hides. */
-export const TODO_TITLE_MIN = 56
+const TODO_TITLE_MIN = 56
 
 interface FitInput {
   /** Room for the trailing group: the chip and the goal badge. */

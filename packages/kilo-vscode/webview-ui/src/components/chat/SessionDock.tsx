@@ -106,24 +106,12 @@ export const SessionDock: Component<SessionDockProps> = (props) => {
   const [trail, setTrail] = createSignal<HTMLDivElement>()
 
   createEffect(() => {
-    const content = lane()
-    const el = trail()
-    if (!working() || !todo.shown() || !content || !el || typeof ResizeObserver === "undefined") return
-    const measure = () => content.style.setProperty("--session-trail", `${Math.ceil(el.offsetWidth)}px`)
-    const observer = new ResizeObserver(measure)
-    observer.observe(el)
-    onCleanup(() => {
-      observer.disconnect()
-      content.style.removeProperty("--session-trail")
-    })
-    measure()
-  })
-
-  createEffect(() => {
     const el = dock()
     const box = trail()
-    if (!working() || !todo.shown() || !el || !box || typeof ResizeObserver === "undefined") return
+    const content = lane()
+    if (!working() || !todo.shown() || !el || !box || !content || typeof ResizeObserver === "undefined") return
     const measure = () => {
+      content.style.setProperty("--session-trail", `${Math.ceil(box.offsetWidth)}px`)
       const chip = box.querySelector<HTMLElement>('[data-component="todo-chip"]')
       if (!chip) return
       const css = getComputedStyle(chip)
@@ -137,7 +125,7 @@ export const SessionDock: Component<SessionDockProps> = (props) => {
       setFit(
         todoFit({
           // A small margin absorbs subpixel rounding and the title transition.
-          space: (el.clientWidth - core(lane())) / 2 - 6,
+          space: (el.clientWidth - core(content)) / 2 - 6,
           chip: ring + edge,
           count,
           title,
@@ -149,6 +137,7 @@ export const SessionDock: Component<SessionDockProps> = (props) => {
     const resize = new ResizeObserver(measure)
     const mutate = new MutationObserver(measure)
     resize.observe(el)
+    resize.observe(box)
     mutate.observe(box, { childList: true, subtree: true, characterData: true })
     // The status label is a sibling of the trail. Its width sets the room, so a
     // new label must plan again.
@@ -157,6 +146,7 @@ export const SessionDock: Component<SessionDockProps> = (props) => {
     onCleanup(() => {
       resize.disconnect()
       mutate.disconnect()
+      content.style.removeProperty("--session-trail")
     })
     measure()
   })

@@ -89,7 +89,6 @@ async function settle(page: Page) {
 // on an indeterminate frame.
 const SKIP = new Set<string>([
   "chat--chat-view-session-dock-stability",
-  "chat--chat-view-session-dock-todos",
   "labs-tool-call-lab--question-resolve-stability",
   "agentmanager--diff-panel-cached-worktree-switch",
   "agentmanager--diff-panel-viewport-loading",

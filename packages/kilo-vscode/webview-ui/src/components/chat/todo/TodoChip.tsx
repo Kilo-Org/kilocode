@@ -10,15 +10,13 @@
  * full list, which is read-only.
  *
  * Changes animate only while the user watches them. A finished item strikes
- * through and the next one slides in, the count rolls, and its ring segment
- * pulses. When the last item finishes, the ring turns into a check with a
+ * through and the next one slides in, the count rolls, and the ring pulses. When the last item finishes, the ring turns into a check with a
  * short burst, then settles. A session switch or a reload never replays any
  * of this, because the chip remounts per session and the hook only reports a
  * finish it saw happen.
  */
 
 import {
-  type Accessor,
   type Component,
   type ComponentProps,
   For,
@@ -34,7 +32,6 @@ import { Icon } from "@kilocode/kilo-ui/icon"
 import { Popover } from "@kilocode/kilo-ui/popover"
 import { useLanguage } from "../../../context/language"
 import { useSession } from "../../../context/session"
-import type { TodoItem } from "../../../types/messages"
 import { TODO_TITLE_MAX, todoFinished, todoStats, todoVisible, type TodoStats } from "./todo-dock"
 
 /** How long the finished state celebrates before it settles. */
@@ -156,47 +153,6 @@ const Ticker: Component<{ value: string; live: boolean; dir: number; strike: boo
   )
 }
 
-const Segment: Component<{ item: Accessor<TodoItem>; index: number; count: number; live: boolean }> = (props) => {
-  const gap = () => (props.count > 1 ? 1.9 : 0)
-  const length = () => C / props.count - gap()
-  const turn = () => -90 + (props.index * 360) / props.count + (gap() / C) * 180
-  let el: SVGCircleElement | undefined
-  // Pulse a segment when its own item finishes, not when a replaced list puts
-  // a done item in the same place. Todo items have no ID, so the text is the
-  // identity.
-  createEffect(
-    on(
-      () => [props.item().content, props.item().status] as const,
-      (next, prev) => {
-        if (!prev || !props.live || !el || !motion()) return
-        if (next[0] !== prev[0] || next[1] !== "completed" || prev[1] === "completed") return
-        el.animate(
-          [
-            { strokeWidth: 4.2, opacity: 0.3 },
-            { strokeWidth: 2.2, opacity: 1 },
-          ],
-          {
-            duration: 480,
-            easing: EASE,
-          },
-        )
-      },
-    ),
-  )
-  return (
-    <circle
-      ref={el}
-      data-slot="todo-segment"
-      data-status={props.item().status}
-      cx="10"
-      cy="10"
-      r={R}
-      stroke-dasharray={`${length()} ${C}`}
-      transform={`rotate(${turn()} 10 10)`}
-    />
-  )
-}
-
 const Ring: Component<{ stats: TodoStats; live: boolean; celebrate: boolean }> = (props) => {
   let el: HTMLSpanElement | undefined
   createEffect(
@@ -221,6 +177,10 @@ const Ring: Component<{ stats: TodoStats; live: boolean; celebrate: boolean }> =
     burst(el)
   })
   const offset = () => C * (1 - props.stats.done / Math.max(1, props.stats.total))
+  // One segment per item with a small gap, starting at the top.
+  const gap = () => (props.stats.total > 1 ? 1.9 : 0)
+  const length = () => C / props.stats.total - gap()
+  const turn = (index: number) => -90 + (index * 360) / props.stats.total + (gap() / C) * 180
   return (
     <span ref={el} data-slot="todo-ring" aria-hidden="true">
       <svg viewBox="0 0 20 20">
@@ -251,7 +211,17 @@ const Ring: Component<{ stats: TodoStats; live: boolean; celebrate: boolean }> =
             }
           >
             <Index each={props.stats.live}>
-              {(item, index) => <Segment item={item} index={index} count={props.stats.total} live={props.live} />}
+              {(item, index) => (
+                <circle
+                  data-slot="todo-segment"
+                  data-status={item().status}
+                  cx="10"
+                  cy="10"
+                  r={R}
+                  stroke-dasharray={`${length()} ${C}`}
+                  transform={`rotate(${turn(index)} 10 10)`}
+                />
+              )}
             </Index>
           </Show>
         </Show>
@@ -404,13 +374,10 @@ export const TodoChip: Component<TodoChipProps> = (props) => {
             {stats().done}/{stats().total}
           </span>
         </div>
-        <div data-slot="todo-panel-progress" aria-hidden="true">
-          <span style={{ width: `${(stats().done / Math.max(1, stats().total)) * 100}%` }} />
-        </div>
         <div data-slot="todo-panel-list">
           <For each={items()}>
-            {(item, idx) => (
-              <div data-slot="todo-panel-row" data-status={item.status} style={{ "--todo-i": String(idx()) }}>
+            {(item) => (
+              <div data-slot="todo-panel-row" data-status={item.status}>
                 <span data-slot="todo-panel-icon">
                   <Show when={item.status === "completed"}>
                     <Icon name="check-small" size="small" />

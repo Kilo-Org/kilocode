@@ -30,12 +30,16 @@
   );
 }
 
-[data-component="todo-chip"] {
+[data-component="todo-chip"],
+[data-slot="todo-panel"] {
   --todo-ok: var(--vscode-testing-iconPassed, #73c991);
   --todo-accent: var(--vscode-progressBar-background, #3794ff);
   --todo-goal: var(--vscode-charts-yellow, #d7ba7d);
   --todo-track: color-mix(in srgb, var(--vscode-descriptionForeground) 32%, transparent);
   --todo-ease: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+[data-component="todo-chip"] {
   position: relative;
   display: inline-flex;
   align-items: center;
@@ -296,6 +300,7 @@
   animation-play-state: paused !important;
 }
 
+/* The agents-only row also holds the todo chip. */
 .session-agents {
   align-items: center;
   gap: 6px;
@@ -311,9 +316,6 @@
 }
 
 [data-slot="todo-panel"] {
-  --todo-ok: var(--vscode-testing-iconPassed, #73c991);
-  --todo-accent: var(--vscode-progressBar-background, #3794ff);
-  --todo-track: color-mix(in srgb, var(--vscode-descriptionForeground) 32%, transparent);
   display: grid;
   gap: 4px;
   font-size: var(--kilo-font-size-12);
@@ -339,22 +341,6 @@
   font-variant-numeric: tabular-nums;
 }
 
-[data-slot="todo-panel-progress"] {
-  height: 3px;
-  margin: 0 8px 4px;
-  overflow: hidden;
-  border-radius: 2px;
-  background: var(--todo-track);
-
-  & > span {
-    display: block;
-    height: 100%;
-    border-radius: inherit;
-    background: var(--todo-ok);
-    transition: width 500ms cubic-bezier(0.22, 1, 0.36, 1);
-  }
-}
-
 [data-slot="todo-panel-list"] {
   display: grid;
   gap: 1px;
@@ -370,8 +356,6 @@
   padding: 5px 8px;
   border-radius: var(--radius-lg);
   color: var(--text-base);
-  animation: todo-row-in 260ms cubic-bezier(0.22, 1, 0.36, 1) backwards;
-  animation-delay: calc(min(var(--todo-i, 0), 12) * 18ms);
 
   &[data-status="in_progress"] {
     background: color-mix(in srgb, var(--todo-accent) 10%, transparent);
@@ -381,15 +365,9 @@
 [data-slot="todo-panel-text"] {
   overflow-wrap: anywhere;
 
-  [data-status="completed"] > & {
+  :is([data-status="completed"], [data-status="cancelled"]) > & {
     color: var(--text-weak);
     text-decoration: line-through;
-  }
-
-  [data-status="cancelled"] > & {
-    color: var(--text-weak);
-    text-decoration: line-through;
-    opacity: 0.7;
   }
 }
 
@@ -465,32 +443,20 @@
   }
 }
 
-@keyframes todo-row-in {
-  from {
-    opacity: 0;
-    transform: translateY(3px);
-  }
-}
-
 @keyframes todo-spin {
   to {
     transform: rotate(360deg);
   }
 }
 
-body.vscode-reduce-motion {
-  [data-component="todo-chip"],
-  [data-component="todo-chip"] *,
-  [data-slot="todo-panel"] * {
-    animation: none !important;
-    transition: none !important;
-  }
+body.vscode-reduce-motion
+  :is([data-component="todo-chip"], [data-component="todo-chip"] *, [data-slot="todo-panel"] *) {
+  animation: none !important;
+  transition: none !important;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  [data-component="todo-chip"],
-  [data-component="todo-chip"] *,
-  [data-slot="todo-panel"] * {
+  :is([data-component="todo-chip"], [data-component="todo-chip"] *, [data-slot="todo-panel"] *) {
     animation: none !important;
     transition: none !important;
   }
