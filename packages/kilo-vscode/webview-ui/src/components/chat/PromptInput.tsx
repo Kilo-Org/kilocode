@@ -35,6 +35,8 @@ import { useLocalTabs } from "../../context/local-tabs"
 import { useServer } from "../../context/server"
 import { useIndexing } from "../../context/indexing"
 import { indexingButtonVisible } from "../../context/indexing-utils"
+import { mcpAuthIssues } from "./session-issues"
+import { SessionIssues } from "./SessionIssues"
 import { useLanguage } from "../../context/language"
 import { useVSCode } from "../../context/vscode"
 import { useConfig } from "../../context/config"
@@ -1547,6 +1549,17 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     vscode.postMessage({ type: "openSettingsTab", tab: "indexing" })
   }
 
+  const handleOpenMcpSettings = (name: string) => {
+    vscode.postMessage({ type: "openSettingsTab", tab: "agentBehaviour", subtab: "mcpServers", focus: name })
+  }
+
+  const sessionIssues = createMemo(() =>
+    mcpAuthIssues(session.mcpAuth().needsAuth, session.mcpAuth().busy, language.t, {
+      signIn: (name) => session.signInMcp(name),
+      openSettings: handleOpenMcpSettings,
+    }),
+  )
+
   const handleEnhance = () => {
     if (isDisabled() || enhancing() || isBusy()) return
     const draft = paste.plainText(text()).trim()
@@ -2262,6 +2275,9 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
             rows={1}
             dir="auto"
           />
+          <div class="prompt-input-issues-overlay">
+            <SessionIssues issues={sessionIssues()} />
+          </div>
         </div>
       </div>
       <div class="prompt-input-hint">
