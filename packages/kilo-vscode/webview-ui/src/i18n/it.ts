@@ -178,6 +178,14 @@ export const dict = {
   "prompt.worktrees.title": "Worktree",
   "prompt.worktrees.search": "Cerca worktree",
   "prompt.thinking.tooltip": "Sforzo di ragionamento",
+  "prompt.shortcutHint.addSelection": "per aggiungere la selezione",
+  "prompt.shortcutHint.waiting": "per rispondere a una sessione in attesa",
+  "prompt.shortcutHint.type": "per scrivere",
+  "prompt.shortcutHint.sessions": "per cambiare sessione",
+  "prompt.shortcutHint.stop": "per interrompere",
+  "prompt.shortcutHint.changes": "per rivedere le modifiche",
+  "prompt.shortcutHint.pr": "per aprire la PR",
+  "prompt.shortcutHint.mode": "Modalità successiva",
   "prompt.action.send": "Invia",
   "prompt.action.continue": "Continua",
   "prompt.action.send.blocked": "Rispondi alla domanda in sospeso o ignorala prima di continuare",
@@ -653,9 +661,11 @@ export const dict = {
   "ui.sessionTurn.status.thinking": "Sto pensando...",
   "ui.sessionTurn.status.consideringNextSteps": "Valutazione prossimi passi...",
   "dialog.model.noProviders": "Nessun provider",
+  "dialog.model.unavailable": "Modelli Kilo non disponibili",
   "prompt.placeholder.connecting": "Connessione al server...",
   "prompt.placeholder.default":
     "Scrivi un messaggio, @ per menzionare i file... (Invio per inviare, Maiusc+Invio per nuova riga)",
+  "prompt.placeholder.hint": "Scrivi un messaggio, @ per menzionare i file... ({{key}} {{action}})",
   "prompt.placeholder.error": "Connessione non riuscita. Controlla il pannello output o riavvia l'estensione.",
   "context.usage.sessionCost": "Costo sessione",
   "context.usage.olderSessions": "{{count}} sessioni precedenti",
@@ -786,15 +796,12 @@ export const dict = {
   "settings.sandboxing.writablePaths.title": "Percorsi di scrittura aggiuntivi",
   "settings.sandboxing.writablePaths.description":
     "Percorsi aggiuntivi del file system in cui la sandbox consente la scrittura (es. /tmp, /var/log). Vengono uniti con i percorsi di scrittura predefiniti quando la sandbox è attiva.",
-  "settings.experimental.multiProject.title": "Agent Manager Multi-Progetto",
   "settings.experimental.conversationPromptHistory.title": "Cronologia dei prompt per conversazione",
   "settings.experimental.conversationPromptHistory.description":
     "Mantieni la cronologia dei prompt (ArrowUp/ArrowDown) separata per ogni conversazione invece di condividerne una sola tra tutte le conversazioni.",
   "settings.experimental.claudeMigration.title": "Migrazione Claude Code",
   "settings.experimental.claudeMigration.description":
     "Importa una volta le istruzioni globali CLAUDE.md supportate, le competenze semplici e le definizioni MCP disabilitate. I file Claude originali restano invariati; riavvia il backend dopo l'attivazione.",
-  "settings.experimental.multiProject.description":
-    "Abilita la gestione di sessioni e worktree su più repository in Agent Manager. Il repository dell'area di lavoro corrente è sempre il progetto predefinito.",
   "settings.experimental.mcpTimeout.title": "Timeout MCP (ms)",
   "settings.experimental.mcpTimeout.description": "Timeout per richieste server MCP in millisecondi",
   "settings.experimental.remote.title": "Controllo remoto",
@@ -1105,6 +1112,9 @@ export const dict = {
   "settings.display.mcpTool.expanded": "Espansi",
   "settings.display.mcpTool.collapsed": "Compressi",
 
+  "settings.display.shortcutHints.title": "Mostra suggerimenti scorciatoie",
+  "settings.display.shortcutHints.description":
+    "Mostra nel prompt vuoto la scorciatoia da tastiera adatta a ciò che stai facendo, ad esempio come aggiungere il codice selezionato o tornare al prompt.",
   "settings.display.tokenThroughput.title": "Mostra velocità di generazione dei token",
   "settings.display.tokenThroughput.description":
     "Mostra la velocità di generazione del testo (tokens/sec) nell'ultimo messaggio dell'assistente e nell'intestazione dell'attività. Visualizzata per impostazione predefinita; disabilita questa impostazione per nasconderla quando necessario.",

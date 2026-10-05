@@ -192,6 +192,14 @@ export const dict = {
   "prompt.worktrees.title": "Worktrees",
   "prompt.worktrees.search": "搜索 Worktree",
   "prompt.thinking.tooltip": "推理强度",
+  "prompt.shortcutHint.addSelection": "添加所选内容",
+  "prompt.shortcutHint.waiting": "回复等待中的会话",
+  "prompt.shortcutHint.type": "开始输入",
+  "prompt.shortcutHint.sessions": "切换会话",
+  "prompt.shortcutHint.stop": "停止",
+  "prompt.shortcutHint.changes": "查看更改",
+  "prompt.shortcutHint.pr": "打开 PR",
+  "prompt.shortcutHint.mode": "下一个模式",
   "prompt.action.indexing": "索引设置",
   "prompt.action.autoApprove.enable": "启用自动审批",
   "prompt.action.autoApprove.disable": "禁用自动审批",
@@ -753,10 +761,12 @@ export const dict = {
   "ui.sessionTurn.status.consideringNextSteps": "正在考虑下一步...",
 
   "dialog.model.noProviders": "无供应商",
+  "dialog.model.unavailable": "Kilo 模型不可用",
 
   "prompt.placeholder.connecting": "正在连接服务器...",
   "prompt.placeholder.error": "连接失败。请检查输出面板或重启扩展。",
   "prompt.placeholder.default": "输入消息，用 @ 提及文件... (Enter 发送，Shift+Enter 换行)",
+  "prompt.placeholder.hint": "输入消息，用 @ 提及文件... ({{key}} {{action}})",
 
   "context.usage.sessionCost": "会话费用",
   "context.usage.olderSessions": "{{count}} 个较早的会话",
@@ -897,15 +907,12 @@ export const dict = {
   "settings.sandboxing.writablePaths.title": "额外可写路径",
   "settings.sandboxing.writablePaths.description":
     "沙盒允许写入的额外文件系统路径（例如 /tmp、/var/log）。沙盒启用后，这些路径会与默认可写路径合并。",
-  "settings.experimental.multiProject.title": "多项目 Agent Manager",
   "settings.experimental.conversationPromptHistory.title": "按对话区分的提示历史",
   "settings.experimental.conversationPromptHistory.description":
     "为每个对话单独保存提示历史(ArrowUp/ArrowDown),而不是在所有对话间共享同一份。",
   "settings.experimental.claudeMigration.title": "Claude Code 迁移",
   "settings.experimental.claudeMigration.description":
     "一次性导入受支持的全局 CLAUDE.md 指令、简单技能和已禁用的 MCP 定义。不会修改原始 Claude 文件；启用后请重启后端。",
-  "settings.experimental.multiProject.description":
-    "在 Agent Manager 中启用跨多个仓库的会话和工作树管理。当前工作区仓库始终是默认项目。",
   "settings.experimental.mcpTimeout.title": "MCP 超时（毫秒）",
   "settings.experimental.mcpTimeout.description": "MCP 服务器请求的超时时间（毫秒）",
   "settings.experimental.remote.title": "Remote 控制",
@@ -1169,6 +1176,9 @@ export const dict = {
   "settings.display.mcpTool.expanded": "展开",
   "settings.display.mcpTool.collapsed": "折叠",
 
+  "settings.display.shortcutHints.title": "显示快捷键提示",
+  "settings.display.shortcutHints.description":
+    "在空输入框中显示与当前操作相符的键盘快捷键，例如如何添加所选代码或返回输入框。",
   "settings.display.tokenThroughput.title": "显示令牌吞吐量",
   "settings.display.tokenThroughput.description":
     "在最新的助手消息和任务标题中显示文本生成速率（tokens/sec）。默认显示；需要时禁用此设置即可隐藏。",

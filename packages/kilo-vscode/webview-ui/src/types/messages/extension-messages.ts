@@ -548,6 +548,8 @@ export interface ProvidersLoadedMessage {
   defaultSelection: ModelSelection
   authMethods: Record<string, ProviderAuthMethod[]>
   authStates: Record<string, ProviderAuthState>
+  /** The organization's Kilo catalog failed to load, so Kilo has no models to pick. */
+  kiloUnavailable?: boolean
 }
 
 export interface AgentsLoadedMessage {
@@ -736,7 +738,6 @@ export interface ClaudeCompatSettingLoadedMessage {
 
 export interface ExtensionSettings {
   maxCost?: number
-  multiProject?: boolean
   claudeMigration?: boolean
   conversationPromptHistory?: boolean
   [key: string]: unknown
@@ -861,6 +862,19 @@ export interface AutoApprovalReasonSettingLoadedMessage {
 export interface PushFixesSettingLoadedMessage {
   type: "pushFixesSettingLoaded"
   enabled: boolean
+}
+
+export interface ShortcutHintsSettingLoadedMessage {
+  type: "shortcutHintsSettingLoaded"
+  visible: boolean
+}
+
+/** Shortcut labels (user keybindings applied) and editor state for prompt hints. */
+export interface ShortcutContextMessage {
+  type: "shortcutContext"
+  bindings: Record<string, string>
+  /** The active text editor has selected text. */
+  selection: boolean
 }
 
 export interface WorkStyleLoadedMessage {
@@ -991,12 +1005,12 @@ export interface AgentProjectSnapshot {
   expanded: boolean
   initialized: boolean
   missing: boolean
+  avatar?: string
 }
 
 // Project catalog push from extension to webview
 export interface AgentManagerProjectsMessage {
   type: "agentManager.projects"
-  multiProject: boolean
   projects: AgentProjectSnapshot[]
 }
 
@@ -1182,13 +1196,6 @@ export interface ModelSelectorExpandedLoadedMessage {
 export interface FavoritesLoadedMessage {
   type: "favoritesLoaded"
   favorites: ModelSelection[]
-}
-
-// Preferred and per-mode model selections loaded from persisted state (extension → webview)
-export interface ModelSelectionsLoadedMessage {
-  type: "modelSelectionsLoaded"
-  selections: Record<string, ModelSelection>
-  preferred?: ModelSelection & { variant?: string }
 }
 
 export interface AgentManagerBranchesMessage {
@@ -1781,6 +1788,8 @@ export type ExtensionMessage =
   | ThroughputSettingLoadedMessage
   | AutoApprovalReasonSettingLoadedMessage
   | PushFixesSettingLoadedMessage
+  | ShortcutHintsSettingLoadedMessage
+  | ShortcutContextMessage
   | WorkStyleLoadedMessage
   | WorkStyleAppliedMessage
   | WorkStyleApplyFailedMessage
@@ -1883,7 +1892,6 @@ export type ExtensionMessage =
   | RecentsLoadedMessage
   | ModelSelectorExpandedLoadedMessage
   | FavoritesLoadedMessage
-  | ModelSelectionsLoadedMessage
   | LanguageChangedMessage
   | ContinueInWorktreeProgressMessage
   | WorktreeStatsLoadedMessage

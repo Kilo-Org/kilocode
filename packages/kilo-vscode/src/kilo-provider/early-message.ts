@@ -1,5 +1,4 @@
 import { routeSuggestionWebviewMessage } from "./handlers/suggestion"
-import * as ModelState from "./model-state"
 import { routeInputToolMessage } from "../services/input-tools"
 import type { KiloConnectionService } from "../services/cli-backend/connection-service"
 import type { SpeechToTextSource } from "../speech-to-text/source"
@@ -110,7 +109,6 @@ export async function routeEarlyMessage(
     return true
   }
   await routeSuggestionWebviewMessage(ctx.question, message)
-  if (await ModelState.handleMessage(message.type, message, ctx.client, ctx.post)) return true
   if (message.type === "exportSessionTranscript") {
     const input = message as { sessionID?: unknown }
     if (typeof input.sessionID === "string") await ctx.exportTranscript(input.sessionID)

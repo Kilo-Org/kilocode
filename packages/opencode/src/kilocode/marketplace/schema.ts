@@ -145,6 +145,8 @@ export type MarketplaceInstalledMetadata = typeof MarketplaceInstalledMetadata.T
 export const MarketplaceListResult = Schema.Struct({
   items: Schema.Array(MarketplaceItem),
   installed: MarketplaceInstalledMetadata,
+  /** `suggest_for.filename` patterns that match a file in the routed workspace. */
+  filenames: Schema.optional(Schema.Array(Schema.String)),
   errors: Schema.optional(Schema.Array(Schema.String)),
 }).annotate({ identifier: "MarketplaceListResult" })
 export type MarketplaceListResult = typeof MarketplaceListResult.Type

@@ -195,6 +195,14 @@ export const dict = {
   "prompt.worktrees.title": "Worktrees",
   "prompt.worktrees.search": "البحث في Worktrees",
   "prompt.thinking.tooltip": "جهد الاستدلال",
+  "prompt.shortcutHint.addSelection": "لإضافة التحديد",
+  "prompt.shortcutHint.waiting": "للرد على جلسة منتظرة",
+  "prompt.shortcutHint.type": "للكتابة",
+  "prompt.shortcutHint.sessions": "لتبديل الجلسة",
+  "prompt.shortcutHint.stop": "للإيقاف",
+  "prompt.shortcutHint.changes": "لمراجعة التغييرات",
+  "prompt.shortcutHint.pr": "لفتح PR",
+  "prompt.shortcutHint.mode": "الوضع التالي",
   "prompt.action.send": "إرسال",
   "prompt.action.continue": "متابعة",
   "prompt.action.send.blocked": "أجب عن السؤال المعلق أو تجاهله أولاً",
@@ -767,10 +775,12 @@ export const dict = {
   "ui.sessionTurn.status.consideringNextSteps": "...جارٍ التفكير في الخطوات التالية",
 
   "dialog.model.noProviders": "لا يوجد موفرون",
+  "dialog.model.unavailable": "نماذج Kilo غير متاحة",
 
   "prompt.placeholder.connecting": "جارٍ الاتصال بالخادم...",
   "prompt.placeholder.error": "فشل الاتصال. تحقق من لوحة الإخراج أو أعد تشغيل الإضافة.",
   "prompt.placeholder.default": "اكتب رسالة، @ للإشارة إلى الملفات... (Enter للإرسال، Shift+Enter لسطر جديد)",
+  "prompt.placeholder.hint": "اكتب رسالة، @ للإشارة إلى الملفات... ({{key}} {{action}})",
 
   "context.usage.sessionCost": "تكلفة الجلسة",
   "context.usage.olderSessions": "{{count}} جلسات أقدم",
@@ -915,15 +925,12 @@ export const dict = {
   "settings.sandboxing.writablePaths.title": "مسارات قابلة للكتابة إضافية",
   "settings.sandboxing.writablePaths.description":
     "مسارات نظام ملفات إضافية يسمح صندوق الرمل بالكتابة إليها (مثل /tmp، /var/log). يتم دمجها مع مسارات الكتابة الافتراضية عندما يكون صندوق الرمل نشطًا.",
-  "settings.experimental.multiProject.title": "إدارة متعددة المشاريع",
   "settings.experimental.conversationPromptHistory.title": "سجل مطالبات لكل محادثة",
   "settings.experimental.conversationPromptHistory.description":
     "إبقاء سجل مطالبات الإدخال (استدعاء بالسهمين لأعلى/لأسفل) منفصلاً لكل محادثة بدلاً من مشاركة سجل واحد بين جميع المحادثات.",
   "settings.experimental.claudeMigration.title": "ترحيل Claude Code",
   "settings.experimental.claudeMigration.description":
     "استورد مرة واحدة تعليمات CLAUDE.md العامة المدعومة والمهارات البسيطة وتعريفات MCP المعطلة. تبقى ملفات Claude الأصلية دون تغيير؛ أعد تشغيل الخلفية بعد التفعيل.",
-  "settings.experimental.multiProject.description":
-    "تفعيل إدارة الجلسات وأشجار العمل عبر مستودعات متعددة في Agent Manager. المستودع الحالي هو دائمًا المشروع الافتراضي.",
   "settings.experimental.mcpTimeout.title": "مهلة MCP (مللي ثانية)",
   "settings.experimental.mcpTimeout.description": "مهلة طلبات خادم MCP بالمللي ثانية",
   "settings.experimental.remote.title": "التحكم Remote",
@@ -1208,6 +1215,9 @@ export const dict = {
   "settings.display.mcpTool.expanded": "موسّعة",
   "settings.display.mcpTool.collapsed": "مطوية",
 
+  "settings.display.shortcutHints.title": "إظهار تلميحات الاختصارات",
+  "settings.display.shortcutHints.description":
+    "إظهار اختصار لوحة المفاتيح الذي يناسب ما تفعله الآن في الموجّه الفارغ، مثل كيفية إضافة الكود المحدد أو العودة إلى الموجّه.",
   "settings.display.tokenThroughput.title": "إظهار إنتاجية الرموز",
   "settings.display.tokenThroughput.description":
     "عرض معدل توليد النص (tokens/sec) في أحدث رسالة للمساعد وفي رأس المهمة. يظهر افتراضيًا؛ عطّل هذا الإعداد لإخفائه عند الحاجة.",

@@ -56,6 +56,40 @@
   }
 }
 
+/* Subagent model and reasoning effort. The title and the model share the
+   space that is left, so both truncate in narrow panels. The title shrinks
+   faster because the subagent tab already shows it. */
+[data-component="task-header"]:has(.task-header-model) [data-slot="task-header-title"] {
+  flex: 1 3 auto;
+}
+
+.task-header-model {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: 0 1 auto;
+  min-width: 0;
+  margin-inline-end: 4px;
+  font-size: var(--kilo-font-size-13);
+  color: var(--text-weak);
+  white-space: nowrap;
+}
+
+[data-slot="task-header-model-name"] {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+[data-slot="task-header-model-variant"] {
+  flex-shrink: 0;
+
+  &::before {
+    content: "·";
+    margin-inline-end: 4px;
+  }
+}
+
 /* ============================================
    Task Header Todos
    ============================================ */

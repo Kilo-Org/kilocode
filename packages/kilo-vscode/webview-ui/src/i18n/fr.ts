@@ -201,6 +201,14 @@ export const dict = {
   "prompt.worktrees.title": "Worktrees",
   "prompt.worktrees.search": "Rechercher des Worktrees",
   "prompt.thinking.tooltip": "Effort de raisonnement",
+  "prompt.shortcutHint.addSelection": "pour ajouter la sélection",
+  "prompt.shortcutHint.waiting": "pour répondre à une session en attente",
+  "prompt.shortcutHint.type": "pour écrire",
+  "prompt.shortcutHint.sessions": "pour changer de session",
+  "prompt.shortcutHint.stop": "pour arrêter",
+  "prompt.shortcutHint.changes": "pour voir les modifications",
+  "prompt.shortcutHint.pr": "pour ouvrir la PR",
+  "prompt.shortcutHint.mode": "Mode suivant",
   "prompt.action.send": "Envoyer",
   "prompt.action.continue": "Continuer",
   "prompt.action.send.blocked": "Répondez ou rejetez d'abord la question en attente",
@@ -797,11 +805,13 @@ export const dict = {
   "ui.sessionTurn.status.consideringNextSteps": "Envisage les prochaines étapes...",
 
   "dialog.model.noProviders": "Aucun fournisseur",
+  "dialog.model.unavailable": "Modèles Kilo indisponibles",
 
   "prompt.placeholder.connecting": "Connexion au serveur...",
   "prompt.placeholder.error": "Échec de la connexion. Vérifiez le panneau de sortie ou redémarrez l'extension.",
   "prompt.placeholder.default":
     "Tapez un message, @ pour mentionner des fichiers... (Entrée pour envoyer, Maj+Entrée pour un saut de ligne)",
+  "prompt.placeholder.hint": "Tapez un message, @ pour mentionner des fichiers... ({{key}} {{action}})",
 
   "context.usage.sessionCost": "Coût de la session",
   "context.usage.olderSessions": "{{count}} sessions précédentes",
@@ -961,15 +971,12 @@ export const dict = {
   "settings.sandboxing.writablePaths.title": "Chemins en écriture supplémentaires",
   "settings.sandboxing.writablePaths.description":
     "Chemins système supplémentaires autorisés en écriture par le bac à sable (par ex. /tmp, /var/log). Ils sont fusionnés avec les chemins en écriture par défaut lorsque le bac à sable est actif.",
-  "settings.experimental.multiProject.title": "Agent Manager Multi-Projet",
   "settings.experimental.conversationPromptHistory.title": "Historique des prompts par conversation",
   "settings.experimental.conversationPromptHistory.description":
     "Garder l'historique des prompts (ArrowUp/ArrowDown) séparé pour chaque conversation au lieu de partager un seul historique entre toutes les conversations.",
   "settings.experimental.claudeMigration.title": "Migration Claude Code",
   "settings.experimental.claudeMigration.description":
     "Importer une fois les instructions CLAUDE.md globales prises en charge, les compétences simples et les définitions MCP désactivées. Les fichiers Claude d'origine restent inchangés ; redémarrez le backend après activation.",
-  "settings.experimental.multiProject.description":
-    "Activer la gestion des sessions et worktrees sur plusieurs dépôts dans Agent Manager. Le dépôt de l'espace de travail actuel est toujours le projet par défaut.",
   "settings.experimental.mcpTimeout.title": "Délai MCP (ms)",
   "settings.experimental.mcpTimeout.description": "Délai des requêtes du serveur MCP en millisecondes",
   "settings.experimental.remote.title": "Contrôle Remote",
@@ -1278,6 +1285,9 @@ export const dict = {
   "settings.display.mcpTool.expanded": "Développés",
   "settings.display.mcpTool.collapsed": "Réduits",
 
+  "settings.display.shortcutHints.title": "Afficher les astuces de raccourcis",
+  "settings.display.shortcutHints.description":
+    "Affiche dans le prompt vide le raccourci clavier adapté à ce que vous faites, par exemple pour ajouter le code sélectionné ou revenir au prompt.",
   "settings.display.tokenThroughput.title": "Afficher le débit de tokens",
   "settings.display.tokenThroughput.description":
     "Afficher la vitesse de génération du texte (tokens/sec) dans le dernier message de l’assistant et dans l’en-tête de la tâche. Affichée par défaut ; désactivez ce paramètre pour la masquer si nécessaire.",

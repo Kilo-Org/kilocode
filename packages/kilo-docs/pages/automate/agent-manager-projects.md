@@ -5,17 +5,9 @@ description: "Manage Agent Manager sessions across multiple Git repositories"
 
 # Multi-project Agent Manager
 
-Multi-project Agent Manager lets you manage sessions and worktrees from multiple Git repositories in one Agent Manager panel. The feature is experimental and disabled by default. When it is disabled, Agent Manager keeps its existing single-project behavior.
+Agent Manager lets you manage sessions and worktrees from multiple Git repositories in one panel. Multi-project support is always available, with no experimental setting required.
 
 One Agent Manager project represents one canonical Git repository. A project is not a collection of repositories, and the VS Code workspace folder does not define a project.
-
-## Enable multi-project mode
-
-1. Open [Kilo Code Settings](/docs/getting-started/settings#experimental-features).
-2. Open the **Experimental** tab.
-3. Enable **Multi-Project Agent Manager**.
-
-The setting is also available as `kilo-code.new.experimental.multiProject`. It is an application-scoped VS Code setting and defaults to `false`.
 
 ## Default project
 
@@ -32,7 +24,7 @@ The project footer below the list provides these actions:
   - **Open local folder...** opens a folder picker. Agent Manager resolves the selected folder to its canonical Git repository root and adds that repository. A folder inside an existing repository attaches that repository, and a linked worktree attaches its primary checkout.
   - **Clone repository...** clones a repository with the VS Code Git extension into a parent folder that you choose, then adds it.
 
-Multi-project mode must be enabled and the VS Code window must be trusted before you can add, create, or clone a repository. Adding a repository does not add it to `vscode.workspaceFolders`. Agent Manager identifies a project by its canonical Git root, so adding the same repository again opens the existing project instead of creating a duplicate.
+The VS Code window must be trusted before you can add, create, or clone a repository. Adding a repository does not add it to `vscode.workspaceFolders`. Agent Manager identifies a project by its canonical Git root, so adding the same repository again opens the existing project instead of creating a duplicate.
 
 If you select a folder that is not a Git repository, **Open local folder...** asks whether to initialize Git and create an empty first commit before it adds the project.
 
