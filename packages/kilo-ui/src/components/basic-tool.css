@@ -226,6 +226,10 @@ html[data-theme="kilo-vscode"] [data-component="tool-part-wrapper"][data-part-ty
       animation: tool-card-down 220ms cubic-bezier(0.23, 1, 0.32, 1);
     }
 
+    > [data-slot="collapsible-content"][data-deferred-height] {
+      animation: none;
+    }
+
     > [data-slot="collapsible-content"][data-closed] {
       animation: tool-card-up 160ms cubic-bezier(0.77, 0, 0.175, 1);
     }
