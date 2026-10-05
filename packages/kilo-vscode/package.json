@@ -1236,6 +1236,11 @@
           "default": true,
           "description": "Show the task timeline graph in the chat header"
         },
+        "kilo-code.new.showShortcutHints": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show the keyboard shortcut that fits what you do now in the empty prompt, for example how to add selected code or return to the prompt."
+        },
         "kilo-code.new.showTokenThroughput": {
           "type": "boolean",
           "default": true,

@@ -41,6 +41,7 @@ export const dict = {
   "agentManager.settings.worktreePool.title": "预热 Worktree",
   "agentManager.settings.worktreePool.description":
     "在后台准备一个就绪的 Worktree，让新的 Agent Manager 会话启动更快。每个打开的项目会额外占用一个 checkout 的磁盘空间。",
+  "agentManager.hints.switchSession": "切换会话",
   "agentManager.settings.project.title": "项目",
   "agentManager.settings.project.description": "选择要编辑其 worktree 设置的 repository。",
   "agentManager.settings.project.empty": "没有可用的 Agent Manager 项目。",

@@ -205,8 +205,11 @@ export interface Host {
   /** Create an output channel for logging. */
   createOutput(name: string): OutputHandle
 
-  /** Read extension keybinding metadata. */
+  /** Read extension keybindings, with the user's keybindings.json applied. */
   extensionKeybindings(): Array<{ command: string; key?: string; mac?: string; when?: string }>
+
+  /** Notify when the user's keybindings.json changes. */
+  onDidChangeKeybindings?(cb: () => void): Disposable
 
   /** Copy text to the system clipboard. */
   copyToClipboard(text: string): void | Promise<void>

@@ -13,7 +13,7 @@ import { SessionTab } from "../src/components/chat/SessionTab"
 import { SessionTabMenu } from "../src/components/chat/SessionTabMenu"
 import { SortableTabContainer } from "../src/components/chat/TabDnd"
 import type { Activity } from "../src/utils/session-activity"
-import { parseBindingTokens } from "./keybind-tokens"
+import { parseBindingTokens } from "../src/utils/keybind-tokens"
 
 /** Individual sortable tab wrapper using the `use:sortable` directive. */
 export const SortableTab: Component<{

@@ -17,6 +17,7 @@ import { samePath } from "./project/paths"
 import type { KiloConnectionService } from "../services/cli-backend"
 import { KiloProvider } from "../KiloProvider"
 import { PLATFORM, SNAPSHOT_INITIALIZATION } from "./constants"
+import { keybindings, watchKeybindings } from "../kilo-provider/shortcut-context"
 import { DiffVirtualProvider } from "../DiffVirtualProvider"
 import { buildWebviewHtml } from "../utils"
 import { openFileInEditor, getWorkspaceRoot } from "../review-utils"
@@ -521,8 +522,11 @@ export class VscodeHost implements Host {
   }
 
   extensionKeybindings(): Array<{ command: string; key?: string; mac?: string; when?: string }> {
-    const ext = vscode.extensions.getExtension("kilocode.kilo-code")
-    return ext?.packageJSON?.contributes?.keybindings ?? []
+    return keybindings(this.context)
+  }
+
+  onDidChangeKeybindings(cb: () => void): Disposable {
+    return watchKeybindings(this.context, cb)
   }
 
   async copyToClipboard(text: string): Promise<void> {

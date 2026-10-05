@@ -45,6 +45,7 @@ export const dict = {
   "agentManager.settings.worktreePool.title": "Worktrees vooraf opwarmen",
   "agentManager.settings.worktreePool.description":
     "Bereid op de achtergrond een kant-en-klare worktree voor, zodat nieuwe Agent Manager-sessies sneller starten. Gebruikt extra schijfruimte voor één checkout per geopend project.",
+  "agentManager.hints.switchSession": "Sessie wisselen",
   "agentManager.settings.project.title": "Project",
   "agentManager.settings.project.description": "Kies de repository waarvan je de worktree-instellingen wilt bewerken.",
   "agentManager.settings.project.empty": "Er zijn geen Agent Manager-projecten beschikbaar.",

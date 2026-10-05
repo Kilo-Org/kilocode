@@ -178,6 +178,14 @@ export const dict = {
   "prompt.worktrees.title": "Worktree",
   "prompt.worktrees.search": "Cerca worktree",
   "prompt.thinking.tooltip": "Sforzo di ragionamento",
+  "prompt.shortcutHint.addSelection": "per aggiungere la selezione",
+  "prompt.shortcutHint.waiting": "per rispondere a una sessione in attesa",
+  "prompt.shortcutHint.type": "per scrivere",
+  "prompt.shortcutHint.sessions": "per cambiare sessione",
+  "prompt.shortcutHint.stop": "per interrompere",
+  "prompt.shortcutHint.changes": "per rivedere le modifiche",
+  "prompt.shortcutHint.pr": "per aprire la PR",
+  "prompt.shortcutHint.mode": "Modalità successiva",
   "prompt.action.send": "Invia",
   "prompt.action.continue": "Continua",
   "prompt.action.send.blocked": "Rispondi alla domanda in sospeso o ignorala prima di continuare",
@@ -657,6 +665,7 @@ export const dict = {
   "prompt.placeholder.connecting": "Connessione al server...",
   "prompt.placeholder.default":
     "Scrivi un messaggio, @ per menzionare i file... (Invio per inviare, Maiusc+Invio per nuova riga)",
+  "prompt.placeholder.hint": "Scrivi un messaggio, @ per menzionare i file... ({{key}} {{action}})",
   "prompt.placeholder.error": "Connessione non riuscita. Controlla il pannello output o riavvia l'estensione.",
   "context.usage.sessionCost": "Costo sessione",
   "context.usage.olderSessions": "{{count}} sessioni precedenti",
@@ -1103,6 +1112,9 @@ export const dict = {
   "settings.display.mcpTool.expanded": "Espansi",
   "settings.display.mcpTool.collapsed": "Compressi",
 
+  "settings.display.shortcutHints.title": "Mostra suggerimenti scorciatoie",
+  "settings.display.shortcutHints.description":
+    "Mostra nel prompt vuoto la scorciatoia da tastiera adatta a ciò che stai facendo, ad esempio come aggiungere il codice selezionato o tornare al prompt.",
   "settings.display.tokenThroughput.title": "Mostra velocità di generazione dei token",
   "settings.display.tokenThroughput.description":
     "Mostra la velocità di generazione del testo (tokens/sec) nell'ultimo messaggio dell'assistente e nell'intestazione dell'attività. Visualizzata per impostazione predefinita; disabilita questa impostazione per nasconderla quando necessario.",

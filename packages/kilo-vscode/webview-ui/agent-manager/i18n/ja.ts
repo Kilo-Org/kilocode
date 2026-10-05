@@ -43,6 +43,7 @@ export const dict = {
   "agentManager.settings.worktreePool.title": "Worktreeの事前準備",
   "agentManager.settings.worktreePool.description":
     "バックグラウンドで準備済みの worktree を用意し、新しい Agent Manager セッションがより速く開始できるようにします。開いているプロジェクトごとに 1 つの checkout 分の追加ディスク容量を使用します。",
+  "agentManager.hints.switchSession": "セッションを切り替え",
   "agentManager.settings.project.title": "プロジェクト",
   "agentManager.settings.project.description": "編集する worktree 設定の repository を選択してください。",
   "agentManager.settings.project.empty": "利用可能な Agent Manager プロジェクトはありません。",

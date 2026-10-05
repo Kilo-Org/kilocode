@@ -47,6 +47,7 @@ export const dict = {
   "agentManager.settings.worktreePool.title": "Worktrees vorwärmen",
   "agentManager.settings.worktreePool.description":
     "Bereitet im Hintergrund einen bereitstehenden Worktree vor, damit neue Agent-Manager-Sitzungen schneller starten. Benötigt zusätzlichen Speicherplatz für einen Checkout pro geöffnetem Projekt.",
+  "agentManager.hints.switchSession": "Sitzung wechseln",
   "agentManager.settings.project.title": "Projekt",
   "agentManager.settings.project.description":
     "Wählen Sie das repository aus, dessen worktree-Einstellungen Sie bearbeiten möchten.",

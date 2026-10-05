@@ -200,6 +200,14 @@ export const dict = {
   "prompt.worktrees.title": "Робочі дерева",
   "prompt.worktrees.search": "Пошук робочих дерев",
   "prompt.thinking.tooltip": "Зусилля міркування",
+  "prompt.shortcutHint.addSelection": "для додавання виділення",
+  "prompt.shortcutHint.waiting": "для відповіді в сесії, що очікує",
+  "prompt.shortcutHint.type": "для введення",
+  "prompt.shortcutHint.sessions": "для зміни сесії",
+  "prompt.shortcutHint.stop": "для зупинки",
+  "prompt.shortcutHint.changes": "для перегляду змін",
+  "prompt.shortcutHint.pr": "для відкриття PR",
+  "prompt.shortcutHint.mode": "Наступний режим",
   "prompt.action.send": "Надіслати",
   "prompt.action.continue": "Продовжити",
   "prompt.action.send.blocked": "Спочатку дайте відповідь або закрийте очікуюче питання",
@@ -776,6 +784,7 @@ export const dict = {
   "prompt.placeholder.connecting": "Підключення до сервера...",
   "prompt.placeholder.default":
     "Напишіть повідомлення, @ щоб згадати файли... (Enter для надсилання, Shift+Enter для нового рядка)",
+  "prompt.placeholder.hint": "Напишіть повідомлення, @ щоб згадати файли... ({{key}} {{action}})",
   "prompt.placeholder.error": "Підключення не вдалося. Перевірте панель виводу або перезапустіть розширення.",
 
   "context.usage.sessionCost": "Вартість сесії",
@@ -1200,6 +1209,9 @@ export const dict = {
   "settings.display.mcpTool.expanded": "Розгорнуті",
   "settings.display.mcpTool.collapsed": "Згорнуті",
 
+  "settings.display.shortcutHints.title": "Показувати підказки клавіш",
+  "settings.display.shortcutHints.description":
+    "Показувати в порожньому полі запиту сполучення клавіш, що відповідає поточній дії, наприклад як додати виділений код або повернутися до запиту.",
   "settings.display.tokenThroughput.title": "Показувати пропускну здатність токенів",
   "settings.display.tokenThroughput.description":
     "Показувати швидкість генерації тексту (tokens/sec) в останньому повідомленні асистента та в заголовку завдання. Показується за замовчуванням; вимкніть цей параметр, щоб за потреби її приховати.",

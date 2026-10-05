@@ -435,6 +435,7 @@ export class AgentManagerProvider implements Disposable {
     this.pushProjects()
     void this.sendRepoInfo()
     this.sendKeybindings()
+    const keys = this.host.onDidChangeKeybindings?.(() => this.sendKeybindings())
     void ctx.waitForReady().then(() => this.browserLifecycle.replay())
     this.prBridge.attachPanel(ctx)
     ctx.onDidDispose(() => {
@@ -457,6 +458,7 @@ export class AgentManagerProvider implements Disposable {
         void this.terminalRouter.dispose()
         this.onVisibilityChange?.(false)
       }
+      keys?.dispose()
       ctx.sessions.dispose()
     })
   }
