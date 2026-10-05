@@ -1,6 +1,6 @@
 import * as vscode from "vscode"
 import * as path from "node:path"
-import { existsSync, readFileSync } from "node:fs"
+import { readFileSync } from "node:fs"
 import { buildKeybindingMap } from "../agent-manager/format-keybinding"
 import { mergeUserKeybindings, parseJsonc, userKeybindingFiles } from "../agent-manager/user-keybindings"
 
@@ -9,12 +9,22 @@ type Post = (msg: unknown) => void
 const files = (ctx?: vscode.ExtensionContext) =>
   ctx?.globalStorageUri ? userKeybindingFiles(ctx.globalStorageUri.fsPath) : []
 
+/** Read one keybindings file. A missing or transiently unreadable file must not break setup. */
+function readKeybindings(file: string): unknown {
+  try {
+    return parseJsonc(readFileSync(file, "utf8"))
+  } catch {
+    return undefined
+  }
+}
+
 /** Extension keybindings with the user's keybindings.json applied, for the current platform. */
 export function keybindings(ctx?: vscode.ExtensionContext) {
   const ext = vscode.extensions.getExtension("kilocode.kilo-code")
   const defaults = ext?.packageJSON?.contributes?.keybindings ?? []
-  const file = files(ctx).find((f) => existsSync(f))
-  const user = file ? parseJsonc(readFileSync(file, "utf8")) : undefined
+  const user = files(ctx)
+    .map(readKeybindings)
+    .find((value) => value !== undefined)
   return mergeUserKeybindings(defaults, user, process.platform === "darwin")
 }
 
