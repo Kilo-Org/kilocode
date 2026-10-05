@@ -49,14 +49,22 @@ export class ValkeyVectorStore implements IVectorStore {
   }
 
   /**
-   * Returns the Valkey URL with userinfo (credentials) stripped for safe logging.
+   * Parses the URL after dropping any userinfo. The password is configured separately, and an
+   * unescaped "/" in userinfo would otherwise make URL treat part of the password as the host.
+   */
+  private endpoint(): URL {
+    const scheme = this.valkeyUrl.startsWith("rediss://") ? "rediss://" : "redis://"
+    const rest = this.valkeyUrl.slice(scheme.length)
+    return new URL(scheme + rest.slice(rest.lastIndexOf("@") + 1))
+  }
+
+  /**
+   * Returns the Valkey URL reduced to scheme, host and port for safe logging.
    */
   private redactedUrl(): string {
     try {
-      const parsed = new URL(this.valkeyUrl)
-      parsed.username = ""
-      parsed.password = ""
-      return parsed.toString().replace(/\/$/, "")
+      const url = this.endpoint()
+      return `${url.protocol}//${url.host}`
     } catch {
       return "<invalid-url>"
     }
@@ -607,7 +615,7 @@ export class ValkeyVectorStore implements IVectorStore {
   }
 
   private async createConnection(): Promise<GlideClient> {
-    const url = new URL(this.valkeyUrl)
+    const url = this.endpoint()
     const host = url.hostname
     const port = url.port ? parseInt(url.port, 10) : 6379
     const useTLS = url.protocol === "rediss:"

@@ -635,6 +635,34 @@ describe("ValkeyVectorStore Unit Tests", () => {
     })
   })
 
+  describe("URLs carrying credentials", () => {
+    const refuse = () =>
+      mockCreateClient.mockImplementation(() => Promise.reject(new Error("Connection refused: ECONNREFUSED")))
+
+    test.each([
+      ["redis://default:hunter2@cache.internal:6380", "redis://cache.internal:6380", "hunter2"],
+      ["redis://default:P@ss/w0rd@cache.internal:6380", "redis://cache.internal:6380", "w0rd"],
+    ])("%s is reported as %s without leaking the password", async (url, safe, secret) => {
+      refuse()
+      const store = new ValkeyVectorStore(TEST_WORKSPACE, url, TEST_VECTOR_SIZE)
+      const err = await store.initialize().catch((e: Error) => e)
+      expect(err).toBeInstanceOf(Error)
+      expect((err as Error).message).toContain(`Valkey at ${safe}.`)
+      expect((err as Error).message).not.toContain(secret)
+    })
+
+    test("connects to the host after the last @, not a fragment of the password", async () => {
+      const store = new ValkeyVectorStore(
+        TEST_WORKSPACE,
+        "rediss://default:P@ss/w0rd@cache.internal:6380",
+        TEST_VECTOR_SIZE,
+      )
+      await store.collectionExists()
+      const opts = (mockCreateClient.mock.calls.at(0) as unknown[] | undefined)?.at(0)
+      expect(opts).toMatchObject({ addresses: [{ host: "cache.internal", port: 6380 }], useTLS: true })
+    })
+  })
+
   describe("clearCollection() MAX_SCAN_ITERATIONS safety valve", () => {
     test("breaks out of scan loop after max iterations without infinite looping", async () => {
       const store = createStore(TEST_PROFILE)
