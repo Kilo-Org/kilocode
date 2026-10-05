@@ -6,7 +6,8 @@ import { mergeUserKeybindings, parseJsonc, userKeybindingFiles } from "../agent-
 
 type Post = (msg: unknown) => void
 
-const files = (ctx?: vscode.ExtensionContext) => (ctx ? userKeybindingFiles(ctx.globalStorageUri.fsPath) : [])
+const files = (ctx?: vscode.ExtensionContext) =>
+  ctx?.globalStorageUri ? userKeybindingFiles(ctx.globalStorageUri.fsPath) : []
 
 /** Extension keybindings with the user's keybindings.json applied, for the current platform. */
 export function keybindings(ctx?: vscode.ExtensionContext) {
