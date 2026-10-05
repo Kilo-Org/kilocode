@@ -23,7 +23,9 @@ import { ContextProgress } from "./ContextProgress"
 import { TaskUsage } from "./TaskUsage"
 import { TranscriptSearch } from "./TranscriptSearch"
 import { useTranscriptSearch } from "../../context/transcript-search"
-import { hasModelUsage, tokenSummary } from "../../context/model-usage"
+import { hasModelUsage, sessionModel, tokenSummary } from "../../context/model-usage"
+import { useProvider } from "../../context/provider"
+import { buildTriggerLabel, sanitizeName } from "../shared/model-selector-utils"
 import { SessionRenameEditor } from "../shared/SessionRenameEditor"
 import { target as todoTarget } from "../../context/todo-revert"
 import type { Part, TodoItem, ExtensionMessage } from "../../types/messages"
@@ -80,6 +82,23 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
   const tokens = createMemo(() => {
     const usage = session.modelUsage()
     return hasModelUsage(usage) ? tokenSummary(usage) : calcTokenUsage(session.visibleMessages())
+  })
+
+  // Subagents run with their own model and reasoning effort, so show them in the header.
+  // Subagent viewers are read-only and may not have the child session info loaded.
+  const provider = useProvider()
+  const model = createMemo(() => {
+    if (!props.readonly && !session.currentSession()?.parentID) return undefined
+    const sel = sessionModel(session.messages())
+    if (!sel) return undefined
+    const info = provider.findModel(sel)
+    const name = buildTriggerLabel(info && sanitizeName(info.name), sel.providerID, sel, false, "", true, {
+      select: language.t("dialog.model.select.title"),
+      noProviders: language.t("dialog.model.noProviders"),
+      notSet: language.t("dialog.model.notSet"),
+    })
+    const variant = sel.variant ? sel.variant.charAt(0).toUpperCase() + sel.variant.slice(1) : undefined
+    return { name, variant, id: `${sel.providerID}/${sel.modelID}` }
   })
 
   const hasTimeline = createMemo(() => {
@@ -223,6 +242,27 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
             </span>
           </Show>
         </div>
+        <Show when={model()}>
+          {(m) => (
+            <Tooltip
+              class="task-header-model"
+              value={
+                <div style={{ "text-align": "left", "white-space": "nowrap" }}>
+                  <div>{m().id}</div>
+                  <Show when={m().variant}>
+                    <div>{`${language.t("prompt.thinking.tooltip")}: ${m().variant}`}</div>
+                  </Show>
+                </div>
+              }
+              placement="bottom"
+            >
+              <span data-slot="task-header-model-name">{m().name}</span>
+              <Show when={m().variant}>
+                <span data-slot="task-header-model-variant">{m().variant}</span>
+              </Show>
+            </Tooltip>
+          )}
+        </Show>
         <div data-slot="task-header-stats">
           <Show when={cost()}>
             {(c) => (

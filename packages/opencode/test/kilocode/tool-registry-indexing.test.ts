@@ -185,6 +185,44 @@ describe("kilocode tool registry indexing", () => {
     ),
   )
 
+  it.live("follows VS Code project consent for semantic_search without config enablement", () =>
+    Effect.acquireUseRelease(
+      Effect.sync(() => {
+        const prev = process.env["KILO_PLATFORM"]
+        process.env["KILO_PLATFORM"] = "vscode"
+        return prev
+      }),
+      () =>
+        provideTmpdirInstance(
+          () =>
+            Effect.gen(function* () {
+              const agent = yield* Agent.Service
+              const build = yield* agent.get("build")
+              const registry = yield* ToolRegistry.Service
+              const check = Effect.fnUntraced(function* (enabled: boolean) {
+                const tools = yield* registry.tools({ ...ref, agent: build })
+                const ids = tools.map((tool) => tool.id)
+                const glob = tools.find((tool) => tool.id === "glob")?.description ?? ""
+                expect(ids.includes("semantic_search")).toBe(enabled)
+                expect(glob.includes("semantic_search")).toBe(enabled)
+              })
+
+              yield* check(false)
+              yield* Effect.promise(() => KiloIndexing.setConsent(true))
+              yield* check(true)
+              yield* Effect.promise(() => KiloIndexing.setConsent(false))
+              yield* check(false)
+            }),
+          { git: true },
+        ),
+      (prev) =>
+        Effect.sync(() => {
+          if (prev === undefined) delete process.env["KILO_PLATFORM"]
+          if (prev !== undefined) process.env["KILO_PLATFORM"] = prev
+        }),
+    ),
+  )
+
   for (const client of ["cli", "vscode", "jetbrains"]) {
     it.live(`omits interactive_terminal from ${client} tool definitions`, () =>
       Effect.acquireUseRelease(

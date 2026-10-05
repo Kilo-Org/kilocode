@@ -3,6 +3,8 @@
  *  Mac format ("⌘⇧W") splits on known modifier symbols. */
 export function parseBindingTokens(binding: string): string[] {
   if (!binding) return []
+  // Chords such as "⌘K ⌘M" are parsed part by part.
+  if (binding.includes(" ")) return binding.split(/\s+/).flatMap(parseBindingTokens)
   // Windows/Linux: "Ctrl+Shift+W" → ["Ctrl", "Shift", "W"]
   if (binding.includes("+")) return binding.split("+")
   // Mac: "⌘⇧W" → ["⌘", "⇧", "W"] — peel off known modifier symbols
