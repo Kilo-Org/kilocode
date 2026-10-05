@@ -179,7 +179,6 @@ describe("AgentManagerOrchestrationBridge", () => {
       expect.objectContaining({
         sessionID: "ses_target",
         directory: dir,
-        messageID: "msg_agent_manager_amr_prompt",
         parts: [
           {
             type: "text",
@@ -236,7 +235,6 @@ describe("AgentManagerOrchestrationBridge", () => {
       {
         sessionID: "ses_caller",
         directory: root,
-        messageID: "msg_agent_manager_amr_reply",
         parts: [{ type: "text", text: expect.stringContaining("[Agent Manager peer reply]") }],
         snapshotInitialization: "wait",
       },

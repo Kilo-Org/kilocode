@@ -39,6 +39,8 @@ export interface ProjectContextDeps {
   sized?: (ctx: ProjectContext) => void
   /** Whether background worktree pre-warming is enabled for this project. */
   worktreePool?: () => boolean
+  /** Per-user directory for pooled slots. When omitted, no slots are pre-warmed. */
+  poolHome?: string
   /** Factory overrides for tests. */
   state?: (root: string, log: (msg: string) => void) => WorktreeStateManager
   worktrees?: (root: string, log: (msg: string) => void, git?: GitOps) => WorktreeManager
@@ -178,7 +180,14 @@ export class ProjectContext {
     this.worktrees ??= (
       this.deps.worktrees ??
       ((root, log, git) =>
-        new WorktreeManager(root, log, git, undefined, () => (this.deps.worktreePool?.() === false ? 0 : 1)))
+        new WorktreeManager(
+          root,
+          log,
+          git,
+          undefined,
+          () => (this.deps.worktreePool?.() === false ? 0 : 1),
+          this.deps.poolHome,
+        ))
     )(this.root, (msg) => this.deps.log(`[WorktreeManager] ${msg}`), this.deps.git)
     return this.worktrees
   }

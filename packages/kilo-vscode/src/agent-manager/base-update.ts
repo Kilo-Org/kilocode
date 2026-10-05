@@ -1,4 +1,3 @@
-import { randomUUID } from "crypto"
 import type { ProjectContext } from "./project/context"
 import type { LifecycleHost } from "./provider-lifecycle"
 import type { Worktree } from "./WorktreeStateManager"
@@ -104,7 +103,6 @@ export async function handleBaseUpdate(
       state,
       sessionID: id,
       text: baseUpdatePrompt(worktree, push),
-      messageID: randomUUID(),
       metadata: injectedMetadata(`Update from ${worktree.parentBranch}`),
       questions: "dismiss",
       model: msg.model,
