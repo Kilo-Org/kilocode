@@ -158,6 +158,36 @@ for (const result of [
   )
 }
 
+it.effect("stops recovering after an unexpected fetch failure instead of retrying it as a network error", () =>
+  Effect.gen(function* () {
+    const calls = yield* Ref.make<Options[]>([])
+    const cache = Layer.fresh(ModelCache.layer).pipe(
+      Layer.provide(FetchHttpClient.layer),
+      Layer.provide(TestConfig.layer()),
+      Layer.provide(Layer.mock(Auth.Service)({ get: () => Effect.succeed(undefined) })),
+      Layer.provide(
+        Layer.succeed(ModelCache.KiloModelsService, {
+          fetch: (options) =>
+            Effect.gen(function* () {
+              yield* Ref.update(calls, (list) => [...list, options])
+              if ((yield* Ref.get(calls)).length === 1) return network
+              return yield* Effect.fail(new Error("unexpected"))
+            }),
+        }),
+      ),
+    )
+    yield* ModelCache.Service.use((service) =>
+      Effect.gen(function* () {
+        yield* service.fetch("kilo", options)
+        yield* TestClock.adjust("30 seconds")
+        expect((yield* Ref.get(calls)).length).toBe(2)
+        yield* TestClock.adjust("1 hour")
+        expect((yield* Ref.get(calls)).length).toBe(2)
+      }),
+    ).pipe(Effect.provide(cache))
+  }),
+)
+
 it.effect("isolates account switches, reselected failed cells and cache clearing", () =>
   Effect.gen(function* () {
     const calls = yield* Ref.make<Options[]>([])

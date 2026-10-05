@@ -18,6 +18,7 @@ export function createCatalogRetry(opts: {
   const delays = opts.delays ?? [30_000, 60_000, 120_000, 240_000, 300_000]
   let step = 0
   let cancel: (() => void) | undefined
+  let disposed = false
 
   const stop = () => {
     cancel?.()
@@ -27,6 +28,8 @@ export function createCatalogRetry(opts: {
   return {
     /** Arm one retry while the catalog stays unavailable; reset once it loads. */
     update(unavailable: boolean) {
+      // A fetch that settles after dispose must not re-arm the loop.
+      if (disposed) return
       if (!unavailable) {
         stop()
         step = 0
@@ -40,6 +43,9 @@ export function createCatalogRetry(opts: {
         opts.refresh()
       }, delay)
     },
-    dispose: stop,
+    dispose() {
+      disposed = true
+      stop()
+    },
   }
 }

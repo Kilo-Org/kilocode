@@ -2857,6 +2857,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           }
           // A rejected fetch leaves nothing cached, so retry on the next connect.
           if (!this.cachedProvidersMessage) this.providersRetry = true
+          // Keep backing off while the last loaded Kilo catalog was unavailable.
+          const last = this.cachedProvidersMessage as { kiloUnavailable?: boolean } | null
+          this.catalogRetry.update(last?.kiloUnavailable === true)
           console.error("[Kilo New] KiloProvider: Failed to fetch providers:", error)
         }
         if (!this.providersQueued) return

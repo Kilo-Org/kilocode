@@ -65,4 +65,11 @@ describe("createCatalogRetry", () => {
     expect(state.pending.at(-1)?.cancelled).toBe(true)
     expect(state.refreshes()).toBe(0)
   })
+
+  it("ignores updates from fetches that settle after dispose", () => {
+    const state = setup()
+    state.retry.dispose()
+    state.retry.update(true)
+    expect(state.pending).toEqual([])
+  })
 })

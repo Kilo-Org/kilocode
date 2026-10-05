@@ -340,9 +340,18 @@ export const layer: Layer.Layer<
           yield* invalidate(entry)
           const version = (versions.get(entry.providerID) ?? 0) + 1
           versions.set(entry.providerID, version)
-          next = yield* evaluate(entry, version).pipe(
-            Effect.catch(() => Effect.succeed({ models: {}, error: { kind: "network" as const } })),
+          // Catalog fetches report network and HTTP problems as results, so a failure
+          // here is unexpected: log it and stop instead of retrying it as a network error.
+          const value = yield* evaluate(entry, version).pipe(
+            Effect.catch((error) =>
+              Effect.sync(() => {
+                log.error("catalog recovery failed", { providerID: entry.providerID, error })
+                return undefined
+              }),
+            ),
           )
+          if (!value) return
+          next = value
           if (selected.get(entry.providerID) !== entry || active.get(entry.providerID) !== entry) return
           if (retryable(next)) continue
           return

@@ -298,6 +298,42 @@ describe("KiloProvider catalog refresh", () => {
     expect(scheduled).toHaveLength(1)
   })
 
+  it("keeps retrying after a failed refetch while the Kilo catalog stays unavailable", async () => {
+    const steps = ["failed", "reject", "recovered"]
+    const { internal, messages } = setup(
+      async () => {
+        const step = steps.shift()
+        if (step === "reject") throw new Error("offline")
+        if (step === "failed")
+          return {
+            data: { all: [external], connected: ["external"], default: { external: "model" }, failed: ["kilo"] },
+          }
+        return catalog("org")
+      },
+      () => "org",
+    )
+    const scheduled: Array<() => void> = []
+    internal.catalogRetry.dispose()
+    internal.catalogRetry = createCatalogRetry({
+      refresh: () => void internal.fetchAndSendProviders(),
+      schedule: (run) => {
+        scheduled.push(run)
+        return () => {}
+      },
+    })
+
+    await internal.fetchAndSendProviders()
+    expect(messages.at(-1)).toMatchObject({ type: "providersLoaded", kiloUnavailable: true })
+    scheduled.at(0)?.()
+    await internal.providersRefresh
+    expect(scheduled).toHaveLength(2)
+
+    scheduled.at(1)?.()
+    await internal.providersRefresh
+    expect(messages.at(-1)).toMatchObject({ type: "providersLoaded", kiloUnavailable: false })
+    expect(scheduled).toHaveLength(2)
+  })
+
   it("does not flag a failed Kilo catalog outside an organization", async () => {
     const { internal, messages } = setup(
       async () => ({
