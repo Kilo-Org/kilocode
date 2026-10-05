@@ -34,6 +34,7 @@ export const dict = {
     "Kun dette projekt. De installerede filer kan føjes til versionsstyring og deles med dit team.",
   "marketplace.install.scope.global.description": "Alle projekter på denne maskine. Gemmes i din brugerkonfiguration.",
   "marketplace.install.destination": "Installationsplacering",
+  "marketplace.install.includedSkills": "Inkluderede færdigheder",
   "marketplace.install.about.mcp":
     "En MCP-server giver Kilo yderligere værktøjer til at arbejde med eksterne tjenester eller lokale programmer.",
   "marketplace.install.about.agent": "En agent tilføjer en genanvendelig rolle med egne instruktioner og tilladelser.",
@@ -64,6 +65,8 @@ export const dict = {
   "marketplace.remove.confirm":
     "Er du sikker på, at du vil fjerne denne {{type}}? Dette vil fjerne den fra din {{scope}} konfiguration.",
   "marketplace.remove.cancel": "Annuller",
+  "marketplace.remove.mcp.skills":
+    "Dette fjerner også de medfølgende færdigheder, som tilhører denne installation. Selvstændigt installerede færdigheder bevares.",
   "marketplace.remove.confirm.button": "Fjern",
   "marketplace.search": "Søg...",
   "marketplace.filter.all": "Alle elementer",
@@ -72,6 +75,7 @@ export const dict = {
   "marketplace.empty": "Ingen elementer fundet",
   "marketplace.empty.relevant": "Der blev ikke fundet relevante marketplace-elementer for dette arbejdsområde.",
   "marketplace.badge.mcpServer": "MCP-server",
+  "marketplace.badge.skills": "Inkluderer færdigheder",
   "marketplace.card.by": "af {{author}}",
   "marketplace.install.method": "Installationsmetode",
   "marketplace.install.parameters": "Parametre",

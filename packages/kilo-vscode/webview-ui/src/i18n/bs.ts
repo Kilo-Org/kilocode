@@ -96,6 +96,7 @@ export const dict = {
     "Razgovor je vraćen. Status vraćanja radnog prostora nije dostupan za ovo ranije vraćanje.",
   "revert.banner.workspace.enableSnapshots": "Omogući snimke stanja",
   "revert.disabled.agentBusy": "Sačekajte da agent završi",
+  "revert.error.body": "Repozitorij je možda u upotrebi. Pokušajte ponovo ili pogledajte Kilo zapise za detalje.",
   "command.session.compact": "Sažmi sesiju",
   "command.session.export": "Izvezi transkript sesije",
 
@@ -199,11 +200,21 @@ export const dict = {
   "prompt.worktrees.title": "Worktrees",
   "prompt.worktrees.search": "Pretraži Worktree-ove",
   "prompt.thinking.tooltip": "Napor razmišljanja",
+  "prompt.shortcutHint.addSelection": "za dodavanje odabira",
+  "prompt.shortcutHint.waiting": "za odgovor sesiji koja čeka",
+  "prompt.shortcutHint.type": "za pisanje",
+  "prompt.shortcutHint.sessions": "za promjenu sesije",
+  "prompt.shortcutHint.stop": "za zaustavljanje",
+  "prompt.shortcutHint.changes": "za pregled izmjena",
+  "prompt.shortcutHint.pr": "za otvaranje PR-a",
+  "prompt.shortcutHint.mode": "Sljedeći način",
   "prompt.action.send": "Pošalji",
   "prompt.action.continue": "Nastavi",
   "prompt.action.send.blocked": "Prvo odgovorite ili odbacite pitanje na čekanju",
   "prompt.action.send.recording": "Transkribuj i pošalji",
   "prompt.action.stop": "Zaustavi",
+  "prompt.action.stop.background": "Zaustavi glavnog agenta. Agenti u pozadini nastavljaju raditi.",
+  "prompt.agents.show": "Prikaži agente u pozadini",
   "prompt.action.enhance": "Poboljšaj prompt",
   "prompt.paste.expand": "Kliknite da proširite zalijepljeni tekst",
   "prompt.action.autoApprove.enable": "Uključi automatsko odobravanje",
@@ -512,6 +523,7 @@ export const dict = {
   "provider.custom.models.toggleImages": "Uključi/isključi slike za sve",
   "provider.custom.models.remove": "Ukloni model",
   "provider.custom.models.add": "Dodaj model",
+  "provider.custom.models.fetch.button": "Dohvati modele",
   "provider.custom.models.fetch.authError":
     "Autentifikacija nije uspjela. Provjerite API ključ iznad i pokušajte ponovo.",
   "provider.custom.models.fetch.empty": "Nisu pronađeni modeli na ovom serveru.",
@@ -780,11 +792,13 @@ export const dict = {
   "ui.sessionTurn.status.consideringNextSteps": "Razmatram sljedeće korake...",
 
   "dialog.model.noProviders": "Nema pružatelja",
+  "dialog.model.unavailable": "Kilo modeli nisu dostupni",
 
   "prompt.placeholder.connecting": "Povezivanje na server...",
   "prompt.placeholder.error": "Povezivanje nije uspjelo. Provjerite panel za izlaz ili ponovo pokrenite ekstenziju.",
   "prompt.placeholder.default":
     "Unesite poruku, @ za spominjanje datoteka... (Enter za slanje, Shift+Enter za novi red)",
+  "prompt.placeholder.hint": "Unesite poruku, @ za spominjanje datoteka... ({{key}} {{action}})",
 
   "context.usage.sessionCost": "Cijena sesije",
   "context.usage.olderSessions": "{{count}} starijih sesija",
@@ -841,7 +855,8 @@ export const dict = {
   "settings.browser.description":
     "Konfigurirajte ugrađenu automatizaciju preglednika koju pokreće Playwright. Kilo može navigirati, komunicirati sa web stranicama i snimati ekran u vašim sesijama.",
   "settings.browser.enable.title": "Omogući automatizaciju preglednika",
-  "settings.browser.enable.description": "Registriraj Playwright MCP server s CLI pozadinom.",
+  "settings.browser.enable.description":
+    "Omogući preglednik vezan za sesiju u aplikaciji Agent Manager za lokalne aplikacije i javne HTTPS stranice.",
   "settings.browser.systemChrome.title": "Koristi sistemski Chrome",
   "settings.browser.systemChrome.description":
     "Koristite instalirani Chrome preglednik umjesto zasebne Chromium instance.",
@@ -934,15 +949,12 @@ export const dict = {
   "settings.sandboxing.writablePaths.title": "Dodatne upisive putanje",
   "settings.sandboxing.writablePaths.description":
     "Dodatne putanje sistema datoteka u koje sandbox dozvoljava upis (npr. /tmp, /var/log). Spajaju se sa zadanim upisivim putanjama kada je sandbox aktivan.",
-  "settings.experimental.multiProject.title": "Višeprojektni Agent Manager",
+  "settings.experimental.conversationPromptHistory.title": "Historija upita po razgovoru",
+  "settings.experimental.conversationPromptHistory.description":
+    "Čuvajte historiju upita (ArrowUp/ArrowDown) zasebno za svaki razgovor umjesto da dijelite jednu historiju među svim razgovorima.",
   "settings.experimental.claudeMigration.title": "Claude Code migracija",
   "settings.experimental.claudeMigration.description":
     "Jednom uvezite podržane globalne CLAUDE.md upute, jednostavne vještine i onemogućene MCP definicije. Originalne Claude datoteke ostaju nepromijenjene; ponovo pokrenite backend nakon uključivanja.",
-  "settings.experimental.multiProject.description":
-    "Omogući upravljanje sesijama i worktree-ima kroz više repozitorija u Agent Manager-u. Trenutni workspace repozitorij je uvijek zadani projekat.",
-  "settings.experimental.taskModelSelection.title": "Odabir modela podagenta za Task",
-  "settings.experimental.taskModelSelection.description":
-    "Omogućava izričit odabir modela, provajdera i napora zaključivanja za Task podagente.",
   "settings.experimental.mcpTimeout.title": "MCP istek vremena (ms)",
   "settings.experimental.mcpTimeout.description": "Istek vremena za MCP server zahtjeve u milisekundama",
   "settings.experimental.remote.title": "Remote kontrola",
@@ -1148,6 +1160,9 @@ export const dict = {
   "settings.autoCleanup.runNow": "Pokreni čišćenje sada",
   "settings.autoCleanup.runNow.confirm":
     "Trajno obrisati istekle sesije u svim projektima i svim Kilo klijentima na ovom računaru?",
+  "settings.autoCleanup.stop": "Zaustavi čišćenje",
+  "settings.autoCleanup.progress.cancelling": "Zaustavljanje čišćenja sesija...",
+  "settings.autoCleanup.lastRun.cancelled": "prekinuto",
   "settings.context.autoCompaction.title": "Automatska kompresija",
   "settings.context.autoCompaction.description": "Automatski komprimiraj kontekst prije nego dostigne limit",
   "settings.context.compaction.title": "Kompresija",
@@ -1238,6 +1253,9 @@ export const dict = {
   "settings.display.mcpTool.expanded": "Prošireni",
   "settings.display.mcpTool.collapsed": "Sažeti",
 
+  "settings.display.shortcutHints.title": "Prikaži savjete za prečice",
+  "settings.display.shortcutHints.description":
+    "Prikazuje u praznom promptu prečicu tastature koja odgovara onome što sada radite, na primjer kako dodati odabrani kod ili se vratiti u prompt.",
   "settings.display.tokenThroughput.title": "Prikaži protok tokena",
   "settings.display.tokenThroughput.description":
     "Prikažite brzinu generisanja teksta (tokens/sec) u najnovijoj poruci asistenta i zaglavlju zadatka. Prikazuje se podrazumijevano; onemogućite ovu postavku da biste je po potrebi sakrili.",
@@ -1317,14 +1335,12 @@ export const dict = {
   "task.todos.allDone": "{{count}} zadataka završeno",
   "task.backgroundAgents.running.one": "1 agent u pozadini",
   "task.backgroundAgents.running.many": "{{count}} agenata u pozadini",
-  "task.backgroundAgents.more": "+{{count}} još",
   "task.backgroundAgents.open": "Otvori agenta u pozadini",
   "task.backgroundAgents.openAll": "Otvori sve agente u pozadini",
   "task.backgroundAgents.cancel": "Zaustavi",
   "task.backgroundAgents.continueInBackground": "Nastavi u pozadini",
   "task.backgroundAgents.waiting": "Agent u pozadini treba vaš unos",
   "task.backgroundAgents.needsInput": "Potreban unos",
-  "task.backgroundAgents.dismiss": "Odbaci",
   "task.backgroundAgents.clearFinished": "Obriši završene",
   "task.backgroundAgents.summary": "{{running}} od {{total}} agenata u pozadini radi",
   "task.backgroundAgents.status.running": "Radi",
@@ -1333,6 +1349,8 @@ export const dict = {
   "task.backgroundAgents.status.error": "Greška",
   "task.backgroundAgents.untitled": "Agent u pozadini",
   "task.backgroundAgents.stopAll": "Zaustavi sve ({{count}})",
+  "task.backgroundAgents.finished": "Agenti u pozadini su završili",
+  "task.stop": "Zaustavi podagenta",
   "settings.saveBar.unsavedChanges": "Nespremljene promjene",
   "settings.saveBar.discard": "Odbaci",
   "settings.saveBar.save": "Spremi",

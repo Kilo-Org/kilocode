@@ -96,6 +96,7 @@ export const dict = {
     "Розмову скасовано. Стан відновлення робочого простору для цього попереднього скасування недоступний.",
   "revert.banner.workspace.enableSnapshots": "Увімкнути знімки",
   "revert.disabled.agentBusy": "Зачекайте завершення агента",
+  "revert.error.body": "Репозиторій може використовуватися. Повторіть спробу або перегляньте журнали Kilo.",
   "command.session.compact": "Стиснути сесію",
   "command.session.export": "Експортувати запис сеансу",
 
@@ -199,11 +200,21 @@ export const dict = {
   "prompt.worktrees.title": "Робочі дерева",
   "prompt.worktrees.search": "Пошук робочих дерев",
   "prompt.thinking.tooltip": "Зусилля міркування",
+  "prompt.shortcutHint.addSelection": "для додавання виділення",
+  "prompt.shortcutHint.waiting": "для відповіді в сесії, що очікує",
+  "prompt.shortcutHint.type": "для введення",
+  "prompt.shortcutHint.sessions": "для зміни сесії",
+  "prompt.shortcutHint.stop": "для зупинки",
+  "prompt.shortcutHint.changes": "для перегляду змін",
+  "prompt.shortcutHint.pr": "для відкриття PR",
+  "prompt.shortcutHint.mode": "Наступний режим",
   "prompt.action.send": "Надіслати",
   "prompt.action.continue": "Продовжити",
   "prompt.action.send.blocked": "Спочатку дайте відповідь або закрийте очікуюче питання",
   "prompt.action.send.recording": "Транскрибувати та надіслати",
   "prompt.action.stop": "Зупинити",
+  "prompt.action.stop.background": "Зупинити головного агента. Фонові агенти продовжать роботу.",
+  "prompt.agents.show": "Показати фонових агентів",
   "prompt.action.enhance": "Покращити запит",
   "prompt.paste.expand": "Натисніть, щоб розгорнути вставлений текст",
   "prompt.action.indexing": "Налаштування індексування",
@@ -462,6 +473,7 @@ export const dict = {
   "provider.custom.models.toggleImages": "Перемкнути зображення для всіх",
   "provider.custom.models.remove": "Видалити модель",
   "provider.custom.models.add": "Додати модель",
+  "provider.custom.models.fetch.button": "Отримати моделі",
   "provider.custom.models.fetch.authError": "Автентифікація не вдалася. Перевірте API-ключ вище і спробуйте ще раз.",
   "provider.custom.models.fetch.empty": "На цьому сервері моделей не знайдено.",
   "provider.custom.models.fetch.added": "Додано {{count}} моделей.",
@@ -767,10 +779,12 @@ export const dict = {
   "ui.sessionTurn.status.consideringNextSteps": "Обдумую наступні кроки...",
 
   "dialog.model.noProviders": "Немає провайдерів",
+  "dialog.model.unavailable": "Моделі Kilo недоступні",
 
   "prompt.placeholder.connecting": "Підключення до сервера...",
   "prompt.placeholder.default":
     "Напишіть повідомлення, @ щоб згадати файли... (Enter для надсилання, Shift+Enter для нового рядка)",
+  "prompt.placeholder.hint": "Напишіть повідомлення, @ щоб згадати файли... ({{key}} {{action}})",
   "prompt.placeholder.error": "Підключення не вдалося. Перевірте панель виводу або перезапустіть розширення.",
 
   "context.usage.sessionCost": "Вартість сесії",
@@ -829,7 +843,8 @@ export const dict = {
   "settings.browser.description":
     "Налаштуйте вбудовану автоматизацію браузера на основі Playwright. Kilo може переходити веб-сторінками, взаємодіяти з ними та робити знімки екрана у ваших сесіях.",
   "settings.browser.enable.title": "Увімкнути автоматизацію браузера",
-  "settings.browser.enable.description": "Зареєструвати MCP-сервер Playwright з CLI-бекендом.",
+  "settings.browser.enable.description":
+    "Увімкнути прив'язаний до сесії браузер Agent Manager для локальних програм і загальнодоступних HTTPS-сторінок.",
   "settings.browser.systemChrome.title": "Використовувати системний Chrome",
   "settings.browser.systemChrome.description":
     "Використовувати встановлений браузер Chrome замість окремого екземпляра Chromium.",
@@ -925,15 +940,12 @@ export const dict = {
   "settings.sandboxing.writablePaths.title": "Додаткові шляхи для запису",
   "settings.sandboxing.writablePaths.description":
     "Додаткові шляхи файлової системи, у які дозволено запис у пісочниці (наприклад, /tmp, /var/log). Вони об'єднуються зі шляхами запису за замовчуванням, коли пісочниця активна.",
-  "settings.experimental.multiProject.title": "Мультипроєктний Agent Manager",
+  "settings.experimental.conversationPromptHistory.title": "Історія промптів для кожної розмови",
+  "settings.experimental.conversationPromptHistory.description":
+    "Зберігати історію промптів (ArrowUp/ArrowDown) окремо для кожної розмови замість однієї спільної історії для всіх.",
   "settings.experimental.claudeMigration.title": "Міграція Claude Code",
   "settings.experimental.claudeMigration.description":
     "Одноразово імпортуйте підтримувані глобальні інструкції CLAUDE.md, прості навички та вимкнені визначення MCP. Оригінальні файли Claude не змінюються; після ввімкнення перезапустіть бекенд.",
-  "settings.experimental.multiProject.description":
-    "Увімкніть керування сеансами та робочими деревами в кількох репозиторіях в Agent Manager. Поточний репозиторій робочого простору завжди є проєктом за замовчуванням.",
-  "settings.experimental.taskModelSelection.title": "Вибір моделі субагента Task",
-  "settings.experimental.taskModelSelection.description":
-    "Дозволяє явно вибирати модель, провайдера та рівень міркування для субагентів Task.",
   "settings.experimental.mcpTimeout.title": "Тайм-аут MCP (мс)",
   "settings.experimental.mcpTimeout.description": "Тайм-аут у мілісекундах для запитів до MCP-сервера",
   "settings.experimental.remote.title": "Керування Remote",
@@ -1102,6 +1114,9 @@ export const dict = {
   "settings.autoCleanup.runNow": "Запустити очищення зараз",
   "settings.autoCleanup.runNow.confirm":
     "Безповоротно видалити застарілі сесії в усіх проєктах і в усіх клієнтах Kilo на цьому комп'ютері?",
+  "settings.autoCleanup.stop": "Зупинити очищення",
+  "settings.autoCleanup.progress.cancelling": "Зупинка очищення сеансів...",
+  "settings.autoCleanup.lastRun.cancelled": "перервано",
 
   "settings.context.autoCompaction.title": "Автоматичне стиснення",
   "settings.context.autoCompaction.description": "Автоматично стискати контекст до досягнення ліміту",
@@ -1194,6 +1209,9 @@ export const dict = {
   "settings.display.mcpTool.expanded": "Розгорнуті",
   "settings.display.mcpTool.collapsed": "Згорнуті",
 
+  "settings.display.shortcutHints.title": "Показувати підказки клавіш",
+  "settings.display.shortcutHints.description":
+    "Показувати в порожньому полі запиту сполучення клавіш, що відповідає поточній дії, наприклад як додати виділений код або повернутися до запиту.",
   "settings.display.tokenThroughput.title": "Показувати пропускну здатність токенів",
   "settings.display.tokenThroughput.description":
     "Показувати швидкість генерації тексту (tokens/sec) в останньому повідомленні асистента та в заголовку завдання. Показується за замовчуванням; вимкніть цей параметр, щоб за потреби її приховати.",
@@ -1284,14 +1302,12 @@ export const dict = {
   "task.todos.allDone": "{{count}} завдань виконано",
   "task.backgroundAgents.running.one": "1 фоновий агент",
   "task.backgroundAgents.running.many": "Фонових агентів: {{count}}",
-  "task.backgroundAgents.more": "+{{count}} ще",
   "task.backgroundAgents.open": "Відкрити фонового агента",
   "task.backgroundAgents.openAll": "Відкрити всіх фонових агентів",
   "task.backgroundAgents.cancel": "Зупинити",
   "task.backgroundAgents.continueInBackground": "Продовжити у фоні",
   "task.backgroundAgents.waiting": "Фоновому агенту потрібен ваш ввід",
   "task.backgroundAgents.needsInput": "Потрібен ввід",
-  "task.backgroundAgents.dismiss": "Сховати",
   "task.backgroundAgents.clearFinished": "Очистити завершені",
   "task.backgroundAgents.summary": "Працює {{running}} із {{total}} фонових агентів",
   "task.backgroundAgents.status.running": "Виконується",
@@ -1300,6 +1316,8 @@ export const dict = {
   "task.backgroundAgents.status.error": "Помилка",
   "task.backgroundAgents.untitled": "Фоновий агент",
   "task.backgroundAgents.stopAll": "Зупинити всіх ({{count}})",
+  "task.backgroundAgents.finished": "Фонові агенти завершили роботу",
+  "task.stop": "Зупинити підагента",
 
   "settings.saveBar.unsavedChanges": "Незбережені зміни",
   "settings.saveBar.discard": "Скасувати",

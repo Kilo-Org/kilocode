@@ -19,8 +19,8 @@ describe("createProjectStateHandlers", () => {
     const applied: AgentManagerStateMessage[] = []
     const routed: AgentManagerStateMessage[] = []
     const handler = createProjectStateHandlers({
-      setMulti: () => {},
       setProjects: () => {},
+      migrate: () => {},
       setStates: (update) => Object.assign(stored, update(stored)),
       prune: () => {},
       ensure: () => ({ sections: () => [], applyState: (value) => applied.push(value) }),
@@ -28,9 +28,6 @@ describe("createProjectStateHandlers", () => {
       routeCatalog: () => {},
       routeState: (value) => routed.push(value),
       isActive: () => true,
-      pending: () => false,
-      setPending: () => {},
-      rename: () => {},
       font: () => {},
       browser: () => {},
       current: () => "session-a",
@@ -47,13 +44,49 @@ describe("createProjectStateHandlers", () => {
     expect(value.browserAutomation).toBe(true)
   })
 
+  it("migrates the pinned project, or the first catalog entry, when projects arrive", () => {
+    const migrated: string[] = []
+    const handler = createProjectStateHandlers({
+      setProjects: () => {},
+      migrate: (id) => migrated.push(id),
+      setStates: () => {},
+      prune: () => {},
+      ensure: () => ({ sections: () => [], applyState: () => {} }),
+      active: () => ({ sections: () => [], applyState: () => {} }),
+      routeCatalog: () => {},
+      routeState: () => {},
+      isActive: () => true,
+      font: () => {},
+      browser: () => {},
+      current: () => "session-a",
+      closeBrowser: () => {},
+      openBrowser: () => {},
+    })
+    const project = (id: string, pinned = false) => ({
+      id,
+      root: `/repo/${id}`,
+      label: id,
+      pinned,
+      active: pinned,
+      expanded: false,
+      initialized: true,
+      missing: false,
+    })
+
+    handler.projects({ type: "agentManager.projects", projects: [project("a"), project("b", true)] })
+    handler.projects({ type: "agentManager.projects", projects: [project("a"), project("b")] })
+    handler.projects({ type: "agentManager.projects", projects: [] })
+
+    expect(migrated).toEqual(["b", "a"])
+  })
+
   it("opens browser previews only for the active project and selected session", () => {
     let opened = 0
     let closed = 0
     let enabled = false
     const handler = createProjectStateHandlers({
-      setMulti: () => {},
       setProjects: () => {},
+      migrate: () => {},
       setStates: () => {},
       prune: () => {},
       ensure: () => ({ sections: () => [], applyState: () => {} }),
@@ -61,9 +94,6 @@ describe("createProjectStateHandlers", () => {
       routeCatalog: () => {},
       routeState: () => {},
       isActive: (project) => project === "project-a",
-      pending: () => false,
-      setPending: () => {},
-      rename: () => {},
       font: () => {},
       browser: (value) => {
         enabled = value
@@ -142,8 +172,8 @@ describe("createProjectStateHandlers", () => {
             )
             const binding = browser.bind(current)
             const handler = createProjectStateHandlers({
-              setMulti: () => {},
               setProjects: () => {},
+              migrate: () => {},
               setStates: () => {},
               prune: () => {},
               ensure: () => ({ sections: () => [], applyState: () => {} }),
@@ -151,9 +181,6 @@ describe("createProjectStateHandlers", () => {
               routeCatalog: () => {},
               routeState: () => {},
               isActive: (project) => project === "project-a",
-              pending: () => false,
-              setPending: () => {},
-              rename: () => {},
               font: () => {},
               ...binding,
             })

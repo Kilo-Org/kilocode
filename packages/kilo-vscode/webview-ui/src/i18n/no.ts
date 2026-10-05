@@ -99,6 +99,7 @@ export const dict = {
     "Samtalen er tilbakeført. Statusen for gjenoppretting av arbeidsområdet er ikke tilgjengelig for denne tidligere tilbakeføringen.",
   "revert.banner.workspace.enableSnapshots": "Aktiver øyeblikksbilder",
   "revert.disabled.agentBusy": "Vent til agenten er ferdig",
+  "revert.error.body": "Repositoriet er kanskje i bruk. Prøv igjen, eller se Kilo-loggene for detaljer.",
   "command.session.compact": "Komprimer sesjon",
   "command.session.export": "Eksporter sesjonsutskrift",
 
@@ -201,11 +202,21 @@ export const dict = {
   "prompt.worktrees.title": "Worktrees",
   "prompt.worktrees.search": "Søk i Worktrees",
   "prompt.thinking.tooltip": "Resonnementsinnsats",
+  "prompt.shortcutHint.addSelection": "for å legge til markeringen",
+  "prompt.shortcutHint.waiting": "for å svare på en ventende økt",
+  "prompt.shortcutHint.type": "for å skrive",
+  "prompt.shortcutHint.sessions": "for å bytte økt",
+  "prompt.shortcutHint.stop": "for å stoppe",
+  "prompt.shortcutHint.changes": "for å se gjennom endringer",
+  "prompt.shortcutHint.pr": "for å åpne PR-en",
+  "prompt.shortcutHint.mode": "Neste modus",
   "prompt.action.send": "Send",
   "prompt.action.continue": "Fortsett",
   "prompt.action.send.blocked": "Svar på eller avvis det ventende spørsmålet først",
   "prompt.action.send.recording": "Transkriber og send",
   "prompt.action.stop": "Stopp",
+  "prompt.action.stop.background": "Stopp hovedagenten. Bakgrunnsagenter fortsetter å kjøre.",
+  "prompt.agents.show": "Vis bakgrunnsagenter",
   "prompt.action.enhance": "Forbedre prompt",
   "prompt.paste.expand": "Klikk for å utvide den innlimte teksten",
   "prompt.action.autoApprove.enable": "Aktiver automatisk godkjenning",
@@ -473,6 +484,7 @@ export const dict = {
   "provider.custom.models.toggleImages": "Veksle bilde for alle",
   "provider.custom.models.remove": "Fjern modell",
   "provider.custom.models.add": "Legg til modell",
+  "provider.custom.models.fetch.button": "Hent modeller",
   "provider.custom.models.fetch.authError": "Autentisering mislyktes. Sjekk API-nøkkelen ovenfor og prøv igjen.",
   "provider.custom.models.fetch.empty": "Ingen modeller funnet på denne serveren.",
   "provider.custom.models.fetch.added": "{{count}} modell(er) lagt til.",
@@ -741,11 +753,13 @@ export const dict = {
   "ui.sessionTurn.status.consideringNextSteps": "Vurderer neste steg...",
 
   "dialog.model.noProviders": "Ingen leverandører",
+  "dialog.model.unavailable": "Kilo-modeller er utilgjengelige",
 
   "prompt.placeholder.connecting": "Kobler til server...",
   "prompt.placeholder.error": "Tilkobling mislyktes. Sjekk utdatapanelet eller start utvidelsen på nytt.",
   "prompt.placeholder.default":
     "Skriv en melding, @ for å nevne filer... (Enter for å sende, Shift+Enter for ny linje)",
+  "prompt.placeholder.hint": "Skriv en melding, @ for å nevne filer... ({{key}} {{action}})",
 
   "context.usage.sessionCost": "Sesjonskostnad",
   "context.usage.olderSessions": "{{count}} eldre sesjoner",
@@ -802,7 +816,8 @@ export const dict = {
   "settings.browser.description":
     "Konfigurer innebygd nettleserautomatisering drevet av Playwright. Kilo kan navigere, samhandle med og ta skjermbilder av nettsider i øktene dine.",
   "settings.browser.enable.title": "Aktiver nettleserautomatisering",
-  "settings.browser.enable.description": "Registrer Playwright MCP-serveren med CLI-backend.",
+  "settings.browser.enable.description":
+    "Aktiver den øktspesifikke nettleseren i Agent Manager for lokale applikasjoner og offentlige HTTPS-sider.",
   "settings.browser.systemChrome.title": "Bruk system-Chrome",
   "settings.browser.systemChrome.description":
     "Bruk den installerte Chrome-nettleseren i stedet for en separat Chromium-instans.",
@@ -895,15 +910,12 @@ export const dict = {
   "settings.sandboxing.writablePaths.title": "Ytterligere skrivbare baner",
   "settings.sandboxing.writablePaths.description":
     "Ytterligere filsystembaner som sandkassen tillater skriving til (f.eks. /tmp, /var/log). Disse flettes med de standardskrivbare banene når sandkassen er aktiv.",
-  "settings.experimental.multiProject.title": "Multi-prosjekt Agent Manager",
+  "settings.experimental.conversationPromptHistory.title": "Promptlogg per samtale",
+  "settings.experimental.conversationPromptHistory.description":
+    "Hold promptloggen (ArrowUp/ArrowDown) adskilt for hver samtale i stedet for å dele én logg på tvers av alle samtaler.",
   "settings.experimental.claudeMigration.title": "Claude Code-migrering",
   "settings.experimental.claudeMigration.description":
     "Importer støttede globale CLAUDE.md-instruksjoner, enkle ferdigheter og deaktiverte MCP-definisjoner én gang. Originale Claude-filer forblir uendret; start backend på nytt etter aktivering.",
-  "settings.experimental.multiProject.description":
-    "Aktiver administrering av økter og worktrees på tvers av flere repositories i Agent Manager. Det nåværende workspace-repositoryet er alltid standardprosjektet.",
-  "settings.experimental.taskModelSelection.title": "Valg av Task-underagentmodell",
-  "settings.experimental.taskModelSelection.description":
-    "Tillat eksplisitt valg av modell, leverandør og resonneringsinnsats for Task-underagenter.",
   "settings.experimental.mcpTimeout.title": "MCP-tidsavbrudd (ms)",
   "settings.experimental.mcpTimeout.description": "Tidsavbrudd for MCP-serverforespørsler i millisekunder",
   "settings.experimental.remote.title": "Remote-kontroll",
@@ -1142,6 +1154,9 @@ export const dict = {
   "settings.autoCleanup.runNow": "Kjør opprydding nå",
   "settings.autoCleanup.runNow.confirm":
     "Slett utløpte økter permanent på tvers av alle prosjekter og alle Kilo-klienter på denne maskinen?",
+  "settings.autoCleanup.stop": "Stopp opprydding",
+  "settings.autoCleanup.progress.cancelling": "Stopper opprydding av økter...",
+  "settings.autoCleanup.lastRun.cancelled": "avbrutt",
   "settings.context.autoCompaction.title": "Automatisk komprimering",
   "settings.context.autoCompaction.description": "Komprimer automatisk kontekst før den når grensen",
   "settings.context.compaction.title": "Komprimering",
@@ -1232,6 +1247,9 @@ export const dict = {
   "settings.display.mcpTool.expanded": "Utvidet",
   "settings.display.mcpTool.collapsed": "Skjult",
 
+  "settings.display.shortcutHints.title": "Vis snarveitips",
+  "settings.display.shortcutHints.description":
+    "Vis hurtigtasten som passer til det du gjør nå, i den tomme ledeteksten, for eksempel hvordan du legger til markert kode eller går tilbake til ledeteksten.",
   "settings.display.tokenThroughput.title": "Vis genereringshastighet",
   "settings.display.tokenThroughput.description":
     "Vis tekstgenereringshastigheten (tokens/sec) i den nyeste assistentmeldingen og i oppgaveoverskriften. Vises som standard; deaktiver denne innstillingen for å skjule den ved behov.",
@@ -1308,14 +1326,12 @@ export const dict = {
   "task.todos.allDone": "{{count}} oppgaver fullført",
   "task.backgroundAgents.running.one": "1 bakgrunnsagent",
   "task.backgroundAgents.running.many": "{{count}} bakgrunnsagenter",
-  "task.backgroundAgents.more": "+{{count}} flere",
   "task.backgroundAgents.open": "Åpne bakgrunnsagent",
   "task.backgroundAgents.openAll": "Åpne alle bakgrunnsagenter",
   "task.backgroundAgents.cancel": "Stopp",
   "task.backgroundAgents.continueInBackground": "Fortsett i bakgrunnen",
   "task.backgroundAgents.waiting": "En bakgrunnsagent trenger innspill fra deg",
   "task.backgroundAgents.needsInput": "Innspill kreves",
-  "task.backgroundAgents.dismiss": "Avvis",
   "task.backgroundAgents.clearFinished": "Fjern fullførte",
   "task.backgroundAgents.summary": "{{running}} av {{total}} bakgrunnsagenter kjører",
   "task.backgroundAgents.status.running": "Kjører",
@@ -1324,6 +1340,8 @@ export const dict = {
   "task.backgroundAgents.status.error": "Feil",
   "task.backgroundAgents.untitled": "Bakgrunnsagent",
   "task.backgroundAgents.stopAll": "Stopp alle ({{count}})",
+  "task.backgroundAgents.finished": "Bakgrunnsagenter er ferdige",
+  "task.stop": "Stopp underagent",
   "settings.saveBar.unsavedChanges": "Ulagrede endringer",
   "settings.saveBar.discard": "Forkast",
   "settings.saveBar.save": "Lagre",

@@ -24,6 +24,7 @@ import * as Network from "@/kilocode/sandbox/network"
 import { Notebook } from "@/kilocode/notebook/service"
 import { AgentManager, HostError } from "@/kilocode/agent-manager/service"
 import { KiloSessions } from "@/kilo-sessions/kilo-sessions"
+import { enabled as prEnabled } from "@/kilo-sessions/pr-link"
 import * as Log from "@opencode-ai/core/util/log"
 import type { Config } from "@/config/config"
 import type { RuntimeFlags } from "@/effect/runtime-flags"
@@ -49,7 +50,25 @@ export namespace KiloToolRegistry {
     config: Pick<Config.Info, "indexing">,
     global?: Pick<Config.Info, "indexing">,
   ): boolean | undefined {
+    // VS Code enables indexing from project consent, not from config. Build the tool here and let
+    // applyVisibility check consent on each turn, because consent can change after the registry is built.
+    if (process.env["KILO_PLATFORM"] === "vscode") return true
     return config.indexing?.enabled ?? global?.indexing?.enabled
+  }
+
+  /**
+   * Check VS Code project consent without failing tool resolution. Import lazily like semanticTool:
+   * indexing.ts imports AppRuntime, which imports the tool registry, and indexing load failures must not break tools.
+   */
+  function consented(dir: string) {
+    return Effect.tryPromise(() => import("@/kilocode/indexing").then((mod) => mod.KiloIndexing.consented(dir))).pipe(
+      Effect.catch((err) =>
+        Effect.sync(() => {
+          log.warn("semantic search consent unavailable", { err })
+          return false
+        }),
+      ),
+    )
   }
 
   export function usePatch(input: { modelID: string; family?: string }) {
@@ -324,7 +343,6 @@ export namespace KiloToolRegistry {
       experimental?: {
         image_generation?: boolean
         native_notebook_tools?: boolean
-        task_model_selection?: boolean
       }
       shared_agent_board?: boolean
     },
@@ -347,9 +365,7 @@ export namespace KiloToolRegistry {
       ...((Flag.KILO_CLIENT === "cli" || Flag.KILO_CLIENT === "vscode") && tools.cronCreate ? [tools.cronCreate] : []),
       ...((Flag.KILO_CLIENT === "cli" || Flag.KILO_CLIENT === "vscode") && tools.cronList ? [tools.cronList] : []),
       ...((Flag.KILO_CLIENT === "cli" || Flag.KILO_CLIENT === "vscode") && tools.cronDelete ? [tools.cronDelete] : []),
-      ...(Flag.KILO_CLIENT === "vscode" || cfg.experimental?.task_model_selection === true
-        ? [tools.managerModels]
-        : []),
+      tools.managerModels,
       ...(Flag.KILO_CLIENT === "vscode" ? [tools.manager] : []),
       ...(Flag.KILO_CLIENT === "vscode" && tools.browser ? [tools.browser] : []),
       ...(Flag.KILO_CLIENT === "vscode" &&
@@ -362,7 +378,7 @@ export namespace KiloToolRegistry {
       tools.notify,
       ...(Flag.KILO_CLIENT === "vscode" && tools.openPlan ? [tools.openPlan] : []),
       tools.send,
-      tools.linkPr,
+      ...(prEnabled() ? [tools.linkPr] : []),
     ]
   }
 
@@ -416,10 +432,18 @@ export namespace KiloToolRegistry {
           return yield* Network.available(new URL(base), token)
         })
       : false
-    return tools.filter((tool) => {
-      if (tool.id.startsWith("kilo_memory_")) return memoryEnabled
-      if (tool.id === "browser_open") return browser
-      return true
+    const semantic =
+      process.env["KILO_PLATFORM"] === "vscode" && tools.some((tool) => tool.id === "semantic_search")
+        ? yield* consented(ctx.directory)
+        : true
+    return tools.flatMap((tool) => {
+      if (tool.id.startsWith("kilo_memory_")) return memoryEnabled ? [tool] : []
+      if (tool.id === "browser_open") return browser ? [tool] : []
+      if (semantic) return [tool]
+      if (tool.id === "semantic_search") return []
+      if (tool.id !== "glob" && tool.id !== "grep") return [tool]
+      const next = { ...tool, description: tool.description.replace(`\n${hint}`, "") }
+      return [Network.isBuiltin(tool) ? Network.builtin(next) : next]
     })
   })
 

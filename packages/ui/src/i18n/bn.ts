@@ -71,7 +71,7 @@ export const dict: Record<string, string> = {
   "ui.sessionTurn.error.addCredits": "ক্রেডিট যোগ করুন",
   "dialog.usageExceeded.freeTier.title": "বিনামূল্যের সীমা পৌঁছেছে",
   "dialog.usageExceeded.freeTier.description":
-    "Kilo-এ সদস্যতা নিন $5/মাস থেকে শুরু করে সেরা ওপেন-সোর্স মডেলগুলিতে নির্ভরযোগ্য অ্যাক্সেসের জন্য যান৷", // kilocode_change
+    "সেরা ওপেন-সোর্স মডেলগুলিতে নির্ভরযোগ্য অ্যাক্সেসের জন্য $10/মাসে Kilo Go-তে সদস্যতা নিন৷", // kilocode_change
   "dialog.usageExceeded.freeTier.actionLabel": "সদস্যতা",
   "dialog.usageExceeded.accountRateLimit.title": "যাওয়ার সীমা পৌঁছে গেছে",
   "dialog.usageExceeded.accountRateLimit.description":

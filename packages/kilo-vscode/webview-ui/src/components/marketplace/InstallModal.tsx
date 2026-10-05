@@ -72,6 +72,7 @@ export const InstallModal = (props: Props) => {
     return `~/.kilo/skills/${props.item.id}/`
   }
   const about = () => t(`marketplace.install.about.${props.item.type}`)
+  const skills = () => (props.item.type === "mcp" ? (props.item.skills ?? []) : [])
   const scopeDescription = () => t(`marketplace.install.scope.${scope().value}.description`)
   const openDocs = (url: string) => vscode.postMessage({ type: "openExternal", url })
 
@@ -204,6 +205,20 @@ export const InstallModal = (props: Props) => {
               <code>{destination()}</code>
             </div>
           </div>
+
+          <Show when={skills().length > 0}>
+            <div class="install-modal-section" data-slot="marketplace-companion-skills">
+              <span class="install-modal-label">{t("marketplace.install.includedSkills")}</span>
+              <For each={skills()}>
+                {(skill) => (
+                  <div class="install-modal-destination">
+                    <span>{skill.id}</span>
+                    <code>{`${scope().value === "global" ? "~/" : ""}.kilo/skills/${skill.id}/`}</code>
+                  </div>
+                )}
+              </For>
+            </div>
+          </Show>
 
           <Show when={props.item.type === "mcp" || props.item.type === "plugin" || scope().value === "project"}>
             <div class="install-modal-warning">

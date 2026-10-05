@@ -203,7 +203,12 @@ export const TabBar: Component<TabBarProps> = (props) => (
                 </TooltipKeybind>
                 <Show when={props.prStatus()}>
                   {(pr) => (
-                    <Tooltip value={`PR #${pr().number}`} placement="bottom" openDelay={0}>
+                    <TooltipKeybind
+                      title={`PR #${pr().number}`}
+                      keybind={props.bindings().openPR ?? ""}
+                      placement="bottom"
+                      openDelay={0}
+                    >
                       <IconButton
                         icon="pull-request"
                         size="small"
@@ -213,7 +218,7 @@ export const TabBar: Component<TabBarProps> = (props) => (
                         data-active={props.prOpen() ? "" : undefined}
                         onClick={props.onTogglePR}
                       />
-                    </Tooltip>
+                    </TooltipKeybind>
                   )}
                 </Show>
                 <Show when={isWorktree()}>
@@ -239,7 +244,12 @@ export const TabBar: Component<TabBarProps> = (props) => (
                       />
                     </span>
                   </Tooltip>
-                  <Tooltip value={props.t("agentManager.open.tooltip")} placement="bottom" openDelay={0}>
+                  <TooltipKeybind
+                    title={props.t("agentManager.open.tooltip")}
+                    keybind={props.bindings().openWorktree ?? ""}
+                    placement="bottom"
+                    openDelay={0}
+                  >
                     <IconButton
                       size="small"
                       variant="ghost"
@@ -247,7 +257,7 @@ export const TabBar: Component<TabBarProps> = (props) => (
                       aria-label={props.t("agentManager.open.button")}
                       onClick={props.onOpen}
                     />
-                  </Tooltip>
+                  </TooltipKeybind>
                 </Show>
                 <Show when={props.browserAutomation()}>
                   <Tooltip value={props.t("agentManager.browser.title")} placement="bottom" openDelay={0}>

@@ -29,6 +29,8 @@ data class SessionRevertDto(
     val snapshot: String? = null,
     val diff: String? = null,
     val diffs: List<DiffFileDto> = emptyList(),
+    /** Why workspace files were or were not restored: "restored" | "snapshots-disabled" | "unavailable" | "not-a-git-repo". Null for older reverts that predate this field. */
+    val workspace: String? = null,
 )
 
 @Serializable

@@ -228,11 +228,21 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
   const [fetchKey, setFetchKey] = createSignal("")
   let fetchVersion = 0
 
+  // Whether a model-listing fetch is possible for the current package + URL.
+  const canFetch = (npm: CustomProviderPackage, url: string) =>
+    npm !== "@ai-sdk/anthropic" && /^https?:\/\//.test(url.trim())
+
   createEffect(() => {
     const npm = fetchPackage()
     const url = fetchURL()
     const key = fetchKey()
     void key // subscribe to key changes without using the value here
+
+    // Invalidate any in-flight fetch (including a manual one) as soon as the
+    // connection details change, so a stale response can't land after the
+    // user has moved on to different URL/key/package values.
+    fetchVersion++
+    setFetching(false)
 
     // Clear previous results whenever URL or key changes
     setFetchedModels(undefined)
@@ -240,9 +250,8 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
     setFetchStatus(undefined)
     setSearch("")
 
-    if (npm === "@ai-sdk/anthropic" || !/^https?:\/\//.test(url.trim())) return
+    if (!canFetch(npm, url)) return
 
-    fetchVersion++
     const version = fetchVersion
     const timer = setTimeout(() => {
       if (version === fetchVersion) doFetch()
@@ -689,6 +698,16 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
                 </Show>
               </div>
               <div style={{ display: "flex", gap: "8px", "align-items": "center", "flex-wrap": "wrap" }}>
+                <Button
+                  type="button"
+                  size="small"
+                  variant="ghost"
+                  icon="reset"
+                  onClick={doFetch}
+                  disabled={fetching() || !canFetch(form.npm, form.baseURL)}
+                >
+                  {language.t("provider.custom.models.fetch.button")}
+                </Button>
                 <Button
                   type="button"
                   size="small"

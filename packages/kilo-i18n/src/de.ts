@@ -35,6 +35,7 @@ export const dict = {
   "marketplace.install.scope.global.description":
     "Alle Projekte auf diesem Computer. Wird in Ihrer Benutzerkonfiguration gespeichert.",
   "marketplace.install.destination": "Installationsziel",
+  "marketplace.install.includedSkills": "Enthaltene Skills",
   "marketplace.install.about.mcp":
     "Ein MCP-Server stellt Kilo zusätzliche Werkzeuge für die Arbeit mit externen Diensten oder lokalen Programmen bereit.",
   "marketplace.install.about.agent":
@@ -66,6 +67,8 @@ export const dict = {
   "marketplace.remove.confirm":
     "Soll dieser Eintrag ({{type}}) wirklich entfernt werden? Er wird dadurch aus Ihrer {{scope}}-Konfiguration entfernt.",
   "marketplace.remove.cancel": "Abbrechen",
+  "marketplace.remove.mcp.skills":
+    "Dabei werden auch die zu dieser Installation gehörenden Begleit-Skills entfernt. Unabhängig installierte Skills bleiben erhalten.",
   "marketplace.remove.confirm.button": "Entfernen",
   "marketplace.search": "Suchen...",
   "marketplace.filter.all": "Alle Elemente",
@@ -74,6 +77,7 @@ export const dict = {
   "marketplace.empty": "Keine Elemente gefunden",
   "marketplace.empty.relevant": "Keine relevanten Marketplace-Elemente für diesen Arbeitsbereich gefunden.",
   "marketplace.badge.mcpServer": "MCP-Server",
+  "marketplace.badge.skills": "Enthält Skills",
   "marketplace.card.by": "von {{author}}",
   "marketplace.install.method": "Installationsmethode",
   "marketplace.install.parameters": "Parameter",

@@ -95,6 +95,7 @@ export const dict = {
     "ย้อนกลับการสนทนาแล้ว ไม่ทราบสถานะการกู้คืนพื้นที่ทำงานสำหรับการย้อนกลับก่อนหน้านี้",
   "revert.banner.workspace.enableSnapshots": "เปิดใช้งานสแนปชอต",
   "revert.disabled.agentBusy": "รอให้เอเจนต์ทำงานเสร็จ",
+  "revert.error.body": "ที่เก็บข้อมูลอาจกำลังถูกใช้งาน ลองอีกครั้ง หรือดูรายละเอียดในบันทึกของ Kilo",
   "command.session.compact": "บีบอัดเซสชัน",
   "command.session.export": "ส่งออกบันทึกเซสชัน",
 
@@ -197,11 +198,21 @@ export const dict = {
   "prompt.worktrees.title": "Worktrees",
   "prompt.worktrees.search": "ค้นหา Worktree",
   "prompt.thinking.tooltip": "ความพยายามในการให้เหตุผล",
+  "prompt.shortcutHint.addSelection": "เพื่อเพิ่มส่วนที่เลือก",
+  "prompt.shortcutHint.waiting": "เพื่อตอบเซสชันที่รออยู่",
+  "prompt.shortcutHint.type": "เพื่อพิมพ์",
+  "prompt.shortcutHint.sessions": "เพื่อสลับเซสชัน",
+  "prompt.shortcutHint.stop": "เพื่อหยุด",
+  "prompt.shortcutHint.changes": "เพื่อตรวจสอบการเปลี่ยนแปลง",
+  "prompt.shortcutHint.pr": "เพื่อเปิด PR",
+  "prompt.shortcutHint.mode": "โหมดถัดไป",
   "prompt.action.send": "ส่ง",
   "prompt.action.continue": "ดำเนินการต่อ",
   "prompt.action.send.blocked": "โปรดตอบหรือข้ามคำถามที่รอดำเนินการก่อน",
   "prompt.action.send.recording": "ถอดเสียงและส่ง",
   "prompt.action.stop": "หยุด",
+  "prompt.action.stop.background": "หยุดเอเจนต์หลัก เอเจนต์เบื้องหลังจะยังคงทำงานต่อ",
+  "prompt.agents.show": "แสดงเอเจนต์เบื้องหลัง",
   "prompt.action.enhance": "ปรับปรุงพรอมต์",
   "prompt.paste.expand": "คลิกเพื่อขยายข้อความที่วาง",
   "prompt.action.autoApprove.enable": "เปิดใช้การอนุมัติอัตโนมัติ",
@@ -504,6 +515,7 @@ export const dict = {
   "provider.custom.models.toggleImages": "สลับรูปภาพสำหรับทุกโมเดล",
   "provider.custom.models.remove": "ลบโมเดล",
   "provider.custom.models.add": "เพิ่มโมเดล",
+  "provider.custom.models.fetch.button": "ดึงโมเดล",
   "provider.custom.models.fetch.authError": "การยืนยันตัวตนล้มเหลว ตรวจสอบคีย์ API ด้านบนแล้วลองอีกครั้ง",
   "provider.custom.models.fetch.empty": "ไม่พบโมเดลบนเซิร์ฟเวอร์นี้",
   "provider.custom.models.fetch.added": "เพิ่มแล้ว {{count}} โมเดล",
@@ -769,10 +781,12 @@ export const dict = {
   "ui.sessionTurn.status.consideringNextSteps": "กำลังพิจารณาขั้นตอนถัดไป...",
 
   "dialog.model.noProviders": "ไม่มีผู้ให้บริการ",
+  "dialog.model.unavailable": "ไม่สามารถใช้โมเดล Kilo ได้",
 
   "prompt.placeholder.connecting": "กำลังเชื่อมต่อกับเซิร์ฟเวอร์...",
   "prompt.placeholder.error": "การเชื่อมต่อล้มเหลว ตรวจสอบแผงเอาต์พุตหรือรีสตาร์ทส่วนขยาย",
   "prompt.placeholder.default": "พิมพ์ข้อความ, @ เพื่ออ้างถึงไฟล์... (Enter เพื่อส่ง, Shift+Enter เพื่อขึ้นบรรทัดใหม่)",
+  "prompt.placeholder.hint": "พิมพ์ข้อความ, @ เพื่ออ้างถึงไฟล์... ({{key}} {{action}})",
 
   "context.usage.sessionCost": "ค่าใช้จ่ายเซสชัน",
   "context.usage.olderSessions": "{{count}} เซสชันก่อนหน้า",
@@ -828,7 +842,8 @@ export const dict = {
   "settings.browser.description":
     "กำหนดค่าการทำงานอัตโนมัติของเบราว์เซอร์ในตัวที่ขับเคลื่อนโดย Playwright Kilo สามารถนำทาง โต้ตอบ และจับภาพหน้าจอของหน้าเว็บในเซสชันของคุณได้",
   "settings.browser.enable.title": "เปิดใช้งานการทำงานอัตโนมัติของเบราว์เซอร์",
-  "settings.browser.enable.description": "ลงทะเบียนเซิร์ฟเวอร์ Playwright MCP กับ CLI backend",
+  "settings.browser.enable.description":
+    "เปิดใช้งานเบราว์เซอร์ Agent Manager แบบแยกตามเซสชันสำหรับแอปพลิเคชันในเครื่องและหน้าเว็บ HTTPS สาธารณะ",
   "settings.browser.systemChrome.title": "ใช้ Chrome ของระบบ",
   "settings.browser.systemChrome.description": "ใช้เบราว์เซอร์ Chrome ที่ติดตั้งแทนอินสแตนซ์ Chromium แยกต่างหาก",
   "settings.browser.headless.title": "โหมด Headless",
@@ -919,15 +934,12 @@ export const dict = {
   "settings.sandboxing.writablePaths.title": "เส้นทางที่เขียนได้เพิ่มเติม",
   "settings.sandboxing.writablePaths.description":
     "เส้นทางระบบไฟล์เพิ่มเติมที่แซนด์บ็อกซ์อนุญาตให้เขียนได้ (เช่น /tmp, /var/log) จะถูกรวมเข้ากับเส้นทางที่เขียนได้เริ่มต้นเมื่อแซนด์บ็อกซ์เปิดใช้งาน",
-  "settings.experimental.multiProject.title": "Agent Manager หลายโปรเจกต์",
+  "settings.experimental.conversationPromptHistory.title": "ประวัติพรอมต์แยกตามการสนทนา",
+  "settings.experimental.conversationPromptHistory.description":
+    "แยกประวัติพรอมต์ (ArrowUp/ArrowDown) ตามแต่ละการสนทนา แทนการใช้ประวัติเดียวร่วมกันในทุกการสนทนา",
   "settings.experimental.claudeMigration.title": "การย้าย Claude Code",
   "settings.experimental.claudeMigration.description":
     "นำเข้าคำสั่ง CLAUDE.md ระดับโลกที่รองรับ ทักษะอย่างง่าย และคำจำกัดความ MCP ที่ปิดใช้งานเพียงครั้งเดียว ไฟล์ Claude ต้นฉบับจะไม่ถูกแก้ไข ให้เริ่มแบ็กเอนด์ใหม่หลังเปิดใช้งาน",
-  "settings.experimental.multiProject.description":
-    "เปิดใช้งานการจัดการเซสชันและเวิร์กทรีข้ามหลาย Repository ใน Agent Manager Repository ของ workspace ปัจจุบันเป็นโปรเจกต์เริ่มต้นเสมอ",
-  "settings.experimental.taskModelSelection.title": "การเลือกโมเดลตัวแทนย่อยของ Task",
-  "settings.experimental.taskModelSelection.description":
-    "เปิดให้เลือกโมเดล ผู้ให้บริการ และระดับการใช้เหตุผลสำหรับตัวแทนย่อยของ Task ได้อย่างชัดเจน",
   "settings.experimental.mcpTimeout.title": "หมดเวลา MCP (มิลลิวินาที)",
   "settings.experimental.mcpTimeout.description": "หมดเวลาสำหรับคำขอเซิร์ฟเวอร์ MCP เป็นมิลลิวินาที",
   "settings.experimental.remote.title": "การควบคุม Remote",
@@ -1121,6 +1133,9 @@ export const dict = {
   "settings.autoCleanup.runNow": "รันการล้างเดี๋ยวนี้",
   "settings.autoCleanup.runNow.confirm":
     "ลบเซสชันที่หมดอายุอย่างถาวรทั่วทุกโปรเจกต์และไคลเอนต์ Kilo ทุกตัวบนเครื่องนี้หรือไม่?",
+  "settings.autoCleanup.stop": "หยุดการล้างข้อมูล",
+  "settings.autoCleanup.progress.cancelling": "กำลังหยุดการล้างเซสชัน...",
+  "settings.autoCleanup.lastRun.cancelled": "ถูกยกเลิก",
   "settings.context.autoCompaction.title": "การบีบอัดอัตโนมัติ",
   "settings.context.autoCompaction.description": "บีบอัดบริบทอัตโนมัติก่อนถึงขีดจำกัด",
   "settings.context.compaction.title": "การบีบอัด",
@@ -1207,6 +1222,9 @@ export const dict = {
   "settings.display.mcpTool.expanded": "ขยาย",
   "settings.display.mcpTool.collapsed": "ยุบ",
 
+  "settings.display.shortcutHints.title": "แสดงคำแนะนำปุ่มลัด",
+  "settings.display.shortcutHints.description":
+    "แสดงปุ่มลัดที่เหมาะกับสิ่งที่คุณทำอยู่ในช่องพรอมต์ที่ว่าง เช่น วิธีเพิ่มโค้ดที่เลือกหรือกลับไปที่พรอมต์",
   "settings.display.tokenThroughput.title": "แสดงอัตราการประมวลผลโทเคน",
   "settings.display.tokenThroughput.description":
     "แสดงอัตราการสร้างข้อความ (tokens/sec) ในข้อความล่าสุดของผู้ช่วยและส่วนหัวของงาน แสดงโดยค่าเริ่มต้น; ปิดใช้งานการตั้งค่านี้เพื่อซ่อนเมื่อจำเป็น",
@@ -1285,14 +1303,12 @@ export const dict = {
   "task.todos.allDone": "{{count}} งานเสร็จแล้ว",
   "task.backgroundAgents.running.one": "เอเจนต์เบื้องหลัง 1 ตัว",
   "task.backgroundAgents.running.many": "เอเจนต์เบื้องหลัง {{count}} ตัว",
-  "task.backgroundAgents.more": "+{{count}} เพิ่มเติม",
   "task.backgroundAgents.open": "เปิดเอเจนต์เบื้องหลัง",
   "task.backgroundAgents.openAll": "เปิดเอเจนต์เบื้องหลังทั้งหมด",
   "task.backgroundAgents.cancel": "หยุด",
   "task.backgroundAgents.continueInBackground": "ทำต่อในเบื้องหลัง",
   "task.backgroundAgents.waiting": "เอเจนต์เบื้องหลังต้องการข้อมูลจากคุณ",
   "task.backgroundAgents.needsInput": "ต้องการข้อมูล",
-  "task.backgroundAgents.dismiss": "ยกเลิก",
   "task.backgroundAgents.clearFinished": "ล้างรายการที่เสร็จแล้ว",
   "task.backgroundAgents.summary": "เอเจนต์เบื้องหลัง {{running}} จาก {{total}} ตัวกำลังทำงาน",
   "task.backgroundAgents.status.running": "กำลังทำงาน",
@@ -1301,6 +1317,8 @@ export const dict = {
   "task.backgroundAgents.status.error": "ข้อผิดพลาด",
   "task.backgroundAgents.untitled": "เอเจนต์เบื้องหลัง",
   "task.backgroundAgents.stopAll": "หยุดทั้งหมด ({{count}})",
+  "task.backgroundAgents.finished": "เอเจนต์เบื้องหลังทำงานเสร็จแล้ว",
+  "task.stop": "หยุดเอเจนต์ย่อย",
   "settings.saveBar.unsavedChanges": "การเปลี่ยนแปลงที่ยังไม่ได้บันทึก",
   "settings.saveBar.discard": "ยกเลิก",
   "settings.saveBar.save": "บันทึก",

@@ -35,6 +35,7 @@ export const dict = {
   "marketplace.install.scope.global.description":
     "Усі проєкти на цьому комп'ютері. Зберігається у вашій користувацькій конфігурації.",
   "marketplace.install.destination": "Місце встановлення",
+  "marketplace.install.includedSkills": "Включені навички",
   "marketplace.install.about.mcp":
     "MCP-сервер надає Kilo додаткові інструменти для роботи із зовнішніми сервісами або локальними програмами.",
   "marketplace.install.about.agent": "Агент додає багаторазову роль із власними інструкціями та дозволами.",
@@ -65,6 +66,8 @@ export const dict = {
   "marketplace.remove.confirm":
     "Ви впевнені, що хочете видалити цей {{type}}? Це видалить його з вашої конфігурації {{scope}}.",
   "marketplace.remove.cancel": "Скасувати",
+  "marketplace.remove.mcp.skills":
+    "Це також видалить супутні навички, що належать цьому встановленню. Незалежно встановлені навички буде збережено.",
   "marketplace.remove.confirm.button": "Видалити",
   "marketplace.search": "Пошук...",
   "marketplace.filter.all": "Усі елементи",
@@ -73,6 +76,7 @@ export const dict = {
   "marketplace.empty": "Елементів не знайдено",
   "marketplace.empty.relevant": "Для цього робочого простору не знайдено відповідних елементів маркетплейсу.",
   "marketplace.badge.mcpServer": "MCP-сервер",
+  "marketplace.badge.skills": "Містить навички",
   "marketplace.card.by": "від {{author}}",
   "marketplace.install.method": "Метод встановлення",
   "marketplace.install.parameters": "Параметри",

@@ -7,6 +7,7 @@ import type { Config } from "./config"
 import type { ModelAllocation, ReviewCommentEntry, TerminalDestination, TerminalPlacement } from "./agent-manager"
 import type { PRReviewCommentData, ReviewMessageData } from "../../../../src/shared/review-comments"
 import type { BrowserFeedbackData } from "../../../../src/shared/browser-feedback"
+import type { BrowserInteraction, BrowserViewport, BrowserViewIdentity } from "../../../../src/shared/browser-stream"
 import type { WorkStyle, WorkStyleState } from "../../../../src/shared/work-style-presets"
 import type { RefreshProviderUsageMessage, RequestProviderUsageMessage } from "./provider-usage"
 import type { AnacondaDesktopWebviewMessage } from "../../../../src/shared/anaconda-desktop-messages"
@@ -532,6 +533,11 @@ export interface RunAutoCleanupNowMessage {
   requestID: string
 }
 
+export interface StopAutoCleanupNowMessage {
+  type: "stopAutoCleanupNow"
+  requestID: string
+}
+
 export interface RequestThroughputSettingMessage {
   type: "requestThroughputSetting"
 }
@@ -775,6 +781,7 @@ export interface CloseSessionRequest {
 /** Persist a non-worktree session to agent-manager.json (worktreeId = null). */
 export interface PersistSessionRequest {
   type: "agentManager.persistSession"
+  projectId?: string
   sessionId: string
   draftID?: string
 }
@@ -995,6 +1002,13 @@ export interface AgentManagerOpenFileRequest {
   column?: number
 }
 
+// Copy a file's absolute path to the clipboard for a specific session
+export interface AgentManagerCopyFilePathRequest {
+  type: "agentManager.copyFilePath"
+  sessionId: string
+  filePath: string
+}
+
 export interface AgentManagerRequestDocumentMessage {
   type: "agentManager.requestDocument"
   sessionId: string
@@ -1018,6 +1032,11 @@ export interface DocumentOpenFileMessage {
 
 export interface DocumentCloseMessage {
   type: "document.close"
+}
+
+export interface DocumentCopyPathMessage {
+  type: "document.copyPath"
+  file: string
 }
 
 export interface DocumentSendCommentsMessage {
@@ -1370,13 +1389,24 @@ export interface AgentManagerBrowserRequestMessage {
   type:
     | "agentManager.browser.open"
     | "agentManager.browser.refresh"
+    | "agentManager.browser.back"
+    | "agentManager.browser.forward"
     | "agentManager.browser.close"
     | "agentManager.browser.state"
     | "agentManager.browser.inspect"
     | "agentManager.browser.input"
     | "agentManager.browser.devtools"
+    | "agentManager.browser.viewport"
+    | "agentManager.browser.interact"
+    | "agentManager.browser.acknowledge"
   sessionId: string
   projectId?: string
+  browserId?: string
+  navigation?: number
+  viewport?: BrowserViewport
+  identity?: BrowserViewIdentity
+  event?: BrowserInteraction
+  sequence?: number
   url?: string
   requestId?: string
   x?: number
@@ -1454,6 +1484,7 @@ export interface AuthorizeProviderOAuthMessage {
   requestId: string
   providerID: string
   method: number
+  inputs?: Record<string, string>
 }
 
 export interface CompleteProviderOAuthMessage {
@@ -1531,19 +1562,6 @@ export interface ToggleFavoriteRequest {
 
 export interface RequestFavoritesMessage {
   type: "requestFavorites"
-}
-
-// Explicit preferred and per-mode model selection persistence (webview → extension)
-export interface PersistModelSelectionRequest {
-  type: "persistModelSelection"
-  agent: string
-  providerID: string
-  modelID: string
-  variant?: string
-}
-
-export interface RequestModelSelectionsMessage {
-  type: "requestModelSelections"
 }
 
 // Continue in Worktree: transfer sidebar session + git state to an isolated worktree
@@ -1628,6 +1646,7 @@ export type WebviewMessage =
   | { type: "acknowledgeSession"; sessionID: string; eventID: string }
   | DocumentRequestMessage
   | DocumentOpenFileMessage
+  | DocumentCopyPathMessage
   | DocumentCloseMessage
   | DocumentSendCommentsMessage
   | SendMessageRequest
@@ -1712,6 +1731,7 @@ export type WebviewMessage =
   | RequestTimelineSettingMessage
   | RequestAutoCleanupStateMessage
   | RunAutoCleanupNowMessage
+  | StopAutoCleanupNowMessage
   | RequestThroughputSettingMessage
   | RequestAutoApprovalReasonSettingMessage
   | RequestWorkStyleMessage
@@ -1782,6 +1802,7 @@ export type WebviewMessage =
   | CopyToClipboardRequest
   | ShowExistingLocalTerminalRequest
   | AgentManagerOpenFileRequest
+  | AgentManagerCopyFilePathRequest
   | AgentManagerRequestDocumentMessage
   | CreateMultiVersionRequest
   | SetTabOrderRequest
@@ -1863,8 +1884,6 @@ export type WebviewMessage =
   | RequestModelSelectorExpandedMessage
   | ToggleFavoriteRequest
   | RequestFavoritesMessage
-  | PersistModelSelectionRequest
-  | RequestModelSelectionsMessage
   | ToggleRemoteMessage
   | ToggleCaffeinationMessage
   | SetRemoteEnabledMessage

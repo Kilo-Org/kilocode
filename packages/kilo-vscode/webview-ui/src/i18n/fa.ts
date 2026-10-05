@@ -96,6 +96,8 @@ export const dict = {
     "مکالمه بازگردانده شد. وضعیت بازیابی فضای کاری برای این بازگردانی قدیمی‌تر در دسترس نیست.",
   "revert.banner.workspace.enableSnapshots": "فعال‌سازی اسنپ‌شات‌ها",
   "revert.disabled.agentBusy": "منتظر بمانید تا عامل کارش تمام شود",
+  "revert.error.body":
+    "ممکن است مخزن در حال استفاده باشد. دوباره تلاش کنید یا برای جزئیات گزارش‌های Kilo را بررسی کنید.",
   "command.session.compact": "فشرده‌سازی جلسه",
   "command.session.export": "صدور رونوشت جلسه",
 
@@ -199,11 +201,21 @@ export const dict = {
   "prompt.worktrees.title": "Worktrees",
   "prompt.worktrees.search": "جستجوی worktree‌ها",
   "prompt.thinking.tooltip": "میزان استدلال",
+  "prompt.shortcutHint.addSelection": "برای افزودن انتخاب",
+  "prompt.shortcutHint.waiting": "برای پاسخ به نشست منتظر",
+  "prompt.shortcutHint.type": "برای تایپ",
+  "prompt.shortcutHint.sessions": "برای تغییر نشست",
+  "prompt.shortcutHint.stop": "برای توقف",
+  "prompt.shortcutHint.changes": "برای بررسی تغییرات",
+  "prompt.shortcutHint.pr": "برای باز کردن PR",
+  "prompt.shortcutHint.mode": "حالت بعدی",
   "prompt.action.send": "ارسال",
   "prompt.action.continue": "ادامه",
   "prompt.action.send.blocked": "ابتدا به سؤال در انتظار پاسخ دهید یا آن را رد کنید",
   "prompt.action.send.recording": "رونویسی و ارسال",
   "prompt.action.stop": "توقف",
+  "prompt.action.stop.background": "توقف عامل اصلی. عامل‌های پس‌زمینه به اجرا ادامه می‌دهند.",
+  "prompt.agents.show": "نمایش عامل‌های پس‌زمینه",
   "prompt.action.enhance": "بهبود پرامپت",
   "prompt.paste.expand": "برای بازکردن متن جایگذاری‌شده کلیک کنید",
   "prompt.action.indexing": "تنظیمات ایندکس‌گذاری",
@@ -426,6 +438,7 @@ export const dict = {
   "provider.custom.models.toggleImages": "تغییر وضعیت تصویر برای همه",
   "provider.custom.models.remove": "حذف مدل",
   "provider.custom.models.add": "افزودن مدل",
+  "provider.custom.models.fetch.button": "دریافت مدل‌ها",
   "provider.custom.models.fetch.authError": "احراز هویت ناموفق بود. کلید API بالا را بررسی کرده و دوباره امتحان کنید.",
   "provider.custom.models.fetch.empty": "هیچ مدلی در این سرور یافت نشد.",
   "provider.custom.models.fetch.added": "{{count}} مدل اضافه شد.",
@@ -759,9 +772,11 @@ export const dict = {
   "ui.sessionTurn.status.consideringNextSteps": "در حال بررسی مراحل بعدی...",
 
   "dialog.model.noProviders": "هیچ ارائه‌دهنده‌ای وجود ندارد",
+  "dialog.model.unavailable": "مدل‌های Kilo در دسترس نیستند",
 
   "prompt.placeholder.connecting": "در حال اتصال به سرور...",
   "prompt.placeholder.default": "پیامی بنویسید... (Enter برای ارسال، Shift+Enter برای خط جدید)",
+  "prompt.placeholder.hint": "پیامی بنویسید... ({{key}} {{action}})",
   "prompt.placeholder.error": "اتصال ناموفق بود. پنل خروجی را بررسی کنید یا افزونه را مجدداً راه‌اندازی کنید.",
 
   "context.usage.sessionCost": "هزینه جلسه",
@@ -821,7 +836,8 @@ export const dict = {
   "settings.browser.description":
     "پیکربندی اتوماسیون مرورگر داخلی با پشتیبانی Playwright. Kilo می‌تواند در جلسات شما در صفحات وب پیمایش کند، با آن‌ها تعامل داشته باشد و اسکرین‌شات بگیرد.",
   "settings.browser.enable.title": "فعال‌سازی اتوماسیون مرورگر",
-  "settings.browser.enable.description": "سرور Playwright MCP را با بک‌اند CLI ثبت کنید.",
+  "settings.browser.enable.description":
+    "مرورگر Agent Manager مختص هر جلسه را برای برنامه‌های محلی و صفحات عمومی HTTPS فعال کنید.",
   "settings.browser.systemChrome.title": "استفاده از Chrome سیستم",
   "settings.browser.systemChrome.description":
     "به جای یک نمونه Chromium جداگانه، از مرورگر Chrome نصب‌شده شما استفاده کنید.",
@@ -922,15 +938,12 @@ export const dict = {
   "settings.sandboxing.writablePaths.title": "مسیرهای قابل نوشتن اضافی",
   "settings.sandboxing.writablePaths.description":
     "مسیرهای فایل‌سیستم اضافی که Sandbox اجازه نوشتن به آن‌ها را می‌دهد (مثلاً /tmp، /var/log). این مسیرها هنگام فعال بودن Sandbox با مسیرهای قابل نوشتن پیش‌فرض ادغام می‌شوند.",
-  "settings.experimental.multiProject.title": "مدیر agent چندپروژه‌ای",
+  "settings.experimental.conversationPromptHistory.title": "تاریخچه پرامپت برای هر گفتگو",
+  "settings.experimental.conversationPromptHistory.description":
+    "تاریخچه پرامپت (ArrowUp/ArrowDown) را برای هر گفتگو جداگانه نگه دارید، به جای اشتراک یک تاریخچه بین همه گفتگوها.",
   "settings.experimental.claudeMigration.title": "مهاجرت Claude Code",
   "settings.experimental.claudeMigration.description":
     "دستورالعمل‌های سراسری CLAUDE.md پشتیبانی‌شده، مهارت‌های ساده و تعریف‌های MCP غیرفعال را فقط یک‌بار وارد کنید. فایل‌های اصلی Claude تغییر نمی‌کنند؛ پس از فعال‌سازی backend را دوباره راه‌اندازی کنید.",
-  "settings.experimental.multiProject.description":
-    "مدیریت sessionها و worktreeها را در چند مخزن در Agent Manager فعال می‌کند. مخزن فضای کاری فعلی همیشه پروژه پیش‌فرض است.",
-  "settings.experimental.taskModelSelection.title": "انتخاب مدل زیرعامل Task",
-  "settings.experimental.taskModelSelection.description":
-    "انتخاب صریح مدل، ارائه‌دهنده و میزان استدلال برای زیرعامل‌های Task را فعال می‌کند.",
   "settings.experimental.mcpTimeout.title": "زمان‌وقفه MCP (میلی‌ثانیه)",
   "settings.experimental.mcpTimeout.description": "زمان‌وقفه برای درخواست‌های سرور MCP بر حسب میلی‌ثانیه",
   "settings.experimental.remote.title": "کنترل از راه دور",
@@ -1128,6 +1141,9 @@ export const dict = {
   "settings.autoCleanup.runNow": "اجرای پاکسازی الآن",
   "settings.autoCleanup.runNow.confirm":
     "حذف دائمی جلسه‌های منقضی‌شده در همهٔ پروژه‌ها و همهٔ سرویس‌گیرنده‌های Kilo روی این رایانه؟",
+  "settings.autoCleanup.stop": "توقف پاکسازی",
+  "settings.autoCleanup.progress.cancelling": "در حال توقف پاکسازی نشست‌ها...",
+  "settings.autoCleanup.lastRun.cancelled": "قطع‌شده",
 
   "settings.context.autoCompaction.title": "فشرده‌سازی خودکار",
   "settings.context.autoCompaction.description": "قبل از رسیدن به محدودیت، زمینه را به‌طور خودکار فشرده کنید",
@@ -1216,6 +1232,9 @@ export const dict = {
     "انتخاب کنید که بلوک‌های ابزار MCP و عمومی در حالت گسترش‌یافته یا جمع‌شده شروع شوند.",
   "settings.display.mcpTool.expanded": "گسترش‌یافته",
   "settings.display.mcpTool.collapsed": "جمع‌شده",
+  "settings.display.shortcutHints.title": "نمایش راهنمای میانبرها",
+  "settings.display.shortcutHints.description":
+    "میانبر صفحه‌کلیدی متناسب با کاری که اکنون انجام می‌دهید را در اعلان خالی نمایش می‌دهد، مثلاً نحوه افزودن کد انتخاب‌شده یا بازگشت به اعلان.",
   "settings.display.tokenThroughput.title": "نمایش توان عملیاتی توکن",
   "settings.display.tokenThroughput.description":
     "نمایش نرخ تولید متن (tokens/sec) در جدیدترین پیام دستیار و سربرگ کار. به‌طور پیش‌فرض نمایش داده می‌شود؛ برای پنهان کردن آن در صورت نیاز، این تنظیم را غیرفعال کنید.",
@@ -1306,14 +1325,12 @@ export const dict = {
   "task.todos.allDone": "{{count}} کار انجام شد",
   "task.backgroundAgents.running.one": "1 عامل پس‌زمینه",
   "task.backgroundAgents.running.many": "{{count}} عامل پس‌زمینه",
-  "task.backgroundAgents.more": "+{{count}} بیشتر",
   "task.backgroundAgents.open": "باز کردن عامل پس‌زمینه",
   "task.backgroundAgents.openAll": "باز کردن همه عامل‌های پس‌زمینه",
   "task.backgroundAgents.cancel": "توقف",
   "task.backgroundAgents.continueInBackground": "ادامه در پس‌زمینه",
   "task.backgroundAgents.waiting": "یک عامل پس‌زمینه به ورودی شما نیاز دارد",
   "task.backgroundAgents.needsInput": "ورودی لازم است",
-  "task.backgroundAgents.dismiss": "رد کردن",
   "task.backgroundAgents.clearFinished": "پاک کردن موارد تکمیل‌شده",
   "task.backgroundAgents.summary": "{{running}} از {{total}} عامل پس‌زمینه در حال اجرا هستند",
   "task.backgroundAgents.status.running": "در حال اجرا",
@@ -1322,6 +1339,8 @@ export const dict = {
   "task.backgroundAgents.status.error": "خطا",
   "task.backgroundAgents.untitled": "عامل پس‌زمینه",
   "task.backgroundAgents.stopAll": "توقف همه ({{count}})",
+  "task.backgroundAgents.finished": "عامل‌های پس‌زمینه به پایان رسیدند",
+  "task.stop": "توقف زیرعامل",
 
   "settings.saveBar.unsavedChanges": "تغییرات ذخیره‌نشده",
   "settings.saveBar.discard": "رد کردن",

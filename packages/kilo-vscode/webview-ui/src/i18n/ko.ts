@@ -100,6 +100,7 @@ export const dict = {
     "대화가 되돌려졌습니다. 이 이전 되돌리기에서는 작업 영역 복원 상태를 확인할 수 없습니다.",
   "revert.banner.workspace.enableSnapshots": "스냅샷 활성화",
   "revert.disabled.agentBusy": "에이전트가 완료될 때까지 기다리세요",
+  "revert.error.body": "저장소가 사용 중일 수 있습니다. 다시 시도하거나 자세한 내용은 Kilo 로그를 확인하세요.",
   "command.session.compact": "세션 압축",
   "command.session.export": "세션 기록 내보내기",
 
@@ -201,11 +202,21 @@ export const dict = {
   "prompt.worktrees.title": "Worktrees",
   "prompt.worktrees.search": "Worktree 검색",
   "prompt.thinking.tooltip": "추론 강도",
+  "prompt.shortcutHint.addSelection": "로 선택 영역 추가",
+  "prompt.shortcutHint.waiting": "로 대기 중인 세션에 응답",
+  "prompt.shortcutHint.type": "로 입력",
+  "prompt.shortcutHint.sessions": "로 세션 전환",
+  "prompt.shortcutHint.stop": "로 중지",
+  "prompt.shortcutHint.changes": "로 변경 사항 검토",
+  "prompt.shortcutHint.pr": "로 PR 열기",
+  "prompt.shortcutHint.mode": "다음 모드",
   "prompt.action.send": "전송",
   "prompt.action.continue": "계속",
   "prompt.action.send.blocked": "먼저 대기 중인 질문에 답하거나 닫아주세요",
   "prompt.action.send.recording": "텍스트 변환 및 전송",
   "prompt.action.stop": "중지",
+  "prompt.action.stop.background": "메인 에이전트를 중지합니다. 백그라운드 에이전트는 계속 실행됩니다.",
+  "prompt.agents.show": "백그라운드 에이전트 표시",
   "prompt.action.enhance": "프롬프트 개선",
   "prompt.paste.expand": "붙여넣은 텍스트를 확장하려면 클릭",
   "prompt.action.autoApprove.enable": "자동 승인 사용",
@@ -467,6 +478,7 @@ export const dict = {
   "provider.custom.models.toggleImages": "모든 모델의 이미지 전환",
   "provider.custom.models.remove": "모델 제거",
   "provider.custom.models.add": "모델 추가",
+  "provider.custom.models.fetch.button": "모델 가져오기",
   "provider.custom.models.fetch.authError": "인증에 실패했습니다. 위의 API 키를 확인하고 다시 시도하세요.",
   "provider.custom.models.fetch.empty": "이 서버에서 모델을 찾을 수 없습니다.",
   "provider.custom.models.fetch.added": "{{count}}개 모델이 추가되었습니다.",
@@ -773,10 +785,12 @@ export const dict = {
   "ui.sessionTurn.status.consideringNextSteps": "다음 단계 고려 중...",
 
   "dialog.model.noProviders": "공급자 없음",
+  "dialog.model.unavailable": "Kilo 모델을 사용할 수 없음",
 
   "prompt.placeholder.connecting": "서버에 연결 중...",
   "prompt.placeholder.error": "연결에 실패했습니다. 출력 패널을 확인하거나 확장 프로그램을 다시 시작하세요.",
   "prompt.placeholder.default": "메시지를 입력하세요, @로 파일 언급... (Enter로 전송, Shift+Enter로 줄 바꿈)",
+  "prompt.placeholder.hint": "메시지를 입력하세요, @로 파일 언급... ({{key}} {{action}})",
 
   "context.usage.sessionCost": "세션 비용",
   "context.usage.olderSessions": "{{count}}개의 이전 세션",
@@ -833,7 +847,8 @@ export const dict = {
   "settings.browser.description":
     "Playwright 기반의 내장 브라우저 자동화를 구성합니다. Kilo는 세션에서 웹 페이지를 탐색하고 상호 작용하며 스크린샷을 찍을 수 있습니다.",
   "settings.browser.enable.title": "브라우저 자동화 활성화",
-  "settings.browser.enable.description": "Playwright MCP 서버를 CLI 백엔드에 등록합니다.",
+  "settings.browser.enable.description":
+    "로컬 애플리케이션과 공개 HTTPS 페이지를 위한 세션별 Agent Manager 브라우저를 활성화합니다.",
   "settings.browser.systemChrome.title": "시스템 Chrome 사용",
   "settings.browser.systemChrome.description": "별도의 Chromium 인스턴스 대신 설치된 Chrome 브라우저를 사용합니다.",
   "settings.browser.headless.title": "헤드리스 모드",
@@ -924,15 +939,12 @@ export const dict = {
   "settings.sandboxing.writablePaths.title": "추가 쓰기 가능 경로",
   "settings.sandboxing.writablePaths.description":
     "샌드박스에서 쓰기를 허용하는 추가 파일시스템 경로(예: /tmp, /var/log). 샌드박스가 활성화되면 기본 쓰기 가능 경로와 병합됩니다.",
-  "settings.experimental.multiProject.title": "멀티 프로젝트 Agent Manager",
+  "settings.experimental.conversationPromptHistory.title": "대화별 프롬프트 기록",
+  "settings.experimental.conversationPromptHistory.description":
+    "프롬프트 기록(ArrowUp/ArrowDown)을 모든 대화에서 공유하지 않고 대화별로 분리하여 유지합니다.",
   "settings.experimental.claudeMigration.title": "Claude Code 마이그레이션",
   "settings.experimental.claudeMigration.description":
     "지원되는 전역 CLAUDE.md 지침, 간단한 스킬 및 비활성화된 MCP 정의를 한 번 가져옵니다. 원본 Claude 파일은 변경되지 않으며 활성화 후 백엔드를 다시 시작해야 합니다.",
-  "settings.experimental.multiProject.description":
-    "Agent Manager에서 여러 저장소에 걸친 세션과 워크트리 관리를 활성화합니다. 현재 워크스페이스 저장소는 항상 기본 프로젝트입니다.",
-  "settings.experimental.taskModelSelection.title": "Task 하위 에이전트 모델 선택",
-  "settings.experimental.taskModelSelection.description":
-    "Task 하위 에이전트에 대해 모델, 제공자 및 추론 수준을 명시적으로 선택합니다.",
   "settings.experimental.mcpTimeout.title": "MCP 타임아웃 (ms)",
   "settings.experimental.mcpTimeout.description": "MCP 서버 요청의 타임아웃 시간 (밀리초)",
   "settings.experimental.remote.title": "Remote 제어",
@@ -1124,6 +1136,9 @@ export const dict = {
   "settings.autoCleanup.runNow": "지금 정리 실행",
   "settings.autoCleanup.runNow.confirm":
     "이 컴퓨터의 모든 프로젝트와 모든 Kilo 클라이언트에 걸쳐 만료된 세션을 영구적으로 삭제할까요?",
+  "settings.autoCleanup.stop": "정리 중지",
+  "settings.autoCleanup.progress.cancelling": "세션 정리를 중지하는 중...",
+  "settings.autoCleanup.lastRun.cancelled": "중단됨",
   "settings.context.autoCompaction.title": "자동 압축",
   "settings.context.autoCompaction.description": "컨텍스트가 한도에 도달하기 전에 자동으로 압축",
   "settings.context.compaction.title": "압축",
@@ -1210,6 +1225,9 @@ export const dict = {
   "settings.display.mcpTool.expanded": "펼침",
   "settings.display.mcpTool.collapsed": "접힘",
 
+  "settings.display.shortcutHints.title": "단축키 힌트 표시",
+  "settings.display.shortcutHints.description":
+    "빈 프롬프트에 현재 작업에 맞는 키보드 단축키를 표시합니다. 예: 선택한 코드를 추가하거나 프롬프트로 돌아가는 방법.",
   "settings.display.tokenThroughput.title": "토큰 처리량 표시",
   "settings.display.tokenThroughput.description":
     "최신 어시스턴트 메시지와 작업 헤더에 텍스트 생성 속도(tokens/sec)를 표시합니다. 기본적으로 표시되며, 필요할 때 이 설정을 비활성화하면 숨길 수 있습니다.",
@@ -1288,14 +1306,12 @@ export const dict = {
   "task.todos.allDone": "{{count}} 할 일 완료",
   "task.backgroundAgents.running.one": "백그라운드 에이전트 1개",
   "task.backgroundAgents.running.many": "백그라운드 에이전트 {{count}}개",
-  "task.backgroundAgents.more": "+{{count}}개 더",
   "task.backgroundAgents.open": "백그라운드 에이전트 열기",
   "task.backgroundAgents.openAll": "모든 백그라운드 에이전트 열기",
   "task.backgroundAgents.cancel": "중지",
   "task.backgroundAgents.continueInBackground": "백그라운드에서 계속",
   "task.backgroundAgents.waiting": "백그라운드 에이전트에 입력이 필요합니다",
   "task.backgroundAgents.needsInput": "입력 필요",
-  "task.backgroundAgents.dismiss": "닫기",
   "task.backgroundAgents.clearFinished": "완료된 항목 지우기",
   "task.backgroundAgents.summary": "백그라운드 에이전트 {{total}}개 중 {{running}}개 실행 중",
   "task.backgroundAgents.status.running": "실행 중",
@@ -1304,6 +1320,8 @@ export const dict = {
   "task.backgroundAgents.status.error": "오류",
   "task.backgroundAgents.untitled": "백그라운드 에이전트",
   "task.backgroundAgents.stopAll": "모두 중지 ({{count}})",
+  "task.backgroundAgents.finished": "백그라운드 에이전트 완료",
+  "task.stop": "하위 에이전트 중지",
   "settings.saveBar.unsavedChanges": "저장되지 않은 변경 사항",
   "settings.saveBar.discard": "취소",
   "settings.saveBar.save": "저장",

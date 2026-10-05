@@ -34,6 +34,7 @@ export const dict = {
     "هذا المشروع فقط. يمكن إضافة الملفات المثبتة إلى نظام التحكم في الإصدارات ومشاركتها مع فريقك.",
   "marketplace.install.scope.global.description": "جميع المشاريع على هذا الجهاز. تُحفظ في إعدادات المستخدم الخاصة بك.",
   "marketplace.install.destination": "وجهة التثبيت",
+  "marketplace.install.includedSkills": "المهارات المضمنة",
   "marketplace.install.about.mcp": "يمنح خادم MCP منصة Kilo أدوات إضافية للعمل مع الخدمات الخارجية أو البرامج المحلية.",
   "marketplace.install.about.agent": "يضيف الوكيل دورًا قابلاً لإعادة الاستخدام بتعليماته وأذوناته الخاصة.",
   "marketplace.install.about.skill": "تضيف المهارة تعليمات وموارد خاصة بمهام معينة يمكن لـ Kilo تحميلها عند الحاجة.",
@@ -60,6 +61,8 @@ export const dict = {
   "marketplace.remove.confirm":
     "هل أنت متأكد أنك تريد إزالة هذا الـ {{type}}؟ سيؤدي هذا إلى إزالته من تكوين {{scope}} الخاص بك.",
   "marketplace.remove.cancel": "إلغاء",
+  "marketplace.remove.mcp.skills":
+    "يؤدي هذا أيضًا إلى إزالة المهارات المرافقة التابعة لهذا التثبيت. يتم الاحتفاظ بالمهارات المثبتة بشكل مستقل.",
   "marketplace.remove.confirm.button": "إزالة",
   "marketplace.search": "بحث...",
   "marketplace.filter.all": "جميع العناصر",
@@ -68,6 +71,7 @@ export const dict = {
   "marketplace.empty": "لم يتم العثور على عناصر",
   "marketplace.empty.relevant": "لم يتم العثور على عناصر سوق ذات صلة بمساحة العمل هذه.",
   "marketplace.badge.mcpServer": "خادم MCP",
+  "marketplace.badge.skills": "يتضمن مهارات",
   "marketplace.card.by": "بواسطة {{author}}",
   "marketplace.install.method": "طريقة التثبيت",
   "marketplace.install.parameters": "المعلمات",

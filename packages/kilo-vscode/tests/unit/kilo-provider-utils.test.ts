@@ -13,7 +13,7 @@ import {
   type ProviderInfo,
 } from "../../src/kilo-provider-utils"
 import type { CloudSessionMessage } from "../../src/services/cli-backend/types"
-import type { SyncPayload } from "../../src/services/cli-backend/sdk-sse-adapter"
+import { normalize, type SyncPayload } from "../../src/services/cli-backend/sdk-sse-adapter"
 import type {
   Session,
   Agent,
@@ -154,6 +154,21 @@ describe("sessionToWebview", () => {
     const result = sessionToWebview(makeSession({ id: "abc", title: "My Session" }))
     expect(result.id).toBe("abc")
     expect(result.title).toBe("My Session")
+  })
+
+  it.each([
+    ["high", { providerID: "kilo", modelID: "gpt", variant: "high" }],
+    ["default", { providerID: "kilo", modelID: "gpt" }],
+  ])("projects the agent and model the session last ran (variant %s)", (variant, model) => {
+    const result = sessionToWebview(makeSession({ agent: "plan", model: { id: "gpt", providerID: "kilo", variant } }))
+    expect(result.agent).toBe("plan")
+    expect(result.model).toEqual(model)
+  })
+
+  it("omits the agent and model before the session first runs", () => {
+    const result = JSON.parse(JSON.stringify(sessionToWebview(makeSession())))
+    expect(result).not.toHaveProperty("agent")
+    expect(result).not.toHaveProperty("model")
   })
 
   it("produces valid ISO format", () => {
@@ -462,6 +477,22 @@ describe("mapSSEEventToWebviewMessage", () => {
       eventID: "evt-error",
       sessionID: "sess-1",
       error: event.properties.error,
+    })
+  })
+
+  it.each(["admission", "execution"] as const)("preserves the %s session error phase", (phase) => {
+    const event = {
+      id: "evt-phase",
+      type: "session.error" as const,
+      properties: { sessionID: "sess-1", error: { name: "UnknownError" as const, data: { message: "error" } } },
+      metadata: { phase },
+    }
+    expect(mapSSEEventToWebviewMessage(normalize(event), "sess-1")).toEqual({
+      type: "sessionError",
+      eventID: event.id,
+      sessionID: "sess-1",
+      error: event.properties.error,
+      phase,
     })
   })
 

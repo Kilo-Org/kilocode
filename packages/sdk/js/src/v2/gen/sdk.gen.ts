@@ -211,6 +211,8 @@ import type {
   KilocodeResetSessionBoardResponses,
   KilocodeResumeSessionErrors,
   KilocodeResumeSessionResponses,
+  KilocodeRetentionCancelErrors,
+  KilocodeRetentionCancelResponses,
   KilocodeRetentionRunErrors,
   KilocodeRetentionRunResponses,
   KilocodeRetentionStatusErrors,
@@ -7922,6 +7924,40 @@ export class Retention extends HeyApiClient {
         ...options?.headers,
         ...params.headers,
       },
+    })
+  }
+
+  /**
+   * Stop the active session retention pass
+   *
+   * Ask the machine-wide retention pass to stop before deleting more sessions. Already-deleted sessions stay deleted; the interrupted pass still records its partial result and honors the spacing window.
+   */
+  public cancel<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<
+      KilocodeRetentionCancelResponses,
+      KilocodeRetentionCancelErrors,
+      ThrowOnError
+    >({
+      url: "/kilocode/retention/cancel",
+      ...options,
+      ...params,
     })
   }
 }

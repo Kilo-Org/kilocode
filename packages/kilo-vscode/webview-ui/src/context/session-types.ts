@@ -108,13 +108,10 @@ export interface SessionContextValue {
   scopedQuestions: (sessionID: string | undefined) => QuestionRequest[]
   scopedSuggestions: (sessionID: string | undefined) => SuggestionRequest[]
 
-  // Model selection (global, extension-lifetime)
+  // Model selection (per-scope picks over per-agent config)
   selected: (sessionID?: string) => ModelSelection | null
   modelForAgent: (agent: string) => ModelSelection | null
   selectModel: (providerID: string, modelID: string, sessionID?: string) => void
-  preferredSelection: Accessor<(ModelSelection & { variant?: string }) | undefined>
-  preferencesReady: Accessor<boolean>
-  rememberSelection: (agent: string, model: ModelSelection, variant?: string) => void
   trackScopes: (ids: Accessor<readonly string[]>) => () => void
 
   // Cost and context usage for the current session
@@ -216,6 +213,8 @@ export interface SessionContextValue {
   loadSessions: () => void
   loadMoreSessions: () => void
   sessionsHasMore: Accessor<boolean>
+  /** Keep these sessions in the store when a full load lists only its first page. */
+  keepSessions: (ids: Accessor<readonly string[]>) => () => void
   sessionsLoadingMore: Accessor<boolean>
   loadOlderMessages: () => boolean
   selectSession: (id: string, options?: { focus?: boolean; scrollToBottom?: boolean }) => void

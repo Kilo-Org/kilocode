@@ -13,6 +13,8 @@ import { batch, createEffect, createSignal, onCleanup, onMount } from "solid-js"
 import { StoryProviders, defaultMockData, mockSessionValue } from "./StoryProviders"
 import { ChatView } from "../components/chat/ChatView"
 import { ErrorDisplay } from "../components/chat/ErrorDisplay"
+import { AgentStack, useAgentStack } from "../components/chat/AgentStack"
+import { pollBackgroundJobs } from "../components/chat/background-jobs"
 import { TaskHeader } from "../components/chat/TaskHeader"
 import { TaskUsage } from "../components/chat/TaskUsage"
 import { QuestionDock } from "../components/chat/QuestionDock"
@@ -1439,8 +1441,67 @@ export const TaskHeaderSkeleton: Story = {
   },
 }
 
-export const TaskHeaderBackgroundAgents1280: Story = {
-  name: "TaskHeader background agents, wide",
+// ---------------------------------------------------------------------------
+// TaskHeader for a subagent session
+// ---------------------------------------------------------------------------
+
+const subagentHeaderMessages: Message[] = [
+  {
+    id: "user-subagent-header-001",
+    sessionID: SESSION_ID,
+    role: "user",
+    content: "Explore the CLI core performance critical paths and report the slowest stages.",
+    createdAt: new Date(headerNow - 8000).toISOString(),
+    time: { created: headerNow - 8000 },
+    model: { providerID: "kilo", modelID: "anthropic/claude-sonnet-4-6", variant: "high" },
+  },
+  {
+    id: "asst-subagent-header-001",
+    sessionID: SESSION_ID,
+    role: "assistant",
+    parentID: "user-subagent-header-001",
+    content: "Profiling the CLI startup and session switching paths.",
+    createdAt: new Date(headerNow - 6000).toISOString(),
+    time: { created: headerNow - 6000 },
+    providerID: "kilo",
+    modelID: "anthropic/claude-sonnet-4-6",
+    variant: "high",
+    tokens: { input: 18_400, output: 320, reasoning: 2_100, cache: { read: 6_200, write: 0 } },
+  },
+]
+
+function subagentHeaderSession() {
+  return {
+    ...mockSessionValue({ id: SESSION_ID, status: "idle" }),
+    messages: () => subagentHeaderMessages,
+    visibleMessages: () => subagentHeaderMessages,
+    currentSession: () => ({
+      id: SESSION_ID,
+      parentID: "parent-session-001",
+      title: "Explore CLI core performance (@explore subagent)",
+      createdAt: new Date(headerNow - 8000).toISOString(),
+      updatedAt: new Date(headerNow).toISOString(),
+    }),
+    contextUsage: () => ({ tokens: 26_800, percentage: 13 }),
+    costBreakdown: () => [{ label: "Session", cost: 0.01 }],
+  }
+}
+
+export const TaskHeaderSubagent: Story = {
+  name: "TaskHeader — subagent with model and reasoning effort",
+  render: () => (
+    <StoryProviders sessionID={SESSION_ID} noPadding>
+      <SessionContext.Provider value={subagentHeaderSession() as any}>
+        <div style={{ width: "100%" }}>
+          <TaskHeader readonly />
+        </div>
+      </SessionContext.Provider>
+    </StoryProviders>
+  ),
+}
+
+export const BackgroundAgentPanel: Story = {
+  name: "Background agent stack and panel",
   args: { names: ["Trace overflow recovery", "Trace outbound request size", "Check request limits"] },
   render: (args: { names: string[] }) => {
     const tools: ToolPart[] = args.names.map((description, index) => ({
@@ -1452,44 +1513,29 @@ export const TaskHeaderBackgroundAgents1280: Story = {
       state: { status: "completed", input: { description }, output: "Started background agent", title: description },
       metadata: { sessionId: `child-${index}`, background: true },
     }))
+    const [hidden, setHidden] = createSignal<ReadonlySet<string>>(new Set())
     const session = {
       ...mockSessionValue({ id: SESSION_ID }),
-      messages: () => headerMessages,
-      visibleMessages: () => headerMessages,
-      getParts: (id: string) => headerParts[id] ?? [],
-      currentSession: () => ({
-        id: SESSION_ID,
-        title: "Investigate request size limits",
-        createdAt: new Date(headerNow).toISOString(),
-        updatedAt: new Date(headerNow).toISOString(),
-      }),
       getSessionToolParts: () => tools,
       allStatusMap: () => Object.fromEntries(tools.map((_, index) => [`child-${index}`, { type: "busy" as const }])),
+      dismissedBackgroundJobs: () => hidden(),
+      dismissBackgroundJobs: (_: string, ids: string[]) => setHidden(new Set([...hidden(), ...ids])),
+    }
+    const Stack = () => {
+      pollBackgroundJobs()
+      const state = useAgentStack()
+      return <AgentStack state={state} label />
     }
     return (
       <StoryProviders sessionID={SESSION_ID} noPadding>
         <SessionContext.Provider value={session as unknown as SessionContextValue}>
-          <TaskHeader />
+          <div style={{ padding: "160px 12px 12px" }}>
+            <Stack />
+          </div>
         </SessionContext.Provider>
       </StoryProviders>
     )
   },
-}
-
-export const TaskHeaderBackgroundAgents420: Story = {
-  ...TaskHeaderBackgroundAgents1280,
-  name: "TaskHeader background agents, narrow",
-}
-
-export const TaskHeaderBackgroundAgents200: Story = {
-  ...TaskHeaderBackgroundAgents1280,
-  name: "TaskHeader background agents, compact",
-}
-
-export const TaskHeaderSingleBackgroundAgent420: Story = {
-  ...TaskHeaderBackgroundAgents1280,
-  name: "TaskHeader single background agent, narrow",
-  args: { names: ["Check request limits"] },
 }
 
 export const TaskHeaderWithTodosAllDone: Story = {
@@ -1563,6 +1609,7 @@ const usageProvider = {
   authMethods: () => ({}),
   authStates: () => ({}),
   isModelValid: () => true,
+  kiloUnavailable: () => false,
 }
 
 const usageStory = (open: boolean) => () => (
