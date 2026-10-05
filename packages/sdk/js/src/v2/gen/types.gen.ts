@@ -1093,6 +1093,10 @@ export type SessionStatus =
       requestID: string
       message: string
     }
+  | {
+      type: "scheduled"
+      scheduledAt: string
+    }
 
 export type QuestionOption = {
   /**
@@ -4301,6 +4305,7 @@ export type MarketplaceInstalledMetadata = {
 export type MarketplaceListResult = {
   items: Array<MarketplaceItem>
   installed: MarketplaceInstalledMetadata
+  filenames?: Array<string>
   errors?: Array<string>
 }
 

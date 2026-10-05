@@ -2,6 +2,8 @@ import { Image } from "@/image/image" // kilocode_change - classify user image v
 import { busyMessage, isBusy } from "@/kilocode/database/sqlite-error" // kilocode_change
 import { KiloSessionHttpApi } from "@/kilocode/server/httpapi/session-fork" // kilocode_change
 import { KiloSessionPromptQueue } from "@/kilocode/session/prompt-queue" // kilocode_change
+import { mergeScheduled } from "@/kilocode/session/scheduled" // kilocode_change
+import { Wakeup } from "@/kilocode/wakeup" // kilocode_change
 import { PermissionV1 } from "@opencode-ai/core/v1/permission"
 import { KiloViewers } from "@/kilocode/presence/service" // kilocode_change
 import { Agent } from "@/agent/agent"
@@ -64,6 +66,7 @@ export const sessionHandlers = HttpApiBuilder.group(InstanceHttpApi, "session", 
     const agentSvc = yield* Agent.Service
     const permissionSvc = yield* Permission.Service
     const statusSvc = yield* SessionStatus.Service
+    const wake = yield* Wakeup.Service // kilocode_change
     const todoSvc = yield* Todo.Service
     const summary = yield* SessionSummary.Service
     const events = yield* EventV2Bridge.Service
@@ -84,7 +87,13 @@ export const sessionHandlers = HttpApiBuilder.group(InstanceHttpApi, "session", 
     })
 
     const status = Effect.fn("SessionHttpApi.status")(function* () {
-      return Object.fromEntries(yield* statusSvc.list())
+      // kilocode_change start - fold in a future wakeup so a session asleep on a
+      // schedule is reported as `scheduled` instead of `idle`
+      return mergeScheduled(
+        Object.fromEntries(yield* statusSvc.list()),
+        yield* wake.scheduled(yield* InstanceState.directory),
+      )
+      // kilocode_change end
     })
 
     const requireSession = Effect.fn("SessionHttpApi.requireSession")(function* (sessionID: SessionID) {

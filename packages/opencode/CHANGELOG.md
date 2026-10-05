@@ -1,5 +1,36 @@
 # @kilocode/cli
 
+## 7.8.2
+
+### Patch Changes
+
+- [#14676](https://github.com/Kilo-Org/kilocode/pull/14676) [`f05a4fd`](https://github.com/Kilo-Org/kilocode/commit/f05a4fdc3ec894269b89b812ad16a2a7158b6a32) - Use the full model output limit for Claude Sonnet, Opus, and Claude-family aliases such as Auto Frontier to prevent responses from ending early during long reasoning.
+
+- [#14547](https://github.com/Kilo-Org/kilocode/pull/14547) [`1b09c19`](https://github.com/Kilo-Org/kilocode/commit/1b09c194b70512e02d1d87f2dcb2c9440432d273) - Report a session asleep on a pending wakeup or cron task as `scheduled` with its wake time.
+
+- [#14708](https://github.com/Kilo-Org/kilocode/pull/14708) [`c8aaebf`](https://github.com/Kilo-Org/kilocode/commit/c8aaebf4789cab9ed6faf141033e4f9ade337bc8) - Show suggested next steps in the CLI with clickable action buttons, and show whether each suggestion was accepted or dismissed.
+
+- [#14635](https://github.com/Kilo-Org/kilocode/pull/14635) [`693c402`](https://github.com/Kilo-Org/kilocode/commit/693c4025a02c7eeecd988ed1639eb895f81d6735) - Recover from provider context-limit errors by compacting and retrying when the provider reports the request exceeded the model's context length.
+
+- [#13321](https://github.com/Kilo-Org/kilocode/pull/13321) [`ad173c7`](https://github.com/Kilo-Org/kilocode/commit/ad173c7e9ae71ced66cf12db333ac1ec10a01069) Thanks [@maphew](https://github.com/maphew)! - Stop sending prompt_cache_breakpoint to custom OpenAI-compatible providers, and to first-party provider IDs rerouted through custom endpoint overrides; both reject the parameter with HTTP 400.
+
+- [#14592](https://github.com/Kilo-Org/kilocode/pull/14592) [`c4506f7`](https://github.com/Kilo-Org/kilocode/commit/c4506f7ef87139654da357779ef6882568803a07) - Show Kilo Gateway models that don't report their supported parameters, such as Jev Router.
+
+- [#14319](https://github.com/Kilo-Org/kilocode/pull/14319) [`52019c9`](https://github.com/Kilo-Org/kilocode/commit/52019c9f90a01beddccdc01483b861ebe132bafb) Thanks [@hdcodedev](https://github.com/hdcodedev)! - Report revert failures instead of failing silently. A failed revert or redo now shows an error toast, and the snapshot steps behind it log the git exit code and stderr when they give up.
+
+- [#14680](https://github.com/Kilo-Org/kilocode/pull/14680) [`ac4a092`](https://github.com/Kilo-Org/kilocode/commit/ac4a092aa827d6d3efd280ae4fef29f4548f688f) - Preserve prompt cache prefixes across goal turns, compaction, and completion, and keep the working timer running through turn boundaries and rejected commands until the goal stops.
+
+- [#14709](https://github.com/Kilo-Org/kilocode/pull/14709) [`1988e54`](https://github.com/Kilo-Org/kilocode/commit/1988e54fd649b9f83ca90c7298651f5ba0a1f4ad) - Keep file storage usable after a cancelled operation interrupts its first access. Before, wakeups, cron tasks, and session fork diffs could fail until Kilo restarted.
+
+- [#14679](https://github.com/Kilo-Org/kilocode/pull/14679) [`9076f03`](https://github.com/Kilo-Org/kilocode/commit/9076f03018fe3f3b4fd4707fb6a4da3ec6530301) - Restrict session PR linking, automatic recording, and background polling to CLI backends. VS Code, Agent Manager, JetBrains, and other clients keep their existing PR integrations without running the separate session-link mechanism, including when controlled from mobile.
+
+- Updated dependencies [[`463cbed`](https://github.com/Kilo-Org/kilocode/commit/463cbedaa6f17ebf6f4fbcc276a338259f348b63), [`d6426d0`](https://github.com/Kilo-Org/kilocode/commit/d6426d047505e2a90bd910d13aab51f6eb4a2b6f)]:
+  - @kilocode/kilo-indexing@7.8.2
+  - @kilocode/kilo-telemetry@7.8.2
+  - @opencode-ai/server@7.8.2
+  - @opencode-ai/tui@7.8.2
+  - @opencode-ai/ui@7.8.2
+
 ## 7.8.1
 
 ### Patch Changes

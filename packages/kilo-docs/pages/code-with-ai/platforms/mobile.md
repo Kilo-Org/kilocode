@@ -19,7 +19,7 @@ The mobile app lets you:
 - Spawn Cloud Agents and code directly from the app.
 - Monitor and view all non-remote sessions in one place.
 - Send follow-up messages while a session is still running — they are queued and processed in order.
-- Run slash commands (like `/compact`) on connected remote CLI sessions, and start a new session in the same workspace with `/new`. The new session inherits the current session's mode and model. Older CLI versions that do not support remote commands prompt you to upgrade.
+- Run slash commands (like `/compact`) on connected remote CLI sessions, and start a new session in the same workspace with `/new`. Typing `/` also lists the session's [skills](/docs/customize/skills) next to the commands; a skill row carries a **Skill** badge, and selecting it invokes that skill in the session. The new session inherits the current session's mode and model. Older CLI versions that do not support remote commands prompt you to upgrade.
 - Track a session's [goal](/docs/code-with-ai/agents/goals) from a fixed section under the session header, and start or control one with `/goal`.
 - Clear the visible transcript of a remote CLI session with `/clear`. Clearing is client-side only, so it works on any CLI version; server history is kept and may reappear when you re-enter the session.
 - Rename a remote CLI session from the app or the CLI — renames sync in both directions.
@@ -112,6 +112,14 @@ Remote sessions start with the mode and model selected on the new-session screen
 For Cloud Agent sessions, choose a repository from GitHub, GitLab, or, for organizations, Bitbucket. The picker groups repositories by provider and includes **Recently used**. Each provider has its own connection and error messages, so a problem with one does not hide the others.
 
 Cloud Agent sessions also offer a **Sandbox** field, which starts on the backend's default destination. Tap it to pick a sandbox type from a sheet that groups the types the backend offers by provider; the field then shows the choice, such as `Cloudflare · Shared`. While the options load, a field-sized skeleton holds the slot, and a failed load shows **Couldn't load sandbox options** with **Retry**. If a chosen type is no longer offered, the field shows why and offers **Use Default**, and you cannot start until you resolve it. Starting sends the type you picked, or the backend default when you pick nothing. Owners without sandbox selection see no Sandbox field.
+
+## Agent environment profiles
+
+The **Profile** tab lets you browse, create, edit, and delete [agent environment profiles](/docs/code-with-ai/platforms/cloud-agent#agent-environment-profiles) from your phone. Profiles are personal or organization-owned, and you can manage their repository bindings and reorder them with the up and down buttons. Each profile row shows its MCP server count.
+
+When you start a session, pick a profile in the new-session screen or choose **No profile**. The active profile appears as a chip on the new-session and session screens; in an organization session, tap the chip to open the profile in its owner's scope. You can also change the profile under **Advanced Configuration** while starting a session. Environment variables and setup commands you enter under **Advanced Configuration** are sent with the session even if you do not save them to a profile.
+
+The profile editor manages the profile's environment variables, setup commands, slash commands, MCP servers, skills, and agents. Secret values stay masked until you reveal them; enter a new value to rotate a secret. To save the current environment variables and setup commands as a new profile, use **Save as Profile**, which appears once a setup command has text. Marking a profile as the default updates it for the profile's owner.
 
 ## Starting a session from a picture
 

@@ -37,6 +37,7 @@ export class MarketplacePanelProvider implements vscode.Disposable {
   private refresh: ReturnType<typeof setTimeout> | undefined
   private statuses = new Map<string, SessionStatus["type"]>()
   private pendingInstall: MarketplaceItem | undefined
+  private pendingFocus: MarketplaceItem | undefined
   private disposables: vscode.Disposable[] = []
   private subscriptions: Array<() => void> = []
   private readonly marketplace = new MarketplaceService()
@@ -63,6 +64,7 @@ export class MarketplacePanelProvider implements vscode.Disposable {
     if (this.panel) {
       this.setProjectDirectory(project)
       this.panel.reveal(vscode.ViewColumn.One)
+      this.post({ type: "resetMarketplaceFilters" })
       this.scheduleRefresh()
       return
     }
@@ -91,10 +93,16 @@ export class MarketplacePanelProvider implements vscode.Disposable {
     this.flushPendingInstall()
   }
 
+  /** Open the panel focused on a specific item so it is easy to find. */
+  focusItem(item: MarketplaceItem): void {
+    this.openPanel()
+    this.pendingFocus = item
+    this.flushPendingFocus()
+  }
+
   dispose(): void {
     this.panel?.dispose()
     this.cleanup()
-    this.marketplace.dispose()
   }
 
   private attach(panel: vscode.WebviewPanel, project: string | null): void {
@@ -156,6 +164,8 @@ export class MarketplacePanelProvider implements vscode.Disposable {
     this.ready = false
     this.generation++
     this.statuses.clear()
+    this.pendingInstall = undefined
+    this.pendingFocus = undefined
   }
 
   private async connect(): Promise<void> {
@@ -208,6 +218,7 @@ export class MarketplacePanelProvider implements vscode.Disposable {
         else await this.connect()
         await this.fetchData()
         this.flushPendingInstall()
+        this.flushPendingFocus()
         return
       case "retryConnection":
         await this.connect()
@@ -241,6 +252,14 @@ export class MarketplacePanelProvider implements vscode.Disposable {
     this.post({ type: "openInstallModal", mpItem: item })
   }
 
+  /** Ask the webview to focus a queued item, once it can receive it. */
+  private flushPendingFocus(): void {
+    if (!this.pendingFocus || !this.ready) return
+    const item = this.pendingFocus
+    this.pendingFocus = undefined
+    this.post({ type: "focusMarketplaceItem", mpItem: item })
+  }
+
   private scheduleRefresh(): void {
     if (!this.ready) return
     if (this.refresh) clearTimeout(this.refresh)
@@ -254,7 +273,7 @@ export class MarketplacePanelProvider implements vscode.Disposable {
     const generation = ++this.generation
     try {
       const project = this.project ?? undefined
-      const data = await fetchMarketplaceData(this.marketplaceCtx, project, this.directory(), this.relevanceRoots())
+      const data = await fetchMarketplaceData(this.marketplaceCtx, project, this.directory())
       if (generation !== this.generation) return
       const dismissed = this.context.globalState.get<boolean>("kilo.agentMigrationBannerDismissed") ?? false
       this.post({ type: "marketplaceData", ...data, showAgentMigrationBanner: !dismissed })
@@ -321,12 +340,6 @@ export class MarketplacePanelProvider implements vscode.Disposable {
 
   private directory(): string {
     return this.project ?? vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? os.homedir()
-  }
-
-  private relevanceRoots(): vscode.Uri[] {
-    if (!this.project) return vscode.workspace.workspaceFolders?.map((folder) => folder.uri) ?? []
-    const folder = vscode.workspace.workspaceFolders?.find((item) => item.uri.fsPath === this.project)
-    return [folder?.uri ?? vscode.Uri.file(this.project)]
   }
 
   private openExternal(raw: unknown): void {

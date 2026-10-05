@@ -5,9 +5,11 @@ import ai.kilocode.client.app.KiloAgentBehaviorService
 import ai.kilocode.client.app.KiloAppService
 import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.plugin.KiloBundle
+import ai.kilocode.client.plugin.KiloDocs
 import ai.kilocode.client.settings.base.DirectoryReadyConfigurable
 import ai.kilocode.client.settings.base.SettingsDraftPage
 import ai.kilocode.client.settings.base.SettingsDraftState
+import ai.kilocode.client.settings.base.SettingsInfo
 import ai.kilocode.client.settings.base.SettingsListPanel
 import ai.kilocode.client.settings.base.SettingsMessageException
 import ai.kilocode.client.settings.base.SettingsPathDialog
@@ -144,6 +146,12 @@ internal class SkillsSettingsUi(
     override fun emptyText() = KiloBundle.message("settings.agentBehavior.skills.empty")
 
     override fun tailActions(): List<AnAction> = listOf(marketplaceAction("settings_skills"))
+
+    override fun info(): JComponent = SettingsInfo(
+        KiloBundle.message("settings.agentBehavior.skills.info"),
+        KiloBundle.message("settings.agentBehavior.skills.info.more"),
+        KiloDocs.SKILLS,
+    )
 
     internal fun updateSources(paths: List<String>, urls: List<String>) {
         state.update { copy(sources = SkillsConfigDto(paths = paths, urls = urls)) }

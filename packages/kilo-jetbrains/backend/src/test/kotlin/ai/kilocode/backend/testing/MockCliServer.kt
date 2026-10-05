@@ -192,6 +192,8 @@ class MockCliServer : AutoCloseable {
     @Volatile var pendingPermissionsStatus = 200
     @Volatile var pendingQuestions = "[]"
     @Volatile var pendingQuestionsStatus = 200
+    @Volatile var instanceReloadStatus = 200
+    @Volatile var lastInstanceReloadPath: String? = null
 
     // Sandbox REST responses
     @Volatile var sandboxSupport = """{"available":true}"""
@@ -499,7 +501,10 @@ class MockCliServer : AutoCloseable {
                     lastRetentionRunBody = body
                     respond(output, retentionRunStatus, retentionRun)
                 }
-                bare == "/instance/reload" && method == "POST" -> respond(output, 200, "true")
+                bare == "/instance/reload" && method == "POST" -> {
+                    lastInstanceReloadPath = path
+                    respond(output, instanceReloadStatus, "true")
+                }
                 bare == "/command" -> respond(output, commandsStatus, commands)
                 bare == "/skill" -> respond(output, skillsStatus, skills)
                 bare == "/find/file" -> {

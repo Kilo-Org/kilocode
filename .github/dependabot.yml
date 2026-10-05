@@ -1,27 +1,35 @@
 # kilocode_change - new file
 version: 2
 updates:
-  # Bun workspace root (packages/*). Known overlap: packages/kilo-docs also
-  # has its own pnpm block below, since this scan can't see its separate
-  # pnpm-lock.yaml. Both may target the same package.json line; whichever PR
-  # merges first makes the other stale (caught by stale-bot-pr-notify.yml).
+  # Bun workspace root (packages/*). Version updates are OFF (limit 0): this
+  # scan covers ~17 upstream-owned packages that share one bun.lock, and
+  # Dependabot cannot scope a workspace scan by path. Nearly every PR it opened
+  # touched upstream files and was closed by hand (dependabot-auto-merge.yml
+  # skips them by design). Those dependencies come in with upstream merges.
+  # A limit of 0 does not disable security updates: alerts still open PRs, and
+  # security-findings-notify.yml reports them. Those PRs mostly edit upstream
+  # manifests, and a root `overrides` or catalog pin can make them a no-op
+  # (check the resolved version in bun.lock before merging). packages/kilo-docs
+  # has its own block below, since this scan can't see its separate
+  # pnpm-lock.yaml.
   - package-ecosystem: "bun"
     directory: "/"
     schedule:
       interval: "weekly"
-    cooldown:
-      default-days: 7
-    open-pull-requests-limit: 10
+    open-pull-requests-limit: 0
     labels:
       - "dependencies"
     commit-message:
       prefix: "chore"
       include: "scope"
+    # One PR for all security fixes in this scan, instead of one per alert.
+    # Deliberately not named "*-minor-patch": these PRs are never auto-merged,
+    # and this group has no update-types filter because a fix may need a major.
     groups:
-      bun-minor-patch:
-        update-types:
-          - "minor"
-          - "patch"
+      security-updates:
+        applies-to: security-updates
+        patterns:
+          - "*"
 
   # packages/kilo-docs deploys separately via pnpm; see note above.
   - package-ecosystem: "npm"
@@ -35,7 +43,33 @@ updates:
       - "dependencies"
     commit-message:
       prefix: "chore(kilo-docs)"
+    # Majors are never proposed. They can change peer specs or type targets
+    # (for example the @types/node major, which no longer matched the Node
+    # versions we target). Bump them by hand, on purpose.
+    ignore:
+      - dependency-name: "*"
+        update-types:
+          - "version-update:semver-major"
+    # Related packages move together. Group names must end in "-minor-patch"
+    # so dependabot-auto-merge.yml recognises them. A dependency joins the
+    # first group that matches it.
     groups:
+      react-minor-patch:
+        patterns:
+          - "react"
+          - "react-dom"
+          - "@types/react"
+          - "@types/react-dom"
+        update-types:
+          - "minor"
+          - "patch"
+      vitest-minor-patch:
+        patterns:
+          - "vitest"
+          - "@vitest/*"
+        update-types:
+          - "minor"
+          - "patch"
       kilo-docs-minor-patch:
         update-types:
           - "minor"
@@ -47,12 +81,57 @@ updates:
       interval: "weekly"
     cooldown:
       default-days: 7
-    open-pull-requests-limit: 5
+    # One slot per group below (6), so no group waits for another to merge.
+    open-pull-requests-limit: 6
     labels:
       - "dependencies"
     commit-message:
       prefix: "chore(jetbrains)"
+    # Majors are never proposed. They can change the build tooling or test
+    # APIs (for example okhttp 4 -> 5 deprecates mockwebserver, and a Gradle
+    # wrapper or Kotlin plugin major changes the build itself). Bump them by
+    # hand, on purpose.
+    ignore:
+      - dependency-name: "*"
+        update-types:
+          - "version-update:semver-major"
+    # One bad update must not block the rest, and coupled artifacts must move
+    # together (same "-minor-patch" suffix and first-match rules as above).
     groups:
+      intellij-minor-patch:
+        patterns:
+          - "org.jetbrains.intellij.platform*"
+          - "rpc"
+        update-types:
+          - "minor"
+          - "patch"
+      kotlin-minor-patch:
+        patterns:
+          - "org.jetbrains.kotlin*"
+          - "org.jetbrains.kotlinx*"
+        update-types:
+          - "minor"
+          - "patch"
+      junit-minor-patch:
+        patterns:
+          - "junit*"
+          - "org.junit*"
+        update-types:
+          - "minor"
+          - "patch"
+      okhttp-minor-patch:
+        patterns:
+          - "com.squareup.okhttp3*"
+        update-types:
+          - "minor"
+          - "patch"
+      markdown-minor-patch:
+        patterns:
+          - "org.commonmark*"
+          - "org.nibor.autolink*"
+        update-types:
+          - "minor"
+          - "patch"
       jetbrains-minor-patch:
         update-types:
           - "minor"

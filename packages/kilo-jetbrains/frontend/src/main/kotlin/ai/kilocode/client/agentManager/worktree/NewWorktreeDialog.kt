@@ -1,6 +1,7 @@
 package ai.kilocode.client.agentManager.worktree
 
 import ai.kilocode.client.KiloNotifications
+import ai.kilocode.client.actions.reloadCoreSettings
 import ai.kilocode.client.app.KiloAppService
 import ai.kilocode.client.app.KiloSandboxService
 import ai.kilocode.client.app.KiloWorkspaceService
@@ -506,6 +507,7 @@ internal class NewWorktreeDialog(
                     sandbox.setNewSessionDefault(sandboxToggle.isSelected)
                 }
             },
+            SlashAction.RELOAD to { reloadCoreSettings(workspaces, directory, project, "slash_command") },
         )
         return SlashAction.ALL.map { spec ->
             SlashAction(spec.name, KiloBundle.message(spec.descriptionKey), spec.hints, actions[spec] ?: {})
