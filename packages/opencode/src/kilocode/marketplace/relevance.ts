@@ -71,9 +71,10 @@ export const detect = Effect.fn("MarketplaceRelevance.detect")(function* (input:
       })
       const hits = left.filter((pattern) => result.items.some((item) => matches(item.path, pattern)))
       for (const hit of hits) found.add(hit)
-      // A malformed pattern makes ripgrep reject the whole alternation, so search every
-      // still-missing pattern alone. One bad catalog entry cannot hide the others.
-      if (result.partial) {
+      // A malformed pattern makes ripgrep reject the whole alternation, so search the
+      // still-missing patterns alone. A transient error sets partial without
+      // invalidPattern, and must not trigger a fresh walk per pattern.
+      if (result.invalidPattern && left.length > 1) {
         for (const pattern of left.filter((item) => !found.has(item))) {
           const single = yield* search(pattern)
           if (single.items.some((item) => matches(item.path, pattern))) found.add(pattern)

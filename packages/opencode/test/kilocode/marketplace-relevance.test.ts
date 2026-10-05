@@ -119,4 +119,28 @@ describe("marketplace relevance", () => {
       expect(found).toEqual(["*.ipynb"])
     }),
   )
+
+  it.live("does not fan out per pattern on a transient ripgrep error", () =>
+    Effect.gen(function* () {
+      const dir = yield* tmpdirScoped({})
+      const calls: string[] = []
+      // A transient error (for example an unreadable directory) sets partial without
+      // invalidPattern. Real ripgrep cannot produce this deterministically, so stub it.
+      const ripgrep = {
+        glob: (input: { pattern: string }) => {
+          calls.push(input.pattern)
+          return Effect.succeed({ items: [], truncated: false, partial: true })
+        },
+      } as unknown as Ripgrep.Interface
+
+      const found = yield* MarketplaceRelevance.detect({
+        ripgrep,
+        directory: dir,
+        items: [item("a", ["*.ipynb"]), item("b", ["*.duckdb"])],
+      })
+
+      expect(found).toEqual([])
+      expect(calls).toHaveLength(1)
+    }),
+  )
 })
