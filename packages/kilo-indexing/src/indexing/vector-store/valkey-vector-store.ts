@@ -399,6 +399,11 @@ export class ValkeyVectorStore implements IVectorStore {
       const SEARCH_LIMIT = 10000
 
       for (const filePath of filePaths) {
+        // "=>" cannot be expressed in an FT.SEARCH TAG query; skip it so one path doesn't abort the batch
+        if (filePath.includes("=>")) {
+          log.warn("Skipping delete for path containing '=>'", { collection: this.collectionName, filePath })
+          continue
+        }
         const sanitizedPath = this.sanitizeTagValue(filePath)
         const query = `@filePath:{${sanitizedPath}}`
 

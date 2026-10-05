@@ -551,5 +551,19 @@ describe("ValkeyVectorStore Operations", () => {
         `${collectionName}:chunk-b2`,
       ])
     })
+
+    test("skips a path containing '=>' and still deletes the others", async () => {
+      await connectStore()
+
+      const collectionName = store.getCollectionName()
+      mockGlideFtInfo.mockResolvedValueOnce({ num_docs: 10, fields: [] })
+      mockGlideFtSearch.mockResolvedValueOnce([1, [{ key: `${collectionName}:chunk-b1` }]])
+      mockDel.mockResolvedValueOnce(1)
+
+      await store.deletePointsByMultipleFilePaths(["src/a=>b.ts", "src/b.ts"])
+
+      expect(mockGlideFtSearch).toHaveBeenCalledTimes(1)
+      expect(mockDel).toHaveBeenCalledWith([`${collectionName}:chunk-b1`])
+    })
   })
 })
