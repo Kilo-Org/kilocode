@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test"
-import { resolveMessagePrefs } from "../../webview-ui/src/context/session-preferences"
+import { resolveInfoPrefs, resolveMessagePrefs } from "../../webview-ui/src/context/session-preferences"
 import type { Message } from "../../webview-ui/src/types/messages"
 
 function msg(input: Partial<Message>): Message {
@@ -108,5 +108,31 @@ describe("session preference recovery", () => {
     expect(prefs.agent).toBe("code")
     expect(prefs.picks.code?.seq).toBe(1)
     expect(prefs.unattributed?.seq).toBe(0)
+  })
+})
+
+describe("session info recovery", () => {
+  it("recovers the agent, model and effort a server session last ran with", () => {
+    expect(
+      resolveInfoPrefs({ agent: "ask", model: { providerID: "openai", modelID: "gpt-5.5", variant: "high" } }, agents),
+    ).toEqual({ agent: "ask", model: { providerID: "openai", modelID: "gpt-5.5" }, variant: "high" })
+  })
+
+  it("treats a missing variant as an explicit Default", () => {
+    expect(resolveInfoPrefs({ agent: "code", model: { providerID: "openai", modelID: "gpt-5.5" } }, agents)).toEqual({
+      agent: "code",
+      model: { providerID: "openai", modelID: "gpt-5.5" },
+      variant: "",
+    })
+  })
+
+  it("keeps the agent alone when the session has no model yet", () => {
+    expect(resolveInfoPrefs({ agent: "code" }, agents)).toEqual({ agent: "code" })
+  })
+
+  it("ignores unknown or missing agents so a model is never attributed to the wrong agent", () => {
+    const model = { providerID: "openai", modelID: "gpt-5.5" }
+    expect(resolveInfoPrefs({ agent: "task", model }, agents)).toBeUndefined()
+    expect(resolveInfoPrefs({ model }, agents)).toBeUndefined()
   })
 })

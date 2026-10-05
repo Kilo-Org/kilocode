@@ -81,9 +81,9 @@ import {
 } from "./session-utils"
 import { Identifier } from "../utils/id"
 import { resolveModelSelection } from "./model-selection"
-import { COMPOSER, getAgentModel, getSelected, getSessionModel } from "./session-model-store"
+import { COMPOSER, getAgentModel, getSelected } from "./session-model-store"
 import { isModelValid } from "./provider-utils"
-import { resolveMessagePrefs } from "./session-preferences"
+import { createSessionRecovery } from "./session-recovery"
 import { errorIDs, preserveSessionErrors, withoutResolvedSessionErrors } from "./session-errors"
 import { PartStash } from "./part-stash"
 import { isolate, mergeOptimisticPart, mergeOptimisticParts, mergeParts } from "./session-parts"
@@ -104,7 +104,7 @@ import { goalControl } from "../../../src/kilo-provider/command-completion"
 import { continuation } from "./session-continuation"
 import { clearIfOn, createCloudPrune } from "./session-cloud-prune"
 import { isSameSessionTree } from "./model-usage"
-import { createDraftAgentSeed, resolvePromptAgent } from "./session-agent"
+import { createDraftAgentSeed, resolvePromptAgent, resolveScopeAgent } from "./session-agent"
 import { createModelSelector } from "./session-model-selector"
 import { createModelPreferences } from "./session-model-preferences"
 import { activities, blockedSessionIds, type Activity } from "../utils/session-activity"
@@ -274,7 +274,7 @@ export const SessionProvider: ParentComponent = (props) => {
   const removeAgent = (name: string) => {
     setAgents((prev) => prev.filter((a) => a.name !== name))
 
-    // Clear stale selections so selectedAgentName() falls back to the default
+    // Clear stale selections so agentForScope() falls back to the default
     if (pendingAgentSelection() === name) {
       setPendingAgentSelection(null)
     }
@@ -420,20 +420,16 @@ export const SessionProvider: ParentComponent = (props) => {
     })
   }
 
-  // Per-session agent selection
-  const selectedAgentName = createMemo<string>(() => {
-    const sessionID = currentSessionID()
-    if (sessionID) {
-      return store.agentSelections[sessionID] ?? defaultAgent()
-    }
-    return pendingAgentSelection() ?? defaultAgent()
-  })
-
+  // One rule decides the agent for every scope, and the model, effort, picks
+  // and sent prompt all read it. With no scope it means the current view: the
+  // open session, otherwise the composer, which follows the pending agent.
   function agentForScope(sessionID?: string) {
-    if (sessionID && sessionID !== COMPOSER) return store.agentSelections[sessionID] ?? defaultAgent()
-    // The composer scope follows the pending agent, even when a session is open
-    // elsewhere; forced-fresh-draft commands resolve through it.
-    return pendingAgentSelection() ?? defaultAgent()
+    return resolveScopeAgent({
+      id: sessionID ?? currentSessionID() ?? COMPOSER,
+      selections: store.agentSelections,
+      pending: pendingAgentSelection(),
+      fallback: defaultAgent(),
+    })
   }
   // Draft scopes keep per-agent picks that transfer on promotion and remember effort.
   const isDraftScope = (id: string) => id === COMPOSER || /^(?:sidebar-)?pending:/.test(id)
@@ -504,8 +500,7 @@ export const SessionProvider: ParentComponent = (props) => {
   // The no-session composer keeps its own picks under the reserved COMPOSER scope.
   function selected(sessionID?: string): ModelSelection | null {
     const id = sessionID ?? currentSessionID() ?? COMPOSER
-    if (id === COMPOSER) return getSelected(preferences(), environment(), COMPOSER, selectedAgentName())
-    return getSessionModel(preferences(), environment(), id, defaultAgent())
+    return getSelected(preferences(), environment(), id, agentForScope(id))
   }
 
   function pushRecent(selection: ModelSelection) {
@@ -532,6 +527,17 @@ export const SessionProvider: ParentComponent = (props) => {
       }),
     )
   }
+
+  const recovery = createSessionRecovery({
+    store,
+    select: (id, agent) => setStore("agentSelections", id, agent),
+    pick: setPick,
+    variant: (key, value) => setStore("variantSelections", key, value),
+    agent: agentForScope,
+    names: agentNames,
+  })
+  const recoverPrefs = recovery.messages
+  const recoverInfo = recovery.info
 
   const memory = createModelPreferences({
     store,
@@ -690,10 +696,11 @@ export const SessionProvider: ParentComponent = (props) => {
       }),
     )
 
-    // Rescan already-loaded message history so sessions whose messagesLoaded
+    // Rescan already-loaded session info and message history so sessions that
     // arrived before agentsLoaded (and therefore got no agent selection) are
     // backfilled now that we know the valid agent names.
     batch(() => {
+      for (const info of Object.values(store.sessions)) recoverInfo(info, names)
       for (const [sid, msgs] of Object.entries(store.messages)) {
         recoverPrefs(sid, msgs, names)
       }
@@ -1173,6 +1180,8 @@ export const SessionProvider: ParentComponent = (props) => {
         setPendingAgentSelection(null)
         memory.forget(COMPOSER)
       }
+      // After the draft and pending agent, so local choices win.
+      recoverInfo(session)
 
       const active = currentSessionID()
       const draft = draftSessionID()
@@ -1186,26 +1195,6 @@ export const SessionProvider: ParentComponent = (props) => {
 
   function patchPage(sessionID: string, patch: Partial<MessagePageState>) {
     setPages(sessionID, { ...(pages[sessionID] ?? emptyPageState), ...patch })
-  }
-
-  function recoverPrefs(sessionID: string, messages: Message[], names = agentNames()) {
-    const prefs = resolveMessagePrefs(messages, names)
-    if (prefs.agent && !store.agentSelections[sessionID]) {
-      setStore("agentSelections", sessionID, prefs.agent)
-    }
-    const entries = new Map(Object.entries(prefs.picks))
-    if (prefs.unattributed) {
-      const owner = prefs.agent ?? store.agentSelections[sessionID] ?? defaultAgent()
-      const existing = entries.get(owner)
-      if (!existing || prefs.unattributed.seq < existing.seq) entries.set(owner, prefs.unattributed)
-    }
-    for (const [agent, pick] of entries) {
-      if (!store.sessionOverrides[sessionID]?.[agent]) {
-        setPick(sessionID, agent, pick.model)
-      }
-      const key = variantKey(pick.model, agent, sessionID)
-      if (store.variantSelections[key] === undefined) setStore("variantSelections", key, pick.variant)
-    }
   }
 
   function withPending(sessionID: string, messages: Message[]) {
@@ -1889,6 +1878,8 @@ export const SessionProvider: ParentComponent = (props) => {
     const prev = store.sessions[session.id]?.revert
     const next = session.revert ?? undefined
     setStore("sessions", session.id, session)
+    const info = store.sessions[session.id]
+    if (info) recoverInfo(info)
     if (!changed || (prev?.messageID === next?.messageID && prev?.partID === next?.partID)) return
     clearClose(session.id)
     resetTodos(session.id, next)
@@ -1903,6 +1894,9 @@ export const SessionProvider: ParentComponent = (props) => {
       open: paging.open(),
       fresh: freshSessions,
       setSessions: (updater) => setStore("sessions", produce(updater)),
+    })
+    batch(() => {
+      for (const info of loaded) if (store.sessions[info.id]) recoverInfo(info)
     })
     paging.finish(hasMore ?? false)
   }
@@ -2205,7 +2199,13 @@ export const SessionProvider: ParentComponent = (props) => {
     const resolved = resolveModelSelection({ ...environment(), session: selection })
     if (selection && resolved?.providerID === selection.providerID && resolved.modelID === selection.modelID)
       return true
-    showToast({ variant: "error", title: language.t("dialog.model.select.title") })
+    // Say why the picker is empty when an organization's Kilo catalog failed to load.
+    const unavailable = provider.kiloUnavailable()
+    showToast({
+      variant: "error",
+      title: unavailable ? language.t("dialog.model.unavailable") : language.t("dialog.model.select.title"),
+      description: unavailable ? language.t("session.activity.retry") : undefined,
+    })
     return false
   }
 
@@ -3008,13 +3008,13 @@ export const SessionProvider: ParentComponent = (props) => {
     selectedAgent: agentForScope,
     submission,
     selectAgent,
-    getSessionAgent: (sessionID: string) => store.agentSelections[sessionID] ?? defaultAgent(),
+    getSessionAgent: (sessionID: string) => agentForScope(sessionID),
     setSessionModel: models.session,
     setSessionAgent: (sessionID: string, name: string) => {
       setStore("agentSelections", sessionID, name)
     },
     setSessionVariant: (sessionID: string, providerID: string, modelID: string, value: string, agent?: string) => {
-      const name = agent ?? store.agentSelections[sessionID] ?? defaultAgent()
+      const name = agent ?? agentForScope(sessionID)
       const key = variantKey({ providerID, modelID }, name, sessionID)
       setStore("variantSelections", key, value)
     },

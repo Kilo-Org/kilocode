@@ -2204,13 +2204,16 @@ try {
   value.setSessionVariant("comparison-only", personal.providerID, personal.modelID, "low")
   assert.deepEqual(value.submission("comparison-only"), { model: personal, variant: "low", agent: "code" })
 
-  // The no-session composer keeps its own per-agent pick.
+  // The no-session composer keeps its own per-agent pick. A model switch
+  // carries the effort it displayed (Code's configured "low"), not the
+  // remembered "high" that configuration shadows.
   value.setCurrentSessionID(undefined)
   value.selectAgent("code")
   choice(value.selected(), first)
+  assert.equal(value.currentVariant(), "low")
   value.selectModel(personal.providerID, personal.modelID)
   choice(value.selected(), personal)
-  assert.equal(value.currentVariant(), "high")
+  assert.equal(value.currentVariant(), "low")
   assert.deepEqual(value.submission("preference-active"), combo)
 
   // Retention must not assign picks to unopened or still-loading historical sessions.
@@ -2429,6 +2432,48 @@ try {
     untrack()
     await settle()
     choice(value.selected("pending:project-one"), first)
+  }
+
+  // One agent resolver for every scope. With a session open, no-scope reads and
+  // writes both target it (QuestionDock, the worktree dialog). Drafts resolve the
+  // model and effort of the agent they send. Server session info shows a
+  // reopened session's agent and model before its history loads, without
+  // overriding a local choice. The worktree dialog's effort matches chat's.
+  {
+    setSettings({
+      agent: { code: { model: "kilo/z-first", variant: "high" }, ask: { model: "kilo/unset-effort", variant: "low" } },
+    })
+    await emit({ type: "variantsLoaded", variants: { "agent/code/kilo/z-first": "low" } })
+    value.clearCurrentSession()
+    value.selectAgent("ask")
+    value.setCurrentSessionID("ses_resolver")
+    value.setSessionAgent("ses_resolver", "code")
+    assert.equal(value.selectedAgent(), "code")
+    value.selectAgent("ask")
+    assert.equal(value.selectedAgent("ses_resolver"), "ask")
+    assert.deepEqual(value.submission("ses_resolver"), { model: outgoing, variant: "low", agent: "ask" })
+
+    value.setCurrentSessionID(undefined)
+    assert.equal(value.selectedAgent("pending:resolver"), "ask")
+    assert.deepEqual(value.submission("pending:resolver"), { model: outgoing, variant: "low", agent: "ask" })
+
+    await emit({
+      type: "sessionsLoaded",
+      sessions: [
+        ...unwrap(value.sessions()),
+        { ...info("ses_info"), agent: "ask", model: { ...first, variant: "high" } },
+      ],
+    })
+    assert.equal(value.selectedAgent("ses_info"), "ask")
+    choice(value.selected("ses_info"), first)
+    assert.equal(value.currentVariant("ses_info"), "high")
+    value.setSessionAgent("ses_info", "code")
+    await emit({ type: "sessionUpdated", session: { ...info("ses_info"), agent: "ask" } })
+    assert.equal(value.selectedAgent("ses_info"), "code")
+
+    assert.equal(value.variantForAgent("code", first), "high")
+    assert.equal(value.variantPreference("code", first), value.variantForAgent("code", first))
+    setSettings({})
   }
   // Repeated goal promotion removes empty draft caches without overwriting arriving session history.
   for (const [index, args] of ["pause", "do X"].entries()) {

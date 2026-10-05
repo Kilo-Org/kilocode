@@ -100,6 +100,24 @@ describe("session variants", () => {
     expect(state.variants.agent("code", model)).toBe("max")
   })
 
+  it("resolves the raw saved choice in the same order as the displayed effort", () => {
+    const state = setup("pending-new", "high")
+    state.selections["agent/code/anthropic/claude-sonnet-4"] = "low"
+    expect(state.variants.current()).toBe("high")
+    expect(state.variants.saved(model, "code")).toBe("high")
+    expect(state.variants.choice()).toBe("high")
+    state.variants.select("low")
+    expect(state.variants.saved(model, "code", "pending-new")).toBe("low")
+    expect(state.variants.current()).toBe("low")
+  })
+
+  it("skips a configured variant the model does not offer, as the displayed effort does", () => {
+    const state = setup("pending-new", "ultra")
+    state.selections["agent/code/anthropic/claude-sonnet-4"] = "low"
+    expect(state.variants.current()).toBe("low")
+    expect(state.variants.saved(model, "code")).toBe("low")
+  })
+
   it("does not apply a configured variant to another model", () => {
     const state = setup("pending-new", "max")
     state.config.model = "anthropic/another-model"

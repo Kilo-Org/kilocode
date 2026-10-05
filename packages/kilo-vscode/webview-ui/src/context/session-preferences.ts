@@ -1,4 +1,4 @@
-import type { Message, ModelSelection } from "../types/messages"
+import type { Message, ModelSelection, SessionInfo } from "../types/messages"
 import { DEFAULT_VARIANT } from "./session-variant-store"
 
 export interface MessagePrefs {
@@ -33,4 +33,20 @@ export function resolveMessagePrefs(messages: Message[], names: Set<string>): Me
     if (!unattributed) unattributed = { model, variant, seq }
   }
   return { agent, picks, unattributed }
+}
+
+/**
+ * The agent, model and effort a server session last ran with, so a reopened
+ * session shows them before its history loads. Unknown agents yield nothing,
+ * and a model is only attributed to the agent that ran it.
+ */
+export function resolveInfoPrefs(info: Pick<SessionInfo, "agent" | "model">, names: Set<string>) {
+  const agent = info.agent?.trim()
+  if (!agent || !names.has(agent)) return undefined
+  if (!info.model?.providerID || !info.model.modelID) return { agent }
+  return {
+    agent,
+    model: { providerID: info.model.providerID, modelID: info.model.modelID },
+    variant: info.model.variant ?? DEFAULT_VARIANT,
+  }
 }

@@ -60,11 +60,16 @@ export function createSessionVariants(options: Options) {
   const request = (sessionID?: string) =>
     current(sessionID) ?? (list(sessionID).length > 0 ? DEFAULT_VARIANT : undefined)
 
-  const saved = (selection: ModelSelection, name: string, sessionID?: string) =>
-    (sessionID ? options.selections()[variantKey(selection, name, sessionID)] : undefined) ??
-    options.selections()[variantKey(selection, name)] ??
-    options.selections()[legacyVariantKey(selection)] ??
-    configured(name, selection)
+  // The raw choice behind current(), in the same order: scoped, then the
+  // configured variant, then remembered, then legacy. An explicit Default stays
+  // "" so carry and the worktree dialog can honor it.
+  const saved = (selection: ModelSelection, name: string, sessionID?: string) => {
+    const scoped = sessionID ? options.selections()[variantKey(selection, name, sessionID)] : undefined
+    if (scoped !== undefined) return scoped
+    const preset = configured(name, selection)
+    if (preset && Object.keys(options.find(selection)?.variants ?? {}).includes(preset)) return preset
+    return options.selections()[variantKey(selection, name)] ?? options.selections()[legacyVariantKey(selection)]
+  }
 
   const choice = (sessionID?: string) => {
     const id = sessionID ?? options.session()

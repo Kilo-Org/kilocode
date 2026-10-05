@@ -548,6 +548,8 @@ export interface ProvidersLoadedMessage {
   defaultSelection: ModelSelection
   authMethods: Record<string, ProviderAuthMethod[]>
   authStates: Record<string, ProviderAuthState>
+  /** The organization's Kilo catalog failed to load, so Kilo has no models to pick. */
+  kiloUnavailable?: boolean
 }
 
 export interface AgentsLoadedMessage {

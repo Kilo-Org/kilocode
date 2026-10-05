@@ -771,6 +771,7 @@ export const dict = {
   "ui.sessionTurn.status.consideringNextSteps": "Обдумую наступні кроки...",
 
   "dialog.model.noProviders": "Немає провайдерів",
+  "dialog.model.unavailable": "Моделі Kilo недоступні",
 
   "prompt.placeholder.connecting": "Підключення до сервера...",
   "prompt.placeholder.default":
