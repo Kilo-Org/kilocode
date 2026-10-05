@@ -396,7 +396,6 @@ export async function prompt(input: {
   state: WorktreeStateManager
   sessionID: string
   text: string
-  messageID: string
   signal?: AbortSignal
   managed?: ManagedSession
   directory?: string
@@ -415,7 +414,6 @@ export async function prompt(input: {
     {
       sessionID: input.sessionID,
       directory: target.dir,
-      messageID: `msg_agent_manager_${input.messageID}`,
       parts: [{ type: "text", text: input.text, ...(input.metadata ? { metadata: input.metadata } : {}) }],
       model: input.model,
       variant: input.variant,
