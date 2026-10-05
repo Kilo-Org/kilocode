@@ -36,10 +36,10 @@ Set the API key as an environment variable or configure it in your `kilo.json` c
 **Environment variable:**
 
 ```bash
-export GMI_API_KEY="your-api-key"
+export GMICLOUD_API_KEY="your-api-key"
 ```
 
-`GMICLOUD_API_KEY` is also accepted. That is the name published in the model catalog.
+`GMICLOUD_API_KEY` is the catalog name. `GMI_API_KEY` is also accepted when `GMICLOUD_API_KEY` is unset.
 
 **Config file** (`~/.config/kilo/kilo.json` or `./kilo.json`):
 
@@ -47,7 +47,9 @@ export GMI_API_KEY="your-api-key"
 {
   "provider": {
     "gmicloud": {
-      "env": ["GMI_API_KEY"],
+      "options": {
+        "apiKey": "your-api-key",
+      },
     },
   },
 }
