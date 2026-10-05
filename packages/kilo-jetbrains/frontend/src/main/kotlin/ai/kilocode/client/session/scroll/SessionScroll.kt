@@ -413,7 +413,11 @@ internal class SessionScroll(
             val y = messageTop(target)
             component.viewport.viewPosition = Point(0, y)
             bar.value = y
-            tail = near()
+            // Not near(): a top-anchored jump to a short latest turn lands within the follow threshold
+            // of the bottom, and re-arming follow there would let the next streamed delta pull the view
+            // back down and undo the jump. Only a transcript that cannot scroll stays followed, where
+            // there is nothing for follow to move.
+            tail = bar.maximum <= bar.visibleAmount
             updateJump()
         } finally {
             auto = false

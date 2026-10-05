@@ -6,6 +6,7 @@ import ai.kilocode.client.session.ui.account.SessionAccountOverlay
 import ai.kilocode.client.session.ui.rail.PromptRail
 import ai.kilocode.client.ui.UiStyle
 import com.intellij.ui.components.JBScrollPane
+import com.intellij.util.ui.JBUI
 import java.awt.Point
 import java.awt.Rectangle
 import java.awt.Component
@@ -104,6 +105,35 @@ class PromptRailLayoutTest : SessionUiTestBase() {
             .coerceIn(0, bottom(bar))
         assertEquals(expected, bar.value)
         assertFalse(ui.scroll.following())
+    }
+
+    /**
+     * A top-anchored jump to the latest turn lands within the follow threshold of the bottom, so
+     * re-arming follow there would let the next streamed delta pull the view back down and undo it.
+     */
+    fun `test jumping to the latest prompt does not re-arm follow`() {
+        showMessages()
+        // The viewport needs a real extent, or the scrollbar reports visibleAmount 0 and the
+        // near-the-bottom condition this guards against can never be reached.
+        ui.setSize(900, 400)
+        layoutAll(ui)
+        fillTranscript(10)
+        layoutAll(ui)
+        drainScroll()
+        val bar = scrollBar()
+
+        assertTrue(ui.scroll.scrollMessageTop("msg_9"))
+        drainScroll()
+
+        // The target lands inside the follow threshold of the bottom, which is exactly the case where
+        // re-arming follow would let the next streamed delta undo the jump.
+        assertTrue(bar.value + bar.visibleAmount >= bar.maximum - JBUI.scale(32))
+        assertFalse("a top jump must leave follow disarmed", ui.scroll.following())
+
+        val landed = bar.value
+        fillTranscript(1, start = 10)
+        drainScroll()
+        assertEquals("a streamed update must not drag the view off the jump target", landed, bar.value)
     }
 
     fun `test repeated updates retain the rail and overlay tree`() {

@@ -33,8 +33,13 @@ internal object PromptRailPlacement {
     /**
      * Center to hand the platform so the [content] box ends exactly [gap] left of [railX], giving the
      * balloon the same breathing room against the ticks that the rail itself keeps against the scroll
-     * pane. The shadow is deliberately not counted here — it is translucent and reaches into that gap,
-     * and reserving it as well pushed the balloon a full shadow width away from the rail.
+     * pane.
+     *
+     * The drop shadow is deliberately not reserved here. It is painted outside the border box, and the
+     * platform default (24px) is wider than that gap (12px), so the faded outer edge of the shadow does
+     * reach over the tick column. Reserving it instead pushes the visible card a further shadow width
+     * out, which reads as disconnected from the rail it belongs to. The border-box gap is the measure
+     * that matters visually, so it is the one held equal to the rail's own inset.
      *
      * [anchorY] is the center the balloon should sit on, clamped to keep the box inside [area], the
      * visible session. It is the center of the rail rather than of the hovered tick, so the balloon holds

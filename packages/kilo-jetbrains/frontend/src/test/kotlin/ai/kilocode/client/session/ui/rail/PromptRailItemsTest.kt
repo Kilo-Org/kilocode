@@ -37,6 +37,34 @@ class PromptRailItemsTest : BasePlatformTestCase() {
         )
     }
 
+    /**
+     * Inline code is a single-line construct. A class that also matched newlines let two unrelated
+     * backticks on different lines swallow the text between them, which could empty a prompt and flip
+     * it into the attachment-only branch.
+     */
+    fun `test inline code stripping does not span lines`() {
+        // One stray backtick per line, so a class that also matched newlines would pair them up and
+        // delete the prose in between. Balanced spans close on their own line and cannot show this.
+        val text = "keep this `start\nand this end` too"
+
+        assertEquals("keep this `start and this end` too", PromptRailItems.preview(text))
+    }
+
+    /** A promoted answer becomes the title, so it has to take the title's shorter limit. */
+    fun `test promoted answer is capped at the prompt limit`() {
+        val model = SessionModel()
+        model.upsertMessage(message("u1", "user"))
+        model.updateContent("u1", part("file", "u1", "file"))
+        model.upsertMessage(message("a1", "assistant"))
+        model.updateContent("a1", part("ap1", "a1", "text", "x".repeat(400)))
+
+        val item = PromptRailItems.items(model).single()
+
+        assertEquals(PromptRailItems.PROMPT_LIMIT, item.prompt.length)
+        assertTrue(item.prompt.endsWith("…"))
+        assertEquals("", item.answer)
+    }
+
     fun `test answer becomes prompt for attachment only turn`() {
         val model = SessionModel()
         model.upsertMessage(message("u1", "user"))

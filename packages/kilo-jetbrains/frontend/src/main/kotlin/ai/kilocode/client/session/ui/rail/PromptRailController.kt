@@ -237,6 +237,10 @@ internal class PromptRailController(
     private fun hover(entry: PromptRailEntry?) {
         if (entry == null) {
             popup.notifyExit(rail)
+            // The reset that clears the open tick is registered on the balloon body, so it only runs
+            // if the dwell actually produced one. Leaving the band before that has to drop the hover
+            // emphasis here, or the tick stays painted at hover size until the next interaction.
+            if (!popup.showing()) rail.setOpen(-1)
             return
         }
         rail.setOpen(rail.entries().indexOf(entry))

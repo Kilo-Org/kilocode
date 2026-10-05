@@ -65,9 +65,9 @@ internal class PromptRailPopup(
             wrapDescription = true,
         ),
         showSearch = false,
-        // The navigator is driven from the rail, so a click jumps straight to the prompt instead of
-        // going through the list's open-on-click selection step.
-        openOnClick = false,
+        // Left at open-on-click so a single click reaches onOpen. With it off, ActiveListView's click
+        // path falls through to the (absent) onClick handler and returns, so only a double click would
+        // jump — the navigator is a one-click list.
         onCell = { _, _ -> },
         onOpen = { row, _ -> items.firstOrNull { it.id == row.key }?.let(onSelect) },
     ).apply {

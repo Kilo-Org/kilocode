@@ -42,7 +42,9 @@ object PromptRailItems {
             val answer = truncate(preview(answerText(model, turn.messageIds)), ANSWER_LIMIT)
             out.add(
                 if (prompt.isEmpty()) {
-                    PromptRailItem(turn.id, model.isQueued(turn.id), answer, "")
+                    // Promoted to the title, so it takes the title's limit rather than keeping the
+                    // longer answer one.
+                    PromptRailItem(turn.id, model.isQueued(turn.id), truncate(answer, PROMPT_LIMIT), "")
                 } else {
                     PromptRailItem(turn.id, model.isQueued(turn.id), prompt, answer)
                 },
@@ -151,7 +153,10 @@ object PromptRailItems {
     private val FENCE = Regex("```[\\s\\S]*?```")
     private val IMAGE = Regex("!\\[[^\\]]*]\\([^)]*\\)")
     private val LINK = Regex("\\[([^\\]]*)]\\([^)]*\\)")
-    private val INLINE_CODE = Regex("`[^`]*`")
+    // Bounded to a single line, like the fenced form above handles multi-line spans. A class that
+    // also matched newlines would let two unrelated backticks on different lines swallow everything
+    // between them, which can empty a prompt outright.
+    private val INLINE_CODE = Regex("`[^`\\n]*`")
     private val LEADING_MARKER = Regex("^\\s*(#{1,6}\\s+|[-*+>]\\s+)")
     private val WHITESPACE = Regex("\\s+")
 }
