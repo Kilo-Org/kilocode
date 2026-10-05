@@ -78,6 +78,30 @@ class PromptRailItemsTest : BasePlatformTestCase() {
         )
     }
 
+    /**
+     * The CLI injects user-role messages whose text is marked synthetic — compaction replays assistant
+     * content that way, and so do task summaries and resumed tool results. The model strips that text,
+     * which left the turn with an empty prompt and promoted the assistant's reply into the title, so a
+     * response was listed as if the user had typed it.
+     */
+    fun `test synthetic injected turns are not listed as prompts`() {
+        val model = SessionModel()
+        model.upsertMessage(message("u1", "user"))
+        model.updateContent("u1", part("p1", "u1", "text", "a real prompt"))
+        model.upsertMessage(message("a1", "assistant"))
+        model.updateContent("a1", part("ap1", "a1", "text", "the real answer"))
+        // A compaction replay: user role, text flagged synthetic, followed by assistant output.
+        model.upsertMessage(message("u2", "user"))
+        model.updateContent("u2", part("p2", "u2", "text", "replayed assistant analysis", synthetic = true))
+        model.upsertMessage(message("a2", "assistant"))
+        model.updateContent("a2", part("ap2", "a2", "text", "more assistant output"))
+
+        val items = PromptRailItems.items(model)
+
+        assertEquals(listOf("u1"), items.map { it.id })
+        assertEquals("a real prompt", items.single().prompt)
+    }
+
     fun `test compaction and reverted turns are excluded`() {
         val model = SessionModel()
         model.upsertMessage(message("u1", "user"))
@@ -130,11 +154,18 @@ class PromptRailItemsTest : BasePlatformTestCase() {
         time = MessageTimeDto(created = 0.0),
     )
 
-    private fun part(id: String, message: String, type: String, text: String? = null) = PartDto(
+    private fun part(
+        id: String,
+        message: String,
+        type: String,
+        text: String? = null,
+        synthetic: Boolean? = null,
+    ) = PartDto(
         id = id,
         sessionID = "ses",
         messageID = message,
         type = type,
         text = text,
+        synthetic = synthetic,
     )
 }

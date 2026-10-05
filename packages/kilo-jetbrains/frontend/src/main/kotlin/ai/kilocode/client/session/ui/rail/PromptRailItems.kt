@@ -1,6 +1,8 @@
 package ai.kilocode.client.session.ui.rail
 
 import ai.kilocode.client.session.model.Compaction
+import ai.kilocode.client.session.model.FileAttachment
+import ai.kilocode.client.session.model.Message
 import ai.kilocode.client.session.model.SessionModel
 import ai.kilocode.client.session.model.Text
 import kotlin.math.floor
@@ -38,6 +40,7 @@ object PromptRailItems {
             if (anchor.info.role != "user") continue
             if (anchor.parts.values.any { it is Compaction }) continue
             if (model.isRevertedMessage(turn.id)) continue
+            if (!prompted(anchor)) continue
             val prompt = truncate(preview(text(anchor.parts.values)), PROMPT_LIMIT)
             val answer = truncate(preview(answerText(model, turn.messageIds)), ANSWER_LIMIT)
             out.add(
@@ -51,6 +54,19 @@ object PromptRailItems {
             )
         }
         return out
+    }
+
+    /**
+     * Whether [anchor] carries something the user actually supplied: text they typed, or an attachment.
+     *
+     * The CLI injects user-role messages of its own — compaction replays earlier assistant content this
+     * way, and task summaries and resumed tool results do the same — marking the text `synthetic`.
+     * [SessionModel] strips those parts, so such a turn reaches here with no user content at all. It has
+     * to be skipped rather than treated as a prompt with empty text: the attachment-only branch would
+     * otherwise promote the assistant's reply into the title and list a response as if it were typed.
+     */
+    private fun prompted(anchor: Message): Boolean = anchor.parts.values.any {
+        (it is Text && it.content.isNotBlank()) || it is FileAttachment
     }
 
     /** Joined, non-blank [Text] parts of the first assistant message in [messageIds] that has any. */
