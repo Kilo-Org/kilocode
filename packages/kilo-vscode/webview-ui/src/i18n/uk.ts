@@ -96,6 +96,7 @@ export const dict = {
     "Розмову скасовано. Стан відновлення робочого простору для цього попереднього скасування недоступний.",
   "revert.banner.workspace.enableSnapshots": "Увімкнути знімки",
   "revert.disabled.agentBusy": "Зачекайте завершення агента",
+  "revert.error.body": "Репозиторій може використовуватися. Повторіть спробу або перегляньте журнали Kilo.",
   "command.session.compact": "Стиснути сесію",
   "command.session.export": "Експортувати запис сеансу",
 
@@ -204,6 +205,8 @@ export const dict = {
   "prompt.action.send.blocked": "Спочатку дайте відповідь або закрийте очікуюче питання",
   "prompt.action.send.recording": "Транскрибувати та надіслати",
   "prompt.action.stop": "Зупинити",
+  "prompt.action.stop.background": "Зупинити головного агента. Фонові агенти продовжать роботу.",
+  "prompt.agents.show": "Показати фонових агентів",
   "prompt.action.enhance": "Покращити запит",
   "prompt.paste.expand": "Натисніть, щоб розгорнути вставлений текст",
   "prompt.action.indexing": "Налаштування індексування",
@@ -468,6 +471,7 @@ export const dict = {
   "provider.custom.models.toggleImages": "Перемкнути зображення для всіх",
   "provider.custom.models.remove": "Видалити модель",
   "provider.custom.models.add": "Додати модель",
+  "provider.custom.models.fetch.button": "Отримати моделі",
   "provider.custom.models.fetch.authError": "Автентифікація не вдалася. Перевірте API-ключ вище і спробуйте ще раз.",
   "provider.custom.models.fetch.empty": "На цьому сервері моделей не знайдено.",
   "provider.custom.models.fetch.added": "Додано {{count}} моделей.",
@@ -933,6 +937,9 @@ export const dict = {
   "settings.sandboxing.writablePaths.description":
     "Додаткові шляхи файлової системи, у які дозволено запис у пісочниці (наприклад, /tmp, /var/log). Вони об'єднуються зі шляхами запису за замовчуванням, коли пісочниця активна.",
   "settings.experimental.multiProject.title": "Мультипроєктний Agent Manager",
+  "settings.experimental.conversationPromptHistory.title": "Історія промптів для кожної розмови",
+  "settings.experimental.conversationPromptHistory.description":
+    "Зберігати історію промптів (ArrowUp/ArrowDown) окремо для кожної розмови замість однієї спільної історії для всіх.",
   "settings.experimental.claudeMigration.title": "Міграція Claude Code",
   "settings.experimental.claudeMigration.description":
     "Одноразово імпортуйте підтримувані глобальні інструкції CLAUDE.md, прості навички та вимкнені визначення MCP. Оригінальні файли Claude не змінюються; після ввімкнення перезапустіть бекенд.",
@@ -1291,14 +1298,12 @@ export const dict = {
   "task.todos.allDone": "{{count}} завдань виконано",
   "task.backgroundAgents.running.one": "1 фоновий агент",
   "task.backgroundAgents.running.many": "Фонових агентів: {{count}}",
-  "task.backgroundAgents.more": "+{{count}} ще",
   "task.backgroundAgents.open": "Відкрити фонового агента",
   "task.backgroundAgents.openAll": "Відкрити всіх фонових агентів",
   "task.backgroundAgents.cancel": "Зупинити",
   "task.backgroundAgents.continueInBackground": "Продовжити у фоні",
   "task.backgroundAgents.waiting": "Фоновому агенту потрібен ваш ввід",
   "task.backgroundAgents.needsInput": "Потрібен ввід",
-  "task.backgroundAgents.dismiss": "Сховати",
   "task.backgroundAgents.clearFinished": "Очистити завершені",
   "task.backgroundAgents.summary": "Працює {{running}} із {{total}} фонових агентів",
   "task.backgroundAgents.status.running": "Виконується",
@@ -1307,6 +1312,8 @@ export const dict = {
   "task.backgroundAgents.status.error": "Помилка",
   "task.backgroundAgents.untitled": "Фоновий агент",
   "task.backgroundAgents.stopAll": "Зупинити всіх ({{count}})",
+  "task.backgroundAgents.finished": "Фонові агенти завершили роботу",
+  "task.stop": "Зупинити підагента",
 
   "settings.saveBar.unsavedChanges": "Незбережені зміни",
   "settings.saveBar.discard": "Скасувати",

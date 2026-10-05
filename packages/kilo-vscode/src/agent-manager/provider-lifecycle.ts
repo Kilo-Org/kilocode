@@ -1,5 +1,6 @@
 import type { KiloClient, Session } from "@kilocode/sdk/v2/client"
 import { getErrorMessage } from "../kilo-provider-utils"
+import { isRunningStatus } from "../session-status"
 import type { AgentManagerOutMessage } from "./types"
 import { PLATFORM } from "./constants"
 import { initContextState } from "./project/init"
@@ -311,7 +312,7 @@ export async function deleteLifecycleWorktree(
     )
       throw new Error("Deletion safety checks returned no data")
     sessions.data.forEach((session) => retained.add(session.id))
-    const active = Object.values(status.data).some((value) => value.type !== "idle")
+    const active = Object.values(status.data).some((value) => isRunningStatus(value.type))
     if (active || permissions.data.length > 0 || questions.data.length > 0)
       return fail("Cannot delete a worktree while a session is active or waiting for input")
   } catch (error) {

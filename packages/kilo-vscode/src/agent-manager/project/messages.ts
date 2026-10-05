@@ -18,6 +18,7 @@ import { cloneProject, createProject, defaultParent, onboard, type Onboarding } 
 import { runner } from "./prepare"
 
 const pending = new WeakSet<ProjectMessageDeps>()
+const selections = new WeakMap<ProjectMessageDeps, symbol>()
 
 /** Route one session to a directory inside a project via the shared session provider. */
 export function routeProjectSession(
@@ -138,7 +139,13 @@ async function activateSelection(requested: SidebarTarget, deps: ProjectMessageD
     deps.error("The project is unavailable. Check that the repository still exists.")
     return
   }
+  // Record the token only for an actionable target, so a click on an
+  // unavailable project cannot discard a pending valid selection.
+  const token = Symbol()
+  selections.set(deps, token)
   const result = await deps.ready(ctx, { warm: true })
+  // A newer click can finish while this project's readiness is pending.
+  if (selections.get(deps) !== token || !deps.enabled()) return
   if (!result.current || !result.ok) {
     deps.error("The project is not ready yet. Expand it before selecting a worktree or session.")
     deps.push()

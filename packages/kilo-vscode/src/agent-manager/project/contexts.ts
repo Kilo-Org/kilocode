@@ -12,6 +12,7 @@ import * as path from "path"
 import { canonicalizePath, projectIdFor, samePath } from "./paths"
 import type { StoredProject } from "./registry"
 import { ProjectContext, type ProjectContextDeps } from "./context"
+import { avatar } from "./avatar"
 
 /** Serializable project description for the webview. */
 export interface ProjectSnapshot {
@@ -23,6 +24,8 @@ export interface ProjectSnapshot {
   expanded: boolean
   initialized: boolean
   missing: boolean
+  /** Organization avatar URL derived from the GitHub origin remote. */
+  avatar?: string
 }
 
 interface ContextsOptions {
@@ -36,6 +39,8 @@ interface ContextsOptions {
   /** Whether the multi-project experiment is enabled. */
   enabled: () => boolean
   remove?: (id: string) => void
+  /** Called when a project avatar finished downloading. */
+  changed?: () => void
   deps: ProjectContextDeps
 }
 
@@ -258,6 +263,7 @@ export class ProjectContexts {
       expanded: !missing && this.isExpanded(id),
       initialized: ctx?.loaded ?? false,
       missing,
+      avatar: missing ? undefined : avatar(root, () => this.opts.changed?.(), this.opts.deps.log),
     }
   }
 

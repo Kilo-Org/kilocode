@@ -1001,6 +1001,13 @@ export interface AgentManagerOpenFileRequest {
   column?: number
 }
 
+// Copy a file's absolute path to the clipboard for a specific session
+export interface AgentManagerCopyFilePathRequest {
+  type: "agentManager.copyFilePath"
+  sessionId: string
+  filePath: string
+}
+
 export interface AgentManagerRequestDocumentMessage {
   type: "agentManager.requestDocument"
   sessionId: string
@@ -1024,6 +1031,11 @@ export interface DocumentOpenFileMessage {
 
 export interface DocumentCloseMessage {
   type: "document.close"
+}
+
+export interface DocumentCopyPathMessage {
+  type: "document.copyPath"
+  file: string
 }
 
 export interface DocumentSendCommentsMessage {
@@ -1654,6 +1666,7 @@ export type WebviewMessage =
   | { type: "acknowledgeSession"; sessionID: string; eventID: string }
   | DocumentRequestMessage
   | DocumentOpenFileMessage
+  | DocumentCopyPathMessage
   | DocumentCloseMessage
   | DocumentSendCommentsMessage
   | SendMessageRequest
@@ -1809,6 +1822,7 @@ export type WebviewMessage =
   | CopyToClipboardRequest
   | ShowExistingLocalTerminalRequest
   | AgentManagerOpenFileRequest
+  | AgentManagerCopyFilePathRequest
   | AgentManagerRequestDocumentMessage
   | CreateMultiVersionRequest
   | SetTabOrderRequest
