@@ -75,13 +75,16 @@ export async function parse(filePath: string, options: KilocodeMarkdown.Options)
   // kilocode_change end
 
   // kilocode_change start - substitute content and retry invalid frontmatter with permissive sanitization
+  // Pass options so gray-matter skips its process-wide content cache: it caches before parsing, so a
+  // YAML error leaves an empty-data entry that silently drops the skill on every later parse, and a
+  // cached result would also carry content substituted for a different caller.
   try {
-    const md = matter(template)
+    const md = matter(template, {})
     md.content = await KilocodeMarkdown.substitute(md.content, filePath, options) // kilocode_change
     return md
   } catch {
     try {
-      const md = matter(fallbackSanitization(template))
+      const md = matter(fallbackSanitization(template), {})
       md.content = await KilocodeMarkdown.substitute(md.content, filePath, options) // kilocode_change
       return md
     } catch (err) {
