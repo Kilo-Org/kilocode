@@ -33,7 +33,7 @@ The **Appearance** section controls how the app looks:
 
 ## Conda Environments
 
-Create and manage conda environments and their packages. See [Environments](/docs/desktop/features/environments) for what you can do here. Requires a Kilo account.
+Create and manage conda environments and their packages. See [Conda environments](/docs/desktop/features/environments) for what you can do here. Requires a Kilo account.
 
 ## Notebooks
 

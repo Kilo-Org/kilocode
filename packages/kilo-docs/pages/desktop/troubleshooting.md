@@ -26,3 +26,11 @@ Git integration needs your system `git`. If the tools are missing or not working
 ## A local model isn't listed in a chat
 
 Local models appear in the model picker only after you're signed in to your [Kilo account](/docs/desktop/settings/ai#ai-providers), the **Local Model Server** is enabled, and you've imported a model. Check the [Local Model Server](/docs/desktop/settings/ai#local-model-server) settings.
+
+## The agent can't find a file in a gitignored folder
+
+When the agent searches your workspace for files, it skips anything excluded by your `.gitignore`. If a notebook or other file lives in an ignored folder, the agent won't find it by searching — but it can still open and edit the file once you point it there:
+
+- **Open it from the [Files](/docs/desktop/features/files) tab.** The Files tab shows gitignored files and folders, so you can browse to the file and open it directly.
+- **Mention it with `@`** in the chat and select the file from the list.
+- **Give the agent the path**, for example: "Open `data/scratch/analysis.ipynb`."

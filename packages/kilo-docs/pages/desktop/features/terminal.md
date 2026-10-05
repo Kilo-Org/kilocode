@@ -12,7 +12,7 @@ Run commands in an interactive shell next to your chat. Each terminal is a real 
 The terminal is yours to drive, but it's connected to the chat:
 
 - **The agent can open a terminal for you**, starting in the workspace folder, for you to work in. It won't type or run commands in it (the agent runs its own commands through a separate, permission-gated shell).
-- **The agent can read what your terminals print**, such as a dev server or test watcher you're running, to help you spot issues and offer assistance, but it can't write commands to your terminal.
+- **The agent can read what your terminals print**, such as a dev server or test watcher you're running, to help you spot issues and offer assistance.
 
 ## Work in multiple terminals
 
