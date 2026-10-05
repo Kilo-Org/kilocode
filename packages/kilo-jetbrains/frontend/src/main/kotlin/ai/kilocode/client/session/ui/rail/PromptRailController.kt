@@ -228,6 +228,27 @@ internal class PromptRailController(
     }
 
     /**
+     * Navigates to the prompt at [index]: scrolls the transcript to it, and moves the navigator with it
+     * so the list highlights and reveals that row and the rail emphasises its tick.
+     *
+     * The first/latest buttons and a row click all route through here. Scrolling the transcript alone
+     * would leave the open card still pointing at whichever row the pointer last hovered, so the
+     * navigator would disagree with what the transcript is showing.
+     */
+    @RequiresEdt
+    private fun go(index: Int) {
+        val item = rail.items().getOrNull(index) ?: return
+        pending = index
+        rail.setOpen(tick(index))
+        body?.select(index)
+        jump(item.id)
+    }
+
+    /** Tick showing the prompt at [item], or -1 when that prompt sits behind the overflow tick. */
+    private fun tick(item: Int): Int =
+        rail.entries().indexOfFirst { it is PromptRailEntry.Prompt && it.index == item }
+
+    /**
      * The balloon is keyed on the rail rather than on the hovered tick, so travelling down the ticks
      * neither restarts the dwell nor rebuilds it somewhere else — only the highlighted row follows the
      * pointer. The open tick is left alone on exit so the rail stays lit while the pointer is inside the
@@ -260,9 +281,9 @@ internal class PromptRailController(
             PromptRailPopup(
                 items = rail.items(),
                 hovered = pending,
-                onSelect = { item -> jump(item.id) },
-                onFirst = { rail.items().firstOrNull()?.let { jump(it.id) } },
-                onLatest = { rail.items().lastOrNull()?.let { jump(it.id) } },
+                onSelect = { item -> go(rail.items().indexOfFirst { it.id == item.id }) },
+                onFirst = { go(0) },
+                onLatest = { go(rail.items().lastIndex) },
             ).also { built ->
                 body = built
                 Disposer.register(built.disposable) {

@@ -1,5 +1,6 @@
 package ai.kilocode.client.session.ui.rail
 
+import ai.kilocode.client.ui.HoverIcon
 import com.intellij.openapi.util.Disposer
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import java.awt.Component
@@ -119,6 +120,37 @@ class PromptRailPopupTest : BasePlatformTestCase() {
         assertTrue("height ${pref.height} must not exceed $CAP_H", pref.height <= CAP_H)
 
         Disposer.dispose(fix.popup.disposable)
+    }
+
+    /**
+     * The header buttons have to drive the same navigation the ticks do. Scrolling the transcript alone
+     * would leave the open card pointing at whichever row was last hovered.
+     */
+    fun `test the header buttons invoke first and latest navigation`() {
+        val seen = mutableListOf<String>()
+        val popup = PromptRailPopup(
+            items = items(40),
+            hovered = 0,
+            onSelect = {},
+            onFirst = { seen.add("first") },
+            onLatest = { seen.add("latest") },
+        )
+        popup.fitWithin(CAP_W, CAP_H)
+        val buttons = findButtons(popup.component)
+        assertEquals("expected the first/latest buttons in the header", 2, buttons.size)
+
+        buttons[0].doClick()
+        buttons[1].doClick()
+
+        assertEquals(listOf("first", "latest"), seen)
+
+        Disposer.dispose(popup.disposable)
+    }
+
+    private fun findButtons(c: Component): List<HoverIcon> {
+        if (c is HoverIcon) return listOf(c)
+        if (c !is Container) return emptyList()
+        return c.components.flatMap { findButtons(it) }
     }
 
     private fun findList(c: Component): JList<*>? {
