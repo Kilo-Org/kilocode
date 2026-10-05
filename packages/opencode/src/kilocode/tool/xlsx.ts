@@ -48,10 +48,13 @@ function cell(value: CellObject | undefined) {
     if (!(value.v instanceof Date)) return String(value.v)
     // Round away SheetJS's floating-point error: 14:05 parses as 14:04:59.999.
     const iso = new Date(Math.round(value.v.getTime() / 1000) * 1000).toISOString()
-    // A time of day or a duration is stored as a day in 1899 or 1900. Its format shows no day or
-    // year outside quoted text, escaped characters and [...] sections, so read it as the cell shows it.
-    const format = String(value.z ?? "").replace(/"[^"]*"|\\.|\[[^\]]*\]/g, "")
-    if (value.z != null && !/[dy]/i.test(format)) return value.w ?? iso.slice(11, 19)
+    // A time of day or a duration is stored as a day in 1899 or 1900. Its format is an elapsed [h], [m]
+    // or [s] one, or shows an hour or a second and no day or year outside quoted text, escaped
+    // characters and [...] sections, so read it as the cell shows it. An m alone is a month (mmm).
+    const code = String(value.z ?? "")
+    const format = code.replace(/"[^"]*"|\\.|\[[^\]]*\]/g, "")
+    const timeOnly = /\[(h+|m+|s+)\]/i.test(code) || (!/[dy]/i.test(format) && /[hs]/i.test(format))
+    if (value.z != null && timeOnly) return value.w ?? iso.slice(11, 19)
     if (iso.endsWith("T00:00:00.000Z")) return iso.slice(0, 10)
     return iso.slice(0, 19).replace("T", " ")
   }

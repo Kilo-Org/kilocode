@@ -169,7 +169,9 @@ describe("kilocode XLSX reads", () => {
         C1: { t: "d", v: new Date("2026-05-29T09:30:00.000Z"), z: "DD.MM.YYYY HH:MM" },
         D1: { t: "d", v: new Date("2026-05-01T00:00:00.000Z"), z: "mmm yyyy" },
         E1: { t: "d", v: new Date("2026-05-29T00:00:00.000Z"), z: "d-mmm" },
-        "!ref": "A1:E1",
+        F1: { t: "d", v: new Date("2026-05-01T00:00:00.000Z"), z: "mmm" },
+        G1: { t: "d", v: new Date("2026-05-01T00:00:00.000Z"), z: "MMMM" },
+        "!ref": "A1:G1",
       }
       const file = path.join(dir, "dates.xlsx")
       yield* put(file, bytes(book(sheet)))
@@ -177,7 +179,7 @@ describe("kilocode XLSX reads", () => {
       const result = yield* run(dir, file)
 
       expect(result.output).toContain(
-        "2: 2026-05-29\t2026-05-29 14:05:00\t2026-05-29 09:30:00\t2026-05-01\t2026-05-29\n",
+        "2: 2026-05-29\t2026-05-29 14:05:00\t2026-05-29 09:30:00\t2026-05-01\t2026-05-29\t2026-05-01\t2026-05-01\n",
       )
     }),
   )
@@ -191,14 +193,16 @@ describe("kilocode XLSX reads", () => {
         C1: { t: "n", v: 0.5, z: "[$-x-systime]h:mm:ss AM/PM" },
         D1: { t: "n", v: 0.75, z: 'h:mm" daily"' },
         E1: { t: "n", v: 0.75, z: "h:mm\\ \\d\\a\\i\\l\\y" },
-        "!ref": "A1:E1",
+        F1: { t: "n", v: 1.5, z: "[h]" },
+        G1: { t: "n", v: (25 * 3600 + 30) / 86400, z: "[ss]" }, // 25 hours and 30 seconds
+        "!ref": "A1:G1",
       }
       const file = path.join(dir, "times.xlsx")
       yield* put(file, bytes(book(sheet)))
 
       const result = yield* run(dir, file)
 
-      expect(result.output).toContain("2: 6:00\t36:00:00\t12:00:00 PM\t18:00 daily\t18:00 daily\n")
+      expect(result.output).toContain("2: 6:00\t36:00:00\t12:00:00 PM\t18:00 daily\t18:00 daily\t36\t90030\n")
     }),
   )
 
