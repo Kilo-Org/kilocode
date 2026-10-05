@@ -1,11 +1,13 @@
 import { createHash } from "node:crypto"
-import { Batch, GlideClient, GlideFt, ClosingError, RequestError } from "@valkey/valkey-glide"
-import type { Field, FtCreateOptions, GlideString } from "@valkey/valkey-glide"
+import type { Field, FtCreateOptions, GlideClient, GlideString } from "@valkey/valkey-glide"
 import type { IVectorStore, VectorStoreSearchResult } from "../interfaces/vector-store"
 import type { PointStruct } from "../interfaces/vector-store"
 import type { EmbeddingProfile } from "../embedding-profile"
 import { DEFAULT_MAX_SEARCH_RESULTS, DEFAULT_SEARCH_MIN_SCORE } from "../constants"
 import { Log } from "../../util/log"
+// Not bundled: the CLI installs GLIDE on demand and points KILO_VALKEY_GLIDE_PATH at it.
+// Resolved per use (require is cached) so module mocks registered after first load still apply.
+import { loadGlide } from "./valkey-loader"
 
 const log = Log.create({ service: "valkey-store" })
 
@@ -254,7 +256,7 @@ export class ValkeyVectorStore implements IVectorStore {
     try {
       for (let i = 0; i < points.length; i += BATCH_CHUNK_SIZE) {
         const chunk = points.slice(i, i + BATCH_CHUNK_SIZE)
-        const batch = new Batch(false) // non-atomic pipeline
+        const batch = new (loadGlide().Batch)(false) // non-atomic pipeline
 
         for (const point of chunk) {
           const key = `${this.collectionName}:${point.id}`
@@ -309,7 +311,7 @@ export class ValkeyVectorStore implements IVectorStore {
       const vectorBlob = this.encodeVector(queryVector)
       const query = `${filter}=>[KNN ${actualMaxResults} @vector $BLOB AS score]`
 
-      const [_count, documents] = await GlideFt.search(client, this.collectionName, query, {
+      const [_count, documents] = await loadGlide().GlideFt.search(client, this.collectionName, query, {
         params: [{ key: "BLOB", value: vectorBlob }],
         returnFields: [
           { fieldIdentifier: "filePath" },
@@ -407,7 +409,7 @@ export class ValkeyVectorStore implements IVectorStore {
         // ensuring files with more than 10,000 chunks are fully cleaned up.
         let found = 0
         do {
-          const [, documents] = await GlideFt.search(client, this.collectionName, query, {
+          const [, documents] = await loadGlide().GlideFt.search(client, this.collectionName, query, {
             limit: { offset: 0, count: SEARCH_LIMIT },
             nocontent: true,
           })
@@ -504,10 +506,10 @@ export class ValkeyVectorStore implements IVectorStore {
   async collectionExists(): Promise<boolean> {
     const client = await this.ensureConnected()
     try {
-      await GlideFt.info(client, this.collectionName)
+      await loadGlide().GlideFt.info(client, this.collectionName)
       return true
     } catch (error) {
-      if (error instanceof RequestError) {
+      if (error instanceof loadGlide().RequestError) {
         return false
       }
       throw error
@@ -635,7 +637,7 @@ export class ValkeyVectorStore implements IVectorStore {
     const port = url.port ? parseInt(url.port, 10) : 6379
     const useTLS = url.protocol === "rediss:"
 
-    return GlideClient.createClient({
+    return loadGlide().GlideClient.createClient({
       addresses: [{ host, port }],
       useTLS,
       credentials: this.valkeyPassword ? { password: this.valkeyPassword } : undefined,
@@ -661,7 +663,7 @@ export class ValkeyVectorStore implements IVectorStore {
   }
 
   protected handleClientError(error: unknown): void {
-    if (error instanceof ClosingError) {
+    if (error instanceof loadGlide().ClosingError) {
       this.client = null
     }
   }
@@ -701,10 +703,10 @@ export class ValkeyVectorStore implements IVectorStore {
   async getIndexInfo(): Promise<Record<string, any> | null> {
     const client = await this.ensureConnected()
     try {
-      const info = await GlideFt.info(client, this.collectionName)
+      const info = await loadGlide().GlideFt.info(client, this.collectionName)
       return info as Record<string, any>
     } catch (error) {
-      if (error instanceof RequestError) {
+      if (error instanceof loadGlide().RequestError) {
         return null
       }
       throw error
@@ -745,7 +747,7 @@ export class ValkeyVectorStore implements IVectorStore {
       prefixes: [`${this.collectionName}:`],
     }
 
-    await GlideFt.create(client, this.collectionName, schema, options)
+    await loadGlide().GlideFt.create(client, this.collectionName, schema, options)
   }
 
   /**
@@ -760,7 +762,7 @@ export class ValkeyVectorStore implements IVectorStore {
     }
 
     const client = await this.ensureConnected()
-    await GlideFt.dropindex(client, this.collectionName)
+    await loadGlide().GlideFt.dropindex(client, this.collectionName)
     await this.scanAndDelete(`${this.collectionName}:`)
   }
 
