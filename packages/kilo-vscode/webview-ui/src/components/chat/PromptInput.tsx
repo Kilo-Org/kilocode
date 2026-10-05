@@ -2251,6 +2251,9 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
             rows={1}
             dir="auto"
           />
+          <div class="prompt-input-issues-overlay">
+            <SessionIssues issues={sessionIssues()} />
+          </div>
         </div>
       </div>
       <div class="prompt-input-hint">
@@ -2260,7 +2263,6 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
           <ThinkingSelector sessionID={sid} blocked={props.blocked?.() ?? false} />
         </div>
         <div class="prompt-input-hint-actions">
-          <SessionIssues issues={sessionIssues()} />
           <Show when={showIndexing()}>
             <Tooltip value={indexing.status().message || indexing.label()} placement="top" openDelay={0}>
               <IconButton

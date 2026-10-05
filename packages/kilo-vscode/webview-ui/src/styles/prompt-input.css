@@ -565,17 +565,15 @@
   flex-shrink: 0;
 }
 
-.prompt-indexing-button,
-.prompt-issues-button {
+.prompt-indexing-button {
   position: relative;
 }
 
 /* Shared status dot for prompt hint controls. Pin it to the icon corner and
    give it a surface-colored ring so it reads as a badge instead of sitting on
    the glyph. The same size, ring, and corner offset are used for the indexing,
-   auto-approve, sandbox, speech, and session-issues controls. */
+   auto-approve, sandbox, and speech controls. */
 .prompt-indexing-button::after,
-.prompt-issues-button::after,
 .prompt-status-button--active::after,
 .prompt-speech-button--recording::after {
   content: "";
@@ -587,15 +585,30 @@
   box-shadow: 0 0 0 1px var(--surface-base, var(--vscode-editor-background));
 }
 
-.prompt-indexing-button::after,
-.prompt-issues-button::after {
+.prompt-indexing-button::after {
   top: 1px;
   right: 1px;
 }
 
+/* Overlaid in the top-right corner of the text input, above the typed text,
+   matching the JetBrains session-issues icon's placement over the editor
+   rather than in the bottom toolbar row. The top inset matches the typed
+   text's own top padding (.prompt-input-highlight-overlay); the right inset
+   matches the bottom toolbar's padding (.prompt-input-hint) so the icon lines
+   up with the toolbar's rightmost control. */
+.prompt-input-issues-overlay {
+  position: absolute;
+  top: 8px;
+  right: 6px;
+  z-index: 3;
+}
+
 /* Only shown when the session has an actionable issue (e.g. an MCP server
-   needing sign-in), so it is always rendered in the warning tone. */
-.prompt-issues-button {
+   needing sign-in), so it is always rendered in the warning tone. The icon's
+   own color token (set by [data-component="icon"]) takes priority over the
+   inherited currentColor, so it is overridden explicitly here too. */
+.prompt-issues-button,
+.prompt-issues-button [data-component="icon"] {
   color: var(--vscode-charts-yellow, #cca700);
 }
 

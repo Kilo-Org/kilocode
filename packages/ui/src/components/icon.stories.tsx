@@ -107,6 +107,7 @@ const names = [
   "selector",
   "arrow-down-to-line",
   "warning",
+  "warning-filled",
   "link",
   "providers",
   "models",

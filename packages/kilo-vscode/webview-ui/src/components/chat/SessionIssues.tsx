@@ -10,10 +10,12 @@ interface Props {
 }
 
 /**
- * Warning icon shown in the prompt toolbar when the current session has one
- * or more actionable issues (currently: MCP servers that need sign-in).
- * Hidden whenever there are no issues — that is the only hide condition,
- * matching the JetBrains session-issues menu this mirrors.
+ * Warning icon overlaid in the top-right corner of the prompt text input when
+ * the current session has one or more actionable issues (currently: MCP
+ * servers that need sign-in) — matching the JetBrains session-issues icon's
+ * placement over the editor rather than in the bottom toolbar row. Hidden
+ * whenever there are no issues — that is the only hide condition, matching
+ * the JetBrains session-issues menu this mirrors.
  *
  * Rendered as a single-level menu styled with VS Code's native menu tokens:
  * each issue contributes a group label followed by its actions, divided from
@@ -25,13 +27,13 @@ export const SessionIssues: Component<Props> = (props) => {
 
   return (
     <Show when={props.issues.length > 0}>
-      <DropdownMenu gutter={4} placement="top">
+      <DropdownMenu gutter={4} placement="bottom-end">
         <Tooltip value={language.t("prompt.issues.title")} placement="top" openDelay={0}>
           <DropdownMenu.Trigger
             class="prompt-issues-button"
             aria-label={language.t("prompt.issues.title")}
             as={IconButton}
-            icon="warning"
+            icon="warning-filled"
             variant="ghost"
             size="small"
           />
