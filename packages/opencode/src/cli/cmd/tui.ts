@@ -419,7 +419,6 @@ export const TuiThreadCommand = cmd({
       orphanWatch.unref()
       // kilocode_change end
 
-      if (!args.cloudFork) await client.call("retention", undefined) // kilocode_change - activate only after resume protection and RPC readiness
       const prompt = await input(args.prompt)
       const { TuiConfig } = await import("@/config/tui") // kilocode_change
       const config = await TuiConfig.get()

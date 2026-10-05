@@ -117,3 +117,9 @@ export const rpc = {
 }
 
 Rpc.listen(rpc)
+
+// kilocode_change start - start cleanup from the worker itself. The parent already
+// protected a resumed session before spawning the worker, and a request sent before the
+// worker is listening can be dropped, which would hang the parent.
+void KiloRetentionWorker.start(undefined).catch((err) => console.error("TUI worker retention start failed", err))
+// kilocode_change end
