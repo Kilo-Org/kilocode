@@ -30,6 +30,13 @@ internal class SidePopupSpot(
     val distance: Int,
     /** Whether the balloon points at [point] with the usual triangular callout. */
     val callout: Boolean = true,
+    /**
+     * Whether the balloon paints its drop shadow.
+     *
+     * The shadow is reserved outside the border box and is hit-testable, so a balloon placed hard against
+     * its subject covers the subject with an invisible margin. Turn it off for those placements.
+     */
+    val shadow: Boolean = true,
 )
 
 /**

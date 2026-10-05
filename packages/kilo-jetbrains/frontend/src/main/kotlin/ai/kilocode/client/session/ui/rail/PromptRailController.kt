@@ -313,24 +313,25 @@ internal class PromptRailController(
         val area = SwingUtilities.convertRectangle(root, root.visibleRect, pane)
         if (area.isEmpty) return null
         val rect = SwingUtilities.convertRectangle(rail.parent, rail.bounds, pane)
-        val gap = UiStyle.Gap.pad()
+        val margin = UiStyle.Gap.pad()
         val insets = UiStyle.Balloon.insets()
-        // The shadow is reserved on every side, so it counts twice on each axis. There is no callout
-        // here, so unlike the header popups the pointer adds nothing.
-        val shadow = UiStyle.Balloon.shadow()
-        val chromeWidth = insets.left + insets.right + shadow * 2
-        val chromeHeight = insets.top + insets.bottom + shadow * 2
+        // No callout and no shadow on this balloon, so the only chrome is the border inset. The shadow
+        // is switched off because it is reserved outside the border box and is hit-testable: against a
+        // flush card it would cover the ticks with an invisible margin and swallow their clicks.
+        val chromeWidth = insets.left + insets.right
+        val chromeHeight = insets.top + insets.bottom
         // Room is measured to the window edge rather than the chat panel: the rail hugs the right side of
         // a narrow sidebar, where the panel alone would leave almost nothing to open into.
         val maxWidth = PromptRailPlacement.maxWidth(
             railX = rect.x,
-            gap = gap,
+            inset = FLUSH,
+            margin = margin,
             chrome = chromeWidth,
-            cap = JBUI.scale(SessionUiStyle.View.Popup.MAX_WIDTH),
+            cap = JBUI.scale((SessionUiStyle.View.Popup.MAX_WIDTH * SessionUiStyle.PromptRail.WIDTH_SCALE).toInt()),
         )
         val maxHeight = PromptRailPlacement.maxHeight(
             height = area.height,
-            gap = gap,
+            margin = margin,
             chrome = chromeHeight,
             cap = JBUI.scale(SessionUiStyle.View.Popup.MAX_HEIGHT),
         )
@@ -344,7 +345,8 @@ internal class PromptRailController(
         val center = PromptRailPlacement.center(
             railX = rect.x,
             area = area,
-            gap = gap,
+            inset = FLUSH,
+            margin = margin,
             content = content,
             // Centred on the rail, not the hovered tick, so the balloon does not drift while the pointer
             // moves between ticks.
@@ -357,6 +359,7 @@ internal class PromptRailController(
             position = Balloon.Position.atLeft,
             distance = 0,
             callout = false,
+            shadow = false,
         )
     }
 
@@ -398,5 +401,13 @@ internal class PromptRailController(
         val padding = JBUI.scale(SessionUiStyle.SessionLayout.TRANSCRIPT_SCROLLBAR_PADDING)
         val width = padding.coerceAtMost(railW).coerceAtLeast(JBUI.scale(2))
         return Rectangle(vpRightInPane - padding + (padding - width) / 2, top, width, height)
+    }
+
+    private companion object {
+        /**
+         * Horizontal distance kept between the card and the rail: none. Any gap is dead space where the
+         * pointer is over neither surface, which starts the hide timer mid-traverse.
+         */
+        const val FLUSH = 0
     }
 }

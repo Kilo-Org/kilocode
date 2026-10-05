@@ -93,6 +93,16 @@ object SessionUiStyle {
         const val INNER_BOTTOM = 4
         const val INNER_HORIZONTAL = 4 + TRANSCRIPT_SCROLLBAR_PADDING
 
+        /**
+         * Right transcript inset. Wider than [INNER_HORIZONTAL] because the prompt rail is drawn over
+         * this edge: it reserves the rail's full tick width plus the smallest standard gap, so a tick at
+         * hover size still clears the content instead of sitting on top of it.
+         *
+         * Reserved whether or not the rail is currently showing, so the transcript does not reflow when
+         * a second prompt makes it appear.
+         */
+        const val INNER_RIGHT = PromptRail.TICK_HOVER + UiStyle.Gap.XS
+
         const val USER_PROMPT_INDENT = 100
         const val SCROLL_INCREMENT = 48
 
@@ -105,13 +115,16 @@ object SessionUiStyle {
     /** Geometry and colors for the prompt navigator rail and its ticks. */
     object PromptRail {
         /** Tick length across the rail, at rest. */
-        const val TICK_REST = 9
+        const val TICK_REST = 12
 
         /** Tick length across the rail when active. */
-        const val TICK_ACTIVE = 13
+        const val TICK_ACTIVE = 16
 
-        /** Tick length across the rail at full size (hover or open). */
-        const val TICK_HOVER = 16
+        /**
+         * Tick length across the rail at full size (hover or open), and so the rail's own width.
+         * [SessionLayout.INNER_RIGHT] reserves this much beside the transcript.
+         */
+        const val TICK_HOVER = 20
 
         /** Tick thickness on the scroll axis. */
         const val TICK_THICKNESS = 2
@@ -127,6 +140,13 @@ object SessionUiStyle {
 
         /** Hover dwell, in ms, before the navigator balloon opens. */
         const val OPEN_MS = 350
+
+        /**
+         * Widest the navigator card may get, as a multiple of the standard session popup width. Prompts
+         * and their answer previews are prose, so the card reads better wider than a menu-sized popup.
+         * The room left of the rail still caps it, so a narrow sidebar gets a narrower card.
+         */
+        const val WIDTH_SCALE = 1.5
 
         fun restColor(): Color = UIUtil.getContextHelpForeground()
 

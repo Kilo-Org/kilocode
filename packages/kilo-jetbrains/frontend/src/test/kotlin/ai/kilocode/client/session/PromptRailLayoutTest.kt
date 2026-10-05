@@ -4,6 +4,7 @@ import ai.kilocode.client.session.ui.SessionDropOverlay
 import ai.kilocode.client.session.ui.SessionRootPanel
 import ai.kilocode.client.session.ui.account.SessionAccountOverlay
 import ai.kilocode.client.session.ui.rail.PromptRail
+import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.ui.UiStyle
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.util.ui.JBUI
@@ -105,6 +106,25 @@ class PromptRailLayoutTest : SessionUiTestBase() {
             .coerceIn(0, bottom(bar))
         assertEquals(expected, bar.value)
         assertFalse(ui.scroll.following())
+    }
+
+    /**
+     * The rail is drawn over the transcript's right edge, so the transcript has to reserve room for a
+     * full-size tick. Without it a tick sits on top of the prompt bubble.
+     */
+    fun `test the transcript reserves room for the rail`() {
+        val inner = SessionUiStyle.SessionLayout.INNER_RIGHT
+        val tick = SessionUiStyle.PromptRail.TICK_HOVER
+
+        assertTrue(
+            "right inset $inner must clear a $tick tick",
+            inner >= tick,
+        )
+        assertEquals("and clear it by the smallest standard gap", UiStyle.Gap.XS, inner - tick)
+        assertTrue(
+            "the reserved edge must be wider than the plain inset it replaces",
+            inner > SessionUiStyle.SessionLayout.INNER_HORIZONTAL,
+        )
     }
 
     /**

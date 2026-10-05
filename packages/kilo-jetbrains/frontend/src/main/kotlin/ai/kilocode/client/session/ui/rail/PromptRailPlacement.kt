@@ -17,38 +17,33 @@ import java.awt.Rectangle
  */
 internal object PromptRailPlacement {
     /**
-     * Largest body that fits between the pane's left edge and [railX], the left edge of the rail.
-     *
-     * [chrome] must include the drop shadow on both sides even though the shadow is allowed to fall
-     * inside the gap: the platform runs `ScreenUtil.moveToFit` on the shadowed rect, so a body sized to
-     * the border box alone would be nudged back to the right, over the ticks.
+     * Largest body that fits between the window's left [margin] and the rail, whose left edge is [railX]
+     * and against which the card sits [inset] short.
      */
-    fun maxWidth(railX: Int, gap: Int, chrome: Int, cap: Int): Int =
-        (railX - gap * 2 - chrome).coerceIn(0, cap)
+    fun maxWidth(railX: Int, inset: Int, margin: Int, chrome: Int, cap: Int): Int =
+        (railX - inset - margin - chrome).coerceIn(0, cap)
 
-    /** Largest body that fits in [height] of visible session, keeping a gap above and below. */
-    fun maxHeight(height: Int, gap: Int, chrome: Int, cap: Int): Int =
-        (height - gap * 2 - chrome).coerceIn(0, cap)
+    /** Largest body that fits in [height] of visible session, keeping [margin] above and below. */
+    fun maxHeight(height: Int, margin: Int, chrome: Int, cap: Int): Int =
+        (height - margin * 2 - chrome).coerceIn(0, cap)
 
     /**
-     * Center to hand the platform so the [content] box ends exactly [gap] left of [railX], giving the
-     * balloon the same breathing room against the ticks that the rail itself keeps against the scroll
-     * pane.
+     * Center to hand the platform so the [content] box ends [inset] left of [railX].
      *
-     * The drop shadow is deliberately not reserved here. It is painted outside the border box, and the
-     * platform default (24px) is wider than that gap (12px), so the faded outer edge of the shadow does
-     * reach over the tick column. Reserving it instead pushes the visible card a further shadow width
-     * out, which reads as disconnected from the rail it belongs to. The border-box gap is the measure
-     * that matters visually, so it is the one held equal to the rail's own inset.
+     * The navigator passes `inset = 0`, putting the card hard against the rail. Any gap there is dead
+     * space: the pointer crossing it is over neither the card nor the ticks, which drops the controller's
+     * on-subject flag and starts the hide timer, so the card closes on the way to a tick. Flush also
+     * requires the balloon's shadow to be off, since that shadow is reserved outside the border box and
+     * is hit-testable, and would otherwise cover the ticks with an invisible margin.
      *
-     * [anchorY] is the center the balloon should sit on, clamped to keep the box inside [area], the
-     * visible session. It is the center of the rail rather than of the hovered tick, so the balloon holds
-     * still while the pointer travels down the ticks.
+     * [anchorY] is the center the balloon should sit on, clamped by [margin] to keep the box inside
+     * [area], the visible session. It is the center of the rail rather than of the hovered tick, so the
+     * balloon holds still while the pointer travels down the ticks.
      */
-    fun center(railX: Int, area: Rectangle, gap: Int, content: Dimension, anchorY: Int): Point {
-        val x = railX - gap - content.width / 2
-        val min = area.y + gap + content.height / 2
-        val max = area.y + area.height - gap - content.height / 2
+    fun center(railX: Int, area: Rectangle, inset: Int, margin: Int, content: Dimension, anchorY: Int): Point {
+        val x = railX - inset - content.width / 2
+        val min = area.y + margin + content.height / 2
+        val max = area.y + area.height - margin - content.height / 2
         // A body taller than the room it was budgeted for can only be centered.
         val y = if (max < min) area.y + area.height / 2 else anchorY.coerceIn(min, max)
         return Point(x, y)

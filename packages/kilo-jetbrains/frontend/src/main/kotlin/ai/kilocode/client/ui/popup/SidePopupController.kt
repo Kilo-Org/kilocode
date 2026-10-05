@@ -181,6 +181,7 @@ internal class SidePopupController(
             .setCornerToPointerDistance(spot.distance)
             .setCornerRadius(UiStyle.Balloon.arc())
             .setShowCallout(spot.callout)
+            .setShadow(spot.shadow)
             .setHideOnClickOutside(true)
             .setHideOnKeyOutside(true)
             .setHideOnFrameResize(true)
