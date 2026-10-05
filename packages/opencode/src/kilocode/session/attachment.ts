@@ -37,6 +37,17 @@ export namespace KiloAttachment {
    * `permission: "read"` prompt and the `KiloReadObject` binding that
    * `prompt.ts` performs, so it cannot be pre-validated at the HTTP boundary.
    *
+   * That leaves one known residual: a `file://` part carrying a raster mime
+   * still reaches `image.normalize`, and an undecodable one becomes a defect
+   * that `prompt_async` can only report after it has already acknowledged with
+   * 204. No first-party client constructs that combination -- the VS Code
+   * webview tags every `file://` mention `text/plain`, and the JetBrains client
+   * inlines raster attachments as base64 `data:` URLs -- and tool-issued
+   * attachments (read/webfetch/send_file) go through the tolerant
+   * `processor.ts` path instead. So it is reachable only by a direct SDK or API
+   * caller, which is what the oversized-image case in `httpapi-sdk.test.ts`
+   * exercises against the synchronous route.
+   *
    * Returns a human-readable rejection reason, or `undefined` when the
    * attachment looks fine.
    */
