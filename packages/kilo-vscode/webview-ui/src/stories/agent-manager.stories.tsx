@@ -20,7 +20,6 @@ import { SessionContext, useSession } from "../context/session"
 import { ServerContext } from "../context/server"
 import { WorktreeModeProvider } from "../context/worktree-mode"
 import { SidebarSearchMenu } from "../../agent-manager/SidebarSearchMenu"
-import { SidebarSectionHeader } from "../../agent-manager/SidebarSectionHeader"
 import { SidebarToggleButton } from "../../agent-manager/SidebarToggleButton"
 import { SideTerminalPanel, createTerminalState } from "../../agent-manager/terminal"
 import { LOCAL } from "../../agent-manager/navigate"
@@ -1790,10 +1789,13 @@ export const SidebarSearchOpen: Story = {
     return (
       <StoryProviders noPadding>
         <div style={{ "min-height": "430px", padding: "16px", background: "var(--surface-base)" }}>
-          <SidebarSectionHeader
-            class="am-section-header"
-            label={<span class="am-section-label">WORKTREES</span>}
-            actions={
+          <div class="am-sidebar-header am-section-header">
+            <div class="am-sidebar-header-main">
+              <div class="am-sidebar-header-label">
+                <span class="am-section-label">WORKTREES</span>
+              </div>
+            </div>
+            <div class="am-sidebar-header-actions">
               <SidebarSearchMenu
                 items={() => sidebarSearchItems}
                 keybind="⌘F"
@@ -1809,8 +1811,8 @@ export const SidebarSearchOpen: Story = {
                 defaultOpen
                 portal={false}
               />
-            }
-          />
+            </div>
+          </div>
           <output class="sr-only" data-slot="sidebar-search-selection">
             {selected()}
           </output>
