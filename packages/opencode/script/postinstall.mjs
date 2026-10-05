@@ -214,12 +214,7 @@ function main() {
     } catch {
       const temp = fs.mkdtempSync(path.join(os.tmpdir(), "kilo-install-"))
       try {
-        let packageJson
-        try {
-          packageJson = JSON.parse(fs.readFileSync(path.join(__dirname, "package.json"), "utf8"))
-        } catch {
-          packageJson = JSON.parse(fs.readFileSync(path.join(__dirname, "..", "package.json"), "utf8"))
-        }
+        const packageJson = JSON.parse(fs.readFileSync(path.join(__dirname, "package.json"), "utf8"))
         const version = packageJson.optionalDependencies?.[name]
         if (!version) continue
         const result = childProcess.spawnSync(
