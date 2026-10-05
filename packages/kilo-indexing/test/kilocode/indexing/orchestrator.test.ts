@@ -1,4 +1,7 @@
 import { describe, expect, test } from "bun:test"
+import { mkdtemp, rm } from "fs/promises"
+import { tmpdir } from "os"
+import path from "path"
 import { CodeIndexConfigManager } from "../../../src/indexing/config-manager"
 import { CodeIndexOrchestrator } from "../../../src/indexing/orchestrator"
 import { CodeIndexStateManager } from "../../../src/indexing/state-manager"
@@ -11,9 +14,12 @@ import type {
   IndexingTelemetryEvent,
   IVectorStore,
   PointStruct,
+  StoreState,
+  StoreStatus,
   VectorStoreSearchResult,
 } from "../../../src/indexing/interfaces"
 import { Emitter } from "../../../src/indexing/runtime"
+import { acquire } from "../../../src/indexing/writer-lock"
 
 class Store {
   public clearCount = 0
@@ -23,7 +29,7 @@ class Store {
   public incompleteCount = 0
 
   constructor(
-    private readonly existing: boolean,
+    private readonly status: StoreStatus,
     private readonly created = false,
   ) {}
 
@@ -56,8 +62,8 @@ class Store {
   async collectionExists(): Promise<boolean> {
     return true
   }
-  async hasIndexedData(): Promise<boolean> {
-    return this.existing
+  async state(): Promise<StoreState> {
+    return { status: this.status }
   }
   async markIndexingComplete(): Promise<void> {
     this.completeCount += 1
@@ -179,7 +185,7 @@ describe("CodeIndexOrchestrator telemetry", () => {
       {
         async clearCacheFile() {},
       } as unknown as CacheManager,
-      new Store(false) as unknown as IVectorStore,
+      new Store("empty") as unknown as IVectorStore,
       new Scanner(3, 3, 6) as unknown as DirectoryScanner,
       new Watcher() as unknown as IFileWatcher,
       (event) => events.push(event),
@@ -207,7 +213,7 @@ describe("CodeIndexOrchestrator telemetry", () => {
       {
         async clearCacheFile() {},
       } as unknown as CacheManager,
-      new Store(true) as unknown as IVectorStore,
+      new Store("complete") as unknown as IVectorStore,
       new Scanner(2, 1, 2) as unknown as DirectoryScanner,
       new Watcher() as unknown as IFileWatcher,
       (event) => events.push(event),
@@ -240,7 +246,7 @@ describe("CodeIndexOrchestrator telemetry", () => {
       new CodeIndexStateManager(),
       "/tmp/ws",
       { async clearCacheFile() {} } as unknown as CacheManager,
-      new Store(false) as unknown as IVectorStore,
+      new Store("empty") as unknown as IVectorStore,
       scanner,
       new Watcher() as unknown as IFileWatcher,
     )
@@ -258,7 +264,7 @@ describe("CodeIndexOrchestrator telemetry", () => {
 
   test("shutdown waits for an active scan before closing the store", async () => {
     const scanner = new BlockingScanner()
-    const store = new Store(false)
+    const store = new Store("empty")
     const orchestrator = new CodeIndexOrchestrator(
       createConfig(),
       new CodeIndexStateManager(),
@@ -282,7 +288,7 @@ describe("CodeIndexOrchestrator telemetry", () => {
 
   test("preserves an unchanged index when an incremental scan is interrupted", async () => {
     const scanner = new BlockingScanner()
-    const store = new Store(true)
+    const store = new Store("complete")
     const orchestrator = new CodeIndexOrchestrator(
       createConfig(),
       new CodeIndexStateManager(),
@@ -303,7 +309,7 @@ describe("CodeIndexOrchestrator telemetry", () => {
     expect(store.clearCount).toBe(0)
   })
 
-  test("clears stale vectors and hashes before rebuilding an incomplete store", async () => {
+  test("clears stale vectors and hashes before rebuilding an empty store", async () => {
     const cache = {
       clears: 0,
       async clearCacheFile() {
@@ -311,7 +317,7 @@ describe("CodeIndexOrchestrator telemetry", () => {
       },
       async flush() {},
     }
-    const store = new Store(false, false)
+    const store = new Store("empty", false)
     const orchestrator = new CodeIndexOrchestrator(
       createConfig(),
       new CodeIndexStateManager(),
@@ -329,6 +335,73 @@ describe("CodeIndexOrchestrator telemetry", () => {
     expect(orchestrator.state).toBe("Indexed")
   })
 
+  test("does not clear a partially built index", async () => {
+    const cache = {
+      clears: 0,
+      async clearCacheFile() {
+        this.clears += 1
+      },
+      async flush() {},
+    }
+    const store = new Store("partial", false)
+    const events: IndexingTelemetryEvent[] = []
+    const orchestrator = new CodeIndexOrchestrator(
+      createConfig(),
+      new CodeIndexStateManager(),
+      "/tmp/ws",
+      cache as unknown as CacheManager,
+      store as unknown as IVectorStore,
+      new Scanner(2, 2, 4) as unknown as DirectoryScanner,
+      new Watcher() as unknown as IFileWatcher,
+      (event) => events.push(event),
+    )
+
+    await orchestrator.startIndexing("background")
+
+    const completed = events.find(
+      (event): event is Extract<IndexingTelemetryEvent, { type: "completed" }> => event.type === "completed",
+    )
+    expect(store.clearCount).toBe(0)
+    expect(cache.clears).toBe(0)
+    expect(completed?.mode).toBe("full")
+    expect(orchestrator.state).toBe("Indexed")
+  })
+
+  test("stands by while another session holds the writer lock", async () => {
+    const dir = await mkdtemp(path.join(tmpdir(), "indexing-lock-"))
+    const held = await acquire(dir, "/tmp/ws")
+    expect(held).toBeDefined()
+
+    const store = new Store("partial", false)
+    let scanned = false
+    const scanner = new Scanner(1, 1, 1) as unknown as DirectoryScanner
+    const scan = scanner.scanDirectory.bind(scanner)
+    scanner.scanDirectory = async (...args: Parameters<typeof scan>) => {
+      scanned = true
+      return scan(...args)
+    }
+    const orchestrator = new CodeIndexOrchestrator(
+      createConfig(),
+      new CodeIndexStateManager(),
+      "/tmp/ws",
+      { dir, async clearCacheFile() {}, async flush() {} } as unknown as CacheManager,
+      store as unknown as IVectorStore,
+      scanner,
+      new Watcher() as unknown as IFileWatcher,
+    )
+
+    await orchestrator.startIndexing("background")
+
+    expect(scanned).toBe(false)
+    expect(store.clearCount).toBe(0)
+    expect(store.deleteCount).toBe(0)
+    expect(store.incompleteCount).toBe(0)
+    expect(orchestrator.state).toBe("Standby")
+
+    await held?.release()
+    await rm(dir, { recursive: true, force: true })
+  })
+
   test("does not clear data when index completeness cannot be read", async () => {
     const cache = {
       clears: 0,
@@ -336,8 +409,8 @@ describe("CodeIndexOrchestrator telemetry", () => {
         this.clears += 1
       },
     }
-    const store = new Store(true, false)
-    store.hasIndexedData = async () => {
+    const store = new Store("complete", false)
+    store.state = async () => {
       throw new Error("metadata unavailable")
     }
     const orchestrator = new CodeIndexOrchestrator(
@@ -365,7 +438,7 @@ describe("CodeIndexOrchestrator telemetry", () => {
         this.clears += 1
       },
     }
-    const store = new Store(true)
+    const store = new Store("complete")
     const orchestrator = new CodeIndexOrchestrator(
       createConfig(),
       new CodeIndexStateManager(),
