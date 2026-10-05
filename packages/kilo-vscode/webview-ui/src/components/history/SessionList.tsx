@@ -17,6 +17,7 @@ import { useLanguage } from "../../context/language"
 import { formatRelativeDate } from "../../utils/date"
 import type { SessionInfo } from "../../types/messages"
 import { SessionRenameEditor } from "../shared/SessionRenameEditor"
+import { FolderBadge } from "../shared/FolderBadge"
 
 const DATE_GROUP_KEYS = ["time.today", "time.yesterday", "time.thisWeek", "time.thisMonth", "time.older"] as const
 
@@ -223,6 +224,7 @@ const SessionList: Component<SessionListProps> = (props) => {
             <span data-slot="list-item-title" dir="auto">
               {name(s)}
             </span>
+            <FolderBadge directory={s.directory} />
             <span data-slot="list-item-description">{formatRelativeDate(s.updatedAt)}</span>
             <Show when={session.currentSessionID() === s.id}>
               <span class="sr-only">{language.t("session.current")}</span>

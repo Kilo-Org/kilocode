@@ -4,7 +4,8 @@ import { diffSummary, diffFile } from "../../agent-manager/local-diff"
 import type { WorktreeDiffEntry } from "../../agent-manager/types"
 import { WorktreeDiffReverter, type DiffTarget, type StatusResolver } from "../shared/reverter"
 import { resolveLocalDiffTarget } from "../shared/target"
-import { appendOutput, getWorkspaceRoot } from "../../review-utils"
+import { appendOutput } from "../../review-utils"
+import { selectedRoot } from "../../workspace-root"
 import type { DiffFile } from "../types"
 import type { DiffSource, DiffSourceDescriptor, DiffSourceFetch } from "./types"
 
@@ -66,7 +67,7 @@ export function createWorktreeDiffSource(opts: WorktreeDiffSourceOptions = {}): 
     const dir = opts.dir?.()
     if (dir) return dir
     if (opts.strictDir) return undefined
-    return getWorkspaceRoot()
+    return selectedRoot()
   }
 
   // Cached between fetches so repeated polling doesn't re-resolve the base

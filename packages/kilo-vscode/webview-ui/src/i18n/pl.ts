@@ -219,6 +219,7 @@ export const dict = {
   "prompt.action.enhanceDescription":
     "Przycisk 'Ulepsz podpowiedź' pomaga ulepszyć Twoją prośbę, dostarczając dodatkowy kontekst, wyjaśnienia lub przeformułowania. Spróbuj wpisać prośbę tutaj i kliknij przycisk ponownie, aby zobaczyć, jak to działa.",
   "prompt.action.indexing": "Ustawienia indeksowania",
+  "prompt.folder.label": "Folder obszaru roboczego dla następnej sesji",
   "prompt.action.sandbox.enable": "Włącz sandbox",
   "prompt.action.sandbox.disable": "Wyłącz sandbox",
   "prompt.action.sandbox.enabled":
@@ -502,6 +503,8 @@ export const dict = {
   "provider.custom.error.required": "Wymagane",
   "provider.custom.error.duplicate": "Duplikat",
   "settings.openLocalConfig": "Konfig. lokalna",
+  "settings.folder.label": "Folder obszaru roboczego, którego dotyczą te ustawienia",
+  "settings.folder.placeholder": "Wybierz folder",
   "settings.openGlobalConfig": "Konfig. globalna",
   "settings.config.scope.local": "Lokalne",
   "settings.config.scope.global": "Globalne",

@@ -499,6 +499,8 @@ export const dict = {
   "provider.custom.error.required": "필수",
   "provider.custom.error.duplicate": "중복",
   "settings.openLocalConfig": "로컬 설정",
+  "settings.folder.label": "이 설정이 적용되는 작업 영역 폴더",
+  "settings.folder.placeholder": "폴더 선택",
   "settings.openGlobalConfig": "전역 설정",
   "settings.config.scope.local": "로컬",
   "settings.config.scope.global": "글로벌",
@@ -694,6 +696,7 @@ export const dict = {
   "settings.aboutKiloCode.title": "Kilo Code 정보",
 
   "prompt.action.indexing": "인덱싱 설정",
+  "prompt.folder.label": "다음 세션의 작업 영역 폴더",
   "settings.indexing.dimension.description": "비워두면 모델에서 임베딩 차원을 자동으로 감지합니다.",
   "settings.indexing.dimension.placeholder": "자동",
   "settings.indexing.dimension.title": "벡터 차원",

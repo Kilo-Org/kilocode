@@ -2,6 +2,8 @@ import * as vscode from "vscode"
 import type { KiloConnectionService } from "../cli-backend/connection-service"
 import { getErrorMessage } from "../../kilo-provider-utils"
 import { getCommitMessageLanguage } from "../i18n"
+import { folderFor } from "../../workspace-folders"
+import { selectedRoot, workspaceRoots } from "../../workspace-root"
 
 let lastGeneratedMessage: string | undefined
 let lastWorkspacePath: string | undefined
@@ -19,14 +21,29 @@ interface GitExtensionExports {
   getAPI(version: number): GitAPI
 }
 
-function findRepository(repositories: GitRepository[], arg?: vscode.SourceControl): GitRepository | undefined {
+/**
+ * The Source Control view passes its repository. From the Command Palette
+ * there is none, so use the repository holding the root picked in the chat
+ * input, then the first repository.
+ */
+export function findRepository(
+  repositories: GitRepository[],
+  arg?: vscode.SourceControl,
+  root?: string,
+): GitRepository | undefined {
   if (!repositories.length) return undefined
   if (arg?.rootUri) {
     const target = arg.rootUri.fsPath
     const match = repositories.find((r) => r.rootUri.fsPath === target)
     if (match) return match
   }
-  return repositories[0]
+  const owner = root
+    ? folderFor(
+        root,
+        repositories.map((r) => r.rootUri.fsPath),
+      )
+    : undefined
+  return repositories.find((r) => r.rootUri.fsPath === owner) ?? repositories[0]
 }
 
 export function registerCommitMessageService(
@@ -47,7 +64,9 @@ export function registerCommitMessageService(
       }
 
       const git = extension.exports?.getAPI(1)
-      const repository = findRepository(git?.repositories ?? [], arg)
+      // Only multi-root windows prefer the picked root; single-root keeps the first repository.
+      const root = workspaceRoots().length > 1 ? selectedRoot(context) : undefined
+      const repository = findRepository(git?.repositories ?? [], arg, root)
       if (!repository) {
         vscode.window.showErrorMessage("No Git repository found")
         return

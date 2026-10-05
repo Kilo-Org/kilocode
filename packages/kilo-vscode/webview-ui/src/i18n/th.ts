@@ -215,6 +215,7 @@ export const dict = {
   "prompt.action.enhanceDescription":
     "ปุ่ม 'ปรับปรุงพรอมต์' ช่วยปรับปรุงพรอมต์ของคุณโดยให้บริบทเพิ่มเติม ชี้แจง หรือเขียนใหม่ ลองพิมพ์พรอมต์ที่นี่และคลิกปุ่มอีกครั้งเพื่อดูว่ามันทำงานอย่างไร",
   "prompt.action.indexing": "การตั้งค่าการสร้างดัชนี",
+  "prompt.folder.label": "โฟลเดอร์พื้นที่ทำงานสำหรับเซสชันถัดไป",
   "prompt.action.sandbox.enable": "เปิดใช้งาน sandbox",
   "prompt.action.sandbox.disable": "ปิดใช้งาน sandbox",
   "prompt.action.sandbox.enabled":
@@ -536,6 +537,8 @@ export const dict = {
   "provider.custom.error.required": "จำเป็น",
   "provider.custom.error.duplicate": "ซ้ำ",
   "settings.openLocalConfig": "คอนฟิก Local",
+  "settings.folder.label": "โฟลเดอร์พื้นที่ทำงานที่ใช้การตั้งค่าเหล่านี้",
+  "settings.folder.placeholder": "เลือกโฟลเดอร์",
   "settings.openGlobalConfig": "คอนฟิก Global",
   "settings.config.scope.local": "ภายใน",
   "settings.config.scope.global": "ทั่วโลก",

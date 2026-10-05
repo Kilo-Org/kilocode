@@ -1,6 +1,7 @@
 import * as vscode from "vscode"
 import { GitOps } from "../../agent-manager/GitOps"
-import { appendOutput, getWorkspaceRoot } from "../../review-utils"
+import { appendOutput } from "../../review-utils"
+import { selectedRoot } from "../../workspace-root"
 import { imageMime, loadImage } from "../shared/image"
 import { resolveInside } from "../shared/path"
 import type { DiffFile } from "../types"
@@ -62,7 +63,7 @@ export function createStagedDiffSource(opts: StagedDiffSourceOptions = {}): Diff
     const dir = opts.dir?.()
     if (dir) return dir
     if (opts.strictDir) return undefined
-    return getWorkspaceRoot()
+    return selectedRoot()
   }
 
   const listEntries = async (dir: string): Promise<FileEntry[]> => {

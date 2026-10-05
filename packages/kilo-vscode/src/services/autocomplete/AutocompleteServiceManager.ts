@@ -11,6 +11,7 @@ import { disposeLog } from "./next-edit/log"
 import { NextEditSuggestionManager } from "./next-edit/NextEditSuggestionManager"
 import { toAllowedMercuryRecentSnippets } from "./next-edit/recentSnippetsAdapter"
 import type { KiloConnectionService } from "../cli-backend"
+import { workspaceRoots } from "../../workspace-root"
 import { hasValidCredentials, fimModel as notebookModel } from "./fim"
 import { DEFAULT_AUTOCOMPLETE_MODEL, getAutocompleteModel } from "../../shared/autocomplete-models"
 
@@ -94,7 +95,8 @@ export class AutocompleteServiceManager {
     this.connectionService = connectionService
     AutocompleteServiceManager._instance = this
 
-    const workspacePath = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? ""
+    // Every workspace folder, so files in each one are completed under its own ignore rules.
+    const workspacePath = () => workspaceRoots()
 
     // Register the providers
     this.nextEditSuggestionManager = new NextEditSuggestionManager()

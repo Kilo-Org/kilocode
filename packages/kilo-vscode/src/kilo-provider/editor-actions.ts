@@ -2,6 +2,7 @@ import * as vscode from "vscode"
 import { buildPreviewPath, getPreviewCommand, getPreviewDir, parseImage, trimEntries } from "../image-preview"
 import { escapeGlob, isAbsolutePath } from "../path-utils"
 import { validateFiles } from "./file-links"
+import { within } from "../workspace-folders"
 import type { DiffVirtualFile, DiffVirtualProvider } from "../DiffVirtualProvider"
 import { isPRReviewComment, parseReview, type PRReviewCommentData } from "../shared/review-comments"
 
@@ -204,6 +205,36 @@ function findFallback(dir: string, filePath: string, line?: number, column?: num
   )
 }
 
+/**
+ * In a multi-root window, a relative path missing from the session folder may
+ * name a file in another workspace folder. Opens it on a single hit, prompts
+ * when several folders have it, and otherwise falls back to a filename search
+ * of the session folder. The folder holding the session is skipped, so a
+ * worktree session never opens the main checkout's copy.
+ */
+async function openInFolders(dir: string, filePath: string, line?: number, column?: number): Promise<void> {
+  const folders = (vscode.workspace.workspaceFolders ?? []).filter((folder) => !within(folder.uri.fsPath, dir))
+  const found = await Promise.all(
+    folders.map(async (folder) => {
+      const uri = vscode.Uri.joinPath(folder.uri, filePath)
+      const stat = await Promise.resolve(vscode.workspace.fs.stat(uri)).catch((err: unknown) => {
+        // A missing file is expected here; anything else (permissions, IO) is worth surfacing.
+        const code = err && typeof err === "object" && "code" in err ? err.code : undefined
+        if (code !== "FileNotFound" && code !== "ENOENT") {
+          console.warn("[Kilo New] KiloProvider: Failed to stat file link candidate:", uri.fsPath, err)
+        }
+        return undefined
+      })
+      return stat && !(stat.type & vscode.FileType.Directory) ? { label: `${folder.name}/${filePath}`, uri } : undefined
+    }),
+  )
+  const hits = found.filter((hit) => hit !== undefined)
+  if (hits.length === 0) return findFallback(dir, filePath, line, column)
+  if (hits.length === 1) return show(hits[0]!.uri, line, column)
+  const pick = await vscode.window.showQuickPick(hits, { placeHolder: `Multiple matches for "${filePath}"` })
+  if (pick) show(pick.uri, line, column)
+}
+
 function openFile(dir: string, filePath: string, line?: number, column?: number): void {
   const uri = isAbsolutePath(filePath) ? vscode.Uri.file(filePath) : vscode.Uri.joinPath(vscode.Uri.file(dir), filePath)
   vscode.workspace.fs.stat(uri).then(
@@ -214,6 +245,12 @@ function openFile(dir: string, filePath: string, line?: number, column?: number)
       }
       show(uri, line, column)
     },
-    () => findFallback(dir, filePath, line, column),
+    () => {
+      const multi = (vscode.workspace.workspaceFolders?.length ?? 0) > 1
+      if (!multi || isAbsolutePath(filePath)) return findFallback(dir, filePath, line, column)
+      openInFolders(dir, filePath, line, column).catch((err: unknown) =>
+        console.error("[Kilo New] KiloProvider: Failed to open file from workspace folders:", err),
+      )
+    },
   )
 }

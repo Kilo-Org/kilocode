@@ -4,7 +4,7 @@ import type { GlobalEvent, SessionStatus } from "@kilocode/sdk/v2/client"
 import { buildWebviewHtml, getWebviewFontSize } from "./utils"
 import { watchFontSizeConfig } from "./kilo-provider/font-size"
 import { mapSSEEventToWebviewMessage } from "./kilo-provider-utils"
-import { resolvePanelProjectDirectory } from "./project-directory"
+import { pickedRoot, selectedRoot, workspaceRoots } from "./workspace-root"
 import { seedSessionStatuses } from "./session-status"
 import { type KiloConnectionService, ServerStartupError } from "./services/cli-backend"
 import { MarketplaceService } from "./services/marketplace"
@@ -330,13 +330,14 @@ export class MarketplacePanelProvider implements vscode.Disposable {
     this.post({ type: "workspaceDirectoryChanged", directory: project ?? "" })
   }
 
+  /**
+   * Project installs target the root picked in the chat input. A multi-root
+   * window that has no explicit pick yet stays global-only (null), so config
+   * is never written into a folder the user did not choose.
+   */
   private resolveProject(): string | null {
-    const editor = vscode.window.activeTextEditor
-    const active =
-      editor?.document.uri.scheme === "file"
-        ? vscode.workspace.getWorkspaceFolder(editor.document.uri)?.uri.fsPath
-        : undefined
-    return resolvePanelProjectDirectory(active, vscode.workspace.workspaceFolders)
+    if (workspaceRoots().length > 1) return pickedRoot(this.context) ?? null
+    return selectedRoot(this.context) ?? null
   }
 
   private directory(): string {

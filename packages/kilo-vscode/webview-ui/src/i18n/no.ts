@@ -219,6 +219,7 @@ export const dict = {
     "Automatisk godkjenning er deaktivert. Klikk for å godkjenne tillatelsesforespørsler automatisk.",
   "prompt.action.autoApprove.sandboxExcluded": "Sandbox-eskaleringsforespørsler er alltid ekskludert.",
   "prompt.action.indexing": "Indekseringsinnstillinger",
+  "prompt.folder.label": "Arbeidsområdemappe for neste økt",
   "prompt.action.enhanceDescription":
     "Knappen 'Forbedre prompt' hjelper med å forbedre forespørselen din ved å gi ekstra kontekst, avklaring eller omformulering. Prøv å skrive en forespørsel her og klikk på knappen igjen for å se hvordan det fungerer.",
   "prompt.action.sandbox.enable": "Aktiver sandbox",
@@ -505,6 +506,8 @@ export const dict = {
   "provider.custom.error.required": "Påkrevd",
   "provider.custom.error.duplicate": "Duplikat",
   "settings.openLocalConfig": "Lokal konfig",
+  "settings.folder.label": "Arbeidsområdemappe disse innstillingene gjelder for",
+  "settings.folder.placeholder": "Velg en mappe",
   "settings.openGlobalConfig": "Global konfig",
   "settings.config.scope.local": "Lokal",
   "settings.config.scope.global": "Global",

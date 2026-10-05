@@ -111,6 +111,15 @@ export interface ClearSessionRequest {
   type: "clearSession"
 }
 
+/**
+ * Pick a workspace folder: the root new sessions start in (prompt bar), or the
+ * project a Settings panel edits. `directory` must be a workspace folder path.
+ */
+export interface SelectWorkspaceFolderRequest {
+  type: "selectWorkspaceFolder"
+  directory: string
+}
+
 export interface LoadMessagesRequest {
   type: "loadMessages"
   sessionID: string
@@ -1675,6 +1684,7 @@ export type WebviewMessage =
   | PermissionResponseRequest
   | CreateSessionRequest
   | ClearSessionRequest
+  | SelectWorkspaceFolderRequest
   | LoadMessagesRequest
   | LoadSessionsRequest
   | RequestSessionModelUsageMessage

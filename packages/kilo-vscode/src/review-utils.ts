@@ -10,6 +10,11 @@ export function appendOutput(channel: vscode.OutputChannel, prefix: string, ...a
   channel.appendLine(`[${prefix}] ${msg}`)
 }
 
+/**
+ * The first workspace folder: Agent Manager's pinned project and the sidebar's
+ * "New Worktree" branch, which creates worktrees there. Views that follow the
+ * chat use the picked root (`selectedRoot` in workspace-root.ts) instead.
+ */
 export function getWorkspaceRoot(): string | undefined {
   const folders = vscode.workspace.workspaceFolders
   if (folders && folders.length > 0) return folders[0].uri.fsPath

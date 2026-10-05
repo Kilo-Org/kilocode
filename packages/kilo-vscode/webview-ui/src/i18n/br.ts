@@ -219,6 +219,7 @@ export const dict = {
   "prompt.action.enhanceDescription":
     "O botão 'Aprimorar prompt' ajuda a melhorar seu pedido fornecendo contexto adicional, esclarecimentos ou reformulações. Tente digitar um pedido aqui e clique no botão novamente para ver como funciona.",
   "prompt.action.indexing": "Configurações de indexação",
+  "prompt.folder.label": "Pasta do espaço de trabalho para a próxima sessão",
   "prompt.action.sandbox.enable": "Ativar sandbox",
   "prompt.action.sandbox.disable": "Desativar sandbox",
   "prompt.action.sandbox.enabled":
@@ -503,6 +504,8 @@ export const dict = {
   "provider.custom.error.required": "Obrigatório",
   "provider.custom.error.duplicate": "Duplicado",
   "settings.openLocalConfig": "Config Local",
+  "settings.folder.label": "Pasta do espaço de trabalho à qual estas configurações se aplicam",
+  "settings.folder.placeholder": "Escolha uma pasta",
   "settings.openGlobalConfig": "Config Global",
   "settings.config.scope.local": "Local",
   "settings.config.scope.global": "Global",

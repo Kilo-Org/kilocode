@@ -3,7 +3,8 @@ import type { KiloConnectionService } from "../../services/cli-backend"
 import { GitOps } from "../../agent-manager/GitOps"
 import { gitGeneratedFiles } from "../shared/git-attributes"
 import { resolveLocalDiffTarget } from "../shared/target"
-import { appendOutput, getWorkspaceRoot } from "../../review-utils"
+import { appendOutput } from "../../review-utils"
+import { selectedRoot } from "../../workspace-root"
 import type { BranchListItem } from "../../agent-manager/git-import"
 import type { PanelContext } from "../types"
 import type { DiffSource, DiffSourceDescriptor } from "./types"
@@ -141,7 +142,7 @@ export class DiffSourceCatalog implements vscode.Disposable {
     override: string | undefined,
     dir?: string,
   ): Promise<WorkspaceBranchesResult | undefined> {
-    const root = dir ?? getWorkspaceRoot()
+    const root = dir ?? selectedRoot()
     if (!root) return undefined
 
     const git = this.ensureBranchGit()

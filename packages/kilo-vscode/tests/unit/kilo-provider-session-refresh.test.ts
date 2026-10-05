@@ -59,6 +59,34 @@ function createListSessions() {
   return { calls, fn }
 }
 
+describe("loadSessions across workspace folders", () => {
+  it("lists every workspace folder once, root first", async () => {
+    const { calls, fn } = createListSessions()
+    const ctx = createContext({ listSessions: fn, connectionState: "connected" })
+    ctx.workspaceFolders = () => ["/other", "/repo", "/third"]
+    ctx.sessionDirectories.set("ses_1", "/other")
+
+    await loadSessions(ctx)
+
+    expect(calls).toEqual(["/repo", "/other", "/third"])
+  })
+
+  it("still succeeds when a non-root folder fails to list", async () => {
+    const ctx = createContext({
+      connectionState: "connected",
+      listSessions: async (dir: string) => {
+        if (dir === "/other") throw new Error("boom")
+        return []
+      },
+    })
+    ctx.workspaceFolders = () => ["/repo", "/other"]
+
+    await loadSessions(ctx)
+
+    expect(ctx.sent.at(-1)).toMatchObject({ type: "sessionsLoaded" })
+  })
+})
+
 function createClient() {
   const calls: string[] = []
   return {

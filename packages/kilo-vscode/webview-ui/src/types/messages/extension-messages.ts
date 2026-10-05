@@ -120,6 +120,23 @@ export interface WorkspaceDirectoryChangedMessage {
   directory: string
 }
 
+export interface WorkspaceFolder {
+  path: string
+  name: string
+}
+
+/**
+ * The editor's workspace folders and the selected one: the root new sessions
+ * start in ("session", chat views) or the project a Settings panel edits
+ * ("settings").
+ */
+export interface WorkspaceFoldersLoadedMessage {
+  type: "workspaceFoldersLoaded"
+  folders: WorkspaceFolder[]
+  selected: string
+  scope: "session" | "settings"
+}
+
 export interface LanguageChangedMessage {
   type: "languageChanged"
   locale: string
@@ -1824,6 +1841,7 @@ export type ExtensionMessage =
   | AgentManagerBranchesMessage
   | AgentManagerImportResultMessage
   | WorkspaceDirectoryChangedMessage
+  | WorkspaceFoldersLoadedMessage
   | AgentManagerWorktreeDiffMessage
   | AgentManagerWorktreeDiffFileMessage
   | AgentManagerDocumentMessage

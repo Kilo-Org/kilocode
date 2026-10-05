@@ -42,6 +42,8 @@ export interface SessionFileDiff {
 // Session info (simplified for webview)
 export interface SessionInfo {
   id: string
+  /** Working directory of the session; used to show its workspace folder in multi-root windows. */
+  directory?: string
   parentID?: string | null
   title?: string
   createdAt: string

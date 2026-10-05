@@ -1,6 +1,6 @@
 import * as vscode from "vscode"
 import { KiloProvider } from "./KiloProvider"
-import { resolvePanelProjectDirectory } from "./project-directory"
+import { selectedRoot } from "./workspace-root"
 import type { KiloConnectionService } from "./services/cli-backend"
 import type { RemoteStatusService } from "./services/RemoteStatusService"
 import type { AgentManagerSettingsHandler } from "./kilo-provider/options"
@@ -38,14 +38,10 @@ export class SettingsEditorProvider implements vscode.Disposable {
     private readonly agentManagerSettings?: AgentManagerSettingsHandler,
   ) {}
 
+  /** Agent Manager's project, else the root picked in the chat input; null without workspace folders. */
   private getProjectDirectory(projectId?: string): string | null {
     if (projectId) return this.agentManagerSettings?.projectDirectory(projectId) ?? null
-    const editor = vscode.window.activeTextEditor
-    const active =
-      editor?.document.uri.scheme === "file"
-        ? vscode.workspace.getWorkspaceFolder(editor.document.uri)?.uri.fsPath
-        : undefined
-    return resolvePanelProjectDirectory(active, vscode.workspace.workspaceFolders)
+    return selectedRoot(this.context) ?? null
   }
 
   /** Extract the PanelView from a viewType string like "kilo-code.new.settingsPanel". */
