@@ -275,6 +275,7 @@ export const {
     const fullSyncedSessions = new Set<string>()
     const deleted = new Set<string>() // kilocode_change
     const terminal = new Set<string>() // kilocode_change
+    // kilocode_change start
     // replied/rejected asks are terminal: a stale pending list must not resurrect them; cap the set so it cannot grow unbounded
     const terminalCap = 512
     function markTerminal(id: string) {
@@ -283,6 +284,7 @@ export const {
       const oldest = terminal.values().next().value
       if (oldest != null) terminal.delete(oldest)
     }
+    // kilocode_change end
     let syncedWorkspace = project.workspace.current() // kilocode_change
     let vcsVersion = 0 // kilocode_change
     const syncingSessions = new Map<string, Promise<void>>()
@@ -1084,7 +1086,7 @@ export const {
               }),
             )
             fullSyncedSessions.add(sessionID)
-            // a failed pending-ask recovery must not fail the session load; the next visit retries it
+            // a failed pending-ask recovery must not fail the session load; the next visit retries it // kilocode_change
             await syncPending().catch((err) => console.error("pending-ask recovery failed", err)) // kilocode_change - recover pending asks lost to eviction or a missed one-shot event
           })().finally(() => {
             syncingSessions.delete(sessionID)

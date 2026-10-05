@@ -23,8 +23,10 @@ export async function wait(fn: () => boolean, timeout = 2000) {
 
 type Ctx = { kv: ReturnType<typeof useKV>; project: ReturnType<typeof useProject>; sync: ReturnType<typeof useSync> }
 
+// kilocode_change start
+// optional TUI args for tests
 export async function mount(override?: FetchHandler, state?: string, args?: Args) {
-  // kilocode_change - optional TUI args for tests
+  // kilocode_change end
   const calls = createFetch(override)
   const events = createEventSource()
   let sync!: ReturnType<typeof useSync>
