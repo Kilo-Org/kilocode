@@ -25,10 +25,14 @@ class SessionUiPromptRestoreTest : SessionUiTestBase() {
         editor.text = "don't lose this message"
 
         find<PromptPanel>(ui).send()
-        settleShort(100)
+        // Wait for the dispatch failure to actually land rather than for a fixed budget: the send
+        // crosses coroutine -> invokeLater -> EDT, which can outlast a short delay under load.
+        assertTrue(
+            "the send failure never reached the model",
+            pumpUntil { controller().model.state is SessionState.Error },
+        )
 
         assertTrue("A rejected send must not reach the backend as a persisted prompt", rpc.prompts.isEmpty())
-        assertTrue("state=${controller().model.state}", controller().model.state is SessionState.Error)
         assertEquals("don't lose this message", find<PromptPanel>(ui).text())
     }
 
@@ -40,7 +44,7 @@ class SessionUiPromptRestoreTest : SessionUiTestBase() {
         editor.text = "this one goes through"
 
         find<PromptPanel>(ui).send()
-        settleShort(100)
+        assertTrue("the send never reached the backend", pumpUntil { rpc.prompts.isNotEmpty() })
 
         assertEquals(1, rpc.prompts.size)
         assertEquals("", find<PromptPanel>(ui).text())
@@ -51,9 +55,10 @@ class SessionUiPromptRestoreTest : SessionUiTestBase() {
         emit(ChatEventDto.MessageUpdated("ses_test", message("restore_test_user_msg")), flush = false)
         emit(ChatEventDto.PartUpdated("ses_test", part("restore_test_part", "restore_test_user_msg", "text", "this one goes through")))
         emit(ChatEventDto.Error("ses_test", MessageErrorDto(type = "unknown", message = "boom")))
-        settleShort(100)
-
-        assertTrue(controller().model.state is SessionState.Error)
+        assertTrue(
+            "the error never reached the model",
+            pumpUntil { controller().model.state is SessionState.Error },
+        )
         assertEquals("", find<PromptPanel>(ui).text())
     }
 
@@ -69,7 +74,7 @@ class SessionUiPromptRestoreTest : SessionUiTestBase() {
 
         find<EditorTextField>(ui).text = "submitted message"
         find<PromptPanel>(ui).send()
-        settleShort(100)
+        assertTrue("the send never reached the backend", pumpUntil { rpc.prompts.isNotEmpty() })
 
         // The send reached the backend and no failure arrived, so nothing has consumed the
         // retained submission yet; the editor was cleared on submit.
@@ -87,7 +92,7 @@ class SessionUiPromptRestoreTest : SessionUiTestBase() {
 
         find<EditorTextField>(ui).text = "submitted message"
         find<PromptPanel>(ui).send()
-        settleShort(100)
+        assertTrue("the send never reached the backend", pumpUntil { rpc.prompts.isNotEmpty() })
 
         assertEquals(1, rpc.prompts.size)
         assertEquals("", find<PromptPanel>(ui).text())
@@ -105,12 +110,15 @@ class SessionUiPromptRestoreTest : SessionUiTestBase() {
 
         find<EditorTextField>(ui).text = "submitted message"
         find<PromptPanel>(ui).send()
-        settleShort(100)
+        assertTrue("the send never reached the backend", pumpUntil { rpc.prompts.isNotEmpty() })
 
         // The server persists the user message, which confirms the send and releases the draft
         // (a pasted image is held as a full base64 data URL, so it must not be pinned forever).
         emit(ChatEventDto.MessageUpdated("ses_test", message("confirmed_user_msg")))
-        settleShort(100)
+        assertTrue(
+            "the user message never reached the model",
+            pumpUntil { controller().model.messages().any { it.info.id == "confirmed_user_msg" } },
+        )
 
         find<PromptPanel>(ui).restoreLastSubmission()
 
