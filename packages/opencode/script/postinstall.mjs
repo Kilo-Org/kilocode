@@ -5,7 +5,7 @@ import fs from "fs"
 import os from "os"
 import path from "path"
 import { createRequire } from "module"
-import { fileURLToPath } from "url"
+import { fileURLToPath, pathToFileURL } from "url"
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const require = createRequire(import.meta.url)
@@ -239,18 +239,17 @@ function main() {
 }
 
 // kilocode_change start - only run main if executed directly (allows importing in tests)
-let isMain = false
-try {
-  if (process.argv[1]) {
-    const executedFile = fs.realpathSync(process.argv[1])
-    const currentFile = fs.realpathSync(fileURLToPath(import.meta.url))
-    isMain = executedFile === currentFile
+function checkMain() {
+  if (!process.argv[1]) return false
+  try {
+    return fs.realpathSync(process.argv[1]) === fs.realpathSync(fileURLToPath(import.meta.url))
+  } catch (err) {
+    console.error(`[kilo] script path resolution failed: ${err.message}`)
+    return import.meta.url === pathToFileURL(process.argv[1]).href
   }
-} catch {
-  // Ignore
 }
 
-if (isMain) {
+if (checkMain()) {
   try {
     main()
   } catch (error) {
