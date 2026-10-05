@@ -1,5 +1,6 @@
 import { createMemo, createSignal, Show } from "solid-js"
 import { createResizeObserver } from "@solid-primitives/resize-observer"
+import { checksum } from "@opencode-ai/core/util/encode"
 import { BasicTool as Base, GenericTool } from "@opencode-ai/ui/basic-tool"
 import type { BasicToolProps as BaseProps, TriggerTitle } from "@opencode-ai/ui/basic-tool"
 import { toolOpenKey, readToolOpen, writeToolOpen } from "./tool-open-state"
@@ -24,7 +25,7 @@ const MOUNTED_MAX = 2000
 const mounted = new Set<string>()
 const heights = new Map<
   string,
-  { size: NonNullable<BaseProps["deferredSize"]>; revision: unknown; approval: boolean; status: BaseProps["status"] }
+  { size: NonNullable<BaseProps["deferredSize"]>; revision: string | undefined; approval: boolean; status: BaseProps["status"] }
 >()
 function remember(key: string | undefined) {
   if (!key) return
@@ -78,9 +79,16 @@ export function BasicTool(props: BasicToolProps) {
   const id = key()
   // Captured before the card is remembered so the first mount stays deferred.
   const remount = id !== undefined && mounted.has(id)
+  // Fingerprint the patch/content instead of retaining the full string so a
+  // long-lived cache cannot pin large diff payloads.
+  const revision = createMemo(() => {
+    const value = props.revision
+    if (typeof value === "string") return checksum(value)
+    return value == null ? undefined : String(value)
+  })
   const cached = remount && id ? heights.get(id) : undefined
   const size =
-    cached && cached.revision === props.revision && cached.status === props.status && cached.approval === inBody()
+    cached && cached.revision === revision() && cached.status === props.status && cached.approval === inBody()
       ? cached.size
       : undefined
   if (initial() && !props.forceOpen) remember(id)
@@ -101,7 +109,7 @@ export function BasicTool(props: BasicToolProps) {
     if (!id || !props.defer || !mounted.has(id) || !initial() || !content || rect.height <= 0) return
     heights.set(id, {
       size: { height: rect.height, width: content.getBoundingClientRect().width, font: getComputedStyle(content).font },
-      revision: props.revision,
+      revision: revision(),
       status: props.status,
       approval: inBody(),
     })
