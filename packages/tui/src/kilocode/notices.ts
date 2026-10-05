@@ -22,3 +22,18 @@ export function combine(notices: Notice[]): ToastOptions | undefined {
     duration: 0,
   }
 }
+
+/**
+ * Raises each notice as soon as its own fetch reports it, re-showing the combined set so a
+ * later notice cannot drop an earlier one. Keeping this per-fetch matters: collecting the
+ * notices and raising them from the aggregate completion handler instead would lose all of
+ * them whenever a sibling fetch rejects, since that handler never runs.
+ */
+export function collector(show: (notice: ToastOptions) => void) {
+  const notices: Notice[] = []
+  return (item: Notice) => {
+    notices.push(item)
+    const notice = combine(notices)
+    if (notice) show(notice)
+  }
+}
