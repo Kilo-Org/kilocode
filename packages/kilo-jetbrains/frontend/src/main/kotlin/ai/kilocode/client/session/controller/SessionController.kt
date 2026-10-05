@@ -574,14 +574,34 @@ class SessionController(
      * is the right trade: rolling a whole run's edits back behind a Retry button is both surprising and
      * unrecoverable once cleanup clears the revert marker.
      */
-    fun retry() {
+    fun retry() = replay(false)
+
+    /**
+     * Continues a turn the user stopped on purpose, behind the Resume action on the stop note.
+     *
+     * Mechanically identical to [retry] — only the gate differs. A stop is not a failure, so it must
+     * not light up Retry on a failure card, but it leaves exactly the same continuable tail behind:
+     * the user message is intact and the assistant that was answering it carries an abort error.
+     */
+    fun resume() = replay(true)
+
+    /** Whether the error card should offer Retry. Gates the action so it is never painted as a no-op. */
+    @RequiresEdt
+    fun canRetry(): Boolean = retryTarget(false) != null
+
+    /** Whether the stop note should offer Resume. Gates the action so it is never painted as a no-op. */
+    @RequiresEdt
+    fun canResume(): Boolean = retryTarget(true) != null
+
+    private fun replay(stopped: Boolean) {
         assertEdt()
         val id = sid ?: return
-        val target = retryTarget() ?: return
-        LOG.info("${ChatLogSummary.sid(id)} kind=retry clicked=true message=${target.assistant ?: "none"}")
+        val target = retryTarget(stopped) ?: return
+        val kind = if (stopped) "resume" else "retry"
+        LOG.info("${ChatLogSummary.sid(id)} kind=$kind clicked=true message=${target.assistant ?: "none"}")
         capture(
             "Session Retry",
-            sessionProps(id) + mapOf("tail" to if (target.assistant != null) "assistant" else "user"),
+            sessionProps(id) + mapOf("tail" to if (target.assistant != null) "assistant" else "user", "kind" to kind),
         )
         // Hand off to the running turn before the RPC resolves. SessionOutcomeView is bound to the
         // session state, so this is also what dismisses the error card, and a busy state is what stops a
@@ -590,12 +610,12 @@ class SessionController(
         cs.launch {
             try {
                 sessions.prompt(id, directory, target.prompt)
-                LOG.info("${ChatLogSummary.sid(id)} kind=retry ok=true")
+                LOG.info("${ChatLogSummary.sid(id)} kind=$kind ok=true")
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                capture("Session Error", sessionProps(id) + mapOf("context" to "retry", "errorClass" to e::class.java.name))
-                LOG.warn("${ChatLogSummary.sid(id)} kind=retry dir=${ChatLogSummary.dir(directory)} failed message=${e.message}", e)
+                capture("Session Error", sessionProps(id) + mapOf("context" to kind, "errorClass" to e::class.java.name))
+                LOG.warn("${ChatLogSummary.sid(id)} kind=$kind dir=${ChatLogSummary.dir(directory)} failed message=${e.message}", e)
                 edt {
                     if (disposed) return@edt
                     model.setState(SessionState.Error(e.message ?: KiloBundle.message("session.error.prompt")))
@@ -604,16 +624,15 @@ class SessionController(
         }
     }
 
-    /** Whether the error card should offer Retry. Gates the action so it is never painted as a no-op. */
-    @RequiresEdt
-    fun canRetry(): Boolean = retryTarget() != null
-
     /**
-     * The failed tail turn to continue, or null when retry does not apply: no session, an operation
+     * The tail turn to continue, or null when continuing does not apply: no session, an operation
      * already in flight, a busy session, a turn that did not fail, or a tail that is neither the last user
      * message nor the assistant that failed answering it.
+     *
+     * [stopped] switches the gate to a turn the user deliberately stopped, which is what Resume
+     * continues. Retry and Resume never accept each other's outcome.
      */
-    private fun retryTarget(): RetryTarget? {
+    private fun retryTarget(stopped: Boolean): RetryTarget? {
         assertEdt()
         if (sid == null) return null
         if (revertOp != null) return null
@@ -621,18 +640,22 @@ class SessionController(
         val tail = model.messages().lastOrNull() ?: return null
         val err = tail.info.error
         val state = model.state
-        val failed = when {
+        val continuable = when {
+            // A turn that completed cleanly is not continuable even when a session-level error or a
+            // late interrupt arrives afterwards: continuing would ask the model to redo delivered work.
+            tail.info.role == "assistant" && err == null && tail.info.time.completed != null -> false
+            // Resume answers a different question than Retry: not "did this fail" but "did the user
+            // stop it". The two gates are exclusive, so neither action is ever offered for the other's
+            // outcome, and the state the transcript is showing is what decides.
+            stopped -> state is SessionState.TurnEnded && state.outcome == Outcome.INTERRUPTED
             // A user stop also lands an errored tail (MessageAbortedError), and it is not a failure.
             // A stop the user never asked for is: `error()` promoted it to SessionState.Error, so
             // follow the state the transcript is already showing rather than the error name alone.
             err != null -> !err.aborted || state is SessionState.Error
-            // A turn that completed cleanly is not retryable even when a session-level error arrives
-            // afterwards: continuing it would ask the model to redo work it already delivered.
-            tail.info.role == "assistant" && tail.info.time.completed != null -> false
             else -> state is SessionState.Error ||
                 (state is SessionState.TurnEnded && state.outcome == Outcome.FAILED)
         }
-        if (!failed) return null
+        if (!continuable) return null
         val prompt = retryPromptCurrent() ?: return null
         // The failure hit before the assistant message existed — model resolution and provider
         // credentials are checked ahead of it — so the user turn is the tail and there is no failed

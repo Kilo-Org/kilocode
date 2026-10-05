@@ -532,6 +532,8 @@ class SessionUi(
             focus = focus,
             retry = if (readonly) null else controller::retry,
             retryable = controller::canRetry,
+            resume = if (readonly) null else controller::resume,
+            resumable = controller::canResume,
         )
         messageBody = SessionMessageListPanel(
             controller.model,

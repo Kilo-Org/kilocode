@@ -6,7 +6,10 @@ import ai.kilocode.client.session.ui.style.SessionEditorStyleTarget
 import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.ui.RoundedContentPanel
 import ai.kilocode.client.ui.UiStyle
+import ai.kilocode.client.ui.layout.HAlign
 import ai.kilocode.client.ui.layout.Stack
+import ai.kilocode.client.ui.layout.VAlign
+import ai.kilocode.client.ui.layout.align
 import com.intellij.ide.ui.laf.darcula.ui.DarculaButtonUI
 import com.intellij.openapi.actionSystem.DataSink
 import com.intellij.openapi.actionSystem.UiDataProvider
@@ -102,6 +105,9 @@ open class DialogView(
     private var actionLeft: JComponent? = null
     private var leftActionId: String? = null
     private var leftActionButton: JButton? = null
+    private var headId: String? = null
+    private var headButton: JButton? = null
+    private var headSlot: JComponent? = null
 
     // Top inset value used when top padding is on; QuestionView sets a non-standard step here.
     private var topInset = UiStyle.Gap.pad()
@@ -198,6 +204,45 @@ open class DialogView(
         if (icon == null && attached) header.remove(this.icon)
         this.icon.revalidate()
         this.icon.repaint()
+        syncNorth()
+    }
+
+    /**
+     * Render a retained action at the right edge of the header row instead of the footer.
+     *
+     * For a card whose whole body is one short line: a footer button under that line reads as a
+     * second block of its own, while the same button beside the line reads as part of it. The button
+     * keeps its preferred height and stays vertically centred, so a header that wraps to several
+     * lines does not stretch it.
+     *
+     * Pass `null` to remove it. Retained by [Action.id] the way [setActions] is.
+     */
+    @RequiresEdt
+    fun setHeaderAction(action: Action?) {
+        if (action == null) {
+            headId?.let(actionHandlers::remove)
+            headId = null
+            detachHead()
+            return
+        }
+        val btn = headButton?.takeIf { headId == action.id } ?: run {
+            headId?.let(actionHandlers::remove)
+            detachHead()
+            makeButton(action.id, action.text).also {
+                headButton = it
+                headSlot = it.align(HAlign.RIGHT, VAlign.CENTER)
+            }
+        }
+        headId = action.id
+        actionHandlers[action.id] = action.handler
+        btn.text = action.text
+        btn.isEnabled = action.enabled
+        btn.putClientProperty(DarculaButtonUI.DEFAULT_STYLE_KEY, if (action.primary) true else null)
+        val slot = headSlot ?: return
+        if (slot.parent === header) return
+        header.add(slot, BorderLayout.EAST)
+        header.revalidate()
+        header.repaint()
         syncNorth()
     }
 
@@ -418,7 +463,16 @@ open class DialogView(
         north.repaint()
     }
 
-    private fun hasHeader() = icon.icon != null || headerText.isVisible || descriptionText.isVisible
+    private fun hasHeader() =
+        icon.icon != null || headerText.isVisible || descriptionText.isVisible || headSlot?.parent === header
+
+    private fun detachHead() {
+        val slot = headSlot?.takeIf { it.parent === header } ?: return
+        header.remove(slot)
+        header.revalidate()
+        header.repaint()
+        syncNorth()
+    }
 
     private fun syncInsets() {
         val side = UiStyle.Gap.pad()

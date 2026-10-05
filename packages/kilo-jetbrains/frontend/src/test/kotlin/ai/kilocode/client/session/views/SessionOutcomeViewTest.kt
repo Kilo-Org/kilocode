@@ -12,6 +12,7 @@ import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.components.JBTextArea
+import java.awt.BorderLayout
 import java.awt.Container
 import java.awt.Dimension
 import java.awt.event.ComponentAdapter
@@ -257,6 +258,103 @@ class SessionOutcomeViewTest : BasePlatformTestCase() {
 
     private fun retryButton(root: Container) =
         findAll<JButton>(root).firstOrNull { it.text == KiloBundle.message("session.outcome.retry") }
+
+    // ------ resume action (stop note) ------
+
+    fun `test interrupted note offers resume on the note row`() {
+        edt {
+            var clicked = 0
+            val view = SessionOutcomeView(resume = { clicked++ })
+            view.showOutcome(Outcome.INTERRUPTED)
+
+            val button = resumeButton(view)
+            assertNotNull("A stopped turn can be continued", button)
+            assertNotNull(
+                "Resume belongs beside the note, not under it",
+                resumeButton(north(view)),
+            )
+            assertNull("The note has no footer of its own", south(view))
+            button!!.doClick()
+            assertEquals(1, clicked)
+        }
+    }
+
+    fun `test failed and incomplete outcomes offer no resume`() {
+        edt {
+            val view = SessionOutcomeView(retry = {}, resume = {})
+            view.showOutcome(Outcome.FAILED)
+            assertNull("A failure offers Retry, not Resume", resumeButton(view))
+
+            view.showOutcome(Outcome.INCOMPLETE, "unknown")
+            assertNull(resumeButton(view))
+
+            view.showError("Provider balance is too low", "APIError")
+            assertNull(resumeButton(view))
+        }
+    }
+
+    fun `test resume hides when the stopped turn cannot be continued`() {
+        edt {
+            val view = SessionOutcomeView(resume = {}, resumable = { false })
+            view.showOutcome(Outcome.INTERRUPTED)
+
+            assertNull("A dead Resume must not be painted", resumeButton(view))
+            assertNotNull(
+                "The note still explains the stop",
+                findText(view, KiloBundle.message("session.outcome.interrupted.note")),
+            )
+        }
+    }
+
+    fun `test readonly session offers no resume`() {
+        edt {
+            val view = SessionOutcomeView(resume = null)
+            view.showOutcome(Outcome.INTERRUPTED)
+
+            assertNull(resumeButton(view))
+        }
+    }
+
+    fun `test resume appears once the tail becomes continuable`() {
+        edt {
+            var ready = false
+            val view = SessionOutcomeView(resume = {}, resumable = { ready })
+            view.showOutcome(Outcome.INTERRUPTED)
+            assertNull(resumeButton(view))
+
+            ready = true
+            view.showOutcome(Outcome.INTERRUPTED)
+
+            assertNotNull(resumeButton(view))
+        }
+    }
+
+    fun `test toggling outcomes does not accumulate resume buttons`() {
+        edt {
+            var clicked = 0
+            val view = SessionOutcomeView(retry = {}, resume = { clicked++ })
+            repeat(3) {
+                view.showOutcome(Outcome.INTERRUPTED)
+                view.showOutcome(Outcome.FAILED)
+            }
+            assertNull("The failure card drops the note's action", resumeButton(view))
+            view.showOutcome(Outcome.INTERRUPTED)
+
+            val buttons = findAll<JButton>(view).filter { it.text == KiloBundle.message("session.outcome.resume") }
+            assertEquals("Exactly one live Resume button", 1, buttons.size)
+            buttons.single().doClick()
+            assertEquals("The live button is wired to the current handler", 1, clicked)
+        }
+    }
+
+    private fun resumeButton(root: Container) =
+        findAll<JButton>(root).firstOrNull { it.text == KiloBundle.message("session.outcome.resume") }
+
+    private fun north(root: SessionOutcomeView) =
+        (root.layout as BorderLayout).getLayoutComponent(BorderLayout.NORTH) as Container
+
+    private fun south(root: SessionOutcomeView) =
+        (root.layout as BorderLayout).getLayoutComponent(BorderLayout.SOUTH)
 
     // ------ action-only failures (the transcript owns the reason) ------
 

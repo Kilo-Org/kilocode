@@ -612,6 +612,97 @@ class DialogViewTest : BasePlatformTestCase() {
         }
     }
 
+    // ------ header action ------
+
+    fun `test setHeaderAction puts the button on the header row and creates no footer`() {
+        edt {
+            var clicked = false
+            var focused = false
+            val panel = DialogView(focus = { focused = true })
+            panel.setHeader("", "Stopped")
+            panel.setHeaderAction(DialogView.Action("resume", "Resume", primary = false) { clicked = true })
+
+            val button = actionButton(panel, "Resume")
+            val header = headerRow(panel)!!
+            val east = (header.layout as BorderLayout).getLayoutComponent(BorderLayout.EAST) as Container
+            assertNotNull("header action should sit at the header's right edge", find(east, button))
+            assertNull("a header action is not a footer action", region(panel, BorderLayout.SOUTH))
+            assertFalse("shares the non-opaque button behavior", button.isOpaque)
+            assertNull(button.getClientProperty(DarculaButtonUI.DEFAULT_STYLE_KEY))
+
+            button.doClick(0)
+            assertTrue(clicked)
+            assertTrue("header action should return focus to the prompt too", focused)
+        }
+    }
+
+    fun `test header action keeps its preferred height on a wrapping header`() {
+        edt {
+            val panel = DialogView()
+            panel.setHeader("", "Stopped")
+            panel.setHeaderAction(DialogView.Action("resume", "Resume", primary = false) {})
+
+            val button = actionButton(panel, "Resume")
+            val header = headerRow(panel)!!
+            val east = (header.layout as BorderLayout).getLayoutComponent(BorderLayout.EAST) as Container
+            // A header tall enough to stretch an unwrapped EAST component.
+            east.setSize(east.preferredSize.width, button.preferredSize.height * 3)
+            east.doLayout()
+
+            assertEquals("the button must not stretch with the header", button.preferredSize.height, button.height)
+            assertTrue("and stays vertically centred", button.y > 0)
+        }
+    }
+
+    fun `test setHeaderAction reuses the retained button for the same id`() {
+        edt {
+            val panel = DialogView()
+            panel.setHeader("", "Stopped")
+            panel.setHeaderAction(DialogView.Action("resume", "Resume", primary = false) {})
+            val first = actionButton(panel, "Resume")
+
+            panel.setHeaderAction(DialogView.Action("resume", "Continue", primary = false) {})
+
+            assertSame("same id must update in place", first, actionButton(panel, "Continue"))
+            assertEquals(1, findAll<JButton>(panel).size)
+        }
+    }
+
+    fun `test setHeaderAction null removes the button and the header row with it`() {
+        edt {
+            val panel = DialogView()
+            panel.setHeaderAction(DialogView.Action("resume", "Resume", primary = false) {})
+            assertNotNull(headerRow(panel))
+
+            panel.setHeaderAction(null)
+
+            assertTrue("button should be gone", findAll<JButton>(panel).isEmpty())
+            assertNull("an action-only header row has nothing left to show", headerRow(panel))
+        }
+    }
+
+    fun `test header action and footer actions coexist without clobbering each other`() {
+        edt {
+            val panel = DialogView()
+            panel.setHeader("Title")
+            panel.setHeaderAction(DialogView.Action("resume", "Resume", primary = false) {})
+            panel.setActions(listOf(DialogView.Action("ok", "OK", primary = true) {}))
+
+            val head = actionButton(panel, "Resume")
+            val header = headerRow(panel)!!
+            val east = (header.layout as BorderLayout).getLayoutComponent(BorderLayout.EAST) as Container
+            val footer = region(panel, BorderLayout.SOUTH) as JPanel
+
+            assertNotNull("setActions must not drop the header action", find(east, head))
+            assertNotNull(find(footer, actionButton(panel, "OK")))
+
+            var clicked = false
+            panel.setHeaderAction(DialogView.Action("resume", "Resume", primary = false) { clicked = true })
+            actionButton(panel, "Resume").doClick(0)
+            assertTrue("the header handler must survive footer churn", clicked)
+        }
+    }
+
     // ------ applyStyle: UI fonts ----
 
     fun `test applyStyle applies headerFont to header and secondary font to description`() {
