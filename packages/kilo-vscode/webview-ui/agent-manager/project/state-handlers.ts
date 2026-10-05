@@ -2,6 +2,7 @@ import type { ExtensionMessage, AgentManagerProjectsMessage, AgentManagerStateMe
 
 export function createProjectStateHandlers(opts: {
   setProjects: (value: AgentManagerProjectsMessage["projects"]) => void
+  migrate: (id: string) => void
   setStates: (
     value: (prev: Record<string, AgentManagerStateMessage>) => Record<string, AgentManagerStateMessage>,
   ) => void
@@ -22,6 +23,9 @@ export function createProjectStateHandlers(opts: {
   const projects = (msg: ExtensionMessage) => {
     if (msg.type !== "agentManager.projects") return
     const ids = new Set(msg.projects.map((item) => item.id))
+    // Legacy single-project tabs migrate into the pinned project, or the first catalog entry.
+    const target = msg.projects.find((item) => item.pinned) ?? msg.projects.at(0)
+    if (target) opts.migrate(target.id)
     opts.setProjects(msg.projects)
     opts.setStates((prev) => Object.fromEntries(Object.entries(prev).filter(([id]) => ids.has(id))))
     opts.prune(ids)

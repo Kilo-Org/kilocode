@@ -1068,10 +1068,15 @@ const AgentManagerContent: Component = () => {
   })
   const stateHandlers = createProjectStateHandlers({
     setProjects: (projects) => {
-      const target = projects.find((project) => project.pinned) ?? projects.at(0)
-      if (target) registry.migrate(target.id)
+      const live = new Set(projects.map((project) => project.id))
+      setRepoBranches((prev) =>
+        Object.keys(prev).every((id) => id === "single" || live.has(id))
+          ? prev
+          : Object.fromEntries(Object.entries(prev).filter(([id]) => id === "single" || live.has(id))),
+      )
       setProjectList(projects)
     },
+    migrate: (id) => registry.migrate(id),
     setStates: setProjectStates,
     prune: (ids) => registry.prune(ids),
     ensure: (id) => registry.ensure(id),
