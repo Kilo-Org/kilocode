@@ -150,6 +150,7 @@ export interface Config {
   subagent_model?: string | null
   subagent_variant?: string | null
   subagent_variant_overrides?: Record<string, string | null> | null
+  memory_model?: string | null
   default_agent?: string | null
   agent?: Record<string, AgentConfig>
   provider?: Record<string, ProviderConfig>
