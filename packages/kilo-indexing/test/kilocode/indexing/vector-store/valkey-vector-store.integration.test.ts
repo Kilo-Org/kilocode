@@ -1,22 +1,27 @@
 /**
  * Integration tests for ValkeyVectorStore against a real Valkey server.
  *
- * These tests require a running Valkey server with the ValkeySearch module loaded.
- * They are skipped gracefully when no server is available.
+ * Opt-in: these tests only run when VALKEY_URL is set, and are skipped when the
+ * server does not have the ValkeySearch module loaded. They never flush the
+ * database; every key they create is removed by collection prefix.
  *
  * Environment variables:
- *   VALKEY_URL      - Valkey server URL (default: "redis://localhost:6379")
+ *   VALKEY_URL      - Valkey server URL, e.g. "redis://localhost:6379" (required to run)
  *   VALKEY_PASSWORD - Optional password for authentication
  */
-import { describe, test, expect, beforeAll, beforeEach, afterEach } from "bun:test"
-import { GlideClient, GlideFt, RequestError } from "@valkey/valkey-glide"
-import { ValkeyVectorStore } from "../../../../src/indexing/vector-store/valkey-vector-store"
+import { describe, test, expect, beforeAll, afterEach } from "bun:test"
+import type { ValkeyVectorStore } from "../../../../src/indexing/vector-store/valkey-vector-store"
 import type { PointStruct } from "../../../../src/indexing/interfaces/vector-store"
 import type { EmbeddingProfile } from "../../../../src/indexing/embedding-profile"
 import { randomUUID } from "crypto"
 
-const VALKEY_URL = process.env.VALKEY_URL ?? "redis://localhost:6379"
+const VALKEY_URL = process.env.VALKEY_URL ?? ""
 const VALKEY_PASSWORD = process.env.VALKEY_PASSWORD ?? undefined
+
+// Loaded lazily so the native binding is never required when the tests are skipped
+// (@valkey/valkey-glide publishes no Windows binary).
+let glide: typeof import("@valkey/valkey-glide")
+let Store: typeof ValkeyVectorStore
 const VECTOR_DIM = 4
 
 // Unique workspace path per test run to avoid conflicts
@@ -47,73 +52,41 @@ function makePoint(
  * Creates a ValkeyVectorStore instance with a unique workspace path.
  */
 function createStore(workspacePath?: string): ValkeyVectorStore {
-  return new ValkeyVectorStore(workspacePath ?? TEST_WORKSPACE, VALKEY_URL, VECTOR_DIM, VALKEY_PASSWORD, TEST_PROFILE)
+  return new Store(workspacePath ?? TEST_WORKSPACE, VALKEY_URL, VECTOR_DIM, VALKEY_PASSWORD, TEST_PROFILE)
+}
+
+function connect() {
+  const url = new URL(VALKEY_URL.startsWith("redis") ? VALKEY_URL : `redis://${VALKEY_URL}`)
+  return glide.GlideClient.createClient({
+    addresses: [{ host: url.hostname, port: url.port ? parseInt(url.port, 10) : 6379 }],
+    credentials: VALKEY_PASSWORD ? { password: VALKEY_PASSWORD } : undefined,
+    requestTimeout: 5000,
+  })
 }
 
 let serverAvailable = false
-let flushClient: GlideClient | null = null
-
-/**
- * Flushes the entire Valkey database to ensure a clean state.
- * Called before each test to prevent cross-test contamination.
- */
-async function flushDatabase(): Promise<void> {
-  if (!flushClient) return
-  try {
-    await flushClient.customCommand(["FLUSHDB"])
-  } catch {
-    // Ignore flush errors (e.g., if server is unavailable)
-  }
-}
 
 beforeAll(async () => {
-  try {
-    const url = new URL(VALKEY_URL.startsWith("redis") ? VALKEY_URL : `redis://${VALKEY_URL}`)
-    const client = await GlideClient.createClient({
-      addresses: [{ host: url.hostname, port: url.port ? parseInt(url.port, 10) : 6379 }],
-      credentials: VALKEY_PASSWORD ? { password: VALKEY_PASSWORD } : undefined,
-      requestTimeout: 5000,
-    })
+  if (!VALKEY_URL) return
+  glide = await import("@valkey/valkey-glide")
+  Store = (await import("../../../../src/indexing/vector-store/valkey-vector-store")).ValkeyVectorStore
 
-    // Verify ValkeySearch module is loaded by trying FT.INFO on a non-existent index
-    try {
-      await GlideFt.info(client, "__valkey_integration_test_probe__")
-    } catch (error) {
-      // RequestError means the module is loaded but index doesn't exist — that's fine
-      if (error instanceof RequestError) {
-        serverAvailable = true
-      }
-      // Other errors mean the module isn't loaded
-    }
+  const client = await connect().catch((err) => {
+    console.log("⚠️  Valkey server not reachable at", VALKEY_URL, err)
+    return null
+  })
+  if (!client) return
 
-    if (serverAvailable) {
-      // Keep the client around for FLUSHDB between tests
-      flushClient = client
-      // Flush once at the start to ensure a clean slate
-      await flushDatabase()
-    } else {
-      client.close()
-    }
-  } catch {
-    // Server not reachable
-    serverAvailable = false
-  }
+  // A plain Redis/Valkey without ValkeySearch also rejects FT.INFO with a RequestError,
+  // so ask the server which modules are loaded instead of inferring it from an error.
+  const modules = await client.customCommand(["MODULE", "LIST"])
+  client.close()
+  serverAvailable = JSON.stringify(modules).toLowerCase().includes("search")
+  if (!serverAvailable) console.log("⚠️  ValkeySearch module not loaded on", VALKEY_URL)
 })
 
-describe("ValkeyVectorStore Integration Tests", () => {
+describe.skipIf(!VALKEY_URL)("ValkeyVectorStore Integration Tests", () => {
   let store: ValkeyVectorStore
-
-  beforeAll(() => {
-    if (!serverAvailable) {
-      console.log("⚠️  Skipping integration tests: Valkey server not available at", VALKEY_URL)
-    }
-  })
-
-  beforeEach(async () => {
-    if (!serverAvailable) return
-    // Flush the database before each test to ensure a clean state
-    await flushDatabase()
-  })
 
   afterEach(async () => {
     if (store) {
@@ -141,7 +114,7 @@ describe("ValkeyVectorStore Integration Tests", () => {
     test("should fail with auth error when wrong password is provided", async () => {
       if (!serverAvailable) return
 
-      const badStore = new ValkeyVectorStore(
+      const badStore = new Store(
         `/tmp/bad-auth-${randomUUID()}`,
         VALKEY_URL,
         VECTOR_DIM,
@@ -389,12 +362,7 @@ describe("ValkeyVectorStore Integration Tests", () => {
       await store.deleteCollection()
 
       // Verify no keys remain with the collection prefix
-      const url = new URL(VALKEY_URL.startsWith("redis") ? VALKEY_URL : `redis://${VALKEY_URL}`)
-      const verifyClient = await GlideClient.createClient({
-        addresses: [{ host: url.hostname, port: url.port ? parseInt(url.port, 10) : 6379 }],
-        credentials: VALKEY_PASSWORD ? { password: VALKEY_PASSWORD } : undefined,
-        requestTimeout: 5000,
-      })
+      const verifyClient = await connect()
 
       const collectionName = store.getCollectionName()
       const pattern = `${collectionName}:*`
