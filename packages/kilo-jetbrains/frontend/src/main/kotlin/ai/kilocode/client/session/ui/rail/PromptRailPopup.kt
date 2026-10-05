@@ -15,13 +15,13 @@ import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBList
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.components.JBTextArea
+import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.SwingTextTrimmer
 import com.intellij.util.ui.UIUtil
 import com.intellij.util.ui.components.BorderLayoutPanel
 import java.awt.BorderLayout
 import java.awt.Component
-import java.awt.Rectangle
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
 import javax.swing.JList
@@ -60,11 +60,26 @@ internal class PromptRailPopup(
         })
     }
 
-    private val scroll = JBScrollPane(
+    /**
+     * Row to reveal once there is a viewport to reveal it in, or -1.
+     *
+     * The balloon builds its body before the platform gives it bounds, so a scroll requested during
+     * construction would run against a zero-height viewport and be dropped (see [reveal]). Holding the
+     * request and replaying it from [JBScrollPane.doLayout] keeps that ordering explicit instead of
+     * leaving it to whichever happens first.
+     */
+    private var pending = -1
+
+    private val scroll = object : JBScrollPane(
         list,
         ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED,
         ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER,
-    ).apply {
+    ) {
+        override fun doLayout() {
+            super.doLayout()
+            reveal()
+        }
+    }.apply {
         isOpaque = false
         viewport.isOpaque = false
         border = JBUI.Borders.empty()
@@ -102,19 +117,37 @@ internal class PromptRailPopup(
     }
 
     /**
-     * Highlights [index] and scrolls it into view when it is not already fully visible. Called while the
-     * balloon stays open and the pointer moves between ticks, so it must not resize the body — a change
-     * in preferred size would make the platform re-place the balloon.
+     * Highlights [index] and brings it into view. Safe to call before the balloon has been laid out and
+     * safe to call repeatedly with the same row: selection is applied now, and the scroll is applied as
+     * soon as there is a viewport for it.
+     *
+     * Called while the balloon stays open and the pointer moves between ticks, so it must not resize the
+     * body — a change in preferred size would make the platform re-place the balloon.
      */
+    @RequiresEdt
     fun select(index: Int) {
         if (index !in 0 until model.size) return
         if (list.selectedIndex != index) list.selectedIndex = index
-        val cell = list.getCellBounds(index, index) ?: return
-        // The viewport's own view rect, not list.visibleRect: the latter is derived by walking up to the
-        // window, so it answers empty until the balloon is realised and would scroll on every hover.
-        val view = Rectangle(scroll.viewport.viewPosition, scroll.viewport.extentSize)
-        if (view.contains(cell)) return
-        list.scrollRectToVisible(cell)
+        pending = index
+        reveal()
+    }
+
+    /**
+     * Scrolls [pending] into view, or leaves it pending when the viewport has no extent yet.
+     *
+     * `JViewport.scrollRectToVisible` derives its delta from the viewport height, so against a
+     * zero-height viewport it resolves to a bogus adjustment and the scroll is lost — which is why this
+     * waits for a real extent rather than scrolling eagerly. `ensureIndexIsVisible` is a no-op once the
+     * row is fully visible, so replaying it never nudges an already-settled list.
+     */
+    @RequiresEdt
+    private fun reveal() {
+        val index = pending
+        if (index < 0) return
+        if (scroll.viewport.extentSize.height <= 0) return
+        // Cleared before scrolling: the scroll re-enters doLayout, and that pass must not scroll again.
+        pending = -1
+        list.ensureIndexIsVisible(index)
     }
 
     private fun content(): BorderLayoutPanel {

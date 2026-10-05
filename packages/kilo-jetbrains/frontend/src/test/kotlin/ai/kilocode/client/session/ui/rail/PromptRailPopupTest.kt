@@ -71,14 +71,72 @@ class PromptRailPopupTest : BasePlatformTestCase() {
         Disposer.dispose(popup.disposable)
     }
 
+    /**
+     * The regression that made hovering a tick look random: the body is built before the platform gives
+     * the balloon bounds, so the row asked for at construction was selected but never scrolled to —
+     * `JViewport.scrollRectToVisible` derives its delta from the viewport height and drops the scroll
+     * against a zero-height viewport. The request has to survive until there is a viewport.
+     */
+    fun `test a row requested before layout is revealed once laid out`() {
+        val popup = popup(items(40), hovered = 30)
+        popup.fitWithin(320, 220)
+        val root = popup.component
+        val port = popup.rows.viewport
+        val list = find(root) ?: error("expected a JBList in the navigator body")
+
+        // Pre-layout the selection is already applied, but the viewport has no extent to scroll in.
+        assertEquals(30, list.selectedIndex)
+        assertEquals(0, port.extentSize.height)
+        // It must not compute a position from that empty viewport. positionAdjustment degenerates to
+        // -cell.y against a zero extent, so an eager scroll here writes a position the real layout pass
+        // is free to discard, which is what made revealing a row look random.
+        assertEquals(0, port.viewPosition.y)
+
+        root.size = Dimension(320, 220)
+        layoutAll(root)
+
+        val cell = list.getCellBounds(30, 30)
+        val view = Rectangle(port.viewPosition, port.extentSize)
+        assertTrue("row 30 at $cell must be revealed in $view once laid out", view.contains(cell))
+
+        // Replaying layout must not drift the settled position.
+        val settled = port.viewPosition
+        layoutAll(root)
+        assertEquals(settled, port.viewPosition)
+
+        Disposer.dispose(popup.disposable)
+    }
+
+    /** A hover that lands while the balloon is open must both select and reveal, every time. */
+    fun `test every hovered row is selected and revealed`() {
+        val popup = popup(items(40))
+        popup.fitWithin(320, 220)
+        val root = popup.component
+        root.size = Dimension(320, 220)
+        layoutAll(root)
+        val port = popup.rows.viewport
+        val list = find(root) ?: error("expected a JBList in the navigator body")
+
+        for (index in listOf(39, 0, 20, 7, 33, 12)) {
+            popup.select(index)
+
+            assertEquals(index, list.selectedIndex)
+            val cell = list.getCellBounds(index, index)
+            val view = Rectangle(port.viewPosition, port.extentSize)
+            assertTrue("row $index at $cell must be visible in $view", view.contains(cell))
+        }
+
+        Disposer.dispose(popup.disposable)
+    }
+
     private fun layoutAll(comp: Component) {
         comp.doLayout()
         if (comp is Container) comp.components.forEach(::layoutAll)
     }
 
-    private fun popup(items: List<PromptRailItem>) = PromptRailPopup(
+    private fun popup(items: List<PromptRailItem>, hovered: Int = 0) = PromptRailPopup(
         items = items,
-        hovered = 0,
+        hovered = hovered,
         onSelect = {},
         onFirst = {},
         onLatest = {},

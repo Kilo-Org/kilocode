@@ -54,6 +54,16 @@ internal class PromptRailController(
 
     /** The live balloon body, so a move between ticks can re-select in place instead of reopening it. */
     private var body: PromptRailPopup? = null
+
+    /**
+     * Item the navigator should highlight, captured when the tick is hovered.
+     *
+     * The body is built when the dwell elapses, not when the hover happens, so reading the rail's live
+     * hover state at build time raced the pointer: by then it could sit on another tick, or have left the
+     * band entirely and report -1. Recording the intent up front makes the opened balloon show the tick
+     * that actually asked for it.
+     */
+    private var pending = -1
     private val adjustment = AdjustmentListener { recomputeActive() }
     private val change = ChangeListener { recomputeActive() }
     private val geometry = object : ComponentAdapter() {
@@ -202,8 +212,9 @@ internal class PromptRailController(
             // revealing them in the list — without waiting out the hover dwell.
             is PromptRailEntry.Overflow -> {
                 rail.setOpen(rail.entries().indexOf(entry))
+                pending = item(entry)
                 if (popup.showing()) {
-                    body?.select(item(entry))
+                    body?.select(pending)
                     return
                 }
                 popup.showNow(rail, this) { request() }
@@ -222,14 +233,16 @@ internal class PromptRailController(
      * pointer. The open tick is left alone on exit so the rail stays lit while the pointer is inside the
      * balloon; it is cleared when the balloon actually goes away.
      */
+    @RequiresEdt
     private fun hover(entry: PromptRailEntry?) {
         if (entry == null) {
             popup.notifyExit(rail)
             return
         }
         rail.setOpen(rail.entries().indexOf(entry))
+        pending = item(entry)
         popup.show(rail, this) { request() }
-        body?.select(item(entry))
+        body?.select(pending)
     }
 
     /** Item the list should highlight for [entry]; an overflow tick points at the first prompt it hides. */
@@ -242,7 +255,7 @@ internal class PromptRailController(
         build = {
             PromptRailPopup(
                 items = rail.items(),
-                hovered = rail.entries().getOrNull(rail.hover())?.let(::item) ?: 0,
+                hovered = pending,
                 onSelect = { item -> jump(item.id) },
                 onFirst = { rail.items().firstOrNull()?.let { jump(it.id) } },
                 onLatest = { rail.items().lastOrNull()?.let { jump(it.id) } },
