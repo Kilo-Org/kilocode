@@ -133,7 +133,7 @@ export class ValkeyVectorStore implements IVectorStore {
         return true
       }
 
-      const metadata = await this.getMetadataHash()
+      const metadata = await this.getMetadata()
       if (metadata?.[KEY.schema] !== SCHEMA) {
         log.info("Index schema mismatch, recreating index", {
           collection: this.collectionName,
@@ -205,10 +205,6 @@ export class ValkeyVectorStore implements IVectorStore {
   }
 
   private async getMetadata(): Promise<Record<string, string> | null> {
-    return this.getMetadataHash()
-  }
-
-  private async getMetadataHash(): Promise<Record<string, string> | null> {
     const client = await this.ensureConnected()
     const hashData = await client.hgetall(this.metadataKey)
     if (!hashData || hashData.length === 0) {
@@ -222,7 +218,7 @@ export class ValkeyVectorStore implements IVectorStore {
   }
 
   private async getStoredProfile(): Promise<EmbeddingProfile | null> {
-    const metadata = await this.getMetadataHash()
+    const metadata = await this.getMetadata()
     if (!metadata) {
       return null
     }
