@@ -1,12 +1,17 @@
 package ai.kilocode.client.session.ui.rail
 
 import ai.kilocode.client.ui.HoverIcon
+import ai.kilocode.client.ui.list.ActiveList
+import ai.kilocode.client.ui.list.ActiveListConfig
+import ai.kilocode.client.ui.list.ActiveListItem
+import ai.kilocode.client.ui.list.ActiveListRowHeight
 import com.intellij.openapi.util.Disposer
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import java.awt.Component
 import java.awt.Container
 import java.awt.Dimension
 import java.awt.Rectangle
+import java.awt.event.MouseEvent
 import javax.swing.JList
 import javax.swing.JScrollPane
 import javax.swing.JViewport
@@ -150,12 +155,30 @@ class PromptRailPopupTest : BasePlatformTestCase() {
         Disposer.dispose(fix.popup.disposable)
     }
 
-    /** The navigator opens on hover, so a tooltip would stack a second floating surface over it. */
-    fun `test the popup shows no tooltips`() {
+    /**
+     * The navigator opens on hover, so a tooltip would stack a second floating surface over it.
+     *
+     * Rows are asked through `getToolTipText(event)` with the pointer over a cell, which is where
+     * `ActiveListView` consults `cfg.tooltip`. The `JComponent.toolTipText` property is never set on
+     * this list, so asserting on it would pass either way and prove nothing.
+     */
+    fun `test the popup shows no row or button tooltips`() {
         val fix = shown(40)
         val list = findList(fix.popup.component) ?: error("expected a JList of rows")
+        val cell = list.getCellBounds(0, 0)
+        val over = MouseEvent(
+            list,
+            MouseEvent.MOUSE_MOVED,
+            0L,
+            0,
+            cell.x + cell.width / 2,
+            cell.y + cell.height / 2,
+            0,
+            false,
+        )
 
-        assertNull(list.toolTipText)
+        assertNull("rows must not serve a tooltip", list.getToolTipText(over))
+
         for (button in findButtons(fix.popup.component)) {
             assertNull("header buttons must not carry a tooltip", button.toolTipText)
             // Still labelled for screen readers.
@@ -164,6 +187,42 @@ class PromptRailPopupTest : BasePlatformTestCase() {
 
         Disposer.dispose(fix.popup.disposable)
     }
+
+    /**
+     * Guards the assertion above: the same list with tooltips left on does serve one, so the suppression
+     * is what the other test observes rather than some unrelated reason for a null.
+     */
+    fun `test a row tooltip is served when the config leaves it on`() {
+        val rows = ActiveList(
+            emptyText = "",
+            cfg = ActiveListConfig(height = ActiveListRowHeight.PREFERRED, wrapDescription = true),
+            showSearch = false,
+            onCell = { _, _ -> },
+        )
+        rows.update(items(40).map { Row(it.id, it.prompt, it.answer) })
+        rows.size = Dimension(CAP_W, CAP_H)
+        layoutAll(rows)
+        val list = findList(rows) ?: error("expected a JList of rows")
+        val cell = list.getCellBounds(0, 0)
+        val over = MouseEvent(
+            list,
+            MouseEvent.MOUSE_MOVED,
+            0L,
+            0,
+            cell.x + cell.width / 2,
+            cell.y + cell.height / 2,
+            0,
+            false,
+        )
+
+        assertNotNull("the default config must serve a row tooltip", list.getToolTipText(over))
+    }
+
+    private data class Row(
+        override val key: String,
+        override val title: String,
+        override val description: String?,
+    ) : ActiveListItem
 
     /**
      * The header buttons have to drive the same navigation the ticks do. Scrolling the transcript alone
