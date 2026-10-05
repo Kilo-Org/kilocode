@@ -82,6 +82,7 @@ function provider(
     hang?: boolean
     npm?: string
     providerID?: ProviderV2.ID
+    broken?: Effect.Effect<never, ModelNotFoundError>
   } = {},
 ): Provider.Interface {
   const providerID = input.providerID ?? pid
@@ -105,6 +106,7 @@ function provider(
     },
     getLanguage: (model) => {
       input.seen?.push(model.id)
+      if (input.broken && model.id === mem.id) return input.broken
       return Effect.succeed(lang(input.outputs, input.calls, input.hang))
     },
     closest: () => Effect.succeed({ providerID: pid, modelID: base.id }),
@@ -304,6 +306,30 @@ describe("memory ports", () => {
 
     expect(configured.fallback).toBeUndefined()
     expect(fallback.fallback).toEqual({ reason: "model unavailable" })
+    expect(seen).toEqual(["memory-config-model", "fake-memory-model"])
+  })
+
+  test("model port falls back to the session model when the configured model has no language model", async () => {
+    const seen: string[] = []
+    const broken = Effect.fail(
+      new ModelNotFoundError({ providerID: pid, modelID: ModelV2.ID.make("memory-config-model") }),
+    )
+    const port = MemoryModel.port({ provider: provider({ seen, broken }) })
+
+    const result = await Effect.runPromise(port.resolve({ configured: "test/memory-config-model", session: ref }))
+
+    expect(result.fallback).toEqual({ reason: "model unavailable" })
+    expect(seen).toEqual(["memory-config-model", "fake-memory-model"])
+  })
+
+  test("model port falls back to the session model when the configured model's SDK fails to load", async () => {
+    const seen: string[] = []
+    const broken = Effect.die(new Error("sdk failed to load"))
+    const port = MemoryModel.port({ provider: provider({ seen, broken }) })
+
+    const result = await Effect.runPromise(port.resolve({ configured: "test/memory-config-model", session: ref }))
+
+    expect(result.fallback).toEqual({ reason: "model unavailable" })
     expect(seen).toEqual(["memory-config-model", "fake-memory-model"])
   })
 
@@ -507,7 +533,7 @@ describe("memory turn", () => {
     return { get: () => Effect.succeed({ memory_model: model }) }
   }
 
-  async function close(model?: string | null) {
+  async function close(model?: string | null, broken?: Effect.Effect<never, ModelNotFoundError>) {
     await using tmp = await tmpdir({ git: true })
     const sessionID = SessionID.make("ses_memory_turn")
     const uid = MessageID.make("msg_turn_user")
@@ -539,6 +565,7 @@ describe("memory turn", () => {
               summary: summary({ seen: [], diffs: [] }),
               provider: provider({
                 seen,
+                broken,
                 outputs: [
                   '{"topic":"memory","summary":"Found the CLI memory test command.","operations":[],"skipped":[]}',
                 ],
@@ -575,5 +602,10 @@ describe("memory turn", () => {
 
   test("close falls back to the session model when memory_model is unavailable", async () => {
     expect(await close("test/missing-memory-model")).toEqual(["fake-memory-model"])
+  })
+
+  test("close falls back to the session model when the configured memory_model cannot load", async () => {
+    const broken = Effect.die(new Error("sdk failed to load"))
+    expect(await close("test/memory-config-model", broken)).toEqual(["memory-config-model", "fake-memory-model"])
   })
 })
