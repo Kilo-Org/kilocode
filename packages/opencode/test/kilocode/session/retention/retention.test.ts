@@ -13,13 +13,13 @@ import { ProjectTable } from "@opencode-ai/core/project/sql"
 import { MessageTable, PartTable, SessionTable } from "@opencode-ai/core/session/sql"
 import { AbsolutePath } from "@opencode-ai/core/schema"
 import { SessionProjector } from "@opencode-ai/core/session/projector"
-import { Config } from "../../../src/config/config"
-import { Session } from "../../../src/session/session"
-import { SessionID, MessageID, PartID } from "../../../src/session/schema"
-import { KiloSessionRetention } from "../../../src/kilocode/session/retention"
-import { RetentionStatus } from "../../../src/kilocode/server/httpapi/groups/kilocode"
-import { testInstanceStoreLayer } from "../../fixture/fixture"
-import { awaitWithTimeout, testEffect } from "../../lib/effect"
+import { Config } from "../../../../src/config/config"
+import { Session } from "../../../../src/session/session"
+import { SessionID, MessageID, PartID } from "../../../../src/session/schema"
+import { KiloSessionRetention } from "../../../../src/kilocode/session/retention"
+import { RetentionStatus } from "../../../../src/kilocode/server/httpapi/groups/kilocode"
+import { testInstanceStoreLayer } from "../../../fixture/fixture"
+import { awaitWithTimeout, testEffect } from "../../../lib/effect"
 
 const env = Layer.mergeAll(
   LayerNode.compile(
@@ -354,7 +354,11 @@ runIt.live("resume after scanning protects the refreshed tree from cascades and 
     const old = Date.now() - 40 * KiloSessionRetention.DAY_MS
     yield* seed({
       directory: "/tmp/retention-resumed",
-      rows: [{ id: unrelated, updated: old }, { id: parent, updated: old }, { id: child, parent, updated: old }],
+      rows: [
+        { id: unrelated, updated: old },
+        { id: parent, updated: old },
+        { id: child, parent, updated: old },
+      ],
     })
     const service = Layer.mock(Session.Service, {
       remove: (id) =>

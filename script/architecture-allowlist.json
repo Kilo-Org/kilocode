@@ -17,7 +17,7 @@
       "allowed": {
         "packages/opencode/src/kilocode/session-export/sequence.ts": { "count": 1, "owner": "export-runtime", "reason": "Read-only offline export database reader" },
         "packages/opencode/src/kilocode/session-export/worker/storage.ts": { "count": 1, "owner": "export-runtime", "reason": "Worker-thread offline export database handle" },
-        "packages/opencode/src/kilocode/session/reclaim-worker.ts": { "count": 1, "owner": "session-retention", "reason": "Worker-thread VACUUM connection that keeps database rebuilds off the main thread" }
+        "packages/opencode/src/kilocode/session/retention/reclaim-worker.ts": { "count": 1, "owner": "session-retention", "reason": "Worker-thread VACUUM connection that keeps database rebuilds off the main thread" }
       }
     },
     "kilo-tool-process-env": {

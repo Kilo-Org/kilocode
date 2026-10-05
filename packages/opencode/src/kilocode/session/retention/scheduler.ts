@@ -5,7 +5,7 @@ import * as Log from "@opencode-ai/core/util/log"
 import { Config } from "@/config/config"
 import { Session } from "@/session/session"
 import { KiloShutdown } from "@/kilocode/cli/shutdown"
-import { KiloSessionRetention } from "./retention"
+import { KiloSessionRetention } from "."
 
 export namespace KiloRetentionScheduler {
   const log = Log.create({ service: "session.retention.scheduler" })

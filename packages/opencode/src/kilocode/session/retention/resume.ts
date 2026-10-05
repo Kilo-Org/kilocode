@@ -40,9 +40,9 @@ export namespace KiloSessionResume {
   })
 
   // The TUI launcher runs before its backend. Resolve without the instance
-  // bootstrap so plugins and watchers do not start twice.
+  // bootstrap so plugins and watchers do not start twice. KiloRetentionTui
+  // calls this only for --session or --continue.
   export async function local(input: Input, directory: string) {
-    if (input.cloudFork || (!input.session && !input.continue)) return
     const { AppRuntime } = await import("@/effect/app-runtime")
     return AppRuntime.runPromise(
       Effect.gen(function* () {

@@ -2,7 +2,6 @@ import { Effect } from "effect"
 import { effectCmd } from "../effect-cmd"
 import { withNetworkOptions, resolveNetworkOptions } from "../network"
 import { Flag } from "@opencode-ai/core/flag/flag"
-import { KiloRetentionScheduler } from "@/kilocode/session/retention-scheduler" // kilocode_change
 
 export const ServeCommand = effectCmd({
   command: "serve",
@@ -32,6 +31,7 @@ export const ServeCommand = effectCmd({
     const { InstanceRuntime } = yield* Effect.promise(() => import("../../project/instance-runtime"))
     const { startParentWatchdog } = yield* Effect.promise(() => import("../../kilocode/parent-watchdog"))
     const { KiloSessions } = yield* Effect.promise(() => import("@/kilo-sessions/kilo-sessions"))
+    const { KiloRetentionScheduler } = yield* Effect.promise(() => import("@/kilocode/session/retention/scheduler"))
     const retention = yield* KiloRetentionScheduler.Service
     yield* retention.start()
     yield* Effect.promise(

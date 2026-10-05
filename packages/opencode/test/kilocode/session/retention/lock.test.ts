@@ -4,10 +4,11 @@ import os from "os"
 import path from "path"
 import { Flock } from "@opencode-ai/core/util/flock"
 import { Hash } from "@opencode-ai/core/util/hash"
+import { KiloRetentionLock } from "../../../../src/kilocode/session/retention/lock"
 
-const key = "session-retention"
+const key = KiloRetentionLock.key
 const day = 24 * 60 * 60_000
-const opts = { owner: true, staleMs: day, timeoutMs: 150, baseDelayMs: 10, maxDelayMs: 10 }
+const opts = { dead: KiloRetentionLock.dead, staleMs: day, timeoutMs: 150, baseDelayMs: 10, maxDelayMs: 10 }
 
 async function fixture() {
   const dir = await mkdtemp(path.join(os.tmpdir(), "retention-lock-"))
@@ -175,6 +176,15 @@ describe("session retention owner lock", () => {
     await writeFile(tmp.meta, "not json")
     await expect(Flock.acquire(key, { ...opts, dir: tmp.dir })).rejects.toThrow("Timed out waiting for lock")
     expect(await readFile(tmp.meta, "utf8")).toBe("not json")
+  })
+
+  test("recovers an empty lock directory left by an interrupted acquire after a minute", async () => {
+    await using tmp = await fixture()
+    await mkdir(tmp.lock)
+    const old = new Date(Date.now() - 2 * 60_000)
+    await utimes(tmp.lock, old, old)
+    await using lease = await Flock.acquire(key, { ...opts, dir: tmp.dir })
+    expect(JSON.parse(await readFile(tmp.meta, "utf8"))).toMatchObject({ pid: process.pid })
   })
 
   test("uses lock age when the PID probe has an unknown error", async () => {

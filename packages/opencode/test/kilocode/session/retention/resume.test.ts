@@ -6,12 +6,12 @@ import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
 import { SessionProjector } from "@opencode-ai/core/session/projector"
 import { SessionTable } from "@opencode-ai/core/session/sql"
-import { Config } from "../../../src/config/config"
-import { Session } from "../../../src/session/session"
-import { SessionStatus } from "../../../src/session/status"
-import { KiloSessionResume } from "../../../src/kilocode/session/resume"
-import { KiloSessionRetention } from "../../../src/kilocode/session/retention"
-import { testEffect } from "../../lib/effect"
+import { Config } from "../../../../src/config/config"
+import { Session } from "../../../../src/session/session"
+import { SessionStatus } from "../../../../src/session/status"
+import { KiloSessionResume } from "../../../../src/kilocode/session/retention/resume"
+import { KiloSessionRetention } from "../../../../src/kilocode/session/retention"
+import { testEffect } from "../../../lib/effect"
 
 const it = testEffect(
   LayerNode.compile(

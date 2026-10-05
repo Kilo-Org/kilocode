@@ -8,12 +8,12 @@ import { Global } from "@opencode-ai/core/global"
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
 import { SessionProjector } from "@opencode-ai/core/session/projector"
-import { Config } from "../../../src/config/config"
-import { Session } from "../../../src/session/session"
-import { KiloShutdown } from "../../../src/kilocode/cli/shutdown"
-import { KiloSessionRetention } from "../../../src/kilocode/session/retention"
-import { KiloRetentionScheduler } from "../../../src/kilocode/session/retention-scheduler"
-import { testEffect } from "../../lib/effect"
+import { Config } from "../../../../src/config/config"
+import { Session } from "../../../../src/session/session"
+import { KiloShutdown } from "../../../../src/kilocode/cli/shutdown"
+import { KiloSessionRetention } from "../../../../src/kilocode/session/retention"
+import { KiloRetentionScheduler } from "../../../../src/kilocode/session/retention/scheduler"
+import { testEffect } from "../../../lib/effect"
 
 const it = testEffect(
   LayerNode.compile(LayerNode.group([Session.node, SessionProjector.node, Database.node, CrossSpawnSpawner.node])),

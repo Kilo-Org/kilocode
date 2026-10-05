@@ -299,7 +299,7 @@ for (const item of targets) {
   // kilocode_change start
   const sessionExportWorkerPath = "./src/kilocode/session-export/worker.ts"
   const indexingWorkerPath = "./src/kilocode/indexing-worker.ts"
-  const reclaimWorkerPath = "./src/kilocode/session/reclaim-worker.ts"
+  const reclaimWorkerPath = "./src/kilocode/session/retention/reclaim-worker.ts"
   // kilocode_change end
 
   const bunfsRoot = item.os === "win32" ? "B:/~BUN/root/" : "/$bunfs/root/"

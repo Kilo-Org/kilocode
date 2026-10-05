@@ -269,6 +269,7 @@ export const TuiThreadCommand = cmd({
     const { KiloTuiThreadDaemon } = await import("@/kilocode/cli/cmd/tui/thread")
     const { preload } = await import("@/kilocode/cli/cmd/tui")
     const { resolveTuiDirectory } = await import("@/kilocode/cli/cmd/tui-worktree")
+    const { KiloRetentionTui } = await import("@/kilocode/session/retention/tui")
     // kilocode_change end
     const unguard = win32InstallCtrlCGuard()
     const shutdown = {
@@ -314,13 +315,8 @@ export const TuiThreadCommand = cmd({
         return
       }
       const cwd = Filesystem.resolve(process.cwd())
+      await KiloRetentionTui.resume(args, cwd) // kilocode_change - protect a resumed session before cleanup starts
       // kilocode_change start - default TUI sessions attach to the daemon unless explicitly disabled
-      const { KiloSessionResume } = await import("@/kilocode/session/resume")
-      const resumed = await KiloSessionResume.local(args, cwd)
-      if (resumed) {
-        args.session = resumed
-        args.continue = false
-      }
       if (await KiloTuiThreadDaemon.attach({ args, cwd, input: () => input(args.prompt), start })) return
       // kilocode_change end
       const auth = KiloTuiThreadDaemon.workerAuth() // kilocode_change - protect TUI-owned HTTP routes from unauthenticated local callers

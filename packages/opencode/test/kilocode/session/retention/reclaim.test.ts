@@ -4,8 +4,8 @@ import { Effect, Fiber } from "effect"
 import { existsSync, statSync } from "node:fs"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
-import { KiloReclaim } from "../../../src/kilocode/session/reclaim"
-import { tmpdir } from "../../fixture/fixture"
+import { KiloReclaim } from "../../../../src/kilocode/session/retention/reclaim"
+import { tmpdir } from "../../../fixture/fixture"
 
 function seed(file: string) {
   const db = new Database(file)
@@ -136,10 +136,10 @@ test("the worker runs from a compiled Bun executable", async () => {
     path
       .relative(
         process.cwd(),
-        fileURLToPath(new URL("../../../src/kilocode/session/reclaim-worker.ts", import.meta.url)),
+        fileURLToPath(new URL("../../../../src/kilocode/session/retention/reclaim-worker.ts", import.meta.url)),
       )
       .replaceAll(path.sep, "/")
-  const helper = fileURLToPath(new URL("../../../src/kilocode/session/reclaim.ts", import.meta.url))
+  const helper = fileURLToPath(new URL("../../../../src/kilocode/session/retention/reclaim.ts", import.meta.url))
   await Bun.write(
     entry,
     `import { Effect } from ${JSON.stringify(fileURLToPath(import.meta.resolve("effect")))}

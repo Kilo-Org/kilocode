@@ -4,7 +4,7 @@ import { Database } from "@opencode-ai/core/database/database"
 import { Global } from "@opencode-ai/core/global"
 import { MessageTable, PartTable, SessionTable } from "@opencode-ai/core/session/sql"
 import * as Log from "@opencode-ai/core/util/log"
-import { Flock } from "@opencode-ai/core/util/flock"
+import { KiloRetentionLock } from "./lock"
 import { Config } from "@/config/config"
 import { Session } from "@/session/session"
 import { SessionID } from "@/session/schema"
@@ -324,7 +324,7 @@ export namespace KiloSessionRetention {
     function* (state: State) {
       const config = yield* Config.Service
       if (!policy(yield* config.getGlobal()).enabled || (yield* SessionStatus.busyAll()).size > 0) return
-      yield* Flock.effect("session-retention", { timeoutMs: 1000, staleMs: DAY_MS, owner: true })
+      yield* KiloRetentionLock.acquire()
       const latest = yield* readState()
       if (!latest || latest.at !== state.at || !policy(yield* config.getGlobal()).enabled) return
       const started = Date.now()
@@ -384,7 +384,7 @@ export namespace KiloSessionRetention {
 
       // Keep live maintenance owners safe and recover dead owners immediately.
       // Another process that holds the lock is running a pass, so report it as busy.
-      const held = yield* Flock.effect("session-retention", { timeoutMs: 1000, staleMs: DAY_MS, owner: true }).pipe(
+      const held = yield* KiloRetentionLock.acquire().pipe(
         Effect.as(true),
         Effect.catchCause((cause) => {
           if (Cause.hasInterrupts(cause)) return Effect.interrupt
