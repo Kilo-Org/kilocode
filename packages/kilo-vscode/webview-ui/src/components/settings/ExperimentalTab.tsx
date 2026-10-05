@@ -218,19 +218,6 @@ const ExperimentalTab: Component = () => {
         </SettingsRow>
 
         <SettingsRow
-          title={language.t("settings.experimental.multiProject.title")}
-          description={language.t("settings.experimental.multiProject.description")}
-        >
-          <Switch
-            checked={settings().multiProject === true}
-            onChange={(checked) => applySetting("multiProject", checked, "experimental.multiProject")}
-            hideLabel
-          >
-            {language.t("settings.experimental.multiProject.title")}
-          </Switch>
-        </SettingsRow>
-
-        <SettingsRow
           title={language.t("settings.experimental.claudeMigration.title")}
           description={language.t("settings.experimental.claudeMigration.description")}
         >

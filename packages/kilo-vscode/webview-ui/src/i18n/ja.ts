@@ -200,6 +200,14 @@ export const dict = {
   "prompt.worktrees.title": "Worktrees",
   "prompt.worktrees.search": "Worktreeを検索",
   "prompt.thinking.tooltip": "推論の強度",
+  "prompt.shortcutHint.addSelection": "で選択範囲を追加",
+  "prompt.shortcutHint.waiting": "で待機中のセッションに回答",
+  "prompt.shortcutHint.type": "で入力",
+  "prompt.shortcutHint.sessions": "でセッションを切り替え",
+  "prompt.shortcutHint.stop": "で停止",
+  "prompt.shortcutHint.changes": "で変更をレビュー",
+  "prompt.shortcutHint.pr": "でPRを開く",
+  "prompt.shortcutHint.mode": "次のモード",
   "prompt.action.send": "送信",
   "prompt.action.continue": "続行",
   "prompt.action.send.blocked": "最初に保留中の質問に答えるか、閉じてください",
@@ -778,10 +786,12 @@ export const dict = {
   "ui.sessionTurn.status.consideringNextSteps": "次のステップを検討中...",
 
   "dialog.model.noProviders": "プロバイダーなし",
+  "dialog.model.unavailable": "Kilo モデルを利用できません",
 
   "prompt.placeholder.connecting": "サーバーに接続中...",
   "prompt.placeholder.error": "接続に失敗しました。出力パネルを確認するか、拡張機能を再起動してください。",
   "prompt.placeholder.default": "メッセージを入力、@ でファイルを参照... (Enterで送信、Shift+Enterで改行)",
+  "prompt.placeholder.hint": "メッセージを入力、@ でファイルを参照... ({{key}} {{action}})",
 
   "context.usage.sessionCost": "セッションコスト",
   "context.usage.olderSessions": "{{count}} 件の古いセッション",
@@ -933,15 +943,12 @@ export const dict = {
   "settings.sandboxing.writablePaths.title": "追加の書き込み可能パス",
   "settings.sandboxing.writablePaths.description":
     "サンドボックスでの書き込みを許可する追加のファイルシステムパス（例: /tmp、/var/log）。サンドボックス有効時、デフォルトの書き込み可能パスと統合されます。",
-  "settings.experimental.multiProject.title": "マルチプロジェクト Agent Manager",
   "settings.experimental.conversationPromptHistory.title": "会話ごとのプロンプト履歴",
   "settings.experimental.conversationPromptHistory.description":
     "プロンプト履歴 (ArrowUp/ArrowDown) をすべての会話で共有せず、会話ごとに分けて保持します。",
   "settings.experimental.claudeMigration.title": "Claude Code 移行",
   "settings.experimental.claudeMigration.description":
     "サポートされるグローバル CLAUDE.md 命令、簡単なスキル、無効化された MCP 定義を一度だけインポートします。元の Claude ファイルは変更されません。有効化後にバックエンドを再起動してください。",
-  "settings.experimental.multiProject.description":
-    "Agent Managerで複数のリポジトリにまたがるセッションとワークツリーの管理を有効にします。現在のワークスペースリポジトリは常にデフォルトプロジェクトです。",
   "settings.experimental.mcpTimeout.title": "MCPタイムアウト（ミリ秒）",
   "settings.experimental.mcpTimeout.description": "MCPサーバーリクエストのタイムアウト（ミリ秒）",
   "settings.experimental.remote.title": "Remote コントロール",
@@ -1234,6 +1241,9 @@ export const dict = {
   "settings.display.mcpTool.expanded": "展開",
   "settings.display.mcpTool.collapsed": "折りたたみ",
 
+  "settings.display.shortcutHints.title": "ショートカットのヒントを表示",
+  "settings.display.shortcutHints.description":
+    "空のプロンプトに、現在の操作に合ったキーボードショートカットを表示します。例: 選択したコードの追加方法やプロンプトへの戻り方。",
   "settings.display.tokenThroughput.title": "トークンスループットを表示",
   "settings.display.tokenThroughput.description":
     "最新のアシスタントメッセージとタスクヘッダーにテキスト生成速度（tokens/sec）を表示します。デフォルトで表示され、必要に応じてこの設定を無効にすると非表示にできます。",

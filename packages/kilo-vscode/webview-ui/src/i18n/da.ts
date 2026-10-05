@@ -199,6 +199,14 @@ export const dict = {
   "prompt.worktrees.title": "Worktrees",
   "prompt.worktrees.search": "Søg i Worktrees",
   "prompt.thinking.tooltip": "Ræsonnementsindsats",
+  "prompt.shortcutHint.addSelection": "for at tilføje markeringen",
+  "prompt.shortcutHint.waiting": "for at svare en ventende session",
+  "prompt.shortcutHint.type": "for at skrive",
+  "prompt.shortcutHint.sessions": "for at skifte session",
+  "prompt.shortcutHint.stop": "for at stoppe",
+  "prompt.shortcutHint.changes": "for at gennemse ændringer",
+  "prompt.shortcutHint.pr": "for at åbne PR'en",
+  "prompt.shortcutHint.mode": "Næste tilstand",
   "prompt.action.send": "Send",
   "prompt.action.continue": "Fortsæt",
   "prompt.action.send.blocked": "Besvar eller afvis det afventende spørgsmål først",
@@ -783,11 +791,13 @@ export const dict = {
   "ui.sessionTurn.status.consideringNextSteps": "Overvejer næste trin...",
 
   "dialog.model.noProviders": "Ingen udbydere",
+  "dialog.model.unavailable": "Kilo-modeller er ikke tilgængelige",
 
   "prompt.placeholder.connecting": "Opretter forbindelse til server...",
   "prompt.placeholder.error": "Forbindelse mislykkedes. Tjek outputpanelet eller genstart udvidelsen.",
   "prompt.placeholder.default":
     "Skriv en besked, @ for at nævne filer... (Enter for at sende, Shift+Enter for ny linje)",
+  "prompt.placeholder.hint": "Skriv en besked, @ for at nævne filer... ({{key}} {{action}})",
 
   "context.usage.sessionCost": "Sessionsomkostning",
   "context.usage.olderSessions": "{{count}} ældre sessioner",
@@ -939,15 +949,12 @@ export const dict = {
   "settings.sandboxing.writablePaths.title": "Yderligere skrivbare stier",
   "settings.sandboxing.writablePaths.description":
     "Yderligere filsystemstier, som sandkassen tillader skrivning til (f.eks. /tmp, /var/log). Disse flettes med de standardskrivbare stier, når sandkassen er aktiv.",
-  "settings.experimental.multiProject.title": "Multi-projekt Agent Manager",
   "settings.experimental.conversationPromptHistory.title": "Prompthistorik pr. samtale",
   "settings.experimental.conversationPromptHistory.description":
     "Hold prompthistorikken (ArrowUp/ArrowDown) adskilt for hver samtale i stedet for at dele én historik på tværs af alle samtaler.",
   "settings.experimental.claudeMigration.title": "Claude Code-migrering",
   "settings.experimental.claudeMigration.description":
     "Importér understøttede globale CLAUDE.md-instruktioner, enkle færdigheder og deaktiverede MCP-definitioner én gang. Originale Claude-filer forbliver uændrede; genstart backend efter aktivering.",
-  "settings.experimental.multiProject.description":
-    "Aktivér styring af sessioner og worktrees på tværs af flere repositories i Agent Manager. Det nuværende workspace-repository er altid standardprojektet.",
   "settings.experimental.mcpTimeout.title": "MCP-timeout (ms)",
   "settings.experimental.mcpTimeout.description": "Timeout for MCP-serveranmodninger i millisekunder",
   "settings.experimental.remote.title": "Remote-styring",
@@ -1241,6 +1248,9 @@ export const dict = {
   "settings.display.mcpTool.expanded": "Foldet ud",
   "settings.display.mcpTool.collapsed": "Foldet sammen",
 
+  "settings.display.shortcutHints.title": "Vis genvejstips",
+  "settings.display.shortcutHints.description":
+    "Vis den tastaturgenvej i den tomme prompt, der passer til det, du gør nu, for eksempel hvordan du tilføjer markeret kode eller vender tilbage til prompten.",
   "settings.display.tokenThroughput.title": "Vis genereringshastighed",
   "settings.display.tokenThroughput.description":
     "Vis tekstgenereringshastigheden (tokens/sec) i den seneste assistentbesked og i opgaveoverskriften. Vises som standard; deaktiver denne indstilling for at skjule den efter behov.",

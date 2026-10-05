@@ -16,6 +16,7 @@ import { DropdownMenu } from "@kilocode/kilo-ui/dropdown-menu"
 import { TaskHeader } from "./TaskHeader"
 import { MessageList } from "./MessageList"
 import { PromptInput } from "./PromptInput"
+import type { ManagerContext } from "../../utils/shortcut-hint"
 import { PermissionDock } from "./PermissionDock"
 import { SessionDock } from "./SessionDock"
 import { StartupErrorBanner } from "./StartupErrorBanner"
@@ -57,6 +58,8 @@ interface ChatViewProps {
   emptyState?: () => JSX.Element
   introduction?: boolean
   resolveEmbeddedTerminal?: (context?: string) => Promise<string | undefined>
+  /** Agent Manager state for the prompt shortcut hint. */
+  manager?: () => ManagerContext | undefined
 }
 
 export const ChatView: Component<ChatViewProps> = (props) => {
@@ -455,6 +458,7 @@ export const ChatView: Component<ChatViewProps> = (props) => {
                   focusOnDraftChange={props.focusOnDraftChange}
                   onFocusChange={props.onFocusChange}
                   resolveEmbeddedTerminal={props.resolveEmbeddedTerminal}
+                  manager={props.manager}
                 />
               </Show>
             </div>

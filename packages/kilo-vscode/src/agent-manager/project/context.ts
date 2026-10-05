@@ -14,8 +14,6 @@
  *   created on demand (expand/select), never eagerly at panel open.
  * - Only the active context gets full Git/PR polling; the pollers follow the
  *   active context through the provider's accessors.
- * - Non-pinned contexts require the multi-project flag before they can be
- *   expanded or activated.
  */
 
 import * as fs from "fs"
