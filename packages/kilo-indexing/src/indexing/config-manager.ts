@@ -173,17 +173,11 @@ export class CodeIndexConfigManager {
     const provider = this.embedderProvider
     const qdrant = this.qdrantUrl
     // Each vector store backend has its own connectivity requirement
-    let hasStore: boolean
-    switch (this.vectorStoreProvider) {
-      case "lancedb":
-        hasStore = true // LanceDB uses a local directory, no URL needed
-        break
-      case "valkey":
-        hasStore = !!this.valkeyUrl
-        break
-      default:
-        hasStore = !!qdrant
-    }
+    const hasStore = (() => {
+      if (this.vectorStoreProvider === "lancedb") return true // LanceDB uses a local directory, no URL needed
+      if (this.vectorStoreProvider === "valkey") return !!this.valkeyUrl
+      return !!qdrant
+    })()
 
     if (provider === "kilo")
       return !!(this.kiloOptions?.apiKey && this.modelId && this.currentModelDimension && hasStore)
