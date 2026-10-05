@@ -1,7 +1,18 @@
-import { describe, test, expect } from "bun:test"
+import { describe, test, expect, mock } from "bun:test"
 import fc from "fast-check"
 import { createHash } from "crypto"
-import { ValkeyVectorStore } from "../../../../src/indexing/vector-store/valkey-vector-store"
+
+// These properties cover pure helpers only. Stub the client library so the module loads
+// on platforms where @valkey/valkey-glide has no native binding (Windows).
+mock.module("@valkey/valkey-glide", () => ({
+  GlideClient: {},
+  GlideFt: {},
+  Batch: class {},
+  RequestError: class extends Error {},
+  ClosingError: class extends Error {},
+}))
+
+const { ValkeyVectorStore } = await import("../../../../src/indexing/vector-store/valkey-vector-store")
 
 /**
  * Property-based tests for ValkeyVectorStore pure utility functions.
@@ -9,7 +20,7 @@ import { ValkeyVectorStore } from "../../../../src/indexing/vector-store/valkey-
 
 const PROPERTY_ITERATIONS = 100
 
-function createStore(): ValkeyVectorStore {
+function createStore() {
   return new ValkeyVectorStore("/dummy/workspace", "redis://localhost:6379", 128)
 }
 

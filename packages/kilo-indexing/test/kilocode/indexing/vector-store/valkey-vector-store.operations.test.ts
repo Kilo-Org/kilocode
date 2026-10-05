@@ -53,12 +53,13 @@ mock.module("@valkey/valkey-glide", () => ({
   SortOrder: { ASC: "ASC", DESC: "DESC" },
 }))
 
-// Now import the module under test
-import { ValkeyVectorStore } from "../../../../src/indexing/vector-store/valkey-vector-store"
+// Dynamic import: a static one is hoisted above mock.module and would load the real
+// native binding, which does not exist on Windows.
+const { ValkeyVectorStore } = await import("../../../../src/indexing/vector-store/valkey-vector-store")
 import type { PointStruct } from "../../../../src/indexing/interfaces/vector-store"
 
 describe("ValkeyVectorStore Operations", () => {
-  let store: ValkeyVectorStore
+  let store: InstanceType<typeof ValkeyVectorStore>
   const workspacePath = "/test/workspace"
   const vectorSize = 128
 

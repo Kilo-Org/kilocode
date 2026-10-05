@@ -65,8 +65,9 @@ mock.module("@valkey/valkey-glide", () => ({
   SortOrder: { ASC: "ASC", DESC: "DESC" },
 }))
 
-// Now import the module under test
-import { ValkeyVectorStore } from "../../../../src/indexing/vector-store/valkey-vector-store"
+// Dynamic import: a static one is hoisted above mock.module and would load the real
+// native binding, which does not exist on Windows.
+const { ValkeyVectorStore } = await import("../../../../src/indexing/vector-store/valkey-vector-store")
 
 const TEST_WORKSPACE = "/test/workspace"
 const TEST_URL = "redis://localhost:6379"
@@ -84,7 +85,7 @@ const expectedHash = createHash("sha256").update(TEST_WORKSPACE).digest("hex")
 const expectedCollectionName = `ws-${expectedHash.substring(0, 16)}`
 const expectedMetadataKey = `${expectedCollectionName}:__metadata__`
 
-function createStore(profile?: typeof TEST_PROFILE): ValkeyVectorStore {
+function createStore(profile?: typeof TEST_PROFILE) {
   return new ValkeyVectorStore(TEST_WORKSPACE, TEST_URL, TEST_VECTOR_SIZE, TEST_PASSWORD, profile)
 }
 

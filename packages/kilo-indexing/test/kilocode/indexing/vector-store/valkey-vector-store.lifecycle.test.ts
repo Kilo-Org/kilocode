@@ -73,10 +73,11 @@ mock.module("@valkey/valkey-glide", () => ({
   SortOrder: { ASC: "ASC", DESC: "DESC" },
 }))
 
-// Import after mocking - only import the module under test, not @valkey/valkey-glide
-import { ValkeyVectorStore } from "../../../../src/indexing/vector-store/valkey-vector-store"
+// Dynamic import: a static one is hoisted above mock.module and would load the real
+// native binding, which does not exist on Windows.
+const { ValkeyVectorStore } = await import("../../../../src/indexing/vector-store/valkey-vector-store")
 
-function createStore(profile?: { provider: string; modelId: string; dimension: number }): ValkeyVectorStore {
+function createStore(profile?: { provider: string; modelId: string; dimension: number }) {
   return new ValkeyVectorStore("/test/workspace", "redis://localhost:6379", 128, undefined, profile as any)
 }
 

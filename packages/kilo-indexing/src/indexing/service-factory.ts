@@ -31,6 +31,18 @@ import type { IgnoreMatcher } from "./shared/load-ignore"
 
 const log = Log.create({ service: "indexing-factory" })
 
+function loadValkey(): typeof import("./vector-store/valkey-vector-store") {
+  try {
+    return require("./vector-store/valkey-vector-store")
+  } catch (err) {
+    log.error("failed to load valkey client", { platform: process.platform, arch: process.arch, err })
+    throw new Error(
+      `The Valkey vector store is not supported on ${process.platform}-${process.arch}. Choose LanceDB or Qdrant instead.`,
+      { cause: err },
+    )
+  }
+}
+
 // RATIONALE: The OpenAI SDK applies the per-attempt timeout and retries internally.
 const policy = {
   openai: undefined,
@@ -222,16 +234,10 @@ export class CodeIndexServiceFactory {
         model: profile.modelId,
         vectorSize: profile.dimension,
       })
-      // Lazy import: @valkey/valkey-glide ships native binaries only for Darwin/Linux.
-      // Importing eagerly would break indexing on Windows even when Valkey is not selected.
-      const { ValkeyVectorStore } = require("./vector-store/valkey-vector-store") as typeof import("./vector-store/valkey-vector-store")
-      return new ValkeyVectorStore(
-        workspacePath,
-        config.valkeyUrl,
-        profile.dimension,
-        config.valkeyPassword,
-        profile,
-      )
+      // Lazy import: @valkey/valkey-glide ships native binaries only for Darwin/Linux and throws on
+      // import elsewhere. Importing eagerly would break indexing on Windows even when Valkey is not selected.
+      const { ValkeyVectorStore } = loadValkey()
+      return new ValkeyVectorStore(workspacePath, config.valkeyUrl, profile.dimension, config.valkeyPassword, profile)
     }
 
     if (!config.qdrantUrl) throw new Error("Qdrant URL is required.")
