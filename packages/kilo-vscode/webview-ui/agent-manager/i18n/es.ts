@@ -34,7 +34,6 @@ export const dict = {
   "agentManager.local": "local",
   "agentManager.sidebar.collapse": "Contraer barra lateral",
   "agentManager.sidebar.expand": "Mostrar barra lateral",
-  "agentManager.section.worktrees": "WORKTREES",
   "agentManager.section.sessions": "SESIONES",
   "agentManager.projects": "PROYECTOS",
   "agentManager.settings.title": "Agent Manager",
@@ -75,12 +74,9 @@ export const dict = {
   "agentManager.project.settings": "Configuración del proyecto",
   "agentManager.project.restricted":
     "Tu espacio de trabajo actual de VS Code es tu carpeta de inicio o la raíz del sistema de archivos. Abre una carpeta de proyecto específica en VS Code para usar Agent Manager.",
-  "agentManager.notGitRepo": "No es un repositorio git",
-
   "agentManager.updateBase.title": "Actualizar desde la base",
   "agentManager.updateBase.selectWorktree": "Selecciona primero un worktree gestionado.",
 
-  "agentManager.worktree.settings": "Configuración de Worktree",
   "agentManager.worktree.new": "Nuevo Worktree",
   "agentManager.worktree.setupScript": "Script de configuración de Worktree",
   "agentManager.worktree.delete": "Eliminar Worktree",
@@ -190,13 +186,6 @@ export const dict = {
   "agentManager.shortcuts.cycleAgentMode": "Siguiente modo de agente",
   "agentManager.shortcuts.cyclePreviousAgentMode": "Modo de agente anterior",
   "agentManager.shortcuts.showShortcuts": "Mostrar atajos de teclado",
-  "agentManager.dialog.removeStaleWorktree.title": "Eliminar Worktree obsoleto",
-  "agentManager.dialog.removeStaleWorktree.messagePre": "¿Eliminar Worktree obsoleto ",
-  "agentManager.dialog.removeStaleWorktree.messagePost":
-    "? Esto solo elimina la asociación en Agent Manager y no modifica los archivos en disco.",
-  "agentManager.dialog.removeStaleWorktree.cancel": "Cancelar",
-  "agentManager.dialog.removeStaleWorktree.confirm": "Eliminar Worktree obsoleto",
-
   "agentManager.dialog.project.select": "Seleccionar proyecto",
   "agentManager.dialog.project.missing": "Repositorio no encontrado",
   "agentManager.dialog.openWorktree": "Nuevo Worktree",

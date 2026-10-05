@@ -156,6 +156,21 @@ describe("sessionToWebview", () => {
     expect(result.title).toBe("My Session")
   })
 
+  it.each([
+    ["high", { providerID: "kilo", modelID: "gpt", variant: "high" }],
+    ["default", { providerID: "kilo", modelID: "gpt" }],
+  ])("projects the agent and model the session last ran (variant %s)", (variant, model) => {
+    const result = sessionToWebview(makeSession({ agent: "plan", model: { id: "gpt", providerID: "kilo", variant } }))
+    expect(result.agent).toBe("plan")
+    expect(result.model).toEqual(model)
+  })
+
+  it("omits the agent and model before the session first runs", () => {
+    const result = JSON.parse(JSON.stringify(sessionToWebview(makeSession())))
+    expect(result).not.toHaveProperty("agent")
+    expect(result).not.toHaveProperty("model")
+  })
+
   it("produces valid ISO format", () => {
     const result = sessionToWebview(makeSession())
     expect(() => new Date(result.createdAt)).not.toThrow()
