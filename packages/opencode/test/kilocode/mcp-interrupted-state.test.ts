@@ -41,7 +41,13 @@ it.instance(
       const fiber = yield* mcp.status().pipe(Effect.forkScoped)
       const first = yield* pid(ready)
       yield* pid(hanging)
-      yield* Effect.sleep("300 millis")
+      // The fixture writes this once the MCP state holds `ready` as a connected client.
+      yield* pollWithTimeout(
+        Effect.promise(() => Bun.file(`${ready}.stored`).exists()).pipe(
+          Effect.map((done) => (done ? true : undefined)),
+        ),
+        "ready client was never stored",
+      )
       yield* Fiber.interrupt(fiber)
 
       const status = yield* mcp.status()
@@ -71,7 +77,8 @@ it.instance(
           type: "local",
           command: [process.execPath, fixture, "--hang"],
           environment: { MCP_PID_FILE: hanging },
-          timeout: 1500,
+          // Keeps the lookup in progress until the test interrupts it; also bounds the retry.
+          timeout: 5000,
         },
       },
     },

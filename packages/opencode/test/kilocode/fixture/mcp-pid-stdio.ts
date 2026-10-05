@@ -11,11 +11,25 @@ if (process.argv.includes("--hang")) {
   await new Promise(() => {})
 }
 
-const server = new Server({ name: "mcp-pid-stdio", version: "1.0.0" }, { capabilities: { tools: {} } })
+const server = new Server(
+  { name: "mcp-pid-stdio", version: "1.0.0" },
+  { capabilities: { tools: { listChanged: true } } },
+)
+let timer: ReturnType<typeof setInterval> | undefined
+let listed = 0
 
 server.setRequestHandler(ListToolsRequestSchema, async () => {
-  // Written once the client has connected and is listing tools.
-  await Bun.write(file, String(process.pid))
+  listed++
+  if (listed === 1) {
+    await Bun.write(file, String(process.pid))
+    // The client only re-lists tools on a change notification once the MCP state holds it
+    // as a connected client, so keep announcing a change until that second request arrives.
+    timer = setInterval(() => void server.sendToolListChanged(), 20)
+  }
+  if (listed === 2) {
+    clearInterval(timer)
+    await Bun.write(`${file}.stored`, "")
+  }
   return { tools: [{ name: "ping", description: "ping", inputSchema: { type: "object", properties: {} } }] }
 })
 
