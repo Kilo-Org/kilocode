@@ -299,12 +299,48 @@ describe("memory ports", () => {
     expect(seen).toEqual(["memory-config-model", "fake-memory-model"])
   })
 
+  test("model port sends x-opencode-session for opencode-managed memory models", async () => {
+    const calls: unknown[] = []
+    const port = MemoryModel.port({
+      provider: provider({ providerID: ProviderV2.ID.make("opencode"), calls }),
+    })
+    const resolved = await Effect.runPromise(port.resolve({ session: ref }))
+
+    await port.run({
+      handle: resolved.handle,
+      sessionID: "ses_memory_headers",
+      system: "system",
+      prompt: "prompt",
+      timeoutMs: 30_000,
+    })
+
+    const opts = calls[0] as { headers?: Record<string, string> }
+    expect(opts.headers?.["x-opencode-session"]).toBe("ses_memory_headers")
+  })
+
+  test("model port omits opencode headers for non-opencode memory models", async () => {
+    const calls: unknown[] = []
+    const port = MemoryModel.port({ provider: provider({ calls }) })
+    const resolved = await Effect.runPromise(port.resolve({ session: ref }))
+
+    await port.run({
+      handle: resolved.handle,
+      sessionID: "ses_memory_headers",
+      system: "system",
+      prompt: "prompt",
+      timeoutMs: 30_000,
+    })
+
+    const opts = calls[0] as { headers?: Record<string, string> }
+    expect(opts.headers?.["x-opencode-session"]).toBeUndefined()
+  })
+
   test("model port asks OpenAI-compatible providers for a non-streaming JSON response", async () => {
     const calls: unknown[] = []
     const port = MemoryModel.port({ provider: provider({ npm: "@ai-sdk/openai-compatible", calls }) })
     const resolved = await Effect.runPromise(port.resolve({ session: ref }))
 
-    await port.run({ handle: resolved.handle, system: "system", prompt: "prompt", timeoutMs: 30_000 })
+    await port.run({ handle: resolved.handle, sessionID: "ses_test", system: "system", prompt: "prompt", timeoutMs: 30_000 })
 
     const opts = calls[0] as { providerOptions?: Record<string, { stream?: boolean }> }
     expect(opts.providerOptions?.test?.stream).toBe(false)
@@ -321,7 +357,7 @@ describe("memory ports", () => {
     })
     const resolved = await Effect.runPromise(port.resolve({ session: ref }))
 
-    await port.run({ handle: resolved.handle, system: "system", prompt: "prompt", timeoutMs: 30_000 })
+    await port.run({ handle: resolved.handle, sessionID: "ses_test", system: "system", prompt: "prompt", timeoutMs: 30_000 })
 
     const opts = calls[0] as { providerOptions?: Record<string, { stream?: boolean }> }
     expect(opts.providerOptions?.openai?.stream).toBe(false)
@@ -374,6 +410,7 @@ describe("memory ports", () => {
       const resolved = await Effect.runPromise(port.resolve({ session: ref }))
       const result = await port.run({
         handle: resolved.handle,
+        sessionID: "ses_test",
         system: "system",
         prompt: "prompt",
         timeoutMs: 30_000,
@@ -400,7 +437,7 @@ describe("memory ports", () => {
     const port = MemoryModel.port({ provider: provider({ outputs: [err, "{}"], calls }) })
     const resolved = await Effect.runPromise(port.resolve({ session: ref }))
 
-    await port.run({ handle: resolved.handle, system: "system", prompt: "prompt", timeoutMs: 30_000 })
+    await port.run({ handle: resolved.handle, sessionID: "ses_test", system: "system", prompt: "prompt", timeoutMs: 30_000 })
 
     expect(calls).toHaveLength(2)
     const opts = calls[0] as { providerOptions?: Record<string, { stream?: boolean }> }
@@ -412,7 +449,7 @@ describe("memory ports", () => {
     const resolved = await Effect.runPromise(port.resolve({ session: ref }))
 
     await expect(
-      port.run({ handle: resolved.handle, system: "system", prompt: "prompt", timeoutMs: 1 }),
+      port.run({ handle: resolved.handle, sessionID: "ses_test", system: "system", prompt: "prompt", timeoutMs: 1 }),
     ).rejects.toMatchObject({ name: "TimeoutError", message: "memory model timed out" })
   })
 
@@ -442,6 +479,7 @@ describe("memory ports", () => {
 
       await port.run({
         handle: resolved.handle,
+        sessionID: "ses_test",
         system: "system",
         prompt: "prompt",
         timeoutMs: 30_000,

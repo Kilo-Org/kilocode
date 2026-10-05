@@ -50,6 +50,12 @@ An objective can be up to 10,000 characters.
 
 The CLI and VS Code also show a goal control next to the composer. Select it to pause, resume, or clear the goal. When a goal is complete, the control label is **Restart goal** instead of **Resume**.
 
+## Agent-started goals
+
+The agent can start or resume a goal itself with the `goal` tool. It calls `goal` with `action: "start"` and an objective, or `action: "resume"` to continue the saved goal after a pause, block, or completion.
+
+Unlike `/goal`, the agent's call does not cancel the current response. The goal becomes active and the goal loop continues after the current turn. The `goal` tool is unavailable while a goal is active; pause or clear the goal first. The tool requests the `goal` permission, which is allowed by default. Set `permission.goal` to `ask` or `deny` to require approval or block agent-started goals. Delegated subagent sessions cannot start a goal.
+
 ## Goal statuses
 
 | Status | Meaning |
@@ -70,9 +76,11 @@ Kilo pauses an active goal when progress stops or the session changes direction:
 - The agent replies with no successful action and no completion report.
 - Work fails, such as a model error or a failed command.
 - You press Stop.
-- You send a new message or run a shell command.
+- You run a shell command.
 - A permission request or tool call is rejected, which marks the goal blocked instead of paused.
 - The backend restarts. An active goal becomes paused; a complete goal stays complete.
+
+A new message you send is not an automatic pause. It takes priority for that turn, then the goal continues toward the objective. Use Stop or `/goal pause` to stop active work.
 
 ## Completion reports
 
@@ -97,7 +105,7 @@ Goal-composer mode accepts multiline objectives and file or image attachments. I
 
 - A custom command or an MCP prompt named `goal` is reserved. Kilo rejects it and reports an error; rename it.
 - The goal is stored under the `kilo.goal` session metadata key.
-- Headless mode supports only status and controls. `kilo run --command goal` accepts no argument, `pause`, or `clear`. Starting or resuming a goal requires the TUI.
+- Headless mode supports only status and controls through `kilo run --command goal`, which accepts no argument, `pause`, or `clear`. The agent can still start or resume a goal itself with the `goal` tool.
 
 ## Related
 

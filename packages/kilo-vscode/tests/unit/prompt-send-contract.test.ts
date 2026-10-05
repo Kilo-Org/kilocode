@@ -86,12 +86,14 @@ describe("sendCommand dismisses pending tool requests", () => {
   })
 
   it("applies model, agent, and variant overrides when provided by a command", () => {
-    expect(body).toContain("if (overrides?.agent)")
-    expect(body).toContain("selectAgent(overrides.agent, scope)")
-    expect(body).toContain("if (overrides?.model)")
-    expect(body).toContain("selectModel(effectiveSelection.providerID, effectiveSelection.modelID, scope)")
-    expect(body).toContain("if (overrides?.variant)")
-    expect(body).toContain("selectVariant(overrides.variant, scope)")
+    const overrides = extractFunctionBody(source, "applyOverrides")
+    expect(overrides).toContain("if (overrides?.agent)")
+    expect(overrides).toContain("selectAgent(overrides.agent, scope)")
+    expect(overrides).toContain("if (overrides?.model)")
+    expect(overrides).toContain("selectModel(selection.providerID, selection.modelID, scope)")
+    expect(overrides).toContain("if (overrides?.variant !== undefined)")
+    expect(overrides).toContain("selectVariant(overrides.variant, scope)")
+    expect(body).toContain("if (effectiveSelection) applyOverrides(overrides, scope, effectiveSelection)")
   })
 })
 
@@ -300,12 +302,13 @@ describe("sendMessage / sendCommand draft id contract", () => {
     // from ":pending:<id>" to ":session:<newSessionId>". The user loses the
     // typed message and the new session starts empty.
     const body = extractFunctionBody(source, "sendMessage")
-    expect(body).toMatch(/const effectiveDraftID = !sid && !draftID \? crypto\.randomUUID\(\) : draftID/)
+    expect(body).toContain("const effectiveDraftID = mintDraft(sid, draftID, false)")
   })
 
   it("sendCommand mints a draftID when there is no current session and none was supplied", () => {
     const body = extractFunctionBody(source, "sendCommand")
-    expect(body).toMatch(/const effectiveDraftID = !sid && !draftID \? crypto\.randomUUID\(\) : draftID/)
+    expect(body).toContain("const effectiveDraftID = mintDraft(sid, draftID, true)")
+    expect(extractFunctionBody(source, "mintDraft")).toMatch(/if \(sid \|\| draftID\) return draftID/)
   })
 
   it("sendMessage seeds the pending agent before resolving draft-scoped settings", () => {
@@ -315,14 +318,15 @@ describe("sendMessage / sendCommand draft id contract", () => {
     // model with the default agent's system prompt.
     const body = extractFunctionBody(source, "sendMessage")
     expect(body).toMatch(
-      /if \(!sid && !draftID && effectiveDraftID\) agentDrafts\.seed\(effectiveDraftID\)[\s\S]*const settings = submission\(scope, selection\)/,
+      /const effectiveDraftID = mintDraft\(sid, draftID, false\)[\s\S]*const settings = submission\(scope, selection\)/,
     )
+    expect(extractFunctionBody(source, "mintDraft")).toMatch(/agentDrafts\.seed\(id\)/)
   })
 
   it("sendCommand seeds the pending agent before resolving draft-scoped settings", () => {
     const body = extractFunctionBody(source, "sendCommand")
     expect(body).toMatch(
-      /if \(!sid && !draftID && effectiveDraftID\) agentDrafts\.seed\(effectiveDraftID\)[\s\S]*submission\(scope, effectiveSelection\)/,
+      /const effectiveDraftID = mintDraft\(sid, draftID, true\)[\s\S]*submission\(scope, effectiveSelection\)/,
     )
   })
 
@@ -424,8 +428,8 @@ describe("PromptInput send origin contract", () => {
     const end = source.indexOf("\n  return (", start)
     const body = source.slice(start, end)
     const send = Math.max(body.indexOf("session.sendMessage("), body.indexOf("session.sendCommand("))
-    const clear = body.indexOf("clearDraft(key, draft)")
-    const append = body.lastIndexOf("history.append(value)")
+    const clear = body.indexOf("clearDraft(key, draft, id)")
+    const append = body.lastIndexOf("history.append(value, historyKey)")
     const guard = body.indexOf("if (draftKey() !== key) return")
 
     expect(send).toBeGreaterThan(-1)
@@ -433,6 +437,16 @@ describe("PromptInput send origin contract", () => {
     expect(append).toBeGreaterThan(clear)
     expect(append).toBeLessThan(guard)
     expect(body.indexOf('setText("")', guard)).toBeGreaterThan(guard)
+  })
+
+  it("appends to history against the origin captured before the async attachment resolution, not whatever conversation is active when the send resolves", () => {
+    // `id` (origin ?? pendingId) is captured before the terminal/git awaits, then
+    // threaded through clearDraft into history.append so a completed send always
+    // credits the conversation it was actually sent to.
+    expect(source).toMatch(/clearDraft\(key, draft, id\)/)
+    expect(source).toMatch(
+      /const clearDraft = \(key: string, value\?: string, historyKey\?: string\) => \{[\s\S]*history\.append\(value, historyKey\)/,
+    )
   })
 })
 
@@ -697,7 +711,9 @@ describe("browser element reference contract", () => {
   it("includes browser reference content only when the user sends the prompt", () => {
     expect(source).toContain("browserFeedbackData(browsers())")
     expect(source).toContain("formatBrowserFeedback(browserData.references)")
-    expect(source).toContain('const message = [review, push, browserText, draft].filter(Boolean).join("\\n\\n")')
+    expect(source).toContain(
+      'const message = [review, browserText, push, contextText, draft].filter(Boolean).join("\\n\\n")',
+    )
     expect(source).toContain("references.delete(key)")
   })
 
@@ -740,5 +756,49 @@ describe("KiloConnectionService pruneSession contract", () => {
     expect(match![1]).toMatch(/this\.attached\.(?:set|delete)/)
     expect(match![1]).toMatch(/this\.visible\.(?:set|delete)/)
     expect(match![1]).toMatch(/this\.flushViewed\(\)/)
+  })
+})
+
+describe("code context pill contract", () => {
+  const source = readFile(PROMPT_FILE)
+  const chips = readFile(path.join(ROOT, "webview-ui/src/components/chat/CodeContextChips.tsx"))
+
+  it("renders editor selections as pills instead of inserting them into the draft", () => {
+    expect(source).toContain("const appendContext =")
+    expect(source).toContain("replaceContexts(mergeCodeContexts(contexts(), [message.context]))")
+    expect(source).toContain("CodeContextChips")
+    expect(chips).toContain('data-component="code-context"')
+    expect(chips).toContain("codeContextLabel(context)")
+  })
+
+  it("reuses the review attachment shell for collapse and large lists", () => {
+    const more = readFile(path.join(ROOT, "webview-ui/src/components/chat/PromptShowMore.tsx"))
+    expect(chips).toContain("prompt-review-comments-toggle")
+    expect(chips).toContain("prompt-review-row-main")
+    expect(chips).toContain("prompt-review-row-snippet")
+    expect(chips).toContain("prompt-review-list--scroll")
+    expect(chips).toContain("PromptShowMore")
+    expect(more).toContain("agentManager.review.showMore")
+    expect(chips).toContain("agentManager.review.clearAll")
+    expect(chips).toContain("ui.promptInput.context")
+    // Clear all must respect the locked prompt, like the review and browser clear handlers.
+    expect(source).toContain("if (!readonly()) clearContexts()")
+  })
+
+  it("includes code context content only when the user sends the prompt", () => {
+    expect(source).toContain("formatCodeContexts(contexts())")
+    expect(source).not.toContain("setText(formatCodeContexts")
+    // A context-only prompt must not take the server slash-command branch, which
+    // sends the raw args and drops the composed message.
+    expect(source).toContain("if (matched && !hasStructuredInput(data, browserData))")
+    expect(source).toContain("data != null || browser != null || contexts().length > 0")
+  })
+
+  it("persists and clears code context with the rest of the draft", () => {
+    expect(source).toContain("setContexts(contextDrafts.get(key) ?? [])")
+    expect(source).toContain("references.delete(key)\n    contextDrafts.delete(key)")
+    expect(source).toContain("setContexts(codeContexts)")
+    // The memory command and client-side slash resets also drop the contexts.
+    expect((source.match(/contextDrafts\.delete\(draftKey\(\)\)/g) ?? []).length).toBeGreaterThanOrEqual(2)
   })
 })

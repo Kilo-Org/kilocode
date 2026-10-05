@@ -19,11 +19,9 @@ describe("goalControl", () => {
 })
 
 describe("completesWithoutStatus", () => {
-  it("matches goal and deprecated static review aliases", () => {
+  it("matches only model-free goal", () => {
     expect(completesWithoutStatus("goal")).toBe(true)
     expect(completesWithoutStatus("goals")).toBe(false)
-    expect(completesWithoutStatus("local-review")).toBe(true)
-    expect(completesWithoutStatus("local-review-uncommitted")).toBe(true)
     expect(completesWithoutStatus("review")).toBe(false)
     expect(completesWithoutStatus("init")).toBe(false)
   })

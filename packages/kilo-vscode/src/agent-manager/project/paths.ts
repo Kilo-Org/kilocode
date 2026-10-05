@@ -21,6 +21,19 @@ export function canonicalizePath(dir: string): string {
   }
 }
 
+/**
+ * Canonical map/set key for a path, folded on case-insensitive filesystems.
+ *
+ * Same rules as {@link canonicalizePath} plus {@link samePath}, collapsed into one value so callers
+ * can use a Set lookup instead of an O(n) scan. Needed because `git worktree list` reports
+ * realpaths: on macOS a repo under /var/folders is reported under /private/var/folders, and a
+ * lexical comparison would call every live worktree unregistered.
+ */
+export function pathKey(target: string, platform: NodeJS.Platform = process.platform): string {
+  const canonical = canonicalizePath(target)
+  return platform === "darwin" || platform === "win32" ? canonical.toLowerCase() : canonical
+}
+
 /** Compare two canonical paths. Case-insensitive filesystems compare folded. */
 export function samePath(a: string, b: string, platform: NodeJS.Platform = process.platform): boolean {
   if (platform === "darwin" || platform === "win32") return a.toLowerCase() === b.toLowerCase()

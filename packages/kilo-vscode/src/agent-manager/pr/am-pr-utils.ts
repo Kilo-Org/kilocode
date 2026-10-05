@@ -10,13 +10,13 @@ import type {
   PRMergeMethod,
   PRMergeState,
   PRReaction,
-  PRReactionContent,
   PRReviewer,
   PRStatus,
   ReviewDecision,
   ReviewerState,
 } from "../types"
-import { PR_REACTION_CONTENT, isConversationComment } from "../../../webview-ui/agent-manager/pr/pr-types"
+import { isConversationComment } from "../../../webview-ui/agent-manager/pr/pr-types"
+import { isPRReactionContent } from "./PRActions"
 import type {
   PRResult,
   GhAuthor,
@@ -38,8 +38,7 @@ export function parsePRResult(json: string): PRResult | null {
   const result: PRResult = {
     id: data.id,
     number: data.number,
-    ...(typeof data.baseRefOid === "string" ? { baseRefOid: data.baseRefOid } : {}),
-    ...(typeof data.headRefOid === "string" ? { headRefOid: data.headRefOid } : {}),
+    ...oids(data),
     title: data.title ?? "",
     body: data.body ?? "",
     ...(typeof data.author?.login === "string" ? { author: data.author.login } : {}),
@@ -57,6 +56,16 @@ export function parsePRResult(json: string): PRResult | null {
     result.reviewers = parseReviewers(data.reviewRequests as GhReviewRequest[], data.reviews as GhReview[])
   }
   return result
+}
+
+/** The commit SHAs `gh pr view --json` exposes, when present. */
+function oids(data: Record<string, unknown>): Pick<PRResult, "baseRefOid" | "headRefOid" | "mergeCommit"> {
+  const merge = (data.mergeCommit as { oid?: unknown } | null | undefined)?.oid
+  return {
+    ...(typeof data.baseRefOid === "string" ? { baseRefOid: data.baseRefOid } : {}),
+    ...(typeof data.headRefOid === "string" ? { headRefOid: data.headRefOid } : {}),
+    ...(typeof merge === "string" ? { mergeCommit: merge } : {}),
+  }
 }
 
 function parseMerge(data: Record<string, unknown>): PRResult["merge"] {
@@ -209,22 +218,20 @@ const REVIEWER_STATE: Record<string, ReviewerState> = {
   COMMENTED: "commented",
 }
 
-const REACTION_CONTENT = new Set<string>(PR_REACTION_CONTENT)
-
 export function parseReactions(groups?: GhReactionGroup[]): PRReaction[] {
   return (groups ?? []).flatMap((group) => {
     const content = group.content
     const count = group.reactors?.totalCount ?? group.users?.totalCount
     if (
       !content ||
-      !REACTION_CONTENT.has(content) ||
+      !isPRReactionContent(content) ||
       typeof count !== "number" ||
       !Number.isSafeInteger(count) ||
       count < 1
     ) {
       return []
     }
-    return [{ content: content as PRReactionContent, count, viewerHasReacted: group.viewerHasReacted === true }]
+    return [{ content, count, viewerHasReacted: group.viewerHasReacted === true }]
   })
 }
 
@@ -446,6 +453,29 @@ export function signature(pr: PRStatus): string {
           ],
     ) ?? [],
   ])
+}
+
+/**
+ * Whether a merged or closed PR belongs to this checkout. gh's finder (and the
+ * batched lookup that mirrors it) returns the newest merged or closed PR of a
+ * branch name, so a branch recreated with the name of an old PR branch
+ * inherits that PR. Keep the PR when its head is reachable from HEAD and the
+ * merge into the base is not: a recreated branch contains neither, and a branch
+ * created from the base after the merge contains both.
+ *
+ * `merge-base --is-ancestor` is reflexive, so a worktree sitting on the PR head
+ * is covered without reading HEAD. A commit that git cannot resolve is absent
+ * from the local object store, so it cannot be in HEAD's history either.
+ */
+export async function related(pr: PRResult, git: (args: string[]) => Promise<string>): Promise<boolean> {
+  if (pr.state === "open" || pr.state === "draft" || !pr.headRefOid) return true
+  const contains = (oid: string) =>
+    git(["merge-base", "--is-ancestor", oid, "HEAD"]).then(
+      () => true,
+      () => false,
+    )
+  if (!(await contains(pr.headRefOid))) return false
+  return pr.mergeCommit === undefined || !(await contains(pr.mergeCommit))
 }
 
 export function retainPRStatus(

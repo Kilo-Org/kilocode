@@ -42,6 +42,7 @@ import { dict as appNl } from "../../webview-ui/src/i18n/nl"
 import { dict as appUk } from "../../webview-ui/src/i18n/uk"
 import { dict as appIt } from "../../webview-ui/src/i18n/it"
 import { dict as appFa } from "../../webview-ui/src/i18n/fa"
+import { REVERT_ERROR_CODE } from "../../src/shared/revert-error"
 
 // Layer 2: upstream UI (@opencode-ai/ui re-exported via @kilocode/kilo-ui)
 import { dict as uiEn } from "../../../ui/src/i18n/en"
@@ -443,7 +444,30 @@ describe("i18n key validation — no missing translation keys", () => {
   })
 })
 
+describe("i18n keys reached through a constant rather than a literal", () => {
+  it("the shared revert failure code is a key in the sidebar dictionary", () => {
+    expect(Object.keys(appEn)).toContain(REVERT_ERROR_CODE)
+  })
+})
+
 describe("i18n locale completeness — every English key exists in all locales", () => {
+  it("translates marketplace descriptions and notices instead of copying English", () => {
+    const keys = [
+      "marketplace.install.about.plugin",
+      "marketplace.install.plugin.warning",
+      "marketplace.install.includedSkills",
+      "marketplace.remove.mcp.skills",
+      "marketplace.badge.skills",
+    ] as const
+    for (const [locale, dict] of Object.entries(kiloLocales)) {
+      if (locale === "en") continue
+      for (const key of keys) {
+        expect(dict[key]?.trim(), `${locale}: ${key}`).toBeTruthy()
+        expect(dict[key], `${locale}: ${key}`).not.toBe(kiloEn[key])
+      }
+    }
+  })
+
   it("shared UI: every English key has a translation in all locales", () => {
     const missing = findMissingLocaleKeys(uiEn, uiLocales)
     if (missing.length > 0) {

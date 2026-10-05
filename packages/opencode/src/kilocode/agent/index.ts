@@ -67,6 +67,23 @@ export const bash: Record<string, "allow" | "ask" | "deny"> = {
   "gunzip *": "allow",
 }
 
+const gh: Record<string, "allow"> = {
+  "gh pr view *": "allow",
+  "gh pr list *": "allow",
+  "gh pr status *": "allow",
+  "gh pr diff *": "allow",
+  "gh pr checks *": "allow",
+  "gh issue view *": "allow",
+  "gh issue list *": "allow",
+  "gh issue status *": "allow",
+  "gh repo view *": "allow",
+  "gh run list *": "allow",
+  "gh run view *": "allow",
+  "gh release list *": "allow",
+  "gh release view *": "allow",
+  "gh search *": "allow",
+}
+
 export const readOnlyBash: Record<string, "allow" | "ask" | "deny"> = {
   "*": "deny",
   ...readable,
@@ -92,6 +109,7 @@ export const readOnlyBash: Record<string, "allow" | "ask" | "deny"> = {
   "git branch -r *": "allow",
   "git remote -v *": "allow",
   "gh *": "ask",
+  ...gh,
   // Everything below is a blocklist layered on the allowlist above: it catches ways
   // an "allowed" read-only command can still write files, chain commands, or exec an
   // arbitrary program. This is defense-in-depth, not a sandbox — the durable fix is
@@ -197,15 +215,7 @@ function askEditGuard() {
 // `agent.<name>.permission`, which merges after patchAgents in agent.ts.
 // Exported so KiloTask.inherited carries the same set into delegated sessions; a tool
 // guarded here but not there would be reachable again through a subagent.
-export const guarded = [
-  "bash",
-  "task",
-  "notebook_edit",
-  "notebook_execute",
-  "write",
-  "agent_manager",
-  "repo_clone",
-]
+export const guarded = ["bash", "task", "notebook_edit", "notebook_execute", "write", "agent_manager", "repo_clone"]
 
 // Derived from `guarded` so the two cannot drift. `bash` and `task` carry their own rules
 // in the guards, so they are denied there instead.
@@ -364,10 +374,7 @@ export interface KiloData {
 // Prepare kilo-specific data derived from config. Call once per state initialization.
 export function prepare(cfg: Config.Info, flags: Pick<RuntimeFlags.Info, "experimentalSharedAgentBoard">): KiloData {
   const mcpRules = getMcpRules(cfg)
-  const enabled = BoardEnabled.resolve({
-    config: cfg.experimental?.shared_agent_board,
-    flag: flags.experimentalSharedAgentBoard,
-  })
+  const enabled = BoardEnabled.on(cfg, flags)
   const defaultsPatch = Permission.fromConfig({
     bash,
     ...board(enabled),
@@ -390,7 +397,7 @@ export function cacheKey(cfg: Config.Info) {
     mode: cfg.mode,
     permission: cfg.permission,
     native_notebook_tools: cfg.experimental?.native_notebook_tools,
-    shared_agent_board: cfg.experimental?.shared_agent_board,
+    shared_agent_board: cfg.shared_agent_board,
     references: cfg.references,
     reference: cfg.reference,
   })

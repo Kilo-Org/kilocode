@@ -116,6 +116,8 @@ export interface PRResult {
   number: number
   baseRefOid?: string
   headRefOid?: string
+  /** Commit that merged the PR into its base, for merged PRs only. */
+  mergeCommit?: string
   title: string
   body: string
   author?: string

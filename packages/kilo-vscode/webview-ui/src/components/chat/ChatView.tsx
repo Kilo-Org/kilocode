@@ -16,6 +16,7 @@ import { DropdownMenu } from "@kilocode/kilo-ui/dropdown-menu"
 import { TaskHeader } from "./TaskHeader"
 import { MessageList } from "./MessageList"
 import { PromptInput } from "./PromptInput"
+import type { ManagerContext } from "../../utils/shortcut-hint"
 import { PermissionDock } from "./PermissionDock"
 import { SessionDock } from "./SessionDock"
 import { StartupErrorBanner } from "./StartupErrorBanner"
@@ -28,7 +29,8 @@ import { useWorktreeMode } from "../../context/worktree-mode"
 import { useServer } from "../../context/server"
 import { TranscriptSearchProvider } from "../../context/transcript-search"
 import { isPromptBlocked, isSuggesting, isQuestioning } from "./prompt-input-utils"
-import { children } from "./background-agents"
+import { taskChildren } from "./background-agents"
+import { pollBackgroundJobs } from "./background-jobs"
 import { showTabStrip } from "../../utils/local-tabs"
 import type { WorktreeReference } from "../../hooks/file-mention-utils"
 
@@ -56,6 +58,8 @@ interface ChatViewProps {
   emptyState?: () => JSX.Element
   introduction?: boolean
   resolveEmbeddedTerminal?: (context?: string) => Promise<string | undefined>
+  /** Agent Manager state for the prompt shortcut hint. */
+  manager?: () => ManagerContext | undefined
 }
 
 export const ChatView: Component<ChatViewProps> = (props) => {
@@ -73,10 +77,15 @@ export const ChatView: Component<ChatViewProps> = (props) => {
   const ownsPrompts = () => props.interactivePrompts !== false
 
   const id = () => session.currentSessionID()
+  // Keeps the background job list fresh for the dock's agent stack and the
+  // swarm board, which both read the replies.
+  pollBackgroundJobs()
   const goal = () => session.currentSession()?.goal
   // Counts the in-flight first message too, so the dock reserves the same row on
   // the very first send instead of growing once the message lands.
-  const hasMessages = () => session.messages().length > 0 || session.submitting()
+  // A memo, so the dock's actions row rebuilds only when this flips, not on
+  // every new message. A rebuild re-inserts the row and skips its transitions.
+  const hasMessages = createMemo(() => session.messages().length > 0 || session.submitting())
 
   const [editable, setEditable] = createSignal(false)
   const [editing, setEditing] = createSignal<{ sessionID: string; messageID: string }>()
@@ -175,10 +184,11 @@ export const ChatView: Component<ChatViewProps> = (props) => {
     response: "once" | "always" | "reject",
     approvedAlways: string[],
     deniedAlways: string[],
+    feedback?: string,
   ) => {
     const perm = permissionRequest()
     if (!perm || perm.id !== permissionID || session.respondingPermissions().has(permissionID)) return
-    session.respondToPermission(permissionID, response, approvedAlways, deniedAlways)
+    session.respondToPermission(permissionID, response, approvedAlways, deniedAlways, feedback)
   }
 
   const startSession = () => window.dispatchEvent(new CustomEvent("newTaskRequest"))
@@ -241,10 +251,8 @@ export const ChatView: Component<ChatViewProps> = (props) => {
 
   const canStartSession = (hasChat: boolean) => hasChat
 
-  // Deliberately status-independent: the dock reserves this row's height even
-  // while the working indicator covers it, so a button that came and went with
-  // the turn would resize the row and shift the transcript. The row is hidden
-  // and non-interactive while a turn runs.
+  // Deliberately status-independent so the row keeps one stable layout across
+  // turns. The dock hides it and makes it non-interactive while a turn runs.
   const canFork = (hasChat: boolean) => hasChat && !isSidebar() && !!props.onForkSession
 
   const canStartWorktree = () => isSidebar() && server.gitInstalled()
@@ -254,10 +262,11 @@ export const ChatView: Component<ChatViewProps> = (props) => {
   const hasActions = (hasChat: boolean) =>
     canStartSession(hasChat) || canFork(hasChat) || canStartWorktree() || canMoveToWorktree(hasChat)
 
-  const renderActions = (hasChat: boolean, control: () => JSX.Element) => (
+  const renderActions = (hasChat: boolean, control: () => JSX.Element, agents: JSX.Element) => (
     <Show when={hasActions(hasChat) || !!goal()}>
       <div class="new-task-button-wrapper" classList={{ "new-task-button-wrapper--empty": !hasChat }}>
         <div class="session-actions-row">
+          {agents}
           <Show when={canStartSession(hasChat)}>
             <Tooltip value={language.t("sidebar.session.newSession.tooltip")} placement="top">
               <Button
@@ -377,7 +386,7 @@ export const ChatView: Component<ChatViewProps> = (props) => {
   )
 
   // Sibling-aware avatar colors for every subagent spawned by this session.
-  const siblings = createMemo(() => (id() ? children(session.getSessionToolParts(id()!)) : []))
+  const siblings = createMemo(() => (id() ? taskChildren(session.getSessionToolParts(id()!)) : []))
 
   return (
     <AgentAvatarPalette ids={siblings()}>
@@ -427,7 +436,7 @@ export const ChatView: Component<ChatViewProps> = (props) => {
               <SessionDock
                 blocked={dockBlocked()}
                 hasActions={() => !props.readonly && (hasActions(hasMessages()) || !!goal())}
-                actions={(control) => renderActions(hasMessages(), control)}
+                actions={(control, agents) => renderActions(hasMessages(), control, agents)}
                 onScrollToBottom={scrollToBottom}
                 readonly={props.readonly}
               />
@@ -449,6 +458,7 @@ export const ChatView: Component<ChatViewProps> = (props) => {
                   focusOnDraftChange={props.focusOnDraftChange}
                   onFocusChange={props.onFocusChange}
                   resolveEmbeddedTerminal={props.resolveEmbeddedTerminal}
+                  manager={props.manager}
                 />
               </Show>
             </div>

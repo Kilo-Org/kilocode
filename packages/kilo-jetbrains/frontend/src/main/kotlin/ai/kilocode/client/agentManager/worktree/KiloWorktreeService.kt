@@ -16,6 +16,8 @@ import ai.kilocode.rpc.dto.WorktreeDirtyListDto
 import ai.kilocode.rpc.dto.WorktreeListDto
 import ai.kilocode.rpc.dto.WorktreePrListDto
 import ai.kilocode.rpc.dto.WorktreeStatsListDto
+import ai.kilocode.rpc.dto.orphans.OrphanRemoveResultDto
+import ai.kilocode.rpc.dto.orphans.RemoveOrphansResultDto
 import com.intellij.openapi.components.Service
 import fleet.rpc.client.durable
 import kotlinx.coroutines.CancellationException
@@ -80,18 +82,28 @@ class KiloWorktreeService internal constructor(
         }
     }
 
+    /**
+     * `unavailable = true` on failure, not the default `false`: callers merge this against their
+     * previous values and only drop a row when the poll actually answered (see
+     * `WorktreeStatusService.merge`), so a swallowed RPC failure must not read as "no worktrees".
+     */
     suspend fun stats(directory: String): WorktreeStatsListDto = try {
         call { stats(directory) }
+    } catch (e: CancellationException) {
+        throw e
     } catch (e: Exception) {
         LOG.warn("worktree stats failed for $directory", e)
-        WorktreeStatsListDto()
+        WorktreeStatsListDto(unavailable = true)
     }
 
+    /** See [stats] for why a failure reports `unavailable = true` instead of an empty, "clean" list. */
     suspend fun dirty(directory: String): WorktreeDirtyListDto = try {
         call { dirty(directory) }
+    } catch (e: CancellationException) {
+        throw e
     } catch (e: Exception) {
         LOG.warn("worktree dirty failed for $directory", e)
-        WorktreeDirtyListDto()
+        WorktreeDirtyListDto(unavailable = true)
     }
 
     /**
@@ -174,6 +186,33 @@ class KiloWorktreeService internal constructor(
         call { setSessionList(directory, visible) }
     } catch (e: Exception) {
         LOG.warn("worktree session list state write failed for $directory", e)
+        false
+    }
+
+    /** Apparent size of every orphan in [paths]. A failed lookup answers empty, never a partial throw. */
+    suspend fun orphanSizes(directory: String, paths: List<String>): Map<String, Long> = try {
+        call { orphanSizes(directory, paths) }
+    } catch (e: CancellationException) {
+        // This pass is cancelled whenever the orphan set changes or a delete starts. Rethrow so the
+        // caller's job actually ends: swallowing it would hand back an empty map that reads exactly
+        // like a walk that failed, which the banner remembers and stops retrying.
+        throw e
+    } catch (e: Exception) {
+        LOG.warn("worktree orphan sizes failed for $directory", e)
+        emptyMap()
+    }
+
+    suspend fun removeOrphans(directory: String, paths: List<String>): RemoveOrphansResultDto = try {
+        call { removeOrphans(directory, paths) }
+    } catch (e: Exception) {
+        LOG.warn("worktree orphan remove failed for $directory", e)
+        RemoveOrphansResultDto(paths.map { OrphanRemoveResultDto(it, ok = false, error = e.message) })
+    }
+
+    suspend fun revealPath(path: String): Boolean = try {
+        call { revealPath(path) }
+    } catch (e: Exception) {
+        LOG.warn("worktree reveal failed for $path", e)
         false
     }
 }

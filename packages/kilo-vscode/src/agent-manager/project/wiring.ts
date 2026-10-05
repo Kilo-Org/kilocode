@@ -13,6 +13,7 @@ import type { ProjectContext, ProjectInitResult } from "./context"
 import { ProjectContexts, type ProjectSnapshot } from "./contexts"
 import type { ProjectMessageDeps } from "./messages"
 import { createSettingsHandler, type SettingsHandler } from "./settings"
+import { poolHome } from "../pool/home"
 
 export interface ProjectWiring {
   registry: ProjectRegistry
@@ -21,7 +22,7 @@ export interface ProjectWiring {
   settings: SettingsHandler
   messages: ProjectMessageDeps
   /** Payload for the agentManager.projects webview message. */
-  snapshots(): { type: "agentManager.projects"; multiProject: boolean; projects: ProjectSnapshot[] }
+  snapshots(): { type: "agentManager.projects"; projects: ProjectSnapshot[] }
   dispose(): void
 }
 
@@ -32,10 +33,12 @@ export function createProjectWiring(opts: {
   output: (msg: string) => void
   /** Re-initialize provider state for a freshly activated context. */
   activate: (ctx: ProjectContext) => void
+  /** Clear the applied project when the last project is removed. */
+  empty: () => void
   /** Initialize an expanded background context and push its state. */
   expand: (ctx: ProjectContext) => void
   /** Ensure a context's repository state is ready (no-op once initialized). */
-  ready: (ctx: ProjectContext) => Promise<ProjectInitResult>
+  ready: (ctx: ProjectContext, opts?: { warm?: boolean }) => Promise<ProjectInitResult>
   /** Push the project catalog to the webview. */
   push: () => void
   /** Push one project's state (or every context when omitted) to the webview. */
@@ -45,6 +48,8 @@ export function createProjectWiring(opts: {
   removed?: (id: string) => void
   /** Acknowledge an atomically validated sidebar selection. */
   selected: (target: import("./route").SidebarTarget) => void
+  /** Post an outbound message to the webview. */
+  post: (message: import("../types").AgentManagerOutMessage) => void
   /** Route one session to a directory inside a project (override + project route). */
   routeSession?: (projectId: string, sessionId: string, directory: string, generation: number) => void
 }): ProjectWiring {
@@ -55,24 +60,32 @@ export function createProjectWiring(opts: {
   const contexts = new ProjectContexts({
     workspaceRoot: () => opts.host.workspacePath(),
     registry,
-    enabled: () => opts.host.multiProject(),
+    changed: () => opts.push(),
     remove: (id) => {
       opts.host.unregisterProjectRoutes(id)
       opts.removed?.(id)
     },
-    deps: { log: opts.output, git: opts.git },
+    deps: {
+      log: opts.output,
+      git: opts.git,
+      worktreePool: () => opts.host.worktreePool(),
+      poolHome: poolHome(),
+      sized: (ctx) => opts.pushState(ctx),
+    },
   })
   const messages: ProjectMessageDeps = {
     registry,
     contexts,
-    enabled: () => opts.host.multiProject(),
-    pickFolder: () => opts.host.pickFolder(),
+    pickFolder: (input) => opts.host.pickFolder(input),
+    onboarding: opts.host,
     activate: opts.activate,
+    empty: opts.empty,
     expand: opts.expand,
     ready: opts.ready,
     push: opts.push,
     pushState: opts.pushState,
     selected: opts.selected,
+    post: opts.post,
     routeSession: opts.routeSession,
     git: opts.git,
     error: (message) => opts.host.showError(message),
@@ -87,13 +100,13 @@ export function createProjectWiring(opts: {
   })
   const listeners: Disposable[] = [
     opts.host.onDidChangeWorkspaceFolders(() => opts.changed()),
-    opts.host.onDidChangeMultiProject((enabled) => {
-      if (!enabled) {
-        const pinned = contexts.disable()
-        if (pinned) opts.activate(pinned)
+    opts.host.onDidChangeWorktreePool((enabled) => {
+      for (const project of contexts.snapshots()) {
+        const manager = contexts.get(project.id)?.peekWorktrees()
+        if (!manager) continue
+        if (enabled) manager.warmPool()
+        else manager.disposePool().catch((err) => opts.log("Failed to clear worktree pool:", err))
       }
-      opts.push()
-      opts.pushState()
     }),
   ]
   return {
@@ -103,7 +116,6 @@ export function createProjectWiring(opts: {
     messages,
     snapshots: () => ({
       type: "agentManager.projects",
-      multiProject: opts.host.multiProject(),
       projects: contexts.snapshots(),
     }),
     dispose: () => {

@@ -18,6 +18,25 @@ export interface DiffHandle {
 // existing symbols. Word-alt keeps those logical additions visually intact.
 export const LINE_DIFF_TYPE = "word-alt" as const
 
+// A file this large renders through Pierre's line virtualizer instead of being
+// drawn in one pass. The review panel open policy shares these limits so eager
+// and virtualized diffs agree on what counts as extreme.
+export const EXTREME_DIFF_CHANGED_LINES = 2_000
+export const MAX_EAGER_DIFF_BYTES = 256 * 1024
+
+function bytes(lines: string[]) {
+  return lines.reduce((total, line) => total + line.length, 0)
+}
+
+// Inline transcript diffs are hunk-bounded, so Pierre can render them once and
+// keep the same instance while the tool streams. Only extreme files fall back
+// to Pierre's line virtualizer, which resets on every update.
+export function virtualize(diff: FileDiffMetadata | undefined) {
+  if (!diff) return true
+  if (diff.additionLines.length + diff.deletionLines.length > EXTREME_DIFF_CHANGED_LINES) return true
+  return bytes(diff.additionLines) > MAX_EAGER_DIFF_BYTES || bytes(diff.deletionLines) > MAX_EAGER_DIFF_BYTES
+}
+
 // Keep Kilo semantic surfaces at the computed row level. Pierre's dedicated
 // number override keeps deletion bars red without tinting line-number text.
 const css = `

@@ -179,19 +179,6 @@ const ExperimentalTab: Component = () => {
         </Show>
 
         <SettingsRow
-          title={language.t("settings.experimental.sharedAgentBoard.title")}
-          description={language.t("settings.experimental.sharedAgentBoard.description")}
-        >
-          <Switch
-            checked={experimental().shared_agent_board ?? false}
-            onChange={(checked) => updateExperimental("shared_agent_board", checked)}
-            hideLabel
-          >
-            {language.t("settings.experimental.sharedAgentBoard.title")}
-          </Switch>
-        </SettingsRow>
-
-        <SettingsRow
           title={language.t("settings.experimental.nativeNotebookTools.title")}
           description={language.t("settings.experimental.nativeNotebookTools.description")}
         >
@@ -218,15 +205,15 @@ const ExperimentalTab: Component = () => {
         </SettingsRow>
 
         <SettingsRow
-          title={language.t("settings.experimental.multiProject.title")}
-          description={language.t("settings.experimental.multiProject.description")}
+          title={language.t("settings.experimental.codeMode.title")}
+          description={language.t("settings.experimental.codeMode.description")}
         >
           <Switch
-            checked={settings().multiProject === true}
-            onChange={(checked) => applySetting("multiProject", checked, "experimental.multiProject")}
+            checked={experimental().code_mode ?? false}
+            onChange={(checked) => updateExperimental("code_mode", checked)}
             hideLabel
           >
-            {language.t("settings.experimental.multiProject.title")}
+            {language.t("settings.experimental.codeMode.title")}
           </Switch>
         </SettingsRow>
 
@@ -244,28 +231,45 @@ const ExperimentalTab: Component = () => {
         </SettingsRow>
 
         <SettingsRow
-          title={language.t("settings.browser.enable.title")}
-          description={language.t("settings.browser.enable.description")}
+          title={language.t("settings.experimental.conversationPromptHistory.title")}
+          description={language.t("settings.experimental.conversationPromptHistory.description")}
+        >
+          <Switch
+            checked={settings().conversationPromptHistory === true}
+            onChange={(checked) =>
+              applySetting("conversationPromptHistory", checked, "experimental.conversationPromptHistory")
+            }
+            hideLabel
+          >
+            {language.t("settings.experimental.conversationPromptHistory.title")}
+          </Switch>
+        </SettingsRow>
+
+        <SettingsRow
+          title={language.t("settings.experimental.browserAutomation.title")}
+          description={language.t("settings.experimental.browserAutomation.description")}
         >
           <Switch
             checked={settings().browserAutomation === true}
             onChange={(checked) => applySetting("browserAutomation", checked, "experimental.browserAutomation")}
             hideLabel
           >
-            {language.t("settings.browser.enable.title")}
+            {language.t("settings.experimental.browserAutomation.title")}
           </Switch>
         </SettingsRow>
 
         <SettingsRow
-          title={language.t("settings.experimental.taskModelSelection.title")}
-          description={language.t("settings.experimental.taskModelSelection.description")}
+          title={language.t("settings.experimental.browserAutomation.systemChrome.title")}
+          description={language.t("settings.experimental.browserAutomation.systemChrome.description")}
         >
           <Switch
-            checked={experimental().task_model_selection ?? false}
-            onChange={(checked) => updateExperimental("task_model_selection", checked)}
+            checked={settings().agentManagerBrowserUseSystemChrome !== false}
+            onChange={(checked) =>
+              applySetting("agentManagerBrowserUseSystemChrome", checked, "agentManager.browser.useSystemChrome")
+            }
             hideLabel
           >
-            {language.t("settings.experimental.taskModelSelection.title")}
+            {language.t("settings.experimental.browserAutomation.systemChrome.title")}
           </Switch>
         </SettingsRow>
 

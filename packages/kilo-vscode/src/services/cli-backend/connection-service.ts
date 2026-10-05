@@ -97,7 +97,6 @@ export class KiloConnectionService {
   private error: Error | null = null
   private connectPromise: Promise<void> | null = null
   private healthPollTimer: ReturnType<typeof setInterval> | null = null
-  private remoteService: import("../RemoteStatusService").RemoteStatusService | null = null
 
   private readonly eventListeners: Set<SSEEventListener> = new Set()
   private readonly filteredListeners = new Set<{ filter: SSEEventFilter; listener: SSEEventListener }>()
@@ -149,7 +148,11 @@ export class KiloConnectionService {
   private viewedDirty = false
   private unsubRemote: (() => void) | null = null
 
-  constructor(context: vscode.ExtensionContext, env?: () => Promise<Record<string, string>>) {
+  constructor(
+    context: vscode.ExtensionContext,
+    env?: () => Promise<Record<string, string>>,
+    private readonly prepare?: (directory: string) => Promise<void>,
+  ) {
     const state =
       context.workspaceState ??
       ({
@@ -200,6 +203,10 @@ export class KiloConnectionService {
       throw new Error("Not connected — call connect() first")
     }
     return this.client
+  }
+
+  async prepareTools(directory: string): Promise<void> {
+    await this.prepare?.(directory)
   }
 
   /**
@@ -255,16 +262,11 @@ export class KiloConnectionService {
   setRemoteService(service: import("../RemoteStatusService").RemoteStatusService | null): void {
     this.unsubRemote?.()
     this.unsubRemote = null
-    this.remoteService = service
     if (service) {
       this.unsubRemote = service.onChange((state) => {
         if (state.enabled) this.flushViewed()
       })
     }
-  }
-
-  private isRemoteEnabled(): boolean {
-    return this.remoteService?.getState().enabled ?? false
   }
 
   /**

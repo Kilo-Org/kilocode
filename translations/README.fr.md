@@ -93,15 +93,6 @@ Configurez des revues de code IA automatisées sur vos pull requests à l'adress
 </details>
 
 <details>
-<summary><strong>KiloClaw</strong></summary>
-
-<br>
-
-Lancez votre agent IA toujours actif sur [app.kilo.ai/claw](https://app.kilo.ai/claw).
-
-</details>
-
-<details>
 <summary>Installer la CLI depuis GitHub Releases (binaires)</summary>
 
 Téléchargez le dernier binaire depuis la [page des releases](https://github.com/Kilo-Org/kilocode/releases).

@@ -82,7 +82,12 @@ export async function createWorktreeOnDisk(
     })
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error)
-    const errorCode = classifyWorktreeError(msg)
+    const errorCode = classifyWorktreeError(msg, {
+      cwd: manager.repo,
+      probeFailed: manager.gitProbeFailed,
+      err: error,
+    })
+    ctx.log(`Worktree creation failed: ${msg}`)
     report(opts, { message: msg, code: errorCode })
     ctx.postToWebview({
       type: "agentManager.worktreeSetup",

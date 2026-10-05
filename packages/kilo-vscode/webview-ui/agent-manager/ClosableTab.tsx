@@ -8,7 +8,7 @@ import { SessionTabMenu } from "../src/components/chat/SessionTabMenu"
 import { SortableTabContainer } from "../src/components/chat/TabDnd"
 import { useLanguage } from "../src/context/language"
 import type { Activity } from "../src/utils/session-activity"
-import { parseBindingTokens } from "./keybind-tokens"
+import { parseBindingTokens } from "../src/utils/keybind-tokens"
 
 type TabIcon = IconProps["name"] | "spinner"
 type Value<T> = T | (() => T)
@@ -130,13 +130,17 @@ export const SortableClosableTab: Component<
   ClosableTabProps & {
     id: string
     onCloseOthers: () => void
+    onCloseToRight?: () => void
+    menuLeading?: JSX.Element
   }
 > = (props) => (
   <SortableTabContainer id={props.id}>
     <SessionTabMenu
       onClose={props.onClose}
       onCloseOthers={props.onCloseOthers}
+      onCloseToRight={props.onCloseToRight}
       closeable={props.closeable}
+      leading={props.menuLeading}
       closeShortcut={
         props.closeKeybind ? (
           <span class="am-menu-shortcut">

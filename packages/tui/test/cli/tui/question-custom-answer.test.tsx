@@ -1,3 +1,4 @@
+// kilocode_change - new file
 /** @jsxImportSource @opentui/solid */
 import { TextareaRenderable } from "@opentui/core"
 import { createDefaultOpenTuiKeymap } from "@opentui/keymap/opentui"
@@ -12,9 +13,9 @@ import { createTuiResolvedConfig } from "../../fixture/tui-runtime"
 import { TestTuiContexts } from "../../fixture/tui-environment"
 import { createEventSource } from "../../fixture/tui-sdk"
 
-async function wait(fn: () => boolean, timeout = 2000) {
+async function wait(fn: () => boolean | Promise<boolean>, timeout = 5000) {
   const start = Date.now()
-  while (!fn()) {
+  while (!(await fn())) {
     if (Date.now() - start > timeout) throw new Error("timed out waiting for condition")
     await Bun.sleep(10)
   }
@@ -104,8 +105,11 @@ async function mount(input: { root: string; requests: { path: string; body: unkn
 }
 
 async function openCustomEditor(prompt: Awaited<ReturnType<typeof mount>>) {
-  await prompt.app.renderOnce()
-  await Bun.sleep(50)
+  // The provider tree mounts the prompt asynchronously, so render until the options are on screen.
+  await wait(async () => {
+    await prompt.app.renderOnce()
+    return prompt.app.captureCharFrame().includes("Type your own answer")
+  })
   await prompt.app.flush()
   prompt.app.mockInput.pressArrow("down")
   await prompt.app.flush()

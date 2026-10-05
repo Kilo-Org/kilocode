@@ -56,7 +56,7 @@ export const SwarmBoard: Component<{ readonly?: boolean; projectId?: string }> =
       !current.parentID &&
       current.id === session.currentSessionID() &&
       !current.id.startsWith("cloud:") &&
-      config.config().experimental?.shared_agent_board
+      (config.config().shared_agent_board ?? true)
     )
   })
 

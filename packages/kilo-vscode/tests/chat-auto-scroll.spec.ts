@@ -410,3 +410,44 @@ test("preserves the pause across working status changes", async ({ page }) => {
   await expect.poll(() => distance(page)).toBeGreaterThan(40)
   await expect(bottom).toBeVisible()
 })
+
+// A session waiting on a permission reports idle while the transcript still
+// changes. The bottom must survive viewport and layout changes in that state.
+test("keeps the bottom when the viewport shrinks while idle", async ({ page }) => {
+  await open(page)
+  await settle(page, 10)
+  await expect.poll(() => distance(page)).toBeLessThanOrEqual(2)
+
+  await page.getByTestId("toggle-status").click()
+  // Past the hook's 300ms settling window, so the session really is idle.
+  await page.waitForTimeout(400)
+  // A pointer gesture on the transcript (as when a user clicks Allow next to
+  // it) makes activity "recent". A viewport resize is still not a scroll.
+  const list = page.locator(".message-list")
+  const box = (await list.boundingBox())!
+  await page.mouse.click(box.x + box.width / 2, box.y + 20)
+  await page.getByTestId("grow-viewport-spacer").click()
+  await settle(page, 2)
+
+  await expect.poll(() => distance(page)).toBeLessThanOrEqual(2)
+  await expect(scrollButton(page)).toBeHidden()
+})
+
+test("re-pins after a programmatic scroll correction while idle", async ({ page }) => {
+  await open(page)
+  const list = page.locator(".message-list")
+  await settle(page, 10)
+  await expect.poll(() => distance(page)).toBeLessThanOrEqual(2)
+
+  await page.getByTestId("toggle-status").click()
+  await page.waitForTimeout(400)
+  // Mimics the virtualizer's jump compensation: a non-user write moves the
+  // viewport without changing content height.
+  await list.evaluate((el) => {
+    el.scrollTop -= 400
+  })
+  await settle(page, 2)
+
+  await expect.poll(() => distance(page)).toBeLessThanOrEqual(2)
+  await expect(scrollButton(page)).toBeHidden()
+})

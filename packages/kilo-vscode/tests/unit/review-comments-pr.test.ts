@@ -13,7 +13,6 @@ import {
   partReview,
   parseReview,
   pushInstruction,
-  reviewMetadata,
   type CIReviewCommentData,
   type PRReviewCommentData,
   type ReviewCommentData,
@@ -118,7 +117,7 @@ describe("push instruction", () => {
   it("keeps the review chips when appended after the review block", () => {
     const comments = [ci()]
     const text = [formatReviewCommentsMarkdown(comments), pushInstruction(comments, true)].join("\n\n")
-    const view = partReview(reviewMetadata({ version: 1, comments }), text)
+    const view = partReview({ kilo: { review: { version: 1, comments } } }, text)
     expect(view?.data.comments).toEqual(comments)
     expect(view?.body).toBe(pushInstruction(comments, true))
   })
@@ -131,7 +130,7 @@ describe("PR review comment metadata", () => {
       comments: [pr({ diffHunk: "@@ -1 +1 @@", reviewState: "approved", replies: [{ author: "bob", body: "ok" }] })],
     }
     const text = `${formatReviewCommentsMarkdown(data.comments)}\n\nplease fix these`
-    const view = partReview(reviewMetadata(data), text)
+    const view = partReview({ kilo: { review: data } }, text)
     expect(view?.body).toBe("please fix these")
     expect(view?.data.comments[0]).toEqual(data.comments[0])
   })
@@ -188,7 +187,7 @@ describe("CI review comment metadata", () => {
   it("round-trips CI metadata with and without a visible message body", () => {
     const data = { version: 1 as const, comments: [ci({ body: "Failed: `typecheck`\n\nRead logs on demand." })] }
     const text = formatReviewCommentsMarkdown(data.comments)
-    const metadata = JSON.parse(JSON.stringify(reviewMetadata(data)))
+    const metadata = JSON.parse(JSON.stringify({ kilo: { review: data } }))
     expect(partReview(metadata, text)).toEqual({ data, body: "" })
     expect(partReview(metadata, `${text}\n\nFix only these failures.`)).toEqual({
       data,
@@ -199,7 +198,7 @@ describe("CI review comment metadata", () => {
   it("round-trips mixed local, PR, and CI metadata", () => {
     const data = { version: 1 as const, comments: [local(), pr(), ci()] }
     const text = formatReviewCommentsMarkdown(data.comments)
-    const metadata = JSON.parse(JSON.stringify(reviewMetadata(data)))
+    const metadata = JSON.parse(JSON.stringify({ kilo: { review: data } }))
     expect(partReview(metadata, text)).toEqual({ data, body: "" })
   })
 

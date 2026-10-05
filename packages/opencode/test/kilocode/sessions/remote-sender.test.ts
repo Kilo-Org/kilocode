@@ -5,6 +5,7 @@ import { ProjectV2 } from "@opencode-ai/core/project"
 import { RemoteCommand } from "../../../src/kilo-sessions/remote-command"
 import { RemoteModelCatalog } from "../../../src/kilo-sessions/remote-model-catalog"
 import { RemoteSender } from "../../../src/kilo-sessions/remote-sender"
+import type { PrLink } from "../../../src/kilo-sessions/pr-link"
 import type { RemoteWS } from "../../../src/kilo-sessions/remote-ws"
 import type { RemoteProtocol } from "../../../src/kilo-sessions/remote-protocol"
 import type { SessionPrompt } from "../../../src/session/prompt"
@@ -24,17 +25,22 @@ import { tmpdir } from "../../fixture/fixture"
 
 function fakeConn() {
   const sent: any[] = []
+  let beats = 0
   return {
     conn: {
       send(msg: any) {
         sent.push(msg)
       },
       close() {},
+      async heartbeat() {
+        beats++
+      },
       get connected() {
         return true
       },
     } as RemoteWS.Connection,
     sent,
+    beats: () => beats,
   }
 }
 
@@ -119,8 +125,14 @@ function catalogModel(providerID: string, modelID: string, name: string, reasoni
 }
 
 // kilocode_change start
+const client = process.env.KILO_CLIENT
 afterEach(() => {
   mock.restore()
+  if (client == null) {
+    delete process.env.KILO_CLIENT
+    return
+  }
+  process.env.KILO_CLIENT = client
 })
 // kilocode_change end
 
@@ -4846,5 +4858,254 @@ describe("RemoteSender slash commands", () => {
     expect(provideCalls).toEqual([])
     expect(createCalls).toEqual([])
   })
+
+  // set_pr_link: the app-controlled, per-session PR link.
+  test("set_pr_link records the parsed link on the command session, ACKs, then fires a best-effort heartbeat", async () => {
+    process.env.KILO_CLIENT = "cli"
+    const { conn, sent, beats } = fakeConn()
+    const calls: [PrLink | undefined, SessionID][] = []
+    const sender = RemoteSender.create({
+      conn,
+      directory: "/tmp/test",
+      log: nolog,
+      subscribe: fakeBus().subscribe,
+      setPrLink: async (value, sessionId) => {
+        calls.push([value, sessionId])
+      },
+    })
+
+    const response = expectResponse(conn, sent, "req_pr")
+    sender.handle({
+      type: "command",
+      id: "req_pr",
+      command: "set_pr_link",
+      sessionId: "ses_pr_owner",
+      data: { prUrl: "https://github.com/acme/widgets/pull/42" },
+    })
+    await response.promise
+    response.restore()
+
+    expect(calls).toEqual([
+      [
+        { platform: "github", prUrl: "https://github.com/acme/widgets/pull/42", prNumber: 42 },
+        SessionID.make("ses_pr_owner"),
+      ],
+    ])
+    expect(sent).toEqual([{ type: "response", id: "req_pr", result: {} }])
+    expect(beats()).toBe(1)
+  })
+
+  test("set_pr_link with cleared withdraws the command session's link", async () => {
+    process.env.KILO_CLIENT = "cli"
+    const { conn, sent } = fakeConn()
+    const calls: [PrLink | undefined, SessionID][] = []
+    const sender = RemoteSender.create({
+      conn,
+      directory: "/tmp/test",
+      log: nolog,
+      subscribe: fakeBus().subscribe,
+      setPrLink: async (value, sessionId) => {
+        calls.push([value, sessionId])
+      },
+    })
+
+    const response = expectResponse(conn, sent, "req_clear")
+    sender.handle({
+      type: "command",
+      id: "req_clear",
+      command: "set_pr_link",
+      sessionId: "ses_pr_owner",
+      data: { cleared: true },
+    })
+    await response.promise
+    response.restore()
+
+    expect(calls).toEqual([[undefined, SessionID.make("ses_pr_owner")]])
+    expect(sent).toEqual([{ type: "response", id: "req_clear", result: {} }])
+  })
+
+  test("set_pr_link without a session id fails closed and writes nothing", () => {
+    process.env.KILO_CLIENT = "cli"
+    const { conn, sent } = fakeConn()
+    const calls: [PrLink | undefined, SessionID][] = []
+    const sender = RemoteSender.create({
+      conn,
+      directory: "/tmp/test",
+      log: nolog,
+      subscribe: fakeBus().subscribe,
+      setPrLink: async (value, sessionId) => {
+        calls.push([value, sessionId])
+      },
+    })
+
+    sender.handle({
+      type: "command",
+      id: "req_no_session",
+      command: "set_pr_link",
+      data: { prUrl: "https://github.com/acme/widgets/pull/42" },
+    })
+
+    // No owner means no link: the command is rejected and the seam is untouched,
+    // so the link can never be pinned to a worktree another session inherits.
+    expect(sent).toEqual([{ type: "response", id: "req_no_session", error: "invalid set_pr_link command" }])
+    expect(calls).toEqual([])
+  })
+
+  test("set_pr_link rejects an invalid url and never writes the link", () => {
+    process.env.KILO_CLIENT = "cli"
+    const { conn, sent } = fakeConn()
+    const calls: [PrLink | undefined, SessionID][] = []
+    const sender = RemoteSender.create({
+      conn,
+      directory: "/tmp/test",
+      log: nolog,
+      subscribe: fakeBus().subscribe,
+      setPrLink: async (value, sessionId) => {
+        calls.push([value, sessionId])
+      },
+    })
+
+    sender.handle({
+      type: "command",
+      id: "req_bad_url",
+      command: "set_pr_link",
+      sessionId: "ses_pr_owner",
+      data: { prUrl: "https://github.com/acme/widgets/issues/42" },
+    })
+
+    expect(sent).toEqual([{ type: "response", id: "req_bad_url", error: "invalid set_pr_link url" }])
+    expect(calls).toEqual([])
+  })
+
+  test("set_pr_link rejects a malformed request", () => {
+    process.env.KILO_CLIENT = "cli"
+    const { conn, sent } = fakeConn()
+    const calls: [PrLink | undefined, SessionID][] = []
+    const sender = RemoteSender.create({
+      conn,
+      directory: "/tmp/test",
+      log: nolog,
+      subscribe: fakeBus().subscribe,
+      setPrLink: async (value, sessionId) => {
+        calls.push([value, sessionId])
+      },
+    })
+
+    sender.handle({
+      type: "command",
+      id: "req_bad",
+      command: "set_pr_link",
+      sessionId: "ses_pr_owner",
+      data: { cleared: false },
+    })
+
+    expect(sent).toEqual([{ type: "response", id: "req_bad", error: "invalid set_pr_link command" }])
+    expect(calls).toEqual([])
+  })
+
+  test("set_pr_link reports a retryable write failure and does not fire the heartbeat", async () => {
+    process.env.KILO_CLIENT = "cli"
+    const { conn, sent, beats } = fakeConn()
+    const sender = RemoteSender.create({
+      conn,
+      directory: "/tmp/test",
+      log: nolog,
+      subscribe: fakeBus().subscribe,
+      setPrLink: async () => {
+        throw new Error("disk full")
+      },
+    })
+
+    const response = expectResponse(conn, sent, "req_fail")
+    sender.handle({
+      type: "command",
+      id: "req_fail",
+      command: "set_pr_link",
+      sessionId: "ses_pr_owner",
+      data: { prUrl: "https://github.com/acme/widgets/pull/42" },
+    })
+    await response.promise
+    response.restore()
+
+    // Retryable failure: the write rejected, so the response carries an error
+    // and the best-effort heartbeat must NOT fire (the link was never stored).
+    expect(sent).toEqual([{ type: "response", id: "req_fail", error: "failed to set pr link" }])
+    expect(beats()).toBe(0)
+  })
+
+  test.each(["vscode", "jetbrains", "desktop", "acp", "custom"])(
+    "set_pr_link rejects %s before validation or either callback without a heartbeat",
+    async (client) => {
+      for (const injected of [false, true]) {
+        process.env.KILO_CLIENT = "cli"
+        const wire = fakeConn()
+        const callback = mock(async (_value: PrLink | undefined, _id: SessionID) => {})
+        const get = mock(async (id: SessionID) => info(id))
+        const sender = RemoteSender.create({
+          conn: wire.conn,
+          directory: "/tmp/test",
+          log: nolog,
+          subscribe: fakeBus().subscribe,
+          session: { get, children: async () => [] },
+          ...(injected ? { setPrLink: callback } : {}),
+        })
+        process.env.KILO_CLIENT = client
+        const requests = [
+          { sessionId: "ses_pr_owner", data: { prUrl: "https://github.com/acme/widgets/pull/42" } },
+          { sessionId: "ses_pr_owner", data: { cleared: true } },
+          { sessionId: "ses_pr_owner", data: { prUrl: "invalid" } },
+          { sessionId: "invalid", data: { cleared: false } },
+        ]
+        for (const [index, request] of requests.entries()) {
+          sender.handle({ type: "command", id: `req_${index}`, command: "set_pr_link", ...request })
+        }
+        await Promise.resolve()
+
+        expect(wire.sent).toEqual(
+          requests.map((_, index) => ({
+            type: "response",
+            id: `req_${index}`,
+            error: "set_pr_link is unsupported for this client",
+          })),
+        )
+        expect(callback).not.toHaveBeenCalled()
+        expect(get).not.toHaveBeenCalled()
+        expect(wire.beats()).toBe(0)
+        sender.dispose()
+      }
+    },
+  )
+
+  test.each(["vscode", "jetbrains", "desktop", "acp", "custom"])(
+    "PR-link policy leaves normal remote commands functional for %s",
+    async (client) => {
+      process.env.KILO_CLIENT = client
+      const wire = fakeConn()
+      const cancel = mock(async (_id: SessionID) => {})
+      const sender = RemoteSender.create({
+        conn: wire.conn,
+        directory: "/tmp/test",
+        log: nolog,
+        subscribe: fakeBus().subscribe,
+        provide: async <R>(input: { directory: string; fn: () => R }) => input.fn(),
+        cancel,
+        session: { get: async (id) => info(id), children: async () => [] },
+      })
+      const response = expectResponse(wire.conn, wire.sent, "req_interrupt")
+      sender.handle({
+        type: "command",
+        id: "req_interrupt",
+        command: "interrupt",
+        sessionId: "ses_normal",
+        data: {},
+      })
+      await response.promise
+      response.restore()
+
+      expect(cancel).toHaveBeenCalledWith(SessionID.make("ses_normal"))
+      expect(wire.sent).toEqual([{ type: "response", id: "req_interrupt", result: {} }])
+      sender.dispose()
+    },
+  )
 })
 // kilocode_change end

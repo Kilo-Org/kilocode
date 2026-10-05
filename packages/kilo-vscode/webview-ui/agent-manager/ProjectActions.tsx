@@ -6,7 +6,7 @@ import { Icon } from "@kilocode/kilo-ui/icon"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { TooltipKeybind } from "@kilocode/kilo-ui/tooltip"
 import type { LanguageContextValue } from "../src/context/language"
-import { parseBindingTokens } from "./keybind-tokens"
+import { parseBindingTokens } from "../src/utils/keybind-tokens"
 
 export interface WorktreeCreateProps {
   branch: string
@@ -68,18 +68,5 @@ export const WorktreeCreate: Component<WorktreeCreateProps> = (props) => (
         </DropdownMenu.Content>
       </DropdownMenu.Portal>
     </DropdownMenu>
-  </div>
-)
-
-export const ProjectActions: Component<WorktreeCreateProps & { onSettings: () => void }> = (props) => (
-  <div class="am-project-actions">
-    <WorktreeCreate {...props} />
-    <IconButton
-      icon="settings-gear"
-      size="small"
-      variant="ghost"
-      label={props.t("agentManager.worktree.settings")}
-      onClick={props.onSettings}
-    />
   </div>
 )

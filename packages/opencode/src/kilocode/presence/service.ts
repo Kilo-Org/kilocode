@@ -60,8 +60,8 @@ export namespace KiloViewers {
 
       const platform = inferPlatform()
       const killSwitch = process.env.KILO_DISABLE_PRESENCE === "1"
-      // Same endpoint the server envelope hands KiloClaw; KILO_EVENT_SERVICE_URL
-      // is a presence-specific override on top of the gateway's EVENT_SERVICE_URL.
+      // KILO_EVENT_SERVICE_URL is a presence-specific override on top of the
+      // gateway's EVENT_SERVICE_URL.
       const url = process.env.KILO_EVENT_SERVICE_URL || KILO_EVENT_SERVICE_URL
 
       const s = {

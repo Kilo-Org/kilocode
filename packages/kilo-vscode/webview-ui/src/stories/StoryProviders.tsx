@@ -118,6 +118,7 @@ const MockProviderProvider: ParentComponent<{ kiloAuth?: boolean; training?: boo
     authMethods: () => ({}),
     authStates: () => (props.kiloAuth ? { kilo: "oauth" } : {}) as Record<string, ProviderAuthState>,
     isModelValid: () => true,
+    kiloUnavailable: () => false,
   }
   return <ProviderContext.Provider value={value}>{props.children}</ProviderContext.Provider>
 }
@@ -237,6 +238,7 @@ export function mockSessionValue(overrides?: {
     selected: () => ({ providerID: "kilo", modelID: "anthropic/claude-sonnet-4-6" }),
     modelForAgent: () => ({ providerID: "kilo", modelID: "anthropic/claude-sonnet-4-6" }),
     selectModel: noop,
+    trackScopes: () => noop,
     costBreakdown: () => [],
     contextUsage: () => undefined,
     modelUsage: () => undefined,
@@ -265,6 +267,7 @@ export function mockSessionValue(overrides?: {
     variantList: () => [],
     currentVariant: () => undefined,
     variantForAgent: () => undefined,
+    variantPreference: () => undefined,
     selectVariant: noop,
     sendMessage: () => true,
     sendCommand: () => true,
@@ -279,6 +282,10 @@ export function mockSessionValue(overrides?: {
     createSession: noop,
     clearCurrentSession: noop,
     loadSessions: noop,
+    loadMoreSessions: noop,
+    sessionsHasMore: () => false,
+    keepSessions: () => noop,
+    sessionsLoadingMore: () => false,
     loadOlderMessages: () => false,
     selectSession: noop,
     // MessageList reads both on mount: `scrollBottomID` must be an accessor
@@ -349,6 +356,7 @@ const ConfigWrapper: ParentComponent<{
         indexing: props.features?.indexing ?? hasIndexingPlugin(config.plugin ?? []),
         sandboxControls: props.features?.sandboxControls ?? false,
         backgroundSubagents: props.features?.backgroundSubagents ?? false,
+        speechToText: props.features?.speechToText ?? true,
       }
     })
 
@@ -359,6 +367,7 @@ const ConfigWrapper: ParentComponent<{
       projectConfig: createMemo(() => (scoped ? project() : cfg())),
       collections: () => ({}),
       settings,
+      shortcuts: () => ({ bindings: {}, selection: false }),
       features,
       loading: () => false,
       isDirty: dirty,

@@ -282,8 +282,11 @@ class WorktreeControllerTest : BasePlatformTestCase() {
 
     fun `test refused nested remove keeps the row and surfaces the error`() {
         val item = WorktreeDto("/repo/.kilo/worktrees/feature-x", "feature-x", "feature/x", "/repo/.kilo/worktrees/feature-x")
+        val nestedPath = "/repo/.kilo/worktrees/feature-x/.kilo/worktrees/nested"
         rpc.listed += item
-        rpc.removeResult = { _, _, _ -> RemoveWorktreeResultDto(error = "Delete nested worktrees first:\n/repo/.kilo/worktrees/feature-x/.kilo/worktrees/nested") }
+        rpc.removeResult = { _, _, _ ->
+            RemoveWorktreeResultDto(error = "Delete nested worktrees first:\n$nestedPath", nestedPaths = listOf(nestedPath))
+        }
         val controller = controller()
         controller.reload()
         flush()
@@ -296,7 +299,32 @@ class WorktreeControllerTest : BasePlatformTestCase() {
         assertEquals("feature/x", controller.model.getElementAt(0).branch)
         assertNull(controller.progress(item.id))
         assertEquals(listOf(false), rpc.removeForces.toList())
-        assertEquals("Delete nested worktrees first:\n/repo/.kilo/worktrees/feature-x/.kilo/worktrees/nested", failures.single().error)
+        assertEquals("Delete nested worktrees first:\n$nestedPath", failures.single().error)
+        // nestedPaths must survive the controller's pass-through unchanged, since the panel
+        // reads it directly to build the copy-path/reveal notification actions.
+        assertEquals(listOf(nestedPath), failures.single().nestedPaths)
+    }
+
+    fun `test reveal routes the path to the backend rpc`() {
+        val controller = controller()
+
+        var failed = false
+        controller.reveal("/repo/.kilo/worktrees/feature-x/.kilo/worktrees/nested") { failed = true }
+        flush()
+
+        assertEquals(listOf("/repo/.kilo/worktrees/feature-x/.kilo/worktrees/nested"), rpc.revealPaths.toList())
+        assertFalse(failed)
+    }
+
+    fun `test reveal reports failure when the backend can't reveal the path`() {
+        val controller = controller()
+        rpc.revealPathResult = { false }
+
+        var failed = false
+        controller.reveal("/repo/.kilo/worktrees/feature-x/.kilo/worktrees/nested") { failed = true }
+        flush()
+
+        assertTrue(failed)
     }
 
     fun `test force remove passes the force flag and drops the row on success`() {
@@ -375,6 +403,32 @@ class WorktreeControllerTest : BasePlatformTestCase() {
         flush()
 
         assertEquals(listOf("main", "feature/x", "release/1.0"), controller.branches)
+    }
+
+    fun `test the controller resolves the origin repo slug without a reload`() {
+        rpc.originSlug = "Kilo-Org/kilocode"
+
+        val controller = controller()
+        flush()
+
+        // The New Worktree dialog can open before any reload runs, so construction alone has to arm
+        // the cross-repo check.
+        assertEquals("Kilo-Org/kilocode", controller.origin)
+    }
+
+    fun `test reload caches the origin repo slug`() {
+        rpc.listed += WorktreeDto("/repo", "repo", "main", "/repo", main = true)
+        val controller = controller()
+        // Let the construction-time lookup settle while there is no slug to find, so the assertion
+        // below can only be satisfied by reload() assigning it.
+        flush()
+        assertNull(controller.origin)
+        rpc.originSlug = "Kilo-Org/kilocode"
+
+        controller.reload()
+        flush()
+
+        assertEquals("Kilo-Org/kilocode", controller.origin)
     }
 
     fun `test base branches exclude branches checked out in worktrees`() {

@@ -438,7 +438,7 @@ it.live(
 )
 
 it.live(
-  "stops a legacy command while an attachment read permission is pending",
+  "stops a command while an attachment read permission is pending",
   () =>
     provideTmpdirServer(
       Effect.fnUntraced(function* ({ dir }) {
@@ -453,7 +453,7 @@ it.live(
         const fiber = yield* prompt
           .command({
             sessionID: session.id,
-            command: "local-review",
+            command: "review",
             arguments: "",
             parts: [
               {
@@ -470,7 +470,7 @@ it.live(
             const requests = yield* permission.list()
             return requests.find((request) => request.sessionID === session.id && request.permission === "read")
           }),
-          "legacy command attachment permission was never requested",
+          "command attachment permission was never requested",
           "15 seconds",
         )
 
@@ -1299,14 +1299,20 @@ for (const continued of [false, true]) {
           const fiber = yield* prompt
             .prompt({ sessionID: root.id, agent: "build", parts: [{ type: "text", text: "Read .env" }] })
             .pipe(Effect.forkScoped)
+          // Both waits cross a real prompt turn, so they carry the same 10-15s headroom as
+          // the sibling tests in this file instead of the helper defaults (5s poll, 2s
+          // join). This file shares one process with the rest of the fast-tier batch, so a
+          // starved host can push a whole turn past those defaults; the continued turn adds
+          // an extra model round trip after the rejection, which is the case that failed.
           const pending = yield* pollWithTimeout(
             Effect.gen(function* () {
               return (yield* permission.list()).find((item) => item.sessionID === root.id)
             }),
             "root never requested read permission",
+            "15 seconds",
           )
           yield* permission.reply({ requestID: pending.id, reply: "reject" })
-          const result = yield* awaitWithTimeout(Fiber.join(fiber), "root did not finish")
+          const result = yield* awaitWithTimeout(Fiber.join(fiber), "root did not finish", "15 seconds")
           expect(result.parts.some((part) => part.type === "text" && part.text === "Skipped the denied read.")).toBe(
             continued,
           )

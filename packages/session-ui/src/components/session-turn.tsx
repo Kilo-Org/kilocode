@@ -93,7 +93,7 @@ function list<T>(value: T[] | undefined | null, fallback: T[]) {
 
 type SummaryDiff = (SnapshotFileDiff & { file: string }) | FileDiffInfo
 
-function summaryDiff(value: SnapshotFileDiff): value is SummaryDiff {
+function summaryDiff(value: SnapshotFileDiff): value is SnapshotFileDiff & { file: string } {
   return typeof value.file === "string"
 }
 

@@ -42,7 +42,7 @@ Place any of these files at your project root to provide project-wide instructio
 For instructions that apply across all your projects, place an `AGENTS.md` file in your global config directory:
 
 - **Kilo:** `~/.config/kilo/AGENTS.md`
-- **Claude-compatible:** `~/.claude/CLAUDE.md`
+- **Claude-compatible:** `~/.claude/CLAUDE.md`, until [Claude Code Migration](/docs/getting-started/settings#claude-code-migration) has been attempted. Migration ends this global fallback; project-level `CLAUDE.md` files keep working.
 
 Project-level instructions are loaded before global instructions and apply to every session.
 
@@ -119,7 +119,7 @@ Place any of these files at your project root to provide project-wide instructio
 For instructions that apply across all your projects, place an `AGENTS.md` file in your global config directory:
 
 - **Kilo:** `~/.config/kilo/AGENTS.md`
-- **Claude-compatible:** `~/.claude/CLAUDE.md`
+- **Claude-compatible:** `~/.claude/CLAUDE.md`, until [Claude Code Migration](/docs/getting-started/settings#claude-code-migration) has been attempted. Migration ends this global fallback; project-level `CLAUDE.md` files keep working.
 
 Project-level instructions are loaded before global instructions and apply to every session.
 

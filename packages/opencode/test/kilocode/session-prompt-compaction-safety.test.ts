@@ -425,7 +425,8 @@ describe("SessionPrompt compaction safety", () => {
         Effect.fnUntraced(function* ({ llm }) {
           const prompt = yield* SessionPrompt.Service
           const sessions = yield* Session.Service
-          const chat = yield* sessions.create({})
+          // Explicit title so the auxiliary title-generation call is skipped and llm.calls stays exact.
+          const chat = yield* sessions.create({ title: "Pending request replay" })
           const old = yield* user(chat.id, "old request")
           yield* assistant(chat.id, old.id, {
             tokens: { input: 95_000, output: 100, reasoning: 0, cache: { read: 0, write: 0 } },
@@ -466,7 +467,11 @@ describe("SessionPrompt compaction safety", () => {
             const prompt = yield* SessionPrompt.Service
             const sessions = yield* Session.Service
             const tools = finish !== "stop"
-            const chat = yield* sessions.create({ permission: [{ permission: "*", pattern: "*", action: "allow" }] })
+            // Explicit title so the auxiliary title-generation call is skipped and llm.calls stays exact.
+            const chat = yield* sessions.create({
+              title: "Completed work no-replay",
+              permission: [{ permission: "*", pattern: "*", action: "allow" }],
+            })
             yield* llm.push(
               (tools ? reply().tool("glob", { pattern: "*.txt" }) : reply().text("answer"))
                 .finish(finish)
@@ -500,7 +505,8 @@ describe("SessionPrompt compaction safety", () => {
           const prompt = yield* SessionPrompt.Service
           const sessions = yield* Session.Service
           const compaction = yield* SessionCompaction.Service
-          const chat = yield* sessions.create({})
+          // Explicit title so the auxiliary title-generation call is skipped and llm.calls stays exact.
+          const chat = yield* sessions.create({ title: "Saved marker replay" })
           const old = yield* user(chat.id, "old request")
           yield* assistant(chat.id, old.id)
           const request = yield* user(chat.id, "run the tool")

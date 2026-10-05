@@ -108,10 +108,11 @@ export interface SessionContextValue {
   scopedQuestions: (sessionID: string | undefined) => QuestionRequest[]
   scopedSuggestions: (sessionID: string | undefined) => SuggestionRequest[]
 
-  // Model selection (global, extension-lifetime)
+  // Model selection (per-scope picks over per-agent config)
   selected: (sessionID?: string) => ModelSelection | null
   modelForAgent: (agent: string) => ModelSelection | null
   selectModel: (providerID: string, modelID: string, sessionID?: string) => void
+  trackScopes: (ids: Accessor<readonly string[]>) => () => void
 
   // Cost and context usage for the current session
   costBreakdown: Accessor<Array<{ label: string; cost: number }>>
@@ -147,6 +148,7 @@ export interface SessionContextValue {
   variantList: (sessionID?: string) => string[]
   currentVariant: (sessionID?: string) => string | undefined
   variantForAgent: (agent: string, model: ModelSelection | null) => string | undefined
+  variantPreference: (agent: string, model: ModelSelection | null) => string | undefined
   selectVariant: (value: string | undefined, sessionID?: string) => void
 
   // Model favorites
@@ -178,6 +180,7 @@ export interface SessionContextValue {
     review?: ReviewMessageData,
     origin?: string | null,
     browserFeedback?: BrowserFeedbackData,
+    injectedTitle?: string,
   ) => boolean
   sendCommand: (
     command: string,
@@ -189,6 +192,7 @@ export interface SessionContextValue {
     context?: string,
     origin?: string | null,
     overrides?: { agent?: string; model?: string; variant?: string; messageID?: string },
+    projectId?: string,
   ) => boolean
   abort: () => void
   compact: () => void
@@ -197,6 +201,7 @@ export interface SessionContextValue {
     response: "once" | "always" | "reject",
     approvedAlways: string[],
     deniedAlways: string[],
+    feedback?: string,
   ) => boolean
   replyToQuestion: (requestID: string, answers: string[][]) => void
   rejectQuestion: (requestID: string) => void
@@ -206,6 +211,11 @@ export interface SessionContextValue {
   createSession: () => void
   clearCurrentSession: () => void
   loadSessions: () => void
+  loadMoreSessions: () => void
+  sessionsHasMore: Accessor<boolean>
+  /** Keep these sessions in the store when a full load lists only its first page. */
+  keepSessions: (ids: Accessor<readonly string[]>) => () => void
+  sessionsLoadingMore: Accessor<boolean>
   loadOlderMessages: () => boolean
   selectSession: (id: string, options?: { focus?: boolean; scrollToBottom?: boolean }) => void
   scrollBottomID: Accessor<string | undefined>

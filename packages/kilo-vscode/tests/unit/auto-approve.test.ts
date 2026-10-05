@@ -143,7 +143,7 @@ describe("registerToggleAutoApprove", () => {
     expect(ctrl.active()).toBe(true)
     expect(changes).toEqual([false, true])
     expect(env.updates).toEqual([{ key: "enabled", value: true, target: vscode.ConfigurationTarget.Workspace }])
-    expect(env.messages).toContain("Auto-approve enabled")
+    expect(env.messages).toContain("Auto-approve enabled. Sandbox escalation prompts are excluded.")
   })
 
   it("uses the SSE directory for worktree permissions before session mappings are available", async () => {

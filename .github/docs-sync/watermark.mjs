@@ -24,20 +24,32 @@ function extractMarker(body) {
   return Number.isNaN(d.getTime()) ? null : d
 }
 
+/**
+ * Pick the marker from the first trusted PR in `prs`. The query is sorted by
+ * `updated-desc`, so that PR is the one the latest run refreshed. Scanning in
+ * `created-desc` order instead could read a surface PR that this run skipped
+ * (its body still carries an older marker) and regress or pin the watermark.
+ */
+export function pickWatermark(prs) {
+  for (const pr of Array.isArray(prs) ? prs : []) {
+    // Only trust markers on PRs authored by the bot itself: bodies are
+    // editable and the label can be applied by anyone with triage access.
+    if (pr.user?.login !== "github-actions[bot]") continue
+    const marker = extractMarker(pr.body)
+    if (marker) return { number: pr.number, marker }
+  }
+  return null
+}
+
 async function findWatermark() {
   const r = repo()
   for (const state of ["open", "merged"]) {
-    const query = `repo:${r} is:pr label:auto-docs sort:created-desc ${state === "open" ? "is:open" : "is:merged"}`
+    const query = `repo:${r} is:pr label:auto-docs sort:updated-desc ${state === "open" ? "is:open" : "is:merged"}`
     const prs = await searchIssues(query, { maxPages: 1 })
-    for (const pr of prs) {
-      // Only trust markers on PRs authored by the bot itself: bodies are
-      // editable and the label can be applied by anyone with triage access.
-      if (pr.user?.login !== "github-actions[bot]") continue
-      const marker = extractMarker(pr.body)
-      if (marker) {
-        console.log(`watermark from ${state} PR #${pr.number}: ${marker.toISOString()}`)
-        return marker
-      }
+    const picked = pickWatermark(prs)
+    if (picked) {
+      console.log(`watermark from ${state} PR #${picked.number}: ${picked.marker.toISOString()}`)
+      return picked.marker
     }
   }
   return null

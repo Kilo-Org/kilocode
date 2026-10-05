@@ -71,5 +71,8 @@ tasks.test {
     // discovered by the vintage engine via JUnit Platform
     useJUnitPlatform()
     // Ensure JUnit 3/4 tests run via vintage engine
-    jvmArgs("-Didea.force.use.core.classloader=true")
+    // Headless matches CI, which has no X display. Without it, Swing paths that need a headful
+    // toolkit (BasicListUI's selection handling calls Toolkit.getMenuShortcutKeyMaskEx) pass locally
+    // on a developer machine and only fail in CI.
+    jvmArgs("-Didea.force.use.core.classloader=true", "-Djava.awt.headless=true")
 }

@@ -9,6 +9,27 @@ export type DocumentResult =
   | { file: string; kind: "image"; mime: string; data: string }
   | { error: string }
 
+/**
+ * Whether `resolved` is `root` or lives inside it.
+ *
+ * Windows and default macOS filesystems are case-insensitive, and
+ * `fs.realpathSync` keeps the case of its input instead of normalizing it, so an
+ * absolute file path can arrive with a different case than the session
+ * directory. Compare folded on those platforms, matching the package's
+ * `samePath` policy, and exactly on Linux, where case can name two real paths.
+ */
+export function isInsideWorktree(
+  root: string,
+  resolved: string,
+  platform: NodeJS.Platform = process.platform,
+): boolean {
+  const fold = platform === "win32" || platform === "darwin"
+  const sep = platform === "win32" ? path.win32.sep : path.sep
+  const base = fold ? root.toLowerCase() : root
+  const target = fold ? resolved.toLowerCase() : resolved
+  return target === base || target.startsWith(base + sep)
+}
+
 function mime(file: string): string | undefined {
   const ext = path.extname(file).toLowerCase()
   if (ext === ".png") return "image/png"
@@ -26,8 +47,7 @@ export function readDocument(root: string, file: string): DocumentResult {
     const base = fs.realpathSync(root)
     const target = path.isAbsolute(file) ? file : path.resolve(root, file)
     const resolved = fs.realpathSync(target)
-    if (resolved !== base && !resolved.startsWith(base + path.sep))
-      return { error: "Document is outside the worktree." }
+    if (!isInsideWorktree(base, resolved)) return { error: "Document is outside the worktree." }
 
     const stat = fs.statSync(resolved)
     if (!stat.isFile()) return { error: "Document is not a file." }

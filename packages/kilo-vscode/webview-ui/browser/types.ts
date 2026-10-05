@@ -1,3 +1,10 @@
+import type {
+  BrowserFrame,
+  BrowserInteraction,
+  BrowserViewport,
+  BrowserViewIdentity,
+} from "../../src/shared/browser-stream"
+
 export interface BrowserScope {
   sessionId: string
   projectId?: string
@@ -34,7 +41,10 @@ export interface BrowserState {
   errors: number
   logs?: string[]
   error?: string
+  missing?: "chrome" | "chromium"
   frameError?: string
+  back?: boolean
+  forward?: boolean
 }
 
 export interface BrowserInspection {
@@ -57,16 +67,22 @@ export interface BrowserDevtools {
 export type BrowserCommand =
   | { type: "open"; scope: BrowserScope; url: string }
   | { type: "refresh"; scope: BrowserScope }
+  | { type: "back"; scope: BrowserScope }
+  | { type: "forward"; scope: BrowserScope }
   | { type: "close"; scope: BrowserScope }
   | { type: "state"; scope: BrowserScope }
   | { type: "inspect"; scope: BrowserScope; position: BrowserPosition; hover: boolean; requestId: string }
   | { type: "input"; scope: BrowserScope; position: BrowserPosition; click: boolean }
   | { type: "devtools"; scope: BrowserScope; theme: "dark" | "light" }
+  | { type: "viewport"; scope: BrowserScope; browserId: string; navigation: number; viewport: BrowserViewport }
+  | { type: "interact"; scope: BrowserScope; identity: BrowserViewIdentity; event: BrowserInteraction }
+  | { type: "acknowledge"; scope: BrowserScope; identity: BrowserViewIdentity; sequence: number }
 
 export type BrowserEvent =
   | { type: "state"; value: BrowserState }
   | { type: "inspection"; value: BrowserInspection }
   | { type: "devtools"; value: BrowserDevtools }
+  | { type: "frame"; value: BrowserFrame & { scope: BrowserScope } }
 
 export interface BrowserTransport {
   send(command: BrowserCommand): void
@@ -79,12 +95,21 @@ export interface BrowserLabels {
   urlPlaceholder: string
   open: string
   refresh: string
+  back: string
+  forward: string
   close: string
   inspect: string
   devtoolsTitle: string
   diagnostics: string
   diagnosticsHint: string
   empty: string
+  requirement: string
+  missingTitle: string
+  missingChrome: string
+  missingChromium: string
+  download: string
+  retry: string
+  settings: string
   noSession: string
   screenshotAlt: string
   errors: (count: number) => string

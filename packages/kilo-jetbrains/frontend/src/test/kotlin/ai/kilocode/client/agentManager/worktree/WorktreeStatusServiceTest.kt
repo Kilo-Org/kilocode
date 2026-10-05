@@ -87,6 +87,152 @@ class WorktreeStatusServiceTest : BasePlatformTestCase() {
         handle.close()
     }
 
+    fun `test an unavailable poll keeps the previous counts instead of publishing zeros`() {
+        val path = "${project.basePath}/.kilo/worktrees/feature-x"
+        val key = normalizeWorktreePath(path)
+        rpc.statsResult = WorktreeStatsListDto(listOf(WorktreeStatsDto(path, additions = 4, files = 2)))
+        rpc.dirtyResult = WorktreeDirtyListDto(listOf(WorktreeDirtyDto(path, additions = 2, files = 1)))
+        val handle = service.attach()
+        timers.advanceBy(300)
+        drain()
+        assertEquals(4, service.stats.value[key]?.additions)
+
+        // A failed measurement carries zeros. Publishing them would render as a clean worktree and
+        // silently drop the badges the row was showing.
+        rpc.statsResult = WorktreeStatsListDto(listOf(WorktreeStatsDto(path, unavailable = true, reason = "timed out")))
+        rpc.dirtyResult = WorktreeDirtyListDto(listOf(WorktreeDirtyDto(path, unavailable = true, reason = "timed out")))
+        service.refreshStats()
+        timers.advanceBy(300)
+        drain()
+
+        assertEquals(4, service.stats.value[key]?.additions)
+        assertEquals(2, service.stats.value[key]?.files)
+        assertEquals(2, service.dirty.value[key]?.additions)
+        handle.close()
+    }
+
+    fun `test a worktree the backend stops reporting is dropped`() {
+        val path = "${project.basePath}/.kilo/worktrees/feature-x"
+        val key = normalizeWorktreePath(path)
+        rpc.statsResult = WorktreeStatsListDto(listOf(WorktreeStatsDto(path, additions = 4)))
+        val handle = service.attach()
+        timers.advanceBy(300)
+        drain()
+        assertEquals(4, service.stats.value[key]?.additions)
+
+        // Gone from the list entirely is different from unmeasured: the worktree no longer exists.
+        rpc.statsResult = WorktreeStatsListDto(emptyList())
+        service.refreshStats()
+        timers.advanceBy(300)
+        drain()
+
+        assertNull(service.stats.value[key])
+        handle.close()
+    }
+
+    fun `test an RPC exception keeps every badge instead of clearing them`() {
+        // KiloWorktreeService.stats/dirty wrap the RPC in try/catch; a thrown exception must still
+        // report unavailable=true, not fall through to the DTO's default false, or a failed RPC would
+        // clear every badge exactly like a failed poll answering an empty list.
+        val path = "${project.basePath}/.kilo/worktrees/feature-x"
+        val key = normalizeWorktreePath(path)
+        rpc.statsResult = WorktreeStatsListDto(listOf(WorktreeStatsDto(path, additions = 4)))
+        rpc.dirtyResult = WorktreeDirtyListDto(listOf(WorktreeDirtyDto(path, additions = 2, files = 1)))
+        val handle = service.attach()
+        timers.advanceBy(300)
+        drain()
+        assertEquals(4, service.stats.value[key]?.additions)
+
+        rpc.statsThrows = RuntimeException("backend unreachable")
+        rpc.dirtyThrows = RuntimeException("backend unreachable")
+        service.refreshStats()
+        timers.advanceBy(300)
+        drain()
+
+        assertEquals(4, service.stats.value[key]?.additions)
+        assertEquals(2, service.dirty.value[key]?.additions)
+        handle.close()
+    }
+
+    fun `test a failed listing keeps every badge instead of clearing them`() {
+        val path = "${project.basePath}/.kilo/worktrees/feature-x"
+        val key = normalizeWorktreePath(path)
+        rpc.statsResult = WorktreeStatsListDto(listOf(WorktreeStatsDto(path, additions = 4)))
+        rpc.dirtyResult = WorktreeDirtyListDto(listOf(WorktreeDirtyDto(path, additions = 2, files = 1)))
+        val handle = service.attach()
+        timers.advanceBy(300)
+        drain()
+        assertEquals(4, service.stats.value[key]?.additions)
+
+        // What the backend answers when `git worktree list` itself fails: an empty list that must not
+        // be read as "the worktrees are gone".
+        rpc.statsResult = WorktreeStatsListDto(emptyList(), unavailable = true)
+        rpc.dirtyResult = WorktreeDirtyListDto(emptyList(), unavailable = true)
+        service.refreshStats()
+        timers.advanceBy(300)
+        drain()
+
+        assertEquals(4, service.stats.value[key]?.additions)
+        assertEquals(2, service.dirty.value[key]?.additions)
+        handle.close()
+    }
+
+    fun `test a stats poll in flight is cancelled when the last handle closes`() {
+        val path = "${project.basePath}/.kilo/worktrees/feature-x"
+        val key = normalizeWorktreePath(path)
+        rpc.statsResult = WorktreeStatsListDto(listOf(WorktreeStatsDto(path, additions = 1)))
+        val gate = CompletableDeferred<Unit>()
+        rpc.beforeStats = { gate.await() }
+        val first = service.attach()
+        timers.advanceBy(300)
+        drain()
+        assertEquals(1, rpc.statsCalls.size)
+
+        // Detaching with a slow poll unanswered used to leave the in-flight guard set, so every
+        // refresh after the next attach was skipped — permanently if the RPC never returned.
+        first.close()
+        rpc.beforeStats = {}
+        gate.complete(Unit)
+        drain()
+
+        val second = service.attach()
+        timers.advanceBy(300)
+        drain()
+
+        assertEquals(2, rpc.statsCalls.size)
+        assertEquals(1, service.stats.value[key]?.additions)
+        second.close()
+    }
+
+    fun `test a stats poll does not stack while one is in flight`() {
+        val path = "${project.basePath}/.kilo/worktrees/feature-x"
+        rpc.statsResult = WorktreeStatsListDto(listOf(WorktreeStatsDto(path, additions = 1)))
+        val gate = CompletableDeferred<Unit>()
+        rpc.beforeStats = { gate.await() }
+        val handle = service.attach()
+        timers.advanceBy(300)
+        drain()
+        assertEquals(1, rpc.statsCalls.size)
+
+        // Every extra request while the first is unanswered would fan out another set of git
+        // processes — the queue that made even `git --version` time out.
+        service.refreshStats()
+        timers.advanceBy(300)
+        drain()
+        service.refreshStats()
+        timers.advanceBy(300)
+        drain()
+        assertEquals("a poll in flight must not be joined by another", 1, rpc.statsCalls.size)
+
+        gate.complete(Unit)
+        drain()
+        service.refreshStats()
+        timers.advanceBy(300)
+        drain()
+        assertEquals(2, rpc.statsCalls.size)
+        handle.close()
+    }
+
     fun `test refresh is ignored after the last handle closes`() {
         val path = "${project.basePath}/.kilo/worktrees/feature-x"
         val key = normalizeWorktreePath(path)

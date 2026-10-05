@@ -2,12 +2,14 @@ import { describe, expect, it } from "bun:test"
 import {
   addPendingTab,
   addSessionTab,
+  closeAllTabs,
   closeOtherTabs,
   closeTab,
   nextTabAfterClose,
   openSessionTab,
   insertSessionTabAfter,
   pendingTabForCreated,
+  pruneClosed,
   reconcileTabs,
   reconcileTrackedTabs,
   replacePendingTab,
@@ -15,6 +17,7 @@ import {
   restoreTrackedTabs,
   showTabStrip,
   tabsForCreatedSession,
+  tabsForLoadedSessions,
   trackedSessionInventory,
   type LocalTabState,
 } from "../../webview-ui/src/utils/local-tabs"
@@ -143,6 +146,10 @@ describe("local session tabs", () => {
     expect(closeTab(state(["s1"], "s1"), "s1", makePending())).toEqual({ ids: [pending()], active: pending() })
   })
 
+  it("replaces all closed tabs with a fresh empty chat", () => {
+    expect(closeAllTabs(makePending())).toEqual({ ids: [pending()], active: pending() })
+  })
+
   it("drops missing persisted sessions while preserving pending work", () => {
     expect(reconcileTabs(state(["s1", pending(), "gone"], "gone"), ["s1"], makePending("sidebar-pending:2"))).toEqual({
       ids: ["s1", pending()],
@@ -184,6 +191,20 @@ describe("local session tabs", () => {
   it("does not close tabs when the retained id is missing", () => {
     const current = state(["s1", "s2"], "s1")
     expect(closeOtherTabs(current, "missing")).toBe(current)
+  })
+
+  it("keeps pinned tabs open when closing the others", () => {
+    expect(closeOtherTabs(state(["s1", "s2", "s3"], "s1"), "s1", ["s3"])).toEqual({
+      ids: ["s1", "s3"],
+      active: "s1",
+    })
+  })
+
+  it("activates the retained tab even when pinned neighbors survive", () => {
+    expect(closeOtherTabs(state(["s1", "s2", "s3"], "s2"), "s3", ["s1"])).toEqual({
+      ids: ["s1", "s3"],
+      active: "s3",
+    })
   })
 })
 
@@ -245,6 +266,32 @@ describe("tracked tab restore", () => {
       "s2",
     ])
   })
+
+  it("never restores a local tab the user just closed while the host still lists it", () => {
+    // Close Others closed "s2"; an early host state push still lists it. The
+    // optimistic close must win, or the tab reappears and later pushes keep it.
+    expect(
+      restoreTrackedTabs(inventory(["s1", "s2"]), ["s1"], ["s1", "s2"], trackedPending, reorder, new Set(["s2"])),
+    ).toEqual(["s1"])
+  })
+
+  it("still restores other missing locals while a closed tab is suppressed", () => {
+    expect(
+      restoreTrackedTabs(inventory(["s1", "s2", "s3"]), ["s1"], undefined, trackedPending, identity, new Set(["s2"])),
+    ).toEqual(["s1", "s3"])
+  })
+
+  it("drops a closed id even when it is present in current and order", () => {
+    expect(
+      restoreTrackedTabs(inventory(["s1", "s2"]), ["s1", "s2"], ["s1", "s2"], trackedPending, reorder, new Set(["s2"])),
+    ).toEqual(["s1"])
+  })
+
+  it("prunes suppressed ids the host no longer tracks", () => {
+    const closed = new Set(["s1", "s2"])
+    pruneClosed(closed, [{ id: "s1" }])
+    expect([...closed]).toEqual(["s1"])
+  })
 })
 
 describe("tracked tab reconcile", () => {
@@ -295,6 +342,31 @@ describe("tracked tab reconcile", () => {
     expect(reconcileTrackedTabs(["pending-1", "gone"], [], inventory([]), trackedPending)).toEqual({
       ids: ["pending-1"],
       forget: ["gone"],
+    })
+  })
+})
+
+describe("tabs for loaded sessions", () => {
+  it("keeps a tab opened from an older page when more pages exist", () => {
+    const tabs = state(["new", "old"], "old")
+
+    expect(tabsForLoadedSessions(tabs, { sessions: [{ id: "new" }], hasMore: true }, [], makePending())).toBeUndefined()
+    expect(tabsForLoadedSessions(tabs, { sessions: [], append: true }, [], makePending())).toBeUndefined()
+  })
+
+  it("closes tabs a complete list no longer has", () => {
+    expect(
+      tabsForLoadedSessions(state(["new", "gone"], "gone"), { sessions: [{ id: "new" }] }, [], makePending()),
+    ).toEqual({ ids: ["new"], active: "new" })
+  })
+
+  it("keeps preserved and freshly created sessions on a complete list", () => {
+    const tabs = state(["kept", "created", "gone"], "kept")
+    const message = { sessions: [], preserveSessionIds: ["kept"] }
+
+    expect(tabsForLoadedSessions(tabs, message, ["created"], makePending())).toEqual({
+      ids: ["kept", "created"],
+      active: "kept",
     })
   })
 })

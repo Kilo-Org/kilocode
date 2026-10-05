@@ -31,6 +31,15 @@ describe("activity", () => {
     expect(activity({ status: "busy", finished: true })).toBe("busy")
     expect(activity({ finished: true })).toBe("done")
   })
+
+  it("reports scheduled only while idle and weaker than done", () => {
+    expect(activity({ scheduled: true })).toBe("scheduled")
+    expect(activity({ scheduled: true, finished: true })).toBe("done")
+    expect(activity({ scheduled: true, status: "busy" })).toBe("busy")
+    expect(activity({ scheduled: true, status: "retry" })).toBe("retry")
+    expect(activity({ scheduled: true, blocked: true })).toBe("waiting")
+    expect(activity({ scheduled: true, status: "offline" })).toBe("error")
+  })
 })
 
 describe("activities", () => {
@@ -48,6 +57,40 @@ describe("activities", () => {
       disconnected: false,
     })
     expect(result).toEqual({ root: "waiting", child: "waiting", nested: "waiting", other: "busy" })
+  })
+
+  it("shows a scheduled wakeup only for the owning idle session", () => {
+    const input = {
+      parents,
+      statuses: {},
+      outcomes: {},
+      blocked: [],
+      disconnected: false,
+    }
+    expect(activities({ ...input, scheduled: ["nested"] })).toEqual({ nested: "scheduled" })
+    expect(
+      activities({ ...input, scheduled: ["nested"], statuses: { nested: { type: "busy" as const } } }).nested,
+    ).toBe("busy")
+    expect(activities({ ...input, scheduled: ["nested"], outcomes: { nested: { reason: "completed" } } }).nested).toBe(
+      "done",
+    )
+    expect(
+      activities({ ...input, scheduled: ["nested"], outcomes: { nested: { reason: "completed", seen: true } } }).nested,
+    ).toBe("scheduled")
+    expect(activities({ ...input, scheduled: ["nested"], blocked: ["nested"] }).nested).toBe("waiting")
+  })
+
+  it("does not roll a child scheduled wakeup up to its parent", () => {
+    expect(
+      activities({
+        parents,
+        statuses: {},
+        outcomes: {},
+        blocked: [],
+        scheduled: ["nested"],
+        disconnected: false,
+      }),
+    ).toEqual({ nested: "scheduled" })
   })
 
   it("rolls up child work but leaves terminal outcomes with their owning sessions", () => {
@@ -165,6 +208,7 @@ describe("isActivity", () => {
   it("accepts only known presentation states", () => {
     expect(isActivity("waiting")).toBe(true)
     expect(isActivity("done")).toBe(true)
+    expect(isActivity("scheduled")).toBe(true)
     expect(isActivity("idle")).toBe(true)
     expect(isActivity("unknown")).toBe(false)
     expect(isActivity({ state: "waiting" })).toBe(false)
@@ -183,8 +227,8 @@ describe("running", () => {
 
 describe("score", () => {
   it("preserves every activity priority with idle scoring zero", () => {
-    const states: Activity[] = ["idle", "done", "busy", "retry", "error", "waiting"]
-    expect(states.map(score)).toEqual([0, 1, 2, 3, 4, 5])
+    const states: Activity[] = ["idle", "scheduled", "done", "busy", "retry", "error", "waiting"]
+    expect(states.map(score)).toEqual([0, 1, 2, 3, 4, 5, 6])
     for (const [index, state] of states.entries()) {
       for (const lower of states.slice(0, index + 1)) {
         expect(strongest([state, lower])).toBe(state)
@@ -199,19 +243,22 @@ describe("strongest", () => {
     expect(strongest(["busy", "waiting", "idle"])).toBe("waiting")
     expect(strongest(["done", "error", "retry"])).toBe("error")
     expect(strongest(["done", "busy"])).toBe("busy")
+    expect(strongest(["scheduled", "idle"])).toBe("scheduled")
+    expect(strongest(["scheduled", "done"])).toBe("done")
     expect(strongest([])).toBe("idle")
   })
 })
 
 describe("label", () => {
   it("returns existing translation keys", () => {
-    const states: Activity[] = ["waiting", "error", "retry", "busy", "done", "idle"]
+    const states: Activity[] = ["waiting", "error", "retry", "busy", "done", "scheduled", "idle"]
     expect(states.map(label)).toEqual([
       "task.backgroundAgents.needsInput",
       "task.backgroundAgents.status.error",
       "session.status.retry",
       "session.tabs.switcher.busy",
       "task.backgroundAgents.status.completed",
+      "session.tabs.switcher.scheduled",
       "session.current",
     ])
   })
