@@ -1,4 +1,4 @@
-import { For, Show, createEffect, createMemo, createSignal, onCleanup, type Component } from "solid-js"
+import { For, Show, createMemo, createSignal, onCleanup, type Component } from "solid-js"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import {
   DragDropProvider,
@@ -33,7 +33,7 @@ import { buildTopLevelItems, sortWorktrees, isGroupEnd, isGroupStart, isGrouped 
 import type { WorktreeDelete } from "./worktree-delete"
 import { outsideSidebar, sectionAwareDetector } from "./section-dnd"
 import { ConstrainDragXAxis } from "./constrain-drag-x"
-import { createProjectStore, type ProjectStore } from "./project/store"
+import type { ProjectStore } from "./project/store"
 import { projectSidebarOrder, projectWorktreeRow } from "./project-local-navigation"
 import { rootSessions } from "./project/session-filter"
 import { createWorktreeCompletion } from "./worktree-completion"
@@ -45,7 +45,7 @@ const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigat
 interface Props {
   project: AgentProjectSnapshot
   state?: AgentManagerStateMessage
-  store?: ProjectStore
+  store: ProjectStore
   deletion: WorktreeDelete
   busy: (id: string) => boolean
   blocked: (id: string) => boolean
@@ -74,13 +74,7 @@ export const ProjectSidebarBody: Component<Props> = (props) => {
   const vscode = useVSCode()
   const dialog = useDialog()
   const updateBase = useBaseUpdate()
-  const store = props.store ?? createProjectStore(props.project.id)
-  if (!props.store) {
-    createEffect(() => {
-      const state = props.state
-      if (state) store.applyState(state)
-    })
-  }
+  const store = props.store
   const [renaming, setRenaming] = createSignal<string>()
   const [dragging, setDragging] = createSignal<string>()
   const [dragOrigin, setDragOrigin] = createSignal<string[]>()
@@ -266,7 +260,7 @@ export const ProjectSidebarBody: Component<Props> = (props) => {
           stats={props.stats?.[worktree.id]}
           shortcut={values().shortcut}
           navHint={values().navHint}
-          sessions={sessions(worktree.id).length}
+          sessions={store.managedSessions().filter((session) => session.worktreeId === worktree.id).length}
           grouped={isGrouped(worktree)}
           groupStart={isGroupStart(worktree, idx(), list)}
           groupEnd={isGroupEnd(worktree, idx(), list)}

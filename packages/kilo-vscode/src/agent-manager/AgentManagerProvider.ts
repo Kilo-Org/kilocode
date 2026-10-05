@@ -1103,7 +1103,7 @@ export class AgentManagerProvider implements Disposable {
       directory,
       {
         byDirectory: (value) => this.contexts.byDirectory(value),
-        usable: (id) => this.contexts.usable(id),
+        usable: (id) => this.contexts.resolve(id),
       },
       this.projectScope,
       (req) => this.startToolRequest(req),
@@ -1574,7 +1574,7 @@ export class AgentManagerProvider implements Disposable {
   private messageProject(m: AgentManagerInMessage): ProjectContext | undefined {
     const pid = (m as { projectId?: unknown }).projectId
     if (typeof pid !== "string") return this.contexts.active()
-    return this.contexts.usable(pid)
+    return this.contexts.resolve(pid)
   }
 
   private activateProject(ctx: ProjectContext): void {

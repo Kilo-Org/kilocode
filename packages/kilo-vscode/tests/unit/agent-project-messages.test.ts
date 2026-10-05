@@ -64,7 +64,7 @@ function gitRepo(dir = directory()): string {
   return dir
 }
 
-function setup(opts: { workspace?: string; git?: GitOps; trusted?: boolean } = {}) {
+function setup(opts: { workspace?: string | null; git?: GitOps; trusted?: boolean } = {}) {
   let stored: unknown
   let pickResult: string | undefined
   const storage: RegistryStorage = {

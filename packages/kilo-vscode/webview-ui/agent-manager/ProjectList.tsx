@@ -309,7 +309,7 @@ export const ProjectList: Component<Props> = (props) => {
         <ProjectSidebarBody
           project={project}
           state={props.states[project.id]}
-          store={store(project.id)}
+          store={store(project.id)!}
           deletion={deletion}
           busy={(id) => props.busy(project.id, id)}
           blocked={(id) => props.blocked(project.id, id)}

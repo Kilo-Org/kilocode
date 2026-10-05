@@ -128,11 +128,6 @@ export class ProjectContexts {
     return this.resolveCtx(id)
   }
 
-  /** Resolve a known project that can be shown or initialized. */
-  usable(id: string): ProjectContext | undefined {
-    return this.resolveCtx(id)
-  }
-
   isActive(id: string): boolean {
     return this.active()?.id === id
   }

@@ -279,7 +279,7 @@ const AgentManagerContent: Component = () => {
   })
   onCleanup(session.trackScopes(registry.scopes))
   const defaultBase = (id: string) =>
-    projectDefaultBase(registry.ensure(id), id === activeProjectId(), repoDetectedBranch())
+    projectDefaultBase(registry.ensure(id), id === activeProjectId(), repoBranches()[id])
   const localSessionIDs = () => registry.active().tabs.ids()
   const setLocalSessionIDs = (next: string[] | ((prev: string[]) => string[])) => registry.active().tabs.set(next)
   /** Remove a session ID from the local tab (no-op if absent). */
