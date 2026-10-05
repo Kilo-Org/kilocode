@@ -124,6 +124,7 @@ describe("archive", () => {
       const bom = await Bun.file(result.sidecar).json()
       expect(delivery(bom, "ripgrep")).toBe("runtime")
       expect(delivery(bom, "@lancedb/lancedb")).toBe("runtime")
+      expect(delivery(bom, "@valkey/valkey-glide")).toBe("runtime")
       expect(delivery(bom, "bun")).toBe("contained")
     } finally {
       await fs.promises.rm(dir, { recursive: true, force: true })
