@@ -139,9 +139,7 @@ export class ValkeyVectorStore implements IVectorStore {
       }
       const msg = error instanceof Error ? error.message : String(error)
       log.error("Failed to initialize Valkey index", { collection: this.collectionName, error: msg })
-      throw new Error(
-        `Failed to initialize Valkey index "${this.collectionName}" at ${this.redactedUrl()}: ${msg}`,
-      )
+      throw new Error(`Failed to initialize Valkey index "${this.collectionName}" at ${this.redactedUrl()}: ${msg}`)
     }
   }
 
@@ -669,21 +667,15 @@ export class ValkeyVectorStore implements IVectorStore {
     }
 
     if (lower.includes("connection refused") || lower.includes("econnrefused")) {
-      return new Error(
-        `Connection refused for Valkey at ${url}. Ensure the Valkey server is running and accessible.`,
-      )
+      return new Error(`Connection refused for Valkey at ${url}. Ensure the Valkey server is running and accessible.`)
     }
 
     if (lower.includes("timeout") || lower.includes("etimedout")) {
-      return new Error(
-        `Connection timed out for Valkey at ${url}. Ensure the server is reachable and not overloaded.`,
-      )
+      return new Error(`Connection timed out for Valkey at ${url}. Ensure the server is reachable and not overloaded.`)
     }
 
     if (lower.includes("getaddrinfo") || lower.includes("enotfound")) {
-      return new Error(
-        `Cannot resolve host for Valkey at ${url}. Check that the hostname is correct.`,
-      )
+      return new Error(`Cannot resolve host for Valkey at ${url}. Check that the hostname is correct.`)
     }
 
     return new Error(`Connection to Valkey at ${url} failed: ${raw}`)
