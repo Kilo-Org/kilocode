@@ -32,6 +32,7 @@ import { ContextMenu } from "@kilocode/kilo-ui/context-menu"
 import { ThinkingSelectorBase } from "../components/shared/ThinkingSelector"
 import { DeferredPopover } from "../components/shared/DeferredPopover"
 import { ProjectSelect } from "../../agent-manager/ProjectSelect"
+import { ProjectsSection } from "../../agent-manager/ProjectsSection"
 import { PRComments } from "../../agent-manager/pr/PRComments"
 import { PRConversation } from "../../agent-manager/pr/PRConversation"
 import { PRPanel } from "../../agent-manager/pr/PRPanel"
@@ -2416,4 +2417,57 @@ export const DiffPanelWithPRThreads: Story = {
 export const FullScreenDiffWithPRThreads: Story = {
   name: "FullScreenDiffView - remote PR threads",
   render: () => <RemoteReviewStory full />,
+}
+
+const orgAvatar = `data:image/svg+xml,${encodeURIComponent(
+  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><rect width="16" height="16" fill="#f8f675"/><path d="M4 4h3v3H4zM9 9h3v3H9z" fill="#000"/></svg>',
+)}`
+
+const storyProjects = [
+  { id: "p1", root: "/repo/kilocode", label: "kilocode", avatar: orgAvatar, expanded: true, active: true },
+  { id: "p2", root: "/repo/internal-tools", label: "internal-tools", expanded: false, active: false },
+  {
+    id: "p3",
+    root: "/repo/a-very-long-project-name-that-needs-to-truncate",
+    label: "a-very-long-project-name-that-needs-to-truncate",
+    avatar: orgAvatar,
+    expanded: false,
+    active: false,
+  },
+].map((item) => ({ pinned: item.id === "p1", initialized: true, missing: false, ...item }))
+
+const ProjectsStory = () => (
+  <StoryProviders noPadding>
+    <div class="am-layout" style={{ "max-height": "320px" }}>
+      <ProjectsSection
+        projects={storyProjects}
+        t={t}
+        bindings={{}}
+        onAdd={() => {}}
+        onCreateProject={() => {}}
+        onClone={() => {}}
+        onSelect={() => {}}
+        onRemove={() => {}}
+        onExpand={() => {}}
+        onHistory={() => {}}
+        onNew={() => {}}
+        onCreate={() => {}}
+        onSection={() => {}}
+        onSettings={() => {}}
+        count={(id) => (id === "p1" ? 3 : undefined)}
+        baseBranch={() => "main"}
+        body={() => <div style={{ padding: "6px 34px", color: "var(--text-weak)" }}>local</div>}
+      />
+    </div>
+  </StoryProviders>
+)
+
+export const ProjectsAvatars: Story = {
+  name: "Projects — organization avatars and letter fallback",
+  render: ProjectsStory,
+}
+
+export const ProjectsAvatars200: Story = {
+  name: "Projects — organization avatars 200px",
+  render: ProjectsStory,
 }
