@@ -30,7 +30,6 @@ export const dict = {
   "agentManager.local": "local",
   "agentManager.sidebar.collapse": "Collapse sidebar",
   "agentManager.sidebar.expand": "Show sidebar",
-  "agentManager.section.worktrees": "WORKTREES",
   "agentManager.section.sessions": "SESSIONS",
   "agentManager.projects": "PROJECTS",
   "agentManager.settings.title": "Agent Manager",
@@ -70,12 +69,9 @@ export const dict = {
   "agentManager.project.settings": "Project settings",
   "agentManager.project.restricted":
     "Your current VS Code workspace is your home folder or a filesystem root. Open a specific project folder in VS Code to use Agent Manager.",
-  "agentManager.notGitRepo": "Not a git repository",
-
   "agentManager.updateBase.title": "Update from base",
   "agentManager.updateBase.selectWorktree": "Select a managed worktree first.",
 
-  "agentManager.worktree.settings": "Worktree settings",
   "agentManager.worktree.new": "New Worktree",
   "agentManager.worktree.setupScript": "Worktree Setup Script",
   "agentManager.worktree.delete": "Delete worktree",
@@ -231,13 +227,6 @@ export const dict = {
   "agentManager.shortcuts.cycleAgentMode": "Next agent mode",
   "agentManager.shortcuts.cyclePreviousAgentMode": "Previous agent mode",
   "agentManager.shortcuts.showShortcuts": "Show keyboard shortcuts",
-
-  "agentManager.dialog.removeStaleWorktree.title": "Remove Stale Worktree",
-  "agentManager.dialog.removeStaleWorktree.messagePre": "Remove stale worktree ",
-  "agentManager.dialog.removeStaleWorktree.messagePost":
-    "? This only removes the Agent Manager mapping and leaves files on disk untouched.",
-  "agentManager.dialog.removeStaleWorktree.cancel": "Cancel",
-  "agentManager.dialog.removeStaleWorktree.confirm": "Remove stale worktree",
 
   "agentManager.dialog.openWorktree": "New Worktree",
   "agentManager.dialog.tab.new": "New",

@@ -33,7 +33,6 @@ export const dict = {
   "agentManager.local": "locale",
   "agentManager.sidebar.collapse": "Comprimi barra laterale",
   "agentManager.sidebar.expand": "Mostra barra laterale",
-  "agentManager.section.worktrees": "WORKTREE",
   "agentManager.section.sessions": "SESSIONI",
   "agentManager.projects": "PROGETTI",
   "agentManager.settings.title": "Agent Manager",
@@ -75,12 +74,9 @@ export const dict = {
   "agentManager.project.settings": "Impostazioni progetto",
   "agentManager.project.restricted":
     "L'area di lavoro VS Code corrente è la cartella home o la radice del file system. Apri una cartella di progetto specifica in VS Code per usare Agent Manager.",
-  "agentManager.notGitRepo": "Non è una repository git",
-
   "agentManager.updateBase.title": "Aggiorna dalla base",
   "agentManager.updateBase.selectWorktree": "Seleziona prima un worktree gestito.",
 
-  "agentManager.worktree.settings": "Impostazioni worktree",
   "agentManager.worktree.new": "Nuovo worktree",
   "agentManager.worktree.setupScript": "Script di setup del worktree",
   "agentManager.worktree.delete": "Elimina worktree",
@@ -194,13 +190,6 @@ export const dict = {
   "agentManager.shortcuts.cycleAgentMode": "Modalità agente successiva",
   "agentManager.shortcuts.cyclePreviousAgentMode": "Modalità agente precedente",
   "agentManager.shortcuts.showShortcuts": "Mostra scorciatoie da tastiera",
-
-  "agentManager.dialog.removeStaleWorktree.title": "Rimuovi worktree obsoleto",
-  "agentManager.dialog.removeStaleWorktree.messagePre": "Rimuovere il worktree obsoleto ",
-  "agentManager.dialog.removeStaleWorktree.messagePost":
-    "? Questo rimuove solo la mappatura dell'Agent Manager e lascia invariati i file su disco.",
-  "agentManager.dialog.removeStaleWorktree.cancel": "Annulla",
-  "agentManager.dialog.removeStaleWorktree.confirm": "Rimuovi worktree obsoleto",
 
   "agentManager.dialog.project.select": "Seleziona progetto",
   "agentManager.dialog.project.missing": "Repository non trovata",

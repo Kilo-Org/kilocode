@@ -34,7 +34,6 @@ export const dict = {
   "agentManager.local": "локальний",
   "agentManager.sidebar.collapse": "Згорнути бічну панель",
   "agentManager.sidebar.expand": "Показати бічну панель",
-  "agentManager.section.worktrees": "РОБОЧІ ДЕРЕВА",
   "agentManager.section.sessions": "СЕСІЇ",
   "agentManager.projects": "ПРОЄКТИ",
   "agentManager.settings.title": "Agent Manager",
@@ -75,12 +74,9 @@ export const dict = {
   "agentManager.project.settings": "Налаштування проєкту",
   "agentManager.project.restricted":
     "Поточна робоча область VS Code є домашньою папкою або коренем файлової системи. Відкрийте певну папку проєкту у VS Code, щоб використовувати Agent Manager.",
-  "agentManager.notGitRepo": "Не є git-репозиторієм",
-
   "agentManager.updateBase.title": "Оновити з базової гілки",
   "agentManager.updateBase.selectWorktree": "Спочатку виберіть кероване робоче дерево.",
 
-  "agentManager.worktree.settings": "Налаштування робочого дерева",
   "agentManager.worktree.new": "Нове робоче дерево",
   "agentManager.worktree.setupScript": "Скрипт налаштування робочого дерева",
   "agentManager.worktree.delete": "Видалити робоче дерево",
@@ -195,13 +191,6 @@ export const dict = {
   "agentManager.shortcuts.cycleAgentMode": "Наступний режим агента",
   "agentManager.shortcuts.cyclePreviousAgentMode": "Попередній режим агента",
   "agentManager.shortcuts.showShortcuts": "Показати клавіатурні скорочення",
-
-  "agentManager.dialog.removeStaleWorktree.title": "Видалити застаріле робоче дерево",
-  "agentManager.dialog.removeStaleWorktree.messagePre": "Видалити застаріле робоче дерево ",
-  "agentManager.dialog.removeStaleWorktree.messagePost":
-    "? Це лише видалить відображення в Agent Manager і не торкнеться файлів на диску.",
-  "agentManager.dialog.removeStaleWorktree.cancel": "Скасувати",
-  "agentManager.dialog.removeStaleWorktree.confirm": "Видалити застаріле робоче дерево",
 
   "agentManager.dialog.project.select": "Вибрати проєкт",
   "agentManager.dialog.project.missing": "Репозиторій не знайдено",

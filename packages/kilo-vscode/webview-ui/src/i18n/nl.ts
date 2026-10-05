@@ -773,6 +773,7 @@ export const dict = {
   "ui.sessionTurn.status.consideringNextSteps": "Volgende stappen overwegen...",
 
   "dialog.model.noProviders": "Geen providers",
+  "dialog.model.unavailable": "Kilo-modellen niet beschikbaar",
 
   "prompt.placeholder.connecting": "Verbinden met server...",
   "prompt.placeholder.default":
@@ -937,15 +938,12 @@ export const dict = {
   "settings.sandboxing.writablePaths.title": "Extra schrijfbare paden",
   "settings.sandboxing.writablePaths.description":
     "Extra bestandssysteempaden waar de sandbox schrijftoestemming voor geeft (bijv. /tmp, /var/log). Deze worden samengevoegd met de standaard schrijfbare paden wanneer de sandbox actief is.",
-  "settings.experimental.multiProject.title": "Multi-project Agent Manager",
   "settings.experimental.conversationPromptHistory.title": "Promptgeschiedenis per gesprek",
   "settings.experimental.conversationPromptHistory.description":
     "Houd de promptgeschiedenis (ArrowUp/ArrowDown) gescheiden per gesprek in plaats van één geschiedenis te delen over alle gesprekken.",
   "settings.experimental.claudeMigration.title": "Claude Code-migratie",
   "settings.experimental.claudeMigration.description":
     "Importeer ondersteunde globale CLAUDE.md-instructies, eenvoudige vaardigheden en uitgeschakelde MCP-definities één keer. Originele Claude-bestanden blijven ongewijzigd; herstart de backend na inschakelen.",
-  "settings.experimental.multiProject.description":
-    "Schakel het beheren van sessies en worktrees over meerdere repositories in Agent Manager in. De huidige workspace-repository is altijd het standaardproject.",
   "settings.experimental.mcpTimeout.title": "MCP Timeout (ms)",
   "settings.experimental.mcpTimeout.description": "Timeout voor MCP-serververzoeken in milliseconden",
   "settings.experimental.remote.title": "Remote-bediening",

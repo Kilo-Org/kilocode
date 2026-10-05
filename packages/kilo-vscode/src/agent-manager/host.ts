@@ -125,6 +125,8 @@ export interface Host {
     /** Dynamic root directory for the panel's session provider (follows the active project). */
     workspaceRoot?: () => string | undefined
     projectId?: () => string | undefined
+    /** Source of an externally created session, including async background work. */
+    sessionProject?: () => string | undefined
   }): PanelContext
 
   /** Get the workspace/project root path. */
@@ -149,8 +151,6 @@ export interface Host {
   /** Clone without changing workspace membership; return the verified checkout path. */
   cloneRepository(url: string, parent: string): Promise<string | undefined>
 
-  /** Whether the experimental multi-project Agent Manager mode is enabled. */
-  multiProject(): boolean
   browserAutomation(): boolean
   approveBrowserNavigation?(origin: string): Promise<boolean>
 
@@ -175,8 +175,6 @@ export interface Host {
   /** Subscribe to workspace folder changes (pinned project re-derivation). */
   onDidChangeWorkspaceFolders(cb: () => void): Disposable
 
-  /** Subscribe to multi-project flag changes. */
-  onDidChangeMultiProject(cb: (enabled: boolean) => void): Disposable
   /** Whether the workspace permits executing configured scripts. */
   isTrusted(): boolean
 

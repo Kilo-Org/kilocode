@@ -217,7 +217,7 @@ describe("Marketplace companion skill payloads", () => {
     const extensions = Object.getOwnPropertyDescriptor(vscode.extensions, "all")
     try {
       Object.defineProperty(vscode.extensions, "all", { configurable: true, value: [] })
-      const data = await service.fetchData(client, project, project, [])
+      const data = await service.fetchData(client, project, project)
       expect(data.marketplaceItems).toEqual([mcp])
       const loaded = data.marketplaceItems.at(0)!
       const options = { target: scope, parameters: { token: "test-value" } }
@@ -241,7 +241,6 @@ describe("Marketplace companion skill payloads", () => {
     } finally {
       if (extensions) Object.defineProperty(vscode.extensions, "all", extensions)
       if (!extensions) Reflect.deleteProperty(vscode.extensions, "all")
-      service.dispose()
       server.stop(true)
     }
   })
