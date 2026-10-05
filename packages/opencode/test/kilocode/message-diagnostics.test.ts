@@ -94,8 +94,8 @@ describe("messageShape", () => {
     expect(shape[0]?.contentKind).toBe("array")
     expect(shape[0]?.parts).toEqual([
       { type: "null" },
-      { type: "42" },
-      { type: "bare-string" },
+      { type: "number" },
+      { type: "string" },
       { type: "tool-call", toolCallId: "undefined", toolName: "undefined" },
       { type: "text" },
     ])

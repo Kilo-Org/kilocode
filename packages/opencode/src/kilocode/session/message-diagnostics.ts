@@ -124,7 +124,7 @@ export namespace KiloMessageDiagnostics {
   }
 
   function partShape(p: unknown): Record<string, unknown> {
-    if (!p || typeof p !== "object") return { type: String(p) }
+    if (!p || typeof p !== "object") return { type: p === null ? "null" : typeof p }
     const part = p as Record<string, unknown>
     if (part.type === "tool-call")
       return { type: "tool-call", toolCallId: String(part.toolCallId), toolName: String(part.toolName) }
