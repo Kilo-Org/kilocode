@@ -70,6 +70,11 @@ export class TerminalManager {
 
   constructor(private readonly deps: TerminalManagerDeps) {}
 
+  /** A retired manager must stay reachable until all late allocations settle. */
+  hasPendingCleanup(): boolean {
+    return this.owned.size > 0 || this.creates.size > 0 || this.restarts.size > 0
+  }
+
   /**
    * Spawn a new backend PTY and record it locally.
    *
@@ -107,8 +112,8 @@ export class TerminalManager {
 
   async closeDirectory(directory: string): Promise<void> {
     const target = key(directory)
-    const entries = [...this.entries.values()].filter((entry) => key(entry.cwd) === target)
-    const results = await Promise.all(entries.map((entry) => this.close(entry.terminalId)))
+    const entries = [...this.owned].filter((entry) => key(entry.cwd) === target)
+    const results = await Promise.all(entries.map((entry) => this.closeEntry(entry)))
     if (results.some((result) => !result)) throw new Error(`Failed to close terminals in ${directory}`)
   }
 

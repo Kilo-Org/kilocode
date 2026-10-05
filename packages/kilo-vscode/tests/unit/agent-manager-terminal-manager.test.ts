@@ -46,6 +46,36 @@ function fixture(
 }
 
 describe("Agent Manager terminal replacement ownership", () => {
+  it("closes detached ownership only in the requested directory when a terminal ID is reused", async () => {
+    const ready = Promise.withResolvers<void>()
+    const release = Promise.withResolvers<void>()
+    let offline = true
+    const test = fixture({
+      create: async (count) => {
+        if (count !== 2) return
+        ready.resolve()
+        await release.promise
+      },
+      remove: async (id) => (id === "pty-2" && offline ? { error: new Error("offline") } : undefined),
+    })
+    await test.manager.create(params)
+    const restarting = test.manager.restart(params.terminalId)
+    await ready.promise
+    expect(await test.manager.close(params.terminalId)).toBe(true)
+    release.resolve()
+    expect(await restarting).toBeUndefined()
+    await test.manager.create({ ...params, cwd: "/other" })
+    await expect(test.manager.closeDirectory(params.cwd)).rejects.toThrow("Failed to close terminals")
+    expect([...test.live]).toEqual(["pty-2", "pty-3"])
+    offline = false
+    await test.manager.closeDirectory(params.cwd)
+    expect([...test.live]).toEqual(["pty-3"])
+    expect(test.manager.titles(null)).toEqual([params.title])
+    await test.manager.closeDirectory("/other")
+    expect([...test.live]).toEqual([])
+    expect(test.manager.hasPendingCleanup()).toBe(false)
+  })
+
   for (const action of ["close", "dispose"] as const) {
     for (const stage of ["create", "resize"] as const) {
       it(`reaps a replacement when ${action} starts during ${stage}`, async () => {
