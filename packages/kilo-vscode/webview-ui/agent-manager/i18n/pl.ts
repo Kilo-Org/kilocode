@@ -32,7 +32,6 @@ export const dict = {
   "agentManager.local": "lokalne",
   "agentManager.sidebar.collapse": "Zwiń pasek boczny",
   "agentManager.sidebar.expand": "Pokaż pasek boczny",
-  "agentManager.section.worktrees": "WORKTREES",
   "agentManager.section.sessions": "SESJE",
   "agentManager.projects": "PROJEKTY",
   "agentManager.settings.title": "Agent Manager",
@@ -72,12 +71,9 @@ export const dict = {
   "agentManager.project.settings": "Ustawienia projektu",
   "agentManager.project.restricted":
     "Bieżący obszar roboczy VS Code to folder domowy lub katalog główny systemu plików. Otwórz konkretny folder projektu w VS Code, aby używać Agent Manager.",
-  "agentManager.notGitRepo": "Nie jest repozytorium git",
-
   "agentManager.updateBase.title": "Aktualizuj z bazy",
   "agentManager.updateBase.selectWorktree": "Najpierw wybierz zarządzany worktree.",
 
-  "agentManager.worktree.settings": "Ustawienia Worktree",
   "agentManager.worktree.new": "Nowy Worktree",
   "agentManager.worktree.setupScript": "Skrypt konfiguracji Worktree",
   "agentManager.worktree.delete": "Usuń Worktree",
@@ -187,13 +183,6 @@ export const dict = {
   "agentManager.shortcuts.cycleAgentMode": "Następny tryb agenta",
   "agentManager.shortcuts.cyclePreviousAgentMode": "Poprzedni tryb agenta",
   "agentManager.shortcuts.showShortcuts": "Pokaż skróty klawiszowe",
-  "agentManager.dialog.removeStaleWorktree.title": "Usuń nieaktualny Worktree",
-  "agentManager.dialog.removeStaleWorktree.messagePre": "Usunąć nieaktualny Worktree ",
-  "agentManager.dialog.removeStaleWorktree.messagePost":
-    "? To usunie tylko mapowanie w Agent Manager i nie zmieni plików na dysku.",
-  "agentManager.dialog.removeStaleWorktree.cancel": "Anuluj",
-  "agentManager.dialog.removeStaleWorktree.confirm": "Usuń nieaktualny Worktree",
-
   "agentManager.dialog.project.select": "Wybierz projekt",
   "agentManager.dialog.project.missing": "Nie znaleziono repozytorium",
   "agentManager.dialog.openWorktree": "Nowy Worktree",

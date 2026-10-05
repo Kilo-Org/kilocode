@@ -29,7 +29,6 @@ export async function fetchMarketplaceData(
   ctx: MarketplaceActionContext,
   project: string | undefined,
   dir: string | undefined,
-  roots: readonly vscode.Uri[],
 ): Promise<MarketplaceDataResponse> {
   const route = project ?? dir
   if (!route) {
@@ -41,7 +40,7 @@ export async function fetchMarketplaceData(
     }
   }
   const client = await ctx.connection.getClientAsync(route)
-  return retry(() => ctx.marketplace.fetchData(client, project, route, roots))
+  return retry(() => ctx.marketplace.fetchData(client, project, route))
 }
 
 export async function installMarketplaceItem(

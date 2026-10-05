@@ -32,7 +32,6 @@ export const dict = {
   "agentManager.local": "yerel",
   "agentManager.sidebar.collapse": "Kenar çubuğunu daralt",
   "agentManager.sidebar.expand": "Kenar çubuğunu göster",
-  "agentManager.section.worktrees": "WORKTREE'LER",
   "agentManager.section.sessions": "OTURUMLAR",
   "agentManager.projects": "PROJELER",
   "agentManager.settings.title": "Agent Manager",
@@ -73,12 +72,9 @@ export const dict = {
   "agentManager.project.settings": "Proje ayarları",
   "agentManager.project.restricted":
     "Mevcut VS Code çalışma alanınız ana klasörünüz veya dosya sistemi köküdür. Agent Manager'ı kullanmak için VS Code'da belirli bir proje klasörü açın.",
-  "agentManager.notGitRepo": "Bir git deposu değil",
-
   "agentManager.updateBase.title": "Temel daldan güncelle",
   "agentManager.updateBase.selectWorktree": "Önce yönetilen bir worktree seçin.",
 
-  "agentManager.worktree.settings": "Worktree ayarları",
   "agentManager.worktree.new": "Yeni Worktree",
   "agentManager.worktree.setupScript": "Worktree Kurulum Betiği",
   "agentManager.worktree.delete": "Worktree'yi sil",
@@ -192,13 +188,6 @@ export const dict = {
   "agentManager.shortcuts.cycleAgentMode": "Sonraki agent modu",
   "agentManager.shortcuts.cyclePreviousAgentMode": "Önceki agent modu",
   "agentManager.shortcuts.showShortcuts": "Klavye kısayollarını göster",
-
-  "agentManager.dialog.removeStaleWorktree.title": "Eskimiş Worktree'yi Kaldır",
-  "agentManager.dialog.removeStaleWorktree.messagePre": "Eskimiş worktree kaldırılsın mı: ",
-  "agentManager.dialog.removeStaleWorktree.messagePost":
-    "? Bu, yalnızca Agent Manager eşlemesini kaldırır ve diskteki dosyalara dokunmaz.",
-  "agentManager.dialog.removeStaleWorktree.cancel": "İptal",
-  "agentManager.dialog.removeStaleWorktree.confirm": "Eskimiş worktree'yi kaldır",
 
   "agentManager.dialog.project.select": "Proje seç",
   "agentManager.dialog.project.missing": "Depo bulunamadı",

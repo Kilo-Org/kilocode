@@ -65,14 +65,13 @@ const TSX_FILES = [
   path.join(ROOT, "webview-ui/agent-manager/SidebarSectionHeader.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/SidebarSearchMenu.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/SidebarToggleButton.tsx"),
-  path.join(ROOT, "webview-ui/agent-manager/WorktreeSectionActions.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/ProjectsSection.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/ProjectsFooter.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/ProjectSidebarBody.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/ProjectList.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/ProjectActions.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/ProjectRowActions.tsx"),
-  path.join(ROOT, "webview-ui/agent-manager/SidebarBody.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/ProjectAvatar.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/orphans/OrphanNotice.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/orphans/OrphanDialog.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/Skeleton.tsx"),
@@ -236,10 +235,7 @@ describe("Agent Manager edit preview", () => {
 })
 
 describe("Agent Manager leftover worktree folders", () => {
-  const bodies = [
-    path.join(ROOT, "webview-ui/agent-manager/SidebarBody.tsx"),
-    path.join(ROOT, "webview-ui/agent-manager/ProjectSidebarBody.tsx"),
-  ]
+  const bodies = [path.join(ROOT, "webview-ui/agent-manager/ProjectSidebarBody.tsx")]
 
   it("puts the notice above the worktrees instead of below them", () => {
     for (const file of bodies) {
@@ -298,9 +294,7 @@ describe("Agent Manager leftover worktree folders", () => {
     const disposable = { dispose: () => undefined }
     const host = {
       workspacePath: () => "/repo",
-      multiProject: () => false,
       onDidChangeWorkspaceFolders: () => disposable,
-      onDidChangeMultiProject: () => disposable,
       onDidChangeWorktreePool: () => disposable,
     } as unknown as Host
 
@@ -310,6 +304,7 @@ describe("Agent Manager leftover worktree folders", () => {
       log: () => undefined,
       output: () => undefined,
       activate: () => undefined,
+      empty: () => undefined,
       expand: () => undefined,
       ready: () => Promise.resolve({ ok: true, refsFixed: 0, current: true }),
       push: () => undefined,

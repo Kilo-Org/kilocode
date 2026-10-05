@@ -26,6 +26,8 @@ interface ProviderContextValue {
   authMethods: Accessor<Record<string, ProviderAuthMethod[]>>
   authStates: Accessor<Record<string, ProviderAuthState>>
   isModelValid: (selection: ModelSelection | null) => boolean
+  /** The organization's Kilo catalog failed to load; the host retries until it recovers. */
+  kiloUnavailable: Accessor<boolean>
 }
 
 export const ProviderContext = createContext<ProviderContextValue>()
@@ -41,6 +43,7 @@ export const ProviderProvider: ParentComponent = (props) => {
   const [defaultSelection, setDefaultSelection] = createSignal<ModelSelection>(KILO_AUTO)
   const [authMethods, setAuthMethods] = createSignal<Record<string, ProviderAuthMethod[]>>({})
   const [authStates, setAuthStates] = createSignal<Record<string, ProviderAuthState>>({})
+  const [kiloUnavailable, setKiloUnavailable] = createSignal(false)
 
   const models = createMemo<EnrichedModel[]>(() => flattenModels(providers()))
 
@@ -84,6 +87,7 @@ export const ProviderProvider: ParentComponent = (props) => {
       setDefaultSelection(message.defaultSelection)
       setAuthMethods(message.authMethods)
       setAuthStates(message.authStates)
+      setKiloUnavailable(message.kiloUnavailable ?? false)
     })
   })
 
@@ -125,6 +129,7 @@ export const ProviderProvider: ParentComponent = (props) => {
     authMethods,
     authStates,
     isModelValid,
+    kiloUnavailable,
   }
 
   return <ProviderContext.Provider value={value}>{props.children}</ProviderContext.Provider>

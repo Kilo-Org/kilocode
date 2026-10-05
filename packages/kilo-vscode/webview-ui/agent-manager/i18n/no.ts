@@ -32,7 +32,6 @@ export const dict = {
   "agentManager.local": "lokal",
   "agentManager.sidebar.collapse": "Skjul sidefelt",
   "agentManager.sidebar.expand": "Vis sidefelt",
-  "agentManager.section.worktrees": "WORKTREES",
   "agentManager.section.sessions": "ØKTER",
   "agentManager.projects": "PROSJEKTER",
   "agentManager.settings.title": "Agent Manager",
@@ -72,12 +71,9 @@ export const dict = {
   "agentManager.project.settings": "Prosjektinnstillinger",
   "agentManager.project.restricted":
     "Det gjeldende VS Code-arbeidsområdet er hjemmemappen din eller filsystemroten. Åpne en bestemt prosjektmappe i VS Code for å bruke Agent Manager.",
-  "agentManager.notGitRepo": "Ikke et git-repositorium",
-
   "agentManager.updateBase.title": "Oppdater fra base",
   "agentManager.updateBase.selectWorktree": "Velg først et administrert worktree.",
 
-  "agentManager.worktree.settings": "Worktree-innstillinger",
   "agentManager.worktree.new": "Nytt Worktree",
   "agentManager.worktree.setupScript": "Worktree-oppsettskript",
   "agentManager.worktree.delete": "Slett Worktree",
@@ -184,13 +180,6 @@ export const dict = {
   "agentManager.shortcuts.cycleAgentMode": "Neste agentmodus",
   "agentManager.shortcuts.cyclePreviousAgentMode": "Forrige agentmodus",
   "agentManager.shortcuts.showShortcuts": "Vis tastatursnarveier",
-  "agentManager.dialog.removeStaleWorktree.title": "Fjern utdatert Worktree",
-  "agentManager.dialog.removeStaleWorktree.messagePre": "Fjern utdatert Worktree ",
-  "agentManager.dialog.removeStaleWorktree.messagePost":
-    "? Dette fjerner bare koblingen i Agent Manager og lar filene på disken være urørt.",
-  "agentManager.dialog.removeStaleWorktree.cancel": "Avbryt",
-  "agentManager.dialog.removeStaleWorktree.confirm": "Fjern utdatert Worktree",
-
   "agentManager.dialog.project.select": "Velg prosjekt",
   "agentManager.dialog.project.missing": "Repository ikke funnet",
   "agentManager.dialog.openWorktree": "Ny worktree",
