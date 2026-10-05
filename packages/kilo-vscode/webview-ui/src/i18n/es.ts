@@ -201,6 +201,14 @@ export const dict = {
   "prompt.worktrees.title": "Worktrees",
   "prompt.worktrees.search": "Buscar Worktrees",
   "prompt.thinking.tooltip": "Esfuerzo de razonamiento",
+  "prompt.shortcutHint.addSelection": "para añadir la selección",
+  "prompt.shortcutHint.waiting": "para responder a una sesión en espera",
+  "prompt.shortcutHint.type": "para escribir",
+  "prompt.shortcutHint.sessions": "para cambiar de sesión",
+  "prompt.shortcutHint.stop": "para detener",
+  "prompt.shortcutHint.changes": "para revisar los cambios",
+  "prompt.shortcutHint.pr": "para abrir la PR",
+  "prompt.shortcutHint.mode": "Siguiente modo",
   "prompt.action.send": "Enviar",
   "prompt.action.continue": "Continuar",
   "prompt.action.send.blocked": "Responda o descarte la pregunta pendiente primero",
@@ -790,11 +798,13 @@ export const dict = {
   "ui.sessionTurn.status.consideringNextSteps": "Considerando siguientes pasos...",
 
   "dialog.model.noProviders": "Sin proveedores",
+  "dialog.model.unavailable": "Modelos de Kilo no disponibles",
 
   "prompt.placeholder.connecting": "Conectando al servidor...",
   "prompt.placeholder.error": "Conexión fallida. Revisa el panel de salida o reinicia la extensión.",
   "prompt.placeholder.default":
     "Escribe un mensaje, @ para mencionar archivos... (Enter para enviar, Shift+Enter para nueva línea)",
+  "prompt.placeholder.hint": "Escribe un mensaje, @ para mencionar archivos... ({{key}} {{action}})",
 
   "context.usage.sessionCost": "Coste de la sesión",
   "context.usage.olderSessions": "{{count}} sesiones anteriores",
@@ -949,15 +959,12 @@ export const dict = {
   "settings.sandboxing.writablePaths.title": "Rutas de escritura adicionales",
   "settings.sandboxing.writablePaths.description":
     "Rutas del sistema de archivos adicionales donde el sandbox permite escritura (por ej., /tmp, /var/log). Se combinan con las rutas de escritura predeterminadas cuando el sandbox está activo.",
-  "settings.experimental.multiProject.title": "Agent Manager Multi-Proyecto",
   "settings.experimental.conversationPromptHistory.title": "Historial de prompts por conversación",
   "settings.experimental.conversationPromptHistory.description":
     "Mantén el historial de prompts (ArrowUp/ArrowDown) separado para cada conversación en lugar de compartir un único historial entre todas.",
   "settings.experimental.claudeMigration.title": "Migración de Claude Code",
   "settings.experimental.claudeMigration.description":
     "Importar una vez las instrucciones globales CLAUDE.md compatibles, habilidades simples y definiciones MCP desactivadas. Los archivos originales de Claude no se modifican; reinicia el backend después de activar.",
-  "settings.experimental.multiProject.description":
-    "Habilitar la gestión de sesiones y worktrees en múltiples repositorios en Agent Manager. El repositorio del workspace actual es siempre el proyecto predeterminado.",
   "settings.experimental.mcpTimeout.title": "Tiempo de espera MCP (ms)",
   "settings.experimental.mcpTimeout.description": "Tiempo de espera para solicitudes del servidor MCP en milisegundos",
   "settings.experimental.remote.title": "Control Remote",
@@ -1262,6 +1269,9 @@ export const dict = {
   "settings.display.mcpTool.expanded": "Expandidos",
   "settings.display.mcpTool.collapsed": "Contraídos",
 
+  "settings.display.shortcutHints.title": "Mostrar sugerencias de atajos",
+  "settings.display.shortcutHints.description":
+    "Muestra en el prompt vacío el atajo de teclado adecuado a lo que hace ahora, por ejemplo cómo añadir el código seleccionado o volver al prompt.",
   "settings.display.tokenThroughput.title": "Mostrar rendimiento de tokens",
   "settings.display.tokenThroughput.description":
     "Mostrar la velocidad de generación de texto (tokens/sec) en el último mensaje del asistente y en el encabezado de la tarea. Se muestra de forma predeterminada; desactiva esta opción para ocultarla cuando sea necesario.",

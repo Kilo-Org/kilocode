@@ -28,6 +28,7 @@ describe("createProjectRegistry", () => {
       const { registry, set } = setup("single", { localSessionIDs: ["ses_old"] })
       expect(registry.active().tabs.ids()).toEqual(["ses_old"])
       set("prj-a")
+      registry.migrate("prj-a")
       expect(registry.active().tabs.ids()).toEqual(["ses_old"])
       expect(registry.all().map((s) => s.id)).toEqual(["prj-a"])
       dispose()
@@ -46,6 +47,7 @@ describe("createProjectRegistry", () => {
     createRoot((dispose) => {
       const { registry, set } = setup("single", { localSessionIDs: ["ses_old"] })
       set("prj-a")
+      registry.migrate("prj-a")
       expect(registry.active().tabs.ids()).toEqual(["ses_old"])
       set("prj-b")
       // "single" was consumed by the first migration, so prj-b stays empty.
@@ -61,7 +63,7 @@ describe("createProjectRegistry", () => {
       })
       set("prj-a")
       expect(registry.active().tabs.ids()).toEqual(["ses_a1"])
-      expect(registry.all().some((s) => s.id === "single")).toBe(true)
+      expect(registry.all().some((s) => s.id === "single")).toBe(false)
       dispose()
     }))
 
@@ -73,6 +75,36 @@ describe("createProjectRegistry", () => {
       expect(registry.version()).toBeGreaterThan(before)
       dispose()
     }))
+
+  it("does not treat the compatibility mirror as legacy tabs", () =>
+    createRoot((dispose) => {
+      const { registry } = setup("prj-a", {
+        localSessionIDs: ["ses_b"],
+        localTabs: { "prj-a": [], "prj-b": ["ses_b"] },
+      })
+      registry.ensure("prj-a")
+      registry.migrate("prj-a")
+      expect(registry.ensure("prj-a").tabs.ids()).toEqual([])
+      expect(registry.ensure("prj-b").tabs.ids()).toEqual(["ses_b"])
+      dispose()
+    }))
+
+  it.each([{ localSessionIDs: ["ses_old"] }, { localTabs: { single: ["ses_old"] } }])(
+    "waits for the catalog migration target even when background state arrives first: %j",
+    (persisted) =>
+      createRoot((dispose) => {
+        const { registry, set } = setup("single", persisted)
+        set("prj-b")
+        registry.active()
+        registry.ensure("prj-a").tabs.set(["pending-new"])
+        expect(registry.ensure("prj-b").tabs.ids()).toEqual([])
+        registry.migrate("prj-a")
+        expect(registry.ensure("prj-a").tabs.ids()).toEqual(["ses_old", "pending-new"])
+        registry.migrate("prj-b")
+        expect(registry.ensure("prj-b").tabs.ids()).toEqual([])
+        dispose()
+      }),
+  )
 
   it("prunes stores for removed projects but keeps single", () =>
     createRoot((dispose) => {

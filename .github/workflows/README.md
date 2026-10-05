@@ -38,6 +38,17 @@ They don't call each other or trigger off PR creation. Each one wakes up on its 
 
 `dependabot-auto-merge.yml` only flips a flag on the PR. GitHub itself completes the merge later, automatically, once both the required human approval and all required status checks pass. If either never happens, the PR just sits with auto-merge armed but unfulfilled — nothing forces it through.
 
+## Slack posts
+
+Three of the four workflows post to Slack. All of them use the `SECURITY_ALERTS_SLACK_WEBHOOK` secret, so every post lands in the one channel that webhook was created for. A run that has nothing to report posts nothing.
+
+| Workflow | Posts? | What a post contains | When it posts |
+|---|---|---|---|
+| `dependabot-auto-merge.yml` | No | Nothing. Its results are only in the Actions log, including a warning when it skips a PR that touches shared code. | Never. |
+| `security-findings-notify.yml` | Yes | One message per Dependabot alert (critical and high only): a label (`New finding`, `SLA at risk` or `SLA breached`), the severity, days open, a link to the alert with its GHSA ID, and the advisory summary. A critical alert that breaches its SLA starts with `@here`. | Checked every 6 hours. Each alert posts once per status (new, then at risk, then breached). A breached alert repeats once a day while it stays open. |
+| `stale-bot-pr-notify.yml` | Yes | One combined message, "Bot PRs needing attention". Each line has the PR number and title as a link, the author, the age in days, and a reason: `conflicting`, `CI failing` (a required check failed) or `unreviewed`. | Checked daily at 13:00 UTC. Posts only if at least one PR is flagged. There is no dedup, so a PR repeats every day until it is fixed. |
+| `outdated-kilo-deps.yml` | Yes | One short summary, "Outdated Kilo-owned dependencies: N major, N minor, N patch". It lists the major and minor updates with current and latest versions. Patch updates are only counted. A link to the run has the full list. | Checked monthly, on the 1st at 09:23 UTC. Posts only if something is outdated. |
+
 ## Fork-safety notes
 
 kilocode is a fork of opencode sharing one `bun.lock` with upstream-owned `@opencode-ai/*` packages. Two things exist specifically to avoid friction with upstream syncs:
