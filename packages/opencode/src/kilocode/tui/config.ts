@@ -39,6 +39,17 @@ export namespace KilocodeTuiConfig {
     return writable(cfg)
   }
 
+  // Read the raw TUI config for a single scope, without merging across
+  // project/global or injecting Kilo default plugins. The settings dialog
+  // uses this so toggling a value writes the scope the user picked instead
+  // of the effective value (which can be dominated by the other scope).
+  export async function getForScope(input: { directory: string; scope: Scope }) {
+    const file = await target(input)
+    const source = await read(file)
+    if (!source) return writable({} as Patch)
+    return parse(source, file)
+  }
+
   export async function update(input: { directory: string; worktree?: string; scope: Scope; patch: Patch }) {
     const file = await target(input)
     const source = await read(file)
@@ -90,9 +101,9 @@ export namespace KilocodeTuiConfig {
     return target.text()
   }
 
-  function parse(input: string, file: string): Patch {
+  function parse(input: string, file: string): Editable {
     const data = ConfigParse.jsonc(input, file)
-    if (!isRecord(data)) return {}
+    if (!isRecord(data)) return writable({} as Patch)
     return writable(ConfigParse.schema(TuiConfig.Info, normalize(data), file))
   }
 

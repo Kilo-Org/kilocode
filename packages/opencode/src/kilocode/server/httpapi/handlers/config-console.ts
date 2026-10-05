@@ -196,8 +196,20 @@ export const configConsoleHandlers = HttpApiBuilder.group(InstanceHttpApi, "conf
       )
     })
 
-    const tuiConfigGet = Effect.fn("ConfigConsoleHttpApi.tuiConfigGet")(function* () {
+    const tuiConfigGet = Effect.fn("ConfigConsoleHttpApi.tuiConfigGet")(function* (ctx: {
+      query: typeof TuiConfigQuery.Type
+    }) {
       const instance = yield* InstanceState.context
+      // When the caller passes `scope`, return that scope's raw config instead
+      // of the effective (project+global merged) value so settings UIs can
+      // display and edit the value they'll actually overwrite. Omitting
+      // `scope` keeps the legacy effective response for callers like the TUI
+      // hot-reload reconciler.
+      if (ctx.query.scope) {
+        return yield* Effect.promise(() =>
+          KilocodeTuiConfig.getForScope({ directory: instance.directory, scope: ctx.query.scope! }),
+        )
+      }
       return yield* Effect.promise(() => KilocodeTuiConfig.get({ directory: instance.directory }))
     })
 
