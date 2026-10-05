@@ -31,7 +31,6 @@ export const dict = {
   "agentManager.local": "lokal",
   "agentManager.sidebar.collapse": "Skjul sidebjælke",
   "agentManager.sidebar.expand": "Vis sidebjælke",
-  "agentManager.section.worktrees": "WORKTREES",
   "agentManager.section.sessions": "SESSIONER",
   "agentManager.projects": "PROJEKTER",
   "agentManager.settings.title": "Agent Manager",
@@ -44,6 +43,7 @@ export const dict = {
   "agentManager.settings.worktreePool.title": "Forvarm worktrees",
   "agentManager.settings.worktreePool.description":
     "Forbered et klart worktree i baggrunden, så nye Agent Manager-sessioner starter hurtigere. Bruger ekstra diskplads til ét checkout pr. åbent projekt.",
+  "agentManager.hints.switchSession": "Skift session",
   "agentManager.settings.project.title": "Projekt",
   "agentManager.settings.project.description": "Vælg det repository, hvis worktree-indstillinger du vil redigere.",
   "agentManager.settings.project.empty": "Der er ingen tilgængelige projekter i Agent Manager.",
@@ -71,12 +71,9 @@ export const dict = {
   "agentManager.project.settings": "Projektindstillinger",
   "agentManager.project.restricted":
     "Dit aktuelle VS Code-arbejdsområde er din hjemmemappe eller filsystemets rod. Åbn en specifik projektmappe i VS Code for at bruge Agent Manager.",
-  "agentManager.notGitRepo": "Ikke et git-repository",
-
   "agentManager.updateBase.title": "Opdater fra base",
   "agentManager.updateBase.selectWorktree": "Vælg først et administreret worktree.",
 
-  "agentManager.worktree.settings": "Worktree-indstillinger",
   "agentManager.worktree.new": "Nyt Worktree",
   "agentManager.worktree.setupScript": "Worktree-opsætningsscript",
   "agentManager.worktree.delete": "Slet Worktree",
@@ -185,13 +182,6 @@ export const dict = {
   "agentManager.shortcuts.cycleAgentMode": "Næste agenttilstand",
   "agentManager.shortcuts.cyclePreviousAgentMode": "Forrige agenttilstand",
   "agentManager.shortcuts.showShortcuts": "Vis tastaturgenveje",
-  "agentManager.dialog.removeStaleWorktree.title": "Fjern forældet Worktree",
-  "agentManager.dialog.removeStaleWorktree.messagePre": "Fjern forældet Worktree ",
-  "agentManager.dialog.removeStaleWorktree.messagePost":
-    "? Dette fjerner kun tilknytningen i Agent Manager og efterlader filer på disken urørt.",
-  "agentManager.dialog.removeStaleWorktree.cancel": "Annuller",
-  "agentManager.dialog.removeStaleWorktree.confirm": "Fjern forældet Worktree",
-
   "agentManager.dialog.project.select": "Vælg projekt",
   "agentManager.dialog.project.missing": "Repository ikke fundet",
   "agentManager.dialog.openWorktree": "Ny Worktree",
