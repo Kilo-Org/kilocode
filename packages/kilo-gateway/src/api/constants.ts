@@ -12,18 +12,20 @@ export const DEFAULT_KILO_API_URL = "https://api.kilo.ai"
 /** Base URL for Kilo API - can be overridden by KILO_API_URL env var */
 export const KILO_API_BASE = process.env[ENV_KILO_API_URL] || DEFAULT_KILO_API_URL
 
-/** Environment variable for a dedicated Kilo AI Gateway URL */
+/** Environment variable for the Kilo AI Gateway base URL, e.g. `http://localhost:3010/api/v1` */
 export const ENV_KILO_AI_GATEWAY_URL = "KILO_AI_GATEWAY_URL"
+
+/**
+ * Default Kilo AI Gateway base URL. The gateway serves the AI endpoints (models, completions,
+ * embeddings, FIM, next-edit, transcriptions); other cloud endpoints (auth, profile, defaults,
+ * sessions, ...) stay on KILO_API_BASE.
+ */
+export const DEFAULT_KILO_AI_GATEWAY_URL = "https://ai-gateway.kilo.ai/api/v1"
 
 const gateway = process.env[ENV_KILO_AI_GATEWAY_URL]?.trim()
 
-/**
- * Base URL of a dedicated Kilo AI Gateway, which serves the AI endpoints (models, completions,
- * embeddings, FIM, next-edit, transcriptions) under `/api/v1`. When unset, the Kilo API at
- * KILO_API_BASE serves them under their legacy paths (`/api/openrouter`, `/api/gateway`, ...).
- * Other cloud endpoints (auth, profile, defaults, sessions, ...) always use KILO_API_BASE.
- */
-export const KILO_AI_GATEWAY_BASE = gateway && URL.canParse(gateway) ? gateway : undefined
+/** Explicit KILO_AI_GATEWAY_URL; when unset the gateway is inferred from the Kilo API URL */
+export const KILO_AI_GATEWAY_OVERRIDE = gateway && URL.canParse(gateway) ? gateway : undefined
 
 /** Environment variable for custom Event Service URL */
 export const KILO_EVENT_SERVICE_URL_ENV = "EVENT_SERVICE_URL"

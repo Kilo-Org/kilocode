@@ -220,8 +220,8 @@ async function fetchRawKiloModels(options?: {
   // Transform URL with token if available
   const finalBaseURL = token ? getKiloUrlFromToken(baseURL, token) : baseURL
 
-  // Construct models endpoint. A dedicated AI gateway serves it under /api/v1 unless an explicit baseURL is set.
-  const gateway = resolveKiloAiGatewayRoot({ baseURL: options?.baseURL })
+  // Construct models endpoint. The AI gateway serves it under /api/v1; other hosts keep the legacy route.
+  const gateway = resolveKiloAiGatewayRoot({ baseURL: options?.baseURL, token })
   const org = organizationId ?? finalBaseURL.match(/\/api(?:\/v1)?\/organizations\/([^/]+)/)?.at(1)
   const modelsURL = gateway
     ? new URL(org ? `organizations/${encodeURIComponent(org)}/models` : "models", gateway).toString()

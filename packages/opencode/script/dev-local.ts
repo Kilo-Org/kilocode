@@ -66,17 +66,16 @@ async function main() {
   const webPort = Number(read(path.join(cloud, ".dev-port"))) || svc("nextjs")
   const ingestPort = noIngest ? undefined : svc("cloudflare-session-ingest")
   const eventsPort = noEvents ? undefined : svc("event-service")
-  const gatewayPort = svc("ai-gateway")
   if (!webPort) die(`no web port found in ${cloud} — is the dev server started? (pnpm dev:start)`)
+  // Without a manifest entry the CLI infers the ai-gateway port as the web port + 10.
+  const gatewayPort = svc("ai-gateway") ?? webPort + 10
 
   const env: NodeJS.ProcessEnv = { ...process.env }
   for (const [k, d] of [["XDG_DATA_HOME", "data"], ["XDG_CONFIG_HOME", "config"], ["XDG_STATE_HOME", "state"], ["XDG_CACHE_HOME", "cache"]] as const) {
     const p = path.join(home, d); fs.mkdirSync(p, { recursive: true }); env[k] = p
   }
   env.KILO_API_URL = `http://localhost:${webPort}`
-  // Without the standalone ai-gateway app, the web server serves the AI gateway routes too.
-  if (gatewayPort) env.KILO_AI_GATEWAY_URL = `http://localhost:${gatewayPort}`
-  else delete env.KILO_AI_GATEWAY_URL
+  env.KILO_AI_GATEWAY_URL = `http://localhost:${gatewayPort}/api/v1`
   env.KILO_DEV_CWD = project
   env.KILO_DISABLE_AUTOUPDATE = "1"
   if (ingestPort) env.KILO_SESSION_INGEST_URL = `http://localhost:${ingestPort}`
@@ -88,9 +87,11 @@ async function main() {
   } else env.KILO_DISABLE_PRESENCE = "1"
 
   const webUp = await alive(webPort)
+  const gatewayUp = await alive(gatewayPort)
   console.log(`${dim}project${rst}  ${project}`)
   console.log(`${dim}web${rst}      :${webPort}  ${webUp ? `${grn}up${rst}` : `${red}down${rst}`}`)
-  console.log(`${dim}gateway${rst}  ${gatewayPort ? `:${gatewayPort}` : "web"}`)
+  console.log(`${dim}gateway${rst}  :${gatewayPort}  ${gatewayUp ? `${grn}up${rst}` : `${red}down${rst}`}`)
+  if (!gatewayUp) console.warn(`${ylw}ai-gateway down — AI requests will fail; start it (pnpm dev:start ai-gateway)${rst}`)
   console.log(`${dim}ingest${rst}   ${ingestPort ? `:${ingestPort}` : "off"}`)
   console.log(`${dim}events${rst}   ${eventsPort ? `:${eventsPort}` : "off"}`)
   console.log(`${dim}home${rst}     ${home}`)

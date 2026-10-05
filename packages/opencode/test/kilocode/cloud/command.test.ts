@@ -31,7 +31,14 @@ const auth = Layer.mock(Auth.Service)({
     ),
 })
 
-const it = testEffect(Layer.mergeAll(AppNodeBuilder.build(Agent.node), AppNodeBuilder.build(Config.node), AppNodeBuilder.build(Git.node), auth))
+const it = testEffect(
+  Layer.mergeAll(
+    AppNodeBuilder.build(Agent.node),
+    AppNodeBuilder.build(Config.node),
+    AppNodeBuilder.build(Git.node),
+    auth,
+  ),
+)
 
 const run = Effect.fn("CloudCommandTest.git")(function* (cwd: string, ...args: string[]) {
   const git = yield* Git.Service
@@ -81,7 +88,7 @@ it.instance(
               prompt: "Inspect the current repository",
             },
             {
-              env: { KILO_API_URL: server.url.origin },
+              env: { KILO_API_URL: server.url.origin, KILO_AI_GATEWAY_URL: `${server.url.origin}/api/v1` },
               make: (options) => {
                 keys.push(options.apiKey)
                 return {
@@ -169,7 +176,7 @@ it.instance(
               stream: true,
             },
             {
-              env: { KILO_API_URL: server.url.origin },
+              env: { KILO_API_URL: server.url.origin, KILO_AI_GATEWAY_URL: `${server.url.origin}/api/v1` },
               make: () => ({
                 async start() {
                   return response
@@ -258,7 +265,7 @@ it.instance(
               stream: true,
             },
             {
-              env: { KILO_API_URL: server.url.origin },
+              env: { KILO_API_URL: server.url.origin, KILO_AI_GATEWAY_URL: `${server.url.origin}/api/v1` },
               make: () => ({
                 async start() {
                   return response
@@ -338,7 +345,7 @@ it.instance(
               stream: true,
             },
             {
-              env: { KILO_API_URL: server.url.origin },
+              env: { KILO_API_URL: server.url.origin, KILO_AI_GATEWAY_URL: `${server.url.origin}/api/v1` },
               make: () => ({
                 async start() {
                   return response
@@ -419,7 +426,7 @@ it.instance(
               stream: true,
             },
             {
-              env: { KILO_API_URL: server.url.origin },
+              env: { KILO_API_URL: server.url.origin, KILO_AI_GATEWAY_URL: `${server.url.origin}/api/v1` },
               make: () => ({
                 async start() {
                   return response

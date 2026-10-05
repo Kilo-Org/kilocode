@@ -46,6 +46,9 @@ const state = (input: Partial<CloudDefaults.ModelStateInfo> = {}): CloudDefaults
   ...input,
 })
 
+// The catalog server below serves both the Kilo API and the AI gateway routes.
+const local = (url: URL) => ({ KILO_API_URL: url.origin, KILO_AI_GATEWAY_URL: `${url.origin}/api/v1` })
+
 function withCatalog<A, E, R>(
   models: readonly string[],
   defaultModel: string,
@@ -113,25 +116,21 @@ it.instance("routes URL-scoped credentials to their catalog origin", () => {
   )
 })
 
-it.instance("fetches models from a dedicated AI gateway and defaults from the Kilo API", () => {
+const organizationID = "11111111-1111-4111-8111-111111111111"
+
+const catalogUrls = (env: CloudCatalog.Environment, token = "stored-token") => {
   const urls: string[] = []
-  const organizationID = "11111111-1111-4111-8111-111111111111"
   return Effect.gen(function* () {
     const catalog = yield* CloudCatalog.Service
-    const token = Redacted.make("https://token.example.test:scoped-token")
-
-    expect(yield* catalog.models({ token })).toEqual(["anthropic/gateway"])
-    expect(yield* catalog.models({ token, organizationID })).toEqual(["anthropic/gateway"])
-    expect(yield* catalog.defaultModel({ token: Redacted.make("stored-token") })).toBe("anthropic/gateway")
-    expect(urls).toEqual([
-      "http://127.0.0.1:3010/api/v1/models",
-      `http://127.0.0.1:3010/api/v1/organizations/${organizationID}/models`,
-      "https://api.example.test/api/defaults",
-    ])
+    const input = { token: Redacted.make(token) }
+    yield* catalog.models(input)
+    yield* catalog.models({ ...input, organizationID })
+    yield* catalog.defaultModel(input)
+    return urls
   }).pipe(
     Effect.provide(
       CloudCatalog.layer({
-        env: { KILO_API_URL: "https://api.example.test", KILO_AI_GATEWAY_URL: "http://127.0.0.1:3010" },
+        env,
         fetch: async (request) => {
           urls.push(request.url)
           return Response.json({
@@ -142,7 +141,48 @@ it.instance("fetches models from a dedicated AI gateway and defaults from the Ki
       }),
     ),
   )
-})
+}
+
+it.instance("fetches models from the production AI gateway and defaults from the Kilo API by default", () =>
+  Effect.gen(function* () {
+    expect(yield* catalogUrls({})).toEqual([
+      "https://ai-gateway.kilo.ai/api/v1/models",
+      `https://ai-gateway.kilo.ai/api/v1/organizations/${organizationID}/models`,
+      "https://api.kilo.ai/api/defaults",
+    ])
+  }),
+)
+
+it.instance("infers the local AI gateway from a localhost Kilo API URL", () =>
+  Effect.gen(function* () {
+    expect(yield* catalogUrls({ KILO_API_URL: "http://127.0.0.1:3000" })).toEqual([
+      "http://127.0.0.1:3010/api/v1/models",
+      `http://127.0.0.1:3010/api/v1/organizations/${organizationID}/models`,
+      "http://127.0.0.1:3000/api/defaults",
+    ])
+  }),
+)
+
+it.instance("keeps the legacy model routes for a Kilo API URL on another host", () =>
+  Effect.gen(function* () {
+    expect(yield* catalogUrls({ KILO_API_URL: "https://api.example.test" })).toEqual([
+      "https://api.example.test/api/openrouter/models",
+      `https://api.example.test/api/organizations/${organizationID}/models`,
+      "https://api.example.test/api/defaults",
+    ])
+  }),
+)
+
+it.instance("fetches models from an explicit AI gateway and defaults from the Kilo API", () =>
+  Effect.gen(function* () {
+    const env = { KILO_API_URL: "https://api.example.test", KILO_AI_GATEWAY_URL: "http://127.0.0.1:3010/api/v1" }
+    expect(yield* catalogUrls(env, "https://token.example.test:scoped-token")).toEqual([
+      "http://127.0.0.1:3010/api/v1/models",
+      `http://127.0.0.1:3010/api/v1/organizations/${organizationID}/models`,
+      "https://token.example.test/api/defaults",
+    ])
+  }),
+)
 
 it.instance("rejects an insecure dedicated AI gateway", () =>
   Effect.gen(function* () {
@@ -152,7 +192,7 @@ it.instance("rejects an insecure dedicated AI gateway", () =>
   }).pipe(
     Effect.provide(
       CloudCatalog.layer({
-        env: { KILO_AI_GATEWAY_URL: "http://gateway.example.test" },
+        env: { KILO_AI_GATEWAY_URL: "http://gateway.example.test/api/v1" },
         fetch: () => Promise.reject(new Error("insecure catalog request must not run")),
       }),
     ),
@@ -250,7 +290,7 @@ it.instance(
                   model: { debug: { providerID: "kilo", modelID: "anthropic/saved" } },
                 }),
               ),
-              CloudCatalog.layer({ env: { KILO_API_URL: url.origin } }),
+              CloudCatalog.layer({ env: local(url) }),
             ),
           ),
         )
@@ -260,11 +300,11 @@ it.instance(
           model: "anthropic/explicit",
           organizationID: explicitID,
         })
-        expect(requests.map((request) => request.path)).toEqual([`/api/organizations/${explicitID}/models`])
+        expect(requests.map((request) => request.path)).toEqual([`/api/v1/organizations/${explicitID}/models`])
         expect(
           requests.every(
             (request) =>
-              request.path.startsWith(`/api/organizations/${explicitID}/`) &&
+              request.path.startsWith(`/api/v1/organizations/${explicitID}/`) &&
               request.authorization === "Bearer stored-token" &&
               request.feature === "kilo-cli" &&
               request.organization === explicitID,
@@ -292,7 +332,7 @@ it.instance(
           const resolved = yield* CloudDefaults.resolve()
           expect(resolved.mode).toBe("code")
           expect(resolved.model).toBe("anthropic/repository")
-          expect(requests.map((request) => request.path)).toEqual(["/api/openrouter/models"])
+          expect(requests.map((request) => request.path)).toEqual(["/api/v1/models"])
           expect(requests.every((request) => request.organization === null)).toBe(true)
         }).pipe(
           Effect.provide(
@@ -304,7 +344,7 @@ it.instance(
                   recent: [{ providerID: "kilo", modelID: "anthropic/recent" }],
                 }),
               ),
-              CloudCatalog.layer({ env: { KILO_API_URL: url.origin } }),
+              CloudCatalog.layer({ env: local(url) }),
             ),
           ),
         ),
@@ -336,7 +376,7 @@ it.instance(
                 model: { code: { providerID: "kilo", modelID: "anthropic/saved" } },
               }),
             ),
-            CloudCatalog.layer({ env: { KILO_API_URL: url.origin } }),
+            CloudCatalog.layer({ env: local(url) }),
           ),
         ),
       ),
@@ -354,14 +394,14 @@ it.instance(
         Effect.tap((resolved) =>
           Effect.sync(() => {
             expect(resolved.model).toBe("anthropic/default")
-            expect(requests.map((request) => request.path)).toEqual(["/api/openrouter/models", "/api/defaults"])
+            expect(requests.map((request) => request.path)).toEqual(["/api/v1/models", "/api/defaults"])
           }),
         ),
         Effect.provide(
           Layer.mergeAll(
             authLayer(new Auth.Api({ type: "api", key: "stored-api-token" })),
             stateLayer(state()),
-            CloudCatalog.layer({ env: { KILO_API_URL: url.origin } }),
+            CloudCatalog.layer({ env: local(url) }),
           ),
         ),
       ),
@@ -391,7 +431,7 @@ it.instance(
           Layer.mergeAll(
             authLayer(new Auth.Api({ type: "api", key: "stored-api-token" })),
             stateLayer(state()),
-            CloudCatalog.layer({ env: { KILO_API_URL: url.origin } }),
+            CloudCatalog.layer({ env: local(url) }),
           ),
         ),
       ),
@@ -460,7 +500,7 @@ it.instance(
                     recent: [{ providerID: "kilo", modelID: "anthropic/recent" }],
                   }),
                 ),
-                CloudCatalog.layer({ env: { KILO_API_URL: url.origin } }),
+                CloudCatalog.layer({ env: local(url) }),
               ),
             ),
           )
@@ -470,7 +510,7 @@ it.instance(
             model: "anthropic/mode",
             organizationID,
           })
-          expect(requests.map((request) => request.path)).toEqual([`/api/organizations/${organizationID}/models`])
+          expect(requests.map((request) => request.path)).toEqual([`/api/v1/organizations/${organizationID}/models`])
           expect(
             requests.every(
               (request) => request.authorization === "Bearer stored-token" && request.organization === organizationID,

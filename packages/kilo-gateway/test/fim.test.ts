@@ -6,12 +6,12 @@ describe("FIM target resolution", () => {
     expect(resolveFimTarget("kilo", "mistralai/codestral-2508")).toEqual({
       provider: "kilo",
       model: "mistralai/codestral-2508",
-      url: "https://api.kilo.ai/api/fim/completions",
+      url: "https://ai-gateway.kilo.ai/api/v1/fim/completions",
     })
     expect(resolveFimTarget("kilo", "inception/mercury-edit-2")).toEqual({
       provider: "kilo",
       model: "inception/mercury-edit-2",
-      url: "https://api.kilo.ai/api/fim/completions",
+      url: "https://ai-gateway.kilo.ai/api/v1/fim/completions",
     })
   })
 
@@ -31,22 +31,22 @@ describe("FIM target resolution", () => {
     expect(resolveFimTarget()).toEqual({
       provider: "kilo",
       model: "mistralai/codestral-2501",
-      url: "https://api.kilo.ai/api/fim/completions",
+      url: "https://ai-gateway.kilo.ai/api/v1/fim/completions",
     })
     expect(resolveFimTarget(undefined, "mistralai/codestral-2508")).toEqual({
       provider: "kilo",
       model: "mistralai/codestral-2508",
-      url: "https://api.kilo.ai/api/fim/completions",
+      url: "https://ai-gateway.kilo.ai/api/v1/fim/completions",
     })
     expect(resolveFimTarget(undefined, "inception/mercury-edit")).toEqual({
       provider: "kilo",
       model: "inception/mercury-edit",
-      url: "https://api.kilo.ai/api/fim/completions",
+      url: "https://ai-gateway.kilo.ai/api/v1/fim/completions",
     })
     expect(resolveFimTarget("kilo", "custom/fim-model")).toEqual({
       provider: "kilo",
       model: "custom/fim-model",
-      url: "https://api.kilo.ai/api/fim/completions",
+      url: "https://ai-gateway.kilo.ai/api/v1/fim/completions",
     })
   })
 })
