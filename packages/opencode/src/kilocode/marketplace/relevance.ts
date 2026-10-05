@@ -8,6 +8,9 @@ import type { MarketplaceItem } from "./schema"
 const LIMIT = 1
 // Bounds a scan on very large trees. Patterns found before the budget runs out are kept.
 const BUDGET = Duration.seconds(30)
+// The previous VS Code scan always skipped these directories. Keep that guarantee even
+// when the workspace is not a git repository and has no .gitignore.
+const EXCLUDE = "**/{node_modules,dist,build,out,.kilo,.opencode,.kilocode}/**"
 
 /** Unique `suggest_for.filename` patterns of the given items. */
 export function patterns(items: readonly MarketplaceItem[]): string[] {
@@ -43,6 +46,16 @@ export const detect = Effect.fn("MarketplaceRelevance.detect")(function* (input:
   if (list.length === 0 || !allowed(input.directory)) return []
   const found = new Set<string>()
 
+  const search = (pattern: string) =>
+    input.ripgrep.glob({
+      cwd: input.directory,
+      pattern: `**/${pattern}`,
+      limit: LIMIT,
+      hidden: true,
+      noRequireGit: true,
+      exclude: [EXCLUDE],
+    })
+
   const scan = (group: readonly string[]): Effect.Effect<void, Ripgrep.Error> =>
     Effect.gen(function* () {
       const left = group.filter((pattern) => !found.has(pattern))
@@ -53,9 +66,20 @@ export const detect = Effect.fn("MarketplaceRelevance.detect")(function* (input:
         pattern: globs.length === 1 ? globs[0] : `{${globs.join(",")}}`,
         limit: LIMIT,
         hidden: true,
+        noRequireGit: true,
+        exclude: [EXCLUDE],
       })
       const hits = left.filter((pattern) => result.items.some((item) => matches(item.path, pattern)))
       for (const hit of hits) found.add(hit)
+      // A malformed pattern makes ripgrep reject the whole alternation, so search every
+      // still-missing pattern alone. One bad catalog entry cannot hide the others.
+      if (result.partial) {
+        for (const pattern of left.filter((item) => !found.has(item))) {
+          const single = yield* search(pattern)
+          if (single.items.some((item) => matches(item.path, pattern))) found.add(pattern)
+        }
+        return
+      }
       // A truncated search stopped early, so the remaining patterns are still unknown.
       if (result.truncated && hits.length > 0) yield* scan(group)
     })

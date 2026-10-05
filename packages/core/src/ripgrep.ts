@@ -69,6 +69,8 @@ export interface GlobInput {
   readonly follow?: boolean
   readonly signal?: AbortSignal
   readonly validate?: Effect.Effect<void, unknown> // kilocode_change - bind approved searches at spawn
+  readonly noRequireGit?: boolean // kilocode_change - honor ignore files outside a git repository
+  readonly exclude?: readonly string[] // kilocode_change - additional exclusion globs
 }
 
 export interface GrepInput extends KiloGrep.Options {
@@ -213,7 +215,9 @@ const layer = Layer.effect(
             "--files",
             ...(input.hidden ? ["--hidden"] : []),
             ...(input.follow ? ["--follow"] : []),
+            ...(input.noRequireGit ? ["--no-require-git"] : []), // kilocode_change
             `--glob=${input.pattern}`,
+            ...(input.exclude ?? []).map((glob) => `--glob=!${glob}`), // kilocode_change
             "--glob=!**/.git/**",
             ".",
           ],

@@ -57,6 +57,7 @@ export class MarketplaceNotifier implements vscode.Disposable {
   }
 
   private schedule(): void {
+    if (this.disposed) return
     if (this.timer) clearTimeout(this.timer)
     this.timer = setTimeout(() => {
       this.timer = undefined
@@ -100,6 +101,7 @@ export class MarketplaceNotifier implements vscode.Disposable {
         ),
       ),
     )
+    if (this.disposed) return
     if (types.some((type) => type & vscode.FileType.Directory)) this.schedule()
   }
 

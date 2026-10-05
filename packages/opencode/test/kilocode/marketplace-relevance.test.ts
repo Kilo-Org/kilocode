@@ -71,4 +71,52 @@ describe("marketplace relevance", () => {
       expect(found.toSorted()).toEqual(["*.go", "*.{yml,yaml}"])
     }),
   )
+
+  it.live("honors ignore files outside a git repository", () =>
+    Effect.gen(function* () {
+      const ripgrep = yield* Ripgrep.Service
+      const dir = yield* tmpdirScoped({})
+      yield* write(dir, {
+        ".gitignore": "data/\n",
+        "notebooks/a.ipynb": "{}",
+        "data/cache.duckdb": "",
+      })
+
+      const found = yield* MarketplaceRelevance.detect({
+        ripgrep,
+        directory: dir,
+        items: [item("data", ["*.ipynb", "*.duckdb"])],
+      })
+
+      expect(found).toEqual(["*.ipynb"])
+    }),
+  )
+
+  it.live("skips build directories without a .gitignore", () =>
+    Effect.gen(function* () {
+      const ripgrep = yield* Ripgrep.Service
+      const dir = yield* tmpdirScoped({})
+      yield* write(dir, { "node_modules/pkg/a.duckdb": "", "build/b.duckdb": "" })
+
+      const found = yield* MarketplaceRelevance.detect({ ripgrep, directory: dir, items: [item("data", ["*.duckdb"])] })
+
+      expect(found).toEqual([])
+    }),
+  )
+
+  it.live("keeps valid patterns when one pattern is malformed", () =>
+    Effect.gen(function* () {
+      const ripgrep = yield* Ripgrep.Service
+      const dir = yield* tmpdirScoped({})
+      yield* write(dir, { "notebooks/a.ipynb": "{}" })
+
+      const found = yield* MarketplaceRelevance.detect({
+        ripgrep,
+        directory: dir,
+        items: [item("broken", ["*.["]), item("jupyter", ["*.ipynb"])],
+      })
+
+      expect(found).toEqual(["*.ipynb"])
+    }),
+  )
 })
