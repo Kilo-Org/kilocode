@@ -124,4 +124,47 @@ class SessionUiPromptRestoreTest : SessionUiTestBase() {
 
         assertEquals("", find<PromptPanel>(ui).text())
     }
+
+    /**
+     * The prompt box stays enabled while a turn streams, so a send can be queued behind one. When
+     * the earlier turn ends, that session-scoped TurnEnded must not be mistaken for the queued
+     * send's own outcome -- doing so discarded the queued draft before its failure arrived.
+     */
+    fun `test an earlier turn ending does not discard a queued send's draft`() {
+        showMessages()
+        rpc.prompts.clear()
+
+        // Send A, and let the server persist its user message so A is confirmed.
+        find<EditorTextField>(ui).text = "first message"
+        find<PromptPanel>(ui).send()
+        assertTrue("send A never reached the backend", pumpUntil { rpc.prompts.isNotEmpty() })
+        emit(ChatEventDto.MessageUpdated("ses_test", message("queued_msg_a")))
+        assertTrue(
+            "A's user message never reached the model",
+            pumpUntil { controller().model.messages().any { it.info.id == "queued_msg_a" } },
+        )
+
+        // Send B while A is still streaming. Its own user message has not been persisted yet.
+        rpc.prompts.clear()
+        find<EditorTextField>(ui).text = "second message"
+        find<PromptPanel>(ui).send()
+        assertTrue("send B never reached the backend", pumpUntil { rpc.prompts.isNotEmpty() })
+        assertEquals("", find<PromptPanel>(ui).text())
+
+        // Turn A ends without completing. This must leave B's pending send untouched.
+        emit(ChatEventDto.TurnClose("ses_test", reason = "interrupted"))
+        assertTrue(
+            "turn A never ended",
+            pumpUntil { controller().model.state is SessionState.TurnEnded },
+        )
+
+        // B now fails before its message was ever persisted, so its draft must come back.
+        emit(ChatEventDto.Error("ses_test", MessageErrorDto(type = "unknown", message = "B rejected")))
+        assertTrue(
+            "B's failure never reached the model",
+            pumpUntil { controller().model.state is SessionState.Error },
+        )
+
+        assertEquals("second message", find<PromptPanel>(ui).text())
+    }
 }

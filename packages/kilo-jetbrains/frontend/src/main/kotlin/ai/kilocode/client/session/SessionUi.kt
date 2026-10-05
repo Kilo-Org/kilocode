@@ -831,6 +831,10 @@ class SessionUi(
                 is SessionModelEvent.MessageRemoved,
                 is SessionModelEvent.HistoryLoaded,
                 is SessionModelEvent.Cleared -> {
+                    // A reload can surface the pending send's own message without a MessageAdded,
+                    // so re-check here too; otherwise the retained draft would linger until the
+                    // next submit.
+                    confirmPendingSend()
                     syncDock()
                     // Covers opening a session with an existing board, and this session's own first
                     // board post; a subagent's post is caught by the busy->idle probe instead.
@@ -1435,11 +1439,17 @@ class SessionUi(
         // Restore the typed prompt when the send never produced a persisted message (rejected
         // synchronously, or prompt_async's 204-then-session.error case). A turn that fails after its
         // user message was already persisted has nothing to restore -- it's in the transcript -- so
-        // this only fires while a send is still pending. A user-initiated stop (TurnEnded) drops the
-        // pending send without restoring; that was a deliberate cancel, not a failure.
-        if (pendingSend != null && (state is SessionState.Error || state is SessionState.TurnEnded)) {
+        // this only fires while a send is still pending.
+        //
+        // TurnEnded deliberately does not participate. It is session-scoped with no turn identity,
+        // and clearing on it is never correct: if the pending send's own message is persisted,
+        // confirmPendingSend() has already released it, and if it is not, the turn that just ended
+        // belongs to an earlier send (a turn only starts once its user message exists). Acting here
+        // would destroy the draft of a send queued behind a still-streaming turn, since the prompt
+        // box stays enabled while busy.
+        if (pendingSend != null && state is SessionState.Error) {
             pendingSend = null
-            if (state is SessionState.Error) prompt.restoreLastSubmission() else prompt.clearLastSubmission()
+            prompt.restoreLastSubmission()
         }
         prompt.setBusy(busy)
         dock?.setBusy(busy)
