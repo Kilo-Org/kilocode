@@ -773,6 +773,7 @@ export const dict = {
   "ui.sessionTurn.status.consideringNextSteps": "Volgende stappen overwegen...",
 
   "dialog.model.noProviders": "Geen providers",
+  "dialog.model.unavailable": "Kilo-modellen niet beschikbaar",
 
   "prompt.placeholder.connecting": "Verbinden met server...",
   "prompt.placeholder.default":

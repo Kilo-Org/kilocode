@@ -46,6 +46,10 @@ export interface SessionInfo {
   title?: string
   createdAt: string
   updatedAt: string
+  /** Agent the server last ran this session with. */
+  agent?: string
+  /** Model and effort the server last ran this session with; no variant means Default. */
+  model?: { providerID: string; modelID: string; variant?: string }
   goal?: {
     text: string
     active: boolean

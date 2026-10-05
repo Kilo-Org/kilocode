@@ -764,6 +764,7 @@ export const dict = {
   "ui.sessionTurn.status.consideringNextSteps": "در حال بررسی مراحل بعدی...",
 
   "dialog.model.noProviders": "هیچ ارائه‌دهنده‌ای وجود ندارد",
+  "dialog.model.unavailable": "مدل‌های Kilo در دسترس نیستند",
 
   "prompt.placeholder.connecting": "در حال اتصال به سرور...",
   "prompt.placeholder.default": "پیامی بنویسید... (Enter برای ارسال، Shift+Enter برای خط جدید)",

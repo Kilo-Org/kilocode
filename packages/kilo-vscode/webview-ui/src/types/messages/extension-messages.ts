@@ -548,6 +548,8 @@ export interface ProvidersLoadedMessage {
   defaultSelection: ModelSelection
   authMethods: Record<string, ProviderAuthMethod[]>
   authStates: Record<string, ProviderAuthState>
+  /** The organization's Kilo catalog failed to load, so Kilo has no models to pick. */
+  kiloUnavailable?: boolean
 }
 
 export interface AgentsLoadedMessage {
@@ -1183,13 +1185,6 @@ export interface ModelSelectorExpandedLoadedMessage {
 export interface FavoritesLoadedMessage {
   type: "favoritesLoaded"
   favorites: ModelSelection[]
-}
-
-// Preferred and per-mode model selections loaded from persisted state (extension → webview)
-export interface ModelSelectionsLoadedMessage {
-  type: "modelSelectionsLoaded"
-  selections: Record<string, ModelSelection>
-  preferred?: ModelSelection & { variant?: string }
 }
 
 export interface AgentManagerBranchesMessage {
@@ -1884,7 +1879,6 @@ export type ExtensionMessage =
   | RecentsLoadedMessage
   | ModelSelectorExpandedLoadedMessage
   | FavoritesLoadedMessage
-  | ModelSelectionsLoadedMessage
   | LanguageChangedMessage
   | ContinueInWorktreeProgressMessage
   | WorktreeStatsLoadedMessage

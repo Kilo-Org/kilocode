@@ -783,6 +783,7 @@ export const dict = {
   "ui.sessionTurn.status.consideringNextSteps": "Overvejer næste trin...",
 
   "dialog.model.noProviders": "Ingen udbydere",
+  "dialog.model.unavailable": "Kilo-modeller er ikke tilgængelige",
 
   "prompt.placeholder.connecting": "Opretter forbindelse til server...",
   "prompt.placeholder.error": "Forbindelse mislykkedes. Tjek outputpanelet eller genstart udvidelsen.",

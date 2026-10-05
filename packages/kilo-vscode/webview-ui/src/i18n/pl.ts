@@ -741,6 +741,7 @@ export const dict = {
   "ui.sessionTurn.status.consideringNextSteps": "Rozważam następne kroki...",
 
   "dialog.model.noProviders": "Brak dostawców",
+  "dialog.model.unavailable": "Modele Kilo niedostępne",
 
   "prompt.placeholder.connecting": "Łączenie z serwerem...",
   "prompt.placeholder.error": "Połączenie nie powiodło się. Sprawdź panel wyjściowy lub uruchom ponownie rozszerzenie.",

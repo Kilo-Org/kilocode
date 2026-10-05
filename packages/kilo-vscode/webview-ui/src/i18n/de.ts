@@ -795,6 +795,7 @@ export const dict = {
   "ui.sessionTurn.status.consideringNextSteps": "Überlege nächste Schritte...",
 
   "dialog.model.noProviders": "Keine Anbieter",
+  "dialog.model.unavailable": "Kilo-Modelle nicht verfügbar",
 
   "prompt.placeholder.connecting": "Verbindung zum Server wird hergestellt...",
   "prompt.placeholder.error":

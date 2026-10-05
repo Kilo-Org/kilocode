@@ -713,6 +713,7 @@ export const dict = {
   "ui.sessionTurn.status.consideringNextSteps": "正在考慮下一步...",
 
   "dialog.model.noProviders": "沒有供應商",
+  "dialog.model.unavailable": "Kilo 模型無法使用",
 
   "prompt.placeholder.connecting": "正在連線至伺服器...",
   "prompt.placeholder.error": "連線失敗。請檢查輸出面板或重新啟動擴充功能。",

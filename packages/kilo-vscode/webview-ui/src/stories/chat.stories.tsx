@@ -1550,6 +1550,7 @@ const usageProvider = {
   authMethods: () => ({}),
   authStates: () => ({}),
   isModelValid: () => true,
+  kiloUnavailable: () => false,
 }
 
 const usageStory = (open: boolean) => () => (

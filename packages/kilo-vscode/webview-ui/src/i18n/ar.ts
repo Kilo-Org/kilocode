@@ -767,6 +767,7 @@ export const dict = {
   "ui.sessionTurn.status.consideringNextSteps": "...جارٍ التفكير في الخطوات التالية",
 
   "dialog.model.noProviders": "لا يوجد موفرون",
+  "dialog.model.unavailable": "نماذج Kilo غير متاحة",
 
   "prompt.placeholder.connecting": "جارٍ الاتصال بالخادم...",
   "prompt.placeholder.error": "فشل الاتصال. تحقق من لوحة الإخراج أو أعد تشغيل الإضافة.",

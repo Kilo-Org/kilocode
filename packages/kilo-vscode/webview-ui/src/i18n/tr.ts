@@ -771,6 +771,7 @@ export const dict = {
   "ui.sessionTurn.status.consideringNextSteps": "Sonraki adımları değerlendiriyor...",
 
   "dialog.model.noProviders": "Sağlayıcı yok",
+  "dialog.model.unavailable": "Kilo modelleri kullanılamıyor",
 
   "prompt.placeholder.connecting": "Sunucuya bağlanılıyor...",
   "prompt.placeholder.default":

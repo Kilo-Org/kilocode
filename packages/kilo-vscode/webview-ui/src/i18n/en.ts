@@ -759,6 +759,7 @@ export const dict = {
   "ui.sessionTurn.status.consideringNextSteps": "Considering next steps...",
 
   "dialog.model.noProviders": "No providers",
+  "dialog.model.unavailable": "Kilo models unavailable",
 
   "prompt.placeholder.connecting": "Connecting to server...",
   "prompt.placeholder.default": "Type a message, @ to mention files... (Enter to send, Shift+Enter for new line)",
