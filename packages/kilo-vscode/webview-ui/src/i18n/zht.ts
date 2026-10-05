@@ -449,6 +449,7 @@ export const dict = {
   "provider.custom.models.toggleImages": "切換所有模型的圖像",
   "provider.custom.models.remove": "移除模型",
   "provider.custom.models.add": "新增模型",
+  "provider.custom.models.fetch.button": "取得模型",
   "provider.custom.models.fetch.authError": "驗證失敗。請檢查上方的 API 金鑰後重試。",
   "provider.custom.models.fetch.empty": "此伺服器上未找到模型。",
   "provider.custom.models.fetch.added": "已新增 {{count}} 個模型。",
@@ -857,6 +858,9 @@ export const dict = {
   "settings.sandboxing.writablePaths.description":
     "沙盒允許寫入的額外檔案系統路徑（例如 /tmp、/var/log）。沙盒啟用後，這些路徑會與預設可寫路徑合併。",
   "settings.experimental.multiProject.title": "多專案 Agent Manager",
+  "settings.experimental.conversationPromptHistory.title": "依對話區分的提示歷史",
+  "settings.experimental.conversationPromptHistory.description":
+    "為每個對話單獨保存提示歷史(ArrowUp/ArrowDown),而不是在所有對話間共用同一份。",
   "settings.experimental.claudeMigration.title": "Claude Code 遷移",
   "settings.experimental.claudeMigration.description":
     "一次性匯入受支援的全域 CLAUDE.md 指示、簡單技能和已停用的 MCP 定義。不會修改原始 Claude 檔案；啟用後請重新啟動後端。",

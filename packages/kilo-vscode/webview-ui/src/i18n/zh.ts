@@ -489,6 +489,7 @@ export const dict = {
   "provider.custom.models.toggleImages": "切换所有模型的图像",
   "provider.custom.models.remove": "移除模型",
   "provider.custom.models.add": "添加模型",
+  "provider.custom.models.fetch.button": "获取模型",
   "provider.custom.models.fetch.authError": "认证失败。请检查上方的 API 密钥后重试。",
   "provider.custom.models.fetch.empty": "此服务器上未找到模型。",
   "provider.custom.models.fetch.added": "已添加 {{count}} 个模型。",
@@ -897,6 +898,9 @@ export const dict = {
   "settings.sandboxing.writablePaths.description":
     "沙盒允许写入的额外文件系统路径（例如 /tmp、/var/log）。沙盒启用后，这些路径会与默认可写路径合并。",
   "settings.experimental.multiProject.title": "多项目 Agent Manager",
+  "settings.experimental.conversationPromptHistory.title": "按对话区分的提示历史",
+  "settings.experimental.conversationPromptHistory.description":
+    "为每个对话单独保存提示历史(ArrowUp/ArrowDown),而不是在所有对话间共享同一份。",
   "settings.experimental.claudeMigration.title": "Claude Code 迁移",
   "settings.experimental.claudeMigration.description":
     "一次性导入受支持的全局 CLAUDE.md 指令、简单技能和已禁用的 MCP 定义。不会修改原始 Claude 文件；启用后请重启后端。",

@@ -131,6 +131,7 @@ export const SortableClosableTab: Component<
     id: string
     onCloseOthers: () => void
     onCloseToRight?: () => void
+    menuLeading?: JSX.Element
   }
 > = (props) => (
   <SortableTabContainer id={props.id}>
@@ -139,6 +140,7 @@ export const SortableClosableTab: Component<
       onCloseOthers={props.onCloseOthers}
       onCloseToRight={props.onCloseToRight}
       closeable={props.closeable}
+      leading={props.menuLeading}
       closeShortcut={
         props.closeKeybind ? (
           <span class="am-menu-shortcut">

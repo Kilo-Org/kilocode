@@ -465,6 +465,7 @@ export const dict = {
   "provider.custom.models.toggleImages": "Перемкнути зображення для всіх",
   "provider.custom.models.remove": "Видалити модель",
   "provider.custom.models.add": "Додати модель",
+  "provider.custom.models.fetch.button": "Отримати моделі",
   "provider.custom.models.fetch.authError": "Автентифікація не вдалася. Перевірте API-ключ вище і спробуйте ще раз.",
   "provider.custom.models.fetch.empty": "На цьому сервері моделей не знайдено.",
   "provider.custom.models.fetch.added": "Додано {{count}} моделей.",
@@ -930,6 +931,9 @@ export const dict = {
   "settings.sandboxing.writablePaths.description":
     "Додаткові шляхи файлової системи, у які дозволено запис у пісочниці (наприклад, /tmp, /var/log). Вони об'єднуються зі шляхами запису за замовчуванням, коли пісочниця активна.",
   "settings.experimental.multiProject.title": "Мультипроєктний Agent Manager",
+  "settings.experimental.conversationPromptHistory.title": "Історія промптів для кожної розмови",
+  "settings.experimental.conversationPromptHistory.description":
+    "Зберігати історію промптів (ArrowUp/ArrowDown) окремо для кожної розмови замість однієї спільної історії для всіх.",
   "settings.experimental.claudeMigration.title": "Міграція Claude Code",
   "settings.experimental.claudeMigration.description":
     "Одноразово імпортуйте підтримувані глобальні інструкції CLAUDE.md, прості навички та вимкнені визначення MCP. Оригінальні файли Claude не змінюються; після ввімкнення перезапустіть бекенд.",

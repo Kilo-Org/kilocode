@@ -462,6 +462,7 @@ export const dict = {
   "provider.custom.models.toggleImages": "تبديل الصور للكل",
   "provider.custom.models.remove": "إزالة النموذج",
   "provider.custom.models.add": "إضافة نموذج",
+  "provider.custom.models.fetch.button": "جلب النماذج",
   "provider.custom.models.fetch.authError": "فشلت المصادقة. تحقق من مفتاح API أعلاه وحاول مرة أخرى.",
   "provider.custom.models.fetch.empty": "لم يتم العثور على نماذج على هذا الخادم.",
   "provider.custom.models.fetch.added": "تمت إضافة {{count}} نموذج(نماذج).",
@@ -915,6 +916,9 @@ export const dict = {
   "settings.sandboxing.writablePaths.description":
     "مسارات نظام ملفات إضافية يسمح صندوق الرمل بالكتابة إليها (مثل /tmp، /var/log). يتم دمجها مع مسارات الكتابة الافتراضية عندما يكون صندوق الرمل نشطًا.",
   "settings.experimental.multiProject.title": "إدارة متعددة المشاريع",
+  "settings.experimental.conversationPromptHistory.title": "سجل مطالبات لكل محادثة",
+  "settings.experimental.conversationPromptHistory.description":
+    "إبقاء سجل مطالبات الإدخال (استدعاء بالسهمين لأعلى/لأسفل) منفصلاً لكل محادثة بدلاً من مشاركة سجل واحد بين جميع المحادثات.",
   "settings.experimental.claudeMigration.title": "ترحيل Claude Code",
   "settings.experimental.claudeMigration.description":
     "استورد مرة واحدة تعليمات CLAUDE.md العامة المدعومة والمهارات البسيطة وتعريفات MCP المعطلة. تبقى ملفات Claude الأصلية دون تغيير؛ أعد تشغيل الخلفية بعد التفعيل.",

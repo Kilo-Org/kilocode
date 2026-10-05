@@ -510,6 +510,7 @@ export const dict = {
   "provider.custom.models.toggleImages": "Переключить изображения для всех",
   "provider.custom.models.remove": "Удалить модель",
   "provider.custom.models.add": "Добавить модель",
+  "provider.custom.models.fetch.button": "Получить модели",
   "provider.custom.models.fetch.authError": "Ошибка аутентификации. Проверьте API-ключ выше и попробуйте снова.",
   "provider.custom.models.fetch.empty": "На этом сервере модели не найдены.",
   "provider.custom.models.fetch.added": "Добавлено {{count}} модель(ей).",
@@ -935,6 +936,9 @@ export const dict = {
   "settings.sandboxing.writablePaths.description":
     "Дополнительные пути файловой системы, в которые разрешена запись в песочнице (например, /tmp, /var/log). Они объединяются с путями записи по умолчанию при активной песочнице.",
   "settings.experimental.multiProject.title": "Мультипроектный Agent Manager",
+  "settings.experimental.conversationPromptHistory.title": "История промптов для каждого разговора",
+  "settings.experimental.conversationPromptHistory.description":
+    "Хранить историю промптов (ArrowUp/ArrowDown) отдельно для каждого разговора вместо одной общей истории для всех.",
   "settings.experimental.claudeMigration.title": "Миграция Claude Code",
   "settings.experimental.claudeMigration.description":
     "Однократно импортируйте поддерживаемые глобальные инструкции CLAUDE.md, простые навыки и отключённые определения MCP. Исходные файлы Claude не изменяются; после включения перезапустите backend.",

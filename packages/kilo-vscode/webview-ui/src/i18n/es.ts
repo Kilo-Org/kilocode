@@ -516,6 +516,7 @@ export const dict = {
   "provider.custom.models.toggleImages": "Alternar imagen para todos",
   "provider.custom.models.remove": "Eliminar modelo",
   "provider.custom.models.add": "Añadir modelo",
+  "provider.custom.models.fetch.button": "Obtener modelos",
   "provider.custom.models.fetch.authError":
     "Autenticación fallida. Verifica la clave de API arriba e intenta de nuevo.",
   "provider.custom.models.fetch.empty": "No se encontraron modelos en este servidor.",
@@ -949,6 +950,9 @@ export const dict = {
   "settings.sandboxing.writablePaths.description":
     "Rutas del sistema de archivos adicionales donde el sandbox permite escritura (por ej., /tmp, /var/log). Se combinan con las rutas de escritura predeterminadas cuando el sandbox está activo.",
   "settings.experimental.multiProject.title": "Agent Manager Multi-Proyecto",
+  "settings.experimental.conversationPromptHistory.title": "Historial de prompts por conversación",
+  "settings.experimental.conversationPromptHistory.description":
+    "Mantén el historial de prompts (ArrowUp/ArrowDown) separado para cada conversación en lugar de compartir un único historial entre todas.",
   "settings.experimental.claudeMigration.title": "Migración de Claude Code",
   "settings.experimental.claudeMigration.description":
     "Importar una vez las instrucciones globales CLAUDE.md compatibles, habilidades simples y definiciones MCP desactivadas. Los archivos originales de Claude no se modifican; reinicia el backend después de activar.",
