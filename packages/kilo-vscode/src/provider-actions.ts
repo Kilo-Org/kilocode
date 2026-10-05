@@ -112,7 +112,18 @@ export async function fetchProviderData(client: KiloClient, dir: string) {
     storedKeys,
     organizationId,
     ready: !!kiloAuth,
+    unavailable: catalogUnavailable(response.failed, all, organizationId),
   }
+}
+
+/** An organization's Kilo catalog failed to load, so Kilo has no models to pick. */
+function catalogUnavailable(
+  failed: string[] | undefined,
+  all: ReadonlyArray<{ id: string; models: Record<string, unknown> }>,
+  organizationId: string | null | undefined,
+) {
+  if (!organizationId || !failed?.includes(KILO_PROVIDER_ID)) return false
+  return Object.keys(all.find((item) => item.id === KILO_PROVIDER_ID)?.models ?? {}).length === 0
 }
 
 /**

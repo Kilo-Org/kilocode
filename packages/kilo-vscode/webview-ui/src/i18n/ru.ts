@@ -203,6 +203,8 @@ export const dict = {
   "prompt.action.send.blocked": "Сначала ответьте на ожидающий вопрос или отклоните его",
   "prompt.action.send.recording": "Расшифровать и отправить",
   "prompt.action.stop": "Остановить",
+  "prompt.action.stop.background": "Остановить основного агента. Фоновые агенты продолжат работу.",
+  "prompt.agents.show": "Показать фоновых агентов",
   "prompt.action.enhance": "Улучшить промпт",
   "prompt.paste.expand": "Нажмите, чтобы развернуть вставленный текст",
   "prompt.action.autoApprove.enable": "Включить автоодобрение",
@@ -508,6 +510,7 @@ export const dict = {
   "provider.custom.models.toggleImages": "Переключить изображения для всех",
   "provider.custom.models.remove": "Удалить модель",
   "provider.custom.models.add": "Добавить модель",
+  "provider.custom.models.fetch.button": "Получить модели",
   "provider.custom.models.fetch.authError": "Ошибка аутентификации. Проверьте API-ключ выше и попробуйте снова.",
   "provider.custom.models.fetch.empty": "На этом сервере модели не найдены.",
   "provider.custom.models.fetch.added": "Добавлено {{count}} модель(ей).",
@@ -778,6 +781,7 @@ export const dict = {
   "ui.sessionTurn.status.consideringNextSteps": "Продумываю следующие шаги...",
 
   "dialog.model.noProviders": "Нет провайдеров",
+  "dialog.model.unavailable": "Модели Kilo недоступны",
 
   "prompt.placeholder.connecting": "Подключение к серверу...",
   "prompt.placeholder.error": "Не удалось подключиться. Проверьте панель вывода или перезапустите расширение.",
@@ -933,6 +937,9 @@ export const dict = {
   "settings.sandboxing.writablePaths.description":
     "Дополнительные пути файловой системы, в которые разрешена запись в песочнице (например, /tmp, /var/log). Они объединяются с путями записи по умолчанию при активной песочнице.",
   "settings.experimental.multiProject.title": "Мультипроектный Agent Manager",
+  "settings.experimental.conversationPromptHistory.title": "История промптов для каждого разговора",
+  "settings.experimental.conversationPromptHistory.description":
+    "Хранить историю промптов (ArrowUp/ArrowDown) отдельно для каждого разговора вместо одной общей истории для всех.",
   "settings.experimental.claudeMigration.title": "Миграция Claude Code",
   "settings.experimental.claudeMigration.description":
     "Однократно импортируйте поддерживаемые глобальные инструкции CLAUDE.md, простые навыки и отключённые определения MCP. Исходные файлы Claude не изменяются; после включения перезапустите backend.",
@@ -1312,14 +1319,12 @@ export const dict = {
   "task.todos.allDone": "{{count}} задач выполнено",
   "task.backgroundAgents.running.one": "1 фоновый агент",
   "task.backgroundAgents.running.many": "Фоновых агентов: {{count}}",
-  "task.backgroundAgents.more": "+{{count}} ещё",
   "task.backgroundAgents.open": "Открыть фонового агента",
   "task.backgroundAgents.openAll": "Открыть всех фоновых агентов",
   "task.backgroundAgents.cancel": "Остановить",
   "task.backgroundAgents.continueInBackground": "Продолжить в фоне",
   "task.backgroundAgents.waiting": "Фоновому агенту требуется ваш ввод",
   "task.backgroundAgents.needsInput": "Требуется ввод",
-  "task.backgroundAgents.dismiss": "Скрыть",
   "task.backgroundAgents.clearFinished": "Очистить завершённые",
   "task.backgroundAgents.summary": "Фоновые агенты: {{running}} из {{total}} выполняются",
   "task.backgroundAgents.status.running": "Выполняется",
@@ -1328,6 +1333,8 @@ export const dict = {
   "task.backgroundAgents.status.error": "Ошибка",
   "task.backgroundAgents.untitled": "Фоновый агент",
   "task.backgroundAgents.stopAll": "Остановить всех ({{count}})",
+  "task.backgroundAgents.finished": "Фоновые агенты завершили работу",
+  "task.stop": "Остановить субагента",
   "settings.saveBar.unsavedChanges": "Несохранённые изменения",
   "settings.saveBar.discard": "Отменить",
   "settings.saveBar.save": "Сохранить",

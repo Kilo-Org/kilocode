@@ -423,7 +423,7 @@ try {
     assert.equal(actual?.providerID, expected.providerID)
     assert.equal(actual?.modelID, expected.modelID)
   }
-  const writes = () => sent.filter((item) => item.type === "persistModelSelection" || item.type === "persistRecents")
+  const writes = () => sent.filter((item) => item.type === "persistRecents")
   const requests = () =>
     sent.filter((item) => ["sendMessage", "sendCommand", "importAndSend", "compact"].includes(item.type))
   const catalog = async (
@@ -567,34 +567,33 @@ try {
   choice(value.selected(), auto)
   value.selectModel(personal.providerID, personal.modelID)
   await settle()
-  assert.equal(writes().length, 2)
+  assert.equal(writes().length, 1)
   choice(value.selected(), personal)
   value.setSessionModel("selection", personal.providerID, personal.modelID)
   value.setCurrentSessionID("selection")
   const remembered = writes().slice()
-  await catalog("org-a", [first.modelID, recommended.modelID], recommended.modelID)
-  choice(value.selected(), recommended)
-  choice(value.selected("selection"), recommended)
+  await catalog("org-a", [personal.modelID, first.modelID, recommended.modelID], recommended.modelID)
+  choice(value.selected(), personal)
+  choice(value.selected("selection"), personal)
   choice(value.modelForAgent("code"), recommended)
   await catalog(null, [auto.modelID, personal.modelID])
   choice(value.selected(), personal)
   choice(value.modelForAgent("code"), personal)
   assert.deepEqual(writes(), remembered)
 
-  await emit({ type: "modelSelectionsLoaded", selections: {} })
   await emit({ type: "recentsLoaded", recents: [auto] })
-  choice(value.selected(), personal)
-  setSettings({ model: "kilo/personal" })
+  setSettings({ agent: { code: { model: "kilo/personal" } } })
   await settle()
-  setSettings({ model: "kilo/a-recommended" })
-  await catalog("org-a", [first.modelID, recommended.modelID], recommended.modelID)
-  choice(value.selected(), recommended)
+  choice(value.modelForAgent("code"), personal)
+  choice(value.selected("fresh"), personal)
+  choice(value.selected(), personal)
   setSettings({})
-  await catalog(null, [auto.modelID, personal.modelID])
+  await settle()
+  choice(value.modelForAgent("code"), auto)
   choice(value.selected(), personal)
   assert.deepEqual(writes(), remembered)
 
-  await catalog("org-a", [first.modelID, recommended.modelID], recommended.modelID)
+  await catalog("org-a", [personal.modelID, first.modelID, recommended.modelID], recommended.modelID)
   await emit({
     type: "messagesLoaded",
     sessionID: "history",
@@ -608,7 +607,7 @@ try {
       },
     ],
   })
-  choice(value.selected("history"), recommended)
+  choice(value.selected("history"), personal)
   await catalog(null, [auto.modelID, personal.modelID])
   choice(value.selected("history"), personal)
   assert.deepEqual(writes(), remembered)
@@ -734,23 +733,19 @@ try {
   assert.deepEqual(writes(), remembered)
 
   value.setCurrentSessionID(undefined)
-  await emit({ type: "modelSelectionsLoaded", selections: { code: personal } })
-  choice(value.selected(), recommended)
-  await catalog(null, [auto.modelID, personal.modelID])
+  // The composer keeps its own pick; config edits apply to scopes without picks.
+  await catalog(null, [auto.modelID, personal.modelID, first.modelID])
   choice(value.selected(), personal)
-  await catalog("org-a", [auto.modelID, first.modelID, recommended.modelID], recommended.modelID)
-  await emit({ type: "modelSelectionsLoaded", selections: { code: auto } })
-  choice(value.selected(), auto)
   setSettings({ agent: { code: { model: "kilo/z-first" } } })
   await settle()
-  choice(value.modelForAgent("code"), auto)
-  choice(value.selected(), auto)
+  choice(value.selected(), personal)
+  choice(value.selected("fresh"), first)
   setSettings({})
-  await emit({ type: "modelSelectionsLoaded", selections: {} })
-  choice(value.selected(), recommended)
+  await settle()
+  choice(value.selected("fresh"), auto)
   assert.deepEqual(writes(), remembered)
 
-  // Mode changes preserve both explicit and inherited session choices, including Default.
+  // Mode switches re-resolve per agent; each agent keeps its own pick in the scope.
   await catalog("org-a", [personal.modelID, first.modelID, recommended.modelID], recommended.modelID)
   setSettings({ agent: { ask: { model: "kilo/z-first", variant: "low" } } })
   for (const effort of ["high", ""]) {
@@ -758,13 +753,14 @@ try {
       value.setSessionAgent(scope, "code")
       value.setSessionModel(scope, personal.providerID, personal.modelID)
       value.selectVariant(effort, scope)
-      const before = sent.length
-      for (const agent of ["ask", "code", "ask"]) {
-        value.selectAgent(agent, scope)
-        await settle()
-        assert.deepEqual(value.submission(scope), { model: personal, variant: effort, agent })
-      }
-      assert.equal(sent.length, before, "Switching mode must not persist a different preference")
+      const before = writes().length
+      value.selectAgent("ask", scope)
+      await settle()
+      assert.deepEqual(value.submission(scope), { model: first, variant: "low", agent: "ask" })
+      value.selectAgent("code", scope)
+      await settle()
+      assert.deepEqual(value.submission(scope), { model: personal, variant: effort, agent: "code" })
+      assert.equal(writes().length, before, "Switching mode must not push recents")
       await emit({ type: "providersLoading" })
       value.selectAgent("code", scope)
       await catalog("org-a", [personal.modelID, first.modelID, recommended.modelID], recommended.modelID)
@@ -776,9 +772,9 @@ try {
   })
   value.setSessionAgent("inherited-mode", "code")
   await emit({ type: "messagesLoaded", sessionID: "inherited-mode", messages: [] })
-  const inherited = value.submission("inherited-mode")
+  assert.deepEqual(value.submission("inherited-mode"), { model: personal, variant: "high", agent: "code" })
   value.selectAgent("ask", "inherited-mode")
-  assert.deepEqual(value.submission("inherited-mode"), { ...inherited, agent: "ask" })
+  assert.deepEqual(value.submission("inherited-mode"), { model: first, variant: "low", agent: "ask" })
   setSettings({})
 
   const snapshot = (scope?: string) =>
@@ -801,9 +797,8 @@ try {
       cleared: value.userClearedSession(),
     })
   await catalog("org-a", [personal.modelID, first.modelID, recommended.modelID], recommended.modelID)
-  await emit({ type: "modelSelectionsLoaded", selections: { code: first, ask: recommended } })
   value.selectAgent("ask")
-  value.selectVariant("low")
+  value.selectVariant("high")
   for (const scope of [undefined, "ses_command", "ses_background-command", "command-draft"]) {
     value.setCurrentSessionID(undefined)
     value.selectAgent("code")
@@ -854,9 +849,8 @@ try {
   }
 
   for (const configured of [false, true]) {
-    const scope = `ses_command-${configured ? "configured" : "preferred"}`
+    const scope = `ses_command-${configured ? "configured" : "recommended"}`
     setSettings(configured ? { agent: { ask: { model: "kilo/z-first", variant: "low" } } } : {})
-    await emit({ type: "modelSelectionsLoaded", selections: { code: first, ask: recommended } })
     value.setCurrentSessionID(scope)
     value.setSessionAgent(scope, "code")
     value.setSessionModel(scope, personal.providerID, personal.modelID)
@@ -881,14 +875,13 @@ try {
     assert(request?.type === "sendCommand")
     assert.equal(request.sessionID, scope)
     assert.equal(request.agent, "ask")
-    assert.equal(request.modelID, personal.modelID)
-    assert.equal(request.variant, "high")
+    assert.equal(request.modelID, configured ? first.modelID : recommended.modelID)
+    assert.equal(request.variant, configured ? "low" : "high")
     assert.equal(value.selectedAgent(scope), "ask")
-    choice(value.selected(scope), personal)
+    choice(value.selected(scope), configured ? first : recommended)
   }
   setSettings({})
   await catalog(null, [auto.modelID, personal.modelID, first.modelID, recommended.modelID])
-  await emit({ type: "modelSelectionsLoaded", selections: {} })
   value.setCurrentSessionID(undefined)
   value.selectAgent("ask")
   await settle()
@@ -919,9 +912,9 @@ try {
   )
   const configured = requests().at(-1)
   assert(configured?.type === "sendCommand")
-  assert.equal(configured.modelID, first.modelID)
-  assert.equal(configured.variant, "high")
-  assert.deepEqual(value.submission("ses_command-cached"), { model: first, variant: "high", agent: "ask" })
+  assert.equal(configured.modelID, recommended.modelID)
+  assert.equal(configured.variant, "low")
+  assert.deepEqual(value.submission("ses_command-cached"), { model: recommended, variant: "low", agent: "ask" })
 
   assert.equal(
     value.sendCommand(
@@ -944,10 +937,10 @@ try {
 
   setSettings({})
   await catalog("org-a", [personal.modelID, first.modelID, recommended.modelID], recommended.modelID)
-  await emit({ type: "modelSelectionsLoaded", selections: { code: first, ask: recommended } })
+  await emit({ type: "variantsLoaded", variants: { "agent/ask/kilo/z-first": "high" } })
   value.setCurrentSessionID(undefined)
   value.selectAgent("ask")
-  choice(value.selected(), first)
+  choice(value.selected(), recommended)
   assert.equal(value.variantForAgent("ask", first), "high")
   value.setCurrentSessionID("selection")
   assert.equal(
@@ -969,10 +962,10 @@ try {
   assert(pending.draftID)
   assert.equal(pending.sessionID, undefined)
   assert.equal(pending.agent, "ask")
-  assert.equal(pending.modelID, first.modelID)
+  assert.equal(pending.modelID, recommended.modelID)
   assert.equal(pending.variant, "high")
   assert.equal(value.selectedAgent(pending.draftID), "ask")
-  choice(value.selected(pending.draftID), first)
+  choice(value.selected(pending.draftID), recommended)
   assert.equal(value.currentVariant(pending.draftID), "high")
   assert.equal(value.variantForAgent("ask", first), "high")
   const persisted = sent.length
@@ -1002,10 +995,11 @@ try {
   choice(value.selected(accepted.draftID), personal)
   assert.equal(value.selectedAgent(accepted.draftID), "ask")
   assert.equal(value.currentVariant(accepted.draftID), "high")
-  choice(value.modelForAgent("ask"), first)
+  choice(value.modelForAgent("ask"), recommended)
+  // Explicit picks push recents but never persist a shared per-agent model.
   assert.equal(
-    sent.slice(persisted).some((message) => message.type === "persistModelSelection"),
-    false,
+    sent.slice(persisted).some((message) => message.type === "persistRecents"),
+    true,
   )
   await emit({ type: "sessionCreated", session: info("ses_command-promoted"), draftID: accepted.draftID })
   assert.equal(Object.hasOwn(value.allMessages(), accepted.draftID), false)
@@ -1049,7 +1043,7 @@ try {
     value.clearCurrentSession()
     value.selectAgent("ask")
     assert.equal(value.selectedAgent(), "ask")
-    choice(value.selected(), first)
+    choice(value.selected(), recommended)
     const usage = JSON.stringify(value.modelUsageHistory())
     const recent = JSON.stringify(value.recentModels())
     const start = sent.length
@@ -1075,7 +1069,7 @@ try {
     )
     assert.equal(value.currentSessionID(), "ses_goal-draft")
     assert.equal(value.selectedAgent(), "ask")
-    choice(value.selected(), first)
+    choice(value.selected(), recommended)
     await emit({ type: "sessionCommandCompleted", messageID: command.messageID })
     assert.equal(value.submitting(), false)
     assert.equal(JSON.stringify(value.modelUsageHistory()), usage)
@@ -2166,9 +2160,8 @@ try {
       mode: "focus",
     },
   )
-  // An explicit next-session combo becomes the shared default, not a change to open sessions.
+  // Draft picks stay per scope and per agent; they never change other open scopes.
   await catalog("org-a", [personal.modelID, first.modelID, recommended.modelID], recommended.modelID)
-  await emit({ type: "modelSelectionsLoaded", selections: {} })
   setSettings({
     agent: { code: { model: "kilo/z-first", variant: "low" }, ask: { model: "kilo/a-recommended", variant: "low" } },
   })
@@ -2176,22 +2169,27 @@ try {
   value.setSessionAgent("preference-active", "ask")
   await emit({ type: "messagesLoaded", sessionID: "preference-active", messages: [] })
   const combo = value.submission("preference-active")
+  assert.deepEqual(combo, { model: recommended, variant: "low", agent: "ask" })
   for (const scope of ["pending:preferred", "sidebar-pending:preferred"]) {
     value.setSessionAgent(scope, "code")
     value.selectModel(personal.providerID, personal.modelID, scope)
     value.selectVariant("high", scope)
-    assert.deepEqual(value.preferredSelection(), { ...personal, variant: "high" })
     assert.deepEqual(value.submission("preference-active"), combo)
-    const saved = sent.findLast((item) => item.type === "persistModelSelection")
-    assert.deepEqual(saved, { type: "persistModelSelection", agent: "code", ...personal, variant: "high" })
-    for (const agent of ["code", "ask"]) {
-      choice(value.modelForAgent(agent), personal)
-      assert.equal(value.variantForAgent(agent, personal), "high")
-    }
+    assert.deepEqual(value.submission(scope), { model: personal, variant: "high", agent: "code" })
+    assert(
+      sent.some(
+        (message) =>
+          message.type === "persistVariant" && message.key === "agent/code/kilo/personal" && message.value === "high",
+      ),
+    )
+    choice(value.modelForAgent("code"), first)
+    choice(value.modelForAgent("ask"), recommended)
     value.selectAgent("ask", scope)
-    assert.deepEqual(value.submission(scope), { model: personal, variant: "high", agent: "ask" })
+    assert.deepEqual(value.submission(scope), { model: recommended, variant: "low", agent: "ask" })
+    value.selectAgent("code", scope)
+    assert.deepEqual(value.submission(scope), { model: personal, variant: "high", agent: "code" })
     value.selectVariant(undefined, scope)
-    assert.deepEqual(value.preferredSelection(), { ...personal, variant: "" })
+    assert.equal(value.currentVariant(scope), undefined)
     assert.equal(value.variantForAgent("code", personal), undefined)
     await emit({ type: "providersLoading" })
     value.selectAgent("code", scope)
@@ -2201,34 +2199,31 @@ try {
     assert.deepEqual(value.submission(scope), { model: personal, variant: "", agent: "code" })
     assert.deepEqual(value.submission("preference-active"), combo)
   }
-  value.rememberSelection("ask", first, "high")
-  assert.deepEqual(value.submission("preference-active"), combo)
-  assert.deepEqual(value.submission("pending:preferred"), { model: personal, variant: "", agent: "code" })
-  choice(value.modelForAgent("code"), first)
-  assert.equal(value.variantForAgent("code", first), "high")
+  value.setSessionAgent("comparison-only", "code")
   value.setSessionModel("comparison-only", personal.providerID, personal.modelID)
   value.setSessionVariant("comparison-only", personal.providerID, personal.modelID, "low")
-  assert.deepEqual(value.preferredSelection(), { ...first, variant: "high" })
+  assert.deepEqual(value.submission("comparison-only"), { model: personal, variant: "low", agent: "code" })
 
-  // Restore the persisted combo through the real host-message boundary.
-  await emit({ type: "modelSelectionsLoaded", selections: { ask: first }, preferred: { ...first, variant: "high" } })
+  // The no-session composer keeps its own per-agent pick. A model switch
+  // carries the effort it displayed (Code's configured "low"), not the
+  // remembered "high" that configuration shadows.
   value.setCurrentSessionID(undefined)
   value.selectAgent("code")
   choice(value.selected(), first)
-  assert.equal(value.currentVariant(), "high")
+  assert.equal(value.currentVariant(), "low")
   value.selectModel(personal.providerID, personal.modelID)
   choice(value.selected(), personal)
-  assert.equal(value.currentVariant(), "high")
-  assert.deepEqual(value.preferredSelection(), { ...personal, variant: "high" })
+  assert.equal(value.currentVariant(), "low")
   assert.deepEqual(value.submission("preference-active"), combo)
 
-  // Retention must not assign defaults to unopened or still-loading historical sessions.
+  // Retention must not assign picks to unopened or still-loading historical sessions.
   await emit({
     type: "sessionsLoaded",
     sessions: [...unwrap(value.sessions()), info("unopened-preference"), info("loading-preference")],
   })
   value.setCurrentSessionID("loading-preference")
-  value.rememberSelection("code", first, "low")
+  value.setSessionAgent("pending:retained", "code")
+  value.selectModel(personal.providerID, personal.modelID, "pending:retained")
   for (const id of ["unopened-preference", "loading-preference"]) {
     await emit({
       type: "messagesLoaded",
@@ -2247,37 +2242,17 @@ try {
     assert.deepEqual(value.submission(id), { model: personal, variant: "high", agent: "ask" })
   }
 
-  // Pin raw inherited preferences, never a temporary catalog fallback or mapped effort.
-  value.rememberSelection("code", personal, "high")
-  for (const missing of ["model", "effort"]) {
-    const id = `pending:inherited-${missing}`
+  // Drafts resolve the remembered effort for their (agent, model) pair.
+  {
+    const id = "pending:effort"
     value.setSessionAgent(id, "code")
-    if (missing === "model") await catalog("org-b", [first.modelID], first.modelID)
-    if (missing === "effort") await catalog("org-a", [personal.modelID], personal.modelID, true, ["low"])
+    value.selectVariant("high", id)
+    assert.equal(value.currentVariant(id), "high")
     value.selectAgent("ask", id)
-    await catalog("org-a", [personal.modelID, first.modelID, recommended.modelID], recommended.modelID)
-    assert.deepEqual(value.submission(id), { model: personal, variant: "high", agent: "ask" })
+    assert.equal(value.currentVariant(id), "low")
+    value.selectAgent("code", id)
+    assert.equal(value.currentVariant(id), "high")
   }
-
-  // A delayed startup response cannot erase a choice made while preferences load.
-  setSharing(false)
-  await settle()
-  setSharing(true)
-  await settle()
-  const fresh = peer.value
-  assert(fresh)
-  assert.equal(fresh.preferencesReady(), false)
-  const loadingPreferences = sent.filter((item) => item.type === "requestModelSelections").length
-  await emit({ type: "extensionDataReady" })
-  assert.equal(sent.filter((item) => item.type === "requestModelSelections").length, loadingPreferences + 1)
-  fresh.selectModel(personal.providerID, personal.modelID)
-  fresh.selectVariant("high")
-  await emit({ type: "modelSelectionsLoaded", selections: { code: first }, preferred: { ...first, variant: "low" } })
-  await emit({ type: "variantsLoaded", variants: { "agent/code/kilo/personal": "low" } })
-  choice(fresh.selected(), personal)
-  assert.equal(fresh.currentVariant(), "high")
-  assert.deepEqual(fresh.preferredSelection(), { ...personal, variant: "high" })
-  assert.equal(fresh.preferencesReady(), true)
 
   // Unset effort defers to the new model; only a real choice can override its preference.
   const outgoing = { providerID: "kilo", modelID: "unset-effort" }
@@ -2292,13 +2267,17 @@ try {
         const instance = peer.value
         assert(instance)
         instance.selectAgent("code")
-        setSettings(target === "configured" ? { agent: { code: { model: "kilo/z-first", variant: "high" } } } : {})
-        await emit({ type: "modelSelectionsLoaded", selections: { code: outgoing } })
+        setSettings(target === "configured" ? { agent: { code: { model: "kilo/unset-effort", variant: "high" } } } : {})
         await emit({
           type: "variantsLoaded",
           variants: target === "remembered" ? { "agent/code/kilo/z-first": "high" } : {},
         })
-        if (scope) instance.setSessionAgent(scope, "code")
+        if (scope) {
+          instance.setSessionAgent(scope, "code")
+          instance.setSessionModel(scope, outgoing.providerID, outgoing.modelID)
+        } else {
+          instance.selectModel(outgoing.providerID, outgoing.modelID)
+        }
         if (effort !== undefined) instance.selectVariant(effort, scope)
         choice(instance.selected(scope), outgoing)
         instance.selectModel(first.providerID, first.modelID, scope)
@@ -2308,9 +2287,6 @@ try {
           { model: first, variant: expected, agent: "code" },
           `${target}/${effort}/${scope}`,
         )
-        if (!scope || scope.startsWith("pending:")) {
-          assert.deepEqual(instance.preferredSelection(), { ...first, variant: expected })
-        }
       }
     }
   }
@@ -2324,7 +2300,6 @@ try {
     const instance = peer.value
     assert(instance)
     setSettings({})
-    await emit({ type: "modelSelectionsLoaded", selections: { code: first } })
     await emit({ type: "variantsLoaded", variants: {} })
     const untrack = instance.trackScopes(() => ["pending:default-one", "pending:default-two"])
     assert.equal(instance.currentVariant("pending:default-one"), undefined)
@@ -2335,7 +2310,7 @@ try {
     untrack()
   }
 
-  // Generated command drafts are known-new before mode overrides resolve their effort.
+  // Generated command drafts resolve the target agent's config before sending.
   {
     setSharing(false)
     await settle()
@@ -2346,10 +2321,8 @@ try {
     setSettings({
       agent: { code: { model: "kilo/z-first", variant: "high" }, ask: { model: "kilo/unset-effort", variant: "low" } },
     })
-    await emit({ type: "modelSelectionsLoaded", selections: {} })
     await emit({ type: "variantsLoaded", variants: {} })
     instance.selectAgent("code")
-    assert.equal(instance.preferredSelection(), undefined)
     assert.equal(
       instance.sendCommand(
         "review-test",
@@ -2366,17 +2339,18 @@ try {
     )
     const request = sent.findLast((item) => item.type === "sendCommand")
     assert(request)
-    assert.equal(request.modelID, first.modelID)
-    assert.equal(request.variant, "high")
+    assert.equal(request.modelID, outgoing.modelID)
+    assert.equal(request.variant, "low")
     assert.equal(request.agent, "ask")
-    choice(instance.selected(request.draftID), first)
+    choice(instance.selected(request.draftID), outgoing)
   }
 
-  // Real sidebar tab inventories include untouched background drafts and reclaim closed drafts.
+  // Real sidebar tab inventories keep per-tab picks; closed tabs are reclaimed.
   setSharing(false)
   await catalog("org-a", [personal.modelID, first.modelID, outgoing.modelID], first.modelID)
   value.clearCurrentSession()
-  value.rememberSelection("code", first, "high")
+  setSettings({})
+  await settle()
   setTabbed(true)
   await settle()
   const sidebar = tabs.value
@@ -2388,18 +2362,18 @@ try {
   value.selectVariant("low", edited)
   choice(value.selected(untouched), first)
   assert.equal(value.currentVariant(untouched), "high")
+  assert.equal(value.currentVariant(edited), "low")
   sidebar.close(untouched)
   sidebar.close(edited)
   await settle()
-  for (const model of [first, personal, first]) {
-    value.rememberSelection("code", model, "low")
-    choice(value.selected(untouched), model)
-    choice(value.selected(edited), model)
-    assert.equal(value.currentVariant(edited), "low")
-  }
+  choice(value.selected(edited), first)
+  const reopened = sidebar.add()
+  value.selectModel(personal.providerID, personal.modelID, reopened)
+  choice(value.selected(reopened), personal)
+  assert.equal(value.currentVariant(reopened), "high")
 
-  // Closing a sending draft retains its combo through promotion, or drops it after failure.
-  for (const accepted of [false, true]) {
+  // Closing a sending draft retains its combo through promotion.
+  {
     const id = sidebar.add()
     value.selectModel(first.providerID, first.modelID, id)
     value.selectVariant("high", id)
@@ -2408,39 +2382,34 @@ try {
     assert(request)
     sidebar.close(id)
     await settle()
-    value.rememberSelection("code", personal, "low")
     assert.equal(value.isSubmitting(id), true)
     choice(value.selected(id), first)
     assert.equal(value.currentVariant(id), "high")
-    if (accepted) {
-      await emit({ type: "sessionCreated", session: info("promoted-closed-draft"), draftID: id })
-      choice(value.selected("promoted-closed-draft"), first)
-      assert.equal(value.currentVariant("promoted-closed-draft"), "high")
-      await emit({ type: "sessionCommandCompleted", messageID: request.messageID })
-    }
-    if (!accepted) await emit({ ...request, type: "sendMessageFailed", error: "Test rejection" })
-    choice(value.selected(id), personal)
-    assert.equal(value.currentVariant(id), "low")
+    await emit({ type: "sessionCreated", session: info("promoted-closed-draft"), draftID: id })
+    choice(value.selected("promoted-closed-draft"), first)
+    assert.equal(value.currentVariant("promoted-closed-draft"), "high")
+    await emit({ type: "sessionCommandCompleted", messageID: request.messageID })
   }
   setTabbed(false)
   await settle()
 
-  // Agent Manager retains all projects, not historical cache entries or unknown unloaded sessions.
+  // Agent Manager retains all projects; tracked tabs keep their own picks and pruning forgets closed ones.
   {
     value.clearCurrentSession()
-    value.rememberSelection("code", first, "high")
     const projects = createProjectRegistry({ persisted: {}, activeId: () => "one" })
     projects.ensure("one").tabs.set(["pending:project-one"])
     projects.ensure("two").tabs.set(["pending:project-two", "background-empty", "unknown-unloaded"])
     const untrack = value.trackScopes(projects.scopes)
     await emit({ type: "messagesLoaded", sessionID: "background-empty", messages: [] })
     await emit({ type: "messagesLoaded", sessionID: "closed-history-cache", messages: [] })
-    value.rememberSelection("code", personal, "low")
-    for (const id of ["pending:project-one", "pending:project-two", "background-empty"]) {
-      choice(value.selected(id), first)
-      assert.equal(value.currentVariant(id), "high")
-    }
-    choice(value.selected("closed-history-cache"), personal)
+    value.selectModel(first.providerID, first.modelID, "pending:project-one")
+    value.selectVariant("high", "pending:project-one")
+    choice(value.selected("pending:project-one"), first)
+    assert.equal(value.currentVariant("pending:project-one"), "high")
+    // Retain pins the other open tabs so this pick cannot change what they display.
+    choice(value.selected("pending:project-two"), first)
+    assert.equal(value.currentVariant("pending:project-two"), "high")
+    choice(value.selected("background-empty"), first)
     await emit({
       type: "messagesLoaded",
       sessionID: "unknown-unloaded",
@@ -2459,14 +2428,52 @@ try {
     assert.equal(value.currentVariant("unknown-unloaded"), "high")
     projects.prune(new Set(["one"]))
     await settle()
-    choice(value.selected("pending:project-two"), personal)
-    choice(value.selected("pending:project-one"), first)
+    choice(value.selected("pending:project-two"), first)
     untrack()
     await settle()
-    choice(value.selected("pending:project-one"), personal)
-    value.rememberSelection("code", outgoing, "low")
-    choice(value.selected("closed-history-cache"), outgoing)
-    choice(value.selected("background-empty"), first)
+    choice(value.selected("pending:project-one"), first)
+  }
+
+  // One agent resolver for every scope. With a session open, no-scope reads and
+  // writes both target it (QuestionDock, the worktree dialog). Drafts resolve the
+  // model and effort of the agent they send. Server session info shows a
+  // reopened session's agent and model before its history loads, without
+  // overriding a local choice. The worktree dialog's effort matches chat's.
+  {
+    setSettings({
+      agent: { code: { model: "kilo/z-first", variant: "high" }, ask: { model: "kilo/unset-effort", variant: "low" } },
+    })
+    await emit({ type: "variantsLoaded", variants: { "agent/code/kilo/z-first": "low" } })
+    value.clearCurrentSession()
+    value.selectAgent("ask")
+    value.setCurrentSessionID("ses_resolver")
+    value.setSessionAgent("ses_resolver", "code")
+    assert.equal(value.selectedAgent(), "code")
+    value.selectAgent("ask")
+    assert.equal(value.selectedAgent("ses_resolver"), "ask")
+    assert.deepEqual(value.submission("ses_resolver"), { model: outgoing, variant: "low", agent: "ask" })
+
+    value.setCurrentSessionID(undefined)
+    assert.equal(value.selectedAgent("pending:resolver"), "ask")
+    assert.deepEqual(value.submission("pending:resolver"), { model: outgoing, variant: "low", agent: "ask" })
+
+    await emit({
+      type: "sessionsLoaded",
+      sessions: [
+        ...unwrap(value.sessions()),
+        { ...info("ses_info"), agent: "ask", model: { ...first, variant: "high" } },
+      ],
+    })
+    assert.equal(value.selectedAgent("ses_info"), "ask")
+    choice(value.selected("ses_info"), first)
+    assert.equal(value.currentVariant("ses_info"), "high")
+    value.setSessionAgent("ses_info", "code")
+    await emit({ type: "sessionUpdated", session: { ...info("ses_info"), agent: "ask" } })
+    assert.equal(value.selectedAgent("ses_info"), "code")
+
+    assert.equal(value.variantForAgent("code", first), "high")
+    assert.equal(value.variantPreference("code", first), value.variantForAgent("code", first))
+    setSettings({})
   }
   // Repeated goal promotion removes empty draft caches without overwriting arriving session history.
   for (const [index, args] of ["pause", "do X"].entries()) {

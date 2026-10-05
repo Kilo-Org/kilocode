@@ -111,6 +111,7 @@ import {
   scrollDrafts,
 } from "../../utils/draft-store"
 import { ReviewComments } from "./ReviewComments"
+import { useRunningAgents } from "./AgentStack"
 import { BrowserReferences } from "./BrowserReferences"
 import { CodeContextChips } from "./CodeContextChips"
 import {
@@ -246,7 +247,11 @@ function MentionItemContent(props: { item: MentionResult }) {
       <span class="file-mention-name">
         {item.type === "folder" ? `${fileName(item.value)}/` : fileName(item.value)}
       </span>
-      <span class="file-mention-dir">{dirName(item.value)}</span>
+      {/* Without the folder name, two roots holding the same relative path render identically. */}
+      <Show when={item.root}>{(root) => <span class="file-mention-root">{root()}</span>}</Show>
+      {/* Shown relative to its own folder: the badge already names the folder, and
+          the absolute form would spell out the local filesystem layout instead. */}
+      <span class="file-mention-dir">{dirName(item.relative ?? item.value)}</span>
     </>
   )
 }
@@ -297,7 +302,9 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     ref.focus()
     adjustHeight()
   })
-  const history = usePromptHistory()
+  // Shared across conversations unless the user opts in to a separate history per conversation.
+  const scoped = () => settings().conversationPromptHistory === true
+  const history = usePromptHistory(sid, () => !scoped())
   let textareaRef: HTMLTextAreaElement | undefined
   let highlightRef: HTMLDivElement | undefined
   let dropdownRef: HTMLDivElement | undefined
@@ -326,7 +333,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   const goal = useGoalComposer(draftKey, {
     send: (...args) => session.sendCommand(...args),
     fingerprint: (key) => fingerprint(key),
-    clear: (key) => clearDraft(key),
+    clear: (key, historyKey) => clearDraft(key, undefined, historyKey),
   })
   const fingerprint = (key: string) =>
     JSON.stringify(
@@ -822,6 +829,9 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     (isBusy() || session.currentSession()?.goal?.active) &&
     !hasInput() &&
     speech.state() !== "recording"
+  // Stop only ends the main agent's turn. Say so while background agents run.
+  const agents = useRunningAgents()
+  const stopLabel = () => language.t(agents().length > 0 ? "prompt.action.stop.background" : "prompt.action.stop")
   const isAtEnd = () =>
     textareaRef ? atEnd(textareaRef.selectionStart, textareaRef.selectionEnd, textareaRef.value.length) : false
   const highlightMentions = () => {
@@ -1113,7 +1123,8 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     if (!raw) return
     const source = scopeDraftKey(boxKey(), raw)
     const target = scopeDraftKey(boxKey(), sessionDraftKey(message.session.id))
-    goal.move(source, target)
+    goal.move(source, target, message.session.id)
+    if (message.draftID) history.move(message.draftID, message.session.id)
     const queued = deferred.get(source)
     if (queued) {
       deferred.set(target, [...queued, ...(deferred.get(target) ?? [])])
@@ -1774,16 +1785,12 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       mention.closeMention()
       slash.close()
       ghost.dismiss()
-      goal.send(key, stamp, [
-        "goal",
-        `-- ${message}`,
-        sel?.providerID,
-        sel?.modelID,
-        attachments,
-        pendingId,
-        context,
-        origin ?? null,
-      ])
+      goal.send(
+        key,
+        stamp,
+        ["goal", `-- ${message}`, sel?.providerID, sel?.modelID, attachments, pendingId, context, origin ?? null],
+        id,
+      )
       return
     }
 
@@ -1821,17 +1828,20 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       if (!accepted) return
     }
 
-    clearDraft(key, draft)
+    // `id` was captured before the terminal/git attachment awaits above, so it still
+    // names the conversation this message was actually sent to even if the user has
+    // since switched to a different conversation.
+    clearDraft(key, draft, id)
   }
 
-  const clearDraft = (key: string, value?: string) => {
+  const clearDraft = (key: string, value?: string, historyKey?: string) => {
     if (value === undefined) {
       const active = key === draftKey()
       const source = active ? text() : (drafts.get(key) ?? "")
       const backing = active ? paste.pastes().map((item) => item.text) : (pasteDrafts.get(key) ?? [])
       value = paste.plainTextFor(source, backing).trim()
     }
-    history.append(value)
+    history.append(value, historyKey)
     drafts.delete(key)
     reviewDrafts.delete(key)
     references.delete(key)
@@ -1977,6 +1987,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
                     <div
                       class="file-mention-item"
                       data-type={item.type}
+                      title={"root" in item ? item.value : undefined}
                       classList={{ "file-mention-item--active": index() === mention.mentionIndex() }}
                       onMouseDown={(e) => {
                         e.preventDefault()
@@ -2285,7 +2296,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
               </Tooltip>
             }
           >
-            <Tooltip value={language.t("prompt.action.stop")} placement="top" openDelay={0}>
+            <Tooltip value={stopLabel()} placement="top" openDelay={0}>
               <IconButton
                 icon="stop"
                 variant="ghost"

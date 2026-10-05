@@ -1,6 +1,7 @@
 package ai.kilocode.backend.run
 
 import ai.kilocode.backend.testing.PlainApplicationConfig
+import ai.kilocode.backend.testing.ConfigTypes
 import ai.kilocode.backend.testing.PlainApplicationType
 import com.intellij.execution.BeforeRunTask
 import com.intellij.execution.CommonProgramRunConfigurationParameters
@@ -27,6 +28,13 @@ import org.jdom.Element
 import java.nio.file.Path
 
 class WorktreeRunDelegateTest : BasePlatformTestCase() {
+    private lateinit var types: ConfigTypes
+
+    override fun setUp() {
+        super.setUp()
+        types = ConfigTypes(testRootDisposable).also { it.mask() }
+    }
+
     fun testSupportNamesTheConfigTypeWhenItIsNotModuleBased() {
         val settings = add(register(paramsType("kilo.test.delegate.plain")), "dev")
         assertEquals(
@@ -160,8 +168,7 @@ class WorktreeRunDelegateTest : BasePlatformTestCase() {
 
     fun testPlainIsUnavailableWithoutTheApplicationConfigurationType() {
         // The non-JVM IDE case: no "Application" type is registered, so there is nothing to copy into
-        // and the fallback declines instead of failing. This is also the default test platform, which
-        // ships without the Java plugin.
+        // and the fallback declines instead of failing. setUp hides any real one the test platform ships.
         val settings = add(register(frameworkType("kilo.test.delegate.plain.nojava")), "app")
         val source = settings.configuration as FrameworkConfig
         source.setModule(module)
@@ -178,8 +185,7 @@ class WorktreeRunDelegateTest : BasePlatformTestCase() {
     // ------ fixtures ------
 
     private fun <T : ConfigurationType> register(type: T): T {
-        ConfigurationType.CONFIGURATION_TYPE_EP.point.registerExtension(type, testRootDisposable)
-        return type
+        return types.add(type)
     }
 
     /**

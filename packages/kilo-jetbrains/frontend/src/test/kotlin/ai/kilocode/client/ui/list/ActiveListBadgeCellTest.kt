@@ -43,6 +43,22 @@ class ActiveListBadgeCellTest : BasePlatformTestCase() {
         assertSame(first, cell.icon)
     }
 
+    fun `test a combined badge keeps its joined segments and icon instance`() {
+        val segments = listOf(
+            FilledBadgeIcon.Segment("MCP", UiStyle.Badge.typeMcp(true)),
+            FilledBadgeIcon.Segment("Skill", UiStyle.Badge.typeSkill(true)),
+        )
+        val badge = ActiveListBadge("MCP|Skill", segments = segments)
+        val cell = ActiveListBadgeCell()
+
+        cell.update(badge)
+        val first = assertInstanceOf(cell.icon, FilledBadgeIcon::class.java)
+        cell.update(badge)
+
+        assertEquals(segments, first.segments)
+        assertSame(first, cell.icon)
+    }
+
     fun `test a changed glyph replaces the previous one`() {
         val cell = ActiveListBadgeCell()
         cell.update(ActiveListBadge("", id = "pr-checks", icon = glyph))

@@ -1255,7 +1255,7 @@ describe("WorktreeManager.ensureGitExclude", () => {
 
     const status = await simpleGit(root).raw(["status", "--porcelain", "--untracked-files=all"])
     expect(status.trim()).toBe("")
-    expect(existsSync(path.join(sub, ".kilo", "worktrees"))).toBe(true)
+    expect(existsSync(path.join(sub, ".kilo", "worktrees"))).toBe(false)
   })
 })
 

@@ -207,6 +207,8 @@ export const dict = {
   "prompt.action.send.blocked": "먼저 대기 중인 질문에 답하거나 닫아주세요",
   "prompt.action.send.recording": "텍스트 변환 및 전송",
   "prompt.action.stop": "중지",
+  "prompt.action.stop.background": "메인 에이전트를 중지합니다. 백그라운드 에이전트는 계속 실행됩니다.",
+  "prompt.agents.show": "백그라운드 에이전트 표시",
   "prompt.action.enhance": "프롬프트 개선",
   "prompt.paste.expand": "붙여넣은 텍스트를 확장하려면 클릭",
   "prompt.action.autoApprove.enable": "자동 승인 사용",
@@ -468,6 +470,7 @@ export const dict = {
   "provider.custom.models.toggleImages": "모든 모델의 이미지 전환",
   "provider.custom.models.remove": "모델 제거",
   "provider.custom.models.add": "모델 추가",
+  "provider.custom.models.fetch.button": "모델 가져오기",
   "provider.custom.models.fetch.authError": "인증에 실패했습니다. 위의 API 키를 확인하고 다시 시도하세요.",
   "provider.custom.models.fetch.empty": "이 서버에서 모델을 찾을 수 없습니다.",
   "provider.custom.models.fetch.added": "{{count}}개 모델이 추가되었습니다.",
@@ -774,6 +777,7 @@ export const dict = {
   "ui.sessionTurn.status.consideringNextSteps": "다음 단계 고려 중...",
 
   "dialog.model.noProviders": "공급자 없음",
+  "dialog.model.unavailable": "Kilo 모델을 사용할 수 없음",
 
   "prompt.placeholder.connecting": "서버에 연결 중...",
   "prompt.placeholder.error": "연결에 실패했습니다. 출력 패널을 확인하거나 확장 프로그램을 다시 시작하세요.",
@@ -927,6 +931,9 @@ export const dict = {
   "settings.sandboxing.writablePaths.description":
     "샌드박스에서 쓰기를 허용하는 추가 파일시스템 경로(예: /tmp, /var/log). 샌드박스가 활성화되면 기본 쓰기 가능 경로와 병합됩니다.",
   "settings.experimental.multiProject.title": "멀티 프로젝트 Agent Manager",
+  "settings.experimental.conversationPromptHistory.title": "대화별 프롬프트 기록",
+  "settings.experimental.conversationPromptHistory.description":
+    "프롬프트 기록(ArrowUp/ArrowDown)을 모든 대화에서 공유하지 않고 대화별로 분리하여 유지합니다.",
   "settings.experimental.claudeMigration.title": "Claude Code 마이그레이션",
   "settings.experimental.claudeMigration.description":
     "지원되는 전역 CLAUDE.md 지침, 간단한 스킬 및 비활성화된 MCP 정의를 한 번 가져옵니다. 원본 Claude 파일은 변경되지 않으며 활성화 후 백엔드를 다시 시작해야 합니다.",
@@ -1290,14 +1297,12 @@ export const dict = {
   "task.todos.allDone": "{{count}} 할 일 완료",
   "task.backgroundAgents.running.one": "백그라운드 에이전트 1개",
   "task.backgroundAgents.running.many": "백그라운드 에이전트 {{count}}개",
-  "task.backgroundAgents.more": "+{{count}}개 더",
   "task.backgroundAgents.open": "백그라운드 에이전트 열기",
   "task.backgroundAgents.openAll": "모든 백그라운드 에이전트 열기",
   "task.backgroundAgents.cancel": "중지",
   "task.backgroundAgents.continueInBackground": "백그라운드에서 계속",
   "task.backgroundAgents.waiting": "백그라운드 에이전트에 입력이 필요합니다",
   "task.backgroundAgents.needsInput": "입력 필요",
-  "task.backgroundAgents.dismiss": "닫기",
   "task.backgroundAgents.clearFinished": "완료된 항목 지우기",
   "task.backgroundAgents.summary": "백그라운드 에이전트 {{total}}개 중 {{running}}개 실행 중",
   "task.backgroundAgents.status.running": "실행 중",
@@ -1306,6 +1311,8 @@ export const dict = {
   "task.backgroundAgents.status.error": "오류",
   "task.backgroundAgents.untitled": "백그라운드 에이전트",
   "task.backgroundAgents.stopAll": "모두 중지 ({{count}})",
+  "task.backgroundAgents.finished": "백그라운드 에이전트 완료",
+  "task.stop": "하위 에이전트 중지",
   "settings.saveBar.unsavedChanges": "저장되지 않은 변경 사항",
   "settings.saveBar.discard": "취소",
   "settings.saveBar.save": "저장",

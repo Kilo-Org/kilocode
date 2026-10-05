@@ -206,6 +206,8 @@ export const dict = {
   "prompt.action.send.blocked": "Répondez ou rejetez d'abord la question en attente",
   "prompt.action.send.recording": "Transcrire et envoyer",
   "prompt.action.stop": "Arrêter",
+  "prompt.action.stop.background": "Arrêter l'agent principal. Les agents en arrière-plan continuent de s'exécuter.",
+  "prompt.agents.show": "Afficher les agents en arrière-plan",
   "prompt.action.enhance": "Améliorer le prompt",
   "prompt.paste.expand": "Cliquez pour développer le texte collé",
   "prompt.action.autoApprove.enable": "Activer l'approbation automatique",
@@ -516,6 +518,7 @@ export const dict = {
   "provider.custom.models.toggleImages": "Basculer l'image pour tous",
   "provider.custom.models.remove": "Supprimer le modèle",
   "provider.custom.models.add": "Ajouter un modèle",
+  "provider.custom.models.fetch.button": "Récupérer les modèles",
   "provider.custom.models.fetch.authError": "Échec de l'authentification. Vérifiez la clé API ci-dessus et réessayez.",
   "provider.custom.models.fetch.empty": "Aucun modèle trouvé sur ce serveur.",
   "provider.custom.models.fetch.added": "{{count}} modèle(s) ajouté(s).",
@@ -794,6 +797,7 @@ export const dict = {
   "ui.sessionTurn.status.consideringNextSteps": "Envisage les prochaines étapes...",
 
   "dialog.model.noProviders": "Aucun fournisseur",
+  "dialog.model.unavailable": "Modèles Kilo indisponibles",
 
   "prompt.placeholder.connecting": "Connexion au serveur...",
   "prompt.placeholder.error": "Échec de la connexion. Vérifiez le panneau de sortie ou redémarrez l'extension.",
@@ -959,6 +963,9 @@ export const dict = {
   "settings.sandboxing.writablePaths.description":
     "Chemins système supplémentaires autorisés en écriture par le bac à sable (par ex. /tmp, /var/log). Ils sont fusionnés avec les chemins en écriture par défaut lorsque le bac à sable est actif.",
   "settings.experimental.multiProject.title": "Agent Manager Multi-Projet",
+  "settings.experimental.conversationPromptHistory.title": "Historique des prompts par conversation",
+  "settings.experimental.conversationPromptHistory.description":
+    "Garder l'historique des prompts (ArrowUp/ArrowDown) séparé pour chaque conversation au lieu de partager un seul historique entre toutes les conversations.",
   "settings.experimental.claudeMigration.title": "Migration Claude Code",
   "settings.experimental.claudeMigration.description":
     "Importer une fois les instructions CLAUDE.md globales prises en charge, les compétences simples et les définitions MCP désactivées. Les fichiers Claude d'origine restent inchangés ; redémarrez le backend après activation.",
@@ -1353,14 +1360,12 @@ export const dict = {
   "task.todos.allDone": "{{count}} tâches terminées",
   "task.backgroundAgents.running.one": "1 agent en arrière-plan",
   "task.backgroundAgents.running.many": "{{count}} agents en arrière-plan",
-  "task.backgroundAgents.more": "+{{count}} de plus",
   "task.backgroundAgents.open": "Ouvrir l'agent en arrière-plan",
   "task.backgroundAgents.openAll": "Ouvrir tous les agents en arrière-plan",
   "task.backgroundAgents.cancel": "Arrêter",
   "task.backgroundAgents.continueInBackground": "Continuer en arrière-plan",
   "task.backgroundAgents.waiting": "Un agent en arrière-plan attend votre saisie",
   "task.backgroundAgents.needsInput": "Saisie requise",
-  "task.backgroundAgents.dismiss": "Ignorer",
   "task.backgroundAgents.clearFinished": "Effacer les agents terminés",
   "task.backgroundAgents.summary": "{{running}} agent(s) en arrière-plan sur {{total}} en cours",
   "task.backgroundAgents.status.running": "En cours",
@@ -1369,6 +1374,8 @@ export const dict = {
   "task.backgroundAgents.status.error": "Erreur",
   "task.backgroundAgents.untitled": "Agent en arrière-plan",
   "task.backgroundAgents.stopAll": "Tout arrêter ({{count}})",
+  "task.backgroundAgents.finished": "Agents en arrière-plan terminés",
+  "task.stop": "Arrêter le sous-agent",
   "settings.saveBar.unsavedChanges": "Modifications non enregistrées",
   "settings.saveBar.discard": "Ignorer",
   "settings.saveBar.save": "Enregistrer",

@@ -211,6 +211,8 @@ export const dict = {
   "prompt.action.send.blocked": "Beantworten oder verwerfen Sie zuerst die ausstehende Frage",
   "prompt.action.send.recording": "Transkribieren und senden",
   "prompt.action.stop": "Stopp",
+  "prompt.action.stop.background": "Hauptagent stoppen. Hintergrund-Agenten laufen weiter.",
+  "prompt.agents.show": "Hintergrund-Agenten anzeigen",
   "prompt.action.enhance": "Prompt verbessern",
   "prompt.paste.expand": "Klicken, um eingefügten Text zu erweitern",
   "prompt.action.autoApprove.enable": "Automatische Genehmigung aktivieren",
@@ -521,6 +523,7 @@ export const dict = {
   "provider.custom.models.toggleImages": "Bild für alle umschalten",
   "provider.custom.models.remove": "Modell entfernen",
   "provider.custom.models.add": "Modell hinzufügen",
+  "provider.custom.models.fetch.button": "Modelle abrufen",
   "provider.custom.models.fetch.authError":
     "Authentifizierung fehlgeschlagen. Überprüfen Sie den API-Schlüssel oben und versuchen Sie es erneut.",
   "provider.custom.models.fetch.empty": "Keine Modelle auf diesem Server gefunden.",
@@ -792,6 +795,7 @@ export const dict = {
   "ui.sessionTurn.status.consideringNextSteps": "Überlege nächste Schritte...",
 
   "dialog.model.noProviders": "Keine Anbieter",
+  "dialog.model.unavailable": "Kilo-Modelle nicht verfügbar",
 
   "prompt.placeholder.connecting": "Verbindung zum Server wird hergestellt...",
   "prompt.placeholder.error":
@@ -957,6 +961,9 @@ export const dict = {
   "settings.sandboxing.writablePaths.description":
     "Zusätzliche Dateisystempfade, in die die Sandbox Schreibvorgänge erlaubt (z. B. /tmp, /var/log). Diese werden mit den Standard-Schreibpfaden zusammengeführt, wenn die Sandbox aktiv ist.",
   "settings.experimental.multiProject.title": "Multi-Projekt Agent Manager",
+  "settings.experimental.conversationPromptHistory.title": "Prompt-Verlauf pro Unterhaltung",
+  "settings.experimental.conversationPromptHistory.description":
+    "Den Prompt-Verlauf (ArrowUp/ArrowDown) für jede Unterhaltung getrennt halten, statt einen gemeinsamen Verlauf für alle Unterhaltungen zu nutzen.",
   "settings.experimental.claudeMigration.title": "Claude-Code-Migration",
   "settings.experimental.claudeMigration.description":
     "Unterstützte globale CLAUDE.md-Anweisungen, einfache Skills und deaktivierte MCP-Definitionen einmalig importieren. Originale Claude-Dateien bleiben unverändert; Backend nach dem Aktivieren neu starten.",
@@ -1344,14 +1351,12 @@ export const dict = {
   "task.todos.allDone": "{{count}} Aufgaben erledigt",
   "task.backgroundAgents.running.one": "1 Hintergrund-Agent",
   "task.backgroundAgents.running.many": "{{count}} Hintergrund-Agenten",
-  "task.backgroundAgents.more": "+{{count}} weitere",
   "task.backgroundAgents.open": "Hintergrund-Agent öffnen",
   "task.backgroundAgents.openAll": "Alle Hintergrund-Agenten öffnen",
   "task.backgroundAgents.cancel": "Stoppen",
   "task.backgroundAgents.continueInBackground": "Im Hintergrund fortsetzen",
   "task.backgroundAgents.waiting": "Ein Hintergrund-Agent benötigt deine Eingabe",
   "task.backgroundAgents.needsInput": "Eingabe erforderlich",
-  "task.backgroundAgents.dismiss": "Ausblenden",
   "task.backgroundAgents.clearFinished": "Abgeschlossene löschen",
   "task.backgroundAgents.summary": "{{running}} von {{total}} Hintergrund-Agenten aktiv",
   "task.backgroundAgents.status.running": "Läuft",
@@ -1360,6 +1365,8 @@ export const dict = {
   "task.backgroundAgents.status.error": "Fehler",
   "task.backgroundAgents.untitled": "Hintergrund-Agent",
   "task.backgroundAgents.stopAll": "Alle stoppen ({{count}})",
+  "task.backgroundAgents.finished": "Hintergrund-Agenten abgeschlossen",
+  "task.stop": "Subagent stoppen",
   "settings.saveBar.unsavedChanges": "Nicht gespeicherte Änderungen",
   "settings.saveBar.discard": "Verwerfen",
   "settings.saveBar.save": "Speichern",

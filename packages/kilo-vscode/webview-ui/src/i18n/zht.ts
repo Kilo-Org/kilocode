@@ -197,6 +197,8 @@ export const dict = {
   "prompt.action.send.blocked": "請先回答或忽略待處理的問題",
   "prompt.action.send.recording": "轉錄並傳送",
   "prompt.action.stop": "停止",
+  "prompt.action.stop.background": "停止主 Agent。背景 Agent 會繼續執行。",
+  "prompt.agents.show": "顯示背景 Agent",
   "prompt.action.enhance": "改善提示詞",
   "prompt.paste.expand": "點擊展開貼上的文字",
   "prompt.action.autoApprove.enable": "啟用自動核准",
@@ -447,6 +449,7 @@ export const dict = {
   "provider.custom.models.toggleImages": "切換所有模型的圖像",
   "provider.custom.models.remove": "移除模型",
   "provider.custom.models.add": "新增模型",
+  "provider.custom.models.fetch.button": "取得模型",
   "provider.custom.models.fetch.authError": "驗證失敗。請檢查上方的 API 金鑰後重試。",
   "provider.custom.models.fetch.empty": "此伺服器上未找到模型。",
   "provider.custom.models.fetch.added": "已新增 {{count}} 個模型。",
@@ -710,6 +713,7 @@ export const dict = {
   "ui.sessionTurn.status.consideringNextSteps": "正在考慮下一步...",
 
   "dialog.model.noProviders": "沒有供應商",
+  "dialog.model.unavailable": "Kilo 模型無法使用",
 
   "prompt.placeholder.connecting": "正在連線至伺服器...",
   "prompt.placeholder.error": "連線失敗。請檢查輸出面板或重新啟動擴充功能。",
@@ -855,6 +859,9 @@ export const dict = {
   "settings.sandboxing.writablePaths.description":
     "沙盒允許寫入的額外檔案系統路徑（例如 /tmp、/var/log）。沙盒啟用後，這些路徑會與預設可寫路徑合併。",
   "settings.experimental.multiProject.title": "多專案 Agent Manager",
+  "settings.experimental.conversationPromptHistory.title": "依對話區分的提示歷史",
+  "settings.experimental.conversationPromptHistory.description":
+    "為每個對話單獨保存提示歷史(ArrowUp/ArrowDown),而不是在所有對話間共用同一份。",
   "settings.experimental.claudeMigration.title": "Claude Code 遷移",
   "settings.experimental.claudeMigration.description":
     "一次性匯入受支援的全域 CLAUDE.md 指示、簡單技能和已停用的 MCP 定義。不會修改原始 Claude 檔案；啟用後請重新啟動後端。",
@@ -1242,14 +1249,12 @@ export const dict = {
   "task.todos.allDone": "{{count}} 個待辦已完成",
   "task.backgroundAgents.running.one": "1 個背景 Agent",
   "task.backgroundAgents.running.many": "{{count}} 個背景 Agent",
-  "task.backgroundAgents.more": "+{{count}} 個",
   "task.backgroundAgents.open": "開啟背景 Agent",
   "task.backgroundAgents.openAll": "開啟所有背景 Agent",
   "task.backgroundAgents.cancel": "停止",
   "task.backgroundAgents.continueInBackground": "在背景繼續",
   "task.backgroundAgents.waiting": "背景 Agent 需要你的輸入",
   "task.backgroundAgents.needsInput": "需要輸入",
-  "task.backgroundAgents.dismiss": "關閉",
   "task.backgroundAgents.clearFinished": "清除已完成",
   "task.backgroundAgents.summary": "{{running}}/{{total}} 個背景 Agent 執行中",
   "task.backgroundAgents.status.running": "執行中",
@@ -1258,6 +1263,8 @@ export const dict = {
   "task.backgroundAgents.status.error": "錯誤",
   "task.backgroundAgents.untitled": "背景 Agent",
   "task.backgroundAgents.stopAll": "全部停止 ({{count}})",
+  "task.backgroundAgents.finished": "背景 Agent 已完成",
+  "task.stop": "停止子代理",
   "settings.saveBar.unsavedChanges": "未儲存的變更",
   "settings.saveBar.discard": "捨棄",
   "settings.saveBar.save": "儲存",

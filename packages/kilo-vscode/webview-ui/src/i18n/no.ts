@@ -207,6 +207,8 @@ export const dict = {
   "prompt.action.send.blocked": "Svar på eller avvis det ventende spørsmålet først",
   "prompt.action.send.recording": "Transkriber og send",
   "prompt.action.stop": "Stopp",
+  "prompt.action.stop.background": "Stopp hovedagenten. Bakgrunnsagenter fortsetter å kjøre.",
+  "prompt.agents.show": "Vis bakgrunnsagenter",
   "prompt.action.enhance": "Forbedre prompt",
   "prompt.paste.expand": "Klikk for å utvide den innlimte teksten",
   "prompt.action.autoApprove.enable": "Aktiver automatisk godkjenning",
@@ -474,6 +476,7 @@ export const dict = {
   "provider.custom.models.toggleImages": "Veksle bilde for alle",
   "provider.custom.models.remove": "Fjern modell",
   "provider.custom.models.add": "Legg til modell",
+  "provider.custom.models.fetch.button": "Hent modeller",
   "provider.custom.models.fetch.authError": "Autentisering mislyktes. Sjekk API-nøkkelen ovenfor og prøv igjen.",
   "provider.custom.models.fetch.empty": "Ingen modeller funnet på denne serveren.",
   "provider.custom.models.fetch.added": "{{count}} modell(er) lagt til.",
@@ -742,6 +745,7 @@ export const dict = {
   "ui.sessionTurn.status.consideringNextSteps": "Vurderer neste steg...",
 
   "dialog.model.noProviders": "Ingen leverandører",
+  "dialog.model.unavailable": "Kilo-modeller er utilgjengelige",
 
   "prompt.placeholder.connecting": "Kobler til server...",
   "prompt.placeholder.error": "Tilkobling mislyktes. Sjekk utdatapanelet eller start utvidelsen på nytt.",
@@ -898,6 +902,9 @@ export const dict = {
   "settings.sandboxing.writablePaths.description":
     "Ytterligere filsystembaner som sandkassen tillater skriving til (f.eks. /tmp, /var/log). Disse flettes med de standardskrivbare banene når sandkassen er aktiv.",
   "settings.experimental.multiProject.title": "Multi-prosjekt Agent Manager",
+  "settings.experimental.conversationPromptHistory.title": "Promptlogg per samtale",
+  "settings.experimental.conversationPromptHistory.description":
+    "Hold promptloggen (ArrowUp/ArrowDown) adskilt for hver samtale i stedet for å dele én logg på tvers av alle samtaler.",
   "settings.experimental.claudeMigration.title": "Claude Code-migrering",
   "settings.experimental.claudeMigration.description":
     "Importer støttede globale CLAUDE.md-instruksjoner, enkle ferdigheter og deaktiverte MCP-definisjoner én gang. Originale Claude-filer forblir uendret; start backend på nytt etter aktivering.",
@@ -1310,14 +1317,12 @@ export const dict = {
   "task.todos.allDone": "{{count}} oppgaver fullført",
   "task.backgroundAgents.running.one": "1 bakgrunnsagent",
   "task.backgroundAgents.running.many": "{{count}} bakgrunnsagenter",
-  "task.backgroundAgents.more": "+{{count}} flere",
   "task.backgroundAgents.open": "Åpne bakgrunnsagent",
   "task.backgroundAgents.openAll": "Åpne alle bakgrunnsagenter",
   "task.backgroundAgents.cancel": "Stopp",
   "task.backgroundAgents.continueInBackground": "Fortsett i bakgrunnen",
   "task.backgroundAgents.waiting": "En bakgrunnsagent trenger innspill fra deg",
   "task.backgroundAgents.needsInput": "Innspill kreves",
-  "task.backgroundAgents.dismiss": "Avvis",
   "task.backgroundAgents.clearFinished": "Fjern fullførte",
   "task.backgroundAgents.summary": "{{running}} av {{total}} bakgrunnsagenter kjører",
   "task.backgroundAgents.status.running": "Kjører",
@@ -1326,6 +1331,8 @@ export const dict = {
   "task.backgroundAgents.status.error": "Feil",
   "task.backgroundAgents.untitled": "Bakgrunnsagent",
   "task.backgroundAgents.stopAll": "Stopp alle ({{count}})",
+  "task.backgroundAgents.finished": "Bakgrunnsagenter er ferdige",
+  "task.stop": "Stopp underagent",
   "settings.saveBar.unsavedChanges": "Ulagrede endringer",
   "settings.saveBar.discard": "Forkast",
   "settings.saveBar.save": "Lagre",

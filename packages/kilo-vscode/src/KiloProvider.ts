@@ -67,7 +67,7 @@ import { ToolInputStream } from "./kilo-provider/tool-input-stream"
 import { handleSidebarWorktreeMessage } from "./kilo-provider/sidebar-worktree"
 import { parseMessageFiles, type MessageFile } from "./kilo-provider/message-files"
 import { renameSession } from "./kilo-provider/rename-session"
-import { handleFileSearch } from "./kilo-provider/file-search"
+import { handleFileSearch, type SearchRoot } from "./kilo-provider/file-search"
 import { handleSessionSearch } from "./kilo-provider/session-search"
 import { handleFilePicker } from "./kilo-provider/file-picker"
 import { watchFontSizeConfig } from "./kilo-provider/font-size"
@@ -97,7 +97,6 @@ import {
 } from "./services/autocomplete/settings"
 import { routeEarlyMessage } from "./kilo-provider/early-message"
 import * as Board from "./kilo-provider/session-board"
-import * as ModelState from "./kilo-provider/model-state"
 import { handleModelUsageMessage } from "./kilo-provider/model-usage"
 import { handleForkSession } from "./kilo-provider/fork-session"
 import { openConfig } from "./kilo-provider/open-config"
@@ -163,6 +162,7 @@ import {
   resolveStoredKey,
 } from "./provider-actions"
 import type { StoredProviderKey } from "./provider-actions"
+import { createCatalogRetry } from "./kilo-provider/catalog-retry"
 import { AnacondaDesktopBridge } from "./anaconda-desktop/bridge"
 import { fetchOpenAIModels, FetchModelsError } from "./shared/fetch-models"
 import type { Agent } from "@kilocode/sdk/v2/client"
@@ -423,6 +423,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private providersQueued = false
   private providersRetry = false
   private providersGeneration = 0
+  /** Re-fetch providers while an organization's Kilo catalog is unavailable. */
+  private readonly catalogRetry = createCatalogRetry({ refresh: () => void this.fetchAndSendProviders() })
   private sandboxRevision = 0
   private cachedAgentsMessage: unknown = null
   /** Cached skillsLoaded payload so requestSkills can be served before client is ready */
@@ -532,8 +534,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private autoApproveBridge: ReturnType<typeof createAutoApproveBridge> | null = null
   private readonly marketplace = new MarketplaceService()
 
-  private ignoreController: FileIgnoreController | null = null
-  private ignoreControllerDir: string | null = null
+  /** Workspace folders plus any session directories recently asked about. */
+  private static readonly IGNORE_CONTROLLER_LIMIT = 16
+  private readonly ignoreControllers = new Map<string, Promise<FileIgnoreController>>()
   private chatAutocomplete: ChatTextAreaAutocomplete | null = null
   private projectDirectory: string | null | undefined
   private settingsGeneration = 0
@@ -2557,6 +2560,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         context: this.contextSessionID,
         dir: (id) => this.getWorkspaceDirectory(id),
         open: (dir) => this.getOpenTabPaths(dir),
+        roots: () => this.getWorkspaceRoots(),
+        allowed: (dir, files) => this.filterIgnored(dir, files),
         post: (msg) => this.postMessage(msg),
       })
       return
@@ -2814,10 +2819,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           return
         }
         try {
-          const { response, authMethods, authStates, storedKeys, organizationId, ready } = await fetchProviderData(
-            client,
-            this.getWorkspaceDirectory(),
-          )
+          const { response, authMethods, authStates, storedKeys, organizationId, ready, unavailable } =
+            await fetchProviderData(client, this.getWorkspaceDirectory())
           if (generation !== this.providersGeneration || client !== this.client) {
             if (!this.providersQueued) return
             generation = this.providersGeneration
@@ -2839,11 +2842,13 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
             ),
             authMethods,
             authStates,
+            kiloUnavailable: unavailable,
           }
           this.cachedProvidersMessage = message
           this.cachedProvidersDirectory = this.settingsDirectory()
           this.providersRetry = false
           this.postMessage(message)
+          this.catalogRetry.update(unavailable)
         } catch (error) {
           if (generation !== this.providersGeneration) {
             if (!this.providersQueued) return
@@ -2852,6 +2857,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           }
           // A rejected fetch leaves nothing cached, so retry on the next connect.
           if (!this.cachedProvidersMessage) this.providersRetry = true
+          // Keep backing off while the last loaded Kilo catalog was unavailable.
+          const last = this.cachedProvidersMessage as { kiloUnavailable?: boolean } | null
+          this.catalogRetry.update(last?.kiloUnavailable === true)
           console.error("[Kilo New] KiloProvider: Failed to fetch providers:", error)
         }
         if (!this.providersQueued) return
@@ -4208,6 +4216,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private claudeMigrationSetting(): boolean {
     return vscode.workspace.getConfiguration("kilo-code.new.experimental").get<boolean>("claudeMigration", false)
   }
+  private conversationPromptHistorySetting(): boolean {
+    return vscode.workspace
+      .getConfiguration("kilo-code.new.experimental")
+      .get<boolean>("conversationPromptHistory", false)
+  }
   private browserAutomationSetting(): boolean {
     return vscode.workspace.getConfiguration("kilo-code.new.experimental").get<boolean>("browserAutomation", false)
   }
@@ -4292,6 +4305,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       multiProject: this.multiProjectSetting(),
       claudeMigration: this.claudeMigrationSetting(),
       browserAutomation: this.browserAutomationSetting(),
+      conversationPromptHistory: this.conversationPromptHistorySetting(),
       agentManagerBrowserUseSystemChrome: integratedBrowserUseSystemChrome(),
       "agentManager.autoBranchNaming": naming.get<boolean>("autoBranchNaming", true),
       "agentManager.branchPrefix": naming.get<string>("branchPrefix", ""),
@@ -5046,7 +5060,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.postMessage(buildAutoApprovalReasonSettingMessage())
     this.postMessage(buildPushFixesSettingMessage())
     this.sendWorkStyle()
-    await ModelState.reset(this.client, (msg) => this.postMessage(msg))
 
     // Re-send globalState items to the webview
     this.postMessage({ type: "variantsLoaded", variants: {} })
@@ -5440,6 +5453,12 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       return
     }
 
+    // The model catalog was refreshed, so the picker's providers may be stale.
+    if (event.type === "models-dev.refreshed") {
+      void this.fetchAndSendProviders()
+      return
+    }
+
     // Forward relevant events to webview
     // Side effects that must happen before the webview message is sent
     if (event.type === "message.updated") {
@@ -5662,18 +5681,68 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   }
 
   /**
-   * Get or create a FileIgnoreController for the current workspace directory.
-   * Reinitializes if the workspace directory has changed.
+   * Every folder in the editor workspace, as candidate file-mention sources.
+   *
+   * File search fans out across these so files in folders added via "Add Folder
+   * to Workspace..." are mentionable. Fan-out is declined downstream unless the
+   * session's own directory is one of them.
+   */
+  private getWorkspaceRoots(): SearchRoot[] {
+    return (vscode.workspace.workspaceFolders ?? []).map((folder) => ({
+      path: folder.uri.fsPath,
+      name: folder.name,
+    }))
+  }
+
+  /**
+   * Narrow a directory's files to those its own ignore rules permit.
+   *
+   * File search applies editor exclusions separately; this adds .kilocodeignore.
+   * A controller that cannot be built lets the files through rather than
+   * hiding everything, since this is a relevance filter and not a permission
+   * boundary.
+   */
+  private async filterIgnored(dir: string, files: string[]): Promise<string[]> {
+    if (!dir || !files.length) return files
+    const controller = await this.getIgnoreController(dir).catch((err) => {
+      console.warn("[Kilo New] Failed to read ignore rules for", dir, err)
+      return undefined
+    })
+    if (!controller) return files
+    return files.filter((file) => controller.validateAccess(file))
+  }
+
+  /**
+   * Get or create a FileIgnoreController for a workspace directory.
+   *
+   * Keyed by directory rather than holding a single controller: multi-root file
+   * search asks about several roots per keystroke, and a one-entry cache would
+   * re-read .kilocodeignore from disk on every alternating lookup. Bounded by
+   * insertion order because session directories, not just workspace folders,
+   * reach this cache.
+   *
+   * A failed init is evicted rather than cached. `initialize()` lets permission
+   * errors from reading .kilocodeignore propagate, and caching that rejection
+   * would keep failing every later lookup for the same directory.
    */
   private async getIgnoreController(workspaceDir: string): Promise<FileIgnoreController> {
-    if (this.ignoreController && this.ignoreControllerDir === workspaceDir) {
-      return this.ignoreController
+    const cached = this.ignoreControllers.get(workspaceDir)
+    if (cached) return cached
+    const pending = (async () => {
+      const controller = new FileIgnoreController(workspaceDir)
+      await controller.initialize()
+      return controller
+    })()
+    void pending.catch(() => {
+      if (this.ignoreControllers.get(workspaceDir) === pending) this.ignoreControllers.delete(workspaceDir)
+    })
+    this.ignoreControllers.set(workspaceDir, pending)
+    while (this.ignoreControllers.size > KiloProvider.IGNORE_CONTROLLER_LIMIT) {
+      const oldest = this.ignoreControllers.keys().next().value
+      if (oldest === undefined || oldest === workspaceDir) break
+      this.ignoreControllers.delete(oldest)
     }
-    const controller = new FileIgnoreController(workspaceDir)
-    await controller.initialize()
-    this.ignoreController = controller
-    this.ignoreControllerDir = workspaceDir
-    return controller
+    return pending
   }
 
   private async gatherEditorContext(dir?: string): Promise<EditorContext> {
@@ -6065,6 +6134,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.setFocusTarget("other")
     this.latch?.dispose()
     this.latch = undefined
+    this.catalogRetry.dispose()
     this.unsubscribeRemote?.()
     this.streams.focus(undefined)
     this.connectionService.unregisterVisible(this.instanceId)
@@ -6117,7 +6187,13 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.epochs.clear()
     this.sessionStatusMap.clear()
     this.wakeupSessions.clear()
-    this.ignoreController?.dispose()
+    for (const pending of this.ignoreControllers.values()) {
+      void pending.then(
+        (controller) => controller.dispose(),
+        (err) => console.warn("[Kilo New] Failed to dispose ignore controller:", err),
+      )
+    }
+    this.ignoreControllers.clear()
     this.chatAutocomplete?.dispose()
     disposeGitChangesTarget()
   }

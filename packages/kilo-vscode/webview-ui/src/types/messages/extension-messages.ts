@@ -548,6 +548,8 @@ export interface ProvidersLoadedMessage {
   defaultSelection: ModelSelection
   authMethods: Record<string, ProviderAuthMethod[]>
   authStates: Record<string, ProviderAuthState>
+  /** The organization's Kilo catalog failed to load, so Kilo has no models to pick. */
+  kiloUnavailable?: boolean
 }
 
 export interface AgentsLoadedMessage {
@@ -612,6 +614,19 @@ export interface SpeechToTextErrorMessage {
 export interface FileSearchItem {
   path: string
   type: "file" | "folder" | "opened-file"
+  /**
+   * Owning workspace folder name, set only when the workspace has more than one
+   * folder. Entries outside the session's own project carry an absolute path and
+   * are mention-only: they are never auto-attached, so the agent must Read them
+   * under the normal external-directory permission check.
+   */
+  root?: string
+  /**
+   * Path within the owning folder, set only when `path` is absolute. The `@`
+   * menu is ranked again in the webview, and scoring an absolute path there
+   * would let the filesystem prefix match every entry under that folder.
+   */
+  relative?: string
 }
 
 export interface FileSearchResultMessage {
@@ -725,6 +740,7 @@ export interface ExtensionSettings {
   maxCost?: number
   multiProject?: boolean
   claudeMigration?: boolean
+  conversationPromptHistory?: boolean
   [key: string]: unknown
 }
 
@@ -977,6 +993,7 @@ export interface AgentProjectSnapshot {
   expanded: boolean
   initialized: boolean
   missing: boolean
+  avatar?: string
 }
 
 // Project catalog push from extension to webview
@@ -1168,13 +1185,6 @@ export interface ModelSelectorExpandedLoadedMessage {
 export interface FavoritesLoadedMessage {
   type: "favoritesLoaded"
   favorites: ModelSelection[]
-}
-
-// Preferred and per-mode model selections loaded from persisted state (extension → webview)
-export interface ModelSelectionsLoadedMessage {
-  type: "modelSelectionsLoaded"
-  selections: Record<string, ModelSelection>
-  preferred?: ModelSelection & { variant?: string }
 }
 
 export interface AgentManagerBranchesMessage {
@@ -1508,6 +1518,15 @@ export interface MarketplaceInstallResultMessage {
 export interface OpenInstallModalMessage {
   type: "openInstallModal"
   mpItem: MarketplaceItem
+}
+
+export interface FocusMarketplaceItemMessage {
+  type: "focusMarketplaceItem"
+  mpItem: MarketplaceItem
+}
+
+export interface ResetMarketplaceFiltersMessage {
+  type: "resetMarketplaceFilters"
 }
 
 export interface MarketplaceRemoveResultMessage {
@@ -1849,6 +1868,8 @@ export type ExtensionMessage =
   | MarketplaceInstallResultMessage
   | MarketplaceRemoveResultMessage
   | OpenInstallModalMessage
+  | FocusMarketplaceItemMessage
+  | ResetMarketplaceFiltersMessage
   | ProviderOAuthReadyMessage
   | ProviderConnectedMessage
   | ProviderDisconnectedMessage
@@ -1858,7 +1879,6 @@ export type ExtensionMessage =
   | RecentsLoadedMessage
   | ModelSelectorExpandedLoadedMessage
   | FavoritesLoadedMessage
-  | ModelSelectionsLoadedMessage
   | LanguageChangedMessage
   | ContinueInWorktreeProgressMessage
   | WorktreeStatsLoadedMessage

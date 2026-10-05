@@ -632,8 +632,9 @@ internal class ActiveListBadgeCell : JBLabel(), ActiveListHitCell {
 
     private fun pill(badge: ActiveListBadge): Icon {
         val current = icon as? FilledBadgeIcon
-        if (current?.text == badge.text && current.style == badge.style) return current
-        return FilledBadgeIcon(badge.text, badge.style)
+        val parts = badge.parts()
+        if (current?.segments == parts) return current
+        return FilledBadgeIcon(parts)
     }
 
     override fun cellEnabled(): Boolean = badge?.action != null
