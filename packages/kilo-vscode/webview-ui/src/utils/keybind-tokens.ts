@@ -23,3 +23,8 @@ export function parseBindingTokens(binding: string): string[] {
   }
   return tokens
 }
+
+/** Split a binding into key groups. Chords ("⌘K ⌘A") and key pairs ("⌘[ ⌘]") give one group per part. */
+export function parseBindingGroups(binding: string): string[][] {
+  return binding.split(/\s+/).filter(Boolean).map(parseBindingTokens)
+}
