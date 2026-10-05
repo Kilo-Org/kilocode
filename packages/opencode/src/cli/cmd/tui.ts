@@ -325,6 +325,7 @@ export const TuiThreadCommand = cmd({
         [KILO_PROCESS_ROLE]: "worker",
         [KILO_RUN_ID]: ensureRunID(),
         ...auth.env,
+        ...KiloRetentionTui.env(args),
         KILO_BACKGROUND_PROCESS_PORTS: "true",
       })
       // kilocode_change end

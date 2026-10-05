@@ -1,5 +1,10 @@
 export namespace KiloRetentionTui {
+  export const defer = "KILO_RETENTION_DEFER"
   type Args = { session?: string; continue?: boolean; cloudFork?: boolean }
+
+  export function env(args: Args) {
+    return { [defer]: args.cloudFork ? "1" : "0" }
+  }
 
   // The TUI launcher protects a resumed session before its worker or the
   // daemon can start cleanup. Plain launches do not load the session modules.
