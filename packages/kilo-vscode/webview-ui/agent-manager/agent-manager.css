@@ -4132,6 +4132,59 @@ body.am-wt-dragging-active * {
   box-shadow: 0 1px 0 var(--border-weak-base);
 }
 
+/* Keyboard shortcut hints: prompt corner and empty session list */
+.am-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--kilo-font-size-11);
+  color: var(--text-weaker);
+  white-space: nowrap;
+}
+
+.am-hint-keys {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.am-hint-kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 16px;
+  min-width: 16px;
+  padding: 0 3px;
+  border-radius: 3px;
+  background: var(--surface-inset-base);
+  border: 1px solid var(--border-weak-base);
+  font-family: var(--font-family-sans);
+  font-size: var(--kilo-font-size-10);
+  font-weight: 500;
+  line-height: 1;
+  color: var(--text-weak);
+}
+
+.am-hint-list {
+  display: grid;
+  grid-template-columns: auto auto;
+  justify-content: center;
+  align-items: center;
+  gap: 8px 6px;
+  margin: 4px 0 8px;
+  font-size: var(--kilo-font-size-12);
+  color: var(--text-weaker);
+}
+
+.am-hint-label {
+  justify-self: end;
+  margin-right: 6px;
+}
+
+.am-hint-list > .am-hint-keys {
+  gap: 6px;
+}
+
 /* Skeleton loading states */
 
 @keyframes am-skeleton-pulse {

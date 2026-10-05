@@ -84,6 +84,7 @@ const config = {
   projectConfig: () => ({}),
   collections: () => ({}),
   settings: () => ({}),
+  shortcuts: () => ({ bindings: {}, selection: false }),
   features: () => ({ indexing: false, sandboxControls: false, backgroundSubagents: false }),
   loading: () => false,
   isDirty: () => false,

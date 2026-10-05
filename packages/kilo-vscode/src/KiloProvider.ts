@@ -208,6 +208,12 @@ import {
   watchAutoApprovalReasonConfig,
 } from "./kilo-provider/auto-approval-reason-settings"
 import { buildPushFixesSettingMessage, pushFixes, watchPushFixesConfig } from "./kilo-provider/push-fixes-settings"
+import {
+  buildShortcutHintsSettingMessage,
+  shortcutHints,
+  watchShortcutHintsConfig,
+} from "./kilo-provider/shortcut-hints-settings"
+import { buildShortcutContextMessage, watchShortcutContext } from "./kilo-provider/shortcut-context"
 
 type ReviewCommentsHandler = (comments: unknown[], autoSend: boolean, sessionID?: string, directory?: string) => void
 
@@ -525,6 +531,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private throughputConfigDisposable: vscode.Disposable | null = null
   private autoApprovalReasonConfigDisposable: vscode.Disposable | null = null
   private pushFixesConfigDisposable: vscode.Disposable | null = null
+  private shortcutHintsConfigDisposable: vscode.Disposable | null = null
+  private shortcutContextDisposable: vscode.Disposable | null = null
   private telemetryStateDisposable: vscode.Disposable | null = null
   private viewStateDisposable: vscode.Disposable | null = null
   private visibilityDisposable: vscode.Disposable | null = null
@@ -1185,6 +1193,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.autoApprovalReasonConfigDisposable = watchAutoApprovalReasonConfig((msg) => this.postMessage(msg))
     this.pushFixesConfigDisposable?.dispose()
     this.pushFixesConfigDisposable = watchPushFixesConfig((msg) => this.postMessage(msg))
+    this.shortcutHintsConfigDisposable?.dispose()
+    this.shortcutHintsConfigDisposable = watchShortcutHintsConfig((msg) => this.postMessage(msg))
+    this.shortcutContextDisposable?.dispose()
+    this.shortcutContextDisposable = watchShortcutContext(this.extensionContext, (msg) => this.postMessage(msg))
     this.telemetryStateDisposable?.dispose()
     this.telemetryStateDisposable = watchTelemetryState((msg) => this.postMessage(msg))
     this.webviewMessageDisposable = webview.onDidReceiveMessage(async (message) => {
@@ -2166,6 +2178,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       this.sendTimelineSetting()
       this.postMessage(buildThroughputSettingMessage())
       this.postMessage(buildAutoApprovalReasonSettingMessage())
+      this.postMessage(buildShortcutContextMessage(this.extensionContext))
       this.postMessage({ type: "extensionDataReady" })
 
       console.log("[Kilo New] KiloProvider: ✅ initializeConnection completed successfully")
@@ -4319,6 +4332,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       "agentManager.branchPrefix": naming.get<string>("branchPrefix", ""),
       "agentManager.worktreePool": naming.get<boolean>("worktreePool", true),
       "agentManager.pushFixes": pushFixes(),
+      showShortcutHints: shortcutHints(),
     }
   }
 
@@ -5067,6 +5081,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.postMessage(buildThroughputSettingMessage())
     this.postMessage(buildAutoApprovalReasonSettingMessage())
     this.postMessage(buildPushFixesSettingMessage())
+    this.postMessage(buildShortcutHintsSettingMessage())
+    this.postMessage(buildShortcutContextMessage(this.extensionContext))
     this.sendWorkStyle()
 
     // Re-send globalState items to the webview
@@ -6169,6 +6185,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.throughputConfigDisposable?.dispose()
     this.autoApprovalReasonConfigDisposable?.dispose()
     this.pushFixesConfigDisposable?.dispose()
+    this.shortcutHintsConfigDisposable?.dispose()
+    this.shortcutContextDisposable?.dispose()
     this.telemetryStateDisposable?.dispose()
     this.autoApproveBridge?.dispose()
     this.marketplace.dispose()

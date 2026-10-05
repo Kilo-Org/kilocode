@@ -195,6 +195,14 @@ export const dict = {
   "prompt.worktrees.title": "Worktrees",
   "prompt.worktrees.search": "البحث في Worktrees",
   "prompt.thinking.tooltip": "جهد الاستدلال",
+  "prompt.shortcutHint.addSelection": "لإضافة التحديد",
+  "prompt.shortcutHint.waiting": "للرد على جلسة منتظرة",
+  "prompt.shortcutHint.type": "للكتابة",
+  "prompt.shortcutHint.sessions": "لتبديل الجلسة",
+  "prompt.shortcutHint.stop": "للإيقاف",
+  "prompt.shortcutHint.changes": "لمراجعة التغييرات",
+  "prompt.shortcutHint.pr": "لفتح PR",
+  "prompt.shortcutHint.mode": "الوضع التالي",
   "prompt.action.send": "إرسال",
   "prompt.action.continue": "متابعة",
   "prompt.action.send.blocked": "أجب عن السؤال المعلق أو تجاهله أولاً",
@@ -772,6 +780,7 @@ export const dict = {
   "prompt.placeholder.connecting": "جارٍ الاتصال بالخادم...",
   "prompt.placeholder.error": "فشل الاتصال. تحقق من لوحة الإخراج أو أعد تشغيل الإضافة.",
   "prompt.placeholder.default": "اكتب رسالة، @ للإشارة إلى الملفات... (Enter للإرسال، Shift+Enter لسطر جديد)",
+  "prompt.placeholder.hint": "اكتب رسالة، @ للإشارة إلى الملفات... ({{key}} {{action}})",
 
   "context.usage.sessionCost": "تكلفة الجلسة",
   "context.usage.olderSessions": "{{count}} جلسات أقدم",
@@ -1206,6 +1215,9 @@ export const dict = {
   "settings.display.mcpTool.expanded": "موسّعة",
   "settings.display.mcpTool.collapsed": "مطوية",
 
+  "settings.display.shortcutHints.title": "إظهار تلميحات الاختصارات",
+  "settings.display.shortcutHints.description":
+    "إظهار اختصار لوحة المفاتيح الذي يناسب ما تفعله الآن في الموجّه الفارغ، مثل كيفية إضافة الكود المحدد أو العودة إلى الموجّه.",
   "settings.display.tokenThroughput.title": "إظهار إنتاجية الرموز",
   "settings.display.tokenThroughput.description":
     "عرض معدل توليد النص (tokens/sec) في أحدث رسالة للمساعد وفي رأس المهمة. يظهر افتراضيًا؛ عطّل هذا الإعداد لإخفائه عند الحاجة.",

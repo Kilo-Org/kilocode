@@ -43,6 +43,7 @@ export const dict = {
   "agentManager.settings.worktreePool.title": "Prethodno zagrijavanje worktree-a",
   "agentManager.settings.worktreePool.description":
     "Pripremite spreman worktree u pozadini da nove sesije Agent Manager-a počinju brže. Koristi dodatni prostor na disku za jedan checkout po otvorenom projektu.",
+  "agentManager.hints.switchSession": "Promijeni sesiju",
   "agentManager.settings.project.title": "Projekat",
   "agentManager.settings.project.description": "Izaberite repository čije worktree postavke želite urediti.",
   "agentManager.settings.project.empty": "Nema dostupnih projekata u Agent Manager.",
