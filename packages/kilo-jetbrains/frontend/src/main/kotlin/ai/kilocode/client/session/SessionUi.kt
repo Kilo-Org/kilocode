@@ -20,6 +20,7 @@ import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.plugin.KiloPluginSettings
 import ai.kilocode.client.session.board.SessionBoardDialog
 import ai.kilocode.client.session.model.FileAttachment
+import ai.kilocode.client.session.model.SandboxUiState
 import ai.kilocode.client.session.model.SessionModelEvent
 import ai.kilocode.client.session.model.SessionState
 import ai.kilocode.client.session.scroll.SessionScroll
@@ -303,6 +304,15 @@ class SessionUi(
 
     override val auto: Boolean get() = controller.autoApprove
 
+    override val sandbox: Boolean?
+        get() = if (controller.sandboxVisible) (controller.model.sandbox as? SandboxUiState.Known)?.enabled else null
+
+    override val sandboxMutable: Boolean
+        get() {
+            val state = controller.model.sandbox as? SandboxUiState.Known ?: return false
+            return !readonly && state.available && !state.pending && !controller.sandboxBusy()
+        }
+
     /**
      * Whether this surface offers forking at all. Decided per surface rather than per session, so the
      * prompt bubbles can carry their fork button from the moment they render; [forkable] adds the
@@ -341,6 +351,12 @@ class SessionUi(
     override fun setAuto(value: Boolean) {
         controller.setAutoApprove(value)
         prompt.setAutoApprove(controller.autoApprove)
+    }
+
+    @RequiresEdt
+    override fun toggleSandbox() {
+        if (!sandboxMutable) return
+        controller.toggleSandbox()
     }
 
     @RequiresEdt

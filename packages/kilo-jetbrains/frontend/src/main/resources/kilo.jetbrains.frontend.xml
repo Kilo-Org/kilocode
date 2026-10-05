@@ -460,6 +460,9 @@
         <action id="Kilo.Session.AutoApprove"
                 class="ai.kilocode.client.actions.SessionAutoApproveAction"/>
 
+        <action id="Kilo.Session.Sandbox"
+                class="ai.kilocode.client.actions.SessionSandboxAction"/>
+
         <action id="Kilo.Session.Fork"
                 class="ai.kilocode.client.actions.ForkSessionAction"/>
 
@@ -493,6 +496,7 @@
         -->
         <group id="Kilo.Session.ContextMenu">
             <reference ref="Kilo.Session.AutoApprove"/>
+            <reference ref="Kilo.Session.Sandbox"/>
             <separator/>
             <reference ref="Kilo.Session.Fork"/>
             <reference ref="Kilo.Session.Board"/>
@@ -518,6 +522,7 @@
         -->
         <group id="Kilo.Session.PromptMenu">
             <reference ref="Kilo.Session.AutoApprove"/>
+            <reference ref="Kilo.Session.Sandbox"/>
             <separator/>
             <reference ref="Kilo.Session.Fork"/>
             <reference ref="Kilo.Session.Board"/>

@@ -46,6 +46,7 @@ class SessionContextMenuActionsTest : SessionUiTestBase() {
         assertEquals(
             listOf(
                 "Kilo.Session.AutoApprove",
+                "Kilo.Session.Sandbox",
                 "---",
                 "Kilo.Session.Fork",
                 "Kilo.Session.Board",
@@ -82,6 +83,7 @@ class SessionContextMenuActionsTest : SessionUiTestBase() {
         assertEquals(
             listOf(
                 "Kilo.Session.AutoApprove",
+                "Kilo.Session.Sandbox",
                 "---",
                 "Kilo.Session.Fork",
                 "Kilo.Session.Board",
@@ -204,6 +206,37 @@ class SessionContextMenuActionsTest : SessionUiTestBase() {
         ActionUtil.updateAction(action, event)
 
         assertFalse(event.presentation.isEnabledAndVisible)
+    }
+
+    // ---- sandbox ----
+
+    fun `test sandbox action reflects and flips session state`() {
+        val actions = Fake(id = "ses_test", sandbox = false, sandboxMutable = true)
+        val action = SessionSandboxAction()
+        val event = event(action, actions)
+
+        ActionUtil.updateAction(action, event)
+        assertTrue(event.presentation.isEnabledAndVisible)
+        assertFalse(Toggleable.isSelected(event.presentation))
+
+        action.setSelected(event, true)
+        assertEquals(1, actions.sandboxToggles)
+
+        ActionUtil.updateAction(action, event)
+        assertTrue(Toggleable.isSelected(event.presentation))
+    }
+
+    fun `test sandbox action is hidden when unknown and disabled when unavailable`() {
+        val action = SessionSandboxAction()
+        val unknown = event(action, Fake(id = "ses_test", sandbox = null))
+        ActionUtil.updateAction(action, unknown)
+        assertFalse(unknown.presentation.isVisible)
+
+        val unavailable = event(action, Fake(id = "ses_test", sandbox = true, sandboxMutable = false))
+        ActionUtil.updateAction(action, unavailable)
+        assertTrue(unavailable.presentation.isVisible)
+        assertFalse(unavailable.presentation.isEnabled)
+        assertTrue(Toggleable.isSelected(unavailable.presentation))
     }
 
     // ---- fork ----
@@ -432,12 +465,17 @@ class SessionContextMenuActionsTest : SessionUiTestBase() {
         override val forkable: Boolean = false,
         override val board: Boolean = false,
         auto: Boolean = false,
+        sandbox: Boolean? = null,
+        override val sandboxMutable: Boolean = false,
     ) : SessionActions {
         // Backing field rather than `override var auto`: a var would generate setAuto(Z)V and clash
         // with the interface's own setAuto.
         private var state = auto
         override val auto: Boolean get() = state
+        private var confined = sandbox
+        override val sandbox: Boolean? get() = confined
         val autos = mutableListOf<Boolean>()
+        var sandboxToggles = 0
         var compares = 0
         var started = 0
         var stopped = 0
@@ -447,6 +485,11 @@ class SessionContextMenuActionsTest : SessionUiTestBase() {
         override fun setAuto(value: Boolean) {
             autos.add(value)
             state = value
+        }
+
+        override fun toggleSandbox() {
+            sandboxToggles++
+            confined = confined?.not()
         }
 
         override fun fork() {
