@@ -29,7 +29,6 @@ export const dict = {
   "agentManager.local": "本地",
   "agentManager.sidebar.collapse": "折叠侧边栏",
   "agentManager.sidebar.expand": "显示侧边栏",
-  "agentManager.section.worktrees": "WORKTREES",
   "agentManager.section.sessions": "会话",
   "agentManager.projects": "项目",
   "agentManager.settings.title": "Agent Manager",
@@ -69,12 +68,9 @@ export const dict = {
   "agentManager.project.settings": "项目设置",
   "agentManager.project.restricted":
     "您当前的 VS Code 工作区是主文件夹或文件系统根目录。请在 VS Code 中打开特定项目文件夹以使用 Agent Manager。",
-  "agentManager.notGitRepo": "不是 git 仓库",
-
   "agentManager.updateBase.title": "从基础分支更新",
   "agentManager.updateBase.selectWorktree": "请先选择一个受管理的 worktree。",
 
-  "agentManager.worktree.settings": "Worktree 设置",
   "agentManager.worktree.new": "新建 Worktree",
   "agentManager.worktree.setupScript": "Worktree 设置脚本",
   "agentManager.worktree.delete": "删除 Worktree",
@@ -177,12 +173,6 @@ export const dict = {
   "agentManager.shortcuts.cycleAgentMode": "下一个代理模式",
   "agentManager.shortcuts.cyclePreviousAgentMode": "上一个代理模式",
   "agentManager.shortcuts.showShortcuts": "显示键盘快捷键",
-  "agentManager.dialog.removeStaleWorktree.title": "移除失效 Worktree",
-  "agentManager.dialog.removeStaleWorktree.messagePre": "移除失效 Worktree ",
-  "agentManager.dialog.removeStaleWorktree.messagePost": "？这只会移除 Agent Manager 映射，不会触碰磁盘上的文件。",
-  "agentManager.dialog.removeStaleWorktree.cancel": "取消",
-  "agentManager.dialog.removeStaleWorktree.confirm": "移除失效 Worktree",
-
   "agentManager.dialog.project.select": "选择项目",
   "agentManager.dialog.project.missing": "未找到仓库",
   "agentManager.dialog.openWorktree": "新建工作树",

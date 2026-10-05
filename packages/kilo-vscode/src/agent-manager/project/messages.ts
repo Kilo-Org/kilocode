@@ -3,7 +3,7 @@
  *
  * Extracted from AgentManagerProvider (file-size cap) and kept free of VS Code
  * imports so the flows are unit-testable. All handlers fail closed: unknown
- * projects and disabled experiments leave state untouched.
+ * projects leave state untouched.
  */
 
 import { GitOps } from "../GitOps"
@@ -41,13 +41,13 @@ export function routeProjectSession(
 export interface ProjectMessageDeps {
   registry: ProjectRegistry
   contexts: ProjectContexts
-  /** Whether the multi-project experiment is enabled. */
-  enabled: () => boolean
   /** Show a folder picker; resolves undefined when cancelled. */
   pickFolder: Host["pickFolder"]
   onboarding: Onboarding["host"]
   /** Re-initialize provider state for a freshly activated context. */
   activate: (ctx: ProjectContext) => void
+  /** Clear the applied project when the last project is removed. */
+  empty?: () => void
   /** Initialize an expanded background context and push its state. */
   expand: (ctx: ProjectContext) => void
   /** Push the current project snapshots to the webview. */
@@ -133,9 +133,8 @@ export async function handleProjectMessage(m: AgentManagerInMessage, deps: Proje
 }
 
 async function activateSelection(requested: SidebarTarget, deps: ProjectMessageDeps, restore = false): Promise<void> {
-  if (disabled(deps)) return
   const ctx = deps.contexts.resolve(requested.projectId)
-  if (!ctx || !deps.contexts.usable(requested.projectId)) {
+  if (!ctx) {
     deps.error("The project is unavailable. Check that the repository still exists.")
     return
   }
@@ -145,7 +144,7 @@ async function activateSelection(requested: SidebarTarget, deps: ProjectMessageD
   selections.set(deps, token)
   const result = await deps.ready(ctx, { warm: true })
   // A newer click can finish while this project's readiness is pending.
-  if (selections.get(deps) !== token || !deps.enabled()) return
+  if (selections.get(deps) !== token) return
   if (!result.current || !result.ok) {
     deps.error("The project is not ready yet. Expand it before selecting a worktree or session.")
     deps.push()
@@ -175,9 +174,8 @@ async function activateSelection(requested: SidebarTarget, deps: ProjectMessageD
  * already gone (the session may be live only).
  */
 async function openSessionLocally(projectId: string, sessionId: string, deps: ProjectMessageDeps): Promise<void> {
-  if (disabled(deps)) return
   const ctx = deps.contexts.resolve(projectId)
-  if (!ctx || !deps.contexts.usable(projectId)) {
+  if (!ctx) {
     deps.error("The project is unavailable. Check that the repository still exists.")
     return
   }
@@ -230,19 +228,12 @@ function rememberTarget(projectId: string, target: SidebarTarget, deps: ProjectM
   state.setActiveTarget(target)
 }
 
-function disabled(deps: ProjectMessageDeps): boolean {
-  if (deps.enabled()) return false
-  deps.error("Multi-project Agent Manager is disabled. Enable it in Kilo Settings > Experimental to add projects.")
-  return true
-}
-
 function onboardingDeps(deps: ProjectMessageDeps, git: GitOps): Onboarding {
   return {
     host: deps.onboarding,
     pickFolder: deps.pickFolder,
     primary: deps.contexts.pinned()?.root,
     git,
-    enabled: deps.enabled,
     registered: (dir) => Boolean(deps.registry.get(projectIdFor(canonicalizePath(dir)))),
   }
 }
@@ -261,7 +252,6 @@ async function createNewProject(parent: string, name: string, deps: ProjectMessa
 
 /** Post the canonical parent folder for a new project: the primary checkout's parent. */
 async function postParent(deps: ProjectMessageDeps): Promise<void> {
-  if (disabled(deps)) return
   const git = deps.git ?? new GitOps({ log: deps.log })
   try {
     deps.post({
@@ -281,7 +271,7 @@ async function attachPrepared(
   prepare: (git: GitOps) => Promise<string | undefined>,
   deps: ProjectMessageDeps,
 ): Promise<void> {
-  if (disabled(deps) || pending.has(deps)) return
+  if (pending.has(deps)) return
   pending.add(deps)
   const git = deps.git ?? new GitOps({ log: deps.log })
   let root: string | undefined
@@ -305,10 +295,6 @@ async function attachPrepared(
 /** Register a prepared root, then select it without warming a worktree of its own. */
 async function attach(root: string, deps: ProjectMessageDeps, git: GitOps): Promise<void> {
   root = canonicalizePath(root)
-  if (!deps.enabled())
-    throw new Error(
-      "Multi-project Agent Manager was disabled. Enable it and use Open local folder to attach this project.",
-    )
   const pinned = deps.contexts.pinned()
   const primary = pinned && (await resolveProjectRoot(pinned.root, runner(git)))
   const id = pinned && samePath(primary ?? pinned.root, root) ? pinned.id : projectIdFor(root)
@@ -319,20 +305,24 @@ async function attach(root: string, deps: ProjectMessageDeps, git: GitOps): Prom
   if (!ctx) throw new Error("The project is unavailable.")
   const result = await deps.ready(ctx, { warm: false })
   deps.push()
-  if (!result.current || !result.ok || !deps.enabled()) throw new Error("Expand the project to retry initialization.")
+  if (!result.current || !result.ok) throw new Error("Expand the project to retry initialization.")
   finish({ projectId: id, kind: "local" }, deps)
   if (existing) deps.onboarding.notify("info", `Opened the existing project at ${root}.`)
 }
 
 async function removeProject(id: string, deps: ProjectMessageDeps): Promise<void> {
-  if (disabled(deps)) return
-  await deps.contexts.remove(id)
+  if (deps.contexts.pinned()?.id === id) return
+  const active = deps.contexts.active()?.id === id
   await deps.registry.remove(id)
+  await deps.contexts.remove(id)
   deps.push()
+  if (!active) return
+  const next = deps.contexts.active()
+  if (next) deps.activate(next)
+  else deps.empty?.()
 }
 
 function selectProject(id: string, deps: ProjectMessageDeps): void {
-  if (disabled(deps)) return
   const ctx = deps.contexts.activate(id)
   if (!ctx) {
     deps.error("The project is unavailable. Check that the repository still exists.")
@@ -345,8 +335,7 @@ function selectProject(id: string, deps: ProjectMessageDeps): void {
 }
 
 async function setExpanded(id: string, expanded: boolean, deps: ProjectMessageDeps): Promise<void> {
-  if (disabled(deps)) return
-  const ctx = expanded ? deps.contexts.usable(id) : deps.contexts.resolve(id)
+  const ctx = deps.contexts.resolve(id)
   if (!ctx) {
     deps.push()
     return
