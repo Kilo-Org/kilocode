@@ -586,7 +586,7 @@ describe("Deferred tool card remount contract (source)", () => {
     expect(wrapper).toContain("deferredSize={size}")
     expect(wrapper).toContain("cached.revision === revision()")
     expect(wrapper).toContain("const value = props.revision")
-    expect(wrapper).toContain("if (typeof value === \"string\") return checksum(value)")
+    expect(wrapper).toContain('if (typeof value === "string") return checksum(value)')
     expect(wrapper).toContain("!mounted.has(id)")
     expect(wrapper).toContain("if (open && !props.forceOpen) remember(key())")
     expect(basic).toContain("deferredSize?: { height: number; width: number; font: string }")
