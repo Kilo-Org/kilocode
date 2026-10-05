@@ -386,6 +386,85 @@
   color: var(--vscode-input-placeholderForeground, var(--text-weaker));
 }
 
+/* The keycap copy below draws the placeholder, so hide the native one. */
+.prompt-input--keycaps::placeholder {
+  color: transparent;
+}
+
+/* Placeholder with the suggested shortcut as keycaps. Same box and font as the
+   textarea, so the text sits where the native placeholder would. */
+.prompt-input-placeholder {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  padding: 8px 8px calc(8px + 1.4em);
+  font-family: var(--vscode-font-family);
+  font-size: var(--font-size-base);
+  line-height: 1.4;
+  white-space: pre-wrap;
+  unicode-bidi: plaintext;
+  word-wrap: break-word;
+  overflow: hidden;
+  scrollbar-gutter: stable;
+  color: var(--vscode-input-placeholderForeground, var(--text-weaker));
+  animation: prompt-hint-in 0.18s ease-out;
+}
+
+/* Same height as one text line, so keycaps never make the line taller. */
+.prompt-input-keys-wrap {
+  white-space: nowrap;
+}
+
+.prompt-input-keys {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 1.4em;
+  vertical-align: top;
+}
+
+.prompt-input-keys-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.prompt-input-key {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  height: 16px;
+  min-width: 16px;
+  padding: 0 4px;
+  border-radius: 3px;
+  border: 1px solid var(--vscode-keybindingLabel-border, var(--border-weak-base, rgba(127, 127, 127, 0.3)));
+  border-bottom-color: var(
+    --vscode-keybindingLabel-bottomBorder,
+    var(--vscode-keybindingLabel-border, rgba(127, 127, 127, 0.4))
+  );
+  background: var(--vscode-keybindingLabel-background, var(--surface-inset-base, rgba(127, 127, 127, 0.1)));
+  box-shadow: inset 0 -1px 0 var(--vscode-widget-shadow, rgba(0, 0, 0, 0.36));
+  color: var(--vscode-keybindingLabel-foreground, var(--vscode-foreground));
+  font-family: var(--vscode-font-family);
+  font-size: var(--kilo-font-size-11);
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+@keyframes prompt-hint-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .prompt-input-placeholder {
+    animation: none;
+  }
+}
+
 /* Input overlay (highlight + ghost text) */
 .prompt-input-ghost-wrapper {
   position: relative;
