@@ -1187,6 +1187,8 @@ export const dict = {
   "error.details.show": "Dettagli",
   "task.todos.progress": "{{done}}/{{total}} to-do completati",
   "task.todos.allDone": "{{count}} to-do completati",
+  "task.todos.title": "To-do",
+  "task.todos.done": "Tutto fatto",
   "task.backgroundAgents.running.one": "1 agente in background",
   "task.backgroundAgents.running.many": "{{count}} agenti in background",
   "task.backgroundAgents.open": "Apri agente in background",

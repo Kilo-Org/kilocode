@@ -259,6 +259,129 @@ export const ChatViewSessionDockStability: Story = {
   },
 }
 
+const dockTodoNames = [
+  "Read session dock layout",
+  "Add todo progress chip",
+  "Wire chip into the dock",
+  "Remove header todo tracker",
+  "Run typecheck and unit tests",
+]
+
+function dockTodos(done: number): TodoItem[] {
+  return dockTodoNames.map((content, i) => ({
+    id: String(i + 1),
+    content,
+    status: i < done ? "completed" : i === done ? "in_progress" : "pending",
+  }))
+}
+
+/**
+ * The todo chip in the session dock: it trails the spinner while a turn runs
+ * and sits next to the session actions when idle. `advance` finishes the
+ * current item, so the last step plays the finished state.
+ */
+export const ChatViewSessionDockTodos: Story = {
+  name: "ChatView — session dock todos",
+  render: () => {
+    const [busy, setBusy] = createSignal(true)
+    const [goal, setGoal] = createSignal(true)
+    const [done, setDone] = createSignal(2)
+    const status = () => (busy() ? "busy" : "idle")
+    const base = mockSessionValue({ id: SESSION_ID, status: "idle", closeReason: "completed" })
+    const session = {
+      ...base,
+      currentSession: () => ({
+        ...base.currentSession(),
+        goal: goal() ? { text: "Ship the todo chip in the session dock", active: busy() } : undefined,
+      }),
+      status,
+      statusInfo: () => ({ type: status() }),
+      statusText: () => (busy() ? "Making edits" : undefined),
+      busyTiming: () => (busy() ? { active: 2000, since: Date.now() } : undefined),
+      submitting: () => false,
+      isSubmitting: () => false,
+      messages: () => [{ id: "msg-001" }] as any[],
+      todos: () => dockTodos(done()),
+    }
+    return (
+      <StoryProviders sessionID={SESSION_ID} status="idle" noPadding>
+        <ServerContext.Provider value={mockServer as any}>
+          <SessionContext.Provider value={session as any}>
+            <WorktreeModeProvider>
+              <div style={{ height: "320px", display: "flex", "flex-direction": "column" }}>
+                <div style={{ display: "flex", gap: "4px" }}>
+                  <button data-testid="toggle-busy" onClick={() => setBusy(!busy())}>
+                    toggle busy
+                  </button>
+                  <button data-testid="advance" onClick={() => setDone(Math.min(done() + 1, dockTodoNames.length))}>
+                    advance
+                  </button>
+                  <button data-testid="back" onClick={() => setDone(Math.max(done() - 1, 0))}>
+                    back
+                  </button>
+                  <button data-testid="toggle-goal" onClick={() => setGoal(!goal())}>
+                    toggle goal
+                  </button>
+                </div>
+                <ChatView onForkSession={() => undefined} />
+              </div>
+            </WorktreeModeProvider>
+          </SessionContext.Provider>
+        </ServerContext.Provider>
+      </StoryProviders>
+    )
+  },
+}
+
+function dockFrame(opts: { busy: boolean; goal: boolean; done: number; width: number; label: string }) {
+  const status = opts.busy ? "busy" : "idle"
+  const base = mockSessionValue({ id: SESSION_ID, status, closeReason: "completed" })
+  const session = {
+    ...base,
+    currentSession: () => ({
+      ...base.currentSession(),
+      goal: opts.goal ? { text: "Ship the todo chip in the session dock", active: opts.busy } : undefined,
+    }),
+    status: () => status,
+    statusInfo: () => ({ type: status }),
+    statusText: () => (opts.busy ? "Making edits" : undefined),
+    busyTiming: () => undefined,
+    submitting: () => false,
+    isSubmitting: () => false,
+    messages: () => [{ id: "msg-001" }] as any[],
+    todos: () => dockTodos(opts.done),
+  }
+  return (
+    <div style={{ width: `${opts.width}px` }}>
+      <div style={{ "font-size": "11px", opacity: 0.6, padding: "4px 8px" }}>{opts.label}</div>
+      <SessionContext.Provider value={session as any}>
+        <WorktreeModeProvider>
+          <div style={{ height: "330px", display: "flex", "flex-direction": "column" }}>
+            <ChatView onForkSession={() => undefined} />
+          </div>
+        </WorktreeModeProvider>
+      </SessionContext.Provider>
+    </div>
+  )
+}
+
+/** Static dock states for the docs and visual regression. */
+export const ChatViewSessionDockTodoStates: Story = {
+  name: "ChatView — session dock todo states",
+  render: () => (
+    <StoryProviders sessionID={SESSION_ID} status="idle" noPadding>
+      <ServerContext.Provider value={mockServer as any}>
+        <div style={{ display: "grid", gap: "8px" }}>
+          {dockFrame({ busy: true, goal: true, done: 2, width: 720, label: "Working, with goal" })}
+          {dockFrame({ busy: true, goal: true, done: 2, width: 380, label: "Working, narrow" })}
+          {dockFrame({ busy: false, goal: true, done: 3, width: 720, label: "Idle" })}
+          {dockFrame({ busy: false, goal: false, done: 5, width: 720, label: "Idle, all done" })}
+        </div>
+      </ServerContext.Provider>
+    </StoryProviders>
+  ),
+}
+
 /** Builds the user message a review-comment send produces: markdown prefix + review metadata. */
 function reviewMessage(comments: ReviewCommentEntry[]) {
   const prefix = formatReviewCommentsMarkdown(comments)
@@ -1228,7 +1351,7 @@ export const TurnOutcomeFailed: Story = {
 }
 
 // ---------------------------------------------------------------------------
-// TaskHeader with todos
+// TaskHeader
 // ---------------------------------------------------------------------------
 
 const headerNow = 1_700_000_000_000
@@ -1358,26 +1481,8 @@ const headerParts: Record<string, Part[]> = {
   ],
 }
 
-const mockTodosInProgress: TodoItem[] = [
-  { id: "1", content: "Project setup and architecture backlog", status: "completed" },
-  { id: "2", content: "Configuration schema for target jobs", status: "completed" },
-  { id: "3", content: "Core scanning logic", status: "completed" },
-  { id: "4", content: "Build invocation and error handling", status: "completed" },
-  { id: "5", content: "CLI interface implementation", status: "in_progress" },
-  { id: "6", content: "Storage layer implementation", status: "pending" },
-  { id: "7", content: "Character profiles and prompt types", status: "pending" },
-  { id: "8", content: "Local tests and integration tests", status: "pending" },
-  { id: "9", content: "Migration guide", status: "pending" },
-  { id: "10", content: "Release validation", status: "pending" },
-]
-
-const mockTodosAllDone: TodoItem[] = [
-  { id: "1", content: "Create a haiku about Jan", status: "completed" },
-  { id: "2", content: "Create a poem about Henk", status: "completed" },
-]
-
-export const TaskHeaderWithTodos: Story = {
-  name: "TaskHeader — with todos (in progress)",
+export const TaskHeaderBusy: Story = {
+  name: "TaskHeader — busy session",
   render: () => {
     const session = {
       ...mockSessionValue({ id: SESSION_ID, status: "busy" }),
@@ -1389,7 +1494,6 @@ export const TaskHeaderWithTodos: Story = {
         createdAt: new Date(headerNow - 12000).toISOString(),
         updatedAt: new Date(headerNow).toISOString(),
       }),
-      todos: () => mockTodosInProgress,
       getParts: (id: string) => headerParts[id] ?? [],
       contextUsage: () => ({ tokens: 34300, percentage: 17 }),
       costBreakdown: () => [{ label: "Session", cost: 0.64 }],
@@ -1531,34 +1635,6 @@ export const BackgroundAgentPanel: Story = {
         <SessionContext.Provider value={session as unknown as SessionContextValue}>
           <div style={{ padding: "160px 12px 12px" }}>
             <Stack />
-          </div>
-        </SessionContext.Provider>
-      </StoryProviders>
-    )
-  },
-}
-
-export const TaskHeaderWithTodosAllDone: Story = {
-  name: "TaskHeader — with todos (all done)",
-  render: () => {
-    const session = {
-      ...mockSessionValue({ id: SESSION_ID, status: "idle" }),
-      messages: () => [{ id: "msg-001" }] as any[],
-      visibleMessages: () => headerMessages,
-      getParts: (id: string) => headerParts[id] ?? [],
-      currentSession: () => ({
-        id: SESSION_ID,
-        title: "Writing poems about the team",
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      }),
-      todos: () => mockTodosAllDone,
-    }
-    return (
-      <StoryProviders sessionID={SESSION_ID} status="idle" noPadding>
-        <SessionContext.Provider value={session as any}>
-          <div style={{ width: "380px" }}>
-            <TaskHeader />
           </div>
         </SessionContext.Provider>
       </StoryProviders>

@@ -89,6 +89,7 @@ async function settle(page: Page) {
 // on an indeterminate frame.
 const SKIP = new Set<string>([
   "chat--chat-view-session-dock-stability",
+  "chat--chat-view-session-dock-todos",
   "labs-tool-call-lab--question-resolve-stability",
   "agentmanager--diff-panel-cached-worktree-switch",
   "agentmanager--diff-panel-viewport-loading",
@@ -106,9 +107,9 @@ const SKIP = new Set<string>([
 
 const DOCS = new Map<string, string[]>([
   [
-    "chat--task-header-with-todos",
+    "chat--chat-view-session-dock-todo-states",
     [
-      "packages/kilo-docs/pages/code-with-ai/features/task-todo-list.md:/docs/img/screenshot-tests/kilo-vscode/visual-regression/chat/task-header-with-todos-chromium-linux.png",
+      "packages/kilo-docs/pages/code-with-ai/features/task-todo-list.md:/docs/img/screenshot-tests/kilo-vscode/visual-regression/chat/chat-view-session-dock-todo-states-chromium-linux.png",
     ],
   ],
   [

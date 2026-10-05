@@ -1334,6 +1334,8 @@ export const dict = {
 
   "task.todos.progress": "{{done}}/{{total}} zadań ukończono",
   "task.todos.allDone": "{{count}} zadań ukończono",
+  "task.todos.title": "Zadania",
+  "task.todos.done": "Wszystko gotowe",
   "task.backgroundAgents.running.one": "1 agent w tle",
   "task.backgroundAgents.running.many": "{{count}} agentów w tle",
   "task.backgroundAgents.open": "Otwórz agenta w tle",
