@@ -200,6 +200,14 @@ export const dict = {
   "prompt.worktrees.title": "Worktrees",
   "prompt.worktrees.search": "Worktrees doorzoeken",
   "prompt.thinking.tooltip": "Redeneringsinspanning",
+  "prompt.shortcutHint.addSelection": "om de selectie toe te voegen",
+  "prompt.shortcutHint.waiting": "om een wachtende sessie te beantwoorden",
+  "prompt.shortcutHint.type": "om te typen",
+  "prompt.shortcutHint.sessions": "om van sessie te wisselen",
+  "prompt.shortcutHint.stop": "om te stoppen",
+  "prompt.shortcutHint.changes": "om wijzigingen te bekijken",
+  "prompt.shortcutHint.pr": "om de PR te openen",
+  "prompt.shortcutHint.mode": "Volgende modus",
   "prompt.action.send": "Verzenden",
   "prompt.action.continue": "Doorgaan",
   "prompt.action.send.blocked": "Beantwoord of negeer eerst de openstaande vraag",
@@ -773,10 +781,12 @@ export const dict = {
   "ui.sessionTurn.status.consideringNextSteps": "Volgende stappen overwegen...",
 
   "dialog.model.noProviders": "Geen providers",
+  "dialog.model.unavailable": "Kilo-modellen niet beschikbaar",
 
   "prompt.placeholder.connecting": "Verbinden met server...",
   "prompt.placeholder.default":
     "Typ een bericht, @ om bestanden te vermelden... (Enter om te verzenden, Shift+Enter voor nieuwe regel)",
+  "prompt.placeholder.hint": "Typ een bericht, @ om bestanden te vermelden... ({{key}} {{action}})",
   "prompt.placeholder.error": "Verbinding mislukt. Controleer het uitvoerpaneel of herstart de extensie.",
 
   "context.usage.sessionCost": "Sessiekosten",
@@ -937,15 +947,12 @@ export const dict = {
   "settings.sandboxing.writablePaths.title": "Extra schrijfbare paden",
   "settings.sandboxing.writablePaths.description":
     "Extra bestandssysteempaden waar de sandbox schrijftoestemming voor geeft (bijv. /tmp, /var/log). Deze worden samengevoegd met de standaard schrijfbare paden wanneer de sandbox actief is.",
-  "settings.experimental.multiProject.title": "Multi-project Agent Manager",
   "settings.experimental.conversationPromptHistory.title": "Promptgeschiedenis per gesprek",
   "settings.experimental.conversationPromptHistory.description":
     "Houd de promptgeschiedenis (ArrowUp/ArrowDown) gescheiden per gesprek in plaats van één geschiedenis te delen over alle gesprekken.",
   "settings.experimental.claudeMigration.title": "Claude Code-migratie",
   "settings.experimental.claudeMigration.description":
     "Importeer ondersteunde globale CLAUDE.md-instructies, eenvoudige vaardigheden en uitgeschakelde MCP-definities één keer. Originele Claude-bestanden blijven ongewijzigd; herstart de backend na inschakelen.",
-  "settings.experimental.multiProject.description":
-    "Schakel het beheren van sessies en worktrees over meerdere repositories in Agent Manager in. De huidige workspace-repository is altijd het standaardproject.",
   "settings.experimental.mcpTimeout.title": "MCP Timeout (ms)",
   "settings.experimental.mcpTimeout.description": "Timeout voor MCP-serververzoeken in milliseconden",
   "settings.experimental.remote.title": "Remote-bediening",
@@ -1216,6 +1223,9 @@ export const dict = {
   "settings.display.mcpTool.expanded": "Uitgeklapt",
   "settings.display.mcpTool.collapsed": "Ingeklapt",
 
+  "settings.display.shortcutHints.title": "Sneltoetstips tonen",
+  "settings.display.shortcutHints.description":
+    "Toon in de lege prompt de sneltoets die past bij wat je nu doet, bijvoorbeeld hoe je geselecteerde code toevoegt of terugkeert naar de prompt.",
   "settings.display.tokenThroughput.title": "Tokendoorvoer weergeven",
   "settings.display.tokenThroughput.description":
     "Toon de tekstgeneratiesnelheid (tokens/sec) in het meest recente assistentbericht en in de taakkoptekst. Wordt standaard weergegeven; schakel deze instelling uit om de snelheid indien nodig te verbergen.",

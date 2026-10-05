@@ -431,4 +431,43 @@ Broken command`,
       },
     })
   })
+
+  test("keeps valid provider models when another model is malformed", async () => {
+    await using tmp = await tmpdir({
+      init: async (dir) => {
+        await Filesystem.write(
+          path.join(dir, ".kilo", "kilo.json"),
+          JSON.stringify({
+            provider: {
+              litellm: {
+                models: {
+                  "good-model": { name: "Good", limit: { context: 128000, output: 8192 } },
+                  "bad-model": { name: "Bad", limit: { output: 8192 } },
+                },
+              },
+            },
+          }),
+        )
+      },
+    })
+
+    await provideTestInstance({
+      directory: tmp.path,
+      fn: async () => {
+        const cfg = await load()
+        const warns = await warnings()
+        const models = cfg.provider?.litellm?.models
+
+        expect(models?.["good-model"]).toBeDefined()
+        expect(models?.["bad-model"]).toBeUndefined()
+        expect(
+          warns.some(
+            (warning) =>
+              warning.path.endsWith("kilo.json") &&
+              warning.message.includes("provider.litellm.models.bad-model"),
+          ),
+        ).toBe(true)
+      },
+    })
+  })
 })

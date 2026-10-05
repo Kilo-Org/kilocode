@@ -20,7 +20,7 @@ import { closeOthers } from "./close-others"
 import { closableRightOf, closeToRight } from "./close-to-right"
 import type { SessionInfo } from "../src/types/messages"
 import type { Activity } from "../src/utils/session-activity"
-import { parseBindingTokens } from "./keybind-tokens"
+import { parseBindingTokens } from "../src/utils/keybind-tokens"
 
 interface FocusTabDeps {
   id: string

@@ -200,6 +200,14 @@ export const dict = {
   "prompt.worktrees.title": "Worktrees",
   "prompt.worktrees.search": "Pretraži Worktree-ove",
   "prompt.thinking.tooltip": "Napor razmišljanja",
+  "prompt.shortcutHint.addSelection": "za dodavanje odabira",
+  "prompt.shortcutHint.waiting": "za odgovor sesiji koja čeka",
+  "prompt.shortcutHint.type": "za pisanje",
+  "prompt.shortcutHint.sessions": "za promjenu sesije",
+  "prompt.shortcutHint.stop": "za zaustavljanje",
+  "prompt.shortcutHint.changes": "za pregled izmjena",
+  "prompt.shortcutHint.pr": "za otvaranje PR-a",
+  "prompt.shortcutHint.mode": "Sljedeći način",
   "prompt.action.send": "Pošalji",
   "prompt.action.continue": "Nastavi",
   "prompt.action.send.blocked": "Prvo odgovorite ili odbacite pitanje na čekanju",
@@ -784,11 +792,13 @@ export const dict = {
   "ui.sessionTurn.status.consideringNextSteps": "Razmatram sljedeće korake...",
 
   "dialog.model.noProviders": "Nema pružatelja",
+  "dialog.model.unavailable": "Kilo modeli nisu dostupni",
 
   "prompt.placeholder.connecting": "Povezivanje na server...",
   "prompt.placeholder.error": "Povezivanje nije uspjelo. Provjerite panel za izlaz ili ponovo pokrenite ekstenziju.",
   "prompt.placeholder.default":
     "Unesite poruku, @ za spominjanje datoteka... (Enter za slanje, Shift+Enter za novi red)",
+  "prompt.placeholder.hint": "Unesite poruku, @ za spominjanje datoteka... ({{key}} {{action}})",
 
   "context.usage.sessionCost": "Cijena sesije",
   "context.usage.olderSessions": "{{count}} starijih sesija",
@@ -939,15 +949,12 @@ export const dict = {
   "settings.sandboxing.writablePaths.title": "Dodatne upisive putanje",
   "settings.sandboxing.writablePaths.description":
     "Dodatne putanje sistema datoteka u koje sandbox dozvoljava upis (npr. /tmp, /var/log). Spajaju se sa zadanim upisivim putanjama kada je sandbox aktivan.",
-  "settings.experimental.multiProject.title": "Višeprojektni Agent Manager",
   "settings.experimental.conversationPromptHistory.title": "Historija upita po razgovoru",
   "settings.experimental.conversationPromptHistory.description":
     "Čuvajte historiju upita (ArrowUp/ArrowDown) zasebno za svaki razgovor umjesto da dijelite jednu historiju među svim razgovorima.",
   "settings.experimental.claudeMigration.title": "Claude Code migracija",
   "settings.experimental.claudeMigration.description":
     "Jednom uvezite podržane globalne CLAUDE.md upute, jednostavne vještine i onemogućene MCP definicije. Originalne Claude datoteke ostaju nepromijenjene; ponovo pokrenite backend nakon uključivanja.",
-  "settings.experimental.multiProject.description":
-    "Omogući upravljanje sesijama i worktree-ima kroz više repozitorija u Agent Manager-u. Trenutni workspace repozitorij je uvijek zadani projekat.",
   "settings.experimental.mcpTimeout.title": "MCP istek vremena (ms)",
   "settings.experimental.mcpTimeout.description": "Istek vremena za MCP server zahtjeve u milisekundama",
   "settings.experimental.remote.title": "Remote kontrola",
@@ -1246,6 +1253,9 @@ export const dict = {
   "settings.display.mcpTool.expanded": "Prošireni",
   "settings.display.mcpTool.collapsed": "Sažeti",
 
+  "settings.display.shortcutHints.title": "Prikaži savjete za prečice",
+  "settings.display.shortcutHints.description":
+    "Prikazuje u praznom promptu prečicu tastature koja odgovara onome što sada radite, na primjer kako dodati odabrani kod ili se vratiti u prompt.",
   "settings.display.tokenThroughput.title": "Prikaži protok tokena",
   "settings.display.tokenThroughput.description":
     "Prikažite brzinu generisanja teksta (tokens/sec) u najnovijoj poruci asistenta i zaglavlju zadatka. Prikazuje se podrazumijevano; onemogućite ovu postavku da biste je po potrebi sakrili.",

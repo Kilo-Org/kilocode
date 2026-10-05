@@ -200,6 +200,14 @@ export const dict = {
   "prompt.worktrees.title": "Робочі дерева",
   "prompt.worktrees.search": "Пошук робочих дерев",
   "prompt.thinking.tooltip": "Зусилля міркування",
+  "prompt.shortcutHint.addSelection": "для додавання виділення",
+  "prompt.shortcutHint.waiting": "для відповіді в сесії, що очікує",
+  "prompt.shortcutHint.type": "для введення",
+  "prompt.shortcutHint.sessions": "для зміни сесії",
+  "prompt.shortcutHint.stop": "для зупинки",
+  "prompt.shortcutHint.changes": "для перегляду змін",
+  "prompt.shortcutHint.pr": "для відкриття PR",
+  "prompt.shortcutHint.mode": "Наступний режим",
   "prompt.action.send": "Надіслати",
   "prompt.action.continue": "Продовжити",
   "prompt.action.send.blocked": "Спочатку дайте відповідь або закрийте очікуюче питання",
@@ -771,10 +779,12 @@ export const dict = {
   "ui.sessionTurn.status.consideringNextSteps": "Обдумую наступні кроки...",
 
   "dialog.model.noProviders": "Немає провайдерів",
+  "dialog.model.unavailable": "Моделі Kilo недоступні",
 
   "prompt.placeholder.connecting": "Підключення до сервера...",
   "prompt.placeholder.default":
     "Напишіть повідомлення, @ щоб згадати файли... (Enter для надсилання, Shift+Enter для нового рядка)",
+  "prompt.placeholder.hint": "Напишіть повідомлення, @ щоб згадати файли... ({{key}} {{action}})",
   "prompt.placeholder.error": "Підключення не вдалося. Перевірте панель виводу або перезапустіть розширення.",
 
   "context.usage.sessionCost": "Вартість сесії",
@@ -930,15 +940,12 @@ export const dict = {
   "settings.sandboxing.writablePaths.title": "Додаткові шляхи для запису",
   "settings.sandboxing.writablePaths.description":
     "Додаткові шляхи файлової системи, у які дозволено запис у пісочниці (наприклад, /tmp, /var/log). Вони об'єднуються зі шляхами запису за замовчуванням, коли пісочниця активна.",
-  "settings.experimental.multiProject.title": "Мультипроєктний Agent Manager",
   "settings.experimental.conversationPromptHistory.title": "Історія промптів для кожної розмови",
   "settings.experimental.conversationPromptHistory.description":
     "Зберігати історію промптів (ArrowUp/ArrowDown) окремо для кожної розмови замість однієї спільної історії для всіх.",
   "settings.experimental.claudeMigration.title": "Міграція Claude Code",
   "settings.experimental.claudeMigration.description":
     "Одноразово імпортуйте підтримувані глобальні інструкції CLAUDE.md, прості навички та вимкнені визначення MCP. Оригінальні файли Claude не змінюються; після ввімкнення перезапустіть бекенд.",
-  "settings.experimental.multiProject.description":
-    "Увімкніть керування сеансами та робочими деревами в кількох репозиторіях в Agent Manager. Поточний репозиторій робочого простору завжди є проєктом за замовчуванням.",
   "settings.experimental.mcpTimeout.title": "Тайм-аут MCP (мс)",
   "settings.experimental.mcpTimeout.description": "Тайм-аут у мілісекундах для запитів до MCP-сервера",
   "settings.experimental.remote.title": "Керування Remote",
@@ -1202,6 +1209,9 @@ export const dict = {
   "settings.display.mcpTool.expanded": "Розгорнуті",
   "settings.display.mcpTool.collapsed": "Згорнуті",
 
+  "settings.display.shortcutHints.title": "Показувати підказки клавіш",
+  "settings.display.shortcutHints.description":
+    "Показувати в порожньому полі запиту сполучення клавіш, що відповідає поточній дії, наприклад як додати виділений код або повернутися до запиту.",
   "settings.display.tokenThroughput.title": "Показувати пропускну здатність токенів",
   "settings.display.tokenThroughput.description":
     "Показувати швидкість генерації тексту (tokens/sec) в останньому повідомленні асистента та в заголовку завдання. Показується за замовчуванням; вимкніть цей параметр, щоб за потреби її приховати.",
