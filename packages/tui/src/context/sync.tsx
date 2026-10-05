@@ -38,6 +38,7 @@ import { useKV } from "./kv"
 import { handleSuggestionEvent } from "@/kilocode/suggestion/tui/sync" // kilocode_change
 import { at, recent, slot } from "../kilocode/message-order" // kilocode_change
 import { useToast } from "../ui/toast" // kilocode_change
+import { errorMessage } from "../util/error" // kilocode_change
 import { usePermission } from "./permission"
 import { GoalSync } from "@/kilocode/cli/cmd/tui/goal-sync" // kilocode_change
 
@@ -802,7 +803,20 @@ export const {
           void Promise.all([
             ...(args.continue ? [] : [sessionListPromise.then((sessions) => setStore("session", reconcile(sessions)))]),
             consoleStatePromise.then((consoleState) => setStore("console_state", reconcile(consoleState))),
-            sdk.client.command.list({ workspace }).then((x) => setStore("command", reconcile(x.data ?? []))),
+            // kilocode_change start - an empty slash menu must not be the only sign the list failed
+            sdk.client.command.list({ workspace }).then((x) => {
+              if (x.error) {
+                toast.show({
+                  title: "Commands Unavailable",
+                  message: errorMessage(x.error),
+                  variant: "warning",
+                  duration: 0,
+                })
+                return
+              }
+              setStore("command", reconcile(x.data ?? []))
+            }),
+            // kilocode_change end
             sdk.client.lsp.status({ workspace }).then((x) => setStore("lsp", reconcile(x.data ?? []))),
             sdk.client.mcp.status({ workspace }).then((x) => setStore("mcp", reconcile(x.data ?? {}))),
             sdk.client.experimental.resource
