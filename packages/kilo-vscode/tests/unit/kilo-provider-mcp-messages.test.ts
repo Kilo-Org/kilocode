@@ -1,10 +1,6 @@
 import { describe, expect, it, mock } from "bun:test"
 import { mcpAuth } from "../../src/services/mcp-auth"
-
-const removeMcp = mock(async () => true)
-mock.module("../../src/kilo-provider/remove-config-item", () => ({ removeMcp }))
-
-const { KiloProvider } = await import("../../src/KiloProvider")
+import { KiloProvider } from "../../src/KiloProvider"
 
 type Internals = {
   handleMcpMessage(message: unknown): Promise<boolean>
@@ -15,6 +11,7 @@ type Internals = {
   handleRemoveMcp(name: string): Promise<void>
   handleSignInMcp(name: string, notify: boolean): Promise<void>
   handleResetMcpAuth(name: string): Promise<void>
+  marketplace: { remove: (...args: unknown[]) => Promise<{ success: boolean; slug: string }> }
 }
 
 function actions() {
@@ -35,6 +32,11 @@ function actions() {
     return true
   }
   internal.refreshMcpAuthConsumers = async () => void calls.push("status")
+  // Overridden directly on the real MarketplaceService instance (not via
+  // mock.module) so remove-config-item.test.ts's own coverage of the real
+  // removeMcp()/removeMarketplaceItemFromAllScopes() wiring stays intact —
+  // mock.module replaces the module for every test file in the process.
+  internal.marketplace.remove = mock(async () => ({ success: true, slug: "anaconda" }))
   provider.postMessage = (message) => calls.push(`post:${(message as { type: string }).type}`)
   return { internal, calls }
 }
@@ -134,15 +136,14 @@ describe("KiloProvider MCP message routing", () => {
   })
 
   it("refreshes MCP auth consumers after removing a server, clearing its stale needs-auth state", async () => {
-    removeMcp.mockResolvedValueOnce(true)
     const { internal, calls } = actions()
     await internal.handleRemoveMcp("anaconda")
     expect(calls).toEqual(["post:mcpRemovalState", "post:mcpRemoved", "status", "post:mcpRemovalState"])
   })
 
   it("does not refresh MCP auth consumers when removal fails", async () => {
-    removeMcp.mockResolvedValueOnce(false)
     const { internal, calls } = actions()
+    internal.marketplace.remove = mock(async () => ({ success: false, slug: "anaconda" }))
     await internal.handleRemoveMcp("anaconda")
     expect(calls).toEqual(["post:mcpRemovalState", "post:mcpRemovalState"])
   })
