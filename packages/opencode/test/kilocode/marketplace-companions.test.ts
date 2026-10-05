@@ -23,7 +23,12 @@ function input(directory: string) {
 function services(directory: string) {
   // File-backed installs only invalidate Config. The archive, config, receipts,
   // locks, and cleanup operations below all use their real implementations.
-  return { directory, worktree: directory, config: { invalidate: () => Effect.void } } as Parameters<typeof install>[0]
+  return {
+    directory,
+    worktree: directory,
+    config: { invalidate: () => Effect.void },
+    mcp: { remove: () => Effect.void },
+  } as unknown as Parameters<typeof install>[0]
 }
 
 async function archive(id = "guide", files: Record<string, string> = {}) {

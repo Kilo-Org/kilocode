@@ -35,6 +35,11 @@ type Services = {
   config: Config.Interface
   agents: Agent.Interface
   skills: Skill.Interface
+  // kilocode_change start - purges a removed MCP server's cached runtime
+  // status (see MCP.remove); accepted here, not via Effect context, so
+  // install()/remove() stay usable from callers without the full MCP layer
+  mcp: { remove: (name: string) => Effect.Effect<void> }
+  // kilocode_change end
   directory: string
   worktree?: string
   vcs?: string
@@ -404,11 +409,15 @@ function removeMcp(svc: Services, item: MarketplaceItemRef, scope: Scope) {
     if (receipt) {
       yield* Companions.remove({ ...svc, scope }, receipt)
       yield* svc.config.invalidate().pipe(Effect.catchCause((cause) => Effect.logWarning(Cause.pretty(cause))))
-      return { success: true, slug: item.id }
+    } else {
+      const cfg = yield* scopedConfig(scope, svc)
+      if (cfg.mcp?.[item.id]) yield* writeMcp(scope, svc, item.id, null)
     }
-    const cfg = yield* scopedConfig(scope, svc)
-    if (!cfg.mcp?.[item.id]) return { success: true, slug: item.id }
-    yield* writeMcp(scope, svc, item.id, null)
+    // kilocode_change start - clear the server's cached runtime status so a
+    // past connection attempt (e.g. "needs_auth") doesn't keep resurfacing in
+    // mcp.status() after it's been uninstalled; see MCP.remove.
+    yield* svc.mcp.remove(item.id)
+    // kilocode_change end
     return { success: true, slug: item.id }
   }).pipe(Effect.catchCause((cause) => Effect.succeed({ success: false, slug: item.id, error: failure(cause) })))
 }

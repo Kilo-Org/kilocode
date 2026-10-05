@@ -242,6 +242,12 @@ export interface Interface {
   readonly add: (name: string, mcp: ConfigMCPV1.Info) => Effect.Effect<{ status: Record<string, Status> | Status }>
   readonly connect: (name: string) => Effect.Effect<void, NotFoundError>
   readonly disconnect: (name: string) => Effect.Effect<void, NotFoundError>
+  // kilocode_change start - purge all cached runtime state for a server removed
+  // from config. `disconnect` alone leaves `status[name]` and `config[name]`
+  // behind, so `status()` keeps resurrecting the server's last-known state
+  // (e.g. stuck "needs_auth") after it's been uninstalled.
+  readonly remove: (name: string) => Effect.Effect<void>
+  // kilocode_change end
   readonly getPrompt: (
     clientName: string,
     name: string,
@@ -740,6 +746,18 @@ const layer = Layer.effect(
       s.status[name] = { status: "disabled" }
     })
 
+    // kilocode_change start - see Interface.remove
+    const remove = Effect.fn("MCP.remove")(function* (name: string) {
+      const s = yield* InstanceState.get(state)
+      yield* closeClient(s, name)
+      delete s.clients[name]
+      delete s.defs[name]
+      delete s.instructions[name]
+      delete s.status[name]
+      delete s.config[name]
+    })
+    // kilocode_change end
+
     function requestTimeout(s: State, name: string, configured: McpEntry | undefined, fallback?: number) {
       const staticTimeout = configured && isMcpConfigured(configured) ? configured.timeout : undefined
       return s.config[name]?.timeout ?? staticTimeout ?? fallback
@@ -1168,6 +1186,7 @@ const layer = Layer.effect(
       add,
       connect,
       disconnect,
+      remove, // kilocode_change
       getPrompt,
       readResource,
       startAuth,
