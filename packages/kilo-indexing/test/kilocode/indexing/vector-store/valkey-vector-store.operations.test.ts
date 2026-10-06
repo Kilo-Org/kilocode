@@ -536,20 +536,18 @@ describe("ValkeyVectorStore Operations", () => {
         [{ key: `${collectionName}:chunk-b1` }, { key: `${collectionName}:chunk-b2` }],
       ])
 
-      mockDel.mockResolvedValueOnce(3)
+      mockDel.mockResolvedValueOnce(1)
+      mockDel.mockResolvedValueOnce(2)
 
       await store.deletePointsByMultipleFilePaths(["src/a.ts", "src/b.ts"])
 
       // Verify search was called for each file path
       expect(mockGlideFtSearch).toHaveBeenCalledTimes(2)
 
-      // Verify all found keys were deleted in one call
-      expect(mockDel).toHaveBeenCalledTimes(1)
-      expect(mockDel).toHaveBeenCalledWith([
-        `${collectionName}:chunk-a1`,
-        `${collectionName}:chunk-b1`,
-        `${collectionName}:chunk-b2`,
-      ])
+      // Keys are flushed per path, so each path's keys are deleted before moving on
+      expect(mockDel).toHaveBeenCalledTimes(2)
+      expect(mockDel).toHaveBeenNthCalledWith(1, [`${collectionName}:chunk-a1`])
+      expect(mockDel).toHaveBeenNthCalledWith(2, [`${collectionName}:chunk-b1`, `${collectionName}:chunk-b2`])
     })
 
     test("skips a path containing '=>' and still deletes the others", async () => {

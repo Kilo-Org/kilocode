@@ -392,7 +392,6 @@ export class ValkeyVectorStore implements IVectorStore {
 
     try {
       const client = await this.ensureConnected()
-      const keysToDelete: string[] = []
       const DELETE_BATCH_SIZE = 1000
       const SEARCH_LIMIT = 10000
 
@@ -404,6 +403,9 @@ export class ValkeyVectorStore implements IVectorStore {
         }
         const sanitizedPath = this.sanitizeTagValue(filePath)
         const query = `@filePath:{${sanitizedPath}}`
+
+        // Scope the pending keys to this path so one file's chunks are flushed before moving on.
+        const keysToDelete: string[] = []
 
         // Paginate: re-query from offset 0 until fewer than SEARCH_LIMIT remain,
         // ensuring files with more than 10,000 chunks are fully cleaned up.
@@ -430,10 +432,10 @@ export class ValkeyVectorStore implements IVectorStore {
             await client.del(batch)
           }
         } while (found >= SEARCH_LIMIT)
-      }
 
-      if (keysToDelete.length > 0) {
-        await client.del(keysToDelete)
+        if (keysToDelete.length > 0) {
+          await client.del(keysToDelete)
+        }
       }
     } catch (error) {
       const samplePaths = filePaths.slice(0, 3)
