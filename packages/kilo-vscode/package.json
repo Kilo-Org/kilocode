@@ -156,6 +156,12 @@
         "icon": "$(settings-gear)"
       },
       {
+        "command": "kilo-code.new.settingsSearch",
+        "title": "Search Settings",
+        "category": "Kilo Code",
+        "icon": "$(search)"
+      },
+      {
         "command": "kilo-code.new.sidebarTitle.plusButtonClicked",
         "title": "New Task",
         "icon": "$(add)"
@@ -193,6 +199,12 @@
           "light": "assets/icons/kilo-light.svg",
           "dark": "assets/icons/kilo-dark.svg"
         }
+      },
+      {
+        "command": "kilo-code.new.openBrowser",
+        "title": "Open Integrated Browser",
+        "category": "Kilo Code",
+        "icon": "$(globe)"
       },
       {
         "command": "kilo-code.new.showChanges",
@@ -887,6 +899,12 @@
         "command": "kilo-code.new.autocomplete.nextEdit.dismiss",
         "key": "escape",
         "when": "editorTextFocus && !editorTabMovesFocus && !inSnippetMode && kilo-code.nextEdit.hasPendingSuggestion"
+      },
+      {
+        "command": "kilo-code.new.settingsSearch",
+        "key": "ctrl+f",
+        "mac": "cmd+f",
+        "when": "activeWebviewPanelId == 'kilo-code.new.settingsPanel'"
       }
     ],
     "configuration": {
@@ -1401,7 +1419,7 @@
     "openai": "^4.85.4",
     "playwright-core": "1.57.0",
     "quick-lru": "^7.0.0",
-    "simple-git": "3.36.0",
+    "simple-git": "4.0.2",
     "solid-js": "^1.9.11",
     "uri-js": "^4.4.1",
     "virtua": "catalog:",

@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, spyOn } from "bun:test"
 import * as fs from "node:fs/promises"
 import * as os from "node:os"
 import * as path from "node:path"
-import simpleGit from "simple-git"
+import { simpleGit } from "simple-git"
 import { ProjectContext } from "../../src/agent-manager/project/context"
 import { initContextState } from "../../src/agent-manager/project/init"
 

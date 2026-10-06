@@ -531,6 +531,9 @@ export const dict = {
   "provider.custom.error.duplicate": "重复",
   "settings.openLocalConfig": "本地配置",
   "settings.openGlobalConfig": "全局配置",
+  "settings.search.placeholder": "搜索设置",
+  "settings.search.noResults": "未找到设置",
+  "settings.search.clear": "清除搜索",
   "settings.config.scope.local": "本地",
   "settings.config.scope.global": "全局",
   "settings.config.status.loaded": "已加载",
@@ -589,6 +592,7 @@ export const dict = {
   "session.tabs.switcher.pending": "新建",
   "session.tabs.switcher.busy": "工作中",
   "session.tabs.switcher.scheduled": "已计划",
+  "session.tabs.pinHint": "按住 Shift 点击可固定或取消固定",
   "session.tab.local": "本地",
   "session.tab.cloud": "云端",
   "session.tab.worktree": "工作树",
@@ -1282,6 +1286,8 @@ export const dict = {
 
   "task.todos.progress": "{{done}}/{{total}} 个待办已完成",
   "task.todos.allDone": "{{count}} 个待办已完成",
+  "task.todos.title": "待办",
+  "task.todos.done": "全部完成",
   "task.backgroundAgents.running.one": "1 个后台智能体",
   "task.backgroundAgents.running.many": "{{count}} 个后台智能体",
   "task.backgroundAgents.open": "打开后台智能体",
@@ -1361,4 +1367,6 @@ export const dict = {
   "settings.experimental.browserAutomation.systemChrome.description":
     "为集成浏览器使用已安装的 Google Chrome。仅在已安装兼容的 Playwright Chromium 浏览器时才禁用。",
   "chat.search.searchingHistory": "正在搜索更早的消息…",
+  "browserTab.noSession": "从会话中打开浏览器以预览本地应用或公共 HTTPS 页面。",
+  "browserTab.disabled": "集成浏览器已禁用。请在 Kilo 设置 > 实验性中启用。",
 } satisfies Partial<Record<Keys, string>>

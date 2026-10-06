@@ -508,6 +508,9 @@ export const dict = {
   "provider.custom.error.duplicate": "Duplicaat",
   "settings.openLocalConfig": "Lokale config",
   "settings.openGlobalConfig": "Globale config",
+  "settings.search.placeholder": "Instellingen zoeken",
+  "settings.search.noResults": "Geen instellingen gevonden",
+  "settings.search.clear": "Zoekopdracht wissen",
   "settings.config.scope.local": "Lokaal",
   "settings.config.scope.global": "Globaal",
   "settings.config.status.loaded": "geladen",
@@ -568,6 +571,7 @@ export const dict = {
   "session.tabs.switcher.pending": "Nieuw",
   "session.tabs.switcher.busy": "Bezig",
   "session.tabs.switcher.scheduled": "Gepland",
+  "session.tabs.pinHint": "Shift+klik om vast te maken of los te maken",
   "session.tab.local": "Lokaal",
   "session.tab.cloud": "Cloud",
   "session.tab.worktree": "Werkboom",
@@ -1346,6 +1350,8 @@ export const dict = {
 
   "task.todos.progress": "{{done}}/{{total}} to-do's voltooid",
   "task.todos.allDone": "{{count}} to-do's voltooid",
+  "task.todos.title": "To-do's",
+  "task.todos.done": "Alles klaar",
   "task.backgroundAgents.running.one": "1 achtergrondagent",
   "task.backgroundAgents.running.many": "{{count}} achtergrondagenten",
   "task.backgroundAgents.open": "Achtergrondagent openen",
@@ -1471,4 +1477,8 @@ export const dict = {
   "settings.experimental.browserAutomation.systemChrome.description":
     "Gebruik de geïnstalleerde Google Chrome voor de geïntegreerde browser. Schakel dit alleen uit als er al een compatibele Playwright Chromium-browser is geïnstalleerd.",
   "chat.search.searchingHistory": "Eerdere berichten doorzoeken…",
+  "browserTab.noSession":
+    "Open de browser vanuit een sessie om een lokale applicatie of een openbare HTTPS-pagina te bekijken.",
+  "browserTab.disabled":
+    "De geïntegreerde browser is uitgeschakeld. Schakel deze in via Kilo-instellingen > Experimenteel.",
 }
