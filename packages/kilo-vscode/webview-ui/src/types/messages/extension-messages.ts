@@ -294,6 +294,7 @@ export interface MessageCreatedMessage {
 
 export interface SessionsLoadedMessage {
   type: "sessionsLoaded"
+  projectId?: string
   sessions: SessionInfo[]
   preserveSessionIds?: string[]
   append?: boolean

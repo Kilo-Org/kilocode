@@ -1391,6 +1391,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           await this.handleCreateSession()
           break
         case "clearSession":
+          this.loadMessagesAbort?.abort()
           this.stopCurrentSessionProcesses()
           this.contextSessionID = undefined
           this.setCurrentSession(null)
@@ -2349,6 +2350,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     if (mode === "replace" || mode === "focus") {
       this.trackedSessionIds.add(sessionID)
       if (options.focus !== false) {
+        this.loadMessagesAbort?.abort()
         this.stopCurrentSessionProcesses(sessionID)
         this.focusSession(sessionID)
         this.contextSessionID = sessionID
@@ -2369,7 +2371,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     // Replace competes for the spinner and cancels earlier loads; prepend/reconcile run in parallel.
     const abort = mode === "replace" && options.focus !== false ? new AbortController() : undefined
     if (abort) {
-      this.loadMessagesAbort?.abort()
       this.loadMessagesAbort = abort
     }
     const revision = this.revisions.get(sessionID)
@@ -2527,6 +2528,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
    */
   private getSessionRefreshContext(revision: number): SessionRefreshContext {
     const client = this.client
+    const project = this.opts.projectQualifier?.()
     return {
       pendingSessionRefresh: this.pendingSessionRefresh,
       connectionState: this.connectionState,
@@ -2540,7 +2542,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       worktreeDirectories: this.opts.worktreeDirectories,
       workspaceDirectory: this.getWorkspaceDirectory(),
       isCurrent: () => revision === this.sessionRefreshRevision,
-      postMessage: (msg: unknown) => this.postMessage(msg),
+      postMessage: (msg: unknown) =>
+        this.postMessage(project && typeof msg === "object" && msg !== null ? { ...msg, ...project } : msg),
     }
   }
 
