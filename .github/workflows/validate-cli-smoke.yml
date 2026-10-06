@@ -19,13 +19,6 @@ name: validate-cli-smoke
 
 on:
   workflow_dispatch:
-  # TEMPORARY — remove before merging to main.
-  # workflow_dispatch only becomes available once this file is on the default branch, so a
-  # push trigger is the only way to exercise this gate from the branch while iterating.
-  # After merge, dispatch it instead: gh workflow run validate-cli-smoke.yml --ref <branch>
-  push:
-    branches:
-      - fearless-walrus
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
