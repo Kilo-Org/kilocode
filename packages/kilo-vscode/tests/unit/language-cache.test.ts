@@ -1,8 +1,7 @@
 import { describe, expect, it } from "bun:test"
 import path from "node:path"
 import { Project, SyntaxKind } from "ts-morph"
-import { pluralCategory, pluralKey } from "@kilocode/kilo-ui/context/i18n"
-import type { UiI18nParams, UiI18nPluralKey } from "@kilocode/kilo-ui/context/i18n"
+import type { UiI18nParams, UiI18nPluralKey, UiPluralCategory } from "@kilocode/kilo-ui/context/i18n"
 import type { LanguageContextValue, LanguageProvider } from "../../webview-ui/src/context/language"
 import {
   LOCALES,
@@ -37,6 +36,30 @@ const layers: Record<string, Record<string, string>> = Object.fromEntries(
   ),
 )
 const solid: typeof import("solid-js") = await import(path.join(path.dirname(require.resolve("solid-js")), "solid.js"))
+// The UI i18n module is JSX, so extract the real plural helpers instead of importing it.
+const uiI18n = project.createSourceFile(
+  "ui-i18n.tsx",
+  await Bun.file(path.resolve(import.meta.dir, "../../../ui/src/context/i18n.tsx")).text(),
+)
+const helpers = new Function(
+  `${new Bun.Transpiler({ loader: "ts" }).transformSync(
+    [
+      uiI18n.getVariableStatementOrThrow("rules").getText(),
+      uiI18n
+        .getFunctionOrThrow("pluralCategory")
+        .getText()
+        .replace(/^export /, ""),
+      uiI18n
+        .getFunctionOrThrow("pluralKey")
+        .getText()
+        .replace(/^export /, ""),
+    ].join("\n"),
+  )}; return { pluralCategory, pluralKey }`,
+)() as {
+  pluralCategory: (locale: string, count: number) => UiPluralCategory
+  pluralKey: (key: UiI18nPluralKey, category: UiPluralCategory) => string
+}
+const { pluralCategory, pluralKey } = helpers
 const body = source
   .getVariableDeclarationOrThrow("LanguageProvider")
   .getInitializerIfKindOrThrow(SyntaxKind.ArrowFunction)
