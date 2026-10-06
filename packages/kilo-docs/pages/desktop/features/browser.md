@@ -7,7 +7,7 @@ description: "Browse the web next to your chat, including pages the agent opens 
 
 Browse the web in a tab next to your chat — check documentation, dashboards, or a local dev server without switching to a separate application. Because it lives inside the chat, the browser is wired into your work with the agent.
 
-## Pages the agent opens
+## Pages the agent opens 
 
 The agent can open a page for you — a local dev server it just started, or documentation it's pointing you to. If a tab is already showing that URL, the agent focuses it instead of opening another. It opens the page to show it to you, but it's not able to read the page contents.
 
