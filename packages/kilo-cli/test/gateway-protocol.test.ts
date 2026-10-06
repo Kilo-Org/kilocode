@@ -1,12 +1,14 @@
 import { expect, test } from "bun:test"
 import path from "node:path"
-import { fixture } from "./fixture"
+import { fixture, interactiveBun } from "./fixture"
 
-test("the execution host dispatches catalog-selected Gateway protocols and replays settled history", async () => {
+const bundledBun = interactiveBun()
+
+test.skipIf(!bundledBun)("the execution host dispatches catalog-selected Gateway protocols and replays settled history", async () => {
   await using input = await fixture()
   const child = Bun.spawn(
     [
-      path.resolve(import.meta.dir, "../dist/interactive/bun"),
+      bundledBun!,
       "--no-env-file",
       path.join(import.meta.dir, "gateway-protocol-fixture.ts"),
     ],

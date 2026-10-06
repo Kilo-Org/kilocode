@@ -1,7 +1,9 @@
 import { expect, test } from "bun:test"
 import path from "node:path"
 import { promptFor } from "../src/model-prompt-policy"
-import { fixture } from "./fixture"
+import { fixture, interactiveBun } from "./fixture"
+
+const bundledBun = interactiveBun()
 
 test("promptFor resolves verified and adapted selectors and never inherited object members", () => {
   expect(promptFor("anthropic")).toBeDefined()
@@ -83,11 +85,11 @@ test("promptFor resolves verified and adapted selectors and never inherited obje
   }
 })
 
-test("the model prompt policy applies verified catalog prompt tags and preserves native composition", async () => {
+test.skipIf(!bundledBun)("the model prompt policy applies verified catalog prompt tags and preserves native composition", async () => {
   await using input = await fixture()
   const child = Bun.spawn(
     [
-      path.resolve(import.meta.dir, "../dist/interactive/bun"),
+      bundledBun!,
       "--no-env-file",
       path.join(import.meta.dir, "model-prompt-policy-fixture.ts"),
     ],

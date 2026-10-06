@@ -14,7 +14,7 @@ import {
   startActivityExporter,
   type EventSubscriberClient,
 } from "../src/telemetry"
-import { fixture, ready } from "./fixture"
+import { fixture, interactiveBun, ready } from "./fixture"
 
 describe("telemetry configuration", () => {
   test("defaults to disabled without explicit opt-in", () => {
@@ -454,13 +454,9 @@ describe("safe activity exporter with local fake OTLP collector", () => {
     await expect(exporter.stop()).resolves.toBeUndefined()
   })
 
-  test("proves real OpenCode promise client satisfies EventSubscriberClient with interactive-fixture", async () => {
+  test.skipIf(!interactiveBun())("proves real OpenCode promise client satisfies EventSubscriberClient with interactive-fixture", async () => {
     // The interactive host requires the bundled Bun 1.4 runtime.
-    const bundledBun = path.resolve(import.meta.dir, "../dist/interactive/bun")
-    if (!(await Bun.file(bundledBun).exists())) {
-      console.warn(`Skipping live-host telemetry proof: bundled runtime missing at ${bundledBun}`)
-      return
-    }
+    const bundledBun = interactiveBun()!
     await using input = await fixture()
     const child = Bun.spawn(
       [bundledBun, "--no-env-file", path.join(import.meta.dir, "interactive-fixture.ts")],

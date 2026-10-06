@@ -1,12 +1,14 @@
 import { expect, test } from "bun:test"
 import path from "node:path"
-import { fixture } from "./fixture"
+import { fixture, interactiveBun } from "./fixture"
 
-test("Gateway Auto catalogs follow real personal/team scope transitions without stale or cross-Location bleed", async () => {
+const bundledBun = interactiveBun()
+
+test.skipIf(!bundledBun)("Gateway Auto catalogs follow real personal/team scope transitions without stale or cross-Location bleed", async () => {
   await using input = await fixture()
   const child = Bun.spawn(
     [
-      path.resolve(import.meta.dir, "../dist/interactive/bun"),
+      bundledBun!,
       "--no-env-file",
       path.join(import.meta.dir, "gateway-scope-acceptance-fixture.ts"),
     ],

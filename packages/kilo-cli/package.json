@@ -14,6 +14,7 @@
     "build:tui": "bun run script/build-tui.ts",
     "build:acp": "bun run script/build-acp.ts",
     "test": "bun run script/test.ts",
+    "test:interactive": "bun run script/test-interactive.ts",
     "test:coexistence": "bun run script/coexistence.ts",
     "typecheck": "tsgo --noEmit"
   },

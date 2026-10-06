@@ -1,14 +1,16 @@
 import { expect, test } from "bun:test"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
-import { fixture } from "./fixture"
+import { fixture, interactiveBun } from "./fixture"
+
+const bundledBun = interactiveBun()
 
 for (const scope of ["profile", "project"]) {
-  test(`Kilo TUI /kilo-settings edits ${scope} configuration the host loads, without touching a session`, async () => {
+  test.skipIf(!bundledBun)(`Kilo TUI /kilo-settings edits ${scope} configuration the host loads, without touching a session`, async () => {
     await using input = await fixture()
     const child = Bun.spawn(
       [
-        path.resolve(import.meta.dir, "../dist/interactive/bun"),
+        bundledBun!,
         "--no-env-file",
         "--preload",
         fileURLToPath(import.meta.resolve("@opentui/solid/preload")),

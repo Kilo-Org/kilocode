@@ -1,15 +1,14 @@
 import { expect, test } from "bun:test"
 import { Permission } from "@opencode-ai/core/permission"
 import path from "node:path"
-import { fixture } from "./fixture"
+import { fixture, interactiveBun } from "./fixture"
 
 const root = path.resolve(import.meta.dir, "..")
-const bundledBun = path.join(root, "dist/interactive/bun")
+const bundledBun = interactiveBun()
 const hostFixture = path.join(import.meta.dir, "agent-policy-fixture.ts")
 
-test("agent policy uses the bundled Bun host and public client contract", async () => {
-  expect(await Bun.file(bundledBun).exists()).toBe(true)
-  expect((await run(bundledBun, ["--version"])).stdout.trim()).toBe("1.4.0")
+test.skipIf(!bundledBun)("agent policy uses the bundled Bun host and public client contract", async () => {
+  expect((await run(bundledBun!, ["--version"])).stdout.trim()).toBe("1.4.0")
 
   const native = await host({
     permissions: [{ action: "read", resource: "secret.txt", effect: "deny" }],
@@ -149,7 +148,7 @@ type Host = {
   }
 }
 
-test("native default-agent fallback already resolves Code configuration without duplicating the coding agent", async () => {
+test.skipIf(!bundledBun)("native default-agent fallback already resolves Code configuration without duplicating the coding agent", async () => {
   const native = await host({ default_agent: "code" }, false)
   expect(native.defaultAgent).toBe("build")
   expect(native.agents.filter((agent) => agent.name === "Code").map((agent) => agent.id)).toEqual(["build"])
@@ -169,7 +168,7 @@ test("native default-agent fallback already resolves Code configuration without 
   expect(explicit.defaultAgent).toBe("ask")
 })
 
-test("explore ceiling keeps explicit configured shell denies winning over the allowlist", async () => {
+test.skipIf(!bundledBun)("explore ceiling keeps explicit configured shell denies winning over the allowlist", async () => {
   // The explore policy runs before config, so a configured deny lands after the ceiling and wins
   // by last-match with no re-append. Real execution confirms the deny and the surviving allowlist.
   const user = await host({
@@ -185,7 +184,7 @@ test("explore ceiling keeps explicit configured shell denies winning over the al
   expect(user.runtime?.explore.cat).toBe(false)
 })
 
-test("explore ceiling is not reopened by broad global or agent shell allows", async () => {
+test.skipIf(!bundledBun)("explore ceiling is not reopened by broad global or agent shell allows", async () => {
   // A broad config allow lands after the ceiling, so pure ruleset evaluation would reopen a
   // table-denied command. The post permission.evaluate ceiling forces the deny in the real assert
   // path, so real execution still blocks them while allowlisted commands run.
@@ -224,7 +223,7 @@ test("explore ceiling is not reopened by broad global or agent shell allows", as
   expect(owned.system).toBe("Project prompt.")
 })
 
-test("enforced post ceiling still denies unsafe commands when the pre policy is disabled", async () => {
+test.skipIf(!bundledBun)("enforced post ceiling still denies unsafe commands when the pre policy is disabled", async () => {
   // Removing the default-phase explore policy stops the agent.transform from appending the
   // exploreBash rules, so with a broad shell allow the agent ruleset alone would allow everything.
   // The enforced post kilocode.agent-policy permission.evaluate ceiling still forces the deny for
@@ -269,7 +268,7 @@ test("enforced post ceiling still denies unsafe commands when the pre policy is 
 
 async function host(config: object, exercise = true) {
   await using input = await fixture()
-  const result = await run(bundledBun, ["--no-env-file", hostFixture], {
+  const result = await run(bundledBun!, ["--no-env-file", hostFixture], {
     ...input.env,
     KILO_AGENT_POLICY_CONFIG: JSON.stringify(config),
     KILO_AGENT_POLICY_CWD: input.cwd,
