@@ -17,13 +17,15 @@ import { createWorkerRemoteExit } from "@/kilocode/cli/cmd/tui/remote-exit-worke
 import { createWorkerShutdown } from "@/cli/tui/worker-shutdown" // kilocode_change
 import { KiloSessions } from "@/kilo-sessions/kilo-sessions" // kilocode_change
 
+// kilocode_change - queue parent requests before the await below; Rpc.listen replays them
+Rpc.arm()
+
 ensureProcessMetadata("worker") // kilocode_change - retain worker role and parent run correlation
 await KiloLog.init() // kilocode_change - keep compatibility logs off the TUI terminal
 Heap.start()
 
-// kilocode_change start - startup checkpoints. Rpc.client().call() has no timeout and no reject
-// path, so a worker that never boots or never registers onmessage leaves the TUI blank forever
-// with no error. These two lines distinguish "worker never started" from "worker up but RPC stuck".
+// kilocode_change start - startup checkpoints: these separate "worker never started" from
+// "worker up but RPC stuck", which is how the release PTY smoke stall was localised
 const log = Log.create({ service: "tui-worker" })
 log.info("worker booted")
 // kilocode_change end
