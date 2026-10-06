@@ -1,0 +1,16 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Transcript lines</title><link rel="stylesheet" href="mockup.css"></head><body>
+<p class="note"><b>Transcript.</b> Auto-approved calls get one quiet line (tool, rule, model, cost). Blocks and backstops are prominent. The legacy feature showed only a cost line.</p>
+<div><h1>A. Quiet approvals</h1><div class="frame wide"><div class="title">Session</div><div class="body">
+<div class="msg">Running the tests, then fixing the failing one.</div>
+<div class="card"><div class="row"><b>bash</b><span class="mono dim">bun test packages/core</span><span class="grow"></span><span class="pill ok">Auto-approved</span></div>
+<div class="line"><span class="t dim">review</span><span class="dim">AFM.KNOWN_RUNNER · tier 2 · no model call</span></div></div>
+<div class="card"><div class="row"><b>bash</b><span class="mono dim">make lint-fix</span><span class="grow"></span><span class="pill ok">Auto-approved</span></div>
+<div class="line"><span class="t dim">review</span><span class="dim">AFM.REVIEWER_ALLOW · kilo-auto/small · 640 ms · $0.0002</span></div></div>
+<div class="card"><div class="row"><b>edit</b><span class="mono dim">src/util/path.ts</span><span class="grow"></span><span class="pill ok">Auto-approved</span></div>
+<div class="line"><span class="t dim">review</span><span class="dim">AFM.WORKSPACE_EDIT · tier 1</span></div></div></div></div></div>
+<div><h1>B. Block and backstop</h1><div class="frame wide"><div class="body">
+<div class="card bad"><div class="row"><b>bash</b><span class="mono dim">rm -rf build/ .git/hooks</span><span class="grow"></span><span class="pill bad">Blocked</span></div>
+<div class="line"><span class="t dim">review</span><span class="dim">AFM.GIT_HOOK_WRITE · tier 2</span></div></div>
+<div class="card warn"><div class="row"><span class="pill warn">Approve for me paused</span><span class="grow"></span></div>
+<div class="dim" style="margin-top:6px">3 calls in a row were blocked. Approve for me stopped deciding for this session. You will be asked for each call. <span class="btn" style="margin-left:6px">Resume</span></div></div></div></div></div>
+</body></html>

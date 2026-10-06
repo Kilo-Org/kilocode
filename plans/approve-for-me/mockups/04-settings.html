@@ -1,0 +1,18 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Settings</title><link rel="stylesheet" href="mockup.css"></head><body>
+<p class="note"><b>Settings page (PR 9).</b> Global only. No free-text prompt editing. The page states what is and is not reviewed, and recommends Sandbox for untrusted repositories.</p>
+<div><h1>Approve for me</h1><div class="frame wide"><div class="title">Settings › Approvals</div><div class="body">
+<div class="field"><label>Mode</label><div class="seg"><span>Off</span><span>Review only</span><span class="on">On</span></div>
+<div class="dim" style="margin-top:4px">Review only records what Approve for me would do. It never changes what you see.</div></div>
+<div class="field"><label>Reviewer model</label><div class="select" style="width:320px">kilo-auto/small ▾</div>
+<div class="dim" style="margin-top:4px">A small, fast model. OpenAI models are not offered for this role. Calls cost a little and add latency to unclear commands only.</div></div>
+<div class="field"><label>Time limit</label><div class="select" style="width:120px">4 seconds ▾</div><div class="dim" style="margin-top:4px">After this, you get the normal prompt.</div></div>
+<div class="field"><label>What is reviewed</label>
+<table><tr><th>Tool</th><th>Decided by</th></tr>
+<tr><td>Read, search, todo</td><td>Rules (no model)</td></tr>
+<tr><td>Edits inside the workspace</td><td>Rules (no model)</td></tr>
+<tr><td>Shell commands</td><td>Rules, then the reviewer for unclear ones</td></tr>
+<tr><td>MCP tools, web fetch</td><td>Reviewer, never auto for unknown write tools</td></tr>
+<tr><td>Skill shell, sandbox escalation, protected files, outside the workspace</td><td>Always you</td></tr></table></div>
+<div class="card warn"><b>Limits.</b> Approve for me is not a sandbox. Test and build commands run project code. Command facts are sent to the reviewer model. Use Sandbox for untrusted repositories.</div>
+</div></div></div>
+</body></html>
