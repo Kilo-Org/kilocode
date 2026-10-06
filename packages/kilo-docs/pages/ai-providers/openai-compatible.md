@@ -65,7 +65,7 @@ Click **Fetch models** next to the model list to retry the fetch at any time, fo
 
 Define a custom provider in your `kilo.json` config file (`~/.config/kilo/kilo.json` or `./kilo.json`). The provider key (e.g., `"vllm"`) is your chosen identifier — it can be any name you like.
 
-You must define at least one model. Setting `name` and `limit` (context window and max output tokens) is recommended so the agent can manage context correctly:
+You must define at least one model, or turn on [model discovery](#discovering-models-from-the-endpoint). Setting `name` and `limit` (context window and max output tokens) is recommended so the agent can manage context correctly:
 
 ```jsonc
 {
@@ -125,6 +125,34 @@ You can also set the API key via an environment variable instead of putting it i
   },
 }
 ```
+
+#### Discovering models from the endpoint
+
+Set `options.discoverModels` to `true` to load the model list from `{baseURL}/models` whenever Kilo loads providers, instead of listing every model by hand. The request uses the provider's API key and `options.headers`, and gives up after 10 seconds. Results are cached for 5 minutes.
+
+```jsonc
+{
+  "provider": {
+    "my-gateway": {
+      "env": ["MY_GATEWAY_API_KEY"],
+      "options": {
+        "baseURL": "https://gateway.example.com/v1",
+        "discoverModels": true,
+      },
+      "models": {
+        "my-model": {
+          "name": "My Model",
+          "limit": { "context": 128000, "output": 4096 },
+        },
+      },
+    },
+  },
+}
+```
+
+Discovered models only get an ID, so add a `models` entry with `name` and `limit` for any model you use a lot; config entries win over discovered ones with the same ID. Use `whitelist` or `blacklist` to trim a long list. If the endpoint fails, the configured models still work.
+
+Discovery only runs from your global config (`~/.config/kilo/kilo.json`) or another trusted source. A project's `kilo.json` cannot turn it on, and it switches discovery off for a provider when it changes that provider's `baseURL`, `api` or `env`, so a repository cannot send your API key to an address of its choosing.
 
 {% /tab %}
 {% /tabs %}

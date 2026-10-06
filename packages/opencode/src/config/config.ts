@@ -598,6 +598,7 @@ const layer = Layer.effect(
         }
         warnings.push(...orgModes.warnings)
         let configuredAgents = { ...(result.agent ?? {}) }
+        const retargeted = new Set<string>() // providers whose model discovery untrusted config touched
         // kilocode_change end
 
         const authEnv: Record<string, string> = {}
@@ -655,6 +656,7 @@ const layer = Layer.effect(
         ) {
           const scope = kind ?? (yield* pluginScopeForSource(source))
           const trusted = sourceTrusted ?? scope === "global"
+          if (!trusted) for (const id of KilocodeConfig.retargets(next)) retargeted.add(id)
           const scoped = KilocodeConfig.scopeIndexing(SandboxConfig.scope(next, scope), scope)
           result = mergeConfigConcatArrays(result, scoped, trusted) // kilocode_change
           if (scoped.agent) configuredAgents = mergeDeep(configuredAgents, scoped.agent)
@@ -1054,6 +1056,7 @@ const layer = Layer.effect(
         }
         // kilocode_change start — inject Kilo default plugins into both plugin list and origins
         KilocodeDefaultPlugins.apply(result, { disabled: Flag.KILO_DISABLE_DEFAULT_PLUGINS, log })
+        KilocodeConfig.undiscover(result, retargeted)
         // kilocode_change end
 
         return {
