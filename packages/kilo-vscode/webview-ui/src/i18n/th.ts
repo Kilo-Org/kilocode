@@ -1415,4 +1415,6 @@ export const dict = {
   "settings.experimental.browserAutomation.systemChrome.description":
     "ใช้ Google Chrome ที่ติดตั้งไว้สำหรับเบราว์เซอร์ในตัว ปิดใช้งานเฉพาะเมื่อติดตั้งเบราว์เซอร์ Playwright Chromium ที่เข้ากันได้ไว้แล้วเท่านั้น",
   "chat.search.searchingHistory": "กำลังค้นหาข้อความก่อนหน้า…",
+  "browserTab.noSession": "เปิดเบราว์เซอร์จากเซสชันเพื่อดูตัวอย่างแอปพลิเคชันในเครื่องหรือหน้า HTTPS สาธารณะ",
+  "browserTab.disabled": "เบราว์เซอร์ในตัวถูกปิดใช้งาน เปิดใช้งานได้ในการตั้งค่า Kilo > ทดลอง",
 }

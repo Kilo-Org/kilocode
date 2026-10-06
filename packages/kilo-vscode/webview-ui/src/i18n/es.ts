@@ -1462,4 +1462,7 @@ export const dict = {
   "settings.experimental.browserAutomation.systemChrome.description":
     "Usa el Google Chrome instalado para el Navegador integrado. Desactívalo solo si ya hay instalado un navegador Playwright Chromium compatible.",
   "chat.search.searchingHistory": "Buscando en mensajes anteriores…",
+  "browserTab.noSession":
+    "Abre el navegador desde una sesión para previsualizar una aplicación local o una página HTTPS pública.",
+  "browserTab.disabled": "El navegador integrado está desactivado. Actívalo en Ajustes de Kilo > Experimental.",
 }

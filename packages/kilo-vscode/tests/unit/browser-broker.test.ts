@@ -912,6 +912,67 @@ describe("BrowserBroker", () => {
     expect(broker.sessions()).toEqual([])
   })
 
+  test("resolves multiple route owners by registration order and requested project", async () => {
+    let target = "about:blank"
+    const page = {
+      url: () => target,
+      title: async () => "Local app",
+      screenshot: async () => Buffer.from("jpeg"),
+      off: () => undefined,
+      on: (_type: string, _listener: (...args: never[]) => void) => undefined,
+      mainFrame: () => undefined,
+      goto: async (url: string) => {
+        target = url
+        return { status: () => 200 }
+      },
+      reload: async () => ({ status: () => 200 }),
+    }
+    const broker = fixture(page)
+    broker.bind((route) =>
+      route.directory === "/tmp/sidebar" ? { sessionId: route.sessionId, directory: route.directory } : undefined,
+    )
+    broker.bind((route) => (route.directory === "/tmp/agent" ? { ...route, projectId: "agent" } : undefined))
+
+    const sidebar = await broker.open({ sessionId: "sidebar", directory: "/tmp/sidebar" }, "http://localhost:3000/")
+    expect(sidebar.projectId).toBeUndefined()
+    expect(broker.get("sidebar")).toMatchObject({ status: "ready" })
+
+    const agent = await broker.open(
+      { sessionId: "agent", directory: "/tmp/agent", projectId: "agent" },
+      "http://localhost:3000/",
+    )
+    expect(agent.projectId).toBe("agent")
+
+    for (const route of [
+      { sessionId: "missing", directory: "/tmp/agent", projectId: "other" },
+      { sessionId: "missing", directory: "/tmp/sidebar", projectId: "agent" },
+    ]) {
+      await expect(broker.open(route, "http://localhost:3000/")).rejects.toThrow(
+        "Browser session does not belong to the requested project or directory",
+      )
+    }
+  })
+
+  test("closeScoped closes only the exact session and project entry", async () => {
+    const page = {
+      url: () => "http://localhost:3000/",
+      title: async () => "App",
+      screenshot: async () => Buffer.from("jpeg"),
+      off: () => undefined,
+      on: (_type: string, _listener: (...args: never[]) => void) => undefined,
+      mainFrame: () => undefined,
+      goto: async () => ({ status: () => 200 }),
+      reload: async () => ({ status: () => 200 }),
+    }
+    const broker = fixture(page)
+    broker.bind((route) => route)
+    await broker.open({ sessionId: "shared", directory: "/fixture" }, "http://localhost:3000/")
+    await broker.open({ sessionId: "shared", directory: "/fixture", projectId: "project" }, "http://localhost:3000/")
+    expect(broker.get("shared")).toBeUndefined()
+    await broker.closeScoped("shared")
+    expect(broker.get("shared")).toMatchObject({ projectId: "project" })
+  })
+
   test("preserves project isolation, successful refresh, and captured HTTP errors", async () => {
     let status = 200
     let target = "about:blank"

@@ -1361,4 +1361,6 @@ export const dict = {
   "settings.experimental.browserAutomation.systemChrome.description":
     "为集成浏览器使用已安装的 Google Chrome。仅在已安装兼容的 Playwright Chromium 浏览器时才禁用。",
   "chat.search.searchingHistory": "正在搜索更早的消息…",
+  "browserTab.noSession": "从会话中打开浏览器以预览本地应用或公共 HTTPS 页面。",
+  "browserTab.disabled": "集成浏览器已禁用。请在 Kilo 设置 > 实验性中启用。",
 } satisfies Partial<Record<Keys, string>>

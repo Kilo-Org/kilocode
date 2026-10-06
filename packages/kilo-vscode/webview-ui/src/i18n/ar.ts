@@ -1409,4 +1409,6 @@ export const dict = {
   "settings.experimental.browserAutomation.systemChrome.description":
     "استخدام Google Chrome المثبّت للمتصفح المدمج. عطّله فقط عند تثبيت متصفح Playwright Chromium متوافق.",
   "chat.search.searchingHistory": "جارٍ البحث في الرسائل السابقة…",
+  "browserTab.noSession": "افتح المتصفح من جلسة لمعاينة تطبيق محلي أو صفحة HTTPS عامة.",
+  "browserTab.disabled": "المتصفح المدمج معطّل. فعّله من إعدادات Kilo > تجريبي.",
 }

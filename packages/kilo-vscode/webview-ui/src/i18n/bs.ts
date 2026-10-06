@@ -1447,4 +1447,6 @@ export const dict = {
   "settings.experimental.browserAutomation.systemChrome.description":
     "Koristite instalirani Google Chrome za Integrirani preglednik. Onemogućite samo kada je kompatibilni Playwright Chromium preglednik već instaliran.",
   "chat.search.searchingHistory": "Pretraživanje ranijih poruka…",
+  "browserTab.noSession": "Otvorite preglednik iz sesije da pregledate lokalnu aplikaciju ili javnu HTTPS stranicu.",
+  "browserTab.disabled": "Integrirani preglednik je onemogućen. Omogućite ga u Kilo postavkama > Eksperimentalno.",
 }

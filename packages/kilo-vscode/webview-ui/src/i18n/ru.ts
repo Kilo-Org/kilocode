@@ -1440,4 +1440,7 @@ export const dict = {
   "settings.experimental.browserAutomation.systemChrome.description":
     "Использовать установленный Google Chrome для встроенного браузера. Отключайте только если совместимый браузер Playwright Chromium уже установлен.",
   "chat.search.searchingHistory": "Поиск в более ранних сообщениях…",
+  "browserTab.noSession":
+    "Откройте браузер из сеанса, чтобы просмотреть локальное приложение или публичную HTTPS-страницу.",
+  "browserTab.disabled": "Встроенный браузер отключён. Включите его в Настройках Kilo > Экспериментальные.",
 }

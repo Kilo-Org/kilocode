@@ -1704,6 +1704,28 @@ export interface AgentManagerBrowserStateMessage {
   forward?: boolean
 }
 
+/** Sent once per editor-tab browser panel with its bound session and feature flag. */
+export interface BrowserTabScopeMessage {
+  type: "browserTab.scope"
+  sessionId: string
+  browserAutomation: boolean
+}
+
+export type BrowserTabStateMessage = Omit<AgentManagerBrowserStateMessage, "type"> & { type: "browserTab.state" }
+
+export type BrowserTabInspectionMessage = Omit<AgentManagerBrowserInspectionMessage, "type"> & {
+  type: "browserTab.inspection"
+}
+
+export type BrowserTabDevtoolsMessage = Omit<AgentManagerBrowserDevtoolsMessage, "type"> & {
+  type: "browserTab.devtools"
+}
+
+export interface BrowserTabFrameMessage extends BrowserFrame {
+  type: "browserTab.frame"
+  sessionId: string
+}
+
 export interface AgentManagerBrowserInspectionMessage {
   type: "agentManager.browserInspection"
   error?: string
@@ -1760,6 +1782,11 @@ export type ExtensionMessage =
   | AgentManagerBrowserInspectionMessage
   | AgentManagerBrowserDevtoolsMessage
   | AgentManagerBrowserFrameMessage
+  | BrowserTabScopeMessage
+  | BrowserTabStateMessage
+  | BrowserTabInspectionMessage
+  | BrowserTabDevtoolsMessage
+  | BrowserTabFrameMessage
   | ReadyMessage
   | FontSizeChangedMessage
   | GitStatusMessage

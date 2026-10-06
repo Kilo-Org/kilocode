@@ -1458,4 +1458,7 @@ export const dict = {
   "settings.experimental.browserAutomation.systemChrome.description":
     "Entegre Tarayıcı için yüklü Google Chrome'u kullanın. Yalnızca uyumlu bir Playwright Chromium tarayıcısı zaten yüklüyse devre dışı bırakın.",
   "chat.search.searchingHistory": "Önceki mesajlarda aranıyor…",
+  "browserTab.noSession":
+    "Yerel bir uygulamayı veya genel bir HTTPS sayfasını önizlemek için tarayıcıyı bir oturumdan açın.",
+  "browserTab.disabled": "Tümleşik Tarayıcı devre dışı. Kilo Ayarları > Deneysel'den etkinleştirin.",
 }

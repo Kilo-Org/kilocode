@@ -1441,4 +1441,7 @@ export const dict = {
   "settings.experimental.browserAutomation.systemChrome.description":
     "Brug den installerede Google Chrome til den integrerede browser. Deaktivér kun, når en kompatibel Playwright Chromium-browser allerede er installeret.",
   "chat.search.searchingHistory": "Søger i tidligere beskeder…",
+  "browserTab.noSession":
+    "Åbn browseren fra en session for at forhåndsvise en lokal applikation eller en offentlig HTTPS-side.",
+  "browserTab.disabled": "Den integrerede browser er deaktiveret. Aktivér den i Kilo-indstillinger > Eksperimentel.",
 }
