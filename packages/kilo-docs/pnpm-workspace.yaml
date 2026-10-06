@@ -2,5 +2,7 @@ allowBuilds:
   core-js: true
 
 # mermaid still pins katex ^0.16, which is affected by GHSA-238p-pmpm-9mq7.
+# next optional-deps sharp ^0.35.4; 0.35.4 is affected by GHSA-wq5f-xc86-pv6w.
 overrides:
   katex: 0.19.0
+  sharp: 0.35.5
