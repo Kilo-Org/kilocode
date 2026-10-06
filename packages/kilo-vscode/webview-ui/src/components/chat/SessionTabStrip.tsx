@@ -173,6 +173,7 @@ export const SessionTabStrip: Component = () => {
                           onMiddleClick={(event) => middle(id, event)}
                           onKeyDown={(event) => key(id, event)}
                           onClose={() => close(id)}
+                          onTogglePin={isPendingTab(id) ? undefined : () => tabs.togglePinned(id)}
                         />
                       </SessionTabMenu>
                     </SortableTabContainer>

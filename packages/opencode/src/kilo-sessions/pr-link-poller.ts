@@ -10,6 +10,7 @@ import { Process } from "@/util/process"
 import * as Log from "@opencode-ai/core/util/log"
 import {
   clearSessionLink,
+  enabled,
   loadSessionLinks,
   mapLimit,
   parsePrUrl,
@@ -283,6 +284,7 @@ async function linksToRefresh(sessionId?: string): Promise<Map<string, SessionPr
 // serialize into a wait that grows with the count (each call is bounded by a
 // 10s host timeout).
 export async function refreshPrLink(opts?: { sessionId?: string; concurrency?: number }): Promise<void> {
+  if (!enabled()) return
   const links = await linksToRefresh(opts?.sessionId)
   if (links.size === 0) return
 
@@ -330,6 +332,7 @@ export async function refreshPrLink(opts?: { sessionId?: string; concurrency?: n
 // default). Overlapping runs coalesce and the timer never holds the process
 // open. Returns a stop function.
 export function startPrLinkPoll(run: () => Promise<void>, opts?: { intervalMs?: number }): () => void {
+  if (!enabled()) return () => {}
   let running = false
   const tick = () => {
     if (running) return

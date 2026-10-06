@@ -4,6 +4,7 @@ import { Effect, Layer, Schema, Stream } from "effect"
 import * as Log from "@opencode-ai/core/util/log"
 import { Agent } from "../../src/agent/agent"
 import { Bus } from "../../src/bus"
+import { Config } from "../../src/config/config"
 import { KiloIndexing } from "../../src/kilocode/indexing"
 import { KilocodeBootstrap } from "../../src/kilocode/bootstrap"
 import { Wakeup } from "../../src/kilocode/wakeup"
@@ -182,6 +183,44 @@ describe("kilocode tool registry indexing", () => {
           }
         }),
       { git: true, config: { indexing: { enabled: true } } },
+    ),
+  )
+
+  it.live("follows VS Code project consent for semantic_search without config enablement", () =>
+    Effect.acquireUseRelease(
+      Effect.sync(() => {
+        const prev = process.env["KILO_PLATFORM"]
+        process.env["KILO_PLATFORM"] = "vscode"
+        return prev
+      }),
+      () =>
+        provideTmpdirInstance(
+          () =>
+            Effect.gen(function* () {
+              const agent = yield* Agent.Service
+              const build = yield* agent.get("build")
+              const registry = yield* ToolRegistry.Service
+              const check = Effect.fnUntraced(function* (enabled: boolean) {
+                const tools = yield* registry.tools({ ...ref, agent: build })
+                const ids = tools.map((tool) => tool.id)
+                const glob = tools.find((tool) => tool.id === "glob")?.description ?? ""
+                expect(ids.includes("semantic_search")).toBe(enabled)
+                expect(glob.includes("semantic_search")).toBe(enabled)
+              })
+
+              yield* check(false)
+              yield* Effect.promise(() => KiloIndexing.setConsent(true))
+              yield* check(true)
+              yield* Effect.promise(() => KiloIndexing.setConsent(false))
+              yield* check(false)
+            }),
+          { git: true },
+        ),
+      (prev) =>
+        Effect.sync(() => {
+          if (prev === undefined) delete process.env["KILO_PLATFORM"]
+          if (prev !== undefined) process.env["KILO_PLATFORM"] = prev
+        }),
     ),
   )
 
@@ -396,7 +435,6 @@ describe("kilocode tool registry indexing", () => {
         "browser_open",
         "notify_user",
         "send_file",
-        "link_pr",
       ])
       expect(
         KiloToolRegistry.extra(
@@ -421,7 +459,6 @@ describe("kilocode tool registry indexing", () => {
         "notebook_execute",
         "notify_user",
         "send_file",
-        "link_pr",
       ])
       expect(KiloToolRegistry.extra({ ...tools, semantic: undefined }, {}, flags).map((tool) => tool.id)).toEqual([
         "kilo_memory_recall",
@@ -434,7 +471,6 @@ describe("kilocode tool registry indexing", () => {
         "browser_open",
         "notify_user",
         "send_file",
-        "link_pr",
       ])
 
       process.env["KILO_CLIENT"] = "desktop"
@@ -446,7 +482,6 @@ describe("kilocode tool registry indexing", () => {
         "agent_manager_models",
         "notify_user",
         "send_file",
-        "link_pr",
       ])
 
       process.env["KILO_CLIENT"] = "run"
@@ -458,7 +493,6 @@ describe("kilocode tool registry indexing", () => {
         "agent_manager_models",
         "notify_user",
         "send_file",
-        "link_pr",
       ])
 
       process.env["KILO_CLIENT"] = "acp"
@@ -470,7 +504,6 @@ describe("kilocode tool registry indexing", () => {
         "agent_manager_models",
         "notify_user",
         "send_file",
-        "link_pr",
       ])
       for (const client of ["cli", "vscode", "jetbrains", "desktop", "run", "acp"]) {
         process.env["KILO_CLIENT"] = client
@@ -523,6 +556,7 @@ describe("kilocode tool registry indexing", () => {
     const session = Layer.succeed(Session.Service, {} as Session.Interface)
     const summary = Layer.succeed(SessionSummary.Service, {} as SessionSummary.Interface)
     const provider = Layer.succeed(Provider.Service, {} as Provider.Interface)
+    const config = Layer.succeed(Config.Service, {} as Config.Interface)
     const watcher = Layer.succeed(KilocodeWatcher.Service, KilocodeWatcher.Service.of({ init: () => Effect.void }))
     const wakeup = Layer.succeed(
       Wakeup.Service,
@@ -547,7 +581,7 @@ describe("kilocode tool registry indexing", () => {
         KilocodeBootstrap.Service.use((svc) => svc.init()).pipe(
           Effect.provide(
             KilocodeBootstrap.layer.pipe(
-              Layer.provide([sessions, bus, memory, session, summary, provider, watcher, wakeup]),
+              Layer.provide([sessions, bus, memory, session, summary, provider, config, watcher, wakeup]),
             ),
           ),
           Effect.scoped,

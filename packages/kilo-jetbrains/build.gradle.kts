@@ -108,7 +108,8 @@ val worktreeRoot = providers.gradleProperty("kilo.dev.worktree.root").orElse(
 val ides = file(".intellijPlatform/ides")
 val corrupt = ides.listFiles()
     ?.filter { ide ->
-        ide.isDirectory && (
+        // layoutIndex is the platform plugin's own layout cache (stored here since 2.19.0), not an IDE.
+        ide.isDirectory && ide.name != "layoutIndex" && (
             ide.walkTopDown().none { it.name == "product-info.json" } ||
                 ide.resolve("lib").listFiles()?.any { jar -> jar.isFile && jar.extension == "jar" } != true
         )

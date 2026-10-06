@@ -1,5 +1,49 @@
 # kilo-code
 
+## 7.8.2
+
+### Minor Changes
+
+- [#14634](https://github.com/Kilo-Org/kilocode/pull/14634) [`34ec938`](https://github.com/Kilo-Org/kilocode/commit/34ec93897b3ecf4635971c97d74010711cfb4e59) Thanks [@brunoagatao](https://github.com/brunoagatao)! - Add a copy content button to the Documents viewer toolbar, and expand the document tab context menu with Copy Path, Copy Relative Path, Copy File Name, and Open in Editor.
+
+- [#14630](https://github.com/Kilo-Org/kilocode/pull/14630) [`de285a6`](https://github.com/Kilo-Org/kilocode/commit/de285a6b554bcc994a619a36e9349a6a736d0202) Thanks [@brunoagatao](https://github.com/brunoagatao)! - Add a manual Fetch Models button to the Custom Provider settings dialog.
+
+- [#13589](https://github.com/Kilo-Org/kilocode/pull/13589) [`2d6d0a0`](https://github.com/Kilo-Org/kilocode/commit/2d6d0a03c1da18bb867868ba5a89209e48bcd26f) Thanks [@sylwester-liljegren](https://github.com/sylwester-liljegren)! - Suggest files from every folder in a multi-root VS Code workspace when typing `@`, so folders added through "Add Folder to Workspace..." are mentionable without reaching for the file picker. Files outside the session's own project are still only read after the usual approval.
+
+### Patch Changes
+
+- [#14675](https://github.com/Kilo-Org/kilocode/pull/14675) [`5b336a9`](https://github.com/Kilo-Org/kilocode/commit/5b336a90abdb82b82e5dcc2c84cc92842f3117a3) - Keep the latest Agent Manager selection when another project finishes loading.
+
+- [#14672](https://github.com/Kilo-Org/kilocode/pull/14672) [`97dda4f`](https://github.com/Kilo-Org/kilocode/commit/97dda4f1bc0af7423d2bd14588baffd68a2fca06) - Keep the Agent Manager browser preview visible when you resize its panel.
+
+- [#14585](https://github.com/Kilo-Org/kilocode/pull/14585) [`234111e`](https://github.com/Kilo-Org/kilocode/commit/234111e1c2253a0f006e7b722f12a1d48de8f73a) - Reduce repetitive autocomplete error telemetry while retaining a diagnostic sample.
+
+- [#14707](https://github.com/Kilo-Org/kilocode/pull/14707) [`f40ebdd`](https://github.com/Kilo-Org/kilocode/commit/f40ebddb730fba1faf45484d10ad876754d13b6d) - Attach selected code to the last-focused chat in Agent Manager, an editor tab, or the sidebar.
+
+- [#14631](https://github.com/Kilo-Org/kilocode/pull/14631) [`029802e`](https://github.com/Kilo-Org/kilocode/commit/029802e9e454608cc26caf592270dd46fb0ddec0) Thanks [@brunoagatao](https://github.com/brunoagatao)! - Fix Open in Editor button in Documents viewer
+
+- [#14686](https://github.com/Kilo-Org/kilocode/pull/14686) [`d3966e5`](https://github.com/Kilo-Org/kilocode/commit/d3966e549bd371658719451578f2515be4eb0266) - Highlight code snippets when a response finishes, without requiring a follow-up message.
+
+- [#14590](https://github.com/Kilo-Org/kilocode/pull/14590) [`63ba85d`](https://github.com/Kilo-Org/kilocode/commit/63ba85de2af251d5749edc6dc2534983c3c167d2) Thanks [@hdcodedev](https://github.com/hdcodedev)! - Keep collapsed pastes when browsing prompt history with the arrow keys.
+
+- [#14684](https://github.com/Kilo-Org/kilocode/pull/14684) [`8bdec8c`](https://github.com/Kilo-Org/kilocode/commit/8bdec8cb38f2c74b2646347926e18a5161019df7) - Add a "View details" action to marketplace suggestion notifications that opens the suggested item in the Kilo Marketplace panel with the search prefilled.
+
+- [#14319](https://github.com/Kilo-Org/kilocode/pull/14319) [`52019c9`](https://github.com/Kilo-Org/kilocode/commit/52019c9f90a01beddccdc01483b861ebe132bafb) Thanks [@hdcodedev](https://github.com/hdcodedev)! - Report revert failures instead of failing silently. A failed revert or redo now shows an error toast, and the snapshot steps behind it log the git exit code and stderr when they give up.
+
+- [#14711](https://github.com/Kilo-Org/kilocode/pull/14711) [`7de049a`](https://github.com/Kilo-Org/kilocode/commit/7de049a2450a40bd0128e9b5ae74509033c1c913) - Keep the background agent avatar animation smooth above the prompt input.
+
+- [#14680](https://github.com/Kilo-Org/kilocode/pull/14680) [`ac4a092`](https://github.com/Kilo-Org/kilocode/commit/ac4a092aa827d6d3efd280ae4fef29f4548f688f) - Preserve prompt cache prefixes across goal turns, compaction, and completion, and keep the working timer running through turn boundaries and rejected commands until the goal stops.
+
+- [#14682](https://github.com/Kilo-Org/kilocode/pull/14682) [`979e02c`](https://github.com/Kilo-Org/kilocode/commit/979e02c575318810b2c98f3214747ccae69f78ca) - Stop a single sub-agent from its task card, and follow the background agents of the current run next to the working status and session actions. A click opens, stops, or clears them. The background agent bar above the chat is removed, and the sub-agent running animation is easier to see.
+
+- [#14641](https://github.com/Kilo-Org/kilocode/pull/14641) [`4f35e9d`](https://github.com/Kilo-Org/kilocode/commit/4f35e9d307bd0837b88e7f8527d08042f5dd0c12) - Apply pending autocomplete edits from the VS Code quick-fix menu.
+
+- Updated dependencies [[`463cbed`](https://github.com/Kilo-Org/kilocode/commit/463cbedaa6f17ebf6f4fbcc276a338259f348b63)]:
+  - @kilocode/kilo-indexing@7.8.2
+  - @opencode-ai/core@7.8.2
+  - @kilocode/kilo-ui@7.8.2
+  - @opencode-ai/ui@7.8.2
+
 ## 7.8.1
 
 ### Patch Changes

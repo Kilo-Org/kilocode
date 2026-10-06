@@ -50,3 +50,18 @@ export type BrowserInteraction =
   | { kind: "composition"; text: string; start: number; end: number }
   | { kind: "clipboard"; action: "copy" | "cut" | "paste" }
   | { kind: "release" }
+
+export type WheelInteraction = Extract<BrowserInteraction, { kind: "wheel" }>
+
+// Coalesces compatible wheel input in place. Coordinates, modifiers, axis direction, and the 10000 cap are
+// ordering barriers, so callers can keep batching while preserving scroll distance and reversals.
+export function mergeWheel(current: WheelInteraction, next: WheelInteraction): boolean {
+  if (current.x !== next.x || current.y !== next.y || current.modifiers !== next.modifiers) return false
+  for (const axis of ["deltaX", "deltaY"] as const) {
+    if (Math.sign(current[axis]) !== Math.sign(next[axis])) return false
+    if (Math.abs(current[axis] + next[axis]) > 10000) return false
+  }
+  current.deltaX += next.deltaX
+  current.deltaY += next.deltaY
+  return true
+}

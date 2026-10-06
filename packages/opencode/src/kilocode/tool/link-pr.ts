@@ -1,6 +1,6 @@
 import { Tool } from "@/tool/tool"
 import { Instance } from "@/kilocode/instance"
-import { linkMatchesWorktree, parsePrUrl } from "@/kilo-sessions/pr-link"
+import { enabled as prEnabled, linkMatchesWorktree, parsePrUrl } from "@/kilo-sessions/pr-link"
 import { Effect, Schema } from "effect"
 import * as Log from "@opencode-ai/core/util/log"
 import DESCRIPTION from "./link-pr.txt"
@@ -30,6 +30,13 @@ export const LinkPrTool = Tool.define<typeof Params, Meta, never, "link_pr">(
     parameters: Params,
     execute: (params, ctx) =>
       Effect.gen(function* () {
+        if (!prEnabled()) {
+          return {
+            title: "PR linking unavailable",
+            output: "Session PR linking is only available in CLI backends.",
+            metadata: { ok: false, reason: "unsupported_client" },
+          }
+        }
         const link = parsePrUrl(params.url)
         if (!link) {
           return {

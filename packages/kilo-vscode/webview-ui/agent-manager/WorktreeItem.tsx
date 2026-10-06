@@ -17,7 +17,7 @@ import { colorCss } from "./section-colors"
 import { useLanguage } from "../src/context/language"
 import { formatRelativeDate } from "../src/utils/date"
 
-import { parseBindingTokens } from "./keybind-tokens"
+import { parseBindingTokens } from "../src/utils/keybind-tokens"
 
 const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.userAgent)
 

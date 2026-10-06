@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, mock, spyOn, test } from "bun:
 import { $ } from "bun"
 import { Global } from "@opencode-ai/core/global"
 import * as fs from "fs/promises"
-import { join } from "node:path"
+import { dirname, join } from "node:path"
 import { tmpdir } from "../fixture/fixture"
 import { Effect, Layer } from "effect"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
@@ -26,7 +26,7 @@ import { SessionID } from "../../src/session/schema"
 import { SessionStatus } from "../../src/session/status"
 import { QuestionID } from "../../src/question/schema"
 import { TestConfig } from "../fixture/config"
-import { testEffect } from "../lib/effect"
+import { pollWithTimeout, testEffect } from "../lib/effect"
 import { InstanceStore } from "../../src/project/instance-store"
 import { TestInstance, testInstanceStoreLayer, tmpdirScoped } from "../fixture/fixture"
 import { RemoteProtocol } from "../../src/kilo-sessions/remote-protocol"
@@ -1259,8 +1259,12 @@ describe("KiloSessions heartbeat attention status (DEF-3)", () => {
 // review is never a link.
 describe("KiloSessions PR link (per-session hard evidence)", () => {
   let ingestBodies: { sessionId: string; data: { type: string; data: unknown }[] }[] = []
+  let client: string | undefined
+  const paths: string[] = []
 
   beforeEach(async () => {
+    client = process.env.KILO_CLIENT
+    process.env.KILO_CLIENT = "cli"
     ingestBodies = []
     // Forget the upgrade migration and any legacy record so each test replays a
     // clean install, then drop the per-session links a previous test left.
@@ -1331,11 +1335,14 @@ describe("KiloSessions PR link (per-session hard evidence)", () => {
       },
     })
     pub.mockRestore()
+    await Promise.all(paths.splice(0).map((path) => fs.rm(path, { force: true })))
     mock.restore()
     delete process.env["KILO_DISABLE_SESSION_INGEST"]
     delete process.env["KILO_SESSION_INGEST_URL"]
     delete process.env["KILO_PLATFORM"]
     delete process.env["KILO_API_KEY"]
+    if (client == null) delete process.env.KILO_CLIENT
+    if (client != null) process.env.KILO_CLIENT = client
     reset("tok")
   })
 
@@ -1534,8 +1541,12 @@ describe("KiloSessions PR link (per-session hard evidence)", () => {
             id,
             toolPart(id, "p-create", "gh pr create --fill", "Opened\nhttps://github.com/owner/repo/pull/7\n"),
           )
-          await new Promise((r) => setTimeout(r, 300))
-          const first = await PrLink.readSessionPrLink(id)
+          const first = await Effect.runPromise(
+            pollWithTimeout(
+              Effect.promise(() => PrLink.readSessionPrLink(id)),
+              "PR creation was not recorded",
+            ),
+          )
           expect(first?.headSha).toBeDefined()
 
           await $`git commit --allow-empty -m next`.cwd(tmp.path).quiet()
@@ -1549,9 +1560,15 @@ describe("KiloSessions PR link (per-session hard evidence)", () => {
               `To github.com:owner/repo.git\n   ${first?.headSha}..${next}  feature/x -> feature/x\n`,
             ),
           )
-          await new Promise((r) => setTimeout(r, 500))
-
-          const pushed = await PrLink.readSessionPrLink(id)
+          const pushed = await Effect.runPromise(
+            pollWithTimeout(
+              Effect.promise(async () => {
+                const record = await PrLink.readSessionPrLink(id)
+                return record?.headSha === next ? record : undefined
+              }),
+              "pushed PR commit was not recorded",
+            ),
+          )
           expect(pushed?.link.prNumber).toBe(7)
           expect(pushed?.headRef).toBe("feature/x")
           expect(pushed?.headSha).toBe(next)
@@ -1815,6 +1832,90 @@ describe("KiloSessions PR link (per-session hard evidence)", () => {
       },
     })
   }, 30000)
+
+  test.each(["vscode", "jetbrains", "desktop", "acp", "custom"])(
+    "%s keeps normal ingestion and heartbeats without activating PR links",
+    async (client) => {
+      process.env.KILO_CLIENT = client
+      const poller = await import("@/kilo-sessions/pr-link-poller")
+      const poll = spyOn(poller, "startPrLinkPoll")
+      const create = spyOn(PrLink, "recordPrCreate")
+      const push = spyOn(PrLink, "recordPush")
+      const load = spyOn(PrLink, "loadSessionLinks")
+      const prune = spyOn(PrLink, "pruneLegacyWorktreeLinks")
+      await using tmp = await repoWithRemote()
+      await provide({
+        directory: tmp.path,
+        fn: async () => {
+          const runtime = await initKiloSessions()
+          try {
+            const id = await setupSession()
+            const record = {
+              link: { platform: "github", prUrl: "https://github.com/owner/repo/pull/7", prNumber: 7 },
+              headRef: "feature/x",
+              headSha: await headSha(tmp.path),
+              evidence: "pr_create",
+            }
+            const root = join(Global.Path.data, "storage")
+            const file = join(root, ...PrLink.sessionLinkKey(id)) + ".json"
+            const legacy = join(root, "session_pr_link_recorded", encodeURIComponent(tmp.path) + ".json")
+            const marker = join(root, "session_pr_link_migration", "legacy-worktree-prune.json")
+            const pending = { pending: [id] }
+            for (const [path, value] of [
+              [file, record],
+              [legacy, record],
+              [marker, pending],
+            ] as const) {
+              paths.push(path)
+              await fs.mkdir(dirname(path), { recursive: true })
+              await fs.writeFile(path, JSON.stringify(value))
+            }
+
+            await KiloSessions.bootstrap(id)
+            await KiloSessions.enableRemote()
+            await KiloSessions.attachRemoteSession(id)
+            await clearStaleIngest()
+            emitPart(id, toolPart(id, "p-create", "gh pr create --fill", "https://github.com/owner/repo/pull/9\n"))
+            emitPart(id, toolPart(id, "p-push", "git push origin feature/x", "[new branch] feature/x -> feature/x"))
+            await Effect.runPromise(
+              pollWithTimeout(
+                Effect.sync(() =>
+                  ingestBodies.some((body) => body.sessionId === id && body.data.some((item) => item.type === "part"))
+                    ? true
+                    : undefined,
+                ),
+                "normal part ingestion did not complete",
+              ),
+            )
+            const payload = await capturedGetSessions()()
+            expect(payload.sessions.find((row) => row.id === id)).toMatchObject({ id, gitBranch: "feature/x" })
+            expect(payload.sessions.every((row) => row.prLink == null)).toBe(true)
+            expect(prLinkItems(id)).toEqual([])
+            expect(poll).not.toHaveBeenCalled()
+            expect(create).not.toHaveBeenCalled()
+            expect(push).not.toHaveBeenCalled()
+            expect(load).not.toHaveBeenCalled()
+            expect(prune).not.toHaveBeenCalled()
+            expect(JSON.parse(await fs.readFile(legacy, "utf8"))).toEqual(record)
+            expect(JSON.parse(await fs.readFile(marker, "utf8"))).toEqual(pending)
+
+            GlobalBus.emit("event", {
+              directory: Instance.directory,
+              payload: {
+                id: `deleted-${id}`,
+                type: Session.Event.Deleted.type,
+                properties: { sessionID: id },
+              },
+            })
+            expect(JSON.parse(await fs.readFile(file, "utf8"))).toEqual(record)
+          } finally {
+            await runtime.dispose()
+          }
+        },
+      })
+    },
+    30000,
+  )
 })
 
 // The create_session command hosts a session on the relay, so the relay must
@@ -2071,7 +2172,10 @@ describe("KiloSessions remote session log lifecycle", () => {
 // replaced with a spy that spreads the real exports, so the scheduler start is
 // counted without issuing a real host query.
 describe("KiloSessions PR poll wiring", () => {
+  let client: string | undefined
   beforeEach(() => {
+    client = process.env.KILO_CLIENT
+    process.env.KILO_CLIENT = "cli"
     process.env["KILO_DISABLE_SESSION_INGEST"] = "0"
     delete process.env["KILO_SESSION_INGEST_URL"]
     process.env["KILO_API_KEY"] = "tok"
@@ -2128,6 +2232,8 @@ describe("KiloSessions PR poll wiring", () => {
     delete process.env["KILO_SESSION_INGEST_URL"]
     delete process.env["KILO_PLATFORM"]
     delete process.env["KILO_API_KEY"]
+    if (client == null) delete process.env.KILO_CLIENT
+    if (client != null) process.env.KILO_CLIENT = client
     reset("tok")
   })
 
@@ -2140,11 +2246,7 @@ describe("KiloSessions PR poll wiring", () => {
 
   test("starts the check once at init and never on a session update or a heartbeat", async () => {
     const poller = await import("@/kilo-sessions/pr-link-poller")
-    const startPoll = mock((_run: () => Promise<void>, _opts?: { intervalMs?: number }) => () => {})
-    void mock.module("@/kilo-sessions/pr-link-poller", () => ({
-      ...poller,
-      startPrLinkPoll: startPoll,
-    }))
+    const startPoll = spyOn(poller, "startPrLinkPoll").mockImplementation(() => () => {})
 
     await using tmp = await tmpdir({ git: true })
     await provide({
