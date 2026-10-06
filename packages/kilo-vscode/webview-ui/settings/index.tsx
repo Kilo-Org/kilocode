@@ -20,6 +20,8 @@ const Content = () => {
     KILO_AGENT_MANAGER_SETTINGS?: boolean
   }
   const [tab, setTab] = createSignal(host.KILO_SETTINGS?.tab)
+  const [subtab, setSubtab] = createSignal<string>()
+  const [focus, setFocus] = createSignal<{ token: number; value: string }>()
   const [project, setProject] = createSignal(host.KILO_SETTINGS?.projectId)
   const [migration, setMigration] = createSignal(false)
   const [profile, setProfile] = createSignal(false)
@@ -31,7 +33,12 @@ const Content = () => {
       return
     }
     if (message.view !== "settings") return
-    if (message.tab) setTab(message.tab)
+    if (message.tab) {
+      setTab(message.tab)
+      vscode.postMessage({ type: "settingsTabChanged", tab: message.tab })
+    }
+    if (message.subtab) setSubtab(message.subtab)
+    if (message.focus) setFocus((prev) => ({ token: (prev?.token ?? 0) + 1, value: message.focus! }))
     setProject(message.projectId)
     setMigration(false)
     setProfile(false)
@@ -59,9 +66,15 @@ const Content = () => {
             <Match when={!profile()}>
               <Settings
                 tab={tab()}
+                subtab={subtab()}
+                focus={focus()}
                 agentManagerProjectId={project()}
                 agentManagerSettings={host.KILO_AGENT_MANAGER_SETTINGS === true}
                 onTabChange={setTab}
+                onAgentBehaviourNavigationConsumed={() => {
+                  setSubtab(undefined)
+                  setFocus(undefined)
+                }}
                 onMigrationClick={() => setMigration(true)}
               />
             </Match>

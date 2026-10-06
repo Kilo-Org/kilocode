@@ -254,6 +254,20 @@ describe("BrowserStream protocol lifecycle", () => {
     ])
   })
 
+  test("does not wait for Chrome to answer pointer moves and wheel input", async () => {
+    const fixture = protocol()
+    await fixture.stream.configure(view)
+    const blocked = Promise.withResolvers<void>()
+    fixture.hooks.set("Input.dispatchMouseEvent", () => blocked.promise)
+    const point = { x: 0.5, y: 0.5, modifiers: 0 } as const
+    await fixture.stream.interact({ kind: "pointer", action: "move", button: "left", buttons: 0, clicks: 0, ...point })
+    await fixture.stream.interact({ kind: "wheel", deltaX: 0, deltaY: 10, ...point })
+    await fixture.stream.interact({ kind: "text", text: "next" })
+    const calls = fixture.calls.filter((call) => call.method.startsWith("Input."))
+    expect(calls.map((call) => call.params?.type ?? call.params?.text)).toEqual(["mouseMoved", "mouseWheel", "next"])
+    blocked.resolve()
+  })
+
   test("drops old-sized JPEGs even when resize metadata is current", async () => {
     const fixture = protocol()
     await fixture.stream.configure(view)
@@ -986,6 +1000,7 @@ describe.skipIf(!executable)("BrowserStream Chromium", () => {
     expect(await recorded()).toEqual([])
     expect(page.viewportSize()).toEqual({ width: 640, height: 480 })
     await stream.interact({ ...pointer, x: 1, y: 1 } as BrowserInteraction)
+    await page.waitForFunction(() => document.body.dataset.events?.includes("mousemove"))
     expect((await recorded()).at(-1)).toMatchObject({ type: "mousemove", x: 639, y: 479 })
     await stream.close()
     await stream.interact({ kind: "text", text: "closed" })

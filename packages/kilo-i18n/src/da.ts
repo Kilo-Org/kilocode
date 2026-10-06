@@ -50,7 +50,6 @@ export const dict = {
     "Et plugin tilføjer tilpassede værktøjer og integrationer til Kilo. Plugins kører med fulde tilladelser.",
   "marketplace.install.plugin.warning":
     "Plugins kører kode med fulde tilladelser. De kan læse og ændre dine filer, køre kommandoer og få adgang til dine legitimationsoplysninger og dit netværk. Installer kun plugins, du har tillid til.",
-  "marketplace.install.installedAt": "Installeret i {{path}}",
   "marketplace.intro":
     "Installer genanvendelige agenter, færdigheder, MCP-værktøjer og plugins til ét eller alle projekter.",
   "marketplace.intro.learnMore": "Om Marketplace",
@@ -61,6 +60,13 @@ export const dict = {
   "marketplace.install.failed": "Installation mislykkedes",
   "marketplace.install.done": "Færdig",
   "marketplace.install.close": "Luk",
+  "marketplace.install.mcp.signIn.message": "{{name}} er installeret, men kræver login, før dens værktøjer kan bruges.",
+  "marketplace.install.mcp.signIn.button": "Log ind",
+  "marketplace.install.mcp.signIn.waiting": "Venter på login via browser…",
+  "marketplace.install.mcp.signIn.cancel": "Annuller",
+  "marketplace.install.mcp.signIn.skip": "Senere",
+  "marketplace.install.mcp.signIn.success": "Logget ind på {{name}}.",
+  "marketplace.install.mcp.signIn.failed": "Login til {{name}} mislykkedes.",
   "marketplace.remove.title": "Fjern {{name}}?",
   "marketplace.remove.confirm":
     "Er du sikker på, at du vil fjerne denne {{type}}? Dette vil fjerne den fra din {{scope}} konfiguration.",

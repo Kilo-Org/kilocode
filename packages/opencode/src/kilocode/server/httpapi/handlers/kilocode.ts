@@ -17,6 +17,7 @@ import * as KiloSkill from "@/kilocode/skill-remove"
 import { Agent } from "@/agent/agent"
 import { Command } from "@/command"
 import { Config } from "@/config/config"
+import { MCP } from "@/mcp"
 import { WorkspaceRef } from "@/effect/instance-ref"
 import { InstanceState } from "@/effect/instance-state"
 import { HeapSnapshot } from "@/kilocode/cli/heap-snapshot"
@@ -86,6 +87,7 @@ export const kilocodeHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilocode"
     const skills = yield* Skill.Service
     const ripgrep = yield* Ripgrep.Service
     const config = yield* Config.Service
+    const mcp = yield* MCP.Service
     const store = yield* InstanceStore.Service
     const manager = yield* AgentManager.Service
     const notebook = yield* Notebook.Service
@@ -343,6 +345,7 @@ export const kilocodeHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilocode"
           config,
           agents,
           skills,
+          mcp: { remove: mcp.remove }, // kilocode_change
           directory: instance.directory,
           worktree: instance.worktree,
           vcs: instance.project.vcs,
@@ -382,6 +385,7 @@ export const kilocodeHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilocode"
           config,
           agents,
           skills,
+          mcp: { remove: mcp.remove }, // kilocode_change
           directory: instance.directory,
           worktree: instance.worktree,
           vcs: instance.project.vcs,

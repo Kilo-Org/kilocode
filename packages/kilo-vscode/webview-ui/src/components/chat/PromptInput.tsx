@@ -35,10 +35,13 @@ import { useLocalTabs } from "../../context/local-tabs"
 import { useServer } from "../../context/server"
 import { useIndexing } from "../../context/indexing"
 import { indexingButtonVisible } from "../../context/indexing-utils"
+import { mcpAuthIssues } from "./session-issues"
+import { SessionIssues } from "./SessionIssues"
 import { useLanguage } from "../../context/language"
 import { useVSCode } from "../../context/vscode"
 import { useConfig } from "../../context/config"
 import { recommend, type ManagerContext } from "../../utils/shortcut-hint"
+import { PromptHint } from "./PromptHint"
 import { useProvider } from "../../context/provider"
 import { ModelSelector, ModelSelectorBase } from "../shared/ModelSelector"
 import { ModeSwitcher } from "../shared/ModeSwitcher"
@@ -892,6 +895,23 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       }
     }
   }
+  // The same template as the placeholder, split around the key so it can render as keycaps.
+  const keycaps = createMemo(
+    () => {
+      const state = server.connectionState()
+      if (state === "connecting" || state === "error") return undefined
+      const next = hint()
+      if (!next) return undefined
+      const mark = "\u0001"
+      const parts = language
+        .t("prompt.placeholder.hint", { key: mark, action: language.t(`prompt.shortcutHint.${next.label}`) })
+        .split(mark)
+      return { before: parts.at(0) ?? "", after: parts.at(1) ?? "", binding: next.binding }
+    },
+    undefined,
+    // Recreate the overlay only when the visible tip changes, so its fade-in runs once per tip.
+    { equals: (a, b) => a?.before === b?.before && a?.after === b?.after && a?.binding === b?.binding },
+  )
 
   const canEdit = () =>
     server.isConnected() && !hasInput() && !enhancing() && !speech.active() && !terminal.pending() && !git.pending()
@@ -1529,6 +1549,17 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     vscode.postMessage({ type: "openSettingsTab", tab: "indexing" })
   }
 
+  const handleOpenMcpSettings = (name: string) => {
+    vscode.postMessage({ type: "openSettingsTab", tab: "agentBehaviour", subtab: "mcpServers", focus: name })
+  }
+
+  const sessionIssues = createMemo(() =>
+    mcpAuthIssues(session.mcpAuth().needsAuth, session.mcpAuth().busy, language.t, {
+      signIn: (name) => session.signInMcp(name),
+      openSettings: handleOpenMcpSettings,
+    }),
+  )
+
   const handleEnhance = () => {
     if (isDisabled() || enhancing() || isBusy()) return
     const draft = paste.plainText(text()).trim()
@@ -2123,6 +2154,9 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       </Show>
       <div class="prompt-input-wrapper">
         <div class="prompt-input-ghost-wrapper">
+          <Show when={keycaps()} keyed>
+            {(caps) => <PromptHint before={caps.before} binding={caps.binding} after={caps.after} />}
+          </Show>
           <div class="prompt-input-highlight-overlay" ref={highlightRef} aria-hidden="true" dir="auto">
             <Index each={paste.segments(text(), highlightMentions())}>
               {(seg) => (
@@ -2190,7 +2224,10 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
           <textarea
             ref={textareaRef}
             class="prompt-input"
-            classList={{ "prompt-input--disabled": !server.isConnected() || readonly() }}
+            classList={{
+              "prompt-input--disabled": !server.isConnected() || readonly(),
+              "prompt-input--keycaps": !!keycaps(),
+            }}
             data-hint={hint()?.label}
             placeholder={placeholder()}
             value={text()}
@@ -2238,6 +2275,9 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
             rows={1}
             dir="auto"
           />
+          <div class="prompt-input-issues-overlay">
+            <SessionIssues issues={sessionIssues()} />
+          </div>
         </div>
       </div>
       <div class="prompt-input-hint">
