@@ -1,7 +1,5 @@
-// Todo item
+// Todo item. The backend sends no ID, so items are identified by their text.
 export interface TodoItem {
-  /** Not sent by the backend. Todo items are identified by their text. */
-  id?: string
   content: string
   status: "pending" | "in_progress" | "completed" | "cancelled"
 }

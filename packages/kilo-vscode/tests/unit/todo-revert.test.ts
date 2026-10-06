@@ -13,7 +13,7 @@ const user = (id: string): Message => ({ ...base, id, role: "user" })
 const assistant = (id: string, parentID: string): Message => ({ ...base, id, parentID, role: "assistant" })
 
 const todos = (...status: TodoItem["status"][]): TodoItem[] =>
-  status.map((status, index) => ({ id: String(index + 1), content: `todo ${index + 1}`, status }))
+  status.map((status, index) => ({ content: `todo ${index + 1}`, status }))
 
 const part = (id: string, messageID: string, list: TodoItem[]): Part => ({
   id,
