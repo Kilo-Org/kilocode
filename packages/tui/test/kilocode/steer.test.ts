@@ -46,6 +46,11 @@ test("subagent views accept input only while the child is running", () => {
   expect(KiloSteer.open(root, "idle")).toBe(true)
 })
 
+test("a paused subagent accepts the prompt that resumes its task", () => {
+  expect(KiloSteer.open({ ...child, metadata: { "kilo.task": { status: "paused" } } }, "idle")).toBe(true)
+  expect(KiloSteer.open({ ...child, metadata: { "kilo.task": { status: "done" } } }, "idle")).toBe(false)
+})
+
 test("subagent-view keys yield only once the focused prompt has text", () => {
   expect(KiloSteer.idle(undefined)).toBe(true)
   expect(KiloSteer.idle({ focused: false, current: { input: "draft" } })).toBe(true)
