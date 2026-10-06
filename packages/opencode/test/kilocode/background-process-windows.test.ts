@@ -116,19 +116,23 @@ require("fs").writeFileSync(${JSON.stringify(pidfile)}, String(child.pid))`
 
   // Cygwin programs such as Git Bash ask for CREATE_BREAKAWAY_FROM_JOB whenever their job allows
   // it. The job must not allow it, or everything a Git Bash command starts escapes tracking.
-  test("keeps what a Git Bash command started in the job", async () => {
-    const bash = Shell.gitbash()
-    if (!bash) return
-    await using tmp = await tmpdir()
-    const pidfile = path.join(tmp.path, "sleep.pid").replaceAll("\\", "/")
-    const result = await contained(tmp.path, {
-      file: bash,
-      args: ["-c", `sleep 60 & cat /proc/$!/winpid > "${pidfile}"; sleep 1`],
-    })
-    const sleep = Number((await Bun.file(pidfile.replaceAll("/", "\\")).text()).trim())
-    expect(sleep).toBeGreaterThan(0)
-    expect(result.before).toContain(sleep)
-    expect(result.after).toEqual([])
-    await until(() => !alive(sleep), "sleep started by Git Bash was not terminated")
-  }, 30_000)
+  const bash = Shell.gitbash()
+  test.skipIf(!bash)(
+    "keeps what a Git Bash command started in the job",
+    async () => {
+      if (!bash) throw new Error("Git Bash not found")
+      await using tmp = await tmpdir()
+      const pidfile = path.join(tmp.path, "sleep.pid").replaceAll("\\", "/")
+      const result = await contained(tmp.path, {
+        file: bash,
+        args: ["-c", `sleep 60 & cat /proc/$!/winpid > "${pidfile}"; sleep 1`],
+      })
+      const sleep = Number((await Bun.file(pidfile.replaceAll("/", "\\")).text()).trim())
+      expect(sleep).toBeGreaterThan(0)
+      expect(result.before).toContain(sleep)
+      expect(result.after).toEqual([])
+      await until(() => !alive(sleep), "sleep started by Git Bash was not terminated")
+    },
+    30_000,
+  )
 })

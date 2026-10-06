@@ -10,7 +10,6 @@ export namespace BackgroundProcessWindows {
   const QUERY = 0x1000 // PROCESS_QUERY_LIMITED_INFORMATION
   const SYNCHRONIZE = 0x100000
   const MISSING = 87 // ERROR_INVALID_PARAMETER: no process has this pid
-  const DENIED = 5 // ERROR_ACCESS_DENIED
   const MORE = 234 // ERROR_MORE_DATA
   const COMMAND = 60 // ProcessCommandLineInformation, Windows 8.1 and later
   const LIMIT = 1024 * 1024
@@ -107,9 +106,9 @@ export namespace BackgroundProcessWindows {
   export type Command = { live: false } | { live: true; line: string }
 
   // The command line of a process, read directly instead of through WMI. A pid that no process
-  // holds, or a process that already exited, is { live: false }. A process this user may not
-  // query cannot be one of ours, so it reports an empty command line. Returns a reason instead
-  // when the answer is not certain, and the caller asks WMI.
+  // holds, or a process that already exited, is { live: false }. Returns a reason instead when
+  // the answer is not certain, including a process this user may not open, and the caller asks
+  // WMI as it did before.
   export async function command(pid: number): Promise<Command | { live?: undefined; reason: string }> {
     const state = await native()
     const lib = state.lib
@@ -119,7 +118,6 @@ export namespace BackgroundProcessWindows {
     if (proc === 0n) {
       const code = kernel.GetLastError()
       if (code === MISSING) return { live: false }
-      if (code === DENIED) return { live: true, line: "" }
       return { reason: `OpenProcess(${pid}) failed with Windows error ${code}` }
     }
     const read = (size: number): Command | { live?: undefined; reason: string } => {
@@ -137,8 +135,10 @@ export namespace BackgroundProcessWindows {
         return { reason: `NtQueryInformationProcess(${pid}) returned an unexpected layout` }
       return { live: true, line: Buffer.from(info.buffer, start, length).toString("utf16le") }
     }
-    const result = kernel.WaitForSingleObject(proc, 0) === 0 ? { live: false as const } : read(1024)
-    kernel.CloseHandle(proc)
-    return result
+    try {
+      return kernel.WaitForSingleObject(proc, 0) === 0 ? { live: false as const } : read(1024)
+    } finally {
+      kernel.CloseHandle(proc)
+    }
   }
 }

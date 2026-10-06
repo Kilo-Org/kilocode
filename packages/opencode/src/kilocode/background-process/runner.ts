@@ -142,7 +142,7 @@ export namespace BackgroundProcessRunner {
       abort: AbortSignal.timeout(2_000),
       timeout: 2_000,
     })
-    if (out.code !== 0 || !out.text.trim()) return seen
+    if (out.code !== 0 || !out.text.trim()) return { seen, ok: false }
     const value: unknown = JSON.parse(out.text)
     const items = Array.isArray(value) ? value : [value]
     const rows = items.flatMap((item) => {
@@ -155,7 +155,12 @@ export namespace BackgroundProcessRunner {
         return []
       return [{ pid: item.ProcessId, parent: item.ParentProcessId, birth: item.CreationDate }]
     })
-    return walk(rows, seen, root)
+    return { seen: walk(rows, seen, root), ok: true }
+  }
+
+  // Goes to stderr, which serve appends to the process output, so the agent and the user see it.
+  function note(message: string) {
+    if (!process.stderr.destroyed) process.stderr.write(`background process runner: ${message}\n`)
   }
 
   // The job holds the command and every process it started, so the runner only has to wait
@@ -179,31 +184,36 @@ export namespace BackgroundProcessRunner {
         failure = err
       },
     )
-    const stuck = new Error("Background process runner could not terminate its Windows job")
+    // `code` is set by the exit handler while the loops below wait.
+    const pending = () => code === undefined || job.members().length > 0
     const watch = async () => {
       while (true) {
         if (failure) throw failure
         if (await Bun.file(input.control).exists()) {
           const end = Date.now() + 5_000
-          while (Date.now() < end && (code === undefined || job.members().length > 0)) {
+          while (Date.now() < end && pending()) {
             job.kill()
             await Bun.sleep(50)
           }
+          // The stop request stays in place until the job is confirmed empty, so the fallback
+          // still sees it if the job fails in between.
+          if (code !== undefined && job.members().length === 0) {
+            await rm(input.control, { force: true })
+            return code
+          }
+          // Keep guarding what could not be ended. Serve then reports the stop as failed instead
+          // of seeing the runner disappear while the command keeps running.
           await rm(input.control, { force: true })
-          if (code !== undefined && job.members().length === 0) return code
-          throw stuck
+          note("could not end every process of the command, still guarding it")
+          continue
         }
         if (code !== undefined && job.members().length === 0) return code
         await Bun.sleep(100)
       }
     }
     return watch().catch((err: unknown) => {
-      if (err === stuck || err === failure) throw err
-      if (!process.stderr.destroyed) {
-        process.stderr.write(
-          `background process runner: job object failed, polling the process table instead: ${String(err)}\n`,
-        )
-      }
+      if (failure !== undefined && err === failure) throw err
+      note(`job object failed, polling the process table instead: ${String(err)}`)
       return windows(input, child, done, start)
     })
   }
@@ -231,29 +241,39 @@ export namespace BackgroundProcessRunner {
         failure = err
       },
     )
+    const root = () =>
+      code === undefined || (exited !== undefined && Date.now() - exited < GRACE)
+        ? { pid, start, end: exited }
+        : undefined
     while (true) {
       if (failure) throw failure
-      const active = code === undefined || (exited !== undefined && Date.now() - exited < GRACE)
-      seen = await descendants(seen, active ? { pid, start, end: exited } : undefined)
+      const from = root()
+      seen = (await descendants(seen, from)).seen
       if (await Bun.file(input.control).exists()) {
-        // Only pids this walk verified: the leader while it is alive, and descendants whose
-        // creation time matched. No `/t`, because taskkill would walk parent pids on its own
-        // without that check, and a dead leader's pid may already belong to another process.
-        await Promise.all(
-          [...(code === undefined ? [pid] : []), ...seen.keys()].map((item) =>
-            Process.run(["taskkill", "/pid", String(item), "/f"], { nothrow: true }),
-          ),
-        )
-        await rm(input.control, { force: true })
+        // Only pids a walk verified: the leader while it is alive, and descendants whose creation
+        // time matched. No `/t`, because taskkill would walk parent pids on its own without that
+        // check, and a dead leader's pid may already belong to another process. The stop only
+        // counts once a walk that actually ran finds nothing left.
         const end = Date.now() + 5_000
         while (Date.now() < end) {
-          seen = await descendants(seen)
-          if (code !== undefined && seen.size === 0) return code
+          await Promise.all(
+            [...(code === undefined ? [pid] : []), ...seen.keys()].map((item) =>
+              Process.run(["taskkill", "/pid", String(item), "/f"], { nothrow: true }),
+            ),
+          )
           await Bun.sleep(100)
+          const next = await descendants(seen, root())
+          seen = next.seen
+          if (code !== undefined && next.ok && seen.size === 0) {
+            await rm(input.control, { force: true })
+            return code
+          }
         }
-        throw new Error("Background process runner could not terminate its Windows process tree")
+        await rm(input.control, { force: true })
+        note("could not confirm that every process of the command ended, still guarding it")
+        continue
       }
-      if (code !== undefined && !active && seen.size === 0) return code
+      if (code !== undefined && !from && seen.size === 0) return code
       await Bun.sleep(100)
     }
   }
@@ -267,9 +287,7 @@ export namespace BackgroundProcessRunner {
     // Join the job before starting the command so that it and every descendant are members
     // from the moment they exist. Without a job, fall back to walking the process table.
     const job = process.platform === "win32" ? await BackgroundProcessWindows.job() : undefined
-    if (job?.reason && !process.stderr.destroyed) {
-      process.stderr.write(`background process runner: ${job.reason}, polling the process table instead\n`)
-    }
+    if (job?.reason) note(`${job.reason}, polling the process table instead`)
     const start = Date.now()
     const child = spawn(input.shell, input.args, {
       cwd: input.cwd,

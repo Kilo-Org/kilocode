@@ -723,12 +723,10 @@ if (process.platform === "win32") setTimeout(() => {}, 5_000)
     // The Windows leader intentionally stays alive for five seconds, so it needs a larger outer budget.
     process.platform === "win32" ? 60_000 : 30_000,
   )
-
-  it.instance(
+  ;(process.platform === "win32" ? it.instance : it.instance.skip)(
     "ends the Windows runner once the last descendant is gone",
     () =>
       Effect.gen(function* () {
-        if (process.platform !== "win32") return
         const test = yield* TestInstance
         const sessionID = SessionID.descending()
         const child = path.join(test.directory, "last.mjs")
