@@ -566,6 +566,7 @@ export const dict = {
   "session.tabs.switcher.pending": "Yeni",
   "session.tabs.switcher.busy": "Çalışıyor",
   "session.tabs.switcher.scheduled": "Zamanlandı",
+  "session.tabs.pinHint": "Sabitlemek veya kaldırmak için Shift+tıkla",
   "session.tab.local": "Local",
   "session.tab.cloud": "Cloud",
   "session.tab.worktree": "Çalışma ağacı",

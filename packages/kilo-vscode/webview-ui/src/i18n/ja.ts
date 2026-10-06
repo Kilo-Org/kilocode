@@ -614,6 +614,7 @@ export const dict = {
   "session.tabs.switcher.pending": "新規",
   "session.tabs.switcher.busy": "作業中",
   "session.tabs.switcher.scheduled": "予約済み",
+  "session.tabs.pinHint": "Shift+クリックで固定または固定解除",
   "session.tab.local": "ローカル",
   "session.tab.cloud": "クラウド",
   "session.tab.worktree": "ワークツリー",

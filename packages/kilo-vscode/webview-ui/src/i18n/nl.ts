@@ -571,6 +571,7 @@ export const dict = {
   "session.tabs.switcher.pending": "Nieuw",
   "session.tabs.switcher.busy": "Bezig",
   "session.tabs.switcher.scheduled": "Gepland",
+  "session.tabs.pinHint": "Shift+klik om vast te maken of los te maken",
   "session.tab.local": "Lokaal",
   "session.tab.cloud": "Cloud",
   "session.tab.worktree": "Werkboom",
