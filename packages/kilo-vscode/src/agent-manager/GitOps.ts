@@ -3,7 +3,7 @@ import * as os from "os"
 import * as fs from "fs/promises"
 import { spawn } from "../util/process"
 import type { GitExecutable } from "../util/git-executable"
-import simpleGit from "simple-git"
+import { simpleGit } from "simple-git"
 import {
   parseWorktreeList,
   normalizePath,
@@ -119,6 +119,10 @@ export function nonInteractiveEnv(): NodeJS.ProcessEnv {
  */
 export function isKiloOwnedSshCommand(env: NodeJS.ProcessEnv): boolean {
   return env.GIT_SSH_COMMAND === KILO_NON_INTERACTIVE_SSH_COMMAND
+}
+
+export function gitKeys(env: NodeJS.ProcessEnv): string[] {
+  return Object.keys(env).filter((key) => key.startsWith("GIT_"))
 }
 
 export class GitOps {
