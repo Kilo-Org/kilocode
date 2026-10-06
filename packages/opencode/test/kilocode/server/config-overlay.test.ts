@@ -455,6 +455,7 @@ describe("config overlay routes", () => {
     await using project = await tmpdir()
     await using managed = await tmpdir()
     await Filesystem.write(path.join(managed.path, "kilo.json"), JSON.stringify({ model: "test/managed" }))
+    const prev = process.env.KILO_TEST_MANAGED_CONFIG_DIR
     process.env.KILO_TEST_MANAGED_CONFIG_DIR = managed.path
     try {
       const before = await json<Overlay>(await req(project.path, "/config/overlay?scope=project"))
@@ -473,7 +474,7 @@ describe("config overlay routes", () => {
       expect(response.status).toBe(409)
       expect(await Bun.file(before.targets.project.path).exists()).toBe(false)
     } finally {
-      delete process.env.KILO_TEST_MANAGED_CONFIG_DIR
+      process.env.KILO_TEST_MANAGED_CONFIG_DIR = prev
     }
   })
 
