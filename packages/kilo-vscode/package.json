@@ -1407,7 +1407,7 @@
     "openai": "^4.85.4",
     "playwright-core": "1.57.0",
     "quick-lru": "^7.0.0",
-    "simple-git": "3.36.0",
+    "simple-git": "4.0.2",
     "solid-js": "^1.9.11",
     "uri-js": "^4.4.1",
     "virtua": "catalog:",

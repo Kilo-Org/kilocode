@@ -14,7 +14,7 @@ import { WorktreeStateManager } from "../../src/agent-manager/WorktreeStateManag
 import { GitOps } from "../../src/agent-manager/GitOps"
 import type { PRInfo } from "../../src/agent-manager/git-import"
 import { BUDGET } from "../../src/agent-manager/command-budget"
-import simpleGit from "simple-git"
+import { simpleGit } from "simple-git"
 
 // Each test gets its own temp directory -- no shared state, safe to run in parallel.
 const tempDirs: string[] = []

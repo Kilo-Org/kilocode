@@ -9,7 +9,7 @@
 import * as path from "path"
 import * as fs from "fs"
 import { createHash, randomUUID } from "crypto"
-import simpleGit, { type SimpleGit } from "simple-git"
+import { simpleGit, type SimpleGit } from "simple-git"
 import { generateBranchName, sanitizeBranchName } from "./branch-name"
 import { type GitOps, isKiloOwnedSshCommand, nonInteractiveEnv } from "./GitOps"
 import { execWithShellEnv } from "./shell-env"
@@ -245,6 +245,7 @@ export class WorktreeManager {
         allowUnsafeCustomBinary: this.binary !== "git",
         allowUnsafeSshCommand: ssh,
       },
+      allowEnvironment: ssh ? ["GIT_TERMINAL_PROMPT", "GIT_SSH_COMMAND"] : ["GIT_TERMINAL_PROMPT"],
     })
   }
 
@@ -1295,9 +1296,27 @@ export class WorktreeManager {
 
     // Only opt into simple-git's allowUnsafeSshCommand when the SSH command
     // is the fixed value Kilo injects — never for an inherited one, which
-    // could be attacker-controlled.
+    // could be attacker-controlled. simple-git v4 treats every GIT_* key in
+    // `.env()` as supplied, so drop leftover guarded keys and allowlist only
+    // the values we set.
     const env = nonInteractiveEnv()
-    await this.client(this.root, isKiloOwnedSshCommand(env))
+    const ssh = isKiloOwnedSshCommand(env)
+    for (const key of Object.keys(env)) {
+      const n = key.toLowerCase()
+      if (n === "git_terminal_prompt") continue
+      if (ssh && n === "git_ssh_command") continue
+      if (
+        n.startsWith("git_") ||
+        n === "ssh_askpass" ||
+        n === "editor" ||
+        n === "pager" ||
+        n === "prefix" ||
+        n === "visual"
+      ) {
+        delete env[key]
+      }
+    }
+    await this.client(this.root, ssh)
       .env(env)
       .raw(["fetch", "--quiet", "--no-tags", remote, `+refs/heads/${branch}:refs/remotes/${remote}/${branch}`])
     WorktreeManager.fetchCache.set(key, Date.now())
