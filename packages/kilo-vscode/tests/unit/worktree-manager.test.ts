@@ -1756,6 +1756,35 @@ describe("WorktreeManager.createWorktree advanced", () => {
     expect(worktreeHead).toBe(remoteHead)
   })
 
+  it("does not fetch with an inherited GIT_SSH_COMMAND", async () => {
+    const { clone } = await createTempRepoWithOrigin()
+    const git = simpleGit(clone)
+    await git.checkoutLocalBranch("topic")
+    await fs.writeFile(path.join(clone, "topic.txt"), "topic")
+    await git.add(".")
+    await git.commit("topic commit")
+    await git.push("origin", "topic")
+    await git.checkout("main")
+    await git.raw(["config", "remote.origin.fetch", "+refs/heads/main:refs/remotes/origin/main"])
+    await git.raw(["update-ref", "-d", "refs/remotes/origin/topic"])
+
+    const prev = process.env.GIT_SSH_COMMAND
+    process.env.GIT_SSH_COMMAND = "ssh"
+    const err = await createManager(clone)
+      .prefetchBase("topic")
+      .then(
+        () => undefined,
+        (e: unknown) => e,
+      )
+      .finally(() => {
+        if (prev == null) delete process.env.GIT_SSH_COMMAND
+        if (prev != null) process.env.GIT_SSH_COMMAND = prev
+      })
+
+    expect(String(err)).toContain("inherited GIT_SSH_COMMAND")
+    expect(await git.raw(["for-each-ref", "refs/remotes/origin/topic"])).toBe("")
+  })
+
   it("creates from a same-repository PR branch excluded by the remote fetch refspec", async () => {
     const { clone } = await createTempRepoWithOrigin()
     const git = simpleGit(clone)

@@ -1294,19 +1294,19 @@ export class WorktreeManager {
     const cached = WorktreeManager.fetchCache.get(key)
     if (cached && Date.now() - cached < WorktreeManager.FETCH_CACHE_TTL) return
 
-    // Only opt into simple-git's allowUnsafeSshCommand when the SSH command
-    // is the fixed value Kilo injects — never for an inherited one, which
-    // could be attacker-controlled.
+    // Only fetch with the fixed SSH command Kilo injects. An inherited one
+    // could be attacker-controlled, and dropping it would let ssh prompt.
+    const env = nonInteractiveEnv()
+    if (!isKiloOwnedSshCommand(env)) throw new Error("Refusing to fetch with an inherited GIT_SSH_COMMAND")
     // simple-git rejects guarded variables (any GIT_* key, EDITOR, VISUAL, ...)
     // passed through .env() unless they are listed in allowEnvironment. Allow
-    // only the keys Kilo sets on purpose and drop any other inherited GIT_* key,
-    // matching how simple-git strips them for every other call.
+    // only the keys Kilo sets and drop any other inherited GIT_* key, matching
+    // how simple-git strips them for every other call.
     const allow = ["GIT_TERMINAL_PROMPT", "GIT_SSH_COMMAND"]
-    const env = nonInteractiveEnv()
     for (const key of Object.keys(env)) {
       if (key.toUpperCase().startsWith("GIT_") && !allow.includes(key)) delete env[key]
     }
-    await this.client(this.root, isKiloOwnedSshCommand(env), allow)
+    await this.client(this.root, true, allow)
       .env(env)
       .raw(["fetch", "--quiet", "--no-tags", remote, `+refs/heads/${branch}:refs/remotes/${remote}/${branch}`])
     WorktreeManager.fetchCache.set(key, Date.now())
