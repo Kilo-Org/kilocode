@@ -5,6 +5,7 @@ import ai.kilocode.client.session.model.Tool
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.session.views.SessionViewIcons
+import ai.kilocode.client.ui.PlainLabel
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.layout.Stack
 import ai.kilocode.client.ui.layout.StackAxis
@@ -18,7 +19,7 @@ interface ApprovalReasonTarget {
 
 class ToolApprovalFooter : Stack(StackAxis.HORIZONTAL, UiStyle.Gap.sm()) {
     private val glyph = JBLabel(SessionViewIcons.shield)
-    private val label = JBLabel()
+    private val label = PlainLabel()
 
     init {
         next(glyph)

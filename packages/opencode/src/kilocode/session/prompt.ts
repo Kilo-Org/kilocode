@@ -19,6 +19,7 @@ import { KiloSessionPromptQueue } from "@/kilocode/session/prompt-queue"
 import { Permission } from "@/permission"
 import { PermissionProvenance } from "@/kilocode/permission/provenance"
 import { Question } from "@/question"
+import { InstanceRef } from "@/effect/instance-ref"
 import { environmentDetails } from "@/kilocode/editor-context"
 import { Identifier } from "@/id/id"
 import { Filesystem } from "@/util/filesystem"
@@ -137,19 +138,20 @@ export namespace KiloSessionPrompt {
     question: Pick<Question.Interface, "ask" | "list" | "reject">
   }): Promise<"continue" | "break"> {
     if (!shouldAskPlanFollowup({ messages: input.messages, abort: input.abort })) return "break"
+    const ctx = Instance.current
+    const run = <A, E>(effect: Effect.Effect<A, E>) =>
+      Effect.runPromise(effect.pipe(Effect.provideService(InstanceRef, ctx)))
     const ask = Instance.bind(PlanFollowup.ask)
     const action = await ask({
       sessionID: input.sessionID,
       messages: input.messages,
       abort: input.abort,
-      // Keep the request in the listener-local Question service so HTTP replies can resolve it.
+      // Keep the listener-local service for replies and the instance ref for directory-routed events.
       question: {
-        ask: Instance.bind((request: Parameters<Question.Interface["ask"]>[0]) =>
-          Effect.runPromise(input.question.ask(request)),
-        ),
-        list: Instance.bind(() => Effect.runPromise(input.question.list())),
+        ask: Instance.bind((request: Parameters<Question.Interface["ask"]>[0]) => run(input.question.ask(request))),
+        list: Instance.bind(() => run(input.question.list())),
         reject: Instance.bind((requestID: Parameters<Question.Interface["reject"]>[0]) =>
-          Effect.runPromise(input.question.reject(requestID)),
+          run(input.question.reject(requestID)),
         ),
       },
     })

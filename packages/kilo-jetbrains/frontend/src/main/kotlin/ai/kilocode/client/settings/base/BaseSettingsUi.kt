@@ -11,6 +11,7 @@ import com.intellij.ide.DataManager
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.EDT
 import com.intellij.openapi.application.ModalityState
+import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.asContextElement
 import com.intellij.openapi.components.service
 import com.intellij.openapi.options.Configurable
@@ -18,6 +19,7 @@ import com.intellij.openapi.options.ConfigurableWithId
 import com.intellij.openapi.options.ShowSettingsUtil
 import com.intellij.openapi.options.ex.Settings
 import com.intellij.openapi.project.ProjectManager
+import com.intellij.platform.project.ProjectId
 import com.intellij.util.concurrency.annotations.RequiresBackgroundThread
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import kotlinx.coroutines.CoroutineScope
@@ -38,7 +40,7 @@ internal abstract class BaseSettingsUi<C : BaseContentPanel, D, P, R, W>(
     private val loginBanner: Boolean = true,
     scroll: Boolean = true,
     pad: Boolean = true,
-) : SettingsPanel(scroll, pad), SettingsDraftPage {
+) : SettingsPanel(scroll, pad), SettingsDraftPage, Disposable {
     protected lateinit var form: C
         private set
     protected val jobs = mutableListOf<Job>()
@@ -48,6 +50,7 @@ internal abstract class BaseSettingsUi<C : BaseContentPanel, D, P, R, W>(
         set(value) {
             state.draft = value
         }
+    protected val baseline: D get() = state.baseline
     protected val saving get() = state.saving
     protected val saveError get() = state.error
     protected var appState: KiloAppStateDto = app.state.value
@@ -56,13 +59,15 @@ internal abstract class BaseSettingsUi<C : BaseContentPanel, D, P, R, W>(
         private set
     protected var projectDirectory: String? = null
         private set
-    protected val hasProjectDirectory get() = projectDirectory != null || hint != null
+    private var projectLoading = false
+    protected val hasProjectDirectory get() = projectDirectory != null || hint != null || projectLoading
     protected var workspaceLoading = false
         private set
     protected var workspaceLoaded = false
         private set
 
     private var disposed = false
+    protected val isDisposed get() = disposed
 
     @RequiresEdt
     protected fun startSettings(content: C) {
@@ -85,6 +90,24 @@ internal abstract class BaseSettingsUi<C : BaseContentPanel, D, P, R, W>(
             val dir = workspaces.resolveProjectDirectory(null, path)
             withContext(edt) {
                 projectDirectory = dir
+                workspaceLoaded = false
+                syncContent()
+                load()
+            }
+        }
+    }
+
+    /** Resolve an exact frontend project before loading its workspace-backed settings. */
+    @RequiresEdt
+    protected fun loadProject(projectId: ProjectId?, hint: String) {
+        if (hint.isBlank() || projectLoading || projectDirectory != null) return
+        projectLoading = true
+        syncContent()
+        jobs += scope.launch {
+            val dir = workspaces.resolveProjectDirectory(projectId, hint)
+            withContext(edt) {
+                projectDirectory = dir
+                projectLoading = false
                 workspaceLoaded = false
                 syncContent()
                 load()
@@ -142,6 +165,7 @@ internal abstract class BaseSettingsUi<C : BaseContentPanel, D, P, R, W>(
     override fun resetDraft() {
         checkEdt()
         state.reset()
+        restoreFields()
         if (!saving) clearProgress()
         syncContent()
     }
@@ -169,6 +193,7 @@ internal abstract class BaseSettingsUi<C : BaseContentPanel, D, P, R, W>(
                     logSaveCompleted(change)
                     val base = base(result)
                     state.complete(token, base)
+                    restoreFields()
                     clearProgress()
                     syncContent()
                     return@invokeLater
@@ -181,7 +206,7 @@ internal abstract class BaseSettingsUi<C : BaseContentPanel, D, P, R, W>(
     }
 
     @RequiresEdt
-    fun dispose() {
+    override fun dispose() {
         checkEdt()
         disposed = true
         jobs.forEach { it.cancel() }
@@ -272,6 +297,9 @@ internal abstract class BaseSettingsUi<C : BaseContentPanel, D, P, R, W>(
 
     @RequiresEdt
     protected open fun clearWorkspaceError() = Unit
+
+    @RequiresEdt
+    protected open fun restoreFields() = Unit
 
     private fun openProfile(src: JComponent) {
         val settings = Settings.KEY.getData(DataManager.getInstance().getDataContext(src))

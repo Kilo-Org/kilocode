@@ -7,6 +7,7 @@ import type {
 } from "@modelcontextprotocol/sdk/shared/auth.js"
 import { Effect } from "effect"
 import { McpAuth } from "./auth"
+import { clientMetadataUrl } from "../kilocode/mcp/client-metadata" // kilocode_change
 
 const OAUTH_CALLBACK_PORT = 19876
 const OAUTH_CALLBACK_PATH = "/mcp/oauth/callback"
@@ -39,6 +40,15 @@ export class McpOAuthProvider implements OAuthClientProvider {
     private callbacks: McpOAuthCallbacks,
     protected auth: McpAuth.Interface,
   ) {}
+
+  // kilocode_change start
+  get clientMetadataUrl(): string | undefined {
+    // The hosted document describes a public client with the default callback URI.
+    if (this.config.clientId || this.config.clientSecret) return undefined
+    if (this.redirectUrl !== `http://127.0.0.1:${OAUTH_CALLBACK_PORT}${OAUTH_CALLBACK_PATH}`) return undefined
+    return clientMetadataUrl
+  }
+  // kilocode_change end
 
   get redirectUrl(): string {
     if (this.config.redirectUri) {

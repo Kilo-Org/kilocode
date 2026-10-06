@@ -215,7 +215,7 @@ export function useFileMention(
   const files = (items: MentionResult[]): FileSearchItem[] =>
     items.flatMap((item) =>
       item.type === "file" || item.type === "folder" || item.type === "opened-file"
-        ? [{ path: item.value, type: item.type }]
+        ? [{ path: item.value, type: item.type, root: item.root, relative: item.relative }]
         : [],
     )
 

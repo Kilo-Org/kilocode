@@ -71,7 +71,7 @@ export const dict: Record<string, string> = {
   "ui.sessionTurn.error.addCredits": "Adjon hozzá krediteket",
   "dialog.usageExceeded.freeTier.title": "Elérte a szabad korlátot",
   "dialog.usageExceeded.freeTier.description":
-    "Iratkozzon fel a Kilo Go szolgáltatásra, hogy megbízható hozzáférést kaphasson a legjobb nyílt forráskódú modellekhez, havi 5 dolláros áron.", // kilocode_change
+    "Iratkozzon fel az Kilo Go szolgáltatásra havi 10 dollárért, hogy megbízható hozzáférést kapjon a legjobb nyílt forráskódú modellekhez.", // kilocode_change
   "dialog.usageExceeded.freeTier.actionLabel": "Iratkozz fel",
   "dialog.usageExceeded.accountRateLimit.title": "Elérte a Go korlátját",
   "dialog.usageExceeded.accountRateLimit.description":

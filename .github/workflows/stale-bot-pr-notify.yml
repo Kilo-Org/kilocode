@@ -1,0 +1,112 @@
+# kilocode_change - new file
+name: Stale bot PR notify
+
+# Bot-opened PRs (Dependabot, Security Agent, etc.) can sit unreviewed until
+# stale (a real security PR went 13 days with green CI and zero reviews), or
+# get reviewed and approved but never merge because a required check keeps
+# failing -- dependabot-auto-merge.yml only arms auto-merge once and never
+# checks back, so nothing else would ever catch that case. Once a day, flag
+# any open bot PR that's conflicting, has a failing required check, or has
+# sat unreviewed too long.
+
+on:
+  schedule:
+    - cron: "0 13 * * *" # once a day
+  workflow_dispatch:
+
+concurrency:
+  group: stale-bot-pr-notify
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  notify:
+    if: github.repository == 'Kilo-Org/kilocode'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - id: build
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          STALE_DAYS: ${{ vars.STALE_BOT_PR_DAYS || '3' }}
+          # Must match the "Main branch protection" ruleset's required status
+          # checks, so a failing non-required check (CodeQL, etc.) is never
+          # reported as blocking a PR that can actually still merge.
+          REQUIRED_CHECKS: '["test (linux)","typecheck","unit (linux)","Visual Regression (kilo-ui)","Visual Regression (kilo-vscode webview)"]'
+        run: |
+          # 500 is generous headroom above this repo's current ~150 open PRs.
+          # gh pr list sorts newest-first by default, so a too-low --limit
+          # would silently miss exactly the oldest/stalest PRs this workflow
+          # exists to catch.
+          prs=$(gh pr list --repo "$REPO" --search "is:open is:pr" \
+            --json number,author,title,url,createdAt --limit 500)
+          now=$(date -u +%s)
+
+          # mergeStateStatus, reviews, and statusCheckRollup are fetched per
+          # bot PR individually, not in the bulk list above: with 150+ PRs
+          # open on this repo, mergeStateStatus alone is expensive enough
+          # that requesting it for 100 PRs in one query reliably 502s.
+          mkdir -p .cache
+          : > .cache/flagged.ndjson
+          while IFS= read -r pr; do
+            [ -z "$pr" ] && continue
+            number=$(echo "$pr" | jq -r '.number')
+            if ! detail=$(gh pr view "$number" --repo "$REPO" --json mergeStateStatus,reviews,statusCheckRollup); then
+              echo "::warning::could not fetch detail for PR #$number, skipping"
+              continue
+            fi
+            jq -cn --argjson now "$now" --argjson staleDays "$STALE_DAYS" \
+              --argjson required "$REQUIRED_CHECKS" --argjson pr "$pr" --argjson detail "$detail" '
+              $pr + $detail
+              | (($now - (.createdAt | fromdateiso8601)) / 86400) as $age
+              # statusCheckRollup mixes CheckRun (uses conclusion) and legacy
+              # StatusContext (uses state) entries; CANCELLED/TIMED_OUT/
+              # STARTUP_FAILURE/ACTION_REQUIRED block a merge just as much as
+              # FAILURE/ERROR does. Only required checks count, so a failing
+              # advisory job (CodeQL, etc.) never gets reported as blocking.
+              | (
+                  (.statusCheckRollup // [])
+                  | map(select(.name as $n | $required | index($n) != null))
+                  | any((.conclusion // .state) as $c | ["FAILURE","ERROR","CANCELLED","TIMED_OUT","STARTUP_FAILURE","ACTION_REQUIRED"] | index($c) != null)
+                ) as $ciFailing
+              | . + {
+                  age_days: ($age | floor),
+                  reason: (
+                    if .mergeStateStatus == "DIRTY" then "conflicting"
+                    elif $ciFailing then "CI failing"
+                    elif ((.reviews | length) == 0 and $age >= $staleDays) then "unreviewed"
+                    else empty
+                    end
+                  )
+                }
+              | select(.reason != null)
+            ' >> .cache/flagged.ndjson
+          done < <(echo "$prs" | jq -c 'map(select(.author.is_bot == true)) | .[]')
+
+          flagged=$(jq -c -s '.' .cache/flagged.ndjson)
+          echo "flagged=$flagged" >> "$GITHUB_OUTPUT"
+
+          # Build real JSON via jq instead of splicing PR titles (free text)
+          # into the Slack payload through Actions expressions. Do not write
+          # the expression delimiters here: Actions evaluates them even in a
+          # shell comment, and an empty one makes the whole workflow invalid.
+          echo "$flagged" | jq '
+            if length == 0 then {text: ""} else
+              {text: (["*Bot PRs needing attention:*"] + map(
+                "- <" + .url + "|#" + (.number | tostring) + " " + .title + "> ("
+                + .author.login + ", " + (.age_days | tostring) + "d old, " + .reason + ")"
+              )) | join("\n")}
+            end
+          ' > .cache/slack-payload.json
+
+      - if: steps.build.outputs.flagged != '[]'
+        name: Notify Slack
+        uses: slackapi/slack-github-action@v2.0.0
+        with:
+          webhook: ${{ secrets.SECURITY_ALERTS_SLACK_WEBHOOK }}
+          webhook-type: incoming-webhook
+          payload-file-path: .cache/slack-payload.json

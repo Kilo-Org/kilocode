@@ -3,12 +3,14 @@ import { ConfigV1 } from "@opencode-ai/core/v1/config/config"
 import { ConfigAgentV1 } from "@opencode-ai/core/v1/config/agent" // kilocode_change
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { httpClient } from "@opencode-ai/core/effect/app-node-platform"
-import { Cause, Effect, Exit, Layer, Option } from "effect"
+import { Cause, Effect, Exit, Layer, Logger, Option } from "effect"
 import { NamedError } from "@opencode-ai/core/util/error"
 import { FetchHttpClient, HttpClient, HttpClientResponse } from "effect/unstable/http"
 import { Config } from "@/config/config"
 import { ConfigManaged } from "@/config/managed"
 import { ConfigParse } from "../../src/config/parse"
+import { ConfigV2Compat } from "../../src/config/v2-compat"
+import { snapshot } from "./snapshot"
 import { Npm } from "@opencode-ai/core/npm"
 
 import { InstanceRef } from "../../src/effect/instance-ref"
@@ -432,6 +434,194 @@ it.effect("updates global config and omits empty shell key in jsonc", () =>
       expect(writtenConfig).not.toContain('"shell"')
       expect(parsed.shell).toBeUndefined()
       expect(parsed.model).toBe("test/model")
+    }),
+  ),
+)
+
+it.effect("logs global update diagnostics once without exposing values", () =>
+  withGlobalConfig(
+    {
+      config: {
+        providers: { example: { settings: { apiKey: "keep-me" } } },
+      },
+    },
+    ({ dir }) =>
+      Effect.gen(function* () {
+        const messages: unknown[] = []
+        yield* Config.use.updateGlobal({ username: "updated" }).pipe(
+          Effect.provide(
+            Logger.layer([
+              Logger.make<unknown, void>((options) => {
+                messages.push(options.message)
+              }),
+            ]),
+          ),
+        )
+        expect(JSON.stringify(messages)).not.toContain("keep-me")
+        expect(
+          messages.filter((item) => Array.isArray(item) && item[0] === "configuration compatibility diagnostic"),
+        ).toEqual([
+          [
+            "configuration compatibility diagnostic",
+            expect.objectContaining({
+              // kilocode_change - Kilo defaults to kilo.json (globalConfigFile prefers it) instead of upstream's opencode.json
+              source: path.join(dir, "kilo.json"),
+              kind: "unsupported",
+              path: ["providers"],
+            }),
+          ],
+        ])
+      }),
+  ),
+)
+
+const updateFixtures = path.join(import.meta.dir, "fixtures/v2-compat")
+const globalInputs = [...new Bun.Glob("update-global/*-input.{json,jsonc}").scanSync({ cwd: updateFixtures })].sort()
+const projectInputs = [...new Bun.Glob("update-project/*-input.json").scanSync({ cwd: updateFixtures })].sort()
+if (!globalInputs.length || !projectInputs.length) throw new Error("Missing config update fixtures")
+
+for (const input of globalInputs) {
+  const extension = path.extname(input)
+  const name = input.slice(0, -`-input${extension}`.length)
+  const prefix = path.join(updateFixtures, name)
+  it.live(`fixture ${name}`, () =>
+    withGlobalConfig({}, ({ dir }) =>
+      Effect.gen(function* () {
+        const fs = yield* FSUtil.Service
+        const file = path.join(dir, `opencode${extension}`)
+        yield* fs.writeFileString(file, yield* fs.readFileString(path.join(updateFixtures, input)))
+        const patch = ConfigParse.schema(ConfigV1.Info, yield* fs.readJson(`${prefix}-patch.json`), input)
+        const updated = yield* Config.use.updateGlobal(patch)
+        const written = yield* fs.readFileString(file)
+
+        yield* Effect.promise(() => snapshot(`${prefix}-output${extension}`, written))
+        yield* Effect.promise(() => snapshot(`${prefix}-normalized.json`, JSON.stringify(updated.info, null, 2) + "\n"))
+      }),
+    ),
+  )
+}
+
+for (const input of projectInputs) {
+  const name = input.slice(0, -"-input.json".length)
+  const prefix = path.join(updateFixtures, name)
+  it.instance(`fixture ${name}`, () =>
+    Effect.gen(function* () {
+      const instance = yield* TestInstance
+      const fs = yield* FSUtil.Service
+      // kilocode_change - upstream writes config.json, but Kilo's project config file set is kilo.json/kilo.jsonc/opencode.json/opencode.jsonc
+      const file = path.join(instance.directory, "kilo.json")
+      yield* fs.writeFileString(file, yield* fs.readFileString(path.join(updateFixtures, input)))
+      const patch = ConfigParse.schema(ConfigV1.Info, yield* fs.readJson(`${prefix}-patch.json`), input)
+      yield* Config.use.update(patch)
+      const written = yield* fs.readFileString(file)
+      const normalized = ConfigParse.schema(
+        ConfigV1.Info,
+        ConfigV2Compat.lower(ConfigParse.jsonc(written, file)).value,
+        file,
+      )
+
+      yield* Effect.promise(() => snapshot(`${prefix}-output.json`, written))
+      yield* Effect.promise(() => snapshot(`${prefix}-normalized.json`, JSON.stringify(normalized, null, 2) + "\n"))
+    }),
+  )
+}
+
+for (const name of ["opencode.json", "opencode.jsonc"]) {
+  it.live(`rejects updating ${name} with native permissions without writing it`, () =>
+    withGlobalConfig(
+      { name, config: { permissions: [{ action: "read", resource: "secret-resource", effect: "deny" }] } },
+      ({ dir }) =>
+        Effect.gen(function* () {
+          const fs = yield* FSUtil.Service
+          const file = path.join(dir, name)
+          const before = yield* fs.readFileString(file)
+          const exit = yield* Effect.exit(Config.use.updateGlobal({ username: "changed" }))
+          expect(Exit.isFailure(exit)).toBe(true)
+          if (Exit.isFailure(exit)) {
+            const error = Cause.squash(exit.cause)
+            expect(error).toMatchObject({ data: { path: file, issues: [{ path: ["permissions"] }] } })
+            expect(JSON.stringify(error)).not.toContain("secret-resource")
+          }
+          expect(yield* fs.readFileString(file)).toBe(before)
+        }),
+    ),
+  )
+}
+
+it.instance("rejects a project update with native agent permissions without writing it", () =>
+  Effect.gen(function* () {
+    const instance = yield* TestInstance
+    const fs = yield* FSUtil.Service
+    // kilocode_change - Kilo reads kilo.json, not upstream's config.json
+    const file = path.join(instance.directory, "kilo.json")
+    const before = JSON.stringify({ agents: { reviewer: { permissions: [] } } })
+    yield* fs.writeFileString(file, before)
+    const exit = yield* Effect.exit(Config.use.update({ username: "changed" }))
+    expect(Exit.isFailure(exit)).toBe(true)
+    if (Exit.isFailure(exit))
+      expect(Cause.squash(exit.cause)).toMatchObject({
+        data: { path: file, issues: [{ path: ["agents", "reviewer", "permissions"] }] },
+      })
+    expect(yield* fs.readFileString(file)).toBe(before)
+  }),
+)
+
+it.effect("native project MCP servers override inherited V1 disabled state", () =>
+  withConfigTree(
+    {
+      global: {
+        mcp: {
+          shared: { type: "local", command: ["global-mcp"], enabled: false },
+        },
+      },
+      project: {
+        mcp: {
+          servers: {
+            shared: { type: "local", command: ["project-mcp"] },
+          },
+        },
+      },
+    },
+    Effect.gen(function* () {
+      expect((yield* Config.use.get()).mcp?.shared).toMatchObject({
+        type: "local",
+        command: ["project-mcp"],
+        enabled: true,
+      })
+    }),
+  ),
+)
+
+it.effect("rejects native project permissions even with inherited V1 rules", () =>
+  withConfigTree(
+    {
+      global: {
+        permission: { read: "deny", bash: "ask" },
+        agent: { reviewer: { permission: { edit: "deny" } } },
+      },
+      project: {
+        permissions: [{ action: "read", resource: "*", effect: "allow" }],
+        agents: {
+          reviewer: {
+            system: "Review carefully",
+            permissions: [{ action: "edit", resource: "*", effect: "allow" }],
+          },
+        },
+      },
+    },
+    Effect.gen(function* () {
+      // kilocode_change start - Kilo degrades gracefully: an invalid project config is
+      // skipped with a warning instead of failing the whole Config.use.get(). The native
+      // V2 permission fields are still rejected, and the inherited global V1 rules survive.
+      const config = yield* Config.use.get()
+      const warnings = yield* Config.Service.use((svc) => svc.warnings())
+      const skipped = warnings.filter((item) => item.path.includes(path.join("project", "kilo.json")))
+      expect(skipped.length).toBeGreaterThan(0)
+      const detail = skipped.map((item) => item.message).join("\n")
+      expect(detail).toContain("permissions")
+      expect(detail).toContain("not supported")
+      expect(config.permission).toMatchObject({ read: "deny", bash: "ask" })
+      // kilocode_change end
     }),
   ),
 )

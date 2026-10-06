@@ -172,11 +172,22 @@ abstract class AbstractSessionPartView(
     fun syncExpandable(expandable: Boolean): Boolean {
         val active = this.expandable && expandable
         val changed = setVisible(arrow, active)
+        syncArrowSlot(active)
         val detached = if (active) false else collapse()
         val cursor = if (active) Cursor.getPredefinedCursor(Cursor.HAND_CURSOR) else Cursor.getDefaultCursor()
         val moved = syncCursor(cursor)
         val icon = syncArrow()
         return changed || detached || moved || icon
+    }
+
+    /**
+     * Keeps the arrow in the header row only while the card can toggle. A hidden component is still walked by
+     * every tree traversal (graphics-configuration updates on tab switch, component searches during painting),
+     * and most transcript cards never become expandable, so the arrow stays out of the tree until needed.
+     */
+    private fun syncArrowSlot(active: Boolean) {
+        if (active == (arrow.parent === row)) return
+        if (active) row.add(arrow, BorderLayout.EAST) else row.remove(arrow)
     }
 
     protected fun refresh() {

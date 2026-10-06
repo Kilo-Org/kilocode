@@ -34,6 +34,7 @@ export const dict = {
     "เฉพาะโปรเจกต์นี้ ไฟล์ที่ติดตั้งสามารถเพิ่มลงในระบบควบคุมเวอร์ชันและแชร์กับทีมของคุณได้",
   "marketplace.install.scope.global.description": "ทุกโปรเจกต์ในเครื่องนี้ จัดเก็บไว้ในการกำหนดค่าผู้ใช้ของคุณ",
   "marketplace.install.destination": "ปลายทางการติดตั้ง",
+  "marketplace.install.includedSkills": "ทักษะที่รวมมาด้วย",
   "marketplace.install.about.mcp":
     "เซิร์ฟเวอร์ MCP เพิ่มเครื่องมือให้ Kilo สำหรับทำงานกับบริการภายนอกหรือโปรแกรมในเครื่อง",
   "marketplace.install.about.agent": "เอเจนต์เพิ่มบทบาทที่นำกลับมาใช้ใหม่ได้พร้อมคำสั่งและสิทธิ์ของตนเอง",
@@ -44,8 +45,12 @@ export const dict = {
     "ไฟล์โปรเจกต์อาจถูกเพิ่มลงในระบบควบคุมเวอร์ชัน อย่าเก็บข้อมูลลับไว้ที่นี่ เว้นแต่การกำหนดค่าจะอ้างอิงตัวแปรสภาพแวดล้อม",
   "marketplace.install.learnMore": "เรียนรู้วิธีการติดตั้งจาก Marketplace",
   "marketplace.install.learnMcp": "เรียนรู้เพิ่มเติมเกี่ยวกับ MCP",
-  "marketplace.install.installedAt": "ติดตั้งไปยัง {{path}} แล้ว",
-  "marketplace.intro": "ติดตั้งเอเจนต์ ทักษะ และเครื่องมือ MCP ที่นำกลับมาใช้ใหม่ได้สำหรับหนึ่งโปรเจกต์หรือทุกโปรเจกต์",
+  "marketplace.install.about.plugin":
+    "ปลั๊กอินเพิ่มเครื่องมือและการเชื่อมต่อแบบกำหนดเองให้กับ Kilo ปลั๊กอินทำงานโดยมีสิทธิ์เต็มรูปแบบ",
+  "marketplace.install.plugin.warning":
+    "ปลั๊กอินเรียกใช้โค้ดโดยมีสิทธิ์เต็มรูปแบบ สามารถอ่านและแก้ไขไฟล์ของคุณ เรียกใช้คำสั่ง และเข้าถึงข้อมูลรับรองและเครือข่ายของคุณได้ ติดตั้งเฉพาะปลั๊กอินที่คุณเชื่อถือเท่านั้น",
+  "marketplace.intro":
+    "ติดตั้งเอเจนต์ ทักษะ เครื่องมือ MCP และปลั๊กอินที่นำกลับมาใช้ใหม่ได้สำหรับหนึ่งโปรเจกต์หรือทุกโปรเจกต์",
   "marketplace.intro.learnMore": "เกี่ยวกับ Marketplace",
   "marketplace.install.prerequisites": "ข้อกำหนดเบื้องต้น",
   "marketplace.install.installing": "กำลังติดตั้ง...",
@@ -54,10 +59,19 @@ export const dict = {
   "marketplace.install.failed": "การติดตั้งล้มเหลว",
   "marketplace.install.done": "เสร็จสิ้น",
   "marketplace.install.close": "ปิด",
+  "marketplace.install.mcp.signIn.message": "{{name}} ติดตั้งแล้ว แต่ต้องเข้าสู่ระบบก่อนจึงจะใช้งานเครื่องมือได้",
+  "marketplace.install.mcp.signIn.button": "เข้าสู่ระบบ",
+  "marketplace.install.mcp.signIn.waiting": "กำลังรอการเข้าสู่ระบบผ่านเบราว์เซอร์…",
+  "marketplace.install.mcp.signIn.cancel": "ยกเลิก",
+  "marketplace.install.mcp.signIn.skip": "ไว้ทีหลัง",
+  "marketplace.install.mcp.signIn.success": "เข้าสู่ระบบ {{name}} แล้ว",
+  "marketplace.install.mcp.signIn.failed": "เข้าสู่ระบบ {{name}} ไม่สำเร็จ",
   "marketplace.remove.title": "ลบ {{name}} หรือไม่?",
   "marketplace.remove.confirm":
     "คุณแน่ใจหรือไม่ว่าต้องการลบ {{type}} นี้? สิ่งนี้จะลบออกจากการกำหนดค่า {{scope}} ของคุณ",
   "marketplace.remove.cancel": "ยกเลิก",
+  "marketplace.remove.mcp.skills":
+    "การดำเนินการนี้จะลบทักษะเสริมที่เป็นของการติดตั้งนี้ด้วย ทักษะที่ติดตั้งแยกต่างหากจะยังคงอยู่",
   "marketplace.remove.confirm.button": "ลบ",
   "marketplace.search": "ค้นหา...",
   "marketplace.filter.all": "รายการทั้งหมด",
@@ -66,6 +80,7 @@ export const dict = {
   "marketplace.empty": "ไม่พบรายการ",
   "marketplace.empty.relevant": "ไม่พบรายการในมาร์เก็ตเพลสที่เกี่ยวข้องกับพื้นที่ทำงานนี้",
   "marketplace.badge.mcpServer": "เซิร์ฟเวอร์ MCP",
+  "marketplace.badge.skills": "มีทักษะรวมมาด้วย",
   "marketplace.card.by": "โดย {{author}}",
   "marketplace.install.method": "วิธีการติดตั้ง",
   "marketplace.install.parameters": "พารามิเตอร์",
@@ -73,6 +88,7 @@ export const dict = {
   "marketplace.scope.project": "โปรเจ็กต์",
   "marketplace.scope.global": "โกลบอล",
   "marketplace.remove.type.mcp": "เซิร์ฟเวอร์ MCP",
+  "marketplace.remove.type.plugin": "ปลั๊กอิน",
   "marketplace.remove.type.skill": "ทักษะ",
   "marketplace.remove.type.agent": "เอเจนต์",
   "marketplace.remove.failed": "ไม่สามารถลบ {{name}} ได้",
@@ -83,7 +99,7 @@ export const dict = {
   "marketplace.warning.busyMany": "มีหลายเซสชันกำลังทำงานและจะถูกขัดจังหวะ",
   "marketplace.warning.installAnyway": "ติดตั้งต่อไป",
   "marketplace.warning.cancel": "ยกเลิก",
-  "marketplace.contribute.prompt": "ขาดสกิล เอเจนต์ หรือเซิร์ฟเวอร์ MCP?",
+  "marketplace.contribute.prompt": "ขาดสกิล เอเจนต์ เซิร์ฟเวอร์ MCP หรือปลั๊กอิน?",
   "marketplace.contribute.cta": "ร่วมสมทบบน GitHub",
   "marketplace.migration.notice":
     "โหมดถูกแทนที่ด้วยเอเจนต์แล้ว หากคุณเคยติดตั้งโหมดจาก marketplace กรุณาลบและติดตั้งใหม่เป็นเอเจนต์เพื่อย้ายไปยังรูปแบบใหม่",

@@ -1,5 +1,6 @@
 package ai.kilocode.client.session.ui.header
 
+import ai.kilocode.client.session.ui.style.SessionUiStyle
 import com.intellij.icons.AllIcons
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.ui.components.JBScrollPane
@@ -9,6 +10,9 @@ import java.awt.Cursor
 import java.awt.event.MouseEvent
 import javax.swing.JComponent
 import javax.swing.JLabel
+import javax.swing.JLayeredPane
+import javax.swing.JPanel
+import javax.swing.JRootPane
 import javax.swing.ScrollPaneConstants
 import javax.swing.SwingUtilities
 
@@ -160,8 +164,53 @@ class StripTest : BasePlatformTestCase() {
         }
     }
 
+    fun `test hovering any summary part paints the transcript header hover fill`() {
+        val strip = TestStrip()
+        val row = strip.rowComponent().also { it.setSize(400, 24) }
+
+        enter(strip.labelComponent())
+
+        assertEquals(SessionUiStyle.View.Surface.headerHoverBgColor().rgb, row.background.rgb)
+
+        exit(strip.labelComponent(), 10_000, 10_000)
+
+        assertEquals(SessionUiStyle.View.Surface.headerBgColor().rgb, row.background.rgb)
+    }
+
+    fun `test hover clears when an overlay covers the strip header`() {
+        val strip = TestStrip().also { it.reveal(true) }
+        val row = strip.rowComponent()
+        val pane = pane(strip)
+        enter(row)
+        assertEquals(SessionUiStyle.View.Surface.headerHoverBgColor().rgb, row.background.rgb)
+
+        pane.add(JPanel().apply { setBounds(0, 0, 200, 40) }, JLayeredPane.PALETTE_LAYER)
+        exit(row, 5, 5)
+
+        assertEquals(SessionUiStyle.View.Surface.headerBgColor().rgb, row.background.rgb)
+    }
+
+    private fun pane(strip: Strip): JLayeredPane {
+        val root = JRootPane()
+        root.setSize(200, 40)
+        root.contentPane.add(strip)
+        strip.setSize(200, 40)
+        strip.doLayout()
+        root.doLayout()
+        root.contentPane.doLayout()
+        return root.layeredPane
+    }
+
     private fun click(component: Component) {
         component.dispatchEvent(MouseEvent(component, MouseEvent.MOUSE_CLICKED, System.currentTimeMillis(), 0, 1, 1, 1, false))
+    }
+
+    private fun enter(component: Component) {
+        component.dispatchEvent(MouseEvent(component, MouseEvent.MOUSE_ENTERED, System.currentTimeMillis(), 0, 1, 1, 0, false))
+    }
+
+    private fun exit(component: Component, x: Int, y: Int) {
+        component.dispatchEvent(MouseEvent(component, MouseEvent.MOUSE_EXITED, System.currentTimeMillis(), 0, x, y, 0, false))
     }
 
     /**

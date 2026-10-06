@@ -3,10 +3,58 @@ import { $ } from "bun"
 import pkg from "../package.json"
 import { Script } from "@opencode-ai/script"
 import { fileURLToPath } from "url"
-import { NpmPublish } from "./kilocode/npm-publish" // kilocode_change
+// kilocode_change start
+import fs from "node:fs"
+import path from "node:path"
+import { NpmPublish } from "./kilocode/npm-publish"
+import * as KiloSbom from "./kilocode/sbom"
+import type { Manifest } from "../../../script/kilocode/sbom/index"
+// kilocode_change end
 
 const dir = fileURLToPath(new URL("..", import.meta.url))
 process.chdir(dir)
+
+// kilocode_change start
+const evidence: Manifest.Entry[] = []
+
+/** Record SBOM evidence for one npm tarball, or an explicit failure entry. */
+async function describe(file: string | undefined, name: string, version: string) {
+  const described = file
+    ? await KiloSbom.npmPackage({
+        file,
+        name,
+        release: { version, channel: Script.channel },
+        out: path.resolve("dist"),
+      }).catch((err) => {
+        console.error(`sbom: could not describe ${name}@${version}`, err)
+        return undefined
+      })
+    : undefined
+  evidence.push(
+    described?.entry ?? {
+      artifact: file ? path.basename(file) : `${name}@${version}`,
+      sha256: "",
+      distribution: "npm",
+      error: `SBOM generation failed for ${name}@${version}`,
+    },
+  )
+}
+
+/** Fetch the tarball the registry actually serves for an already-published version. */
+async function registry(name: string, version: string) {
+  const dest = path.resolve("dist", ".sbom-registry")
+  await fs.promises.mkdir(dest, { recursive: true })
+  const out = await $`npm pack ${name}@${version} --pack-destination ${dest} --json`
+    .quiet()
+    .json()
+    .catch((err) => {
+      console.error(`sbom: could not fetch published ${name}@${version}`, err)
+      return undefined
+    })
+  const filename = (out as { filename?: string }[] | undefined)?.at(0)?.filename
+  return filename ? path.join(dest, filename) : undefined
+}
+// kilocode_change end
 
 async function published(name: string, version: string) {
   return (await $`npm view ${name}@${version} version`.nothrow()).exitCode === 0
@@ -18,14 +66,33 @@ async function publish(dir: string, name: string, version: string) {
   if (process.platform !== "win32") await $`chmod -R 755 .`.cwd(dir)
   if (await published(name, version)) {
     console.log(`already published ${name}@${version}`)
+    // kilocode_change start - a re-run must still describe what the registry
+    // serves, otherwise the distribution manifest shrinks and its upload would
+    // replace the complete evidence from the first run.
+    await describe(await registry(name, version), name, version)
+    // kilocode_change end
     return
   }
+  // kilocode_change start - remove stale tarballs so the SBOM subject and the
+  // published bytes are provably the file this pack just wrote.
+  for (const stale of await Array.fromAsync(new Bun.Glob("*.tgz").scan({ cwd: dir }))) {
+    await fs.promises.rm(path.join(dir, stale), { force: true })
+  }
+  // kilocode_change end
   await $`bun pm pack`.cwd(dir)
-  // kilocode_change start
+  // kilocode_change start - describe the exact tarball before publishing it, and
+  // publish that resolved path rather than a glob.
+  const packed = await Array.fromAsync(new Bun.Glob("*.tgz").scan({ cwd: dir }))
+  if (packed.length !== 1) {
+    throw new Error(`bun pm pack must produce exactly one tarball for ${name}, found ${packed.length}`)
+  }
+  const tarball = packed[0]
+  await describe(path.join(dir, tarball), name, version)
+
   await NpmPublish.retry({
     name,
     version,
-    run: () => $`npm publish *.tgz --access public --tag ${Script.channel} --provenance`.cwd(dir),
+    run: () => $`npm publish ${tarball} --access public --tag ${Script.channel} --provenance`.cwd(dir),
     exists: () => published(name, version),
   })
   // kilocode_change end
@@ -92,7 +159,13 @@ const tagFlags = tags.flatMap((t) => ["-t", t])
 
 // registries
 if (!Script.preview) {
-  await $`docker buildx build --platform ${platforms} ${tagFlags} --push .`
+  // kilocode_change start - BuildKit attestations are requested explicitly rather
+  // than relying on defaults, and the pushed digests are captured so the image
+  // SBOM describes an immutable manifest instead of a moving channel tag.
+  const metadata = path.resolve("dist", "oci-metadata.json")
+  await $`docker buildx build --platform ${platforms} ${tagFlags} --provenance=mode=max --sbom=true --metadata-file ${metadata} --push .`
+  evidence.push(...(await describeImages(metadata)))
+  // kilocode_change end
   // Calculate SHA values
   const arm64Sha = await $`sha256sum ./dist/kilo-linux-arm64.tar.gz | cut -d' ' -f1`.text().then((x) => x.trim())
   const x64Sha = await $`sha256sum ./dist/kilo-linux-x64.tar.gz | cut -d' ' -f1`.text().then((x) => x.trim())
@@ -228,3 +301,74 @@ if (!Script.preview) {
     await $`cd ./dist/homebrew-tap && git push`
   }
 }
+
+// kilocode_change start - record which npm tarballs and container manifests this
+// release produced. Homebrew and AUR redistribute the archives described by the
+// archive manifest, so they need no separate evidence.
+if (Script.release) {
+  // Expected coverage is derived from what this release had to produce, not from
+  // what happened to be recorded, so a missing package or image is a shortfall.
+  const packages = Object.keys(binaries).length + 1
+  const images = Script.preview ? 0 : platforms.split(",").length + 1
+  const described = await KiloSbom.distribution({
+    dir: path.resolve("dist"),
+    release: { version, channel: Script.channel },
+    entries: evidence,
+    expected: packages + images,
+  })
+  await $`gh release upload v${Script.version} ${described.files} --clobber`.nothrow()
+}
+
+/**
+ * Describe each pushed image manifest.
+ *
+ * BuildKit writes attestation manifests into the same index with an `unknown`
+ * platform; those are not images and must not be described as one.
+ */
+async function describeImages(metadata: string) {
+  const digest = await Bun.file(metadata)
+    .json()
+    .then((data) => data["containerimage.digest"] as string | undefined)
+    .catch((err) => {
+      console.error("sbom: could not read the container build metadata", err)
+      return undefined
+    })
+  if (!digest) return []
+
+  const index = await $`docker buildx imagetools inspect ${image}@${digest} --raw`
+    .nothrow()
+    .json()
+    .catch((err) => {
+      console.error(`sbom: could not inspect ${image}@${digest}`, err)
+      return undefined
+    })
+
+  const manifests: { digest: string; platform?: string }[] = (index?.manifests ?? [])
+    .filter((item: any) => item?.platform?.architecture && item.platform.architecture !== "unknown")
+    .map((item: any) => ({ digest: item.digest, platform: `${item.platform.os}/${item.platform.architecture}` }))
+
+  const entries: Manifest.Entry[] = []
+  for (const item of [...manifests, { digest, platform: undefined }]) {
+    const described = await KiloSbom.ociImage({
+      reference: `${image}@${item.digest}`,
+      digest: item.digest,
+      platform: item.platform,
+      release: { version, channel: Script.channel },
+      out: path.resolve("dist"),
+    }).catch((err) => {
+      console.error(`sbom: could not describe ${image}@${item.digest}`, err)
+      return undefined
+    })
+    entries.push(
+      described?.entry ?? {
+        artifact: KiloSbom.ociName(item.digest, item.platform),
+        sha256: item.digest.replace(/^sha256:/, ""),
+        distribution: "oci",
+        ...(item.platform ? { target: item.platform } : {}),
+        error: `SBOM generation failed for ${image}@${item.digest}`,
+      },
+    )
+  }
+  return entries
+}
+// kilocode_change end

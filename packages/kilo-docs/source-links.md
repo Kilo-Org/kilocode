@@ -139,6 +139,8 @@
 - <https://kilo.ai/docs/getting-started/settings>
   <!-- packages/opencode/src/kilocode/config/claude-migration.ts -->
   <!-- packages/opencode/src/kilocode/config/config.ts -->
+- <https://kilo.ai/docs/oauth/kilo/client.json>
+  <!-- packages/opencode/src/kilocode/mcp/client-metadata.ts -->
 - <https://kilo.ai/gateway>
   <!-- packages/opencode/src/kilocode/cli/cmd/tui/component/dialog-provider.tsx -->
 - <https://kilo.ai/pricing/kilo-pass>
@@ -197,6 +199,8 @@
   <!-- packages/opencode/src/kilocode/anaconda-desktop/domain.ts -->
 - <https://www.eclipse.org/downloads/download.php?file=/jdtls/snapshots/jdt-language-server-latest.tar.gz>
   <!-- packages/opencode/src/lsp/server.ts -->
+- <https://www.google.com/chrome/>
+  <!-- packages/kilo-vscode/webview-ui/agent-manager/BrowserPanel.tsx -->
 - <https://www.googleapis.com/auth/cloud-platform>
   <!-- packages/opencode/src/provider/provider.ts -->
 - <https://www.rfc-editor.org/rfc/rfc8628.html#section-3.5>

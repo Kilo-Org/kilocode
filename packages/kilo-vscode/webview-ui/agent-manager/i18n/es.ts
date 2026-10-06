@@ -34,7 +34,6 @@ export const dict = {
   "agentManager.local": "local",
   "agentManager.sidebar.collapse": "Contraer barra lateral",
   "agentManager.sidebar.expand": "Mostrar barra lateral",
-  "agentManager.section.worktrees": "WORKTREES",
   "agentManager.section.sessions": "SESIONES",
   "agentManager.projects": "PROYECTOS",
   "agentManager.settings.title": "Agent Manager",
@@ -47,6 +46,7 @@ export const dict = {
   "agentManager.settings.worktreePool.title": "Precalentar worktrees",
   "agentManager.settings.worktreePool.description":
     "Prepara un worktree listo en segundo plano para que las nuevas sesiones de Agent Manager se inicien más rápido. Usa espacio adicional en disco para un checkout por cada proyecto abierto.",
+  "agentManager.hints.switchSession": "Cambiar de sesión",
   "agentManager.settings.project.title": "Proyecto",
   "agentManager.settings.project.description": "Elige el repository cuyos ajustes de worktree quieres editar.",
   "agentManager.settings.project.empty": "No hay proyectos de Agent Manager disponibles.",
@@ -75,12 +75,9 @@ export const dict = {
   "agentManager.project.settings": "Configuración del proyecto",
   "agentManager.project.restricted":
     "Tu espacio de trabajo actual de VS Code es tu carpeta de inicio o la raíz del sistema de archivos. Abre una carpeta de proyecto específica en VS Code para usar Agent Manager.",
-  "agentManager.notGitRepo": "No es un repositorio git",
-
   "agentManager.updateBase.title": "Actualizar desde la base",
   "agentManager.updateBase.selectWorktree": "Selecciona primero un worktree gestionado.",
 
-  "agentManager.worktree.settings": "Configuración de Worktree",
   "agentManager.worktree.new": "Nuevo Worktree",
   "agentManager.worktree.setupScript": "Script de configuración de Worktree",
   "agentManager.worktree.delete": "Eliminar Worktree",
@@ -190,13 +187,6 @@ export const dict = {
   "agentManager.shortcuts.cycleAgentMode": "Siguiente modo de agente",
   "agentManager.shortcuts.cyclePreviousAgentMode": "Modo de agente anterior",
   "agentManager.shortcuts.showShortcuts": "Mostrar atajos de teclado",
-  "agentManager.dialog.removeStaleWorktree.title": "Eliminar Worktree obsoleto",
-  "agentManager.dialog.removeStaleWorktree.messagePre": "¿Eliminar Worktree obsoleto ",
-  "agentManager.dialog.removeStaleWorktree.messagePost":
-    "? Esto solo elimina la asociación en Agent Manager y no modifica los archivos en disco.",
-  "agentManager.dialog.removeStaleWorktree.cancel": "Cancelar",
-  "agentManager.dialog.removeStaleWorktree.confirm": "Eliminar Worktree obsoleto",
-
   "agentManager.dialog.project.select": "Seleccionar proyecto",
   "agentManager.dialog.project.missing": "Repositorio no encontrado",
   "agentManager.dialog.openWorktree": "Nuevo Worktree",
@@ -434,6 +424,10 @@ export const dict = {
   "agentManager.documents.loading": "Cargando documento...",
   "agentManager.documents.preview": "Previsualizar documento",
   "agentManager.documents.source": "Mostrar código fuente",
+  "agentManager.documents.copy": "Copiar contenido",
+  "agentManager.documents.copyPath": "Copiar ruta",
+  "agentManager.documents.copyRelativePath": "Copiar ruta relativa",
+  "agentManager.documents.copyFileName": "Copiar nombre de archivo",
   "agentManager.documents.comments": "{{count}} comentarios",
   "agentManager.import.pullRequest": "Pull Request",
   "agentManager.import.pastePrUrl": "Pegar URL del PR...",
@@ -453,16 +447,26 @@ export const dict = {
   "agentManager.caffeination.unavailable":
     "El modo para mantener el equipo activo no está disponible en esta plataforma",
   "agentManager.browser.title": "Navegador integrado",
-  "agentManager.browser.url": "URL de la aplicación local",
+  "agentManager.browser.url": "Dirección",
   "agentManager.browser.urlPlaceholder": "http://localhost:3000",
   "agentManager.browser.open": "Abrir",
   "agentManager.browser.inspect": "Seleccionar elemento",
   "agentManager.browser.devtoolsTitle": "Herramientas de desarrollo",
   "agentManager.browser.refresh": "Actualizar navegador",
+  "agentManager.browser.back": "Atrás",
+  "agentManager.browser.forward": "Adelante",
   "agentManager.browser.close": "Cerrar navegador",
-  "agentManager.browser.empty": "Abre una aplicación local para previsualizarla aquí.",
-  "agentManager.browser.noSession":
-    "Inicia o selecciona una sesión en Agent Manager para navegar por una aplicación local.",
+  "agentManager.browser.empty": "Abre una aplicación local o una página HTTPS pública para previsualizarla aquí.",
+  "agentManager.browser.requirement":
+    "Requiere Google Chrome o un navegador Playwright Chromium compatible. Los navegadores no se instalan automáticamente.",
+  "agentManager.browser.missingTitle": "Navegador no encontrado",
+  "agentManager.browser.missingChrome":
+    "No se encontró Google Chrome. Instala Chrome para usar el navegador integrado y vuelve a intentarlo.",
+  "agentManager.browser.missingChromium":
+    "No se encontró Playwright Chromium. Instala un navegador compatible o activa «Usar Chrome del sistema» en «Configuración del navegador».",
+  "agentManager.browser.downloadChrome": "Descargar Chrome",
+  "agentManager.browser.settings": "Configuración del navegador",
+  "agentManager.browser.noSession": "Inicia o selecciona una sesión en Agent Manager.",
   "agentManager.browser.screenshotAlt": "Página actual del navegador",
   "agentManager.browser.errors": "Problemas del navegador: {{count}}",
   "agentManager.browser.diagnostics": "Diagnóstico del navegador",

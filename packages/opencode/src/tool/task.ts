@@ -113,7 +113,6 @@ export const TaskTool = Tool.define(
       ctx: Tool.Context,
     ) {
       const cfg = yield* config.get()
-      const selection = cfg.experimental?.task_model_selection === true // kilocode_change
       const runInBackground = params.background === true
       if (runInBackground && !flags.experimentalBackgroundSubagents) {
         return yield* Effect.fail(new Error("Background subagents require KILO_EXPERIMENTAL_BACKGROUND_SUBAGENTS=true"))
@@ -186,7 +185,6 @@ export const TaskTool = Tool.define(
         variant: msg.info.variant,
         workflow: KiloTask.workflow(ctx.extra),
         provider,
-        enabled: selection,
         selection: { model: params.model, provider: params.provider, variant: params.variant },
         resume: session?.model,
       })
@@ -482,7 +480,10 @@ export const TaskTool = Tool.define(
             }
             // kilocode_change end
             if (result?.status === "error") return yield* Effect.fail(new Error(result.error ?? "Task failed"))
-            if (result?.status === "cancelled") return yield* Effect.fail(new Error("Task cancelled"))
+            // kilocode_change start - only an explicit stop/delete cancels a task its parent still awaits;
+            // without that reason, models treat the result as a failure and start a new subagent right away
+            if (result?.status === "cancelled") return yield* Effect.fail(new Error("Task cancelled by the user"))
+            // kilocode_change end
             return {
               title: params.description,
               metadata,
@@ -522,28 +523,23 @@ export const TaskTool = Tool.define(
     })
 
     // kilocode_change start
-    return () =>
-      Effect.gen(function* () {
-        const cfg = yield* config.get()
-        const selection = cfg.experimental?.task_model_selection === true
-        return {
-          description: [
-            DESCRIPTION,
-            ...(flags.experimentalBackgroundSubagents ? [BACKGROUND_DESCRIPTION] : []),
-            ...(selection ? [KiloTask.modelDescription] : []),
-          ].join("\n\n"),
-          parameters: Parameters,
-          jsonSchema: ToolJsonSchema.fromSchema(
-            Schema.Struct({
-              ...BaseParameters.fields,
-              ...(flags.experimentalBackgroundSubagents ? { background: Parameters.fields.background } : {}),
-              ...(selection ? KiloTask.ModelFields : {}),
-            }),
-          ),
-          execute: (params: Schema.Schema.Type<typeof Parameters>, ctx: Tool.Context) =>
-            drain.track(ctx.sessionID, run(params, ctx).pipe(Effect.scoped)).pipe(Effect.orDie),
-        }
-      })
+    return {
+      description: [
+        DESCRIPTION,
+        ...(flags.experimentalBackgroundSubagents ? [BACKGROUND_DESCRIPTION] : []),
+        KiloTask.modelDescription,
+      ].join("\n\n"),
+      parameters: Parameters,
+      jsonSchema: ToolJsonSchema.fromSchema(
+        Schema.Struct({
+          ...BaseParameters.fields,
+          ...(flags.experimentalBackgroundSubagents ? { background: Parameters.fields.background } : {}),
+          ...KiloTask.ModelFields,
+        }),
+      ),
+      execute: (params: Schema.Schema.Type<typeof Parameters>, ctx: Tool.Context) =>
+        drain.track(ctx.sessionID, run(params, ctx).pipe(Effect.scoped)).pipe(Effect.orDie),
+    }
     // kilocode_change end
   }),
 )
