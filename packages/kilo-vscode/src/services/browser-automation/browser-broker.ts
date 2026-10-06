@@ -163,7 +163,7 @@ const MAX_BODY = 32 * 1024
 const MAX_SCREENSHOT = 2 * 1024 * 1024
 const TIMEOUT = /ERR_CONNECTION_TIMED_OUT|ETIMEDOUT|Timeout \d+ms exceeded/i
 const CRASHED = "The browser stopped unexpectedly. Refresh to start it again."
-const MISSING = /Chromium distribution ['"]chrome['"] is not found\b|Executable doesn't exist at\b/i
+const MISSING = /Chrom(?:e|ium) distribution ("|')chrom(?:e|ium)(\1) is not found\b|Executable doesn't exist at\b/i
 
 function unreachable(url?: string): string {
   return `Cannot connect to ${url ?? "the local application"}. Make sure the local server is running.`
