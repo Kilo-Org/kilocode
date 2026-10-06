@@ -471,7 +471,7 @@ describe.skipIf(!serverAvailable)("ValkeyVectorStore Integration Tests", () => {
   })
 
   describe("hasIndexedData after clearCollection (gap #1)", () => {
-    test("hasIndexedData remains true after clearCollection due to ValkeySearch num_docs behavior", async () => {
+    test("hasIndexedData is false after clearCollection even though num_docs lags", async () => {
       store = createStore()
       await store.initialize()
 
@@ -486,18 +486,11 @@ describe.skipIf(!serverAvailable)("ValkeyVectorStore Integration Tests", () => {
       await store.clearCollection()
       await new Promise((resolve) => setTimeout(resolve, 500))
 
-      // ValkeySearch's FT.INFO num_docs does NOT decrement when hash keys are
-      // deleted via DEL (its technically a soft/lazy delete) — only on FT.DROPINDEX or index recreation.
-      // The orchestrator works around this by calling markIndexingIncomplete().
-      const hasData = await store.hasIndexedData()
-      expect(hasData).toBe(true)
+      // FT.INFO num_docs does not decrement on DEL, so clearCollection() must reset the complete flag
+      expect(await store.hasIndexedData()).toBe(false)
 
-      // Search correctly returns nothing — the actual data is gone
       const results = await store.search([1, 0, 0, 0], undefined, 0.0, 10)
       expect(results.length).toBe(0)
-
-      await store.markIndexingIncomplete()
-      expect(await store.hasIndexedData()).toBe(false)
     })
 
     test("search returns empty immediately after clearCollection regardless of num_docs", async () => {

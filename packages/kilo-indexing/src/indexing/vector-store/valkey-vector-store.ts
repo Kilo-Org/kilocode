@@ -475,13 +475,16 @@ export class ValkeyVectorStore implements IVectorStore {
         cursor = String(nextCursor)
 
         if (keys.length > 0) {
-          // Preserve the metadata key so hasIndexedData() still works after clear
+          // Preserve the metadata key so the profile and schema survive the clear
           const keysToDelete = (keys as string[]).filter((key) => key !== this.metadataKey)
           if (keysToDelete.length > 0) {
             await client.del(keysToDelete)
           }
         }
       } while (cursor !== "0")
+
+      // FT.INFO num_docs does not drop on DEL, so reset the flag hasIndexedData() relies on
+      await this.setMetadata(false)
     } catch (error) {
       log.error("Failed to clear collection", {
         collection: this.collectionName,

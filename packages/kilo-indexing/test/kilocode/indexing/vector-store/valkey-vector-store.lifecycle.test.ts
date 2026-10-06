@@ -132,6 +132,19 @@ describe("ValkeyVectorStore - Lifecycle, Metadata, Error Handling, and Service F
       expect(deletedKeys).not.toContain(metadataKey)
     })
 
+    test("marks indexing incomplete so hasIndexedData() is false for the emptied index", async () => {
+      const store = createStore()
+      mockFtInfo.mockResolvedValue({ num_docs: 5 })
+      mockScan.mockResolvedValueOnce(["0", [`${store.getCollectionName()}:point1`]])
+
+      await store.clearCollection()
+
+      expect(mockHset).toHaveBeenCalledWith(
+        store.getMetadataKey(),
+        expect.objectContaining({ indexing_complete: "false" }),
+      )
+    })
+
     test("returns silently when collection doesn't exist", async () => {
       const store = createStore()
 
