@@ -16,9 +16,10 @@ import { ensureProcessMetadata } from "@opencode-ai/core/util/opencode-process" 
 import { createWorkerRemoteExit } from "@/kilocode/cli/cmd/tui/remote-exit-worker" // kilocode_change
 import { createWorkerShutdown } from "@/cli/tui/worker-shutdown" // kilocode_change
 import { KiloSessions } from "@/kilo-sessions/kilo-sessions" // kilocode_change
+import { KiloRpc } from "@/kilocode/util/rpc" // kilocode_change
 
-// kilocode_change start - queue parent requests before the await below; Rpc.listen replays them
-Rpc.arm()
+// kilocode_change start - queue parent requests before the await below; KiloRpc.listen replays them
+KiloRpc.arm()
 // kilocode_change end
 
 ensureProcessMetadata("worker") // kilocode_change - retain worker role and parent run correlation
@@ -124,5 +125,7 @@ export const rpc = {
   },
 }
 
-Rpc.listen(rpc)
-log.info("worker listening") // kilocode_change - checkpoint, see the note above Rpc.listen's caller
+// kilocode_change start - KiloRpc.listen replays queued requests and announces readiness
+KiloRpc.listen(rpc)
+log.info("worker listening") // checkpoint, see the note above KiloRpc.arm
+// kilocode_change end

@@ -25,6 +25,18 @@
  * Arming inside the worker is not sufficient on its own: static imports evaluate before the
  * module body, so `arm` cannot run until Server/InstanceRuntime/etc have loaded, which is
  * where most of the 2s window is spent.
+ *
+ * Bun 1.4.2 is the trigger rather than the defect: it drops messages posted while a worker is
+ * still initialising, where 1.3.14 queued them. The missing readiness handshake was latent the
+ * whole time. The native Worker `open` event fires too early to stand in for readiness.
+ *
+ * Measured precisely: the message is lost only when the worker's event loop is alive but no
+ * `onmessage` exists yet, which is exactly what a top-level `await` during module evaluation
+ * produces. A thread parked in `Atomics.wait` queues the message instead, so a blocking gate
+ * reproduces nothing -- see the fixture note in test/kilocode/util/fixture/gated-worker.ts.
+ *
+ * Lives here, and is used directly by `cli/tui/worker.ts` and `cli/cmd/tui.ts`, so the shared
+ * `util/rpc.ts` stays byte-identical to upstream and never conflicts on a fork merge.
  */
 
 import * as Log from "@opencode-ai/core/util/log"
@@ -52,6 +64,21 @@ const early: string[] = []
 const armed = { queueing: false }
 
 /**
+ * Envelopes are JSON strings, but the channel also carries unrelated traffic: the readiness
+ * test fixture posts a SharedArrayBuffer, and callers are free to postMessage anything. A
+ * throw inside onmessage would take down the handler, so ignore whatever is not ours.
+ */
+function envelope(data: unknown) {
+  if (typeof data !== "string") return undefined
+  try {
+    const parsed = JSON.parse(data)
+    return typeof parsed?.type === "string" ? parsed : undefined
+  } catch {
+    return undefined
+  }
+}
+
+/**
  * Queue worker messages until `listen` installs the real handler. Call this as early as
  * possible in the worker — before any `await` — so nothing posted during startup is lost.
  * Always paired with a later `listen`, which drains whatever arrived in between.
@@ -65,8 +92,9 @@ export function arm() {
 }
 
 export function listen(rpc: Definition) {
-  const handle = async (data: string) => {
-    const parsed = JSON.parse(data)
+  const handle = async (data: unknown) => {
+    const parsed = envelope(data)
+    if (!parsed) return
     // Covers the reverse order: a parent that attached after this worker already announced
     // itself missed that announcement, so answer its probe with a fresh one.
     if (parsed.type === "rpc.hello") {
@@ -133,6 +161,9 @@ export function client<T extends Definition>(target: {
   // the worker emits global events before it can serve requests, and treating those as proof
   // of readiness is what previously disarmed this guard.
   const limit = timeout()
+  // Resolves true once the worker answers, false if the bound elapses first. Callers can show
+  // a real error and exit cleanly instead of leaving the user on a blank screen.
+  const ready = Promise.withResolvers<boolean>()
   live.timer = setTimeout(() => {
     const message = `worker rpc never became ready within ${limit}ms`
     log.error(message, { queued: outbox.length, pending: pending.size })
@@ -144,17 +175,20 @@ export function client<T extends Definition>(target: {
     const waiting = [...pending.values()]
     pending.clear()
     for (const entry of waiting) entry.reject(live.failure)
+    ready.resolve(false)
   }, limit)
   live.timer?.unref?.()
 
   target.onmessage = (evt) => {
-    const parsed = JSON.parse(evt.data)
+    const parsed = envelope(evt.data)
+    if (!parsed) return
     if (parsed.type === "rpc.ready") {
       if (live.timer) clearTimeout(live.timer)
       live.timer = undefined
       live.ready = true
       // A worker that announced itself late is still usable, so stop failing new calls.
       live.failure = undefined
+      ready.resolve(true)
       for (const data of outbox.splice(0)) target.postMessage(data)
       return
     }
@@ -172,6 +206,9 @@ export function client<T extends Definition>(target: {
   target.postMessage(JSON.stringify({ type: "rpc.hello" }))
 
   return {
+    /** True when the worker announced itself, false once the bound elapsed. */
+    ready: ready.promise,
+    timeout: limit,
     call<Method extends keyof T>(method: Method, input: Parameters<T[Method]>[0]): Promise<ReturnType<T[Method]>> {
       const id = live.id++
       return new Promise((resolve, reject) => {
