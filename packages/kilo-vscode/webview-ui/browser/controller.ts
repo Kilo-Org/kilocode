@@ -37,6 +37,8 @@ export interface BrowserController {
   toggleSelecting: () => void
   toggleTools: () => void
   move: (value: BrowserPosition) => void
+  scroll: (value: BrowserPosition) => void
+  leave: () => void
   select: (value: BrowserPosition) => void
   dispose: () => void
 }
@@ -59,7 +61,11 @@ export function createBrowserController(props: BrowserControllerOptions): Browse
   const cancelFrame = props.cancel ?? ((frame: number) => cancelAnimationFrame(frame))
   let frame: number | undefined
   let pending: BrowserPosition | undefined
+  let pointer: BrowserPosition | undefined
+  let motion = false
   let active: string | undefined
+  let stale = false
+  let dirty = false
   let selected: string | undefined
   let sequence = 0
   let current: BrowserScope | undefined
@@ -71,7 +77,11 @@ export function createBrowserController(props: BrowserControllerOptions): Browse
     if (frame !== undefined) cancelFrame(frame)
     frame = undefined
     pending = undefined
+    pointer = undefined
+    motion = false
     active = undefined
+    stale = false
+    dirty = false
     selected = undefined
     setHovered(undefined)
   }
@@ -115,13 +125,16 @@ export function createBrowserController(props: BrowserControllerOptions): Browse
   }
 
   const schedule = () => {
-    if (frame !== undefined || active || !pending || (!selecting() && !pointing())) return
+    if (frame !== undefined || active || dirty || !pending || (!selecting() && !pointing())) return
     frame = scheduleFrame(() => {
       frame = undefined
+      if (!sync()) return
       const value = pending
       pending = undefined
       if (!value || (!selecting() && !pointing())) return
-      if (pointing()) input(value, false)
+      // Frame refreshes only read the element. Moving the DevTools pointer here would create more frames.
+      if (pointing() && motion) input(value, false)
+      motion = false
       inspect(value, true)
     })
   }
@@ -154,7 +167,8 @@ export function createBrowserController(props: BrowserControllerOptions): Browse
     if (value.hover) {
       if ((!selecting() && !pointing()) || value.requestId !== active) return
       active = undefined
-      setHovered(value.error ? undefined : value)
+      if (!stale) setHovered(value.error ? undefined : value)
+      stale = false
       schedule()
       return
     }
@@ -182,9 +196,24 @@ export function createBrowserController(props: BrowserControllerOptions): Browse
   }
 
   const receive = (event: BrowserEvent) => {
-    if (disposed || event.type === "frame") return
+    if (disposed) return
     sync()
     if (!current) return
+    if (event.type === "frame") {
+      if (
+        !pointer ||
+        (!selecting() && !pointing()) ||
+        !same(current, event.value.scope) ||
+        event.value.browserId !== state()?.browserId ||
+        event.value.navigation !== state()?.navigation
+      )
+        return
+      // A frame already in transit can precede the scroll, so keep tracking later frames at the same pointer.
+      dirty = false
+      pending = pointer
+      schedule()
+      return
+    }
     if (event.type === "state") return receiveState(event.value)
     if (event.type === "devtools") {
       if (!same(current, event.value.scope) || event.value.browserId !== state()?.browserId) return
@@ -275,9 +304,27 @@ export function createBrowserController(props: BrowserControllerOptions): Browse
       })
     },
     move: (value) => {
-      if (!sync()) return
+      if (!sync() || (!selecting() && !pointing())) return
+      pointer = value
       pending = value
+      motion = true
+      dirty = false
       schedule()
+    },
+    scroll: (value) => {
+      if (!sync() || (!selecting() && !pointing())) return
+      if (frame !== undefined) cancelFrame(frame)
+      frame = undefined
+      pending = undefined
+      motion = false
+      pointer = value
+      stale = !!active
+      dirty = true
+      setHovered(undefined)
+    },
+    leave: () => {
+      if (!sync() || (!selecting() && !pointing())) return
+      stop()
     },
     select: (value) => {
       if (!sync()) return

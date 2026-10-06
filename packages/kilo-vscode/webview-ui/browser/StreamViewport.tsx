@@ -6,8 +6,8 @@ import {
   type BrowserViewIdentity,
   type BrowserViewport,
 } from "../../src/shared/browser-stream"
-import type { BrowserScope, BrowserState, BrowserTransport } from "./types"
-import { clicks, clipboard, key, modifiers, pointer, transition, typing, wheel } from "./stream-input"
+import type { BrowserPosition, BrowserScope, BrowserState, BrowserTransport } from "./types"
+import { clicks, clipboard, key, merge, modifiers, pointer, transition, typing, wheel } from "./stream-input"
 import "./stream.css"
 
 type Frame = BrowserFrame & { scope: BrowserScope }
@@ -52,6 +52,8 @@ export const StreamViewport: Component<{
   state: Accessor<BrowserState | undefined>
   transport: BrowserTransport
   label: string
+  inspecting?: Accessor<boolean>
+  onScroll?: (position: BrowserPosition) => void
 }> = (props) => {
   let host!: HTMLDivElement
   let canvas!: HTMLCanvasElement
@@ -150,6 +152,12 @@ export const StreamViewport: Component<{
     return { scope, browserId: state.browserId, navigation, inspecting: state.inspecting }
   }
 
+  const inspecting = () => props.state()?.inspecting || props.inspecting?.()
+
+  const restrict = () => {
+    if (inspecting() && (held || moving?.kind === "pointer")) release()
+  }
+
   const measure = () => {
     const bounds = host.getBoundingClientRect()
     const width = Math.max(0, Math.round(bounds.width))
@@ -190,7 +198,7 @@ export const StreamViewport: Component<{
       previous.viewport.scale === viewport.scale &&
       previous.viewport.active === viewport.active
     ) {
-      if (next.inspecting) release()
+      restrict()
       return
     }
     clear(unchanged && viewport.active)
@@ -209,20 +217,23 @@ export const StreamViewport: Component<{
 
   const bound = (frame: Frame) => current && same(current.scope, frame.scope) && matches(frame, current.identity)
 
-  const ready = () => {
+  const ready = (input = true) => {
     sync()
-    if (!current?.viewport.active || !painted || !matches(painted, current.identity) || props.state()?.inspecting)
-      return
+    if (!current?.viewport.active || !painted || !matches(painted, current.identity) || (input && inspecting())) return
     return current
   }
 
   const focused = () => document.activeElement === textarea && ready()
 
   const emit = (event: BrowserInteraction) => {
-    const view = ready()
+    const view = ready(event.kind !== "wheel")
     if (!view) return false
-    held = view
+    if (event.kind !== "wheel") held = view
     props.transport.send({ type: "interact", scope: view.scope, identity: view.identity, event })
+    if (event.kind === "wheel") {
+      const bounds = canvas.getBoundingClientRect()
+      props.onScroll?.({ x: event.x, y: event.y, width: bounds.width, height: bounds.height })
+    }
     return true
   }
 
@@ -333,6 +344,7 @@ export const StreamViewport: Component<{
     const action = transition(event)
     if (action === "down") return down(event)
     if (action === "up") return up(event)
+    if (moving?.kind === "wheel") flush()
     clicker.move(event)
     moving = pointer(event, canvas.getBoundingClientRect(), "move", 0)
     if (!moving || scheduled !== undefined) return
@@ -356,14 +368,18 @@ export const StreamViewport: Component<{
   }
 
   const scroll = (event: WheelEvent) => {
-    if (!ready()) return
-    const line = Number.parseFloat(getComputedStyle(host).lineHeight) || 16
+    if (!ready(false)) return
+    if (event.target instanceof Element && event.target.closest(".am-browser-error-overlay")) return
+    const line = event.deltaMode === 1 ? Number.parseFloat(getComputedStyle(host).lineHeight) || 16 : 16
     const value = wheel(event, canvas.getBoundingClientRect(), line)
     if (!value) return
     event.preventDefault()
     event.stopPropagation()
+    if (moving?.kind === "wheel" && merge(moving, value)) return
+    // Preserve target, direction, modifier, and pointer ordering across wheel batches.
     flush()
-    emit(value)
+    moving = value
+    scheduled = requestAnimationFrame(flush)
   }
 
   const press = (event: KeyboardEvent) => {
@@ -480,7 +496,10 @@ export const StreamViewport: Component<{
     }
     resize.observe(host, { box: "device-pixel-content-box" })
     intersection.observe(host)
-    host.addEventListener("wheel", scroll, { passive: false })
+    const viewport = host.parentElement ?? host
+    viewport.addEventListener("wheel", scroll, { passive: false })
+    viewport.addEventListener("pointerdown", flush, true)
+    viewport.addEventListener("pointerleave", flush)
     document.addEventListener("visibilitychange", sync)
     window.addEventListener("blur", blur)
     sync()
@@ -488,7 +507,9 @@ export const StreamViewport: Component<{
       resize.disconnect()
       intersection.disconnect()
       visibility.disconnect()
-      host.removeEventListener("wheel", scroll)
+      viewport.removeEventListener("wheel", scroll)
+      viewport.removeEventListener("pointerdown", flush, true)
+      viewport.removeEventListener("pointerleave", flush)
       document.removeEventListener("visibilitychange", sync)
       window.removeEventListener("blur", blur)
     })

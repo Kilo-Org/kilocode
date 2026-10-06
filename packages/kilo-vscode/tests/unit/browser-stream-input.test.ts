@@ -3,6 +3,7 @@ import {
   clicks,
   clipboard,
   key,
+  merge,
   modifiers,
   point,
   pointer,
@@ -85,6 +86,23 @@ describe("browser stream pointer input", () => {
     })
     expect(wheel({ ...event, deltaY: Infinity }, bounds)).toBeUndefined()
     expect(wheel(event, { ...bounds, height: 0 })).toBeUndefined()
+  })
+
+  test("batches compatible wheel deltas without losing fractional distance", () => {
+    const event = wheel({ ...position, ...flags, deltaX: 0, deltaY: 0.25, deltaMode: 0 }, bounds)!
+    const queued = { ...event }
+    for (let i = 0; i < 119; i++) expect(merge(queued, event)).toBe(true)
+    expect(queued.deltaY).toBe(30)
+    expect(event.deltaY).toBe(0.25)
+  })
+
+  test("keeps wheel target, direction, modifiers, and bounded distance as ordering barriers", () => {
+    const event = wheel({ ...position, ...flags, deltaX: 0, deltaY: 2, deltaMode: 0 }, bounds)!
+    for (const change of [{ x: 0.4 }, { y: 0.4 }, { modifiers: 8 }, { deltaY: -2 }, { deltaX: 1 }, { deltaY: 10000 }]) {
+      const queued = { ...event }
+      expect(merge(queued, { ...event, ...change })).toBe(false)
+      expect(queued).toEqual(event)
+    }
   })
 
   test("counts double clicks when pointer events have no native click detail", () => {
