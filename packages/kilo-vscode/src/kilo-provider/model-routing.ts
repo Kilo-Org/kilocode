@@ -28,10 +28,20 @@ export type ModelRoutingContext = {
   updateConfig: (partial: Partial<Config>, unset?: string[][]) => Promise<void>
   /** The settings scope: the directory for requests that name none. */
   directory: () => string
+  /** Whether the extension advertised this directory to the webview. */
+  known: (directory: string) => boolean
 }
 
+/**
+ * Requests run in the directory the webview names, but only one the extension
+ * advertised: a backend request in any other path would bootstrap an instance
+ * (with indexing) there. Anything else falls back to the settings scope.
+ */
 function resolveDirectory(ctx: ModelRoutingContext, requested: unknown): string {
-  return typeof requested === "string" && requested !== "" ? requested : ctx.directory()
+  if (typeof requested !== "string" || requested === "") return ctx.directory()
+  if (ctx.known(requested)) return requested
+  console.warn("[Kilo New] KiloProvider: Ignoring unadvertised routing directory:", requested)
+  return ctx.directory()
 }
 
 function requestEndpoints(

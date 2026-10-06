@@ -445,6 +445,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private providersRefresh: Promise<void> | null = null
   private providersQueued = false
   private providersRetry = false
+  /** Directories sent to the webview as a session workspace; routing requests may only name these. */
+  private advertised = new Set<string>()
   /** Serializes global-config writes from chat controls (see writeGlobalConfig). */
   private configWrites: Promise<void> = Promise.resolve()
   private providersGeneration = 0
@@ -728,7 +730,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.cachedProviderUsageMessage = null
     this.configBindings.clear()
     this.cachedConfigMessage = null
-    this.postMessage({ type: "workspaceDirectoryChanged", directory: directory ?? "" })
+    this.advertiseDirectory(directory ?? "")
     this.postMessage({ type: "configBindingExpired", reason: "project-changed" })
   }
 
@@ -1274,6 +1276,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           openSessions: (ids) => this.trackOpenSessions(ids),
           updateConfig: (partial, unset) => this.writeGlobalConfig(partial, unset),
           directory: () => this.settingsDirectory(),
+          // The ready message advertises the current project directory without tracking it.
+          known: (dir) =>
+            dir === this.settingsDirectory() ||
+            dir === this.getProjectDirectory(this.currentSession?.id) ||
+            this.advertised.has(dir),
           activity: (state) => {
             if (!isActivity(state)) return
             this.activity = state
@@ -2296,7 +2303,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         console.warn("[Kilo New] KiloProvider: getSession failed (non-critical):", e)
         return undefined
       })
-    this.postMessage({ type: "workspaceDirectoryChanged", directory: this.getWorkspaceDirectory(sessionID) })
+    this.advertiseDirectory(this.getWorkspaceDirectory(sessionID))
     this.sync(sessionID, dir, signal, refresh)
     return details
   }
@@ -4534,6 +4541,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
   private settingsDirectory(): string {
     return this.projectDirectory ?? this.getRootDirectory()
+  }
+
+  private advertiseDirectory(directory: string): void {
+    if (directory) this.advertised.add(directory)
+    this.postMessage({ type: "workspaceDirectoryChanged", directory })
   }
 
   private async handleAgentManagerSettingsMessage(

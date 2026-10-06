@@ -177,6 +177,9 @@ export const dict = {
   "model.routing.failed":
     "Kunne ikke laste inn listen over leverandører. Det prøves igjen neste gang du åpner denne menyen.",
   "model.routing.busy": "Det kjører økter. Bytte av leverandør avbryter dem.",
+  "model.routing.custom": "Egendefinert",
+  "model.routing.customNote":
+    "Ruting for denne modellen angir flere leverandører i kilo.json. Valg av en leverandør eller Automatisk erstatter dette oppsettet.",
   "model.routing.projectOverride":
     "Leverandørruting for denne modellen er angitt i prosjektets kilo.json og overstyrer dette valget.",
   "model.group.auto": "Automatiske modeller",

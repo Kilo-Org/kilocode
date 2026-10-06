@@ -175,6 +175,9 @@ export const dict = {
   "model.routing.failed":
     "Nie udało się wczytać listy dostawców. Ponowna próba nastąpi przy następnym otwarciu tego menu.",
   "model.routing.busy": "Trwają sesje. Zmiana dostawcy je przerwie.",
+  "model.routing.custom": "Niestandardowe",
+  "model.routing.customNote":
+    "Routing tego modelu wymienia kilku dostawców w kilo.json. Wybranie dostawcy lub Automatyczny zastąpi tę konfigurację.",
   "model.routing.projectOverride":
     "Routing dostawcy dla tego modelu jest ustawiony w kilo.json projektu i nadpisuje ten wybór.",
   "model.group.auto": "Modele automatyczne",

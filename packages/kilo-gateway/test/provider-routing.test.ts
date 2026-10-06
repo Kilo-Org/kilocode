@@ -3,7 +3,7 @@
 // every Kilo Gateway transport, not only through the OpenRouter SDK — and the
 // header itself must never leave the wrapper.
 
-import { describe, expect, test } from "bun:test"
+import { describe, expect, spyOn, test } from "bun:test"
 import type { LanguageModelV3 } from "@openrouter/ai-sdk-provider"
 import { createKilo } from "../src/provider"
 import { providerRoutingHeaders, takeProviderRouting } from "../src/provider-routing"
@@ -68,11 +68,17 @@ describe("provider routing header", () => {
     expect(providerRoutingHeaders(["gmicloud/fp8"])).toEqual({})
   })
 
-  test("ignores a malformed header but still removes it", () => {
+  test("ignores a malformed header but still removes it, with a warning", () => {
+    const warn = spyOn(console, "warn").mockImplementation(() => {})
     const headers = new Headers({ [HEADER_PROVIDER_ROUTING]: "%7Bnot-json" })
 
     expect(takeProviderRouting(headers)).toBeUndefined()
     expect(headers.has(HEADER_PROVIDER_ROUTING)).toBe(false)
+    expect(warn).toHaveBeenCalledTimes(1)
+
+    expect(takeProviderRouting(new Headers({ [HEADER_PROVIDER_ROUTING]: "%5B%5D" }))).toBeUndefined()
+    expect(warn).toHaveBeenCalledTimes(2)
+    warn.mockRestore()
   })
 })
 

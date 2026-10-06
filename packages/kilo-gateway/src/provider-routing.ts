@@ -28,9 +28,14 @@ export function takeProviderRouting(headers: Headers): Record<string, unknown> |
   const parsed = (() => {
     try {
       return JSON.parse(decodeURIComponent(raw)) as unknown
-    } catch {
+    } catch (err) {
+      // A plugin or model-level header can overwrite the encoded value; the request still
+      // goes out, but without the routing the user configured.
+      console.warn("[Kilo Gateway] Ignoring malformed provider routing header:", err)
       return undefined
     }
   })()
-  return record(parsed) ? parsed : undefined
+  if (record(parsed)) return parsed
+  if (parsed !== undefined) console.warn("[Kilo Gateway] Ignoring non-object provider routing header")
+  return undefined
 }

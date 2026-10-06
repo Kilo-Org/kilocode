@@ -21,7 +21,12 @@ import { isEnterKeyCommitNotIme } from "../../utils/ime-enter"
 import { endpointsEntry, requestEndpoints } from "../../context/routing-endpoints"
 import { requestWorkspaceConfig, workspaceConfigEntry } from "../../context/workspace-config"
 import { useRoutingPick } from "../../hooks/useRoutingPick"
-import { layeredRouting, modelRouting, routingOverriddenByProject } from "../../../../src/shared/provider-routing"
+import {
+  layeredRouting,
+  modelRouting,
+  routingCustom,
+  routingOverriddenByProject,
+} from "../../../../src/shared/provider-routing"
 import type { ModelEndpoint, ModelSelection } from "../../types/messages"
 
 // ---------------------------------------------------------------------------
@@ -68,7 +73,12 @@ export function useModelEndpoints(model: Accessor<ModelSelection | undefined>, d
 // ---------------------------------------------------------------------------
 
 export { routable }
-export { modelRouting, routingOverriddenByProject, routingPartial } from "../../../../src/shared/provider-routing"
+export {
+  modelRouting,
+  routingCustom,
+  routingOverriddenByProject,
+  routingPartial,
+} from "../../../../src/shared/provider-routing"
 
 function fmtContext(n: number): string {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(n % 1_000_000 === 0 ? 0 : 1)}M`
@@ -179,6 +189,8 @@ export interface RoutingSelectorBaseProps {
   failed?: boolean
   /** Sessions are running that a selection would interrupt (the write restarts the backend). */
   busy?: boolean
+  /** The config holds a hand-written multi-provider setup no single row represents. */
+  custom?: boolean
   /** Popover placement — defaults to top-start. */
   placement?: "top-start" | "bottom-start" | "bottom-end" | "top-end"
   /** Render inline instead of through a portal when nested in a dialog. */
@@ -195,14 +207,16 @@ export const RoutingSelectorBase: Component<RoutingSelectorBaseProps> = (props) 
   let listRef: HTMLDivElement | undefined
 
   const auto = () => language.t("model.routing.auto")
+  // A custom setup has no row of its own: nothing is pinned, focused, or flagged as missing.
+  const value = () => (props.custom ? undefined : props.value)
   // A pinned slug that vanished from the catalog still renders as a synthetic
   // row, so the active pin stays visible and clearable instead of silently
   // presenting as Auto.
   const missing = createMemo<ModelEndpoint | undefined>(() => {
-    const value = props.value
-    if (!value || !props.endpoints) return undefined
-    if (props.endpoints.some((endpoint) => endpoint.provider === value)) return undefined
-    return { provider: value, name: value }
+    const slug = value()
+    if (!slug || !props.endpoints) return undefined
+    if (props.endpoints.some((endpoint) => endpoint.provider === slug)) return undefined
+    return { provider: slug, name: slug }
   })
   // null is the Auto row; undefined remains reserved for no focused row.
   const rows = (): (ModelEndpoint | null)[] => {
@@ -210,7 +224,7 @@ export const RoutingSelectorBase: Component<RoutingSelectorBaseProps> = (props) 
     return [null, ...(gone ? [gone] : []), ...(props.endpoints ?? [])]
   }
   const hovered = () => rows()[focused()]
-  const pinned = () => props.endpoints?.find((endpoint) => endpoint.provider === props.value) ?? missing()
+  const pinned = () => props.endpoints?.find((endpoint) => endpoint.provider === value()) ?? missing()
   const preview = () => routingPreview(hovered(), pinned())
   const unavailable = () => !props.failed && preview() !== undefined && preview() === missing()
 
@@ -227,7 +241,7 @@ export const RoutingSelectorBase: Component<RoutingSelectorBaseProps> = (props) 
   // the pinned row once — unless the user already navigated somewhere.
   createEffect(() => {
     if (!open() || moved()) return
-    const idx = rows().findIndex((row) => row?.provider === props.value)
+    const idx = rows().findIndex((row) => row?.provider === value())
     if (idx > 0 && idx !== focused()) focusItem(idx)
   })
 
@@ -243,7 +257,7 @@ export const RoutingSelectorBase: Component<RoutingSelectorBaseProps> = (props) 
     if (val) {
       if (props.blocked) return
       props.onOpen?.()
-      const idx = rows().findIndex((row) => row?.provider === props.value)
+      const idx = rows().findIndex((row) => row?.provider === value())
       setFocused(idx >= 0 ? idx : 0)
       setMoved(false)
       setOpen(true)
@@ -314,7 +328,9 @@ export const RoutingSelectorBase: Component<RoutingSelectorBaseProps> = (props) 
       }}
       trigger={
         <>
-          <span class="routing-selector-trigger-label">{props.value ?? auto()}</span>
+          <span class="routing-selector-trigger-label">
+            {props.custom ? language.t("model.routing.custom") : (value() ?? auto())}
+          </span>
           <svg width="10" height="10" viewBox="0 0 16 16" fill="currentColor" style={{ "flex-shrink": "0" }}>
             <path d="M8 4l4 5H4l4-5z" />
           </svg>
@@ -334,10 +350,13 @@ export const RoutingSelectorBase: Component<RoutingSelectorBaseProps> = (props) 
           <Show when={props.overridden}>
             <div class="routing-selector-override">{language.t("model.routing.projectOverride")}</div>
           </Show>
+          <Show when={props.custom}>
+            <div class="routing-selector-override">{language.t("model.routing.customNote")}</div>
+          </Show>
           <div class="routing-selector-list" role="listbox" ref={listRef}>
             <For each={rows()}>
               {(row, i) => {
-                const selected = () => (row?.provider ?? undefined) === props.value
+                const selected = () => !props.custom && (row?.provider ?? undefined) === value()
                 return (
                   <div
                     class={`routing-selector-item${selected() ? " selected" : ""}`}
@@ -422,6 +441,7 @@ export const RoutingSelector: Component<RoutingSelectorProps> = (props) => {
   // Same signal the Settings save bar warns from: a write disposes every
   // backend instance, which cancels running sessions in all panels.
   const busy = () => Object.values(session.allStatusMap()).some((status) => status.type === "busy")
+  const layers = () => (scoped() ? [config.globalConfig(), project()] : [config.config()])
 
   const endpoints = useModelEndpoints(routed, directory)
   const routing = useRoutingPick(current, vscode)
@@ -432,6 +452,7 @@ export const RoutingSelector: Component<RoutingSelectorProps> = (props) => {
         <RoutingSelectorBase
           endpoints={endpoints.endpoints()}
           value={routing.value(model())}
+          custom={!routing.picking(model()) && routingCustom(layers(), model().providerID, model().modelID)}
           blocked={props.blocked}
           failed={endpoints.failed()}
           busy={busy()}

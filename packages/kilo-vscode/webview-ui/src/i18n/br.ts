@@ -175,6 +175,9 @@ export const dict = {
   "model.routing.failed":
     "Não foi possível carregar a lista de provedores. Uma nova tentativa será feita na próxima vez que você abrir este menu.",
   "model.routing.busy": "Há sessões em execução. Trocar de provedor vai interrompê-las.",
+  "model.routing.custom": "Personalizado",
+  "model.routing.customNote":
+    "O roteamento deste modelo lista vários provedores no kilo.json. Escolher um provedor ou Automático substitui essa configuração.",
   "model.routing.projectOverride":
     "O roteamento de provedor deste modelo está definido no kilo.json do projeto e substitui esta seleção.",
   "model.group.auto": "Modelos automáticos",

@@ -181,6 +181,9 @@ export const dict = {
   "model.routing.failed":
     "Die Anbieterliste konnte nicht geladen werden. Beim nächsten Öffnen dieses Menüs wird es erneut versucht.",
   "model.routing.busy": "Es laufen Sitzungen. Ein Anbieterwechsel unterbricht sie.",
+  "model.routing.custom": "Benutzerdefiniert",
+  "model.routing.customNote":
+    "Für dieses Modell sind in kilo.json mehrere Anbieter festgelegt. Die Auswahl eines Anbieters oder von „Automatisch“ ersetzt diese Einstellung.",
   "model.routing.projectOverride":
     "Das Anbieter-Routing für dieses Modell ist in der kilo.json des Projekts gesetzt und überschreibt diese Auswahl.",
   "model.group.auto": "Automatische Modelle",

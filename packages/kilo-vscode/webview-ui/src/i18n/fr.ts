@@ -177,6 +177,9 @@ export const dict = {
   "model.routing.failed":
     "Impossible de charger la liste des fournisseurs. Nouvelle tentative à la prochaine ouverture de ce menu.",
   "model.routing.busy": "Des sessions sont en cours. Changer de fournisseur les interrompra.",
+  "model.routing.custom": "Personnalisé",
+  "model.routing.customNote":
+    "Le routage de ce modèle liste plusieurs fournisseurs dans kilo.json. Choisir un fournisseur ou Automatique remplace cette configuration.",
   "model.routing.projectOverride":
     "Le routage de fournisseur de ce modèle est défini dans le kilo.json du projet et remplace cette sélection.",
   "model.group.auto": "Modèles automatiques",

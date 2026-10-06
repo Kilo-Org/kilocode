@@ -170,6 +170,9 @@ export const dict = {
   "model.routing.unavailable": "Currently unavailable",
   "model.routing.failed": "Couldn't load the provider list. It is retried the next time you open this menu.",
   "model.routing.busy": "Sessions are running. Changing the provider interrupts them.",
+  "model.routing.custom": "Custom",
+  "model.routing.customNote":
+    "Routing for this model lists several providers in kilo.json. Picking a provider or Auto replaces that setup.",
   "model.routing.projectOverride":
     "Provider routing for this model is set in the project kilo.json, which overrides this selection.",
   "model.group.auto": "Auto Models",

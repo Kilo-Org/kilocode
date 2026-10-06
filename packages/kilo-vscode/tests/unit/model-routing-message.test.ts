@@ -1,4 +1,4 @@
-import { describe, expect, it } from "bun:test"
+import { describe, expect, it, spyOn } from "bun:test"
 import { routeModelRoutingMessage, type ModelRoutingContext } from "../../src/kilo-provider/model-routing"
 import { routingUnsetPaths, routingValue } from "../../src/shared/provider-routing"
 import { KILO_PROVIDER_ID } from "../../src/shared/provider-model"
@@ -55,6 +55,7 @@ function harness(
       configCalls.push({ partial, unset })
     },
     directory: () => settingsDir,
+    known: (dir) => dir === "/worktree",
   }
   return { ctx, posted, configCalls, endpointCalls, workspaceCalls }
 }
@@ -153,6 +154,19 @@ describe("provider routing message router", () => {
       { type: "workspaceConfigLoaded", requestID: 5, directory: "/worktree", projectConfig: project },
       { type: "workspaceConfigLoaded", requestID: 6, directory: settingsDir, projectConfig: project },
     ])
+  })
+
+  it("falls back to the settings scope for a directory the extension never advertised", async () => {
+    const warn = spyOn(console, "warn").mockImplementation(() => {})
+    const { ctx, posted, workspaceCalls } = harness(undefined, async () => ({ data: { targets: { project: {} } } }))
+
+    await routeModelRoutingMessage({ type: "requestWorkspaceConfig", requestID: 7, directory: "/elsewhere" }, ctx)
+    await drain()
+
+    expect(workspaceCalls).toEqual([{ directory: settingsDir, scope: "project" }])
+    expect(posted).toEqual([expect.objectContaining({ requestID: 7, directory: settingsDir })])
+    expect(warn).toHaveBeenCalledTimes(1)
+    warn.mockRestore()
   })
 
   it("reports a failed workspace config lookup", async () => {

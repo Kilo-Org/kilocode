@@ -14,6 +14,7 @@ import { ModelSelectorBase } from "../shared/ModelSelector"
 import { ThinkingSelectorBase } from "../shared/ThinkingSelector"
 import {
   RoutingSelectorBase,
+  routingCustom,
   modelRouting,
   routable,
   routingOverriddenByProject,
@@ -178,6 +179,7 @@ const ModelsTab: Component = () => {
                 endpoints={routingEndpoints.endpoints()}
                 failed={routingEndpoints.failed()}
                 value={modelRouting(config(), model().providerID, model().modelID)}
+                custom={routingCustom([config()], model().providerID, model().modelID)}
                 onSelect={(provider) => updateRouting(provider)}
                 onClear={() => updateRouting(null)}
                 onOpen={routingEndpoints.load}

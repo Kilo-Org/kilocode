@@ -57,12 +57,15 @@ export function useRoutingPick(current: (model: ModelSelection) => string | unde
   })
   onCleanup(unsubscribe)
 
+  const picking = (model: ModelSelection) => {
+    const next = pending()
+    return next !== undefined && next.providerID === model.providerID && next.modelID === model.modelID
+  }
+
   return {
+    picking,
     value(model: ModelSelection): string | undefined {
-      const next = pending()
-      if (next && next.providerID === model.providerID && next.modelID === model.modelID) {
-        return next.provider ?? undefined
-      }
+      if (picking(model)) return pending()?.provider ?? undefined
       return current(model)
     },
     pick(model: ModelSelection, provider: string | null): void {

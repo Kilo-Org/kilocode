@@ -169,6 +169,9 @@ export const dict = {
   "model.routing.unavailable": "غير متاح حاليًا",
   "model.routing.failed": "تعذّر تحميل قائمة المزوّدين. ستتم إعادة المحاولة عند فتح هذه القائمة في المرة القادمة.",
   "model.routing.busy": "توجد جلسات قيد التشغيل. سيؤدي تغيير المزوّد إلى مقاطعتها.",
+  "model.routing.custom": "مخصص",
+  "model.routing.customNote":
+    "يحدد توجيه هذا النموذج عدة مزوّدين في kilo.json. سيؤدي اختيار مزوّد أو «تلقائي» إلى استبدال هذا الإعداد.",
   "model.routing.projectOverride":
     "توجيه الموفر لهذا النموذج محدَّد في ملف kilo.json الخاص بالمشروع ويتجاوز هذا الاختيار.",
   "model.group.auto": "النماذج التلقائية",

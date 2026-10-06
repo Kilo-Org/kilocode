@@ -73,7 +73,26 @@ export function modelRouting(config: unknown, providerID: string, modelID: strin
  * `only`, which is what the request is filtered by.
  */
 export function layeredRouting(configs: unknown[], providerID: string, modelID: string): string | undefined {
-  return slug(Object.assign({}, ...configs.map((config) => routingOptions(config, providerID, modelID))))
+  return slug(layered(configs, providerID, modelID))
+}
+
+function layered(configs: unknown[], providerID: string, modelID: string): Record<string, unknown> {
+  return Object.assign({}, ...configs.map((config) => routingOptions(config, providerID, modelID)))
+}
+
+/**
+ * Whether the merged routing for a model is a hand-written setup the single-pin
+ * UI cannot represent: several providers in `only` or `order`, or lists that
+ * start with different providers. Presenting it as a pin of its first entry
+ * would misstate what the gateway does, and a selection replaces all of it.
+ */
+export function routingCustom(configs: unknown[], providerID: string, modelID: string): boolean {
+  const routing = layered(configs, providerID, modelID)
+  const list = (value: unknown) => (Array.isArray(value) ? value : [])
+  const only = list(routing.only)
+  const order = list(routing.order)
+  if (only.length > 1 || order.length > 1) return true
+  return only.length === 1 && order.length === 1 && only[0] !== order[0]
 }
 
 /**

@@ -176,6 +176,9 @@ export const dict = {
   "model.routing.failed":
     "Kan de providerlijst niet laden. Er wordt opnieuw geprobeerd wanneer je dit menu weer opent.",
   "model.routing.busy": "Er lopen sessies. Een andere provider kiezen onderbreekt ze.",
+  "model.routing.custom": "Aangepast",
+  "model.routing.customNote":
+    "De routering voor dit model noemt meerdere providers in kilo.json. Een provider of Auto kiezen vervangt die instelling.",
   "model.routing.projectOverride":
     "De providerroutering voor dit model staat in de kilo.json van het project en overschrijft deze keuze.",
   "model.group.auto": "Automatische modellen",

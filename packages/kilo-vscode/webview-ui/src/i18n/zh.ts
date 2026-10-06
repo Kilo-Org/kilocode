@@ -167,6 +167,8 @@ export const dict = {
   "model.routing.unavailable": "当前不可用",
   "model.routing.failed": "无法加载提供商列表。下次打开此菜单时将重试。",
   "model.routing.busy": "有会话正在运行。更改提供商会中断这些会话。",
+  "model.routing.custom": "自定义",
+  "model.routing.customNote": "此模型的路由在 kilo.json 中列出了多个提供商。选择某个提供商或“自动”将替换该设置。",
   "model.routing.projectOverride": "该模型的提供商路由已在项目的 kilo.json 中设置，会覆盖此处的选择。",
   "model.group.auto": "自动模型",
   "model.group.recommended": "推荐",

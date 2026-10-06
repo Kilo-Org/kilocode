@@ -4,6 +4,7 @@ import {
   layeredRouting,
   modelRouting,
   routingClear,
+  routingCustom,
   routingOverriddenByProject,
   routingPartial,
   routingUnsetPaths,
@@ -108,6 +109,22 @@ describe("provider routing persistence", () => {
     // Layers without routing for the model are skipped.
     expect(layeredRouting([global, undefined, layer(siblings)], pid, mid)).toBe("b/fp8")
     expect(layeredRouting([undefined, layer(siblings)], pid, mid)).toBeUndefined()
+  })
+
+  it("routingCustom flags hand-written setups a single pin cannot represent", () => {
+    const layer = (routing: Record<string, unknown>) => ({
+      provider: { [pid]: { models: { [mid]: { options: { provider: routing } } } } },
+    })
+
+    expect(routingCustom([layer({ only: ["a/fp8", "b/fp8"] })], pid, mid)).toBe(true)
+    expect(routingCustom([layer({ order: ["a/fp8", "b/fp8"] })], pid, mid)).toBe(true)
+    expect(routingCustom([layer({ only: ["a/fp8"], order: ["b/fp8"] })], pid, mid)).toBe(true)
+    // Merged across layers: a project order against a global pin disagrees.
+    expect(routingCustom([layer(routingValue("b/fp8")), layer({ order: ["a/fp8"] })], pid, mid)).toBe(true)
+
+    expect(routingCustom([layer(routingValue("a/fp8"))], pid, mid)).toBe(false)
+    expect(routingCustom([layer({ order: ["a/fp8"] })], pid, mid)).toBe(false)
+    expect(routingCustom([layer(siblings), undefined], pid, mid)).toBe(false)
   })
 })
 

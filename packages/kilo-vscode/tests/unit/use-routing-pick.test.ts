@@ -117,5 +117,17 @@ describe("useRoutingPick", () => {
     routing.pick(model, "gmicloud/fp8")
 
     expect(routing.value(other)).toBe("baseten/fp8")
+    expect(routing.picking(other)).toBe(false)
+  })
+
+  it("reports a pending pick until its write settles", () => {
+    const { routing, updated } = setup()
+    expect(routing.picking(model)).toBe(false)
+
+    routing.pick(model, "gmicloud/fp8")
+    expect(routing.picking(model)).toBe(true)
+
+    updated(pinned("gmicloud/fp8"))
+    expect(routing.picking(model)).toBe(false)
   })
 })

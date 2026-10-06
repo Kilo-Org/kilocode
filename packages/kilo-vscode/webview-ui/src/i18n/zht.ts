@@ -167,6 +167,8 @@ export const dict = {
   "model.routing.unavailable": "目前無法使用",
   "model.routing.failed": "無法載入供應商清單。下次開啟此選單時將重試。",
   "model.routing.busy": "有工作階段正在執行。變更供應商會中斷這些工作階段。",
+  "model.routing.custom": "自訂",
+  "model.routing.customNote": "此模型的路由在 kilo.json 中列出了多個供應商。選擇某個供應商或「自動」將取代該設定。",
   "model.routing.projectOverride": "此模型的供應商路由已在專案的 kilo.json 中設定，會覆寫此處的選擇。",
   "model.group.auto": "自動模型",
   "model.group.recommended": "推薦",

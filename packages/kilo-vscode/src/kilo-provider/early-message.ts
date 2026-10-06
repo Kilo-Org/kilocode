@@ -24,6 +24,8 @@ type Ctx = {
   updateConfig: (partial: Partial<Config>, unset?: string[][]) => Promise<void>
   /** The settings scope: the directory for routing requests that name none. */
   directory: () => string
+  /** Whether the extension advertised this directory to the webview. */
+  known: (directory: string) => boolean
   activity: (state: unknown) => void
   speechToTextModels: () => Promise<void>
   speechToTextSource: () => SpeechToTextSource | undefined
@@ -143,6 +145,7 @@ export async function routeEarlyMessage(
       post: ctx.post,
       updateConfig: ctx.updateConfig,
       directory: ctx.directory,
+      known: ctx.known,
     })
   )
     return true

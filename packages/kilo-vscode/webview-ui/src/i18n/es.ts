@@ -176,6 +176,9 @@ export const dict = {
   "model.routing.failed":
     "No se pudo cargar la lista de proveedores. Se reintentará la próxima vez que abras este menú.",
   "model.routing.busy": "Hay sesiones en curso. Cambiar de proveedor las interrumpirá.",
+  "model.routing.custom": "Personalizado",
+  "model.routing.customNote":
+    "El enrutamiento de este modelo incluye varios proveedores en kilo.json. Elegir un proveedor o Automático reemplaza esa configuración.",
   "model.routing.projectOverride":
     "El enrutamiento de proveedor de este modelo está definido en el kilo.json del proyecto y anula esta selección.",
   "model.group.auto": "Modelos automáticos",

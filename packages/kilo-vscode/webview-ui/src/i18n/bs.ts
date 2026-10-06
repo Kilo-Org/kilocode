@@ -175,6 +175,9 @@ export const dict = {
   "model.routing.failed":
     "Učitavanje liste provajdera nije uspjelo. Ponovni pokušaj će se izvršiti pri sljedećem otvaranju ovog menija.",
   "model.routing.busy": "Sesije su u toku. Promjena provajdera će ih prekinuti.",
+  "model.routing.custom": "Prilagođeno",
+  "model.routing.customNote":
+    "Rutiranje za ovaj model navodi više provajdera u kilo.json. Odabir provajdera ili Automatski zamijenit će tu postavku.",
   "model.routing.projectOverride":
     "Usmjeravanje provajdera za ovaj model postavljeno je u kilo.json projekta i nadjačava ovaj izbor.",
   "model.group.auto": "Automatski modeli",

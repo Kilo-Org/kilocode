@@ -173,6 +173,9 @@ export const dict = {
   "model.routing.unavailable": "Ikke tilgængelig i øjeblikket",
   "model.routing.failed": "Kunne ikke indlæse listen over udbydere. Der prøves igen, næste gang du åbner denne menu.",
   "model.routing.busy": "Der kører sessioner. Et skift af udbyder afbryder dem.",
+  "model.routing.custom": "Brugerdefineret",
+  "model.routing.customNote":
+    "Routing for denne model angiver flere udbydere i kilo.json. Valg af en udbyder eller Automatisk erstatter den opsætning.",
   "model.routing.projectOverride":
     "Udbyderrouting for denne model er angivet i projektets kilo.json og tilsidesætter dette valg.",
   "model.group.auto": "Automatiske modeller",

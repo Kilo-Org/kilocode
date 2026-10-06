@@ -174,6 +174,9 @@ export const dict = {
   "model.routing.unavailable": "現在は利用できません",
   "model.routing.failed": "プロバイダー一覧を読み込めませんでした。次にこのメニューを開いたときに再試行します。",
   "model.routing.busy": "実行中のセッションがあります。プロバイダーを変更すると中断されます。",
+  "model.routing.custom": "カスタム",
+  "model.routing.customNote":
+    "このモデルのルーティングは kilo.json で複数のプロバイダーを指定しています。プロバイダーまたは「自動」を選ぶと、この設定は置き換えられます。",
   "model.routing.projectOverride":
     "このモデルのプロバイダールーティングはプロジェクトの kilo.json で設定されており、この選択より優先されます。",
   "model.group.auto": "自動モデル",
