@@ -362,7 +362,7 @@
 }
 
 /* Explains the Shift+click gesture on the Pin/Unpin tab menu item. */
-.am-menu-hint {
+.session-tab-menu-hint {
   margin-left: auto;
   padding-left: 16px;
   color: var(--text-weak);
