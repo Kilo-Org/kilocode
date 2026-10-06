@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test"
-import { tracksElapsed } from "../../webview-ui/src/components/shared/working-indicator-utils"
+import { cancelScope, tracksElapsed } from "../../webview-ui/src/components/shared/working-indicator-utils"
 
 const timing = { active: 0, since: 1 }
 
@@ -26,5 +26,15 @@ describe("tracksElapsed", () => {
     expect(tracksElapsed("idle", false, timing)).toBe(false)
     expect(tracksElapsed("busy", false, undefined)).toBe(false)
     expect(tracksElapsed("idle", true, undefined)).toBe(false)
+  })
+})
+
+describe("cancelScope", () => {
+  it("interrupts a root session's turn", () => {
+    expect(cancelScope(undefined)).toBe("session")
+  })
+
+  it("cancels a subagent, whose view cannot resume a paused task", () => {
+    expect(cancelScope("ses_parent")).toBe("tree")
   })
 })

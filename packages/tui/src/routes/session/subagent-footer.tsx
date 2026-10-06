@@ -10,6 +10,7 @@ import { Locale } from "../../util/locale"
 import { useTerminalDimensions } from "@opentui/solid"
 import { useCommandShortcut, useOpencodeKeymap } from "../../keymap"
 import { useSubagentKeys } from "../../kilocode/subagent-keys" // kilocode_change
+import { PausedHint } from "../../kilocode/task-pause-view" // kilocode_change
 
 export function SubagentFooter() {
   const route = useRouteData("session")
@@ -90,7 +91,9 @@ export function SubagentFooter() {
   })
   const armed = createMemo(() => keys.interrupt() > 0)
   // narrow footers drop usage while a key hint is shown so the row does not wrap
-  const crowded = createMemo(() => narrow() && (keys.interruptible() || keys.exit() > 0))
+  const crowded = createMemo(() => keys.paused() || (narrow() && (keys.interruptible() || keys.exit() > 0)))
+  // the paused hint is the longest; a narrow footer drops prev/next while it shows
+  const compact = createMemo(() => narrow() && keys.paused() && keys.exit() === 0)
   // kilocode_change end
   const [hover, setHover] = createSignal<"interrupt" | "parent" | "prev" | "next" | null>(null) // kilocode_change
   useTerminalDimensions()
@@ -158,6 +161,7 @@ export function SubagentFooter() {
                 </text>
               </box>
             </Show>
+            <PausedHint when={keys.paused() && keys.exit() === 0} />
             {/* kilocode_change end */}
             <box
               onMouseOver={() => setHover("parent")}
@@ -170,6 +174,7 @@ export function SubagentFooter() {
               </text>
             </box>
             <box
+              visible={!compact()} // kilocode_change
               onMouseOver={() => setHover("prev")}
               onMouseOut={() => setHover(null)}
               onMouseUp={() => keymap.dispatchCommand("session.child.previous")}
@@ -180,6 +185,7 @@ export function SubagentFooter() {
               </text>
             </box>
             <box
+              visible={!compact()} // kilocode_change
               onMouseOver={() => setHover("next")}
               onMouseOut={() => setHover(null)}
               onMouseUp={() => keymap.dispatchCommand("session.child.next")}

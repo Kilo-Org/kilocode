@@ -1,9 +1,9 @@
 import { Effect } from "effect"
-import { Database } from "@opencode-ai/core/database/database"
+import type { Database } from "@opencode-ai/core/database/database"
 import type { Config } from "@/config/config"
 import type { RuntimeFlags } from "@/effect/runtime-flags"
 import type { SessionID } from "@/session/schema"
-import { BoardEnabled } from "@/kilocode/board/enabled"
+import { KiloSubagentNotice } from "@/kilocode/board/subagent-notice"
 import { BoardStore } from "@/kilocode/board/store"
 
 /**
@@ -58,19 +58,16 @@ export const notify = Effect.fn("KiloSessionSteering.notify")(function* (input: 
   if (!parent) return
   const steer = text(input.parts)
   if (!steer) return
-  if (!BoardEnabled.on(yield* input.config.get(), input.flags)) return
-  yield* BoardStore.post({
-    sessionID: input.session.id,
-    messageID: input.messageID,
+  yield* KiloSubagentNotice.post({
+    from: input.session.id,
     to: parent,
-    type: "INFO",
+    messageID: input.messageID,
     body: body(steer),
-  }).pipe(
-    Effect.provideService(Database.Service, input.database),
-    Effect.catch((err) =>
-      Effect.logWarning("subagent steering notification failed", { "session.id": input.session.id, err }),
-    ),
-  )
+    label: "subagent steering notification failed",
+    config: input.config,
+    flags: input.flags,
+    database: input.database,
+  })
 })
 
 export * as KiloSessionSteering from "./steering"

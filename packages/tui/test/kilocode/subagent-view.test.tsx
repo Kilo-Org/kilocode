@@ -16,7 +16,7 @@ import { LocationProvider } from "../../src/context/location"
 import { PermissionProvider } from "../../src/context/permission"
 import { ProjectProvider } from "../../src/context/project"
 import { PromptRefProvider, usePromptRef } from "../../src/context/prompt"
-import { RouteProvider } from "../../src/context/route"
+import { RouteProvider, useRoute } from "../../src/context/route"
 import { TuiTerminalEnvironmentProvider } from "../../src/context/runtime"
 import { SDKProvider } from "../../src/context/sdk"
 import { SyncProvider, useSync } from "../../src/context/sync"
@@ -73,31 +73,53 @@ const reply = {
 async function mount(
   root: string,
   width = 100,
-  opts: { route?: string; agents?: object[]; config?: Parameters<typeof createTuiResolvedConfig>[0] } = {},
+  opts: {
+    route?: string
+    agents?: object[]
+    config?: Parameters<typeof createTuiResolvedConfig>[0]
+    status?: Record<string, { type: string }>
+    metadata?: Record<string, unknown>
+    messages?: Record<string, unknown[]>
+  } = {},
 ) {
   const route = opts.route ?? child.id
   const agents = opts.agents ?? []
+  const status = opts.status ?? { [child.id]: { type: "busy" } }
+  const target = { ...child, ...(opts.metadata ? { metadata: opts.metadata } : {}) }
+  const messages = opts.messages ?? { [child.id]: [reply] }
   await Bun.write(`${root}/kv.json`, JSON.stringify({ animations_enabled: false, sidebar: "hide", vim_enabled: false }))
   const aborts: URL[] = []
+  const backgrounds: URL[] = []
   const exits: unknown[] = []
   const calls = createFetch((url) => {
     if (url.pathname === "/agent") return json(agents)
-    if (url.pathname === "/session") return json([parent, child])
-    if (url.pathname === `/session/${child.id}`) return json(child)
+    if (url.pathname === "/session") return json([parent, target])
+    if (url.pathname === `/session/${child.id}`) return json(target)
     if (url.pathname === `/session/${parent.id}`) return json(parent)
-    if (url.pathname === "/session/status") return json({ [child.id]: { type: "busy" } })
-    if (url.pathname === `/session/${child.id}/abort`) {
+    if (url.pathname === "/session/status") return json(status)
+    if (url.pathname === "/experimental/capabilities") return json({ backgroundSubagents: true })
+    if (url.pathname.endsWith("/abort")) {
       aborts.push(url)
       return json(true)
     }
-    if (url.pathname.startsWith("/session/") && url.pathname.endsWith("/children")) return json([child])
-    if (url.pathname === `/session/${child.id}/message`) return json([reply])
+    if (url.pathname.startsWith("/experimental/session/") && url.pathname.endsWith("/background")) {
+      backgrounds.push(url)
+      return json(true)
+    }
+    if (url.pathname.startsWith("/session/") && url.pathname.endsWith("/children")) return json([target])
+    for (const [id, list] of Object.entries(messages)) {
+      if (url.pathname === `/session/${id}/message`) return json(list)
+    }
     if (["/message", "/todo", "/diff"].some((suffix) => url.pathname.endsWith(suffix))) return json([])
     if (url.pathname.startsWith("/background-process/")) return json(true)
     return undefined
   })
   const config = createTuiResolvedConfig(opts.config)
-  const refs: { sync?: ReturnType<typeof useSync>; prompt?: ReturnType<typeof usePromptRef> } = {}
+  const refs: {
+    sync?: ReturnType<typeof useSync>
+    prompt?: ReturnType<typeof usePromptRef>
+    route?: ReturnType<typeof useRoute>
+  } = {}
 
   function Ready() {
     const sync = useSync()
@@ -131,6 +153,7 @@ async function mount(
 
   function Content() {
     refs.prompt = usePromptRef()
+    refs.route = useRoute()
     const dimensions = useTerminalDimensions()
     return (
       <box width={dimensions().width} height={dimensions().height} flexDirection="column">
@@ -198,14 +221,17 @@ async function mount(
   try {
     await wait(() =>
       route === child.id
-        ? refs.sync?.data.session_status?.[child.id]?.type === "busy" && frame().includes("General")
+        ? frame().includes("General") &&
+          (status[child.id]?.type !== "busy" || refs.sync?.data.session_status?.[child.id]?.type === "busy")
         : !!refs.prompt?.current?.focused,
     )
     await app.flush()
     return {
       aborts,
+      backgrounds,
       exits,
       frame,
+      route: () => refs.route?.data,
       spans: () => app.captureSpans(),
       async press(sequence: string) {
         app.renderer.stdin.emit("data", Buffer.from(sequence))
@@ -234,7 +260,7 @@ test("running subagent view shows the interrupt shortcut beside the navigation s
   expect(row).toMatch(/Interrupt esc\s+Parent up\s+Prev left\s+Next right/)
 })
 
-test("double Esc stops the running subagent like the VS Code task-card Stop", async () => {
+test("double Esc interrupts the running subagent with session scope", async () => {
   await using tmp = await tmpdir()
   using scene = await mount(tmp.path)
   await scene.press("\x1b")
@@ -243,7 +269,7 @@ test("double Esc stops the running subagent like the VS Code task-card Stop", as
   await scene.press("\x1b")
   await wait(() => scene.aborts.length === 1)
   expect(scene.aborts[0]?.pathname).toBe(`/session/${child.id}/abort`)
-  expect(scene.aborts[0]?.searchParams.get("scope")).toBe("tree")
+  expect(scene.aborts[0]?.searchParams.get("scope")).toBe("session")
   expect(scene.frame()).not.toContain("esc again")
 })
 
@@ -313,14 +339,14 @@ test("ctrl+c clears a typed steer before it arms exit", async () => {
   expect(scene.exits).toHaveLength(0)
 })
 
-test("double Esc still stops the subagent while a steer is typed", async () => {
+test("double Esc still interrupts the subagent while a steer is typed", async () => {
   await using tmp = await tmpdir()
   using scene = await mount(tmp.path)
   await scene.press("half typed")
   await scene.press("\x1b")
   await scene.press("\x1b")
   await wait(() => scene.aborts.length === 1)
-  expect(scene.aborts[0]?.searchParams.get("scope")).toBe("tree")
+  expect(scene.aborts[0]?.searchParams.get("scope")).toBe("session")
   expect(scene.frame()).toContain("half typed")
   await scene.press("\x03")
 })
@@ -385,4 +411,163 @@ test("the main prompt's exit guard uses the same double press", async () => {
   await scene.press("\x03")
   expect(scene.exits).toHaveLength(1)
   expect(scene.frame()).not.toContain("again to exit")
+})
+
+const paused = { "kilo.task": { status: "paused" } }
+// an interrupted turn is finalized, so the paused child's last reply is complete
+const stopped = { ...reply, info: { ...reply.info, time: { created: 2, completed: 3 } } }
+
+test("a paused subagent opens the steering prompt and Esc does not end its task", async () => {
+  await using tmp = await tmpdir()
+  using scene = await mount(tmp.path, 100, {
+    status: { [child.id]: { type: "idle" } },
+    metadata: paused,
+    messages: { [child.id]: [stopped] },
+  })
+  const row = () =>
+    scene
+      .frame()
+      .split("\n")
+      .find((line) => line.includes("General")) ?? ""
+  expect(row()).toMatch(/Interrupted · send a prompt to resume\s+Parent up\s+Prev left\s+Next right/)
+  expect(row()).not.toContain("Interrupt esc")
+  // the prompt that resumes the task is open, unlike an idle subagent's view
+  expect(scene.frame()).toContain("commands")
+  await scene.press("\x1b")
+  await scene.press("\x1b")
+  expect(scene.aborts).toHaveLength(0)
+  const current = scene.route()
+  expect(current?.type === "session" && current.sessionID).toBe(child.id)
+})
+
+test("an idle subagent that is not paused has no interrupt binding", async () => {
+  await using tmp = await tmpdir()
+  using scene = await mount(tmp.path, 100, { status: { [child.id]: { type: "idle" } } })
+  expect(scene.frame()).not.toContain("Interrupt")
+  expect(scene.frame()).not.toContain("commands")
+  await scene.press("\x1b")
+  await scene.press("\x1b")
+  expect(scene.aborts).toHaveLength(0)
+})
+
+for (const width of [80, 120]) {
+  test(`paused footer fits one row at ${width} columns`, async () => {
+    await using tmp = await tmpdir()
+    using scene = await mount(tmp.path, width, {
+      status: { [child.id]: { type: "idle" } },
+      metadata: paused,
+      messages: { [child.id]: [stopped] },
+    })
+    const rows = () =>
+      scene
+        .frame()
+        .split("\n")
+        .filter((row) => row.includes("┃") && row.trim() !== "┃")
+    const row = rows().find((line) => line.includes("General"))
+    expect(row).toContain("Interrupted · send a prompt to resume")
+    expect(row).not.toContain("⋯")
+    expect(row).toContain("Parent up")
+    // a narrow footer drops prev/next while the paused hint shows
+    expect(row?.includes("Next right")).toBe(width - 4 >= 96)
+  })
+}
+
+const ask = {
+  info: {
+    id: "msg_parent_user",
+    sessionID: parent.id,
+    role: "user",
+    agent: "code",
+    model: { providerID: "test", modelID: "test" },
+    time: { created: 1 },
+  },
+  parts: [{ id: "prt_parent_user", sessionID: parent.id, messageID: "msg_parent_user", type: "text", text: "go" }],
+}
+
+function delegation(state: Record<string, unknown>) {
+  return {
+    info: {
+      ...reply.info,
+      id: "msg_parent_reply",
+      sessionID: parent.id,
+      parentID: "msg_parent_user",
+      agent: "code",
+      mode: "code",
+      time: { created: 2 },
+    },
+    parts: [
+      {
+        id: "prt_parent_task",
+        sessionID: parent.id,
+        messageID: "msg_parent_reply",
+        type: "tool",
+        tool: "task",
+        callID: "call_1",
+        state: {
+          input: { description: "inspect bug", prompt: "look", subagent_type: "general" },
+          title: "inspect bug",
+          time: { start: 2 },
+          ...state,
+        },
+      },
+    ],
+  }
+}
+
+test("the parent task card shows a paused foreground task as waiting, with the background key", async () => {
+  await using tmp = await tmpdir()
+  using scene = await mount(tmp.path, 100, {
+    route: parent.id,
+    status: { [parent.id]: { type: "busy" }, [child.id]: { type: "idle" } },
+    metadata: paused,
+    messages: {
+      [parent.id]: [ask, delegation({ status: "running", metadata: { sessionId: child.id } })],
+      [child.id]: [stopped],
+    },
+  })
+  await wait(() => scene.frame().includes("Interrupted — waiting for you"))
+  expect(scene.frame()).toContain("Interrupted — waiting for you · ctrl+b background")
+  expect(scene.frame()).not.toContain("Starting...")
+  // Ctrl+B still promotes the paused foreground task
+  await scene.press("\x02")
+  await wait(() => scene.backgrounds.length === 1)
+  expect(scene.backgrounds[0]?.pathname).toBe(`/experimental/session/${parent.id}/background`)
+})
+
+test("the parent task card shows a paused background task as waiting, not finished", async () => {
+  await using tmp = await tmpdir()
+  using scene = await mount(tmp.path, 100, {
+    route: parent.id,
+    status: { [child.id]: { type: "idle" } },
+    metadata: paused,
+    messages: {
+      [parent.id]: [
+        ask,
+        delegation({
+          status: "completed",
+          output: "started",
+          metadata: { sessionId: child.id, background: true },
+          time: { start: 2, end: 3 },
+        }),
+      ],
+      [child.id]: [stopped],
+    },
+  })
+  await wait(() => scene.frame().includes("Interrupted — waiting for you"))
+  expect(scene.frame()).not.toContain("ctrl+b background")
+  expect(scene.frame()).not.toContain("✓")
+})
+
+test("double Esc in the parent prompt interrupts with session scope", async () => {
+  await using tmp = await tmpdir()
+  using scene = await mount(tmp.path, 100, {
+    route: parent.id,
+    status: { [parent.id]: { type: "busy" } },
+    messages: { [parent.id]: [ask, delegation({ status: "running", metadata: { sessionId: child.id } })] },
+  })
+  await scene.press("\x1b")
+  await scene.press("\x1b")
+  await wait(() => scene.aborts.length === 1)
+  expect(scene.aborts[0]?.pathname).toBe(`/session/${parent.id}/abort`)
+  expect(scene.aborts[0]?.searchParams.get("scope")).toBe("session")
 })
