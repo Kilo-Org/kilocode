@@ -14,6 +14,7 @@ Workflows that automate dependency remediation and give the team Slack visibilit
 ## Setup
 
 - Add repo secret `SECURITY_ALERTS_SLACK_WEBHOOK` (a Slack incoming webhook URL) — required by `security-findings-notify.yml`, `stale-bot-pr-notify.yml`, `outdated-kilo-deps.yml` and `stale-alerts-report.yml`.
+- Optional repo secret `SECURITY_SCAN_TOKEN`: a token with the `secret_scanning_alerts` scope. Without it, `security-findings-notify.yml` tries the default token and skips secret scanning with a warning if that fails.
 - Optional repo variables to override defaults: `SECURITY_SLA_CRITICAL_DAYS` (15), `SECURITY_SLA_HIGH_DAYS` (30), `SECURITY_SLA_MEDIUM_DAYS` (90), `SECURITY_SLA_LOW_DAYS` (180), `SECURITY_MIN_SEVERITY` (`high`; set to `medium` or `low` to report more), `STALE_BOT_PR_DAYS` (3).
 
 ## How it works
@@ -42,7 +43,7 @@ They don't call each other or trigger off PR creation. Each one wakes up on its 
 |---|---|---|
 | Dependabot alerts | `security-findings-notify.yml`, `stale-alerts-report.yml` | Needs the `vulnerability-alerts: read` permission. |
 | Code scanning alerts | `security-findings-notify.yml` | Needs `security-events: read`. Alerts without a security severity are quality findings and are skipped. If the API returns an error, the run logs a warning and continues. |
-| Secret scanning alerts | `security-findings-notify.yml` | The default `GITHUB_TOKEN` cannot read these on every plan. If the API returns an error, the run logs a warning and continues. Add a token with the `secret_scanning_alerts` scope if you need this source. |
+| Secret scanning alerts | `security-findings-notify.yml` | The default `GITHUB_TOKEN` cannot read these on every plan. If the API returns an error, the run logs a warning and continues. To enable this source, add the repo secret `SECURITY_SCAN_TOKEN` (a token with the `secret_scanning_alerts` scope). The workflow uses it for this one call only. |
 | Findings of the Kilo Security Agent (the "Unreachable" and "Exploitable" labels) | None | They live in the private `Kilo-Org/cloud` stack. A repo workflow cannot read them. |
 
 The helper scripts are `script/kilocode/bot-prs.ts` (duplicate grouping) and `script/kilocode/stale-alerts.ts` (stale alert check). Both have tests next to them. Run `bun test bot-prs.test.ts stale-alerts.test.ts` from `script/kilocode/`.

@@ -33,6 +33,10 @@ jobs:
       - id: build
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Optional. The default token cannot read secret scanning alerts on
+          # every plan. A token with the secret_scanning_alerts scope is used
+          # for that one call only. Without it, the call uses GH_TOKEN.
+          SECRET_SCAN_TOKEN: ${{ secrets.SECURITY_SCAN_TOKEN }}
           REPO: ${{ github.repository }}
           # 15 matches an observed real critical deadline; 30 is a guess.
           CRIT_DAYS: ${{ vars.SECURITY_SLA_CRITICAL_DAYS || '15' }}
@@ -54,13 +58,13 @@ jobs:
 
           # Code scanning returns 404 when it is not enabled, and secret
           # scanning is not readable with the default GITHUB_TOKEN on every
-          # plan. A source that cannot be read is skipped with a warning, so it
+          # plan (set the SECURITY_SCAN_TOKEN secret to fix that). A source that cannot be read is skipped with a warning, so it
           # never hides the Dependabot findings.
           if ! code=$(fetch code-scanning/alerts 2>/dev/null); then
             echo "::warning::could not read code scanning alerts, skipping them"
             code='[]'
           fi
-          if ! secrets=$(fetch secret-scanning/alerts 2>/dev/null); then
+          if ! secrets=$(GH_TOKEN="${SECRET_SCAN_TOKEN:-$GH_TOKEN}" fetch secret-scanning/alerts 2>/dev/null); then
             echo "::warning::could not read secret scanning alerts, skipping them"
             secrets='[]'
           fi
