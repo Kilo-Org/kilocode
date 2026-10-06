@@ -71,6 +71,7 @@ export const StreamViewport: Component<{
   let pid: number | undefined
   let scheduled: number | undefined
   let moving: BrowserInteraction | undefined
+  let wheeling: Extract<BrowserInteraction, { kind: "wheel" }> | undefined
   const keyboard = new Map<string, Extract<BrowserInteraction, { kind: "key" }>>()
   const clicker = clicks()
   const text = typing()
@@ -109,6 +110,7 @@ export const StreamViewport: Component<{
     keyboard.clear()
     clicker.reset()
     moving = undefined
+    wheeling = undefined
     if (scheduled !== undefined) cancelAnimationFrame(scheduled)
     scheduled = undefined
     const captured = pid
@@ -316,9 +318,10 @@ export const StreamViewport: Component<{
   const flush = () => {
     if (scheduled !== undefined) cancelAnimationFrame(scheduled)
     scheduled = undefined
-    const event = moving
+    const queue = [wheeling, moving]
+    wheeling = undefined
     moving = undefined
-    if (event) emit(event)
+    for (const event of queue) if (event) emit(event)
   }
 
   const focus = () => {
@@ -345,7 +348,6 @@ export const StreamViewport: Component<{
     const action = transition(event)
     if (action === "down") return down(event)
     if (action === "up") return up(event)
-    if (moving?.kind === "wheel") flush()
     clicker.move(event)
     moving = pointer(event, canvas.getBoundingClientRect(), "move", 0)
     if (!moving || scheduled !== undefined) return
@@ -376,10 +378,11 @@ export const StreamViewport: Component<{
     if (!value) return
     event.preventDefault()
     event.stopPropagation()
-    if (moving?.kind === "wheel" && mergeWheel(moving, value)) return
-    // Preserve target, direction, modifier, and pointer ordering across wheel batches.
-    flush()
-    moving = value
+    if (wheeling && mergeWheel(wheeling, value)) return
+    // A new target, direction, or modifier set starts a fresh batch so batches stay ordered and bounded.
+    if (wheeling) emit(wheeling)
+    wheeling = value
+    if (scheduled !== undefined) return
     scheduled = requestAnimationFrame(flush)
   }
 
