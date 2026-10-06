@@ -57,7 +57,7 @@ source-tree deletion through a reviewable class. That is the main evidence for o
 | Attack and benign corpus; spelling and route equivalence tests | `test/.../corpus.ts:86-161`, `route-equivalence.test.ts`, `spelling-equivalence.test.ts`, `bypass-regression.test.ts` | Evaluation corpus and PR 4 tests |
 | One status mapping for all clients | `packages/core/src/security-status.ts` | Client labels |
 
-Attack classes from the corpus, as a checklist for PR 4:
+Attack classes from the corpus, as a checklist for PR 5:
 carried program (`sh -c`, `python -c`, `awk`, `caffeinate ...`); secret read through git or an unknown reader (`git show HEAD:.env`,
 `xxd .env`, `curl --data-binary @.env`, `env > file`); persistence and destruction (`.git/hooks`, `core.hooksPath`, `rm -rf ~`, `dd of=/dev/...`);
 dependency install; host control (docker socket, ssh, `launchctl`, `crontab`, `defaults write`);
@@ -77,6 +77,6 @@ spelling rewrites (`PATH=`, `alias`, quoting, `\rm`, `/bin/rm`, `.GIT/hooks`, `c
 
 ## 5. Coordination
 
-- Post the plan link on #14033, thank the author, and propose: they own the deterministic engine PRs (our PR 4), we own the hook, state, UI and reviewer.
-- Ask the maintainers to confirm the split before PR 4 starts, and record the decision on #14033.
-- Credit the author in PR 4 and in the docs.
+- Post the plan link on #14033, thank the author, and propose: they own the deterministic engine PRs (our PR 5), we own the hook, state, UI and reviewer.
+- Ask the maintainers to confirm the split before PR 5 starts, and record the decision on #14033.
+- Credit the author in PR 5 and in the docs.

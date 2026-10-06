@@ -21,4 +21,10 @@
 <div class="code mono">npm run codegen</div>
 <div class="dim">You see the normal prompt. Nothing was approved.</div>
 <div class="row" style="margin-top:10px"><span class="btn primary">Allow once</span><span class="btn">Always allow…</span><span class="btn">Reject</span></div></div></div></div>
+<div><h1>E. Sandbox escalation (Sandboxed mode asks; Approve for me may decide)</h1><div class="frame"><div class="title">Needs access outside the sandbox</div><div class="body">
+<div class="row"><span class="pill warn">Escalation</span><span class="dim">The sandbox blocked this</span></div>
+<div class="code mono">git commit -m "fix: path handling"</div>
+<div class="dim">Denied by the sandbox: write to <span class="mono">.git/</span>. Allow this command to run outside the sandbox once?</div>
+<div class="row" style="margin-top:10px"><span class="btn primary">Allow once</span><span class="btn">Reject</span></div>
+<div class="dim" style="margin-top:8px;font-size:11px">Approve for me mode: a reviewer can approve this after the safety rules. The line “Approved by Approve for me (escalation)” then appears in the transcript.</div></div></div></div>
 </body></html>

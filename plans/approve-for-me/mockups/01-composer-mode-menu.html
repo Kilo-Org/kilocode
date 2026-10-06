@@ -1,5 +1,5 @@
 <!doctype html><html><head><meta charset="utf-8"><title>Composer approval mode menu</title><link rel="stylesheet" href="mockup.css"></head><body>
-<p class="note"><b>Composer approval mode menu.</b> Replaces the shield button while the hidden flag is on (PR 1, #14636). Three exclusive modes. Sandbox is a separate control. The tooltip names the active mode.</p>
+<p class="note"><b>Composer approval mode menu.</b> A and B show what PR 1 (#14636) ships: three exclusive modes, with Sandbox still a separate control. D shows the target after the team decision of 2026-10-06 (plan PR 2): Approve for me, Sandboxed and Auto-approve, each fixing the sandbox state. The platform wording in D is still an open choice (design 0.1).</p>
 <div><h1>A. Menu open</h1><div class="frame"><div class="title">Kilo Code</div>
 <div class="body dim">…conversation…</div>
 <div class="composer"><div class="input">Type a message…</div>
@@ -14,6 +14,19 @@
 <div><h1>B. Tooltip (menu closed)</h1><div class="frame"><div class="body dim">…</div>
 <div class="tip">Approval mode: Approve for me (experimental)</div>
 <div class="composer"><div class="input">Type a message…</div><div class="bar"><span class="chip">Code ▾</span><span class="grow"></span><span class="iconbtn active">◔</span><span class="iconbtn">➤</span></div></div></div></div>
+<div><h1>D. Target model (plan PR 2): Sandbox in the selector</h1><div class="frame"><div class="title">Kilo Code</div>
+<div class="body dim">…conversation…</div>
+<div class="composer"><div class="input">Type a message…</div>
+<div class="bar"><span class="chip">Code ▾</span><span class="chip">kilo-auto/frontier ▾</span><span class="grow"></span><span class="iconbtn active">◔</span><span class="iconbtn">➤</span></div></div>
+<div class="menu">
+<div class="item sel"><span class="icon">◔</span>Approve for me (experimental)<span class="grow"></span>✓</div>
+<div class="sub">Sandbox on. Safe calls run on their own. Risky ones ask you.</div>
+<div class="item"><span class="icon">▣</span>Sandboxed<span class="grow"></span></div>
+<div class="sub">Sandbox on. Kilo asks before each permission request.</div>
+<div class="item"><span class="icon">⛨</span>Auto-approve<span class="grow"></span></div>
+<div class="sub">Sandbox off. Everything runs without asking.</div>
+</div>
+<div class="tip" style="margin-top:0">Windows: Sandboxed shows as “Ask every time”; Approve for me runs with reduced protection (no sandbox)</div></div></div>
 <div><h1>C. Flag off (today)</h1><div class="frame"><div class="body dim">…</div>
 <div class="composer"><div class="input">Type a message…</div><div class="bar"><span class="chip">Code ▾</span><span class="grow"></span><span class="iconbtn">⛨</span><span class="iconbtn">➤</span></div></div></div></div>
 </body></html>

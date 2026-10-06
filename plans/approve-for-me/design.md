@@ -3,6 +3,51 @@
 Line numbers refer to `main` at `9d0f7a1dd8`. They drift. Re-check them when you implement.
 Paths starting with `P/` mean `packages/opencode/src/`.
 
+## 0. Mode model
+
+Decided on 2026-10-06 after the team discussion: Sandbox joins the same selector. The model is similar to Codex:
+one selector with three choices, and each choice fixes both the approval policy and the sandbox state.
+
+| Mode | Sandbox | Approval | Sandbox escalation (a command that needs more than the sandbox allows) |
+|---|---|---|---|
+| Approve for me | on | Reviewer decides (tiers 0 to 3). Flagged calls ask the user | Reviewer decides (section 2.5) |
+| Sandboxed | on | Ask as today, with the sandbox as the first layer | Ask the user |
+| Auto-approve | off | Approve everything | Not applicable (no sandbox) |
+
+Points that follow from this:
+
+- The sandbox is the first layer of defense. The reviewer is the second. The permission prompt is the last.
+- Sandbox is **enabled by default** in the end state. That default is a late step in the roadmap and is gated by data (section 2.5.4).
+- The mode is stored **per session**, with a default from the user's global config. This keeps sessions portable between local and cloud
+  (cloud sessions are expected to do what local sessions do). Cloud wiring waits until cloud is stable.
+- The current Sandbox button in the composer goes away under the flag. The mode drives the sandbox state for the session.
+  The sandbox settings (network, allowed hosts, writable paths) stay, and move into the same settings page as permissions.
+- An explicit mode choice wins over `sandbox.enabled` in config for that session. Project config still cannot loosen the sandbox.
+
+### 0.1 Platforms without a sandbox, and "Ask every time" (decided)
+
+Decision (2026-10-06): option C for Approve for me, and option 3 for plain ask. The options stay below so the choice can be revisited.
+
+Sandboxing works on macOS and Linux only. It is off by default today, and a sandbox that cannot start makes the affected tool refuse to run.
+So the three-mode model needs a rule for Windows and for a sandbox that fails to start. Options:
+
+| Option | Behavior without a sandbox | Pros | Cons |
+|---|---|---|---|
+| A. Approve for me still works | Same pipeline, same thresholds | Available to every user. One behavior everywhere | Weaker protection on Windows, with no visible difference. Build and test commands run unconfined |
+| B. Approve for me requires a sandbox | The option is disabled with a reason. Windows users get Sandboxed (as plain ask) and Auto-approve | Safety promise is the same everywhere | Windows users cannot use the feature |
+| C. Reduced profile (recommended) | Approve for me works with a stricter profile: tier 1 and clearly read-only tier 2 allows only. Build, test, install and every reviewable call ask. The model reviewer is off. The UI says "reduced protection: no sandbox" | Usable everywhere. Honest about the weaker guarantee. Cheap to build on tiers already planned | Two behaviors to document and test. Fewer prompts saved on Windows |
+
+For plain **Ask every time** (no sandbox, ask for everything), which is today's default:
+
+| Option | Pros | Cons |
+|---|---|---|
+| 1. Remove it. Three modes only | Matches the team's three options. Simple selector | Users who want manual approval without containment lose it (for example, tools that break in the sandbox) |
+| 2. Keep it as a fourth item | Nothing is taken away | Four choices. Weaker story about Sandbox as the first layer |
+| 3. Three modes, with "Sandboxed" shown as "Ask every time" where no sandbox exists (recommended) | No dead option on Windows. Same permission behavior | One label changes by platform. A user who turns the sandbox off in config sees the same label |
+
+Chosen: C for Approve for me, and 3 for the plain-ask case. A user can still turn the sandbox off with `sandbox.enabled: false`;
+the selector then shows "Ask every time" in place of "Sandboxed".
+
 ## 1. Where the review hooks in
 
 ### 1.1 How a permission request flows today
@@ -56,7 +101,7 @@ const verdict = yield* ApproveForMe.review({ request, ruleset, hardRuleset, sess
 | `ask` | Call `permission.ask` unchanged, with `metadata.review = { kind: "ask", reason, ... }` so clients can label the prompt |
 | `block` | Fail the tool call with a `BlockedError` that carries a stable reason code (new error type next to `DeniedError`). The model gets a fixed message. The user sees a notice |
 
-Open point for a spike in PR 3: confirm that appending a once-scoped allow rule keeps all deny and hard-veto
+Open point for a spike in PR 4: confirm that appending a once-scoped allow rule keeps all deny and hard-veto
 precedence. If it does not, the fallback is a small marked hook in `Permission.ask` that accepts a
 `reviewed: { allow: true }` flag, valid only for this call. Either way `reply()` is never called by the reviewer, so
 `interactive` semantics stay intact.
@@ -79,7 +124,8 @@ Tiers run in order. The first tier that decides wins. Tiers 0 to 2 are free and 
 
 These stay on the normal path. The reviewer may add a label but never an allow:
 
-- `skillShell` and `sandboxEscalation` requests (`P/permission/index.ts:149,216,295`, `P/kilocode/permission/drain.ts:37-38`).
+- `skillShell` requests (`P/permission/index.ts:149,216,295`, `P/kilocode/permission/drain.ts:37-38`).
+- Sandbox escalation requests are **not** in this list. In Approve for me the reviewer may decide them under extra rules (section 2.5).
 - Anything the hard ruleset or an explicit deny already covers.
 - Config-protected paths and agent control files (`.kilo/`, rule files).
 - Secret reads that `ReadPermission.harden` turned into `ask` (`P/kilocode/permission/read.ts:11-18`).
@@ -129,6 +175,52 @@ spelling (quotes, escapes, case, `/bin/rm`, `PATH=...`, aliases, `cp -t`, `--out
 Details in section 5. It runs only for `reviewable` calls and returns `allow` or `keep_ask`.
 It cannot return `block`. It cannot allow anything tiers 0 to 2 decided.
 
+### 2.5 Sandbox escalation
+
+A sandboxed command that needs more than the sandbox gives (for example `git commit`, network access to a host, a write outside the allowed paths)
+raises a `sandbox_escalation` request (`P/tool/shell.ts:439-448`, metadata `sandboxEscalation: true`).
+Today it is effectively always denied: the server accepts only an `interactive` human reply (`P/permission/index.ts:295-304`),
+`kilo run` rejects it (`P/cli/cmd/run.ts:950-953`), and VS Code auto-approve skips it (`toggle-auto-approve.ts:78,93`).
+With a default-on sandbox that is not workable: ordinary Git and network use would hit it all the time.
+
+#### 2.5.1 Decision
+
+- **Sandboxed mode:** escalation becomes a normal ask. The user sees what the sandbox denied and chooses. (Own PR, useful without Approve for me.)
+- **Approve for me:** the reviewer may approve **any** escalation, after the deterministic rules. This was chosen on 2026-10-06 over the
+  stricter option (human only, or deterministic-only), with the guard rails in 2.5.3. The pros and cons are below so the choice can be revisited.
+- **Auto-approve:** no sandbox, so no escalation.
+
+#### 2.5.2 Pros and cons of letting the reviewer approve escalations
+
+| Pros | Cons |
+|---|---|
+| Escalations are the main friction of a default-on sandbox. If they always ask, the mode saves few prompts | An escalation is the point where the sandbox stops protecting the call. A wrong "allow" there has no second layer behind it |
+| The reviewer gets better facts than usual: it knows exactly what the sandbox denied (host, path, Git verb) | The reviewer is the weakest component. In the #14033 benchmark a live reviewer raised attack success from 2.6% to 5.3% |
+| One policy engine for all approvals. No separate logic for escalations | Today's human-only rule is a deliberate invariant (`index.ts:295`). Relaxing it affects every client, including headless and cloud |
+| Matches the team's wording: "escalate to the permission layer, on top of approve for me" | Injection incentive: an attacker wants the agent to request an escalation. Mitigated by facts-only input, but the target is attractive |
+| Rare events, so reviewer cost and latency stay small | Two correlated failures: if the reviewer is fooled, the sandbox no longer limits that call |
+| Gives real data (how often, which classes) for deciding the sandbox default | Some classes are hard to judge from facts (network to an allowed-looking host that serves attacker content) |
+
+#### 2.5.3 Guard rails (apply to all escalations)
+
+1. Deterministic rules run first and cannot be overridden: git hook writes, `core.hooksPath`, config and control-plane writes, system paths,
+   secret reads, destructive patterns. They give `ask` or `block`.
+2. Scope is the narrowest one: a once-scoped allow for the exact normalized request. Never an `always` rule, never a saved host or path.
+3. The reviewer sees the denied capability as a fact (`denied: { network: "registry.npmjs.org:443" }`), and never the model-written justification text.
+4. Shadow mode first: record what the reviewer would do next to the human decision before the first real auto-approved escalation.
+5. Per-session backstop: after N reviewer-approved escalations (start with 10), or on 3 consecutive blocks, fall back to asking the user.
+6. Telemetry per escalation: class, verdict, human override, and later outcome (command exit status).
+7. A visible setting "Let Approve for me approve sandbox escalations" (default on in Approve for me). Turning it off makes escalations ask.
+8. A review point in the evaluation gate (roadmap PR 9): if data shows false allows in escalation classes, narrow to deterministic-only.
+
+#### 2.5.4 Required changes in shared code
+
+- `forceAsk` (`P/permission/index.ts:216`) ignores allow rules for `sandboxEscalation`. The once-scoped allow in section 1.2 would be skipped.
+  A small marked change is needed so that an allow with origin `approve-for-me` counts for this key. The `interactive` check for human replies
+  (`:295-304`) stays as is, because the reviewer does not call `reply()`.
+- Clients that reject or skip escalation requests (`kilo run`, VS Code auto-approve) keep that behavior in Auto-approve and headless runs.
+- Decide default-on for the sandbox only after PR 9 shows how often escalations occur in real use.
+
 ## 3. Tool coverage (v1 policy)
 
 Permission key to policy. Source for keys and metadata: the tool survey of `P/tool/*` and `P/kilocode/tool/*`.
@@ -146,7 +238,7 @@ Permission key to policy. Source for keys and metadata: the tool survey of `P/to
 | `todowrite` | none | Tier 1 |
 | MCP tool keys | `["*"]`; `mcpInput` | Tier 3 with tool name, server and argument shape. No auto-allow for unknown write-like tools in v1 |
 | MCP resources | `mcp:<server>:*` | Tier 1 allow for read |
-| `sandbox_escalation` | `sandboxEscalation: true` | Tier 0 |
+| `sandbox_escalation` | `sandboxEscalation: true`; denied capability | Sandboxed: ask. Approve for me: reviewer under section 2.5 |
 | Kilo tools: `background-process`, `browser-open`, `generate-image`, `repo_clone`, `send-file`, `agent-manager`, `notebook-host`, `memory-save`, `board` | tool specific | Tier 0 (ask) in v1; add policies one by one with tests |
 
 Rule: **a new tool has no auto-allow until a PR adds a policy and a test for it.** Unknown keys fall to tier 0.
@@ -221,7 +313,7 @@ Rules for the call:
 
 - Resolve with `Provider.getSmallModel` (`P/provider/provider.ts:2058`). Order today: `small_model` config, plugin hook, `kilo-auto/small`
   for Kilo providers (`P/kilocode/provider/provider.ts:297`), then family fallbacks.
-  Add an optional `approve_for_me.model`. Do not reuse `small_model` silently: a title model may be a poor judge. Decide in PR 6.
+  Add an optional `approve_for_me.model`. Do not reuse `small_model` silently: a title model may be a poor judge. Decide in PR 7.
 - **Default must not be an OpenAI model.** Reject OpenAI providers and models for this role in code, not only in docs.
   The legacy docs suggested `gpt-oss-safeguard-20b`; that is not acceptable here.
 - The model, provider and base URL for this role come only from the **environment or global config**. A project config must not set them.
@@ -238,7 +330,7 @@ Side-model calls (title, branch name, enhance) record no cost today. For the rev
 
 - Record `latencyMs`, token usage and cost in `metadata.review` and in telemetry.
 - Show the cost in the transcript line as legacy did (`gatekeeper.ts:84-131`), but also when the provider returns no usage ("cost unknown").
-- Open question: add reviewer cost to the session total. Default for v1: show only.
+- Add the reviewer cost to the task's cost so that cost per task includes it (the team wants cost per task visible; see the usage work in #14463). Show it in the transcript line as well.
 
 ## 6. Mode state, flag and config
 
@@ -253,13 +345,14 @@ The `approve_for_me` config key was removed from that PR on purpose: nothing rea
 1. **A hidden flag** that works for CLI and all clients: an `experimental` config entry
    (`packages/core/src/v1/config/config.ts`, `experimental` block near `:318-375`) plus an env override in `P/effect/runtime-flags.ts`
    (`enabledByExperimental("KILO_EXPERIMENTAL_APPROVE_FOR_ME")`). The VS Code visibility setting stays as the per-user switch for the UI.
-2. **Mode state.** Proposed: a small in-memory service `ApproveForMe.State` seeded from global config
-   (`approve_for_me.mode`: `off | review | on`) and changed through an API
-   (`permission.approveForMe { mode }`), modelled on `permission.allowEverything`. In-memory avoids writing config files on every toggle.
-   Alternative: write the global config key from each client. Simpler, but it touches disk and races across windows.
-3. **Modes.** `off`; `review` (shadow: compute and record, never change the outcome); `on` (verdicts take effect).
+2. **Mode state, per session.** The selected mode (`approve-for-me | sandboxed | auto`) is stored with the session and defaults from global config
+   (`approve_for_me.default_mode`). Clients change it through an API modelled on `permission.allowEverything`. Per-session state keeps sessions portable
+   between local and cloud and lets two windows differ. The reviewer rollout stage (`off | review | on`) is a separate global setting.
+   Alternative: one global in-memory value. Simpler, but a session cannot carry its mode when it moves.
+3. **Reviewer rollout stage.** `off`; `review` (shadow: compute and record, never change the outcome); `on` (verdicts take effect).
+   Choosing the Approve for me mode with the stage at `review` behaves like Sandboxed.
 4. **Trust scope.** Only global config and the environment can set `mode`, `model` and the timeout. Project config is ignored for these keys.
-5. **Coupling with approve all.** The server rejects `on` while allow-everything is active and the reverse, to match the client rule from #14636.
+5. **Coupling.** The mode drives the sandbox state for the session (section 0). Approve for me and Auto-approve exclude each other, as in #14636.
 
 ### 6.3 Required chores for any new config key
 
@@ -274,12 +367,12 @@ Mockups: [`mockups/`](./mockups).
 
 | Surface | Change | Data |
 |---|---|---|
-| VS Code composer | Mode menu: Ask every time, Approve for me, Approve all. Done in #14636 | VS Code settings, later server mode |
+| VS Code composer | Mode menu. #14636 ships Ask every time, Approve for me, Approve all. Later it becomes Approve for me, Sandboxed, Auto-approve and the Sandbox button is removed | VS Code settings now; session mode later |
 | VS Code permission dock | Badge and one-line reason on prompts for `ask` verdicts. Remove noise for `allow` | `request.args.review` (the `PermissionDock.tsx` helpers read `props.request.args`) |
 | VS Code transcript | One quiet line per auto-approved call: tool, rule, model, cost. Denials and blocks stay prominent | tool part `metadata.review` |
 | TUI | Same label in the permission prompt (`packages/tui/src/routes/session/permission.tsx`, per-permission renderers) and footer (`P/cli/cmd/run/footer.permission.tsx`). New `/approve-for-me` command next to `/auto-approve` | `permission.asked` metadata |
 | JetBrains | The label arrives as strings in `PermissionMeta.raw` (`.../session/model/Permission.kt`). Render it in `PermissionView.kt` | same |
-| Settings | Reviewer model, timeout, tool coverage table, "what is reviewed" text. No free-text prompts | config |
+| Settings | One page for permissions and sandbox: mode default, sandbox network, hosts and paths, reviewer model, timeout, escalation toggle, tool coverage table, "what is reviewed" text. No free-text prompts | config |
 
 UX rules:
 
@@ -296,7 +389,7 @@ Invariants (each gets a test):
 1. Fail closed. Error, timeout, abort, parse failure, missing model or missing mode state yields the normal prompt.
 2. Monotonic. The reviewer never overrides a deny, a hard veto, tier 0, or a tier 2 `ask` or `block`.
 3. The reviewer cannot create persistent permission. It never produces `always` rules and never writes config.
-4. `reply()` is never called by the reviewer. Human-only requests stay human-only.
+4. `reply()` is never called by the reviewer. Human-only requests (`skillShell`) stay human-only. Sandbox escalation is the one request the reviewer may approve, only through the once-scoped allow in section 2.5.
 5. The reviewer input has no chat history, assistant prose, tool output or file content.
 6. Reviewer model config cannot come from the project.
 7. Verdict applies to the exact normalized request that was reviewed (re-check before applying).
@@ -311,10 +404,11 @@ Threats and answers:
 | Persistence (`.git/hooks`, CI, `.husky`) | Path classes. Hooks block, others ask |
 | Symlink escape | `realpath` with a hop limit. Unresolved means ask. Out of scope: TOCTOU between check and run (the sandbox covers part of it) |
 | "Allowed" test or build commands run project code | Accept in v1 only for known runners; document it. The sandbox is the control for this risk |
+| Agent requests an escalation to get out of the sandbox | Section 2.5: deterministic rules first, narrowest scope, facts-only input, caps, shadow mode |
 | Repeated retries of a blocked call | Backstop: stop auto-deciding after 3 consecutive blocks or 5 in the last 20 calls, and tell the user (numbers from #13893 `continuation.ts:36`) |
 | Reviewer cost abuse or latency | Tiers first, cache, deadline, per-session call cap |
 | Data leaving the machine | Only structured facts leave. In-workspace relative paths only. Document it. Respect `privacy_mode` if set |
-| A model that is too weak | Evaluation gate before `on` (roadmap PR 8). Ship `review` mode first |
+| A model that is too weak | Evaluation gate before `on` (roadmap PR 9). Ship `review` mode first |
 
 Honest limit: this lowers prompts and flags risk. It is not a sandbox. The docs must say so, and must recommend Sandbox
 for untrusted repositories.
@@ -331,7 +425,7 @@ Evaluation:
   (taxonomy from #13893 `corpus.ts:86-161`).
 - Metrics: false-allow rate on attacks (target 0 on critical classes), prompt reduction on benign work, p95 latency, cost per 100 calls.
 - `review` mode in dogfood compares verdicts with human decisions. Disagreements feed the corpus.
-- Graduation gate for `on`: thresholds agreed in PR 8, not before.
+- Graduation gate for `on`: thresholds agreed in PR 9, not before.
 
 ## 10. Tests
 

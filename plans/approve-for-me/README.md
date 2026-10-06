@@ -25,17 +25,22 @@ Kilo has two approval behaviors for tool calls today:
 - **Ask every time.** The default. Every call that no rule allows waits for the user.
 - **Approve all.** The composer shield (VS Code), `/auto-approve` (TUI), `kilo run --auto`.
   It approves everything. There is no judgment.
+- **Sandbox.** An operating-system boundary around tools (macOS and Linux). Off by default today. Separate from the two above.
 
-**Approve for Me** is a third mode between the two. A reviewer looks at each call that
+**Approve for Me** sits between them, on top of the sandbox. A reviewer looks at each call that
 would need approval. Safe calls run without a prompt. Risky or unclear calls go to the
 user, with a label that says why. A few classes of call are never auto-approved.
+The end state is one selector with three modes (Approve for me, Sandboxed, Auto-approve), like Codex.
 
 Decisions already made (from the team discussion):
 
 | Topic | Decision |
 |---|---|
 | Relation to Approve all | Mutually exclusive. Turning one on turns the other off. Done in #14636. |
-| Relation to Sandbox | Independent for now. Sandbox may join the same selector later. |
+| Relation to Sandbox | Joins the same selector (decided 2026-10-06). Three modes: Approve for me (sandbox on), Sandboxed (sandbox on, ask), Auto-approve (sandbox off). Sandbox is the first layer of defense and is enabled by default in the end state, gated by data. |
+| Sandbox escalation | Becomes a normal ask in Sandboxed mode. In Approve for me the reviewer may approve any escalation, with guard rails. Pros and cons in `design.md` 2.5. |
+| Mode state | Per session, default from global config, so sessions can move between local and cloud. Cloud wiring waits for cloud to be stable. |
+| Settings | Permissions and sandbox in one settings page. |
 | Reviewer model | Not an OpenAI model. Cheap and fast. Configurable. |
 | Delivery | Small PRs behind one hidden flag. Plan first, code after. |
 | Source of design | Port the idea of the legacy feature. Do not port it line by line (see below). |
@@ -70,10 +75,10 @@ KiloSessionPrompt.askPermission            (Kilo-owned file)
    |  mode off? -> normal Permission.ask
    v
 ApproveForMe.review(request, context)      (new, packages/opencode/src/kilocode/approve-for-me/)
-   |  tier 0  never auto: skill shell, sandbox escalation, protected config, hard deny
+   |  tier 0  never auto: skill shell, protected config, hard deny
    |  tier 1  deterministic allow: read-only tools, in-workspace edits
    |  tier 2  deterministic classifier: shell facts, path classes, git verbs
-   |  tier 3  LLM reviewer: only for what tier 2 marks "reviewable"
+   |  tier 3  LLM reviewer: only for what tier 2 marks "reviewable"; also sandbox escalations (design 2.5)
    v
 verdict: allow | ask(reason) | block(reason)
    |
@@ -99,30 +104,31 @@ Full list with acceptance criteria is in [`roadmap.md`](./roadmap.md).
 |---|---|---|
 | 0 | This plan | None |
 | 1 | Entry point + exclusion + mode menu (#14636) | None (hidden UI) |
-| 2 | Server mode, flag, config and trust scope | None |
-| 3 | Review skeleton in shadow mode (tier 0 and 1) | None (logs only) |
-| 4 | Deterministic bash classifier (tier 2) | None (logs only) |
-| 5 | Verdict shown in prompts and transcript | Labels only |
-| 6 | LLM reviewer (tier 3) in shadow mode | None (logs only) |
-| 7 | Active mode: allow outcomes auto-approve; backstops | **Yes, behind the flag** |
-| 8 | Evaluation harness and thresholds | None |
-| 9 | Settings UI, legacy migration, docs | Behind the flag |
-| 10 | Graduation, sandbox unification | Decision needed |
+| 2 | Mode model: per-session state, flag, trust scope; selector becomes Approve for me / Sandboxed / Auto-approve and drives the sandbox | Behind the flag |
+| 3 | Sandbox escalation becomes an ask (Sandboxed mode) | Behind the sandbox flag |
+| 4 | Review skeleton in shadow mode (tier 0 and 1) | None (logs only) |
+| 5 | Deterministic bash classifier (tier 2) | None (logs only) |
+| 6 | Verdict shown in prompts and transcript | Labels only |
+| 7 | LLM reviewer (tier 3) in shadow mode | None (logs only) |
+| 8 | Active mode: allow outcomes auto-approve, escalations included; backstops | **Yes, behind the flag** |
+| 9 | Evaluation harness, escalation telemetry, thresholds | None |
+| 10 | Unified settings page, legacy migration, docs | Behind the flag |
+| 11 | Graduation: remove the flag, sandbox default-on if data allows | Decision needed |
 
 Shadow mode first is deliberate. We collect real verdicts next to real human decisions
 before any verdict changes what the user sees.
 
 ## 5. Open questions for the team
 
-1. **Does an LLM "dangerous" verdict hard-block, or show a prompt?** We propose a prompt.
-   Only deterministic rules block. The issue text says "flag ... and block"; we need a decision.
-2. **How does a client tell the server the mode?** Config key, a small in-memory API, or both
-   (`design.md` section 6). We propose an in-memory server state seeded from global config.
-3. **Default reviewer model.** Which non-OpenAI small model is the default, and does the free tier have one?
-4. **Cost display.** Side-model calls are not billed into session cost today. Do we add them?
-5. **Overlap with #13893 / #14033.** The author has a large deterministic layer and offered to split it.
-   We should agree on who owns which PRs before PR 4 (see `prior-art.md`).
-6. **Legacy migration.** Do we import `yoloGatekeeperApiConfigId` automatically? (#10252 says never turn guarded YOLO into allow-all.)
+1. **Does an LLM "dangerous" verdict hard-block, or show a prompt?** We propose a prompt. Only deterministic rules block.
+2. **Default reviewer model.** Which non-OpenAI small model is the default, and does the free tier have one?
+3. **Overlap with #13893 / #14033.** The author has a large deterministic layer and offered to split it.
+   Agree owners before PR 5 (see `prior-art.md`).
+4. **Legacy migration.** Do we import `yoloGatekeeperApiConfigId` automatically? (#10252 says never turn guarded YOLO into allow-all.)
+5. **Sandbox default-on.** What escalation rate is acceptable before we turn it on by default? Set in PR 9.
+
+Decided: Sandbox joins the selector; without a sandbox, Approve for me runs with a reduced profile and "Sandboxed" shows as "Ask every time" (`design.md` 0.1); the reviewer may approve any sandbox escalation (with guard rails); mode is per session;
+reviewer cost counts toward task cost.
 
 ## 6. Risks
 
@@ -134,6 +140,9 @@ before any verdict changes what the user sees.
 | Upstream merge conflicts | One small marked hook in shared code. Everything else in `kilocode/` paths. |
 | Duplicate community work stalls again (#10248, #10267 and #11619 were closed as stale) | One owner, a public plan, small PRs, and an early reply on #14033. |
 | Client-side auto-approve in VS Code replies before the server can judge | Modes are exclusive. In Approve for Me the extension does not auto-reply. |
+| Default-on sandbox causes constant escalations and a poor first run | Escalation becomes an ask first (PR 3). Default-on only after PR 9 data. Good defaults for common hosts and paths |
+| Reviewer approves a harmful sandbox escalation | Deterministic rules first, narrowest scope, caps, shadow mode, visible off switch (`design.md` 2.5) |
+| Mode and sandbox state diverge between clients or cloud | Mode lives on the session. Sandbox state is derived from it |
 
 ## 7. Planned UI
 
@@ -141,11 +150,11 @@ Source HTML and PNG files are in [`mockups/`](./mockups). They show intent, not 
 
 | Mockup | Shows |
 |---|---|
-| ![Composer mode menu](./mockups/01-composer-mode-menu.png) | Composer mode menu and tooltip (PR 1) |
-| ![Permission prompts](./mockups/02-permission-prompt.png) | Prompts for unclear, risky, blocked and "not reviewed" calls (PR 5) |
-| ![Transcript](./mockups/03-transcript.png) | Quiet auto-approved lines, a block, and the backstop notice (PR 5, 7) |
-| ![Settings](./mockups/04-settings.png) | Settings page (PR 9) |
-| ![TUI](./mockups/05-tui.png) | TUI prompt label and status lines (PR 5) |
+| ![Composer mode menu](./mockups/01-composer-mode-menu.png) | Composer mode menu and tooltip. Three modes with Sandbox (PR 2); #14636 ships the first version (PR 1) |
+| ![Permission prompts](./mockups/02-permission-prompt.png) | Prompts for unclear, risky, blocked and "not reviewed" calls, and a sandbox escalation (PRs 3 and 6) |
+| ![Transcript](./mockups/03-transcript.png) | Quiet auto-approved lines, a block, and the backstop notice (PRs 6 and 8) |
+| ![Settings](./mockups/04-settings.png) | Unified permissions and sandbox settings (PR 10) |
+| ![TUI](./mockups/05-tui.png) | TUI prompt label and status lines (PR 6) |
 
 ## 8. How to use this plan
 
