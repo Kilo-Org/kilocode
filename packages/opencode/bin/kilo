@@ -213,8 +213,7 @@ if (!resolved) {
   if (platform === "windows" && arch === "arm64") {
     console.error(
       "The Kilo CLI native binary for Windows ARM64 could not be found.\n" +
-      "If the native package is unavailable, you can try manually installing the x64 version to run under Windows 11 emulation:\n" +
-      "  npm install -g @kilocode/cli-windows-x64\n" +
+      "If the native package is unavailable, you can try downloading the pre-built x64 binary from the GitHub Releases page to run under Windows 11 emulation.\n" +
       "Alternatively, use WSL2 with the Linux ARM64 build."
     )
   } else {
