@@ -90,10 +90,13 @@ export const dict = {
     "Konuşma geri alındı. Anlık görüntüler devre dışı olduğu için dosya değişiklikleri geri yüklenmedi.",
   "revert.banner.workspace.unavailable":
     "Konuşma geri alındı. Dosya kontrol noktası olmadığından çalışma alanı değişiklikleri geri yüklenmedi.",
+  "revert.banner.workspace.notAGitRepo":
+    "Konuşma geri alındı. Dosya kontrol noktaları bir Git deposu gerektirir, bu nedenle çalışma alanı değişiklikleri geri yüklenmedi.",
   "revert.banner.workspace.legacy":
     "Konuşma geri alındı. Bu önceki geri alma için çalışma alanı geri yükleme durumu kullanılamıyor.",
   "revert.banner.workspace.enableSnapshots": "Anlık Görüntüleri Etkinleştir",
   "revert.disabled.agentBusy": "Ajanın bitmesini bekleyin",
+  "revert.error.body": "Depo kullanımda olabilir. Tekrar deneyin veya ayrıntılar için Kilo günlüklerine bakın.",
   "command.session.compact": "Oturumu sıkıştır",
   "command.session.export": "Oturum dökümünü dışa aktar",
 
@@ -209,13 +212,27 @@ export const dict = {
   "prompt.worktrees.title": "Worktree'ler",
   "prompt.worktrees.search": "Worktree'leri ara",
   "prompt.thinking.tooltip": "Akıl yürütme eforu",
+  "prompt.shortcutHint.addSelection": "seçimi eklemek için",
+  "prompt.shortcutHint.waiting": "bekleyen oturumu yanıtlamak için",
+  "prompt.shortcutHint.type": "yazmak için",
+  "prompt.shortcutHint.sessions": "oturum değiştirmek için",
+  "prompt.shortcutHint.stop": "durdurmak için",
+  "prompt.shortcutHint.changes": "değişiklikleri incelemek için",
+  "prompt.shortcutHint.pr": "PR'ı açmak için",
+  "prompt.shortcutHint.mode": "Sonraki mod",
   "prompt.action.send": "Gönder",
   "prompt.action.continue": "Devam et",
   "prompt.action.send.blocked": "Bekleyen soruyu önce yanıtlayın veya kapatın",
   "prompt.action.send.recording": "Yazıya dök ve gönder",
   "prompt.action.stop": "Durdur",
+  "prompt.action.stop.background": "Ana ajanı durdur. Arka plan ajanları çalışmaya devam eder.",
+  "prompt.agents.show": "Arka plan ajanlarını göster",
   "prompt.action.enhance": "Komutu geliştir",
   "prompt.paste.expand": "Yapıştırılan metni genişletmek için tıklayın",
+  "prompt.issues.title": "Oturum sorunları",
+  "prompt.mcp.provider": "{{name}} MCP",
+  "prompt.mcp.openSettings": "Ayarlarda Aç",
+  "prompt.mcp.signIn.busy": "Oturum açılıyor…",
   "prompt.action.indexing": "İndeksleme ayarları",
   "prompt.action.autoApprove.enable": "Otomatik onayı etkinleştir",
   "prompt.action.autoApprove.disable": "Otomatik onayı devre dışı bırak",
@@ -323,7 +340,7 @@ export const dict = {
   "ui.approval.source.agent.default": "aracı tarafından",
   "ui.approval.source.global": "genel yapılandırmanız tarafından",
   "ui.approval.source.project": "proje yapılandırması tarafından",
-  "ui.approval.source.yolo": "otomatik onay (YOLO) modu tarafından",
+  "ui.approval.source.yolo": "otomatik onay modu tarafından",
   "ui.approval.source.session": "bir oturum otomatik onay kuralı tarafından",
   "ui.approval.source.default": "varsayılan olarak",
   "ui.approval.outsideWorkspace": "(çalışma alanınızın dışında: {{file}})",
@@ -469,6 +486,7 @@ export const dict = {
   "provider.custom.models.toggleImages": "Tüm modeller için görüntüyü aç/kapat",
   "provider.custom.models.remove": "Modeli kaldır",
   "provider.custom.models.add": "Model ekle",
+  "provider.custom.models.fetch.button": "Modelleri getir",
   "provider.custom.models.fetch.authError":
     "Kimlik doğrulama başarısız oldu. Yukarıdaki API anahtarını kontrol edin ve tekrar deneyin.",
   "provider.custom.models.fetch.empty": "Bu sunucuda model bulunamadı.",
@@ -499,6 +517,9 @@ export const dict = {
   "provider.custom.error.duplicate": "Tekrar",
   "settings.openLocalConfig": "Yerel Config",
   "settings.openGlobalConfig": "Global Config",
+  "settings.search.placeholder": "Ayarlarda ara",
+  "settings.search.noResults": "Ayar bulunamadı",
+  "settings.search.clear": "Aramayı temizle",
   "settings.config.scope.local": "Yerel",
   "settings.config.scope.global": "Küresel",
   "settings.config.status.loaded": "yüklendi",
@@ -558,6 +579,7 @@ export const dict = {
   "session.tabs.switcher.pending": "Yeni",
   "session.tabs.switcher.busy": "Çalışıyor",
   "session.tabs.switcher.scheduled": "Zamanlandı",
+  "session.tabs.pinHint": "Sabitlemek veya kaldırmak için Shift+tıkla",
   "session.tab.local": "Local",
   "session.tab.cloud": "Cloud",
   "session.tab.worktree": "Çalışma ağacı",
@@ -583,14 +605,16 @@ export const dict = {
   "workStyle.choice.human-in-the-loop.permissions":
     "Dosyaları düzenlemeden veya komutları çalıştırmadan önce izin ister.",
   "workStyle.choice.human-in-the-loop.bash": "Her terminal komutunu çalıştırmadan önce izin ister.",
-  "workStyle.choice.human-in-the-loop.visibility": "Akıl yürütme dahil tüm konuşma ayrıntılarını gösterir.",
+  "workStyle.choice.human-in-the-loop.visibility":
+    "İnceleme için akıl yürütmeyi, komutları ve düzenlemeleri genişletir.",
   "workStyle.choice.autonomous.eyebrow": "Daha az kesinti",
   "workStyle.choice.autonomous.title": "Yüksek özerklik",
   "workStyle.choice.autonomous.description": "Daha az kesinti, daha sade bir arayüz.",
   "workStyle.choice.autonomous.permissions":
     "Çalışma alanındaki dosyaları izin istemeden düzenler ve komutları çalıştırır.",
   "workStyle.choice.autonomous.bash": "Çalışma alanında terminal komutlarını onay almadan çalıştırabilir.",
-  "workStyle.choice.autonomous.visibility": "Ayrıntılar siz genişletene kadar daraltılmış olarak kalır.",
+  "workStyle.choice.autonomous.visibility":
+    "Araç ayrıntılarını daraltır, akıl yürütmeyi kompakt bir önizleme olarak gösterir.",
   "session.cloud.import.title": "Buluttan içe aktar",
   "session.cloud.import.placeholder": "Oturum kimliği, URL veya kilo import komutu",
   "session.cloud.import.button": "İçe Aktar",
@@ -776,10 +800,12 @@ export const dict = {
   "ui.sessionTurn.status.consideringNextSteps": "Sonraki adımları değerlendiriyor...",
 
   "dialog.model.noProviders": "Sağlayıcı yok",
+  "dialog.model.unavailable": "Kilo modelleri kullanılamıyor",
 
   "prompt.placeholder.connecting": "Sunucuya bağlanılıyor...",
   "prompt.placeholder.default":
     "Bir mesaj yazın, dosyaları belirtmek için @ kullanın... (Göndermek için Enter, yeni satır için Shift+Enter)",
+  "prompt.placeholder.hint": "Bir mesaj yazın, dosyaları belirtmek için @ kullanın... ({{key}} {{action}})",
   "prompt.placeholder.error": "Bağlantı başarısız. Çıktı panelini kontrol edin veya uzantıyı yeniden başlatın.",
 
   "context.usage.sessionCost": "Oturum maliyeti",
@@ -838,7 +864,8 @@ export const dict = {
   "settings.browser.description":
     "Playwright ile çalışan yerleşik tarayıcı otomasyonunu yapılandırın. Kilo, oturumlarınızda web sayfalarında gezinebilir, bunlarla etkileşime girebilir ve ekran görüntüsü alabilir.",
   "settings.browser.enable.title": "Tarayıcı Otomasyonunu Etkinleştir",
-  "settings.browser.enable.description": "Playwright MCP sunucusunu CLI arka ucuyla kaydet.",
+  "settings.browser.enable.description":
+    "Yerel uygulamalar ve herkese açık HTTPS sayfaları için oturuma özel Agent Manager tarayıcısını etkinleştir.",
   "settings.browser.systemChrome.title": "Sistem Chrome'unu Kullan",
   "settings.browser.systemChrome.description": "Ayrı bir Chromium örneği yerine yüklü Chrome tarayıcınızı kullanın.",
   "settings.browser.headless.title": "Başsız Mod",
@@ -933,15 +960,12 @@ export const dict = {
   "settings.sandboxing.writablePaths.title": "Ek Yazılabilir Yollar",
   "settings.sandboxing.writablePaths.description":
     "Sandığın yazılmasına izin veren ek dosya sistemi yolları (ör. /tmp, /var/log). Sandık etkinken varsayılan yazılabilir yollarla birleştirilir.",
-  "settings.experimental.multiProject.title": "Çoklu Proje Agent Manager",
+  "settings.experimental.conversationPromptHistory.title": "Sohbet başına istem geçmişi",
+  "settings.experimental.conversationPromptHistory.description":
+    "İstem geçmişini (ArrowUp/ArrowDown) tüm sohbetlerde tek bir geçmiş paylaşmak yerine her sohbet için ayrı tutun.",
   "settings.experimental.claudeMigration.title": "Claude Code Geçişi",
   "settings.experimental.claudeMigration.description":
     "Desteklenen genel CLAUDE.md talimatlarını, basit becerileri ve devre dışı MCP tanımlarını bir kez içe aktarın. Orijinal Claude dosyaları değiştirilmez; etkinleştirdikten sonra arka ucu yeniden başlatın.",
-  "settings.experimental.multiProject.description":
-    "Agent Manager'da birden fazla depo genelinde oturum ve worktree yönetimini etkinleştirin. Mevcut çalışma alanı deposu her zaman varsayılan projedir.",
-  "settings.experimental.taskModelSelection.title": "Task Alt Aracı Modeli Seçimi",
-  "settings.experimental.taskModelSelection.description":
-    "Task alt aracıları için model, sağlayıcı ve akıl yürütme çabasını açıkça seçmeye izin verin.",
   "settings.experimental.mcpTimeout.title": "MCP Zaman Aşımı (ms)",
   "settings.experimental.mcpTimeout.description": "MCP sunucu istekleri için milisaniye cinsinden zaman aşımı",
   "settings.experimental.remote.title": "Remote Kontrolü",
@@ -1004,6 +1028,8 @@ export const dict = {
   "settings.agentBehaviour.removeSkill.title": "Beceriyi kaldır",
   "settings.agentBehaviour.removeSkill.confirm":
     '"{{name}}" becerisi kaldırılsın mı? Bu, beceri dosyalarını diskten silecek.',
+  "settings.agentBehaviour.removeSkill.bundleConfirm":
+    '"{{name}}" becerisi kaldırılsın mı? Bu, aynı Marketplace yüklemesinden {{mcp}} MCP sunucusunu ve her eşlik eden beceriyi de kaldıracaktır.',
   "settings.agentBehaviour.removeSkill.button": "Kaldır",
   "settings.agentBehaviour.rules.description":
     "Kurallar, ajanın davranışını yönlendiren talimat dosyalarıdır. Her konuşma için sistem komutuna dahil edilirler. Ek kurallar eklemek için aşağıya dosya yolları ekleyin.",
@@ -1020,15 +1046,40 @@ export const dict = {
   "settings.agentBehaviour.removeMcp.title": "MCP sunucusunu kaldır",
   "settings.agentBehaviour.removeMcp.confirm":
     '"{{name}}" MCP sunucusu kaldırılsın mı? Bu, yapılandırmanızdan kaldırılacak.',
+  "settings.agentBehaviour.removeMcp.bundleConfirm":
+    '"{{name}}" MCP sunucusu ve eşlik eden becerileri kaldırılsın mı? Bu, bu Marketplace yüklemesine ait sunucuyu ve her beceriyi kaldırır.',
   "settings.agentBehaviour.removeMcp.button": "Kaldır",
   "settings.agentBehaviour.mcpDetail.command": "Komut",
   "settings.agentBehaviour.mcpDetail.args": "Argümanlar",
   "settings.agentBehaviour.mcpDetail.env": "Ortam",
+  "settings.agentBehaviour.mcpSignIn.cancel": "Oturum açmayı iptal et",
+  "settings.agentBehaviour.mcpRemoving": "Kaldırılıyor…",
+  "settings.agentBehaviour.mcpResetAuth": "Oturumu sıfırla",
+  "settings.agentBehaviour.mcpResetAuth.title": "MCP oturumunu sıfırla",
+  "settings.agentBehaviour.mcpResetAuth.confirm":
+    '"{{name}}" için kaydedilmiş oturum temizlensin mi? Yeniden oturum açmanız gerekecek.',
   "settings.agentBehaviour.editMcp": "MCP Sunucusunu Düzenle",
   "settings.agentBehaviour.editMcp.transportLocal": "Yerel sunucu (stdio taşıma)",
   "settings.agentBehaviour.editMcp.transportRemote": "Uzak sunucu (SSE/HTTP taşıma)",
   "settings.agentBehaviour.editMcp.env": "Ortam Değişkenleri",
   "settings.agentBehaviour.editMcp.env.help": "MCP sunucu sürecine aktarılan değişkenler.",
+  "settings.agentBehaviour.editMcp.oauth": "OAuth",
+  "settings.agentBehaviour.editMcp.oauth.help":
+    "Sunucu önceden kayıtlı bir istemci gerektirmedikçe Otomatik olarak bırakın. İstemci sırrı Kilo yapılandırma dosyanızda saklanır.",
+  "settings.agentBehaviour.editMcp.oauth.mode": "Mod",
+  "settings.agentBehaviour.editMcp.oauth.mode.automatic": "Otomatik",
+  "settings.agentBehaviour.editMcp.oauth.mode.disabled": "Devre dışı",
+  "settings.agentBehaviour.editMcp.oauth.mode.custom": "Özel istemci",
+  "settings.agentBehaviour.editMcp.oauth.clientId": "İstemci kimliği",
+  "settings.agentBehaviour.editMcp.oauth.clientSecret": "İstemci sırrı",
+  "settings.agentBehaviour.editMcp.oauth.scope": "Kapsam",
+  "settings.agentBehaviour.editMcp.oauth.callbackPort": "Geri çağırma bağlantı noktası",
+  "settings.agentBehaviour.editMcp.oauth.redirectUri": "Yönlendirme URI'si",
+  "settings.agentBehaviour.editMcp.oauth.redirectUri.help":
+    "Varsayılan değer http://127.0.0.1:19876/mcp/oauth/callback'tir ve geri çağırma bağlantı noktasını geçersiz kılar.",
+  "settings.agentBehaviour.editMcp.oauth.port.invalid": "1 ile 65535 arasında bir bağlantı noktası girin.",
+  "settings.agentBehaviour.editMcp.oauth.secret.invalid": "İstemci sırrı bir istemci kimliği gerektirir.",
+  "settings.agentBehaviour.editMcp.oauth.redirectUri.invalid": "Geçerli bir yönlendirme URI'si girin.",
   "settings.agentBehaviour.addMcp.command": "Komut",
   "settings.agentBehaviour.addMcp.command.placeholder": "e.g. npx",
   "settings.agentBehaviour.addMcp.args": "Argümanlar",
@@ -1090,6 +1141,30 @@ export const dict = {
   "settings.checkpoints.enable.title": "Anlık Görüntüleri Etkinleştir",
   "settings.checkpoints.enable.description":
     "Dosya düzenlemelerinden önce kontrol noktaları oluştur, böylece önceki durumları geri yükleyebilirsiniz",
+  "settings.autoCleanup.enable.title": "Otomatik oturum temizliğini etkinleştir",
+  "settings.autoCleanup.enable.description":
+    "Belirli bir gün sayısından sonra eski oturum geçmişini otomatik olarak siler, bu bilgisayardaki tüm projelerde ve tüm Kilo istemcilerinde, yalnızca bu pencerede değil. Şu anda çalışan oturumlar ve yeni çatallaması olan oturumlar asla silinmez. Silme kalıcıdır.",
+  "settings.autoCleanup.defaultRetention.title": "Oturumları saklama süresi (gün)",
+  "settings.autoCleanup.defaultRetention.description":
+    "Otomatik temizlik, oturum geçmişini silmeden önce ne kadar süreyle saklanır.",
+  "settings.autoCleanup.lastRun.title": "Son temizlik",
+  "settings.autoCleanup.lastRun.never": "Hiç çalıştırılmadı",
+  "settings.autoCleanup.result":
+    "{{date}}: {{scanned}} oturumdan {{deleted}} tanesi silindi ({{active}} etkin atlandı, {{failed}} başarısız) {{seconds}} sn içinde",
+  "settings.autoCleanup.starting": "Oturum temizliği başlatılıyor...",
+  "settings.autoCleanup.error.status": "Oturum temizliği durumu geçici olarak kullanılamıyor. Yeniden deneniyor...",
+  "settings.autoCleanup.error.timeout": "Temizlik durumu bekleniyor. Arka uç beklenenden uzun sürüyor.",
+  "settings.autoCleanup.error.run":
+    "Oturum temizliğinin tamamlandığı doğrulanamadı. Yeniden denemeden önce son temizlik sonucunu kontrol edin.",
+  "settings.autoCleanup.progress.scanning": "Oturumlar taranıyor: {{processed}}/{{total}} işlendi",
+  "settings.autoCleanup.progress.deleting":
+    "Oturumlar siliniyor: {{processed}}/{{total}} işlendi ({{deleted}} silindi, {{failed}} başarısız)",
+  "settings.autoCleanup.runNow": "Temizliği şimdi çalıştır",
+  "settings.autoCleanup.runNow.confirm":
+    "Süresi dolmuş oturumlar bu bilgisayardaki tüm projelerde ve tüm Kilo istemcilerinde kalıcı olarak silinsin mi?",
+  "settings.autoCleanup.stop": "Temizliği durdur",
+  "settings.autoCleanup.progress.cancelling": "Oturum temizliği durduruluyor...",
+  "settings.autoCleanup.lastRun.cancelled": "kesintiye uğradı",
 
   "settings.context.autoCompaction.title": "Otomatik Sıkıştırma",
   "settings.context.autoCompaction.description": "Bağlam sınıra ulaşmadan önce otomatik olarak sıkıştır",
@@ -1139,6 +1214,21 @@ export const dict = {
   "settings.commitMessage.language.description":
     "AI tarafından oluşturulan commit mesajları için hangi dili kullanacağınızı seçin:",
 
+  "settings.display.preview.title": "Önizleme",
+  "settings.display.presets.title": "Görüntüleme ön ayarları",
+  "settings.display.presets.description":
+    "Aşağıdaki görüntüleme seçeneklerini değiştirir, izinleri değil. Uygulamak için kaydedin.",
+  "settings.display.preview.model": "Örnek model",
+  "settings.display.preview.prompt": "Selamlamadaki fazla boşlukları kaldırın ve testleri kontrol edin.",
+  "settings.display.preview.reasoning":
+    "**Selamlamayı kontrol et.** İşlev, düz bir ad ve iki ucunda fazla boşluk bulunan bir ad için aynı selamlamayı üretmelidir. Mevcut işlev imzasını ve selamlama biçimini koruyacağım ve yalnızca adın döndürülen dizeye nasıl girdiğini değiştireceğim.\n\n`  Ada  ` gibi bir girdide istenmeyen boşluklar girdiye aittir, selamlama şablonuna değil. Tamamlanmış selamlamayı kırpmak, adın yanında boşluk bırakırdı. Bu nedenle kırpma işlemi, ad eklenmeden önce yapılmalıdır.\n\n`trim()` işlevinin her iki uçtaki boşlukları kaldırdığını ve yeni bir dize döndürdüğünü doğrulamak için dize belgelerini kontrol edeceğim. Özgün girdiyi değiştirmeden bırakmalıdır. Bu değişiklik için düzenli ifade, ek bağımlılık veya ayrı bir yardımcı işleve gerek yoktur.\n\nBir adın içindeki boşluklar bozulmadan kalmalıdır. `Ada Lovelace` gibi bir ad `AdaLovelace` olmamalı ve büyük/küçük harf durumu değişmemelidir. Boş veya yalnızca boşluk içeren bir girdi, bu odaklı düzeltmenin parçası olarak yeni bir yedek selamlama gerektirmez.\n\nDeğişiklik, şablonun şu anda `name` kullandığı yerde `name.trim()` kullanılarak return ifadesinde kalabilir. Çevredeki noktalama işaretlerini ve selamlamadan sonraki kasıtlı boşluğu koruyacağım. Bu, diff'i küçük tutar ve davranışın incelenmesini kolaylaştırır.\n\nSon olarak `bun test greeting.test.ts` komutunu çalıştıracağım ve iki sonucu da kontrol edeceğim. Boşluklu ad durumu fazla boşlukların kaldırıldığını doğrulamalı, düz ad durumu ise mevcut çıktıyı korumalıdır. Değişikliği ve test sonuçlarını yalnızca komut tamamlandıktan sonra bildireceğim.",
+  "settings.display.preview.shell": "Selamlama testini kontrol et",
+  "settings.display.preview.shellOutput":
+    "bun test greeting.test.ts\n\n[pass] fazla boşlukları kaldırır\n[pass] düz bir adı korur\n\n2 test geçti",
+  "settings.display.preview.query": "Dize kırpma",
+  "settings.display.preview.result": "trim() bir dizenin her iki ucundaki boşlukları kaldırır.",
+  "settings.display.preview.answer":
+    "Selamlama, fazla boşlukları kaldıracak şekilde güncellendi. Her iki test de geçiyor.",
   "settings.display.username.title": "Kullanıcı Adı",
   "settings.display.username.description": "Sohbetlerde görüntülenen özel kullanıcı adı",
   "settings.display.fontSize.title": "Yazı Tipi Boyutu",
@@ -1168,12 +1258,15 @@ export const dict = {
   "settings.display.mcpTool.expanded": "Genişletilmiş",
   "settings.display.mcpTool.collapsed": "Daraltılmış",
 
+  "settings.display.shortcutHints.title": "Kısayol ipuçlarını göster",
+  "settings.display.shortcutHints.description":
+    "Boş istemde şu anda yaptığınız işe uyan klavye kısayolunu gösterir, örneğin seçili kodu ekleme veya isteme geri dönme.",
   "settings.display.tokenThroughput.title": "Token İşleme Hızını Göster",
   "settings.display.tokenThroughput.description":
     "En son asistan mesajında ve görev başlığında metin oluşturma hızını (tokens/sec) gösterin. Varsayılan olarak gösterilir; gerektiğinde gizlemek için bu ayarı devre dışı bırakın.",
   "settings.display.autoApprovalReason.title": "Otomatik Onay Nedenini Göster",
   "settings.display.autoApprovalReason.description":
-    "Araç çağrılarının neden otomatik olarak onaylandığını açıklayan bir satır gösterir (eşleşen kural, aracı varsayılanı, YOLO modu vb.).",
+    "Bir araç çağrısının neden otomatik olarak onaylandığını gösterir; örneğin eşleşen bir izin kuralı veya aracı varsayılanı.",
 
   "chat.throughput.tooltip":
     "Average {{speed}} tokens/s for this turn. Includes output and reasoning tokens; excludes tool execution and waiting time.",
@@ -1259,16 +1352,16 @@ export const dict = {
 
   "task.todos.progress": "{{total}} görevden {{done}} tanesi tamamlandı",
   "task.todos.allDone": "{{count}} görev tamamlandı",
+  "task.todos.title": "Görevler",
+  "task.todos.done": "Hepsi tamam",
   "task.backgroundAgents.running.one": "1 arka plan ajanı",
   "task.backgroundAgents.running.many": "{{count}} arka plan ajanı",
-  "task.backgroundAgents.more": "+{{count}} tane daha",
   "task.backgroundAgents.open": "Arka plan ajanını aç",
   "task.backgroundAgents.openAll": "Tüm arka plan ajanlarını aç",
   "task.backgroundAgents.cancel": "Durdur",
   "task.backgroundAgents.continueInBackground": "Arka planda devam et",
   "task.backgroundAgents.waiting": "Bir arka plan ajanı girişinizi bekliyor",
   "task.backgroundAgents.needsInput": "Giriş gerekli",
-  "task.backgroundAgents.dismiss": "Kapat",
   "task.backgroundAgents.clearFinished": "Tamamlananları temizle",
   "task.backgroundAgents.summary": "{{total}} arka plan ajanından {{running}} tanesi çalışıyor",
   "task.backgroundAgents.status.running": "Çalışıyor",
@@ -1277,6 +1370,8 @@ export const dict = {
   "task.backgroundAgents.status.error": "Hata",
   "task.backgroundAgents.untitled": "Arka plan ajanı",
   "task.backgroundAgents.stopAll": "Tümünü durdur ({{count}})",
+  "task.backgroundAgents.finished": "Arka plan ajanları tamamlandı",
+  "task.stop": "Alt ajanı durdur",
 
   "settings.saveBar.unsavedChanges": "Kaydedilmemiş değişiklikler",
   "settings.saveBar.discard": "Geri Al",
@@ -1385,4 +1480,7 @@ export const dict = {
   "settings.experimental.browserAutomation.systemChrome.description":
     "Entegre Tarayıcı için yüklü Google Chrome'u kullanın. Yalnızca uyumlu bir Playwright Chromium tarayıcısı zaten yüklüyse devre dışı bırakın.",
   "chat.search.searchingHistory": "Önceki mesajlarda aranıyor…",
+  "browserTab.noSession":
+    "Yerel bir uygulamayı veya genel bir HTTPS sayfasını önizlemek için tarayıcıyı bir oturumdan açın.",
+  "browserTab.disabled": "Tümleşik Tarayıcı devre dışı. Kilo Ayarları > Deneysel'den etkinleştirin.",
 }

@@ -5,25 +5,44 @@ import { containsPath } from "@/project/instance-context"
 import { InstanceState } from "@/effect/instance-state"
 import { KiloSession } from "@/kilocode/session"
 import { SessionID } from "@/session/schema"
+import { PositiveInt } from "@opencode-ai/core/schema"
 import { Effect, Schema } from "effect"
 import { enabled as sandboxed } from "@kilocode/sandbox"
 import DESCRIPTION from "./background-process.txt"
 import path from "path"
 
-const Action = Schema.Literals(["start", "list", "status", "logs", "stop", "restart"])
+const Action = Schema.Literals(["start", "monitor", "list", "status", "logs", "stop", "restart"])
 type Action = Schema.Schema.Type<typeof Action>
+
+const MONITOR_LINES = 200
+const MONITOR_LINES_MIN = 1
+const MONITOR_LINES_MAX = 1_000
+const MONITOR_TIMEOUT_MS = 120_000
+const MONITOR_TIMEOUT_MIN_MS = 5_000
+const MONITOR_TIMEOUT_MAX_MS = 600_000
+const MONITOR_POLL_MS = 200
+
+const STOPPED: readonly BackgroundProcess.Status[] = ["exited", "failed", "stopped", "stopping"]
 
 export const Params = Schema.Struct({
   action: Action.annotate({ description: "Operation to perform" }),
   command: Schema.optional(Schema.String).annotate({
-    description: "Required for start. Command to run as a tracked background process.",
+    description: "Required for start and monitor. Command to run as a tracked background process.",
   }),
   id: Schema.optional(BackgroundProcess.ID.annotate({ description: "Required for status, logs, stop, and restart" })),
   workdir: Schema.optional(Schema.String).annotate({
-    description: "Working directory for start. Defaults to the project directory.",
+    description: "Working directory for start and monitor. Defaults to the project directory.",
   }),
   description: Schema.optional(Schema.String).annotate({ description: "Short label shown in the sidebar" }),
-  ready: Schema.optional(BackgroundProcess.Ready).annotate({ description: "Optional readiness probe for start" }),
+  ready: Schema.optional(BackgroundProcess.Ready).annotate({
+    description: "Optional readiness probe for start and monitor",
+  }),
+  lines: Schema.optional(PositiveInt).annotate({
+    description: `For monitor: maximum output lines to capture (default ${MONITOR_LINES}, clamped to ${MONITOR_LINES_MIN}..${MONITOR_LINES_MAX})`,
+  }),
+  timeout: Schema.optional(PositiveInt).annotate({
+    description: `For monitor: wall-time cap in milliseconds (default ${MONITOR_TIMEOUT_MS}, clamped to ${MONITOR_TIMEOUT_MIN_MS}..${MONITOR_TIMEOUT_MAX_MS})`,
+  }),
   inherit: Schema.optional(Schema.Boolean).annotate({
     description: "For subagents only: transfer the process to the parent session when this session ends",
   }),
@@ -45,6 +64,10 @@ export const Params = Schema.Struct({
         return "command is required when action is start"
       }
       if (params.inherit || params.persistent) return "inherit and persistent are only valid when action is start"
+      if (params.action === "monitor") {
+        if (params.command?.trim()) return undefined
+        return "command is required when action is monitor"
+      }
       if (params.action === "list") return undefined
       if (params.id) return undefined
       return "id is required when action is status, logs, stop, or restart"
@@ -53,10 +76,15 @@ export const Params = Schema.Struct({
 )
 export type Params = Schema.Schema.Type<typeof Params>
 
+type Reason = "exit" | "lines" | "time"
+
 type Meta = {
   processID?: BackgroundProcess.ID
   status?: BackgroundProcess.Status
   count?: number
+  output?: string
+  reason?: Reason
+  lines?: number
 }
 
 function title(info: BackgroundProcess.Info) {
@@ -107,6 +135,92 @@ function pattern(ready?: BackgroundProcess.Ready) {
   }
 }
 
+function clamp(value: number | undefined, min: number, max: number, fallback: number) {
+  if (value == null) return fallback
+  if (value < min) return min
+  if (value > max) return max
+  return value
+}
+
+/** Keep at most the last `limit` lines of the process output. */
+function capture(text: string, limit: number) {
+  const rows = text.replace(/\r\n/g, "\n").split("\n")
+  if (rows.at(-1) === "") rows.pop()
+  const total = rows.length
+  return {
+    output: total > limit ? rows.slice(total - limit).join("\n") : rows.join("\n"),
+    lines: total < limit ? total : limit,
+    reached: total >= limit,
+  }
+}
+
+function trailer(
+  reason: Reason,
+  status: BackgroundProcess.Status,
+  id: BackgroundProcess.ID,
+  cap: number,
+  timeout: number,
+) {
+  const detail =
+    reason === "exit"
+      ? `process ${status}`
+      : reason === "lines"
+        ? `reached the ${cap}-line cap; the process is still running`
+        : `reached the ${timeout} ms wall-time cap; the process is still running`
+  return [
+    `[monitor stopped: ${detail}]`,
+    `process id: ${id}`,
+    `Use this tool with action "logs", "status", or "stop" to follow up.`,
+  ].join("\n")
+}
+
+function monitor(params: Params, ctx: Tool.Context<Meta>, info: BackgroundProcess.Info) {
+  const cap = clamp(params.lines, MONITOR_LINES_MIN, MONITOR_LINES_MAX, MONITOR_LINES)
+  const timeout = clamp(params.timeout, MONITOR_TIMEOUT_MIN_MS, MONITOR_TIMEOUT_MAX_MS, MONITOR_TIMEOUT_MS)
+  const deadline = Date.now() + timeout
+  return Effect.gen(function* () {
+    let pushed = ""
+    const outcome = yield* Effect.raceFirst(
+      Effect.gen(function* () {
+        while (true) {
+          const current = yield* Effect.promise(() => BackgroundProcess.get(info.id))
+          const status = current?.status ?? "stopped"
+          const captured = capture(current?.output ?? "", cap)
+          if (captured.output !== pushed) {
+            pushed = captured.output
+            yield* ctx.metadata({ metadata: { output: pushed } })
+          }
+          const reason: Reason | undefined = !current
+            ? "exit"
+            : STOPPED.includes(status)
+              ? "exit"
+              : captured.reached
+                ? "lines"
+                : Date.now() >= deadline
+                  ? "time"
+                  : undefined
+          if (reason) return { reason, status, lines: captured.lines, output: captured.output }
+          yield* Effect.sleep(`${MONITOR_POLL_MS} millis`)
+        }
+      }).pipe(Effect.map((result) => ({ kind: "stopped" as const, result }))),
+      Effect.callback<{ kind: "abort" }>((resume) => {
+        const abort = () => resume(Effect.succeed({ kind: "abort" as const }))
+        if (ctx.abort.aborted) return abort()
+        ctx.abort.addEventListener("abort", abort, { once: true })
+        return Effect.sync(() => ctx.abort.removeEventListener("abort", abort))
+      }),
+    )
+    if (outcome.kind === "abort") return yield* Effect.interrupt
+    const { reason, status, lines, output } = outcome.result
+    const note = trailer(reason, status, info.id, cap, timeout)
+    return {
+      title: `Monitor: ${title(info)}`,
+      output: output ? `${output}\n\n${note}` : note,
+      metadata: { processID: info.id, status, reason, lines },
+    }
+  })
+}
+
 export const BackgroundProcessTool = Tool.define<typeof Params, Meta, never, "background_process">(
   "background_process",
   Effect.succeed({
@@ -125,11 +239,14 @@ export const BackgroundProcessTool = Tool.define<typeof Params, Meta, never, "ba
           }
         }
 
-        if ((params.action === "start" || params.action === "restart") && (yield* sandboxed)) {
+        if (
+          (params.action === "start" || params.action === "monitor" || params.action === "restart") &&
+          (yield* sandboxed)
+        ) {
           return invalid(params.action, "Background processes are unavailable while the sandbox is enabled")
         }
 
-        if (params.action !== "start") {
+        if (params.action !== "start" && params.action !== "monitor") {
           const id = params.id
           if (!id) return invalid(params.action, "Missing id")
           const found = yield* Effect.promise(() => BackgroundProcess.get(id))
@@ -194,6 +311,7 @@ export const BackgroundProcessTool = Tool.define<typeof Params, Meta, never, "ba
             parentID,
           }),
         )
+        if (params.action === "monitor") return yield* monitor(params, ctx, info)
         return {
           title: `Started: ${title(info)}`,
           output: format(info),

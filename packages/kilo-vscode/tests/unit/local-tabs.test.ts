@@ -2,6 +2,7 @@ import { describe, expect, it } from "bun:test"
 import {
   addPendingTab,
   addSessionTab,
+  closeAllTabs,
   closeOtherTabs,
   closeTab,
   nextTabAfterClose,
@@ -16,6 +17,7 @@ import {
   restoreTrackedTabs,
   showTabStrip,
   tabsForCreatedSession,
+  tabsForLoadedSessions,
   trackedSessionInventory,
   type LocalTabState,
 } from "../../webview-ui/src/utils/local-tabs"
@@ -144,6 +146,10 @@ describe("local session tabs", () => {
     expect(closeTab(state(["s1"], "s1"), "s1", makePending())).toEqual({ ids: [pending()], active: pending() })
   })
 
+  it("replaces all closed tabs with a fresh empty chat", () => {
+    expect(closeAllTabs(makePending())).toEqual({ ids: [pending()], active: pending() })
+  })
+
   it("drops missing persisted sessions while preserving pending work", () => {
     expect(reconcileTabs(state(["s1", pending(), "gone"], "gone"), ["s1"], makePending("sidebar-pending:2"))).toEqual({
       ids: ["s1", pending()],
@@ -185,6 +191,20 @@ describe("local session tabs", () => {
   it("does not close tabs when the retained id is missing", () => {
     const current = state(["s1", "s2"], "s1")
     expect(closeOtherTabs(current, "missing")).toBe(current)
+  })
+
+  it("keeps pinned tabs open when closing the others", () => {
+    expect(closeOtherTabs(state(["s1", "s2", "s3"], "s1"), "s1", ["s3"])).toEqual({
+      ids: ["s1", "s3"],
+      active: "s1",
+    })
+  })
+
+  it("activates the retained tab even when pinned neighbors survive", () => {
+    expect(closeOtherTabs(state(["s1", "s2", "s3"], "s2"), "s3", ["s1"])).toEqual({
+      ids: ["s1", "s3"],
+      active: "s3",
+    })
   })
 })
 
@@ -275,6 +295,31 @@ describe("tracked tab restore", () => {
 })
 
 describe("tracked tab reconcile", () => {
+  it("preserves an unmanaged local tab while the shared list still belongs to another project", () => {
+    expect(reconcileTrackedTabs(["ses-b"], ["ses-a"], inventory([]), trackedPending, false)).toBeUndefined()
+    expect(reconcileTrackedTabs(["ses-b"], ["ses-b"], inventory([]), trackedPending, true)).toBeUndefined()
+    expect(reconcileTrackedTabs(["ses-b"], [], inventory([]), trackedPending, true)).toEqual({
+      ids: [],
+      forget: ["ses-b"],
+    })
+  })
+
+  it("preserves an older open local tab while the selected project's list is incomplete", () => {
+    expect(reconcileTrackedTabs(["older"], ["newer"], inventory([]), trackedPending, false)).toBeUndefined()
+  })
+
+  it("still removes known external and child sessions before an authoritative list arrives", () => {
+    expect(
+      reconcileTrackedTabs(
+        ["local", "external", "child"],
+        [],
+        { local: [], external: new Set(["external"]), rejected: new Set(["child"]) },
+        trackedPending,
+        false,
+      ),
+    ).toEqual({ ids: ["local"], forget: ["child"] })
+  })
+
   it("evicts sparse sessions without forgetting them", () => {
     const data = trackedSessionInventory(
       [
@@ -322,6 +367,31 @@ describe("tracked tab reconcile", () => {
     expect(reconcileTrackedTabs(["pending-1", "gone"], [], inventory([]), trackedPending)).toEqual({
       ids: ["pending-1"],
       forget: ["gone"],
+    })
+  })
+})
+
+describe("tabs for loaded sessions", () => {
+  it("keeps a tab opened from an older page when more pages exist", () => {
+    const tabs = state(["new", "old"], "old")
+
+    expect(tabsForLoadedSessions(tabs, { sessions: [{ id: "new" }], hasMore: true }, [], makePending())).toBeUndefined()
+    expect(tabsForLoadedSessions(tabs, { sessions: [], append: true }, [], makePending())).toBeUndefined()
+  })
+
+  it("closes tabs a complete list no longer has", () => {
+    expect(
+      tabsForLoadedSessions(state(["new", "gone"], "gone"), { sessions: [{ id: "new" }] }, [], makePending()),
+    ).toEqual({ ids: ["new"], active: "new" })
+  })
+
+  it("keeps preserved and freshly created sessions on a complete list", () => {
+    const tabs = state(["kept", "created", "gone"], "kept")
+    const message = { sessions: [], preserveSessionIds: ["kept"] }
+
+    expect(tabsForLoadedSessions(tabs, message, ["created"], makePending())).toEqual({
+      ids: ["kept", "created"],
+      active: "kept",
     })
   })
 })

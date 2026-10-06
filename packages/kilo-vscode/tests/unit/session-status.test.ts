@@ -49,6 +49,21 @@ describe("seedSessionStatuses", () => {
 
   // ---- THE BUG: stale entries not cleared on reconnect ----
 
+  it("normalizes a derived scheduled session to idle so it is not rendered as working", async () => {
+    const client = createClient({
+      data: {
+        s1: { type: "scheduled", scheduledAt: "2026-09-24T15:00:00.000Z" } as unknown as SessionStatus,
+      },
+    })
+    const map = new Map<string, SessionStatus["type"]>()
+    const { msgs, post } = collect()
+
+    await seedSessionStatuses(client, "/repo", map, post)
+
+    expect(map.get("s1")).toBe("idle")
+    expect(msgs).toEqual([{ type: "sessionStatus", sessionID: "s1", status: "idle" }])
+  })
+
   it("clears stale busy entries absent from server response", async () => {
     const client = createClient({ data: {} })
     const map = new Map<string, SessionStatus["type"]>([["s1", "busy"]])

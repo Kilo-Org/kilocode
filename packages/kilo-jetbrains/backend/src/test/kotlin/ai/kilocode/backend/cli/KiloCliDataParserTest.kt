@@ -7,6 +7,9 @@ import ai.kilocode.rpc.dto.AgentConfigPatchDto
 import ai.kilocode.rpc.dto.CompactionPatchDto
 import ai.kilocode.rpc.dto.ConfigDto
 import ai.kilocode.rpc.dto.ConfigPatchDto
+import ai.kilocode.rpc.dto.RetentionPatchDto
+import ai.kilocode.rpc.dto.CustomModelDto
+import ai.kilocode.rpc.dto.CustomProviderSaveDto
 import ai.kilocode.rpc.dto.EditorContextDto
 import ai.kilocode.rpc.dto.McpConfigDto
 import ai.kilocode.rpc.dto.PermissionAlwaysRulesDto
@@ -731,7 +734,8 @@ class KiloCliDataParserTest {
                             "messageID": "msg_rollback",
                             "partID": "prt_rollback",
                             "snapshot": "snap_rollback",
-                            "diff": "diff --git a/src/A.kt b/src/A.kt\n--- a/src/A.kt\n+++ b/src/A.kt\n@@ -1 +1,2 @@\n-old\n+new\n+more\ndiff --git a/src/Old.kt b/src/Old.kt\ndeleted file mode 100644\n--- a/src/Old.kt\n+++ /dev/null\n@@ -1 +0,0 @@\n-gone"
+                            "diff": "diff --git a/src/A.kt b/src/A.kt\n--- a/src/A.kt\n+++ b/src/A.kt\n@@ -1 +1,2 @@\n-old\n+new\n+more\ndiff --git a/src/Old.kt b/src/Old.kt\ndeleted file mode 100644\n--- a/src/Old.kt\n+++ /dev/null\n@@ -1 +0,0 @@\n-gone",
+                            "workspace": "not-a-git-repo"
                         }
                     }
                 }
@@ -752,6 +756,7 @@ class KiloCliDataParserTest {
             assertEquals("modified", result.session.revert?.diffs?.get(0)?.status)
             assertEquals("src/Old.kt", result.session.revert?.diffs?.get(1)?.file)
             assertEquals("deleted", result.session.revert?.diffs?.get(1)?.status)
+            assertEquals("not-a-git-repo", result.session.revert?.workspace)
         }
 
         @Test
@@ -1378,6 +1383,47 @@ class KiloCliDataParserTest {
             val cfg = KiloCliDataParser.parseConfig("""{"model":"openai/gpt","shared_agent_board":{}}""")
             assertEquals("openai/gpt", cfg.model)
             assertNull(cfg.shared_agent_board)
+        }
+
+        @Test
+        fun `parseConfig - snapshot values preserve default resolution`() {
+            assertEquals(true, KiloCliDataParser.parseConfig("""{"snapshot":true}""").snapshot)
+            assertEquals(false, KiloCliDataParser.parseConfig("""{"snapshot":false}""").snapshot)
+            assertNull(KiloCliDataParser.parseConfig("""{"model":"openai/gpt"}""").snapshot)
+        }
+
+        @Test
+        fun `parseConfig - malformed snapshot does not discard config`() {
+            val cfg = KiloCliDataParser.parseConfig("""{"model":"openai/gpt","snapshot":{}}""")
+
+            assertEquals("openai/gpt", cfg.model)
+            assertNull(cfg.snapshot)
+        }
+
+        @Test
+        fun `parseConfig - retention reads valid values and normalizes invalid days`() {
+            val enabled = KiloCliDataParser.parseConfig(
+                """{"retention":{"enabled":true,"maxAgeDays":45}}""",
+            ).retention
+            val invalid = KiloCliDataParser.parseConfig(
+                """{"retention":{"enabled":false,"maxAgeDays":0}}""",
+            ).retention
+
+            assertEquals(true, enabled?.enabled)
+            assertEquals(45, enabled?.maxAgeDays)
+            assertEquals(false, invalid?.enabled)
+            assertNull(invalid?.maxAgeDays)
+        }
+
+        @Test
+        fun `parseConfig - malformed retention days do not discard other config`() {
+            val cfg = KiloCliDataParser.parseConfig(
+                """{"model":"openai/gpt","retention":{"enabled":true,"maxAgeDays":{}}}""",
+            )
+
+            assertEquals("openai/gpt", cfg.model)
+            assertEquals(true, cfg.retention?.enabled)
+            assertNull(cfg.retention?.maxAgeDays)
         }
 
         @Test
@@ -2220,6 +2266,107 @@ class KiloCliDataParserTest {
             assertEquals("""{"method":0,"inputs":{"deploymentType":"github.com"}}""", result)
         }
 
+        // ---- buildCustomProviderPatch ----
+
+        @Test
+        fun `buildCustomProviderPatch - no removed models by default`() {
+            val input = CustomProviderSaveDto(
+                directory = "/test",
+                id = "my-openai",
+                name = "My OpenAI",
+                baseUrl = "https://api.example.com/v1",
+                models = listOf(CustomModelDto("gpt-4o", "gpt-4o")),
+            )
+
+            val result = KiloCliDataParser.buildCustomProviderPatch(input)
+
+            assertEquals(
+                """{"provider":{"my-openai":{"name":"My OpenAI","npm":"@ai-sdk/openai-compatible","options":{"baseURL":"https://api.example.com/v1"},"models":{"gpt-4o":{"id":"gpt-4o","name":"gpt-4o","capabilities":{"reasoning":false}}}}}}""",
+                result,
+            )
+        }
+
+        @Test
+        fun `buildCustomProviderPatch - deselected model becomes a null sentinel`() {
+            val input = CustomProviderSaveDto(
+                directory = "/test",
+                id = "my-openai",
+                name = "My OpenAI",
+                baseUrl = "https://api.example.com/v1",
+                models = listOf(CustomModelDto("gpt-4o", "gpt-4o")),
+            )
+
+            val result = KiloCliDataParser.buildCustomProviderPatch(input, removedModelIds = setOf("gpt-3.5-turbo"))
+
+            assertEquals(
+                """{"provider":{"my-openai":{"name":"My OpenAI","npm":"@ai-sdk/openai-compatible","options":{"baseURL":"https://api.example.com/v1"},"models":{"gpt-3.5-turbo":null,"gpt-4o":{"id":"gpt-4o","name":"gpt-4o","capabilities":{"reasoning":false}}}}}}""",
+                result,
+            )
+        }
+
+        @Test
+        fun `buildCustomProviderPatch - removed model never appears alongside a matching kept entry`() {
+            val input = CustomProviderSaveDto(
+                directory = "/test",
+                id = "my-openai",
+                name = "My OpenAI",
+                baseUrl = "https://api.example.com/v1",
+                models = listOf(CustomModelDto("gpt-4o", "gpt-4o")),
+            )
+
+            // A removed ID that the caller mistakenly still lists among the kept models must not
+            // null out the entry the user is keeping: the kept model always wins.
+            val result = KiloCliDataParser.buildCustomProviderPatch(input, removedModelIds = setOf("gpt-4o"))
+
+            assertEquals(
+                """{"provider":{"my-openai":{"name":"My OpenAI","npm":"@ai-sdk/openai-compatible","options":{"baseURL":"https://api.example.com/v1"},"models":{"gpt-4o":{"id":"gpt-4o","name":"gpt-4o","capabilities":{"reasoning":false}}}}}}""",
+                result,
+            )
+        }
+
+        @Test
+        fun `buildCustomProviderPatch - all models removed still writes a models object with only null sentinels`() {
+            val input = CustomProviderSaveDto(
+                directory = "/test",
+                id = "my-openai",
+                name = "My OpenAI",
+                baseUrl = "https://api.example.com/v1",
+                models = emptyList(),
+            )
+
+            val result = KiloCliDataParser.buildCustomProviderPatch(input, removedModelIds = setOf("gpt-4o"))
+
+            assertEquals(
+                """{"provider":{"my-openai":{"name":"My OpenAI","npm":"@ai-sdk/openai-compatible","options":{"baseURL":"https://api.example.com/v1"},"models":{"gpt-4o":null}}}}""",
+                result,
+            )
+        }
+
+        // ---- buildCustomProviderModelRemovalPatch ----
+
+        @Test
+        fun `buildCustomProviderModelRemovalPatch - nulls only the given models`() {
+            val result = KiloCliDataParser.buildCustomProviderModelRemovalPatch("my-openai", setOf("gpt-3.5-turbo"))
+
+            assertEquals(
+                """{"provider":{"my-openai":{"models":{"gpt-3.5-turbo":null}}}}""",
+                result,
+            )
+        }
+
+        @Test
+        fun `buildCustomProviderModelRemovalPatch - leaves every other field untouched`() {
+            // No name, npm, or options keys should appear: a scope's other fields must survive
+            // this patch via the deep-merge, since this builder only ever targets "models".
+            val result = KiloCliDataParser.buildCustomProviderModelRemovalPatch("my-openai", setOf("a", "b"))
+
+            assertFalse(result.contains("\"name\""))
+            assertFalse(result.contains("\"npm\""))
+            assertFalse(result.contains("\"options\""))
+            assertTrue(result.contains("\"a\":null"))
+            assertTrue(result.contains("\"b\":null"))
+        }
+
         @Test
         fun `buildPromptJson - with agent`() {
             val prompt = PromptDto(
@@ -2260,6 +2407,24 @@ class KiloCliDataParserTest {
 
             assertEquals(
                 """{"parts":[{"type":"text","text":"see this"},{"type":"file","mime":"image/png","url":"file:///tmp/a.png","filename":"a.png"}]}""",
+                result,
+            )
+        }
+
+        @Test
+        fun `buildPromptJson - synthetic selection marker precedes its ranged file part`() {
+            val prompt = PromptDto(
+                parts = listOf(
+                    PromptPartDto(type = "text", text = "Explain this selection"),
+                    PromptPartDto(type = "text", text = "Note: the user selected lines 2-3", synthetic = true),
+                    PromptPartDto(type = "file", mime = "text/plain", url = "file:///tmp/App.kt?start=2&end=3", filename = "App.kt"),
+                ),
+            )
+
+            val result = KiloCliDataParser.buildPromptJson(prompt)
+
+            assertEquals(
+                """{"parts":[{"type":"text","text":"Explain this selection"},{"type":"text","text":"Note: the user selected lines 2-3","synthetic":true},{"type":"file","mime":"text/plain","url":"file:///tmp/App.kt?start=2&end=3","filename":"App.kt"}]}""",
                 result,
             )
         }
@@ -2493,6 +2658,28 @@ class KiloCliDataParserTest {
         @Test
         fun `buildConfigPatch - shared_agent_board omitted when null`() {
             assertEquals("{}", KiloCliDataParser.buildConfigPatch(ConfigPatchDto()))
+        }
+
+        @Test
+        fun `buildConfigPatch - snapshot writes explicit booleans`() {
+            assertEquals(
+                "{\"snapshot\":true}",
+                KiloCliDataParser.buildConfigPatch(ConfigPatchDto(snapshot = true)),
+            )
+            assertEquals(
+                "{\"snapshot\":false}",
+                KiloCliDataParser.buildConfigPatch(ConfigPatchDto(snapshot = false)),
+            )
+        }
+
+        @Test
+        fun `buildConfigPatch - retention writes nested policy`() {
+            assertEquals(
+                "{\"retention\":{\"enabled\":true,\"maxAgeDays\":30}}",
+                KiloCliDataParser.buildConfigPatch(ConfigPatchDto(
+                    retention = RetentionPatchDto(enabled = true, maxAgeDays = 30),
+                )),
+            )
         }
 
         @Test
@@ -2976,6 +3163,100 @@ class KiloCliDataParserTest {
         val text = "before\n\nCalled the Read tool with the following input: {\"filePath\":\"/tmp/a.kt\"}\n\nafter\n\n\nkeep"
 
         assertEquals("before\n\nafter\n\n\nkeep", KiloCliDataParser.sanitizeUserPromptText(text))
+    }
+
+    // ================================================================
+    // parseBackgroundJobs
+    // ================================================================
+
+    @Nested
+    inner class BackgroundJobs {
+        @Test
+        fun `parseBackgroundJobs - flattens metadata into typed fields`() {
+            val raw = """
+                [
+                    {
+                        "id": "job1",
+                        "type": "task",
+                        "status": "running",
+                        "title": "Explore",
+                        "started_at": 1700000000000,
+                        "metadata": {
+                            "sessionId": "ses_child1",
+                            "parentSessionId": "ses_parent",
+                            "background": true
+                        }
+                    }
+                ]
+            """.trimIndent()
+
+            val job = KiloCliDataParser.parseBackgroundJobs(raw).single()
+
+            assertEquals("job1", job.id)
+            assertEquals("task", job.type)
+            assertEquals("running", job.status)
+            assertEquals("Explore", job.title)
+            assertEquals(1700000000000L, job.startedAt)
+            assertNull(job.completedAt)
+            assertNull(job.error)
+            assertEquals("ses_child1", job.sessionId)
+            assertEquals("ses_parent", job.parentSessionId)
+            assertTrue(job.background)
+        }
+
+        @Test
+        fun `parseBackgroundJobs - defaults when metadata is absent`() {
+            val raw = """[{"id": "job1", "type": "task", "status": "completed"}]"""
+
+            val job = KiloCliDataParser.parseBackgroundJobs(raw).single()
+
+            assertEquals(0L, job.startedAt)
+            assertNull(job.completedAt)
+            assertNull(job.sessionId)
+            assertNull(job.parentSessionId)
+            assertFalse(job.background)
+        }
+
+        @Test
+        fun `parseBackgroundJobs - tolerates non-finite timestamps from the widened SDK types`() {
+            val raw = """
+                [
+                    {
+                        "id": "job1",
+                        "type": "task",
+                        "status": "error",
+                        "started_at": "NaN",
+                        "completed_at": "Infinity",
+                        "error": "boom"
+                    }
+                ]
+            """.trimIndent()
+
+            val job = KiloCliDataParser.parseBackgroundJobs(raw).single()
+
+            assertEquals(0L, job.startedAt)
+            assertNull(job.completedAt)
+            assertEquals("boom", job.error)
+        }
+
+        @Test
+        fun `parseBackgroundJobs - drops a row missing a required field instead of failing the list`() {
+            val raw = """
+                [
+                    {"id": "job1", "type": "task", "status": "running"},
+                    {"id": "job2", "type": "task"}
+                ]
+            """.trimIndent()
+
+            val jobs = KiloCliDataParser.parseBackgroundJobs(raw)
+
+            assertEquals(listOf("job1"), jobs.map { it.id })
+        }
+
+        @Test
+        fun `parseBackgroundJobs - malformed json returns an empty list`() {
+            assertEquals(emptyList(), KiloCliDataParser.parseBackgroundJobs("not json"))
+        }
     }
 
     // ================================================================

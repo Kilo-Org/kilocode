@@ -4,6 +4,14 @@ import type { ProviderConfig } from "./providers"
 
 type SdkIndexingStatus = import("@kilocode/sdk/v2/client").IndexingStatus
 
+export interface McpOAuthConfig {
+  clientId?: string
+  clientSecret?: string
+  scope?: string
+  callbackPort?: number
+  redirectUri?: string
+}
+
 export interface McpConfig {
   type?: "local" | "remote"
   command?: string[] | string
@@ -13,6 +21,9 @@ export interface McpConfig {
   url?: string
   headers?: Record<string, string>
   enabled?: boolean
+  timeout?: number
+  /** `false` disables OAuth auto-detection; an object configures a pre-registered client; absent/`null` is automatic discovery. */
+  oauth?: McpOAuthConfig | false | null
 }
 
 export type ConfigOrigin = "project" | "global" | "system" | "default"
@@ -52,7 +63,6 @@ export interface ExperimentalConfig {
   batch_tool?: boolean
   image_generation?: boolean
   image_generation_model?: string
-  task_model_selection?: boolean
   code_mode?: boolean
   native_notebook_tools?: boolean
   speech_to_text_model?: string
@@ -139,6 +149,11 @@ export type CodeEditDisplay = "expanded" | "collapsed"
 export type McpToolDisplay = "expanded" | "collapsed"
 export type ReasoningDisplay = "expanded" | "preview" | "headline"
 
+export interface RetentionConfig {
+  enabled?: boolean
+  maxAgeDays?: number
+}
+
 export interface Config {
   permission?: PermissionConfig
   model?: string | null
@@ -146,6 +161,7 @@ export interface Config {
   subagent_model?: string | null
   subagent_variant?: string | null
   subagent_variant_overrides?: Record<string, string | null> | null
+  memory_model?: string | null
   default_agent?: string | null
   agent?: Record<string, AgentConfig>
   provider?: Record<string, ProviderConfig>
@@ -156,6 +172,7 @@ export interface Config {
   instructions?: string[]
   skills?: SkillsConfig
   snapshot?: boolean
+  retention?: RetentionConfig
   remote_control?: boolean
   terminal_command_display?: TerminalCommandDisplay
   code_edit_display?: CodeEditDisplay

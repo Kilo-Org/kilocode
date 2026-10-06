@@ -1,5 +1,7 @@
 package ai.kilocode.client.session.model
 
+import ai.kilocode.client.session.background.BackgroundAgent
+import ai.kilocode.client.session.background.BackgroundAgents
 import ai.kilocode.rpc.dto.DiffFileDto
 import ai.kilocode.rpc.dto.KiloAppStateDto
 import ai.kilocode.rpc.dto.KiloAppStatusDto
@@ -86,6 +88,13 @@ class SessionModel {
 
     var todos: List<TodoDto> = emptyList()
         private set
+
+    /** Already dismissal-filtered, already-ordered rows for the background-agents strip. */
+    var backgroundAgents: List<BackgroundAgent> = emptyList()
+        private set
+
+    private var rawBackgroundAgents: List<BackgroundAgent> = emptyList()
+    private var dismissedBackgroundAgents: Set<String> = emptySet()
 
     var compactionCount: Int = 0
         private set
@@ -332,6 +341,30 @@ class SessionModel {
         updateHeader()
     }
 
+    /** Replace the raw background-agent rows (already parent-filtered by the caller) and re-derive [backgroundAgents]. */
+    @RequiresEdt
+    fun setBackgroundAgents(agents: List<BackgroundAgent>) {
+        rawBackgroundAgents = agents
+        applyBackgroundAgents()
+    }
+
+    /** Hide finished background-agent rows locally. A dismissed job that runs again reappears. */
+    @RequiresEdt
+    fun dismissBackgroundAgents(jobs: Set<String>) {
+        if (jobs.isEmpty()) return
+        dismissedBackgroundAgents = dismissedBackgroundAgents + jobs
+        applyBackgroundAgents()
+    }
+
+    private fun applyBackgroundAgents() {
+        val visible = BackgroundAgents.order(
+            rawBackgroundAgents.filter { BackgroundAgents.visible(it, dismissedBackgroundAgents) },
+        )
+        if (visible == backgroundAgents) return
+        backgroundAgents = visible
+        fire(SessionModelEvent.BackgroundAgentsUpdated(visible))
+    }
+
     @RequiresEdt
     fun markCompacted() {
         compactionCount++
@@ -357,6 +390,9 @@ class SessionModel {
         state = SessionState.Idle
         diff = emptyList()
         todos = emptyList()
+        rawBackgroundAgents = emptyList()
+        dismissedBackgroundAgents = emptySet()
+        backgroundAgents = emptyList()
         compactionCount = 0
         for (msg in history) {
             val item = Message(msg.info)
@@ -392,6 +428,9 @@ class SessionModel {
         state = SessionState.Idle
         diff = emptyList()
         todos = emptyList()
+        rawBackgroundAgents = emptyList()
+        dismissedBackgroundAgents = emptySet()
+        backgroundAgents = emptyList()
         compactionCount = 0
         fire(SessionModelEvent.Cleared)
         updateHeader()

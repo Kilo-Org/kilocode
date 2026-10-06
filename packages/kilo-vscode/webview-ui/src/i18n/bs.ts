@@ -90,10 +90,13 @@ export const dict = {
     "Razgovor je vraćen. Promjene datoteka nisu vraćene jer su snimci stanja onemogućeni.",
   "revert.banner.workspace.unavailable":
     "Razgovor je vraćen. Nije bila dostupna kontrolna tačka datoteka, pa promjene radnog prostora nisu vraćene.",
+  "revert.banner.workspace.notAGitRepo":
+    "Razgovor je vraćen. Kontrolne tačke datoteka zahtijevaju Git repozitorij, pa promjene radnog prostora nisu vraćene.",
   "revert.banner.workspace.legacy":
     "Razgovor je vraćen. Status vraćanja radnog prostora nije dostupan za ovo ranije vraćanje.",
   "revert.banner.workspace.enableSnapshots": "Omogući snimke stanja",
   "revert.disabled.agentBusy": "Sačekajte da agent završi",
+  "revert.error.body": "Repozitorij je možda u upotrebi. Pokušajte ponovo ili pogledajte Kilo zapise za detalje.",
   "command.session.compact": "Sažmi sesiju",
   "command.session.export": "Izvezi transkript sesije",
 
@@ -210,13 +213,27 @@ export const dict = {
   "prompt.worktrees.title": "Worktrees",
   "prompt.worktrees.search": "Pretraži Worktree-ove",
   "prompt.thinking.tooltip": "Napor razmišljanja",
+  "prompt.shortcutHint.addSelection": "za dodavanje odabira",
+  "prompt.shortcutHint.waiting": "za odgovor sesiji koja čeka",
+  "prompt.shortcutHint.type": "za pisanje",
+  "prompt.shortcutHint.sessions": "za promjenu sesije",
+  "prompt.shortcutHint.stop": "za zaustavljanje",
+  "prompt.shortcutHint.changes": "za pregled izmjena",
+  "prompt.shortcutHint.pr": "za otvaranje PR-a",
+  "prompt.shortcutHint.mode": "Sljedeći način",
   "prompt.action.send": "Pošalji",
   "prompt.action.continue": "Nastavi",
   "prompt.action.send.blocked": "Prvo odgovorite ili odbacite pitanje na čekanju",
   "prompt.action.send.recording": "Transkribuj i pošalji",
   "prompt.action.stop": "Zaustavi",
+  "prompt.action.stop.background": "Zaustavi glavnog agenta. Agenti u pozadini nastavljaju raditi.",
+  "prompt.agents.show": "Prikaži agente u pozadini",
   "prompt.action.enhance": "Poboljšaj prompt",
   "prompt.paste.expand": "Kliknite da proširite zalijepljeni tekst",
+  "prompt.issues.title": "Problemi sesije",
+  "prompt.mcp.provider": "MCP {{name}}",
+  "prompt.mcp.openSettings": "Otvori u Postavkama",
+  "prompt.mcp.signIn.busy": "Prijavljivanje u toku…",
   "prompt.action.autoApprove.enable": "Uključi automatsko odobravanje",
   "prompt.action.autoApprove.disable": "Isključi automatsko odobravanje",
   "prompt.action.autoApprove.enabled":
@@ -325,7 +342,7 @@ export const dict = {
   "ui.approval.source.agent.default": "od strane agenta",
   "ui.approval.source.global": "globalnom konfiguracijom",
   "ui.approval.source.project": "konfiguracijom projekta",
-  "ui.approval.source.yolo": "režimom automatskog odobravanja (YOLO)",
+  "ui.approval.source.yolo": "režimom automatskog odobravanja",
   "ui.approval.source.session": "pravilom automatskog odobravanja sesije",
   "ui.approval.source.default": "podrazumevano",
   "ui.approval.outsideWorkspace": "(izvan vašeg radnog prostora: {{file}})",
@@ -526,6 +543,7 @@ export const dict = {
   "provider.custom.models.toggleImages": "Uključi/isključi slike za sve",
   "provider.custom.models.remove": "Ukloni model",
   "provider.custom.models.add": "Dodaj model",
+  "provider.custom.models.fetch.button": "Dohvati modele",
   "provider.custom.models.fetch.authError":
     "Autentifikacija nije uspjela. Provjerite API ključ iznad i pokušajte ponovo.",
   "provider.custom.models.fetch.empty": "Nisu pronađeni modeli na ovom serveru.",
@@ -556,6 +574,9 @@ export const dict = {
   "provider.custom.error.duplicate": "Duplikat",
   "settings.openLocalConfig": "Lokalna konfig.",
   "settings.openGlobalConfig": "Globalna konfig.",
+  "settings.search.placeholder": "Pretraži postavke",
+  "settings.search.noResults": "Nisu pronađene postavke",
+  "settings.search.clear": "Očisti pretragu",
   "settings.config.scope.local": "Lokalno",
   "settings.config.scope.global": "Globalno",
   "settings.config.status.loaded": "učitano",
@@ -616,6 +637,7 @@ export const dict = {
   "session.tabs.switcher.pending": "Novo",
   "session.tabs.switcher.busy": "Radi",
   "session.tabs.switcher.scheduled": "Zakazano",
+  "session.tabs.pinHint": "Shift+klik za zakačiti ili otkačiti",
   "session.tab.local": "Lokalno",
   "session.tab.cloud": "Oblak",
   "session.tab.worktree": "Radno stablo",
@@ -639,13 +661,13 @@ export const dict = {
   "workStyle.choice.human-in-the-loop.description": "Kilo zastaje i prikazuje vam svoj plan tokom rada.",
   "workStyle.choice.human-in-the-loop.permissions": "Traži dozvolu prije uređivanja datoteka ili pokretanja komandi.",
   "workStyle.choice.human-in-the-loop.bash": "Traži dozvolu za svaku terminalsku komandu.",
-  "workStyle.choice.human-in-the-loop.visibility": "Prikazuje sve detalje razgovora, uključujući zaključivanje.",
+  "workStyle.choice.human-in-the-loop.visibility": "Proširuje zaključivanje, naredbe i izmjene radi pregleda.",
   "workStyle.choice.autonomous.eyebrow": "Manje prekida",
   "workStyle.choice.autonomous.title": "Visoka autonomija",
   "workStyle.choice.autonomous.description": "Manje prekida i pojednostavljen interfejs.",
   "workStyle.choice.autonomous.permissions": "Uređuje datoteke i pokreće komande u radnom prostoru bez pitanja.",
   "workStyle.choice.autonomous.bash": "Može pokretati terminalske komande u radnom prostoru bez odobrenja.",
-  "workStyle.choice.autonomous.visibility": "Detalji ostaju sažeti dok ih ne proširite.",
+  "workStyle.choice.autonomous.visibility": "Sažima detalje alata, uz kompaktan pregled zaključivanja.",
   "session.cloud.import.title": "Uvezi iz oblaka",
   "session.cloud.import.placeholder": "ID sesije, URL ili kilo import naredba",
   "session.cloud.import.button": "Uvezi",
@@ -794,11 +816,13 @@ export const dict = {
   "ui.sessionTurn.status.consideringNextSteps": "Razmatram sljedeće korake...",
 
   "dialog.model.noProviders": "Nema pružatelja",
+  "dialog.model.unavailable": "Kilo modeli nisu dostupni",
 
   "prompt.placeholder.connecting": "Povezivanje na server...",
   "prompt.placeholder.error": "Povezivanje nije uspjelo. Provjerite panel za izlaz ili ponovo pokrenite ekstenziju.",
   "prompt.placeholder.default":
     "Unesite poruku, @ za spominjanje datoteka... (Enter za slanje, Shift+Enter za novi red)",
+  "prompt.placeholder.hint": "Unesite poruku, @ za spominjanje datoteka... ({{key}} {{action}})",
 
   "context.usage.sessionCost": "Cijena sesije",
   "context.usage.olderSessions": "{{count}} starijih sesija",
@@ -855,7 +879,8 @@ export const dict = {
   "settings.browser.description":
     "Konfigurirajte ugrađenu automatizaciju preglednika koju pokreće Playwright. Kilo može navigirati, komunicirati sa web stranicama i snimati ekran u vašim sesijama.",
   "settings.browser.enable.title": "Omogući automatizaciju preglednika",
-  "settings.browser.enable.description": "Registriraj Playwright MCP server s CLI pozadinom.",
+  "settings.browser.enable.description":
+    "Omogući preglednik vezan za sesiju u aplikaciji Agent Manager za lokalne aplikacije i javne HTTPS stranice.",
   "settings.browser.systemChrome.title": "Koristi sistemski Chrome",
   "settings.browser.systemChrome.description":
     "Koristite instalirani Chrome preglednik umjesto zasebne Chromium instance.",
@@ -948,15 +973,12 @@ export const dict = {
   "settings.sandboxing.writablePaths.title": "Dodatne upisive putanje",
   "settings.sandboxing.writablePaths.description":
     "Dodatne putanje sistema datoteka u koje sandbox dozvoljava upis (npr. /tmp, /var/log). Spajaju se sa zadanim upisivim putanjama kada je sandbox aktivan.",
-  "settings.experimental.multiProject.title": "Višeprojektni Agent Manager",
+  "settings.experimental.conversationPromptHistory.title": "Historija upita po razgovoru",
+  "settings.experimental.conversationPromptHistory.description":
+    "Čuvajte historiju upita (ArrowUp/ArrowDown) zasebno za svaki razgovor umjesto da dijelite jednu historiju među svim razgovorima.",
   "settings.experimental.claudeMigration.title": "Claude Code migracija",
   "settings.experimental.claudeMigration.description":
     "Jednom uvezite podržane globalne CLAUDE.md upute, jednostavne vještine i onemogućene MCP definicije. Originalne Claude datoteke ostaju nepromijenjene; ponovo pokrenite backend nakon uključivanja.",
-  "settings.experimental.multiProject.description":
-    "Omogući upravljanje sesijama i worktree-ima kroz više repozitorija u Agent Manager-u. Trenutni workspace repozitorij je uvijek zadani projekat.",
-  "settings.experimental.taskModelSelection.title": "Odabir modela podagenta za Task",
-  "settings.experimental.taskModelSelection.description":
-    "Omogućava izričit odabir modela, provajdera i napora zaključivanja za Task podagente.",
   "settings.experimental.mcpTimeout.title": "MCP istek vremena (ms)",
   "settings.experimental.mcpTimeout.description": "Istek vremena za MCP server zahtjeve u milisekundama",
   "settings.experimental.remote.title": "Remote kontrola",
@@ -1045,12 +1067,31 @@ export const dict = {
   "settings.agentBehaviour.removeMcp.title": "Ukloni MCP server",
   "settings.agentBehaviour.removeMcp.confirm":
     'Ukloniti MCP server "{{name}}"? Ovo će ga ukloniti iz vaše konfiguracije.',
+  "settings.agentBehaviour.removeMcp.bundleConfirm":
+    'Ukloniti MCP server "{{name}}" i njegove pratećeg vještine? Ovo uklanja server i svaku vještinu koja pripada ovoj instalaciji sa Marketplace-a.',
   "settings.agentBehaviour.removeMcp.button": "Ukloni",
   "settings.agentBehaviour.editMcp": "Uredi MCP Server",
   "settings.agentBehaviour.editMcp.transportLocal": "Lokalni server (stdio transport)",
   "settings.agentBehaviour.editMcp.transportRemote": "Udaljeni server (SSE/HTTP transport)",
   "settings.agentBehaviour.editMcp.env": "Varijable okruženja",
   "settings.agentBehaviour.editMcp.env.help": "Varijable proslijeđene procesu MCP servera.",
+  "settings.agentBehaviour.editMcp.oauth": "OAuth",
+  "settings.agentBehaviour.editMcp.oauth.help":
+    "Ostavite na Automatski osim ako server ne zahtijeva prethodno registrovanog klijenta. Tajni klijent se čuva u vašoj Kilo konfiguracionoj datoteci.",
+  "settings.agentBehaviour.editMcp.oauth.mode": "Način rada",
+  "settings.agentBehaviour.editMcp.oauth.mode.automatic": "Automatski",
+  "settings.agentBehaviour.editMcp.oauth.mode.disabled": "Onemogućeno",
+  "settings.agentBehaviour.editMcp.oauth.mode.custom": "Prilagođeni klijent",
+  "settings.agentBehaviour.editMcp.oauth.clientId": "ID klijenta",
+  "settings.agentBehaviour.editMcp.oauth.clientSecret": "Tajni klijent",
+  "settings.agentBehaviour.editMcp.oauth.scope": "Opseg",
+  "settings.agentBehaviour.editMcp.oauth.callbackPort": "Povratni port",
+  "settings.agentBehaviour.editMcp.oauth.redirectUri": "URI preusmjeravanja",
+  "settings.agentBehaviour.editMcp.oauth.redirectUri.help":
+    "Zadano je http://127.0.0.1:19876/mcp/oauth/callback i poništava povratni port.",
+  "settings.agentBehaviour.editMcp.oauth.port.invalid": "Unesite port između 1 i 65535.",
+  "settings.agentBehaviour.editMcp.oauth.secret.invalid": "Tajni klijent zahtijeva ID klijenta.",
+  "settings.agentBehaviour.editMcp.oauth.redirectUri.invalid": "Unesite važeći URI preusmjeravanja.",
   "settings.agentBehaviour.addMcp.command": "Naredba",
   "settings.agentBehaviour.addMcp.command.placeholder": "e.g. npx",
   "settings.agentBehaviour.addMcp.args": "Argumenti",
@@ -1063,6 +1104,8 @@ export const dict = {
   "settings.agentBehaviour.removeSkill.title": "Ukloni vještinu",
   "settings.agentBehaviour.removeSkill.confirm":
     'Ukloniti vještinu "{{name}}"? Ovo će obrisati datoteke vještine sa diska.',
+  "settings.agentBehaviour.removeSkill.bundleConfirm":
+    'Ukloniti vještinu "{{name}}"? Ovo će također deinstalirati MCP server {{mcp}} i svaku pratećeg vještinu iz iste instalacije sa Marketplace-a.',
   "settings.agentBehaviour.removeSkill.button": "Ukloni",
   "settings.agentBehaviour.rules.description":
     "Pravila su datoteke uputa koje usmjeravaju ponašanje agenta. Uključena su u sistemski prompt za svaki razgovor. Dodajte putanje datoteka ispod kako biste uključili dodatna pravila.",
@@ -1078,6 +1121,12 @@ export const dict = {
   "settings.agentBehaviour.mcpDetail.command": "Naredba",
   "settings.agentBehaviour.mcpDetail.args": "Argumenti",
   "settings.agentBehaviour.mcpDetail.env": "Okruženje",
+  "settings.agentBehaviour.mcpSignIn.cancel": "Otkaži prijavu",
+  "settings.agentBehaviour.mcpRemoving": "Uklanjanje…",
+  "settings.agentBehaviour.mcpResetAuth": "Resetuj prijavu",
+  "settings.agentBehaviour.mcpResetAuth.title": "Resetuj MCP prijavu",
+  "settings.agentBehaviour.mcpResetAuth.confirm":
+    'Ukloniti sačuvanu prijavu za "{{name}}"? Morat ćete se ponovo prijaviti.',
   "settings.agentBehaviour.mcpBrowseMarketplace": "Pregledaj Marketplace",
   "settings.agentBehaviour.mcpEmpty":
     "Nema konfiguriranih MCP servera. Dodajte MCP servere u kilo.jsonc ili zamolite agenta da ih doda.",
@@ -1140,6 +1189,31 @@ export const dict = {
     "Sprečavanje ponavljanja identičnih radnji. Pokreće se kada se isti poziv alata ponovi sa identičnim unosom.",
   "settings.checkpoints.enable.title": "Omogući snimke",
   "settings.checkpoints.enable.description": "Kreiraj kontrolne točke prije uređivanja datoteka",
+  "settings.autoCleanup.enable.title": "Omogući automatsko čišćenje sesija",
+  "settings.autoCleanup.enable.description":
+    "Automatski briše staru historiju sesija nakon određenog broja dana, u svim projektima i svim Kilo klijentima na ovom računaru, ne samo u ovom prozoru. Sesije koje su trenutno aktivne i sesije sa nedavnim forkom nikad se ne brišu. Brisanje je trajno.",
+  "settings.autoCleanup.defaultRetention.title": "Zadrži sesije (dana)",
+  "settings.autoCleanup.defaultRetention.description":
+    "Koliko dugo se historija sesija čuva prije automatskog brisanja.",
+  "settings.autoCleanup.lastRun.title": "Posljednje čišćenje",
+  "settings.autoCleanup.lastRun.never": "Nikad pokrenuto",
+  "settings.autoCleanup.result":
+    "{{date}}: obrisano {{deleted}} od {{scanned}} sesija ({{active}} aktivnih preskočeno, {{failed}} neuspjelo) za {{seconds}}s",
+  "settings.autoCleanup.starting": "Pokretanje čišćenja sesija...",
+  "settings.autoCleanup.error.status": "Status čišćenja sesija je privremeno nedostupan. Ponovni pokušaj...",
+  "settings.autoCleanup.error.timeout":
+    "Čekanje na status čišćenja. Pozadinski servis traje duže nego što se očekivalo.",
+  "settings.autoCleanup.error.run":
+    "Nije moguće potvrditi da je čišćenje sesija završeno. Provjerite rezultat posljednjeg čišćenja prije ponovnog pokušaja.",
+  "settings.autoCleanup.progress.scanning": "Pregled sesija: {{processed}}/{{total}} obrađeno",
+  "settings.autoCleanup.progress.deleting":
+    "Brisanje sesija: {{processed}}/{{total}} obrađeno ({{deleted}} obrisano, {{failed}} neuspjelo)",
+  "settings.autoCleanup.runNow": "Pokreni čišćenje sada",
+  "settings.autoCleanup.runNow.confirm":
+    "Trajno obrisati istekle sesije u svim projektima i svim Kilo klijentima na ovom računaru?",
+  "settings.autoCleanup.stop": "Zaustavi čišćenje",
+  "settings.autoCleanup.progress.cancelling": "Zaustavljanje čišćenja sesija...",
+  "settings.autoCleanup.lastRun.cancelled": "prekinuto",
   "settings.context.autoCompaction.title": "Automatska kompresija",
   "settings.context.autoCompaction.description": "Automatski komprimiraj kontekst prije nego dostigne limit",
   "settings.context.compaction.title": "Kompresija",
@@ -1188,6 +1262,19 @@ export const dict = {
   "settings.commitMessage.language.sync": "Sinkronizacija sa jezikom korisničkog sučelja",
   "settings.commitMessage.language.description": "Izaberite koji jezik koristiti za poruke koje generiše AI:",
 
+  "settings.display.preview.title": "Pregled",
+  "settings.display.presets.title": "Preseti prikaza",
+  "settings.display.presets.description": "Mijenja opcije prikaza ispod, ne dozvole. Sačuvajte da primijenite.",
+  "settings.display.preview.model": "Primjer modela",
+  "settings.display.preview.prompt": "Uklonite dodatne razmake iz pozdrava i provjerite testove.",
+  "settings.display.preview.reasoning":
+    "**Provjerite pozdrav.** Funkcija bi trebalo da proizvede isti pozdrav za obično ime i ime sa dodatnim razmacima na oba kraja. Zadržat ću postojeći potpis funkcije i format pozdrava, a promijeniti samo način na koji ime ulazi u vraćeni string.\n\nZa unos kao što je `  Ada  `, neželjeni razmaci pripadaju unosu, a ne predlošku pozdrava. Podrezivanje dovršenog pozdrava ostavilo bi razmake pored imena. Operacija podrezivanja zato mora da se dogodi prije nego što se ime umetne.\n\nProvjerit ću dokumentaciju o stringovima da potvrdim da `trim()` uklanja razmake sa oba kraja i vraća novi string. Trebalo bi da ostavi originalni unos nepromijenjenim. Za ovu promjenu nije potreban regularni izraz, dodatna zavisnost ni zasebna pomoćna funkcija.\n\nRazmaci unutar imena moraju ostati netaknuti. Ime kao što je `Ada Lovelace` ne bi trebalo da postane `AdaLovelace`, a velika i mala slova ne bi trebalo da se mijenjaju. Prazan unos ili unos koji sadrži samo razmake ne zahtijeva novi zadani pozdrav u okviru ove ciljane ispravke.\n\nPromjena može ostati u izrazu za vraćanje korištenjem `name.trim()` tamo gdje predložak trenutno koristi `name`. Zadržat ću okolnu interpunkciju i namjerni razmak nakon pozdrava. To čuva mali diff i olakšava provjeru ponašanja.\n\nNa kraju ću pokrenuti `bun test greeting.test.ts` i provjeriti oba rezultata. Slučaj sa dopunjenim imenom trebalo bi da potvrdi da se dodatni razmaci uklanjaju, dok slučaj sa običnim imenom štiti postojeći izlaz. Promjenu i rezultate testova prijavit ću tek nakon što se naredba završi.",
+  "settings.display.preview.shell": "Provjerite test pozdrava",
+  "settings.display.preview.shellOutput":
+    "bun test greeting.test.ts\n\n[pass] uklanja dodatne razmake\n[pass] čuva obično ime\n\n2 testa prošla",
+  "settings.display.preview.query": "Podrezivanje stringova",
+  "settings.display.preview.result": "trim() uklanja razmake sa oba kraja stringa.",
+  "settings.display.preview.answer": "Pozdrav je ažuriran da uklanja dodatne razmake. Oba testa prolaze.",
   "settings.display.username.title": "Korisničko ime",
   "settings.display.username.description": "Prilagođeno korisničko ime u razgovorima",
   "settings.display.fontSize.title": "Veličina fonta",
@@ -1217,12 +1304,15 @@ export const dict = {
   "settings.display.mcpTool.expanded": "Prošireni",
   "settings.display.mcpTool.collapsed": "Sažeti",
 
+  "settings.display.shortcutHints.title": "Prikaži savjete za prečice",
+  "settings.display.shortcutHints.description":
+    "Prikazuje u praznom promptu prečicu tastature koja odgovara onome što sada radite, na primjer kako dodati odabrani kod ili se vratiti u prompt.",
   "settings.display.tokenThroughput.title": "Prikaži protok tokena",
   "settings.display.tokenThroughput.description":
     "Prikažite brzinu generisanja teksta (tokens/sec) u najnovijoj poruci asistenta i zaglavlju zadatka. Prikazuje se podrazumijevano; onemogućite ovu postavku da biste je po potrebi sakrili.",
   "settings.display.autoApprovalReason.title": "Prikaži razlog automatskog odobravanja",
   "settings.display.autoApprovalReason.description":
-    "Prikazuje red uz pozive alata koji objašnjava zašto su automatski odobreni (odgovarajuće pravilo, podrazumevana vrijednost agenta, YOLO režim itd.).",
+    "Prikazuje zašto je poziv alata automatski odobren, kao što je odgovarajuće pravilo dozvole ili zadana vrijednost agenta.",
 
   "chat.throughput.tooltip":
     "Average {{speed}} tokens/s for this turn. Includes output and reasoning tokens; excludes tool execution and waiting time.",
@@ -1294,16 +1384,16 @@ export const dict = {
 
   "task.todos.progress": "{{done}}/{{total}} zadataka završeno",
   "task.todos.allDone": "{{count}} zadataka završeno",
+  "task.todos.title": "Zadaci",
+  "task.todos.done": "Sve završeno",
   "task.backgroundAgents.running.one": "1 agent u pozadini",
   "task.backgroundAgents.running.many": "{{count}} agenata u pozadini",
-  "task.backgroundAgents.more": "+{{count}} još",
   "task.backgroundAgents.open": "Otvori agenta u pozadini",
   "task.backgroundAgents.openAll": "Otvori sve agente u pozadini",
   "task.backgroundAgents.cancel": "Zaustavi",
   "task.backgroundAgents.continueInBackground": "Nastavi u pozadini",
   "task.backgroundAgents.waiting": "Agent u pozadini treba vaš unos",
   "task.backgroundAgents.needsInput": "Potreban unos",
-  "task.backgroundAgents.dismiss": "Odbaci",
   "task.backgroundAgents.clearFinished": "Obriši završene",
   "task.backgroundAgents.summary": "{{running}} od {{total}} agenata u pozadini radi",
   "task.backgroundAgents.status.running": "Radi",
@@ -1312,6 +1402,8 @@ export const dict = {
   "task.backgroundAgents.status.error": "Greška",
   "task.backgroundAgents.untitled": "Agent u pozadini",
   "task.backgroundAgents.stopAll": "Zaustavi sve ({{count}})",
+  "task.backgroundAgents.finished": "Agenti u pozadini su završili",
+  "task.stop": "Zaustavi podagenta",
   "settings.saveBar.unsavedChanges": "Nespremljene promjene",
   "settings.saveBar.discard": "Odbaci",
   "settings.saveBar.save": "Spremi",
@@ -1377,4 +1469,6 @@ export const dict = {
   "settings.experimental.browserAutomation.systemChrome.description":
     "Koristite instalirani Google Chrome za Integrirani preglednik. Onemogućite samo kada je kompatibilni Playwright Chromium preglednik već instaliran.",
   "chat.search.searchingHistory": "Pretraživanje ranijih poruka…",
+  "browserTab.noSession": "Otvorite preglednik iz sesije da pregledate lokalnu aplikaciju ili javnu HTTPS stranicu.",
+  "browserTab.disabled": "Integrirani preglednik je onemogućen. Omogućite ga u Kilo postavkama > Eksperimentalno.",
 }

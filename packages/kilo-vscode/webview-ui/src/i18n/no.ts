@@ -93,10 +93,13 @@ export const dict = {
     "Samtalen ble tilbakestilt. Filendringer ble ikke gjenopprettet fordi øyeblikksbilder er deaktivert.",
   "revert.banner.workspace.unavailable":
     "Samtalen ble tilbakestilt. Ingen filkontrollpunkt var tilgjengelig, så endringer i arbeidsområdet ble ikke gjenopprettet.",
+  "revert.banner.workspace.notAGitRepo":
+    "Samtalen ble tilbakestilt. Filkontrollpunkter krever et Git-repositorium, så endringer i arbeidsområdet ble ikke gjenopprettet.",
   "revert.banner.workspace.legacy":
     "Samtalen er tilbakeført. Statusen for gjenoppretting av arbeidsområdet er ikke tilgjengelig for denne tidligere tilbakeføringen.",
   "revert.banner.workspace.enableSnapshots": "Aktiver øyeblikksbilder",
   "revert.disabled.agentBusy": "Vent til agenten er ferdig",
+  "revert.error.body": "Repositoriet er kanskje i bruk. Prøv igjen, eller se Kilo-loggene for detaljer.",
   "command.session.compact": "Komprimer sesjon",
   "command.session.export": "Eksporter sesjonsutskrift",
 
@@ -212,13 +215,27 @@ export const dict = {
   "prompt.worktrees.title": "Worktrees",
   "prompt.worktrees.search": "Søk i Worktrees",
   "prompt.thinking.tooltip": "Resonnementsinnsats",
+  "prompt.shortcutHint.addSelection": "for å legge til markeringen",
+  "prompt.shortcutHint.waiting": "for å svare på en ventende økt",
+  "prompt.shortcutHint.type": "for å skrive",
+  "prompt.shortcutHint.sessions": "for å bytte økt",
+  "prompt.shortcutHint.stop": "for å stoppe",
+  "prompt.shortcutHint.changes": "for å se gjennom endringer",
+  "prompt.shortcutHint.pr": "for å åpne PR-en",
+  "prompt.shortcutHint.mode": "Neste modus",
   "prompt.action.send": "Send",
   "prompt.action.continue": "Fortsett",
   "prompt.action.send.blocked": "Svar på eller avvis det ventende spørsmålet først",
   "prompt.action.send.recording": "Transkriber og send",
   "prompt.action.stop": "Stopp",
+  "prompt.action.stop.background": "Stopp hovedagenten. Bakgrunnsagenter fortsetter å kjøre.",
+  "prompt.agents.show": "Vis bakgrunnsagenter",
   "prompt.action.enhance": "Forbedre prompt",
   "prompt.paste.expand": "Klikk for å utvide den innlimte teksten",
+  "prompt.issues.title": "Sesjonsproblemer",
+  "prompt.mcp.provider": "{{name}} MCP",
+  "prompt.mcp.openSettings": "Åpne i Innstillinger",
+  "prompt.mcp.signIn.busy": "Logger inn…",
   "prompt.action.autoApprove.enable": "Aktiver automatisk godkjenning",
   "prompt.action.autoApprove.disable": "Deaktiver automatisk godkjenning",
   "prompt.action.autoApprove.enabled":
@@ -331,7 +348,7 @@ export const dict = {
   "ui.approval.source.agent.default": "av agenten",
   "ui.approval.source.global": "av den globale konfigurasjonen",
   "ui.approval.source.project": "av prosjektkonfigurasjonen",
-  "ui.approval.source.yolo": "av automatisk godkjenning (YOLO)",
+  "ui.approval.source.yolo": "av automatisk godkjenning",
   "ui.approval.source.session": "av en økt-autogodkjenningsregel",
   "ui.approval.source.default": "som standard",
   "ui.approval.outsideWorkspace": "(utenfor arbeidsområdet ditt: {{file}})",
@@ -487,6 +504,7 @@ export const dict = {
   "provider.custom.models.toggleImages": "Veksle bilde for alle",
   "provider.custom.models.remove": "Fjern modell",
   "provider.custom.models.add": "Legg til modell",
+  "provider.custom.models.fetch.button": "Hent modeller",
   "provider.custom.models.fetch.authError": "Autentisering mislyktes. Sjekk API-nøkkelen ovenfor og prøv igjen.",
   "provider.custom.models.fetch.empty": "Ingen modeller funnet på denne serveren.",
   "provider.custom.models.fetch.added": "{{count}} modell(er) lagt til.",
@@ -516,6 +534,9 @@ export const dict = {
   "provider.custom.error.duplicate": "Duplikat",
   "settings.openLocalConfig": "Lokal konfig",
   "settings.openGlobalConfig": "Global konfig",
+  "settings.search.placeholder": "Søk i innstillinger",
+  "settings.search.noResults": "Fant ingen innstillinger",
+  "settings.search.clear": "Tøm søk",
   "settings.config.scope.local": "Lokal",
   "settings.config.scope.global": "Global",
   "settings.config.status.loaded": "lastet",
@@ -576,6 +597,7 @@ export const dict = {
   "session.tabs.switcher.pending": "Ny",
   "session.tabs.switcher.busy": "Jobber",
   "session.tabs.switcher.scheduled": "Planlagt",
+  "session.tabs.pinHint": "Shift+klikk for å feste eller løsne",
   "session.tab.local": "Lokal",
   "session.tab.cloud": "Sky",
   "session.tab.worktree": "Arbeidstre",
@@ -599,13 +621,14 @@ export const dict = {
   "workStyle.choice.human-in-the-loop.description": "Kilo tar pause og viser deg planen sin mens den arbeider.",
   "workStyle.choice.human-in-the-loop.permissions": "Ber om tillatelse før filer redigeres eller kommandoer kjøres.",
   "workStyle.choice.human-in-the-loop.bash": "Ber om tillatelse til alle terminalkommandoer.",
-  "workStyle.choice.human-in-the-loop.visibility": "Viser alle samtaledetaljer, inkludert resonnering.",
+  "workStyle.choice.human-in-the-loop.visibility": "Utvider resonnering, kommandoer og redigeringer for gjennomgang.",
   "workStyle.choice.autonomous.eyebrow": "Færre avbrudd",
   "workStyle.choice.autonomous.title": "Høy autonomi",
   "workStyle.choice.autonomous.description": "Færre avbrudd og et strømlinjeformet grensesnitt.",
   "workStyle.choice.autonomous.permissions": "Redigerer filer og kjører kommandoer i arbeidsområdet uten å spørre.",
   "workStyle.choice.autonomous.bash": "Kan kjøre terminalkommandoer i arbeidsområdet uten godkjenning.",
-  "workStyle.choice.autonomous.visibility": "Detaljene forblir skjult til du utvider dem.",
+  "workStyle.choice.autonomous.visibility":
+    "Slår sammen verktøydetaljer, med en kompakt forhåndsvisning av resonneringen.",
   "session.cloud.import.title": "Importer fra skyen",
   "session.cloud.import.placeholder": "Økt-ID, URL eller kilo import-kommando",
   "session.cloud.import.button": "Importer",
@@ -754,11 +777,13 @@ export const dict = {
   "ui.sessionTurn.status.consideringNextSteps": "Vurderer neste steg...",
 
   "dialog.model.noProviders": "Ingen leverandører",
+  "dialog.model.unavailable": "Kilo-modeller er utilgjengelige",
 
   "prompt.placeholder.connecting": "Kobler til server...",
   "prompt.placeholder.error": "Tilkobling mislyktes. Sjekk utdatapanelet eller start utvidelsen på nytt.",
   "prompt.placeholder.default":
     "Skriv en melding, @ for å nevne filer... (Enter for å sende, Shift+Enter for ny linje)",
+  "prompt.placeholder.hint": "Skriv en melding, @ for å nevne filer... ({{key}} {{action}})",
 
   "context.usage.sessionCost": "Sesjonskostnad",
   "context.usage.olderSessions": "{{count}} eldre sesjoner",
@@ -815,7 +840,8 @@ export const dict = {
   "settings.browser.description":
     "Konfigurer innebygd nettleserautomatisering drevet av Playwright. Kilo kan navigere, samhandle med og ta skjermbilder av nettsider i øktene dine.",
   "settings.browser.enable.title": "Aktiver nettleserautomatisering",
-  "settings.browser.enable.description": "Registrer Playwright MCP-serveren med CLI-backend.",
+  "settings.browser.enable.description":
+    "Aktiver den øktspesifikke nettleseren i Agent Manager for lokale applikasjoner og offentlige HTTPS-sider.",
   "settings.browser.systemChrome.title": "Bruk system-Chrome",
   "settings.browser.systemChrome.description":
     "Bruk den installerte Chrome-nettleseren i stedet for en separat Chromium-instans.",
@@ -908,15 +934,12 @@ export const dict = {
   "settings.sandboxing.writablePaths.title": "Ytterligere skrivbare baner",
   "settings.sandboxing.writablePaths.description":
     "Ytterligere filsystembaner som sandkassen tillater skriving til (f.eks. /tmp, /var/log). Disse flettes med de standardskrivbare banene når sandkassen er aktiv.",
-  "settings.experimental.multiProject.title": "Multi-prosjekt Agent Manager",
+  "settings.experimental.conversationPromptHistory.title": "Promptlogg per samtale",
+  "settings.experimental.conversationPromptHistory.description":
+    "Hold promptloggen (ArrowUp/ArrowDown) adskilt for hver samtale i stedet for å dele én logg på tvers av alle samtaler.",
   "settings.experimental.claudeMigration.title": "Claude Code-migrering",
   "settings.experimental.claudeMigration.description":
     "Importer støttede globale CLAUDE.md-instruksjoner, enkle ferdigheter og deaktiverte MCP-definisjoner én gang. Originale Claude-filer forblir uendret; start backend på nytt etter aktivering.",
-  "settings.experimental.multiProject.description":
-    "Aktiver administrering av økter og worktrees på tvers av flere repositories i Agent Manager. Det nåværende workspace-repositoryet er alltid standardprosjektet.",
-  "settings.experimental.taskModelSelection.title": "Valg av Task-underagentmodell",
-  "settings.experimental.taskModelSelection.description":
-    "Tillat eksplisitt valg av modell, leverandør og resonneringsinnsats for Task-underagenter.",
   "settings.experimental.mcpTimeout.title": "MCP-tidsavbrudd (ms)",
   "settings.experimental.mcpTimeout.description": "Tidsavbrudd for MCP-serverforespørsler i millisekunder",
   "settings.experimental.remote.title": "Remote-kontroll",
@@ -1043,12 +1066,31 @@ export const dict = {
   "settings.agentBehaviour.removeMcp.title": "Fjern MCP-server",
   "settings.agentBehaviour.removeMcp.confirm":
     'Vil du fjerne MCP-serveren "{{name}}"? Dette vil fjerne den fra konfigurasjonen din.',
+  "settings.agentBehaviour.removeMcp.bundleConfirm":
+    'Fjerne MCP-serveren "{{name}}" og tilhørende ferdigheter? Dette fjerner både serveren og alle ferdigheter som eies av denne Marketplace-installasjonen.',
   "settings.agentBehaviour.removeMcp.button": "Fjern",
   "settings.agentBehaviour.editMcp": "Rediger MCP-server",
   "settings.agentBehaviour.editMcp.transportLocal": "Lokal server (stdio-transport)",
   "settings.agentBehaviour.editMcp.transportRemote": "Ekstern server (SSE/HTTP-transport)",
   "settings.agentBehaviour.editMcp.env": "Miljøvariabler",
   "settings.agentBehaviour.editMcp.env.help": "Variabler som sendes til MCP-serverprosessen.",
+  "settings.agentBehaviour.editMcp.oauth": "OAuth",
+  "settings.agentBehaviour.editMcp.oauth.help":
+    "La stå på Automatisk med mindre serveren krever en forhåndsregistrert klient. En klienthemmelighet lagres i Kilo-konfigurasjonsfilen din.",
+  "settings.agentBehaviour.editMcp.oauth.mode": "Modus",
+  "settings.agentBehaviour.editMcp.oauth.mode.automatic": "Automatisk",
+  "settings.agentBehaviour.editMcp.oauth.mode.disabled": "Deaktivert",
+  "settings.agentBehaviour.editMcp.oauth.mode.custom": "Egendefinert klient",
+  "settings.agentBehaviour.editMcp.oauth.clientId": "Klient-ID",
+  "settings.agentBehaviour.editMcp.oauth.clientSecret": "Klienthemmelighet",
+  "settings.agentBehaviour.editMcp.oauth.scope": "Omfang",
+  "settings.agentBehaviour.editMcp.oauth.callbackPort": "Callback-port",
+  "settings.agentBehaviour.editMcp.oauth.redirectUri": "Omdirigerings-URI",
+  "settings.agentBehaviour.editMcp.oauth.redirectUri.help":
+    "Standard er http://127.0.0.1:19876/mcp/oauth/callback og overstyrer callback-porten.",
+  "settings.agentBehaviour.editMcp.oauth.port.invalid": "Angi en port mellom 1 og 65535.",
+  "settings.agentBehaviour.editMcp.oauth.secret.invalid": "En klienthemmelighet krever en klient-ID.",
+  "settings.agentBehaviour.editMcp.oauth.redirectUri.invalid": "Angi en gyldig omdirigerings-URI.",
   "settings.agentBehaviour.addMcp.command": "Kommando",
   "settings.agentBehaviour.addMcp.command.placeholder": "e.g. npx",
   "settings.agentBehaviour.addMcp.args": "Argumenter",
@@ -1061,6 +1103,8 @@ export const dict = {
   "settings.agentBehaviour.removeSkill.title": "Fjern ferdighet",
   "settings.agentBehaviour.removeSkill.confirm":
     'Vil du fjerne ferdigheten "{{name}}"? Dette vil slette ferdighetsfilene fra disken.',
+  "settings.agentBehaviour.removeSkill.bundleConfirm":
+    'Fjerne ferdigheten "{{name}}"? Dette avinstallerer også {{mcp}} MCP-serveren og alle tilhørende ferdigheter fra samme Marketplace-installasjon.',
   "settings.agentBehaviour.removeSkill.button": "Fjern",
   "settings.agentBehaviour.rules.description":
     "Regler er instruksjonsfiler som styrer agentens atferd. De inkluderes i systemprompten for hver samtale. Legg til filstier nedenfor for å inkludere ekstra regler.",
@@ -1076,6 +1120,12 @@ export const dict = {
   "settings.agentBehaviour.mcpDetail.command": "Kommando",
   "settings.agentBehaviour.mcpDetail.args": "Argumenter",
   "settings.agentBehaviour.mcpDetail.env": "Miljø",
+  "settings.agentBehaviour.mcpSignIn.cancel": "Avbryt innlogging",
+  "settings.agentBehaviour.mcpRemoving": "Fjerner…",
+  "settings.agentBehaviour.mcpResetAuth": "Nullstill innlogging",
+  "settings.agentBehaviour.mcpResetAuth.title": "Nullstill MCP-innlogging",
+  "settings.agentBehaviour.mcpResetAuth.confirm":
+    'Fjerne den lagrede innloggingen for "{{name}}"? Du må logge inn på nytt.',
   "settings.agentBehaviour.mcpBrowseMarketplace": "Bla gjennom Marketplace",
   "settings.agentBehaviour.mcpEmpty":
     "Ingen MCP-servere konfigurert. Legg til MCP-servere i kilo.jsonc, eller be agenten om å legge dem til.",
@@ -1134,6 +1184,30 @@ export const dict = {
     "Forhindre gjentatte identiske handlinger. Utløses når det samme verktøyanropet gjentas med identisk inndata.",
   "settings.checkpoints.enable.title": "Aktiver øyeblikksbilder",
   "settings.checkpoints.enable.description": "Opprett kontrollpunkter før filredigeringer",
+  "settings.autoCleanup.enable.title": "Aktiver automatisk opprydding av økter",
+  "settings.autoCleanup.enable.description":
+    "Sletter gammel økthistorikk automatisk etter et fast antall dager, på tvers av alle prosjekter og alle Kilo-klienter på denne maskinen, ikke bare i dette vinduet. Kjørende økter og økter med nylig forgrening slettes aldri. Sletting er permanent.",
+  "settings.autoCleanup.defaultRetention.title": "Behold økter i (dager)",
+  "settings.autoCleanup.defaultRetention.description":
+    "Hvor lenge økthistorikk beholdes før automatisk opprydding sletter den.",
+  "settings.autoCleanup.lastRun.title": "Siste opprydding",
+  "settings.autoCleanup.lastRun.never": "Aldri kjørt",
+  "settings.autoCleanup.result":
+    "{{date}}: slettet {{deleted}} av {{scanned}} økter ({{active}} aktive hoppet over, {{failed}} feilet) på {{seconds}}s",
+  "settings.autoCleanup.starting": "Starter opprydding av økter...",
+  "settings.autoCleanup.error.status": "Status for opprydding av økter er midlertidig utilgjengelig. Prøver igjen...",
+  "settings.autoCleanup.error.timeout": "Venter på oppryddingsstatus. Bakenden bruker lengre tid enn forventet.",
+  "settings.autoCleanup.error.run":
+    "Kunne ikke bekrefte at oppryddingen av økter er fullført. Kontroller resultatet av siste opprydding før du prøver igjen.",
+  "settings.autoCleanup.progress.scanning": "Skanner økter: {{processed}}/{{total}} behandlet",
+  "settings.autoCleanup.progress.deleting":
+    "Sletter økter: {{processed}}/{{total}} behandlet ({{deleted}} slettet, {{failed}} feilet)",
+  "settings.autoCleanup.runNow": "Kjør opprydding nå",
+  "settings.autoCleanup.runNow.confirm":
+    "Slett utløpte økter permanent på tvers av alle prosjekter og alle Kilo-klienter på denne maskinen?",
+  "settings.autoCleanup.stop": "Stopp opprydding",
+  "settings.autoCleanup.progress.cancelling": "Stopper opprydding av økter...",
+  "settings.autoCleanup.lastRun.cancelled": "avbrutt",
   "settings.context.autoCompaction.title": "Automatisk komprimering",
   "settings.context.autoCompaction.description": "Komprimer automatisk kontekst før den når grensen",
   "settings.context.compaction.title": "Komprimering",
@@ -1182,6 +1256,19 @@ export const dict = {
   "settings.commitMessage.language.sync": "Sync med UI-språk",
   "settings.commitMessage.language.description": "Velg hvilket språk du skal bruke for AI-genererte commit-meldinger:",
 
+  "settings.display.preview.title": "Forhåndsvisning",
+  "settings.display.presets.title": "Visningsforhåndsinnstillinger",
+  "settings.display.presets.description": "Endrer visningsalternativene nedenfor, ikke tillatelser. Lagre for å bruke.",
+  "settings.display.preview.model": "Eksempelmodell",
+  "settings.display.preview.prompt": "Fjern overflødige mellomrom fra hilsenen, og kontroller testene.",
+  "settings.display.preview.reasoning":
+    "**Kontroller hilsenen.** Funksjonen bør gi samme hilsen for et vanlig navn og et navn med overflødige mellomrom i begge ender. Jeg beholder den eksisterende funksjonssignaturen og hilsenformatet og endrer bare hvordan navnet kommer inn i den returnerte strengen.\n\nFor en inndata som `  Ada  ` tilhører de uønskede mellomrommene inndataene, ikke hilsenmalen. Hvis man trimmer den ferdige hilsenen, vil det stå mellomrom ved siden av navnet. Trim-operasjonen må derfor skje før navnet settes inn.\n\nJeg vil sjekke strengdokumentasjonen for å bekrefte at `trim()` fjerner mellomrom i begge ender og returnerer en ny streng. Den bør la den opprinnelige inndataene være uendret. Det er ikke behov for et regulært uttrykk, en ekstra avhengighet eller en egen hjelpefunksjon for denne endringen.\n\nMellomrom inne i et navn må forbli intakte. Et navn som `Ada Lovelace` bør ikke bli `AdaLovelace`, og store og små bokstaver bør ikke endres. En tom inndata eller inndata med bare mellomrom krever ikke en ny standardhilsen som en del av denne målrettede rettelsen.\n\nEndringen kan bli i returuttrykket ved å bruke `name.trim()` der malen for tiden bruker `name`. Jeg bevarer tegnsettingen rundt og det bevisste mellomrommet etter hilsenen. Det holder diffen liten og gjør oppførselen lett å gjennomgå.\n\nTil slutt kjører jeg `bun test greeting.test.ts` og kontrollerer begge resultatene. Tilfellet med det utfylte navnet bør bekrefte at overflødige mellomrom fjernes, mens tilfellet med det vanlige navnet beskytter den eksisterende utdataene. Jeg rapporterer først endringen og testresultatene når kommandoen er fullført.",
+  "settings.display.preview.shell": "Kontroller hilsentesten",
+  "settings.display.preview.shellOutput":
+    "bun test greeting.test.ts\n\n[pass] fjerner overflødige mellomrom\n[pass] bevarer et vanlig navn\n\n2 tester bestått",
+  "settings.display.preview.query": "Trimming av strenger",
+  "settings.display.preview.result": "trim() fjerner mellomrom i begge ender av en streng.",
+  "settings.display.preview.answer": "Hilsenen er oppdatert for å fjerne overflødige mellomrom. Begge testene består.",
   "settings.display.username.title": "Brukernavn",
   "settings.display.username.description": "Egendefinert brukernavn i samtaler",
   "settings.display.fontSize.title": "Skriftstørrelse",
@@ -1211,12 +1298,15 @@ export const dict = {
   "settings.display.mcpTool.expanded": "Utvidet",
   "settings.display.mcpTool.collapsed": "Skjult",
 
+  "settings.display.shortcutHints.title": "Vis snarveitips",
+  "settings.display.shortcutHints.description":
+    "Vis hurtigtasten som passer til det du gjør nå, i den tomme ledeteksten, for eksempel hvordan du legger til markert kode eller går tilbake til ledeteksten.",
   "settings.display.tokenThroughput.title": "Vis genereringshastighet",
   "settings.display.tokenThroughput.description":
     "Vis tekstgenereringshastigheten (tokens/sec) i den nyeste assistentmeldingen og i oppgaveoverskriften. Vises som standard; deaktiver denne innstillingen for å skjule den ved behov.",
   "settings.display.autoApprovalReason.title": "Vis årsak til automatisk godkjenning",
   "settings.display.autoApprovalReason.description":
-    "Viser en linje ved verktøykall som forklarer hvorfor de ble automatisk godkjent (samsvarende regel, agentstandard, YOLO-modus osv.).",
+    "Viser hvorfor et verktøykall ble automatisk godkjent, for eksempel en samsvarende tillatelsesregel eller en agentstandard.",
 
   "chat.throughput.tooltip":
     "Average {{speed}} tokens/s for this turn. Includes output and reasoning tokens; excludes tool execution and waiting time.",
@@ -1285,16 +1375,16 @@ export const dict = {
 
   "task.todos.progress": "{{done}}/{{total}} oppgaver fullført",
   "task.todos.allDone": "{{count}} oppgaver fullført",
+  "task.todos.title": "Oppgaver",
+  "task.todos.done": "Alt ferdig",
   "task.backgroundAgents.running.one": "1 bakgrunnsagent",
   "task.backgroundAgents.running.many": "{{count}} bakgrunnsagenter",
-  "task.backgroundAgents.more": "+{{count}} flere",
   "task.backgroundAgents.open": "Åpne bakgrunnsagent",
   "task.backgroundAgents.openAll": "Åpne alle bakgrunnsagenter",
   "task.backgroundAgents.cancel": "Stopp",
   "task.backgroundAgents.continueInBackground": "Fortsett i bakgrunnen",
   "task.backgroundAgents.waiting": "En bakgrunnsagent trenger innspill fra deg",
   "task.backgroundAgents.needsInput": "Innspill kreves",
-  "task.backgroundAgents.dismiss": "Avvis",
   "task.backgroundAgents.clearFinished": "Fjern fullførte",
   "task.backgroundAgents.summary": "{{running}} av {{total}} bakgrunnsagenter kjører",
   "task.backgroundAgents.status.running": "Kjører",
@@ -1303,6 +1393,8 @@ export const dict = {
   "task.backgroundAgents.status.error": "Feil",
   "task.backgroundAgents.untitled": "Bakgrunnsagent",
   "task.backgroundAgents.stopAll": "Stopp alle ({{count}})",
+  "task.backgroundAgents.finished": "Bakgrunnsagenter er ferdige",
+  "task.stop": "Stopp underagent",
   "settings.saveBar.unsavedChanges": "Ulagrede endringer",
   "settings.saveBar.discard": "Forkast",
   "settings.saveBar.save": "Lagre",
@@ -1368,4 +1460,7 @@ export const dict = {
   "settings.experimental.browserAutomation.systemChrome.description":
     "Bruk den installerte Google Chrome for den integrerte nettleseren. Deaktiver bare når en kompatibel Playwright Chromium-nettleser allerede er installert.",
   "chat.search.searchingHistory": "Søker i tidligere meldinger…",
+  "browserTab.noSession":
+    "Åpne nettleseren fra en økt for å forhåndsvise en lokal applikasjon eller en offentlig HTTPS-side.",
+  "browserTab.disabled": "Den integrerte nettleseren er deaktivert. Aktiver den i Kilo-innstillinger > Eksperimentelt.",
 } satisfies Partial<Record<Keys, string>>

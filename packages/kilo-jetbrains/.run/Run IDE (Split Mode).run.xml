@@ -1,7 +1,7 @@
 <component name="ProjectRunConfigurationManager">
   <configuration default="false" name="Run IDE (Split Mode)" type="GradleRunConfiguration" factoryName="Gradle">
-    <log_file alias="Backend Kilo" path="$PROJECT_DIR$/packages/kilo-jetbrains/.intellijPlatform/sandbox/kilo.jetbrains/kilo-backend/kilo.log" show_all="true" />
-    <log_file alias="Frontend Kilo" path="$PROJECT_DIR$/packages/kilo-jetbrains/.intellijPlatform/sandbox/kilo.jetbrains/kilo-frontend/kilo.log" show_all="true" />
+    <log_file alias="Backend Kilo" path="$PROJECT_DIR$/packages/kilo-jetbrains/.intellijPlatform/sandbox/kilo.jetbrains/kilo-backend/kilo.log" skipped="false" charset="UTF-8" />
+    <log_file alias="Frontend Kilo" path="$PROJECT_DIR$/packages/kilo-jetbrains/.intellijPlatform/sandbox/kilo.jetbrains/kilo-frontend/kilo.log" skipped="false" charset="UTF-8" />
     <ExternalSystemSettings>
       <option name="executionName" />
       <option name="externalProjectPath" value="$PROJECT_DIR$/packages/kilo-jetbrains" />

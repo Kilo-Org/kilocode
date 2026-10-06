@@ -51,6 +51,9 @@ export class Service extends ConfigService.Service<Service>()("@opencode/Runtime
   // kilocode_change end
   experimentalLspTy: bool("KILO_EXPERIMENTAL_LSP_TY"),
   experimentalLspTool: enabledByExperimental("KILO_EXPERIMENTAL_LSP_TOOL"),
+  // kilocode_change start - self-context tools
+  experimentalContextTools: enabledByExperimental("KILO_EXPERIMENTAL_CONTEXT_TOOLS"),
+  // kilocode_change end
   experimentalOxfmt: enabledByExperimental("KILO_EXPERIMENTAL_OXFMT"),
   experimentalCodeMode: enabledByExperimental("KILO_EXPERIMENTAL_CODE_MODE"),
   experimentalEventSystem: enabledByExperimental("KILO_EXPERIMENTAL_EVENT_SYSTEM"),

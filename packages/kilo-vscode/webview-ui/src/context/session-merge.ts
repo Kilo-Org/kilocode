@@ -27,7 +27,7 @@ export function mergeMessages(current: Message[], incoming: Message[], mode: Exc
 
 // Cheap tail check: same ids in the same order and no visible streamed-part
 // correction to apply. It skips store churn when SSE already matches the
-// snapshot, but lets reconcile heal part removals and finalized text.
+// snapshot, but lets reconcile heal part removals, finalized text, and missed costs.
 export function sameReconcileShape(
   current: Message[],
   incoming: Message[],
@@ -37,6 +37,7 @@ export function sameReconcileShape(
   for (const [i, n] of incoming.entries()) {
     const c = current[i]!
     if (c.id !== n.id) return false
+    if (c.cost !== n.cost) return false
     if (!sameParts(getParts(c.id) ?? c.parts, n.parts)) return false
   }
   return true

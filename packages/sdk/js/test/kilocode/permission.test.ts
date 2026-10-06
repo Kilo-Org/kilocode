@@ -122,6 +122,107 @@ describe("respondToPermission", () => {
       await server.stop(true)
     }
   })
+
+  it("retries a dropped transport socket while replying", async () => {
+    const paths: string[] = []
+    const server = Bun.serve({
+      port: 0,
+      fetch(request) {
+        paths.push(new URL(request.url).pathname)
+        return Response.json(true)
+      },
+    })
+    let drops = 1
+    const flaky = (request: Request) => {
+      if (drops > 0) {
+        drops -= 1
+        return Promise.reject(new TypeError("terminated"))
+      }
+      return fetch(request)
+    }
+    try {
+      const result = await respondToPermission(createKiloClient({ baseUrl: server.url.href, fetch: flaky }), {
+        ...route,
+        reply: "once",
+        approvedAlways: [],
+        deniedAlways: [],
+      })
+      expect(result.error).toBeUndefined()
+      expect(paths).toEqual(["/permission/p1/reply"])
+    } finally {
+      await server.stop(true)
+    }
+  })
+
+  it("retries a dropped transport socket while saving rules", async () => {
+    const paths: string[] = []
+    const server = Bun.serve({
+      port: 0,
+      fetch(request) {
+        paths.push(new URL(request.url).pathname)
+        return Response.json(true)
+      },
+    })
+    let drops = 1
+    const flaky = (request: Request) => {
+      if (drops > 0) {
+        drops -= 1
+        return Promise.reject(new TypeError("terminated"))
+      }
+      return fetch(request)
+    }
+    try {
+      const result = await respondToPermission(createKiloClient({ baseUrl: server.url.href, fetch: flaky }), {
+        ...route,
+        reply: "once",
+        approvedAlways: ["bun *"],
+        deniedAlways: [],
+      })
+      expect(result.error).toBeUndefined()
+      expect(paths).toEqual(["/permission/p1/always-rules", "/permission/p1/reply"])
+    } finally {
+      await server.stop(true)
+    }
+  })
+
+  it("does not retry a decisive not-found response", async () => {
+    let calls = 0
+    const server = Bun.serve({
+      port: 0,
+      fetch: () => {
+        calls += 1
+        return Response.json({ name: "NotFoundError" }, { status: 404 })
+      },
+    })
+    try {
+      const result = await respondToPermission(createKiloClient({ baseUrl: server.url.href }), {
+        ...route,
+        reply: "once",
+        approvedAlways: [],
+        deniedAlways: [],
+      })
+      expect(result.error).toBeDefined()
+      expect(calls).toBe(1)
+    } finally {
+      await server.stop(true)
+    }
+  })
+
+  it("does not retry a status-less client error", async () => {
+    let calls = 0
+    const failing = () => {
+      calls += 1
+      return Promise.reject(new Error("Request is not supported by this version of OpenCode Server"))
+    }
+    const result = await respondToPermission(createKiloClient({ baseUrl: "http://127.0.0.1:1/", fetch: failing }), {
+      ...route,
+      reply: "once",
+      approvedAlways: [],
+      deniedAlways: [],
+    })
+    expect(result.error).toBeDefined()
+    expect(calls).toBe(1)
+  })
 })
 
 describe("permissionSettled", () => {

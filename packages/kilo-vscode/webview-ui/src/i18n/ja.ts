@@ -90,10 +90,14 @@ export const dict = {
     "会話を元に戻しました。スナップショットが無効になっているため、ファイルの変更は復元されませんでした。",
   "revert.banner.workspace.unavailable":
     "会話を元に戻しました。利用可能なファイルのチェックポイントがなかったため、ワークスペースの変更は復元されませんでした。",
+  "revert.banner.workspace.notAGitRepo":
+    "会話を元に戻しました。ファイルのチェックポイントには Git リポジトリが必要なため、ワークスペースの変更は復元されませんでした。",
   "revert.banner.workspace.legacy":
     "会話を元に戻しました。この以前の復元では、ワークスペースの復元状態を利用できません。",
   "revert.banner.workspace.enableSnapshots": "スナップショットを有効にする",
   "revert.disabled.agentBusy": "エージェントの完了を待ってください",
+  "revert.error.body":
+    "リポジトリが使用中の可能性があります。もう一度お試しいただくか、詳細は Kilo のログを確認してください。",
   "command.session.compact": "セッションを圧縮",
   "command.session.export": "セッション記録をエクスポート",
 
@@ -209,13 +213,27 @@ export const dict = {
   "prompt.worktrees.title": "Worktrees",
   "prompt.worktrees.search": "Worktreeを検索",
   "prompt.thinking.tooltip": "推論の強度",
+  "prompt.shortcutHint.addSelection": "で選択範囲を追加",
+  "prompt.shortcutHint.waiting": "で待機中のセッションに回答",
+  "prompt.shortcutHint.type": "で入力",
+  "prompt.shortcutHint.sessions": "でセッションを切り替え",
+  "prompt.shortcutHint.stop": "で停止",
+  "prompt.shortcutHint.changes": "で変更をレビュー",
+  "prompt.shortcutHint.pr": "でPRを開く",
+  "prompt.shortcutHint.mode": "次のモード",
   "prompt.action.send": "送信",
   "prompt.action.continue": "続行",
   "prompt.action.send.blocked": "最初に保留中の質問に答えるか、閉じてください",
   "prompt.action.send.recording": "文字起こしして送信",
   "prompt.action.stop": "停止",
+  "prompt.action.stop.background": "メインエージェントを停止します。バックグラウンドエージェントは実行を続けます。",
+  "prompt.agents.show": "バックグラウンドエージェントを表示",
   "prompt.action.enhance": "プロンプトを改善",
   "prompt.paste.expand": "クリックして貼り付けたテキストを展開",
+  "prompt.issues.title": "セッションの問題",
+  "prompt.mcp.provider": "{{name}} MCP",
+  "prompt.mcp.openSettings": "設定で開く",
+  "prompt.mcp.signIn.busy": "サインイン中…",
   "prompt.action.autoApprove.enable": "自動承認を有効化",
   "prompt.action.autoApprove.disable": "自動承認を無効化",
   "prompt.action.autoApprove.enabled": "自動承認が有効です。権限リクエストは自動的に承認されます。",
@@ -324,7 +342,7 @@ export const dict = {
   "ui.approval.source.agent.default": "エージェントによって",
   "ui.approval.source.global": "グローバル設定によって",
   "ui.approval.source.project": "プロジェクト設定によって",
-  "ui.approval.source.yolo": "自動承認（YOLO）モードによって",
+  "ui.approval.source.yolo": "自動承認モードによって",
   "ui.approval.source.session": "セッションの自動承認ルールによって",
   "ui.approval.source.default": "デフォルトで",
   "ui.approval.outsideWorkspace": "（ワークスペース外：{{file}}）",
@@ -520,6 +538,7 @@ export const dict = {
   "provider.custom.models.toggleImages": "すべてのモデルの画像を切り替え",
   "provider.custom.models.remove": "モデルを削除",
   "provider.custom.models.add": "モデルを追加",
+  "provider.custom.models.fetch.button": "モデルを取得",
   "provider.custom.models.fetch.authError": "認証に失敗しました。上記のAPIキーを確認して再試行してください。",
   "provider.custom.models.fetch.empty": "このサーバーにモデルが見つかりません。",
   "provider.custom.models.fetch.added": "{{count}}個のモデルを追加しました。",
@@ -549,6 +568,9 @@ export const dict = {
   "provider.custom.error.duplicate": "重複",
   "settings.openLocalConfig": "ローカル設定",
   "settings.openGlobalConfig": "グローバル設定",
+  "settings.search.placeholder": "設定の検索",
+  "settings.search.noResults": "設定が見つかりません",
+  "settings.search.clear": "検索をクリア",
   "settings.config.scope.local": "ローカル",
   "settings.config.scope.global": "グローバル",
   "settings.config.status.loaded": "読み込み済み",
@@ -608,6 +630,7 @@ export const dict = {
   "session.tabs.switcher.pending": "新規",
   "session.tabs.switcher.busy": "作業中",
   "session.tabs.switcher.scheduled": "予約済み",
+  "session.tabs.pinHint": "Shift+クリックで固定または固定解除",
   "session.tab.local": "ローカル",
   "session.tab.cloud": "クラウド",
   "session.tab.worktree": "ワークツリー",
@@ -631,13 +654,13 @@ export const dict = {
   "workStyle.choice.human-in-the-loop.description": "Kiloは作業中に一時停止し、計画を表示します。",
   "workStyle.choice.human-in-the-loop.permissions": "ファイルの編集やコマンドの実行前に許可を求めます。",
   "workStyle.choice.human-in-the-loop.bash": "すべてのターミナルコマンド実行時に許可を求める",
-  "workStyle.choice.human-in-the-loop.visibility": "推論を含む会話の詳細をすべて表示します。",
+  "workStyle.choice.human-in-the-loop.visibility": "確認できるように、推論、コマンド、編集を展開します。",
   "workStyle.choice.autonomous.eyebrow": "中断を少なく",
   "workStyle.choice.autonomous.title": "高い自律性",
   "workStyle.choice.autonomous.description": "中断を減らし、インターフェースを簡素化します。",
   "workStyle.choice.autonomous.permissions": "確認なしでワークスペース内のファイルを編集し、コマンドを実行します。",
   "workStyle.choice.autonomous.bash": "ワークスペース内で承認なしにターミナルコマンドを実行できます。",
-  "workStyle.choice.autonomous.visibility": "詳細は展開するまで折りたたまれたままです。",
+  "workStyle.choice.autonomous.visibility": "ツールの詳細を折りたたみ、推論をコンパクトにプレビューします。",
   "session.cloud.import.title": "クラウドからインポート",
   "session.cloud.import.placeholder": "セッションID、URL、またはkilo importコマンド",
   "session.cloud.import.button": "インポート",
@@ -787,10 +810,12 @@ export const dict = {
   "ui.sessionTurn.status.consideringNextSteps": "次のステップを検討中...",
 
   "dialog.model.noProviders": "プロバイダーなし",
+  "dialog.model.unavailable": "Kilo モデルを利用できません",
 
   "prompt.placeholder.connecting": "サーバーに接続中...",
   "prompt.placeholder.error": "接続に失敗しました。出力パネルを確認するか、拡張機能を再起動してください。",
   "prompt.placeholder.default": "メッセージを入力、@ でファイルを参照... (Enterで送信、Shift+Enterで改行)",
+  "prompt.placeholder.hint": "メッセージを入力、@ でファイルを参照... ({{key}} {{action}})",
 
   "context.usage.sessionCost": "セッションコスト",
   "context.usage.olderSessions": "{{count}} 件の古いセッション",
@@ -849,7 +874,8 @@ export const dict = {
   "settings.browser.description":
     "Playwrightを利用した組み込みブラウザ自動化を設定します。Kiloはセッション内でWebページのナビゲーション、操作、スクリーンショット撮影を行えます。",
   "settings.browser.enable.title": "ブラウザ自動化を有効にする",
-  "settings.browser.enable.description": "Playwright MCPサーバーをCLIバックエンドに登録します。",
+  "settings.browser.enable.description":
+    "ローカルアプリケーションと公開 HTTPS ページ向けに、セッション単位の Agent Manager ブラウザを有効にします。",
   "settings.browser.systemChrome.title": "システムChromeを使用",
   "settings.browser.systemChrome.description":
     "別のChromiumインスタンスの代わりに、インストール済みのChromeブラウザを使用します。",
@@ -941,15 +967,12 @@ export const dict = {
   "settings.sandboxing.writablePaths.title": "追加の書き込み可能パス",
   "settings.sandboxing.writablePaths.description":
     "サンドボックスでの書き込みを許可する追加のファイルシステムパス（例: /tmp、/var/log）。サンドボックス有効時、デフォルトの書き込み可能パスと統合されます。",
-  "settings.experimental.multiProject.title": "マルチプロジェクト Agent Manager",
+  "settings.experimental.conversationPromptHistory.title": "会話ごとのプロンプト履歴",
+  "settings.experimental.conversationPromptHistory.description":
+    "プロンプト履歴 (ArrowUp/ArrowDown) をすべての会話で共有せず、会話ごとに分けて保持します。",
   "settings.experimental.claudeMigration.title": "Claude Code 移行",
   "settings.experimental.claudeMigration.description":
     "サポートされるグローバル CLAUDE.md 命令、簡単なスキル、無効化された MCP 定義を一度だけインポートします。元の Claude ファイルは変更されません。有効化後にバックエンドを再起動してください。",
-  "settings.experimental.multiProject.description":
-    "Agent Managerで複数のリポジトリにまたがるセッションとワークツリーの管理を有効にします。現在のワークスペースリポジトリは常にデフォルトプロジェクトです。",
-  "settings.experimental.taskModelSelection.title": "Task サブエージェントモデルの選択",
-  "settings.experimental.taskModelSelection.description":
-    "Task サブエージェントに使用するモデル、プロバイダー、推論の労力を明示的に選択できます。",
   "settings.experimental.mcpTimeout.title": "MCPタイムアウト（ミリ秒）",
   "settings.experimental.mcpTimeout.description": "MCPサーバーリクエストのタイムアウト（ミリ秒）",
   "settings.experimental.remote.title": "Remote コントロール",
@@ -1038,12 +1061,31 @@ export const dict = {
   "settings.agentBehaviour.removeAgent.button": "削除",
   "settings.agentBehaviour.removeMcp.title": "MCPサーバーを削除",
   "settings.agentBehaviour.removeMcp.confirm": 'MCPサーバー "{{name}}" を削除しますか？設定から削除されます。',
+  "settings.agentBehaviour.removeMcp.bundleConfirm":
+    'MCPサーバー "{{name}}" と関連スキルを削除しますか？これにより、サーバーとこのMarketplaceインストールが所有するすべてのスキルが削除されます。',
   "settings.agentBehaviour.removeMcp.button": "削除",
   "settings.agentBehaviour.editMcp": "MCPサーバーを編集",
   "settings.agentBehaviour.editMcp.transportLocal": "ローカルサーバー（stdio トランスポート）",
   "settings.agentBehaviour.editMcp.transportRemote": "リモートサーバー（SSE/HTTP トランスポート）",
   "settings.agentBehaviour.editMcp.env": "環境変数",
   "settings.agentBehaviour.editMcp.env.help": "MCPサーバープロセスに渡される変数。",
+  "settings.agentBehaviour.editMcp.oauth": "OAuth",
+  "settings.agentBehaviour.editMcp.oauth.help":
+    "サーバーが事前登録済みのクライアントを必要としない限り、自動のままにしてください。クライアントシークレットはKilo設定ファイルに保存されます。",
+  "settings.agentBehaviour.editMcp.oauth.mode": "モード",
+  "settings.agentBehaviour.editMcp.oauth.mode.automatic": "自動",
+  "settings.agentBehaviour.editMcp.oauth.mode.disabled": "無効",
+  "settings.agentBehaviour.editMcp.oauth.mode.custom": "カスタムクライアント",
+  "settings.agentBehaviour.editMcp.oauth.clientId": "クライアントID",
+  "settings.agentBehaviour.editMcp.oauth.clientSecret": "クライアントシークレット",
+  "settings.agentBehaviour.editMcp.oauth.scope": "スコープ",
+  "settings.agentBehaviour.editMcp.oauth.callbackPort": "コールバックポート",
+  "settings.agentBehaviour.editMcp.oauth.redirectUri": "リダイレクトURI",
+  "settings.agentBehaviour.editMcp.oauth.redirectUri.help":
+    "デフォルトはhttp://127.0.0.1:19876/mcp/oauth/callbackで、コールバックポートを上書きします。",
+  "settings.agentBehaviour.editMcp.oauth.port.invalid": "1から65535の間のポートを入力してください。",
+  "settings.agentBehaviour.editMcp.oauth.secret.invalid": "クライアントシークレットにはクライアントIDが必要です。",
+  "settings.agentBehaviour.editMcp.oauth.redirectUri.invalid": "有効なリダイレクトURIを入力してください。",
   "settings.agentBehaviour.addMcp.command": "コマンド",
   "settings.agentBehaviour.addMcp.command.placeholder": "e.g. npx",
   "settings.agentBehaviour.addMcp.args": "引数",
@@ -1056,6 +1098,8 @@ export const dict = {
   "settings.agentBehaviour.removeSkill.title": "スキルを削除",
   "settings.agentBehaviour.removeSkill.confirm":
     'スキル "{{name}}" を削除しますか？これにより、ディスクからスキルファイルが削除されます。',
+  "settings.agentBehaviour.removeSkill.bundleConfirm":
+    'スキル "{{name}}" を削除しますか？これにより、{{mcp}} MCPサーバーと同じMarketplaceインストールの関連スキルもすべてアンインストールされます。',
   "settings.agentBehaviour.removeSkill.button": "削除",
   "settings.agentBehaviour.rules.description":
     "ルールはエージェントの動作を導く指示ファイルです。すべての会話のシステムプロンプトに含まれます。追加のルールを含めるには、以下にファイルパスを追加してください。",
@@ -1071,6 +1115,12 @@ export const dict = {
   "settings.agentBehaviour.mcpDetail.command": "コマンド",
   "settings.agentBehaviour.mcpDetail.args": "引数",
   "settings.agentBehaviour.mcpDetail.env": "環境",
+  "settings.agentBehaviour.mcpSignIn.cancel": "サインインをキャンセル",
+  "settings.agentBehaviour.mcpRemoving": "削除中…",
+  "settings.agentBehaviour.mcpResetAuth": "サインインをリセット",
+  "settings.agentBehaviour.mcpResetAuth.title": "MCPサインインをリセット",
+  "settings.agentBehaviour.mcpResetAuth.confirm":
+    '"{{name}}" の保存されたサインイン情報を消去しますか？再度サインインが必要になります。',
   "settings.agentBehaviour.mcpBrowseMarketplace": "マーケットプレイスを閲覧",
   "settings.agentBehaviour.mcpEmpty":
     "MCPサーバーが設定されていません。kilo.jsoncでMCPサーバーを追加するか、エージェントに追加を依頼してください。",
@@ -1129,6 +1179,30 @@ export const dict = {
     "繰り返し同一のアクションを防止。同じツール呼び出しが同一の入力で繰り返されたときにトリガーされます。",
   "settings.checkpoints.enable.title": "スナップショットを有効にする",
   "settings.checkpoints.enable.description": "ファイル編集前にチェックポイントを作成して以前の状態を復元可能にする",
+  "settings.autoCleanup.enable.title": "自動セッションクリーンアップを有効化",
+  "settings.autoCleanup.enable.description":
+    "決まった日数が経過すると古いセッション履歴を自動削除します。対象はこのマシン上のすべてのプロジェクトとすべての Kilo クライアントで、このウィンドウだけではありません。実行中のセッションや最近フォークを持つセッションは決して削除されません。削除は元に戻せません。",
+  "settings.autoCleanup.defaultRetention.title": "セッションを保持する期間（日数）",
+  "settings.autoCleanup.defaultRetention.description": "自動クリーンアップがセッション履歴を削除するまでの保持期間。",
+  "settings.autoCleanup.lastRun.title": "前回のクリーンアップ",
+  "settings.autoCleanup.lastRun.never": "未実行",
+  "settings.autoCleanup.result":
+    "{{date}}: {{scanned}} 件中 {{deleted}} 件のセッションを削除（{{active}} 件のアクティブをスキップ、{{failed}} 件失敗）、{{seconds}} 秒",
+  "settings.autoCleanup.starting": "セッションのクリーンアップを開始しています...",
+  "settings.autoCleanup.error.status": "セッションのクリーンアップ状況を一時的に取得できません。再試行しています...",
+  "settings.autoCleanup.error.timeout":
+    "クリーンアップ状況を待機中です。バックエンドの応答に予想以上の時間がかかっています。",
+  "settings.autoCleanup.error.run":
+    "セッションのクリーンアップ完了を確認できませんでした。再試行する前に、前回のクリーンアップ結果を確認してください。",
+  "settings.autoCleanup.progress.scanning": "セッションをスキャン中: {{processed}}/{{total}} 件を処理済み",
+  "settings.autoCleanup.progress.deleting":
+    "セッションを削除中: {{processed}}/{{total}} 件を処理済み（{{deleted}} 件削除、{{failed}} 件失敗）",
+  "settings.autoCleanup.runNow": "今すぐクリーンアップを実行",
+  "settings.autoCleanup.runNow.confirm":
+    "このマシン上のすべてのプロジェクトとすべての Kilo クライアントにわたる、削除対象の古いセッションを完全に削除しますか？",
+  "settings.autoCleanup.stop": "クリーンアップを停止",
+  "settings.autoCleanup.progress.cancelling": "セッションのクリーンアップを停止しています...",
+  "settings.autoCleanup.lastRun.cancelled": "中断されました",
   "settings.context.autoCompaction.title": "自動圧縮",
   "settings.context.autoCompaction.description": "コンテキストが上限に達する前に自動的に圧縮",
   "settings.context.compaction.title": "圧縮",
@@ -1176,6 +1250,20 @@ export const dict = {
   "settings.commitMessage.language.sync": "UI言語と同期",
   "settings.commitMessage.language.description": "AIが生成するコミットメッセージに使用する言語を選択:",
 
+  "settings.display.preview.title": "プレビュー",
+  "settings.display.presets.title": "表示プリセット",
+  "settings.display.presets.description":
+    "下の表示オプションを変更します。権限は変更しません。適用するには保存してください。",
+  "settings.display.preview.model": "サンプルモデル",
+  "settings.display.preview.prompt": "挨拶から余分な空白を削除し、テストを確認してください。",
+  "settings.display.preview.reasoning":
+    "**挨拶を確認します。** この関数は、通常の名前と両端に余分な空白がある名前に対して、同じ挨拶を生成する必要があります。既存の関数シグネチャと挨拶の形式は維持し、名前が返り値の文字列に入る方法だけを変更します。\n\n`  Ada  ` のような入力では、不要な空白は入力に属し、挨拶のテンプレートには属しません。完成した挨拶をトリムすると、名前の隣に空白が残ってしまいます。したがって、トリム操作は名前を挿入する前に行う必要があります。\n\n文字列のドキュメントを確認し、`trim()` が両端の空白を削除して新しい文字列を返すことを確かめます。元の入力は変更されないはずです。この変更に正規表現、追加の依存関係、別のヘルパーは必要ありません。\n\n名前の中の空白はそのままにしておく必要があります。`Ada Lovelace` のような名前が `AdaLovelace` になってはならず、大文字と小文字も変わってはいけません。空の入力や空白だけの入力には、この限定的な修正の一環として新しいフォールバックの挨拶は必要ありません。\n\nテンプレートが現在 `name` を使っている箇所で `name.trim()` を使うことで、変更を return 式の中に収められます。周囲の句読点と挨拶の後の意図的な空白は維持します。これにより差分が小さくなり、動作を確認しやすくなります。\n\n最後に `bun test greeting.test.ts` を実行し、両方の結果を確認します。空白付きの名前のケースでは余分な空白が削除されることを確認し、通常の名前のケースでは既存の出力を保護します。変更とテスト結果は、コマンドが完了してから報告します。",
+  "settings.display.preview.shell": "挨拶のテストを確認する",
+  "settings.display.preview.shellOutput":
+    "bun test greeting.test.ts\n\n[pass] 余分な空白を削除する\n[pass] 通常の名前を保持する\n\n2件のテストに合格",
+  "settings.display.preview.query": "文字列のトリミング",
+  "settings.display.preview.result": "trim() は文字列の両端から空白を削除します。",
+  "settings.display.preview.answer": "挨拶を更新して余分な空白を削除しました。両方のテストに合格しました。",
   "settings.display.username.title": "ユーザー名",
   "settings.display.username.description": "会話に表示されるカスタムユーザー名",
   "settings.display.fontSize.title": "フォントサイズ",
@@ -1204,12 +1292,15 @@ export const dict = {
   "settings.display.mcpTool.expanded": "展開",
   "settings.display.mcpTool.collapsed": "折りたたみ",
 
+  "settings.display.shortcutHints.title": "ショートカットのヒントを表示",
+  "settings.display.shortcutHints.description":
+    "空のプロンプトに、現在の操作に合ったキーボードショートカットを表示します。例: 選択したコードの追加方法やプロンプトへの戻り方。",
   "settings.display.tokenThroughput.title": "トークンスループットを表示",
   "settings.display.tokenThroughput.description":
     "最新のアシスタントメッセージとタスクヘッダーにテキスト生成速度（tokens/sec）を表示します。デフォルトで表示され、必要に応じてこの設定を無効にすると非表示にできます。",
   "settings.display.autoApprovalReason.title": "自動承認の理由を表示",
   "settings.display.autoApprovalReason.description":
-    "ツール呼び出しが自動承認された理由（一致したルール、エージェントのデフォルト、YOLOモードなど）を示す行を表示します。",
+    "ツール呼び出しが自動承認された理由（一致する権限ルールやエージェントのデフォルトなど）を表示します。",
 
   "chat.throughput.tooltip":
     "Average {{speed}} tokens/s for this turn. Includes output and reasoning tokens; excludes tool execution and waiting time.",
@@ -1280,16 +1371,16 @@ export const dict = {
 
   "task.todos.progress": "{{done}}/{{total}} タスク完了",
   "task.todos.allDone": "{{count}} タスク完了",
+  "task.todos.title": "タスク",
+  "task.todos.done": "すべて完了",
   "task.backgroundAgents.running.one": "バックグラウンドエージェント 1 件",
   "task.backgroundAgents.running.many": "バックグラウンドエージェント {{count}} 件",
-  "task.backgroundAgents.more": "+{{count}} 件",
   "task.backgroundAgents.open": "バックグラウンドエージェントを開く",
   "task.backgroundAgents.openAll": "すべてのバックグラウンドエージェントを開く",
   "task.backgroundAgents.cancel": "停止",
   "task.backgroundAgents.continueInBackground": "バックグラウンドで続行",
   "task.backgroundAgents.waiting": "バックグラウンドエージェントが入力を待っています",
   "task.backgroundAgents.needsInput": "入力が必要",
-  "task.backgroundAgents.dismiss": "閉じる",
   "task.backgroundAgents.clearFinished": "完了済みを消去",
   "task.backgroundAgents.summary": "{{total}} 件中 {{running}} 件のバックグラウンドエージェントが実行中",
   "task.backgroundAgents.status.running": "実行中",
@@ -1298,6 +1389,8 @@ export const dict = {
   "task.backgroundAgents.status.error": "エラー",
   "task.backgroundAgents.untitled": "バックグラウンドエージェント",
   "task.backgroundAgents.stopAll": "すべて停止 ({{count}})",
+  "task.backgroundAgents.finished": "バックグラウンドエージェントが完了しました",
+  "task.stop": "サブエージェントを停止",
   "settings.saveBar.unsavedChanges": "未保存の変更",
   "settings.saveBar.discard": "破棄",
   "settings.saveBar.save": "保存",
@@ -1363,4 +1456,6 @@ export const dict = {
   "settings.experimental.browserAutomation.systemChrome.description":
     "統合ブラウザーにインストール済みの Google Chrome を使用します。互換性のある Playwright Chromium ブラウザーが既にインストールされている場合にのみ無効にしてください。",
   "chat.search.searchingHistory": "以前のメッセージを検索しています…",
+  "browserTab.noSession": "セッションからブラウザを開いて、ローカルアプリまたは公開 HTTPS ページをプレビューします。",
+  "browserTab.disabled": "統合ブラウザは無効になっています。Kilo 設定 > 実験的機能で有効にしてください。",
 }

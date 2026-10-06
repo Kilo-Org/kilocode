@@ -73,6 +73,18 @@ class MdViewHybridTest : BasePlatformTestCase() {
         assertTrue(view.html().contains("<strong>"))
     }
 
+    fun `test append normalizes crlf split between chunks`() {
+        view.append("```text\nfirst\r")
+        val field = editors().single()
+
+        view.append("\nsecond\r\n")
+        view.append("```")
+
+        assertSame(field, editors().single())
+        assertEquals("first\nsecond", field.document.text)
+        assertEquals("```text\nfirst\r\nsecond\r\n```", view.markdown())
+    }
+
     fun `test fenced code block shows horizontal scrollbar as needed`() {
         view.set("```kotlin\nval value = 1\n```")
         val pane = scrolls().single()
@@ -154,6 +166,17 @@ class MdViewHybridTest : BasePlatformTestCase() {
         assertEquals("val one = 1\nval two = 2\nval three = 3", editor.text)
         assertEquals(editor.preferredSize.height + ins.top + ins.bottom + pad.top + pad.bottom + bar, pane.preferredSize.height)
         assertTrue(pane.preferredSize.height >= line * 3)
+    }
+
+    fun `test fenced code block normalizes mixed line separators`() {
+        val markdown = "```java\nList.of(\"a\", \"b\");\r\n\n  Line two\r\n```"
+
+        view.set(markdown)
+
+        val text = editors().single().document.text
+        assertEquals("List.of(\"a\", \"b\");\n\n  Line two", text)
+        assertFalse(text.contains('\r'))
+        assertEquals(markdown, view.markdown())
     }
 
     fun `test fenced code block balances content padding with horizontal scrollbar`() {

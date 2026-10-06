@@ -13,6 +13,7 @@ import com.intellij.util.ui.JBValue
 import com.intellij.util.ui.NamedColorUtil
 import com.intellij.util.ui.UIUtil
 import java.awt.Color
+import java.awt.Insets
 import javax.swing.AbstractButton
 import javax.swing.JComponent
 import javax.swing.UIManager
@@ -53,6 +54,22 @@ object UiStyle {
         fun pad() = JBUI.scale(PAD)
 
         fun xl() = JBUI.scale(XL)
+    }
+
+    /** Metrics for labelled toolbar buttons that pair a leading action icon with text. */
+    object ToolbarButton {
+        /** 25% smaller than IntelliJ's standard 16x16 action icon canvas. */
+        const val ICON_SIZE = 12
+
+        /**
+         * Insets inside the hover pill. IntelliJ's `ActionButtonWithText` starts with its 4px
+         * `BUTTONS_GAP`; the wider trailing side keeps icon+text artwork optically centered.
+         * The toolbar still owns the theme-driven `Toolbar.Button.buttonInsets` border.
+         */
+        fun padding(): Insets = JBUI.insets(0, Gap.SM, 0, Gap.LG)
+
+        /** Matches IntelliJ toolbar combo widgets' 6px gap after their leading icons. */
+        fun gap() = Gap.md()
     }
 
     /** Theme-aware component geometry tokens. */
@@ -351,32 +368,23 @@ object UiStyle {
         fun errorLabelForeground(): Color = JBColor.namedColor("Label.errorForeground", UIUtil.getErrorForeground())
 
         /**
-         * Per-participant avatar fills for the Kilo Swarm board, keyed by a participant's position in
-         * the board's order. Mirrors `AgentAvatarPalette` in `packages/kilo-ui` so the same subagent
-         * reads the same colour across clients, which is why the fallbacks are exact values; each is
-         * exposed under a semantic key so a theme can still override it.
+         * Per-subagent avatar hues for the generated dot-glyph identity (see
+         * `ai.kilocode.client.session.AgentAvatar`), keyed by a sibling's assigned color slot.
+         * Mirrors the eight hues in `packages/kilo-ui/src/components/agent-avatar.css` so the same
+         * subagent reads with a similar hue across clients; each is exposed under a semantic key so a
+         * theme can still override it.
          */
-        fun swarmAvatar(index: Int): Color = swarmAvatars[index.mod(swarmAvatars.size)]()
+        fun avatarHue(index: Int): Color = avatarHues[index.mod(avatarHues.size)]()
 
-        /** Neutral fill for `main` and for any participant outside the known order. */
-        fun swarmAvatarMain(): Color = JBColor.namedColor(
-            "Kilo.Swarm.avatarMainBackground",
-            JBColor(0x6B7280, 0x9CA3AF),
-        )
-
-        private val swarmAvatars: List<() -> Color> = listOf(
-            { JBColor.namedColor("Kilo.Swarm.avatarBackground1", JBColor(0x3574F0, 0x548AF7)) },
-            { JBColor.namedColor("Kilo.Swarm.avatarBackground2", JBColor(0x1A9E77, 0x2FBE96)) },
-            { JBColor.namedColor("Kilo.Swarm.avatarBackground3", JBColor(0xB5651D, 0xD4813A)) },
-            { JBColor.namedColor("Kilo.Swarm.avatarBackground4", JBColor(0x8957E5, 0xA679F0)) },
-            { JBColor.namedColor("Kilo.Swarm.avatarBackground5", JBColor(0xC74F4F, 0xE06666)) },
-            { JBColor.namedColor("Kilo.Swarm.avatarBackground6", JBColor(0x2E8FB8, 0x4CB4DE)) },
-        )
-
-        /** Initial drawn on top of a swarm avatar fill; the fills are saturated in both themes. */
-        fun swarmAvatarForeground(): Color = JBColor.namedColor(
-            "Kilo.Swarm.avatarForeground",
-            JBColor(Color.WHITE, Color.WHITE),
+        private val avatarHues: List<() -> Color> = listOf(
+            { JBColor.namedColor("Kilo.Agent.avatarHueBlue", JBColor(0x3574F0, 0x548AF7)) },
+            { JBColor.namedColor("Kilo.Agent.avatarHueOrange", JBColor(0xE66D17, 0xC77D55)) },
+            { JBColor.namedColor("Kilo.Agent.avatarHueGreen", JBColor(0x208A3C, 0x57965C)) },
+            { JBColor.namedColor("Kilo.Agent.avatarHuePurple", JBColor(0x834DF0, 0xB589EC)) },
+            { JBColor.namedColor("Kilo.Agent.avatarHueYellow", JBColor(0xC27D04, 0xD6AE58)) },
+            { JBColor.namedColor("Kilo.Agent.avatarHueTeal", JBColor(0x1A9E77, 0x2FBE96)) },
+            { JBColor.namedColor("Kilo.Agent.avatarHueRed", JBColor(0xDB3B4B, 0xDB5C5C)) },
+            { JBColor.namedColor("Kilo.Agent.avatarHuePink", JBColor(0xC74F4F, 0xE06666)) },
         )
 
         fun addedForeground(): Color = JBColor.namedColor(
@@ -499,17 +507,32 @@ object UiStyle {
          * Tooltip copy that keeps [lines] as separate lines and still wraps each one at the tooltip
          * column, so a single long line cannot stretch the tooltip past the window.
          */
-        fun tipLines(lines: List<String>): String = HtmlChunk.div()
+        fun tipLines(lines: List<String>): String = linesDiv(lines)
             .attr("width", tipWidth())
+            .wrapWith(HtmlChunk.body())
+            .wrapWith("html")
+            .toString()
+
+        /**
+         * Escapes [lines] and joins them with explicit `<br>` breaks, without a fixed column width.
+         * Use this for a label whose own Swing width already bounds the reflow (e.g. a wrapping
+         * [com.intellij.ui.components.JBLabel]), where a hardcoded HTML column would fight the
+         * component's real width. Pass [centered] for a label whose text should read centered once
+         * it wraps onto more than one line.
+         */
+        fun wrapLines(lines: List<String>, centered: Boolean = false): String {
+            val div = linesDiv(lines)
+            val body = if (centered) div.attr("style", "text-align:center") else div
+            return body.wrapWith(HtmlChunk.body()).wrapWith("html").toString()
+        }
+
+        private fun linesDiv(lines: List<String>): HtmlChunk.Element = HtmlChunk.div()
             .children(
                 lines.flatMapIndexed { i, line ->
                     if (i == lines.lastIndex) listOf(HtmlChunk.text(line))
                     else listOf(HtmlChunk.text(line), HtmlChunk.br())
                 },
             )
-            .wrapWith(HtmlChunk.body())
-            .wrapWith("html")
-            .toString()
     }
 
     object Components {

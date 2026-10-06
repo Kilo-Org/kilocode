@@ -101,20 +101,20 @@ class AgentBehaviorSettingsUiTest : BasePlatformTestCase() {
 
         edt {
             val labels = components(requireNotNull(ui)).filterIsInstance<ActionLink>().map { it.text }
-            assertEquals(listOf("Agents", "MCP Servers", "Skills", "Workflows", "Rules"), labels)
+            assertEquals(listOf("Agents", "MCP Servers", "Skills", "Commands", "Rules"), labels)
         }
     }
 
-    fun `test swarm toggle sits below the links behind its own separator`() {
+    fun `test swarm toggle sits below the links behind the extended agents separator`() {
         start(ConfigDto())
 
         edt {
             val all = components(requireNotNull(ui))
             val lastLink = all.indexOfLast { it is ActionLink }
-            val separator = all.indexOfFirst { it is TitledSeparator && it.text == "Kilo Swarm" }
+            val separator = all.indexOfFirst { it is TitledSeparator && it.text == "Extended agents" }
             val toggle = all.indexOfFirst { it is SettingsToggle }
 
-            assertTrue("expected a Kilo Swarm separator", separator >= 0)
+            assertTrue("expected an Extended agents separator", separator >= 0)
             assertTrue("separator must follow the links", separator > lastLink)
             assertTrue("toggle must follow the separator", toggle > separator)
         }

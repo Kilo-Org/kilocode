@@ -14,8 +14,6 @@
  *   created on demand (expand/select), never eagerly at panel open.
  * - Only the active context gets full Git/PR polling; the pollers follow the
  *   active context through the provider's accessors.
- * - Non-pinned contexts require the multi-project flag before they can be
- *   expanded or activated.
  */
 
 import * as fs from "fs"
@@ -41,6 +39,8 @@ export interface ProjectContextDeps {
   sized?: (ctx: ProjectContext) => void
   /** Whether background worktree pre-warming is enabled for this project. */
   worktreePool?: () => boolean
+  /** Per-user directory for pooled slots. When omitted, no slots are pre-warmed. */
+  poolHome?: string
   /** Factory overrides for tests. */
   state?: (root: string, log: (msg: string) => void) => WorktreeStateManager
   worktrees?: (root: string, log: (msg: string) => void, git?: GitOps) => WorktreeManager
@@ -62,6 +62,7 @@ export class ProjectContext {
   private worktrees: WorktreeManager | undefined
   private setup: SetupScriptService | undefined
   private init: Promise<ProjectInitResult> | undefined
+  private pool: Promise<void> | undefined
   private last: ProjectInitResult | undefined
   private phase: ProjectLifecycle = "cold"
   private version = 0
@@ -130,6 +131,23 @@ export class ProjectContext {
     return this.init
   }
 
+  /** Start pool maintenance once, independently of cached state initialization. */
+  warmPool(): void {
+    if (this.phase !== "ready" || this.pool) return
+    const generation = this.version
+    const manager = this.worktreeManager()
+    this.pool = manager
+      .reconcilePool()
+      .then(() => {
+        if (this.isCurrent(generation)) return manager.warmPool()
+        this.pool = undefined
+      })
+      .catch((err) => {
+        this.deps.log(`Failed to reconcile worktree pool: ${err}`)
+        this.pool = undefined
+      })
+  }
+
   /** Invalidate asynchronous work while keeping loaded repository state reusable. */
   suspend(): void {
     if (this.phase === "disposed" || this.phase === "disposing") return
@@ -162,7 +180,14 @@ export class ProjectContext {
     this.worktrees ??= (
       this.deps.worktrees ??
       ((root, log, git) =>
-        new WorktreeManager(root, log, git, undefined, () => (this.deps.worktreePool?.() === false ? 0 : 1)))
+        new WorktreeManager(
+          root,
+          log,
+          git,
+          undefined,
+          () => (this.deps.worktreePool?.() === false ? 0 : 1),
+          this.deps.poolHome,
+        ))
     )(this.root, (msg) => this.deps.log(`[WorktreeManager] ${msg}`), this.deps.git)
     return this.worktrees
   }
@@ -247,6 +272,7 @@ export class ProjectContext {
     this.phase = "disposing"
     disposeOrphanSizes(this)
     await this.init?.catch((err) => this.deps.log(`dispose: initialization failed: ${err}`))
+    await this.pool
     await this.mutation.catch((err) => this.deps.log(`dispose: mutation failed: ${err}`))
     await this.worktrees?.settle().catch((err) => this.deps.log(`dispose: worktree bookkeeping failed: ${err}`))
     await this.state?.flush().catch((err) => this.deps.log(`dispose: state flush failed: ${err}`))

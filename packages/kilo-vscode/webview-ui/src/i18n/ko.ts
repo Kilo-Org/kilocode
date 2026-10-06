@@ -94,10 +94,13 @@ export const dict = {
     "대화를 되돌렸습니다. 스냅샷이 비활성화되어 있어 파일 변경 사항은 복원되지 않았습니다.",
   "revert.banner.workspace.unavailable":
     "대화를 되돌렸습니다. 사용 가능한 파일 체크포인트가 없어 작업 공간 변경 사항은 복원되지 않았습니다.",
+  "revert.banner.workspace.notAGitRepo":
+    "대화를 되돌렸습니다. 파일 체크포인트를 사용하려면 Git 저장소가 필요하므로 작업 공간 변경 사항은 복원되지 않았습니다.",
   "revert.banner.workspace.legacy":
     "대화가 되돌려졌습니다. 이 이전 되돌리기에서는 작업 영역 복원 상태를 확인할 수 없습니다.",
   "revert.banner.workspace.enableSnapshots": "스냅샷 활성화",
   "revert.disabled.agentBusy": "에이전트가 완료될 때까지 기다리세요",
+  "revert.error.body": "저장소가 사용 중일 수 있습니다. 다시 시도하거나 자세한 내용은 Kilo 로그를 확인하세요.",
   "command.session.compact": "세션 압축",
   "command.session.export": "세션 기록 내보내기",
 
@@ -212,13 +215,27 @@ export const dict = {
   "prompt.worktrees.title": "Worktrees",
   "prompt.worktrees.search": "Worktree 검색",
   "prompt.thinking.tooltip": "추론 강도",
+  "prompt.shortcutHint.addSelection": "로 선택 영역 추가",
+  "prompt.shortcutHint.waiting": "로 대기 중인 세션에 응답",
+  "prompt.shortcutHint.type": "로 입력",
+  "prompt.shortcutHint.sessions": "로 세션 전환",
+  "prompt.shortcutHint.stop": "로 중지",
+  "prompt.shortcutHint.changes": "로 변경 사항 검토",
+  "prompt.shortcutHint.pr": "로 PR 열기",
+  "prompt.shortcutHint.mode": "다음 모드",
   "prompt.action.send": "전송",
   "prompt.action.continue": "계속",
   "prompt.action.send.blocked": "먼저 대기 중인 질문에 답하거나 닫아주세요",
   "prompt.action.send.recording": "텍스트 변환 및 전송",
   "prompt.action.stop": "중지",
+  "prompt.action.stop.background": "메인 에이전트를 중지합니다. 백그라운드 에이전트는 계속 실행됩니다.",
+  "prompt.agents.show": "백그라운드 에이전트 표시",
   "prompt.action.enhance": "프롬프트 개선",
   "prompt.paste.expand": "붙여넣은 텍스트를 확장하려면 클릭",
+  "prompt.issues.title": "세션 문제",
+  "prompt.mcp.provider": "{{name}} MCP",
+  "prompt.mcp.openSettings": "설정에서 열기",
+  "prompt.mcp.signIn.busy": "로그인 중…",
   "prompt.action.autoApprove.enable": "자동 승인 사용",
   "prompt.action.autoApprove.disable": "자동 승인 사용 안 함",
   "prompt.action.autoApprove.enabled": "자동 승인이 켜져 있습니다. 권한 요청이 자동으로 승인됩니다.",
@@ -325,7 +342,7 @@ export const dict = {
   "ui.approval.source.agent.default": "에이전트에 의해",
   "ui.approval.source.global": "전역 설정에 의해",
   "ui.approval.source.project": "프로젝트 설정에 의해",
-  "ui.approval.source.yolo": "자동 승인(YOLO) 모드에 의해",
+  "ui.approval.source.yolo": "자동 승인 모드에 의해",
   "ui.approval.source.session": "세션 자동 승인 규칙에 의해",
   "ui.approval.source.default": "기본값으로",
   "ui.approval.outsideWorkspace": "(작업 영역 외부: {{file}})",
@@ -481,6 +498,7 @@ export const dict = {
   "provider.custom.models.toggleImages": "모든 모델의 이미지 전환",
   "provider.custom.models.remove": "모델 제거",
   "provider.custom.models.add": "모델 추가",
+  "provider.custom.models.fetch.button": "모델 가져오기",
   "provider.custom.models.fetch.authError": "인증에 실패했습니다. 위의 API 키를 확인하고 다시 시도하세요.",
   "provider.custom.models.fetch.empty": "이 서버에서 모델을 찾을 수 없습니다.",
   "provider.custom.models.fetch.added": "{{count}}개 모델이 추가되었습니다.",
@@ -510,6 +528,9 @@ export const dict = {
   "provider.custom.error.duplicate": "중복",
   "settings.openLocalConfig": "로컬 설정",
   "settings.openGlobalConfig": "전역 설정",
+  "settings.search.placeholder": "설정 검색",
+  "settings.search.noResults": "설정을 찾을 수 없습니다",
+  "settings.search.clear": "검색 지우기",
   "settings.config.scope.local": "로컬",
   "settings.config.scope.global": "글로벌",
   "settings.config.status.loaded": "로드됨",
@@ -569,6 +590,7 @@ export const dict = {
   "session.tabs.switcher.pending": "새 항목",
   "session.tabs.switcher.busy": "작업 중",
   "session.tabs.switcher.scheduled": "예약됨",
+  "session.tabs.pinHint": "Shift+클릭으로 고정하거나 고정 해제",
   "session.tab.local": "로컬",
   "session.tab.cloud": "클라우드",
   "session.tab.worktree": "작업 트리",
@@ -592,13 +614,13 @@ export const dict = {
   "workStyle.choice.human-in-the-loop.description": "Kilo가 작업 중에 잠시 멈추고 계획을 보여줍니다.",
   "workStyle.choice.human-in-the-loop.permissions": "파일을 편집하거나 명령을 실행하기 전에 권한을 요청합니다.",
   "workStyle.choice.human-in-the-loop.bash": "모든 터미널 명령 실행 시 권한 요청",
-  "workStyle.choice.human-in-the-loop.visibility": "추론을 포함한 전체 대화 세부 정보를 표시합니다.",
+  "workStyle.choice.human-in-the-loop.visibility": "검토할 수 있도록 추론, 명령, 편집을 펼칩니다.",
   "workStyle.choice.autonomous.eyebrow": "중단 최소화",
   "workStyle.choice.autonomous.title": "높은 자율성",
   "workStyle.choice.autonomous.description": "중단을 줄이고 인터페이스를 간소화합니다.",
   "workStyle.choice.autonomous.permissions": "묻지 않고 작업 공간의 파일을 편집하고 명령을 실행합니다.",
   "workStyle.choice.autonomous.bash": "승인 없이 작업 공간에서 터미널 명령을 실행할 수 있습니다.",
-  "workStyle.choice.autonomous.visibility": "세부 정보는 펼칠 때까지 접힌 상태로 유지됩니다.",
+  "workStyle.choice.autonomous.visibility": "도구 세부 정보를 접고 추론을 간결하게 미리 보여줍니다.",
   "session.cloud.import.title": "클라우드에서 가져오기",
   "session.cloud.import.placeholder": "세션 ID, URL 또는 kilo import 명령어",
   "session.cloud.import.button": "가져오기",
@@ -787,10 +809,12 @@ export const dict = {
   "ui.sessionTurn.status.consideringNextSteps": "다음 단계 고려 중...",
 
   "dialog.model.noProviders": "공급자 없음",
+  "dialog.model.unavailable": "Kilo 모델을 사용할 수 없음",
 
   "prompt.placeholder.connecting": "서버에 연결 중...",
   "prompt.placeholder.error": "연결에 실패했습니다. 출력 패널을 확인하거나 확장 프로그램을 다시 시작하세요.",
   "prompt.placeholder.default": "메시지를 입력하세요, @로 파일 언급... (Enter로 전송, Shift+Enter로 줄 바꿈)",
+  "prompt.placeholder.hint": "메시지를 입력하세요, @로 파일 언급... ({{key}} {{action}})",
 
   "context.usage.sessionCost": "세션 비용",
   "context.usage.olderSessions": "{{count}}개의 이전 세션",
@@ -847,7 +871,8 @@ export const dict = {
   "settings.browser.description":
     "Playwright 기반의 내장 브라우저 자동화를 구성합니다. Kilo는 세션에서 웹 페이지를 탐색하고 상호 작용하며 스크린샷을 찍을 수 있습니다.",
   "settings.browser.enable.title": "브라우저 자동화 활성화",
-  "settings.browser.enable.description": "Playwright MCP 서버를 CLI 백엔드에 등록합니다.",
+  "settings.browser.enable.description":
+    "로컬 애플리케이션과 공개 HTTPS 페이지를 위한 세션별 Agent Manager 브라우저를 활성화합니다.",
   "settings.browser.systemChrome.title": "시스템 Chrome 사용",
   "settings.browser.systemChrome.description": "별도의 Chromium 인스턴스 대신 설치된 Chrome 브라우저를 사용합니다.",
   "settings.browser.headless.title": "헤드리스 모드",
@@ -938,15 +963,12 @@ export const dict = {
   "settings.sandboxing.writablePaths.title": "추가 쓰기 가능 경로",
   "settings.sandboxing.writablePaths.description":
     "샌드박스에서 쓰기를 허용하는 추가 파일시스템 경로(예: /tmp, /var/log). 샌드박스가 활성화되면 기본 쓰기 가능 경로와 병합됩니다.",
-  "settings.experimental.multiProject.title": "멀티 프로젝트 Agent Manager",
+  "settings.experimental.conversationPromptHistory.title": "대화별 프롬프트 기록",
+  "settings.experimental.conversationPromptHistory.description":
+    "프롬프트 기록(ArrowUp/ArrowDown)을 모든 대화에서 공유하지 않고 대화별로 분리하여 유지합니다.",
   "settings.experimental.claudeMigration.title": "Claude Code 마이그레이션",
   "settings.experimental.claudeMigration.description":
     "지원되는 전역 CLAUDE.md 지침, 간단한 스킬 및 비활성화된 MCP 정의를 한 번 가져옵니다. 원본 Claude 파일은 변경되지 않으며 활성화 후 백엔드를 다시 시작해야 합니다.",
-  "settings.experimental.multiProject.description":
-    "Agent Manager에서 여러 저장소에 걸친 세션과 워크트리 관리를 활성화합니다. 현재 워크스페이스 저장소는 항상 기본 프로젝트입니다.",
-  "settings.experimental.taskModelSelection.title": "Task 하위 에이전트 모델 선택",
-  "settings.experimental.taskModelSelection.description":
-    "Task 하위 에이전트에 대해 모델, 제공자 및 추론 수준을 명시적으로 선택합니다.",
   "settings.experimental.mcpTimeout.title": "MCP 타임아웃 (ms)",
   "settings.experimental.mcpTimeout.description": "MCP 서버 요청의 타임아웃 시간 (밀리초)",
   "settings.experimental.remote.title": "Remote 제어",
@@ -1032,12 +1054,31 @@ export const dict = {
   "settings.agentBehaviour.removeAgent.button": "제거",
   "settings.agentBehaviour.removeMcp.title": "MCP 서버 제거",
   "settings.agentBehaviour.removeMcp.confirm": 'MCP 서버 "{{name}}"을(를) 제거하시겠습니까? 구성에서 제거됩니다.',
+  "settings.agentBehaviour.removeMcp.bundleConfirm":
+    'MCP 서버 "{{name}}"과(와) 동반 스킬을 제거하시겠습니까? 이는 서버와 이 마켓플레이스 설치가 소유한 모든 스킬을 함께 제거합니다.',
   "settings.agentBehaviour.removeMcp.button": "제거",
   "settings.agentBehaviour.editMcp": "MCP 서버 편집",
   "settings.agentBehaviour.editMcp.transportLocal": "로컬 서버 (stdio 전송)",
   "settings.agentBehaviour.editMcp.transportRemote": "원격 서버 (SSE/HTTP 전송)",
   "settings.agentBehaviour.editMcp.env": "환경 변수",
   "settings.agentBehaviour.editMcp.env.help": "MCP 서버 프로세스에 전달되는 변수입니다.",
+  "settings.agentBehaviour.editMcp.oauth": "OAuth",
+  "settings.agentBehaviour.editMcp.oauth.help":
+    "서버가 사전 등록된 클라이언트를 요구하지 않는 한 자동으로 두세요. 클라이언트 시크릿은 Kilo 설정 파일에 저장됩니다.",
+  "settings.agentBehaviour.editMcp.oauth.mode": "모드",
+  "settings.agentBehaviour.editMcp.oauth.mode.automatic": "자동",
+  "settings.agentBehaviour.editMcp.oauth.mode.disabled": "사용 안 함",
+  "settings.agentBehaviour.editMcp.oauth.mode.custom": "사용자 지정 클라이언트",
+  "settings.agentBehaviour.editMcp.oauth.clientId": "클라이언트 ID",
+  "settings.agentBehaviour.editMcp.oauth.clientSecret": "클라이언트 시크릿",
+  "settings.agentBehaviour.editMcp.oauth.scope": "범위",
+  "settings.agentBehaviour.editMcp.oauth.callbackPort": "콜백 포트",
+  "settings.agentBehaviour.editMcp.oauth.redirectUri": "리디렉션 URI",
+  "settings.agentBehaviour.editMcp.oauth.redirectUri.help":
+    "기본값은 http://127.0.0.1:19876/mcp/oauth/callback이며 콜백 포트를 재정의합니다.",
+  "settings.agentBehaviour.editMcp.oauth.port.invalid": "1에서 65535 사이의 포트를 입력하세요.",
+  "settings.agentBehaviour.editMcp.oauth.secret.invalid": "클라이언트 시크릿에는 클라이언트 ID가 필요합니다.",
+  "settings.agentBehaviour.editMcp.oauth.redirectUri.invalid": "유효한 리디렉션 URI를 입력하세요.",
   "settings.agentBehaviour.addMcp.command": "명령어",
   "settings.agentBehaviour.addMcp.command.placeholder": "e.g. npx",
   "settings.agentBehaviour.addMcp.args": "인수",
@@ -1050,6 +1091,8 @@ export const dict = {
   "settings.agentBehaviour.removeSkill.title": "스킬 제거",
   "settings.agentBehaviour.removeSkill.confirm":
     '스킬 "{{name}}"을(를) 제거하시겠습니까? 디스크에서 스킬 파일이 삭제됩니다.',
+  "settings.agentBehaviour.removeSkill.bundleConfirm":
+    '스킬 "{{name}}"을(를) 제거하시겠습니까? 이는 {{mcp}} MCP 서버와 동일한 마켓플레이스 설치의 모든 동반 스킬도 제거합니다.',
   "settings.agentBehaviour.removeSkill.button": "제거",
   "settings.agentBehaviour.rules.description":
     "규칙은 에이전트 동작을 안내하는 지시 파일입니다. 모든 대화의 시스템 프롬프트에 포함됩니다. 추가 규칙을 포함하려면 아래에 파일 경로를 추가하세요.",
@@ -1065,6 +1108,12 @@ export const dict = {
   "settings.agentBehaviour.mcpDetail.command": "명령어",
   "settings.agentBehaviour.mcpDetail.args": "인수",
   "settings.agentBehaviour.mcpDetail.env": "환경",
+  "settings.agentBehaviour.mcpSignIn.cancel": "로그인 취소",
+  "settings.agentBehaviour.mcpRemoving": "제거 중…",
+  "settings.agentBehaviour.mcpResetAuth": "로그인 재설정",
+  "settings.agentBehaviour.mcpResetAuth.title": "MCP 로그인 재설정",
+  "settings.agentBehaviour.mcpResetAuth.confirm":
+    '"{{name}}"에 저장된 로그인 정보를 지우시겠습니까? 다시 로그인해야 합니다.',
   "settings.agentBehaviour.mcpBrowseMarketplace": "마켓플레이스 둘러보기",
   "settings.agentBehaviour.mcpEmpty":
     "MCP 서버가 구성되지 않았습니다. kilo.jsonc에서 MCP 서버를 추가하거나 에이전트에게 추가를 요청하세요.",
@@ -1118,6 +1167,29 @@ export const dict = {
     "반복되는 동일한 작업 방지. 동일한 입력으로 동일한 도구 호출이 반복될 때 트리거됩니다.",
   "settings.checkpoints.enable.title": "스냅샷 활성화",
   "settings.checkpoints.enable.description": "파일 편집 전 체크포인트를 생성하여 이전 상태를 복원할 수 있습니다",
+  "settings.autoCleanup.enable.title": "자동 세션 정리 활성화",
+  "settings.autoCleanup.enable.description":
+    "정해진 일 수가 지나면 오래된 세션 기록을 자동으로 삭제합니다. 이 컴퓨터의 모든 프로젝트와 모든 Kilo 클라이언트가 대상이며 이 창만이 아닙니다. 실행 중인 세션과 최근 분기가 있는 세션은 절대 삭제되지 않습니다. 삭제는 영구적입니다.",
+  "settings.autoCleanup.defaultRetention.title": "세션 보관 기간(일)",
+  "settings.autoCleanup.defaultRetention.description": "자동 정리가 세션 기록을 삭제하기 전까지 보관하는 기간입니다.",
+  "settings.autoCleanup.lastRun.title": "마지막 정리",
+  "settings.autoCleanup.lastRun.never": "실행된 적 없음",
+  "settings.autoCleanup.result":
+    "{{date}}: {{scanned}}개 중 {{deleted}}개 세션 삭제({{active}}개 활성 건너뜀, {{failed}}개 실패), {{seconds}}초",
+  "settings.autoCleanup.starting": "세션 정리를 시작하는 중...",
+  "settings.autoCleanup.error.status": "세션 정리 상태를 일시적으로 확인할 수 없습니다. 다시 시도하는 중...",
+  "settings.autoCleanup.error.timeout": "정리 상태를 기다리는 중입니다. 백엔드 응답이 예상보다 오래 걸리고 있습니다.",
+  "settings.autoCleanup.error.run":
+    "세션 정리 완료를 확인할 수 없습니다. 다시 시도하기 전에 마지막 정리 결과를 확인하세요.",
+  "settings.autoCleanup.progress.scanning": "세션 검색 중: {{processed}}/{{total}}개 처리됨",
+  "settings.autoCleanup.progress.deleting":
+    "세션 삭제 중: {{processed}}/{{total}}개 처리됨({{deleted}}개 삭제, {{failed}}개 실패)",
+  "settings.autoCleanup.runNow": "지금 정리 실행",
+  "settings.autoCleanup.runNow.confirm":
+    "이 컴퓨터의 모든 프로젝트와 모든 Kilo 클라이언트에 걸쳐 만료된 세션을 영구적으로 삭제할까요?",
+  "settings.autoCleanup.stop": "정리 중지",
+  "settings.autoCleanup.progress.cancelling": "세션 정리를 중지하는 중...",
+  "settings.autoCleanup.lastRun.cancelled": "중단됨",
   "settings.context.autoCompaction.title": "자동 압축",
   "settings.context.autoCompaction.description": "컨텍스트가 한도에 도달하기 전에 자동으로 압축",
   "settings.context.compaction.title": "압축",
@@ -1165,6 +1237,19 @@ export const dict = {
   "settings.commitMessage.language.sync": "UI 언어와 동기화",
   "settings.commitMessage.language.description": "AI 생성된 커밋 메시지에 사용할 언어를 선택하십시오.:",
 
+  "settings.display.preview.title": "미리보기",
+  "settings.display.presets.title": "표시 프리셋",
+  "settings.display.presets.description": "아래 표시 옵션을 변경하며 권한은 변경하지 않습니다. 적용하려면 저장하세요.",
+  "settings.display.preview.model": "샘플 모델",
+  "settings.display.preview.prompt": "인사말에서 여분의 공백을 제거하고 테스트를 확인하세요.",
+  "settings.display.preview.reasoning":
+    "**인사말을 확인합니다.** 이 함수는 일반 이름과 양쪽 끝에 여분의 공백이 있는 이름에 대해 같은 인사말을 생성해야 합니다. 기존 함수 시그니처와 인사말 형식은 유지하고, 이름이 반환 문자열에 들어가는 방식만 변경합니다.\n\n`  Ada  ` 같은 입력에서 원치 않는 공백은 입력에 속하며 인사말 템플릿에 속하지 않습니다. 완성된 인사말을 트림하면 이름 옆에 공백이 남습니다. 따라서 트림 작업은 이름을 삽입하기 전에 수행해야 합니다.\n\n문자열 문서를 확인하여 `trim()`이 양쪽 끝의 공백을 제거하고 새 문자열을 반환하는지 확인합니다. 원본 입력은 변경하지 않아야 합니다. 이 변경에는 정규식, 추가 의존성 또는 별도의 도우미 함수가 필요하지 않습니다.\n\n이름 안의 공백은 그대로 유지되어야 합니다. `Ada Lovelace` 같은 이름이 `AdaLovelace`가 되어서는 안 되며 대소문자도 바뀌지 않아야 합니다. 빈 입력이나 공백만 있는 입력에는 이 집중적인 수정의 일부로 새로운 대체 인사말이 필요하지 않습니다.\n\n템플릿이 현재 `name`을 사용하는 곳에서 `name.trim()`을 사용하면 변경을 return 식 안에 둘 수 있습니다. 주변 문장 부호와 인사말 뒤의 의도적인 공백은 유지합니다. 이렇게 하면 diff가 작게 유지되고 동작을 검토하기 쉽습니다.\n\n마지막으로 `bun test greeting.test.ts`를 실행하고 두 결과를 확인합니다. 공백이 있는 이름 사례는 여분의 공백이 제거됨을 확인하고, 일반 이름 사례는 기존 출력을 보호합니다. 변경 사항과 테스트 결과는 명령이 완료된 후에만 보고합니다.",
+  "settings.display.preview.shell": "인사말 테스트 확인",
+  "settings.display.preview.shellOutput":
+    "bun test greeting.test.ts\n\n[pass] 여분의 공백 제거\n[pass] 일반 이름 유지\n\n2개 테스트 통과",
+  "settings.display.preview.query": "문자열 트림",
+  "settings.display.preview.result": "trim()은 문자열 양쪽 끝의 공백을 제거합니다.",
+  "settings.display.preview.answer": "인사말을 업데이트하여 여분의 공백을 제거했습니다. 두 테스트 모두 통과합니다.",
   "settings.display.username.title": "사용자 이름",
   "settings.display.username.description": "대화에 표시되는 사용자 정의 사용자 이름",
   "settings.display.fontSize.title": "글꼴 크기",
@@ -1191,12 +1276,15 @@ export const dict = {
   "settings.display.mcpTool.expanded": "펼침",
   "settings.display.mcpTool.collapsed": "접힘",
 
+  "settings.display.shortcutHints.title": "단축키 힌트 표시",
+  "settings.display.shortcutHints.description":
+    "빈 프롬프트에 현재 작업에 맞는 키보드 단축키를 표시합니다. 예: 선택한 코드를 추가하거나 프롬프트로 돌아가는 방법.",
   "settings.display.tokenThroughput.title": "토큰 처리량 표시",
   "settings.display.tokenThroughput.description":
     "최신 어시스턴트 메시지와 작업 헤더에 텍스트 생성 속도(tokens/sec)를 표시합니다. 기본적으로 표시되며, 필요할 때 이 설정을 비활성화하면 숨길 수 있습니다.",
   "settings.display.autoApprovalReason.title": "자동 승인 이유 표시",
   "settings.display.autoApprovalReason.description":
-    "도구 호출이 자동으로 승인된 이유(일치한 규칙, 에이전트 기본값, YOLO 모드 등)를 설명하는 줄을 표시합니다.",
+    "일치하는 권한 규칙이나 에이전트 기본값 등 도구 호출이 자동 승인된 이유를 표시합니다.",
 
   "chat.throughput.tooltip":
     "Average {{speed}} tokens/s for this turn. Includes output and reasoning tokens; excludes tool execution and waiting time.",
@@ -1267,16 +1355,16 @@ export const dict = {
 
   "task.todos.progress": "{{done}}/{{total}} 할 일 완료",
   "task.todos.allDone": "{{count}} 할 일 완료",
+  "task.todos.title": "할 일",
+  "task.todos.done": "모두 완료",
   "task.backgroundAgents.running.one": "백그라운드 에이전트 1개",
   "task.backgroundAgents.running.many": "백그라운드 에이전트 {{count}}개",
-  "task.backgroundAgents.more": "+{{count}}개 더",
   "task.backgroundAgents.open": "백그라운드 에이전트 열기",
   "task.backgroundAgents.openAll": "모든 백그라운드 에이전트 열기",
   "task.backgroundAgents.cancel": "중지",
   "task.backgroundAgents.continueInBackground": "백그라운드에서 계속",
   "task.backgroundAgents.waiting": "백그라운드 에이전트에 입력이 필요합니다",
   "task.backgroundAgents.needsInput": "입력 필요",
-  "task.backgroundAgents.dismiss": "닫기",
   "task.backgroundAgents.clearFinished": "완료된 항목 지우기",
   "task.backgroundAgents.summary": "백그라운드 에이전트 {{total}}개 중 {{running}}개 실행 중",
   "task.backgroundAgents.status.running": "실행 중",
@@ -1285,6 +1373,8 @@ export const dict = {
   "task.backgroundAgents.status.error": "오류",
   "task.backgroundAgents.untitled": "백그라운드 에이전트",
   "task.backgroundAgents.stopAll": "모두 중지 ({{count}})",
+  "task.backgroundAgents.finished": "백그라운드 에이전트 완료",
+  "task.stop": "하위 에이전트 중지",
   "settings.saveBar.unsavedChanges": "저장되지 않은 변경 사항",
   "settings.saveBar.discard": "취소",
   "settings.saveBar.save": "저장",
@@ -1350,4 +1440,6 @@ export const dict = {
   "settings.experimental.browserAutomation.systemChrome.description":
     "통합 브라우저에 설치된 Google Chrome을 사용합니다. 호환되는 Playwright Chromium 브라우저가 이미 설치된 경우에만 비활성화하세요.",
   "chat.search.searchingHistory": "이전 메시지를 검색하는 중…",
+  "browserTab.noSession": "세션에서 브라우저를 열어 로컬 애플리케이션이나 공개 HTTPS 페이지를 미리 보세요.",
+  "browserTab.disabled": "통합 브라우저가 비활성화되어 있습니다. Kilo 설정 > 실험에서 활성화하세요.",
 }

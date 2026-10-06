@@ -12,6 +12,7 @@ import ai.kilocode.rpc.dto.AgentConfigPatchDto
 import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.CompactionPatchDto
 import ai.kilocode.rpc.dto.ConfigPatchDto
+import ai.kilocode.rpc.dto.RetentionPatchDto
 import ai.kilocode.rpc.dto.SessionActivityKindDto
 import ai.kilocode.rpc.dto.WatcherPatchDto
 import kotlinx.coroutines.CompletableDeferred
@@ -110,6 +111,68 @@ class KiloBackendAppServiceTest {
         val ready = svc.appState.value as KiloAppState.Ready
         assertNotNull(ready.data.config)
         assertNotNull(ready.data.notifications)
+    }
+
+    @Test
+    fun `ready reports the background subagent capability`() = runBlocking {
+        val svc = create()
+        svc.connect()
+
+        ready(svc)
+
+        // The probe runs off the load's critical path, so Ready starts with it off and flips once
+        // the answer lands.
+        withTimeout(10_000) { svc.capabilities.first { it } }
+        assertNotNull(mock.lastCapabilitiesPath)
+    }
+
+    @Test
+    fun `background subagent capability is false when the CLI reports it off`() = runBlocking {
+        mock.capabilities = """{"backgroundSubagents":false}"""
+        val svc = create()
+        svc.connect()
+
+        ready(svc)
+        awaitCapabilityProbe()
+
+        assertFalse(svc.capabilities.value)
+    }
+
+    @Test
+    fun `a hung capability probe still reaches Ready`() = runBlocking {
+        // The probe's client call is blocking, so it cannot live inside the load's coroutineScope:
+        // structured concurrency would wait on the socket and time the whole load out.
+        val gate = java.util.concurrent.CountDownLatch(1)
+        mock.capabilitiesGate = gate
+        val svc = create()
+        try {
+            svc.connect()
+
+            ready(svc)
+
+            assertFalse(svc.capabilities.value)
+        } finally {
+            gate.countDown()
+        }
+    }
+
+    @Test
+    fun `unreadable capability leaves it off without failing the load`() = runBlocking {
+        // An older CLI has no /experimental/capabilities route at all; that must not block Ready.
+        mock.capabilitiesStatus = 404
+        val svc = create()
+        svc.connect()
+
+        ready(svc)
+        awaitCapabilityProbe()
+
+        assertFalse(svc.capabilities.value)
+    }
+
+    private suspend fun awaitCapabilityProbe() {
+        withTimeout(10_000) {
+            while (mock.lastCapabilitiesPath == null) delay(20)
+        }
     }
 
     @Test
@@ -266,6 +329,59 @@ class KiloBackendAppServiceTest {
         val cfg = appStateDto(state).config
         assertEquals(true, cfg?.shared_agent_board)
         assertEquals(true, svc.config?.shared_agent_board)
+    }
+
+    @Test
+    fun `update config patches snapshot and reloads`() = runBlocking {
+        val svc = create()
+        svc.connect()
+        ready(svc)
+
+        val state = svc.updateConfig(ConfigPatchDto(snapshot = false))
+
+        assertEquals("{\"snapshot\":false}", mock.lastConfigPatchBody)
+        val cfg = appStateDto(state).config
+        assertEquals(false, cfg?.snapshot)
+        assertEquals(false, svc.config?.snapshot)
+    }
+
+    @Test
+    fun `update config patches retention and reloads`() = runBlocking {
+        val svc = create()
+        svc.connect()
+        ready(svc)
+
+        val state = svc.updateConfig(ConfigPatchDto(
+            retention = RetentionPatchDto(enabled = true, maxAgeDays = 30),
+        ))
+
+        assertEquals("{\"retention\":{\"enabled\":true,\"maxAgeDays\":30}}", mock.lastConfigPatchBody)
+        val retention = appStateDto(state).config?.retention
+        assertEquals(true, retention?.enabled)
+        assertEquals(30, retention?.maxAgeDays)
+    }
+
+    @Test
+    fun `retention status and forced run map generated responses`() = runBlocking {
+        mock.retentionStatus = """
+            {"policy":{"enabled":true,"maxAgeDays":45},"last":{"at":1000,"scanned":8,"deleted":3,"skippedActive":2,"failed":1,"durationMs":250},"progress":{"phase":"scanning","total":4,"processed":1,"deleted":0,"failed":0,"skippedActive":2}}
+        """.trimIndent()
+        mock.retentionRun = """
+            {"policy":{"enabled":true,"maxAgeDays":45},"last":{"at":2000,"scanned":8,"deleted":4,"skippedActive":2,"failed":0,"durationMs":300},"progress":null}
+        """.trimIndent()
+        val svc = create()
+        svc.connect()
+        ready(svc)
+
+        val status = svc.retention.status()
+        val run = svc.retention.run(true)
+
+        assertEquals(45, status.policy.maxAgeDays)
+        assertEquals("scanning", status.progress?.phase)
+        assertEquals(2, status.progress?.skippedActive)
+        assertEquals(4, run.last?.deleted)
+        assertEquals(300, run.last?.durationMs)
+        assertEquals("{\"force\":true}", mock.lastRetentionRunBody)
     }
 
     @Test

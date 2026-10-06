@@ -90,10 +90,14 @@ export const dict = {
     "مکالمه بازگردانده شد. تغییرات فایل بازیابی نشدند زیرا عکس‌برداری غیرفعال است.",
   "revert.banner.workspace.unavailable":
     "مکالمه بازگردانده شد. هیچ نقطه بازیابی فایلی موجود نبود، بنابراین تغییرات فضای کاری بازیابی نشدند.",
+  "revert.banner.workspace.notAGitRepo":
+    "مکالمه بازگردانده شد. نقاط بازیابی فایل به مخزن Git نیاز دارند، بنابراین تغییرات فضای کاری بازیابی نشدند.",
   "revert.banner.workspace.legacy":
     "مکالمه بازگردانده شد. وضعیت بازیابی فضای کاری برای این بازگردانی قدیمی‌تر در دسترس نیست.",
   "revert.banner.workspace.enableSnapshots": "فعال‌سازی اسنپ‌شات‌ها",
   "revert.disabled.agentBusy": "منتظر بمانید تا عامل کارش تمام شود",
+  "revert.error.body":
+    "ممکن است مخزن در حال استفاده باشد. دوباره تلاش کنید یا برای جزئیات گزارش‌های Kilo را بررسی کنید.",
   "command.session.compact": "فشرده‌سازی جلسه",
   "command.session.export": "صدور رونوشت جلسه",
 
@@ -210,13 +214,27 @@ export const dict = {
   "prompt.worktrees.title": "Worktrees",
   "prompt.worktrees.search": "جستجوی worktree‌ها",
   "prompt.thinking.tooltip": "میزان استدلال",
+  "prompt.shortcutHint.addSelection": "برای افزودن انتخاب",
+  "prompt.shortcutHint.waiting": "برای پاسخ به نشست منتظر",
+  "prompt.shortcutHint.type": "برای تایپ",
+  "prompt.shortcutHint.sessions": "برای تغییر نشست",
+  "prompt.shortcutHint.stop": "برای توقف",
+  "prompt.shortcutHint.changes": "برای بررسی تغییرات",
+  "prompt.shortcutHint.pr": "برای باز کردن PR",
+  "prompt.shortcutHint.mode": "حالت بعدی",
   "prompt.action.send": "ارسال",
   "prompt.action.continue": "ادامه",
   "prompt.action.send.blocked": "ابتدا به سؤال در انتظار پاسخ دهید یا آن را رد کنید",
   "prompt.action.send.recording": "رونویسی و ارسال",
   "prompt.action.stop": "توقف",
+  "prompt.action.stop.background": "توقف عامل اصلی. عامل‌های پس‌زمینه به اجرا ادامه می‌دهند.",
+  "prompt.agents.show": "نمایش عامل‌های پس‌زمینه",
   "prompt.action.enhance": "بهبود پرامپت",
   "prompt.paste.expand": "برای بازکردن متن جایگذاری‌شده کلیک کنید",
+  "prompt.issues.title": "مشکلات نشست",
+  "prompt.mcp.provider": "MCP {{name}}",
+  "prompt.mcp.openSettings": "باز کردن در تنظیمات",
+  "prompt.mcp.signIn.busy": "در حال ورود…",
   "prompt.action.indexing": "تنظیمات ایندکس‌گذاری",
   "prompt.action.autoApprove.enable": "فعال‌سازی تأیید خودکار",
   "prompt.action.autoApprove.disable": "غیرفعال‌سازی تأیید خودکار",
@@ -322,7 +340,7 @@ export const dict = {
   "ui.approval.source.agent.default": "توسط عامل",
   "ui.approval.source.global": "توسط تنظیمات سراسری شما",
   "ui.approval.source.project": "توسط تنظیمات پروژه",
-  "ui.approval.source.yolo": "توسط حالت تأیید خودکار (YOLO)",
+  "ui.approval.source.yolo": "توسط حالت تأیید خودکار",
   "ui.approval.source.session": "توسط قانون تأیید خودکار جلسه",
   "ui.approval.source.default": "به‌طور پیش‌فرض",
   "ui.approval.outsideWorkspace": "(خارج از فضای کاری شما: {{file}})",
@@ -437,6 +455,7 @@ export const dict = {
   "provider.custom.models.toggleImages": "تغییر وضعیت تصویر برای همه",
   "provider.custom.models.remove": "حذف مدل",
   "provider.custom.models.add": "افزودن مدل",
+  "provider.custom.models.fetch.button": "دریافت مدل‌ها",
   "provider.custom.models.fetch.authError": "احراز هویت ناموفق بود. کلید API بالا را بررسی کرده و دوباره امتحان کنید.",
   "provider.custom.models.fetch.empty": "هیچ مدلی در این سرور یافت نشد.",
   "provider.custom.models.fetch.added": "{{count}} مدل اضافه شد.",
@@ -466,6 +485,9 @@ export const dict = {
   "provider.custom.error.duplicate": "تکراری",
   "settings.openLocalConfig": "پیکربندی محلی",
   "settings.openGlobalConfig": "پیکربندی سراسری",
+  "settings.search.placeholder": "جست‌وجوی تنظیمات",
+  "settings.search.noResults": "تنظیمی یافت نشد",
+  "settings.search.clear": "پاک کردن جست‌وجو",
   "settings.config.scope.local": "محلی",
   "settings.config.scope.global": "سراسری",
   "settings.config.status.loaded": "بارگذاری شد",
@@ -525,6 +547,7 @@ export const dict = {
   "session.tabs.switcher.pending": "جدید",
   "session.tabs.switcher.busy": "در حال کار",
   "session.tabs.switcher.scheduled": "زمان‌بندی‌شده",
+  "session.tabs.pinHint": "Shift+کلیک برای سنجاق کردن یا لغو آن",
   "session.tab.local": "محلی",
   "session.tab.cloud": "Cloud",
   "session.tab.worktree": "Worktree",
@@ -548,14 +571,14 @@ export const dict = {
   "workStyle.choice.human-in-the-loop.description": "Kilo در حین کار مکث می‌کند و برنامه خود را به شما نشان می‌دهد.",
   "workStyle.choice.human-in-the-loop.permissions": "قبل از ویرایش فایل‌ها یا اجرای دستورات اجازه می‌گیرد.",
   "workStyle.choice.human-in-the-loop.bash": "هنگام اجرای تمام دستورات ترمینال اجازه می‌گیرد.",
-  "workStyle.choice.human-in-the-loop.visibility": "جزئیات کامل مکالمه، از جمله استدلال، را نمایش می‌دهد.",
+  "workStyle.choice.human-in-the-loop.visibility": "استدلال، فرمان‌ها و ویرایش‌ها را برای بررسی باز می‌کند.",
   "workStyle.choice.autonomous.eyebrow": "وقفه‌های کمتر",
   "workStyle.choice.autonomous.title": "استقلال بالا",
   "workStyle.choice.autonomous.description": "وقفه‌های کمتر، رابط کاربری ساده‌تر.",
   "workStyle.choice.autonomous.permissions":
     "بدون درخواست اجازه، فایل‌ها را ویرایش می‌کند و دستورات را در فضای کاری اجرا می‌کند.",
   "workStyle.choice.autonomous.bash": "می‌تواند بدون تأیید، دستورات ترمینال را در فضای کاری اجرا کند.",
-  "workStyle.choice.autonomous.visibility": "جزئیات تا زمانی که آن‌ها را باز کنید، جمع‌شده باقی می‌مانند.",
+  "workStyle.choice.autonomous.visibility": "جزئیات ابزار را جمع می‌کند، همراه با پیش‌نمایش فشرده استدلال.",
   "session.cloud.import.title": "وارد کردن جلسه",
   "session.cloud.import.placeholder": "شناسه جلسه، URL، یا دستور kilo import",
   "session.cloud.import.button": "وارد کردن",
@@ -770,9 +793,11 @@ export const dict = {
   "ui.sessionTurn.status.consideringNextSteps": "در حال بررسی مراحل بعدی...",
 
   "dialog.model.noProviders": "هیچ ارائه‌دهنده‌ای وجود ندارد",
+  "dialog.model.unavailable": "مدل‌های Kilo در دسترس نیستند",
 
   "prompt.placeholder.connecting": "در حال اتصال به سرور...",
   "prompt.placeholder.default": "پیامی بنویسید... (Enter برای ارسال، Shift+Enter برای خط جدید)",
+  "prompt.placeholder.hint": "پیامی بنویسید... ({{key}} {{action}})",
   "prompt.placeholder.error": "اتصال ناموفق بود. پنل خروجی را بررسی کنید یا افزونه را مجدداً راه‌اندازی کنید.",
 
   "context.usage.sessionCost": "هزینه جلسه",
@@ -832,7 +857,8 @@ export const dict = {
   "settings.browser.description":
     "پیکربندی اتوماسیون مرورگر داخلی با پشتیبانی Playwright. Kilo می‌تواند در جلسات شما در صفحات وب پیمایش کند، با آن‌ها تعامل داشته باشد و اسکرین‌شات بگیرد.",
   "settings.browser.enable.title": "فعال‌سازی اتوماسیون مرورگر",
-  "settings.browser.enable.description": "سرور Playwright MCP را با بک‌اند CLI ثبت کنید.",
+  "settings.browser.enable.description":
+    "مرورگر Agent Manager مختص هر جلسه را برای برنامه‌های محلی و صفحات عمومی HTTPS فعال کنید.",
   "settings.browser.systemChrome.title": "استفاده از Chrome سیستم",
   "settings.browser.systemChrome.description":
     "به جای یک نمونه Chromium جداگانه، از مرورگر Chrome نصب‌شده شما استفاده کنید.",
@@ -933,15 +959,12 @@ export const dict = {
   "settings.sandboxing.writablePaths.title": "مسیرهای قابل نوشتن اضافی",
   "settings.sandboxing.writablePaths.description":
     "مسیرهای فایل‌سیستم اضافی که Sandbox اجازه نوشتن به آن‌ها را می‌دهد (مثلاً /tmp، /var/log). این مسیرها هنگام فعال بودن Sandbox با مسیرهای قابل نوشتن پیش‌فرض ادغام می‌شوند.",
-  "settings.experimental.multiProject.title": "مدیر agent چندپروژه‌ای",
+  "settings.experimental.conversationPromptHistory.title": "تاریخچه پرامپت برای هر گفتگو",
+  "settings.experimental.conversationPromptHistory.description":
+    "تاریخچه پرامپت (ArrowUp/ArrowDown) را برای هر گفتگو جداگانه نگه دارید، به جای اشتراک یک تاریخچه بین همه گفتگوها.",
   "settings.experimental.claudeMigration.title": "مهاجرت Claude Code",
   "settings.experimental.claudeMigration.description":
     "دستورالعمل‌های سراسری CLAUDE.md پشتیبانی‌شده، مهارت‌های ساده و تعریف‌های MCP غیرفعال را فقط یک‌بار وارد کنید. فایل‌های اصلی Claude تغییر نمی‌کنند؛ پس از فعال‌سازی backend را دوباره راه‌اندازی کنید.",
-  "settings.experimental.multiProject.description":
-    "مدیریت sessionها و worktreeها را در چند مخزن در Agent Manager فعال می‌کند. مخزن فضای کاری فعلی همیشه پروژه پیش‌فرض است.",
-  "settings.experimental.taskModelSelection.title": "انتخاب مدل زیرعامل Task",
-  "settings.experimental.taskModelSelection.description":
-    "انتخاب صریح مدل، ارائه‌دهنده و میزان استدلال برای زیرعامل‌های Task را فعال می‌کند.",
   "settings.experimental.mcpTimeout.title": "زمان‌وقفه MCP (میلی‌ثانیه)",
   "settings.experimental.mcpTimeout.description": "زمان‌وقفه برای درخواست‌های سرور MCP بر حسب میلی‌ثانیه",
   "settings.experimental.remote.title": "کنترل از راه دور",
@@ -990,6 +1013,8 @@ export const dict = {
   "settings.agentBehaviour.removeSkill.title": "حذف مهارت",
   "settings.agentBehaviour.removeSkill.confirm":
     "مهارت «{{name}}» حذف شود؟ این کار فایل‌های مهارت را از دیسک حذف می‌کند.",
+  "settings.agentBehaviour.removeSkill.bundleConfirm":
+    "مهارت «{{name}}» حذف شود؟ این کار سرور MCP {{mcp}} و هر مهارت همراه از همان نصب مارکت‌پلیس را نیز حذف می‌کند.",
   "settings.agentBehaviour.removeSkill.button": "حذف",
   "settings.agentBehaviour.rules.description":
     "قوانین، فایل‌های دستورالعملی هستند که رفتار عامل را هدایت می‌کنند. این قوانین در پرامپت سیستم برای هر مکالمه گنجانده می‌شوند. برای افزودن قوانین بیشتر، مسیرهای فایل را در زیر وارد کنید.",
@@ -1005,15 +1030,39 @@ export const dict = {
     "دستورالعمل‌ها و مهارت‌های CLAUDE.md را از پوشه پیکربندی Claude Code شما در جلسات بارگذاری می‌کند. اگر می‌خواهید Kilo از دستورالعمل‌ها و مهارت‌های Claude Code شما استفاده کند، این گزینه را فعال کنید. نیاز به راه‌اندازی مجدد دارد.",
   "settings.agentBehaviour.removeMcp.title": "حذف سرور MCP",
   "settings.agentBehaviour.removeMcp.confirm": "سرور MCP «{{name}}» حذف شود؟ این کار آن را از پیکربندی شما حذف می‌کند.",
+  "settings.agentBehaviour.removeMcp.bundleConfirm":
+    "سرور MCP «{{name}}» و مهارت‌های همراه آن حذف شوند؟ این کار هم سرور و هم هر مهارتی که متعلق به این نصب مارکت‌پلیس است را حذف می‌کند.",
   "settings.agentBehaviour.removeMcp.button": "حذف",
   "settings.agentBehaviour.mcpDetail.command": "دستور",
   "settings.agentBehaviour.mcpDetail.args": "آرگومان‌ها",
   "settings.agentBehaviour.mcpDetail.env": "محیط",
+  "settings.agentBehaviour.mcpSignIn.cancel": "لغو ورود",
+  "settings.agentBehaviour.mcpRemoving": "در حال حذف…",
+  "settings.agentBehaviour.mcpResetAuth": "بازنشانی ورود",
+  "settings.agentBehaviour.mcpResetAuth.title": "بازنشانی ورود MCP",
+  "settings.agentBehaviour.mcpResetAuth.confirm": "ورود ذخیره‌شده برای «{{name}}» پاک شود؟ باید دوباره وارد شوید.",
   "settings.agentBehaviour.editMcp": "ویرایش سرور MCP",
   "settings.agentBehaviour.editMcp.transportLocal": "سرور محلی (انتقال stdio)",
   "settings.agentBehaviour.editMcp.transportRemote": "سرور راه‌دور (انتقال SSE/HTTP)",
   "settings.agentBehaviour.editMcp.env": "متغیرهای محیطی",
   "settings.agentBehaviour.editMcp.env.help": "متغیرهایی که به فرآیند سرور MCP ارسال می‌شوند.",
+  "settings.agentBehaviour.editMcp.oauth": "OAuth",
+  "settings.agentBehaviour.editMcp.oauth.help":
+    "مگر اینکه سرور به یک کلاینت از‌پیش‌ثبت‌شده نیاز داشته باشد، آن را روی خودکار بگذارید. رمز کلاینت در فایل پیکربندی Kilo شما ذخیره می‌شود.",
+  "settings.agentBehaviour.editMcp.oauth.mode": "حالت",
+  "settings.agentBehaviour.editMcp.oauth.mode.automatic": "خودکار",
+  "settings.agentBehaviour.editMcp.oauth.mode.disabled": "غیرفعال",
+  "settings.agentBehaviour.editMcp.oauth.mode.custom": "کلاینت سفارشی",
+  "settings.agentBehaviour.editMcp.oauth.clientId": "شناسه کلاینت",
+  "settings.agentBehaviour.editMcp.oauth.clientSecret": "رمز کلاینت",
+  "settings.agentBehaviour.editMcp.oauth.scope": "محدوده",
+  "settings.agentBehaviour.editMcp.oauth.callbackPort": "پورت بازگشتی",
+  "settings.agentBehaviour.editMcp.oauth.redirectUri": "آدرس تغییرمسیر",
+  "settings.agentBehaviour.editMcp.oauth.redirectUri.help":
+    "پیش‌فرض http://127.0.0.1:19876/mcp/oauth/callback است و پورت بازگشتی را نادیده می‌گیرد.",
+  "settings.agentBehaviour.editMcp.oauth.port.invalid": "پورتی بین ۱ تا ۶۵۵۳۵ وارد کنید.",
+  "settings.agentBehaviour.editMcp.oauth.secret.invalid": "رمز کلاینت به شناسه کلاینت نیاز دارد.",
+  "settings.agentBehaviour.editMcp.oauth.redirectUri.invalid": "یک آدرس تغییرمسیر معتبر وارد کنید.",
   "settings.agentBehaviour.addMcp.command": "دستور",
   "settings.agentBehaviour.addMcp.command.placeholder": "مثلاً npx",
   "settings.agentBehaviour.addMcp.args": "آرگومان‌ها",
@@ -1118,6 +1167,30 @@ export const dict = {
   "settings.checkpoints.enable.title": "فعال‌سازی اسنپ‌شات‌ها",
   "settings.checkpoints.enable.description":
     "قبل از ویرایش فایل‌ها نقاط بازیابی ایجاد کنید تا بتوانید به حالت‌های قبلی بازگردید",
+  "settings.autoCleanup.enable.title": "فعال‌سازی پاکسازی خودکار جلسه‌ها",
+  "settings.autoCleanup.enable.description":
+    "تاریخچه جلسه‌های قدیمی را پس از تعداد روز مشخصی به‌صورت خودکار حذف می‌کند، در همهٔ پروژه‌ها و همهٔ سرویس‌گیرنده‌های Kilo روی این رایانه، نه فقط همین پنجره. جلسه‌های در حال اجرا و جلسه‌های دارای انشعاب اخیر هرگز حذف نمی‌شوند. حذف دائمی است.",
+  "settings.autoCleanup.defaultRetention.title": "نگهداری جلسه‌ها (روز)",
+  "settings.autoCleanup.defaultRetention.description": "مدت نگهداری تاریخچه جلسه‌ها قبل از حذف توسط پاکسازی خودکار.",
+  "settings.autoCleanup.lastRun.title": "آخرین پاکسازی",
+  "settings.autoCleanup.lastRun.never": "هرگز اجرا نشده",
+  "settings.autoCleanup.result":
+    "{{date}}: {{deleted}} از {{scanned}} جلسه حذف شد ({{active}} فعال رد شد، {{failed}} ناموفق) در {{seconds}} ثانیه",
+  "settings.autoCleanup.starting": "در حال شروع پاکسازی جلسه‌ها...",
+  "settings.autoCleanup.error.status": "وضعیت پاکسازی جلسه‌ها موقتاً در دسترس نیست. در حال تلاش مجدد...",
+  "settings.autoCleanup.error.timeout":
+    "در انتظار وضعیت پاکسازی. پاسخ‌دهی بخش پشتیبان بیشتر از حد انتظار طول کشیده است.",
+  "settings.autoCleanup.error.run":
+    "تکمیل پاکسازی جلسه‌ها تأیید نشد. پیش از تلاش مجدد، نتیجه آخرین پاکسازی را بررسی کنید.",
+  "settings.autoCleanup.progress.scanning": "در حال اسکن جلسه‌ها: {{processed}}/{{total}} پردازش شده",
+  "settings.autoCleanup.progress.deleting":
+    "در حال حذف جلسه‌ها: {{processed}}/{{total}} پردازش شده ({{deleted}} حذف شده، {{failed}} ناموفق)",
+  "settings.autoCleanup.runNow": "اجرای پاکسازی الآن",
+  "settings.autoCleanup.runNow.confirm":
+    "حذف دائمی جلسه‌های منقضی‌شده در همهٔ پروژه‌ها و همهٔ سرویس‌گیرنده‌های Kilo روی این رایانه؟",
+  "settings.autoCleanup.stop": "توقف پاکسازی",
+  "settings.autoCleanup.progress.cancelling": "در حال توقف پاکسازی نشست‌ها...",
+  "settings.autoCleanup.lastRun.cancelled": "قطع‌شده",
 
   "settings.context.autoCompaction.title": "فشرده‌سازی خودکار",
   "settings.context.autoCompaction.description": "قبل از رسیدن به محدودیت، زمینه را به‌طور خودکار فشرده کنید",
@@ -1166,6 +1239,19 @@ export const dict = {
   "settings.commitMessage.language.description":
     "زبان مورد استفاده برای پیام‌های کامیت تولیدشده توسط هوش مصنوعی را انتخاب کنید:",
 
+  "settings.display.preview.title": "پیش‌نمایش",
+  "settings.display.presets.title": "از پیش تعیین‌های نمایش",
+  "settings.display.presets.description": "گزینه‌های نمایش زیر را تغییر می‌دهد، نه مجوزها. برای اعمال ذخیره کنید.",
+  "settings.display.preview.model": "مدل نمونه",
+  "settings.display.preview.prompt": "فاصله‌های اضافی را از درود حذف کنید و تست‌ها را بررسی کنید.",
+  "settings.display.preview.reasoning":
+    "**درود را بررسی کنید.** تابع باید برای یک نام ساده و نامی با فاصله‌های اضافی در دو طرف، درود یکسانی تولید کند. من امضای تابع و قالب درود موجود را حفظ می‌کنم و فقط نحوه ورود نام به رشته بازگشتی را تغییر می‌دهم.\n\nبرای ورودی مانند `  Ada  `، فاصله‌های ناخواسته به ورودی تعلق دارند، نه به قالب درود. بریدن درود کامل، فاصله‌هایی کنار نام باقی می‌گذارد. بنابراین عملیات بریدن باید پیش از درج نام انجام شود.\n\nمستندات رشته را بررسی می‌کنم تا تأیید کنم که `trim()` فاصله‌های سفید را از دو طرف حذف می‌کند و رشته جدیدی برمی‌گرداند. باید ورودی اصلی را بدون تغییر بگذارد. برای این تغییر نیازی به عبارت باقاعده، وابستگی دیگر یا تابع کمکی جداگانه نیست.\n\nفاصله‌های داخل نام باید دست‌نخورده باقی بمانند. نامی مانند `Ada Lovelace` نباید به `AdaLovelace` تبدیل شود و بزرگی و کوچکی حروف آن نباید تغییر کند. ورودی خالی یا فقط شامل فاصله، در چارچوب این اصلاح هدفمند به درود جایگزین جدید نیاز ندارد.\n\nاین تغییر می‌تواند در عبارت بازگشتی بماند و از `name.trim()` در جایی استفاده کند که قالب اکنون `name` را به کار می‌برد. من نقطه‌گذاری اطراف و فاصله عمدی پس از درود را حفظ می‌کنم. این کار diff را کوچک نگه می‌دارد و بررسی رفتار را آسان می‌کند.\n\nدر پایان، `bun test greeting.test.ts` را اجرا می‌کنم و هر دو نتیجه را بررسی می‌کنم. حالت نام دارای فاصله باید تأیید کند که فاصله‌های اضافی حذف می‌شوند، در حالی که حالت نام ساده از خروجی موجود محافظت می‌کند. تغییر و نتایج تست را فقط پس از تکمیل فرمان گزارش می‌کنم.",
+  "settings.display.preview.shell": "تست درود را بررسی کنید",
+  "settings.display.preview.shellOutput":
+    "bun test greeting.test.ts\n\n[pass] فاصله‌های اضافی را حذف می‌کند\n[pass] نام ساده را حفظ می‌کند\n\n۲ تست قبول شد",
+  "settings.display.preview.query": "بریدن رشته",
+  "settings.display.preview.result": "trim() فاصله‌ها را از دو طرف رشته حذف می‌کند.",
+  "settings.display.preview.answer": "درود به‌روزرسانی شد تا فاصله‌های اضافی حذف شود. هر دو تست قبول می‌شوند.",
   "settings.display.username.title": "نام کاربری",
   "settings.display.username.description": "نام کاربری سفارشی که در مکالمات نمایش داده می‌شود",
   "settings.display.fontSize.title": "اندازه قلم",
@@ -1193,12 +1279,15 @@ export const dict = {
     "انتخاب کنید که بلوک‌های ابزار MCP و عمومی در حالت گسترش‌یافته یا جمع‌شده شروع شوند.",
   "settings.display.mcpTool.expanded": "گسترش‌یافته",
   "settings.display.mcpTool.collapsed": "جمع‌شده",
+  "settings.display.shortcutHints.title": "نمایش راهنمای میانبرها",
+  "settings.display.shortcutHints.description":
+    "میانبر صفحه‌کلیدی متناسب با کاری که اکنون انجام می‌دهید را در اعلان خالی نمایش می‌دهد، مثلاً نحوه افزودن کد انتخاب‌شده یا بازگشت به اعلان.",
   "settings.display.tokenThroughput.title": "نمایش توان عملیاتی توکن",
   "settings.display.tokenThroughput.description":
     "نمایش نرخ تولید متن (tokens/sec) در جدیدترین پیام دستیار و سربرگ کار. به‌طور پیش‌فرض نمایش داده می‌شود؛ برای پنهان کردن آن در صورت نیاز، این تنظیم را غیرفعال کنید.",
   "settings.display.autoApprovalReason.title": "نمایش دلیل تأیید خودکار",
   "settings.display.autoApprovalReason.description":
-    "نمایش خطی در فراخوانی ابزارها که توضیح می‌دهد چرا به‌طور خودکار تأیید شده‌اند (قانون مطابق، پیش‌فرض عامل، حالت YOLO و غیره).",
+    "نشان می‌دهد چرا یک فراخوانی ابزار به‌طور خودکار تأیید شده است، مانند یک قانون مجوز مطابق یا پیش‌فرض عامل.",
 
   "chat.throughput.tooltip":
     "میانگین {{speed}} توکن/ثانیه برای این نوبت. شامل توکن‌های خروجی و استدلال می‌شود؛ زمان اجرای ابزار و انتظار را شامل نمی‌شود.",
@@ -1284,16 +1373,16 @@ export const dict = {
 
   "task.todos.progress": "{{done}}/{{total}} کار انجام شد",
   "task.todos.allDone": "{{count}} کار انجام شد",
+  "task.todos.title": "کارها",
+  "task.todos.done": "همه انجام شد",
   "task.backgroundAgents.running.one": "1 عامل پس‌زمینه",
   "task.backgroundAgents.running.many": "{{count}} عامل پس‌زمینه",
-  "task.backgroundAgents.more": "+{{count}} بیشتر",
   "task.backgroundAgents.open": "باز کردن عامل پس‌زمینه",
   "task.backgroundAgents.openAll": "باز کردن همه عامل‌های پس‌زمینه",
   "task.backgroundAgents.cancel": "توقف",
   "task.backgroundAgents.continueInBackground": "ادامه در پس‌زمینه",
   "task.backgroundAgents.waiting": "یک عامل پس‌زمینه به ورودی شما نیاز دارد",
   "task.backgroundAgents.needsInput": "ورودی لازم است",
-  "task.backgroundAgents.dismiss": "رد کردن",
   "task.backgroundAgents.clearFinished": "پاک کردن موارد تکمیل‌شده",
   "task.backgroundAgents.summary": "{{running}} از {{total}} عامل پس‌زمینه در حال اجرا هستند",
   "task.backgroundAgents.status.running": "در حال اجرا",
@@ -1302,6 +1391,8 @@ export const dict = {
   "task.backgroundAgents.status.error": "خطا",
   "task.backgroundAgents.untitled": "عامل پس‌زمینه",
   "task.backgroundAgents.stopAll": "توقف همه ({{count}})",
+  "task.backgroundAgents.finished": "عامل‌های پس‌زمینه به پایان رسیدند",
+  "task.stop": "توقف زیرعامل",
 
   "settings.saveBar.unsavedChanges": "تغییرات ذخیره‌نشده",
   "settings.saveBar.discard": "رد کردن",
@@ -1371,4 +1462,6 @@ export const dict = {
   "settings.experimental.browserAutomation.systemChrome.description":
     "از Google Chrome نصب‌شده برای مرورگر یکپارچه استفاده کنید. فقط زمانی غیرفعال کنید که مرورگر Playwright Chromium سازگار از قبل نصب شده باشد.",
   "chat.search.searchingHistory": "در حال جستجو در پیام‌های قبلی…",
+  "browserTab.noSession": "مرورگر را از یک نشست باز کنید تا یک برنامه محلی یا یک صفحه HTTPS عمومی را پیش‌نمایش بگیرید.",
+  "browserTab.disabled": "مرورگر یکپارچه غیرفعال است. آن را در تنظیمات Kilo > آزمایشی فعال کنید.",
 }

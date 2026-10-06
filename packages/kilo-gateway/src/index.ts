@@ -45,6 +45,7 @@ export {
   fetchKiloTranscriptionModels,
   type KiloTranscriptionModel,
   type KiloTranscriptionModelsResult,
+  supportsTools,
 } from "./api/models.js"
 export { fetchKiloModelEndpoints, type KiloModelEndpoint, type KiloModelEndpointsResult } from "./api/endpoints.js"
 export {

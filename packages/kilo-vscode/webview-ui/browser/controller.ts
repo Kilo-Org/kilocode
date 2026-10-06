@@ -18,7 +18,13 @@ export interface BrowserControllerOptions {
   theme?: Accessor<"dark" | "light">
   schedule?: (callback: FrameRequestCallback) => number
   cancel?: (frame: number) => void
+  now?: () => number
 }
+
+// How long after the last wheel event a stationary pointer keeps re-inspecting streamed frames. A frame can
+// arrive before the scroll is applied, and content can settle over several frames, so refresh for a short
+// window instead of trusting one frame. Refreshes stay scoped to scrolling and stop for a resting pointer.
+const SETTLE = 400
 
 export interface BrowserController {
   url: Accessor<string>
@@ -31,12 +37,23 @@ export interface BrowserController {
   setUrl: (value: string) => void
   open: () => void
   refresh: () => void
+  back: () => void
+  forward: () => void
   close: () => void
   toggleSelecting: () => void
   toggleTools: () => void
   move: (value: BrowserPosition) => void
+  scroll: (value: BrowserPosition) => void
+  leave: () => void
   select: (value: BrowserPosition) => void
   dispose: () => void
+}
+
+function address(value: string): string {
+  if (/^[a-z][a-z\d+.-]*:\/\//i.test(value)) return value
+  const host = value.replace(/^\/\//, "")
+  const scheme = /^(?:localhost|127\.0\.0\.1|0\.0\.0\.0)(?=[:/?#]|$)/i.test(host) ? "http" : "https"
+  return `${scheme}://${host}`
 }
 
 export function createBrowserController(props: BrowserControllerOptions): BrowserController {
@@ -48,9 +65,14 @@ export function createBrowserController(props: BrowserControllerOptions): Browse
   const [tools, setTools] = createSignal<{ browserId: string; url: string }>()
   const scheduleFrame = props.schedule ?? ((callback: FrameRequestCallback) => requestAnimationFrame(callback))
   const cancelFrame = props.cancel ?? ((frame: number) => cancelAnimationFrame(frame))
+  const now = props.now ?? (() => Date.now())
   let frame: number | undefined
   let pending: BrowserPosition | undefined
+  let pointer: BrowserPosition | undefined
+  let motion = false
   let active: string | undefined
+  let stale = false
+  let scrolling = 0
   let selected: string | undefined
   let sequence = 0
   let current: BrowserScope | undefined
@@ -62,7 +84,11 @@ export function createBrowserController(props: BrowserControllerOptions): Browse
     if (frame !== undefined) cancelFrame(frame)
     frame = undefined
     pending = undefined
+    pointer = undefined
+    motion = false
     active = undefined
+    stale = false
+    scrolling = 0
     selected = undefined
     setHovered(undefined)
   }
@@ -84,7 +110,7 @@ export function createBrowserController(props: BrowserControllerOptions): Browse
     props.transport.send(command)
   }
 
-  const request = (type: "refresh" | "close" | "state") => {
+  const request = (type: "refresh" | "back" | "forward" | "close" | "state") => {
     sync()
     if (!current) return
     send({ type, scope: current })
@@ -109,10 +135,13 @@ export function createBrowserController(props: BrowserControllerOptions): Browse
     if (frame !== undefined || active || !pending || (!selecting() && !pointing())) return
     frame = scheduleFrame(() => {
       frame = undefined
+      if (!sync()) return
       const value = pending
       pending = undefined
       if (!value || (!selecting() && !pointing())) return
-      if (pointing()) input(value, false)
+      // Frame refreshes only read the element. Moving the DevTools pointer here would create more frames.
+      if (pointing() && motion) input(value, false)
+      motion = false
       inspect(value, true)
     })
   }
@@ -145,7 +174,8 @@ export function createBrowserController(props: BrowserControllerOptions): Browse
     if (value.hover) {
       if ((!selecting() && !pointing()) || value.requestId !== active) return
       active = undefined
-      setHovered(value.error ? undefined : value)
+      if (!stale) setHovered(value.error ? undefined : value)
+      stale = false
       schedule()
       return
     }
@@ -176,6 +206,21 @@ export function createBrowserController(props: BrowserControllerOptions): Browse
     if (disposed) return
     sync()
     if (!current) return
+    if (event.type === "frame") {
+      if (
+        !pointer ||
+        scrolling < now() ||
+        (!selecting() && !pointing()) ||
+        !same(current, event.value.scope) ||
+        event.value.browserId !== state()?.browserId ||
+        event.value.navigation !== state()?.navigation
+      )
+        return
+      // A frame can precede the scroll, so re-inspect the stationary pointer while the scroll settles.
+      pending = pointer
+      schedule()
+      return
+    }
     if (event.type === "state") return receiveState(event.value)
     if (event.type === "devtools") {
       if (!same(current, event.value.scope) || event.value.browserId !== state()?.browserId) return
@@ -231,9 +276,13 @@ export function createBrowserController(props: BrowserControllerOptions): Browse
       if (!sync() || !current) return
       const value = url().trim()
       if (!value) return
-      send({ type: "open", scope: current, url: /^https?:\/\//i.test(value) ? value : `http://${value}` })
+      const target = address(value)
+      setUrl(target)
+      send({ type: "open", scope: current, url: target })
     },
     refresh: () => request("refresh"),
+    back: () => request("back"),
+    forward: () => request("forward"),
     close: () => {
       if (!sync()) return
       stop()
@@ -262,9 +311,26 @@ export function createBrowserController(props: BrowserControllerOptions): Browse
       })
     },
     move: (value) => {
-      if (!sync()) return
+      if (!sync() || (!selecting() && !pointing())) return
+      pointer = value
       pending = value
+      motion = true
       schedule()
+    },
+    scroll: (value) => {
+      if (!sync() || (!selecting() && !pointing())) return
+      if (frame !== undefined) cancelFrame(frame)
+      frame = undefined
+      pending = undefined
+      motion = false
+      pointer = value
+      stale = !!active
+      scrolling = now() + SETTLE
+      setHovered(undefined)
+    },
+    leave: () => {
+      if (!sync() || (!selecting() && !pointing())) return
+      stop()
     },
     select: (value) => {
       if (!sync()) return

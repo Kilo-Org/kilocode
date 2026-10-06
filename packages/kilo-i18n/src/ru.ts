@@ -35,6 +35,7 @@ export const dict = {
   "marketplace.install.scope.global.description":
     "Все проекты на этом компьютере. Сохраняется в вашей пользовательской конфигурации.",
   "marketplace.install.destination": "Место установки",
+  "marketplace.install.includedSkills": "Включённые навыки",
   "marketplace.install.about.mcp":
     "MCP-сервер предоставляет Kilo дополнительные инструменты для работы с внешними сервисами или локальными программами.",
   "marketplace.install.about.agent":
@@ -47,9 +48,12 @@ export const dict = {
     "Файлы проекта могут быть добавлены в систему контроля версий. Не храните здесь секреты, если только конфигурация не ссылается на переменную окружения.",
   "marketplace.install.learnMore": "Узнайте, как работает установка из Marketplace",
   "marketplace.install.learnMcp": "Подробнее о MCP",
-  "marketplace.install.installedAt": "Установлено в {{path}}",
+  "marketplace.install.about.plugin":
+    "Плагин добавляет в Kilo пользовательские инструменты и интеграции. Плагины выполняются с полными правами доступа.",
+  "marketplace.install.plugin.warning":
+    "Плагины выполняют код с полными правами доступа. Они могут читать и изменять ваши файлы, выполнять команды и получать доступ к вашим учётным данным и сети. Устанавливайте только те плагины, которым доверяете.",
   "marketplace.intro":
-    "Устанавливайте многократно используемых агентов, навыки и инструменты MCP для одного или всех проектов.",
+    "Устанавливайте многократно используемых агентов, навыки, инструменты MCP и плагины для одного или всех проектов.",
   "marketplace.intro.learnMore": "О Marketplace",
   "marketplace.install.prerequisites": "Предварительные требования",
   "marketplace.install.installing": "Установка...",
@@ -58,10 +62,19 @@ export const dict = {
   "marketplace.install.failed": "Сбой установки",
   "marketplace.install.done": "Готово",
   "marketplace.install.close": "Закрыть",
+  "marketplace.install.mcp.signIn.message": "{{name}} установлен, но требуется вход, прежде чем его инструменты можно будет использовать.",
+  "marketplace.install.mcp.signIn.button": "Войти",
+  "marketplace.install.mcp.signIn.waiting": "Ожидание входа через браузер…",
+  "marketplace.install.mcp.signIn.cancel": "Отмена",
+  "marketplace.install.mcp.signIn.skip": "Позже",
+  "marketplace.install.mcp.signIn.success": "Вход в {{name}} выполнен.",
+  "marketplace.install.mcp.signIn.failed": "Не удалось войти в {{name}}.",
   "marketplace.remove.title": "Удалить {{name}}?",
   "marketplace.remove.confirm":
     "Вы уверены, что хотите удалить этот {{type}}? Это удалит его из вашей конфигурации ({{scope}}).",
   "marketplace.remove.cancel": "Отмена",
+  "marketplace.remove.mcp.skills":
+    "Также будут удалены сопутствующие навыки, принадлежащие этой установке. Независимо установленные навыки сохранятся.",
   "marketplace.remove.confirm.button": "Удалить",
   "marketplace.search": "Поиск...",
   "marketplace.filter.all": "Все элементы",
@@ -70,6 +83,7 @@ export const dict = {
   "marketplace.empty": "Элементы не найдены",
   "marketplace.empty.relevant": "Для этого рабочего пространства не найдено подходящих элементов маркетплейса.",
   "marketplace.badge.mcpServer": "MCP-сервер",
+  "marketplace.badge.skills": "Включает навыки",
   "marketplace.card.by": "от {{author}}",
   "marketplace.install.method": "Способ установки",
   "marketplace.install.parameters": "Параметры",
@@ -77,6 +91,7 @@ export const dict = {
   "marketplace.scope.project": "проект",
   "marketplace.scope.global": "глобально",
   "marketplace.remove.type.mcp": "MCP-сервер",
+  "marketplace.remove.type.plugin": "плагин",
   "marketplace.remove.type.skill": "навык",
   "marketplace.remove.type.agent": "агент",
   "marketplace.remove.failed": "Не удалось удалить {{name}}",
@@ -87,7 +102,7 @@ export const dict = {
   "marketplace.warning.busyMany": "Несколько сеансов выполняются и будут прерваны",
   "marketplace.warning.installAnyway": "Установить в любом случае",
   "marketplace.warning.cancel": "Отмена",
-  "marketplace.contribute.prompt": "Не хватает навыка, агента или MCP-сервера?",
+  "marketplace.contribute.prompt": "Не хватает навыка, агента, MCP-сервера или плагина?",
   "marketplace.contribute.cta": "Внести вклад на GitHub",
   "marketplace.migration.notice":
     "Режимы заменены агентами. Если вы ранее устанавливали режимы из магазина, удалите их и переустановите как агенты, чтобы перейти на новый формат.",

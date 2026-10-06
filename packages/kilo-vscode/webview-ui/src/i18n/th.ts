@@ -89,10 +89,13 @@ export const dict = {
     "ย้อนกลับการสนทนาแล้ว ไม่ได้กู้คืนการเปลี่ยนแปลงไฟล์เนื่องจากปิดใช้งานสแนปชอตอยู่",
   "revert.banner.workspace.unavailable":
     "ย้อนกลับการสนทนาแล้ว ไม่มีจุดตรวจสอบไฟล์ จึงไม่ได้กู้คืนการเปลี่ยนแปลงในพื้นที่ทำงาน",
+  "revert.banner.workspace.notAGitRepo":
+    "ย้อนกลับการสนทนาแล้ว จุดตรวจสอบไฟล์ต้องใช้รีโพซิทอรี Git จึงไม่ได้กู้คืนการเปลี่ยนแปลงในพื้นที่ทำงาน",
   "revert.banner.workspace.legacy":
     "ย้อนกลับการสนทนาแล้ว ไม่ทราบสถานะการกู้คืนพื้นที่ทำงานสำหรับการย้อนกลับก่อนหน้านี้",
   "revert.banner.workspace.enableSnapshots": "เปิดใช้งานสแนปชอต",
   "revert.disabled.agentBusy": "รอให้เอเจนต์ทำงานเสร็จ",
+  "revert.error.body": "ที่เก็บข้อมูลอาจกำลังถูกใช้งาน ลองอีกครั้ง หรือดูรายละเอียดในบันทึกของ Kilo",
   "command.session.compact": "บีบอัดเซสชัน",
   "command.session.export": "ส่งออกบันทึกเซสชัน",
 
@@ -208,13 +211,27 @@ export const dict = {
   "prompt.worktrees.title": "Worktrees",
   "prompt.worktrees.search": "ค้นหา Worktree",
   "prompt.thinking.tooltip": "ความพยายามในการให้เหตุผล",
+  "prompt.shortcutHint.addSelection": "เพื่อเพิ่มส่วนที่เลือก",
+  "prompt.shortcutHint.waiting": "เพื่อตอบเซสชันที่รออยู่",
+  "prompt.shortcutHint.type": "เพื่อพิมพ์",
+  "prompt.shortcutHint.sessions": "เพื่อสลับเซสชัน",
+  "prompt.shortcutHint.stop": "เพื่อหยุด",
+  "prompt.shortcutHint.changes": "เพื่อตรวจสอบการเปลี่ยนแปลง",
+  "prompt.shortcutHint.pr": "เพื่อเปิด PR",
+  "prompt.shortcutHint.mode": "โหมดถัดไป",
   "prompt.action.send": "ส่ง",
   "prompt.action.continue": "ดำเนินการต่อ",
   "prompt.action.send.blocked": "โปรดตอบหรือข้ามคำถามที่รอดำเนินการก่อน",
   "prompt.action.send.recording": "ถอดเสียงและส่ง",
   "prompt.action.stop": "หยุด",
+  "prompt.action.stop.background": "หยุดเอเจนต์หลัก เอเจนต์เบื้องหลังจะยังคงทำงานต่อ",
+  "prompt.agents.show": "แสดงเอเจนต์เบื้องหลัง",
   "prompt.action.enhance": "ปรับปรุงพรอมต์",
   "prompt.paste.expand": "คลิกเพื่อขยายข้อความที่วาง",
+  "prompt.issues.title": "ปัญหาของเซสชัน",
+  "prompt.mcp.provider": "MCP {{name}}",
+  "prompt.mcp.openSettings": "เปิดในการตั้งค่า",
+  "prompt.mcp.signIn.busy": "กำลังเข้าสู่ระบบ…",
   "prompt.action.autoApprove.enable": "เปิดใช้การอนุมัติอัตโนมัติ",
   "prompt.action.autoApprove.disable": "ปิดใช้การอนุมัติอัตโนมัติ",
   "prompt.action.autoApprove.enabled": "เปิดใช้การอนุมัติอัตโนมัติแล้ว คำขอสิทธิ์จะได้รับการอนุมัติโดยอัตโนมัติ",
@@ -322,7 +339,7 @@ export const dict = {
   "ui.approval.source.agent.default": "โดยเอเจนต์",
   "ui.approval.source.global": "โดยการตั้งค่าส่วนกลาง",
   "ui.approval.source.project": "โดยการตั้งค่าโปรเจกต์",
-  "ui.approval.source.yolo": "โดยโหมดอนุมัติอัตโนมัติ (YOLO)",
+  "ui.approval.source.yolo": "โดยโหมดอนุมัติอัตโนมัติ",
   "ui.approval.source.session": "โดยกฎอนุมัติอัตโนมัติของเซสชัน",
   "ui.approval.source.default": "ตามค่าเริ่มต้น",
   "ui.approval.outsideWorkspace": "(นอกพื้นที่ทำงานของคุณ: {{file}})",
@@ -518,6 +535,7 @@ export const dict = {
   "provider.custom.models.toggleImages": "สลับรูปภาพสำหรับทุกโมเดล",
   "provider.custom.models.remove": "ลบโมเดล",
   "provider.custom.models.add": "เพิ่มโมเดล",
+  "provider.custom.models.fetch.button": "ดึงโมเดล",
   "provider.custom.models.fetch.authError": "การยืนยันตัวตนล้มเหลว ตรวจสอบคีย์ API ด้านบนแล้วลองอีกครั้ง",
   "provider.custom.models.fetch.empty": "ไม่พบโมเดลบนเซิร์ฟเวอร์นี้",
   "provider.custom.models.fetch.added": "เพิ่มแล้ว {{count}} โมเดล",
@@ -547,6 +565,9 @@ export const dict = {
   "provider.custom.error.duplicate": "ซ้ำ",
   "settings.openLocalConfig": "คอนฟิก Local",
   "settings.openGlobalConfig": "คอนฟิก Global",
+  "settings.search.placeholder": "ค้นหาการตั้งค่า",
+  "settings.search.noResults": "ไม่พบการตั้งค่า",
+  "settings.search.clear": "ล้างการค้นหา",
   "settings.config.scope.local": "ภายใน",
   "settings.config.scope.global": "ทั่วโลก",
   "settings.config.status.loaded": "โหลดแล้ว",
@@ -606,6 +627,7 @@ export const dict = {
   "session.tabs.switcher.pending": "ใหม่",
   "session.tabs.switcher.busy": "กำลังทำงาน",
   "session.tabs.switcher.scheduled": "ตั้งเวลาไว้",
+  "session.tabs.pinHint": "Shift+คลิกเพื่อปักหมุดหรือเลิกปักหมุด",
   "session.tab.local": "ในเครื่อง",
   "session.tab.cloud": "คลาวด์",
   "session.tab.worktree": "เวิร์กทรี Git",
@@ -629,13 +651,13 @@ export const dict = {
   "workStyle.choice.human-in-the-loop.description": "Kilo จะหยุดและแสดงแผนให้คุณเห็นระหว่างการทำงาน",
   "workStyle.choice.human-in-the-loop.permissions": "ขออนุญาตก่อนแก้ไขไฟล์หรือเรียกใช้คำสั่ง",
   "workStyle.choice.human-in-the-loop.bash": "ขออนุญาตเมื่อเรียกใช้คำสั่งเทอร์มินัลทุกคำสั่ง",
-  "workStyle.choice.human-in-the-loop.visibility": "แสดงรายละเอียดการสนทนาทั้งหมด รวมถึงกระบวนการให้เหตุผล",
+  "workStyle.choice.human-in-the-loop.visibility": "ขยายเหตุผล คำสั่ง และการแก้ไขเพื่อการตรวจสอบ",
   "workStyle.choice.autonomous.eyebrow": "รบกวนน้อยลง",
   "workStyle.choice.autonomous.title": "ทำงานอัตโนมัติสูง",
   "workStyle.choice.autonomous.description": "ขัดจังหวะน้อยลง พร้อมอินเทอร์เฟซที่กระชับขึ้น",
   "workStyle.choice.autonomous.permissions": "แก้ไขไฟล์และเรียกใช้คำสั่งในพื้นที่ทำงานโดยไม่ต้องขออนุญาต",
   "workStyle.choice.autonomous.bash": "เรียกใช้คำสั่งเทอร์มินัลในพื้นที่ทำงานได้โดยไม่ต้องขออนุมัติ",
-  "workStyle.choice.autonomous.visibility": "รายละเอียดจะถูกย่อไว้จนกว่าคุณจะขยายดู",
+  "workStyle.choice.autonomous.visibility": "ย่อรายละเอียดเครื่องมือ พร้อมตัวอย่างเหตุผลแบบกะทัดรัด",
   "session.cloud.import.title": "นำเข้าจากคลาวด์",
   "session.cloud.import.placeholder": "ID เซสชัน, URL หรือคำสั่ง kilo import",
   "session.cloud.import.button": "นำเข้า",
@@ -783,10 +805,12 @@ export const dict = {
   "ui.sessionTurn.status.consideringNextSteps": "กำลังพิจารณาขั้นตอนถัดไป...",
 
   "dialog.model.noProviders": "ไม่มีผู้ให้บริการ",
+  "dialog.model.unavailable": "ไม่สามารถใช้โมเดล Kilo ได้",
 
   "prompt.placeholder.connecting": "กำลังเชื่อมต่อกับเซิร์ฟเวอร์...",
   "prompt.placeholder.error": "การเชื่อมต่อล้มเหลว ตรวจสอบแผงเอาต์พุตหรือรีสตาร์ทส่วนขยาย",
   "prompt.placeholder.default": "พิมพ์ข้อความ, @ เพื่ออ้างถึงไฟล์... (Enter เพื่อส่ง, Shift+Enter เพื่อขึ้นบรรทัดใหม่)",
+  "prompt.placeholder.hint": "พิมพ์ข้อความ, @ เพื่ออ้างถึงไฟล์... ({{key}} {{action}})",
 
   "context.usage.sessionCost": "ค่าใช้จ่ายเซสชัน",
   "context.usage.olderSessions": "{{count}} เซสชันก่อนหน้า",
@@ -842,7 +866,8 @@ export const dict = {
   "settings.browser.description":
     "กำหนดค่าการทำงานอัตโนมัติของเบราว์เซอร์ในตัวที่ขับเคลื่อนโดย Playwright Kilo สามารถนำทาง โต้ตอบ และจับภาพหน้าจอของหน้าเว็บในเซสชันของคุณได้",
   "settings.browser.enable.title": "เปิดใช้งานการทำงานอัตโนมัติของเบราว์เซอร์",
-  "settings.browser.enable.description": "ลงทะเบียนเซิร์ฟเวอร์ Playwright MCP กับ CLI backend",
+  "settings.browser.enable.description":
+    "เปิดใช้งานเบราว์เซอร์ Agent Manager แบบแยกตามเซสชันสำหรับแอปพลิเคชันในเครื่องและหน้าเว็บ HTTPS สาธารณะ",
   "settings.browser.systemChrome.title": "ใช้ Chrome ของระบบ",
   "settings.browser.systemChrome.description": "ใช้เบราว์เซอร์ Chrome ที่ติดตั้งแทนอินสแตนซ์ Chromium แยกต่างหาก",
   "settings.browser.headless.title": "โหมด Headless",
@@ -933,15 +958,12 @@ export const dict = {
   "settings.sandboxing.writablePaths.title": "เส้นทางที่เขียนได้เพิ่มเติม",
   "settings.sandboxing.writablePaths.description":
     "เส้นทางระบบไฟล์เพิ่มเติมที่แซนด์บ็อกซ์อนุญาตให้เขียนได้ (เช่น /tmp, /var/log) จะถูกรวมเข้ากับเส้นทางที่เขียนได้เริ่มต้นเมื่อแซนด์บ็อกซ์เปิดใช้งาน",
-  "settings.experimental.multiProject.title": "Agent Manager หลายโปรเจกต์",
+  "settings.experimental.conversationPromptHistory.title": "ประวัติพรอมต์แยกตามการสนทนา",
+  "settings.experimental.conversationPromptHistory.description":
+    "แยกประวัติพรอมต์ (ArrowUp/ArrowDown) ตามแต่ละการสนทนา แทนการใช้ประวัติเดียวร่วมกันในทุกการสนทนา",
   "settings.experimental.claudeMigration.title": "การย้าย Claude Code",
   "settings.experimental.claudeMigration.description":
     "นำเข้าคำสั่ง CLAUDE.md ระดับโลกที่รองรับ ทักษะอย่างง่าย และคำจำกัดความ MCP ที่ปิดใช้งานเพียงครั้งเดียว ไฟล์ Claude ต้นฉบับจะไม่ถูกแก้ไข ให้เริ่มแบ็กเอนด์ใหม่หลังเปิดใช้งาน",
-  "settings.experimental.multiProject.description":
-    "เปิดใช้งานการจัดการเซสชันและเวิร์กทรีข้ามหลาย Repository ใน Agent Manager Repository ของ workspace ปัจจุบันเป็นโปรเจกต์เริ่มต้นเสมอ",
-  "settings.experimental.taskModelSelection.title": "การเลือกโมเดลตัวแทนย่อยของ Task",
-  "settings.experimental.taskModelSelection.description":
-    "เปิดให้เลือกโมเดล ผู้ให้บริการ และระดับการใช้เหตุผลสำหรับตัวแทนย่อยของ Task ได้อย่างชัดเจน",
   "settings.experimental.mcpTimeout.title": "หมดเวลา MCP (มิลลิวินาที)",
   "settings.experimental.mcpTimeout.description": "หมดเวลาสำหรับคำขอเซิร์ฟเวอร์ MCP เป็นมิลลิวินาที",
   "settings.experimental.remote.title": "การควบคุม Remote",
@@ -1028,12 +1050,31 @@ export const dict = {
   "settings.agentBehaviour.removeMcp.title": "ลบเซิร์ฟเวอร์ MCP",
   "settings.agentBehaviour.removeMcp.confirm":
     'ต้องการลบเซิร์ฟเวอร์ MCP "{{name}}" หรือไม่? การดำเนินการนี้จะลบออกจากการกำหนดค่าของคุณ',
+  "settings.agentBehaviour.removeMcp.bundleConfirm":
+    'ลบเซิร์ฟเวอร์ MCP "{{name}}" และทักษะคู่กันหรือไม่? การดำเนินการนี้จะลบทั้งเซิร์ฟเวอร์และทักษะทั้งหมดที่เป็นของการติดตั้ง Marketplace นี้',
   "settings.agentBehaviour.removeMcp.button": "ลบ",
   "settings.agentBehaviour.editMcp": "แก้ไขเซิร์ฟเวอร์ MCP",
   "settings.agentBehaviour.editMcp.transportLocal": "เซิร์ฟเวอร์ภายใน (การขนส่ง stdio)",
   "settings.agentBehaviour.editMcp.transportRemote": "เซิร์ฟเวอร์ระยะไกล (การขนส่ง SSE/HTTP)",
   "settings.agentBehaviour.editMcp.env": "ตัวแปรสภาพแวดล้อม",
   "settings.agentBehaviour.editMcp.env.help": "ตัวแปรที่ส่งไปยังกระบวนการเซิร์ฟเวอร์ MCP",
+  "settings.agentBehaviour.editMcp.oauth": "OAuth",
+  "settings.agentBehaviour.editMcp.oauth.help":
+    "ปล่อยไว้ที่อัตโนมัติ เว้นแต่เซิร์ฟเวอร์ต้องการไคลเอ็นต์ที่ลงทะเบียนไว้ล่วงหน้า ไคลเอ็นต์ซีเคร็ตจะถูกจัดเก็บไว้ในไฟล์การกำหนดค่า Kilo ของคุณ",
+  "settings.agentBehaviour.editMcp.oauth.mode": "โหมด",
+  "settings.agentBehaviour.editMcp.oauth.mode.automatic": "อัตโนมัติ",
+  "settings.agentBehaviour.editMcp.oauth.mode.disabled": "ปิดใช้งาน",
+  "settings.agentBehaviour.editMcp.oauth.mode.custom": "ไคลเอ็นต์กำหนดเอง",
+  "settings.agentBehaviour.editMcp.oauth.clientId": "ไคลเอ็นต์ไอดี",
+  "settings.agentBehaviour.editMcp.oauth.clientSecret": "ไคลเอ็นต์ซีเคร็ต",
+  "settings.agentBehaviour.editMcp.oauth.scope": "สโคป",
+  "settings.agentBehaviour.editMcp.oauth.callbackPort": "พอร์ตคอลแบ็ก",
+  "settings.agentBehaviour.editMcp.oauth.redirectUri": "URI การเปลี่ยนเส้นทาง",
+  "settings.agentBehaviour.editMcp.oauth.redirectUri.help":
+    "ค่าเริ่มต้นคือ http://127.0.0.1:19876/mcp/oauth/callback และจะแทนที่พอร์ตคอลแบ็ก",
+  "settings.agentBehaviour.editMcp.oauth.port.invalid": "ป้อนพอร์ตระหว่าง 1 ถึง 65535",
+  "settings.agentBehaviour.editMcp.oauth.secret.invalid": "ไคลเอ็นต์ซีเคร็ตต้องมีไคลเอ็นต์ไอดี",
+  "settings.agentBehaviour.editMcp.oauth.redirectUri.invalid": "ป้อน URI การเปลี่ยนเส้นทางที่ถูกต้อง",
   "settings.agentBehaviour.addMcp.command": "คำสั่ง",
   "settings.agentBehaviour.addMcp.command.placeholder": "e.g. npx",
   "settings.agentBehaviour.addMcp.args": "อาร์กิวเมนต์",
@@ -1046,6 +1087,8 @@ export const dict = {
   "settings.agentBehaviour.removeSkill.title": "ลบทักษะ",
   "settings.agentBehaviour.removeSkill.confirm":
     'ต้องการลบทักษะ "{{name}}" หรือไม่? การดำเนินการนี้จะลบไฟล์ทักษะออกจากดิสก์',
+  "settings.agentBehaviour.removeSkill.bundleConfirm":
+    'ลบทักษะ "{{name}}" หรือไม่? การดำเนินการนี้จะถอนการติดตั้งเซิร์ฟเวอร์ MCP {{mcp}} และทักษะคู่กันทั้งหมดจากการติดตั้ง Marketplace เดียวกันด้วย',
   "settings.agentBehaviour.removeSkill.button": "ลบ",
   "settings.agentBehaviour.rules.description":
     "กฎคือไฟล์คำสั่งที่แนะนำพฤติกรรมของเอเจนต์ กฎเหล่านี้จะถูกรวมอยู่ในพรอมต์ระบบสำหรับทุกการสนทนา เพิ่มเส้นทางไฟล์ด้านล่างเพื่อรวมกฎเพิ่มเติม",
@@ -1061,6 +1104,12 @@ export const dict = {
   "settings.agentBehaviour.mcpDetail.command": "คำสั่ง",
   "settings.agentBehaviour.mcpDetail.args": "อาร์กิวเมนต์",
   "settings.agentBehaviour.mcpDetail.env": "สภาพแวดล้อม",
+  "settings.agentBehaviour.mcpSignIn.cancel": "ยกเลิกการเข้าสู่ระบบ",
+  "settings.agentBehaviour.mcpRemoving": "กำลังนำออก…",
+  "settings.agentBehaviour.mcpResetAuth": "รีเซ็ตการเข้าสู่ระบบ",
+  "settings.agentBehaviour.mcpResetAuth.title": "รีเซ็ตการเข้าสู่ระบบ MCP",
+  "settings.agentBehaviour.mcpResetAuth.confirm":
+    'ล้างข้อมูลการเข้าสู่ระบบที่บันทึกไว้สำหรับ "{{name}}" หรือไม่? คุณจะต้องเข้าสู่ระบบอีกครั้ง',
   "settings.agentBehaviour.mcpBrowseMarketplace": "เรียกดู Marketplace",
   "settings.agentBehaviour.mcpEmpty":
     "ไม่ได้กำหนดค่าเซิร์ฟเวอร์ MCP เพิ่มเซิร์ฟเวอร์ MCP ใน kilo.jsonc หรือขอให้เอเจนต์เพิ่มให้คุณ",
@@ -1115,6 +1164,29 @@ export const dict = {
     "ป้องกันการกระทำที่ซ้ำกัน ถูกเรียกเมื่อเครื่องมือเดิมถูกเรียกซ้ำด้วยข้อมูลนำเข้าที่เหมือนกัน",
   "settings.checkpoints.enable.title": "เปิดใช้งานสแนปชอต",
   "settings.checkpoints.enable.description": "สร้างจุดตรวจก่อนแก้ไขไฟล์",
+  "settings.autoCleanup.enable.title": "เปิดการล้างเซสชันอัตโนมัติ",
+  "settings.autoCleanup.enable.description":
+    "ล้างประวัติเซสชันเก่าโดยอัตโนมัติหลังจากผ่านไปตามจำนวนวันที่กำหนด ครอบคลุมทุกโปรเจกต์และไคลเอนต์ Kilo ทุกตัวบนเครื่องนี้ ไม่ใช่แค่หน้าต่างนี้ เซสชันที่กำลังทำงานและเซสชันที่มี fork ล่าสุดจะไม่ถูกลบเด็ดขาด การลบเป็นการถาวร",
+  "settings.autoCleanup.defaultRetention.title": "เก็บเซสชันไว้ (วัน)",
+  "settings.autoCleanup.defaultRetention.description": "ระยะเวลาที่เก็บประวัติเซสชันก่อนการล้างอัตโนมัติจะลบ",
+  "settings.autoCleanup.lastRun.title": "การล้างล่าสุด",
+  "settings.autoCleanup.lastRun.never": "ยังไม่เคยรัน",
+  "settings.autoCleanup.result":
+    "{{date}}: ลบ {{deleted}} จาก {{scanned}} เซสชัน (ข้ามเซสชันที่กำลังทำงาน {{active}} เซสชัน, ล้มเหลว {{failed}}) ใน {{seconds}} วินาที",
+  "settings.autoCleanup.starting": "กำลังเริ่มการล้างเซสชัน...",
+  "settings.autoCleanup.error.status": "ไม่สามารถดูสถานะการล้างเซสชันได้ชั่วคราว กำลังลองใหม่...",
+  "settings.autoCleanup.error.timeout": "กำลังรอสถานะการล้าง ระบบเบื้องหลังใช้เวลานานกว่าที่คาดไว้",
+  "settings.autoCleanup.error.run":
+    "ไม่สามารถยืนยันได้ว่าการล้างเซสชันเสร็จสมบูรณ์ โปรดตรวจสอบผลการล้างล่าสุดก่อนลองอีกครั้ง",
+  "settings.autoCleanup.progress.scanning": "กำลังสแกนเซสชัน: ประมวลผลแล้ว {{processed}}/{{total}}",
+  "settings.autoCleanup.progress.deleting":
+    "กำลังลบเซสชัน: ประมวลผลแล้ว {{processed}}/{{total}} (ลบแล้ว {{deleted}}, ล้มเหลว {{failed}})",
+  "settings.autoCleanup.runNow": "รันการล้างเดี๋ยวนี้",
+  "settings.autoCleanup.runNow.confirm":
+    "ลบเซสชันที่หมดอายุอย่างถาวรทั่วทุกโปรเจกต์และไคลเอนต์ Kilo ทุกตัวบนเครื่องนี้หรือไม่?",
+  "settings.autoCleanup.stop": "หยุดการล้างข้อมูล",
+  "settings.autoCleanup.progress.cancelling": "กำลังหยุดการล้างเซสชัน...",
+  "settings.autoCleanup.lastRun.cancelled": "ถูกยกเลิก",
   "settings.context.autoCompaction.title": "การบีบอัดอัตโนมัติ",
   "settings.context.autoCompaction.description": "บีบอัดบริบทอัตโนมัติก่อนถึงขีดจำกัด",
   "settings.context.compaction.title": "การบีบอัด",
@@ -1162,6 +1234,19 @@ export const dict = {
   "settings.commitMessage.language.sync": "ซิงค์กับภาษา UI",
   "settings.commitMessage.language.description": "เลือกภาษาใดที่จะใช้สําหรับข้อความ commit ที่สร้างโดย AI:",
 
+  "settings.display.preview.title": "ตัวอย่าง",
+  "settings.display.presets.title": "พรีเซ็ตการแสดงผล",
+  "settings.display.presets.description": "เปลี่ยนตัวเลือกการแสดงผลด้านล่าง ไม่ใช่สิทธิ์ บันทึกเพื่อนำไปใช้",
+  "settings.display.preview.model": "โมเดลตัวอย่าง",
+  "settings.display.preview.prompt": "ลบช่องว่างส่วนเกินออกจากคำทักทายและตรวจสอบการทดสอบ",
+  "settings.display.preview.reasoning":
+    "**ตรวจสอบคำทักทาย** ฟังก์ชันควรสร้างคำทักทายเดียวกันสำหรับชื่อธรรมดาและชื่อที่มีช่องว่างส่วนเกินที่ปลายทั้งสองข้าง ฉันจะคงลายเซ็นฟังก์ชันและรูปแบบคำทักทายเดิมไว้ และเปลี่ยนเฉพาะวิธีที่ชื่อเข้าสู่สตริงที่ส่งคืน\n\nสำหรับอินพุตอย่าง `  Ada  ` ช่องว่างที่ไม่ต้องการเป็นของอินพุต ไม่ใช่ของเทมเพลตคำทักทาย การตัดคำทักทายที่เสร็จแล้วจะเหลือช่องว่างข้างชื่อ ดังนั้นการตัดต้องเกิดขึ้นก่อนที่จะแทรกชื่อ\n\nฉันจะตรวจสอบเอกสารเกี่ยวกับสตริงเพื่อยืนยันว่า `trim()` ลบช่องว่างจากปลายทั้งสองข้างและส่งคืนสตริงใหม่ มันควรทิ้งอินพุตเดิมไว้ไม่เปลี่ยนแปลง ไม่จำเป็นต้องใช้ regular expression, dependency เพิ่มเติม หรือฟังก์ชันช่วยเหลือแยกต่างหากสำหรับการเปลี่ยนแปลงนี้\n\nช่องว่างภายในชื่อต้องคงอยู่ ชื่ออย่าง `Ada Lovelace` ไม่ควรกลายเป็น `AdaLovelace` และตัวพิมพ์เล็กใหญ่ไม่ควรเปลี่ยน อินพุตว่างหรือมีแต่ช่องว่างไม่จำเป็นต้องมีคำทักทายสำรองใหม่เป็นส่วนหนึ่งของการแก้ไขแบบเจาะจงนี้\n\nการแก้ไขสามารถอยู่ในนิพจน์ return ได้โดยใช้ `name.trim()` ในตำแหน่งที่เทมเพลตใช้ `name` อยู่ ฉันจะรักษาเครื่องหมายวรรคตอนรอบข้างและช่องว่างที่ตั้งใจไว้หลังคำทักทาย ซึ่งช่วยให้ diff เล็กและตรวจสอบพฤติกรรมได้ง่าย\n\nสุดท้าย ฉันจะรัน `bun test greeting.test.ts` และตรวจสอบผลลัพธ์ทั้งสอง กรณีชื่อที่มีช่องว่างควรยืนยันว่าช่องว่างส่วนเกินถูกนำออก ส่วนกรณีชื่อธรรมดาช่วยปกป้องผลลัพธ์เดิม ฉันจะรายงานการเปลี่ยนแปลงและผลการทดสอบหลังจากคำสั่งเสร็จสิ้นเท่านั้น",
+  "settings.display.preview.shell": "ตรวจสอบการทดสอบคำทักทาย",
+  "settings.display.preview.shellOutput":
+    "bun test greeting.test.ts\n\n[pass] ลบช่องว่างส่วนเกิน\n[pass] รักษาชื่อธรรมดาไว้\n\nผ่าน 2 การทดสอบ",
+  "settings.display.preview.query": "การตัดสตริง",
+  "settings.display.preview.result": "trim() ลบช่องว่างจากปลายทั้งสองข้างของสตริง",
+  "settings.display.preview.answer": "อัปเดตคำทักทายเพื่อลบช่องว่างส่วนเกินแล้ว การทดสอบทั้งสองผ่าน",
   "settings.display.username.title": "ชื่อผู้ใช้",
   "settings.display.username.description": "ชื่อผู้ใช้กำหนดเองในบทสนทนา",
   "settings.display.fontSize.title": "ขนาดฟอนต์",
@@ -1188,12 +1273,15 @@ export const dict = {
   "settings.display.mcpTool.expanded": "ขยาย",
   "settings.display.mcpTool.collapsed": "ยุบ",
 
+  "settings.display.shortcutHints.title": "แสดงคำแนะนำปุ่มลัด",
+  "settings.display.shortcutHints.description":
+    "แสดงปุ่มลัดที่เหมาะกับสิ่งที่คุณทำอยู่ในช่องพรอมต์ที่ว่าง เช่น วิธีเพิ่มโค้ดที่เลือกหรือกลับไปที่พรอมต์",
   "settings.display.tokenThroughput.title": "แสดงอัตราการประมวลผลโทเคน",
   "settings.display.tokenThroughput.description":
     "แสดงอัตราการสร้างข้อความ (tokens/sec) ในข้อความล่าสุดของผู้ช่วยและส่วนหัวของงาน แสดงโดยค่าเริ่มต้น; ปิดใช้งานการตั้งค่านี้เพื่อซ่อนเมื่อจำเป็น",
   "settings.display.autoApprovalReason.title": "แสดงเหตุผลการอนุมัติอัตโนมัติ",
   "settings.display.autoApprovalReason.description":
-    "แสดงบรรทัดในการเรียกใช้เครื่องมือเพื่ออธิบายว่าเหตุใดจึงได้รับการอนุมัติอัตโนมัติ (กฎที่ตรงกัน ค่าเริ่มต้นของเอเจนต์ โหมด YOLO ฯลฯ)",
+    "แสดงสาเหตุที่การเรียกเครื่องมือได้รับการอนุมัติอัตโนมัติ เช่น กฎสิทธิ์ที่ตรงกันหรือค่าเริ่มต้นของเอเจนต์",
 
   "chat.throughput.tooltip":
     "Average {{speed}} tokens/s for this turn. Includes output and reasoning tokens; excludes tool execution and waiting time.",
@@ -1264,16 +1352,16 @@ export const dict = {
 
   "task.todos.progress": "{{done}}/{{total}} งานเสร็จแล้ว",
   "task.todos.allDone": "{{count}} งานเสร็จแล้ว",
+  "task.todos.title": "รายการงาน",
+  "task.todos.done": "เสร็จทั้งหมด",
   "task.backgroundAgents.running.one": "เอเจนต์เบื้องหลัง 1 ตัว",
   "task.backgroundAgents.running.many": "เอเจนต์เบื้องหลัง {{count}} ตัว",
-  "task.backgroundAgents.more": "+{{count}} เพิ่มเติม",
   "task.backgroundAgents.open": "เปิดเอเจนต์เบื้องหลัง",
   "task.backgroundAgents.openAll": "เปิดเอเจนต์เบื้องหลังทั้งหมด",
   "task.backgroundAgents.cancel": "หยุด",
   "task.backgroundAgents.continueInBackground": "ทำต่อในเบื้องหลัง",
   "task.backgroundAgents.waiting": "เอเจนต์เบื้องหลังต้องการข้อมูลจากคุณ",
   "task.backgroundAgents.needsInput": "ต้องการข้อมูล",
-  "task.backgroundAgents.dismiss": "ยกเลิก",
   "task.backgroundAgents.clearFinished": "ล้างรายการที่เสร็จแล้ว",
   "task.backgroundAgents.summary": "เอเจนต์เบื้องหลัง {{running}} จาก {{total}} ตัวกำลังทำงาน",
   "task.backgroundAgents.status.running": "กำลังทำงาน",
@@ -1282,6 +1370,8 @@ export const dict = {
   "task.backgroundAgents.status.error": "ข้อผิดพลาด",
   "task.backgroundAgents.untitled": "เอเจนต์เบื้องหลัง",
   "task.backgroundAgents.stopAll": "หยุดทั้งหมด ({{count}})",
+  "task.backgroundAgents.finished": "เอเจนต์เบื้องหลังทำงานเสร็จแล้ว",
+  "task.stop": "หยุดเอเจนต์ย่อย",
   "settings.saveBar.unsavedChanges": "การเปลี่ยนแปลงที่ยังไม่ได้บันทึก",
   "settings.saveBar.discard": "ยกเลิก",
   "settings.saveBar.save": "บันทึก",
@@ -1347,4 +1437,6 @@ export const dict = {
   "settings.experimental.browserAutomation.systemChrome.description":
     "ใช้ Google Chrome ที่ติดตั้งไว้สำหรับเบราว์เซอร์ในตัว ปิดใช้งานเฉพาะเมื่อติดตั้งเบราว์เซอร์ Playwright Chromium ที่เข้ากันได้ไว้แล้วเท่านั้น",
   "chat.search.searchingHistory": "กำลังค้นหาข้อความก่อนหน้า…",
+  "browserTab.noSession": "เปิดเบราว์เซอร์จากเซสชันเพื่อดูตัวอย่างแอปพลิเคชันในเครื่องหรือหน้า HTTPS สาธารณะ",
+  "browserTab.disabled": "เบราว์เซอร์ในตัวถูกปิดใช้งาน เปิดใช้งานได้ในการตั้งค่า Kilo > ทดลอง",
 }
