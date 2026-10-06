@@ -12,7 +12,7 @@ import type {
 
 const point = (x: number): BrowserPosition => ({ x, y: x, width: 100, height: 100 })
 
-function setup(theme: "dark" | "light" = "dark") {
+function setup(theme: "dark" | "light" = "dark", options: { now?: () => number } = {}) {
   const sent: BrowserCommand[] = []
   const references: BrowserReference[] = []
   const listeners = new Set<(event: BrowserEvent) => void>()
@@ -50,6 +50,7 @@ function setup(theme: "dark" | "light" = "dark") {
         cancelled.push(id)
         frames.delete(id)
       },
+      now: options.now,
     })
   })
   const emit = (event: BrowserEvent) => listeners.forEach((listener) => listener(event))
@@ -330,6 +331,29 @@ describe("browser controller", () => {
     view.emit(frame(scope))
     expect(view.frames.size).toBe(0)
     expect(view.sent.filter((item) => item.type === "inspect")).toHaveLength(0)
+    view.dispose()
+  })
+
+  test("stops refreshing frames once the scroll settle window passes", () => {
+    let clock = 1_000
+    const view = setup("dark", { now: () => clock })
+    const scope = { sessionId: "session-a", projectId: "project-a" }
+    view.emit({ type: "state", value: { scope, browserId: "browser", navigation: 1, status: "ready", errors: 0 } })
+    view.controller.toggleSelecting()
+    view.controller.move(point(0.1))
+    view.run()
+    view.emit({ type: "inspection", value: inspection("1", scope) })
+    view.controller.scroll(point(0.1))
+    clock += 100
+    view.emit(frame(scope))
+    expect(view.frames.size).toBe(1)
+    view.run()
+    expect(view.sent.at(-1)).toMatchObject({ type: "inspect", requestId: "2" })
+    clock += 5_000
+    view.emit(frame(scope))
+    expect(view.frames.size).toBe(0)
+    view.emit(frame(scope))
+    expect(view.frames.size).toBe(0)
     view.dispose()
   })
 

@@ -1,9 +1,9 @@
 import { describe, expect, test } from "bun:test"
+import { mergeWheel } from "../../src/shared/browser-stream"
 import {
   clicks,
   clipboard,
   key,
-  merge,
   modifiers,
   point,
   pointer,
@@ -91,7 +91,7 @@ describe("browser stream pointer input", () => {
   test("batches compatible wheel deltas without losing fractional distance", () => {
     const event = wheel({ ...position, ...flags, deltaX: 0, deltaY: 0.25, deltaMode: 0 }, bounds)!
     const queued = { ...event }
-    for (let i = 0; i < 119; i++) expect(merge(queued, event)).toBe(true)
+    for (let i = 0; i < 119; i++) expect(mergeWheel(queued, event)).toBe(true)
     expect(queued.deltaY).toBe(30)
     expect(event.deltaY).toBe(0.25)
   })
@@ -100,7 +100,7 @@ describe("browser stream pointer input", () => {
     const event = wheel({ ...position, ...flags, deltaX: 0, deltaY: 2, deltaMode: 0 }, bounds)!
     for (const change of [{ x: 0.4 }, { y: 0.4 }, { modifiers: 8 }, { deltaY: -2 }, { deltaX: 1 }, { deltaY: 10000 }]) {
       const queued = { ...event }
-      expect(merge(queued, { ...event, ...change })).toBe(false)
+      expect(mergeWheel(queued, { ...event, ...change })).toBe(false)
       expect(queued).toEqual(event)
     }
   })

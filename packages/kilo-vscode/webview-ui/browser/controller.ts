@@ -18,7 +18,13 @@ export interface BrowserControllerOptions {
   theme?: Accessor<"dark" | "light">
   schedule?: (callback: FrameRequestCallback) => number
   cancel?: (frame: number) => void
+  now?: () => number
 }
+
+// How long after the last wheel event a stationary pointer keeps re-inspecting streamed frames. A frame can
+// arrive before the scroll is applied, and content can settle over several frames, so refresh for a short
+// window instead of trusting one frame. Refreshes stay scoped to scrolling and stop for a resting pointer.
+const SETTLE = 400
 
 export interface BrowserController {
   url: Accessor<string>
@@ -59,13 +65,14 @@ export function createBrowserController(props: BrowserControllerOptions): Browse
   const [tools, setTools] = createSignal<{ browserId: string; url: string }>()
   const scheduleFrame = props.schedule ?? ((callback: FrameRequestCallback) => requestAnimationFrame(callback))
   const cancelFrame = props.cancel ?? ((frame: number) => cancelAnimationFrame(frame))
+  const now = props.now ?? (() => Date.now())
   let frame: number | undefined
   let pending: BrowserPosition | undefined
   let pointer: BrowserPosition | undefined
   let motion = false
   let active: string | undefined
   let stale = false
-  let dirty = false
+  let scrolling = 0
   let selected: string | undefined
   let sequence = 0
   let current: BrowserScope | undefined
@@ -81,7 +88,7 @@ export function createBrowserController(props: BrowserControllerOptions): Browse
     motion = false
     active = undefined
     stale = false
-    dirty = false
+    scrolling = 0
     selected = undefined
     setHovered(undefined)
   }
@@ -125,7 +132,7 @@ export function createBrowserController(props: BrowserControllerOptions): Browse
   }
 
   const schedule = () => {
-    if (frame !== undefined || active || dirty || !pending || (!selecting() && !pointing())) return
+    if (frame !== undefined || active || !pending || (!selecting() && !pointing())) return
     frame = scheduleFrame(() => {
       frame = undefined
       if (!sync()) return
@@ -202,14 +209,14 @@ export function createBrowserController(props: BrowserControllerOptions): Browse
     if (event.type === "frame") {
       if (
         !pointer ||
+        scrolling < now() ||
         (!selecting() && !pointing()) ||
         !same(current, event.value.scope) ||
         event.value.browserId !== state()?.browserId ||
         event.value.navigation !== state()?.navigation
       )
         return
-      // A frame already in transit can precede the scroll, so keep tracking later frames at the same pointer.
-      dirty = false
+      // A frame can precede the scroll, so re-inspect the stationary pointer while the scroll settles.
       pending = pointer
       schedule()
       return
@@ -308,7 +315,6 @@ export function createBrowserController(props: BrowserControllerOptions): Browse
       pointer = value
       pending = value
       motion = true
-      dirty = false
       schedule()
     },
     scroll: (value) => {
@@ -319,7 +325,7 @@ export function createBrowserController(props: BrowserControllerOptions): Browse
       motion = false
       pointer = value
       stale = !!active
-      dirty = true
+      scrolling = now() + SETTLE
       setHovered(undefined)
     },
     leave: () => {

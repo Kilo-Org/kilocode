@@ -1,11 +1,17 @@
 import { setTimeout as wait } from "node:timers/promises"
 import type { CDPSession, Frame, Page } from "playwright-core"
-import type { BrowserFrame, BrowserInteraction, BrowserViewport } from "../../shared/browser-stream"
+import {
+  mergeWheel,
+  type BrowserFrame,
+  type BrowserInteraction,
+  type BrowserViewport,
+  type WheelInteraction,
+} from "../../shared/browser-stream"
 
 type Scope = { browserId: string; navigation: number }
 type Key = Extract<BrowserInteraction, { kind: "key" }>
 type Pointer = Extract<BrowserInteraction, { kind: "pointer" }>
-type Wheel = Extract<BrowserInteraction, { kind: "wheel" }>
+type Wheel = WheelInteraction
 type Clipboard = Extract<BrowserInteraction, { kind: "clipboard" }>["action"]
 type Cast = {
   sessionId: number
@@ -70,17 +76,6 @@ function dimensions(value: string): { width: number; height: number } | undefine
 
 function position(event: { x: number; y: number; modifiers: number }): boolean {
   return range(event.x, 0, 1) && range(event.y, 0, 1) && range(event.modifiers, 0, 15, true)
-}
-
-function merge(current: Wheel, next: Wheel): boolean {
-  if (current.x !== next.x || current.y !== next.y || current.modifiers !== next.modifiers) return false
-  for (const axis of ["deltaX", "deltaY"] as const) {
-    if (Math.sign(current[axis]) !== Math.sign(next[axis])) return false
-    if (!range(current[axis] + next[axis], -10000, 10000)) return false
-  }
-  current.deltaX += next.deltaX
-  current.deltaY += next.deltaY
-  return true
 }
 
 function pointer(event: Pointer): boolean {
@@ -406,7 +401,7 @@ export class BrowserStream {
   private coalesce(event: BrowserInteraction): Promise<string | undefined> | undefined {
     const queued = this.wheel
     this.wheel = undefined
-    if (event.kind !== "wheel" || !queued || !merge(queued.event, event)) return
+    if (event.kind !== "wheel" || !queued || !mergeWheel(queued.event, event)) return
     this.wheel = queued
     return queued.result
   }

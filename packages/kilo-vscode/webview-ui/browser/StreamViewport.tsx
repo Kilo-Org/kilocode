@@ -1,5 +1,6 @@
 import { createEffect, onCleanup, onMount, type Accessor, type Component } from "solid-js"
 import {
+  mergeWheel,
   source,
   type BrowserFrame,
   type BrowserInteraction,
@@ -7,7 +8,7 @@ import {
   type BrowserViewport,
 } from "../../src/shared/browser-stream"
 import type { BrowserPosition, BrowserScope, BrowserState, BrowserTransport } from "./types"
-import { clicks, clipboard, key, merge, modifiers, pointer, transition, typing, wheel } from "./stream-input"
+import { clicks, clipboard, key, modifiers, pointer, transition, typing, wheel } from "./stream-input"
 import "./stream.css"
 
 type Frame = BrowserFrame & { scope: BrowserScope }
@@ -375,7 +376,7 @@ export const StreamViewport: Component<{
     if (!value) return
     event.preventDefault()
     event.stopPropagation()
-    if (moving?.kind === "wheel" && merge(moving, value)) return
+    if (moving?.kind === "wheel" && mergeWheel(moving, value)) return
     // Preserve target, direction, modifier, and pointer ordering across wheel batches.
     flush()
     moving = value

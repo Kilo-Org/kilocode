@@ -65,25 +65,6 @@ export function wheel(
   }
 }
 
-export function merge(
-  queued: Extract<BrowserInteraction, { kind: "wheel" }>,
-  event: Extract<BrowserInteraction, { kind: "wheel" }>,
-) {
-  if (
-    queued.x !== event.x ||
-    queued.y !== event.y ||
-    queued.modifiers !== event.modifiers ||
-    Math.sign(queued.deltaX) !== Math.sign(event.deltaX) ||
-    Math.sign(queued.deltaY) !== Math.sign(event.deltaY) ||
-    Math.abs(queued.deltaX + event.deltaX) > 10000 ||
-    Math.abs(queued.deltaY + event.deltaY) > 10000
-  )
-    return false
-  queued.deltaX += event.deltaX
-  queued.deltaY += event.deltaY
-  return true
-}
-
 export function printable(event: Key) {
   const shortcut = (event.ctrlKey || event.metaKey) && !event.getModifierState("AltGraph")
   return Array.from(event.key).length === 1 && !shortcut
