@@ -97,8 +97,14 @@ export interface BrowserContextFactory {
   on?(event: "disconnected", listener: () => void): unknown
 }
 
+export interface BrowserOwner {
+  resolve: (route: BrowserRoute) => BrowserRoute | undefined
+  approve?: (route: BrowserRoute, url: URL) => Promise<boolean>
+}
+
 interface Entry {
   route: BrowserRoute
+  owner?: BrowserOwner
   browserId: string
   context: BrowserContext
   page: Page
@@ -240,8 +246,7 @@ export class BrowserBroker {
   private readonly token = randomBytes(32).toString("hex")
   private readonly proxies = new Set<BrowserProxy>()
   private gateway: BrowserProxy | undefined
-  private owner: ((route: BrowserRoute) => BrowserRoute | undefined) | undefined
-  private approval: ((route: BrowserRoute, url: URL) => Promise<boolean>) | undefined
+  private readonly owners: BrowserOwner[] = []
   private server: Server | undefined
   private readonly sockets = new Set<Socket>()
   private port: number | undefined
@@ -297,12 +302,57 @@ export class BrowserBroker {
     }
   }
 
+  /**
+   * Register a route owner. Owners are tried in registration order, so a surface
+   * that wants to claim a request first (for example the editor-tab browser for
+   * sidebar sessions) must register before the Agent Manager.
+   *
+   * A request that carries a project id only resolves against owners that return
+   * the same project id, which keeps Agent Manager worktree entries from being
+   * captured by the sidebar resolver. A request without a project id resolves
+   * against the first owner that accepts it.
+   *
+   * Each owner carries its own navigation approval so a route is gated by the
+   * surface that owns it, not by another surface's registration order.
+   */
   bind(
-    owner: (route: BrowserRoute) => BrowserRoute | undefined,
+    resolve: (route: BrowserRoute) => BrowserRoute | undefined,
     approve?: (route: BrowserRoute, url: URL) => Promise<boolean>,
-  ): void {
-    this.owner = owner
-    this.approval = approve
+  ): BrowserOwner {
+    const owner: BrowserOwner = { resolve, approve }
+    this.owners.push(owner)
+    return owner
+  }
+
+  /** Remove a previously registered owner so its resolver cannot be called again. */
+  unbind(owner: BrowserOwner): void {
+    const index = this.owners.indexOf(owner)
+    if (index >= 0) this.owners.splice(index, 1)
+  }
+
+  private resolve(route: BrowserRoute): { scope: BrowserRoute; owner?: BrowserOwner } | undefined {
+    if (this.owners.length === 0) return { scope: route }
+    for (const owner of this.owners) {
+      const scope = owner.resolve(route)
+      if (!scope) continue
+      if (route.projectId !== undefined && scope.projectId !== route.projectId) continue
+      return { scope, owner }
+    }
+    return
+  }
+
+  private revalid(route: BrowserRoute, owner?: BrowserOwner): BrowserRoute | undefined {
+    if (this.owners.length === 0) return route
+    for (const item of owner ? [owner] : this.owners) {
+      const scope = item.resolve(route)
+      if (scope && scope.projectId === route.projectId && scope.directory === route.directory) return scope
+    }
+    return
+  }
+
+  private async approve(route: BrowserRoute, url: URL, owner?: BrowserOwner): Promise<boolean> {
+    if (!owner?.approve) return false
+    return owner.approve(route, url)
   }
 
   subscribe(listener: (state: BrowserState) => void): () => void {
@@ -406,7 +456,7 @@ export class BrowserBroker {
       entry.state.navigation !== identity.navigation
     )
       return
-    const scope = this.owner ? this.owner(entry.route) : entry.route
+    const scope = this.revalid(entry.route, entry.owner)
     return scope?.directory === entry.route.directory && scope.projectId === entry.route.projectId ? entry : undefined
   }
 
@@ -423,13 +473,20 @@ export class BrowserBroker {
   }
 
   open(route: BrowserRoute, target: string, capture = true): Promise<BrowserState> {
-    const scope = this.owner ? this.owner(route) : route
-    if (!scope)
+    const resolved = this.resolve(route)
+    if (!resolved)
       return Promise.reject(new Error("Browser session does not belong to the requested project or directory"))
-    return this.serial(this.key(scope.sessionId, scope.projectId), () => this.create(scope, target, capture))
+    return this.serial(this.key(resolved.scope.sessionId, resolved.scope.projectId), () =>
+      this.create(resolved.scope, target, capture, resolved.owner),
+    )
   }
 
-  private async create(scope: BrowserRoute, target: string, capture: boolean): Promise<BrowserState> {
+  private async create(
+    scope: BrowserRoute,
+    target: string,
+    capture: boolean,
+    owner?: BrowserOwner,
+  ): Promise<BrowserState> {
     this.available()
     const url = this.validate(target)
     const existing = this.entries.get(this.key(scope.sessionId, scope.projectId))
@@ -481,6 +538,7 @@ export class BrowserBroker {
     })
     const entry: Entry = {
       route: { ...scope },
+      owner,
       browserId: randomUUID(),
       context,
       page,
@@ -504,7 +562,8 @@ export class BrowserBroker {
     this.attach(entry)
     try {
       this.available()
-      if (this.owner && !this.owner(scope)) throw new Error("Browser session is no longer available")
+      if (this.owners.length > 0 && !this.revalid(scope, owner))
+        throw new Error("Browser session is no longer available")
       entry.network = await (this.opts.network ?? BrowserNetwork.attach)(page, {
         url,
         proxy,
@@ -513,7 +572,7 @@ export class BrowserBroker {
           if (!this.view(scope.sessionId, scope.projectId, identity)) return false
           entry.waiting.add(target.origin)
           try {
-            const approved = await this.approval?.(entry.route, target)
+            const approved = await this.approve(entry.route, target, entry.owner)
             return (
               approved === true &&
               entry.network?.active !== false &&
@@ -530,7 +589,8 @@ export class BrowserBroker {
         log: this.opts.log,
       })
       this.available()
-      if (this.owner && !this.owner(scope)) throw new Error("Browser session is no longer available")
+      if (this.owners.length > 0 && !this.revalid(scope, owner))
+        throw new Error("Browser session is no longer available")
     } catch (error) {
       await this.retire(entry)
       throw error
@@ -624,9 +684,9 @@ export class BrowserBroker {
       const entry = this.require(sessionId, undefined, projectId)
       const url = this.validate(entry.state.url ?? entry.origin)
       if (entry.dead) {
-        const scope = this.owner ? this.owner(entry.route) : entry.route
+        const scope = this.revalid(entry.route, entry.owner)
         if (!scope) throw new Error("Browser session does not belong to the requested project or directory")
-        return this.create(scope, url.href, capture)
+        return this.create(scope, url.href, capture, entry.owner)
       }
       await this.goto(entry, url, true, capture)
       return this.copy(entry.state)
@@ -643,6 +703,20 @@ export class BrowserBroker {
             : key === this.key(sessionId, projectId),
         )
         .map((key) => this.stop(key)),
+    ).then(() => undefined)
+  }
+
+  /** Close only the entry for this exact session and project, leaving other projects' entries intact. */
+  closeScoped(sessionId: string, projectId?: string): Promise<void> {
+    return this.stop(this.key(sessionId, projectId)).then(() => undefined)
+  }
+
+  /** Close every entry owned by one surface, leaving other owners' entries intact. */
+  closeOwned(owner: BrowserOwner): Promise<void> {
+    return Promise.all(
+      [...this.entries.values()]
+        .filter((entry) => entry.owner === owner)
+        .map((entry) => this.stop(this.key(entry.route.sessionId, entry.route.projectId))),
     ).then(() => undefined)
   }
 

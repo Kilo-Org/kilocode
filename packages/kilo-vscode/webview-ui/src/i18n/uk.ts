@@ -1331,6 +1331,8 @@ export const dict = {
 
   "task.todos.progress": "{{done}} з {{total}} завдань виконано",
   "task.todos.allDone": "{{count}} завдань виконано",
+  "task.todos.title": "Завдання",
+  "task.todos.done": "Усе готово",
   "task.backgroundAgents.running.one": "1 фоновий агент",
   "task.backgroundAgents.running.many": "Фонових агентів: {{count}}",
   "task.backgroundAgents.open": "Відкрити фонового агента",
@@ -1458,4 +1460,7 @@ export const dict = {
   "settings.experimental.browserAutomation.systemChrome.description":
     "Використовувати встановлений Google Chrome для вбудованого браузера. Вимкніть лише якщо сумісний браузер Playwright Chromium уже встановлено.",
   "chat.search.searchingHistory": "Пошук у попередніх повідомленнях…",
+  "browserTab.noSession":
+    "Відкрийте браузер із сеансу, щоб переглянути локальний застосунок або загальнодоступну HTTPS-сторінку.",
+  "browserTab.disabled": "Вбудований браузер вимкнено. Увімкніть його в Налаштуваннях Kilo > Експериментальні.",
 }

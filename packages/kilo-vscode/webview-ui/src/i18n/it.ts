@@ -1218,6 +1218,8 @@ export const dict = {
   "error.details.show": "Dettagli",
   "task.todos.progress": "{{done}}/{{total}} to-do completati",
   "task.todos.allDone": "{{count}} to-do completati",
+  "task.todos.title": "To-do",
+  "task.todos.done": "Tutto fatto",
   "task.backgroundAgents.running.one": "1 agente in background",
   "task.backgroundAgents.running.many": "{{count}} agenti in background",
   "task.backgroundAgents.open": "Apri agente in background",
@@ -1426,4 +1428,7 @@ export const dict = {
   "settings.experimental.browserAutomation.systemChrome.description":
     "Usa il Google Chrome installato per il Browser integrato. Disattivalo solo se è già installato un browser Playwright Chromium compatibile.",
   "chat.search.searchingHistory": "Ricerca nei messaggi precedenti…",
+  "browserTab.noSession":
+    "Apri il browser da una sessione per visualizzare in anteprima un'applicazione locale o una pagina HTTPS pubblica.",
+  "browserTab.disabled": "Il browser integrato è disabilitato. Abilitalo in Impostazioni Kilo > Sperimentale.",
 } as const

@@ -1663,7 +1663,8 @@ export class AgentManagerProvider implements Disposable {
       focusPanelPrompt(panel, this.waitForPanelReady(panel), this.waitForPanelActive(panel)),
     )
   }
-  public isActive(): boolean {
+  public isActive(sessionId?: string): boolean {
+    if (sessionId != null && this.visiblePresence.displayed() !== sessionId) return false
     return this.panel?.active === true
   }
 

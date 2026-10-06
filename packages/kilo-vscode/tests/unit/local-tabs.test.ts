@@ -295,6 +295,31 @@ describe("tracked tab restore", () => {
 })
 
 describe("tracked tab reconcile", () => {
+  it("preserves an unmanaged local tab while the shared list still belongs to another project", () => {
+    expect(reconcileTrackedTabs(["ses-b"], ["ses-a"], inventory([]), trackedPending, false)).toBeUndefined()
+    expect(reconcileTrackedTabs(["ses-b"], ["ses-b"], inventory([]), trackedPending, true)).toBeUndefined()
+    expect(reconcileTrackedTabs(["ses-b"], [], inventory([]), trackedPending, true)).toEqual({
+      ids: [],
+      forget: ["ses-b"],
+    })
+  })
+
+  it("preserves an older open local tab while the selected project's list is incomplete", () => {
+    expect(reconcileTrackedTabs(["older"], ["newer"], inventory([]), trackedPending, false)).toBeUndefined()
+  })
+
+  it("still removes known external and child sessions before an authoritative list arrives", () => {
+    expect(
+      reconcileTrackedTabs(
+        ["local", "external", "child"],
+        [],
+        { local: [], external: new Set(["external"]), rejected: new Set(["child"]) },
+        trackedPending,
+        false,
+      ),
+    ).toEqual({ ids: ["local"], forget: ["child"] })
+  })
+
   it("evicts sparse sessions without forgetting them", () => {
     const data = trackedSessionInventory(
       [
