@@ -534,6 +534,7 @@ export const dict = {
   "session.tabs.switcher.pending": "جدید",
   "session.tabs.switcher.busy": "در حال کار",
   "session.tabs.switcher.scheduled": "زمان‌بندی‌شده",
+  "session.tabs.pinHint": "Shift+کلیک برای سنجاق کردن یا لغو آن",
   "session.tab.local": "محلی",
   "session.tab.cloud": "Cloud",
   "session.tab.worktree": "Worktree",
