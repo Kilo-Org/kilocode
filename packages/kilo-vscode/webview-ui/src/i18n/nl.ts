@@ -173,6 +173,9 @@ export const dict = {
   "model.routing.preview.autoDescription":
     "De gateway selecteert voor elke aanvraag dynamisch een provider op het moment van verzenden.",
   "model.routing.unavailable": "Momenteel niet beschikbaar",
+  "model.routing.failed":
+    "Kan de providerlijst niet laden. Er wordt opnieuw geprobeerd wanneer je dit menu weer opent.",
+  "model.routing.busy": "Er lopen sessies. Een andere provider kiezen onderbreekt ze.",
   "model.routing.projectOverride":
     "De providerroutering voor dit model staat in de kilo.json van het project en overschrijft deze keuze.",
   "model.group.auto": "Automatische modellen",

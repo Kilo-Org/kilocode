@@ -172,6 +172,8 @@ export const dict = {
   "model.routing.preview.uptime": "稼働率（30分）",
   "model.routing.preview.autoDescription": "ゲートウェイは、各リクエストの送信時にプロバイダーを動的に選択します。",
   "model.routing.unavailable": "現在は利用できません",
+  "model.routing.failed": "プロバイダー一覧を読み込めませんでした。次にこのメニューを開いたときに再試行します。",
+  "model.routing.busy": "実行中のセッションがあります。プロバイダーを変更すると中断されます。",
   "model.routing.projectOverride":
     "このモデルのプロバイダールーティングはプロジェクトの kilo.json で設定されており、この選択より優先されます。",
   "model.group.auto": "自動モデル",

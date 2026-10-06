@@ -4179,7 +4179,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       const snapshot = await fetchSnapshot(this.client, dir, () => this.configSettings())
       const binding = this.bindingsFor(dir, snapshot.targets).global
       if (!binding) return this.failConfigUpdate("Global config is not available")
-      return await this.handleUpdateConfig(partial, {}, unset, [], binding.id)
+      const result = await this.handleUpdateConfig(partial, {}, unset, [], binding.id)
+      // Issuing the binding above superseded the ones the Settings webview
+      // holds; a successful write republishes bindings, a failed one does not.
+      if (!result.success) await this.fetchAndSendConfigUpdated()
+      return result
     } catch (error) {
       return this.postConfigFailure(error)
     }

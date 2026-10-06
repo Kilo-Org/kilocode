@@ -175,6 +175,8 @@ export const dict = {
   "model.routing.preview.uptime": "가동률(30분)",
   "model.routing.preview.autoDescription": "게이트웨이는 각 요청을 전송할 때 공급자를 동적으로 선택합니다.",
   "model.routing.unavailable": "현재 사용할 수 없음",
+  "model.routing.failed": "공급자 목록을 불러오지 못했습니다. 다음에 이 메뉴를 열 때 다시 시도합니다.",
+  "model.routing.busy": "실행 중인 세션이 있습니다. 공급자를 변경하면 중단됩니다.",
   "model.routing.projectOverride":
     "이 모델의 공급자 라우팅은 프로젝트 kilo.json에 설정되어 있으며 이 선택보다 우선합니다.",
   "model.group.auto": "자동 모델",

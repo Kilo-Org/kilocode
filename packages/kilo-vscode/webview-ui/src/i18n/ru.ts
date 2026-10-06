@@ -171,6 +171,8 @@ export const dict = {
   "model.routing.preview.uptime": "Доступность (30 мин)",
   "model.routing.preview.autoDescription": "Шлюз динамически выбирает провайдера при отправке каждого запроса.",
   "model.routing.unavailable": "Сейчас недоступен",
+  "model.routing.failed": "Не удалось загрузить список провайдеров. Повторная попытка — при следующем открытии меню.",
+  "model.routing.busy": "Сейчас выполняются сессии. Смена провайдера прервёт их.",
   "model.routing.projectOverride":
     "Маршрутизация провайдера для этой модели задана в kilo.json проекта и переопределяет этот выбор.",
   "model.group.auto": "Автоматические модели",

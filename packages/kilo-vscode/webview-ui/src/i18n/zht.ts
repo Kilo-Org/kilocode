@@ -165,6 +165,8 @@ export const dict = {
   "model.routing.preview.uptime": "可用率（30 分鐘）",
   "model.routing.preview.autoDescription": "閘道會在傳送每個請求時動態選擇供應商。",
   "model.routing.unavailable": "目前無法使用",
+  "model.routing.failed": "無法載入供應商清單。下次開啟此選單時將重試。",
+  "model.routing.busy": "有工作階段正在執行。變更供應商會中斷這些工作階段。",
   "model.routing.projectOverride": "此模型的供應商路由已在專案的 kilo.json 中設定，會覆寫此處的選擇。",
   "model.group.auto": "自動模型",
   "model.group.recommended": "推薦",

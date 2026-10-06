@@ -172,6 +172,9 @@ export const dict = {
   "model.routing.preview.uptime": "Доступність (30 хв)",
   "model.routing.preview.autoDescription": "Шлюз динамічно вибирає провайдера під час надсилання кожного запиту.",
   "model.routing.unavailable": "Наразі недоступний",
+  "model.routing.failed":
+    "Не вдалося завантажити список провайдерів. Повторна спроба — під час наступного відкриття меню.",
+  "model.routing.busy": "Зараз виконуються сесії. Зміна провайдера перерве їх.",
   "model.routing.projectOverride":
     "Маршрутизацію провайдера для цієї моделі задано в kilo.json проєкту, і вона перевизначає цей вибір.",
   "model.group.auto": "Автоматичні моделі",

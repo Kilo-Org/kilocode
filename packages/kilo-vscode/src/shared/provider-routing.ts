@@ -50,9 +50,7 @@ export function routingOverriddenByProject(projectConfig: unknown, providerID: s
   return ROUTING_KEYS.some((key) => routing[key] !== undefined)
 }
 
-/** Read the routing slug pinned for a model in a config object, if any. */
-export function modelRouting(config: unknown, providerID: string, modelID: string): string | undefined {
-  const routing = routingOptions(config, providerID, modelID)
+function slug(routing: Record<string, unknown> | undefined): string | undefined {
   if (!routing) return undefined
   const first = (value: unknown) => {
     if (!Array.isArray(value)) return undefined
@@ -60,6 +58,22 @@ export function modelRouting(config: unknown, providerID: string, modelID: strin
     return typeof head === "string" ? head : undefined
   }
   return first(routing.only) ?? first(routing.order)
+}
+
+/** Read the routing slug pinned for a model in a config object, if any. */
+export function modelRouting(config: unknown, providerID: string, modelID: string): string | undefined {
+  return slug(routingOptions(config, providerID, modelID))
+}
+
+/**
+ * The routing slug that applies when several config layers (lowest precedence
+ * first) set routing for a model. Layers merge field by field like the
+ * backend's config merge — later layers win and arrays are replaced — so a
+ * project-level `order` over a global `only` still resolves to the global
+ * `only`, which is what the request is filtered by.
+ */
+export function layeredRouting(configs: unknown[], providerID: string, modelID: string): string | undefined {
+  return slug(Object.assign({}, ...configs.map((config) => routingOptions(config, providerID, modelID))))
 }
 
 /**

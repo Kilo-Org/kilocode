@@ -172,6 +172,9 @@ export const dict = {
   "model.routing.preview.uptime": "Dostupnost (30 min)",
   "model.routing.preview.autoDescription": "Gateway dinamički bira provajdera prilikom slanja svakog zahtjeva.",
   "model.routing.unavailable": "Trenutno nedostupno",
+  "model.routing.failed":
+    "Učitavanje liste provajdera nije uspjelo. Ponovni pokušaj će se izvršiti pri sljedećem otvaranju ovog menija.",
+  "model.routing.busy": "Sesije su u toku. Promjena provajdera će ih prekinuti.",
   "model.routing.projectOverride":
     "Usmjeravanje provajdera za ovaj model postavljeno je u kilo.json projekta i nadjačava ovaj izbor.",
   "model.group.auto": "Automatski modeli",

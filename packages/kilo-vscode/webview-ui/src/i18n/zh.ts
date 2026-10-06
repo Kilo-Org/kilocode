@@ -165,6 +165,8 @@ export const dict = {
   "model.routing.preview.uptime": "可用率（30 分钟）",
   "model.routing.preview.autoDescription": "网关会在发送每个请求时动态选择提供商。",
   "model.routing.unavailable": "当前不可用",
+  "model.routing.failed": "无法加载提供商列表。下次打开此菜单时将重试。",
+  "model.routing.busy": "有会话正在运行。更改提供商会中断这些会话。",
   "model.routing.projectOverride": "该模型的提供商路由已在项目的 kilo.json 中设置，会覆盖此处的选择。",
   "model.group.auto": "自动模型",
   "model.group.recommended": "推荐",

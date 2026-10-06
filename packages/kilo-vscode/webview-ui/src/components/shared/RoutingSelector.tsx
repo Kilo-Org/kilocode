@@ -21,7 +21,7 @@ import { isEnterKeyCommitNotIme } from "../../utils/ime-enter"
 import { endpointsEntry, requestEndpoints } from "../../context/routing-endpoints"
 import { requestWorkspaceConfig, workspaceConfigEntry } from "../../context/workspace-config"
 import { useRoutingPick } from "../../hooks/useRoutingPick"
-import { modelRouting, routingOverriddenByProject } from "../../../../src/shared/provider-routing"
+import { layeredRouting, modelRouting, routingOverriddenByProject } from "../../../../src/shared/provider-routing"
 import type { ModelEndpoint, ModelSelection } from "../../types/messages"
 
 // ---------------------------------------------------------------------------
@@ -46,7 +46,7 @@ export function useModelEndpoints(model: Accessor<ModelSelection | undefined>, d
   }
 
   // undefined while unrequested/loading; [] for a failed request (the base
-  // component renders the unavailable note and the next open retries).
+  // component renders the failure note and the next open retries).
   function endpoints() {
     const selection = model()
     if (!selection) return undefined
@@ -55,7 +55,12 @@ export function useModelEndpoints(model: Accessor<ModelSelection | undefined>, d
     return entry.status === "ok" ? entry.endpoints : []
   }
 
-  return { endpoints, load }
+  function failed() {
+    const selection = model()
+    return selection !== undefined && endpointsEntry(scope(selection))?.status === "error"
+  }
+
+  return { endpoints, failed, load }
 }
 
 // ---------------------------------------------------------------------------
@@ -170,6 +175,10 @@ export interface RoutingSelectorBaseProps {
   onOpen?: () => void
   /** A project-level config pins routing for this model and wins over the write path. */
   overridden?: boolean
+  /** The catalog request failed, so an absent pin says nothing about its availability. */
+  failed?: boolean
+  /** Sessions are running that a selection would interrupt (the write restarts the backend). */
+  busy?: boolean
   /** Popover placement — defaults to top-start. */
   placement?: "top-start" | "bottom-start" | "bottom-end" | "top-end"
   /** Render inline instead of through a portal when nested in a dialog. */
@@ -203,7 +212,7 @@ export const RoutingSelectorBase: Component<RoutingSelectorBaseProps> = (props) 
   const hovered = () => rows()[focused()]
   const pinned = () => props.endpoints?.find((endpoint) => endpoint.provider === props.value) ?? missing()
   const preview = () => routingPreview(hovered(), pinned())
-  const unavailable = () => preview() !== undefined && preview() === missing()
+  const unavailable = () => !props.failed && preview() !== undefined && preview() === missing()
 
   function focusItem(idx: number) {
     setMoved(true)
@@ -319,6 +328,9 @@ export const RoutingSelectorBase: Component<RoutingSelectorBaseProps> = (props) 
             <RoutingPreview endpoint={preview()} autoLabel={auto()} unavailable={unavailable()} />
           </div>
           <div class="routing-selector-divider" />
+          <Show when={props.busy}>
+            <div class="routing-selector-override">{language.t("model.routing.busy")}</div>
+          </Show>
           <Show when={props.overridden}>
             <div class="routing-selector-override">{language.t("model.routing.projectOverride")}</div>
           </Show>
@@ -341,7 +353,7 @@ export const RoutingSelectorBase: Component<RoutingSelectorBaseProps> = (props) 
                     }}
                   >
                     <span class="routing-selector-item-name">{row?.provider ?? auto()}</span>
-                    <Show when={row !== null && row === missing()}>
+                    <Show when={!props.failed && row !== null && row === missing()}>
                       <span class="routing-selector-item-unavailable">{language.t("model.routing.unavailable")}</span>
                     </Show>
                   </div>
@@ -352,7 +364,9 @@ export const RoutingSelectorBase: Component<RoutingSelectorBaseProps> = (props) 
               <div class="routing-selector-note">{language.t("model.routing.loading")}</div>
             </Show>
             <Show when={props.endpoints?.length === 0}>
-              <div class="routing-selector-note">{language.t("model.routing.empty")}</div>
+              <div class="routing-selector-note">
+                {language.t(props.failed ? "model.routing.failed" : "model.routing.empty")}
+              </div>
             </Show>
           </div>
         </div>
@@ -403,9 +417,11 @@ export const RoutingSelector: Component<RoutingSelectorProps> = (props) => {
   const project = () => (scoped() ? workspace()?.projectConfig : config.projectConfig())
   const current = (model: ModelSelection) =>
     scoped()
-      ? (modelRouting(project(), model.providerID, model.modelID) ??
-        modelRouting(config.globalConfig(), model.providerID, model.modelID))
+      ? layeredRouting([config.globalConfig(), project()], model.providerID, model.modelID)
       : modelRouting(config.config(), model.providerID, model.modelID)
+  // Same signal the Settings save bar warns from: a write disposes every
+  // backend instance, which cancels running sessions in all panels.
+  const busy = () => Object.values(session.allStatusMap()).some((status) => status.type === "busy")
 
   const endpoints = useModelEndpoints(routed, directory)
   const routing = useRoutingPick(current, vscode)
@@ -417,6 +433,8 @@ export const RoutingSelector: Component<RoutingSelectorProps> = (props) => {
           endpoints={endpoints.endpoints()}
           value={routing.value(model())}
           blocked={props.blocked}
+          failed={endpoints.failed()}
+          busy={busy()}
           onSelect={(provider) => routing.pick(model(), provider)}
           onClear={() => routing.pick(model(), null)}
           onOpen={() => {

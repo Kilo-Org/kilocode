@@ -174,6 +174,9 @@ export const dict = {
   "model.routing.preview.autoDescription":
     "La passerelle sélectionne dynamiquement un fournisseur lors de l’envoi de chaque requête.",
   "model.routing.unavailable": "Actuellement indisponible",
+  "model.routing.failed":
+    "Impossible de charger la liste des fournisseurs. Nouvelle tentative à la prochaine ouverture de ce menu.",
+  "model.routing.busy": "Des sessions sont en cours. Changer de fournisseur les interrompra.",
   "model.routing.projectOverride":
     "Le routage de fournisseur de ce modèle est défini dans le kilo.json du projet et remplace cette sélection.",
   "model.group.auto": "Modèles automatiques",

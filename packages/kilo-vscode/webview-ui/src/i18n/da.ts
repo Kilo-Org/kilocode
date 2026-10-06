@@ -171,6 +171,8 @@ export const dict = {
   "model.routing.preview.uptime": "Tilgængelighed (30 min.)",
   "model.routing.preview.autoDescription": "Gatewayen vælger dynamisk en udbyder, når hver anmodning sendes.",
   "model.routing.unavailable": "Ikke tilgængelig i øjeblikket",
+  "model.routing.failed": "Kunne ikke indlæse listen over udbydere. Der prøves igen, næste gang du åbner denne menu.",
+  "model.routing.busy": "Der kører sessioner. Et skift af udbyder afbryder dem.",
   "model.routing.projectOverride":
     "Udbyderrouting for denne model er angivet i projektets kilo.json og tilsidesætter dette valg.",
   "model.group.auto": "Automatiske modeller",

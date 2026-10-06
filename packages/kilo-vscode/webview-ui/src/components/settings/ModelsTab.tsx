@@ -176,6 +176,7 @@ const ModelsTab: Component = () => {
             >
               <RoutingSelectorBase
                 endpoints={routingEndpoints.endpoints()}
+                failed={routingEndpoints.failed()}
                 value={modelRouting(config(), model().providerID, model().modelID)}
                 onSelect={(provider) => updateRouting(provider)}
                 onClear={() => updateRouting(null)}

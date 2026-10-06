@@ -171,6 +171,8 @@ export const dict = {
   "model.routing.preview.uptime": "Erişilebilirlik (30 dk.)",
   "model.routing.preview.autoDescription": "Ağ geçidi, her istek gönderilirken dinamik olarak bir sağlayıcı seçer.",
   "model.routing.unavailable": "Şu anda kullanılamıyor",
+  "model.routing.failed": "Sağlayıcı listesi yüklenemedi. Bu menüyü bir sonraki açışınızda yeniden denenecek.",
+  "model.routing.busy": "Çalışan oturumlar var. Sağlayıcıyı değiştirmek onları kesintiye uğratır.",
   "model.routing.projectOverride":
     "Bu modelin sağlayıcı yönlendirmesi projenin kilo.json dosyasında ayarlı ve bu seçimi geçersiz kılar.",
   "model.group.auto": "Otomatik Modeller",

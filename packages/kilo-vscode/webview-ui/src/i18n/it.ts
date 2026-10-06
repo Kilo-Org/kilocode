@@ -153,6 +153,9 @@ export const dict = {
   "model.routing.preview.autoDescription":
     "Il gateway seleziona dinamicamente un provider al momento dell’invio di ogni richiesta.",
   "model.routing.unavailable": "Attualmente non disponibile",
+  "model.routing.failed":
+    "Impossibile caricare l'elenco dei provider. Verrà ritentato alla prossima apertura di questo menu.",
+  "model.routing.busy": "Ci sono sessioni in esecuzione. Cambiare provider le interromperà.",
   "model.routing.projectOverride":
     "Il routing dei provider per questo modello è impostato nel kilo.json del progetto e ha la precedenza su questa selezione.",
   "model.group.auto": "Modelli automatici",

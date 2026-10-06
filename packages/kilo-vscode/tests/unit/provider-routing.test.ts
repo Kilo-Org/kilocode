@@ -1,6 +1,7 @@
 import { describe, expect, it } from "bun:test"
 import {
   ROUTING_KEYS,
+  layeredRouting,
   modelRouting,
   routingClear,
   routingOverriddenByProject,
@@ -92,6 +93,21 @@ describe("provider routing persistence", () => {
       provider: { [pid]: { models: { [mid]: { options: { provider: { ...siblings } } } } } },
     }
     expect(modelRouting(cleared, pid, mid)).toBeUndefined()
+  })
+
+  it("layeredRouting merges layers field by field like the backend config merge", () => {
+    const layer = (routing: Record<string, unknown>) => ({
+      provider: { [pid]: { models: { [mid]: { options: { provider: routing } } } } },
+    })
+    const global = layer(routingValue("b/fp8"))
+
+    // A project `order` alone does not displace the global `only` filter.
+    expect(layeredRouting([global, layer({ order: ["a/fp8"] })], pid, mid)).toBe("b/fp8")
+    // A full project pin wins.
+    expect(layeredRouting([global, layer(routingValue("a/fp8"))], pid, mid)).toBe("a/fp8")
+    // Layers without routing for the model are skipped.
+    expect(layeredRouting([global, undefined, layer(siblings)], pid, mid)).toBe("b/fp8")
+    expect(layeredRouting([undefined, layer(siblings)], pid, mid)).toBeUndefined()
   })
 })
 

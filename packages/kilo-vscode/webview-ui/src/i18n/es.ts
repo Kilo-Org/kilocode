@@ -173,6 +173,9 @@ export const dict = {
   "model.routing.preview.uptime": "Disponibilidad (30 min)",
   "model.routing.preview.autoDescription": "El gateway selecciona dinámicamente un proveedor al enviar cada solicitud.",
   "model.routing.unavailable": "No disponible actualmente",
+  "model.routing.failed":
+    "No se pudo cargar la lista de proveedores. Se reintentará la próxima vez que abras este menú.",
+  "model.routing.busy": "Hay sesiones en curso. Cambiar de proveedor las interrumpirá.",
   "model.routing.projectOverride":
     "El enrutamiento de proveedor de este modelo está definido en el kilo.json del proyecto y anula esta selección.",
   "model.group.auto": "Modelos automáticos",

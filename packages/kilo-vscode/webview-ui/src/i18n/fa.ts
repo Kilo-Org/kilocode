@@ -173,6 +173,8 @@ export const dict = {
   "model.routing.preview.uptime": "دسترس‌پذیری (۳۰ دقیقه)",
   "model.routing.preview.autoDescription": "درگاه هنگام ارسال هر درخواست، ارائه‌دهنده را به‌صورت پویا انتخاب می‌کند.",
   "model.routing.unavailable": "در حال حاضر در دسترس نیست",
+  "model.routing.failed": "بارگیری فهرست ارائه‌دهندگان ممکن نشد. دفعه بعد که این منو را باز کنید، دوباره تلاش می‌شود.",
+  "model.routing.busy": "جلسه‌هایی در حال اجرا هستند. تغییر ارائه‌دهنده آن‌ها را قطع می‌کند.",
   "model.routing.projectOverride":
     "مسیریابی ارائه‌دهنده برای این مدل در فایل kilo.json پروژه تنظیم شده است و بر این انتخاب اولویت دارد.",
   "model.group.auto": "مدل‌های خودکار",

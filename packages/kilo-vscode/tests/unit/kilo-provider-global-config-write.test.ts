@@ -177,12 +177,45 @@ describe("KiloProvider.writeGlobalConfig", () => {
     await internal.writeGlobalConfig(pin("gmicloud/fp8"))
 
     expect(conn.patches).toEqual([])
-    expect(sent).toEqual([expect.objectContaining({ type: "configUpdateFailed", message: "Revision mismatch" })])
+    expect(sent.map((message) => message.type)).toEqual(["configUpdateFailed", "configUpdated"])
+    expect(sent[0]).toEqual(expect.objectContaining({ message: "Revision mismatch" }))
     expect(notice).toHaveBeenCalledWith("Config update failed: Revision mismatch")
 
     // A queued write after a failure still runs.
     await internal.writeGlobalConfig(pin("baseten/fp8"))
-    expect(sent.map((message) => message.type)).toEqual(["configUpdateFailed", "configUpdateFailed"])
+    expect(sent.map((message) => message.type)).toEqual([
+      "configUpdateFailed",
+      "configUpdated",
+      "configUpdateFailed",
+      "configUpdated",
+    ])
+  })
+
+  it("republishes bindings after a failed write so a Settings save is not rejected as expired", async () => {
+    let fail = true
+    const conn = createConnection()
+    const { internal, sent } = setup(conn)
+    const drain = conn.service.drainPendingPrompts
+    conn.service.drainPendingPrompts = async () => {
+      if (fail) throw new Error("drain failed")
+    }
+
+    // Settings holds the binding published with the last config load.
+    await (internal as unknown as { refreshConfig: (type: "configLoaded") => Promise<void> }).refreshConfig(
+      "configLoaded",
+    )
+    await internal.writeGlobalConfig(pin("gmicloud/fp8"))
+    fail = false
+    conn.service.drainPendingPrompts = drain
+
+    const latest = sent.findLast((message) => message.type === "configUpdated") as
+      | { bindings?: { global?: { id: string } } }
+      | undefined
+    const id = latest?.bindings?.global?.id
+    expect(id).toBeString()
+    const result = await internal.handleUpdateConfig(pin("baseten/fp8"), {}, [], [], id)
+    expect(result).toEqual({ success: true })
+    expect(conn.patches).toHaveLength(1)
   })
 
   it("reports a throw inside the write like a rejected write, then keeps accepting later writes", async () => {

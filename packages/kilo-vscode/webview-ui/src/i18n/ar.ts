@@ -167,6 +167,8 @@ export const dict = {
   "model.routing.preview.uptime": "وقت التشغيل (30 دقيقة)",
   "model.routing.preview.autoDescription": "تختار البوابة موفرًا ديناميكيًا عند إرسال كل طلب.",
   "model.routing.unavailable": "غير متاح حاليًا",
+  "model.routing.failed": "تعذّر تحميل قائمة المزوّدين. ستتم إعادة المحاولة عند فتح هذه القائمة في المرة القادمة.",
+  "model.routing.busy": "توجد جلسات قيد التشغيل. سيؤدي تغيير المزوّد إلى مقاطعتها.",
   "model.routing.projectOverride":
     "توجيه الموفر لهذا النموذج محدَّد في ملف kilo.json الخاص بالمشروع ويتجاوز هذا الاختيار.",
   "model.group.auto": "النماذج التلقائية",

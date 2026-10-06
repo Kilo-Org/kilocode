@@ -172,6 +172,9 @@ export const dict = {
   "model.routing.preview.uptime": "Dostępność (30 min)",
   "model.routing.preview.autoDescription": "Brama dynamicznie wybiera dostawcę podczas wysyłania każdego żądania.",
   "model.routing.unavailable": "Obecnie niedostępny",
+  "model.routing.failed":
+    "Nie udało się wczytać listy dostawców. Ponowna próba nastąpi przy następnym otwarciu tego menu.",
+  "model.routing.busy": "Trwają sesje. Zmiana dostawcy je przerwie.",
   "model.routing.projectOverride":
     "Routing dostawcy dla tego modelu jest ustawiony w kilo.json projektu i nadpisuje ten wybór.",
   "model.group.auto": "Modele automatyczne",
