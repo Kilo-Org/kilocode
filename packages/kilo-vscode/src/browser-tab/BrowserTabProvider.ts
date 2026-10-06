@@ -69,7 +69,7 @@ const prefix = "browserTab."
 export class BrowserTabProvider {
   private readonly panels = new Map<string, Panel>()
   private readonly disposables: vscode.Disposable[] = []
-  private readonly owner?: BrowserOwner
+  readonly owner?: BrowserOwner
 
   constructor(
     private readonly extensionUri: vscode.Uri,

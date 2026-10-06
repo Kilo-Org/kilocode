@@ -230,10 +230,10 @@ export async function activate(context: vscode.ExtensionContext) {
       resolve: (route) => {
         if (!vscode.workspace.isTrusted) return
         if (!vscode.workspace.getConfiguration("kilo-code.new.experimental").get("browserAutomation", false)) return
-        // While the Agent Manager panel is focused on this exact session, it
-        // owns the browser for that shared root session. Other sidebar and
-        // editor-tab sessions still resolve here.
-        if (agentManager?.isActive(route.sessionId)) return
+        // The Agent Manager owns project-scoped browser entries and keeps them
+        // alive across session switches. Defer while it holds one for this
+        // session so a shared root session does not get two browser entries.
+        if (browserTabProvider.owner && browserBroker.ownedByOther(route.sessionId, browserTabProvider.owner)) return
         const tabs = [...tabPanels.values()]
         const surfaced =
           provider.getCurrentSessionId() === route.sessionId ||

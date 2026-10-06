@@ -241,6 +241,7 @@ function read(req: IncomingMessage): Promise<string> {
 export class BrowserBroker {
   private readonly entries = new Map<string, Entry>()
   private readonly pending = new Map<string, Promise<unknown>>()
+  private readonly claims = new Map<string, BrowserOwner>()
   private readonly listeners = new Set<(state: BrowserState) => void>()
   private readonly viewers = new Set<(frame: BrowserFrame & Pick<BrowserRoute, "sessionId" | "projectId">) => void>()
   private readonly token = randomBytes(32).toString("hex")
@@ -472,13 +473,23 @@ export class BrowserBroker {
     return [...new Set([...this.entries.keys(), ...this.pending.keys()].map((key) => key.slice(key.indexOf("\0") + 1)))]
   }
 
+  /** True when a surface other than `owner` holds an entry or in-flight open for the session. */
+  ownedByOther(sessionId: string, owner: BrowserOwner): boolean {
+    for (const key of [...this.entries.keys(), ...this.pending.keys()]) {
+      if (key.slice(key.indexOf("\0") + 1) !== sessionId) continue
+      const current = this.ownerOf(key)
+      if (current && current !== owner) return true
+    }
+    return false
+  }
+
   open(route: BrowserRoute, target: string, capture = true): Promise<BrowserState> {
     const resolved = this.resolve(route)
     if (!resolved)
       return Promise.reject(new Error("Browser session does not belong to the requested project or directory"))
-    return this.serial(this.key(resolved.scope.sessionId, resolved.scope.projectId), () =>
-      this.create(resolved.scope, target, capture, resolved.owner),
-    )
+    const key = this.key(resolved.scope.sessionId, resolved.scope.projectId)
+    if (resolved.owner) this.claims.set(key, resolved.owner)
+    return this.serial(key, () => this.create(resolved.scope, target, capture, resolved.owner))
   }
 
   private async create(
@@ -711,13 +722,12 @@ export class BrowserBroker {
     return this.stop(this.key(sessionId, projectId)).then(() => undefined)
   }
 
-  /** Close every entry owned by one surface, leaving other owners' entries intact. */
+  /** Close every entry and in-flight open owned by one surface, leaving other owners intact. */
   closeOwned(owner: BrowserOwner): Promise<void> {
-    return Promise.all(
-      [...this.entries.values()]
-        .filter((entry) => entry.owner === owner)
-        .map((entry) => this.stop(this.key(entry.route.sessionId, entry.route.projectId))),
-    ).then(() => undefined)
+    const keys = new Set([...this.entries.keys(), ...this.pending.keys()])
+    return Promise.all([...keys].filter((key) => this.ownerOf(key) === owner).map((key) => this.stop(key))).then(
+      () => undefined,
+    )
   }
 
   private stop(key: string): Promise<void> {
@@ -1020,6 +1030,13 @@ export class BrowserBroker {
 
   private key(session: string, project?: string): string {
     return `${project ?? ""}\0${session}`
+  }
+
+  /** Owner of a keyed session, preferring a live entry over a pending open's claim. */
+  private ownerOf(key: string): BrowserOwner | undefined {
+    const entry = this.entries.get(key)
+    if (entry) return entry.owner
+    return this.pending.has(key) ? this.claims.get(key) : undefined
   }
 
   private async serial<T>(session: string, operation: () => Promise<T>): Promise<T> {

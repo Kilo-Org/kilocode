@@ -51,7 +51,7 @@ export interface BrowserControlMessage extends BrowserControlFields {
 
 /** Builds a neutral control message from a surface message that shares these fields. */
 export function browserControlMessage(kind: BrowserControlKind, fields: BrowserControlFields): BrowserControlMessage {
-  return { kind, ...fields }
+  return { ...fields, kind }
 }
 
 /**
