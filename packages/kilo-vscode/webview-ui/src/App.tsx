@@ -245,6 +245,7 @@ const AppContent: Component = () => {
   const [settingsTab, setSettingsTab] = createSignal<string | undefined>()
   const [settingsSubtab, setSettingsSubtab] = createSignal<string | undefined>()
   const [settingsFocus, setSettingsFocus] = createSignal<{ token: number; value: string } | undefined>()
+  const [settingsSearch, setSettingsSearch] = createSignal(0)
   const [agentManagerProjectId, setAgentManagerProjectId] = createSignal<string | undefined>()
   const [migration, setMigration] = createSignal(false)
   const session = useSession()
@@ -305,6 +306,10 @@ const AppContent: Component = () => {
       case "focusSearch":
         setCurrentView("newTask")
         window.dispatchEvent(new CustomEvent("focusTranscriptSearch"))
+        break
+      case "focusSettingsSearch":
+        setCurrentView("settings")
+        setSettingsSearch((count) => count + 1)
         break
     }
   }
@@ -469,6 +474,7 @@ const AppContent: Component = () => {
                   setSettingsFocus(undefined)
                 }}
                 onMigrationClick={() => setMigration(true)}
+                searchRequest={settingsSearch()}
               />
             </Match>
             <Match when={currentView() === "subAgentViewer"}>
