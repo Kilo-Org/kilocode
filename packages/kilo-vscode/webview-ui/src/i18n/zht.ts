@@ -1286,6 +1286,8 @@ export const dict = {
 
   "task.todos.progress": "{{done}}/{{total}} 個待辦已完成",
   "task.todos.allDone": "{{count}} 個待辦已完成",
+  "task.todos.title": "待辦",
+  "task.todos.done": "全部完成",
   "task.backgroundAgents.running.one": "1 個背景 Agent",
   "task.backgroundAgents.running.many": "{{count}} 個背景 Agent",
   "task.backgroundAgents.open": "開啟背景 Agent",

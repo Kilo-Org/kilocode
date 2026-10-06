@@ -1357,6 +1357,8 @@ export const dict = {
 
   "task.todos.progress": "{{done}}/{{total}} задач выполнено",
   "task.todos.allDone": "{{count}} задач выполнено",
+  "task.todos.title": "Задачи",
+  "task.todos.done": "Всё готово",
   "task.backgroundAgents.running.one": "1 фоновый агент",
   "task.backgroundAgents.running.many": "Фоновых агентов: {{count}}",
   "task.backgroundAgents.open": "Открыть фонового агента",

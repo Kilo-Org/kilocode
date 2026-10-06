@@ -1332,6 +1332,8 @@ export const dict = {
 
   "task.todos.progress": "{{done}}/{{total}} งานเสร็จแล้ว",
   "task.todos.allDone": "{{count}} งานเสร็จแล้ว",
+  "task.todos.title": "รายการงาน",
+  "task.todos.done": "เสร็จทั้งหมด",
   "task.backgroundAgents.running.one": "เอเจนต์เบื้องหลัง 1 ตัว",
   "task.backgroundAgents.running.many": "เอเจนต์เบื้องหลัง {{count}} ตัว",
   "task.backgroundAgents.open": "เปิดเอเจนต์เบื้องหลัง",

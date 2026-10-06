@@ -1332,6 +1332,8 @@ export const dict = {
 
   "task.todos.progress": "{{total}} görevden {{done}} tanesi tamamlandı",
   "task.todos.allDone": "{{count}} görev tamamlandı",
+  "task.todos.title": "Görevler",
+  "task.todos.done": "Hepsi tamam",
   "task.backgroundAgents.running.one": "1 arka plan ajanı",
   "task.backgroundAgents.running.many": "{{count}} arka plan ajanı",
   "task.backgroundAgents.open": "Arka plan ajanını aç",

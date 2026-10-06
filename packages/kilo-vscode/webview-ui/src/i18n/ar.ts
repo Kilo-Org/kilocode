@@ -1326,6 +1326,8 @@ export const dict = {
 
   "task.todos.progress": "{{done}}/{{total}} مهام مكتملة",
   "task.todos.allDone": "{{count}} مهام مكتملة",
+  "task.todos.title": "المهام",
+  "task.todos.done": "اكتمل الكل",
   "task.backgroundAgents.running.one": "وكيل خلفي واحد",
   "task.backgroundAgents.running.many": "{{count}} وكلاء خلفيون",
   "task.backgroundAgents.open": "فتح الوكيل الخلفي",

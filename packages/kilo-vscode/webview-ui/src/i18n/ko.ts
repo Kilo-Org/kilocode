@@ -1335,6 +1335,8 @@ export const dict = {
 
   "task.todos.progress": "{{done}}/{{total}} 할 일 완료",
   "task.todos.allDone": "{{count}} 할 일 완료",
+  "task.todos.title": "할 일",
+  "task.todos.done": "모두 완료",
   "task.backgroundAgents.running.one": "백그라운드 에이전트 1개",
   "task.backgroundAgents.running.many": "백그라운드 에이전트 {{count}}개",
   "task.backgroundAgents.open": "백그라운드 에이전트 열기",

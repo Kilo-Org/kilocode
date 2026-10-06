@@ -1351,6 +1351,8 @@ export const dict = {
 
   "task.todos.progress": "{{done}}/{{total}} タスク完了",
   "task.todos.allDone": "{{count}} タスク完了",
+  "task.todos.title": "タスク",
+  "task.todos.done": "すべて完了",
   "task.backgroundAgents.running.one": "バックグラウンドエージェント 1 件",
   "task.backgroundAgents.running.many": "バックグラウンドエージェント {{count}} 件",
   "task.backgroundAgents.open": "バックグラウンドエージェントを開く",
