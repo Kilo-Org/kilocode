@@ -1789,9 +1789,13 @@ export const SidebarSearchOpen: Story = {
     return (
       <StoryProviders noPadding>
         <div style={{ "min-height": "430px", padding: "16px", background: "var(--surface-base)" }}>
-          <div class="am-section-header">
-            <span class="am-section-label">WORKTREES</span>
-            <div class="am-section-actions">
+          <div class="am-sidebar-header am-section-header">
+            <div class="am-sidebar-header-main">
+              <div class="am-sidebar-header-label">
+                <span class="am-section-label">WORKTREES</span>
+              </div>
+            </div>
+            <div class="am-sidebar-header-actions">
               <SidebarSearchMenu
                 items={() => sidebarSearchItems}
                 keybind="⌘F"

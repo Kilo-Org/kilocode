@@ -204,6 +204,41 @@ describe("KiloProvider pending session refresh", () => {
     expect(internal.projectID).toBe("backend-b")
   })
 
+  it("qualifies a session list with the project captured before the request", async () => {
+    const client = createClient()
+    const pending = Promise.withResolvers<{ data: unknown[]; response: { headers: Headers } }>()
+    client.experimental.session.list = async () => pending.promise as never
+    const connection = createConnection(client)
+    await connection.connect()
+    let active = "a"
+    const provider = new KiloProvider({} as never, connection as never, undefined, {
+      rootDirectory: () => `/repo/${active}`,
+      projectQualifier: () => ({ projectId: active }),
+    })
+    const internal = provider as unknown as ProviderInternals
+    const sent: unknown[] = []
+    internal.connectionState = "connected"
+    internal.isWebviewReady = true
+    internal.webview = { postMessage: async (message) => sent.push(message) }
+
+    const request = internal.handleLoadSessions()
+    active = "b"
+    pending.resolve({
+      data: [{ id: "ses-a", projectID: "backend-a", time: { created: 1, updated: 1 } }],
+      response: { headers: new Headers() },
+    })
+    await request
+
+    expect(sent).toContainEqual(
+      expect.objectContaining({
+        type: "sessionsLoaded",
+        projectId: "a",
+        sessions: [expect.objectContaining({ id: "ses-a" })],
+      }),
+    )
+    expect(internal.projectID).toBeUndefined()
+  })
+
   it("keeps worktree sessions with legacy project ids", async () => {
     const sent: unknown[] = []
     const ctx = createContext({

@@ -35,10 +35,14 @@ import { useLocalTabs } from "../../context/local-tabs"
 import { useServer } from "../../context/server"
 import { useIndexing } from "../../context/indexing"
 import { indexingButtonVisible } from "../../context/indexing-utils"
+import { mcpAuthIssues } from "./session-issues"
+import { SessionIssues } from "./SessionIssues"
 import { useLanguage } from "../../context/language"
 import { useVSCode } from "../../context/vscode"
 import { ApprovalModeMenu } from "./ApprovalModeMenu"
 import { useConfig } from "../../context/config"
+import { recommend, type ManagerContext } from "../../utils/shortcut-hint"
+import { PromptHint } from "./PromptHint"
 import { useProvider } from "../../context/provider"
 import { ModelSelector, ModelSelectorBase } from "../shared/ModelSelector"
 import { ModeSwitcher } from "../shared/ModeSwitcher"
@@ -175,6 +179,8 @@ interface PromptInputProps {
   focusOnDraftChange?: () => boolean
   onFocusChange?: (focused: boolean) => void
   resolveEmbeddedTerminal?: (context?: string) => Promise<string | undefined>
+  /** Agent Manager state for the shortcut hint. Omitted in the sidebar and editor tabs. */
+  manager?: () => ManagerContext | undefined
 }
 
 // The `@` model entry reopens the shared model selector through its
@@ -262,7 +268,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   const tabs = useLocalTabs()
   const server = useServer()
   const indexing = useIndexing()
-  const { config, globalConfig, settings, features } = useConfig()
+  const { config, globalConfig, settings, features, shortcuts } = useConfig()
   const provider = useProvider()
   const language = useLanguage()
   const vscode = useVSCode()
@@ -388,6 +394,32 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   })
 
   const [text, setText] = createSignal("")
+  const [focused, setFocused] = createSignal(false)
+  const [away, setAway] = createSignal(!document.hasFocus())
+  const onWindowFocus = () => setAway(false)
+  const onWindowBlur = () => setAway(true)
+  window.addEventListener("focus", onWindowFocus)
+  window.addEventListener("blur", onWindowBlur)
+  onCleanup(() => {
+    window.removeEventListener("focus", onWindowFocus)
+    window.removeEventListener("blur", onWindowBlur)
+  })
+  const hint = () => {
+    if (settings().showShortcutHints === false || readonly() || props.blocked?.()) return undefined
+    return recommend({
+      bindings: shortcuts().bindings,
+      focused: focused(),
+      away: away(),
+      draft: !!text(),
+      busy: isBusy(),
+      selection: shortcuts().selection,
+      manager: props.manager?.(),
+    })
+  }
+  const modeHint = () => {
+    const keybind = shortcuts().bindings.cycleAgentMode
+    return keybind ? { title: language.t("prompt.shortcutHint.mode"), keybind } : undefined
+  }
   const [reviewComments, setReviewComments] = createSignal<ReviewCommentEntry[]>([])
   const [browsers, setBrowsers] = createSignal<BrowserReference[]>([])
   // Large pastes collapse into a `[Pasted ~N lines]` chip, matching the CLI and
@@ -854,10 +886,35 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
         return language.t("prompt.placeholder.connecting")
       case "error":
         return language.t("prompt.placeholder.error")
-      default:
-        return language.t("prompt.placeholder.default")
+      default: {
+        // The contextual shortcut replaces the generic key help in the same template.
+        const next = hint()
+        if (!next) return language.t("prompt.placeholder.default")
+        return language.t("prompt.placeholder.hint", {
+          // Keep chords like "⌘K ⌘A" on one line.
+          key: next.binding.replaceAll(" ", "\u00a0"),
+          action: language.t(`prompt.shortcutHint.${next.label}`),
+        })
+      }
     }
   }
+  // The same template as the placeholder, split around the key so it can render as keycaps.
+  const keycaps = createMemo(
+    () => {
+      const state = server.connectionState()
+      if (state === "connecting" || state === "error") return undefined
+      const next = hint()
+      if (!next) return undefined
+      const mark = "\u0001"
+      const parts = language
+        .t("prompt.placeholder.hint", { key: mark, action: language.t(`prompt.shortcutHint.${next.label}`) })
+        .split(mark)
+      return { before: parts.at(0) ?? "", after: parts.at(1) ?? "", binding: next.binding }
+    },
+    undefined,
+    // Recreate the overlay only when the visible tip changes, so its fade-in runs once per tip.
+    { equals: (a, b) => a?.before === b?.before && a?.after === b?.after && a?.binding === b?.binding },
+  )
 
   const canEdit = () =>
     server.isConnected() && !hasInput() && !enhancing() && !speech.active() && !terminal.pending() && !git.pending()
@@ -1500,6 +1557,17 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     vscode.postMessage({ type: "openSettingsTab", tab: "indexing" })
   }
 
+  const handleOpenMcpSettings = (name: string) => {
+    vscode.postMessage({ type: "openSettingsTab", tab: "agentBehaviour", subtab: "mcpServers", focus: name })
+  }
+
+  const sessionIssues = createMemo(() =>
+    mcpAuthIssues(session.mcpAuth().needsAuth, session.mcpAuth().busy, language.t, {
+      signIn: (name) => session.signInMcp(name),
+      openSettings: handleOpenMcpSettings,
+    }),
+  )
+
   const handleEnhance = () => {
     if (isDisabled() || enhancing() || isBusy()) return
     const draft = paste.plainText(text()).trim()
@@ -1992,19 +2060,30 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
               <For each={mention.mentionResults()}>
                 {(item, index) => (
                   <>
-                    <div
-                      class="file-mention-item"
-                      data-type={item.type}
-                      title={"root" in item ? item.value : undefined}
-                      classList={{ "file-mention-item--active": index() === mention.mentionIndex() }}
-                      onMouseDown={(e) => {
-                        e.preventDefault()
-                        if (textareaRef) mention.selectMention(item, textareaRef, setText, adjustHeight)
-                      }}
-                      onMouseEnter={() => mention.setMentionIndex(index())}
+                    {/* Rendered in the webview rather than as a native `title`, which
+                        macOS does not reliably show inside VS Code webviews. */}
+                    <Tooltip
+                      value={
+                        item.type === "file" || item.type === "folder" || item.type === "opened-file"
+                          ? item.value
+                          : undefined
+                      }
+                      placement="top-start"
+                      contentClass="file-mention-tooltip"
                     >
-                      <MentionItemContent item={item} />
-                    </div>
+                      <div
+                        class="file-mention-item"
+                        data-type={item.type}
+                        classList={{ "file-mention-item--active": index() === mention.mentionIndex() }}
+                        onMouseDown={(e) => {
+                          e.preventDefault()
+                          if (textareaRef) mention.selectMention(item, textareaRef, setText, adjustHeight)
+                        }}
+                        onMouseEnter={() => mention.setMentionIndex(index())}
+                      >
+                        <MentionItemContent item={item} />
+                      </div>
+                    </Tooltip>
                     <Show when={divides(index())}>
                       <div class="file-mention-separator" />
                     </Show>
@@ -2094,6 +2173,9 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       </Show>
       <div class="prompt-input-wrapper">
         <div class="prompt-input-ghost-wrapper">
+          <Show when={keycaps()} keyed>
+            {(caps) => <PromptHint before={caps.before} binding={caps.binding} after={caps.after} />}
+          </Show>
           <div class="prompt-input-highlight-overlay" ref={highlightRef} aria-hidden="true" dir="auto">
             <Index each={paste.segments(text(), highlightMentions())}>
               {(seg) => (
@@ -2161,7 +2243,11 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
           <textarea
             ref={textareaRef}
             class="prompt-input"
-            classList={{ "prompt-input--disabled": !server.isConnected() || readonly() }}
+            classList={{
+              "prompt-input--disabled": !server.isConnected() || readonly(),
+              "prompt-input--keycaps": !!keycaps(),
+            }}
+            data-hint={hint()?.label}
             placeholder={placeholder()}
             value={text()}
             onBeforeInput={(e) => paste.beforeInput(e, textareaRef)}
@@ -2189,11 +2275,13 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
             onFocus={() => {
               hold.claim()
               syncGhost()
+              setFocused(true)
               props.onFocusChange?.(true)
             }}
             onBlur={() => {
               hold.release()
               syncGhost()
+              setFocused(false)
               props.onFocusChange?.(false)
             }}
             onSelect={() => {
@@ -2206,11 +2294,14 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
             rows={1}
             dir="auto"
           />
+          <div class="prompt-input-issues-overlay">
+            <SessionIssues issues={sessionIssues()} />
+          </div>
         </div>
       </div>
       <div class="prompt-input-hint">
         <div class="prompt-input-hint-selectors">
-          <ModeSwitcher sessionID={sid} blocked={props.blocked?.() ?? false} />
+          <ModeSwitcher sessionID={sid} blocked={props.blocked?.() ?? false} hint={modeHint()} />
           <ModelSelector sessionID={sid} blocked={props.blocked?.() ?? false} />
           <ThinkingSelector sessionID={sid} blocked={props.blocked?.() ?? false} />
         </div>

@@ -28,6 +28,16 @@
   min-width: 0;
 }
 
+/* The tooltip trigger wraps the row, so the row must still span the dropdown. */
+.file-mention-dropdown > [data-component="tooltip-trigger"] > .file-mention-item {
+  flex: 1;
+}
+
+/* Paths have few break points, so let them wrap anywhere within the tooltip's max width. */
+.file-mention-tooltip {
+  overflow-wrap: anywhere;
+}
+
 .file-mention-item--active {
   background: var(--vscode-list-activeSelectionBackground);
   color: var(--vscode-list-activeSelectionForeground);

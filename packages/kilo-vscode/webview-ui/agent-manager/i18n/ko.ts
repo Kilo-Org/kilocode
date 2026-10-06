@@ -31,7 +31,6 @@ export const dict = {
   "agentManager.local": "로컬",
   "agentManager.sidebar.collapse": "사이드바 접기",
   "agentManager.sidebar.expand": "사이드바 표시",
-  "agentManager.section.worktrees": "WORKTREES",
   "agentManager.section.sessions": "세션",
   "agentManager.projects": "프로젝트",
   "agentManager.settings.title": "Agent Manager",
@@ -44,6 +43,7 @@ export const dict = {
   "agentManager.settings.worktreePool.title": "Worktree 미리 준비",
   "agentManager.settings.worktreePool.description":
     "백그라운드에서 준비된 worktree를 미리 만들어 두면 새 Agent Manager 세션이 더 빠르게 시작됩니다. 열린 프로젝트마다 checkout 하나를 위해 추가 디스크 공간을 사용합니다.",
+  "agentManager.hints.switchSession": "세션 전환",
   "agentManager.settings.project.title": "프로젝트",
   "agentManager.settings.project.description": "편집하려는 worktree 설정의 repository를 선택하세요.",
   "agentManager.settings.project.empty": "사용 가능한 Agent Manager 프로젝트가 없습니다.",
@@ -71,12 +71,9 @@ export const dict = {
   "agentManager.project.settings": "프로젝트 설정",
   "agentManager.project.restricted":
     "현재 VS Code 작업 영역이 홈 폴더 또는 파일 시스템 루트입니다. Agent Manager를 사용하려면 VS Code에서 특정 프로젝트 폴더를 여세요.",
-  "agentManager.notGitRepo": "git 저장소가 아닙니다",
-
   "agentManager.updateBase.title": "베이스에서 업데이트",
   "agentManager.updateBase.selectWorktree": "먼저 관리 중인 worktree를 선택하세요.",
 
-  "agentManager.worktree.settings": "Worktree 설정",
   "agentManager.worktree.new": "새 Worktree",
   "agentManager.worktree.setupScript": "Worktree 설정 스크립트",
   "agentManager.worktree.delete": "Worktree 삭제",
@@ -184,13 +181,6 @@ export const dict = {
   "agentManager.shortcuts.cycleAgentMode": "다음 에이전트 모드",
   "agentManager.shortcuts.cyclePreviousAgentMode": "이전 에이전트 모드",
   "agentManager.shortcuts.showShortcuts": "키보드 단축키 표시",
-  "agentManager.dialog.removeStaleWorktree.title": "오래된 Worktree 제거",
-  "agentManager.dialog.removeStaleWorktree.messagePre": "오래된 Worktree 제거 ",
-  "agentManager.dialog.removeStaleWorktree.messagePost":
-    "? 이 작업은 Agent Manager 매핑만 제거하며 디스크의 파일은 변경하지 않습니다.",
-  "agentManager.dialog.removeStaleWorktree.cancel": "취소",
-  "agentManager.dialog.removeStaleWorktree.confirm": "오래된 Worktree 제거",
-
   "agentManager.dialog.project.select": "프로젝트 선택",
   "agentManager.dialog.project.missing": "저장소를 찾을 수 없음",
   "agentManager.dialog.openWorktree": "새 워크트리",

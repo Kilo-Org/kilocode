@@ -10,6 +10,7 @@
 import { type Accessor, Component, createEffect, createSignal, onCleanup, For, Show } from "solid-js"
 import { PopupSelector } from "./PopupSelector"
 import { Button } from "@kilocode/kilo-ui/button"
+import { TooltipKeybind } from "@kilocode/kilo-ui/tooltip"
 import { useSession } from "../../context/session"
 import { useLanguage } from "../../context/language"
 import type { AgentInfo } from "../../types/messages"
@@ -225,6 +226,8 @@ export const ModeSwitcherBase: Component<ModeSwitcherBaseProps> = (props) => {
 interface ModeSwitcherProps {
   sessionID?: Accessor<string | undefined>
   blocked?: boolean
+  /** Tooltip with the mode cycle shortcut. */
+  hint?: { title: string; keybind: string }
 }
 
 export const ModeSwitcher: Component<ModeSwitcherProps> = (props) => {
@@ -232,14 +235,22 @@ export const ModeSwitcher: Component<ModeSwitcherProps> = (props) => {
   const id = () => props.sessionID?.()
 
   return (
-    <ModeSwitcherBase
-      agents={session.agents()}
-      value={session.selectedAgent(id())}
-      blocked={props.blocked}
-      onSelect={(name) => {
-        session.selectAgent(name, id())
-        requestAnimationFrame(() => window.dispatchEvent(new Event("focusPrompt")))
-      }}
-    />
+    <TooltipKeybind
+      title={props.hint?.title ?? ""}
+      keybind={props.hint?.keybind ?? ""}
+      placement="top"
+      openDelay={0}
+      inactive={!props.hint?.keybind}
+    >
+      <ModeSwitcherBase
+        agents={session.agents()}
+        value={session.selectedAgent(id())}
+        blocked={props.blocked}
+        onSelect={(name) => {
+          session.selectAgent(name, id())
+          requestAnimationFrame(() => window.dispatchEvent(new Event("focusPrompt")))
+        }}
+      />
+    </TooltipKeybind>
   )
 }

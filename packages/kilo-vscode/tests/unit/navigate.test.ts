@@ -13,8 +13,8 @@ import {
   type ProjectNavInput,
   LOCAL,
 } from "../../webview-ui/agent-manager/navigate"
-import { createProjectNav, type NavTarget } from "../../webview-ui/agent-manager/project-nav"
-import type { SidebarItem } from "../../webview-ui/agent-manager/section-helpers"
+import { createProjectNav } from "../../webview-ui/agent-manager/project-nav"
+import type { NavTarget } from "../../webview-ui/agent-manager/navigate"
 import type {
   AgentManagerStateMessage,
   AgentProjectSnapshot,
@@ -505,17 +505,11 @@ describe("createProjectNav", () => {
     activeProjectId: string | undefined,
     currentSessionID: string | undefined,
     post: (t: NavTarget) => void = () => {},
-    focus: (item: SidebarItem) => void = () => {},
-    multiProject = true,
-    sidebarOrder: () => SidebarItem[] = () => [],
   ) =>
     createRoot((dispose) => {
       fn(
         createProjectNav(
           {
-            multiProject: () => multiProject,
-            sidebarOrder,
-            focus,
             projects,
             states,
             activeProjectId: () => activeProjectId,
@@ -586,45 +580,34 @@ describe("createProjectNav", () => {
     // Past the end — and C's collapsed worktree is never reachable by any index.
     expect(jumpOnce(4)).toBeUndefined()
     expect(jumpOnce(99)).toBeUndefined()
+    expect(jumpOnce(-1)).toBeUndefined()
   })
 
   it("multi-project jump targets the global order by index (⌘3 = B Local)", () => {
     expect(jumpOnce(2)).toEqual({ projectId: "B", kind: "local" })
   })
 
-  it("single-project mode keeps the legacy in-process traversal and never posts activateSelection", () => {
-    const order: SidebarItem[] = [
-      { type: "local", id: "local" },
-      { type: "wt", id: "w1" },
-      { type: "session", id: "s1" },
-    ]
-    const focused: SidebarItem[] = []
-    const posted: NavTarget[] = []
-    const focus = (item: SidebarItem) => focused.push(item)
-    const post = (t: NavTarget) => posted.push(t)
-    run(
-      (nav) => nav.step("down"),
-      LOCAL,
-      "A",
-      undefined,
-      post,
-      focus,
-      false,
-      () => order,
-    )
-    expect(focused.pop()).toEqual({ type: "wt", id: "w1" })
-    run(
-      (nav) => nav.jump(2),
-      "w1",
-      "A",
-      undefined,
-      post,
-      focus,
-      false,
-      () => order,
-    )
-    expect(focused.pop()).toEqual({ type: "session", id: "s1" })
-    // Legacy path never dispatches the multi-project activation message.
-    expect(posted).toEqual([])
+  it("uses project activation even with only the default project", () => {
+    createRoot((dispose) => {
+      const posted: NavTarget[] = []
+      const nav = createProjectNav(
+        {
+          projects: () => [project("A", true)],
+          states,
+          activeProjectId: () => "A",
+          selection: () => LOCAL,
+          currentSessionID: () => undefined,
+        },
+        (target) => posted.push(target),
+        () => {},
+      )
+      nav.step("down")
+      nav.jump(0)
+      expect(posted).toEqual([
+        { projectId: "A", kind: "worktree", worktreeId: "aw1" },
+        { projectId: "A", kind: "local" },
+      ])
+      dispose()
+    })
   })
 })
