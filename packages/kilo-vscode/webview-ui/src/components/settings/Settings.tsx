@@ -1,4 +1,4 @@
-import { Component, createSignal, createEffect, createMemo, on, Show, onCleanup } from "solid-js"
+import { Component, createSignal, createEffect, createMemo, lazy, on, Show, onCleanup } from "solid-js"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { Tabs } from "@kilocode/kilo-ui/tabs"
 import { Button } from "@kilocode/kilo-ui/button"
@@ -10,22 +10,6 @@ import { useLanguage } from "../../context/language"
 import { useConfig } from "../../context/config"
 import { useSession } from "../../context/session"
 import ModelsTab from "./ModelsTab"
-import ProvidersTab from "./ProvidersTab"
-import AgentBehaviourTab from "./AgentBehaviourTab"
-import AutoApproveTab from "./AutoApproveTab"
-import BrowserTab from "./BrowserTab"
-import CheckpointsTab from "./CheckpointsTab"
-import DisplayTab from "./DisplayTab"
-import AutocompleteTab from "./AutocompleteTab"
-import NotificationsTab from "./NotificationsTab"
-import ContextTab from "./ContextTab"
-
-import CommitMessageTab from "./CommitMessageTab"
-import ExperimentalTab from "./ExperimentalTab"
-import LanguageTab from "./LanguageTab"
-import AboutKiloCodeTab from "./AboutKiloCodeTab"
-import IndexingTab from "./IndexingTab"
-import SandboxingTab from "./SandboxingTab"
 import * as Sandboxing from "./sandboxing"
 import { useServer } from "../../context/server"
 import type { MigrationSource } from "../../types/messages"
@@ -43,6 +27,22 @@ import { Switch } from "@kilocode/kilo-ui/switch"
 import { TextField } from "@kilocode/kilo-ui/text-field"
 import SettingsRow from "./SettingsRow"
 import { ProjectBranchDialog } from "../../../agent-manager/ProjectBranchDialog"
+
+const DisplayTab = lazy(() => import("./DisplayTab"))
+const ProvidersTab = lazy(() => import("./ProvidersTab"))
+const AgentBehaviourTab = lazy(() => import("./AgentBehaviourTab"))
+const AutoApproveTab = lazy(() => import("./AutoApproveTab"))
+const BrowserTab = lazy(() => import("./BrowserTab"))
+const CheckpointsTab = lazy(() => import("./CheckpointsTab"))
+const AutocompleteTab = lazy(() => import("./AutocompleteTab"))
+const NotificationsTab = lazy(() => import("./NotificationsTab"))
+const ContextTab = lazy(() => import("./ContextTab"))
+const CommitMessageTab = lazy(() => import("./CommitMessageTab"))
+const ExperimentalTab = lazy(() => import("./ExperimentalTab"))
+const LanguageTab = lazy(() => import("./LanguageTab"))
+const AboutKiloCodeTab = lazy(() => import("./AboutKiloCodeTab"))
+const IndexingTab = lazy(() => import("./IndexingTab"))
+const SandboxingTab = lazy(() => import("./SandboxingTab"))
 
 export interface SettingsProps {
   tab?: string
@@ -266,7 +266,13 @@ const Settings: Component<SettingsProps> = (props) => {
   const session = useSession()
   const [active, setActive] = createSignal(props.tab ?? "models")
   const [errorExpanded, setErrorExpanded] = createSignal(false)
-  const sandboxing = createMemo(() => Sandboxing.visible(features()))
+  // Keep requested tabs registered while config loads so Tabs does not reset them to Models.
+  const indexing = createMemo(
+    () => features().indexing || (loading() && (active() === "indexing" || props.tab === "indexing")),
+  )
+  const sandboxing = createMemo(
+    () => Sandboxing.visible(features()) || (loading() && (active() === "sandboxing" || props.tab === "sandboxing")),
+  )
 
   const busyCount = () => Object.values(session.allStatusMap()).filter((s) => s.type === "busy").length
 
@@ -303,7 +309,7 @@ const Settings: Component<SettingsProps> = (props) => {
   )
 
   createEffect(() => {
-    if (features().indexing || active() !== "indexing") return
+    if (loading() || features().indexing || active() !== "indexing") return
     onTabChange("providers")
   })
 
@@ -408,7 +414,7 @@ const Settings: Component<SettingsProps> = (props) => {
             <Icon name="edit" />
             <span class="label">{language.t("settings.commitMessage.title")}</span>
           </Tabs.Trigger>
-          <Show when={features().indexing}>
+          <Show when={indexing()}>
             <Tabs.Trigger value="indexing" aria-label={language.t("settings.indexing.title")}>
               <Icon name="database" />
               <span class="label">{language.t("settings.indexing.title")}</span>
@@ -489,7 +495,7 @@ const Settings: Component<SettingsProps> = (props) => {
           <h3>{language.t("settings.commitMessage.title")}</h3>
           <CommitMessageTab />
         </Tabs.Content>
-        <Show when={features().indexing}>
+        <Show when={indexing()}>
           <Tabs.Content value="indexing">
             <h3>{language.t("settings.indexing.title")}</h3>
             <IndexingTab />

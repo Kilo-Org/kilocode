@@ -1,5 +1,5 @@
 import * as path from "path"
-import { existsSync } from "fs"
+import { existsSync, readFileSync } from "fs"
 import * as vscode from "vscode"
 import { TRANSIENT as MEMORY_TRANSIENT } from "@kilocode/kilo-memory/schema"
 import type {
@@ -6206,6 +6206,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   }
 
   private _getHtmlForWebview(webview: vscode.Webview, sidebar = false): string {
+    const bundle = this.opts.settingsPanel ? "settings" : "webview"
+    const file = path.join(this.extensionUri.fsPath, "dist", "settings-preload.json")
+    const preloads: string[] = this.opts.settingsPanel && existsSync(file) ? JSON.parse(readFileSync(file, "utf8")) : []
     return buildWebviewHtml(webview, {
       // The rail follows the physical workbench edge. RTL text direction must not move it between chat and code.
       sidebar: sidebar
@@ -6213,8 +6216,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           ? "right"
           : "left"
         : undefined,
-      scriptUri: webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, "dist", "webview.js")),
-      styleUri: webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, "dist", "webview.css")),
+      scriptUri: webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, "dist", `${bundle}.js`)),
+      styleUri: webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, "dist", `${bundle}.css`)),
       iconsBaseUri: webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, "assets", "icons")),
       workerUri: webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, "dist", "shiki-worker.js")),
       title: "Kilo Code",
@@ -6226,6 +6229,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       topBar: this.opts.hideTopBar !== true && isCursorHost(),
       topBarSurface: this.opts.topBarSurface === "tab" ? "tab_title" : "sidebar_title",
       agentManagerSettings: this.opts.agentManagerSettings !== undefined,
+      settings: this.opts.settingsPanel?.(),
+      module: this.opts.settingsPanel !== undefined,
+      preloads: preloads.map((file) => webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, "dist", file))),
     })
   }
 
