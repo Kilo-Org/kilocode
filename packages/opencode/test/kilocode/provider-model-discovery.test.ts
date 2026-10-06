@@ -10,10 +10,16 @@ const it = testEffect(AppNodeBuilder.build(Provider.node))
 const hits: { path: string; auth: string | null; team: string | null }[] = []
 const server = Bun.serve({
   port: 0,
+  idleTimeout: 0, // the stalled endpoint below must only be cut off by the client
   fetch(req) {
     const url = new URL(req.url)
     hits.push({ path: url.pathname, auth: req.headers.get("authorization"), team: req.headers.get("x-team") })
     if (url.pathname.startsWith("/broken/")) return new Response("unavailable", { status: 503 })
+    // Sends 200 headers and part of the body, then never finishes it.
+    if (url.pathname.startsWith("/stall/"))
+      return new Response(new ReadableStream({ start: (ctl) => ctl.enqueue(new TextEncoder().encode('{"data":[')) }), {
+        headers: { "content-type": "application/json" },
+      })
     return Response.json({ object: "list", data: [{ id: "org/alpha", object: "model" }, { id: "beta" }] })
   },
 })
@@ -140,6 +146,28 @@ it.instance(
       }),
     ),
   { config: {} },
+)
+
+it.instance(
+  "gives up on an endpoint whose body never finishes",
+  () =>
+    env(
+      {
+        KILO_CONFIG_CONTENT: gateway({
+          options: { baseURL: base("stall"), apiKey: "secret", discoverModels: true },
+          models: { beta: {} },
+        }),
+      },
+      Effect.gen(function* () {
+        const start = Date.now()
+        const item = yield* list
+        expect(Object.keys(item?.models ?? {})).toEqual(["beta"])
+        expect(calls("stall")).toHaveLength(1)
+        expect(Date.now() - start).toBeLessThan(20_000)
+      }),
+    ),
+  { config: {} },
+  30_000,
 )
 
 it.instance(

@@ -103,8 +103,9 @@ export const layer: Layer.Layer<
       modalities: { input: ["text", "image"], output: ["text"] },
     })
 
-    // GET {url}/models on an OpenAI-compatible endpoint. The 10 second cap ignores the provider's own
-    // request timeout, which may be disabled, so a stalled endpoint cannot hold up provider loading.
+    // GET {url}/models on an OpenAI-compatible endpoint. The 10 second cap covers the body read too and
+    // ignores the provider's own request timeout, which may be disabled, so a stalled endpoint cannot
+    // hold up provider loading.
     const list = Effect.fn("ModelCache.list")(function* (target: Target) {
       const base = HttpClientRequest.get(`${target.url.replace(/\/+$/, "")}/models`).pipe(HttpClientRequest.acceptJson)
       // Configured headers win over the bearer token, matching how the AI SDK sends chat requests.
@@ -112,7 +113,7 @@ export const layer: Layer.Layer<
         target.key ? HttpClientRequest.bearerToken(base, target.key) : base,
         target.headers ?? {},
       )
-      const response = yield* http.execute(request).pipe(Effect.timeout("10 seconds"))
+      const response = yield* http.execute(request)
       if (response.status < 200 || response.status >= 300) {
         log.error("model fetch failed", { url: target.url, status: response.status })
         return []
@@ -120,7 +121,7 @@ export const layer: Layer.Layer<
 
       const json = yield* HttpClientResponse.schemaBodyJson(Listing)(response)
       return json.data ?? []
-    })
+    }, Effect.timeout("10 seconds"))
 
     const fetchApertisModels = Effect.fn("ModelCache.fetchApertisModels")(function* (options: Options) {
       if (!options.apiKey) {
@@ -143,7 +144,7 @@ export const layer: Layer.Layer<
           Effect.map((items) => items.map((item) => item.id)),
           Effect.catch((error) =>
             Effect.sync(() => {
-              log.warn("model discovery failed", { url: target.url, error })
+              log.warn("model discovery failed", { url: target.url, error: String(error) })
               return []
             }),
           ),
