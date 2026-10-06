@@ -9,6 +9,9 @@ export const AgentManagerTask = Schema.Struct({
   prompt: Schema.optional(Schema.String).annotate({ description: "Initial prompt to send to the new session" }),
   name: Schema.optional(Schema.String).annotate({ description: "Short display name for the Agent Manager card" }),
   branchName: Schema.optional(Schema.String).annotate({ description: "Git branch name seed for worktree mode" }),
+  agent: Schema.optional(Schema.String).annotate({
+    description: "Primary agent to run the new session as. Omit to use the workspace default agent.",
+  }),
   model: Schema.optional(
     Schema.Struct({
       providerID: ProviderV2.ID,

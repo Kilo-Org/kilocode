@@ -63,12 +63,40 @@ const agent: Agent.Info = {
   options: {},
 }
 
+const customAgent: Agent.Info = {
+  name: "candidate",
+  mode: "all",
+  permission: [],
+  options: {},
+}
+
+const subAgent: Agent.Info = {
+  name: "researcher",
+  mode: "subagent",
+  permission: [],
+  options: {},
+}
+
+const agentsByName: Record<string, Agent.Info> = {
+  build: agent,
+  candidate: customAgent,
+  researcher: subAgent,
+}
+
 // Default provider is `test`, so resolution should prefer test, then kilo, then others.
-function makeRuntime(defaultProviderID = "test", host: Partial<AgentManager.Interface> = {}) {
+function makeRuntime(
+  defaultProviderID = "test",
+  host: Partial<AgentManager.Interface> = {},
+  agentSvc: Partial<Agent.Interface> = {},
+) {
   return ManagedRuntime.make(
     Layer.mergeAll(
       AppNodeBuilder.build(Truncate.node),
-      Layer.mock(Agent.Service, { get: () => Effect.succeed(agent) }),
+      Layer.mock(Agent.Service, {
+        get: (name: string) => Effect.succeed(agentsByName[name]),
+        list: () => Effect.succeed(Object.values(agentsByName)),
+        ...agentSvc,
+      }),
       AppNodeBuilder.build(Bus.node),
       AppNodeBuilder.build(CrossSpawnSpawner.node),
       Layer.mock(AgentManager.Service, host),
@@ -1108,5 +1136,80 @@ describe("agent_manager tool", () => {
         ).pipe(Effect.scoped),
       ),
     ).rejects.toThrow("Each task must include prompt, name, or branchName")
+  })
+
+  test("publishes a valid primary agent on the task without requiring a prompt", async () => {
+    const task = await publish(runtime, { name: "Prepared", agent: "candidate" })
+    expect(task?.agent).toBe("candidate")
+  })
+
+  test("omits agent from the published task when not specified", async () => {
+    const task = await publish(runtime, { name: "Prepared" })
+    expect(task?.agent).toBeUndefined()
+  })
+
+  test("rejects an unknown agent name before requesting permission", async () => {
+    const tool = await init()
+    const calls: unknown[] = []
+
+    const result = await runtime.runPromise(
+      provideTmpdirInstance(() =>
+        tool.execute(
+          { mode: "local", tasks: [{ prompt: "Fix", agent: "does-not-exist" }] },
+          { ...ctx, ask: (input: unknown) => Effect.sync(() => calls.push(input)) },
+        ),
+      ).pipe(Effect.scoped),
+    )
+
+    expect(calls).toEqual([])
+    expect(result.title).toBe("Invalid Agent Manager agent selection")
+    expect(result.output).toContain('Agent "does-not-exist" not found.')
+    expect(result.output).toContain("Available agents: build, candidate")
+    expect(result.metadata.count).toBe(0)
+  })
+
+  test("rejects a subagent-mode agent before requesting permission", async () => {
+    const tool = await init()
+    const calls: unknown[] = []
+
+    const result = await runtime.runPromise(
+      provideTmpdirInstance(() =>
+        tool.execute(
+          { mode: "local", tasks: [{ prompt: "Fix", agent: "researcher" }] },
+          { ...ctx, ask: (input: unknown) => Effect.sync(() => calls.push(input)) },
+        ),
+      ).pipe(Effect.scoped),
+    )
+
+    expect(calls).toEqual([])
+    expect(result.title).toBe("Invalid Agent Manager agent selection")
+    expect(result.output).toContain('Agent "researcher" is a subagent')
+    expect(result.output).toContain("task tool")
+    expect(result.metadata.count).toBe(0)
+  })
+
+  test("does not publish any session when one task's agent is invalid", async () => {
+    const tool: Tool.Def = await init()
+    const events: AgentManagerStart[] = []
+    await runtime.runPromise(
+      provideTmpdirInstance(() =>
+        Effect.gen(function* () {
+          const bus = yield* Bus.Service
+          const off = yield* bus.subscribeCallback(AgentManagerEvent.Start, (item) => events.push(item.properties))
+          yield* Effect.addFinalizer(() => Effect.sync(off))
+          yield* tool.execute(
+            {
+              mode: "local",
+              tasks: [
+                { prompt: "Fix one", agent: "candidate" },
+                { prompt: "Fix two", agent: "researcher" },
+              ],
+            },
+            { ...ctx, ask: () => Effect.void },
+          )
+        }),
+      ).pipe(Effect.scoped),
+    )
+    expect(events).toEqual([])
   })
 })

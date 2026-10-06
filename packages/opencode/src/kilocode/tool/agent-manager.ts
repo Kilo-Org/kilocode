@@ -1,3 +1,4 @@
+import { Agent } from "@/agent/agent"
 import { Bus } from "@/bus"
 import { InstanceState } from "@/effect/instance-state"
 import { AgentManagerEvent, type AgentManagerTask } from "@/kilocode/agent-manager/event"
@@ -23,6 +24,10 @@ const Task = Schema.Struct({
   }),
   branchName: Schema.optional(Schema.NullOr(Schema.String)).annotate({
     description: "Git branch name seed for worktree mode",
+  }),
+  agent: Schema.optional(Schema.NullOr(Schema.String)).annotate({
+    description:
+      "Optional primary agent name to run the new session as (e.g. a custom subagent-style agent configured with mode 'all'). Must not be a mode: 'subagent' agent. Omit to use the workspace default agent.",
   }),
   model: Schema.optional(Schema.NullOr(Schema.String)).annotate({
     description:
@@ -225,6 +230,7 @@ function select(
     ...(task.prompt != null ? { prompt: task.prompt } : {}),
     ...(task.name != null ? { name: task.name } : {}),
     ...(task.branchName != null ? { branchName: task.branchName } : {}),
+    ...(task.agent != null ? { agent: task.agent } : {}),
   }
   if (!task.model?.trim() && !task.variant?.trim()) {
     return { task: task.prompt?.trim() && source ? { ...base, ...source } : base }
@@ -249,7 +255,7 @@ export const AgentManagerTool = Tool.define<
     sessionID?: string
     questionID?: string
   },
-  AgentManager.Service | Bus.Service | Provider.Service,
+  AgentManager.Service | Bus.Service | Provider.Service | Agent.Service,
   "agent_manager"
 >(
   "agent_manager",
@@ -257,6 +263,7 @@ export const AgentManagerTool = Tool.define<
     const bus = yield* Bus.Service
     const host = yield* AgentManager.Service
     const provider = yield* Provider.Service
+    const agents = yield* Agent.Service
     const wire = ToolJsonSchema.fromSchema(WireParams)
     const section = wire.properties?.sectionID
     if (section && typeof section === "object" && wire.properties) {
@@ -421,6 +428,32 @@ export const AgentManagerTool = Tool.define<
                 ...(msg.model.variant ? { variant: msg.model.variant } : {}),
               }
             : undefined
+          const agentNames = params.tasks.flatMap((task) => (task.agent?.trim() ? [task.agent.trim()] : []))
+          const agentErrors: string[] = []
+          for (const name of agentNames) {
+            const info = yield* agents.get(name)
+            if (!info) {
+              const available = (yield* agents.list())
+                .filter((a) => a.mode !== "subagent" && !a.hidden)
+                .map((a) => a.name)
+              const hint = available.length ? ` Available agents: ${available.join(", ")}` : ""
+              agentErrors.push(`Agent "${name}" not found.${hint}`)
+              continue
+            }
+            if (info.mode === "subagent") {
+              agentErrors.push(
+                `Agent "${name}" is a subagent (mode: "subagent") and cannot run as an Agent Manager session's primary agent. Set its mode to "all" in config, or use the task tool for subagent work instead.`,
+              )
+            }
+          }
+          if (agentErrors.length > 0) {
+            return {
+              title: "Invalid Agent Manager agent selection",
+              output: ["No Agent Manager sessions were requested.", ...agentErrors].join("\n"),
+              metadata: { action: "start", count: 0 },
+            }
+          }
+
           const need = params.tasks.some((task) => task.model?.trim() || task.provider?.trim() || task.variant?.trim())
           const providers = need ? yield* provider.list() : undefined
           const preferred = need
