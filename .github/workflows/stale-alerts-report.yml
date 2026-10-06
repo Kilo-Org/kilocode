@@ -1,0 +1,62 @@
+# kilocode_change - new file
+name: Stale alerts report
+
+# Dependabot normally closes an alert when the fix lands. Some stay open after
+# the manifest is deleted or the lockfile moves past the vulnerable range, and
+# keep showing in the security views and the SLA reports. Once a week, compare
+# each open npm alert with the lockfiles in this checkout and post the ones
+# that look stale to Slack, so a person can dismiss them. Read-only: it never
+# dismisses an alert.
+
+on:
+  schedule:
+    - cron: "41 8 * * 1" # Mondays, offset to avoid the top of the hour
+  workflow_dispatch:
+
+concurrency:
+  group: stale-alerts-report
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  vulnerability-alerts: read
+
+jobs:
+  report:
+    if: github.repository == 'Kilo-Org/kilocode'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+
+      - id: report
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -o pipefail
+          mkdir -p .cache
+          # --method GET is required: gh api auto-switches to POST whenever
+          # -f is passed. --paginate prints one array per page, so merge them.
+          gh api --paginate --method GET -f state=open -f per_page=100 "repos/$REPO/dependabot/alerts" \
+            | jq -cs 'add // []' > .cache/alerts.json
+          bun run script/kilocode/stale-alerts.ts .cache/alerts.json > .cache/report.json
+          echo "count=$(jq -r .count .cache/report.json)" >> "$GITHUB_OUTPUT"
+          jq -r '.full' .cache/report.json >> "$GITHUB_STEP_SUMMARY"
+          # Build real JSON via jq instead of splicing text into a YAML payload.
+          jq '{text}' .cache/report.json > .cache/slack-payload.json
+
+      - if: steps.report.outputs.count != '0'
+        name: Notify Slack
+        uses: slackapi/slack-github-action@v2.0.0
+        with:
+          webhook: ${{ secrets.SECURITY_ALERTS_SLACK_WEBHOOK }}
+          webhook-type: incoming-webhook
+          payload-file-path: .cache/slack-payload.json
