@@ -552,6 +552,7 @@ export const dict = {
   "session.tabs.switcher.pending": "新增",
   "session.tabs.switcher.busy": "工作中",
   "session.tabs.switcher.scheduled": "已排程",
+  "session.tabs.pinHint": "按住 Shift 點擊可釘選或取消釘選",
   "session.tab.local": "本機",
   "session.tab.cloud": "雲端",
   "session.tab.worktree": "工作樹",

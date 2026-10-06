@@ -630,6 +630,7 @@ export const dict = {
   "session.tabs.switcher.pending": "Neu",
   "session.tabs.switcher.busy": "In Arbeit",
   "session.tabs.switcher.scheduled": "Geplant",
+  "session.tabs.pinHint": "Umschalt+Klick zum Anheften oder Lösen",
   "session.tab.local": "Lokal",
   "session.tab.cloud": "Cloud",
   "session.tab.worktree": "Arbeitsbaum",

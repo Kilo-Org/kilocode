@@ -611,6 +611,7 @@ export const dict = {
   "session.tabs.switcher.pending": "ใหม่",
   "session.tabs.switcher.busy": "กำลังทำงาน",
   "session.tabs.switcher.scheduled": "ตั้งเวลาไว้",
+  "session.tabs.pinHint": "Shift+คลิกเพื่อปักหมุดหรือเลิกปักหมุด",
   "session.tab.local": "ในเครื่อง",
   "session.tab.cloud": "คลาวด์",
   "session.tab.worktree": "เวิร์กทรี Git",

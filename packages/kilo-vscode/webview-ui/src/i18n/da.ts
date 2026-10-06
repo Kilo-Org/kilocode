@@ -618,6 +618,7 @@ export const dict = {
   "session.tabs.switcher.pending": "Ny",
   "session.tabs.switcher.busy": "Arbejder",
   "session.tabs.switcher.scheduled": "Planlagt",
+  "session.tabs.pinHint": "Skift+klik for at fastgøre eller frigøre",
   "session.tab.local": "Lokal",
   "session.tab.cloud": "Sky",
   "session.tab.worktree": "Arbejdstræ",
