@@ -9,7 +9,7 @@ const OUTPUT_LIMIT = 20_000
 const LOG_TAIL = 80
 const IDLE_LIMIT = 25_000
 const DIAGNOSTIC =
-  /(?:TUI worker error\b|(?:^|[\r\n])\s*(?:panic|fatal(?: error)?|unhandled exception|uncaught exception)\b)/i
+  /(?:TUI worker error\b|worker (?:unhandledRejection|uncaughtException)\b|(?:^|[\r\n])\s*(?:panic|fatal(?: error)?|unhandled exception|uncaught exception)\b)/i
 
 /**
  * Tail whatever the child wrote to the CLI log directory inside the harness home.
@@ -50,6 +50,9 @@ export async function render(file: string, args: string[] = ["--pure"], timeout 
     KILO_DISABLE_PROJECT_CONFIG: "1",
     KILO_DISABLE_DEFAULT_PLUGINS: "1",
     KILO_PURE: "1",
+    // A release binary logs at INFO, which is too coarse to locate a startup stall.
+    // KiloLog.init reads this, so the log tail attached on failure shows every step.
+    KILO_LOG_LEVEL: process.env.KILO_PTY_SMOKE_LOG_LEVEL ?? "DEBUG",
     KILO_CONFIG_CONTENT: JSON.stringify({ enabled_providers: ["anthropic"], experimental: { openTelemetry: false } }),
     KILO_AUTH_CONTENT: "{}",
     ANTHROPIC_API_KEY: "dummy",

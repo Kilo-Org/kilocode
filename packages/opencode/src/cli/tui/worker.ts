@@ -11,6 +11,7 @@ import { AppRuntime } from "@/effect/app-runtime"
 import { Effect } from "effect"
 import { disposeAllInstancesAndEmitGlobalDisposed } from "@/server/global-lifecycle"
 import { KiloLog } from "@/kilocode/log" // kilocode_change
+import * as Log from "@opencode-ai/core/util/log" // kilocode_change
 import { ensureProcessMetadata } from "@opencode-ai/core/util/opencode-process" // kilocode_change
 import { createWorkerRemoteExit } from "@/kilocode/cli/cmd/tui/remote-exit-worker" // kilocode_change
 import { createWorkerShutdown } from "@/cli/tui/worker-shutdown" // kilocode_change
@@ -19,6 +20,13 @@ import { KiloSessions } from "@/kilo-sessions/kilo-sessions" // kilocode_change
 ensureProcessMetadata("worker") // kilocode_change - retain worker role and parent run correlation
 await KiloLog.init() // kilocode_change - keep compatibility logs off the TUI terminal
 Heap.start()
+
+// kilocode_change start - startup checkpoints. Rpc.client().call() has no timeout and no reject
+// path, so a worker that never boots or never registers onmessage leaves the TUI blank forever
+// with no error. These two lines distinguish "worker never started" from "worker up but RPC stuck".
+const log = Log.create({ service: "tui-worker" })
+log.info("worker booted")
+// kilocode_change end
 
 // kilocode_change start - keep upstream's keep-alive intent but never swallow the error silently
 const onUnhandledRejection = (error: unknown) => {
@@ -114,3 +122,4 @@ export const rpc = {
 }
 
 Rpc.listen(rpc)
+log.info("worker listening") // kilocode_change - checkpoint, see the note above Rpc.listen's caller
