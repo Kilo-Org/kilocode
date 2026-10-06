@@ -46,9 +46,6 @@ const state = (input: Partial<CloudDefaults.ModelStateInfo> = {}): CloudDefaults
   ...input,
 })
 
-// The catalog server below serves both the Kilo API and the AI gateway routes.
-const local = (url: URL) => ({ KILO_API_URL: url.origin, KILO_AI_GATEWAY_URL: `${url.origin}/api/v1` })
-
 function withCatalog<A, E, R>(
   models: readonly string[],
   defaultModel: string,
@@ -93,7 +90,7 @@ it.instance("routes URL-scoped credentials to their catalog origin", () => {
         authorization: `Bearer ${token}`,
         feature: "kilo-cli",
         organization: null,
-        path: "/api/openrouter/models",
+        path: "/api/v1/models",
       },
     ])
   }).pipe(
@@ -153,22 +150,12 @@ it.instance("fetches models from the production AI gateway and defaults from the
   }),
 )
 
-it.instance("infers the local AI gateway from a localhost Kilo API URL", () =>
+it.instance("derives the AI gateway from KILO_API_URL", () =>
   Effect.gen(function* () {
     expect(yield* catalogUrls({ KILO_API_URL: "http://127.0.0.1:3000" })).toEqual([
-      "http://127.0.0.1:3010/api/v1/models",
-      `http://127.0.0.1:3010/api/v1/organizations/${organizationID}/models`,
+      "http://127.0.0.1:3000/api/v1/models",
+      `http://127.0.0.1:3000/api/v1/organizations/${organizationID}/models`,
       "http://127.0.0.1:3000/api/defaults",
-    ])
-  }),
-)
-
-it.instance("keeps the legacy model routes for a Kilo API URL on another host", () =>
-  Effect.gen(function* () {
-    expect(yield* catalogUrls({ KILO_API_URL: "https://api.example.test" })).toEqual([
-      "https://api.example.test/api/openrouter/models",
-      `https://api.example.test/api/organizations/${organizationID}/models`,
-      "https://api.example.test/api/defaults",
     ])
   }),
 )
@@ -290,7 +277,7 @@ it.instance(
                   model: { debug: { providerID: "kilo", modelID: "anthropic/saved" } },
                 }),
               ),
-              CloudCatalog.layer({ env: local(url) }),
+              CloudCatalog.layer({ env: { KILO_API_URL: url.origin } }),
             ),
           ),
         )
@@ -344,7 +331,7 @@ it.instance(
                   recent: [{ providerID: "kilo", modelID: "anthropic/recent" }],
                 }),
               ),
-              CloudCatalog.layer({ env: local(url) }),
+              CloudCatalog.layer({ env: { KILO_API_URL: url.origin } }),
             ),
           ),
         ),
@@ -376,7 +363,7 @@ it.instance(
                 model: { code: { providerID: "kilo", modelID: "anthropic/saved" } },
               }),
             ),
-            CloudCatalog.layer({ env: local(url) }),
+            CloudCatalog.layer({ env: { KILO_API_URL: url.origin } }),
           ),
         ),
       ),
@@ -401,7 +388,7 @@ it.instance(
           Layer.mergeAll(
             authLayer(new Auth.Api({ type: "api", key: "stored-api-token" })),
             stateLayer(state()),
-            CloudCatalog.layer({ env: local(url) }),
+            CloudCatalog.layer({ env: { KILO_API_URL: url.origin } }),
           ),
         ),
       ),
@@ -431,7 +418,7 @@ it.instance(
           Layer.mergeAll(
             authLayer(new Auth.Api({ type: "api", key: "stored-api-token" })),
             stateLayer(state()),
-            CloudCatalog.layer({ env: local(url) }),
+            CloudCatalog.layer({ env: { KILO_API_URL: url.origin } }),
           ),
         ),
       ),
@@ -500,7 +487,7 @@ it.instance(
                     recent: [{ providerID: "kilo", modelID: "anthropic/recent" }],
                   }),
                 ),
-                CloudCatalog.layer({ env: local(url) }),
+                CloudCatalog.layer({ env: { KILO_API_URL: url.origin } }),
               ),
             ),
           )

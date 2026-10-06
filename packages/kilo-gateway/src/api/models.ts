@@ -1,8 +1,8 @@
 import { z } from "zod"
 import { getKiloUrlFromToken } from "../auth/token.js"
 import { getDefaultHeaders, buildKiloHeaders } from "../headers.js"
-import { KILO_OPENROUTER_BASE, resolveKiloAiGatewayRoot, resolveKiloGatewayBaseUrl } from "./url.js"
-import { KILO_API_BASE, MODELS_FETCH_TIMEOUT_MS, PROMPTS, AI_SDK_PROVIDERS } from "./constants.js"
+import { resolveKiloGatewayUrl } from "./url.js"
+import { MODELS_FETCH_TIMEOUT_MS, PROMPTS, AI_SDK_PROVIDERS } from "./constants.js"
 
 export type KiloModelsResult = {
   models: Record<string, any>
@@ -160,7 +160,7 @@ export async function fetchKiloTranscriptionModels(options?: {
 }): Promise<KiloTranscriptionModelsResult> {
   const token = options?.kilocodeToken
   const organizationId = options?.kilocodeOrganizationId
-  const url = new URL("transcription-models", resolveKiloGatewayBaseUrl({ baseURL: options?.baseURL, token }))
+  const url = resolveKiloGatewayUrl("transcription-models", { baseURL: options?.baseURL, token })
   const response = await fetch(url, {
     headers: {
       ...getDefaultHeaders(),
@@ -212,20 +212,13 @@ async function fetchRawKiloModels(options?: {
   const token = options?.kilocodeToken
   const organizationId = options?.kilocodeOrganizationId
 
-  // Construct base URL
-  const defaultBaseURL = organizationId ? `${KILO_API_BASE}/api/organizations/${organizationId}` : KILO_OPENROUTER_BASE
-
-  const baseURL = options?.baseURL ?? defaultBaseURL
-
-  // Transform URL with token if available
-  const finalBaseURL = token ? getKiloUrlFromToken(baseURL, token) : baseURL
-
-  // Construct models endpoint. The AI gateway serves it under /api/v1; other hosts keep the legacy route.
-  const gateway = resolveKiloAiGatewayRoot({ baseURL: options?.baseURL, token })
-  const org = organizationId ?? finalBaseURL.match(/\/api(?:\/v1)?\/organizations\/([^/]+)/)?.at(1)
-  const modelsURL = gateway
-    ? new URL(org ? `organizations/${encodeURIComponent(org)}/models` : "models", gateway).toString()
-    : `${finalBaseURL}/models`
+  // An organization can also come from an organization-scoped baseURL or token URL.
+  const scoped = getKiloUrlFromToken(options?.baseURL ?? "", token ?? "")
+  const org = organizationId ?? scoped.match(/\/api(?:\/v1)?\/organizations\/([^/]+)/)?.at(1)
+  const modelsURL = resolveKiloGatewayUrl(org ? `organizations/${encodeURIComponent(org)}/models` : "models", {
+    baseURL: options?.baseURL,
+    token,
+  })
 
   const response = await fetch(modelsURL, {
     headers: {
@@ -241,7 +234,7 @@ async function fetchRawKiloModels(options?: {
   }
 
   if (!response.ok) {
-    if (response.status === 401 && token && !organizationId && !finalBaseURL.includes("/api/organizations/")) {
+    if (response.status === 401 && token && !org) {
       return fetchRawKiloModels({})
     }
     const kind = response.status === 401 || response.status === 403 ? "unauthorized" : "http"

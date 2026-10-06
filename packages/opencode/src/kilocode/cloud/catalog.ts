@@ -4,8 +4,8 @@ import {
   ENV_KILO_AI_GATEWAY_URL,
   getDefaultHeaders,
   getKiloUrlFromToken,
-  resolveKiloAiGatewayRoot,
   resolveKiloApiRoot,
+  resolveKiloGatewayBaseUrl,
   supportsTools,
 } from "@kilocode/kilo-gateway"
 import { Context, Effect, Layer, Redacted, Schema } from "effect"
@@ -137,40 +137,36 @@ export namespace CloudCatalog {
         message: "Kilo catalog URL must be secure",
       })
 
-    const api = () => env.KILO_API_URL?.trim() || DEFAULT_KILO_API_URL
-
-    // The Kilo API root (`…/api/`) serves the defaults and, on hosts without an AI gateway, the models.
+    // The Kilo API root (`…/api/`) serves the defaults.
     const base = Effect.fn("CloudCatalog.base")(function* (input: Input) {
-      const fallback = api()
+      const raw = env.KILO_API_URL?.trim()
+      const fallback = raw || DEFAULT_KILO_API_URL
       const value = getKiloUrlFromToken(fallback, Redacted.value(input.token))
-      const loopback = !!env.KILO_API_URL?.trim() || value !== fallback
       return yield* Effect.try({
-        try: () => secure(resolveKiloApiRoot({ baseURL: value }), loopback),
+        try: () => secure(resolveKiloApiRoot({ baseURL: value }), !!raw || value !== fallback),
         catch: insecure,
       })
     })
 
-    // The AI gateway root (`…/api/v1/`): KILO_AI_GATEWAY_URL, or inferred from the Kilo API URL.
-    // Inference only yields loopback hosts for a loopback Kilo API URL, so loopback is always allowed.
+    // The AI gateway base (`…/api/v1/`) serves the models. Only the production default is not an
+    // override, and it is HTTPS, so loopback HTTP is allowed.
     const gateway = Effect.fn("CloudCatalog.gateway")(function* (input: Input) {
       return yield* Effect.try({
         try: () => {
-          const root = resolveKiloAiGatewayRoot({
+          const root = resolveKiloGatewayBaseUrl({
             gateway: env[ENV_KILO_AI_GATEWAY_URL]?.trim() ?? "",
-            api: api(),
+            api: env.KILO_API_URL?.trim() ?? "",
             token: Redacted.value(input.token),
           })
-          return root ? secure(root, true) : undefined
+          return secure(root, true)
         },
         catch: insecure,
       })
     })
 
     const models = Effect.fn("CloudCatalog.models")(function* (input: Input) {
-      const org = input.organizationID ? `organizations/${encodeURIComponent(input.organizationID)}/models` : undefined
-      const root = yield* gateway(input)
-      const url = root ? new URL(org ?? "models", root) : new URL(org ?? "openrouter/models", yield* base(input))
-      const result = yield* request(url.toString(), input, Models)
+      const path = input.organizationID ? `organizations/${encodeURIComponent(input.organizationID)}/models` : "models"
+      const result = yield* request(new URL(path, yield* gateway(input)).toString(), input, Models)
       return [
         ...new Set(
           result.data

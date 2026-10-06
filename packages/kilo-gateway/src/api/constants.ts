@@ -22,10 +22,16 @@ export const ENV_KILO_AI_GATEWAY_URL = "KILO_AI_GATEWAY_URL"
  */
 export const DEFAULT_KILO_AI_GATEWAY_URL = "https://ai-gateway.kilo.ai/api/v1"
 
-const gateway = process.env[ENV_KILO_AI_GATEWAY_URL]?.trim()
+const parse = (value: string | undefined) => {
+  const raw = value?.trim()
+  return raw && URL.canParse(raw) ? raw : undefined
+}
 
-/** Explicit KILO_AI_GATEWAY_URL; when unset the gateway is inferred from the Kilo API URL */
-export const KILO_AI_GATEWAY_OVERRIDE = gateway && URL.canParse(gateway) ? gateway : undefined
+/** Explicit KILO_AI_GATEWAY_URL */
+export const KILO_AI_GATEWAY_OVERRIDE = parse(process.env[ENV_KILO_AI_GATEWAY_URL])
+
+/** Explicit KILO_API_URL; without KILO_AI_GATEWAY_URL the gateway is `<KILO_API_URL>/api/v1` */
+export const KILO_API_OVERRIDE = parse(process.env[ENV_KILO_API_URL])
 
 /** Environment variable for custom Event Service URL */
 export const KILO_EVENT_SERVICE_URL_ENV = "EVENT_SERVICE_URL"

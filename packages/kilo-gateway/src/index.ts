@@ -55,11 +55,9 @@ export {
 } from "./api/embedding-models.js"
 export {
   KILO_OPENROUTER_BASE,
-  resolveKiloAiGatewayRoot,
-  resolveKiloAiGatewayUrl,
   resolveKiloApiRoot,
   resolveKiloGatewayBaseUrl,
-  resolveKiloOpenRouterBaseUrl,
+  resolveKiloGatewayUrl,
 } from "./api/url.js"
 export {
   AUTOCOMPLETE_MODELS,

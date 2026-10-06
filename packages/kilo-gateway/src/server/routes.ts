@@ -9,7 +9,7 @@ import { fetchKilocodeNotifications, KilocodeNotificationSchema } from "../api/n
 import { fetchKiloImageModels } from "../api/models.js"
 import { fetchOrganizationModes, clearModesCache } from "../api/modes.js"
 import { HEADER_FEATURE, HEADER_ORGANIZATIONID } from "../api/constants.js"
-import { KILO_OPENROUTER_BASE, resolveKiloAiGatewayUrl } from "../api/url.js"
+import { KILO_OPENROUTER_BASE, resolveKiloGatewayUrl } from "../api/url.js"
 import { buildKiloHeaders } from "../headers.js"
 import type { ImportDeps, DrizzleDb } from "../cloud-sessions.js"
 import {
@@ -434,15 +434,12 @@ export function createKiloRoutes(deps: KiloRoutesDeps) {
           [HEADER_FEATURE]: "vscode-extension",
         }
 
-        const response = await fetch(
-          resolveKiloAiGatewayUrl("audio/transcriptions", "/api/gateway/v1/audio/transcriptions"),
-          {
-            method: "POST",
-            headers,
-            signal: c.req.raw.signal,
-            body: JSON.stringify(body),
-          },
-        )
+        const response = await fetch(resolveKiloGatewayUrl("audio/transcriptions"), {
+          method: "POST",
+          headers,
+          signal: c.req.raw.signal,
+          body: JSON.stringify(body),
+        })
 
         const text = await response.text()
         return new Response(text, {

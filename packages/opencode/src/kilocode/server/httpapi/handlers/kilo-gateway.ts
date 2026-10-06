@@ -15,7 +15,7 @@ import {
   fetchKiloPassState,
   fetchOrganizationModes,
   fetchProfile,
-  resolveKiloAiGatewayUrl,
+  resolveKiloGatewayUrl,
 } from "@kilocode/kilo-gateway"
 import { DIRECT_FIM_ENV, requestMistralFim, resolveFimTarget } from "@kilocode/kilo-gateway/fim"
 import { DIRECT_EDIT_ENV, extractFencedBody, resolveEditTarget } from "@kilocode/kilo-gateway/edit"
@@ -296,7 +296,7 @@ export const kiloGatewayHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilo",
       const request = yield* HttpServerRequest.HttpServerRequest
       const response = yield* Effect.tryPromise({
         try: () =>
-          fetch(resolveKiloAiGatewayUrl("audio/transcriptions", "/api/gateway/v1/audio/transcriptions"), {
+          fetch(resolveKiloGatewayUrl("audio/transcriptions"), {
             method: "POST",
             headers: {
               "Content-Type": "application/json",

@@ -52,6 +52,6 @@ describe("KiloEmbedder", () => {
       modelId: "mistralai/mistral-embed-2312",
     })
 
-    expect((seen[0] as { baseURL: string }).baseURL).toBe("https://example.test/api/gateway/")
+    expect((seen[0] as { baseURL: string }).baseURL).toBe("https://example.test/api/v1/")
   })
 })

@@ -21,7 +21,7 @@ describe("fetchKiloEmbeddingModelCatalog", () => {
 
       expect(catalog.defaultModel).toBe("provider/model")
       const call = (fn as unknown as { mock: { calls: Array<[URL, RequestInit]> } }).mock.calls[0]
-      expect(call?.[0].toString()).toBe("https://example.test/api/gateway/embedding-models")
+      expect(call?.[0].toString()).toBe("https://example.test/api/v1/embedding-models")
       expect(call?.[1].redirect).toBe("error")
     } finally {
       global.fetch = prev

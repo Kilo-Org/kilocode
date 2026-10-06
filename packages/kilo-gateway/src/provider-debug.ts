@@ -4,7 +4,7 @@ import type { KiloProviderOptions } from "./types.js"
 import { getApiKey } from "./auth/token.js"
 import { buildKiloHeaders, getDefaultHeaders } from "./headers.js"
 import { ANONYMOUS_API_KEY } from "./api/constants.js"
-import { resolveKiloOpenRouterBaseUrl } from "./api/url.js"
+import { resolveKiloGatewayBaseUrl } from "./api/url.js"
 import { buildRequestHeaders } from "./provider.js"
 
 /**
@@ -20,7 +20,7 @@ export function createKiloDebug(options: KiloProviderOptions = {}): SDK {
   console.log("  - Source:", options.kilocodeToken ? "kilocodeToken" : options.apiKey ? "apiKey" : "none")
   console.log("  - Value:", apiKey ? `${apiKey.substring(0, 8)}...${apiKey.substring(apiKey.length - 8)}` : "MISSING!")
 
-  const openRouterUrl = resolveKiloOpenRouterBaseUrl({ baseURL: options.baseURL, token: apiKey })
+  const openRouterUrl = resolveKiloGatewayBaseUrl({ baseURL: options.baseURL, token: apiKey })
   console.log("🔗 [KILO DEBUG] OpenRouter URL:", openRouterUrl)
 
   // Merge custom headers with defaults
