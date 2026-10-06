@@ -22,3 +22,27 @@ for (const status of ["pending", "running", "completed"]) {
     ])
   })
 }
+
+const windows = {
+  plain: [
+    "pattern=Понятно",
+    "\\Program.cs pattern=Понятно",
+    "/Program.cs pattern=Понятно",
+    "C:\\SourcesOld\\Program.cs pattern=Понятно",
+  ],
+  webview: [
+    "pattern=Понятно",
+    "Program.cs pattern=Понятно",
+    "Program.cs pattern=Понятно",
+    "C:\\SourcesOld\\Program.cs pattern=Понятно",
+  ],
+}
+
+for (const [name, expected] of Object.entries(windows)) {
+  test(`grep relativizes targets inside a ${name} Windows workspace`, async ({ page }) => {
+    await page.goto("/iframe.html?id=components-messagepart--grep-windows-workspace&viewMode=story")
+
+    const rows = page.locator(`[data-workspace='${name}'] [data-slot='basic-tool-tool-subtitle']`)
+    await expect(rows).toHaveText(expected)
+  })
+}

@@ -339,9 +339,9 @@ const boardBroadcastPart: ToolPart = {
 
 const mockDataBoardBroadcast = createMockData([boardBroadcastPart])
 
-function AllProviders(props: { children: any; data?: MockData; onOpenDiff?: () => void }) {
+function AllProviders(props: { children: any; data?: MockData; directory?: string; onOpenDiff?: () => void }) {
   return (
-    <DataProvider data={props.data ?? mockData} directory="/project" onOpenDiff={props.onOpenDiff}>
+    <DataProvider data={props.data ?? mockData} directory={props.directory ?? "/project"} onOpenDiff={props.onOpenDiff}>
       <DiffComponentProvider component={Diff}>
         <CodeComponentProvider component={Code}>
           <FileComponentProvider component={File}>
@@ -409,6 +409,38 @@ export const GrepTargets: Story = {
         )}
       </For>
     </AllProviders>
+  ),
+}
+
+// The VS Code webview appends `/` to the workspace directory, so Windows roots arrive as `C:\Sources/`
+export const GrepWindowsWorkspace: Story = {
+  render: () => (
+    <For
+      each={[
+        { name: "plain", directory: "C:\\Sources" },
+        { name: "webview", directory: "C:\\Sources/" },
+      ]}
+    >
+      {(workspace) => (
+        <section data-workspace={workspace.name}>
+          <AllProviders directory={workspace.directory}>
+            <For
+              each={["C:\\Sources", "C:\\Sources\\Program.cs", "C:/Sources/Program.cs", "C:\\SourcesOld\\Program.cs"]}
+            >
+              {(path) => (
+                <Dynamic
+                  component={ToolRegistry.render("grep")}
+                  tool="grep"
+                  status="completed"
+                  input={{ path, pattern: "Понятно" }}
+                  metadata={{}}
+                />
+              )}
+            </For>
+          </AllProviders>
+        </section>
+      )}
+    </For>
   ),
 }
 

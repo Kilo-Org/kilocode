@@ -215,11 +215,15 @@ export function relativizeProjectPath(path: string, directory?: string) {
   if (!directory) return path
   if (directory === "/") return path
   if (directory === "\\") return path
-  if (path === directory) return ""
 
-  const separator = directory.includes("\\") ? "\\" : "/"
-  const prefix = directory.endsWith(separator) ? directory : directory + separator
-  if (!path.startsWith(prefix)) return path
+  // Windows workspaces arrive with mixed separators (e.g. `C:\Sources/`), so compare with `/` only
+  const target = path.replaceAll("\\", "/")
+  const root = directory.replaceAll("\\", "/")
+  const trim = (value: string) => value.replace(/\/+$/, "")
+  if (trim(target) === trim(root)) return ""
+
+  const prefix = root.endsWith("/") ? root : root + "/"
+  if (!target.startsWith(prefix)) return path
   return path.slice(directory.length)
 }
 
