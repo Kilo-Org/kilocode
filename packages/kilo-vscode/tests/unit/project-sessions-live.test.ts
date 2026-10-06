@@ -2,6 +2,7 @@ import { describe, expect, it } from "bun:test"
 import { createRoot, createSignal } from "solid-js"
 import { createProjectSessionsLive } from "../../webview-ui/agent-manager/project/sessions-live"
 import { recentSessions } from "../../webview-ui/src/context/session-utils"
+import { fixture } from "../fixtures/run"
 import type { ProjectSessionInfo, SessionInfo } from "../../webview-ui/src/types/messages"
 
 const session = (worktreeId: string | null): ProjectSessionInfo => ({
@@ -45,19 +46,11 @@ describe("project session live state", () => {
     })
   })
 
-  it("forwards the project session accessor to recents while retaining the sidebar default", async () => {
-    const root = `${import.meta.dir}/../../webview-ui`
-    const [app, intro, welcome] = await Promise.all([
-      Bun.file(`${root}/agent-manager/AgentManagerApp.tsx`).text(),
-      Bun.file(`${root}/agent-manager/intro/AgentManagerIntro.tsx`).text(),
-      Bun.file(`${root}/src/components/chat/WelcomeEmptyState.tsx`).text(),
-    ])
-
-    expect(app).toMatch(/const intro = createIntro\(\{[^}]*sessions: projectSessionsLive\.current,/s)
-    expect(intro).toContain("sessions={opts.sessions}")
-    expect(intro).toContain("sessions={props.sessions}")
-    expect(welcome).toContain("recentSessions(props.sessions?.() ?? session.sessions())")
-  })
+  it(
+    "consumes a project-scoped sessions accessor and keeps the shared store as the default",
+    () => fixture("welcome-recent-sessions"),
+    30_000,
+  )
 
   it("uses managed placement while the project session cache is stale", () => {
     createRoot((dispose) => {
