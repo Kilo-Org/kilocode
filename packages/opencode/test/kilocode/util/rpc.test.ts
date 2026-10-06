@@ -96,14 +96,59 @@ describe("worker rpc", () => {
     expect(seen).toEqual(["one"])
   })
 
-  test("a reply stops bounding calls already in flight", async () => {
+  test("recovers when the worker was ready before the client attached", async () => {
     using wire = channel()
     KiloRpc.arm()
+    // Worker announces itself with nobody listening, so that announcement is lost.
     KiloRpc.listen({ echo: (input: string) => input })
     const client = KiloRpc.client<{ echo: (input: string) => string }>(wire.parent)
 
-    // First reply completes the handshake; a later call must carry no timer at all.
+    // The client's probe has to recover readiness, otherwise both sides wait forever.
     expect(await client.call("echo", "first")).toBe("first")
     expect(await client.call("echo", "second")).toBe("second")
+  })
+
+  test("holds requests until the worker announces itself", async () => {
+    using wire = channel()
+    const seen: string[] = []
+    const parent = {
+      postMessage: (data: string) => {
+        seen.push(data)
+        wire.parent.postMessage(data)
+      },
+      get onmessage() {
+        return wire.parent.onmessage
+      },
+      set onmessage(handler) {
+        wire.parent.onmessage = handler
+      },
+    }
+    const client = KiloRpc.client<{ echo: (input: string) => string }>(parent)
+    const requests = () => seen.filter((data) => JSON.parse(data).type === "rpc.request")
+
+    const inflight = client.call("echo", "waiting")
+    // No request may reach a worker that has not said it is ready: this is the window where
+    // the compiled worker is still evaluating its imports and silently drops messages.
+    expect(requests()).toEqual([])
+
+    KiloRpc.arm()
+    KiloRpc.listen({ echo: (input: string) => `got ${input}` })
+
+    expect(await inflight).toBe("got waiting")
+    expect(requests().length).toBe(1)
+  })
+
+  test("rejects queued calls when the worker never becomes ready", async () => {
+    using wire = channel()
+    const previous = process.env["KILO_RPC_HANDSHAKE_TIMEOUT"]
+    process.env["KILO_RPC_HANDSHAKE_TIMEOUT"] = "150"
+    try {
+      // The worker side never calls listen, so rpc.ready never arrives.
+      const client = KiloRpc.client<{ echo: (input: string) => string }>(wire.parent)
+      await expect(client.call("echo", "lost")).rejects.toThrow(/never became ready within 150ms/)
+    } finally {
+      if (previous === undefined) delete process.env["KILO_RPC_HANDSHAKE_TIMEOUT"]
+      if (previous !== undefined) process.env["KILO_RPC_HANDSHAKE_TIMEOUT"] = previous
+    }
   })
 })

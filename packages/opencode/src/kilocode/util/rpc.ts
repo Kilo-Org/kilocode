@@ -16,9 +16,15 @@
  * 37476092331, 37493845893), where the worker logged `worker booted` / `worker listening`
  * yet `creating instance` never followed.
  *
- * `arm` closes the race by queueing early messages; `listen` replays them and reports handler
- * failures as `rpc.error`; `client` rejects on those failures and bounds only the pre-handshake
- * window, so legitimately long calls (a proxied LLM request) are never cut short.
+ * The fix is parent-side gating: `listen` announces `rpc.ready`, and `client` holds every
+ * request until it arrives, so nothing is posted into the window at all. `arm` is a second
+ * line of defence for anything that still lands early, `listen` answers handler failures as
+ * `rpc.error`, and the only bound is "the worker never became ready" -- once it is ready calls
+ * run unbounded, so a long proxied request is never cut short.
+ *
+ * Arming inside the worker is not sufficient on its own: static imports evaluate before the
+ * module body, so `arm` cannot run until Server/InstanceRuntime/etc have loaded, which is
+ * where most of the 2s window is spent.
  */
 
 import * as Log from "@opencode-ai/core/util/log"
@@ -28,10 +34,12 @@ type Definition = {
 }
 
 /**
- * Only bounds calls issued before the worker's first reply, never in-flight work after it.
- * Overridable so the release PTY smoke can fail faster than its own silence watchdog.
+ * How long to wait for the worker to announce itself. Overridable so the release PTY smoke can
+ * fail faster than its own silence watchdog. Read per client so a caller can set it at startup.
  */
-const HANDSHAKE_TIMEOUT = Number(process.env["KILO_RPC_HANDSHAKE_TIMEOUT"] ?? 30_000)
+function timeout() {
+  return Number(process.env["KILO_RPC_HANDSHAKE_TIMEOUT"] ?? 30_000)
+}
 
 const log = Log.create({ service: "worker-rpc" })
 
@@ -54,6 +62,12 @@ export function arm() {
 export function listen(rpc: Definition) {
   const handle = async (data: string) => {
     const parsed = JSON.parse(data)
+    // Covers the reverse order: a parent that attached after this worker already announced
+    // itself missed that announcement, so answer its probe with a fresh one.
+    if (parsed.type === "rpc.hello") {
+      postMessage(JSON.stringify({ type: "rpc.ready" }))
+      return
+    }
     if (parsed.type !== "rpc.request") return
     // Records that the request actually crossed the channel, which separates a lost
     // request from a lost reply when the parent reports a timeout.
@@ -81,31 +95,53 @@ export function listen(rpc: Definition) {
   armed.queueing = false
   onmessage = (evt) => void handle(evt.data)
   for (const data of early.splice(0)) void handle(data)
+  // Tell the parent it is safe to post. Queueing on the parent is what actually closes the
+  // race: `arm` can only run once this module's imports have evaluated, which in a compiled
+  // binary is seconds after the parent gets its Worker handle.
+  postMessage(JSON.stringify({ type: "rpc.ready" }))
 }
 
 export function client<T extends Definition>(target: {
   postMessage: (data: string) => void | null
   onmessage: ((this: Worker, ev: MessageEvent<any>) => any) | null
 }) {
-  type Entry = { resolve: (result: any) => void; reject: (err: unknown) => void; timer?: Timer }
+  type Entry = { resolve: (result: any) => void; reject: (err: unknown) => void }
   const pending = new Map<number, Entry>()
   const listeners = new Map<string, Set<(data: any) => void>>()
-  const live = { id: 0, handshake: false }
+  const outbox: string[] = []
+  const live = { id: 0, ready: false, timer: undefined as Timer | undefined }
 
   const settle = (id: number) => {
     const entry = pending.get(id)
     if (!entry) return undefined
-    if (entry.timer) clearTimeout(entry.timer)
     pending.delete(id)
     return entry
   }
 
+  // Bounds only "the worker never came up". Once it is ready, calls run unbounded so a long
+  // proxied request is never cut short. Deliberately not keyed off arbitrary inbound traffic:
+  // the worker emits global events before it can serve requests, and treating those as proof
+  // of readiness is what previously disarmed this guard.
+  const limit = timeout()
+  live.timer = setTimeout(() => {
+    const message = `worker rpc never became ready within ${limit}ms`
+    log.error(message, { queued: outbox.length, pending: pending.size })
+    live.timer = undefined
+    outbox.length = 0
+    const waiting = [...pending.values()]
+    pending.clear()
+    for (const entry of waiting) entry.reject(new Error(message))
+  }, limit)
+  live.timer?.unref?.()
+
   target.onmessage = (evt) => {
     const parsed = JSON.parse(evt.data)
-    // Any message proves the channel is live, so stop bounding the calls already in flight.
-    if (!live.handshake) {
-      live.handshake = true
-      for (const entry of pending.values()) if (entry.timer) clearTimeout(entry.timer)
+    if (parsed.type === "rpc.ready") {
+      if (live.timer) clearTimeout(live.timer)
+      live.timer = undefined
+      live.ready = true
+      for (const data of outbox.splice(0)) target.postMessage(data)
+      return
     }
     if (parsed.type === "rpc.result") settle(parsed.id)?.resolve(parsed.result)
     if (parsed.type === "rpc.error") settle(parsed.id)?.reject(new Error(`worker rpc failed: ${parsed.error}`))
@@ -116,20 +152,18 @@ export function client<T extends Definition>(target: {
     }
   }
 
+  // Probe in case the worker announced itself before this handler existed. `arm` buffers it
+  // during startup, so `listen` replays it and answers even when it lands early.
+  target.postMessage(JSON.stringify({ type: "rpc.hello" }))
+
   return {
     call<Method extends keyof T>(method: Method, input: Parameters<T[Method]>[0]): Promise<ReturnType<T[Method]>> {
       const id = live.id++
       return new Promise((resolve, reject) => {
-        const timer = live.handshake
-          ? undefined
-          : setTimeout(() => {
-              pending.delete(id)
-              const message = `worker rpc ${String(method)} got no reply within ${HANDSHAKE_TIMEOUT}ms: the worker never answered`
-              log.error(message, { method: String(method), id })
-              reject(new Error(message))
-            }, HANDSHAKE_TIMEOUT)
-        pending.set(id, { resolve, reject, timer })
-        target.postMessage(JSON.stringify({ type: "rpc.request", method, input, id }))
+        pending.set(id, { resolve, reject })
+        const data = JSON.stringify({ type: "rpc.request", method, input, id })
+        if (live.ready) return target.postMessage(data)
+        outbox.push(data)
       })
     },
     on<Data>(event: string, handler: (data: Data) => void) {
