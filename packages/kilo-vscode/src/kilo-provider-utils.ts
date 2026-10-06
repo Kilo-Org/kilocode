@@ -788,6 +788,7 @@ export function mapCloudSessionMessageToWebviewMessage(message: CloudSessionMess
     id: message.info.id,
     sessionID: message.info.sessionID,
     role: message.info.role as "user" | "assistant",
+    parentID: message.info.parentID,
     parts: message.parts,
     createdAt: message.info.time?.created
       ? new Date(message.info.time.created).toISOString()
