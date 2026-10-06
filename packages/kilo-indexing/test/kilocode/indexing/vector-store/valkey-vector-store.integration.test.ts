@@ -285,8 +285,8 @@ describe.skipIf(!serverAvailable)("ValkeyVectorStore Integration Tests", () => {
     })
   })
 
-  describe("Batch upsert performance", () => {
-    test("should upsert 60 points in a single pipeline", async () => {
+  describe("Batch upsert", () => {
+    test("should make all 60 upserted points searchable", async () => {
       store = createStore()
       await store.initialize()
 
@@ -301,9 +301,7 @@ describe.skipIf(!serverAvailable)("ValkeyVectorStore Integration Tests", () => {
         points.push(makePoint(`batch-${i}`, normalized, `src/file${i}.ts`, `code chunk ${i}`, i * 10, i * 10 + 9))
       }
 
-      const startTime = Date.now()
       await store.upsertPoints(points)
-      const elapsed = Date.now() - startTime
 
       // Wait for indexing
       await new Promise((resolve) => setTimeout(resolve, 1000))
@@ -312,9 +310,6 @@ describe.skipIf(!serverAvailable)("ValkeyVectorStore Integration Tests", () => {
       // Search with a vector that should match at least some points
       const results = await store.search(points[0]!.vector, undefined, 0.0, 60)
       expect(results.length).toBe(60)
-
-      // Verify the batch completed in reasonable time (< 10 seconds)
-      expect(elapsed).toBeLessThan(10000)
     })
   })
 

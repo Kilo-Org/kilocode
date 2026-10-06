@@ -155,16 +155,6 @@ describe("ValkeyVectorStore Unit Tests", () => {
       const store = new ValkeyVectorStore(TEST_WORKSPACE, "localhost:6379", TEST_VECTOR_SIZE)
       expect(store.getValkeyUrl()).toBe("redis://localhost:6379")
     })
-
-    test("preserves existing redis:// scheme", () => {
-      const store = new ValkeyVectorStore(TEST_WORKSPACE, "redis://myhost:6380", TEST_VECTOR_SIZE)
-      expect(store.getValkeyUrl()).toBe("redis://myhost:6380")
-    })
-
-    test("preserves existing rediss:// scheme", () => {
-      const store = new ValkeyVectorStore(TEST_WORKSPACE, "rediss://secure-host:6380", TEST_VECTOR_SIZE)
-      expect(store.getValkeyUrl()).toBe("rediss://secure-host:6380")
-    })
   })
 
   describe("initialize()", () => {

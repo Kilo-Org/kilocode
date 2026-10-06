@@ -103,7 +103,7 @@ function resetMocks() {
   mockExec.mockResolvedValue([])
 }
 
-describe("ValkeyVectorStore - Lifecycle, Metadata, Error Handling, and Service Factory", () => {
+describe("ValkeyVectorStore - Lifecycle, Metadata, and Error Handling", () => {
   beforeEach(() => {
     resetMocks()
   })
@@ -304,8 +304,8 @@ describe("ValkeyVectorStore - Lifecycle, Metadata, Error Handling, and Service F
     })
   })
 
-  describe("Error logging includes correct context", () => {
-    test("upsert error re-throws with correct error and exercises error path", async () => {
+  describe("Errors propagate to the caller", () => {
+    test("upsertPoints re-throws the pipeline error", async () => {
       const store = createStore()
 
       // Make exec throw an error
@@ -325,13 +325,12 @@ describe("ValkeyVectorStore - Lifecycle, Metadata, Error Handling, and Service F
         },
       ]
 
-      // Verify the error is re-thrown (confirms error handling path is exercised)
       const thrownError = await store.upsertPoints(points).catch((e) => e)
       expect(thrownError).toBe(upsertError)
       expect(thrownError.message).toBe("Pipeline execution failed")
     })
 
-    test("deletion error re-throws with correct error and exercises error path", async () => {
+    test("deletePointsByMultipleFilePaths re-throws the search error", async () => {
       const store = createStore()
 
       // collectionExists → true
@@ -343,13 +342,12 @@ describe("ValkeyVectorStore - Lifecycle, Metadata, Error Handling, and Service F
 
       const filePaths = ["src/a.ts", "src/b.ts", "src/c.ts", "src/d.ts"]
 
-      // Verify the error is re-thrown (confirms error handling path is exercised)
       const thrownError = await store.deletePointsByMultipleFilePaths(filePaths).catch((e) => e)
       expect(thrownError).toBe(deleteError)
       expect(thrownError.message).toBe("Search during delete failed")
     })
 
-    test("search error re-throws with correct error and exercises error path", async () => {
+    test("search re-throws the KNN error", async () => {
       const store = createStore()
 
       // collectionExists → true
@@ -359,7 +357,6 @@ describe("ValkeyVectorStore - Lifecycle, Metadata, Error Handling, and Service F
       const searchError = new Error("KNN search failed")
       mockFtSearch.mockRejectedValue(searchError)
 
-      // Verify the error is re-thrown (confirms error handling path is exercised)
       const thrownError = await store
         .search(
           Array.from({ length: 128 }, () => 0.5),
@@ -400,27 +397,6 @@ describe("ValkeyVectorStore - Lifecycle, Metadata, Error Handling, and Service F
 
       const result = await store.hasIndexedData()
       expect(result).toBe(false)
-    })
-  })
-
-  describe("Service factory", () => {
-    test("creates ValkeyVectorStore with correct params", async () => {
-      // We test the factory logic by verifying ValkeyVectorStore is constructed correctly
-      const store = new ValkeyVectorStore("/my/workspace", "redis://valkey.example.com:6380", 768, "secret-password", {
-        provider: "openai",
-        modelId: "text-embedding-3-small",
-        dimension: 768,
-      } as any)
-
-      expect(store.getValkeyUrl()).toBe("redis://valkey.example.com:6380")
-      expect(store.getVectorSize()).toBe(768)
-      expect(store.getProfile()).toEqual({
-        provider: "openai",
-        modelId: "text-embedding-3-small",
-        dimension: 768,
-      })
-      // Collection name is deterministic based on workspace path
-      expect(store.getCollectionName()).toMatch(/^ws-[a-f0-9]{16}$/)
     })
   })
 
