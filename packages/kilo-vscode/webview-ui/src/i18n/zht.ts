@@ -1367,4 +1367,6 @@ export const dict = {
   "settings.experimental.browserAutomation.systemChrome.description":
     "為整合瀏覽器使用已安裝的 Google Chrome。僅在已安裝相容的 Playwright Chromium 瀏覽器時才停用。",
   "chat.search.searchingHistory": "正在搜尋較早的訊息…",
+  "browserTab.noSession": "從工作階段開啟瀏覽器以預覽本機應用程式或公開 HTTPS 頁面。",
+  "browserTab.disabled": "整合瀏覽器已停用。請在 Kilo 設定 > 實驗性中啟用。",
 } satisfies Partial<Record<Keys, string>>

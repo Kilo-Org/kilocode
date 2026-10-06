@@ -1450,4 +1450,7 @@ export const dict = {
   "settings.experimental.browserAutomation.systemChrome.description":
     "Użyj zainstalowanej przeglądarki Google Chrome dla zintegrowanej przeglądarki. Wyłącz tylko wtedy, gdy zgodna przeglądarka Playwright Chromium jest już zainstalowana.",
   "chat.search.searchingHistory": "Wyszukiwanie we wcześniejszych wiadomościach…",
+  "browserTab.noSession":
+    "Otwórz przeglądarkę z sesji, aby wyświetlić podgląd lokalnej aplikacji lub publicznej strony HTTPS.",
+  "browserTab.disabled": "Zintegrowana przeglądarka jest wyłączona. Włącz ją w Ustawieniach Kilo > Eksperymentalne.",
 }

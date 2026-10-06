@@ -1473,4 +1473,8 @@ export const dict = {
   "settings.experimental.browserAutomation.systemChrome.description":
     "Gebruik de geïnstalleerde Google Chrome voor de geïntegreerde browser. Schakel dit alleen uit als er al een compatibele Playwright Chromium-browser is geïnstalleerd.",
   "chat.search.searchingHistory": "Eerdere berichten doorzoeken…",
+  "browserTab.noSession":
+    "Open de browser vanuit een sessie om een lokale applicatie of een openbare HTTPS-pagina te bekijken.",
+  "browserTab.disabled":
+    "De geïntegreerde browser is uitgeschakeld. Schakel deze in via Kilo-instellingen > Experimenteel.",
 }

@@ -195,6 +195,12 @@
         }
       },
       {
+        "command": "kilo-code.new.openBrowser",
+        "title": "Open Integrated Browser",
+        "category": "Kilo Code",
+        "icon": "$(globe)"
+      },
+      {
         "command": "kilo-code.new.showChanges",
         "title": "Show Changes",
         "category": "Kilo Code"

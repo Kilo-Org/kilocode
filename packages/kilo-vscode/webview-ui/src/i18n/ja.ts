@@ -1436,4 +1436,6 @@ export const dict = {
   "settings.experimental.browserAutomation.systemChrome.description":
     "統合ブラウザーにインストール済みの Google Chrome を使用します。互換性のある Playwright Chromium ブラウザーが既にインストールされている場合にのみ無効にしてください。",
   "chat.search.searchingHistory": "以前のメッセージを検索しています…",
+  "browserTab.noSession": "セッションからブラウザを開いて、ローカルアプリまたは公開 HTTPS ページをプレビューします。",
+  "browserTab.disabled": "統合ブラウザは無効になっています。Kilo 設定 > 実験的機能で有効にしてください。",
 }

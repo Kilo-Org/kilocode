@@ -1442,4 +1442,6 @@ export const dict = {
   "settings.experimental.browserAutomation.systemChrome.description":
     "از Google Chrome نصب‌شده برای مرورگر یکپارچه استفاده کنید. فقط زمانی غیرفعال کنید که مرورگر Playwright Chromium سازگار از قبل نصب شده باشد.",
   "chat.search.searchingHistory": "در حال جستجو در پیام‌های قبلی…",
+  "browserTab.noSession": "مرورگر را از یک نشست باز کنید تا یک برنامه محلی یا یک صفحه HTTPS عمومی را پیش‌نمایش بگیرید.",
+  "browserTab.disabled": "مرورگر یکپارچه غیرفعال است. آن را در تنظیمات Kilo > آزمایشی فعال کنید.",
 }

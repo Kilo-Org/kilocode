@@ -1440,4 +1440,7 @@ export const dict = {
   "settings.experimental.browserAutomation.systemChrome.description":
     "Bruk den installerte Google Chrome for den integrerte nettleseren. Deaktiver bare når en kompatibel Playwright Chromium-nettleser allerede er installert.",
   "chat.search.searchingHistory": "Søker i tidligere meldinger…",
+  "browserTab.noSession":
+    "Åpne nettleseren fra en økt for å forhåndsvise en lokal applikasjon eller en offentlig HTTPS-side.",
+  "browserTab.disabled": "Den integrerte nettleseren er deaktivert. Aktiver den i Kilo-innstillinger > Eksperimentelt.",
 } satisfies Partial<Record<Keys, string>>
