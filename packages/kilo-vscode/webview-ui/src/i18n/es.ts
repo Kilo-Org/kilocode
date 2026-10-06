@@ -201,6 +201,14 @@ export const dict = {
   "prompt.worktrees.title": "Worktrees",
   "prompt.worktrees.search": "Buscar Worktrees",
   "prompt.thinking.tooltip": "Esfuerzo de razonamiento",
+  "prompt.shortcutHint.addSelection": "para añadir la selección",
+  "prompt.shortcutHint.waiting": "para responder a una sesión en espera",
+  "prompt.shortcutHint.type": "para escribir",
+  "prompt.shortcutHint.sessions": "para cambiar de sesión",
+  "prompt.shortcutHint.stop": "para detener",
+  "prompt.shortcutHint.changes": "para revisar los cambios",
+  "prompt.shortcutHint.pr": "para abrir la PR",
+  "prompt.shortcutHint.mode": "Siguiente modo",
   "prompt.action.send": "Enviar",
   "prompt.action.continue": "Continuar",
   "prompt.action.send.blocked": "Responda o descarte la pregunta pendiente primero",
@@ -210,6 +218,10 @@ export const dict = {
   "prompt.agents.show": "Mostrar agentes en segundo plano",
   "prompt.action.enhance": "Mejorar prompt",
   "prompt.paste.expand": "Haz clic para expandir el texto pegado",
+  "prompt.issues.title": "Problemas de la sesión",
+  "prompt.mcp.provider": "MCP de {{name}}",
+  "prompt.mcp.openSettings": "Abrir en Configuración",
+  "prompt.mcp.signIn.busy": "Iniciando sesión…",
   "prompt.action.autoApprove.enable": "Activar aprobación automática",
   "prompt.action.autoApprove.disable": "Desactivar aprobación automática",
   "prompt.action.autoApprove.enabled":
@@ -790,11 +802,13 @@ export const dict = {
   "ui.sessionTurn.status.consideringNextSteps": "Considerando siguientes pasos...",
 
   "dialog.model.noProviders": "Sin proveedores",
+  "dialog.model.unavailable": "Modelos de Kilo no disponibles",
 
   "prompt.placeholder.connecting": "Conectando al servidor...",
   "prompt.placeholder.error": "Conexión fallida. Revisa el panel de salida o reinicia la extensión.",
   "prompt.placeholder.default":
     "Escribe un mensaje, @ para mencionar archivos... (Enter para enviar, Shift+Enter para nueva línea)",
+  "prompt.placeholder.hint": "Escribe un mensaje, @ para mencionar archivos... ({{key}} {{action}})",
 
   "context.usage.sessionCost": "Coste de la sesión",
   "context.usage.olderSessions": "{{count}} sesiones anteriores",
@@ -949,15 +963,12 @@ export const dict = {
   "settings.sandboxing.writablePaths.title": "Rutas de escritura adicionales",
   "settings.sandboxing.writablePaths.description":
     "Rutas del sistema de archivos adicionales donde el sandbox permite escritura (por ej., /tmp, /var/log). Se combinan con las rutas de escritura predeterminadas cuando el sandbox está activo.",
-  "settings.experimental.multiProject.title": "Agent Manager Multi-Proyecto",
   "settings.experimental.conversationPromptHistory.title": "Historial de prompts por conversación",
   "settings.experimental.conversationPromptHistory.description":
     "Mantén el historial de prompts (ArrowUp/ArrowDown) separado para cada conversación en lugar de compartir un único historial entre todas.",
   "settings.experimental.claudeMigration.title": "Migración de Claude Code",
   "settings.experimental.claudeMigration.description":
     "Importar una vez las instrucciones globales CLAUDE.md compatibles, habilidades simples y definiciones MCP desactivadas. Los archivos originales de Claude no se modifican; reinicia el backend después de activar.",
-  "settings.experimental.multiProject.description":
-    "Habilitar la gestión de sesiones y worktrees en múltiples repositorios en Agent Manager. El repositorio del workspace actual es siempre el proyecto predeterminado.",
   "settings.experimental.mcpTimeout.title": "Tiempo de espera MCP (ms)",
   "settings.experimental.mcpTimeout.description": "Tiempo de espera para solicitudes del servidor MCP en milisegundos",
   "settings.experimental.remote.title": "Control Remote",
@@ -1048,12 +1059,31 @@ export const dict = {
   "settings.agentBehaviour.removeMcp.title": "Eliminar servidor MCP",
   "settings.agentBehaviour.removeMcp.confirm":
     '¿Eliminar el servidor MCP "{{name}}"? Esto lo eliminará de su configuración.',
+  "settings.agentBehaviour.removeMcp.bundleConfirm":
+    '¿Eliminar el servidor MCP "{{name}}" y sus habilidades complementarias? Esto elimina tanto el servidor como cada habilidad que pertenece a esta instalación del Marketplace.',
   "settings.agentBehaviour.removeMcp.button": "Eliminar",
   "settings.agentBehaviour.editMcp": "Editar servidor MCP",
   "settings.agentBehaviour.editMcp.transportLocal": "Servidor local (transporte stdio)",
   "settings.agentBehaviour.editMcp.transportRemote": "Servidor remoto (transporte SSE/HTTP)",
   "settings.agentBehaviour.editMcp.env": "Variables de entorno",
   "settings.agentBehaviour.editMcp.env.help": "Variables pasadas al proceso del servidor MCP.",
+  "settings.agentBehaviour.editMcp.oauth": "OAuth",
+  "settings.agentBehaviour.editMcp.oauth.help":
+    "Déjelo en Automático a menos que el servidor requiera un cliente preregistrado. Un secreto de cliente se almacena en su archivo de configuración de Kilo.",
+  "settings.agentBehaviour.editMcp.oauth.mode": "Modo",
+  "settings.agentBehaviour.editMcp.oauth.mode.automatic": "Automático",
+  "settings.agentBehaviour.editMcp.oauth.mode.disabled": "Desactivado",
+  "settings.agentBehaviour.editMcp.oauth.mode.custom": "Cliente personalizado",
+  "settings.agentBehaviour.editMcp.oauth.clientId": "ID de cliente",
+  "settings.agentBehaviour.editMcp.oauth.clientSecret": "Secreto de cliente",
+  "settings.agentBehaviour.editMcp.oauth.scope": "Alcance",
+  "settings.agentBehaviour.editMcp.oauth.callbackPort": "Puerto de retorno",
+  "settings.agentBehaviour.editMcp.oauth.redirectUri": "URI de redirección",
+  "settings.agentBehaviour.editMcp.oauth.redirectUri.help":
+    "El valor predeterminado es http://127.0.0.1:19876/mcp/oauth/callback y anula el puerto de retorno.",
+  "settings.agentBehaviour.editMcp.oauth.port.invalid": "Ingrese un puerto entre 1 y 65535.",
+  "settings.agentBehaviour.editMcp.oauth.secret.invalid": "Un secreto de cliente requiere un ID de cliente.",
+  "settings.agentBehaviour.editMcp.oauth.redirectUri.invalid": "Ingrese un URI de redirección válido.",
   "settings.agentBehaviour.addMcp.command": "Comando",
   "settings.agentBehaviour.addMcp.command.placeholder": "e.g. npx",
   "settings.agentBehaviour.addMcp.args": "Argumentos",
@@ -1066,6 +1096,8 @@ export const dict = {
   "settings.agentBehaviour.removeSkill.title": "Eliminar habilidad",
   "settings.agentBehaviour.removeSkill.confirm":
     '¿Eliminar la habilidad "{{name}}"? Esto borrará los archivos de la habilidad del disco.',
+  "settings.agentBehaviour.removeSkill.bundleConfirm":
+    '¿Eliminar la habilidad "{{name}}"? Esto también desinstalará el servidor MCP {{mcp}} y cada habilidad complementaria de la misma instalación del Marketplace.',
   "settings.agentBehaviour.removeSkill.button": "Eliminar",
   "settings.agentBehaviour.rules.description":
     "Las reglas son archivos de instrucciones que guían el comportamiento del agente. Se incluyen en el prompt del sistema para cada conversación. Añada rutas de archivos a continuación para incluir reglas adicionales.",
@@ -1082,6 +1114,12 @@ export const dict = {
   "settings.agentBehaviour.mcpDetail.command": "Comando",
   "settings.agentBehaviour.mcpDetail.args": "Argumentos",
   "settings.agentBehaviour.mcpDetail.env": "Entorno",
+  "settings.agentBehaviour.mcpSignIn.cancel": "Cancelar inicio de sesión",
+  "settings.agentBehaviour.mcpRemoving": "Eliminando…",
+  "settings.agentBehaviour.mcpResetAuth": "Restablecer inicio de sesión",
+  "settings.agentBehaviour.mcpResetAuth.title": "Restablecer inicio de sesión de MCP",
+  "settings.agentBehaviour.mcpResetAuth.confirm":
+    '¿Borrar el inicio de sesión guardado para "{{name}}"? Deberás iniciar sesión de nuevo.',
   "settings.agentBehaviour.mcpBrowseMarketplace": "Explorar Marketplace",
   "settings.agentBehaviour.mcpEmpty":
     "No hay servidores MCP configurados. Añada servidores MCP en kilo.jsonc o pida al agente que los añada.",
@@ -1262,6 +1300,9 @@ export const dict = {
   "settings.display.mcpTool.expanded": "Expandidos",
   "settings.display.mcpTool.collapsed": "Contraídos",
 
+  "settings.display.shortcutHints.title": "Mostrar sugerencias de atajos",
+  "settings.display.shortcutHints.description":
+    "Muestra en el prompt vacío el atajo de teclado adecuado a lo que hace ahora, por ejemplo cómo añadir el código seleccionado o volver al prompt.",
   "settings.display.tokenThroughput.title": "Mostrar rendimiento de tokens",
   "settings.display.tokenThroughput.description":
     "Mostrar la velocidad de generación de texto (tokens/sec) en el último mensaje del asistente y en el encabezado de la tarea. Se muestra de forma predeterminada; desactiva esta opción para ocultarla cuando sea necesario.",

@@ -31,7 +31,6 @@ export const dict = {
   "agentManager.local": "lokalno",
   "agentManager.sidebar.collapse": "Skupi bočnu traku",
   "agentManager.sidebar.expand": "Prikaži bočnu traku",
-  "agentManager.section.worktrees": "WORKTREES",
   "agentManager.section.sessions": "SESIJE",
   "agentManager.projects": "PROJEKTI",
   "agentManager.settings.title": "Agent Manager",
@@ -44,6 +43,7 @@ export const dict = {
   "agentManager.settings.worktreePool.title": "Prethodno zagrijavanje worktree-a",
   "agentManager.settings.worktreePool.description":
     "Pripremite spreman worktree u pozadini da nove sesije Agent Manager-a počinju brže. Koristi dodatni prostor na disku za jedan checkout po otvorenom projektu.",
+  "agentManager.hints.switchSession": "Promijeni sesiju",
   "agentManager.settings.project.title": "Projekat",
   "agentManager.settings.project.description": "Izaberite repository čije worktree postavke želite urediti.",
   "agentManager.settings.project.empty": "Nema dostupnih projekata u Agent Manager.",
@@ -71,12 +71,9 @@ export const dict = {
   "agentManager.project.settings": "Postavke projekta",
   "agentManager.project.restricted":
     "Vaš trenutni VS Code radni prostor je vaša početna fascikla ili korijen sistema datoteka. Otvorite određenu projektnu fasciklu u VS Code-u da koristite Agent Manager.",
-  "agentManager.notGitRepo": "Nije git repozitorij",
-
   "agentManager.updateBase.title": "Ažuriraj iz baze",
   "agentManager.updateBase.selectWorktree": "Prvo odaberite worktree kojim upravlja Agent Manager.",
 
-  "agentManager.worktree.settings": "Postavke Worktree-a",
   "agentManager.worktree.new": "Novi Worktree",
   "agentManager.worktree.setupScript": "Skripta za postavljanje Worktree-a",
   "agentManager.worktree.delete": "Obriši Worktree",
@@ -185,13 +182,6 @@ export const dict = {
   "agentManager.shortcuts.cycleAgentMode": "Sljedeći način rada agenta",
   "agentManager.shortcuts.cyclePreviousAgentMode": "Prethodni način rada agenta",
   "agentManager.shortcuts.showShortcuts": "Prikaži prečice na tastaturi",
-  "agentManager.dialog.removeStaleWorktree.title": "Ukloni zastarjeli Worktree",
-  "agentManager.dialog.removeStaleWorktree.messagePre": "Ukloni zastarjeli Worktree ",
-  "agentManager.dialog.removeStaleWorktree.messagePost":
-    "? Ovo uklanja samo mapiranje u Agent Manageru i ne dira datoteke na disku.",
-  "agentManager.dialog.removeStaleWorktree.cancel": "Otkaži",
-  "agentManager.dialog.removeStaleWorktree.confirm": "Ukloni zastarjeli Worktree",
-
   "agentManager.dialog.project.select": "Odaberi projekat",
   "agentManager.dialog.project.missing": "Repozitorij nije pronađen",
   "agentManager.dialog.openWorktree": "Novi worktree",

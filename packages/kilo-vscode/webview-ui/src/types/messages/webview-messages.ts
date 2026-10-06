@@ -387,9 +387,29 @@ export interface DisconnectMcpMessage {
   name: string
 }
 
-export interface AuthenticateMcpMessage {
-  type: "authenticateMcp"
+export interface RequestMcpAuthStateMessage {
+  type: "requestMcpAuthState"
+}
+
+export interface SignInMcpMessage {
+  type: "signInMcp"
   name: string
+  /** When false, suppress the host's native sign-in outcome notification (the caller renders its own, e.g. the Marketplace install modal). Defaults to true. */
+  notify?: boolean
+}
+
+export interface CancelMcpSignInMessage {
+  type: "cancelMcpSignIn"
+  name: string
+}
+
+export interface ResetMcpAuthMessage {
+  type: "resetMcpAuth"
+  name: string
+}
+
+export interface RequestMcpBundlesMessage {
+  type: "requestMcpBundles"
 }
 
 export interface SetLanguageRequest {
@@ -616,6 +636,8 @@ export interface RequestSpeechToTextModelsMessage {
 export interface OpenSettingsTabRequest {
   type: "openSettingsTab"
   tab: string
+  subtab?: string
+  focus?: string
 }
 
 export interface UpdateConfigMessage {
@@ -781,6 +803,7 @@ export interface CloseSessionRequest {
 /** Persist a non-worktree session to agent-manager.json (worktreeId = null). */
 export interface PersistSessionRequest {
   type: "agentManager.persistSession"
+  projectId?: string
   sessionId: string
   draftID?: string
 }
@@ -1563,19 +1586,6 @@ export interface RequestFavoritesMessage {
   type: "requestFavorites"
 }
 
-// Explicit preferred and per-mode model selection persistence (webview → extension)
-export interface PersistModelSelectionRequest {
-  type: "persistModelSelection"
-  agent: string
-  providerID: string
-  modelID: string
-  variant?: string
-}
-
-export interface RequestModelSelectionsMessage {
-  type: "requestModelSelections"
-}
-
 // Continue in Worktree: transfer sidebar session + git state to an isolated worktree
 export interface ContinueInWorktreeRequest {
   type: "continueInWorktree"
@@ -1717,7 +1727,11 @@ export type WebviewMessage =
   | RequestMcpStatusMessage
   | ConnectMcpMessage
   | DisconnectMcpMessage
-  | AuthenticateMcpMessage
+  | RequestMcpAuthStateMessage
+  | SignInMcpMessage
+  | CancelMcpSignInMessage
+  | ResetMcpAuthMessage
+  | RequestMcpBundlesMessage
   | SetLanguageRequest
   | QuestionReplyRequest
   | QuestionRejectRequest
@@ -1896,8 +1910,6 @@ export type WebviewMessage =
   | RequestModelSelectorExpandedMessage
   | ToggleFavoriteRequest
   | RequestFavoritesMessage
-  | PersistModelSelectionRequest
-  | RequestModelSelectionsMessage
   | ToggleRemoteMessage
   | ToggleCaffeinationMessage
   | SetRemoteEnabledMessage
