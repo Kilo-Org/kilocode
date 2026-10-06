@@ -15,6 +15,7 @@ import { ensureProcessMetadata } from "@opencode-ai/core/util/opencode-process" 
 import { createWorkerRemoteExit } from "@/kilocode/cli/cmd/tui/remote-exit-worker" // kilocode_change
 import { createWorkerShutdown } from "@/cli/tui/worker-shutdown" // kilocode_change
 import { KiloSessions } from "@/kilo-sessions/kilo-sessions" // kilocode_change
+import { KiloRetentionWorker } from "@/kilocode/session/retention/worker" // kilocode_change
 
 ensureProcessMetadata("worker") // kilocode_change - retain worker role and parent run correlation
 await KiloLog.init() // kilocode_change - keep compatibility logs off the TUI terminal
@@ -53,6 +54,7 @@ const runShutdown = createWorkerShutdown({
 // kilocode_change end
 
 export const rpc = {
+  retention: KiloRetentionWorker.start, // kilocode_change - the parent protects resume IDs before cleanup starts
   // kilocode_change start - worker lifecycle hooks for remote exit
   tuiReady() {
     remoteExit.ready()
@@ -104,6 +106,7 @@ export const rpc = {
   },
   async shutdown() {
     remoteExit.shutdown() // kilocode_change
+    await KiloRetentionWorker.stop() // kilocode_change
     await runShutdown() // kilocode_change - drain → dispose → stopServer
     // kilocode_change start - Clear the Rpc message channel so the worker's event loop can drain and
     // exit naturally. Without this, the active onmessage handle keeps the
@@ -114,3 +117,4 @@ export const rpc = {
 }
 
 Rpc.listen(rpc)
+KiloRetentionWorker.boot() // kilocode_change - start cleanup once the worker is listening

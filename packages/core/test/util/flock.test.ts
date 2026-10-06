@@ -139,7 +139,15 @@ describe("util.flock", () => {
       ),
     )
 
-    expect(out.map((x) => x.code)).toEqual(Array.from({ length: n }, () => 0))
+    // kilocode_change start - include child errors without weakening the exit-code assertion
+    expect(
+      out.map((x) => x.code),
+      out
+        .filter((x) => x.code !== 0)
+        .map((x) => x.stderr.toString())
+        .join("\n"),
+    ).toEqual(Array.from({ length: n }, () => 0))
+    // kilocode_change end
     expect(out.map((x) => x.stderr.toString()).filter(Boolean)).toEqual([])
 
     const lines = (await fs.readFile(done, "utf8"))

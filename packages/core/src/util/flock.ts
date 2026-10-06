@@ -46,6 +46,7 @@ export namespace Flock {
     baseDelayMs?: number
     maxDelayMs?: number
     onWait?: Wait
+    dead?: (meta: string) => Promise<boolean> // kilocode_change - caller proof that the recorded owner is dead
   }
 
   type Opts = {
@@ -53,6 +54,7 @@ export namespace Flock {
     timeoutMs: number
     baseDelayMs: number
     maxDelayMs: number
+    dead?: (meta: string) => Promise<boolean> // kilocode_change
   }
 
   type Owned = {
@@ -124,7 +126,10 @@ export namespace Flock {
     }
   }
 
-  async function stale(lockDir: string, heartbeatPath: string, metaPath: string, staleMs: number) {
+  // kilocode_change start
+  async function stale(lockDir: string, heartbeatPath: string, metaPath: string, staleMs: number, dead?: Opts["dead"]) {
+    if (dead && (await dead(metaPath))) return true
+    // kilocode_change end
     // Stale detection allows automatic recovery after crashed owners.
     const now = wall()
     const heartbeat = await stats(heartbeatPath)
@@ -157,9 +162,11 @@ export namespace Flock {
         throw err
       }
 
-      if (!(await stale(lockDir, heartbeatPath, metaPath, opts.staleMs))) {
+      // kilocode_change start
+      if (!(await stale(lockDir, heartbeatPath, metaPath, opts.staleMs, opts.dead))) {
         return { acquired: false }
       }
+      // kilocode_change end
 
       const breakerPath = lockDir + ".breaker"
       try {
@@ -183,9 +190,11 @@ export namespace Flock {
 
       try {
         // Breaker ownership ensures only one contender performs stale cleanup.
-        if (!(await stale(lockDir, heartbeatPath, metaPath, opts.staleMs))) {
+        // kilocode_change start
+        if (!(await stale(lockDir, heartbeatPath, metaPath, opts.staleMs, opts.dead))) {
           return { acquired: false }
         }
+        // kilocode_change end
 
         await rm(lockDir, { recursive: true, force: true })
 
@@ -314,6 +323,7 @@ export namespace Flock {
       timeoutMs: input.timeoutMs ?? defaultOpts.timeoutMs,
       baseDelayMs: input.baseDelayMs ?? defaultOpts.baseDelayMs,
       maxDelayMs: input.maxDelayMs ?? defaultOpts.maxDelayMs,
+      dead: input.dead, // kilocode_change
     }
     const dir = input.dir ?? root()
 

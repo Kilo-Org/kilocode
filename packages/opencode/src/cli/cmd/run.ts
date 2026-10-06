@@ -288,6 +288,8 @@ export const RunCommand = effectCmd({
     const { KiloRunDrain } = yield* Effect.promise(() => import("@/kilocode/cli/run-drain"))
     const { KiloHeadless } = yield* Effect.promise(() => import("@/kilocode/permission/headless"))
     const { KiloRun, KiloRunDaemon } = yield* Effect.promise(() => import("@/kilocode/cli/cmd/run"))
+    const { KiloRetentionRun } = yield* Effect.promise(() => import("@/kilocode/session/retention/run"))
+    yield* KiloRetentionRun.start(args)
     // kilocode_change end
     const agentSvc = yield* Agent.Service
     const flags = yield* RuntimeFlags.Service

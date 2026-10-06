@@ -6,11 +6,11 @@
 // server — so the POST /:id/abort endpoint (what ESC fires) never ran.
 //
 // This test proves:
-//   1. A synthetic freeze workload (30k-line file) now completes quickly.
+//   1. A synthetic freeze workload (3k-line file) now completes quickly.
 //   2. The abort endpoint responds within a bounded time while the freeze
 //      workload runs concurrently.
-//   3. A concurrent setInterval keeps ticking — i.e. the event loop keeps
-//      breathing and ESC would be delivered.
+//   3. Timer-delivered abort stays responsive even if the diff finishes
+//      before an interval would tick.
 
 import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { test, expect, afterEach, mock } from "bun:test"
@@ -30,7 +30,10 @@ import type { InstanceContext } from "../../src/project/instance-context"
 
 void Log.init({ print: false })
 
-function run<A>(ctx: InstanceContext, body: (snapshot: Snapshot.Interface) => Effect.Effect<A, never, Session.Service>) {
+function run<A>(
+  ctx: InstanceContext,
+  body: (snapshot: Snapshot.Interface) => Effect.Effect<A, never, Session.Service>,
+) {
   return Effect.runPromise(
     seedProject.pipe(
       Effect.andThen(Snapshot.Service.use(body)),
@@ -84,27 +87,23 @@ test("pathological diffFull workload finishes quickly and does not block abort",
           )
           expect(warm.status).toBe(200)
 
-          // Kick off a diffFull that exercises the freeze path.
-          const diff = yield* snapshot.diffFull(before!, after!).pipe(Effect.forkChild({ startImmediately: true }))
-
-          // Concurrently keep a tick counter running. If the event loop blocks we
-          // will see this count fall behind wall-clock elapsed.
-          const ticks = { count: 0 }
+          // Queue abort before starting the diff so latency includes event-loop delivery.
+          const reply = Promise.withResolvers<Response>()
           const start = Date.now()
-          const timer = setInterval(() => {
-            ticks.count++
-          }, 25)
+          const timer = setTimeout(() => {
+            Promise.resolve(app.request(`/session/${session.id}/abort`, { method: "POST", headers })).then(
+              reply.resolve,
+              reply.reject,
+            )
+          }, 0)
 
           try {
-            // Fire an abort request against the warmed Hono route in the middle of the diff.
-            const abortStart = Date.now()
-            const res = yield* Effect.promise(() =>
-              Promise.resolve(app.request(`/session/${session.id}/abort`, { method: "POST", headers })),
-            )
-            const abortLatency = Date.now() - abortStart
+            const diff = yield* snapshot.diffFull(before!, after!).pipe(Effect.forkChild({ startImmediately: true }))
+            const res = yield* Effect.promise(() => reply.promise)
+            const latency = Date.now() - start
             expect(res.status).toBe(200)
-            // The abort endpoint must respond well under a second even under load.
-            expect(abortLatency).toBeLessThan(2000)
+            // Both timer delivery and the abort response must stay under two seconds.
+            expect(latency).toBeLessThan(2000)
 
             const diffs = yield* Fiber.join(diff)
             const total = Date.now() - start
@@ -112,10 +111,6 @@ test("pathological diffFull workload finishes quickly and does not block abort",
             // The freeze workload must finish in bounded time. Five seconds is
             // generous even for a slow CI box; without the fix this hangs.
             expect(total).toBeLessThan(5000)
-            // And we must have ticked at least a few times during the work, proving
-            // the event loop stayed responsive (ESC would actually arrive).
-            expect(ticks.count).toBeGreaterThan(0)
-
             // With git-based diff the patch is a real unified diff, not empty.
             const hit = diffs.find((d) => d.file === "fat.json")
             expect(hit).toBeDefined()
@@ -125,7 +120,7 @@ test("pathological diffFull workload finishes quickly and does not block abort",
             expect(hit!.additions).toBeGreaterThan(0)
             expect(hit!.deletions).toBeGreaterThan(0)
           } finally {
-            clearInterval(timer)
+            clearTimeout(timer)
           }
         }),
       ),

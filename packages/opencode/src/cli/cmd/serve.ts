@@ -31,6 +31,9 @@ export const ServeCommand = effectCmd({
     const { InstanceRuntime } = yield* Effect.promise(() => import("../../project/instance-runtime"))
     const { startParentWatchdog } = yield* Effect.promise(() => import("../../kilocode/parent-watchdog"))
     const { KiloSessions } = yield* Effect.promise(() => import("@/kilo-sessions/kilo-sessions"))
+    const { KiloRetentionScheduler } = yield* Effect.promise(() => import("@/kilocode/session/retention/scheduler"))
+    const retention = yield* KiloRetentionScheduler.Service
+    yield* retention.start()
     yield* Effect.promise(
       () =>
         new Promise<void>((resolve) => {
@@ -39,6 +42,7 @@ export const ServeCommand = effectCmd({
           const shutdown = async () => {
             stopWatchdog()
             try {
+              await Effect.runPromise(retention.stop())
               await KiloSessions.drainIngestForShutdown() // kilocode_change
               await InstanceRuntime.disposeAllInstances()
               await server.stop(true)

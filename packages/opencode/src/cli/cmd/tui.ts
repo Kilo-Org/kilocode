@@ -269,6 +269,7 @@ export const TuiThreadCommand = cmd({
     const { KiloTuiThreadDaemon } = await import("@/kilocode/cli/cmd/tui/thread")
     const { preload } = await import("@/kilocode/cli/cmd/tui")
     const { resolveTuiDirectory } = await import("@/kilocode/cli/cmd/tui-worktree")
+    const { KiloRetentionTui } = await import("@/kilocode/session/retention/tui")
     // kilocode_change end
     const unguard = win32InstallCtrlCGuard()
     const shutdown = {
@@ -314,6 +315,7 @@ export const TuiThreadCommand = cmd({
         return
       }
       const cwd = Filesystem.resolve(process.cwd())
+      await KiloRetentionTui.resume(args, cwd) // kilocode_change - protect a resumed session before cleanup starts
       // kilocode_change start - default TUI sessions attach to the daemon unless explicitly disabled
       if (await KiloTuiThreadDaemon.attach({ args, cwd, input: () => input(args.prompt), start })) return
       // kilocode_change end
@@ -323,6 +325,7 @@ export const TuiThreadCommand = cmd({
         [KILO_PROCESS_ROLE]: "worker",
         [KILO_RUN_ID]: ensureRunID(),
         ...auth.env,
+        ...KiloRetentionTui.env(args),
         KILO_BACKGROUND_PROCESS_PORTS: "true",
       })
       // kilocode_change end
@@ -459,6 +462,7 @@ export const TuiThreadCommand = cmd({
             const id = await importCloudSession(sdk, args.session)
             args.session = id
             args.cloudFork = false
+            await client.call("retention", { session: id }) // kilocode_change - protect imported history before activation
           } catch (err) {
             reportCloudImportError(err)
             shutdownAndExit({ reason: "cloud-fork-failed", code: 1 })
