@@ -1,5 +1,7 @@
 import { afterEach, describe, expect, it, mock } from "bun:test"
+import { createKiloClient } from "@kilocode/sdk/v2/client"
 import * as vscode from "vscode"
+import { MarketplaceService } from "../../src/services/marketplace"
 import {
   removeMarketplaceItem,
   removeMarketplaceItemFromAllScopes,
@@ -173,6 +175,77 @@ describe("Marketplace installation metadata", () => {
   })
 })
 
+describe("Marketplace companion skill payloads", () => {
+  it.each(["project", "global"] as const)("preserves companion skills from catalog to %s install", async (scope) => {
+    const mcp: McpMarketplaceItem = {
+      ...item,
+      skills: [
+        { id: "query-workflow", content: "https://example.test/query-workflow.tar.gz" },
+        { id: "data-checks", content: "data:application/gzip;base64,ZmFrZQ==" },
+      ],
+    }
+    const result = {
+      success: true,
+      slug: mcp.id,
+      filePaths: [
+        "/chosen/config/kilo.jsonc",
+        "/chosen/skills/query-workflow/SKILL.md",
+        "/chosen/skills/data-checks/SKILL.md",
+      ],
+    }
+    const calls: Array<{ method: string; path: string; directory: string | null; body: unknown }> = []
+    const server = Bun.serve({
+      hostname: "127.0.0.1",
+      port: 0,
+      async fetch(request) {
+        const url = new URL(request.url)
+        calls.push({
+          method: request.method,
+          path: url.pathname,
+          directory: url.searchParams.get("directory"),
+          body: request.method === "POST" ? await request.json() : undefined,
+        })
+        if (url.pathname === "/kilocode/marketplace")
+          return Response.json({ items: [mcp], installed: { project: {}, global: {} } })
+        if (url.pathname === "/kilocode/marketplace/install") return Response.json(result)
+        if (url.pathname === "/kilocode/marketplace/remove") return Response.json({ success: true, slug: mcp.id })
+        return new Response(null, { status: 404 })
+      },
+    })
+    const service = new MarketplaceService()
+    const client = createKiloClient({ baseUrl: server.url.href })
+    const extensions = Object.getOwnPropertyDescriptor(vscode.extensions, "all")
+    try {
+      Object.defineProperty(vscode.extensions, "all", { configurable: true, value: [] })
+      const data = await service.fetchData(client, project, project)
+      expect(data.marketplaceItems).toEqual([mcp])
+      const loaded = data.marketplaceItems.at(0)!
+      const options = { target: scope, parameters: { token: "test-value" } }
+      expect(await service.install(client, loaded, options, project)).toEqual(result)
+      expect(await service.remove(client, loaded, scope, project)).toEqual({ success: true, slug: mcp.id })
+      expect(calls).toEqual([
+        { method: "GET", path: "/kilocode/marketplace", directory: project, body: undefined },
+        {
+          method: "POST",
+          path: "/kilocode/marketplace/install",
+          directory: project,
+          body: { item: mcp, ...options },
+        },
+        {
+          method: "POST",
+          path: "/kilocode/marketplace/remove",
+          directory: project,
+          body: { item: { id: mcp.id, type: "mcp" }, scope },
+        },
+      ])
+    } finally {
+      if (extensions) Object.defineProperty(vscode.extensions, "all", extensions)
+      if (!extensions) Reflect.deleteProperty(vscode.extensions, "all")
+      server.stop(true)
+    }
+  })
+})
+
 describe("Marketplace removal actions", () => {
   it("preserves global legacy config during project removal", async () => {
     const files = setup()
@@ -202,6 +275,17 @@ describe("Marketplace removal actions", () => {
     expect(has(files, local)).toBe(false)
     expect(has(files, legacy)).toBe(false)
     expect(has(files, global)).toBe(false)
+  })
+
+  it("does not report whole-bundle success when either scope fails", async () => {
+    const remove = mock(async (_client, _item, scope: "project" | "global") => ({
+      success: scope === "project",
+      slug: item.id,
+      error: scope === "global" ? "Global config is still installed" : undefined,
+    }))
+
+    expect(await removeMarketplaceItemFromAllScopes(ctx(remove), item, project, project)).toBe(false)
+    expect(remove.mock.calls.map((call) => call[2])).toEqual(["project", "global"])
   })
 })
 

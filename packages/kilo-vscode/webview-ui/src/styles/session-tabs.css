@@ -360,3 +360,12 @@
     margin: 4px 0;
   }
 }
+
+/* Explains the Shift+click gesture on the Pin/Unpin tab menu item. */
+.session-tab-menu-hint {
+  margin-left: auto;
+  padding-left: 16px;
+  color: var(--text-weak);
+  font-size: var(--kilo-font-size-10);
+  white-space: nowrap;
+}

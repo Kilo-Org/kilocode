@@ -386,6 +386,51 @@
   color: var(--vscode-input-placeholderForeground, var(--text-weaker));
 }
 
+/* The keycap copy below draws the placeholder, so hide the native one. */
+.prompt-input--keycaps::placeholder {
+  color: transparent;
+}
+
+/* Placeholder with the suggested shortcut as keycaps. Same box and font as the
+   textarea, so the text sits where the native placeholder would. */
+.prompt-input-placeholder {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  padding: 8px 8px calc(8px + 1.4em);
+  font-family: var(--vscode-font-family);
+  font-size: var(--font-size-base);
+  line-height: 1.4;
+  white-space: pre-wrap;
+  unicode-bidi: plaintext;
+  word-wrap: break-word;
+  overflow: hidden;
+  scrollbar-gutter: stable;
+  color: var(--vscode-input-placeholderForeground, var(--text-weaker));
+  animation: prompt-hint-in 0.18s ease-out;
+}
+
+/* Same height as one text line, so keycaps never make the line taller. */
+.prompt-input-keys-wrap {
+  white-space: nowrap;
+}
+
+.prompt-input-keys-wrap .shortcut-keys {
+  height: 1.4em;
+}
+
+@keyframes prompt-hint-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .prompt-input-placeholder {
+    animation: none;
+  }
+}
+
 /* Input overlay (highlight + ghost text) */
 .prompt-input-ghost-wrapper {
   position: relative;
@@ -588,6 +633,88 @@
 .prompt-indexing-button::after {
   top: 1px;
   right: 1px;
+}
+
+/* Overlaid in the top-right corner of the text input, above the typed text,
+   matching the JetBrains session-issues icon's placement over the editor
+   rather than in the bottom toolbar row. The top inset matches the typed
+   text's own top padding (.prompt-input-highlight-overlay); the right inset
+   matches the bottom toolbar's padding (.prompt-input-hint) so the icon lines
+   up with the toolbar's rightmost control. */
+.prompt-input-issues-overlay {
+  position: absolute;
+  top: 8px;
+  right: 6px;
+  z-index: 3;
+}
+
+/* Only shown when the session has an actionable issue (e.g. an MCP server
+   needing sign-in), so it is always rendered in the warning tone. The icon's
+   own color token (set by [data-component="icon"]) takes priority over the
+   inherited currentColor, so it is overridden explicitly here too. */
+.prompt-issues-button,
+.prompt-issues-button [data-component="icon"] {
+  color: var(--vscode-charts-yellow, #cca700);
+}
+
+/* Match VS Code's native menu chrome so the session-issues popup reads as a
+   platform menu rather than a webview surface. Items span the full width and
+   the container carries no horizontal padding, as in the editor's own menus. */
+.prompt-issues-menu[data-component="dropdown-menu-content"] {
+  min-width: 180px;
+  max-width: calc(100vw - 24px);
+  padding: 4px 0;
+  border-radius: 5px;
+  border: 1px solid var(--vscode-menu-border, var(--vscode-editorWidget-border, transparent));
+  background-color: var(--vscode-menu-background, var(--vscode-editorWidget-background));
+  color: var(--vscode-menu-foreground, var(--vscode-editorWidget-foreground));
+  box-shadow: 0 2px 8px var(--vscode-widget-shadow, rgb(0 0 0 / 36%));
+}
+
+.prompt-issues-menu[data-component="dropdown-menu-content"] [data-slot="dropdown-menu-item"] {
+  min-height: 22px;
+  padding: 2px 10px;
+  border-radius: 0;
+  font-size: var(--kilo-font-size-13);
+  font-weight: var(--font-weight-normal);
+  color: var(--vscode-menu-foreground, var(--vscode-editorWidget-foreground));
+}
+
+.prompt-issues-menu[data-component="dropdown-menu-content"] [data-slot="dropdown-menu-item"][data-highlighted] {
+  background-color: var(--vscode-menu-selectionBackground, var(--vscode-list-activeSelectionBackground));
+  color: var(--vscode-menu-selectionForeground, var(--vscode-list-activeSelectionForeground));
+  outline: 1px solid var(--vscode-menu-selectionBorder, transparent);
+  outline-offset: -1px;
+}
+
+.prompt-issues-menu[data-component="dropdown-menu-content"] [data-slot="dropdown-menu-item"][data-disabled] {
+  color: var(--vscode-disabledForeground, var(--vscode-descriptionForeground));
+}
+
+/* VS Code labels menu sections in the description tone, not as a clickable row. */
+.prompt-issues-menu[data-component="dropdown-menu-content"] [data-slot="dropdown-menu-group-label"] {
+  padding: 2px 10px;
+  font-size: var(--kilo-font-size-10);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--vscode-descriptionForeground);
+}
+
+.prompt-issues-menu[data-component="dropdown-menu-content"] [data-slot="dropdown-menu-separator"] {
+  margin: 4px 0;
+  border-top-color: var(--vscode-menu-separatorBackground, var(--vscode-editorWidget-border));
+}
+
+body.vscode-reduce-motion .prompt-issues-menu {
+  animation: none;
+  transition: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .prompt-issues-menu {
+    animation: none;
+    transition: none;
+  }
 }
 
 .prompt-indexing-button--muted {

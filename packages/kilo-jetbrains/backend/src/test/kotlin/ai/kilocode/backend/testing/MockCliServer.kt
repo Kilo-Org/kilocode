@@ -85,6 +85,11 @@ class MockCliServer : AutoCloseable {
     @Volatile var backgroundJobCancelResult = "true"
     @Volatile var backgroundJobCancelStatus = 200
     @Volatile var backgroundJobPromoteResult = "true"
+    @Volatile var retentionStatus = """{"policy":{"enabled":false,"maxAgeDays":30},"last":null,"progress":null}"""
+    @Volatile var retentionRun = retentionStatus
+    @Volatile var retentionStatusCode = 200
+    @Volatile var retentionRunStatus = 200
+    @Volatile var lastRetentionRunBody: String? = null
     @Volatile var backgroundJobPromoteStatus = 200
     @Volatile var lastBackgroundJobsPath: String? = null
     @Volatile var lastBackgroundJobCancelPath: String? = null
@@ -185,6 +190,8 @@ class MockCliServer : AutoCloseable {
     @Volatile var pendingPermissionsStatus = 200
     @Volatile var pendingQuestions = "[]"
     @Volatile var pendingQuestionsStatus = 200
+    @Volatile var instanceReloadStatus = 200
+    @Volatile var lastInstanceReloadPath: String? = null
 
     /** Configurable delay for all endpoint responses (ms). 0 = no delay. */
     @Volatile var responseDelay: Long = 0
@@ -475,7 +482,16 @@ class MockCliServer : AutoCloseable {
                     lastBackgroundJobPromotePath = path
                     respond(output, backgroundJobPromoteStatus, backgroundJobPromoteResult)
                 }
-                bare == "/instance/reload" && method == "POST" -> respond(output, 200, "true")
+                bare == "/kilocode/retention" && method == "GET" ->
+                    respond(output, retentionStatusCode, retentionStatus)
+                bare == "/kilocode/retention/run" && method == "POST" -> {
+                    lastRetentionRunBody = body
+                    respond(output, retentionRunStatus, retentionRun)
+                }
+                bare == "/instance/reload" && method == "POST" -> {
+                    lastInstanceReloadPath = path
+                    respond(output, instanceReloadStatus, "true")
+                }
                 bare == "/command" -> respond(output, commandsStatus, commands)
                 bare == "/skill" -> respond(output, skillsStatus, skills)
                 bare == "/find/file" -> {

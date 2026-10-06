@@ -33,7 +33,6 @@ export const dict = {
   "agentManager.local": "lokaal",
   "agentManager.sidebar.collapse": "Zijbalk inklappen",
   "agentManager.sidebar.expand": "Zijbalk tonen",
-  "agentManager.section.worktrees": "WORKTREES",
   "agentManager.section.sessions": "SESSIES",
   "agentManager.projects": "PROJECTEN",
   "agentManager.settings.title": "Agent Manager",
@@ -46,6 +45,7 @@ export const dict = {
   "agentManager.settings.worktreePool.title": "Worktrees vooraf opwarmen",
   "agentManager.settings.worktreePool.description":
     "Bereid op de achtergrond een kant-en-klare worktree voor, zodat nieuwe Agent Manager-sessies sneller starten. Gebruikt extra schijfruimte voor één checkout per geopend project.",
+  "agentManager.hints.switchSession": "Sessie wisselen",
   "agentManager.settings.project.title": "Project",
   "agentManager.settings.project.description": "Kies de repository waarvan je de worktree-instellingen wilt bewerken.",
   "agentManager.settings.project.empty": "Er zijn geen Agent Manager-projecten beschikbaar.",
@@ -74,12 +74,9 @@ export const dict = {
   "agentManager.project.settings": "Projectinstellingen",
   "agentManager.project.restricted":
     "Je huidige VS Code-werkruimte is je thuismap of de hoofdmap van het bestandssysteem. Open een specifieke projectmap in VS Code om Agent Manager te gebruiken.",
-  "agentManager.notGitRepo": "Geen git repository",
-
   "agentManager.updateBase.title": "Bijwerken vanuit de basis",
   "agentManager.updateBase.selectWorktree": "Selecteer eerst een beheerde worktree.",
 
-  "agentManager.worktree.settings": "Worktree instellingen",
   "agentManager.worktree.new": "Nieuwe worktree",
   "agentManager.worktree.setupScript": "Worktree setup script",
   "agentManager.worktree.delete": "Worktree verwijderen",
@@ -192,13 +189,6 @@ export const dict = {
   "agentManager.shortcuts.cycleAgentMode": "Volgende agent modus",
   "agentManager.shortcuts.cyclePreviousAgentMode": "Vorige agent modus",
   "agentManager.shortcuts.showShortcuts": "Sneltoetsen tonen",
-
-  "agentManager.dialog.removeStaleWorktree.title": "Verouderde worktree verwijderen",
-  "agentManager.dialog.removeStaleWorktree.messagePre": "Verouderde worktree ",
-  "agentManager.dialog.removeStaleWorktree.messagePost":
-    "? Dit verwijdert alleen de Agent Manager koppeling en laat bestanden op de schijf ongemoeid.",
-  "agentManager.dialog.removeStaleWorktree.cancel": "Annuleren",
-  "agentManager.dialog.removeStaleWorktree.confirm": "Verouderde worktree verwijderen",
 
   "agentManager.dialog.project.select": "Project selecteren",
   "agentManager.dialog.project.missing": "Repository niet gevonden",
@@ -436,6 +426,10 @@ export const dict = {
   "agentManager.documents.loading": "Document wordt geladen...",
   "agentManager.documents.preview": "Voorbeeld van document bekijken",
   "agentManager.documents.source": "Broncode weergeven",
+  "agentManager.documents.copy": "Inhoud kopiëren",
+  "agentManager.documents.copyPath": "Pad kopiëren",
+  "agentManager.documents.copyRelativePath": "Relatief pad kopiëren",
+  "agentManager.documents.copyFileName": "Bestandsnaam kopiëren",
   "agentManager.documents.comments": "{{count}} opmerkingen",
   "agentManager.import.pullRequest": "Pull request",
   "agentManager.import.pastePrUrl": "Plak PR URL...",
@@ -455,16 +449,26 @@ export const dict = {
   "agentManager.caffeination.unavailable":
     "De modus om de computer wakker te houden is niet beschikbaar op dit platform",
   "agentManager.browser.title": "Geïntegreerde browser",
-  "agentManager.browser.url": "URL van lokale applicatie",
+  "agentManager.browser.url": "Adres",
   "agentManager.browser.urlPlaceholder": "http://localhost:3000",
   "agentManager.browser.open": "Openen",
   "agentManager.browser.inspect": "Element selecteren",
   "agentManager.browser.devtoolsTitle": "Ontwikkeltools",
   "agentManager.browser.refresh": "Browser vernieuwen",
+  "agentManager.browser.back": "Terug",
+  "agentManager.browser.forward": "Vooruit",
   "agentManager.browser.close": "Browser sluiten",
-  "agentManager.browser.empty": "Open een lokale applicatie om deze hier te bekijken.",
-  "agentManager.browser.noSession":
-    "Start of selecteer een sessie in Agent Manager om een lokale applicatie te bekijken.",
+  "agentManager.browser.empty": "Open een lokale applicatie of een openbare HTTPS-pagina om deze hier te bekijken.",
+  "agentManager.browser.requirement":
+    "Vereist Google Chrome of een compatibele Playwright Chromium-browser. Browsers worden niet automatisch geïnstalleerd.",
+  "agentManager.browser.missingTitle": "Browser niet gevonden",
+  "agentManager.browser.missingChrome":
+    "Google Chrome is niet gevonden. Installeer Chrome om de geïntegreerde browser te gebruiken en probeer het opnieuw.",
+  "agentManager.browser.missingChromium":
+    "Playwright Chromium is niet gevonden. Installeer een compatibele browser of schakel ‘Gebruik Systeem Chrome’ in via ‘Browserinstellingen’.",
+  "agentManager.browser.downloadChrome": "Chrome downloaden",
+  "agentManager.browser.settings": "Browserinstellingen",
+  "agentManager.browser.noSession": "Start of selecteer een sessie in Agent Manager.",
   "agentManager.browser.screenshotAlt": "Huidige browserpagina",
   "agentManager.browser.errors": "Browserproblemen: {{count}}",
   "agentManager.browser.diagnostics": "Browserdiagnostiek",

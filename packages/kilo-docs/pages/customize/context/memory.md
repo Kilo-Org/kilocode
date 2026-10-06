@@ -64,6 +64,18 @@ When memory is enabled and auto-save is on, Kilo reviews completed turns and sav
 
 Explicit saves are not throttled.
 
+### Use a different model for auto-save
+
+Auto-save can use a different model than your main session. By default it runs on the model your session is using. To customize it, set `memory_model` in `kilo.jsonc`:
+
+```jsonc
+{
+  "memory_model": "kilo/kilo-auto/small"
+}
+```
+
+A smaller or faster model is usually enough for this background work, so you can keep a more capable model for the session itself. If `memory_model` is unset, malformed, or unavailable, auto-save uses the session model. The setting does not affect explicit saves or recall, which run in your session.
+
 ## Explicit memory
 
 Use explicit commands when you want to control what is stored:

@@ -71,3 +71,12 @@ test("viewed snapshots post the presence payload against the selected directory"
     visible: [],
   })
 })
+
+test("a session asleep on a wakeup does not read as a running turn", async () => {
+  setup()
+  const client = await import("./client")
+
+  expect(client.running({ type: "scheduled", scheduledAt: "2026-09-24T15:00:00.000Z" })).toBe(false)
+  expect(client.running({ type: "idle" })).toBe(false)
+  expect(client.running({ type: "busy" })).toBe(true)
+})

@@ -5,6 +5,7 @@ import ai.kilocode.client.settings.base.BaseContentPanel
 import ai.kilocode.client.settings.base.SettingsRow
 import ai.kilocode.client.settings.base.SettingsRows
 import ai.kilocode.client.settings.base.SettingsStackedRow
+import ai.kilocode.client.settings.base.WrapBanner
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.layout.Stack
 import ai.kilocode.rpc.dto.MarketplaceItemDto
@@ -14,16 +15,13 @@ import com.intellij.openapi.ui.ComboBox
 import com.intellij.openapi.ui.DialogWrapper
 import com.intellij.openapi.ui.ValidationInfo
 import com.intellij.openapi.util.text.HtmlChunk
-import com.intellij.ui.EditorNotificationPanel.Status
-import com.intellij.ui.InlineBanner
 import com.intellij.ui.TitledSeparator
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.components.JBTextField
+import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
-import java.awt.event.ComponentAdapter
-import java.awt.event.ComponentEvent
 import javax.swing.JComponent
 import javax.swing.ScrollPaneConstants
 
@@ -33,46 +31,6 @@ internal data class MarketplaceInstallRequest(
     /** The chosen scope already has the item, so confirming removes it from that scope. */
     val remove: Boolean = false,
 )
-
-/**
- * The platform's information banner, carrying copy that re-wraps to the width it is actually given.
- *
- * Swing cannot ask an HTML view "how tall are you at some width you do not have yet", so [seed] is the
- * column the first layout wraps at — that is what the dialog packs around. Once Swing has assigned a
- * real width, the text re-wraps to it, which keeps a resized dialog from leaving a ragged right edge.
- * Re-wrapping is skipped unless the width actually changed, so the resize does not loop.
- */
-internal class WrapBanner(private val copy: String, private val seed: Int) :
-    InlineBanner("", Status.Info) {
-    private var applied = 0
-
-    /** Measured once per banner: chrome cannot change mid-resize, and [chrome] builds a component. */
-    private val chrome = chrome()
-
-    init {
-        showCloseButton(false)
-        wrap(seed)
-        addComponentListener(object : ComponentAdapter() {
-            override fun componentResized(e: ComponentEvent) = wrap(width - chrome)
-        })
-    }
-
-    private fun wrap(to: Int) {
-        if (to <= 0 || to == applied) return
-        applied = to
-        setMessage(UiStyle.Text.wrap(copy, to))
-    }
-
-    companion object {
-        /**
-         * Horizontal space a banner spends on itself — insets, icon, the gap after it, and the slot it
-         * reserves for its buttons. Measured from an empty banner rather than rebuilt from the platform's
-         * constants, so it stays right if any of them change. Callers should hold the result rather than
-         * call this per layout pass; it constructs a banner to measure.
-         */
-        fun chrome(): Int = InlineBanner("", Status.Info).showCloseButton(false).preferredSize.width
-    }
-}
 
 internal interface MarketplaceInstallDialogHandle {
     fun showAndGet(): Boolean
@@ -85,14 +43,17 @@ internal class MarketplaceInstallDialog(
 ) : DialogWrapper(true), MarketplaceInstallDialogHandle {
     private val scope = combo(scopeOptions()).apply { selectedItem = preferred() }
     private val destination = JBLabel().apply { foreground = UIUtil.getContextHelpForeground() }
+    private val included = JBLabel()
     private val method = combo(item.methods.map { it.name }.toTypedArray())
     private val fields = linkedMapOf<String, JBTextField>()
     private val paramsRows = SettingsRows()
 
-    // Install-only parts of the form, hidden for a removal. Declared before [body] on purpose: form()
+    // Scope-dependent parts of the form. Declared before [body] on purpose: form()
     // assigns them, and a property initializer running afterwards would reset them to null.
     private var methodRow: JComponent? = null
     private var security: JComponent? = null
+    private var companions: JComponent? = null
+    private var ownership: JComponent? = null
 
     /**
      * The form, built before [init] runs. Declaring it here rather than inside [createCenterPanel]
@@ -132,6 +93,7 @@ internal class MarketplaceInstallDialog(
         return MarketplaceInstallRequest(target, params)
     }
 
+    @RequiresEdt
     private fun form(): JComponent {
         val panel = BaseContentPanel().apply {
             border = JBUI.Borders.empty(UiStyle.Gap.pad())
@@ -146,6 +108,12 @@ internal class MarketplaceInstallDialog(
                 KiloBundle.message("settings.marketplace.install.destination"),
                 value = destination,
             ))
+            if (item.type == "mcp" && item.skills.isNotEmpty()) {
+                companions = SettingsStackedRow(
+                    KiloBundle.message("settings.marketplace.install.skills"),
+                    value = included,
+                ).also { row(it) }
+            }
             if (item.methods.size > 1) {
                 val pick = SettingsRow(KiloBundle.message("settings.marketplace.install.method"), value = method)
                 methodRow = pick
@@ -158,6 +126,9 @@ internal class MarketplaceInstallDialog(
                 .next(TitledSeparator(KiloBundle.message("settings.marketplace.install.security.title")))
                 .next(note(KiloBundle.message("settings.marketplace.install.security")))
             panel.next(security!!)
+            ownership = note(KiloBundle.message("settings.marketplace.remove.skills"))
+                .apply { isVisible = false }
+                .also { panel.next(it) }
         }
         panel.next(paramsRows)
         return panel
@@ -168,6 +139,7 @@ internal class MarketplaceInstallDialog(
      * than installed. The install-only parts of the form go away with it, since nothing about a
      * parameter or an installation method applies to a removal.
      */
+    @RequiresEdt
     private fun syncAction() {
         val remove = uninstalls()
         title = KiloBundle.message(
@@ -179,6 +151,8 @@ internal class MarketplaceInstallDialog(
         )
         methodRow?.isVisible = !remove
         security?.isVisible = !remove
+        companions?.isVisible = !remove
+        ownership?.isVisible = remove
         syncDestination()
         syncParams()
     }
@@ -243,9 +217,13 @@ internal class MarketplaceInstallDialog(
         return selected.prerequisites.ifEmpty { item.prerequisites }
     }
 
+    @RequiresEdt
     private fun syncDestination() {
         val target = if (scope.selectedItem == globalLabel()) "global" else "project"
         destination.text = destinationText(item.type, target, item.id)
+        included.text = bullets(item.skills.map {
+            KiloBundle.message("settings.marketplace.install.skills.item", it.id, destinationText("skill", target, it.id))
+        })
     }
 
     private fun syncParams() {

@@ -32,6 +32,7 @@ import HistoryView from "./components/history/HistoryView"
 import { MigrationWizard } from "./components/migration"
 import type { Message as SDKMessage, Part as SDKPart } from "@kilocode/sdk/v2"
 import { cycleAgent as cycle } from "./context/session-agent"
+import { routeChatInput } from "./utils/chat-input-route"
 import "./styles/chat.css"
 
 type ViewType = "newTask" | "history" | "profile" | "settings" | "subAgentViewer"
@@ -242,6 +243,9 @@ export const DataBridge: Component<{ children: any }> = (props) => {
 const AppContent: Component = () => {
   const [currentView, setCurrentView] = createSignal<ViewType>("newTask")
   const [settingsTab, setSettingsTab] = createSignal<string | undefined>()
+  const [settingsSubtab, setSettingsSubtab] = createSignal<string | undefined>()
+  const [settingsFocus, setSettingsFocus] = createSignal<{ token: number; value: string } | undefined>()
+  const [settingsSearch, setSettingsSearch] = createSignal(0)
   const [agentManagerProjectId, setAgentManagerProjectId] = createSignal<string | undefined>()
   const [migration, setMigration] = createSignal(false)
   const session = useSession()
@@ -258,16 +262,32 @@ const AppContent: Component = () => {
       : undefined,
   )
 
+  const newTask = () => {
+    if (currentView() === "newTask") {
+      window.dispatchEvent(new CustomEvent("newTaskRequest"))
+      return
+    }
+    tabs?.add()
+    if (!tabs) session.clearCurrentSession()
+    setCurrentView("newTask")
+  }
+
   const handleViewAction = (action: string) => {
     switch (action) {
-      case "plusButtonClicked": {
-        const chat = currentView() === "newTask"
-        if (chat) window.dispatchEvent(new CustomEvent("newTaskRequest"))
-        if (!chat && tabs) tabs.add()
-        if (!chat && !tabs) session.clearCurrentSession()
-        setCurrentView("newTask")
+      case "plusButtonClicked":
+        newTask()
+        break
+      case "closeTask": {
+        if (currentView() !== "newTask") break
+        const id = tabs?.active()
+        if (!tabs || !id) break
+        tabs.close(id)
         break
       }
+      case "closeAllTasks":
+        tabs?.closeAll()
+        setCurrentView("newTask")
+        break
       case "historyButtonClicked":
         setCurrentView("history")
         break
@@ -286,6 +306,10 @@ const AppContent: Component = () => {
       case "focusSearch":
         setCurrentView("newTask")
         window.dispatchEvent(new CustomEvent("focusTranscriptSearch"))
+        break
+      case "focusSettingsSearch":
+        setCurrentView("settings")
+        setSettingsSearch((count) => count + 1)
         break
     }
   }
@@ -331,6 +355,8 @@ const AppContent: Component = () => {
       if (message?.type === "navigate" && message.view && VALID_VIEWS.has(message.view)) {
         console.log("[Kilo New] App: 🧭 navigate:", message.view, message.tab ? `tab=${message.tab}` : "")
         if (message.tab) setSettingsTab(message.tab)
+        if (message.subtab) setSettingsSubtab(message.subtab)
+        if (message.focus) setSettingsFocus((prev) => ({ token: (prev?.token ?? 0) + 1, value: message.focus! }))
         setAgentManagerProjectId(message.projectId)
         setCurrentView(message.view as ViewType)
         vscode.postMessage({ type: "settingsTabChanged", tab: message.tab })
@@ -343,6 +369,12 @@ const AppContent: Component = () => {
       open(message)
       handleKiloModel(message)
       handleForked(message)
+      routeChatInput(
+        message,
+        currentView(),
+        () => setCurrentView("newTask"),
+        (msg) => window.postMessage(msg, window.origin),
+      )
       if (message?.type === "viewSubAgentSession" && message.sessionID) {
         console.log("[Kilo New] App: 🔍 viewSubAgentSession:", message.sessionID)
         session.setCurrentSessionID(message.sessionID)
@@ -432,10 +464,17 @@ const AppContent: Component = () => {
             <Match when={currentView() === "settings"}>
               <Settings
                 tab={settingsTab()}
+                subtab={settingsSubtab()}
+                focus={settingsFocus()}
                 agentManagerProjectId={agentManagerProjectId()}
                 agentManagerSettings={host.KILO_AGENT_MANAGER_SETTINGS === true}
                 onTabChange={setSettingsTab}
+                onAgentBehaviourNavigationConsumed={() => {
+                  setSettingsSubtab(undefined)
+                  setSettingsFocus(undefined)
+                }}
                 onMigrationClick={() => setMigration(true)}
+                searchRequest={settingsSearch()}
               />
             </Match>
             <Match when={currentView() === "subAgentViewer"}>

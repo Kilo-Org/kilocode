@@ -5,7 +5,7 @@ import * as path from "node:path"
 import type { ScriptTerminalManager } from "../../src/agent-manager/ScriptTerminalManager"
 import { createSetupScriptTask, pickSetupTask, runWorktreeSetupScript } from "../../src/agent-manager/setup-script-task"
 import { SetupScriptService } from "../../src/agent-manager/SetupScriptService"
-import type { RunTask } from "../../src/agent-manager/SetupScriptRunner"
+import { setupTaskIdentity, type RunTask } from "../../src/agent-manager/SetupScriptRunner"
 import type { AgentManagerOutMessage } from "../../src/agent-manager/types"
 
 interface StartCall {
@@ -314,13 +314,14 @@ describe("runWorktreeSetupScript", () => {
 
   function flow(
     script: boolean,
-    opts?: { destination?: "vscode" | "agentManager"; code?: number; projectId?: string },
+    opts?: { destination?: "vscode" | "agentManager"; code?: number; projectId?: string; error?: Error },
   ) {
     const posted: AgentManagerOutMessage[] = []
     const runs: string[] = []
     const ctx = harness()
     const vscode: RunTask = async (cfg) => {
       runs.push(cfg.cwd)
+      if (opts?.error) throw opts.error
       return opts?.code ?? 0
     }
     const input = {
@@ -384,5 +385,28 @@ describe("runWorktreeSetupScript", () => {
       message: "Setup script exited with code 3",
       worktreeId: "wt-1",
     })
+  })
+
+  it("reports a VS Code task that fails to start instead of assuming success", async () => {
+    const scene = flow(true, { error: new Error("Failed to start setup task: boom") })
+    await runWorktreeSetupScript(scene.input, { worktreePath: "/repo/worktree", repoPath: "/repo" })
+    expect(scene.posted).toContainEqual({
+      type: "agentManager.worktreeSetup",
+      status: "error",
+      message: "Failed to start setup task: boom",
+      worktreeId: "wt-1",
+    })
+  })
+})
+
+describe("setupTaskIdentity", () => {
+  it("gives each worktree its own VS Code task identity", () => {
+    const a = setupTaskIdentity({ ...config, cwd: "/repo/.kilo/worktrees/a" })
+    const b = setupTaskIdentity({ ...config, cwd: "/repo/.kilo/worktrees/b" })
+
+    expect(a.definition).not.toEqual(b.definition)
+    expect(a.name).not.toBe(b.name)
+    expect(a.definition).toEqual({ type: "kilo-worktree-setup", script: "sh", worktree: "/repo/.kilo/worktrees/a" })
+    expect(a.name).toBe("Worktree Setup (a)")
   })
 })

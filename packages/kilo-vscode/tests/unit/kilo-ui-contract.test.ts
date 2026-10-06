@@ -573,14 +573,26 @@ describe("Collapsed deferred tool details contract (source)", () => {
 })
 
 describe("Deferred tool card remount contract (source)", () => {
+  const basic = fs.readFileSync(BASIC_TOOL_FILE, "utf-8")
   const wrapper = fs.readFileSync(path.join(MONOREPO_ROOT, "packages/kilo-ui/src/components/basic-tool.tsx"), "utf-8")
+  const css = fs.readFileSync(KILO_BASIC_TOOL_CSS_FILE, "utf-8")
   const scroll = fs.readFileSync(path.join(MONOREPO_ROOT, "packages/kilo-ui/src/hooks/create-auto-scroll.tsx"), "utf-8")
 
-  it("mounts a remembered-open deferred card with its body in the same frame", () => {
-    // Otherwise every virtualizer remount of an expanded diff paints a
-    // collapsed frame, then grows by the full diff height and the pinned
-    // transcript jumps (and can loop through the virtualizer's range).
-    expect(wrapper).toContain("const defer = () => props.defer && !(remount && initial())")
+  it("reserves remembered-open card height while remounting its body later", () => {
+    // Restoring the measured height prevents the collapsed frame and
+    // virtualizer feedback loop without rebuilding Pierre inside the switch.
+    expect(wrapper).toContain("const cached = remount && id ? heights.get(id) : undefined")
+    expect(wrapper).toContain("const defer = () => props.defer && !(remount && initial() && size == null)")
+    expect(wrapper).toContain("deferredSize={size}")
+    expect(wrapper).toContain("cached.revision === revision()")
+    expect(wrapper).toContain("const value = props.revision")
+    expect(wrapper).toContain('if (typeof value === "string") return checksum(value)')
+    expect(wrapper).toContain("!mounted.has(id)")
+    expect(wrapper).toContain("if (open && !props.forceOpen) remember(key())")
+    expect(basic).toContain("deferredSize?: { height: number; width: number; font: string }")
+    expect(basic).toContain('data-deferred-height={state.restored ? "" : undefined}')
+    expect(basic).toContain('style={{ "min-height": reserve() }}')
+    expect(css).toMatch(/\[data-slot="collapsible-content"\]\[data-deferred-height\]\s*\{[^}]*animation:\s*none;/)
     // The memory is separate from the user preference map: a display setting
     // or search forceOpen must not become a durable per-card open state.
     expect(wrapper).toContain("if (initial() && !props.forceOpen) remember(id)")

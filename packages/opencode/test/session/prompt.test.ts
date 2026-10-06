@@ -138,12 +138,14 @@ function makeMcp(instructions: MCP.ServerInstructions[] = []) {
       add: () => Effect.succeed({ status: { status: "disabled" as const } }),
       connect: () => Effect.void,
       disconnect: () => Effect.void,
+    remove: () => Effect.void, // kilocode_change
       getPrompt: () => Effect.succeed(undefined),
       readResource: () => Effect.succeed(undefined),
       startAuth: () => Effect.die("unexpected MCP auth in prompt-effect tests"),
       authenticate: () => Effect.die("unexpected MCP auth in prompt-effect tests"),
       finishAuth: () => Effect.die("unexpected MCP auth in prompt-effect tests"),
       removeAuth: () => Effect.void,
+      cancelAuth: () => Effect.void, // kilocode_change
       supportsOAuth: () => Effect.succeed(false),
       hasStoredTokens: () => Effect.succeed(false),
       getAuthStatus: () => Effect.succeed("not_authenticated" as const),
@@ -1037,6 +1039,43 @@ it.instance("loop continues when finish is tool-calls", () =>
   }),
 )
 
+it.instance("loop continues when finish is unknown", () =>
+  Effect.gen(function* () {
+    const { llm } = yield* useServerConfig(providerCfg)
+    const prompt = yield* SessionPrompt.Service
+    const sessions = yield* Session.Service
+    const session = yield* sessions.create({
+      title: "Pinned",
+      permission: [{ permission: "*", pattern: "*", action: "allow" }],
+    })
+    yield* prompt.prompt({
+      sessionID: session.id,
+      agent: "build",
+      noReply: true,
+      parts: [{ type: "text", text: "hello" }],
+    })
+    yield* llm.push(reply())
+    yield* llm.text("second")
+
+    const result = yield* prompt.loop({ sessionID: session.id })
+    // kilocode_change start - Kilo settles a finish-less response instead of
+    // continuing the prompt loop. Kilo preserves the AI SDK's unexpected
+    // provider finish reason as "other" (packages/llm/src/schema/ids.ts), which
+    // is a terminal finish for the loop-exit check in session/prompt.ts, and
+    // src/kilocode/session/processor.ts only retries genuinely incomplete
+    // responses through its bounded recover budget. The second queued reply is
+    // therefore never consumed and only one model call is made.
+    expect(yield* llm.calls).toBe(1)
+    expect(yield* llm.pending).toBe(1)
+    expect(result.info.role).toBe("assistant")
+    if (result.info.role === "assistant") {
+      expect(result.parts.some((part) => part.type === "text" && part.text === "second")).toBe(false)
+      expect(result.info.finish).toBe("other")
+    }
+    // kilocode_change end
+  }),
+)
+
 it.instance("glob tool keeps instance context during prompt runs", () =>
   Effect.gen(function* () {
     const { dir, llm } = yield* useServerConfig(providerCfg)
@@ -1327,6 +1366,64 @@ it.instance(
     }),
   10_000,
 )
+
+// kilocode_change start - TUI subagent-view Esc and the VS Code task-card Stop both abort the child as a tree
+it.instance(
+  "tree abort of a running subagent leaves the parent running and reports the task as cancelled",
+  () =>
+    Effect.gen(function* () {
+      const { llm } = yield* useServerConfig(providerCfg)
+      const prompt = yield* SessionPrompt.Service
+      const sessions = yield* Session.Service
+      const status = yield* SessionStatus.Service
+      const chat = yield* sessions.create({
+        title: "Pinned",
+        permission: [{ permission: "*", pattern: "*", action: "allow" }],
+      })
+      yield* llm.tool("task", {
+        description: "inspect bug",
+        prompt: "look into the cache key path",
+        subagent_type: "general",
+      })
+      yield* llm.hang
+      yield* llm.text("parent recovered")
+      yield* user(chat.id, "hello")
+
+      const fiber = yield* prompt.loop({ sessionID: chat.id }).pipe(Effect.forkChild)
+      const child = yield* pollWithTimeout(
+        Effect.gen(function* () {
+          const id = (yield* sessions.children(chat.id))[0]?.id
+          if (!id) return undefined
+          if ((yield* status.get(id)).type !== "busy") return undefined
+          return (yield* llm.calls) >= 2 ? id : undefined
+        }),
+        "child task never started",
+        "10 seconds",
+      )
+
+      yield* prompt.cancel(child, "tree")
+      const result = yield* awaitWithTimeout(
+        Fiber.join(fiber),
+        "parent did not continue after child abort",
+        "15 seconds",
+      )
+
+      // the parent was not aborted: it finished its step and made its next model call
+      expect(result.parts.some((part) => part.type === "text" && part.text === "parent recovered")).toBe(true)
+      const part = (yield* MessageV2.filterCompactedEffect(chat.id))
+        .flatMap((msg) => msg.parts)
+        .find(
+          (part): part is ErrorToolPart =>
+            part.type === "tool" && part.tool === "task" && part.state.status === "error",
+        )
+      expect(part?.state.error).toBe("Task cancelled by the user")
+      // the reason reaches the parent model, so it does not treat the stop as a failure to retry
+      expect(JSON.stringify((yield* llm.hits).at(-1)?.body)).toContain("Task cancelled by the user")
+      expect((yield* status.get(child)).type).toBe("idle")
+    }),
+  30_000,
+)
+// kilocode_change end
 
 it.instance(
   "loop sets status to busy then idle",
