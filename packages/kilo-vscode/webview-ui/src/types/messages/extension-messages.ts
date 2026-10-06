@@ -294,6 +294,7 @@ export interface MessageCreatedMessage {
 
 export interface SessionsLoadedMessage {
   type: "sessionsLoaded"
+  projectId?: string
   sessions: SessionInfo[]
   preserveSessionIds?: string[]
   append?: boolean
@@ -464,6 +465,8 @@ export interface NavigateMessage {
   type: "navigate"
   view: "newTask" | "marketplace" | "history" | "profile" | "settings" | "subAgentViewer"
   tab?: string
+  subtab?: string
+  focus?: string
   projectId?: string
 }
 
@@ -1524,6 +1527,8 @@ export interface MarketplaceInstallResultMessage {
   error?: string
   filePath?: string
   filePaths?: string[]
+  /** True when the installed MCP server reports `needs_auth` right after install (success only). */
+  needsAuth?: boolean
 }
 
 export interface OpenInstallModalMessage {
@@ -1593,6 +1598,63 @@ export interface McpStatusLoadedMessage {
   status: Record<string, McpStatusEntry>
 }
 
+/** The status tags an MCP sign-in attempt can resolve to: the CLI's `McpStatus` tags, plus client-synthesized `cancelled`/`timeout` and HTTP-derived `unsupported`/`not_found`. */
+export type McpAuthStatus =
+  | "connected"
+  | "failed"
+  | "cancelled"
+  | "timeout"
+  | "unsupported"
+  | "not_found"
+  | "disabled"
+  | "needs_auth"
+  | "needs_client_registration"
+
+export interface McpAuthStateMessage {
+  type: "mcpAuthState"
+  directory: string
+  needsAuth: string[]
+  busy: string[]
+}
+
+export interface McpAuthResultMessage {
+  type: "mcpAuthResult"
+  name: string
+  status: McpAuthStatus
+  error?: string
+}
+
+export interface McpBundle {
+  id: string
+  scope: "project" | "global"
+  skills: string[]
+}
+
+export interface McpBundlesMessage {
+  type: "mcpBundles"
+  bundles: McpBundle[]
+}
+
+export interface McpRemovedMessage {
+  type: "mcpRemoved"
+  name: string
+}
+
+export interface McpInstalledMessage {
+  type: "mcpInstalled"
+  name: string
+}
+
+export interface McpRemovalStateMessage {
+  type: "mcpRemovalState"
+  name: string
+  removing: boolean
+}
+
+export interface AgentBehaviourInvalidatedMessage {
+  type: "agentBehaviourInvalidated"
+}
+
 // Continue in Worktree: progress updates (extension → webview)
 export interface ContinueInWorktreeProgressMessage {
   type: "continueInWorktreeProgress"
@@ -1641,6 +1703,28 @@ export interface AgentManagerBrowserStateMessage {
   frameError?: string
   back?: boolean
   forward?: boolean
+}
+
+/** Sent once per editor-tab browser panel with its bound session and feature flag. */
+export interface BrowserTabScopeMessage {
+  type: "browserTab.scope"
+  sessionId: string
+  browserAutomation: boolean
+}
+
+export type BrowserTabStateMessage = Omit<AgentManagerBrowserStateMessage, "type"> & { type: "browserTab.state" }
+
+export type BrowserTabInspectionMessage = Omit<AgentManagerBrowserInspectionMessage, "type"> & {
+  type: "browserTab.inspection"
+}
+
+export type BrowserTabDevtoolsMessage = Omit<AgentManagerBrowserDevtoolsMessage, "type"> & {
+  type: "browserTab.devtools"
+}
+
+export interface BrowserTabFrameMessage extends BrowserFrame {
+  type: "browserTab.frame"
+  sessionId: string
 }
 
 export interface AgentManagerBrowserInspectionMessage {
@@ -1699,6 +1783,11 @@ export type ExtensionMessage =
   | AgentManagerBrowserInspectionMessage
   | AgentManagerBrowserDevtoolsMessage
   | AgentManagerBrowserFrameMessage
+  | BrowserTabScopeMessage
+  | BrowserTabStateMessage
+  | BrowserTabInspectionMessage
+  | BrowserTabDevtoolsMessage
+  | BrowserTabFrameMessage
   | ReadyMessage
   | FontSizeChangedMessage
   | GitStatusMessage
@@ -1896,6 +1985,13 @@ export type ExtensionMessage =
   | ContinueInWorktreeProgressMessage
   | WorktreeStatsLoadedMessage
   | McpStatusLoadedMessage
+  | McpAuthStateMessage
+  | McpAuthResultMessage
+  | McpBundlesMessage
+  | McpRemovedMessage
+  | McpInstalledMessage
+  | McpRemovalStateMessage
+  | AgentBehaviourInvalidatedMessage
   | ClearPendingPromptsMessage
   | ExtensionDataReadyMessage
   | TelemetryStateMessage

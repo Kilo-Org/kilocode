@@ -14,7 +14,7 @@ function message(finish?: string, error?: Message["error"]): Message {
 }
 
 function todo(status: TodoItem["status"]): TodoItem {
-  return { id: status, content: status, status }
+  return { content: status, status }
 }
 
 describe("terminal", () => {

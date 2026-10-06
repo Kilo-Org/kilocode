@@ -135,6 +135,10 @@ const icons: Record<string, { path: string; viewBox: string }> = {
     viewBox: "0 0 24 24",
     path: `<path d="M9.5 14.5L3 21" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M5.00007 9.48528L14.1925 18.6777L15.8895 16.9806L15.4974 13.1944L21.0065 8.5211L15.1568 2.67141L10.4834 8.18034L6.69713 7.78823L5.00007 9.48528Z" fill="currentColor" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>`,
   },
+  "warning-filled": {
+    viewBox: "0 0 20 20",
+    path: `<path fill-rule="evenodd" clip-rule="evenodd" d="M10 2.5L18.125 16.25H1.875L10 2.5ZM9.375 7.5H10.625V12H9.375V7.5ZM9.375 13.125H10.625V14.375H9.375V13.125Z" fill="currentColor"/>`,
+  },
 }
 
 type Name = keyof typeof icons

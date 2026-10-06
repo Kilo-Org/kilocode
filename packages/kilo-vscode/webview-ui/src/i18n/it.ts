@@ -194,6 +194,10 @@ export const dict = {
   "prompt.agents.show": "Mostra agenti in background",
   "prompt.action.enhance": "Migliora prompt",
   "prompt.paste.expand": "Fai clic per espandere il testo incollato",
+  "prompt.issues.title": "Problemi della sessione",
+  "prompt.mcp.provider": "MCP {{name}}",
+  "prompt.mcp.openSettings": "Apri nelle Impostazioni",
+  "prompt.mcp.signIn.busy": "Accesso in corso…",
   "prompt.action.indexing": "Impostazioni indicizzazione",
   "prompt.action.autoApprove.enable": "Abilita approvazione automatica",
   "prompt.action.autoApprove.disable": "Disabilita approvazione automatica",
@@ -397,6 +401,9 @@ export const dict = {
   "provider.custom.error.duplicate": "Duplicato",
   "settings.openLocalConfig": "Config locale",
   "settings.openGlobalConfig": "Config globale",
+  "settings.search.placeholder": "Cerca impostazioni",
+  "settings.search.noResults": "Nessuna impostazione trovata",
+  "settings.search.clear": "Cancella ricerca",
   "settings.config.scope.local": "Locale",
   "settings.config.scope.global": "Globale",
   "settings.config.status.loaded": "caricata",
@@ -871,6 +878,8 @@ export const dict = {
   "settings.agentBehaviour.removeSkill.title": "Rimuovi skill",
   "settings.agentBehaviour.removeSkill.confirm":
     'Rimuovere la skill "{{name}}"? Questo eliminerà i file della skill dal disco.',
+  "settings.agentBehaviour.removeSkill.bundleConfirm":
+    'Rimuovere la skill "{{name}}"? Questo disinstallerà anche il server MCP {{mcp}} e ogni skill correlata della stessa installazione dal Marketplace.',
   "settings.agentBehaviour.removeSkill.button": "Rimuovi",
   "settings.agentBehaviour.rules.description":
     "Le regole sono file di istruzioni che guidano il comportamento dell'agente. Sono incluse nel prompt di sistema per ogni conversazione. Aggiungi i percorsi dei file qui sotto per includere regole aggiuntive.",
@@ -887,15 +896,40 @@ export const dict = {
   "settings.agentBehaviour.removeMcp.title": "Rimuovi server MCP",
   "settings.agentBehaviour.removeMcp.confirm":
     'Rimuovere il server MCP "{{name}}"? Questo lo rimuoverà dalla configurazione.',
+  "settings.agentBehaviour.removeMcp.bundleConfirm":
+    'Rimuovere il server MCP "{{name}}" e le sue skill correlate? Questo rimuove sia il server che ogni skill appartenente a questa installazione dal Marketplace.',
   "settings.agentBehaviour.removeMcp.button": "Rimuovi",
   "settings.agentBehaviour.mcpDetail.command": "Comando",
   "settings.agentBehaviour.mcpDetail.args": "Argomenti",
   "settings.agentBehaviour.mcpDetail.env": "Ambiente",
+  "settings.agentBehaviour.mcpSignIn.cancel": "Annulla accesso",
+  "settings.agentBehaviour.mcpRemoving": "Rimozione…",
+  "settings.agentBehaviour.mcpResetAuth": "Reimposta accesso",
+  "settings.agentBehaviour.mcpResetAuth.title": "Reimposta accesso MCP",
+  "settings.agentBehaviour.mcpResetAuth.confirm":
+    'Eliminare l\'accesso salvato per "{{name}}"? Dovrai accedere di nuovo.',
   "settings.agentBehaviour.editMcp": "Modifica server MCP",
   "settings.agentBehaviour.editMcp.transportLocal": "Server locale (trasporto stdio)",
   "settings.agentBehaviour.editMcp.transportRemote": "Server remoto (trasporto SSE/HTTP)",
   "settings.agentBehaviour.editMcp.env": "Variabili d'ambiente",
   "settings.agentBehaviour.editMcp.env.help": "Variabili passate al processo del server MCP.",
+  "settings.agentBehaviour.editMcp.oauth": "OAuth",
+  "settings.agentBehaviour.editMcp.oauth.help":
+    "Lasciare su Automatico a meno che il server non richieda un client pre-registrato. Un client secret viene memorizzato nel file di configurazione di Kilo.",
+  "settings.agentBehaviour.editMcp.oauth.mode": "Modalità",
+  "settings.agentBehaviour.editMcp.oauth.mode.automatic": "Automatica",
+  "settings.agentBehaviour.editMcp.oauth.mode.disabled": "Disabilitata",
+  "settings.agentBehaviour.editMcp.oauth.mode.custom": "Client personalizzato",
+  "settings.agentBehaviour.editMcp.oauth.clientId": "ID client",
+  "settings.agentBehaviour.editMcp.oauth.clientSecret": "Client secret",
+  "settings.agentBehaviour.editMcp.oauth.scope": "Ambito",
+  "settings.agentBehaviour.editMcp.oauth.callbackPort": "Porta di callback",
+  "settings.agentBehaviour.editMcp.oauth.redirectUri": "URI di reindirizzamento",
+  "settings.agentBehaviour.editMcp.oauth.redirectUri.help":
+    "Il valore predefinito è http://127.0.0.1:19876/mcp/oauth/callback e sovrascrive la porta di callback.",
+  "settings.agentBehaviour.editMcp.oauth.port.invalid": "Inserisci una porta tra 1 e 65535.",
+  "settings.agentBehaviour.editMcp.oauth.secret.invalid": "Un client secret richiede un ID client.",
+  "settings.agentBehaviour.editMcp.oauth.redirectUri.invalid": "Inserisci un URI di reindirizzamento valido.",
   "settings.agentBehaviour.addMcp.command": "Comando",
   "settings.agentBehaviour.addMcp.command.placeholder": "es. npx",
   "settings.agentBehaviour.addMcp.args": "Argomenti",
@@ -1187,6 +1221,8 @@ export const dict = {
   "error.details.show": "Dettagli",
   "task.todos.progress": "{{done}}/{{total}} to-do completati",
   "task.todos.allDone": "{{count}} to-do completati",
+  "task.todos.title": "To-do",
+  "task.todos.done": "Tutto fatto",
   "task.backgroundAgents.running.one": "1 agente in background",
   "task.backgroundAgents.running.many": "{{count}} agenti in background",
   "task.backgroundAgents.open": "Apri agente in background",
@@ -1395,4 +1431,7 @@ export const dict = {
   "settings.experimental.browserAutomation.systemChrome.description":
     "Usa il Google Chrome installato per il Browser integrato. Disattivalo solo se è già installato un browser Playwright Chromium compatibile.",
   "chat.search.searchingHistory": "Ricerca nei messaggi precedenti…",
+  "browserTab.noSession":
+    "Apri il browser da una sessione per visualizzare in anteprima un'applicazione locale o una pagina HTTPS pubblica.",
+  "browserTab.disabled": "Il browser integrato è disabilitato. Abilitalo in Impostazioni Kilo > Sperimentale.",
 } as const

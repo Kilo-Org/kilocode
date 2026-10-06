@@ -3767,12 +3767,108 @@
             }
           }
         },
-        "description": "Start OAuth flow and wait for callback (opens browser).",
+        "description": "Start OAuth flow and wait for callback, optionally letting the client open the browser.",
         "summary": "Authenticate MCP OAuth",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "external": {
+                    "type": "boolean"
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
         "x-codeSamples": [
           {
             "lang": "js",
             "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.mcp.auth.authenticate({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/mcp/{name}/auth/cancel": {
+      "post": {
+        "tags": ["mcp"],
+        "operationId": "mcp.auth.cancel",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "schema": {
+              "type": "string"
+            },
+            "required": true
+          },
+          {
+            "name": "directory",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OAuth authentication cancelled",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [true]
+                    }
+                  },
+                  "required": ["success"],
+                  "additionalProperties": false,
+                  "description": "OAuth authentication cancelled"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "McpServerNotFoundError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/McpServerNotFoundError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Cancel an active OAuth flow without removing stored credentials.",
+        "summary": "Cancel MCP OAuth",
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.mcp.auth.cancel({\n  ...\n})"
           }
         ]
       }
@@ -27685,6 +27781,9 @@
             "$ref": "#/components/schemas/EventMcpBrowserOpenFailed1"
           },
           {
+            "$ref": "#/components/schemas/EventMcpAuthUrl1"
+          },
+          {
             "$ref": "#/components/schemas/EventCommandExecuted1"
           },
           {
@@ -28040,6 +28139,9 @@
           },
           {
             "$ref": "#/components/schemas/EventMcpBrowserOpenFailed"
+          },
+          {
+            "$ref": "#/components/schemas/EventMcpAuthUrl"
           },
           {
             "$ref": "#/components/schemas/EventCommandExecuted"
@@ -31179,6 +31281,9 @@
                 "$ref": "#/components/schemas/EventMcpBrowserOpenFailed"
               },
               {
+                "$ref": "#/components/schemas/EventMcpAuthUrl"
+              },
+              {
                 "$ref": "#/components/schemas/EventCommandExecuted"
               },
               {
@@ -33788,6 +33893,34 @@
                   },
                   "type": {
                     "type": "string",
+                    "enum": ["mcp.auth.url"]
+                  },
+                  "properties": {
+                    "type": "object",
+                    "properties": {
+                      "mcpName": {
+                        "type": "string"
+                      },
+                      "url": {
+                        "type": "string"
+                      }
+                    },
+                    "required": ["mcpName", "url"],
+                    "additionalProperties": false
+                  }
+                },
+                "required": ["id", "type", "properties"],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "pattern": "^evt_"
+                  },
+                  "type": {
+                    "type": "string",
                     "enum": ["command.executed"]
                   },
                   "properties": {
@@ -35607,6 +35740,9 @@
               "type": "string"
             }
           },
+          "memory_model": {
+            "type": "string"
+          },
           "default_agent": {
             "type": "string"
           },
@@ -37230,6 +37366,9 @@
           "status": {
             "type": "string",
             "enum": ["needs_auth"]
+          },
+          "error": {
+            "type": "string"
           }
         },
         "required": ["status"],
@@ -43058,6 +43197,9 @@
             "$ref": "#/components/schemas/McpBrowserOpenFailed"
           },
           {
+            "$ref": "#/components/schemas/McpAuthUrl"
+          },
+          {
             "$ref": "#/components/schemas/CommandExecuted"
           },
           {
@@ -47578,6 +47720,33 @@
           "type": {
             "type": "string",
             "enum": ["mcp.browser.open.failed"]
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "mcpName": {
+                "type": "string"
+              },
+              "url": {
+                "type": "string"
+              }
+            },
+            "required": ["mcpName", "url"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["id", "type", "properties"],
+        "additionalProperties": false
+      },
+      "EventMcpAuthUrl": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["mcp.auth.url"]
           },
           "properties": {
             "type": "object",
@@ -56430,6 +56599,56 @@
         "required": ["id", "type", "data"],
         "additionalProperties": false
       },
+      "McpAuthUrl": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^evt_"
+          },
+          "metadata": {
+            "type": "object"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["mcp.auth.url"]
+          },
+          "durable": {
+            "type": "object",
+            "properties": {
+              "aggregateID": {
+                "type": "string"
+              },
+              "seq": {
+                "type": "integer"
+              },
+              "version": {
+                "type": "integer"
+              }
+            },
+            "required": ["aggregateID", "seq", "version"],
+            "additionalProperties": false
+          },
+          "location": {
+            "$ref": "#/components/schemas/LocationRef"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "mcpName": {
+                "type": "string"
+              },
+              "url": {
+                "type": "string"
+              }
+            },
+            "required": ["mcpName", "url"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["id", "type", "data"],
+        "additionalProperties": false
+      },
       "CommandExecuted": {
         "type": "object",
         "properties": {
@@ -59971,6 +60190,34 @@
           "type": {
             "type": "string",
             "enum": ["mcp.browser.open.failed"]
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "mcpName": {
+                "type": "string"
+              },
+              "url": {
+                "type": "string"
+              }
+            },
+            "required": ["mcpName", "url"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["id", "type", "properties"],
+        "additionalProperties": false
+      },
+      "EventMcpAuthUrl1": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^evt_"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["mcp.auth.url"]
           },
           "properties": {
             "type": "object",
