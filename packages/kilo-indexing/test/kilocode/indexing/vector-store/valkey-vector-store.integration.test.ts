@@ -9,7 +9,7 @@
  *   VALKEY_URL      - Valkey server URL, e.g. "redis://localhost:6379" (required to run)
  *   VALKEY_PASSWORD - Optional password for authentication
  */
-import { describe, test, expect, beforeAll, afterEach } from "bun:test"
+import { describe, test, expect, afterEach } from "bun:test"
 import type { ValkeyVectorStore } from "../../../../src/indexing/vector-store/valkey-vector-store"
 import type { PointStruct } from "../../../../src/indexing/interfaces/vector-store"
 import type { EmbeddingProfile } from "../../../../src/indexing/embedding-profile"
@@ -64,10 +64,9 @@ function connect() {
   })
 }
 
-let serverAvailable = false
-
-beforeAll(async () => {
-  if (!VALKEY_URL) return
+// Probed at load time so unavailable servers report the suite as skipped, not as passing no-ops.
+const serverAvailable = await (async () => {
+  if (!VALKEY_URL) return false
   glide = await import("@valkey/valkey-glide")
   Store = (await import("../../../../src/indexing/vector-store/valkey-vector-store")).ValkeyVectorStore
 
@@ -75,34 +74,31 @@ beforeAll(async () => {
     console.log("⚠️  Valkey server not reachable at", VALKEY_URL, err)
     return null
   })
-  if (!client) return
+  if (!client) return false
 
   // A plain Redis/Valkey without ValkeySearch also rejects FT.INFO with a RequestError,
   // so ask the server which modules are loaded instead of inferring it from an error.
   const modules = await client.customCommand(["MODULE", "LIST"])
   client.close()
-  serverAvailable = JSON.stringify(modules).toLowerCase().includes("search")
-  if (!serverAvailable) console.log("⚠️  ValkeySearch module not loaded on", VALKEY_URL)
-})
+  const loaded = JSON.stringify(modules).toLowerCase().includes("search")
+  if (!loaded) console.log("⚠️  ValkeySearch module not loaded on", VALKEY_URL)
+  return loaded
+})()
 
-describe.skipIf(!VALKEY_URL)("ValkeyVectorStore Integration Tests", () => {
+describe.skipIf(!serverAvailable)("ValkeyVectorStore Integration Tests", () => {
   let store: ValkeyVectorStore
 
   afterEach(async () => {
     if (store) {
-      try {
-        await store.deleteCollection()
-      } catch {
-        // Ignore cleanup errors
-      }
+      await store
+        .deleteCollection()
+        .catch((err) => console.log("⚠️  cleanup failed for", store.getCollectionName(), err))
       await store.dispose()
     }
   })
 
   describe("Connection", () => {
     test("should connect successfully to Valkey server", async () => {
-      if (!serverAvailable) return
-
       store = createStore()
       const created = await store.initialize()
       expect(created).toBe(true)
@@ -112,8 +108,6 @@ describe.skipIf(!VALKEY_URL)("ValkeyVectorStore Integration Tests", () => {
     })
 
     test("should fail with auth error when wrong password is provided", async () => {
-      if (!serverAvailable) return
-
       const badStore = new Store(
         `/tmp/bad-auth-${randomUUID()}`,
         VALKEY_URL,
@@ -137,8 +131,6 @@ describe.skipIf(!VALKEY_URL)("ValkeyVectorStore Integration Tests", () => {
 
   describe("Full workflow: initialize → upsert → search → verify", () => {
     test("should upsert points and find them via search", async () => {
-      if (!serverAvailable) return
-
       store = createStore()
       await store.initialize()
 
@@ -175,8 +167,6 @@ describe.skipIf(!VALKEY_URL)("ValkeyVectorStore Integration Tests", () => {
     })
 
     test("should overwrite existing point on re-upsert", async () => {
-      if (!serverAvailable) return
-
       store = createStore()
       await store.initialize()
 
@@ -201,8 +191,6 @@ describe.skipIf(!VALKEY_URL)("ValkeyVectorStore Integration Tests", () => {
 
   describe("Directory prefix filtering", () => {
     test("should filter results by directory prefix", async () => {
-      if (!serverAvailable) return
-
       store = createStore()
       await store.initialize()
 
@@ -235,8 +223,6 @@ describe.skipIf(!VALKEY_URL)("ValkeyVectorStore Integration Tests", () => {
     })
 
     test("should treat '.', './', and empty string as no filter", async () => {
-      if (!serverAvailable) return
-
       store = createStore()
       await store.initialize()
 
@@ -260,8 +246,6 @@ describe.skipIf(!VALKEY_URL)("ValkeyVectorStore Integration Tests", () => {
 
   describe("GlideFt lifecycle: create → info → dropindex", () => {
     test("should create index, verify via info, and drop it", async () => {
-      if (!serverAvailable) return
-
       store = createStore()
 
       // Initially collection should not exist
@@ -289,8 +273,6 @@ describe.skipIf(!VALKEY_URL)("ValkeyVectorStore Integration Tests", () => {
     })
 
     test("should re-initialize after deletion", async () => {
-      if (!serverAvailable) return
-
       store = createStore()
 
       await store.initialize()
@@ -305,8 +287,6 @@ describe.skipIf(!VALKEY_URL)("ValkeyVectorStore Integration Tests", () => {
 
   describe("Batch upsert performance", () => {
     test("should upsert 60 points in a single pipeline", async () => {
-      if (!serverAvailable) return
-
       store = createStore()
       await store.initialize()
 
@@ -340,8 +320,6 @@ describe.skipIf(!VALKEY_URL)("ValkeyVectorStore Integration Tests", () => {
 
   describe("Scan+delete: no orphaned keys after deleteCollection", () => {
     test("should leave no orphaned keys after deleteCollection", async () => {
-      if (!serverAvailable) return
-
       store = createStore()
       await store.initialize()
 
@@ -383,8 +361,6 @@ describe.skipIf(!VALKEY_URL)("ValkeyVectorStore Integration Tests", () => {
 
   describe("clearCollection preserves index structure", () => {
     test("should clear all points but keep the index", async () => {
-      if (!serverAvailable) return
-
       store = createStore()
       await store.initialize()
 
@@ -421,8 +397,6 @@ describe.skipIf(!VALKEY_URL)("ValkeyVectorStore Integration Tests", () => {
 
   describe("Metadata round-trip: markComplete → hasIndexedData → markIncomplete", () => {
     test("should track indexing state correctly", async () => {
-      if (!serverAvailable) return
-
       store = createStore()
       await store.initialize()
 
@@ -454,8 +428,6 @@ describe.skipIf(!VALKEY_URL)("ValkeyVectorStore Integration Tests", () => {
     })
 
     test("should return false for hasIndexedData when collection does not exist", async () => {
-      if (!serverAvailable) return
-
       store = createStore(`/tmp/nonexistent-${randomUUID()}`)
       // Don't initialize — collection doesn't exist
       expect(await store.hasIndexedData()).toBe(false)
@@ -464,8 +436,6 @@ describe.skipIf(!VALKEY_URL)("ValkeyVectorStore Integration Tests", () => {
 
   describe("Point deletion by file path", () => {
     test("should delete points by file path", async () => {
-      if (!serverAvailable) return
-
       store = createStore()
       await store.initialize()
 
@@ -491,8 +461,6 @@ describe.skipIf(!VALKEY_URL)("ValkeyVectorStore Integration Tests", () => {
     })
 
     test("should handle deletion of non-existent file path gracefully", async () => {
-      if (!serverAvailable) return
-
       store = createStore()
       await store.initialize()
 
@@ -504,8 +472,6 @@ describe.skipIf(!VALKEY_URL)("ValkeyVectorStore Integration Tests", () => {
 
   describe("hasIndexedData after clearCollection (gap #1)", () => {
     test("hasIndexedData remains true after clearCollection due to ValkeySearch num_docs behavior", async () => {
-      if (!serverAvailable) return
-
       store = createStore()
       await store.initialize()
 
@@ -535,8 +501,6 @@ describe.skipIf(!VALKEY_URL)("ValkeyVectorStore Integration Tests", () => {
     })
 
     test("search returns empty immediately after clearCollection regardless of num_docs", async () => {
-      if (!serverAvailable) return
-
       store = createStore()
       await store.initialize()
 
@@ -554,8 +518,6 @@ describe.skipIf(!VALKEY_URL)("ValkeyVectorStore Integration Tests", () => {
 
   describe("search on non-existent collection (gap #2)", () => {
     test("should return empty array when collection was never initialized", async () => {
-      if (!serverAvailable) return
-
       store = createStore(`/tmp/never-initialized-${randomUUID()}`)
 
       const results = await store.search([1, 0, 0, 0], undefined, 0.0, 10)
@@ -565,8 +527,6 @@ describe.skipIf(!VALKEY_URL)("ValkeyVectorStore Integration Tests", () => {
 
   describe("deletePointsByFilePath on non-existent collection (gap #3)", () => {
     test("should not throw when collection was never initialized", async () => {
-      if (!serverAvailable) return
-
       store = createStore(`/tmp/no-collection-del-${randomUUID()}`)
 
       await store.deletePointsByFilePath("src/anything.ts")
@@ -576,8 +536,6 @@ describe.skipIf(!VALKEY_URL)("ValkeyVectorStore Integration Tests", () => {
 
   describe("minScore filtering (gap #5)", () => {
     test("should exclude results below minScore threshold", async () => {
-      if (!serverAvailable) return
-
       store = createStore()
       await store.initialize()
 
@@ -603,8 +561,6 @@ describe.skipIf(!VALKEY_URL)("ValkeyVectorStore Integration Tests", () => {
     })
 
     test("should return all results when minScore is 0", async () => {
-      if (!serverAvailable) return
-
       store = createStore()
       await store.initialize()
 
@@ -624,8 +580,6 @@ describe.skipIf(!VALKEY_URL)("ValkeyVectorStore Integration Tests", () => {
 
   describe("Deep path segments >5 levels (gap #6)", () => {
     test("should index and search files with paths deeper than 5 segments", async () => {
-      if (!serverAvailable) return
-
       store = createStore()
       await store.initialize()
 
@@ -653,8 +607,6 @@ describe.skipIf(!VALKEY_URL)("ValkeyVectorStore Integration Tests", () => {
     })
 
     test("should delete files with deep paths correctly", async () => {
-      if (!serverAvailable) return
-
       store = createStore()
       await store.initialize()
 
@@ -672,8 +624,6 @@ describe.skipIf(!VALKEY_URL)("ValkeyVectorStore Integration Tests", () => {
 
   describe("Special characters in file paths (gap #7)", () => {
     test("should handle file paths with dots correctly", async () => {
-      if (!serverAvailable) return
-
       store = createStore()
       await store.initialize()
 
@@ -692,8 +642,6 @@ describe.skipIf(!VALKEY_URL)("ValkeyVectorStore Integration Tests", () => {
     })
 
     test("should handle file paths with hyphens and underscores", async () => {
-      if (!serverAvailable) return
-
       store = createStore()
       await store.initialize()
 
@@ -712,8 +660,6 @@ describe.skipIf(!VALKEY_URL)("ValkeyVectorStore Integration Tests", () => {
     })
 
     test("should handle file paths with @ symbol", async () => {
-      if (!serverAvailable) return
-
       store = createStore()
       await store.initialize()
 
@@ -733,8 +679,6 @@ describe.skipIf(!VALKEY_URL)("ValkeyVectorStore Integration Tests", () => {
     })
 
     test("should handle file paths with parentheses and spaces", async () => {
-      if (!serverAvailable) return
-
       store = createStore()
       await store.initialize()
 
@@ -754,8 +698,6 @@ describe.skipIf(!VALKEY_URL)("ValkeyVectorStore Integration Tests", () => {
     })
 
     test("should handle batch deletion of paths with special characters", async () => {
-      if (!serverAvailable) return
-
       store = createStore()
       await store.initialize()
 
@@ -783,8 +725,6 @@ describe.skipIf(!VALKEY_URL)("ValkeyVectorStore Integration Tests", () => {
 
   describe("Batch upsert at scale (gap #8)", () => {
     test("should upsert points in multiple sequential batches totaling >1000", async () => {
-      if (!serverAvailable) return
-
       store = createStore()
       await store.initialize()
 
