@@ -628,15 +628,69 @@ describe("BrowserBroker", () => {
     expect(broker.sessions()).toEqual([])
   })
 
+  test("falls back from missing Chrome without changing sandbox or network options", async () => {
+    const configs: Array<Parameters<NonNullable<BrowserBrokerOptions["launch"]>>[0]> = []
+    const broker = new BrowserBroker({
+      log: () => {},
+      fallback: () => true,
+      launch: async (config) => {
+        configs.push(config)
+        if (config.channel === "chrome") throw new Error("Chromium distribution 'chrome' is not found")
+        return {
+          newContext: async () => {
+            throw new Error("Chromium launched")
+          },
+          close: async () => undefined,
+        }
+      },
+    })
+    brokers.push(broker)
+    await expect(
+      broker.open({ sessionId: "fallback", directory: "/tmp/project" }, "http://localhost:3000/"),
+    ).rejects.toThrow("Chromium launched")
+    expect(configs).toHaveLength(2)
+    expect(configs.at(0)?.channel).toBe("chrome")
+    expect(configs.at(1)).toEqual({ ...configs.at(0), channel: undefined })
+    expect(configs.at(1)).toMatchObject({ chromiumSandbox: true, headless: true })
+  })
+
+  test("reports missing Chromium after fallback and retries both runtimes", async () => {
+    const channels: Array<string | undefined> = []
+    const broker = new BrowserBroker({
+      log: () => {},
+      fallback: () => true,
+      launch: async (config) => {
+        channels.push(config.channel)
+        throw new Error(
+          config.channel === "chrome"
+            ? "Chromium distribution 'chrome' is not found"
+            : "Executable doesn't exist at /cache/chromium_headless_shell/chrome",
+        )
+      },
+    })
+    brokers.push(broker)
+    for (const sessionId of ["one", "two"]) {
+      await expect(
+        broker.open({ sessionId, directory: "/tmp/project" }, "http://localhost:3000/"),
+      ).rejects.toMatchObject({
+        missing: "chromium",
+      })
+    }
+    expect(channels).toEqual(["chrome", undefined, "chrome", undefined])
+  })
+
   test.each([
     "No usable sandbox!",
     "error while loading shared libraries: libnss3.so: cannot open shared object file",
     "Timeout 30000ms exceeded",
     "Target page, context or browser has been closed",
   ])("does not misreport a browser startup failure as a missing installation: %s", async (message) => {
+    let attempts = 0
     const broker = new BrowserBroker({
       log: () => {},
+      fallback: () => true,
       launch: async () => {
+        attempts++
         throw new Error(message)
       },
     })
@@ -646,6 +700,7 @@ describe("BrowserBroker", () => {
       .catch((err: unknown) => err)
     expect(error).toBeInstanceOf(BrowserLaunchError)
     expect(error).toMatchObject({ missing: undefined })
+    expect(attempts).toBe(1)
     expect(diagnostic(error, "http://localhost:3000/")).toBe(`The browser could not start. ${message}`)
   })
 
