@@ -112,6 +112,9 @@ export class SettingsEditorProvider implements vscode.Disposable {
       projectDirectory,
       hideTopBar: true,
       agentManagerSettings: view === "settings" ? this.agentManagerSettings : undefined,
+      settingsPanel:
+        view === "settings" ? () => ({ tab: this.tabs.get(view), projectId: this.projects.get(view) }) : undefined,
+      disableStatsPolling: view === "settings",
     })
     if (this.remoteService) {
       provider.setRemoteService(this.remoteService)
@@ -129,15 +132,12 @@ export class SettingsEditorProvider implements vscode.Disposable {
     // "Developer: Reload Webviews" which re-creates the JS context).
     const readyDisposable = panel.webview.onDidReceiveMessage((msg) => {
       if (msg.type === "webviewReady") {
-        // Small delay to let KiloProvider's own webviewReady handler finish first
-        setTimeout(() => {
-          provider.postMessage({
-            type: "navigate",
-            view,
-            tab: this.tabs.get(view),
-            projectId: this.projects.get(view),
-          })
-        }, 50)
+        provider.postMessage({
+          type: "navigate",
+          view,
+          tab: this.tabs.get(view),
+          projectId: this.projects.get(view),
+        })
       }
     })
 
