@@ -266,6 +266,9 @@ export const dict = {
   "speechToText.error.emptyTranscript": "No se detectó voz.",
 
   "prompt.toast.promptSendFailed.title": "Fallo al enviar prompt",
+  "prompt.attachment.failed": "No se puede adjuntar el archivo",
+  "prompt.attachment.unsupported": "{{name}} no es una imagen ni un archivo de texto.",
+  "prompt.attachment.tooLarge": "{{name}} supera {{size}}.",
 
   "mcp.status.connected": "conectado",
   "mcp.status.failed": "fallido",

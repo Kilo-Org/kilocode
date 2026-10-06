@@ -158,8 +158,14 @@ function attachTiming(rows: TranscriptAssistantRow[], copied: string | undefined
 function content(parts: Part[]) {
   const text = parts.find((part) => part.type === "text" && !part.synthetic)
   if (text?.type === "text" && text.text.trim()) return true
+  // Match the attachment tiles of UserMessageDisplay: images, PDFs, and data
+  // URLs without a mention span (attached files). Mention context is hidden.
   return parts.some(
-    (part) => part.type === "file" && (part.mime.startsWith("image/") || part.mime === "application/pdf"),
+    (part) =>
+      part.type === "file" &&
+      (part.mime.startsWith("image/") ||
+        part.mime === "application/pdf" ||
+        (part.url.startsWith("data:") && part.source?.text?.start === undefined)),
   )
 }
 

@@ -40,6 +40,7 @@ import {
 } from "./MultiModelSelector"
 import { useLanguage } from "../src/context/language"
 import { useImageAttachments, type ImageAttachment } from "../src/hooks/useImageAttachments"
+import { AttachmentThumb } from "../src/components/chat/AttachmentThumb"
 import { useSpeechToText } from "../src/components/speech-to-text/useSpeechToText"
 import { useSpeechToTextModels } from "../src/context/speech-to-text-models"
 import { createSpeechShortcut } from "../src/components/speech-to-text/shortcut"
@@ -453,7 +454,7 @@ export const NewWorktreeDialog: Component<{
    */
   const resolveFiles = (text: string | undefined) => {
     const mentionFiles = text ? mention.parseAttachments(text) : []
-    const imgFiles = imageAttach.images().map((img) => ({ mime: img.mime, url: img.dataUrl }))
+    const imgFiles = imageAttach.images().map((img) => ({ mime: img.mime, url: img.dataUrl, filename: img.filename }))
     const files = [...mentionFiles, ...imgFiles]
     return files.length > 0 ? files : undefined
   }
@@ -938,11 +939,9 @@ export const NewWorktreeDialog: Component<{
                   <For each={imageAttach.images()}>
                     {(img) => (
                       <div class="image-attachment">
-                        <img
-                          src={img.dataUrl}
-                          alt={img.filename}
-                          title={img.filename}
-                          onClick={() =>
+                        <AttachmentThumb
+                          file={img}
+                          onPreview={() =>
                             vscode.postMessage({ type: "previewImage", dataUrl: img.dataUrl, filename: img.filename })
                           }
                         />

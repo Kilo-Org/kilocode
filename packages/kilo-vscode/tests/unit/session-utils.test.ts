@@ -1072,6 +1072,15 @@ describe("revertPromptState", () => {
     expect(state.images).toEqual([{ dataUrl: "data:image/png;base64,abc", mime: "image/png", filename: "shot.png" }])
   })
 
+  it("restores dropped text file attachments", () => {
+    const state = revertPromptState([
+      file({ mime: "text/plain", url: "data:text/plain;base64,aGk=", filename: "notes.md" }),
+      text("read this"),
+    ])
+    expect(state.images).toEqual([{ dataUrl: "data:text/plain;base64,aGk=", mime: "text/plain", filename: "notes.md" }])
+    expect(state.text).toBe("read this")
+  })
+
   it("collects mention paths but excludes session references from paths", () => {
     const state = revertPromptState([
       file({ source: { type: "file", path: "a b.txt", text: { value: "@a b.txt", start: 0, end: 8 } } }),

@@ -65,6 +65,7 @@ import { useSpeechToText } from "../speech-to-text/useSpeechToText"
 import { useSpeechToTextModels } from "../../context/speech-to-text-models"
 import { createSpeechShortcut } from "../speech-to-text/shortcut"
 import { useImageAttachments, type ImageAttachment } from "../../hooks/useImageAttachments"
+import { isDataAttachment } from "../../hooks/image-attachments-utils"
 import { convertToMentionPath, insertPathMentions } from "../../utils/path-mentions"
 import { promptMentionOver, registerPromptMentionDrop } from "../../utils/prompt-mention-drop"
 import { SessionMentionPicker } from "./SessionMentionPicker"
@@ -117,6 +118,7 @@ import {
 import { ReviewComments } from "./ReviewComments"
 import { useRunningAgents } from "./AgentStack"
 import { BrowserReferences } from "./BrowserReferences"
+import { AttachmentThumb } from "./AttachmentThumb"
 import { CodeContextChips } from "./CodeContextChips"
 import {
   browserFeedbackData,
@@ -923,10 +925,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       const parts = session.getParts(request.messageID)
       if (
         parts.some(
-          (part) =>
-            part.type !== "text" &&
-            (part.type !== "file" ||
-              (!part.source && !(part.mime.startsWith("image/") && part.url.startsWith("data:")))),
+          (part) => part.type !== "text" && (part.type !== "file" || (!part.source && !isDataAttachment(part))),
         )
       )
         return
@@ -1005,14 +1004,12 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     if (!target) return
     const comments = restored.comments
     const browser = restored.browsers
-    const images = (failed.files ?? [])
-      .filter((file) => file.mime.startsWith("image/") && file.url.startsWith("data:"))
-      .map((file) => ({
-        id: crypto.randomUUID(),
-        filename: file.filename ?? "image",
-        mime: file.mime,
-        dataUrl: file.url,
-      }))
+    const images = (failed.files ?? []).filter(isDataAttachment).map((file) => ({
+      id: crypto.randomUUID(),
+      filename: file.filename ?? "image",
+      mime: file.mime,
+      dataUrl: file.url,
+    }))
     if (target !== draftKey()) {
       saveDraft(target, draft, comments, images, scrollDrafts.get(target) ?? 0, browser, [])
       return
@@ -2128,11 +2125,9 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
           <For each={imageAttach.images()}>
             {(img) => (
               <div class="image-attachment">
-                <img
-                  src={img.dataUrl}
-                  alt={img.filename}
-                  title={img.filename}
-                  onClick={() =>
+                <AttachmentThumb
+                  file={img}
+                  onPreview={() =>
                     vscode.postMessage({ type: "previewImage", dataUrl: img.dataUrl, filename: img.filename })
                   }
                 />

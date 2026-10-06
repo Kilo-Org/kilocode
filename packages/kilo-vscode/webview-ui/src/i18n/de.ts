@@ -271,6 +271,9 @@ export const dict = {
   "speechToText.error.emptyTranscript": "Es wurde keine Sprache erkannt.",
 
   "prompt.toast.promptSendFailed.title": "Eingabe konnte nicht gesendet werden",
+  "prompt.attachment.failed": "Datei kann nicht angehängt werden",
+  "prompt.attachment.unsupported": "{{name}} ist weder ein Bild noch eine Textdatei.",
+  "prompt.attachment.tooLarge": "{{name}} ist größer als {{size}}.",
 
   "mcp.status.connected": "verbunden",
   "mcp.status.failed": "fehlgeschlagen",

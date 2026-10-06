@@ -818,7 +818,10 @@ export function UserMessageDisplay(props: {
   const attachments = createMemo(() =>
     files()?.filter((f) => {
       const mime = f.mime
-      return mime.startsWith("image/") || mime === "application/pdf"
+      if (mime.startsWith("image/") || mime === "application/pdf") return true
+      // A data URL without a mention span is an attached file (for example a
+      // text file dropped from Finder). Mention context renders inline instead.
+      return f.url.startsWith("data:") && f.source?.text?.start === undefined
     }),
   )
 
@@ -922,6 +925,7 @@ export function UserMessageDisplay(props: {
                   data-slot="user-message-attachment"
                   data-type={file.mime.startsWith("image/") ? "image" : "file"}
                   data-queued={props.queued ? "" : undefined}
+                  title={file.mime.startsWith("image/") ? undefined : file.filename}
                   onClick={() => {
                     if (file.mime.startsWith("image/") && file.url) {
                       openImagePreview(file.url, file.filename)
@@ -931,9 +935,20 @@ export function UserMessageDisplay(props: {
                   <Show
                     when={file.mime.startsWith("image/") && file.url}
                     fallback={
-                      <div data-slot="user-message-attachment-icon">
-                        <Icon name="folder" />
-                      </div>
+                      <Show
+                        when={file.filename}
+                        fallback={
+                          <div data-slot="user-message-attachment-icon">
+                            <Icon name="folder" />
+                          </div>
+                        }
+                      >
+                        {(name) => (
+                          <div data-slot="user-message-attachment-file">
+                            <span data-slot="user-message-attachment-name">{name()}</span>
+                          </div>
+                        )}
+                      </Show>
                     }
                   >
                     <img

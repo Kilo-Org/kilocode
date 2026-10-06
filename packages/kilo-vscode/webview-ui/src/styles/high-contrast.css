@@ -61,7 +61,8 @@ body.vscode-high-contrast-light {
   }
 
   /* Image attachments */
-  .image-attachment img {
+  .image-attachment img,
+  .image-attachment-file {
     border-color: var(--vscode-contrastBorder, var(--vscode-widget-border));
   }
 

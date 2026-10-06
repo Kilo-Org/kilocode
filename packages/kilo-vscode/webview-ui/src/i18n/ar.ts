@@ -255,6 +255,9 @@ export const dict = {
   "speechToText.error.emptyTranscript": "لم يتم اكتشاف أي كلام.",
 
   "prompt.toast.promptSendFailed.title": "فشل إرسال الموجه",
+  "prompt.attachment.failed": "تعذر إرفاق الملف",
+  "prompt.attachment.unsupported": "{{name}} ليس صورة أو ملفًا نصيًا.",
+  "prompt.attachment.tooLarge": "حجم {{name}} أكبر من {{size}}.",
 
   "mcp.status.connected": "متصل",
   "mcp.status.failed": "فشل",

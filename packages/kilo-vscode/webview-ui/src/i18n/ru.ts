@@ -260,6 +260,9 @@ export const dict = {
   "speechToText.error.emptyTranscript": "Речь не обнаружена.",
 
   "prompt.toast.promptSendFailed.title": "Не удалось отправить запрос",
+  "prompt.attachment.failed": "Не удалось прикрепить файл",
+  "prompt.attachment.unsupported": "{{name}} не является изображением или текстовым файлом.",
+  "prompt.attachment.tooLarge": "Размер {{name}} превышает {{size}}.",
 
   "mcp.status.connected": "подключено",
   "mcp.status.failed": "ошибка",

@@ -261,6 +261,9 @@ export const dict = {
   "speechToText.error.emptyTranscript": "هیچ گفتاری شناسایی نشد.",
 
   "prompt.toast.promptSendFailed.title": "ارسال پرامپت ناموفق بود",
+  "prompt.attachment.failed": "پیوست فایل ممکن نیست",
+  "prompt.attachment.unsupported": "{{name}} تصویر یا فایل متنی نیست.",
+  "prompt.attachment.tooLarge": "حجم {{name}} بیشتر از {{size}} است.",
 
   "mcp.status.connected": "متصل",
   "mcp.status.failed": "ناموفق",

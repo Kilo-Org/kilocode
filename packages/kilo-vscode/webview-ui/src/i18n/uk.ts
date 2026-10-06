@@ -262,6 +262,9 @@ export const dict = {
   "speechToText.error.emptyTranscript": "Мовлення не виявлено.",
 
   "prompt.toast.promptSendFailed.title": "Не вдалося надіслати запит",
+  "prompt.attachment.failed": "Не вдалося прикріпити файл",
+  "prompt.attachment.unsupported": "{{name}} не є зображенням або текстовим файлом.",
+  "prompt.attachment.tooLarge": "Розмір {{name}} перевищує {{size}}.",
 
   "mcp.status.connected": "підключено",
   "mcp.status.failed": "помилка",

@@ -209,6 +209,9 @@ export const dict = {
   "prompt.action.enhanceDescription":
     "Il pulsante 'Migliora prompt' aiuta a migliorare il prompt aggiungendo contesto, chiarimenti o riformulazioni. Scrivi un prompt qui e fai di nuovo clic sul pulsante per vedere come funziona.",
   "prompt.toast.promptSendFailed.title": "Invio prompt non riuscito",
+  "prompt.attachment.failed": "Impossibile allegare il file",
+  "prompt.attachment.unsupported": "{{name}} non è un'immagine né un file di testo.",
+  "prompt.attachment.tooLarge": "{{name}} supera {{size}}.",
   "mcp.status.connected": "connesso",
   "mcp.status.failed": "non riuscito",
   "mcp.status.needs_auth": "richiede autenticazione",

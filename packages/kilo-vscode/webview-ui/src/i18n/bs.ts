@@ -263,6 +263,9 @@ export const dict = {
   "speechToText.error.emptyTranscript": "Govor nije otkriven.",
 
   "prompt.toast.promptSendFailed.title": "Neuspješno slanje upita",
+  "prompt.attachment.failed": "Nije moguće priložiti datoteku",
+  "prompt.attachment.unsupported": "{{name}} nije slika ni tekstualna datoteka.",
+  "prompt.attachment.tooLarge": "{{name}} je veća od {{size}}.",
 
   "mcp.status.connected": "povezano",
   "mcp.status.failed": "neuspjelo",

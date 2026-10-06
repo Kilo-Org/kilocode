@@ -262,6 +262,9 @@ export const dict = {
   "speechToText.error.emptyTranscript": "Ingen tale blev registreret.",
 
   "prompt.toast.promptSendFailed.title": "Kunne ikke sende forespørgsel",
+  "prompt.attachment.failed": "Kan ikke vedhæfte filen",
+  "prompt.attachment.unsupported": "{{name}} er hverken et billede eller en tekstfil.",
+  "prompt.attachment.tooLarge": "{{name}} er større end {{size}}.",
 
   "mcp.status.connected": "forbundet",
   "mcp.status.failed": "mislykkedes",

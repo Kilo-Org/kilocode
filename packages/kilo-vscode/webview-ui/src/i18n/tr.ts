@@ -261,6 +261,9 @@ export const dict = {
   "speechToText.error.emptyTranscript": "Hiçbir konuşma algılanmadı.",
 
   "prompt.toast.promptSendFailed.title": "Komut gönderilemedi",
+  "prompt.attachment.failed": "Dosya eklenemiyor",
+  "prompt.attachment.unsupported": "{{name}} bir görsel veya metin dosyası değil.",
+  "prompt.attachment.tooLarge": "{{name}} {{size}} boyutundan büyük.",
 
   "mcp.status.connected": "bağlı",
   "mcp.status.failed": "başarısız",

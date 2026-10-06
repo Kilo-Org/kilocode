@@ -265,6 +265,9 @@ export const dict = {
   "speechToText.error.emptyTranscript": "Er is geen spraak gedetecteerd.",
 
   "prompt.toast.promptSendFailed.title": "Verzenden prompt mislukt",
+  "prompt.attachment.failed": "Kan bestand niet bijvoegen",
+  "prompt.attachment.unsupported": "{{name}} is geen afbeelding of tekstbestand.",
+  "prompt.attachment.tooLarge": "{{name}} is groter dan {{size}}.",
 
   "mcp.status.connected": "verbonden",
   "mcp.status.failed": "mislukt",

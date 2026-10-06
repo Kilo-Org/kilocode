@@ -328,6 +328,26 @@
   cursor: pointer;
 }
 
+.image-attachment:has(.image-attachment-file) {
+  width: auto;
+  max-width: 180px;
+}
+
+.image-attachment-file {
+  height: 48px;
+  line-height: 46px;
+  padding: 0 10px;
+  box-sizing: border-box;
+  border-radius: 4px;
+  border: 1px solid var(--border-weak-base, var(--vscode-panel-border));
+  background: var(--surface-inset-base, rgba(127, 127, 127, 0.08));
+  color: var(--vscode-foreground);
+  font-size: var(--kilo-font-size-12);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .image-attachment-remove {
   position: absolute;
   top: -6px;

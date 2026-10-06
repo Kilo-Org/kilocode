@@ -248,6 +248,9 @@ export const dict = {
   "speechToText.error.emptyTranscript": "未偵測到語音。",
 
   "prompt.toast.promptSendFailed.title": "傳送提示失敗",
+  "prompt.attachment.failed": "無法附加檔案",
+  "prompt.attachment.unsupported": "{{name}} 不是圖片或文字檔案。",
+  "prompt.attachment.tooLarge": "{{name}} 超過 {{size}}。",
 
   "mcp.status.connected": "已連線",
   "mcp.status.failed": "失敗",

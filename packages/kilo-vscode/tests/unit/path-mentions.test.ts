@@ -78,6 +78,37 @@ describe("extractDropPaths", () => {
     expect(extractDropPaths(dt)).toEqual(["file:///home/user/a.ts"])
   })
 
+  it("extracts file URIs from text/uri-list and skips comments and web links", () => {
+    const list =
+      "# dragged files\r\nfile:///Users/me/notes.md\r\nhttps://example.com/page\r\nfile:///Users/me/data.yaml"
+    const dt = {
+      getData: (type: string) => (type === "text/uri-list" ? list : ""),
+    } as unknown as DataTransfer
+    expect(extractDropPaths(dt)).toEqual(["file:///Users/me/notes.md", "file:///Users/me/data.yaml"])
+  })
+
+  it("ignores a text/uri-list that has only web links", () => {
+    const dt = {
+      getData: (type: string) => {
+        if (type === "text/uri-list") return "https://example.com/page"
+        if (type === "text") return "https://example.com/page"
+        return ""
+      },
+    } as unknown as DataTransfer
+    expect(extractDropPaths(dt)).toBe(null)
+  })
+
+  it("prefers the VS Code uri-list over text/uri-list", () => {
+    const dt = {
+      getData: (type: string) => {
+        if (type === "application/vnd.code.uri-list") return "file:///from-vscode.ts"
+        if (type === "text/uri-list") return "file:///from-os.ts"
+        return ""
+      },
+    } as unknown as DataTransfer
+    expect(extractDropPaths(dt)).toEqual(["file:///from-vscode.ts"])
+  })
+
   it("prefers uri-list over text/plain", () => {
     const dt = {
       getData: (type: string) => {

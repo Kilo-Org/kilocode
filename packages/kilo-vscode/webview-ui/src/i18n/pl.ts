@@ -264,6 +264,9 @@ export const dict = {
   "speechToText.error.emptyTranscript": "Nie wykryto mowy.",
 
   "prompt.toast.promptSendFailed.title": "Nie udało się wysłać zapytania",
+  "prompt.attachment.failed": "Nie można dołączyć pliku",
+  "prompt.attachment.unsupported": "{{name}} nie jest obrazem ani plikiem tekstowym.",
+  "prompt.attachment.tooLarge": "{{name}} jest większy niż {{size}}.",
 
   "mcp.status.connected": "połączono",
   "mcp.status.failed": "niepowodzenie",

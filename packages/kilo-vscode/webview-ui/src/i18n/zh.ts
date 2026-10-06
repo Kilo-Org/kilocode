@@ -250,6 +250,9 @@ export const dict = {
   "speechToText.error.emptyTranscript": "未检测到语音。",
 
   "prompt.toast.promptSendFailed.title": "发送提示失败",
+  "prompt.attachment.failed": "无法附加文件",
+  "prompt.attachment.unsupported": "{{name}} 不是图片或文本文件。",
+  "prompt.attachment.tooLarge": "{{name}} 超过 {{size}}。",
 
   "mcp.status.connected": "已连接",
   "mcp.status.failed": "失败",

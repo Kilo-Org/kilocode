@@ -260,6 +260,9 @@ export const dict = {
   "speechToText.error.emptyTranscript": "ตรวจไม่พบเสียงพูด",
 
   "prompt.toast.promptSendFailed.title": "ไม่สามารถส่งพร้อมท์",
+  "prompt.attachment.failed": "ไม่สามารถแนบไฟล์ได้",
+  "prompt.attachment.unsupported": "{{name}} ไม่ใช่รูปภาพหรือไฟล์ข้อความ",
+  "prompt.attachment.tooLarge": "{{name}} มีขนาดใหญ่กว่า {{size}}",
 
   "mcp.status.connected": "เชื่อมต่อแล้ว",
   "mcp.status.failed": "ล้มเหลว",
