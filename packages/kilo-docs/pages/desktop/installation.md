@@ -10,7 +10,7 @@ Kilo Desktop is distributed as a native installer for your operating system. Dow
 ## System requirements
 
 - **Operating system:** macOS (Apple Silicon), Windows (`x64`), or Linux (`x64`).
-- **Account:** a [Kilo account](/docs/desktop/settings/ai#ai-providers). Signing in is required to use hosted models as well as certain in-app features.
+- **Account:** a [Kilo account](/docs/desktop/settings/ai#ai-providers). Signing in is required to use the local model server and create Conda environments.
 
 ## Install the app
 
@@ -23,7 +23,7 @@ Kilo Desktop is distributed as a native installer for your operating system. Dow
 Some capabilities rely on tools already installed on your system:
 
 - **Git integration** uses your system `git`. Install git to review changes and switch branches from a chat. See [Git integration](/docs/desktop/features/git).
-- **Environments** and **local inference** use a conda runtime that the app provisions for you. See [Environments](/docs/desktop/features/environments).
+- **Conda environments** and **local inference** use a conda runtime that the app provisions for you. See [Conda environments](/docs/desktop/features/environments).
 - **Local inference** also needs a model file in **GGUF format** (`.gguf`) that you provide. Import one from the [Local Model Server](/docs/desktop/settings/ai#local-model-server) settings. See [Local inference](/docs/desktop/features/local-inference).
 
 ## After installing

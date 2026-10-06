@@ -5,7 +5,7 @@ description: "Browse and edit your workspace files, mention them in chat, and op
 
 # Files
 
-Browse and edit the files in your chat's workspace from a **Files** panel, so you can read and change code alongside the conversation. The panel is scoped to the workspace folder, so what you see matches what the agent is working with.
+Browse and edit the files in your chat's workspace from a **Files** tab, so you can read and change code alongside the conversation. The tab is scoped to the workspace, so what you see matches what the agent is working with.
 
 ## Browse the workspace
 
@@ -19,7 +19,7 @@ The file tree shows the files in your workspace. You can:
 
 Select a file to open it in the editor with syntax highlighting.
 
-- Notebook (`.ipynb`) files open in a [Notebook](/docs/desktop/features/notebooks) panel.
+- Notebook (`.ipynb`) files open in a [Notebook](/docs/desktop/features/notebooks) tab.
 - Markdown (`.md`) files can be viewed in a {% svgIcon src="/docs/img/desktop/eye.svg" /%} rendered preview or {% svgIcon src="/docs/img/desktop/code.svg" /%} as source code, with links to other workspace files clickable inline.
 - Images open in a preview.
 - Files that can't be shown — such as binaries or very large files — open read-only or explain why they can't be previewed.
@@ -32,7 +32,7 @@ Type `@` in the chat to search your workspace files and insert a mention. The me
 
 ## Open file links from responses
 
-When the agent references a file in its response — including a specific location, like `src/api.py:42` — it renders as a clickable link rather than plain text. Click it to open that file at that line in the Files panel.
+When the agent references a file in its response — including a specific location, like `src/api.py:42` — it renders as a clickable link rather than plain text. Click it to open that file at that line in the Files tab.
 
 The agent can also open a file for you directly, jumping to the relevant line.
 

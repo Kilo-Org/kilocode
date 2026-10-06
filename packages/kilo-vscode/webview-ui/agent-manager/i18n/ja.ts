@@ -31,7 +31,6 @@ export const dict = {
   "agentManager.local": "ローカル",
   "agentManager.sidebar.collapse": "サイドバーを折りたたむ",
   "agentManager.sidebar.expand": "サイドバーを表示",
-  "agentManager.section.worktrees": "WORKTREES",
   "agentManager.section.sessions": "セッション",
   "agentManager.projects": "プロジェクト",
   "agentManager.settings.title": "Agent Manager",
@@ -44,6 +43,7 @@ export const dict = {
   "agentManager.settings.worktreePool.title": "Worktreeの事前準備",
   "agentManager.settings.worktreePool.description":
     "バックグラウンドで準備済みの worktree を用意し、新しい Agent Manager セッションがより速く開始できるようにします。開いているプロジェクトごとに 1 つの checkout 分の追加ディスク容量を使用します。",
+  "agentManager.hints.switchSession": "セッションを切り替え",
   "agentManager.settings.project.title": "プロジェクト",
   "agentManager.settings.project.description": "編集する worktree 設定の repository を選択してください。",
   "agentManager.settings.project.empty": "利用可能な Agent Manager プロジェクトはありません。",
@@ -71,12 +71,9 @@ export const dict = {
   "agentManager.project.settings": "プロジェクト設定",
   "agentManager.project.restricted":
     "現在の VS Code ワークスペースはホームフォルダーまたはファイルシステムのルートです。Agent Manager を使用するには、VS Code で特定のプロジェクトフォルダーを開いてください。",
-  "agentManager.notGitRepo": "gitリポジトリではありません",
-
   "agentManager.updateBase.title": "ベースから更新",
   "agentManager.updateBase.selectWorktree": "最初に管理対象の worktree を選択してください。",
 
-  "agentManager.worktree.settings": "Worktree設定",
   "agentManager.worktree.new": "新しいWorktree",
   "agentManager.worktree.setupScript": "Worktreeセットアップスクリプト",
   "agentManager.worktree.delete": "Worktreeを削除",
@@ -186,13 +183,6 @@ export const dict = {
   "agentManager.shortcuts.cycleAgentMode": "次のエージェントモード",
   "agentManager.shortcuts.cyclePreviousAgentMode": "前のエージェントモード",
   "agentManager.shortcuts.showShortcuts": "キーボードショートカットを表示",
-  "agentManager.dialog.removeStaleWorktree.title": "無効な Worktree を削除",
-  "agentManager.dialog.removeStaleWorktree.messagePre": "無効な Worktree を削除 ",
-  "agentManager.dialog.removeStaleWorktree.messagePost":
-    "？ これは Agent Manager の関連付けのみを削除し、ディスク上のファイルは変更しません。",
-  "agentManager.dialog.removeStaleWorktree.cancel": "キャンセル",
-  "agentManager.dialog.removeStaleWorktree.confirm": "無効な Worktree を削除",
-
   "agentManager.dialog.project.select": "プロジェクトを選択",
   "agentManager.dialog.project.missing": "リポジトリが見つかりません",
   "agentManager.dialog.openWorktree": "新規ワークツリー",

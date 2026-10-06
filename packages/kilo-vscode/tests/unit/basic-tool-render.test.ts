@@ -1,4 +1,8 @@
 import { it } from "bun:test"
 import { fixture } from "../fixtures/run"
 
-it("keeps a collapsed tool body lazy and its trigger node stable", () => fixture("basic-tool-render"), 30_000)
+it(
+  "keeps tool bodies lazy and reserves restored open heights until deferred mount",
+  () => fixture("basic-tool-render"),
+  30_000,
+)

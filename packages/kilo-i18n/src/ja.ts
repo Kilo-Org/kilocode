@@ -49,7 +49,6 @@ export const dict = {
     "プラグインは、カスタムツールや連携機能をKiloに追加します。プラグインはすべての権限を持って実行されます。",
   "marketplace.install.plugin.warning":
     "プラグインはすべての権限を持ってコードを実行します。ファイルの読み取りや変更、コマンドの実行、認証情報やネットワークへのアクセスが可能です。信頼できるプラグインのみをインストールしてください。",
-  "marketplace.install.installedAt": "{{path}} にインストール済み",
   "marketplace.intro":
     "再利用可能なエージェント、スキル、MCPツール、プラグインを1つのプロジェクトまたはすべてのプロジェクトにインストールできます。",
   "marketplace.intro.learnMore": "Marketplaceについて",
@@ -60,6 +59,13 @@ export const dict = {
   "marketplace.install.failed": "インストールに失敗しました",
   "marketplace.install.done": "完了",
   "marketplace.install.close": "閉じる",
+  "marketplace.install.mcp.signIn.message": "{{name}} はインストールされていますが、ツールを使用する前にサインインが必要です。",
+  "marketplace.install.mcp.signIn.button": "サインイン",
+  "marketplace.install.mcp.signIn.waiting": "ブラウザでのサインインを待っています…",
+  "marketplace.install.mcp.signIn.cancel": "キャンセル",
+  "marketplace.install.mcp.signIn.skip": "後で",
+  "marketplace.install.mcp.signIn.success": "{{name}} にサインインしました。",
+  "marketplace.install.mcp.signIn.failed": "{{name}} へのサインインに失敗しました。",
   "marketplace.remove.title": "{{name}} を削除しますか？",
   "marketplace.remove.confirm": "この{{type}}を削除してもよろしいですか？ これにより、{{scope}}設定から削除されます。",
   "marketplace.remove.cancel": "キャンセル",

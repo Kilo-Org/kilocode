@@ -178,6 +178,14 @@ export const dict = {
   "prompt.worktrees.title": "Worktree",
   "prompt.worktrees.search": "Cerca worktree",
   "prompt.thinking.tooltip": "Sforzo di ragionamento",
+  "prompt.shortcutHint.addSelection": "per aggiungere la selezione",
+  "prompt.shortcutHint.waiting": "per rispondere a una sessione in attesa",
+  "prompt.shortcutHint.type": "per scrivere",
+  "prompt.shortcutHint.sessions": "per cambiare sessione",
+  "prompt.shortcutHint.stop": "per interrompere",
+  "prompt.shortcutHint.changes": "per rivedere le modifiche",
+  "prompt.shortcutHint.pr": "per aprire la PR",
+  "prompt.shortcutHint.mode": "Modalità successiva",
   "prompt.action.send": "Invia",
   "prompt.action.continue": "Continua",
   "prompt.action.send.blocked": "Rispondi alla domanda in sospeso o ignorala prima di continuare",
@@ -186,6 +194,10 @@ export const dict = {
   "prompt.agents.show": "Mostra agenti in background",
   "prompt.action.enhance": "Migliora prompt",
   "prompt.paste.expand": "Fai clic per espandere il testo incollato",
+  "prompt.issues.title": "Problemi della sessione",
+  "prompt.mcp.provider": "MCP {{name}}",
+  "prompt.mcp.openSettings": "Apri nelle Impostazioni",
+  "prompt.mcp.signIn.busy": "Accesso in corso…",
   "prompt.action.indexing": "Impostazioni indicizzazione",
   "prompt.action.autoApprove.enable": "Abilita approvazione automatica",
   "prompt.action.autoApprove.disable": "Disabilita approvazione automatica",
@@ -653,9 +665,11 @@ export const dict = {
   "ui.sessionTurn.status.thinking": "Sto pensando...",
   "ui.sessionTurn.status.consideringNextSteps": "Valutazione prossimi passi...",
   "dialog.model.noProviders": "Nessun provider",
+  "dialog.model.unavailable": "Modelli Kilo non disponibili",
   "prompt.placeholder.connecting": "Connessione al server...",
   "prompt.placeholder.default":
     "Scrivi un messaggio, @ per menzionare i file... (Invio per inviare, Maiusc+Invio per nuova riga)",
+  "prompt.placeholder.hint": "Scrivi un messaggio, @ per menzionare i file... ({{key}} {{action}})",
   "prompt.placeholder.error": "Connessione non riuscita. Controlla il pannello output o riavvia l'estensione.",
   "context.usage.sessionCost": "Costo sessione",
   "context.usage.olderSessions": "{{count}} sessioni precedenti",
@@ -786,15 +800,12 @@ export const dict = {
   "settings.sandboxing.writablePaths.title": "Percorsi di scrittura aggiuntivi",
   "settings.sandboxing.writablePaths.description":
     "Percorsi aggiuntivi del file system in cui la sandbox consente la scrittura (es. /tmp, /var/log). Vengono uniti con i percorsi di scrittura predefiniti quando la sandbox è attiva.",
-  "settings.experimental.multiProject.title": "Agent Manager Multi-Progetto",
   "settings.experimental.conversationPromptHistory.title": "Cronologia dei prompt per conversazione",
   "settings.experimental.conversationPromptHistory.description":
     "Mantieni la cronologia dei prompt (ArrowUp/ArrowDown) separata per ogni conversazione invece di condividerne una sola tra tutte le conversazioni.",
   "settings.experimental.claudeMigration.title": "Migrazione Claude Code",
   "settings.experimental.claudeMigration.description":
     "Importa una volta le istruzioni globali CLAUDE.md supportate, le competenze semplici e le definizioni MCP disabilitate. I file Claude originali restano invariati; riavvia il backend dopo l'attivazione.",
-  "settings.experimental.multiProject.description":
-    "Abilita la gestione di sessioni e worktree su più repository in Agent Manager. Il repository dell'area di lavoro corrente è sempre il progetto predefinito.",
   "settings.experimental.mcpTimeout.title": "Timeout MCP (ms)",
   "settings.experimental.mcpTimeout.description": "Timeout per richieste server MCP in millisecondi",
   "settings.experimental.remote.title": "Controllo remoto",
@@ -864,6 +875,8 @@ export const dict = {
   "settings.agentBehaviour.removeSkill.title": "Rimuovi skill",
   "settings.agentBehaviour.removeSkill.confirm":
     'Rimuovere la skill "{{name}}"? Questo eliminerà i file della skill dal disco.',
+  "settings.agentBehaviour.removeSkill.bundleConfirm":
+    'Rimuovere la skill "{{name}}"? Questo disinstallerà anche il server MCP {{mcp}} e ogni skill correlata della stessa installazione dal Marketplace.',
   "settings.agentBehaviour.removeSkill.button": "Rimuovi",
   "settings.agentBehaviour.rules.description":
     "Le regole sono file di istruzioni che guidano il comportamento dell'agente. Sono incluse nel prompt di sistema per ogni conversazione. Aggiungi i percorsi dei file qui sotto per includere regole aggiuntive.",
@@ -880,15 +893,40 @@ export const dict = {
   "settings.agentBehaviour.removeMcp.title": "Rimuovi server MCP",
   "settings.agentBehaviour.removeMcp.confirm":
     'Rimuovere il server MCP "{{name}}"? Questo lo rimuoverà dalla configurazione.',
+  "settings.agentBehaviour.removeMcp.bundleConfirm":
+    'Rimuovere il server MCP "{{name}}" e le sue skill correlate? Questo rimuove sia il server che ogni skill appartenente a questa installazione dal Marketplace.',
   "settings.agentBehaviour.removeMcp.button": "Rimuovi",
   "settings.agentBehaviour.mcpDetail.command": "Comando",
   "settings.agentBehaviour.mcpDetail.args": "Argomenti",
   "settings.agentBehaviour.mcpDetail.env": "Ambiente",
+  "settings.agentBehaviour.mcpSignIn.cancel": "Annulla accesso",
+  "settings.agentBehaviour.mcpRemoving": "Rimozione…",
+  "settings.agentBehaviour.mcpResetAuth": "Reimposta accesso",
+  "settings.agentBehaviour.mcpResetAuth.title": "Reimposta accesso MCP",
+  "settings.agentBehaviour.mcpResetAuth.confirm":
+    'Eliminare l\'accesso salvato per "{{name}}"? Dovrai accedere di nuovo.',
   "settings.agentBehaviour.editMcp": "Modifica server MCP",
   "settings.agentBehaviour.editMcp.transportLocal": "Server locale (trasporto stdio)",
   "settings.agentBehaviour.editMcp.transportRemote": "Server remoto (trasporto SSE/HTTP)",
   "settings.agentBehaviour.editMcp.env": "Variabili d'ambiente",
   "settings.agentBehaviour.editMcp.env.help": "Variabili passate al processo del server MCP.",
+  "settings.agentBehaviour.editMcp.oauth": "OAuth",
+  "settings.agentBehaviour.editMcp.oauth.help":
+    "Lasciare su Automatico a meno che il server non richieda un client pre-registrato. Un client secret viene memorizzato nel file di configurazione di Kilo.",
+  "settings.agentBehaviour.editMcp.oauth.mode": "Modalità",
+  "settings.agentBehaviour.editMcp.oauth.mode.automatic": "Automatica",
+  "settings.agentBehaviour.editMcp.oauth.mode.disabled": "Disabilitata",
+  "settings.agentBehaviour.editMcp.oauth.mode.custom": "Client personalizzato",
+  "settings.agentBehaviour.editMcp.oauth.clientId": "ID client",
+  "settings.agentBehaviour.editMcp.oauth.clientSecret": "Client secret",
+  "settings.agentBehaviour.editMcp.oauth.scope": "Ambito",
+  "settings.agentBehaviour.editMcp.oauth.callbackPort": "Porta di callback",
+  "settings.agentBehaviour.editMcp.oauth.redirectUri": "URI di reindirizzamento",
+  "settings.agentBehaviour.editMcp.oauth.redirectUri.help":
+    "Il valore predefinito è http://127.0.0.1:19876/mcp/oauth/callback e sovrascrive la porta di callback.",
+  "settings.agentBehaviour.editMcp.oauth.port.invalid": "Inserisci una porta tra 1 e 65535.",
+  "settings.agentBehaviour.editMcp.oauth.secret.invalid": "Un client secret richiede un ID client.",
+  "settings.agentBehaviour.editMcp.oauth.redirectUri.invalid": "Inserisci un URI di reindirizzamento valido.",
   "settings.agentBehaviour.addMcp.command": "Comando",
   "settings.agentBehaviour.addMcp.command.placeholder": "es. npx",
   "settings.agentBehaviour.addMcp.args": "Argomenti",
@@ -1105,6 +1143,9 @@ export const dict = {
   "settings.display.mcpTool.expanded": "Espansi",
   "settings.display.mcpTool.collapsed": "Compressi",
 
+  "settings.display.shortcutHints.title": "Mostra suggerimenti scorciatoie",
+  "settings.display.shortcutHints.description":
+    "Mostra nel prompt vuoto la scorciatoia da tastiera adatta a ciò che stai facendo, ad esempio come aggiungere il codice selezionato o tornare al prompt.",
   "settings.display.tokenThroughput.title": "Mostra velocità di generazione dei token",
   "settings.display.tokenThroughput.description":
     "Mostra la velocità di generazione del testo (tokens/sec) nell'ultimo messaggio dell'assistente e nell'intestazione dell'attività. Visualizzata per impostazione predefinita; disabilita questa impostazione per nasconderla quando necessario.",

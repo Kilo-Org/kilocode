@@ -5,7 +5,7 @@ description: "Browse the web next to your chat, including pages the agent opens 
 
 # In-app browser
 
-Browse the web in a panel next to your chat — check documentation, dashboards, or a local dev server without switching to a separate application. Because it lives inside the chat, the browser is wired into your work with the agent.
+Browse the web in a tab next to your chat — check documentation, dashboards, or a local dev server without switching to a separate application. Because it lives inside the chat, the browser is wired into your work with the agent.
 
 ## Pages the agent opens
 
@@ -17,7 +17,7 @@ Selecting an `http(s)` link in a chat message opens it in a browser tab of that 
 
 ## Browse on your own
 
-Type a URL and press Enter to load a page; the panel has the controls you'd expect.
+Type a URL and press Enter to load a page; the tab has the controls you'd expect.
 
 - **Back**, **forward**, and **refresh**.
 - A menu with **Hard reload** and **Open DevTools**.

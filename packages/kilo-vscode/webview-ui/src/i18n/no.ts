@@ -202,6 +202,14 @@ export const dict = {
   "prompt.worktrees.title": "Worktrees",
   "prompt.worktrees.search": "Søk i Worktrees",
   "prompt.thinking.tooltip": "Resonnementsinnsats",
+  "prompt.shortcutHint.addSelection": "for å legge til markeringen",
+  "prompt.shortcutHint.waiting": "for å svare på en ventende økt",
+  "prompt.shortcutHint.type": "for å skrive",
+  "prompt.shortcutHint.sessions": "for å bytte økt",
+  "prompt.shortcutHint.stop": "for å stoppe",
+  "prompt.shortcutHint.changes": "for å se gjennom endringer",
+  "prompt.shortcutHint.pr": "for å åpne PR-en",
+  "prompt.shortcutHint.mode": "Neste modus",
   "prompt.action.send": "Send",
   "prompt.action.continue": "Fortsett",
   "prompt.action.send.blocked": "Svar på eller avvis det ventende spørsmålet først",
@@ -211,6 +219,10 @@ export const dict = {
   "prompt.agents.show": "Vis bakgrunnsagenter",
   "prompt.action.enhance": "Forbedre prompt",
   "prompt.paste.expand": "Klikk for å utvide den innlimte teksten",
+  "prompt.issues.title": "Sesjonsproblemer",
+  "prompt.mcp.provider": "{{name}} MCP",
+  "prompt.mcp.openSettings": "Åpne i Innstillinger",
+  "prompt.mcp.signIn.busy": "Logger inn…",
   "prompt.action.autoApprove.enable": "Aktiver automatisk godkjenning",
   "prompt.action.autoApprove.disable": "Deaktiver automatisk godkjenning",
   "prompt.action.autoApprove.enabled":
@@ -745,11 +757,13 @@ export const dict = {
   "ui.sessionTurn.status.consideringNextSteps": "Vurderer neste steg...",
 
   "dialog.model.noProviders": "Ingen leverandører",
+  "dialog.model.unavailable": "Kilo-modeller er utilgjengelige",
 
   "prompt.placeholder.connecting": "Kobler til server...",
   "prompt.placeholder.error": "Tilkobling mislyktes. Sjekk utdatapanelet eller start utvidelsen på nytt.",
   "prompt.placeholder.default":
     "Skriv en melding, @ for å nevne filer... (Enter for å sende, Shift+Enter for ny linje)",
+  "prompt.placeholder.hint": "Skriv en melding, @ for å nevne filer... ({{key}} {{action}})",
 
   "context.usage.sessionCost": "Sesjonskostnad",
   "context.usage.olderSessions": "{{count}} eldre sesjoner",
@@ -900,15 +914,12 @@ export const dict = {
   "settings.sandboxing.writablePaths.title": "Ytterligere skrivbare baner",
   "settings.sandboxing.writablePaths.description":
     "Ytterligere filsystembaner som sandkassen tillater skriving til (f.eks. /tmp, /var/log). Disse flettes med de standardskrivbare banene når sandkassen er aktiv.",
-  "settings.experimental.multiProject.title": "Multi-prosjekt Agent Manager",
   "settings.experimental.conversationPromptHistory.title": "Promptlogg per samtale",
   "settings.experimental.conversationPromptHistory.description":
     "Hold promptloggen (ArrowUp/ArrowDown) adskilt for hver samtale i stedet for å dele én logg på tvers av alle samtaler.",
   "settings.experimental.claudeMigration.title": "Claude Code-migrering",
   "settings.experimental.claudeMigration.description":
     "Importer støttede globale CLAUDE.md-instruksjoner, enkle ferdigheter og deaktiverte MCP-definisjoner én gang. Originale Claude-filer forblir uendret; start backend på nytt etter aktivering.",
-  "settings.experimental.multiProject.description":
-    "Aktiver administrering av økter og worktrees på tvers av flere repositories i Agent Manager. Det nåværende workspace-repositoryet er alltid standardprosjektet.",
   "settings.experimental.mcpTimeout.title": "MCP-tidsavbrudd (ms)",
   "settings.experimental.mcpTimeout.description": "Tidsavbrudd for MCP-serverforespørsler i millisekunder",
   "settings.experimental.remote.title": "Remote-kontroll",
@@ -1035,12 +1046,31 @@ export const dict = {
   "settings.agentBehaviour.removeMcp.title": "Fjern MCP-server",
   "settings.agentBehaviour.removeMcp.confirm":
     'Vil du fjerne MCP-serveren "{{name}}"? Dette vil fjerne den fra konfigurasjonen din.',
+  "settings.agentBehaviour.removeMcp.bundleConfirm":
+    'Fjerne MCP-serveren "{{name}}" og tilhørende ferdigheter? Dette fjerner både serveren og alle ferdigheter som eies av denne Marketplace-installasjonen.',
   "settings.agentBehaviour.removeMcp.button": "Fjern",
   "settings.agentBehaviour.editMcp": "Rediger MCP-server",
   "settings.agentBehaviour.editMcp.transportLocal": "Lokal server (stdio-transport)",
   "settings.agentBehaviour.editMcp.transportRemote": "Ekstern server (SSE/HTTP-transport)",
   "settings.agentBehaviour.editMcp.env": "Miljøvariabler",
   "settings.agentBehaviour.editMcp.env.help": "Variabler som sendes til MCP-serverprosessen.",
+  "settings.agentBehaviour.editMcp.oauth": "OAuth",
+  "settings.agentBehaviour.editMcp.oauth.help":
+    "La stå på Automatisk med mindre serveren krever en forhåndsregistrert klient. En klienthemmelighet lagres i Kilo-konfigurasjonsfilen din.",
+  "settings.agentBehaviour.editMcp.oauth.mode": "Modus",
+  "settings.agentBehaviour.editMcp.oauth.mode.automatic": "Automatisk",
+  "settings.agentBehaviour.editMcp.oauth.mode.disabled": "Deaktivert",
+  "settings.agentBehaviour.editMcp.oauth.mode.custom": "Egendefinert klient",
+  "settings.agentBehaviour.editMcp.oauth.clientId": "Klient-ID",
+  "settings.agentBehaviour.editMcp.oauth.clientSecret": "Klienthemmelighet",
+  "settings.agentBehaviour.editMcp.oauth.scope": "Omfang",
+  "settings.agentBehaviour.editMcp.oauth.callbackPort": "Callback-port",
+  "settings.agentBehaviour.editMcp.oauth.redirectUri": "Omdirigerings-URI",
+  "settings.agentBehaviour.editMcp.oauth.redirectUri.help":
+    "Standard er http://127.0.0.1:19876/mcp/oauth/callback og overstyrer callback-porten.",
+  "settings.agentBehaviour.editMcp.oauth.port.invalid": "Angi en port mellom 1 og 65535.",
+  "settings.agentBehaviour.editMcp.oauth.secret.invalid": "En klienthemmelighet krever en klient-ID.",
+  "settings.agentBehaviour.editMcp.oauth.redirectUri.invalid": "Angi en gyldig omdirigerings-URI.",
   "settings.agentBehaviour.addMcp.command": "Kommando",
   "settings.agentBehaviour.addMcp.command.placeholder": "e.g. npx",
   "settings.agentBehaviour.addMcp.args": "Argumenter",
@@ -1053,6 +1083,8 @@ export const dict = {
   "settings.agentBehaviour.removeSkill.title": "Fjern ferdighet",
   "settings.agentBehaviour.removeSkill.confirm":
     'Vil du fjerne ferdigheten "{{name}}"? Dette vil slette ferdighetsfilene fra disken.',
+  "settings.agentBehaviour.removeSkill.bundleConfirm":
+    'Fjerne ferdigheten "{{name}}"? Dette avinstallerer også {{mcp}} MCP-serveren og alle tilhørende ferdigheter fra samme Marketplace-installasjon.',
   "settings.agentBehaviour.removeSkill.button": "Fjern",
   "settings.agentBehaviour.rules.description":
     "Regler er instruksjonsfiler som styrer agentens atferd. De inkluderes i systemprompten for hver samtale. Legg til filstier nedenfor for å inkludere ekstra regler.",
@@ -1068,6 +1100,12 @@ export const dict = {
   "settings.agentBehaviour.mcpDetail.command": "Kommando",
   "settings.agentBehaviour.mcpDetail.args": "Argumenter",
   "settings.agentBehaviour.mcpDetail.env": "Miljø",
+  "settings.agentBehaviour.mcpSignIn.cancel": "Avbryt innlogging",
+  "settings.agentBehaviour.mcpRemoving": "Fjerner…",
+  "settings.agentBehaviour.mcpResetAuth": "Nullstill innlogging",
+  "settings.agentBehaviour.mcpResetAuth.title": "Nullstill MCP-innlogging",
+  "settings.agentBehaviour.mcpResetAuth.confirm":
+    'Fjerne den lagrede innloggingen for "{{name}}"? Du må logge inn på nytt.',
   "settings.agentBehaviour.mcpBrowseMarketplace": "Bla gjennom Marketplace",
   "settings.agentBehaviour.mcpEmpty":
     "Ingen MCP-servere konfigurert. Legg til MCP-servere i kilo.jsonc, eller be agenten om å legge dem til.",
@@ -1240,6 +1278,9 @@ export const dict = {
   "settings.display.mcpTool.expanded": "Utvidet",
   "settings.display.mcpTool.collapsed": "Skjult",
 
+  "settings.display.shortcutHints.title": "Vis snarveitips",
+  "settings.display.shortcutHints.description":
+    "Vis hurtigtasten som passer til det du gjør nå, i den tomme ledeteksten, for eksempel hvordan du legger til markert kode eller går tilbake til ledeteksten.",
   "settings.display.tokenThroughput.title": "Vis genereringshastighet",
   "settings.display.tokenThroughput.description":
     "Vis tekstgenereringshastigheten (tokens/sec) i den nyeste assistentmeldingen og i oppgaveoverskriften. Vises som standard; deaktiver denne innstillingen for å skjule den ved behov.",
