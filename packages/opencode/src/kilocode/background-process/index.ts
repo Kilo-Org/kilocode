@@ -20,6 +20,7 @@ import * as Log from "@opencode-ai/core/util/log"
 import { Filesystem } from "@/util/filesystem"
 import { isRecord } from "@/util/record"
 import { BackgroundProcessRunner } from "./runner"
+import { BackgroundProcessWindows } from "./windows"
 import { chmod, mkdir, readFile, readdir, rm, stat } from "fs/promises"
 import { randomUUID } from "crypto"
 import { hostname } from "os"
@@ -671,10 +672,26 @@ export namespace BackgroundProcess {
     return members.some((command) => command.includes(token)) ? "owned" : "foreign"
   }
 
+  // Reasons already reported once, so a probe that keeps failing the same way logs one warning.
+  const reported = new Set<string>()
+
   async function windows(active: Active): Promise<Probe> {
     const pid = active.info.pid
     const token = active.token
     if (!pid || !token) return "unknown"
+    const found = await BackgroundProcessWindows.command(pid)
+    if (found.live === false) return "gone"
+    if (found.live) return found.line.includes(token) ? "owned" : "foreign"
+    const key = found.reason.replace(/\(\d+\)/, "")
+    if (!reported.has(key)) {
+      reported.add(key)
+      log.warn("probing a persistent process with PowerShell instead of natively", {
+        id: active.info.id,
+        pid,
+        reason: found.reason,
+      })
+    }
+    log.debug("native process probe failed", { id: active.info.id, pid, reason: found.reason })
     const query = `$p=Get-CimInstance Win32_Process -Filter "ProcessId = ${pid}"; if ($p) { [Console]::Out.Write($p.CommandLine) }`
     const out = await Process.text(["powershell.exe", "-NoProfile", "-NonInteractive", "-Command", query], {
       nothrow: true,
