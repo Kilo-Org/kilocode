@@ -479,6 +479,7 @@ export const dict = {
   "provider.custom.models.fetch.empty": "Bu sunucuda model bulunamadı.",
   "provider.custom.models.fetch.added": "{{count}} model eklendi.",
   "provider.custom.models.fetch.allExist": "Getirilen tüm modeller zaten eklenmiş.",
+  "provider.custom.save.timeout": "Kilo'dan yanıt yok. Değişiklikleriniz kaydedilmemiş olabilir. Tekrar deneyin.",
   "provider.custom.models.fetch.selectAll": "Tümünü seç",
   "provider.custom.models.fetch.deselectAll": "Tümünün seçimini kaldır",
   "provider.custom.models.fetch.found": "{{count}} model bulundu",

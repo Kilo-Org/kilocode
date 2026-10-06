@@ -533,6 +533,7 @@ export const dict = {
   "provider.custom.models.fetch.empty": "Nisu pronađeni modeli na ovom serveru.",
   "provider.custom.models.fetch.added": "Dodano {{count}} model(a).",
   "provider.custom.models.fetch.allExist": "Svi preuzeti modeli su već dodani.",
+  "provider.custom.save.timeout": "Nema odgovora od Kilo. Vaše promjene možda nisu sačuvane. Pokušajte ponovo.",
   "provider.custom.models.fetch.selectAll": "Odaberi sve",
   "provider.custom.models.fetch.deselectAll": "Poništi odabir",
   "provider.custom.models.fetch.found": "{{count}} modela pronađeno",

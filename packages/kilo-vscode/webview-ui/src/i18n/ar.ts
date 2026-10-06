@@ -479,6 +479,7 @@ export const dict = {
   "provider.custom.models.fetch.empty": "لم يتم العثور على نماذج على هذا الخادم.",
   "provider.custom.models.fetch.added": "تمت إضافة {{count}} نموذج(نماذج).",
   "provider.custom.models.fetch.allExist": "جميع النماذج المجلوبة مضافة بالفعل.",
+  "provider.custom.save.timeout": "لم يصل رد من Kilo. ربما لم يتم حفظ تغييراتك. حاول مرة أخرى.",
   "provider.custom.models.fetch.selectAll": "تحديد الكل",
   "provider.custom.models.fetch.deselectAll": "إلغاء تحديد الكل",
   "provider.custom.models.fetch.found": "تم العثور على {{count}} نموذج",

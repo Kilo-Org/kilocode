@@ -435,6 +435,37 @@ describe("saveCustomProvider", () => {
     expect(calls.config).toHaveLength(1)
     expect(calls.config[0].config.disabled_providers).toEqual(["openai"])
   })
+
+  it("replies before the slow provider refresh finishes", async () => {
+    const { ctx, calls, setCachedConfig } = createCtx()
+    const started = Promise.withResolvers<void>()
+    const release = Promise.withResolvers<void>()
+    ctx.fetchAndSendProviders = async () => {
+      started.resolve()
+      await release.promise
+    }
+
+    const done = saveCustomProvider(ctx, "req", "myprovider", createProvider(), undefined, false, null, setCachedConfig)
+    await started.promise
+
+    expect(calls.posts.at(-1)).toEqual({ type: "providerConnected", requestId: "req", providerID: "myprovider" })
+    release.resolve()
+    await done
+  })
+
+  it("does not send a second reply when the refresh fails", async () => {
+    const { ctx, calls, setCachedConfig } = createCtx()
+    ctx.fetchAndSendProviders = async () => {
+      throw new Error("refresh failed")
+    }
+
+    await saveCustomProvider(ctx, "req", "myprovider", createProvider(), undefined, false, null, setCachedConfig)
+
+    const replies = calls.posts.filter((msg) =>
+      ["providerConnected", "providerActionError"].includes((msg as { type: string }).type),
+    )
+    expect(replies).toEqual([{ type: "providerConnected", requestId: "req", providerID: "myprovider" }])
+  })
 })
 
 describe("disconnectProvider", () => {

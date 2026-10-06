@@ -466,6 +466,7 @@ export const dict = {
   "provider.custom.models.fetch.empty": "此伺服器上未找到模型。",
   "provider.custom.models.fetch.added": "已新增 {{count}} 個模型。",
   "provider.custom.models.fetch.allExist": "取得的所有模型均已新增。",
+  "provider.custom.save.timeout": "Kilo 未回應。你的變更可能未儲存。請再試一次。",
   "provider.custom.models.fetch.selectAll": "全選",
   "provider.custom.models.fetch.deselectAll": "取消全選",
   "provider.custom.models.fetch.found": "找到 {{count}} 個模型",

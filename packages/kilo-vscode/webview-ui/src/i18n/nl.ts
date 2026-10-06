@@ -483,6 +483,8 @@ export const dict = {
   "provider.custom.models.fetch.empty": "Geen modellen gevonden op deze server.",
   "provider.custom.models.fetch.added": "{{count}} model(len) toegevoegd.",
   "provider.custom.models.fetch.allExist": "Alle opgehaalde modellen zijn al toegevoegd.",
+  "provider.custom.save.timeout":
+    "Geen antwoord van Kilo. Je wijzigingen zijn mogelijk niet opgeslagen. Probeer het opnieuw.",
   "provider.custom.models.fetch.selectAll": "Alles selecteren",
   "provider.custom.models.fetch.deselectAll": "Alles deselecteren",
   "provider.custom.models.fetch.found": "{{count}} modellen gevonden",

@@ -482,6 +482,7 @@ export const dict = {
   "provider.custom.models.fetch.empty": "На цьому сервері моделей не знайдено.",
   "provider.custom.models.fetch.added": "Додано {{count}} моделей.",
   "provider.custom.models.fetch.allExist": "Усі отримані моделі вже додано.",
+  "provider.custom.save.timeout": "Kilo не відповів. Можливо, зміни не збережено. Спробуйте ще раз.",
   "provider.custom.models.fetch.selectAll": "Вибрати все",
   "provider.custom.models.fetch.deselectAll": "Зняти весь вибір",
   "provider.custom.models.fetch.found": "Знайдено {{count}} моделей",

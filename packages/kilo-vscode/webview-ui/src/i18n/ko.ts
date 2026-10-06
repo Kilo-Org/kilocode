@@ -487,6 +487,7 @@ export const dict = {
   "provider.custom.models.fetch.empty": "이 서버에서 모델을 찾을 수 없습니다.",
   "provider.custom.models.fetch.added": "{{count}}개 모델이 추가되었습니다.",
   "provider.custom.models.fetch.allExist": "가져온 모든 모델이 이미 추가되어 있습니다.",
+  "provider.custom.save.timeout": "Kilo에서 응답이 없습니다. 변경 사항이 저장되지 않았을 수 있습니다. 다시 시도하세요.",
   "provider.custom.models.fetch.selectAll": "모두 선택",
   "provider.custom.models.fetch.deselectAll": "모두 선택 해제",
   "provider.custom.models.fetch.found": "{{count}}개 모델 발견",

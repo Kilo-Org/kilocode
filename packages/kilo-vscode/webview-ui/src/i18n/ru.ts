@@ -527,6 +527,7 @@ export const dict = {
   "provider.custom.models.fetch.empty": "На этом сервере модели не найдены.",
   "provider.custom.models.fetch.added": "Добавлено {{count}} модель(ей).",
   "provider.custom.models.fetch.allExist": "Все полученные модели уже добавлены.",
+  "provider.custom.save.timeout": "Kilo не ответил. Возможно, изменения не сохранены. Попробуйте ещё раз.",
   "provider.custom.models.fetch.selectAll": "Выбрать все",
   "provider.custom.models.fetch.deselectAll": "Снять выбор",
   "provider.custom.models.fetch.found": "Найдено {{count}} моделей",

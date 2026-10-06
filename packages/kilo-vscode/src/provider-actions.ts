@@ -447,10 +447,12 @@ export async function saveCustomProvider(
     return
   }
 
-  const refresh = async () => {
-    await ctx.disposeGlobal(`custom provider save (${id})`)
-    await ctx.fetchAndSendProviders()
-  }
+  // Runs after the reply is sent, so a failure is logged instead of sent as a second reply.
+  const refresh = () =>
+    ctx
+      .disposeGlobal(`custom provider save (${id})`)
+      .then(() => ctx.fetchAndSendProviders())
+      .catch((err: unknown) => console.warn(`[Kilo New] Provider refresh after saving ${id} failed:`, err))
 
   try {
     const globalConfig = (await ctx.client.global.config.get({ throwOnError: true })).data ?? {}
@@ -485,13 +487,15 @@ export async function saveCustomProvider(
         await ctx.client.auth.remove({ providerID: id }, { throwOnError: true })
       }
     } catch (error) {
-      await refresh()
       postError(ctx, requestId, providerID, "connect", ctx.getErrorMessage(error) || "Failed to save custom provider")
+      await refresh()
       return
     }
 
-    await refresh()
+    // Reply before the refresh: the provider list can be several MB and slow to
+    // load, and the dialog must not wait for it to finish saving (#13292).
     ctx.postMessage({ type: "providerConnected", requestId, providerID: id })
+    await refresh()
   } catch (error) {
     postError(ctx, requestId, providerID, "connect", ctx.getErrorMessage(error) || "Failed to save custom provider")
   }

@@ -524,6 +524,7 @@ export const dict = {
   "provider.custom.models.fetch.empty": "ไม่พบโมเดลบนเซิร์ฟเวอร์นี้",
   "provider.custom.models.fetch.added": "เพิ่มแล้ว {{count}} โมเดล",
   "provider.custom.models.fetch.allExist": "โมเดลที่ดึงมาทั้งหมดถูกเพิ่มไปแล้ว",
+  "provider.custom.save.timeout": "ไม่ได้รับการตอบกลับจาก Kilo การเปลี่ยนแปลงของคุณอาจยังไม่ได้บันทึก โปรดลองอีกครั้ง",
   "provider.custom.models.fetch.selectAll": "เลือกทั้งหมด",
   "provider.custom.models.fetch.deselectAll": "ยกเลิกการเลือกทั้งหมด",
   "provider.custom.models.fetch.found": "พบ {{count}} โมเดล",

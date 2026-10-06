@@ -527,6 +527,8 @@ export const dict = {
   "provider.custom.models.fetch.empty": "このサーバーにモデルが見つかりません。",
   "provider.custom.models.fetch.added": "{{count}}個のモデルを追加しました。",
   "provider.custom.models.fetch.allExist": "取得したモデルはすべて既に追加されています。",
+  "provider.custom.save.timeout":
+    "Kilo から応答がありません。変更が保存されていない可能性があります。もう一度お試しください。",
   "provider.custom.models.fetch.selectAll": "すべて選択",
   "provider.custom.models.fetch.deselectAll": "すべて選択解除",
   "provider.custom.models.fetch.found": "{{count}}個のモデルが見つかりました",

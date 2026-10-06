@@ -534,6 +534,8 @@ export const dict = {
   "provider.custom.models.fetch.empty": "No se encontraron modelos en este servidor.",
   "provider.custom.models.fetch.added": "Se añadieron {{count}} modelo(s).",
   "provider.custom.models.fetch.allExist": "Todos los modelos obtenidos ya están añadidos.",
+  "provider.custom.save.timeout":
+    "Kilo no respondió. Es posible que tus cambios no se hayan guardado. Inténtalo de nuevo.",
   "provider.custom.models.fetch.selectAll": "Seleccionar todo",
   "provider.custom.models.fetch.deselectAll": "Deseleccionar todo",
   "provider.custom.models.fetch.found": "{{count}} modelos encontrados",
