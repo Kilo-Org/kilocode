@@ -3,7 +3,7 @@ import { mkdir, mkdtemp, realpath, rm, symlink } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import path from "node:path"
 import { Effect } from "effect"
-import { assertWrite, current, enabled, run } from "../src/context"
+import { assertPath, assertWrite, current, enabled, run } from "../src/context"
 import type { Profile } from "../src/profile"
 
 function makeProfile(
@@ -80,6 +80,11 @@ describe("sandbox profile context", () => {
     expect((await write(path.join(cache, "repo", ".git", "config")))._tag).toBe("Failure")
     expect((await write(path.join(cache, "existing", ".git")))._tag).toBe("Failure")
     expect((await write(path.join(project, "nested", ".git")))._tag).toBe("Failure")
+    const create = (method: string) =>
+      Effect.runPromise(run(profile, assertPath(path.join(cache, "fresh", ".git"), method).pipe(Effect.exit)))
+    expect((await create("writeFile"))._tag).toBe("Success")
+    expect((await create("makeDirectory"))._tag).toBe("Failure")
+    expect((await create("symlink"))._tag).toBe("Failure")
   })
 
   test("canonicalizes the longest existing ancestor across symlinks", async () => {

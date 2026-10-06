@@ -38,10 +38,13 @@ function denied(path: string, method: string) {
   })
 }
 
-// A missing entry counts as regular because the write would create a regular file.
-function regular(target: string) {
+// Methods whose missing target can only become a regular file. Anything else (makeDirectory,
+// symlink, link, rename, copy) could place a directory or link under a denied name.
+const creates = new Set(["assertWrite", "copyFile", "open", "sink", "writeFile", "writeFileString"])
+
+function regular(target: string, method: string) {
   try {
-    return lstatSync(target, { throwIfNoEntry: false })?.isFile() ?? true
+    return lstatSync(target, { throwIfNoEntry: false })?.isFile() ?? creates.has(method)
   } catch {
     // Fail closed: an entry that cannot be inspected keeps the full name protection.
     return false
@@ -64,7 +67,7 @@ function assertTarget(
     const parts = target.split(/[\\/]/).map((part) => (process.platform === "win32" ? part.toLowerCase() : part))
     const strict = profile.filesystem.allowWrite.some((rule) => !rule.markers && matches(rule, target))
     // Outside strict roots a denied name may only be the final part, as a new or existing regular file.
-    const file = !strict && !parts.slice(0, -1).some((part) => names.includes(part)) && regular(target)
+    const file = !strict && !parts.slice(0, -1).some((part) => names.includes(part)) && regular(target, method)
     if (
       profile.filesystem.denyWrite.some((rule) => matches(rule, target)) ||
       (!file && parts.some((part) => names.includes(part)))
