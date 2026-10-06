@@ -34,7 +34,7 @@ This guide uses Kilo's custom provider configuration. Ace Data Cloud is not curr
 - **Model ID:** `gpt-4.1-mini`
 
 3. Select `gpt-4.1-mini` from the fetched models or add it manually, then click **Submit**.
-4. Select the model in the model picker. To set explicit context limits and cost estimates, use the model definition in the **CLI** tab in your `kilo.json` or `kilo.jsonc` file.
+4. Select the model in the model picker. To set explicit context limits and cost estimates, use the model definition in the **CLI** tab in your global `~/.config/kilo/kilo.json` file.
 
 Model discovery returns IDs; it does not establish tool support, context limits, or pricing for every returned model. Add only models whose capabilities you have checked.
 
@@ -47,7 +47,7 @@ Set your API token in the environment:
 export ACEDATACLOUD_API_KEY="your-api-token"
 ```
 
-Add this configuration to `~/.config/kilo/kilo.json`, or merge it into your project's `kilo.json`:
+Merge this configuration into your global `~/.config/kilo/kilo.json`. The `{env:ACEDATACLOUD_API_KEY}` reference requires global configuration; do not put this example in a project-level `kilo.json`.
 
 ```json
 {
