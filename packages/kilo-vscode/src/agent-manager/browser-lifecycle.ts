@@ -16,7 +16,7 @@ export function createBrowserLifecycle(input: {
   log: (...args: unknown[]) => void
 }) {
   const browser = input.browser ?? new BrowserBroker({ log: input.log })
-  browser.bind(
+  const owner = browser.bind(
     (route: BrowserRoute) => {
       const directory = canonicalizePath(route.directory)
       const ctx = input.contexts().byDirectory(directory)
@@ -85,12 +85,13 @@ export function createBrowserLifecycle(input: {
       for (const session of browser.sessions()) this.close(session, projectId)
     },
     closeAll(): Promise<void> {
-      return Promise.all([...browser.sessions()].map((sessionId) => browser.close(sessionId))).then(() => undefined)
+      return browser.closeOwned(owner)
     },
     dispose(): Promise<void> {
       current = undefined
       off()
       frames()
+      browser.unbind(owner)
       return browser.disposeAsync()
     },
   }

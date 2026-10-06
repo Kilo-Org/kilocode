@@ -230,10 +230,10 @@ export async function activate(context: vscode.ExtensionContext) {
       resolve: (route) => {
         if (!vscode.workspace.isTrusted) return
         if (!vscode.workspace.getConfiguration("kilo-code.new.experimental").get("browserAutomation", false)) return
-        // While the Agent Manager panel is the active surface, its sessions
-        // belong to Agent Manager. This keeps a shared root session from being
-        // captured by the tab browser when the user is working in Agent Manager.
-        if (agentManager?.isActive()) return
+        // While the Agent Manager panel is focused on this exact session, it
+        // owns the browser for that shared root session. Other sidebar and
+        // editor-tab sessions still resolve here.
+        if (agentManager?.isActive(route.sessionId)) return
         const tabs = [...tabPanels.values()]
         const surfaced =
           provider.getCurrentSessionId() === route.sessionId ||

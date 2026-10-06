@@ -1,6 +1,12 @@
 import * as vscode from "vscode"
-import { type BrowserBroker, type BrowserRoute, type BrowserState } from "../services/browser-automation"
 import {
+  type BrowserBroker,
+  type BrowserOwner,
+  type BrowserRoute,
+  type BrowserState,
+} from "../services/browser-automation"
+import {
+  browserControlMessage,
   browserStatePayload,
   controlBrowser,
   controlBrowserFailure,
@@ -63,6 +69,7 @@ const prefix = "browserTab."
 export class BrowserTabProvider {
   private readonly panels = new Map<string, Panel>()
   private readonly disposables: vscode.Disposable[] = []
+  private readonly owner?: BrowserOwner
 
   constructor(
     private readonly extensionUri: vscode.Uri,
@@ -72,7 +79,7 @@ export class BrowserTabProvider {
     },
     private readonly options: BrowserTabProviderOptions,
   ) {
-    this.opts.browser?.bind(
+    this.owner = this.opts.browser?.bind(
       (route) => this.options.resolve(route),
       (route, url) => this.options.approve(route, url.origin),
     )
@@ -132,6 +139,7 @@ export class BrowserTabProvider {
   dispose(): void {
     for (const entry of this.panels.values()) entry.panel.dispose()
     this.panels.clear()
+    if (this.owner) this.opts.browser?.unbind(this.owner)
     for (const disposable of this.disposables.splice(0)) disposable.dispose()
   }
 
@@ -173,24 +181,7 @@ export class BrowserTabProvider {
   }
 
   private control(message: InMessage): BrowserControlMessage {
-    return {
-      kind: message.type.slice(prefix.length) as BrowserControlKind,
-      browserId: message.browserId,
-      navigation: message.navigation,
-      viewport: message.viewport,
-      identity: message.identity,
-      event: message.event,
-      sequence: message.sequence,
-      url: message.url,
-      requestId: message.requestId,
-      x: message.x,
-      y: message.y,
-      width: message.width,
-      height: message.height,
-      hover: message.hover,
-      click: message.click,
-      theme: message.theme,
-    }
+    return browserControlMessage(message.type.slice(prefix.length) as BrowserControlKind, message)
   }
 
   private surface(entry: Panel): BrowserControlSurface {

@@ -953,6 +953,27 @@ describe("BrowserBroker", () => {
     }
   })
 
+  test("closeOwned closes only one owner's entries", async () => {
+    const page = {
+      url: () => "http://localhost:3000/",
+      title: async () => "App",
+      screenshot: async () => Buffer.from("jpeg"),
+      off: () => undefined,
+      on: (_type: string, _listener: (...args: never[]) => void) => undefined,
+      mainFrame: () => undefined,
+      goto: async () => ({ status: () => 200 }),
+      reload: async () => ({ status: () => 200 }),
+    }
+    const broker = fixture(page)
+    const first = broker.bind((route) => (route.directory === "/a" ? route : undefined))
+    broker.bind((route) => (route.directory === "/b" ? { ...route, projectId: "b" } : undefined))
+    await broker.open({ sessionId: "sa", directory: "/a" }, "http://localhost:3000/")
+    await broker.open({ sessionId: "sb", directory: "/b", projectId: "b" }, "http://localhost:3000/")
+    await broker.closeOwned(first)
+    expect(broker.get("sa")).toBeUndefined()
+    expect(broker.get("sb")).toMatchObject({ projectId: "b" })
+  })
+
   test("closeScoped closes only the exact session and project entry", async () => {
     const page = {
       url: () => "http://localhost:3000/",

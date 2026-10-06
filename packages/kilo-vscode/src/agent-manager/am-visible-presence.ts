@@ -26,6 +26,11 @@ export class AgentManagerVisiblePresence {
     this.flush()
   }
 
+  /** The session the Agent Manager panel currently shows, or null. */
+  displayed(): string | null {
+    return this.id
+  }
+
   flush(): void {
     if (this.panelVisible()) {
       this.register(this.id ? [this.id] : [])

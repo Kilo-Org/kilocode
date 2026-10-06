@@ -1,9 +1,12 @@
 import type { ExtensionMessage, WebviewMessage } from "../src/types/messages"
-import type { BrowserCommand, BrowserEvent, BrowserInspection, BrowserScope, BrowserState } from "../browser"
-
-export function scope(sessionId: string, projectId?: string): BrowserScope {
-  return { sessionId, projectId }
-}
+import {
+  browserDevtoolsEvent,
+  browserFrameEvent,
+  browserInspectionEvent,
+  browserScope,
+  browserStateEvent,
+} from "../browser"
+import type { BrowserCommand, BrowserEvent } from "../browser"
 
 function unreachable(value: never): never {
   throw new Error(`Unhandled browser command: ${JSON.stringify(value)}`)
@@ -58,47 +61,14 @@ export function command(value: BrowserCommand): WebviewMessage {
 
 export function event(message: ExtensionMessage): BrowserEvent | undefined {
   if (message.type === "browserTab.frame") {
-    return { type: "frame", value: { ...message, scope: scope(message.sessionId) } }
+    return browserFrameEvent(browserScope(message.sessionId), message)
   }
   if (message.type === "browserTab.state") {
-    const value: BrowserState = {
-      scope: scope(message.sessionId, message.projectId),
-      browserId: message.browserId,
-      navigation: message.navigation,
-      status: message.status,
-      inspecting: message.inspecting,
-      url: message.url,
-      title: message.title,
-      errors: message.errors,
-      logs: message.logs,
-      error: message.error,
-      missing: message.missing,
-      frameError: message.frameError,
-      back: message.back,
-      forward: message.forward,
-    }
-    return { type: "state", value }
+    return browserStateEvent(browserScope(message.sessionId, message.projectId), message)
   }
   if (message.type === "browserTab.inspection") {
-    const value: BrowserInspection = {
-      scope: scope(message.sessionId, message.projectId),
-      requestId: message.requestId,
-      url: message.url,
-      title: message.title,
-      element: message.element,
-      logs: message.logs,
-      hover: message.hover,
-      error: message.error,
-    }
-    return { type: "inspection", value }
+    return browserInspectionEvent(browserScope(message.sessionId, message.projectId), message)
   }
   if (message.type !== "browserTab.devtools") return
-  return {
-    type: "devtools",
-    value: {
-      scope: scope(message.sessionId, message.projectId),
-      browserId: message.browserId,
-      url: message.url,
-    },
-  }
+  return browserDevtoolsEvent(browserScope(message.sessionId, message.projectId), message)
 }

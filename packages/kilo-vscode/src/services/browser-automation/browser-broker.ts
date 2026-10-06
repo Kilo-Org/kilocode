@@ -97,14 +97,14 @@ export interface BrowserContextFactory {
   on?(event: "disconnected", listener: () => void): unknown
 }
 
-interface Owner {
+export interface BrowserOwner {
   resolve: (route: BrowserRoute) => BrowserRoute | undefined
   approve?: (route: BrowserRoute, url: URL) => Promise<boolean>
 }
 
 interface Entry {
   route: BrowserRoute
-  owner?: Owner
+  owner?: BrowserOwner
   browserId: string
   context: BrowserContext
   page: Page
@@ -246,7 +246,7 @@ export class BrowserBroker {
   private readonly token = randomBytes(32).toString("hex")
   private readonly proxies = new Set<BrowserProxy>()
   private gateway: BrowserProxy | undefined
-  private readonly owners: Owner[] = []
+  private readonly owners: BrowserOwner[] = []
   private server: Server | undefined
   private readonly sockets = new Set<Socket>()
   private port: number | undefined
@@ -318,11 +318,19 @@ export class BrowserBroker {
   bind(
     resolve: (route: BrowserRoute) => BrowserRoute | undefined,
     approve?: (route: BrowserRoute, url: URL) => Promise<boolean>,
-  ): void {
-    this.owners.push({ resolve, approve })
+  ): BrowserOwner {
+    const owner: BrowserOwner = { resolve, approve }
+    this.owners.push(owner)
+    return owner
   }
 
-  private resolve(route: BrowserRoute): { scope: BrowserRoute; owner?: Owner } | undefined {
+  /** Remove a previously registered owner so its resolver cannot be called again. */
+  unbind(owner: BrowserOwner): void {
+    const index = this.owners.indexOf(owner)
+    if (index >= 0) this.owners.splice(index, 1)
+  }
+
+  private resolve(route: BrowserRoute): { scope: BrowserRoute; owner?: BrowserOwner } | undefined {
     if (this.owners.length === 0) return { scope: route }
     for (const owner of this.owners) {
       const scope = owner.resolve(route)
@@ -333,7 +341,7 @@ export class BrowserBroker {
     return
   }
 
-  private revalid(route: BrowserRoute, owner?: Owner): BrowserRoute | undefined {
+  private revalid(route: BrowserRoute, owner?: BrowserOwner): BrowserRoute | undefined {
     if (this.owners.length === 0) return route
     for (const item of owner ? [owner] : this.owners) {
       const scope = item.resolve(route)
@@ -342,7 +350,7 @@ export class BrowserBroker {
     return
   }
 
-  private async approve(route: BrowserRoute, url: URL, owner?: Owner): Promise<boolean> {
+  private async approve(route: BrowserRoute, url: URL, owner?: BrowserOwner): Promise<boolean> {
     if (!owner?.approve) return false
     return owner.approve(route, url)
   }
@@ -473,7 +481,12 @@ export class BrowserBroker {
     )
   }
 
-  private async create(scope: BrowserRoute, target: string, capture: boolean, owner?: Owner): Promise<BrowserState> {
+  private async create(
+    scope: BrowserRoute,
+    target: string,
+    capture: boolean,
+    owner?: BrowserOwner,
+  ): Promise<BrowserState> {
     this.available()
     const url = this.validate(target)
     const existing = this.entries.get(this.key(scope.sessionId, scope.projectId))
@@ -696,6 +709,15 @@ export class BrowserBroker {
   /** Close only the entry for this exact session and project, leaving other projects' entries intact. */
   closeScoped(sessionId: string, projectId?: string): Promise<void> {
     return this.stop(this.key(sessionId, projectId)).then(() => undefined)
+  }
+
+  /** Close every entry owned by one surface, leaving other owners' entries intact. */
+  closeOwned(owner: BrowserOwner): Promise<void> {
+    return Promise.all(
+      [...this.entries.values()]
+        .filter((entry) => entry.owner === owner)
+        .map((entry) => this.stop(this.key(entry.route.sessionId, entry.route.projectId))),
+    ).then(() => undefined)
   }
 
   private stop(key: string): Promise<void> {

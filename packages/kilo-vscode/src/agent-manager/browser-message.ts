@@ -1,5 +1,6 @@
 import { type BrowserBroker, type BrowserState } from "../services/browser-automation"
 import {
+  browserControlMessage,
   browserStatePayload,
   controlBrowser,
   controlBrowserFailure,
@@ -23,24 +24,7 @@ type Dependencies = {
 const prefix = "agentManager.browser."
 
 function control(message: BrowserMessage): BrowserControlMessage {
-  return {
-    kind: message.type.slice(prefix.length) as BrowserControlKind,
-    browserId: message.browserId,
-    navigation: message.navigation,
-    viewport: message.viewport,
-    identity: message.identity,
-    event: message.event,
-    sequence: message.sequence,
-    url: message.url,
-    requestId: message.requestId,
-    x: message.x,
-    y: message.y,
-    width: message.width,
-    height: message.height,
-    hover: message.hover,
-    click: message.click,
-    theme: message.theme,
-  }
+  return browserControlMessage(message.type.slice(prefix.length) as BrowserControlKind, message)
 }
 
 function route(contexts: ProjectContexts, message: BrowserMessage): { project: string; directory: string } | undefined {

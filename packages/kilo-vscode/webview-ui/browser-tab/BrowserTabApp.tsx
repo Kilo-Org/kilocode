@@ -3,9 +3,8 @@ import { useLanguage } from "../src/context/language"
 import { useVSCode } from "../src/context/vscode"
 import type { ExtensionMessage } from "../src/types/messages"
 import { formatBrowserFeedback, type BrowserReference } from "../../src/shared/browser-feedback"
-import { BrowserPanel } from "../browser"
-import type { BrowserScope, BrowserTransport } from "../browser"
-import { command, event, scope } from "./messages"
+import { BrowserPanel, browserLabels, browserScope, browserTransport } from "../browser"
+import { command, event } from "./messages"
 
 export const BrowserTabApp: Component = () => {
   const vscode = useVSCode()
@@ -13,40 +12,9 @@ export const BrowserTabApp: Component = () => {
   const [session, setSession] = createSignal<string>()
   const [enabled, setEnabled] = createSignal(false)
 
-  const transport: BrowserTransport = {
-    send: (value) => vscode.postMessage(command(value)),
-    subscribe: (listener) =>
-      vscode.onMessage((message) => {
-        const value = event(message)
-        if (value) listener(value)
-      }),
-  }
+  const transport = browserTransport((message) => vscode.postMessage(message), vscode.onMessage, command, event)
 
-  const labels = createMemo(() => ({
-    title: language.t("agentManager.browser.title"),
-    url: language.t("agentManager.browser.url"),
-    urlPlaceholder: language.t("agentManager.browser.urlPlaceholder"),
-    open: language.t("agentManager.browser.open"),
-    refresh: language.t("agentManager.browser.refresh"),
-    back: language.t("agentManager.browser.back"),
-    forward: language.t("agentManager.browser.forward"),
-    close: language.t("agentManager.browser.close"),
-    inspect: language.t("agentManager.browser.inspect"),
-    devtoolsTitle: language.t("agentManager.browser.devtoolsTitle"),
-    diagnostics: language.t("agentManager.browser.diagnostics"),
-    diagnosticsHint: language.t("agentManager.browser.diagnosticsHint"),
-    empty: language.t("agentManager.browser.empty"),
-    requirement: language.t("agentManager.browser.requirement"),
-    missingTitle: language.t("agentManager.browser.missingTitle"),
-    missingChrome: language.t("agentManager.browser.missingChrome"),
-    missingChromium: language.t("agentManager.browser.missingChromium"),
-    download: language.t("agentManager.browser.downloadChrome"),
-    retry: language.t("common.retry"),
-    settings: language.t("agentManager.browser.settings"),
-    noSession: language.t("browserTab.noSession"),
-    screenshotAlt: language.t("agentManager.browser.screenshotAlt"),
-    errors: (count: number) => language.t("agentManager.browser.errors", { count }),
-  }))
+  const labels = createMemo(() => browserLabels(language.t, "browserTab.noSession"))
 
   const reference = (value: BrowserReference) => {
     const id = session()
@@ -83,7 +51,7 @@ export const BrowserTabApp: Component = () => {
         <BrowserPanel
           scope={() => {
             const id = session()
-            return id ? scope(id) : undefined
+            return id ? browserScope(id) : undefined
           }}
           transport={transport}
           labels={labels()}

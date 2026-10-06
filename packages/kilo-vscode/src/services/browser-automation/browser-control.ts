@@ -27,8 +27,7 @@ export type BrowserControlKind =
   | "input"
   | "close"
 
-export interface BrowserControlMessage {
-  kind: BrowserControlKind
+export interface BrowserControlFields {
   browserId?: string
   navigation?: number
   viewport?: BrowserViewport
@@ -44,6 +43,15 @@ export interface BrowserControlMessage {
   hover?: boolean
   click?: boolean
   theme?: "dark" | "light"
+}
+
+export interface BrowserControlMessage extends BrowserControlFields {
+  kind: BrowserControlKind
+}
+
+/** Builds a neutral control message from a surface message that shares these fields. */
+export function browserControlMessage(kind: BrowserControlKind, fields: BrowserControlFields): BrowserControlMessage {
+  return { kind, ...fields }
 }
 
 /**
