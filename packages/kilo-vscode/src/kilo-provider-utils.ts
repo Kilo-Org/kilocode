@@ -201,7 +201,7 @@ export async function runWithMessageConfirmation<T>(
 }
 
 export function sessionToWebview(
-  session: Pick<Session, "id" | "parentID" | "title" | "time" | "summary" | "revert" | "metadata">,
+  session: Pick<Session, "id" | "parentID" | "title" | "time" | "summary" | "revert" | "metadata" | "agent" | "model">,
 ) {
   const goal = session.metadata?.["kilo.goal"]
   return {
@@ -210,6 +210,14 @@ export function sessionToWebview(
     title: session.title,
     createdAt: new Date(session.time.created).toISOString(),
     updatedAt: new Date(session.time.updated).toISOString(),
+    // The agent and model the server last ran, so a reopened session shows
+    // them before its history loads. The server stores Default as "default".
+    agent: session.agent,
+    model: session.model && {
+      providerID: session.model.providerID,
+      modelID: session.model.id,
+      ...(session.model.variant && session.model.variant !== "default" ? { variant: session.model.variant } : {}),
+    },
     // Use null (not undefined) so the value survives postMessage JSON serialization.
     // Without this, unrevert responses lose the revert key entirely and the
     // SolidJS store merge never clears the existing revert state.

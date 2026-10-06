@@ -200,6 +200,14 @@ export const dict = {
   "prompt.worktrees.title": "Worktrees",
   "prompt.worktrees.search": "Pesquisar Worktrees",
   "prompt.thinking.tooltip": "Esforço de raciocínio",
+  "prompt.shortcutHint.addSelection": "para adicionar a seleção",
+  "prompt.shortcutHint.waiting": "para responder a uma sessão em espera",
+  "prompt.shortcutHint.type": "para digitar",
+  "prompt.shortcutHint.sessions": "para trocar de sessão",
+  "prompt.shortcutHint.stop": "para parar",
+  "prompt.shortcutHint.changes": "para revisar as alterações",
+  "prompt.shortcutHint.pr": "para abrir o PR",
+  "prompt.shortcutHint.mode": "Próximo modo",
   "prompt.action.send": "Enviar",
   "prompt.action.continue": "Continuar",
   "prompt.action.send.blocked": "Responda ou feche a pergunta pendente primeiro",
@@ -209,6 +217,10 @@ export const dict = {
   "prompt.agents.show": "Mostrar agentes em segundo plano",
   "prompt.action.enhance": "Melhorar prompt",
   "prompt.paste.expand": "Clique para expandir o texto colado",
+  "prompt.issues.title": "Kudennoù estez",
+  "prompt.mcp.provider": "MCP {{name}}",
+  "prompt.mcp.openSettings": "Digeriñ en Arventennoù",
+  "prompt.mcp.signIn.busy": "O kennaskañ…",
   "prompt.action.autoApprove.enable": "Ativar aprovação automática",
   "prompt.action.autoApprove.disable": "Desativar aprovação automática",
   "prompt.action.autoApprove.enabled":
@@ -786,11 +798,13 @@ export const dict = {
   "ui.sessionTurn.status.consideringNextSteps": "Considerando próximos passos...",
 
   "dialog.model.noProviders": "Nenhum provedor",
+  "dialog.model.unavailable": "Modelos Kilo indisponíveis",
 
   "prompt.placeholder.connecting": "Conectando ao servidor...",
   "prompt.placeholder.error": "Conexão falhou. Verifique o painel de saída ou reinicie a extensão.",
   "prompt.placeholder.default":
     "Digite uma mensagem, @ para mencionar arquivos... (Enter para enviar, Shift+Enter para nova linha)",
+  "prompt.placeholder.hint": "Digite uma mensagem, @ para mencionar arquivos... ({{key}} {{action}})",
 
   "context.usage.sessionCost": "Custo da sessão",
   "context.usage.olderSessions": "{{count}} sessões anteriores",
@@ -947,15 +961,12 @@ export const dict = {
   "settings.sandboxing.writablePaths.title": "Caminhos graváveis adicionais",
   "settings.sandboxing.writablePaths.description":
     "Caminhos adicionais do sistema de arquivos onde o sandbox permite gravação (por exemplo, /tmp, /var/log). Eles são mesclados com os caminhos graváveis padrão quando o sandbox está ativo.",
-  "settings.experimental.multiProject.title": "Agent Manager Multi-Projeto",
   "settings.experimental.conversationPromptHistory.title": "Histórico de prompts por conversa",
   "settings.experimental.conversationPromptHistory.description":
     "Mantenha o histórico de prompts (ArrowUp/ArrowDown) separado para cada conversa, em vez de compartilhar um único histórico entre todas as conversas.",
   "settings.experimental.claudeMigration.title": "Migração do Claude Code",
   "settings.experimental.claudeMigration.description":
     "Importe uma vez instruções globais CLAUDE.md compatíveis, habilidades simples e definições MCP desativadas. Os arquivos originais do Claude permanecem inalterados; reinicie o backend após ativar.",
-  "settings.experimental.multiProject.description":
-    "Ativar gerenciamento de sessões e worktrees em múltiplos repositórios no Agent Manager. O repositório do workspace atual é sempre o projeto padrão.",
   "settings.experimental.mcpTimeout.title": "Tempo limite MCP (ms)",
   "settings.experimental.mcpTimeout.description": "Tempo limite para solicitações do servidor MCP em milissegundos",
   "settings.experimental.remote.title": "Controle Remote",
@@ -1045,12 +1056,31 @@ export const dict = {
   "settings.agentBehaviour.removeMcp.title": "Remover servidor MCP",
   "settings.agentBehaviour.removeMcp.confirm":
     'Remover o servidor MCP "{{name}}"? Isso o removerá da sua configuração.',
+  "settings.agentBehaviour.removeMcp.bundleConfirm":
+    "Dilemel an dafariad MCP \"{{name}}\" hag e giz kenseurt? Dilemel a raio an dafariad ha pep c'hiz dalc'het gant an staliadur Marc'had-mañ.",
   "settings.agentBehaviour.removeMcp.button": "Remover",
   "settings.agentBehaviour.editMcp": "Editar Servidor MCP",
   "settings.agentBehaviour.editMcp.transportLocal": "Servidor local (transporte stdio)",
   "settings.agentBehaviour.editMcp.transportRemote": "Servidor remoto (transporte SSE/HTTP)",
   "settings.agentBehaviour.editMcp.env": "Variáveis de Ambiente",
   "settings.agentBehaviour.editMcp.env.help": "Variáveis passadas para o processo do servidor MCP.",
+  "settings.agentBehaviour.editMcp.oauth": "OAuth",
+  "settings.agentBehaviour.editMcp.oauth.help":
+    "Laoskit war Emgefreek nemet ma ranka an dafariad ur c'hliant enrollet a-raok. Un arvar kliant a vez kadavet en ho restr kefluniañ Kilo.",
+  "settings.agentBehaviour.editMcp.oauth.mode": "Mod",
+  "settings.agentBehaviour.editMcp.oauth.mode.automatic": "Emgefreek",
+  "settings.agentBehaviour.editMcp.oauth.mode.disabled": "Dizweredekaet",
+  "settings.agentBehaviour.editMcp.oauth.mode.custom": "Kliant personelaet",
+  "settings.agentBehaviour.editMcp.oauth.clientId": "ID kliant",
+  "settings.agentBehaviour.editMcp.oauth.clientSecret": "Arvar kliant",
+  "settings.agentBehaviour.editMcp.oauth.scope": "Ledenn",
+  "settings.agentBehaviour.editMcp.oauth.callbackPort": "Porzh distro",
+  "settings.agentBehaviour.editMcp.oauth.redirectUri": "URI adkas",
+  "settings.agentBehaviour.editMcp.oauth.redirectUri.help":
+    "Dre ziouer: http://127.0.0.1:19876/mcp/oauth/callback, a zilez ar porzh distro.",
+  "settings.agentBehaviour.editMcp.oauth.port.invalid": "Roit ur porzh etre 1 ha 65535.",
+  "settings.agentBehaviour.editMcp.oauth.secret.invalid": "Un arvar kliant a c'houlenn un ID kliant.",
+  "settings.agentBehaviour.editMcp.oauth.redirectUri.invalid": "Roit un URI adkas reizh.",
   "settings.agentBehaviour.addMcp.command": "Comando",
   "settings.agentBehaviour.addMcp.command.placeholder": "e.g. npx",
   "settings.agentBehaviour.addMcp.args": "Argumentos",
@@ -1064,6 +1094,8 @@ export const dict = {
   "settings.agentBehaviour.removeSkill.title": "Remover habilidade",
   "settings.agentBehaviour.removeSkill.confirm":
     'Remover a habilidade "{{name}}"? Isso excluirá os arquivos da habilidade do disco.',
+  "settings.agentBehaviour.removeSkill.bundleConfirm":
+    "Dilemel ar c'hiz \"{{name}}\"? Dizentus ivez a raio an dafariad MCP {{mcp}} ha pep c'hiz kenseurt eus an hevelep staliadur Marc'had.",
   "settings.agentBehaviour.removeSkill.button": "Remover",
   "settings.agentBehaviour.rules.description":
     "Regras são arquivos de instrução que orientam o comportamento do agente. Elas são incluídas no prompt do sistema para cada conversa. Adicione caminhos de arquivos abaixo para incluir regras adicionais.",
@@ -1080,6 +1112,12 @@ export const dict = {
   "settings.agentBehaviour.mcpDetail.command": "Comando",
   "settings.agentBehaviour.mcpDetail.args": "Argumentos",
   "settings.agentBehaviour.mcpDetail.env": "Ambiente",
+  "settings.agentBehaviour.mcpSignIn.cancel": "Nullañ ar c'hennaskañ",
+  "settings.agentBehaviour.mcpRemoving": "O tilemel…",
+  "settings.agentBehaviour.mcpResetAuth": "Adderaouekaat ar c'hennaskañ",
+  "settings.agentBehaviour.mcpResetAuth.title": "Adderaouekaat kennaskañ MCP",
+  "settings.agentBehaviour.mcpResetAuth.confirm":
+    "Skarzhañ ar c'hennaskañ kadaviet evit \"{{name}}\"? Ret e vo deoc'h kennaskañ en-dro.",
   "settings.agentBehaviour.mcpBrowseMarketplace": "Explorar Marketplace",
   "settings.agentBehaviour.mcpEmpty":
     "Nenhum servidor MCP configurado. Adicione servidores MCP em kilo.jsonc ou peça ao agente para adicioná-los.",
@@ -1257,6 +1295,9 @@ export const dict = {
   "settings.display.mcpTool.expanded": "Expandidos",
   "settings.display.mcpTool.collapsed": "Recolhidos",
 
+  "settings.display.shortcutHints.title": "Mostrar dicas de atalhos",
+  "settings.display.shortcutHints.description":
+    "Mostra no prompt vazio o atalho de teclado adequado ao que você faz agora, por exemplo como adicionar o código selecionado ou voltar ao prompt.",
   "settings.display.tokenThroughput.title": "Mostrar taxa de tokens",
   "settings.display.tokenThroughput.description":
     "Exibir a taxa de geração de texto (tokens/sec) na mensagem mais recente do assistente e no cabeçalho da tarefa. Exibida por padrão; desative esta configuração para ocultá-la quando necessário.",

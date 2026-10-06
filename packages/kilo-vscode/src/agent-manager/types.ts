@@ -105,7 +105,7 @@ export type {
 
 interface WorktreeStatsMessage {
   type: "agentManager.worktreeStats"
-  /** Owning project; absent in single-project mode. */
+  /** Owning project, when available. */
   projectId?: string
   stats: WorktreeStats[]
 }
@@ -123,14 +123,14 @@ interface WorktreeDeletedMessage {
 
 interface LocalStatsMessage {
   type: "agentManager.localStats"
-  /** Owning project; absent in single-project mode. */
+  /** Owning project, when available. */
   projectId?: string
   stats: LocalStats
 }
 
 interface WorktreeSetupMessage {
   type: "agentManager.worktreeSetup"
-  /** Owning project; absent in single-project mode. */
+  /** Owning project, when available. */
   projectId?: string
   status: "creating" | "starting" | "ready" | "error"
   message: string
@@ -162,7 +162,7 @@ interface StateMessage {
   runStatuses?: RunStatus[]
   runScriptConfigured?: boolean
   runScriptPath?: string
-  /** Owning project for this state payload. Absent in legacy single-project payloads. */
+  /** Owning project for this state payload. Absent when no project is ready. */
   projectId?: string
   /** Last selected sidebar target for seamless project-switch restore. */
   activeTarget?: SidebarTarget
@@ -175,8 +175,6 @@ interface StateMessage {
 /** Project catalog pushed to the webview after registry or context changes. */
 interface ProjectsMessage {
   type: "agentManager.projects"
-  /** Whether the multi-project experiment is enabled. */
-  multiProject: boolean
   projects: ProjectSnapshot[]
 }
 
@@ -294,7 +292,7 @@ interface SessionClosedMessage {
 
 interface MultiVersionProgressMessage {
   type: "agentManager.multiVersionProgress"
-  /** Owning project; absent in single-project mode. */
+  /** Owning project, when available. */
   projectId?: string
   status: "creating" | "done"
   total: number
@@ -304,7 +302,7 @@ interface MultiVersionProgressMessage {
 
 interface SetSessionModelMessage {
   type: "agentManager.setSessionModel"
-  /** Owning project; absent in single-project mode. */
+  /** Owning project, when available. */
   projectId?: string
   sessionId: string
   providerID: string
@@ -313,7 +311,7 @@ interface SetSessionModelMessage {
 
 interface SendInitialMessage {
   type: "agentManager.sendInitialMessage"
-  /** Owning project; absent in single-project mode. */
+  /** Owning project, when available. */
   projectId?: string
   sessionId: string
   worktreeId: string
@@ -433,7 +431,7 @@ interface DiffBranchesMessage {
 
 interface PRStatusOutMessage {
   type: "agentManager.prStatus"
-  /** Owning project; absent in single-project mode. */
+  /** Owning project, when available. */
   projectId?: string
   worktreeId: string
   pr: PRStatus | null
@@ -519,7 +517,7 @@ interface BrowserDevtoolsMessage {
 
 interface RunStatusMessage extends RunStatus {
   type: "agentManager.runStatus"
-  /** Owning project for this status. Absent in legacy single-project mode. */
+  /** Owning project for this status, when available. */
   projectId?: string
 }
 
@@ -721,6 +719,7 @@ interface CloseSessionIn {
 /** Persist a non-worktree session to agent-manager.json (worktreeId = null). */
 interface PersistSessionIn {
   type: "agentManager.persistSession"
+  projectId?: string
   sessionId: string
   draftID?: string
 }
