@@ -58,9 +58,9 @@ Alternatively, on the packages table on the Environment's details page, you can 
 
 ### Add packages
 
-From an open environment, select **+ Package** to open the Add Packages dialog. Search for a package, and for each result pick a version (defaulting to **latest**). Your selections and their dependencies are added to the **Selected packages** list, and the {% svgIcon src="/docs/img/desktop/list-filter.svg" /%} **Channels** control sets where packages come from (see [Choose a channel](#choose-a-channel)).
+From an open environment, select **+ Add Packages** to open the Add Packages dialog. Search for a package, and for each result pick a version (defaulting to **latest**). Your selections and their dependencies are added to the **Selected packages** list, and the {% svgIcon src="/docs/img/desktop/list-filter.svg" /%} **Channels** control sets where packages come from (see [Choose a channel](#choose-a-channel)).
 
-Before anything is applied, the **Resolution** panel previews the dependency changes the solver will make — packages that will be upgraded, downgraded, added, removed, or rebuilt — so there are no surprises. Select **Install** to apply the changes. A long-running install can be sent to **Run in background** so you can keep working while it finishes.
+Before anything is applied, the **Dependency changes** panel previews the dependency changes the solver will make — packages that will be upgraded, downgraded, added, removed, or rebuilt — so there are no surprises. Select **Install** to apply the changes. A long-running install can be sent to **Run in background** so you can keep working while it finishes.
 
 ## Choose a channel
 
