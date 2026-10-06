@@ -451,6 +451,32 @@ describe("config overlay routes", () => {
     expect(saved.permission?.bash).toBe("ask")
   })
 
+  test("reports a managed file that shadows a project target not created yet", async () => {
+    await using project = await tmpdir()
+    await using managed = await tmpdir()
+    await Filesystem.write(path.join(managed.path, "kilo.json"), JSON.stringify({ model: "test/managed" }))
+    process.env.KILO_TEST_MANAGED_CONFIG_DIR = managed.path
+    try {
+      const before = await json<Overlay>(await req(project.path, "/config/overlay?scope=project"))
+      expect(before.targets.project.exists).toBe(false)
+
+      const response = await req(project.path, "/config/overlay", {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          scope: "project",
+          expected: { path: before.targets.project.path, revision: before.targets.project.revision },
+          set: { model: "test/new" },
+        }),
+      })
+
+      expect(response.status).toBe(409)
+      expect(await Bun.file(before.targets.project.path).exists()).toBe(false)
+    } finally {
+      delete process.env.KILO_TEST_MANAGED_CONFIG_DIR
+    }
+  })
+
   test("does not report shadowing for unrelated values in higher-priority files", async () => {
     await using project = await tmpdir()
     await Filesystem.write(path.join(project.path, "kilo.json"), "{}")

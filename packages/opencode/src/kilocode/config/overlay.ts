@@ -240,8 +240,9 @@ export namespace KilocodeConfigOverlay {
     )
     const paths = await Promise.all(files.map((item) => canonicalize(item.path)))
     const at = paths.lastIndexOf(target)
-    if (at < 0) return undefined
-    for (const item of files.slice(at + 1).reverse()) {
+    // A target that is not created yet is not listed; managed files still outrank it.
+    const later = at < 0 ? files.filter((item) => item.kind === "managed-file") : files.slice(at + 1)
+    for (const item of later.reverse()) {
       if (!item.exists) continue
       const text = await Bun.file(item.path).text()
       if (clashes(parse(text), input.patch)) return { target, path: item.path }
