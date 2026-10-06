@@ -193,7 +193,7 @@ To see the preview in the VS Code composer:
 | Approve for me (experimental) | Preview only. Kilo asks as usual for now. |
 | Approve all | Kilo approves every permission request, as Auto-Approve does today. |
 
-Approve for me and Approve all exclude each other. Choosing one turns the other off, and this also holds when you change the settings directly. If both are on when Kilo starts, Approve for me stays on. **Sandbox** is a separate control and works with any mode.
+Approve for me and Approve all exclude each other. Choosing one turns the other off, and this also holds when you change the settings directly. If both are on when Kilo starts, Approve for me stays on. **Sandbox** is still a separate control in this preview. A later release will fold it into this menu, so each mode also sets the sandbox.
 
 ## Troubleshooting
 
