@@ -27,3 +27,14 @@ describe("resolveGlideSpecifier", () => {
     expect(resolveGlideSpecifier()).toBe("@valkey/valkey-glide")
   })
 })
+
+describe("loadGlide", () => {
+  test("reports the platform in a not-supported error when the native binding is missing", async () => {
+    process.env[env] = "/nonexistent/@valkey/valkey-glide-missing-binding"
+    const { loadGlide } = await import("../../../../src/indexing/vector-store/valkey-loader")
+
+    expect(() => loadGlide()).toThrow(
+      `The Valkey vector store is not supported on ${process.platform}-${process.arch}. Choose LanceDB or Qdrant instead.`,
+    )
+  })
+})

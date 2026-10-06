@@ -9,5 +9,13 @@ export function resolveGlideSpecifier() {
 }
 
 export function loadGlide(): typeof import("@valkey/valkey-glide") {
-  return require(resolveGlideSpecifier())
+  const specifier = resolveGlideSpecifier()
+  try {
+    return require(specifier)
+  } catch (cause) {
+    throw new Error(
+      `The Valkey vector store is not supported on ${process.platform}-${process.arch}. Choose LanceDB or Qdrant instead.`,
+      { cause },
+    )
+  }
 }

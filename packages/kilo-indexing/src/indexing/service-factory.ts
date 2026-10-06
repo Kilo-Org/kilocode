@@ -15,6 +15,7 @@ import { OpenRouterEmbedder } from "./embedders/openrouter"
 import { VoyageEmbedder } from "./embedders/voyage"
 import { QdrantVectorStore } from "./vector-store/qdrant-client"
 import { LanceDBVectorStore } from "./vector-store/lancedb-vector-store"
+import { loadGlide } from "./vector-store/valkey-loader"
 import { CodeParser, DirectoryScanner, FileWatcher } from "./processors"
 import type { AvailableEmbedders, ICodeParser, IEmbedder, IFileWatcher, IVectorStore } from "./interfaces"
 import type { CodeIndexConfigManager } from "./config-manager"
@@ -32,15 +33,11 @@ import type { IgnoreMatcher } from "./shared/load-ignore"
 const log = Log.create({ service: "indexing-factory" })
 
 function loadValkey(): typeof import("./vector-store/valkey-vector-store") {
-  try {
-    return require("./vector-store/valkey-vector-store")
-  } catch (err) {
-    log.error("failed to load valkey client", { platform: process.platform, arch: process.arch, err })
-    throw new Error(
-      `The Valkey vector store is not supported on ${process.platform}-${process.arch}. Choose LanceDB or Qdrant instead.`,
-      { cause: err },
-    )
-  }
+  // The native GLIDE binding loads lazily via loadGlide(); probe it here so an unsupported
+  // platform (e.g. Windows, which GLIDE never publishes a binding for) fails with a clear
+  // message at store creation instead of a raw native error on the first connect/search.
+  loadGlide()
+  return require("./vector-store/valkey-vector-store")
 }
 
 // RATIONALE: The OpenAI SDK applies the per-attempt timeout and retries internally.
