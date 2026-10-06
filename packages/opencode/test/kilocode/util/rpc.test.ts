@@ -30,6 +30,18 @@ function channel() {
   }
 }
 
+/** Scope a KILO_RPC_HANDSHAKE_TIMEOUT override to one test. */
+function bound(value: string) {
+  const previous = process.env["KILO_RPC_HANDSHAKE_TIMEOUT"]
+  process.env["KILO_RPC_HANDSHAKE_TIMEOUT"] = value
+  return {
+    [Symbol.dispose]() {
+      if (previous === undefined) delete process.env["KILO_RPC_HANDSHAKE_TIMEOUT"]
+      if (previous !== undefined) process.env["KILO_RPC_HANDSHAKE_TIMEOUT"] = previous
+    },
+  }
+}
+
 describe("worker rpc", () => {
   test("replays requests posted before listen installs a handler", async () => {
     using wire = channel()
@@ -140,15 +152,52 @@ describe("worker rpc", () => {
 
   test("rejects queued calls when the worker never becomes ready", async () => {
     using wire = channel()
-    const previous = process.env["KILO_RPC_HANDSHAKE_TIMEOUT"]
-    process.env["KILO_RPC_HANDSHAKE_TIMEOUT"] = "150"
-    try {
-      // The worker side never calls listen, so rpc.ready never arrives.
-      const client = KiloRpc.client<{ echo: (input: string) => string }>(wire.parent)
-      await expect(client.call("echo", "lost")).rejects.toThrow(/never became ready within 150ms/)
-    } finally {
-      if (previous === undefined) delete process.env["KILO_RPC_HANDSHAKE_TIMEOUT"]
-      if (previous !== undefined) process.env["KILO_RPC_HANDSHAKE_TIMEOUT"] = previous
-    }
+    using _ = bound("150")
+    // The worker side never calls listen, so rpc.ready never arrives.
+    const client = KiloRpc.client<{ echo: (input: string) => string }>(wire.parent)
+
+    await expect(client.call("echo", "lost")).rejects.toThrow(/never became ready within 150ms/)
+  })
+
+  test("rejects calls made after the ready bound already elapsed", async () => {
+    using wire = channel()
+    using _ = bound("100")
+    const client = KiloRpc.client<{ echo: (input: string) => string }>(wire.parent)
+
+    await expect(client.call("echo", "first")).rejects.toThrow(/never became ready/)
+    // The bound has fired and cleared its timer, so a later call has nothing left to reject
+    // it. It must fail immediately rather than queue behind a timer that no longer exists.
+    await expect(client.call("echo", "later")).rejects.toThrow(/never became ready/)
+  })
+
+  test("recovers when the worker becomes ready after the bound elapsed", async () => {
+    using wire = channel()
+    using _ = bound("100")
+    const client = KiloRpc.client<{ echo: (input: string) => string }>(wire.parent)
+
+    await expect(client.call("echo", "early")).rejects.toThrow(/never became ready/)
+
+    // A late worker is still usable, so the client must stop failing new calls.
+    KiloRpc.arm()
+    KiloRpc.listen({ echo: (input: string) => `got ${input}` })
+
+    expect(await client.call("echo", "late")).toBe("got late")
+  })
+
+  test.each([
+    ["not-a-number", "NaN"],
+    ["", "zero"],
+    ["0", "zero"],
+    ["-5", "negative"],
+  ])("ignores a malformed timeout override (%s is %s)", async (value) => {
+    using wire = channel()
+    using _ = bound(value)
+    // Number("") is 0 and Number("not-a-number") is NaN; either fires setTimeout on the next
+    // tick, which would fail every call the moment the client is created.
+    const client = KiloRpc.client<{ echo: (input: string) => string }>(wire.parent)
+    KiloRpc.arm()
+    KiloRpc.listen({ echo: (input: string) => `got ${input}` })
+
+    expect(await client.call("echo", "fine")).toBe("got fine")
   })
 })

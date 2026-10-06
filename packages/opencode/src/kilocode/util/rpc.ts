@@ -33,12 +33,17 @@ type Definition = {
   [method: string]: (input: any) => any
 }
 
+const DEFAULT_TIMEOUT = 30_000
+
 /**
  * How long to wait for the worker to announce itself. Overridable so the release PTY smoke can
  * fail faster than its own silence watchdog. Read per client so a caller can set it at startup.
+ * A malformed override falls back to the default: `Number("")` is 0 and `Number("x")` is NaN,
+ * and either would fire the bound on the next tick and fail every call at startup.
  */
 function timeout() {
-  return Number(process.env["KILO_RPC_HANDSHAKE_TIMEOUT"] ?? 30_000)
+  const value = Number(process.env["KILO_RPC_HANDSHAKE_TIMEOUT"])
+  return Number.isFinite(value) && value > 0 ? value : DEFAULT_TIMEOUT
 }
 
 const log = Log.create({ service: "worker-rpc" })
@@ -109,7 +114,12 @@ export function client<T extends Definition>(target: {
   const pending = new Map<number, Entry>()
   const listeners = new Map<string, Set<(data: any) => void>>()
   const outbox: string[] = []
-  const live = { id: 0, ready: false, timer: undefined as Timer | undefined }
+  const live = {
+    id: 0,
+    ready: false,
+    timer: undefined as Timer | undefined,
+    failure: undefined as Error | undefined,
+  }
 
   const settle = (id: number) => {
     const entry = pending.get(id)
@@ -127,10 +137,13 @@ export function client<T extends Definition>(target: {
     const message = `worker rpc never became ready within ${limit}ms`
     log.error(message, { queued: outbox.length, pending: pending.size })
     live.timer = undefined
+    // Remember the failure so calls made after the bound elapses reject at once. Without it
+    // they would queue behind a timer that no longer exists and never settle.
+    live.failure = new Error(message)
     outbox.length = 0
     const waiting = [...pending.values()]
     pending.clear()
-    for (const entry of waiting) entry.reject(new Error(message))
+    for (const entry of waiting) entry.reject(live.failure)
   }, limit)
   live.timer?.unref?.()
 
@@ -140,6 +153,8 @@ export function client<T extends Definition>(target: {
       if (live.timer) clearTimeout(live.timer)
       live.timer = undefined
       live.ready = true
+      // A worker that announced itself late is still usable, so stop failing new calls.
+      live.failure = undefined
       for (const data of outbox.splice(0)) target.postMessage(data)
       return
     }
@@ -160,6 +175,7 @@ export function client<T extends Definition>(target: {
     call<Method extends keyof T>(method: Method, input: Parameters<T[Method]>[0]): Promise<ReturnType<T[Method]>> {
       const id = live.id++
       return new Promise((resolve, reject) => {
+        if (!live.ready && live.failure) return reject(live.failure)
         pending.set(id, { resolve, reject })
         const data = JSON.stringify({ type: "rpc.request", method, input, id })
         if (live.ready) return target.postMessage(data)
