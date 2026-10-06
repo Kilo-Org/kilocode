@@ -10,7 +10,11 @@ import { useLanguage } from "../../context/language"
 import type { CodeEditDisplay, McpToolDisplay, ReasoningDisplay, TerminalCommandDisplay } from "../../types/messages"
 import SettingsRow from "./SettingsRow"
 import SessionPreview from "./SessionPreview"
+import { RichProvider } from "../../context/rich-provider"
+import { registerVscodeToolOverrides } from "../chat/VscodeToolOverrides"
 import { getDisplayPreset, WORK_STYLE_CHOICES, type WorkStyle } from "../../../../src/shared/work-style-presets"
+
+registerVscodeToolOverrides()
 
 interface LayoutOption {
   value: string
@@ -266,7 +270,9 @@ const DisplayTab: Component = () => {
           />
         </SettingsRow>
       </Card>
-      <SessionPreview />
+      <RichProvider>
+        <SessionPreview />
+      </RichProvider>
     </div>
   )
 }

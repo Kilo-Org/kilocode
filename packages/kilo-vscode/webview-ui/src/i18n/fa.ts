@@ -472,6 +472,9 @@ export const dict = {
   "provider.custom.error.duplicate": "تکراری",
   "settings.openLocalConfig": "پیکربندی محلی",
   "settings.openGlobalConfig": "پیکربندی سراسری",
+  "settings.search.placeholder": "جست‌وجوی تنظیمات",
+  "settings.search.noResults": "تنظیمی یافت نشد",
+  "settings.search.clear": "پاک کردن جست‌وجو",
   "settings.config.scope.local": "محلی",
   "settings.config.scope.global": "سراسری",
   "settings.config.status.loaded": "بارگذاری شد",
@@ -1353,6 +1356,8 @@ export const dict = {
 
   "task.todos.progress": "{{done}}/{{total}} کار انجام شد",
   "task.todos.allDone": "{{count}} کار انجام شد",
+  "task.todos.title": "کارها",
+  "task.todos.done": "همه انجام شد",
   "task.backgroundAgents.running.one": "1 عامل پس‌زمینه",
   "task.backgroundAgents.running.many": "{{count}} عامل پس‌زمینه",
   "task.backgroundAgents.open": "باز کردن عامل پس‌زمینه",
@@ -1440,4 +1445,6 @@ export const dict = {
   "settings.experimental.browserAutomation.systemChrome.description":
     "از Google Chrome نصب‌شده برای مرورگر یکپارچه استفاده کنید. فقط زمانی غیرفعال کنید که مرورگر Playwright Chromium سازگار از قبل نصب شده باشد.",
   "chat.search.searchingHistory": "در حال جستجو در پیام‌های قبلی…",
+  "browserTab.noSession": "مرورگر را از یک نشست باز کنید تا یک برنامه محلی یا یک صفحه HTTPS عمومی را پیش‌نمایش بگیرید.",
+  "browserTab.disabled": "مرورگر یکپارچه غیرفعال است. آن را در تنظیمات Kilo > آزمایشی فعال کنید.",
 }

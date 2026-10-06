@@ -507,6 +507,9 @@ export const dict = {
   "provider.custom.error.duplicate": "Дублікат",
   "settings.openLocalConfig": "Локальний конфіг",
   "settings.openGlobalConfig": "Глобальний конфіг",
+  "settings.search.placeholder": "Пошук параметрів",
+  "settings.search.noResults": "Параметри не знайдено",
+  "settings.search.clear": "Очистити пошук",
   "settings.config.scope.local": "Локальний",
   "settings.config.scope.global": "Глобальний",
   "settings.config.status.loaded": "завантажено",
@@ -1331,6 +1334,8 @@ export const dict = {
 
   "task.todos.progress": "{{done}} з {{total}} завдань виконано",
   "task.todos.allDone": "{{count}} завдань виконано",
+  "task.todos.title": "Завдання",
+  "task.todos.done": "Усе готово",
   "task.backgroundAgents.running.one": "1 фоновий агент",
   "task.backgroundAgents.running.many": "Фонових агентів: {{count}}",
   "task.backgroundAgents.open": "Відкрити фонового агента",
@@ -1458,4 +1463,7 @@ export const dict = {
   "settings.experimental.browserAutomation.systemChrome.description":
     "Використовувати встановлений Google Chrome для вбудованого браузера. Вимкніть лише якщо сумісний браузер Playwright Chromium уже встановлено.",
   "chat.search.searchingHistory": "Пошук у попередніх повідомленнях…",
+  "browserTab.noSession":
+    "Відкрийте браузер із сеансу, щоб переглянути локальний застосунок або загальнодоступну HTTPS-сторінку.",
+  "browserTab.disabled": "Вбудований браузер вимкнено. Увімкніть його в Налаштуваннях Kilo > Експериментальні.",
 }

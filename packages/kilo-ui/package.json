@@ -64,6 +64,7 @@
     "./file": "./src/components/file.tsx",
     "./motion-spring": "./src/components/motion-spring.tsx",
     "./tool-motion": "./src/components/tool-motion.ts",
+    "./tool-approval": "./src/components/tool-approval.tsx",
     "./line-comment-annotations": "./src/components/line-comment-annotations.tsx",
     "./animated-number": "./src/components/animated-number.tsx",
     "./text-reveal": "./src/components/text-reveal.tsx",

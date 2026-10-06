@@ -11,6 +11,12 @@
  * leads the spinner out of flow, as the goal badge trails it, so the spinner
  * stays centered. In the actions state it takes a line that has room for it.
  * On a surface without actions it keeps the row alive until the agents finish.
+ *
+ * The todo chip trails the spinner, before the goal badge: left of the spinner
+ * is who works (background agents), right of it is progress (todos, then the
+ * goal). The dock plans that trailing group as one, so it collapses in a fixed
+ * order instead of each badge shrinking on its own. When idle, the chip sits
+ * next to the Goal control in the actions row.
  */
 import { type Component, type JSX, Show, createEffect, createSignal, onCleanup } from "solid-js"
 import { useSession } from "../../context/session"
@@ -20,10 +26,12 @@ import { running } from "../../context/session-timing"
 import { useGoalDock } from "./goal/useGoalDock"
 import { AgentStack, useAgentStack } from "./AgentStack"
 import { stackFit, stackPlace, stackWidth } from "./background-agents"
+import { TodoChip, useTodoDock } from "./todo/TodoChip"
+import { TODO_TITLE_MAX, todoFit, type TodoFit } from "./todo/todo-dock"
 
 interface SessionDockProps {
   /** Idle-state content. Renders nothing when no action applies. */
-  actions?: (goal: () => JSX.Element, agents: JSX.Element) => JSX.Element
+  actions?: (goal: () => JSX.Element, agents: JSX.Element, todos: JSX.Element) => JSX.Element
   /** Whether idle-state content exists for this surface. */
   hasActions?: () => boolean
   /** True while a permission, question, suggestion, or requirement owns the row. */
@@ -35,6 +43,7 @@ interface SessionDockProps {
 export const SessionDock: Component<SessionDockProps> = (props) => {
   const session = useSession()
   const stack = useAgentStack()
+  const todo = useTodoDock()
   const working = () =>
     showsWorking(
       session.status(),
@@ -44,11 +53,13 @@ export const SessionDock: Component<SessionDockProps> = (props) => {
     )
   const actions = () => !working() && !props.blocked && (props.hasActions?.() ?? false)
   const visible = () => !props.readonly && stack.shown()
-  const agents = () => !working() && !actions() && !props.blocked && visible()
+  const agents = () => !working() && !actions() && !props.blocked && (visible() || todo.shown())
   const active = () => working() || actions() || agents()
+  const [fit, setFit] = createSignal<TodoFit>({ title: TODO_TITLE_MAX, count: true, compact: false })
   const goal = useGoalDock({
     working,
     actions,
+    compact: () => (todo.shown() ? fit().compact : undefined),
     get readonly() {
       return props.readonly
     },
@@ -89,13 +100,84 @@ export const SessionDock: Component<SessionDockProps> = (props) => {
     measure()
   })
 
-  const [fit, setFit] = createSignal(3)
+  // The trailing group: the todo chip, then the goal badge. Its width is
+  // reserved on both sides like the stack, and it plans its own collapse
+  // from natural widths, so a collapse cannot feed back into the plan.
+  const [trail, setTrail] = createSignal<HTMLDivElement>()
+
+  createEffect(() => {
+    const el = dock()
+    const box = trail()
+    const content = lane()
+    if (!working() || !todo.shown() || !el || !box || !content || typeof ResizeObserver === "undefined") return
+    // Read every value before any write, so one plan does not force a second
+    // layout, and let the observers plan at most once per frame.
+    const measure = () => {
+      const chip = box.querySelector<HTMLElement>('[data-component="todo-chip"]')
+      if (!chip) return
+      const css = getComputedStyle(chip)
+      const edge = Number.parseFloat(css.paddingLeft) + Number.parseFloat(css.paddingRight) + 2
+      const ring = chip.querySelector<HTMLElement>('[data-slot="todo-ring"]')?.offsetWidth ?? 16
+      const inner = chip.querySelector<HTMLElement>('[data-slot="todo-chip-count-inner"]')
+      const count = inner ? text(inner) + (Number.parseFloat(getComputedStyle(inner).paddingInlineStart) || 0) : 0
+      const line = chip.querySelector<HTMLElement>('.todo-chip-text > [data-slot="todo-line"]:not([data-old])')
+      const hidden = chip.hasAttribute("data-settled")
+      const title = line?.textContent && !hidden ? text(line) + 6 : 0
+      const reserve = Math.ceil(box.offsetWidth)
+      const plan = todoFit({
+        // A small margin absorbs subpixel rounding and the title transition.
+        space: (el.clientWidth - core(content)) / 2 - 6,
+        chip: ring + edge,
+        count,
+        title,
+        goal: badge(box),
+        gap: Number.parseFloat(getComputedStyle(box).columnGap) || 0,
+      })
+      setFit(plan)
+      content.style.setProperty("--session-trail", `${reserve}px`)
+    }
+    let frame = 0
+    const schedule = () => {
+      if (frame) return
+      frame = requestAnimationFrame(() => {
+        frame = 0
+        measure()
+      })
+    }
+    const resize = new ResizeObserver(schedule)
+    const mutate = new MutationObserver(schedule)
+    resize.observe(el)
+    resize.observe(box)
+    mutate.observe(box, { childList: true, subtree: true, characterData: true })
+    // The status label is a sibling of the trail. Its width sets the room, so a
+    // new label must plan again.
+    const status = lane()?.querySelector(".working-status")
+    if (status) mutate.observe(status, { childList: true, subtree: true, characterData: true })
+    onCleanup(() => {
+      cancelAnimationFrame(frame)
+      resize.disconnect()
+      mutate.disconnect()
+      content.style.removeProperty("--session-trail")
+    })
+    measure()
+  })
+
+  // One chip instance. `useTodoDock` guards session switches, so a new session
+  // never animates the previous list into this one.
+  const chip = (title: boolean) => (
+    <Show when={todo.shown()}>
+      <TodoChip state={todo} title={title} width={title ? fit().title : undefined} count={title ? fit().count : true} />
+    </Show>
+  )
+  const idleTodo = chip(false)
+
+  const [room, setRoom] = createSignal(3)
 
   // Created once, so the actions row can rebuild around it without replaying
   // the stack's open animation.
   const idleStack = (
     <Show when={visible()}>
-      <AgentStack state={stack} max={Math.min(max(), fit())} rule />
+      <AgentStack state={stack} max={Math.min(max(), room())} rule />
     </Show>
   )
 
@@ -144,7 +226,7 @@ export const SessionDock: Component<SessionDockProps> = (props) => {
       const count = stack.items().length
       const room = Math.max(0, ...lines.map((line) => width - line.used))
       const size = Math.min(max(), stackFit(room - gap - 1, count), Math.max(1, count))
-      setFit(size)
+      setRoom(size)
       const slot = stackPlace(
         lines.map((line) => line.used),
         width,
@@ -187,6 +269,7 @@ export const SessionDock: Component<SessionDockProps> = (props) => {
           }}
           data-goal={goal.running() ? "" : undefined}
           data-agents={visible() ? "" : undefined}
+          data-todos={todo.shown() ? "" : undefined}
         >
           <Show when={visible()}>
             <div class="session-working-lead" ref={setLead}>
@@ -194,21 +277,95 @@ export const SessionDock: Component<SessionDockProps> = (props) => {
             </div>
           </Show>
           <WorkingIndicator onScrollToBottom={props.onScrollToBottom} />
-          {goal.status()}
+          <div class="session-working-trail" ref={setTrail}>
+            {chip(true)}
+            {goal.status()}
+          </div>
         </div>
       </div>
       <div class="session-dock-state" ref={setIdle} data-active={actions() ? "" : undefined} aria-hidden={!actions()}>
-        {props.actions?.(goal.control, idleStack)}
+        {props.actions?.(goal.control, idleStack, idleTodo)}
       </div>
       <div class="session-dock-state" data-active={agents() ? "" : undefined} aria-hidden={!agents()}>
         <div class="session-agents">
           <Show when={visible()}>
             <AgentStack state={stack} label />
           </Show>
+          {chip(false)}
         </div>
       </div>
     </div>
   )
+}
+
+/**
+ * The trailing group collapses before the status label truncates. A label
+ * wider than this truncates first, so one long status cannot hide the todos.
+ */
+const LABEL_MAX = 160
+
+/**
+ * Natural width of the centered working cluster, with its label capped at
+ * LABEL_MAX. The painted widths depend on the reserve this plan sets (the
+ * lane squeezes the whole cluster), so every part is measured from its text
+ * or its own fixed size instead.
+ */
+function core(lane: HTMLElement | undefined) {
+  const box = lane?.querySelector<HTMLElement>(".working-indicator")
+  const btn = box?.querySelector<HTMLElement>(".working-indicator-scroll")
+  if (!box || !btn) return 160
+  const pad = (el: HTMLElement) => {
+    const css = getComputedStyle(el)
+    return {
+      edge: Number.parseFloat(css.paddingLeft) + Number.parseFloat(css.paddingRight),
+      gap: Number.parseFloat(css.columnGap) || 0,
+    }
+  }
+  const outer = pad(box)
+  const inner = pad(btn)
+  const parts = [...btn.children].filter((el) => !el.classList.contains("sr-only"))
+  const widths = parts.map((el) => {
+    if (el.classList.contains("working-status")) {
+      const line = el.querySelector<HTMLElement>(".working-status-line:not([data-old])")
+      return Math.min(line ? text(line) : 0, LABEL_MAX)
+    }
+    if (el instanceof HTMLElement && el.dataset.empty != null) return 0
+    // The spinner has no text but a fixed size.
+    if (!el.textContent) return el.getBoundingClientRect().width
+    return Math.max(text(el), Number.parseFloat(getComputedStyle(el).minWidth) || 0)
+  })
+  const shown = widths.filter((width) => width > 0)
+  const rest = [...box.children].filter((el): el is HTMLElement => el instanceof HTMLElement && el !== btn)
+  const extra = rest.reduce((sum, el) => sum + el.offsetWidth + outer.gap, 0)
+  return (
+    outer.edge +
+    inner.edge +
+    shown.reduce((sum, width) => sum + width, 0) +
+    inner.gap * Math.max(0, shown.length - 1) +
+    extra
+  )
+}
+
+/**
+ * Natural width of the text in an element. A box clipped by its parent
+ * reports its clipped width, so measure the text itself.
+ */
+function text(el: Element) {
+  const range = document.createRange()
+  range.selectNodeContents(el)
+  return Math.ceil(range.getBoundingClientRect().width)
+}
+
+/** Natural widths of the goal badge, full and icon only. */
+function badge(box: HTMLElement) {
+  const el = box.querySelector<HTMLElement>(".session-goal-status-content")
+  if (!el) return undefined
+  const css = getComputedStyle(el)
+  const edge = Number.parseFloat(css.paddingLeft) + Number.parseFloat(css.paddingRight)
+  const gap = Number.parseFloat(css.getPropertyValue("--goal-label-gap")) || 0
+  const icon = el.querySelector('[data-component="icon"]')?.getBoundingClientRect().width ?? 0
+  const label = el.querySelector<HTMLElement>(".session-goal-status-label")?.scrollWidth ?? 0
+  return { compact: icon + edge, full: icon + edge + gap + label }
 }
 
 /**
