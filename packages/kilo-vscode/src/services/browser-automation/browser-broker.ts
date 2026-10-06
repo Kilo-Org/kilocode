@@ -1046,7 +1046,10 @@ export class BrowserBroker {
     try {
       return await next
     } finally {
-      if (this.pending.get(session) === next) this.pending.delete(session)
+      if (this.pending.get(session) === next) {
+        this.pending.delete(session)
+        this.claims.delete(session)
+      }
     }
   }
 
