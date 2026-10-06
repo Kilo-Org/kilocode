@@ -9,7 +9,7 @@
 import { Storage } from "@/storage/storage"
 import { Flag } from "@opencode-ai/core/flag/flag"
 import * as Log from "@opencode-ai/core/util/log"
-import simpleGit from "simple-git"
+import { simpleGit } from "simple-git"
 
 export type PrLink = {
   platform: string
