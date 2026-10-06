@@ -3,7 +3,7 @@ import * as os from "os"
 import * as fs from "fs/promises"
 import { spawn } from "../util/process"
 import type { GitExecutable } from "../util/git-executable"
-import simpleGit from "simple-git"
+import { simpleGit } from "simple-git"
 import {
   parseWorktreeList,
   normalizePath,
