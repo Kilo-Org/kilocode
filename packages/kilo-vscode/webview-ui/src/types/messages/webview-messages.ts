@@ -6,7 +6,7 @@ import type { ModelSelection, ProviderConfig } from "./providers"
 import type { Config } from "./config"
 import type { ModelAllocation, ReviewCommentEntry, TerminalDestination, TerminalPlacement } from "./agent-manager"
 import type { PRReviewCommentData, ReviewMessageData } from "../../../../src/shared/review-comments"
-import type { BrowserFeedbackData } from "../../../../src/shared/browser-feedback"
+import type { BrowserFeedbackData, BrowserReference } from "../../../../src/shared/browser-feedback"
 import type { BrowserInteraction, BrowserViewport, BrowserViewIdentity } from "../../../../src/shared/browser-stream"
 import type { WorkStyle, WorkStyleState } from "../../../../src/shared/work-style-presets"
 import type { RefreshProviderUsageMessage, RequestProviderUsageMessage } from "./provider-usage"
@@ -387,9 +387,29 @@ export interface DisconnectMcpMessage {
   name: string
 }
 
-export interface AuthenticateMcpMessage {
-  type: "authenticateMcp"
+export interface RequestMcpAuthStateMessage {
+  type: "requestMcpAuthState"
+}
+
+export interface SignInMcpMessage {
+  type: "signInMcp"
   name: string
+  /** When false, suppress the host's native sign-in outcome notification (the caller renders its own, e.g. the Marketplace install modal). Defaults to true. */
+  notify?: boolean
+}
+
+export interface CancelMcpSignInMessage {
+  type: "cancelMcpSignIn"
+  name: string
+}
+
+export interface ResetMcpAuthMessage {
+  type: "resetMcpAuth"
+  name: string
+}
+
+export interface RequestMcpBundlesMessage {
+  type: "requestMcpBundles"
 }
 
 export interface SetLanguageRequest {
@@ -616,6 +636,8 @@ export interface RequestSpeechToTextModelsMessage {
 export interface OpenSettingsTabRequest {
   type: "openSettingsTab"
   tab: string
+  subtab?: string
+  focus?: string
 }
 
 export interface UpdateConfigMessage {
@@ -1418,6 +1440,63 @@ export interface AgentManagerBrowserRequestMessage {
   theme?: "dark" | "light"
 }
 
+/**
+ * Editor-tab Integrated Browser. Mirrors the Agent Manager browser request
+ * shape, but belongs to a sidebar/editor-tab session instead of an Agent
+ * Manager project.
+ */
+export interface BrowserTabRequestMessage {
+  type:
+    | "browserTab.open"
+    | "browserTab.refresh"
+    | "browserTab.back"
+    | "browserTab.forward"
+    | "browserTab.close"
+    | "browserTab.state"
+    | "browserTab.inspect"
+    | "browserTab.input"
+    | "browserTab.devtools"
+    | "browserTab.viewport"
+    | "browserTab.interact"
+    | "browserTab.acknowledge"
+  sessionId: string
+  projectId?: string
+  browserId?: string
+  navigation?: number
+  viewport?: BrowserViewport
+  identity?: BrowserViewIdentity
+  event?: BrowserInteraction
+  sequence?: number
+  url?: string
+  requestId?: string
+  x?: number
+  y?: number
+  width?: number
+  height?: number
+  hover?: boolean
+  click?: boolean
+  theme?: "dark" | "light"
+}
+
+export interface BrowserTabReferenceMessage {
+  type: "browserTab.reference"
+  sessionId: string
+  reference: BrowserReference
+}
+
+export interface BrowserTabReadyMessage {
+  type: "browserTab.ready"
+}
+
+export interface BrowserTabOpenSettingsMessage {
+  type: "browserTab.openSettings"
+}
+
+export interface BrowserTabOpenExternalMessage {
+  type: "browserTab.openExternal"
+  url: string
+}
+
 export interface RequestAutoApproveStateMessage {
   type: "requestAutoApproveState"
 }
@@ -1705,7 +1784,11 @@ export type WebviewMessage =
   | RequestMcpStatusMessage
   | ConnectMcpMessage
   | DisconnectMcpMessage
-  | AuthenticateMcpMessage
+  | RequestMcpAuthStateMessage
+  | SignInMcpMessage
+  | CancelMcpSignInMessage
+  | ResetMcpAuthMessage
+  | RequestMcpBundlesMessage
   | SetLanguageRequest
   | QuestionReplyRequest
   | QuestionRejectRequest
@@ -1859,6 +1942,11 @@ export type WebviewMessage =
   | SidebarOpenSessionsMessage
   | AgentManagerVisibleSessionMessage
   | AgentManagerBrowserRequestMessage
+  | BrowserTabRequestMessage
+  | BrowserTabReferenceMessage
+  | BrowserTabReadyMessage
+  | BrowserTabOpenSettingsMessage
+  | BrowserTabOpenExternalMessage
   | RequestAutoApproveStateMessage
   | ToggleAutoApproveMessage
   | RequestSandboxStatusMessage

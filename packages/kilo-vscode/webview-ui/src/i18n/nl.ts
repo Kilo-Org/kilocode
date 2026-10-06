@@ -217,6 +217,10 @@ export const dict = {
   "prompt.agents.show": "Achtergrondagenten tonen",
   "prompt.action.enhance": "Prompt verbeteren",
   "prompt.paste.expand": "Klik om geplakte tekst uit te vouwen",
+  "prompt.issues.title": "Sessieproblemen",
+  "prompt.mcp.provider": "{{name}} MCP",
+  "prompt.mcp.openSettings": "Openen in Instellingen",
+  "prompt.mcp.signIn.busy": "Bezig met inloggen…",
   "prompt.action.indexing": "Indexeringsinstellingen",
   "prompt.action.autoApprove.enable": "Automatisch goedkeuren inschakelen",
   "prompt.action.autoApprove.disable": "Automatisch goedkeuren uitschakelen",
@@ -504,6 +508,9 @@ export const dict = {
   "provider.custom.error.duplicate": "Duplicaat",
   "settings.openLocalConfig": "Lokale config",
   "settings.openGlobalConfig": "Globale config",
+  "settings.search.placeholder": "Instellingen zoeken",
+  "settings.search.noResults": "Geen instellingen gevonden",
+  "settings.search.clear": "Zoekopdracht wissen",
   "settings.config.scope.local": "Lokaal",
   "settings.config.scope.global": "Globaal",
   "settings.config.status.loaded": "geladen",
@@ -1015,6 +1022,8 @@ export const dict = {
   "settings.agentBehaviour.removeSkill.title": "Verwijder skill",
   "settings.agentBehaviour.removeSkill.confirm":
     'Skill "{{name}}" verwijderen? Dit verwijdert de skill bestanden van schijf.',
+  "settings.agentBehaviour.removeSkill.bundleConfirm":
+    'Skill "{{name}}" verwijderen? Dit verwijdert ook de {{mcp}} MCP-server en elke bijbehorende skill uit dezelfde Marketplace-installatie.',
   "settings.agentBehaviour.removeSkill.button": "Verwijderen",
   "settings.agentBehaviour.rules.description":
     "Regels zijn instructiebestanden die het gedrag van de agent sturen. Ze worden opgenomen in de systeemprompt voor elk gesprek. Voeg hieronder bestandspaden toe om aanvullende regels op te nemen.",
@@ -1031,15 +1040,40 @@ export const dict = {
   "settings.agentBehaviour.removeMcp.title": "Verwijder MCP-server",
   "settings.agentBehaviour.removeMcp.confirm":
     'MCP-server "{{name}}" verwijderen? Dit zal deze uit je configuratie verwijderen.',
+  "settings.agentBehaviour.removeMcp.bundleConfirm":
+    'MCP-server "{{name}}" en bijbehorende skills verwijderen? Dit verwijdert zowel de server als elke skill die bij deze Marketplace-installatie hoort.',
   "settings.agentBehaviour.removeMcp.button": "Verwijderen",
   "settings.agentBehaviour.mcpDetail.command": "Opdracht",
   "settings.agentBehaviour.mcpDetail.args": "Argumenten",
   "settings.agentBehaviour.mcpDetail.env": "Omgeving",
+  "settings.agentBehaviour.mcpSignIn.cancel": "Aanmelden annuleren",
+  "settings.agentBehaviour.mcpRemoving": "Verwijderen…",
+  "settings.agentBehaviour.mcpResetAuth": "Aanmelding resetten",
+  "settings.agentBehaviour.mcpResetAuth.title": "MCP-aanmelding resetten",
+  "settings.agentBehaviour.mcpResetAuth.confirm":
+    'De opgeslagen aanmelding voor "{{name}}" wissen? Je moet opnieuw inloggen.',
   "settings.agentBehaviour.editMcp": "MCP-server bewerken",
   "settings.agentBehaviour.editMcp.transportLocal": "Lokale server (stdio-transport)",
   "settings.agentBehaviour.editMcp.transportRemote": "Externe server (SSE/HTTP-transport)",
   "settings.agentBehaviour.editMcp.env": "Omgevingsvariabelen",
   "settings.agentBehaviour.editMcp.env.help": "Variabelen die worden doorgegeven aan het MCP-serverproces.",
+  "settings.agentBehaviour.editMcp.oauth": "OAuth",
+  "settings.agentBehaviour.editMcp.oauth.help":
+    "Laat op Automatisch staan, behalve als de server een vooraf geregistreerde client vereist. Een clientgeheim wordt opgeslagen in je Kilo-configuratiebestand.",
+  "settings.agentBehaviour.editMcp.oauth.mode": "Modus",
+  "settings.agentBehaviour.editMcp.oauth.mode.automatic": "Automatisch",
+  "settings.agentBehaviour.editMcp.oauth.mode.disabled": "Uitgeschakeld",
+  "settings.agentBehaviour.editMcp.oauth.mode.custom": "Aangepaste client",
+  "settings.agentBehaviour.editMcp.oauth.clientId": "Client-ID",
+  "settings.agentBehaviour.editMcp.oauth.clientSecret": "Clientgeheim",
+  "settings.agentBehaviour.editMcp.oauth.scope": "Bereik",
+  "settings.agentBehaviour.editMcp.oauth.callbackPort": "Callback-poort",
+  "settings.agentBehaviour.editMcp.oauth.redirectUri": "Omleidings-URI",
+  "settings.agentBehaviour.editMcp.oauth.redirectUri.help":
+    "Standaard http://127.0.0.1:19876/mcp/oauth/callback en overschrijft de callback-poort.",
+  "settings.agentBehaviour.editMcp.oauth.port.invalid": "Voer een poort tussen 1 en 65535 in.",
+  "settings.agentBehaviour.editMcp.oauth.secret.invalid": "Een clientgeheim vereist een client-ID.",
+  "settings.agentBehaviour.editMcp.oauth.redirectUri.invalid": "Voer een geldige omleidings-URI in.",
   "settings.agentBehaviour.addMcp.command": "Opdracht",
   "settings.agentBehaviour.addMcp.command.placeholder": "e.g. npx",
   "settings.agentBehaviour.addMcp.args": "Argumenten",
@@ -1315,6 +1349,8 @@ export const dict = {
 
   "task.todos.progress": "{{done}}/{{total}} to-do's voltooid",
   "task.todos.allDone": "{{count}} to-do's voltooid",
+  "task.todos.title": "To-do's",
+  "task.todos.done": "Alles klaar",
   "task.backgroundAgents.running.one": "1 achtergrondagent",
   "task.backgroundAgents.running.many": "{{count}} achtergrondagenten",
   "task.backgroundAgents.open": "Achtergrondagent openen",
@@ -1440,4 +1476,8 @@ export const dict = {
   "settings.experimental.browserAutomation.systemChrome.description":
     "Gebruik de geïnstalleerde Google Chrome voor de geïntegreerde browser. Schakel dit alleen uit als er al een compatibele Playwright Chromium-browser is geïnstalleerd.",
   "chat.search.searchingHistory": "Eerdere berichten doorzoeken…",
+  "browserTab.noSession":
+    "Open de browser vanuit een sessie om een lokale applicatie of een openbare HTTPS-pagina te bekijken.",
+  "browserTab.disabled":
+    "De geïntegreerde browser is uitgeschakeld. Schakel deze in via Kilo-instellingen > Experimenteel.",
 }

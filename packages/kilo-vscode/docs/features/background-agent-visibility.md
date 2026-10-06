@@ -73,8 +73,8 @@ An agent counts as running only when its child session status is `busy` or `retr
 3. `webview-ui/src/components/chat/background-agents.ts`
    Pure derivation for backend lifecycle rows and the running-task fallback.
 4. `webview-ui/src/components/chat/BackgroundAgents.tsx`
-   The strip. Collapsed by default, reuses the `task-header-todos-*` slots, opens an agent through the shared helper.
-5. `TaskHeader.tsx` renders `<BackgroundAgents />` above the to-do strip.
+   The strip. Collapsed by default, opens an agent through the shared helper.
+5. `TaskHeader.tsx` renders `<BackgroundAgents />`.
 6. `styles/task-header.css` adds `[data-component="task-header-agents"]`.
 7. `i18n/*.ts` adds the localized `task.backgroundAgents.*` strings.
 8. `tests/unit/background-agents.test.ts` covers lifecycle derivation, attention attribution, and promotion discovery.
