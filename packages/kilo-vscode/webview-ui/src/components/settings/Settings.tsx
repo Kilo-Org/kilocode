@@ -1,4 +1,4 @@
-import { Component, createSignal, createEffect, createMemo, lazy, on, Show, onCleanup } from "solid-js"
+import { Component, createSignal, createEffect, createMemo, lazy, on, onCleanup, Show } from "solid-js"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { Tabs } from "@kilocode/kilo-ui/tabs"
 import { Button } from "@kilocode/kilo-ui/button"
@@ -26,6 +26,10 @@ import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { Switch } from "@kilocode/kilo-ui/switch"
 import { TextField } from "@kilocode/kilo-ui/text-field"
 import SettingsRow from "./SettingsRow"
+import SettingsSearch from "./SettingsSearch"
+import SettingsSearchResults from "./SettingsSearchResults"
+import { SETTINGS_TABS, type SettingsTab } from "./settings-search"
+import { useSettingsSearch } from "./useSettingsSearch"
 import { ProjectBranchDialog } from "../../../agent-manager/ProjectBranchDialog"
 
 const DisplayTab = lazy(() => import("./DisplayTab"))
@@ -53,6 +57,8 @@ export interface SettingsProps {
   onTabChange?: (tab: string) => void
   onAgentBehaviourNavigationConsumed?: () => void
   onMigrationClick?: (source: MigrationSource) => void
+  /** Increments when the host asks to open the settings search. */
+  searchRequest?: number
 }
 
 const AgentManagerTab: Component<{ projectId?: string }> = (props) => {
@@ -324,8 +330,27 @@ const Settings: Component<SettingsProps> = (props) => {
     vscode.postMessage({ type: "settingsTabChanged", tab })
   }
 
+  const searchTabs = createMemo<SettingsTab[]>(() =>
+    SETTINGS_TABS.filter((tab) => {
+      if (tab.id === "indexing") return features().indexing
+      if (tab.id === "sandboxing") return sandboxing()
+      if (tab.id === "agentManager") return props.agentManagerSettings === true
+      return true
+    }),
+  )
+
+  const search = useSettingsSearch({
+    tabs: searchTabs,
+    translate: (key) => language.t(key),
+    onSelectTab: onTabChange,
+    searchRequest: () => props.searchRequest,
+  })
+
   return (
-    <div style={{ display: "flex", "flex-direction": "column", height: "100%", "min-height": 0 }}>
+    <div
+      data-searching={search.searching() ? "true" : undefined}
+      style={{ display: "flex", "flex-direction": "column", height: "100%", "min-height": 0 }}
+    >
       {/* Header */}
       <div
         style={{
@@ -359,10 +384,26 @@ const Settings: Component<SettingsProps> = (props) => {
         orientation="vertical"
         variant="settings"
         value={active()}
-        onChange={onTabChange}
+        onChange={(tab) => {
+          if (search.searching()) search.clear()
+          onTabChange(tab)
+        }}
         style={{ flex: 1, overflow: "hidden" }}
       >
         <Tabs.List>
+          <div data-slot="settings-search-slot">
+            <SettingsSearch
+              query={search.query()}
+              focusRequest={search.focusTick()}
+              listId={search.listId}
+              activeId={search.activeId()}
+              onInput={search.input}
+              onClear={search.clear}
+              onMove={search.move}
+              onChoose={search.choose}
+              onDismiss={search.clear}
+            />
+          </div>
           <Tabs.Trigger value="models" aria-label={language.t("settings.models.title")}>
             <Icon name="models" />
             <span class="label">{language.t("settings.models.title")}</span>
@@ -524,6 +565,18 @@ const Settings: Component<SettingsProps> = (props) => {
             onMigrationClick={props.onMigrationClick}
           />
         </Tabs.Content>
+
+        <Show when={search.searching()}>
+          <SettingsSearchResults
+            query={search.query()}
+            results={search.results()}
+            active={search.active()}
+            listId={search.listId}
+            tabs={searchTabs()}
+            onHover={search.setActive}
+            onSelect={search.select}
+          />
+        </Show>
       </Tabs>
 
       {/* Save bar — slides in when there are unsaved config changes */}

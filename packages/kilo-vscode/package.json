@@ -156,6 +156,12 @@
         "icon": "$(settings-gear)"
       },
       {
+        "command": "kilo-code.new.settingsSearch",
+        "title": "Search Settings",
+        "category": "Kilo Code",
+        "icon": "$(search)"
+      },
+      {
         "command": "kilo-code.new.sidebarTitle.plusButtonClicked",
         "title": "New Task",
         "icon": "$(add)"
@@ -887,6 +893,12 @@
         "command": "kilo-code.new.autocomplete.nextEdit.dismiss",
         "key": "escape",
         "when": "editorTextFocus && !editorTabMovesFocus && !inSnippetMode && kilo-code.nextEdit.hasPendingSuggestion"
+      },
+      {
+        "command": "kilo-code.new.settingsSearch",
+        "key": "ctrl+f",
+        "mac": "cmd+f",
+        "when": "activeWebviewPanelId == 'kilo-code.new.settingsPanel'"
       }
     ],
     "configuration": {
