@@ -3,7 +3,7 @@ import * as os from "os"
 import * as fs from "fs/promises"
 import { spawn } from "../util/process"
 import type { GitExecutable } from "../util/git-executable"
-import simpleGit from "simple-git"
+import { simpleGit } from "simple-git"
 import {
   parseWorktreeList,
   normalizePath,
@@ -119,6 +119,26 @@ export function nonInteractiveEnv(): NodeJS.ProcessEnv {
  */
 export function isKiloOwnedSshCommand(env: NodeJS.ProcessEnv): boolean {
   return env.GIT_SSH_COMMAND === KILO_NON_INTERACTIVE_SSH_COMMAND
+}
+
+const GUARDED = new Set(["editor", "pager", "prefix", "ssh_askpass", "visual"])
+
+/**
+ * simple-git 4.x rejects GIT_* keys passed through `.env()` unless they are
+ * named in `allowEnvironment`. Keep PATH/HOME and only the overlay keys we
+ * intend to send into the child.
+ */
+export function gitEnv(): { env: NodeJS.ProcessEnv; ssh: boolean; allow: string[] } {
+  const env = nonInteractiveEnv()
+  const ssh = isKiloOwnedSshCommand(env)
+  const allow = ssh ? ["GIT_TERMINAL_PROMPT", "GIT_SSH_COMMAND"] : ["GIT_TERMINAL_PROMPT"]
+  const keep = new Set(allow.map((key) => key.toLowerCase()))
+  for (const key of Object.keys(env)) {
+    const lower = key.toLowerCase()
+    if (!lower.startsWith("git_") && !GUARDED.has(lower)) continue
+    if (!keep.has(lower)) delete env[key]
+  }
+  return { env, ssh, allow }
 }
 
 export class GitOps {

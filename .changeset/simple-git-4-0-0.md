@@ -1,0 +1,6 @@
+---
+"kilo-code": patch
+"@kilocode/cli": patch
+---
+
+Upgrade simple-git to 4.0.2 to block abbreviated git options that could bypass unsafe-operation checks.
