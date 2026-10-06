@@ -165,18 +165,22 @@ export const {
     GoalSync.watch(sdk, project.workspace.current, store, (fn) => setStore(produce(fn))) // kilocode_change
 
     // kilocode_change start
-    function evict(sessionID: string) {
+    // Navigation eviction only drops data that session.sync() re-hydrates. Status and pending
+    // requests are live, event-driven state that is never re-fetched, so they are kept until the
+    // session is deleted.
+    function evict(sessionID: string, purge = false) {
       const children = store.session.filter((session) => session.parentID === sessionID).map((session) => session.id)
       setStore(
         produce((draft) => {
           for (const message of draft.message[sessionID] ?? []) delete draft.part[message.id]
           delete draft.message[sessionID]
           delete draft.session_diff[sessionID]
-          delete draft.session_status[sessionID]
           delete draft.todo[sessionID]
           const processes = draft.background_process[sessionID]?.filter((item) => item.lifetime === "persistent")
           if (processes?.length) draft.background_process[sessionID] = processes
           else delete draft.background_process[sessionID]
+          if (!purge) return
+          delete draft.session_status[sessionID]
           delete draft.permission[sessionID]
           delete draft.question[sessionID]
           delete draft.suggestion[sessionID]
@@ -184,7 +188,7 @@ export const {
         }),
       )
       fullSyncedSessions.delete(sessionID)
-      for (const child of children) evict(child)
+      for (const child of children) evict(child, purge)
     }
 
     function strip(message: Message): Message {
@@ -367,7 +371,7 @@ export const {
               }),
             )
           }
-          evict(event.properties.info.id) // kilocode_change
+          evict(event.properties.info.id, true) // kilocode_change
           break
         }
         case "session.updated": {
@@ -619,7 +623,7 @@ export const {
               "session",
               produce((draft) => draft.splice(match.index, 1)),
             )
-          evict(id)
+          evict(id, true)
           break
         }
         case "message.updated.1": {
