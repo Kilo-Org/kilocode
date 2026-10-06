@@ -635,6 +635,10 @@ describe("agent manager tool start", () => {
     expect(parseToolRequest({ mode: "local", tasks: [{ prompt: "Fix", agent: "  " }] })?.tasks).toEqual([
       { prompt: "Fix" },
     ])
+    // The server resolves the agent by exact key, so a padded name must not reach session.create.
+    expect(parseToolRequest({ mode: "local", tasks: [{ prompt: "Fix", agent: "  candidate  " }] })?.tasks).toEqual([
+      { prompt: "Fix", agent: "candidate" },
+    ])
     expect(parseToolRequest({ mode: "local", tasks: [{ prompt: "Fix", agent: 42 }] })?.tasks).toEqual([
       { prompt: "Fix" },
     ])

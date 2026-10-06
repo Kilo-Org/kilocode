@@ -362,10 +362,16 @@ function model(value: unknown): ToolTask["model"] {
   return { providerID, modelID }
 }
 
+// The server resolves the agent by exact key, so keep the canonical trimmed name.
+function agent(value: unknown): Pick<ToolTask, "agent"> {
+  if (typeof value !== "string" || !value.trim()) return {}
+  return { agent: value.trim() }
+}
+
 function task(value: unknown): ToolTask | undefined {
   if (!record(value)) return undefined
-  const out: ToolTask = {}
-  for (const key of ["prompt", "name", "branchName", "agent"] as const) {
+  const out: ToolTask = { ...agent(value.agent) }
+  for (const key of ["prompt", "name", "branchName"] as const) {
     if (Object.hasOwn(value, key) && typeof value[key] === "string" && value[key].trim()) out[key] = value[key]
   }
   const hasModel = Object.hasOwn(value, "model")

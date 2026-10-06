@@ -1148,6 +1148,19 @@ describe("agent_manager tool", () => {
     expect(task?.agent).toBeUndefined()
   })
 
+  // A padded name passes the trimmed fail-fast check, so it must be published
+  // canonical too. Agent.get resolves by exact key, so " candidate " would
+  // otherwise fail later at prompt time with "Agent not found".
+  test("publishes a padded agent name trimmed", async () => {
+    const task = await publish(runtime, { name: "Prepared", agent: "  candidate  " })
+    expect(task?.agent).toBe("candidate")
+  })
+
+  test("omits a blank agent from the published task", async () => {
+    const task = await publish(runtime, { name: "Prepared", agent: "   " })
+    expect(task?.agent).toBeUndefined()
+  })
+
   test("rejects an unknown agent name before requesting permission", async () => {
     const tool = await init()
     const calls: unknown[] = []
