@@ -141,7 +141,7 @@ kilo run --auto "run tests and fix any failures"
 
 ### Documentation
 
-For configuration and everything else, [head over to the docs](https://kilo.ai/docs).
+For configuration and more, see the [documentation](https://kilo.ai/docs).
 
 ### Contributing
 
