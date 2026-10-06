@@ -98,7 +98,36 @@ Remote MCP servers are accessed over HTTP/HTTPS. Set `type` to `"remote"`.
 | `url` | String | Yes | URL of the remote MCP server. |
 | `enabled` | Boolean | No | Enable or disable the MCP server on startup. |
 | `headers` | Object | No | HTTP headers to send with requests. |
+| `oauth` | Object or `false` | No | OAuth configuration. Omit it for automatic discovery, set `false` to disable OAuth, or provide an object to use a pre-registered client. |
 | `timeout` | Number | No | Timeout in ms for fetching tools from the MCP server. Default: 5000. |
+
+## OAuth Sign-in
+
+OAuth is enabled by default for remote servers. The CLI starts the sign-in flow when it connects to a server that requires authentication. Set `"oauth": false` on a server to disable auto-detection.
+
+- Run `kilo mcp auth` to select an OAuth-capable server and sign in, or `kilo mcp auth list` to see each server's auth status.
+- Run `kilo mcp logout` to remove stored credentials.
+- The CLI prints the authorization URL. Open it in a browser on any machine.
+
+When the authorization server does not support dynamic client registration, configure a pre-registered OAuth client:
+
+```json
+{
+  "mcp": {
+    "my-remote-server": {
+      "type": "remote",
+      "url": "https://my-mcp-server.com/mcp",
+      "oauth": {
+        "clientId": "your-client-id",
+        "clientSecret": "your-client-secret",
+        "scope": "read write"
+      }
+    }
+  }
+}
+```
+
+The `oauth` object also accepts `callbackPort` (default `19876`) and `redirectUri` (default `http://127.0.0.1:19876/mcp/oauth/callback`). `callbackPort` is ignored when `redirectUri` is set.
 
 ## Managing MCP Servers
 
@@ -109,6 +138,8 @@ You can manage MCP servers from the CLI:
 | `kilo mcp list` | List all configured MCP servers |
 | `kilo mcp add` | Add an MCP server |
 | `kilo mcp auth` | Authenticate with an MCP server |
+| `kilo mcp auth list` | List OAuth-capable MCP servers and their auth status |
+| `kilo mcp logout` | Remove OAuth credentials for an MCP server |
 
 Inside the interactive TUI, use the `/mcps` slash command to toggle MCP servers on or off.
 

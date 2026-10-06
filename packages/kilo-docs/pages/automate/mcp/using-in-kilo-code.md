@@ -214,10 +214,51 @@ In the VS Code extension, open **Settings → MCP**, click **Add Server**, and c
 | `url` | String | Yes | URL of the remote MCP server. |
 | `enabled` | Boolean | No | Enable or disable the MCP server on startup. |
 | `headers` | Object | No | HTTP headers to send with requests. |
+| `oauth` | Object or `false` | No | OAuth configuration. Omit it for automatic discovery, set `false` to disable OAuth, or provide an object to use a pre-registered client. |
 | `timeout` | Number | No | Timeout in ms for fetching tools from the MCP server. Default: 30000. |
 
 {% /tab %}
 {% /tabs %}
+
+### OAuth sign-in
+
+OAuth is enabled by default for remote servers. Kilo starts the sign-in flow when it connects to a server that requires authentication. Set `"oauth": false` on a server to disable auto-detection.
+
+{% tabs %}
+{% tab label="VSCode" %}
+
+- When a server needs sign-in, the chat prompt shows it with a **Sign in** action, and **Open in Settings** opens its MCP entry. Installing an OAuth-protected server from the Marketplace also prompts you to sign in.
+- Kilo opens the authorization page in your default browser through VS Code. If Kilo cannot open a browser, for example over SSH or remote development, it offers **Open in Browser** and **Copy URL** so you can finish signing in where the browser runs.
+- **Cancel** stops an in-progress sign-in without removing stored credentials. Removing stored credentials is a separate sign-out action.
+
+{% /tab %}
+{% tab label="CLI" %}
+
+- Run `kilo mcp auth` to select an OAuth-capable server and sign in, or `kilo mcp auth list` to see each server's auth status. Run `kilo mcp logout` to remove stored credentials.
+- The CLI prints the authorization URL. Open it in a browser on any machine.
+
+{% /tab %}
+{% /tabs %}
+
+When the authorization server does not support dynamic client registration, configure a pre-registered OAuth client:
+
+```json
+{
+  "mcp": {
+    "my-remote-server": {
+      "type": "remote",
+      "url": "https://my-mcp-server.com/mcp",
+      "oauth": {
+        "clientId": "your-client-id",
+        "clientSecret": "your-client-secret",
+        "scope": "read write"
+      }
+    }
+  }
+}
+```
+
+The `oauth` object also accepts `callbackPort` (default `19876`) and `redirectUri` (default `http://127.0.0.1:19876/mcp/oauth/callback`). `callbackPort` is ignored when `redirectUri` is set.
 
 ### SSE Transport
 
@@ -273,6 +314,7 @@ The extension also supports the `{env:VARIABLE_NAME}` syntax in config files to 
 | `kilo mcp list` | List all configured MCP servers |
 | `kilo mcp add` | Add an MCP server |
 | `kilo mcp auth` | Authenticate with an MCP server |
+| `kilo mcp auth list` | List OAuth-capable MCP servers and their auth status |
 | `kilo mcp logout` | Log out from an MCP server |
 | `kilo mcp debug` | Debug an MCP server connection |
 
@@ -525,7 +567,7 @@ Resource-capable servers also make the `list_mcp_resources`, `list_mcp_resource_
 {% tab label="VSCode" %}
 
 - **Server Not Responding:** Check if the server process is running and verify network connectivity. Review server status in Settings > Agent Behaviour > MCP Servers.
-- **`needs_auth` status:** For remote servers with OAuth, the extension will show a notification to start the auth flow. Click it to authenticate.
+- **`needs_auth` status:** For remote servers with OAuth, the chat prompt shows the server with a **Sign in** action. You can also sign in from its entry in **Settings → Agent Behaviour → MCP Servers**.
 - **`failed` status:** Check the CLI output for error details. Ensure commands and paths are correct.
 - **Tool Not Available:** Confirm the server is properly implementing the tool and it's not disabled in settings.
 

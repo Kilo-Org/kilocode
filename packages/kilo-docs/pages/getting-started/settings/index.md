@@ -170,6 +170,8 @@ You can change both choices later:
 
 Display changes apply as a draft. Click **Save** to keep them or **Discard** to revert.
 
+**Show shortcut hints** (on by default) shows a shortcut hint in the empty chat prompt that fits what you are doing, for example how to add the editor selection or return to the prompt. It appears only when the shortcut applies and follows your custom keybindings.
+
 ### Markdown Diff Rendering
 
 Markdown files in Kilo diff viewers can be shown as rendered Markdown instead of a raw text diff. Use the eye/code toggle in a Markdown file header, or set `kilo-code.new.diff.renderMarkdown` to `true` to render Markdown files by default.

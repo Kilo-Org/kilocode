@@ -15,7 +15,7 @@ Marketplace items are configuration, instruction, and plugin files, not VS Code 
 |---|---|---|
 | **Agent** | A reusable role with its own prompt, behavior, and permissions. | The agent becomes available in Kilo's agent selector. |
 | **Skill** | Task-specific instructions and resources that Kilo can load when relevant. | Kilo can discover and load the skill during a session. |
-| **MCP server** | Tools supplied by an external service or a program running on your machine. | Kilo starts or connects to the configured server when it loads the MCP configuration. |
+| **MCP server** | Tools supplied by an external service or a program running on your machine. | Kilo starts or connects to the configured server when it loads the MCP configuration. If the server uses OAuth, Kilo prompts you to sign in. |
 | **Plugin** | Custom hooks, tools, auth providers, model providers, and runtime behavior. | Kilo adds the plugin to the `plugin` array in the relevant config file and loads it at startup. |
 
 MCP stands for **Model Context Protocol**, a standard that lets AI applications use external tools. For example, an MCP server might let Kilo query a database, work with GitHub, or interact with a browser. See [What is MCP?](/docs/automate/mcp/what-is-mcp) for a fuller explanation.

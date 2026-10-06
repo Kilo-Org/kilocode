@@ -730,6 +730,8 @@ Closing a managed worktree removes it from Agent Manager, deletes its `.kilo/wor
 | `Cmd+Shift+/` | `Ctrl+Shift+/` | Show keyboard shortcuts |
 | `Cmd+1` … `Cmd+9` | `Ctrl+1` … `Ctrl+9` | Jump to worktree/session by index |
 
+The prompt shows one context-aware hint for the shortcut that fits what you are doing, such as adding the editor selection, returning to the prompt, stopping a run, or reviewing changes and the pull request. Empty Agent Manager sessions list the main panel shortcuts. All hint labels follow your `keybindings.json` overrides. Turn hints off with the **Show shortcut hints** setting in **Settings → Display**.
+
 ## Troubleshooting
 
 - **"Please open a folder…" error** — the Agent Manager requires a VS Code workspace folder
