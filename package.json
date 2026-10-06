@@ -165,7 +165,8 @@
     "@opentui/solid": "catalog:",
     "solid-js": "catalog:",
     "@opentui/keymap": "catalog:",
-    "@ai-sdk/anthropic": "3.0.111"
+    "@ai-sdk/anthropic": "3.0.111",
+    "source-map-js": "1.2.2"
   },
   "patchedDependencies": {
     "@npmcli/agent@4.0.2": "patches/@npmcli%2Fagent@4.0.2.patch",
