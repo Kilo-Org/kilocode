@@ -110,8 +110,9 @@ export const SessionDock: Component<SessionDockProps> = (props) => {
     const box = trail()
     const content = lane()
     if (!working() || !todo.shown() || !el || !box || !content || typeof ResizeObserver === "undefined") return
+    // Read every value before any write, so one plan does not force a second
+    // layout, and let the observers plan at most once per frame.
     const measure = () => {
-      content.style.setProperty("--session-trail", `${Math.ceil(box.offsetWidth)}px`)
       const chip = box.querySelector<HTMLElement>('[data-component="todo-chip"]')
       if (!chip) return
       const css = getComputedStyle(chip)
@@ -122,20 +123,29 @@ export const SessionDock: Component<SessionDockProps> = (props) => {
       const line = chip.querySelector<HTMLElement>('.todo-chip-text > [data-slot="todo-line"]:not([data-old])')
       const hidden = chip.hasAttribute("data-settled")
       const title = line?.textContent && !hidden ? text(line) + 6 : 0
-      setFit(
-        todoFit({
-          // A small margin absorbs subpixel rounding and the title transition.
-          space: (el.clientWidth - core(content)) / 2 - 6,
-          chip: ring + edge,
-          count,
-          title,
-          goal: badge(box),
-          gap: Number.parseFloat(getComputedStyle(box).columnGap) || 0,
-        }),
-      )
+      const reserve = Math.ceil(box.offsetWidth)
+      const plan = todoFit({
+        // A small margin absorbs subpixel rounding and the title transition.
+        space: (el.clientWidth - core(content)) / 2 - 6,
+        chip: ring + edge,
+        count,
+        title,
+        goal: badge(box),
+        gap: Number.parseFloat(getComputedStyle(box).columnGap) || 0,
+      })
+      setFit(plan)
+      content.style.setProperty("--session-trail", `${reserve}px`)
     }
-    const resize = new ResizeObserver(measure)
-    const mutate = new MutationObserver(measure)
+    let frame = 0
+    const schedule = () => {
+      if (frame) return
+      frame = requestAnimationFrame(() => {
+        frame = 0
+        measure()
+      })
+    }
+    const resize = new ResizeObserver(schedule)
+    const mutate = new MutationObserver(schedule)
     resize.observe(el)
     resize.observe(box)
     mutate.observe(box, { childList: true, subtree: true, characterData: true })
@@ -144,6 +154,7 @@ export const SessionDock: Component<SessionDockProps> = (props) => {
     const status = lane()?.querySelector(".working-status")
     if (status) mutate.observe(status, { childList: true, subtree: true, characterData: true })
     onCleanup(() => {
+      cancelAnimationFrame(frame)
       resize.disconnect()
       mutate.disconnect()
       content.style.removeProperty("--session-trail")
@@ -151,19 +162,11 @@ export const SessionDock: Component<SessionDockProps> = (props) => {
     measure()
   })
 
-  // Keyed by session, so a switch remounts the chip and never animates the
-  // other session's list into this one.
+  // One chip instance. `useTodoDock` guards session switches, so a new session
+  // never animates the previous list into this one.
   const chip = (title: boolean) => (
-    <Show when={todo.shown() ? session.currentSessionID() : undefined} keyed>
-      {(id) => (
-        <TodoChip
-          state={todo}
-          session={id}
-          title={title}
-          width={title ? fit().title : undefined}
-          count={title ? fit().count : true}
-        />
-      )}
+    <Show when={todo.shown()}>
+      <TodoChip state={todo} title={title} width={title ? fit().title : undefined} count={title ? fit().count : true} />
     </Show>
   )
   const idleTodo = chip(false)

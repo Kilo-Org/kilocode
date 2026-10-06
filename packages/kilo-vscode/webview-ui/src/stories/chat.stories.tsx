@@ -11,7 +11,10 @@ import type { Meta, StoryObj } from "storybook-solidjs-vite"
 import type { AssistantMessage } from "@kilocode/sdk/v2"
 import { batch, createEffect, createSignal, onCleanup, onMount } from "solid-js"
 import { StoryProviders, defaultMockData, mockSessionValue } from "./StoryProviders"
+import { Button } from "@kilocode/kilo-ui/button"
+import { Icon } from "@kilocode/kilo-ui/icon"
 import { ChatView } from "../components/chat/ChatView"
+import { SessionDock } from "../components/chat/SessionDock"
 import { ErrorDisplay } from "../components/chat/ErrorDisplay"
 import { AgentStack, useAgentStack } from "../components/chat/AgentStack"
 import { pollBackgroundJobs } from "../components/chat/background-jobs"
@@ -274,7 +277,11 @@ function dockTodos(done: number): TodoItem[] {
   }))
 }
 
-function dockFrame(opts: { busy: boolean; goal: boolean; done: number; width: number; label: string }) {
+// The dock on its own, so the docs screenshot focuses on the chip instead of
+// the whole chat. Rendering ChatView here pulled in the welcome screen, the
+// account switcher, the feedback box, and busy header skeletons, none of which
+// belong in a picture of the todo chip.
+function dockRow(opts: { busy: boolean; goal: boolean; done: number; width: number; label: string }) {
   const status = opts.busy ? "busy" : "idle"
   const base = mockSessionValue({ id: SESSION_ID, status, closeReason: "completed" })
   const session = {
@@ -286,10 +293,11 @@ function dockFrame(opts: { busy: boolean; goal: boolean; done: number; width: nu
     status: () => status,
     statusInfo: () => ({ type: status }),
     statusText: () => (opts.busy ? "Making edits" : undefined),
-    busyTiming: () => undefined,
+    busyTiming: () => (opts.busy ? { active: 2000, since: Date.now() } : undefined),
     submitting: () => false,
     isSubmitting: () => false,
-    messages: () => [{ id: "msg-001" }] as any[],
+    messages: () => [],
+    getParts: () => [],
     todos: () => dockTodos(opts.done),
   }
   return (
@@ -297,8 +305,27 @@ function dockFrame(opts: { busy: boolean; goal: boolean; done: number; width: nu
       <div style={{ "font-size": "11px", opacity: 0.6, padding: "4px 8px" }}>{opts.label}</div>
       <SessionContext.Provider value={session as any}>
         <WorktreeModeProvider>
-          <div style={{ height: "330px", display: "flex", "flex-direction": "column" }}>
-            <ChatView onForkSession={() => undefined} />
+          <div class="chat-input" style={{ padding: "4px 8px" }}>
+            <SessionDock
+              onScrollToBottom={() => undefined}
+              hasActions={() => !opts.busy}
+              actions={(goal, agents, todos) => (
+                <div class="new-task-button-wrapper">
+                  <div class="session-actions-row">
+                    {agents}
+                    <Button variant="secondary" size="small" class="session-new-button">
+                      New Session
+                    </Button>
+                    <Button variant="ghost" size="small">
+                      <Icon name="fork" size="small" />
+                      Fork Session
+                    </Button>
+                    {todos}
+                    {goal()}
+                  </div>
+                </div>
+              )}
+            />
           </div>
         </WorktreeModeProvider>
       </SessionContext.Provider>
@@ -311,15 +338,13 @@ export const ChatViewSessionDockTodoStates: Story = {
   name: "ChatView — session dock todo states",
   render: () => (
     <StoryProviders sessionID={SESSION_ID} status="idle" noPadding>
-      <ServerContext.Provider value={mockServer as any}>
-        <div style={{ display: "grid", gap: "8px" }}>
-          {dockFrame({ busy: true, goal: false, done: 2, width: 420, label: "Working" })}
-          {dockFrame({ busy: true, goal: true, done: 2, width: 420, label: "Working, with goal" })}
-          {dockFrame({ busy: true, goal: true, done: 2, width: 300, label: "Working, narrow, with goal" })}
-          {dockFrame({ busy: false, goal: true, done: 3, width: 420, label: "Idle" })}
-          {dockFrame({ busy: false, goal: false, done: 5, width: 420, label: "Idle, all done" })}
-        </div>
-      </ServerContext.Provider>
+      <div style={{ display: "grid", gap: "16px" }}>
+        {dockRow({ busy: true, goal: false, done: 2, width: 420, label: "Working" })}
+        {dockRow({ busy: true, goal: true, done: 2, width: 420, label: "Working, with goal" })}
+        {dockRow({ busy: true, goal: true, done: 2, width: 300, label: "Working, narrow, with goal" })}
+        {dockRow({ busy: false, goal: true, done: 3, width: 420, label: "Idle" })}
+        {dockRow({ busy: false, goal: false, done: 5, width: 420, label: "Idle, all done" })}
+      </div>
     </StoryProviders>
   ),
 }

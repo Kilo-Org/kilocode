@@ -32,6 +32,7 @@ import { Icon } from "@kilocode/kilo-ui/icon"
 import { Popover } from "@kilocode/kilo-ui/popover"
 import { useLanguage } from "../../../context/language"
 import { useSession } from "../../../context/session"
+import { useRunBoundary } from "../run-boundary"
 import { TODO_TITLE_MAX, todoFinished, todoStats, todoVisible, type TodoStats } from "./todo-dock"
 
 /** How long the finished state celebrates before it settles. */
@@ -57,11 +58,7 @@ export function useTodoDock() {
     if (!id) return undefined
     return session.getSessionToolParts(id).findLast((part) => part.tool === "todowrite")?.messageID
   })
-  // A background result arrives as a synthetic user message. It does not
-  // start a new run, so it must not hide a finished list.
-  const result = (id: string) =>
-    session.getParts(id).some((part) => part.type === "text" && part.synthetic && part.metadata?.background === true)
-  const user = createMemo(() => session.messages().findLast((msg) => msg.role === "user" && !result(msg.id))?.id)
+  const { user } = useRunBoundary()
   const shown = createMemo(() => todoVisible(stats(), last(), user()))
 
   // Live means this session already showed a list, so a change is one the
@@ -262,8 +259,6 @@ function burst(el: HTMLElement) {
 
 interface TodoChipProps {
   state: TodoDockState
-  /** The session the chip shows. A new session remounts the chip. */
-  session: string
   /** Show the current item. The idle row shows the ring and count only. */
   title?: boolean
   /** Title cap in px from the dock fit. Zero hides the title. */
@@ -299,6 +294,11 @@ export const TodoChip: Component<TodoChipProps> = (props) => {
   }
   const settled = () => stats().all && !celebrate()
   const hidden = () => props.width === 0 || settled() || !title()
+  // The finished label is not a finished item, so it must not carry a strike
+  // on the way out when the chip settles.
+  createEffect(() => {
+    if (settled()) setStrike(false)
+  })
   const label = createMemo(() => {
     if (stats().all) return language.t("task.todos.allDone", { count: String(stats().total) })
     const value = language.t("task.todos.progress", { done: String(stats().done), total: String(stats().total) })
@@ -313,7 +313,6 @@ export const TodoChip: Component<TodoChipProps> = (props) => {
       ({
         type: "button",
         "data-component": "todo-chip",
-        "data-session": props.session,
         "data-celebrate": celebrate() ? "" : undefined,
         "data-settled": settled() ? "" : undefined,
         "aria-label": label(),
