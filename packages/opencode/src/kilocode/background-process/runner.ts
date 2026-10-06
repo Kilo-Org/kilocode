@@ -248,7 +248,8 @@ export namespace BackgroundProcessRunner {
     while (true) {
       if (failure) throw failure
       const from = root()
-      seen = (await descendants(seen, from)).seen
+      const walked = await descendants(seen, from)
+      seen = walked.seen
       if (await Bun.file(input.control).exists()) {
         // Only pids a walk verified: the leader while it is alive, and descendants whose creation
         // time matched. No `/t`, because taskkill would walk parent pids on its own without that
@@ -273,7 +274,8 @@ export namespace BackgroundProcessRunner {
         note("could not confirm that every process of the command ended, still guarding it")
         continue
       }
-      if (code !== undefined && !from && seen.size === 0) return code
+      // Same rule as for a stop: an empty set only means the command is done if the walk ran.
+      if (code !== undefined && !from && walked.ok && seen.size === 0) return code
       await Bun.sleep(100)
     }
   }
