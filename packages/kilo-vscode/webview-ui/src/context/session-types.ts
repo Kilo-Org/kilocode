@@ -37,6 +37,8 @@ export interface SessionContextValue {
 
   // All sessions (sorted most recent first)
   sessions: Accessor<SessionInfo[]>
+  // Project whose session list is complete enough for absence-based tab cleanup.
+  sessionsProject: Accessor<string | undefined>
 
   // Session status
   status: Accessor<SessionStatus>

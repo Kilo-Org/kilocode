@@ -239,6 +239,7 @@ export function reconcileTrackedTabs(
   loaded: readonly string[],
   inventory: LocalTabInventory,
   check: PendingTabCheck,
+  ready = true,
 ): LocalTabReconcileResult | undefined {
   const seen = new Set(loaded)
   const local = new Set(inventory.local)
@@ -251,7 +252,7 @@ export function reconcileTrackedTabs(
       continue
     }
     if (inventory.external?.has(id) || inventory.unresolved?.has(id) || inventory.rejected?.has(id)) continue
-    if (seen.has(id) || local.has(id)) {
+    if (!ready || seen.has(id) || local.has(id)) {
       ids.push(id)
       continue
     }
