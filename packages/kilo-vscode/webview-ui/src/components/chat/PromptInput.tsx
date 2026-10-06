@@ -37,6 +37,7 @@ import { useIndexing } from "../../context/indexing"
 import { indexingButtonVisible } from "../../context/indexing-utils"
 import { useLanguage } from "../../context/language"
 import { useVSCode } from "../../context/vscode"
+import { ApprovalModeMenu } from "./ApprovalModeMenu"
 import { useConfig } from "../../context/config"
 import { useProvider } from "../../context/provider"
 import { ModelSelector, ModelSelectorBase } from "../shared/ModelSelector"
@@ -2226,49 +2227,33 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
               />
             </Tooltip>
           </Show>
-          <Tooltip
-            value={`${language.t(
-              autoApprove() ? "prompt.action.autoApprove.enabled" : "prompt.action.autoApprove.disabled",
-            )} ${language.t("prompt.action.autoApprove.sandboxExcluded")}`}
-            placement="top"
-            openDelay={0}
+          <Show
+            when={approveForMeVisible()}
+            fallback={
+              <Tooltip
+                value={`${language.t(
+                  autoApprove() ? "prompt.action.autoApprove.enabled" : "prompt.action.autoApprove.disabled",
+                )} ${language.t("prompt.action.autoApprove.sandboxExcluded")}`}
+                placement="top"
+                openDelay={0}
+              >
+                <IconButton
+                  icon="shield"
+                  variant="ghost"
+                  size="small"
+                  onClick={() => vscode.postMessage({ type: "toggleAutoApprove" })}
+                  aria-label={
+                    autoApprove()
+                      ? language.t("prompt.action.autoApprove.disable")
+                      : language.t("prompt.action.autoApprove.enable")
+                  }
+                  aria-pressed={autoApprove()}
+                  class={`prompt-status-button ${autoApprove() ? "prompt-status-button--active" : ""}`}
+                />
+              </Tooltip>
+            }
           >
-            <IconButton
-              icon="shield"
-              variant="ghost"
-              size="small"
-              onClick={() => vscode.postMessage({ type: "toggleAutoApprove" })}
-              aria-label={
-                autoApprove()
-                  ? language.t("prompt.action.autoApprove.disable")
-                  : language.t("prompt.action.autoApprove.enable")
-              }
-              aria-pressed={autoApprove()}
-              class={`prompt-status-button ${autoApprove() ? "prompt-status-button--active" : ""}`}
-            />
-          </Tooltip>
-          <Show when={approveForMeVisible()}>
-            <Tooltip
-              value={language.t(
-                approveForMe() ? "prompt.action.approveForMe.enabled" : "prompt.action.approveForMe.disabled",
-              )}
-              placement="top"
-              openDelay={0}
-            >
-              <IconButton
-                icon="gauge"
-                variant="ghost"
-                size="small"
-                onClick={() => vscode.postMessage({ type: "toggleApproveForMe" })}
-                aria-label={
-                  approveForMe()
-                    ? language.t("prompt.action.approveForMe.disable")
-                    : language.t("prompt.action.approveForMe.enable")
-                }
-                aria-pressed={approveForMe()}
-                class={`prompt-status-button ${approveForMe() ? "prompt-status-button--active" : ""}`}
-              />
-            </Tooltip>
+            <ApprovalModeMenu autoApprove={autoApprove} approveForMe={approveForMe} />
           </Show>
           <Show when={sandboxVisible()}>
             <SandboxButtonBase

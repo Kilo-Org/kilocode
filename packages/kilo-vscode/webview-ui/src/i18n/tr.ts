@@ -214,11 +214,10 @@ export const dict = {
   "prompt.action.autoApprove.enabled": "Otomatik onay etkin. İzin istekleri otomatik olarak onaylanacak.",
   "prompt.action.autoApprove.disabled": "Otomatik onay devre dışı. İzin isteklerini otomatik onaylamak için tıklayın.",
   "prompt.action.autoApprove.sandboxExcluded": "Korumalı alan yükseltme istemleri her zaman hariç tutulur.",
-  "prompt.action.approveForMe.enable": "Benim için onayla'yı etkinleştir (deneysel)",
-  "prompt.action.approveForMe.disable": "Benim için onayla'yı devre dışı bırak (deneysel)",
-  "prompt.action.approveForMe.enabled":
-    "Benim için onayla etkin. Bu erken bir önizleme: onay davranışını henüz değiştirmiyor.",
-  "prompt.action.approveForMe.disabled": "Benim için onayla devre dışı. Deneysel önizleme, henüz etkisi yok.",
+  "prompt.approval.label": "Onay modu",
+  "prompt.approval.mode.ask": "Her seferinde sor",
+  "prompt.approval.mode.approveForMe": "Benim için onayla (deneysel)",
+  "prompt.approval.mode.approveAll": "Hepsini onayla",
   "prompt.action.enhanceDescription":
     "'Komutu Geliştir' düğmesi, ek bağlam, açıklama veya yeniden ifadelendirme sağlayarak komutunuzu iyileştirmeye yardımcı olur. Buraya bir komut yazıp düğmeye tekrar tıklayarak nasıl çalıştığını görebilirsiniz.",
   "prompt.action.sandbox.enable": "Sandbox'ı etkinleştir",
