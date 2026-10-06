@@ -36,7 +36,7 @@ function policy(profile: Profile, proxy?: ProxyRuntime) {
   const allow = profile.filesystem.allowWrite.map((rule, index) => {
     const key = `ALLOW_WRITE_${index}`
     params.push({ key, value: rule.path })
-    return filter(rule, key)
+    return { rule, key }
   })
   const deny = profile.filesystem.denyWrite.flatMap((rule, index) => {
     const key = `DENY_WRITE_${index}`
@@ -44,10 +44,25 @@ function policy(profile: Profile, proxy?: ProxyRuntime) {
     return exclude(rule, key)
   })
   const names = profile.filesystem.denyNames.map((name) => `(require-not (regex #"(^|/)${escape(name)}(/|$)"))`)
-  const write =
-    allow.length === 0
-      ? ""
-      : `(allow file-write*\n  (require-all\n    (require-any ${allow.join(" ")})\n    ${[...deny, ...names].join("\n    ")}\n  )\n)`
+  const strict = allow.filter((item) => !item.rule.markers)
+  const markers = allow.filter((item) => item.rule.markers)
+  // Marker roots allow a regular file with a denied name, but never a directory (created, renamed
+  // or symlinked) or anything inside one, and never a path a strict root also covers.
+  const files = profile.filesystem.denyNames.flatMap((name) => [
+    `(require-not (regex #"(^|/)${escape(name)}/"))`,
+    `(require-not (require-all (regex #"(^|/)${escape(name)}$") (require-not (vnode-type REGULAR-FILE))))`,
+  ])
+  const rules = [
+    { roots: strict, extra: names },
+    { roots: markers, extra: [...files, ...strict.flatMap((item) => exclude(item.rule, item.key))] },
+  ]
+  const write = rules
+    .filter((item) => item.roots.length > 0)
+    .map(
+      (item) =>
+        `(allow file-write*\n  (require-all\n    (require-any ${item.roots.map((root) => filter(root.rule, root.key)).join(" ")})\n    ${[...deny, ...item.extra].join("\n    ")}\n  )\n)`,
+    )
+    .join("\n")
   return {
     value: [
       base,

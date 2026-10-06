@@ -61,7 +61,7 @@ export function canonicalizeEntry(input: string): Effect.Effect<string, Platform
 }
 
 function normalizeRule(rule: PathRule) {
-  return Effect.map(canonicalize(rule.path), (target): PathRule => ({ path: target, kind: rule.kind }))
+  return Effect.map(canonicalize(rule.path), (target): PathRule => ({ ...rule, path: target }))
 }
 
 export function normalize(profile: Profile): Effect.Effect<Profile, PlatformError.PlatformError> {

@@ -1,3 +1,4 @@
+import { lstatSync } from "node:fs"
 import { Context, Effect, PlatformError } from "effect"
 import { canonicalize, canonicalizeEntry, matches, normalize } from "./path"
 import type { Profile } from "./profile"
@@ -37,6 +38,16 @@ function denied(path: string, method: string) {
   })
 }
 
+// A missing entry counts as regular because the write would create a regular file.
+function regular(target: string) {
+  try {
+    return lstatSync(target, { throwIfNoEntry: false })?.isFile() ?? true
+  } catch {
+    // Fail closed: an entry that cannot be inspected keeps the full name protection.
+    return false
+  }
+}
+
 function assertTarget(
   path: string,
   method: string,
@@ -51,9 +62,12 @@ function assertTarget(
         ? profile.filesystem.denyNames.map((name) => name.toLowerCase())
         : profile.filesystem.denyNames
     const parts = target.split(/[\\/]/).map((part) => (process.platform === "win32" ? part.toLowerCase() : part))
+    const strict = profile.filesystem.allowWrite.some((rule) => !rule.markers && matches(rule, target))
+    // Outside strict roots a denied name may only be the final part, as a new or existing regular file.
+    const file = !strict && !parts.slice(0, -1).some((part) => names.includes(part)) && regular(target)
     if (
       profile.filesystem.denyWrite.some((rule) => matches(rule, target)) ||
-      parts.some((part) => names.includes(part))
+      (!file && parts.some((part) => names.includes(part)))
     ) {
       yield* Effect.fail(denied(path, method))
     }

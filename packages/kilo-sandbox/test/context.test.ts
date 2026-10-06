@@ -62,6 +62,26 @@ describe("sandbox profile context", () => {
     expect(error.reason._tag).toBe("PermissionDenied")
   })
 
+  test("allows regular marker files under marker roots but keeps denied directories protected", async () => {
+    const cache = path.join(root, "markers")
+    const project = path.join(cache, "project")
+    await mkdir(path.join(cache, "existing", ".git"), { recursive: true })
+    const profile = makeProfile(
+      [
+        { path: cache, kind: "subtree", markers: true },
+        { path: project, kind: "subtree" },
+      ],
+      [],
+      [".git"],
+    )
+    const write = (target: string) => Effect.runPromise(run(profile, assertWrite(target).pipe(Effect.exit)))
+
+    expect((await write(path.join(cache, "sdists-v9", ".git")))._tag).toBe("Success")
+    expect((await write(path.join(cache, "repo", ".git", "config")))._tag).toBe("Failure")
+    expect((await write(path.join(cache, "existing", ".git")))._tag).toBe("Failure")
+    expect((await write(path.join(project, "nested", ".git")))._tag).toBe("Failure")
+  })
+
   test("canonicalizes the longest existing ancestor across symlinks", async () => {
     const allowed = path.join(root, "allowed")
     const outside = path.join(root, "outside")

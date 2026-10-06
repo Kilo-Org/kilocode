@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test"
-import { chmodSync, mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs"
+import { spawnSync } from "node:child_process"
+import { chmodSync, mkdirSync, mkdtempSync, readdirSync, realpathSync, rmSync, writeFileSync } from "node:fs"
 import os from "node:os"
 import path from "node:path"
 import { Effect, PlatformError, Result } from "effect"
@@ -187,6 +188,74 @@ describe("sandbox launch preparation", () => {
       )
     } finally {
       chmodSync(root, 0o700)
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+
+  test("keeps only regular marker files writable under Linux marker roots", () => {
+    const root = realpathSync(mkdtempSync(path.join(os.tmpdir(), "kilo-bubblewrap-markers-")))
+    const cache = path.join(root, "cache")
+    const project = path.join(cache, "project")
+    mkdirSync(path.join(cache, "repo", ".git"), { recursive: true })
+    mkdirSync(path.join(project, "nested"), { recursive: true })
+    writeFileSync(path.join(cache, ".git"), "")
+    writeFileSync(path.join(project, "nested", ".git"), "gitdir: ../../repo/.git\n")
+    const profile: Profile = {
+      ...makeProfile("allow"),
+      filesystem: {
+        allowWrite: [
+          { path: cache, kind: "subtree", markers: true },
+          { path: project, kind: "subtree" },
+        ],
+        denyWrite: [],
+        denyNames: [".git"],
+      },
+    }
+
+    try {
+      const result = generateBubblewrap(profile, { ...launch, cwd: project }, "/opt/kilo/bwrap", [])
+      const bound = result.args.flatMap((arg, index) => (arg === "--ro-bind" ? [result.args[index + 1]] : []))
+      expect(bound).not.toContain(path.join(cache, ".git"))
+      expect(bound).toContain(path.join(cache, "repo", ".git"))
+      expect(bound).toContain(path.join(project, "nested", ".git"))
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+
+  test.skipIf(process.platform !== "darwin")("lets Seatbelt write only regular marker files under marker roots", () => {
+    const root = realpathSync(mkdtempSync(path.join(os.tmpdir(), "kilo-seatbelt-markers-")))
+    const cache = path.join(root, "cache")
+    const project = path.join(cache, "project")
+    mkdirSync(path.join(cache, "repo", ".git"), { recursive: true })
+    mkdirSync(path.join(cache, "fresh"), { recursive: true })
+    mkdirSync(path.join(project, "nested"), { recursive: true })
+    const profile: Profile = {
+      ...makeProfile("allow"),
+      filesystem: {
+        allowWrite: [
+          { path: cache, kind: "subtree", markers: true },
+          { path: project, kind: "subtree" },
+        ],
+        denyWrite: [],
+        denyNames: [".git"],
+      },
+    }
+    const run = (command: string, ...args: string[]) => {
+      const result = generate(profile, { command, args, environment: {} })
+      return spawnSync(result.command, result.args).status
+    }
+
+    try {
+      expect(run("/usr/bin/touch", path.join(cache, ".git"))).toBe(0)
+      expect(run("/usr/bin/touch", path.join(cache, "repo", ".git", "config"))).not.toBe(0)
+      expect(run("/bin/mv", path.join(cache, "repo", ".git"), path.join(cache, "repo", "moved"))).not.toBe(0)
+      expect(run("/bin/mkdir", path.join(cache, "fresh", ".git"))).not.toBe(0)
+      expect(run("/bin/ln", "-s", path.join(cache, "repo"), path.join(cache, "fresh", ".git"))).not.toBe(0)
+      expect(run("/usr/bin/touch", path.join(project, "nested", ".git"))).not.toBe(0)
+      expect(run("/usr/bin/touch", path.join(project, "file.txt"))).toBe(0)
+      expect(run("/usr/bin/touch", path.join(root, "outside.txt"))).not.toBe(0)
+    } finally {
       rmSync(root, { recursive: true, force: true })
     }
   })
