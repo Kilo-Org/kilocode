@@ -221,6 +221,12 @@ function escapeRegExp(value: string): string {
  * description, or tab name). Token matches in the title score highest so the
  * most relevant settings float to the top. An empty query returns no results.
  *
+ * Results are grouped by the tab that owns them, in order of that tab's best
+ * match, and stay score-ordered within each group. The grouped list is what the
+ * results pane renders, and keyboard selection indexes into this array, so a
+ * tab must stay contiguous or Enter could open a different setting than the
+ * highlighted one.
+ *
  * The index is small (about 120 entries), so this runs synchronously on every
  * keystroke. Regexes and translations are computed once per call to keep it
  * well under a frame.
@@ -290,7 +296,15 @@ export function searchSettings(
     })
   }
 
-  return results.sort((a, b) => b.score - a.score || a.title.localeCompare(b.title))
+  const sorted = results.sort((a, b) => b.score - a.score || a.title.localeCompare(b.title))
+
+  const grouped = new Map<string, SettingsSearchResult[]>()
+  for (const result of sorted) {
+    const list = grouped.get(result.tab)
+    if (list) list.push(result)
+    else grouped.set(result.tab, [result])
+  }
+  return [...grouped.values()].flat()
 }
 
 export interface SearchSegment {

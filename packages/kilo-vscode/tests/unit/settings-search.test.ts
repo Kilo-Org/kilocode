@@ -120,6 +120,21 @@ describe("searchSettings", () => {
     expect(result.title).toBe("Font Size")
     expect(typeof result.description).toBe("string")
   })
+
+  // The results pane groups matches by tab and indexes the flat list for
+  // keyboard selection, so a tab must not reappear after another tab's results.
+  it("keeps each tab's matches contiguous", () => {
+    for (const query of ["browser", "model", "provider", "api", "mode", "font"]) {
+      const seen = new Set<string>()
+      let previous = ""
+      for (const result of searchSettings(query, translate)) {
+        if (result.tab === previous) continue
+        expect(seen.has(result.tab)).toBe(false)
+        seen.add(result.tab)
+        previous = result.tab
+      }
+    }
+  })
 })
 
 describe("highlightSegments", () => {
