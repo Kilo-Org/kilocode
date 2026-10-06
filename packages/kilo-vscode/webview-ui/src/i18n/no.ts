@@ -518,6 +518,9 @@ export const dict = {
   "provider.custom.error.duplicate": "Duplikat",
   "settings.openLocalConfig": "Lokal konfig",
   "settings.openGlobalConfig": "Global konfig",
+  "settings.search.placeholder": "Søk i innstillinger",
+  "settings.search.noResults": "Fant ingen innstillinger",
+  "settings.search.clear": "Tøm søk",
   "settings.config.scope.local": "Lokal",
   "settings.config.scope.global": "Global",
   "settings.config.status.loaded": "lastet",
@@ -1355,6 +1358,8 @@ export const dict = {
 
   "task.todos.progress": "{{done}}/{{total}} oppgaver fullført",
   "task.todos.allDone": "{{count}} oppgaver fullført",
+  "task.todos.title": "Oppgaver",
+  "task.todos.done": "Alt ferdig",
   "task.backgroundAgents.running.one": "1 bakgrunnsagent",
   "task.backgroundAgents.running.many": "{{count}} bakgrunnsagenter",
   "task.backgroundAgents.open": "Åpne bakgrunnsagent",
@@ -1438,4 +1443,7 @@ export const dict = {
   "settings.experimental.browserAutomation.systemChrome.description":
     "Bruk den installerte Google Chrome for den integrerte nettleseren. Deaktiver bare når en kompatibel Playwright Chromium-nettleser allerede er installert.",
   "chat.search.searchingHistory": "Søker i tidligere meldinger…",
+  "browserTab.noSession":
+    "Åpne nettleseren fra en økt for å forhåndsvise en lokal applikasjon eller en offentlig HTTPS-side.",
+  "browserTab.disabled": "Den integrerte nettleseren er deaktivert. Aktiver den i Kilo-innstillinger > Eksperimentelt.",
 } satisfies Partial<Record<Keys, string>>

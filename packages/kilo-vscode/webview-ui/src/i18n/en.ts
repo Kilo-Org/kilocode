@@ -467,6 +467,9 @@ export const dict = {
   "provider.custom.error.duplicate": "Duplicate",
   "settings.openLocalConfig": "Local Config",
   "settings.openGlobalConfig": "Global Config",
+  "settings.search.placeholder": "Search settings",
+  "settings.search.noResults": "No settings found",
+  "settings.search.clear": "Clear search",
   "settings.config.scope.local": "Local",
   "settings.config.scope.global": "Global",
   "settings.config.status.loaded": "loaded",
@@ -937,10 +940,12 @@ export const dict = {
     "Extra filesystem paths the sandbox allows writes to (e.g. /tmp, /var/log). These are merged with the default writable paths when the sandbox is active.",
   "settings.experimental.browserAutomation.title": "Integrated Browser",
   "settings.experimental.browserAutomation.description":
-    "Preview local applications and public HTTPS pages in Agent Manager and expose the browser_open tool to Agent Manager sessions.",
+    "Preview local applications and public HTTPS pages in Agent Manager and the Integrated Browser tab, and expose the browser_open tool to sessions.",
   "settings.experimental.browserAutomation.systemChrome.title": "Use System Chrome",
   "settings.experimental.browserAutomation.systemChrome.description":
     "Use installed Google Chrome for the Integrated Browser. Disable only when a compatible Playwright Chromium browser is already installed.",
+  "browserTab.noSession": "Open the browser from a session to preview a local application or public HTTPS page.",
+  "browserTab.disabled": "The Integrated Browser is disabled. Enable it in Kilo Settings > Experimental.",
   "settings.experimental.conversationPromptHistory.title": "Per-Conversation Prompt History",
   "settings.experimental.conversationPromptHistory.description":
     "Keep the prompt input history (ArrowUp/ArrowDown recall) separate for each conversation instead of sharing one history across all conversations.",
@@ -1344,6 +1349,8 @@ export const dict = {
 
   "task.todos.progress": "{{done}}/{{total}} to-dos done",
   "task.todos.allDone": "{{count}} to-dos done",
+  "task.todos.title": "To-dos",
+  "task.todos.done": "All done",
 
   "task.backgroundAgents.running.one": "1 background agent",
   "task.backgroundAgents.running.many": "{{count}} background agents",

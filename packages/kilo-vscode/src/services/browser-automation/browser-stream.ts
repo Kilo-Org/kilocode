@@ -337,15 +337,17 @@ export class BrowserStream {
           return
         case "wheel":
           this.coordinates(input, view)
-          await session.send("Input.dispatchMouseEvent", {
-            type: "mouseWheel",
-            x: this.x,
-            y: this.y,
-            modifiers: this.modifiers,
-            buttons: this.buttons,
-            deltaX: input.deltaX,
-            deltaY: input.deltaY,
-          })
+          this.dispatch(
+            session.send("Input.dispatchMouseEvent", {
+              type: "mouseWheel",
+              x: this.x,
+              y: this.y,
+              modifiers: this.modifiers,
+              buttons: this.buttons,
+              deltaX: input.deltaX,
+              deltaY: input.deltaY,
+            }),
+          )
           return
         case "key":
           await this.keyboard(session, input)
@@ -551,7 +553,7 @@ export class BrowserStream {
     this.buttons |= event.buttons
     if (event.action === "down") this.buttons |= BUTTONS[event.button]
     if (event.action === "up") this.buttons &= ~BUTTONS[event.button]
-    await session.send("Input.dispatchMouseEvent", {
+    const sent = session.send("Input.dispatchMouseEvent", {
       type: event.action === "move" ? "mouseMoved" : event.action === "down" ? "mousePressed" : "mouseReleased",
       x: this.x,
       y: this.y,
@@ -559,6 +561,17 @@ export class BrowserStream {
       buttons: this.buttons,
       clickCount: event.clicks,
       modifiers: this.modifiers,
+    })
+    if (event.action === "move") return this.dispatch(sent)
+    await sent
+  }
+
+  // Chrome answers a mouse move or wheel event only after the page renders the next frame. Waiting for that answer
+  // limits input to the frame rate, so input from a display with a higher refresh rate lags more and more. CDP keeps
+  // the event order, and Chrome merges these events while the page is busy, so they do not wait for the answer.
+  private dispatch(sent: Promise<unknown>): void {
+    void sent.catch(() => {
+      if (!this.closed) this.report("mouse input failed")
     })
   }
 

@@ -201,6 +201,7 @@
   <!-- packages/opencode/src/lsp/server.ts -->
 - <https://www.google.com/chrome/>
   <!-- packages/kilo-vscode/webview-ui/agent-manager/BrowserPanel.tsx -->
+  <!-- packages/kilo-vscode/webview-ui/browser-tab/BrowserTabApp.tsx -->
 - <https://www.googleapis.com/auth/cloud-platform>
   <!-- packages/opencode/src/provider/provider.ts -->
 - <https://www.rfc-editor.org/rfc/rfc8628.html#section-3.5>
