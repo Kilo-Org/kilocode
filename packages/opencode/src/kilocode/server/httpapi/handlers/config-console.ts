@@ -83,6 +83,25 @@ export const configConsoleHandlers = HttpApiBuilder.group(InstanceHttpApi, "conf
       }
       const expected = body.expected ? { ...body.expected } : undefined
       const instance = yield* InstanceState.context
+      const patch = KilocodeConfigOverlay.patch(body)
+      // A later config file can already define the value, so a write would silently not apply.
+      const shadow = yield* Effect.promise(() =>
+        KilocodeConfigOverlay.shadow({
+          scope: body.scope,
+          directory: instance.directory,
+          worktree: instance.worktree,
+          patch,
+        }),
+      )
+      if (shadow) {
+        return yield* Effect.fail(
+          new ConfigOverlayShadowedError({
+            message: `Not saved: ${shadow.path} takes precedence over ${shadow.target}. Remove or edit the conflicting value there.`,
+            path: shadow.target,
+            shadowedBy: shadow.path,
+          }),
+        )
+      }
       const writing = Effect.tryPromise({
         try: () =>
           KilocodeConfigWriter.write({
@@ -123,28 +142,7 @@ export const configConsoleHandlers = HttpApiBuilder.group(InstanceHttpApi, "conf
           new ConfigOverlayConflictError({ code: result.code, message: result.message, target: result.target }),
         )
       }
-      const patch = KilocodeConfigOverlay.patch(body)
       const hot = body.scope === "global" && Object.keys(patch).every((key) => key === "console")
-      // The write landed, but a higher-priority config file can still override the new value
-      // (e.g. ~/.config/kilo/opencode.json shadows ~/.config/kilo/kilo.json). In that case the
-      // effective setting does not change, so report it instead of claiming success.
-      const shadow = yield* Effect.promise(() =>
-        KilocodeConfigSources.conflicting({
-          directory: instance.directory,
-          worktree: instance.worktree,
-          target: result.target.path,
-          patch,
-        }),
-      )
-      if (shadow) {
-        return yield* Effect.fail(
-          new ConfigOverlayShadowedError({
-            message: `The setting was saved to ${result.target.path}, but ${shadow} still takes precedence over it. Remove or edit the conflicting value there.`,
-            path: result.target.path,
-            shadowedBy: shadow,
-          }),
-        )
-      }
       if (body.scope === "global") {
         yield* config.invalidate()
         if (result.changed) {

@@ -349,7 +349,6 @@ describe("config overlay routes", () => {
     const update = (model: string) =>
       Server.Default().app.request("/config/overlay", {
         method: "PATCH",
-
         headers: { "content-type": "application/json", "x-kilo-directory": project.path },
         body: JSON.stringify({
           scope: "project",
@@ -365,7 +364,7 @@ describe("config overlay routes", () => {
     expect(responses.map((response) => response.status).sort()).toEqual([200, 409])
   })
 
-  test("reports a shadowed project write when a .kilo directory file wins the merge", async () => {
+  test("does not report shadowing when the .kilo target outranks the root file", async () => {
     await using project = await tmpdir()
     // Target resolution prefers an existing root kilo.json, but .kilo/kilo.json loads after it
     // in the merge chain, so writing the target leaves the .kilo value effective.
@@ -416,9 +415,9 @@ describe("config overlay routes", () => {
     const body = (await response.json()) as { message: string; shadowedBy?: string }
     expect(body.shadowedBy).toBe(path.join(project.path, "opencode.json"))
     expect(body.message).toContain("takes precedence")
-    // The write still landed on disk; the error explains why it does not take effect.
-    const saved = (await Bun.file(before.targets.project.path).json()) as { permission?: { bash?: string } }
-    expect(saved.permission?.bash).toBe("allow")
+    // Nothing is written, so the revision stays valid for a retry.
+    const after = await json<Overlay>(await req(project.path, "/config/overlay?scope=project"))
+    expect(after.targets.project.revision).toBe(before.targets.project.revision)
   })
 
   test("reports a shadowed global write when a higher-precedence global file wins", async () => {
@@ -449,7 +448,7 @@ describe("config overlay routes", () => {
     const body = (await response.json()) as { message: string; shadowedBy?: string }
     expect(body.shadowedBy).toBe(path.join(global.path, "opencode.json"))
     const saved = (await Bun.file(before.targets.global.path).json()) as { permission?: { bash?: string } }
-    expect(saved.permission?.bash).toBe("allow")
+    expect(saved.permission?.bash).toBe("ask")
   })
 
   test("does not report shadowing for unrelated values in higher-priority files", async () => {
