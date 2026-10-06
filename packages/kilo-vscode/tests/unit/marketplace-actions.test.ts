@@ -276,6 +276,17 @@ describe("Marketplace removal actions", () => {
     expect(has(files, legacy)).toBe(false)
     expect(has(files, global)).toBe(false)
   })
+
+  it("does not report whole-bundle success when either scope fails", async () => {
+    const remove = mock(async (_client, _item, scope: "project" | "global") => ({
+      success: scope === "project",
+      slug: item.id,
+      error: scope === "global" ? "Global config is still installed" : undefined,
+    }))
+
+    expect(await removeMarketplaceItemFromAllScopes(ctx(remove), item, project, project)).toBe(false)
+    expect(remove.mock.calls.map((call) => call[2])).toEqual(["project", "global"])
+  })
 })
 
 describe("Marketplace plugin removal", () => {
