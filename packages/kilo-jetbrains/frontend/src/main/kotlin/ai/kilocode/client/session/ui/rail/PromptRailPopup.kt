@@ -37,7 +37,11 @@ import javax.swing.JComponent
 internal class PromptRailPopup(
     private val items: List<PromptRailItem>,
     hovered: Int,
-    onSelect: (PromptRailItem) -> Unit,
+    /**
+     * Navigate to a row. The flag is the list's `focus` signal: false for a single click, true for a
+     * double click or Enter, which the navigator treats as a committed pick and so also closes on.
+     */
+    onSelect: (PromptRailItem, Boolean) -> Unit,
     onFirst: () -> Unit,
     onLatest: () -> Unit,
 ) : SidePopupContent {
@@ -72,7 +76,9 @@ internal class PromptRailPopup(
         // path falls through to the (absent) onClick handler and returns, so only a double click would
         // jump — the navigator is a one-click list.
         onCell = { _, _ -> },
-        onOpen = { row, _ -> items.firstOrNull { it.id == row.key }?.let(onSelect) },
+        onOpen = { row, focus ->
+            items.firstOrNull { it.id == row.key }?.let { onSelect(it, focus) }
+        },
     ).apply {
         setListCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR))
         update(items.map(::row))

@@ -283,7 +283,14 @@ internal class PromptRailController(
                 hovered = pending,
                 // A clicked row is already under the pointer, so it is navigated to without moving the
                 // list; only the buttons and tick hovers, which the user cannot aim, scroll it.
-                onSelect = { item -> go(rail.items().indexOfFirst { it.id == item.id }, scroll = false) },
+                //
+                // A double click (or Enter) arrives with the list's focus flag set. That reads as a
+                // committed pick rather than browsing, so the card closes and leaves the transcript on
+                // the chosen prompt. A single click keeps it open for scanning further rows.
+                onSelect = { item, commit ->
+                    go(rail.items().indexOfFirst { it.id == item.id }, scroll = false)
+                    if (commit) hideAll()
+                },
                 onFirst = { go(0) },
                 onLatest = { go(rail.items().lastIndex) },
             ).also { built ->

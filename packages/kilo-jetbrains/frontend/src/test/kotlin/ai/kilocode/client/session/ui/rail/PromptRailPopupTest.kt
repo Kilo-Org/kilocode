@@ -218,6 +218,56 @@ class PromptRailPopupTest : BasePlatformTestCase() {
         assertNotNull("the default config must serve a row tooltip", list.getToolTipText(over))
     }
 
+    /**
+     * A single click browses, so it navigates with the card left open. A double click is a committed
+     * pick, so it navigates and reports the flag the controller closes on.
+     */
+    fun `test clicks report the commit flag for single and double`() {
+        val seen = mutableListOf<Pair<String, Boolean>>()
+        val popup = PromptRailPopup(
+            items = items(40),
+            hovered = 0,
+            onSelect = { item, commit -> seen.add(item.id to commit) },
+            onFirst = {},
+            onLatest = {},
+        )
+        popup.fitWithin(CAP_W, CAP_H)
+        val root = popup.component
+        root.size = root.preferredSize
+        layoutAll(root)
+        val list = findList(root) ?: error("expected a JList of rows")
+
+        click(list, index = 1, count = 1)
+        click(list, index = 1, count = 2)
+
+        // Swing delivers count 1 then count 2 for a double click, so the committed pick is the last.
+        assertEquals("msg_1" to false, seen.first())
+        assertEquals("msg_1" to true, seen.last())
+
+        Disposer.dispose(popup.disposable)
+    }
+
+    /**
+     * Only the click is dispatched. A press would reach `BasicListUI`, whose selection handling asks the
+     * toolkit for the menu shortcut mask and throws headlessly, and `onOpen` is driven from the click.
+     */
+    private fun click(list: JList<*>, index: Int, count: Int) {
+        val cell = list.getCellBounds(index, index)
+        list.dispatchEvent(
+            MouseEvent(
+                list,
+                MouseEvent.MOUSE_CLICKED,
+                0L,
+                0,
+                cell.x + cell.width / 2,
+                cell.y + cell.height / 2,
+                count,
+                false,
+                MouseEvent.BUTTON1,
+            ),
+        )
+    }
+
     private data class Row(
         override val key: String,
         override val title: String,
@@ -233,7 +283,7 @@ class PromptRailPopupTest : BasePlatformTestCase() {
         val popup = PromptRailPopup(
             items = items(40),
             hovered = 0,
-            onSelect = {},
+            onSelect = { _, _ -> },
             onFirst = { seen.add("first") },
             onLatest = { seen.add("latest") },
         )
@@ -281,7 +331,7 @@ class PromptRailPopupTest : BasePlatformTestCase() {
     private fun popup(items: List<PromptRailItem>, hovered: Int = 0) = PromptRailPopup(
         items = items,
         hovered = hovered,
-        onSelect = {},
+        onSelect = { _, _ -> },
         onFirst = {},
         onLatest = {},
     )
