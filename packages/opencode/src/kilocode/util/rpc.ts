@@ -21,12 +21,19 @@
  * window, so legitimately long calls (a proxied LLM request) are never cut short.
  */
 
+import * as Log from "@opencode-ai/core/util/log"
+
 type Definition = {
   [method: string]: (input: any) => any
 }
 
-/** Only bounds calls issued before the worker's first reply, never in-flight work after it. */
-const HANDSHAKE_TIMEOUT = 30_000
+/**
+ * Only bounds calls issued before the worker's first reply, never in-flight work after it.
+ * Overridable so the release PTY smoke can fail faster than its own silence watchdog.
+ */
+const HANDSHAKE_TIMEOUT = Number(process.env["KILO_RPC_HANDSHAKE_TIMEOUT"] ?? 30_000)
+
+const log = Log.create({ service: "worker-rpc" })
 
 const early: string[] = []
 const armed = { queueing: false }
@@ -48,6 +55,9 @@ export function listen(rpc: Definition) {
   const handle = async (data: string) => {
     const parsed = JSON.parse(data)
     if (parsed.type !== "rpc.request") return
+    // Records that the request actually crossed the channel, which separates a lost
+    // request from a lost reply when the parent reports a timeout.
+    log.info("rpc request", { method: parsed.method, id: parsed.id })
     const method = rpc[parsed.method]
     if (!method) {
       postMessage(JSON.stringify({ type: "rpc.error", id: parsed.id, error: `unknown method ${parsed.method}` }))
@@ -114,11 +124,9 @@ export function client<T extends Definition>(target: {
           ? undefined
           : setTimeout(() => {
               pending.delete(id)
-              reject(
-                new Error(
-                  `worker rpc ${String(method)} got no reply within ${HANDSHAKE_TIMEOUT}ms: the worker never answered`,
-                ),
-              )
+              const message = `worker rpc ${String(method)} got no reply within ${HANDSHAKE_TIMEOUT}ms: the worker never answered`
+              log.error(message, { method: String(method), id })
+              reject(new Error(message))
             }, HANDSHAKE_TIMEOUT)
         pending.set(id, { resolve, reject, timer })
         target.postMessage(JSON.stringify({ type: "rpc.request", method, input, id }))

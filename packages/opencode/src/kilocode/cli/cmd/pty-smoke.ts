@@ -53,6 +53,9 @@ export async function render(file: string, args: string[] = ["--pure"], timeout 
     // A release binary logs at INFO, which is too coarse to locate a startup stall.
     // KiloLog.init reads this, so the log tail attached on failure shows every step.
     KILO_LOG_LEVEL: process.env.KILO_PTY_SMOKE_LOG_LEVEL ?? "DEBUG",
+    // Must stay below IDLE_LIMIT so an unanswered worker call is reported in the log tail
+    // instead of being cut off by the silence watchdog.
+    KILO_RPC_HANDSHAKE_TIMEOUT: "8000",
     KILO_CONFIG_CONTENT: JSON.stringify({ enabled_providers: ["anthropic"], experimental: { openTelemetry: false } }),
     KILO_AUTH_CONTENT: "{}",
     ANTHROPIC_API_KEY: "dummy",
