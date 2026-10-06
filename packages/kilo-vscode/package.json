@@ -1152,7 +1152,8 @@
         "kilo-code.new.approveForMe.enabled": {
           "type": "boolean",
           "default": false,
-          "description": "Start Kilo Code with the experimental 'Approve for me' toggle enabled. Requires kilo-code.new.experimental.approveForMe. Entry point only: does not change approval behavior yet."
+          "scope": "application",
+          "description": "Start Kilo Code with the experimental 'Approve for me' mode enabled. Requires kilo-code.new.experimental.approveForMe. Turning it on turns auto-approve off, and the reverse. Entry point only: does not change approval behavior yet."
         },
         "kilo-code.new.maxCost": {
           "type": "number",

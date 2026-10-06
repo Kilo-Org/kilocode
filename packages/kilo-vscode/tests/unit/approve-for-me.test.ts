@@ -17,12 +17,18 @@ afterEach(() => {
   vscode.commands.registerCommand = original.registerCommand
 })
 
-function config(initial: { active?: boolean; visible?: boolean } = {}) {
+type Flags = { active: boolean; visible: boolean; auto: boolean }
+type Update = { section: string; key: string; value: unknown; target: unknown }
+
+// Fake settings store. Like VS Code, update() stores the value and then fires the
+// configuration-change listeners.
+function config(initial: Partial<Flags> = {}) {
   const handlers: Array<() => void> = []
-  const updates: Array<{ key: string; value: unknown; target: unknown }> = []
+  const updates: Update[] = []
   const messages: string[] = []
-  const commands = new Map<string, (...args: unknown[]) => unknown>()
-  const state = { active: initial.active ?? false, visible: initial.visible ?? false }
+  const state: Flags = { active: false, visible: false, auto: false, ...initial }
+  // What inspect() reports per setting, to test which scope a write targets.
+  const scopes: Partial<Record<keyof Flags, Record<string, unknown>>> = {}
   const api = vscode as unknown as {
     workspace: {
       getConfiguration: (section?: string) => {
@@ -35,13 +41,19 @@ function config(initial: { active?: boolean; visible?: boolean } = {}) {
     window: { showInformationMessage: (message: string) => Promise<undefined> }
     commands: { registerCommand: (command: string, callback: (...args: unknown[]) => unknown) => { dispose(): void } }
   }
+  const slot = (section = ""): keyof Flags =>
+    section.endsWith("experimental") ? "visible" : section.endsWith("autoApprove") ? "auto" : "active"
+  const emit = () => {
+    for (const handler of [...handlers]) handler()
+  }
 
   api.workspace.getConfiguration = (section) => ({
-    get: (_key, fallback) => (section?.endsWith("experimental") ? state.visible : state.active) ?? fallback,
-    inspect: () => ({}),
-    update: async (_key, value, target) => {
-      updates.push({ key: _key, value, target })
-      state.active = Boolean(value)
+    get: (_key, fallback) => state[slot(section)] ?? fallback,
+    inspect: () => scopes[slot(section)] ?? {},
+    update: async (key, value, target) => {
+      updates.push({ section: section ?? "", key, value, target })
+      state[slot(section)] = Boolean(value)
+      emit()
     },
   })
   api.workspace.onDidChangeConfiguration = (listener) => {
@@ -57,23 +69,17 @@ function config(initial: { active?: boolean; visible?: boolean } = {}) {
     messages.push(message)
     return undefined
   }
-  api.commands.registerCommand = (command, callback) => {
-    commands.set(command, callback)
-    return { dispose: () => undefined }
-  }
+  api.commands.registerCommand = () => ({ dispose: () => undefined })
 
   return {
+    state,
+    scopes,
     updates,
     messages,
-    commands,
-    set active(value: boolean) {
-      state.active = value
-    },
-    set visible(value: boolean) {
-      state.visible = value
-    },
-    emit() {
-      for (const handler of handlers) handler()
+    // Simulates the user editing a setting directly (settings UI or settings.json).
+    edit(flags: Partial<Flags>) {
+      Object.assign(state, flags)
+      emit()
     },
   }
 }
@@ -81,6 +87,10 @@ function config(initial: { active?: boolean; visible?: boolean } = {}) {
 function context() {
   return { subscriptions: [] as Array<{ dispose(): void }> } as vscode.ExtensionContext
 }
+
+const ME = "kilo-code.new.approveForMe"
+const AUTO = "kilo-code.new.autoApprove"
+const GLOBAL = vscode.ConfigurationTarget.Global
 
 describe("registerToggleApproveForMe", () => {
   it("ignores toggle attempts while the experimental flag is off, including from the Command Palette", async () => {
@@ -108,7 +118,7 @@ describe("registerToggleApproveForMe", () => {
 
     expect(ctrl.active()).toBe(true)
     expect(changes).toEqual([{ active: true, visible: true }])
-    expect(env.updates).toEqual([{ key: "enabled", value: true, target: vscode.ConfigurationTarget.Global }])
+    expect(env.updates).toEqual([{ section: ME, key: "enabled", value: true, target: GLOBAL }])
     expect(env.messages).toContain("Approve for me is enabled. This entry point does not change approval behavior yet.")
   })
 
@@ -118,12 +128,96 @@ describe("registerToggleApproveForMe", () => {
     const changes: Array<{ active: boolean; visible: boolean }> = []
     ctrl.onChange((state) => changes.push(state))
 
-    env.visible = true
-    env.emit()
+    env.edit({ visible: true })
 
     expect(ctrl.visible()).toBe(true)
     expect(ctrl.active()).toBe(false)
     expect(changes).toEqual([{ active: false, visible: true }])
+  })
+})
+
+describe("exclusion with auto-approve", () => {
+  it("turns auto-approve off before turning approve-for-me on", async () => {
+    const env = config({ visible: true, auto: true })
+    const ctrl = registerToggleApproveForMe(context())
+
+    expect(await ctrl.toggle()).toBe(true)
+
+    expect(env.updates).toEqual([
+      { section: AUTO, key: "enabled", value: false, target: GLOBAL },
+      { section: ME, key: "enabled", value: true, target: GLOBAL },
+    ])
+    expect(env.state).toMatchObject({ active: true, auto: false })
+    expect(env.messages).toEqual([
+      "Approve for me is enabled and auto-approve is off. This entry point does not change approval behavior yet.",
+    ])
+  })
+
+  it("yields when auto-approve is turned on afterwards", async () => {
+    const env = config({ visible: true })
+    const ctrl = registerToggleApproveForMe(context())
+    await ctrl.toggle()
+    const changes: boolean[] = []
+    ctrl.onChange((state) => changes.push(state.active))
+    env.updates.length = 0
+
+    env.edit({ auto: true })
+
+    expect(ctrl.active()).toBe(false)
+    expect(env.state).toMatchObject({ active: false, auto: true })
+    expect(env.updates).toEqual([{ section: ME, key: "enabled", value: false, target: GLOBAL }])
+    expect(changes).toEqual([false])
+  })
+
+  it("turns auto-approve off when approve-for-me is switched on by editing settings", () => {
+    const env = config({ visible: true, auto: true })
+    const ctrl = registerToggleApproveForMe(context())
+    env.updates.length = 0
+
+    env.edit({ active: true })
+
+    expect(ctrl.active()).toBe(true)
+    expect(env.state).toMatchObject({ active: true, auto: false })
+    expect(env.updates).toEqual([{ section: AUTO, key: "enabled", value: false, target: GLOBAL }])
+  })
+
+  it("writes auto-approve in the scope where the user set it", async () => {
+    const env = config({ visible: true, auto: true })
+    env.scopes.auto = { workspaceValue: true }
+    const ctrl = registerToggleApproveForMe(context())
+
+    await ctrl.toggle()
+
+    expect(env.updates[0]).toEqual({
+      section: AUTO,
+      key: "enabled",
+      value: false,
+      target: vscode.ConfigurationTarget.Workspace,
+    })
+    env.scopes.auto = { workspaceFolderValue: true, workspaceValue: true }
+    env.edit({ auto: true })
+    expect(env.updates.at(-1)).toMatchObject({ section: ME, target: GLOBAL })
+  })
+
+  it("lets approve-for-me win when both are on at startup", () => {
+    const env = config({ visible: true, active: true, auto: true })
+    const ctrl = registerToggleApproveForMe(context())
+
+    expect(ctrl.active()).toBe(true)
+    expect(env.state).toMatchObject({ active: true, auto: false })
+    expect(env.updates).toEqual([{ section: AUTO, key: "enabled", value: false, target: GLOBAL }])
+  })
+
+  it("leaves auto-approve alone while the experimental flag is off", async () => {
+    const env = config({ active: true, auto: true })
+    const ctrl = registerToggleApproveForMe(context())
+
+    env.edit({ auto: false })
+    env.edit({ auto: true })
+    await ctrl.toggle()
+
+    expect(env.state).toMatchObject({ active: true, auto: true })
+    expect(env.updates).toEqual([])
   })
 })
 
