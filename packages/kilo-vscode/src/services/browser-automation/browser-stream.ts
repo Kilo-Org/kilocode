@@ -255,7 +255,10 @@ export class BrowserStream {
       : {
           width,
           height,
-          scale: Math.max(1, Math.min(view.scale ?? 1, 2, VIEWPORT_LIMIT.width / width, VIEWPORT_LIMIT.height / height)),
+          scale: Math.max(
+            1,
+            Math.min(view.scale ?? 1, 2, VIEWPORT_LIMIT.width / width, VIEWPORT_LIMIT.height / height),
+          ),
           revision: view.revision,
           active: view.active,
         }
