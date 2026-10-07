@@ -599,6 +599,16 @@ export class BrowserBroker {
           entry.state.error = message
           this.emit(entry.state)
         },
+        // A new document starts a new view identity, so input for the old document cannot reach it. Same-document
+        // navigations keep the identity, so a client-side route change does not restart the view or drop input.
+        committed: () => {
+          if (entry.navigating) return
+          entry.state.navigation++
+          this.emit(entry.state)
+          void this.update(entry)
+            .then(() => this.emit(entry.state))
+            .catch((error: unknown) => this.fail(entry, error))
+        },
         log: this.opts.log,
       })
       this.available()
@@ -912,7 +922,6 @@ export class BrowserBroker {
     })
     entry.page.on("framenavigated", (frame) => {
       if (frame !== entry.page.mainFrame()) return
-      if (!entry.navigating) entry.state.navigation++
       void this.update(entry)
         .then(() => this.emit(entry.state))
         .catch((error: unknown) => this.fail(entry, error))

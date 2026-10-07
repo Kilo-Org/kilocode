@@ -1,7 +1,8 @@
 import { setTimeout as wait } from "node:timers/promises"
-import type { CDPSession, Frame, Page } from "playwright-core"
+import type { CDPSession, Page } from "playwright-core"
 import {
   mergeWheel,
+  VIEWPORT_LIMIT,
   type BrowserFrame,
   type BrowserInteraction,
   type BrowserViewport,
@@ -190,6 +191,16 @@ function selection(opts: { action: Clipboard; limit: number; text?: string }): {
   return { focused: true, text: result }
 }
 
+function kept(current: BrowserViewport | undefined, next: BrowserViewport) {
+  return (
+    !!current &&
+    next.active &&
+    next.width === current.width &&
+    next.height === current.height &&
+    next.scale === current.scale
+  )
+}
+
 export class BrowserStream {
   private session?: CDPSession
   private view?: BrowserViewport
@@ -220,7 +231,6 @@ export class BrowserStream {
   ) {
     this.scope = { ...identity() }
     page.on("close", this.ended)
-    page.on("framenavigated", this.navigated)
   }
 
   async configure(view: BrowserViewport): Promise<void> {
@@ -238,19 +248,28 @@ export class BrowserStream {
     const current = this.view
     const suspend = current && current.active && !view.active && view.revision === current.revision
     if (current && view.revision <= current.revision && !suspend) return
-    const width = Math.max(32, Math.min(4096, Math.round(view.width)))
-    const height = Math.max(32, Math.min(2160, Math.round(view.height)))
+    const width = Math.max(32, Math.min(VIEWPORT_LIMIT.width, Math.round(view.width)))
+    const height = Math.max(32, Math.min(VIEWPORT_LIMIT.height, Math.round(view.height)))
     const next = suspend
       ? { ...current, active: false }
       : {
           width,
           height,
-          scale: Math.max(1, Math.min(view.scale ?? 1, 2, 4096 / width, 2160 / height)),
+          scale: Math.max(
+            1,
+            Math.min(view.scale ?? 1, 2, VIEWPORT_LIMIT.width / width, VIEWPORT_LIMIT.height / height),
+          ),
           revision: view.revision,
           active: view.active,
         }
     this.view = next
     this.reset()
+    // The screencast continues across navigations. A new document with the same size only needs the new identity, so
+    // the preview does not wait for a stream restart and a resize settle on each page load.
+    if (this.casting === current && kept(current, next)) {
+      this.casting = next
+      return
+    }
     await this.serial(async () => {
       if (this.closed || this.view !== next) return
       const session = await this.connect()
@@ -416,13 +435,13 @@ export class BrowserStream {
     this.closed = true
     this.reset()
     this.page.off("close", this.ended)
-    this.page.off("framenavigated", this.navigated)
     this.closing = this.serial(async () => {
       await this.release()
       const session = this.session
       if (!session) return
       await this.stop().catch(() => this.report("stop failed"))
       session.off("Page.screencastFrame", this.receive)
+      session.off("Page.frameNavigated", this.navigated)
       this.session = undefined
       await session.detach().catch(() => this.report("detach failed"))
     })
@@ -433,8 +452,9 @@ export class BrowserStream {
     void this.close().catch(() => this.report("close failed"))
   }
 
-  private readonly navigated = (frame: Frame): void => {
-    if (this.closed || frame !== this.page.mainFrame()) return
+  // Only a new main-frame document releases held input. Same-document navigations, such as pushState, keep it.
+  private readonly navigated = (event: { frame: { parentId?: string } }): void => {
+    if (this.closed || event.frame.parentId) return
     this.synchronize()
     this.reset()
     void this.serial(() => this.release()).catch(() => this.report("navigation release failed"))
@@ -474,6 +494,7 @@ export class BrowserStream {
     const session = await this.page.context().newCDPSession(this.page)
     this.session = session
     session.on("Page.screencastFrame", this.receive)
+    session.on("Page.frameNavigated", this.navigated)
     if (!this.closed) await session.send("Page.enable")
     return session
   }
