@@ -60,6 +60,7 @@ export const dict = {
   ...anacondaDesktopDict,
   ...cloudProviderDict,
   "task.swarm.title": "Доска",
+  "task.swarm.open": "Открыть доску",
   "task.swarm.refresh": "Обновить",
   "task.swarm.reset": "Сбросить доску",
   "task.swarm.resetTitle": "Сбросить эту доску?",

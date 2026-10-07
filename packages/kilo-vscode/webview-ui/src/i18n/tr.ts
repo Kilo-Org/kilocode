@@ -60,6 +60,7 @@ export const dict = {
   ...anacondaDesktopDict,
   ...cloudProviderDict,
   "task.swarm.title": "Pano",
+  "task.swarm.open": "Panoyu aç",
   "task.swarm.refresh": "Yenile",
   "task.swarm.reset": "Panoyu sıfırla",
   "task.swarm.resetTitle": "Bu pano sıfırlansın mı?",

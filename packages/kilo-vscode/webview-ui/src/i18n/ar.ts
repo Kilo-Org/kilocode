@@ -59,6 +59,7 @@ export const dict = {
   ...anacondaDesktopDict,
   ...cloudProviderDict,
   "task.swarm.title": "اللوحة",
+  "task.swarm.open": "فتح اللوحة",
   "task.swarm.refresh": "تحديث",
   "task.swarm.reset": "إعادة تعيين اللوحة",
   "task.swarm.resetTitle": "إعادة تعيين هذه اللوحة؟",
