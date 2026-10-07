@@ -3,7 +3,7 @@
 Line numbers refer to `main` at `9d0f7a1dd8`. They drift. Re-check them when you implement.
 Paths starting with `P/` mean `packages/opencode/src/`.
 
-Security: the requirements from the security review are in section 12 (`SEC-1` to `SEC-16`) and are enforced in the sections they touch. Sections 1.2, 2.1, 2.5 to 2.11, 3, 5.1 to 5.3, 6.1, 6.2, 8, 10 and 11 changed because of them. A second review added `SEC-12` and `SEC-13` and nine medium items. A third review added `SEC-14` to `SEC-16` and four medium items (sections 2.8, 2.12, 2.13, 6.2).
+Security: the requirements from the security review are in section 12 (`SEC-1` to `SEC-19`) and are enforced in the sections they touch. Sections 1.2, 2.1, 2.5 to 2.11, 3, 5.1 to 5.3, 6.1, 6.2, 8, 10 and 11 changed because of them. A second review added `SEC-12` and `SEC-13` and nine medium items. A third review added `SEC-14` to `SEC-16` and four medium items (sections 2.8, 2.12, 2.13, 6.2). A fourth review added `SEC-17` and `SEC-18` and four medium items (sections 2.3, 2.12, 5.5, 6.2). A fifth review added `SEC-19` and five medium items (sections 2.6, 2.8, 2.14, 5.5, 6.2).
 
 ## 0. Mode model
 
@@ -155,7 +155,7 @@ These stay on the normal path. The reviewer may add a label but never an allow:
 Read-only and bookkeeping tools, as in legacy `gatekeeper.ts:285-292`, plus in-workspace edits:
 
 - `read` (non-sensitive), `glob`, `grep`, `todowrite`, `lsp`, `semantic-search`, `recall`, `skill` load.
-- `edit`, `write`, `apply_patch` whose every path is inside the workspace, ordinary class, not protected.
+- `edit`, `write`, `apply_patch` whose every path is inside the workspace, ordinary class, not protected. "Inside" means the **real path** after the link checks in 2.14, not the lexical path.
   Legacy sent these to the model (`gatekeeper.ts:252-264`) with only the path. A rule decides the same thing better and costs nothing.
 
 ### 2.3 Tier 2: deterministic classifier
@@ -187,6 +187,11 @@ For `bash` (`P/tool/shell.ts:319-324`, tree-sitter parse at `:369-452`):
 
 Spelling must not change the outcome. A test group asserts that the same effect gets the same rule through every
 spelling (quotes, escapes, case, `/bin/rm`, `PATH=...`, aliases, `cp -t`, `--output=...`).
+
+**Allow means an exact argv shape, not a prefix glob (SEC-18).** The existing read-only agent rules are prefix globs that accept any flags (`P/kilocode/agent/index.ts:24-144`: `git diff *`, `git log *`, `git show *`, `git cat-file *`, `less *`, `man *`, `printenv *`, and in the default map `tar *`, `cp *`, `mv *`).
+Some flags turn a read into a write or an execution, and the `*>*` guard does not see them: `git diff --output=file`, `git log --output`, `--ext-diff` and `--textconv` (run configured external programs), `git cat-file --textconv|--filters`, `git ls-remote --upload-pack`, `tar --to-command` and `--checkpoint-action=exec`, `less` (`!`, `LESSOPEN`), `man` (pager).
+Tier 2 therefore never reuses those globs as `allow`. Each auto-allowed command has an explicit entry: the program, its permitted subcommands and flags, and the number and class of its path arguments. Anything not listed asks.
+A deny table, seeded from GTFOBins-style behaviors and covered by a corpus test, is kept next to it. `printenv`, `env` and `set` count as sensitive reads (they print every environment secret). Any `NAME=value` prefix asks (2.8).
 
 ### 2.4 Tier 3: LLM reviewer
 
@@ -264,6 +269,9 @@ Rule: edits to the **executable-config class** are always `ask` (tier 0), throug
 | Executable files | any file with the executable bit or a shebang line, `scripts/**`, `bin/**`, `*.sh`, `*.mk`, `Rakefile`, `Gemfile`, `CMakeLists.txt`, `meson.build`, `deno.json*`, `mise.toml`, `flake.nix` |
 | Tool configs that run code | `*.config.{js,cjs,mjs,ts}`, `.babelrc*`, `.eslintrc*`, `jest.config.*`, `vitest.config.*`, `webpack.config.*`, `vite.config.*` |
 
+For the edit tools the class check reads `metadata.files[]`, not only `patterns`. `apply_patch` builds `edit` patterns from the source path (`P/tool/apply_patch.ts:231-239`), a move destination gets only the external-directory check, and a delete looks like an ordinary edit.
+So a **move into** the class, a **move or delete out of** the class (removing a hook or a config file), `chmod` and link creation all count as writes to class paths and ask.
+
 The list lives in one table in code and has a test per group. Adding to it needs no design change. A name list is incomplete by nature, so the executable-bit and shebang rule classifies by content, not by name.
 Paths are normalised before matching: NFC, case-fold on every platform (macOS volumes are case-insensitive too, and `ReadPermission.harden` is case-sensitive today, `P/kilocode/permission/read.ts:4-8`), `realpath`, and on Windows trailing dots and spaces, alternate data streams (`.env::$DATA`), 8.3 short names (also for paths that do not exist yet) and `\\?\` and UNC prefixes. Each form has a test.
 
@@ -305,11 +313,13 @@ Rules for auto-allow (tiers 1 to 3 never allow a shell call unless all hold):
    history expansion, brace or extglob expansion, zsh glob qualifiers, `=cmd` expansion, here-strings, or functions. A plain `*` glob is allowed only as the last path component of an ordinary in-workspace path.
 4. The executable resolves, at review time, to a real file on `PATH` and is **not an alias or function** in the shell that will run it (spike in PR 5: use the shell snapshot, or run auto-approved commands without the login rc).
    If this cannot be proven, the call asks.
-5. **PowerShell, cmd and Windows:** tier 2 is off. Approve for me uses the reduced profile (section 0.1).
-6. **Wrappers and carriers** ask unless the inner command is itself auto-allowable and parsed: `env`, `sudo`, `doas`, `time`, `nohup`, `timeout`, `nice`, `command`, `builtin`, `exec`, `xargs`, `find -exec`, `watch`, `ssh`, `git -c alias.*=!`, `eval`, `source`, `.`,
+5. **Assignment prefixes ask.** Any `NAME=value` before a command asks (`LD_PRELOAD`, `NODE_OPTIONS`, `BASH_ENV`, `PYTHONSTARTUP`, `GIT_*`, `PATH`). The permission pattern keeps the assignment today (`P/kilocode/tool/shell-pattern.ts:67-71`), so allow rules fail closed, but the saved "always" entry is built from the stripped tokens (`P/tool/shell.ts:409`). The explicit rule removes any doubt.
+6. **PowerShell, cmd and Windows:** tier 2 is off. Approve for me uses the reduced profile (section 0.1).
+7. **Wrappers and carriers** ask unless the inner command is itself auto-allowable and parsed: `env`, `sudo`, `doas`, `time`, `nohup`, `timeout`, `nice`, `command`, `builtin`, `exec`, `xargs`, `find -exec`, `watch`, `ssh`, `git -c alias.*=!`, `eval`, `source`, `.`,
    here-strings and heredocs fed to an interpreter, and any pipe into an interpreter (`| sh`, `| bash`, `| python`, `| node`). **Package runners that download and run remote code always ask:** `npx`, `bunx`, `bun x`, `uvx`, `pipx run`, `pnpm dlx`, `yarn dlx`, `npm exec`.
    Today the arity table has no entries for `npx`, `bunx`, `xargs`, `sudo`, `time`, `nohup` or `timeout`, `env` has arity 1 (an "always" on it would allow every `env ...` command), and `shell.ts` has no carrier handling. So an explicit table and tests come with PR 5.
-7. Tests: a differential corpus that runs each case through the real shell and through the parser and asserts they agree on the executable and the written paths (zsh and bash).
+8. **Parse limits (new).** `shell.ts` calls `.parse(command)` with no limit on length, depth, node count or time (`P/tool/shell.ts:281-285`), and the WASM parser blocks the thread. Add a maximum command length (16 KB), nesting depth and node count, and a parse timeout (progress callback). Over any limit the call asks. A parse exception must also become "ask", not a thrown defect.
+9. Tests: a differential corpus that runs each case through the real shell and through the parser and asserts they agree on the executable and the written paths (zsh and bash).
 
 ### 2.9 Project allow rules do not bypass review (SEC-10 in section 12)
 
@@ -330,7 +340,7 @@ Rules:
 
 1. `grep` and `glob` exclude the sensitive globs inside the tool (an ignore list added to the rg call). A search that names a sensitive path explicitly asks.
 2. Git read commands are pathspec-aware. Tier 2 appends exclusion pathspecs for sensitive globs, or asks when the repository tracks sensitive-class files and the command can print file contents.
-3. A **secret scanner runs on every tool output** before it reaches the model (cloud and CI token shapes, PEM headers, private-key blocks, `.env`-style `KEY=value` lines with high entropy). A hit sets the taint and shows a notice.
+3. A **secret scanner runs on every tool output** (size-capped, with ReDoS-safe patterns and a time limit; over the cap it scans a bounded window and sets the taint) before it reaches the model (cloud and CI token shapes, PEM headers, private-key blocks, `.env`-style `KEY=value` lines with high entropy). A hit sets the taint and shows a notice.
 4. The taint is set by any of these routes, not only by `read`. It stays per root session and survives subagents.
 
 ### 2.11 Auto-approved edits stay visible
@@ -356,6 +366,12 @@ Requirements (prerequisite S7):
 2. **Environment allowlist.** Tool processes (shell, formatters, MCP, LSP, background processes) get an allowlist of variables (`PATH`, `HOME`, `LANG`, `TERM`, `TMPDIR`, language-tool paths). Credential variables are passed only when the user opts in per variable. Correct the formatter comment.
 3. **Allowed hosts** are documented as exfiltration channels. The settings page warns when a host accepts user content (code hosting, gists, package publishing). The default is no hosts.
 4. Until S7 ships, the docs say the sandbox does not protect secrets from reads, and runners are not auto-allowed outside a trusted workspace (2.13).
+5. **Host sockets (SEC-17).** Linux bubblewrap uses `--unshare-net --ro-bind / /` (`bubblewrap.ts:184-198`). That isolates the network namespace, but pathname Unix sockets still work through the filesystem, and a read-only bind does not stop `connect()`.
+   Reachable today: `/var/run/docker.sock` (host root through a privileged container), `$SSH_AUTH_SOCK` (sign and authenticate as the user), the D-Bus session bus (`systemd-run --user` starts unconfined processes), gpg-agent, and `/tmp/.X11-unix`.
+   Nothing mounts over `/run`, `/var/run` or `$XDG_RUNTIME_DIR`, and the environment is passed through with no `--clearenv` or `--unsetenv` (`bubblewrap.ts:210`). Requirements: tmpfs over `/run`, `/var/run`, `$XDG_RUNTIME_DIR` and `/tmp/.X11-unix`; the environment allowlist from item 2 (so `SSH_AUTH_SOCK`, `DBUS_SESSION_BUS_ADDRESS` and `DOCKER_HOST` are gone); and a test per socket type that a sandboxed process cannot connect.
+   On macOS the profile starts from `(deny default)` and denies Unix-socket connect in deny and proxy network modes (`seatbelt-network.ts`), but allows it in `allow` mode.
+6. **Network mode.** Approve for me never uses the `allow` network mode (all outbound and Unix sockets, no seccomp). If the user's setting is `allow`, runners ask. Seccomp is applied only in proxy mode today (`bubblewrap.ts:173`); add a filter for deny mode too.
+7. **Proxy mode review.** Proxy mode adds `--cap-add cap_sys_admin` for the relay (`bubblewrap.ts:185`). Review that kernel surface before Approve for me uses proxy mode. Deny mode is the default.
 
 ### 2.13 Untrusted workspaces and project-controlled code (SEC-15, SEC-16)
 
@@ -371,6 +387,24 @@ Approve for Me does not make this worse, but it must not imply protection. Requi
 
 - Gate project-scope MCP servers, plugins, formatters, LSP servers and the `shell` setting behind workspace trust or a one-time prompt that shows the commands.
 - Until S8 ships, the docs and the mode menu say Approve for Me is **not safe for untrusted repositories**.
+
+### 2.14 Writes follow links (SEC-19)
+
+`edit`, `write` and `apply_patch` call no `realpath`. Their only boundary check is `assertExternalDirectoryEffect`, which uses `inside()` and `FSUtil.contains`. That function is lexical, built on `path.relative` (`P/tool/external-directory.ts:19-39`, `packages/core/src/fs-util.ts:265-268`).
+A symlink inside the workspace that points outside it counts as inside, and the edit tools run in the backend process, not in the sandbox. Two ways to use this:
+
+- A **cloned repository** ships a symlink. Git tracks absolute symlinks (for example `notes/todo.md -> ~/.zshrc`). An injected agent edits `notes/todo.md` and the tool writes to the target.
+- A **sandboxed program** creates a symlink or hardlink inside the workspace (writes there are allowed). The unsandboxed edit tool then follows it. The edit tool becomes a confused deputy across the sandbox boundary.
+
+Both defeat the tier 1 rule "in-workspace, ordinary class" and the path classes of 2.6, which match the lexical path.
+
+Requirements (prerequisite S9):
+
+1. Resolve the real path of the target before any write: the deepest existing ancestor and the final component, with `lstat`. If any component is a symlink that resolves outside the workspace, ask through `external_directory`. If it resolves to a path in the sensitive or executable-config classes, ask.
+2. Refuse to write a file with more than one hard link (`nlink > 1`), and open files for writing without following the final link (`O_NOFOLLOW`).
+3. Apply the same checks to the destination of an `apply_patch` move and to deletes.
+4. Use the real path for all class matching (2.6, 2.10) and for the `external_directory` test. Precedent: `packages/core/src/filesystem.ts:73-76` already does a real-path check ("Path escapes the location").
+5. Tests: a committed symlink to an outside file, a program-created symlink, a hardlink, a symlink chain, and a symlink to a class path.
 
 ## 3. Tool coverage (v1 policy)
 
@@ -441,7 +475,7 @@ tool output, file contents, environment values, absolute paths outside the works
 A byte budget (about 8 KB) applies. If the decision-critical part does not fit, the reviewer is not called and the answer is `ask`.
 
 **Structure, not literals.** Argument literals are not sent as text. The program and flags from a known set are sent as they are. Every other literal becomes a typed placeholder (`<path:ordinary>`, `<number>`, `<string>`).
-Paths are sent as class plus the in-workspace relative path, after control and bidi characters are removed and the length is capped. Redaction of "secret-like" tokens is not relied on, because a heuristic misses cases.
+Paths are sent as class plus the in-workspace relative path, restricted to `[A-Za-z0-9._/-]` and capped in length (anything else becomes a typed placeholder), after control and bidi characters are removed. Redaction of "secret-like" tokens is not relied on, because a heuristic misses cases.
 
 ### 5.2 Prompt
 
@@ -496,6 +530,14 @@ Side-model calls (title, branch name, enhance) record no cost today. For the rev
 - Show the cost in the transcript line as legacy did (`gatekeeper.ts:84-131`), but also when the provider returns no usage ("cost unknown").
 - Add the reviewer cost to the task's cost so that cost per task includes it (the team wants cost per task visible; see the usage work in #14463). Show it in the transcript line as well.
 
+### 5.5 Logging and diagnostics
+
+- Reviewer input and output are never logged at info level. Debug logs may hold them only after the redaction rules in 5.1. Persisted `metadata.review` keeps the rule id, label, model, latency and cost, never the facts.
+- Heap snapshots are written to the log directory (`P/heap.ts:29`, `P/kilocode/cli/heap-snapshot.ts:8`) and hold in-memory commands and secrets. The feature gets a warning, and snapshots are excluded from any bug-report or export bundle.
+- Telemetry carries rule ids and classes only, as in section 9.
+- **Messages to the model reveal no policy.** A block says only "Blocked by policy. Do not try another way to do the same thing." with no rule id. `DeniedError` returns the matched ruleset as JSON to the model today (`packages/core/src/v1/permission.ts:7-27`); trim it to the permission name. The rule id stays in the user-facing prompt and in telemetry.
+- The backstop also counts repeated attempts at the same normalised effect, not only consecutive blocks, so an agent cannot search for an allowed spelling.
+
 ## 6. Mode state, flag and config
 
 ### 6.1 What exists (PR #14636)
@@ -541,6 +583,9 @@ The `approve_for_me` config key was removed from that PR on purpose: nothing rea
    - A test imports a crafted file and asserts that the ruleset and mode are not applied.
 10. **Managed policy.** Organisations can pin behavior with managed-scope keys only (ignored in global and project config): `approve_for_me.allowed_modes`, `approve_for_me.escalation_approval` (`on` or `off`), `approve_for_me.model`, and `sandbox.required`. An admin can disable Auto-approve and Approve for me entirely. Managed config already exists (`P/config/config.ts:973-1003`).
 11. **Consent for the review stage.** The first time the stage is `review` or `on`, show a one-time notice that structured command facts go to the reviewer model's provider, even in shadow mode where nothing is enforced. Respect `privacy_mode`.
+12. **Remote org config can only tighten.** `kilo providers login <url>` fetches `${url}/.well-known/opencode` and an optional second URL, and merges the result as global scope with `trusted: true` (`P/config/config.ts:688-744`). It is unsigned. For the Approve for me keys it may restrict modes, require the sandbox, or force escalation approval off. It may not set the reviewer model or endpoint, the default mode, or loosen anything, and the settings page shows where each value came from.
+13. **Remote kill switch and minimum version.** The only security switches today are local environment flags (`KILO_DISABLE_SKILL_SHELL`, `P/effect/runtime-flags.ts:23`). If a classifier bypass is found, installed clients stay exposed until they update. Add a signed kill list served by the Kilo gateway. It can force the reviewer stage to `off`, the mode to Sandboxed, and the escalation approval off, and it can set a minimum version for `on`. When offline the last known list applies. A missing list never turns the feature on.
+14. **Server hardening (defense in depth).** Validate the `Host` header against the loopback and configured names (DNS rebinding), keep CORS to the known origins, and accept the `auth_token` query parameter only for WebSocket upgrades (`P/server/.../authorization.ts:91-97`), so credentials do not appear in request logs or referrers.
 
 ### 6.3 Required chores for any new config key
 
@@ -593,6 +638,11 @@ Invariants (each gets a test):
 17. Tool processes get an environment allowlist, and the sandbox denies reads of credential stores (SEC-14).
 18. In an untrusted workspace, runners and unclear calls ask and the reviewer is off. The manifest baseline starts only after a human acknowledgement (SEC-15).
 19. The docs never claim protection against project-controlled execution until S8 ships (SEC-16).
+20. A sandboxed process cannot reach host Unix sockets (docker, ssh-agent, D-Bus, gpg-agent, X11), and Approve for me never runs with the `allow` network mode (SEC-17).
+21. Tier 2 `allow` is an exact argv-shape allowlist. Prefix globs are never reused, and any assignment prefix asks (SEC-18).
+22. Remote org config can tighten Approve for me settings but never loosen them or choose the reviewer model.
+23. A write never follows a symlink or hardlink out of the workspace, and class matching uses the real path (SEC-19).
+24. Messages to the model carry no rule ids or rulesets. A remote kill list can only turn the feature down (13).
 
 Threats and answers:
 
@@ -621,6 +671,15 @@ Threats and answers:
 | Wrapper or package runner hides a command (`npx`, `env`, `xargs`, `| sh`) | Section 2.8: explicit carrier table, remote-code runners always ask |
 | A route writes config or permissions without credentials | Section 6.2 item 6: every state-writing route is guarded |
 | `.ENV`, `.env.`, `.env::$DATA` or 8.3 names slip past path rules | Section 2.6: normalisation on every platform, with tests |
+| A sandboxed program uses docker.sock, ssh-agent, D-Bus or gpg-agent | Section 2.12: tmpfs over runtime directories, environment allowlist, per-socket tests (S7) |
+| A "read-only" command writes or executes through a flag (`git diff --output`, `tar --to-command`, `less !`) | Section 2.3: exact argv-shape allowlist, GTFOBins deny corpus |
+| An org config URL loosens or redirects the reviewer | Section 6.2 item 12: tighten-only |
+| Logs or heap snapshots expose commands and secrets | Section 5.5 |
+| A committed or program-created symlink or hardlink makes an edit land outside the workspace | Section 2.14: real-path and `nlink` checks, `O_NOFOLLOW` (S9) |
+| An `apply_patch` move or delete bypasses the class check | Section 2.6: class check reads `metadata.files[]` |
+| A pathological command stalls the parser | Section 2.8 item 8: limits and a timeout, over limit asks |
+| The agent probes policy through rule ids in error messages | Section 5.5: generic block message, trimmed `DeniedError` |
+| A bypass is found and installed clients stay exposed | Section 6.2 item 13: signed remote kill list and minimum version |
 | Reviewer text injection through argument literals | Structure-only input, temperature 0, two-call consensus for escalations (5.1, 5.2) |
 | Agent requests an escalation to get out of the sandbox | Section 2.5: deterministic rules first, narrowest scope, facts-only input, caps, shadow mode |
 | Repeated retries of a blocked call | Backstop: stop auto-deciding after 3 consecutive blocks or 5 in the last 20 calls, and tell the user (numbers from #13893 `continuation.ts:36`) |
@@ -672,6 +731,13 @@ Evaluation:
   - SEC-16: project-scope MCP, plugin, formatter, LSP and `shell` settings do not run in an untrusted workspace.
   - Wrappers: each entry in the 2.8 carrier table asks, including `npx`, `bunx`, `uvx`, `env`, `xargs`, `sudo`, `| sh`.
   - Routes: every state-writing route refuses without credentials.
+  - SEC-17: a sandboxed process cannot connect to docker.sock, `$SSH_AUTH_SOCK`, the D-Bus session bus, gpg-agent or X11. Its environment lacks `SSH_AUTH_SOCK`, `DBUS_SESSION_BUS_ADDRESS` and `DOCKER_HOST`. The `allow` network mode makes runners ask.
+  - SEC-18: a GTFOBins-derived corpus (output and exec flags of git, tar, less, man, find, sort, sed, awk, rg) never auto-allows. Every `NAME=value` prefix asks. `printenv`, `env` and `set` are sensitive reads.
+  - SEC-19: a committed symlink to an outside file, a program-created symlink, a hardlink, a symlink chain and a symlink to a class path are all refused or ask. A move into, or a delete out of, the class asks.
+  - Parser limits: commands over the length, depth or node limit, and inputs that time out, ask and never run unchecked.
+  - Messages: a block and a `DeniedError` contain no rule id or ruleset.
+  - Kill list: a signed list forces the stage off. An unsigned or missing list never enables the feature.
+  - Remote config: a well-known response that sets the default mode, the reviewer model or loosens a limit is ignored for those keys.
   - Paths: case, NFC, trailing dots, alternate data streams, 8.3, `\\?\` and UNC forms of `.env` and build files are classified correctly.
   - SEC-11: a workspace `.vscode/settings.json` value for either setting has no effect. Writes go to user settings. At startup Approve for me wins.
 
@@ -688,6 +754,8 @@ Shared-file touches expected, each one a few lines with `kilocode_change` marker
 | `P/tool/webfetch.ts` | the SSRF guard (SEC-4). Needed on its own, so it ships as its own PR |
 | `P/server/middleware/authorization.ts` | the always-guarded endpoint list (SEC-7) |
 | `P/cli/cmd/export.ts`, `P/cli/cmd/import.ts` | drop permission and mode (SEC-8) |
+| `P/tool/edit.ts`, `write.ts`, `apply_patch.ts`, `external-directory.ts` | real-path, `lstat` and `nlink` checks (SEC-19, S9). Small marked changes, needed on their own |
+| `P/tool/shell.ts` | parser limits and timeout (2.8 item 8). A few lines, marked |
 | `P/kilocode/permission/config-paths.ts` | the executable-config class lives in a Kilo-owned file, so no marker is needed |
 
 Everything else lives in `P/kilocode/approve-for-me/`, `P/kilocode/session/prompt.ts` (Kilo-owned), `packages/kilo-vscode/`, and Kilo-owned TUI files.
@@ -715,12 +783,21 @@ Findings from the security review, and where each is resolved. IDs are used in c
 | SEC-15 | The manifest baseline in a fresh clone is attacker-controlled. The backend ignores workspace trust | Trust signal, reduced profile when untrusted, script-surface acknowledgement before the baseline | 2.13 |
 | SEC-16 | A project config can start MCP servers, plugins, formatters and LSP servers with no trust gate (pre-existing) | Trust gate (S8). Documented as not covered until then | 2.13 |
 
+| SEC-17 | The Linux sandbox reaches host Unix sockets (docker, ssh-agent, D-Bus, gpg-agent, X11) and passes their env vars | tmpfs over runtime directories, environment allowlist, never `allow` network mode, per-socket tests (S7) | 2.12 |
+| SEC-18 | The "read-only" allow list is prefix globs. Flags turn reads into writes or execution. Assignment prefixes are not an explicit rule | Exact argv-shape allowlist, GTFOBins deny corpus, assignment prefixes ask | 2.3, 2.8 |
+
+| SEC-19 | The edit tools follow symlinks and hardlinks (lexical containment), so a committed or program-created link writes outside the workspace | Real-path, `lstat` and `nlink` checks, `O_NOFOLLOW`, real path for class matching (S9) | 2.14 |
+
 SEC-9, SEC-10 and the once-only `always` rule (6.2 item 7) were medium findings. They are included because they use the same code and would otherwise leave a gap in a high fix.
 
 The second review's medium findings are folded in: escalated commits and the network class (2.5.3), a wider executable-config class and manifest (2.6), SSRF details (2.7), structure-only reviewer input and consensus (5.1, 5.2),
 the consent notice, credential handling and managed policy (6.2), and visible auto-approved edits (2.11).
 
 The third review's medium findings are folded in: wrapper and carrier coverage (2.8), every state-writing route guarded (6.2 item 6), path normalisation per platform (2.6), and mode inheritance for every created session (6.2 item 8).
+
+The fourth review's medium findings are folded in: tighten-only remote org config (6.2 item 12), the `allow` network mode and the proxy-mode capability review (2.12), logging and heap snapshots (5.5), and a restricted path charset in reviewer input (5.1).
+
+The fifth review's medium findings are folded in: move and delete in the class check (2.6), parser limits (2.8), message and ruleset trimming plus repeat-effect counting (5.5), the remote kill list and server hardening (6.2 items 13 and 14), and CODEOWNERS for the security-sensitive paths (roadmap).
 
 Still open and tracked in the roadmap: reviewer injection residuals and model drift (evaluation, PR 9), prompt spoofing in the permission dock (PR 6), other clients that auto-reply, including JetBrains (PR 2),
 TOCTOU and parallel calls (PR 8 gate), backstop counting of asks (PR 8), the bubblewrap `.git` protection that is computed at launch (S6 follow-up).

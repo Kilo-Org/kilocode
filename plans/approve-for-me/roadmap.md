@@ -5,6 +5,7 @@ Rules for every PR:
 - One concern per PR. Aim for under 500 changed lines of non-test code.
 - Everything is behind the hidden flag until PR 11 (PR 3 sits behind the existing sandbox flag).
 - A PR that changes the design edits `plans/approve-for-me/` in the same PR.
+- Changes to the tier tables, the executable-config class, the sandbox profile or the permission core need a security reviewer. Add CODEOWNERS entries and branch protection for `packages/opencode/src/kilocode/permission`, `kilocode/sandbox`, `kilocode/approve-for-me`, `packages/kilo-sandbox`, `tool/edit.ts`, `tool/write.ts`, `tool/apply_patch.ts` and `tool/external-directory.ts`. `.github/CODEOWNERS` covers only upstream paths today.
 - Each PR passes: package `typecheck`, `lint`, focused tests, and the guards that apply
   (`check-opencode-annotations`, `knip` for `kilo-vscode`, i18n key test, SDK regeneration, `check-md-table-padding`).
 - Each PR adds a changeset only if a user can see the change.
@@ -47,6 +48,7 @@ Goal: the server knows the mode, and the selector matches the team decision. The
 - `always` replies are stored as once in Approve for me (`design.md` 6.2 item 7).
 - Move and import rules: a session never becomes looser when it moves, imports or is shared (SEC-8, with S4).
 - Clients: JetBrains has its own IDE-level auto-reply (`SessionController.kt`). It must stop replying when the server mode is Approve for me. The server publishes the mode and clients refuse to auto-reply.
+- Signed remote kill list and minimum version for the reviewer stage (`design.md` 6.2 item 13). Server hardening: Host-header check, `auth_token` only for WebSocket upgrades (item 14).
 - Regenerate the SDK. Mirror the key in `Kilo-Org/cloud` (`extras.ts`) in a linked PR.
 - Tests: scope function, exclusion, mode-to-sandbox mapping, unsupported platform, flag off leaves today's behavior unchanged, child inheritance, mode events for loosening changes.
 
@@ -90,6 +92,8 @@ Goal: decide shell calls from facts.
 - Shell constraints (`design.md` 2.8, SEC-6): strict simple-command subset, bash or zsh only and not set by project config, alias and function check (spike), tier 2 off on PowerShell, cmd and Windows.
 - Executable-config class applied to shell writes (uses S2) and the manifest check before runners and escalations (`design.md` 2.6).
 - Outbound rules and the sensitive-read taint (`design.md` 2.7, uses S1).
+- Parser limits and timeout, over limit asks (`design.md` 2.8 item 8). The class check reads `metadata.files[]` (moves, deletes), `design.md` 2.6.
+- Exact argv-shape allowlist for tier 2 `allow`, with a GTFOBins-derived deny corpus (`design.md` 2.3, SEC-18). `printenv`, `env`, `set` are sensitive reads. Any assignment prefix asks.
 - Explicit carrier and wrapper table with tests (`design.md` 2.8 item 6): `env`, `sudo`, `xargs`, `time`, `nohup`, `timeout`, pipes into interpreters, and package runners (`npx`, `bunx`, `uvx`, `pnpm dlx`, `npm exec`) that always ask.
 - Path normalisation per platform (`design.md` 2.6): NFC, case-fold everywhere, Windows trailing dots and spaces, alternate data streams, 8.3 names, `\\?\` and UNC.
 - First-run acknowledgement of the script surface before the manifest baseline exists (`design.md` 2.13).
@@ -119,6 +123,8 @@ Done when: a flagged command shows a label in all three clients, with no change 
 - No allow cache (SEC-5). Only ask results may be cached.
 - Structure-only reviewer input: typed placeholders for argument literals, path class plus capped, cleaned relative path (`design.md` 5.1). No reliance on token redaction.
 - Temperature 0, and two-call consensus (different prompt wording, second model when available) for escalations.
+- Generic block message to the model, trimmed `DeniedError`, and repeat-effect counting (`design.md` 5.5).
+- Logging rules (`design.md` 5.5): no reviewer input or output at info level, heap snapshot warning, snapshots excluded from exports.
 - One-time consent notice before the `review` or `on` stage sends facts to the reviewer's provider; honor `privacy_mode` (`design.md` 6.2 item 11).
 - Input hardening: JSON-encode all strings, strip control and bidi characters, length caps.
 - Cost and latency recorded in `metadata.review`, telemetry, and the task cost.
@@ -138,13 +144,14 @@ Done when: in `review` stage the reviewer runs on `reviewable` calls and escalat
 
 Security gate. PR 8 does not merge until all of these hold:
 
-- S1 to S8 are merged and #14636 has its SEC-11 changes.
+- S1 to S9 are merged and #14636 has its SEC-11 changes. The S7 socket tests pass on Linux, and the GTFOBins corpus never auto-allows.
 - Every security test group in `design.md` section 10 passes in CI.
 - The grant property test runs in CI on every change to `Permission.ask`.
 - The shell differential corpus passes for bash and zsh.
 - Escalation approval is limited to the deterministic classes in `design.md` 2.5.3: `git add`, `status` and `diff`. `git commit` and network escalations ask in v1 (widening waits for PR 9 data and the hook manifest).
 - S7 sandbox read-deny and environment allowlist are on, and the sandbox tests prove a sandboxed command cannot read the credential stores or see credential variables.
 - S8 trust gate is on, or the docs and the mode menu state that Approve for Me is not safe for untrusted repositories.
+- S9 link-safe writes are on, and the link tests pass for all three edit tools.
 - The output secret scanner, the `grep` and `glob` exclusions and pathspec-aware git (S6, `design.md` 2.10) are enabled and tested.
 - The grant type is server-only: no schema, event or `metadata` carries it (SEC-13 test).
 - Review of the TOCTOU gap: paths are re-resolved inside the tool at execution time, and reviewed calls run one at a time per session. Record the result in the PR.
@@ -165,6 +172,7 @@ Done when: dogfood users run a normal session with fewer prompts and no unsafe a
 
 - One settings page for permissions and sandbox: default mode, sandbox network/hosts/paths, reviewer model (non-OpenAI list), timeout, escalation toggle, "what is reviewed" table.
 - Legacy import: map `yoloMode` and `yoloGatekeeperApiConfigId` (`legacy-gatekeeper.md` section 10). Never produce Auto-approve from a guarded setup.
+- Remote org config is tighten-only for the Approve for me keys, and the settings page shows each value's origin (`design.md` 6.2 item 12).
 - Managed-scope policy keys: `approve_for_me.allowed_modes`, `approve_for_me.escalation_approval`, `approve_for_me.model`, `sandbox.required` (`design.md` 6.2 item 10).
 - User docs say the sandbox limits writes and network (and, after S7, reads of credential stores), and that Approve for Me is not for untrusted repositories until S8 ships.
 - User docs in `packages/kilo-docs`, including limits: not a replacement for review, build and test commands run project code, data sent to the reviewer, behavior without a sandbox.
@@ -175,9 +183,9 @@ Done when: dogfood users run a normal session with fewer prompts and no unsafe a
 - Turn the sandbox on by default only if PR 9 thresholds hold. Provide good defaults for common hosts and paths.
 - Remove `plans/approve-for-me/`.
 
-### Security prerequisites (S1 to S8)
+### Security prerequisites (S1 to S9)
 
-These small PRs fix existing gaps that Approve for Me would otherwise inherit. They are useful on their own. **PR 8 (active mode) cannot start until S1 to S8 are merged** (section 2).
+These small PRs fix existing gaps that Approve for Me would otherwise inherit. They are useful on their own. **PR 8 (active mode) cannot start until S1 to S9 are merged** (section 2).
 
 | # | PR | Fixes | Notes |
 |---|---|---|---|
@@ -187,8 +195,9 @@ These small PRs fix existing gaps that Approve for Me would otherwise inherit. T
 | S4 | Session export, share and import: drop `permission` and `mode`; import validates | SEC-8 | `P/cli/cmd/export.ts`, `P/cli/cmd/import.ts`. Independent of this feature |
 | S5 | Every state-writing or command-running route always authenticated (config, permission reply and always-rules, session create and patch, MCP add and connect, session shell, upgrade, worktrees); no password means no loosening modes; tool env test | SEC-7 | `P/server/middleware/authorization.ts` |
 | S6 | `grep` and `glob` exclude sensitive globs inside the tool; pathspec-aware git read commands; secret scanner on tool output that sets the taint | SEC-12 | `P/tool/grep.ts`, `P/tool/glob.ts` (shared, small), scanner and git logic in Kilo-owned files. Applies to every mode |
-| S7 | Sandbox confinement: deny reads of credential stores (seatbelt and bubblewrap); environment allowlist for shell, formatter, MCP, LSP and background processes; fix the formatter comment | SEC-14 | `kilo-sandbox`, `P/kilocode/sandbox/policy.ts`, `P/kilocode/process/env.ts`. Applies to every sandboxed mode |
+| S7 | Sandbox confinement: deny reads of credential stores (seatbelt and bubblewrap); environment allowlist for shell, formatter, MCP, LSP and background processes; tmpfs over `/run`, `/var/run`, `$XDG_RUNTIME_DIR` and `/tmp/.X11-unix` with a per-socket test; no `allow` network mode in Approve for me; seccomp for deny mode; proxy-mode `CAP_SYS_ADMIN` review; fix the formatter comment | SEC-14, SEC-17 | `kilo-sandbox`, `P/kilocode/sandbox/policy.ts`, `P/kilocode/process/env.ts`. Applies to every sandboxed mode |
 | S8 | Trust gate for project-controlled execution: project-scope MCP servers, plugins, formatters, LSP servers and `shell` need workspace trust or a one-time prompt showing the commands. Wire a trust signal (VS Code, JetBrains, CLI) into the backend | SEC-15, SEC-16 | Shared files (`P/mcp`, `P/plugin`, `P/format`, `P/lsp`) get small marked hooks. Independent of this feature. Report as a standalone issue |
+| S9 | Link-safe writes: real-path, `lstat` and `nlink` checks, `O_NOFOLLOW` in `edit`, `write` and `apply_patch`; real path in the external-directory test and in class matching | SEC-19 | `P/tool/edit.ts`, `write.ts`, `apply_patch.ts`, `external-directory.ts` (shared, small marked changes). Applies to every mode. Report as a standalone issue |
 
 The grant type needs no S item: it is part of PR 4 (`design.md` 1.2, SEC-13).
 
@@ -202,11 +211,11 @@ Each S item has its own tests (`design.md` section 10). S1, S4 and S5 are also w
 2 -> 4 -> 5 -> 8
 4 -> 6
 4 -> 7 -> 8
-S1..S8 -> 8
+S1..S9 -> 8
 8 -> 9 -> 10 -> 11
 ```
 
-3, 4 and S1 to S8 can start once their predecessors in the graph are done. 5 and 7 need 4. 6 can start after 4. 7 also needs S3. 8 needs 3, 5, 7 and **S1 to S8**. 10 needs 8. PR 3 has value without the reviewer and can ship early. S1 to S8 are independent of each other and can start now.
+3, 4 and S1 to S9 can start once their predecessors in the graph are done. 5 and 7 need 4. 6 can start after 4. 7 also needs S3. 8 needs 3, 5, 7 and **S1 to S9**. 10 needs 8. PR 3 has value without the reviewer and can ship early. S1 to S9 are independent of each other and can start now.
 
 ## 3. Rollout
 
@@ -227,7 +236,7 @@ Keep the flag-off path identical to today. A test asserts it.
 |---|---|
 | 0 Plan | This PR |
 | 1 Entry point | Open: #14636 |
-| S1 to S8 | Not started (can start now) |
+| S1 to S9 | Not started (can start now) |
 | 2 to 11 | Not started |
 
 ## 5. Work split with the community effort
