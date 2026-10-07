@@ -107,6 +107,52 @@ class PromptRailItemsTest : BasePlatformTestCase() {
      * from every streamed delta. The raw text is cut before the stripping regexes see it.
      */
     /**
+     * A fence-free answer must cost the budget, not its own length. The fence scan ran to the end of the
+     * part looking for an opening marker, so every streamed delta re-read the whole answer and the
+     * stream came out quadratic — the cost the budget exists to remove.
+     */
+    fun `test the fence scan is bounded by the budget`() {
+        val plain = Counting("word ".repeat(40_000))
+
+        val out = StringBuilder()
+        PromptRailItems.prose(out, plain)
+
+        assertTrue("the preview must still be filled, got ${out.length}", out.length > 1_000)
+        assertTrue(
+            "reads ${plain.reads} must track the budget, not the ${plain.length}-char answer",
+            plain.reads < 5_000,
+        )
+    }
+
+    /** A fenced block is still measured, so stepping over it reads it rather than guessing its end. */
+    fun `test a fenced block is still stepped over in full`() {
+        val code = "val x = 1\n".repeat(400)
+        val fenced = Counting("lead\n```kotlin\n$code```\ntail")
+
+        val out = StringBuilder()
+        PromptRailItems.prose(out, fenced)
+
+        // Whitespace is left for preview() to collapse, so assert on what was kept and dropped.
+        val kept = out.toString()
+        assertFalse("the fence marker must not survive: $kept", kept.contains("`"))
+        assertFalse("code inside the fence must not survive: $kept", kept.contains("val x = 1"))
+        assertTrue("prose on both sides must survive: $kept", kept.contains("lead") && kept.contains("tail"))
+    }
+
+    private class Counting(private val src: String) : CharSequence {
+        var reads = 0
+
+        override val length get() = src.length
+
+        override fun get(index: Int): Char {
+            reads++
+            return src[index]
+        }
+
+        override fun subSequence(startIndex: Int, endIndex: Int) = src.subSequence(startIndex, endIndex)
+    }
+
+    /**
      * The lead-in is inline code: it consumes budget but `preview()` discards it, so the marker after it
      * is the only thing that could reach the preview. Reading the whole text surfaces the marker, while
      * the budget stops before it. A marker placed after plain prose proves nothing, because the preview

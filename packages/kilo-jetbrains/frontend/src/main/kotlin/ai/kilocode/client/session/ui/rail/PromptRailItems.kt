@@ -154,12 +154,20 @@ object PromptRailItems {
      *
      * An unclosed fence is kept as text, which is what [preview]'s closed-pair regex does with it too.
      */
-    private fun prose(out: StringBuilder, src: CharSequence) {
+    internal fun prose(out: StringBuilder, src: CharSequence) {
         var at = 0
         while (at < src.length && out.length < BUDGET) {
-            val open = mark(src, at)
-            if (open < 0) return take(out, src, at, src.length)
-            val close = mark(src, open + MARK)
+            val room = BUDGET - out.length
+            // The opening search stops at the remaining budget. A fence that opens beyond it cannot
+            // affect the output, because the prose in front of it already fills the preview, so a
+            // fence-free answer costs the budget rather than its own length. That matters because a
+            // streamed delta re-previews its turn, which would otherwise make the stream quadratic.
+            val open = mark(src, at, at + room)
+            if (open < 0) return take(out, src, at, at + room)
+            // The closing search is not bounded the same way: the block has to be measured to be
+            // stepped over, and guessing its end is what leaks half a fence into the preview. It only
+            // runs when a fence is actually present, and never past this part.
+            val close = mark(src, open + MARK, src.length)
             if (close < 0) return take(out, src, at, src.length)
             take(out, src, at, open)
             if (out.length < BUDGET) out.append(' ')
@@ -167,10 +175,11 @@ object PromptRailItems {
         }
     }
 
-    /** Index of the next fence marker at or after [from], or -1. Avoids materialising [src]. */
-    private fun mark(src: CharSequence, from: Int): Int {
+    /** Index of the first fence marker starting in `[from, until)`, or -1. Reads [src] in place. */
+    private fun mark(src: CharSequence, from: Int, until: Int): Int {
         var i = from.coerceAtLeast(0)
-        while (i <= src.length - MARK) {
+        val last = minOf(until, src.length - MARK + 1)
+        while (i < last) {
             if (src[i] == '`' && src[i + 1] == '`' && src[i + 2] == '`') return i
             i++
         }
@@ -180,7 +189,7 @@ object PromptRailItems {
     private fun take(out: StringBuilder, src: CharSequence, from: Int, to: Int) {
         val room = BUDGET - out.length
         if (room <= 0) return
-        val end = minOf(to, from + room)
+        val end = minOf(to, from + room, src.length)
         if (end > from) out.append(src, from, end)
     }
 
