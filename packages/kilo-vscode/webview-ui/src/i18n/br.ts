@@ -60,6 +60,7 @@ export const dict = {
   ...anacondaDesktopDict,
   ...cloudProviderDict,
   "task.swarm.title": "Quadro",
+  "task.swarm.open": "Abrir quadro",
   "task.swarm.refresh": "Atualizar",
   "task.swarm.reset": "Redefinir quadro",
   "task.swarm.resetTitle": "Redefinir este quadro?",
@@ -217,6 +218,10 @@ export const dict = {
   "prompt.agents.show": "Mostrar agentes em segundo plano",
   "prompt.action.enhance": "Melhorar prompt",
   "prompt.paste.expand": "Clique para expandir o texto colado",
+  "prompt.issues.title": "Kudennoù estez",
+  "prompt.mcp.provider": "MCP {{name}}",
+  "prompt.mcp.openSettings": "Digeriñ en Arventennoù",
+  "prompt.mcp.signIn.busy": "O kennaskañ…",
   "prompt.action.autoApprove.enable": "Ativar aprovação automática",
   "prompt.action.autoApprove.disable": "Desativar aprovação automática",
   "prompt.action.autoApprove.enabled":
@@ -512,6 +517,9 @@ export const dict = {
   "provider.custom.error.duplicate": "Duplicado",
   "settings.openLocalConfig": "Config Local",
   "settings.openGlobalConfig": "Config Global",
+  "settings.search.placeholder": "Pesquisar configurações",
+  "settings.search.noResults": "Nenhuma configuração encontrada",
+  "settings.search.clear": "Limpar pesquisa",
   "settings.config.scope.local": "Local",
   "settings.config.scope.global": "Global",
   "settings.config.status.loaded": "carregado",
@@ -573,6 +581,7 @@ export const dict = {
   "session.tabs.switcher.pending": "Nova",
   "session.tabs.switcher.busy": "Trabalhando",
   "session.tabs.switcher.scheduled": "Agendado",
+  "session.tabs.pinHint": "Shift+clique para fixar ou desafixar",
   "session.tab.local": "Local",
   "session.tab.cloud": "Nuvem",
   "session.tab.worktree": "Árvore de trabalho",
@@ -1052,12 +1061,31 @@ export const dict = {
   "settings.agentBehaviour.removeMcp.title": "Remover servidor MCP",
   "settings.agentBehaviour.removeMcp.confirm":
     'Remover o servidor MCP "{{name}}"? Isso o removerá da sua configuração.',
+  "settings.agentBehaviour.removeMcp.bundleConfirm":
+    "Dilemel an dafariad MCP \"{{name}}\" hag e giz kenseurt? Dilemel a raio an dafariad ha pep c'hiz dalc'het gant an staliadur Marc'had-mañ.",
   "settings.agentBehaviour.removeMcp.button": "Remover",
   "settings.agentBehaviour.editMcp": "Editar Servidor MCP",
   "settings.agentBehaviour.editMcp.transportLocal": "Servidor local (transporte stdio)",
   "settings.agentBehaviour.editMcp.transportRemote": "Servidor remoto (transporte SSE/HTTP)",
   "settings.agentBehaviour.editMcp.env": "Variáveis de Ambiente",
   "settings.agentBehaviour.editMcp.env.help": "Variáveis passadas para o processo do servidor MCP.",
+  "settings.agentBehaviour.editMcp.oauth": "OAuth",
+  "settings.agentBehaviour.editMcp.oauth.help":
+    "Laoskit war Emgefreek nemet ma ranka an dafariad ur c'hliant enrollet a-raok. Un arvar kliant a vez kadavet en ho restr kefluniañ Kilo.",
+  "settings.agentBehaviour.editMcp.oauth.mode": "Mod",
+  "settings.agentBehaviour.editMcp.oauth.mode.automatic": "Emgefreek",
+  "settings.agentBehaviour.editMcp.oauth.mode.disabled": "Dizweredekaet",
+  "settings.agentBehaviour.editMcp.oauth.mode.custom": "Kliant personelaet",
+  "settings.agentBehaviour.editMcp.oauth.clientId": "ID kliant",
+  "settings.agentBehaviour.editMcp.oauth.clientSecret": "Arvar kliant",
+  "settings.agentBehaviour.editMcp.oauth.scope": "Ledenn",
+  "settings.agentBehaviour.editMcp.oauth.callbackPort": "Porzh distro",
+  "settings.agentBehaviour.editMcp.oauth.redirectUri": "URI adkas",
+  "settings.agentBehaviour.editMcp.oauth.redirectUri.help":
+    "Dre ziouer: http://127.0.0.1:19876/mcp/oauth/callback, a zilez ar porzh distro.",
+  "settings.agentBehaviour.editMcp.oauth.port.invalid": "Roit ur porzh etre 1 ha 65535.",
+  "settings.agentBehaviour.editMcp.oauth.secret.invalid": "Un arvar kliant a c'houlenn un ID kliant.",
+  "settings.agentBehaviour.editMcp.oauth.redirectUri.invalid": "Roit un URI adkas reizh.",
   "settings.agentBehaviour.addMcp.command": "Comando",
   "settings.agentBehaviour.addMcp.command.placeholder": "e.g. npx",
   "settings.agentBehaviour.addMcp.args": "Argumentos",
@@ -1071,6 +1099,8 @@ export const dict = {
   "settings.agentBehaviour.removeSkill.title": "Remover habilidade",
   "settings.agentBehaviour.removeSkill.confirm":
     'Remover a habilidade "{{name}}"? Isso excluirá os arquivos da habilidade do disco.',
+  "settings.agentBehaviour.removeSkill.bundleConfirm":
+    "Dilemel ar c'hiz \"{{name}}\"? Dizentus ivez a raio an dafariad MCP {{mcp}} ha pep c'hiz kenseurt eus an hevelep staliadur Marc'had.",
   "settings.agentBehaviour.removeSkill.button": "Remover",
   "settings.agentBehaviour.rules.description":
     "Regras são arquivos de instrução que orientam o comportamento do agente. Elas são incluídas no prompt do sistema para cada conversa. Adicione caminhos de arquivos abaixo para incluir regras adicionais.",
@@ -1087,6 +1117,12 @@ export const dict = {
   "settings.agentBehaviour.mcpDetail.command": "Comando",
   "settings.agentBehaviour.mcpDetail.args": "Argumentos",
   "settings.agentBehaviour.mcpDetail.env": "Ambiente",
+  "settings.agentBehaviour.mcpSignIn.cancel": "Nullañ ar c'hennaskañ",
+  "settings.agentBehaviour.mcpRemoving": "O tilemel…",
+  "settings.agentBehaviour.mcpResetAuth": "Adderaouekaat ar c'hennaskañ",
+  "settings.agentBehaviour.mcpResetAuth.title": "Adderaouekaat kennaskañ MCP",
+  "settings.agentBehaviour.mcpResetAuth.confirm":
+    "Skarzhañ ar c'hennaskañ kadaviet evit \"{{name}}\"? Ret e vo deoc'h kennaskañ en-dro.",
   "settings.agentBehaviour.mcpBrowseMarketplace": "Explorar Marketplace",
   "settings.agentBehaviour.mcpEmpty":
     "Nenhum servidor MCP configurado. Adicione servidores MCP em kilo.jsonc ou peça ao agente para adicioná-los.",
@@ -1344,6 +1380,8 @@ export const dict = {
 
   "task.todos.progress": "{{done}}/{{total}} tarefas concluídas",
   "task.todos.allDone": "{{count}} tarefas concluídas",
+  "task.todos.title": "Tarefas",
+  "task.todos.done": "Tudo pronto",
   "task.backgroundAgents.running.one": "1 agente em segundo plano",
   "task.backgroundAgents.running.many": "{{count}} agentes em segundo plano",
   "task.backgroundAgents.open": "Abrir agente em segundo plano",
@@ -1426,5 +1464,13 @@ export const dict = {
   "settings.experimental.browserAutomation.systemChrome.title": "Usar Chrome do Sistema",
   "settings.experimental.browserAutomation.systemChrome.description":
     "Use o Google Chrome instalado para o Navegador Integrado. Desative apenas quando um navegador Playwright Chromium compatível já estiver instalado.",
+  "settings.experimental.browserLinks.title": "Abrir links em",
+  "settings.experimental.browserLinks.description":
+    "Escolha onde os links da web abrem a partir das conversas do Kilo. Requer o Navegador Integrado.",
+  "settings.experimental.browserLinks.external": "Navegador do sistema",
+  "settings.experimental.browserLinks.integrated": "Navegador Integrado",
   "chat.search.searchingHistory": "Pesquisando mensagens anteriores…",
+  "browserTab.noSession":
+    "Abra o navegador de uma sessão para visualizar um aplicativo local ou uma página HTTPS pública.",
+  "browserTab.disabled": "O navegador integrado está desativado. Ative-o em Configurações do Kilo > Experimental.",
 }

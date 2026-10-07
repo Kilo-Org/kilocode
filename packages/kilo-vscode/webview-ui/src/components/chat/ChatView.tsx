@@ -7,6 +7,7 @@
 
 import { type Component, type JSX, Show, createEffect, createMemo, createSignal, onCleanup, onMount } from "solid-js"
 import { AgentAvatarPalette } from "@kilocode/kilo-ui/agent-avatar"
+import { useData } from "@kilocode/kilo-ui/context/data"
 import { Button } from "@kilocode/kilo-ui/button"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
@@ -64,6 +65,7 @@ interface ChatViewProps {
 
 export const ChatView: Component<ChatViewProps> = (props) => {
   const session = useSession()
+  const data = useData()
   const vscode = useVSCode()
   const language = useLanguage()
   const worktreeMode = useWorktreeMode()
@@ -77,6 +79,17 @@ export const ChatView: Component<ChatViewProps> = (props) => {
   const ownsPrompts = () => props.interactivePrompts !== false
 
   const id = () => session.currentSessionID()
+  const openLink = (event: MouseEvent) => {
+    if (!data.openUrl || !(event.target instanceof Element)) return
+    const anchor = event.target.closest("a[href]")
+    if (!anchor || anchor.closest(".chat-view") !== event.currentTarget) return
+    const url = anchor.getAttribute("href") ?? ""
+    if (!/^https?:\/\//i.test(url)) return
+    // Claim the click before renderer handlers and VS Code's window listener.
+    event.preventDefault()
+    event.stopPropagation()
+    data.openUrl(url, id())
+  }
   // Keeps the background job list fresh for the dock's agent stack and the
   // swarm board, which both read the replies.
   pollBackgroundJobs()
@@ -262,7 +275,7 @@ export const ChatView: Component<ChatViewProps> = (props) => {
   const hasActions = (hasChat: boolean) =>
     canStartSession(hasChat) || canFork(hasChat) || canStartWorktree() || canMoveToWorktree(hasChat)
 
-  const renderActions = (hasChat: boolean, control: () => JSX.Element, agents: JSX.Element) => (
+  const renderActions = (hasChat: boolean, control: () => JSX.Element, agents: JSX.Element, todos: JSX.Element) => (
     <Show when={hasActions(hasChat) || !!goal()}>
       <div class="new-task-button-wrapper" classList={{ "new-task-button-wrapper--empty": !hasChat }}>
         <div class="session-actions-row">
@@ -379,6 +392,7 @@ export const ChatView: Component<ChatViewProps> = (props) => {
               </Tooltip>
             </>
           </Show>
+          {todos}
           {control()}
         </div>
       </div>
@@ -391,11 +405,18 @@ export const ChatView: Component<ChatViewProps> = (props) => {
   return (
     <AgentAvatarPalette ids={siblings()}>
       <TranscriptSearchProvider>
-        <div class="chat-view">
+        <div
+          class="chat-view"
+          data-browser-links={data.browserLinks ? "true" : undefined}
+          ref={(node) => {
+            node.addEventListener("click", openLink, true)
+            onCleanup(() => node.removeEventListener("click", openLink, true))
+          }}
+        >
           <Show when={isSidebar() && !props.readonly && tabs && showTabStrip(tabs.ids())}>
             <SessionTabStrip />
           </Show>
-          <TaskHeader readonly={props.readonly} projectId={props.projectId} />
+          <TaskHeader readonly={props.readonly} />
           <div class="chat-messages-wrapper">
             <div class="chat-messages">
               <MessageList
@@ -436,9 +457,10 @@ export const ChatView: Component<ChatViewProps> = (props) => {
               <SessionDock
                 blocked={dockBlocked()}
                 hasActions={() => !props.readonly && (hasActions(hasMessages()) || !!goal())}
-                actions={(control, agents) => renderActions(hasMessages(), control, agents)}
+                actions={(control, agents, todos) => renderActions(hasMessages(), control, agents, todos)}
                 onScrollToBottom={scrollToBottom}
                 readonly={props.readonly}
+                projectId={props.projectId}
               />
               <Show when={ownsPrompts() && !props.readonly}>
                 <PromptInput

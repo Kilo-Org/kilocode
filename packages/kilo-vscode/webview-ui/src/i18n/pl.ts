@@ -60,6 +60,7 @@ export const dict = {
   ...anacondaDesktopDict,
   ...cloudProviderDict,
   "task.swarm.title": "Tablica",
+  "task.swarm.open": "Otwórz tablicę",
   "task.swarm.refresh": "Odśwież",
   "task.swarm.reset": "Zresetuj tablicę",
   "task.swarm.resetTitle": "Zresetować tę tablicę?",
@@ -217,6 +218,10 @@ export const dict = {
   "prompt.agents.show": "Pokaż agentów w tle",
   "prompt.action.enhance": "Ulepsz prompt",
   "prompt.paste.expand": "Kliknij, aby rozwinąć wklejony tekst",
+  "prompt.issues.title": "Problemy sesji",
+  "prompt.mcp.provider": "MCP {{name}}",
+  "prompt.mcp.openSettings": "Otwórz w Ustawieniach",
+  "prompt.mcp.signIn.busy": "Logowanie…",
   "prompt.action.autoApprove.enable": "Włącz automatyczne zatwierdzanie",
   "prompt.action.autoApprove.disable": "Wyłącz automatyczne zatwierdzanie",
   "prompt.action.autoApprove.enabled":
@@ -511,6 +516,9 @@ export const dict = {
   "provider.custom.error.duplicate": "Duplikat",
   "settings.openLocalConfig": "Konfig. lokalna",
   "settings.openGlobalConfig": "Konfig. globalna",
+  "settings.search.placeholder": "Wyszukaj ustawienia",
+  "settings.search.noResults": "Nie znaleziono ustawień",
+  "settings.search.clear": "Wyczyść wyszukiwanie",
   "settings.config.scope.local": "Lokalne",
   "settings.config.scope.global": "Globalne",
   "settings.config.status.loaded": "wczytano",
@@ -570,6 +578,7 @@ export const dict = {
   "session.tabs.switcher.pending": "Nowa",
   "session.tabs.switcher.busy": "Pracuje",
   "session.tabs.switcher.scheduled": "Zaplanowano",
+  "session.tabs.pinHint": "Shift+kliknij, aby przypiąć lub odpiąć",
   "session.tab.local": "Lokalny",
   "session.tab.cloud": "Chmura",
   "session.tab.worktree": "Drzewo robocze",
@@ -1042,12 +1051,31 @@ export const dict = {
   "settings.agentBehaviour.removeMcp.title": "Usuń serwer MCP",
   "settings.agentBehaviour.removeMcp.confirm":
     'Usunąć serwer MCP "{{name}}"? Spowoduje to usunięcie go z konfiguracji.',
+  "settings.agentBehaviour.removeMcp.bundleConfirm":
+    'Usunąć serwer MCP "{{name}}" i powiązane z nim umiejętności? Spowoduje to usunięcie serwera oraz każdej umiejętności należącej do tej instalacji Marketplace.',
   "settings.agentBehaviour.removeMcp.button": "Usuń",
   "settings.agentBehaviour.editMcp": "Edytuj serwer MCP",
   "settings.agentBehaviour.editMcp.transportLocal": "Serwer lokalny (transport stdio)",
   "settings.agentBehaviour.editMcp.transportRemote": "Serwer zdalny (transport SSE/HTTP)",
   "settings.agentBehaviour.editMcp.env": "Zmienne środowiskowe",
   "settings.agentBehaviour.editMcp.env.help": "Zmienne przekazywane do procesu serwera MCP.",
+  "settings.agentBehaviour.editMcp.oauth": "OAuth",
+  "settings.agentBehaviour.editMcp.oauth.help":
+    "Pozostaw na Automatycznie, jeśli serwer nie wymaga wcześniej zarejestrowanego klienta. Sekret klienta jest przechowywany w pliku konfiguracyjnym Kilo.",
+  "settings.agentBehaviour.editMcp.oauth.mode": "Tryb",
+  "settings.agentBehaviour.editMcp.oauth.mode.automatic": "Automatyczny",
+  "settings.agentBehaviour.editMcp.oauth.mode.disabled": "Wyłączony",
+  "settings.agentBehaviour.editMcp.oauth.mode.custom": "Klient niestandardowy",
+  "settings.agentBehaviour.editMcp.oauth.clientId": "ID klienta",
+  "settings.agentBehaviour.editMcp.oauth.clientSecret": "Sekret klienta",
+  "settings.agentBehaviour.editMcp.oauth.scope": "Zakres",
+  "settings.agentBehaviour.editMcp.oauth.callbackPort": "Port zwrotny",
+  "settings.agentBehaviour.editMcp.oauth.redirectUri": "URI przekierowania",
+  "settings.agentBehaviour.editMcp.oauth.redirectUri.help":
+    "Domyślnie http://127.0.0.1:19876/mcp/oauth/callback i zastępuje port zwrotny.",
+  "settings.agentBehaviour.editMcp.oauth.port.invalid": "Wprowadź port z zakresu od 1 do 65535.",
+  "settings.agentBehaviour.editMcp.oauth.secret.invalid": "Sekret klienta wymaga ID klienta.",
+  "settings.agentBehaviour.editMcp.oauth.redirectUri.invalid": "Wprowadź prawidłowy URI przekierowania.",
   "settings.agentBehaviour.addMcp.command": "Polecenie",
   "settings.agentBehaviour.addMcp.command.placeholder": "e.g. npx",
   "settings.agentBehaviour.addMcp.args": "Argumenty",
@@ -1060,6 +1088,8 @@ export const dict = {
   "settings.agentBehaviour.removeSkill.title": "Usuń umiejętność",
   "settings.agentBehaviour.removeSkill.confirm":
     'Usunąć umiejętność "{{name}}"? Spowoduje to usunięcie plików umiejętności z dysku.',
+  "settings.agentBehaviour.removeSkill.bundleConfirm":
+    'Usunąć umiejętność "{{name}}"? Spowoduje to również odinstalowanie serwera MCP {{mcp}} i każdej powiązanej umiejętności z tej samej instalacji Marketplace.',
   "settings.agentBehaviour.removeSkill.button": "Usuń",
   "settings.agentBehaviour.rules.description":
     "Reguły to pliki instrukcji, które kierują zachowaniem agenta. Są one dołączane do promptu systemowego dla każdej rozmowy. Dodaj poniżej ścieżki plików, aby dołączyć dodatkowe reguły.",
@@ -1076,6 +1106,12 @@ export const dict = {
   "settings.agentBehaviour.mcpDetail.command": "Polecenie",
   "settings.agentBehaviour.mcpDetail.args": "Argumenty",
   "settings.agentBehaviour.mcpDetail.env": "Środowisko",
+  "settings.agentBehaviour.mcpSignIn.cancel": "Anuluj logowanie",
+  "settings.agentBehaviour.mcpRemoving": "Usuwanie…",
+  "settings.agentBehaviour.mcpResetAuth": "Zresetuj logowanie",
+  "settings.agentBehaviour.mcpResetAuth.title": "Zresetuj logowanie MCP",
+  "settings.agentBehaviour.mcpResetAuth.confirm":
+    'Wyczyścić zapisane logowanie dla "{{name}}"? Będziesz musiał zalogować się ponownie.',
   "settings.agentBehaviour.mcpBrowseMarketplace": "Przeglądaj Marketplace",
   "settings.agentBehaviour.mcpEmpty":
     "Brak skonfigurowanych serwerów MCP. Dodaj serwery MCP w kilo.jsonc lub poproś agenta o ich dodanie.",
@@ -1334,6 +1370,8 @@ export const dict = {
 
   "task.todos.progress": "{{done}}/{{total}} zadań ukończono",
   "task.todos.allDone": "{{count}} zadań ukończono",
+  "task.todos.title": "Zadania",
+  "task.todos.done": "Wszystko gotowe",
   "task.backgroundAgents.running.one": "1 agent w tle",
   "task.backgroundAgents.running.many": "{{count}} agentów w tle",
   "task.backgroundAgents.open": "Otwórz agenta w tle",
@@ -1416,5 +1454,13 @@ export const dict = {
   "settings.experimental.browserAutomation.systemChrome.title": "Użyj systemowego Chrome",
   "settings.experimental.browserAutomation.systemChrome.description":
     "Użyj zainstalowanej przeglądarki Google Chrome dla zintegrowanej przeglądarki. Wyłącz tylko wtedy, gdy zgodna przeglądarka Playwright Chromium jest już zainstalowana.",
+  "settings.experimental.browserLinks.title": "Otwieraj linki w",
+  "settings.experimental.browserLinks.description":
+    "Wybierz, gdzie otwierają się linki internetowe z czatów Kilo. Wymaga zintegrowanej przeglądarki.",
+  "settings.experimental.browserLinks.external": "Przeglądarka systemowa",
+  "settings.experimental.browserLinks.integrated": "Zintegrowana przeglądarka",
   "chat.search.searchingHistory": "Wyszukiwanie we wcześniejszych wiadomościach…",
+  "browserTab.noSession":
+    "Otwórz przeglądarkę z sesji, aby wyświetlić podgląd lokalnej aplikacji lub publicznej strony HTTPS.",
+  "browserTab.disabled": "Zintegrowana przeglądarka jest wyłączona. Włącz ją w Ustawieniach Kilo > Eksperymentalne.",
 }

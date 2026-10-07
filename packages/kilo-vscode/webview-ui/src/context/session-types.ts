@@ -5,6 +5,8 @@ import type {
   AgentInfo,
   ContextUsage,
   FileAttachment,
+  McpAuthStatus,
+  McpBundle,
   McpStatusEntry,
   Message,
   ModelSelection,
@@ -35,6 +37,8 @@ export interface SessionContextValue {
 
   // All sessions (sorted most recent first)
   sessions: Accessor<SessionInfo[]>
+  // Project whose session list is complete enough for absence-based tab cleanup.
+  sessionsProject: Accessor<string | undefined>
 
   // Session status
   status: Accessor<SessionStatus>
@@ -135,7 +139,18 @@ export interface SessionContextValue {
   mcpLoading: Accessor<string | null>
   connectMcp: (name: string) => void
   disconnectMcp: (name: string) => void
-  authenticateMcp: (name: string) => void
+
+  // MCP OAuth sign-in state, owned by the extension host's McpAuthService and
+  // shared by Settings, the chat prompt's session-issues indicator, and the
+  // Marketplace install modal.
+  mcpAuth: Accessor<{ needsAuth: string[]; busy: string[] }>
+  mcpRemoving: Accessor<string[]>
+  signInMcp: (name: string, notify?: boolean) => void
+  cancelMcpSignIn: (name: string) => void
+  resetMcpAuth: (name: string) => void
+  mcpAuthResult: Accessor<{ name: string; status: McpAuthStatus; error?: string } | undefined>
+  mcpBundles: Accessor<McpBundle[]>
+  refreshMcpBundles: () => void
   selectedAgent: (sessionID?: string) => string
   submission: (sessionID?: string) => { model?: ModelSelection; variant?: string; agent?: string }
   selectAgent: (name: string, sessionID?: string) => void

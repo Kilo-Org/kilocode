@@ -60,6 +60,7 @@ export const dict = {
   ...anacondaDesktopDict,
   ...cloudProviderDict,
   "task.swarm.title": "Tablero",
+  "task.swarm.open": "Abrir tablero",
   "task.swarm.refresh": "Actualizar",
   "task.swarm.reset": "Restablecer tablero",
   "task.swarm.resetTitle": "¿Restablecer este tablero?",
@@ -218,6 +219,10 @@ export const dict = {
   "prompt.agents.show": "Mostrar agentes en segundo plano",
   "prompt.action.enhance": "Mejorar prompt",
   "prompt.paste.expand": "Haz clic para expandir el texto pegado",
+  "prompt.issues.title": "Problemas de la sesión",
+  "prompt.mcp.provider": "MCP de {{name}}",
+  "prompt.mcp.openSettings": "Abrir en Configuración",
+  "prompt.mcp.signIn.busy": "Iniciando sesión…",
   "prompt.action.autoApprove.enable": "Activar aprobación automática",
   "prompt.action.autoApprove.disable": "Desactivar aprobación automática",
   "prompt.action.autoApprove.enabled":
@@ -555,6 +560,9 @@ export const dict = {
   "provider.custom.error.duplicate": "Duplicado",
   "settings.openLocalConfig": "Config local",
   "settings.openGlobalConfig": "Config global",
+  "settings.search.placeholder": "Buscar configuraciones",
+  "settings.search.noResults": "No se encontraron configuraciones",
+  "settings.search.clear": "Borrar búsqueda",
   "settings.config.scope.local": "Local",
   "settings.config.scope.global": "Global",
   "settings.config.status.loaded": "cargado",
@@ -616,6 +624,7 @@ export const dict = {
   "session.tabs.switcher.pending": "Nueva",
   "session.tabs.switcher.busy": "Trabajando",
   "session.tabs.switcher.scheduled": "Programado",
+  "session.tabs.pinHint": "Mayús+clic para fijar o dejar de fijar",
   "session.tab.local": "Local",
   "session.tab.cloud": "Nube",
   "session.tab.worktree": "Árbol de trabajo",
@@ -1055,12 +1064,31 @@ export const dict = {
   "settings.agentBehaviour.removeMcp.title": "Eliminar servidor MCP",
   "settings.agentBehaviour.removeMcp.confirm":
     '¿Eliminar el servidor MCP "{{name}}"? Esto lo eliminará de su configuración.',
+  "settings.agentBehaviour.removeMcp.bundleConfirm":
+    '¿Eliminar el servidor MCP "{{name}}" y sus habilidades complementarias? Esto elimina tanto el servidor como cada habilidad que pertenece a esta instalación del Marketplace.',
   "settings.agentBehaviour.removeMcp.button": "Eliminar",
   "settings.agentBehaviour.editMcp": "Editar servidor MCP",
   "settings.agentBehaviour.editMcp.transportLocal": "Servidor local (transporte stdio)",
   "settings.agentBehaviour.editMcp.transportRemote": "Servidor remoto (transporte SSE/HTTP)",
   "settings.agentBehaviour.editMcp.env": "Variables de entorno",
   "settings.agentBehaviour.editMcp.env.help": "Variables pasadas al proceso del servidor MCP.",
+  "settings.agentBehaviour.editMcp.oauth": "OAuth",
+  "settings.agentBehaviour.editMcp.oauth.help":
+    "Déjelo en Automático a menos que el servidor requiera un cliente preregistrado. Un secreto de cliente se almacena en su archivo de configuración de Kilo.",
+  "settings.agentBehaviour.editMcp.oauth.mode": "Modo",
+  "settings.agentBehaviour.editMcp.oauth.mode.automatic": "Automático",
+  "settings.agentBehaviour.editMcp.oauth.mode.disabled": "Desactivado",
+  "settings.agentBehaviour.editMcp.oauth.mode.custom": "Cliente personalizado",
+  "settings.agentBehaviour.editMcp.oauth.clientId": "ID de cliente",
+  "settings.agentBehaviour.editMcp.oauth.clientSecret": "Secreto de cliente",
+  "settings.agentBehaviour.editMcp.oauth.scope": "Alcance",
+  "settings.agentBehaviour.editMcp.oauth.callbackPort": "Puerto de retorno",
+  "settings.agentBehaviour.editMcp.oauth.redirectUri": "URI de redirección",
+  "settings.agentBehaviour.editMcp.oauth.redirectUri.help":
+    "El valor predeterminado es http://127.0.0.1:19876/mcp/oauth/callback y anula el puerto de retorno.",
+  "settings.agentBehaviour.editMcp.oauth.port.invalid": "Ingrese un puerto entre 1 y 65535.",
+  "settings.agentBehaviour.editMcp.oauth.secret.invalid": "Un secreto de cliente requiere un ID de cliente.",
+  "settings.agentBehaviour.editMcp.oauth.redirectUri.invalid": "Ingrese un URI de redirección válido.",
   "settings.agentBehaviour.addMcp.command": "Comando",
   "settings.agentBehaviour.addMcp.command.placeholder": "e.g. npx",
   "settings.agentBehaviour.addMcp.args": "Argumentos",
@@ -1073,6 +1101,8 @@ export const dict = {
   "settings.agentBehaviour.removeSkill.title": "Eliminar habilidad",
   "settings.agentBehaviour.removeSkill.confirm":
     '¿Eliminar la habilidad "{{name}}"? Esto borrará los archivos de la habilidad del disco.',
+  "settings.agentBehaviour.removeSkill.bundleConfirm":
+    '¿Eliminar la habilidad "{{name}}"? Esto también desinstalará el servidor MCP {{mcp}} y cada habilidad complementaria de la misma instalación del Marketplace.',
   "settings.agentBehaviour.removeSkill.button": "Eliminar",
   "settings.agentBehaviour.rules.description":
     "Las reglas son archivos de instrucciones que guían el comportamiento del agente. Se incluyen en el prompt del sistema para cada conversación. Añada rutas de archivos a continuación para incluir reglas adicionales.",
@@ -1089,6 +1119,12 @@ export const dict = {
   "settings.agentBehaviour.mcpDetail.command": "Comando",
   "settings.agentBehaviour.mcpDetail.args": "Argumentos",
   "settings.agentBehaviour.mcpDetail.env": "Entorno",
+  "settings.agentBehaviour.mcpSignIn.cancel": "Cancelar inicio de sesión",
+  "settings.agentBehaviour.mcpRemoving": "Eliminando…",
+  "settings.agentBehaviour.mcpResetAuth": "Restablecer inicio de sesión",
+  "settings.agentBehaviour.mcpResetAuth.title": "Restablecer inicio de sesión de MCP",
+  "settings.agentBehaviour.mcpResetAuth.confirm":
+    '¿Borrar el inicio de sesión guardado para "{{name}}"? Deberás iniciar sesión de nuevo.',
   "settings.agentBehaviour.mcpBrowseMarketplace": "Explorar Marketplace",
   "settings.agentBehaviour.mcpEmpty":
     "No hay servidores MCP configurados. Añada servidores MCP en kilo.jsonc o pida al agente que los añada.",
@@ -1348,6 +1384,8 @@ export const dict = {
 
   "task.todos.progress": "{{done}}/{{total}} tareas completadas",
   "task.todos.allDone": "{{count}} tareas completadas",
+  "task.todos.title": "Tareas",
+  "task.todos.done": "Todo listo",
   "task.backgroundAgents.running.one": "1 agente en segundo plano",
   "task.backgroundAgents.running.many": "{{count}} agentes en segundo plano",
   "task.backgroundAgents.open": "Abrir agente en segundo plano",
@@ -1430,5 +1468,13 @@ export const dict = {
   "settings.experimental.browserAutomation.systemChrome.title": "Usar Chrome del sistema",
   "settings.experimental.browserAutomation.systemChrome.description":
     "Usa el Google Chrome instalado para el Navegador integrado. Desactívalo solo si ya hay instalado un navegador Playwright Chromium compatible.",
+  "settings.experimental.browserLinks.title": "Abrir enlaces en",
+  "settings.experimental.browserLinks.description":
+    "Elige dónde se abren los enlaces web desde los chats de Kilo. Requiere el Navegador integrado.",
+  "settings.experimental.browserLinks.external": "Navegador del sistema",
+  "settings.experimental.browserLinks.integrated": "Navegador integrado",
   "chat.search.searchingHistory": "Buscando en mensajes anteriores…",
+  "browserTab.noSession":
+    "Abre el navegador desde una sesión para previsualizar una aplicación local o una página HTTPS pública.",
+  "browserTab.disabled": "El navegador integrado está desactivado. Actívalo en Ajustes de Kilo > Experimental.",
 }

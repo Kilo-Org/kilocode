@@ -32,9 +32,12 @@ import {
 import { useSession } from "../../context/session"
 import { revertPromptState } from "../../context/session-utils"
 import { useLocalTabs } from "../../context/local-tabs"
+import { showTabStrip } from "../../utils/local-tabs"
 import { useServer } from "../../context/server"
 import { useIndexing } from "../../context/indexing"
 import { indexingButtonVisible } from "../../context/indexing-utils"
+import { mcpAuthIssues } from "./session-issues"
+import { SessionIssues } from "./SessionIssues"
 import { useLanguage } from "../../context/language"
 import { useVSCode } from "../../context/vscode"
 import { useConfig } from "../../context/config"
@@ -410,6 +413,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       draft: !!text(),
       busy: isBusy(),
       selection: shortcuts().selection,
+      tabs: showTabStrip(tabs?.display() ?? []),
       manager: props.manager?.(),
     })
   }
@@ -1547,6 +1551,17 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     vscode.postMessage({ type: "openSettingsTab", tab: "indexing" })
   }
 
+  const handleOpenMcpSettings = (name: string) => {
+    vscode.postMessage({ type: "openSettingsTab", tab: "agentBehaviour", subtab: "mcpServers", focus: name })
+  }
+
+  const sessionIssues = createMemo(() =>
+    mcpAuthIssues(session.mcpAuth().needsAuth, session.mcpAuth().busy, language.t, {
+      signIn: (name) => session.signInMcp(name),
+      openSettings: handleOpenMcpSettings,
+    }),
+  )
+
   const handleEnhance = () => {
     if (isDisabled() || enhancing() || isBusy()) return
     const draft = paste.plainText(text()).trim()
@@ -2039,19 +2054,30 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
               <For each={mention.mentionResults()}>
                 {(item, index) => (
                   <>
-                    <div
-                      class="file-mention-item"
-                      data-type={item.type}
-                      title={"root" in item ? item.value : undefined}
-                      classList={{ "file-mention-item--active": index() === mention.mentionIndex() }}
-                      onMouseDown={(e) => {
-                        e.preventDefault()
-                        if (textareaRef) mention.selectMention(item, textareaRef, setText, adjustHeight)
-                      }}
-                      onMouseEnter={() => mention.setMentionIndex(index())}
+                    {/* Rendered in the webview rather than as a native `title`, which
+                        macOS does not reliably show inside VS Code webviews. */}
+                    <Tooltip
+                      value={
+                        item.type === "file" || item.type === "folder" || item.type === "opened-file"
+                          ? item.value
+                          : undefined
+                      }
+                      placement="top-start"
+                      contentClass="file-mention-tooltip"
                     >
-                      <MentionItemContent item={item} />
-                    </div>
+                      <div
+                        class="file-mention-item"
+                        data-type={item.type}
+                        classList={{ "file-mention-item--active": index() === mention.mentionIndex() }}
+                        onMouseDown={(e) => {
+                          e.preventDefault()
+                          if (textareaRef) mention.selectMention(item, textareaRef, setText, adjustHeight)
+                        }}
+                        onMouseEnter={() => mention.setMentionIndex(index())}
+                      >
+                        <MentionItemContent item={item} />
+                      </div>
+                    </Tooltip>
                     <Show when={divides(index())}>
                       <div class="file-mention-separator" />
                     </Show>
@@ -2262,6 +2288,9 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
             rows={1}
             dir="auto"
           />
+          <div class="prompt-input-issues-overlay">
+            <SessionIssues issues={sessionIssues()} />
+          </div>
         </div>
       </div>
       <div class="prompt-input-hint">
