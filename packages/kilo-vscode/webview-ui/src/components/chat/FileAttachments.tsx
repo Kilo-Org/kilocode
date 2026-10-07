@@ -2,7 +2,6 @@ import { For, Show, createSignal, type Component } from "solid-js"
 import { Button } from "@kilocode/kilo-ui/button"
 import { FileIcon } from "@kilocode/kilo-ui/file-icon"
 import { Icon } from "@kilocode/kilo-ui/icon"
-import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { dataUrlText } from "../../hooks/image-attachments-utils"
 import type { ImageAttachment } from "../../hooks/useImageAttachments"
 import { useLanguage } from "../../context/language"
@@ -45,6 +44,7 @@ export const FileAttachments: Component<FileAttachmentsProps> = (props) => {
           onClick={() => setOpen(!open())}
         >
           <Icon name={open() ? "chevron-down" : "chevron-right"} size="small" />
+          <Icon name="file" size="small" />
           <span class="prompt-review-comments-title">
             {language.t("prompt.attachment.files")} ({props.files.length})
           </span>
@@ -82,14 +82,14 @@ export const FileAttachments: Component<FileAttachmentsProps> = (props) => {
                       </Show>
                     </button>
                     <Show when={props.onRemove}>
-                      <IconButton
-                        icon="close-small"
-                        variant="ghost"
-                        size="small"
+                      <button
+                        type="button"
                         class="prompt-review-row-remove"
                         onClick={() => props.onRemove?.(file.id)}
                         aria-label={language.t("common.delete")}
-                      />
+                      >
+                        ×
+                      </button>
                     </Show>
                   </div>
 
