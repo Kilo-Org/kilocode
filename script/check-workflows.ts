@@ -45,6 +45,7 @@ const active = new Set([
   "kilo-auto-close.yml",
   "nix-eval.yml",
   "nix-hashes.yml",
+  "outdated-kilo-deps.yml",
   "prepare-jetbrains-release.yml",
   "publish-jetbrains-bundled.yml",
   "publish-jetbrains.yml",
@@ -57,6 +58,7 @@ const active = new Set([
   "test-vscode.yml",
   "test.yml",
   "typecheck.yml",
+  "validate-cli-smoke.yml",
   "visual-regression.yml",
   "watch-opencode-releases.yml",
 ])

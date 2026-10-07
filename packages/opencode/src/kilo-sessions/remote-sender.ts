@@ -4,7 +4,7 @@ import { RemoteModelCatalog } from "@/kilo-sessions/remote-model-catalog"
 import { RemoteSessionLog } from "@/kilo-sessions/remote-session-log"
 import { RemoteProtocol } from "@/kilo-sessions/remote-protocol"
 // kilocode_change - set_pr_link: parse the app-supplied PR URL into a per-session link.
-import { parsePrUrl, type PrLink } from "@/kilo-sessions/pr-link"
+import { enabled as prEnabled, parsePrUrl, type PrLink } from "@/kilo-sessions/pr-link"
 import { consumeRenameAdoption, markRenameAdopted } from "@/kilo-sessions/rename-adoptions"
 import type { RemoteWS } from "@/kilo-sessions/remote-ws"
 import { GlobalBus } from "@/bus/global"
@@ -1379,6 +1379,10 @@ export namespace RemoteSender {
       // than pin the link to a worktree every session would inherit. A parsed URL
       // is still checked against the session worktree's own repository.
       if (msg.command === "set_pr_link") {
+        if (!prEnabled()) {
+          options.conn.send({ type: "response", id: msg.id, error: "set_pr_link is unsupported for this client" })
+          return
+        }
         const parsed = SetPrLinkData.safeParse(msg.data)
         const current = msg.sessionId ? decodeSessionID(msg.sessionId) : Option.none<SessionID>()
         if (!parsed.success || Option.isNone(current)) {

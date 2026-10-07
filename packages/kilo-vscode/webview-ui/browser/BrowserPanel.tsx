@@ -148,6 +148,7 @@ const Picker: Component<{
         class="am-browser-inspect"
         aria-label={props.labels.inspect}
         onMouseMove={(event) => props.controller.move(position(event))}
+        onMouseLeave={props.controller.leave}
         onClick={(event) => props.controller.select(position(event))}
       />
       <Show when={bounds()} keyed>
@@ -209,6 +210,8 @@ const Viewport: Component<{
             state={() => props.state}
             transport={props.transport}
             label={props.labels.screenshotAlt}
+            inspecting={() => props.controller.selecting() || props.controller.pointing()}
+            onScroll={props.controller.scroll}
           />
         )}
       </Show>

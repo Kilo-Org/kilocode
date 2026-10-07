@@ -217,7 +217,7 @@ describe("Marketplace companion skill payloads", () => {
     const extensions = Object.getOwnPropertyDescriptor(vscode.extensions, "all")
     try {
       Object.defineProperty(vscode.extensions, "all", { configurable: true, value: [] })
-      const data = await service.fetchData(client, project, project, [])
+      const data = await service.fetchData(client, project, project)
       expect(data.marketplaceItems).toEqual([mcp])
       const loaded = data.marketplaceItems.at(0)!
       const options = { target: scope, parameters: { token: "test-value" } }
@@ -241,7 +241,6 @@ describe("Marketplace companion skill payloads", () => {
     } finally {
       if (extensions) Object.defineProperty(vscode.extensions, "all", extensions)
       if (!extensions) Reflect.deleteProperty(vscode.extensions, "all")
-      service.dispose()
       server.stop(true)
     }
   })
@@ -276,6 +275,17 @@ describe("Marketplace removal actions", () => {
     expect(has(files, local)).toBe(false)
     expect(has(files, legacy)).toBe(false)
     expect(has(files, global)).toBe(false)
+  })
+
+  it("does not report whole-bundle success when either scope fails", async () => {
+    const remove = mock(async (_client, _item, scope: "project" | "global") => ({
+      success: scope === "project",
+      slug: item.id,
+      error: scope === "global" ? "Global config is still installed" : undefined,
+    }))
+
+    expect(await removeMarketplaceItemFromAllScopes(ctx(remove), item, project, project)).toBe(false)
+    expect(remove.mock.calls.map((call) => call[2])).toEqual(["project", "global"])
   })
 })
 

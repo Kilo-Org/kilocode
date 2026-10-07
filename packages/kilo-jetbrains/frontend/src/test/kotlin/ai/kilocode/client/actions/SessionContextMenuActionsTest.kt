@@ -55,6 +55,7 @@ class SessionContextMenuActionsTest : SessionUiTestBase() {
                 "Kilo.Session.CopyPrRef",
                 "---",
                 "Kilo.OpenSettings",
+                "Kilo.ReloadCoreSettings",
                 "---",
                 "\$Copy",
                 "---",
@@ -91,6 +92,7 @@ class SessionContextMenuActionsTest : SessionUiTestBase() {
                 "Kilo.Session.CopyPrRef",
                 "---",
                 "Kilo.OpenSettings",
+                "Kilo.ReloadCoreSettings",
                 "---",
                 "Kilo.Session.CopyId",
                 "Kilo.Session.CopyShareLink",
@@ -112,6 +114,20 @@ class SessionContextMenuActionsTest : SessionUiTestBase() {
 
             assertEquals("$group references undeclared action ids", emptyList<String>(), missing)
         }
+    }
+
+    fun `test reload slash command reloads core settings for the session workspace`() {
+        rpc.history.addAll(history(1))
+        ui = newUi(id = "ses_test")
+        settle()
+        val prompt = find<ai.kilocode.client.session.ui.prompt.PromptPanel>(ui)
+        prompt.setText("/reload")
+
+        prompt.send()
+        settle()
+
+        assertEquals(listOf(workspace.directory), workspaceRpc.coreReloads.toList())
+        assertTrue("client command must not be sent to the model", rpc.prompts.isEmpty())
     }
 
     /**
