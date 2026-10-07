@@ -139,6 +139,41 @@ class PromptRailItemsTest : BasePlatformTestCase() {
         assertTrue("prose on both sides must survive: $kept", kept.contains("lead") && kept.contains("tail"))
     }
 
+    /**
+     * A fenced answer must also cost a bounded amount per call. Measuring the block is unavoidable, so
+     * the close search has its own cap rather than running to the end of a very large answer.
+     */
+    fun `test the close scan is bounded for a huge fenced answer`() {
+        val code = "val x = 1\n".repeat(20_000)
+        val fenced = Counting("lead\n```kotlin\n$code```\ntail")
+
+        val out = StringBuilder()
+        PromptRailItems.prose(out, fenced)
+
+        assertTrue(
+            "reads ${fenced.reads} must stay bounded for a ${fenced.length}-char answer",
+            fenced.reads < 25_000,
+        )
+        // Crucially still no spill: hitting the cap keeps the prose in front of the fence and stops.
+        val kept = out.toString()
+        assertFalse("the fence marker must not survive: $kept", kept.contains("`"))
+        assertFalse("code inside the fence must not survive: $kept", kept.contains("val x = 1"))
+        assertTrue("prose before the fence must survive: $kept", kept.contains("lead"))
+    }
+
+    /**
+     * A genuinely unclosed fence keeps its baseline behaviour: `preview()` only strips a closed pair, so
+     * the text is kept rather than dropped. This is the case streaming produces mid-code-block.
+     */
+    fun `test a short unclosed fence is kept as text`() {
+        val partial = Counting("lead\n```kotlin\nval x = 1")
+
+        val out = StringBuilder()
+        PromptRailItems.prose(out, partial)
+
+        assertEquals("lead\n```kotlin\nval x = 1", out.toString())
+    }
+
     private class Counting(private val src: String) : CharSequence {
         var reads = 0
 

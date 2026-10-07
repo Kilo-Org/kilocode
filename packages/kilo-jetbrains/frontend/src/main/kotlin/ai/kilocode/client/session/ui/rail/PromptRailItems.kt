@@ -40,6 +40,13 @@ object PromptRailItems {
     /** Length of a fence marker. */
     private const val MARK = 3
 
+    /**
+     * Characters scanned looking for a fence's closing marker. Sized past any realistic code block, so
+     * a block is normally stepped over in full; beyond it the preview keeps the prose before the fence
+     * and stops, which bounds the work without ever spilling code into the output.
+     */
+    private const val SCAN = BUDGET * 16
+
     /** Leading characters folded into a turn's cache stamp. */
     private const val PROBE = 256
 
@@ -164,11 +171,20 @@ object PromptRailItems {
             // streamed delta re-previews its turn, which would otherwise make the stream quadratic.
             val open = mark(src, at, at + room)
             if (open < 0) return take(out, src, at, at + room)
-            // The closing search is not bounded the same way: the block has to be measured to be
-            // stepped over, and guessing its end is what leaks half a fence into the preview. It only
-            // runs when a fence is actually present, and never past this part.
-            val close = mark(src, open + MARK, src.length)
-            if (close < 0) return take(out, src, at, src.length)
+            // The closing search is bounded too, but by its own cap rather than the budget: the block
+            // has to be measured to be stepped over, so this cannot stop at the budget the way the
+            // opening search does. [SCAN] is sized past any realistic code block, which keeps a fenced
+            // answer bounded per call instead of rescanning the block on every streamed delta.
+            val reach = open + MARK + SCAN
+            val close = mark(src, open + MARK, minOf(src.length, reach))
+            if (close < 0) {
+                // Whole part scanned, so the fence really is unclosed: keep it as text, which is what
+                // [preview]'s closed-pair regex does with it.
+                if (reach >= src.length) return take(out, src, at, src.length)
+                // Cap reached first, so the block may well close further on. Emit the prose in front of
+                // it and stop; keeping the remainder as text here is what spills code into the preview.
+                return take(out, src, at, open)
+            }
             take(out, src, at, open)
             if (out.length < BUDGET) out.append(' ')
             at = close + MARK
