@@ -1,5 +1,8 @@
 import { describe, expect, it } from "bun:test"
 import { applyProjectSelection } from "../../webview-ui/agent-manager/project/selection"
+import { agentProject, isStaleAgentSession } from "../../webview-ui/src/context/session-project"
+import { mergeSessionsLoaded } from "../../webview-ui/src/context/session-paging"
+import type { SessionInfo, SessionsLoadedMessage } from "../../webview-ui/src/types/messages"
 
 function deps(active: string, applied = active) {
   const calls: string[] = []
@@ -71,5 +74,33 @@ describe("applyProjectSelection", () => {
     )
 
     expect(result.calls).toEqual([])
+  })
+})
+
+describe("project-scoped session refresh", () => {
+  it("keeps the selected local session when the previous project's list arrives after a switch", () => {
+    const local: SessionInfo = { id: "ses-b", parentID: null, createdAt: "", updatedAt: "" }
+    const sessions: Record<string, SessionInfo> = { [local.id]: local }
+    const project = agentProject({
+      type: "agentManager.projects",
+      projects: [{ id: "prj-b", active: true }],
+    } as never)
+    const apply = (message: SessionsLoadedMessage) => {
+      if (isStaleAgentSession(message, project)) return
+      mergeSessionsLoaded({ loaded: message.sessions, fresh: new Set(), setSessions: (update) => update(sessions) })
+    }
+
+    apply({ type: "sessionsLoaded", projectId: "prj-a", sessions: [] })
+    expect(sessions[local.id]).toBe(local)
+    apply({ type: "sessionsLoaded", projectId: "prj-b", sessions: [local] })
+    expect(Object.keys(sessions)).toEqual([local.id])
+  })
+
+  it("rejects old-project pages and accepts current-project or ordinary sidebar lists", () => {
+    const page: SessionsLoadedMessage = { type: "sessionsLoaded", projectId: "prj-a", sessions: [], append: true }
+    expect(isStaleAgentSession(page, "prj-b")).toBe(true)
+    expect(isStaleAgentSession(page, "prj-a")).toBe(false)
+    expect(isStaleAgentSession(page, undefined)).toBe(false)
+    expect(isStaleAgentSession({ type: "sessionsLoaded", sessions: [] }, "prj-b")).toBe(false)
   })
 })

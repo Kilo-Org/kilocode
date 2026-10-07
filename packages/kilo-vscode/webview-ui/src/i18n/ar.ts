@@ -508,6 +508,9 @@ export const dict = {
   "provider.custom.error.duplicate": "مكرر",
   "settings.openLocalConfig": "تكوين محلي",
   "settings.openGlobalConfig": "تكوين عام",
+  "settings.search.placeholder": "البحث في الإعدادات",
+  "settings.search.noResults": "لم يتم العثور على إعدادات",
+  "settings.search.clear": "مسح البحث",
   "settings.config.scope.local": "محلي",
   "settings.config.scope.global": "عالمي",
   "settings.config.status.loaded": "محمل",
@@ -567,6 +570,7 @@ export const dict = {
   "session.tabs.switcher.pending": "جديد",
   "session.tabs.switcher.busy": "جارٍ العمل",
   "session.tabs.switcher.scheduled": "مجدولة",
+  "session.tabs.pinHint": "Shift+النقر للتثبيت أو إلغاء التثبيت",
   "session.tab.local": "محلي",
   "session.tab.cloud": "السحابة",
   "session.tab.worktree": "شجرة العمل",
@@ -1330,6 +1334,8 @@ export const dict = {
 
   "task.todos.progress": "{{done}}/{{total}} مهام مكتملة",
   "task.todos.allDone": "{{count}} مهام مكتملة",
+  "task.todos.title": "المهام",
+  "task.todos.done": "اكتمل الكل",
   "task.backgroundAgents.running.one": "وكيل خلفي واحد",
   "task.backgroundAgents.running.many": "{{count}} وكلاء خلفيون",
   "task.backgroundAgents.open": "فتح الوكيل الخلفي",
@@ -1413,4 +1419,6 @@ export const dict = {
   "settings.experimental.browserAutomation.systemChrome.description":
     "استخدام Google Chrome المثبّت للمتصفح المدمج. عطّله فقط عند تثبيت متصفح Playwright Chromium متوافق.",
   "chat.search.searchingHistory": "جارٍ البحث في الرسائل السابقة…",
+  "browserTab.noSession": "افتح المتصفح من جلسة لمعاينة تطبيق محلي أو صفحة HTTPS عامة.",
+  "browserTab.disabled": "المتصفح المدمج معطّل. فعّله من إعدادات Kilo > تجريبي.",
 }

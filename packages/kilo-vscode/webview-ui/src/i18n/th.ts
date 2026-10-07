@@ -553,6 +553,9 @@ export const dict = {
   "provider.custom.error.duplicate": "ซ้ำ",
   "settings.openLocalConfig": "คอนฟิก Local",
   "settings.openGlobalConfig": "คอนฟิก Global",
+  "settings.search.placeholder": "ค้นหาการตั้งค่า",
+  "settings.search.noResults": "ไม่พบการตั้งค่า",
+  "settings.search.clear": "ล้างการค้นหา",
   "settings.config.scope.local": "ภายใน",
   "settings.config.scope.global": "ทั่วโลก",
   "settings.config.status.loaded": "โหลดแล้ว",
@@ -612,6 +615,7 @@ export const dict = {
   "session.tabs.switcher.pending": "ใหม่",
   "session.tabs.switcher.busy": "กำลังทำงาน",
   "session.tabs.switcher.scheduled": "ตั้งเวลาไว้",
+  "session.tabs.pinHint": "Shift+คลิกเพื่อปักหมุดหรือเลิกปักหมุด",
   "session.tab.local": "ในเครื่อง",
   "session.tab.cloud": "คลาวด์",
   "session.tab.worktree": "เวิร์กทรี Git",
@@ -1336,6 +1340,8 @@ export const dict = {
 
   "task.todos.progress": "{{done}}/{{total}} งานเสร็จแล้ว",
   "task.todos.allDone": "{{count}} งานเสร็จแล้ว",
+  "task.todos.title": "รายการงาน",
+  "task.todos.done": "เสร็จทั้งหมด",
   "task.backgroundAgents.running.one": "เอเจนต์เบื้องหลัง 1 ตัว",
   "task.backgroundAgents.running.many": "เอเจนต์เบื้องหลัง {{count}} ตัว",
   "task.backgroundAgents.open": "เปิดเอเจนต์เบื้องหลัง",
@@ -1419,4 +1425,6 @@ export const dict = {
   "settings.experimental.browserAutomation.systemChrome.description":
     "ใช้ Google Chrome ที่ติดตั้งไว้สำหรับเบราว์เซอร์ในตัว ปิดใช้งานเฉพาะเมื่อติดตั้งเบราว์เซอร์ Playwright Chromium ที่เข้ากันได้ไว้แล้วเท่านั้น",
   "chat.search.searchingHistory": "กำลังค้นหาข้อความก่อนหน้า…",
+  "browserTab.noSession": "เปิดเบราว์เซอร์จากเซสชันเพื่อดูตัวอย่างแอปพลิเคชันในเครื่องหรือหน้า HTTPS สาธารณะ",
+  "browserTab.disabled": "เบราว์เซอร์ในตัวถูกปิดใช้งาน เปิดใช้งานได้ในการตั้งค่า Kilo > ทดลอง",
 }

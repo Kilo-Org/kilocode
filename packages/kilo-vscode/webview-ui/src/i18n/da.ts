@@ -559,6 +559,9 @@ export const dict = {
   "provider.custom.error.duplicate": "Duplikat",
   "settings.openLocalConfig": "Lokal konfig",
   "settings.openGlobalConfig": "Global konfig",
+  "settings.search.placeholder": "Søg i indstillinger",
+  "settings.search.noResults": "Ingen indstillinger fundet",
+  "settings.search.clear": "Ryd søgning",
   "settings.config.scope.local": "Lokal",
   "settings.config.scope.global": "Global",
   "settings.config.status.loaded": "indlæst",
@@ -619,6 +622,7 @@ export const dict = {
   "session.tabs.switcher.pending": "Ny",
   "session.tabs.switcher.busy": "Arbejder",
   "session.tabs.switcher.scheduled": "Planlagt",
+  "session.tabs.pinHint": "Skift+klik for at fastgøre eller frigøre",
   "session.tab.local": "Lokal",
   "session.tab.cloud": "Sky",
   "session.tab.worktree": "Arbejdstræ",
@@ -1362,6 +1366,8 @@ export const dict = {
 
   "task.todos.progress": "{{done}}/{{total}} opgaver udført",
   "task.todos.allDone": "{{count}} opgaver udført",
+  "task.todos.title": "Opgaver",
+  "task.todos.done": "Alt færdigt",
   "task.backgroundAgents.running.one": "1 baggrundsagent",
   "task.backgroundAgents.running.many": "{{count}} baggrundsagenter",
   "task.backgroundAgents.open": "Åbn baggrundsagent",
@@ -1445,4 +1451,7 @@ export const dict = {
   "settings.experimental.browserAutomation.systemChrome.description":
     "Brug den installerede Google Chrome til den integrerede browser. Deaktivér kun, når en kompatibel Playwright Chromium-browser allerede er installeret.",
   "chat.search.searchingHistory": "Søger i tidligere beskeder…",
+  "browserTab.noSession":
+    "Åbn browseren fra en session for at forhåndsvise en lokal applikation eller en offentlig HTTPS-side.",
+  "browserTab.disabled": "Den integrerede browser er deaktiveret. Aktivér den i Kilo-indstillinger > Eksperimentel.",
 }

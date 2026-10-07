@@ -556,6 +556,9 @@ export const dict = {
   "provider.custom.error.duplicate": "Дубликат",
   "settings.openLocalConfig": "Локальный конфиг",
   "settings.openGlobalConfig": "Глобальный конфиг",
+  "settings.search.placeholder": "Поиск параметров",
+  "settings.search.noResults": "Параметры не найдены",
+  "settings.search.clear": "Очистить поиск",
   "settings.config.scope.local": "Локальный",
   "settings.config.scope.global": "Глобальный",
   "settings.config.status.loaded": "загружено",
@@ -617,6 +620,7 @@ export const dict = {
   "session.tabs.switcher.pending": "Новая",
   "session.tabs.switcher.busy": "В работе",
   "session.tabs.switcher.scheduled": "Запланировано",
+  "session.tabs.pinHint": "Shift+щелчок, чтобы закрепить или открепить",
   "session.tab.local": "Локальный",
   "session.tab.cloud": "Облако",
   "session.tab.worktree": "Рабочее дерево",
@@ -1361,6 +1365,8 @@ export const dict = {
 
   "task.todos.progress": "{{done}}/{{total}} задач выполнено",
   "task.todos.allDone": "{{count}} задач выполнено",
+  "task.todos.title": "Задачи",
+  "task.todos.done": "Всё готово",
   "task.backgroundAgents.running.one": "1 фоновый агент",
   "task.backgroundAgents.running.many": "Фоновых агентов: {{count}}",
   "task.backgroundAgents.open": "Открыть фонового агента",
@@ -1444,4 +1450,7 @@ export const dict = {
   "settings.experimental.browserAutomation.systemChrome.description":
     "Использовать установленный Google Chrome для встроенного браузера. Отключайте только если совместимый браузер Playwright Chromium уже установлен.",
   "chat.search.searchingHistory": "Поиск в более ранних сообщениях…",
+  "browserTab.noSession":
+    "Откройте браузер из сеанса, чтобы просмотреть локальное приложение или публичную HTTPS-страницу.",
+  "browserTab.disabled": "Встроенный браузер отключён. Включите его в Настройках Kilo > Экспериментальные.",
 }

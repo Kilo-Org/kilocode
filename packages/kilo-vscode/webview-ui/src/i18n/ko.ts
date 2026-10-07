@@ -516,6 +516,9 @@ export const dict = {
   "provider.custom.error.duplicate": "중복",
   "settings.openLocalConfig": "로컬 설정",
   "settings.openGlobalConfig": "전역 설정",
+  "settings.search.placeholder": "설정 검색",
+  "settings.search.noResults": "설정을 찾을 수 없습니다",
+  "settings.search.clear": "검색 지우기",
   "settings.config.scope.local": "로컬",
   "settings.config.scope.global": "글로벌",
   "settings.config.status.loaded": "로드됨",
@@ -575,6 +578,7 @@ export const dict = {
   "session.tabs.switcher.pending": "새 항목",
   "session.tabs.switcher.busy": "작업 중",
   "session.tabs.switcher.scheduled": "예약됨",
+  "session.tabs.pinHint": "Shift+클릭으로 고정하거나 고정 해제",
   "session.tab.local": "로컬",
   "session.tab.cloud": "클라우드",
   "session.tab.worktree": "작업 트리",
@@ -1339,6 +1343,8 @@ export const dict = {
 
   "task.todos.progress": "{{done}}/{{total}} 할 일 완료",
   "task.todos.allDone": "{{count}} 할 일 완료",
+  "task.todos.title": "할 일",
+  "task.todos.done": "모두 완료",
   "task.backgroundAgents.running.one": "백그라운드 에이전트 1개",
   "task.backgroundAgents.running.many": "백그라운드 에이전트 {{count}}개",
   "task.backgroundAgents.open": "백그라운드 에이전트 열기",
@@ -1422,4 +1428,6 @@ export const dict = {
   "settings.experimental.browserAutomation.systemChrome.description":
     "통합 브라우저에 설치된 Google Chrome을 사용합니다. 호환되는 Playwright Chromium 브라우저가 이미 설치된 경우에만 비활성화하세요.",
   "chat.search.searchingHistory": "이전 메시지를 검색하는 중…",
+  "browserTab.noSession": "세션에서 브라우저를 열어 로컬 애플리케이션이나 공개 HTTPS 페이지를 미리 보세요.",
+  "browserTab.disabled": "통합 브라우저가 비활성화되어 있습니다. Kilo 설정 > 실험에서 활성화하세요.",
 }

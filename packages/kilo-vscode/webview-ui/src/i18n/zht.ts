@@ -495,6 +495,9 @@ export const dict = {
   "provider.custom.error.duplicate": "重複",
   "settings.openLocalConfig": "本機設定",
   "settings.openGlobalConfig": "全域設定",
+  "settings.search.placeholder": "搜尋設定",
+  "settings.search.noResults": "找不到設定",
+  "settings.search.clear": "清除搜尋",
   "settings.config.scope.local": "本地",
   "settings.config.scope.global": "全域",
   "settings.config.status.loaded": "已載入",
@@ -553,6 +556,7 @@ export const dict = {
   "session.tabs.switcher.pending": "新增",
   "session.tabs.switcher.busy": "工作中",
   "session.tabs.switcher.scheduled": "已排程",
+  "session.tabs.pinHint": "按住 Shift 點擊可釘選或取消釘選",
   "session.tab.local": "本機",
   "session.tab.cloud": "雲端",
   "session.tab.worktree": "工作樹",
@@ -1290,6 +1294,8 @@ export const dict = {
 
   "task.todos.progress": "{{done}}/{{total}} 個待辦已完成",
   "task.todos.allDone": "{{count}} 個待辦已完成",
+  "task.todos.title": "待辦",
+  "task.todos.done": "全部完成",
   "task.backgroundAgents.running.one": "1 個背景 Agent",
   "task.backgroundAgents.running.many": "{{count}} 個背景 Agent",
   "task.backgroundAgents.open": "開啟背景 Agent",
@@ -1369,4 +1375,6 @@ export const dict = {
   "settings.experimental.browserAutomation.systemChrome.description":
     "為整合瀏覽器使用已安裝的 Google Chrome。僅在已安裝相容的 Playwright Chromium 瀏覽器時才停用。",
   "chat.search.searchingHistory": "正在搜尋較早的訊息…",
+  "browserTab.noSession": "從工作階段開啟瀏覽器以預覽本機應用程式或公開 HTTPS 頁面。",
+  "browserTab.disabled": "整合瀏覽器已停用。請在 Kilo 設定 > 實驗性中啟用。",
 } satisfies Partial<Record<Keys, string>>

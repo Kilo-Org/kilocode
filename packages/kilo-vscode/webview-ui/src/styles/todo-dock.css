@@ -1,0 +1,463 @@
+/* ============================================
+   Todo progress in the session dock
+   ============================================ */
+
+/* The trailing group of the working row: the todo chip, then the goal badge.
+   It sits out of flow after the centered spinner, as the agent stack leads it,
+   so the spinner stays centered. */
+.session-working-trail {
+  position: absolute;
+  inset-inline-start: calc(100% - 8px);
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  width: max-content;
+}
+
+.session-working-trail .session-goal-status {
+  position: static;
+  transform: none;
+}
+
+/* The lane reserves the wider of the two sides on both sides, so the spinner
+   stays centered and its label truncates before either side leaves the row. */
+.session-dock-state .session-working[data-todos] {
+  max-width: min(
+    var(--session-dock-lane),
+    calc(100% - 2 * max(var(--session-lead, 0px), var(--session-trail, 64px), 28px))
+  );
+}
+
+[data-component="todo-chip"],
+[data-slot="todo-panel"] {
+  --todo-ok: var(--vscode-testing-iconPassed, #73c991);
+  --todo-accent: var(--vscode-progressBar-background, #3794ff);
+  --todo-goal: var(--vscode-charts-yellow, #d7ba7d);
+  --todo-track: color-mix(in srgb, var(--vscode-descriptionForeground) 32%, transparent);
+  --todo-ease: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+[data-component="todo-chip"] {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  height: 24px;
+  padding: 0 6px 0 4px;
+  border: 1px solid transparent;
+  border-radius: var(--session-action-radius);
+  background: transparent;
+  color: var(--vscode-descriptionForeground);
+  font-family: var(--font-family-sans);
+  font-size: var(--kilo-font-size-12);
+  font-weight: var(--font-weight-medium);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  cursor: pointer;
+  animation: todo-chip-in 260ms var(--todo-ease) backwards;
+  transition:
+    background-color 150ms ease,
+    color 300ms ease,
+    border-color 300ms ease;
+
+  &:hover,
+  &:focus-visible {
+    background: var(--surface-interactive-hover, var(--vscode-list-hoverBackground));
+    color: var(--vscode-foreground);
+  }
+
+  &:focus-visible {
+    outline: 1px solid var(--vscode-focusBorder);
+    outline-offset: -1px;
+  }
+
+  /* The last item just finished. */
+  &[data-celebrate] {
+    border-color: color-mix(in srgb, var(--todo-ok) 35%, transparent);
+    background: color-mix(in srgb, var(--todo-ok) 12%, transparent);
+    color: var(--todo-ok);
+  }
+}
+
+/* Match the 22px action buttons next to it. */
+.session-actions-row > [data-component="todo-chip"] {
+  height: 22px;
+  overflow: visible;
+}
+
+[data-slot="todo-chip-body"] {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+}
+
+[data-slot="todo-ring"] {
+  position: relative;
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+
+  & svg {
+    display: block;
+    width: 16px;
+    height: 16px;
+    overflow: visible;
+  }
+
+  /* One ripple when the list finishes. */
+  &::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border: 2px solid var(--todo-ok);
+    border-radius: 50%;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  [data-celebrate] &::after {
+    animation: todo-ripple 900ms var(--todo-ease);
+  }
+
+  [data-settled] & {
+    opacity: 0.75;
+  }
+}
+
+[data-slot="todo-segment"],
+[data-slot="todo-track"],
+[data-slot="todo-fill"] {
+  fill: none;
+  stroke: var(--todo-track);
+  stroke-width: 2.2;
+  transition: stroke 300ms ease;
+}
+
+[data-slot="todo-segment"][data-status="in_progress"] {
+  stroke: var(--todo-accent);
+  animation: todo-breathe 1.6s ease-in-out infinite;
+}
+
+[data-slot="todo-segment"][data-status="completed"],
+[data-slot="todo-fill"] {
+  stroke: var(--todo-ok);
+}
+
+[data-slot="todo-fill"] {
+  stroke-linecap: round;
+  transition: stroke-dashoffset 520ms var(--todo-ease);
+}
+
+[data-slot="todo-check-bg"] {
+  fill: color-mix(in srgb, var(--todo-ok) 18%, transparent);
+  stroke: var(--todo-ok);
+  stroke-width: 1.6;
+}
+
+[data-slot="todo-check"] {
+  fill: none;
+  stroke: var(--todo-ok);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 12;
+
+  [data-celebrate] & {
+    animation: todo-check-draw 380ms ease-out 160ms backwards;
+  }
+}
+
+[data-slot="todo-spark"] {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+/* The count and the title collapse to zero width when the dock runs out of
+   room. Their padding lives inside, so the collapse also closes the gap. */
+[data-slot="todo-chip-count"],
+[data-slot="todo-chip-title"] {
+  display: inline-grid;
+  grid-template-columns: minmax(0, 1fr);
+  min-width: 0;
+  overflow: hidden;
+  transition:
+    max-width 260ms var(--todo-ease),
+    opacity 200ms ease;
+}
+
+[data-slot="todo-chip-count"] {
+  max-width: 56px;
+}
+
+[data-slot="todo-chip-count"][data-hidden] {
+  max-width: 0;
+  opacity: 0;
+}
+
+[data-slot="todo-chip-title"][data-hidden] {
+  opacity: 0;
+}
+
+[data-slot="todo-chip-count-inner"] {
+  display: inline-flex;
+  padding-inline-start: 5px;
+}
+
+.todo-chip-num {
+  color: var(--vscode-foreground);
+
+  [data-celebrate] & {
+    color: var(--todo-ok);
+  }
+
+  [data-settled] & {
+    color: inherit;
+  }
+}
+
+[data-slot="todo-chip-total"] {
+  opacity: 0.8;
+}
+
+[data-slot="todo-chip-title-inner"] {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  min-width: 0;
+  padding-inline-start: 6px;
+  color: var(--vscode-foreground);
+  font-weight: var(--font-weight-regular, 400);
+
+  [data-celebrate] & {
+    color: var(--todo-ok);
+    font-weight: var(--font-weight-medium);
+  }
+}
+
+/* One line leaves as the next one arrives, in the same cell. The padding
+   gives the lines room to travel without changing the row height. */
+[data-slot="todo-ticker"] {
+  display: inline-grid;
+  grid-template-columns: minmax(0, 1fr);
+  min-width: 0;
+  padding-block: 4px;
+  margin-block: -4px;
+  overflow: hidden;
+}
+
+[data-slot="todo-line"] {
+  position: relative;
+  grid-area: 1 / 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  animation: todo-line-in 340ms var(--todo-ease) both;
+
+  &[data-still] {
+    animation: none;
+  }
+
+  /* After a strike, the next line waits until the struck one starts to leave. */
+  &[data-late] {
+    animation-delay: 220ms;
+  }
+
+  &[data-old] {
+    animation: todo-line-out 280ms var(--todo-ease) forwards;
+  }
+
+  /* A finished item draws a strike through itself, then leaves. */
+  &[data-old][data-strike] {
+    color: var(--vscode-descriptionForeground);
+    animation-delay: 220ms;
+  }
+
+  &::after {
+    content: "";
+    position: absolute;
+    inset-inline-start: 0;
+    top: 55%;
+    width: 0;
+    height: 1px;
+    background: currentColor;
+    transition: width 200ms var(--todo-ease);
+  }
+
+  &[data-strike]::after {
+    width: 100%;
+  }
+}
+
+/* The hidden dock states stay mounted. Their chips must not animate. */
+.session-dock-state:not([data-active]) [data-component="todo-chip"],
+.session-dock-state:not([data-active]) [data-component="todo-chip"] * {
+  animation-play-state: paused !important;
+}
+
+/* The agents-only row also holds the todo chip. */
+.session-agents {
+  align-items: center;
+  gap: 6px;
+}
+
+/* Same surface as the agent panel and the Goal menu in this row. */
+.todo-panel[data-component="popover-content"] {
+  box-sizing: border-box;
+  width: 300px;
+  max-width: calc(100vw - 24px);
+  padding: 6px;
+  border-radius: var(--radius-xl);
+}
+
+[data-slot="todo-panel"] {
+  display: grid;
+  gap: 4px;
+  font-size: var(--kilo-font-size-12);
+}
+
+[data-slot="todo-panel-header"] {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 2px 8px 0;
+}
+
+[data-slot="todo-panel-title"] {
+  color: var(--text-weak);
+  font-size: var(--kilo-font-size-10);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+[data-slot="todo-panel-count"] {
+  color: var(--text-weak);
+  font-variant-numeric: tabular-nums;
+}
+
+[data-slot="todo-panel-list"] {
+  display: grid;
+  gap: 1px;
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+[data-slot="todo-panel-row"] {
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr);
+  align-items: start;
+  gap: 8px;
+  padding: 5px 8px;
+  border-radius: var(--radius-lg);
+  color: var(--text-base);
+
+  &[data-status="in_progress"] {
+    background: color-mix(in srgb, var(--todo-accent) 10%, transparent);
+  }
+}
+
+[data-slot="todo-panel-text"] {
+  overflow-wrap: anywhere;
+
+  :is([data-status="completed"], [data-status="cancelled"]) > & {
+    color: var(--text-weak);
+    text-decoration: line-through;
+  }
+}
+
+[data-slot="todo-panel-icon"] {
+  display: grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  color: var(--text-weak);
+
+  [data-status="completed"] > & {
+    color: var(--todo-ok);
+  }
+}
+
+[data-slot="todo-panel-open"],
+[data-slot="todo-panel-spin"] {
+  box-sizing: border-box;
+  width: 10px;
+  height: 10px;
+  border: 1.5px solid var(--todo-track);
+  border-radius: 50%;
+}
+
+[data-slot="todo-panel-spin"] {
+  border-color: var(--todo-accent);
+  border-top-color: transparent;
+  animation: todo-spin 0.9s linear infinite;
+}
+
+@keyframes todo-chip-in {
+  from {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+}
+
+@keyframes todo-breathe {
+  50% {
+    opacity: 0.35;
+  }
+}
+
+@keyframes todo-check-draw {
+  from {
+    stroke-dashoffset: 12;
+  }
+}
+
+@keyframes todo-ripple {
+  0% {
+    opacity: 0.7;
+    transform: scale(1);
+  }
+
+  100% {
+    opacity: 0;
+    transform: scale(2.8);
+  }
+}
+
+@keyframes todo-line-in {
+  from {
+    opacity: 0;
+    transform: translateY(calc(var(--todo-dir, 1) * 100%));
+  }
+}
+
+@keyframes todo-line-out {
+  to {
+    opacity: 0;
+    transform: translateY(calc(var(--todo-dir, 1) * -100%));
+  }
+}
+
+@keyframes todo-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+body.vscode-reduce-motion
+  :is([data-component="todo-chip"], [data-component="todo-chip"] *, [data-slot="todo-panel"] *) {
+  animation: none !important;
+  transition: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :is([data-component="todo-chip"], [data-component="todo-chip"] *, [data-slot="todo-panel"] *) {
+    animation: none !important;
+    transition: none !important;
+  }
+}
