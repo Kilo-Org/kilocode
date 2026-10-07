@@ -4,8 +4,8 @@ import {
   ENV_KILO_AI_GATEWAY_URL,
   getDefaultHeaders,
   getKiloUrlFromToken,
-  resolveKiloApiRoot,
-  resolveKiloGatewayBaseUrl,
+  resolveKiloAiGatewayRoot,
+  resolveKiloOpenRouterBaseUrl,
   supportsTools,
 } from "@kilocode/kilo-gateway"
 import { Context, Effect, Layer, Redacted, Schema } from "effect"
@@ -125,48 +125,49 @@ export namespace CloudCatalog {
       return parsed.data
     })
 
-    const secure = (raw: string, loopback: boolean) => {
-      const url = new URL(raw)
-      parseServiceOrigin(url.origin, { allowHttpLoopback: loopback })
-      if (url.username !== "" || url.password !== "") throw new Error("Catalog URL credentials are not allowed")
-      return url
-    }
-    const insecure = () =>
-      new CatalogError({
-        kind: "schema",
-        message: "Kilo catalog URL must be secure",
-      })
-
-    // The Kilo API root (`…/api/`) serves the defaults.
     const base = Effect.fn("CloudCatalog.base")(function* (input: Input) {
       const raw = env.KILO_API_URL?.trim()
       const fallback = raw || DEFAULT_KILO_API_URL
       const value = getKiloUrlFromToken(fallback, Redacted.value(input.token))
       return yield* Effect.try({
-        try: () => secure(resolveKiloApiRoot({ baseURL: value }), !!raw || value !== fallback),
-        catch: insecure,
+        try: () => {
+          const url = new URL(resolveKiloOpenRouterBaseUrl({ baseURL: value, gateway: "" }))
+          parseServiceOrigin(url.origin, { allowHttpLoopback: !!raw || value !== fallback })
+          if (url.username !== "" || url.password !== "") throw new Error("Catalog URL credentials are not allowed")
+          return url
+        },
+        catch: () =>
+          new CatalogError({
+            kind: "schema",
+            message: "Kilo catalog URL must be secure",
+          }),
       })
     })
 
-    // The AI gateway base (`…/api/v1/`) serves the models. Only the production default is not an
-    // override, and it is HTTPS, so loopback HTTP is allowed.
-    const gateway = Effect.fn("CloudCatalog.gateway")(function* (input: Input) {
+    // KILO_AI_GATEWAY_URL serves the models when it is set; the defaults stay on the Kilo API.
+    const gateway = Effect.fn("CloudCatalog.gateway")(function* () {
+      const raw = env[ENV_KILO_AI_GATEWAY_URL]?.trim()
+      if (!raw) return undefined
       return yield* Effect.try({
         try: () => {
-          const root = resolveKiloGatewayBaseUrl({
-            gateway: env[ENV_KILO_AI_GATEWAY_URL]?.trim() ?? "",
-            api: env.KILO_API_URL?.trim() ?? "",
-            token: Redacted.value(input.token),
-          })
-          return secure(root, true)
+          const url = new URL(resolveKiloAiGatewayRoot({ gateway: raw }) ?? raw)
+          parseServiceOrigin(url.origin, { allowHttpLoopback: true })
+          if (url.username !== "" || url.password !== "") throw new Error("Catalog URL credentials are not allowed")
+          return url
         },
-        catch: insecure,
+        catch: () =>
+          new CatalogError({
+            kind: "schema",
+            message: "Kilo catalog URL must be secure",
+          }),
       })
     })
 
     const models = Effect.fn("CloudCatalog.models")(function* (input: Input) {
-      const path = input.organizationID ? `organizations/${encodeURIComponent(input.organizationID)}/models` : "models"
-      const result = yield* request(new URL(path, yield* gateway(input)).toString(), input, Models)
+      const org = input.organizationID ? `organizations/${encodeURIComponent(input.organizationID)}/models` : undefined
+      const root = yield* gateway()
+      const url = root ? new URL(org ?? "models", root) : new URL(org ? `../${org}` : "models", yield* base(input))
+      const result = yield* request(url.toString(), input, Models)
       return [
         ...new Set(
           result.data
@@ -179,8 +180,8 @@ export namespace CloudCatalog {
     const defaultModel = Effect.fn("CloudCatalog.defaultModel")(function* (input: Input) {
       const root = yield* base(input)
       const path = input.organizationID
-        ? `organizations/${encodeURIComponent(input.organizationID)}/defaults`
-        : "defaults"
+        ? `../organizations/${encodeURIComponent(input.organizationID)}/defaults`
+        : "../defaults"
       return (yield* request(new URL(path, root).toString(), input, Defaults)).defaultModel
     })
 

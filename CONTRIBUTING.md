@@ -233,16 +233,16 @@ To point the CLI at a local backend (e.g., a locally running Kilo API server on 
 KILO_API_URL=http://localhost:3000 bun dev
 ```
 
-This redirects cloud traffic (auth, profile, defaults, etc.) to your local server. The default is `https://api.kilo.ai`.
+This redirects all gateway traffic (auth, model listing, provider routing, profile, etc.) to your local server. The default is `https://api.kilo.ai`.
 
-AI traffic (models, completions, embeddings, FIM, next-edit, transcriptions) goes to the AI gateway at `KILO_AI_GATEWAY_URL`. When that is unset, it goes to `<KILO_API_URL>/api/v1`, so `http://localhost:3000` uses `http://localhost:3000/api/v1`. Without either variable, it goes to `https://ai-gateway.kilo.ai/api/v1`.
+To send AI traffic (models, completions, embeddings, FIM, next-edit, transcriptions) to a separate AI gateway, also set `KILO_AI_GATEWAY_URL` to its full base URL, e.g. `http://localhost:3010/api/v1`. Other cloud traffic (auth, profile, defaults, sessions) stays on `KILO_API_URL`.
 
 There are also optional overrides for other services:
 
 | Variable | Default | Purpose |
 |---|---|---|
-| `KILO_API_URL` | `https://api.kilo.ai` | Kilo API (auth, profile, defaults, sessions) |
-| `KILO_AI_GATEWAY_URL` | `<KILO_API_URL>/api/v1`, or `https://ai-gateway.kilo.ai/api/v1` without `KILO_API_URL` | AI gateway base URL, e.g. `http://localhost:3010/api/v1` |
+| `KILO_API_URL` | `https://api.kilo.ai` | Kilo API (gateway, auth, models, profile) |
+| `KILO_AI_GATEWAY_URL` | unset | Separate AI gateway base URL, e.g. `http://localhost:3010/api/v1`. When unset, `KILO_API_URL` serves the AI endpoints. |
 | `KILO_SESSION_INGEST_URL` | `https://ingest.kilosessions.ai` | Session export / cloud sync |
 | `KILO_MODELS_URL` | `https://models.dev` | Model metadata |
 

@@ -1,71 +1,138 @@
 import { describe, expect, test } from "bun:test"
-import { resolveKiloApiRoot, resolveKiloGatewayBaseUrl, resolveKiloGatewayUrl } from "../../src/api/url"
+import {
+  resolveKiloAiGatewayRoot,
+  resolveKiloAiGatewayUrl,
+  resolveKiloGatewayBaseUrl,
+  resolveKiloOpenRouterBaseUrl,
+} from "../../src/api/url"
 
-describe("Kilo API root", () => {
-  test("resolves the Kilo API root for endpoints outside the AI gateway", () => {
-    expect(resolveKiloApiRoot()).toBe("https://api.kilo.ai/api/")
-    expect(resolveKiloApiRoot({ baseURL: "http://localhost:3000/api/organizations/org" })).toBe(
-      "http://localhost:3000/api/",
+describe("Kilo API URL resolvers", () => {
+  test("resolves production route bases", () => {
+    expect(resolveKiloGatewayBaseUrl()).toBe("https://api.kilo.ai/api/gateway/")
+    expect(resolveKiloOpenRouterBaseUrl()).toBe("https://api.kilo.ai/api/openrouter/")
+  })
+
+  test("normalizes root API base overrides", () => {
+    expect(resolveKiloGatewayBaseUrl({ baseURL: "https://example.test" })).toBe("https://example.test/api/gateway/")
+    expect(resolveKiloOpenRouterBaseUrl({ baseURL: "https://example.test/" })).toBe(
+      "https://example.test/api/openrouter/",
     )
-    expect(resolveKiloApiRoot({ token: "https://token.test:opaque" })).toBe("https://token.test/api/")
+  })
+
+  test("replaces existing Kilo API route paths", () => {
+    expect(resolveKiloGatewayBaseUrl({ baseURL: "https://example.test/api/openrouter/" })).toBe(
+      "https://example.test/api/gateway/",
+    )
+    expect(resolveKiloOpenRouterBaseUrl({ baseURL: "https://example.test/api/gateway/" })).toBe(
+      "https://example.test/api/openrouter/",
+    )
+  })
+
+  test("preserves path prefixes before api", () => {
+    expect(resolveKiloGatewayBaseUrl({ baseURL: "https://example.test/dev/api/openrouter/" })).toBe(
+      "https://example.test/dev/api/gateway/",
+    )
+    expect(resolveKiloOpenRouterBaseUrl({ baseURL: "https://example.test/dev" })).toBe(
+      "https://example.test/dev/api/openrouter/",
+    )
+  })
+
+  test("strips search and hash components", () => {
+    expect(resolveKiloGatewayBaseUrl({ baseURL: "https://example.test/api/openrouter/?x=1#frag" })).toBe(
+      "https://example.test/api/gateway/",
+    )
+  })
+
+  test("prefers token-derived URL when token contains one", () => {
+    expect(resolveKiloGatewayBaseUrl({ baseURL: "https://fallback.test", token: "https://token.test:opaque" })).toBe(
+      "https://token.test/api/gateway/",
+    )
+  })
+
+  test("resolves child endpoint URLs", () => {
+    expect(new URL("embedding-models", resolveKiloGatewayBaseUrl({ baseURL: "https://example.test" })).toString()).toBe(
+      "https://example.test/api/gateway/embedding-models",
+    )
   })
 })
 
-describe("Kilo AI Gateway base URL", () => {
-  test("uses the production gateway without any override", () => {
-    expect(resolveKiloGatewayBaseUrl()).toBe("https://ai-gateway.kilo.ai/api/v1/")
-    expect(resolveKiloGatewayUrl("fim/completions")).toBe("https://ai-gateway.kilo.ai/api/v1/fim/completions")
-  })
-
-  test("derives /api/v1 from the Kilo API URL", () => {
-    expect(resolveKiloGatewayBaseUrl({ api: "http://localhost:3000" })).toBe("http://localhost:3000/api/v1/")
-    expect(resolveKiloGatewayBaseUrl({ api: "https://api.example.test/" })).toBe("https://api.example.test/api/v1/")
-    expect(resolveKiloGatewayBaseUrl({ api: "https://example.test/dev" })).toBe("https://example.test/dev/api/v1/")
-  })
-
-  test("derives /api/v1 from a token URL or baseURL before KILO_API_URL", () => {
-    expect(resolveKiloGatewayBaseUrl({ api: "https://api.example.test", token: "http://localhost:3000:opaque" })).toBe(
-      "http://localhost:3000/api/v1/",
-    )
-    expect(resolveKiloGatewayBaseUrl({ api: "https://api.example.test", baseURL: "https://example.test" })).toBe(
-      "https://example.test/api/v1/",
+describe("KILO_AI_GATEWAY_URL resolvers", () => {
+  test("keep the Kilo API routes when no gateway is set", () => {
+    expect(resolveKiloAiGatewayRoot()).toBeUndefined()
+    expect(resolveKiloAiGatewayUrl("fim/completions", "/api/fim/completions")).toBe(
+      "https://api.kilo.ai/api/fim/completions",
     )
   })
 
-  test("replaces existing Kilo API routes in a baseURL", () => {
-    expect(resolveKiloGatewayBaseUrl({ baseURL: "https://example.test/api/openrouter/?x=1#frag" })).toBe(
-      "https://example.test/api/v1/",
-    )
-    expect(resolveKiloGatewayBaseUrl({ baseURL: "https://example.test/dev/api/organizations/org" })).toBe(
-      "https://example.test/dev/api/v1/",
-    )
-    expect(resolveKiloGatewayBaseUrl({ baseURL: "https://ai-gateway.kilo.ai/api/v1" })).toBe(
-      "https://ai-gateway.kilo.ai/api/v1/",
-    )
-  })
-
-  test("uses an explicit gateway URL as given", () => {
+  test("serve every AI route from the gateway URL as given", () => {
     const gateway = "https://gateway.test/v1?x=1"
-    expect(resolveKiloGatewayBaseUrl({ gateway, api: "https://api.example.test" })).toBe("https://gateway.test/v1/")
-    expect(resolveKiloGatewayBaseUrl({ gateway, token: "http://localhost:3000:opaque" })).toBe(
-      "https://gateway.test/v1/",
+    expect(resolveKiloAiGatewayRoot({ gateway })).toBe("https://gateway.test/v1/")
+    expect(resolveKiloGatewayBaseUrl({ gateway })).toBe("https://gateway.test/v1/")
+    expect(resolveKiloOpenRouterBaseUrl({ gateway })).toBe("https://gateway.test/v1/")
+    expect(resolveKiloAiGatewayUrl("fim/completions", "/api/fim/completions", { gateway })).toBe(
+      "https://gateway.test/v1/fim/completions",
     )
-    expect(resolveKiloGatewayBaseUrl({ gateway, baseURL: "https://gateway.test/v1/" })).toBe("https://gateway.test/v1/")
-    expect(resolveKiloGatewayUrl("fim/completions", { gateway })).toBe("https://gateway.test/v1/fim/completions")
   })
 
-  test("lets a baseURL elsewhere override an explicit gateway URL", () => {
-    expect(resolveKiloGatewayBaseUrl({ gateway: "https://gateway.test/api/v1", baseURL: "https://example.test" })).toBe(
-      "https://example.test/api/v1/",
+  test("prefer the gateway over a token-derived URL", () => {
+    const gateway = "https://gateway.test/api/v1"
+    expect(resolveKiloOpenRouterBaseUrl({ gateway, token: "https://token.test:opaque" })).toBe(
+      "https://gateway.test/api/v1/",
     )
+  })
+
+  test("keep a baseURL under the gateway on the gateway", () => {
+    const gateway = "https://gateway.test/api/v1"
+    expect(resolveKiloOpenRouterBaseUrl({ gateway, baseURL: "https://gateway.test/api/v1/" })).toBe(
+      "https://gateway.test/api/v1/",
+    )
+  })
+
+  test("keep a baseURL elsewhere on its Kilo API routes", () => {
+    const options = { gateway: "https://gateway.test/api/v1", baseURL: "https://example.test" }
+    expect(resolveKiloAiGatewayRoot(options)).toBeUndefined()
+    expect(resolveKiloGatewayBaseUrl(options)).toBe("https://example.test/api/gateway/")
+    expect(resolveKiloOpenRouterBaseUrl(options)).toBe("https://example.test/api/openrouter/")
   })
 })
 
 describe("environment", () => {
   test.each([
-    { mode: "only KILO_API_URL", ai: "api" },
-    { mode: "both", ai: "gateway" },
-  ])("routes AI endpoints with $mode set", async ({ mode, ai }) => {
+    {
+      mode: "only KILO_API_URL",
+      seen: [
+        "api /api/openrouter/models",
+        "api /api/organizations/org/models",
+        "api /api/gateway/transcription-models",
+        "api /api/gateway/embedding-models",
+        "api /api/defaults",
+        "api /api/openrouter/chat/completions",
+      ],
+      urls: {
+        openrouter: "<api>/api/openrouter",
+        fim: "<api>/api/fim/completions",
+        edit: "<api>/api/edit/completions",
+        transcriptions: "<api>/api/gateway/v1/audio/transcriptions",
+      },
+    },
+    {
+      mode: "both",
+      seen: [
+        "gateway /api/v1/models",
+        "gateway /api/v1/organizations/org/models",
+        "gateway /api/v1/transcription-models",
+        "gateway /api/v1/embedding-models",
+        "api /api/defaults",
+        "gateway /api/v1/chat/completions",
+      ],
+      urls: {
+        openrouter: "<gateway>/api/v1",
+        fim: "<gateway>/api/v1/fim/completions",
+        edit: "<gateway>/api/v1/edit/completions",
+        transcriptions: "<gateway>/api/v1/audio/transcriptions",
+      },
+    },
+  ])("routes Kilo requests with $mode set", async (input) => {
     const script = `
       const seen = []
       const serve = (name) => Bun.serve({
@@ -76,15 +143,15 @@ describe("environment", () => {
         },
       })
       const api = serve("api")
-      const gateway = ${JSON.stringify(mode)} === "both" ? serve("gateway") : api
+      const gateway = serve("gateway")
       process.env.KILO_API_URL = "http://localhost:" + api.port
-      if (gateway !== api) process.env.KILO_AI_GATEWAY_URL = "http://localhost:" + gateway.port + "/api/v1"
+      if (${JSON.stringify(input.mode)} === "both") process.env.KILO_AI_GATEWAY_URL = "http://localhost:" + gateway.port + "/api/v1"
       else delete process.env.KILO_AI_GATEWAY_URL
       const kilo = await import(${JSON.stringify(Bun.resolveSync("../../src/index.ts", import.meta.dir))})
       const fim = await import(${JSON.stringify(Bun.resolveSync("../../src/fim.ts", import.meta.dir))})
       const edit = await import(${JSON.stringify(Bun.resolveSync("../../src/edit.ts", import.meta.dir))})
       const strip = (url) =>
-        url.replace("http://localhost:" + gateway.port, "<ai>").replace("http://localhost:" + api.port, "<api>")
+        url.replace("http://localhost:" + gateway.port, "<gateway>").replace("http://localhost:" + api.port, "<api>")
       await kilo.fetchKiloModels({ kilocodeToken: "token" })
       await kilo.fetchKiloModels({ kilocodeToken: "token", kilocodeOrganizationId: "org" })
       await kilo.fetchKiloTranscriptionModels({ kilocodeToken: "token" })
@@ -98,10 +165,12 @@ describe("environment", () => {
         .catch(() => undefined)
       console.log(JSON.stringify({
         seen,
-        openrouter: strip(kilo.KILO_OPENROUTER_BASE),
-        fim: strip(fim.resolveFimTarget().url),
-        edit: strip(edit.resolveEditTarget().url),
-        transcriptions: strip(kilo.resolveKiloGatewayUrl("audio/transcriptions")),
+        urls: {
+          openrouter: strip(kilo.KILO_OPENROUTER_BASE),
+          fim: strip(fim.resolveFimTarget().url),
+          edit: strip(edit.resolveEditTarget().url),
+          transcriptions: strip(kilo.resolveKiloAiGatewayUrl("audio/transcriptions", "/api/gateway/v1/audio/transcriptions")),
+        },
       }))
       api.stop(true)
       gateway.stop(true)
@@ -114,19 +183,6 @@ describe("environment", () => {
     ])
     expect(err).toBe("")
     expect(code).toBe(0)
-    expect(JSON.parse(out.trim().split("\n").at(-1) ?? "")).toEqual({
-      seen: [
-        `${ai} /api/v1/models`,
-        `${ai} /api/v1/organizations/org/models`,
-        `${ai} /api/v1/transcription-models`,
-        `${ai} /api/v1/embedding-models`,
-        "api /api/defaults",
-        `${ai} /api/v1/chat/completions`,
-      ],
-      openrouter: "<ai>/api/v1",
-      fim: "<ai>/api/v1/fim/completions",
-      edit: "<ai>/api/v1/edit/completions",
-      transcriptions: "<ai>/api/v1/audio/transcriptions",
-    })
+    expect(JSON.parse(out.trim().split("\n").at(-1) ?? "")).toEqual({ seen: input.seen, urls: input.urls })
   })
 })

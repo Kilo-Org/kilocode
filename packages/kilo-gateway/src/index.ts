@@ -55,9 +55,10 @@ export {
 } from "./api/embedding-models.js"
 export {
   KILO_OPENROUTER_BASE,
-  resolveKiloApiRoot,
+  resolveKiloAiGatewayRoot,
+  resolveKiloAiGatewayUrl,
   resolveKiloGatewayBaseUrl,
-  resolveKiloGatewayUrl,
+  resolveKiloOpenRouterBaseUrl,
 } from "./api/url.js"
 export {
   AUTOCOMPLETE_MODELS,
@@ -143,7 +144,6 @@ export {
   DEFAULT_KILO_API_URL,
   KILO_API_BASE,
   ENV_KILO_AI_GATEWAY_URL,
-  DEFAULT_KILO_AI_GATEWAY_URL,
   KILO_EVENT_SERVICE_URL,
   POLL_INTERVAL_MS,
   DEFAULT_MODEL,

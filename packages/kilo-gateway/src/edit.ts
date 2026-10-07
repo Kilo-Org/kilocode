@@ -1,4 +1,4 @@
-import { resolveKiloGatewayUrl } from "./api/url.js"
+import { resolveKiloAiGatewayUrl } from "./api/url.js"
 import { getAutocompleteModel, type DirectAutocompleteProviderID } from "./autocomplete.js"
 
 /**
@@ -21,12 +21,12 @@ export interface EditUpstreamResponse {
 }
 
 const INCEPTION_EDIT_URL = "https://api.inceptionlabs.ai/v1/edit/completions"
-const KILO_NEXTEDIT_URL = resolveKiloGatewayUrl("edit/completions")
+const KILO_NEXTEDIT_URL = resolveKiloAiGatewayUrl("edit/completions", "/api/edit/completions")
 
 /**
  * Pick the upstream edit endpoint for a (provider, model) pair. Today this is
  * either Inception's `/v1/edit/completions` (direct BYOK) or the Kilo Gateway's
- * `/api/v1/edit/completions` proxy, which forwards to Inception server-side.
+ * `/api/edit/completions` proxy, which forwards to Inception server-side.
  * Mistral does not expose a comparable surface.
  */
 export function resolveEditTarget(provider?: string, model?: string): EditTarget {

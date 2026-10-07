@@ -6,7 +6,7 @@ import type { KiloProvider, KiloProviderOptions } from "./types.js"
 import { getApiKey } from "./auth/token.js"
 import { buildKiloHeaders, getDefaultHeaders } from "./headers.js"
 import { ANONYMOUS_API_KEY } from "./api/constants.js"
-import { resolveKiloGatewayBaseUrl } from "./api/url.js"
+import { resolveKiloOpenRouterBaseUrl } from "./api/url.js"
 import { transformRequestBody } from "./responses.js"
 import * as GatewayMetadata from "./gateway-metadata.js"
 
@@ -38,7 +38,7 @@ export function createKilo(options: KiloProviderOptions = {}): KiloProvider {
   // Get API key from options or environment
   const apiKey = getApiKey(options)
 
-  const openRouterUrl = resolveKiloGatewayBaseUrl({ baseURL: options.baseURL, token: apiKey })
+  const openRouterUrl = resolveKiloOpenRouterBaseUrl({ baseURL: options.baseURL, token: apiKey })
 
   // Merge custom headers with defaults
   const customHeaders = {

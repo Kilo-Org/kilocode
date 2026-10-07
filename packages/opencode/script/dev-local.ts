@@ -74,7 +74,7 @@ async function main() {
     const p = path.join(home, d); fs.mkdirSync(p, { recursive: true }); env[k] = p
   }
   env.KILO_API_URL = `http://localhost:${webPort}`
-  // Without the standalone ai-gateway app, the web server serves the gateway at <KILO_API_URL>/api/v1.
+  // Without the standalone ai-gateway app, the web server serves the AI endpoints too.
   if (gatewayPort) env.KILO_AI_GATEWAY_URL = `http://localhost:${gatewayPort}/api/v1`
   else delete env.KILO_AI_GATEWAY_URL
   env.KILO_DEV_CWD = project

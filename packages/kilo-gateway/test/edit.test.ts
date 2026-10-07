@@ -20,7 +20,7 @@ describe("Edit target resolution", () => {
     const target = resolveEditTarget("kilo", "inception/mercury-next-edit")
     expect(target.provider).toBe("kilo")
     expect(target.model).toBe("inception/mercury-edit-2")
-    expect(target.url).toMatch(/\/api\/v1\/edit\/completions$/)
+    expect(target.url).toMatch(/\/api\/edit\/completions$/)
   })
 
   test("falls back to a kilo placeholder (no upstream) for non-edit models", () => {
@@ -35,7 +35,7 @@ describe("Edit target resolution", () => {
     expect(resolveEditTarget()).toEqual({
       provider: "kilo",
       model: "inception/mercury-edit-2",
-      url: "https://ai-gateway.kilo.ai/api/v1/edit/completions",
+      url: "https://api.kilo.ai/api/edit/completions",
     })
   })
 })

@@ -115,7 +115,7 @@ for (const scenario of [
                           : undefined,
                 })
               }
-              if (url.pathname === "/api/v1/organizations/org-env/models") {
+              if (url.pathname === "/api/organizations/org-env/models") {
                 if (scenario === "unauthorized") return new Response(null, { status: 401 })
                 if (scenario === "error") return new Response(null, { status: 500 })
                 if (scenario === "empty") return Response.json({ data: [] })
@@ -178,7 +178,7 @@ for (const scenario of [
       expect(connected.default.external).toBe("independent")
       expect(all.default.external).toBe("independent")
       expect(all.connected).toContain("external")
-      expect(paths.filter((path) => path.endsWith("/models"))).toEqual(["/api/v1/organizations/org-env/models"])
+      expect(paths.filter((path) => path.endsWith("/models"))).toEqual(["/api/organizations/org-env/models"])
       expect(paths.filter((path) => path.endsWith("/defaults"))).toEqual(
         unavailable ? [] : ["/api/organizations/org-env/defaults", "/api/organizations/org-env/defaults"],
       )

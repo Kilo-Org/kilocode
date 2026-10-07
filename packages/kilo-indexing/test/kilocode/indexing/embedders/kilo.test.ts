@@ -28,7 +28,7 @@ describe("KiloEmbedder", () => {
     await embedder.createEmbeddings(["hello"])
 
     expect(seen[0]).toEqual({
-      baseURL: "https://ai-gateway.kilo.ai/api/v1/",
+      baseURL: "https://api.kilo.ai/api/gateway/",
       apiKey: "kilo-token",
       defaultHeaders: {
         "X-KILOCODE-FEATURE": KILO_INDEXING_FEATURE,
@@ -52,6 +52,6 @@ describe("KiloEmbedder", () => {
       modelId: "mistralai/mistral-embed-2312",
     })
 
-    expect((seen[0] as { baseURL: string }).baseURL).toBe("https://example.test/api/v1/")
+    expect((seen[0] as { baseURL: string }).baseURL).toBe("https://example.test/api/gateway/")
   })
 })

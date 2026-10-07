@@ -1,4 +1,4 @@
-import { DEFAULT_KILO_AI_GATEWAY_URL, KILO_AI_GATEWAY_OVERRIDE, KILO_API_BASE, KILO_API_OVERRIDE } from "./constants.js"
+import { KILO_AI_GATEWAY_BASE, KILO_API_BASE } from "./constants.js"
 import { getKiloUrlFromToken } from "../auth/token.js"
 
 type UrlOptions = {
@@ -6,20 +6,21 @@ type UrlOptions = {
   token?: string
   /** AI gateway base URL. Defaults to KILO_AI_GATEWAY_URL; pass "" for none. */
   gateway?: string
-  /** Kilo API URL the gateway is derived from. Defaults to KILO_API_URL; pass "" for none. */
-  api?: string
 }
 
-/** Drops everything after the last `/api` segment and appends `/api/` or `/api/v1/` */
-function route(raw: string, name?: "v1"): string {
+function route(raw: string, name: "gateway" | "openrouter"): string {
   const url = new URL(raw)
   const parts = url.pathname.replace(/\/+$/, "").split("/").filter(Boolean)
   const api = parts.lastIndexOf("api")
   const prefix = api >= 0 ? parts.slice(0, api) : parts
-  url.pathname = `/${[...prefix, "api", ...(name ? [name] : [])].join("/")}/`
+  url.pathname = `/${[...prefix, "api", name].join("/")}/`
   url.search = ""
   url.hash = ""
   return url.toString()
+}
+
+function base(options: UrlOptions): string {
+  return getKiloUrlFromToken(options.baseURL ?? KILO_API_BASE, options.token ?? "")
 }
 
 function slash(raw: string) {
@@ -31,31 +32,34 @@ function slash(raw: string) {
 }
 
 /**
- * Kilo AI Gateway base URL (`…/api/v1/`) for the AI endpoints:
- * - KILO_AI_GATEWAY_URL as given, unless a baseURL points somewhere else.
- * - Otherwise `/api/v1` on the Kilo API URL: the token URL, baseURL or KILO_API_URL.
- * - Otherwise the production gateway.
+ * KILO_AI_GATEWAY_URL as a base URL with a trailing slash, or undefined when it is unset or a
+ * baseURL points somewhere else. A baseURL under the gateway (such as KILO_OPENROUTER_BASE) keeps it.
  */
+export function resolveKiloAiGatewayRoot(options: UrlOptions = {}): string | undefined {
+  const gateway = options.gateway ?? KILO_AI_GATEWAY_BASE
+  if (!gateway) return
+  const root = slash(gateway)
+  if (options.baseURL && !slash(options.baseURL).startsWith(root)) return
+  return root
+}
+
+/**
+ * Resolve an AI endpoint: `path` under KILO_AI_GATEWAY_URL when it is set, otherwise the
+ * `legacy` path on KILO_API_BASE.
+ */
+export function resolveKiloAiGatewayUrl(path: string, legacy: string, options: Pick<UrlOptions, "gateway"> = {}) {
+  const root = resolveKiloAiGatewayRoot(options)
+  if (root) return new URL(path, root).toString()
+  return `${KILO_API_BASE}${legacy}`
+}
+
 export function resolveKiloGatewayBaseUrl(options: UrlOptions = {}): string {
-  const gateway = options.gateway ?? KILO_AI_GATEWAY_OVERRIDE
-  if (gateway) {
-    const root = slash(gateway)
-    if (!options.baseURL || slash(options.baseURL).startsWith(root)) return root
-    return route(options.baseURL, "v1")
-  }
-  const api = getKiloUrlFromToken(options.baseURL ?? options.api ?? KILO_API_OVERRIDE ?? "", options.token ?? "")
-  return api ? route(api, "v1") : slash(DEFAULT_KILO_AI_GATEWAY_URL)
+  return resolveKiloAiGatewayRoot(options) ?? route(base(options), "gateway")
 }
 
-/** Resolve an AI gateway endpoint, e.g. `fim/completions` */
-export function resolveKiloGatewayUrl(path: string, options: UrlOptions = {}): string {
-  return new URL(path, resolveKiloGatewayBaseUrl(options)).toString()
+export function resolveKiloOpenRouterBaseUrl(options: UrlOptions = {}): string {
+  return resolveKiloAiGatewayRoot(options) ?? route(base(options), "openrouter")
 }
 
-/** Kilo API root (`…/api/`) for endpoints the AI gateway does not serve, such as `defaults` */
-export function resolveKiloApiRoot(options: Pick<UrlOptions, "baseURL" | "token"> = {}): string {
-  return route(getKiloUrlFromToken(options.baseURL ?? KILO_API_BASE, options.token ?? ""))
-}
-
-/** Kilo AI Gateway base URL without a trailing slash; the name predates the gateway split */
-export const KILO_OPENROUTER_BASE = resolveKiloGatewayBaseUrl().replace(/\/+$/, "")
+/** Base URL for the OpenRouter-compatible endpoint, without a trailing slash */
+export const KILO_OPENROUTER_BASE = resolveKiloAiGatewayRoot()?.replace(/\/+$/, "") ?? `${KILO_API_BASE}/api/openrouter`
