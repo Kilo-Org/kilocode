@@ -3,7 +3,7 @@
 Line numbers refer to `main` at `9d0f7a1dd8`. They drift. Re-check them when you implement.
 Paths starting with `P/` mean `packages/opencode/src/`.
 
-Security: the requirements from the security review are in section 12 (`SEC-1` to `SEC-13`) and are enforced in the sections they touch. Sections 1.2, 2.1, 2.5 to 2.11, 3, 5.1 to 5.3, 6.1, 6.2, 8, 10 and 11 changed because of them. A second review added `SEC-12` and `SEC-13` and nine medium items.
+Security: the requirements from the security review are in section 12 (`SEC-1` to `SEC-16`) and are enforced in the sections they touch. Sections 1.2, 2.1, 2.5 to 2.11, 3, 5.1 to 5.3, 6.1, 6.2, 8, 10 and 11 changed because of them. A second review added `SEC-12` and `SEC-13` and nine medium items. A third review added `SEC-14` to `SEC-16` and four medium items (sections 2.8, 2.12, 2.13, 6.2).
 
 ## 0. Mode model
 
@@ -265,15 +265,15 @@ Rule: edits to the **executable-config class** are always `ask` (tier 0), throug
 | Tool configs that run code | `*.config.{js,cjs,mjs,ts}`, `.babelrc*`, `.eslintrc*`, `jest.config.*`, `vitest.config.*`, `webpack.config.*`, `vite.config.*` |
 
 The list lives in one table in code and has a test per group. Adding to it needs no design change. A name list is incomplete by nature, so the executable-bit and shebang rule classifies by content, not by name.
-Paths are normalised (NFC, case-folded, `realpath`) before matching.
+Paths are normalised before matching: NFC, case-fold on every platform (macOS volumes are case-insensitive too, and `ReadPermission.harden` is case-sensitive today, `P/kilocode/permission/read.ts:4-8`), `realpath`, and on Windows trailing dots and spaces, alternate data streams (`.env::$DATA`), 8.3 short names (also for paths that do not exist yet) and `\\?\` and UNC prefixes. Each form has a test.
 
 The manifest check covers files written by a running program (a test that rewrites the Makefile):
 
-- At session start, and after every edit the **human** approved, the engine records a hash of every file in the class (a manifest). The manifest also records **absence** (a new `Makefile` is a change) and includes `.git/config`, the non-sample files in `.git/hooks/`, and the `core.hooksPath` target directory.
+- After the human acknowledges the repository's script surface (section 2.13), and after every edit the **human** approved, the engine records a hash of every file in the class (a manifest). Session start alone is not a trusted baseline: in a fresh clone the files are attacker-controlled. The manifest also records **absence** (a new `Makefile` is a change) and includes `.git/config`, the non-sample files in `.git/hooks/`, and the `core.hooksPath` target directory.
 - Before approving a known runner, a reviewable call, or any escalation, it compares the current hashes with the manifest.
 - A mismatch means "changed outside human review". All runners and all escalations ask for the rest of the session, until the user acknowledges the change in a prompt that shows what changed.
 
-Source-code edits stay tier 1. The sandbox is the control for code the agent wrote: it limits writes and network.
+Source-code edits stay tier 1. For code the agent wrote, the sandbox limits **writes and network**. It does not limit reads and it passes credentials in the environment today, so it is a real control only together with section 2.12 (SEC-14).
 Without a sandbox (reduced profile) runners ask anyway (section 0.1).
 
 ### 2.7 Outbound data: exfiltration rules (SEC-4)
@@ -290,6 +290,7 @@ Rules:
    MCP tools, `bash` with a network command or a network escalation, and `browser-open`. Sensitive class: the existing secret globs (`.env*`, `.netrc`, `.npmrc`, `id_*`, keystores, `.ssh`, `.aws`, `.kube`, `.docker`, `.gnupg`),
    cloud and CI credential files, `*.pem`, `*.key`, `terraform.tfstate*`, `credentials*`, and `.git/config`. The taint is per root session and survives subagents.
 5. `always` replies in this mode are once-only (section 6.2, item 7).
+6. The output scanner (2.10) is heuristic and can be evaded by encoding. The default "ask" for outbound calls is the real control. The built-in docs allowlist contains no host that accepts user content (code hosting, gists, pastebins).
 
 ### 2.8 Shell parse and execute: no differential (SEC-6)
 
@@ -305,7 +306,10 @@ Rules for auto-allow (tiers 1 to 3 never allow a shell call unless all hold):
 4. The executable resolves, at review time, to a real file on `PATH` and is **not an alias or function** in the shell that will run it (spike in PR 5: use the shell snapshot, or run auto-approved commands without the login rc).
    If this cannot be proven, the call asks.
 5. **PowerShell, cmd and Windows:** tier 2 is off. Approve for me uses the reduced profile (section 0.1).
-6. Tests: a differential corpus that runs each case through the real shell and through the parser and asserts they agree on the executable and the written paths (zsh and bash).
+6. **Wrappers and carriers** ask unless the inner command is itself auto-allowable and parsed: `env`, `sudo`, `doas`, `time`, `nohup`, `timeout`, `nice`, `command`, `builtin`, `exec`, `xargs`, `find -exec`, `watch`, `ssh`, `git -c alias.*=!`, `eval`, `source`, `.`,
+   here-strings and heredocs fed to an interpreter, and any pipe into an interpreter (`| sh`, `| bash`, `| python`, `| node`). **Package runners that download and run remote code always ask:** `npx`, `bunx`, `bun x`, `uvx`, `pipx run`, `pnpm dlx`, `yarn dlx`, `npm exec`.
+   Today the arity table has no entries for `npx`, `bunx`, `xargs`, `sudo`, `time`, `nohup` or `timeout`, `env` has arity 1 (an "always" on it would allow every `env ...` command), and `shell.ts` has no carrier handling. So an explicit table and tests come with PR 5.
+7. Tests: a differential corpus that runs each case through the real shell and through the parser and asserts they agree on the executable and the written paths (zsh and bash).
 
 ### 2.9 Project allow rules do not bypass review (SEC-10 in section 12)
 
@@ -334,6 +338,39 @@ Rules:
 Tier 1 auto-approves source edits, and the reviewer cannot protect against a harmful change in a file the sandbox only contains (a backdoor in source, a bad commit later).
 So every auto-approved edit is recorded, and at the end of each turn the client shows a short summary ("4 files changed without asking", with a link to the diff).
 Commits stay on the human path (2.5.3). The summary is a client feature in PR 6.
+
+### 2.12 Sandbox confinement (SEC-14)
+
+The plan uses the sandbox as the first layer and auto-runs known runners inside it. Today the sandbox limits **writes and network** only:
+
+- No deny-read list. macOS allows `file-read*` globally (`seatbelt.ts:55`). Linux uses `--ro-bind / /`. `FilesystemProfile` has write rules only (`kilo-sandbox/src/profile.ts:26`).
+- Sandboxed commands keep credentials in the environment. The sandbox removes seven `KILO_*` variables (`P/kilocode/sandbox/policy.ts:262-271`), and `modelEnv` removes the same seven (`P/kilocode/process/env.ts`). `GITHUB_TOKEN`, `NPM_TOKEN`, `AWS_*` and provider keys pass through.
+  The comment in `P/format/index.ts:89` ("formatters must not inherit backend credentials") overstates this.
+
+A runner in a malicious repository could therefore read `~/.ssh/id_rsa` or `~/.aws/credentials` and print them. The output reaches the model provider, the transcript and any export, before any taint helps.
+With `allowed_hosts` set (for example `github.com` or the npm registry), it could also send a token it found to an authenticated API (a gist, an npm publish).
+
+Requirements (prerequisite S7):
+
+1. **Deny reads** of credential stores inside the sandbox: `~/.ssh`, `~/.aws`, `~/.config/gh`, `~/.npmrc`, `~/.docker/config.json`, `~/.kube`, `~/.gnupg`, keychains and browser profiles. Seatbelt: `deny file-read*` rules. Bubblewrap: tmpfs or bind-over.
+2. **Environment allowlist.** Tool processes (shell, formatters, MCP, LSP, background processes) get an allowlist of variables (`PATH`, `HOME`, `LANG`, `TERM`, `TMPDIR`, language-tool paths). Credential variables are passed only when the user opts in per variable. Correct the formatter comment.
+3. **Allowed hosts** are documented as exfiltration channels. The settings page warns when a host accepts user content (code hosting, gists, package publishing). The default is no hosts.
+4. Until S7 ships, the docs say the sandbox does not protect secrets from reads, and runners are not auto-allowed outside a trusted workspace (2.13).
+
+### 2.13 Untrusted workspaces and project-controlled code (SEC-15, SEC-16)
+
+**Trust baseline (SEC-15).** The manifest and the "known runner" rule assume the repository's scripts are the user's own. In a fresh clone they are not. Rules:
+
+1. A workspace trust signal feeds the engine: VS Code `workspace.isTrusted`, the JetBrains project trust state, and a one-time trust prompt in the CLI and TUI. Today the backend ignores trust (only browser automation reads it: `extension.ts:84,232`), and `kilo serve` starts regardless.
+2. In an **untrusted** workspace Approve for me has the reduced profile: runners, builds and unclear calls ask, and the reviewer is off.
+3. In a trusted workspace, the **first runner call** in a repository shows the script surface (package scripts, Makefile targets, task files) and needs a human acknowledgement. The manifest baseline is recorded only after that.
+
+**Project-controlled execution (SEC-16, pre-existing).** A project `kilo.json` can start MCP servers (`P/mcp/index.ts:429-437`), load plugins (`P/plugin/loader.ts:141`), run formatter commands after every edit (`P/format/index.ts:81-109`) and start LSP servers (`P/lsp/lsp.ts:152-162`).
+None of these has a trust gate, and they run outside the permission system. So a malicious repository can run code on the first auto-approved edit, whatever the mode.
+Approve for Me does not make this worse, but it must not imply protection. Requirements (prerequisite S8):
+
+- Gate project-scope MCP servers, plugins, formatters, LSP servers and the `shell` setting behind workspace trust or a one-time prompt that shows the commands.
+- Until S8 ships, the docs and the mode menu say Approve for Me is **not safe for untrusted repositories**.
 
 ## 3. Tool coverage (v1 policy)
 
@@ -484,7 +521,10 @@ The `approve_for_me` config key was removed from that PR on purpose: nothing rea
 4. **Trust scope.** Only global config and the environment can set `mode`, `model` and the timeout. Project config is ignored for these keys.
 5. **Coupling.** The mode drives the sandbox state for the session (section 0). Approve for me and Auto-approve exclude each other, as in #14636.
 6. **Mode API is always authenticated (SEC-7).** Today the server runs without auth when no password is set, `interactive` is only a client-set flag (`P/permission/index.ts:295-304`; handler `handlers/permission.ts:33`),
-   and only three endpoints stay guarded without a password (`P/server/middleware/authorization.ts:16-20`). So:
+   and only three endpoints stay guarded without a password (`P/server/middleware/authorization.ts:16-20`). Many other routes write state or run commands, and they are protected only by the optional password:
+   `PATCH /global/config`, `PATCH /config`, `POST /permission/:id/always-rules`, `POST /permission/:id/reply`, `POST /session` (can carry a permission ruleset), `PATCH /session/:id`, `POST /mcp` and `connect` (spawn a command),
+   `POST /session/:id/shell`, `POST /global/upgrade`, and worktree create, remove and reset. So:
+   - **Every state-writing or command-running route** joins the always-guarded set whenever a restricted mode can exist (the simplest rule: the server always requires credentials).
    - The mode endpoints and the permission reply endpoint join that always-guarded set. Without a password they refuse. In that case Approve for me and Auto-approve are unavailable and sessions stay in Sandboxed (ask), with a warning.
    - `interactive` is documented as **not** a security boundary. Human-only protection relies on authentication.
    - A change to a looser mode (toward Auto-approve or sandbox off) is published as an event, shown in the transcript ("Mode changed to Auto-approve by <client>"), and recorded in telemetry.
@@ -493,7 +533,7 @@ The `approve_for_me` config key was removed from that PR on purpose: nothing rea
    - Standalone `kilo serve` or `kilo run` without a credential cannot use Approve for me or Auto-approve. This follows from the design and must be confirmed as a product decision.
 7. **`always` is once-only in Approve for me.** An `always` reply writes a global rule (`P/permission/index.ts:342-366`) shared by all sessions and subagents, which would then bypass the reviewer. In this mode `always` is stored as once,
    or accepted only with a narrow pattern (no `*`, no bare-prefix wildcard) and a warning.
-8. **Child sessions inherit the stricter mode (SEC-9).** A subagent starts in the stricter of the parent's mode and its own default. Counters (backstop, escalation cap) and taints (2.6, 2.7) key on the **root** session, so spawning a child does not reset them.
+8. **Created sessions inherit the stricter mode (SEC-9).** A subagent, and any session started by a tool or an API call (the `agent-manager` tool, `POST /session`), starts in the stricter of the creator's mode and its own default. Counters (backstop, escalation cap) and taints (2.6, 2.7) key on the **root** session, so spawning a child does not reset them.
 9. **Session export, import, share and move (SEC-8).** Export keeps `info.permission` today (`P/cli/cmd/export.ts:289-292`) and import spreads `exportData.info` into the new session (`P/cli/cmd/import.ts:208-214`), so a crafted file could carry an allow-all ruleset.
    - Export and share drop `permission` and `mode` by default (an opt-in keeps deny rules only).
    - Import drops `permission` and `mode`, validates the rest, and starts the session in the user's default mode.
@@ -550,6 +590,9 @@ Invariants (each gets a test):
 14. The grant exists only in server code. It is never in a schema, an event or `metadata` (SEC-13).
 15. Tool output that looks like a secret sets the outbound taint, whatever tool produced it (SEC-12).
 16. Escalations approved by the reviewer are limited to the deterministic classes in 2.5.3. Commits and network escalations ask in v1.
+17. Tool processes get an environment allowlist, and the sandbox denies reads of credential stores (SEC-14).
+18. In an untrusted workspace, runners and unclear calls ask and the reviewer is off. The manifest baseline starts only after a human acknowledgement (SEC-15).
+19. The docs never claim protection against project-controlled execution until S8 ships (SEC-16).
 
 Threats and answers:
 
@@ -572,6 +615,12 @@ Threats and answers:
 | Secrets reach the model through `grep`, `glob`, git read commands or program output | Section 2.10: tool-side exclusions, pathspec-aware git, output scanner, taint |
 | Escalated `git commit` runs hooks or signs unsandboxed | `git commit` asks in v1; manifest covers hooks (2.5.3, 2.6) |
 | Unreviewed source edit plants a backdoor | Section 2.11: recorded edits, end-of-turn summary, commits on the human path |
+| A runner reads credential files or tokens in the environment, and prints them | Section 2.12: read-deny for credential stores, environment allowlist (S7) |
+| A freshly cloned repository's scripts auto-run | Section 2.13: workspace trust, script-surface acknowledgement before the baseline |
+| A repository's MCP server, plugin, formatter or LSP runs code | Section 2.13: trust gate (S8). Documented as not covered until then |
+| Wrapper or package runner hides a command (`npx`, `env`, `xargs`, `| sh`) | Section 2.8: explicit carrier table, remote-code runners always ask |
+| A route writes config or permissions without credentials | Section 6.2 item 6: every state-writing route is guarded |
+| `.ENV`, `.env.`, `.env::$DATA` or 8.3 names slip past path rules | Section 2.6: normalisation on every platform, with tests |
 | Reviewer text injection through argument literals | Structure-only input, temperature 0, two-call consensus for escalations (5.1, 5.2) |
 | Agent requests an escalation to get out of the sandbox | Section 2.5: deterministic rules first, narrowest scope, facts-only input, caps, shadow mode |
 | Repeated retries of a blocked call | Backstop: stop auto-deciding after 3 consecutive blocks or 5 in the last 20 calls, and tell the user (numbers from #13893 `continuation.ts:36`) |
@@ -618,6 +667,12 @@ Evaluation:
   - SEC-9 and SEC-10: child mode and counters. Project-scope allow rule counts as ask.
   - SEC-12: `grep` and `glob` never return `.env`, `.npmrc` or key files. `git diff -- .env` and `git show` of tracked secrets are excluded or ask. The output scanner sets the taint on token shapes and PEM blocks.
   - SEC-13: `metadata.reviewed` and similar keys from a plugin tool have no effect. The grant type is absent from every schema and event.
+  - SEC-14: a sandboxed command cannot read the credential stores, and its environment contains none of the credential variables unless opted in. Formatters and MCP children get the same allowlist.
+  - SEC-15: in an untrusted workspace runners ask and the reviewer is off. The baseline is recorded only after the acknowledgement.
+  - SEC-16: project-scope MCP, plugin, formatter, LSP and `shell` settings do not run in an untrusted workspace.
+  - Wrappers: each entry in the 2.8 carrier table asks, including `npx`, `bunx`, `uvx`, `env`, `xargs`, `sudo`, `| sh`.
+  - Routes: every state-writing route refuses without credentials.
+  - Paths: case, NFC, trailing dots, alternate data streams, 8.3, `\\?\` and UNC forms of `.env` and build files are classified correctly.
   - SEC-11: a workspace `.vscode/settings.json` value for either setting has no effect. Writes go to user settings. At startup Approve for me wins.
 
 ## 11. Keeping the upstream diff small
@@ -658,10 +713,16 @@ Findings from the security review, and where each is resolved. IDs are used in c
 | SEC-12 | Secrets reach the model through `grep`, `glob`, git read commands and program output. The taint misses them | Tool-side exclusions, pathspec-aware git, output secret scanner sets the taint | 2.10 |
 | SEC-13 | The grant could be forged through the schema or plugin `metadata` | Server-only type, never in a schema, event or `metadata` | 1.2 |
 
+| SEC-14 | The sandbox does not confine reads and passes credentials in the environment, so runners can read and print secrets | Read-deny for credential stores and an environment allowlist (S7). Allowed hosts documented as exfiltration channels | 2.12 |
+| SEC-15 | The manifest baseline in a fresh clone is attacker-controlled. The backend ignores workspace trust | Trust signal, reduced profile when untrusted, script-surface acknowledgement before the baseline | 2.13 |
+| SEC-16 | A project config can start MCP servers, plugins, formatters and LSP servers with no trust gate (pre-existing) | Trust gate (S8). Documented as not covered until then | 2.13 |
+
 SEC-9, SEC-10 and the once-only `always` rule (6.2 item 7) were medium findings. They are included because they use the same code and would otherwise leave a gap in a high fix.
 
 The second review's medium findings are folded in: escalated commits and the network class (2.5.3), a wider executable-config class and manifest (2.6), SSRF details (2.7), structure-only reviewer input and consensus (5.1, 5.2),
 the consent notice, credential handling and managed policy (6.2), and visible auto-approved edits (2.11).
+
+The third review's medium findings are folded in: wrapper and carrier coverage (2.8), every state-writing route guarded (6.2 item 6), path normalisation per platform (2.6), and mode inheritance for every created session (6.2 item 8).
 
 Still open and tracked in the roadmap: reviewer injection residuals and model drift (evaluation, PR 9), prompt spoofing in the permission dock (PR 6), other clients that auto-reply, including JetBrains (PR 2),
 TOCTOU and parallel calls (PR 8 gate), backstop counting of asks (PR 8), the bubblewrap `.git` protection that is computed at launch (S6 follow-up).

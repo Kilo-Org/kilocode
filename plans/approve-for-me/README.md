@@ -102,7 +102,7 @@ Full list with acceptance criteria is in [`roadmap.md`](./roadmap.md).
 
 | # | PR | Behavior change |
 |---|---|---|
-| S1 to S6 | Security prerequisites: webfetch SSRF guard, executable-config paths, reviewer resolver, import and export, authenticated mode API | Fixes existing gaps |
+| S1 to S8 | Security prerequisites: webfetch SSRF guard, executable-config paths, reviewer resolver, import and export, authenticated routes, grep and glob exclusions, sandbox read-deny, trust gate | Fixes existing gaps |
 | 0 | This plan | None |
 | 1 | Entry point + exclusion + mode menu (#14636) | None (hidden UI) |
 | 2 | Mode model: per-session state, flag, trust scope; selector becomes Approve for me / Sandboxed / Auto-approve and drives the sandbox | Behind the flag |
@@ -149,7 +149,7 @@ reviewer cost counts toward task cost.
 
 ## 7. Security
 
-Two security reviews of this plan found eleven high-severity and several medium-severity issues. All high findings are resolved in the design (`design.md` section 12, `SEC-1` to `SEC-13`), and the medium findings of the second review are folded in.
+Three security reviews of this plan found fourteen high-severity and several medium-severity issues. All high findings are resolved in the design (`design.md` section 12, `SEC-1` to `SEC-16`), and the medium findings of the second and third reviews are folded in.
 
 | Area | Rule in one line |
 |---|---|
@@ -162,13 +162,16 @@ Two security reviews of this plan found eleven high-severity and several medium-
 | Grant | Server-only type. Never in a schema, event or `metadata` |
 | Escalations | v1 reviewer approves only `git add`, `status`, `diff`. `git commit` and network escalations ask |
 | Reviewer input | Structure and placeholders, not argument text. Consent notice before facts leave the machine |
+| Sandbox | Denies reads of credential stores. Tool processes get an environment allowlist (S7). It limits writes and network, and the docs say so |
+| Untrusted repositories | Workspace trust feeds the engine. Untrusted means the reduced profile. First runner call needs a script-surface acknowledgement. Project MCP, plugins, formatters and LSP need a trust gate (S8). Until then the mode is not safe for untrusted repos |
+| Wrappers | Explicit carrier table. `npx`, `bunx`, `uvx`, `pnpm dlx`, `npm exec` always ask |
 | Organisations | Managed-scope keys can disable the modes or force the model |
 | Shell | Strict simple-command subset. bash or zsh only, not chosen by the project. Off on Windows |
 | Mode and permissions | Mode API always authenticated. Import, export and share never carry permission or mode |
 | Project config | Project allow rules do not bypass review. Project config cannot set the mode or the model |
 | VS Code | Auto-approve and Approve for me settings scoped to the user (application scope). A workspace file cannot set either |
 
-The roadmap has six security prerequisites (S1 to S6) that must merge before the mode can approve anything.
+The roadmap has eight security prerequisites (S1 to S8) that must merge before the mode can approve anything.
 
 ## 8. Planned UI
 

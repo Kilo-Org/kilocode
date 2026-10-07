@@ -4,8 +4,8 @@
 <div class="field"><label>Default mode for new sessions</label><div class="seg"><span class="on">Approve for me</span><span>Sandboxed</span><span>Auto-approve</span></div>
 <div class="dim" style="margin-top:4px">Each session can change its own mode. Reviewer stage (off, review only, on) is set under Advanced during the rollout.</div></div>
 <div class="field"><label>Sandbox</label>
-<div class="row"><span class="select" style="width:220px">Network: blocked ▾</span><span class="select" style="width:260px">Allowed hosts: github.com, registry.npmjs.org ▾</span></div>
-<div class="dim" style="margin-top:4px">Writable paths: workspace, temp. Applies to Approve for me and Sandboxed. Not available on Windows.</div></div>
+<div class="row"><span class="select" style="width:220px">Network: blocked ▾</span><span class="select" style="width:260px">Allowed hosts: none (default) ▾</span></div>
+<div class="dim" style="margin-top:4px">Writable paths: workspace, temp. Reads of credential stores are denied. Allowed hosts can be used to send data out: add one only if you trust it. Applies to Approve for me and Sandboxed. Not available on Windows.</div></div>
 <div class="field"><label>Sandbox escalations</label><div class="row"><span class="seg"><span class="on">Let Approve for me decide</span><span>Always ask me</span></span></div>
 <div class="dim" style="margin-top:4px">When a command needs more than the sandbox allows. Safety rules run first. Hook writes, config writes and system paths always ask or block.</div></div>
 <div class="field"><label>Reviewer model</label><div class="select" style="width:320px">kilo-auto/small ▾</div>

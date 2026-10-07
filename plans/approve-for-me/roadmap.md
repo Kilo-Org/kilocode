@@ -75,6 +75,7 @@ Goal: the hook exists and records verdicts without changing outcomes.
 - `metadata.review` written to the tool part. Telemetry event with tier, rule, stage.
 - In `review` stage: compute, record, and return `pass` to the caller always.
 - Project-scope allow rules count as `ask` in this mode (SEC-10).
+- Trust-aware profile (`design.md` 2.13): untrusted workspace uses the reduced profile and the reviewer stays off. The trust signal comes from S8.
 - Tests: tool coverage table (every permission key has a test row; unknown key is tier 0), tier 0 set, the grant property test, headless.
 
 Done when: with `review` on, every permission request has a recorded verdict, and user-visible behavior is unchanged.
@@ -89,6 +90,9 @@ Goal: decide shell calls from facts.
 - Shell constraints (`design.md` 2.8, SEC-6): strict simple-command subset, bash or zsh only and not set by project config, alias and function check (spike), tier 2 off on PowerShell, cmd and Windows.
 - Executable-config class applied to shell writes (uses S2) and the manifest check before runners and escalations (`design.md` 2.6).
 - Outbound rules and the sensitive-read taint (`design.md` 2.7, uses S1).
+- Explicit carrier and wrapper table with tests (`design.md` 2.8 item 6): `env`, `sudo`, `xargs`, `time`, `nohup`, `timeout`, pipes into interpreters, and package runners (`npx`, `bunx`, `uvx`, `pnpm dlx`, `npm exec`) that always ask.
+- Path normalisation per platform (`design.md` 2.6): NFC, case-fold everywhere, Windows trailing dots and spaces, alternate data streams, 8.3 names, `\\?\` and UNC.
+- First-run acknowledgement of the script surface before the manifest baseline exists (`design.md` 2.13).
 - Differential corpus: each case runs through the real shell (bash and zsh) and the parser, and both must agree on the executable and the written paths.
 - Tests: table tests; spelling-equivalence and route-equivalence groups; the attack and benign corpus seed (`prior-art.md`).
 - Still shadow only.
@@ -134,11 +138,13 @@ Done when: in `review` stage the reviewer runs on `reviewable` calls and escalat
 
 Security gate. PR 8 does not merge until all of these hold:
 
-- S1 to S6 are merged and #14636 has its SEC-11 changes.
+- S1 to S8 are merged and #14636 has its SEC-11 changes.
 - Every security test group in `design.md` section 10 passes in CI.
 - The grant property test runs in CI on every change to `Permission.ask`.
 - The shell differential corpus passes for bash and zsh.
 - Escalation approval is limited to the deterministic classes in `design.md` 2.5.3: `git add`, `status` and `diff`. `git commit` and network escalations ask in v1 (widening waits for PR 9 data and the hook manifest).
+- S7 sandbox read-deny and environment allowlist are on, and the sandbox tests prove a sandboxed command cannot read the credential stores or see credential variables.
+- S8 trust gate is on, or the docs and the mode menu state that Approve for Me is not safe for untrusted repositories.
 - The output secret scanner, the `grep` and `glob` exclusions and pathspec-aware git (S6, `design.md` 2.10) are enabled and tested.
 - The grant type is server-only: no schema, event or `metadata` carries it (SEC-13 test).
 - Review of the TOCTOU gap: paths are re-resolved inside the tool at execution time, and reviewed calls run one at a time per session. Record the result in the PR.
@@ -160,6 +166,7 @@ Done when: dogfood users run a normal session with fewer prompts and no unsafe a
 - One settings page for permissions and sandbox: default mode, sandbox network/hosts/paths, reviewer model (non-OpenAI list), timeout, escalation toggle, "what is reviewed" table.
 - Legacy import: map `yoloMode` and `yoloGatekeeperApiConfigId` (`legacy-gatekeeper.md` section 10). Never produce Auto-approve from a guarded setup.
 - Managed-scope policy keys: `approve_for_me.allowed_modes`, `approve_for_me.escalation_approval`, `approve_for_me.model`, `sandbox.required` (`design.md` 6.2 item 10).
+- User docs say the sandbox limits writes and network (and, after S7, reads of credential stores), and that Approve for Me is not for untrusted repositories until S8 ships.
 - User docs in `packages/kilo-docs`, including limits: not a replacement for review, build and test commands run project code, data sent to the reviewer, behavior without a sandbox.
 
 ### PR 11. Graduation
@@ -168,9 +175,9 @@ Done when: dogfood users run a normal session with fewer prompts and no unsafe a
 - Turn the sandbox on by default only if PR 9 thresholds hold. Provide good defaults for common hosts and paths.
 - Remove `plans/approve-for-me/`.
 
-### Security prerequisites (S1 to S6)
+### Security prerequisites (S1 to S8)
 
-These small PRs fix existing gaps that Approve for Me would otherwise inherit. They are useful on their own. **PR 8 (active mode) cannot start until S1 to S6 are merged** (section 2).
+These small PRs fix existing gaps that Approve for Me would otherwise inherit. They are useful on their own. **PR 8 (active mode) cannot start until S1 to S8 are merged** (section 2).
 
 | # | PR | Fixes | Notes |
 |---|---|---|---|
@@ -178,8 +185,10 @@ These small PRs fix existing gaps that Approve for Me would otherwise inherit. T
 | S2 | Executable-config class (names plus executable-bit and shebang rule) and wider protected paths in the edit tools (`P/kilocode/permission/config-paths.ts`), with the manifest helper (records absence, covers `.git/config` and hooks) | SEC-2 | Kilo-owned file. Applies to every mode, not only Approve for Me |
 | S3 | Reviewer resolver (global-only, provider equality, `${` rejected, per directory). Separate issue and fix for the same defect in `getSmallModel` callers | SEC-3 | Resolver is Kilo-owned. The existing-callers fix touches shared `provider.ts`, so keep it minimal |
 | S4 | Session export, share and import: drop `permission` and `mode`; import validates | SEC-8 | `P/cli/cmd/export.ts`, `P/cli/cmd/import.ts`. Independent of this feature |
-| S5 | Mode and permission-reply endpoints always authenticated; no password means no loosening modes; tool env test | SEC-7 | `P/server/middleware/authorization.ts` |
+| S5 | Every state-writing or command-running route always authenticated (config, permission reply and always-rules, session create and patch, MCP add and connect, session shell, upgrade, worktrees); no password means no loosening modes; tool env test | SEC-7 | `P/server/middleware/authorization.ts` |
 | S6 | `grep` and `glob` exclude sensitive globs inside the tool; pathspec-aware git read commands; secret scanner on tool output that sets the taint | SEC-12 | `P/tool/grep.ts`, `P/tool/glob.ts` (shared, small), scanner and git logic in Kilo-owned files. Applies to every mode |
+| S7 | Sandbox confinement: deny reads of credential stores (seatbelt and bubblewrap); environment allowlist for shell, formatter, MCP, LSP and background processes; fix the formatter comment | SEC-14 | `kilo-sandbox`, `P/kilocode/sandbox/policy.ts`, `P/kilocode/process/env.ts`. Applies to every sandboxed mode |
+| S8 | Trust gate for project-controlled execution: project-scope MCP servers, plugins, formatters, LSP servers and `shell` need workspace trust or a one-time prompt showing the commands. Wire a trust signal (VS Code, JetBrains, CLI) into the backend | SEC-15, SEC-16 | Shared files (`P/mcp`, `P/plugin`, `P/format`, `P/lsp`) get small marked hooks. Independent of this feature. Report as a standalone issue |
 
 The grant type needs no S item: it is part of PR 4 (`design.md` 1.2, SEC-13).
 
@@ -193,7 +202,7 @@ Each S item has its own tests (`design.md` section 10). S1, S4 and S5 are also w
                 4 -> 7 -> 8 -> 9 -> 10 -> 11
 ```
 
-6 can start after 4. 7 needs 4 and S3. 8 needs 3, 5, 7 and **S1 to S6**. 10 needs 8. PR 3 has value without the reviewer and can ship early. S1 to S6 are independent of each other and can start now.
+6 can start after 4. 7 needs 4 and S3. 8 needs 3, 5, 7 and **S1 to S8**. 10 needs 8. PR 3 has value without the reviewer and can ship early. S1 to S8 are independent of each other and can start now.
 
 ## 3. Rollout
 
@@ -214,7 +223,7 @@ Keep the flag-off path identical to today. A test asserts it.
 |---|---|
 | 0 Plan | This PR |
 | 1 Entry point | Open: #14636 |
-| S1 to S6 | Not started (can start now) |
+| S1 to S8 | Not started (can start now) |
 | 2 to 11 | Not started |
 
 ## 5. Work split with the community effort
