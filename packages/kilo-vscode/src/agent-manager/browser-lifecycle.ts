@@ -16,7 +16,7 @@ export function createBrowserLifecycle(input: {
   log: (...args: unknown[]) => void
 }) {
   const browser = input.browser ?? new BrowserBroker({ log: input.log })
-  browser.bind(
+  const owner = browser.bind(
     (route: BrowserRoute) => {
       const directory = canonicalizePath(route.directory)
       const ctx = input.contexts().byDirectory(directory)
@@ -36,6 +36,10 @@ export function createBrowserLifecycle(input: {
     },
   )
   const post = (state: BrowserState) => {
+    // Browser entries opened for sidebar or editor-tab sessions carry no Agent
+    // Manager project. The tab browser owns and renders those, so Agent Manager
+    // must not broadcast them or reveal its own panel.
+    if (!state.projectId) return
     const active = input.contexts().active()
     if ((state.status === "starting" || state.status === "loading") && state.projectId === active?.id) {
       input.openPanel()
@@ -43,7 +47,10 @@ export function createBrowserLifecycle(input: {
     input.post(browserMessage(state))
   }
   const off = browser.subscribe(post)
-  const frames = browser.frames((frame) => input.post({ type: "agentManager.browserFrame", ...frame }))
+  const frames = browser.frames((frame) => {
+    if (!frame.projectId) return
+    input.post({ type: "agentManager.browserFrame", ...frame })
+  })
   let current: Panel | undefined
   return {
     attach(panel: Panel): void {
@@ -78,12 +85,13 @@ export function createBrowserLifecycle(input: {
       for (const session of browser.sessions()) this.close(session, projectId)
     },
     closeAll(): Promise<void> {
-      return Promise.all([...browser.sessions()].map((sessionId) => browser.close(sessionId))).then(() => undefined)
+      return browser.closeOwned(owner)
     },
     dispose(): Promise<void> {
       current = undefined
       off()
       frames()
+      browser.unbind(owner)
       return browser.disposeAsync()
     },
   }

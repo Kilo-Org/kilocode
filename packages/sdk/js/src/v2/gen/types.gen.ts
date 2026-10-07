@@ -77,6 +77,7 @@ export type Event =
   | EventTuiSessionSelect1
   | EventMcpToolsChanged1
   | EventMcpBrowserOpenFailed1
+  | EventMcpAuthUrl1
   | EventCommandExecuted1
   | EventProjectUpdated1
   | EventSessionStatus1
@@ -196,6 +197,7 @@ export type Event =
   | EventTuiSessionSelect
   | EventMcpToolsChanged
   | EventMcpBrowserOpenFailed
+  | EventMcpAuthUrl
   | EventCommandExecuted
   | EventProjectUpdated
   | EventSessionStatus
@@ -1093,6 +1095,10 @@ export type SessionStatus =
       requestID: string
       message: string
     }
+  | {
+      type: "scheduled"
+      scheduledAt: string
+    }
 
 export type QuestionOption = {
   /**
@@ -1241,6 +1247,7 @@ export type GlobalEvent = {
     | EventTuiSessionSelect
     | EventMcpToolsChanged
     | EventMcpBrowserOpenFailed
+    | EventMcpAuthUrl
     | EventCommandExecuted
     | EventProjectUpdated
     | EventSessionStatus
@@ -1999,6 +2006,14 @@ export type GlobalEvent = {
       }
     | {
         id: string
+        type: "mcp.auth.url"
+        properties: {
+          mcpName: string
+          url: string
+        }
+      }
+    | {
+        id: string
         type: "command.executed"
         properties: {
           name: string
@@ -2597,6 +2612,7 @@ export type Config = {
   subagent_variant_overrides?: {
     [key: string]: string
   }
+  memory_model?: string
   default_agent?: string
   subagent_depth?: number
   username?: string
@@ -3137,6 +3153,7 @@ export type McpStatusFailed = {
 
 export type McpStatusNeedsAuth = {
   status: "needs_auth"
+  error?: string
 }
 
 export type McpStatusNeedsClientRegistration = {
@@ -4301,6 +4318,7 @@ export type MarketplaceInstalledMetadata = {
 export type MarketplaceListResult = {
   items: Array<MarketplaceItem>
   installed: MarketplaceInstalledMetadata
+  filenames?: Array<string>
   errors?: Array<string>
 }
 
@@ -5043,6 +5061,7 @@ export type V2Event =
   | TuiSessionSelect
   | McpToolsChanged
   | McpBrowserOpenFailed
+  | McpAuthUrl
   | CommandExecuted
   | ProjectUpdated
   | SessionStatus2
@@ -6312,6 +6331,15 @@ export type EventMcpToolsChanged = {
 export type EventMcpBrowserOpenFailed = {
   id: string
   type: "mcp.browser.open.failed"
+  properties: {
+    mcpName: string
+    url: string
+  }
+}
+
+export type EventMcpAuthUrl = {
+  id: string
+  type: "mcp.auth.url"
   properties: {
     mcpName: string
     url: string
@@ -9232,6 +9260,24 @@ export type McpBrowserOpenFailed = {
   }
 }
 
+export type McpAuthUrl = {
+  id: string
+  metadata?: {
+    [key: string]: unknown
+  }
+  type: "mcp.auth.url"
+  durable?: {
+    aggregateID: string
+    seq: number
+    version: number
+  }
+  location?: LocationRef
+  data: {
+    mcpName: string
+    url: string
+  }
+}
+
 export type CommandExecuted = {
   id: string
   metadata?: {
@@ -10407,6 +10453,15 @@ export type EventMcpToolsChanged1 = {
 export type EventMcpBrowserOpenFailed1 = {
   id: string
   type: "mcp.browser.open.failed"
+  properties: {
+    mcpName: string
+    url: string
+  }
+}
+
+export type EventMcpAuthUrl1 = {
+  id: string
+  type: "mcp.auth.url"
   properties: {
     mcpName: string
     url: string
@@ -12402,7 +12457,9 @@ export type McpAuthCallbackResponses = {
 export type McpAuthCallbackResponse = McpAuthCallbackResponses[keyof McpAuthCallbackResponses]
 
 export type McpAuthAuthenticateData = {
-  body?: never
+  body?: {
+    external?: boolean
+  }
   path: {
     name: string
   }
@@ -12434,6 +12491,42 @@ export type McpAuthAuthenticateResponses = {
 }
 
 export type McpAuthAuthenticateResponse = McpAuthAuthenticateResponses[keyof McpAuthAuthenticateResponses]
+
+export type McpAuthCancelData = {
+  body?: never
+  path: {
+    name: string
+  }
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/mcp/{name}/auth/cancel"
+}
+
+export type McpAuthCancelErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+  /**
+   * McpServerNotFoundError
+   */
+  404: McpServerNotFoundError
+}
+
+export type McpAuthCancelError = McpAuthCancelErrors[keyof McpAuthCancelErrors]
+
+export type McpAuthCancelResponses = {
+  /**
+   * OAuth authentication cancelled
+   */
+  200: {
+    success: true
+  }
+}
+
+export type McpAuthCancelResponse = McpAuthCancelResponses[keyof McpAuthCancelResponses]
 
 export type McpConnectData = {
   body?: never

@@ -224,6 +224,15 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
     if (id && child) vscode.postMessage({ type: "promoteBackgroundJob", jobID: child, sessionID: id })
   }
 
+  // Stop only this sub-agent and anything it started. The parent keeps running
+  // and receives the cancelled task result.
+  const stop = (e: MouseEvent) => {
+    e.stopPropagation()
+    const child = childSessionId()
+    if (child) vscode.postMessage({ type: "abort", sessionID: child, scope: "tree" })
+  }
+  const stoppable = () => !props.readonly && !!childSessionId() && avatar() === "running"
+
   const trigger = () => (
     <div data-slot="basic-tool-tool-info-structured" data-component="task-tool-heading">
       <div data-slot="basic-tool-tool-info-main">
@@ -240,6 +249,18 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
         </Show>
       </div>
       <Show when={childSessionId()}>
+        <Show when={stoppable()}>
+          <Tooltip value={language.t("task.stop")} placement="top">
+            <IconButton
+              icon="stop"
+              size="small"
+              variant="ghost"
+              data-slot="task-tool-stop"
+              aria-label={language.t("task.stop")}
+              onClick={stop}
+            />
+          </Tooltip>
+        </Show>
         <Show when={features().backgroundSubagents && promotable()}>
           <Tooltip value={language.t("task.backgroundAgents.continueInBackground")} placement="top">
             <IconButton

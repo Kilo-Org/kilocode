@@ -347,6 +347,12 @@ GET /providers
 
 No authentication required.
 
+## Request size limits
+
+Request bodies sent to the gateway are limited to a maximum payload size of 20MB. Requests that exceed this limit fail with an HTTP 413 (Payload Too Large) error.
+
+This most commonly happens when a conversation history contains many large inline images (base64-encoded `image_url` content parts). If you hit this limit, reduce the size or number of inline images in the conversation history -- for example, downscale or compress images before encoding them, or drop older image parts from earlier messages.
+
 ## Error codes
 
 | HTTP Status | Description |
@@ -355,6 +361,7 @@ No authentication required.
 | 401 | Unauthorized -- invalid or missing API key |
 | 402 | Insufficient balance -- add credits to continue |
 | 403 | Forbidden -- model not allowed by organization policy |
+| 413 | Payload too large -- request body exceeds the 20MB limit |
 | 429 | Rate limited -- too many requests |
 | 500 | Internal server error |
 | 502 | Provider error -- upstream provider returned an error |

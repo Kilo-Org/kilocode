@@ -47,7 +47,7 @@ const testAllow: Record<string, { count: number; reason: string }> = {
     reason: "production default snapshot hooks require the shared runtime and instance context",
   },
   "kilocode/kilo-sessions.test.ts": {
-    count: 46,
+    count: 49,
     reason:
       "K1 W1: real integration test for SessionStatus→detach→heartbeat-fence; " +
       "the test creates a session and sets its status via the global AppRuntime, " +
@@ -75,7 +75,11 @@ const testAllow: Record<string, { count: number; reason: string }> = {
       "The PR poll wiring test creates its session through that same global AppRuntime to " +
       "drive the production init/bootstrap/attach path that starts the 5-minute check, then " +
       "asserts the scheduler start count on the module-level pr-link-poller seam, so the " +
-      "global-runtime coupling is what the test observes.",
+      "global-runtime coupling is what the test observes. " +
+      "The migration-settle test lists and removes leftover sessions through that " +
+      "same global AppRuntime so the persisted migration candidate set contains only " +
+      "its own session; the sweep's settle behavior is otherwise masked by sessions " +
+      "earlier tests left in the shared project.",
   },
   "kilocode/session/platform-attribution.test.ts": { count: 2, reason: "existing runtime integration test" },
   "kilocode/session-prompt-queue.test.ts": { count: 6, reason: "prompt queue legacy instance bridge regression" },

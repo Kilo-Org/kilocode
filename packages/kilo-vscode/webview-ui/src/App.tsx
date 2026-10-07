@@ -20,6 +20,8 @@ import { useWorktreeMode } from "./context/worktree-mode"
 import { useDiffStyle } from "./context/diff-style"
 import { dispatchAgentManagerEditPreview } from "./utils/agent-manager-events"
 import { strongest } from "./utils/session-activity"
+import { adjacentTab } from "./utils/local-tabs"
+import { focusPrompt } from "./utils/tab-navigation"
 import { createPlanOpener } from "./utils/open-plan"
 import type { PermissionFileDiff } from "./types/messages"
 
@@ -243,6 +245,9 @@ export const DataBridge: Component<{ children: any }> = (props) => {
 const AppContent: Component = () => {
   const [currentView, setCurrentView] = createSignal<ViewType>("newTask")
   const [settingsTab, setSettingsTab] = createSignal<string | undefined>()
+  const [settingsSubtab, setSettingsSubtab] = createSignal<string | undefined>()
+  const [settingsFocus, setSettingsFocus] = createSignal<{ token: number; value: string } | undefined>()
+  const [settingsSearch, setSettingsSearch] = createSignal(0)
   const [agentManagerProjectId, setAgentManagerProjectId] = createSignal<string | undefined>()
   const [migration, setMigration] = createSignal(false)
   const session = useSession()
@@ -300,11 +305,31 @@ const AppContent: Component = () => {
       case "cyclePreviousAgentMode":
         if (document.hasFocus()) cycleAgent(-1)
         break
+      case "tabPrevious":
+        step(-1)
+        break
+      case "tabNext":
+        step(1)
+        break
       case "focusSearch":
         setCurrentView("newTask")
         window.dispatchEvent(new CustomEvent("focusTranscriptSearch"))
         break
+      case "focusSettingsSearch":
+        setCurrentView("settings")
+        setSettingsSearch((count) => count + 1)
+        break
     }
+  }
+
+  // Select the session tab next to the active one, like Agent Manager tab navigation.
+  // The host sends the action to the sidebar and the active editor tab, so only the focused one acts.
+  const step = (offset: -1 | 1) => {
+    if (!tabs || !document.hasFocus() || currentView() !== "newTask") return
+    const id = adjacentTab(tabs.display(), tabs.active(), offset)
+    if (!id) return
+    tabs.select(id)
+    requestAnimationFrame(focusPrompt)
   }
 
   const cycleAgent = (direction: 1 | -1) => {
@@ -348,6 +373,8 @@ const AppContent: Component = () => {
       if (message?.type === "navigate" && message.view && VALID_VIEWS.has(message.view)) {
         console.log("[Kilo New] App: 🧭 navigate:", message.view, message.tab ? `tab=${message.tab}` : "")
         if (message.tab) setSettingsTab(message.tab)
+        if (message.subtab) setSettingsSubtab(message.subtab)
+        if (message.focus) setSettingsFocus((prev) => ({ token: (prev?.token ?? 0) + 1, value: message.focus! }))
         setAgentManagerProjectId(message.projectId)
         setCurrentView(message.view as ViewType)
         vscode.postMessage({ type: "settingsTabChanged", tab: message.tab })
@@ -455,10 +482,17 @@ const AppContent: Component = () => {
             <Match when={currentView() === "settings"}>
               <Settings
                 tab={settingsTab()}
+                subtab={settingsSubtab()}
+                focus={settingsFocus()}
                 agentManagerProjectId={agentManagerProjectId()}
                 agentManagerSettings={host.KILO_AGENT_MANAGER_SETTINGS === true}
                 onTabChange={setSettingsTab}
+                onAgentBehaviourNavigationConsumed={() => {
+                  setSettingsSubtab(undefined)
+                  setSettingsFocus(undefined)
+                }}
                 onMigrationClick={() => setMigration(true)}
+                searchRequest={settingsSearch()}
               />
             </Match>
             <Match when={currentView() === "subAgentViewer"}>

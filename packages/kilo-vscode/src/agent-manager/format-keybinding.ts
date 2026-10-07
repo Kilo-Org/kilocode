@@ -22,15 +22,22 @@ const SPECIAL_KEYS: Record<string, string> = {
  * Mac: "⌘⇧W"  Windows/Linux: "Ctrl+Shift+W"
  */
 export function formatKeybinding(raw: string, mac: boolean): string {
-  const symbols = raw
-    .split("+")
-    .map((p) => p.trim().toLowerCase())
-    .map((part) => {
-      const mod = KEY_SYMBOLS[part]
-      if (mod) return mac ? mod.mac : mod.other
-      return SPECIAL_KEYS[part] ?? part.toUpperCase()
+  // Chords such as "cmd+k cmd+m" are formatted part by part.
+  return raw
+    .trim()
+    .split(/\s+/)
+    .map((chord) => {
+      const symbols = chord
+        .split("+")
+        .map((p) => p.trim().toLowerCase())
+        .map((part) => {
+          const mod = KEY_SYMBOLS[part]
+          if (mod) return mac ? mod.mac : mod.other
+          return SPECIAL_KEYS[part] ?? part.toUpperCase()
+        })
+      return mac ? symbols.join("") : symbols.join("+")
     })
-  return mac ? symbols.join("") : symbols.join("+")
+    .join(" ")
 }
 
 /** Agent Manager command prefix for keybinding extraction. */
@@ -41,7 +48,22 @@ const GLOBAL_KEYBINDINGS: Record<string, string> = {
   "kilo-code.new.agentManagerOpen": "agentManagerOpen",
   "kilo-code.new.cycleAgentMode": "cycleAgentMode",
   "kilo-code.new.cyclePreviousAgentMode": "cyclePreviousAgentMode",
+  "kilo-code.new.focusChatInput": "focusChatInput",
+  "kilo-code.new.addToContext": "addToContext",
+  "kilo-code.new.settingsSearch": "settingsSearch",
 }
+
+/** [binding name, command suffix, key after the cmd/ctrl modifier] */
+const FALLBACKS: Array<[string, string, string]> = [
+  ["search", "search", "f"],
+  ["runScript", "runScript", "e"],
+  ["toggleDiff", "toggleDiff", "d"],
+  ["showShortcuts", "showShortcuts", "shift+/"],
+  ["previousTerminal", "previousTerminal", "shift+["],
+  ["nextTerminal", "nextTerminal", "shift+]"],
+  ["newTerminalCenter", "newTerminalTab", "shift+t"],
+  ["newTerminalTerminal", "newSideTerminal", "t"],
+]
 
 function addBinding(bindings: Record<string, string>, name: string, value: string, when?: string): void {
   if (name === "newTerminalTab" && when?.includes("!kilo-code.new.agentManagerSideTerminalFocused")) {
@@ -86,18 +108,14 @@ export function buildKeybindingMap(
     addRawBinding(bindings, kb, mac)
   }
 
-  // Ensure fallback bindings are always present (may be missing from
-  // cached packageJSON if the extension hasn't been fully reloaded)
-  if (!bindings.search) bindings.search = formatKeybinding(mac ? "cmd+f" : "ctrl+f", mac)
-  if (!bindings.runScript) bindings.runScript = formatKeybinding(mac ? "cmd+e" : "ctrl+e", mac)
-  if (!bindings.toggleDiff) bindings.toggleDiff = formatKeybinding(mac ? "cmd+d" : "ctrl+d", mac)
-  if (!bindings.showShortcuts) bindings.showShortcuts = formatKeybinding(mac ? "cmd+shift+/" : "ctrl+shift+/", mac)
-  if (!bindings.previousTerminal)
-    bindings.previousTerminal = formatKeybinding(mac ? "cmd+shift+[" : "ctrl+shift+[", mac)
-  if (!bindings.nextTerminal) bindings.nextTerminal = formatKeybinding(mac ? "cmd+shift+]" : "ctrl+shift+]", mac)
-  if (!bindings.newTerminalCenter)
-    bindings.newTerminalCenter = formatKeybinding(mac ? "cmd+shift+t" : "ctrl+shift+t", mac)
-  if (!bindings.newTerminalTerminal) bindings.newTerminalTerminal = formatKeybinding(mac ? "cmd+t" : "ctrl+t", mac)
+  // Ensure fallback bindings are present when the command is missing from a
+  // cached packageJSON (extension not fully reloaded). A command the user
+  // unbound has a key-less entry, so its fallback is not added.
+  const removed = new Set(keybindings.filter((kb) => !kb.key && !kb.mac).map((kb) => kb.command))
+  for (const [name, command, key] of FALLBACKS) {
+    if (bindings[name] || removed.has(AM_PREFIX + command)) continue
+    bindings[name] = formatKeybinding(mac ? `cmd+${key}` : `ctrl+${key}`, mac)
+  }
 
   return bindings
 }

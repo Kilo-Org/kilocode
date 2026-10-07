@@ -1013,6 +1013,7 @@ const layer = Layer.effect(
                 (cause) => !Cause.hasInterruptsOnly(cause),
                 (cause) => Effect.fail(Cause.squash(cause)),
               ),
+              Effect.tapError(() => Effect.forEach(Object.keys(ctx.reasoningMap), finishReasoning)), // kilocode_change - close failed-attempt reasoning before retry resets tracking
               Effect.retry(
                 SessionRetry.policy({
                   provider: input.model.providerID,
