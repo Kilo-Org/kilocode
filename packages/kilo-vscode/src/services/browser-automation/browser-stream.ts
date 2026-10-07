@@ -1,5 +1,5 @@
 import { setTimeout as wait } from "node:timers/promises"
-import type { CDPSession, Frame, Page } from "playwright-core"
+import type { CDPSession, Page } from "playwright-core"
 import {
   mergeWheel,
   type BrowserFrame,
@@ -190,6 +190,16 @@ function selection(opts: { action: Clipboard; limit: number; text?: string }): {
   return { focused: true, text: result }
 }
 
+function kept(current: BrowserViewport | undefined, next: BrowserViewport) {
+  return (
+    !!current &&
+    next.active &&
+    next.width === current.width &&
+    next.height === current.height &&
+    next.scale === current.scale
+  )
+}
+
 export class BrowserStream {
   private session?: CDPSession
   private view?: BrowserViewport
@@ -220,7 +230,6 @@ export class BrowserStream {
   ) {
     this.scope = { ...identity() }
     page.on("close", this.ended)
-    page.on("framenavigated", this.navigated)
   }
 
   async configure(view: BrowserViewport): Promise<void> {
@@ -251,6 +260,12 @@ export class BrowserStream {
         }
     this.view = next
     this.reset()
+    // The screencast continues across navigations. A new document with the same size only needs the new identity, so
+    // the preview does not wait for a stream restart and a resize settle on each page load.
+    if (this.casting === current && kept(current, next)) {
+      this.casting = next
+      return
+    }
     await this.serial(async () => {
       if (this.closed || this.view !== next) return
       const session = await this.connect()
@@ -416,13 +431,13 @@ export class BrowserStream {
     this.closed = true
     this.reset()
     this.page.off("close", this.ended)
-    this.page.off("framenavigated", this.navigated)
     this.closing = this.serial(async () => {
       await this.release()
       const session = this.session
       if (!session) return
       await this.stop().catch(() => this.report("stop failed"))
       session.off("Page.screencastFrame", this.receive)
+      session.off("Page.frameNavigated", this.navigated)
       this.session = undefined
       await session.detach().catch(() => this.report("detach failed"))
     })
@@ -433,8 +448,9 @@ export class BrowserStream {
     void this.close().catch(() => this.report("close failed"))
   }
 
-  private readonly navigated = (frame: Frame): void => {
-    if (this.closed || frame !== this.page.mainFrame()) return
+  // Only a new main-frame document releases held input. Same-document navigations, such as pushState, keep it.
+  private readonly navigated = (event: { frame: { parentId?: string } }): void => {
+    if (this.closed || event.frame.parentId) return
     this.synchronize()
     this.reset()
     void this.serial(() => this.release()).catch(() => this.report("navigation release failed"))
@@ -474,6 +490,7 @@ export class BrowserStream {
     const session = await this.page.context().newCDPSession(this.page)
     this.session = session
     session.on("Page.screencastFrame", this.receive)
+    session.on("Page.frameNavigated", this.navigated)
     if (!this.closed) await session.send("Page.enable")
     return session
   }

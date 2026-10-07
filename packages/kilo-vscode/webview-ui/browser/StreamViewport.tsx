@@ -16,6 +16,7 @@ type View = { scope: BrowserScope; identity: BrowserViewIdentity; viewport: Brow
 type Job = { frame: Frame; done: boolean; image?: HTMLImageElement }
 
 let revision = Date.now()
+const SETTLE = 300
 
 function same(scope: BrowserScope, value: BrowserScope) {
   return scope.sessionId === value.sessionId && scope.projectId === value.projectId
@@ -31,6 +32,12 @@ function matches(value: BrowserViewIdentity, identity: BrowserViewIdentity) {
 
 function identity(frame: BrowserViewIdentity): BrowserViewIdentity {
   return { browserId: frame.browserId, navigation: frame.navigation, revision: frame.revision }
+}
+
+function fits(view: BrowserViewport, next: Omit<BrowserViewport, "revision">) {
+  return (
+    view.width === next.width && view.height === next.height && view.scale === next.scale && view.active === next.active
+  )
 }
 
 function valid(frame: Frame) {
@@ -72,6 +79,8 @@ export const StreamViewport: Component<{
   let scheduled: number | undefined
   let moving: BrowserInteraction | undefined
   let wheeling: Extract<BrowserInteraction, { kind: "wheel" }> | undefined
+  let published = 0
+  let deferred: ReturnType<typeof setTimeout> | undefined
   const keyboard = new Map<string, Extract<BrowserInteraction, { kind: "key" }>>()
   const clicker = clicks()
   const text = typing()
@@ -123,7 +132,8 @@ export const StreamViewport: Component<{
     props.transport.send({ type: "interact", scope: view.scope, identity: view.identity, event: { kind: "release" } })
   }
 
-  // Keep the last image on a resize of the same page, so the preview does not go blank until the next frame.
+  // Keep the last image on a resize or a new document of the same page, so the preview does not go blank until the
+  // next frame.
   const clear = (keep = false) => {
     release()
     const queued = pending
@@ -135,6 +145,8 @@ export const StreamViewport: Component<{
     if (!canvas || keep) return
     canvas.width = 0
     canvas.height = 0
+    canvas.style.removeProperty("width")
+    canvas.style.removeProperty("height")
     for (const name of ["browserId", "navigation", "revision", "sequence", "sessionId", "projectId"]) {
       delete canvas.dataset[name]
     }
@@ -189,22 +201,16 @@ export const StreamViewport: Component<{
       return
     }
     const viewport = measure()
-    const unchanged =
-      previous &&
-      same(previous.scope, next.scope) &&
-      previous.identity.browserId === next.browserId &&
-      previous.identity.navigation === next.navigation
-    if (
-      unchanged &&
-      previous.viewport.width === viewport.width &&
-      previous.viewport.height === viewport.height &&
-      previous.viewport.scale === viewport.scale &&
-      previous.viewport.active === viewport.active
-    ) {
+    const page = previous && same(previous.scope, next.scope) && previous.identity.browserId === next.browserId
+    const unchanged = page && previous.identity.navigation === next.navigation
+    if (unchanged && fits(previous.viewport, viewport)) {
       restrict()
       return
     }
-    clear(unchanged && viewport.active)
+    if (unchanged && hold(previous, viewport.active)) return
+    // Like a native browser, a new document of the same page keeps the last image until its first frame. Input waits
+    // for that frame, because it must reach the new document.
+    clear(page && viewport.active)
     if (previous && !unchanged) publish(previous, { ...previous.viewport, revision: ++revision, active: false })
     const version = ++revision
     current = {
@@ -214,8 +220,24 @@ export const StreamViewport: Component<{
     }
     host.dataset.active = String(viewport.active)
     host.setAttribute("aria-busy", String(viewport.active))
-    if (!unchanged || !viewport.active) textarea.blur()
+    if (!page || !viewport.active) textarea.blur()
+    published = performance.now()
     publish(current)
+  }
+
+  // Each size restarts the stream. During a continuous resize, send the next size only after the page painted the
+  // last one, so the preview follows the resize instead of waiting for it to end.
+  const hold = (view: View, active: boolean) => {
+    const wait = SETTLE - (performance.now() - published)
+    if (!view.viewport.active || !active || painted || wait <= 0) return false
+    deferred ??= setTimeout(resume, wait)
+    return true
+  }
+
+  const resume = () => {
+    clearTimeout(deferred)
+    deferred = undefined
+    sync()
   }
 
   const bound = (frame: Frame) => current && same(current.scope, frame.scope) && matches(frame, current.identity)
@@ -240,6 +262,21 @@ export const StreamViewport: Component<{
     return true
   }
 
+  // Keep the image at its page size. A resize then shows or hides the page edge, like a native browser, and does not
+  // stretch the text until the next frame.
+  const fit = (viewport: BrowserViewport) => {
+    const width = `${viewport.width}px`
+    const height = `${viewport.height}px`
+    if (canvas.style.width !== width) canvas.style.width = width
+    if (canvas.style.height !== height) canvas.style.height = height
+  }
+
+  // After a frame, send a size that waited for it, then draw the newest frame.
+  const proceed = () => {
+    if (deferred !== undefined && painted) resume()
+    drain()
+  }
+
   const draw = async (job: Job, data: string) => {
     const image = new Image()
     job.image = image
@@ -256,6 +293,7 @@ export const StreamViewport: Component<{
       if (canvas.height !== frame.height) canvas.height = frame.height
       context.clearRect(0, 0, canvas.width, canvas.height)
       context.drawImage(image, 0, 0, canvas.width, canvas.height)
+      fit(current.viewport)
       painted = identity(frame)
       canvas.dataset.browserId = frame.browserId
       canvas.dataset.navigation = String(frame.navigation)
@@ -273,7 +311,7 @@ export const StreamViewport: Component<{
       job.image = undefined
       acknowledge(job)
       decoding = undefined
-      if (!disposed) drain()
+      if (!disposed) proceed()
     }
   }
 
@@ -521,6 +559,7 @@ export const StreamViewport: Component<{
 
   onCleanup(() => {
     disposed = true
+    clearTimeout(deferred)
     unsubscribe()
     clear()
     textarea.blur()
