@@ -4,22 +4,18 @@ import ai.kilocode.backend.app.KiloBackendChatManager
 import ai.kilocode.backend.app.KiloBackendSessionManager
 import ai.kilocode.log.KiloLog
 import ai.kilocode.rpc.KiloWorktreeRpcApi
-import ai.kilocode.rpc.dto.AgentManagerStartProgressDto
-import ai.kilocode.rpc.dto.AgentManagerStartStage
 import ai.kilocode.rpc.dto.CreateWorktreeRequestDto
 import ai.kilocode.rpc.dto.PromptDto
 import ai.kilocode.rpc.dto.PromptPartDto
-import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.SharedFlow
-import kotlinx.coroutines.flow.asSharedFlow
 import java.nio.file.Path
 import java.security.SecureRandom
 
 /**
  * Executes `kilocode.agent_manager.start` — worktree/session creation requested by the `agent_manager`
  * tool's `start` action. Fire-and-forget on the CLI side (see [AgentManagerProtocol.Start]'s doc): the
- * tool call already returned before this runs, so failures are reported only through [progress] and
- * logs, never back to the CLI.
+ * tool call already returned before this runs, so a failure can only be logged, never reported back
+ * to the CLI. A task that fails therefore leaves no session; the chat learns about it by asking for an
+ * `overview` and not finding one, which is also how it discovers a session it never saw created.
  *
  * Scope note: unlike the New Worktree dialog's [ai.kilocode.client.agentManager.worktree.
  * runWorktreeSetupScript], a host-initiated worktree does not open an interactive setup-script
@@ -32,14 +28,8 @@ internal class AgentManagerStarter(
     private val sessions: KiloBackendSessionManager,
     private val chat: KiloBackendChatManager,
     private val worktrees: KiloWorktreeRpcApi,
+    private val log: KiloLog,
 ) {
-    companion object {
-        private val LOG = KiloLog.create(AgentManagerStarter::class.java)
-    }
-
-    private val _progress = MutableSharedFlow<AgentManagerStartProgressDto>(extraBufferCapacity = 64)
-    val progress: SharedFlow<AgentManagerStartProgressDto> = _progress.asSharedFlow()
-
     /**
      * [root] is the directory the requesting session reported in the SSE envelope — the admitted
      * workspace root for `mode = "local"`, or the repository root a new worktree is created under for
@@ -50,15 +40,14 @@ internal class AgentManagerStarter(
      */
     suspend fun start(start: AgentManagerProtocol.Start, root: String) {
         val target = resolveTarget(start, root) ?: run {
-            start.tasks.forEach { emitFailed(start.requestID, "Unknown worktree ${start.worktreeID}") }
+            log.warn("agent_manager start req=${start.requestID} failed: unknown worktree ${start.worktreeID}")
             return
         }
+        // Sequential and individually guarded: one task's failure must not abandon the rest of the
+        // batch, since each task is an independent session the chat asked for.
         for (task in start.tasks) {
             runCatching { startOne(start, task, target) }
-                .onFailure { err ->
-                    LOG.warn("agent_manager start task failed: ${err.message}", err)
-                    emitFailed(start.requestID, err.message ?: "Agent Manager session creation failed")
-                }
+                .onFailure { err -> log.warn("agent_manager start req=${start.requestID} task failed: ${err.message}", err) }
         }
     }
 
@@ -69,7 +58,6 @@ internal class AgentManagerStarter(
     }
 
     private suspend fun startOne(start: AgentManagerProtocol.Start, task: AgentManagerProtocol.StartTask, localTarget: String) {
-        _progress.emit(AgentManagerStartProgressDto(start.requestID, AgentManagerStartStage.PREPARING))
         val directory = if (start.mode == "worktree") createWorktree(start, task, localTarget) else localTarget
         val session = sessions.create(directory)
         sessions.setDirectory(session.id, directory)
@@ -85,14 +73,7 @@ internal class AgentManagerStarter(
                 ),
             )
         }
-        _progress.emit(
-            AgentManagerStartProgressDto(
-                start.requestID,
-                AgentManagerStartStage.READY,
-                worktreeID = if (start.mode == "worktree") directory else null,
-                sessionID = session.id,
-            ),
-        )
+        log.info("agent_manager start req=${start.requestID} mode=${start.mode} session=${session.id} dir=$directory")
     }
 
     private suspend fun createWorktree(
@@ -110,21 +91,20 @@ internal class AgentManagerStarter(
         return worktree.path
     }
 
-    private fun emitFailed(requestID: String, error: String) {
-        _progress.tryEmit(AgentManagerStartProgressDto(requestID, AgentManagerStartStage.FAILED, error = error))
-    }
-
     /**
-     * A git-safe branch name for a new worktree: the task's own [AgentManagerProtocol.StartTask.
-     * branchName] when given, else a slug of its display name, else a random suffix so concurrent
-     * tasks in one `start` batch never collide.
+     * The branch for a new worktree.
+     *
+     * An explicit [AgentManagerProtocol.StartTask.branchName] is used verbatim: the chat asked for
+     * that specific branch, so rewriting it would silently discard the request, and a collision with
+     * an existing branch is better surfaced as a failed task the chat can retry under another name.
+     * A display name is instead slugged under `agent/` with a random suffix, since it is a title
+     * rather than a branch request and several tasks in one batch can share one.
      */
     private fun branchName(task: AgentManagerProtocol.StartTask): String {
-        val seed = task.branchName?.trim()?.takeIf { it.isNotEmpty() }
-            ?: task.name?.trim()?.takeIf { it.isNotEmpty() }
-            ?: return "agent/${randomSuffix()}"
-        val slug = seed.lowercase()
-            .map { ch -> if (ch.isLetterOrDigit() || ch == '/' || ch == '-' || ch == '_') ch else '-' }
+        task.branchName?.trim()?.takeIf { it.isNotEmpty() }?.let { return it }
+        val name = task.name?.trim()?.takeIf { it.isNotEmpty() } ?: return "agent/${randomSuffix()}"
+        val slug = name.lowercase()
+            .map { ch -> if (ch.isLetterOrDigit() || ch == '-' || ch == '_') ch else '-' }
             .joinToString("")
             .trim('-')
             .ifEmpty { "agent" }

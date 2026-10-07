@@ -6,22 +6,13 @@ import ai.kilocode.backend.rpc.KiloWorktreeRpcApiImpl
 import ai.kilocode.backend.testing.FakeCliServer
 import ai.kilocode.backend.testing.MockCliServer
 import ai.kilocode.backend.testing.TestLog
-import ai.kilocode.rpc.dto.AgentManagerStartProgressDto
-import ai.kilocode.rpc.dto.AgentManagerStartStage
 import com.intellij.execution.configurations.GeneralCommandLine
 import com.intellij.execution.process.CapturingProcessHandler
-import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.async
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.onSubscription
-import kotlinx.coroutines.flow.take
-import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import java.nio.file.Files
@@ -29,10 +20,17 @@ import java.nio.file.Path
 import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertNotNull
-import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
+/**
+ * Exercises [AgentManagerStarter] against a real temp git repository (worktrees are created by a real
+ * `git` subprocess, as in production) and a [MockCliServer]-backed [KiloBackendAppService] for
+ * session creation and prompting.
+ *
+ * `start` is fire-and-forget on the CLI side, so there is nothing to assert on the wire protocol
+ * here — these tests assert the observable effects instead: a worktree on disk, a session created,
+ * and a prompt delivered.
+ */
 class AgentManagerStarterTest {
     private val repo: Path = Files.createTempDirectory("kilo-starter")
     private val mock = MockCliServer()
@@ -75,22 +73,7 @@ class AgentManagerStarterTest {
 
     private fun delete(dir: Path) {
         if (!Files.exists(dir)) return
-        Files.walk(dir).use { paths ->
-            paths.sorted(Comparator.reverseOrder()).forEach { Files.deleteIfExists(it) }
-        }
-    }
-
-    /**
-     * Starts collecting [count] events from [progress] in the background and returns only once a
-     * subscriber is actually attached — [MutableSharedFlow.tryEmit] (what [AgentManagerStarter]
-     * publishes with) drops events emitted before any collector subscribes, so the caller's
-     * `start(...)` must not run until this returns.
-     */
-    private suspend fun collect(progress: SharedFlow<AgentManagerStartProgressDto>, count: Int): Deferred<List<AgentManagerStartProgressDto>> {
-        val attached = CompletableDeferred<Unit>()
-        val result = scope.async { progress.onSubscription { attached.complete(Unit) }.take(count).toList() }
-        withTimeout(10_000) { attached.await() }
-        return result
+        Files.walk(dir).use { paths -> paths.sorted(Comparator.reverseOrder()).forEach { Files.deleteIfExists(it) } }
     }
 
     private fun task(prompt: String?, name: String) =
@@ -107,79 +90,129 @@ class AgentManagerStarterTest {
             tasks = tasks.toList(),
         )
 
+    private fun worktreeDirs(): List<Path> {
+        val root = repo.resolve(".kilo").resolve("worktrees")
+        if (!Files.isDirectory(root)) return emptyList()
+        return Files.list(root).use { it.toList() }
+    }
+
     @Test
     fun `worktree mode creates a worktree, a session, and sends the prompt`() = runBlocking {
-        initRepo()
-        mock.sessionCreate = """{"id":"ses_new","slug":"s","projectID":"p","directory":"$repo/.kilo/worktrees/agent-task-a-0","title":"T","version":"1","time":{"created":1,"updated":1}}"""
-        val app = setup()
-        ready(app)
-        val starter = AgentManagerStarter(app.sessions, app.chat, worktrees)
-
-        val collector = collect(starter.progress, 2)
-        starter.start(start("am-1", "worktree", task("do the task", "Task A")), repo.toString())
-        val events = withTimeout(10_000) { collector.await() }
-
-        assertEquals(AgentManagerStartStage.PREPARING, events[0].stage)
-        assertEquals(AgentManagerStartStage.READY, events[1].stage)
-        assertEquals("ses_new", events[1].sessionID)
-        val worktreeID = assertNotNull(events[1].worktreeID)
-
-        assertTrue(mock.awaitRequestCount("/session", 1, timeout = 5_000))
-        assertTrue(mock.awaitRequestCount("/session/ses_new/prompt_async", 1, timeout = 5_000))
-        assertTrue(Files.isDirectory(Path.of(worktreeID)), "expected a real worktree at $worktreeID")
-    }
-
-    @Test
-    fun `local mode does not create a worktree`() = runBlocking {
-        initRepo()
-        mock.sessionCreate = """{"id":"ses_local","slug":"s","projectID":"p","directory":"$repo","title":"T","version":"1","time":{"created":1,"updated":1}}"""
-        val app = setup()
-        ready(app)
-        val starter = AgentManagerStarter(app.sessions, app.chat, worktrees)
-
-        val collector = collect(starter.progress, 2)
-        starter.start(start("am-2", "local", task(null, "Task B")), repo.toString())
-        val events = withTimeout(10_000) { collector.await() }
-
-        assertEquals(AgentManagerStartStage.READY, events[1].stage)
-        assertNull(events[1].worktreeID)
-        assertTrue(Files.notExists(repo.resolve(".kilo").resolve("worktrees")), "local mode must not create a worktree")
-    }
-
-    @Test
-    fun `a failed task reports failed progress without throwing`() = runBlocking {
-        initRepo()
-        mock.sessionCreateStatus = 500
-        val app = setup()
-        ready(app)
-        val starter = AgentManagerStarter(app.sessions, app.chat, worktrees)
-
-        val collector = collect(starter.progress, 2)
-        starter.start(start("am-3", "local", task(null, "Task C")), repo.toString())
-        val events = withTimeout(10_000) { collector.await() }
-
-        assertEquals(AgentManagerStartStage.PREPARING, events[0].stage)
-        assertEquals(AgentManagerStartStage.FAILED, events[1].stage)
-        assertNotNull(events[1].error)
-    }
-
-    @Test
-    fun `two local tasks each report their own preparing and ready progress`() = runBlocking {
         initRepo()
         mock.sessionCreate = """{"id":"ses_new","slug":"s","projectID":"p","directory":"$repo","title":"T","version":"1","time":{"created":1,"updated":1}}"""
         val app = setup()
         ready(app)
-        val starter = AgentManagerStarter(app.sessions, app.chat, worktrees)
 
-        // AgentManagerStarter.start runs its tasks sequentially (see its doc) — a failure in one task
-        // is caught per-task and does not stop the rest, which this asserts indirectly: both tasks
-        // here succeed and both report their own independent PREPARING/READY pair rather than one
-        // task's failure aborting the other's progress.
-        val collector = collect(starter.progress, 4)
-        starter.start(start("am-4", "local", task(null, "Task D"), task(null, "Task E")), repo.toString())
-        val events = withTimeout(10_000) { collector.await() }
+        AgentManagerStarter(app.sessions, app.chat, worktrees, log)
+            .start(start("am-1", "worktree", task("do the task", "Task A")), repo.toString())
 
-        assertEquals(2, events.count { it.stage == AgentManagerStartStage.PREPARING })
-        assertEquals(2, events.count { it.stage == AgentManagerStartStage.READY })
+        val created = worktreeDirs()
+        assertEquals(1, created.size, "expected exactly one worktree, got $created")
+        assertTrue(Files.isDirectory(created.single()))
+        assertTrue(mock.awaitRequestCount("/session", 1, timeout = 5_000))
+        assertTrue(mock.awaitRequestCount("/session/ses_new/prompt_async", 1, timeout = 5_000))
+        assertTrue(mock.lastPromptBody?.contains("do the task") == true)
+    }
+
+    @Test
+    fun `worktree mode derives the branch from the task name`() = runBlocking {
+        initRepo()
+        mock.sessionCreate = """{"id":"ses_new","slug":"s","projectID":"p","directory":"$repo","title":"T","version":"1","time":{"created":1,"updated":1}}"""
+        val app = setup()
+        ready(app)
+
+        AgentManagerStarter(app.sessions, app.chat, worktrees, log)
+            .start(start("am-2", "worktree", task(null, "Fix the Login Bug")), repo.toString())
+
+        val branches = worktrees.list(repo.toString()).worktrees.filter { !it.main }.map { it.branch }
+        assertEquals(1, branches.size)
+        assertTrue(
+            branches.single().startsWith("agent/fix-the-login-bug-"),
+            "expected a slugged agent/ branch, got ${branches.single()}",
+        )
+    }
+
+    @Test
+    fun `worktree mode uses an explicitly requested branch name verbatim`() = runBlocking {
+        initRepo()
+        mock.sessionCreate = """{"id":"ses_new","slug":"s","projectID":"p","directory":"$repo","title":"T","version":"1","time":{"created":1,"updated":1}}"""
+        val app = setup()
+        ready(app)
+
+        AgentManagerStarter(app.sessions, app.chat, worktrees, log).start(
+            start("am-6", "worktree", AgentManagerProtocol.StartTask(null, "Ignored Title", "feature/explicit", null, null, null)),
+            repo.toString(),
+        )
+
+        val branches = worktrees.list(repo.toString()).worktrees.filter { !it.main }.map { it.branch }
+        assertEquals(listOf("feature/explicit"), branches)
+    }
+
+    @Test
+    fun `local mode creates a session without a worktree`() = runBlocking {
+        initRepo()
+        mock.sessionCreate = """{"id":"ses_local","slug":"s","projectID":"p","directory":"$repo","title":"T","version":"1","time":{"created":1,"updated":1}}"""
+        val app = setup()
+        ready(app)
+
+        AgentManagerStarter(app.sessions, app.chat, worktrees, log)
+            .start(start("am-3", "local", task(null, "Task B")), repo.toString())
+
+        assertTrue(mock.awaitRequestCount("/session", 1, timeout = 5_000))
+        assertEquals(emptyList(), worktreeDirs(), "local mode must not create a worktree")
+    }
+
+    @Test
+    fun `a failing task is logged and does not abandon the rest of the batch`() = runBlocking {
+        initRepo()
+        mock.sessionCreate = """{"id":"ses_new","slug":"s","projectID":"p","directory":"$repo","title":"T","version":"1","time":{"created":1,"updated":1}}"""
+        val app = setup()
+        ready(app)
+
+        // Two worktree tasks where the first branch is taken already, so its creation fails while the
+        // second still has to run to completion.
+        git("branch", "agent/taken")
+        val starter = AgentManagerStarter(app.sessions, app.chat, worktrees, log)
+        starter.start(
+            start(
+                "am-4",
+                "worktree",
+                AgentManagerProtocol.StartTask("p1", "Task C", "agent/taken", null, null, null),
+                task("p2", "Task D"),
+            ),
+            repo.toString(),
+        )
+
+        assertTrue(
+            log.awaitMessage(timeout = 5_000) { it.contains("am-4") && it.contains("task failed") },
+            "expected the failing task to be logged; got ${log.messages}",
+        )
+        // The second task still produced its worktree and session.
+        assertEquals(1, worktreeDirs().size)
+        assertTrue(mock.awaitRequestCount("/session", 1, timeout = 5_000))
+    }
+
+    @Test
+    fun `an unknown worktree id is logged and creates nothing`() = runBlocking {
+        initRepo()
+        val app = setup()
+        ready(app)
+
+        val request = AgentManagerProtocol.Start(
+            requestID = "am-5",
+            sessionID = "ses_caller",
+            sandboxInheritanceToken = null,
+            mode = "local",
+            worktreeID = "/nope",
+            versions = null,
+            tasks = listOf(task(null, "Task E")),
+        )
+        AgentManagerStarter(app.sessions, app.chat, worktrees, log).start(request, repo.toString())
+
+        assertTrue(
+            log.awaitMessage(timeout = 5_000) { it.contains("am-5") && it.contains("unknown worktree") },
+            "expected the unknown worktree to be logged; got ${log.messages}",
+        )
+        assertEquals(0, mock.requestCount("/session"))
     }
 }

@@ -8,7 +8,6 @@ import ai.kilocode.backend.app.KiloBackendSessionManager
 import ai.kilocode.backend.app.SseEvent
 import ai.kilocode.backend.rpc.KiloWorktreeRpcApiImpl
 import ai.kilocode.log.KiloLog
-import ai.kilocode.rpc.dto.AgentManagerStartProgressDto
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
@@ -49,11 +48,8 @@ class KiloAgentManagerHost(
 ) {
     private val dispatch = AgentManagerDispatch(sessions, chat)
     private val worktrees = KiloWorktreeRpcApiImpl()
-    private val starter = AgentManagerStarter(sessions, chat, worktrees)
+    private val starter = AgentManagerStarter(sessions, chat, worktrees, log)
     private val originals = PromptLedger()
-
-    /** Frontend-facing progress feed for host-initiated session creation; see [AgentManagerStarter]. */
-    val startProgress: SharedFlow<AgentManagerStartProgressDto> get() = starter.progress
 
     private var http: OkHttpClient? = null
     private var base: String? = null
