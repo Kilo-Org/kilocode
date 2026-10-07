@@ -329,6 +329,13 @@ describe("session processor retry limit", () => {
     expect(SessionV1.APIError.isInstance(reset)).toBe(true)
     expect(SessionNetwork.serverReset(reset)).toBe(true)
 
+    // undici-style wrapper: the reset sits in the cause chain, so fromError
+    // records no top-level metadata.code — the message must still match
+    const nested = MessageV2.fromError(new Error("fetch failed", { cause: connectionReset() }), {
+      providerID: ref.providerID,
+    })
+    expect(SessionNetwork.serverReset(nested)).toBe(true)
+
     const blocked = new MessageV2.APIError({ message: "Connection reset by server", isRetryable: false }).toObject()
     expect(SessionNetwork.serverReset(blocked)).toBe(false)
 
