@@ -1004,12 +1004,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     if (!target) return
     const comments = restored.comments
     const browser = restored.browsers
-    const images = (failed.files ?? []).filter(isDataAttachment).map((file) => ({
-      id: crypto.randomUUID(),
-      filename: file.filename ?? "image",
-      mime: file.mime,
-      dataUrl: file.url,
-    }))
+    const images = restored.images
     if (target !== draftKey()) {
       saveDraft(target, draft, comments, images, scrollDrafts.get(target) ?? 0, browser, [])
       return

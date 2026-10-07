@@ -35,8 +35,15 @@ export function textDataUrl(bytes: Uint8Array): string | undefined {
   return `data:text/plain;base64,${btoa(chars)}`
 }
 
-/** True for a file part that the prompt attaches as data: an image or a dropped text file. */
-export function isDataAttachment(file: { mime: string; url: string }): boolean {
+/**
+ * True for a file part that the prompt attaches as data: an image or a dropped
+ * text file. Mention context (terminal, git changes, worktree) is also a
+ * text/plain data URL, but it has a mention span. The prompt collects it again
+ * from the mention on send, so it is not an attachment. This is the same rule
+ * as the attachment tiles of the transcript.
+ */
+export function isDataAttachment(file: { mime: string; url: string; source?: { text?: { start: number } } }): boolean {
   if (!file.url.startsWith("data:")) return false
-  return file.mime.startsWith("image/") || file.mime === "text/plain"
+  if (file.mime.startsWith("image/")) return true
+  return file.mime === "text/plain" && file.source?.text?.start === undefined
 }

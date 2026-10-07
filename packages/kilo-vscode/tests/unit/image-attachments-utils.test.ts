@@ -6,6 +6,7 @@ import {
   isDragLeavingComponent,
   textDataUrl,
 } from "../../webview-ui/src/hooks/image-attachments-utils"
+import { buildTerminalAttachment } from "../../webview-ui/src/hooks/terminal-context-utils"
 
 describe("ACCEPTED_IMAGE_TYPES", () => {
   it("includes the standard image MIME types", () => {
@@ -90,5 +91,11 @@ describe("isDataAttachment", () => {
     expect(isDataAttachment({ mime: "application/pdf", url: "data:application/pdf;base64,abc" })).toBe(false)
     expect(isDataAttachment({ mime: "text/plain", url: "file:///repo/a.ts" })).toBe(false)
     expect(isDataAttachment({ mime: "image/png", url: "https://example.com/a.png" })).toBe(false)
+  })
+
+  it("rejects mention context, which is a text data URL with a mention span", () => {
+    const terminal = buildTerminalAttachment("check @terminal", "$ ls")
+    expect(terminal?.url.startsWith("data:text/plain")).toBe(true)
+    expect(terminal && isDataAttachment(terminal)).toBe(false)
   })
 })
