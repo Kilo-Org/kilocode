@@ -192,6 +192,14 @@ export const dict = {
   "prompt.worktrees.title": "Worktrees",
   "prompt.worktrees.search": "搜索 Worktree",
   "prompt.thinking.tooltip": "推理强度",
+  "prompt.shortcutHint.addSelection": "添加所选内容",
+  "prompt.shortcutHint.waiting": "回复等待中的会话",
+  "prompt.shortcutHint.type": "开始输入",
+  "prompt.shortcutHint.sessions": "切换会话",
+  "prompt.shortcutHint.stop": "停止",
+  "prompt.shortcutHint.changes": "查看更改",
+  "prompt.shortcutHint.pr": "打开 PR",
+  "prompt.shortcutHint.mode": "下一个模式",
   "prompt.action.indexing": "索引设置",
   "prompt.action.autoApprove.enable": "启用自动审批",
   "prompt.action.autoApprove.disable": "禁用自动审批",
@@ -207,6 +215,10 @@ export const dict = {
   "prompt.agents.show": "显示后台智能体",
   "prompt.action.enhance": "优化提示词",
   "prompt.paste.expand": "点击展开粘贴的文本",
+  "prompt.issues.title": "会话问题",
+  "prompt.mcp.provider": "{{name}} MCP",
+  "prompt.mcp.openSettings": "在设置中打开",
+  "prompt.mcp.signIn.busy": "正在登录…",
   "prompt.action.enhanceDescription":
     "'增强提示'按钮通过提供额外上下文、澄清或重新表述来帮助改进您的请求。尝试在此处输入请求，然后再次点击按钮查看其工作原理。",
   "prompt.action.sandbox.enable": "启用沙盒",
@@ -519,6 +531,9 @@ export const dict = {
   "provider.custom.error.duplicate": "重复",
   "settings.openLocalConfig": "本地配置",
   "settings.openGlobalConfig": "全局配置",
+  "settings.search.placeholder": "搜索设置",
+  "settings.search.noResults": "未找到设置",
+  "settings.search.clear": "清除搜索",
   "settings.config.scope.local": "本地",
   "settings.config.scope.global": "全局",
   "settings.config.status.loaded": "已加载",
@@ -577,6 +592,7 @@ export const dict = {
   "session.tabs.switcher.pending": "新建",
   "session.tabs.switcher.busy": "工作中",
   "session.tabs.switcher.scheduled": "已计划",
+  "session.tabs.pinHint": "按住 Shift 点击可固定或取消固定",
   "session.tab.local": "本地",
   "session.tab.cloud": "云端",
   "session.tab.worktree": "工作树",
@@ -753,10 +769,12 @@ export const dict = {
   "ui.sessionTurn.status.consideringNextSteps": "正在考虑下一步...",
 
   "dialog.model.noProviders": "无供应商",
+  "dialog.model.unavailable": "Kilo 模型不可用",
 
   "prompt.placeholder.connecting": "正在连接服务器...",
   "prompt.placeholder.error": "连接失败。请检查输出面板或重启扩展。",
   "prompt.placeholder.default": "输入消息，用 @ 提及文件... (Enter 发送，Shift+Enter 换行)",
+  "prompt.placeholder.hint": "输入消息，用 @ 提及文件... ({{key}} {{action}})",
 
   "context.usage.sessionCost": "会话费用",
   "context.usage.olderSessions": "{{count}} 个较早的会话",
@@ -897,15 +915,12 @@ export const dict = {
   "settings.sandboxing.writablePaths.title": "额外可写路径",
   "settings.sandboxing.writablePaths.description":
     "沙盒允许写入的额外文件系统路径（例如 /tmp、/var/log）。沙盒启用后，这些路径会与默认可写路径合并。",
-  "settings.experimental.multiProject.title": "多项目 Agent Manager",
   "settings.experimental.conversationPromptHistory.title": "按对话区分的提示历史",
   "settings.experimental.conversationPromptHistory.description":
     "为每个对话单独保存提示历史(ArrowUp/ArrowDown),而不是在所有对话间共享同一份。",
   "settings.experimental.claudeMigration.title": "Claude Code 迁移",
   "settings.experimental.claudeMigration.description":
     "一次性导入受支持的全局 CLAUDE.md 指令、简单技能和已禁用的 MCP 定义。不会修改原始 Claude 文件；启用后请重启后端。",
-  "settings.experimental.multiProject.description":
-    "在 Agent Manager 中启用跨多个仓库的会话和工作树管理。当前工作区仓库始终是默认项目。",
   "settings.experimental.mcpTimeout.title": "MCP 超时（毫秒）",
   "settings.experimental.mcpTimeout.description": "MCP 服务器请求的超时时间（毫秒）",
   "settings.experimental.remote.title": "Remote 控制",
@@ -985,12 +1000,31 @@ export const dict = {
   "settings.agentBehaviour.removeAgent.button": "移除",
   "settings.agentBehaviour.removeMcp.title": "移除 MCP 服务器",
   "settings.agentBehaviour.removeMcp.confirm": '移除 MCP 服务器 "{{name}}" 吗？这将从您的配置中移除它。',
+  "settings.agentBehaviour.removeMcp.bundleConfirm":
+    '移除 MCP 服务器 "{{name}}" 及其配套技能吗？这将同时移除该服务器以及属于此 Marketplace 安装的所有技能。',
   "settings.agentBehaviour.removeMcp.button": "移除",
   "settings.agentBehaviour.editMcp": "编辑 MCP 服务器",
   "settings.agentBehaviour.editMcp.transportLocal": "本地服务器（stdio 传输）",
   "settings.agentBehaviour.editMcp.transportRemote": "远程服务器（SSE/HTTP 传输）",
   "settings.agentBehaviour.editMcp.env": "环境变量",
   "settings.agentBehaviour.editMcp.env.help": "传递给 MCP 服务器进程的变量。",
+  "settings.agentBehaviour.editMcp.oauth": "OAuth",
+  "settings.agentBehaviour.editMcp.oauth.help":
+    "除非服务器需要预先注册的客户端，否则请保留为自动。客户端密钥会存储在您的 Kilo 配置文件中。",
+  "settings.agentBehaviour.editMcp.oauth.mode": "模式",
+  "settings.agentBehaviour.editMcp.oauth.mode.automatic": "自动",
+  "settings.agentBehaviour.editMcp.oauth.mode.disabled": "已禁用",
+  "settings.agentBehaviour.editMcp.oauth.mode.custom": "自定义客户端",
+  "settings.agentBehaviour.editMcp.oauth.clientId": "客户端 ID",
+  "settings.agentBehaviour.editMcp.oauth.clientSecret": "客户端密钥",
+  "settings.agentBehaviour.editMcp.oauth.scope": "范围",
+  "settings.agentBehaviour.editMcp.oauth.callbackPort": "回调端口",
+  "settings.agentBehaviour.editMcp.oauth.redirectUri": "重定向 URI",
+  "settings.agentBehaviour.editMcp.oauth.redirectUri.help":
+    "默认值为 http://127.0.0.1:19876/mcp/oauth/callback，并会覆盖回调端口。",
+  "settings.agentBehaviour.editMcp.oauth.port.invalid": "请输入 1 到 65535 之间的端口。",
+  "settings.agentBehaviour.editMcp.oauth.secret.invalid": "客户端密钥需要客户端 ID。",
+  "settings.agentBehaviour.editMcp.oauth.redirectUri.invalid": "请输入有效的重定向 URI。",
   "settings.agentBehaviour.addMcp.command": "命令",
   "settings.agentBehaviour.addMcp.command.placeholder": "e.g. npx",
   "settings.agentBehaviour.addMcp.args": "参数",
@@ -1002,6 +1036,8 @@ export const dict = {
   "settings.agentBehaviour.skillUrls": "技能 URL",
   "settings.agentBehaviour.removeSkill.title": "移除技能",
   "settings.agentBehaviour.removeSkill.confirm": '移除技能 "{{name}}" 吗？这会从磁盘中删除该技能文件。',
+  "settings.agentBehaviour.removeSkill.bundleConfirm":
+    '移除技能 "{{name}}" 吗？这还会卸载 {{mcp}} MCP 服务器以及来自同一 Marketplace 安装的所有配套技能。',
   "settings.agentBehaviour.removeSkill.button": "移除",
   "settings.agentBehaviour.rules.description":
     "规则是指导代理行为的指令文件。它们会被包含在每次对话的系统提示词中。在下方添加文件路径以包含额外的规则。",
@@ -1017,6 +1053,11 @@ export const dict = {
   "settings.agentBehaviour.mcpDetail.command": "命令",
   "settings.agentBehaviour.mcpDetail.args": "参数",
   "settings.agentBehaviour.mcpDetail.env": "环境",
+  "settings.agentBehaviour.mcpSignIn.cancel": "取消登录",
+  "settings.agentBehaviour.mcpRemoving": "正在移除…",
+  "settings.agentBehaviour.mcpResetAuth": "重置登录",
+  "settings.agentBehaviour.mcpResetAuth.title": "重置 MCP 登录",
+  "settings.agentBehaviour.mcpResetAuth.confirm": '清除 "{{name}}" 的已保存登录信息吗？您需要重新登录。',
   "settings.agentBehaviour.mcpBrowseMarketplace": "浏览市场",
   "settings.agentBehaviour.mcpEmpty": "未配置 MCP 服务器。在 kilo.jsonc 中添加 MCP 服务器，或让代理为您添加。",
   "settings.agentBehaviour.workflows.description":
@@ -1169,6 +1210,9 @@ export const dict = {
   "settings.display.mcpTool.expanded": "展开",
   "settings.display.mcpTool.collapsed": "折叠",
 
+  "settings.display.shortcutHints.title": "显示快捷键提示",
+  "settings.display.shortcutHints.description":
+    "在空输入框中显示与当前操作相符的键盘快捷键，例如如何添加所选代码或返回输入框。",
   "settings.display.tokenThroughput.title": "显示令牌吞吐量",
   "settings.display.tokenThroughput.description":
     "在最新的助手消息和任务标题中显示文本生成速率（tokens/sec）。默认显示；需要时禁用此设置即可隐藏。",
@@ -1242,6 +1286,8 @@ export const dict = {
 
   "task.todos.progress": "{{done}}/{{total}} 个待办已完成",
   "task.todos.allDone": "{{count}} 个待办已完成",
+  "task.todos.title": "待办",
+  "task.todos.done": "全部完成",
   "task.backgroundAgents.running.one": "1 个后台智能体",
   "task.backgroundAgents.running.many": "{{count}} 个后台智能体",
   "task.backgroundAgents.open": "打开后台智能体",
@@ -1320,5 +1366,11 @@ export const dict = {
   "settings.experimental.browserAutomation.systemChrome.title": "使用系统 Chrome",
   "settings.experimental.browserAutomation.systemChrome.description":
     "为集成浏览器使用已安装的 Google Chrome。仅在已安装兼容的 Playwright Chromium 浏览器时才禁用。",
+  "settings.experimental.browserLinks.title": "在以下位置打开链接",
+  "settings.experimental.browserLinks.description": "选择 Kilo 聊天中的网页链接在何处打开。需要集成浏览器。",
+  "settings.experimental.browserLinks.external": "系统浏览器",
+  "settings.experimental.browserLinks.integrated": "集成浏览器",
   "chat.search.searchingHistory": "正在搜索更早的消息…",
+  "browserTab.noSession": "从会话中打开浏览器以预览本地应用或公共 HTTPS 页面。",
+  "browserTab.disabled": "集成浏览器已禁用。请在 Kilo 设置 > 实验性中启用。",
 } satisfies Partial<Record<Keys, string>>

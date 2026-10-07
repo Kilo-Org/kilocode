@@ -628,15 +628,69 @@ describe("BrowserBroker", () => {
     expect(broker.sessions()).toEqual([])
   })
 
+  test("falls back from missing Chrome without changing sandbox or network options", async () => {
+    const configs: Array<Parameters<NonNullable<BrowserBrokerOptions["launch"]>>[0]> = []
+    const broker = new BrowserBroker({
+      log: () => {},
+      fallback: () => true,
+      launch: async (config) => {
+        configs.push(config)
+        if (config.channel === "chrome") throw new Error("Chromium distribution 'chrome' is not found")
+        return {
+          newContext: async () => {
+            throw new Error("Chromium launched")
+          },
+          close: async () => undefined,
+        }
+      },
+    })
+    brokers.push(broker)
+    await expect(
+      broker.open({ sessionId: "fallback", directory: "/tmp/project" }, "http://localhost:3000/"),
+    ).rejects.toThrow("Chromium launched")
+    expect(configs).toHaveLength(2)
+    expect(configs.at(0)?.channel).toBe("chrome")
+    expect(configs.at(1)).toEqual({ ...configs.at(0), channel: undefined })
+    expect(configs.at(1)).toMatchObject({ chromiumSandbox: true, headless: true })
+  })
+
+  test("reports missing Chromium after fallback and retries both runtimes", async () => {
+    const channels: Array<string | undefined> = []
+    const broker = new BrowserBroker({
+      log: () => {},
+      fallback: () => true,
+      launch: async (config) => {
+        channels.push(config.channel)
+        throw new Error(
+          config.channel === "chrome"
+            ? "Chromium distribution 'chrome' is not found"
+            : "Executable doesn't exist at /cache/chromium_headless_shell/chrome",
+        )
+      },
+    })
+    brokers.push(broker)
+    for (const sessionId of ["one", "two"]) {
+      await expect(
+        broker.open({ sessionId, directory: "/tmp/project" }, "http://localhost:3000/"),
+      ).rejects.toMatchObject({
+        missing: "chromium",
+      })
+    }
+    expect(channels).toEqual(["chrome", undefined, "chrome", undefined])
+  })
+
   test.each([
     "No usable sandbox!",
     "error while loading shared libraries: libnss3.so: cannot open shared object file",
     "Timeout 30000ms exceeded",
     "Target page, context or browser has been closed",
   ])("does not misreport a browser startup failure as a missing installation: %s", async (message) => {
+    let attempts = 0
     const broker = new BrowserBroker({
       log: () => {},
+      fallback: () => true,
       launch: async () => {
+        attempts++
         throw new Error(message)
       },
     })
@@ -646,6 +700,7 @@ describe("BrowserBroker", () => {
       .catch((err: unknown) => err)
     expect(error).toBeInstanceOf(BrowserLaunchError)
     expect(error).toMatchObject({ missing: undefined })
+    expect(attempts).toBe(1)
     expect(diagnostic(error, "http://localhost:3000/")).toBe(`The browser could not start. ${message}`)
   })
 
@@ -910,6 +965,197 @@ describe("BrowserBroker", () => {
       broker.open({ projectId: "unknown", sessionId: "missing", directory: "/tmp/project" }, "http://localhost:3000/"),
     ).rejects.toThrow("Browser session does not belong to the requested project or directory")
     expect(broker.sessions()).toEqual([])
+  })
+
+  test("resolves multiple route owners by registration order and requested project", async () => {
+    let target = "about:blank"
+    const page = {
+      url: () => target,
+      title: async () => "Local app",
+      screenshot: async () => Buffer.from("jpeg"),
+      off: () => undefined,
+      on: (_type: string, _listener: (...args: never[]) => void) => undefined,
+      mainFrame: () => undefined,
+      goto: async (url: string) => {
+        target = url
+        return { status: () => 200 }
+      },
+      reload: async () => ({ status: () => 200 }),
+    }
+    const broker = fixture(page)
+    broker.bind((route) =>
+      route.directory === "/tmp/sidebar" ? { sessionId: route.sessionId, directory: route.directory } : undefined,
+    )
+    broker.bind((route) => (route.directory === "/tmp/agent" ? { ...route, projectId: "agent" } : undefined))
+
+    const sidebar = await broker.open({ sessionId: "sidebar", directory: "/tmp/sidebar" }, "http://localhost:3000/")
+    expect(sidebar.projectId).toBeUndefined()
+    expect(broker.get("sidebar")).toMatchObject({ status: "ready" })
+
+    const agent = await broker.open(
+      { sessionId: "agent", directory: "/tmp/agent", projectId: "agent" },
+      "http://localhost:3000/",
+    )
+    expect(agent.projectId).toBe("agent")
+
+    for (const route of [
+      { sessionId: "missing", directory: "/tmp/agent", projectId: "other" },
+      { sessionId: "missing", directory: "/tmp/sidebar", projectId: "agent" },
+    ]) {
+      await expect(broker.open(route, "http://localhost:3000/")).rejects.toThrow(
+        "Browser session does not belong to the requested project or directory",
+      )
+    }
+  })
+
+  test("closeOwned closes only one owner's entries", async () => {
+    const page = {
+      url: () => "http://localhost:3000/",
+      title: async () => "App",
+      screenshot: async () => Buffer.from("jpeg"),
+      off: () => undefined,
+      on: (_type: string, _listener: (...args: never[]) => void) => undefined,
+      mainFrame: () => undefined,
+      goto: async () => ({ status: () => 200 }),
+      reload: async () => ({ status: () => 200 }),
+    }
+    const broker = fixture(page)
+    const first = broker.bind((route) => (route.directory === "/a" ? route : undefined))
+    broker.bind((route) => (route.directory === "/b" ? { ...route, projectId: "b" } : undefined))
+    await broker.open({ sessionId: "sa", directory: "/a" }, "http://localhost:3000/")
+    await broker.open({ sessionId: "sb", directory: "/b", projectId: "b" }, "http://localhost:3000/")
+    await broker.closeOwned(first)
+    expect(broker.get("sa")).toBeUndefined()
+    expect(broker.get("sb")).toMatchObject({ projectId: "b" })
+  })
+
+  test("closeOwned cancels an in-flight open for its own surface", async () => {
+    const entered = Promise.withResolvers<void>()
+    const release = Promise.withResolvers<void>()
+    let contexts = 0
+    const broker = new BrowserBroker({
+      log: () => {},
+      network,
+      launch: async () => ({
+        newContext: async () => {
+          contexts++
+          entered.resolve()
+          await release.promise
+          return {
+            close: async () => undefined,
+            newPage: async () => ({
+              url: () => "http://localhost:3000/",
+              title: async () => "App",
+              screenshot: async () => Buffer.from("jpeg"),
+              off: () => undefined,
+              on: (_type: string, _listener: (...args: never[]) => void) => undefined,
+              mainFrame: () => undefined,
+              goto: async () => ({ status: () => 200 }),
+            }),
+          }
+        },
+        close: async () => undefined,
+      }),
+    })
+    brokers.push(broker)
+    const owner = broker.bind((route) => (route.directory === "/a" ? { ...route, projectId: "a" } : undefined))
+    const opened = broker.open({ sessionId: "pending", directory: "/a" }, "http://localhost:3000/")
+    await entered.promise
+    const closing = broker.closeOwned(owner)
+    release.resolve()
+    await Promise.all([opened, closing])
+    expect(contexts).toBe(1)
+    expect(broker.get("pending", "a")).toBeUndefined()
+  })
+
+  test("ownedByOther reports another owner's entry and in-flight open", async () => {
+    const entered = Promise.withResolvers<void>()
+    const release = Promise.withResolvers<void>()
+    const broker = new BrowserBroker({
+      log: () => {},
+      network,
+      launch: async () => ({
+        newContext: async () => {
+          entered.resolve()
+          await release.promise
+          return {
+            close: async () => undefined,
+            newPage: async () => ({
+              url: () => "http://localhost:3000/",
+              title: async () => "App",
+              screenshot: async () => Buffer.from("jpeg"),
+              off: () => undefined,
+              on: (_type: string, _listener: (...args: never[]) => void) => undefined,
+              mainFrame: () => undefined,
+              goto: async () => ({ status: () => 200 }),
+            }),
+          }
+        },
+        close: async () => undefined,
+      }),
+    })
+    brokers.push(broker)
+    const first = broker.bind((route) => (route.directory === "/a" ? { ...route, projectId: "a" } : undefined))
+    const second = broker.bind((route) => (route.directory === "/b" ? { ...route, projectId: "b" } : undefined))
+    const pending = broker.open({ sessionId: "shared", directory: "/a" }, "http://localhost:3000/")
+    await entered.promise
+    expect(broker.ownedByOther("shared", second)).toBe(true)
+    expect(broker.ownedByOther("shared", first)).toBe(false)
+    expect(broker.ownedByOther("missing", second)).toBe(false)
+    release.resolve()
+    await pending
+    expect(broker.ownedByOther("shared", second)).toBe(true)
+    expect(broker.ownedByOther("shared", first)).toBe(false)
+  })
+
+  test("closeScoped closes only the exact session and project entry", async () => {
+    const page = {
+      url: () => "http://localhost:3000/",
+      title: async () => "App",
+      screenshot: async () => Buffer.from("jpeg"),
+      off: () => undefined,
+      on: (_type: string, _listener: (...args: never[]) => void) => undefined,
+      mainFrame: () => undefined,
+      goto: async () => ({ status: () => 200 }),
+      reload: async () => ({ status: () => 200 }),
+    }
+    const broker = fixture(page)
+    broker.bind((route) => route)
+    await broker.open({ sessionId: "shared", directory: "/fixture" }, "http://localhost:3000/")
+    await broker.open({ sessionId: "shared", directory: "/fixture", projectId: "project" }, "http://localhost:3000/")
+    expect(broker.get("shared")).toBeUndefined()
+    await broker.closeScoped("shared")
+    expect(broker.get("shared")).toMatchObject({ projectId: "project" })
+  })
+
+  test("starts a new view identity only when the page commits a new document", async () => {
+    const events = new EventEmitter()
+    let target = "about:blank"
+    const page = Object.assign(events, {
+      url: () => target,
+      title: async () => "Local app",
+      screenshot: async () => Buffer.from("jpeg"),
+      mainFrame: () => page,
+      goto: async (url: string) => {
+        target = url
+        return { status: () => 200 }
+      },
+    })
+    let commit: (() => void) | undefined
+    const broker = fixture(page, async (_page, opts) => {
+      commit = opts.committed
+      return { active: true, authorize: () => undefined, close: async () => undefined }
+    })
+    broker.bind((route) => route)
+    const route = { sessionId: "session", directory: "/tmp/project" }
+    const opened = await broker.open(route, "http://localhost:3000/")
+    expect(opened.navigation).toBe(1)
+    target = "http://localhost:3000/route"
+    page.emit("framenavigated", page)
+    await Bun.sleep(0)
+    expect(broker.get(route.sessionId)).toMatchObject({ navigation: 1, url: "http://localhost:3000/route" })
+    commit?.()
+    expect(broker.get(route.sessionId)?.navigation).toBe(2)
   })
 
   test("preserves project isolation, successful refresh, and captured HTTP errors", async () => {

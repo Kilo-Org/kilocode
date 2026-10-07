@@ -43,6 +43,24 @@
   text-decoration-color: var(--text-weak);
 }
 
+/* The hover box and the rename editor extend past the title line. Do not clip
+   them. The label truncates on its own. */
+[data-component="task-header"] [data-slot="task-header-title"] {
+  overflow: visible;
+}
+
+/* The rename editor uses the same box as the title hover state. Negative
+   margins cancel its padding and border, so the header height and the text
+   position do not change while renaming. */
+[data-component="task-header"] [data-slot="session-title-editor"] {
+  margin: -4px -7px;
+  padding: 3px 6px;
+}
+
+[data-component="task-header"] .session-title-input {
+  font-size: inherit;
+}
+
 [data-slot="task-header-title-label"] {
   min-width: 0;
   overflow: hidden;
@@ -56,65 +74,37 @@
   }
 }
 
-/* ============================================
-   Task Header Todos
-   ============================================ */
+/* Subagent model and reasoning effort. The title and the model share the
+   space that is left, so both truncate in narrow panels. The title shrinks
+   faster because the subagent tab already shows it. */
+[data-component="task-header"]:has(.task-header-model) [data-slot="task-header-title"] {
+  flex: 1 3 auto;
+}
 
-[data-component="task-header-todos"] {
+.task-header-model {
   display: flex;
-  flex-direction: column;
-  border-bottom: 1px solid var(--border-weak-base);
-  background-color: var(--background-base);
+  align-items: center;
+  gap: 4px;
+  flex: 0 1 auto;
+  min-width: 0;
+  margin-inline-end: 4px;
+  font-size: var(--kilo-font-size-13);
+  color: var(--text-weak);
+  white-space: nowrap;
+}
+
+[data-slot="task-header-model-name"] {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+[data-slot="task-header-model-variant"] {
   flex-shrink: 0;
 
-  [data-slot="task-header-todos-trigger"] {
-    all: unset;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    width: 100%;
-    padding: 6px 16px;
-    cursor: pointer;
-    font-size: var(--kilo-font-size-12);
-    color: var(--text-weak);
-    box-sizing: border-box;
-
-    &:hover {
-      color: var(--text-base);
-    }
-  }
-
-  [data-slot="task-header-todos-summary"] {
-    flex: 1;
-
-    &[data-all-done] {
-      color: var(--text-success, var(--vscode-testing-iconPassed, #5cb85c));
-    }
-  }
-
-  [data-slot="task-header-todos-arrow"] {
-    transition: transform 0.15s ease;
-
-    &[data-open] {
-      transform: rotate(180deg);
-    }
-  }
-
-  [data-slot="task-header-todos-list"] {
-    padding: 4px 16px 8px;
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-  }
-
-  [data-slot="task-header-todo-content"] {
-    font-size: var(--kilo-font-size-12);
-    color: var(--text-base);
-
-    &[data-completed] {
-      text-decoration: line-through;
-      color: var(--text-weak);
-    }
+  &::before {
+    content: "·";
+    margin-inline-end: 4px;
   }
 }
 

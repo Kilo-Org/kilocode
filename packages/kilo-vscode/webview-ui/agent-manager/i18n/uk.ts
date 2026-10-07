@@ -34,7 +34,6 @@ export const dict = {
   "agentManager.local": "локальний",
   "agentManager.sidebar.collapse": "Згорнути бічну панель",
   "agentManager.sidebar.expand": "Показати бічну панель",
-  "agentManager.section.worktrees": "РОБОЧІ ДЕРЕВА",
   "agentManager.section.sessions": "СЕСІЇ",
   "agentManager.projects": "ПРОЄКТИ",
   "agentManager.settings.title": "Agent Manager",
@@ -47,6 +46,7 @@ export const dict = {
   "agentManager.settings.worktreePool.title": "Попереднє прогрівання worktree",
   "agentManager.settings.worktreePool.description":
     "Готувати worktree заздалегідь у фоновому режимі, щоб нові сесії Agent Manager запускалися швидше. Використовує додатковий простір на диску для одного checkout на кожен відкритий проєкт.",
+  "agentManager.hints.switchSession": "Перемкнути сесію",
   "agentManager.settings.project.title": "Проєкт",
   "agentManager.settings.project.description": "Виберіть repository, налаштування worktree якого потрібно змінити.",
   "agentManager.settings.project.empty": "Немає доступних проєктів Agent Manager.",
@@ -75,12 +75,9 @@ export const dict = {
   "agentManager.project.settings": "Налаштування проєкту",
   "agentManager.project.restricted":
     "Поточна робоча область VS Code є домашньою папкою або коренем файлової системи. Відкрийте певну папку проєкту у VS Code, щоб використовувати Agent Manager.",
-  "agentManager.notGitRepo": "Не є git-репозиторієм",
-
   "agentManager.updateBase.title": "Оновити з базової гілки",
   "agentManager.updateBase.selectWorktree": "Спочатку виберіть кероване робоче дерево.",
 
-  "agentManager.worktree.settings": "Налаштування робочого дерева",
   "agentManager.worktree.new": "Нове робоче дерево",
   "agentManager.worktree.setupScript": "Скрипт налаштування робочого дерева",
   "agentManager.worktree.delete": "Видалити робоче дерево",
@@ -96,6 +93,9 @@ export const dict = {
   "agentManager.worktree.copyPath": "Копіювати шлях",
   "agentManager.worktree.openInVscode": "Відкрити у VS Code",
   "agentManager.worktree.rename": "Перейменувати",
+  "agentManager.worktree.pin": "Закріпити",
+  "agentManager.worktree.unpin": "Відкріпити",
+  "agentManager.worktree.pinned": "Закріплені",
   "agentManager.worktree.newSection": "Новий розділь",
   "agentManager.worktree.ungrouped": "Без групи",
   "agentManager.section.rename": "Перейменувати розділ",
@@ -109,6 +109,7 @@ export const dict = {
   "agentManager.hoverCard.worktree": "Worktree",
   "agentManager.hoverCard.base": "База",
   "agentManager.hoverCard.sessions": "Сесії",
+  "agentManager.hoverCard.section": "Розділ",
   "agentManager.hoverCard.files": "Файли",
   "agentManager.hoverCard.changes": "Зміни",
   "agentManager.hoverCard.commits": "Коміти",
@@ -195,13 +196,6 @@ export const dict = {
   "agentManager.shortcuts.cycleAgentMode": "Наступний режим агента",
   "agentManager.shortcuts.cyclePreviousAgentMode": "Попередній режим агента",
   "agentManager.shortcuts.showShortcuts": "Показати клавіатурні скорочення",
-
-  "agentManager.dialog.removeStaleWorktree.title": "Видалити застаріле робоче дерево",
-  "agentManager.dialog.removeStaleWorktree.messagePre": "Видалити застаріле робоче дерево ",
-  "agentManager.dialog.removeStaleWorktree.messagePost":
-    "? Це лише видалить відображення в Agent Manager і не торкнеться файлів на диску.",
-  "agentManager.dialog.removeStaleWorktree.cancel": "Скасувати",
-  "agentManager.dialog.removeStaleWorktree.confirm": "Видалити застаріле робоче дерево",
 
   "agentManager.dialog.project.select": "Вибрати проєкт",
   "agentManager.dialog.project.missing": "Репозиторій не знайдено",

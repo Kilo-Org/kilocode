@@ -30,7 +30,6 @@ export const dict = {
   "agentManager.local": "محلي",
   "agentManager.sidebar.collapse": "طي الشريط الجانبي",
   "agentManager.sidebar.expand": "إظهار الشريط الجانبي",
-  "agentManager.section.worktrees": "WORKTREES",
   "agentManager.section.sessions": "الجلسات",
   "agentManager.projects": "المشاريع",
   "agentManager.settings.title": "Agent Manager",
@@ -43,6 +42,7 @@ export const dict = {
   "agentManager.settings.worktreePool.title": "تسخين Worktrees مسبقًا",
   "agentManager.settings.worktreePool.description":
     "جهّز worktree جاهزًا في الخلفية حتى تبدأ جلسات Agent Manager الجديدة بشكل أسرع. يستخدم مساحة إضافية على القرص مقابل checkout واحد لكل مشروع مفتوح.",
+  "agentManager.hints.switchSession": "تبديل الجلسة",
   "agentManager.settings.project.title": "المشروع",
   "agentManager.settings.project.description": "اختر repository الذي تريد تعديل إعدادات worktree الخاصة به.",
   "agentManager.settings.project.empty": "لا تتوفر أي مشاريع في Agent Manager.",
@@ -70,12 +70,9 @@ export const dict = {
   "agentManager.project.settings": "إعدادات المشروع",
   "agentManager.project.restricted":
     "مساحة عمل VS Code الحالية هي مجلدك الرئيسي أو جذر نظام الملفات. افتح مجلد مشروع محدد في VS Code لاستخدام Agent Manager.",
-  "agentManager.notGitRepo": "ليس مستودع git",
-
   "agentManager.updateBase.title": "تحديث من الفرع الأساسي",
   "agentManager.updateBase.selectWorktree": "اختر أولًا worktree مُدارًا.",
 
-  "agentManager.worktree.settings": "إعدادات Worktree",
   "agentManager.worktree.new": "Worktree جديد",
   "agentManager.worktree.setupScript": "سكربت إعداد Worktree",
   "agentManager.worktree.delete": "حذف Worktree",
@@ -91,6 +88,9 @@ export const dict = {
   "agentManager.worktree.copyPath": "نسخ المسار",
   "agentManager.worktree.openInVscode": "فتح في VS Code",
   "agentManager.worktree.rename": "إعادة تسمية",
+  "agentManager.worktree.pin": "تثبيت",
+  "agentManager.worktree.unpin": "إلغاء التثبيت",
+  "agentManager.worktree.pinned": "مثبتة",
   "agentManager.worktree.newSection": "قسم جديد",
   "agentManager.worktree.ungrouped": "غير مجمع",
   "agentManager.section.rename": "إعادة تسمية القسم",
@@ -103,6 +103,7 @@ export const dict = {
   "agentManager.hoverCard.worktree": "Worktree",
   "agentManager.hoverCard.base": "الأساس",
   "agentManager.hoverCard.sessions": "الجلسات",
+  "agentManager.hoverCard.section": "القسم",
   "agentManager.hoverCard.files": "الملفات",
   "agentManager.hoverCard.changes": "التغييرات",
   "agentManager.hoverCard.commits": "عمليات الالتزام",
@@ -182,13 +183,6 @@ export const dict = {
   "agentManager.shortcuts.cycleAgentMode": "وضع الوكيل التالي",
   "agentManager.shortcuts.cyclePreviousAgentMode": "وضع الوكيل السابق",
   "agentManager.shortcuts.showShortcuts": "إظهار اختصارات لوحة المفاتيح",
-  "agentManager.dialog.removeStaleWorktree.title": "إزالة Worktree القديم",
-  "agentManager.dialog.removeStaleWorktree.messagePre": "إزالة Worktree القديم ",
-  "agentManager.dialog.removeStaleWorktree.messagePost":
-    "؟ سيؤدي هذا إلى إزالة الربط في Agent Manager فقط وترك الملفات على القرص دون تغيير.",
-  "agentManager.dialog.removeStaleWorktree.cancel": "إلغاء",
-  "agentManager.dialog.removeStaleWorktree.confirm": "إزالة Worktree القديم",
-
   "agentManager.dialog.project.select": "اختيار مشروع",
   "agentManager.dialog.project.missing": "المستودع غير موجود",
   "agentManager.dialog.openWorktree": "شجرة عمل جديدة",

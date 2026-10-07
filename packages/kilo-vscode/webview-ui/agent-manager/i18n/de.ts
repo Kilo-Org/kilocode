@@ -35,7 +35,6 @@ export const dict = {
   "agentManager.local": "lokal",
   "agentManager.sidebar.collapse": "Seitenleiste einklappen",
   "agentManager.sidebar.expand": "Seitenleiste anzeigen",
-  "agentManager.section.worktrees": "WORKTREES",
   "agentManager.section.sessions": "SITZUNGEN",
   "agentManager.projects": "PROJEKTE",
   "agentManager.settings.title": "Agent Manager",
@@ -48,6 +47,7 @@ export const dict = {
   "agentManager.settings.worktreePool.title": "Worktrees vorwärmen",
   "agentManager.settings.worktreePool.description":
     "Bereitet im Hintergrund einen bereitstehenden Worktree vor, damit neue Agent-Manager-Sitzungen schneller starten. Benötigt zusätzlichen Speicherplatz für einen Checkout pro geöffnetem Projekt.",
+  "agentManager.hints.switchSession": "Sitzung wechseln",
   "agentManager.settings.project.title": "Projekt",
   "agentManager.settings.project.description":
     "Wählen Sie das repository aus, dessen worktree-Einstellungen Sie bearbeiten möchten.",
@@ -78,12 +78,9 @@ export const dict = {
   "agentManager.project.settings": "Projekteinstellungen",
   "agentManager.project.restricted":
     "Ihr aktueller VS Code-Arbeitsbereich ist Ihr Home-Ordner oder das Dateisystemstammverzeichnis. Öffnen Sie einen bestimmten Projektordner in VS Code, um den Agent Manager zu verwenden.",
-  "agentManager.notGitRepo": "Kein Git-Repository",
-
   "agentManager.updateBase.title": "Von der Basis aktualisieren",
   "agentManager.updateBase.selectWorktree": "Wählen Sie zuerst einen verwalteten Worktree aus.",
 
-  "agentManager.worktree.settings": "Worktree-Einstellungen",
   "agentManager.worktree.new": "Neuer Worktree",
   "agentManager.worktree.setupScript": "Worktree-Einrichtungsskript",
   "agentManager.worktree.delete": "Worktree löschen",
@@ -99,6 +96,9 @@ export const dict = {
   "agentManager.worktree.copyPath": "Pfad kopieren",
   "agentManager.worktree.openInVscode": "In VS Code öffnen",
   "agentManager.worktree.rename": "Umbenennen",
+  "agentManager.worktree.pin": "Anheften",
+  "agentManager.worktree.unpin": "Lösen",
+  "agentManager.worktree.pinned": "Angeheftet",
   "agentManager.worktree.newSection": "Neuer Bereich",
   "agentManager.worktree.ungrouped": "Nicht gruppiert",
   "agentManager.section.rename": "Bereich umbenennen",
@@ -111,6 +111,7 @@ export const dict = {
   "agentManager.hoverCard.worktree": "Worktree",
   "agentManager.hoverCard.base": "Basis",
   "agentManager.hoverCard.sessions": "Sitzungen",
+  "agentManager.hoverCard.section": "Abschnitt",
   "agentManager.hoverCard.files": "Dateien",
   "agentManager.hoverCard.changes": "Änderungen",
   "agentManager.hoverCard.commits": "Commits",
@@ -194,13 +195,6 @@ export const dict = {
   "agentManager.shortcuts.cycleAgentMode": "Nächster Agentenmodus",
   "agentManager.shortcuts.cyclePreviousAgentMode": "Vorheriger Agentenmodus",
   "agentManager.shortcuts.showShortcuts": "Tastenkürzel anzeigen",
-  "agentManager.dialog.removeStaleWorktree.title": "Veralteten Worktree entfernen",
-  "agentManager.dialog.removeStaleWorktree.messagePre": "Veralteten Worktree entfernen ",
-  "agentManager.dialog.removeStaleWorktree.messagePost":
-    "? Dies entfernt nur die Zuordnung im Agent Manager und lässt die Dateien auf der Festplatte unberührt.",
-  "agentManager.dialog.removeStaleWorktree.cancel": "Abbrechen",
-  "agentManager.dialog.removeStaleWorktree.confirm": "Veralteten Worktree entfernen",
-
   "agentManager.dialog.project.select": "Projekt auswählen",
   "agentManager.dialog.project.missing": "Repository nicht gefunden",
   "agentManager.dialog.openWorktree": "Neuer Worktree",

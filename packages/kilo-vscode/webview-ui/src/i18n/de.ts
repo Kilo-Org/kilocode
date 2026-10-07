@@ -206,6 +206,14 @@ export const dict = {
   "prompt.worktrees.title": "Worktrees",
   "prompt.worktrees.search": "Worktrees durchsuchen",
   "prompt.thinking.tooltip": "Reasoning-Aufwand",
+  "prompt.shortcutHint.addSelection": "zum Hinzufügen der Auswahl",
+  "prompt.shortcutHint.waiting": "zum Beantworten einer wartenden Sitzung",
+  "prompt.shortcutHint.type": "zum Tippen",
+  "prompt.shortcutHint.sessions": "zum Wechseln der Sitzung",
+  "prompt.shortcutHint.stop": "zum Stoppen",
+  "prompt.shortcutHint.changes": "zum Prüfen der Änderungen",
+  "prompt.shortcutHint.pr": "zum Öffnen des PR",
+  "prompt.shortcutHint.mode": "Nächster Modus",
   "prompt.action.send": "Senden",
   "prompt.action.continue": "Fortsetzen",
   "prompt.action.send.blocked": "Beantworten oder verwerfen Sie zuerst die ausstehende Frage",
@@ -215,6 +223,10 @@ export const dict = {
   "prompt.agents.show": "Hintergrund-Agenten anzeigen",
   "prompt.action.enhance": "Prompt verbessern",
   "prompt.paste.expand": "Klicken, um eingefügten Text zu erweitern",
+  "prompt.issues.title": "Sitzungsprobleme",
+  "prompt.mcp.provider": "{{name}} MCP",
+  "prompt.mcp.openSettings": "In den Einstellungen öffnen",
+  "prompt.mcp.signIn.busy": "Anmeldung läuft…",
   "prompt.action.autoApprove.enable": "Automatische Genehmigung aktivieren",
   "prompt.action.autoApprove.disable": "Automatische Genehmigung deaktivieren",
   "prompt.action.autoApprove.enabled":
@@ -554,6 +566,9 @@ export const dict = {
   "provider.custom.error.duplicate": "Duplikat",
   "settings.openLocalConfig": "Lokale Config",
   "settings.openGlobalConfig": "Globale Config",
+  "settings.search.placeholder": "Einstellungen durchsuchen",
+  "settings.search.noResults": "Keine Einstellungen gefunden",
+  "settings.search.clear": "Suche löschen",
   "settings.config.scope.local": "Lokal",
   "settings.config.scope.global": "Global",
   "settings.config.status.loaded": "geladen",
@@ -615,6 +630,7 @@ export const dict = {
   "session.tabs.switcher.pending": "Neu",
   "session.tabs.switcher.busy": "In Arbeit",
   "session.tabs.switcher.scheduled": "Geplant",
+  "session.tabs.pinHint": "Umschalt+Klick zum Anheften oder Lösen",
   "session.tab.local": "Lokal",
   "session.tab.cloud": "Cloud",
   "session.tab.worktree": "Arbeitsbaum",
@@ -795,12 +811,14 @@ export const dict = {
   "ui.sessionTurn.status.consideringNextSteps": "Überlege nächste Schritte...",
 
   "dialog.model.noProviders": "Keine Anbieter",
+  "dialog.model.unavailable": "Kilo-Modelle nicht verfügbar",
 
   "prompt.placeholder.connecting": "Verbindung zum Server wird hergestellt...",
   "prompt.placeholder.error":
     "Verbindung fehlgeschlagen. Überprüfen Sie das Ausgabepanel oder starten Sie die Erweiterung neu.",
   "prompt.placeholder.default":
     "Nachricht eingeben, @ um Dateien zu erwähnen... (Enter zum Senden, Shift+Enter für neue Zeile)",
+  "prompt.placeholder.hint": "Nachricht eingeben, @ um Dateien zu erwähnen... ({{key}} {{action}})",
 
   "context.usage.sessionCost": "Sitzungskosten",
   "context.usage.olderSessions": "{{count}} ältere Sitzungen",
@@ -959,15 +977,12 @@ export const dict = {
   "settings.sandboxing.writablePaths.title": "Zusätzliche schreibbare Pfade",
   "settings.sandboxing.writablePaths.description":
     "Zusätzliche Dateisystempfade, in die die Sandbox Schreibvorgänge erlaubt (z. B. /tmp, /var/log). Diese werden mit den Standard-Schreibpfaden zusammengeführt, wenn die Sandbox aktiv ist.",
-  "settings.experimental.multiProject.title": "Multi-Projekt Agent Manager",
   "settings.experimental.conversationPromptHistory.title": "Prompt-Verlauf pro Unterhaltung",
   "settings.experimental.conversationPromptHistory.description":
     "Den Prompt-Verlauf (ArrowUp/ArrowDown) für jede Unterhaltung getrennt halten, statt einen gemeinsamen Verlauf für alle Unterhaltungen zu nutzen.",
   "settings.experimental.claudeMigration.title": "Claude-Code-Migration",
   "settings.experimental.claudeMigration.description":
     "Unterstützte globale CLAUDE.md-Anweisungen, einfache Skills und deaktivierte MCP-Definitionen einmalig importieren. Originale Claude-Dateien bleiben unverändert; Backend nach dem Aktivieren neu starten.",
-  "settings.experimental.multiProject.description":
-    "Aktivieren Sie die Verwaltung von Sitzungen und Worktrees über mehrere Repositories im Agent Manager. Das aktuelle Workspace-Repository ist immer das Standardprojekt.",
   "settings.experimental.mcpTimeout.title": "MCP-Zeitlimit (ms)",
   "settings.experimental.mcpTimeout.description": "Zeitlimit für MCP-Server-Anfragen in Millisekunden",
   "settings.experimental.remote.title": "Remote-Steuerung",
@@ -1057,12 +1072,31 @@ export const dict = {
   "settings.agentBehaviour.removeMcp.title": "MCP-Server entfernen",
   "settings.agentBehaviour.removeMcp.confirm":
     'MCP-Server "{{name}}" entfernen? Dadurch wird er aus Ihrer Konfiguration entfernt.',
+  "settings.agentBehaviour.removeMcp.bundleConfirm":
+    'MCP-Server "{{name}}" und seine Begleit-Skills entfernen? Dadurch werden sowohl der Server als auch jeder Skill entfernt, der dieser Marketplace-Installation gehört.',
   "settings.agentBehaviour.removeMcp.button": "Entfernen",
   "settings.agentBehaviour.editMcp": "MCP-Server bearbeiten",
   "settings.agentBehaviour.editMcp.transportLocal": "Lokaler Server (stdio-Transport)",
   "settings.agentBehaviour.editMcp.transportRemote": "Remote-Server (SSE/HTTP-Transport)",
   "settings.agentBehaviour.editMcp.env": "Umgebungsvariablen",
   "settings.agentBehaviour.editMcp.env.help": "Variablen, die an den MCP-Serverprozess übergeben werden.",
+  "settings.agentBehaviour.editMcp.oauth": "OAuth",
+  "settings.agentBehaviour.editMcp.oauth.help":
+    "Belassen Sie es bei Automatisch, außer der Server erfordert einen vorregistrierten Client. Ein Client-Secret wird in Ihrer Kilo-Konfigurationsdatei gespeichert.",
+  "settings.agentBehaviour.editMcp.oauth.mode": "Modus",
+  "settings.agentBehaviour.editMcp.oauth.mode.automatic": "Automatisch",
+  "settings.agentBehaviour.editMcp.oauth.mode.disabled": "Deaktiviert",
+  "settings.agentBehaviour.editMcp.oauth.mode.custom": "Benutzerdefinierter Client",
+  "settings.agentBehaviour.editMcp.oauth.clientId": "Client-ID",
+  "settings.agentBehaviour.editMcp.oauth.clientSecret": "Client-Secret",
+  "settings.agentBehaviour.editMcp.oauth.scope": "Bereich",
+  "settings.agentBehaviour.editMcp.oauth.callbackPort": "Callback-Port",
+  "settings.agentBehaviour.editMcp.oauth.redirectUri": "Weiterleitungs-URI",
+  "settings.agentBehaviour.editMcp.oauth.redirectUri.help":
+    "Standardmäßig http://127.0.0.1:19876/mcp/oauth/callback, überschreibt den Callback-Port.",
+  "settings.agentBehaviour.editMcp.oauth.port.invalid": "Geben Sie einen Port zwischen 1 und 65535 ein.",
+  "settings.agentBehaviour.editMcp.oauth.secret.invalid": "Ein Client-Secret erfordert eine Client-ID.",
+  "settings.agentBehaviour.editMcp.oauth.redirectUri.invalid": "Geben Sie eine gültige Weiterleitungs-URI ein.",
   "settings.agentBehaviour.addMcp.command": "Befehl",
   "settings.agentBehaviour.addMcp.command.placeholder": "e.g. npx",
   "settings.agentBehaviour.addMcp.args": "Argumente",
@@ -1076,6 +1110,8 @@ export const dict = {
   "settings.agentBehaviour.removeSkill.title": "Skill entfernen",
   "settings.agentBehaviour.removeSkill.confirm":
     'Skill "{{name}}" entfernen? Dadurch werden die Skill-Dateien vom Datenträger gelöscht.',
+  "settings.agentBehaviour.removeSkill.bundleConfirm":
+    'Skill "{{name}}" entfernen? Dadurch wird auch der {{mcp}} MCP-Server und jeder Begleit-Skill aus derselben Marketplace-Installation deinstalliert.',
   "settings.agentBehaviour.removeSkill.button": "Entfernen",
   "settings.agentBehaviour.rules.description":
     "Regeln sind Anweisungsdateien, die das Verhalten des Agenten steuern. Sie werden in den System-Prompt für jede Konversation eingebunden. Fügen Sie unten Dateipfade hinzu, um zusätzliche Regeln einzubinden.",
@@ -1091,6 +1127,12 @@ export const dict = {
   "settings.agentBehaviour.mcpDetail.command": "Befehl",
   "settings.agentBehaviour.mcpDetail.args": "Argumente",
   "settings.agentBehaviour.mcpDetail.env": "Umgebung",
+  "settings.agentBehaviour.mcpSignIn.cancel": "Anmeldung abbrechen",
+  "settings.agentBehaviour.mcpRemoving": "Wird entfernt…",
+  "settings.agentBehaviour.mcpResetAuth": "Anmeldung zurücksetzen",
+  "settings.agentBehaviour.mcpResetAuth.title": "MCP-Anmeldung zurücksetzen",
+  "settings.agentBehaviour.mcpResetAuth.confirm":
+    'Die gespeicherte Anmeldung für "{{name}}" löschen? Sie müssen sich erneut anmelden.',
   "settings.agentBehaviour.mcpBrowseMarketplace": "Marketplace durchsuchen",
   "settings.agentBehaviour.mcpEmpty":
     "Keine MCP-Server konfiguriert. Fügen Sie MCP-Server in kilo.jsonc hinzu oder bitten Sie den Agenten, sie hinzuzufügen.",
@@ -1270,6 +1312,9 @@ export const dict = {
   "settings.display.mcpTool.expanded": "Ausgeklappt",
   "settings.display.mcpTool.collapsed": "Eingeklappt",
 
+  "settings.display.shortcutHints.title": "Tastenkürzel-Hinweise anzeigen",
+  "settings.display.shortcutHints.description":
+    "Zeigt in der leeren Eingabe das Tastenkürzel an, das zu Ihrer aktuellen Tätigkeit passt, zum Beispiel wie Sie ausgewählten Code hinzufügen oder zur Eingabe zurückkehren.",
   "settings.display.tokenThroughput.title": "Token-Durchsatz anzeigen",
   "settings.display.tokenThroughput.description":
     "Die Textgenerierungsrate (tokens/sec) in der neuesten Assistentennachricht und in der Aufgabenüberschrift anzeigen. Standardmäßig angezeigt; deaktivieren Sie diese Einstellung, um sie bei Bedarf auszublenden.",
@@ -1348,6 +1393,8 @@ export const dict = {
 
   "task.todos.progress": "{{done}}/{{total}} Aufgaben erledigt",
   "task.todos.allDone": "{{count}} Aufgaben erledigt",
+  "task.todos.title": "Aufgaben",
+  "task.todos.done": "Alles erledigt",
   "task.backgroundAgents.running.one": "1 Hintergrund-Agent",
   "task.backgroundAgents.running.many": "{{count}} Hintergrund-Agenten",
   "task.backgroundAgents.open": "Hintergrund-Agent öffnen",
@@ -1430,5 +1477,14 @@ export const dict = {
   "settings.experimental.browserAutomation.systemChrome.title": "System-Chrome verwenden",
   "settings.experimental.browserAutomation.systemChrome.description":
     "Das installierte Google Chrome für den integrierten Browser verwenden. Nur deaktivieren, wenn bereits ein kompatibler Playwright-Chromium-Browser installiert ist.",
+  "settings.experimental.browserLinks.title": "Links öffnen in",
+  "settings.experimental.browserLinks.description":
+    "Wählen Sie, wo Weblinks aus Kilo-Chats geöffnet werden. Erfordert den integrierten Browser.",
+  "settings.experimental.browserLinks.external": "Systembrowser",
+  "settings.experimental.browserLinks.integrated": "Integrierter Browser",
   "chat.search.searchingHistory": "Frühere Nachrichten werden durchsucht…",
+  "browserTab.noSession":
+    "Öffne den Browser aus einer Sitzung, um eine lokale Anwendung oder eine öffentliche HTTPS-Seite anzuzeigen.",
+  "browserTab.disabled":
+    "Der integrierte Browser ist deaktiviert. Aktiviere ihn unter Kilo-Einstellungen > Experimentell.",
 } satisfies Partial<Record<Keys, string>>

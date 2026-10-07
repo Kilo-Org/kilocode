@@ -30,7 +30,6 @@ export const dict = {
   "agentManager.local": "local",
   "agentManager.sidebar.collapse": "Collapse sidebar",
   "agentManager.sidebar.expand": "Show sidebar",
-  "agentManager.section.worktrees": "WORKTREES",
   "agentManager.section.sessions": "SESSIONS",
   "agentManager.projects": "PROJECTS",
   "agentManager.settings.title": "Agent Manager",
@@ -43,6 +42,7 @@ export const dict = {
   "agentManager.settings.worktreePool.title": "Pre-warm worktrees",
   "agentManager.settings.worktreePool.description":
     "Prepare a ready worktree in the background so new Agent Manager sessions start faster. Uses extra disk space for one checkout per open project.",
+  "agentManager.hints.switchSession": "Switch session",
   "agentManager.settings.project.title": "Project",
   "agentManager.settings.project.description": "Choose the repository whose worktree settings you want to edit.",
   "agentManager.settings.project.empty": "No Agent Manager projects are available.",
@@ -70,12 +70,9 @@ export const dict = {
   "agentManager.project.settings": "Project settings",
   "agentManager.project.restricted":
     "Your current VS Code workspace is your home folder or a filesystem root. Open a specific project folder in VS Code to use Agent Manager.",
-  "agentManager.notGitRepo": "Not a git repository",
-
   "agentManager.updateBase.title": "Update from base",
   "agentManager.updateBase.selectWorktree": "Select a managed worktree first.",
 
-  "agentManager.worktree.settings": "Worktree settings",
   "agentManager.worktree.new": "New Worktree",
   "agentManager.worktree.setupScript": "Worktree Setup Script",
   "agentManager.worktree.delete": "Delete worktree",
@@ -134,6 +131,9 @@ export const dict = {
   "agentManager.worktree.copyPath": "Copy Path",
   "agentManager.worktree.openInVscode": "Open in VS Code",
   "agentManager.worktree.rename": "Rename",
+  "agentManager.worktree.pin": "Pin",
+  "agentManager.worktree.unpin": "Unpin",
+  "agentManager.worktree.pinned": "Pinned",
   "agentManager.worktree.newSection": "New Section",
   "agentManager.worktree.ungrouped": "Ungrouped",
   "agentManager.section.rename": "Rename Section",
@@ -147,6 +147,7 @@ export const dict = {
   "agentManager.hoverCard.worktree": "Worktree",
   "agentManager.hoverCard.base": "Base",
   "agentManager.hoverCard.sessions": "Sessions",
+  "agentManager.hoverCard.section": "Section",
   "agentManager.hoverCard.files": "Files",
   "agentManager.hoverCard.changes": "Changes",
   "agentManager.hoverCard.commits": "Commits",
@@ -231,13 +232,6 @@ export const dict = {
   "agentManager.shortcuts.cycleAgentMode": "Next agent mode",
   "agentManager.shortcuts.cyclePreviousAgentMode": "Previous agent mode",
   "agentManager.shortcuts.showShortcuts": "Show keyboard shortcuts",
-
-  "agentManager.dialog.removeStaleWorktree.title": "Remove Stale Worktree",
-  "agentManager.dialog.removeStaleWorktree.messagePre": "Remove stale worktree ",
-  "agentManager.dialog.removeStaleWorktree.messagePost":
-    "? This only removes the Agent Manager mapping and leaves files on disk untouched.",
-  "agentManager.dialog.removeStaleWorktree.cancel": "Cancel",
-  "agentManager.dialog.removeStaleWorktree.confirm": "Remove stale worktree",
 
   "agentManager.dialog.openWorktree": "New Worktree",
   "agentManager.dialog.tab.new": "New",

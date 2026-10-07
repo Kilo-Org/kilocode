@@ -33,7 +33,6 @@ export const dict = {
   "agentManager.local": "lokaal",
   "agentManager.sidebar.collapse": "Zijbalk inklappen",
   "agentManager.sidebar.expand": "Zijbalk tonen",
-  "agentManager.section.worktrees": "WORKTREES",
   "agentManager.section.sessions": "SESSIES",
   "agentManager.projects": "PROJECTEN",
   "agentManager.settings.title": "Agent Manager",
@@ -46,6 +45,7 @@ export const dict = {
   "agentManager.settings.worktreePool.title": "Worktrees vooraf opwarmen",
   "agentManager.settings.worktreePool.description":
     "Bereid op de achtergrond een kant-en-klare worktree voor, zodat nieuwe Agent Manager-sessies sneller starten. Gebruikt extra schijfruimte voor één checkout per geopend project.",
+  "agentManager.hints.switchSession": "Sessie wisselen",
   "agentManager.settings.project.title": "Project",
   "agentManager.settings.project.description": "Kies de repository waarvan je de worktree-instellingen wilt bewerken.",
   "agentManager.settings.project.empty": "Er zijn geen Agent Manager-projecten beschikbaar.",
@@ -74,12 +74,9 @@ export const dict = {
   "agentManager.project.settings": "Projectinstellingen",
   "agentManager.project.restricted":
     "Je huidige VS Code-werkruimte is je thuismap of de hoofdmap van het bestandssysteem. Open een specifieke projectmap in VS Code om Agent Manager te gebruiken.",
-  "agentManager.notGitRepo": "Geen git repository",
-
   "agentManager.updateBase.title": "Bijwerken vanuit de basis",
   "agentManager.updateBase.selectWorktree": "Selecteer eerst een beheerde worktree.",
 
-  "agentManager.worktree.settings": "Worktree instellingen",
   "agentManager.worktree.new": "Nieuwe worktree",
   "agentManager.worktree.setupScript": "Worktree setup script",
   "agentManager.worktree.delete": "Worktree verwijderen",
@@ -95,6 +92,9 @@ export const dict = {
   "agentManager.worktree.copyPath": "Pad kopiëren",
   "agentManager.worktree.openInVscode": "Openen in VS Code",
   "agentManager.worktree.rename": "Hernoemen",
+  "agentManager.worktree.pin": "Vastmaken",
+  "agentManager.worktree.unpin": "Losmaken",
+  "agentManager.worktree.pinned": "Vastgemaakt",
   "agentManager.worktree.newSection": "Nieuwe sectie",
   "agentManager.worktree.ungrouped": "Niet gegroepeerd",
   "agentManager.section.rename": "Sectie hernoemen",
@@ -108,6 +108,7 @@ export const dict = {
   "agentManager.hoverCard.worktree": "Worktree",
   "agentManager.hoverCard.base": "Basis",
   "agentManager.hoverCard.sessions": "Sessies",
+  "agentManager.hoverCard.section": "Sectie",
   "agentManager.hoverCard.files": "Bestanden",
   "agentManager.hoverCard.changes": "Wijzigingen",
   "agentManager.hoverCard.commits": "Commits",
@@ -192,13 +193,6 @@ export const dict = {
   "agentManager.shortcuts.cycleAgentMode": "Volgende agent modus",
   "agentManager.shortcuts.cyclePreviousAgentMode": "Vorige agent modus",
   "agentManager.shortcuts.showShortcuts": "Sneltoetsen tonen",
-
-  "agentManager.dialog.removeStaleWorktree.title": "Verouderde worktree verwijderen",
-  "agentManager.dialog.removeStaleWorktree.messagePre": "Verouderde worktree ",
-  "agentManager.dialog.removeStaleWorktree.messagePost":
-    "? Dit verwijdert alleen de Agent Manager koppeling en laat bestanden op de schijf ongemoeid.",
-  "agentManager.dialog.removeStaleWorktree.cancel": "Annuleren",
-  "agentManager.dialog.removeStaleWorktree.confirm": "Verouderde worktree verwijderen",
 
   "agentManager.dialog.project.select": "Project selecteren",
   "agentManager.dialog.project.missing": "Repository niet gevonden",

@@ -31,7 +31,6 @@ export const dict = {
   "agentManager.local": "ในเครื่อง",
   "agentManager.sidebar.collapse": "ย่อแถบด้านข้าง",
   "agentManager.sidebar.expand": "แสดงแถบด้านข้าง",
-  "agentManager.section.worktrees": "WORKTREES",
   "agentManager.section.sessions": "เซสชัน",
   "agentManager.projects": "โปรเจกต์",
   "agentManager.settings.title": "Agent Manager",
@@ -44,6 +43,7 @@ export const dict = {
   "agentManager.settings.worktreePool.title": "อุ่นเครื่อง Worktree ล่วงหน้า",
   "agentManager.settings.worktreePool.description":
     "เตรียม Worktree ที่พร้อมใช้งานไว้ในเบื้องหลังเพื่อให้เซสชัน Agent Manager ใหม่เริ่มได้เร็วขึ้น ใช้พื้นที่ดิสก์เพิ่มขึ้นสำหรับหนึ่ง checkout ต่อโปรเจกต์ที่เปิดอยู่",
+  "agentManager.hints.switchSession": "สลับเซสชัน",
   "agentManager.settings.project.title": "โปรเจกต์",
   "agentManager.settings.project.description": "เลือก repository ที่มีการตั้งค่า worktree ที่คุณต้องการแก้ไข",
   "agentManager.settings.project.empty": "ไม่มีโปรเจกต์ Agent Manager ที่พร้อมใช้งาน",
@@ -71,12 +71,9 @@ export const dict = {
   "agentManager.project.settings": "การตั้งค่าโปรเจกต์",
   "agentManager.project.restricted":
     "พื้นที่ทำงาน VS Code ปัจจุบันของคุณคือโฟลเดอร์บ้านหรือรากของระบบไฟล์ เปิดโฟลเดอร์โครงการที่เจาะจงใน VS Code เพื่อใช้ Agent Manager",
-  "agentManager.notGitRepo": "ไม่ใช่ git repository",
-
   "agentManager.updateBase.title": "อัปเดตจากฐาน",
   "agentManager.updateBase.selectWorktree": "เลือก worktree ที่มีการจัดการก่อน",
 
-  "agentManager.worktree.settings": "ตั้งค่า Worktree",
   "agentManager.worktree.new": "Worktree ใหม่",
   "agentManager.worktree.setupScript": "สคริปต์ตั้งค่า Worktree",
   "agentManager.worktree.delete": "ลบ Worktree",
@@ -92,6 +89,9 @@ export const dict = {
   "agentManager.worktree.copyPath": "คัดลอกเส้นทาง",
   "agentManager.worktree.openInVscode": "เปิดใน VS Code",
   "agentManager.worktree.rename": "เปลี่ยนชื่อ",
+  "agentManager.worktree.pin": "ปักหมุด",
+  "agentManager.worktree.unpin": "เลิกปักหมุด",
+  "agentManager.worktree.pinned": "ปักหมุดแล้ว",
   "agentManager.worktree.newSection": "ส่วนใหม่",
   "agentManager.worktree.ungrouped": "ไม่ได้จัดกลุ่ม",
   "agentManager.section.rename": "เปลี่ยนชื่อส่วน",
@@ -104,6 +104,7 @@ export const dict = {
   "agentManager.hoverCard.worktree": "Worktree",
   "agentManager.hoverCard.base": "ฐาน",
   "agentManager.hoverCard.sessions": "เซสชัน",
+  "agentManager.hoverCard.section": "ส่วน",
   "agentManager.hoverCard.files": "ไฟล์",
   "agentManager.hoverCard.changes": "การเปลี่ยนแปลง",
   "agentManager.hoverCard.commits": "คอมมิต",
@@ -180,13 +181,6 @@ export const dict = {
   "agentManager.shortcuts.cycleAgentMode": "โหมดเอเจนต์ถัดไป",
   "agentManager.shortcuts.cyclePreviousAgentMode": "โหมดเอเจนต์ก่อนหน้า",
   "agentManager.shortcuts.showShortcuts": "แสดงปุ่มลัดแป้นพิมพ์",
-  "agentManager.dialog.removeStaleWorktree.title": "ลบ Worktree ที่ล้าสมัย",
-  "agentManager.dialog.removeStaleWorktree.messagePre": "ลบ Worktree ที่ล้าสมัย ",
-  "agentManager.dialog.removeStaleWorktree.messagePost":
-    "? การดำเนินการนี้จะลบเฉพาะการแมปใน Agent Manager และจะไม่แตะไฟล์บนดิสก์",
-  "agentManager.dialog.removeStaleWorktree.cancel": "ยกเลิก",
-  "agentManager.dialog.removeStaleWorktree.confirm": "ลบ Worktree ที่ล้าสมัย",
-
   "agentManager.dialog.project.select": "เลือกโปรเจกต์",
   "agentManager.dialog.project.missing": "ไม่พบ Repository",
   "agentManager.dialog.openWorktree": "Worktree ใหม่",

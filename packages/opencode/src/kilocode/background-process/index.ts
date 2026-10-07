@@ -838,7 +838,14 @@ export namespace BackgroundProcess {
     const size = meta.size
     const offset = active.offset ?? 0
     const start = size < offset ? Math.max(0, size - MAX) : offset
-    const next = await Bun.file(active.log).slice(start, size).text()
+    const next = await Bun.file(active.log)
+      .slice(start, size)
+      .text()
+      .catch((err) => {
+        if (isRecord(err) && err.code === "ENOENT") return undefined
+        throw err
+      })
+    if (next === undefined) return
     active.offset = size
     if (next) append(active, next)
   }

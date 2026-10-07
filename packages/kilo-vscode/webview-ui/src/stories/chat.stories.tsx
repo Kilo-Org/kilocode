@@ -11,7 +11,10 @@ import type { Meta, StoryObj } from "storybook-solidjs-vite"
 import type { AssistantMessage } from "@kilocode/sdk/v2"
 import { batch, createEffect, createSignal, onCleanup, onMount } from "solid-js"
 import { StoryProviders, defaultMockData, mockSessionValue } from "./StoryProviders"
+import { Button } from "@kilocode/kilo-ui/button"
+import { Icon } from "@kilocode/kilo-ui/icon"
 import { ChatView } from "../components/chat/ChatView"
+import { SessionDock } from "../components/chat/SessionDock"
 import { ErrorDisplay } from "../components/chat/ErrorDisplay"
 import { AgentStack, useAgentStack } from "../components/chat/AgentStack"
 import { pollBackgroundJobs } from "../components/chat/background-jobs"
@@ -257,6 +260,93 @@ export const ChatViewSessionDockStability: Story = {
       </StoryProviders>
     )
   },
+}
+
+const dockTodoNames = [
+  "Read session dock layout",
+  "Add todo progress chip",
+  "Wire chip into the dock",
+  "Remove header todo tracker",
+  "Run typecheck and unit tests",
+]
+
+function dockTodos(done: number): TodoItem[] {
+  return dockTodoNames.map((content, i) => ({
+    content,
+    status: i < done ? "completed" : i === done ? "in_progress" : "pending",
+  }))
+}
+
+// The dock on its own, so the docs screenshot focuses on the chip instead of
+// the whole chat. Rendering ChatView here pulled in the welcome screen, the
+// account switcher, the feedback box, and busy header skeletons, none of which
+// belong in a picture of the todo chip.
+function dockRow(opts: { busy: boolean; goal: boolean; done: number; width: number; label: string }) {
+  const status = opts.busy ? "busy" : "idle"
+  const base = mockSessionValue({ id: SESSION_ID, status, closeReason: "completed" })
+  const session = {
+    ...base,
+    currentSession: () => ({
+      ...base.currentSession(),
+      goal: opts.goal ? { text: "Ship the todo chip in the session dock", active: opts.busy } : undefined,
+    }),
+    status: () => status,
+    statusInfo: () => ({ type: status }),
+    statusText: () => (opts.busy ? "Making edits" : undefined),
+    busyTiming: () => (opts.busy ? { active: 2000, since: Date.now() } : undefined),
+    submitting: () => false,
+    isSubmitting: () => false,
+    messages: () => [],
+    getParts: () => [],
+    todos: () => dockTodos(opts.done),
+  }
+  return (
+    <div style={{ width: `${opts.width}px` }}>
+      <div style={{ "font-size": "11px", opacity: 0.6, padding: "4px 8px" }}>{opts.label}</div>
+      <SessionContext.Provider value={session as any}>
+        <WorktreeModeProvider>
+          <div class="chat-input" style={{ padding: "4px 8px" }}>
+            <SessionDock
+              onScrollToBottom={() => undefined}
+              hasActions={() => !opts.busy}
+              actions={(goal, agents, todos) => (
+                <div class="new-task-button-wrapper">
+                  <div class="session-actions-row">
+                    {agents}
+                    <Button variant="secondary" size="small" class="session-new-button">
+                      New Session
+                    </Button>
+                    <Button variant="ghost" size="small">
+                      <Icon name="fork" size="small" />
+                      Fork Session
+                    </Button>
+                    {todos}
+                    {goal()}
+                  </div>
+                </div>
+              )}
+            />
+          </div>
+        </WorktreeModeProvider>
+      </SessionContext.Provider>
+    </div>
+  )
+}
+
+/** Static dock states for the docs and visual regression. */
+export const ChatViewSessionDockTodoStates: Story = {
+  name: "ChatView — session dock todo states",
+  render: () => (
+    <StoryProviders sessionID={SESSION_ID} status="idle" noPadding>
+      <div style={{ display: "grid", gap: "16px" }}>
+        {dockRow({ busy: true, goal: false, done: 2, width: 420, label: "Working" })}
+        {dockRow({ busy: true, goal: true, done: 2, width: 420, label: "Working, with goal" })}
+        {dockRow({ busy: true, goal: true, done: 2, width: 300, label: "Working, narrow, with goal" })}
+        {dockRow({ busy: false, goal: true, done: 3, width: 420, label: "Idle" })}
+        {dockRow({ busy: false, goal: false, done: 5, width: 420, label: "Idle, all done" })}
+      </div>
+    </StoryProviders>
+  ),
 }
 
 /** Builds the user message a review-comment send produces: markdown prefix + review metadata. */
@@ -1228,7 +1318,7 @@ export const TurnOutcomeFailed: Story = {
 }
 
 // ---------------------------------------------------------------------------
-// TaskHeader with todos
+// TaskHeader
 // ---------------------------------------------------------------------------
 
 const headerNow = 1_700_000_000_000
@@ -1358,26 +1448,8 @@ const headerParts: Record<string, Part[]> = {
   ],
 }
 
-const mockTodosInProgress: TodoItem[] = [
-  { id: "1", content: "Project setup and architecture backlog", status: "completed" },
-  { id: "2", content: "Configuration schema for target jobs", status: "completed" },
-  { id: "3", content: "Core scanning logic", status: "completed" },
-  { id: "4", content: "Build invocation and error handling", status: "completed" },
-  { id: "5", content: "CLI interface implementation", status: "in_progress" },
-  { id: "6", content: "Storage layer implementation", status: "pending" },
-  { id: "7", content: "Character profiles and prompt types", status: "pending" },
-  { id: "8", content: "Local tests and integration tests", status: "pending" },
-  { id: "9", content: "Migration guide", status: "pending" },
-  { id: "10", content: "Release validation", status: "pending" },
-]
-
-const mockTodosAllDone: TodoItem[] = [
-  { id: "1", content: "Create a haiku about Jan", status: "completed" },
-  { id: "2", content: "Create a poem about Henk", status: "completed" },
-]
-
-export const TaskHeaderWithTodos: Story = {
-  name: "TaskHeader — with todos (in progress)",
+export const TaskHeaderBusy: Story = {
+  name: "TaskHeader — busy session",
   render: () => {
     const session = {
       ...mockSessionValue({ id: SESSION_ID, status: "busy" }),
@@ -1389,7 +1461,6 @@ export const TaskHeaderWithTodos: Story = {
         createdAt: new Date(headerNow - 12000).toISOString(),
         updatedAt: new Date(headerNow).toISOString(),
       }),
-      todos: () => mockTodosInProgress,
       getParts: (id: string) => headerParts[id] ?? [],
       contextUsage: () => ({ tokens: 34300, percentage: 17 }),
       costBreakdown: () => [{ label: "Session", cost: 0.64 }],
@@ -1441,6 +1512,65 @@ export const TaskHeaderSkeleton: Story = {
   },
 }
 
+// ---------------------------------------------------------------------------
+// TaskHeader for a subagent session
+// ---------------------------------------------------------------------------
+
+const subagentHeaderMessages: Message[] = [
+  {
+    id: "user-subagent-header-001",
+    sessionID: SESSION_ID,
+    role: "user",
+    content: "Explore the CLI core performance critical paths and report the slowest stages.",
+    createdAt: new Date(headerNow - 8000).toISOString(),
+    time: { created: headerNow - 8000 },
+    model: { providerID: "kilo", modelID: "anthropic/claude-sonnet-4-6", variant: "high" },
+  },
+  {
+    id: "asst-subagent-header-001",
+    sessionID: SESSION_ID,
+    role: "assistant",
+    parentID: "user-subagent-header-001",
+    content: "Profiling the CLI startup and session switching paths.",
+    createdAt: new Date(headerNow - 6000).toISOString(),
+    time: { created: headerNow - 6000 },
+    providerID: "kilo",
+    modelID: "anthropic/claude-sonnet-4-6",
+    variant: "high",
+    tokens: { input: 18_400, output: 320, reasoning: 2_100, cache: { read: 6_200, write: 0 } },
+  },
+]
+
+function subagentHeaderSession() {
+  return {
+    ...mockSessionValue({ id: SESSION_ID, status: "idle" }),
+    messages: () => subagentHeaderMessages,
+    visibleMessages: () => subagentHeaderMessages,
+    currentSession: () => ({
+      id: SESSION_ID,
+      parentID: "parent-session-001",
+      title: "Explore CLI core performance (@explore subagent)",
+      createdAt: new Date(headerNow - 8000).toISOString(),
+      updatedAt: new Date(headerNow).toISOString(),
+    }),
+    contextUsage: () => ({ tokens: 26_800, percentage: 13 }),
+    costBreakdown: () => [{ label: "Session", cost: 0.01 }],
+  }
+}
+
+export const TaskHeaderSubagent: Story = {
+  name: "TaskHeader — subagent with model and reasoning effort",
+  render: () => (
+    <StoryProviders sessionID={SESSION_ID} noPadding>
+      <SessionContext.Provider value={subagentHeaderSession() as any}>
+        <div style={{ width: "100%" }}>
+          <TaskHeader readonly />
+        </div>
+      </SessionContext.Provider>
+    </StoryProviders>
+  ),
+}
+
 export const BackgroundAgentPanel: Story = {
   name: "Background agent stack and panel",
   args: { names: ["Trace overflow recovery", "Trace outbound request size", "Check request limits"] },
@@ -1472,34 +1602,6 @@ export const BackgroundAgentPanel: Story = {
         <SessionContext.Provider value={session as unknown as SessionContextValue}>
           <div style={{ padding: "160px 12px 12px" }}>
             <Stack />
-          </div>
-        </SessionContext.Provider>
-      </StoryProviders>
-    )
-  },
-}
-
-export const TaskHeaderWithTodosAllDone: Story = {
-  name: "TaskHeader — with todos (all done)",
-  render: () => {
-    const session = {
-      ...mockSessionValue({ id: SESSION_ID, status: "idle" }),
-      messages: () => [{ id: "msg-001" }] as any[],
-      visibleMessages: () => headerMessages,
-      getParts: (id: string) => headerParts[id] ?? [],
-      currentSession: () => ({
-        id: SESSION_ID,
-        title: "Writing poems about the team",
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      }),
-      todos: () => mockTodosAllDone,
-    }
-    return (
-      <StoryProviders sessionID={SESSION_ID} status="idle" noPadding>
-        <SessionContext.Provider value={session as any}>
-          <div style={{ width: "380px" }}>
-            <TaskHeader />
           </div>
         </SessionContext.Provider>
       </StoryProviders>
@@ -1550,6 +1652,7 @@ const usageProvider = {
   authMethods: () => ({}),
   authStates: () => ({}),
   isModelValid: () => true,
+  kiloUnavailable: () => false,
 }
 
 const usageStory = (open: boolean) => () => (

@@ -1,9 +1,12 @@
 # kilocode_change - new file
 name: Security findings notify
 
-# Posts open Dependabot security alerts (critical/high) to Slack, and pings
-# the channel when a critical finding breaches its resolution SLA. Read-only;
-# follows the cron pattern from watch-opencode-releases.yml.
+# Posts open security alerts to Slack, and pings the channel when a critical
+# finding breaches its resolution SLA. Read-only; follows the cron pattern from
+# watch-opencode-releases.yml. Three sources: Dependabot alerts, code scanning
+# (CodeQL) alerts and secret scanning alerts. Dependabot and code scanning
+# alerts below SECURITY_MIN_SEVERITY (default: high) are skipped. A leaked
+# secret always counts as critical.
 
 on:
   schedule:
@@ -17,6 +20,7 @@ concurrency:
 permissions:
   contents: read
   vulnerability-alerts: read
+  security-events: read
 
 jobs:
   list-findings:
@@ -29,32 +33,72 @@ jobs:
       - id: build
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Optional. The default token cannot read secret scanning alerts on
+          # every plan. A token with the secret_scanning_alerts scope is used
+          # for that one call only. Without it, the call uses GH_TOKEN.
+          SECRET_SCAN_TOKEN: ${{ secrets.SECURITY_SCAN_TOKEN }}
           REPO: ${{ github.repository }}
           # 15 matches an observed real critical deadline; 30 is a guess.
           CRIT_DAYS: ${{ vars.SECURITY_SLA_CRITICAL_DAYS || '15' }}
           HIGH_DAYS: ${{ vars.SECURITY_SLA_HIGH_DAYS || '30' }}
+          # Only used when SECURITY_MIN_SEVERITY lets medium or low through.
+          MEDIUM_DAYS: ${{ vars.SECURITY_SLA_MEDIUM_DAYS || '90' }}
+          LOW_DAYS: ${{ vars.SECURITY_SLA_LOW_DAYS || '180' }}
+          # critical, high, medium or low. Anything below it is not reported.
+          MIN_SEVERITY: ${{ vars.SECURITY_MIN_SEVERITY || 'high' }}
         run: |
           # --method GET is required: gh api auto-switches to POST whenever
           # -f is passed, which would 404 against this GET-only endpoint.
-          alerts=$(gh api --paginate --method GET -f state=open -f per_page=100 "repos/$REPO/dependabot/alerts")
+          # --paginate prints one array per page, so merge them into one.
+          set -o pipefail
+          fetch() {
+            gh api --paginate --method GET -f state=open -f per_page=100 "repos/$REPO/$1" | jq -cs 'add // []'
+          }
+          dependabot=$(fetch dependabot/alerts)
+
+          # Code scanning returns 404 when it is not enabled, and secret
+          # scanning is not readable with the default GITHUB_TOKEN on every
+          # plan (set the SECURITY_SCAN_TOKEN secret to fix that). A source that cannot be read is skipped with a warning, so it
+          # never hides the Dependabot findings.
+          if ! code=$(fetch code-scanning/alerts 2>/dev/null); then
+            echo "::warning::could not read code scanning alerts, skipping them"
+            code='[]'
+          fi
+          if ! secrets=$(GH_TOKEN="${SECRET_SCAN_TOKEN:-$GH_TOKEN}" fetch secret-scanning/alerts 2>/dev/null); then
+            echo "::warning::could not read secret scanning alerts, skipping them"
+            secrets='[]'
+          fi
+
           now=$(date -u +%s)
-          matrix=$(echo "$alerts" | jq -c --argjson now "$now" --argjson critDays "$CRIT_DAYS" --argjson highDays "$HIGH_DAYS" '
-            map(select(.security_advisory.severity == "critical" or .security_advisory.severity == "high"))
-            | map(
-                . as $a
-                | $a.security_advisory.severity as $sev
-                | (if $sev == "critical" then $critDays else $highDays end) as $threshold
-                | (($now - ($a.created_at | fromdateiso8601)) / 86400) as $age
-                | {
-                    number: $a.number,
-                    severity: $sev,
-                    ghsa_id: $a.security_advisory.ghsa_id,
-                    summary: $a.security_advisory.summary,
-                    html_url: $a.html_url,
-                    age_days: ($age | floor),
-                    status: (if $age >= $threshold then "breach" elif $age >= ($threshold * 0.7) then "warning" else "new" end)
-                  }
-              )
+          matrix=$(jq -cn --argjson now "$now" \
+            --argjson critDays "$CRIT_DAYS" --argjson highDays "$HIGH_DAYS" \
+            --argjson medDays "$MEDIUM_DAYS" --argjson lowDays "$LOW_DAYS" \
+            --arg min "$MIN_SEVERITY" \
+            --argjson dependabot "$dependabot" --argjson code "$code" --argjson secrets "$secrets" '
+            def rank: {critical: 4, high: 3, medium: 2, low: 1}[.] // 0;
+            def days: if . == "critical" then $critDays elif . == "high" then $highDays elif . == "medium" then $medDays else $lowDays end;
+            def item($kind; $number; $sev; $id; $summary; $url; $created):
+              (($now - ($created | fromdateiso8601)) / 86400) as $age
+              | ($sev | days) as $threshold
+              | {
+                  kind: $kind,
+                  number: $number,
+                  severity: $sev,
+                  ghsa_id: $id,
+                  summary: $summary,
+                  html_url: $url,
+                  age_days: ($age | floor),
+                  status: (if $age >= $threshold then "breach" elif $age >= ($threshold * 0.7) then "warning" else "new" end)
+                };
+            (
+              ($dependabot | map(item("dependabot"; .number; .security_advisory.severity; .security_advisory.ghsa_id; .security_advisory.summary; .html_url; .created_at)))
+              # Code scanning alerts without a security severity are quality
+              # findings, not vulnerabilities, so they are left out.
+              + ($code | map(select(.rule.security_severity_level != null)
+                  | item("code"; .number; .rule.security_severity_level; .rule.id; (.rule.description + " in " + (.most_recent_instance.location.path // "unknown file")); .html_url; .created_at)))
+              + ($secrets | map(item("secret"; .number; "critical"; (.secret_type_display_name // .secret_type); "Exposed secret, rotate it now"; .html_url; .created_at)))
+            )
+            | map(select((.severity | rank) >= ($min | rank)))
           ')
           echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
 
@@ -73,15 +117,21 @@ jobs:
       # injection from free-text advisory summaries.
       - id: key
         env:
+          KIND: ${{ matrix.kind }}
           NUMBER: ${{ matrix.number }}
           STATUS: ${{ matrix.status }}
         run: |
+          # Alert numbers repeat across sources, so non-Dependabot keys carry
+          # the source. Dependabot keeps the original "sec-alert" prefix, so
+          # alerts already notified are not announced again.
+          prefix="sec-alert"
+          [ "$KIND" != "dependabot" ] && prefix="sec-${KIND}"
           if [ "$STATUS" = "breach" ]; then
-            # Re-notify once per day while a critical/high stays breached,
+            # Re-notify once per day while an alert stays breached,
             # instead of once ever, so an unresolved breach keeps nagging.
-            echo "value=sec-alert-${NUMBER}-breach-$(date -u +%Y-%m-%d)" >> "$GITHUB_OUTPUT"
+            echo "value=${prefix}-${NUMBER}-breach-$(date -u +%Y-%m-%d)" >> "$GITHUB_OUTPUT"
           else
-            echo "value=sec-alert-${NUMBER}-${STATUS}" >> "$GITHUB_OUTPUT"
+            echo "value=${prefix}-${NUMBER}-${STATUS}" >> "$GITHUB_OUTPUT"
           fi
 
       - id: cache
@@ -94,6 +144,7 @@ jobs:
         name: Build Slack payload
         id: message
         env:
+          KIND: ${{ matrix.kind }}
           SEVERITY: ${{ matrix.severity }}
           STATUS: ${{ matrix.status }}
           AGE_DAYS: ${{ matrix.age_days }}
@@ -110,8 +161,13 @@ jobs:
             warning) label=":hourglass_flowing_sand: SLA at risk" ;;
             *) label=":mag: New finding" ;;
           esac
-          text=$(printf '%s%s (%s severity, open %sd): <%s|%s> %s' \
-            "$mention" "$label" "$SEVERITY" "$AGE_DAYS" "$HTML_URL" "$GHSA_ID" "$SUMMARY")
+          case "$KIND" in
+            code) source="code scanning" ;;
+            secret) source="secret scanning" ;;
+            *) source="Dependabot" ;;
+          esac
+          text=$(printf '%s%s [%s] (%s severity, open %sd): <%s|%s> %s' \
+            "$mention" "$label" "$source" "$SEVERITY" "$AGE_DAYS" "$HTML_URL" "$GHSA_ID" "$SUMMARY")
           mkdir -p .cache
           jq -n --arg text "$text" '{text: $text}' > .cache/slack-payload.json
 
