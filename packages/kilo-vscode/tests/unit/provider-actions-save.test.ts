@@ -6,6 +6,8 @@ import {
   resolveStoredKey,
   saveCustomProvider,
 } from "../../src/provider-actions"
+import { existingProvider } from "../../webview-ui/src/components/settings/provider-visibility"
+import type { ProviderConfig } from "../../webview-ui/src/types/messages"
 
 type ExistingGlobal = { disabled_providers?: string[]; provider?: Record<string, unknown> }
 
@@ -465,6 +467,105 @@ describe("saveCustomProvider", () => {
       ["providerConnected", "providerActionError"].includes((msg as { type: string }).type),
     )
     expect(replies).toEqual([{ type: "providerConnected", requestId: "req", providerID: "myprovider" }])
+  })
+
+  it("runs an overlapping save after an earlier save that is waiting for the backend", async () => {
+    const { ctx, calls, setCachedConfig } = createCtx()
+    const started = Promise.withResolvers<void>()
+    const resume = Promise.withResolvers<void>()
+    const update = ctx.client.global.config.update
+    // Save A writes its config, but the backend does not reply until resume.
+    ctx.client.global.config.update = (async (input: { config: Record<string, unknown> }) => {
+      calls.config.push(input)
+      if (calls.config.length === 1) {
+        started.resolve()
+        await resume.promise
+      }
+      return { data: input }
+    }) as unknown as typeof update
+
+    const first = saveCustomProvider(ctx, "a", "myprovider", createProvider(), "sk-old", true, null, setCachedConfig)
+    await started.promise
+    // The webview timed out on save A and the user saves again with a new key.
+    const second = saveCustomProvider(ctx, "b", "myprovider", createProvider(), "sk-new", true, null, setCachedConfig)
+    await Bun.sleep(10)
+    expect(calls.config).toHaveLength(1)
+    expect(calls.set).toEqual([])
+
+    resume.resolve()
+    await Promise.all([first, second])
+
+    expect(calls.config).toHaveLength(2)
+    expect(calls.set.map((item) => item.auth.key)).toEqual(["sk-old", "sk-new"])
+    const replies = calls.posts.filter((msg) => (msg as { type: string }).type === "providerConnected")
+    expect(replies).toEqual([
+      { type: "providerConnected", requestId: "a", providerID: "myprovider" },
+      { type: "providerConnected", requestId: "b", providerID: "myprovider" },
+    ])
+  })
+
+  it("does not make the next save wait for the refresh of an earlier save", async () => {
+    const { ctx, calls, setCachedConfig } = createCtx()
+    const started = Promise.withResolvers<void>()
+    const resume = Promise.withResolvers<void>()
+    ctx.fetchAndSendProviders = async () => {
+      if (calls.refresh++ > 0) return
+      started.resolve()
+      await resume.promise
+    }
+
+    const first = saveCustomProvider(ctx, "a", "myprovider", createProvider(), undefined, false, null, setCachedConfig)
+    await started.promise
+    await saveCustomProvider(ctx, "b", "myprovider", createProvider(), undefined, false, null, setCachedConfig)
+
+    expect(calls.posts.at(-1)).toEqual({ type: "providerConnected", requestId: "b", providerID: "myprovider" })
+    resume.resolve()
+    await first
+  })
+
+  it("runs the next save after an earlier save fails", async () => {
+    const { ctx, calls, setCachedConfig } = createCtx()
+    const get = ctx.client.global.config.get
+    ctx.client.global.config.get = (async () => {
+      throw new Error("backend down")
+    }) as unknown as typeof get
+
+    const first = saveCustomProvider(ctx, "a", "myprovider", createProvider(), undefined, false, null, setCachedConfig)
+    await first
+    ctx.client.global.config.get = get
+    await saveCustomProvider(ctx, "b", "myprovider", createProvider(), undefined, false, null, setCachedConfig)
+
+    expect(calls.posts.at(0)).toMatchObject({ type: "providerActionError", requestId: "a" })
+    expect(calls.posts.at(-1)).toEqual({ type: "providerConnected", requestId: "b", providerID: "myprovider" })
+  })
+
+  it("gives the edit dialog the new name while the refresh after a rename is delayed", async () => {
+    const saved = { ...createSavedProvider(), name: "Old Name" }
+    const { ctx, calls, setCachedConfig } = createCtx({ disabled_providers: [], provider: { myprovider: saved } })
+    const get = ctx.client.config.get
+    // The merged config is what the backend now has: the last global config update.
+    ctx.client.config.get = (async () => ({ data: calls.config.at(-1)?.config })) as unknown as typeof get
+    const started = Promise.withResolvers<void>()
+    const resume = Promise.withResolvers<void>()
+    ctx.fetchAndSendProviders = async () => {
+      started.resolve()
+      await resume.promise
+    }
+
+    const renamed = { ...createProvider(), name: "New Name" }
+    const done = saveCustomProvider(ctx, "req", "myprovider", renamed, undefined, false, null, setCachedConfig)
+    await started.promise
+
+    // The reply closed the dialog, but the provider list still has the old name.
+    expect(calls.posts.at(-1)).toEqual({ type: "providerConnected", requestId: "req", providerID: "myprovider" })
+    const update = calls.posts.find((msg) => (msg as { type: string }).type === "configUpdated") as {
+      config: { provider: Record<string, ProviderConfig> }
+    }
+    const stale = { id: "myprovider", name: "Old Name", models: {}, source: "config" as const }
+    expect(existingProvider(stale, update.config.provider.myprovider).name).toBe("New Name")
+
+    resume.resolve()
+    await done
   })
 })
 

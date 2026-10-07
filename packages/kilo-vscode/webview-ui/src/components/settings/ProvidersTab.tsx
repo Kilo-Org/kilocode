@@ -21,6 +21,7 @@ import { isPopularProvider, providerIcon, providerNoteKey, sortProviders } from 
 import {
   canChangeProviderKey,
   disabledProviderOptions,
+  existingProvider,
   providersWithKiloFallback,
   visibleConnectedIds,
 } from "./provider-visibility"
@@ -104,7 +105,7 @@ const ProvidersTab: Component = () => {
   function editProvider(item: Provider) {
     const cfg = config().provider?.[item.id]
     if (!cfg) return
-    dialog.show(() => <CustomProviderDialog existing={{ providerID: item.id, name: item.name, config: cfg }} />)
+    dialog.show(() => <CustomProviderDialog existing={existingProvider(item, cfg)} />)
   }
 
   function disconnect(providerID: string, name: string) {
