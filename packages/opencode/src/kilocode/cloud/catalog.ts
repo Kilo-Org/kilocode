@@ -144,10 +144,10 @@ export namespace CloudCatalog {
       })
     })
 
-    // KILO_AI_GATEWAY_URL serves the models when it is set; the defaults stay on the Kilo API.
+    // A valid KILO_AI_GATEWAY_URL serves the models, like in @kilocode/kilo-gateway; the defaults stay on the Kilo API.
     const gateway = Effect.fn("CloudCatalog.gateway")(function* () {
       const raw = env[ENV_KILO_AI_GATEWAY_URL]?.trim()
-      if (!raw) return undefined
+      if (!raw || !URL.canParse(raw)) return undefined
       return yield* Effect.try({
         try: () => {
           const url = new URL(resolveKiloAiGatewayRoot({ gateway: raw }) ?? raw)

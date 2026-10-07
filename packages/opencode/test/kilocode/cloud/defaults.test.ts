@@ -159,6 +159,25 @@ it.instance("rejects an insecure KILO_AI_GATEWAY_URL", () =>
   ),
 )
 
+it.instance("ignores a malformed KILO_AI_GATEWAY_URL like the Kilo Gateway package does", () => {
+  const urls: string[] = []
+  return Effect.gen(function* () {
+    const catalog = yield* CloudCatalog.Service
+    yield* catalog.models({ token: Redacted.make("stored-token") })
+    expect(urls).toEqual(["https://api.example.test/api/openrouter/models"])
+  }).pipe(
+    Effect.provide(
+      CloudCatalog.layer({
+        env: { KILO_API_URL: "https://api.example.test", KILO_AI_GATEWAY_URL: "not a url" },
+        fetch: async (request) => {
+          urls.push(request.url)
+          return Response.json({ data: [] })
+        },
+      }),
+    ),
+  )
+})
+
 it.instance("returns text-output models that support or may support tools", () =>
   Effect.gen(function* () {
     const catalog = yield* CloudCatalog.Service

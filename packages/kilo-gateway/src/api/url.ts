@@ -37,9 +37,9 @@ function slash(raw: string) {
  */
 export function resolveKiloAiGatewayRoot(options: UrlOptions = {}): string | undefined {
   const gateway = options.gateway ?? KILO_AI_GATEWAY_BASE
-  if (!gateway) return
+  if (!gateway) return undefined
   const root = slash(gateway)
-  if (options.baseURL && !slash(options.baseURL).startsWith(root)) return
+  if (options.baseURL && !slash(options.baseURL).startsWith(root)) return undefined
   return root
 }
 
