@@ -806,6 +806,16 @@ describe("mapCloudSessionMessage", () => {
     const msg = mapCloudSessionMessageToWebviewMessage(makeCloudMessage({ role: "user" }))
     expect(msg.role).toBe("user")
   })
+
+  it("passes parentID through so turn grouping can link answers to prompts", () => {
+    const msg = mapCloudSessionMessageToWebviewMessage(makeCloudMessage({ parentID: "msg-0" }))
+    expect(msg.parentID).toBe("msg-0")
+  })
+
+  it("leaves parentID undefined when the cloud message has none", () => {
+    const msg = mapCloudSessionMessageToWebviewMessage(makeCloudMessage())
+    expect(msg.parentID).toBeUndefined()
+  })
 })
 
 describe("getErrorMessage", () => {

@@ -574,6 +574,7 @@ export const dict = {
   "session.tabs.switcher.pending": "새 항목",
   "session.tabs.switcher.busy": "작업 중",
   "session.tabs.switcher.scheduled": "예약됨",
+  "session.tabs.pinHint": "Shift+클릭으로 고정하거나 고정 해제",
   "session.tab.local": "로컬",
   "session.tab.cloud": "클라우드",
   "session.tab.worktree": "작업 트리",
