@@ -156,6 +156,21 @@ describe("sessionToWebview", () => {
     expect(result.title).toBe("My Session")
   })
 
+  it.each([
+    ["high", { providerID: "kilo", modelID: "gpt", variant: "high" }],
+    ["default", { providerID: "kilo", modelID: "gpt" }],
+  ])("projects the agent and model the session last ran (variant %s)", (variant, model) => {
+    const result = sessionToWebview(makeSession({ agent: "plan", model: { id: "gpt", providerID: "kilo", variant } }))
+    expect(result.agent).toBe("plan")
+    expect(result.model).toEqual(model)
+  })
+
+  it("omits the agent and model before the session first runs", () => {
+    const result = JSON.parse(JSON.stringify(sessionToWebview(makeSession())))
+    expect(result).not.toHaveProperty("agent")
+    expect(result).not.toHaveProperty("model")
+  })
+
   it("produces valid ISO format", () => {
     const result = sessionToWebview(makeSession())
     expect(() => new Date(result.createdAt)).not.toThrow()
@@ -790,6 +805,16 @@ describe("mapCloudSessionMessage", () => {
   it("maps user role correctly", () => {
     const msg = mapCloudSessionMessageToWebviewMessage(makeCloudMessage({ role: "user" }))
     expect(msg.role).toBe("user")
+  })
+
+  it("passes parentID through so turn grouping can link answers to prompts", () => {
+    const msg = mapCloudSessionMessageToWebviewMessage(makeCloudMessage({ parentID: "msg-0" }))
+    expect(msg.parentID).toBe("msg-0")
+  })
+
+  it("leaves parentID undefined when the cloud message has none", () => {
+    const msg = mapCloudSessionMessageToWebviewMessage(makeCloudMessage())
+    expect(msg.parentID).toBeUndefined()
   })
 })
 

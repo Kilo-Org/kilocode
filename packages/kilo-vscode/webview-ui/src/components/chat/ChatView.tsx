@@ -16,6 +16,7 @@ import { DropdownMenu } from "@kilocode/kilo-ui/dropdown-menu"
 import { TaskHeader } from "./TaskHeader"
 import { MessageList } from "./MessageList"
 import { PromptInput } from "./PromptInput"
+import type { ManagerContext } from "../../utils/shortcut-hint"
 import { PermissionDock } from "./PermissionDock"
 import { SessionDock } from "./SessionDock"
 import { StartupErrorBanner } from "./StartupErrorBanner"
@@ -57,6 +58,8 @@ interface ChatViewProps {
   emptyState?: () => JSX.Element
   introduction?: boolean
   resolveEmbeddedTerminal?: (context?: string) => Promise<string | undefined>
+  /** Agent Manager state for the prompt shortcut hint. */
+  manager?: () => ManagerContext | undefined
 }
 
 export const ChatView: Component<ChatViewProps> = (props) => {
@@ -259,7 +262,7 @@ export const ChatView: Component<ChatViewProps> = (props) => {
   const hasActions = (hasChat: boolean) =>
     canStartSession(hasChat) || canFork(hasChat) || canStartWorktree() || canMoveToWorktree(hasChat)
 
-  const renderActions = (hasChat: boolean, control: () => JSX.Element, agents: JSX.Element) => (
+  const renderActions = (hasChat: boolean, control: () => JSX.Element, agents: JSX.Element, todos: JSX.Element) => (
     <Show when={hasActions(hasChat) || !!goal()}>
       <div class="new-task-button-wrapper" classList={{ "new-task-button-wrapper--empty": !hasChat }}>
         <div class="session-actions-row">
@@ -376,6 +379,7 @@ export const ChatView: Component<ChatViewProps> = (props) => {
               </Tooltip>
             </>
           </Show>
+          {todos}
           {control()}
         </div>
       </div>
@@ -433,7 +437,7 @@ export const ChatView: Component<ChatViewProps> = (props) => {
               <SessionDock
                 blocked={dockBlocked()}
                 hasActions={() => !props.readonly && (hasActions(hasMessages()) || !!goal())}
-                actions={(control, agents) => renderActions(hasMessages(), control, agents)}
+                actions={(control, agents, todos) => renderActions(hasMessages(), control, agents, todos)}
                 onScrollToBottom={scrollToBottom}
                 readonly={props.readonly}
               />
@@ -455,6 +459,7 @@ export const ChatView: Component<ChatViewProps> = (props) => {
                   focusOnDraftChange={props.focusOnDraftChange}
                   onFocusChange={props.onFocusChange}
                   resolveEmbeddedTerminal={props.resolveEmbeddedTerminal}
+                  manager={props.manager}
                 />
               </Show>
             </div>

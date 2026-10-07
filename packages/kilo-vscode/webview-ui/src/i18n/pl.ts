@@ -200,6 +200,14 @@ export const dict = {
   "prompt.worktrees.title": "Worktrees",
   "prompt.worktrees.search": "Wyszukaj Worktree",
   "prompt.thinking.tooltip": "Wysiłek rozumowania",
+  "prompt.shortcutHint.addSelection": "aby dodać zaznaczenie",
+  "prompt.shortcutHint.waiting": "aby odpowiedzieć oczekującej sesji",
+  "prompt.shortcutHint.type": "aby pisać",
+  "prompt.shortcutHint.sessions": "aby przełączyć sesję",
+  "prompt.shortcutHint.stop": "aby zatrzymać",
+  "prompt.shortcutHint.changes": "aby przejrzeć zmiany",
+  "prompt.shortcutHint.pr": "aby otworzyć PR",
+  "prompt.shortcutHint.mode": "Następny tryb",
   "prompt.action.send": "Wyślij",
   "prompt.action.continue": "Kontynuuj",
   "prompt.action.send.blocked": "Najpierw odpowiedz na oczekujące pytanie lub je odrzuć",
@@ -209,6 +217,10 @@ export const dict = {
   "prompt.agents.show": "Pokaż agentów w tle",
   "prompt.action.enhance": "Ulepsz prompt",
   "prompt.paste.expand": "Kliknij, aby rozwinąć wklejony tekst",
+  "prompt.issues.title": "Problemy sesji",
+  "prompt.mcp.provider": "MCP {{name}}",
+  "prompt.mcp.openSettings": "Otwórz w Ustawieniach",
+  "prompt.mcp.signIn.busy": "Logowanie…",
   "prompt.action.autoApprove.enable": "Włącz automatyczne zatwierdzanie",
   "prompt.action.autoApprove.disable": "Wyłącz automatyczne zatwierdzanie",
   "prompt.action.autoApprove.enabled":
@@ -472,6 +484,7 @@ export const dict = {
   "provider.custom.models.toggleImages": "Przełącz obraz dla wszystkich",
   "provider.custom.models.remove": "Usuń model",
   "provider.custom.models.add": "Dodaj model",
+  "provider.custom.models.fetch.button": "Pobierz modele",
   "provider.custom.models.fetch.authError":
     "Uwierzytelnianie nie powiodło się. Sprawdź klucz API powyżej i spróbuj ponownie.",
   "provider.custom.models.fetch.empty": "Nie znaleziono modeli na tym serwerze.",
@@ -502,6 +515,9 @@ export const dict = {
   "provider.custom.error.duplicate": "Duplikat",
   "settings.openLocalConfig": "Konfig. lokalna",
   "settings.openGlobalConfig": "Konfig. globalna",
+  "settings.search.placeholder": "Wyszukaj ustawienia",
+  "settings.search.noResults": "Nie znaleziono ustawień",
+  "settings.search.clear": "Wyczyść wyszukiwanie",
   "settings.config.scope.local": "Lokalne",
   "settings.config.scope.global": "Globalne",
   "settings.config.status.loaded": "wczytano",
@@ -561,6 +577,7 @@ export const dict = {
   "session.tabs.switcher.pending": "Nowa",
   "session.tabs.switcher.busy": "Pracuje",
   "session.tabs.switcher.scheduled": "Zaplanowano",
+  "session.tabs.pinHint": "Shift+kliknij, aby przypiąć lub odpiąć",
   "session.tab.local": "Lokalny",
   "session.tab.cloud": "Chmura",
   "session.tab.worktree": "Drzewo robocze",
@@ -740,11 +757,13 @@ export const dict = {
   "ui.sessionTurn.status.consideringNextSteps": "Rozważam następne kroki...",
 
   "dialog.model.noProviders": "Brak dostawców",
+  "dialog.model.unavailable": "Modele Kilo niedostępne",
 
   "prompt.placeholder.connecting": "Łączenie z serwerem...",
   "prompt.placeholder.error": "Połączenie nie powiodło się. Sprawdź panel wyjściowy lub uruchom ponownie rozszerzenie.",
   "prompt.placeholder.default":
     "Wpisz wiadomość, @ aby wspomnieć pliki... (Enter, aby wysłać, Shift+Enter dla nowej linii)",
+  "prompt.placeholder.hint": "Wpisz wiadomość, @ aby wspomnieć pliki... ({{key}} {{action}})",
 
   "context.usage.sessionCost": "Koszt sesji",
   "context.usage.olderSessions": "{{count}} starszych sesji",
@@ -896,12 +915,12 @@ export const dict = {
   "settings.sandboxing.writablePaths.title": "Dodatkowe ścieżki zapisu",
   "settings.sandboxing.writablePaths.description":
     "Dodatkowe ścieżki systemu plików, do których sandbox zezwala na zapis (np. /tmp, /var/log). Są one łączone z domyślnymi ścieżkami zapisu, gdy sandbox jest aktywny.",
-  "settings.experimental.multiProject.title": "Wieloprojektowy Agent Manager",
+  "settings.experimental.conversationPromptHistory.title": "Historia promptów dla każdej rozmowy",
+  "settings.experimental.conversationPromptHistory.description":
+    "Przechowuj historię promptów (ArrowUp/ArrowDown) osobno dla każdej rozmowy zamiast współdzielić jedną historię we wszystkich rozmowach.",
   "settings.experimental.claudeMigration.title": "Migracja Claude Code",
   "settings.experimental.claudeMigration.description":
     "Jednorazowo importuj obsługiwane globalne instrukcje CLAUDE.md, proste umiejętności i wyłączone definicje MCP. Oryginalne pliki Claude pozostają niezmienione; po włączeniu uruchom ponownie backend.",
-  "settings.experimental.multiProject.description":
-    "Włącz zarządzanie sesjami i worktree w wielu repozytoriach w Agent Managerze. Bieżące repozytorium obszaru roboczego jest zawsze projektem domyślnym.",
   "settings.experimental.mcpTimeout.title": "Limit czasu MCP (ms)",
   "settings.experimental.mcpTimeout.description": "Limit czasu żądań serwera MCP w milisekundach",
   "settings.experimental.remote.title": "Sterowanie Remote",
@@ -1031,12 +1050,31 @@ export const dict = {
   "settings.agentBehaviour.removeMcp.title": "Usuń serwer MCP",
   "settings.agentBehaviour.removeMcp.confirm":
     'Usunąć serwer MCP "{{name}}"? Spowoduje to usunięcie go z konfiguracji.',
+  "settings.agentBehaviour.removeMcp.bundleConfirm":
+    'Usunąć serwer MCP "{{name}}" i powiązane z nim umiejętności? Spowoduje to usunięcie serwera oraz każdej umiejętności należącej do tej instalacji Marketplace.',
   "settings.agentBehaviour.removeMcp.button": "Usuń",
   "settings.agentBehaviour.editMcp": "Edytuj serwer MCP",
   "settings.agentBehaviour.editMcp.transportLocal": "Serwer lokalny (transport stdio)",
   "settings.agentBehaviour.editMcp.transportRemote": "Serwer zdalny (transport SSE/HTTP)",
   "settings.agentBehaviour.editMcp.env": "Zmienne środowiskowe",
   "settings.agentBehaviour.editMcp.env.help": "Zmienne przekazywane do procesu serwera MCP.",
+  "settings.agentBehaviour.editMcp.oauth": "OAuth",
+  "settings.agentBehaviour.editMcp.oauth.help":
+    "Pozostaw na Automatycznie, jeśli serwer nie wymaga wcześniej zarejestrowanego klienta. Sekret klienta jest przechowywany w pliku konfiguracyjnym Kilo.",
+  "settings.agentBehaviour.editMcp.oauth.mode": "Tryb",
+  "settings.agentBehaviour.editMcp.oauth.mode.automatic": "Automatyczny",
+  "settings.agentBehaviour.editMcp.oauth.mode.disabled": "Wyłączony",
+  "settings.agentBehaviour.editMcp.oauth.mode.custom": "Klient niestandardowy",
+  "settings.agentBehaviour.editMcp.oauth.clientId": "ID klienta",
+  "settings.agentBehaviour.editMcp.oauth.clientSecret": "Sekret klienta",
+  "settings.agentBehaviour.editMcp.oauth.scope": "Zakres",
+  "settings.agentBehaviour.editMcp.oauth.callbackPort": "Port zwrotny",
+  "settings.agentBehaviour.editMcp.oauth.redirectUri": "URI przekierowania",
+  "settings.agentBehaviour.editMcp.oauth.redirectUri.help":
+    "Domyślnie http://127.0.0.1:19876/mcp/oauth/callback i zastępuje port zwrotny.",
+  "settings.agentBehaviour.editMcp.oauth.port.invalid": "Wprowadź port z zakresu od 1 do 65535.",
+  "settings.agentBehaviour.editMcp.oauth.secret.invalid": "Sekret klienta wymaga ID klienta.",
+  "settings.agentBehaviour.editMcp.oauth.redirectUri.invalid": "Wprowadź prawidłowy URI przekierowania.",
   "settings.agentBehaviour.addMcp.command": "Polecenie",
   "settings.agentBehaviour.addMcp.command.placeholder": "e.g. npx",
   "settings.agentBehaviour.addMcp.args": "Argumenty",
@@ -1049,6 +1087,8 @@ export const dict = {
   "settings.agentBehaviour.removeSkill.title": "Usuń umiejętność",
   "settings.agentBehaviour.removeSkill.confirm":
     'Usunąć umiejętność "{{name}}"? Spowoduje to usunięcie plików umiejętności z dysku.',
+  "settings.agentBehaviour.removeSkill.bundleConfirm":
+    'Usunąć umiejętność "{{name}}"? Spowoduje to również odinstalowanie serwera MCP {{mcp}} i każdej powiązanej umiejętności z tej samej instalacji Marketplace.',
   "settings.agentBehaviour.removeSkill.button": "Usuń",
   "settings.agentBehaviour.rules.description":
     "Reguły to pliki instrukcji, które kierują zachowaniem agenta. Są one dołączane do promptu systemowego dla każdej rozmowy. Dodaj poniżej ścieżki plików, aby dołączyć dodatkowe reguły.",
@@ -1065,6 +1105,12 @@ export const dict = {
   "settings.agentBehaviour.mcpDetail.command": "Polecenie",
   "settings.agentBehaviour.mcpDetail.args": "Argumenty",
   "settings.agentBehaviour.mcpDetail.env": "Środowisko",
+  "settings.agentBehaviour.mcpSignIn.cancel": "Anuluj logowanie",
+  "settings.agentBehaviour.mcpRemoving": "Usuwanie…",
+  "settings.agentBehaviour.mcpResetAuth": "Zresetuj logowanie",
+  "settings.agentBehaviour.mcpResetAuth.title": "Zresetuj logowanie MCP",
+  "settings.agentBehaviour.mcpResetAuth.confirm":
+    'Wyczyścić zapisane logowanie dla "{{name}}"? Będziesz musiał zalogować się ponownie.',
   "settings.agentBehaviour.mcpBrowseMarketplace": "Przeglądaj Marketplace",
   "settings.agentBehaviour.mcpEmpty":
     "Brak skonfigurowanych serwerów MCP. Dodaj serwery MCP w kilo.jsonc lub poproś agenta o ich dodanie.",
@@ -1244,6 +1290,9 @@ export const dict = {
   "settings.display.mcpTool.expanded": "Rozwinięte",
   "settings.display.mcpTool.collapsed": "Zwinięte",
 
+  "settings.display.shortcutHints.title": "Pokaż podpowiedzi skrótów",
+  "settings.display.shortcutHints.description":
+    "Pokazuje w pustym polu promptu skrót klawiszowy pasujący do tego, co teraz robisz, na przykład jak dodać zaznaczony kod lub wrócić do promptu.",
   "settings.display.tokenThroughput.title": "Pokaż przepustowość tokenów",
   "settings.display.tokenThroughput.description":
     "Wyświetlaj szybkość generowania tekstu (tokens/sec) w najnowszej wiadomości asystenta i nagłówku zadania. Domyślnie jest wyświetlana; wyłącz to ustawienie, aby w razie potrzeby ją ukryć.",
@@ -1320,6 +1369,8 @@ export const dict = {
 
   "task.todos.progress": "{{done}}/{{total}} zadań ukończono",
   "task.todos.allDone": "{{count}} zadań ukończono",
+  "task.todos.title": "Zadania",
+  "task.todos.done": "Wszystko gotowe",
   "task.backgroundAgents.running.one": "1 agent w tle",
   "task.backgroundAgents.running.many": "{{count}} agentów w tle",
   "task.backgroundAgents.open": "Otwórz agenta w tle",
@@ -1403,4 +1454,7 @@ export const dict = {
   "settings.experimental.browserAutomation.systemChrome.description":
     "Użyj zainstalowanej przeglądarki Google Chrome dla zintegrowanej przeglądarki. Wyłącz tylko wtedy, gdy zgodna przeglądarka Playwright Chromium jest już zainstalowana.",
   "chat.search.searchingHistory": "Wyszukiwanie we wcześniejszych wiadomościach…",
+  "browserTab.noSession":
+    "Otwórz przeglądarkę z sesji, aby wyświetlić podgląd lokalnej aplikacji lub publicznej strony HTTPS.",
+  "browserTab.disabled": "Zintegrowana przeglądarka jest wyłączona. Włącz ją w Ustawieniach Kilo > Eksperymentalne.",
 }

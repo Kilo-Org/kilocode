@@ -1,6 +1,6 @@
 {
   "$schema": "https://json.schemastore.org/package.json",
-  "version": "7.8.1",
+  "version": "7.8.7",
   "name": "@kilocode/cli",
   "type": "module",
   "license": "MIT",
@@ -172,7 +172,7 @@
     "remeda": "catalog:",
     "ripgrep": "0.3.1",
     "semver": "^7.6.3",
-    "simple-git": "3.36.0",
+    "simple-git": "4.0.2",
     "solid-js": "catalog:",
     "strip-ansi": "7.1.2",
     "tree-sitter-bash": "0.25.0",

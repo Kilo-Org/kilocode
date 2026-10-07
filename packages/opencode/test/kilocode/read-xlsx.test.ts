@@ -98,6 +98,33 @@ async function range(bytes: Uint8Array) {
   return output.close()
 }
 
+// SheetJS writes ODS dates and times as plain values, so tests hand it the XML LibreOffice writes for them.
+async function calc(content: string) {
+  const output = new ZipWriter(new Uint8ArrayWriter())
+  await output.add("mimetype", new TextReader("application/vnd.oasis.opendocument.spreadsheet"), {
+    level: 0,
+    dataDescriptor: false,
+  })
+  await output.add(
+    "META-INF/manifest.xml",
+    new TextReader('<manifest:manifest xmlns:manifest="urn:oasis:names:tc:opendocument:xmlns:manifest:1.0"/>'),
+  )
+  await output.add("styles.xml", new TextReader(`<office:document-styles ${ODS}/>`))
+  await output.add(
+    "content.xml",
+    new TextReader(`<office:document-content ${ODS}>${content}</office:document-content>`),
+  )
+  return output.close()
+}
+
+const ODS = [
+  'xmlns:office="urn:oasis:names:tc:opendocument:xmlns:office:1.0"',
+  'xmlns:style="urn:oasis:names:tc:opendocument:xmlns:style:1.0"',
+  'xmlns:table="urn:oasis:names:tc:opendocument:xmlns:table:1.0"',
+  'xmlns:text="urn:oasis:names:tc:opendocument:xmlns:text:1.0"',
+  'xmlns:number="urn:oasis:names:tc:opendocument:xmlns:datastyle:1.0"',
+].join(" ")
+
 function book(sheet: WorkSheet, name = "Visible") {
   const value = utils.book_new()
   utils.book_append_sheet(value, sheet, name)
@@ -130,6 +157,52 @@ describe("kilocode XLSX reads", () => {
       expect(result.output).toContain("[Error: #DIV/0!]")
       expect(result.output).toContain("After blank row")
       expect(result.attachments).toBeUndefined()
+    }),
+  )
+
+  it.live("reads date cells as ISO dates with their time of day", () =>
+    Effect.gen(function* () {
+      const dir = yield* tmpdirScoped()
+      const sheet: WorkSheet = {
+        A1: { t: "d", v: new Date("2026-05-29T00:00:00.000Z"), z: "yyyy-mm-dd" },
+        B1: { t: "d", v: new Date("2026-05-29T14:05:00.000Z"), z: "m/d/yy h:mm" },
+        C1: { t: "d", v: new Date("2026-05-29T09:30:00.000Z"), z: "DD.MM.YYYY HH:MM" },
+        D1: { t: "d", v: new Date("2026-05-01T00:00:00.000Z"), z: "mmm yyyy" },
+        E1: { t: "d", v: new Date("2026-05-29T00:00:00.000Z"), z: "d-mmm" },
+        F1: { t: "d", v: new Date("2026-05-01T00:00:00.000Z"), z: "mmm" },
+        G1: { t: "d", v: new Date("2026-05-01T00:00:00.000Z"), z: "MMMM" },
+        "!ref": "A1:G1",
+      }
+      const file = path.join(dir, "dates.xlsx")
+      yield* put(file, bytes(book(sheet)))
+
+      const result = yield* run(dir, file)
+
+      expect(result.output).toContain(
+        "2: 2026-05-29\t2026-05-29 14:05:00\t2026-05-29 09:30:00\t2026-05-01\t2026-05-29\t2026-05-01\t2026-05-01\n",
+      )
+    }),
+  )
+
+  it.live("reads times of day and durations as the cells show them", () =>
+    Effect.gen(function* () {
+      const dir = yield* tmpdirScoped()
+      const sheet: WorkSheet = {
+        A1: { t: "n", v: 0.25, z: "h:mm" },
+        B1: { t: "n", v: 1.5, z: "[h]:mm:ss" },
+        C1: { t: "n", v: 0.5, z: "[$-x-systime]h:mm:ss AM/PM" },
+        D1: { t: "n", v: 0.75, z: 'h:mm" daily"' },
+        E1: { t: "n", v: 0.75, z: "h:mm\\ \\d\\a\\i\\l\\y" },
+        F1: { t: "n", v: 1.5, z: "[h]" },
+        G1: { t: "n", v: (25 * 3600 + 30) / 86400, z: "[ss]" }, // 25 hours and 30 seconds
+        "!ref": "A1:G1",
+      }
+      const file = path.join(dir, "times.xlsx")
+      yield* put(file, bytes(book(sheet)))
+
+      const result = yield* run(dir, file)
+
+      expect(result.output).toContain("2: 6:00\t36:00:00\t12:00:00 PM\t18:00 daily\t18:00 daily\t36\t90030\n")
     }),
   )
 
@@ -271,6 +344,36 @@ describe("kilocode ODS reads", () => {
       expect(result.output).toContain("42")
       expect(result.output).toContain("After blank row")
       expect(result.attachments).toBeUndefined()
+    }),
+  )
+
+  it.live("keeps the time of date cells and reads times of day and durations as shown in ODS files", () =>
+    Effect.gen(function* () {
+      const dir = yield* tmpdirScoped()
+      const file = path.join(dir, "times.ods")
+      const styles = [
+        '<number:date-style style:name="N1"><number:year number:style="long"/><number:text>-</number:text><number:month number:style="long"/><number:text>-</number:text><number:day number:style="long"/><number:text> </number:text><number:hours number:style="long"/><number:text>:</number:text><number:minutes number:style="long"/></number:date-style>',
+        '<number:time-style style:name="N2"><number:hours number:style="long"/><number:text>:</number:text><number:minutes number:style="long"/></number:time-style>',
+        '<number:time-style style:name="N3" number:truncate-on-overflow="false"><number:hours/><number:text>:</number:text><number:minutes number:style="long"/><number:text>:</number:text><number:seconds number:style="long"/></number:time-style>',
+        '<style:style style:name="ce1" style:family="table-cell" style:data-style-name="N1"/>',
+        '<style:style style:name="ce2" style:family="table-cell" style:data-style-name="N2"/>',
+        '<style:style style:name="ce3" style:family="table-cell" style:data-style-name="N3"/>',
+      ]
+      const cells = [
+        '<table:table-cell table:style-name="ce1" office:value-type="date" office:date-value="2026-05-29T14:05:00"><text:p>2026-05-29 14:05</text:p></table:table-cell>',
+        '<table:table-cell table:style-name="ce2" office:value-type="time" office:time-value="PT06H00M00S"><text:p>06:00</text:p></table:table-cell>',
+        '<table:table-cell table:style-name="ce3" office:value-type="time" office:time-value="PT36H00M00S"><text:p>36:00:00</text:p></table:table-cell>',
+      ]
+      const content = [
+        `<office:automatic-styles>${styles.join("")}</office:automatic-styles>`,
+        `<office:body><office:spreadsheet><table:table table:name="Times"><table:table-row>${cells.join("")}</table:table-row></table:table></office:spreadsheet></office:body>`,
+      ]
+      yield* put(file, yield* Effect.promise(() => calc(content.join(""))))
+
+      const result = yield* run(dir, file)
+
+      expect(result.output).toContain("--- Sheet: Times ---")
+      expect(result.output).toContain("2: 2026-05-29 14:05:00\t06:00\t36:00:00\n")
     }),
   )
 
