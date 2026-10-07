@@ -210,12 +210,7 @@ describe("buildSidebarOrder", () => {
     const items = buildTopLevelItems([s1], [w4, w3], sorted, ["w1", "w4", "w3", "s1", "w2"])
     const members = (id: string) => (id === "s1" ? [w1, w2] : [])
     expect(items.map((item) => (item.kind === "worktree" ? item.wt.id : item.section.id))).toEqual(["w3", "s1"])
-    expect(buildSidebarOrder(items, sorted, [s1], members).map((item) => item.id)).toEqual([
-      "local",
-      "w1",
-      "w4",
-      "w3",
-    ])
+    expect(buildSidebarOrder(items, sorted, [s1], members).map((item) => item.id)).toEqual(["local", "w1", "w4", "w3"])
   })
 
   it("puts pinned worktrees first when no sections exist", () => {

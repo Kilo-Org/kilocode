@@ -566,12 +566,7 @@ export const WorktreeItem: Component<WorktreeItemProps> = (props) => {
                             {props.shortcut}
                           </span>
                         </Show>
-                        <UnpinButton
-                          t={t}
-                          show={unpinnable()}
-                          onToggle={props.onTogglePin}
-                          onOver={setOverAction}
-                        />
+                        <UnpinButton t={t} show={unpinnable()} onToggle={props.onTogglePin} onOver={setOverAction} />
                         {/* A pinned worktree has no hover delete button, so a click meant for
                             the unpin button cannot delete it. Delete stays on the context menu. */}
                         <Show when={deletable()}>
