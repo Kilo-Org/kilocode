@@ -261,6 +261,7 @@ export const dict = {
   "prompt.attachment.failed": "Cannot attach file",
   "prompt.attachment.unsupported": "{{name}} is not an image or a text file.",
   "prompt.attachment.tooLarge": "{{name}} is larger than {{size}}.",
+  "prompt.attachment.files": "Files",
 
   "mcp.status.connected": "connected",
   "mcp.status.failed": "failed",

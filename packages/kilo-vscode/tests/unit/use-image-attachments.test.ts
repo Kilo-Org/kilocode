@@ -77,4 +77,14 @@ describe("useImageAttachments drag and drop", () => {
     expect(toasts.map((toast) => toast.description)).toEqual(["prompt.attachment.unsupported"])
     ctx.dispose()
   })
+
+  it("splits images from dropped text files", () => {
+    const ctx = setup()
+    const image = { id: "a", filename: "shot.png", mime: "image/png", dataUrl: "data:image/png;base64,AA==" }
+    const text = { id: "b", filename: "notes.md", mime: "text/plain", dataUrl: "data:text/plain;base64,AA==" }
+    ctx.attach.replace([text, image])
+    expect(ctx.attach.thumbs()).toEqual([image])
+    expect(ctx.attach.texts()).toEqual([text])
+    ctx.dispose()
+  })
 })

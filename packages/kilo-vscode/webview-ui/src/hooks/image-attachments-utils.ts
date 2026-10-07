@@ -35,6 +35,14 @@ export function textDataUrl(bytes: Uint8Array): string | undefined {
   return `data:text/plain;base64,${btoa(chars)}`
 }
 
+/** Decode the UTF-8 text of a base64 or percent-encoded data URL. */
+export function dataUrlText(url: string): string {
+  const comma = url.indexOf(",")
+  const data = url.slice(comma + 1)
+  if (!url.slice(0, comma).endsWith(";base64")) return decodeURIComponent(data)
+  return new TextDecoder().decode(Uint8Array.from(atob(data), (char) => char.charCodeAt(0)))
+}
+
 /**
  * True for a file part that the prompt attaches as data: an image or a dropped
  * text file. Mention context (terminal, git changes, worktree) is also a

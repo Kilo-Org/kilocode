@@ -40,7 +40,7 @@ import {
 } from "./MultiModelSelector"
 import { useLanguage } from "../src/context/language"
 import { useImageAttachments, type ImageAttachment } from "../src/hooks/useImageAttachments"
-import { AttachmentThumb } from "../src/components/chat/AttachmentThumb"
+import { FileAttachments } from "../src/components/chat/FileAttachments"
 import { useSpeechToText } from "../src/components/speech-to-text/useSpeechToText"
 import { useSpeechToTextModels } from "../src/context/speech-to-text-models"
 import { createSpeechShortcut } from "../src/components/speech-to-text/shortcut"
@@ -830,6 +830,13 @@ export const NewWorktreeDialog: Component<{
               onDragLeave={imageAttach.handleDragLeave}
               onDrop={imageAttach.handleDrop}
             >
+              <Show when={imageAttach.texts().length > 0}>
+                <FileAttachments
+                  files={imageAttach.texts()}
+                  onRemove={imageAttach.remove}
+                  onClear={() => imageAttach.replace(imageAttach.thumbs())}
+                />
+              </Show>
               <div class="mention-model-anchor" aria-hidden="true">
                 <ModelSelectorBase
                   value={null}
@@ -934,14 +941,16 @@ export const NewWorktreeDialog: Component<{
                   </Show>
                 </div>
               </Show>
-              <Show when={imageAttach.images().length > 0}>
+              <Show when={imageAttach.thumbs().length > 0}>
                 <div class="image-attachments">
-                  <For each={imageAttach.images()}>
+                  <For each={imageAttach.thumbs()}>
                     {(img) => (
                       <div class="image-attachment">
-                        <AttachmentThumb
-                          file={img}
-                          onPreview={() =>
+                        <img
+                          src={img.dataUrl}
+                          alt={img.filename}
+                          title={img.filename}
+                          onClick={() =>
                             vscode.postMessage({ type: "previewImage", dataUrl: img.dataUrl, filename: img.filename })
                           }
                         />

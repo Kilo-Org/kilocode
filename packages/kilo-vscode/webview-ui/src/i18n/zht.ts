@@ -252,6 +252,7 @@ export const dict = {
   "prompt.attachment.failed": "無法附加檔案",
   "prompt.attachment.unsupported": "{{name}} 不是圖片或文字檔案。",
   "prompt.attachment.tooLarge": "{{name}} 超過 {{size}}。",
+  "prompt.attachment.files": "檔案",
 
   "mcp.status.connected": "已連線",
   "mcp.status.failed": "失敗",

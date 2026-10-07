@@ -267,6 +267,7 @@ export const dict = {
   "prompt.attachment.failed": "Nije moguće priložiti datoteku",
   "prompt.attachment.unsupported": "{{name}} nije slika ni tekstualna datoteka.",
   "prompt.attachment.tooLarge": "{{name}} je veća od {{size}}.",
+  "prompt.attachment.files": "Datoteke",
 
   "mcp.status.connected": "povezano",
   "mcp.status.failed": "neuspjelo",

@@ -269,6 +269,7 @@ export const dict = {
   "prompt.attachment.failed": "Kan bestand niet bijvoegen",
   "prompt.attachment.unsupported": "{{name}} is geen afbeelding of tekstbestand.",
   "prompt.attachment.tooLarge": "{{name}} is groter dan {{size}}.",
+  "prompt.attachment.files": "Bestanden",
 
   "mcp.status.connected": "verbonden",
   "mcp.status.failed": "mislukt",

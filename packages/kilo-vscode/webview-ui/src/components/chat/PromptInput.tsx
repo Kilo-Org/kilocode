@@ -119,8 +119,8 @@ import {
 import { ReviewComments } from "./ReviewComments"
 import { useRunningAgents } from "./AgentStack"
 import { BrowserReferences } from "./BrowserReferences"
-import { AttachmentThumb } from "./AttachmentThumb"
 import { CodeContextChips } from "./CodeContextChips"
+import { FileAttachments } from "./FileAttachments"
 import {
   browserFeedbackData,
   formatBrowserFeedback,
@@ -1992,6 +1992,17 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
           />
         </div>
       </Show>
+      <Show when={imageAttach.texts().length > 0}>
+        <FileAttachments
+          files={imageAttach.texts()}
+          onRemove={(id) => {
+            if (!readonly()) imageAttach.remove(id)
+          }}
+          onClear={() => {
+            if (!readonly()) imageAttach.replace(imageAttach.thumbs())
+          }}
+        />
+      </Show>
       <div class="mention-model-anchor" aria-hidden="true">
         <ModelSelectorBase
           value={null}
@@ -2128,14 +2139,16 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
           </Show>
         </div>
       </Show>
-      <Show when={imageAttach.images().length > 0}>
+      <Show when={imageAttach.thumbs().length > 0}>
         <div class="image-attachments">
-          <For each={imageAttach.images()}>
+          <For each={imageAttach.thumbs()}>
             {(img) => (
               <div class="image-attachment">
-                <AttachmentThumb
-                  file={img}
-                  onPreview={() =>
+                <img
+                  src={img.dataUrl}
+                  alt={img.filename}
+                  title={img.filename}
+                  onClick={() =>
                     vscode.postMessage({ type: "previewImage", dataUrl: img.dataUrl, filename: img.filename })
                   }
                 />

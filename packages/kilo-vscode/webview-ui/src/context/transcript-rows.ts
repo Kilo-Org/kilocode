@@ -1,4 +1,5 @@
 import type { Message, Part } from "../types/messages"
+import { isDataAttachment } from "../hooks/image-attachments-utils"
 import { visibleParts, type MessageTurn, type RevertBoundary } from "./session-queue"
 
 interface TranscriptMeta {
@@ -158,14 +159,12 @@ function attachTiming(rows: TranscriptAssistantRow[], copied: string | undefined
 function content(parts: Part[]) {
   const text = parts.find((part) => part.type === "text" && !part.synthetic)
   if (text?.type === "text" && text.text.trim()) return true
-  // Match the attachment tiles of UserMessageDisplay: images, PDFs, and data
-  // URLs without a mention span (attached files). Mention context is hidden.
+  // Images and PDFs render as attachment tiles, dropped text files as rows in
+  // VscodeUserMessage. Mention context is hidden.
   return parts.some(
     (part) =>
       part.type === "file" &&
-      (part.mime.startsWith("image/") ||
-        part.mime === "application/pdf" ||
-        (part.url.startsWith("data:") && part.source?.text?.start === undefined)),
+      (part.mime.startsWith("image/") || part.mime === "application/pdf" || isDataAttachment(part)),
   )
 }
 

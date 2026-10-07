@@ -70,6 +70,10 @@ export function useImageAttachments() {
     setImages((prev) => prev.filter((img) => img.id !== id))
   }
 
+  // Images render as thumbnails, dropped text files as context rows.
+  const thumbs = () => images().filter((img) => img.mime.startsWith("image/"))
+  const texts = () => images().filter((img) => !img.mime.startsWith("image/"))
+
   const clear = () => setImages([])
 
   const replace = (next: ImageAttachment[]) => setImages(next)
@@ -129,6 +133,8 @@ export function useImageAttachments() {
 
   return {
     images,
+    thumbs,
+    texts,
     dragging,
     pending: () => pending() > 0,
     add,

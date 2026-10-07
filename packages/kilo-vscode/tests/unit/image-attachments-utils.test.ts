@@ -1,6 +1,7 @@
 import { describe, it, expect } from "bun:test"
 import {
   ACCEPTED_IMAGE_TYPES,
+  dataUrlText,
   isAcceptedImageType,
   isDataAttachment,
   isDragLeavingComponent,
@@ -78,6 +79,18 @@ describe("textDataUrl", () => {
 
   it("rejects invalid UTF-8", () => {
     expect(textDataUrl(new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0xff, 0xfe]))).toBeUndefined()
+  })
+})
+
+describe("dataUrlText", () => {
+  it("decodes the UTF-8 text of a dropped file", () => {
+    const text = "# Notes\nunicode: é ✓ 日本\n"
+    expect(dataUrlText(textDataUrl(new TextEncoder().encode(text))!)).toBe(text)
+  })
+
+  it("decodes a percent-encoded data URL", () => {
+    const terminal = buildTerminalAttachment("check @terminal", "$ ls -la\n100% done")
+    expect(dataUrlText(terminal!.url)).toBe("$ ls -la\n100% done")
   })
 })
 

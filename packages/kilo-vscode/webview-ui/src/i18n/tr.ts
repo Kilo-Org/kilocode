@@ -265,6 +265,7 @@ export const dict = {
   "prompt.attachment.failed": "Dosya eklenemiyor",
   "prompt.attachment.unsupported": "{{name}} bir görsel veya metin dosyası değil.",
   "prompt.attachment.tooLarge": "{{name}} {{size}} boyutundan büyük.",
+  "prompt.attachment.files": "Dosyalar",
 
   "mcp.status.connected": "bağlı",
   "mcp.status.failed": "başarısız",

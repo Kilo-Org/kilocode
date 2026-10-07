@@ -266,6 +266,7 @@ export const dict = {
   "prompt.attachment.failed": "Не вдалося прикріпити файл",
   "prompt.attachment.unsupported": "{{name}} не є зображенням або текстовим файлом.",
   "prompt.attachment.tooLarge": "Розмір {{name}} перевищує {{size}}.",
+  "prompt.attachment.files": "Файли",
 
   "mcp.status.connected": "підключено",
   "mcp.status.failed": "помилка",
