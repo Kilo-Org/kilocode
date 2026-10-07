@@ -2,6 +2,7 @@ import { createEffect, onCleanup, onMount, type Accessor, type Component } from 
 import {
   mergeWheel,
   source,
+  VIEWPORT_LIMIT,
   type BrowserFrame,
   type BrowserInteraction,
   type BrowserViewIdentity,
@@ -175,8 +176,9 @@ export const StreamViewport: Component<{
 
   const measure = () => {
     const bounds = host.getBoundingClientRect()
-    const width = Math.max(0, Math.round(bounds.width))
-    const height = Math.max(0, Math.round(bounds.height))
+    // Match the host bounds, so a panel larger than the stream limit does not make the frame scale back up.
+    const width = Math.max(0, Math.min(VIEWPORT_LIMIT.width, Math.round(bounds.width)))
+    const height = Math.max(0, Math.min(VIEWPORT_LIMIT.height, Math.round(bounds.height)))
     const visible = !host.checkVisibility || host.checkVisibility({ checkOpacity: true, checkVisibilityCSS: true })
     const active = intersecting && document.visibilityState !== "hidden" && visible && width > 0 && height > 0
     return {

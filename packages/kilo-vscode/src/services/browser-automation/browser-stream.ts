@@ -2,6 +2,7 @@ import { setTimeout as wait } from "node:timers/promises"
 import type { CDPSession, Page } from "playwright-core"
 import {
   mergeWheel,
+  VIEWPORT_LIMIT,
   type BrowserFrame,
   type BrowserInteraction,
   type BrowserViewport,
@@ -247,14 +248,14 @@ export class BrowserStream {
     const current = this.view
     const suspend = current && current.active && !view.active && view.revision === current.revision
     if (current && view.revision <= current.revision && !suspend) return
-    const width = Math.max(32, Math.min(4096, Math.round(view.width)))
-    const height = Math.max(32, Math.min(2160, Math.round(view.height)))
+    const width = Math.max(32, Math.min(VIEWPORT_LIMIT.width, Math.round(view.width)))
+    const height = Math.max(32, Math.min(VIEWPORT_LIMIT.height, Math.round(view.height)))
     const next = suspend
       ? { ...current, active: false }
       : {
           width,
           height,
-          scale: Math.max(1, Math.min(view.scale ?? 1, 2, 4096 / width, 2160 / height)),
+          scale: Math.max(1, Math.min(view.scale ?? 1, 2, VIEWPORT_LIMIT.width / width, VIEWPORT_LIMIT.height / height)),
           revision: view.revision,
           active: view.active,
         }
