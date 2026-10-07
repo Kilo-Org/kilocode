@@ -58,8 +58,6 @@ class SessionHeaderPanel(
         private const val TOUCH_BEGIN = 2
         private const val TOUCH_UPDATE = 3
         private const val TOUCH_END = 4
-        /** Cap for the sub-agent model label so a long name truncates instead of squeezing the title. */
-        private const val MODEL_MAX_WIDTH = 220
         internal const val EXPANDED_KEY = "kilo.session.header.expanded"
     }
 
@@ -139,7 +137,6 @@ class SessionHeaderPanel(
     private val top = BorderLayoutPanel()
     private val modelName = JBLabel().apply {
         putClientProperty(SwingTextTrimmer.KEY, SwingTextTrimmer.ELLIPSIS_AT_RIGHT)
-        maximumSize = Dimension(JBUI.scale(MODEL_MAX_WIDTH), Int.MAX_VALUE)
     }
     private val modelVariant = JBLabel()
     private val modelRow = Stack.horizontal()
