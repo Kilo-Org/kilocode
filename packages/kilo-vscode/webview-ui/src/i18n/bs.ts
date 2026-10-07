@@ -625,6 +625,7 @@ export const dict = {
   "session.tabs.switcher.pending": "Novo",
   "session.tabs.switcher.busy": "Radi",
   "session.tabs.switcher.scheduled": "Zakazano",
+  "session.tabs.pinHint": "Shift+klik za zakačiti ili otkačiti",
   "session.tab.local": "Lokalno",
   "session.tab.cloud": "Oblak",
   "session.tab.worktree": "Radno stablo",
@@ -1455,6 +1456,11 @@ export const dict = {
   "settings.experimental.browserAutomation.systemChrome.title": "Koristi sistemski Chrome",
   "settings.experimental.browserAutomation.systemChrome.description":
     "Koristite instalirani Google Chrome za Integrirani preglednik. Onemogućite samo kada je kompatibilni Playwright Chromium preglednik već instaliran.",
+  "settings.experimental.browserLinks.title": "Otvori linkove u",
+  "settings.experimental.browserLinks.description":
+    "Odaberite gdje se web linkovi otvaraju iz Kilo razgovora. Zahtijeva Integrirani preglednik.",
+  "settings.experimental.browserLinks.external": "Sistemski preglednik",
+  "settings.experimental.browserLinks.integrated": "Integrirani preglednik",
   "chat.search.searchingHistory": "Pretraživanje ranijih poruka…",
   "browserTab.noSession": "Otvorite preglednik iz sesije da pregledate lokalnu aplikaciju ili javnu HTTPS stranicu.",
   "browserTab.disabled": "Integrirani preglednik je onemogućen. Omogućite ga u Kilo postavkama > Eksperimentalno.",

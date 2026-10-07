@@ -584,6 +584,7 @@ export const dict = {
   "session.tabs.switcher.pending": "Nova",
   "session.tabs.switcher.busy": "Trabalhando",
   "session.tabs.switcher.scheduled": "Agendado",
+  "session.tabs.pinHint": "Shift+clique para fixar ou desafixar",
   "session.tab.local": "Local",
   "session.tab.cloud": "Nuvem",
   "session.tab.worktree": "Árvore de trabalho",
@@ -1466,6 +1467,11 @@ export const dict = {
   "settings.experimental.browserAutomation.systemChrome.title": "Usar Chrome do Sistema",
   "settings.experimental.browserAutomation.systemChrome.description":
     "Use o Google Chrome instalado para o Navegador Integrado. Desative apenas quando um navegador Playwright Chromium compatível já estiver instalado.",
+  "settings.experimental.browserLinks.title": "Abrir links em",
+  "settings.experimental.browserLinks.description":
+    "Escolha onde os links da web abrem a partir das conversas do Kilo. Requer o Navegador Integrado.",
+  "settings.experimental.browserLinks.external": "Navegador do sistema",
+  "settings.experimental.browserLinks.integrated": "Navegador Integrado",
   "chat.search.searchingHistory": "Pesquisando mensagens anteriores…",
   "browserTab.noSession":
     "Abra o navegador de uma sessão para visualizar um aplicativo local ou uma página HTTPS pública.",

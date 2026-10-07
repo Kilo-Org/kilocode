@@ -596,6 +596,7 @@ export const dict = {
   "session.tabs.switcher.pending": "新建",
   "session.tabs.switcher.busy": "工作中",
   "session.tabs.switcher.scheduled": "已计划",
+  "session.tabs.pinHint": "按住 Shift 点击可固定或取消固定",
   "session.tab.local": "本地",
   "session.tab.cloud": "云端",
   "session.tab.worktree": "工作树",
@@ -1369,6 +1370,10 @@ export const dict = {
   "settings.experimental.browserAutomation.systemChrome.title": "使用系统 Chrome",
   "settings.experimental.browserAutomation.systemChrome.description":
     "为集成浏览器使用已安装的 Google Chrome。仅在已安装兼容的 Playwright Chromium 浏览器时才禁用。",
+  "settings.experimental.browserLinks.title": "在以下位置打开链接",
+  "settings.experimental.browserLinks.description": "选择 Kilo 聊天中的网页链接在何处打开。需要集成浏览器。",
+  "settings.experimental.browserLinks.external": "系统浏览器",
+  "settings.experimental.browserLinks.integrated": "集成浏览器",
   "chat.search.searchingHistory": "正在搜索更早的消息…",
   "browserTab.noSession": "从会话中打开浏览器以预览本地应用或公共 HTTPS 页面。",
   "browserTab.disabled": "集成浏览器已禁用。请在 Kilo 设置 > 实验性中启用。",

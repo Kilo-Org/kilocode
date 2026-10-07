@@ -620,6 +620,7 @@ export const dict = {
   "session.tabs.switcher.pending": "Новая",
   "session.tabs.switcher.busy": "В работе",
   "session.tabs.switcher.scheduled": "Запланировано",
+  "session.tabs.pinHint": "Shift+щелчок, чтобы закрепить или открепить",
   "session.tab.local": "Локальный",
   "session.tab.cloud": "Облако",
   "session.tab.worktree": "Рабочее дерево",
@@ -1448,6 +1449,11 @@ export const dict = {
   "settings.experimental.browserAutomation.systemChrome.title": "Использовать системный Chrome",
   "settings.experimental.browserAutomation.systemChrome.description":
     "Использовать установленный Google Chrome для встроенного браузера. Отключайте только если совместимый браузер Playwright Chromium уже установлен.",
+  "settings.experimental.browserLinks.title": "Открывать ссылки в",
+  "settings.experimental.browserLinks.description":
+    "Выберите, где открывать веб-ссылки из чатов Kilo. Требуется встроенный браузер.",
+  "settings.experimental.browserLinks.external": "Системный браузер",
+  "settings.experimental.browserLinks.integrated": "Встроенный браузер",
   "chat.search.searchingHistory": "Поиск в более ранних сообщениях…",
   "browserTab.noSession":
     "Откройте браузер из сеанса, чтобы просмотреть локальное приложение или публичную HTTPS-страницу.",

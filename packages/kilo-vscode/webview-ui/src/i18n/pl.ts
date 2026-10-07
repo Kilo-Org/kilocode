@@ -581,6 +581,7 @@ export const dict = {
   "session.tabs.switcher.pending": "Nowa",
   "session.tabs.switcher.busy": "Pracuje",
   "session.tabs.switcher.scheduled": "Zaplanowano",
+  "session.tabs.pinHint": "Shift+kliknij, aby przypiąć lub odpiąć",
   "session.tab.local": "Lokalny",
   "session.tab.cloud": "Chmura",
   "session.tab.worktree": "Drzewo robocze",
@@ -1456,6 +1457,11 @@ export const dict = {
   "settings.experimental.browserAutomation.systemChrome.title": "Użyj systemowego Chrome",
   "settings.experimental.browserAutomation.systemChrome.description":
     "Użyj zainstalowanej przeglądarki Google Chrome dla zintegrowanej przeglądarki. Wyłącz tylko wtedy, gdy zgodna przeglądarka Playwright Chromium jest już zainstalowana.",
+  "settings.experimental.browserLinks.title": "Otwieraj linki w",
+  "settings.experimental.browserLinks.description":
+    "Wybierz, gdzie otwierają się linki internetowe z czatów Kilo. Wymaga zintegrowanej przeglądarki.",
+  "settings.experimental.browserLinks.external": "Przeglądarka systemowa",
+  "settings.experimental.browserLinks.integrated": "Zintegrowana przeglądarka",
   "chat.search.searchingHistory": "Wyszukiwanie we wcześniejszych wiadomościach…",
   "browserTab.noSession":
     "Otwórz przeglądarkę z sesji, aby wyświetlić podgląd lokalnej aplikacji lub publicznej strony HTTPS.",

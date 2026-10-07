@@ -32,6 +32,7 @@ import {
 import { useSession } from "../../context/session"
 import { revertPromptState } from "../../context/session-utils"
 import { useLocalTabs } from "../../context/local-tabs"
+import { showTabStrip } from "../../utils/local-tabs"
 import { useServer } from "../../context/server"
 import { useIndexing } from "../../context/indexing"
 import { indexingButtonVisible } from "../../context/indexing-utils"
@@ -413,6 +414,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       draft: !!text(),
       busy: isBusy(),
       selection: shortcuts().selection,
+      tabs: showTabStrip(tabs?.display() ?? []),
       manager: props.manager?.(),
     })
   }

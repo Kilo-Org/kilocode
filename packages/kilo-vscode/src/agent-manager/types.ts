@@ -1174,6 +1174,13 @@ interface ToggleSectionCollapsedIn {
   sectionId: string
 }
 
+interface SetWorktreePinnedIn {
+  type: "agentManager.setWorktreePinned"
+  projectId?: string
+  worktreeId: string
+  pinned: boolean
+}
+
 interface MoveToSectionIn {
   type: "agentManager.moveToSection"
   projectId?: string
@@ -1357,6 +1364,7 @@ export type AgentManagerInMessage =
   | SetSectionColorIn
   | ToggleSectionCollapsedIn
   | MoveToSectionIn
+  | SetWorktreePinnedIn
   | MoveSectionIn
   | TerminalCreateIn
   | TerminalCloseIn

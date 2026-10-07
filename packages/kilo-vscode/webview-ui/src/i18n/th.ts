@@ -615,6 +615,7 @@ export const dict = {
   "session.tabs.switcher.pending": "ใหม่",
   "session.tabs.switcher.busy": "กำลังทำงาน",
   "session.tabs.switcher.scheduled": "ตั้งเวลาไว้",
+  "session.tabs.pinHint": "Shift+คลิกเพื่อปักหมุดหรือเลิกปักหมุด",
   "session.tab.local": "ในเครื่อง",
   "session.tab.cloud": "คลาวด์",
   "session.tab.worktree": "เวิร์กทรี Git",
@@ -1423,6 +1424,10 @@ export const dict = {
   "settings.experimental.browserAutomation.systemChrome.title": "ใช้ Chrome ของระบบ",
   "settings.experimental.browserAutomation.systemChrome.description":
     "ใช้ Google Chrome ที่ติดตั้งไว้สำหรับเบราว์เซอร์ในตัว ปิดใช้งานเฉพาะเมื่อติดตั้งเบราว์เซอร์ Playwright Chromium ที่เข้ากันได้ไว้แล้วเท่านั้น",
+  "settings.experimental.browserLinks.title": "เปิดลิงก์ใน",
+  "settings.experimental.browserLinks.description": "เลือกว่าเว็บลิงก์จะเปิดจากแชท Kilo ที่ใด ต้องใช้เบราว์เซอร์ในตัว",
+  "settings.experimental.browserLinks.external": "เบราว์เซอร์ของระบบ",
+  "settings.experimental.browserLinks.integrated": "เบราว์เซอร์ในตัว",
   "chat.search.searchingHistory": "กำลังค้นหาข้อความก่อนหน้า…",
   "browserTab.noSession": "เปิดเบราว์เซอร์จากเซสชันเพื่อดูตัวอย่างแอปพลิเคชันในเครื่องหรือหน้า HTTPS สาธารณะ",
   "browserTab.disabled": "เบราว์เซอร์ในตัวถูกปิดใช้งาน เปิดใช้งานได้ในการตั้งค่า Kilo > ทดลอง",
