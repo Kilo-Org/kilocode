@@ -2,7 +2,7 @@ import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { Npm } from "@opencode-ai/core/npm"
 import { describe, expect, test } from "bun:test"
-import { Effect, Layer } from "effect"
+import { Effect } from "effect"
 import path from "path"
 import { pathToFileURL } from "url"
 import { Account } from "../../../src/account/account"
@@ -10,7 +10,6 @@ import { Auth } from "../../../src/auth"
 import { Command } from "../../../src/command"
 import { Config } from "../../../src/config/config"
 import { RuntimeFlags } from "../../../src/effect/runtime-flags"
-import { MCP } from "../../../src/mcp"
 import { Plugin } from "../../../src/plugin/index"
 import * as Reserved from "../../../src/kilocode/command/reserved"
 import { AccountTest } from "../../fake/account"
@@ -19,19 +18,7 @@ import { NpmTest } from "../../fake/npm"
 import { TestInstance, provideTmpdirInstance } from "../../fixture/fixture"
 import { testEffect } from "../../lib/effect"
 
-// A reserved name arriving from an MCP server used to fail the whole list the same way a
-// config one did, so both sources are covered.
-const mcp = Layer.mock(MCP.Service)({
-  prompts: () =>
-    Effect.succeed({
-      goal: { name: "goal", description: "Plugin goal", client: "plugin" },
-      deploy: { name: "deploy", description: "Ship it", client: "plugin" },
-    }),
-})
-
-const it = testEffect(
-  LayerNode.compile(LayerNode.group([Command.node, Config.node, CrossSpawnSpawner.node]), [[MCP.node, mcp]]),
-)
+const it = testEffect(LayerNode.compile(LayerNode.group([Command.node, Config.node, CrossSpawnSpawner.node])))
 
 // One graph so Plugin and Command share a Config: a plugin registers its commands by
 // mutating the loaded config, and the warning has to be derived from that same object.
@@ -45,15 +32,22 @@ const plugin = testEffect(
 )
 
 describe("reserved command names", () => {
-  test("names the source and the resolution in its warning", () => {
+  test("reserves only the name that is intercepted before command lookup", () => {
     expect(Reserved.reserved("goal")).toBe(true)
     expect(Reserved.reserved("review")).toBe(false)
-    expect(Reserved.notice("goal", "command")).toContain('custom command named "goal"')
-    expect(Reserved.notice("goal", "mcp")).toContain('MCP prompt named "goal"')
-    for (const source of ["command", "mcp"] as const) {
-      expect(Reserved.notice("goal", source)).toContain("reserved for Kilo's own command")
-      expect(Reserved.notice("goal", source)).toContain("Rename it")
-    }
+    // Resolved through the registry rather than intercepted, so they stay available.
+    for (const name of ["compact", "summarize"]) expect(Reserved.reserved(name)).toBe(false)
+    // McpCatalog keys prompts as `<client>:<prompt>`, so an MCP prompt cannot collide.
+    expect(Reserved.reserved("myserver:goal")).toBe(false)
+  })
+
+  test("names both possible sources and the resolution in its warning", () => {
+    const message = Reserved.notice("goal")
+
+    expect(message).toContain('"goal" command registered by your config or a plugin')
+    expect(message).toContain("reserved for Kilo's own command")
+    expect(message).toContain("Rename it")
+    expect(message).toContain("turn it off in the plugin that registers it")
   })
 
   it.live("keeps every other command when config claims a reserved name", () =>
@@ -85,19 +79,6 @@ describe("reserved command names", () => {
     ),
   )
 
-  it.live("keeps every other MCP prompt when one claims a reserved name", () =>
-    provideTmpdirInstance(() =>
-      Effect.gen(function* () {
-        const command = yield* Command.Service
-        const list = yield* command.list()
-
-        expect(yield* command.get("deploy")).toMatchObject({ source: "mcp" })
-        expect(list.filter((item) => item.name === "goal")).toHaveLength(1)
-        expect(yield* command.get("goal")).toMatchObject({ source: "command", template: "$ARGUMENTS" })
-      }),
-    ),
-  )
-
   it.live("reports a config-sourced clash as a config warning", () =>
     provideTmpdirInstance((dir) =>
       Effect.gen(function* () {
@@ -112,7 +93,7 @@ describe("reserved command names", () => {
 
         expect(warnings.some((item) => item.path === "command.goal")).toBe(true)
         expect(warnings.find((item) => item.path === "command.goal")?.message).toContain(
-          'Ignoring the custom command named "goal"',
+          '"goal" command registered by your config or a plugin',
         )
       }),
     ),
@@ -140,10 +121,7 @@ describe("reserved command names", () => {
         ),
       )
       yield* Effect.promise(() =>
-        Bun.write(
-          path.join(test.directory, "opencode.json"),
-          JSON.stringify({ plugin: [pathToFileURL(file).href] }),
-        ),
+        Bun.write(path.join(test.directory, "opencode.json"), JSON.stringify({ plugin: [pathToFileURL(file).href] })),
       )
 
       // Plugins load during startup in production; the hook has to have run before the
@@ -152,7 +130,7 @@ describe("reserved command names", () => {
 
       const warnings = yield* Config.Service.use((svc) => svc.warnings())
       expect(warnings.find((item) => item.path === "command.goal")?.message).toContain(
-        'Ignoring the custom command named "goal"',
+        '"goal" command registered by your config or a plugin',
       )
 
       // The plugin keeps every command that does not clash, and /goal stays Kilo's.

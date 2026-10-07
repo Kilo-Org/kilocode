@@ -132,7 +132,7 @@ const layer = Layer.effect(
       const overrides: Array<{ name: string; command: Override }> = []
       for (const [name, command] of Object.entries(cfg.command ?? {})) {
         if (Reserved.reserved(name)) {
-          yield* Effect.logWarning(Reserved.notice(name, "command"))
+          yield* Effect.logWarning(Reserved.notice(name))
           continue
         }
         if (!applyOverride(commands, name, command, hints)) overrides.push({ name, command }) // kilocode_change
@@ -140,12 +140,6 @@ const layer = Layer.effect(
       // kilocode_change end
 
       for (const [name, prompt] of Object.entries(yield* mcp.prompts())) {
-        // kilocode_change start - a reserved name must not fail the whole list
-        if (Reserved.reserved(name)) {
-          yield* Effect.logWarning(Reserved.notice(name, "mcp"))
-          continue
-        }
-        // kilocode_change end
         commands[name] = {
           name,
           source: "mcp",

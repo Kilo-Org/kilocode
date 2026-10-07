@@ -49,7 +49,7 @@ describe("reserved command name over HTTP", () => {
 
     const warnings = await json<Config.Warning[]>(await req(tmp.path, "/config/warnings"))
     const clash = warnings.find((item) => item.path === "command.goal")
-    expect(clash?.message).toContain('Ignoring the custom command named "goal"')
+    expect(clash?.message).toContain('"goal" command registered by your config or a plugin')
     expect(clash?.message).toContain("reserved for Kilo's own command")
   })
 })
