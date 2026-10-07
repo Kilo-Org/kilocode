@@ -40,7 +40,7 @@ import type { SessionBoard, SessionBoardLoadedMessage } from "../../types/messag
 /** Posts shown in the dock panel. Older posts are in the full board. */
 const RECENT = 5
 
-type Probe = { requestID: string; sessionID: string; projectId?: string; scope: string }
+type Probe = { requestID: string; sessionID: string; projectId?: string; scope: string; epoch?: number }
 
 function merge(previous: SessionBoard | undefined, next: SessionBoard, before?: string) {
   if (!previous || !before) return next
@@ -71,9 +71,14 @@ export function useSwarmBoard(props: { readonly?: boolean; projectId?: string })
   // of a view counts as seen, so a reload does not mark old posts as new.
   const [latest, setLatest] = createSignal<string>()
   const [seen, setSeen] = createSignal<string>()
+  // True only for the full board reader, not the reset confirmation.
+  const [reading, setReading] = createSignal(false)
   let fresh = true
   let jobs = ""
   let layer: string | undefined
+  // Bumped when a full load or a reset lands, so a late one-post check cannot
+  // restore a board that a reset just cleared.
+  let epoch = 0
   const present = () => !!board()?.messages.length
   const scope = createMemo(() => JSON.stringify([session.currentSessionID(), props.projectId]))
   const allowed = createMemo(() => {
@@ -108,7 +113,7 @@ export function useSwarmBoard(props: { readonly?: boolean; projectId?: string })
     const sessionID = session.currentSessionID()
     if (!sessionID || !allowed() || !vscode.active() || peeking()) return
     const base = { sessionID, projectId: props.projectId, requestID: crypto.randomUUID() }
-    setPeeking({ ...base, scope: scope() })
+    setPeeking({ ...base, scope: scope(), epoch })
     vscode.postMessage({ type: "requestSessionBoard", ...base, limit: 1 })
   }
 
@@ -137,6 +142,8 @@ export function useSwarmBoard(props: { readonly?: boolean; projectId?: string })
     const probe = peeking()
     if (!match(probe, message)) return false
     setPeeking(undefined)
+    // A full load or a reset landed after this check, so its board is newer.
+    if (probe.epoch !== epoch) return true
     const next = message.board
     if (message.error || !next || next.ownerSessionID !== probe.sessionID) return true
     note(next)
@@ -167,7 +174,10 @@ export function useSwarmBoard(props: { readonly?: boolean; projectId?: string })
         setError(language.t("task.swarm.failed"))
         return
       }
-      if (!expected.before) note(message.board)
+      if (!expected.before) {
+        note(message.board)
+        epoch += 1
+      }
       setBoard(merge(board(), message.board, expected.before))
       if (dialog.active?.id === expected.confirmation) dialog.close()
     }),
@@ -199,17 +209,21 @@ export function useSwarmBoard(props: { readonly?: boolean; projectId?: string })
 
   const mark = () => setSeen(latest())
   createEffect(() => {
-    if (open()) mark()
+    if (reading()) mark()
   })
 
-  const show = (content: () => JSX.Element) => {
+  const show = (content: () => JSX.Element, read = false) => {
     const current = scope()
     const valid = () => current === scope() && allowed() && present() && vscode.active()
     void dialog
       .show(
         () => {
           setOpen(true)
-          onCleanup(() => setOpen(false))
+          setReading(read)
+          onCleanup(() => {
+            setOpen(false)
+            setReading(false)
+          })
           createEffect(() => {
             const ready = valid()
             if (!ready && dialog.active?.id === layer) dialog.close()
@@ -411,7 +425,7 @@ export function useSwarmBoard(props: { readonly?: boolean; projectId?: string })
           </div>
         </Dialog>
       )
-    })
+    }, true)
   }
 
   return {
@@ -430,7 +444,7 @@ export function useSwarmBoard(props: { readonly?: boolean; projectId?: string })
 export type SwarmBoardState = ReturnType<typeof useSwarmBoard>
 
 /** The dock button: the latest posts in a small panel, with a way to the full board. */
-export const SwarmBoardButton: Component<{ state: SwarmBoardState; rule?: boolean }> = (props) => {
+export const SwarmBoardButton: Component<{ state: SwarmBoardState; rule?: boolean; active: boolean }> = (props) => {
   const language = useLanguage()
   const [open, setOpen] = createSignal(false)
   const recent = createMemo(() => props.state.messages().slice(-RECENT))
@@ -438,6 +452,11 @@ export const SwarmBoardButton: Component<{ state: SwarmBoardState; rule?: boolea
 
   createEffect(() => {
     if (!props.state.shown()) setOpen(false)
+  })
+  // The panel is a portal, so it would outlive the dock state that hides this
+  // button. Close it when that state stops being the active one.
+  createEffect(() => {
+    if (!props.active) setOpen(false)
   })
   createEffect(() => {
     if (open()) props.state.mark()

@@ -196,7 +196,7 @@ export const SessionDock: Component<SessionDockProps> = (props) => {
       <Show when={visible()}>
         <AgentStack state={stack} max={Math.min(max(), room())} rule={!board.shown()} />
       </Show>
-      <SwarmBoardButton state={board} rule />
+      <SwarmBoardButton state={board} rule active={actions()} />
     </>
   )
 
@@ -307,7 +307,7 @@ export const SessionDock: Component<SessionDockProps> = (props) => {
               <Show when={visible()}>
                 <AgentStack state={stack} max={max()} rule={!board.shown()} />
               </Show>
-              <SwarmBoardButton state={board} rule />
+              <SwarmBoardButton state={board} rule active={working()} />
             </div>
           </Show>
           <WorkingIndicator onScrollToBottom={props.onScrollToBottom} />
@@ -325,7 +325,7 @@ export const SessionDock: Component<SessionDockProps> = (props) => {
           <Show when={visible()}>
             <AgentStack state={stack} label />
           </Show>
-          <SwarmBoardButton state={board} />
+          <SwarmBoardButton state={board} active={agents()} />
           {chip(false)}
         </div>
       </div>

@@ -328,7 +328,8 @@ test("shows recent posts in the dock and marks new posts until the panel opens",
   await expect(panel.last()).toContainText("A newer post.")
   await expect(scene.toggle).not.toHaveAttribute("data-unread", "")
   await page.getByRole("button", { name: "Open board", exact: true }).click()
-  await expect(page.getByRole("dialog", { name: "Board", exact: true })).toBeVisible()
+  await expect(page.locator(".task-board")).toBeVisible()
+  await expect(page.locator('[data-slot="board-panel"]')).toHaveCount(0)
 })
 
 test("does not check hidden views and rechecks availability when the view returns", async ({ page }) => {
