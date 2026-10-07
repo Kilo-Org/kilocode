@@ -14,6 +14,13 @@ export function integratedBrowserUseSystemChrome(): boolean {
   return vscode.workspace.getConfiguration(INTEGRATED_BROWSER).get("useSystemChrome", true)
 }
 
+export function integratedBrowserFallback(remote = vscode.env.remoteName): boolean {
+  return (
+    remote === "wsl" &&
+    vscode.workspace.getConfiguration(INTEGRATED_BROWSER).inspect<boolean>("useSystemChrome")?.globalValue == null
+  )
+}
+
 /**
  * Copy a user-level Chrome preference that was stored before this setting had
  * its own key.

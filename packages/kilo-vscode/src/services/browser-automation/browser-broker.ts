@@ -84,6 +84,7 @@ export interface BrowserBrokerOptions {
   trusted?: () => boolean
   launch?: (options: LaunchOptions) => Promise<BrowserContextFactory>
   useSystemChrome?: () => boolean
+  fallback?: () => boolean
   network?: (
     page: Page,
     options: Parameters<typeof BrowserNetwork.attach>[1],
@@ -162,6 +163,7 @@ const MAX_BODY = 32 * 1024
 const MAX_SCREENSHOT = 2 * 1024 * 1024
 const TIMEOUT = /ERR_CONNECTION_TIMED_OUT|ETIMEDOUT|Timeout \d+ms exceeded/i
 const CRASHED = "The browser stopped unexpectedly. Refresh to start it again."
+const MISSING = /Chrom(?:e|ium) distribution ("|')chrom(?:e|ium)(\1) is not found\b|Executable doesn't exist at\b/i
 
 function unreachable(url?: string): string {
   return `Cannot connect to ${url ?? "the local application"}. Make sure the local server is running.`
@@ -793,7 +795,7 @@ export class BrowserBroker {
     if (this.closed) return Promise.reject(new Error("Browser broker is closed"))
     if (this.browser) return Promise.resolve(this.browser)
     if (this.browserStarting) return this.browserStarting
-    const system = this.opts.useSystemChrome?.() !== false
+    let system = this.opts.useSystemChrome?.() !== false
     const starting = (async () => {
       const port = this.opts.launch ? undefined : await reserve()
       const base = options(system, port)
@@ -814,7 +816,15 @@ export class BrowserBroker {
           "--force-webrtc-ip-handling-policy=disable_non_proxied_udp",
         ],
       }
-      const browser = await (this.opts.launch?.(config) ?? chromium.launch(config))
+      const launch = (config: LaunchOptions): Promise<BrowserContextFactory> =>
+        this.opts.launch?.(config) ?? chromium.launch(config)
+      const browser = await launch(config).catch((error: unknown) => {
+        const detail = error instanceof Error ? error.message : String(error)
+        if (!system || !this.opts.fallback?.() || !MISSING.test(detail)) throw error
+        system = false
+        this.opts.log("Chrome is not installed in WSL. Trying Playwright Chromium.")
+        return launch({ ...config, channel: undefined })
+      })
       this.debugging = ("debugging" in browser ? browser.debugging : undefined) ?? port
       this.browser = browser
       browser.on?.("disconnected", () => this.lost(browser))
@@ -823,13 +833,7 @@ export class BrowserBroker {
       .catch(async (error: unknown) => {
         await this.release()
         const detail = error instanceof Error ? error.message : String(error)
-        const missing = /Chromium distribution ['"]chrome['"] is not found\b|Executable doesn't exist at\b/i.test(
-          detail,
-        )
-          ? system
-            ? "chrome"
-            : "chromium"
-          : undefined
+        const missing = MISSING.test(detail) ? (system ? "chrome" : "chromium") : undefined
         throw new BrowserLaunchError(missing, error)
       })
       .finally(() => {
