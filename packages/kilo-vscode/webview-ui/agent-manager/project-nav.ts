@@ -17,7 +17,7 @@ import type { AgentManagerStateMessage, AgentProjectSnapshot } from "../src/type
  *
  * Handles previous/next (⌘⌥↑/↓) and numeric-shortcut (⌘1-9) navigation across
  * the sidebar. It builds one global visual order across every expanded project:
- * Local, ungrouped worktrees, then section members,
+ * Local, pinned worktrees, ungrouped worktrees, then section members,
  * using stable project-qualified composite ids, and activates each target with
  * a single atomic `agentManager.activateSelection` dispatch.
  *
@@ -55,7 +55,12 @@ export function buildProjectNavEntries(
       return {
         id: p.id,
         expanded: p.expanded,
-        worktrees: (st.worktrees ?? []).map((w) => ({ id: w.id, sectionId: w.sectionId, groupId: w.groupId })),
+        worktrees: (st.worktrees ?? []).map((w) => ({
+          id: w.id,
+          sectionId: w.sectionId,
+          groupId: w.groupId,
+          pinned: w.pinned,
+        })),
         worktreeOrder: st.worktreeOrder,
         sections: (st.sections ?? []).map((s) => ({ id: s.id, collapsed: s.collapsed })),
       }

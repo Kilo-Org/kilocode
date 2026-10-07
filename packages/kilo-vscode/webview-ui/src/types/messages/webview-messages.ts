@@ -1691,6 +1691,13 @@ export interface MoveToSectionRequest {
   sectionId: string | null
 }
 
+export interface SetWorktreePinnedRequest {
+  type: "agentManager.setWorktreePinned"
+  projectId?: string
+  worktreeId: string
+  pinned: boolean
+}
+
 export interface MoveSectionRequest {
   type: "agentManager.moveSection"
   projectId?: string
@@ -1986,6 +1993,7 @@ export type WebviewMessage =
   | SetSectionColorRequest
   | ToggleSectionCollapsedRequest
   | MoveToSectionRequest
+  | SetWorktreePinnedRequest
   | MoveSectionRequest
   | OpenContentRequest
   | AgentManagerTerminalCreateRequest
