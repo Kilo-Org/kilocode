@@ -109,6 +109,77 @@ class PromptRailLayoutTest : SessionUiTestBase() {
     }
 
     /**
+     * With many prompts the tick band covers the whole viewport, and in the narrow layout the rail is
+     * drawn over the scrollbar. The rail must therefore claim only the rows its ticks occupy, or the
+     * thumb cannot be dragged and track clicks never reach the scrollbar.
+     */
+    fun `test presses between ticks reach the scrollbar`() {
+        showMessages()
+        // Enough prompts that the band spans the viewport, which is the case that locked the bar.
+        fillTranscript(60)
+        ui.setSize(420, 600)
+        layoutAll(ui)
+        ui.promptRail.refresh()
+        val root = find<SessionRootPanel>(ui)
+        root.overlay.doLayout()
+        drainScroll()
+        val rail = find<PromptRail>(ui)
+        assertTrue("the rail must be showing for this case", rail.isVisible)
+        assertNotNull("the narrow layout must hand the rail its scrollbar", rail.barTarget)
+
+        // Hover still works along the whole band, so the card opens wherever the pointer rests.
+        val x = rail.width / 2
+        assertTrue(rail.contains(x, rail.tickCenterY(0)))
+        assertTrue(rail.contains(x, rail.tickCenterY(rail.entries().lastIndex)))
+
+        // A press off a tick is handed to the bar; one on a tick stays the rail's own. Asserted by what
+        // the bar receives rather than by its value, which needs a realised UI to move.
+        val bar = scrollBar()
+        val got = mutableListOf<Int>()
+        bar.addMouseListener(object : java.awt.event.MouseAdapter() {
+            override fun mousePressed(e: java.awt.event.MouseEvent) {
+                got.add(e.y)
+            }
+        })
+
+        val mid = (rail.tickCenterY(0) + rail.tickCenterY(1)) / 2
+        rail.dispatchEvent(pressAt(rail, mid))
+        assertEquals("a press between ticks must reach the scrollbar", 1, got.size)
+
+        rail.dispatchEvent(pressAt(rail, rail.tickCenterY(2)))
+        assertEquals("a press on a tick must not reach the scrollbar", 1, got.size)
+
+        var jumped = false
+        rail.onSelect = { jumped = true }
+        rail.dispatchEvent(clickAt(rail, rail.tickCenterY(2)))
+        assertTrue("a click on a tick must still navigate", jumped)
+    }
+
+    private fun pressAt(rail: PromptRail, y: Int) = java.awt.event.MouseEvent(
+        rail,
+        java.awt.event.MouseEvent.MOUSE_PRESSED,
+        0L,
+        0,
+        rail.width / 2,
+        y,
+        1,
+        false,
+        java.awt.event.MouseEvent.BUTTON1,
+    )
+
+    private fun clickAt(rail: PromptRail, y: Int) = java.awt.event.MouseEvent(
+        rail,
+        java.awt.event.MouseEvent.MOUSE_CLICKED,
+        0L,
+        0,
+        rail.width / 2,
+        y,
+        1,
+        false,
+        java.awt.event.MouseEvent.BUTTON1,
+    )
+
+    /**
      * The rail is drawn over the transcript's right edge, so the transcript has to reserve room for a
      * full-size tick. Without it a tick sits on top of the prompt bubble.
      */

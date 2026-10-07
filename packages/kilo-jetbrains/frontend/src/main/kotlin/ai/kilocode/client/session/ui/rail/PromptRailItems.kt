@@ -1,10 +1,12 @@
 package ai.kilocode.client.session.ui.rail
 
 import ai.kilocode.client.session.model.Compaction
+import ai.kilocode.client.session.model.Content
 import ai.kilocode.client.session.model.FileAttachment
 import ai.kilocode.client.session.model.Message
 import ai.kilocode.client.session.model.SessionModel
 import ai.kilocode.client.session.model.Text
+import ai.kilocode.client.session.model.Turn
 import kotlin.math.floor
 
 /** One navigable prompt: a user turn, its preview text, and the start of its response, if any. */
@@ -32,27 +34,62 @@ object PromptRailItems {
     const val PROMPT_LIMIT = 160
     const val ANSWER_LIMIT = 220
 
+    /** Raw characters read per preview before stripping. Comfortably above [ANSWER_LIMIT]. */
+    private const val BUDGET = 1200
+
+    /**
+     * Per-turn preview cache. Rebuilds are driven by streamed content, so without this every delta
+     * re-previews every turn in the transcript; with it only the turn that changed is recomputed.
+     *
+     * Keyed by turn id, holding the [stamp] the entry was built from. EDT-only, like the model it reads.
+     */
+    class Cache {
+        internal val entries = HashMap<String, Pair<Long, PromptRailItem>>()
+
+        internal fun take(id: String, mark: Long): PromptRailItem? =
+            entries[id]?.takeIf { it.first == mark }?.second
+
+        internal fun put(id: String, mark: Long, item: PromptRailItem) {
+            entries[id] = mark to item
+        }
+
+        /** Drops turns that are no longer in the transcript, so a cleared session does not linger. */
+        internal fun retain(ids: Set<String>) {
+            if (entries.size != ids.size) entries.keys.retainAll(ids)
+        }
+
+        fun size(): Int = entries.size
+    }
+
     /** One item per navigable user turn, in transcript order. */
-    fun items(model: SessionModel): List<PromptRailItem> {
+    fun items(model: SessionModel, cache: Cache? = null): List<PromptRailItem> {
         val out = mutableListOf<PromptRailItem>()
+        val seen = mutableSetOf<String>()
         for (turn in model.turns()) {
             val anchor = model.message(turn.id) ?: continue
             if (anchor.info.role != "user") continue
             if (anchor.parts.values.any { it is Compaction }) continue
             if (model.isRevertedMessage(turn.id)) continue
             if (!prompted(anchor)) continue
+            seen.add(turn.id)
+            val mark = if (cache == null) 0L else stamp(model, turn)
+            cache?.take(turn.id, mark)?.let {
+                out.add(it)
+                continue
+            }
             val prompt = truncate(preview(text(anchor.parts.values)), PROMPT_LIMIT)
             val answer = truncate(preview(answerText(model, turn.messageIds)), ANSWER_LIMIT)
-            out.add(
-                if (prompt.isEmpty()) {
-                    // Promoted to the title, so it takes the title's limit rather than keeping the
-                    // longer answer one.
-                    PromptRailItem(turn.id, model.isQueued(turn.id), truncate(answer, PROMPT_LIMIT), "")
-                } else {
-                    PromptRailItem(turn.id, model.isQueued(turn.id), prompt, answer)
-                },
-            )
+            val item = if (prompt.isEmpty()) {
+                // Promoted to the title, so it takes the title's limit rather than keeping the longer
+                // answer one.
+                PromptRailItem(turn.id, model.isQueued(turn.id), truncate(answer, PROMPT_LIMIT), "")
+            } else {
+                PromptRailItem(turn.id, model.isQueued(turn.id), prompt, answer)
+            }
+            cache?.put(turn.id, mark, item)
+            out.add(item)
         }
+        cache?.retain(seen)
         return out
     }
 
@@ -80,11 +117,43 @@ object PromptRailItems {
         return ""
     }
 
-    private fun text(parts: Collection<ai.kilocode.client.session.model.Content>): String = parts
-        .filterIsInstance<Text>()
-        .map { it.content.toString() }
-        .filter { it.isNotBlank() }
-        .joinToString("\n")
+    /**
+     * Joined [Text] parts, cut to [BUDGET] characters before any markdown stripping runs.
+     *
+     * The previews are at most a couple of hundred characters, but an assistant answer can be tens of
+     * kilobytes and this is reached from every streamed delta. Copying and running the preview regexes
+     * over the whole answer was the cost; the budget leaves ample slack for stripping to shorten the
+     * text and still reach the limit.
+     */
+    private fun text(parts: Collection<Content>): String {
+        val out = StringBuilder()
+        for (part in parts) {
+            if (part !is Text) continue
+            if (part.content.isBlank()) continue
+            if (out.isNotEmpty()) out.append('\n')
+            val room = BUDGET - out.length
+            if (room <= 0) break
+            out.append(part.content, 0, minOf(room, part.content.length))
+            if (out.length >= BUDGET) break
+        }
+        return out.toString()
+    }
+
+    /** Cheap stand-in for a turn's preview inputs, so an unchanged turn is not previewed again. */
+    private fun stamp(model: SessionModel, turn: Turn): Long {
+        var hash = if (model.isQueued(turn.id)) 1L else 0L
+        for (id in turn.messageIds) {
+            val msg = model.message(id) ?: continue
+            hash = hash * 31 + id.hashCode()
+            for (part in msg.parts.values) {
+                // Lengths only: reading a StringBuilder's length does not copy it, so this stays O(parts)
+                // no matter how much text has streamed in.
+                hash = hash * 31 + part.id.hashCode()
+                if (part is Text) hash = hash * 31 + part.content.length
+            }
+        }
+        return hash
+    }
 
     /**
      * Plain-text preview of markdown [text]: fenced code blocks, inline code and images are dropped,

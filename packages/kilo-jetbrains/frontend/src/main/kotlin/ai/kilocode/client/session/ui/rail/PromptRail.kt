@@ -13,6 +13,7 @@ import java.awt.event.MouseWheelEvent
 import java.awt.event.MouseWheelListener
 import javax.swing.JComponent
 import javax.swing.SwingUtilities
+import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
 
@@ -47,13 +48,25 @@ internal class PromptRail : JComponent() {
      */
     var wheelTarget: JComponent? = null
 
+    /**
+     * Scrollbar the rail is drawn over, or null when it sits in its own gutter.
+     *
+     * In the narrow layout the rail covers the scrollbar. It claims the whole band for hover, so without
+     * this the bar would never see a press and its thumb could not be dragged. A press that misses every
+     * tick is handed over instead; Swing then routes the rest of that drag to the bar on its own, so one
+     * reachable row between ticks is enough to start a drag.
+     */
+    var barTarget: JComponent? = null
+
     init {
         isOpaque = false
         addMouseListener(object : MouseAdapter() {
             override fun mouseExited(e: MouseEvent) = setHover(-1)
+            override fun mousePressed(e: MouseEvent) = press(e)
+            override fun mouseReleased(e: MouseEvent) = press(e)
             override fun mouseClicked(e: MouseEvent) {
                 val idx = indexAt(e.y)
-                if (idx < 0) return
+                if (idx < 0) return press(e)
                 onSelect?.invoke(entries[idx])
             }
         })
@@ -62,6 +75,9 @@ internal class PromptRail : JComponent() {
                 if (e.modifiersEx and BUTTON_MASK != 0) return
                 setHover(indexAt(e.y))
             }
+
+            // Mid-drag the bar owns the gesture, so keep handing it the movement.
+            override fun mouseDragged(e: MouseEvent) = press(e)
         })
         addMouseWheelListener(MouseWheelListener { e -> forward(e) })
     }
@@ -105,6 +121,14 @@ internal class PromptRail : JComponent() {
         return geo.top + index * geo.step + geo.step / 2
     }
 
+    /**
+     * Claims the whole tick band, so hovering anywhere along the rail opens the navigator.
+     *
+     * Presses are split finer than this. The band grows with the prompt count — a hundred prompts covers
+     * a 600px viewport outright — and in the narrow layout the rail is drawn over the scrollbar, so
+     * claiming every press here left the thumb undraggable. [press] forwards presses that did not land
+     * on a tick to the scrollbar instead; see [barTarget].
+     */
     override fun contains(x: Int, y: Int): Boolean {
         val geo = geometry() ?: return false
         if (y < geo.top || y >= geo.top + geo.step * entries.size) return false
@@ -170,12 +194,36 @@ internal class PromptRail : JComponent() {
         repaint()
     }
 
+    /**
+     * Tick whose own rows cover [y], or -1 for the gap between two ticks.
+     *
+     * The grab band around a tick is widened past its painted thickness so a tick stays easy to hit, but
+     * it deliberately stops short of the full step: the remainder is what leaves the scrollbar beneath
+     * the rail reachable. See [contains].
+     */
     private fun indexAt(y: Int): Int {
         val geo = geometry() ?: return -1
         if (entries.isEmpty()) return -1
         val idx = (y - geo.top) / geo.step
         if (idx !in entries.indices) return -1
+        val center = geo.top + idx * geo.step + geo.step / 2
+        val grab = max(JBUI.scale(SessionUiStyle.PromptRail.TICK_THICKNESS), geo.step / 2 - JBUI.scale(2))
+        if (abs(y - center) > grab) return -1
         return idx
+    }
+
+    /**
+     * Hands a press, drag or release that did not land on a tick to the scrollbar under the rail.
+     *
+     * Only meaningful in the narrow layout, where [barTarget] is set because the rail covers the bar. A
+     * press on a tick is the rail's own and is left alone.
+     */
+    private fun press(e: MouseEvent) {
+        // barTarget is only set while the bar is visible and sized under the rail, so no further
+        // liveness check is needed here.
+        val target = barTarget ?: return
+        if (e.id == MouseEvent.MOUSE_PRESSED && indexAt(e.y) >= 0) return
+        target.dispatchEvent(SwingUtilities.convertMouseEvent(this, e, target))
     }
 
     private fun forward(e: MouseWheelEvent) {

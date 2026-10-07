@@ -102,6 +102,55 @@ class PromptRailItemsTest : BasePlatformTestCase() {
         assertEquals("a real prompt", items.single().prompt)
     }
 
+    /**
+     * Previews are a couple of hundred characters but an answer can be tens of kilobytes, and this runs
+     * from every streamed delta. The raw text is cut before the stripping regexes see it.
+     */
+    fun `test preview work is bounded by the raw text budget`() {
+        val model = SessionModel()
+        model.upsertMessage(message("u1", "user"))
+        model.updateContent("u1", part("p1", "u1", "text", "a real prompt"))
+        model.upsertMessage(message("a1", "assistant"))
+        // Deliberately larger than any budget, and shaped so stripping cannot shorten it.
+        model.updateContent("a1", part("ap1", "a1", "text", "x".repeat(200_000)))
+
+        val item = PromptRailItems.items(model).single()
+
+        assertEquals(PromptRailItems.ANSWER_LIMIT, item.answer.length)
+    }
+
+    /** A streamed delta must not re-preview every turn in the transcript, only the one that changed. */
+    fun `test the cache reuses turns that did not change`() {
+        val model = SessionModel()
+        for (i in 0 until 5) {
+            model.upsertMessage(message("u$i", "user"))
+            model.updateContent("u$i", part("p$i", "u$i", "text", "prompt $i"))
+            model.upsertMessage(message("a$i", "assistant"))
+            model.updateContent("a$i", part("ap$i", "a$i", "text", "answer $i"))
+        }
+        val cache = PromptRailItems.Cache()
+
+        val first = PromptRailItems.items(model, cache)
+        val again = PromptRailItems.items(model, cache)
+
+        assertEquals(5, cache.size())
+        // Unchanged turns come back as the very same instances, so no preview ran for them.
+        for (i in first.indices) assertSame(first[i], again[i])
+
+        // Streaming into one turn invalidates only that turn.
+        model.updateContent("a2", part("ap2", "a2", "text", "answer 2 with more streamed in"))
+        val third = PromptRailItems.items(model, cache)
+        for (i in third.indices) {
+            if (third[i].id == "u2") continue
+            assertSame("turn ${third[i].id} must be reused", first[i], third[i])
+        }
+
+        // A cleared transcript does not leave entries behind.
+        model.clear()
+        PromptRailItems.items(model, cache)
+        assertEquals(0, cache.size())
+    }
+
     fun `test compaction and reverted turns are excluded`() {
         val model = SessionModel()
         model.upsertMessage(message("u1", "user"))

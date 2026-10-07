@@ -64,6 +64,9 @@ internal class PromptRailController(
      * that actually asked for it.
      */
     private var pending = -1
+
+    /** Per-turn preview cache, so a streamed delta only re-previews the turn it changed. */
+    private val cache = PromptRailItems.Cache()
     private val adjustment = AdjustmentListener { recomputeActive() }
     private val change = ChangeListener { recomputeActive() }
     private val geometry = object : ComponentAdapter() {
@@ -165,15 +168,20 @@ internal class PromptRailController(
 
     @RequiresEdt
     private fun rebuild() {
-        val items = PromptRailItems.items(model)
+        val items = PromptRailItems.items(model, cache)
         val capacity = PromptRailItems.capacity(
             scroll.component.viewport.height,
             JBUI.scale(SessionUiStyle.PromptRail.STEP_MIN),
             JBUI.scale(SessionUiStyle.PromptRail.RAIL_INSET) / 2,
         )
         val entries = PromptRailItems.entries(items, capacity)
+        val stale = body != null && rail.items() != items
         rail.update(items, entries, activeIndex(items))
         rail.setAvailable(scroll.view === messages)
+        // The open card captured the list it was built from, so once the transcript moves on it is
+        // showing rows that no longer match the rail. Close it rather than leave it misleading; the next
+        // hover rebuilds it from the current prompts.
+        if (stale) hideAll()
         relayout()
     }
 
@@ -396,10 +404,14 @@ internal class PromptRailController(
         val height = vpBounds.height
         if (wide) {
             rail.centered = false
+            // Its own gutter: the bar is clear of the rail, so presses stay the rail's own.
+            rail.barTarget = null
             val right = contentRight - pad
             return Rectangle(right - railW, top, railW, height)
         }
         rail.centered = true
+        // Drawn over the bar, so a press that misses a tick has to reach it.
+        rail.barTarget = scroll.bar.takeIf { barBounds != null }
         if (barBounds != null) {
             val width = barBounds.width.coerceAtMost(railW).coerceAtLeast(JBUI.scale(2))
             val x = barBounds.x + (barBounds.width - width) / 2
