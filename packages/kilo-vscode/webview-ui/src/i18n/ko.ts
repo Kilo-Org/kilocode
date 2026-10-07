@@ -64,6 +64,7 @@ export const dict = {
   ...anacondaDesktopDict,
   ...cloudProviderDict,
   "task.swarm.title": "보드",
+  "task.swarm.open": "보드 열기",
   "task.swarm.refresh": "새로 고침",
   "task.swarm.reset": "보드 초기화",
   "task.swarm.resetTitle": "이 보드를 초기화할까요?",
@@ -1427,6 +1428,11 @@ export const dict = {
   "settings.experimental.browserAutomation.systemChrome.title": "시스템 Chrome 사용",
   "settings.experimental.browserAutomation.systemChrome.description":
     "통합 브라우저에 설치된 Google Chrome을 사용합니다. 호환되는 Playwright Chromium 브라우저가 이미 설치된 경우에만 비활성화하세요.",
+  "settings.experimental.browserLinks.title": "링크 열기 위치",
+  "settings.experimental.browserLinks.description":
+    "Kilo 채팅에서 웹 링크를 여는 위치를 선택합니다. 통합 브라우저가 필요합니다.",
+  "settings.experimental.browserLinks.external": "시스템 브라우저",
+  "settings.experimental.browserLinks.integrated": "통합 브라우저",
   "chat.search.searchingHistory": "이전 메시지를 검색하는 중…",
   "browserTab.noSession": "세션에서 브라우저를 열어 로컬 애플리케이션이나 공개 HTTPS 페이지를 미리 보세요.",
   "browserTab.disabled": "통합 브라우저가 비활성화되어 있습니다. Kilo 설정 > 실험에서 활성화하세요.",

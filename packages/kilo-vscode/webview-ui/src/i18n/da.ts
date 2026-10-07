@@ -60,6 +60,7 @@ export const dict = {
   ...anacondaDesktopDict,
   ...cloudProviderDict,
   "task.swarm.title": "Tavle",
+  "task.swarm.open": "Åbn tavle",
   "task.swarm.refresh": "Opdater",
   "task.swarm.reset": "Nulstil tavle",
   "task.swarm.resetTitle": "Nulstil denne tavle?",
@@ -1450,6 +1451,11 @@ export const dict = {
   "settings.experimental.browserAutomation.systemChrome.title": "Brug system-Chrome",
   "settings.experimental.browserAutomation.systemChrome.description":
     "Brug den installerede Google Chrome til den integrerede browser. Deaktivér kun, når en kompatibel Playwright Chromium-browser allerede er installeret.",
+  "settings.experimental.browserLinks.title": "Åbn links i",
+  "settings.experimental.browserLinks.description":
+    "Vælg, hvor web-links åbnes fra Kilo-chats. Kræver den integrerede browser.",
+  "settings.experimental.browserLinks.external": "Systembrowser",
+  "settings.experimental.browserLinks.integrated": "Integreret browser",
   "chat.search.searchingHistory": "Søger i tidligere beskeder…",
   "browserTab.noSession":
     "Åbn browseren fra en session for at forhåndsvise en lokal applikation eller en offentlig HTTPS-side.",

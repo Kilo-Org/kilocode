@@ -63,6 +63,7 @@ export const dict = {
   ...anacondaDesktopDict,
   ...cloudProviderDict,
   "task.swarm.title": "Tavle",
+  "task.swarm.open": "Åpne tavle",
   "task.swarm.refresh": "Oppdater",
   "task.swarm.reset": "Nullstill tavle",
   "task.swarm.resetTitle": "Nullstille denne tavlen?",
@@ -1447,6 +1448,11 @@ export const dict = {
   "settings.experimental.browserAutomation.systemChrome.title": "Bruk system-Chrome",
   "settings.experimental.browserAutomation.systemChrome.description":
     "Bruk den installerte Google Chrome for den integrerte nettleseren. Deaktiver bare når en kompatibel Playwright Chromium-nettleser allerede er installert.",
+  "settings.experimental.browserLinks.title": "Åpne lenker i",
+  "settings.experimental.browserLinks.description":
+    "Velg hvor nettlenker åpnes fra Kilo-samtaler. Krever Integrert nettleser.",
+  "settings.experimental.browserLinks.external": "Systemnettleser",
+  "settings.experimental.browserLinks.integrated": "Integrert nettleser",
   "chat.search.searchingHistory": "Søker i tidligere meldinger…",
   "browserTab.noSession":
     "Åpne nettleseren fra en økt for å forhåndsvise en lokal applikasjon eller en offentlig HTTPS-side.",

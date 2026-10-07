@@ -61,6 +61,7 @@ export const dict = {
   ...anacondaDesktopDict,
   ...cloudProviderDict,
   "task.swarm.title": "看板",
+  "task.swarm.open": "打開看板",
   "task.swarm.refresh": "重新整理",
   "task.swarm.reset": "重設看板",
   "task.swarm.resetTitle": "重設此看板？",
@@ -1374,6 +1375,10 @@ export const dict = {
   "settings.experimental.browserAutomation.systemChrome.title": "使用系統 Chrome",
   "settings.experimental.browserAutomation.systemChrome.description":
     "為整合瀏覽器使用已安裝的 Google Chrome。僅在已安裝相容的 Playwright Chromium 瀏覽器時才停用。",
+  "settings.experimental.browserLinks.title": "連結開啟位置",
+  "settings.experimental.browserLinks.description": "選擇 Kilo 聊天中的網頁連結開啟位置。需要整合瀏覽器。",
+  "settings.experimental.browserLinks.external": "系統瀏覽器",
+  "settings.experimental.browserLinks.integrated": "整合瀏覽器",
   "chat.search.searchingHistory": "正在搜尋較早的訊息…",
   "browserTab.noSession": "從工作階段開啟瀏覽器以預覽本機應用程式或公開 HTTPS 頁面。",
   "browserTab.disabled": "整合瀏覽器已停用。請在 Kilo 設定 > 實驗性中啟用。",

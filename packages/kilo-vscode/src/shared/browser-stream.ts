@@ -53,6 +53,10 @@ export type BrowserInteraction =
 
 export type WheelInteraction = Extract<BrowserInteraction, { kind: "wheel" }>
 
+// The host clamps the streamed page to these bounds. The viewport the webview publishes must use the same bounds, so
+// the frame and the canvas size stay equal and the preview is never scaled back up.
+export const VIEWPORT_LIMIT = { width: 4096, height: 2160 } as const
+
 // Coalesces compatible wheel input in place. Coordinates, modifiers, axis direction, and the 10000 cap are
 // ordering barriers, so callers can keep batching while preserving scroll distance and reversals.
 export function mergeWheel(current: WheelInteraction, next: WheelInteraction): boolean {

@@ -234,4 +234,34 @@ assert.equal(closed, 1)
 assert.deepEqual(sent.at(-1), { type: "close", scope })
 dispose()
 assert.equal(listeners.size, 0)
+
+const emptyRoot = document.createElement("div")
+document.body.append(emptyRoot)
+const sentEmpty: BrowserCommand[] = []
+const disposeEmpty = render(
+  () => (
+    <BrowserPanel
+      scope={() => undefined}
+      labels={labels()}
+      theme={() => "light"}
+      transport={{
+        send: (command) => sentEmpty.push(command),
+        subscribe: () => () => undefined,
+      }}
+      download={() => undefined}
+      settings={() => undefined}
+      onReference={() => undefined}
+      onClose={() => undefined}
+    />
+  ),
+  emptyRoot,
+)
+assert.equal(sentEmpty.length, 0)
+const noSession = emptyRoot.querySelector('[role="alert"][data-component="card"][data-variant="warning"]')
+assert.ok(noSession, "no-session panel shows a warning card")
+assert.equal(noSession.textContent?.includes(labels().noSession), true)
+assert.equal(emptyRoot.querySelector(".am-browser-empty"), null)
+assert.equal((emptyRoot.querySelector("input") as HTMLInputElement | null)?.disabled, true)
+assert.equal((emptyRoot.querySelector(`button[aria-label="${labels().open}"]`) as HTMLButtonElement)?.disabled, true)
+disposeEmpty()
 await window.happyDOM.close()

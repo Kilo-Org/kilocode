@@ -60,6 +60,7 @@ export const dict = {
   ...anacondaDesktopDict,
   ...cloudProviderDict,
   "task.swarm.title": "Доска",
+  "task.swarm.open": "Открыть доску",
   "task.swarm.refresh": "Обновить",
   "task.swarm.reset": "Сбросить доску",
   "task.swarm.resetTitle": "Сбросить эту доску?",
@@ -1449,6 +1450,11 @@ export const dict = {
   "settings.experimental.browserAutomation.systemChrome.title": "Использовать системный Chrome",
   "settings.experimental.browserAutomation.systemChrome.description":
     "Использовать установленный Google Chrome для встроенного браузера. Отключайте только если совместимый браузер Playwright Chromium уже установлен.",
+  "settings.experimental.browserLinks.title": "Открывать ссылки в",
+  "settings.experimental.browserLinks.description":
+    "Выберите, где открывать веб-ссылки из чатов Kilo. Требуется встроенный браузер.",
+  "settings.experimental.browserLinks.external": "Системный браузер",
+  "settings.experimental.browserLinks.integrated": "Встроенный браузер",
   "chat.search.searchingHistory": "Поиск в более ранних сообщениях…",
   "browserTab.noSession":
     "Откройте браузер из сеанса, чтобы просмотреть локальное приложение или публичную HTTPS-страницу.",

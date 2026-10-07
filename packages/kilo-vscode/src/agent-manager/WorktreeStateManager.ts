@@ -58,6 +58,8 @@ export interface Worktree {
   autoNamePromptCount?: number
   /** Section this worktree belongs to, or undefined for ungrouped. */
   sectionId?: string
+  /** Pinned worktrees show at the top of the sidebar. The section is kept for when the pin is removed. */
+  pinned?: boolean
 }
 
 export interface Section {
@@ -320,6 +322,18 @@ export class WorktreeStateManager {
     void this.save()
   }
 
+  /** Pin or unpin a worktree. Multi-version siblings follow so the group stays together. */
+  setWorktreePinned(id: string, pinned: boolean): void {
+    const wt = this.worktrees.get(id)
+    if (!wt) return
+    for (const item of this.worktrees.values()) {
+      if (item.id !== id && (!wt.groupId || item.groupId !== wt.groupId)) continue
+      item.pinned = pinned || undefined
+    }
+    this.setNormalizedWorktreeOrder(this.worktreeOrder)
+    void this.save()
+  }
+
   updateWorktreePR(id: string, prNumber?: number, prUrl?: string, prState?: string): void {
     const wt = this.worktrees.get(id)
     if (!wt) return
@@ -483,10 +497,16 @@ export class WorktreeStateManager {
     void this.save()
   }
 
+  /** Top-level worktrees: ungrouped and pinned. Pinned worktrees render above sections. */
+  private top(id: string): boolean {
+    const wt = this.worktrees.get(id)
+    return !!wt && (!wt.sectionId || wt.pinned === true)
+  }
+
   private ordered(order: string[]): string[] {
     const idx = new Map(order.map((id, i) => [id, i] as const))
     return [...this.worktrees.values()]
-      .filter((wt) => !wt.sectionId)
+      .filter((wt) => this.top(wt.id))
       .sort((a, b) => (idx.get(a.id) ?? Number.MAX_SAFE_INTEGER) - (idx.get(b.id) ?? Number.MAX_SAFE_INTEGER))
       .map((wt) => wt.id)
   }
@@ -511,7 +531,7 @@ export class WorktreeStateManager {
     const normalized = [
       ...this.ordered(result),
       ...result.filter((id) => this.sections.has(id)),
-      ...result.filter((id) => this.worktrees.get(id)?.sectionId),
+      ...result.filter((id) => this.worktrees.has(id) && !this.top(id)),
     ]
 
     const changed =

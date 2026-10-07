@@ -60,6 +60,7 @@ export const dict = {
   ...anacondaDesktopDict,
   ...cloudProviderDict,
   "task.swarm.title": "Bord",
+  "task.swarm.open": "Bord openen",
   "task.swarm.refresh": "Vernieuwen",
   "task.swarm.reset": "Bord resetten",
   "task.swarm.resetTitle": "Dit bord resetten?",
@@ -1481,6 +1482,11 @@ export const dict = {
   "settings.experimental.browserAutomation.systemChrome.title": "Gebruik Systeem Chrome",
   "settings.experimental.browserAutomation.systemChrome.description":
     "Gebruik de geïnstalleerde Google Chrome voor de geïntegreerde browser. Schakel dit alleen uit als er al een compatibele Playwright Chromium-browser is geïnstalleerd.",
+  "settings.experimental.browserLinks.title": "Links openen in",
+  "settings.experimental.browserLinks.description":
+    "Kies waar weblinks openen vanuit Kilo-chats. Vereist de geïntegreerde browser.",
+  "settings.experimental.browserLinks.external": "Systeembrowser",
+  "settings.experimental.browserLinks.integrated": "Geïntegreerde browser",
   "chat.search.searchingHistory": "Eerdere berichten doorzoeken…",
   "browserTab.noSession":
     "Open de browser vanuit een sessie om een lokale applicatie of een openbare HTTPS-pagina te bekijken.",
