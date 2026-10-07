@@ -416,7 +416,7 @@ export const ChatView: Component<ChatViewProps> = (props) => {
           <Show when={isSidebar() && !props.readonly && tabs && showTabStrip(tabs.ids())}>
             <SessionTabStrip />
           </Show>
-          <TaskHeader readonly={props.readonly} projectId={props.projectId} />
+          <TaskHeader readonly={props.readonly} />
           <div class="chat-messages-wrapper">
             <div class="chat-messages">
               <MessageList
@@ -460,6 +460,7 @@ export const ChatView: Component<ChatViewProps> = (props) => {
                 actions={(control, agents, todos) => renderActions(hasMessages(), control, agents, todos)}
                 onScrollToBottom={scrollToBottom}
                 readonly={props.readonly}
+                projectId={props.projectId}
               />
               <Show when={ownsPrompts() && !props.readonly}>
                 <PromptInput

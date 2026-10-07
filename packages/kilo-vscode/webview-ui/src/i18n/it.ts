@@ -60,6 +60,7 @@ export const dict = {
   ...anacondaDesktopDict,
   ...cloudProviderDict,
   "task.swarm.title": "Bacheca",
+  "task.swarm.open": "Apri bacheca",
   "task.swarm.refresh": "Aggiorna",
   "task.swarm.reset": "Reimposta bacheca",
   "task.swarm.resetTitle": "Reimpostare questa bacheca?",
