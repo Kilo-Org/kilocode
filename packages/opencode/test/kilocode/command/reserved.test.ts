@@ -48,9 +48,56 @@ describe("reserved command names", () => {
     expect(message).toContain("reserved for Kilo's own command")
     expect(message).toContain("Rename it")
     expect(message).toContain("turn it off in the plugin that registers it")
+    // No alias was registered, so there is nothing to point the user at.
+    expect(message).not.toContain("instead")
   })
 
-  it.live("keeps every other command when config claims a reserved name", () =>
+  test("names the alias in the warning when one is registered", () => {
+    const message = Reserved.notice("goal", "goal:command")
+    expect(message).toContain("Run yours as /goal:command instead.")
+  })
+
+  test("builds the alias as the reserved name plus the command-source suffix", () => {
+    expect(Reserved.alias("goal")).toBe("goal:command")
+  })
+
+  describe("rename", () => {
+    test("registers the alias for a full template definition", () => {
+      expect(Reserved.rename({ goal: { template: "Plugin goal: $ARGUMENTS" } }, "goal")).toBe("goal:command")
+    })
+
+    test("has nothing to register for a template-less partial override", () => {
+      expect(Reserved.rename({ goal: { model: "test/model" } }, "goal")).toBeUndefined()
+    })
+
+    test("defers to an explicit alias that defines its own template", () => {
+      expect(
+        Reserved.rename(
+          {
+            goal: { template: "Plugin goal: $ARGUMENTS" },
+            "goal:command": { template: "Explicit alias" },
+          },
+          "goal",
+        ),
+      ).toBeUndefined()
+    })
+
+    test("still registers the alias when the explicit entry is template-less", () => {
+      // A template-less `goal:command` is itself a partial override; it is meant to land on
+      // top of the auto-registered alias via the deferred-override pass, not to block it.
+      expect(
+        Reserved.rename(
+          {
+            goal: { template: "Plugin goal: $ARGUMENTS" },
+            "goal:command": { model: "test/model" },
+          },
+          "goal",
+        ),
+      ).toBe("goal:command")
+    })
+  })
+
+  it.live("keeps every other command and exposes the clash as goal:command", () =>
     provideTmpdirInstance((dir) =>
       Effect.gen(function* () {
         yield* Effect.promise(() =>
@@ -72,14 +119,63 @@ describe("reserved command names", () => {
         expect(names).toContain("ship")
         expect(names).toContain("init")
         expect(names).toContain("review")
+        expect(names).toContain("goal:command")
         expect(list.filter((item) => item.name === "goal")).toHaveLength(1)
+        // Kilo's own /goal is untouched.
         expect(yield* command.get("goal")).toMatchObject({ source: "command", template: "$ARGUMENTS" })
         expect(yield* command.get("ship")).toMatchObject({ source: "command" })
+        // The clashing template is reachable under the alias instead of being dropped.
+        expect(yield* command.get("goal:command")).toMatchObject({
+          source: "command",
+          template: "Plugin goal: $ARGUMENTS",
+          description: "Plugin goal",
+        })
       }),
     ),
   )
 
-  it.live("reports a config-sourced clash as a config warning", () =>
+  it.live("does not alias a template-less partial override", () =>
+    provideTmpdirInstance((dir) =>
+      Effect.gen(function* () {
+        yield* Effect.promise(() =>
+          Bun.write(path.join(dir, "opencode.json"), JSON.stringify({ command: { goal: { model: "test/model" } } })),
+        )
+
+        const command = yield* Command.Service
+        const list = yield* command.list()
+
+        expect(list.map((item) => item.name)).not.toContain("goal:command")
+        expect(yield* command.get("goal")).toMatchObject({ source: "command", template: "$ARGUMENTS" })
+
+        const warnings = yield* Config.Service.use((svc) => svc.warnings())
+        const message = warnings.find((item) => item.path === "command.goal")?.message
+        expect(message).toBeDefined()
+        expect(message).not.toContain("instead")
+      }),
+    ),
+  )
+
+  for (const order of ["alias-first", "goal-first"] as const) {
+    it.live(`lets an explicit goal:command entry win regardless of key order (${order})`, () =>
+      provideTmpdirInstance((dir) =>
+        Effect.gen(function* () {
+          const command = {
+            "goal:command": { template: "Explicit alias" },
+            goal: { template: "Plugin goal: $ARGUMENTS" },
+          }
+          const ordered =
+            order === "alias-first" ? command : { goal: command.goal, "goal:command": command["goal:command"] }
+          yield* Effect.promise(() => Bun.write(path.join(dir, "opencode.json"), JSON.stringify({ command: ordered })))
+
+          const svc = yield* Command.Service
+          expect(yield* svc.get("goal:command")).toMatchObject({ source: "command", template: "Explicit alias" })
+          expect(yield* svc.get("goal")).toMatchObject({ source: "command", template: "$ARGUMENTS" })
+        }),
+      ),
+    )
+  }
+
+  it.live("reports a config-sourced clash as a config warning naming the alias", () =>
     provideTmpdirInstance((dir) =>
       Effect.gen(function* () {
         yield* Effect.promise(() =>
@@ -92,9 +188,9 @@ describe("reserved command names", () => {
         const warnings = yield* Config.Service.use((svc) => svc.warnings())
 
         expect(warnings.some((item) => item.path === "command.goal")).toBe(true)
-        expect(warnings.find((item) => item.path === "command.goal")?.message).toContain(
-          '"goal" command registered by your config or a plugin',
-        )
+        const message = warnings.find((item) => item.path === "command.goal")?.message
+        expect(message).toContain('"goal" command registered by your config or a plugin')
+        expect(message).toContain("Run yours as /goal:command instead.")
       }),
     ),
   )
@@ -129,16 +225,22 @@ describe("reserved command names", () => {
       yield* Plugin.Service.use((svc) => svc.list())
 
       const warnings = yield* Config.Service.use((svc) => svc.warnings())
-      expect(warnings.find((item) => item.path === "command.goal")?.message).toContain(
-        '"goal" command registered by your config or a plugin',
-      )
+      const message = warnings.find((item) => item.path === "command.goal")?.message
+      expect(message).toContain('"goal" command registered by your config or a plugin')
+      expect(message).toContain("Run yours as /goal:command instead.")
 
       // The plugin keeps every command that does not clash, and /goal stays Kilo's.
       const command = yield* Command.Service
       const list = yield* command.list()
       expect(list.map((item) => item.name)).toContain("handoff")
+      expect(list.map((item) => item.name)).toContain("goal:command")
       expect(list.filter((item) => item.name === "goal")).toHaveLength(1)
       expect(yield* command.get("goal")).toMatchObject({ source: "command", template: "$ARGUMENTS" })
+      // The plugin's own template is reachable under the alias.
+      expect(yield* command.get("goal:command")).toMatchObject({
+        source: "command",
+        template: "Plugin goal: $ARGUMENTS",
+      })
     }),
   )
 })
