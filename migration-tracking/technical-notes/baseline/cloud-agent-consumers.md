@@ -8,7 +8,7 @@ source changes in any repository.
 | Item | Value |
 |---|---|
 | Date | 2026-10-02 |
-| Updated | 2026-10-07 — applied PR #14758 review: owner-confirmed v1/v2 API difference, deploy/rollout path, sdk lockstep invariant; added `webhook-agent-ingest`; narrowed the Vercel rollout unknown |
+| Updated | 2026-10-07 — applied PR #14758 review; added `webhook-agent-ingest`; recorded the EOL removal decision for Gastown and KiloClaw |
 | Cloud repo | `Kilo-Org/cloud` at `3de933dd85070e9d15c41d8ff3af6c91ca856fd4` (read-only clone) |
 | This repo, `origin/main` (v1) | `622ed1f5ae5af2d864908a0bb759b0c9121d406c` |
 | This repo, `kilo-v2` (v2) | `a2e6c1f69b36a0215c30a80f9d13da9f530073df` |
@@ -49,8 +49,8 @@ the rest is still proposed.
 |---|---|---|---|---|---|---|---|---|---|---|
 | cloud-agent-next (hosted cloud agent; all `agent_*`/`workspace_*` sessions, incl. PR-review/auto-fix bot sandboxes) | `Kilo-Org/cloud` `services/cloud-agent-next/` | unassigned | Binary + SDK + HTTP: wrapper spawns `kilo serve` and imports `@kilocode/sdk` and `@kilocode/sdk/v2` | `@kilocode/cli@7.8.1` npm-global in sandbox image (Dockerfile `ARG KILOCODE_CLI_VERSION`); `KILOCODE_CLI_VERSION` in `wrangler.jsonc` `image_vars`/`build_vars` for every container class; `@kilocode/sdk@7.8.1` in `package.json` and `wrapper/package.json`; single source `src/shared/kilo-cli-version.ts` | 7.8.1 | Bump `KILO_CLI_VERSION` + manifests; `wrangler deploy` rebuilds Cloudflare Containers (changed-worker matrix in `deploy-workers.yml`; `deploy-production.yml`/`deploy-staging.yml`); `rollout_active_grace_period 1800` | yes | Primary hosted runtime; embeds the v1 CLI server + SDK; every hosted agent flow executes here. Owner-confirmed (PR #14758): the v1↔v2 message/API differs significantly, so this is a required adaptation, not a version bump alone; the concrete deltas are #14426 | G1 for adaptation; independent cutover (pinned, own go/no-go) | cloud@3de933dd `services/cloud-agent-next/Dockerfile:6,64`; `src/shared/kilo-cli-version.ts:1`; `wrangler.jsonc:182,277`; `wrapper/package.json:11`; `wrapper/src/control-plane/kilo-runtime.ts:184`; `wrapper/src/control/worktree-runtime.ts:379` |
 | auto-routing-benchmark (decider benchmark runner) | `services/auto-routing-benchmark/container/` | unassigned | Binary: spawns `kilo run --format json` | `npm install -g @kilocode/cli@latest` resolved at image build; no version pin | latest at last image build (7.8.x as of the assessed SHA; exact build unverified) | `wrangler deploy` builds/pushes the container image; each deploy re-pins to that day's `latest` | yes | Floats on `@kilocode/cli@latest`, so a v2 `latest` reaches it automatically | G1 | cloud@3de933dd `services/auto-routing-benchmark/container/Dockerfile:12`; `container/server.mjs:64`; `wrangler.jsonc:32-39` |
-| Gastown (agent orchestration via Durable Objects + container) | `services/gastown/container/` | unassigned | Binary + SDK: spawns `kilo serve` via `createKilo()`; ships `@kilocode/plugin` for plugin discovery | `@kilocode/cli@7.2.14` (+ `cli-linux-x64`, `cli-linux-x64-musl`, `@kilocode/plugin@7.2.14`) in Dockerfile; `@kilocode/sdk@7.2.14`, `@kilocode/plugin@7.2.52` in `container/package.json` | 7.2.14 | `pnpm --filter cloudflare-gastown deploy:prod` → `container:prepare` + container build + `wrangler deploy`; `max_instances 500` | no (EOL) | Owner disposition on PR #14758 (pandemicsyn, 2026-10-05): Gastown is EOL'd; do not invest effort updating it. Runtime facts recorded for completeness only | n/a (EOL; no v2 work) | cloud@3de933dd `services/gastown/container/Dockerfile:80-81`; `container/package.json:15-16`; `container/src/process-manager.ts:9,664`; PR #14758 review comment |
-| KiloClaw (per-user OpenClaw runtimes on Fly.io) | `services/kiloclaw/` | unassigned | Binary: ships `@kilocode/cli` in the Fly image and spawns `kilo run --auto`; controller also configures the `kilo` provider | Baked `@kilocode/cli@7.2.31` in Dockerfile; controller runs background `npm install -g @kilocode/cli@latest` 3h after boot when `KILOCLAW_KILO_CLI=true` | baked 7.2.31, then per-instance self-upgrade to `latest` | `deploy-kiloclaw.yml` builds/pushes the Fly image; each machine self-upgrades at runtime | no (EOL) | Owner disposition on PR #14758 (pandemicsyn, 2026-10-05): KiloClaw is EOL'd; take it wholly out of v2 support if possible. Kilo only appears as an optional CLI users may invoke from OpenClaw and as a rescue/doctor admin mechanic, which the owner flags as the most likely to break. Residual risk: the runtime `@latest` self-upgrade can still pull a v2 release into EOL machines without an image rebuild; accepted because no v2 support is planned. The doctor route today runs `openclaw doctor`, not the Kilo CLI | n/a (EOL; no v2 work) | cloud@3de933dd `services/kiloclaw/Dockerfile:93`; `controller/src/index.ts:638-646`; `controller/src/routes/kilo-cli-run.ts:120,159`; `controller/src/routes/doctor.ts:420-421`; `docs/instance-features.md:29`; PR #14758 review comment |
+| Gastown (agent orchestration via Durable Objects + container) | `services/gastown/container/` | unassigned | Binary + SDK: spawns `kilo serve` via `createKilo()`; ships `@kilocode/plugin` for plugin discovery | `@kilocode/cli@7.2.14` (+ `cli-linux-x64`, `cli-linux-x64-musl`, `@kilocode/plugin@7.2.14`) in Dockerfile; `@kilocode/sdk@7.2.14`, `@kilocode/plugin@7.2.52` in `container/package.json` | 7.2.14 | `pnpm --filter cloudflare-gastown deploy:prod` → `container:prepare` + container build + `wrangler deploy`; `max_instances 500` | no (EOL; slated for removal) | Owner disposition on PR #14758 (pandemicsyn, 2026-10-05): Gastown is EOL'd and slated for removal; do not invest effort updating it or add v2 compatibility. Removal tracking not yet created — see "EOL removal signal". Runtime facts recorded for completeness only | n/a (EOL; no v2 work) | cloud@3de933dd `services/gastown/container/Dockerfile:80-81`; `container/package.json:15-16`; `container/src/process-manager.ts:9,664`; PR #14758 review comment |
+| KiloClaw (per-user OpenClaw runtimes on Fly.io) | `services/kiloclaw/` | unassigned | Binary: ships `@kilocode/cli` in the Fly image and spawns `kilo run --auto`; controller also configures the `kilo` provider | Baked `@kilocode/cli@7.2.31` in Dockerfile; controller runs background `npm install -g @kilocode/cli@latest` 3h after boot when `KILOCLAW_KILO_CLI=true` | baked 7.2.31, then per-instance self-upgrade to `latest` | `deploy-kiloclaw.yml` builds/pushes the Fly image; each machine self-upgrades at runtime | no (EOL; slated for removal) | Owner disposition on PR #14758 (pandemicsyn, 2026-10-05): KiloClaw is EOL'd and slated for removal; take it wholly out of v2 support if possible. Kilo only appears as an optional CLI users may invoke from OpenClaw and as a rescue/doctor admin mechanic, which the owner flags as the most likely to break. Residual risk: the runtime `@latest` self-upgrade can still pull a v2 release into EOL machines without an image rebuild; accepted because no v2 support is planned. The doctor route today runs `openclaw doctor`, not the Kilo CLI. Client-side removal/disposition is recorded by kilocode #14419 (its acceptance allows a product-decision removal) and inventoried by #14415; execution-plan Decision 5 already drops the client KiloClaw port. Cloud-service removal is not yet tracked — see "EOL removal signal" | n/a (EOL; no v2 work) | cloud@3de933dd `services/kiloclaw/Dockerfile:93`; `controller/src/index.ts:638-646`; `controller/src/routes/kilo-cli-run.ts:120,159`; `controller/src/routes/doctor.ts:420-421`; `docs/instance-features.md:29`; PR #14758 review comment |
 | MCP catalog generator (CI) | `.github/workflows/kilo-mcp-catalog.yml` + `apps/web/src/scripts/mcp-catalog/catalog.ts` | unassigned | Binary: `kilo run --model … --variant … --format json` | `npm install -g @kilocode/cli` (unpinned) inside the workflow | workflow-run `latest` | Runs on every PR and main push; a required `catalog (PR)` check | yes (CI consumer executing the runtime) | Floats on `@latest`; generates summaries used by `services/kilo-mcp` | G1 | cloud@3de933dd `.github/workflows/kilo-mcp-catalog.yml:115,371`; `apps/web/src/scripts/mcp-catalog/catalog.ts:714,722` |
 | code-review-infra | `services/code-review-infra/` | unassigned | HTTP only: calls cloud-agent-next `prepareSession`/`initiate` and `interruptSession` | n/a (no Kilo package) | n/a | n/a | no | Indirect caller: no runtime embed; cloud-agent-next owns execution and the response contract | n/a | cloud@3de933dd `services/code-review-infra/src/code-review-orchestrator.ts:1243,1262` |
 | auto-fix-infra | `services/auto-fix-infra/` | unassigned | HTTP only: calls cloud-agent-next prepare/initiate | n/a | n/a | n/a | no | Same as code-review-infra | n/a | cloud@3de933dd `services/auto-fix-infra/src/fix-orchestrator.ts:259,270` |
@@ -96,14 +96,18 @@ JetBrains.
 
 ### Out of scope
 
-- **Gastown** — owner disposition: EOL'd; do not invest effort updating it. The
-  runtime facts are retained in the inventory for completeness only.
-- **KiloClaw** — owner disposition: EOL'd; take it wholly out of v2 support if
-  possible. The optional CLI use and the rescue/doctor admin mechanic are the
-  only Kilo touchpoints; the owner flags the doctor mechanic as the most likely
-  to break. Its runtime `@latest` self-upgrade can still pull v2 into EOL
-  machines without an image rebuild — recorded as an accepted residual risk, not
-  a support obligation.
+- **Gastown** — owner disposition: EOL'd and slated for removal; do not invest
+  effort updating it or add v2 compatibility. The runtime facts are retained in
+  the inventory for completeness only; removal tracking is not yet created (see
+  "EOL removal signal").
+- **KiloClaw** — owner disposition: EOL'd and slated for removal; take it wholly
+  out of v2 support if possible. The optional CLI use and the rescue/doctor admin
+  mechanic are the only Kilo touchpoints; the owner flags the doctor mechanic as
+  the most likely to break. Its runtime `@latest` self-upgrade can still pull v2
+  into EOL machines without an image rebuild — recorded as an accepted residual
+  risk, not a support obligation. Client-side disposition is handled by #14419
+  (and inventoried by #14415); cloud-service removal is not yet tracked (see
+  "EOL removal signal").
 - **code-review-infra, auto-fix-infra, auto-triage-infra, security-auto-analysis,
   webhook-agent-ingest** — orchestration callers of cloud-agent-next's tRPC API
   (`prepareSession`/`initiate*`). They embed no Kilo runtime; any
@@ -121,6 +125,24 @@ JetBrains.
 - **kilo-ops, wasteland, mcp-gateway, images-mcp, kilo-mcp** — no runtime
   embedding found.
 - The **`kilo cloud` CLI client** in this repo — tracked separately.
+
+## EOL removal signal
+
+Both services are end-of-life and slated for removal. Recorded here so downstream
+tasks stop building v2 compatibility for them and the removal work can be
+scheduled. This is the decision record; the removal issues themselves belong in
+`Kilo-Org/cloud`.
+
+| Consumer | Decision | Existing downstream task | Removal tracking |
+|---|---|---|---|
+| KiloClaw | EOL; remove; not needed for v2 | kilocode #14419 records the client-side product-decision removal (its acceptance allows it) and #14415 inventories it; execution-plan Decision 5 already drops the client KiloClaw port | Missing: cloud-service removal of `services/kiloclaw` (worker/controller/container) and its satellites (`kiloclaw-billing`, `kiloclaw-inbound-email`, `kilo-chat`, the `kiloclaw_chat` path in `webhook-agent-ingest`, the `apps/web` instance UI, DB tables, Fly.io app/DNS) is untracked |
+| Gastown | EOL; remove | None in either repo | Missing: removal of `services/gastown` (worker + container + deploy config) is untracked |
+
+Cascade note: confirm whether `kilo-chat` has consumers outside KiloClaw before
+including it in the KiloClaw removal; `webhook-agent-ingest` posts to it today.
+
+Action: create the removal issue(s) in `Kilo-Org/cloud` (owner to confirm). Until
+then this decision is the only record.
 
 ## Owner-confirmed findings (PR #14758 review, 2026-10-06)
 
@@ -155,6 +177,9 @@ File: `migration-tracking/plans/kilo-opencode-v2-plan-progress.md`, section
    cloud-hosted consumer compatibility.
 3. Link this baseline document from the #14023 subissue list area so the epic's
    evidence is one hop from the plan.
+4. Do not add v2 rows for the EOL consumers (Gastown, KiloClaw). Record them as
+   product-decision removals and reference the cloud removal issue(s) once
+   created (see "EOL removal signal").
 
 Evidence links for the epic: #14425 (this discovery), #14426 (contracts),
 #14427 (adaptation), #14428 (validation).
