@@ -30,6 +30,7 @@ import {
 } from "solid-js"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { Popover } from "@kilocode/kilo-ui/popover"
+import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { useLanguage } from "../../../context/language"
 import { useSession } from "../../../context/session"
 import { useRunBoundary } from "../run-boundary"
@@ -385,7 +386,7 @@ export const TodoChip: Component<TodoChipProps> = (props) => {
                     <Icon name="close-small" size="small" />
                   </Show>
                   <Show when={item.status === "in_progress"}>
-                    <span data-slot="todo-panel-spin" />
+                    <Spinner class="todo-panel-spin" />
                   </Show>
                   <Show when={item.status === "pending"}>
                     <span data-slot="todo-panel-open" />
