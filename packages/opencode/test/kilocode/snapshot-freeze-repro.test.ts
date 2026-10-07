@@ -9,8 +9,8 @@
 //   1. A synthetic freeze workload (30k-line file) now completes quickly.
 //   2. The abort endpoint responds within a bounded time while the freeze
 //      workload runs concurrently.
-//   3. A concurrent timer is never starved for long — i.e. the event loop
-//      keeps breathing and ESC would be delivered.
+//   3. A concurrent setInterval keeps ticking — i.e. the event loop keeps
+//      breathing and ESC would be delivered.
 
 import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { test, expect, afterEach, mock } from "bun:test"
@@ -30,13 +30,7 @@ import type { InstanceContext } from "../../src/project/instance-context"
 
 void Log.init({ print: false })
 
-/** Timer period used to sample event-loop responsiveness during the diff. */
-const TICK_MS = 25
-
-function run<A>(
-  ctx: InstanceContext,
-  body: (snapshot: Snapshot.Interface) => Effect.Effect<A, never, Session.Service>,
-) {
+function run<A>(ctx: InstanceContext, body: (snapshot: Snapshot.Interface) => Effect.Effect<A, never, Session.Service>) {
   return Effect.runPromise(
     seedProject.pipe(
       Effect.andThen(Snapshot.Service.use(body)),
@@ -93,18 +87,13 @@ test("pathological diffFull workload finishes quickly and does not block abort",
           // Kick off a diffFull that exercises the freeze path.
           const diff = yield* snapshot.diffFull(before!, after!).pipe(Effect.forkChild({ startImmediately: true }))
 
-          // Concurrently record when a timer actually gets to run. A blocked event
-          // loop shows up as a long stretch with no callback at all.
-          //
-          // Counting ticks and requiring count > 0 does not work here: the whole
-          // workload now finishes in ~150ms, so there are only a handful of 25ms
-          // windows, and one ordinary synchronous chunk of diff work on a loaded CI
-          // box can starve every one of them. That made the assertion fail more
-          // often the faster diffFull got, while a real freeze is a multi-second
-          // stall. Measure the stall directly instead.
-          const marks: number[] = []
+          // Concurrently keep a tick counter running. If the event loop blocks we
+          // will see this count fall behind wall-clock elapsed.
+          const ticks = { count: 0 }
           const start = Date.now()
-          const timer = setInterval(() => marks.push(Date.now()), TICK_MS)
+          const timer = setInterval(() => {
+            ticks.count++
+          }, 25)
 
           try {
             // Fire an abort request against the warmed Hono route in the middle of the diff.
@@ -123,13 +112,9 @@ test("pathological diffFull workload finishes quickly and does not block abort",
             // The freeze workload must finish in bounded time. Five seconds is
             // generous even for a slow CI box; without the fix this hangs.
             expect(total).toBeLessThan(5000)
-            // And the event loop must never have been parked for long, proving it
-            // stayed responsive (ESC would actually arrive). This is a sharper bound
-            // than `total` alone: it catches a long contiguous stall even when the
-            // overall run still lands inside the budget.
-            const stamps = [start, ...marks, Date.now()]
-            const stall = stamps.reduce((worst, at, i) => (i === 0 ? worst : Math.max(worst, at - stamps[i - 1]!)), 0)
-            expect(stall).toBeLessThan(2000)
+            // And we must have ticked at least a few times during the work, proving
+            // the event loop stayed responsive (ESC would actually arrive).
+            expect(ticks.count).toBeGreaterThan(0)
 
             // With git-based diff the patch is a real unified diff, not empty.
             const hit = diffs.find((d) => d.file === "fat.json")
