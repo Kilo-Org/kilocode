@@ -521,6 +521,7 @@ export interface ChatSettingsLoadedMessage {
     shiftTabCyclesVariant: boolean
     browserAutomation: boolean
     agentManagerBrowserOpenLinksIn: "external" | "integrated"
+    workspaceTrusted: boolean
   }
 }
 

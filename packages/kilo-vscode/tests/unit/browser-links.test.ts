@@ -2,64 +2,77 @@ import { afterEach, describe, expect, test } from "bun:test"
 import * as vscode from "vscode"
 import { openBrowserLink } from "../../src/browser-links"
 
-describe("Chat browser destination", () => {
+describe("Chat link destination", () => {
   const workspace = Object.getOwnPropertyDescriptors(vscode.workspace)
-  const commands = Object.getOwnPropertyDescriptors(vscode.commands)
   const env = Object.getOwnPropertyDescriptors(vscode.env)
+  const uri = Object.getOwnPropertyDescriptors(vscode.Uri)
 
   afterEach(() => {
     Object.defineProperties(vscode.workspace, workspace)
-    Object.defineProperties(vscode.commands, commands)
     Object.defineProperties(vscode.env, env)
+    Object.defineProperties(vscode.Uri, uri)
   })
 
-  function setup(input: { destination?: string; enabled?: boolean; trusted?: boolean; fail?: boolean } = {}) {
-    const calls: Array<{ command: string; uri: vscode.Uri }> = []
+  function setup(input: { destination?: string; enabled?: boolean; trusted?: boolean } = {}) {
+    const external: string[] = []
     Object.defineProperty(vscode.workspace, "isTrusted", { configurable: true, value: input.trusted !== false })
     vscode.workspace.getConfiguration = (() =>
       ({
         get: (key: string, fallback: unknown) =>
           key === "openLinksIn"
-            ? (input.destination ?? fallback)
+            ? (input.destination ?? "integrated")
             : key === "browserAutomation"
               ? input.enabled !== false
               : fallback,
       }) as vscode.WorkspaceConfiguration) as typeof vscode.workspace.getConfiguration
-    vscode.commands.executeCommand = (async (command: string, uri: vscode.Uri) => {
-      calls.push({ command, uri })
-      if (input.fail) throw new Error("Browser navigation failed")
-    }) as typeof vscode.commands.executeCommand
-    vscode.env.openExternal = async (uri) => {
-      calls.push({ command: "external", uri })
+    vscode.Uri.parse = ((value: string) => value) as unknown as typeof vscode.Uri.parse
+    vscode.env.openExternal = async (target) => {
+      external.push(String(target))
       return true
     }
-    return calls
+    return external
   }
 
-  test("defaults to the browser tab when the flag is on and nothing is saved", async () => {
-    const calls = setup()
-    await openBrowserLink("https://example.com")
-    expect(calls).toEqual([{ command: "simpleBrowser.api.open", uri: vscode.Uri.parse("https://example.com") }])
+  test("opens in the Integrated Browser when the opener accepts the link", async () => {
+    const external = setup()
+    const opened: string[] = []
+    await openBrowserLink("https://example.com", () => {
+      opened.push("https://example.com")
+      return true
+    })
+    expect(opened).toEqual(["https://example.com"])
+    expect(external).toEqual([])
   })
 
-  test("does not open the external browser after a tab navigation error", async () => {
-    const calls = setup({ fail: true })
-    await expect(openBrowserLink("https://example.com")).rejects.toThrow("Browser navigation failed")
-    expect(calls.map((call) => call.command)).toEqual(["simpleBrowser.api.open"])
+  test("falls back to the system browser when the opener cannot take the link", async () => {
+    const external = setup()
+    await openBrowserLink("https://example.com", () => false)
+    expect(external).toEqual(["https://example.com"])
+  })
+
+  test("falls back to the system browser when no in-app opener is available", async () => {
+    const external = setup()
+    await openBrowserLink("https://example.com")
+    expect(external).toEqual(["https://example.com"])
   })
 
   test.each([{ destination: "external" }, { enabled: false }, { trusted: false }])(
-    "opens externally when the user opts out or integration is unavailable: %j",
+    "opens externally when in-app routing is unavailable: %j",
     async (input) => {
-      const calls = setup(input)
-      await openBrowserLink("https://example.com")
-      expect(calls).toEqual([{ command: "external", uri: vscode.Uri.parse("https://example.com") }])
+      const external = setup(input)
+      const opened: string[] = []
+      await openBrowserLink("https://example.com", () => {
+        opened.push("yes")
+        return true
+      })
+      expect(opened).toEqual([])
+      expect(external).toEqual(["https://example.com"])
     },
   )
 
   test("leaves non-web schemes with VS Code's external opener", async () => {
-    const calls = setup()
-    await openBrowserLink("mailto:test@example.com")
-    expect(calls).toEqual([{ command: "external", uri: vscode.Uri.parse("mailto:test@example.com") }])
+    const external = setup()
+    await openBrowserLink("mailto:test@example.com", () => true)
+    expect(external).toEqual(["mailto:test@example.com"])
   })
 })

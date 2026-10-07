@@ -13,6 +13,7 @@ export function buildChatSettingsMessage() {
         .getConfiguration("kilo-code.new.experimental")
         .get("browserAutomation", false),
       agentManagerBrowserOpenLinksIn: integratedBrowserLinkDestination(),
+      workspaceTrusted: vscode.workspace.isTrusted,
     },
   }
 }

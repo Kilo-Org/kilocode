@@ -25,9 +25,9 @@ function openExternal(url: unknown): void {
   void vscode.env.openExternal(vscode.Uri.parse(url))
 }
 
-function openLink(url: unknown): void {
+function openLink(url: unknown, openIntegrated?: (url: string) => boolean): void {
   if (typeof url !== "string") return
-  void openBrowserLink(url).catch((err) => {
+  void openBrowserLink(url, openIntegrated ? () => openIntegrated(url) : undefined).catch((err) => {
     console.error("[Kilo New] KiloProvider: open link failed:", err)
     void vscode.window.showErrorMessage(err instanceof Error ? err.message : String(err))
   })
@@ -103,6 +103,7 @@ export function handleEditorAction(
     diff?: DiffVirtualProvider
     openMarkdown?: (file: string, sessionID?: string) => boolean
     openPRComment?: (comment: PRReviewCommentData, sessionID?: string) => void
+    openLink?: (url: string) => boolean
     storage?: vscode.Uri
     post?: (msg: unknown) => void
   },
@@ -146,7 +147,7 @@ export function handleEditorAction(
     return true
   }
   if (message.type === "openWebLink") {
-    openLink(message.url)
+    openLink(message.url, opts.openLink)
     return true
   }
   if (message.type === "openDiffVirtual") {

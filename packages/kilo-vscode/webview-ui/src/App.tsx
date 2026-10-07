@@ -247,7 +247,8 @@ export const DataBridge: Component<{ children: any }> = (props) => {
       onValidateFiles={validateFiles}
       browserLinks={
         config.settings().browserAutomation === true &&
-        config.settings().agentManagerBrowserOpenLinksIn === "integrated"
+        config.settings().agentManagerBrowserOpenLinksIn === "integrated" &&
+        config.settings().workspaceTrusted === true
       }
       onNavigateToSession={(id) => session.selectSession(id)}
     >

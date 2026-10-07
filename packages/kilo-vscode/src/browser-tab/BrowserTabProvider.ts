@@ -22,6 +22,7 @@ interface Panel {
   panel: vscode.WebviewPanel
   sessionId: string
   ready: boolean
+  pendingUrl?: string
 }
 
 export interface BrowserTabProviderOptions {
@@ -136,6 +137,29 @@ export class BrowserTabProvider {
     })
   }
 
+  /**
+   * Open (or reveal) the browser tab for a session and navigate to a URL. Used
+   * when a chat web link should open in the Integrated Browser. Returns false
+   * when the browser cannot take the link, so the caller can fall back.
+   */
+  openUrl(sessionId: string, url: string): boolean {
+    if (!this.options.trusted() || !this.options.enabled()) return false
+    const directory = this.options.directory(sessionId)
+    const route = directory ? { sessionId, directory } : undefined
+    if (!route || !this.options.resolve(route) || !this.opts.browser) return false
+    this.open(sessionId)
+    const entry = this.panels.get(sessionId)
+    if (!entry) return false
+    if (entry.ready) this.navigate(entry, route, url)
+    else entry.pendingUrl = url
+    return true
+  }
+
+  private navigate(entry: Panel, route: BrowserRoute, url: string): void {
+    entry.pendingUrl = undefined
+    void this.opts.browser?.open(route, url, false).catch((error: unknown) => this.log("Browser open failed:", error))
+  }
+
   dispose(): void {
     for (const entry of this.panels.values()) entry.panel.dispose()
     this.panels.clear()
@@ -229,6 +253,13 @@ export class BrowserTabProvider {
         sessionId: entry.sessionId,
         browserAutomation: this.options.enabled(),
       })
+      if (entry.pendingUrl) {
+        const url = entry.pendingUrl
+        const directory = this.options.directory(entry.sessionId)
+        const route = directory ? { sessionId: entry.sessionId, directory } : undefined
+        if (route && this.options.resolve(route)) this.navigate(entry, route, url)
+        else entry.pendingUrl = undefined
+      }
       return
     }
     if (message.type === "browserTab.openSettings") {

@@ -83,6 +83,7 @@ function loadedSettings(message: ExtensionMessage): Record<string, unknown> | un
       "chat.shiftTabCyclesVariant": message.settings.shiftTabCyclesVariant,
       browserAutomation: message.settings.browserAutomation,
       agentManagerBrowserOpenLinksIn: message.settings.agentManagerBrowserOpenLinksIn,
+      workspaceTrusted: message.settings.workspaceTrusted,
     }
   }
   if (message.type === "throughputSettingLoaded") return { showTokenThroughput: message.visible }

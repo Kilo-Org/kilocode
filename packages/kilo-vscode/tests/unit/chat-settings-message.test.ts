@@ -17,6 +17,7 @@ type Stub = {
 const original = {
   get: vscode.workspace.getConfiguration,
   watch: vscode.workspace.onDidChangeConfiguration,
+  trusted: Object.getOwnPropertyDescriptor(vscode.workspace, "isTrusted"),
 }
 
 function stubConfig(state: Map<string, unknown>, scope = "kilo-code.new.chat") {
@@ -34,6 +35,8 @@ afterEach(() => {
   const workspace = vscode.workspace as unknown as Stub
   workspace.getConfiguration = original.get as Stub["getConfiguration"]
   workspace.onDidChangeConfiguration = original.watch
+  if (original.trusted) Object.defineProperty(vscode.workspace, "isTrusted", original.trusted)
+  else delete (vscode.workspace as { isTrusted?: boolean }).isTrusted
 })
 
 describe("buildChatSettingsMessage", () => {
@@ -55,6 +58,7 @@ describe("buildChatSettingsMessage", () => {
   })
 
   it("broadcasts browser preference changes to all open chat viewers", () => {
+    Object.defineProperty(vscode.workspace, "isTrusted", { configurable: true, value: true })
     const workspace = vscode.workspace as unknown as Stub
     const prefs = new Map<string, unknown>([
       ["kilo-code.new.experimental.browserAutomation", true],
@@ -78,7 +82,12 @@ describe("buildChatSettingsMessage", () => {
     expect(parent).toEqual([
       {
         type: "chatSettingsLoaded",
-        settings: { shiftTabCyclesVariant: true, browserAutomation: true, agentManagerBrowserOpenLinksIn: "external" },
+        settings: {
+          shiftTabCyclesVariant: true,
+          browserAutomation: true,
+          agentManagerBrowserOpenLinksIn: "external",
+          workspaceTrusted: true,
+        },
       },
     ])
     expect(child).toEqual(parent)

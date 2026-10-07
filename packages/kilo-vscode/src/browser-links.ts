@@ -3,12 +3,8 @@ import { integratedBrowserLinkDestination } from "./services/browser-automation/
 
 const BROWSER_AUTOMATION = "kilo-code.new.experimental"
 
-/** Only route web URLs in trusted workspaces with the Integrated Browser selected. */
-function shouldOpenLinkInIntegratedBrowser(url: string): boolean {
-  if (!vscode.workspace.isTrusted) return false
-  if (vscode.workspace.getConfiguration(BROWSER_AUTOMATION).get<boolean>("browserAutomation", false) !== true)
-    return false
-  if (integratedBrowserLinkDestination() !== "integrated") return false
+/** True when the URL is an http(s) web link, which is all the browser handles. */
+export function isWebLink(url: string): boolean {
   try {
     const protocol = new URL(url).protocol
     return protocol === "http:" || protocol === "https:"
@@ -17,12 +13,27 @@ function shouldOpenLinkInIntegratedBrowser(url: string): boolean {
   }
 }
 
-export async function openBrowserLink(url: string): Promise<void> {
+/**
+ * In-app routing needs a trusted workspace, the experimental Integrated Browser
+ * flag, the "integrated" destination, and an http(s) URL. Everything else stays
+ * external so a link is never swallowed when the browser is unavailable.
+ */
+export function shouldOpenLinkInIntegratedBrowser(url: string): boolean {
+  if (!vscode.workspace.isTrusted) return false
+  if (vscode.workspace.getConfiguration(BROWSER_AUTOMATION).get<boolean>("browserAutomation", false) !== true)
+    return false
+  if (integratedBrowserLinkDestination() !== "integrated") return false
+  return isWebLink(url)
+}
+
+/**
+ * Open a web link in the Kilo Integrated Browser through the provided opener,
+ * and fall back to the system browser when integration is unavailable or the
+ * opener cannot take the link. A navigation error inside the browser does not
+ * reject the opener, so this never opens both.
+ */
+export async function openBrowserLink(url: string, openIntegrated?: () => boolean): Promise<void> {
   const uri = vscode.Uri.parse(url)
-  if (shouldOpenLinkInIntegratedBrowser(url)) {
-    // The built-in command uses the native browser tab when available.
-    await vscode.commands.executeCommand("simpleBrowser.api.open", uri)
-    return
-  }
+  if (shouldOpenLinkInIntegratedBrowser(url) && openIntegrated?.()) return
   await vscode.env.openExternal(uri)
 }
