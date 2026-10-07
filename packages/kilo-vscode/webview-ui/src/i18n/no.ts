@@ -63,6 +63,7 @@ export const dict = {
   ...anacondaDesktopDict,
   ...cloudProviderDict,
   "task.swarm.title": "Tavle",
+  "task.swarm.open": "Åpne tavle",
   "task.swarm.refresh": "Oppdater",
   "task.swarm.reset": "Nullstill tavle",
   "task.swarm.resetTitle": "Nullstille denne tavlen?",

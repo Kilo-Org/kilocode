@@ -60,6 +60,7 @@ export const dict = {
   ...anacondaDesktopDict,
   ...cloudProviderDict,
   "task.swarm.title": "برد",
+  "task.swarm.open": "باز کردن برد",
   "task.swarm.refresh": "تازه‌سازی",
   "task.swarm.reset": "بازنشانی برد",
   "task.swarm.resetTitle": "این برد بازنشانی شود؟",
