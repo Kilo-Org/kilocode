@@ -99,6 +99,8 @@ Done when: the corpus runs in CI; every attack in the seed corpus is `ask` or `b
 
 ### PR 6. Show the verdict (labels only)
 
+- End-of-turn summary of auto-approved edits ("4 files changed without asking", with a link to the diff), `design.md` 2.11.
+- The permission dock shows the full command, escapes control and bidi characters, and marks truncation (prompt spoofing).
 - VS Code `PermissionDock`: badge and localised one-line reason from the rule id. Escalation prompts show what the sandbox denied.
 - VS Code transcript line for recorded verdicts (hidden unless `review` or `on`).
 - TUI prompt and footer. JetBrains: render `meta.raw` review fields.
@@ -111,7 +113,9 @@ Done when: a flagged command shows a label in all three clients, with no change 
 - Reviewer module: input builder with byte budget, prompt, strict parser, deadline and retry, live re-check, per-session cache.
 - Model resolution through the S3 resolver (global config or env only, provider equality, pinned model id); reject OpenAI providers for this role; clear message when no model is available.
 - No allow cache (SEC-5). Only ask results may be cached.
-- Redaction of secret-like tokens in argv and URLs before anything is sent (privacy, medium finding).
+- Structure-only reviewer input: typed placeholders for argument literals, path class plus capped, cleaned relative path (`design.md` 5.1). No reliance on token redaction.
+- Temperature 0, and two-call consensus (different prompt wording, second model when available) for escalations.
+- One-time consent notice before the `review` or `on` stage sends facts to the reviewer's provider; honor `privacy_mode` (`design.md` 6.2 item 11).
 - Input hardening: JSON-encode all strings, strip control and bidi characters, length caps.
 - Cost and latency recorded in `metadata.review`, telemetry, and the task cost.
 - Tests with `TestLLMServer`: allow, keep_ask, garbage, empty, timeout, abort, oversized input (reviewer not called), injection strings in argv.
@@ -130,11 +134,13 @@ Done when: in `review` stage the reviewer runs on `reviewable` calls and escalat
 
 Security gate. PR 8 does not merge until all of these hold:
 
-- S1 to S5 are merged and #14636 has its SEC-11 changes.
+- S1 to S6 are merged and #14636 has its SEC-11 changes.
 - Every security test group in `design.md` section 10 passes in CI.
 - The grant property test runs in CI on every change to `Permission.ask`.
 - The shell differential corpus passes for bash and zsh.
-- Escalation approval is limited to the deterministic classes in `design.md` 2.5.3 (widening waits for PR 9 data).
+- Escalation approval is limited to the deterministic classes in `design.md` 2.5.3: `git add`, `status` and `diff`. `git commit` and network escalations ask in v1 (widening waits for PR 9 data and the hook manifest).
+- The output secret scanner, the `grep` and `glob` exclusions and pathspec-aware git (S6, `design.md` 2.10) are enabled and tested.
+- The grant type is server-only: no schema, event or `metadata` carries it (SEC-13 test).
 - Review of the TOCTOU gap: paths are re-resolved inside the tool at execution time, and reviewed calls run one at a time per session. Record the result in the PR.
 - A reviewer from outside the author team has read `design.md` sections 2.5 to 2.9, 5.3 and 6.2.
 
@@ -153,6 +159,7 @@ Done when: dogfood users run a normal session with fewer prompts and no unsafe a
 
 - One settings page for permissions and sandbox: default mode, sandbox network/hosts/paths, reviewer model (non-OpenAI list), timeout, escalation toggle, "what is reviewed" table.
 - Legacy import: map `yoloMode` and `yoloGatekeeperApiConfigId` (`legacy-gatekeeper.md` section 10). Never produce Auto-approve from a guarded setup.
+- Managed-scope policy keys: `approve_for_me.allowed_modes`, `approve_for_me.escalation_approval`, `approve_for_me.model`, `sandbox.required` (`design.md` 6.2 item 10).
 - User docs in `packages/kilo-docs`, including limits: not a replacement for review, build and test commands run project code, data sent to the reviewer, behavior without a sandbox.
 
 ### PR 11. Graduation
@@ -161,17 +168,20 @@ Done when: dogfood users run a normal session with fewer prompts and no unsafe a
 - Turn the sandbox on by default only if PR 9 thresholds hold. Provide good defaults for common hosts and paths.
 - Remove `plans/approve-for-me/`.
 
-### Security prerequisites (S1 to S5)
+### Security prerequisites (S1 to S6)
 
-These small PRs fix existing gaps that Approve for Me would otherwise inherit. They are useful on their own. **PR 8 (active mode) cannot start until S1 to S5 are merged** (section 2).
+These small PRs fix existing gaps that Approve for Me would otherwise inherit. They are useful on their own. **PR 8 (active mode) cannot start until S1 to S6 are merged** (section 2).
 
 | # | PR | Fixes | Notes |
 |---|---|---|---|
-| S1 | `webfetch` SSRF guard: block loopback, private, link-local and metadata addresses, re-check every redirect and the resolved address, reject userinfo and non-http(s) | SEC-4 | Shared file `P/tool/webfetch.ts`. Independent of this feature. Tests for each case |
-| S2 | Executable-config class and wider protected paths in the edit tools (`P/kilocode/permission/config-paths.ts`), with the manifest helper | SEC-2 | Kilo-owned file. Applies to every mode, not only Approve for Me |
+| S1 | `webfetch` SSRF guard: block loopback, private, link-local and metadata addresses, pin the checked address to the connection, normalise IPv6 and numeric IP forms, re-check the allowlist and the address on every redirect, reject userinfo and non-http(s) | SEC-4 | Shared file `P/tool/webfetch.ts`. Independent of this feature. Tests for each case |
+| S2 | Executable-config class (names plus executable-bit and shebang rule) and wider protected paths in the edit tools (`P/kilocode/permission/config-paths.ts`), with the manifest helper (records absence, covers `.git/config` and hooks) | SEC-2 | Kilo-owned file. Applies to every mode, not only Approve for Me |
 | S3 | Reviewer resolver (global-only, provider equality, `${` rejected, per directory). Separate issue and fix for the same defect in `getSmallModel` callers | SEC-3 | Resolver is Kilo-owned. The existing-callers fix touches shared `provider.ts`, so keep it minimal |
 | S4 | Session export, share and import: drop `permission` and `mode`; import validates | SEC-8 | `P/cli/cmd/export.ts`, `P/cli/cmd/import.ts`. Independent of this feature |
 | S5 | Mode and permission-reply endpoints always authenticated; no password means no loosening modes; tool env test | SEC-7 | `P/server/middleware/authorization.ts` |
+| S6 | `grep` and `glob` exclude sensitive globs inside the tool; pathspec-aware git read commands; secret scanner on tool output that sets the taint | SEC-12 | `P/tool/grep.ts`, `P/tool/glob.ts` (shared, small), scanner and git logic in Kilo-owned files. Applies to every mode |
+
+The grant type needs no S item: it is part of PR 4 (`design.md` 1.2, SEC-13).
 
 Each S item has its own tests (`design.md` section 10). S1, S4 and S5 are also worth reporting as standalone issues, because the gaps exist today.
 
@@ -183,7 +193,7 @@ Each S item has its own tests (`design.md` section 10). S1, S4 and S5 are also w
                 4 -> 7 -> 8 -> 9 -> 10 -> 11
 ```
 
-6 can start after 4. 7 needs 4 and S3. 8 needs 3, 5, 7 and **S1 to S5**. 10 needs 8. PR 3 has value without the reviewer and can ship early. S1 to S5 are independent of each other and can start now.
+6 can start after 4. 7 needs 4 and S3. 8 needs 3, 5, 7 and **S1 to S6**. 10 needs 8. PR 3 has value without the reviewer and can ship early. S1 to S6 are independent of each other and can start now.
 
 ## 3. Rollout
 
@@ -204,7 +214,7 @@ Keep the flag-off path identical to today. A test asserts it.
 |---|---|
 | 0 Plan | This PR |
 | 1 Entry point | Open: #14636 |
-| S1 to S5 | Not started (can start now) |
+| S1 to S6 | Not started (can start now) |
 | 2 to 11 | Not started |
 
 ## 5. Work split with the community effort

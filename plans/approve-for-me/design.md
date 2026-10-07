@@ -3,7 +3,7 @@
 Line numbers refer to `main` at `9d0f7a1dd8`. They drift. Re-check them when you implement.
 Paths starting with `P/` mean `packages/opencode/src/`.
 
-Security: the requirements from the security review are in section 12 (`SEC-1` to `SEC-11`) and are enforced in the sections they touch. Sections 1.2, 2.1, 2.5 to 2.9, 3, 5.2, 5.3, 6.1, 6.2, 8, 10 and 11 changed because of them.
+Security: the requirements from the security review are in section 12 (`SEC-1` to `SEC-13`) and are enforced in the sections they touch. Sections 1.2, 2.1, 2.5 to 2.11, 3, 5.1 to 5.3, 6.1, 6.2, 8, 10 and 11 changed because of them. A second review added `SEC-12` and `SEC-13` and nine medium items.
 
 ## 0. Mode model
 
@@ -113,6 +113,9 @@ So the reviewer never edits the ruleset. Instead:
 2. It issues a grant only if **every** pattern evaluates to `ask`. If any pattern is `deny`, vetoed, protected, or `forceAsk` (except the escalation case in 2.5), the verdict is forced to `pass` and the normal flow runs.
 3. The grant is passed to `Permission.ask` as a per-call argument `reviewed: { patterns, id }`. Inside `Permission.ask` a pattern with action `ask` and a matching grant is treated as allowed.
    A pattern with any other action ignores the grant. The grant has no wildcard form. It carries the exact patterns that were reviewed.
+   **The grant type is server-only (SEC-13).** It lives in the TypeScript-only extension of `AskInput`, like `hardRuleset` (`P/permission/index.ts:49`). It is never added to `PermissionV1.AskInput` or to `Request.fields`
+   (those feed the `permission.asked` event and the wire schema, `packages/schema/src/v1/permission.ts:27-66`), and it is never read from `metadata`, which plugin tools fill freely (`packages/plugin/src/tool.ts:19-27`).
+   No HTTP route decodes `AskInput` today. A test asserts that `metadata.reviewed`, `metadata.grant` and similar keys from a plugin tool have no effect.
 4. This needs one small marked change in `Permission.ask` (shared file). It is the only change planned there. It is covered by a property test (section 10): for every generated ruleset and request, a grant never turns `deny`, a hard veto, a protected path or a `skillShell` request into an allow.
 
 Either way `reply()` is never called by the reviewer, so `interactive` semantics stay intact.
@@ -220,8 +223,11 @@ With a default-on sandbox that is not workable: ordinary Git and network use wou
 
 1. Deterministic rules run first and cannot be overridden: git hook writes, `core.hooksPath`, config and control-plane writes, system paths,
    secret reads, destructive patterns. They give `ask` or `block`. In v1 the reviewer may only approve escalations in these deterministic classes:
-   `git add`, `git commit`, `git status` and `git diff` inside the workspace repository (with no `-c` or `--git-dir` flags), and network access to hosts already in `sandbox.allowed_hosts`.
-   Every other escalation asks the human until the PR 9 data supports widening. Dependency installs always ask (install scripts run unsandboxed).
+   `git add`, `git status` and `git diff` inside the workspace repository, pathspec-aware (section 2.10), with no `-c` or `--git-dir` flag and no `GIT_*` variable in the command.
+   **`git commit` asks in v1.** An escalated commit runs hooks and commit signing unsandboxed (`policy.ts:634-636`), and signing would use your key for a commit the reviewer approved.
+   It can join the fixed classes later only if the manifest (2.6) covers `.git/hooks/*`, `.git/config`, the `core.hooksPath` target and `.husky/**`, signing is off, and no hook exists that the human has not seen.
+   **Network escalations are not approved by the reviewer in v1.** A host already in `sandbox.allowed_hosts` needs no escalation, so a "host in the allowlist" class is empty or ambiguous. Network classes are defined from PR 9 data.
+   Every other escalation asks the human. Dependency installs always ask (install scripts run unsandboxed).
 2. Scope is the narrowest one: a per-call grant (section 1.2) for the exact normalized request. Never an `always` rule, never a saved host or path.
 3. The reviewer sees the denied capability as a fact (`denied: { network: "registry.npmjs.org:443" }`), and never the model-written justification text.
 4. Shadow mode first: record what the reviewer would do next to the human decision before the first real auto-approved escalation.
@@ -255,13 +261,15 @@ Rule: edits to the **executable-config class** are always `ask` (tier 0), throug
 | CI and hooks | `.github/workflows/**`, `.gitlab-ci.yml`, `.husky/**`, `.githooks/**`, `.gitattributes`, `.pre-commit-config.yaml` |
 | Shell and env | `.envrc`, `.tool-versions`, `.npmrc`, `.yarnrc*`, `bunfig.toml`, `.cargo/config*` |
 | Build and task runners | `package.json`, `Makefile`, `justfile`, `Taskfile*`, `Dockerfile*`, `docker-compose*`, `setup.py`, `pyproject.toml`, `tox.ini`, `pytest.ini`, `conftest.py`, `build.rs`, `Cargo.toml`, `*.gradle*`, `pom.xml` |
+| Executable files | any file with the executable bit or a shebang line, `scripts/**`, `bin/**`, `*.sh`, `*.mk`, `Rakefile`, `Gemfile`, `CMakeLists.txt`, `meson.build`, `deno.json*`, `mise.toml`, `flake.nix` |
 | Tool configs that run code | `*.config.{js,cjs,mjs,ts}`, `.babelrc*`, `.eslintrc*`, `jest.config.*`, `vitest.config.*`, `webpack.config.*`, `vite.config.*` |
 
-The list lives in one table in code and has a test per group. Adding to it needs no design change.
+The list lives in one table in code and has a test per group. Adding to it needs no design change. A name list is incomplete by nature, so the executable-bit and shebang rule classifies by content, not by name.
+Paths are normalised (NFC, case-folded, `realpath`) before matching.
 
 The manifest check covers files written by a running program (a test that rewrites the Makefile):
 
-- At session start, and after every edit the **human** approved, the engine records a hash of every file in the class (a manifest).
+- At session start, and after every edit the **human** approved, the engine records a hash of every file in the class (a manifest). The manifest also records **absence** (a new `Makefile` is a change) and includes `.git/config`, the non-sample files in `.git/hooks/`, and the `core.hooksPath` target directory.
 - Before approving a known runner, a reviewable call, or any escalation, it compares the current hashes with the manifest.
 - A mismatch means "changed outside human review". All runners and all escalations ask for the rest of the session, until the user acknowledges the change in a prompt that shows what changed.
 
@@ -277,7 +285,7 @@ Rules:
 
 1. `webfetch` and `websearch` are **ask by default** in this mode. The reviewer does not decide them.
 2. Narrow allowlist, decided by rules (no model): `https` only, exact host in a small built-in docs list plus the user's own list, no userinfo, no query string, no fragment, path length cap, port 443.
-3. Deterministic SSRF guard in the tool itself (prerequisite, section 12): block loopback, private, link-local and metadata addresses, check the resolved address and **every redirect hop**, reject non-http(s) schemes, reject userinfo.
+3. Deterministic SSRF guard in the tool itself (prerequisite, section 12): block loopback, private, link-local and metadata addresses, check the resolved address and **every redirect hop**, reject non-http(s) schemes, reject userinfo. **Pin the checked address to the connection** (no second lookup, to stop DNS rebinding). Normalise IPv6 (`::1`, `fc00::/7`, `::ffff:127.0.0.1`) and numeric IP forms (decimal, octal, hex) and trailing-dot hosts before checking. Apply the exact-host allowlist again on **every redirect hop**: a redirect to another host asks.
 4. **Sensitive-read taint.** After the session reads a sensitive-class file, every call that can send data out asks for the rest of the session. Outbound-capable means `webfetch`, `websearch`,
    MCP tools, `bash` with a network command or a network escalation, and `browser-open`. Sensitive class: the existing secret globs (`.env*`, `.netrc`, `.npmrc`, `id_*`, keystores, `.ssh`, `.aws`, `.kube`, `.docker`, `.gnupg`),
    cloud and CI credential files, `*.pem`, `*.key`, `terraform.tfstate*`, `credentials*`, and `.git/config`. The taint is per root session and survives subagents.
@@ -305,6 +313,28 @@ A committed `kilo.json` can set `permission` allow rules with no trust prompt (`
 count as `ask` before review, so the reviewer still decides. Global, managed and `KILO_PERMISSION` rules are honored, as they come from the user or the organisation.
 This matches how the sandbox scope treats project config (a project may tighten, never loosen).
 
+### 2.10 Secrets that reach the model by other routes (SEC-12)
+
+The sensitive-read taint (2.7) would only fire on the `read` tool. Secrets also reach the model through paths the taint cannot see today:
+
+- **`grep` and `glob`.** The permission pattern is the regex or glob, not a file path (`P/tool/grep.ts:43-53`), and `ReadPermission.harden` applies to `read` only (`P/kilocode/permission/read.ts:12`).
+  `grep` runs rg with `--hidden` and excludes only `.git` (`packages/core/src/ripgrep.ts:293-297`), so an untracked `.env`, `.npmrc` or `id_rsa` that is not git-ignored is searched and its matching lines are returned.
+- **Git read commands.** `git diff`, `git log -p`, `git show`, `git grep` and `git cat-file` are treated as read-only (`P/kilocode/agent/index.ts:87-109`, `P/kilocode/sandbox/git.ts`), with no pathspec handling. `git diff -- .env` prints a tracked secret.
+- **Programs.** A sandboxed runner can read any file (macOS allows `file-read*` globally, `seatbelt.ts:55`; Linux uses `--ro-bind / /`) and print it. The output reaches the model.
+
+Rules:
+
+1. `grep` and `glob` exclude the sensitive globs inside the tool (an ignore list added to the rg call). A search that names a sensitive path explicitly asks.
+2. Git read commands are pathspec-aware. Tier 2 appends exclusion pathspecs for sensitive globs, or asks when the repository tracks sensitive-class files and the command can print file contents.
+3. A **secret scanner runs on every tool output** before it reaches the model (cloud and CI token shapes, PEM headers, private-key blocks, `.env`-style `KEY=value` lines with high entropy). A hit sets the taint and shows a notice.
+4. The taint is set by any of these routes, not only by `read`. It stays per root session and survives subagents.
+
+### 2.11 Auto-approved edits stay visible
+
+Tier 1 auto-approves source edits, and the reviewer cannot protect against a harmful change in a file the sandbox only contains (a backdoor in source, a bad commit later).
+So every auto-approved edit is recorded, and at the end of each turn the client shows a short summary ("4 files changed without asking", with a link to the diff).
+Commits stay on the human path (2.5.3). The summary is a client feature in PR 6.
+
 ## 3. Tool coverage (v1 policy)
 
 Permission key to policy. Source for keys and metadata: the tool survey of `P/tool/*` and `P/kilocode/tool/*`.
@@ -313,7 +343,8 @@ Permission key to policy. Source for keys and metadata: the tool survey of `P/to
 |---|---|---|
 | `bash` | tree-sitter patterns; `command`, `description`, heredocs | Tier 2, then tier 3 |
 | `edit` (edit, write, apply_patch) | relative paths; `filepath`, `diff`, `filediff` | Tier 1 in workspace and ordinary; tier 0 for protected paths and the executable-config class (2.6) |
-| `read`, `glob`, `grep` | path or pattern | Tier 1; secret reads tier 0 |
+| `read` | path | Tier 1; secret reads tier 0 |
+| `glob`, `grep` | glob or regex (not a path) | Tier 1 only with the sensitive-glob exclusion and the output scan in 2.10. A result that touches a sensitive path sets the taint |
 | `external_directory` | `dir/*` | Tier 0 |
 | `webfetch` | `url`, `format` | Ask. Auto only for the exact-host docs allowlist in 2.7. Never reviewer |
 | `websearch` | `query` | Ask in v1 (a query can carry data out, 2.7). Revisit with data |
@@ -372,6 +403,9 @@ It never receives: chat history, assistant prose (including the tool `descriptio
 tool output, file contents, environment values, absolute paths outside the workspace, or secrets.
 A byte budget (about 8 KB) applies. If the decision-critical part does not fit, the reviewer is not called and the answer is `ask`.
 
+**Structure, not literals.** Argument literals are not sent as text. The program and flags from a known set are sent as they are. Every other literal becomes a typed placeholder (`<path:ordinary>`, `<number>`, `<string>`).
+Paths are sent as class plus the in-workspace relative path, after control and bidi characters are removed and the length is capped. Redaction of "secret-like" tokens is not relied on, because a heuristic misses cases.
+
 ### 5.2 Prompt
 
 Start from the legacy principles (`legacy-gatekeeper.md` section 4) and the #13893 framing. Skeleton:
@@ -387,6 +421,7 @@ Reply with JSON only: {"decision":"allow"|"keep_ask","reason_code":"SHORT_UPPER_
 Rules for the call:
 
 - No tools. `small: true`. One retry on transport error only, inside one shared deadline (3 to 5 s).
+- Temperature 0. For **escalations**, two independent calls with different prompt wording (and, when available, a second model) must both return `allow`. Any disagreement is `keep_ask`.
 - Parse: first `{` to last `}`, `JSON.parse`, `decision` must be exactly `allow` or `keep_ask`. Anything else is `keep_ask` with `AFM.INVALID_RESPONSE`.
   A missing `reason_code` becomes `UNSPECIFIED`. Never `startsWith`.
 - On timeout, error, abort or unparsable reply: `keep_ask`. Never allow on failure.
@@ -453,7 +488,9 @@ The `approve_for_me` config key was removed from that PR on purpose: nothing rea
    - The mode endpoints and the permission reply endpoint join that always-guarded set. Without a password they refuse. In that case Approve for me and Auto-approve are unavailable and sessions stay in Sandboxed (ask), with a warning.
    - `interactive` is documented as **not** a security boundary. Human-only protection relies on authentication.
    - A change to a looser mode (toward Auto-approve or sandbox off) is published as an event, shown in the transcript ("Mode changed to Auto-approve by <client>"), and recorded in telemetry.
-   - The tool environment keeps being scrubbed of server credentials (`P/kilocode/process/env.ts`). A test asserts it, and also that the sandbox blocks loopback in the sandboxed modes.
+   - The tool environment keeps being scrubbed of server credentials (`P/kilocode/process/env.ts`). A test asserts it, and also that the sandbox blocks loopback in the sandboxed modes (it does today: seatbelt denies outbound including loopback, bubblewrap uses an empty network namespace and hides host processes).
+   - Follow-up: move the credential out of the environment. Same-user processes can read an environment variable (`/proc/<pid>/environ`, `ps eww`). Use an inherited file descriptor or a mode-0600 Unix socket.
+   - Standalone `kilo serve` or `kilo run` without a credential cannot use Approve for me or Auto-approve. This follows from the design and must be confirmed as a product decision.
 7. **`always` is once-only in Approve for me.** An `always` reply writes a global rule (`P/permission/index.ts:342-366`) shared by all sessions and subagents, which would then bypass the reviewer. In this mode `always` is stored as once,
    or accepted only with a narrow pattern (no `*`, no bare-prefix wildcard) and a warning.
 8. **Child sessions inherit the stricter mode (SEC-9).** A subagent starts in the stricter of the parent's mode and its own default. Counters (backstop, escalation cap) and taints (2.6, 2.7) key on the **root** session, so spawning a child does not reset them.
@@ -462,6 +499,8 @@ The `approve_for_me` config key was removed from that PR on purpose: nothing rea
    - Import drops `permission` and `mode`, validates the rest, and starts the session in the user's default mode.
    - Moving a session between local and cloud never makes it looser: the destination takes the stricter of the source mode and the destination default. Auto-approve and sandbox-off always need a new confirmation on the destination.
    - A test imports a crafted file and asserts that the ruleset and mode are not applied.
+10. **Managed policy.** Organisations can pin behavior with managed-scope keys only (ignored in global and project config): `approve_for_me.allowed_modes`, `approve_for_me.escalation_approval` (`on` or `off`), `approve_for_me.model`, and `sandbox.required`. An admin can disable Auto-approve and Approve for me entirely. Managed config already exists (`P/config/config.ts:973-1003`).
+11. **Consent for the review stage.** The first time the stage is `review` or `on`, show a one-time notice that structured command facts go to the reviewer model's provider, even in shadow mode where nothing is enforced. Respect `privacy_mode`.
 
 ### 6.3 Required chores for any new config key
 
@@ -508,6 +547,9 @@ Invariants (each gets a test):
 11. No allow cache. Reviewer settings come from environment and global config only, and the provider entry must match the global one (SEC-3, SEC-5).
 12. Mode and permission state never arrive from a project, an import or a share, and the mode API needs authentication (SEC-7, SEC-8).
 13. Project-scope allow rules do not bypass review in this mode (SEC-10).
+14. The grant exists only in server code. It is never in a schema, an event or `metadata` (SEC-13).
+15. Tool output that looks like a secret sets the outbound taint, whatever tool produced it (SEC-12).
+16. Escalations approved by the reviewer are limited to the deterministic classes in 2.5.3. Commits and network escalations ask in v1.
 
 Threats and answers:
 
@@ -526,6 +568,11 @@ Threats and answers:
 | Parser and shell disagree (zsh, aliases, login rc, project `shell`) | Section 2.8: strict subset, bash or zsh only, differential tests |
 | Agent or file changes the mode or imports allow-all | Section 6.2 items 6 to 9 |
 | Project `kilo.json` allows everything | Section 2.9 |
+| A plugin tool or a client forges a grant | Server-only grant type, never read from `metadata` (1.2, SEC-13) |
+| Secrets reach the model through `grep`, `glob`, git read commands or program output | Section 2.10: tool-side exclusions, pathspec-aware git, output scanner, taint |
+| Escalated `git commit` runs hooks or signs unsandboxed | `git commit` asks in v1; manifest covers hooks (2.5.3, 2.6) |
+| Unreviewed source edit plants a backdoor | Section 2.11: recorded edits, end-of-turn summary, commits on the human path |
+| Reviewer text injection through argument literals | Structure-only input, temperature 0, two-call consensus for escalations (5.1, 5.2) |
 | Agent requests an escalation to get out of the sandbox | Section 2.5: deterministic rules first, narrowest scope, facts-only input, caps, shadow mode |
 | Repeated retries of a blocked call | Backstop: stop auto-deciding after 3 consecutive blocks or 5 in the last 20 calls, and tell the user (numbers from #13893 `continuation.ts:36`) |
 | Reviewer cost abuse or latency | Tiers first, cache, deadline, per-session call cap |
@@ -569,6 +616,8 @@ Evaluation:
   - SEC-7: mode and reply endpoints refuse without credentials. Tool environment contains no server credential. Loosening is logged.
   - SEC-8: crafted export and import files do not apply permission or mode. A session move never loosens.
   - SEC-9 and SEC-10: child mode and counters. Project-scope allow rule counts as ask.
+  - SEC-12: `grep` and `glob` never return `.env`, `.npmrc` or key files. `git diff -- .env` and `git show` of tracked secrets are excluded or ask. The output scanner sets the taint on token shapes and PEM blocks.
+  - SEC-13: `metadata.reviewed` and similar keys from a plugin tool have no effect. The grant type is absent from every schema and event.
   - SEC-11: a workspace `.vscode/settings.json` value for either setting has no effect. Writes go to user settings. At startup Approve for me wins.
 
 ## 11. Keeping the upstream diff small
@@ -606,7 +655,13 @@ Findings from the security review, and where each is resolved. IDs are used in c
 | SEC-10 | Project `kilo.json` can allow everything with no trust prompt | Local-scope allow rules count as `ask` in this mode | 2.9 |
 | SEC-11 | VS Code `autoApprove.enabled` could be set by a workspace file, live (fixed in #14636) | Scope both settings to the application (user only). Writes always go to user settings. `.vscode/` and IDE dirs protected as defense in depth | 6.1, #14636 |
 
+| SEC-12 | Secrets reach the model through `grep`, `glob`, git read commands and program output. The taint misses them | Tool-side exclusions, pathspec-aware git, output secret scanner sets the taint | 2.10 |
+| SEC-13 | The grant could be forged through the schema or plugin `metadata` | Server-only type, never in a schema, event or `metadata` | 1.2 |
+
 SEC-9, SEC-10 and the once-only `always` rule (6.2 item 7) were medium findings. They are included because they use the same code and would otherwise leave a gap in a high fix.
 
-Medium and low findings that stay open and are tracked in the roadmap: reviewer injection residuals and model drift (evaluation, PR 9), privacy and redaction of command text (PR 7, PR 10), prompt spoofing in the permission dock (PR 6),
-the JetBrains and other client-side auto-reply (PR 2), TOCTOU and parallel calls (PR 8 gate), backstop counting of asks (PR 8).
+The second review's medium findings are folded in: escalated commits and the network class (2.5.3), a wider executable-config class and manifest (2.6), SSRF details (2.7), structure-only reviewer input and consensus (5.1, 5.2),
+the consent notice, credential handling and managed policy (6.2), and visible auto-approved edits (2.11).
+
+Still open and tracked in the roadmap: reviewer injection residuals and model drift (evaluation, PR 9), prompt spoofing in the permission dock (PR 6), other clients that auto-reply, including JetBrains (PR 2),
+TOCTOU and parallel calls (PR 8 gate), backstop counting of asks (PR 8), the bubblewrap `.git` protection that is computed at launch (S6 follow-up).
