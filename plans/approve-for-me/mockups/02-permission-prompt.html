@@ -27,4 +27,14 @@
 <div class="dim">Denied by the sandbox: write to <span class="mono">.git/</span>. Allow this command to run outside the sandbox once?</div>
 <div class="row" style="margin-top:10px"><span class="btn primary">Allow once</span><span class="btn">Reject</span></div>
 <div class="dim" style="margin-top:8px;font-size:11px">Approve for me mode: a reviewer can approve this after the safety rules. The line “Approved by Approve for me (escalation)” then appears in the transcript.</div></div></div></div>
+<div><h1>F. Build or CI file edit always asks</h1><div class="frame"><div class="title">Permission required</div><div class="body">
+<div class="row"><span class="pill warn">Runs code</span><span class="dim">Approve for me never edits this alone</span></div>
+<div class="code mono">edit package.json  (scripts.test)</div>
+<div class="dim">Reason: build and test files run commands. Check the change before you allow it.</div>
+<div class="row" style="margin-top:10px"><span class="btn primary">Allow once</span><span class="btn">Reject</span></div></div></div></div>
+<div><h1>G. Sending data out after reading a secret</h1><div class="frame"><div class="title">Permission required</div><div class="body">
+<div class="row"><span class="pill warn">Outbound</span><span class="dim">A secret file was read in this session</span></div>
+<div class="code mono">webfetch https://docs.example.com/search?q=…</div>
+<div class="dim">Reason: this call can send data out. Approve for me asks for every outbound call until the end of the session.</div>
+<div class="row" style="margin-top:10px"><span class="btn primary">Allow once</span><span class="btn">Reject</span></div></div></div></div>
 </body></html>

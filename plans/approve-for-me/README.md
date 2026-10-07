@@ -16,7 +16,7 @@ extensions as **Approve for Me**. It follows this approach:
 | [`design.md`](./design.md) | Architecture for the new repo: hook point, pipeline, verdicts, tool coverage, config, trust, clients |
 | [`roadmap.md`](./roadmap.md) | PR-by-PR delivery plan, acceptance criteria, rollout and evaluation |
 | [`prior-art.md`](./prior-art.md) | What to reuse from community attempts (#13893, #11619, #9138) |
-| [`mockups/`](./mockups) | HTML mockups and screenshots of the planned UI (section 7 below) |
+| [`mockups/`](./mockups) | HTML mockups and screenshots of the planned UI (section 8 below) |
 
 ## 1. What the feature is
 
@@ -82,7 +82,7 @@ ApproveForMe.review(request, context)      (new, packages/opencode/src/kilocode/
    v
 verdict: allow | ask(reason) | block(reason)
    |
-   +-- allow -> run now (once-scoped allow, no saved rule), record metadata.review
+   +-- allow -> run now (per-call grant where the rules say ask; no saved rule), record metadata.review
    +-- ask   -> normal prompt, annotated with risk label and reason
    +-- block -> tool error to the model with a stable reason; notice to the user
 ```
@@ -102,6 +102,7 @@ Full list with acceptance criteria is in [`roadmap.md`](./roadmap.md).
 
 | # | PR | Behavior change |
 |---|---|---|
+| S1 to S5 | Security prerequisites: webfetch SSRF guard, executable-config paths, reviewer resolver, import and export, authenticated mode API | Fixes existing gaps |
 | 0 | This plan | None |
 | 1 | Entry point + exclusion + mode menu (#14636) | None (hidden UI) |
 | 2 | Mode model: per-session state, flag, trust scope; selector becomes Approve for me / Sandboxed / Auto-approve and drives the sandbox | Behind the flag |
@@ -141,10 +142,30 @@ reviewer cost counts toward task cost.
 | Duplicate community work stalls again (#10248, #10267 and #11619 were closed as stale) | One owner, a public plan, small PRs, and an early reply on #14033. |
 | Client-side auto-approve in VS Code replies before the server can judge | Modes are exclusive. In Approve for Me the extension does not auto-reply. |
 | Default-on sandbox causes constant escalations and a poor first run | Escalation becomes an ask first (PR 3). Default-on only after PR 9 data. Good defaults for common hosts and paths |
-| Reviewer approves a harmful sandbox escalation | Deterministic rules first, narrowest scope, caps, shadow mode, visible off switch (`design.md` 2.5) |
+| Reviewer approves a harmful sandbox escalation | Deterministic classes only in v1, narrowest scope, caps, shadow mode, visible off switch (`design.md` 2.5) |
+| Agent edits a build file and runs it | Executable-config class asks; manifest check (`design.md` 2.6) |
+| A cloned repo redirects the reviewer or allows everything | Global-only reviewer resolver; project allow rules count as ask (`design.md` 5.3, 2.9) |
 | Mode and sandbox state diverge between clients or cloud | Mode lives on the session. Sandbox state is derived from it |
 
-## 7. Planned UI
+## 7. Security
+
+A security review of this plan found nine high-severity and several medium-severity issues. All high findings are resolved in the design (`design.md` section 12, `SEC-1` to `SEC-11`).
+
+| Area | Rule in one line |
+|---|---|
+| Grant | The reviewer never edits the ruleset. A per-call grant applies only where the original evaluation is `ask` |
+| Write then execute | Edits to build, CI, hook and IDE files always ask. A hash manifest catches changes made by running programs |
+| Reviewer model | Global config and environment only. The provider entry must match the global one |
+| Data leaving | `webfetch`, `websearch` and MCP ask by default. SSRF guard. Outbound calls ask after a secret was read |
+| Cache | No allow cache |
+| Shell | Strict simple-command subset. bash or zsh only, not chosen by the project. Off on Windows |
+| Mode and permissions | Mode API always authenticated. Import, export and share never carry permission or mode |
+| Project config | Project allow rules do not bypass review. Project config cannot set the mode or the model |
+| VS Code | Auto-approve and Approve for me settings scoped to the user (application scope). A workspace file cannot set either |
+
+The roadmap has five security prerequisites (S1 to S5) that must merge before the mode can approve anything.
+
+## 8. Planned UI
 
 Source HTML and PNG files are in [`mockups/`](./mockups). They show intent, not final pixels.
 
@@ -156,7 +177,7 @@ Source HTML and PNG files are in [`mockups/`](./mockups). They show intent, not 
 | ![Settings](./mockups/04-settings.png) | Unified permissions and sandbox settings (PR 10) |
 | ![TUI](./mockups/05-tui.png) | TUI prompt label and status lines (PR 6) |
 
-## 8. How to use this plan
+## 9. How to use this plan
 
 - Each roadmap PR links to its section here and updates the status table.
 - When a PR changes the design, it edits this folder in the same PR.

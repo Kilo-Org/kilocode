@@ -3,6 +3,8 @@
 Line numbers refer to `main` at `9d0f7a1dd8`. They drift. Re-check them when you implement.
 Paths starting with `P/` mean `packages/opencode/src/`.
 
+Security: the requirements from the security review are in section 12 (`SEC-1` to `SEC-11`) and are enforced in the sections they touch. Sections 1.2, 2.1, 2.5 to 2.9, 3, 5.2, 5.3, 6.1, 6.2, 8, 10 and 11 changed because of them.
+
 ## 0. Mode model
 
 Decided on 2026-10-06 after the team discussion: Sandbox joins the same selector. The model is similar to Codex:
@@ -97,14 +99,23 @@ const verdict = yield* ApproveForMe.review({ request, ruleset, hardRuleset, sess
 | Verdict | What `askPermission` does |
 |---|---|
 | `pass` | Mode off or request out of scope. Call `permission.ask` unchanged |
-| `allow` | Call `permission.ask` with one extra **once-scoped** allow rule for exactly these patterns, tagged origin `approve-for-me`. Hard rules and denies still win because `resolve()` gives a deny priority (`P/permission/index.ts:115-135`). No rule is saved |
+| `allow` | Call `permission.ask` with a **grant** (below). No rule is saved and no rule is appended |
 | `ask` | Call `permission.ask` unchanged, with `metadata.review = { kind: "ask", reason, ... }` so clients can label the prompt |
 | `block` | Fail the tool call with a `BlockedError` that carries a stable reason code (new error type next to `DeniedError`). The model gets a fixed message. The user sees a notice |
 
-Open point for a spike in PR 4: confirm that appending a once-scoped allow rule keeps all deny and hard-veto
-precedence. If it does not, the fallback is a small marked hook in `Permission.ask` that accepts a
-`reviewed: { allow: true }` flag, valid only for this call. Either way `reply()` is never called by the reviewer, so
-`interactive` semantics stay intact.
+#### The grant (SEC-1)
+
+An appended allow rule is **not safe**. `evaluate` uses `findLast` (`P/permission/index.ts:102-111`), so the last matching rule wins.
+An appended allow would override an earlier deny in the same ruleset, and a specific allow would skip `ReadPermission.harden` and the Agent Manager hardening.
+So the reviewer never edits the ruleset. Instead:
+
+1. `askPermission` evaluates the **original** merged ruleset for every pattern of the request (including `resolve()`, the hard ruleset, protected-path checks).
+2. It issues a grant only if **every** pattern evaluates to `ask`. If any pattern is `deny`, vetoed, protected, or `forceAsk` (except the escalation case in 2.5), the verdict is forced to `pass` and the normal flow runs.
+3. The grant is passed to `Permission.ask` as a per-call argument `reviewed: { patterns, id }`. Inside `Permission.ask` a pattern with action `ask` and a matching grant is treated as allowed.
+   A pattern with any other action ignores the grant. The grant has no wildcard form. It carries the exact patterns that were reviewed.
+4. This needs one small marked change in `Permission.ask` (shared file). It is the only change planned there. It is covered by a property test (section 10): for every generated ruleset and request, a grant never turns `deny`, a hard veto, a protected path or a `skillShell` request into an allow.
+
+Either way `reply()` is never called by the reviewer, so `interactive` semantics stay intact.
 
 Alternative considered: insert at `P/permission/index.ts:244` or before `pending.set` (`:273`). That puts
 logic in a shared file and cannot see the agent or model without changing `AskInput`. Rejected for v1.
@@ -127,10 +138,14 @@ These stay on the normal path. The reviewer may add a label but never an allow:
 - `skillShell` requests (`P/permission/index.ts:149,216,295`, `P/kilocode/permission/drain.ts:37-38`).
 - Sandbox escalation requests are **not** in this list. In Approve for me the reviewer may decide them under extra rules (section 2.5).
 - Anything the hard ruleset or an explicit deny already covers.
-- Config-protected paths and agent control files (`.kilo/`, rule files).
+- Config-protected paths and agent control files, and the **executable-config class** (section 2.6).
 - Secret reads that `ReadPermission.harden` turned into `ask` (`P/kilocode/permission/read.ts:11-18`).
 - Subagent asks in headless runs (`KiloHeadless.denies`, `:247`) are already denied. Do not review them.
 - `external_directory` in v1 (outside the workspace). Revisit after evaluation.
+- MCP tool calls (section 3). Outbound-capable tools (`webfetch`, `websearch`) except the narrow allowlist in section 2.7.
+- Any call after the session has read a **sensitive-class** file, if the call can send data out (section 2.7).
+- Any call when project config sets the `shell`, or the shell is not bash or zsh (section 2.8).
+- Project-level allow rules do not count in this mode (section 2.9).
 
 ### 2.2 Tier 1: deterministic allow
 
@@ -204,8 +219,10 @@ With a default-on sandbox that is not workable: ordinary Git and network use wou
 #### 2.5.3 Guard rails (apply to all escalations)
 
 1. Deterministic rules run first and cannot be overridden: git hook writes, `core.hooksPath`, config and control-plane writes, system paths,
-   secret reads, destructive patterns. They give `ask` or `block`.
-2. Scope is the narrowest one: a once-scoped allow for the exact normalized request. Never an `always` rule, never a saved host or path.
+   secret reads, destructive patterns. They give `ask` or `block`. In v1 the reviewer may only approve escalations in these deterministic classes:
+   `git add`, `git commit`, `git status` and `git diff` inside the workspace repository (with no `-c` or `--git-dir` flags), and network access to hosts already in `sandbox.allowed_hosts`.
+   Every other escalation asks the human until the PR 9 data supports widening. Dependency installs always ask (install scripts run unsandboxed).
+2. Scope is the narrowest one: a per-call grant (section 1.2) for the exact normalized request. Never an `always` rule, never a saved host or path.
 3. The reviewer sees the denied capability as a fact (`denied: { network: "registry.npmjs.org:443" }`), and never the model-written justification text.
 4. Shadow mode first: record what the reviewer would do next to the human decision before the first real auto-approved escalation.
 5. Per-session backstop: after N reviewer-approved escalations (start with 10), or on 3 consecutive blocks, fall back to asking the user.
@@ -215,11 +232,78 @@ With a default-on sandbox that is not workable: ordinary Git and network use wou
 
 #### 2.5.4 Required changes in shared code
 
-- `forceAsk` (`P/permission/index.ts:216`) ignores allow rules for `sandboxEscalation`. The once-scoped allow in section 1.2 would be skipped.
-  A small marked change is needed so that an allow with origin `approve-for-me` counts for this key. The `interactive` check for human replies
+- `forceAsk` (`P/permission/index.ts:216`) ignores allow rules for `sandboxEscalation`. The grant in section 1.2 is skipped for it today.
+  The same small marked change lets a grant count for the escalation key only, and never for `skillShell`. The `interactive` check for human replies
   (`:295-304`) stays as is, because the reviewer does not call `reply()`.
+- The grant for an escalation is bound to the **exact command, cwd and environment** that were reviewed.
+- If the executable-config manifest (2.6) shows a change, or the outbound taint (2.7) is set and the escalation needs network, the escalation asks the human. The reviewer is not consulted.
 - Clients that reject or skip escalation requests (`kilo run`, VS Code auto-approve) keep that behavior in Auto-approve and headless runs.
 - Decide default-on for the sandbox only after PR 9 shows how often escalations occur in real use.
+
+### 2.6 Write then execute: the executable-config class (SEC-2)
+
+Risk: tier 1 auto-approves workspace edits and tier 2 auto-approves known runners (`bun test`, `npm run build`). If the agent could first edit a file the runner executes
+(`package.json` scripts, `Makefile`, a build or test config) and then run the runner, the pair is arbitrary code execution that no single call reveals.
+Today's protected paths do not cover most of these files (`.kilo/**`, a few root config files and root `AGENTS.md` only), and a protected edit is only a prompt.
+
+Rule: edits to the **executable-config class** are always `ask` (tier 0), through every route: the edit tools, and shell writes seen by tier 2
+(redirects, `tee`, `cp`, `mv`, `sed -i`, `git apply`, heredocs). Class (globs, matched at any depth, case-folded, after `realpath`):
+
+| Group | Globs |
+|---|---|
+| IDE and agent control | `.vscode/**`, `.idea/**`, `.devcontainer/**`, `.mcp.json`, `.cursor/**`, `.cursorrules`, `**/AGENTS.md`, `**/CLAUDE.md`, `.github/copilot-instructions.md` |
+| CI and hooks | `.github/workflows/**`, `.gitlab-ci.yml`, `.husky/**`, `.githooks/**`, `.gitattributes`, `.pre-commit-config.yaml` |
+| Shell and env | `.envrc`, `.tool-versions`, `.npmrc`, `.yarnrc*`, `bunfig.toml`, `.cargo/config*` |
+| Build and task runners | `package.json`, `Makefile`, `justfile`, `Taskfile*`, `Dockerfile*`, `docker-compose*`, `setup.py`, `pyproject.toml`, `tox.ini`, `pytest.ini`, `conftest.py`, `build.rs`, `Cargo.toml`, `*.gradle*`, `pom.xml` |
+| Tool configs that run code | `*.config.{js,cjs,mjs,ts}`, `.babelrc*`, `.eslintrc*`, `jest.config.*`, `vitest.config.*`, `webpack.config.*`, `vite.config.*` |
+
+The list lives in one table in code and has a test per group. Adding to it needs no design change.
+
+The manifest check covers files written by a running program (a test that rewrites the Makefile):
+
+- At session start, and after every edit the **human** approved, the engine records a hash of every file in the class (a manifest).
+- Before approving a known runner, a reviewable call, or any escalation, it compares the current hashes with the manifest.
+- A mismatch means "changed outside human review". All runners and all escalations ask for the rest of the session, until the user acknowledges the change in a prompt that shows what changed.
+
+Source-code edits stay tier 1. The sandbox is the control for code the agent wrote: it limits writes and network.
+Without a sandbox (reduced profile) runners ask anyway (section 0.1).
+
+### 2.7 Outbound data: exfiltration rules (SEC-4)
+
+Risk: `read` (tier 1), `websearch` and a reviewer-approved `webfetch` can chain: read a secret, then send it in a query string or URL. `webfetch` has no SSRF protection today
+(`P/tool/webfetch.ts:36-38` checks only the scheme prefix), and a session `always` allow of `*` would allow any URL.
+
+Rules:
+
+1. `webfetch` and `websearch` are **ask by default** in this mode. The reviewer does not decide them.
+2. Narrow allowlist, decided by rules (no model): `https` only, exact host in a small built-in docs list plus the user's own list, no userinfo, no query string, no fragment, path length cap, port 443.
+3. Deterministic SSRF guard in the tool itself (prerequisite, section 12): block loopback, private, link-local and metadata addresses, check the resolved address and **every redirect hop**, reject non-http(s) schemes, reject userinfo.
+4. **Sensitive-read taint.** After the session reads a sensitive-class file, every call that can send data out asks for the rest of the session. Outbound-capable means `webfetch`, `websearch`,
+   MCP tools, `bash` with a network command or a network escalation, and `browser-open`. Sensitive class: the existing secret globs (`.env*`, `.netrc`, `.npmrc`, `id_*`, keystores, `.ssh`, `.aws`, `.kube`, `.docker`, `.gnupg`),
+   cloud and CI credential files, `*.pem`, `*.key`, `terraform.tfstate*`, `credentials*`, and `.git/config`. The taint is per root session and survives subagents.
+5. `always` replies in this mode are once-only (section 6.2, item 7).
+
+### 2.8 Shell parse and execute: no differential (SEC-6)
+
+The permission parser uses the bash grammar for zsh, fish, nu and cmd (`P/tool/shell.ts:282`). macOS defaults to zsh. Commands run through a login shell with `eval`, aliases enabled and rc files loaded
+(`packages/core/src/shell.ts:167-197`), and a project config `shell` setting can pick the shell. A command that parses as safe may therefore run as something else.
+
+Rules for auto-allow (tiers 1 to 3 never allow a shell call unless all hold):
+
+1. The effective shell is **bash or zsh** and is **not set by project config**. Otherwise all shell calls ask.
+2. The parse is complete: no `ERROR` or `MISSING` nodes.
+3. Only a **strict simple-command subset**: one or more simple commands joined by `&&`, `;`, `|`. Every word is a literal. No command or process substitution, backticks, parameter or arithmetic expansion,
+   history expansion, brace or extglob expansion, zsh glob qualifiers, `=cmd` expansion, here-strings, or functions. A plain `*` glob is allowed only as the last path component of an ordinary in-workspace path.
+4. The executable resolves, at review time, to a real file on `PATH` and is **not an alias or function** in the shell that will run it (spike in PR 5: use the shell snapshot, or run auto-approved commands without the login rc).
+   If this cannot be proven, the call asks.
+5. **PowerShell, cmd and Windows:** tier 2 is off. Approve for me uses the reduced profile (section 0.1).
+6. Tests: a differential corpus that runs each case through the real shell and through the parser and asserts they agree on the executable and the written paths (zsh and bash).
+
+### 2.9 Project allow rules do not bypass review (SEC-10 in section 12)
+
+A committed `kilo.json` can set `permission` allow rules with no trust prompt (`P/config/config.ts:783-801`, scope `local`). In Approve for me, allow rules from **local scope** (project files and the project `.kilo` directory)
+count as `ask` before review, so the reviewer still decides. Global, managed and `KILO_PERMISSION` rules are honored, as they come from the user or the organisation.
+This matches how the sandbox scope treats project config (a project may tighten, never loosen).
 
 ## 3. Tool coverage (v1 policy)
 
@@ -228,15 +312,15 @@ Permission key to policy. Source for keys and metadata: the tool survey of `P/to
 | Permission key | Pattern and metadata available | v1 policy |
 |---|---|---|
 | `bash` | tree-sitter patterns; `command`, `description`, heredocs | Tier 2, then tier 3 |
-| `edit` (edit, write, apply_patch) | relative paths; `filepath`, `diff`, `filediff` | Tier 1 in workspace and ordinary; tier 0 for protected paths |
+| `edit` (edit, write, apply_patch) | relative paths; `filepath`, `diff`, `filediff` | Tier 1 in workspace and ordinary; tier 0 for protected paths and the executable-config class (2.6) |
 | `read`, `glob`, `grep` | path or pattern | Tier 1; secret reads tier 0 |
 | `external_directory` | `dir/*` | Tier 0 |
-| `webfetch` | `url`, `format` | Tier 2: same-host docs allowlist optional; else tier 3 with URL only |
-| `websearch` | `query` | Tier 1 allow (no side effect), revisit for query leakage |
+| `webfetch` | `url`, `format` | Ask. Auto only for the exact-host docs allowlist in 2.7. Never reviewer |
+| `websearch` | `query` | Ask in v1 (a query can carry data out, 2.7). Revisit with data |
 | `task` (subagent) | `subagent_type`, `description` | Tier 1 allow; the subagent's own calls are reviewed |
 | `skill` | `name` | Tier 1; `skillShell` is tier 0 |
 | `todowrite` | none | Tier 1 |
-| MCP tool keys | `["*"]`; `mcpInput` | Tier 3 with tool name, server and argument shape. No auto-allow for unknown write-like tools in v1 |
+| MCP tool keys | `["*"]`; `mcpInput` | Tier 0 (ask) in v1. Tool names and annotations come from the server, so "write-like" cannot be judged from them. Revisit with a user-managed allowlist |
 | MCP resources | `mcp:<server>:*` | Tier 1 allow for read |
 | `sandbox_escalation` | `sandboxEscalation: true`; denied capability | Sandboxed: ask. Approve for me: reviewer under section 2.5 |
 | Kilo tools: `background-process`, `browser-open`, `generate-image`, `repo_clone`, `send-file`, `agent-manager`, `notebook-host`, `memory-save`, `board` | tool specific | Tier 0 (ask) in v1; add policies one by one with tests |
@@ -307,22 +391,30 @@ Rules for the call:
   A missing `reason_code` becomes `UNSPECIFIED`. Never `startsWith`.
 - On timeout, error, abort or unparsable reply: `keep_ask`. Never allow on failure.
 - After an `allow`, re-check live state (rules, mode, request still pending) before applying it. If it changed, `keep_ask` with `AFM.CHANGED`.
-- Cache the verdict per session by a hash of the normalized facts. Never share across sessions.
+- **No allow cache in v1 (SEC-5).** The facts exclude file contents, so a cached allow for `make deploy` would survive an edit to the Makefile. Only `keep_ask` and `ask` results may be cached,
+  per session, to save cost. If an allow cache is added later, its key must include a content hash of every script the command references and the executable-config manifest version, with a short expiry, and any edit clears it.
 
 ### 5.3 Model and trust
 
-- Resolve with `Provider.getSmallModel` (`P/provider/provider.ts:2058`). Order today: `small_model` config, plugin hook, `kilo-auto/small`
-  for Kilo providers (`P/kilocode/provider/provider.ts:297`), then family fallbacks.
-  Add an optional `approve_for_me.model`. Do not reuse `small_model` silently: a title model may be a poor judge. Decide in PR 7.
-- **Default must not be an OpenAI model.** Reject OpenAI providers and models for this role in code, not only in docs.
-  The legacy docs suggested `gpt-oss-safeguard-20b`; that is not acceptable here.
-- The model, provider and base URL for this role come only from the **environment or global config**. A project config must not set them.
-  Precedent: `SandboxConfig.scope` (`P/kilocode/sandbox/config.ts:50-60`, applied at `P/config/config.ts:656-658`).
-  Note the direction: sandbox lets a project **tighten**; Approve for Me **loosens**, so a project may not enable it either.
-- If no usable reviewer model exists (no credentials, free tier without access), tier 3 is off and `reviewable` means `ask`.
-  The user sees one notice, not one per call.
+**A dedicated reviewer resolver (SEC-3).** The reviewer must not use `Provider.getSmallModel` as it is. That function reads the merged config (`P/provider/provider.ts:2059-2066`) and project config can set
+`small_model`, `model`, and `provider.<id>.options.baseURL`, with no global-only guard anywhere. A cloned repository could therefore point the reviewer at an attacker URL while the user's stored or environment key is attached.
+`${ENV}` placeholders inside `baseURL` are also expanded at run time (`provider.ts:1868`).
+
+The resolver, in `P/kilocode/approve-for-me/model.ts`:
+
+1. Reads the reviewer model from the **environment or from global-scope config only**: `approve_for_me.model`, then a fixed default. It ignores `small_model` and `model` from every other source.
+2. Builds the provider entry from global config only. It requires the merged provider entry for that provider id to **equal** the global entry, compared after key-order-independent serialisation
+   (the check in #13893 `reviewer-config.ts:94-139`). Any difference, or a `baseURL` that contains `${`, turns the reviewer off for that workspace with one notice.
+3. Re-runs the check for each workspace or directory (one backend serves many worktrees). No module-level cache of the resolved config.
+4. Refuses OpenAI providers and models for this role, by provider id and by resolved model id, and refuses a base URL that is not on the provider's known host unless the user set it globally. This is a policy and trust check, not a security boundary.
+5. Pins the reviewer model id and version. An alias such as `kilo-auto/small` is allowed only if the gateway reports the concrete model, which is recorded in `metadata.review.model`. A change of the concrete model re-opens the evaluation gate (PR 9).
+6. If no usable model exists, tier 3 is off and `reviewable` means `ask`. The user sees one notice, not one per call.
+
+The same defect affects other side calls (title, commit message, enhance prompt, branch name). It is reported as a separate issue and fixed on its own (section 12).
+
 - Call pattern to copy: `P/kilocode/branch-name.ts:85-117` (`LLM.stream` with `small: true`, a hidden agent with `permission: []`, `retries`, `KiloLLM.text`).
   Use `Effect.timeout` and the stream abort signal (`P/session/llm.ts:196,410,464`).
+- Note the direction of trust: the sandbox lets a project **tighten**; Approve for Me **loosens**, so a project may not enable it, choose its mode, or choose its model.
 
 ### 5.4 Cost and usage
 
@@ -335,6 +427,9 @@ Side-model calls (title, branch name, enhance) record no cost today. For the rev
 ## 6. Mode state, flag and config
 
 ### 6.1 What exists (PR #14636)
+
+Security note (SEC-11): in #14636, `kilo-code.new.autoApprove.enabled` has no `scope`, so a workspace `.vscode/settings.json` can turn it on, live. An agent can write that file, and in Approve for me that edit would be auto-approved today.
+Resolved in #14636: both settings have application scope and all writes go to the user settings, so a workspace file can no longer set either. The remaining writers are the user (the menu, the palette, or the user's own settings.json), so the newest change wins, and at startup Approve for me wins. A stricter-wins rule was considered and dropped: it would stop the user from choosing Approve all in the menu. `.vscode/` and similar paths stay protected by S2 as defense in depth. See section 12.
 
 VS Code only. Settings `kilo-code.new.experimental.approveForMe` (hidden visibility flag) and
 `kilo-code.new.approveForMe.enabled`. The server knows nothing about the mode.
@@ -353,6 +448,20 @@ The `approve_for_me` config key was removed from that PR on purpose: nothing rea
    Choosing the Approve for me mode with the stage at `review` behaves like Sandboxed.
 4. **Trust scope.** Only global config and the environment can set `mode`, `model` and the timeout. Project config is ignored for these keys.
 5. **Coupling.** The mode drives the sandbox state for the session (section 0). Approve for me and Auto-approve exclude each other, as in #14636.
+6. **Mode API is always authenticated (SEC-7).** Today the server runs without auth when no password is set, `interactive` is only a client-set flag (`P/permission/index.ts:295-304`; handler `handlers/permission.ts:33`),
+   and only three endpoints stay guarded without a password (`P/server/middleware/authorization.ts:16-20`). So:
+   - The mode endpoints and the permission reply endpoint join that always-guarded set. Without a password they refuse. In that case Approve for me and Auto-approve are unavailable and sessions stay in Sandboxed (ask), with a warning.
+   - `interactive` is documented as **not** a security boundary. Human-only protection relies on authentication.
+   - A change to a looser mode (toward Auto-approve or sandbox off) is published as an event, shown in the transcript ("Mode changed to Auto-approve by <client>"), and recorded in telemetry.
+   - The tool environment keeps being scrubbed of server credentials (`P/kilocode/process/env.ts`). A test asserts it, and also that the sandbox blocks loopback in the sandboxed modes.
+7. **`always` is once-only in Approve for me.** An `always` reply writes a global rule (`P/permission/index.ts:342-366`) shared by all sessions and subagents, which would then bypass the reviewer. In this mode `always` is stored as once,
+   or accepted only with a narrow pattern (no `*`, no bare-prefix wildcard) and a warning.
+8. **Child sessions inherit the stricter mode (SEC-9).** A subagent starts in the stricter of the parent's mode and its own default. Counters (backstop, escalation cap) and taints (2.6, 2.7) key on the **root** session, so spawning a child does not reset them.
+9. **Session export, import, share and move (SEC-8).** Export keeps `info.permission` today (`P/cli/cmd/export.ts:289-292`) and import spreads `exportData.info` into the new session (`P/cli/cmd/import.ts:208-214`), so a crafted file could carry an allow-all ruleset.
+   - Export and share drop `permission` and `mode` by default (an opt-in keeps deny rules only).
+   - Import drops `permission` and `mode`, validates the rest, and starts the session in the user's default mode.
+   - Moving a session between local and cloud never makes it looser: the destination takes the stricter of the source mode and the destination default. Auto-approve and sandbox-off always need a new confirmation on the destination.
+   - A test imports a crafted file and asserts that the ruleset and mode are not applied.
 
 ### 6.3 Required chores for any new config key
 
@@ -389,10 +498,16 @@ Invariants (each gets a test):
 1. Fail closed. Error, timeout, abort, parse failure, missing model or missing mode state yields the normal prompt.
 2. Monotonic. The reviewer never overrides a deny, a hard veto, tier 0, or a tier 2 `ask` or `block`.
 3. The reviewer cannot create persistent permission. It never produces `always` rules and never writes config.
-4. `reply()` is never called by the reviewer. Human-only requests (`skillShell`) stay human-only. Sandbox escalation is the one request the reviewer may approve, only through the once-scoped allow in section 2.5.
+4. `reply()` is never called by the reviewer. Human-only requests (`skillShell`) stay human-only. Sandbox escalation is the one request the reviewer may approve, only through the per-call grant in sections 1.2 and 2.5.
 5. The reviewer input has no chat history, assistant prose, tool output or file content.
 6. Reviewer model config cannot come from the project.
 7. Verdict applies to the exact normalized request that was reviewed (re-check before applying).
+8. A grant never changes the ruleset and never overrides a deny, a hard veto, a protected path or `skillShell` (property test, SEC-1).
+9. Edits to the executable-config class always ask. A changed manifest makes runners and escalations ask (SEC-2).
+10. Outbound-capable calls ask by default and after a sensitive read (SEC-4).
+11. No allow cache. Reviewer settings come from environment and global config only, and the provider entry must match the global one (SEC-3, SEC-5).
+12. Mode and permission state never arrive from a project, an import or a share, and the mode API needs authentication (SEC-7, SEC-8).
+13. Project-scope allow rules do not bypass review in this mode (SEC-10).
 
 Threats and answers:
 
@@ -402,8 +517,15 @@ Threats and answers:
 | Spelling tricks (`sh -c`, aliases, `PATH=`, quoting, case) | Canonicalize before matching. Equivalence tests |
 | Indirect secret reads (`git show HEAD:.env`) | Verb allowlist for git. Unknown verbs are not inert |
 | Persistence (`.git/hooks`, CI, `.husky`) | Path classes. Hooks block, others ask |
-| Symlink escape | `realpath` with a hop limit. Unresolved means ask. Out of scope: TOCTOU between check and run (the sandbox covers part of it) |
-| "Allowed" test or build commands run project code | Accept in v1 only for known runners; document it. The sandbox is the control for this risk |
+| Symlink escape | `realpath` with a hop limit. Unresolved means ask. TOCTOU between check and run is a known gap: re-resolve paths inside the tool at execution time and run reviewed calls one at a time per session (medium item, tracked in the roadmap) |
+| "Allowed" test or build commands run project code | Known runners only. Edits to build and test config ask (2.6). A manifest check catches programmatic changes. The sandbox is the control for code the agent wrote |
+| Edit a build file, then run it (write then execute) | Section 2.6 |
+| Read a secret, then send it out (`websearch`, `webfetch`, MCP, network) | Section 2.7: ask by default, SSRF guard, sensitive-read taint |
+| Reviewer redirected to an attacker endpoint through project config | Section 5.3: global-only resolver and provider equality check |
+| A stale or cached allow after the files changed | No allow cache (5.2) |
+| Parser and shell disagree (zsh, aliases, login rc, project `shell`) | Section 2.8: strict subset, bash or zsh only, differential tests |
+| Agent or file changes the mode or imports allow-all | Section 6.2 items 6 to 9 |
+| Project `kilo.json` allows everything | Section 2.9 |
 | Agent requests an escalation to get out of the sandbox | Section 2.5: deterministic rules first, narrowest scope, facts-only input, caps, shadow mode |
 | Repeated retries of a blocked call | Backstop: stop auto-deciding after 3 consecutive blocks or 5 in the last 20 calls, and tell the user (numbers from #13893 `continuation.ts:36`) |
 | Reviewer cost abuse or latency | Tiers first, cache, deadline, per-session call cap |
@@ -437,6 +559,17 @@ Evaluation:
 - Integration: `askPermission` with a fake reviewer: allow, ask, block, timeout, garbage reply, changed state, human-only request, deny precedence.
 - Client: unit tests for the badge mapping; webview checks for the dock and transcript line; i18n key test.
 - Guards: `check-opencode-annotations`, `check-opencode-promise-facades`, SDK freshness by hand.
+- Security tests, one group per requirement:
+  - SEC-1: property test over generated rulesets and requests. A grant never turns a deny, hard veto, protected path or `skillShell` request into an allow, and never applies to a pattern whose action is not `ask`.
+  - SEC-2: each glob group of the executable-config class asks through the edit tools and through every shell write route. Manifest mismatch makes runners and escalations ask.
+  - SEC-3: a project config with `small_model`, `provider.<id>.options.baseURL` and `${ENV}` placeholders never changes the reviewer endpoint or key. The reviewer turns off with one notice.
+  - SEC-4: SSRF cases (loopback, private, link-local, metadata, redirect to each, userinfo, DNS to a private address). Taint after a sensitive read.
+  - SEC-5: an edit between two identical reviewed calls always produces a new review.
+  - SEC-6: the shell differential corpus for bash and zsh, forbidden syntax, project-set `shell`, alias and function shadowing.
+  - SEC-7: mode and reply endpoints refuse without credentials. Tool environment contains no server credential. Loosening is logged.
+  - SEC-8: crafted export and import files do not apply permission or mode. A session move never loosens.
+  - SEC-9 and SEC-10: child mode and counters. Project-scope allow rule counts as ask.
+  - SEC-11: a workspace `.vscode/settings.json` value for either setting has no effect. Writes go to user settings. At startup Approve for me wins.
 
 ## 11. Keeping the upstream diff small
 
@@ -447,6 +580,33 @@ Shared-file touches expected, each one a few lines with `kilocode_change` marker
 | `P/effect/runtime-flags.ts` | one flag |
 | `packages/core/src/v1/config/config.ts` | one config block |
 | `P/session/tools.ts` | pass the verdict into the tool part metadata (if the existing `approval` channel is not enough) |
-| `P/permission/index.ts` | none planned; only if the spike in section 1.2 fails |
+| `P/permission/index.ts` | the grant argument (section 1.2) and the escalation key (2.5.4). Few lines, marked |
+| `P/tool/webfetch.ts` | the SSRF guard (SEC-4). Needed on its own, so it ships as its own PR |
+| `P/server/middleware/authorization.ts` | the always-guarded endpoint list (SEC-7) |
+| `P/cli/cmd/export.ts`, `P/cli/cmd/import.ts` | drop permission and mode (SEC-8) |
+| `P/kilocode/permission/config-paths.ts` | the executable-config class lives in a Kilo-owned file, so no marker is needed |
 
 Everything else lives in `P/kilocode/approve-for-me/`, `P/kilocode/session/prompt.ts` (Kilo-owned), `packages/kilo-vscode/`, and Kilo-owned TUI files.
+
+## 12. Security requirements
+
+Findings from the security review, and where each is resolved. IDs are used in code comments, tests and PR descriptions.
+
+| ID | Finding | Resolution | Where |
+|---|---|---|---|
+| SEC-1 | An appended allow rule overrides earlier deny rules (`findLast`) and can skip read and Agent Manager hardening | The reviewer never edits the ruleset. It issues a per-call grant that applies only where the original evaluation is `ask`. Property test | 1.2, 2.5.4, 8, 10 |
+| SEC-2 | Write then execute: auto-approved edits to build files followed by an auto-approved runner | Executable-config class always asks (edit tools and shell writes). Manifest hash check for changes made by running programs | 2.6 |
+| SEC-3 | A repo can redirect the reviewer model and attach the user's key (`small_model`, `provider.*.baseURL`, `${ENV}`) | Dedicated global-only resolver, provider-entry equality check, `${` rejected, per-directory, pinned model. Existing leak fixed as a separate issue | 5.3 |
+| SEC-4 | Exfiltration chain: read, then `websearch`, `webfetch`, MCP or network. No SSRF guard in `webfetch` | Ask by default, exact-host docs allowlist, SSRF guard in the tool, sensitive-read taint, MCP asks | 2.7, 3 |
+| SEC-5 | Cached verdicts go stale after files change | No allow cache in v1 | 5.2 |
+| SEC-6 | Parser (bash grammar) and shell (zsh, aliases, login rc, project `shell`) can disagree | Strict simple-command subset, bash or zsh only, not set by project config, alias check, differential tests, tier 2 off on Windows | 2.8 |
+| SEC-7 | `interactive` is client-set. No password means no auth. The mode API can be reached by an agent | Mode and reply endpoints always authenticated. No password means no Approve for me and no Auto-approve. Loosening is logged and shown. Credentials scrubbed from tool env | 6.2 item 6 |
+| SEC-8 | Session import and export carry the permission ruleset. The per-session mode would travel too | Export and share drop permission and mode. Import drops them. Moves never loosen | 6.2 item 9 |
+| SEC-9 | Child sessions start with fresh defaults. Counters reset per session | Child takes the stricter mode. Counters and taints key on the root session | 6.2 item 8 |
+| SEC-10 | Project `kilo.json` can allow everything with no trust prompt | Local-scope allow rules count as `ask` in this mode | 2.9 |
+| SEC-11 | VS Code `autoApprove.enabled` could be set by a workspace file, live (fixed in #14636) | Scope both settings to the application (user only). Writes always go to user settings. `.vscode/` and IDE dirs protected as defense in depth | 6.1, #14636 |
+
+SEC-9, SEC-10 and the once-only `always` rule (6.2 item 7) were medium findings. They are included because they use the same code and would otherwise leave a gap in a high fix.
+
+Medium and low findings that stay open and are tracked in the roadmap: reviewer injection residuals and model drift (evaluation, PR 9), privacy and redaction of command text (PR 7, PR 10), prompt spoofing in the permission dock (PR 6),
+the JetBrains and other client-side auto-reply (PR 2), TOCTOU and parallel calls (PR 8 gate), backstop counting of asks (PR 8).
