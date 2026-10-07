@@ -29,8 +29,13 @@ const Toolbar: Component<{
   labels: BrowserLabels
   title?: string
   active: boolean
+  openExternal: (url: string) => void
 }> = (props) => {
   const ready = () => !!props.controller.state()?.url && props.controller.state()?.status !== "closed"
+  const external = () => {
+    const url = props.controller.state()?.url
+    if (url) props.openExternal(url)
+  }
   return (
     <div class="am-browser-toolbar">
       <Tooltip value={props.labels.back} placement="bottom">
@@ -99,6 +104,16 @@ const Toolbar: Component<{
           />
         </Tooltip>
       </form>
+      <Tooltip value={props.labels.openExternal} placement="bottom">
+        <IconButton
+          icon="square-arrow-top-right"
+          size="small"
+          variant="ghost"
+          aria-label={props.labels.openExternal}
+          disabled={!ready() || props.controller.loading()}
+          onClick={external}
+        />
+      </Tooltip>
       <Tooltip value={props.labels.inspect} placement="bottom">
         <IconButton
           icon="window-cursor"
@@ -328,6 +343,7 @@ export interface BrowserPanelProps {
   labels: BrowserLabels
   download: () => void
   settings: () => void
+  openExternal: (url: string) => void
   onReference: (reference: BrowserReference) => void
   onClose: () => void
   theme?: Accessor<"dark" | "light">
@@ -354,6 +370,7 @@ export const BrowserPanel: Component<BrowserPanelProps> = (props) => {
         labels={props.labels}
         title={state()?.title}
         active={!!props.scope()?.sessionId}
+        openExternal={props.openExternal}
       />
       <div class="am-browser-workspace" classList={{ "am-browser-workspace-docked": !!controller.tools() }}>
         <Viewport

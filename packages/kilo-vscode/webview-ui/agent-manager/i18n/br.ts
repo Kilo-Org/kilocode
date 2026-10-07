@@ -451,6 +451,7 @@ export const dict = {
   "agentManager.browser.url": "Endereço",
   "agentManager.browser.urlPlaceholder": "http://localhost:3000",
   "agentManager.browser.open": "Abrir",
+  "agentManager.browser.openExternal": "Abrir no navegador externo",
   "agentManager.browser.inspect": "Selecionar elemento",
   "agentManager.browser.devtoolsTitle": "Ferramentas de desenvolvedor",
   "agentManager.browser.refresh": "Atualizar navegador",

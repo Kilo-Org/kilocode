@@ -42,6 +42,7 @@ export function browserLabels(
     url: t("agentManager.browser.url"),
     urlPlaceholder: t("agentManager.browser.urlPlaceholder"),
     open: t("agentManager.browser.open"),
+    openExternal: t("agentManager.browser.openExternal"),
     refresh: t("agentManager.browser.refresh"),
     back: t("agentManager.browser.back"),
     forward: t("agentManager.browser.forward"),

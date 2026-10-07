@@ -447,6 +447,7 @@ export const dict = {
   "agentManager.browser.url": "アドレス",
   "agentManager.browser.urlPlaceholder": "http://localhost:3000",
   "agentManager.browser.open": "開く",
+  "agentManager.browser.openExternal": "外部ブラウザーで開く",
   "agentManager.browser.refresh": "ブラウザーを更新",
   "agentManager.browser.back": "戻る",
   "agentManager.browser.forward": "進む",
