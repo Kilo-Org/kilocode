@@ -383,8 +383,7 @@
   }
 }
 
-[data-slot="todo-panel-open"],
-[data-slot="todo-panel-spin"] {
+[data-slot="todo-panel-open"] {
   box-sizing: border-box;
   width: 10px;
   height: 10px;
@@ -392,10 +391,9 @@
   border-radius: 50%;
 }
 
-[data-slot="todo-panel-spin"] {
-  border-color: var(--todo-accent);
-  border-top-color: transparent;
-  animation: todo-spin 0.9s linear infinite;
+.todo-panel-spin {
+  width: 14px;
+  color: var(--todo-accent);
 }
 
 @keyframes todo-chip-in {
@@ -440,12 +438,6 @@
   to {
     opacity: 0;
     transform: translateY(calc(var(--todo-dir, 1) * -100%));
-  }
-}
-
-@keyframes todo-spin {
-  to {
-    transform: rotate(360deg);
   }
 }
 
