@@ -257,6 +257,24 @@ describe("buildProjectNavOrder", () => {
     ])
   })
 
+  it("puts pinned worktrees before ungrouped and section worktrees", () => {
+    const order = buildProjectNavOrder([
+      {
+        id: "A",
+        expanded: true,
+        worktrees: [{ id: "w1" }, { id: "w2", sectionId: "s1" }, { id: "w3", sectionId: "s1", pinned: true }],
+        worktreeOrder: ["w1", "w3", "s1", "w2"],
+        sections: [{ id: "s1", collapsed: false }],
+      },
+    ])
+    expect(order.map((e) => e.id)).toEqual([
+      localNavId("A"),
+      worktreeNavId("A", "w3"),
+      worktreeNavId("A", "w1"),
+      worktreeNavId("A", "w2"),
+    ])
+  })
+
   it("uses project-qualified composite ids, never raw worktree ids", () => {
     const order = buildProjectNavOrder([{ id: "A", expanded: true, worktrees: [{ id: "aw1" }], sections: [] }])
     const ids = order.map((e) => e.id)
