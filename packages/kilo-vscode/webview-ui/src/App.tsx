@@ -179,6 +179,7 @@ export const DataBridge: Component<{ children: any }> = (props) => {
       id &&
       config.settings().browserAutomation === true &&
       config.settings().agentManagerBrowserOpenLinksIn === "integrated" &&
+      config.settings().workspaceTrusted === true &&
       /^https?:\/\//i.test(url)
     ) {
       vscode.postMessage({ type: "agentManager.browser.open", sessionId: id, url })

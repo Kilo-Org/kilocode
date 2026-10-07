@@ -157,7 +157,19 @@ export class BrowserTabProvider {
 
   private navigate(entry: Panel, route: BrowserRoute, url: string): void {
     entry.pendingUrl = undefined
-    void this.opts.browser?.open(route, url, false).catch((error: unknown) => this.log("Browser open failed:", error))
+    void this.opts.browser?.open(route, url, false).catch((error: unknown) => {
+      this.log("Browser open failed:", error)
+      // Surface early failures (for example no Chromium) instead of leaving the
+      // link silently unopened, matching the in-panel browser error state.
+      entry.panel.webview.postMessage({
+        type: "browserTab.state",
+        browserId: "",
+        sessionId: entry.sessionId,
+        status: "error",
+        errors: 0,
+        error: error instanceof Error ? error.message : String(error),
+      })
+    })
   }
 
   dispose(): void {
