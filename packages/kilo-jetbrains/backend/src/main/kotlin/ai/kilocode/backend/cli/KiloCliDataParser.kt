@@ -1124,12 +1124,16 @@ object KiloCliDataParser {
                                 oauth == null -> Unit
                                 oauth.clear -> put("oauth", JsonNull)
                                 oauth.enabled == false -> put("oauth", JsonPrimitive(false))
+                                // The config schema deep-merges on PATCH, so an omitted key keeps
+                                // its old value on disk. A field the user cleared therefore has to
+                                // be written as an explicit null sentinel or the previous client
+                                // id/secret/scope survives and is reused after a restart.
                                 else -> put("oauth", buildJsonObject {
-                                    if (oauth.clientId != null) put("clientId", oauth.clientId)
-                                    if (oauth.clientSecret != null) put("clientSecret", oauth.clientSecret)
-                                    if (oauth.scope != null) put("scope", oauth.scope)
-                                    if (oauth.callbackPort != null) put("callbackPort", oauth.callbackPort)
-                                    if (oauth.redirectUri != null) put("redirectUri", oauth.redirectUri)
+                                    put("clientId", oauth.clientId?.let(::JsonPrimitive) ?: JsonNull)
+                                    put("clientSecret", oauth.clientSecret?.let(::JsonPrimitive) ?: JsonNull)
+                                    put("scope", oauth.scope?.let(::JsonPrimitive) ?: JsonNull)
+                                    put("callbackPort", oauth.callbackPort?.let(::JsonPrimitive) ?: JsonNull)
+                                    put("redirectUri", oauth.redirectUri?.let(::JsonPrimitive) ?: JsonNull)
                                 })
                             }
                         }

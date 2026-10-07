@@ -175,6 +175,36 @@ class McpEditDialogTest : BasePlatformTestCase() {
         )
     }
 
+    /**
+     * `URI.isAbsolute` alone accepts `javascript:x` and `file:///x`. The redirect target is a
+     * loopback HTTP listener, so only http(s) with a host may validate.
+     */
+    fun `test non-web redirect uri fails validation`() {
+        val d = open(remote())
+
+        edt {
+            val root = d.centerComponent()
+            oauthModeBox(root).selectedItem = KiloBundle.message("settings.agentBehavior.mcp.edit.oauth.mode.custom")
+            for (value in listOf("javascript:alert(1)", "file:///etc/passwd", "smb://host/share", "http:///nohost")) {
+                field<JBTextField>(root, title("oauth.redirectUri")).text = value
+                assertNotNull("$value must not validate", d.validateForTest())
+            }
+            true
+        }
+    }
+
+    fun `test loopback redirect uri passes validation`() {
+        val d = open(remote())
+
+        edt {
+            val root = d.centerComponent()
+            oauthModeBox(root).selectedItem = KiloBundle.message("settings.agentBehavior.mcp.edit.oauth.mode.custom")
+            field<JBTextField>(root, title("oauth.redirectUri")).text = "http://127.0.0.1:19876/mcp/oauth/callback"
+            assertNull(d.validateForTest())
+            true
+        }
+    }
+
     fun `test switching back to automatic after custom clears the oauth block when one existed`() {
         val cfg = remote().copy(oauth = McpOAuthDto(enabled = true, clientId = "abc"))
         val d = open(cfg)

@@ -262,6 +262,25 @@ class McpSettingsUiTest : BasePlatformTestCase() {
         }
     }
 
+    /**
+     * Bundle ownership only decides whether a delete offers to remove a whole Marketplace install.
+     * A Marketplace outage must not stop the page from listing and managing MCP servers.
+     */
+    fun `test marketplace bundle failure still lists mcp servers`() {
+        val panel = panel()
+        flushUntil { rows(panel).size == 3 }
+        val calls = agentRpc.mcpCalls.size
+
+        marketRpc.bundlesError = RuntimeException("marketplace offline")
+        edt { panel.reload(); true }
+        flushUntil { agentRpc.mcpCalls.size > calls && searchField(panel).isEnabled }
+
+        edt {
+            assertEquals(listOf("filesystem", "github", "runtime"), rows(panel).map { it.key })
+            true
+        }
+    }
+
     fun `test connect action updates runtime status and keeps selection`() {
         val panel = panel()
         flushUntil { rows(panel).size == 3 }

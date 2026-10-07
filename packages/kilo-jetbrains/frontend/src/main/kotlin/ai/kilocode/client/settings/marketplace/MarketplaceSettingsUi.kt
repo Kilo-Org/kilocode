@@ -96,6 +96,9 @@ internal class MarketplaceSettingsUi(
         reload()
     }
 
+    /** Installed state changes when MCP or Skills Settings removes a bundle this page listed. */
+    override fun refreshOnFocus(): Boolean = true
+
     override suspend fun fetch(): List<ActiveListItem> {
         val result = service<KiloMarketplaceService>().list(dir)
         items = result.items

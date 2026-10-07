@@ -29,6 +29,7 @@ import ai.kilocode.rpc.dto.SkillsPatchDto
 import ai.kilocode.rpc.dto.WatcherPatchDto
 import org.junit.jupiter.api.Nested
 import kotlin.test.Test
+import kotlin.test.assertContains
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
@@ -2915,6 +2916,10 @@ class KiloCliDataParserTest {
         }
 
         @Test
+        /**
+         * Unset fields are emitted as explicit nulls, not omitted: the config schema deep-merges on
+         * PATCH, so an omitted key would keep whatever the user just cleared.
+         */
         fun `buildConfigPatch - mcp oauth custom client writes object`() {
             val patch = ConfigPatchDto(mcp = linkedMapOf(
                 "remote" to McpConfigDto(
@@ -2925,7 +2930,9 @@ class KiloCliDataParserTest {
             ))
 
             assertEquals(
-                "{\"mcp\":{\"remote\":{\"type\":\"remote\",\"url\":\"https://mcp.example.test\",\"oauth\":{\"clientId\":\"abc\",\"scope\":\"read\"}}}}",
+                "{\"mcp\":{\"remote\":{\"type\":\"remote\",\"url\":\"https://mcp.example.test\"," +
+                    "\"oauth\":{\"clientId\":\"abc\",\"clientSecret\":null,\"scope\":\"read\"," +
+                    "\"callbackPort\":null,\"redirectUri\":null}}}}",
                 KiloCliDataParser.buildConfigPatch(patch),
             )
         }
@@ -2978,6 +2985,30 @@ class KiloCliDataParserTest {
                 "{\"scope\":\"project\",\"unset\":[[\"mcp\",\"anaconda\"]]}",
                 KiloCliDataParser.buildMcpOverlayPatch("anaconda", "workspace", null),
             )
+        }
+
+        /**
+         * The config schema deep-merges on PATCH, so an omitted key keeps its old value on disk. A
+         * field the user cleared has to go out as an explicit null or the previous client
+         * id/secret/scope survives and gets reused after a restart.
+         */
+        @Test
+        fun `buildMcpOverlayPatch - cleared oauth fields are written as explicit nulls`() {
+            val result = KiloCliDataParser.buildMcpOverlayPatch(
+                "anaconda",
+                "workspace",
+                McpConfigDto(
+                    type = "remote",
+                    url = "https://anaconda.com/api/mcp",
+                    oauth = McpOAuthDto(enabled = true, clientId = "abc"),
+                ),
+            )
+
+            assertContains(result, "\"clientId\":\"abc\"")
+            assertContains(result, "\"clientSecret\":null")
+            assertContains(result, "\"scope\":null")
+            assertContains(result, "\"callbackPort\":null")
+            assertContains(result, "\"redirectUri\":null")
         }
 
         @Test

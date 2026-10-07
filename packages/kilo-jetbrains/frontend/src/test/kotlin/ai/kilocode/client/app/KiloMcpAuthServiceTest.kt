@@ -321,6 +321,33 @@ class KiloMcpAuthServiceTest : BasePlatformTestCase() {
         assertTrue(opened.isEmpty())
     }
 
+    /**
+     * The authorization URL is supplied by the remote MCP server, so a non-web scheme must never
+     * reach the browser or the fallback dialog. Otherwise a malicious server could have the IDE
+     * open `file:///…` or `smb://…` on the user's machine.
+     */
+    fun `test non-web auth urls are dropped instead of opened`() {
+        val opened = mutableListOf<String>()
+        val dialogs = mutableListOf<String>()
+        val service = service(
+            dedupeWindowMs = 0L,
+            showAuthUrl = { _, url -> dialogs.add(url) },
+            openUrl = { url -> opened.add(url) },
+        )
+
+        runBlocking(Dispatchers.Default) { service.refresh("/test") }
+        settle()
+        for (url in listOf("file:///etc/passwd", "smb://host/share", "javascript:alert(1)", "https:///nohost")) {
+            runBlocking(Dispatchers.Default) {
+                rpc.mcpAuthEventsFlow.emit(McpAuthEventDto("linear", url, external = true))
+            }
+            settle()
+        }
+
+        assertTrue("no non-web URL may be opened, got $opened", opened.isEmpty())
+        assertTrue("no non-web URL may reach the dialog, got $dialogs", dialogs.isEmpty())
+    }
+
     /** A [KiloAgentBehaviorService] backed by an RPC fake whose `mcpAuthenticate` never returns. */
     private class SlowAuthenticateRpc(private val never: CompletableDeferred<McpAuthResultDto>) :
         ai.kilocode.rpc.KiloAgentBehaviorRpcApi by FakeAgentBehaviorRpcApi() {

@@ -50,6 +50,35 @@ class McpAuthUrlDialogTest : BasePlatformTestCase() {
         }
     }
 
+    /**
+     * The URL comes from the remote server's OAuth metadata, so a non-web scheme must not be
+     * openable from here. Copy stays available because copying is harmless.
+     */
+    fun `test open is disabled for a non-web authorization URL`() {
+        for (url in listOf("file:///etc/passwd", "smb://host/share", "javascript:alert(1)", "not a url")) {
+            val d = open("linear", url)
+            edt {
+                val open = d.openActionForTest()
+                assertFalse("Open must be disabled for $url", open.isEnabled)
+                true
+            }
+            edt { Disposer.dispose(d.disposable); true }
+            dialog = null
+        }
+    }
+
+    fun `test open is enabled for an http authorization URL`() {
+        for (url in listOf("https://auth.example.test/authorize?state=abc", "http://127.0.0.1:19876/cb")) {
+            val d = open("linear", url)
+            edt {
+                assertTrue("Open must be enabled for $url", d.openActionForTest().isEnabled)
+                true
+            }
+            edt { Disposer.dispose(d.disposable); true }
+            dialog = null
+        }
+    }
+
     private fun open(name: String, url: String): McpAuthUrlDialog {
         val item = edt { McpAuthUrlDialog(name, url) }
         dialog = item

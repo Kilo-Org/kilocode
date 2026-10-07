@@ -89,7 +89,7 @@ internal class SkillsSettingsUi(
         SettingsPathDialog(sourceDialogTitle(adding, path), value, if (path) choose else null)
     },
     private val edit: (SkillDto, Boolean) -> SkillEditDialogHandle = ::SkillEditDialog,
-) : SettingsListPanel(scope, ActiveListConfig.Equal.copy(tooltip = false)), SettingsDraftPage {
+) : SettingsListPanel(scope, ActiveListConfig.Equal.copy(tooltip = false, keepActions = true)), SettingsDraftPage {
     private val cs = scope
     private var dir = dir
     private var skills = emptyMap<String, SkillDto>()
@@ -115,11 +115,14 @@ internal class SkillsSettingsUi(
         reload()
     }
 
+    /** A Marketplace install or removal can add or drop skills while this page sits open. */
+    override fun refreshOnFocus(): Boolean = true
+
     override suspend fun fetch(): List<ActiveListItem> {
         val items = withTimeoutOrNull(SKILL_LOAD_TIMEOUT_MS) {
             service<KiloAgentBehaviorService>().loadSkills(dir)
         } ?: throw SettingsMessageException(KiloBundle.message("settings.agentBehavior.skills.load.timeout"))
-        val owned = if (dir.isBlank()) emptyList() else service<KiloMarketplaceService>().bundles(dir)
+        val owned = ownedBundles(dir)
         withContext(edt) {
             val dirty = state.modified()
             val edit = draft

@@ -13,6 +13,7 @@ class FakeMarketplaceRpcApi : KiloMarketplaceRpcApi {
     var installResult = MarketplaceResultDto(success = true, slug = "test")
     var removeResult = MarketplaceResultDto(success = true, slug = "test")
     var bundles = emptyList<MarketplaceBundleDto>()
+    var bundlesError: Exception? = null
 
     /** Holds [install] open until completed, so a test can observe the in-flight state. */
     var installGate: CompletableDeferred<Unit>? = null
@@ -34,6 +35,7 @@ class FakeMarketplaceRpcApi : KiloMarketplaceRpcApi {
     override suspend fun bundles(directory: String): List<MarketplaceBundleDto> {
         assertNotEdt("marketplace.bundles")
         bundleCalls.add(directory)
+        bundlesError?.let { throw it }
         return bundles
     }
 

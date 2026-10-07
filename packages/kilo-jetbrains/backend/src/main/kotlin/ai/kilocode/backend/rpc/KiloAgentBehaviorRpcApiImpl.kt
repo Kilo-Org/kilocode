@@ -503,13 +503,27 @@ class KiloAgentBehaviorRpcApiImpl(private val backend: KiloBackendAppService? = 
         }
     }
 
+    /**
+     * Overlays the just-saved MCP entries on top of what the CLI currently reports, so a save is
+     * visible before the CLI reload lands.
+     *
+     * The overlay never carries a client secret (see [saveMcpOverride]); the secret is taken back
+     * from the authoritative config in [items] so the edit dialog still prefills it.
+     */
     private fun withSavedMcp(directory: String, items: Map<String, McpServerConfigDto>): Map<String, McpServerConfigDto> = buildMap {
         syncSaved()
         putAll(items)
         for (item in saved.values) {
             if (item.scope == "workspace" && item.directory != directory) continue
             val cfg = item.config ?: continue
-            put(item.name, McpServerConfigDto(cfg, item.scope))
+            val secret = items[item.name]?.config?.oauth?.clientSecret
+            val oauth = cfg.oauth
+            val merged = if (oauth == null || oauth.clientSecret != null || secret == null) {
+                cfg
+            } else {
+                cfg.copy(oauth = oauth.copy(clientSecret = secret))
+            }
+            put(item.name, McpServerConfigDto(merged, item.scope))
         }
     }
 
@@ -522,11 +536,15 @@ class KiloAgentBehaviorRpcApiImpl(private val backend: KiloBackendAppService? = 
             saved.remove(key)
             return
         }
+        // The overlay only has to make the save visible until the CLI reload lands, so the client
+        // secret is dropped rather than held in a long-lived map. The config the CLI reports back is
+        // the one source for it, and `withSavedMcp` reads it from there.
+        val oauth = config.oauth
         saved[key] = SavedMcp(
             directory = if (scope == "workspace") directory else "",
             name = name,
             scope = scope,
-            config = config,
+            config = if (oauth?.clientSecret == null) config else config.copy(oauth = oauth.copy(clientSecret = null)),
         )
     }
 

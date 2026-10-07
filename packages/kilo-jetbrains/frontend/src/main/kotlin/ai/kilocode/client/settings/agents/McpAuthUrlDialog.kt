@@ -4,6 +4,7 @@ import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.settings.auth.copyToClipboard
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.layout.Stack
+import ai.kilocode.client.util.webUrl
 import com.intellij.ide.BrowserUtil
 import com.intellij.openapi.ui.DialogWrapper
 import com.intellij.ui.components.JBLabel
@@ -38,8 +39,11 @@ internal class McpAuthUrlDialog(
     }
     private var center: JComponent? = null
 
+    // The URL originates from the remote MCP server, so the scheme is re-checked here instead of
+    // trusting the caller: this dialog is also reachable from the CLI's browser-open-failed event.
     private val openAction: Action = object : AbstractAction(KiloBundle.message("settings.agentBehavior.mcp.authUrl.open")) {
         override fun actionPerformed(e: ActionEvent) {
+            if (!webUrl(url)) return
             BrowserUtil.browse(url)
         }
     }
@@ -53,10 +57,14 @@ internal class McpAuthUrlDialog(
     init {
         title = KiloBundle.message("settings.agentBehavior.mcp.authUrl.title")
         isModal = false
+        // Copying a non-web URL is harmless, opening it is not, so only Open is withheld.
+        openAction.isEnabled = webUrl(url)
         init()
     }
 
     internal fun contentForTest(): JComponent = center ?: error("center panel not built")
+
+    internal fun openActionForTest(): Action = openAction
 
     override fun createCenterPanel(): JComponent {
         val panel = Stack.vertical(UiStyle.Gap.sm())

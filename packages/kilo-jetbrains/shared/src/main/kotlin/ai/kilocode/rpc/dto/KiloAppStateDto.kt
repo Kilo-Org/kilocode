@@ -124,7 +124,17 @@ data class McpOAuthDto(
     val callbackPort: Int? = null,
     val redirectUri: String? = null,
     val clear: Boolean = false,
-)
+) {
+    /**
+     * Redacts [clientSecret].
+     *
+     * The generated `toString` of a data class prints every field, and this DTO travels through RPC
+     * logging and exception messages, so the secret would otherwise end up in the IDE log.
+     */
+    override fun toString(): String =
+        "McpOAuthDto(enabled=$enabled, clientId=$clientId, clientSecret=${if (clientSecret == null) "null" else "***"}, " +
+            "scope=$scope, callbackPort=$callbackPort, redirectUri=$redirectUri, clear=$clear)"
+}
 
 typealias PermissionConfigDto = Map<String, PermissionRuleDto>
 

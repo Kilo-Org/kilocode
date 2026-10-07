@@ -75,7 +75,7 @@ internal class McpSettingsUi(
     private val cs: CoroutineScope,
     dir: String,
     private val create: (String, McpConfigDto) -> McpEditDialogHandle = ::McpEditDialog,
-) : SettingsListPanel(cs, ActiveListConfig.Equal.copy(description = false)) {
+) : SettingsListPanel(cs, ActiveListConfig.Equal.copy(description = false, keepActions = true)) {
     private var dir = dir
 
     private var servers: Map<String, McpServerConfigDto> = emptyMap()
@@ -91,10 +91,13 @@ internal class McpSettingsUi(
         reload()
     }
 
+    /** A Marketplace install or removal can add or drop servers while this page sits open. */
+    override fun refreshOnFocus(): Boolean = true
+
     override suspend fun fetch(): List<ActiveListItem> {
         val behavior = service<KiloAgentBehaviorService>()
         val cfg = behavior.mcpConfig(dir)
-        val owned = if (dir.isBlank()) emptyList() else service<KiloMarketplaceService>().bundles(dir)
+        val owned = ownedBundles(dir)
         withContext(edt) {
             servers = cfg
             bundles = owned

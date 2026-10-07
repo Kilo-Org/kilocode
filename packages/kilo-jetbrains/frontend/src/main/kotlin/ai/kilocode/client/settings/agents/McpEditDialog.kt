@@ -10,6 +10,7 @@ import ai.kilocode.client.ui.layout.Stack
 import ai.kilocode.client.ui.layout.StackAxis
 import ai.kilocode.client.ui.list.ActiveListActionCell
 import ai.kilocode.client.ui.list.ActiveListCell
+import ai.kilocode.client.util.webUrl
 import ai.kilocode.rpc.dto.McpConfigDto
 import ai.kilocode.rpc.dto.McpOAuthDto
 import com.intellij.icons.AllIcons
@@ -33,8 +34,6 @@ import java.awt.Dimension
 import java.awt.Rectangle
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
-import java.net.URI
-import java.net.URISyntaxException
 import javax.swing.JButton
 import javax.swing.JComponent
 import javax.swing.JPanel
@@ -112,6 +111,8 @@ internal class McpEditDialog(
     }
 
     internal fun centerComponent(): JComponent = center ?: error("center panel not built")
+
+    internal fun validateForTest(): ValidationInfo? = doValidate()
 
     override fun result(): McpConfigDto {
         if (type == REMOTE) return cfg.copy(url = text(url.text), oauth = oauthResult())
@@ -215,14 +216,11 @@ internal class McpEditDialog(
         if (String(oauthClientSecret.password).isNotBlank() && text(oauthClientId.text) == null) {
             return ValidationInfo(KiloBundle.message("settings.agentBehavior.mcp.edit.oauth.secret.invalid"), oauthClientId)
         }
+        // Absolute is not enough: `javascript:x` and `file:///x` are both absolute URIs. The
+        // redirect target is a loopback HTTP listener, so only http(s) with a host is accepted.
         val redirect = oauthRedirectUri.text.trim()
-        if (redirect.isNotEmpty()) {
-            val valid = try {
-                URI(redirect).isAbsolute
-            } catch (_: URISyntaxException) {
-                false
-            }
-            if (!valid) return ValidationInfo(KiloBundle.message("settings.agentBehavior.mcp.edit.oauth.redirectUri.invalid"), oauthRedirectUri)
+        if (redirect.isNotEmpty() && !webUrl(redirect)) {
+            return ValidationInfo(KiloBundle.message("settings.agentBehavior.mcp.edit.oauth.redirectUri.invalid"), oauthRedirectUri)
         }
         return null
     }

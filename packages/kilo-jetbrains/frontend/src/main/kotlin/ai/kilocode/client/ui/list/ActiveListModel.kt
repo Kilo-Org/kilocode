@@ -84,6 +84,14 @@ internal data class ActiveListConfig(
     val iconAlignment: ActiveListIconAlignment = ActiveListIconAlignment.CENTER,
     val selection: Int = ListSelectionModel.SINGLE_SELECTION,
     val hoverActions: Boolean = false,
+    /**
+     * Keep a selected row's in-place action cells visible while focus sits outside the list.
+     *
+     * Off by default, so a list only shows actions on the focused selection. Turn it on for a list
+     * whose actions open a dialog or move focus elsewhere (MCP sign-in, skill editing): the actions
+     * would otherwise disappear from under the pointer as soon as the click moved focus away.
+     */
+    val keepActions: Boolean = false,
     /** Weight used for the primary row title. */
     val title: ActiveListWeight = ActiveListWeight.BOLD,
     /** Weight used for section headers. */

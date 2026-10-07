@@ -173,8 +173,15 @@ internal abstract class SettingsListPanel(
 
     protected open fun showRefresh(): Boolean = true
 
-    /** Reload the list automatically whenever this panel becomes visible again, e.g. re-navigating into it. */
-    protected open fun refreshOnFocus(): Boolean = true
+    /**
+     * Reload the list automatically whenever this panel becomes visible again, e.g. re-navigating
+     * into it.
+     *
+     * Off by default so an unrelated settings list keeps its existing load-once behavior. Turn it on
+     * for a page whose contents another page can change behind its back, such as MCP and Skills
+     * after a Marketplace install or removal.
+     */
+    protected open fun refreshOnFocus(): Boolean = false
 
     protected open fun afterApply() = Unit
 

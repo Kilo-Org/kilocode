@@ -5,6 +5,7 @@ package ai.kilocode.client.app
 import ai.kilocode.client.KiloNotifications
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.settings.agents.McpAuthUrlDialog
+import ai.kilocode.client.util.webUrl
 import ai.kilocode.log.KiloLog
 import ai.kilocode.rpc.dto.McpAuthEventDto
 import ai.kilocode.rpc.dto.McpAuthResultDto
@@ -212,8 +213,15 @@ class KiloMcpAuthService internal constructor(
      * For [McpAuthEventDto.external] the CLI deliberately did not open a browser, so the client
      * does it here and only falls back to the dialog when that fails. Otherwise the CLI already
      * tried and failed, and the dialog is the remaining option.
+     *
+     * The URL comes from the remote server's `authorization_endpoint`, so a non-web scheme is
+     * dropped outright rather than opened or offered in the dialog.
      */
     private suspend fun onAuthUrl(event: McpAuthEventDto) {
+        if (!webUrl(event.url)) {
+            LOG.warn("mcp auth url rejected name=${event.name}: not an http(s) URL")
+            return
+        }
         val now = System.currentTimeMillis()
         val prevUrl = lastEventUrl.get()
         val prevAt = lastEventAt.get()
@@ -226,13 +234,15 @@ class KiloMcpAuthService internal constructor(
         }
     }
 
+    // The authorization URL carries the OAuth `state` and other single-use parameters, so it is
+    // never logged; the server name is enough to identify which sign-in failed to open.
     private fun browse(url: String): Boolean = try {
         openUrl(url)
         true
     } catch (err: CancellationException) {
         throw err
     } catch (err: Exception) {
-        LOG.warn("mcp auth browser open failed url=$url", err)
+        LOG.warn("mcp auth browser open failed", err)
         false
     }
 }
