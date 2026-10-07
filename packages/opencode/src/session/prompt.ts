@@ -1037,8 +1037,7 @@ export const layer = Layer.effect(
           const url = new URL(part.url)
           switch (url.protocol) {
             case "data:":
-              // kilocode_change start - markup "images" (SVG) are source text, not rasters Photon can decode
-              if (part.mime === "text/plain" || KiloAttachment.classify(part.mime) === "markup") {
+              if (part.mime === "text/plain") {
                 return [
                   {
                     messageID: info.id,
@@ -1057,7 +1056,6 @@ export const layer = Layer.effect(
                   { ...part, messageID: info.id, sessionID: input.sessionID },
                 ]
               }
-              // kilocode_change end
               // kilocode_change start - normalize user image data before persistence
               if (KiloAttachment.classify(part.mime) === "raster") {
                 const file: MessageV2.FilePart = {
@@ -1085,7 +1083,6 @@ export const layer = Layer.effect(
               const reference = yield* referenceContextFromFilePart(part, filepath)
               // kilocode_change end
               const mime = (yield* fsys.isDir(filepath)) ? "application/x-directory" : part.mime
-              const kind = KiloAttachment.classify(mime) // kilocode_change - raster vs markup vs other, shared by the base64 cap, normalize call, and the post-read branch below
 
               const { read } = yield* registry.named()
               // kilocode_change start - authorize prompt attachments like model-issued read calls
@@ -1299,7 +1296,7 @@ export const layer = Layer.effect(
                       filename: part.filename!,
                       source: part.source,
                     }
-                    return kind === "raster" ? yield* image.normalize(file) : file
+                    return KiloAttachment.classify(mime) === "raster" ? yield* image.normalize(file) : file
                   }),
                 )
                 // kilocode_change end
@@ -1328,27 +1325,6 @@ export const layer = Layer.effect(
                     synthetic: true,
                     text: `Read tool failed to read ${filepath} with the following error: ${message}`,
                   },
-                ]
-              }
-              // kilocode_change end
-              // kilocode_change start - decode markup "images" (SVG) into readable source instead of leaving them as a binary file part
-              if (kind === "markup") {
-                return [
-                  {
-                    messageID: info.id,
-                    sessionID: input.sessionID,
-                    type: "text",
-                    synthetic: true,
-                    text: `Called the Read tool with the following input: {"filePath":"${filepath}"}`,
-                  },
-                  {
-                    messageID: info.id,
-                    sessionID: input.sessionID,
-                    type: "text",
-                    synthetic: true,
-                    text: decodeDataUrl(access.value.url),
-                  },
-                  access.value,
                 ]
               }
               // kilocode_change end
@@ -1406,9 +1382,11 @@ export const layer = Layer.effect(
       }
       // kilocode_change end
 
-      const resolvedParts = yield* Effect.forEach(submittedParts, resolvePart, { concurrency: "unbounded" }).pipe(
-        Effect.map((x) => x.flat().map(assign)),
-      )
+      const resolvedParts = yield* Effect.forEach(
+        submittedParts.map(KiloAttachment.asText), // kilocode_change - SVG is source text, not an image mime any provider accepts
+        resolvePart,
+        { concurrency: "unbounded" },
+      ).pipe(Effect.map((x) => x.flat().map(assign)))
 
       yield* plugin.trigger(
         "chat.message",

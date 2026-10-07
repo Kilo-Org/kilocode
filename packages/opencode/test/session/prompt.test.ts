@@ -835,12 +835,17 @@ noLLMServer.instance(
       expect(result.parts).toEqual(
         expect.arrayContaining([
           expect.objectContaining({ type: "text", synthetic: true, text: svg }),
-          expect.objectContaining({ type: "file", mime: "image/svg+xml", url }),
+          // Relabelled text/plain, so message-v2 keeps it out of the model request instead of
+          // forwarding an image/svg+xml file part that providers reject on every later turn.
+          expect.objectContaining({ type: "file", mime: "text/plain", url }),
         ]),
       )
+      expect(result.parts.some((part) => part.type === "file" && part.mime === "image/svg+xml")).toBe(false)
 
       const saved = yield* sessions.messages({ sessionID: chat.id })
-      expect(saved.flatMap((message) => message.parts).some((part) => part.type === "file")).toBe(true)
+      const savedParts = saved.flatMap((message) => message.parts)
+      expect(savedParts.some((part) => part.type === "file")).toBe(true)
+      expect(savedParts.some((part) => part.type === "file" && part.mime === "image/svg+xml")).toBe(false)
     }),
   { config: cfg },
 )
@@ -865,12 +870,15 @@ noLLMServer.instance(
         parts: [{ type: "file", mime: "image/svg+xml", filename: "icon.svg", url: pathToFileURL(file).href }],
       })
 
+      // Relabelled text/plain, so it goes through the real Read tool: the markup arrives as
+      // normal numbered file content, and the retained part never reaches the model as an image.
       expect(result.parts).toEqual(
-        expect.arrayContaining([
-          expect.objectContaining({ type: "text", synthetic: true, text: svg }),
-          expect.objectContaining({ type: "file", mime: "image/svg+xml" }),
-        ]),
+        expect.arrayContaining([expect.objectContaining({ type: "file", mime: "text/plain", filename: "icon.svg" })]),
       )
+      expect(
+        result.parts.some((part) => part.type === "text" && typeof part.text === "string" && part.text.includes(svg)),
+      ).toBe(true)
+      expect(result.parts.some((part) => part.type === "file" && part.mime === "image/svg+xml")).toBe(false)
     }),
   { config: cfg },
 )

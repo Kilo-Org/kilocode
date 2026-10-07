@@ -1,4 +1,4 @@
-import { isImageAttachment } from "@/util/media"
+import { isImageAttachment, sniffAttachmentMime } from "@/util/media"
 import { Image } from "@/image/image"
 
 export namespace KiloAttachment {
@@ -25,15 +25,27 @@ export namespace KiloAttachment {
   }
 
   /**
-   * Cheap, synchronous rejection for a `data:` URL raster attachment that is
-   * not actually decodable, without touching Photon/WASM. Used at the HTTP
+   * Relabels a markup "image" (SVG) as `text/plain` so the prompt pipeline treats it as the
+   * source text it is. Applied once before parts are resolved, which means the existing
+   * `text/plain` paths do the reading and size limiting, and `message-v2` never forwards the
+   * persisted part to the model as an `image/svg+xml` file part -- a mime providers reject, and
+   * one that would be replayed on every later turn because the user message is saved.
+   */
+  export function asText<T extends { type: string; mime?: string }>(part: T): T {
+    if (part.type !== "file" || !part.mime) return part
+    return classify(part.mime) === "markup" ? { ...part, mime: "text/plain" } : part
+  }
+
+  /**
+   * Cheap, synchronous rejection for a `data:` URL attachment the prompt
+   * pipeline would only be able to reject as a defect. Used at the HTTP
    * boundary so a bad attachment is rejected with a 400 *before* `prompt_async`
    * promises acceptance, instead of surfacing as an async `session.error`
    * after the client has already cleared its draft.
    *
-   * Only validates "raster"-classified `data:` parts, which is everything that
-   * can be checked without touching the filesystem. A `file://` attachment is
-   * deliberately left to the prompt pipeline: reading it here would bypass the
+   * Only `data:` parts are checked, which is everything that can be validated
+   * without touching the filesystem. A `file://` attachment is deliberately
+   * left to the prompt pipeline: reading it here would bypass the
    * `permission: "read"` prompt and the `KiloReadObject` binding that
    * `prompt.ts` performs, so it cannot be pre-validated at the HTTP boundary.
    *
@@ -52,16 +64,35 @@ export namespace KiloAttachment {
    * attachment looks fine.
    */
   export function precheck(part: { mime: string; url: string }): string | undefined {
-    if (classify(part.mime) !== "raster") return undefined
     if (!part.url.startsWith("data:")) return undefined
-    // `Image.normalize` only accepts base64 data URLs and fails any other form with
-    // InvalidDataUrlError, which the prompt pipeline turns into a defect. Reject it here
-    // instead so the caller gets a 400 rather than a lost message.
-    if (!part.url.includes(";base64,")) return `${part.mime} attachment must be a base64 data URL`
+
+    // A non-base64 `data:` URL is percent-encoded, and `decodeDataUrl` runs it through
+    // `decodeURIComponent`, which throws `URIError` on a malformed escape. That throw would
+    // become a defect and lose the message, so reject it here for every mime -- a markup
+    // (SVG) part reaches the same decode even though it is not a raster.
+    if (!part.url.includes(";base64,")) {
+      const body = part.url.slice(part.url.indexOf(",") + 1)
+      try {
+        decodeURIComponent(body)
+      } catch {
+        return `${part.mime} attachment is not a decodable data URL`
+      }
+      // `Image.normalize` accepts base64 data URLs only and fails any other form with
+      // InvalidDataUrlError, which the prompt pipeline turns into a defect.
+      if (classify(part.mime) === "raster") return `${part.mime} attachment must be a base64 data URL`
+      return undefined
+    }
+
+    if (classify(part.mime) !== "raster") return undefined
     const base64 = part.url.slice(part.url.indexOf(";base64,") + ";base64,".length)
     const data = Buffer.from(base64, "base64")
-    const canonical = data.toString("base64").replace(/=+$/, "") === base64.replace(/=+$/, "")
-    if (canonical && Image.dimensions(part.mime, data)) return undefined
+    if (data.byteLength === 0) return `${part.mime} attachment could not be decoded as a valid image`
+    // Validate against the sniffed format rather than the declared mime. Photon decodes by
+    // content, so an image mislabelled as the wrong raster mime (JPEG bytes sent as
+    // `image/png`) decodes fine today and must not start failing here. `Image.dimensions`
+    // understands exactly the formats Photon handles reliably, so a successful parse is the
+    // right acceptance test -- notably it still rejects BMP bytes, which Photon traps on.
+    if (Image.dimensions(sniffAttachmentMime(data, part.mime), data)) return undefined
     return `${part.mime} attachment could not be decoded as a valid image`
   }
 }
