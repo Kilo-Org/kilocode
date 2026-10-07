@@ -537,6 +537,8 @@ The project and worktree context owns document tabs, loaded content, and comment
 
 Enable **Browser Automation** in **Settings > Experimental** to show the Browser panel. It is off by default. Open the panel with the **Browser** button and enter your local application's URL. Each session has its own browser, with developer tools and console diagnostics beside the preview.
 
+The same Integrated Browser also opens as an editor tab for any session, including sidebar sessions that are not part of Agent Manager. Run **Kilo Code: Open Integrated Browser** from the Command Palette, or let the `browser_open` tool reveal the tab automatically. Each session gets its own browser tab, so switching sidebar sessions keeps an open tab live.
+
 Use **Select element** to attach an element reference to your next message. It includes enough page context for Kilo to identify the element, plus a source file and line when the page provides a verifiable location. Add your instruction before sending it.
 
 The agent can open the application with `browser_open`. Its automation browser accepts only HTTP URLs on `localhost` or `127.0.0.1` and blocks other origins, including external assets and APIs on separate ports. Serve the resources the agent needs from the same loopback origin. These restrictions apply to the automation browser, not the independent visible preview iframe.

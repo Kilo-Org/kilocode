@@ -68,6 +68,12 @@ Send a message while Kilo is working to queue it for processing in order. To rev
 
 After stopping a response, leave the input empty and click **Continue** to resume the interrupted turn with its original model and agent, without adding another user message. Continue starts a new model request; it does not undo tool actions already performed and is not available for completed responses.
 
+## Session tabs
+
+Both the sidebar and Agent Manager show open sessions as tabs above the chat. Click a tab to switch to that session.
+
+Shift+click a session tab to pin or unpin it, so sessions you return to often stay at the front of the strip. The tab's context menu and tooltip show the gesture next to **Pin** and **Unpin**. Pending tabs (a new session that has not started yet) cannot be pinned, so Shift+click on them only selects.
+
 ## Shared Settings
 
 Settings apply across extension surfaces, including the sidebar and Agent Manager. The standalone CLI uses the same `~/.config/kilo/kilo.jsonc` (global) and `./kilo.jsonc` (project) files when used directly.

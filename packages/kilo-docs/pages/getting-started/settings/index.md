@@ -42,6 +42,12 @@ The VS Code extension provides a **Settings webview UI** accessible from Kilo Co
 
 This UI reads and writes to the same underlying JSONC config files used across extension surfaces. Changes apply to the sidebar, Agent Manager, and the CLI when used directly.
 
+### Settings Search
+
+The Settings UI has many tabs, so use the **Search settings** field at the top of the navigation to find an option without scanning each one. Type to filter every setting; matches are grouped by the tab that owns them. Select a result to open its tab and briefly highlight the row.
+
+Navigate results with `Up`/`Down` and press `Enter` to open one, or `Escape` to dismiss the search. The field focuses with `Ctrl+F` (`Cmd+F` on macOS), shown as a keycap in the input, and the same action is available as **Kilo Code: Search Settings** in the Command Palette.
+
 ### Config File Locations
 
 There are two primary config files:
