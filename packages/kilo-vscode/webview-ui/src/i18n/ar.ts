@@ -566,6 +566,7 @@ export const dict = {
   "session.tabs.switcher.pending": "جديد",
   "session.tabs.switcher.busy": "جارٍ العمل",
   "session.tabs.switcher.scheduled": "مجدولة",
+  "session.tabs.pinHint": "Shift+النقر للتثبيت أو إلغاء التثبيت",
   "session.tab.local": "محلي",
   "session.tab.cloud": "السحابة",
   "session.tab.worktree": "شجرة العمل",
@@ -1413,6 +1414,10 @@ export const dict = {
   "settings.experimental.browserAutomation.systemChrome.title": "استخدام Chrome النظام",
   "settings.experimental.browserAutomation.systemChrome.description":
     "استخدام Google Chrome المثبّت للمتصفح المدمج. عطّله فقط عند تثبيت متصفح Playwright Chromium متوافق.",
+  "settings.experimental.browserLinks.title": "فتح الروابط في",
+  "settings.experimental.browserLinks.description": "اختر مكان فتح روابط الويب من محادثات Kilo. يتطلب المتصفح المدمج.",
+  "settings.experimental.browserLinks.external": "متصفح النظام",
+  "settings.experimental.browserLinks.integrated": "المتصفح المدمج",
   "chat.search.searchingHistory": "جارٍ البحث في الرسائل السابقة…",
   "browserTab.noSession": "افتح المتصفح من جلسة لمعاينة تطبيق محلي أو صفحة HTTPS عامة.",
   "browserTab.disabled": "المتصفح المدمج معطّل. فعّله من إعدادات Kilo > تجريبي.",

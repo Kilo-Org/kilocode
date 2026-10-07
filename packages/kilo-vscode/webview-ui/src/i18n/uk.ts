@@ -571,6 +571,7 @@ export const dict = {
   "session.tabs.switcher.pending": "Нова",
   "session.tabs.switcher.busy": "Працює",
   "session.tabs.switcher.scheduled": "Заплановано",
+  "session.tabs.pinHint": "Shift+клік, щоб закріпити або відкріпити",
   "session.tab.local": "Локальний",
   "session.tab.cloud": "Хмарний",
   "session.tab.worktree": "Робоче дерево",
@@ -1462,6 +1463,11 @@ export const dict = {
   "settings.experimental.browserAutomation.systemChrome.title": "Використовувати системний Chrome",
   "settings.experimental.browserAutomation.systemChrome.description":
     "Використовувати встановлений Google Chrome для вбудованого браузера. Вимкніть лише якщо сумісний браузер Playwright Chromium уже встановлено.",
+  "settings.experimental.browserLinks.title": "Відкривати посилання в",
+  "settings.experimental.browserLinks.description":
+    "Виберіть, де відкривати веб-посилання з чатів Kilo. Потрібен вбудований браузер.",
+  "settings.experimental.browserLinks.external": "Системний браузер",
+  "settings.experimental.browserLinks.integrated": "Вбудований браузер",
   "chat.search.searchingHistory": "Пошук у попередніх повідомленнях…",
   "browserTab.noSession":
     "Відкрийте браузер із сеансу, щоб переглянути локальний застосунок або загальнодоступну HTTPS-сторінку.",

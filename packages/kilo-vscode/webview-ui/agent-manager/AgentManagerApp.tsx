@@ -1154,8 +1154,8 @@ const AgentManagerContent: Component = () => {
       if (msg?.type !== "action") return
       if (msg.action === "sessionPrevious") projectNav.step("up")
       else if (msg.action === "sessionNext") projectNav.step("down")
-      else if (msg.action === "tabPrevious") navigateTab("left")
-      else if (msg.action === "tabNext") navigateTab("right")
+      else if (msg.action === "tabPrevious" && document.hasFocus()) navigateTab("left")
+      else if (msg.action === "tabNext" && document.hasFocus()) navigateTab("right")
       else if (msg.action === "terminalPrevious") cycleTerminal("previous")
       else if (msg.action === "terminalNext") cycleTerminal("next")
       else if (msg.action === "search") {

@@ -136,6 +136,19 @@ describe("BrowserStream protocol lifecycle", () => {
     }
   })
 
+  test("keeps the screencast running for a new document of the same size", async () => {
+    const fixture = protocol()
+    await fixture.stream.configure(view)
+    const count = fixture.calls.length
+    fixture.scope.navigation++
+    await fixture.stream.configure({ ...view, revision: 2 })
+    expect(fixture.calls.slice(count)).toEqual([])
+    fixture.send(1)
+    expect(fixture.frames.at(-1)).toMatchObject({ navigation: 2, revision: 2 })
+    await fixture.stream.configure({ ...view, width: 800, revision: 3 })
+    expect(fixture.calls.slice(count).map((call) => call.method)).toContain("Page.startScreencast")
+  })
+
   test("keeps paste ahead of later input while reading the clipboard", async () => {
     const fixture = protocol()
     await fixture.stream.configure(view)
@@ -387,7 +400,7 @@ describe("BrowserStream protocol lifecycle", () => {
     expect(fixture.calls.filter((call) => call.method === "detach")).toHaveLength(1)
     expect(fixture.session.listenerCount("Page.screencastFrame")).toBe(0)
     expect(fixture.page.listenerCount("close")).toBe(0)
-    expect(fixture.page.listenerCount("framenavigated")).toBe(0)
+    expect(fixture.session.listenerCount("Page.frameNavigated")).toBe(0)
     if (method === "Page.startScreencast") {
       expect(fixture.calls.map((call) => call.method).slice(-2)).toEqual(["Page.stopScreencast", "detach"])
     }
@@ -429,7 +442,7 @@ describe("BrowserStream protocol lifecycle", () => {
     await entered.promise
     const stale = fixture.stream.interact({ kind: "text", text: "stale" })
     fixture.scope.navigation++
-    fixture.page.emit("framenavigated", fixture.page)
+    fixture.session.emit("Page.frameNavigated", { frame: { id: "main" } })
     resume.resolve()
     await Promise.all([first, stale])
     expect(fixture.calls.filter((call) => call.method === "Input.insertText").map((call) => call.params?.text)).toEqual(

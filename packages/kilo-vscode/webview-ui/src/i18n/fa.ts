@@ -534,6 +534,7 @@ export const dict = {
   "session.tabs.switcher.pending": "جدید",
   "session.tabs.switcher.busy": "در حال کار",
   "session.tabs.switcher.scheduled": "زمان‌بندی‌شده",
+  "session.tabs.pinHint": "Shift+کلیک برای سنجاق کردن یا لغو آن",
   "session.tab.local": "محلی",
   "session.tab.cloud": "Cloud",
   "session.tab.worktree": "Worktree",
@@ -1444,6 +1445,11 @@ export const dict = {
   "settings.experimental.browserAutomation.systemChrome.title": "استفاده از Chrome سیستم",
   "settings.experimental.browserAutomation.systemChrome.description":
     "از Google Chrome نصب‌شده برای مرورگر یکپارچه استفاده کنید. فقط زمانی غیرفعال کنید که مرورگر Playwright Chromium سازگار از قبل نصب شده باشد.",
+  "settings.experimental.browserLinks.title": "باز کردن پیوندها در",
+  "settings.experimental.browserLinks.description":
+    "انتخاب کنید پیوندهای وب از گفتگوهای Kilo کجا باز شوند. به مرورگر یکپارچه نیاز دارد.",
+  "settings.experimental.browserLinks.external": "مرورگر سیستم",
+  "settings.experimental.browserLinks.integrated": "مرورگر یکپارچه",
   "chat.search.searchingHistory": "در حال جستجو در پیام‌های قبلی…",
   "browserTab.noSession": "مرورگر را از یک نشست باز کنید تا یک برنامه محلی یا یک صفحه HTTPS عمومی را پیش‌نمایش بگیرید.",
   "browserTab.disabled": "مرورگر یکپارچه غیرفعال است. آن را در تنظیمات Kilo > آزمایشی فعال کنید.",
