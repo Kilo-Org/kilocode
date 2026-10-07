@@ -1382,11 +1382,11 @@ export const layer = Layer.effect(
       }
       // kilocode_change end
 
-      const resolvedParts = yield* Effect.forEach(
-        submittedParts.map(KiloAttachment.asText), // kilocode_change - SVG is source text, not an image mime any provider accepts
-        resolvePart,
-        { concurrency: "unbounded" },
-      ).pipe(Effect.map((x) => x.flat().map(assign)))
+      // kilocode_change start - asText relabels SVG as source text; it is not an image mime any provider accepts
+      const resolvedParts = yield* Effect.forEach(submittedParts.map(KiloAttachment.asText), resolvePart, {
+        concurrency: "unbounded",
+      }).pipe(Effect.map((x) => x.flat().map(assign)))
+      // kilocode_change end
 
       yield* plugin.trigger(
         "chat.message",
