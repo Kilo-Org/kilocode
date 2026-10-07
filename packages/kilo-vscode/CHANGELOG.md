@@ -1,5 +1,32 @@
 # kilo-code
 
+## 7.8.8
+
+### Minor Changes
+
+- [#14891](https://github.com/Kilo-Org/kilocode/pull/14891) [`ce9a04b`](https://github.com/Kilo-Org/kilocode/commit/ce9a04b0f91531b26d37a0f514621396f85311e8) - Pin worktrees in the Agent Manager sidebar with Shift+click or the context menu. Pinned worktrees stay at the top of the list, get the first jump shortcuts, and keep their section for when you unpin them.
+
+- [#14885](https://github.com/Kilo-Org/kilocode/pull/14885) [`0abb254`](https://github.com/Kilo-Org/kilocode/commit/0abb2543204636b59be9afc22b7f380b5177fdd2) - Open chat web links in-app by default when the experimental Integrated Browser is enabled: sidebar chats use a browser tab and Agent Manager uses its browser panel. Choose "System browser" under "Open links in" to opt out. In-app links show a browser icon, and links no longer open in two browsers.
+
+### Patch Changes
+
+- [#14890](https://github.com/Kilo-Org/kilocode/pull/14890) [`3453059`](https://github.com/Kilo-Org/kilocode/commit/34530596230a4614cb7c6c089ab8a2f1a264d9ca) - Reduce the height of Agent Manager section headers so more sessions fit in the sidebar.
+
+- [#14884](https://github.com/Kilo-Org/kilocode/pull/14884) [`d6b3b21`](https://github.com/Kilo-Org/kilocode/commit/d6b3b214d22e81cbe9b05ec2ec90735d050292bc) - Make the integrated browser preview feel more like a native browser. Page loads and client-side route changes keep the current page visible until the next page paints, instead of showing a blank preview. Route changes in single-page apps no longer drop input. The preview now updates while you resize its panel, and it does not stretch the page during the resize.
+
+- [#14886](https://github.com/Kilo-Org/kilocode/pull/14886) [`8781c16`](https://github.com/Kilo-Org/kilocode/commit/8781c165ccfbc23d1135bb556936009d896e3ff2) - Show a clear warning when the Integrated Browser is opened without an active session, and disable its address bar until a session is selected.
+
+- [#14888](https://github.com/Kilo-Org/kilocode/pull/14888) [`35da0f1`](https://github.com/Kilo-Org/kilocode/commit/35da0f1814fefbfbab3c41a75b93e3cdd2485ca4) - Make the session header more compact to save vertical space, and keep the scroll-to-bottom button clear of the prompt rail.
+
+- [#14889](https://github.com/Kilo-Org/kilocode/pull/14889) [`7f64374`](https://github.com/Kilo-Org/kilocode/commit/7f6437435e3886a4753c87aa79fd2e0d43844035) Thanks [@WebReflection](https://github.com/WebReflection)! - Keep MCP OAuth credentials bound to the authorization server that issued them, so a server that switches authorization servers can no longer receive stored refresh tokens or client secrets.
+
+- [#14887](https://github.com/Kilo-Org/kilocode/pull/14887) [`248e9ae`](https://github.com/Kilo-Org/kilocode/commit/248e9ae468efdbd31e34ef3ca863c05be8800337) - Switch between session tabs in the sidebar and Kilo editor tabs with `Cmd+Alt+Left` / `Right` (`Ctrl+Alt+Left` / `Right` on Windows and Linux), with shortcut hints on the tabs and in the prompt.
+
+- [#14854](https://github.com/Kilo-Org/kilocode/pull/14854) [`2c85991`](https://github.com/Kilo-Org/kilocode/commit/2c859919d8e4c420bed3abd9872da2cc0b5bcc8c) - Use installed Playwright Chromium in WSL when Chrome is missing and no browser preference is set. Document manual browser setup without installing software automatically.
+
+- Updated dependencies [[`35da0f1`](https://github.com/Kilo-Org/kilocode/commit/35da0f1814fefbfbab3c41a75b93e3cdd2485ca4)]:
+  - @kilocode/kilo-ui@7.8.8
+
 ## 7.8.7
 
 ### Minor Changes
