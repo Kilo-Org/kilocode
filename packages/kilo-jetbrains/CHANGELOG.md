@@ -562,6 +562,25 @@
 
 ## [Unreleased]
 
+## [7.1.9-rc.2] - 2026-10-07
+
+### Added
+
+- Add a prompt navigator to the chat transcript for jumping between your own prompts.
+- Add MCP OAuth sign-in support, including recognizing recoverable auth failures and refreshing auth after a reset.
+- Show a combined MCP and Skill badge for marketplace servers that include companion skills.
+
+### Fixed
+
+- Submit chat dialogs with Command+Enter from any focused dialog control.
+- Refresh a worktree's pull request status when its agent stops.
+- Prevent a rejected attachment from discarding the prompt you were composing.
+
+### Changed
+
+- Bump the bundled Kilo CLI pin from 7.8.1 to 7.8.8.
+- Pin the Bun runtime and types to 1.4.2 for reproducible builds.
+
 ## [7.1.9-rc.1] - 2026-09-28
 
 ### Added
