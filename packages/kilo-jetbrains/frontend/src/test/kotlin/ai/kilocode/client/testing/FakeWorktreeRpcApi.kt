@@ -17,6 +17,7 @@ import ai.kilocode.rpc.dto.WorktreeStatsListDto
 import ai.kilocode.rpc.dto.orphans.OrphanRemoveResultDto
 import ai.kilocode.rpc.dto.orphans.RemoveOrphansResultDto
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asFlow
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArrayList
@@ -251,4 +252,18 @@ class FakeWorktreeRpcApi : KiloWorktreeRpcApi {
         revealPaths.add(path)
         return revealPathResult(path)
     }
+
+    /**
+     * Worktree-list changes made outside this fake. Tests that need to drive a refresh emit into
+     * [changes] directly and pass [KiloWorktreeRpcApi.changes]'s flow to the controller.
+     */
+    val changes = MutableSharedFlow<Unit>(extraBufferCapacity = 16)
+
+    override suspend fun changes(directory: String): Flow<Unit> {
+        assertNotEdt("changes")
+        changeCalls.add(directory)
+        return changes
+    }
+
+    val changeCalls = CopyOnWriteArrayList<String>()
 }

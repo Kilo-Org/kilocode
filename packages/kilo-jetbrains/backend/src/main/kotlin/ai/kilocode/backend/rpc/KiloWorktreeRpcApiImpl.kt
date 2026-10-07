@@ -1,5 +1,6 @@
 package ai.kilocode.backend.rpc
 
+import ai.kilocode.backend.agentmanager.AgentManagerWorktreeChanges
 import ai.kilocode.backend.app.ForkHandoff
 import ai.kilocode.backend.app.KiloBackendAppService
 import ai.kilocode.backend.diff.GIT_COMMAND_TIMEOUT_MS
@@ -1158,6 +1159,13 @@ class KiloWorktreeRpcApiImpl(
                 }
             }
         }
+
+    // Backed by a process-wide singleton, not instance state — see its doc. This instance's own
+    // create/remove/rename/importPr calls do not need it: their caller already has the fresh result
+    // and reloads from it directly. It exists only for a mutation made through a different
+    // `KiloWorktreeRpcApiImpl` instance, which today means `agentmanager.AgentManagerStarter`.
+    override suspend fun changes(directory: String): Flow<Unit> =
+        AgentManagerWorktreeChanges.observe(Path.of(directory).normalize().toString())
 
     private data class Timed<T>(val time: Long, val value: T)
 

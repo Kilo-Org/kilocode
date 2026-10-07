@@ -193,6 +193,19 @@ class MockCliServer : AutoCloseable {
     @Volatile var instanceReloadStatus = 200
     @Volatile var lastInstanceReloadPath: String? = null
 
+    /** `GET /kilocode/agent-manager` — bare JSON array of pending host requests, for [KiloAgentManagerHost] reconnect reconciliation. */
+    @Volatile var agentManagerPending = "[]"
+    @Volatile var agentManagerPendingStatus = 200
+
+    /** Bodies the host POSTed to `/kilocode/agent-manager/{requestID}/reply`, in arrival order. */
+    val agentManagerReplies: MutableList<Pair<String, String>> = CopyOnWriteArrayList()
+
+    /** Bodies the host POSTed to `/kilocode/agent-manager/{requestID}/reject`, in arrival order. */
+    val agentManagerRejects: MutableList<Pair<String, String>> = CopyOnWriteArrayList()
+
+    @Volatile var agentManagerReplyStatus = 200
+    @Volatile var agentManagerRejectStatus = 200
+
     /** Configurable delay for all endpoint responses (ms). 0 = no delay. */
     @Volatile var responseDelay: Long = 0
 
@@ -221,6 +234,32 @@ class MockCliServer : AutoCloseable {
         val end = System.currentTimeMillis() + timeout
         synchronized(requests) {
             while (requestCount(path) < target) {
+                val wait = end - System.currentTimeMillis()
+                if (wait <= 0) return false
+                requests.wait(wait)
+            }
+            return true
+        }
+    }
+
+    /** Blocks until [agentManagerReplies] holds at least [target] entries, or [timeout] elapses. */
+    fun awaitAgentManagerReplies(target: Int, timeout: Long = 5_000): Boolean {
+        val end = System.currentTimeMillis() + timeout
+        synchronized(requests) {
+            while (agentManagerReplies.size < target) {
+                val wait = end - System.currentTimeMillis()
+                if (wait <= 0) return false
+                requests.wait(wait)
+            }
+            return true
+        }
+    }
+
+    /** Blocks until [agentManagerRejects] holds at least [target] entries, or [timeout] elapses. */
+    fun awaitAgentManagerRejects(target: Int, timeout: Long = 5_000): Boolean {
+        val end = System.currentTimeMillis() + timeout
+        synchronized(requests) {
+            while (agentManagerRejects.size < target) {
                 val wait = end - System.currentTimeMillis()
                 if (wait <= 0) return false
                 requests.wait(wait)
@@ -530,6 +569,20 @@ class MockCliServer : AutoCloseable {
                     respond(output, pendingPermissionsStatus, pendingPermissions)
                 bare == "/question" && method == "GET" ->
                     respond(output, pendingQuestionsStatus, pendingQuestions)
+                bare == "/kilocode/agent-manager" && method == "GET" ->
+                    respond(output, agentManagerPendingStatus, agentManagerPending)
+                bare.matches(Regex("/kilocode/agent-manager/[^/]+/reply")) && method == "POST" -> {
+                    val requestID = bare.removePrefix("/kilocode/agent-manager/").removeSuffix("/reply")
+                    agentManagerReplies.add(requestID to body)
+                    synchronized(requests) { requests.notifyAll() }
+                    respond(output, agentManagerReplyStatus, "true")
+                }
+                bare.matches(Regex("/kilocode/agent-manager/[^/]+/reject")) && method == "POST" -> {
+                    val requestID = bare.removePrefix("/kilocode/agent-manager/").removeSuffix("/reject")
+                    agentManagerRejects.add(requestID to body)
+                    synchronized(requests) { requests.notifyAll() }
+                    respond(output, agentManagerRejectStatus, "true")
+                }
                 bare == "/session" && method == "GET" -> respond(output, sessionsStatus, sessions)
                 bare == "/session" && method == "POST" -> respond(output, sessionCreateStatus, sessionCreate)
                 bare.matches(Regex("/session/ses_[^/]+")) && method == "GET" ->

@@ -1,5 +1,6 @@
 package ai.kilocode.backend.app
 
+import ai.kilocode.backend.agentmanager.KiloAgentManagerHost
 import ai.kilocode.backend.cli.CliServer
 import ai.kilocode.backend.cli.KiloBackendCliManager
 import ai.kilocode.backend.cli.KiloCliDataParser
@@ -151,6 +152,7 @@ class KiloBackendAppService private constructor(
     val activity = KiloBackendActivityManager(cs, log)
     val models = KiloBackendModelStateManager(log)
     val workspaces = KiloBackendWorkspaceManager(cs, sessions, log)
+    val agentManager = KiloAgentManagerHost(cs, sessions, chat, log)
     @Volatile var profile: KiloProfile200Response? = null
         private set
 
@@ -464,6 +466,7 @@ class KiloBackendAppService private constructor(
                     chat.start(connection.apiClient!!, connection.port, connection.events)
                     activity.start(sessions.statuses, sessions::sessionDirectory, chat.events)
                     workspaces.start(connection.api!!, connection.apiClient!!, connection.port, connection.events)
+                    agentManager.start(connection.apiClient!!, connection.port, connection.events)
                     startWatchingGlobalSseEvents()
                     setTelemetry(true)
                     captureBackend("Backend Connected", mapOf("portKnown" to "true"))
@@ -894,6 +897,7 @@ class KiloBackendAppService private constructor(
     }
 
     private fun stopRuntime() {
+        agentManager.stop()
         workspaces.stop()
         models.stop()
         activity.stop()

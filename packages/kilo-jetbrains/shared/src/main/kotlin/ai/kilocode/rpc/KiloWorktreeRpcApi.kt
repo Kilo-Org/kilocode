@@ -150,4 +150,13 @@ interface KiloWorktreeRpcApi : RemoteApi<Unit> {
      * (see its doc). Returns false when reveal is unsupported on this OS or [path] does not exist.
      */
     suspend fun revealPath(path: String): Boolean
+
+    /**
+     * Ticks once per worktree-list mutation made for [directory] by something other than this
+     * frontend's own [create]/[importPr]/[remove]/[rename] calls — currently, the `agent_manager`
+     * tool's host-initiated worktree creation (see `ai.kilocode.rpc.KiloAgentManagerRpcApi`). The
+     * panel otherwise learns about a new worktree only from the result of its own creation call, which
+     * a chat-initiated creation bypasses entirely.
+     */
+    suspend fun changes(directory: String): Flow<Unit>
 }
