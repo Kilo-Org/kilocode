@@ -285,10 +285,13 @@ Advanced options not exposed in the UI can be configured via the `experimental` 
     "batch_tool": false,
     "openTelemetry": true,
     "disable_paste_summary": false,
-    "mcp_timeout": 30000
+    "mcp_timeout": 30000,
+    "chatMaxRetries": 10
   }
 }
 ```
+
+`chatMaxRetries` sets how many times a failed chat completion is retried (for example on provider rate limits or 5xx errors) before the session fails. When unset, the default retry limit applies.
 
 Refer to the auto-generated `$schema` in your `kilo.jsonc` for the full list of available options.
 

@@ -952,6 +952,9 @@ const layer = Layer.effect(
         ctx.shouldBreak = (yield* config.get()).experimental?.continue_loop_on_deny !== true
 
         return yield* Effect.gen(function* () {
+          // kilocode_change start - configurable retry limit via experimental.chatMaxRetries
+          const chatMaxRetries = (yield* config.get()).experimental?.chatMaxRetries
+          // kilocode_change end
           // kilocode_change start - publish retry state consistently for provider and empty-response retries
           const retries = { provider: 0 }
           const setRetry = (info: {
@@ -1018,12 +1021,15 @@ const layer = Layer.effect(
                 SessionRetry.policy({
                   provider: input.model.providerID,
                   parse: retryParse,
+                  // kilocode_change start - configurable retry limit via experimental.chatMaxRetries
                   ...KiloSessionProcessor.retryOpts({
                     sessionID: ctx.sessionID,
                     abort: ac.signal,
                     set: status.set,
                     used: retries.provider,
+                    chatMaxRetries,
                   }),
+                  // kilocode_change end
                   set: (info) => {
                     if (info.attempt > 0) retries.provider += 1
                     return setRetry(info)
