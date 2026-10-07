@@ -5,15 +5,19 @@ import ai.kilocode.client.ui.list.ActiveList
 import ai.kilocode.client.ui.list.ActiveListConfig
 import ai.kilocode.client.ui.list.ActiveListItem
 import ai.kilocode.client.ui.list.ActiveListRowHeight
+import com.intellij.openapi.options.advanced.AdvancedSettings
 import com.intellij.openapi.util.Disposer
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import java.awt.Component
 import java.awt.Container
 import java.awt.Dimension
 import java.awt.Rectangle
+import java.awt.event.ActionEvent
+import java.awt.event.KeyEvent
 import java.awt.event.MouseEvent
 import javax.swing.JList
 import javax.swing.JScrollPane
+import javax.swing.KeyStroke
 import javax.swing.JViewport
 
 class PromptRailPopupTest : BasePlatformTestCase() {
@@ -248,6 +252,43 @@ class PromptRailPopupTest : BasePlatformTestCase() {
     }
 
     /**
+     * Enter has to commit like a double click. The list's default provider reports the global
+     * `edit.source.on.enter.key.request.focus.in.editor` setting, so without an override Enter would
+     * close the card on installs where that is on and leave it open everywhere else.
+     */
+    fun `test enter commits regardless of the editor focus setting`() {
+        // The setting defaults to on, which is indistinguishable from the override. Turn it off, which
+        // is the install state where the default provider would report false and leave the card open.
+        val restore = AdvancedSettings.getBoolean(ENTER_FOCUS)
+        AdvancedSettings.setBoolean(ENTER_FOCUS, false)
+        try {
+            val seen = mutableListOf<Pair<String, Boolean>>()
+            val popup = PromptRailPopup(
+                items = items(40),
+                hovered = 3,
+                onSelect = { item, commit -> seen.add(item.id to commit) },
+                onFirst = {},
+                onLatest = {},
+            )
+            popup.fitWithin(CAP_W, CAP_H)
+            val root = popup.component
+            root.size = root.preferredSize
+            layoutAll(root)
+            val list = findList(root) ?: error("expected a JList of rows")
+
+            val enter = list.getActionForKeyStroke(KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, 0))
+                ?: error("expected an Enter binding on the row list")
+            enter.actionPerformed(ActionEvent(list, ActionEvent.ACTION_PERFORMED, null))
+
+            assertEquals(listOf("msg_3" to true), seen)
+
+            Disposer.dispose(popup.disposable)
+        } finally {
+            AdvancedSettings.setBoolean(ENTER_FOCUS, restore)
+        }
+    }
+
+    /**
      * Only the click is dispatched. A press would reach `BasicListUI`, whose selection handling asks the
      * toolkit for the menu shortcut mask and throws headlessly, and `onOpen` is driven from the click.
      */
@@ -346,6 +387,7 @@ class PromptRailPopupTest : BasePlatformTestCase() {
     }
 
     private companion object {
+        const val ENTER_FOCUS = "edit.source.on.enter.key.request.focus.in.editor"
         const val CAP_W = 320
         const val CAP_H = 260
     }

@@ -75,6 +75,11 @@ internal class PromptRailPopup(
         // Left at open-on-click so a single click reaches onOpen. With it off, ActiveListView's click
         // path falls through to the (absent) onClick handler and returns, so only a double click would
         // jump — the navigator is a one-click list.
+        //
+        // Enter commits unconditionally. The default provider reports the global
+        // `edit.source.on.enter.key.request.focus.in.editor` advanced setting, which would make Enter
+        // close the card on some installs and leave it open on others.
+        enter = { true },
         onCell = { _, _ -> },
         onOpen = { row, focus ->
             items.firstOrNull { it.id == row.key }?.let { onSelect(it, focus) }
