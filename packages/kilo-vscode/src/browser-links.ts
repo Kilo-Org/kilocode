@@ -34,6 +34,16 @@ export function shouldOpenLinkInIntegratedBrowser(url: string): boolean {
  */
 export async function openBrowserLink(url: string, openIntegrated?: () => boolean): Promise<void> {
   const uri = vscode.Uri.parse(url)
-  if (shouldOpenLinkInIntegratedBrowser(url) && openIntegrated?.()) return
+  if (shouldOpenLinkInIntegratedBrowser(url) && openerAccepted(openIntegrated)) return
   await vscode.env.openExternal(uri)
+}
+
+function openerAccepted(openIntegrated?: () => boolean): boolean {
+  if (!openIntegrated) return false
+  try {
+    return openIntegrated()
+  } catch (error) {
+    console.warn("[Kilo New] Integrated Browser open failed, opening externally:", error)
+    return false
+  }
 }

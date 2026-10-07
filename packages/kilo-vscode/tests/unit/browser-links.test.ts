@@ -56,6 +56,14 @@ describe("Chat link destination", () => {
     expect(external).toEqual(["https://example.com"])
   })
 
+  test("falls back to the system browser when the opener throws", async () => {
+    const external = setup()
+    await openBrowserLink("https://example.com", () => {
+      throw new Error("Browser tab unavailable")
+    })
+    expect(external).toEqual(["https://example.com"])
+  })
+
   test.each([{ destination: "external" }, { enabled: false }, { trusted: false }])(
     "opens externally when in-app routing is unavailable: %j",
     async (input) => {
