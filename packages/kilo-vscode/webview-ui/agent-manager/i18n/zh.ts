@@ -436,6 +436,7 @@ export const dict = {
   "agentManager.browser.url": "地址",
   "agentManager.browser.urlPlaceholder": "http://localhost:3000",
   "agentManager.browser.open": "打开",
+  "agentManager.browser.openExternal": "在外部浏览器中打开",
   "agentManager.browser.refresh": "刷新浏览器",
   "agentManager.browser.back": "后退",
   "agentManager.browser.forward": "前进",

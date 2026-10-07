@@ -38,12 +38,13 @@ const receive = (event: BrowserEvent) => {
   for (const listener of [...listeners]) listener(event)
 }
 let closed = 0
-const actions = { download: 0, settings: 0 }
+const actions = { download: 0, settings: 0, openExternal: [] as string[] }
 const [labels, update] = createSignal<BrowserLabels>({
   title: "Browser",
   url: "Address",
   urlPlaceholder: "Local URL",
   open: "Go",
+  openExternal: "Open in external browser",
   refresh: "Reload",
   back: "Back",
   forward: "Forward",
@@ -79,6 +80,7 @@ const dispose = render(
       }}
       download={() => actions.download++}
       settings={() => actions.settings++}
+      openExternal={(url) => actions.openExternal.push(url)}
       onReference={(reference) => references.push(reference)}
       onClose={() => closed++}
     />
@@ -108,7 +110,7 @@ const button = (label: string) =>
   [...root.querySelectorAll("button")].find((node) => node.textContent?.trim() === label)
 button(labels().download)!.click()
 button(labels().settings)!.click()
-assert.deepEqual(actions, { download: 1, settings: 1 })
+assert.deepEqual(actions, { download: 1, settings: 1, openExternal: [] })
 button(labels().retry)!.click()
 assert.deepEqual(sent.at(-1), { type: "open", scope, url: state.url })
 receive({ type: "state", value: { ...state, browserId: "", status: "error", missing: "chromium" } })
@@ -126,6 +128,10 @@ assert.equal(root.querySelector(".am-browser-stream canvas"), null)
 assert.equal(root.querySelector(".am-browser-empty"), null)
 receive?.({ type: "state", value: state })
 assert.equal(root.querySelector('[role="alert"]'), null)
+const external = root.querySelector(`button[aria-label="${labels().openExternal}"]`) as HTMLButtonElement
+assert.ok(external, "external browser button renders")
+external.click()
+assert.deepEqual(actions.openExternal, [state.url])
 await window.happyDOM.waitUntilComplete()
 const frame = root.querySelector(".am-browser-stream canvas")
 assert.ok(frame)
@@ -250,6 +256,7 @@ const disposeEmpty = render(
       }}
       download={() => undefined}
       settings={() => undefined}
+      openExternal={() => undefined}
       onReference={() => undefined}
       onClose={() => undefined}
     />
