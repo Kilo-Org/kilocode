@@ -1678,6 +1678,49 @@ class KiloCliDataParserTest {
         }
 
         @Test
+        fun `parseMessages - reads assistant variant and user model selection`() {
+            val raw = """[
+                {
+                    "info": {
+                        "id": "u1", "sessionID": "s1", "role": "user", "time": { "created": 1.0 },
+                        "model": { "providerID": "anthropic", "modelID": "claude", "variant": "low" }
+                    },
+                    "parts": []
+                },
+                {
+                    "info": {
+                        "id": "a1", "sessionID": "s1", "role": "assistant", "time": { "created": 2.0 },
+                        "providerID": "kilo", "modelID": "gpt-5", "variant": "high"
+                    },
+                    "parts": []
+                }
+            ]"""
+
+            val result = KiloCliDataParser.parseMessages(raw)
+
+            assertEquals("anthropic", result[0].info.model?.providerID)
+            assertEquals("claude", result[0].info.model?.modelID)
+            assertEquals("low", result[0].info.model?.variant)
+            assertNull(result[1].info.model)
+            assertEquals("high", result[1].info.variant)
+        }
+
+        @Test
+        fun `parseMessages - drops a user model selection without provider or id`() {
+            val raw = """[
+                {
+                    "info": {
+                        "id": "u1", "sessionID": "s1", "role": "user", "time": { "created": 1.0 },
+                        "model": { "providerID": "", "modelID": "claude" }
+                    },
+                    "parts": []
+                }
+            ]"""
+
+            assertNull(KiloCliDataParser.parseMessages(raw).single().info.model)
+        }
+
+        @Test
         fun `parseMessages - sanitizes user text read payloads only`() {
             val raw = """[
                 {

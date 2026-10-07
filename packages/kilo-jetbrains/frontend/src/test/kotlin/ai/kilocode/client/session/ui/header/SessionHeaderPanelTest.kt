@@ -149,6 +149,47 @@ class SessionHeaderPanelTest : SessionControllerTestBase() {
         assertEquals(1, opened)
     }
 
+    fun `test subagent header shows model and effort`() {
+        val c = promptedHeader()
+        val sub = session("ses_test", title = "Sub").copy(parentID = "parent")
+        emit(ChatEventDto.SessionUpdated("ses_test", sub), flush = false)
+        emit(ChatEventDto.MessageUpdated("ses_test", assistant().copy(providerID = "kilo", modelID = "gpt-5", variant = "high")))
+        val panel = SessionHeaderPanel(c, parent, readonly = true)
+
+        assertTrue(panel.modelVisible())
+        assertEquals("GPT-5", panel.modelText())
+        assertEquals("· High", panel.modelVariantText())
+        val tip = panel.modelTip().orEmpty()
+        assertTrue(tip.contains("kilo/gpt-5"))
+        assertTrue(tip.contains("Reasoning effort: High"))
+    }
+
+    fun `test readonly subagent header shows model without a parent id`() {
+        val c = promptedHeader()
+        emit(ChatEventDto.MessageUpdated("ses_test", assistant().copy(providerID = "kilo", modelID = "gpt-5")))
+        val panel = SessionHeaderPanel(c, parent, readonly = true)
+
+        assertTrue(panel.modelVisible())
+        assertEquals("GPT-5", panel.modelText())
+    }
+
+    fun `test root session header hides the model`() {
+        val c = promptedHeader()
+        emit(ChatEventDto.MessageUpdated("ses_test", assistant().copy(providerID = "kilo", modelID = "gpt-5")))
+        val panel = SessionHeaderPanel(c, parent)
+
+        assertFalse(panel.modelVisible())
+    }
+
+    fun `test subagent header hides the model when no message names one`() {
+        val c = promptedHeader()
+        val sub = session("ses_test", title = "Sub").copy(parentID = "parent")
+        emit(ChatEventDto.SessionUpdated("ses_test", sub))
+        val panel = SessionHeaderPanel(c, parent, readonly = true)
+
+        assertFalse(panel.modelVisible())
+    }
+
     fun `test clicking session title toggles expansion`() {
         val c = promptedHeader()
         val panel = SessionHeaderPanel(c, parent)

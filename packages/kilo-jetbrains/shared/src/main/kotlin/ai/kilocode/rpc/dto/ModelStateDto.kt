@@ -6,6 +6,8 @@ import kotlinx.serialization.Serializable
 data class ModelSelectionDto(
     val providerID: String,
     val modelID: String,
+    /** Reasoning effort the selection ran with; null means the model default. */
+    val variant: String? = null,
 )
 
 @Serializable

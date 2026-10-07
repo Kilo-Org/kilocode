@@ -703,6 +703,7 @@ class SessionModel {
             timeline = timeline(items),
             todos = TodoSummary(todos.size, done, todos),
             canCompact = !state.isBusy() && model?.let(::parseModelKey) != null,
+            model = headerModel(),
         )
     }
 
@@ -722,6 +723,42 @@ class SessionModel {
         }
 
     private fun item(key: String): ModelItem? = models.firstOrNull { it.key == key }
+
+    /**
+     * Model the latest message ran with, for the sub-agent header. Assistant messages carry the
+     * model at the top level, user messages under [MessageDto.model]; the newest of either wins.
+     */
+    private fun headerModel(): HeaderModel? {
+        val ref = latestModelRef() ?: return null
+        val variant = ref.variant?.trim()?.takeIf { it.isNotEmpty() }?.replaceFirstChar { it.titlecase() }
+        return HeaderModel(name = modelName(ref.provider, ref.id), variant = variant, id = "${ref.provider}/${ref.id}")
+    }
+
+    private fun latestModelRef(): ModelRef? {
+        val items = messages().toList()
+        for (index in items.indices.reversed()) {
+            val info = items[index].info
+            val provider = info.providerID?.trim()
+            val id = info.modelID?.trim()
+            if (info.role == "assistant" && !provider.isNullOrEmpty() && !id.isNullOrEmpty()) {
+                return ModelRef(provider, id, info.variant ?: info.model?.variant)
+            }
+            val nested = info.model
+            if (nested != null && nested.providerID.isNotBlank() && nested.modelID.isNotBlank()) {
+                return ModelRef(nested.providerID, nested.modelID, nested.variant)
+            }
+        }
+        return null
+    }
+
+    private fun modelName(provider: String, id: String): String {
+        val display = item("$provider/$id")?.display?.let(::sanitizeModelName)?.takeIf { it.isNotBlank() }
+        return when {
+            display == null -> if (provider == KILO_PROVIDER) id else "$provider / $id"
+            provider == KILO_PROVIDER -> stripSubProviderPrefix(display)
+            else -> display
+        }
+    }
 
     // ------ string representations ------
 
@@ -836,7 +873,24 @@ private fun emptyHeader() = SessionHeaderSnapshot(
     timeline = emptyList(),
     todos = TodoSummary(0, 0, emptyList()),
     canCompact = false,
+    model = null,
 )
+
+private const val KILO_PROVIDER = "kilo"
+
+private data class ModelRef(val provider: String, val id: String, val variant: String?)
+
+/** Drops a trailing "(free)" suffix, matching the model picker's display name. */
+private fun sanitizeModelName(name: String): String =
+    name.replace(Regex("[\\s:_-]*\\(free\\)\\s*$", RegexOption.IGNORE_CASE), "").trim()
+
+/** Strips a sub-provider prefix like "OpenRouter: " from a Kilo gateway model name. */
+private fun stripSubProviderPrefix(name: String): String {
+    val colon = name.indexOf(": ")
+    if (colon < 0) return name
+    if (name.substring(0, colon).equals(KILO_PROVIDER, ignoreCase = true)) return name
+    return name.substring(colon + 2)
+}
 
 private fun TokensDto.total(): Long = listOf(input, output, reasoning, cacheRead, cacheWrite).fold(0L) { sum, value ->
     if (value <= 0) return@fold sum
