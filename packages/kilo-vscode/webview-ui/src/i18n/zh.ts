@@ -592,6 +592,7 @@ export const dict = {
   "session.tabs.switcher.pending": "新建",
   "session.tabs.switcher.busy": "工作中",
   "session.tabs.switcher.scheduled": "已计划",
+  "session.tabs.pinHint": "按住 Shift 点击可固定或取消固定",
   "session.tab.local": "本地",
   "session.tab.cloud": "云端",
   "session.tab.worktree": "工作树",

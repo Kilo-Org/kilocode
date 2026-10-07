@@ -621,6 +621,7 @@ export const dict = {
   "session.tabs.switcher.pending": "Novo",
   "session.tabs.switcher.busy": "Radi",
   "session.tabs.switcher.scheduled": "Zakazano",
+  "session.tabs.pinHint": "Shift+klik za zakačiti ili otkačiti",
   "session.tab.local": "Lokalno",
   "session.tab.cloud": "Oblak",
   "session.tab.worktree": "Radno stablo",
