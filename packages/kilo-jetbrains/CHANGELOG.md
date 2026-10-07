@@ -562,6 +562,150 @@
 
 ## [Unreleased]
 
+## [7.1.9-rc.2] - 2026-10-07
+
+### Added
+- feat(security): detect bot PRs stuck on a failing required check by @brunoagatao in https://github.com/Kilo-Org/kilocode/pull/14661
+- feat(vscode): add View details action to marketplace suggestion notifications by @kilo-code-bot[bot] in https://github.com/Kilo-Org/kilocode/pull/14684
+- feat(vscode): stop single sub-agents and show background agent status by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14682
+- feat(jetbrains): reload core settings by @kirillk in https://github.com/Kilo-Org/kilocode/pull/14666
+- feat(jetbrains): combine MCP and skill badges by @kirillk in https://github.com/Kilo-Org/kilocode/pull/14648
+- feat: suggest files from every folder in a multi-root workspace by @sylwester-liljegren in https://github.com/Kilo-Org/kilocode/pull/13589
+- feat(vscode): add copy content button to Documents viewer by @brunoagatao in https://github.com/Kilo-Org/kilocode/pull/14634
+- feat(vscode): add manual `Fetch Models` button to `Custom Provider` dialog by @brunoagatao in https://github.com/Kilo-Org/kilocode/pull/14630
+- feat(vscode): scope prompt input history to each conversation by @brunoagatao in https://github.com/Kilo-Org/kilocode/pull/14632
+- feat(cli): interrupt a subagent from its view with double Esc by @calebnorman in https://github.com/Kilo-Org/kilocode/pull/14701
+- feat(tui): steer running subagents from their view by @calebnorman in https://github.com/Kilo-Org/kilocode/pull/14702
+- feat(agent-manager): show project organization avatars by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14751
+- feat(agent-manager): enable multiple projects by default by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14797
+- feat(vscode): show subagent model and variant in session header by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14802
+- feat(vscode): add contextual keyboard shortcut hints by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14806
+- feat(vscode): render prompt shortcut hints as keycaps by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14810
+- feat: consolidate MCP OAuth sign-in by @kirillk in https://github.com/Kilo-Org/kilocode/pull/14724
+- feat(vscode): show todo progress in the session dock by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14813
+- feat(cli): add memory_model setting for automatic memory saves by @eborjaa in https://github.com/Kilo-Org/kilocode/pull/14781
+- feat(vscode): add integrated browser editor tab by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14836
+- feat(vscode): add search to the settings sidebar by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14837
+- feat(vscode): pin session tabs with shift-click by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14855
+- feat(vscode): switch session tabs with keyboard shortcuts by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14887
+- feat(agent-manager): pin worktrees in the sidebar by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14891
+- feat(vscode): open chat web links in the integrated browser by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14885
+- feat(vscode): show the agent board next to background agents by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14899
+- feat(vscode): open integrated browser page in external browser by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14900
+- feat(jetbrains): add MCP OAuth sign-in by @kirillk in https://github.com/Kilo-Org/kilocode/pull/14667
+- feat(jetbrains): add prompt navigator to chat transcript by @kirillk in https://github.com/Kilo-Org/kilocode/pull/14694
+
+### Fixed
+- fix(sessions): link a pull request to a session only on its own evidence by @iscekic in https://github.com/Kilo-Org/kilocode/pull/14650
+- fix: report git errors when a revert or redo fails  by @hdcodedev in https://github.com/Kilo-Org/kilocode/pull/14319
+- fix(vscode): keep collapsed pastes when browsing prompt history by @hdcodedev in https://github.com/Kilo-Org/kilocode/pull/14590
+- fix(vscode): keep browser preview visible on panel resize by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14672
+- fix(agent-manager): keep latest project selection by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14675
+- fix(goal): preserve prompt cache across goal turns and keep timers running by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14680
+- fix(cli): restrict session PR linking to CLI backends by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14679
+- fix(jetbrains): migrate off deprecated Gradle Kotlin DSL task registering delegate by @brunoagatao in https://github.com/Kilo-Org/kilocode/pull/14660
+- fix(jetbrains): submit chat dialogs with command enter by @kirillk in https://github.com/Kilo-Org/kilocode/pull/14670
+- fix(jetbrains): surface hidden session questions by @kirillk in https://github.com/Kilo-Org/kilocode/pull/14663
+- fix(kilo-docs): bump vitest and js-yaml for security alerts by @brunoagatao in https://github.com/Kilo-Org/kilocode/pull/14691
+- fix(vscode): attach Add to Context to the last focused chat by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14707
+- fix(ui): highlight settled code blocks when worker highlighting fails by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14686
+- fix(cli): request full output limit for Claude by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14676
+- fix(cli): keep storage usable after an interrupted first access by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14709
+- fix(vscode): keep background agent avatar pulse smooth by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14711
+- fix(tui): render suggest tool actions by @jeanduplessis in https://github.com/Kilo-Org/kilocode/pull/14708
+- fix(kilo-docs): upgrade next to 16.3.6 for GHSA-vcvr-r3jv-pc5j by @kilo-code-bot[bot] in https://github.com/Kilo-Org/kilocode/pull/14714
+- fix(cli): make PTY release smoke test resilient to slow shell startup by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14716
+- fix(agent-manager): run worktree setup for every worktree by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14712
+- fix(cli): show the received worktreeID in the agent_manager mode error by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14729
+- fix(cli): register semantic_search from VS Code project consent by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14750
+- fix(sandbox): keep the mutation worker offline by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14733
+- fix(agent-manager): keep pooled worktrees outside the project by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14721
+- fix(cli): stop gray-matter cache from dropping project skills by @ykakade in https://github.com/Kilo-Org/kilocode/pull/14787
+- fix(agent-manager): let backend assign peer prompt message IDs by @brunoagatao in https://github.com/Kilo-Org/kilocode/pull/14736
+- fix(vscode): pause the hidden working spinner after a turn ends by @mardausdennis in https://github.com/Kilo-Org/kilocode/pull/14791
+- fix(ui): scroll wide MCP tool input and output instead of clipping by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14798
+- fix(cli): keep valid models when provider config contains a malformed entry by @qingshungLI in https://github.com/Kilo-Org/kilocode/pull/14794
+- fix(agent-manager): preserve staged renames when continuing in a worktree by @LEN5010 in https://github.com/Kilo-Org/kilocode/pull/14775
+- fix(vscode): Improve default models on session bootstrap by @WebReflection in https://github.com/Kilo-Org/kilocode/pull/14723
+- fix(cli): recover models after transient catalog failures by @arccat-114 in https://github.com/Kilo-Org/kilocode/pull/14688
+- fix(marketplace): scan workspace for suggestions in the backend by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14803
+- fix(vscode): keep session switching responsive with expanded edit diffs by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14808
+- fix(vscode): preview plan documents from canonical plans dir in non-git projects by @Hardik180704 in https://github.com/Kilo-Org/kilocode/pull/14677
+- fix(ci): run the annotation check for every scope it covers by @WebReflection in https://github.com/Kilo-Org/kilocode/pull/14807
+- fix(vscode): center prompt shortcut keycap glyphs by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14814
+- fix(vscode): reduce integrated browser pointer input latency by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14828
+- fix(cli): finalize reasoning before stream retries by @jeanduplessis in https://github.com/Kilo-Org/kilocode/pull/14722
+- fix(vscode): display the actual Grep search target by @ykakade in https://github.com/Kilo-Org/kilocode/pull/14780
+- fix(vscode): keep sessions isolated across Agent Manager projects by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14833
+- fix(vscode): show full path tooltip for file mentions by @sylwester-liljegren in https://github.com/Kilo-Org/kilocode/pull/14783
+- fix(cli): keep spreadsheet times when reading xlsx and ods by @L4XB in https://github.com/Kilo-Org/kilocode/pull/14799
+- fix(vscode): close in-flight browser opens per owner and route by ownership by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14841
+- fix(cli): preserve provider errors during commit-message generation by @abdulhusainahk in https://github.com/Kilo-Org/kilocode/pull/14805
+- fix(vscode): preserve message ordering for cloud sessions in history view by @kilo-code-bot[bot] in https://github.com/Kilo-Org/kilocode/pull/14821
+- fix(agent-manager): match shortcut hint keycaps to prompt input by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14853
+- fix(vscode): allow scrolling while selecting integrated browser elements by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14852
+- fix(cli): stop the TUI worker RPC from hanging on a dropped request by @kirillk in https://github.com/Kilo-Org/kilocode/pull/14860
+- fix(cli): upload release assets one at a time with retries by @kirillk in https://github.com/Kilo-Org/kilocode/pull/14868
+- fix(vscode): use installed Chromium in WSL when Chrome is missing by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14854
+- fix(vscode): keep integrated browser preview visible across navigation and resize by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14884
+- fix(vscode): explain the Integrated Browser needs an active session by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14886
+- fix(board): expose self identity on the roster and make self-post failures actionable by @maphew in https://github.com/Kilo-Org/kilocode/pull/14880
+- fix(agent-manager): reduce section header height by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14890
+- fix(vscode): reduce session header height by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14888
+- fix(cli): surface shadowed and failed config overlay writes by @kilo-code-bot[bot] in https://github.com/Kilo-Org/kilocode/pull/14537
+- fix(cli): log structural diagnostics on ModelMessage[] schema failure by @maphew in https://github.com/Kilo-Org/kilocode/pull/13593
+- fix: clear git environment in pre-push so turbo works from linked worktrees by @mardausdennis in https://github.com/Kilo-Org/kilocode/pull/14872
+- fix(vscode): compare cloud message ids by byte order by @brunoagatao in https://github.com/Kilo-Org/kilocode/pull/14859
+- fix(script): normalize glob paths so the promise facade check runs on Windows by @mardausdennis in https://github.com/Kilo-Org/kilocode/pull/14871
+- fix(vscode): fall back to session directory for permission replies by @brunoagatao in https://github.com/Kilo-Org/kilocode/pull/14738
+- fix(vscode): match Integrated Browser theme to IDE theme by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14898
+- fix(tui): approval popup disappears when switching b/w agent sessions, subagent hangs forever by @rakshith1928 in https://github.com/Kilo-Org/kilocode/pull/13955
+- fix(vscode): align loading spinner with the subagent identicon grid by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14896
+- fix(vscode): stop diff row leaking above sticky file header by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14901
+- fix(jetbrains): refresh a worktree's PR when its agent stops by @kirillk in https://github.com/Kilo-Org/kilocode/pull/14902
+- fix(cli): keep slash commands when a command claims a reserved name by @kirillk in https://github.com/Kilo-Org/kilocode/pull/14812
+- fix: prevent a rejected attachment from discarding the prompt by @kirillk in https://github.com/Kilo-Org/kilocode/pull/14776
+- fix(ci): keep the CodeQL Kotlin job from OOM-killing the runner by @kirillk in https://github.com/Kilo-Org/kilocode/pull/14905
+
+### Changed
+- release(jetbrains): v7.1.9-rc.1 by @kilo-maintainer[bot] in https://github.com/Kilo-Org/kilocode/pull/14646
+- [DATA-8187] fix(vscode): sample repetitive autocomplete failure telemetry by @pedroheyerdahl in https://github.com/Kilo-Org/kilocode/pull/14585
+- [DATA-8187] fix(telemetry): remove redundant identity events by @pedroheyerdahl in https://github.com/Kilo-Org/kilocode/pull/14638
+- docs: add WSL disconnect diagnostics to troubleshooting guide by @kilo-code-bot[bot] in https://github.com/Kilo-Org/kilocode/pull/14656
+- docs(kilo-docs): explain ChatGPT login and subscription connections by @lambertjosh in https://github.com/Kilo-Org/kilocode/pull/14659
+- docs: remove sunset KiloClaw and App Builder by @emilieschario in https://github.com/Kilo-Org/kilocode/pull/14658
+- docs: document multi-repository Agent Manager workflows by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14673
+- test(cli): make goal fork controls test deterministic by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14681
+- chore(cli): bump secretlint core and preset to 13.0.5 by @brunoagatao in https://github.com/Kilo-Org/kilocode/pull/14690
+- chore(jetbrains): bump org.junit.vintage:junit-vintage-engine from 5.11.4 to 6.1.3 in /packages/kilo-jetbrains by @dependabot[bot] in https://github.com/Kilo-Org/kilocode/pull/14560
+- docs: add Nebius Token Factory provider page by @kilo-code-bot[bot] in https://github.com/Kilo-Org/kilocode/pull/14692
+- docs: auto-sync gateway with merged PRs (through 2026-09-30) by @github-actions[bot] in https://github.com/Kilo-Org/kilocode/pull/14671
+- chore(jetbrains): bump okhttp from 4.12.0 to 5.5.0 in /packages/kilo-jetbrains by @dependabot[bot] in https://github.com/Kilo-Org/kilocode/pull/14559
+- docs: auto-sync cloud-mobile with merged PRs (through 2026-09-30) by @github-actions[bot] in https://github.com/Kilo-Org/kilocode/pull/14599
+- chore(jetbrains): bump the jetbrains-minor-patch group in /packages/kilo-jetbrains with 12 updates by @dependabot[bot] in https://github.com/Kilo-Org/kilocode/pull/14558
+- test(sbom): read okhttp version from the JetBrains catalog by @brunoagatao in https://github.com/Kilo-Org/kilocode/pull/14696
+- docs: note OpenAI per-app usage quota on ChatGPT subscription page by @kilo-code-bot[bot] in https://github.com/Kilo-Org/kilocode/pull/14699
+- chore(deps-dev): bump @vscode/vsce from 3.9.2 to 4.0.0 by @dependabot[bot] in https://github.com/Kilo-Org/kilocode/pull/14745
+- chore(jetbrains): bump gradle wrapper to 9.8.0 and intellij-gradle-plugin to 2.19.0 by @dependabot[bot] in https://github.com/Kilo-Org/kilocode/pull/14739
+- chore(security): reduce Dependabot noise by @brunoagatao in https://github.com/Kilo-Org/kilocode/pull/14695
+- chore(security): report outdated Kilo-owned dependencies monthly by @brunoagatao in https://github.com/Kilo-Org/kilocode/pull/14735
+- chore: pin Bun runtime and types to 1.4.2 by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14800
+- docs(security): document what the github workflows post to Slack by @brunoagatao in https://github.com/Kilo-Org/kilocode/pull/14804
+- chore(jetbrains): bump CLI pin to v7.8.3 by @kilo-maintainer[bot] in https://github.com/Kilo-Org/kilocode/pull/14715
+- chore(deps): Update DOMPurify due dependabot warnings by @WebReflection in https://github.com/Kilo-Org/kilocode/pull/14827
+- perf(vscode): open settings without loading chat by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14829
+- docs: reference shared VS Code self-test harness by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14835
+- chore(deps): cumulative updates due Dependabot warnings by @WebReflection in https://github.com/Kilo-Org/kilocode/pull/14834
+- docs: auto-sync cloud-mobile with merged PRs (through 2026-10-06) by @github-actions[bot] in https://github.com/Kilo-Org/kilocode/pull/14728
+- Docs: Initial Kilo Desktop documentation by @AlpenMo in https://github.com/Kilo-Org/kilocode/pull/14763
+- chore(deps): update KaTeX due Dependabot warnings by @WebReflection in https://github.com/Kilo-Org/kilocode/pull/14848
+- chore(jetbrains): bump CLI pin to v7.8.7 by @kilo-maintainer[bot] in https://github.com/Kilo-Org/kilocode/pull/14873
+- chore(deps): cumulative updates due Dependabot warnings by @WebReflection in https://github.com/Kilo-Org/kilocode/pull/14889
+- chore(ci): group duplicate bot PRs, cover more alert sources, report stale alerts by @brunoagatao in https://github.com/Kilo-Org/kilocode/pull/14845
+- test(cli): deflake snapshot freeze repro on fast runners by @kirillk in https://github.com/Kilo-Org/kilocode/pull/14897
+- chore(jetbrains): bump CLI pin to v7.8.8 by @kilo-maintainer[bot] in https://github.com/Kilo-Org/kilocode/pull/14894
+
+
 ## [7.1.9-rc.1] - 2026-09-28
 
 ### Added
