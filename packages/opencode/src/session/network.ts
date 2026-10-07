@@ -5,6 +5,7 @@ import { Bus } from "../bus"
 import { BusEvent } from "../bus/bus-event"
 import { QuestionID } from "../question/schema"
 import { SessionID } from "../session/schema"
+import { SessionV1 } from "@opencode-ai/core/v1/session"
 import { InstanceState } from "@/effect/instance-state"
 import { InstanceRef } from "@/effect/instance-ref"
 import { capture } from "@/kilocode/instance"
@@ -203,6 +204,17 @@ export namespace SessionNetwork {
     if (msgs(err).some((item) => item.toLowerCase().includes("failed to fetch"))) return "Network request failed"
     if (msgs(err).some((item) => item.toLowerCase().includes("fetch failed"))) return "Network request failed"
     return "Network connection failed"
+  }
+
+  /**
+   * A connection reset the error parser already marked retryable ("Connection
+   * reset by server" with isRetryable) is a transient server-side failure, not
+   * a dead local network: it belongs on the normal retry path (backoff plus
+   * the retry limit) rather than the offline reconnection wait.
+   */
+  export function serverReset(err: unknown) {
+    if (!SessionV1.APIError.isInstance(err)) return false
+    return err.data.isRetryable && err.data.message === "Connection reset by server"
   }
 
   async function check(url: string) {
