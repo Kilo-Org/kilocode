@@ -163,6 +163,55 @@ const setup = Effect.fnUntraced(function* (dir: string, deleted = false) {
 
 describe("partial assistant revert", () => {
   it.live(
+    "keeps patches before a selected part through revert and redo",
+    provideTmpdirInstance(
+      (dir) =>
+        Effect.gen(function* () {
+          const x = yield* setup(dir)
+          const messages = yield* x.sessions.messages({ sessionID: x.session.id })
+          const assistant = messages.find((msg) => msg.info.role === "assistant")!
+          yield* x.sessions.updatePart({
+            id: PartID.ascending(),
+            messageID: assistant.info.id,
+            sessionID: x.session.id,
+            type: "text",
+            text: "keep the first edit",
+          })
+          const boundary = yield* x.sessions.updatePart({
+            id: PartID.ascending(),
+            messageID: assistant.info.id,
+            sessionID: x.session.id,
+            type: "text",
+            text: "undo the second edit",
+          })
+          yield* Effect.promise(() => fs.writeFile(x.writable, "second"))
+          yield* x.snapshot.track()
+          const patch = yield* x.snapshot.patch(x.after)
+          yield* x.sessions.updatePart({
+            id: PartID.ascending(),
+            messageID: assistant.info.id,
+            sessionID: x.session.id,
+            type: "patch",
+            hash: patch.hash,
+            files: patch.files,
+          })
+          yield* x.revert.revert({
+            sessionID: x.session.id,
+            messageID: assistant.info.id,
+            partID: boundary.id,
+          })
+          expect(yield* Effect.promise(() => fs.readFile(x.protected, "utf8"))).toBe("after")
+          expect(yield* Effect.promise(() => fs.readFile(x.writable, "utf8"))).toBe("after")
+          yield* x.revert.unrevert({ sessionID: x.session.id })
+          expect(yield* Effect.promise(() => fs.readFile(x.protected, "utf8"))).toBe("after")
+          expect(yield* Effect.promise(() => fs.readFile(x.writable, "utf8"))).toBe("second")
+        }),
+      { git: true },
+    ),
+    30_000,
+  )
+
+  it.live(
     "clears provider errors when the revert becomes permanent",
     provideTmpdirInstance(
       (dir) =>
@@ -754,7 +803,7 @@ describe("sub-agent revert", () => {
 
 describe("sub-agent revert and redo", () => {
   it.live(
-    "restores a child-recorded file on redo",
+    "restores a child-recorded file when changing the revert point and on redo",
     provideTmpdirInstance(
       (dir) =>
         Effect.gen(function* () {
@@ -814,8 +863,25 @@ describe("sub-agent revert and redo", () => {
             files: patch.files,
           })
 
+          const later = yield* sessions.updateMessage({
+            ...user,
+            id: MessageID.ascending(),
+            time: { created: assistant.time.created + 1 },
+          })
+          yield* sessions.updatePart({
+            id: PartID.ascending(),
+            messageID: later.id,
+            sessionID: session.id,
+            type: "text",
+            text: "a later turn without file edits",
+          })
+
           yield* revert.revert({ sessionID: session.id, messageID: user.id })
           const undone = yield* Effect.promise(() => fs.readFile(file, "utf8"))
+          yield* revert.revert({ sessionID: session.id, messageID: later.id })
+          expect(yield* Effect.promise(() => fs.readFile(file, "utf8"))).toBe("after")
+          yield* revert.revert({ sessionID: session.id, messageID: user.id })
+          expect(yield* Effect.promise(() => fs.readFile(file, "utf8"))).toBe("before")
 
           yield* revert.unrevert({ sessionID: session.id })
           const redone = yield* Effect.promise(() => fs.readFile(file, "utf8"))
