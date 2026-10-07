@@ -1486,6 +1486,11 @@ export const dict = {
   "settings.experimental.browserAutomation.systemChrome.title": "Utiliser le Chrome système",
   "settings.experimental.browserAutomation.systemChrome.description":
     "Utilisez le Google Chrome installé pour le Navigateur intégré. Désactivez uniquement lorsqu'un navigateur Playwright Chromium compatible est déjà installé.",
+  "settings.experimental.browserLinks.title": "Ouvrir les liens dans",
+  "settings.experimental.browserLinks.description":
+    "Choisissez l'emplacement d'ouverture des liens web depuis les chats Kilo. Nécessite le Navigateur intégré.",
+  "settings.experimental.browserLinks.external": "Navigateur système",
+  "settings.experimental.browserLinks.integrated": "Navigateur intégré",
   "chat.search.searchingHistory": "Recherche dans les messages précédents…",
   "browserTab.noSession":
     "Ouvrez le navigateur depuis une session pour prévisualiser une application locale ou une page HTTPS publique.",

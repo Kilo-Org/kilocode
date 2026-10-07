@@ -59,7 +59,10 @@ import { resolveProjectDirectory } from "./project-directory"
 import { seedSessionStatuses, seedSessionWakeups, clientSessionStatus } from "./session-status"
 import { normalizeEnhancePromptErrorMessage } from "./enhance-prompt-error"
 import { retry } from "./services/cli-backend/retry"
-import { integratedBrowserUseSystemChrome } from "./services/browser-automation/chrome-setting"
+import {
+  integratedBrowserLinkDestination,
+  integratedBrowserUseSystemChrome,
+} from "./services/browser-automation/chrome-setting"
 import { removeAgent } from "./services/agent-removal"
 import { normalize, type SSEPayload, type SyncPayload, type WirePayload } from "./services/cli-backend/sdk-sse-adapter"
 import { slimInfo, slimPart, slimParts } from "./kilo-provider/slim-metadata"
@@ -4459,6 +4462,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       browserAutomation: this.browserAutomationSetting(),
       conversationPromptHistory: this.conversationPromptHistorySetting(),
       agentManagerBrowserUseSystemChrome: integratedBrowserUseSystemChrome(),
+      agentManagerBrowserOpenLinksIn: integratedBrowserLinkDestination(),
       "agentManager.autoBranchNaming": naming.get<boolean>("autoBranchNaming", true),
       "agentManager.branchPrefix": naming.get<string>("branchPrefix", ""),
       "agentManager.worktreePool": naming.get<boolean>("worktreePool", true),

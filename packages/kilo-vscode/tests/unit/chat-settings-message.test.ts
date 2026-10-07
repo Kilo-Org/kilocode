@@ -53,6 +53,39 @@ describe("buildChatSettingsMessage", () => {
 
     expect(buildChatSettingsMessage().settings.shiftTabCyclesVariant).toBe(false)
   })
+
+  it("broadcasts browser preference changes to all open chat viewers", () => {
+    const workspace = vscode.workspace as unknown as Stub
+    const prefs = new Map<string, unknown>([
+      ["kilo-code.new.experimental.browserAutomation", true],
+      ["kilo-code.new.agentManager.browser.openLinksIn", "integrated"],
+    ])
+    workspace.getConfiguration = (section) => ({
+      get: <T>(key: string, fallback?: T) => (prefs.get(`${section}.${key}`) as T | undefined) ?? fallback,
+    })
+    const listeners = new Set<(event: vscode.ConfigurationChangeEvent) => void>()
+    workspace.onDidChangeConfiguration = (listener) => {
+      listeners.add(listener)
+      return new vscode.Disposable(() => listeners.delete(listener))
+    }
+    const parent: unknown[] = []
+    const child: unknown[] = []
+    const main = watchChatConfig((message) => parent.push(message))
+    const viewer = watchChatConfig((message) => child.push(message))
+    const key = "kilo-code.new.agentManager.browser.openLinksIn"
+    prefs.set(key, "external")
+    for (const listener of listeners) listener({ affectsConfiguration: (name) => name === key })
+    expect(parent).toEqual([
+      {
+        type: "chatSettingsLoaded",
+        settings: { shiftTabCyclesVariant: true, browserAutomation: true, agentManagerBrowserOpenLinksIn: "external" },
+      },
+    ])
+    expect(child).toEqual(parent)
+    main.dispose()
+    viewer.dispose()
+    expect(listeners.size).toBe(0)
+  })
 })
 
 describe("timeline settings", () => {

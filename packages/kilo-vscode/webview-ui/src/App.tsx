@@ -8,6 +8,7 @@ import { useServer } from "./context/server"
 import { useProvider } from "./context/provider"
 import { WorkStyleProvider } from "./context/work-style"
 import { useSession, useSessionVisibility } from "./context/session"
+import { useConfig } from "./context/config"
 import { LocalTabsProvider, useLocalTabs } from "./context/local-tabs"
 import { ProviderShell } from "./context/provider-shell"
 import { ChatView } from "./components/chat"
@@ -58,6 +59,7 @@ const VALID_VIEWS = new Set<string>(["newTask", "history", "profile", "settings"
 export const DataBridge: Component<{ children: any }> = (props) => {
   const session = useSession()
   const vscode = useVSCode()
+  const config = useConfig()
   const prov = useProvider()
   const server = useServer()
   const worktree = useWorktreeMode()
@@ -170,8 +172,19 @@ export const DataBridge: Component<{ children: any }> = (props) => {
     vscode.postMessage({ type: "openDiffVirtual", diff, initialDiffStyle: diffStyle?.style() ?? "unified" })
   }
 
-  const openUrl = (url: string) => {
-    vscode.postMessage({ type: "openExternal", url })
+  const openUrl = (url: string, sessionID?: string) => {
+    const id = sessionID ?? session.currentSessionID()
+    if (
+      worktree &&
+      id &&
+      config.settings().browserAutomation === true &&
+      config.settings().agentManagerBrowserOpenLinksIn === "integrated" &&
+      /^https?:\/\//i.test(url)
+    ) {
+      vscode.postMessage({ type: "agentManager.browser.open", sessionId: id, url })
+      return
+    }
+    vscode.postMessage({ type: "openWebLink", url })
   }
 
   const openContent = (content: string, language?: string) => {
@@ -232,6 +245,10 @@ export const DataBridge: Component<{ children: any }> = (props) => {
       onOpenUrl={openUrl}
       onOpenContent={openContent}
       onValidateFiles={validateFiles}
+      browserLinks={
+        config.settings().browserAutomation === true &&
+        config.settings().agentManagerBrowserOpenLinksIn === "integrated"
+      }
       onNavigateToSession={(id) => session.selectSession(id)}
     >
       <BoardNavigationProvider open={openAgent}>{props.children}</BoardNavigationProvider>

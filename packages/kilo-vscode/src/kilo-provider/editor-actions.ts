@@ -4,6 +4,7 @@ import { escapeGlob, isAbsolutePath } from "../path-utils"
 import { validateFiles } from "./file-links"
 import type { DiffVirtualFile, DiffVirtualProvider } from "../DiffVirtualProvider"
 import { isPRReviewComment, parseReview, type PRReviewCommentData } from "../shared/review-comments"
+import { openBrowserLink } from "../browser-links"
 
 type EditorOpenMessage = {
   type?: string
@@ -22,6 +23,14 @@ function isMarkdownFile(file: string): boolean {
 function openExternal(url: unknown): void {
   if (typeof url !== "string") return
   void vscode.env.openExternal(vscode.Uri.parse(url))
+}
+
+function openLink(url: unknown): void {
+  if (typeof url !== "string") return
+  void openBrowserLink(url).catch((err) => {
+    console.error("[Kilo New] KiloProvider: open link failed:", err)
+    void vscode.window.showErrorMessage(err instanceof Error ? err.message : String(err))
+  })
 }
 
 function openDiffVirtual(provider: DiffVirtualProvider | undefined, diff: unknown, initialDiffStyle?: unknown): void {
@@ -134,6 +143,10 @@ export function handleEditorAction(
   }
   if (message.type === "openExternal") {
     openExternal(message.url)
+    return true
+  }
+  if (message.type === "openWebLink") {
+    openLink(message.url)
     return true
   }
   if (message.type === "openDiffVirtual") {

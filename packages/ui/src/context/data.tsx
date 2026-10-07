@@ -69,7 +69,7 @@ export type OpenDiffFn = (diff: {
   // kilocode_change end
 }) => void
 
-export type OpenUrlFn = (url: string) => void
+export type OpenUrlFn = (url: string, sessionID?: string) => void // kilocode_change - optional sessionID scopes the open
 
 export type OpenContentFn = (content: string, language?: string) => void // kilocode_change
 
@@ -91,6 +91,8 @@ export const { use: useData, provider: DataProvider } = createSimpleContext({
     onOpenUrl?: OpenUrlFn // kilocode_change
     onOpenContent?: OpenContentFn // kilocode_change
     onValidateFiles?: ValidateFilesFn // kilocode_change
+    // kilocode_change - true when web links open in the Integrated Browser
+    browserLinks?: boolean
   }) => {
     return {
       get store() {
@@ -106,6 +108,9 @@ export const { use: useData, provider: DataProvider } = createSimpleContext({
       openUrl: props.onOpenUrl, // kilocode_change
       openContent: props.onOpenContent, // kilocode_change
       validateFiles: props.onValidateFiles, // kilocode_change
+      get browserLinks() {
+        return props.browserLinks // kilocode_change
+      },
     }
   },
 })

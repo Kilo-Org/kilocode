@@ -1180,6 +1180,20 @@
           "scope": "application",
           "description": "Use system-installed Google Chrome for the Integrated Browser. Disable only when a compatible Playwright Chromium browser is already installed."
         },
+        "kilo-code.new.agentManager.browser.openLinksIn": {
+          "type": "string",
+          "enum": [
+            "external",
+            "integrated"
+          ],
+          "enumDescriptions": [
+            "Open web links in your default browser.",
+            "Open web links in a browser tab from the sidebar, or in the browser panel from Agent Manager."
+          ],
+          "default": "integrated",
+          "scope": "application",
+          "description": "Choose where web links open from Kilo chats. Requires the experimental Integrated Browser."
+        },
         "kilo-code.new.attention.enabled": {
           "type": "boolean",
           "default": false,
