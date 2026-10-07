@@ -57,18 +57,3 @@ export function writes(input: Input): Write[] {
 export function state(input: Input): TodoItem[] {
   return writes(input).at(-1)?.todos ?? []
 }
-
-export function target(input: Omit<Input, "revert">, index: number): Part | undefined {
-  const all = writes(input)
-  const done = (item: Write) => item.todos[index]?.status === "completed"
-  const fallback = [...all].reverse().find(done)
-  const entry = all
-    .map((item, idx) => ({ item, idx }))
-    .reverse()
-    .find(({ item, idx }) => {
-      if (!done(item)) return false
-      return all[idx - 1]?.todos[index]?.status !== "completed"
-    })
-
-  return entry?.item.part ?? fallback?.part
-}

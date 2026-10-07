@@ -60,6 +60,7 @@ export const dict = {
   ...anacondaDesktopDict,
   ...cloudProviderDict,
   "task.swarm.title": "Pano",
+  "task.swarm.open": "Panoyu aç",
   "task.swarm.refresh": "Yenile",
   "task.swarm.reset": "Panoyu sıfırla",
   "task.swarm.resetTitle": "Bu pano sıfırlansın mı?",
@@ -504,6 +505,9 @@ export const dict = {
   "provider.custom.error.duplicate": "Tekrar",
   "settings.openLocalConfig": "Yerel Config",
   "settings.openGlobalConfig": "Global Config",
+  "settings.search.placeholder": "Ayarlarda ara",
+  "settings.search.noResults": "Ayar bulunamadı",
+  "settings.search.clear": "Aramayı temizle",
   "settings.config.scope.local": "Yerel",
   "settings.config.scope.global": "Küresel",
   "settings.config.status.loaded": "yüklendi",
@@ -563,6 +567,7 @@ export const dict = {
   "session.tabs.switcher.pending": "Yeni",
   "session.tabs.switcher.busy": "Çalışıyor",
   "session.tabs.switcher.scheduled": "Zamanlandı",
+  "session.tabs.pinHint": "Sabitlemek veya kaldırmak için Shift+tıkla",
   "session.tab.local": "Local",
   "session.tab.cloud": "Cloud",
   "session.tab.worktree": "Çalışma ağacı",
@@ -1332,6 +1337,8 @@ export const dict = {
 
   "task.todos.progress": "{{total}} görevden {{done}} tanesi tamamlandı",
   "task.todos.allDone": "{{count}} görev tamamlandı",
+  "task.todos.title": "Görevler",
+  "task.todos.done": "Hepsi tamam",
   "task.backgroundAgents.running.one": "1 arka plan ajanı",
   "task.backgroundAgents.running.many": "{{count}} arka plan ajanı",
   "task.backgroundAgents.open": "Arka plan ajanını aç",
@@ -1457,5 +1464,13 @@ export const dict = {
   "settings.experimental.browserAutomation.systemChrome.title": "Sistem Chrome'unu Kullan",
   "settings.experimental.browserAutomation.systemChrome.description":
     "Entegre Tarayıcı için yüklü Google Chrome'u kullanın. Yalnızca uyumlu bir Playwright Chromium tarayıcısı zaten yüklüyse devre dışı bırakın.",
+  "settings.experimental.browserLinks.title": "Bağlantıların açılacağı yer",
+  "settings.experimental.browserLinks.description":
+    "Kilo sohbetlerindeki web bağlantılarının nerede açılacağını seçin. Entegre Tarayıcı gerektirir.",
+  "settings.experimental.browserLinks.external": "Sistem tarayıcısı",
+  "settings.experimental.browserLinks.integrated": "Entegre Tarayıcı",
   "chat.search.searchingHistory": "Önceki mesajlarda aranıyor…",
+  "browserTab.noSession":
+    "Yerel bir uygulamayı veya genel bir HTTPS sayfasını önizlemek için tarayıcıyı bir oturumdan açın.",
+  "browserTab.disabled": "Tümleşik Tarayıcı devre dışı. Kilo Ayarları > Deneysel'den etkinleştirin.",
 }

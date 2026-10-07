@@ -60,6 +60,7 @@ export const dict = {
   ...anacondaDesktopDict,
   ...cloudProviderDict,
   "task.swarm.title": "Ploča",
+  "task.swarm.open": "Otvori ploču",
   "task.swarm.refresh": "Osvježi",
   "task.swarm.reset": "Resetuj ploču",
   "task.swarm.resetTitle": "Resetovati ovu ploču?",
@@ -558,6 +559,9 @@ export const dict = {
   "provider.custom.error.duplicate": "Duplikat",
   "settings.openLocalConfig": "Lokalna konfig.",
   "settings.openGlobalConfig": "Globalna konfig.",
+  "settings.search.placeholder": "Pretraži postavke",
+  "settings.search.noResults": "Nisu pronađene postavke",
+  "settings.search.clear": "Očisti pretragu",
   "settings.config.scope.local": "Lokalno",
   "settings.config.scope.global": "Globalno",
   "settings.config.status.loaded": "učitano",
@@ -618,6 +622,7 @@ export const dict = {
   "session.tabs.switcher.pending": "Novo",
   "session.tabs.switcher.busy": "Radi",
   "session.tabs.switcher.scheduled": "Zakazano",
+  "session.tabs.pinHint": "Shift+klik za zakačiti ili otkačiti",
   "session.tab.local": "Lokalno",
   "session.tab.cloud": "Oblak",
   "session.tab.worktree": "Radno stablo",
@@ -1364,6 +1369,8 @@ export const dict = {
 
   "task.todos.progress": "{{done}}/{{total}} zadataka završeno",
   "task.todos.allDone": "{{count}} zadataka završeno",
+  "task.todos.title": "Zadaci",
+  "task.todos.done": "Sve završeno",
   "task.backgroundAgents.running.one": "1 agent u pozadini",
   "task.backgroundAgents.running.many": "{{count}} agenata u pozadini",
   "task.backgroundAgents.open": "Otvori agenta u pozadini",
@@ -1446,5 +1453,12 @@ export const dict = {
   "settings.experimental.browserAutomation.systemChrome.title": "Koristi sistemski Chrome",
   "settings.experimental.browserAutomation.systemChrome.description":
     "Koristite instalirani Google Chrome za Integrirani preglednik. Onemogućite samo kada je kompatibilni Playwright Chromium preglednik već instaliran.",
+  "settings.experimental.browserLinks.title": "Otvori linkove u",
+  "settings.experimental.browserLinks.description":
+    "Odaberite gdje se web linkovi otvaraju iz Kilo razgovora. Zahtijeva Integrirani preglednik.",
+  "settings.experimental.browserLinks.external": "Sistemski preglednik",
+  "settings.experimental.browserLinks.integrated": "Integrirani preglednik",
   "chat.search.searchingHistory": "Pretraživanje ranijih poruka…",
+  "browserTab.noSession": "Otvorite preglednik iz sesije da pregledate lokalnu aplikaciju ili javnu HTTPS stranicu.",
+  "browserTab.disabled": "Integrirani preglednik je onemogućen. Omogućite ga u Kilo postavkama > Eksperimentalno.",
 }

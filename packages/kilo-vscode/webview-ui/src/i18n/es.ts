@@ -60,6 +60,7 @@ export const dict = {
   ...anacondaDesktopDict,
   ...cloudProviderDict,
   "task.swarm.title": "Tablero",
+  "task.swarm.open": "Abrir tablero",
   "task.swarm.refresh": "Actualizar",
   "task.swarm.reset": "Restablecer tablero",
   "task.swarm.resetTitle": "¿Restablecer este tablero?",
@@ -559,6 +560,9 @@ export const dict = {
   "provider.custom.error.duplicate": "Duplicado",
   "settings.openLocalConfig": "Config local",
   "settings.openGlobalConfig": "Config global",
+  "settings.search.placeholder": "Buscar configuraciones",
+  "settings.search.noResults": "No se encontraron configuraciones",
+  "settings.search.clear": "Borrar búsqueda",
   "settings.config.scope.local": "Local",
   "settings.config.scope.global": "Global",
   "settings.config.status.loaded": "cargado",
@@ -620,6 +624,7 @@ export const dict = {
   "session.tabs.switcher.pending": "Nueva",
   "session.tabs.switcher.busy": "Trabajando",
   "session.tabs.switcher.scheduled": "Programado",
+  "session.tabs.pinHint": "Mayús+clic para fijar o dejar de fijar",
   "session.tab.local": "Local",
   "session.tab.cloud": "Nube",
   "session.tab.worktree": "Árbol de trabajo",
@@ -1379,6 +1384,8 @@ export const dict = {
 
   "task.todos.progress": "{{done}}/{{total}} tareas completadas",
   "task.todos.allDone": "{{count}} tareas completadas",
+  "task.todos.title": "Tareas",
+  "task.todos.done": "Todo listo",
   "task.backgroundAgents.running.one": "1 agente en segundo plano",
   "task.backgroundAgents.running.many": "{{count}} agentes en segundo plano",
   "task.backgroundAgents.open": "Abrir agente en segundo plano",
@@ -1461,5 +1468,13 @@ export const dict = {
   "settings.experimental.browserAutomation.systemChrome.title": "Usar Chrome del sistema",
   "settings.experimental.browserAutomation.systemChrome.description":
     "Usa el Google Chrome instalado para el Navegador integrado. Desactívalo solo si ya hay instalado un navegador Playwright Chromium compatible.",
+  "settings.experimental.browserLinks.title": "Abrir enlaces en",
+  "settings.experimental.browserLinks.description":
+    "Elige dónde se abren los enlaces web desde los chats de Kilo. Requiere el Navegador integrado.",
+  "settings.experimental.browserLinks.external": "Navegador del sistema",
+  "settings.experimental.browserLinks.integrated": "Navegador integrado",
   "chat.search.searchingHistory": "Buscando en mensajes anteriores…",
+  "browserTab.noSession":
+    "Abre el navegador desde una sesión para previsualizar una aplicación local o una página HTTPS pública.",
+  "browserTab.disabled": "El navegador integrado está desactivado. Actívalo en Ajustes de Kilo > Experimental.",
 }

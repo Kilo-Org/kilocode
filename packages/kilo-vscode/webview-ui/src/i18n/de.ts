@@ -66,6 +66,7 @@ export const dict = {
   ...anacondaDesktopDict,
   ...cloudProviderDict,
   "task.swarm.title": "Board",
+  "task.swarm.open": "Board öffnen",
   "task.swarm.refresh": "Aktualisieren",
   "task.swarm.reset": "Board zurücksetzen",
   "task.swarm.resetTitle": "Dieses Board zurücksetzen?",
@@ -566,6 +567,9 @@ export const dict = {
   "provider.custom.error.duplicate": "Duplikat",
   "settings.openLocalConfig": "Lokale Config",
   "settings.openGlobalConfig": "Globale Config",
+  "settings.search.placeholder": "Einstellungen durchsuchen",
+  "settings.search.noResults": "Keine Einstellungen gefunden",
+  "settings.search.clear": "Suche löschen",
   "settings.config.scope.local": "Lokal",
   "settings.config.scope.global": "Global",
   "settings.config.status.loaded": "geladen",
@@ -627,6 +631,7 @@ export const dict = {
   "session.tabs.switcher.pending": "Neu",
   "session.tabs.switcher.busy": "In Arbeit",
   "session.tabs.switcher.scheduled": "Geplant",
+  "session.tabs.pinHint": "Umschalt+Klick zum Anheften oder Lösen",
   "session.tab.local": "Lokal",
   "session.tab.cloud": "Cloud",
   "session.tab.worktree": "Arbeitsbaum",
@@ -1389,6 +1394,8 @@ export const dict = {
 
   "task.todos.progress": "{{done}}/{{total}} Aufgaben erledigt",
   "task.todos.allDone": "{{count}} Aufgaben erledigt",
+  "task.todos.title": "Aufgaben",
+  "task.todos.done": "Alles erledigt",
   "task.backgroundAgents.running.one": "1 Hintergrund-Agent",
   "task.backgroundAgents.running.many": "{{count}} Hintergrund-Agenten",
   "task.backgroundAgents.open": "Hintergrund-Agent öffnen",
@@ -1471,5 +1478,14 @@ export const dict = {
   "settings.experimental.browserAutomation.systemChrome.title": "System-Chrome verwenden",
   "settings.experimental.browserAutomation.systemChrome.description":
     "Das installierte Google Chrome für den integrierten Browser verwenden. Nur deaktivieren, wenn bereits ein kompatibler Playwright-Chromium-Browser installiert ist.",
+  "settings.experimental.browserLinks.title": "Links öffnen in",
+  "settings.experimental.browserLinks.description":
+    "Wählen Sie, wo Weblinks aus Kilo-Chats geöffnet werden. Erfordert den integrierten Browser.",
+  "settings.experimental.browserLinks.external": "Systembrowser",
+  "settings.experimental.browserLinks.integrated": "Integrierter Browser",
   "chat.search.searchingHistory": "Frühere Nachrichten werden durchsucht…",
+  "browserTab.noSession":
+    "Öffne den Browser aus einer Sitzung, um eine lokale Anwendung oder eine öffentliche HTTPS-Seite anzuzeigen.",
+  "browserTab.disabled":
+    "Der integrierte Browser ist deaktiviert. Aktiviere ihn unter Kilo-Einstellungen > Experimentell.",
 } satisfies Partial<Record<Keys, string>>

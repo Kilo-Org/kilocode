@@ -63,6 +63,7 @@ export const dict = {
   ...anacondaDesktopDict,
   ...cloudProviderDict,
   "task.swarm.title": "Tavle",
+  "task.swarm.open": "Åpne tavle",
   "task.swarm.refresh": "Oppdater",
   "task.swarm.reset": "Nullstill tavle",
   "task.swarm.resetTitle": "Nullstille denne tavlen?",
@@ -518,6 +519,9 @@ export const dict = {
   "provider.custom.error.duplicate": "Duplikat",
   "settings.openLocalConfig": "Lokal konfig",
   "settings.openGlobalConfig": "Global konfig",
+  "settings.search.placeholder": "Søk i innstillinger",
+  "settings.search.noResults": "Fant ingen innstillinger",
+  "settings.search.clear": "Tøm søk",
   "settings.config.scope.local": "Lokal",
   "settings.config.scope.global": "Global",
   "settings.config.status.loaded": "lastet",
@@ -578,6 +582,7 @@ export const dict = {
   "session.tabs.switcher.pending": "Ny",
   "session.tabs.switcher.busy": "Jobber",
   "session.tabs.switcher.scheduled": "Planlagt",
+  "session.tabs.pinHint": "Shift+klikk for å feste eller løsne",
   "session.tab.local": "Lokal",
   "session.tab.cloud": "Sky",
   "session.tab.worktree": "Arbeidstre",
@@ -1355,6 +1360,8 @@ export const dict = {
 
   "task.todos.progress": "{{done}}/{{total}} oppgaver fullført",
   "task.todos.allDone": "{{count}} oppgaver fullført",
+  "task.todos.title": "Oppgaver",
+  "task.todos.done": "Alt ferdig",
   "task.backgroundAgents.running.one": "1 bakgrunnsagent",
   "task.backgroundAgents.running.many": "{{count}} bakgrunnsagenter",
   "task.backgroundAgents.open": "Åpne bakgrunnsagent",
@@ -1437,5 +1444,13 @@ export const dict = {
   "settings.experimental.browserAutomation.systemChrome.title": "Bruk system-Chrome",
   "settings.experimental.browserAutomation.systemChrome.description":
     "Bruk den installerte Google Chrome for den integrerte nettleseren. Deaktiver bare når en kompatibel Playwright Chromium-nettleser allerede er installert.",
+  "settings.experimental.browserLinks.title": "Åpne lenker i",
+  "settings.experimental.browserLinks.description":
+    "Velg hvor nettlenker åpnes fra Kilo-samtaler. Krever Integrert nettleser.",
+  "settings.experimental.browserLinks.external": "Systemnettleser",
+  "settings.experimental.browserLinks.integrated": "Integrert nettleser",
   "chat.search.searchingHistory": "Søker i tidligere meldinger…",
+  "browserTab.noSession":
+    "Åpne nettleseren fra en økt for å forhåndsvise en lokal applikasjon eller en offentlig HTTPS-side.",
+  "browserTab.disabled": "Den integrerte nettleseren er deaktivert. Aktiver den i Kilo-innstillinger > Eksperimentelt.",
 } satisfies Partial<Record<Keys, string>>

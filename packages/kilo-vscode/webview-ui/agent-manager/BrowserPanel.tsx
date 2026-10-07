@@ -4,14 +4,16 @@ import { useVSCode } from "../src/context/vscode"
 import type { ExtensionMessage, WebviewMessage } from "../src/types/messages"
 import { formatBrowserFeedback, type BrowserReference } from "../../src/shared/browser-feedback"
 import { BrowserPanel as BrowserPanelView } from "../browser"
-import type {
-  BrowserCommand,
-  BrowserEvent,
-  BrowserInspection,
-  BrowserScope,
-  BrowserState,
-  BrowserTransport,
+import {
+  browserDevtoolsEvent,
+  browserFrameEvent,
+  browserInspectionEvent,
+  browserLabels,
+  browserScope,
+  browserStateEvent,
+  browserTransport,
 } from "../browser"
+import type { BrowserCommand, BrowserEvent } from "../browser"
 import { SidePanel } from "./side-panel-layout"
 import { post } from "../src/utils/webview-message"
 import { browserScopeKey, browserScopeParts, evictBrowserScopes, rememberBrowserScope } from "./browser-panel-cache"
@@ -63,10 +65,6 @@ export function createBrowserPanel(
   }
 }
 
-function scope(sessionId: string, projectId?: string): BrowserScope {
-  return { sessionId, projectId }
-}
-
 function command(command: BrowserCommand): WebviewMessage {
   if (command.type === "open") {
     return { type: "agentManager.browser.open", ...command.scope, url: command.url }
@@ -113,49 +111,16 @@ function command(command: BrowserCommand): WebviewMessage {
 
 function event(message: ExtensionMessage): BrowserEvent | undefined {
   if (message.type === "agentManager.browserFrame") {
-    return { type: "frame", value: { ...message, scope: scope(message.sessionId, message.projectId) } }
+    return browserFrameEvent(browserScope(message.sessionId, message.projectId), message)
   }
   if (message.type === "agentManager.browserState") {
-    const value: BrowserState = {
-      scope: scope(message.sessionId, message.projectId),
-      browserId: message.browserId,
-      navigation: message.navigation,
-      status: message.status,
-      inspecting: message.inspecting,
-      url: message.url,
-      title: message.title,
-      errors: message.errors,
-      logs: message.logs,
-      error: message.error,
-      missing: message.missing,
-      frameError: message.frameError,
-      back: message.back,
-      forward: message.forward,
-    }
-    return { type: "state", value }
+    return browserStateEvent(browserScope(message.sessionId, message.projectId), message)
   }
   if (message.type === "agentManager.browserInspection") {
-    const value: BrowserInspection = {
-      scope: scope(message.sessionId, message.projectId),
-      requestId: message.requestId,
-      url: message.url,
-      title: message.title,
-      element: message.element,
-      logs: message.logs,
-      hover: message.hover,
-      error: message.error,
-    }
-    return { type: "inspection", value }
+    return browserInspectionEvent(browserScope(message.sessionId, message.projectId), message)
   }
   if (message.type !== "agentManager.browserDevtools") return
-  return {
-    type: "devtools",
-    value: {
-      scope: scope(message.sessionId, message.projectId),
-      browserId: message.browserId,
-      url: message.url,
-    },
-  }
+  return browserDevtoolsEvent(browserScope(message.sessionId, message.projectId), message)
 }
 
 function BrowserAdapter(props: {
@@ -165,39 +130,8 @@ function BrowserAdapter(props: {
 }) {
   const language = useLanguage()
   const vscode = useVSCode()
-  const transport: BrowserTransport = {
-    send: (value) => vscode.postMessage(command(value)),
-    subscribe: (listener) =>
-      vscode.onMessage((message) => {
-        const value = event(message)
-        if (value) listener(value)
-      }),
-  }
-  const labels = createMemo(() => ({
-    title: language.t("agentManager.browser.title"),
-    url: language.t("agentManager.browser.url"),
-    urlPlaceholder: language.t("agentManager.browser.urlPlaceholder"),
-    open: language.t("agentManager.browser.open"),
-    refresh: language.t("agentManager.browser.refresh"),
-    back: language.t("agentManager.browser.back"),
-    forward: language.t("agentManager.browser.forward"),
-    close: language.t("agentManager.browser.close"),
-    inspect: language.t("agentManager.browser.inspect"),
-    devtoolsTitle: language.t("agentManager.browser.devtoolsTitle"),
-    diagnostics: language.t("agentManager.browser.diagnostics"),
-    diagnosticsHint: language.t("agentManager.browser.diagnosticsHint"),
-    empty: language.t("agentManager.browser.empty"),
-    requirement: language.t("agentManager.browser.requirement"),
-    missingTitle: language.t("agentManager.browser.missingTitle"),
-    missingChrome: language.t("agentManager.browser.missingChrome"),
-    missingChromium: language.t("agentManager.browser.missingChromium"),
-    download: language.t("agentManager.browser.downloadChrome"),
-    retry: language.t("common.retry"),
-    settings: language.t("agentManager.browser.settings"),
-    noSession: language.t("agentManager.browser.noSession"),
-    screenshotAlt: language.t("agentManager.browser.screenshotAlt"),
-    errors: (count: number) => language.t("agentManager.browser.errors", { count }),
-  }))
+  const transport = browserTransport((message) => vscode.postMessage(message), vscode.onMessage, command, event)
+  const labels = createMemo(() => browserLabels(language.t))
   const reference = (value: BrowserReference) => {
     post({ type: "appendChatBoxMessage", text: formatBrowserFeedback([value]), browser: value })
   }
@@ -209,13 +143,14 @@ function BrowserAdapter(props: {
     <BrowserPanelView
       scope={() => {
         const session = props.sessionId()
-        return session ? scope(session, props.projectId()) : undefined
+        return session ? browserScope(session, props.projectId()) : undefined
       }}
       transport={transport}
       labels={labels()}
       theme={theme}
       download={() => vscode.postMessage({ type: "openExternal", url: "https://www.google.com/chrome/" })}
       settings={() => vscode.postMessage({ type: "openSettingsPanel", tab: "browser", projectId: props.projectId() })}
+      openExternal={(url) => vscode.postMessage({ type: "openExternal", url })}
       onReference={reference}
       onClose={props.onClose}
     />
