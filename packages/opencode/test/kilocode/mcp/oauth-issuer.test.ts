@@ -36,7 +36,7 @@ function server() {
         return Response.json({
           access_token: "access",
           token_type: "Bearer",
-          refresh_token: "issued-refresh-token",
+          refresh_token: `refresh-${url.port}`,
           expires_in: 3600,
         })
       }
@@ -90,16 +90,18 @@ for (const Provider of [McpOAuthProvider, McpOAuthPendingProvider]) {
           expect(await auth(provider, { serverUrl: mcp.url })).toBe("REDIRECT")
           expect(await auth(provider, { serverUrl: mcp.url, authorizationCode: "code" })).toBe("AUTHORIZED")
           if (provider instanceof McpOAuthPendingProvider) await provider.commit()
+          const old = `refresh-${new URL(first.url).port}`
           const before = await Effect.runPromise(store.getForUrl(name, mcp.url))
-          expect(before?.tokens?.refreshToken).toBe("issued-refresh-token")
+          expect(before?.tokens?.refreshToken).toBe(old)
           expect(before?.tokens?.issuer).toContain(first.url)
           expect(before?.clientInfo?.issuer).toContain(first.url)
           expect(before?.clientInfo?.clientSecret).toBeUndefined()
 
-          // The MCP server now names a different authorization server.
+          // The MCP server now names a different authorization server: the user
+          // authorizes again there, and later sessions refresh against it.
           mcp.state.issuer = second.url
           const redirects: URL[] = []
-          const restored = new McpOAuthProvider(
+          const again = new Provider(
             name,
             mcp.url,
             item.config,
@@ -110,18 +112,29 @@ for (const Provider of [McpOAuthProvider, McpOAuthPendingProvider]) {
             },
             store,
           )
-          expect(await auth(restored, { serverUrl: mcp.url })).toBe("REDIRECT")
+          expect(await auth(again, { serverUrl: mcp.url })).toBe("REDIRECT")
           expect(redirects.at(0)?.origin).toBe(second.url)
-          expect(second.requests.some((request) => request.path === "/token")).toBe(false)
-          expect(second.requests.some((request) => request.path === "/register")).toBe(true)
-          expect(second.requests.some((request) => request.body.includes("issued-refresh-token"))).toBe(false)
+          expect(await auth(again, { serverUrl: mcp.url, authorizationCode: "code" })).toBe("AUTHORIZED")
+          if (again instanceof McpOAuthPendingProvider) await again.commit()
+          const later = new McpOAuthProvider(name, mcp.url, item.config, { onRedirect: () => {} }, store)
+          expect(await auth(later, { serverUrl: mcp.url })).toBe("AUTHORIZED")
+
+          const tokens = second.requests.filter((request) => request.path === "/token")
+          expect(tokens.map((request) => new URLSearchParams(request.body).get("grant_type"))).toEqual([
+            "authorization_code",
+            "refresh_token",
+          ])
+          expect(tokens.every((request) => new URLSearchParams(request.body).get("client_id") === "registered")).toBe(
+            true,
+          )
+          expect(second.requests.some((request) => request.body.includes(old))).toBe(false)
           if (item.secret) expect(second.requests.some((request) => request.body.includes(item.secret!))).toBe(false)
           expect(first.requests.filter((request) => request.path === "/token")).toHaveLength(1)
           const after = await Effect.runPromise(store.getForUrl(name, mcp.url))
-          // A configured client keeps its binding; a dynamically registered one is
-          // replaced by the registration at the new authorization server.
-          if (item.config.clientId) expect(after?.clientInfo).toEqual(before?.clientInfo)
-          if (!item.config.clientId) expect(after?.clientInfo?.issuer).toContain(second.url)
+          expect(after?.tokens?.issuer).toContain(second.url)
+          expect(after?.clientInfo).toMatchObject({ clientId: "registered" })
+          expect(after?.clientInfo?.issuer).toContain(second.url)
+          if (item.secret) expect(JSON.stringify(after)).not.toContain(item.secret)
         })
       }),
     )

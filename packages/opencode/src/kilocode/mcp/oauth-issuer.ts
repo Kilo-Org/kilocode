@@ -1,34 +1,48 @@
-import type { OAuthClientInformationMixed } from "@modelcontextprotocol/sdk/shared/auth.js"
+import type { OAuthClientInformation, OAuthClientInformationMixed } from "@modelcontextprotocol/sdk/shared/auth.js"
 import type { McpAuth } from "../../mcp/auth"
 
 // The MCP SDK binds stored OAuth credentials to the authorization server that issued
 // them by stamping an `issuer` on what it saves, and ignores credentials stamped for a
 // different server. Pre-registered credentials (a configured client ID) are never
-// written to disk, so only their binding is stored: the client ID and its issuer.
+// written to disk: only their binding (client ID and issuer) is stored. When the MCP
+// server moves to another authorization server, the SDK registers a new client there
+// instead of presenting the configured secret, and that registration is stored in
+// place of the binding.
 
-/** Issuer the stored binding records for the configured client ID. */
-export function bound(info: McpAuth.ClientInfo | undefined, id: string) {
-  if (info?.clientId !== id) return undefined
-  return info.issuer
+/** Client information for a configured client ID, given what is stored for it. */
+export function configured(
+  info: McpAuth.ClientInfo | undefined,
+  id: string,
+  secret: string | undefined,
+): OAuthClientInformation | undefined {
+  if (info?.clientId === id) return { client_id: id, client_secret: secret, issuer: info.issuer }
+  // Nothing bound yet: the SDK binds the configured client on first use.
+  if (info?.issuer == null) return { client_id: id, client_secret: secret }
+  // An expired registration makes the SDK register again rather than fall back to the
+  // configured secret.
+  if (info.clientSecretExpiresAt && info.clientSecretExpiresAt < Date.now() / 1000) return undefined
+  return { client_id: info.clientId, client_secret: info.clientSecret, issuer: info.issuer }
 }
 
-/** Binding to store for the configured client ID, without its secret. */
-export function binding(info: OAuthClientInformationMixed | undefined, id: string): McpAuth.ClientInfo | undefined {
-  if (info?.client_id !== id) return undefined
-  return { clientId: id, issuer: info.issuer }
+/** What to store for a configured client ID: its binding, or a client registered elsewhere. */
+export function stored(info: OAuthClientInformationMixed, id: string): McpAuth.ClientInfo {
+  if (info.client_id === id) return { clientId: id, issuer: info.issuer }
+  return {
+    clientId: info.client_id,
+    clientSecret: info.client_secret,
+    clientIdIssuedAt: info.client_id_issued_at,
+    clientSecretExpiresAt: info.client_secret_expires_at,
+    issuer: info.issuer,
+  }
 }
 
-/**
- * Binding to keep after an authorization flow: the one the SDK just saved, or the stored
- * one. A client registered at another authorization server never replaces it.
- */
+/** Client information to keep after an authorization flow for a configured client ID. */
 export function retain(
   info: OAuthClientInformationMixed | undefined,
-  stored: McpAuth.ClientInfo | undefined,
+  previous: McpAuth.ClientInfo | undefined,
   id: string,
 ): McpAuth.ClientInfo | undefined {
-  const next = binding(info, id)
-  if (next) return next
-  if (stored?.clientId !== id) return undefined
-  return { clientId: id, issuer: stored.issuer }
+  if (info) return stored(info, id)
+  if (previous?.clientId === id || previous?.issuer != null) return previous
+  return undefined
 }
