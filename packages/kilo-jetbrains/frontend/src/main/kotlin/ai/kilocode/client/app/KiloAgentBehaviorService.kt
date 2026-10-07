@@ -87,6 +87,9 @@ class KiloAgentBehaviorService internal constructor(
     suspend fun mcpAuthenticate(directory: String, name: String): McpAuthResultDto =
         safe(McpAuthResultDto("failed", "RPC failed")) { call { mcpAuthenticate(directory, name) } }
 
+    suspend fun mcpAuthCancel(directory: String, name: String): Boolean =
+        safe(false) { call { mcpAuthCancel(directory, name) } }
+
     suspend fun mcpAuthRemove(directory: String, name: String): Boolean =
         safe(false) { call { mcpAuthRemove(directory, name) } }
 

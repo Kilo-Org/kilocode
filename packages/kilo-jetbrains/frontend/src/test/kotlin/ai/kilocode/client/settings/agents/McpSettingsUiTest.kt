@@ -502,10 +502,10 @@ class McpSettingsUiTest : BasePlatformTestCase() {
         assertTrue(edt { rows(panel).any { it.key == "github" } })
     }
 
-    fun `test sign in cancel calls mcpAuthRemove`() {
+    fun `test sign in cancel calls mcpAuthCancel`() {
         val panel = panel()
         flushUntil { rows(panel).size == 3 }
-        agentRpc.mcpAuthRemoveResult = true
+        agentRpc.mcpAuthCancelResult = true
 
         edt {
             // Directly exercises the cancel path the progress overlay's Cancel button wires to,
@@ -514,7 +514,9 @@ class McpSettingsUiTest : BasePlatformTestCase() {
             true
         }
 
-        flushUntil { agentRpc.mcpAuthRemovals.contains("github") }
+        flushUntil { agentRpc.mcpAuthCancels.contains("github") }
+        // Cancelling an attempt must not throw away credentials; only Reset sign-in does that.
+        assertTrue(agentRpc.mcpAuthRemovals.isEmpty())
     }
 
     fun `test reset sign in cell only appears for connected remote servers`() {

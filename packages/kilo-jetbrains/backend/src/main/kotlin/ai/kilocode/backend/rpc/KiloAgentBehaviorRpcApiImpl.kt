@@ -46,6 +46,14 @@ class KiloAgentBehaviorRpcApiImpl(private val backend: KiloBackendAppService? = 
         private val port = AtomicInteger(-1)
         private val extensions = setOf("md", "markdown", "txt", "text", "html", "htm")
         private const val BROWSER_OPEN_FAILED = "mcp.browser.open.failed"
+        private const val AUTH_URL = "mcp.auth.url"
+
+        /**
+         * Asks the CLI to hand the authorization URL back over SSE instead of opening a browser
+         * itself. In split mode the CLI runs on the host while the user sits at the client, so only
+         * the client can open a usable browser.
+         */
+        private val AUTH_EXTERNAL = JsonObject(mapOf("external" to JsonPrimitive(true)))
     }
 
     private val app: KiloBackendAppService get() = backend ?: service()
@@ -220,10 +228,16 @@ class KiloAgentBehaviorRpcApiImpl(private val backend: KiloBackendAppService? = 
     override suspend fun mcpDisconnect(directory: String, name: String): Boolean = post(directory, "/mcp/${encodePath(name)}/disconnect")
 
     override suspend fun mcpAuthenticate(directory: String, name: String): McpAuthResultDto {
-        val reply = send(directory, "/mcp/${encodePath(name)}/auth/authenticate", "POST")
+        val reply = send(directory, "/mcp/${encodePath(name)}/auth/authenticate", "POST", AUTH_EXTERNAL)
         val result = KiloCliDataParser.parseMcpAuthResult(reply.code, reply.body)
         LOG.info("MCP auth dir=$directory name=$name http=${reply.code} status=${result.status}")
         return result
+    }
+
+    override suspend fun mcpAuthCancel(directory: String, name: String): Boolean {
+        val reply = send(directory, "/mcp/${encodePath(name)}/auth/cancel", "POST")
+        LOG.info("MCP auth cancel dir=$directory name=$name http=${reply.code}")
+        return reply.code in 200..299
     }
 
     override suspend fun mcpAuthRemove(directory: String, name: String): Boolean {
@@ -234,10 +248,14 @@ class KiloAgentBehaviorRpcApiImpl(private val backend: KiloBackendAppService? = 
 
     override suspend fun mcpAuthEvents(): Flow<McpAuthEventDto> = channelFlow {
         app.events.collect { event ->
-            val type = if (event.type == BROWSER_OPEN_FAILED) event.type else KiloCliDataParser.extractEventType(event.data)
-            if (type != BROWSER_OPEN_FAILED) return@collect
-            val dto = KiloCliDataParser.parseMcpBrowserOpenFailed(event.data) ?: return@collect
-            LOG.info("MCP auth browser open failed name=${dto.name}")
+            val type = if (event.type == AUTH_URL || event.type == BROWSER_OPEN_FAILED) {
+                event.type
+            } else {
+                KiloCliDataParser.extractEventType(event.data)
+            }
+            if (type != AUTH_URL && type != BROWSER_OPEN_FAILED) return@collect
+            val dto = KiloCliDataParser.parseMcpAuthEvent(event.data, external = type == AUTH_URL) ?: return@collect
+            LOG.info("MCP auth url event name=${dto.name} type=$type")
             trySendBlocking(dto)
         }
     }
@@ -441,13 +459,18 @@ class KiloAgentBehaviorRpcApiImpl(private val backend: KiloBackendAppService? = 
 
     private data class Reply(val code: Int, val body: String)
 
-    private suspend fun send(directory: String, path: String, method: String): Reply = withContext(Dispatchers.IO) {
+    private suspend fun send(
+        directory: String,
+        path: String,
+        method: String,
+        body: JsonObject = JsonObject(emptyMap()),
+    ): Reply = withContext(Dispatchers.IO) {
         val http = app.http ?: throw IllegalStateException("Kilo HTTP client is unavailable")
         val url = "http://127.0.0.1:${app.port}$path?directory=${encode(directory)}"
         val builder = Request.Builder().url(url)
         when (method) {
             "DELETE" -> builder.delete()
-            else -> builder.post(JsonObject(emptyMap()).toString().toRequestBody(JSON))
+            else -> builder.post(body.toString().toRequestBody(JSON))
         }
         http.newCall(builder.build()).execute().use { response ->
             Reply(response.code, response.body?.string().orEmpty())

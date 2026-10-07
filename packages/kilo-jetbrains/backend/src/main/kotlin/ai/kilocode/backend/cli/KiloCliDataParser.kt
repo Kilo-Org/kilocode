@@ -129,28 +129,6 @@ object KiloCliDataParser {
     private val FIELD_RE = ConcurrentHashMap<String, Regex>()
     private val APPROVAL_SOURCES = setOf("agent", "global", "project", "yolo", "session", "manual", "default")
 
-    /** Lowercase markers that identify a `failed` MCP status as recoverable by signing in again. */
-    private val MCP_AUTH_FAILURE_MARKERS = listOf(
-        "unauthorized",
-        "authentication required",
-        "needs authentication",
-        "not authenticated",
-        "browser authorization",
-        "token exchange failed",
-        "invalid_token",
-        "invalid_grant",
-    )
-
-    /** Word-boundary markers, so a hostname or server name that merely contains the text does not match. */
-    private val MCP_AUTH_FAILURE_WORD_MARKERS = listOf("oauth").map { Regex("\\b${Regex.escape(it)}\\b") }
-
-    /**
-     * An HTTP 401/403 response, anchored to `http`/`status` so an unrelated port or ID is not mistaken
-     * for it. Covers both transports' unauthenticated rejections, e.g. `Error POSTing to endpoint
-     * (HTTP 401): missing bearer token` and `SSE error: Non-200 status code (403)`.
-     */
-    private val MCP_AUTH_HTTP_STATUS = Regex("\\b(?:http|status)\\D{0,10}40[13]\\b")
-
     // ================================================================
     // SSE event parsing
     // ================================================================
@@ -872,13 +850,18 @@ object KiloCliDataParser {
         return McpAuthResultDto(status = status, error = obj?.str("error") ?: obj?.str("message") ?: "HTTP $code")
     }
 
-    fun parseMcpBrowserOpenFailed(raw: String): McpAuthEventDto? {
+    /**
+     * Parses the `{ mcpName, url }` payload shared by `mcp.auth.url` and `mcp.browser.open.failed`.
+     *
+     * [external] marks the `mcp.auth.url` variant, where opening the URL is the client's job.
+     */
+    fun parseMcpAuthEvent(raw: String, external: Boolean = false): McpAuthEventDto? {
         val obj = tryParseObject(raw) ?: return null
         val payload = obj["payload"]?.jsonObject ?: obj
         val props = payload["properties"]?.jsonObject ?: obj
         val name = props.str("mcpName") ?: return null
         val url = props.str("url") ?: return null
-        return McpAuthEventDto(name = name, url = url)
+        return McpAuthEventDto(name = name, url = url, external = external)
     }
 
     private fun String.array(): JsonArray {
@@ -890,37 +873,23 @@ object KiloCliDataParser {
         }
     }
 
+    /**
+     * The status is taken verbatim from the CLI.
+     *
+     * Classifying a transport failure as "sign-in required" belongs to the CLI, which does it once
+     * in `packages/opencode/src/kilocode/mcp/auth-failure.ts` and reports `needs_auth` directly —
+     * including for a rejected browser flow, a failed token exchange, and HTTP 401/403 rejections.
+     * Re-deriving that here from the human-readable `error` text would duplicate the rules and drift
+     * from them, so the plugin only reads the structured field.
+     */
     private fun mcpStatus(item: JsonElement, fallback: String? = null): McpStatusDto? {
         val obj = item.obj() ?: return null
         val name = obj.str("name") ?: fallback ?: return null
-        val error = obj.str("error")
-        val raw = obj.str("status") ?: obj.str("state") ?: "unknown"
-        val status = if (raw == "failed" && error.isMcpAuthFailure()) "needs_auth" else raw
         return McpStatusDto(
             name = name,
-            status = status,
-            error = error,
+            status = obj.str("status") ?: obj.str("state") ?: "unknown",
+            error = obj.str("error"),
         )
-    }
-
-    /**
-     * Whether a `failed` MCP status is really "sign-in required".
-     *
-     * The CLI only reports `needs_auth` when the transport threw `UnauthorizedError` or the message
-     * mentions OAuth (`packages/opencode/src/mcp/index.ts`); a rejected browser flow, a failed token
-     * exchange, or an HTTP 401/403 rejection (`SSE error: Non-200 status code (403)`) fall through to
-     * `failed`. Those are all recoverable by signing in again, so they must still offer sign-in in
-     * Settings, Marketplace, and the session prompt — including the post-install prompt, which only
-     * fires when this normalization reports `needs_auth`.
-     *
-     * Matched markers are OAuth-specific and word/status-anchored, so an unrelated failure that merely
-     * embeds a port number or a server name containing "oauth" is not reclassified.
-     */
-    private fun String?.isMcpAuthFailure(): Boolean {
-        val value = this?.lowercase() ?: return false
-        if (MCP_AUTH_FAILURE_MARKERS.any { value.contains(it) }) return true
-        if (MCP_AUTH_FAILURE_WORD_MARKERS.any { it.containsMatchIn(value) }) return true
-        return MCP_AUTH_HTTP_STATUS.containsMatchIn(value)
     }
 
     private fun removable(obj: JsonObject): Boolean {

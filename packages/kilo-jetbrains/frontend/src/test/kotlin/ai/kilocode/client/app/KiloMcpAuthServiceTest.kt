@@ -49,7 +49,8 @@ class KiloMcpAuthServiceTest : BasePlatformTestCase() {
         authTimeoutMs: Long = 60_000L,
         dedupeWindowMs: Long = 4000L,
         showAuthUrl: (String, String) -> Unit = { _, _ -> },
-    ) = KiloMcpAuthService(scope, behavior, authTimeoutMs, dedupeWindowMs, showAuthUrl)
+        openUrl: (String) -> Unit = { },
+    ) = KiloMcpAuthService(scope, behavior, authTimeoutMs, dedupeWindowMs, showAuthUrl, openUrl)
 
     private fun settle() = runBlocking {
         repeat(3) {
@@ -128,27 +129,31 @@ class KiloMcpAuthServiceTest : BasePlatformTestCase() {
         assertEquals(1, rpc.mcpAuthentications.size)
     }
 
-    fun `test signIn on timeout removes credentials and reports timeout`() = runBlocking(Dispatchers.Default) {
-        // The fake's mcpAuthenticate never returns, so withTimeoutOrNull must fire first and the
-        // service must fall back to removing credentials and reporting a timeout status.
+    /**
+     * A timeout must abandon the attempt without discarding credentials, so it cancels rather than
+     * deleting the stored sign-in.
+     */
+    fun `test signIn on timeout cancels the flow and reports timeout`() = runBlocking(Dispatchers.Default) {
         val slowRpc = SlowAuthenticateRpc(CompletableDeferred())
         val slowBehavior = KiloAgentBehaviorService(scope, slowRpc)
-        val slowService = KiloMcpAuthService(scope, slowBehavior, authTimeoutMs = 100L, dedupeWindowMs = 4000L) { _, _ -> }
+        val slowService = KiloMcpAuthService(scope, slowBehavior, authTimeoutMs = 100L, dedupeWindowMs = 4000L)
 
         val result = slowService.signIn("/test", "linear")
 
         assertEquals("timeout", result.status)
-        assertEquals(listOf("linear"), slowRpc.mcpAuthRemovals)
+        assertEquals(listOf("linear"), slowRpc.mcpAuthCancels)
+        assertTrue("a timeout must not delete credentials", slowRpc.mcpAuthRemovals.isEmpty())
     }
 
-    fun `test cancel calls mcpAuthRemove`() = runBlocking(Dispatchers.Default) {
-        rpc.mcpAuthRemoveResult = true
+    fun `test cancel calls mcpAuthCancel and keeps credentials`() = runBlocking(Dispatchers.Default) {
+        rpc.mcpAuthCancelResult = true
         val service = service()
 
         val ok = service.cancel("/test", "linear")
 
         assertTrue(ok)
-        assertEquals(listOf("linear"), rpc.mcpAuthRemovals)
+        assertEquals(listOf("linear"), rpc.mcpAuthCancels)
+        assertTrue("cancel must not delete credentials", rpc.mcpAuthRemovals.isEmpty())
     }
 
     fun `test reset reconnects and refreshes needs auth state`() = runBlocking(Dispatchers.Default) {
@@ -201,7 +206,7 @@ class KiloMcpAuthServiceTest : BasePlatformTestCase() {
         gate.complete(Unit)
 
         assertEquals("cancelled", result.await().status)
-        assertEquals(listOf("linear"), rpc.mcpAuthRemovals)
+        assertEquals(listOf("linear"), rpc.mcpAuthCancels)
 
         rpc.beforeAuthenticate = null
         rpc.mcpAuthenticateStarted = false
@@ -251,12 +256,83 @@ class KiloMcpAuthServiceTest : BasePlatformTestCase() {
         assertEquals(2, opened.size)
     }
 
+    /**
+     * `mcp.auth.url` means the CLI deliberately did not open a browser, because in split mode it
+     * runs on the host while the user sits at the client. The client must open it itself.
+     */
+    fun `test external auth url opens in the client browser`() {
+        val opened = mutableListOf<String>()
+        val dialogs = mutableListOf<String>()
+        val service = service(
+            showAuthUrl = { _, url -> dialogs.add(url) },
+            openUrl = { url -> opened.add(url) },
+        )
+
+        runBlocking(Dispatchers.Default) { service.refresh("/test") }
+        settle()
+        runBlocking(Dispatchers.Default) {
+            rpc.mcpAuthEventsFlow.emit(
+                McpAuthEventDto("linear", "https://auth.example.test/authorize", external = true),
+            )
+        }
+        settle()
+
+        assertEquals(listOf("https://auth.example.test/authorize"), opened)
+        assertTrue("the dialog is only a fallback", dialogs.isEmpty())
+    }
+
+    /** When the client cannot open a browser either, the URL still has to reach the user. */
+    fun `test external auth url falls back to the dialog when opening fails`() {
+        val dialogs = mutableListOf<String>()
+        val service = service(
+            showAuthUrl = { _, url -> dialogs.add(url) },
+            openUrl = { throw RuntimeException("no browser") },
+        )
+
+        runBlocking(Dispatchers.Default) { service.refresh("/test") }
+        settle()
+        runBlocking(Dispatchers.Default) {
+            rpc.mcpAuthEventsFlow.emit(
+                McpAuthEventDto("linear", "https://auth.example.test/authorize", external = true),
+            )
+        }
+        settle()
+
+        assertEquals(listOf("https://auth.example.test/authorize"), dialogs)
+    }
+
+    /** `mcp.browser.open.failed` means the CLI already tried, so the dialog is the only option. */
+    fun `test browser open failed event does not retry opening a browser`() {
+        val opened = mutableListOf<String>()
+        val dialogs = mutableListOf<String>()
+        val service = service(
+            showAuthUrl = { _, url -> dialogs.add(url) },
+            openUrl = { url -> opened.add(url) },
+        )
+
+        runBlocking(Dispatchers.Default) { service.refresh("/test") }
+        settle()
+        runBlocking(Dispatchers.Default) {
+            rpc.mcpAuthEventsFlow.emit(McpAuthEventDto("linear", "https://auth.example.test/authorize"))
+        }
+        settle()
+
+        assertEquals(listOf("https://auth.example.test/authorize"), dialogs)
+        assertTrue(opened.isEmpty())
+    }
+
     /** A [KiloAgentBehaviorService] backed by an RPC fake whose `mcpAuthenticate` never returns. */
     private class SlowAuthenticateRpc(private val never: CompletableDeferred<McpAuthResultDto>) :
         ai.kilocode.rpc.KiloAgentBehaviorRpcApi by FakeAgentBehaviorRpcApi() {
+        val mcpAuthCancels = mutableListOf<String>()
         val mcpAuthRemovals = mutableListOf<String>()
 
         override suspend fun mcpAuthenticate(directory: String, name: String): McpAuthResultDto = never.await()
+
+        override suspend fun mcpAuthCancel(directory: String, name: String): Boolean {
+            mcpAuthCancels.add(name)
+            return true
+        }
 
         override suspend fun mcpAuthRemove(directory: String, name: String): Boolean {
             mcpAuthRemovals.add(name)

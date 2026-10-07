@@ -62,6 +62,9 @@ interface KiloAgentBehaviorRpcApi : RemoteApi<Unit> {
 
     suspend fun mcpAuthenticate(directory: String, name: String): McpAuthResultDto
 
+    /** Cancels an in-flight sign-in, leaving any stored credentials in place. */
+    suspend fun mcpAuthCancel(directory: String, name: String): Boolean
+
     suspend fun mcpAuthRemove(directory: String, name: String): Boolean
 
     suspend fun mcpAuthEvents(): Flow<McpAuthEventDto>

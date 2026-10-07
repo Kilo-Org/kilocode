@@ -2277,10 +2277,15 @@ class KiloCliDataParserTest {
             assertEquals("HTTP 500", result.error)
         }
 
+        /**
+         * The CLI owns the "is this really a sign-in problem" decision and reports `needs_auth`
+         * itself, so the parser must pass the status through untouched rather than re-deriving it
+         * from the human-readable error text.
+         */
         @Test
-        fun `parseMcpStatus - legacy unauthorized failure needs auth`() {
+        fun `parseMcpStatus - needs_auth is taken from the CLI status`() {
             val result = KiloCliDataParser.parseMcpStatus(
-                """{"anaconda":{"status":"failed","error":"Unauthorized: authentication required"}}""",
+                """{"anaconda":{"status":"needs_auth","error":"Unauthorized: authentication required"}}""",
             ).single()
 
             assertEquals("needs_auth", result.status)
@@ -2288,100 +2293,67 @@ class KiloCliDataParserTest {
         }
 
         @Test
-        fun `parseMcpStatus - non-auth failure remains failed`() {
+        fun `parseMcpStatus - needs_auth without an error is preserved`() {
+            val result = KiloCliDataParser.parseMcpStatus("""{"anaconda":{"status":"needs_auth"}}""").single()
+
+            assertEquals("needs_auth", result.status)
+            assertNull(result.error)
+        }
+
+        @Test
+        fun `parseMcpStatus - needs_client_registration is preserved`() {
             val result = KiloCliDataParser.parseMcpStatus(
-                """{"anaconda":{"status":"failed","error":"Connection refused"}}""",
+                """{"anaconda":{"status":"needs_client_registration","error":"no dynamic registration"}}""",
             ).single()
 
-            assertEquals("failed", result.status)
+            assertEquals("needs_client_registration", result.status)
+            assertEquals("no dynamic registration", result.error)
         }
 
         /**
-         * The CLI only reports `needs_auth` for `UnauthorizedError` or an "OAuth" message, so these
-         * recoverable sign-in failures arrive as `failed` and must still offer sign-in.
+         * Auth-shaped error text on a `failed` status must NOT be upgraded to `needs_auth` here.
+         * The CLI already classifies those; re-doing it client-side would duplicate the rules and
+         * drift from them.
          */
         @Test
-        fun `parseMcpStatus - recoverable oauth failures need auth`() {
+        fun `parseMcpStatus - failed is never reclassified from its error text`() {
             val reasons = listOf(
+                "Unauthorized: authentication required",
                 "Browser authorization failed: Authorization cancelled",
-                "Browser authorization was rejected: this request was replaced by another authorization attempt",
                 "Token exchange failed: invalid client",
                 "Error POSTing to endpoint (HTTP 401): missing bearer token",
-                "Error POSTing to endpoint (HTTP 403): Forbidden",
-                // The SSE transport's unauthenticated rejection, as reported for anaconda's MCP.
                 "SSE error: Non-200 status code (403)",
-                "SSE error: Non-200 status code (401)",
                 "OAuth discovery failed",
                 "Server rejected the request: invalid_grant",
-                "Server rejected the request: invalid_token",
+                "Connection closed",
+                "spawn npx ENOENT",
             )
 
             for (reason in reasons) {
                 val json = """{"anaconda":{"status":"failed","error":${JsonPrimitive(reason)}}}"""
                 val result = KiloCliDataParser.parseMcpStatus(json).single()
-                assertEquals("needs_auth", result.status, "expected sign-in for: $reason")
-                assertEquals(reason, result.error, "the reason must survive normalization")
-            }
-        }
-
-        @Test
-        fun `parseMcpStatus - unrelated failures are not reclassified as auth`() {
-            val reasons = listOf(
-                "Connection closed",
-                "Failed to get tools",
-                "spawn npx ENOENT",
-                "Invalid MCP URL for \"broken\"",
-                "Error POSTing to endpoint (HTTP 500): server error",
-                "SSE error: Non-200 status code (404)",
-                "SSE error: Non-200 status code (500)",
-            )
-
-            for (reason in reasons) {
-                val json = """{"broken":{"status":"failed","error":${JsonPrimitive(reason)}}}"""
-                val result = KiloCliDataParser.parseMcpStatus(json).single()
                 assertEquals("failed", result.status, "must stay failed for: $reason")
+                assertEquals(reason, result.error, "the reason must survive parsing")
             }
         }
 
-        /**
-         * The 401/403/oauth markers are anchored to avoid reclassifying failures that merely embed
-         * those digits/letters as a substring, e.g. a port number or a server hostname.
-         */
-        @Test
-        fun `parseMcpStatus - loose status-code and oauth substrings are not reclassified as auth`() {
-            val reasons = listOf(
-                "connect ECONNREFUSED 127.0.0.1:40123",
-                "connect ECONNREFUSED 127.0.0.1:40323",
-                "Invalid MCP URL for \"broken401\"",
-                "Invalid MCP URL for \"broken403\"",
-                "Invalid MCP URL for \"oauthserver\"",
-                "Failed to connect to myoauthapp.internal",
-                "Request failed after 403 ms",
-            )
-
-            for (reason in reasons) {
-                val json = """{"broken":{"status":"failed","error":${JsonPrimitive(reason)}}}"""
-                val result = KiloCliDataParser.parseMcpStatus(json).single()
-                assertEquals("failed", result.status, "must stay failed for: $reason")
-            }
-        }
-
-        // ---- parseMcpBrowserOpenFailed ----
+        // ---- parseMcpAuthEvent ----
 
         @Test
-        fun `parseMcpBrowserOpenFailed - wrapped payload shape`() {
-            val event = KiloCliDataParser.parseMcpBrowserOpenFailed(
+        fun `parseMcpAuthEvent - wrapped payload shape`() {
+            val event = KiloCliDataParser.parseMcpAuthEvent(
                 """{"directory":"/test","payload":{"type":"mcp.browser.open.failed","properties":{"mcpName":"linear","url":"https://auth.example.test/authorize"}}}"""
             )
 
             assertNotNull(event)
             assertEquals("linear", event.name)
             assertEquals("https://auth.example.test/authorize", event.url)
+            assertFalse(event.external)
         }
 
         @Test
-        fun `parseMcpBrowserOpenFailed - flat payload shape`() {
-            val event = KiloCliDataParser.parseMcpBrowserOpenFailed(
+        fun `parseMcpAuthEvent - flat payload shape`() {
+            val event = KiloCliDataParser.parseMcpAuthEvent(
                 """{"properties":{"mcpName":"linear","url":"https://auth.example.test/authorize"}}"""
             )
 
@@ -2390,9 +2362,21 @@ class KiloCliDataParserTest {
             assertEquals("https://auth.example.test/authorize", event.url)
         }
 
+        /** `mcp.auth.url` means the client owns opening the URL, which the DTO has to carry. */
         @Test
-        fun `parseMcpBrowserOpenFailed - missing url returns null`() {
-            val event = KiloCliDataParser.parseMcpBrowserOpenFailed(
+        fun `parseMcpAuthEvent - external marks the client-owned variant`() {
+            val event = KiloCliDataParser.parseMcpAuthEvent(
+                """{"payload":{"type":"mcp.auth.url","properties":{"mcpName":"linear","url":"https://auth.example.test/authorize"}}}""",
+                external = true,
+            )
+
+            assertNotNull(event)
+            assertTrue(event.external)
+        }
+
+        @Test
+        fun `parseMcpAuthEvent - missing url returns null`() {
+            val event = KiloCliDataParser.parseMcpAuthEvent(
                 """{"properties":{"mcpName":"linear"}}"""
             )
 
@@ -2400,8 +2384,8 @@ class KiloCliDataParserTest {
         }
 
         @Test
-        fun `parseMcpBrowserOpenFailed - malformed JSON returns null`() {
-            assertNull(KiloCliDataParser.parseMcpBrowserOpenFailed("not json"))
+        fun `parseMcpAuthEvent - malformed JSON returns null`() {
+            assertNull(KiloCliDataParser.parseMcpAuthEvent("not json"))
         }
     }
 

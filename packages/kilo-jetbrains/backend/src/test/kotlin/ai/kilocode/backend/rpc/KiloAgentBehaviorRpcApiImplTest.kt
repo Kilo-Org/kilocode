@@ -362,33 +362,32 @@ class KiloAgentBehaviorRpcApiImplTest {
     }
 
     /**
-     * A rejected browser flow reaches the plugin as `failed`, but signing in again fixes it, so the
-     * whole wire path must report `needs_auth` for Settings, Marketplace, and the session prompt.
+     * The CLI classifies recoverable auth failures itself and reports `needs_auth`, so the wire path
+     * only has to carry that status through for Settings, Marketplace, and the session prompt.
      */
     @Test
-    fun `mcp status reports recoverable auth failures as needing sign in`() = runBlocking {
-        mock.mcp = """{"anaconda":{"status":"failed","error":"Browser authorization failed: Authorization cancelled"}}"""
+    fun `mcp status carries needs sign in through the wire path`() = runBlocking {
+        mock.mcp = """{"anaconda":{"status":"needs_auth","error":"Unauthorized: authentication required"}}"""
         val rpc = rpc()
 
         val status = rpc.mcpStatus("/test").single()
 
         assertEquals("needs_auth", status.status)
-        assertEquals("Browser authorization failed: Authorization cancelled", status.error)
+        assertEquals("Unauthorized: authentication required", status.error)
     }
 
     /**
-     * An unauthenticated SSE rejection (anaconda's MCP responds 403 before OAuth) also reaches the
-     * plugin as `failed`. It must normalize to `needs_auth` over the full wire path, or the
-     * post-install sign-in prompt never fires and MCP Settings shows `failed` without Sign In.
+     * Auth-shaped error text on a `failed` status must not be upgraded by the plugin. Doing so would
+     * duplicate the CLI's classification rules and drift from them.
      */
     @Test
-    fun `mcp status reports an SSE 403 rejection as needing sign in`() = runBlocking {
+    fun `mcp status does not reclassify failed from its error text`() = runBlocking {
         mock.mcp = """{"anaconda":{"status":"failed","error":"SSE error: Non-200 status code (403)"}}"""
         val rpc = rpc()
 
         val status = rpc.mcpStatus("/test").single()
 
-        assertEquals("needs_auth", status.status)
+        assertEquals("failed", status.status)
         assertEquals("SSE error: Non-200 status code (403)", status.error)
     }
 
@@ -398,6 +397,31 @@ class KiloAgentBehaviorRpcApiImplTest {
         val rpc = rpc()
 
         assertEquals("failed", rpc.mcpStatus("/test").single().status)
+    }
+
+    /**
+     * In split mode the CLI runs on the host and the user sits at the client, so the plugin must ask
+     * for the authorization URL instead of letting the CLI open a browser the user cannot see.
+     */
+    @Test
+    fun `mcp authenticate asks the CLI for external browser handling`() = runBlocking {
+        val rpc = rpc()
+
+        rpc.mcpAuthenticate("/test", "linear")
+
+        assertContains(mock.lastMcpAuthenticateBody.orEmpty(), "\"external\":true")
+    }
+
+    @Test
+    fun `mcp auth cancel posts to the cancel endpoint`() = runBlocking {
+        val rpc = rpc()
+
+        mock.mcpAuthCancelStatus = 200
+        assertTrue(rpc.mcpAuthCancel("/test", "linear"))
+        assertEquals("/mcp/linear/auth/cancel", mock.lastMcpAuthCancelPath)
+
+        mock.mcpAuthCancelStatus = 404
+        assertFalse(rpc.mcpAuthCancel("/test", "missing"))
     }
 
     @Test

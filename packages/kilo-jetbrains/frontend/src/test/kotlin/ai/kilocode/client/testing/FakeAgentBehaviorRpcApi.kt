@@ -37,6 +37,7 @@ class FakeAgentBehaviorRpcApi : KiloAgentBehaviorRpcApi {
     val mcpConnects = mutableListOf<String>()
     val mcpDisconnects = mutableListOf<String>()
     val mcpAuthentications = mutableListOf<String>()
+    val mcpAuthCancels = mutableListOf<String>()
     val mcpAuthRemovals = mutableListOf<String>()
     val mcpAuthEventsFlow = MutableSharedFlow<McpAuthEventDto>(extraBufferCapacity = 8)
     val creations = mutableListOf<AgentCreateDto>()
@@ -66,6 +67,7 @@ class FakeAgentBehaviorRpcApi : KiloAgentBehaviorRpcApi {
     var mcpConnectResult = true
     var mcpDisconnectResult = true
     var mcpAuthenticateResult = McpAuthResultDto("connected")
+    var mcpAuthCancelResult = true
     var mcpAuthRemoveResult = true
     @Volatile var mcpAuthenticateStarted = false
     var beforeAuthenticate: (suspend () -> Unit)? = null
@@ -218,6 +220,12 @@ class FakeAgentBehaviorRpcApi : KiloAgentBehaviorRpcApi {
         beforeAuthenticate?.invoke()
         mcpAuthentications.add(name)
         return mcpAuthenticateResult
+    }
+
+    override suspend fun mcpAuthCancel(directory: String, name: String): Boolean {
+        assertNotEdt("agentBehavior.mcpAuthCancel")
+        mcpAuthCancels.add(name)
+        return mcpAuthCancelResult
     }
 
     override suspend fun mcpAuthRemove(directory: String, name: String): Boolean {
