@@ -32,7 +32,13 @@ const ATTRIBUTION = /\n\n<!-- kilo-agent-manager source=([^ ]+) -->$/
 export const VscodeUserMessage: Component<VscodeUserMessageProps> = (props) => {
   const language = useLanguage()
   const vscode = useVSCode()
-  const text = createMemo(() => props.parts.find((part): part is TextPart => part.type === "text" && !part.synthetic))
+  // Cron and wakeup fires are synthetic parts flagged `metadata.wakeup`; show them as scheduled notes.
+  const text = createMemo(() =>
+    props.parts.find(
+      (part): part is TextPart =>
+        part.type === "text" && (!part.synthetic || (part.metadata as { wakeup?: unknown } | undefined)?.wakeup === true),
+    ),
+  )
   const attribution = createMemo(() => text()?.text.match(ATTRIBUTION)?.[1])
   const feedback = createMemo(() => {
     const part = text()
