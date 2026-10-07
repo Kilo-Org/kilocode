@@ -38,6 +38,8 @@ import { useKV } from "./kv"
 import { handleSuggestionEvent } from "@/kilocode/suggestion/tui/sync" // kilocode_change
 import { at, recent, slot } from "../kilocode/message-order" // kilocode_change
 import { useToast } from "../ui/toast" // kilocode_change
+import { collector } from "../kilocode/notices" // kilocode_change
+import { errorMessage } from "../util/error" // kilocode_change
 import { usePermission } from "./permission"
 import { GoalSync } from "@/kilocode/cli/cmd/tui/goal-sync" // kilocode_change
 
@@ -892,11 +894,25 @@ export const {
         })
         .then(() => {
           if (store.status !== "complete") setStore("status", "partial")
+          // kilocode_change start - the toast store keeps a single toast, so each notice below
+          // re-shows the combined set instead of calling show() with only its own text, which
+          // let whichever fetch resolved last silently replace the others. Each notice still
+          // surfaces on its own fetch, so a rejected sibling cannot suppress it.
+          const notify = collector((notice) => toast.show(notice))
+          // kilocode_change end
           // non-blocking
           void Promise.all([
             ...(args.continue ? [] : [sessionListPromise.then((sessions) => setStore("session", reconcile(sessions)))]),
             consoleStatePromise.then((consoleState) => setStore("console_state", reconcile(consoleState))),
-            sdk.client.command.list({ workspace }).then((x) => setStore("command", reconcile(x.data ?? []))),
+            // kilocode_change start - an empty slash menu must not be the only sign the list failed
+            sdk.client.command.list({ workspace }).then((x) => {
+              if (x.error) {
+                notify({ title: "Commands Unavailable", message: errorMessage(x.error) })
+                return
+              }
+              setStore("command", reconcile(x.data ?? []))
+            }),
+            // kilocode_change end
             sdk.client.lsp.status({ workspace }).then((x) => setStore("lsp", reconcile(x.data ?? []))),
             sdk.client.mcp.status({ workspace }).then((x) => setStore("mcp", reconcile(x.data ?? {}))),
             sdk.client.experimental.resource
@@ -932,14 +948,10 @@ export const {
             // kilocode_change start
             sdk.client.config.warnings().then((result) => {
               const list = result.data ?? []
-              if (!list.length) return
+              const first = list.at(0)
+              if (!first) return
               const suffix = list.length > 1 ? ` (and ${list.length - 1} more)` : ""
-              toast.show({
-                title: "Config Warning",
-                message: list[0].message + suffix,
-                variant: "warning",
-                duration: 0,
-              })
+              notify({ title: "Config Warning", message: first.message + suffix })
             }),
             sdk.client.indexing
               .status()
