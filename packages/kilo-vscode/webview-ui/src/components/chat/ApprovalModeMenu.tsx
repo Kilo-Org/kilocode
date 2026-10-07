@@ -35,8 +35,7 @@ export const ApprovalModeMenu: Component<Props> = (props) => {
   const icon = () => MODES.find((item) => item.mode === mode())!.icon
 
   const select = (next: ApprovalMode) => {
-    const type = approvalRequest(flags(), next)
-    if (type) vscode.postMessage({ type })
+    for (const type of approvalRequest(flags(), next)) vscode.postMessage({ type })
   }
 
   return (

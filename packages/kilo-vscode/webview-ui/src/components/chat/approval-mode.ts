@@ -11,13 +11,21 @@ export function approvalMode(flags: Flags): ApprovalMode {
 }
 
 /**
- * The single host message that moves from the current mode to `next`. The host
- * turns the other mode off, so one toggle is always enough.
+ * The host messages that move from the current mode to `next`. The host turns the
+ * other mode off, so one toggle is enough from any normal state. If both flags are
+ * briefly on, the menu shows Approve all, so each flag is toggled to match `next`.
  */
-export function approvalRequest(flags: Flags, next: ApprovalMode): Request | undefined {
+export function approvalRequest(flags: Flags, next: ApprovalMode): Request[] {
+  if (flags.auto && flags.me) {
+    const want = { auto: next === "approveAll", me: next === "approveForMe" }
+    return [
+      ...(flags.auto === want.auto ? [] : (["toggleAutoApprove"] as const)),
+      ...(flags.me === want.me ? [] : (["toggleApproveForMe"] as const)),
+    ]
+  }
   const from = approvalMode(flags)
-  if (from === next) return undefined
-  if (next === "approveAll") return "toggleAutoApprove"
-  if (next === "approveForMe") return "toggleApproveForMe"
-  return from === "approveAll" ? "toggleAutoApprove" : "toggleApproveForMe"
+  if (from === next) return []
+  if (next === "approveAll") return ["toggleAutoApprove"]
+  if (next === "approveForMe") return ["toggleApproveForMe"]
+  return [from === "approveAll" ? "toggleAutoApprove" : "toggleApproveForMe"]
 }

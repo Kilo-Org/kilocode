@@ -23,18 +23,25 @@ describe("approvalRequest", () => {
   const modes: ApprovalMode[] = ["ask", "approveForMe", "approveAll"]
 
   it("sends nothing when the mode does not change", () => {
-    for (const mode of modes) expect(approvalRequest(states[mode], mode)).toBeUndefined()
+    for (const mode of modes) expect(approvalRequest(states[mode], mode)).toEqual([])
   })
 
   it("sends one toggle for every change, and the host switches the other mode off", () => {
-    expect(approvalRequest(states.ask, "approveAll")).toBe("toggleAutoApprove")
-    expect(approvalRequest(states.approveForMe, "approveAll")).toBe("toggleAutoApprove")
-    expect(approvalRequest(states.ask, "approveForMe")).toBe("toggleApproveForMe")
-    expect(approvalRequest(states.approveAll, "approveForMe")).toBe("toggleApproveForMe")
+    expect(approvalRequest(states.ask, "approveAll")).toEqual(["toggleAutoApprove"])
+    expect(approvalRequest(states.approveForMe, "approveAll")).toEqual(["toggleAutoApprove"])
+    expect(approvalRequest(states.ask, "approveForMe")).toEqual(["toggleApproveForMe"])
+    expect(approvalRequest(states.approveAll, "approveForMe")).toEqual(["toggleApproveForMe"])
   })
 
   it("turns off whichever mode is active when going back to ask", () => {
-    expect(approvalRequest(states.approveAll, "ask")).toBe("toggleAutoApprove")
-    expect(approvalRequest(states.approveForMe, "ask")).toBe("toggleApproveForMe")
+    expect(approvalRequest(states.approveAll, "ask")).toEqual(["toggleAutoApprove"])
+    expect(approvalRequest(states.approveForMe, "ask")).toEqual(["toggleApproveForMe"])
+  })
+
+  it("reaches every mode when both flags are briefly on", () => {
+    const both = { auto: true, me: true }
+    expect(approvalRequest(both, "ask")).toEqual(["toggleAutoApprove", "toggleApproveForMe"])
+    expect(approvalRequest(both, "approveForMe")).toEqual(["toggleAutoApprove"])
+    expect(approvalRequest(both, "approveAll")).toEqual(["toggleApproveForMe"])
   })
 })

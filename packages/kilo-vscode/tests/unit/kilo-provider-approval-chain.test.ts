@@ -10,13 +10,13 @@ type Internals = {
   setApproveForMeController(ctrl: unknown): void
 }
 
-function controller(calls: string[]) {
+function controller(calls: string[], label: string) {
   return {
     active: () => false,
     visible: () => true,
     approve: async () => false,
     toggle: async () => {
-      calls.push("toggle")
+      calls.push(label)
       return true
     },
     onChange: () => ({ dispose: () => undefined }),
@@ -33,21 +33,21 @@ describe("KiloProvider approval interceptors", () => {
   it("routes each bridge's messages and forwards everything else", async () => {
     const calls: string[] = []
     const kilo = provider()
-    kilo.setAutoApproveController(controller(calls))
-    kilo.setApproveForMeController(controller(calls))
+    kilo.setAutoApproveController(controller(calls, "auto"))
+    kilo.setApproveForMeController(controller(calls, "me"))
 
     expect(await kilo.onBeforeMessage!({ type: "toggleAutoApprove" })).toBeNull()
     expect(await kilo.onBeforeMessage!({ type: "toggleApproveForMe" })).toBeNull()
     expect(await kilo.onBeforeMessage!({ type: "other" })).toEqual({ type: "other" })
-    expect(calls).toEqual(["toggle", "toggle"])
+    expect(calls).toEqual(["auto", "me"])
   })
 
   it("does not recurse when a controller is registered twice", async () => {
     const kilo = provider()
-    kilo.setAutoApproveController(controller([]))
-    kilo.setAutoApproveController(controller([]))
-    kilo.setApproveForMeController(controller([]))
-    kilo.setApproveForMeController(controller([]))
+    kilo.setAutoApproveController(controller([], "x"))
+    kilo.setAutoApproveController(controller([], "x"))
+    kilo.setApproveForMeController(controller([], "x"))
+    kilo.setApproveForMeController(controller([], "x"))
 
     expect(await kilo.onBeforeMessage!({ type: "other" })).toEqual({ type: "other" })
   })
