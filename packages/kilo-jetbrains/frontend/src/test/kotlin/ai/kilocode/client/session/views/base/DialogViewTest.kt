@@ -654,6 +654,28 @@ class DialogViewTest : BasePlatformTestCase() {
         }
     }
 
+    /**
+     * A vertical Stack lays out from the top and BorderLayout stretches CENTER to the row height, so
+     * the header text used to pin to the top of a row the action made taller.
+     */
+    fun `test header text centres against a taller header action`() {
+        edt {
+            val panel = DialogView()
+            panel.setHeader("", "Stopped")
+            panel.setHeaderAction(DialogView.Action("resume", "Resume", primary = false) {})
+            realize(panel)
+
+            val note = findAll<JBTextArea>(panel).first { it.text == "Stopped" }
+            val button = actionButton(panel, "Resume")
+            val header = headerRow(panel)!!
+
+            assertTrue("precondition: the action is the taller element", button.height > note.height)
+            // A one-pixel gap is odd-height rounding, not a top-aligned block.
+            val drift = Math.abs(mid(note, header) - mid(button, header))
+            assertTrue("note and action must share a centre line, drifted ${drift}px", drift <= 1)
+        }
+    }
+
     fun `test setHeaderAction reuses the retained button for the same id`() {
         edt {
             val panel = DialogView()
@@ -778,6 +800,31 @@ class DialogViewTest : BasePlatformTestCase() {
             }
         }
         return null
+    }
+
+    /** Lays the card out for real so component bounds, not just preferred sizes, can be asserted. */
+    private fun realize(panel: DialogView, width: Int = 560) {
+        val root = JPanel(BorderLayout())
+        root.setSize(width, 200)
+        root.add(panel, BorderLayout.NORTH)
+        root.addNotify()
+        repeat(4) { layoutTree(root) }
+    }
+
+    private fun layoutTree(root: Container) {
+        root.doLayout()
+        for (child in root.components) if (child is Container) layoutTree(child)
+    }
+
+    /** Vertical centre of [c] in [root] coordinates. */
+    private fun mid(c: java.awt.Component, root: Container): Int {
+        var y = 0
+        var node: java.awt.Component? = c
+        while (node != null && node !== root) {
+            y += node.y
+            node = node.parent
+        }
+        return y + c.height / 2
     }
 
     private fun actionButton(panel: DialogView, text: String): JButton = actionButtons(panel)[text]!!

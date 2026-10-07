@@ -146,7 +146,11 @@ open class DialogView(
 
     init {
         text.next(headerText).next(descriptionText)
-        header.add(text, BorderLayout.CENTER)
+        // A vertical Stack lays its children out from the top, and BorderLayout stretches CENTER to the
+        // row height. Without this the text pins to the top of a row made taller by something else in
+        // it -- a header action -- instead of sitting level with it. FIT keeps the full-width behavior
+        // BorderLayout already gave the text; CENTER keeps its own height and centres the block.
+        header.add(text.align(HAlign.FIT, VAlign.CENTER), BorderLayout.CENTER)
         syncInsets()
         syncNorth()
         add(north, BorderLayout.NORTH)
