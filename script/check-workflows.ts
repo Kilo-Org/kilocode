@@ -53,6 +53,7 @@ const active = new Set([
   "security-findings-notify.yml",
   "smoke-test.yml",
   "source-check-links.yml",
+  "stale-alerts-report.yml",
   "stale-bot-pr-notify.yml",
   "test-jetbrains.yml",
   "test-vscode.yml",

@@ -178,7 +178,10 @@
 .scroll-to-bottom-button {
   position: absolute;
   bottom: 12px;
-  right: 12px;
+  /* Clear the prompt rail's right-edge column (8px edge + 16px width + 4px gap).
+     A tick over this button would intercept the click and could open the rail
+     when the pointer rests here after scrolling to the bottom. */
+  right: 28px;
   width: 32px;
   height: 32px;
   border-radius: 50%;
