@@ -262,7 +262,7 @@ export const ChatView: Component<ChatViewProps> = (props) => {
   const hasActions = (hasChat: boolean) =>
     canStartSession(hasChat) || canFork(hasChat) || canStartWorktree() || canMoveToWorktree(hasChat)
 
-  const renderActions = (hasChat: boolean, control: () => JSX.Element, agents: JSX.Element) => (
+  const renderActions = (hasChat: boolean, control: () => JSX.Element, agents: JSX.Element, todos: JSX.Element) => (
     <Show when={hasActions(hasChat) || !!goal()}>
       <div class="new-task-button-wrapper" classList={{ "new-task-button-wrapper--empty": !hasChat }}>
         <div class="session-actions-row">
@@ -379,6 +379,7 @@ export const ChatView: Component<ChatViewProps> = (props) => {
               </Tooltip>
             </>
           </Show>
+          {todos}
           {control()}
         </div>
       </div>
@@ -436,7 +437,7 @@ export const ChatView: Component<ChatViewProps> = (props) => {
               <SessionDock
                 blocked={dockBlocked()}
                 hasActions={() => !props.readonly && (hasActions(hasMessages()) || !!goal())}
-                actions={(control, agents) => renderActions(hasMessages(), control, agents)}
+                actions={(control, agents, todos) => renderActions(hasMessages(), control, agents, todos)}
                 onScrollToBottom={scrollToBottom}
                 readonly={props.readonly}
               />

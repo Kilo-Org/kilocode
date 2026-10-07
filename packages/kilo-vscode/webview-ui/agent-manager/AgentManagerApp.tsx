@@ -763,6 +763,7 @@ const AgentManagerContent: Component = () => {
       all.filter(isKnownRootSession).map((s) => s.id),
       trackedSessionInventory(managedSessions(), all),
       isPending,
+      session.sessionsProject() === currentProjectId(),
     )
     if (!next) return
     for (const id of next.forget) vscode.postMessage({ type: "agentManager.forgetSession", sessionId: id })
@@ -1800,6 +1801,7 @@ const AgentManagerContent: Component = () => {
     hints: hints.list,
     base: repoDefaultBranch,
     git: isGitRepo,
+    sessions: projectSessionsLive.current,
     onCreateWorktree: showNewWorktreeDialog,
     onSelectSession: selectChatSession,
     onShowHistory: () => openHistory(),
