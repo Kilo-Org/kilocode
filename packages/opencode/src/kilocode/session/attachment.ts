@@ -1,4 +1,4 @@
-import { isImageAttachment, sniffAttachmentMime } from "@/util/media"
+import { isImageAttachment } from "@/util/media"
 import { Image } from "@/image/image"
 
 export namespace KiloAttachment {
@@ -87,12 +87,12 @@ export namespace KiloAttachment {
     const base64 = part.url.slice(part.url.indexOf(";base64,") + ";base64,".length)
     const data = Buffer.from(base64, "base64")
     if (data.byteLength === 0) return `${part.mime} attachment could not be decoded as a valid image`
-    // Validate against the sniffed format rather than the declared mime. Photon decodes by
-    // content, so an image mislabelled as the wrong raster mime (JPEG bytes sent as
-    // `image/png`) decodes fine today and must not start failing here. `Image.dimensions`
-    // understands exactly the formats Photon handles reliably, so a successful parse is the
-    // right acceptance test -- notably it still rejects BMP bytes, which Photon traps on.
-    if (Image.dimensions(sniffAttachmentMime(data, part.mime), data)) return undefined
+    // Judge decodability by content, the same way Photon does, using the predicate shared with
+    // `Image.fallback`. Single-sourcing it keeps this boundary check and the pipeline from
+    // drifting apart: anything accepted here must also survive `Image.normalize`, otherwise an
+    // attachment waved through would later die as a defect and lose the message. It still
+    // rejects BMP bytes, which Photon traps on.
+    if (Image.decodable(part.mime, data)) return undefined
     return `${part.mime} attachment could not be decoded as a valid image`
   }
 }
