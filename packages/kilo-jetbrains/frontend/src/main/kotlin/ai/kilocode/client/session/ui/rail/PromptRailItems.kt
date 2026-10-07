@@ -34,8 +34,14 @@ object PromptRailItems {
     const val PROMPT_LIMIT = 160
     const val ANSWER_LIMIT = 220
 
-    /** Raw characters read per preview before stripping. Comfortably above [ANSWER_LIMIT]. */
+    /** Prose characters read per preview before stripping. Comfortably above [ANSWER_LIMIT]. */
     private const val BUDGET = 1200
+
+    /** Length of a fence marker. */
+    private const val MARK = 3
+
+    /** Leading characters folded into a turn's cache stamp. */
+    private const val PROBE = 256
 
     /**
      * Per-turn preview cache. Rebuilds are driven by streamed content, so without this every delta
@@ -130,28 +136,85 @@ object PromptRailItems {
         for (part in parts) {
             if (part !is Text) continue
             if (part.content.isBlank()) continue
-            if (out.isNotEmpty()) out.append('\n')
-            val room = BUDGET - out.length
-            if (room <= 0) break
-            out.append(part.content, 0, minOf(room, part.content.length))
             if (out.length >= BUDGET) break
+            if (out.isNotEmpty()) out.append('\n')
+            prose(out, part.content)
         }
         return out.toString()
     }
 
-    /** Cheap stand-in for a turn's preview inputs, so an unchanged turn is not previewed again. */
+    /**
+     * Appends the non-code text of [src] until the budget is reached, stepping over fenced blocks.
+     *
+     * The budget counts prose rather than raw characters precisely so a fence is never cut in half:
+     * [preview] only strips a *closed* fence, so a budget landing inside one would leave the opening
+     * marker and a slice of code in the preview, where reading the whole text dropped the block. Fences
+     * are found by scanning for the marker instead of by regex, so stepping over a large code block
+     * stays a cheap linear walk that allocates nothing.
+     *
+     * An unclosed fence is kept as text, which is what [preview]'s closed-pair regex does with it too.
+     */
+    private fun prose(out: StringBuilder, src: CharSequence) {
+        var at = 0
+        while (at < src.length && out.length < BUDGET) {
+            val open = mark(src, at)
+            if (open < 0) return take(out, src, at, src.length)
+            val close = mark(src, open + MARK)
+            if (close < 0) return take(out, src, at, src.length)
+            take(out, src, at, open)
+            if (out.length < BUDGET) out.append(' ')
+            at = close + MARK
+        }
+    }
+
+    /** Index of the next fence marker at or after [from], or -1. Avoids materialising [src]. */
+    private fun mark(src: CharSequence, from: Int): Int {
+        var i = from.coerceAtLeast(0)
+        while (i <= src.length - MARK) {
+            if (src[i] == '`' && src[i + 1] == '`' && src[i + 2] == '`') return i
+            i++
+        }
+        return -1
+    }
+
+    private fun take(out: StringBuilder, src: CharSequence, from: Int, to: Int) {
+        val room = BUDGET - out.length
+        if (room <= 0) return
+        val end = minOf(to, from + room)
+        if (end > from) out.append(src, from, end)
+    }
+
+    /**
+     * Cheap stand-in for a turn's preview inputs, so an unchanged turn is not previewed again.
+     *
+     * Bounded on purpose: this runs for every turn on every streamed delta, so it folds in the role
+     * [answerText] selects on, each part's id and length, and a hash of a [PROBE]-character prefix
+     * rather than hashing the whole text. Length alone would miss an in-place edit that replaces text
+     * with a different string of the same length; the prefix catches those, and the remaining blind
+     * spot is an equal-length edit entirely beyond the probe, which streaming never produces because it
+     * only appends.
+     */
     private fun stamp(model: SessionModel, turn: Turn): Long {
         var hash = if (model.isQueued(turn.id)) 1L else 0L
         for (id in turn.messageIds) {
             val msg = model.message(id) ?: continue
             hash = hash * 31 + id.hashCode()
+            hash = hash * 31 + msg.info.role.hashCode()
             for (part in msg.parts.values) {
-                // Lengths only: reading a StringBuilder's length does not copy it, so this stays O(parts)
-                // no matter how much text has streamed in.
                 hash = hash * 31 + part.id.hashCode()
-                if (part is Text) hash = hash * 31 + part.content.length
+                if (part !is Text) continue
+                hash = hash * 31 + part.content.length
+                hash = hash * 31 + head(part.content)
             }
         }
+        return hash
+    }
+
+    /** Hash of at most [PROBE] leading characters. Reads [src] in place, copying nothing. */
+    private fun head(src: CharSequence): Int {
+        var hash = 0
+        val end = minOf(src.length, PROBE)
+        for (i in 0 until end) hash = hash * 31 + src[i].code
         return hash
     }
 

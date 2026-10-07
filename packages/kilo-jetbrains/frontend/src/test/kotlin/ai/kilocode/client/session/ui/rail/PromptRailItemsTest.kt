@@ -106,17 +106,63 @@ class PromptRailItemsTest : BasePlatformTestCase() {
      * Previews are a couple of hundred characters but an answer can be tens of kilobytes, and this runs
      * from every streamed delta. The raw text is cut before the stripping regexes see it.
      */
-    fun `test preview work is bounded by the raw text budget`() {
+    /**
+     * The lead-in is inline code: it consumes budget but `preview()` discards it, so the marker after it
+     * is the only thing that could reach the preview. Reading the whole text surfaces the marker, while
+     * the budget stops before it. A marker placed after plain prose proves nothing, because the preview
+     * is truncated to the limit long before it either way.
+     */
+    fun `test preview work is bounded by the text budget`() {
         val model = SessionModel()
         model.upsertMessage(message("u1", "user"))
         model.updateContent("u1", part("p1", "u1", "text", "a real prompt"))
         model.upsertMessage(message("a1", "assistant"))
-        // Deliberately larger than any budget, and shaped so stripping cannot shorten it.
-        model.updateContent("a1", part("ap1", "a1", "text", "x".repeat(200_000)))
+        model.updateContent("a1", part("ap1", "a1", "text", "`a` ".repeat(600) + "SENTINEL_PAST_BUDGET"))
 
         val item = PromptRailItems.items(model).single()
 
-        assertEquals(PromptRailItems.ANSWER_LIMIT, item.answer.length)
+        assertFalse(
+            "text beyond the budget must never be read, got: ${item.answer}",
+            item.answer.contains("SENTINEL"),
+        )
+    }
+
+    /**
+     * The budget is applied to prose, not to raw characters. Cutting raw text first could land inside a
+     * fenced block, and `preview()` only strips a closed fence, so a partial code block plus a stray
+     * fence marker leaked into the preview where the unbounded version dropped the block entirely.
+     */
+    fun `test a large fenced block is dropped rather than cut in half`() {
+        val model = SessionModel()
+        model.upsertMessage(message("u1", "user"))
+        model.updateContent("u1", part("p1", "u1", "text", "a real prompt"))
+        model.upsertMessage(message("a1", "assistant"))
+        val code = "fun compute(value: Int): Int = value * 2\n".repeat(400)
+        model.updateContent("a1", part("ap1", "a1", "text", "Here is the fix:\n```kotlin\n$code```\nAll done."))
+
+        val answer = PromptRailItems.items(model).single().answer
+
+        assertFalse("the fence marker must not leak: $answer", answer.contains("`"))
+        assertFalse("code inside the fence must not leak: $answer", answer.contains("fun compute"))
+        assertEquals("Here is the fix: All done.", answer)
+    }
+
+    /**
+     * The prompt side has the same exposure: a prompt that is nothing but a large fenced block has to
+     * still strip to empty, or it stops taking the attachment-only promotion branch.
+     */
+    fun `test a prompt of only fenced code still promotes the answer`() {
+        val model = SessionModel()
+        model.upsertMessage(message("u1", "user"))
+        val code = "val x = 1\n".repeat(400)
+        model.updateContent("u1", part("p1", "u1", "text", "```kotlin\n$code```"))
+        model.upsertMessage(message("a1", "assistant"))
+        model.updateContent("a1", part("ap1", "a1", "text", "I read the snippet"))
+
+        val item = PromptRailItems.items(model).single()
+
+        assertEquals("I read the snippet", item.prompt)
+        assertEquals("", item.answer)
     }
 
     /** A streamed delta must not re-preview every turn in the transcript, only the one that changed. */
@@ -149,6 +195,25 @@ class PromptRailItemsTest : BasePlatformTestCase() {
         model.clear()
         PromptRailItems.items(model, cache)
         assertEquals(0, cache.size())
+    }
+
+    /**
+     * An in-place edit that keeps the length must still invalidate. Folding only the length into the
+     * stamp left the cache serving the old preview until something else about the turn moved.
+     */
+    fun `test the cache notices an equal length edit`() {
+        val model = SessionModel()
+        model.upsertMessage(message("u1", "user"))
+        model.updateContent("u1", part("p1", "u1", "text", "first prompt"))
+        model.upsertMessage(message("a1", "assistant"))
+        model.updateContent("a1", part("ap1", "a1", "text", "first answer"))
+        val cache = PromptRailItems.Cache()
+        assertEquals("first prompt", PromptRailItems.items(model, cache).single().prompt)
+
+        // Same length, different text.
+        model.updateContent("u1", part("p1", "u1", "text", "FIRST PROMPT"))
+
+        assertEquals("FIRST PROMPT", PromptRailItems.items(model, cache).single().prompt)
     }
 
     fun `test compaction and reverted turns are excluded`() {
