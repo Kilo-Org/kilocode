@@ -2642,11 +2642,16 @@ body.am-wt-dragging-active * {
   width: 100% !important;
 }
 
+/* The virtual list puts rows at fractional offsets. With fractional device
+   pixel ratios (VS Code zoom), the stuck header and the scroller clip can snap
+   to different device pixels and leave one row of diff visible above the
+   header. Paint 1px of header background above the header to cover it. */
 .am-diff-content [data-component="sticky-accordion-header"],
 .am-review-diff-content [data-component="sticky-accordion-header"] {
   width: 100% !important;
   left: 0;
   right: 0;
+  box-shadow: 0 -1px 0 var(--background-stronger);
 }
 
 .am-diff-content [data-slot="session-review-trigger-content"],
