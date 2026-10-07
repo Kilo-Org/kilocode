@@ -30,6 +30,12 @@ internal interface SessionActions {
     /** App-wide auto-approve state (IDE-level, not per session). */
     val auto: Boolean
 
+    /** Effective sandbox state, or null until sandbox support is known. */
+    val sandbox: Boolean?
+
+    /** Whether sandbox state can currently be changed. */
+    val sandboxMutable: Boolean
+
     /** Whether this session can be forked; false in the sidebar and in read-only hosts. */
     val forkable: Boolean
 
@@ -40,6 +46,8 @@ internal interface SessionActions {
     val board: Boolean
 
     fun setAuto(value: Boolean)
+
+    fun toggleSandbox()
 
     /** Copies this session's history into a new session and opens it. */
     fun fork()

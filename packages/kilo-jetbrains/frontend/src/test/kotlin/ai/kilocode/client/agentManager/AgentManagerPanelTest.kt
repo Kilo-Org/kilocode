@@ -169,7 +169,7 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
 
     fun `test configure creates the worktree only after the dialog closes`() {
         val order = mutableListOf<String>()
-        val plan = NewWorktreePlan.Create("feature/y", "main", PendingPrompt("build it"))
+        val plan = NewWorktreePlan.Create("feature/y", "main", PendingPrompt("build it"), sandbox = false)
         val controller = WorktreeController(service, "/test", coroutines.scope)
         val panel = edt {
             AgentManagerPanel(testRootDisposable, controller, project, dialog = { _, _ -> FakeWorktreeDialog(plan, order) })
@@ -203,7 +203,7 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
 
     fun `test configure imports an existing branch`() {
         val order = mutableListOf<String>()
-        val plan = NewWorktreePlan.Branch("feature/x")
+        val plan = NewWorktreePlan.Branch("feature/x", sandbox = false)
         val controller = WorktreeController(service, "/test", coroutines.scope)
         val panel = edt {
             AgentManagerPanel(testRootDisposable, controller, project, dialog = { _, _ -> FakeWorktreeDialog(plan, order) })
@@ -219,7 +219,7 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
 
     fun `test configure imports a pull request`() {
         val order = mutableListOf<String>()
-        val plan = NewWorktreePlan.Pr("https://github.com/o/r/pull/7")
+        val plan = NewWorktreePlan.Pr("https://github.com/o/r/pull/7", sandbox = false)
         val controller = WorktreeController(service, "/test", coroutines.scope)
         val panel = edt {
             AgentManagerPanel(testRootDisposable, controller, project, dialog = { _, _ -> FakeWorktreeDialog(plan, order) })

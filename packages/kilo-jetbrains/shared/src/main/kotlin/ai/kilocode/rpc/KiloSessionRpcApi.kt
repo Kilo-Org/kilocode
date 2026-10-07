@@ -47,8 +47,12 @@ interface KiloSessionRpcApi : RemoteApi<Unit> {
     /** List recent root sessions for the worktree containing [directory]. */
     suspend fun recent(directory: String, limit: Int): SessionListDto
 
-    /** Create a new session in the given directory. */
-    suspend fun create(directory: String): SessionDto
+    /**
+     * Create a new session in the given directory. [sandbox] is null for no explicit preference
+     * (the CLI applies its own default precedence), or the desired confinement state sent as
+     * create-time metadata so the session's very first tool call is already governed by it.
+     */
+    suspend fun create(directory: String, sandbox: Boolean? = null): SessionDto
 
     /**
      * Fork session [id] into [directory]. With [messageId] the fork truncates at that message;

@@ -2,6 +2,7 @@ package ai.kilocode.client.session.controller
 
 import ai.kilocode.client.util.edtWait
 import ai.kilocode.client.app.KiloAppService
+import ai.kilocode.client.app.KiloSandboxService
 import ai.kilocode.client.app.KiloSessionService
 import ai.kilocode.client.session.model.SessionModel
 import ai.kilocode.client.session.model.SessionModelEvent
@@ -141,6 +142,8 @@ abstract class SessionControllerTestBase : BasePlatformTestCase() {
             Disposer.dispose(parent)
             coroutines.close()
             KiloPluginSettings.unsetAgent()
+            // The light test project is reused across tests; never leak a sandbox preference.
+            KiloSandboxService(project, scope, null).unsetNewSessionDefault()
         } finally {
             super.tearDown()
         }
@@ -155,8 +158,18 @@ abstract class SessionControllerTestBase : BasePlatformTestCase() {
         revertTimeoutMs: Long = SessionController.REVERT_TIMEOUT_MS,
         open: (SessionRef) -> Unit = {},
         log: KiloLog? = null,
+        sandbox: KiloSandboxService? = null,
     ): SessionController {
-        return controller(id, flushMs, true, displayMs = displayMs, revertTimeoutMs = revertTimeoutMs, open = open, log = log)
+        return controller(
+            id,
+            flushMs,
+            true,
+            displayMs = displayMs,
+            revertTimeoutMs = revertTimeoutMs,
+            open = open,
+            log = log,
+            sandbox = sandbox,
+        )
     }
 
     protected fun controller(
@@ -180,6 +193,7 @@ abstract class SessionControllerTestBase : BasePlatformTestCase() {
         open: (SessionRef) -> Unit = {},
         log: KiloLog? = null,
         ref: SessionRef? = if (session != null) SessionRef.Local(session) else SessionRef.from(id),
+        sandbox: KiloSandboxService? = null,
     ): SessionController {
         val root = Root()
         val m = SessionController(
@@ -188,6 +202,7 @@ abstract class SessionControllerTestBase : BasePlatformTestCase() {
             sessions = sessions,
             workspace = workspace,
             app = app,
+            sandbox = sandbox,
             cs = scope,
             comp = root,
             flushMs = flushMs,

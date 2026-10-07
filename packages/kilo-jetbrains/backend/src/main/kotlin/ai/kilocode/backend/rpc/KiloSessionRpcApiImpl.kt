@@ -88,10 +88,10 @@ class KiloSessionRpcApiImpl internal constructor(
     override suspend fun recent(directory: String, limit: Int): SessionListDto =
         ready { sessions.recent(directory, limit) }
 
-    override suspend fun create(directory: String): SessionDto {
+    override suspend fun create(directory: String, sandbox: Boolean?): SessionDto {
         app.requireReady()
-        log.info("create session: directory=$directory")
-        val session = workspaces.get(directory).createSession()
+        log.info("create session: directory=$directory sandbox=$sandbox")
+        val session = workspaces.get(directory).createSession(sandbox)
         log.info("create session: id=${session.id}, directory=$directory")
         return session
     }

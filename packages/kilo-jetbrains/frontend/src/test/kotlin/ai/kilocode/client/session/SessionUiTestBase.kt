@@ -1,6 +1,7 @@
 package ai.kilocode.client.session
 
 import ai.kilocode.client.app.KiloAppService
+import ai.kilocode.client.app.KiloSandboxService
 import ai.kilocode.client.app.KiloSessionService
 import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.app.Workspace
@@ -10,6 +11,7 @@ import ai.kilocode.client.session.ui.SessionRootPanel
 import ai.kilocode.client.session.ui.prompt.PromptPanel
 import ai.kilocode.client.session.controller.SessionController
 import ai.kilocode.client.testing.FakeAppRpcApi
+import ai.kilocode.client.testing.FakeSandboxRpcApi
 import ai.kilocode.client.testing.FakeSessionRpcApi
 import ai.kilocode.client.testing.FakeWorkspaceRpcApi
 import ai.kilocode.client.testing.TestCoroutines
@@ -52,6 +54,7 @@ abstract class SessionUiTestBase : BasePlatformTestCase() {
     protected lateinit var appRpc: FakeAppRpcApi
     protected lateinit var workspace: Workspace
     protected lateinit var ui: SessionUi
+    protected lateinit var sandbox: KiloSandboxService
 
     override fun setUp() {
         super.setUp()
@@ -70,6 +73,8 @@ abstract class SessionUiTestBase : BasePlatformTestCase() {
         app = KiloAppService(scope, appRpc)
         workspaces = KiloWorkspaceService(scope, workspaceRpc)
         workspace = workspaces.workspace("/test")
+        sandbox = KiloSandboxService(project, scope, FakeSandboxRpcApi())
+        sandbox.unsetNewSessionDefault()
 
         ui = newUi()
         layout()
@@ -105,6 +110,7 @@ abstract class SessionUiTestBase : BasePlatformTestCase() {
             manager = owner,
             workspaces = workspaces,
             onboarding = onboarding,
+            sandbox = sandbox,
         ).apply {
             setSize(800, 600)
         }

@@ -44,6 +44,9 @@ class KiloCliDownloader(
         private val DIGEST = Regex("^sha256:[a-f0-9]{64}$")
         private val JSON = Json { ignoreUnknownKeys = true }
         private val LOCKS = ConcurrentHashMap<String, Any>()
+
+        /** Archive entries that must keep their executable bit after extraction (non-Windows only). */
+        internal val EXECUTABLE_NAMES = setOf("kilo", "bwrap", "kilo-sandbox-seccomp")
     }
 
     suspend fun resolve(version: String, force: Boolean = false, onProgress: (CliDownload) -> Unit = {}): File =
@@ -354,7 +357,11 @@ class KiloCliDownloader(
         }
         target.parentFile.mkdirs()
         target.outputStream().use(copy)
-        if (!SystemInfo.isWindows && (target.name == "kilo" || target.name == "bwrap")) {
+        // The sandbox network relay's seccomp helper is a native executable (unlike the
+        // relay/mutation-worker `.js` files, which run through the `kilo` binary itself) and needs
+        // its executable bit restored the same as `kilo`/`bwrap`, or Linux `allowed_hosts`/proxy
+        // network mode reports available and then fails to spawn it.
+        if (!SystemInfo.isWindows && target.name in EXECUTABLE_NAMES) {
             target.setExecutable(true)
         }
     }

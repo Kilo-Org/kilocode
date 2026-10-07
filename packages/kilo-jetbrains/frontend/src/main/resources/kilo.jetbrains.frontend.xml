@@ -83,8 +83,16 @@
 
         <applicationConfigurable
                 parentId="ai.kilocode.jetbrains.settings"
-                id="ai.kilocode.jetbrains.settings.context"
+                id="ai.kilocode.jetbrains.settings.sandbox"
                 groupWeight="-1"
+                instance="ai.kilocode.client.settings.sandbox.SandboxConfigurable"
+                bundle="messages.KiloBundle"
+                key="settings.sandbox.displayName"/>
+
+        <applicationConfigurable
+                parentId="ai.kilocode.jetbrains.settings"
+                id="ai.kilocode.jetbrains.settings.context"
+                groupWeight="-2"
                 instance="ai.kilocode.client.settings.context.ContextConfigurable"
                 bundle="messages.KiloBundle"
                 key="settings.context.displayName"/>
@@ -100,7 +108,7 @@
         <applicationConfigurable
                 parentId="ai.kilocode.jetbrains.settings"
                 id="ai.kilocode.jetbrains.settings.checkpoints"
-                groupWeight="-2"
+                groupWeight="-3"
                 instance="ai.kilocode.client.settings.checkpoints.CheckpointsConfigurable"
                 bundle="messages.KiloBundle"
                 key="settings.checkpoints.displayName"/>
@@ -108,7 +116,7 @@
         <applicationConfigurable
                 parentId="ai.kilocode.jetbrains.settings"
                 id="ai.kilocode.jetbrains.settings.integrations"
-                groupWeight="-3"
+                groupWeight="-4"
                 instance="ai.kilocode.client.settings.integrations.IntegrationsConfigurable"
                 bundle="messages.KiloBundle"
                 key="settings.integrations.displayName"/>
@@ -116,7 +124,7 @@
         <applicationConfigurable
                 parentId="ai.kilocode.jetbrains.settings"
                 id="ai.kilocode.jetbrains.settings.advanced"
-                groupWeight="-4"
+                groupWeight="-5"
                 instance="ai.kilocode.client.settings.AdvancedConfigurable"
                 bundle="messages.KiloBundle"
                 key="settings.advanced.displayName"/>
@@ -465,6 +473,9 @@
         <action id="Kilo.Session.AutoApprove"
                 class="ai.kilocode.client.actions.SessionAutoApproveAction"/>
 
+        <action id="Kilo.Session.Sandbox"
+                class="ai.kilocode.client.actions.SessionSandboxAction"/>
+
         <action id="Kilo.Session.Fork"
                 class="ai.kilocode.client.actions.ForkSessionAction"/>
 
@@ -498,6 +509,7 @@
         -->
         <group id="Kilo.Session.ContextMenu">
             <reference ref="Kilo.Session.AutoApprove"/>
+            <reference ref="Kilo.Session.Sandbox"/>
             <separator/>
             <reference ref="Kilo.Session.Fork"/>
             <reference ref="Kilo.Session.Board"/>
@@ -524,6 +536,7 @@
         -->
         <group id="Kilo.Session.PromptMenu">
             <reference ref="Kilo.Session.AutoApprove"/>
+            <reference ref="Kilo.Session.Sandbox"/>
             <separator/>
             <reference ref="Kilo.Session.Fork"/>
             <reference ref="Kilo.Session.Board"/>

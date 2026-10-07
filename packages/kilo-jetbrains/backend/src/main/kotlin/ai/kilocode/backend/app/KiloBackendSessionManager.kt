@@ -196,20 +196,26 @@ class KiloBackendSessionManager(
     }
 
     /**
-     * Create a new session in the given directory.
+     * Create a new session in the given directory. [sandbox] is null for no sandbox preference
+     * (equivalent to the CLI's own defaulting), or an explicit desired confinement state sent as
+     * create-time `metadata["kilocode.sandbox"]` so the session's very first tool call is already
+     * governed by it.
      *
      * Uses raw HTTP because the generated client sends malformed JSON
      * for the optional request body (Content-Type set but empty body).
      */
-    fun create(dir: String): SessionDto {
+    fun create(dir: String, sandbox: Boolean? = null): SessionDto {
         val h = http ?: throw IllegalStateException("Session manager not started")
         val url = base ?: throw IllegalStateException("Session manager not started")
         val encoded = java.net.URLEncoder.encode(dir, "UTF-8")
-        log.info("Creating session: POST $url/session?directory=$encoded")
+        log.info("Creating session: POST $url/session?directory=$encoded sandbox=$sandbox")
 
+        // A non-null [sandbox] must be present in metadata before the CLI creates the session, so
+        // the very first tool call is already confined — a create-then-toggle race would let it run
+        // unsandboxed. See packages/opencode/src/kilocode/sandbox/state.ts (key "kilocode.sandbox").
         val request = Request.Builder()
             .url("$url/session?directory=$encoded")
-            .post("{}".toRequestBody("application/json".toMediaType()))
+            .post(KiloCliDataParser.buildSessionCreateJson(sandbox).toRequestBody("application/json".toMediaType()))
             .build()
 
         h.newCall(request).execute().use { response ->

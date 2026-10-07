@@ -3,6 +3,7 @@ package ai.kilocode.client.session
 import ai.kilocode.client.KiloNotifications
 import ai.kilocode.client.actions.reloadCoreSettings
 import ai.kilocode.client.app.KiloAppService
+import ai.kilocode.client.app.KiloSandboxService
 import ai.kilocode.client.app.KiloSessionService
 import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.app.Workspace
@@ -21,6 +22,7 @@ import ai.kilocode.client.plugin.KiloDocs
 import ai.kilocode.client.plugin.KiloPluginSettings
 import ai.kilocode.client.session.board.SessionBoardDialog
 import ai.kilocode.client.session.model.FileAttachment
+import ai.kilocode.client.session.model.SandboxUiState
 import ai.kilocode.client.session.model.SessionModelEvent
 import ai.kilocode.client.session.model.SessionState
 import ai.kilocode.client.session.scroll.SessionScroll
@@ -150,6 +152,7 @@ class SessionUi(
     private val workspaces: KiloWorkspaceService = service(),
     private val onboarding: OnboardingController = service<KiloOnboardingService>(),
     private val timers: UiTimerSource = UiTimers,
+    sandbox: KiloSandboxService = project.service(),
 ) : JPanel(BorderLayout()), Disposable, SessionEditorStyleTarget, UiDataProvider, SessionActions {
 
     companion object {
@@ -179,6 +182,7 @@ class SessionUi(
         sessions = sessions,
         workspace = workspace,
         app = app,
+        sandbox = sandbox,
         cs = cs,
         comp = this,
         flushMs = flushMs,
@@ -302,6 +306,15 @@ class SessionUi(
 
     override val auto: Boolean get() = controller.autoApprove
 
+    override val sandbox: Boolean?
+        get() = if (controller.sandboxVisible) (controller.model.sandbox as? SandboxUiState.Known)?.enabled else null
+
+    override val sandboxMutable: Boolean
+        get() {
+            val state = controller.model.sandbox as? SandboxUiState.Known ?: return false
+            return !readonly && state.available && !state.pending && !controller.sandboxBusy()
+        }
+
     /**
      * Whether this surface offers forking at all. Decided per surface rather than per session, so the
      * prompt bubbles can carry their fork button from the moment they render; [forkable] adds the
@@ -340,6 +353,12 @@ class SessionUi(
     override fun setAuto(value: Boolean) {
         controller.setAutoApprove(value)
         prompt.setAutoApprove(controller.autoApprove)
+    }
+
+    @RequiresEdt
+    override fun toggleSandbox() {
+        if (!sandboxMutable) return
+        controller.toggleSandbox()
     }
 
     @RequiresEdt
@@ -712,6 +731,8 @@ class SessionUi(
             prompt.onChange = { scroll.refresh() }
             prompt.onAutoApproveToggle = ::setAuto
             prompt.setAutoApprove(controller.autoApprove)
+            prompt.onSandboxToggle = { controller.toggleSandbox() }
+            syncSandbox()
             prompt.model.favorites = { app.favorites.value }
             prompt.model.onFavoriteToggle = { item ->
                 Telemetry.send(
@@ -794,6 +815,8 @@ class SessionUi(
                     prompt.setReady(controller.model.isReady())
                     // Config carries the Swarm toggle, so the entry points follow it without a restart.
                     refreshBoard()
+                    // Config also carries sandbox.enabled, which gates whether the control is shown.
+                    syncSandbox()
                 }
 
                 is SessionControllerEvent.WorkspaceChanged -> {
@@ -809,7 +832,10 @@ class SessionUi(
 
         controller.model.addListener(this) { event ->
             when (event) {
-                is SessionModelEvent.StateChanged -> onStateChanged(event.state)
+                is SessionModelEvent.StateChanged -> {
+                    onStateChanged(event.state)
+                    syncSandbox()
+                }
 
                 is SessionModelEvent.SessionUpdated -> onSessionUpdated()
 
@@ -827,6 +853,8 @@ class SessionUi(
 
                 is SessionModelEvent.QueueChanged -> Unit
 
+                is SessionModelEvent.SandboxChanged -> syncSandbox()
+
                 is SessionModelEvent.TurnAdded,
                 is SessionModelEvent.TurnUpdated,
                 is SessionModelEvent.ContentAdded,
@@ -842,6 +870,17 @@ class SessionUi(
                 is SessionModelEvent.Compacted -> Unit
             }
         }
+    }
+
+    @RequiresEdt
+    private fun syncSandbox() {
+        if (readonly) return
+        prompt.setSandbox(
+            controller.sandboxVisible,
+            controller.model.sandbox,
+            controller.sandboxBusy(),
+            controller.sandboxNetworkRestricted,
+        )
     }
 
     @RequiresEdt
@@ -1079,6 +1118,7 @@ class SessionUi(
             SlashAction.AGENTS to { prompt.mode.open() },
             SlashAction.VARIANT to { prompt.reasoning.open() },
             SlashAction.COMPACT to { controller.compact() },
+            SlashAction.SANDBOX to { controller.toggleSandbox() },
             SlashAction.RELOAD to { reloadCoreSettings(workspaces, workspace.directory, project, "slash_command") },
             SlashAction.SETTINGS to { openKiloSettings() },
             SlashAction.HELP to { BrowserUtil.browse(KiloDocs.BASE) },
