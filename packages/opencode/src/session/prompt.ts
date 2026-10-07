@@ -1441,8 +1441,11 @@ export const layer = Layer.effect(
       function* (input: PromptInput, prior?: KiloSessionControl.Ticket) {
         const background = KiloSessionControl.background(input.parts)
         // kilocode_change - a real user message takes priority over an active goal
-        // for its turn but must not pause the goal; the goal loop resumes after it.
-        const human = input.parts.some((part) => part.type !== "text" || !part.synthetic)
+        // for its turn but must not pause the goal; the goal loop resumes after it. A continuation
+        // counts as one too: it carries no parts, so the parts test alone would drop a Resume.
+        const human =
+          input.parts.some((part) => part.type !== "text" || !part.synthetic) ||
+          KiloSessionControl.continuation(input)
         const ticket = prior ?? (yield* control.begin(input.sessionID, input.noReply !== true && human))
         // kilocode_change end
         const session = yield* sessions.get(input.sessionID).pipe(Effect.orDie)

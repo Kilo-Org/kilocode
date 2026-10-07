@@ -213,6 +213,48 @@ it.live(
   30000,
 )
 
+/**
+ * A stop leaves the session paused, and a continuation carries no parts, so the parts-based human
+ * test used to skip the resume in `control.begin`. The ticket was never running, the prompt returned
+ * the rewritten user message without opening a turn or reporting idle, and the client sat busy.
+ */
+it.live(
+  "a continuation with no parts resumes a stopped session",
+  () =>
+    provideTmpdirServer(
+      () =>
+        Effect.gen(function* () {
+          const prompt = yield* SessionPrompt.Service
+          const sessions = yield* Session.Service
+          const status = yield* SessionStatus.Service
+          const llm = yield* TestLLMServer
+          const session = yield* sessions.create({ title: "Resume after stop" })
+          yield* llm.pushMatch(({ body }) => matches(body, "STOPPED_REQUEST"), reply().hang())
+          const fiber = yield* prompt
+            .prompt({ sessionID: session.id, parts: [{ type: "text", text: "STOPPED_REQUEST" }] })
+            .pipe(Effect.forkScoped)
+          yield* awaitWithTimeout(llm.wait(1), "the first turn did not start", "15 seconds")
+
+          yield* prompt.cancel(session.id, "session")
+          yield* Fiber.await(fiber)
+          expect((yield* status.get(session.id)).type).toBe("idle")
+
+          // Exactly what the Resume action sends: no parts, the original user message id.
+          const messages = yield* sessions.messages({ sessionID: session.id })
+          const user = messages.findLast((message) => message.info.role === "user")
+          if (!user) throw new Error("user message not found")
+          yield* llm.text("RESUMED_REPLY")
+          const result = yield* prompt.prompt({ sessionID: session.id, messageID: user.info.id, parts: [] })
+
+          expect(result.parts.some((part) => part.type === "text" && part.text === "RESUMED_REPLY")).toBe(true)
+          expect(yield* llm.calls).toBe(2)
+          expect((yield* status.get(session.id)).type).toBe("idle")
+        }),
+      { config },
+    ),
+  30000,
+)
+
 for (const scope of [undefined, "tree"] as const) {
   it.live(
     `${scope ?? "default"} stop cancels running background descendants`,
