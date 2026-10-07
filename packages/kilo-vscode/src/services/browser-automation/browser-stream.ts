@@ -1,11 +1,17 @@
 import { setTimeout as wait } from "node:timers/promises"
 import type { CDPSession, Frame, Page } from "playwright-core"
-import type { BrowserFrame, BrowserInteraction, BrowserViewport } from "../../shared/browser-stream"
+import {
+  mergeWheel,
+  type BrowserFrame,
+  type BrowserInteraction,
+  type BrowserViewport,
+  type WheelInteraction,
+} from "../../shared/browser-stream"
 
 type Scope = { browserId: string; navigation: number }
 type Key = Extract<BrowserInteraction, { kind: "key" }>
 type Pointer = Extract<BrowserInteraction, { kind: "pointer" }>
-type Wheel = Extract<BrowserInteraction, { kind: "wheel" }>
+type Wheel = WheelInteraction
 type Clipboard = Extract<BrowserInteraction, { kind: "clipboard" }>["action"]
 type Cast = {
   sessionId: number
@@ -70,17 +76,6 @@ function dimensions(value: string): { width: number; height: number } | undefine
 
 function position(event: { x: number; y: number; modifiers: number }): boolean {
   return range(event.x, 0, 1) && range(event.y, 0, 1) && range(event.modifiers, 0, 15, true)
-}
-
-function merge(current: Wheel, next: Wheel): boolean {
-  if (current.x !== next.x || current.y !== next.y || current.modifiers !== next.modifiers) return false
-  for (const axis of ["deltaX", "deltaY"] as const) {
-    if (Math.sign(current[axis]) !== Math.sign(next[axis])) return false
-    if (!range(current[axis] + next[axis], -10000, 10000)) return false
-  }
-  current.deltaX += next.deltaX
-  current.deltaY += next.deltaY
-  return true
 }
 
 function pointer(event: Pointer): boolean {
@@ -337,15 +332,17 @@ export class BrowserStream {
           return
         case "wheel":
           this.coordinates(input, view)
-          await session.send("Input.dispatchMouseEvent", {
-            type: "mouseWheel",
-            x: this.x,
-            y: this.y,
-            modifiers: this.modifiers,
-            buttons: this.buttons,
-            deltaX: input.deltaX,
-            deltaY: input.deltaY,
-          })
+          this.dispatch(
+            session.send("Input.dispatchMouseEvent", {
+              type: "mouseWheel",
+              x: this.x,
+              y: this.y,
+              modifiers: this.modifiers,
+              buttons: this.buttons,
+              deltaX: input.deltaX,
+              deltaY: input.deltaY,
+            }),
+          )
           return
         case "key":
           await this.keyboard(session, input)
@@ -404,7 +401,7 @@ export class BrowserStream {
   private coalesce(event: BrowserInteraction): Promise<string | undefined> | undefined {
     const queued = this.wheel
     this.wheel = undefined
-    if (event.kind !== "wheel" || !queued || !merge(queued.event, event)) return
+    if (event.kind !== "wheel" || !queued || !mergeWheel(queued.event, event)) return
     this.wheel = queued
     return queued.result
   }
@@ -551,7 +548,7 @@ export class BrowserStream {
     this.buttons |= event.buttons
     if (event.action === "down") this.buttons |= BUTTONS[event.button]
     if (event.action === "up") this.buttons &= ~BUTTONS[event.button]
-    await session.send("Input.dispatchMouseEvent", {
+    const sent = session.send("Input.dispatchMouseEvent", {
       type: event.action === "move" ? "mouseMoved" : event.action === "down" ? "mousePressed" : "mouseReleased",
       x: this.x,
       y: this.y,
@@ -559,6 +556,17 @@ export class BrowserStream {
       buttons: this.buttons,
       clickCount: event.clicks,
       modifiers: this.modifiers,
+    })
+    if (event.action === "move") return this.dispatch(sent)
+    await sent
+  }
+
+  // Chrome answers a mouse move or wheel event only after the page renders the next frame. Waiting for that answer
+  // limits input to the frame rate, so input from a display with a higher refresh rate lags more and more. CDP keeps
+  // the event order, and Chrome merges these events while the page is busy, so they do not wait for the answer.
+  private dispatch(sent: Promise<unknown>): void {
+    void sent.catch(() => {
+      if (!this.closed) this.report("mouse input failed")
     })
   }
 

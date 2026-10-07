@@ -203,6 +203,10 @@ export const Info = Schema.Struct({
     description:
       "Model-specific variant overrides for task-tool subagents, keyed by provider/model. Valid overrides take precedence over saved, agent-specific, and inherited variants.",
   }),
+  memory_model: Schema.optional(Schema.NullOr(Schema.String)).annotate({
+    description:
+      "Model for automatic project memory saves in the format of provider/model. If unset or unavailable, memory uses the session model.",
+  }),
   default_agent: Schema.optional(Schema.NullOr(Schema.String)).annotate({
     description:
       "Default agent to use when none is specified. Must be a primary agent. Falls back to 'code' if not set or if the specified agent is invalid.",

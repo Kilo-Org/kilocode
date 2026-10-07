@@ -552,6 +552,9 @@ export const dict = {
   "provider.custom.error.duplicate": "重複",
   "settings.openLocalConfig": "ローカル設定",
   "settings.openGlobalConfig": "グローバル設定",
+  "settings.search.placeholder": "設定の検索",
+  "settings.search.noResults": "設定が見つかりません",
+  "settings.search.clear": "検索をクリア",
   "settings.config.scope.local": "ローカル",
   "settings.config.scope.global": "グローバル",
   "settings.config.status.loaded": "読み込み済み",
@@ -611,6 +614,7 @@ export const dict = {
   "session.tabs.switcher.pending": "新規",
   "session.tabs.switcher.busy": "作業中",
   "session.tabs.switcher.scheduled": "予約済み",
+  "session.tabs.pinHint": "Shift+クリックで固定または固定解除",
   "session.tab.local": "ローカル",
   "session.tab.cloud": "クラウド",
   "session.tab.worktree": "ワークツリー",
@@ -1351,6 +1355,8 @@ export const dict = {
 
   "task.todos.progress": "{{done}}/{{total}} タスク完了",
   "task.todos.allDone": "{{count}} タスク完了",
+  "task.todos.title": "タスク",
+  "task.todos.done": "すべて完了",
   "task.backgroundAgents.running.one": "バックグラウンドエージェント 1 件",
   "task.backgroundAgents.running.many": "バックグラウンドエージェント {{count}} 件",
   "task.backgroundAgents.open": "バックグラウンドエージェントを開く",
@@ -1434,4 +1440,6 @@ export const dict = {
   "settings.experimental.browserAutomation.systemChrome.description":
     "統合ブラウザーにインストール済みの Google Chrome を使用します。互換性のある Playwright Chromium ブラウザーが既にインストールされている場合にのみ無効にしてください。",
   "chat.search.searchingHistory": "以前のメッセージを検索しています…",
+  "browserTab.noSession": "セッションからブラウザを開いて、ローカルアプリまたは公開 HTTPS ページをプレビューします。",
+  "browserTab.disabled": "統合ブラウザは無効になっています。Kilo 設定 > 実験的機能で有効にしてください。",
 }
