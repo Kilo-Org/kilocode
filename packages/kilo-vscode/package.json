@@ -258,12 +258,12 @@
       },
       {
         "command": "kilo-code.new.agentManager.previousTab",
-        "title": "Agent Manager: Previous Tab",
+        "title": "Previous Session Tab",
         "category": "Kilo Code"
       },
       {
         "command": "kilo-code.new.agentManager.nextTab",
-        "title": "Agent Manager: Next Tab",
+        "title": "Next Session Tab",
         "category": "Kilo Code"
       },
       {
@@ -703,13 +703,13 @@
         "command": "kilo-code.new.agentManager.previousTab",
         "key": "ctrl+alt+left",
         "mac": "cmd+alt+left",
-        "when": "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel'"
+        "when": "kilo-code.new.sidebarFocused || activeWebviewPanelId == 'kilo-code.new.TabPanel' || activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel'"
       },
       {
         "command": "kilo-code.new.agentManager.nextTab",
         "key": "ctrl+alt+right",
         "mac": "cmd+alt+right",
-        "when": "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel'"
+        "when": "kilo-code.new.sidebarFocused || activeWebviewPanelId == 'kilo-code.new.TabPanel' || activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel'"
       },
       {
         "command": "kilo-code.new.agentManager.previousTerminal",

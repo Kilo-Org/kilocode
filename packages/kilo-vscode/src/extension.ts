@@ -772,6 +772,9 @@ export async function activate(context: vscode.ExtensionContext) {
         subAgentViewerProvider.openPanel(sessionID, title, directory)
       },
     ),
+    // One shortcut pair serves the sidebar, Kilo editor tabs, and Agent Manager.
+    // Every surface receives the action and acts only while it has focus, matching
+    // cycleAgentMode, so one binding never depends on a shared focus context key.
     vscode.commands.registerCommand("kilo-code.new.agentManager.previousSession", () => {
       agentManagerProvider.postMessage({ type: "action", action: "sessionPrevious" })
     }),
@@ -779,9 +782,15 @@ export async function activate(context: vscode.ExtensionContext) {
       agentManagerProvider.postMessage({ type: "action", action: "sessionNext" })
     }),
     vscode.commands.registerCommand("kilo-code.new.agentManager.previousTab", () => {
+      const tab = activeTabProvider()
+      if (tab) tab.postMessage({ type: "action", action: "tabPrevious" })
+      provider.postMessage({ type: "action", action: "tabPrevious" })
       agentManagerProvider.postMessage({ type: "action", action: "tabPrevious" })
     }),
     vscode.commands.registerCommand("kilo-code.new.agentManager.nextTab", () => {
+      const tab = activeTabProvider()
+      if (tab) tab.postMessage({ type: "action", action: "tabNext" })
+      provider.postMessage({ type: "action", action: "tabNext" })
       agentManagerProvider.postMessage({ type: "action", action: "tabNext" })
     }),
     vscode.commands.registerCommand("kilo-code.new.agentManager.previousTerminal", () => {
