@@ -92,8 +92,9 @@ export const ProjectSidebarBody: Component<Props> = (props) => {
     (wt) => wt.label || firstOrderedTitle(sessions(wt.id), store.tabOrder()[wt.id], wt.branch),
   )
   const sorted = completion.rows
-  const members = (sectionId: string) => sorted().filter((wt) => wt.sectionId === sectionId)
-  const ungrouped = createMemo(() => sorted().filter((wt) => !wt.sectionId))
+  const pinned = createMemo(() => sorted().filter((wt) => wt.pinned))
+  const members = (sectionId: string) => sorted().filter((wt) => wt.sectionId === sectionId && !wt.pinned)
+  const ungrouped = createMemo(() => sorted().filter((wt) => !wt.sectionId && !wt.pinned))
   const top = createMemo(() => buildTopLevelItems(sections(), ungrouped(), sorted(), order()))
   const sidebarOrder = createMemo(() => projectSidebarOrder(top(), sorted(), sections(), members))
   const post = (message: Record<string, unknown>) =>
@@ -170,6 +171,9 @@ export const ProjectSidebarBody: Component<Props> = (props) => {
     const from = parse("worktree", event.draggable?.id)
     const to = parse("worktree", event.droppable?.id)
     if (!from || !to || !worktreeIds().has(from) || !worktreeIds().has(to)) return
+    // Pinned and unpinned worktrees render in separate blocks, so only reorder inside one block.
+    const pin = (id: string) => worktrees().find((wt) => wt.id === id)?.pinned === true
+    if (pin(from) !== pin(to)) return
     store.setWorktreeOrder((previous) => {
       const current = applyTabOrder(
         sorted().map((wt) => ({ id: wt.id })),
@@ -201,6 +205,8 @@ export const ProjectSidebarBody: Component<Props> = (props) => {
     }
     if (section && sections().some((item) => item.id === section)) {
       post({ type: "agentManager.moveToSection", worktreeIds: [from], sectionId: section })
+      const wt = worktrees().find((item) => item.id === from)
+      if (wt) unpin(wt)
       return
     }
     if (!to || !worktreeIds().has(to)) {
@@ -227,6 +233,11 @@ export const ProjectSidebarBody: Component<Props> = (props) => {
   const cancelRename = () => {
     cancelled = true
     setRenaming(undefined)
+  }
+
+  // A user move into a section must show the worktree in that section, so it leaves the pinned block.
+  const unpin = (wt: WorktreeState) => {
+    if (wt.pinned) post({ type: "agentManager.setWorktreePinned", worktreeId: wt.id, pinned: false })
   }
 
   const renderWorktree = (worktree: WorktreeState, idx: () => number, list: WorktreeState[]) => {
@@ -273,10 +284,18 @@ export const ProjectSidebarBody: Component<Props> = (props) => {
           runStatus={runs()[worktree.id]}
           sections={sections()}
           currentSectionId={worktree.sectionId}
-          onMoveToSection={(sectionId) =>
+          onMoveToSection={(sectionId) => {
             post({ type: "agentManager.moveToSection", worktreeIds: [worktree.id], sectionId })
+            unpin(worktree)
+          }}
+          onMoveToNewSection={() => {
+            unpin(worktree)
+            props.onCreateSection([worktree.id])
+          }}
+          pinned={worktree.pinned}
+          onTogglePin={() =>
+            post({ type: "agentManager.setWorktreePinned", worktreeId: worktree.id, pinned: !worktree.pinned })
           }
-          onMoveToNewSection={() => props.onCreateSection([worktree.id])}
           onClick={() => props.onSelectWorktree(props.project.id, worktree.id)}
           onCancelDelete={props.deletion.cancel}
           onDelete={(event) => {
@@ -385,6 +404,17 @@ export const ProjectSidebarBody: Component<Props> = (props) => {
               <DragDropSensors />
               <ConstrainDragXAxis />
               <SortableProvider ids={dragIds()}>
+                <Show when={pinned().length > 0}>
+                  <div class="am-pinned-group" data-pinned-group={props.project.id}>
+                    <div class="am-pinned-header">
+                      <span class="am-pinned-icon">
+                        <Icon name="pin-filled" size="small" />
+                      </span>
+                      <span class="am-pinned-label">{props.t("agentManager.worktree.pinned")}</span>
+                    </div>
+                    <For each={pinned()}>{(wt, idx) => renderWorktree(wt, idx, pinned())}</For>
+                  </div>
+                </Show>
                 <For each={top()}>
                   {(item, index) => {
                     if (item.kind === "worktree") {
