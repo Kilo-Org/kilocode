@@ -44,6 +44,7 @@ import ai.kilocode.client.session.ui.prompt.SessionIssue
 import ai.kilocode.client.session.ui.prompt.SessionIssueAction
 import ai.kilocode.client.session.ui.prompt.SlashAction
 import ai.kilocode.client.session.ui.prompt.mentionParts as promptMentionParts
+import ai.kilocode.client.session.ui.rail.PromptRailController
 import ai.kilocode.client.session.settings.ApprovalReasonVisibilityListener
 import ai.kilocode.client.session.ui.account.SessionAccountOverlay
 import ai.kilocode.client.session.ui.popup.HeaderPopupController
@@ -205,6 +206,7 @@ class SessionUi(
     private lateinit var account: SessionAccountOverlay
     private lateinit var drop: SessionDropOverlay
     private lateinit var overlay: SessionHoverCopyOverlay
+    internal lateinit var promptRail: PromptRailController
     private val hide = timers.timer(HIDE_MS, repeats = false) {
         if (disposed || !this::drop.isInitialized) return@timer
         drop.setActive(false)
@@ -664,6 +666,14 @@ class SessionUi(
             java.awt.Rectangle(0, 0, pane.width, pane.height)
         }
         root.overlay.setComponentZOrder(drop, 0)
+        promptRail = PromptRailController(
+            root = root,
+            model = controller.model,
+            messages = messageBody,
+            scroll = scroll,
+            parent = this,
+            timers = timers,
+        )
         if (!readonly) {
             prompt.onFileDrag = ::syncDrop
             prompt.installFileDrop(root, "session-root")
@@ -914,6 +924,7 @@ class SessionUi(
                 ApplicationManager.getApplication().invokeLater { surfaceActivePrompt() }
             } else {
                 popup.hideAll()
+                promptRail.hideAll()
             }
         }
 
@@ -1458,6 +1469,7 @@ class SessionUi(
         prompt.applyStyle(style)
         connection.applyStyle(style)
         scroll.applyStyle(style)
+        promptRail.applyStyle(style)
         empty?.applyStyle(style)
         refresh()
     }
@@ -1560,6 +1572,7 @@ class SessionUi(
         issuesJob?.cancel()
         hide.stop()
         popup.hideAll()
+        if (this::promptRail.isInitialized) promptRail.hideAll()
         modalFocus = null
         empty = null
         if (this::root.isInitialized) root.setModalContent(null)

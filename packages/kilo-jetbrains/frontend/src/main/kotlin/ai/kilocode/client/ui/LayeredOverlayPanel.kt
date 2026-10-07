@@ -189,7 +189,16 @@ open class LayeredOverlayPanel(
 
         override fun doLayout() {
             items.forEach { (child, bounds) ->
-                child.bounds = bounds(this, child)
+                val next = bounds(this, child)
+                val prev = child.bounds
+                if (prev != next) {
+                    child.bounds = next
+                    // Swing repaints a moved component's new bounds, but the region it vacated belongs to
+                    // this panel. Overlay children do move — the prompt rail switches between the lane
+                    // gutter and the scrollbar column, the jump button follows the lane — and without this
+                    // the old position stays painted over the content beneath, showing the child twice.
+                    repaint(prev.union(next))
+                }
                 child.doLayout()
             }
         }
