@@ -93,7 +93,10 @@ export const ProjectSidebarBody: Component<Props> = (props) => {
   )
   const sorted = completion.rows
   const pinned = createMemo(() => sorted().filter((wt) => wt.pinned))
+  // Pinned members render in the pinned block, so the section body uses this list.
   const members = (sectionId: string) => sorted().filter((wt) => wt.sectionId === sectionId && !wt.pinned)
+  // Membership keeps pinned members: pinning does not remove a worktree from its section.
+  const memberCount = (sectionId: string) => sorted().filter((wt) => wt.sectionId === sectionId).length
   const ungrouped = createMemo(() => sorted().filter((wt) => !wt.sectionId && !wt.pinned))
   const top = createMemo(() => buildTopLevelItems(sections(), ungrouped(), sorted(), order()))
   const sidebarOrder = createMemo(() => projectSidebarOrder(top(), sorted(), sections(), members))
@@ -206,7 +209,7 @@ export const ProjectSidebarBody: Component<Props> = (props) => {
     if (section && sections().some((item) => item.id === section)) {
       post({ type: "agentManager.moveToSection", worktreeIds: [from], sectionId: section })
       const wt = worktrees().find((item) => item.id === from)
-      if (wt) unpin(wt)
+      if (wt) unpinForMove(wt, section)
       return
     }
     if (!to || !worktreeIds().has(to)) {
@@ -235,7 +238,14 @@ export const ProjectSidebarBody: Component<Props> = (props) => {
     setRenaming(undefined)
   }
 
-  // A user move into a section must show the worktree in that section, so it leaves the pinned block.
+  // Pinning keeps the section, so an explicit move into a different section must unpin to be
+  // visible. A no-op move (the current section, or Ungrouped when already ungrouped) leaves the pin.
+  const unpinForMove = (wt: WorktreeState, sectionId: string | null) => {
+    if (!wt.pinned) return
+    if ((sectionId ?? null) === (wt.sectionId ?? null)) return
+    post({ type: "agentManager.setWorktreePinned", worktreeId: wt.id, pinned: false })
+  }
+  // Creating a section always moves the worktree, so it always clears the pin.
   const unpin = (wt: WorktreeState) => {
     if (wt.pinned) post({ type: "agentManager.setWorktreePinned", worktreeId: wt.id, pinned: false })
   }
@@ -286,7 +296,7 @@ export const ProjectSidebarBody: Component<Props> = (props) => {
           currentSectionId={worktree.sectionId}
           onMoveToSection={(sectionId) => {
             post({ type: "agentManager.moveToSection", worktreeIds: [worktree.id], sectionId })
-            unpin(worktree)
+            unpinForMove(worktree, sectionId)
           }}
           onMoveToNewSection={() => {
             unpin(worktree)
@@ -427,7 +437,7 @@ export const ProjectSidebarBody: Component<Props> = (props) => {
                       <SectionHeader
                         section={section}
                         dropId={scope("section", section.id)}
-                        count={list.length}
+                        count={memberCount(section.id)}
                         autoRename={props.renamingSection() === section.id}
                         onRenameEnd={() => {
                           if (props.renamingSection() === section.id) props.onRenameEnd()
