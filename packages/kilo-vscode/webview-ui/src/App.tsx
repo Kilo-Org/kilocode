@@ -20,6 +20,8 @@ import { useWorktreeMode } from "./context/worktree-mode"
 import { useDiffStyle } from "./context/diff-style"
 import { dispatchAgentManagerEditPreview } from "./utils/agent-manager-events"
 import { strongest } from "./utils/session-activity"
+import { adjacentTab } from "./utils/local-tabs"
+import { focusPrompt } from "./utils/tab-navigation"
 import { createPlanOpener } from "./utils/open-plan"
 import type { PermissionFileDiff } from "./types/messages"
 
@@ -303,6 +305,12 @@ const AppContent: Component = () => {
       case "cyclePreviousAgentMode":
         if (document.hasFocus()) cycleAgent(-1)
         break
+      case "tabPrevious":
+        step(-1)
+        break
+      case "tabNext":
+        step(1)
+        break
       case "focusSearch":
         setCurrentView("newTask")
         window.dispatchEvent(new CustomEvent("focusTranscriptSearch"))
@@ -312,6 +320,16 @@ const AppContent: Component = () => {
         setSettingsSearch((count) => count + 1)
         break
     }
+  }
+
+  // Select the session tab next to the active one, like Agent Manager tab navigation.
+  // The host sends the action to the sidebar and the active editor tab, so only the focused one acts.
+  const step = (offset: -1 | 1) => {
+    if (!tabs || !document.hasFocus() || currentView() !== "newTask") return
+    const id = adjacentTab(tabs.display(), tabs.active(), offset)
+    if (!id) return
+    tabs.select(id)
+    requestAnimationFrame(focusPrompt)
   }
 
   const cycleAgent = (direction: 1 | -1) => {
