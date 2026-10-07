@@ -204,7 +204,7 @@ With a default-on sandbox that is not workable: ordinary Git and network use wou
 #### 2.5.1 Decision
 
 - **Sandboxed mode:** escalation becomes a normal ask. The user sees what the sandbox denied and chooses. (Own PR, useful without Approve for me.)
-- **Approve for me:** the reviewer may approve **any** escalation, after the deterministic rules. This was chosen on 2026-10-06 over the
+- **Approve for me:** the reviewer may approve escalations in the **fixed v1 classes** (`git add`, `git status`, `git diff`), after the deterministic rules. `git commit` and network escalations ask in v1 (2.5.3). This was chosen on 2026-10-06 over the
   stricter option (human only, or deterministic-only), with the guard rails in 2.5.3. The pros and cons are below so the choice can be revisited.
 - **Auto-approve:** no sandbox, so no escalation.
 
@@ -709,10 +709,8 @@ Findings from the security review, and where each is resolved. IDs are used in c
 | SEC-9 | Child sessions start with fresh defaults. Counters reset per session | Child takes the stricter mode. Counters and taints key on the root session | 6.2 item 8 |
 | SEC-10 | Project `kilo.json` can allow everything with no trust prompt | Local-scope allow rules count as `ask` in this mode | 2.9 |
 | SEC-11 | VS Code `autoApprove.enabled` could be set by a workspace file, live (fixed in #14636) | Scope both settings to the application (user only). Writes always go to user settings. `.vscode/` and IDE dirs protected as defense in depth | 6.1, #14636 |
-
 | SEC-12 | Secrets reach the model through `grep`, `glob`, git read commands and program output. The taint misses them | Tool-side exclusions, pathspec-aware git, output secret scanner sets the taint | 2.10 |
 | SEC-13 | The grant could be forged through the schema or plugin `metadata` | Server-only type, never in a schema, event or `metadata` | 1.2 |
-
 | SEC-14 | The sandbox does not confine reads and passes credentials in the environment, so runners can read and print secrets | Read-deny for credential stores and an environment allowlist (S7). Allowed hosts documented as exfiltration channels | 2.12 |
 | SEC-15 | The manifest baseline in a fresh clone is attacker-controlled. The backend ignores workspace trust | Trust signal, reduced profile when untrusted, script-surface acknowledgement before the baseline | 2.13 |
 | SEC-16 | A project config can start MCP servers, plugins, formatters and LSP servers with no trust gate (pre-existing) | Trust gate (S8). Documented as not covered until then | 2.13 |

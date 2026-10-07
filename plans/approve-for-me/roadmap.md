@@ -197,12 +197,16 @@ Each S item has its own tests (`design.md` section 10). S1, S4 and S5 are also w
 ## 2. Dependencies
 
 ```
-0 -> 1 -> 2 -> 3
-          2 -> 4 -> 5 -> 6
-                4 -> 7 -> 8 -> 9 -> 10 -> 11
+0 -> 1 -> 2
+2 -> 3 -> 8
+2 -> 4 -> 5 -> 8
+4 -> 6
+4 -> 7 -> 8
+S1..S8 -> 8
+8 -> 9 -> 10 -> 11
 ```
 
-6 can start after 4. 7 needs 4 and S3. 8 needs 3, 5, 7 and **S1 to S8**. 10 needs 8. PR 3 has value without the reviewer and can ship early. S1 to S8 are independent of each other and can start now.
+3, 4 and S1 to S8 can start once their predecessors in the graph are done. 5 and 7 need 4. 6 can start after 4. 7 also needs S3. 8 needs 3, 5, 7 and **S1 to S8**. 10 needs 8. PR 3 has value without the reviewer and can ship early. S1 to S8 are independent of each other and can start now.
 
 ## 3. Rollout
 

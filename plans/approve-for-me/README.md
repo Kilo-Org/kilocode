@@ -38,7 +38,7 @@ Decisions already made (from the team discussion):
 |---|---|
 | Relation to Approve all | Mutually exclusive. Turning one on turns the other off. Done in #14636. |
 | Relation to Sandbox | Joins the same selector (decided 2026-10-06). Three modes: Approve for me (sandbox on), Sandboxed (sandbox on, ask), Auto-approve (sandbox off). Sandbox is the first layer of defense and is enabled by default in the end state, gated by data. |
-| Sandbox escalation | Becomes a normal ask in Sandboxed mode. In Approve for me the reviewer may approve any escalation, with guard rails. Pros and cons in `design.md` 2.5. |
+| Sandbox escalation | Becomes a normal ask in Sandboxed mode. In Approve for me the reviewer may approve escalations in fixed v1 classes only (`git add`, `status`, `diff`), with guard rails. `git commit` and network escalations ask. Pros and cons in `design.md` 2.5. |
 | Mode state | Per session, default from global config, so sessions can move between local and cloud. Cloud wiring waits for cloud to be stable. |
 | Settings | Permissions and sandbox in one settings page. |
 | Reviewer model | Not an OpenAI model. Cheap and fast. Configurable. |
@@ -128,7 +128,7 @@ before any verdict changes what the user sees.
 4. **Legacy migration.** Do we import `yoloGatekeeperApiConfigId` automatically? (#10252 says never turn guarded YOLO into allow-all.)
 5. **Sandbox default-on.** What escalation rate is acceptable before we turn it on by default? Set in PR 9.
 
-Decided: Sandbox joins the selector; without a sandbox, Approve for me runs with a reduced profile and "Sandboxed" shows as "Ask every time" (`design.md` 0.1); the reviewer may approve any sandbox escalation (with guard rails); mode is per session;
+Decided: Sandbox joins the selector; without a sandbox, Approve for me runs with a reduced profile and "Sandboxed" shows as "Ask every time" (`design.md` 0.1); the reviewer may approve sandbox escalations in fixed v1 classes only (`git add`, `status`, `diff`; commits and network ask), with guard rails; mode is per session;
 reviewer cost counts toward task cost.
 
 ## 6. Risks

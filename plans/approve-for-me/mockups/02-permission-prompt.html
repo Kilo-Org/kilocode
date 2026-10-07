@@ -23,10 +23,10 @@
 <div class="row" style="margin-top:10px"><span class="btn primary">Allow once</span><span class="btn">Always allow…</span><span class="btn">Reject</span></div></div></div></div>
 <div><h1>E. Sandbox escalation (Sandboxed mode asks; Approve for me may decide)</h1><div class="frame"><div class="title">Needs access outside the sandbox</div><div class="body">
 <div class="row"><span class="pill warn">Escalation</span><span class="dim">The sandbox blocked this</span></div>
-<div class="code mono">git commit -m "fix: path handling"</div>
-<div class="dim">Denied by the sandbox: write to <span class="mono">.git/</span>. Allow this command to run outside the sandbox once?</div>
+<div class="code mono">git add src/util/path.ts</div>
+<div class="dim">Denied by the sandbox: write to <span class="mono">.git/index</span>. Allow this command to run outside the sandbox once?</div>
 <div class="row" style="margin-top:10px"><span class="btn primary">Allow once</span><span class="btn">Reject</span></div>
-<div class="dim" style="margin-top:8px;font-size:11px">Approve for me mode: a reviewer can approve this after the safety rules. The line “Approved by Approve for me (escalation)” then appears in the transcript.</div></div></div></div>
+<div class="dim" style="margin-top:8px;font-size:11px">Approve for me mode: for <span class="mono">git add</span>, <span class="mono">status</span> and <span class="mono">diff</span> in the repository a reviewer can approve this after the safety rules, and the line “Approved by Approve for me (escalation)” appears in the transcript. In v1 <span class="mono">git commit</span> and network escalations always ask.</div></div></div></div>
 <div><h1>F. Build or CI file edit always asks</h1><div class="frame"><div class="title">Permission required</div><div class="body">
 <div class="row"><span class="pill warn">Runs code</span><span class="dim">Approve for me never edits this alone</span></div>
 <div class="code mono">edit package.json  (scripts.test)</div>
