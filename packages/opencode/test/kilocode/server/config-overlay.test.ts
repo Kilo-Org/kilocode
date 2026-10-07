@@ -364,6 +364,170 @@ describe("config overlay routes", () => {
     expect(responses.map((response) => response.status).sort()).toEqual([200, 409])
   })
 
+  test("does not report shadowing when the .kilo target outranks the root file", async () => {
+    await using project = await tmpdir()
+    // Target resolution prefers an existing root kilo.json, but .kilo/kilo.json loads after it
+    // in the merge chain, so writing the target leaves the .kilo value effective.
+    await Filesystem.write(path.join(project.path, "kilo.json"), JSON.stringify({ model: "test/old" }))
+    await Filesystem.write(path.join(project.path, ".kilo", "kilo.json"), JSON.stringify({ model: "test/old" }))
+    const before = await json<Overlay>(await req(project.path, "/config/overlay?scope=project"))
+    expect(before.targets.project.path).toBe(path.join(project.path, ".kilo", "kilo.json"))
+
+    const response = await Server.Default().app.request("/config/overlay", {
+      method: "PATCH",
+      headers: { "content-type": "application/json", "x-kilo-directory": project.path },
+      body: JSON.stringify({
+        scope: "project",
+        expected: {
+          path: before.targets.project.path,
+          revision: before.targets.project.revision,
+        },
+        set: { model: "test/new" },
+      }),
+    })
+
+    expect(response.status).toBe(200)
+  })
+
+  test("reports a shadowed write when a later file in the target chain wins", async () => {
+    await using project = await tmpdir()
+    // kilo.json is the target, but opencode.json sorts after it in the same directory, so it
+    // shadows the write even though the user explicitly flipped the value in the UI.
+    await Filesystem.write(path.join(project.path, "kilo.json"), JSON.stringify({ permission: { bash: "ask" } }))
+    await Filesystem.write(path.join(project.path, "opencode.json"), JSON.stringify({ permission: { bash: "ask" } }))
+    const before = await json<Overlay>(await req(project.path, "/config/overlay?scope=project"))
+    expect(before.targets.project.path).toBe(path.join(project.path, "kilo.json"))
+
+    const response = await Server.Default().app.request("/config/overlay", {
+      method: "PATCH",
+      headers: { "content-type": "application/json", "x-kilo-directory": project.path },
+      body: JSON.stringify({
+        scope: "project",
+        expected: {
+          path: before.targets.project.path,
+          revision: before.targets.project.revision,
+        },
+        set: { permission: { bash: "allow" } },
+      }),
+    })
+
+    expect(response.status).toBe(409)
+    const body = (await response.json()) as { message: string; shadowedBy?: string }
+    expect(body.shadowedBy).toBe(path.join(project.path, "opencode.json"))
+    expect(body.message).toContain("takes precedence")
+    // Nothing is written, so the revision stays valid for a retry.
+    const after = await json<Overlay>(await req(project.path, "/config/overlay?scope=project"))
+    expect(after.targets.project.revision).toBe(before.targets.project.revision)
+  })
+
+  test("reports a shadowed global write when a higher-precedence global file wins", async () => {
+    await using global = await tmpdir()
+    await using project = await tmpdir()
+    ;(Global.Path as { config: string }).config = global.path
+    // The global target prefers kilo.json, and the loader merges opencode.json after it, so
+    // an existing opencode.json value shadows every write to kilo.json.
+    await Filesystem.write(path.join(global.path, "kilo.json"), JSON.stringify({ permission: { bash: "ask" } }))
+    await Filesystem.write(path.join(global.path, "opencode.json"), JSON.stringify({ permission: { bash: "ask" } }))
+    const before = await json<Overlay>(await req(project.path, "/config/overlay?scope=global"))
+    expect(before.targets.global.path).toBe(path.join(global.path, "kilo.json"))
+
+    const response = await Server.Default().app.request("/config/overlay", {
+      method: "PATCH",
+      headers: { "content-type": "application/json", "x-kilo-directory": project.path },
+      body: JSON.stringify({
+        scope: "global",
+        expected: {
+          path: before.targets.global.path,
+          revision: before.targets.global.revision,
+        },
+        set: { permission: { bash: "allow" } },
+      }),
+    })
+
+    expect(response.status).toBe(409)
+    const body = (await response.json()) as { message: string; shadowedBy?: string }
+    expect(body.shadowedBy).toBe(path.join(global.path, "opencode.json"))
+    const saved = (await Bun.file(before.targets.global.path).json()) as { permission?: { bash?: string } }
+    expect(saved.permission?.bash).toBe("ask")
+  })
+
+  test("reports a managed file that shadows a project target not created yet", async () => {
+    await using project = await tmpdir()
+    await using managed = await tmpdir()
+    await Filesystem.write(path.join(managed.path, "kilo.json"), JSON.stringify({ model: "test/managed" }))
+    const prev = process.env.KILO_TEST_MANAGED_CONFIG_DIR
+    process.env.KILO_TEST_MANAGED_CONFIG_DIR = managed.path
+    try {
+      const before = await json<Overlay>(await req(project.path, "/config/overlay?scope=project"))
+      expect(before.targets.project.exists).toBe(false)
+
+      const response = await req(project.path, "/config/overlay", {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          scope: "project",
+          expected: { path: before.targets.project.path, revision: before.targets.project.revision },
+          set: { model: "test/new" },
+        }),
+      })
+
+      expect(response.status).toBe(409)
+      expect(await Bun.file(before.targets.project.path).exists()).toBe(false)
+    } finally {
+      process.env.KILO_TEST_MANAGED_CONFIG_DIR = prev
+    }
+  })
+
+  test("does not report shadowing for unrelated values in higher-priority files", async () => {
+    await using project = await tmpdir()
+    await Filesystem.write(path.join(project.path, "kilo.json"), "{}")
+    await Filesystem.write(path.join(project.path, "opencode.json"), JSON.stringify({ share: "disabled" }))
+    const before = await json<Overlay>(await req(project.path, "/config/overlay?scope=project"))
+
+    const response = await Server.Default().app.request("/config/overlay", {
+      method: "PATCH",
+      headers: { "content-type": "application/json", "x-kilo-directory": project.path },
+      body: JSON.stringify({
+        scope: "project",
+        expected: {
+          path: before.targets.project.path,
+          revision: before.targets.project.revision,
+        },
+        set: { model: "test/new" },
+      }),
+    })
+
+    expect(response.status).toBe(200)
+  })
+
+  test("surfaces config validation errors as a typed 400 instead of an opaque 500", async () => {
+    await using project = await tmpdir()
+    const before = await json<Overlay>(await req(project.path, "/config/overlay?scope=project"))
+
+    const response = await Server.Default().app.request("/config/overlay", {
+      method: "PATCH",
+      headers: { "content-type": "application/json", "x-kilo-directory": project.path },
+      body: JSON.stringify({
+        scope: "project",
+        expected: {
+          path: before.targets.project.path,
+          revision: before.targets.project.revision,
+        },
+        set: { modle: "test/model" },
+      }),
+    })
+
+    expect(response.status).toBe(400)
+    const body = (await response.json()) as {
+      message: string
+      path?: string
+      issues?: Array<{ message: string }>
+    }
+    expect(body.path).toBe(before.targets.project.path)
+    expect(body.issues?.at(0)?.message).toContain("modle")
+    expect(await Bun.file(before.targets.project.path).exists()).toBe(false)
+  })
+
   test("rejects a project config target that escapes through a symlink", async () => {
     if (process.platform === "win32") return
     await using project = await tmpdir()

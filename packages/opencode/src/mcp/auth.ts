@@ -11,6 +11,7 @@ export const Tokens = Schema.Struct({
   refreshToken: Schema.mutableKey(Schema.optional(Schema.String)),
   expiresAt: Schema.mutableKey(Schema.optional(Schema.Number)),
   scope: Schema.mutableKey(Schema.optional(Schema.String)),
+  issuer: Schema.mutableKey(Schema.optional(Schema.String)), // kilocode_change - authorization server the MCP SDK bound these to
 })
 export type Tokens = Schema.Schema.Type<typeof Tokens>
 
@@ -19,6 +20,7 @@ export const ClientInfo = Schema.Struct({
   clientSecret: Schema.mutableKey(Schema.optional(Schema.String)),
   clientIdIssuedAt: Schema.mutableKey(Schema.optional(Schema.Number)),
   clientSecretExpiresAt: Schema.mutableKey(Schema.optional(Schema.Number)),
+  issuer: Schema.mutableKey(Schema.optional(Schema.String)), // kilocode_change - authorization server the MCP SDK bound this to
 })
 export type ClientInfo = Schema.Schema.Type<typeof ClientInfo>
 
