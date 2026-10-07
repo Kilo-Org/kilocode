@@ -87,12 +87,17 @@ test("pathological diffFull workload finishes quickly and does not block abort",
           // Kick off a diffFull that exercises the freeze path.
           const diff = yield* snapshot.diffFull(before!, after!).pipe(Effect.forkChild({ startImmediately: true }))
 
-          // Concurrently keep a tick counter running. If the event loop blocks we
-          // will see this count fall behind wall-clock elapsed.
-          const ticks = { count: 0 }
-          const start = Date.now()
+          // Concurrently watch for event-loop stalls. Tick *count* is not a usable
+          // signal: the whole point of the fix is that this workload is fast, so on
+          // a quick box it finishes inside a single interval period and zero ticks
+          // is the healthy outcome. What matters is that no single gap between
+          // ticks is long enough to swallow an ESC keypress.
+          const clock = { last: Date.now(), gap: 0 }
+          const start = clock.last
           const timer = setInterval(() => {
-            ticks.count++
+            const now = Date.now()
+            clock.gap = Math.max(clock.gap, now - clock.last)
+            clock.last = now
           }, 25)
 
           try {
@@ -108,13 +113,14 @@ test("pathological diffFull workload finishes quickly and does not block abort",
 
             const diffs = yield* Fiber.join(diff)
             const total = Date.now() - start
+            clock.gap = Math.max(clock.gap, Date.now() - clock.last)
 
             // The freeze workload must finish in bounded time. Five seconds is
             // generous even for a slow CI box; without the fix this hangs.
             expect(total).toBeLessThan(5000)
-            // And we must have ticked at least a few times during the work, proving
-            // the event loop stayed responsive (ESC would actually arrive).
-            expect(ticks.count).toBeGreaterThan(0)
+            // And the event loop must never have been parked long enough to delay
+            // ESC delivery. Without the fix this gap ran into minutes.
+            expect(clock.gap).toBeLessThan(2000)
 
             // With git-based diff the patch is a real unified diff, not empty.
             const hit = diffs.find((d) => d.file === "fat.json")
@@ -130,4 +136,6 @@ test("pathological diffFull workload finishes quickly and does not block abort",
         }),
       ),
   })
-})
+  // Setup alone (git init, committing a 3000-line file, two snapshots) can
+  // outlive bun's 5s default on a loaded machine.
+}, 30_000)
