@@ -949,11 +949,14 @@ const layer = Layer.effect(
         // kilocode_change end
         ctx.needsCompaction = false
         ctx.compactionError = undefined // kilocode_change
-        ctx.shouldBreak = (yield* config.get()).experimental?.continue_loop_on_deny !== true
+        // kilocode_change start - read config once per step (continue_loop_on_deny + chatMaxRetries)
+        const cfg = yield* config.get()
+        ctx.shouldBreak = cfg.experimental?.continue_loop_on_deny !== true
+        // kilocode_change end
 
         return yield* Effect.gen(function* () {
           // kilocode_change start - configurable retry limit via experimental.chatMaxRetries
-          const chatMaxRetries = (yield* config.get()).experimental?.chatMaxRetries
+          const chatMaxRetries = cfg.experimental?.chatMaxRetries
           // kilocode_change end
           // kilocode_change start - publish retry state consistently for provider and empty-response retries
           const retries = { provider: 0 }
