@@ -80,6 +80,8 @@ interface BrowserDevtoolsInfo {
 
 export interface BrowserBrokerOptions {
   log: (...args: unknown[]) => void
+  /** Current IDE color scheme, applied to pages so `prefers-color-scheme` matches the editor. */
+  theme?: () => "dark" | "light"
   enabled?: () => boolean
   trusted?: () => boolean
   launch?: (options: LaunchOptions) => Promise<BrowserContextFactory>
@@ -261,6 +263,25 @@ export class BrowserBroker {
   private closed = false
 
   constructor(private readonly opts: BrowserBrokerOptions) {}
+
+  private scheme(): "dark" | "light" {
+    return this.opts.theme?.() ?? "light"
+  }
+
+  /**
+   * Re-apply the current IDE color scheme to every live page. A page keeps the
+   * emulated scheme across navigations, so this only needs to run when the IDE
+   * theme changes, not on every navigation.
+   */
+  retheme(): void {
+    const colorScheme = this.scheme()
+    for (const entry of this.entries.values()) {
+      if (entry.dead) continue
+      void entry.page
+        .emulateMedia({ colorScheme })
+        .catch((error: unknown) => this.opts.log("Browser theme update failed", error))
+    }
+  }
 
   async start(): Promise<void> {
     if (this.closed) throw new Error("Browser broker is closed")
@@ -534,6 +555,7 @@ export class BrowserBroker {
         serviceWorkers: "block",
         viewport: { width: 1280, height: 720 },
         deviceScaleFactor: 2,
+        colorScheme: this.scheme(),
         proxy: proxy.proxy,
         ignoreHTTPSErrors: false,
         acceptDownloads: false,

@@ -195,6 +195,46 @@ describe("BrowserBroker", () => {
     expect(shots).toBe(1)
   })
 
+  test("matches the page color scheme to the IDE theme and updates on change", async () => {
+    let theme: "dark" | "light" = "dark"
+    const schemes: Array<string | null | undefined> = []
+    const emulated: Array<string | null | undefined> = []
+    const page = {
+      url: () => "http://localhost:3000/",
+      title: async () => "Themed",
+      screenshot: async () => Buffer.from("jpeg"),
+      off: () => undefined,
+      on: () => undefined,
+      mainFrame: () => undefined,
+      goto: async () => undefined,
+      emulateMedia: async (options: { colorScheme?: string | null }) => {
+        emulated.push(options.colorScheme)
+      },
+    }
+    const broker = new BrowserBroker({
+      log: () => {},
+      network,
+      theme: () => theme,
+      launch: async () => ({
+        newContext: async (opts) => {
+          schemes.push(opts.colorScheme)
+          return {
+            close: async () => undefined,
+            newPage: async () => page,
+          }
+        },
+        close: async () => undefined,
+      }),
+    })
+    brokers.push(broker)
+    const route = { projectId: "project", sessionId: "themed", directory: "/tmp/project" }
+    await broker.open(route, "http://localhost:3000/", false)
+    expect(schemes).toEqual(["dark"])
+    theme = "light"
+    broker.retheme()
+    expect(emulated).toEqual(["light"])
+  })
+
   test("reloads repeated agent opens and returns fresh page diagnostics", async () => {
     const listeners = new Map<string, (value: unknown) => void>()
     const loading: number[] = []
