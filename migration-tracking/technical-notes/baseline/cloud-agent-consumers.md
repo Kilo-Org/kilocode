@@ -8,7 +8,7 @@ source changes in any repository.
 | Item | Value |
 |---|---|
 | Date | 2026-10-02 |
-| Updated | 2026-10-05 — applied PR #14758 review dispositions (Gastown/KiloClaw EOL, session-ingest coupling) |
+| Updated | 2026-10-07 — applied PR #14758 review: owner-confirmed v1/v2 API difference, deploy/rollout path, sdk lockstep invariant; added `webhook-agent-ingest`; narrowed the Vercel rollout unknown |
 | Cloud repo | `Kilo-Org/cloud` at `3de933dd85070e9d15c41d8ff3af6c91ca856fd4` (read-only clone) |
 | This repo, `origin/main` (v1) | `622ed1f5ae5af2d864908a0bb759b0c9121d406c` |
 | This repo, `kilo-v2` (v2) | `a2e6c1f69b36a0215c30a80f9d13da9f530073df` |
@@ -22,6 +22,15 @@ Both v1 and v2 publish the CLI package as **`@kilocode/cli`** (v1
 `packages/kilo-cli/package.json:2-3` on `kilo-v2` is `0.0.0-internal` and
 `private`). Every consumer below resolves `@kilocode/cli` from npm, so the v1/v2
 distinction is a package/channel question, not a package-name question.
+
+Do not confuse the SDK's `/v2` subpath with the Kilo v2 product. The
+`@kilocode/sdk` package is v1's Kilo SDK, published from
+`origin/main:packages/sdk/js/package.json` (name `@kilocode/sdk`, version `7.8.3`)
+and already exposing a `./v2` subpath (`src/v2/…`). The `@kilocode/sdk/v2`
+imports in cloud-agent-next refer to that second-generation client subpath, not
+to the Kilo v2 runtime. On `kilo-v2` there is no `@kilocode/sdk` package yet:
+`packages/sdk/package.json` is upstream `@opencode-ai/sdk`, with Kilo helpers in
+`packages/kilo-client`. Contract mapping under #14426 must keep the two distinct.
 
 Already tracked elsewhere, not re-assessed here: the `kilo cloud` CLI client
 (`origin/main:packages/opencode/src/kilocode/cloud/` and
@@ -38,7 +47,7 @@ the rest is still proposed.
 
 | Consumer | Repo + path | Owner | Kilo dependency | How obtained and pinned | Deployed runtime | Update / rollout | In scope? | Rationale | Recommended gate | Evidence |
 |---|---|---|---|---|---|---|---|---|---|---|
-| cloud-agent-next (hosted cloud agent; all `agent_*`/`workspace_*` sessions, incl. PR-review/auto-fix bot sandboxes) | `Kilo-Org/cloud` `services/cloud-agent-next/` | unassigned | Binary + SDK + HTTP: wrapper spawns `kilo serve` and imports `@kilocode/sdk` and `@kilocode/sdk/v2` | `@kilocode/cli@7.8.1` npm-global in sandbox image (Dockerfile `ARG KILOCODE_CLI_VERSION`); `KILOCODE_CLI_VERSION` in `wrangler.jsonc` `image_vars`/`build_vars` for every container class; `@kilocode/sdk@7.8.1` in `package.json` and `wrapper/package.json`; single source `src/shared/kilo-cli-version.ts` | 7.8.1 | Bump `KILO_CLI_VERSION` + manifests; `wrangler deploy` rebuilds Cloudflare Containers (changed-worker matrix in `deploy-workers.yml`; `deploy-production.yml`/`deploy-staging.yml`); `rollout_active_grace_period 1800` | yes | Primary hosted runtime; embeds the v1 CLI server + SDK; every hosted agent flow executes here | G1 for adaptation; independent cutover (pinned, own go/no-go) | cloud@3de933dd `services/cloud-agent-next/Dockerfile:6,64`; `src/shared/kilo-cli-version.ts:1`; `wrangler.jsonc:182,277`; `wrapper/package.json:11`; `wrapper/src/control-plane/kilo-runtime.ts:184`; `wrapper/src/control/worktree-runtime.ts:379` |
+| cloud-agent-next (hosted cloud agent; all `agent_*`/`workspace_*` sessions, incl. PR-review/auto-fix bot sandboxes) | `Kilo-Org/cloud` `services/cloud-agent-next/` | unassigned | Binary + SDK + HTTP: wrapper spawns `kilo serve` and imports `@kilocode/sdk` and `@kilocode/sdk/v2` | `@kilocode/cli@7.8.1` npm-global in sandbox image (Dockerfile `ARG KILOCODE_CLI_VERSION`); `KILOCODE_CLI_VERSION` in `wrangler.jsonc` `image_vars`/`build_vars` for every container class; `@kilocode/sdk@7.8.1` in `package.json` and `wrapper/package.json`; single source `src/shared/kilo-cli-version.ts` | 7.8.1 | Bump `KILO_CLI_VERSION` + manifests; `wrangler deploy` rebuilds Cloudflare Containers (changed-worker matrix in `deploy-workers.yml`; `deploy-production.yml`/`deploy-staging.yml`); `rollout_active_grace_period 1800` | yes | Primary hosted runtime; embeds the v1 CLI server + SDK; every hosted agent flow executes here. Owner-confirmed (PR #14758): the v1↔v2 message/API differs significantly, so this is a required adaptation, not a version bump alone; the concrete deltas are #14426 | G1 for adaptation; independent cutover (pinned, own go/no-go) | cloud@3de933dd `services/cloud-agent-next/Dockerfile:6,64`; `src/shared/kilo-cli-version.ts:1`; `wrangler.jsonc:182,277`; `wrapper/package.json:11`; `wrapper/src/control-plane/kilo-runtime.ts:184`; `wrapper/src/control/worktree-runtime.ts:379` |
 | auto-routing-benchmark (decider benchmark runner) | `services/auto-routing-benchmark/container/` | unassigned | Binary: spawns `kilo run --format json` | `npm install -g @kilocode/cli@latest` resolved at image build; no version pin | latest at last image build (7.8.x as of the assessed SHA; exact build unverified) | `wrangler deploy` builds/pushes the container image; each deploy re-pins to that day's `latest` | yes | Floats on `@kilocode/cli@latest`, so a v2 `latest` reaches it automatically | G1 | cloud@3de933dd `services/auto-routing-benchmark/container/Dockerfile:12`; `container/server.mjs:64`; `wrangler.jsonc:32-39` |
 | Gastown (agent orchestration via Durable Objects + container) | `services/gastown/container/` | unassigned | Binary + SDK: spawns `kilo serve` via `createKilo()`; ships `@kilocode/plugin` for plugin discovery | `@kilocode/cli@7.2.14` (+ `cli-linux-x64`, `cli-linux-x64-musl`, `@kilocode/plugin@7.2.14`) in Dockerfile; `@kilocode/sdk@7.2.14`, `@kilocode/plugin@7.2.52` in `container/package.json` | 7.2.14 | `pnpm --filter cloudflare-gastown deploy:prod` → `container:prepare` + container build + `wrangler deploy`; `max_instances 500` | no (EOL) | Owner disposition on PR #14758 (pandemicsyn, 2026-10-05): Gastown is EOL'd; do not invest effort updating it. Runtime facts recorded for completeness only | n/a (EOL; no v2 work) | cloud@3de933dd `services/gastown/container/Dockerfile:80-81`; `container/package.json:15-16`; `container/src/process-manager.ts:9,664`; PR #14758 review comment |
 | KiloClaw (per-user OpenClaw runtimes on Fly.io) | `services/kiloclaw/` | unassigned | Binary: ships `@kilocode/cli` in the Fly image and spawns `kilo run --auto`; controller also configures the `kilo` provider | Baked `@kilocode/cli@7.2.31` in Dockerfile; controller runs background `npm install -g @kilocode/cli@latest` 3h after boot when `KILOCLAW_KILO_CLI=true` | baked 7.2.31, then per-instance self-upgrade to `latest` | `deploy-kiloclaw.yml` builds/pushes the Fly image; each machine self-upgrades at runtime | no (EOL) | Owner disposition on PR #14758 (pandemicsyn, 2026-10-05): KiloClaw is EOL'd; take it wholly out of v2 support if possible. Kilo only appears as an optional CLI users may invoke from OpenClaw and as a rescue/doctor admin mechanic, which the owner flags as the most likely to break. Residual risk: the runtime `@latest` self-upgrade can still pull a v2 release into EOL machines without an image rebuild; accepted because no v2 support is planned. The doctor route today runs `openclaw doctor`, not the Kilo CLI | n/a (EOL; no v2 work) | cloud@3de933dd `services/kiloclaw/Dockerfile:93`; `controller/src/index.ts:638-646`; `controller/src/routes/kilo-cli-run.ts:120,159`; `controller/src/routes/doctor.ts:420-421`; `docs/instance-features.md:29`; PR #14758 review comment |
@@ -47,8 +56,9 @@ the rest is still proposed.
 | auto-fix-infra | `services/auto-fix-infra/` | unassigned | HTTP only: calls cloud-agent-next prepare/initiate | n/a | n/a | n/a | no | Same as code-review-infra | n/a | cloud@3de933dd `services/auto-fix-infra/src/fix-orchestrator.ts:259,270` |
 | auto-triage-infra | `services/auto-triage-infra/` | unassigned | HTTP only: calls cloud-agent-next prepare/initiate + callback | n/a | n/a | n/a | no | Same as code-review-infra | n/a | cloud@3de933dd `services/auto-triage-infra/src/triage-orchestrator.ts:378,387` |
 | security-auto-analysis (remediation) | `services/security-auto-analysis/` | unassigned | HTTP only: calls cloud-agent-next `prepareSession`/`interruptSession` | n/a | n/a | n/a | no | Same as code-review-infra | n/a | cloud@3de933dd `services/security-auto-analysis/src/remediation.ts:1202,1091` |
+| webhook-agent-ingest | `services/webhook-agent-ingest/` | unassigned | HTTP only: queue consumer calls cloud-agent-next `prepareSession` and `initiateFromKilocodeSessionV2`; KiloClaw trigger type posts to kilo-chat | n/a (no Kilo package) | n/a | n/a | no | Indirect caller: no runtime embed; cloud-agent-next owns execution and the response contract | n/a | cloud@3de933dd `services/webhook-agent-ingest/src/queue-consumer.ts:470,558`; `services/webhook-agent-ingest/package.json:24-27` |
 | app-builder | `services/app-builder/` | unassigned | None: `cloudflare/sandbox` for app preview/build | n/a | n/a | n/a | no | Sandbox product with no Kilo CLI/SDK/server usage | n/a | cloud@3de933dd `services/app-builder/Dockerfile:1-2` |
-| cloud-agent-sdk + web/mobile clients | `packages/cloud-agent-sdk/`, `apps/web`, `apps/mobile` | unassigned | HTTP/relay only: consumes cloud-agent-next tRPC and the `/remote` relay | n/a | n/a | n/a | no | Client-side SDK, already tracked in #14019 | n/a | cloud@3de933dd `packages/cloud-agent-sdk/src/cli-live-transport.ts:1-4`; `packages/cloud-agent-sdk/package.json:5` |
+| cloud-agent-sdk + web/mobile clients | `packages/cloud-agent-sdk/`, `apps/web`, `apps/mobile` | unassigned | HTTP/relay only: consumes cloud-agent-next tRPC and the `/remote` relay | n/a | n/a | n/a | no | Client-side SDK and the web/mobile apps; `apps/web` also hosts the cloud-agent-next callers (routers + `lib/cloud-agent-next/*`). Already tracked in #14019. The "kilocode-backends prepare-session endpoint" in cloud-agent-next's README is historical naming for that web/api layer, not a separate service in this clone | n/a | cloud@3de933dd `packages/cloud-agent-sdk/src/cli-live-transport.ts:1-4`; `packages/cloud-agent-sdk/package.json:5`; `services/cloud-agent-next/README.md:299` |
 | session-ingest | `services/session-ingest/` | unassigned | Contract-coupled, no runtime: receives CLI session events/ingest and backs `kilo import`; shares `@kilocode/session-ingest-contracts` with cloud-agent-next and cloud-agent-sdk | n/a (service, not the CLI) | n/a | n/a | yes (contract-coupled; does not execute the runtime) | Owner notes the CLI and session-ingest are closely tied (PR #14758, 2026-10-05): the CLI ships to session-ingest, and cloud agents, the session feature and others tap in. The CLI↔session-ingest wire contract is therefore a G1 producer concern even though session-ingest embeds no runtime | G1 (producer-side contract) | cloud@3de933dd `services/session-ingest/src/remote-session-notifications.ts:82`; `services/cloud-agent-next/wrangler.jsonc:59`; `services/cloud-agent-next/package.json:50`; `packages/cloud-agent-sdk/package.json:29`; `services/cloud-agent-next/src/kilo/client.ts:112`; PR #14758 review comment |
 | kilo-ops, wasteland, mcp-gateway, images-mcp, kilo-mcp | `services/<name>/` | unassigned | None | n/a | n/a | n/a | no | No Kilo CLI/SDK/server spawn or image inclusion found | n/a | — |
 
@@ -62,7 +72,9 @@ the rest is still proposed.
   and `@kilocode/sdk`, and it is the execution path for hosted sessions and the
   PR-review/auto-fix/auto-triage/security bot flows. Pinned to `7.8.1`, so it
   cuts over on its own pin bump after G1 stabilises the v2 CLI/SDK/server
-  contract.
+  contract. An owner confirmed the v1↔v2 API differs significantly, so this is a
+  confirmed adaptation, not a no-change consumer; the concrete deltas and the
+  approach are #14426/#14427.
 - **auto-routing-benchmark** — executes `kilo run` from a container image built
   against `@kilocode/cli@latest`.
 - **MCP catalog generator (CI)** — executes `kilo run` with an unpinned
@@ -92,17 +104,32 @@ JetBrains.
   to break. Its runtime `@latest` self-upgrade can still pull v2 into EOL
   machines without an image rebuild — recorded as an accepted residual risk, not
   a support obligation.
-- **code-review-infra, auto-fix-infra, auto-triage-infra, security-auto-analysis**
-  — orchestration callers of cloud-agent-next's tRPC API. They embed no Kilo
-  runtime; any cloud-agent-next response-shape change is covered by
-  cloud-agent-next's G1 work. No separate gate.
+- **code-review-infra, auto-fix-infra, auto-triage-infra, security-auto-analysis,
+  webhook-agent-ingest** — orchestration callers of cloud-agent-next's tRPC API
+  (`prepareSession`/`initiate*`). They embed no Kilo runtime; any
+  cloud-agent-next response-shape change is covered by cloud-agent-next's G1
+  work. No separate gate.
+- **apps/web** — hosts the cloud-agent-next callers (routers and
+  `lib/cloud-agent-next/*`) but embeds no runtime; it is a web/client and
+  orchestration surface, not a consumer gate. The "kilocode-backends
+  prepare-session endpoint" referenced in cloud-agent-next's README is
+  historical naming for that layer, not a separate service in this clone.
 - **app-builder** — sandbox app host with no Kilo runtime.
-- **cloud-agent-sdk, web, mobile** — client consumers of cloud-agent-next and
-  the `/remote` relay; tracked in #14019.
+- **cloud-agent-sdk and mobile** — client consumers of cloud-agent-next and the
+  `/remote` relay; tracked in #14019. (`apps/web` is covered above.)
 - **VS Code extension / Agent Manager** — tracked in #14016.
 - **kilo-ops, wasteland, mcp-gateway, images-mcp, kilo-mcp** — no runtime
   embedding found.
 - The **`kilo cloud` CLI client** in this repo — tracked separately.
+
+## Owner-confirmed findings (PR #14758 review, 2026-10-06)
+
+| Finding | Impact | Evidence |
+|---|---|---|
+| The v1↔v2 message/API differs significantly | cloud-agent-next is a confirmed adaptation, not a no-change consumer. The concrete contract deltas and the adaptation approach remain #14426/#14427 work | PR #14758 review (eshurakov question; fpliger reply: "Yes, it's significantly different") |
+| cloud-agent-next deploys build containers from the Dockerfiles, then Cloudflare rolls out the changes | Confirms the Cloudflare-container rollout path; the `@kilocode/cli` pin is baked at image build | PR #14758 review (eshurakov) |
+| The Vercel Sandbox path exists in code but is unenrolled in the assessed config | `parseVercelSandboxEnrollment` disables it when `VERCEL_SANDBOX_ORG_IDS` is empty and `wrangler.jsonc` sets it to `""`; only the enrollment question remains open | cloud@3de933dd `services/cloud-agent-next/src/agent-sandbox/vercel/vercel-runtime-config.ts:131-133`; `wrangler.jsonc:69,483`; `scripts/vercel-snapshot.ts` |
+| `@kilocode/sdk` and `@kilocode/cli` must be the same version; divergence is a bug | Recorded as a release invariant. It holds on v1 (both `7.8.x`). v2 ships no `@kilocode/sdk` package yet, so #14426/#14427 must establish the v2 lockstep pair (Kilo SDK vs `@opencode-ai/sdk`) | PR #14758 review (eshurakov); `origin/main:packages/sdk/js/package.json` (`@kilocode/sdk@7.8.3`); `kilo-v2:packages/sdk/package.json` (`@opencode-ai/sdk@1.18.4`) |
 
 ## Remaining unknowns
 
@@ -111,11 +138,9 @@ JetBrains.
 | Cloud repo owners for each service | `CODEOWNERS` or owner contacts; none exist in the clone | cloud repo owners / maintainers |
 | Exact currently deployed versions in dev and prod (repo pins may lag deployed images; floating consumers unverified) | Query the deployed workers/containers or read deploy artifacts | cloud repo owners / release operators |
 | v2 release package name and dist-tag; whether v2 replaces `@kilocode/cli@latest` or ships under a separate name/channel | Release-channel decision for the v2 CLI | Kilo release owner / plan coordinator |
-| Whether v2 keeps the `kilo serve` HTTP API and `@kilocode/sdk` surface compatible (cloud-agent-next imports `@kilocode/sdk/v2`) | v2 SDK/server contract from #14426 | v2 core/server owner |
 | EOL disposition and residual CLI exposure for Gastown/KiloClaw (e.g. KiloClaw's `@latest` self-upgrade reaching a v2 release) | Confirm no support obligation; decide whether to pin or disable the self-upgrade in EOL services | cloud repo owners |
 | CLI↔session-ingest wire contract (session event/ingest payloads and `kilo import`) under v2 | Map the producer/consumer contract in #14426 against the v2 CLI | session-ingest owner / v2 CLI owner |
-| Whether every cloud-agent-next container class rebuilds from the same repo SHA (Vercel Sandbox snapshot path installs the same pin separately) | Deploy configuration audit | cloud-agent-next owner |
-| Whether `@kilocode/sdk` is versioned in lockstep with `@kilocode/cli` (both `7.8.1` here) or follows its own release train | SDK release policy | v2 SDK owner |
+| Whether the Vercel Sandbox path is enrolled in any environment (code exists but `VERCEL_SANDBOX_ORG_IDS` is empty in the assessed `wrangler.jsonc`) | Confirm dev/prod enrollment; if unused, mark the package-time Vercel install inactive | cloud-agent-next owner |
 | Other repositories or deployment configs (secrets, separate infra) outside the read-only clone that consume the runtime | Full org-level inventory | cloud repo owners |
 
 ## Proposed progress-plan row changes (for N7; do not apply here)
@@ -124,7 +149,7 @@ File: `migration-tracking/plans/kilo-opencode-v2-plan-progress.md`, section
 "Remote, sharing and distribution".
 
 1. Add a row:
-   `| Cloud agent runtime consumers (hosted) | Kilo CLI / Gateway | 4, 6 | Partial | Evidence recorded; contract mapping pending #14426 | Four consumers: cloud-agent-next pinned (independent cutover); auto-routing-benchmark and the MCP catalog CI float on @kilocode/cli latest (G1); session-ingest is contract-coupled to the CLI (G1). Gastown and KiloClaw are EOL and out of scope (owner disposition, PR #14758). See technical-notes/baseline/cloud-agent-consumers.md. |`
+   `| Cloud agent runtime consumers (hosted) | Kilo CLI / Gateway | 4, 6 | Partial | Evidence recorded; contract mapping pending #14426 | Four consumers: cloud-agent-next pinned (independent cutover) and a confirmed v2 adaptation (v1/v2 API differs); auto-routing-benchmark and the MCP catalog CI float on @kilocode/cli latest (G1); session-ingest is contract-coupled (G1). Gastown and KiloClaw EOL, out of scope (owner disposition, PR #14758). Indirect callers (incl. webhook-agent-ingest) need no gate. See technical-notes/baseline/cloud-agent-consumers.md. |`
 2. Amend the existing `Cloud CLI client` row's remaining scope to point at the
    inventory and state that local `kilo cloud` fixtures do not establish
    cloud-hosted consumer compatibility.
