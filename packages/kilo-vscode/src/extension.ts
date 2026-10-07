@@ -404,6 +404,9 @@ export async function activate(context: vscode.ExtensionContext) {
   provider.setCreateWorktreeHandler((baseBranch, branchName) =>
     agentManagerProvider.createFromSidebar(baseBranch, branchName),
   )
+  // Chat web links open in the Integrated Browser tab for the current session.
+  const openLink = (url: string, sessionId?: string) => (sessionId ? browserTabProvider.openUrl(sessionId, url) : false)
+  provider.setOpenLinkHandler(openLink)
 
   // Register toggle auto-approve shortcut (Ctrl+Alt+A / Cmd+Alt+A)
   const defaultDir = () => vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? process.cwd()
@@ -497,6 +500,7 @@ export async function activate(context: vscode.ExtensionContext) {
     tabProvider.setCreateWorktreeHandler((baseBranch, branchName) =>
       agentManagerProvider.createFromSidebar(baseBranch, branchName),
     )
+    tabProvider.setOpenLinkHandler(openLink)
     tabProvider.setDiffVirtualProvider(diffVirtualProvider)
     tabProvider.setDiffViewerProvider(diffViewerProvider)
     tabProvider.setReviewCommentsHandler(deliver)

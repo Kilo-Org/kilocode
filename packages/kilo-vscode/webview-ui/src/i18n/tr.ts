@@ -1463,6 +1463,11 @@ export const dict = {
   "settings.experimental.browserAutomation.systemChrome.title": "Sistem Chrome'unu Kullan",
   "settings.experimental.browserAutomation.systemChrome.description":
     "Entegre Tarayıcı için yüklü Google Chrome'u kullanın. Yalnızca uyumlu bir Playwright Chromium tarayıcısı zaten yüklüyse devre dışı bırakın.",
+  "settings.experimental.browserLinks.title": "Bağlantıların açılacağı yer",
+  "settings.experimental.browserLinks.description":
+    "Kilo sohbetlerindeki web bağlantılarının nerede açılacağını seçin. Entegre Tarayıcı gerektirir.",
+  "settings.experimental.browserLinks.external": "Sistem tarayıcısı",
+  "settings.experimental.browserLinks.integrated": "Entegre Tarayıcı",
   "chat.search.searchingHistory": "Önceki mesajlarda aranıyor…",
   "browserTab.noSession":
     "Yerel bir uygulamayı veya genel bir HTTPS sayfasını önizlemek için tarayıcıyı bir oturumdan açın.",

@@ -182,6 +182,11 @@ export interface OpenExternalRequest {
   url: string
 }
 
+export interface OpenWebLinkRequest {
+  type: "openWebLink"
+  url: string
+}
+
 export interface OpenFileRequest {
   type: "openFile"
   filePath: string
@@ -1760,6 +1765,7 @@ export type WebviewMessage =
   | RequestProviderUsageMessage
   | RefreshProviderUsageMessage
   | OpenExternalRequest
+  | OpenWebLinkRequest
   | OpenSettingsPanelRequest
   | RequestAgentManagerSettingsMessage
   | RequestAgentManagerSettingsBranchesMessage
