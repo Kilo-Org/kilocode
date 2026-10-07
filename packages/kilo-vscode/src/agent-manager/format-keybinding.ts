@@ -50,6 +50,7 @@ const GLOBAL_KEYBINDINGS: Record<string, string> = {
   "kilo-code.new.cyclePreviousAgentMode": "cyclePreviousAgentMode",
   "kilo-code.new.focusChatInput": "focusChatInput",
   "kilo-code.new.addToContext": "addToContext",
+  "kilo-code.new.settingsSearch": "settingsSearch",
 }
 
 /** [binding name, command suffix, key after the cmd/ctrl modifier] */

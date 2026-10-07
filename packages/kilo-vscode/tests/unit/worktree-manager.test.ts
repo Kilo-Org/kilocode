@@ -14,7 +14,7 @@ import { WorktreeStateManager } from "../../src/agent-manager/WorktreeStateManag
 import { GitOps } from "../../src/agent-manager/GitOps"
 import type { PRInfo } from "../../src/agent-manager/git-import"
 import { BUDGET } from "../../src/agent-manager/command-budget"
-import simpleGit from "simple-git"
+import { simpleGit } from "simple-git"
 
 // Each test gets its own temp directory -- no shared state, safe to run in parallel.
 const tempDirs: string[] = []
@@ -1725,6 +1725,64 @@ describe("WorktreeManager.createWorktree advanced", () => {
 
     expect(worktreeHead).toBe(remoteHead)
     expect(result.parentBranch).toBe("topic")
+  })
+
+  it("fetches the base branch when guarded git variables are inherited", async () => {
+    const { clone } = await createTempRepoWithOrigin()
+    const git = simpleGit(clone)
+    await git.checkoutLocalBranch("topic")
+    await fs.writeFile(path.join(clone, "topic.txt"), "topic")
+    await git.add(".")
+    await git.commit("topic commit")
+    await git.push("origin", "topic")
+    await git.checkout("main")
+    await git.raw(["config", "remote.origin.fetch", "+refs/heads/main:refs/remotes/origin/main"])
+    await git.raw(["update-ref", "-d", "refs/remotes/origin/topic"])
+
+    const prev = { visual: process.env.VISUAL, author: process.env.GIT_AUTHOR_NAME }
+    process.env.VISUAL = "true"
+    process.env.GIT_AUTHOR_NAME = "Kilo"
+    const result = await createManager(clone)
+      .createWorktree({ baseBranch: "topic", prompt: "from topic" })
+      .finally(() => {
+        if (prev.visual == null) delete process.env.VISUAL
+        if (prev.visual != null) process.env.VISUAL = prev.visual
+        if (prev.author == null) delete process.env.GIT_AUTHOR_NAME
+        if (prev.author != null) process.env.GIT_AUTHOR_NAME = prev.author
+      })
+    const remoteHead = (await git.revparse(["refs/remotes/origin/topic"])).trim()
+    const worktreeHead = (await simpleGit(result.path).revparse(["HEAD"])).trim()
+
+    expect(worktreeHead).toBe(remoteHead)
+  })
+
+  it("does not fetch with an inherited GIT_SSH_COMMAND", async () => {
+    const { clone } = await createTempRepoWithOrigin()
+    const git = simpleGit(clone)
+    await git.checkoutLocalBranch("topic")
+    await fs.writeFile(path.join(clone, "topic.txt"), "topic")
+    await git.add(".")
+    await git.commit("topic commit")
+    await git.push("origin", "topic")
+    await git.checkout("main")
+    await git.raw(["config", "remote.origin.fetch", "+refs/heads/main:refs/remotes/origin/main"])
+    await git.raw(["update-ref", "-d", "refs/remotes/origin/topic"])
+
+    const prev = process.env.GIT_SSH_COMMAND
+    process.env.GIT_SSH_COMMAND = "ssh"
+    const err = await createManager(clone)
+      .prefetchBase("topic")
+      .then(
+        () => undefined,
+        (e: unknown) => e,
+      )
+      .finally(() => {
+        if (prev == null) delete process.env.GIT_SSH_COMMAND
+        if (prev != null) process.env.GIT_SSH_COMMAND = prev
+      })
+
+    expect(String(err)).toContain("inherited GIT_SSH_COMMAND")
+    expect(await git.raw(["for-each-ref", "refs/remotes/origin/topic"])).toBe("")
   })
 
   it("creates from a same-repository PR branch excluded by the remote fetch refspec", async () => {

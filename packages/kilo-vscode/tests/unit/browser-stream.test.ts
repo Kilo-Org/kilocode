@@ -136,6 +136,19 @@ describe("BrowserStream protocol lifecycle", () => {
     }
   })
 
+  test("keeps the screencast running for a new document of the same size", async () => {
+    const fixture = protocol()
+    await fixture.stream.configure(view)
+    const count = fixture.calls.length
+    fixture.scope.navigation++
+    await fixture.stream.configure({ ...view, revision: 2 })
+    expect(fixture.calls.slice(count)).toEqual([])
+    fixture.send(1)
+    expect(fixture.frames.at(-1)).toMatchObject({ navigation: 2, revision: 2 })
+    await fixture.stream.configure({ ...view, width: 800, revision: 3 })
+    expect(fixture.calls.slice(count).map((call) => call.method)).toContain("Page.startScreencast")
+  })
+
   test("keeps paste ahead of later input while reading the clipboard", async () => {
     const fixture = protocol()
     await fixture.stream.configure(view)
@@ -252,6 +265,20 @@ describe("BrowserStream protocol lifecycle", () => {
       10000,
       1,
     ])
+  })
+
+  test("does not wait for Chrome to answer pointer moves and wheel input", async () => {
+    const fixture = protocol()
+    await fixture.stream.configure(view)
+    const blocked = Promise.withResolvers<void>()
+    fixture.hooks.set("Input.dispatchMouseEvent", () => blocked.promise)
+    const point = { x: 0.5, y: 0.5, modifiers: 0 } as const
+    await fixture.stream.interact({ kind: "pointer", action: "move", button: "left", buttons: 0, clicks: 0, ...point })
+    await fixture.stream.interact({ kind: "wheel", deltaX: 0, deltaY: 10, ...point })
+    await fixture.stream.interact({ kind: "text", text: "next" })
+    const calls = fixture.calls.filter((call) => call.method.startsWith("Input."))
+    expect(calls.map((call) => call.params?.type ?? call.params?.text)).toEqual(["mouseMoved", "mouseWheel", "next"])
+    blocked.resolve()
   })
 
   test("drops old-sized JPEGs even when resize metadata is current", async () => {
@@ -373,7 +400,7 @@ describe("BrowserStream protocol lifecycle", () => {
     expect(fixture.calls.filter((call) => call.method === "detach")).toHaveLength(1)
     expect(fixture.session.listenerCount("Page.screencastFrame")).toBe(0)
     expect(fixture.page.listenerCount("close")).toBe(0)
-    expect(fixture.page.listenerCount("framenavigated")).toBe(0)
+    expect(fixture.session.listenerCount("Page.frameNavigated")).toBe(0)
     if (method === "Page.startScreencast") {
       expect(fixture.calls.map((call) => call.method).slice(-2)).toEqual(["Page.stopScreencast", "detach"])
     }
@@ -415,7 +442,7 @@ describe("BrowserStream protocol lifecycle", () => {
     await entered.promise
     const stale = fixture.stream.interact({ kind: "text", text: "stale" })
     fixture.scope.navigation++
-    fixture.page.emit("framenavigated", fixture.page)
+    fixture.session.emit("Page.frameNavigated", { frame: { id: "main" } })
     resume.resolve()
     await Promise.all([first, stale])
     expect(fixture.calls.filter((call) => call.method === "Input.insertText").map((call) => call.params?.text)).toEqual(
@@ -986,6 +1013,7 @@ describe.skipIf(!executable)("BrowserStream Chromium", () => {
     expect(await recorded()).toEqual([])
     expect(page.viewportSize()).toEqual({ width: 640, height: 480 })
     await stream.interact({ ...pointer, x: 1, y: 1 } as BrowserInteraction)
+    await page.waitForFunction(() => document.body.dataset.events?.includes("mousemove"))
     expect((await recorded()).at(-1)).toMatchObject({ type: "mousemove", x: 639, y: 479 })
     await stream.close()
     await stream.interact({ kind: "text", text: "closed" })

@@ -76,6 +76,7 @@ export const SortableTab: Component<{
           onSelect={props.onSelect}
           onMiddleClick={props.onMiddleClick}
           onClose={props.onClose}
+          onTogglePin={props.onTogglePin}
         />
       </SessionTabMenu>
     </SortableTabContainer>
