@@ -53,7 +53,7 @@ export function registerToggleAutoApprove(
     active = next
     generation++
     notify()
-    await vscode.workspace.getConfiguration(CONFIG).update(KEY, active, target())
+    await vscode.workspace.getConfiguration(CONFIG).update(KEY, active, vscode.ConfigurationTarget.Global)
   }
 
   const toggle = async () => {
@@ -129,13 +129,6 @@ export function registerToggleAutoApprove(
 
 function readActive(): boolean {
   return vscode.workspace.getConfiguration(CONFIG).get(KEY, false)
-}
-
-function target(): vscode.ConfigurationTarget {
-  const info = vscode.workspace.getConfiguration(CONFIG).inspect<boolean>(KEY)
-  if (info?.workspaceFolderValue !== undefined) return vscode.ConfigurationTarget.WorkspaceFolder
-  if (info?.workspaceValue !== undefined) return vscode.ConfigurationTarget.Workspace
-  return vscode.ConfigurationTarget.Global
 }
 
 function tryGetClient(connectionService: KiloConnectionService): KiloClient | undefined {

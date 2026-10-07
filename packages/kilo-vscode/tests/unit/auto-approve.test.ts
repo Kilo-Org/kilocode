@@ -114,7 +114,7 @@ function asked(id: string, sessionID = "ses_1") {
 }
 
 describe("registerToggleAutoApprove", () => {
-  it("restores persisted state, follows config changes, and persists toggles to the closest configured scope", async () => {
+  it("restores persisted state, follows config changes, and persists toggles to the user settings, even when a workspace value exists", async () => {
     const env = config(true, { workspaceValue: false })
     const replies: unknown[] = []
     const conn = connection(client({ reply: async (args) => replies.push(args) }))
@@ -142,7 +142,7 @@ describe("registerToggleAutoApprove", () => {
     await ctrl.toggle()
     expect(ctrl.active()).toBe(true)
     expect(changes).toEqual([false, true])
-    expect(env.updates).toEqual([{ key: "enabled", value: true, target: vscode.ConfigurationTarget.Workspace }])
+    expect(env.updates).toEqual([{ key: "enabled", value: true, target: vscode.ConfigurationTarget.Global }])
     expect(env.messages).toContain("Auto-approve enabled. Sandbox escalation prompts are excluded.")
   })
 

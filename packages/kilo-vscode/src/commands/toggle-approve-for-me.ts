@@ -7,8 +7,9 @@ import * as vscode from "vscode"
  *
  * "Approve for me" and auto-approve are alternatives: at most one is on. The
  * exclusion is enforced here through the two settings, so it also holds for the
- * Command Palette and for edits made directly in settings.json. The newest
- * change wins. At startup, when both are on, approve-for-me wins because it is
+ * Command Palette and for edits made directly in the user's settings.json. Both
+ * settings have application scope, so a workspace file cannot set them and writes
+ * always go to the user settings. The newest change wins. At startup, when both are on, approve-for-me wins because it is
  * the stricter mode. Nothing is enforced while the experimental flag is off.
  */
 export interface ApproveForMeController {
@@ -35,9 +36,9 @@ export function registerToggleApproveForMe(context: vscode.ExtensionContext): Ap
   }
 
   const write = (section: string, value: boolean) =>
-    Promise.resolve(vscode.workspace.getConfiguration(section).update(KEY, value, target(section))).catch((err) =>
-      console.error(`[Kilo New] approve-for-me: failed to update ${section}.${KEY}:`, err),
-    )
+    Promise.resolve(
+      vscode.workspace.getConfiguration(section).update(KEY, value, vscode.ConfigurationTarget.Global),
+    ).catch((err) => console.error(`[Kilo New] approve-for-me: failed to update ${section}.${KEY}:`, err))
 
   // Startup conflict: approve-for-me wins over auto-approve.
   if (visible && active && auto) void write(AUTO, false)
@@ -107,11 +108,4 @@ function readActive(): boolean {
 
 function readVisible(): boolean {
   return vscode.workspace.getConfiguration(FLAG).get(FLAG_KEY, false)
-}
-
-function target(section: string): vscode.ConfigurationTarget {
-  const info = vscode.workspace.getConfiguration(section).inspect<boolean>(KEY)
-  if (info?.workspaceFolderValue !== undefined) return vscode.ConfigurationTarget.WorkspaceFolder
-  if (info?.workspaceValue !== undefined) return vscode.ConfigurationTarget.Workspace
-  return vscode.ConfigurationTarget.Global
 }

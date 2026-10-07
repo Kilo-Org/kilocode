@@ -181,22 +181,14 @@ describe("exclusion with auto-approve", () => {
     expect(env.updates).toEqual([{ section: AUTO, key: "enabled", value: false, target: GLOBAL }])
   })
 
-  it("writes auto-approve in the scope where the user set it", async () => {
+  it("always writes the user settings, even when a workspace value is reported", async () => {
     const env = config({ visible: true, auto: true })
-    env.scopes.auto = { workspaceValue: true }
+    env.scopes.auto = { workspaceValue: true, workspaceFolderValue: true }
     const ctrl = registerToggleApproveForMe(context())
 
     await ctrl.toggle()
 
-    expect(env.updates[0]).toEqual({
-      section: AUTO,
-      key: "enabled",
-      value: false,
-      target: vscode.ConfigurationTarget.Workspace,
-    })
-    env.scopes.auto = { workspaceFolderValue: true, workspaceValue: true }
-    env.edit({ auto: true })
-    expect(env.updates.at(-1)).toMatchObject({ section: ME, target: GLOBAL })
+    expect(env.updates.map((update) => update.target)).toEqual([GLOBAL, GLOBAL])
   })
 
   it("lets approve-for-me win when both are on at startup", () => {
