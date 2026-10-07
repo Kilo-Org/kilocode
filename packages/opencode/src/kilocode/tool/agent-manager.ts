@@ -27,7 +27,7 @@ const Task = Schema.Struct({
   }),
   agent: Schema.optional(Schema.NullOr(Schema.String)).annotate({
     description:
-      "Optional primary agent name to run the new session as (e.g. a custom subagent-style agent configured with mode 'all'). Must not be a mode: 'subagent' agent. Omit to use the workspace default agent.",
+      "Optional agent name to run the new session as (e.g. a custom agent configured with mode 'all'). Must be a selectable primary agent: not a mode: 'subagent' agent and not an internal/hidden one. Omit to use the workspace default agent; prefer the name the user asked for. A rejected name lists the selectable agents.",
   }),
   model: Schema.optional(Schema.NullOr(Schema.String)).annotate({
     description:
@@ -430,20 +430,28 @@ export const AgentManagerTool = Tool.define<
             : undefined
           const agentNames = params.tasks.flatMap((task) => (task.agent?.trim() ? [task.agent.trim()] : []))
           const agentErrors: string[] = []
-          for (const name of agentNames) {
-            const info = yield* agents.get(name)
-            if (!info) {
-              const available = (yield* agents.list())
-                .filter((a) => a.mode !== "subagent" && !a.hidden)
-                .map((a) => a.name)
-              const hint = available.length ? ` Available agents: ${available.join(", ")}` : ""
-              agentErrors.push(`Agent "${name}" not found.${hint}`)
-              continue
-            }
-            if (info.mode === "subagent") {
-              agentErrors.push(
-                `Agent "${name}" is a subagent (mode: "subagent") and cannot run as an Agent Manager session's primary agent. Set its mode to "all" in config, or use the task tool for subagent work instead.`,
-              )
+          if (agentNames.length > 0) {
+            // The caller has no way to enumerate agents, so every rejection carries the
+            // selectable set. Matches Agent.defaultInfo and the extension's agent picker.
+            const selectable = (yield* agents.list())
+              .filter((item) => item.mode !== "subagent" && !item.hidden)
+              .map((item) => item.name)
+            const hint = selectable.length ? ` Available agents: ${selectable.join(", ")}` : ""
+            for (const name of agentNames) {
+              const info = yield* agents.get(name)
+              if (!info) {
+                agentErrors.push(`Agent "${name}" not found.${hint}`)
+                continue
+              }
+              if (info.mode === "subagent") {
+                agentErrors.push(
+                  `Agent "${name}" is a subagent (mode: "subagent") and cannot run as an Agent Manager session's primary agent. Set its mode to "all" in config, or use the task tool for subagent work instead.${hint}`,
+                )
+                continue
+              }
+              if (info.hidden) {
+                agentErrors.push(`Agent "${name}" is an internal agent and cannot run an Agent Manager session.${hint}`)
+              }
             }
           }
           if (agentErrors.length > 0) {
