@@ -23,6 +23,9 @@ import ai.kilocode.client.ui.HoverIcon
 import ai.kilocode.client.ui.editor.EditorFolds
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.iconButton
+import ai.kilocode.client.ui.layout.HAlign
+import ai.kilocode.client.ui.layout.VAlign
+import ai.kilocode.client.ui.layout.align
 import ai.kilocode.log.ChatLogSummary
 import ai.kilocode.log.KiloLog
 import ai.kilocode.rpc.dto.PromptPartDto
@@ -45,6 +48,7 @@ import com.intellij.openapi.actionSystem.ActionUiKind
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.DataSink
+import com.intellij.openapi.actionSystem.DefaultActionGroup
 import com.intellij.openapi.actionSystem.UiDataProvider
 import com.intellij.openapi.actionSystem.ex.ActionUtil
 import com.intellij.openapi.actionSystem.IdeActions
@@ -259,6 +263,16 @@ class PromptPanel(
         addActionListener { onAutoApproveToggle(!autoApprove) }
     }
 
+    private var issues = emptyList<SessionIssue>()
+    private val issuesButton = HoverIcon().apply {
+        icon = AllIcons.General.Warning
+        toolTipText = KiloBundle.message("prompt.issues.title")
+        accessibleContext.accessibleName = toolTipText
+        isVisible = false
+        addActionListener { showIssues() }
+    }
+    private val issuesSlot = issuesButton.align(HAlign.RIGHT, VAlign.TOP).apply { isVisible = false }
+
     /**
      * Opens the Kilo.Session.PromptMenu popup (auto-approve + sharing). Resolves its context from
      * DataManager, so it reads live SessionActionsKeys.ACTIONS from the session ancestor chain rather
@@ -340,7 +354,12 @@ class PromptPanel(
             }
         })
         shell.add(strip, BorderLayout.NORTH)
-        shell.add(editor, BorderLayout.CENTER)
+        val input = BorderLayoutPanel().apply {
+            isOpaque = false
+            add(editor, BorderLayout.CENTER)
+            add(issuesSlot, BorderLayout.EAST)
+        }
+        shell.add(input, BorderLayout.CENTER)
 
         val bar = BorderLayoutPanel().apply {
             layout = BoxLayout(this, BoxLayout.X_AXIS)
@@ -523,6 +542,16 @@ class PromptPanel(
     }
 
     @RequiresEdt
+    internal fun setIssues(value: List<SessionIssue>) {
+        issues = value
+        val visible = value.isNotEmpty()
+        issuesButton.isVisible = visible
+        issuesSlot.isVisible = visible
+        revalidate()
+        repaint()
+    }
+
+    @RequiresEdt
     fun text(): String = editor.text.trim()
 
     @RequiresEdt
@@ -554,6 +583,10 @@ class PromptPanel(
     internal fun resetVisibleForTest() = reset.isVisible
 
     internal fun resetForTest(): JComponent = reset
+
+    internal fun issuesForTest(): List<SessionIssue> = issues
+
+    internal fun issuesButtonForTest(): JComponent = issuesButton
 
     internal fun shellForTest(): JComponent = shell
 
@@ -688,6 +721,37 @@ class PromptPanel(
             true,
         )
         popup.show(PopupShowOptions.aboveComponent(menu))
+    }
+
+    @RequiresEdt
+    private fun showIssues() {
+        if (issues.isEmpty()) return
+        val group = DefaultActionGroup()
+        issueActions().forEach(group::add)
+        JBPopupFactory.getInstance().createActionGroupPopup(
+            null,
+            group,
+            DataManager.getInstance().getDataContext(issuesButton),
+            JBPopupFactory.ActionSelectionAid.SPEEDSEARCH,
+            true,
+        ).show(PopupShowOptions.aboveComponent(issuesButton))
+    }
+
+    @RequiresEdt
+    internal fun issueActions(): List<AnAction> = issues.map { issue ->
+        DefaultActionGroup(issue.title, true).apply {
+            for (item in issue.actions) {
+                add(object : DumbAwareAction(item.title, item.description, null) {
+                    override fun update(e: AnActionEvent) {
+                        e.presentation.isEnabled = item.enabled
+                    }
+
+                    override fun actionPerformed(e: AnActionEvent) {
+                        item.action()
+                    }
+                })
+            }
+        }
     }
 
     @RequiresEdt
