@@ -122,7 +122,7 @@ Done when: a flagged command shows a label in all three clients, with no change 
 ### PR 7. LLM reviewer (tier 3), shadow mode
 
 - Reviewer module: input builder with byte budget, prompt, strict parser, deadline and retry, live re-check, per-session cache.
-- Model resolution through the S3 resolver (global config or env only, provider equality, pinned model id); reject OpenAI providers for this role; clear message when no model is available.
+- Model resolution through the S3 resolver (global config or env only, provider equality, pinned model id); refuse providers on the exclusion list for this role; clear message when no model is available.
 - No allow cache (SEC-5). Only ask results may be cached.
 - Structure-only reviewer input: typed placeholders for argument literals, path class plus capped, cleaned relative path (`design.md` 5.1). No reliance on token redaction.
 - Temperature 0, and two-call consensus (different prompt wording, second model when available) for escalations.
@@ -178,7 +178,7 @@ Done when: dogfood users run a normal session with fewer prompts and no unsafe a
 
 ### PR 10. Unified settings, migration and docs
 
-- One settings page for permissions and sandbox: default mode, sandbox network/hosts/paths, reviewer model (non-OpenAI list), timeout, escalation toggle, "what is reviewed" table.
+- One settings page for permissions and sandbox: default mode, sandbox network/hosts/paths, reviewer model (approved providers only), timeout, escalation toggle, "what is reviewed" table.
 - Legacy import: map `yoloMode` and `yoloGatekeeperApiConfigId` (`legacy-gatekeeper.md` section 10). Never produce Auto-approve from a guarded setup.
 - Remote org config is tighten-only for the Approve for me keys, and the settings page shows each value's origin (`design.md` 6.2 item 12).
 - Managed-scope policy keys: `approve_for_me.allowed_modes`, `approve_for_me.escalation_approval`, `approve_for_me.model`, `sandbox.required` (`design.md` 6.2 item 10).

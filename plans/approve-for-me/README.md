@@ -30,7 +30,7 @@ Kilo has two approval behaviors for tool calls today:
 **Approve for Me** sits between them, on top of the sandbox. A reviewer looks at each call that
 would need approval. Safe calls run without a prompt. Risky or unclear calls go to the
 user, with a label that says why. A few classes of call are never auto-approved.
-The end state is one selector with three modes (Approve for me, Sandboxed, Auto-approve), like Codex.
+The end state is one selector with three modes (Approve for me, Sandboxed, Auto-approve).
 
 Decisions already made (from the team discussion):
 
@@ -41,7 +41,7 @@ Decisions already made (from the team discussion):
 | Sandbox escalation | Becomes a normal ask in Sandboxed mode. In Approve for me the reviewer may approve escalations in fixed v1 classes only (`git add`, `status`, `diff`), with guard rails. `git commit` and network escalations ask. Pros and cons in `design.md` 2.5. |
 | Mode state | Per session, default from global config, so sessions can move between local and cloud. Cloud wiring waits for cloud to be stable. |
 | Settings | Permissions and sandbox in one settings page. |
-| Reviewer model | Not an OpenAI model. Cheap and fast. Configurable. |
+| Reviewer model | A small, cheap, fast model from an approved provider. Configurable. A team-set exclusion list is enforced in code. |
 | Delivery | Small PRs behind one hidden flag. Plan first, code after. |
 | Source of design | Port the idea of the legacy feature. Do not port it line by line (see below). |
 
@@ -63,7 +63,7 @@ Details and line references are in [`legacy-gatekeeper.md`](./legacy-gatekeeper.
 | No timeout or abort on the model call | A hang blocks the tool | Hard deadline, then "ask". |
 | No telemetry for gatekeeper decisions | No data on false denies, cost or latency | Verdict, latency, cost and human override are recorded. |
 | Docs say it "reviews every intended change" (`auto-approving-actions.md:331`) | Overstates coverage; read tools were pre-approved | Docs state what is and is not reviewed. |
-| Suggested model `gpt-oss-safeguard-20b` (OpenAI) | Conflicts with the "no OpenAI" decision | Default to a non-OpenAI small model. |
+| Docs suggested one specific model | Conflicts with the team's provider rules | Default to a small model from an approved provider. |
 
 ## 3. Proposed architecture in one page
 
@@ -122,7 +122,7 @@ before any verdict changes what the user sees.
 ## 5. Open questions for the team
 
 1. **Does an LLM "dangerous" verdict hard-block, or show a prompt?** We propose a prompt. Only deterministic rules block.
-2. **Default reviewer model.** Which non-OpenAI small model is the default, and does the free tier have one?
+2. **Default reviewer model.** Which small model from an approved provider is the default, and does the free tier have one?
 3. **Legacy migration.** Do we import `yoloGatekeeperApiConfigId` automatically? (Rule: never turn a guarded setup into allow-all.)
 4. **Sandbox default-on.** What escalation rate is acceptable before we turn it on by default? Set in PR 9.
 

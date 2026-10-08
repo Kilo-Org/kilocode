@@ -23,7 +23,7 @@ The clone of the legacy repo has no history, so history comes from the GitHub AP
   (`gatekeeper.ts:123-131`). It appears only when the provider reports usage.
 - Agent Manager has a separate YOLO toggle (`Zap` button, `SessionDetail.tsx:569-578`) and defaults to YOLO on.
 - Docs: [`auto-approving-actions.md:325-331`](https://github.com/Kilo-Org/kilocode-legacy/blob/ae046acafd17993bdf12dce0f81d9ac948e17ee8/docs/legacy-ides/getting-started/settings/auto-approving-actions.md#L325-L331).
-  It says the gatekeeper "reviews every intended change" and suggests `gpt-oss-safeguard-20b`.
+  It says the gatekeeper "reviews every intended change" and suggests one specific model.
 
 **Key fact.** In legacy the gatekeeper is not a separate mode. It is an option **inside YOLO mode**.
 "YOLO without a gatekeeper" approves everything. "YOLO with a gatekeeper" is the feature we are rebuilding.
@@ -148,7 +148,7 @@ approve and deny examples (`:355-381`) are a ready-made seed for the reviewer pr
 - The gatekeeper reuses a saved **API profile**: `providerSettingsManager.getProfile({ id })` then `buildApiHandler(profile)` (`gatekeeper.ts:40-70`).
 - It calls `streamResponseFromHandler` (`src/utils/single-completion-handler.ts:36-57`): `handler.createMessage(system, [user])`,
   concatenate text chunks, keep the last `usage`. There is no timeout and no abort signal.
-- Cost: `usage.totalCost` if given, else `calculateApiCostAnthropic` or `calculateApiCostOpenAI` from `src/shared/cost`,
+- Cost: `usage.totalCost` if given, else a provider-specific cost function from `src/shared/cost`,
   chosen by `getApiProtocol(provider, model.id)` (`gatekeeper.ts:86-112`).
   The gatekeeper cost is not added to the task cost totals (not verified; assume it is not).
 
@@ -166,7 +166,7 @@ Gaps to avoid repeating:
 - Three "parser" tests (`approve`, `allow`, mixed case) use `read_file`, which is pre-approved. The model reply is never read, so they pass for any parser (`:187,203,246`).
 - `vi.clearAllMocks()` keeps implementations, so cost mocks leak between tests (`:52`).
 - Not tested: `apply_diff` and the other edit tools, the 300-char default branch, quoted paths and shell metacharacters,
-  the OpenAI cost path, the caller in `presentAssistantMessage.ts`, timeouts.
+  one of the provider-specific cost paths, the caller in `presentAssistantMessage.ts`, timeouts.
 
 ## 8. Weaknesses to design away
 
@@ -191,7 +191,7 @@ Gaps to avoid repeating:
 | Date | PR | Change |
 |---|---|---|
 | 2025-11-10 | [#3632](https://github.com/Kilo-Org/kilocode/pull/3632) | Show YOLO settings to all users |
-| 2025-11-12 | [#3643](https://github.com/Kilo-Org/kilocode/pull/3643) | "Add smart yolo mode": adds `gatekeeper.ts`; Copilot flagged substring parsing, changed to `startsWith`; chrarnoldus asked for streaming API to get cost; fail-open chosen on purpose "to avoid blocking the workflow" |
+| 2025-11-12 | [#3643](https://github.com/Kilo-Org/kilocode/pull/3643) | "Add smart yolo mode": adds `gatekeeper.ts`; an automated reviewer flagged substring parsing, changed to `startsWith`; chrarnoldus asked for streaming API to get cost; fail-open chosen on purpose "to avoid blocking the workflow" |
 | 2025-11-13 | [#3720](https://github.com/Kilo-Org/kilocode/pull/3720) | Docs; reviewers asked to say "use a cheap, fast model" and "the gatekeeper can make mistakes" |
 | 2025-11-14 | [#3768](https://github.com/Kilo-Org/kilocode/pull/3768) | Pre-approve `codebase_search`; prompt tweak |
 | 2025-12 / 2026-01 | #4333, #4865 | Merge fixes: tool case removed, `fast_edit_file` added |
@@ -205,7 +205,7 @@ Public feedback is thin. The one YOLO bug report is legacy issue #51 ("Yolo mode
 |---|---|
 | `yoloMode` off | Ask every time |
 | `yoloMode` on, no gatekeeper profile | Approve all |
-| `yoloMode` on, gatekeeper profile set | Approve for Me, reviewer model = that profile's model if it is allowed (not OpenAI, global scope) |
+| `yoloMode` on, gatekeeper profile set | Approve for Me, reviewer model = that profile's model if it is allowed (provider not excluded, global scope) |
 
 Rule: a migration must never turn a guarded setup into "Approve all". If the profile
 cannot be mapped, land in Ask every time and tell the user.

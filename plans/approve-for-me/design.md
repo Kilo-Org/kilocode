@@ -7,7 +7,7 @@ Security: the requirements from the security review are in section 12 (`SEC-1` t
 
 ## 0. Mode model
 
-Decided on 2026-10-06 after the team discussion: Sandbox joins the same selector. The model is similar to Codex:
+Decided on 2026-10-06 after the team discussion: Sandbox joins the same selector. The model:
 one selector with three choices, and each choice fixes both the approval policy and the sandbox state.
 
 | Mode | Sandbox | Approval | Sandbox escalation (a command that needs more than the sandbox allows) |
@@ -283,7 +283,7 @@ Rule: edits to the **executable-config class** are always `ask` (tier 0), throug
 
 | Group | Globs |
 |---|---|
-| IDE and agent control | `.vscode/**`, `.idea/**`, `.devcontainer/**`, `.mcp.json`, `.cursor/**`, `.cursorrules`, `**/AGENTS.md`, `**/CLAUDE.md`, `.github/copilot-instructions.md` |
+| IDE and agent control | `.vscode/**`, `.idea/**`, `.devcontainer/**`, `.mcp.json`, `**/AGENTS.md`, and the rules and instruction files of other coding agents (one table in code) |
 | CI and hooks | `.github/workflows/**`, `.gitlab-ci.yml`, `.husky/**`, `.githooks/**`, `.gitattributes`, `.pre-commit-config.yaml` |
 | Shell and env | `.envrc`, `.tool-versions`, `.npmrc`, `.yarnrc*`, `bunfig.toml`, `.cargo/config*` |
 | Build and task runners | `package.json`, `Makefile`, `justfile`, `Taskfile*`, `Dockerfile*`, `docker-compose*`, `setup.py`, `pyproject.toml`, `tox.ini`, `pytest.ini`, `conftest.py`, `build.rs`, `Cargo.toml`, `*.gradle*`, `pom.xml` |
@@ -551,7 +551,7 @@ The resolver, in `P/kilocode/approve-for-me/model.ts`:
 2. Builds the provider entry from global config only. It requires the merged provider entry for that provider id to **equal** the global entry, compared after key-order-independent serialisation
    (the check described in `prior-art.md`). Any difference, or a `baseURL` that contains `${`, turns the reviewer off for that workspace with one notice.
 3. Re-runs the check for each workspace or directory (one backend serves many worktrees). No module-level cache of the resolved config.
-4. Refuses OpenAI providers and models for this role, by provider id and by resolved model id, and refuses a base URL that is not on the provider's known host unless the user set it globally. This is a policy and trust check, not a security boundary.
+4. Refuses providers and models on the team's exclusion list for this role, by provider id and by resolved model id, and refuses a base URL that is not on the provider's known host unless the user set it globally. This is a policy and trust check, not a security boundary.
 5. Pins the reviewer model id and version. An alias such as `kilo-auto/small` is allowed only if the gateway reports the concrete model, which is recorded in `metadata.review.model`. A change of the concrete model re-opens the evaluation gate (PR 9).
 6. If no usable model exists, tier 3 is off and `reviewable` means `ask`. The user sees one notice, not one per call.
 
