@@ -9,6 +9,7 @@ import { MCP } from "../mcp"
 import { Skill } from "../skill"
 import { reviewCommand } from "@/kilocode/review/command" // kilocode_change
 import { apply as applyOverride, type Override } from "@/kilocode/command/override" // kilocode_change
+import * as Reserved from "@/kilocode/command/reserved" // kilocode_change
 import PROMPT_INITIALIZE from "./template/initialize.txt"
 import { LegacyEvent } from "@opencode-ai/schema/legacy-event"
 import { SessionResume } from "@/kilocode/session-resume" // kilocode_change
@@ -130,14 +131,15 @@ const layer = Layer.effect(
       // kilocode_change start - defer partial overrides until all command sources are registered
       const overrides: Array<{ name: string; command: Override }> = []
       for (const [name, command] of Object.entries(cfg.command ?? {})) {
-        if (name === "goal")
-          throw new Error("The /goal command is reserved for session goals. Rename the custom command.")
+        if (Reserved.reserved(name)) {
+          yield* Effect.logWarning(Reserved.notice(name))
+          continue
+        }
         if (!applyOverride(commands, name, command, hints)) overrides.push({ name, command }) // kilocode_change
       }
       // kilocode_change end
 
       for (const [name, prompt] of Object.entries(yield* mcp.prompts())) {
-        if (name === "goal") throw new Error("The /goal command is reserved for session goals. Rename the MCP prompt.") // kilocode_change
         commands[name] = {
           name,
           source: "mcp",

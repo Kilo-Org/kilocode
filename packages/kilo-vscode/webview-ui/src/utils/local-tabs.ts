@@ -52,6 +52,26 @@ export const isPendingTab = (id: string) => id.startsWith(PENDING_TAB_PREFIX)
 
 export const showTabStrip = (ids: readonly string[]) => ids.length > 1
 
+/** The tab next to the active tab, without wrapping at the ends of the strip. */
+export function adjacentTab(ids: readonly string[], active: string | undefined, offset: -1 | 1) {
+  const index = active ? ids.indexOf(active) : -1
+  const next = index + offset
+  if (index === -1 || next < 0 || next >= ids.length) return undefined
+  return ids[next]
+}
+
+/** Shortcut that selects this tab from the active tab, if it is a direct neighbour. */
+export function adjacentTabHint(
+  ids: readonly string[],
+  active: string | undefined,
+  id: string,
+  kb: Record<string, string>,
+) {
+  if (adjacentTab(ids, active, -1) === id) return kb.previousTab ?? ""
+  if (adjacentTab(ids, active, 1) === id) return kb.nextTab ?? ""
+  return ""
+}
+
 const unique = (ids: string[]) => [...new Set(ids.filter(Boolean))]
 
 type PendingTabFactory = () => string

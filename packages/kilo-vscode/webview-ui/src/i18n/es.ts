@@ -60,6 +60,7 @@ export const dict = {
   ...anacondaDesktopDict,
   ...cloudProviderDict,
   "task.swarm.title": "Tablero",
+  "task.swarm.open": "Abrir tablero",
   "task.swarm.refresh": "Actualizar",
   "task.swarm.reset": "Restablecer tablero",
   "task.swarm.resetTitle": "¿Restablecer este tablero?",
@@ -1467,6 +1468,11 @@ export const dict = {
   "settings.experimental.browserAutomation.systemChrome.title": "Usar Chrome del sistema",
   "settings.experimental.browserAutomation.systemChrome.description":
     "Usa el Google Chrome instalado para el Navegador integrado. Desactívalo solo si ya hay instalado un navegador Playwright Chromium compatible.",
+  "settings.experimental.browserLinks.title": "Abrir enlaces en",
+  "settings.experimental.browserLinks.description":
+    "Elige dónde se abren los enlaces web desde los chats de Kilo. Requiere el Navegador integrado.",
+  "settings.experimental.browserLinks.external": "Navegador del sistema",
+  "settings.experimental.browserLinks.integrated": "Navegador integrado",
   "chat.search.searchingHistory": "Buscando en mensajes anteriores…",
   "browserTab.noSession":
     "Abre el navegador desde una sesión para previsualizar una aplicación local o una página HTTPS pública.",
