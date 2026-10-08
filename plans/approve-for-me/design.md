@@ -3,7 +3,7 @@
 Line numbers refer to `main` at `9d0f7a1dd8`. They drift. Re-check them when you implement.
 Paths starting with `P/` mean `packages/opencode/src/`.
 
-Security: the requirements from the security review are in section 12 (`SEC-1` to `SEC-21`) and are enforced in the sections they touch. Sections 1.2, 2.1, 2.5 to 2.11, 3, 5.1 to 5.3, 6.1, 6.2, 8, 10 and 11 changed because of them. A second review added `SEC-12` and `SEC-13` and nine medium items. A third review added `SEC-14` to `SEC-16` and four medium items (sections 2.8, 2.12, 2.13, 6.2). A fourth review added `SEC-17` and `SEC-18` and four medium items (sections 2.3, 2.12, 5.5, 6.2). A fifth review added `SEC-19` and five medium items (sections 2.6, 2.8, 2.14, 5.5, 6.2). A sixth review added `SEC-20` and three medium items (sections 1.3, 2.2, 3). A seventh review added `SEC-21` and four medium items (sections 1.3, 2.15, 6.2, 10).
+Security: the requirements from the security review are in section 12 (`SEC-1` to `SEC-21`) and are enforced in the sections they touch. Sections 0, 1.2, 1.3, 2.1, 2.3, 2.5 to 2.15, 3, 5.1 to 5.5, 6.1, 6.2, 8, 10 and 11 changed because of them. A second review added `SEC-12` and `SEC-13` and nine medium items. A third review added `SEC-14` to `SEC-16` and four medium items (sections 2.6, 2.8, 6.2). A fourth review added `SEC-17` and `SEC-18` and four medium items (sections 2.12, 5.1, 5.5, 6.2). A fifth review added `SEC-19` and five medium items (sections 2.6, 2.8, 5.5, 6.2, and the roadmap). A sixth review added `SEC-20` and three medium items (sections 0, 1.3, 2.1, 3). A seventh review added `SEC-21` and four medium items (sections 1.3, 2.15, 6.2, and the roadmap).
 
 ## 0. Mode model
 
@@ -838,14 +838,10 @@ Findings from the security review, and where each is resolved. IDs are used in c
 | SEC-14 | The sandbox does not confine reads and passes credentials in the environment, so runners can read and print secrets | Read-deny for credential stores and an environment allowlist (S7). Allowed hosts documented as exfiltration channels | 2.12 |
 | SEC-15 | The manifest baseline in a fresh clone is attacker-controlled. The backend ignores workspace trust | Trust signal, reduced profile when untrusted, script-surface acknowledgement before the baseline | 2.13 |
 | SEC-16 | A project config can start MCP servers, plugins, formatters and LSP servers with no trust gate (pre-existing) | Trust gate (S8). Documented as not covered until then | 2.13 |
-
 | SEC-17 | The Linux sandbox reaches host Unix sockets (docker, ssh-agent, D-Bus, gpg-agent, X11) and passes their env vars | tmpfs over runtime directories, environment allowlist, never `allow` network mode, per-socket tests (S7) | 2.12 |
 | SEC-18 | The "read-only" allow list is prefix globs. Flags turn reads into writes or execution. Assignment prefixes are not an explicit rule | Exact argv-shape allowlist, GTFOBins deny corpus, assignment prefixes ask | 2.3, 2.8 |
-
 | SEC-19 | The edit tools follow symlinks and hardlinks (lexical containment), so a committed or program-created link writes outside the workspace | Real-path, `lstat` and `nlink` checks, `O_NOFOLLOW`, real path for class matching (S9) | 2.14 |
-
 | SEC-20 | The default ruleset (`"*": "allow"`, allowed bash commands) makes calls skip the engine, because an `ask` verdict meant "call permission.ask unchanged". Tier 0 asks and most SEC items were inert in a default configuration | Enforcing layer: tiers evaluate every request, a forced ask beats allow rules, default, agent and project allows are downgraded, only explicit global allows are honored (not over tier 0) | 1.3 |
-
 | SEC-21 | Scheduling and unattended tools (`cron_create`, `schedule_wakeup`, `goal`) make no permission request, so an injected prompt can persist and run unattended, and the engine never sees them | Scheduling tools ask, unattended profile, banner, caps, inventory test | 2.15 |
 
 SEC-9, SEC-10 and the once-only `always` rule (6.2 item 7) were medium findings. They are included because they use the same code and would otherwise leave a gap in a high fix.
