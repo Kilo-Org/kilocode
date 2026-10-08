@@ -978,6 +978,18 @@ describe("OpenAICompatibleEmbedder", () => {
       expect(mockEmbeddingsCreate.mock.calls.at(2)?.at(0).dimensions).toBe(2)
     })
 
+    test("does not cache omission when the fallback returns no usable data", async () => {
+      embedder = new OpenAICompatibleEmbedder(testBaseUrl, testApiKey, "custom-embed", undefined, { dimensions: 2 })
+      mockEmbeddingsCreate
+        .mockRejectedValueOnce(rejection())
+        .mockResolvedValueOnce({ error: { message: "model not found" } } as never)
+        .mockResolvedValueOnce({ data: [{ embedding: [0.25, 0.5] }] })
+
+      expect((await embedder.validateConfiguration()).valid).toBe(false)
+      expect((await embedder.validateConfiguration()).valid).toBe(true)
+      expect(mockEmbeddingsCreate.mock.calls.at(2)?.at(0).dimensions).toBe(2)
+    })
+
     test("does not apply one model's omission to another model", async () => {
       embedder = new OpenAICompatibleEmbedder(testBaseUrl, testApiKey, "custom-embed", undefined, { dimensions: 2 })
       mockEmbeddingsCreate

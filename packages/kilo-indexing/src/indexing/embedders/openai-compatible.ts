@@ -295,7 +295,7 @@ export class OpenAICompatibleEmbedder implements IEmbedder {
       log.warn("Embedding endpoint rejected the dimensions parameter, retrying without it")
       // Keep the configured store size. Omit dimensions only after a matching response succeeds.
       const result = check(await send(undefined))
-      this.omitted.add(model)
+      if (result.projected) this.omitted.add(model)
       return result
     }
   }
