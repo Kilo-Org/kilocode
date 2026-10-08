@@ -1,5 +1,6 @@
 // kilocode_change - new file
 import { describe, expect, test } from "bun:test"
+import { RGBA } from "@opentui/core"
 import { failedDescription, renderGutter } from "../../../../../src/kilocode/cli/cmd/tui/component/dialog-provider"
 
 describe("failedDescription", () => {
@@ -47,7 +48,7 @@ describe("failedDescription", () => {
 })
 
 describe("renderGutter", () => {
-  const theme = { error: { r: 1, g: 0, b: 0, a: 1 } }
+  const theme = { error: RGBA.fromValues(1, 0, 0, 1) }
 
   test("returns undefined when the provider is not failed", () => {
     expect(renderGutter("kilo", [], theme)).toBeUndefined()
