@@ -24,6 +24,49 @@ export interface BrowserFrame extends BrowserViewIdentity {
   data: string
 }
 
+export interface BrowserCursor extends BrowserViewIdentity {
+  cursor: string
+}
+
+// Only CSS keywords can cross the browser boundary, never page-provided cursor images or URLs.
+export const CURSORS = new Set([
+  "default",
+  "none",
+  "context-menu",
+  "help",
+  "pointer",
+  "progress",
+  "wait",
+  "cell",
+  "crosshair",
+  "text",
+  "vertical-text",
+  "alias",
+  "copy",
+  "move",
+  "no-drop",
+  "not-allowed",
+  "grab",
+  "grabbing",
+  "all-scroll",
+  "col-resize",
+  "row-resize",
+  "n-resize",
+  "e-resize",
+  "s-resize",
+  "w-resize",
+  "ne-resize",
+  "nw-resize",
+  "se-resize",
+  "sw-resize",
+  "ew-resize",
+  "ns-resize",
+  "nesw-resize",
+  "nwse-resize",
+  "zoom-in",
+  "zoom-out",
+])
+
 export type BrowserInteraction =
   | {
       kind: "pointer"

@@ -5,6 +5,7 @@ import type { ExtensionMessage, WebviewMessage } from "../src/types/messages"
 import { formatBrowserFeedback, type BrowserReference } from "../../src/shared/browser-feedback"
 import { BrowserPanel as BrowserPanelView } from "../browser"
 import {
+  browserCursorEvent,
   browserDevtoolsEvent,
   browserFrameEvent,
   browserInspectionEvent,
@@ -110,6 +111,9 @@ function command(command: BrowserCommand): WebviewMessage {
 }
 
 function event(message: ExtensionMessage): BrowserEvent | undefined {
+  if (message.type === "agentManager.browserCursor") {
+    return browserCursorEvent(browserScope(message.sessionId, message.projectId), message)
+  }
   if (message.type === "agentManager.browserFrame") {
     return browserFrameEvent(browserScope(message.sessionId, message.projectId), message)
   }

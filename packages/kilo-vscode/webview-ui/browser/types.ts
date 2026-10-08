@@ -1,4 +1,5 @@
 import type {
+  BrowserCursor,
   BrowserFrame,
   BrowserInteraction,
   BrowserViewport,
@@ -83,6 +84,7 @@ export type BrowserEvent =
   | { type: "inspection"; value: BrowserInspection }
   | { type: "devtools"; value: BrowserDevtools }
   | { type: "frame"; value: BrowserFrame & { scope: BrowserScope } }
+  | { type: "cursor"; value: BrowserCursor & { scope: BrowserScope } }
 
 export interface BrowserTransport {
   send(command: BrowserCommand): void
