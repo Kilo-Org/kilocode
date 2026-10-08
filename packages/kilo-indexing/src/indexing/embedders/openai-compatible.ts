@@ -226,7 +226,10 @@ export class OpenAICompatibleEmbedder implements IEmbedder {
     texts: string[],
     model: string,
     options: { signal?: AbortSignal; timeout?: number; maxRetries?: number } = {},
-  ): Promise<OpenAIEmbeddingResponse> {
+  ): Promise<{
+    response: OpenAIEmbeddingResponse
+    projected: { embeddings: number[][]; usage: { promptTokens: number; totalTokens: number } }
+  }> {
     const send = async (dimensions: number | undefined): Promise<OpenAIEmbeddingResponse> => {
       if (this.isFullUrl) {
         return this.makeDirectEmbeddingRequest(this.baseUrl, texts, model, dimensions, options.signal)
@@ -250,18 +253,20 @@ export class OpenAICompatibleEmbedder implements IEmbedder {
     }
 
     const check = (response: OpenAIEmbeddingResponse) => {
-      if (this.dimensions === undefined) return response
+      // Decode once here and reuse the projected vectors in the caller and validation.
+      const projected = projectEmbeddingResponse(response)
+      if (this.dimensions === undefined) return { response, projected }
       if (!response?.data || response.data.length !== texts.length) {
         throw new Error("Invalid response from embedding endpoint")
       }
-      for (const vector of projectEmbeddingResponse(response).embeddings) {
+      for (const vector of projected.embeddings) {
         if (Array.isArray(vector) && vector.length === this.dimensions) continue
         throw new Error(
           `Embedding endpoint returned ${Array.isArray(vector) ? vector.length : 0} dimensions, but ${this.dimensions} are configured. ` +
             "Set the configured dimension to match the model output or use an endpoint that supports the requested dimensions.",
         )
       }
-      return response
+      return { response, projected }
     }
     const dimensions = this.omitted.has(model) ? undefined : this.dimensions
 
@@ -284,9 +289,9 @@ export class OpenAICompatibleEmbedder implements IEmbedder {
 
       log.warn("Embedding endpoint rejected the dimensions parameter, retrying without it")
       // Keep the configured store size. Omit dimensions only after a matching response succeeds.
-      const response = check(await send(undefined))
+      const result = check(await send(undefined))
       this.omitted.add(model)
-      return response
+      return result
     }
   }
 
@@ -305,9 +310,9 @@ export class OpenAICompatibleEmbedder implements IEmbedder {
       await this.waitForGlobalRateLimit()
 
       try {
-        const response = await this.request(batchTexts, model)
+        const { projected } = await this.request(batchTexts, model)
 
-        return projectEmbeddingResponse(response)
+        return projected
       } catch (error) {
         log.error("OpenAI Compatible embedder batch error", {
           err: error instanceof Error ? error.message : String(error),
@@ -360,11 +365,12 @@ export class OpenAICompatibleEmbedder implements IEmbedder {
         const timer = ctl ? setTimeout(() => ctl.abort(), REMOTE_EMBEDDER_VALIDATION_TIMEOUT_MS) : undefined
 
         try {
-          response = await this.request(testTexts, modelToUse, {
+          const result = await this.request(testTexts, modelToUse, {
             signal: ctl?.signal,
             timeout: REMOTE_EMBEDDER_VALIDATION_TIMEOUT_MS,
             maxRetries: REMOTE_EMBEDDER_VALIDATION_MAX_RETRIES,
           })
+          response = result.response
         } finally {
           if (timer) clearTimeout(timer)
         }
