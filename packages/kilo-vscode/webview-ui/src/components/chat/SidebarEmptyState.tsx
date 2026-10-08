@@ -4,6 +4,7 @@ import { useWorkStyle } from "../../context/work-style"
 import { useLanguage } from "../../context/language"
 import { WorkStylePicker } from "../shared/WorkStylePicker"
 import { KiloLogo, WelcomeEmptyState } from "./WelcomeEmptyState"
+import { WorkspaceScopeHint } from "./WorkspaceScopeHint"
 
 interface SidebarEmptyStateProps {
   onSelectSession?: (id: string) => void
@@ -31,6 +32,7 @@ export const SidebarEmptyState: Component<SidebarEmptyStateProps> = (props) => {
         <div class="message-list-empty work-style-empty">
           <KiloLogo />
           <h1 class="work-style-welcome">{language.t("workStyle.onboarding.welcome")}</h1>
+          <WorkspaceScopeHint />
           <WorkStylePicker />
         </div>
       </Show>
