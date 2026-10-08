@@ -19,6 +19,7 @@ import { BrowserNetwork } from "./browser-network"
 import { BrowserProxy, UNREACHABLE } from "./browser-proxy"
 import { parse } from "./browser-policy"
 import type {
+  BrowserCursor,
   BrowserFrame,
   BrowserInteraction,
   BrowserViewport,
@@ -248,6 +249,7 @@ export class BrowserBroker {
   private readonly claims = new Map<string, BrowserOwner>()
   private readonly listeners = new Set<(state: BrowserState) => void>()
   private readonly viewers = new Set<(frame: BrowserFrame & Pick<BrowserRoute, "sessionId" | "projectId">) => void>()
+  private readonly pointers = new Set<(cursor: BrowserCursor & Pick<BrowserRoute, "sessionId" | "projectId">) => void>()
   private readonly token = randomBytes(32).toString("hex")
   private readonly proxies = new Set<BrowserProxy>()
   private gateway: BrowserProxy | undefined
@@ -393,6 +395,11 @@ export class BrowserBroker {
     return () => this.viewers.delete(listener)
   }
 
+  cursors(listener: (cursor: BrowserCursor & Pick<BrowserRoute, "sessionId" | "projectId">) => void): () => void {
+    this.pointers.add(listener)
+    return () => this.pointers.delete(listener)
+  }
+
   async viewport(
     sessionId: string,
     projectId: string | undefined,
@@ -419,6 +426,11 @@ export class BrowserBroker {
         for (const viewer of this.viewers) viewer({ ...frame, projectId: route.projectId, sessionId: route.sessionId })
       },
       this.opts.log,
+      (cursor) => {
+        if (!this.accepts(route.sessionId, route.projectId, cursor)) return
+        for (const listener of this.pointers)
+          listener({ ...cursor, projectId: route.projectId, sessionId: route.sessionId })
+      },
     )
     return entry.stream
   }
@@ -817,6 +829,7 @@ export class BrowserBroker {
     this.port = undefined
     this.listeners.clear()
     this.viewers.clear()
+    this.pointers.clear()
   }
 
   dispose(): void {

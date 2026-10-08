@@ -16,7 +16,7 @@ import {
   type BrowserControlMessage,
   type BrowserControlSurface,
 } from "../services/browser-automation/browser-control"
-import type { BrowserInteraction, BrowserViewIdentity, BrowserViewport } from "../shared/browser-stream"
+import type { BrowserCursor, BrowserInteraction, BrowserViewIdentity, BrowserViewport } from "../shared/browser-stream"
 import type { BrowserReference } from "../shared/browser-feedback"
 import { buildWebviewHtml } from "../utils"
 
@@ -91,6 +91,9 @@ export class BrowserTabProvider {
         vscode.Disposable.from({ dispose: this.opts.browser.subscribe((state) => this.state(state)) }),
       )
       this.disposables.push(vscode.Disposable.from({ dispose: this.opts.browser.frames((frame) => this.frame(frame)) }))
+      this.disposables.push(
+        vscode.Disposable.from({ dispose: this.opts.browser.cursors((cursor) => this.cursor(cursor)) }),
+      )
     }
   }
 
@@ -214,6 +217,13 @@ export class BrowserTabProvider {
     const entry = this.panels.get(frame.sessionId)
     if (!entry?.ready) return
     entry.panel.webview.postMessage({ ...frame, type: "browserTab.frame" })
+  }
+
+  private cursor(cursor: BrowserCursor & { sessionId: string; projectId?: string }): void {
+    if (cursor.projectId) return
+    const entry = this.panels.get(cursor.sessionId)
+    if (!entry?.ready) return
+    entry.panel.webview.postMessage({ ...cursor, type: "browserTab.cursor" })
   }
 
   private stateMessage(state: BrowserState) {
