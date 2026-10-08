@@ -17,6 +17,7 @@ import { installAccountSidebar } from "./sidebar-account"
 import { installSettingsUi } from "./settings"
 import { installRemoteUi } from "./remote"
 import { installPrivacyUi, type PrivacyUi } from "./privacy"
+import { installNetworkUi } from "./network"
 
 const Options = Schema.Struct({
   kiloHttp: Schema.optional(
@@ -84,6 +85,7 @@ export default Plugin.define({
     installProcessSidebar(ctx, { signal: controller.signal })
     installBenchSidebar(ctx, { client, account, revision, signal: controller.signal })
     installRoutedModelSidebar(ctx)
+    installNetworkUi(ctx, { client, signal: controller.signal })
     installAccountSidebar(ctx, {
       client,
       account,

@@ -52,6 +52,7 @@ import type { TelemetryConfig } from "./telemetry"
 import type { IndexingConfig } from "@kilocode/indexing/config"
 import type { CloudServiceOrigins } from "./cloud-plugin"
 import { createSandboxPlugin, type SandboxConfig } from "./sandbox"
+import { createNetworkPolicy, type NetworkPolicyOptions } from "./network-policy"
 
 export function launch(
   input: Layout,
@@ -71,6 +72,7 @@ export function launch(
     cloud?: CloudServiceOrigins & { allowHttpLoopback?: boolean }
     remote?: { relayURL: string; allowHttpLoopback?: boolean }
     lock?: Pick<Flock.Options, "staleMs" | "timeoutMs">
+    network?: Omit<NetworkPolicyOptions, "reconnect">
   } = {},
 ) {
   return Effect.gen(function* () {
@@ -154,6 +156,22 @@ export function launch(
     yield* plugins.register(createGenerationPlugin())
     yield* plugins.register(createModelStatePlugin(input.paths.state))
     yield* plugins.register(createPrivacyPlugin({ layout: input }))
+    yield* plugins.register(
+      createNetworkPolicy({
+        ...options.network,
+        reconnect: async (target) => {
+          const { OpenCode } = await import("@opencode-ai/client")
+          const client = OpenCode.make({
+            baseUrl: urls()[0],
+            headers: { authorization: `Basic ${btoa(`opencode:${password}`)}` },
+          })
+          await client.mcp.connect({
+            server: target.server,
+            location: { directory: target.directory, workspace: target.workspaceID },
+          })
+        },
+      }),
+    )
     if (options.swarm) {
       const { OpenCode } = yield* Effect.promise(() => import("@opencode-ai/client"))
       const { createSwarmPlugin } = yield* Effect.promise(() => import("./swarm"))
