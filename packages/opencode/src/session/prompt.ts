@@ -6,6 +6,7 @@ import fs from "node:fs" // kilocode_change
 import { SessionV1 } from "@opencode-ai/core/v1/session"
 import os from "os"
 import { KiloSessionPrompt } from "@/kilocode/session/prompt" // kilocode_change
+import { KiloAttachment } from "@/kilocode/session/attachment" // kilocode_change
 import { unavailable } from "@/kilocode/provider/catalog-recovery" // kilocode_change
 import { BoardContext } from "@/kilocode/board/context" // kilocode_change
 import { SKILL_SHELL_DISABLED, SKILL_SHELL_UNTRUSTED } from "@/kilocode/skills/display" // kilocode_change
@@ -1056,7 +1057,7 @@ export const layer = Layer.effect(
                 ]
               }
               // kilocode_change start - normalize user image data before persistence
-              if (part.mime.startsWith("image/")) {
+              if (KiloAttachment.classify(part.mime) === "raster") {
                 const file: MessageV2.FilePart = {
                   ...part,
                   id: part.id ? PartID.make(part.id) : PartID.ascending(),
@@ -1257,6 +1258,9 @@ export const layer = Layer.effect(
                   metadata: {},
                 })
 
+                // kilocode_change start - every image/* attachment keeps the base64 cap it had before, so a
+                // huge .svg or .ico cannot be read unbounded into memory; only Photon normalization below is
+                // restricted to rasters, since that is the part that cannot decode markup/icon formats.
                 return yield* KiloReadObject.use(file, (bound) =>
                   Effect.gen(function* () {
                     const limit = mime.startsWith("image/")
@@ -1292,9 +1296,10 @@ export const layer = Layer.effect(
                       filename: part.filename!,
                       source: part.source,
                     }
-                    return mime.startsWith("image/") ? yield* image.normalize(file) : file
+                    return KiloAttachment.classify(mime) === "raster" ? yield* image.normalize(file) : file
                   }),
                 )
+                // kilocode_change end
               }).pipe(Effect.exit)
               if (Exit.isFailure(access)) {
                 if (defer && isInterrupted(access.cause)) return yield* Effect.interrupt
@@ -1377,9 +1382,11 @@ export const layer = Layer.effect(
       }
       // kilocode_change end
 
-      const resolvedParts = yield* Effect.forEach(submittedParts, resolvePart, { concurrency: "unbounded" }).pipe(
-        Effect.map((x) => x.flat().map(assign)),
-      )
+      // kilocode_change start - asText relabels SVG as source text; it is not an image mime any provider accepts
+      const resolvedParts = yield* Effect.forEach(submittedParts.map(KiloAttachment.asText), resolvePart, {
+        concurrency: "unbounded",
+      }).pipe(Effect.map((x) => x.flat().map(assign)))
+      // kilocode_change end
 
       yield* plugin.trigger(
         "chat.message",

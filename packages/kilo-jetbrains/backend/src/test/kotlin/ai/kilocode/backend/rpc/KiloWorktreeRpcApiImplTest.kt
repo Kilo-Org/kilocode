@@ -378,6 +378,24 @@ class KiloWorktreeRpcApiImplTest {
     }
 
     @Test
+    fun `a named worktree resolves its pull request against nothing cached`() {
+        val fresh = prPaths(listOf("/repo/.kilo/worktrees/feature-x/"))
+
+        // The caller named this one because an agent just stopped in it, so no cached answer about it
+        // can have accounted for whatever that agent did.
+        assertEquals(0, prAge("/repo/.kilo/worktrees/feature-x", fresh, maxAge = null))
+        // A trailing separator, a `.` segment, or a `..` on the way in still names the same checkout.
+        assertEquals(0, prAge("/repo/.kilo/worktrees/./feature-x", fresh, maxAge = null))
+        assertEquals(0, prAge("/repo/.kilo/worktrees/other/../feature-x", fresh, maxAge = null))
+
+        // Every other row keeps the caller's own ceiling. Spending the fan-out on all of them is what
+        // naming paths exists to avoid: one row's news is not news about the rest of the repository.
+        assertEquals(90_000, prAge("/repo/.kilo/worktrees/other", fresh, maxAge = 90_000))
+        assertNull(prAge("/repo/.kilo/worktrees/other", fresh, maxAge = null))
+        assertNull(prAge("/repo/.kilo/worktrees/feature-x", emptySet(), maxAge = null))
+    }
+
+    @Test
     fun `reason reports a timeout instead of falling through to the fallback text`() {
         assertEquals("timed out", api.reason(CmdOut(-1, "", "", timeout = true), "git worktree remove failed"))
         assertEquals("boom", api.reason(CmdOut(1, "", "boom"), "git worktree remove failed"))

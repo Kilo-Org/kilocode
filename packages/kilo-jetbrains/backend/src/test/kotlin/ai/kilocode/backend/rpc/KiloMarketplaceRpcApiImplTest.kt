@@ -5,6 +5,7 @@ import ai.kilocode.backend.app.KiloBackendAppService
 import ai.kilocode.backend.testing.FakeCliServer
 import ai.kilocode.backend.testing.MockCliServer
 import ai.kilocode.backend.testing.TestLog
+import ai.kilocode.rpc.dto.MarketplaceBundleDto
 import ai.kilocode.rpc.dto.MarketplaceSkillDto
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -17,6 +18,7 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import java.nio.file.Files
+import java.util.UUID
 import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -115,6 +117,41 @@ class KiloMarketplaceRpcApiImplTest {
         assertEquals("\"https://example.com/review-skill.tar.gz\"", skill.content)
 
         assertEquals("directory=%2Ftest+project", mock.lastMarketplaceListPath?.substringAfter("?"))
+    }
+
+    @Test
+    fun `bundles reads catalog independent companion ownership markers`() = runBlocking {
+        val root = Files.createTempDirectory("kilo-marketplace-bundles")
+        val project = root.resolve("project")
+        val local = project.resolve(".kilo/skills/docs/SKILL.md")
+        val global = root.resolve("global/skills/review/SKILL.md")
+        try {
+            Files.createDirectories(local.parent)
+            Files.createDirectories(global.parent)
+            Files.writeString(local, "# Docs")
+            Files.writeString(global, "# Review")
+            val token = UUID.randomUUID().toString()
+            Files.writeString(local.parent.resolve(".kilo-marketplace.json"), """{"version":1,"id":"context7","token":"$token"}""")
+            Files.writeString(global.parent.resolve(".kilo-marketplace.json"), """{"version":1,"id":"context7","token":"$token"}""")
+            mock.skills = """
+                [
+                  {"name":"docs","location":"$local"},
+                  {"name":"review","location":"$global"}
+                ]
+            """.trimIndent()
+
+            val result = rpc().bundles(project.toString())
+
+            assertEquals(
+                listOf(
+                    MarketplaceBundleDto("context7", "global", listOf(global.toString())),
+                    MarketplaceBundleDto("context7", "project", listOf(local.toString())),
+                ),
+                result,
+            )
+        } finally {
+            root.toFile().deleteRecursively()
+        }
     }
 
     @Test

@@ -94,6 +94,7 @@ export interface BrowserLabels {
   url: string
   urlPlaceholder: string
   open: string
+  openExternal: string
   refresh: string
   back: string
   forward: string

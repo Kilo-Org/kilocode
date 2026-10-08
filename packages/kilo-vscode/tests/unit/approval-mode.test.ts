@@ -1,5 +1,10 @@
 import { describe, expect, it } from "bun:test"
-import { approvalMode, approvalRequest, type ApprovalMode } from "../../webview-ui/src/components/chat/approval-mode"
+import {
+  approvalMode,
+  approvalRequest,
+  nextApprovalMode,
+  type ApprovalMode,
+} from "../../webview-ui/src/components/chat/approval-mode"
 
 const states = {
   ask: { auto: false, me: false },
@@ -43,5 +48,17 @@ describe("approvalRequest", () => {
     expect(approvalRequest(both, "ask")).toEqual(["toggleAutoApprove", "toggleApproveForMe"])
     expect(approvalRequest(both, "approveForMe")).toEqual(["toggleAutoApprove"])
     expect(approvalRequest(both, "approveAll")).toEqual(["toggleApproveForMe"])
+  })
+})
+
+describe("nextApprovalMode", () => {
+  it("cycles ask, approve for me, approve all, then ask again", () => {
+    expect(nextApprovalMode(states.ask)).toBe("approveForMe")
+    expect(nextApprovalMode(states.approveForMe)).toBe("approveAll")
+    expect(nextApprovalMode(states.approveAll)).toBe("ask")
+  })
+
+  it("moves on from approve all when both flags are briefly on", () => {
+    expect(nextApprovalMode({ auto: true, me: true })).toBe("ask")
   })
 })

@@ -29,3 +29,11 @@ export function approvalRequest(flags: Flags, next: ApprovalMode): Request[] {
   if (next === "approveForMe") return ["toggleApproveForMe"]
   return [from === "approveAll" ? "toggleAutoApprove" : "toggleApproveForMe"]
 }
+
+/** The mode a single click in the folded toolbar menu moves to: ask, approve for me, approve all, then ask again. */
+export function nextApprovalMode(flags: Flags): ApprovalMode {
+  const mode = approvalMode(flags)
+  if (mode === "ask") return "approveForMe"
+  if (mode === "approveForMe") return "approveAll"
+  return "ask"
+}

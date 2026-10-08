@@ -445,6 +445,7 @@ export const dict = {
   "agentManager.browser.url": "주소",
   "agentManager.browser.urlPlaceholder": "http://localhost:3000",
   "agentManager.browser.open": "열기",
+  "agentManager.browser.openExternal": "외부 브라우저에서 열기",
   "agentManager.browser.refresh": "브라우저 새로 고침",
   "agentManager.browser.back": "뒤로",
   "agentManager.browser.forward": "앞으로",
