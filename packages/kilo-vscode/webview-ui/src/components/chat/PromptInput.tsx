@@ -44,12 +44,13 @@ import { useConfig } from "../../context/config"
 import { recommend, type ManagerContext } from "../../utils/shortcut-hint"
 import { PromptHint } from "./PromptHint"
 import { useProvider } from "../../context/provider"
-import { ModelSelector, ModelSelectorBase } from "../shared/ModelSelector"
-import { ModeSwitcher } from "../shared/ModeSwitcher"
+import { ModelSelectorBase } from "../shared/ModelSelector"
 import { SandboxButtonBase, SandboxTooltipContent } from "../shared/SandboxButton"
 import { SpeechToTextButton } from "../speech-to-text/SpeechToTextButton"
 import { canUseSpeechToText, selectedSpeechToTextModel } from "../speech-to-text/availability"
-import { ThinkingSelector } from "../shared/ThinkingSelector"
+import { PromptSelectors } from "./PromptSelectors"
+import { PromptOverflow, type OverflowItem } from "./PromptOverflow"
+import { fold } from "./prompt-fold"
 import { useFileMention } from "../../hooks/useFileMention"
 import { usePasteCollapse } from "../../hooks/usePasteCollapse"
 import type { MentionResult, WorktreeReference } from "../../hooks/file-mention-utils"
@@ -1943,6 +1944,61 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     onCleanup(() => registerPromptMentionDrop(undefined, undefined))
   })
 
+  // Progressive toolbar fold, driven by the toolbar width only. The list goes
+  // from low to high priority, so low priority actions fold first and the
+  // actions next to voice and send stay in place.
+  let hintRef: HTMLDivElement | undefined
+  let pinnedRef: HTMLDivElement | undefined
+  const [hintWidth, setHintWidth] = createSignal(Number.POSITIVE_INFINITY)
+  const [pinnedWidth, setPinnedWidth] = createSignal(0)
+  onMount(() => {
+    const observer = new ResizeObserver(() => {
+      // 12px toolbar padding plus the 8px gap between selectors and actions.
+      if (hintRef) setHintWidth(hintRef.clientWidth - 20)
+      if (pinnedRef) setPinnedWidth(pinnedRef.offsetWidth)
+    })
+    if (hintRef) observer.observe(hintRef)
+    if (pinnedRef) observer.observe(pinnedRef)
+    onCleanup(() => observer.disconnect())
+  })
+  const foldable = createMemo(() => {
+    const list: OverflowItem[] = []
+    if (showIndexing())
+      list.push({
+        key: "indexing",
+        icon: "database",
+        label: language.t("prompt.action.indexing"),
+        run: handleOpenIndexingSettings,
+      })
+    if (sandboxVisible())
+      list.push({
+        key: "sandbox",
+        icon: "lock",
+        label: language.t(sandboxEnabled() ? "prompt.action.sandbox.disable" : "prompt.action.sandbox.enable"),
+        disabled: sandboxDisabled(),
+        active: sandboxEnabled(),
+        run: toggleSandbox,
+      })
+    list.push({
+      key: "enhance",
+      icon: "wand-sparkles",
+      label: language.t("prompt.action.enhance"),
+      disabled: !canEnhance(),
+      run: handleEnhance,
+    })
+    list.push({
+      key: "approve",
+      icon: "shield",
+      label: language.t(autoApprove() ? "prompt.action.autoApprove.disable" : "prompt.action.autoApprove.enable"),
+      active: autoApprove(),
+      run: () => vscode.postMessage({ type: "toggleAutoApprove" }),
+    })
+    return list
+  })
+  const shown = createMemo(() => fold({ width: hintWidth(), pinned: pinnedWidth(), count: foldable().length }))
+  const hidden = createMemo(() => foldable().slice(0, foldable().length - shown()))
+  const folded = (key: string) => hidden().some((item) => item.key === key)
+
   return (
     <div
       ref={containerRef}
@@ -2293,78 +2349,96 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
           </div>
         </div>
       </div>
-      <div class="prompt-input-hint">
-        <div class="prompt-input-hint-selectors">
-          <ModeSwitcher sessionID={sid} blocked={props.blocked?.() ?? false} hint={modeHint()} />
-          <ModelSelector sessionID={sid} blocked={props.blocked?.() ?? false} />
-          <ThinkingSelector sessionID={sid} blocked={props.blocked?.() ?? false} />
-        </div>
+      <div class="prompt-input-hint" ref={hintRef}>
+        <PromptSelectors sessionID={sid} blocked={props.blocked?.() ?? false} hint={modeHint()} />
         <div class="prompt-input-hint-actions">
+          <div class="prompt-action" data-folded={hidden().length === 0 ? "" : undefined}>
+            <PromptOverflow items={hidden()} />
+          </div>
           <Show when={showIndexing()}>
-            <Tooltip value={indexing.status().message || indexing.label()} placement="top" openDelay={0}>
+            <div class="prompt-action" data-folded={folded("indexing") ? "" : undefined}>
+              <Tooltip value={indexing.status().message || indexing.label()} placement="top" openDelay={0}>
+                <IconButton
+                  icon="database"
+                  variant="ghost"
+                  size="small"
+                  onClick={handleOpenIndexingSettings}
+                  aria-label={language.t("prompt.action.indexing")}
+                  class={`prompt-indexing-button prompt-indexing-button--${indexing.tone()}`}
+                />
+              </Tooltip>
+            </div>
+          </Show>
+          <Show when={sandboxVisible()}>
+            <div class="prompt-action" data-folded={folded("sandbox") ? "" : undefined}>
+              <SandboxButtonBase
+                enabled={sandboxEnabled()}
+                available={sandboxReady() ? sandboxAvailable() : undefined}
+                reason={sandboxReason()}
+                disabled={sandboxDisabled()}
+                tooltip={<SandboxTooltipContent enabled={sandboxEnabled()} network={sandboxNetworkEnabled()} />}
+                tooltipClass="prompt-sandbox-tooltip-content"
+                onToggle={toggleSandbox}
+              />
+            </div>
+          </Show>
+          <div class="prompt-action" data-folded={folded("enhance") ? "" : undefined}>
+            <Tooltip value={language.t("prompt.action.enhance")} placement="top" openDelay={0}>
               <IconButton
-                icon="database"
+                icon="wand-sparkles"
                 variant="ghost"
                 size="small"
-                onClick={handleOpenIndexingSettings}
-                aria-label={language.t("prompt.action.indexing")}
-                class={`prompt-indexing-button prompt-indexing-button--${indexing.tone()}`}
+                onClick={handleEnhance}
+                disabled={!canEnhance()}
+                loading={enhancing()}
+                aria-label={language.t("prompt.action.enhance")}
               />
             </Tooltip>
-          </Show>
-          <Tooltip
-            value={`${language.t(
-              autoApprove() ? "prompt.action.autoApprove.enabled" : "prompt.action.autoApprove.disabled",
-            )} ${language.t("prompt.action.autoApprove.sandboxExcluded")}`}
-            placement="top"
-            openDelay={0}
-          >
-            <IconButton
-              icon="shield"
-              variant="ghost"
-              size="small"
-              onClick={() => vscode.postMessage({ type: "toggleAutoApprove" })}
-              aria-label={
-                autoApprove()
-                  ? language.t("prompt.action.autoApprove.disable")
-                  : language.t("prompt.action.autoApprove.enable")
-              }
-              aria-pressed={autoApprove()}
-              class={`prompt-status-button ${autoApprove() ? "prompt-status-button--active" : ""}`}
-            />
-          </Tooltip>
-          <Show when={sandboxVisible()}>
-            <SandboxButtonBase
-              enabled={sandboxEnabled()}
-              available={sandboxReady() ? sandboxAvailable() : undefined}
-              reason={sandboxReason()}
-              disabled={sandboxDisabled()}
-              tooltip={<SandboxTooltipContent enabled={sandboxEnabled()} network={sandboxNetworkEnabled()} />}
-              tooltipClass="prompt-sandbox-tooltip-content"
-              onToggle={toggleSandbox}
-            />
-          </Show>
-          <Tooltip value={language.t("prompt.action.enhance")} placement="top" openDelay={0}>
-            <IconButton
-              icon="wand-sparkles"
-              variant="ghost"
-              size="small"
-              onClick={handleEnhance}
-              disabled={!canEnhance()}
-              loading={enhancing()}
-              aria-label={language.t("prompt.action.enhance")}
-            />
-          </Tooltip>
-          <Show when={canUseSpeech()}>
-            <SpeechToTextButton speech={speech} disabled={isDisabled()} start={startSpeech} label={language.t} />
-          </Show>
-          <Show
-            when={showStop()}
-            fallback={
-              <Tooltip value={sendLabel()} placement="top" openDelay={0}>
-                <Show
-                  when={goal.active()}
-                  fallback={
+          </div>
+          <div class="prompt-action" data-folded={folded("approve") ? "" : undefined}>
+            <Tooltip
+              value={`${language.t(
+                autoApprove() ? "prompt.action.autoApprove.enabled" : "prompt.action.autoApprove.disabled",
+              )} ${language.t("prompt.action.autoApprove.sandboxExcluded")}`}
+              placement="top"
+              openDelay={0}
+            >
+              <IconButton
+                icon="shield"
+                variant="ghost"
+                size="small"
+                onClick={() => vscode.postMessage({ type: "toggleAutoApprove" })}
+                aria-label={
+                  autoApprove()
+                    ? language.t("prompt.action.autoApprove.disable")
+                    : language.t("prompt.action.autoApprove.enable")
+                }
+                aria-pressed={autoApprove()}
+                class={`prompt-status-button ${autoApprove() ? "prompt-status-button--active" : ""}`}
+              />
+            </Tooltip>
+          </div>
+          <div class="prompt-input-hint-pinned" ref={pinnedRef}>
+            <Show when={canUseSpeech()}>
+              <SpeechToTextButton speech={speech} disabled={isDisabled()} start={startSpeech} label={language.t} />
+            </Show>
+            <Show
+              when={showStop()}
+              fallback={
+                <Tooltip value={sendLabel()} placement="top" openDelay={0}>
+                  <Show
+                    when={goal.active()}
+                    fallback={
+                      <IconButton
+                        icon="send"
+                        variant="ghost"
+                        size="small"
+                        onClick={handleSendClick}
+                        disabled={!canSend()}
+                        aria-label={sendLabel()}
+                      />
+                    }
+                  >
                     <IconButton
                       icon="send"
                       variant="ghost"
@@ -2372,33 +2446,24 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
                       onClick={handleSendClick}
                       disabled={!canSend()}
                       aria-label={sendLabel()}
-                    />
-                  }
-                >
-                  <IconButton
-                    icon="send"
-                    variant="ghost"
-                    size="small"
-                    onClick={handleSendClick}
-                    disabled={!canSend()}
-                    aria-label={sendLabel()}
-                  >
-                    {language.t("prompt.goal.start")}
-                  </IconButton>
-                </Show>
+                    >
+                      {language.t("prompt.goal.start")}
+                    </IconButton>
+                  </Show>
+                </Tooltip>
+              }
+            >
+              <Tooltip value={stopLabel()} placement="top" openDelay={0}>
+                <IconButton
+                  icon="stop"
+                  variant="ghost"
+                  size="small"
+                  onClick={() => session.abort()}
+                  aria-label={language.t("prompt.action.stop")}
+                />
               </Tooltip>
-            }
-          >
-            <Tooltip value={stopLabel()} placement="top" openDelay={0}>
-              <IconButton
-                icon="stop"
-                variant="ghost"
-                size="small"
-                onClick={() => session.abort()}
-                aria-label={language.t("prompt.action.stop")}
-              />
-            </Tooltip>
-          </Show>
+            </Show>
+          </div>
         </div>
       </div>
     </div>

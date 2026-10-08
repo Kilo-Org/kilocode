@@ -217,6 +217,7 @@ export const dict = {
   "prompt.action.stop.background": "Hoofdagent stoppen. Achtergrondagenten blijven actief.",
   "prompt.agents.show": "Achtergrondagenten tonen",
   "prompt.action.enhance": "Prompt verbeteren",
+  "prompt.action.more": "Meer acties",
   "prompt.paste.expand": "Klik om geplakte tekst uit te vouwen",
   "prompt.issues.title": "Sessieproblemen",
   "prompt.mcp.provider": "{{name}} MCP",

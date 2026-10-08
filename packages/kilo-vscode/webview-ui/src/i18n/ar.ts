@@ -212,6 +212,7 @@ export const dict = {
   "prompt.action.stop.background": "إيقاف الوكيل الرئيسي. يستمر الوكلاء الخلفيون في العمل.",
   "prompt.agents.show": "إظهار الوكلاء الخلفيين",
   "prompt.action.enhance": "تحسين النص",
+  "prompt.action.more": "مزيد من الإجراءات",
   "prompt.paste.expand": "انقر لتوسيع النص الملصق",
   "prompt.issues.title": "مشكلات الجلسة",
   "prompt.mcp.provider": "خادم MCP لـ {{name}}",

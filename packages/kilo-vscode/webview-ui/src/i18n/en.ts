@@ -213,6 +213,7 @@ export const dict = {
   "prompt.action.stop.background": "Stop main agent. Background agents keep running.",
   "prompt.agents.show": "Show background agents",
   "prompt.action.enhance": "Enhance prompt",
+  "prompt.action.more": "More actions",
   "prompt.paste.expand": "Click to expand pasted text",
   "prompt.issues.title": "Session issues",
   "prompt.mcp.provider": "{{name}} MCP",
