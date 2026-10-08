@@ -1377,6 +1377,8 @@ export const dict = {
   "task.backgroundAgents.stopAll": "すべて停止 ({{count}})",
   "task.backgroundAgents.finished": "バックグラウンドエージェントが完了しました",
   "task.stop": "サブエージェントを停止",
+  "task.open.panel": "サブエージェントをパネルで開く",
+  "task.open.tab": "サブエージェントをタブで開く",
   "settings.saveBar.unsavedChanges": "未保存の変更",
   "settings.saveBar.discard": "破棄",
   "settings.saveBar.save": "保存",

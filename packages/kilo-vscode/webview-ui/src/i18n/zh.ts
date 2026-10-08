@@ -1308,6 +1308,8 @@ export const dict = {
   "task.backgroundAgents.stopAll": "全部停止 ({{count}})",
   "task.backgroundAgents.finished": "后台智能体已完成",
   "task.stop": "停止子智能体",
+  "task.open.panel": "在面板中打开子智能体",
+  "task.open.tab": "在标签页中打开子智能体",
   "settings.saveBar.unsavedChanges": "未保存的更改",
   "settings.saveBar.discard": "放弃",
   "settings.saveBar.save": "保存",

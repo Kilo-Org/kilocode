@@ -1383,6 +1383,8 @@ export const dict = {
   "task.backgroundAgents.stopAll": "Остановить всех ({{count}})",
   "task.backgroundAgents.finished": "Фоновые агенты завершили работу",
   "task.stop": "Остановить субагента",
+  "task.open.panel": "Открыть субагента на панели",
+  "task.open.tab": "Открыть субагента во вкладке",
   "settings.saveBar.unsavedChanges": "Несохранённые изменения",
   "settings.saveBar.discard": "Отменить",
   "settings.saveBar.save": "Сохранить",

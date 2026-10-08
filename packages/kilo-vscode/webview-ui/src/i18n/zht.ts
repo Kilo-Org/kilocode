@@ -1312,6 +1312,8 @@ export const dict = {
   "task.backgroundAgents.stopAll": "全部停止 ({{count}})",
   "task.backgroundAgents.finished": "背景 Agent 已完成",
   "task.stop": "停止子代理",
+  "task.open.panel": "在面板中開啟子代理",
+  "task.open.tab": "在分頁中開啟子代理",
   "settings.saveBar.unsavedChanges": "未儲存的變更",
   "settings.saveBar.discard": "捨棄",
   "settings.saveBar.save": "儲存",

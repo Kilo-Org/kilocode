@@ -1352,6 +1352,8 @@ export const dict = {
   "task.backgroundAgents.stopAll": "إيقاف الكل ({{count}})",
   "task.backgroundAgents.finished": "انتهى الوكلاء الخلفيون",
   "task.stop": "إيقاف الوكيل الفرعي",
+  "task.open.panel": "فتح الوكيل الفرعي في اللوحة",
+  "task.open.tab": "فتح الوكيل الفرعي في علامة تبويب",
   "settings.saveBar.unsavedChanges": "تغييرات غير محفوظة",
   "settings.saveBar.discard": "تجاهل",
   "settings.saveBar.save": "حفظ",

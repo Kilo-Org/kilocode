@@ -1391,6 +1391,8 @@ export const dict = {
   "task.backgroundAgents.stopAll": "Zatrzymaj wszystkich ({{count}})",
   "task.backgroundAgents.finished": "Agenci w tle zakończyli pracę",
   "task.stop": "Zatrzymaj podagenta",
+  "task.open.panel": "Otwórz podagenta w panelu",
+  "task.open.tab": "Otwórz podagenta w karcie",
   "settings.saveBar.unsavedChanges": "Niezapisane zmiany",
   "settings.saveBar.discard": "Odrzuć",
   "settings.saveBar.save": "Zapisz",

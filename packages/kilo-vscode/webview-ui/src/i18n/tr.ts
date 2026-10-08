@@ -1358,6 +1358,8 @@ export const dict = {
   "task.backgroundAgents.stopAll": "Tümünü durdur ({{count}})",
   "task.backgroundAgents.finished": "Arka plan ajanları tamamlandı",
   "task.stop": "Alt ajanı durdur",
+  "task.open.panel": "Alt ajanı panelde aç",
+  "task.open.tab": "Alt ajanı sekmede aç",
 
   "settings.saveBar.unsavedChanges": "Kaydedilmemiş değişiklikler",
   "settings.saveBar.discard": "Geri Al",
