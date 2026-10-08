@@ -254,15 +254,16 @@ export class OpenAICompatibleEmbedder implements IEmbedder {
 
     const check = (response: OpenAIEmbeddingResponse) => {
       // Guard the shape before decoding. A 200 response with an error body has no
-      // data, so decoding it first would throw a raw TypeError. Leave validation
-      // free to read response.error for that case.
+      // data, so decoding it first would throw a raw TypeError. Do not throw here
+      // either: validation reads response.error for that case, and the batch caller
+      // reports the missing data when it needs the vectors.
       const hasData = Array.isArray(response?.data)
       const projected = hasData ? projectEmbeddingResponse(response) : undefined
-      if (this.dimensions !== undefined) {
-        if (!hasData || response.data.length !== texts.length) {
+      if (this.dimensions !== undefined && projected) {
+        if (response.data.length !== texts.length) {
           throw new Error("Invalid response from embedding endpoint")
         }
-        for (const vector of projected!.embeddings) {
+        for (const vector of projected.embeddings) {
           if (Array.isArray(vector) && vector.length === this.dimensions) continue
           throw new Error(
             `Embedding endpoint returned ${Array.isArray(vector) ? vector.length : 0} dimensions, but ${this.dimensions} are configured. ` +
