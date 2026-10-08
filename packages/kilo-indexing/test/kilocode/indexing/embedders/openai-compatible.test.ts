@@ -912,6 +912,30 @@ describe("OpenAICompatibleEmbedder", () => {
       expect(mockEmbeddingsCreate).toHaveBeenCalledTimes(2)
     })
 
+    test("keeps the server error for a 200 response without data", async () => {
+      embedder = new OpenAICompatibleEmbedder(testBaseUrl, testApiKey, testModelId)
+
+      mockEmbeddingsCreate.mockResolvedValue({ error: { message: "model not found" } } as never)
+
+      const result = await embedder.validateConfiguration()
+
+      expect(result.valid).toBe(false)
+      expect(result.error).toBe("model not found")
+    })
+
+    test("reports a clear error for a malformed response with dimensions configured", async () => {
+      embedder = new OpenAICompatibleEmbedder(testBaseUrl, testApiKey, "custom-embed", undefined, {
+        dimensions: 2,
+      })
+
+      mockEmbeddingsCreate.mockResolvedValue({ error: { message: "model not found" } } as never)
+
+      const result = await embedder.validateConfiguration()
+
+      expect(result.valid).toBe(false)
+      expect(result.error).toBe("Invalid response from embedding endpoint")
+    })
+
     test("does not retry a 400 when no dimensions are configured", async () => {
       embedder = new OpenAICompatibleEmbedder(testBaseUrl, testApiKey, testModelId)
 

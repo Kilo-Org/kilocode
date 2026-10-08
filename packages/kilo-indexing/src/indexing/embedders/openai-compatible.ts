@@ -228,7 +228,7 @@ export class OpenAICompatibleEmbedder implements IEmbedder {
     options: { signal?: AbortSignal; timeout?: number; maxRetries?: number } = {},
   ): Promise<{
     response: OpenAIEmbeddingResponse
-    projected: { embeddings: number[][]; usage: { promptTokens: number; totalTokens: number } }
+    projected?: { embeddings: number[][]; usage: { promptTokens: number; totalTokens: number } }
   }> {
     const send = async (dimensions: number | undefined): Promise<OpenAIEmbeddingResponse> => {
       if (this.isFullUrl) {
@@ -253,18 +253,22 @@ export class OpenAICompatibleEmbedder implements IEmbedder {
     }
 
     const check = (response: OpenAIEmbeddingResponse) => {
-      // Decode once here and reuse the projected vectors in the caller and validation.
-      const projected = projectEmbeddingResponse(response)
-      if (this.dimensions === undefined) return { response, projected }
-      if (!response?.data || response.data.length !== texts.length) {
-        throw new Error("Invalid response from embedding endpoint")
-      }
-      for (const vector of projected.embeddings) {
-        if (Array.isArray(vector) && vector.length === this.dimensions) continue
-        throw new Error(
-          `Embedding endpoint returned ${Array.isArray(vector) ? vector.length : 0} dimensions, but ${this.dimensions} are configured. ` +
-            "Set the configured dimension to match the model output or use an endpoint that supports the requested dimensions.",
-        )
+      // Guard the shape before decoding. A 200 response with an error body has no
+      // data, so decoding it first would throw a raw TypeError. Leave validation
+      // free to read response.error for that case.
+      const hasData = Array.isArray(response?.data)
+      const projected = hasData ? projectEmbeddingResponse(response) : undefined
+      if (this.dimensions !== undefined) {
+        if (!hasData || response.data.length !== texts.length) {
+          throw new Error("Invalid response from embedding endpoint")
+        }
+        for (const vector of projected!.embeddings) {
+          if (Array.isArray(vector) && vector.length === this.dimensions) continue
+          throw new Error(
+            `Embedding endpoint returned ${Array.isArray(vector) ? vector.length : 0} dimensions, but ${this.dimensions} are configured. ` +
+              "Set the configured dimension to match the model output or use an endpoint that supports the requested dimensions.",
+          )
+        }
       }
       return { response, projected }
     }
@@ -311,6 +315,7 @@ export class OpenAICompatibleEmbedder implements IEmbedder {
 
       try {
         const { projected } = await this.request(batchTexts, model)
+        if (!projected) throw new Error("Invalid response from embedding endpoint")
 
         return projected
       } catch (error) {
