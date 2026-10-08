@@ -562,7 +562,6 @@
   min-width: 0;
   height: 24px;
   border-radius: 5px;
-  overflow: hidden;
 }
 
 .prompt-selector {
@@ -578,7 +577,19 @@
 
 .prompt-selector[data-part="model"] {
   flex: 0 1 auto;
-  min-width: 40px;
+  min-width: 6em;
+}
+
+/* A long agent name truncates. It is capped, and it shrinks much slower than
+   the model, so the model gives up its room first and a short agent name like
+   "Code" stays readable. */
+.prompt-selector[data-part="agent"] {
+  flex: 0 0.1 auto;
+  min-width: 3em;
+}
+
+.prompt-selectors .prompt-selector[data-part="agent"] [data-slot="popover-trigger"] {
+  max-width: 10em;
 }
 
 .prompt-selector > [data-component="tooltip-trigger"] {
@@ -593,7 +604,7 @@
   position: absolute;
   top: 6px;
   bottom: 6px;
-  left: 0;
+  inset-inline-start: 0;
   z-index: 1;
   width: 1px;
   background: color-mix(in srgb, var(--vscode-foreground) 22%, transparent);
@@ -607,7 +618,7 @@
   opacity: 0;
 }
 
-.prompt-selectors .prompt-selector [data-component="button"] {
+.prompt-selectors .prompt-selector [data-slot="popover-trigger"] {
   flex: 1 1 auto;
   min-width: 0;
   max-width: 100%;
@@ -626,38 +637,39 @@
   transition: background-color 120ms ease;
 }
 
-.prompt-selectors .prompt-selector [data-component="button"]:hover:not(:disabled) {
+.prompt-selectors .prompt-selector [data-slot="popover-trigger"]:hover:not(:disabled) {
   background: var(--button-ghost-hover, var(--surface-base-hover, rgba(128, 128, 128, 0.2)));
 }
 
-.prompt-selectors .prompt-selector [data-component="button"][data-expanded]:not(:disabled) {
+.prompt-selectors .prompt-selector [data-slot="popover-trigger"][data-expanded]:not(:disabled) {
   background: var(--vscode-toolbar-activeBackground, var(--button-ghost-hover, var(--surface-base-hover)));
 }
 
-.prompt-selectors .prompt-selector [data-component="button"]:active:not(:disabled) {
+.prompt-selectors .prompt-selector [data-slot="popover-trigger"]:active:not(:disabled) {
   opacity: 0.8;
 }
 
 /* Focus shows only the ring. The outer parts take the group radius, so the
    ring and the fills follow the rounded corners instead of being clipped. */
-.prompt-selectors .prompt-selector [data-component="button"]:focus-visible {
+.prompt-selectors .prompt-selector [data-slot="popover-trigger"]:focus-visible {
   position: relative;
   z-index: 2;
   outline: 1px solid var(--border-focus);
   outline-offset: -1px;
 }
 
-.prompt-selector:not(.prompt-selector:has([data-slot="popover-trigger"]) ~ .prompt-selector) [data-component="button"] {
-  border-top-left-radius: 5px;
-  border-bottom-left-radius: 5px;
+.prompt-selector:not(.prompt-selector:has([data-slot="popover-trigger"]) ~ .prompt-selector)
+  [data-slot="popover-trigger"] {
+  border-start-start-radius: 5px;
+  border-end-start-radius: 5px;
 }
 
-.prompt-selector:not(:has(~ .prompt-selector [data-slot="popover-trigger"])) [data-component="button"] {
-  border-top-right-radius: 5px;
-  border-bottom-right-radius: 5px;
+.prompt-selector:not(:has(~ .prompt-selector [data-slot="popover-trigger"])) [data-slot="popover-trigger"] {
+  border-start-end-radius: 5px;
+  border-end-end-radius: 5px;
 }
 
-.prompt-selectors .prompt-selector[data-part="variant"] [data-component="button"] {
+.prompt-selectors .prompt-selector[data-part="variant"] [data-slot="popover-trigger"] {
   padding: 0 6px;
   color: var(--text-weak, var(--vscode-descriptionForeground));
 }
@@ -672,7 +684,10 @@
 }
 
 .prompt-selectors .prompt-selector[data-part="variant"] .selector-trigger-chevron,
-.prompt-selectors:not(:has([data-part="variant"] [data-slot="popover-trigger"])) .model-selector-trigger-chevron {
+.prompt-selectors:not(:has([data-part="variant"] [data-slot="popover-trigger"])) .model-selector-trigger-chevron,
+.prompt-selectors:not(:has(:is([data-part="model"], [data-part="variant"]) [data-slot="popover-trigger"]))
+  [data-part="agent"]
+  .selector-trigger-chevron {
   display: block;
 }
 
@@ -712,13 +727,13 @@
 .prompt-selectors[data-tight] .thinking-selector-trigger-label,
 .prompt-selectors .thinking-selector-trigger-label[data-unset] {
   max-width: 0;
-  margin-right: -4px;
+  margin-inline-end: -4px;
   opacity: 0;
 }
 
 .prompt-selectors[data-peek] .thinking-selector-trigger-label {
   max-width: 8em;
-  margin-right: 0;
+  margin-inline-end: 0;
   opacity: 1;
 }
 
@@ -831,7 +846,7 @@ body.vscode-reduce-motion .prompt-action {
 
 .prompt-action[data-folded] {
   max-width: 0;
-  margin-left: -4px;
+  margin-inline-start: -4px;
   opacity: 0;
   visibility: hidden;
   transition:
@@ -842,8 +857,8 @@ body.vscode-reduce-motion .prompt-action {
 }
 
 .prompt-action:first-child[data-folded] {
-  margin-left: 0;
-  margin-right: -4px;
+  margin-inline-start: 0;
+  margin-inline-end: -4px;
 }
 
 .prompt-more-button {
@@ -851,7 +866,9 @@ body.vscode-reduce-motion .prompt-action {
 }
 
 /* A folded action is on (auto-approve, sandbox). Same dot as the status buttons. */
-.prompt-more-button[data-active]::after {
+/* A folded action has state (a toggle that is on, indexing progress or an
+   error). Same dot as the status buttons, colored by the most important state. */
+.prompt-more-button:is([data-dot], [data-busy])::after {
   content: "";
   position: absolute;
   top: 1px;
@@ -863,10 +880,32 @@ body.vscode-reduce-motion .prompt-action {
   box-shadow: 0 0 0 1px var(--surface-base, var(--vscode-editor-background));
 }
 
-/* Folded actions menu. Matches the Agent Manager split-button menu
-   (.am-split-menu): same item padding, default highlight, 16px icon slot. */
+.prompt-more-button[data-dot="warning"]::after {
+  background: var(--vscode-charts-yellow, #cca700);
+}
+
+.prompt-more-button[data-dot="error"]::after {
+  background: var(--vscode-errorForeground, #f48771);
+}
+
+/* A folded action is working (for example enhance). The dot pulses. */
+.prompt-more-button[data-busy]:not([data-dot])::after {
+  background: var(--border-focus, var(--vscode-focusBorder));
+}
+
+.prompt-more-button[data-busy]::after {
+  animation: prompt-more-pulse 1200ms ease-in-out infinite;
+}
+
+@keyframes prompt-more-pulse {
+  50% {
+    opacity: 0.35;
+  }
+}
+
 .prompt-more-menu[data-component="dropdown-menu-content"] {
   min-width: 200px;
+  max-width: min(300px, calc(100vw - 16px));
 }
 
 .prompt-more-menu[data-component="dropdown-menu-content"] [data-slot="dropdown-menu-item"] {
@@ -898,8 +937,47 @@ body.vscode-reduce-motion .prompt-action {
   color: inherit;
 }
 
-.prompt-more-menu [data-slot="dropdown-menu-item"][data-active] .prompt-more-icon {
+.prompt-more-menu [data-slot="dropdown-menu-item"][data-tone="success"] .prompt-more-icon {
   color: var(--vscode-testing-iconPassed, #73c991);
+}
+
+.prompt-more-menu [data-slot="dropdown-menu-item"][data-tone="warning"] .prompt-more-icon {
+  color: var(--vscode-charts-yellow, #cca700);
+}
+
+.prompt-more-menu [data-slot="dropdown-menu-item"][data-tone="error"] .prompt-more-icon {
+  color: var(--vscode-errorForeground, #f48771);
+}
+
+.prompt-more-menu [data-slot="dropdown-menu-item"] {
+  align-items: flex-start;
+}
+
+.prompt-more-icon {
+  margin-top: 1px;
+}
+
+.prompt-more-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+/* The tooltip text of the folded button, so the menu keeps its hint. */
+.prompt-more-menu [data-slot="dropdown-menu-item-description"] {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  font-size: var(--kilo-font-size-11);
+  color: var(--text-weak, var(--vscode-descriptionForeground));
+  white-space: normal;
+}
+
+.prompt-more-menu [data-slot="dropdown-menu-item"][data-highlighted] [data-slot="dropdown-menu-item-description"] {
+  color: inherit;
+  opacity: 0.8;
 }
 
 .prompt-indexing-button {

@@ -1,31 +1,28 @@
 /**
  * PromptSelectors - agent, model, and reasoning as one split control.
  *
- * Each segment is the existing selector, so its popover, slash command, and
- * keyboard shortcuts do not change. The group adds:
+ * A layout shell shared by the chat prompt and the Agent Manager New Worktree
+ * dialog. Callers pass their existing selectors as slots, so each popover,
+ * slash command, and keyboard shortcut keeps its own code path. The shell adds:
  * - Menu bar behavior: while one popover is open, moving the pointer onto
  *   another segment opens that segment instead.
  * - Left and Right arrows move focus between segments.
- * - Reasoning collapses before the model name truncates (`data-tight`), and a
- *   changed reasoning value peeks out for a moment (`data-peek`).
+ * - Reasoning collapses before the agent or model name truncates
+ *   (`data-tight`), and a changed reasoning value peeks out for a moment
+ *   (`data-peek`).
  */
 
-import { type Accessor, Component, onCleanup, onMount } from "solid-js"
-import { ModeSwitcher } from "../shared/ModeSwitcher"
-import { ModelSelector } from "../shared/ModelSelector"
-import { ThinkingSelector } from "../shared/ThinkingSelector"
-import { FOLD_RESERVE } from "./prompt-fold"
+import { type Component, type JSX, onCleanup, onMount } from "solid-js"
+import { reserve } from "./prompt-fold"
 
 interface Props {
-  sessionID: Accessor<string | undefined>
-  blocked: boolean
-  hint?: { title: string; keybind: string }
+  agent?: JSX.Element
+  model?: JSX.Element
+  variant?: JSX.Element
 }
 
 const TRIGGER = "[data-slot='popover-trigger']"
 const PEEK = 1500
-/** Covers the toolbar gaps the fold math leaves out, so the cap stays below the real space. */
-const FOLD_MARGIN = 8
 
 function triggers(root: HTMLElement) {
   return Array.from(root.querySelectorAll<HTMLButtonElement>(`.prompt-selector ${TRIGGER}`)).filter(
@@ -34,26 +31,38 @@ function triggers(root: HTMLElement) {
 }
 
 /**
- * True when the pill with the full model and reasoning labels does not fit.
- * The room is the pill width now plus the free space in the toolbar. It does
- * not change when the reasoning label collapses, so the result cannot
- * oscillate.
+ * Width a label needs beyond the width it has now (0 when it is not
+ * truncated). A label that truncates at its segment's max-width (the agent
+ * cap) cannot use more room, so only the part below the cap counts.
+ */
+function cut(el: HTMLElement | null) {
+  if (!el) return 0
+  const over = Math.max(0, el.scrollWidth - el.clientWidth)
+  const button = el.closest<HTMLElement>(TRIGGER)
+  const max = button ? getComputedStyle(button).maxWidth : ""
+  if (!button || !max.endsWith("px")) return over
+  return Math.max(0, Math.min(over, parseFloat(max) - button.getBoundingClientRect().width))
+}
+
+/**
+ * True when the control with full labels does not fit. The room is the
+ * control width now plus the free space in the toolbar. It does not change
+ * when the reasoning label collapses, so the result cannot oscillate.
  *
  * While prompt actions are folded, the room is capped to the space the fold
- * keeps for the pill. At each fold step the pill gets exactly that space, and
- * only the space between two steps is larger. Without the cap the label would
- * show in that space and collapse again when the next action unfolds. With the
- * cap the order is the same in both directions: actions unfold first, then the
- * reasoning label shows.
+ * keeps for the control. At each fold step the control gets exactly that
+ * space, and only the space between two steps is larger. Without the cap the
+ * label would show in that space and collapse again when the next action
+ * unfolds. With the cap the order is the same in both directions: actions
+ * unfold first, then the reasoning label shows.
  */
 function tight(root: HTMLElement) {
-  const model = root.querySelector<HTMLElement>(".model-selector-trigger-label")
   const level = root.querySelector<HTMLElement>(".thinking-selector-trigger-label")
   const hint = root.parentElement
-  if (!model || !level || !hint) return false
+  if (!level || !hint) return false
   const button = level.parentElement
   const gap = button ? parseFloat(getComputedStyle(button).columnGap) || 0 : 0
-  const used = level.getBoundingClientRect().width + gap + (parseFloat(getComputedStyle(level).marginRight) || 0)
+  const used = level.getBoundingClientRect().width + gap + (parseFloat(getComputedStyle(level).marginInlineEnd) || 0)
   const box = getComputedStyle(hint)
   const inner = hint.clientWidth - parseFloat(box.paddingLeft) - parseFloat(box.paddingRight)
   const others = Array.from(hint.children).reduce(
@@ -64,8 +73,10 @@ function tight(root: HTMLElement) {
   const width = root.getBoundingClientRect().width
   const free = Math.max(0, inner - gaps - others - width)
   const folded = !!hint.querySelector(".prompt-input-hint-actions > .prompt-action:first-child:not([data-folded])")
-  const room = folded ? Math.min(width + free, FOLD_RESERVE - FOLD_MARGIN) : width + free
-  const need = width - used - model.clientWidth + model.scrollWidth + level.scrollWidth + gap
+  const room = folded ? Math.min(width + free, reserve(hint)) : width + free
+  const labels =
+    cut(root.querySelector(".mode-switcher-trigger-label")) + cut(root.querySelector(".model-selector-trigger-label"))
+  const need = width - used + labels + level.scrollWidth + gap
   return need > room + 1
 }
 
@@ -117,17 +128,28 @@ export const PromptSelectors: Component<Props> = (props) => {
     })
   })
 
+  // Pending hover switch, cancelled on a newer hover and on unmount.
+  let hover = 0
+  onCleanup(() => cancelAnimationFrame(hover))
+
+  /** Another segment's popover is open, so hovering `target` should switch to it. */
+  const switchable = (target: HTMLButtonElement) => {
+    if (!root || !target.isConnected || target.disabled || target.hasAttribute("data-expanded")) return false
+    return triggers(root).some((el) => el !== target && el.hasAttribute("data-expanded"))
+  }
+
   const onPointerOver = (e: PointerEvent) => {
-    if (!root || e.pointerType === "touch") return
+    if (e.pointerType === "touch") return
     const target = (e.target as HTMLElement).closest<HTMLButtonElement>(TRIGGER)
-    if (!target || target.disabled || target.hasAttribute("data-expanded")) return
-    const open = triggers(root).some((el) => el !== target && el.hasAttribute("data-expanded"))
-    if (!open) return
+    if (!target || !switchable(target)) return
     // The new popover takes focus, so the open one closes as an outside focus.
     // Wait one frame so the hover tooltip has opened first. Opening the popover
-    // then closes it, the same as a click does.
-    requestAnimationFrame(() => {
-      if (!target.matches(":hover") || target.hasAttribute("data-expanded")) return
+    // then closes it, the same as a click does. Check again after the frame:
+    // the open popover may have closed, or the pointer may have left.
+    cancelAnimationFrame(hover)
+    hover = requestAnimationFrame(() => {
+      hover = 0
+      if (!target.matches(":hover") || !switchable(target)) return
       target.click()
     })
   }
@@ -145,13 +167,13 @@ export const PromptSelectors: Component<Props> = (props) => {
   return (
     <div class="prompt-selectors" ref={root} onPointerOver={onPointerOver} onKeyDown={onKeyDown}>
       <div class="prompt-selector" data-part="agent">
-        <ModeSwitcher sessionID={props.sessionID} blocked={props.blocked} hint={props.hint} />
+        {props.agent}
       </div>
       <div class="prompt-selector" data-part="model">
-        <ModelSelector sessionID={props.sessionID} blocked={props.blocked} />
+        {props.model}
       </div>
       <div class="prompt-selector" data-part="variant">
-        <ThinkingSelector sessionID={props.sessionID} blocked={props.blocked} />
+        {props.variant}
       </div>
     </div>
   )

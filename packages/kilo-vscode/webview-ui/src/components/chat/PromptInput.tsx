@@ -44,13 +44,15 @@ import { useConfig } from "../../context/config"
 import { recommend, type ManagerContext } from "../../utils/shortcut-hint"
 import { PromptHint } from "./PromptHint"
 import { useProvider } from "../../context/provider"
-import { ModelSelectorBase } from "../shared/ModelSelector"
+import { ModelSelector, ModelSelectorBase } from "../shared/ModelSelector"
+import { ModeSwitcher } from "../shared/ModeSwitcher"
+import { ThinkingSelector } from "../shared/ThinkingSelector"
 import { SandboxButtonBase, SandboxTooltipContent } from "../shared/SandboxButton"
 import { SpeechToTextButton } from "../speech-to-text/SpeechToTextButton"
 import { canUseSpeechToText, selectedSpeechToTextModel } from "../speech-to-text/availability"
 import { PromptSelectors } from "./PromptSelectors"
 import { PromptOverflow, type OverflowItem } from "./PromptOverflow"
-import { fold } from "./prompt-fold"
+import { fold, reserve } from "./prompt-fold"
 import { useFileMention } from "../../hooks/useFileMention"
 import { usePasteCollapse } from "../../hooks/usePasteCollapse"
 import type { MentionResult, WorktreeReference } from "../../hooks/file-mention-utils"
@@ -1944,39 +1946,62 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     onCleanup(() => registerPromptMentionDrop(undefined, undefined))
   })
 
-  // Progressive toolbar fold, driven by the toolbar width only. The list goes
-  // from low to high priority, so low priority actions fold first and the
-  // actions next to voice and send stay in place.
+  // Progressive toolbar fold, driven by the toolbar width and font size only.
+  // The list goes from low to high priority, so low priority actions fold first
+  // and the actions next to voice and send stay in place. All sizes are read
+  // from the DOM, so a larger font scales the fold steps.
   let hintRef: HTMLDivElement | undefined
   let pinnedRef: HTMLDivElement | undefined
-  const [hintWidth, setHintWidth] = createSignal(Number.POSITIVE_INFINITY)
-  const [pinnedWidth, setPinnedWidth] = createSignal(0)
+  const [metrics, setMetrics] = createSignal({ width: Number.POSITIVE_INFINITY, pinned: 0, slot: 26, reserve: 210 })
   onMount(() => {
-    const observer = new ResizeObserver(() => {
-      // 12px toolbar padding plus the 8px gap between selectors and actions.
-      if (hintRef) setHintWidth(hintRef.clientWidth - 20)
-      if (pinnedRef) setPinnedWidth(pinnedRef.offsetWidth)
-    })
+    const measure = () => {
+      const hint = hintRef
+      const pinned = pinnedRef
+      if (!hint || !pinned) return
+      const box = getComputedStyle(hint)
+      const actions = pinned.parentElement
+      const button = actions?.querySelector<HTMLElement>(".prompt-action [data-component='icon-button']")
+      const gap = actions ? parseFloat(getComputedStyle(actions).columnGap) || 0 : 0
+      setMetrics({
+        width:
+          hint.clientWidth -
+          parseFloat(box.paddingLeft) -
+          parseFloat(box.paddingRight) -
+          (parseFloat(box.columnGap) || 0),
+        pinned: pinned.getBoundingClientRect().width,
+        slot: (button?.getBoundingClientRect().width ?? 22) + gap,
+        reserve: reserve(hint),
+      })
+    }
+    const observer = new ResizeObserver(measure)
     if (hintRef) observer.observe(hintRef)
     if (pinnedRef) observer.observe(pinnedRef)
     onCleanup(() => observer.disconnect())
   })
   const foldable = createMemo(() => {
     const list: OverflowItem[] = []
-    if (showIndexing())
+    if (showIndexing()) {
+      const tone = indexing.tone()
       list.push({
         key: "indexing",
         icon: "database",
         label: language.t("prompt.action.indexing"),
+        description: indexing.status().message || indexing.label(),
+        tone: tone === "muted" ? undefined : tone,
+        dot: tone === "error" || tone === "warning" ? tone : undefined,
         run: handleOpenIndexingSettings,
       })
+    }
     if (sandboxVisible())
       list.push({
         key: "sandbox",
         icon: "lock",
         label: language.t(sandboxEnabled() ? "prompt.action.sandbox.disable" : "prompt.action.sandbox.enable"),
+        description:
+          sandboxReady() && !sandboxAvailable() ? (sandboxReason() ?? language.t("common.requestFailed")) : undefined,
         disabled: sandboxDisabled(),
-        active: sandboxEnabled(),
+        tone: sandboxEnabled() ? "success" : undefined,
+        dot: sandboxEnabled() ? "success" : undefined,
         run: toggleSandbox,
       })
     list.push({
@@ -1984,18 +2009,21 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       icon: "wand-sparkles",
       label: language.t("prompt.action.enhance"),
       disabled: !canEnhance(),
+      busy: enhancing(),
       run: handleEnhance,
     })
     list.push({
       key: "approve",
       icon: "shield",
       label: language.t(autoApprove() ? "prompt.action.autoApprove.disable" : "prompt.action.autoApprove.enable"),
-      active: autoApprove(),
+      description: language.t("prompt.action.autoApprove.sandboxExcluded"),
+      tone: autoApprove() ? "success" : undefined,
+      dot: autoApprove() ? "success" : undefined,
       run: () => vscode.postMessage({ type: "toggleAutoApprove" }),
     })
     return list
   })
-  const shown = createMemo(() => fold({ width: hintWidth(), pinned: pinnedWidth(), count: foldable().length }))
+  const shown = createMemo(() => fold({ ...metrics(), count: foldable().length }))
   const hidden = createMemo(() => foldable().slice(0, foldable().length - shown()))
   const folded = (key: string) => hidden().some((item) => item.key === key)
 
@@ -2350,7 +2378,11 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
         </div>
       </div>
       <div class="prompt-input-hint" ref={hintRef}>
-        <PromptSelectors sessionID={sid} blocked={props.blocked?.() ?? false} hint={modeHint()} />
+        <PromptSelectors
+          agent={<ModeSwitcher sessionID={sid} blocked={props.blocked?.() ?? false} hint={modeHint()} />}
+          model={<ModelSelector sessionID={sid} blocked={props.blocked?.() ?? false} />}
+          variant={<ThinkingSelector sessionID={sid} blocked={props.blocked?.() ?? false} />}
+        />
         <div class="prompt-input-hint-actions">
           <div class="prompt-action" data-folded={hidden().length === 0 ? "" : undefined}>
             <PromptOverflow items={hidden()} />
