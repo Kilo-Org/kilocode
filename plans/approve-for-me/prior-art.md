@@ -1,63 +1,49 @@
 # Prior art
 
-What earlier attempts offer, and what we take or leave.
-References: PR/issue numbers are in `Kilo-Org/kilocode` unless noted.
+Earlier work on this feature, and what we take or leave. This file keeps ideas only. No code reuse is implied. If code from any earlier work is reused, check its license and credit the author.
 
-## 1. Timeline
+## 1. Earlier approaches
 
-| Item | State | Idea |
-|---|---|---|
-| Legacy #3643 (2025-11) | merged (legacy) | LLM gatekeeper inside YOLO. See `legacy-gatekeeper.md` |
-| [#7684](https://github.com/Kilo-Org/kilocode/issues/7684) | closed (stale bot) | Reintroduce for CLI and the new extension. Needs fallback to manual approval when unsure |
-| [#9138](https://github.com/Kilo-Org/kilocode/issues/9138) | closed (stale bot) | "LLM-based bash command auto-approval", modelled on Claude Code auto mode: safe-tool allowlist, then a two-stage classifier. Names prompt injection and false-positive recovery as the hard parts. Comment: bind the decision to the full action context (cwd, files, MCP identity), not just the command string |
-| #10248, #10249 to #10255 | closed (stale bot) | Rollout tracker. #10252: migrate legacy YOLO settings and never silently turn guarded YOLO into allow-all. #10253: show decisions inline with reason, model and cost; keep approvals quiet and denials prominent |
-| #10267 | closed (stale bot) | Top-level `gatekeeper` config, default model `kilo-auto/balanced`, separate from `small_model` |
-| #11619 | closed (stale bot) | Runs only on the would-auto-approve path. A block is a tool error so the agent continues. Fails closed to a human. Reasoning-blind transcript. Escalates after 3 consecutive or 20 total denials |
-| [#13893](https://github.com/Kilo-Org/kilocode/pull/13893) / [#14033](https://github.com/Kilo-Org/kilocode/issues/14033) | open | Deterministic floor decided by what a command does, plus a narrow reviewer. 129 files, +15.5k lines |
-| [#14636](https://github.com/Kilo-Org/kilocode/pull/14636) | open | Entry point (this plan's PR 1) |
+| Approach | Idea |
+|---|---|
+| Legacy Gatekeeper (Kilo's own, 2025-11) | An LLM safety check inside YOLO mode. See `legacy-gatekeeper.md` |
+| Reviewer on the auto-approve path | Runs only on what would be approved anyway. A block is a tool error, so the agent continues. Fails closed to a human. The reviewer sees no transcript. After repeated denials it hands control to the user |
+| Deterministic floor | Decides by what a command does, not how it is spelled, using a parsed command and path facts. A narrow reviewer can only undo an ask that the floor raised |
+| Modelled on other tools' auto modes | A safe-tool allowlist first, then a classifier. Names prompt injection and false positives as the hard parts. Binds the decision to the full action context (folder, files, MCP identity), not only the command text |
+| Migration and visibility ideas | Never turn a guarded legacy setup into allow-all. Show decisions inline with reason, model and cost. Keep approvals quiet and denials prominent |
 
-Why the earlier ones died: they were large, there was no agreed owner, and two people sometimes built the same thing in parallel.
-The stale bot closed them without a product decision.
+Why earlier efforts stalled: they were large, and a large single change is hard to review and merge. This plan builds in small PRs behind one hidden flag.
 
-## 2. PR #13893 in short
+## 2. Evidence for the design
 
-It is **not** an approve-for-me design. It is a deterministic floor under allow rules. It can raise `allow` to `ask` or `deny`.
-Its reviewer can only undo asks that the layer itself raised. It never answers asks from the normal ruleset.
-This is the opposite direction of Approve for Me, but its engine (facts, rules, tests) is what tiers 2 and 3 need.
+A public benchmark of a deterministic layer reported the following, over ten tasks:
 
-Pipeline (all in the PR; paths are PR paths under `packages/opencode/src/kilocode/security-decision/` unless noted):
+- With no layer, attack success was 100%.
+- With the layer plus a sandbox, attack success was 2.6%, with 5 false positives.
+- With the layer, the sandbox and a live reviewer model, attack success was 5.3%, with 0 false positives. **The reviewer made attacks succeed more** by allowing a source-tree deletion through a class it was allowed to judge.
 
-1. Facts from the tree-sitter AST (`kilocode/tool/shell-security-facts.ts`) and from path classification (`adapter.ts`).
-2. Pure core (`core.ts`, `types.ts`, `rules.ts`) with no IO. Result: `{ decision, rule_id, reviewable }`.
-3. Optional reviewer (`reviewer.ts`, `reviewer-config.ts`, `reviewer-binding.ts`) only on `ask` + `reviewable`.
-4. Live re-check of state after the verdict (`gate.ts:252-270`).
-5. Escalation breaker (`continuation.ts:36`: 3 consecutive, window 20, recent 5).
-6. Shared status for clients (`packages/core/src/security-status.ts`).
-
-Author's benchmark (#14033): no layer 100% attack success; layer plus sandbox 2.6% with 5 false positives out of 10 tasks;
-layer plus live reviewer (Qwen 3.5 35B) 5.3% with 0 false positives. **The reviewer made attack success worse** by allowing a
-source-tree deletion through a reviewable class. That is the main evidence for our "shadow first" and "narrow reviewer" decisions.
+This is the main evidence for the "shadow first", "narrow reviewer" and "deterministic-only first release" decisions.
 
 ## 3. What to take
 
-| Item | Where in #13893 | Use in our plan |
-|---|---|---|
-| Pure core contract: `decision`, `rule_id`, `reviewable`, no IO | `types.ts`, `rules.ts` | Our `Verdict` (design 4) |
-| Stable reason codes as the only text sent back to the model | `rules.ts:6-8`, `block.ts` | Block message |
-| Aggregation by precedence, not fact order | `core.ts:885-911` | Tier 2 |
-| Canonical argv (`bare`, `delivered`), `pathed` and `assigns` flags | `core.ts:30-63`, `shell-security-facts.ts:58-74,39-48` | Tier 2 facts |
-| Git verb plus flag allowlist; global flags refused | `core.ts:191-201,414-453` | Tier 2 |
-| Symlink resolution that fails closed (16 hops) | `realpath.ts:71-99` | Path facts |
-| Path classes; git hooks deny; control plane ask; subtree inheritance | `adapter.ts:224-279` | Path facts |
-| Reviewer input: facts only, in-workspace paths only, byte budget | `reviewer.ts:263-288,226-242` | Tier 3 input. **Drop the `task` field** (it is model-written prose, `adapter.ts:666-670`) |
-| Prompt framing: untrusted data, `keep_ask` is always safe | `reviewer.ts:310-336` | Tier 3 prompt |
-| Strict decision parse, lenient reason code, one shared deadline | `reviewer.ts:356-394` | Tier 3 |
-| Reviewer model trust rule (env or global only; merged provider must equal global) | `reviewer-config.ts:94-139` | Design 5.3 |
-| Escalation breaker numbers | `continuation.ts:36` | Design 8 |
-| Attack and benign corpus; spelling and route equivalence tests | `test/.../corpus.ts:86-161`, `route-equivalence.test.ts`, `spelling-equivalence.test.ts`, `bypass-regression.test.ts` | Evaluation corpus and PR 4 tests |
-| One status mapping for all clients | `packages/core/src/security-status.ts` | Client labels |
+| Idea | Use in our plan |
+|---|---|
+| A pure core: `decision`, `rule_id`, `reviewable`, no IO | The `Verdict` type (design 4) |
+| Stable reason codes as the only text sent back to the model | Block message (design 5.5) |
+| Aggregate by precedence, not by fact order | Tier 2 |
+| Canonical argv, flags for "delivered by path" and "has assignments" | Tier 2 facts |
+| Git verb plus flag allowlist, global flags refused | Tier 2 exact argv shapes (design 2.3) |
+| Symlink resolution that fails closed, with a hop limit | Path facts and link-safe writes (design 2.14) |
+| Path classes: hooks deny, control plane ask, subtree inheritance | Path facts (design 2.6) |
+| Reviewer input: facts only, in-workspace paths only, byte budget | Tier 3 input (design 5.1). The model-written task text is dropped |
+| Prompt framing: untrusted data, `keep_ask` is always safe | Tier 3 prompt (design 5.2) |
+| Strict decision parse, lenient reason code, one shared deadline | Tier 3 |
+| Reviewer model trust rule: environment or global config only, the merged provider must equal the global one | Reviewer resolver (design 5.3) |
+| Escalate to the user after 3 consecutive blocks, or 5 in the last 20 calls | Backstop (design 8) |
+| An attack and benign corpus, with spelling and route equivalence tests | Evaluation corpus and PR 5 tests |
+| One status mapping for all clients | Client labels (design 7) |
 
-Attack classes from the corpus, as a checklist for PR 5:
+Attack classes for the corpus, as a checklist for PR 5:
 carried program (`sh -c`, `python -c`, `awk`, `caffeinate ...`); secret read through git or an unknown reader (`git show HEAD:.env`,
 `xxd .env`, `curl --data-binary @.env`, `env > file`); persistence and destruction (`.git/hooks`, `core.hooksPath`, `rm -rf ~`, `dd of=/dev/...`);
 dependency install; host control (docker socket, ssh, `launchctl`, `crontab`, `defaults write`);
@@ -65,18 +51,11 @@ spelling rewrites (`PATH=`, `alias`, quoting, `\rm`, `/bin/rm`, `.GIT/hooks`, `c
 
 ## 4. What to leave
 
-- The single 15.5k-line PR. Four concerns are bundled (RPC fix, human-only asks, engine, UI).
-- Large edits in shared files (`permission/index.ts` +219 lines with 25 markers, `tool/shell.ts` +151, `session/tools.ts` +99).
-  We use a hook in a Kilo-owned file.
-- Config through environment variables only. We need a schema key, a settings UI and a trust scope.
-- The macOS-only Seatbelt containment probe as a requirement.
-- Module-level mutable reviewer state and the dynamic `AppRuntime` import (`reviewer-binding.ts:77-89`), which breaks the repo's facade rule.
-- Making `DESTRUCTIVE_FS` reviewable. That is where the reviewer failed in the benchmark.
+- A single very large change. Four concerns were bundled (an RPC fix, human-only asks, the engine, the UI).
+- Large edits in shared upstream files. We use a hook in a Kilo-owned file.
+- Configuration through environment variables only. We need a schema key, a settings page and a trust scope.
+- A macOS-only containment probe as a requirement.
+- Module-level mutable reviewer state and a dynamic runtime import, which break the repository's facade rule.
+- Letting the reviewer judge destructive file operations. That is where it failed in the benchmark.
 - Treating normal developer commands as `ask` (`git add`, `git commit`, `grep`, `find`). Approve for Me exists to remove those prompts.
-- `kilo debug security-bench` and 9.8k lines of tests in one go. Bring tests with each rule.
-
-## 5. Coordination
-
-- Post the plan link on #14033, thank the author, and propose: they own the deterministic engine PRs (our PR 5), we own the hook, state, UI and reviewer.
-- Ask the maintainers to confirm the split before PR 5 starts, and record the decision on #14033.
-- Credit the author in PR 5 and in the docs.
+- A large debug benchmark command and a very large test suite in one go. Tests come with each rule.
