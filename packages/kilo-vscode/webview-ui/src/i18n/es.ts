@@ -60,6 +60,7 @@ export const dict = {
   ...anacondaDesktopDict,
   ...cloudProviderDict,
   "task.swarm.title": "Tablero",
+  "task.swarm.open": "Abrir tablero",
   "task.swarm.refresh": "Actualizar",
   "task.swarm.reset": "Restablecer tablero",
   "task.swarm.resetTitle": "¿Restablecer este tablero?",

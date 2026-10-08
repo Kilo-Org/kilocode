@@ -64,6 +64,7 @@ export const dict = {
   ...anacondaDesktopDict,
   ...cloudProviderDict,
   "task.swarm.title": "보드",
+  "task.swarm.open": "보드 열기",
   "task.swarm.refresh": "새로 고침",
   "task.swarm.reset": "보드 초기화",
   "task.swarm.resetTitle": "이 보드를 초기화할까요?",

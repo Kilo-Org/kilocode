@@ -180,6 +180,32 @@ internal class SessionScroll(
         return true
     }
 
+    /**
+     * Scrolls so [id]'s turn sits at the top of the viewport, like [scrollMessageBottom] but anchored to
+     * the top of the turn rather than the bottom of a message — used by the prompt navigator, whose
+     * ticks jump to where a prompt starts rather than where the transcript ends.
+     */
+    @RequiresEdt
+    fun scrollMessageTop(id: String): Boolean {
+        val target = messages.findTurn(id) ?: return false
+        if (!target.isVisible) return false
+        user = false
+        pause = false
+        stable = -1
+        auto = true
+        show(messages)
+        auto = false
+        val gen = ++seq
+        if (SwingUtilities.isEventDispatchThread()) {
+            topPass(gen, id, FOLLOW_PASSES)
+            return true
+        }
+        ApplicationManager.getApplication().invokeLater {
+            topPass(gen, id, FOLLOW_PASSES)
+        }
+        return true
+    }
+
     @RequiresEdt
     fun following(): Boolean {
         return component.viewport.view === messages && tail
@@ -373,6 +399,43 @@ internal class SessionScroll(
     }
 
     @RequiresEdt
+    private fun topPass(id: Int, message: String, remaining: Int) {
+        if (id != seq) return
+        val target = messages.findTurn(message)
+        if (target == null || !target.isVisible) {
+            stable = -1
+            updateJump()
+            return
+        }
+        auto = true
+        try {
+            layoutScroll()
+            val y = messageTop(target)
+            component.viewport.viewPosition = Point(0, y)
+            bar.value = y
+            // Not near(): a top-anchored jump to a short latest turn lands within the follow threshold
+            // of the bottom, and re-arming follow there would let the next streamed delta pull the view
+            // back down and undo the jump. Only a transcript that cannot scroll stays followed, where
+            // there is nothing for follow to move.
+            tail = bar.maximum <= bar.visibleAmount
+            updateJump()
+        } finally {
+            auto = false
+        }
+        syncValue()
+        if (remaining <= 0) {
+            stable = -1
+            return
+        }
+        val next = messageTop(target)
+        val left = if (next == stable) remaining - 1 else FOLLOW_PASSES
+        stable = next
+        ApplicationManager.getApplication().invokeLater {
+            topPass(id, message, left)
+        }
+    }
+
+    @RequiresEdt
     private fun layoutScroll() {
         component.validate()
     }
@@ -392,6 +455,12 @@ internal class SessionScroll(
         val point = SwingUtilities.convertPoint(target, Point(0, target.height.coerceAtLeast(1)), messages)
         val extent = component.viewport.extentSize.height
         return (point.y - extent).coerceIn(0, bottom())
+    }
+
+    @RequiresEdt
+    private fun messageTop(target: JComponent): Int {
+        val point = SwingUtilities.convertPoint(target, Point(0, 0), messages)
+        return point.y.coerceIn(0, bottom())
     }
 
     @RequiresEdt
