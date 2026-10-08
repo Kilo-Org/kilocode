@@ -71,7 +71,7 @@ The sweep owns the status labels. It adds and removes them on its own. Do not ma
 
 ## Whose turn is it
 
-The sweep reads the comments, reviews, review replies, commits and reopen events of each open community PR. Drafts are skipped. A reopen by the author counts as a reply. Commit dates in the future count as now.
+The sweep reads the comments, reviews, review replies, commits and reopen events of each open community PR. Drafts are skipped. A reopen by the author counts as a reply. The sweep ignores commit dates in the future.
 
 The sweep reads only the latest events. If it finds no maintainer reaction on a PR with more events than it can read, it labels the PR `needs-review` so a person decides.
 

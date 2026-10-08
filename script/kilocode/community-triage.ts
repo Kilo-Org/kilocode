@@ -125,6 +125,11 @@ export function component(body: string) {
   }
 }
 
+export function pushedAt(date: string, now: number) {
+  const at = Date.parse(date)
+  return at > now ? undefined : at
+}
+
 export type Event = { who: "author" | "maintainer"; at: number; approve?: boolean }
 
 export type State =
@@ -428,9 +433,10 @@ async function sweep() {
         events.push({ who: "maintainer", at, approve: node.state === "APPROVED" })
     }
     const commit = pr.commits.nodes.at(0)?.commit
-    // Commit dates come from the commit author. A date in the future must not
-    // count as the latest reply forever.
-    if (commit) events.push({ who: "author", at: Math.min(Date.parse(commit.committedDate), now) })
+    // Commit dates come from the commit author. A date in the future would sort
+    // after every maintainer reaction, so it is ignored.
+    const pushed = commit ? pushedAt(commit.committedDate, now) : undefined
+    if (pushed) events.push({ who: "author", at: pushed })
     // Reopening a closed PR is a reply too.
     const reopen = pr.timelineItems.nodes.at(0)
     if (reopen?.actor?.login === login) events.push({ who: "author", at: Date.parse(reopen.createdAt) })

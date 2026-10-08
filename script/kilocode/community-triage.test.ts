@@ -1,5 +1,16 @@
 import { describe, expect, test } from "bun:test"
-import { areas, classify, component, decide, digest, DAY, label, type Event, type Row } from "./community-triage"
+import {
+  areas,
+  classify,
+  component,
+  pushedAt,
+  decide,
+  digest,
+  DAY,
+  label,
+  type Event,
+  type Row,
+} from "./community-triage"
 
 const now = Date.UTC(2026, 9, 8)
 const ago = (days: number) => now - days * DAY
@@ -49,6 +60,16 @@ describe("component", () => {
   test("ignores other answers", () => {
     expect(component("### Component\n\nOther / not sure")).toBeUndefined()
     expect(component("no form")).toBeUndefined()
+  })
+})
+
+describe("pushedAt", () => {
+  test("keeps past commit dates", () => {
+    expect(pushedAt(new Date(ago(2)).toISOString(), now)).toBe(ago(2))
+  })
+
+  test("ignores future commit dates", () => {
+    expect(pushedAt(new Date(now + DAY).toISOString(), now)).toBeUndefined()
   })
 })
 
