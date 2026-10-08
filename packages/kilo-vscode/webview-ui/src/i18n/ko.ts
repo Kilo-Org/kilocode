@@ -219,6 +219,7 @@ export const dict = {
   "prompt.action.stop.background": "메인 에이전트를 중지합니다. 백그라운드 에이전트는 계속 실행됩니다.",
   "prompt.agents.show": "백그라운드 에이전트 표시",
   "prompt.action.enhance": "프롬프트 개선",
+  "prompt.action.enhanceStop": "프롬프트 개선 중지",
   "prompt.action.more": "기타 작업",
   "prompt.paste.expand": "붙여넣은 텍스트를 확장하려면 클릭",
   "prompt.issues.title": "세션 문제",

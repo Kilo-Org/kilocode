@@ -32,7 +32,7 @@ describe("PromptInput connection guard", () => {
 describe("PromptInput sandbox toggle", () => {
   it("updates the default for drafts and toggles only existing sessions", () => {
     const start = src.indexOf("const toggleSandbox = () =>")
-    const end = src.indexOf("let enhanceCounter", start)
+    const end = src.indexOf("let enhanceRequest", start)
     const toggle = src.slice(start, end)
 
     expect(start).toBeGreaterThan(-1)

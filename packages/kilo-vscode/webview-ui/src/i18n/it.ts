@@ -194,6 +194,7 @@ export const dict = {
   "prompt.action.stop.background": "Ferma l'agente principale. Gli agenti in background continuano a funzionare.",
   "prompt.agents.show": "Mostra agenti in background",
   "prompt.action.enhance": "Migliora prompt",
+  "prompt.action.enhanceStop": "Ferma il miglioramento del prompt",
   "prompt.action.more": "Altre azioni",
   "prompt.paste.expand": "Fai clic per espandere il testo incollato",
   "prompt.issues.title": "Problemi della sessione",

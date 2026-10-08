@@ -10,7 +10,12 @@ export const enhancePromptHandlers = HttpApiBuilder.group(InstanceHttpApi, "enha
     const enhance = Effect.fn("EnhancePromptHttpApi.enhance")(function* (ctx: {
       payload: typeof EnhancePromptPayload.Type
     }) {
-      const text = yield* EffectBridge.fromPromise(() => enhancePrompt(ctx.payload.text))
+      // The server interrupts this fiber when the client closes the request.
+      // Abort the model call too, so a cancelled enhancement stops using tokens.
+      const abort = new AbortController()
+      const text = yield* EffectBridge.fromPromise(() => enhancePrompt(ctx.payload.text, abort.signal)).pipe(
+        Effect.onInterrupt(() => Effect.sync(() => abort.abort())),
+      )
       return { text }
     })
 

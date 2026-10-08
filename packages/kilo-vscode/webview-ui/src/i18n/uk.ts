@@ -217,6 +217,7 @@ export const dict = {
   "prompt.action.stop.background": "Зупинити головного агента. Фонові агенти продовжать роботу.",
   "prompt.agents.show": "Показати фонових агентів",
   "prompt.action.enhance": "Покращити запит",
+  "prompt.action.enhanceStop": "Зупинити покращення запиту",
   "prompt.action.more": "Інші дії",
   "prompt.paste.expand": "Натисніть, щоб розгорнути вставлений текст",
   "prompt.issues.title": "Проблеми сесії",

@@ -57,7 +57,7 @@ import { MarketplaceService } from "./services/marketplace"
 import type { RemoteStatusService } from "./services/RemoteStatusService"
 import { resolveProjectDirectory } from "./project-directory"
 import { seedSessionStatuses, seedSessionWakeups, clientSessionStatus } from "./session-status"
-import { normalizeEnhancePromptErrorMessage } from "./enhance-prompt-error"
+import { EnhanceRequests } from "./kilo-provider/enhance-prompt"
 import { retry } from "./services/cli-backend/retry"
 import {
   integratedBrowserLinkDestination,
@@ -450,6 +450,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private providersGeneration = 0
   /** Re-fetch providers while an organization's Kilo catalog is unavailable. */
   private readonly catalogRetry = createCatalogRetry({ refresh: () => void this.fetchAndSendProviders() })
+  private readonly enhance = new EnhanceRequests(
+    (reply) => this.postMessage(reply),
+    (error) => vscode.window.showErrorMessage(`Enhance prompt failed: ${error}`),
+  )
   private sandboxRevision = 0
   private cachedAgentsMessage: unknown = null
   /** Cached skillsLoaded payload so requestSkills can be served before client is ready */
@@ -1724,31 +1728,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           break
         }
         case "enhancePrompt": {
-          const sdkClient = this.client
-          if (!sdkClient) {
-            this.postMessage({
-              type: "enhancePromptError",
-              error: "Not connected to CLI backend",
-              requestId: message.requestId,
-            })
-            break
-          }
-          void sdkClient.enhancePrompt
-            .enhance({ text: message.text }, { throwOnError: true })
-            .then(({ data }) => {
-              this.postMessage({ type: "enhancePromptResult", text: data.text, requestId: message.requestId })
-            })
-            .catch((err: unknown) => {
-              const raw = getErrorMessage(err) || "Failed to enhance prompt"
-              const msg = normalizeEnhancePromptErrorMessage(raw)
-              console.error("[Kilo New] KiloProvider: Failed to enhance prompt:", err)
-              vscode.window.showErrorMessage(`Enhance prompt failed: ${msg}`)
-              this.postMessage({
-                type: "enhancePromptError",
-                error: msg,
-                requestId: message.requestId,
-              })
-            })
+          this.enhance.start(this.client, message.text, message.requestId)
+          break
+        }
+        case "cancelEnhancePrompt": {
+          this.enhance.cancel(message.requestId)
           break
         }
       }
@@ -6306,6 +6290,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.latch?.dispose()
     this.latch = undefined
     this.catalogRetry.dispose()
+    this.enhance.dispose()
     this.unsubscribeRemote?.()
     this.streams.focus(undefined)
     this.connectionService.unregisterVisible(this.instanceId)

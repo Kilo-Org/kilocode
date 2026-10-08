@@ -218,6 +218,7 @@ export const dict = {
   "prompt.action.stop.background": "توقف عامل اصلی. عامل‌های پس‌زمینه به اجرا ادامه می‌دهند.",
   "prompt.agents.show": "نمایش عامل‌های پس‌زمینه",
   "prompt.action.enhance": "بهبود پرامپت",
+  "prompt.action.enhanceStop": "توقف بهبود پرامپت",
   "prompt.action.more": "اقدامات بیشتر",
   "prompt.paste.expand": "برای بازکردن متن جایگذاری‌شده کلیک کنید",
   "prompt.issues.title": "مشکلات نشست",
