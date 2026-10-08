@@ -1361,6 +1361,8 @@ export const dict = {
   "task.backgroundAgents.stopAll": "모두 중지 ({{count}})",
   "task.backgroundAgents.finished": "백그라운드 에이전트 완료",
   "task.stop": "하위 에이전트 중지",
+  "task.open.panel": "패널에서 하위 에이전트 열기",
+  "task.open.tab": "탭에서 하위 에이전트 열기",
   "settings.saveBar.unsavedChanges": "저장되지 않은 변경 사항",
   "settings.saveBar.discard": "취소",
   "settings.saveBar.save": "저장",

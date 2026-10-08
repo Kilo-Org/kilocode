@@ -1390,6 +1390,8 @@ export const dict = {
   "task.backgroundAgents.stopAll": "Zaustavi sve ({{count}})",
   "task.backgroundAgents.finished": "Agenti u pozadini su završili",
   "task.stop": "Zaustavi podagenta",
+  "task.open.panel": "Otvori podagenta u panelu",
+  "task.open.tab": "Otvori podagenta u kartici",
   "settings.saveBar.unsavedChanges": "Nespremljene promjene",
   "settings.saveBar.discard": "Odbaci",
   "settings.saveBar.save": "Spremi",

@@ -1379,6 +1379,8 @@ export const dict = {
   "task.backgroundAgents.stopAll": "توقف همه ({{count}})",
   "task.backgroundAgents.finished": "عامل‌های پس‌زمینه به پایان رسیدند",
   "task.stop": "توقف زیرعامل",
+  "task.open.panel": "باز کردن زیرعامل در پنل",
+  "task.open.tab": "باز کردن زیرعامل در تب",
 
   "settings.saveBar.unsavedChanges": "تغییرات ذخیره‌نشده",
   "settings.saveBar.discard": "رد کردن",

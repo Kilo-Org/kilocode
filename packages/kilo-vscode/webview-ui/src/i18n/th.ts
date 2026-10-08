@@ -1358,6 +1358,8 @@ export const dict = {
   "task.backgroundAgents.stopAll": "หยุดทั้งหมด ({{count}})",
   "task.backgroundAgents.finished": "เอเจนต์เบื้องหลังทำงานเสร็จแล้ว",
   "task.stop": "หยุดเอเจนต์ย่อย",
+  "task.open.panel": "เปิดเอเจนต์ย่อยในแผง",
+  "task.open.tab": "เปิดเอเจนต์ย่อยในแท็บ",
   "settings.saveBar.unsavedChanges": "การเปลี่ยนแปลงที่ยังไม่ได้บันทึก",
   "settings.saveBar.discard": "ยกเลิก",
   "settings.saveBar.save": "บันทึก",

@@ -1381,6 +1381,8 @@ export const dict = {
   "task.backgroundAgents.stopAll": "Stopp alle ({{count}})",
   "task.backgroundAgents.finished": "Bakgrunnsagenter er ferdige",
   "task.stop": "Stopp underagent",
+  "task.open.panel": "Åpne underagent i panel",
+  "task.open.tab": "Åpne underagent i fane",
   "settings.saveBar.unsavedChanges": "Ulagrede endringer",
   "settings.saveBar.discard": "Forkast",
   "settings.saveBar.save": "Lagre",
