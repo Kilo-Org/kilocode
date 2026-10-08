@@ -30,8 +30,6 @@ jobs:
     if: github.repository == 'Kilo-Org/kilocode'
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    env:
-      SLACK_WEBHOOK: ${{ secrets.COMMUNITY_TRIAGE_SLACK_WEBHOOK }}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -52,10 +50,18 @@ jobs:
           SLACK_PAYLOAD: ${{ runner.temp }}/slack-payload.json
         run: bun run script/kilocode/community-triage.ts sweep
 
+      # A step cannot read its own env in `if`, so a small step exposes the
+      # secret to itself only and passes on whether it is set.
+      - name: Check Slack webhook
+        id: slack
+        env:
+          SLACK_WEBHOOK: ${{ secrets.COMMUNITY_TRIAGE_SLACK_WEBHOOK }}
+        run: echo "enabled=${{ env.SLACK_WEBHOOK != '' }}" >> "$GITHUB_OUTPUT"
+
       - name: Notify Slack
-        if: env.SLACK_WEBHOOK != ''
+        if: steps.slack.outputs.enabled == 'true'
         uses: slackapi/slack-github-action@v2.0.0
         with:
-          webhook: ${{ env.SLACK_WEBHOOK }}
+          webhook: ${{ secrets.COMMUNITY_TRIAGE_SLACK_WEBHOOK }}
           webhook-type: incoming-webhook
           payload-file-path: ${{ runner.temp }}/slack-payload.json

@@ -61,9 +61,9 @@ Set by hand:
 
 | Label | Meaning |
 |---|---|
-| `high-value` | We want this change. It is never auto-closed |
+| `high-value` | We want this change. The sweep never closes it |
 | `low-value` | Triaged. Not a priority |
-| `keep-open` | Never auto-close this PR |
+| `keep-open` | The sweep never closes this PR |
 
 The sweep owns the status labels. It adds and removes them on its own. Do not manage them by hand.
 
@@ -107,11 +107,13 @@ When a PR has been `awaiting-contributor` for 14 days:
 | Has `keep-open` | Nothing happens |
 | Anything else | Closed with a comment |
 
+Before the sweep closes or adopts a PR, it checks the full history for a contributor reply. This catches replies on long PRs.
+
 Closing is **off by default**. Until it is on, the sweep only logs what it would close. To turn it on, set the repo variable `COMMUNITY_AUTO_CLOSE_ENABLED` to `true`. To try it by hand, run the sweep from the Actions tab and tick "close".
 
 When a PR first gets `awaiting-contributor`, the sweep also posts one comment that gives the due date. That comment is also off until closing is on. The sweep posts at most 20 comments per run (`MAX_COMMENTS`).
 
-`kilo-auto-close.yml` is separate. It still closes any PR with no activity for 30 days.
+`kilo-auto-close.yml` is separate. It does not read these labels. It still closes any PR with no activity for 30 days, including `high-value` and `keep-open` PRs.
 
 ## The maintainer routine
 
@@ -133,7 +135,7 @@ Useful searches:
 
 ## Issues
 
-New issues get the `community` label, `needs-triage` and an `area:*` label. The area comes from the required "Component" dropdown in the bug and feature templates. The sweep only handles PRs.
+New issues get the `community` label, `needs-triage` and an `area:*` label. The area comes from the required "Component" dropdown in the bug and feature templates. The answer "Other / not sure" adds no `area:*` label. The sweep only handles PRs.
 
 ## Setup
 

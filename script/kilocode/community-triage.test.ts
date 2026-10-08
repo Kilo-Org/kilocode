@@ -27,6 +27,10 @@ describe("component", () => {
     )
   })
 
+  test("skips a typed heading with no known answer", () => {
+    expect(component("### Component\n\nmy text\n\n### Component\n\nSDK")).toBe("area:sdk")
+  })
+
   test("ignores other answers", () => {
     expect(component("### Component\n\nOther / not sure")).toBeUndefined()
     expect(component("no form")).toBeUndefined()
@@ -41,7 +45,7 @@ describe("classify", () => {
     expect(classify([author(3)], [], now)).toEqual({ state: "triage" })
   })
 
-  test("a triage label counts as triaged", () => {
+  test("a high-value label moves a PR to needs-review", () => {
     expect(classify([author(3)], [label.high], now)).toEqual({ state: "review" })
   })
 

@@ -112,8 +112,12 @@ export function areas(title: string, files: string[]) {
 }
 
 export function component(body: string) {
-  const value = body.match(/^###\s+Component\s*\n+(.+)$/im)?.[1]
-  return value ? components[value.trim().toLowerCase()] : undefined
+  // Issue forms render the answer as "### Component". Text the reporter typed
+  // can contain the same heading, so take the first one with a known answer.
+  for (const hit of body.matchAll(/^###\s+Component\s*\n+(.+)$/gim)) {
+    const tag = components[hit[1].trim().toLowerCase()]
+    if (tag) return tag
+  }
 }
 
 export type Event = { who: "author" | "maintainer"; at: number; approve?: boolean }
@@ -315,6 +319,40 @@ async function onevent() {
 
 type Actor = { login: string; __typename: string } | null
 type Node = { createdAt: string; authorAssociation: string; author: Actor; state?: string }
+type Pull = {
+  number: number
+  title: string
+  url: string
+  isDraft: boolean
+  createdAt: string
+  authorAssociation: string
+  author: Actor
+  labels: { nodes: { name: string }[] }
+  commits: { nodes: { commit: { committedDate: string; statusCheckRollup: { state: string } | null } }[] }
+  comments: { nodes: Node[] }
+  reviews: { nodes: Node[] }
+  reviewThreads: { nodes: { comments: { nodes: Node[] } }[] }
+}
+
+type Reply = { user: { login: string } | null; created_at?: string; submitted_at?: string }
+
+// The query reads only the latest comments, reviews and replies. Before a PR
+// is closed or adopted, ask the API for everything since the maintainer's
+// last reaction, so a reply outside that window cannot be missed.
+async function replied(num: number, login: string, since: number) {
+  const iso = new Date(since).toISOString()
+  const get = async (path: string): Promise<Reply[]> => (await api(`/repos/${repo}/${path}`)).json()
+  const mine = (list: Reply[]) =>
+    list.some((x) => x.user?.login === login && Date.parse(x.created_at ?? x.submitted_at ?? "") > since)
+  if (mine(await get(`issues/${num}/comments?since=${iso}&per_page=100`))) return true
+  if (mine(await get(`pulls/${num}/comments?since=${iso}&per_page=100`))) return true
+  for (let page = 1; page <= 5; page++) {
+    const list = await get(`pulls/${num}/reviews?per_page=100&page=${page}`)
+    if (mine(list)) return true
+    if (list.length < 100) return false
+  }
+  return false
+}
 
 const query = `
 query($owner: String!, $repo: String!, $cursor: String) {
@@ -352,7 +390,7 @@ async function sweep() {
   let spent = 0
   await ensure()
 
-  const prs: any[] = []
+  const prs: Pull[] = []
   let cursor: string | null = null
   do {
     const page = await graphql(cursor)
@@ -363,8 +401,8 @@ async function sweep() {
 
   const rows: Row[] = []
   for (const pr of prs) {
-    const login: string | undefined = pr.author?.login
-    if (!login || pr.author.__typename === "Bot" || bots(login) || pr.isDraft) continue
+    const login = pr.author?.login
+    if (!login || pr.author?.__typename === "Bot" || bots(login) || pr.isDraft) continue
     if (await maintainer(login, pr.authorAssociation)) continue
 
     const tags: string[] = pr.labels.nodes.map((l: { name: string }) => l.name)
@@ -385,8 +423,12 @@ async function sweep() {
     const commit = pr.commits.nodes.at(0)?.commit
     if (commit) events.push({ who: "author", at: Date.parse(commit.committedDate) })
 
-    const state = classify(events, tags, now)
-    const failing = ["FAILURE", "ERROR"].includes(commit?.statusCheckRollup?.state)
+    const first = classify(events, tags, now)
+    const state: State =
+      first.state === "awaiting" && first.days >= WAIT_DAYS && (await replied(pr.number, login, first.since))
+        ? { state: "review" }
+        : first
+    const failing = ["FAILURE", "ERROR"].includes(commit?.statusCheckRollup?.state ?? "")
     const plan = decide(tags, state, failing)
     const more = [...(tags.includes(label.community) ? [] : [label.community])]
     if (!tags.some((tag) => tag.startsWith("area:"))) more.push(...areas(pr.title, await files(pr.number)))

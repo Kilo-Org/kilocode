@@ -38,3 +38,23 @@ body:
     validations:
       required: true
   # kilocode_change end
+
+  # kilocode_change start
+  - type: dropdown
+    id: component
+    attributes:
+      label: Component
+      description: Which part of Kilo is this about? It helps us route your request.
+      options:
+        - VS Code extension
+        - CLI / TUI
+        - Agent Manager
+        - JetBrains plugin
+        - Desktop or web app
+        - Documentation
+        - Kilo Gateway or account
+        - SDK
+        - Other / not sure
+    validations:
+      required: true
+  # kilocode_change end
