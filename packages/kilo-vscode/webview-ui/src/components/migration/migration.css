@@ -183,20 +183,11 @@
   height: 12px;
 }
 
-/* Spinner for migrating state */
-.migration-wizard__spinner {
-  width: 14px;
-  height: 14px;
-  border: 2px solid color-mix(in srgb, var(--vscode-button-background) 30%, transparent);
-  border-top-color: var(--vscode-button-background);
-  border-radius: 50%;
-  animation: migration-spin 0.6s linear infinite;
-}
-
-@keyframes migration-spin {
-  to {
-    transform: rotate(360deg);
-  }
+/* Spinner for migrating state. Two classes, so the status icon svg size does not apply. */
+.migration-wizard__status-icon .migration-wizard__spinner {
+  width: 16px;
+  height: 16px;
+  color: var(--vscode-button-background);
 }
 
 /* Item text */

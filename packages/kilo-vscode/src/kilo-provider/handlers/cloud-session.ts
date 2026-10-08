@@ -91,12 +91,10 @@ export async function handleRequestCloudSessionData(ctx: CloudSessionContext, se
       return
     }
 
-    // The cloud export does not guarantee per-turn order (same-millisecond
-    // time_created ties can invert user/assistant), so sort ascending by
-    // time.created with id as tiebreak, matching the CLI's DB ordering.
+    // The export can invert same-millisecond ties; order by time, then id, like the CLI DB.
     const messages = (data.messages ?? [])
       .filter((m) => m.info)
-      .sort((a, b) => (a.info.time?.created ?? 0) - (b.info.time?.created ?? 0) || a.info.id.localeCompare(b.info.id))
+      .sort((a, b) => (a.info.time?.created ?? 0) - (b.info.time?.created ?? 0) || (a.info.id < b.info.id ? -1 : 1))
       .map(mapCloudSessionMessageToWebviewMessage)
 
     ctx.postMessage({

@@ -68,8 +68,14 @@ interface KiloWorktreeRpcApi : RemoteApi<Unit> {
      * a caller returning from a long absence can ask for `maxAge = <time away>`, which keeps
      * anything gathered while it was gone and rejects only what predates its departure, and several
      * callers asking at once still collapse onto one lookup instead of each forcing its own.
+     *
+     * [fresh] names worktree paths whose every cached answer is refused, however loose [maxAge] is.
+     * For a caller that learned something about one checkout — an agent working in it just stopped,
+     * so it may have opened a pull request — this is what `maxAge = 0` would otherwise cost: the
+     * named paths re-run their lookup while all the others still answer from cache, instead of the
+     * whole repository paying a fresh `gh` fan-out to refresh one row.
      */
-    suspend fun prStatus(directory: String, maxAge: Long? = null): WorktreePrListDto
+    suspend fun prStatus(directory: String, maxAge: Long? = null, fresh: List<String> = emptyList()): WorktreePrListDto
 
     /**
      * Single-directory branch status for the chat branch/PR dock: current branch, worktree flag,

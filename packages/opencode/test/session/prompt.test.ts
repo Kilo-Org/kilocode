@@ -815,6 +815,77 @@ noLLMServer.instance(
   { config: cfg },
 )
 
+// kilocode_change start - SVG "images" are markup, not rasters Photon can decode; they must not die the prompt
+noLLMServer.instance(
+  "decodes a user SVG data image into readable source instead of normalizing it",
+  () =>
+    Effect.gen(function* () {
+      const prompt = yield* SessionPrompt.Service
+      const sessions = yield* Session.Service
+      const chat = yield* sessions.create({ title: "User SVG data" })
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg"><circle r="1"/></svg>`
+      const url = `data:image/svg+xml;base64,${Buffer.from(svg).toString("base64")}`
+
+      const result = yield* prompt.prompt({
+        sessionID: chat.id,
+        agent: "build",
+        model: ref,
+        noReply: true,
+        parts: [{ type: "file", mime: "image/svg+xml", filename: "icon.svg", url }],
+      })
+
+      expect(result.parts).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ type: "text", synthetic: true, text: svg }),
+          // Relabelled text/plain, so message-v2 keeps it out of the model request instead of
+          // forwarding an image/svg+xml file part that providers reject on every later turn.
+          expect.objectContaining({ type: "file", mime: "text/plain", url }),
+        ]),
+      )
+      expect(result.parts.some((part) => part.type === "file" && part.mime === "image/svg+xml")).toBe(false)
+
+      const saved = yield* sessions.messages({ sessionID: chat.id })
+      const savedParts = saved.flatMap((message) => message.parts)
+      expect(savedParts.some((part) => part.type === "file")).toBe(true)
+      expect(savedParts.some((part) => part.type === "file" && part.mime === "image/svg+xml")).toBe(false)
+    }),
+  { config: cfg },
+)
+
+noLLMServer.instance(
+  "decodes a user SVG file URL into readable source instead of normalizing it",
+  () =>
+    Effect.gen(function* () {
+      const test = yield* TestInstance
+      const prompt = yield* SessionPrompt.Service
+      const sessions = yield* Session.Service
+      const chat = yield* sessions.create({ title: "User SVG file" })
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg"><rect width="1" height="1"/></svg>`
+      const file = path.join(test.directory, "icon.svg")
+      yield* Effect.promise(() => Bun.write(file, svg))
+
+      const result = yield* prompt.prompt({
+        sessionID: chat.id,
+        agent: "build",
+        model: ref,
+        noReply: true,
+        parts: [{ type: "file", mime: "image/svg+xml", filename: "icon.svg", url: pathToFileURL(file).href }],
+      })
+
+      // Relabelled text/plain, so it goes through the real Read tool: the markup arrives as
+      // normal numbered file content, and the retained part never reaches the model as an image.
+      expect(result.parts).toEqual(
+        expect.arrayContaining([expect.objectContaining({ type: "file", mime: "text/plain", filename: "icon.svg" })]),
+      )
+      expect(
+        result.parts.some((part) => part.type === "text" && typeof part.text === "string" && part.text.includes(svg)),
+      ).toBe(true)
+      expect(result.parts.some((part) => part.type === "file" && part.mime === "image/svg+xml")).toBe(false)
+    }),
+  { config: cfg },
+)
+// kilocode_change end
+
 it.instance("loop surfaces content-filter finishes as session errors", () =>
   Effect.gen(function* () {
     const { llm } = yield* useServerConfig(providerCfg)

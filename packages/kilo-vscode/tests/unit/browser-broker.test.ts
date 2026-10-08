@@ -195,6 +195,46 @@ describe("BrowserBroker", () => {
     expect(shots).toBe(1)
   })
 
+  test("matches the page color scheme to the IDE theme and updates on change", async () => {
+    let theme: "dark" | "light" = "dark"
+    const schemes: Array<string | null | undefined> = []
+    const emulated: Array<string | null | undefined> = []
+    const page = {
+      url: () => "http://localhost:3000/",
+      title: async () => "Themed",
+      screenshot: async () => Buffer.from("jpeg"),
+      off: () => undefined,
+      on: () => undefined,
+      mainFrame: () => undefined,
+      goto: async () => undefined,
+      emulateMedia: async (options: { colorScheme?: string | null }) => {
+        emulated.push(options.colorScheme)
+      },
+    }
+    const broker = new BrowserBroker({
+      log: () => {},
+      network,
+      theme: () => theme,
+      launch: async () => ({
+        newContext: async (opts) => {
+          schemes.push(opts.colorScheme)
+          return {
+            close: async () => undefined,
+            newPage: async () => page,
+          }
+        },
+        close: async () => undefined,
+      }),
+    })
+    brokers.push(broker)
+    const route = { projectId: "project", sessionId: "themed", directory: "/tmp/project" }
+    await broker.open(route, "http://localhost:3000/", false)
+    expect(schemes).toEqual(["dark"])
+    theme = "light"
+    broker.retheme()
+    expect(emulated).toEqual(["light"])
+  })
+
   test("reloads repeated agent opens and returns fresh page diagnostics", async () => {
     const listeners = new Map<string, (value: unknown) => void>()
     const loading: number[] = []
@@ -1126,6 +1166,36 @@ describe("BrowserBroker", () => {
     expect(broker.get("shared")).toBeUndefined()
     await broker.closeScoped("shared")
     expect(broker.get("shared")).toMatchObject({ projectId: "project" })
+  })
+
+  test("starts a new view identity only when the page commits a new document", async () => {
+    const events = new EventEmitter()
+    let target = "about:blank"
+    const page = Object.assign(events, {
+      url: () => target,
+      title: async () => "Local app",
+      screenshot: async () => Buffer.from("jpeg"),
+      mainFrame: () => page,
+      goto: async (url: string) => {
+        target = url
+        return { status: () => 200 }
+      },
+    })
+    let commit: (() => void) | undefined
+    const broker = fixture(page, async (_page, opts) => {
+      commit = opts.committed
+      return { active: true, authorize: () => undefined, close: async () => undefined }
+    })
+    broker.bind((route) => route)
+    const route = { sessionId: "session", directory: "/tmp/project" }
+    const opened = await broker.open(route, "http://localhost:3000/")
+    expect(opened.navigation).toBe(1)
+    target = "http://localhost:3000/route"
+    page.emit("framenavigated", page)
+    await Bun.sleep(0)
+    expect(broker.get(route.sessionId)).toMatchObject({ navigation: 1, url: "http://localhost:3000/route" })
+    commit?.()
+    expect(broker.get(route.sessionId)?.navigation).toBe(2)
   })
 
   test("preserves project isolation, successful refresh, and captured HTTP errors", async () => {

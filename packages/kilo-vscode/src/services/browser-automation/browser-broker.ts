@@ -80,6 +80,8 @@ interface BrowserDevtoolsInfo {
 
 export interface BrowserBrokerOptions {
   log: (...args: unknown[]) => void
+  /** Current IDE color scheme, applied to pages so `prefers-color-scheme` matches the editor. */
+  theme?: () => "dark" | "light"
   enabled?: () => boolean
   trusted?: () => boolean
   launch?: (options: LaunchOptions) => Promise<BrowserContextFactory>
@@ -261,6 +263,25 @@ export class BrowserBroker {
   private closed = false
 
   constructor(private readonly opts: BrowserBrokerOptions) {}
+
+  private scheme(): "dark" | "light" {
+    return this.opts.theme?.() ?? "light"
+  }
+
+  /**
+   * Re-apply the current IDE color scheme to every live page. A page keeps the
+   * emulated scheme across navigations, so this only needs to run when the IDE
+   * theme changes, not on every navigation.
+   */
+  retheme(): void {
+    const colorScheme = this.scheme()
+    for (const entry of this.entries.values()) {
+      if (entry.dead) continue
+      void entry.page
+        .emulateMedia({ colorScheme })
+        .catch((error: unknown) => this.opts.log("Browser theme update failed", error))
+    }
+  }
 
   async start(): Promise<void> {
     if (this.closed) throw new Error("Browser broker is closed")
@@ -534,6 +555,7 @@ export class BrowserBroker {
         serviceWorkers: "block",
         viewport: { width: 1280, height: 720 },
         deviceScaleFactor: 2,
+        colorScheme: this.scheme(),
         proxy: proxy.proxy,
         ignoreHTTPSErrors: false,
         acceptDownloads: false,
@@ -598,6 +620,16 @@ export class BrowserBroker {
         blocked: (message) => {
           entry.state.error = message
           this.emit(entry.state)
+        },
+        // A new document starts a new view identity, so input for the old document cannot reach it. Same-document
+        // navigations keep the identity, so a client-side route change does not restart the view or drop input.
+        committed: () => {
+          if (entry.navigating) return
+          entry.state.navigation++
+          this.emit(entry.state)
+          void this.update(entry)
+            .then(() => this.emit(entry.state))
+            .catch((error: unknown) => this.fail(entry, error))
         },
         log: this.opts.log,
       })
@@ -912,7 +944,6 @@ export class BrowserBroker {
     })
     entry.page.on("framenavigated", (frame) => {
       if (frame !== entry.page.mainFrame()) return
-      if (!entry.navigating) entry.state.navigation++
       void this.update(entry)
         .then(() => this.emit(entry.state))
         .catch((error: unknown) => this.fail(entry, error))

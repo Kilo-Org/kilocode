@@ -150,6 +150,7 @@ function BrowserAdapter(props: {
       theme={theme}
       download={() => vscode.postMessage({ type: "openExternal", url: "https://www.google.com/chrome/" })}
       settings={() => vscode.postMessage({ type: "openSettingsPanel", tab: "browser", projectId: props.projectId() })}
+      openExternal={(url) => vscode.postMessage({ type: "openExternal", url })}
       onReference={reference}
       onClose={props.onClose}
     />

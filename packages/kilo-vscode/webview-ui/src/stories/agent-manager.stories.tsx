@@ -873,7 +873,7 @@ export const WorktreeActivityStates: Story = {
   render: (args: { active?: boolean }) => (
     <StoryProviders noPadding>
       <div data-activity-story style={{ padding: "12px", background: "var(--surface-base)" }}>
-        <style>{'[data-activity-story] [data-component="spinner"] rect { animation: none !important; }'}</style>
+        <style>{'[data-activity-story] [data-component="spinner"] path { animation: none !important; }'}</style>
         <For each={activityStates}>
           {([state, title]) => (
             <WorktreeItem
@@ -909,7 +909,7 @@ export const SessionTabActivityStates: Story = {
   render: () => (
     <StoryProviders noPadding>
       <div data-activity-story style={{ padding: "12px", background: "var(--surface-base)" }}>
-        <style>{'[data-activity-story] [data-component="spinner"] rect { animation: none !important; }'}</style>
+        <style>{'[data-activity-story] [data-component="spinner"] path { animation: none !important; }'}</style>
         <For each={activityStates}>
           {([state, title]) => (
             <div class="am-tab-bar" role="tablist" aria-label={title}>
