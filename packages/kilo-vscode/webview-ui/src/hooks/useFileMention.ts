@@ -178,6 +178,10 @@ export function useFileMention(
   const [worktreePicker, setWorktreePicker] = createSignal(false)
   const worktreeCandidates = () => worktrees?.().filter((worktree) => !worktree.disabled) ?? []
   let workspaceDir = ""
+  // The inserted prefix and its root-relative search form can differ in a multi-root workspace.
+  let folder: { path: string; query: string } | undefined
+  const search = (query: string) =>
+    folder && query.startsWith(folder.path) ? folder.query + query.slice(folder.path.length) : query
   const cache = new Map<string, FileSearchCache>()
   const dirs = new Map<string, string>()
   // Accumulates every path ever mentioned so syncMentionedPaths can
@@ -209,6 +213,14 @@ export function useFileMention(
   }
   const results = (query: string, items: Array<FileSearchItem | string>) => {
     references()
+    if (folder && query.startsWith(folder.path)) {
+      const prefix = folder.path
+      const children = items.filter((item) => {
+        const path = typeof item === "string" ? item : item.path
+        return path.startsWith(prefix) && path.length > prefix.length
+      })
+      return buildMentionResults(search(query), children, false)
+    }
     return buildMentionResults(query, items, git?.() ?? true, worktrees !== undefined, sessionResults(query))
   }
   /** The file-ish entries of a result list, in the shape the builder accepts. */
@@ -270,6 +282,7 @@ export function useFileMention(
     const value = scope()
     if (value === activeScope) return value
     activeScope = value
+    folder = undefined
     dead = undefined
     inserted.clear()
     if (fileSearchTimer) clearTimeout(fileSearchTimer)
@@ -459,6 +472,11 @@ export function useFileMention(
 
   const applyFiles = (query: string, items: FileSearchItem[]) => {
     const next = results(query, items)
+    if (folder && query.startsWith(folder.path)) {
+      pending = undefined
+      replaceResults(next)
+      return
+    }
     // The folder the query names may only arrive now, when the space was typed
     // before the search for the name came back.
     const prose = /\s/.test(query) && !filePickerNamed(query) && next.every((item) => item.type === "file-picker")
@@ -541,10 +559,11 @@ export function useFileMention(
       revision,
     }
     fileSearchRequest = request
+    const value = search(query)
     const send = () => {
       vscode.postMessage({
         type: "requestFileSearch",
-        query,
+        query: value,
         requestId: request.id,
         ...(request.scope ? { sessionID: request.scope } : {}),
       })
@@ -560,6 +579,7 @@ export function useFileMention(
     if (fileSearchTimer) clearTimeout(fileSearchTimer)
     fileSearchRevision++
     fileSearchRequest = undefined
+    folder = undefined
     setMentionQuery(null)
     setMentionResults([])
     setSessionPicker(false)
@@ -855,6 +875,7 @@ export function useFileMention(
       return
     }
     const query = match[1] ?? ""
+    if (folder && !query.startsWith(folder.path)) folder = undefined
     at = (match.index ?? 0) + (/^\s/.test(match[0]) ? 1 : 0)
     if (dead && dead.at === at && query.startsWith(dead.query)) {
       closeMention()
@@ -864,7 +885,7 @@ export function useFileMention(
     // rest is prose being written after it, not a longer filename. Only what is
     // already on offer can decide this synchronously; anything else waits for
     // the search, so a new query is not closed by an earlier mention in the text.
-    if (settledByOffer(query, mentionResults(), atIndex(before, at))) {
+    if (!folder && settledByOffer(query, mentionResults(), atIndex(before, at))) {
       dead = { at, query }
       closeMention()
       return
@@ -891,6 +912,30 @@ export function useFileMention(
     requestFileSearch(query)
   }
 
+  const navigate = (
+    e: KeyboardEvent,
+    textarea: HTMLTextAreaElement | undefined,
+    setText: (text: string) => void,
+    onSelect?: () => void,
+  ): boolean => {
+    if (e.shiftKey || e.ctrlKey || e.metaKey || e.altKey || !textarea) return false
+    if (textarea.selectionStart !== textarea.selectionEnd) return false
+    const result = mentionResults().at(mentionIndex())
+    if (result?.type !== "folder") return false
+    const cursor = textarea.selectionStart
+    const match = textarea.value.substring(0, cursor).match(AT_PATTERN)
+    if (!match || match[1] !== mentionQuery()) return false
+    e.preventDefault()
+    const path = `${result.value.replace(/\/+$/, "")}/`
+    folder = { path, query: `${(result.relative ?? result.value).replace(/\/+$/, "")}/` }
+    pending = undefined
+    replaceRange(textarea, cursor - (match[1]?.length ?? 0), cursor, path)
+    setText(textarea.value)
+    onInput(textarea.value, textarea.selectionStart)
+    onSelect?.()
+    return true
+  }
+
   const onKeyDown = (
     e: KeyboardEvent,
     textarea: HTMLTextAreaElement | undefined,
@@ -912,6 +957,7 @@ export function useFileMention(
       setMentionIndex((i) => Math.max(i - 1, 0))
       return true
     }
+    if (e.key === "ArrowRight") return navigate(e, textarea, setText, onSelect)
     if (e.key === "Enter" || e.key === "Tab") {
       const result = mentionResults()[mentionIndex()]
       if (!result) return false

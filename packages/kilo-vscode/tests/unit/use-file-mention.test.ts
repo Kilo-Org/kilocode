@@ -7,7 +7,7 @@ import {
   TERMINAL_RESULT,
   type WorktreeReference,
 } from "../../webview-ui/src/hooks/file-mention-utils"
-import type { ExtensionMessage, WebviewMessage } from "../../webview-ui/src/types/messages"
+import type { ExtensionMessage, FileSearchItem, WebviewMessage } from "../../webview-ui/src/types/messages"
 
 declare global {
   // eslint-disable-next-line no-var
@@ -2377,6 +2377,152 @@ describe("useFileMention", () => {
     expect(mention.mentionResults()).not.toContainEqual({ type: "file", value: "late.ts" })
 
     dispose.fn?.()
+  })
+})
+
+describe("useFileMention folder navigation", () => {
+  async function picker(text = "@Pag", cursor = text.length) {
+    const posted: WebviewMessage[] = []
+    const handlers = new Set<(message: ExtensionMessage) => void>()
+    const state = createRoot((dispose) => ({
+      dispose,
+      mention: useFileMention({
+        postMessage: (message) => posted.push(message),
+        onMessage: (handler) => {
+          handlers.add(handler)
+          return () => handlers.delete(handler)
+        },
+      }),
+    }))
+    const input = editor(text)
+    input.setSelectionRange(cursor, cursor)
+    state.mention.onInput(text, cursor)
+    await wait(170)
+    const reply = (items: FileSearchItem[]) => {
+      const request = posted.findLast((message) => message.type === "requestFileSearch")
+      if (request?.type !== "requestFileSearch") throw new Error("Expected a file search")
+      for (const handler of handlers) {
+        handler({ type: "fileSearchResult", requestId: request.requestId, dir: "/repo", paths: [], items })
+      }
+    }
+    return { ...state, input, posted, reply }
+  }
+
+  it.each([
+    { path: "Pages/", query: "Pages/" },
+    { path: "Pages", query: "Pages/" },
+    { path: "My Pages/", query: "My Pages/" },
+    { path: "/other/Pages", query: "Pages/", root: "other", relative: "Pages" },
+  ])("enters $path and keeps the picker open for its children", async (folder) => {
+    const state = await picker("Read @Pag after this", 9)
+    const item = { path: folder.path, type: "folder" as const, root: folder.root, relative: folder.relative }
+    state.reply([item])
+    const event = key("ArrowRight")
+    const text = { value: "" }
+    mockDocument(state.input)
+    try {
+      expect(state.mention.onKeyDown(event.event, state.input, (value) => (text.value = value))).toBe(true)
+      const path = `${folder.path.replace(/\/+$/, "")}/`
+      expect(state.input.value).toBe(`Read @${path} after this`)
+      expect(text.value).toBe(state.input.value)
+      expect(state.input.selectionStart).toBe(6 + path.length)
+      expect(state.mention.mentionQuery()).toBe(path)
+      expect(state.mention.showMention()).toBe(true)
+      expect(state.mention.mentionedPaths().size).toBe(0)
+      expect(event.state.prevented).toBe(1)
+      await wait(170)
+      expect(state.posted.at(-1)).toMatchObject({ type: "requestFileSearch", query: folder.query })
+      state.reply([
+        item,
+        { path: `${path}index.ts`, type: "file", root: folder.root, relative: `${folder.query}index.ts` },
+        { path: `${path}Admin/`, type: "folder", root: folder.root, relative: `${folder.query}Admin/` },
+        { path: "Pages_Admin/index.ts", type: "file" },
+        { path: "other/Pages/index.ts", type: "file" },
+        { path: "/different/Pages/index.ts", type: "file", relative: "Pages/index.ts" },
+      ])
+      expect(
+        state.mention
+          .mentionResults()
+          .filter((item) => item.type !== "file-picker")
+          .map((item) => item.value),
+      ).toEqual([`${path}Admin/`, `${path}index.ts`])
+      const index = state.mention.mentionResults().findIndex((item) => item.type === "folder")
+      state.mention.setMentionIndex(index)
+      expect(state.mention.onKeyDown(event.event, state.input, () => {})).toBe(true)
+      expect(state.mention.mentionQuery()).toBe(`${path}Admin/`)
+      await wait(170)
+      expect(state.posted.at(-1)).toMatchObject({ type: "requestFileSearch", query: `${folder.query}Admin/` })
+      state.reply([{ path: `${path}Admin/page.ts`, type: "file" }])
+      const enter = { key: "Enter", preventDefault: () => {} } as KeyboardEvent
+      expect(state.mention.onKeyDown(enter, state.input, () => {})).toBe(true)
+      expect(state.input.value).toBe(`Read @${path}Admin/page.ts after this`)
+      expect(state.mention.mentionedPaths().has(`${path}Admin/page.ts`)).toBe(true)
+      expect(state.mention.showMention()).toBe(false)
+    } finally {
+      restoreDocument()
+      state.dispose()
+    }
+  })
+
+  it.each(["Tab", "Enter"])("still accepts a highlighted folder with %s", async (key) => {
+    const state = await picker()
+    state.reply([{ path: "Pages/", type: "folder" }])
+    mockDocument(state.input)
+    try {
+      expect(state.mention.onKeyDown({ key, preventDefault: () => {} } as KeyboardEvent, state.input, () => {})).toBe(
+        true,
+      )
+      expect(state.input.value).toBe("@Pages/ ")
+      expect(state.mention.mentionedPaths().has("Pages/")).toBe(true)
+      expect(state.mention.showMention()).toBe(false)
+    } finally {
+      restoreDocument()
+      state.dispose()
+    }
+  })
+
+  it("leaves modified arrows, selections, files, and a closed picker to the editor", async () => {
+    const state = await picker()
+    state.reply([{ path: "Pages/", type: "folder" }])
+    const event = key("ArrowRight")
+    try {
+      for (const modifier of ["shiftKey", "ctrlKey", "metaKey", "altKey", "isComposing"]) {
+        expect(state.mention.onKeyDown({ ...event.event, [modifier]: true }, state.input, () => {})).toBe(false)
+      }
+      state.input.setSelectionRange(1, 4)
+      expect(state.mention.onKeyDown(event.event, state.input, () => {})).toBe(false)
+      state.input.setSelectionRange(4, 4)
+      expect(state.mention.onKeyDown(event.event, undefined, () => {})).toBe(false)
+      state.mention.onInput("@Pag", 4)
+      await wait(170)
+      state.reply([{ path: "Pages.ts", type: "file" }])
+      expect(state.mention.onKeyDown(event.event, state.input, () => {})).toBe(false)
+      state.mention.closeMention()
+      expect(state.mention.onKeyDown(event.event, state.input, () => {})).toBe(false)
+      expect(event.state.prevented).toBe(0)
+      expect(state.input.value).toBe("@Pag")
+    } finally {
+      state.dispose()
+    }
+  })
+
+  it("keeps an empty spaced folder open and resets navigation when the query changes", async () => {
+    const state = await picker()
+    state.reply([{ path: "My Pages/", type: "folder" }])
+    mockDocument(state.input)
+    try {
+      expect(state.mention.onKeyDown(key("ArrowRight").event, state.input, () => {})).toBe(true)
+      await wait(170)
+      state.reply([])
+      expect(state.mention.showMention()).toBe(true)
+      state.mention.onInput("@read", 5)
+      await wait(170)
+      state.reply([{ path: "README.md", type: "file" }])
+      expect(state.mention.mentionResults().at(0)?.value).toBe("README.md")
+    } finally {
+      restoreDocument()
+      state.dispose()
+    }
   })
 })
 
