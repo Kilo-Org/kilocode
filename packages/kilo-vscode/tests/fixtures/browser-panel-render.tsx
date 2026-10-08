@@ -38,12 +38,13 @@ const receive = (event: BrowserEvent) => {
   for (const listener of [...listeners]) listener(event)
 }
 let closed = 0
-const actions = { download: 0, settings: 0 }
+const actions = { download: 0, settings: 0, openExternal: [] as string[] }
 const [labels, update] = createSignal<BrowserLabels>({
   title: "Browser",
   url: "Address",
   urlPlaceholder: "Local URL",
   open: "Go",
+  openExternal: "Open in external browser",
   refresh: "Reload",
   back: "Back",
   forward: "Forward",
@@ -79,6 +80,7 @@ const dispose = render(
       }}
       download={() => actions.download++}
       settings={() => actions.settings++}
+      openExternal={(url) => actions.openExternal.push(url)}
       onReference={(reference) => references.push(reference)}
       onClose={() => closed++}
     />
@@ -108,7 +110,7 @@ const button = (label: string) =>
   [...root.querySelectorAll("button")].find((node) => node.textContent?.trim() === label)
 button(labels().download)!.click()
 button(labels().settings)!.click()
-assert.deepEqual(actions, { download: 1, settings: 1 })
+assert.deepEqual(actions, { download: 1, settings: 1, openExternal: [] })
 button(labels().retry)!.click()
 assert.deepEqual(sent.at(-1), { type: "open", scope, url: state.url })
 receive({ type: "state", value: { ...state, browserId: "", status: "error", missing: "chromium" } })
@@ -126,6 +128,10 @@ assert.equal(root.querySelector(".am-browser-stream canvas"), null)
 assert.equal(root.querySelector(".am-browser-empty"), null)
 receive?.({ type: "state", value: state })
 assert.equal(root.querySelector('[role="alert"]'), null)
+const external = root.querySelector(`button[aria-label="${labels().openExternal}"]`) as HTMLButtonElement
+assert.ok(external, "external browser button renders")
+external.click()
+assert.deepEqual(actions.openExternal, [state.url])
 await window.happyDOM.waitUntilComplete()
 const frame = root.querySelector(".am-browser-stream canvas")
 assert.ok(frame)
@@ -234,4 +240,35 @@ assert.equal(closed, 1)
 assert.deepEqual(sent.at(-1), { type: "close", scope })
 dispose()
 assert.equal(listeners.size, 0)
+
+const emptyRoot = document.createElement("div")
+document.body.append(emptyRoot)
+const sentEmpty: BrowserCommand[] = []
+const disposeEmpty = render(
+  () => (
+    <BrowserPanel
+      scope={() => undefined}
+      labels={labels()}
+      theme={() => "light"}
+      transport={{
+        send: (command) => sentEmpty.push(command),
+        subscribe: () => () => undefined,
+      }}
+      download={() => undefined}
+      settings={() => undefined}
+      openExternal={() => undefined}
+      onReference={() => undefined}
+      onClose={() => undefined}
+    />
+  ),
+  emptyRoot,
+)
+assert.equal(sentEmpty.length, 0)
+const noSession = emptyRoot.querySelector('[role="alert"][data-component="card"][data-variant="warning"]')
+assert.ok(noSession, "no-session panel shows a warning card")
+assert.equal(noSession.textContent?.includes(labels().noSession), true)
+assert.equal(emptyRoot.querySelector(".am-browser-empty"), null)
+assert.equal((emptyRoot.querySelector("input") as HTMLInputElement | null)?.disabled, true)
+assert.equal((emptyRoot.querySelector(`button[aria-label="${labels().open}"]`) as HTMLButtonElement)?.disabled, true)
+disposeEmpty()
 await window.happyDOM.close()

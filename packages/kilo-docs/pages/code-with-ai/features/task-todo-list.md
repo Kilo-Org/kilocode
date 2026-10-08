@@ -50,12 +50,12 @@ Kilo updates the list when:
 
 ## Where todo lists appear
 
-**1. Task Header Summary**
-Quick progress overview with your next important item
+**1. Session Dock**
+A progress chip above the prompt shows how many items are done and the item Kilo works on now
 
-{% image src="/docs/img/screenshot-tests/kilo-vscode/visual-regression/chat/task-header-with-todos-chromium-linux.png" alt="Task header summary showing todo list progress" width="420" /%}
+{% image src="/docs/img/screenshot-tests/kilo-vscode/visual-regression/chat/chat-view-session-dock-todo-states-chromium-linux.png" alt="Todo progress chip in the session dock, next to the working indicator and the session actions" width="420" /%}
 
-Click the task header summary to expand the full list inline and jump to the current item.
+While Kilo works, the chip sits next to the working indicator. When the session is idle, it sits next to the session actions. Click the chip to see the full list.
 
 **2. Interactive Tool Block**
 Full todo interface in chat where you can:

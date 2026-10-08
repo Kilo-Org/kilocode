@@ -6,6 +6,8 @@ import fs from "node:fs" // kilocode_change
 import { SessionV1 } from "@opencode-ai/core/v1/session"
 import os from "os"
 import { KiloSessionPrompt } from "@/kilocode/session/prompt" // kilocode_change
+import { KiloAttachment } from "@/kilocode/session/attachment" // kilocode_change
+import { unavailable } from "@/kilocode/provider/catalog-recovery" // kilocode_change
 import { BoardContext } from "@/kilocode/board/context" // kilocode_change
 import { SKILL_SHELL_DISABLED, SKILL_SHELL_UNTRUSTED } from "@/kilocode/skills/display" // kilocode_change
 import { KiloSessionMessageOrder } from "@/kilocode/session/message-order" // kilocode_change
@@ -94,6 +96,7 @@ import { SessionResume } from "@/kilocode/session-resume" // kilocode_change
 import { SessionResumeImport } from "@/kilocode/session-resume/import" // kilocode_change
 import { KiloSessionContinuation } from "@/kilocode/session/continuation" // kilocode_change
 import { KiloSessionControl } from "@/kilocode/session/control" // kilocode_change
+import { KiloSessionSteering } from "@/kilocode/session/steering" // kilocode_change
 import { Goal } from "@/kilocode/session/goal/runner" // kilocode_change
 import { GoalPolicy } from "@/kilocode/session/goal/policy" // kilocode_change
 import { GoalState } from "@/kilocode/session/goal/state" // kilocode_change
@@ -799,7 +802,7 @@ export const layer = Layer.effect(
       const err = Cause.squash(exit.cause)
       if (Provider.ModelNotFoundError.isInstance(err)) {
         const hint = err.suggestions?.length ? ` Did you mean: ${err.suggestions.join(", ")}?` : ""
-        const empty = err.modelsEmpty ? " No models are currently available." : "" // kilocode_change
+        const empty = unavailable(err) ? ` ${unavailable(err)}` : "" // kilocode_change
         yield* events.publish(Session.Event.Error, {
           sessionID,
           error: new NamedError.Unknown({
@@ -1054,7 +1057,7 @@ export const layer = Layer.effect(
                 ]
               }
               // kilocode_change start - normalize user image data before persistence
-              if (part.mime.startsWith("image/")) {
+              if (KiloAttachment.classify(part.mime) === "raster") {
                 const file: MessageV2.FilePart = {
                   ...part,
                   id: part.id ? PartID.make(part.id) : PartID.ascending(),
@@ -1255,6 +1258,9 @@ export const layer = Layer.effect(
                   metadata: {},
                 })
 
+                // kilocode_change start - every image/* attachment keeps the base64 cap it had before, so a
+                // huge .svg or .ico cannot be read unbounded into memory; only Photon normalization below is
+                // restricted to rasters, since that is the part that cannot decode markup/icon formats.
                 return yield* KiloReadObject.use(file, (bound) =>
                   Effect.gen(function* () {
                     const limit = mime.startsWith("image/")
@@ -1290,9 +1296,10 @@ export const layer = Layer.effect(
                       filename: part.filename!,
                       source: part.source,
                     }
-                    return mime.startsWith("image/") ? yield* image.normalize(file) : file
+                    return KiloAttachment.classify(mime) === "raster" ? yield* image.normalize(file) : file
                   }),
                 )
+                // kilocode_change end
               }).pipe(Effect.exit)
               if (Exit.isFailure(access)) {
                 if (defer && isInterrupted(access.cause)) return yield* Effect.interrupt
@@ -1375,9 +1382,11 @@ export const layer = Layer.effect(
       }
       // kilocode_change end
 
-      const resolvedParts = yield* Effect.forEach(submittedParts, resolvePart, { concurrency: "unbounded" }).pipe(
-        Effect.map((x) => x.flat().map(assign)),
-      )
+      // kilocode_change start - asText relabels SVG as source text; it is not an image mime any provider accepts
+      const resolvedParts = yield* Effect.forEach(submittedParts.map(KiloAttachment.asText), resolvePart, {
+        concurrency: "unbounded",
+      }).pipe(Effect.map((x) => x.flat().map(assign)))
+      // kilocode_change end
 
       yield* plugin.trigger(
         "chat.message",
@@ -1487,6 +1496,9 @@ export const layer = Layer.effect(
           yield* dismiss
           return message
         }
+        // Tell the parent when a human steers this subagent; only a turn that will run counts.
+        const steer = { session, parts: input.parts, messageID: message.info.id }
+        yield* KiloSessionSteering.notify({ ...steer, config, flags, database })
         // Queue tails and runner fibers can resume outside the HTTP request's
         // ambient instance context; bridge both Effect refs and legacy ALS.
         const bridge = yield* EffectBridge.make()
