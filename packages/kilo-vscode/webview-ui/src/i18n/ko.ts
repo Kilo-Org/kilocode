@@ -289,6 +289,14 @@ export const dict = {
   "error.providerAuth.chatgpt.description":
     "ChatGPT에 다시 로그인한 후 메시지를 다시 보내 Codex 모델을 계속 사용하세요.",
 
+  "provider.failure.unauthorized": "자격 증명이 거부되었습니다 (HTTP {{status}}). 다시 로그인하세요.",
+  "provider.failure.unauthorizedNoStatus": "자격 증명이 거부되었습니다. 다시 로그인하세요.",
+  "provider.failure.unauthenticated": "로그인되어 있지 않습니다.",
+  "provider.failure.network": "공급자에 연결할 수 없습니다. 연결 상태를 확인하세요.",
+  "provider.failure.http": "공급자 오류 (HTTP {{status}}).",
+  "provider.failure.httpNoStatus": "공급자 오류.",
+  "provider.failure.schema": "공급자로부터 예기치 않은 응답을 받았습니다.",
+
   "notification.permission.title": "권한 필요",
   "notification.permission.titleSubagent": "권한 필요 (서브에이전트)",
   "notification.permission.titleSkillShell": '스킬 "{{skill}}"의 셸 명령을 실행할까요?',

@@ -271,6 +271,14 @@ export const dict = {
   "error.providerAuth.chatgpt.title": "OpenAI 已將您登出",
   "error.providerAuth.chatgpt.description": "請再次登入 ChatGPT，然後重新發送訊息以繼續使用 Codex 模型。",
 
+  "provider.failure.unauthorized": "憑證遭拒（HTTP {{status}}）。請重新登入。",
+  "provider.failure.unauthorizedNoStatus": "憑證遭拒。請重新登入。",
+  "provider.failure.unauthenticated": "尚未登入。",
+  "provider.failure.network": "無法連線至供應商。請檢查您的網路連線。",
+  "provider.failure.http": "供應商錯誤（HTTP {{status}}）。",
+  "provider.failure.httpNoStatus": "供應商錯誤。",
+  "provider.failure.schema": "供應商回傳非預期的回應。",
+
   "notification.permission.title": "需要權限",
   "notification.permission.titleSubagent": "需要權限（子代理）",
   "notification.permission.titleSkillShell": "要執行技能「{{skill}}」的 shell 指令嗎？",

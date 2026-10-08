@@ -295,6 +295,14 @@ export const dict = {
   "error.providerAuth.chatgpt.description":
     "Logg på ChatGPT igjen, og send meldingen din på nytt for å fortsette å bruke Codex-modeller.",
 
+  "provider.failure.unauthorized": "Påloggingsinformasjon ble avvist (HTTP {{status}}). Logg på igjen.",
+  "provider.failure.unauthorizedNoStatus": "Påloggingsinformasjon ble avvist. Logg på igjen.",
+  "provider.failure.unauthenticated": "Ikke pålogget.",
+  "provider.failure.network": "Fikk ikke kontakt med leverandøren. Sjekk tilkoblingen din.",
+  "provider.failure.http": "Leverandørfeil (HTTP {{status}}).",
+  "provider.failure.httpNoStatus": "Leverandørfeil.",
+  "provider.failure.schema": "Uventet svar fra leverandøren.",
+
   "notification.permission.title": "Tillatelse påkrevd",
   "notification.permission.titleSubagent": "Tillatelse påkrevd (underagent)",
   "notification.permission.titleSkillShell": "Kjøre skallkommandoer fra ferdigheten «{{skill}}»?",

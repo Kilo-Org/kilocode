@@ -289,6 +289,14 @@ export const dict = {
   "error.providerAuth.chatgpt.description":
     "Codex モデルを引き続き使用するには、ChatGPT に再度ログインしてから、メッセージを再送信してください。",
 
+  "provider.failure.unauthorized": "認証情報が拒否されました (HTTP {{status}})。再度サインインしてください。",
+  "provider.failure.unauthorizedNoStatus": "認証情報が拒否されました。再度サインインしてください。",
+  "provider.failure.unauthenticated": "サインインしていません。",
+  "provider.failure.network": "プロバイダーに接続できませんでした。接続を確認してください。",
+  "provider.failure.http": "プロバイダーエラー (HTTP {{status}})。",
+  "provider.failure.httpNoStatus": "プロバイダーエラー。",
+  "provider.failure.schema": "プロバイダーから予期しない応答がありました。",
+
   "notification.permission.title": "権限が必要です",
   "notification.permission.titleSubagent": "権限が必要です（サブエージェント）",
   "notification.permission.titleSkillShell": "スキル「{{skill}}」のシェルコマンドを実行しますか？",

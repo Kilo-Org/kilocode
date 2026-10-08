@@ -290,6 +290,14 @@ export const dict = {
   "error.providerAuth.chatgpt.description":
     "Zaloguj się ponownie do ChatGPT, a następnie wyślij wiadomość jeszcze raz, aby kontynuować korzystanie z modeli Codex.",
 
+  "provider.failure.unauthorized": "Poświadczenia zostały odrzucone (HTTP {{status}}). Zaloguj się ponownie.",
+  "provider.failure.unauthorizedNoStatus": "Poświadczenia zostały odrzucone. Zaloguj się ponownie.",
+  "provider.failure.unauthenticated": "Nie jesteś zalogowany.",
+  "provider.failure.network": "Nie można połączyć się z dostawcą. Sprawdź swoje połączenie.",
+  "provider.failure.http": "Błąd dostawcy (HTTP {{status}}).",
+  "provider.failure.httpNoStatus": "Błąd dostawcy.",
+  "provider.failure.schema": "Nieoczekiwana odpowiedź od dostawcy.",
+
   "notification.permission.title": "Wymagane uprawnienie",
   "notification.permission.titleSubagent": "Wymagane uprawnienie (podagent)",
   "notification.permission.titleSkillShell": "Uruchomić polecenia powłoki z umiejętności „{{skill}}”?",
