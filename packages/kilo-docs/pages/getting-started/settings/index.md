@@ -259,7 +259,7 @@ Straightforward tasks can stay solo. Enabling the board does not mean agents are
 
 All participants can read the board history, including messages addressed to others. Recipient selection is not a privacy boundary. Peer messages do not grant user approval or change permissions; `HOLD` and `VETO` are advisory, not controls that pause or cancel work.
 
-When a main session has board messages, open the **Board** icon in its task header (VS Code) or session header (JetBrains, which also offers a **View Kilo Swarm** session menu action) to read them, refresh them, or reset the board. Only the owning top-level session can view or reset its board; child sessions and cloud sessions cannot. Reset clears visible messages only and does not stop agents or clear conversations. See [Kilo Swarm communication](/docs/automate/agent-manager#kilo-swarm-communication) for the board dialog, ownership rules, and recipient-state warnings.
+When a main session has board messages, open the **Board** button in the session dock next to the background agent avatars (VS Code) or the **Board** icon in the session header (JetBrains, which also offers a **View Kilo Swarm** session menu action) to read them, refresh them, or reset the board. Only the owning top-level session can view or reset its board; child sessions and cloud sessions cannot. Reset clears visible messages only and does not stop agents or clear conversations. See [Kilo Swarm communication](/docs/automate/agent-manager#kilo-swarm-communication) for the board dialog, ownership rules, and recipient-state warnings.
 
 ## Experimental Features
 

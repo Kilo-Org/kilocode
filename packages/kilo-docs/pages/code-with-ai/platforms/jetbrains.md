@@ -16,8 +16,29 @@ Open **Settings → Tools → Kilo Code** to configure the plugin. Shared agent 
 - **Auto-Approve** — set per-tool permission levels (Allow / Ask / Deny) and manage granular command and path exceptions without editing config by hand. Permission prompts offer one-time approvals alongside saved allow/reject rules. See [Auto-Approving Actions](/docs/getting-started/settings/auto-approving-actions) for the shared permission model.
 - **Context** — toggle auto-compaction, set the auto-compaction limit (the percentage of the model window that triggers compaction), enable pruning of old tool outputs, and manage file watcher ignore patterns. See [Context Condensing](/docs/customize/context/context-condensing) and [.kilocodeignore](/docs/customize/context/kilocodeignore) for what these settings control.
 - **Agent Behavior → Skills** — inspect loaded skills, add extra skill sources (local paths or remote URLs), edit or remove custom skills, and open skill files in the editor. See [Skills](/docs/customize/skills) for the skill format and discovery rules.
+- **Agent Behavior → MCP Servers** — connect or disconnect MCP servers, sign in to remote servers that use OAuth, reset sign-in, and edit or remove servers. See [MCP servers](#mcp-servers).
 - **Integrations** - enable or disable the GitHub integration for pull request badges and imports. It requires the GitHub CLI (`gh`) to be installed and authenticated.
 - **Advanced → Index agent worktrees** - include `.kilo/worktrees` in the containing project's index. Worktrees are excluded by default to avoid duplicate search results. Files opened from an excluded worktree in the main IDE window lack code resolution and inspections; open the worktree as its own project for full indexing.
+
+## MCP servers
+
+MCP servers extend the agent with external tools. The plugin reads and writes the same `mcp` entries in your shared `kilo.jsonc` files as the CLI and VS Code extension, so servers you configure there also appear here. To add a server, ask the agent to add it and it writes the entry into your Kilo config.
+
+Open **Settings → Tools → Kilo Code → Agent Behavior → MCP Servers** to see configured servers. Each row shows its connection state — **connected**, **failed**, **needs auth**, **needs registration**, or **disabled** — and offers only the actions valid for that state, such as Connect, Disconnect, Sign In, Reset sign-in, Edit, or Delete. See [Using MCP in Kilo Code](/docs/automate/mcp/using-in-kilo-code) for the config format and tool permissions.
+
+### Signing in to a remote MCP server
+
+Remote servers that use OAuth appear as **needs auth** with a **Sign In** action. Kilo opens the authorization page in the browser on your own machine, so sign-in also works in remote development. While a sign-in is pending, a progress bar lets you cancel it without discarding credentials you already had. If the browser cannot be opened automatically, Kilo shows the authorization URL in a dialog so you can open or copy it. When sign-in finishes or fails, a notification reports the outcome, including the server's own error message.
+
+Use **Reset sign-in** on a connected remote server to clear its stored credentials so you can sign in again.
+
+### OAuth client settings
+
+The edit dialog includes OAuth settings for remote servers. Leave **Mode** on **Automatic** unless the server requires a pre-registered client. Choose **Disabled** to turn off OAuth, or **Custom client** to provide a Client ID, client secret, scope, callback port, or redirect URI. The client secret is stored in your Kilo config file.
+
+### Marketplace installs
+
+After you install an MCP server from the Marketplace that needs sign-in, Kilo offers to start sign-in right away. When a configured server needs authentication, the prompt shows a **Session issues** menu with a sign-in action. Removing a Marketplace MCP server and its companion skills from either MCP or Skills settings confirms and removes the whole bundle.
 
 ## Chat and worktrees
 
@@ -54,6 +75,17 @@ Use **Fork Session** in a worktree session's row menu, right-click menu, or prom
 Ask Kilo for a Mermaid diagram to visualize a workflow, architecture, data relationship, or timeline. Chat renders `mermaid` and `mmd` code blocks inline, with source shown while streaming or if rendering fails.
 
 Click a diagram to open a zoomable viewer, or use its toolbar to open an editor tab with **Diagram** and read-only **Source** views. Copying a rendered diagram copies a PNG; copying while it is still streaming or after a render error copies the source instead.
+
+## Navigating prompts
+
+The chat transcript shows a prompt navigator: a vertical rail of ticks along the right edge, one tick per prompt. The rail appears when the session has two or more prompts, and the tick for the prompt you are viewing is highlighted.
+
+- Click a tick to scroll the transcript to that prompt.
+- Hover a tick to open the **Prompt navigator**, a list of every prompt with a preview of its response, or **No response yet** when the response has not started. Use the up and down buttons to jump to the first or latest prompt, or click a row to jump to that prompt. Double-click a row, or press `Enter`, to jump and close the list.
+- A queued prompt is marked with a distinct tick color and labelled **Queued** in the list.
+- When the session has more prompts than the rail can show, a dashed tick stands in for the prompts that do not have their own tick. Click the dashed tick to open the full list.
+
+The rail sits to the right of the transcript. In a narrow sidebar, where there is no free gutter, it moves over the scrollbar column so it stays reachable.
 
 ## Reviewing session changes
 

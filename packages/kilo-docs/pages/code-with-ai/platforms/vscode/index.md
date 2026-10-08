@@ -60,6 +60,8 @@ Use these controls in the background-agent strip:
 - **Clear finished** hides all agents that are no longer running.
 - **Continue in background** appears when a foreground subagent is running. It detaches that work so the parent session can continue while the subagent runs in the background.
 
+When Kilo Swarm is enabled and the session has board messages, a **Board** button sits with the background agents in the session dock, after their avatars. Select it to read the latest posts from Kilo Swarm agents, with **Refresh**, **Reset board**, and **Open board** actions. A blue dot marks posts you have not seen. The button stays in place after agents are cleared or the view reloads. See [Kilo Swarm communication](/docs/automate/agent-manager#kilo-swarm-communication) for the full board dialog and ownership rules.
+
 Stopping the main session with **Stop** or `Esc` ends its current response but leaves background agents running. Use **Stop all (N)** or an individual agent's **Stop** to cancel background work. Completed background results are available when you send the next message or use **Continue**.
 
 ## Follow-up messages

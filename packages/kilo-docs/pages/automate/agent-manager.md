@@ -61,11 +61,13 @@ Separate Agent Manager sessions do not share a Swarm board just because they use
 
 #### Viewing the board
 
-When Kilo Swarm is enabled and the main session has board messages, a **Board** icon appears in its task header. Select the icon to open the board dialog and read the stored messages. Each message shows the sender and recipient avatars. Select an avatar to open that agent's transcript.
+When Kilo Swarm is enabled and the main session has board messages, a **Board** button appears in the session dock, next to the background agent avatars above the prompt. Select it to open a panel with the latest posts and **Refresh**, **Reset board**, and **Open board** actions. **Open board** opens the full board dialog. Posts you have not seen are marked with a blue dot on the button. The button stays in place after background agents are cleared or the view reloads, because the board belongs to the session rather than to a single run.
+
+In the dialog, each message shows the sender and recipient avatars. Select an avatar to open that agent's transcript.
 
 The dialog has a **Refresh** action. Earlier messages load as you scroll to the top of the list, using the cursor from the loaded page.
 
-Only the owning top-level session can open its board. Child sessions and cloud sessions do not show the Board icon. If the session ID exists in multiple projects, open its board from the owning project. Kilo rejects the reference instead of choosing a project.
+Only the owning top-level session can open its board. Child sessions and cloud sessions do not show the Board button. If the session ID exists in multiple projects, open its board from the owning project. Kilo rejects the reference instead of choosing a project.
 
 #### Resetting the board
 
@@ -358,6 +360,18 @@ Double-click a worktree name to edit its label inline. You can also right-click 
 
 Renaming a worktree changes only the label shown in Agent Manager. It does not rename the underlying git branch.
 
+### Pinning Worktrees
+
+Pin the worktrees you use most so they stay at the top of the sidebar, above ungrouped worktrees and sections. Shift+click a worktree, use the pin button on hover, or choose **Pin** / **Unpin** from the right-click menu.
+
+- Pinned worktrees lead the sidebar and take the earliest jump shortcuts — `⌘2`, `⌘3`, and so on, after any Local entry. Drag pinned worktrees to reorder them within the pinned block.
+- Pinned worktrees stay visible when their section is collapsed. Pinning keeps the worktree in its section, so unpinning returns it there; the hover card names that section while the worktree is pinned.
+- Moving a pinned worktree into a different section (menu or drag) unpins it so the move is visible. Dragging cannot reorder a worktree across the pinned and unpinned blocks.
+- Multi-version siblings pin and unpin together.
+- A pinned row replaces its hover delete button with an unpin button, so a stray click cannot delete it. Use **Delete** in the right-click menu to delete a pinned worktree.
+
+Pins are stored in `.kilo/agent-manager.json` with the rest of the sidebar state.
+
 ## Starting and orchestrating sessions from chat
 
 Kilo can start Agent Manager sessions from chat with the `agent_manager` tool. It is available by default only in the VS Code extension because Agent Manager is an extension feature.
@@ -535,7 +549,9 @@ The project and worktree context owns document tabs, loaded content, and comment
 
 ## Browser previews
 
-Enable **Browser Automation** in **Settings > Experimental** to show the Browser panel. It is off by default. Open the panel with the **Browser** button and enter your local application's URL. Each session has its own browser, with developer tools and console diagnostics beside the preview.
+Enable **Integrated Browser** in **Settings > Experimental** to show the Browser panel. It is off by default. Open the panel with the **Browser** button and enter your local application's URL. Each session has its own browser, with developer tools and console diagnostics beside the preview.
+
+Use the button next to the address bar to open the page currently loaded in the panel in your default browser. It is enabled once a page finishes loading.
 
 Use **Select element** to attach an element reference to your next message. It includes enough page context for Kilo to identify the element, plus a source file and line when the page provides a verifiable location. Add your instruction before sending it.
 
@@ -552,6 +568,10 @@ The Integrated Browser does not install browsers or operating system packages. T
 Use the paths for your active VS Code Server and Kilo extension. Linux system libraries may also need manual installation. Keep browser sandbox protection enabled.
 
 In a VS Code WSL window, the browser runs in the WSL extension host. Chrome installed on Windows is not Linux Chrome. Install Chrome inside WSL and keep **Use System Chrome** on, or use matching Chromium with the setting off. This setting is application-scoped, so configure it in Windows-side user settings, not WSL remote settings. `localhost` refers to the extension host, so keep your application's server running inside WSL.
+
+### Chat web links
+
+When the Integrated Browser is enabled, web links in chat open in-app by default: the sidebar opens an Integrated Browser tab, and Agent Manager opens its browser panel. In-app links are marked with a small browser icon. Choose **System browser** under **Open links in**, next to the Integrated Browser flag in **Settings > Experimental**, to send links to your default browser instead. The preference applies to open chats immediately. Links still open in the system browser when the Integrated Browser is off, the workspace is untrusted, or the target is not an `http`/`https` URL.
 
 ## Terminals
 
