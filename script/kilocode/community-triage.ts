@@ -77,14 +77,16 @@ const paths: [string, string][] = [
   ["packages/kilo-vscode/webview-ui/agent-manager/", "area:agent-manager"],
   ["packages/kilo-vscode/", "area:vscode"],
   ["packages/opencode/", "area:cli"],
+  ["packages/core/", "area:cli"],
+  ["packages/server/", "area:cli"],
+  ["packages/tui/", "area:cli"],
   ["packages/kilo-jetbrains/", "area:jetbrains"],
   ["packages/kilo-docs/", "area:docs"],
   ["packages/kilo-gateway/", "area:gateway"],
   ["packages/sdk/", "area:sdk"],
   ["packages/kilo-ui/", "area:ui"],
   ["packages/kilo-i18n/", "area:i18n"],
-  ["packages/app/", "area:desktop"],
-  ["packages/desktop/", "area:desktop"],
+  ["packages/kilo-web-ui/", "area:desktop"],
 ]
 
 // Options of the "Component" dropdown in the issue templates.
@@ -99,10 +101,13 @@ const components: Record<string, string> = {
   sdk: "area:sdk",
 }
 
+// Plain objects inherit keys like "constructor". Only own keys are labels.
+const own = (map: Record<string, string>, key: string) => (Object.hasOwn(map, key) ? map[key] : undefined)
+
 export function areas(title: string, files: string[]) {
   const set = new Set<string>()
   const scope = title.match(/^\w+\(([^)]+)\)!?:/)?.[1]
-  const hit = scope ? scopes[scope.toLowerCase()] : undefined
+  const hit = scope ? own(scopes, scope.toLowerCase()) : undefined
   if (hit) set.add(hit)
   for (const file of files) {
     const rule = paths.find(([prefix]) => file.startsWith(prefix))
@@ -115,7 +120,7 @@ export function component(body: string) {
   // Issue forms render the answer as "### Component". Text the reporter typed
   // can contain the same heading, so take the first one with a known answer.
   for (const hit of body.matchAll(/^###\s+Component\s*\n+(.+)$/gim)) {
-    const tag = components[hit[1].trim().toLowerCase()]
+    const tag = own(components, hit[1].trim().toLowerCase())
     if (tag) return tag
   }
 }
@@ -329,9 +334,10 @@ type Pull = {
   author: Actor
   labels: { nodes: { name: string }[] }
   commits: { nodes: { commit: { committedDate: string; statusCheckRollup: { state: string } | null } }[] }
-  comments: { nodes: Node[] }
-  reviews: { nodes: Node[] }
-  reviewThreads: { nodes: { comments: { nodes: Node[] } }[] }
+  timelineItems: { nodes: { createdAt: string; actor: { login: string } | null }[] }
+  comments: { totalCount: number; nodes: Node[] }
+  reviews: { totalCount: number; nodes: Node[] }
+  reviewThreads: { totalCount: number; nodes: { comments: { nodes: Node[] } }[] }
 }
 
 type Reply = { user: { login: string } | null; created_at?: string; submitted_at?: string }
@@ -364,10 +370,11 @@ query($owner: String!, $repo: String!, $cursor: String) {
         authorAssociation
         author { login __typename }
         labels(first: 30) { nodes { name } }
+        timelineItems(last: 1, itemTypes: [REOPENED_EVENT]) { nodes { ... on ReopenedEvent { createdAt actor { login } } } }
         commits(last: 1) { nodes { commit { committedDate statusCheckRollup { state } } } }
-        comments(last: 20) { nodes { createdAt authorAssociation author { login __typename } } }
-        reviews(last: 20) { nodes { createdAt state authorAssociation author { login __typename } } }
-        reviewThreads(last: 20) { nodes { comments(last: 5) { nodes { createdAt authorAssociation author { login __typename } } } } }
+        comments(last: 20) { totalCount nodes { createdAt authorAssociation author { login __typename } } }
+        reviews(last: 20) { totalCount nodes { createdAt state authorAssociation author { login __typename } } }
+        reviewThreads(last: 20) { totalCount nodes { comments(last: 5) { nodes { createdAt authorAssociation author { login __typename } } } } }
       }
     }
   }
@@ -421,13 +428,27 @@ async function sweep() {
         events.push({ who: "maintainer", at, approve: node.state === "APPROVED" })
     }
     const commit = pr.commits.nodes.at(0)?.commit
-    if (commit) events.push({ who: "author", at: Date.parse(commit.committedDate) })
+    // Commit dates come from the commit author. A date in the future must not
+    // count as the latest reply forever.
+    if (commit) events.push({ who: "author", at: Math.min(Date.parse(commit.committedDate), now) })
+    // Reopening a closed PR is a reply too.
+    const reopen = pr.timelineItems.nodes.at(0)
+    if (reopen?.actor?.login === login) events.push({ who: "author", at: Date.parse(reopen.createdAt) })
 
+    // The query reads only the latest events. If it missed some and found no
+    // maintainer reaction, the reaction may be older than the window. Send the
+    // PR to a human, do not call it untriaged.
+    const cut =
+      pr.comments.totalCount > pr.comments.nodes.length ||
+      pr.reviews.totalCount > pr.reviews.nodes.length ||
+      pr.reviewThreads.totalCount > pr.reviewThreads.nodes.length
     const first = classify(events, tags, now)
     const state: State =
-      first.state === "awaiting" && first.days >= WAIT_DAYS && (await replied(pr.number, login, first.since))
+      first.state === "triage" && cut
         ? { state: "review" }
-        : first
+        : first.state === "awaiting" && first.days >= WAIT_DAYS && (await replied(pr.number, login, first.since))
+          ? { state: "review" }
+          : first
     const failing = ["FAILURE", "ERROR"].includes(commit?.statusCheckRollup?.state ?? "")
     const plan = decide(tags, state, failing)
     const more = [...(tags.includes(label.community) ? [] : [label.community])]

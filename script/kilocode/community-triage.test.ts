@@ -18,6 +18,16 @@ describe("areas", () => {
   test("returns nothing for unknown scope and paths", () => {
     expect(areas("chore: misc", ["script/x.ts"])).toEqual([])
   })
+
+  test("ignores inherited object keys in the scope", () => {
+    expect(areas("fix(constructor): x", [])).toEqual([])
+    expect(areas("fix(__proto__): x", [])).toEqual([])
+    expect(areas("fix(toString): x", [])).toEqual([])
+  })
+
+  test("maps the web UI package", () => {
+    expect(areas("fix: x", ["packages/kilo-web-ui/src/a.ts"])).toEqual(["area:desktop"])
+  })
 })
 
 describe("component", () => {
@@ -29,6 +39,11 @@ describe("component", () => {
 
   test("skips a typed heading with no known answer", () => {
     expect(component("### Component\n\nmy text\n\n### Component\n\nSDK")).toBe("area:sdk")
+  })
+
+  test("ignores inherited object keys in the answer", () => {
+    expect(component("### Component\n\nconstructor")).toBeUndefined()
+    expect(component("### Component\n\n__proto__")).toBeUndefined()
   })
 
   test("ignores other answers", () => {
