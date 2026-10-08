@@ -651,6 +651,12 @@ interface SetProjectExpandedIn {
   expanded: boolean
 }
 
+/** Persist the sidebar order of the additional (not pinned) projects. */
+interface SetProjectOrderIn {
+  type: "agentManager.setProjectOrder"
+  order: string[]
+}
+
 interface DeleteWorktreeIn {
   type: "agentManager.deleteWorktree"
   projectId?: string
@@ -1288,6 +1294,7 @@ export type AgentManagerInMessage =
   | ActivateSelectionIn
   | RememberTargetIn
   | SetProjectExpandedIn
+  | SetProjectOrderIn
   | DeleteWorktreeIn
   | RemoveStaleWorktreeIn
   | RestoreWorktreeIn
