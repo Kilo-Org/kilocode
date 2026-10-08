@@ -26,7 +26,7 @@ Two workflows do the work. Both use `script/kilocode/community-triage.ts`.
 
 | Workflow | Runs | Does |
 |---|---|---|
-| `community-label.yml` | When a PR or issue opens or is edited | Adds `community`, `needs-triage` and `area:*` labels |
+| `community-label.yml` | When a PR or issue opens or is edited | Adds `community`, `needs-triage` (new items only, not reopened ones) and `area:*` labels |
 | `community-sweep.yml` | Monday and Thursday, 17:00 UTC | Syncs status labels, closes stale PRs, posts the queue |
 
 The sweep runs the evening before each maintainer slot. Andrea starts Friday and Bruno starts Tuesday with a fresh queue.

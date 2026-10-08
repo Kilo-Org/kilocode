@@ -38,6 +38,7 @@ const active = new Set([
   "codeql.yml",
   "community-label.yml",
   "community-sweep.yml",
+  "community-triage-test.yml",
   "containers.yml",
   "dependabot-auto-merge.yml",
   "docs-build.yml",
