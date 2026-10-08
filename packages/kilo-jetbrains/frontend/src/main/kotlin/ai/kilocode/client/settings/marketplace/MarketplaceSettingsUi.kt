@@ -267,6 +267,9 @@ internal class MarketplaceSettingsUi(
             var ok = false
             try {
                 val svc = service<KiloMarketplaceService>()
+                // Mirrors McpSettingsUi.remove(): drop any pending sign-in and the needs-auth
+                // indicator before the server disappears, while the CLI still recognizes the name.
+                if (request.remove && item.type == "mcp") service<KiloMcpAuthService>().forget(dir, item.id)
                 val result = if (request.remove) {
                     svc.remove(dir, item.id, item.type, request.target)
                 } else {
