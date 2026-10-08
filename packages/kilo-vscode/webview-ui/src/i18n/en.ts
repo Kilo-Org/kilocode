@@ -158,6 +158,24 @@ export const dict = {
 
   "model.tag.free": "Free",
   "model.tag.dataCollected": "Data may be used for training",
+  "model.routing.label": "Provider routing",
+  "model.routing.auto": "Auto",
+  "model.routing.loading": "Loading providers…",
+  "model.routing.empty": "No provider list available for this model",
+  "model.routing.preview.quantization": "Quantization",
+  "model.routing.preview.maxOutput": "Max output",
+  "model.routing.preview.cacheRead": "Cache read",
+  "model.routing.preview.cacheWrite": "Cache write",
+  "model.routing.preview.uptime": "Uptime (30 min)",
+  "model.routing.preview.autoDescription": "The gateway selects a provider dynamically when each request is sent.",
+  "model.routing.unavailable": "Currently unavailable",
+  "model.routing.failed": "Couldn't load the provider list. It is retried the next time you open this menu.",
+  "model.routing.busy": "Sessions are running. Changing the provider interrupts them.",
+  "model.routing.custom": "Custom",
+  "model.routing.customNote":
+    "Routing for this model lists several providers in kilo.json. Picking a provider or Auto replaces that setup.",
+  "model.routing.projectOverride":
+    "Provider routing for this model is set in the project kilo.json, which overrides this selection.",
   "model.group.auto": "Auto Models",
   "model.group.recommended": "Recommended",
   "model.group.favorites": "Favorites",
@@ -1293,6 +1311,9 @@ export const dict = {
   "settings.models.hidePromptTraining.title": "Hide Prompt-Training Models",
   "settings.models.hidePromptTraining.description":
     "Hide Kilo Gateway models whose providers may use your prompts for training.",
+  "settings.models.providerRouting.title": "Provider Routing",
+  "settings.models.providerRouting.description":
+    "Pin the default model to a specific upstream inference provider when routed through the Kilo Gateway. Auto lets the gateway choose.",
   "settings.providers.modeModels": "Model per Mode",
   "settings.providers.modeModels.description":
     "Override the default model for specific modes. If not set, the global default model is used.",

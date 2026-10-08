@@ -374,6 +374,7 @@ const ConfigWrapper: ParentComponent<{
     })
 
     const value = {
+      directory: () => undefined,
       config: createMemo(() => cfg()),
       globalConfig: createMemo(() => (scoped ? global() : cfg())),
       globalDraft: () => ({}),

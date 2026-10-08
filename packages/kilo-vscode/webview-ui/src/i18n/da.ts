@@ -161,6 +161,24 @@ export const dict = {
   "provider.disconnect.toast.disconnected.description": "Modeller fra {{provider}} er ikke længere tilgængelige.",
   "model.tag.free": "Gratis",
   "model.tag.dataCollected": "Data kan bruges til træning",
+  "model.routing.label": "Udbyderrouting",
+  "model.routing.auto": "Automatisk",
+  "model.routing.loading": "Indlæser udbydere…",
+  "model.routing.empty": "Ingen udbyderliste tilgængelig for denne model",
+  "model.routing.preview.quantization": "Kvantisering",
+  "model.routing.preview.maxOutput": "Maks. output",
+  "model.routing.preview.cacheRead": "Cachelæsning",
+  "model.routing.preview.cacheWrite": "Cacheskrivning",
+  "model.routing.preview.uptime": "Tilgængelighed (30 min.)",
+  "model.routing.preview.autoDescription": "Gatewayen vælger dynamisk en udbyder, når hver anmodning sendes.",
+  "model.routing.unavailable": "Ikke tilgængelig i øjeblikket",
+  "model.routing.failed": "Kunne ikke indlæse listen over udbydere. Der prøves igen, næste gang du åbner denne menu.",
+  "model.routing.busy": "Der kører sessioner. Et skift af udbyder afbryder dem.",
+  "model.routing.custom": "Brugerdefineret",
+  "model.routing.customNote":
+    "Routing for denne model angiver flere udbydere i kilo.json. Valg af en udbyder eller Automatisk erstatter den opsætning.",
+  "model.routing.projectOverride":
+    "Udbyderrouting for denne model er angivet i projektets kilo.json og tilsidesætter dette valg.",
   "model.group.auto": "Automatiske modeller",
   "model.group.recommended": "Anbefalet",
   "model.group.favorites": "Favoritter",
@@ -497,6 +515,9 @@ export const dict = {
   "settings.models.hidePromptTraining.title": "Skjul modeller, der træner på prompts",
   "settings.models.hidePromptTraining.description":
     "Skjul Kilo Gateway-modeller, hvis udbydere muligvis bruger dine prompts til træning.",
+  "settings.models.providerRouting.title": "Udbyderrouting",
+  "settings.models.providerRouting.description":
+    "Fastgør standardmodellen til en bestemt inferensudbyder, når den routes gennem Kilo Gateway. Vælg Automatisk for at lade gatewayen vælge.",
   "settings.providers.modeModels": "Model pr. tilstand",
   "settings.providers.modeModels.description":
     "Tilsidesæt standardmodellen for bestemte tilstande. Hvis ikke angivet, bruges den globale standardmodel.",

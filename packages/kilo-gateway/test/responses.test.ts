@@ -114,4 +114,32 @@ describe("Responses request sanitization", () => {
       provider: { data_collection: "deny" },
     })
   })
+
+  test("merges model routing into the provider object for any endpoint", () => {
+    const body = JSON.stringify({ model: "anthropic/claude-sonnet-4", messages: [] })
+    const routing = { order: ["gmicloud/fp8"], only: ["gmicloud/fp8"], allow_fallbacks: false }
+    const result = transformRequestBody("https://api.kilo.ai/api/openrouter/messages", body, undefined, routing)
+
+    expect(JSON.parse(result as string)).toEqual({
+      model: "anthropic/claude-sonnet-4",
+      messages: [],
+      provider: routing,
+    })
+  })
+
+  test("request provider preferences win over model routing, privacy wins over both", () => {
+    const body = JSON.stringify({ provider: { order: ["baseten/fp8"], data_collection: "allow" } })
+    const routing = { order: ["gmicloud/fp8"], only: ["gmicloud/fp8"] }
+    const result = transformRequestBody("https://api.kilo.ai/api/openrouter/chat/completions", body, "deny", routing)
+
+    expect(JSON.parse(result as string)).toEqual({
+      provider: { order: ["baseten/fp8"], only: ["gmicloud/fp8"], data_collection: "deny" },
+    })
+  })
+
+  test("empty routing leaves the body unchanged", () => {
+    const body = JSON.stringify({ model: "anthropic/claude-sonnet-4" })
+
+    expect(transformRequestBody("https://api.kilo.ai/api/openrouter/chat/completions", body, undefined, {})).toBe(body)
+  })
 })
