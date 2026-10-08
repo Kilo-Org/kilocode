@@ -217,6 +217,7 @@ export const dict = {
   "prompt.action.stop.background": "Zaustavi glavnog agenta. Agenti u pozadini nastavljaju raditi.",
   "prompt.agents.show": "Prikaži agente u pozadini",
   "prompt.action.enhance": "Poboljšaj prompt",
+  "prompt.action.more": "Više akcija",
   "prompt.paste.expand": "Kliknite da proširite zalijepljeni tekst",
   "prompt.issues.title": "Problemi sesije",
   "prompt.mcp.provider": "MCP {{name}}",
