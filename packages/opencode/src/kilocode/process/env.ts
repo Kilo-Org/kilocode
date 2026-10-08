@@ -5,6 +5,7 @@ export function model(extra?: NodeJS.ProcessEnv | null): Record<string, string> 
     ),
   )
   delete env.KILO_SERVER_PASSWORD
+  delete env.KILO_SERVER_PASSWORD_FILE
   delete env.KILO_SERVER_USERNAME
   delete env.KILO_BROWSER_BROKER_URL
   delete env.KILO_BROWSER_BROKER_TOKEN

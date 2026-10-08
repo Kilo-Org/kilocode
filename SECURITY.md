@@ -20,7 +20,9 @@ If you need true isolation, run Kilo CLI inside a Docker container or VM.
 
 ### Server Mode
 
-Server mode is opt-in only. When enabled, set `KILO_SERVER_PASSWORD` to require HTTP Basic Auth. Without this, the server runs unauthenticated (with a warning). It is the end user's responsibility to secure the server - any functionality it provides is not a vulnerability.
+Server mode is opt-in only. When enabled, set `KILO_SERVER_PASSWORD` (or `KILO_SERVER_PASSWORD_FILE`, see below) to require HTTP Basic Auth. Without this, the server runs unauthenticated (with a warning). It is the end user's responsibility to secure the server - any functionality it provides is not a vulnerability.
+
+A process's startup environment can be read by other processes running as the same user (for example `ps eww` on macOS or `/proc/<pid>/environ` on Linux), including commands the server itself starts. To keep the password out of the environment, put it in a file readable only by you and set `KILO_SERVER_PASSWORD_FILE` to its path. The file is read once at startup and a single trailing newline is ignored. A file descriptor path such as `/dev/fd/3` also works. If `KILO_SERVER_PASSWORD` is also set, it takes precedence.
 
 ### Out of Scope
 
