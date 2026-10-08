@@ -163,17 +163,37 @@ export namespace BackgroundProcessRunner {
     if (!process.stderr.destroyed) process.stderr.write(`background process runner: ${message}\n`)
   }
 
+  function control(file: string) {
+    const noted = new Set<string>()
+    const failed = (action: string, err: unknown) => {
+      if (noted.has(action)) return
+      noted.add(action)
+      note(`could not ${action} stop file, retrying: ${String(err)}`)
+    }
+    return {
+      exists: () =>
+        Promise.resolve()
+          .then(() => Bun.file(file).exists())
+          .catch((err: unknown) => {
+            failed("check", err)
+            return undefined
+          }),
+      clear: () =>
+        rm(file, { force: true }).then(
+          () => true,
+          (err: unknown) => {
+            failed("remove", err)
+            return false
+          },
+        ),
+    }
+  }
+
   // The job holds the command and every process it started, so the runner only has to wait
   // until the command exited and no other member is left. A stop terminates the members.
-  // If the job itself stops answering, the runner keeps guarding the command by walking the
-  // process table instead of exiting and leaving the command unmanaged.
-  async function contained(
-    input: Input,
-    job: BackgroundProcessWindows.Job,
-    child: ReturnType<typeof spawn>,
-    done: Promise<number>,
-    start: number,
-  ) {
+  // Once assigned, the job remains the authority even if a native call temporarily fails.
+  // A process-table walk cannot recover detached members or safely invent an exit bound.
+  export async function contained(input: Input, job: BackgroundProcessWindows.Job, done: Promise<number>) {
     let code: number | undefined
     let failure: unknown
     void done.then(
@@ -184,38 +204,45 @@ export namespace BackgroundProcessRunner {
         failure = err
       },
     )
-    // `code` is set by the exit handler while the loops below wait.
-    const pending = () => code === undefined || job.members().length > 0
-    const watch = async () => {
-      while (true) {
-        if (failure) throw failure
-        if (await Bun.file(input.control).exists()) {
-          const end = Date.now() + 5_000
-          while (Date.now() < end && pending()) {
-            job.kill()
-            await Bun.sleep(50)
-          }
-          // The stop request stays in place until the job is confirmed empty, so the fallback
-          // still sees it if the job fails in between.
-          if (code !== undefined && job.members().length === 0) {
-            await rm(input.control, { force: true })
-            return code
-          }
-          // Keep guarding what could not be ended. Serve then reports the stop as failed instead
-          // of seeing the runner disappear while the command keeps running.
-          await rm(input.control, { force: true })
-          note("could not end every process of the command, still guarding it")
-          continue
-        }
-        if (code !== undefined && job.members().length === 0) return code
-        await Bun.sleep(100)
+    const stop = control(input.control)
+    let warned = false
+    const faults = new Set<string>()
+    const call = <T>(action: string, fn: () => T) => {
+      try {
+        const value = fn()
+        if (faults.delete(action)) note(`job ${action} recovered`)
+        return { value }
+      } catch (err) {
+        if (!faults.has(action)) note(`job ${action} failed, still guarding it: ${String(err)}`)
+        faults.add(action)
+        return undefined
       }
     }
-    return watch().catch((err: unknown) => {
-      if (failure !== undefined && err === failure) throw err
-      note(`job object failed, polling the process table instead: ${String(err)}`)
-      return windows(input, child, done, start)
-    })
+    const empty = () => call("query", () => job.members())?.value.length === 0
+    while (true) {
+      if (failure) throw failure
+      const requested = await stop.exists()
+      if (requested) {
+        const end = Date.now() + 5_000
+        while (Date.now() < end) {
+          if (code !== undefined && empty()) break
+          call("kill", () => job.kill())
+          await Bun.sleep(50)
+        }
+        if (code !== undefined && empty()) {
+          await stop.clear()
+          return code
+        }
+        // Keep guarding what could not be ended. Serve then reports the stop as failed instead
+        // of seeing the runner disappear while the command keeps running.
+        const cleared = await stop.clear()
+        if (!warned) note("could not end every process of the command, still guarding it")
+        warned = !cleared
+        continue
+      }
+      if (code !== undefined && empty()) return code
+      await Bun.sleep(100)
+    }
   }
 
   // Grace window after the leader exits during which we keep walking from its
@@ -304,7 +331,7 @@ export namespace BackgroundProcessRunner {
       child.once("exit", (code, signal) => resolve(code ?? (signal ? 1 : 0)))
     })
     try {
-      if (job?.job) return await contained(input, job.job, child, done, start)
+      if (job?.job) return await contained(input, job.job, done)
       if (process.platform === "win32") return await windows(input, child, done, start)
       return await done
     } finally {
