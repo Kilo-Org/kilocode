@@ -68,6 +68,10 @@ describe("pushedAt", () => {
     expect(pushedAt(new Date(ago(2)).toISOString(), now)).toBe(ago(2))
   })
 
+  test("allows a small clock skew", () => {
+    expect(pushedAt(new Date(now + 60_000).toISOString(), now)).toBe(now + 60_000)
+  })
+
   test("ignores future commit dates", () => {
     expect(pushedAt(new Date(now + DAY).toISOString(), now)).toBeUndefined()
   })

@@ -125,9 +125,12 @@ export function component(body: string) {
   }
 }
 
+// Clocks differ a little between a contributor and GitHub. Allow a small skew.
+const SKEW = 5 * 60 * 1000
+
 export function pushedAt(date: string, now: number) {
   const at = Date.parse(date)
-  return at > now ? undefined : at
+  return at > now + SKEW ? undefined : at
 }
 
 export type Event = { who: "author" | "maintainer"; at: number; approve?: boolean }
@@ -434,7 +437,7 @@ async function sweep() {
     }
     const commit = pr.commits.nodes.at(0)?.commit
     // Commit dates come from the commit author. A date in the future would sort
-    // after every maintainer reaction, so it is ignored.
+    // after every maintainer reaction, so it is ignored. A small clock skew is allowed.
     const pushed = commit ? pushedAt(commit.committedDate, now) : undefined
     if (pushed) events.push({ who: "author", at: pushed })
     // Reopening a closed PR is a reply too.
