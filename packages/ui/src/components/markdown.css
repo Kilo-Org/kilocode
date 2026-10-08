@@ -7,6 +7,8 @@
   font-family: var(--font-family-sans);
   font-size: var(--font-size-base); /* 14px */
   line-height: 160%;
+  unicode-bidi: plaintext; /* kilocode_change */
+  text-align: start; /* kilocode_change */
 
   /* Spacing for flow */
   > *:first-child {
@@ -35,6 +37,8 @@
     margin-top: 0px;
     margin-bottom: 24px;
     line-height: var(--line-height-large);
+    unicode-bidi: plaintext; /* kilocode_change */
+    text-align: start; /* kilocode_change */
   }
 
   /* Emphasis & Strong: Neutral strong color */
@@ -47,6 +51,8 @@
   /* Paragraphs */
   p {
     margin-bottom: 12px;
+    unicode-bidi: plaintext; /* kilocode_change */
+    text-align: start; /* kilocode_change */
   }
 
   /* Links */
@@ -100,6 +106,8 @@
 
   li {
     margin-bottom: 8px;
+    unicode-bidi: plaintext; /* kilocode_change */
+    text-align: start; /* kilocode_change */
   }
 
   li > p:first-child {
@@ -135,6 +143,8 @@
     padding-inline-start: 0.5rem; /* kilocode_change */
     color: var(--text-weak);
     font-style: normal;
+    unicode-bidi: plaintext; /* kilocode_change */
+    text-align: start; /* kilocode_change */
   }
 
   /* Horizontal Rule - Invisible spacing only */
@@ -302,6 +312,7 @@
     padding: 12px;
     text-align: start; /* kilocode_change */
     vertical-align: top;
+    unicode-bidi: plaintext; /* kilocode_change */
   }
 
   th {
