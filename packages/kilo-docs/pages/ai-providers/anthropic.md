@@ -17,6 +17,16 @@ Anthropic is an AI safety and research company that builds reliable, interpretab
 3.  **Create a Key:** Click "Create Key". Give your key a descriptive name (e.g., "Kilo Code").
 4.  **Copy the Key:** **Important:** Copy the API key _immediately_. You will not be able to see it again. Store it securely.
 
+## Using a Claude Max or Team subscription
+
+If you have a Claude Max or Team plan, your subscription includes monthly Claude Platform API credits — $100/month on Max 5x, $200/month on Max 20x, and up to $500/month pooled on Team — that work with any Claude model in third-party tools like Kilo Code:
+
+1. Link a Claude Console organization to your plan from [claude.ai Settings → Billing](https://claude.ai/settings/billing) to claim the credits.
+2. Create an API key in the linked organization at [platform.claude.com](https://platform.claude.com).
+3. Configure that key in Kilo Code as described above — requests draw from your subscription's monthly credits before any purchased credits.
+
+See [Anthropic's announcement](https://x.com/claudedevs/status/2107895957933408429) and the official [Monthly API credits for Max and Team plans](https://support.claude.com/en/articles/17154008-monthly-api-credits-for-max-and-team-plans) documentation for eligibility and full terms. Free, Pro, and Enterprise plans are not eligible.
+
 ## Configuration in Kilo Code
 
 {% tabs %}
