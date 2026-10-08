@@ -144,6 +144,32 @@ it.instance("fetches models from KILO_AI_GATEWAY_URL and defaults from the Kilo 
   )
 })
 
+it.instance("fetches models from the production AI gateway when no Kilo URL is configured", () => {
+  const urls: string[] = []
+  return Effect.gen(function* () {
+    const catalog = yield* CloudCatalog.Service
+    const token = Redacted.make("stored-token")
+    yield* catalog.models({ token })
+    yield* catalog.models({ token, organizationID: "org" })
+    yield* catalog.defaultModel({ token })
+    expect(urls).toEqual([
+      "https://ai-gateway.kilo.ai/api/v1/models",
+      "https://ai-gateway.kilo.ai/api/v1/organizations/org/models",
+      "https://api.kilo.ai/api/defaults",
+    ])
+  }).pipe(
+    Effect.provide(
+      CloudCatalog.layer({
+        env: {},
+        fetch: async (request) => {
+          urls.push(request.url)
+          return Response.json({ data: [], defaultModel: "anthropic/gateway" })
+        },
+      }),
+    ),
+  )
+})
+
 it.instance("rejects an insecure KILO_AI_GATEWAY_URL", () =>
   Effect.gen(function* () {
     const catalog = yield* CloudCatalog.Service

@@ -1,11 +1,13 @@
-import { KILO_AI_GATEWAY_BASE, KILO_API_BASE } from "./constants.js"
+import { DEFAULT_KILO_AI_GATEWAY_URL, KILO_AI_GATEWAY_OVERRIDE, KILO_API_BASE, KILO_API_OVERRIDE } from "./constants.js"
 import { getKiloUrlFromToken } from "../auth/token.js"
 
 type UrlOptions = {
   baseURL?: string
   token?: string
-  /** AI gateway base URL. Defaults to KILO_AI_GATEWAY_URL; pass "" for none. */
+  /** KILO_AI_GATEWAY_URL value. Defaults to the process environment; pass "" for unset. */
   gateway?: string
+  /** KILO_API_URL value. Defaults to the process environment; pass "" for unset. */
+  api?: string
 }
 
 function route(raw: string, name: "gateway" | "openrouter"): string {
@@ -20,7 +22,7 @@ function route(raw: string, name: "gateway" | "openrouter"): string {
 }
 
 function base(options: UrlOptions): string {
-  return getKiloUrlFromToken(options.baseURL ?? KILO_API_BASE, options.token ?? "")
+  return getKiloUrlFromToken(options.baseURL ?? (options.api || KILO_API_BASE), options.token ?? "")
 }
 
 function slash(raw: string) {
@@ -32,11 +34,18 @@ function slash(raw: string) {
 }
 
 /**
- * KILO_AI_GATEWAY_URL as a base URL with a trailing slash, or undefined when it is unset or a
- * baseURL points somewhere else. A baseURL under the gateway (such as KILO_OPENROUTER_BASE) keeps it.
+ * Kilo AI Gateway base URL with a trailing slash, or undefined when the AI endpoints use the
+ * legacy routes on the Kilo API:
+ * - A valid KILO_AI_GATEWAY_URL is used as given.
+ * - Otherwise a custom Kilo API (KILO_API_URL or a URL embedded in the token) keeps the legacy routes.
+ * - Otherwise the production gateway is used.
+ * A baseURL outside the gateway also keeps the legacy routes; one under it (such as
+ * KILO_OPENROUTER_BASE) keeps the gateway.
  */
 export function resolveKiloAiGatewayRoot(options: UrlOptions = {}): string | undefined {
-  const gateway = options.gateway ?? KILO_AI_GATEWAY_BASE
+  const raw = (options.gateway ?? KILO_AI_GATEWAY_OVERRIDE)?.trim()
+  const custom = (options.api ?? KILO_API_OVERRIDE) || getKiloUrlFromToken("", options.token ?? "")
+  const gateway = raw && URL.canParse(raw) ? raw : custom ? undefined : DEFAULT_KILO_AI_GATEWAY_URL
   if (!gateway) return undefined
   const root = slash(gateway)
   if (options.baseURL && !slash(options.baseURL).startsWith(root)) return undefined
@@ -44,13 +53,17 @@ export function resolveKiloAiGatewayRoot(options: UrlOptions = {}): string | und
 }
 
 /**
- * Resolve an AI endpoint: `path` under KILO_AI_GATEWAY_URL when it is set, otherwise the
- * `legacy` path on KILO_API_BASE.
+ * Resolve an AI endpoint: `path` under the Kilo AI Gateway, or the `legacy` path on KILO_API_BASE
+ * when the legacy routes apply.
  */
-export function resolveKiloAiGatewayUrl(path: string, legacy: string, options: Pick<UrlOptions, "gateway"> = {}) {
+export function resolveKiloAiGatewayUrl(
+  path: string,
+  legacy: string,
+  options: Pick<UrlOptions, "gateway" | "api"> = {},
+) {
   const root = resolveKiloAiGatewayRoot(options)
   if (root) return new URL(path, root).toString()
-  return `${KILO_API_BASE}${legacy}`
+  return `${options.api || KILO_API_BASE}${legacy}`
 }
 
 export function resolveKiloGatewayBaseUrl(options: UrlOptions = {}): string {

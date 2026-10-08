@@ -220,8 +220,8 @@ async function fetchRawKiloModels(options?: {
   // Transform URL with token if available
   const finalBaseURL = token ? getKiloUrlFromToken(baseURL, token) : baseURL
 
-  // Construct models endpoint. KILO_AI_GATEWAY_URL serves the models, including organization models.
-  const gateway = resolveKiloAiGatewayRoot({ baseURL: options?.baseURL })
+  // Construct models endpoint. The Kilo AI Gateway serves the models, including organization models.
+  const gateway = resolveKiloAiGatewayRoot({ baseURL: options?.baseURL, token })
   const org = organizationId ?? finalBaseURL.match(/\/api\/organizations\/([^/]+)/)?.at(1)
   const modelsURL = gateway
     ? new URL(org ? `organizations/${encodeURIComponent(org)}/models` : "models", gateway).toString()

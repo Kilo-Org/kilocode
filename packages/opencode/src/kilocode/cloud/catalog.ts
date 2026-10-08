@@ -131,7 +131,7 @@ export namespace CloudCatalog {
       const value = getKiloUrlFromToken(fallback, Redacted.value(input.token))
       return yield* Effect.try({
         try: () => {
-          const url = new URL(resolveKiloOpenRouterBaseUrl({ baseURL: value, gateway: "" }))
+          const url = new URL(resolveKiloOpenRouterBaseUrl({ baseURL: value }))
           parseServiceOrigin(url.origin, { allowHttpLoopback: !!raw || value !== fallback })
           if (url.username !== "" || url.password !== "") throw new Error("Catalog URL credentials are not allowed")
           return url
@@ -144,13 +144,18 @@ export namespace CloudCatalog {
       })
     })
 
-    // A valid KILO_AI_GATEWAY_URL serves the models, like in @kilocode/kilo-gateway; the defaults stay on the Kilo API.
-    const gateway = Effect.fn("CloudCatalog.gateway")(function* () {
-      const raw = env[ENV_KILO_AI_GATEWAY_URL]?.trim()
-      if (!raw || !URL.canParse(raw)) return undefined
+    // The Kilo AI Gateway serves the models, resolved like in @kilocode/kilo-gateway from the injected
+    // env; the defaults stay on the Kilo API. Only an explicit KILO_AI_GATEWAY_URL can be loopback HTTP.
+    const gateway = Effect.fn("CloudCatalog.gateway")(function* (input: Input) {
+      const root = resolveKiloAiGatewayRoot({
+        gateway: env[ENV_KILO_AI_GATEWAY_URL] ?? "",
+        api: env.KILO_API_URL?.trim() ?? "",
+        token: Redacted.value(input.token),
+      })
+      if (!root) return undefined
       return yield* Effect.try({
         try: () => {
-          const url = new URL(resolveKiloAiGatewayRoot({ gateway: raw }) ?? raw)
+          const url = new URL(root)
           parseServiceOrigin(url.origin, { allowHttpLoopback: true })
           if (url.username !== "" || url.password !== "") throw new Error("Catalog URL credentials are not allowed")
           return url
@@ -165,7 +170,7 @@ export namespace CloudCatalog {
 
     const models = Effect.fn("CloudCatalog.models")(function* (input: Input) {
       const org = input.organizationID ? `organizations/${encodeURIComponent(input.organizationID)}/models` : undefined
-      const root = yield* gateway()
+      const root = yield* gateway(input)
       const url = root ? new URL(org ?? "models", root) : new URL(org ? `../${org}` : "models", yield* base(input))
       const result = yield* request(url.toString(), input, Models)
       return [

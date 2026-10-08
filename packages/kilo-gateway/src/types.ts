@@ -85,7 +85,8 @@ export interface KiloProviderOptions {
   /**
    * Base URL for the KiloCode API
    * Can be overridden by KILO_API_URL environment variable.
-   * When KILO_AI_GATEWAY_URL is set, AI requests go to that gateway unless this points elsewhere.
+   * AI requests go to the Kilo AI Gateway (KILO_AI_GATEWAY_URL, or https://ai-gateway.kilo.ai/api/v1
+   * when KILO_API_URL is unset); a baseURL outside the gateway keeps the legacy routes.
    * @default "https://api.kilo.ai"
    */
   baseURL?: string
