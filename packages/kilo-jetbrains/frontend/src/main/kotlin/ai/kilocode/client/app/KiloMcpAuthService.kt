@@ -67,9 +67,28 @@ class KiloMcpAuthService internal constructor(
 
     private val _busy = MutableStateFlow<Set<String>>(emptySet())
     val busy: StateFlow<Set<String>> = _busy.asStateFlow()
-    private val active = ConcurrentHashMap<String, CompletableDeferred<Unit>>()
-    private val cancelled = ConcurrentHashMap.newKeySet<CompletableDeferred<Unit>>()
-    private val dropped = ConcurrentHashMap.newKeySet<CompletableDeferred<Unit>>()
+    private val active = ConcurrentHashMap<String, Attempt>()
+
+    /**
+     * One in-flight sign-in.
+     *
+     * [abort] releases the `signIn` caller waiting on the CLI, and [forgotten] tells that caller the
+     * server is being removed so it skips its trailing refresh. The flag lives on the attempt rather
+     * than in a separate set so it cannot outlive the attempt it describes: [stop] writes it before
+     * completing [abort], and the only reader is the `signIn` that already holds this reference.
+     */
+    private class Attempt {
+        val abort = CompletableDeferred<Unit>()
+
+        @Volatile
+        var forgotten = false
+            private set
+
+        fun stop(forget: Boolean = false) {
+            if (forget) forgotten = true
+            abort.complete(Unit)
+        }
+    }
 
     private val started = AtomicBoolean(false)
     private val lastEventUrl = AtomicReference<String?>(null)
@@ -93,13 +112,13 @@ class KiloMcpAuthService internal constructor(
     /** Starts (or resumes) sign-in for [name] in [dir]. Single-flight per directory/name pair. */
     suspend fun signIn(dir: String, name: String): McpAuthResultDto {
         val key = busyKey(dir, name)
-        val abort = CompletableDeferred<Unit>()
-        if (active.putIfAbsent(key, abort) != null) return McpAuthResultDto("failed", null)
+        val pending = Attempt()
+        if (active.putIfAbsent(key, pending) != null) return McpAuthResultDto("failed", null)
         _busy.update { it + key }
         return try {
-            val result = withTimeoutOrNull(authTimeoutMs) { race(dir, name, abort) }
+            val result = withTimeoutOrNull(authTimeoutMs) { race(dir, name, pending.abort) }
             if (result != null) {
-                if (abort.isCompleted) return McpAuthResultDto("cancelled", null)
+                if (pending.abort.isCompleted) return McpAuthResultDto("cancelled", null)
                 return result
             }
             // Cancel rather than remove: a timeout should abandon this attempt, not discard
@@ -109,12 +128,10 @@ class KiloMcpAuthService internal constructor(
             }
             McpAuthResultDto("timeout", null)
         } finally {
-            val gone = dropped.remove(abort)
-            cancelled.remove(abort)
-            release(key, abort)
+            release(key, pending)
             // A forgotten server is mid-removal, so re-reading its runtime status here would race the
             // removal RPC and put the name straight back into needsAuth.
-            if (!gone) refresh(dir)
+            if (!pending.forgotten) refresh(dir)
         }
     }
 
@@ -145,20 +162,19 @@ class KiloMcpAuthService internal constructor(
         }
     }
 
-    private fun release(key: String, abort: CompletableDeferred<Unit>) {
-        if (active.remove(key, abort)) _busy.update { it - key }
+    private fun release(key: String, pending: Attempt) {
+        if (active.remove(key, pending)) _busy.update { it - key }
     }
 
     /** Cancels a pending sign-in for [name], keeping any stored credentials. */
     suspend fun cancel(dir: String, name: String): Boolean {
-        val abort = active[busyKey(dir, name)]
-        if (abort != null) cancelled.add(abort)
+        val pending = active[busyKey(dir, name)]
         val stopped = attempt("mcp auth cancel failed dir=$dir name=$name", false) { svc().mcpAuthCancel(dir, name) }
         // Abandon the attempt even when the CLI refuses the cancel. A rejected cancel means the flow
         // is already unreachable, and leaving it busy strands the Settings progress overlay and the
         // prompt indicator on "Signing in..." until the six-minute timeout. The trailing refresh in
         // signIn's finally still reports the truth if the flow somehow completes anyway.
-        abort?.complete(Unit)
+        pending?.stop()
         return stopped
     }
 
@@ -172,12 +188,11 @@ class KiloMcpAuthService internal constructor(
      */
     suspend fun forget(dir: String, name: String) {
         val key = busyKey(dir, name)
-        val abort = active[key]
-        if (abort != null) {
-            dropped.add(abort)
+        val pending = active[key]
+        if (pending != null) {
             attempt("mcp auth forget failed dir=$dir name=$name", false) { svc().mcpAuthCancel(dir, name) }
-            abort.complete(Unit)
-            release(key, abort)
+            pending.stop(forget = true)
+            release(key, pending)
         }
         val names = _needsAuth.value[dir].orEmpty()
         if (name in names) updateNeedsAuth(dir, names - name)
@@ -187,10 +202,7 @@ class KiloMcpAuthService internal constructor(
     suspend fun reset(dir: String, name: String): Boolean {
         val removed = attempt("mcp auth reset failed dir=$dir name=$name", false) { svc().mcpAuthRemove(dir, name) }
         if (!removed) return false
-        active[busyKey(dir, name)]?.let { abort ->
-            cancelled.add(abort)
-            abort.complete(Unit)
-        }
+        active[busyKey(dir, name)]?.stop()
         var reconnected = false
         try {
             val disconnected = attempt("mcp disconnect after auth reset failed dir=$dir name=$name", false) {

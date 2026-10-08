@@ -246,6 +246,31 @@ class KiloMcpAuthServiceTest : BasePlatformTestCase() {
         assertTrue(rpc.mcpAuthCancels.isEmpty())
     }
 
+    /**
+     * The forgotten marker is scoped to the attempt it abandons, so re-adding the server and signing
+     * in again must get the normal trailing refresh. A marker held in a service-wide set could
+     * survive its attempt and silently suppress this later refresh.
+     */
+    fun `test a later sign in still refreshes after an earlier attempt was forgotten`() = runBlocking(Dispatchers.Default) {
+        val gate = CompletableDeferred<Unit>()
+        rpc.beforeAuthenticate = { gate.await() }
+        rpc.mcps = listOf(McpStatusDto("linear", "needs_auth"))
+        val service = service(authTimeoutMs = 60_000L)
+        val first = async { service.signIn("/test", "linear") }
+        withTimeout(5000) { while (!rpc.mcpAuthenticateStarted) delay(5) }
+        service.forget("/test", "linear")
+        withTimeout(2000) { first.await() }
+        assertTrue(service.needsAuth.value["/test"].orEmpty().isEmpty())
+
+        // The server is back in config and still unauthenticated, so this attempt's refresh must run.
+        rpc.beforeAuthenticate = null
+        rpc.mcpAuthenticateStarted = false
+        rpc.mcpAuthenticateResult = McpAuthResultDto("failed", "denied")
+        service.signIn("/test", "linear")
+
+        assertEquals(setOf("linear"), service.needsAuth.value["/test"])
+    }
+
     fun `test sync records needs auth from a supplied status list without calling the rpc`() = runBlocking(Dispatchers.Default) {
         val service = service()
 
