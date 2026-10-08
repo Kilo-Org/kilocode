@@ -12,6 +12,7 @@ import ai.kilocode.client.session.model.ToolKind
 import ai.kilocode.client.session.ui.style.SessionUiStyle
 import com.intellij.util.ui.JBUI
 import java.awt.Color
+import java.awt.Cursor
 import java.awt.Dimension
 import java.awt.Graphics
 import java.awt.Graphics2D
@@ -27,6 +28,8 @@ internal class TimelinePanel : JPanel() {
         private const val MIN = 8
         private const val PAD = 4
         private const val GAP = 2
+        private val HAND = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
+        private val DEFAULT = Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR)
     }
 
     private var items: List<TimelineItem> = emptyList()
@@ -39,6 +42,7 @@ internal class TimelinePanel : JPanel() {
             override fun mouseMoved(event: MouseEvent) {
                 val idx = index(event)
                 toolTipText = items.getOrNull(idx)?.title
+                cursor = if (idx >= 0) HAND else DEFAULT
                 if (hover == idx) return
                 hover = idx
                 repaint()
@@ -47,6 +51,7 @@ internal class TimelinePanel : JPanel() {
         addMouseListener(object : MouseAdapter() {
             override fun mouseExited(event: MouseEvent) {
                 toolTipText = null
+                cursor = DEFAULT
                 if (hover == -1) return
                 hover = -1
                 repaint()
@@ -87,6 +92,9 @@ internal class TimelinePanel : JPanel() {
             g2.dispose()
         }
     }
+
+    /** Timeline item under [event], or null when the pointer is between bars. */
+    fun itemAt(event: MouseEvent): TimelineItem? = items.getOrNull(index(event))
 
     private fun index(event: MouseEvent): Int {
         val w = JBUI.scale(WIDTH)

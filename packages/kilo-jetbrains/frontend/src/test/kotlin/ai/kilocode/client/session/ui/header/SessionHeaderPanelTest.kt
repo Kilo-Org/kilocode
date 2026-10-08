@@ -674,6 +674,122 @@ class SessionHeaderPanelTest : SessionControllerTestBase() {
         assertEquals(0, panel.timelineViewport().viewPosition.y)
     }
 
+    fun `test clicking a timeline bar jumps to its message and part`() {
+        val c = promptedHeader()
+        val jumps = mutableListOf<Pair<String, String>>()
+        val panel = SessionHeaderPanel(c, parent, onJumpTimeline = { message, part -> jumps.add(message to part) })
+        val timeline = panel.timelinePanel()
+
+        pressReleaseClick(timeline, panel, 1)
+
+        assertEquals(listOf("msg1" to "tool_1"), jumps)
+    }
+
+    fun `test clicking a different timeline bar jumps to that part`() {
+        val c = promptedHeader()
+        val jumps = mutableListOf<Pair<String, String>>()
+        val panel = SessionHeaderPanel(c, parent, onJumpTimeline = { message, part -> jumps.add(message to part) })
+        val timeline = panel.timelinePanel()
+
+        pressReleaseClick(timeline, panel, 3)
+
+        assertEquals(listOf("msg1" to "step_finish_1"), jumps)
+    }
+
+    fun `test dragging the timeline does not trigger a jump`() {
+        val c = promptedHeader()
+        val jumps = mutableListOf<Pair<String, String>>()
+        val panel = SessionHeaderPanel(c, parent, onJumpTimeline = { message, part -> jumps.add(message to part) })
+        repeat(12) { idx ->
+            emit(ChatEventDto.PartUpdated("ses_test", tool("tool_more_$idx", "bash", "running", "More $idx")), flush = false)
+        }
+        flush()
+        panel.timelineViewport().setSize(panel.timelineBarWidth() * 4, panel.timelineViewportPreferredSize().height)
+        panel.timelineViewport().doLayout()
+        panel.timelineViewport().viewPosition = Point(0, 0)
+        val timeline = panel.timelinePanel()
+
+        timeline.dispatchEvent(MouseEvent(
+            timeline,
+            MouseEvent.MOUSE_PRESSED,
+            System.currentTimeMillis(),
+            0,
+            panel.timelineBarWidth() * 3,
+            1,
+            1,
+            false,
+            MouseEvent.BUTTON1,
+        ))
+        timeline.dispatchEvent(MouseEvent(
+            timeline,
+            MouseEvent.MOUSE_DRAGGED,
+            System.currentTimeMillis(),
+            0,
+            panel.timelineBarWidth(),
+            1,
+            0,
+            false,
+            MouseEvent.NOBUTTON,
+        ))
+        timeline.dispatchEvent(MouseEvent(
+            timeline,
+            MouseEvent.MOUSE_RELEASED,
+            System.currentTimeMillis(),
+            0,
+            panel.timelineBarWidth(),
+            1,
+            1,
+            false,
+            MouseEvent.BUTTON1,
+        ))
+        timeline.dispatchEvent(MouseEvent(
+            timeline,
+            MouseEvent.MOUSE_CLICKED,
+            System.currentTimeMillis(),
+            0,
+            panel.timelineBarWidth(),
+            1,
+            1,
+            false,
+            MouseEvent.BUTTON1,
+        ))
+
+        assertEquals(emptyList<Pair<String, String>>(), jumps)
+    }
+
+    fun `test clicking between timeline bars does not trigger a jump`() {
+        val c = promptedHeader()
+        val jumps = mutableListOf<Pair<String, String>>()
+        val panel = SessionHeaderPanel(c, parent, onJumpTimeline = { message, part -> jumps.add(message to part) })
+        val timeline = panel.timelinePanel()
+
+        // Hits a gap column, not a bar — see barWidth() = WIDTH + GAP and index()'s per-bar hit test.
+        leftClick(timeline, panel.timelineBarWidth() * 100, panel.timelinePreferredSize().height - 1)
+
+        assertEquals(emptyList<Pair<String, String>>(), jumps)
+    }
+
+    fun `test hovering a timeline bar shows a hand cursor`() {
+        val c = promptedHeader()
+        val panel = SessionHeaderPanel(c, parent)
+        val timeline = panel.timelinePanel()
+
+        move(panel, 1)
+        assertEquals(Cursor.HAND_CURSOR, timeline.cursor.type)
+
+        timeline.dispatchEvent(MouseEvent(
+            timeline,
+            MouseEvent.MOUSE_EXITED,
+            System.currentTimeMillis(),
+            0,
+            0,
+            0,
+            0,
+            false,
+        ))
+        assertEquals(Cursor.DEFAULT_CURSOR, timeline.cursor.type)
+    }
+
     private fun promptedHeader(): ai.kilocode.client.session.controller.SessionController {
         appRpc.state.value = ai.kilocode.rpc.dto.KiloAppStateDto(
             ai.kilocode.rpc.dto.KiloAppStatusDto.READY,
@@ -787,6 +903,19 @@ class SessionHeaderPanelTest : SessionControllerTestBase() {
             1,
             false,
         ))
+    }
+
+    /** Presses, releases, and clicks bar [index] without any drag — same coordinates as [move]. */
+    private fun pressReleaseClick(timeline: java.awt.Component, panel: SessionHeaderPanel, index: Int) {
+        val x = panel.timelineBarWidth() * index + 1
+        val y = panel.timelinePreferredSize().height - 1
+        leftClick(timeline, x, y)
+    }
+
+    private fun leftClick(component: java.awt.Component, x: Int, y: Int) {
+        component.dispatchEvent(MouseEvent(component, MouseEvent.MOUSE_PRESSED, System.currentTimeMillis(), 0, x, y, 1, false, MouseEvent.BUTTON1))
+        component.dispatchEvent(MouseEvent(component, MouseEvent.MOUSE_RELEASED, System.currentTimeMillis(), 0, x, y, 1, false, MouseEvent.BUTTON1))
+        component.dispatchEvent(MouseEvent(component, MouseEvent.MOUSE_CLICKED, System.currentTimeMillis(), 0, x, y, 1, false, MouseEvent.BUTTON1))
     }
 
     private fun reset() {
