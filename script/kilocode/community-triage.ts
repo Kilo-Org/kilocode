@@ -313,7 +313,8 @@ async function onevent() {
   const login: string = item.user.login
   if (item.user.type === "Bot" || bots(login)) return console.log(`skip bot ${login}`)
 
-  const fresh = ["opened", "reopened"].includes(event.action)
+  // A reopened PR may already be triaged. The sweep decides its status.
+  const fresh = event.action === "opened"
   const community = !(await maintainer(login, item.author_association))
   const tags = new Set<string>()
   if (community) tags.add(label.community)
