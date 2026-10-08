@@ -15,7 +15,7 @@ extensions as **Approve for Me**. It follows this approach:
 | [`legacy-gatekeeper.md`](./legacy-gatekeeper.md) | Full map of the legacy feature, with permalinks, and what we keep or change |
 | [`design.md`](./design.md) | Architecture for the new repo: hook point, pipeline, verdicts, tool coverage, config, trust, clients |
 | [`roadmap.md`](./roadmap.md) | PR-by-PR delivery plan, acceptance criteria, rollout and evaluation |
-| [`prior-art.md`](./prior-art.md) | What to reuse from community attempts (#13893, #11619, #9138) |
+| [`prior-art.md`](./prior-art.md) | Ideas from earlier approaches, and what to take or leave |
 | [`mockups/`](./mockups) | HTML mockups and screenshots of the planned UI (section 8 below) |
 
 ## 1. What the feature is
@@ -90,8 +90,8 @@ verdict: allow | ask(reason) | block(reason)
 Key points (details in [`design.md`](./design.md)):
 
 - The hook lives in `KiloSessionPrompt.askPermission` (Kilo-owned) so shared upstream files stay almost untouched.
-- A verdict can only make a call **stricter than "allow"** when a rule says so, and can only
-  **auto-allow what a human would otherwise be asked about**. It never overrides a deny.
+- The mode is an **enforcing layer**. A tier 0 or tier 2 verdict to ask or block is enforced even over an allow rule, including the default `"*": "allow"` ruleset. A verdict to allow applies
+  only to what a human would otherwise be asked about, and only through a per-call grant. Nothing overrides a deny or a hard rule.
 - The reviewer model is chosen only from **global** config or the environment. A cloned repo cannot enable the mode, choose the model or point at an endpoint.
 - The same server-side stage serves the TUI, `kilo run`, VS Code and JetBrains.
   The VS Code composer menu (#14636) only selects the mode.
@@ -123,10 +123,8 @@ before any verdict changes what the user sees.
 
 1. **Does an LLM "dangerous" verdict hard-block, or show a prompt?** We propose a prompt. Only deterministic rules block.
 2. **Default reviewer model.** Which non-OpenAI small model is the default, and does the free tier have one?
-3. **Overlap with #13893 / #14033.** The author has a large deterministic layer and offered to split it.
-   Agree owners before PR 5 (see `prior-art.md`).
-4. **Legacy migration.** Do we import `yoloGatekeeperApiConfigId` automatically? (#10252 says never turn guarded YOLO into allow-all.)
-5. **Sandbox default-on.** What escalation rate is acceptable before we turn it on by default? Set in PR 9.
+3. **Legacy migration.** Do we import `yoloGatekeeperApiConfigId` automatically? (Rule: never turn a guarded setup into allow-all.)
+4. **Sandbox default-on.** What escalation rate is acceptable before we turn it on by default? Set in PR 9.
 
 Decided: Sandbox joins the selector; without a sandbox, Approve for me runs with a reduced profile and "Sandboxed" shows as "Ask every time" (`design.md` 0.1); the reviewer may approve sandbox escalations in fixed v1 classes only (`git add`, `status`, `diff`; commits and network ask), with guard rails; mode is per session;
 reviewer cost counts toward task cost.
@@ -135,11 +133,11 @@ reviewer cost counts toward task cost.
 
 | Risk | Mitigation |
 |---|---|
-| Reviewer approves something harmful (#13893 benchmark: the reviewer raised attack success from 2.6% to 5.3%) | Reviewer only sees a narrow class. Start in shadow mode. Gate graduation on a corpus with a zero critical false-allow target. |
+| Reviewer approves something harmful (a public benchmark: adding a live reviewer raised attack success from 2.6% to 5.3%) | Reviewer only sees a narrow class. Start in shadow mode. Gate graduation on a corpus with a zero critical false-allow target. |
 | Latency and cost on every call | Tiers 0 to 2 are free and fast. Cache by session and normalized request. Hard deadline. |
 | Prompt injection into the reviewer | Structured facts, delimited as untrusted data, strict JSON, no tools. |
 | Upstream merge conflicts | One small marked hook in shared code. Everything else in `kilocode/` paths. |
-| Duplicate community work stalls again (#10248, #10267 and #11619 were closed as stale) | One owner, a public plan, small PRs, and an early reply on #14033. |
+| A large single change stalls in review | Small PRs behind one hidden flag, one owner, and a public plan. |
 | Client-side auto-approve in VS Code replies before the server can judge | Modes are exclusive. In Approve for Me the extension does not auto-reply. |
 | Default-on sandbox causes constant escalations and a poor first run | Escalation becomes an ask first (PR 3). Default-on only after PR 9 data. Good defaults for common hosts and paths |
 | Reviewer approves a harmful sandbox escalation | Deterministic classes only in v1, narrowest scope, caps, shadow mode, visible off switch (`design.md` 2.5) |
@@ -149,10 +147,13 @@ reviewer cost counts toward task cost.
 
 ## 7. Security
 
-Five security reviews of this plan found seventeen high-severity and several medium-severity issues. All high findings are resolved in the design (`design.md` section 12, `SEC-1` to `SEC-19`), and the medium findings of the second to fifth reviews are folded in.
+Seven security reviews of this plan found nineteen high-severity and several medium-severity issues. All high findings are resolved in the design (`design.md` section 12, `SEC-1` to `SEC-21`), and the medium findings of the second to seventh reviews are folded in.
 
 | Area | Rule in one line |
 |---|---|
+| Unattended runs | Scheduling tools (`cron_create`, `schedule_wakeup`, `goal`) ask. Scheduled and goal turns run with a read-only unattended profile and a banner |
+| Allow rules | Broad allows (`bash: allow`, `edit: allow`, `*`) are not honored in this mode. They amount to Auto-approve |
+| Default rules | The default ruleset allows most tools. In this mode tier 0 and tier 2 asks are enforced over allow rules, and default, agent and project allows are downgraded (`design.md` 1.3) |
 | Grant | The reviewer never edits the ruleset. A per-call grant applies only where the original evaluation is `ask` |
 | Write then execute | Edits to build, CI, hook and IDE files always ask. A hash manifest catches changes made by running programs |
 | Reviewer model | Global config and environment only. The provider entry must match the global one |

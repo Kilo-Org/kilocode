@@ -207,5 +207,5 @@ Public feedback is thin. The one YOLO bug report is legacy issue #51 ("Yolo mode
 | `yoloMode` on, no gatekeeper profile | Approve all |
 | `yoloMode` on, gatekeeper profile set | Approve for Me, reviewer model = that profile's model if it is allowed (not OpenAI, global scope) |
 
-Rule from #10252: a migration must never turn a guarded setup into "Approve all". If the profile
+Rule: a migration must never turn a guarded setup into "Approve all". If the profile
 cannot be mapped, land in Ask every time and tell the user.

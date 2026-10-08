@@ -5,6 +5,7 @@ Rules for every PR:
 - One concern per PR. Aim for under 500 changed lines of non-test code.
 - Everything is behind the hidden flag until PR 11 (PR 3 sits behind the existing sandbox flag).
 - A PR that changes the design edits `plans/approve-for-me/` in the same PR.
+- The feature has a security contact and a disclosure path before any non-hidden release (security policy in the repository, a monitored address). Reports about this feature go to the owners of the security paths.
 - Changes to the tier tables, the executable-config class, the sandbox profile or the permission core need a security reviewer. Add CODEOWNERS entries and branch protection for `packages/opencode/src/kilocode/permission`, `kilocode/sandbox`, `kilocode/approve-for-me`, `packages/kilo-sandbox`, `tool/edit.ts`, `tool/write.ts`, `tool/apply_patch.ts` and `tool/external-directory.ts`. `.github/CODEOWNERS` covers only upstream paths today.
 - Each PR passes: package `typecheck`, `lint`, focused tests, and the guards that apply
   (`check-opencode-annotations`, `knip` for `kilo-vscode`, i18n key test, SDK regeneration, `check-md-table-padding`).
@@ -48,7 +49,7 @@ Goal: the server knows the mode, and the selector matches the team decision. The
 - `always` replies are stored as once in Approve for me (`design.md` 6.2 item 7).
 - Move and import rules: a session never becomes looser when it moves, imports or is shared (SEC-8, with S4).
 - Clients: JetBrains has its own IDE-level auto-reply (`SessionController.kt`). It must stop replying when the server mode is Approve for me. The server publishes the mode and clients refuse to auto-reply.
-- Signed remote kill list and minimum version for the reviewer stage (`design.md` 6.2 item 13). Server hardening: Host-header check, `auth_token` only for WebSocket upgrades (item 14).
+- Signed remote kill list with a pinned key, version and expiry, and minimum version for the reviewer stage (`design.md` 6.2 item 13). Server hardening: Host-header check, `auth_token` only for WebSocket upgrades (item 14).
 - Regenerate the SDK. Mirror the key in `Kilo-Org/cloud` (`extras.ts`) in a linked PR.
 - Tests: scope function, exclusion, mode-to-sandbox mapping, unsupported platform, flag off leaves today's behavior unchanged, child inheritance, mode events for loosening changes.
 
@@ -77,6 +78,9 @@ Goal: the hook exists and records verdicts without changing outcomes.
 - `metadata.review` written to the tool part. Telemetry event with tier, rule, stage.
 - In `review` stage: compute, record, and return `pass` to the caller always.
 - Project-scope allow rules count as `ask` in this mode (SEC-10).
+- **Enforcing layer (`design.md` 1.3, SEC-20).** The tiers evaluate every request of a reviewable key. The forced ask joins the grant in the one marked `Permission.ask` change. Allows from the default ruleset, agent and project config and saved rules are downgraded for reviewable keys. Tests run against the default ruleset.
+- Scheduling tools get the `schedule` key and ask. The unattended profile and the tool inventory test (`design.md` 2.15, SEC-21).
+- Broad allow rules are not honored, with a settings warning (`design.md` 1.3).
 - Trust-aware profile (`design.md` 2.13): untrusted workspace uses the reduced profile and the reviewer stays off. The trust signal comes from S8.
 - Tests: tool coverage table (every permission key has a test row; unknown key is tier 0), tier 0 set, the grant property test, headless.
 
@@ -101,7 +105,6 @@ Goal: decide shell calls from facts.
 - Tests: table tests; spelling-equivalence and route-equivalence groups; the attack and benign corpus seed (`prior-art.md`).
 - Still shadow only.
 
-Coordination: agree with the author of #13893 / #14033 which pieces they contribute (`prior-art.md`). This PR is the most likely to overlap.
 
 Done when: the corpus runs in CI; every attack in the seed corpus is `ask` or `block`; the benign seed set is mostly `allow`.
 
@@ -134,6 +137,8 @@ Done when: in `review` stage the reviewer runs on `reviewable` calls and escalat
 
 ### PR 8. Active mode
 
+Scope option: the first active release can be **deterministic only**. Tiers 0 to 2 decide, there are no model calls and no reviewer-approved escalations, and unclear calls ask. The LLM reviewer (PR 7) and escalation approval then ship later behind their own gate and the PR 9 data. This lowers the attack surface at the cost of fewer saved prompts. A public benchmark saw a live reviewer worsen results (`prior-art.md`).
+
 - `allow` verdicts approve the call through the per-call grant (`design.md` 1.2), escalations included under the guard rails in `design.md` 2.5.3.
   `ask` verdicts show the labelled prompt. `block` fails the call with the fixed message.
 - Backstops: 3 consecutive blocks or 5 in the last 20 calls, and the escalation cap, stop auto-deciding for the session and notify the user.
@@ -151,9 +156,12 @@ Security gate. PR 8 does not merge until all of these hold:
 - Escalation approval is limited to the deterministic classes in `design.md` 2.5.3: `git add`, `status` and `diff`. `git commit` and network escalations ask in v1 (widening waits for PR 9 data and the hook manifest).
 - S7 sandbox read-deny and environment allowlist are on, and the sandbox tests prove a sandboxed command cannot read the credential stores or see credential variables.
 - S8 trust gate is on, or the docs and the mode menu state that Approve for Me is not safe for untrusted repositories.
+- The SEC-20 default-ruleset tests pass: with the default ruleset, edits of build files, `webfetch`, `printenv` and secret reads prompt.
 - S9 link-safe writes are on, and the link tests pass for all three edit tools.
 - The output secret scanner, the `grep` and `glob` exclusions and pathspec-aware git (S6, `design.md` 2.10) are enabled and tested.
 - The grant type is server-only: no schema, event or `metadata` carries it (SEC-13 test).
+- **Fixed gate principles (set now, numbers tuned in PR 9, never relaxed to ship):** zero critical false-allows on the attack corpus, a minimum corpus size agreed in PR 9, and every corpus miss fixed or documented before the gate passes.
+- Scheduling tools ask and the unattended profile is on (`design.md` 2.15). The inventory test is in CI.
 - Review of the TOCTOU gap: paths are re-resolved inside the tool at execution time, and reviewed calls run one at a time per session. Record the result in the PR.
 - A reviewer from outside the author team has read `design.md` sections 2.5 to 2.9, 5.3 and 6.2.
 
@@ -224,7 +232,7 @@ S1..S9 -> 8
 | A | Flag off | Everyone (PRs 1 to 3) |
 | B | `review` (shadow) | Team dogfood. Verdicts logged, nothing changes |
 | C | `on` | Team dogfood, with the backstops |
-| D | `on` | Opt-in beta for users who enable the setting |
+| D | `on` | Opt-in beta for users who enable the setting. **Needs an independent red-team of tier 2, the sandbox and the edit tools first** |
 | E | Flag removed | After thresholds hold for a full release |
 
 Rollback: set the mode to `off` (user), or flip the server flag (operator). `off` restores the plain prompt flow.
@@ -238,9 +246,3 @@ Keep the flag-off path identical to today. A test asserts it.
 | 1 Entry point | Open: #14636 |
 | S1 to S9 | Not started (can start now) |
 | 2 to 11 | Not started |
-
-## 5. Work split with the community effort
-
-PR #13893 and issue #14033 contain a large deterministic layer by another contributor, who offered to split it.
-Past efforts stalled when two people worked on the same thing (#10248, #10267, #11619).
-Before PR 5: post the plan link on #14033, propose the split, and agree owners per PR. See `prior-art.md`.
