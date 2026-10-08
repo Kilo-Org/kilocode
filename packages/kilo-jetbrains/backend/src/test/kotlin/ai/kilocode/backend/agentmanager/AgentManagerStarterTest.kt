@@ -13,6 +13,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import java.nio.file.Files
@@ -214,5 +215,57 @@ class AgentManagerStarterTest {
             "expected the unknown worktree to be logged; got ${log.messages}",
         )
         assertEquals(0, mock.requestCount("/session"))
+    }
+
+    @Test
+    fun `cancelling a batch stops it instead of creating the remaining sessions`() = runBlocking {
+        initRepo()
+        mock.sessionCreate = """{"id":"ses_new","slug":"s","projectID":"p","directory":"$repo","title":"T","version":"1","time":{"created":1,"updated":1}}"""
+        val app = setup()
+        ready(app)
+        val starter = AgentManagerStarter(app.sessions, app.chat, worktrees, log)
+
+        // Hold the first task's session creation open, cancel the batch while it is in flight, then
+        // release it. `runCatching` used to swallow the CancellationException and march on to task 2.
+        val gate = java.util.concurrent.CountDownLatch(1)
+        mock.responseGate = gate
+        val job = scope.launch {
+            starter.start(start("am-cancel", "local", task(null, "Task F"), task(null, "Task G")), repo.toString())
+        }
+        assertTrue(mock.awaitRequestCount("/session", 1, timeout = 10_000))
+        job.cancel()
+        gate.countDown()
+        job.join()
+
+        assertTrue(job.isCancelled, "expected the batch job to end cancelled")
+        assertEquals(1, mock.requestCount("/session"), "the second task must not run after cancellation")
+    }
+
+    @Test
+    fun `an unsupported versions request is reported instead of silently under-delivered`() = runBlocking {
+        initRepo()
+        mock.sessionCreate = """{"id":"ses_new","slug":"s","projectID":"p","directory":"$repo","title":"T","version":"1","time":{"created":1,"updated":1}}"""
+        val app = setup()
+        ready(app)
+
+        val request = AgentManagerProtocol.Start(
+            requestID = "am-ver",
+            sessionID = "ses_caller",
+            sandboxInheritanceToken = "tok_123",
+            mode = "local",
+            worktreeID = null,
+            versions = true,
+            tasks = listOf(task(null, "Task H")),
+        )
+        AgentManagerStarter(app.sessions, app.chat, worktrees, log).start(request, repo.toString())
+
+        assertTrue(
+            log.awaitMessage(timeout = 5_000) { it.contains("am-ver") && it.contains("ignored versions=true") },
+            "expected versions=true to be reported; got ${log.messages}",
+        )
+        assertTrue(
+            log.awaitMessage(timeout = 5_000) { it.contains("am-ver") && it.contains("ignored sandboxInheritanceToken") },
+            "expected the sandbox token to be reported; got ${log.messages}",
+        )
     }
 }

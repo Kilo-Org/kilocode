@@ -74,14 +74,18 @@ class KiloAgentManagerHostTest {
 
         assertTrue(mock.awaitAgentManagerReplies(1, timeout = 10_000))
         assertEquals(0, mock.agentManagerRejects.size)
-        val (requestID, body) = mock.agentManagerReplies.single()
+        val answer = mock.agentManagerReplies.single()
+        val requestID = answer.requestID
+        val body = answer.body
         assertEquals("amr_1", requestID)
         val result = json.parseToJsonElement(body).jsonObject["result"]!!.jsonObject
         assertEquals("overview", result["operation"]!!.jsonPrimitive.content)
     }
 
     @Test
-    fun `an overview request for an unreachable directory is rejected as workspace_unavailable`() = runBlocking {
+    fun `an overview request for an unreachable directory is rejected through that same directory`() = runBlocking {
+        // The directory is still the only instance that can accept the answer, even though it is not
+        // a readable directory here — the reject must route to it rather than being dropped.
         val app = setup()
         ready(app)
 
@@ -92,9 +96,10 @@ class KiloAgentManagerHostTest {
         )
 
         assertTrue(mock.awaitAgentManagerRejects(1, timeout = 10_000))
-        val (requestID, body) = mock.agentManagerRejects.single()
-        assertEquals("amr_2", requestID)
-        val error = json.parseToJsonElement(body).jsonObject["error"]!!.jsonObject
+        val answer = mock.agentManagerRejects.single()
+        assertEquals("amr_2", answer.requestID)
+        assertEquals(missing, answer.directory)
+        val error = json.parseToJsonElement(answer.body).jsonObject["error"]!!.jsonObject
         assertEquals("workspace_unavailable", error["code"]!!.jsonPrimitive.content)
     }
 
@@ -109,7 +114,9 @@ class KiloAgentManagerHostTest {
         )
 
         assertTrue(mock.awaitAgentManagerRejects(1, timeout = 10_000))
-        val (requestID, body) = mock.agentManagerRejects.single()
+        val answer = mock.agentManagerRejects.single()
+        val requestID = answer.requestID
+        val body = answer.body
         assertEquals("amr_3", requestID)
         val error = json.parseToJsonElement(body).jsonObject["error"]!!.jsonObject
         assertEquals("unknown_section", error["code"]!!.jsonPrimitive.content)
@@ -130,7 +137,7 @@ class KiloAgentManagerHostTest {
         )
 
         assertTrue(mock.awaitAgentManagerRejects(1, timeout = 10_000))
-        val error = json.parseToJsonElement(mock.agentManagerRejects.single().second).jsonObject["error"]!!.jsonObject
+        val error = json.parseToJsonElement(mock.agentManagerRejects.single().body).jsonObject["error"]!!.jsonObject
         assertEquals("unknown_session", error["code"]!!.jsonPrimitive.content)
     }
 
@@ -184,26 +191,30 @@ class KiloAgentManagerHostTest {
 
         // Draining time to prove silence, not just its absence at this instant.
         delay(500)
-        assertTrue(mock.agentManagerReplies.none { it.first == "amr_6" })
-        assertTrue(mock.agentManagerRejects.none { it.first == "amr_6" })
+        assertTrue(mock.agentManagerReplies.none { it.requestID == "amr_6" })
+        assertTrue(mock.agentManagerRejects.none { it.requestID == "amr_6" })
     }
 
     @Test
-    fun `reconnect reconciles a request the CLI still reports pending as workspace_unavailable without a known directory`() = runBlocking {
-        // GET /kilocode/agent-manager (unlike the live SSE `requested` envelope) carries no directory
-        // at all — see KiloAgentManagerHost.execute's doc. A reconciled overview request for a session
-        // this backend has never observed therefore cannot resolve a directory and is rejected, rather
-        // than left pending forever.
-        mock.sessions = "[]"
-        mock.agentManagerPending = """[{"id":"amr_7","sessionID":"ses_never_seen","operation":"overview"}]"""
+    fun `a newly observed session directory is reconciled once and its pending request executed`() = runBlocking {
+        // Reconciliation is per directory (the endpoint is workspace-routed), and the session
+        // manager's directory map is cleared on every disconnect, so the host reconciles a directory
+        // when it first observes a session there rather than only at connect time.
+        mock.agentManagerPending = """[{"id":"amr_7","sessionID":"ses_b","operation":"overview"}]"""
         val app = setup()
         ready(app)
 
-        assertTrue(mock.awaitAgentManagerRejects(1, timeout = 10_000))
-        val (requestID, body) = mock.agentManagerRejects.single()
-        assertEquals("amr_7", requestID)
-        val error = json.parseToJsonElement(body).jsonObject["error"]!!.jsonObject
-        assertEquals("workspace_unavailable", error["code"]!!.jsonPrimitive.content)
+        mock.pushEvent(
+            "session.created",
+            """{"directory":"${repo}","payload":{"type":"session.created","properties":{"info":{"id":"ses_b","directory":"${repo}"}}}}""",
+        )
+
+        assertTrue(mock.awaitAgentManagerLists(1, timeout = 10_000))
+        assertEquals(repo.toString(), mock.agentManagerListDirectories.first())
+        assertTrue(mock.awaitAgentManagerReplies(1, timeout = 10_000))
+        val answer = mock.agentManagerReplies.single()
+        assertEquals("amr_7", answer.requestID)
+        assertEquals(repo.toString(), answer.directory)
     }
 
     @Test
@@ -225,7 +236,7 @@ class KiloAgentManagerHostTest {
         )
 
         assertTrue(mock.awaitAgentManagerReplies(1, timeout = 10_000))
-        assertEquals("amr_8", mock.agentManagerReplies.single().first)
+        assertEquals("amr_8", mock.agentManagerReplies.single().requestID)
     }
 
     @Test
@@ -246,7 +257,7 @@ class KiloAgentManagerHostTest {
         )
 
         assertTrue(mock.awaitAgentManagerReplies(1, timeout = 10_000))
-        val result = json.parseToJsonElement(mock.agentManagerReplies.single().second).jsonObject["result"]!!.jsonObject
+        val result = json.parseToJsonElement(mock.agentManagerReplies.single().body).jsonObject["result"]!!.jsonObject
         assertEquals("q_1", result["questionID"]!!.jsonPrimitive.content)
     }
 
@@ -264,7 +275,112 @@ class KiloAgentManagerHostTest {
 
         assertTrue(mock.awaitAgentManagerReplies(1, timeout = 10_000))
         assertTrue(mock.awaitRequestCount("/session/ses_b/abort", 1, timeout = 5_000))
-        val result = json.parseToJsonElement(mock.agentManagerReplies.single().second).jsonObject["result"]!!.jsonObject
+        val result = json.parseToJsonElement(mock.agentManagerReplies.single().body).jsonObject["result"]!!.jsonObject
         assertEquals(true, result["stopped"]!!.jsonPrimitive.content.toBoolean())
+    }
+
+    // ---- workspace routing (review feedback) ----
+
+    @Test
+    fun `a reply carries the directory query so it reaches the right workspace instance`() = runBlocking {
+        // `/kilocode/agent-manager/{id}/reply` is workspace-routed and the pending set is per-directory
+        // instance state. Without `?directory=` the POST lands on the server's process.cwd() instance,
+        // finds no pending entry, 404s, and the CLI request hangs until its 60s timeout.
+        mock.sessions = "[]"
+        val app = setup()
+        ready(app)
+
+        mock.pushEvent(
+            AgentManagerProtocol.REQUESTED_EVENT,
+            envelope(repo.toString(), AgentManagerProtocol.REQUESTED_EVENT, """{"id":"amr_10","sessionID":"ses_a","operation":"overview"}"""),
+        )
+
+        assertTrue(mock.awaitAgentManagerReplies(1, timeout = 10_000))
+        assertEquals(repo.toString(), mock.agentManagerReplies.single().directory)
+    }
+
+    @Test
+    fun `a reject carries the directory query too`() = runBlocking {
+        val app = setup()
+        ready(app)
+
+        mock.pushEvent(
+            AgentManagerProtocol.REQUESTED_EVENT,
+            envelope(repo.toString(), AgentManagerProtocol.REQUESTED_EVENT, """{"id":"amr_11","sessionID":"ses_a","operation":"move","targetSessionID":"ses_b","sectionID":null}"""),
+        )
+
+        assertTrue(mock.awaitAgentManagerRejects(1, timeout = 10_000))
+        assertEquals(repo.toString(), mock.agentManagerRejects.single().directory)
+    }
+
+    @Test
+    fun `reconciliation lists each observed directory separately with its own directory query`() = runBlocking {
+        // A single un-parameterised GET would only ever see the server's process.cwd() instance, so
+        // nothing would be reconciled for the directories this backend actually serves.
+        val other = Files.createTempDirectory("kilo-agent-manager-other")
+        try {
+            val app = setup()
+            ready(app)
+
+            mock.pushEvent(
+                "session.created",
+                """{"directory":"${repo}","payload":{"type":"session.created","properties":{"info":{"id":"ses_a","directory":"${repo}"}}}}""",
+            )
+            mock.pushEvent(
+                "session.created",
+                """{"directory":"$other","payload":{"type":"session.created","properties":{"info":{"id":"ses_b","directory":"$other"}}}}""",
+            )
+
+            assertTrue(mock.awaitAgentManagerLists(2, timeout = 10_000))
+            val listed = mock.agentManagerListDirectories.filterNotNull().toSet()
+            assertTrue(repo.toString() in listed, "expected $repo among $listed")
+            assertTrue(other.toString() in listed, "expected $other among $listed")
+        } finally {
+            delete(other)
+        }
+    }
+
+    @Test
+    fun `a stop whose abort fails is rejected instead of reporting stopped`() = runBlocking {
+        // KiloBackendChatManager.abort logs and returns on a non-2xx by default; reporting
+        // `stopped: true` for a failed abort would tell the model the session was stopped when it
+        // was not.
+        mock.sessions = """[{"id":"ses_b","slug":"s","projectID":"p","directory":"${repo}","title":"T","version":"1","time":{"created":1,"updated":1}}]"""
+        mock.sessionAbortStatus = 500
+        val app = setup()
+        ready(app)
+        app.sessions.list(repo.toString())
+
+        mock.pushEvent(
+            AgentManagerProtocol.REQUESTED_EVENT,
+            envelope(repo.toString(), AgentManagerProtocol.REQUESTED_EVENT, """{"id":"amr_12","sessionID":"ses_a","operation":"stop","targetSessionID":"ses_b"}"""),
+        )
+
+        assertTrue(mock.awaitAgentManagerRejects(1, timeout = 10_000))
+        assertEquals(0, mock.agentManagerReplies.size)
+        val error = json.parseToJsonElement(mock.agentManagerRejects.single().body).jsonObject["error"]!!.jsonObject
+        assertEquals("host_error", error["code"]!!.jsonPrimitive.content)
+    }
+
+    @Test
+    fun `a malformed agent manager event is dropped without killing the event stream`() = runBlocking {
+        // route() runs inside events.collect, so an escaping exception would silently disable
+        // agent_manager handling for the rest of the connection.
+        mock.sessions = "[]"
+        val app = setup()
+        ready(app)
+
+        mock.pushEvent(
+            AgentManagerProtocol.START_EVENT,
+            """{"directory":"${repo}","payload":{"type":"${AgentManagerProtocol.START_EVENT}","properties":{"requestID":"am-bad","sessionID":"ses_a","mode":"worktree","tasks":"not-an-array"}}}""",
+        )
+        // The stream must still serve the next request.
+        mock.pushEvent(
+            AgentManagerProtocol.REQUESTED_EVENT,
+            envelope(repo.toString(), AgentManagerProtocol.REQUESTED_EVENT, """{"id":"amr_13","sessionID":"ses_a","operation":"overview"}"""),
+        )
+
+        assertTrue(mock.awaitAgentManagerReplies(1, timeout = 10_000))
+        assertEquals("amr_13", mock.agentManagerReplies.single().requestID)
     }
 }

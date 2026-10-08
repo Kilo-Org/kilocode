@@ -197,11 +197,30 @@ class MockCliServer : AutoCloseable {
     @Volatile var agentManagerPending = "[]"
     @Volatile var agentManagerPendingStatus = 200
 
-    /** Bodies the host POSTed to `/kilocode/agent-manager/{requestID}/reply`, in arrival order. */
-    val agentManagerReplies: MutableList<Pair<String, String>> = CopyOnWriteArrayList()
+    /**
+     * One answer the host POSTed back to `/kilocode/agent-manager/{requestID}/reply|reject`.
+     *
+     * [directory] is the `directory` query the call carried. These endpoints are workspace-routed and
+     * the pending-request set is per-directory instance state, so a call without it reaches the wrong
+     * instance and 404s in a real CLI. Recording it is what lets tests catch that, since this mock
+     * otherwise serves every route by bare path and would happily accept an unrouted call.
+     */
+    data class AgentManagerAnswer(val requestID: String, val body: String, val directory: String?)
 
-    /** Bodies the host POSTed to `/kilocode/agent-manager/{requestID}/reject`, in arrival order. */
-    val agentManagerRejects: MutableList<Pair<String, String>> = CopyOnWriteArrayList()
+    /** Replies the host POSTed, in arrival order. */
+    val agentManagerReplies: MutableList<AgentManagerAnswer> = CopyOnWriteArrayList()
+
+    /** Rejects the host POSTed, in arrival order. */
+    val agentManagerRejects: MutableList<AgentManagerAnswer> = CopyOnWriteArrayList()
+
+    /** `directory` query of each `GET /kilocode/agent-manager` reconciliation call, in arrival order. */
+    val agentManagerListDirectories: MutableList<String?> = CopyOnWriteArrayList()
+
+    /** Status for `POST /session/{id}/abort`. 500 simulates an abort the CLI refused. */
+    @Volatile var sessionAbortStatus = 200
+
+    /** Status for `POST /question/{id}/reply`. 500 simulates a reply the CLI refused. */
+    @Volatile var questionReplyStatus = 200
 
     @Volatile var agentManagerReplyStatus = 200
     @Volatile var agentManagerRejectStatus = 200
@@ -234,6 +253,26 @@ class MockCliServer : AutoCloseable {
         val end = System.currentTimeMillis() + timeout
         synchronized(requests) {
             while (requestCount(path) < target) {
+                val wait = end - System.currentTimeMillis()
+                if (wait <= 0) return false
+                requests.wait(wait)
+            }
+            return true
+        }
+    }
+
+    /** The `directory` query of a raw request path, URL-decoded; null when absent. */
+    private fun directoryParam(path: String): String? {
+        val query = path.substringAfter('?', "").takeIf { it.isNotEmpty() } ?: return null
+        val raw = query.split('&').firstOrNull { it.startsWith("directory=") }?.removePrefix("directory=") ?: return null
+        return java.net.URLDecoder.decode(raw, "UTF-8")
+    }
+
+    /** Blocks until [agentManagerListDirectories] holds at least [target] entries, or [timeout] elapses. */
+    fun awaitAgentManagerLists(target: Int, timeout: Long = 5_000): Boolean {
+        val end = System.currentTimeMillis() + timeout
+        synchronized(requests) {
+            while (agentManagerListDirectories.size < target) {
                 val wait = end - System.currentTimeMillis()
                 if (wait <= 0) return false
                 requests.wait(wait)
@@ -569,17 +608,22 @@ class MockCliServer : AutoCloseable {
                     respond(output, pendingPermissionsStatus, pendingPermissions)
                 bare == "/question" && method == "GET" ->
                     respond(output, pendingQuestionsStatus, pendingQuestions)
-                bare == "/kilocode/agent-manager" && method == "GET" ->
+                bare.matches(Regex("/question/[^/]+/reply")) && method == "POST" ->
+                    respond(output, questionReplyStatus, "true")
+                bare == "/kilocode/agent-manager" && method == "GET" -> {
+                    agentManagerListDirectories.add(directoryParam(path))
+                    synchronized(requests) { requests.notifyAll() }
                     respond(output, agentManagerPendingStatus, agentManagerPending)
+                }
                 bare.matches(Regex("/kilocode/agent-manager/[^/]+/reply")) && method == "POST" -> {
                     val requestID = bare.removePrefix("/kilocode/agent-manager/").removeSuffix("/reply")
-                    agentManagerReplies.add(requestID to body)
+                    agentManagerReplies.add(AgentManagerAnswer(requestID, body, directoryParam(path)))
                     synchronized(requests) { requests.notifyAll() }
                     respond(output, agentManagerReplyStatus, "true")
                 }
                 bare.matches(Regex("/kilocode/agent-manager/[^/]+/reject")) && method == "POST" -> {
                     val requestID = bare.removePrefix("/kilocode/agent-manager/").removeSuffix("/reject")
-                    agentManagerRejects.add(requestID to body)
+                    agentManagerRejects.add(AgentManagerAnswer(requestID, body, directoryParam(path)))
                     synchronized(requests) { requests.notifyAll() }
                     respond(output, agentManagerRejectStatus, "true")
                 }
@@ -595,6 +639,8 @@ class MockCliServer : AutoCloseable {
                     lastSessionRenameMethod = method
                     respond(output, sessionRenameStatus, sessionRenameResponse)
                 }
+                bare.matches(Regex("/session/ses_[^/]+/abort")) && method == "POST" ->
+                    respond(output, sessionAbortStatus, "true")
                 bare.matches(Regex("/session/ses_[^/]+/fork")) && method == "POST" -> {
                     lastForkPath = path
                     lastForkBody = body

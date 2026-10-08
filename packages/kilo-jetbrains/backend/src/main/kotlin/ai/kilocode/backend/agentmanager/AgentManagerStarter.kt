@@ -7,6 +7,9 @@ import ai.kilocode.rpc.KiloWorktreeRpcApi
 import ai.kilocode.rpc.dto.CreateWorktreeRequestDto
 import ai.kilocode.rpc.dto.PromptDto
 import ai.kilocode.rpc.dto.PromptPartDto
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import java.nio.file.Path
 import java.security.SecureRandom
 
@@ -43,11 +46,22 @@ internal class AgentManagerStarter(
             log.warn("agent_manager start req=${start.requestID} failed: unknown worktree ${start.worktreeID}")
             return
         }
+        warnUnsupported(start)
         // Sequential and individually guarded: one task's failure must not abandon the rest of the
-        // batch, since each task is an independent session the chat asked for.
+        // batch, since each task is an independent session the chat asked for. Cancellation, by
+        // contrast, must stop the batch: `ensureActive` makes that cooperative even though the work
+        // inside is mostly blocking HTTP and git with no suspension point of its own, and the
+        // `CancellationException` rethrow keeps a cancellation that does surface from being logged
+        // and swallowed as if it were a task failure.
         for (task in start.tasks) {
-            runCatching { startOne(start, task, target) }
-                .onFailure { err -> log.warn("agent_manager start req=${start.requestID} task failed: ${err.message}", err) }
+            currentCoroutineContext().ensureActive()
+            try {
+                startOne(start, task, target)
+            } catch (err: CancellationException) {
+                throw err
+            } catch (err: Exception) {
+                log.warn("agent_manager start req=${start.requestID} task failed: ${err.message}", err)
+            }
         }
     }
 
@@ -86,9 +100,42 @@ internal class AgentManagerStarter(
         val worktree = result.worktree
             ?: throw IllegalStateException(result.error ?: "Worktree creation failed for branch $branch")
         val title = task.name?.trim().takeUnless { it.isNullOrEmpty() } ?: task.branchName?.trim()
-        if (!title.isNullOrEmpty()) runCatching { worktrees.adopt(root, worktree.path, title) }
+        if (!title.isNullOrEmpty()) {
+            // Best effort: the worktree is already usable without its display name. Cancellation still
+            // propagates rather than being absorbed as a naming failure.
+            try {
+                worktrees.adopt(root, worktree.path, title)
+            } catch (err: CancellationException) {
+                throw err
+            } catch (err: Exception) {
+                log.warn("agent_manager start could not name worktree ${worktree.path}: ${err.message}", err)
+            }
+        }
         AgentManagerWorktreeChanges.emit(Path.of(root).normalize().toString())
         return worktree.path
+    }
+
+    /**
+     * Surfaces the parts of a `start` request this host does not implement, instead of quietly
+     * under-delivering. `versions: true` asks for alternative-version worktrees (VS Code builds `_vN`
+     * variants) and `sandboxInheritanceToken` carries the requesting session's sandbox/snapshot
+     * inheritance into the new sessions; neither has a JetBrains equivalent yet. `start` is
+     * fire-and-forget with no reply channel, so a log line is the only honest signal available —
+     * without it the chat would believe it received something it did not.
+     */
+    private fun warnUnsupported(start: AgentManagerProtocol.Start) {
+        if (start.versions == true) {
+            log.warn(
+                "agent_manager start req=${start.requestID} ignored versions=true: " +
+                    "alternative-version worktrees are not supported in JetBrains; creating one plain worktree per task",
+            )
+        }
+        if (start.sandboxInheritanceToken != null) {
+            log.warn(
+                "agent_manager start req=${start.requestID} ignored sandboxInheritanceToken: " +
+                    "sandbox inheritance is not supported in JetBrains; new sessions start without the requester's grants",
+            )
+        }
     }
 
     /**

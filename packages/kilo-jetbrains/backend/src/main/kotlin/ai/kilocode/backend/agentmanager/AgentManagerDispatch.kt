@@ -46,7 +46,9 @@ internal class AgentManagerDispatch(
     fun stop(request: Request.Stop) {
         val dir = sessions.sessionDirectory(request.targetSessionID)
             ?: throw RequestFailure(ErrorCode.UNKNOWN_SESSION, "No known session ${request.targetSessionID}")
-        chat.abort(request.targetSessionID, dir)
+        // strict: a swallowed non-2xx here would be reported to the requesting model as
+        // `stopped: true`, which is worse than an explicit failure it can retry or report.
+        chat.abort(request.targetSessionID, dir, strict = true)
     }
 
     /** Returns the resolved `questionID`, needed for [AgentManagerProtocol.replyBody]. */
@@ -60,7 +62,8 @@ internal class AgentManagerDispatch(
                 if (pending.isEmpty()) "Session ${request.targetSessionID} has no pending question"
                 else "Session ${request.targetSessionID} has ${pending.size} pending questions; specify questionID",
             )
-        chat.replyQuestion(question.id, dir, QuestionReplyDto(request.answers))
+        // strict: same reason as `stop` — never answer `resolved: true` for a reply that failed.
+        chat.replyQuestion(question.id, dir, QuestionReplyDto(request.answers), strict = true)
         return question.id
     }
 }

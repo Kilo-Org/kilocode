@@ -8,6 +8,7 @@ import ai.kilocode.backend.app.KiloBackendSessionManager
 import ai.kilocode.backend.app.SseEvent
 import ai.kilocode.backend.rpc.KiloWorktreeRpcApiImpl
 import ai.kilocode.log.KiloLog
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
@@ -17,7 +18,9 @@ import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request as OkRequest
 import okhttp3.RequestBody.Companion.toRequestBody
+import java.net.URLEncoder
 import java.nio.file.Files
+import java.nio.file.InvalidPathException
 import java.nio.file.Path
 import java.util.concurrent.ConcurrentHashMap
 
@@ -39,6 +42,14 @@ import java.util.concurrent.ConcurrentHashMap
  * redelivery or [sync] reconciliation, instead of re-running `prompt`/`stop`/`answer` and risking a
  * second prompt delivery or a second abort. [sync] reconciles anything the CLI still lists as pending
  * after a reconnect this host was not alive for.
+ *
+ * **Every call must carry `?directory=`.** `/kilocode/agent-manager` and its `reply`/`reject` routes
+ * are workspace-routed, and the pending-request set lives in per-directory instance state. The
+ * middleware resolves the instance from the `directory` query, then the `x-kilo-directory` header,
+ * then the server's own `process.cwd()`; it cannot recover one from these paths, because
+ * `getWorkspaceRouteSessionID` only matches `/session/...`-shaped URLs. The backend's OkHttp client
+ * adds only Basic auth, so an un-parameterised call silently lands on the `process.cwd()` instance,
+ * finds no pending entry, and 404s — leaving the CLI request to time out after 60s.
  */
 class KiloAgentManagerHost(
     private val cs: CoroutineScope,
@@ -57,8 +68,16 @@ class KiloAgentManagerHost(
     private val jobs = ConcurrentHashMap<String, Job>()
     private val settled = ConcurrentHashMap.newKeySet<String>()
 
-    /** `requestID` → (isReply, body), built once per request and reused by every retried POST. */
-    private val outcomes = ConcurrentHashMap<String, Pair<Boolean, String>>()
+    /**
+     * `requestID` → the answer built once and reused by every retried POST. [directory] is part of
+     * the outcome because the retry has to address the same workspace instance as the original.
+     */
+    private data class Outcome(val reply: Boolean, val body: String, val directory: String)
+
+    private val outcomes = ConcurrentHashMap<String, Outcome>()
+
+    /** Directories already reconciled on this connection, so each is listed at most once. */
+    private val synced = ConcurrentHashMap.newKeySet<String>()
 
     fun start(client: OkHttpClient, port: Int, events: SharedFlow<SseEvent>) {
         stop()
@@ -70,6 +89,15 @@ class KiloAgentManagerHost(
         // it was in flight. `sync()` therefore runs as its own child job once the collector is live.
         watcher = cs.launch {
             launch { sync() }
+            // Reconciliation can only ask about directories it knows, and the session manager's
+            // directory map is cleared on every disconnect, so at connect time it is usually empty.
+            // Reconcile a directory the first time a session is observed in it instead: that is when
+            // the host first learns the directory exists, and it covers a CLI that outlived this host.
+            launch {
+                sessions.changes.collect { change ->
+                    if (synced.add(change.directory)) syncDirectory(change.directory)
+                }
+            }
             events.collect { event -> route(event) }
         }
     }
@@ -81,14 +109,30 @@ class KiloAgentManagerHost(
         jobs.clear()
         settled.clear()
         outcomes.clear()
+        synced.clear()
         http = null
         base = null
     }
 
+    /**
+     * Routes one SSE event. Exception-safe on purpose: this runs inside `events.collect`, so letting
+     * anything escape would terminate the collector and silently disable `agent_manager` for the rest
+     * of the connection. A malformed payload — a bad `Path.of`, an unexpected JSON shape — must cost
+     * one dropped event, not the whole stream.
+     */
     private fun route(event: SseEvent) {
+        try {
+            dispatchEvent(event)
+        } catch (err: CancellationException) {
+            throw err
+        } catch (err: Exception) {
+            log.warn("agent_manager dropped a malformed ${event.type} event", err)
+        }
+    }
+
+    private fun dispatchEvent(event: SseEvent) {
         AgentManagerProtocol.parseRequest(event.type, event.data)?.let { request ->
-            val directory = AgentManagerProtocol.envelopeDirectory(event.data)
-            admit(request, directory)
+            admit(request, AgentManagerProtocol.envelopeDirectory(event.data))
             return
         }
         AgentManagerProtocol.parseCancelled(event.type, event.data)?.let { cancelled ->
@@ -98,96 +142,147 @@ class KiloAgentManagerHost(
             return
         }
         AgentManagerProtocol.parseStart(event.type, event.data)?.let { start ->
-            val directory = AgentManagerProtocol.envelopeDirectory(event.data)?.takeIf { Files.isDirectory(Path.of(it)) } ?: return
-            cs.launch { runCatching { starter.start(start, directory) }.onFailure { log.warn("agent_manager start failed", it) } }
+            val directory = AgentManagerProtocol.envelopeDirectory(event.data)?.takeIf { reachable(it) } ?: return
+            cs.launch {
+                try {
+                    starter.start(start, directory)
+                } catch (err: CancellationException) {
+                    throw err
+                } catch (err: Exception) {
+                    log.warn("agent_manager start req=${start.requestID} failed", err)
+                }
+            }
         }
     }
 
-    /** Reconciles requests the CLI still has pending after a (re)connect we were not alive for. */
+    private fun reachable(directory: String): Boolean =
+        try {
+            Files.isDirectory(Path.of(directory))
+        } catch (_: InvalidPathException) {
+            false
+        }
+
+    /**
+     * Reconciles requests the CLI still has pending after a (re)connect this host was not alive for.
+     *
+     * Listed per directory, not once: the endpoint is workspace-routed and each directory is a
+     * separate instance with its own pending set, so a single un-parameterised call would only ever
+     * see the server's `process.cwd()` instance. The VS Code bridge enumerates its known directories
+     * the same way. A recovered request also carries the directory it was listed from, which is the
+     * only directory information available here — the protocol's `Request` payload has none.
+     */
     private suspend fun sync() {
-        val raw = get("/kilocode/agent-manager") ?: return
-        AgentManagerProtocol.parsePendingRequests(raw).forEach { request ->
-            if (request.id in settled || jobs.containsKey(request.id)) return@forEach
-            admit(request, null)
+        for (directory in sessions.knownDirectories()) {
+            if (synced.add(directory)) syncDirectory(directory)
         }
     }
 
+    private fun syncDirectory(directory: String) {
+        if (!reachable(directory)) return
+        val raw = get("/kilocode/agent-manager", directory) ?: return
+        for (request in AgentManagerProtocol.parsePendingRequests(raw)) {
+            admit(request, directory)
+        }
+    }
+
+    /**
+     * Admits a request exactly once. The check and the launch must be atomic: [sync] runs concurrently
+     * with the live SSE collector, so a request that appears in both the reconciliation list and as a
+     * `requested` event would otherwise pass a `containsKey` check in both callers and execute twice —
+     * delivering a `prompt` or issuing a `stop` twice, which is precisely what [outcomes] cannot
+     * prevent, since memoization only happens after execution.
+     */
     private fun admit(request: Request, directory: String?) {
-        if (request.id in settled || jobs.containsKey(request.id)) return
-        val memoized = outcomes[request.id]
-        jobs[request.id] = cs.launch {
-            try {
-                if (memoized != null) send(request.id, memoized.first, memoized.second) else execute(request, directory)
-            } finally {
-                jobs.remove(request.id)
+        if (request.id in settled) return
+        jobs.computeIfAbsent(request.id) {
+            val memoized = outcomes[request.id]
+            cs.launch {
+                try {
+                    if (memoized != null) send(request.id, memoized.directory, memoized.reply, memoized.body)
+                    else execute(request, directory)
+                } finally {
+                    jobs.remove(request.id)
+                }
             }
         }
     }
 
     private suspend fun execute(request: Request, directory: String?) {
+        // The reply/reject must address the instance that holds this request's pending entry. The
+        // live SSE envelope names it; a request recovered by `sync()` is admitted with the directory
+        // it was listed from. Falling back to the requesting session's own directory covers a flat
+        // event with no envelope directory.
+        // The answer has to address the instance holding this request's pending entry, which is the
+        // directory it was published from — reachable or not. A directory that no longer exists on
+        // disk still has a live instance (the CLI published from it), so the reject below can land;
+        // only a request with no directory at all has nowhere to answer.
+        val workspace = directory ?: sessions.sessionDirectory(request.sessionID)
+        if (workspace == null) {
+            log.warn("agent_manager request ${request.id} dropped: no workspace directory to answer through")
+            settled.add(request.id)
+            return
+        }
         try {
             when (request) {
                 is Request.Overview -> {
-                    // The CLI's `GET /kilocode/agent-manager` reconciliation list carries no directory
-                    // at all (only the live `requested` SSE envelope does) — see `sync()`'s doc — so a
-                    // request recovered after a reconnect falls back to the requesting session's own
-                    // known directory, the same lookup `AgentManagerDispatch` uses for prompt/stop/
-                    // answer targets.
-                    val root = (directory ?: sessions.sessionDirectory(request.sessionID))
-                        ?.takeIf { Files.isDirectory(Path.of(it)) }
-                        ?: throw RequestFailure(ErrorCode.WORKSPACE_UNAVAILABLE, "Agent Manager requires a reachable workspace directory")
-                    val overview = AgentManagerOverview.build(root, sessions, chat, worktrees, request.sectionIDs, request.states)
-                    reply(request.id, AgentManagerProtocol.replyBody(request, overview))
+                    if (!reachable(workspace)) {
+                        throw RequestFailure(ErrorCode.WORKSPACE_UNAVAILABLE, "Workspace directory is not reachable: $workspace")
+                    }
+                    val overview = AgentManagerOverview.build(workspace, sessions, chat, worktrees, request.sectionIDs, request.states)
+                    reply(request.id, workspace, AgentManagerProtocol.replyBody(request, overview))
                 }
                 is Request.Prompt -> {
                     dispatch.prompt(request, originals)
-                    reply(request.id, AgentManagerProtocol.replyBody(request))
+                    reply(request.id, workspace, AgentManagerProtocol.replyBody(request))
                 }
                 is Request.Stop -> {
                     dispatch.stop(request)
-                    reply(request.id, AgentManagerProtocol.replyBody(request))
+                    reply(request.id, workspace, AgentManagerProtocol.replyBody(request))
                 }
                 is Request.Answer -> {
                     val questionID = dispatch.answer(request)
-                    reply(request.id, AgentManagerProtocol.replyBody(request, questionID))
+                    reply(request.id, workspace, AgentManagerProtocol.replyBody(request, questionID))
                 }
                 is Request.Move -> reject(
                     request.id,
+                    workspace,
                     ErrorCode.UNKNOWN_SECTION,
                     "Agent Manager sections are a VS Code-only grouping; this client has no sections to move into.",
                 )
             }
         } catch (failure: RequestFailure) {
-            reject(request.id, failure.code, failure.message ?: "Agent Manager request failed")
+            reject(request.id, workspace, failure.code, failure.message ?: "Agent Manager request failed")
+        } catch (err: CancellationException) {
+            throw err
         } catch (err: Exception) {
             log.warn("agent_manager request ${request.id} failed", err)
-            reject(request.id, ErrorCode.HOST_ERROR, err.message ?: "Agent Manager request failed")
+            reject(request.id, workspace, ErrorCode.HOST_ERROR, err.message ?: "Agent Manager request failed")
         }
     }
 
-    private fun reply(requestID: String, body: String) {
-        outcomes[requestID] = true to body
-        send(requestID, isReply = true, body = body)
+    private fun reply(requestID: String, directory: String, body: String) {
+        outcomes[requestID] = Outcome(reply = true, body = body, directory = directory)
+        send(requestID, directory, isReply = true, body = body)
     }
 
-    private fun reject(requestID: String, code: ErrorCode, message: String) {
+    private fun reject(requestID: String, directory: String, code: ErrorCode, message: String) {
         val body = AgentManagerProtocol.rejectBody(code, message)
-        outcomes[requestID] = false to body
-        send(requestID, isReply = false, body = body)
+        outcomes[requestID] = Outcome(reply = false, body = body, directory = directory)
+        send(requestID, directory, isReply = false, body = body)
     }
 
-    private fun send(requestID: String, isReply: Boolean, body: String) {
-        val path = if (isReply) "/kilocode/agent-manager/$requestID/reply" else "/kilocode/agent-manager/$requestID/reject"
-        if (!post(path, body)) return
+    private fun send(requestID: String, directory: String, isReply: Boolean, body: String) {
+        val action = if (isReply) "reply" else "reject"
+        if (!post("/kilocode/agent-manager/$requestID/$action", directory, body)) return
         settled.add(requestID)
         outcomes.remove(requestID)
     }
 
-    private fun post(path: String, body: String): Boolean {
+    private fun post(path: String, directory: String, body: String): Boolean {
         val client = http ?: return false
         val url = base ?: return false
         val request = OkRequest.Builder()
-            .url("$url$path")
+            .url("$url$path?directory=${encode(directory)}")
             .post(body.toRequestBody("application/json".toMediaType()))
             .build()
         return try {
@@ -201,10 +296,10 @@ class KiloAgentManagerHost(
         }
     }
 
-    private fun get(path: String): String? {
+    private fun get(path: String, directory: String): String? {
         val client = http ?: return null
         val url = base ?: return null
-        val request = OkRequest.Builder().url("$url$path").get().build()
+        val request = OkRequest.Builder().url("$url$path?directory=${encode(directory)}").get().build()
         return try {
             client.newCall(request).execute().use { response ->
                 if (!response.isSuccessful) {
@@ -219,4 +314,6 @@ class KiloAgentManagerHost(
             null
         }
     }
+
+    private fun encode(value: String): String = URLEncoder.encode(value, "UTF-8")
 }

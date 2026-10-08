@@ -216,7 +216,14 @@ class KiloBackendChatManager(
 
     // ------ abort ------
 
-    fun abort(id: String, dir: String) {
+    /**
+     * [strict] makes a non-2xx throw instead of only logging. Interactive callers (the chat UI's
+     * cancel button) want the lenient default — the turn is ending either way and there is nothing
+     * useful to show. A caller that has to report the outcome to someone else, such as the
+     * `agent_manager` host answering a `stop` request, must pass `true` so a failed abort is not
+     * reported upstream as a successful one.
+     */
+    fun abort(id: String, dir: String, strict: Boolean = false) {
         log.debug { "${ChatLogSummary.sid(id)} kind=abort ${ChatLogSummary.dir(dir)} op=abort send=true" }
         val http = requireClient()
         val url = requireBase()
@@ -229,6 +236,7 @@ class KiloBackendChatManager(
         http.newCall(request).execute().use { response ->
             if (!response.isSuccessful) {
                 log.warn("abort failed: HTTP ${response.code}")
+                if (strict) throw RuntimeException("abort failed: HTTP ${response.code}")
                 return
             }
             log.debug { "${ChatLogSummary.sid(id)} kind=abort op=abort ok=true code=${response.code}" }
@@ -367,10 +375,16 @@ class KiloBackendChatManager(
         post("/permission/$requestId/always-rules?directory=${encode(dir)}", body, "savePermissionRules", "kind=permission rid=$requestId")
     }
 
-    suspend fun replyQuestion(requestId: String, dir: String, answers: QuestionReplyDto) = withContext(Dispatchers.IO) {
+    /** See [abort] for why [strict] exists and which callers need it. */
+    suspend fun replyQuestion(
+        requestId: String,
+        dir: String,
+        answers: QuestionReplyDto,
+        strict: Boolean = false,
+    ) = withContext(Dispatchers.IO) {
         log.debug { "kind=question rid=$requestId ${ChatLogSummary.dir(dir)} op=replyQuestion answers=${answers.answers.size} send=true" }
         val body = KiloCliDataParser.buildQuestionReplyJson(answers)
-        post("/question/$requestId/reply?directory=${encode(dir)}", body, "replyQuestion", "kind=question rid=$requestId")
+        post("/question/$requestId/reply?directory=${encode(dir)}", body, "replyQuestion", "kind=question rid=$requestId", strict)
     }
 
     suspend fun rejectQuestion(requestId: String, dir: String) = withContext(Dispatchers.IO) {
