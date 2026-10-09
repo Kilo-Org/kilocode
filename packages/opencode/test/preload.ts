@@ -76,6 +76,8 @@ delete process.env["PERPLEXITY_API_KEY"]
 delete process.env["TOGETHER_API_KEY"]
 delete process.env["XAI_API_KEY"]
 delete process.env["DEEPSEEK_API_KEY"]
+delete process.env["GMI_API_KEY"] // kilocode_change
+delete process.env["GMICLOUD_API_KEY"] // kilocode_change
 delete process.env["FIREWORKS_API_KEY"]
 delete process.env["CEREBRAS_API_KEY"]
 delete process.env["SAMBANOVA_API_KEY"]

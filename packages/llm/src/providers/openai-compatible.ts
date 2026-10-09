@@ -61,5 +61,6 @@ export const cerebras = define(profiles.cerebras)
 export const deepinfra = define(profiles.deepinfra)
 export const deepseek = define(profiles.deepseek)
 export const fireworks = define(profiles.fireworks)
+export const gmicloud = define(profiles.gmicloud) // kilocode_change
 export const groq = define(profiles.groq)
 export const togetherai = define(profiles.togetherai)

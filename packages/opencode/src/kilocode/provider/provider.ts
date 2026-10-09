@@ -20,6 +20,7 @@ import type { Provider } from "@/provider/provider"
 import type { Auth } from "@/auth"
 import type { Config } from "@/config/config"
 import { organization, token } from "./catalog"
+import { load } from "./gmicloud"
 
 /** Default timeout (ms) for provider HTTP requests (connection phase). */
 export const REQUEST_TIMEOUT_MS = 300_000 // 5 minutes
@@ -240,6 +241,18 @@ export function kiloCustomLoaders(dep: CustomDep): Record<string, CustomLoader> 
         autoload: false,
         options: { headers: DEFAULT_HEADERS },
       }),
+
+    // Catalog env stays ["GMICLOUD_API_KEY"] so the single-env path sets provider.key.
+    // GMI_API_KEY fills options.apiKey only when that key, a saved key, and config apiKey are absent.
+    gmicloud: Effect.fnUntraced(function* () {
+      const env = yield* dep.env()
+      const auth = yield* dep.auth("gmicloud")
+      const config = yield* dep.config()
+      const saved = auth?.type === "api" && auth.key ? auth.key : undefined
+      const value = config.provider?.gmicloud?.options?.apiKey
+      const configured = typeof value === "string" && value !== "" ? value : undefined
+      return load({ env, saved, configured })
+    }),
   }
 }
 

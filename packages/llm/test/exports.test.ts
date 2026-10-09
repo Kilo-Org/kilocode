@@ -35,6 +35,7 @@ describe("public exports", () => {
     expect(OpenAI.provider.responsesWebSocket).toBe(OpenAI.responsesWebSocket)
     expect(OpenAI.configure({ apiKey: "fixture" }).responses).toBeFunction()
     expect(OpenAICompatible.deepseek.model).toBeFunction()
+    expect(OpenAICompatible.gmicloud.model).toBeFunction() // kilocode_change
     expect(CloudflareAIGateway.configure).toBeFunction()
     expect(CloudflareAIGateway.configure({ accountId: "fixture", gatewayApiKey: "fixture" }).model).toBeFunction()
     expect(CloudflareWorkersAI.configure).toBeFunction()
