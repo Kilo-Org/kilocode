@@ -293,7 +293,11 @@ export const sessionHandlers = HttpApiBuilder.group(InstanceHttpApi, "session", 
       params: { sessionID: SessionID }
       payload: typeof SummarizePayload.Type
     }) {
-      yield* revertSvc.cleanup(yield* requireSession(ctx.params.sessionID))
+      // kilocode_change start - summarize already declares the generic 400 response
+      yield* revertSvc
+        .cleanup(yield* requireSession(ctx.params.sessionID))
+        .pipe(Effect.mapError(() => new HttpApiError.BadRequest({})))
+      // kilocode_change end
       const messages = yield* SessionError.mapStorageNotFound(session.messages({ sessionID: ctx.params.sessionID }))
       const defaultAgent = yield* agentSvc.defaultAgent()
       const currentAgent = messages.findLast((message) => message.info.role === "user")?.info.agent ?? defaultAgent
@@ -339,7 +343,8 @@ export const sessionHandlers = HttpApiBuilder.group(InstanceHttpApi, "session", 
             if (
               error instanceof Image.InvalidDataUrlError ||
               error instanceof Image.DecodeError ||
-              error instanceof Image.SizeError
+              error instanceof Image.SizeError ||
+              error instanceof Session.BusyError
             )
               return Effect.fail(new InvalidRequestError({ message: error.message, kind: "attachment" })) // kilocode_change - carry a readable message instead of an empty BadRequest
             return Effect.die(error)

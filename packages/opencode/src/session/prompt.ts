@@ -150,10 +150,10 @@ function isOrphanedInterruptedTool(part: SessionV1.ToolPart) {
 export interface Interface {
   readonly cancel: (sessionID: SessionID, scope?: KiloSessionControl.AbortScope) => Effect.Effect<void> // kilocode_change
   readonly paused: (sessionID: SessionID) => Effect.Effect<boolean> // kilocode_change - wakeup resume refuses a paused session instead of dropping its turn
-  readonly prompt: (input: PromptInput) => Effect.Effect<SessionV1.WithParts, Image.Error>
+  readonly prompt: (input: PromptInput) => Effect.Effect<SessionV1.WithParts, Image.Error | Session.BusyError> // kilocode_change
   readonly loop: (input: LoopInput) => Effect.Effect<SessionV1.WithParts>
   readonly shell: (input: ShellInput) => Effect.Effect<SessionV1.WithParts, Session.BusyError>
-  readonly command: (input: CommandInput) => Effect.Effect<SessionV1.WithParts, Image.Error | Error>
+  readonly command: (input: CommandInput) => Effect.Effect<SessionV1.WithParts, Image.Error | Error | Session.BusyError> // kilocode_change
   readonly resolvePromptParts: (template: string) => Effect.Effect<PromptInput["parts"]>
 }
 
@@ -1444,7 +1444,7 @@ export const layer = Layer.effect(
     const prompt: (
       input: PromptInput,
       prior?: KiloSessionControl.Ticket,
-    ) => Effect.Effect<SessionV1.WithParts, Image.Error> = Effect.fn("SessionPrompt.prompt")(
+    ) => Effect.Effect<SessionV1.WithParts, Image.Error | Session.BusyError> = Effect.fn("SessionPrompt.prompt")(
       function* (input: PromptInput, prior?: KiloSessionControl.Ticket) {
         const background = KiloSessionControl.background(input.parts)
         // kilocode_change - a real user message takes priority over an active goal
@@ -2000,7 +2000,7 @@ export const layer = Layer.effect(
     const loop: (
       input: LoopInput,
       prior?: KiloSessionControl.Ticket,
-    ) => Effect.Effect<MessageV2.WithParts, NotFoundError> = Effect.fn("SessionPrompt.loop")(function* (
+    ) => Effect.Effect<MessageV2.WithParts, NotFoundError | Session.BusyError> = Effect.fn("SessionPrompt.loop")(function* (
       input: LoopInput,
       prior?: KiloSessionControl.Ticket,
     ) {
