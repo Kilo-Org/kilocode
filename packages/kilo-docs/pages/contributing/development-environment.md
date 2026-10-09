@@ -43,8 +43,7 @@ Before you begin, make sure you have the following installed:
 
    This command will install dependencies for all workspace packages.
 
-1. **Install VSCode Extensions**:
-   - **Required**: [ESBuild Problem Matchers](https://marketplace.visualstudio.com/items?itemName=connor4312.esbuild-problem-matchers) - Helps display build errors correctly.
+#### Recommended Extensions
 
 While not strictly necessary for running the extension, these extensions are recommended for development:
 
