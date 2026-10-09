@@ -28,6 +28,12 @@ The VS Code window must be trusted before you can add, create, or clone a reposi
 
 If you select a folder that is not a Git repository, **Open local folder...** asks whether to initialize Git and create an empty first commit before it adds the project.
 
+## Reorder projects
+
+Drag a project header in the **PROJECTS** list to move that project up or down. A thin line shows where the project will land, and the new order is saved right away and applied to every VS Code window.
+
+The default project is pinned to the first position and cannot be dragged. The order you set persists across restarts.
+
 ## Project scope
 
 Each project keeps its own state:

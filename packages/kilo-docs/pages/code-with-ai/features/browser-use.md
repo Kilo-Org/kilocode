@@ -22,6 +22,8 @@ Browser automation is built into the extension and requires no manual setup. Ena
 The experimental **Integrated Browser** under **Settings → Experimental** is a different feature. It shows local application previews inside Agent Manager and does not replace Playwright browser automation. The two features have independent settings.
 {% /callout %}
 
+Chat links follow the Integrated Browser's **Open links in** setting under **Settings → Experimental**. When it is set to open links in the Integrated Browser, a plain click opens an `http(s)` link from a Kilo chat in the Integrated Browser. To open that link in your system browser instead, hold **Shift** as you click. Choosing **System browser** for **Open links in** sends every chat link to your system browser, so Shift-click changes nothing.
+
 {% /tab %}
 {% tab label="CLI" %}
 

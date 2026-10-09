@@ -362,6 +362,8 @@ Renaming a worktree changes only the label shown in Agent Manager. It does not r
 
 Kilo can start Agent Manager sessions from chat with the `agent_manager` tool. It is available by default only in the VS Code extension because Agent Manager is an extension feature.
 
+Kilo starts these sessions only when you explicitly ask for new Agent Manager sessions or worktrees, or after it confirms with you first. It does not start them on its own to parallelize or organize routine work: each session is user-visible and each worktree uses disk space and tokens.
+
 The tool supports two modes:
 
 | Mode | Behavior |
