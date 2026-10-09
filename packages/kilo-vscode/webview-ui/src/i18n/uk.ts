@@ -217,6 +217,7 @@ export const dict = {
   "prompt.action.stop.background": "Зупинити головного агента. Фонові агенти продовжать роботу.",
   "prompt.agents.show": "Показати фонових агентів",
   "prompt.action.enhance": "Покращити запит",
+  "prompt.action.more": "Інші дії",
   "prompt.paste.expand": "Натисніть, щоб розгорнути вставлений текст",
   "prompt.issues.title": "Проблеми сесії",
   "prompt.mcp.provider": "MCP {{name}}",
@@ -1356,6 +1357,8 @@ export const dict = {
   "task.backgroundAgents.stopAll": "Зупинити всіх ({{count}})",
   "task.backgroundAgents.finished": "Фонові агенти завершили роботу",
   "task.stop": "Зупинити підагента",
+  "task.open.panel": "Відкрити підагента на панелі",
+  "task.open.tab": "Відкрити підагента у вкладці",
 
   "settings.saveBar.unsavedChanges": "Незбережені зміни",
   "settings.saveBar.discard": "Скасувати",

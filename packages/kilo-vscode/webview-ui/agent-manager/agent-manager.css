@@ -490,6 +490,45 @@ html[data-theme="kilo-vscode"]
   border-bottom: 0;
 }
 
+/* Project drag and drop: dim the dragged project and draw the insertion line. */
+.am-project-dragging {
+  opacity: 0.4;
+}
+
+.am-project-drop-before::before,
+.am-project-drop-after::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  z-index: 2;
+  height: 2px;
+  background: var(--border-focus);
+  pointer-events: none;
+}
+
+.am-project-drop-before::before {
+  top: -1px;
+}
+
+.am-project-drop-after::after {
+  bottom: -1px;
+}
+
+body.am-project-dragging-active,
+body.am-project-dragging-active * {
+  cursor: grabbing !important;
+}
+
+/* The overlay is portalled to the body. Keep it above the sticky project headers. */
+.am-project-drag-layer {
+  z-index: 10;
+}
+
+.am-project-overlay {
+  font-weight: 500;
+}
+
 .am-project-item {
   min-height: 34px;
   /* Leading column aligns with the card icons below it (.am-local-item and
