@@ -56,6 +56,7 @@ export const dict = {
   ...anacondaDesktopDict,
   ...cloudProviderDict,
   "task.swarm.title": "Board",
+  "task.swarm.open": "Open board",
   "task.swarm.refresh": "Refresh",
   "task.swarm.reset": "Reset board",
   "task.swarm.resetTitle": "Reset this board?",
@@ -70,6 +71,7 @@ export const dict = {
   "session.activity.error": "Error or connection lost.",
   "session.activity.retry": "Retrying automatically.",
   "session.activity.busy": "In progress.",
+  "session.activity.scheduled": "Waiting for a scheduled wakeup.",
   "session.activity.done": "Turn completed.",
   "session.activity.idle": "Not running.",
 
@@ -85,10 +87,13 @@ export const dict = {
     "Conversation reverted. File changes were not restored because snapshots are disabled.",
   "revert.banner.workspace.unavailable":
     "Conversation reverted. No file checkpoint was available, so workspace changes were not restored.",
+  "revert.banner.workspace.notAGitRepo":
+    "Conversation reverted. File checkpoints require a Git repository, so workspace changes were not restored.",
   "revert.banner.workspace.legacy":
     "Conversation reverted. Workspace restoration status is unavailable for this earlier revert.",
   "revert.banner.workspace.enableSnapshots": "Enable snapshots",
   "revert.disabled.agentBusy": "Wait for agent to finish",
+  "revert.error.body": "The repository may be in use. Try again, or check the Kilo logs for details.",
   "command.session.compact": "Compact session",
   "command.session.export": "Export session transcript",
 
@@ -192,17 +197,34 @@ export const dict = {
   "prompt.worktrees.title": "Worktrees",
   "prompt.worktrees.search": "Search worktrees",
   "prompt.thinking.tooltip": "Reasoning effort",
+  "prompt.shortcutHint.addSelection": "to add the selection",
+  "prompt.shortcutHint.waiting": "to answer a waiting session",
+  "prompt.shortcutHint.type": "to type",
+  "prompt.shortcutHint.sessions": "to switch session",
+  "prompt.shortcutHint.stop": "to stop",
+  "prompt.shortcutHint.changes": "to review changes",
+  "prompt.shortcutHint.pr": "to open the PR",
+  "prompt.shortcutHint.mode": "Next mode",
   "prompt.action.send": "Send",
   "prompt.action.continue": "Continue",
   "prompt.action.send.blocked": "Answer or dismiss the pending question first",
   "prompt.action.send.recording": "Transcribe and send",
   "prompt.action.stop": "Stop",
+  "prompt.action.stop.background": "Stop main agent. Background agents keep running.",
+  "prompt.agents.show": "Show background agents",
   "prompt.action.enhance": "Enhance prompt",
+  "prompt.action.more": "More actions",
+  "prompt.paste.expand": "Click to expand pasted text",
+  "prompt.issues.title": "Session issues",
+  "prompt.mcp.provider": "{{name}} MCP",
+  "prompt.mcp.openSettings": "Open in Settings",
+  "prompt.mcp.signIn.busy": "Signing in…",
   "prompt.action.indexing": "Indexing settings",
   "prompt.action.autoApprove.enable": "Enable auto-approve",
   "prompt.action.autoApprove.disable": "Disable auto-approve",
   "prompt.action.autoApprove.enabled": "Auto-approve is enabled. Permission prompts will be approved automatically.",
   "prompt.action.autoApprove.disabled": "Auto-approve is disabled. Click to approve permission prompts automatically.",
+  "prompt.action.autoApprove.sandboxExcluded": "Sandbox escalation prompts are always excluded.",
   "prompt.action.sandbox.enable": "Enable sandbox",
   "prompt.action.sandbox.disable": "Disable sandbox",
   "prompt.action.sandbox.enabled":
@@ -218,12 +240,14 @@ export const dict = {
   "prompt.action.sandbox.network.allowed": "Allowed",
   "prompt.action.sandbox.unrestricted": "Unrestricted",
   "prompt.action.sandbox.description.enabled": "Writes are limited to the project and Kilo directories.",
+  "prompt.action.sandbox.description.escalation":
+    "Permission rules and auto-approve apply inside the sandbox. Commands that must leave it always ask.",
   "prompt.action.sandbox.description.disabled": "Click to restrict filesystem writes and network access.",
   "prompt.action.sandbox.description.disabledNetworkAllowed":
     "Click to restrict filesystem writes. Network access remains allowed by your sandbox settings.",
   "prompt.action.enhanceDescription":
     "The 'Enhance Prompt' button helps improve your prompt by providing additional context, clarification, or rephrasing. Try typing a prompt in here and clicking the button again to see how it works.",
-  "speechToText.tooltip.start": "Start voice input with Kilo Gateway",
+  "speechToText.tooltip.start": "Start voice input",
   "speechToText.tooltip.shortcut":
     "Tap to start or stop recording. Hold while speaking, then release to transcribe and submit.",
   "speechToText.tooltip.starting": "Starting microphone... Wait to speak.",
@@ -263,8 +287,13 @@ export const dict = {
   "notification.permission.title": "Permission required",
   "notification.permission.titleSubagent": "Permission required (subagent)",
   "notification.permission.titleSkillShell": 'Run shell commands from skill "{{skill}}"?',
-  "notification.permission.titleSandboxEscalation": "Allow Git operation outside the sandbox?",
+  "notification.permission.titleSandboxEscalation": "Run outside the sandbox?",
+  "notification.permission.descriptionSandboxEscalation":
+    "This runs the whole command with filesystem and network restrictions removed, for this command only. Git must write to .git, which is read-only in the sandbox and outside the worktree in a linked worktree. Bash allow rules and auto-approve never approve this prompt automatically.",
   "ui.permission.manageAutoApprove": "Manage Auto-Approve Rules",
+  "ui.permission.reject": "Reject",
+  "ui.permission.feedbackPlaceholder": "Tell Kilo what to do differently",
+  "ui.permission.feedbackHint": "Enter to reject, Esc to cancel",
   "ui.permission.doomLoop.prompt": "Potential loop detected for the {{tool}} tool. Continue running?",
   "ui.permission.doomLoop.rule": "Continue {{tool}} calls",
   "ui.permission.rule.addToAllowed": "Add to allowed list",
@@ -296,7 +325,7 @@ export const dict = {
   "ui.approval.source.agent.default": "by the agent",
   "ui.approval.source.global": "by your global config",
   "ui.approval.source.project": "by the project config",
-  "ui.approval.source.yolo": "by auto-approve (YOLO) mode",
+  "ui.approval.source.yolo": "by auto-approve mode",
   "ui.approval.source.session": "by a session auto-approve rule",
   "ui.approval.source.default": "by default",
   "ui.approval.outsideWorkspace": "(outside your workspace: {{file}})",
@@ -381,6 +410,7 @@ export const dict = {
   "settings.providers.tag.other": "Other",
   "settings.providers.connected.environmentDescription": "Connected from your environment variables",
   "settings.providers.action.signInChatGPT": "Sign in with ChatGPT",
+  "settings.providers.action.changeApiKey": "Change API key",
   "settings.providers.custom.description": "Add a custom provider by base URL.",
 
   "provider.custom.title": "Custom provider",
@@ -409,6 +439,7 @@ export const dict = {
   "provider.custom.models.toggleImages": "Toggle image for all",
   "provider.custom.models.remove": "Remove model",
   "provider.custom.models.add": "Add model",
+  "provider.custom.models.fetch.button": "Fetch models",
   "provider.custom.models.fetch.authError": "Authentication failed. Check the API key above and try again.",
   "provider.custom.models.fetch.empty": "No models found on this server.",
   "provider.custom.models.fetch.added": "Added {{count}} model(s).",
@@ -438,6 +469,9 @@ export const dict = {
   "provider.custom.error.duplicate": "Duplicate",
   "settings.openLocalConfig": "Local Config",
   "settings.openGlobalConfig": "Global Config",
+  "settings.search.placeholder": "Search settings",
+  "settings.search.noResults": "No settings found",
+  "settings.search.clear": "Clear search",
   "settings.config.scope.local": "Local",
   "settings.config.scope.global": "Global",
   "settings.config.status.loaded": "loaded",
@@ -463,37 +497,21 @@ export const dict = {
 
   "settings.permissions.toast.updateFailed.title": "Failed to update permissions",
 
-  "settings.permissions.tool.read.title": "Read",
   "settings.permissions.tool.read.description": "Reading a file (matches the file path)",
-  "settings.permissions.tool.edit.title": "Edit",
   "settings.permissions.tool.edit.description": "Modify files, including edits, writes, patches, and multi-edits",
-  "settings.permissions.tool.glob.title": "Glob",
   "settings.permissions.tool.glob.description": "Match files using glob patterns",
-  "settings.permissions.tool.grep.title": "Grep",
   "settings.permissions.tool.grep.description": "Search file contents using regular expressions",
-  "settings.permissions.tool.list.title": "List",
   "settings.permissions.tool.list.description": "List files within a directory",
-  "settings.permissions.tool.bash.title": "Bash",
   "settings.permissions.tool.bash.description": "Run shell commands",
-  "settings.permissions.tool.task.title": "Task",
   "settings.permissions.tool.task.description": "Launch sub-agents",
-  "settings.permissions.tool.skill.title": "Skill",
   "settings.permissions.tool.skill.description": "Load a skill by name",
-  "settings.permissions.tool.lsp.title": "LSP",
   "settings.permissions.tool.lsp.description": "Run language server queries",
-  "settings.permissions.tool.todoread.title": "Todo Read",
   "settings.permissions.tool.todoread.description": "Read the todo list",
-  "settings.permissions.tool.todowrite.title": "Todo Write",
   "settings.permissions.tool.todowrite.description": "Update the todo list",
-  "settings.permissions.tool.webfetch.title": "Web Fetch",
   "settings.permissions.tool.webfetch.description": "Fetch content from a URL",
-  "settings.permissions.tool.websearch.title": "Web Search",
   "settings.permissions.tool.websearch.description": "Search the web",
-  "settings.permissions.tool.codesearch.title": "Code Search",
   "settings.permissions.tool.codesearch.description": "Search code on the web",
-  "settings.permissions.tool.external_directory.title": "External Directory",
   "settings.permissions.tool.external_directory.description": "Access files outside the project directory",
-  "settings.permissions.tool.doom_loop.title": "Doom Loop",
   "settings.permissions.tool.doom_loop.description": "Detect repeated tool calls with identical input",
 
   "session.delete.title": "Delete session",
@@ -511,6 +529,8 @@ export const dict = {
   "session.tabs.switcher.current": "Current",
   "session.tabs.switcher.pending": "New",
   "session.tabs.switcher.busy": "Working",
+  "session.tabs.switcher.scheduled": "Scheduled",
+  "session.tabs.pinHint": "Shift+click to pin or unpin",
   "session.tab.local": "Local",
   "session.tab.cloud": "Cloud",
   "session.tab.worktree": "Worktree",
@@ -534,13 +554,13 @@ export const dict = {
   "workStyle.choice.human-in-the-loop.description": "Kilo pauses and shows you its plan as it works.",
   "workStyle.choice.human-in-the-loop.permissions": "Asks before editing files or running commands.",
   "workStyle.choice.human-in-the-loop.bash": "Asks for permission when running all terminal commands.",
-  "workStyle.choice.human-in-the-loop.visibility": "Shows full conversation details, including reasoning.",
+  "workStyle.choice.human-in-the-loop.visibility": "Expands reasoning, commands, and edits for review.",
   "workStyle.choice.autonomous.eyebrow": "Fewer interruptions",
   "workStyle.choice.autonomous.title": "High autonomy",
   "workStyle.choice.autonomous.description": "Fewer interruptions, streamlined interface.",
   "workStyle.choice.autonomous.permissions": "Edits files and runs commands in the workspace without asking.",
   "workStyle.choice.autonomous.bash": "Can run terminal commands in the workspace without approval.",
-  "workStyle.choice.autonomous.visibility": "Details stay collapsed until you expand them.",
+  "workStyle.choice.autonomous.visibility": "Collapses tool details, with a compact reasoning preview.",
   "session.cloud.import.title": "Import session",
   "session.cloud.import.placeholder": "Session ID, URL, or kilo import command",
   "session.cloud.import.button": "Import",
@@ -585,6 +605,7 @@ export const dict = {
   "profile.usage.source.direct": "Direct",
   "profile.usage.state.stale": "Showing last updated usage.",
   "profile.usage.state.unavailable": "Usage unavailable.",
+  "profile.usage.state.empty": "No usage limits reported.",
   "profile.usage.plan.pastDue": "Plan: Past due",
   "profile.usage.plan.canceling": "Plan: Cancels at period end",
   "profile.usage.plan.unknown": "Plan: Status unknown",
@@ -724,7 +745,6 @@ export const dict = {
   "sidebar.topBar.newTask": "New Task",
   "sidebar.topBar.history": "History",
   "sidebar.topBar.agentManager": "Agent Manager",
-  "sidebar.topBar.kiloClaw": "KiloClaw",
   "sidebar.topBar.marketplace": "Marketplace",
   "sidebar.topBar.profile": "Profile",
   "sidebar.topBar.settings": "Settings",
@@ -757,9 +777,11 @@ export const dict = {
   "ui.sessionTurn.status.consideringNextSteps": "Considering next steps...",
 
   "dialog.model.noProviders": "No providers",
+  "dialog.model.unavailable": "Kilo models unavailable",
 
   "prompt.placeholder.connecting": "Connecting to server...",
   "prompt.placeholder.default": "Type a message, @ to mention files... (Enter to send, Shift+Enter for new line)",
+  "prompt.placeholder.hint": "Type a message, @ to mention files... ({{key}} {{action}})",
   "prompt.placeholder.error": "Connection failed. Check the output panel or restart the extension.",
 
   "context.usage.sessionCost": "Session cost",
@@ -814,15 +836,14 @@ export const dict = {
   "settings.agentBehaviour.subtab.skills": "Skills",
 
   "settings.browser.description":
-    "Configure the browser runtime used by the experimental Agent Manager browser. The page preview stays in Agent Manager.",
+    "Configure built-in browser automation powered by Playwright. Kilo can navigate, interact with, and screenshot web pages in your sessions.",
   "settings.browser.enable.title": "Enable Browser Automation",
-  "settings.browser.enable.description": "Enable the session-scoped Agent Manager browser for local applications.",
+  "settings.browser.enable.description": "Register the Playwright MCP server with the CLI backend.",
   "settings.browser.systemChrome.title": "Use System Chrome",
   "settings.browser.systemChrome.description":
     "Use installed Google Chrome. Disable only when a compatible Playwright Chromium browser is already installed.",
   "settings.browser.headless.title": "Headless Mode",
-  "settings.browser.headless.description":
-    "Agent Manager always runs the browser headlessly. The page preview appears in the Browser panel.",
+  "settings.browser.headless.description": "Run in headless mode (no visible browser window).",
 
   "settings.language.description":
     'Choose the language for the Kilo Code UI. "Auto" uses your VS Code display language.',
@@ -874,22 +895,39 @@ export const dict = {
   "settings.experimental.batch.description": "Enable batching of multiple tool calls",
   "settings.experimental.imageGeneration.title": "Image Generation",
   "settings.experimental.imageGeneration.description": "Enable AI image generation",
-  "settings.experimental.sharedAgentBoard.title": "Kilo Swarm",
-  "settings.experimental.sharedAgentBoard.description":
+  "settings.agentBehaviour.sharedAgentBoard.title": "Kilo Swarm",
+  "settings.agentBehaviour.sharedAgentBoard.description":
     "Share a board between a main session and its task subagents, including nested subagents. Use it for parallel solution attempts or complementary work, not every task.",
   "settings.experimental.imageGenerationModel.title": "Image Model",
   "settings.experimental.imageGenerationModel.description": "Image Generation Model",
   "settings.experimental.imageGenerationModel.placeholder": "Default (Auto Router)",
 
   "settings.models.speechToText.disabledDescription":
-    "Enable and sign in to the Kilo provider to use Speech to Text. Speech to Text is currently only supported through Kilo Gateway.",
+    "Kilo Gateway is selected. Enable and sign in to the Kilo provider to choose a supported model, or enter a custom transcription base URL above.",
+  "settings.models.speechToText.remoteDescription":
+    "Voice input is unavailable in remote windows. Open Kilo in a local window to use the microphone.",
   "settings.models.speechToTextModel.title": "Speech to Text Model",
-  "settings.models.speechToTextModel.description": "Choose the Kilo Gateway transcription model for voice input.",
+  "settings.models.speechToTextModel.description":
+    "Kilo Gateway is the active speech-to-text source. Choose its transcription model for voice input.",
+  "settings.models.speechToTextModel.customDescription":
+    "Model ID sent to your custom transcription endpoint, for example whisper-1. Voice input is unavailable until you set one.",
+  "settings.models.speechToTextModel.customPlaceholder": "whisper-1",
+  "settings.models.speechToTextBaseUrl.title": "Speech to Text Base URL",
+  "settings.models.speechToTextBaseUrl.description":
+    "Use an OpenAI-compatible transcription API instead of Kilo Gateway. Models are read from /models and audio is sent to /audio/transcriptions. Leave empty to use Kilo Gateway.",
+  "settings.models.speechToTextBaseUrl.placeholder": "https://api.openai.com/v1",
+  "settings.models.speechToTextApiKey.title": "Speech to Text API Key",
+  "settings.models.speechToTextApiKey.description":
+    "Bearer token sent to the custom transcription base URL. Stored in your Kilo config file.",
+  "settings.models.speechToTextApiKey.placeholder": "sk-...",
   "settings.experimental.nativeNotebookTools.title": "Native Notebook Tools",
   "settings.experimental.nativeNotebookTools.description":
     "Enable experimental tools for reading, editing, and executing VS Code notebooks",
   "settings.experimental.continueOnDeny.title": "Continue on Deny",
   "settings.experimental.continueOnDeny.description": "Continue the agent loop when a permission is denied",
+  "settings.experimental.codeMode.title": "Programmatic Tool Calling",
+  "settings.experimental.codeMode.description":
+    "Route MCP tool calls through a confined JavaScript runtime with on-demand tool discovery instead of exposing every MCP tool directly. Saves context when many MCP tools are connected.",
   "settings.sandboxing.enabled.title": "Sandbox",
   "settings.sandboxing.enabled.description":
     "Run agent shell commands inside an OS-level sandbox that restricts writes to the project and Kilo state directories",
@@ -903,15 +941,25 @@ export const dict = {
   "settings.sandboxing.writablePaths.title": "Additional Writable Paths",
   "settings.sandboxing.writablePaths.description":
     "Extra filesystem paths the sandbox allows writes to (e.g. /tmp, /var/log). These are merged with the default writable paths when the sandbox is active.",
-  "settings.experimental.multiProject.title": "Multi-Project Agent Manager",
-  "settings.experimental.multiProject.description":
-    "Enable managing sessions and worktrees across multiple repositories in Agent Manager. The current workspace repository is always the default project.",
+  "settings.experimental.browserAutomation.title": "Integrated Browser",
+  "settings.experimental.browserAutomation.description":
+    "Preview local applications and public HTTPS pages in Agent Manager and the Integrated Browser tab, and expose the browser_open tool to sessions.",
+  "settings.experimental.browserAutomation.systemChrome.title": "Use System Chrome",
+  "settings.experimental.browserAutomation.systemChrome.description":
+    "Use installed Google Chrome for the Integrated Browser. Disable only when a compatible Playwright Chromium browser is already installed.",
+  "browserTab.noSession": "Open the browser from a session to preview a local application or public HTTPS page.",
+  "browserTab.disabled": "The Integrated Browser is disabled. Enable it in Kilo Settings > Experimental.",
+  "settings.experimental.browserLinks.title": "Open links in",
+  "settings.experimental.browserLinks.description":
+    "Choose where web links open from Kilo chats. Requires the Integrated Browser.",
+  "settings.experimental.browserLinks.external": "System browser",
+  "settings.experimental.browserLinks.integrated": "Integrated Browser",
+  "settings.experimental.conversationPromptHistory.title": "Per-Conversation Prompt History",
+  "settings.experimental.conversationPromptHistory.description":
+    "Keep the prompt input history (ArrowUp/ArrowDown recall) separate for each conversation instead of sharing one history across all conversations.",
   "settings.experimental.claudeMigration.title": "Claude Code Migration",
   "settings.experimental.claudeMigration.description":
     "On the next backend start, import supported global CLAUDE.md instructions, simple skills, and disabled MCP definitions. This runs once with no automatic retry; global Claude instructions and skills are then handed off to Kilo. Claude files stay unchanged; keep them if you still use Claude Code.",
-  "settings.experimental.taskModelSelection.title": "Task Subagent Model Selection",
-  "settings.experimental.taskModelSelection.description":
-    "Allow task subagents to use an explicitly selected model, provider, and reasoning effort.",
   "settings.experimental.mcpTimeout.title": "MCP Timeout (ms)",
   "settings.experimental.mcpTimeout.description": "Timeout for MCP server requests in milliseconds",
   "settings.experimental.remote.title": "Remote Control",
@@ -959,6 +1007,8 @@ export const dict = {
   "settings.agentBehaviour.skillUrls": "Skill URLs",
   "settings.agentBehaviour.removeSkill.title": "Remove skill",
   "settings.agentBehaviour.removeSkill.confirm": 'Remove skill "{{name}}"? This will delete the skill files from disk.',
+  "settings.agentBehaviour.removeSkill.bundleConfirm":
+    'Remove skill "{{name}}"? This also uninstalls the {{mcp}} MCP server and every companion skill from the same Marketplace installation.',
   "settings.agentBehaviour.removeSkill.button": "Remove",
   "settings.agentBehaviour.rules.description":
     "Rules are instruction files that guide agent behaviour. They are included in the system prompt for every conversation. Add file paths below to include additional rules.",
@@ -974,15 +1024,40 @@ export const dict = {
     "Load CLAUDE.md instructions and skills from your Claude Code configuration directory into sessions. Enable this if you want Kilo to use your Claude Code instructions and skills. Requires restart.",
   "settings.agentBehaviour.removeMcp.title": "Remove MCP server",
   "settings.agentBehaviour.removeMcp.confirm": 'Remove MCP server "{{name}}"? This will remove it from your config.',
+  "settings.agentBehaviour.removeMcp.bundleConfirm":
+    'Remove MCP server "{{name}}" and its companion skills? This removes both the server and every skill owned by this Marketplace installation.',
   "settings.agentBehaviour.removeMcp.button": "Remove",
   "settings.agentBehaviour.mcpDetail.command": "Command",
   "settings.agentBehaviour.mcpDetail.args": "Arguments",
   "settings.agentBehaviour.mcpDetail.env": "Environment",
+  "settings.agentBehaviour.mcpSignIn.cancel": "Cancel sign-in",
+  "settings.agentBehaviour.mcpRemoving": "Removing…",
+  "settings.agentBehaviour.mcpResetAuth": "Reset sign-in",
+  "settings.agentBehaviour.mcpResetAuth.title": "Reset MCP sign-in",
+  "settings.agentBehaviour.mcpResetAuth.confirm":
+    'Clear the stored sign-in for "{{name}}"? You will need to sign in again.',
   "settings.agentBehaviour.editMcp": "Edit MCP Server",
   "settings.agentBehaviour.editMcp.transportLocal": "Local server (stdio transport)",
   "settings.agentBehaviour.editMcp.transportRemote": "Remote server (SSE/HTTP transport)",
   "settings.agentBehaviour.editMcp.env": "Environment Variables",
   "settings.agentBehaviour.editMcp.env.help": "Variables passed to the MCP server process.",
+  "settings.agentBehaviour.editMcp.oauth": "OAuth",
+  "settings.agentBehaviour.editMcp.oauth.help":
+    "Leave on Automatic unless the server requires a pre-registered client. A client secret is stored in your Kilo config file.",
+  "settings.agentBehaviour.editMcp.oauth.mode": "Mode",
+  "settings.agentBehaviour.editMcp.oauth.mode.automatic": "Automatic",
+  "settings.agentBehaviour.editMcp.oauth.mode.disabled": "Disabled",
+  "settings.agentBehaviour.editMcp.oauth.mode.custom": "Custom client",
+  "settings.agentBehaviour.editMcp.oauth.clientId": "Client ID",
+  "settings.agentBehaviour.editMcp.oauth.clientSecret": "Client secret",
+  "settings.agentBehaviour.editMcp.oauth.scope": "Scope",
+  "settings.agentBehaviour.editMcp.oauth.callbackPort": "Callback port",
+  "settings.agentBehaviour.editMcp.oauth.redirectUri": "Redirect URI",
+  "settings.agentBehaviour.editMcp.oauth.redirectUri.help":
+    "Defaults to http://127.0.0.1:19876/mcp/oauth/callback and overrides the callback port.",
+  "settings.agentBehaviour.editMcp.oauth.port.invalid": "Enter a port between 1 and 65535.",
+  "settings.agentBehaviour.editMcp.oauth.secret.invalid": "A client secret requires a client ID.",
+  "settings.agentBehaviour.editMcp.oauth.redirectUri.invalid": "Enter a valid redirect URI.",
   "settings.agentBehaviour.addMcp.command": "Command",
   "settings.agentBehaviour.addMcp.command.placeholder": "e.g. npx",
   "settings.agentBehaviour.addMcp.args": "Arguments",
@@ -1085,6 +1160,31 @@ export const dict = {
   "settings.checkpoints.enable.title": "Enable Snapshots",
   "settings.checkpoints.enable.description": "Create checkpoints before file edits so you can restore previous states",
 
+  "settings.autoCleanup.enable.title": "Enable automatic session cleanup",
+  "settings.autoCleanup.enable.description":
+    "Automatically delete old session history after a fixed number of days across all projects and every Kilo client on this machine, not just this window. Running sessions and sessions with a recent fork are never deleted. Deletion is permanent.",
+  "settings.autoCleanup.defaultRetention.title": "Keep sessions for (days)",
+  "settings.autoCleanup.defaultRetention.description":
+    "How long session history is kept before automatic cleanup deletes it.",
+  "settings.autoCleanup.lastRun.title": "Last cleanup",
+  "settings.autoCleanup.lastRun.never": "Never run",
+  "settings.autoCleanup.result":
+    "{{date}}: deleted {{deleted}} of {{scanned}} sessions ({{active}} active skipped, {{failed}} failed) in {{seconds}}s",
+  "settings.autoCleanup.starting": "Starting session cleanup...",
+  "settings.autoCleanup.error.status": "Session cleanup status is temporarily unavailable. Retrying...",
+  "settings.autoCleanup.error.timeout": "Waiting for cleanup status. The backend is taking longer than expected.",
+  "settings.autoCleanup.error.run":
+    "Could not confirm session cleanup completed. Check the last cleanup result before trying again.",
+  "settings.autoCleanup.progress.scanning": "Scanning sessions: {{processed}}/{{total}} processed",
+  "settings.autoCleanup.progress.deleting":
+    "Deleting sessions: {{processed}}/{{total}} processed ({{deleted}} deleted, {{failed}} failed)",
+  "settings.autoCleanup.runNow": "Run Cleanup Now",
+  "settings.autoCleanup.runNow.confirm":
+    "Permanently delete expired sessions across all projects and every Kilo client on this machine?",
+  "settings.autoCleanup.stop": "Stop cleanup",
+  "settings.autoCleanup.progress.cancelling": "Stopping session cleanup...",
+  "settings.autoCleanup.lastRun.cancelled": "interrupted",
+
   "settings.context.autoCompaction.title": "Auto Compaction",
   "settings.context.autoCompaction.description": "Automatically compact context before it reaches the limit",
   "settings.context.compaction.title": "Compaction",
@@ -1131,13 +1231,29 @@ export const dict = {
   "settings.commitMessage.language.sync": "Sync with UI language",
   "settings.commitMessage.language.description": "Choose which language to use for AI-generated commit messages:",
 
+  "settings.display.preview.title": "Preview",
+  "settings.display.presets.title": "Display presets",
+  "settings.display.presets.description": "Changes the display options below, not permissions. Save to apply.",
+  "settings.display.preview.model": "Sample model",
+  "settings.display.preview.prompt": "Trim extra spaces from the greeting and check the tests.",
+  "settings.display.preview.reasoning":
+    "**Check the greeting.** The function should produce the same greeting for a plain name and a name with extra spaces at either end. I will keep the existing function signature and greeting format, and change only how the name enters the returned string.\n\nFor an input such as `  Ada  `, the unwanted spaces belong to the input, not to the greeting template. Trimming the completed greeting would leave spaces beside the name. The trim operation therefore needs to happen before the name is inserted.\n\nI will check the string documentation to confirm that `trim()` removes whitespace from both ends and returns a new string. It should leave the original input unchanged. There is no need for a regular expression, another dependency, or a separate helper for this change.\n\nSpaces inside a name must remain intact. A name such as `Ada Lovelace` should not become `AdaLovelace`, and its letter case should not change. An empty or whitespace-only input does not require a new fallback greeting as part of this focused fix.\n\nThe edit can stay in the return expression by using `name.trim()` where the template currently uses `name`. I will preserve the surrounding punctuation and the intentional space after the greeting. This keeps the diff small and makes the behavior easy to review.\n\nFinally, I will run `bun test greeting.test.ts` and check both results. The padded-name case should confirm that extra spaces are removed, while the plain-name case protects the existing output. I will report the change and test results only after the command completes.",
+  "settings.display.preview.shell": "Check the greeting test",
+  "settings.display.preview.shellOutput":
+    "bun test greeting.test.ts\n\n[pass] trims extra spaces\n[pass] preserves a plain name\n\n2 tests passed",
+  "settings.display.preview.query": "String trimming",
+  "settings.display.preview.result": "trim() removes spaces from both ends of a string.",
+  "settings.display.preview.answer": "Updated the greeting to trim extra spaces. Both tests pass.",
   "settings.display.username.title": "Username",
   "settings.display.username.description": "Custom username displayed in conversations",
   "settings.display.fontSize.title": "Font Size",
   "settings.display.fontSize.description": "Adjust the Kilo webview UI font size independently from VS Code.",
-  "settings.display.reasoningAutoCollapse.title": "Auto-Collapse Reasoning",
-  "settings.display.reasoningAutoCollapse.description":
-    "Collapse reasoning blocks after the agent finishes writing them. Leave off to keep reasoning expanded unless you collapse it manually.",
+  "settings.display.reasoningDisplay.title": "Reasoning Blocks",
+  "settings.display.reasoningDisplay.description":
+    "Choose how reasoning blocks start. Expanded shows the full text, Preview caps it to a short scrolling preview, and Headline shows only the title and streaming indicator until you open it.",
+  "settings.display.reasoningDisplay.expanded": "Expanded",
+  "settings.display.reasoningDisplay.preview": "Preview",
+  "settings.display.reasoningDisplay.headline": "Headline",
   "settings.display.shiftTabCycle.title": "Cycle Reasoning Effort with Shift+Tab",
   "settings.display.shiftTabCycle.description":
     "Press Shift+Tab in a prompt input to switch to the next reasoning effort level. Disable to keep Shift+Tab for keyboard focus navigation.",
@@ -1153,12 +1269,15 @@ export const dict = {
   "settings.display.mcpTool.description": "Choose whether MCP and generic tool blocks start expanded or collapsed.",
   "settings.display.mcpTool.expanded": "Expanded",
   "settings.display.mcpTool.collapsed": "Collapsed",
+  "settings.display.shortcutHints.title": "Show shortcut hints",
+  "settings.display.shortcutHints.description":
+    "Show the keyboard shortcut that fits what you do now in the empty prompt, for example how to add selected code or return to the prompt.",
   "settings.display.tokenThroughput.title": "Show Token Throughput",
   "settings.display.tokenThroughput.description":
     "Display the text-generation rate (tokens/sec) on the latest assistant message and in the task header. Shown by default; disable this setting to hide it when needed.",
   "settings.display.autoApprovalReason.title": "Show Auto-Approval Reason",
   "settings.display.autoApprovalReason.description":
-    "Show a line on tool calls explaining why they were auto-approved (matched rule, agent default, YOLO mode, etc.).",
+    "Show why a tool call was auto-approved, such as a matching permission rule or an agent default.",
 
   "chat.throughput.tooltip":
     "Average {{speed}} tokens/s for this turn. Includes output and reasoning tokens; excludes tool execution and waiting time.",
@@ -1238,6 +1357,8 @@ export const dict = {
 
   "task.todos.progress": "{{done}}/{{total}} to-dos done",
   "task.todos.allDone": "{{count}} to-dos done",
+  "task.todos.title": "To-dos",
+  "task.todos.done": "All done",
 
   "task.backgroundAgents.running.one": "1 background agent",
   "task.backgroundAgents.running.many": "{{count}} background agents",
@@ -1247,16 +1368,18 @@ export const dict = {
   "task.backgroundAgents.continueInBackground": "Continue in background",
   "task.backgroundAgents.waiting": "A background agent needs your input",
   "task.backgroundAgents.needsInput": "Needs input",
-  "task.backgroundAgents.dismiss": "Dismiss",
   "task.backgroundAgents.clearFinished": "Clear finished",
   "task.backgroundAgents.summary": "{{running}} of {{total}} background agents running",
-  "task.backgroundAgents.more": "+{{count}} more",
   "task.backgroundAgents.status.running": "Running",
   "task.backgroundAgents.status.completed": "Done",
   "task.backgroundAgents.status.cancelled": "Cancelled",
   "task.backgroundAgents.status.error": "Error",
   "task.backgroundAgents.untitled": "Background agent",
   "task.backgroundAgents.stopAll": "Stop all ({{count}})",
+  "task.backgroundAgents.finished": "Background agents finished",
+  "task.stop": "Stop sub-agent",
+  "task.open.panel": "Open sub-agent in panel",
+  "task.open.tab": "Open sub-agent in tab",
 
   "settings.saveBar.unsavedChanges": "Unsaved changes",
   "settings.saveBar.discard": "Discard",
@@ -1289,6 +1412,16 @@ export const dict = {
   "diffViewer.group.git": "Git",
   "diffViewer.notice.snapshotsDisabled":
     "Snapshots are disabled for this repository. Please edit your configuration files in order to display session changes.",
+  "diffViewer.comment.postToGithub": "Post to GitHub",
+  "diffViewer.comment.loadFailed": "Could not load the pull request changes.",
+  "diffViewer.comment.unavailable": "This line is not available in the current pull request snapshot.",
+  "diffViewer.comment.prContext": "PR #{{number}}",
+  "diffViewer.comment.openPR": "Open pull request",
+  "diffViewer.comment.localChanges": "Local changes",
+  "diffViewer.comment.prChanges": "PR changes",
+  "diffViewer.comment.sendToKilo": "Send to Kilo",
+  "diffViewer.comment.sendToGithub": "Send to GitHub #{{number}}",
+  "diffViewer.comment.chooseDestination": "Choose destination",
 
   "diffViewer.baseBranch.auto": "Default",
   "diffViewer.baseBranch.default": "Default",

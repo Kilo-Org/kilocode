@@ -6,18 +6,21 @@ import { Global } from "@opencode-ai/core/global"
 import { InstallationVersion } from "@opencode-ai/core/installation/version"
 import path from "node:path"
 import { Bus } from "@/bus"
+import { Config } from "@/config/config"
 import { Provider } from "@/provider/provider"
 import { Session } from "@/session/session"
 import { SessionSummary } from "@/session/summary"
 import { SessionExport } from "@/kilocode/session-export"
 import { createWorkspaceProvider } from "@/kilocode/session-export/workspace-provider"
 import { Instance } from "@/kilocode/instance"
+import { InstanceRef } from "@/effect/instance-ref"
 import { Identity } from "@kilocode/kilo-telemetry"
 import { MemoryLifecycle } from "@/kilocode/memory/turn"
 import { MemoryService } from "@kilocode/kilo-memory/effect/service"
 import { MemoryEvents } from "@/kilocode/memory/events"
 import { installMemoryRuntime } from "@/kilocode/memory/runtime"
 import { KiloToolRegistry } from "@/kilocode/tool/registry"
+import { Wakeup } from "@/kilocode/wakeup"
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { KilocodeWatcher } from "@/kilocode/watcher"
 import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder" // kilocode_change
@@ -41,13 +44,15 @@ export namespace KilocodeBootstrap {
       const sessions = yield* Session.Service
       const summary = yield* SessionSummary.Service
       const provider = yield* Provider.Service
+      const config = yield* Config.Service
       const memory = yield* MemoryService.Service
       const watcher = yield* KilocodeWatcher.Service
+      const wake = yield* Wakeup.Service
 
       const init = Effect.fn("KilocodeBootstrap.init")(function* () {
         yield* watcher.init()
         yield* kilo.init()
-        yield* MemoryLifecycle.subscribe({ bus, sessions, summary, provider, memory })
+        yield* MemoryLifecycle.subscribe({ bus, sessions, summary, provider, config, memory })
         // Invalidate enabled cache on every memory state mutation (properties.directory holds the memory root).
         yield* bus.subscribeCallback(MemoryEvents.Status, (evt) =>
           KiloToolRegistry.invalidateMemoryEnabled(evt.properties.directory),
@@ -55,6 +60,16 @@ export namespace KilocodeBootstrap {
         yield* bus.subscribeCallback(MemoryEvents.Updated, (evt) =>
           KiloToolRegistry.invalidateMemoryEnabled(evt.properties.directory),
         )
+        // Re-arm this directory's persisted wakeups on every instance start: overdue ones
+        // fire immediately, the rest get their timers. A failure must not block bootstrap.
+        const inst = yield* InstanceRef
+        if (inst) {
+          yield* wake.adopt(inst.directory).pipe(
+            Effect.catchCause((cause) =>
+              Effect.sync(() => log.warn("wakeup adopt failed", { err: Cause.squash(cause) })),
+            ),
+          )
+        }
         // Session export bootstrap.
         yield* Effect.gen(function* () {
           if (!SessionExport.enabled) return
@@ -102,9 +117,11 @@ export namespace KilocodeBootstrap {
       Session.defaultLayer,
       AppNodeBuilder.build(SessionSummary.node),
       AppNodeBuilder.build(Provider.node),
+      AppNodeBuilder.build(Config.node),
       MemoryService.layer,
       Bus.defaultLayer,
       KilocodeWatcher.defaultLayer,
+      AppNodeBuilder.build(Wakeup.node),
     ]),
   )
 
@@ -114,7 +131,17 @@ export namespace KilocodeBootstrap {
     LayerNode.make({
       service: Service,
       layer,
-      deps: [KiloSessions.node, Session.node, SessionSummary.node, Provider.node, memory, Bus.node, watcher],
+      deps: [
+        KiloSessions.node,
+        Session.node,
+        SessionSummary.node,
+        Provider.node,
+        Config.node,
+        memory,
+        Bus.node,
+        watcher,
+        Wakeup.node,
+      ],
     }),
   )
 }

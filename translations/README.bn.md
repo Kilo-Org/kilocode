@@ -93,15 +93,6 @@ JetBrains Marketplace থেকে [Kilo Code plugin](https://plugins.jetbrains.
 </details>
 
 <details>
-<summary><strong>KiloClaw</strong></summary>
-
-<br>
-
-[app.kilo.ai/claw](https://app.kilo.ai/claw)-এ আপনার always-on AI agent চালু করুন।
-
-</details>
-
-<details>
 <summary>GitHub Releases থেকে CLI ইনস্টল করুন (বাইনারি)</summary>
 
 [Releases page](https://github.com/Kilo-Org/kilocode/releases) থেকে সর্বশেষ বাইনারি ডাউনলোড করুন।

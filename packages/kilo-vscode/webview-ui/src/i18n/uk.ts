@@ -60,6 +60,7 @@ export const dict = {
   ...anacondaDesktopDict,
   ...cloudProviderDict,
   "task.swarm.title": "Дошка",
+  "task.swarm.open": "Відкрити дошку",
   "task.swarm.refresh": "Оновити",
   "task.swarm.reset": "Скинути дошку",
   "task.swarm.resetTitle": "Скинути цю дошку?",
@@ -74,6 +75,7 @@ export const dict = {
   "session.activity.error": "Помилка або втрата з'єднання.",
   "session.activity.retry": "Автоматична повторна спроба.",
   "session.activity.busy": "Виконується.",
+  "session.activity.scheduled": "Очікування запланованого пробудження.",
   "session.activity.done": "Хід завершено.",
   "session.activity.idle": "Не запущено.",
 
@@ -89,10 +91,13 @@ export const dict = {
     "Розмову скасовано. Зміни файлів не відновлено, оскільки знімки вимкнено.",
   "revert.banner.workspace.unavailable":
     "Розмову скасовано. Контрольна точка файлів була недоступна, тому зміни в робочому просторі не відновлено.",
+  "revert.banner.workspace.notAGitRepo":
+    "Розмову скасовано. Контрольні точки файлів потребують репозиторію Git, тому зміни в робочому просторі не відновлено.",
   "revert.banner.workspace.legacy":
     "Розмову скасовано. Стан відновлення робочого простору для цього попереднього скасування недоступний.",
   "revert.banner.workspace.enableSnapshots": "Увімкнути знімки",
   "revert.disabled.agentBusy": "Зачекайте завершення агента",
+  "revert.error.body": "Репозиторій може використовуватися. Повторіть спробу або перегляньте журнали Kilo.",
   "command.session.compact": "Стиснути сесію",
   "command.session.export": "Експортувати запис сеансу",
 
@@ -196,18 +201,35 @@ export const dict = {
   "prompt.worktrees.title": "Робочі дерева",
   "prompt.worktrees.search": "Пошук робочих дерев",
   "prompt.thinking.tooltip": "Зусилля міркування",
+  "prompt.shortcutHint.addSelection": "для додавання виділення",
+  "prompt.shortcutHint.waiting": "для відповіді в сесії, що очікує",
+  "prompt.shortcutHint.type": "для введення",
+  "prompt.shortcutHint.sessions": "для зміни сесії",
+  "prompt.shortcutHint.stop": "для зупинки",
+  "prompt.shortcutHint.changes": "для перегляду змін",
+  "prompt.shortcutHint.pr": "для відкриття PR",
+  "prompt.shortcutHint.mode": "Наступний режим",
   "prompt.action.send": "Надіслати",
   "prompt.action.continue": "Продовжити",
   "prompt.action.send.blocked": "Спочатку дайте відповідь або закрийте очікуюче питання",
   "prompt.action.send.recording": "Транскрибувати та надіслати",
   "prompt.action.stop": "Зупинити",
+  "prompt.action.stop.background": "Зупинити головного агента. Фонові агенти продовжать роботу.",
+  "prompt.agents.show": "Показати фонових агентів",
   "prompt.action.enhance": "Покращити запит",
+  "prompt.action.more": "Інші дії",
+  "prompt.paste.expand": "Натисніть, щоб розгорнути вставлений текст",
+  "prompt.issues.title": "Проблеми сесії",
+  "prompt.mcp.provider": "MCP {{name}}",
+  "prompt.mcp.openSettings": "Відкрити в налаштуваннях",
+  "prompt.mcp.signIn.busy": "Виконується вхід…",
   "prompt.action.indexing": "Налаштування індексування",
   "prompt.action.autoApprove.enable": "Увімкнути автоматичне схвалення",
   "prompt.action.autoApprove.disable": "Вимкнути автоматичне схвалення",
   "prompt.action.autoApprove.enabled": "Автоматичне схвалення увімкнено. Запити дозволів схвалюватимуться автоматично.",
   "prompt.action.autoApprove.disabled":
     "Автоматичне схвалення вимкнено. Натисніть, щоб автоматично схвалювати запити дозволів.",
+  "prompt.action.autoApprove.sandboxExcluded": "Запити на вихід із пісочниці завжди виключено.",
   "prompt.action.enhanceDescription":
     "Кнопка 'Покращити запит' допомагає вдосконалити ваш запит, надаючи додатковий контекст, уточнення або перефразування. Введіть запит тут і натисніть кнопку ще раз, щоб побачити, як це працює.",
   "prompt.action.sandbox.enable": "Увімкнути пісочницю",
@@ -224,11 +246,13 @@ export const dict = {
   "prompt.action.sandbox.network.allowed": "Дозволено",
   "prompt.action.sandbox.unrestricted": "Без обмежень",
   "prompt.action.sandbox.description.enabled": "Запис дозволено лише в каталогах проєкту та Kilo.",
+  "prompt.action.sandbox.description.escalation":
+    "Правила дозволів і автоматичне схвалення діють усередині пісочниці. Команди, яким потрібно вийти з неї, завжди запитують.",
   "prompt.action.sandbox.description.disabled": "Натисніть, щоб обмежити запис у файлову систему та доступ до мережі.",
   "prompt.action.sandbox.description.disabledNetworkAllowed":
     "Натисніть, щоб обмежити запис у файлову систему. Доступ до мережі залишиться дозволеним відповідно до налаштувань пісочниці.",
 
-  "speechToText.tooltip.start": "Почати голосове введення з Kilo Gateway",
+  "speechToText.tooltip.start": "Почати голосове введення",
   "speechToText.tooltip.shortcut":
     "Торкніться кнопки або натисніть Cmd/Ctrl+K, щоб почати чи зупинити запис; утримуйте кнопку під час мовлення, а потім відпустіть її, щоб транскрибувати й надіслати.",
   "speechToText.tooltip.starting": "Запуск мікрофона... Поки що не говоріть.",
@@ -270,8 +294,13 @@ export const dict = {
   "notification.permission.title": "Потрібен дозвіл",
   "notification.permission.titleSubagent": "Потрібен дозвіл (підагент)",
   "notification.permission.titleSkillShell": "Виконати команди оболонки з навички «{{skill}}»?",
-  "notification.permission.titleSandboxEscalation": "Дозволити операцію Git за межами пісочниці?",
+  "notification.permission.titleSandboxEscalation": "Виконати поза пісочницею?",
+  "notification.permission.descriptionSandboxEscalation":
+    "Команда повністю виконується без обмежень файлової системи та мережі, лише для цієї команди. Git має записувати в .git, який доступний лише для читання в пісочниці та розташований поза робочим деревом у пов'язаному worktree. Правила дозволів Bash і автоматичне схвалення ніколи не схвалюють цей запит автоматично.",
   "ui.permission.manageAutoApprove": "Керувати правилами автоматичного схвалення",
+  "ui.permission.reject": "Відхилити",
+  "ui.permission.feedbackPlaceholder": "Скажіть Kilo, що зробити інакше",
+  "ui.permission.feedbackHint": "Enter для відхилення, Esc для скасування",
   "ui.permission.doomLoop.prompt":
     "Виявлено потенційний цикл під час роботи інструмента {{tool}}. Продовжити виконання?",
   "ui.permission.doomLoop.rule": "Продовжувати виклики {{tool}}",
@@ -304,7 +333,7 @@ export const dict = {
   "ui.approval.source.agent.default": "агентом",
   "ui.approval.source.global": "вашою глобальною конфігурацією",
   "ui.approval.source.project": "конфігурацією проєкту",
-  "ui.approval.source.yolo": "режимом автосхвалення (YOLO)",
+  "ui.approval.source.yolo": "режимом автосхвалення",
   "ui.approval.source.session": "правилом автосхвалення сесії",
   "ui.approval.source.default": "за замовчуванням",
   "ui.approval.outsideWorkspace": "(за межами вашого робочого простору: {{file}})",
@@ -322,7 +351,6 @@ export const dict = {
   "sidebar.topBar.newTask": "Нове завдання",
   "sidebar.topBar.history": "Історія",
   "sidebar.topBar.agentManager": "Agent Manager",
-  "sidebar.topBar.kiloClaw": "KiloClaw",
   "sidebar.topBar.marketplace": "Маркетплейс",
   "sidebar.topBar.profile": "Профіль",
   "sidebar.topBar.settings": "Налаштування",
@@ -421,6 +449,7 @@ export const dict = {
   "settings.providers.tag.other": "Інші",
   "settings.providers.connected.environmentDescription": "Підключено зі змінних середовища",
   "settings.providers.action.signInChatGPT": "Увійти через ChatGPT",
+  "settings.providers.action.changeApiKey": "Змінити API-ключ",
   "settings.providers.custom.description": "Додати власного провайдера через базовий URL.",
 
   "provider.custom.title": "Власний провайдер",
@@ -450,6 +479,7 @@ export const dict = {
   "provider.custom.models.toggleImages": "Перемкнути зображення для всіх",
   "provider.custom.models.remove": "Видалити модель",
   "provider.custom.models.add": "Додати модель",
+  "provider.custom.models.fetch.button": "Отримати моделі",
   "provider.custom.models.fetch.authError": "Автентифікація не вдалася. Перевірте API-ключ вище і спробуйте ще раз.",
   "provider.custom.models.fetch.empty": "На цьому сервері моделей не знайдено.",
   "provider.custom.models.fetch.added": "Додано {{count}} моделей.",
@@ -479,6 +509,9 @@ export const dict = {
   "provider.custom.error.duplicate": "Дублікат",
   "settings.openLocalConfig": "Локальний конфіг",
   "settings.openGlobalConfig": "Глобальний конфіг",
+  "settings.search.placeholder": "Пошук параметрів",
+  "settings.search.noResults": "Параметри не знайдено",
+  "settings.search.clear": "Очистити пошук",
   "settings.config.scope.local": "Локальний",
   "settings.config.scope.global": "Глобальний",
   "settings.config.status.loaded": "завантажено",
@@ -505,38 +538,22 @@ export const dict = {
 
   "settings.permissions.toast.updateFailed.title": "Не вдалося оновити дозволи",
 
-  "settings.permissions.tool.read.title": "Читати",
   "settings.permissions.tool.read.description": "Читати файл (відповідає шляху файлу)",
-  "settings.permissions.tool.edit.title": "Редагувати",
   "settings.permissions.tool.edit.description":
     "Змінювати файли включаючи редагування, запис, патч і множинне редагування",
-  "settings.permissions.tool.glob.title": "Glob",
   "settings.permissions.tool.glob.description": "Зіставляти файли за шаблонами glob",
-  "settings.permissions.tool.grep.title": "Grep",
   "settings.permissions.tool.grep.description": "Шукати вміст файлів за регулярними виразами",
-  "settings.permissions.tool.list.title": "Список",
   "settings.permissions.tool.list.description": "Перелічити файли в директорії",
-  "settings.permissions.tool.bash.title": "Bash",
   "settings.permissions.tool.bash.description": "Виконувати команди оболонки",
-  "settings.permissions.tool.task.title": "Завдання",
   "settings.permissions.tool.task.description": "Запускати підагентів",
-  "settings.permissions.tool.skill.title": "Навичка",
   "settings.permissions.tool.skill.description": "Завантажувати навичку за назвою",
-  "settings.permissions.tool.lsp.title": "LSP",
   "settings.permissions.tool.lsp.description": "Виконувати запити до мовного сервера",
-  "settings.permissions.tool.todoread.title": "Читати завдання",
   "settings.permissions.tool.todoread.description": "Читати список завдань",
-  "settings.permissions.tool.todowrite.title": "Записати завдання",
   "settings.permissions.tool.todowrite.description": "Оновлювати список завдань",
-  "settings.permissions.tool.webfetch.title": "Веб-запит",
   "settings.permissions.tool.webfetch.description": "Отримати вміст з URL",
-  "settings.permissions.tool.websearch.title": "Веб-пошук",
   "settings.permissions.tool.websearch.description": "Шукати в інтернеті",
-  "settings.permissions.tool.codesearch.title": "Пошук коду",
   "settings.permissions.tool.codesearch.description": "Шукати код в інтернеті",
-  "settings.permissions.tool.external_directory.title": "Зовнішня директорія",
   "settings.permissions.tool.external_directory.description": "Доступ до файлів поза директорією проєкту",
-  "settings.permissions.tool.doom_loop.title": "Нескінченний цикл",
   "settings.permissions.tool.doom_loop.description":
     "Виявляти повторювані виклики інструментів з однаковими вхідними даними",
 
@@ -555,6 +572,8 @@ export const dict = {
   "session.tabs.switcher.current": "Поточна",
   "session.tabs.switcher.pending": "Нова",
   "session.tabs.switcher.busy": "Працює",
+  "session.tabs.switcher.scheduled": "Заплановано",
+  "session.tabs.pinHint": "Shift+клік, щоб закріпити або відкріпити",
   "session.tab.local": "Локальний",
   "session.tab.cloud": "Хмарний",
   "session.tab.worktree": "Робоче дерево",
@@ -578,13 +597,14 @@ export const dict = {
   "workStyle.choice.human-in-the-loop.description": "Kilo призупиняється та показує свій план у процесі роботи.",
   "workStyle.choice.human-in-the-loop.permissions": "Запитує дозвіл перед редагуванням файлів або виконанням команд.",
   "workStyle.choice.human-in-the-loop.bash": "Запитує дозвіл на кожну команду термінала.",
-  "workStyle.choice.human-in-the-loop.visibility": "Показує всі деталі розмови, зокрема хід міркувань.",
+  "workStyle.choice.human-in-the-loop.visibility": "Розгортає міркування, команди та зміни для перевірки.",
   "workStyle.choice.autonomous.eyebrow": "Менше переривань",
   "workStyle.choice.autonomous.title": "Висока автономність",
   "workStyle.choice.autonomous.description": "Менше переривань, спрощений інтерфейс.",
   "workStyle.choice.autonomous.permissions": "Редагує файли та виконує команди в робочому просторі без дозволу.",
   "workStyle.choice.autonomous.bash": "Може виконувати команди термінала в робочому просторі без схвалення.",
-  "workStyle.choice.autonomous.visibility": "Деталі залишаються згорнутими, доки ви їх не розгорнете.",
+  "workStyle.choice.autonomous.visibility":
+    "Згортає деталі інструментів, з компактним попереднім переглядом міркувань.",
   "session.cloud.import.title": "Імпортувати з хмари",
   "session.cloud.import.placeholder": "Ідентифікатор сесії, URL або команда kilo import",
   "session.cloud.import.button": "Імпортувати",
@@ -629,6 +649,7 @@ export const dict = {
   "profile.usage.source.direct": "Напряму",
   "profile.usage.state.stale": "Показано останні оновлені дані про використання.",
   "profile.usage.state.unavailable": "Дані про використання недоступні.",
+  "profile.usage.state.empty": "Про обмеження використання не повідомлено.",
   "profile.usage.plan.pastDue": "План: Платіж прострочено",
   "profile.usage.plan.canceling": "План: Скасування наприкінці періоду",
   "profile.usage.plan.unknown": "План: Статус невідомий",
@@ -768,10 +789,12 @@ export const dict = {
   "ui.sessionTurn.status.consideringNextSteps": "Обдумую наступні кроки...",
 
   "dialog.model.noProviders": "Немає провайдерів",
+  "dialog.model.unavailable": "Моделі Kilo недоступні",
 
   "prompt.placeholder.connecting": "Підключення до сервера...",
   "prompt.placeholder.default":
     "Напишіть повідомлення, @ щоб згадати файли... (Enter для надсилання, Shift+Enter для нового рядка)",
+  "prompt.placeholder.hint": "Напишіть повідомлення, @ щоб згадати файли... ({{key}} {{action}})",
   "prompt.placeholder.error": "Підключення не вдалося. Перевірте панель виводу або перезапустіть розширення.",
 
   "context.usage.sessionCost": "Вартість сесії",
@@ -828,9 +851,10 @@ export const dict = {
   "settings.agentBehaviour.subtab.skills": "Навички",
 
   "settings.browser.description":
-    "Після увімкнення агент ШІ може взаємодіяти з веб-сторінками — навігація, натискання, введення тексту та знімки екрана. Відкриється вікно Chrome, щоб ви могли стежити за роботою агента.",
+    "Налаштуйте вбудовану автоматизацію браузера на основі Playwright. Kilo може переходити веб-сторінками, взаємодіяти з ними та робити знімки екрана у ваших сесіях.",
   "settings.browser.enable.title": "Увімкнути автоматизацію браузера",
-  "settings.browser.enable.description": "Зареєструвати MCP-сервер Playwright з CLI-бекендом.",
+  "settings.browser.enable.description":
+    "Увімкнути прив'язаний до сесії браузер Agent Manager для локальних програм і загальнодоступних HTTPS-сторінок.",
   "settings.browser.systemChrome.title": "Використовувати системний Chrome",
   "settings.browser.systemChrome.description":
     "Використовувати встановлений браузер Chrome замість окремого екземпляра Chromium.",
@@ -886,15 +910,28 @@ export const dict = {
   "settings.experimental.batch.description": "Увімкнути пакетну обробку кількох викликів інструментів",
   "settings.experimental.imageGeneration.title": "Генерація зображень",
   "settings.experimental.imageGeneration.description": "Увімкнути генерацію зображень за допомогою ШІ",
-  "settings.experimental.sharedAgentBoard.title": "Kilo Swarm",
-  "settings.experimental.sharedAgentBoard.description":
+  "settings.agentBehaviour.sharedAgentBoard.title": "Kilo Swarm",
+  "settings.agentBehaviour.sharedAgentBoard.description":
     "Надайте спільну дошку головному сеансу та його субагентам, які виконують завдання, включно з вкладеними субагентами. Використовуйте її для паралельних спроб знайти розв'язання або взаємодоповнювальної роботи, а не для кожного завдання.",
   "settings.experimental.imageGenerationModel.title": "Модель зображень",
   "settings.experimental.imageGenerationModel.description": "Модель генерації зображень",
   "settings.experimental.imageGenerationModel.placeholder": "За замовчуванням (Auto Router)",
 
+  "settings.models.speechToTextModel.customDescription":
+    "Ідентифікатор моделі, який надсилається до вашої власної кінцевої точки транскрипції, наприклад whisper-1.",
+  "settings.models.speechToTextModel.customPlaceholder": "whisper-1",
+  "settings.models.speechToTextBaseUrl.title": "Базова URL-адреса мовлення в текст",
+  "settings.models.speechToTextBaseUrl.description":
+    "Використовуйте сумісний з OpenAI API транскрипції замість Kilo Gateway. Моделі читаються з /models, а аудіо надсилається на /audio/transcriptions. Залиште порожнім, щоб використовувати Kilo Gateway.",
+  "settings.models.speechToTextBaseUrl.placeholder": "https://api.openai.com/v1",
+  "settings.models.speechToTextApiKey.title": "Ключ API мовлення в текст",
+  "settings.models.speechToTextApiKey.description":
+    "Bearer-токен, який надсилається на власну базову URL-адресу транскрипції. Зберігається у вашому файлі конфігурації Kilo.",
+  "settings.models.speechToTextApiKey.placeholder": "sk-...",
   "settings.models.speechToText.disabledDescription":
-    "Увімкніть провайдер Kilo та виконайте вхід, щоб використовувати Speech to Text. Наразі Speech to Text підтримується лише з Kilo Gateway.",
+    "Увімкніть провайдер Kilo та виконайте вхід, щоб використовувати Speech to Text, або вкажіть нижче власну базову URL-адресу транскрипції.",
+  "settings.models.speechToText.remoteDescription":
+    "Голосове введення недоступне у віддалених вікнах. Відкрийте Kilo у локальному вікні, щоб використовувати мікрофон.",
   "settings.models.speechToTextModel.title": "Модель мовлення в текст",
   "settings.models.speechToTextModel.description": "Виберіть модель транскрипції Kilo Gateway для голосового введення.",
   "settings.experimental.nativeNotebookTools.title": "Власні інструменти для блокнотів",
@@ -913,15 +950,12 @@ export const dict = {
   "settings.sandboxing.writablePaths.title": "Додаткові шляхи для запису",
   "settings.sandboxing.writablePaths.description":
     "Додаткові шляхи файлової системи, у які дозволено запис у пісочниці (наприклад, /tmp, /var/log). Вони об'єднуються зі шляхами запису за замовчуванням, коли пісочниця активна.",
-  "settings.experimental.multiProject.title": "Мультипроєктний Agent Manager",
+  "settings.experimental.conversationPromptHistory.title": "Історія промптів для кожної розмови",
+  "settings.experimental.conversationPromptHistory.description":
+    "Зберігати історію промптів (ArrowUp/ArrowDown) окремо для кожної розмови замість однієї спільної історії для всіх.",
   "settings.experimental.claudeMigration.title": "Міграція Claude Code",
   "settings.experimental.claudeMigration.description":
     "Одноразово імпортуйте підтримувані глобальні інструкції CLAUDE.md, прості навички та вимкнені визначення MCP. Оригінальні файли Claude не змінюються; після ввімкнення перезапустіть бекенд.",
-  "settings.experimental.multiProject.description":
-    "Увімкніть керування сеансами та робочими деревами в кількох репозиторіях в Agent Manager. Поточний репозиторій робочого простору завжди є проєктом за замовчуванням.",
-  "settings.experimental.taskModelSelection.title": "Вибір моделі субагента Task",
-  "settings.experimental.taskModelSelection.description":
-    "Дозволяє явно вибирати модель, провайдера та рівень міркування для субагентів Task.",
   "settings.experimental.mcpTimeout.title": "Тайм-аут MCP (мс)",
   "settings.experimental.mcpTimeout.description": "Тайм-аут у мілісекундах для запитів до MCP-сервера",
   "settings.experimental.remote.title": "Керування Remote",
@@ -933,6 +967,9 @@ export const dict = {
   "settings.experimental.remote.inactive": "Неактивний",
   "settings.experimental.remote.hint": "Використовуйте /remote у чаті для перемикання",
   "settings.experimental.toolToggles": "Перемикачі інструментів",
+  "settings.experimental.codeMode.title": "Програмні виклики інструментів",
+  "settings.experimental.codeMode.description":
+    "Спрямовує виклики інструментів MCP через ізольоване середовище виконання JavaScript із виявленням інструментів на вимогу замість прямого надання кожного інструменту MCP. Економить контекст, коли підключено багато інструментів MCP.",
   "settings.sandboxing.enabled.title": "Пісочниця",
   "settings.sandboxing.enabled.description":
     "Виконувати команди оболонки агента в пісочниці на рівні ОС, яка обмежує запис до каталогів стану проєкту та Kilo",
@@ -980,6 +1017,8 @@ export const dict = {
   "settings.agentBehaviour.skillUrls": "URL навичок",
   "settings.agentBehaviour.removeSkill.title": "Видалити навичку",
   "settings.agentBehaviour.removeSkill.confirm": 'Видалити навичку "{{name}}"? Це видалить файли навичок з диска.',
+  "settings.agentBehaviour.removeSkill.bundleConfirm":
+    'Видалити навичку "{{name}}"? Це також видалить сервер MCP {{mcp}} і кожну супутню навичку з того ж встановлення Marketplace.',
   "settings.agentBehaviour.removeSkill.button": "Видалити",
   "settings.agentBehaviour.rules.description":
     "Правила — це файли інструкцій, що спрямовують поведінку агента. Вони включаються до системного запиту для кожної розмови. Додайте шляхи до файлів нижче для додаткових правил.",
@@ -995,15 +1034,40 @@ export const dict = {
     "Завантажувати інструкції та навички CLAUDE.md з вашого каталогу конфігурації Claude Code у сесії. Увімкніть це, якщо ви хочете, щоб Kilo використовував ваші інструкції та навички Claude Code. Потребує перезапуску.",
   "settings.agentBehaviour.removeMcp.title": "Видалити MCP-сервер",
   "settings.agentBehaviour.removeMcp.confirm": 'Видалити MCP-сервер "{{name}}"? Це видалить його з вашої конфігурації.',
+  "settings.agentBehaviour.removeMcp.bundleConfirm":
+    'Видалити MCP-сервер "{{name}}" і його супутні навички? Це видалить як сервер, так і кожну навичку, що належить цьому встановленню Marketplace.',
   "settings.agentBehaviour.removeMcp.button": "Видалити",
   "settings.agentBehaviour.mcpDetail.command": "Команда",
   "settings.agentBehaviour.mcpDetail.args": "Аргументи",
   "settings.agentBehaviour.mcpDetail.env": "Середовище",
+  "settings.agentBehaviour.mcpSignIn.cancel": "Скасувати вхід",
+  "settings.agentBehaviour.mcpRemoving": "Видалення…",
+  "settings.agentBehaviour.mcpResetAuth": "Скинути вхід",
+  "settings.agentBehaviour.mcpResetAuth.title": "Скинути вхід MCP",
+  "settings.agentBehaviour.mcpResetAuth.confirm":
+    'Очистити збережений вхід для "{{name}}"? Вам потрібно буде увійти знову.',
   "settings.agentBehaviour.editMcp": "Редагувати MCP-сервер",
   "settings.agentBehaviour.editMcp.transportLocal": "Локальний сервер (stdio транспорт)",
   "settings.agentBehaviour.editMcp.transportRemote": "Віддалений сервер (SSE/HTTP транспорт)",
   "settings.agentBehaviour.editMcp.env": "Змінні середовища",
   "settings.agentBehaviour.editMcp.env.help": "Змінні, що передаються процесу MCP-сервера.",
+  "settings.agentBehaviour.editMcp.oauth": "OAuth",
+  "settings.agentBehaviour.editMcp.oauth.help":
+    "Залишіть на Автоматично, якщо сервер не вимагає попередньо зареєстрованого клієнта. Секрет клієнта зберігається у вашому файлі конфігурації Kilo.",
+  "settings.agentBehaviour.editMcp.oauth.mode": "Режим",
+  "settings.agentBehaviour.editMcp.oauth.mode.automatic": "Автоматично",
+  "settings.agentBehaviour.editMcp.oauth.mode.disabled": "Вимкнено",
+  "settings.agentBehaviour.editMcp.oauth.mode.custom": "Власний клієнт",
+  "settings.agentBehaviour.editMcp.oauth.clientId": "ID клієнта",
+  "settings.agentBehaviour.editMcp.oauth.clientSecret": "Секрет клієнта",
+  "settings.agentBehaviour.editMcp.oauth.scope": "Область",
+  "settings.agentBehaviour.editMcp.oauth.callbackPort": "Порт зворотного виклику",
+  "settings.agentBehaviour.editMcp.oauth.redirectUri": "URI перенаправлення",
+  "settings.agentBehaviour.editMcp.oauth.redirectUri.help":
+    "За замовчуванням http://127.0.0.1:19876/mcp/oauth/callback, що перевизначає порт зворотного виклику.",
+  "settings.agentBehaviour.editMcp.oauth.port.invalid": "Введіть порт від 1 до 65535.",
+  "settings.agentBehaviour.editMcp.oauth.secret.invalid": "Для секрету клієнта потрібен ID клієнта.",
+  "settings.agentBehaviour.editMcp.oauth.redirectUri.invalid": "Введіть дійсний URI перенаправлення.",
   "settings.agentBehaviour.addMcp.command": "Команда",
   "settings.agentBehaviour.addMcp.command.placeholder": "напр. npx",
   "settings.agentBehaviour.addMcp.args": "Аргументи",
@@ -1065,6 +1129,31 @@ export const dict = {
   "settings.checkpoints.enable.title": "Увімкнути знімки",
   "settings.checkpoints.enable.description":
     "Створювати контрольні точки перед редагуванням файлів, щоб мати можливість відновити попередні стани",
+  "settings.autoCleanup.enable.title": "Увімкнути автоматичне очищення сесій",
+  "settings.autoCleanup.enable.description":
+    "Автоматично видаляє стару історію сесій після визначеної кількості днів, в усіх проєктах і в усіх клієнтах Kilo на цьому комп'ютері, а не лише в цьому вікні. Запущені сесії та сесії з нещодавнім форком ніколи не видаляються. Видалення необоротне.",
+  "settings.autoCleanup.defaultRetention.title": "Зберігати сесії (днів)",
+  "settings.autoCleanup.defaultRetention.description":
+    "Як довго зберігається історія сесій до видалення автоматичним очищенням.",
+  "settings.autoCleanup.lastRun.title": "Останнє очищення",
+  "settings.autoCleanup.lastRun.never": "Ніколи не запускалося",
+  "settings.autoCleanup.result":
+    "{{date}}: видалено {{deleted}} із {{scanned}} сесій ({{active}} активних пропущено, {{failed}} невдалих) за {{seconds}} с",
+  "settings.autoCleanup.starting": "Запуск очищення сесій...",
+  "settings.autoCleanup.error.status": "Статус очищення сесій тимчасово недоступний. Повторна спроба...",
+  "settings.autoCleanup.error.timeout":
+    "Очікування статусу очищення. Серверна частина відповідає довше, ніж очікувалося.",
+  "settings.autoCleanup.error.run":
+    "Не вдалося підтвердити завершення очищення сесій. Перевірте результат останнього очищення перед повторною спробою.",
+  "settings.autoCleanup.progress.scanning": "Сканування сесій: оброблено {{processed}}/{{total}}",
+  "settings.autoCleanup.progress.deleting":
+    "Видалення сесій: оброблено {{processed}}/{{total}} (видалено {{deleted}}, невдалих {{failed}})",
+  "settings.autoCleanup.runNow": "Запустити очищення зараз",
+  "settings.autoCleanup.runNow.confirm":
+    "Безповоротно видалити застарілі сесії в усіх проєктах і в усіх клієнтах Kilo на цьому комп'ютері?",
+  "settings.autoCleanup.stop": "Зупинити очищення",
+  "settings.autoCleanup.progress.cancelling": "Зупинка очищення сеансів...",
+  "settings.autoCleanup.lastRun.cancelled": "перервано",
 
   "settings.context.autoCompaction.title": "Автоматичне стиснення",
   "settings.context.autoCompaction.description": "Автоматично стискати контекст до досягнення ліміту",
@@ -1114,13 +1203,30 @@ export const dict = {
   "settings.commitMessage.language.description":
     "Виберіть, яку мову використовувати для повідомлень, створених штучним інтелектом:",
 
+  "settings.display.preview.title": "Попередній перегляд",
+  "settings.display.presets.title": "Пресети відображення",
+  "settings.display.presets.description":
+    "Змінює параметри відображення нижче, а не дозволи. Збережіть, щоб застосувати.",
+  "settings.display.preview.model": "Приклад моделі",
+  "settings.display.preview.prompt": "Приберіть зайві пробіли з привітання та перевірте тести.",
+  "settings.display.preview.reasoning":
+    "**Перевірте привітання.** Функція має видавати однакове привітання для звичайного імені та імені із зайвими пробілами з обох боків. Я збережу наявну сигнатуру функції та формат привітання і зміню лише те, як ім'я потрапляє у повернений рядок.\n\nДля вхідних даних на кшталт `  Ada  ` небажані пробіли належать вхідним даним, а не шаблону привітання. Обрізання готового привітання залишило б пробіли поряд з іменем. Тому операцію обрізання потрібно виконати до підстановки імені.\n\nЯ перевірю документацію щодо рядків, щоб підтвердити, що `trim()` видаляє пробільні символи з обох боків і повертає новий рядок. Вона має залишити початкові вхідні дані без змін. Для цієї зміни не потрібні регулярний вираз, додаткова залежність чи окрема допоміжна функція.\n\nПробіли всередині імені мають залишитися незмінними. Ім'я на кшталт `Ada Lovelace` не повинно стати `AdaLovelace`, і регістр літер не повинен змінюватися. Порожні вхідні дані або дані лише з пробілів не потребують нового привітання за замовчуванням у межах цього точкового виправлення.\n\nЗміна може залишитися у виразі повернення, якщо використати `name.trim()` там, де шаблон зараз використовує `name`. Я збережу навколишню пунктуацію та навмисний пробіл після привітання. Так diff залишиться малим, а поведінку буде легко перевірити.\n\nНарешті я виконаю `bun test greeting.test.ts` і перевірю обидва результати. Випадок із доповненим іменем має підтвердити, що зайві пробіли видаляються, а випадок зі звичайним іменем захищає наявний вивід. Я повідомлю про зміну та результати тестів лише після завершення команди.",
+  "settings.display.preview.shell": "Перевірте тест привітання",
+  "settings.display.preview.shellOutput":
+    "bun test greeting.test.ts\n\n[pass] видаляє зайві пробіли\n[pass] зберігає звичайне ім'я\n\n2 тести пройдено",
+  "settings.display.preview.query": "Обрізання рядків",
+  "settings.display.preview.result": "trim() видаляє пробіли з обох боків рядка.",
+  "settings.display.preview.answer": "Привітання оновлено, щоб прибирати зайві пробіли. Обидва тести проходять.",
   "settings.display.username.title": "Ім'я користувача",
   "settings.display.username.description": "Власне ім'я користувача, що відображається в чатах",
   "settings.display.fontSize.title": "Розмір шрифту",
   "settings.display.fontSize.description": "Налаштуйте розмір шрифту webview UI для Kilo незалежно від VS Code.",
-  "settings.display.reasoningAutoCollapse.title": "Автоматично згортати міркування",
-  "settings.display.reasoningAutoCollapse.description":
-    "Згортає блоки міркувань після того, як агент закінчить їх писати. Залиште вимкненим, щоб міркування залишалися розгорнутими, доки ви не згорнете їх вручну.",
+  "settings.display.reasoningDisplay.title": "Блоки міркувань",
+  "settings.display.reasoningDisplay.description":
+    "Виберіть, як починаються блоки міркувань. Розгорнуті показує повний текст, Попередній перегляд обмежує його коротким прокручуваним переглядом, а Заголовок показує лише заголовок та індикатор потокового передавання, доки ви не відкриєте його.",
+  "settings.display.reasoningDisplay.expanded": "Розгорнуті",
+  "settings.display.reasoningDisplay.preview": "Попередній перегляд",
+  "settings.display.reasoningDisplay.headline": "Заголовок",
   "settings.display.shiftTabCycle.title": "Перемикати зусилля міркування за допомогою Shift+Tab",
   "settings.display.shiftTabCycle.description":
     "Натисніть Shift+Tab у полі введення запиту, щоб перейти до наступного рівня зусиль міркування. Вимкніть цю опцію, щоб зберегти Shift+Tab для навігації фокусом за допомогою клавіатури.",
@@ -1140,12 +1246,15 @@ export const dict = {
   "settings.display.mcpTool.expanded": "Розгорнуті",
   "settings.display.mcpTool.collapsed": "Згорнуті",
 
+  "settings.display.shortcutHints.title": "Показувати підказки клавіш",
+  "settings.display.shortcutHints.description":
+    "Показувати в порожньому полі запиту сполучення клавіш, що відповідає поточній дії, наприклад як додати виділений код або повернутися до запиту.",
   "settings.display.tokenThroughput.title": "Показувати пропускну здатність токенів",
   "settings.display.tokenThroughput.description":
     "Показувати швидкість генерації тексту (tokens/sec) в останньому повідомленні асистента та в заголовку завдання. Показується за замовчуванням; вимкніть цей параметр, щоб за потреби її приховати.",
   "settings.display.autoApprovalReason.title": "Показувати причину автосхвалення",
   "settings.display.autoApprovalReason.description":
-    "Показує рядок біля викликів інструментів, що пояснює, чому їх автоматично схвалено (відповідне правило, стандартне значення агента, режим YOLO тощо).",
+    "Показує, чому виклик інструмента схвалено автоматично, наприклад через відповідне правило дозволів або стандартне значення агента.",
 
   "chat.throughput.tooltip":
     "Average {{speed}} tokens/s for this turn. Includes output and reasoning tokens; excludes tool execution and waiting time.",
@@ -1228,16 +1337,16 @@ export const dict = {
 
   "task.todos.progress": "{{done}} з {{total}} завдань виконано",
   "task.todos.allDone": "{{count}} завдань виконано",
+  "task.todos.title": "Завдання",
+  "task.todos.done": "Усе готово",
   "task.backgroundAgents.running.one": "1 фоновий агент",
   "task.backgroundAgents.running.many": "Фонових агентів: {{count}}",
-  "task.backgroundAgents.more": "+{{count}} ще",
   "task.backgroundAgents.open": "Відкрити фонового агента",
   "task.backgroundAgents.openAll": "Відкрити всіх фонових агентів",
   "task.backgroundAgents.cancel": "Зупинити",
   "task.backgroundAgents.continueInBackground": "Продовжити у фоні",
   "task.backgroundAgents.waiting": "Фоновому агенту потрібен ваш ввід",
   "task.backgroundAgents.needsInput": "Потрібен ввід",
-  "task.backgroundAgents.dismiss": "Сховати",
   "task.backgroundAgents.clearFinished": "Очистити завершені",
   "task.backgroundAgents.summary": "Працює {{running}} із {{total}} фонових агентів",
   "task.backgroundAgents.status.running": "Виконується",
@@ -1246,6 +1355,10 @@ export const dict = {
   "task.backgroundAgents.status.error": "Помилка",
   "task.backgroundAgents.untitled": "Фоновий агент",
   "task.backgroundAgents.stopAll": "Зупинити всіх ({{count}})",
+  "task.backgroundAgents.finished": "Фонові агенти завершили роботу",
+  "task.stop": "Зупинити підагента",
+  "task.open.panel": "Відкрити підагента на панелі",
+  "task.open.tab": "Відкрити підагента у вкладці",
 
   "settings.saveBar.unsavedChanges": "Незбережені зміни",
   "settings.saveBar.discard": "Скасувати",
@@ -1317,6 +1430,16 @@ export const dict = {
     "Файли, змінені Kilo під час поточної сесії, на основі знімків по ходу. Скидається при старті нової сесії.",
   "diffViewer.group.session": "Сесія",
   "diffViewer.group.git": "Git",
+  "diffViewer.comment.postToGithub": "Опублікувати на GitHub",
+  "diffViewer.comment.loadFailed": "Не вдалося завантажити зміни пул-реквесту.",
+  "diffViewer.comment.unavailable": "Цей рядок недоступний у поточному знімку пул-реквесту.",
+  "diffViewer.comment.prContext": "PR #{{number}}",
+  "diffViewer.comment.openPR": "Відкрити PR",
+  "diffViewer.comment.localChanges": "Локальні зміни",
+  "diffViewer.comment.prChanges": "Зміни PR",
+  "diffViewer.comment.sendToKilo": "Надіслати до Kilo",
+  "diffViewer.comment.sendToGithub": "Надіслати до GitHub #{{number}}",
+  "diffViewer.comment.chooseDestination": "Вибрати призначення",
   "diffViewer.notice.snapshotsDisabled":
     "Знімки вимкнено для цього репозиторію. Будь ласка, відредагуйте файли конфігурації, щоб відображати зміни сесії.",
 
@@ -1338,5 +1461,19 @@ export const dict = {
   "chat.search.close": "Закрити пошук",
   "chat.search.invalidRegex": "Недійсний регулярний вираз",
   "chat.search.noResults": "Немає результатів",
+  "settings.experimental.browserAutomation.title": "Вбудований браузер",
+  "settings.experimental.browserAutomation.description":
+    "Показуйте попередній перегляд локальних застосунків в Agent Manager і надавайте інструмент browser_open сесіям Agent Manager.",
+  "settings.experimental.browserAutomation.systemChrome.title": "Використовувати системний Chrome",
+  "settings.experimental.browserAutomation.systemChrome.description":
+    "Використовувати встановлений Google Chrome для вбудованого браузера. Вимкніть лише якщо сумісний браузер Playwright Chromium уже встановлено.",
+  "settings.experimental.browserLinks.title": "Відкривати посилання в",
+  "settings.experimental.browserLinks.description":
+    "Виберіть, де відкривати веб-посилання з чатів Kilo. Потрібен вбудований браузер.",
+  "settings.experimental.browserLinks.external": "Системний браузер",
+  "settings.experimental.browserLinks.integrated": "Вбудований браузер",
   "chat.search.searchingHistory": "Пошук у попередніх повідомленнях…",
+  "browserTab.noSession":
+    "Відкрийте браузер із сеансу, щоб переглянути локальний застосунок або загальнодоступну HTTPS-сторінку.",
+  "browserTab.disabled": "Вбудований браузер вимкнено. Увімкніть його в Налаштуваннях Kilo > Експериментальні.",
 }

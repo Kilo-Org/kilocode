@@ -13,13 +13,14 @@ import {
   type ProviderInfo,
 } from "../../src/kilo-provider-utils"
 import type { CloudSessionMessage } from "../../src/services/cli-backend/types"
-import type { SyncPayload } from "../../src/services/cli-backend/sdk-sse-adapter"
+import { normalize, type SyncPayload } from "../../src/services/cli-backend/sdk-sse-adapter"
 import type {
   Session,
   Agent,
   Provider,
   Event,
   EventSessionStatus,
+  EventSessionWakeup,
   EventSessionTurnClose,
   EventSessionError,
   EventSandboxStatusChanged,
@@ -153,6 +154,21 @@ describe("sessionToWebview", () => {
     const result = sessionToWebview(makeSession({ id: "abc", title: "My Session" }))
     expect(result.id).toBe("abc")
     expect(result.title).toBe("My Session")
+  })
+
+  it.each([
+    ["high", { providerID: "kilo", modelID: "gpt", variant: "high" }],
+    ["default", { providerID: "kilo", modelID: "gpt" }],
+  ])("projects the agent and model the session last ran (variant %s)", (variant, model) => {
+    const result = sessionToWebview(makeSession({ agent: "plan", model: { id: "gpt", providerID: "kilo", variant } }))
+    expect(result.agent).toBe("plan")
+    expect(result.model).toEqual(model)
+  })
+
+  it("omits the agent and model before the session first runs", () => {
+    const result = JSON.parse(JSON.stringify(sessionToWebview(makeSession())))
+    expect(result).not.toHaveProperty("agent")
+    expect(result).not.toHaveProperty("model")
   })
 
   it("produces valid ISO format", () => {
@@ -384,6 +400,19 @@ describe("mapSSEEventToWebviewMessage", () => {
     }
   })
 
+  it("maps session.wakeup to sessionWakeup", () => {
+    const event: EventSessionWakeup = {
+      type: "session.wakeup",
+      properties: { sessionID: "sess-1", pending: 2 },
+    }
+
+    expect(mapSSEEventToWebviewMessage(event, "sess-1")).toEqual({
+      type: "sessionWakeup",
+      sessionID: "sess-1",
+      pending: 2,
+    })
+  })
+
   it("maps sandbox status changes to effective button state", () => {
     const event: EventSandboxStatusChanged = {
       type: "sandbox.status.changed",
@@ -448,6 +477,22 @@ describe("mapSSEEventToWebviewMessage", () => {
       eventID: "evt-error",
       sessionID: "sess-1",
       error: event.properties.error,
+    })
+  })
+
+  it.each(["admission", "execution"] as const)("preserves the %s session error phase", (phase) => {
+    const event = {
+      id: "evt-phase",
+      type: "session.error" as const,
+      properties: { sessionID: "sess-1", error: { name: "UnknownError" as const, data: { message: "error" } } },
+      metadata: { phase },
+    }
+    expect(mapSSEEventToWebviewMessage(normalize(event), "sess-1")).toEqual({
+      type: "sessionError",
+      eventID: event.id,
+      sessionID: "sess-1",
+      error: event.properties.error,
+      phase,
     })
   })
 
@@ -761,6 +806,16 @@ describe("mapCloudSessionMessage", () => {
     const msg = mapCloudSessionMessageToWebviewMessage(makeCloudMessage({ role: "user" }))
     expect(msg.role).toBe("user")
   })
+
+  it("passes parentID through so turn grouping can link answers to prompts", () => {
+    const msg = mapCloudSessionMessageToWebviewMessage(makeCloudMessage({ parentID: "msg-0" }))
+    expect(msg.parentID).toBe("msg-0")
+  })
+
+  it("leaves parentID undefined when the cloud message has none", () => {
+    const msg = mapCloudSessionMessageToWebviewMessage(makeCloudMessage())
+    expect(msg.parentID).toBeUndefined()
+  })
 })
 
 describe("getErrorMessage", () => {
@@ -894,6 +949,20 @@ describe("getConfigErrorDetails", () => {
 
   it("omits the issues section when only the path is present", () => {
     expect(getConfigErrorDetails({ data: { path: "/cfg.json" } })).toBe("File: /cfg.json")
+  })
+
+  it("formats a shadowed-write error with the overriding file", () => {
+    const err = {
+      data: {
+        message:
+          "The setting was saved to /home/me/.config/kilo/kilo.json, but /home/me/.config/kilo/opencode.json still takes precedence over it.",
+        path: "/home/me/.config/kilo/kilo.json",
+        shadowedBy: "/home/me/.config/kilo/opencode.json",
+      },
+    }
+    expect(getConfigErrorDetails(err)).toBe(
+      "File: /home/me/.config/kilo/kilo.json\nShadowed by: /home/me/.config/kilo/opencode.json",
+    )
   })
 
   it("returns undefined when issues array is empty and no path", () => {

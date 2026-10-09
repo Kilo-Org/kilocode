@@ -22,7 +22,7 @@ Turn Keep Awake on or off with any of these controls:
 
 The Agent Manager coffee icon reflects the same state as the other controls.
 
-Kilo holds the sleep inhibitor only while at least one session is busy or retrying, and releases it when every session is idle. Keep Awake stops when the VS Code window reloads.
+Kilo holds the sleep inhibitor only while at least one session is busy or retrying, or while a session has a scheduled wakeup, and releases it when every session is idle and has no pending wakeup. Keep Awake stops when the VS Code window reloads.
 
 The first time you enable Keep Awake, VS Code asks for confirmation. The answer is stored in the extension's global state, not in `kilo.jsonc`. Enable Keep Awake only in a trusted workspace. It is not available in a remote window.
 
@@ -31,7 +31,7 @@ The first time you enable Keep Awake, VS Code asks for confirmation. The answer 
 
 In the terminal UI, run the `/caffeinate` slash command. The alias `/caffenate` works too. You can also use the **Enable Keep Awake** and **Disable Keep Awake** entries in the **System** command category.
 
-Kilo holds the sleep inhibitor while any session is busy or retrying, and releases it when every session is idle. The first time you enable Keep Awake, a dialog explains what it does and asks you to confirm. The answer is stored in the TUI state, not in `kilo.jsonc`.
+Kilo holds the sleep inhibitor while any session is busy or retrying, or while a session has a scheduled wakeup, and releases it when every session is idle and has no pending wakeup. The first time you enable Keep Awake, a dialog explains what it does and asks you to confirm. The answer is stored in the TUI state, not in `kilo.jsonc`.
 
 {% /tab %}
 {% /tabs %}

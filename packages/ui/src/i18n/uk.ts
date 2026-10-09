@@ -77,7 +77,7 @@ export const dict: Record<string, string> = {
 
   "dialog.usageExceeded.freeTier.title": "Безкоштовний ліміт вичерпано",
   "dialog.usageExceeded.freeTier.description":
-    "Підпишіться на Kilo Go для надійного доступу до найкращих моделей із відкритим кодом від $5 на місяць.", // kilocode_change
+    "Підпишіться на Kilo Go за $10 на місяць для надійного доступу до найкращих моделей із відкритим кодом.", // kilocode_change
   "dialog.usageExceeded.freeTier.actionLabel": "Підписатися",
   "dialog.usageExceeded.accountRateLimit.title": "Ліміт Go вичерпано",
   "dialog.usageExceeded.accountRateLimit.description":
@@ -233,6 +233,10 @@ export const dict: Record<string, string> = {
   "ui.mermaid.copySvg": "Копіювати SVG",
   "ui.mermaid.download": "Завантажити",
   "ui.mermaid.downloadPng": "Завантажити PNG",
+  "ui.mermaid.zoom": "Масштаб",
+  "ui.mermaid.zoomIn": "Збільшити",
+  "ui.mermaid.zoomOut": "Зменшити",
+  "ui.mermaid.zoomReset": "Скинути масштаб",
   "ui.mermaid.downloadSvg": "Завантажити SVG",
   "ui.mermaid.errorDefault": "Не вдалося відтворити діаграму Mermaid.",
   "ui.mermaid.errorEmpty": "Mermaid відтворив порожню діаграму.",

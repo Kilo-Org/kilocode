@@ -1,5 +1,6 @@
 package ai.kilocode.rpc.dto
 
+import ai.kilocode.rpc.dto.orphans.OrphanDto
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -15,7 +16,15 @@ data class WorktreeDto(
 )
 
 @Serializable
-data class WorktreeListDto(val worktrees: List<WorktreeDto> = emptyList())
+data class WorktreeListDto(
+    val worktrees: List<WorktreeDto> = emptyList(),
+    /**
+     * Directories under `.kilo/worktrees/` that git does not track — leftovers from interrupted
+     * deletes or hand-removed metadata. Reported so they can be surfaced and cleaned deliberately;
+     * nothing removes them automatically.
+     */
+    val orphans: List<OrphanDto> = emptyList(),
+)
 
 @Serializable
 data class WorktreeStatsDto(
@@ -28,10 +37,29 @@ data class WorktreeStatsDto(
     val files: Int = 0,
     /** Resolved base ref the counts are relative to, e.g. `origin/main`. Empty when unresolved. */
     val base: String = "",
+    /**
+     * True when the counts could not be measured, so they mean "unknown" rather than "zero".
+     *
+     * Without this a timed-out or failed poll is indistinguishable from a clean worktree, and the UI
+     * quietly drops the badges it was showing a moment earlier.
+     */
+    val unavailable: Boolean = false,
+    /** Why the poll failed, for logs and tooltips. Empty when [unavailable] is false. */
+    val reason: String = "",
 )
 
 @Serializable
-data class WorktreeStatsListDto(val items: List<WorktreeStatsDto> = emptyList())
+data class WorktreeStatsListDto(
+    val items: List<WorktreeStatsDto> = emptyList(),
+    /**
+     * True when the worktree listing itself failed, so [items] means "unknown", not "none".
+     *
+     * Without it an empty list is indistinguishable from a repository that has no worktrees, and the
+     * client drops every badge it was showing — a failed poll rendering as clean, which is exactly
+     * what [WorktreeStatsDto.unavailable] exists to prevent per row.
+     */
+    val unavailable: Boolean = false,
+)
 
 /**
  * Uncommitted state of one worktree, relative to its own HEAD — staged, unstaged, and untracked
@@ -47,10 +75,18 @@ data class WorktreeDirtyDto(
     val untracked: Int = 0,
     /** Commits ahead of `@{upstream}`. 0 when the branch has no upstream. */
     val unpushed: Int = 0,
+    /** True when the counts could not be measured; see [WorktreeStatsDto.unavailable]. */
+    val unavailable: Boolean = false,
+    /** Why the poll failed, for logs and tooltips. Empty when [unavailable] is false. */
+    val reason: String = "",
 )
 
 @Serializable
-data class WorktreeDirtyListDto(val items: List<WorktreeDirtyDto> = emptyList())
+data class WorktreeDirtyListDto(
+    val items: List<WorktreeDirtyDto> = emptyList(),
+    /** True when the worktree listing itself failed; see [WorktreeStatsListDto.unavailable]. */
+    val unavailable: Boolean = false,
+)
 
 @Serializable
 enum class GhState { OPEN, DRAFT, MERGED, CLOSED }
@@ -136,7 +172,23 @@ data class WorktreePrDto(
  * its whole strategy ladder.
  */
 @Serializable
-enum class GhAvailability { OK, MISSING, UNAUTH, GIT_MISSING, RATE_LIMITED }
+enum class GhAvailability {
+    OK,
+    MISSING,
+    UNAUTH,
+    GIT_MISSING,
+    RATE_LIMITED,
+
+    /**
+     * `gh` ran but did not answer within its budget.
+     *
+     * Distinct from [OK] because a timeout used to be reported as success, which reset the probe's
+     * failure counter and defeated its own backoff — the loop kept spending a full timeout per poll
+     * on a command that never returns. Distinct from [MISSING] because `gh` is installed and may
+     * answer the next time.
+     */
+    TIMEOUT,
+}
 
 @Serializable
 data class WorktreePrListDto(
@@ -173,6 +225,8 @@ data class MoveProgressDto(
 data class WorktreeBranchesDto(
     val branches: List<String> = emptyList(),
     val current: String? = null,
+    // `owner/repo` for the checkout's origin remote; null when there is no GitHub origin.
+    val origin: String? = null,
 )
 
 @Serializable
@@ -195,6 +249,7 @@ data class RemoveWorktreeResultDto(
     val ok: Boolean = false,
     val error: String? = null,
     val locked: Boolean = false, // removal was blocked by a worktree lock; retry with force
+    val nestedPaths: List<String> = emptyList(), // live nested worktrees blocking removal; see error
 )
 
 @Serializable

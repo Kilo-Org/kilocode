@@ -8,6 +8,7 @@ import {
 } from "@thisbeyond/solid-dnd"
 import { For, Show, createSignal, type Accessor, type Component, type JSX } from "solid-js"
 import { ConstrainDragYAxis } from "../src/components/chat/TabDnd"
+import { beginPromptMentionDrop, endPromptMentionDrop, type PromptMentionDrop } from "../src/utils/prompt-mention-drop"
 import { createTabFocus } from "../src/utils/tab-navigation"
 import { useTabScroll } from "../src/utils/tab-scroll"
 import { setTabWidths } from "../src/utils/tab-widths"
@@ -30,6 +31,8 @@ interface Props {
   overlay: (id: string) => string
   onSelect: (id: string) => void
   onReorder: (from: string, to: string) => void
+  /** Prompt mention payload for a tab id, so the tab can be dragged to the prompt. */
+  drag?: (id: string) => PromptMentionDrop | undefined
   action?: (api: InspectorTabStripApi) => JSX.Element
 }
 
@@ -47,12 +50,19 @@ export const InspectorTabStrip: Component<Props> = (props) => {
     const width = event.draggable?.layout.width ?? event.draggable?.node.getBoundingClientRect().width
     freeze()
     setDragging({ id, width })
+    const payload = props.drag?.(id)
+    if (payload) beginPromptMentionDrop(payload)
   }
   const end = () => {
+    endPromptMentionDrop()
     setDragging(undefined)
     release()
   }
   const over = (event: DragEvent) => {
+    // Once the tab leaves the side panel it is on its way to the prompt, so stop
+    // reordering the tabs under it. Use the strip bounds, not the tab's own
+    // rect, so leftward reordering inside the strip still works.
+    if (props.drag && event.draggable.transformed.center.x < host.getBoundingClientRect().left) return
     const from = event.draggable?.id
     const to = event.droppable?.id
     if (typeof from !== "string" || typeof to !== "string") return

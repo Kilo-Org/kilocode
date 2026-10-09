@@ -3,6 +3,7 @@ package ai.kilocode.client.session.ui.style
 import ai.kilocode.client.ui.UiStyle
 import com.intellij.ui.JBColor
 import com.intellij.util.ui.JBUI
+import com.intellij.util.ui.NamedColorUtil
 import com.intellij.util.ui.UIUtil
 import java.awt.Color
 import java.awt.Component
@@ -92,6 +93,16 @@ object SessionUiStyle {
         const val INNER_BOTTOM = 4
         const val INNER_HORIZONTAL = 4 + TRANSCRIPT_SCROLLBAR_PADDING
 
+        /**
+         * Right transcript inset. Wider than [INNER_HORIZONTAL] because the prompt rail is drawn over
+         * this edge: it reserves the rail's full tick width plus the smallest standard gap, so a tick at
+         * hover size still clears the content instead of sitting on top of it.
+         *
+         * Reserved whether or not the rail is currently showing, so the transcript does not reflow when
+         * a second prompt makes it appear.
+         */
+        const val INNER_RIGHT = PromptRail.TICK_HOVER + UiStyle.Gap.XS
+
         const val USER_PROMPT_INDENT = 100
         const val SCROLL_INCREMENT = 48
 
@@ -99,6 +110,49 @@ object SessionUiStyle {
             val width = component.getFontMetrics(font).charWidth('0').coerceAtLeast(1)
             return width * READABLE_COLUMNS
         }
+    }
+
+    /** Geometry and colors for the prompt navigator rail and its ticks. */
+    object PromptRail {
+        /** Tick length across the rail, at rest. */
+        const val TICK_REST = 12
+
+        /** Tick length across the rail when active. */
+        const val TICK_ACTIVE = 16
+
+        /**
+         * Tick length across the rail at full size (hover or open), and so the rail's own width.
+         * [SessionLayout.INNER_RIGHT] reserves this much beside the transcript.
+         */
+        const val TICK_HOVER = 20
+
+        /** Tick thickness on the scroll axis. */
+        const val TICK_THICKNESS = 2
+
+        /** Closest allowed spacing between tick centers. */
+        const val STEP_MIN = 7
+
+        /** Widest allowed spacing between tick centers. */
+        const val STEP_MAX = 14
+
+        /** Total vertical padding reserved across the top and bottom of the rail. */
+        const val RAIL_INSET = 24
+
+        /** Hover dwell, in ms, before the navigator balloon opens. */
+        const val OPEN_MS = 350
+
+        /**
+         * Widest the navigator card may get, as a multiple of the standard session popup width. Prompts
+         * and their answer previews are prose, so the card reads better wider than a menu-sized popup.
+         * The room left of the rail still caps it, so a narrow sidebar gets a narrower card.
+         */
+        const val WIDTH_SCALE = 1.5
+
+        fun restColor(): Color = UIUtil.getContextHelpForeground()
+
+        fun activeColor(): Color = UIUtil.getLabelForeground()
+
+        fun queuedColor(): Color = NamedColorUtil.getInactiveTextColor()
     }
 
     /** Shared tokens for individual transcript views and session views. */
@@ -187,6 +241,17 @@ object SessionUiStyle {
             fun headerHoverBgColor(): Color = JBColor.lazy {
                 UiStyle.Colors.blend(Colors.sessionBackground(), Outline.hoverColor(), HOVER_FILL_ALPHA)
             }
+
+            /**
+             * The same hover recipe as [headerHoverBgColor] for rows that sit on a raised block
+             * surface (the to-do list, background-agent rows) rather than on the backdrop. Blending
+             * off [Colors.codeBlockBackground] keeps the tint reading as a highlight of the row's own
+             * base; reusing the backdrop-based [headerHoverBgColor] there would punch a
+             * backdrop-coloured patch through the raised surface.
+             */
+            fun blockHoverBgColor(): Color = JBColor.lazy {
+                UiStyle.Colors.blend(Colors.codeBlockBackground(), Outline.hoverColor(), HOVER_FILL_ALPHA)
+            }
         }
 
         object Outline {
@@ -242,6 +307,8 @@ object SessionUiStyle {
             const val SHELL_HORIZONTAL_PADDING = 8
             // Horizontal editor inset intentionally matches vertical shell padding to balance text and chrome.
             const val EDITOR_HORIZONTAL_INSET = SHELL_VERTICAL_PADDING
+            // Caps a pasted block rendered in the transcript prompt bubble; matches Tool.BODY_LINES.
+            const val PASTE_BLOCK_LINES = 15
 
             fun separator(): Color = JBColor.namedColor(
                 "EditorTabs.underTabsBorderColor",

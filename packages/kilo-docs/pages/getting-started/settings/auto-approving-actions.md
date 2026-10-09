@@ -59,18 +59,21 @@ The Auto Approve tab lists the following tool-specific permissions. Some tools a
 
 ## Runtime Permission Requests
 
-When a tool is set to `"ask"`, Kilo pauses and displays a permission prompt with two options:
+When a tool is set to `"ask"`, Kilo pauses and displays a permission prompt:
 
 | Option | Behavior |
 |---|---|
 | **Run** | Allow this specific invocation |
-| **Deny** | Block this specific invocation |
+| **Deny** | Reveal an optional feedback field |
+| **Reject** | Block this specific invocation and send any feedback to the agent |
+
+In the feedback field, describe what the agent should change before it retries. Press `Enter` to post the rejection, `Shift+Enter` to add a newline, or `Escape` to cancel.
 
 Use the shield button in the prompt controls to toggle runtime auto-approve for permission prompts without opening Settings. When enabled, the shield is highlighted and pending permission prompts are approved automatically. The runtime state stays synced across the sidebar, open Kilo tabs, and Agent Manager session views.
 
 Expand **Manage Auto-Approve Rules** to add commands or patterns to your allowed or denied lists. These rules are then appended to the bottom of the approval rules in settings and the config file.
 
-For the `agent_manager` tool, runtime approvals use the requested capability as the pattern: `worktree`, `local`, `overview`, or `prompt`. Prompting an existing managed session always requires an explicit `prompt` approval the first time, even when a broad Agent Manager allow rule already exists.
+For the `agent_manager` tool, runtime approvals use the requested capability as the pattern: `worktree`, `local`, `overview`, `prompt`, `stop`, `move`, or `answer`. Prompting, stopping, moving, or answering a managed session requires its own explicit capability approval the first time, even when a broad Agent Manager allow rule already exists.
 
 ## MCP Tool Permissions
 
@@ -265,7 +268,7 @@ When a tool is set to `"ask"`, Kilo pauses and displays a permission prompt. You
 |---|---|
 | **Allow once** | Allow this specific invocation only |
 | **Allow always** | Save an allow rule for the matching tool or pattern in your global config |
-| **Reject** | Block this specific invocation |
+| **Reject** | Block this specific invocation; you can add optional feedback that the agent uses to adjust before retrying |
 
 For shell commands, saved approvals are written under `permission.bash` and apply across CLI sessions.
 

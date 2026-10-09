@@ -12,6 +12,7 @@ import ai.kilocode.rpc.dto.QuestionRequestDto
 import ai.kilocode.rpc.dto.SessionStatusDto
 import ai.kilocode.rpc.dto.TodoDto
 import ai.kilocode.rpc.dto.ToolRefDto
+import com.intellij.openapi.application.ApplicationManager
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 
 class SessionUpdateQueueTest : SessionControllerTestBase() {
@@ -41,6 +42,101 @@ class SessionUpdateQueueTest : SessionControllerTestBase() {
             TurnAdded msg1 [msg1]
         """, modelEvents)
         assertTrue(m.model.state is SessionState.Busy)
+    }
+
+    fun `test showing controller defers hidden catchup beyond hierarchy callback`() {
+        appRpc.state.value = ai.kilocode.rpc.dto.KiloAppStateDto(ai.kilocode.rpc.dto.KiloAppStatusDto.READY)
+        projectRpc.state.value = workspaceReady()
+        val m = controller("ses_test", flushMs = 250L)
+        val modelEvents = collectModelEvents(m)
+        flush()
+        modelEvents.clear()
+
+        hide(m)
+        emit(ChatEventDto.MessageUpdated("ses_test", msg("msg1", "ses_test", "assistant")), flush = false)
+        settle()
+
+        show(m)
+
+        assertTrue(modelEvents.isEmpty())
+        assertNull(m.model.message("msg1"))
+
+        settle()
+
+        assertNotNull(m.model.message("msg1"))
+    }
+
+    fun `test hidden catchup yields between bounded batches`() {
+        appRpc.state.value = ai.kilocode.rpc.dto.KiloAppStateDto(ai.kilocode.rpc.dto.KiloAppStatusDto.READY)
+        projectRpc.state.value = workspaceReady()
+        var updates = 0
+        val m = controller(
+            id = "ses_test",
+            flushMs = 250L,
+            condense = true,
+            afterUpdate = { updates++ },
+        )
+        val total = EVENT_CATCHUP_SIZE * 25 + 1
+        flush()
+        updates = 0
+
+        hide(m)
+        repeat(total) { idx ->
+            emit(ChatEventDto.MessageUpdated("ses_test", msg("msg$idx", "ses_test", "assistant")), flush = false)
+        }
+        settle()
+
+        var interleaved = -1
+        show(m)
+        ApplicationManager.getApplication().invokeLater { interleaved = updates }
+        settle()
+
+        assertEquals(1, interleaved)
+        assertEquals(26, updates)
+        assertEquals(total, m.model.messages().size)
+    }
+
+    fun `test hiding during catchup pauses until shown again`() {
+        appRpc.state.value = ai.kilocode.rpc.dto.KiloAppStateDto(ai.kilocode.rpc.dto.KiloAppStatusDto.READY)
+        projectRpc.state.value = workspaceReady()
+        val m = controller("ses_test", flushMs = 250L)
+        val total = EVENT_CATCHUP_SIZE * 2 + 1
+        flush()
+
+        hide(m)
+        repeat(total) { idx ->
+            emit(ChatEventDto.MessageUpdated("ses_test", msg("msg$idx", "ses_test", "assistant")), flush = false)
+        }
+        settle()
+
+        show(m)
+        ApplicationManager.getApplication().invokeLater { hide(m) }
+        settle()
+
+        assertEquals(EVENT_CATCHUP_SIZE, m.model.messages().size)
+
+        show(m)
+        settle()
+
+        assertEquals(total, m.model.messages().size)
+    }
+
+    fun `test forced flush drains hidden backlog synchronously`() {
+        appRpc.state.value = ai.kilocode.rpc.dto.KiloAppStateDto(ai.kilocode.rpc.dto.KiloAppStatusDto.READY)
+        projectRpc.state.value = workspaceReady()
+        val m = controller("ses_test", flushMs = 250L)
+        val total = EVENT_CATCHUP_SIZE + 1
+        flush()
+
+        hide(m)
+        repeat(total) { idx ->
+            emit(ChatEventDto.MessageUpdated("ses_test", msg("msg$idx", "ses_test", "assistant")), flush = false)
+        }
+        settle()
+
+        edt { m.flushEvents() }
+
+        assertEquals(total, m.model.messages().size)
     }
 
     fun `test hidden controller applies question metadata without flushing transcript`() {
@@ -596,20 +692,16 @@ class SessionUpdateQueueTest : SessionControllerTestBase() {
             },
         )
 
-        // History load and recovery are two separate update cycles, and recovery seeds state from the
-        // status flow KiloSessionService collects off the fake RPC. A fixed number of drain rounds does
-        // not always outrun that collection, so wait for both cycles to be observed instead.
-        // Each waitFor round ends in a pumpEdt, so reading the hook log from the test thread is ordered
-        // against the EDT writes the same way the other tests in this file rely on.
-        val both = waitFor { order.size >= 4 }
-        assertTrue("history load and recovery did not both run, saw $order", both)
-
-        assertTrue(order.contains("before:0"))
-        assertTrue(order.contains("after:true:1"))
-        assertTrue(order.contains("before:2"))
-        assertTrue(order.contains("after:true:3"))
-        assertNotNull(m.model.message("msg1"))
-        assertTrue(m.model.state is SessionState.Busy)
+        // History load and recovery are separate update cycles. Other startup cycles may run first, so
+        // wait for the semantic result instead of assuming the first four hook entries belong to them.
+        // Each waitFor round ends in a pumpEdt, ordering these reads after the hook writes on the EDT.
+        val ready = waitFor {
+            val cycles = order.zipWithNext().count {
+                it.first.startsWith("before:") && it.second.startsWith("after:true:")
+            }
+            cycles >= 2 && m.model.message("msg1") != null && m.model.state is SessionState.Busy
+        }
+        assertTrue("history load and recovery did not settle, saw state=${m.model.state} hooks=$order", ready)
     }
 
     private fun question(id: String) = QuestionRequestDto(

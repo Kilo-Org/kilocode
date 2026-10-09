@@ -27,7 +27,6 @@ Use Kilo Code wherever you work:
 - [**Cloud Agent**](/docs/code-with-ai/platforms/cloud-agent) — Run Kilo in the cloud
 - [**Mobile Apps**](/docs/code-with-ai/platforms/mobile) — iOS and Android support
 - [**Slack**](/docs/code-with-ai/platforms/slack) — Chat with Kilo in your workspace
-- [**App Builder**](/docs/code-with-ai/app-builder) — Create full-stack applications with AI
 
 ## Working with Agents
 

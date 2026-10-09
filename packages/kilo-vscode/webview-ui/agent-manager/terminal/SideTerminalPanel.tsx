@@ -79,6 +79,7 @@ export const SideTerminalPanel: Component<Props> = (props) => {
         overlay={(id) => props.state.title(id) ?? t("agentManager.tab.terminal")}
         onSelect={props.onSelect}
         onReorder={(from, to) => props.state.reorderSideDrag(props.contextKey(), from, to)}
+        drag={() => ({ kind: "terminal" })}
         renderTab={(id, api) => {
           const term = sides().find((item) => item.id === id)
           if (!term) return null

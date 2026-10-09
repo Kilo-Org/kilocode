@@ -11,7 +11,7 @@
 
 import * as path from "path"
 import * as fs from "fs"
-import { normalizePath } from "./git-import"
+import { pathKey } from "./project/paths"
 import type { SidebarTarget } from "./project/route"
 
 /** Accept a persisted sidebar target only when its shape matches a known kind. */
@@ -58,6 +58,8 @@ export interface Worktree {
   autoNamePromptCount?: number
   /** Section this worktree belongs to, or undefined for ungrouped. */
   sectionId?: string
+  /** Pinned worktrees show at the top of the sidebar. The section is kept for when the pin is removed. */
+  pinned?: boolean
 }
 
 export interface Section {
@@ -91,6 +93,7 @@ interface StateFile {
   closedSessions?: Record<string, string | null>
   sections?: Record<string, Omit<Section, "id">>
   tabOrder?: Record<string, string[]>
+  pinnedTabs?: Record<string, string[]>
   worktreeOrder?: string[]
   sessionsCollapsed?: boolean
   sidebarCollapsed?: boolean
@@ -123,6 +126,7 @@ export class WorktreeStateManager {
   private closed = new Map<string, string | null>()
   private sections = new Map<string, Section>()
   private tabOrder: Record<string, string[]> = {}
+  private pinnedTabs: Record<string, string[]> = {}
   private worktreeOrder: string[] = []
   private collapsed = true
   private sidebar = false
@@ -156,11 +160,17 @@ export class WorktreeStateManager {
     return this.worktrees.get(id)
   }
 
-  /** Find worktree by its filesystem path. */
+  /**
+   * Find worktree by its filesystem path.
+   *
+   * Compares with `pathKey`, so a symlinked parent (`/tmp` -> `/private/tmp` on macOS) or a case
+   * variant still finds the row. A lexical compare misses both, and every caller uses the answer to
+   * decide which worktree a session, a terminal, or a tool call belongs to.
+   */
   findWorktreeByPath(wtPath: string): Worktree | undefined {
-    const target = normalizePath(wtPath)
+    const target = pathKey(wtPath)
     for (const wt of this.worktrees.values()) {
-      if (normalizePath(wt.path) === target) return wt
+      if (pathKey(wt.path) === target) return wt
     }
     return undefined
   }
@@ -312,6 +322,18 @@ export class WorktreeStateManager {
     void this.save()
   }
 
+  /** Pin or unpin a worktree. Multi-version siblings follow so the group stays together. */
+  setWorktreePinned(id: string, pinned: boolean): void {
+    const wt = this.worktrees.get(id)
+    if (!wt) return
+    for (const item of this.worktrees.values()) {
+      if (item.id !== id && (!wt.groupId || item.groupId !== wt.groupId)) continue
+      item.pinned = pinned || undefined
+    }
+    this.setNormalizedWorktreeOrder(this.worktreeOrder)
+    void this.save()
+  }
+
   updateWorktreePR(id: string, prNumber?: number, prUrl?: string, prState?: string): void {
     const wt = this.worktrees.get(id)
     if (!wt) return
@@ -341,6 +363,7 @@ export class WorktreeStateManager {
 
     // Clean up tab order for this worktree
     delete this.tabOrder[id]
+    delete this.pinnedTabs[id]
 
     this.setNormalizedWorktreeOrder(this.worktreeOrder.filter((item) => item !== id))
 
@@ -401,6 +424,14 @@ export class WorktreeStateManager {
       }
     }
 
+    for (const [key, pinned] of Object.entries(this.pinnedTabs)) {
+      const idx = pinned.indexOf(id)
+      if (idx !== -1) {
+        pinned.splice(idx, 1)
+        if (pinned.length === 0) delete this.pinnedTabs[key]
+      }
+    }
+
     void this.save()
   }
 
@@ -417,8 +448,22 @@ export class WorktreeStateManager {
     void this.save()
   }
 
-  removeTabOrder(key: string): void {
-    delete this.tabOrder[key]
+  // ---------------------------------------------------------------------------
+  // Pinned tabs
+  // ---------------------------------------------------------------------------
+
+  getPinnedTabs(): Record<string, string[]> {
+    return this.pinnedTabs
+  }
+
+  /** Pinned session ids for one context, in pin order. An empty list clears the key. */
+  setPinnedTabs(key: string, ids: string[]): void {
+    if (ids.length === 0) {
+      delete this.pinnedTabs[key]
+      void this.save()
+      return
+    }
+    this.pinnedTabs[key] = ids
     void this.save()
   }
 
@@ -452,10 +497,16 @@ export class WorktreeStateManager {
     void this.save()
   }
 
+  /** Top-level worktrees: ungrouped and pinned. Pinned worktrees render above sections. */
+  private top(id: string): boolean {
+    const wt = this.worktrees.get(id)
+    return !!wt && (!wt.sectionId || wt.pinned === true)
+  }
+
   private ordered(order: string[]): string[] {
     const idx = new Map(order.map((id, i) => [id, i] as const))
     return [...this.worktrees.values()]
-      .filter((wt) => !wt.sectionId)
+      .filter((wt) => this.top(wt.id))
       .sort((a, b) => (idx.get(a.id) ?? Number.MAX_SAFE_INTEGER) - (idx.get(b.id) ?? Number.MAX_SAFE_INTEGER))
       .map((wt) => wt.id)
   }
@@ -480,7 +531,7 @@ export class WorktreeStateManager {
     const normalized = [
       ...this.ordered(result),
       ...result.filter((id) => this.sections.has(id)),
-      ...result.filter((id) => this.worktrees.get(id)?.sectionId),
+      ...result.filter((id) => this.worktrees.has(id) && !this.top(id)),
     ]
 
     const changed =
@@ -731,6 +782,7 @@ export class WorktreeStateManager {
     this.closed.clear()
     this.sections.clear()
     this.tabOrder = {}
+    this.pinnedTabs = {}
     this.worktreeOrder = []
     this.reviewDiffStyle = "unified"
 
@@ -764,6 +816,9 @@ export class WorktreeStateManager {
     if (data.tabOrder) {
       this.tabOrder = data.tabOrder
     }
+    if (data.pinnedTabs) {
+      this.pinnedTabs = data.pinnedTabs
+    }
     if (data.worktreeOrder) {
       this.worktreeOrder = data.worktreeOrder
     }
@@ -790,31 +845,14 @@ export class WorktreeStateManager {
     }
   }
 
-  /** Remove worktrees whose directories no longer exist on disk and prune orphaned sessions. */
-  async validate(root: string): Promise<void> {
-    let changed = false
-    for (const wt of [...this.worktrees.values()]) {
-      const resolved = path.isAbsolute(wt.path) ? wt.path : path.join(root, wt.path)
-      if (!fs.existsSync(resolved)) {
-        this.log(`Worktree ${wt.id} directory missing (${resolved}), removing`)
-        this.removeWorktree(wt.id)
-        changed = true
-      }
-    }
-    // Preserve local sessions; prune only sessions that reference missing worktrees.
-    for (const s of [...this.sessions.values()]) {
-      const ref = s.worktreeId
-      if (ref === null) continue
-      if (!ref || !this.worktrees.has(ref)) {
-        this.sessions.delete(s.id)
-        changed = true
-      }
-    }
-    if (changed) {
-      this.log(`Pruned orphaned sessions during validation`)
-      await this.save()
-    }
-  }
+  /*
+   * `validate(root)` used to live here: it removed every worktree row whose directory was missing
+   * and deleted the session mappings with it. That silently discarded conversation history for
+   * worktrees a user could still restore from their branch, and it never ran — nothing in src/
+   * called it. Worktree health now lives in worktree-reconcile.ts, which classifies rows instead of
+   * deleting them and only drops a row when the directory, the branch, and the sessions are all
+   * gone.
+   */
 
   /** Wait for any in-flight save to complete without triggering a new one. */
   async flush(): Promise<void> {
@@ -878,6 +916,9 @@ export class WorktreeStateManager {
     }
     if (Object.keys(this.tabOrder).length > 0) {
       data.tabOrder = this.tabOrder
+    }
+    if (Object.keys(this.pinnedTabs).length > 0) {
+      data.pinnedTabs = this.pinnedTabs
     }
     if (this.worktreeOrder.length > 0) {
       data.worktreeOrder = this.worktreeOrder

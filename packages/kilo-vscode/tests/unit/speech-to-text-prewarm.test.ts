@@ -44,6 +44,13 @@ const SCRIPT = `
 
   const [config, setConfig] = createSignal({ disabled_providers: ["kilo"] })
   const [auth, setAuth] = createSignal({})
+  const [capture, setCapture] = createSignal(false)
+  const features = () => ({
+    indexing: false,
+    sandboxControls: false,
+    backgroundSubagents: false,
+    speechToText: capture(),
+  })
   const root = document.createElement("div")
   const dispose = render(
     () =>
@@ -51,7 +58,7 @@ const SCRIPT = `
         value: { authStates: auth },
         get children() {
           return createComponent(ConfigContext.Provider, {
-            value: { config },
+            value: { config, features },
             get children() {
               return createComponent(SpeechToTextPrewarm, {})
             },
@@ -65,8 +72,10 @@ const SCRIPT = `
   setAuth({ kilo: "api" })
   if (sent.length !== 0) fail("prewarmed while Kilo was disabled")
   setConfig({})
+  if (sent.length !== 0) fail("prewarmed without capture support")
+  setCapture(true)
   if (sent.length !== 1 || sent[0]?.type !== "speechToTextPrewarm") {
-    fail("did not prewarm after Kilo access became available")
+    fail("did not prewarm after capture became available")
   }
   setAuth({ kilo: "oauth" })
   if (sent.length !== 1) fail("prewarmed more than once")

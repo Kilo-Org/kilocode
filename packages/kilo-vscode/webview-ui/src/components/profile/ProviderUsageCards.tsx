@@ -109,6 +109,10 @@ const UsageCard: Component<{
       </p>
     </Show>
 
+    <Show when={props.item.fetchState === "ready" && props.item.windows.length === 0}>
+      <CardDescription>{props.language.t("profile.usage.state.empty")}</CardDescription>
+    </Show>
+
     <div class="provider-usage-resources">
       <For each={props.item.windows}>
         {(window) => {

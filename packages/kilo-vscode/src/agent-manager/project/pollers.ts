@@ -21,6 +21,7 @@ import type { ProjectContexts } from "./contexts"
 import type { Semaphore } from "../semaphore"
 import type { AgentManagerOutMessage } from "../types"
 import type { WorktreeStateManager } from "../WorktreeStateManager"
+import { broken } from "../worktree-reconcile"
 
 export interface PollerPair {
   stats: { setEnabled(enabled: boolean): void; setVisible(visible: boolean): void; stop(): void }
@@ -50,6 +51,12 @@ interface PollerDeps {
   mergeMethods?: Pick<Host, "getPRMergeMethod" | "savePRMergeMethod">
 }
 
+/** True when the last reconcile decided this worktree cannot answer a git or gh query. */
+function unhealthyWorktree(ctx: ProjectContext, id: string): boolean {
+  const entry = ctx.report?.entries.find((item) => item.id === id)
+  return entry !== undefined && broken(entry.health)
+}
+
 function hot(state: WorktreeStateManager | undefined): Set<string> {
   const result = new Set<string>()
   const target = state?.getActiveTarget()
@@ -70,6 +77,7 @@ function createPollerPair(ctx: ProjectContext, deps: PollerDeps): PollerPair {
     getHotWorktreeIds: deps.hot ?? (() => hot(state())),
     git: deps.git,
     semaphore: deps.semaphore,
+    isUnhealthy: (id) => unhealthyWorktree(ctx, id),
     log: deps.log,
     onStats: (stats) => deps.post({ type: "agentManager.worktreeStats", projectId: ctx.id, stats }),
     onLocalStats: (stats) => deps.post({ type: "agentManager.localStats", projectId: ctx.id, stats }),
@@ -90,6 +98,7 @@ function createPollerPair(ctx: ProjectContext, deps: PollerDeps): PollerPair {
     savePRMergeMethod: async (repo, method) => {
       await deps.mergeMethods?.savePRMergeMethod?.(repo, method)
     },
+    isUnhealthy: (id) => unhealthyWorktree(ctx, id),
   })
   return { stats, pr }
 }
@@ -193,6 +202,8 @@ export function createPollers(opts: {
   log: (...args: unknown[]) => void
   hot?: () => Set<string>
   mergeMethods?: Pick<Host, "getPRMergeMethod" | "savePRMergeMethod">
+  /** Worktrees the health reconcile says cannot answer; skipped instead of polled. */
+  isUnhealthy?: (worktreeId: string) => boolean
 }): { stats: GitStatsPoller; pr: PRStatusBridge; projects: ProjectPollers } {
   const stats = new GitStatsPoller({
     getWorktrees: () => opts.state()?.getWorktrees() ?? [],
@@ -210,6 +221,7 @@ export function createPollers(opts: {
       opts.post(msg)
     },
     onWorktreePresence: opts.presence,
+    isUnhealthy: opts.isUnhealthy,
     log: opts.log,
     git: opts.git,
   })
@@ -223,6 +235,7 @@ export function createPollers(opts: {
     openExternal: opts.openExternal,
     log: opts.log,
     semaphore: opts.semaphore,
+    isUnhealthy: opts.isUnhealthy,
     projectId: opts.activeId,
     conflicts: (cwd, remote, base, head) => opts.git.conflicts(cwd, remote, base, head),
     getPRMergeMethod: (repo) => opts.mergeMethods?.getPRMergeMethod?.(repo),

@@ -1,13 +1,13 @@
 import { routeSuggestionWebviewMessage } from "./handlers/suggestion"
-import * as ModelState from "./model-state"
 import { routeInputToolMessage } from "../services/input-tools"
 import type { KiloConnectionService } from "../services/cli-backend/connection-service"
+import type { SpeechToTextSource } from "../speech-to-text/source"
 import type { SuggestionContext } from "./handlers/suggestion"
 import type { KiloClient } from "@kilocode/sdk/v2/client"
 import { buildChatSettingsMessage } from "./chat-settings"
 import { buildThroughputSettingMessage } from "./throughput-settings"
 import { buildAutoApprovalReasonSettingMessage } from "./auto-approval-reason-settings"
-import { handleModelUsageMessage, type ModelUsageMessage } from "./model-usage"
+import type { ModelUsageMessage } from "./model-usage"
 
 type Ctx = {
   question: SuggestionContext
@@ -22,6 +22,7 @@ type Ctx = {
   openSessions: (ids: string[]) => void
   activity: (state: unknown) => void
   speechToTextModels: () => Promise<void>
+  speechToTextSource: () => SpeechToTextSource | undefined
   modelUsage: (message: ModelUsageMessage) => Promise<void>
   backgroundJobs: (sessionID: string, requestID: string) => Promise<void>
   board: (message: Record<string, unknown>) => Promise<boolean>
@@ -108,7 +109,6 @@ export async function routeEarlyMessage(
     return true
   }
   await routeSuggestionWebviewMessage(ctx.question, message)
-  if (await ModelState.handleMessage(message.type, message, ctx.client, ctx.post)) return true
   if (message.type === "exportSessionTranscript") {
     const input = message as { sessionID?: unknown }
     if (typeof input.sessionID === "string") await ctx.exportTranscript(input.sessionID)
@@ -148,6 +148,12 @@ export async function routeEarlyMessage(
   }
   const background = await routeBackgroundMessage(message, ctx)
   return (
-    background ?? (await routeInputToolMessage(message, { connection: ctx.connection, dir: ctx.dir, post: ctx.post }))
+    background ??
+    (await routeInputToolMessage(message, {
+      connection: ctx.connection,
+      dir: ctx.dir,
+      post: ctx.post,
+      speechSource: ctx.speechToTextSource,
+    }))
   )
 }

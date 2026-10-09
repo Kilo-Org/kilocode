@@ -68,7 +68,7 @@ There are several ways to switch agents:
 | **Description** | An experienced technical leader and planner who helps design systems and create implementation plans |
 | **Tool Access** | Read-only tools plus restricted file editing (plan files in `.kilo/plans/` only) |
 | **Ideal For** | System design, high-level planning, and architecture discussions |
-| **Special Features** | Similar to the legacy extension's "Architect" mode, with a planning-focused approach |
+| **Special Features** | Similar to the legacy extension's "Architect" mode, with a planning-focused approach. In VS Code, the saved plan opens in the editor when ready for review. |
 
 ### debug
 

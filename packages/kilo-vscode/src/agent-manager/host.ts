@@ -10,6 +10,7 @@
 
 import type { Session } from "@kilocode/sdk/v2/client"
 import type { ProjectRef, SessionRef, WorktreeRef } from "./project/route"
+import type { PRMergeMethod } from "./types"
 
 // ---------------------------------------------------------------------------
 // Primitives
@@ -25,6 +26,8 @@ export interface Disposable {
 
 export interface OutputHandle {
   appendLine(msg: string): void
+  /** Reveal the channel, e.g. after writing a report the user asked for. */
+  show?(): void
   dispose(): void
 }
 
@@ -68,6 +71,7 @@ export interface SessionProvider {
   routeSessionDirectoryFor?(ref: SessionRef): string | undefined
   /** Re-check Git capability for the active project/session directory. */
   refreshGitStatus?(): void
+  retryInitialization?(): void
   dispose(): void
 }
 
@@ -121,6 +125,8 @@ export interface Host {
     /** Dynamic root directory for the panel's session provider (follows the active project). */
     workspaceRoot?: () => string | undefined
     projectId?: () => string | undefined
+    /** Source of an externally created session, including async background work. */
+    sessionProject?: () => string | undefined
   }): PanelContext
 
   /** Get the workspace/project root path. */
@@ -130,11 +136,29 @@ export interface Host {
   dirtyFiles(): string[]
 
   /** Show a folder picker and return the selected path, or undefined when cancelled. */
-  pickFolder(): Promise<string | undefined>
+  pickFolder(opts?: { defaultPath?: string; title?: string }): Promise<string | undefined>
 
-  /** Whether the experimental multi-project Agent Manager mode is enabled. */
-  multiProject(): boolean
+  input(opts: {
+    title: string
+    prompt?: string
+    value?: string
+    validate?: (value: string) => string | undefined
+  }): Promise<string | undefined>
+
+  /** Show a native modal confirmation. Dismissal means no. */
+  confirm(message: string, action: string): Promise<boolean>
+
+  /** Clone without changing workspace membership; return the verified checkout path. */
+  cloneRepository(url: string, parent: string): Promise<string | undefined>
+
   browserAutomation(): boolean
+  approveBrowserNavigation?(origin: string): Promise<boolean>
+
+  /** Whether background worktree pre-warming is enabled. */
+  worktreePool(): boolean
+
+  /** Listen for changes to the worktree pre-warming setting. */
+  onDidChangeWorktreePool(cb: (enabled: boolean) => void): Disposable
 
   /** Read the persisted additional-project registry payload. */
   readProjects(): unknown
@@ -143,16 +167,14 @@ export interface Host {
   writeProjects(value: unknown): Promise<void>
 
   /** Read and persist the user's last PR merge method per repository. */
-  getPRMergeMethod?(repo: string): "merge" | "squash" | "rebase" | undefined
-  savePRMergeMethod?(repo: string, method: "merge" | "squash" | "rebase"): Promise<void>
+  getPRMergeMethod?(repo: string): PRMergeMethod | undefined
+  savePRMergeMethod?(repo: string, method: PRMergeMethod): Promise<void>
 
   unregisterProjectRoutes(projectId: string): void
 
   /** Subscribe to workspace folder changes (pinned project re-derivation). */
   onDidChangeWorkspaceFolders(cb: () => void): Disposable
 
-  /** Subscribe to multi-project flag changes. */
-  onDidChangeMultiProject(cb: (enabled: boolean) => void): Disposable
   /** Whether the workspace permits executing configured scripts. */
   isTrusted(): boolean
 
@@ -161,6 +183,15 @@ export interface Host {
 
   /** Show an error notification. */
   showError(msg: string): void
+
+  /** Show an info, warning, or error notification. */
+  notify(kind: "info" | "warning" | "error", msg: string): void
+
+  /** Reveal a path in the OS file manager. A no-op (logged) on a remote workspace. */
+  revealInOS(path: string): void
+
+  /** Run a cancellable background task behind a progress notification. */
+  withProgress<T>(title: string, task: (cancelled: () => boolean) => Promise<T>): Promise<T>
 
   /** Open a text document in an editor (e.g. setup script). */
   openDocument(path: string): Promise<void>
@@ -174,11 +205,15 @@ export interface Host {
   /** Create an output channel for logging. */
   createOutput(name: string): OutputHandle
 
-  /** Read extension keybinding metadata. */
+  /** Read extension keybindings, with the user's keybindings.json applied. */
   extensionKeybindings(): Array<{ command: string; key?: string; mac?: string; when?: string }>
 
+  /** Notify when the user's keybindings.json changes. */
+  onDidChangeKeybindings?(cb: () => void): Disposable
+
   /** Copy text to the system clipboard. */
-  copyToClipboard(text: string): void
+  copyToClipboard(text: string): void | Promise<void>
+  readClipboard?(): Promise<string>
 
   /** Capture a telemetry event. */
   capture(event: string, properties?: Record<string, unknown>): void

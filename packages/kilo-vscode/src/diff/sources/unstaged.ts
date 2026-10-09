@@ -23,6 +23,7 @@ import {
   readDiskBytes,
   showBlob,
   showBlobBytes,
+  stamp,
   summarize,
   type FileEntry,
 } from "./git-status"
@@ -34,11 +35,6 @@ export const UNSTAGED_DESCRIPTOR: DiffSourceDescriptor = {
   type: "unstaged",
   group: "Git",
   capabilities: { revert: false, comments: true },
-}
-
-function stamp(entry: FileEntry, before: string, after: string): FileEntry {
-  if (!imageMime(entry.file)) return entry
-  return { ...entry, stamp: `${entry.status}:${before}:${after}` }
 }
 
 export interface UnstagedDiffSourceOptions {

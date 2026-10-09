@@ -4,12 +4,14 @@ import { access, realpath } from "fs/promises"
 import { constants } from "fs"
 import { createHash } from "crypto"
 import { Schema } from "effect"
+import { parse } from "jsonc-parser"
 import z from "zod"
 import * as Log from "@opencode-ai/core/util/log"
 import { Global } from "@opencode-ai/core/global"
 import { ConfigAgent } from "@/config/agent"
 import { Config } from "@/config/config"
 import { ConfigParse } from "@/config/parse"
+import { ConfigV2Compat } from "@/config/v2-compat"
 import { ConfigVariable } from "@/config/variable"
 import { Filesystem } from "@/util/filesystem"
 import { isRecord } from "@/util/record"
@@ -225,6 +227,40 @@ export namespace KilocodeConfigOverlay {
     return base as Config.Info
   }
 
+  // A later config file that already defines a patched value wins the merge, so a write would not
+  // change the effective setting. Returns the highest-priority such file. Values are compared
+  // structurally, not via the schema, because a shadowing file may use another shape.
+  export async function shadow(input: { scope: Scope; directory: string; worktree?: string; patch: Config.Info }) {
+    const [{ sources }, { path: target }] = await Promise.all([
+      KilocodeConfigSources.list(input),
+      KilocodeConfigOverlay.target(input),
+    ])
+    const files = sources.flatMap((item) =>
+      item.path && shadowKinds.has(item.kind) ? [{ ...item, path: item.path }] : [],
+    )
+    const paths = await Promise.all(files.map((item) => canonicalize(item.path)))
+    const at = paths.lastIndexOf(target)
+    // A target that is not created yet is not listed; managed files still outrank it.
+    const later = at < 0 ? files.filter((item) => item.kind === "managed-file") : files.slice(at + 1)
+    for (const item of later.reverse()) {
+      if (!item.exists) continue
+      const text = await Bun.file(item.path).text()
+      if (clashes(parse(text), input.patch)) return { target, path: item.path }
+    }
+    return undefined
+  }
+
+  const shadowKinds = new Set(["global-file", "env-file", "project-file", "config-dir-file", "managed-file"])
+
+  // Nulls in the patch are unsets, which inherit the later value on purpose.
+  function clashes(file: unknown, patch: Record<string, unknown>): boolean {
+    if (!isRecord(file)) return false
+    return Object.entries(patch).some(([key, value]) => {
+      if (value === null || file[key] === undefined) return false
+      return isRecord(value) ? !isRecord(file[key]) || clashes(file[key], value) : true
+    })
+  }
+
   async function projectFiles(input: { directory: string; worktree?: string }) {
     const roots = await Filesystem.findUp([...files], input.directory, input.worktree, { rootFirst: true })
     const found = await Filesystem.findUp([...dirs], input.directory, input.worktree)
@@ -283,7 +319,7 @@ export namespace KilocodeConfigOverlay {
     if (!isRecord(parsed)) return {}
     for (const warning of sanitized.warnings) log.warn(warning.message, { path: warning.path })
     // kilocode_change end
-    return ConfigParse.schema(Config.Info, parsed, file) as Config.Info
+    return ConfigParse.schema(Config.Info, ConfigV2Compat.lower(parsed, file).value, file) as Config.Info
   }
 
   function field(

@@ -11,6 +11,7 @@ import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.session.ui.selection.SessionCopyTarget
 import ai.kilocode.client.session.ui.selection.SessionSelection
 import ai.kilocode.client.session.views.base.PartView
+import ai.kilocode.client.ui.md.MdCodeBlockFactory
 import ai.kilocode.client.ui.md.MdView
 import ai.kilocode.client.ui.md.MdViewFactory
 import com.intellij.openapi.util.Disposer
@@ -30,11 +31,12 @@ open class TextView(
     private val openFile: SessionFileOpener = { _, _ -> },
     private val openUrl: (String) -> Unit = {},
     selection: SessionSelection? = null,
+    code: MdCodeBlockFactory = MdCodeBlockFactory(),
 ) : PartView(), SessionCopyTarget {
 
     override val contentId: String = text.id
 
-    val md: MdView = MdViewFactory.create(SessionEditorStyle.current(), selection)
+    val md: MdView = MdViewFactory.create(SessionEditorStyle.current(), selection, code)
     private var mode: CopyMode? = null
     private val toolbar = MessageToolbar(
         text = { copyText() },
@@ -56,7 +58,6 @@ open class TextView(
         md.addLinkListener { onLink(it) }
         applyStyle(SessionEditorStyle.current())
         add(md.component, BorderLayout.CENTER)
-        add(placeholder, BorderLayout.SOUTH)
         if (text.content.isNotEmpty()) md.set(text.content.toString())
         syncContent()
         syncToolbar()
@@ -137,12 +138,16 @@ open class TextView(
         md.component.isVisible = md.markdown().isNotBlank()
     }
 
+    /**
+     * At most one text part per assistant message carries a copy toolbar, so the placeholder that reserves its
+     * slot joins the tree only while the toolbar is on rather than sitting hidden under every text part.
+     */
     @RequiresEdt
     private fun syncToolbar() {
         val on = copyText()?.isNotEmpty() == true
         toolbar.sync(on)
-        if (placeholder.isVisible == on) return
-        placeholder.isVisible = on
+        if ((placeholder.parent === this) == on) return
+        if (on) add(placeholder, BorderLayout.SOUTH) else remove(placeholder)
         refresh()
     }
 

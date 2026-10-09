@@ -1,4 +1,4 @@
-import { createMemo, type Component } from "solid-js"
+import { createEffect, createMemo, createSignal, type Component } from "solid-js"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { TooltipKeybind } from "@kilocode/kilo-ui/tooltip"
 import type {
@@ -21,7 +21,11 @@ import type { SidebarSearchItem } from "./sidebar-search"
 import { label, type Activity } from "../src/utils/session-activity"
 import { LOCAL } from "./navigate"
 import { NewWorktreeDialog } from "./NewWorktreeDialog"
-import type { ProjectStore } from "./project/store"
+import { NewProjectDialog } from "./NewProjectDialog"
+import { CloneProjectDialog } from "./CloneProjectDialog"
+import { randomColor } from "./section-colors"
+import { createProjectStore, type ProjectStore } from "./project/store"
+import { createWorktreeDelete, type WorktreeDelete } from "./worktree-delete"
 import type { ModeRouter } from "./mode-router"
 import { CaffeinationButton } from "./CaffeinationButton"
 
@@ -58,6 +62,8 @@ interface Props {
   bindings: Record<string, string>
   t: LanguageContextValue["t"]
   onSearchRef: (ref: SidebarSearchMenuRef) => void
+  onDeleteRef?: (confirm: WorktreeDelete["confirm"]) => void
+  onDelete?: (projectId: string, worktreeId: string) => void
   onShortcuts: () => void
   onHistory: (projectId: string) => void
   shortcutMap?: () => Map<string, number>
@@ -70,6 +76,41 @@ export const ProjectList: Component<Props> = (props) => {
     if (props.onSelect) return props.onSelect(target, restore)
     vscode.postMessage({ type: "agentManager.activateSelection", target, restore })
   }
+  const stores = new Map<string, ProjectStore>()
+  const store = (id: string) => {
+    if (!props.projects.some((project) => project.id === id)) return
+    if (props.store) return props.store(id)
+    const existing = stores.get(id)
+    if (existing) return existing
+    const value = createProjectStore(id)
+    stores.set(id, value)
+    return value
+  }
+  createEffect(() => {
+    if (props.store) return
+    for (const [id, state] of Object.entries(props.states)) store(id)?.applyState(state)
+  })
+  const deletion = createWorktreeDelete({
+    store,
+    project: () => props.selectedProject,
+    selection: () => props.selection,
+    busy: (projectId, id) => props.busy(projectId, id) || store(projectId)?.busy().has(id) === true,
+    blocked: (projectId, id) => props.blocked(projectId, id),
+    select,
+    remove: (projectId, worktreeId) => {
+      props.onDelete?.(projectId, worktreeId)
+      vscode.postMessage({ type: "agentManager.deleteWorktree", projectId, worktreeId })
+    },
+    reveal: (projectId, worktreeId) => {
+      if (!props.projects.find((project) => project.id === projectId)?.expanded)
+        vscode.postMessage({ type: "agentManager.setProjectExpanded", projectId, expanded: true })
+      const state = store(projectId)
+      const section = state?.worktrees().find((wt) => wt.id === worktreeId)?.sectionId
+      if (section && state?.sections().find((item) => item.id === section)?.collapsed)
+        vscode.postMessage({ type: "agentManager.toggleSectionCollapsed", projectId, sectionId: section })
+    },
+  })
+  props.onDeleteRef?.(deletion.confirm)
   const search = createMemo(() => {
     const items: SidebarSearchItem[] = []
     for (const project of props.projects) {
@@ -171,6 +212,37 @@ export const ProjectList: Component<Props> = (props) => {
       />
     ))
   }
+  const newProject = () => {
+    dialog.show(() => <NewProjectDialog onClose={() => dialog.close()} />)
+  }
+  const cloneProject = () => {
+    dialog.show(() => (
+      <CloneProjectDialog roots={props.projects.map((project) => project.root)} onClose={() => dialog.close()} />
+    ))
+  }
+  const [pendingSection, setPendingSection] = createSignal<{ project: string; ids: Set<string> }>()
+  const [renamingSection, setRenamingSection] = createSignal<string>()
+  createEffect(() => {
+    const previous = pendingSection()
+    if (!previous) return
+    const created = (props.states[previous.project]?.sections ?? []).find((section) => !previous.ids.has(section.id))
+    if (!created) return
+    setPendingSection(undefined)
+    setRenamingSection(created.id)
+  })
+  const newSection = (projectId: string, worktreeIds?: string[]) => {
+    setPendingSection({
+      project: projectId,
+      ids: new Set((props.states[projectId]?.sections ?? []).map((section) => section.id)),
+    })
+    vscode.postMessage({
+      type: "agentManager.createSection",
+      projectId,
+      name: props.t("agentManager.section.defaultName"),
+      color: randomColor(),
+      worktreeIds,
+    })
+  }
   return (
     <ProjectsSection
       projects={props.projects}
@@ -209,6 +281,8 @@ export const ProjectList: Component<Props> = (props) => {
         </>
       }
       onAdd={() => vscode.postMessage({ type: "agentManager.addProject" })}
+      onCreateProject={newProject}
+      onClone={cloneProject}
       onSelect={(projectId) =>
         // Selecting the project itself returns to where the user left off in it;
         // the extension resolves its persisted target authoritatively.
@@ -216,9 +290,18 @@ export const ProjectList: Component<Props> = (props) => {
       }
       onRemove={(projectId) => vscode.postMessage({ type: "agentManager.removeProject", projectId })}
       onHistory={props.onHistory}
+      onNew={newWorktree}
+      onCreate={(projectId) => vscode.postMessage({ type: "agentManager.createWorktree", projectId })}
+      onSection={(projectId) => newSection(projectId)}
+      onSettings={(projectId) => vscode.postMessage({ type: "openSettingsPanel", tab: "agentManager", projectId })}
+      bindings={props.bindings}
+      baseBranch={(projectId) =>
+        props.states[projectId]?.defaultBaseBranch ?? props.local[projectId]?.branch ?? props.t("common.default")
+      }
       onExpand={(projectId, expanded) =>
         vscode.postMessage({ type: "agentManager.setProjectExpanded", projectId, expanded })
       }
+      onReorder={(order) => vscode.postMessage({ type: "agentManager.setProjectOrder", order })}
       count={(projectId) => {
         const state = props.states[projectId]
         return state ? state.worktrees.length + 1 : undefined
@@ -227,7 +310,8 @@ export const ProjectList: Component<Props> = (props) => {
         <ProjectSidebarBody
           project={project}
           state={props.states[project.id]}
-          store={props.store?.(project.id)}
+          store={store(project.id)!}
+          deletion={deletion}
           busy={(id) => props.busy(project.id, id)}
           blocked={(id) => props.blocked(project.id, id)}
           activityFor={(id) => props.activityFor(project.id, id)}
@@ -244,7 +328,9 @@ export const ProjectList: Component<Props> = (props) => {
           onSelectWorktree={(projectId, worktreeId) => select({ projectId, kind: "worktree", worktreeId })}
           onOpenComments={props.onOpenComments}
           onOpenPR={props.onOpenPR}
-          onNewWorktree={newWorktree}
+          onCreateSection={(worktreeIds) => newSection(project.id, worktreeIds)}
+          renamingSection={renamingSection}
+          onRenameEnd={() => setRenamingSection(undefined)}
           shortcutMap={props.shortcutMap}
         />
       )}

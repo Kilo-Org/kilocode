@@ -2,6 +2,7 @@ import fuzzysort from "fuzzysort"
 import type { FileAttachment, FileSearchItem, SessionSearchItem } from "../types/messages"
 import { GIT_CHANGES_MENTION } from "./git-changes-context-utils"
 import { TERMINAL_MENTION } from "./terminal-context-utils"
+import { escapeRegExp } from "../utils/escape-regexp"
 
 /**
  * The in-progress `@mention` query ending at the cursor.
@@ -23,6 +24,16 @@ export type WorktreeReference = {
   sessions: { id: string; title?: string }[]
   disabled: boolean
 }
+
+/**
+ * A mention inserted directly at the caret without an open `@` query, for
+ * example when a session tab or worktree card is dropped on the prompt.
+ */
+export type PromptMentionDrop =
+  | { kind: "worktree"; worktree: WorktreeReference }
+  | { kind: "session"; session: SessionSearchItem }
+  | { kind: "terminal" }
+  | { kind: "file"; path: string }
 
 export const PAST_CHATS_MENTION = "past-chats"
 
@@ -92,9 +103,9 @@ type MentionEntry = (typeof entries)[number]["result"]
 
 export type MentionResult =
   | MentionEntry
-  | { type: "file"; value: string }
-  | { type: "opened-file"; value: string }
-  | { type: "folder"; value: string }
+  | { type: "file"; value: string; root?: string; relative?: string }
+  | { type: "opened-file"; value: string; root?: string; relative?: string }
+  | { type: "folder"; value: string; root?: string; relative?: string }
   | { type: "session"; value: string; session: SessionSearchItem }
 
 /**
@@ -127,8 +138,18 @@ export const MODEL_RESULT = model.result
  * but is not a prefix of any alias, and the two answers must not disagree.
  */
 export function filePickerNamed(query: string): boolean {
+  return mentionNamed(query, FILE_PICKER_RESULT)
+}
+
+/**
+ * Whether the query reads as this result, on the same scale the ranking uses.
+ * Files are ranked without this floor because the file search already chose
+ * them, but a spaced query that only scatters across a path (`agents asdf` on
+ * `agents/skills/dsf.md`) is prose, and Enter must not trade the draft for it.
+ */
+export function mentionNamed(query: string, item: MentionResult): boolean {
   if (!normalize(query)) return false
-  return score(query, FILE_PICKER_RESULT) >= FLOOR
+  return score(query, item) >= FLOOR
 }
 
 export function isMentionEntry(item: MentionResult): boolean {
@@ -152,6 +173,13 @@ function labels(item: MentionResult): string[] {
   const entry = entries.find((candidate) => candidate.result.type === item.type)
   if (entry) return [...("label" in item ? [item.label] : []), item.value, ...entry.aliases]
   if (item.type === "session") return [item.session.title, item.session.worktreeName ?? ""].filter(Boolean)
+  // Files in another workspace folder carry an absolute path so they can be
+  // mentioned without being auto-attached. Score them on their path within that
+  // folder: including the filesystem prefix would let a query match a username
+  // or a parent directory on every file under it.
+  if (item.type === "file" || item.type === "folder" || item.type === "opened-file") {
+    return [item.relative ?? item.value]
+  }
   return [item.value]
 }
 
@@ -217,9 +245,10 @@ export function buildMentionResults(
   const references = entries.filter((entry) => entry.gate === null || gates[entry.gate]).map((entry) => entry.result)
   const results: MentionResult[] = items.map((item) => {
     if (typeof item === "string") return { type: "file", value: item }
-    if (item.type === "folder") return { type: "folder", value: item.path }
-    if (item.type === "opened-file") return { type: "opened-file", value: item.path }
-    return { type: "file", value: item.path }
+    const owner = { ...(item.root ? { root: item.root } : {}), ...(item.relative ? { relative: item.relative } : {}) }
+    if (item.type === "folder") return { type: "folder", value: item.path, ...owner }
+    if (item.type === "opened-file") return { type: "opened-file", value: item.path, ...owner }
+    return { type: "file", value: item.path, ...owner }
   })
   return rankMentionResults(query, [...references, ...sessions, ...results])
 }
@@ -265,28 +294,28 @@ export function modelReferenceToken(providerID: string, modelID: string) {
 }
 
 /**
- * Whether an in-progress query continues past a mention that was inserted at
- * this same `@`, meaning the user moved on to writing prose rather than typing
- * a longer filename. Because a query may contain spaces, `@notes.md and then`
- * still matches the mention trigger; this is what tells the two apart.
+ * Whether an in-progress query continues past a completed mention, meaning the
+ * user moved on to writing prose rather than typing a longer filename. Because
+ * a query may contain spaces, `@notes.md and then` still matches the mention
+ * trigger; this is what tells the two apart.
  *
- * `token` must be the mention actually inserted at this `@`, not merely a known
- * path: paths stay in the mention hook's sticky known set for the whole
- * session, so testing every known token would let a short earlier mention such
- * as `my` close the search for a genuinely new `@my report.txt`.
- *
- * `tokens` guards the remaining ambiguity: while the query is still growing
- * toward a longer known path, the user is completing a filename rather than
- * writing prose, so the search stays open.
+ * `tokens` are everything the query could stand for: the mentions present in
+ * the text, the files and folders currently on offer, and the built-in
+ * entries. A token that the query extends past whitespace settles it, whether
+ * it was picked from the dropdown or typed by hand. A longer token that still
+ * starts with the whole query keeps the search open instead: the user may be
+ * completing `my report.txt` after an earlier `@my`.
  */
-export function mentionSettled(query: string, token: string | undefined, tokens: Set<string>): boolean {
-  if (!token || query.length <= token.length) return false
-  if (!query.startsWith(token)) return false
-  if (!/\s/.test(query[token.length] ?? "")) return false
-  for (const known of tokens) {
-    if (known.length > query.length && known.startsWith(query)) return false
+export function mentionSettled(query: string, tokens: Set<string>): boolean {
+  for (const token of tokens) {
+    if (token.length > query.length && token.startsWith(query)) return false
   }
-  return true
+  for (const token of tokens) {
+    if (!token || query.length <= token.length) continue
+    if (!query.startsWith(token)) continue
+    if (/\s/.test(query[token.length] ?? "")) return true
+  }
+  return false
 }
 
 export function filterMentionResults(query: string, items: MentionResult[]): MentionResult[] {
@@ -591,4 +620,33 @@ export function buildSessionAttachments(text: string, mentioned: Map<string, Ses
     })
   }
   return result
+}
+
+export interface MentionSegment {
+  text: string
+  mention: boolean
+}
+
+/**
+ * Split prompt text into plain and mention segments for the highlight overlay.
+ * Tokens are matched longest first so a title that contains another token still
+ * highlights as one mention. A leading `@` is required, so bare tokens in prose
+ * stay plain.
+ */
+export function segmentMentionText(text: string, tokens: Set<string>): MentionSegment[] {
+  const list = [...tokens].filter((token) => token.length > 0).sort((a, b) => b.length - a.length)
+  if (list.length === 0 || !text) return text ? [{ text, mention: false }] : []
+  const escaped = list.map((token) => escapeRegExp(token))
+  const pattern = new RegExp(`@(?:${escaped.join("|")})`, "g")
+  const segments: MentionSegment[] = []
+  let last = 0
+  for (const match of text.matchAll(pattern)) {
+    const index = match.index ?? 0
+    const plain = text.slice(last, index)
+    if (plain) segments.push({ text: plain, mention: false })
+    segments.push({ text: match[0], mention: true })
+    last = index + match[0].length
+  }
+  if (last < text.length) segments.push({ text: text.slice(last), mention: false })
+  return segments
 }

@@ -1,4 +1,3 @@
-// kilocode_change - new file
 import path from "path"
 import { type ParseError, parse, printParseErrorCode } from "jsonc-parser"
 import { Schema } from "effect"
@@ -6,10 +5,11 @@ import { ConfigProtection } from "./permission/config-paths"
 import { ConfigMarkdown } from "@/config/markdown"
 import { ConfigParse } from "@/config/parse"
 import { Config } from "@/config/config"
+import { Excess } from "@/kilocode/config/excess"
 import { ConfigAgentV1 } from "@opencode-ai/core/v1/config/agent"
 import { ConfigCommandV1 } from "@opencode-ai/core/v1/config/command"
 import { ConfigErrorV1, FrontmatterError } from "@opencode-ai/core/v1/config/error"
-import { Instance } from "@/kilocode/instance"
+import { Instance, capture } from "@/kilocode/instance"
 import { Filesystem } from "@/util/filesystem"
 
 export namespace ConfigValidation {
@@ -49,6 +49,8 @@ export namespace ConfigValidation {
     }
 
     const issues = (() => {
+      const keys = Excess.keys(Config.Info, data)
+      if (keys.length) return Excess.issue(keys)
       try {
         ConfigParse.schema(Config.Info, data, filepath)
         return undefined
@@ -64,7 +66,7 @@ export namespace ConfigValidation {
     return `\n\n<config_validation>\nConfig file validated successfully.\n</config_validation>`
   }
 
-  async function markdown(filepath: string): Promise<string> {
+  async function markdown(filepath: string, ctx = capture()) {
     const dir = path.basename(path.dirname(filepath))
 
     // Determine schema from parent directory
@@ -74,11 +76,11 @@ export namespace ConfigValidation {
     let md: Awaited<ReturnType<typeof ConfigMarkdown.parse>>
     try {
       const trusted = path.isAbsolute(filepath) && ConfigProtection.isAbsolute(filepath)
-      const ctx = Instance.current
-      const root = ctx.worktree === "/" ? ctx.directory : ctx.worktree
+      const root = ctx == null ? undefined : ctx.worktree === "/" ? ctx.directory : ctx.worktree
+      if (!trusted && root == null) return ""
       md = await ConfigMarkdown.parse(filepath, {
         trusted,
-        fileScope: trusted ? undefined : { root, source: filepath },
+        fileScope: trusted || root == null ? undefined : { root, source: filepath },
       })
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (e: any) {
@@ -154,6 +156,7 @@ export namespace ConfigValidation {
    */
   export async function check(filepath: string): Promise<string> {
     if (!isConfig(filepath)) return ""
+    const ctx = capture()
 
     const ext = path.extname(filepath).toLowerCase()
 
@@ -166,7 +169,7 @@ export namespace ConfigValidation {
     }
 
     const prefix = await existing()
-    const validation = JSONC_EXT.has(ext) ? await jsonc(filepath) : ext === ".md" ? await markdown(filepath) : ""
+    const validation = JSONC_EXT.has(ext) ? await jsonc(filepath) : ext === ".md" ? await markdown(filepath, ctx) : ""
 
     if (!validation) return ""
 

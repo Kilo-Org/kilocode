@@ -42,7 +42,7 @@ const it = testEffect(
     ]),
   ),
 )
-const options = { config: { experimental: { shared_agent_board: true }, snapshot: false } }
+const options = { config: { shared_agent_board: true, snapshot: false } }
 
 const seed = Effect.fn("BoardToolTest.seed")(function* (title: string) {
   const sessions = yield* Session.Service
@@ -124,7 +124,7 @@ describe("shared board tools", () => {
           expect(read.description).toContain("do not reread solely because a Task")
           expect(post.description).toContain("Include evidence with candidate results")
           expect(post.description).toContain("Respect requested independence and communication limits")
-          expect(post.description).toContain("including parents, children, and background siblings, not yourself")
+          expect(post.description).toContain("including parents, children, and background siblings")
           expect(post.description).toContain("ALL only for team-wide updates")
           expect(post.description).toContain("Posts do not wake, assign, cancel, or resume workers")
           expect(post.description).toContain(
@@ -202,9 +202,80 @@ describe("shared board tools", () => {
           if (Exit.isFailure(invalid))
             expect(Cause.pretty(invalid.cause)).toContain("Reply message is not on this board")
           const cursor = yield* Effect.exit(read.execute({ since: "board_missing" }, ctx))
-          expect(Exit.isFailure(cursor)).toBe(true)
-          if (Exit.isFailure(cursor)) expect(Cause.pretty(cursor.cause)).toContain("Board cursor is not valid")
+          expect(Exit.isFailure(cursor)).toBe(false)
+          if (Exit.isFailure(cursor))
+            throw new Error(`board_read must recover from stale cursors: ${Cause.pretty(cursor.cause)}`)
+          const replayed = JSON.parse(cursor.value.output).messages as { id: string }[]
+          expect(replayed).toHaveLength(2)
+          expect(cursor.value.metadata.cursor).toBeDefined()
+          expect(cursor.value.metadata.recovered).toBe(true)
           expect((yield* BoardStore.read({ sessionID: root.session.id })).messages).toHaveLength(2)
+        }),
+      options,
+    ),
+  )
+
+  it.live("recovers from a stale board cursor instead of failing the sub-agent", () =>
+    provideTmpdirInstance(
+      () =>
+        Effect.gen(function* () {
+          const sessions = yield* Session.Service
+          const root = yield* seed("Stale cursor recovery")
+          const child = yield* sessions.create({ parentID: root.session.id, title: "Reviewer" })
+          const ctx = yield* context(child.id, MessageID.ascending())
+          const post = yield* Tool.init(yield* BoardPostTool)
+          const read = yield* Tool.init(yield* BoardReadTool)
+
+          const first = yield* post.execute({ to: "ALL", type: "INFO", body: "Initial finding" }, ctx)
+          yield* post.execute(
+            { to: "main", type: "RESULT", body: "Conclusion", reply_to: first.metadata.id },
+            { ...ctx, callID: "follow-up" },
+          )
+
+          const other = yield* seed("Foreign cursor")
+          const foreign = yield* BoardStore.post({
+            sessionID: other.session.id,
+            messageID: MessageID.ascending(),
+            callID: "foreign-post",
+            to: "ALL",
+            type: "INFO",
+            body: "Foreign note",
+          })
+
+          const recovered = yield* Effect.exit(read.execute({ since: foreign.id, limit: null }, ctx))
+          if (Exit.isFailure(recovered)) {
+            throw new Error(`board_read must replay from the beginning: ${Cause.pretty(recovered.cause)}`)
+          }
+          expect(JSON.parse(recovered.value.output)).toMatchObject({
+            messages: [{ body: "Initial finding" }, { body: "Conclusion" }],
+            recovered: true,
+          })
+          expect(recovered.value.metadata.recovered).toBe(true)
+          const cursor = recovered.value.metadata.cursor
+          if (!cursor) throw new Error("Recovered board_read must return a cursor")
+
+          const consumed = yield* read.execute({ since: cursor, limit: null }, ctx)
+          expect(JSON.parse(consumed.output).messages).toEqual([])
+          expect(consumed.metadata.recovered).toBeUndefined()
+
+          yield* BoardStore.post({
+            sessionID: child.id,
+            messageID: MessageID.ascending(),
+            callID: "next-post",
+            to: "main",
+            type: "INFO",
+            body: "Next note",
+          })
+          const next = yield* read.execute({ since: cursor, limit: null }, ctx)
+          expect(JSON.parse(next.output).messages).toMatchObject([{ body: "Next note" }])
+          expect(next.metadata.recovered).toBeUndefined()
+
+          const empty = yield* seed("Empty stale cursor recovery")
+          const emptyCtx = yield* context(empty.session.id, empty.message)
+          const emptyResult = yield* read.execute({ since: foreign.id, limit: null }, emptyCtx)
+          expect(JSON.parse(emptyResult.output)).toMatchObject({ messages: [], recovered: true })
+          expect(emptyResult.metadata.cursor).toBeUndefined()
+          expect(emptyResult.metadata.recovered).toBe(true)
         }),
       options,
     ),
@@ -247,7 +318,10 @@ describe("shared board tools", () => {
           expect(yield* observed).toBe("unknown")
           const self = yield* Effect.exit(send("main", "main"))
           expect(self._tag).toBe("Failure")
-          if (Exit.isFailure(self)) expect(Cause.pretty(self.cause)).toContain("cannot be sent to yourself")
+          if (Exit.isFailure(self)) {
+            expect(Cause.pretty(self.cause)).toContain("cannot be sent to yourself")
+            expect(Cause.pretty(self.cause)).toContain("belong in your final response")
+          }
           const own = yield* Effect.exit(
             post.execute(
               { to: child.id, type: "INFO", body: "Note to self" },
@@ -256,6 +330,24 @@ describe("shared board tools", () => {
           )
           expect(own._tag).toBe("Failure")
           if (Exit.isFailure(own)) expect(Cause.pretty(own.cause)).toContain("cannot be sent to yourself")
+          const roster = yield* read.execute({}, ctx)
+          const rosterRows = JSON.parse(roster.output).participants as Array<{
+            id: string
+            sessionID: string
+            self?: boolean
+          }>
+          const ownRow = rosterRows.find((row) => row.sessionID === root.session.id)
+          const childRow = rosterRows.find((row) => row.sessionID === child.id)
+          expect(ownRow).toMatchObject({ id: "main", self: true })
+          expect(childRow?.self).toBeUndefined()
+          const childRoster = yield* read.execute({}, yield* context(child.id, MessageID.ascending()))
+          const childRows = JSON.parse(childRoster.output).participants as Array<{
+            id: string
+            sessionID: string
+            self?: boolean
+          }>
+          expect(childRows.find((row) => row.sessionID === child.id)?.self).toBe(true)
+          expect(childRows.find((row) => row.id === "main")?.self).toBeUndefined()
           yield* jobs.start({ id: child.id, type: "task", run: Effect.never })
           const running = yield* send(child.id, "running")
           expect(JSON.parse(running.output)).not.toHaveProperty("warning")
@@ -377,20 +469,33 @@ describe("shared board tools", () => {
     ),
   )
 
-  it.live("is absent by default and rejects direct execution while disabled", () =>
+  it.live("is enabled by default", () =>
     provideTmpdirInstance(() =>
       Effect.gen(function* () {
         const registry = yield* ToolRegistry.Service
-        expect(yield* registry.ids()).not.toContain("board_read")
-        expect(yield* registry.ids()).not.toContain("board_post")
-        const root = yield* seed("Disabled")
-        const ctx = yield* context(root.session.id, root.message)
-        const post = yield* Tool.init(yield* BoardPostTool)
-        const result = yield* Effect.exit(post.execute({ to: "ALL", type: "INFO", body: "Not posted" }, ctx))
-        expect(Exit.isFailure(result)).toBe(true)
-        if (Exit.isFailure(result)) expect(Cause.pretty(result.cause)).toContain("shared agent board is disabled")
-        expect((yield* BoardStore.read({ sessionID: root.session.id })).messages).toHaveLength(0)
+        const ids = yield* registry.ids()
+        expect(ids).toContain("board_read")
+        expect(ids).toContain("board_post")
       }),
+    ),
+  )
+
+  it.live("is absent and rejects direct execution when config disables it", () =>
+    provideTmpdirInstance(
+      () =>
+        Effect.gen(function* () {
+          const registry = yield* ToolRegistry.Service
+          expect(yield* registry.ids()).not.toContain("board_read")
+          expect(yield* registry.ids()).not.toContain("board_post")
+          const root = yield* seed("Disabled")
+          const ctx = yield* context(root.session.id, root.message)
+          const post = yield* Tool.init(yield* BoardPostTool)
+          const result = yield* Effect.exit(post.execute({ to: "ALL", type: "INFO", body: "Not posted" }, ctx))
+          expect(Exit.isFailure(result)).toBe(true)
+          if (Exit.isFailure(result)) expect(Cause.pretty(result.cause)).toContain("shared agent board is disabled")
+          expect((yield* BoardStore.read({ sessionID: root.session.id })).messages).toHaveLength(0)
+        }),
+      { config: { shared_agent_board: false } },
     ),
   )
 
@@ -453,7 +558,7 @@ describe("shared board tools", () => {
           expect(Exit.isFailure(result)).toBe(true)
         }),
       {
-        config: { experimental: { shared_agent_board: true }, permission: { board_read: "deny", board_post: "deny" } },
+        config: { shared_agent_board: true, permission: { board_read: "deny", board_post: "deny" } },
       },
     ),
   )

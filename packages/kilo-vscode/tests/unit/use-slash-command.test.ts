@@ -139,7 +139,7 @@ describe("useSlashCommand sandbox action", () => {
     ctx.dispose()
   })
 
-  it("can restrict the menu to worktree configuration commands", () => {
+  it("restricts client actions with include without hiding server commands", () => {
     const ctx = setup(() => {}, { include: new Set(["models", "agents", "variant", "sandbox"]) })
 
     ctx.fire({
@@ -149,11 +149,16 @@ describe("useSlashCommand sandbox action", () => {
         { name: "models", description: "Server model command", hints: [] },
       ],
     })
+    // Server commands stay available so worktree-independent commands can run.
     ctx.slash.onInput("/merge", 6)
-    expect(ctx.slash.results()).toEqual([])
+    expect(ctx.slash.results().map((command) => command.name)).toEqual(["merge"])
 
     ctx.slash.onInput("/models", 7)
     expect(ctx.slash.results().map((command) => command.name)).toEqual(["models"])
+
+    // Client actions outside the include set stay hidden.
+    ctx.slash.onInput("/review", 7)
+    expect(ctx.slash.results()).toEqual([])
     ctx.dispose()
   })
 
@@ -392,6 +397,71 @@ describe("useSlashCommand sandbox action", () => {
     expect(matches[0]?.agent).toBe("code")
     expect(matches[0]?.model).toBe("openai/gpt-5.6-luna-fast")
     expect(matches[0]?.variant).toBe("xhigh")
+    ctx.dispose()
+  })
+})
+
+// Issue #14096: skills were listed as indistinguishable "Commands" rows.
+describe("skill entries in the slash menu", () => {
+  const loaded = (ctx: ReturnType<typeof setup>) =>
+    ctx.fire({
+      type: "commandsLoaded",
+      commands: [
+        { name: "foo", description: "custom command", source: "command", hints: [] },
+        { name: "foo", description: "skill with the same name", source: "skill", hints: [] },
+        { name: "grill", description: "a plain skill", source: "skill", hints: [] },
+        { name: "grill", description: "duplicate skill row", source: "skill", hints: [] },
+        { name: "notes", description: "mcp prompt", source: "mcp", hints: [] },
+      ],
+    })
+
+  it("orders skills after commands so the dropdown can render a Skills group", () => {
+    const ctx = setup(() => {})
+    loaded(ctx)
+    ctx.slash.onInput("/", 1)
+    const server = ctx.slash.results().filter((cmd) => !cmd.action)
+    const sources = server.map((cmd) => cmd.source ?? "command")
+    const first = sources.indexOf("skill")
+    expect(first).toBeGreaterThan(0)
+    expect(sources.slice(first).every((source) => source === "skill")).toBe(true)
+    expect(sources.slice(0, first).every((source) => source !== "skill")).toBe(true)
+    ctx.dispose()
+  })
+
+  it("suffixes a skill that clashes with a command and drops exact duplicate rows", () => {
+    const ctx = setup(() => {})
+    loaded(ctx)
+    ctx.slash.onInput("/", 1)
+    const rows = ctx.slash
+      .results()
+      .filter((cmd) => !cmd.action)
+      .map((cmd) => `${cmd.source ?? "command"}:${cmd.name}`)
+    expect(rows.filter((row) => row.endsWith(":foo"))).toEqual(["command:foo"])
+    expect(rows.filter((row) => row.startsWith("skill:"))).toEqual(["skill:foo:skill", "skill:grill"])
+    ctx.dispose()
+  })
+
+  it("inserts /name:skill when the clashing skill row is selected", () => {
+    const ctx = setup(() => {})
+    loaded(ctx)
+    let text = ""
+    const textarea = { value: "/foo", setSelectionRange: () => {}, focus: () => {} } as unknown as HTMLTextAreaElement
+    ctx.slash.onInput("/foo", 4)
+    const entry = ctx.slash.results().find((cmd) => cmd.source === "skill" && cmd.name.startsWith("foo"))!
+    ctx.slash.select(entry, textarea, (value) => (text = value))
+    expect(text.startsWith("/foo:skill")).toBe(true)
+    ctx.dispose()
+  })
+
+  it("still matches a clashing skill by its plain name", () => {
+    const ctx = setup(() => {})
+    loaded(ctx)
+    ctx.slash.onInput("/foo", 4)
+    const names = ctx.slash
+      .results()
+      .filter((cmd) => !cmd.action)
+      .map((cmd) => cmd.name)
+    expect(names).toEqual(["foo", "foo:skill"])
     ctx.dispose()
   })
 })

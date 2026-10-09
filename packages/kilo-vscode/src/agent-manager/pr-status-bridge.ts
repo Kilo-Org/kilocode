@@ -38,6 +38,8 @@ interface PRBridgeHost {
   conflicts?: (cwd: string, remote: string, base: string, head: string) => Promise<string[]>
   getPRMergeMethod?: (repo: string) => PRMergeMethod | undefined
   savePRMergeMethod?: (repo: string, method: PRMergeMethod) => Promise<void>
+  /** Worktrees the health reconcile says cannot answer; skipped instead of polled. */
+  isUnhealthy?: (worktreeId: string) => boolean
 }
 
 /** Minimal panel surface needed by the bridge (subset of PanelContext). */
@@ -116,6 +118,7 @@ export class PRStatusBridge {
     conflicts?: (cwd: string, remote: string, base: string, head: string) => Promise<string[]>
     getPRMergeMethod?: (repo: string) => PRMergeMethod | undefined
     savePRMergeMethod?: (repo: string, method: PRMergeMethod) => Promise<void>
+    isUnhealthy?: (worktreeId: string) => boolean
   }): PRStatusBridge {
     return new PRStatusBridge(opts)
   }
@@ -363,6 +366,7 @@ function bridgePollerOpts(bridge: PRStatusBridge, host: PRBridgeHost) {
     },
     log: (...args: unknown[]) => host.log(...args),
     getPRMergeMethod: host.getPRMergeMethod,
+    isUnhealthy: host.isUnhealthy,
   }
 }
 

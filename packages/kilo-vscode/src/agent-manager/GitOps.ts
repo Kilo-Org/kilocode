@@ -3,7 +3,7 @@ import * as os from "os"
 import * as fs from "fs/promises"
 import { spawn } from "../util/process"
 import type { GitExecutable } from "../util/git-executable"
-import simpleGit from "simple-git"
+import { simpleGit } from "simple-git"
 import {
   parseWorktreeList,
   normalizePath,
@@ -91,6 +91,7 @@ export function nonInteractiveEnv(): NodeJS.ProcessEnv {
   delete env.SSH_ASKPASS
   delete env.GIT_ASKPASS
   delete env.EDITOR
+  delete env.VISUAL
   delete env.GIT_EDITOR
   delete env.GIT_SEQUENCE_EDITOR
   delete env.PAGER
@@ -314,12 +315,6 @@ export class GitOps {
 
     const result = await this.exec(args, cwd, { env: nonInteractiveEnv(), timeout: 5000 })
     return result.code === 0 ? result.stdout.trim() : ""
-  }
-
-  async hasRemoteRef(cwd: string, ref: string): Promise<boolean> {
-    return this.raw(["rev-parse", "--verify", "--quiet", `refs/remotes/${ref}`], cwd)
-      .then(() => true)
-      .catch(() => false)
   }
 
   /**
@@ -652,7 +647,7 @@ export class GitOps {
   execGit(
     args: string[],
     cwd: string,
-    options?: { stdin?: string; signal?: AbortSignal; priority?: boolean },
+    options?: { stdin?: string; signal?: AbortSignal; priority?: boolean; env?: NodeJS.ProcessEnv },
   ): Promise<ExecResult> {
     return this.exec(args, cwd, options)
   }

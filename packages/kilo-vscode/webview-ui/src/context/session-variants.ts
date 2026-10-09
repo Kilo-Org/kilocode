@@ -1,6 +1,13 @@
 import type { Accessor } from "solid-js"
 import type { AgentConfig, ExtensionMessage, ModelSelection } from "../types/messages"
-import { DEFAULT_VARIANT, getAgentVariant, getVariant, preserveVariant, variantKey } from "./session-variant-store"
+import {
+  DEFAULT_VARIANT,
+  getAgentVariant,
+  getVariant,
+  legacyVariantKey,
+  preserveVariant,
+  variantKey,
+} from "./session-variant-store"
 
 interface Model {
   variants?: Record<string, unknown>
@@ -12,12 +19,14 @@ interface Options {
   selections: Accessor<Record<string, string>>
   set: (key: string, value: string) => void
   selected: (sessionID?: string) => ModelSelection | null
-  session: Accessor<string | undefined>
+  session: Accessor<string>
   agent: (sessionID?: string) => string
   config: (agent: string) => Pick<AgentConfig, "model" | "variant"> | undefined
   find: (selection: ModelSelection) => Model | undefined
   post: (message: Message) => void
   listen: (handler: (message: ExtensionMessage) => void) => () => void
+  draft: (id: string) => boolean
+  remember: (agent: string, model: ModelSelection, variant: string) => void
 }
 
 export function createSessionVariants(options: Options) {
@@ -51,27 +60,39 @@ export function createSessionVariants(options: Options) {
   const request = (sessionID?: string) =>
     current(sessionID) ?? (list(sessionID).length > 0 ? DEFAULT_VARIANT : undefined)
 
+  // The raw choice behind current(), in the same order: scoped, then the
+  // configured variant, then remembered, then legacy. An explicit Default stays
+  // "" so carry and the worktree dialog can honor it.
+  const saved = (selection: ModelSelection, name: string, sessionID?: string) => {
+    const scoped = sessionID ? options.selections()[variantKey(selection, name, sessionID)] : undefined
+    if (scoped !== undefined) return scoped
+    const preset = configured(name, selection)
+    if (preset && Object.keys(options.find(selection)?.variants ?? {}).includes(preset)) return preset
+    return options.selections()[variantKey(selection, name)] ?? options.selections()[legacyVariantKey(selection)]
+  }
+
+  const choice = (sessionID?: string) => {
+    const id = sessionID ?? options.session()
+    const model = options.selected(id)
+    return model ? saved(model, options.agent(id), id) : undefined
+  }
+
   const select = (value: string | undefined, sessionID?: string) => {
     const sid = sessionID ?? options.session()
     const selection = options.selected(sid)
     if (!selection) return
-    const key = variantKey(selection, options.agent(sid), sid)
     const next = value ?? DEFAULT_VARIANT
-    options.set(key, next)
-    if (!sid) options.post({ type: "persistVariant", key, value: next })
+    options.set(variantKey(selection, options.agent(sid), sid), next)
+    if (options.draft(sid)) options.remember(options.agent(sid), selection, next)
   }
 
   const carry = (selection: ModelSelection, value: string | undefined, name: string, sessionID?: string) => {
     const list = Object.keys(options.find(selection)?.variants ?? {})
     if (list.length === 0) return
-    // An absent value means the model default, not an explicit user choice.
-    // Do not write a default sentinel here because it would shadow a cached
-    // agent-level variant when this selection is resolved for a new session.
-    const next = preserveVariant(value, list)
+    // Undefined leaves the target's effort intact; an explicit Default must be carried.
+    const next = value === DEFAULT_VARIANT ? DEFAULT_VARIANT : preserveVariant(value, list)
     if (next === undefined) return
-    const key = variantKey(selection, name, sessionID)
-    options.set(key, next)
-    if (!sessionID) options.post({ type: "persistVariant", key, value: next })
+    options.set(variantKey(selection, name, sessionID), next)
   }
 
   const load = () => {
@@ -86,5 +107,5 @@ export function createSessionVariants(options: Options) {
     return unsub
   }
 
-  return { carry, list, agent, current, request, select, load }
+  return { carry, list, agent, current, request, saved, choice, select, load }
 }

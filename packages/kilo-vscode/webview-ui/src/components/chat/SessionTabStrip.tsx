@@ -4,7 +4,8 @@ import { For, Show, createMemo, createSignal, type Component, type JSX } from "s
 import { useLanguage } from "../../context/language"
 import { useLocalTabs } from "../../context/local-tabs"
 import { useSession } from "../../context/session"
-import { isPendingTab } from "../../utils/local-tabs"
+import { adjacentTabHint, isPendingTab } from "../../utils/local-tabs"
+import { useConfig } from "../../context/config"
 import { useTabScroll } from "../../utils/tab-scroll"
 import { focusPrompt, focusSelectedTab, focusTabElement, handleTabKey } from "../../utils/tab-navigation"
 import { setTabWidths } from "../../utils/tab-widths"
@@ -13,13 +14,15 @@ import { useVSCode } from "../../context/vscode"
 import { SessionTab } from "./SessionTab"
 import { SessionTabMenu } from "./SessionTabMenu"
 import { SessionTabSwitcher } from "./SessionTabSwitcher"
-import { ConstrainDragYAxis, SortableTabContainer } from "./TabDnd"
+import { ConstrainDragYAxis, SortableTabContainer, outsideTabBar } from "./TabDnd"
+import { beginPromptMentionDrop, endPromptMentionDrop, sessionDrop } from "../../utils/prompt-mention-drop"
 
 export const SessionTabStrip: Component = () => {
   const tabs = useLocalTabs()
   const session = useSession()
   const language = useLanguage()
   const vscode = useVSCode()
+  const config = useConfig()
   const [dragging, setDragging] = createSignal<string>()
   const [announcement, setAnnouncement] = createSignal("")
   if (!tabs) return null
@@ -45,7 +48,7 @@ export const SessionTabStrip: Component = () => {
       (event.key === "ArrowLeft" || event.key === "ArrowRight")
     ) {
       event.preventDefault()
-      const ids = tabs.ids()
+      const ids = tabs.display()
       const target = tabs.move(id, event.key === "ArrowLeft" ? -1 : 1)
       if (target === undefined) return
       tabs.persist()
@@ -53,11 +56,11 @@ export const SessionTabStrip: Component = () => {
       focusTabElement(root, id)
       return
     }
-    handleTabKey({ ids: tabs.ids(), id, event, select: tabs.select, root })
+    handleTabKey({ ids: tabs.display(), id, event, select: tabs.select, root })
   }
-  const scroll = useTabScroll(tabs.ids, tabs.active)
+  const scroll = useTabScroll(tabs.display, tabs.active)
   const rows = createMemo(() =>
-    tabs.ids().map((id) => ({
+    tabs.display().map((id) => ({
       id,
       title: title(id),
       active: tabs.active() === id,
@@ -81,18 +84,32 @@ export const SessionTabStrip: Component = () => {
     focusTabElement(document, id, focusPrompt)
     requestAnimationFrame(release)
   }
+  const closeRight = (id: string) => {
+    freeze()
+    tabs.closeToRight(id)
+    if (tabs.active() === id) focusTabElement(document, id, focusPrompt)
+    else focusSelectedTab(document, focusPrompt)
+    requestAnimationFrame(release)
+  }
   const dragStart = (event: DragEvent) => {
     const id = event.draggable?.id
     if (typeof id !== "string") return
     freeze()
     setDragging(id)
+    if (isPendingTab(id)) return
+    const item = items().get(id)
+    beginPromptMentionDrop(sessionDrop(item ?? { id }))
   }
   const dragOver = (event: DragEvent) => {
+    // Once the tab is below the bar it is on its way to the prompt, so stop
+    // reordering the tabs under it.
+    if (outsideTabBar(event)) return
     const from = event.draggable?.id
     const to = event.droppable?.id
     if (typeof from === "string" && typeof to === "string") tabs.reorder(from, to)
   }
   const dragEnd = () => {
+    endPromptMentionDrop()
     setDragging(undefined)
     release()
     tabs.persist()
@@ -121,10 +138,10 @@ export const SessionTabStrip: Component = () => {
               class="am-tab-list"
               ref={scroll.setRef}
               role="tablist"
-              style={{ "--tab-count": `${tabs.ids().length}` } as JSX.CSSProperties}
+              style={{ "--tab-count": `${tabs.display().length}` } as JSX.CSSProperties}
             >
-              <SortableProvider ids={tabs.ids()}>
-                <For each={tabs.ids()}>
+              <SortableProvider ids={tabs.display()}>
+                <For each={tabs.display()}>
                   {(id) => (
                     <SortableTabContainer id={id}>
                       <SessionTabMenu
@@ -135,13 +152,19 @@ export const SessionTabStrip: Component = () => {
                             : undefined
                         }
                         onClose={() => close(id)}
-                        onCloseOthers={tabs.ids().length > 1 ? () => closeOthers(id) : undefined}
+                        onCloseOthers={tabs.display().length > 1 ? () => closeOthers(id) : undefined}
+                        onCloseToRight={tabs.closableRight(id).length ? () => closeRight(id) : undefined}
+                        pinned={tabs.isPinned(id)}
+                        onTogglePin={isPendingTab(id) ? undefined : () => tabs.togglePinned(id)}
                       >
                         <SessionTab
                           title={title(id)}
                           active={tabs.active() === id}
+                          pinned={tabs.isPinned(id)}
+                          pinnedLabel={language.t("agentManager.tab.pinned")}
                           state={state(id)}
                           stateLabel={language.t(label(state(id)))}
+                          keybind={adjacentTabHint(tabs.display(), tabs.active(), id, config.shortcuts().bindings)}
                           closeTitle={language.t("common.closeTab")}
                           closeLabel={language.t("common.closeTab")}
                           role="tab"
@@ -153,6 +176,7 @@ export const SessionTabStrip: Component = () => {
                           onMiddleClick={(event) => middle(id, event)}
                           onKeyDown={(event) => key(id, event)}
                           onClose={() => close(id)}
+                          onTogglePin={isPendingTab(id) ? undefined : () => tabs.togglePinned(id)}
                         />
                       </SessionTabMenu>
                     </SortableTabContainer>

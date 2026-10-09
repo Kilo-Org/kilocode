@@ -11,6 +11,8 @@ import ai.kilocode.client.testing.deactivateIde
 import ai.kilocode.client.testing.installBrowser
 import ai.kilocode.client.util.edtWait
 import ai.kilocode.rpc.dto.GhAvailability
+import com.intellij.notification.Notification
+import com.intellij.notification.Notifications
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.service
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
@@ -108,6 +110,135 @@ class GhStatusCoordinatorTest : BasePlatformTestCase() {
         // And the recovery is picked up on its own, without the user doing anything.
         assertEquals(GhAvailability.OK, service.current())
         handle.close()
+    }
+
+    fun `test coordinator slows down for a gh that does not answer`() {
+        // A timeout used to be classified OK, which reset the failure count and kept the loop paying a
+        // full budget per poll for a command that never returns.
+        rpc.ghResult = GhAvailability.TIMEOUT
+        val handle = edtWait { service.attach(project) }
+        drain()
+        // One slow command is not yet the state, so the loop is still on the OK cadence here.
+        assertEquals(1, rpc.ghCalls.size)
+        timers.advanceBy(30_000)
+        drain()
+        assertEquals(GhAvailability.TIMEOUT, service.current())
+        assertEquals(2, rpc.ghCalls.size)
+
+        // SLOW, not the 30s OK cadence.
+        timers.advanceBy(59_999)
+        drain()
+        assertEquals("a gh that timed out must not be re-probed on the ok cadence", 2, rpc.ghCalls.size)
+
+        rpc.ghResult = GhAvailability.OK
+        timers.advanceBy(1)
+        drain()
+        assertEquals(3, rpc.ghCalls.size)
+        assertEquals(GhAvailability.OK, service.current())
+        handle.close()
+    }
+
+    fun `test one slow lookup is not enough to report gh as not answering`() {
+        val events = mutableListOf<GhAvailability>()
+        ApplicationManager.getApplication().messageBus.connect(testRootDisposable)
+            .subscribe(GhStatusListener.TOPIC, GhStatusListener { events += it })
+
+        // A PR fan-out runs one `gh` per worktree and calls the whole repository unavailable if any
+        // single one overruns, so on a busy machine with many worktrees this fires for one slow process
+        // out of dozens — and the next probe, milliseconds later, says gh is fine.
+        report(GhAvailability.TIMEOUT)
+
+        assertEquals(GhAvailability.OK, service.current())
+        assertEquals("one overrun must not reach the banner", emptyList<GhAvailability>(), events)
+
+        timers.advanceBy(GhStatusCoordinator.TIMEOUT_WINDOW)
+        report(GhAvailability.TIMEOUT)
+
+        assertEquals(GhAvailability.TIMEOUT, service.current())
+        assertEquals(listOf(GhAvailability.TIMEOUT), events)
+    }
+
+    fun `test one slow lookup replayed from the backend cache confirms nothing`() {
+        // The backend re-serves a timed-out verdict to whoever asks next, so one overrun arrives here
+        // several times: from the probe that suffered it, from a prStatus handed the cached verdict, and
+        // from each other attached project polling the same root. Counting those confirms a timeout with
+        // itself, which is exactly what the confirmation exists to prevent.
+        repeat(6) { report(GhAvailability.TIMEOUT) }
+
+        assertEquals(GhAvailability.OK, service.current())
+
+        timers.advanceBy(GhStatusCoordinator.TIMEOUT_WINDOW)
+        report(GhAvailability.TIMEOUT)
+
+        assertEquals(GhAvailability.TIMEOUT, service.current())
+    }
+
+    fun `test a slow lookup answered by a healthy one starts the tally over`() {
+        report(GhAvailability.TIMEOUT)
+        report(GhAvailability.OK)
+
+        // The claim is a run of consecutive timeouts, not a lifetime count. Without the reset, two
+        // unrelated overruns an hour apart would eventually trip a banner between two healthy probes.
+        timers.advanceBy(GhStatusCoordinator.TIMEOUT_WINDOW)
+        report(GhAvailability.TIMEOUT)
+        assertEquals(GhAvailability.OK, service.current())
+
+        timers.advanceBy(GhStatusCoordinator.TIMEOUT_WINDOW)
+        report(GhAvailability.TIMEOUT)
+        assertEquals(GhAvailability.TIMEOUT, service.current())
+    }
+
+    fun `test an actionable state is never held back for confirmation`() {
+        val events = mutableListOf<GhAvailability>()
+        ApplicationManager.getApplication().messageBus.connect(testRootDisposable)
+            .subscribe(GhStatusListener.TOPIC, GhStatusListener { events += it })
+
+        // Only a timeout is rationed. Everything else is either actionable or resets on GitHub's own
+        // schedule, so delaying it would just make the banner slower to say something true.
+        report(GhAvailability.UNAUTH)
+        report(GhAvailability.OK)
+        report(GhAvailability.MISSING)
+        report(GhAvailability.OK)
+        report(GhAvailability.RATE_LIMITED)
+
+        assertEquals(
+            listOf(
+                GhAvailability.UNAUTH,
+                GhAvailability.OK,
+                GhAvailability.MISSING,
+                GhAvailability.OK,
+                GhAvailability.RATE_LIMITED,
+            ),
+            events,
+        )
+    }
+
+    fun `test a confirmed timeout does not re-arm its own confirmation`() {
+        report(GhAvailability.TIMEOUT)
+        timers.advanceBy(GhStatusCoordinator.TIMEOUT_WINDOW)
+        report(GhAvailability.TIMEOUT)
+        assertEquals(GhAvailability.TIMEOUT, service.current())
+
+        // Already published: further timeouts are the same state, and must not leave a tally behind that
+        // makes the *next* recovery-then-overrun publish on a single observation.
+        report(GhAvailability.TIMEOUT)
+        report(GhAvailability.OK)
+        timers.advanceBy(GhStatusCoordinator.TIMEOUT_WINDOW)
+        report(GhAvailability.TIMEOUT)
+
+        assertEquals(GhAvailability.OK, service.current())
+    }
+
+    fun `test a timeout stays silent but does not consume the one-shot announcement`() {
+        // `notified` only clears on a return to OK, so a TIMEOUT that marked itself announced would
+        // silence the actionable state reached straight from it.
+        val quiet = notifications { report(GhAvailability.TIMEOUT) }
+        assertTrue("a slow gh is not actionable and must not pop a notification", quiet.isEmpty())
+
+        val loud = notifications { report(GhAvailability.MISSING) }
+
+        assertEquals(1, loud.size)
+        assertTrue(loud.first().title.isNotEmpty())
     }
 
     fun `test coordinator backs off on backend failure without reporting ok`() {
@@ -469,6 +600,27 @@ class GhStatusCoordinatorTest : BasePlatformTestCase() {
     private fun report(value: GhAvailability) {
         edtWait { service.report(project, value) }
         pump()
+    }
+
+    /** Every notification published while [block] runs, on both buses KiloNotifications can reach. */
+    private fun notifications(block: () -> Unit): List<Notification> {
+        val notes = mutableListOf<Notification>()
+        val listener = object : Notifications {
+            override fun notify(notification: Notification) {
+                notes.add(notification)
+            }
+        }
+        val app = ApplicationManager.getApplication().messageBus.connect(testRootDisposable)
+        val proj = project.messageBus.connect(testRootDisposable)
+        app.subscribe(Notifications.TOPIC, listener)
+        proj.subscribe(Notifications.TOPIC, listener)
+        try {
+            block()
+        } finally {
+            app.disconnect()
+            proj.disconnect()
+        }
+        return notes
     }
 
     private fun github(enabled: Boolean) {
