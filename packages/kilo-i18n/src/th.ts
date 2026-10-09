@@ -49,7 +49,6 @@ export const dict = {
     "ปลั๊กอินเพิ่มเครื่องมือและการเชื่อมต่อแบบกำหนดเองให้กับ Kilo ปลั๊กอินทำงานโดยมีสิทธิ์เต็มรูปแบบ",
   "marketplace.install.plugin.warning":
     "ปลั๊กอินเรียกใช้โค้ดโดยมีสิทธิ์เต็มรูปแบบ สามารถอ่านและแก้ไขไฟล์ของคุณ เรียกใช้คำสั่ง และเข้าถึงข้อมูลรับรองและเครือข่ายของคุณได้ ติดตั้งเฉพาะปลั๊กอินที่คุณเชื่อถือเท่านั้น",
-  "marketplace.install.installedAt": "ติดตั้งไปยัง {{path}} แล้ว",
   "marketplace.intro":
     "ติดตั้งเอเจนต์ ทักษะ เครื่องมือ MCP และปลั๊กอินที่นำกลับมาใช้ใหม่ได้สำหรับหนึ่งโปรเจกต์หรือทุกโปรเจกต์",
   "marketplace.intro.learnMore": "เกี่ยวกับ Marketplace",
@@ -60,6 +59,13 @@ export const dict = {
   "marketplace.install.failed": "การติดตั้งล้มเหลว",
   "marketplace.install.done": "เสร็จสิ้น",
   "marketplace.install.close": "ปิด",
+  "marketplace.install.mcp.signIn.message": "{{name}} ติดตั้งแล้ว แต่ต้องเข้าสู่ระบบก่อนจึงจะใช้งานเครื่องมือได้",
+  "marketplace.install.mcp.signIn.button": "เข้าสู่ระบบ",
+  "marketplace.install.mcp.signIn.waiting": "กำลังรอการเข้าสู่ระบบผ่านเบราว์เซอร์…",
+  "marketplace.install.mcp.signIn.cancel": "ยกเลิก",
+  "marketplace.install.mcp.signIn.skip": "ไว้ทีหลัง",
+  "marketplace.install.mcp.signIn.success": "เข้าสู่ระบบ {{name}} แล้ว",
+  "marketplace.install.mcp.signIn.failed": "เข้าสู่ระบบ {{name}} ไม่สำเร็จ",
   "marketplace.remove.title": "ลบ {{name}} หรือไม่?",
   "marketplace.remove.confirm":
     "คุณแน่ใจหรือไม่ว่าต้องการลบ {{type}} นี้? สิ่งนี้จะลบออกจากการกำหนดค่า {{scope}} ของคุณ",

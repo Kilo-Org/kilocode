@@ -25,6 +25,7 @@ import { useProvider } from "./provider"
 import { useConfig } from "./config"
 import { useLanguage } from "./language"
 import { createCostAlertHandler } from "./cost-alert"
+import { createMcpAuth } from "./mcp-auth"
 import { showToast } from "@kilocode/kilo-ui/toast"
 import { touch } from "@kilocode/kilo-ui/tool-motion"
 import type {
@@ -153,6 +154,7 @@ export const SessionProvider: ParentComponent = (props) => {
   // Consumed once by MessageList's restore effect, then cleared.
   const [scrollBottomID, setScrollBottomID] = createSignal<string>()
   const [agentProjectId, setAgentProjectId] = createSignal<string | undefined>()
+  const [sessionsProject, setSessionsProject] = createSignal<string | undefined>()
 
   const trackAgentProject = (message: ExtensionMessage): boolean => {
     if (message.type !== "agentManager.projects" && message.type !== "agentManager.selectionActivated") return false
@@ -290,34 +292,11 @@ export const SessionProvider: ParentComponent = (props) => {
     vscode.postMessage({ type: "removeAgent", name })
   }
 
-  const removeMcp = (name: string) => {
-    vscode.postMessage({ type: "removeMcp", name })
-  }
-
-  // MCP runtime status
-  const [mcpStatus, setMcpStatus] = createSignal<Record<string, McpStatusEntry>>({})
-  const [mcpLoading, setMcpLoading] = createSignal<string | null>(null)
-
-  const connectMcp = (name: string) => {
-    if (mcpLoading()) return
-    if (!server.isConnected()) return
-    setMcpLoading(name)
-    vscode.postMessage({ type: "connectMcp", name })
-  }
-
-  const disconnectMcp = (name: string) => {
-    if (mcpLoading()) return
-    if (!server.isConnected()) return
-    setMcpLoading(name)
-    vscode.postMessage({ type: "disconnectMcp", name })
-  }
-
-  const authenticateMcp = (name: string) => {
-    if (mcpLoading()) return
-    if (!server.isConnected()) return
-    setMcpLoading(name)
-    vscode.postMessage({ type: "authenticateMcp", name })
-  }
+  // MCP runtime status and OAuth sign-in state, owned by the extension host.
+  const mcp = createMcpAuth({
+    post: (message) => vscode.postMessage(message as never),
+    connected: () => server.isConnected(),
+  })
 
   // Pending agent selection for before a session exists
   const [pendingAgentSelection, setPendingAgentSelection] = createSignal<string | null>(null)
@@ -745,28 +724,29 @@ export const SessionProvider: ParentComponent = (props) => {
   })
   onCleanup(unsubPermissions)
 
-  // MCP status loaded from CLI backend
+  // MCP runtime status from the CLI backend, plus OAuth sign-in state and
+  // per-attempt outcomes owned by the host's McpAuthService.
   const unsubMcpStatus = vscode.onMessage((message: ExtensionMessage) => {
-    if (message.type === "mcpStatusLoaded") {
-      setMcpStatus(message.status)
-      setMcpLoading(null)
-    }
+    mcp.accept(message)
   })
 
-  // Request MCP status immediately; retry once on extensionDataReady if still missing.
-  vscode.postMessage({ type: "requestMcpStatus" })
+  // Request MCP data immediately; retry once on extensionDataReady if still missing.
+  mcp.requestStatus()
+  mcp.request()
 
-  const fallback = setTimeout(() => {
+  const retryMcp = () => {
     if (agents().length === 0) vscode.postMessage({ type: "requestAgents" })
-    if (Object.keys(mcpStatus()).length === 0) vscode.postMessage({ type: "requestMcpStatus" })
-  }, 3000)
+    if (Object.keys(mcp.status()).length === 0) mcp.requestStatus()
+    if (mcp.state().needsAuth.length === 0) mcp.request()
+  }
+
+  const fallback = setTimeout(retryMcp, 3000)
 
   const unsubReady = vscode.onMessage((message: ExtensionMessage) => {
     if (message.type !== "extensionDataReady") return
     unsubReady()
     clearTimeout(fallback)
-    if (agents().length === 0) vscode.postMessage({ type: "requestAgents" })
-    if (Object.keys(mcpStatus()).length === 0) vscode.postMessage({ type: "requestMcpStatus" })
+    retryMcp()
   })
 
   onCleanup(() => {
@@ -968,7 +948,13 @@ export const SessionProvider: ParentComponent = (props) => {
         break
 
       case "sessionsLoaded":
-        handleSessionsLoaded(message.sessions, message.preserveSessionIds, message.append, message.hasMore)
+        handleSessionsLoaded(
+          message.sessions,
+          message.preserveSessionIds,
+          message.append,
+          message.hasMore,
+          message.projectId,
+        )
         break
 
       case "sessionUpdated":
@@ -1885,7 +1871,13 @@ export const SessionProvider: ParentComponent = (props) => {
     resetTodos(session.id, next)
   }
 
-  function handleSessionsLoaded(loaded: SessionInfo[], preserve?: string[], append?: boolean, hasMore?: boolean) {
+  function handleSessionsLoaded(
+    loaded: SessionInfo[],
+    preserve?: string[],
+    append?: boolean,
+    hasMore?: boolean,
+    projectId?: string,
+  ) {
     mergeSessionsLoaded({
       loaded,
       preserve,
@@ -1899,6 +1891,7 @@ export const SessionProvider: ParentComponent = (props) => {
       for (const info of loaded) if (store.sessions[info.id]) recoverInfo(info)
     })
     paging.finish(hasMore ?? false)
+    setSessionsProject(hasMore ? undefined : projectId)
   }
 
   function handleSessionDeleted(sessionID: string) {
@@ -2948,6 +2941,7 @@ export const SessionProvider: ParentComponent = (props) => {
   })
 
   const value: SessionContextValue = {
+    sessionsProject,
     currentSessionID,
     currentSession,
     setCurrentSessionID,
@@ -2999,12 +2993,19 @@ export const SessionProvider: ParentComponent = (props) => {
     refreshSkills,
     removeSkill,
     removeAgent,
-    removeMcp,
-    mcpStatus,
-    mcpLoading,
-    connectMcp,
-    disconnectMcp,
-    authenticateMcp,
+    removeMcp: mcp.remove,
+    mcpStatus: mcp.status,
+    mcpLoading: mcp.loading,
+    connectMcp: mcp.connect,
+    disconnectMcp: mcp.disconnect,
+    mcpAuth: mcp.state,
+    mcpRemoving: mcp.removing,
+    signInMcp: mcp.signIn,
+    cancelMcpSignIn: mcp.cancel,
+    resetMcpAuth: mcp.reset,
+    mcpAuthResult: mcp.result,
+    mcpBundles: mcp.bundles,
+    refreshMcpBundles: mcp.refreshBundles,
     selectedAgent: agentForScope,
     submission,
     selectAgent,

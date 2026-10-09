@@ -8,6 +8,7 @@ import fs from "node:fs"
 import path from "node:path"
 import { NpmPublish } from "./kilocode/npm-publish"
 import * as KiloSbom from "./kilocode/sbom"
+import * as KiloRelease from "../../../script/kilocode/release"
 import type { Manifest } from "../../../script/kilocode/sbom/index"
 // kilocode_change end
 
@@ -316,7 +317,11 @@ if (Script.release) {
     entries: evidence,
     expected: packages + images,
   })
-  await $`gh release upload v${Script.version} ${described.files} --clobber`.nothrow()
+  // Evidence is a record of a release that already shipped, so a failure here is
+  // reported rather than rolled back onto an npm publish that cannot be undone.
+  await KiloRelease.upload({ tag: `v${Script.version}`, files: described.files }).catch((err) =>
+    console.error("sbom: could not publish the distribution evidence", err),
+  )
 }
 
 /**

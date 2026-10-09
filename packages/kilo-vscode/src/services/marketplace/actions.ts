@@ -101,7 +101,7 @@ export async function removeMarketplaceItemFromAllScopes(
     if (item.type === "mcp") await removeLegacyMcp(ctx, item.id, project, "all")
     const local = project ? await removeScoped(ctx, item, "project", project) : undefined
     const global = await removeScoped(ctx, item, "global", dir)
-    return Boolean(local?.success || global.success)
+    return (local?.success ?? true) && global.success
   } catch (err) {
     console.warn("[Kilo New] Marketplace removal failed:", err)
     return false

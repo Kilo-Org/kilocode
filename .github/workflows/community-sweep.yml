@@ -1,0 +1,67 @@
+# kilocode_change - new file
+name: Community sweep
+
+# Twice a week, the evening before the maintainer triage slots (Friday and
+# Tuesday). Works out whose turn it is on each community PR, keeps the status
+# labels in sync, closes PRs that got no reply for 14 days and posts the queue.
+# See docs/community-triage.md.
+
+on:
+  schedule:
+    - cron: "0 17 * * 1,4" # Monday and Thursday, 17:00 UTC
+  workflow_dispatch:
+    inputs:
+      close:
+        description: "Close PRs with no reply for 14 days. Off means log only."
+        type: boolean
+        default: false
+
+concurrency:
+  group: community-sweep
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
+jobs:
+  sweep:
+    if: github.repository == 'Kilo-Org/kilocode'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+
+      - name: Sweep
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          MEMBER_TOKEN: ${{ secrets.COMMUNITY_TRIAGE_MEMBER_TOKEN }}
+          MAINTAINERS: ${{ vars.COMMUNITY_MAINTAINERS }}
+          # Closing stays off until the repo variable is set to "true".
+          CLOSE_ENABLED: ${{ github.event_name == 'workflow_dispatch' && format('{0}', inputs.close) || vars.COMMUNITY_AUTO_CLOSE_ENABLED }}
+          SLACK_PAYLOAD: ${{ runner.temp }}/slack-payload.json
+        run: bun run script/kilocode/community-triage.ts sweep
+
+      # A step cannot read its own env in `if`, so a small step exposes the
+      # secret to itself only and passes on whether it is set.
+      - name: Check Slack webhook
+        id: slack
+        env:
+          SLACK_WEBHOOK: ${{ secrets.COMMUNITY_TRIAGE_SLACK_WEBHOOK }}
+        run: echo "enabled=${{ env.SLACK_WEBHOOK != '' }}" >> "$GITHUB_OUTPUT"
+
+      - name: Notify Slack
+        if: steps.slack.outputs.enabled == 'true'
+        uses: slackapi/slack-github-action@v2.0.0
+        with:
+          webhook: ${{ secrets.COMMUNITY_TRIAGE_SLACK_WEBHOOK }}
+          webhook-type: incoming-webhook
+          payload-file-path: ${{ runner.temp }}/slack-payload.json
