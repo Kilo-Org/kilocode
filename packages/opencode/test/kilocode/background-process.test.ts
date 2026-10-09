@@ -720,9 +720,74 @@ if (process.platform === "win32") setTimeout(() => {}, 5_000)
           })
         }
       }),
-    // Windows process-tree ownership uses PowerShell/CIM probes and intentionally
-    // keeps the leader alive for five seconds, so it needs a larger outer budget.
+    // The Windows leader intentionally stays alive for five seconds, so it needs a larger outer budget.
     process.platform === "win32" ? 60_000 : 30_000,
+  )
+  ;(process.platform === "win32" ? it.instance : it.instance.skip)(
+    "ends the Windows runner once the last descendant is gone",
+    () =>
+      Effect.gen(function* () {
+        const test = yield* TestInstance
+        const sessionID = SessionID.descending()
+        const child = path.join(test.directory, "last.mjs")
+        yield* Effect.promise(() => Bun.write(child, "setInterval(() => {}, 1_000)\n"))
+        const command = yield* Effect.promise(() =>
+          script(
+            test.directory,
+            "last-leader.cjs",
+            `const { spawn } = require("child_process")
+const child = spawn(process.execPath, [${JSON.stringify(child)}], { stdio: "ignore", detached: true, windowsHide: true })
+child.unref()
+console.log("child:" + child.pid)
+`,
+            "node",
+          ),
+        )
+        const info = yield* Effect.promise(() =>
+          BackgroundProcess.start({
+            sessionID,
+            command,
+            cwd: test.directory,
+            lifetime: "persistent",
+            ready: { pattern: "child:", timeout: 15_000 },
+          }),
+        )
+        const pid = Number(info.output.match(/child:(\d+)/)?.[1])
+        const runner = info.pid
+        try {
+          expect(pid).toBeGreaterThan(0)
+          // The leader has exited by now; the detached child keeps the runner alive.
+          yield* Effect.promise(() => Bun.sleep(1_500))
+          expect(alive(runner)).toBe(true)
+          process.kill(pid, "SIGKILL")
+          yield* Effect.promise(() =>
+            until(() => !alive(runner), "runner did not end after its last descendant", 5_000),
+          )
+          // Poll inside the instance context: `get` reads instance state and must not run in a
+          // detached promise callback.
+          const end = Date.now() + 5_000
+          while (Date.now() < end) {
+            const current = yield* Effect.promise(() => BackgroundProcess.get(info.id))
+            if (!current || current.status === "exited") break
+            yield* Effect.promise(() => Bun.sleep(100))
+          }
+          const last = yield* Effect.promise(() => BackgroundProcess.get(info.id))
+          expect(!last || last.status === "exited").toBe(true)
+        } finally {
+          yield* Effect.promise(async () => {
+            await Promise.allSettled([BackgroundProcess.stop(info.id)])
+            for (const item of [pid, runner]) {
+              if (!item || !alive(item)) continue
+              try {
+                process.kill(item, "SIGKILL")
+              } catch (err) {
+                if (alive(item)) throw err
+              }
+            }
+          })
+        }
+      }),
+    30_000,
   )
 
   it.instance("rejects invalid readiness patterns before launching", () =>
