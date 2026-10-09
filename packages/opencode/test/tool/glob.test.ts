@@ -18,6 +18,8 @@ import { testEffect } from "../lib/effect"
 import { RuntimeFlags } from "@/effect/runtime-flags"
 import { Git } from "@/git"
 import { Filesystem } from "@/util/filesystem"
+import { Config } from "@/config/config" // kilocode_change
+import { TestConfig } from "../fixture/config" // kilocode_change
 
 const toolLayer = (flags: Partial<RuntimeFlags.Info> = {}) =>
   Layer.mergeAll(
@@ -114,6 +116,78 @@ describe("tool.glob", () => {
         expect(result.output).toContain(path.join(outer, "two.md"))
         expect(result.output).not.toContain(path.join(outer, "three.txt"))
       }),
+    { git: true },
+  )
+  // kilocode_change end
+
+  // kilocode_change start - opt-in includeIgnored gated by experimental.glob_search_ignored
+  unixInstance(
+    "respects .gitignore by default",
+    () =>
+      Effect.gen(function* () {
+        const test = yield* TestInstance
+        const ignored = path.join(test.directory, "build", "ignored.txt")
+        yield* Effect.promise(() => fs.mkdir(path.dirname(ignored), { recursive: true }))
+        yield* Effect.promise(() => Bun.write(path.join(test.directory, ".gitignore"), "build/\n"))
+        yield* Effect.promise(() => Bun.write(ignored, "secret\n"))
+        yield* Effect.promise(() => Bun.write(path.join(test.directory, "visible.txt"), "public\n"))
+        const info = yield* GlobTool
+        const glob = yield* info.init()
+        const result = yield* glob.execute({ pattern: "**/*.txt", path: test.directory }, ctx)
+        expect(result.output).toContain("visible.txt")
+        expect(result.output).not.toContain("ignored.txt")
+      }),
+    { git: true },
+  )
+
+  unixInstance(
+    "rejects includeIgnored when the config setting is disabled",
+    () =>
+      Effect.gen(function* () {
+        const test = yield* TestInstance
+        const info = yield* GlobTool
+        const glob = yield* info.init()
+        const exit = yield* glob
+          .execute({ pattern: "**/*.txt", path: test.directory, includeIgnored: true }, ctx)
+          .pipe(Effect.exit)
+        expect(Exit.isFailure(exit)).toBe(true)
+        if (Exit.isFailure(exit)) {
+          const err = Cause.squash(exit.cause)
+          expect(err instanceof Error ? err.message : String(err)).toContain("experimental.glob_search_ignored")
+        }
+      }).pipe(
+        Effect.provideService(
+          Config.Service,
+          TestConfig.make({ get: () => Effect.succeed({ experimental: { glob_search_ignored: false } }) }),
+        ),
+      ),
+    { git: true },
+  )
+
+  unixInstance(
+    "returns gitignored files when includeIgnored is set and the config setting is enabled",
+    () =>
+      Effect.gen(function* () {
+        const test = yield* TestInstance
+        const ignored = path.join(test.directory, "build", "ignored.txt")
+        yield* Effect.promise(() => fs.mkdir(path.dirname(ignored), { recursive: true }))
+        yield* Effect.promise(() => Bun.write(path.join(test.directory, ".gitignore"), "build/\n"))
+        yield* Effect.promise(() => Bun.write(ignored, "secret\n"))
+        yield* Effect.promise(() => Bun.write(path.join(test.directory, "visible.txt"), "public\n"))
+        const info = yield* GlobTool
+        const glob = yield* info.init()
+        const withFlag = yield* glob.execute({ pattern: "**/*.txt", path: test.directory }, ctx)
+        expect(withFlag.output).toContain("visible.txt")
+        expect(withFlag.output).not.toContain("ignored.txt")
+        const result = yield* glob.execute({ pattern: "**/*.txt", path: test.directory, includeIgnored: true }, ctx)
+        expect(result.output).toContain("ignored.txt")
+        expect(result.output).not.toContain(path.join(".git", "HEAD"))
+      }).pipe(
+        Effect.provideService(
+          Config.Service,
+          TestConfig.make({ get: () => Effect.succeed({ experimental: { glob_search_ignored: true } }) }),
+        ),
+      ),
     { git: true },
   )
   // kilocode_change end
