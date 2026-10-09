@@ -74,10 +74,16 @@ const layer = Layer.effect(
       // kilocode_change start
       // A fresh snapshot only preserves the state needed for redo. File restoration
       // is possible only when the historical turn retained checkpoint data.
-      // A delegated task records its edits in its own session, so collect those too: the whole set
-      // is ordered chronologically, which is what lets the earliest snapshot win the file dedup,
-      // and the merged message list is what the revert summary reads for its file list.
-      const ordered = yield* KiloSessionRevert.ordered(sessions, input.sessionID, rev, all, state.assertNotBusy)
+      // A delegated task records its edits in its own session. Resolve task boundaries and
+      // checkpoint provenance before selecting the restoration baselines and file summary.
+      const ordered = yield* KiloSessionRevert.ordered(
+        sessions,
+        input.sessionID,
+        rev,
+        all,
+        state.assertNotBusy,
+        storage,
+      )
       patches.length = 0
       patches.push(...ordered.patches)
       const range = ordered.messages
@@ -93,9 +99,17 @@ const layer = Layer.effect(
       // kilocode_change end
       rev.snapshot = session.revert?.snapshot ?? (yield* snap.track())
       // kilocode_change start - keep the entire workspace transition atomic
-      const prior = session.revert
-        ? (yield* KiloSessionRevert.ordered(sessions, input.sessionID, session.revert, all, state.assertNotBusy)).files
+      const earlier = session.revert
+        ? yield* KiloSessionRevert.ordered(sessions, input.sessionID, session.revert, all, state.assertNotBusy, storage)
+        : undefined
+      const previous = session.revert
+        ? ((yield* KiloSessionRevert.saved(storage, input.sessionID, session.revert)) ?? earlier?.patches ?? [])
         : []
+      const applied = KiloSessionRevert.merge(all, session.revert, rev, ordered.patches, previous)
+      patches.length = 0
+      patches.push(...applied)
+      if (patches.length > 0) rev.workspace = "restored"
+      const prior = [...new Set(previous.flatMap((patch) => patch.files))]
       const files = [...new Set([...prior, ...patches.flatMap((patch) => patch.files)])]
       const baseline = session.revert?.snapshot && files.length > 0 ? yield* snap.track() : rev.snapshot
       if (files.length > 0 && !baseline) {
@@ -109,7 +123,9 @@ const layer = Layer.effect(
           if (session.revert?.snapshot) yield* KiloSessionRevert.restore(snap, session.revert.snapshot, prior)
 
           // Compute the user-facing diff while files still contain the changes being undone.
-          const diffs = yield* summary.computeDiff({ messages: range })
+          const diffs = rev.snapshot
+            ? yield* KiloSessionRevert.diff(snap, patches, rev.snapshot)
+            : yield* summary.computeDiff({ messages: range })
           yield* snap.revert(patches)
           if (rev.snapshot) rev.diff = yield* snap.diff(rev.snapshot)
           yield* storage.write(["session_diff", input.sessionID], diffs).pipe(Effect.ignore)
@@ -120,6 +136,7 @@ const layer = Layer.effect(
             deletions: d.deletions,
             status: d.status,
           }))
+          yield* KiloSessionRevert.remember(storage, input.sessionID, rev, applied)
           yield* sessions.setRevert({
             sessionID: input.sessionID,
             revert: rev,
@@ -149,8 +166,10 @@ const layer = Layer.effect(
         session.revert,
         all,
         state.assertNotBusy,
+        storage,
       )
-      const files = found.files
+      const patches = (yield* KiloSessionRevert.saved(storage, input.sessionID, session.revert)) ?? found.patches
+      const files = [...new Set(patches.flatMap((patch) => patch.files))]
       const baseline = files.length > 0 ? yield* snap.track() : undefined
       if (files.length > 0 && !baseline) {
         return yield* Effect.die(
@@ -175,6 +194,18 @@ const layer = Layer.effect(
       const sessionID = session.id
       const msgs = yield* sessions.messages({ sessionID }).pipe(Effect.orDie)
       const messageID = session.revert.messageID
+      // kilocode_change start - invalidate discarded descendant checkpoints before removing parent history
+      const found = yield* KiloSessionRevert.ordered(
+        sessions,
+        sessionID,
+        session.revert,
+        msgs,
+        state.assertNotBusy,
+        storage,
+      ).pipe(Effect.orDie)
+      const discarded = (yield* KiloSessionRevert.saved(storage, sessionID, session.revert)) ?? found.patches
+      yield* KiloSessionRevert.discard(storage, sessionID, discarded)
+      // kilocode_change end
       const remove = [] as SessionV1.WithParts[]
       let target: SessionV1.WithParts | undefined
       const index = msgs.findIndex((msg) => msg.info.id === messageID)

@@ -30,6 +30,18 @@ These terms describe local execution. They are separate from hosted Cloud Agent 
 
 One `kilo serve` process can host several local runtime instances. Directory-keyed state stays isolated. Process-shared service state does not.
 
+## Session revert and sub-agent checkpoints
+
+Reverting a session includes patches recorded by its descendants in the same Git worktree. The assistant message's recorded `path.root` identifies the worktree of a descendant checkpoint; a session's current directory alone does not identify where an older checkpoint was captured. Linked-worktree checkpoints are excluded. Busy descendants are checked in their own directory context before file restoration, including during redo and changes to the revert point.
+
+For partial reverts, the parent's task parts identify which delegated work belongs after the selected part. A completed task before that boundary retains its child work. Older descendants without a task link use message chronology. Patch baselines are merged by message creation time with message ID as a deterministic tie breaker, matching the first-baseline-per-file rule used by snapshot restoration.
+
+The applied patch set is persisted in local Storage under `session_revert`, keyed by session, message, part boundary, and redo snapshot. Redo and revert-point transitions use this saved set even if a child session has been deleted; reverts recorded before this data was introduced fall back to surviving history. When continuing after a revert, cleanup records discarded descendant patch IDs under `session_discarded_patches` before pruning parent messages. Child conversations remain inspectable, but those discarded checkpoints cannot reintroduce edits in a subsequent parent revert.
+
+The revert summary compares each file's actual restoration baseline with the redo snapshot. It does not select an endpoint by sorting step messages: parent and child steps can overlap and finish in a different order from their creation times.
+
+Integration coverage lives in `packages/opencode/test/kilocode/session/revert-descendants.test.ts` and uses real Session, Snapshot, Git, and directory-keyed runners. Run it from `packages/opencode/` with `bun test --timeout 30000 ./test/kilocode/session/revert-descendants.test.ts`.
+
 ## Command entry points
 
 {% callout type="warning" title="Kilo Console is deprecated" %}
