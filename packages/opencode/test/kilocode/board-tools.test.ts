@@ -124,7 +124,7 @@ describe("shared board tools", () => {
           expect(read.description).toContain("do not reread solely because a Task")
           expect(post.description).toContain("Include evidence with candidate results")
           expect(post.description).toContain("Respect requested independence and communication limits")
-          expect(post.description).toContain("including parents, children, and background siblings, not yourself")
+          expect(post.description).toContain("including parents, children, and background siblings")
           expect(post.description).toContain("ALL only for team-wide updates")
           expect(post.description).toContain("Posts do not wake, assign, cancel, or resume workers")
           expect(post.description).toContain(
@@ -318,7 +318,10 @@ describe("shared board tools", () => {
           expect(yield* observed).toBe("unknown")
           const self = yield* Effect.exit(send("main", "main"))
           expect(self._tag).toBe("Failure")
-          if (Exit.isFailure(self)) expect(Cause.pretty(self.cause)).toContain("cannot be sent to yourself")
+          if (Exit.isFailure(self)) {
+            expect(Cause.pretty(self.cause)).toContain("cannot be sent to yourself")
+            expect(Cause.pretty(self.cause)).toContain("belong in your final response")
+          }
           const own = yield* Effect.exit(
             post.execute(
               { to: child.id, type: "INFO", body: "Note to self" },
@@ -327,6 +330,24 @@ describe("shared board tools", () => {
           )
           expect(own._tag).toBe("Failure")
           if (Exit.isFailure(own)) expect(Cause.pretty(own.cause)).toContain("cannot be sent to yourself")
+          const roster = yield* read.execute({}, ctx)
+          const rosterRows = JSON.parse(roster.output).participants as Array<{
+            id: string
+            sessionID: string
+            self?: boolean
+          }>
+          const ownRow = rosterRows.find((row) => row.sessionID === root.session.id)
+          const childRow = rosterRows.find((row) => row.sessionID === child.id)
+          expect(ownRow).toMatchObject({ id: "main", self: true })
+          expect(childRow?.self).toBeUndefined()
+          const childRoster = yield* read.execute({}, yield* context(child.id, MessageID.ascending()))
+          const childRows = JSON.parse(childRoster.output).participants as Array<{
+            id: string
+            sessionID: string
+            self?: boolean
+          }>
+          expect(childRows.find((row) => row.sessionID === child.id)?.self).toBe(true)
+          expect(childRows.find((row) => row.id === "main")?.self).toBeUndefined()
           yield* jobs.start({ id: child.id, type: "task", run: Effect.never })
           const running = yield* send(child.id, "running")
           expect(JSON.parse(running.output)).not.toHaveProperty("warning")

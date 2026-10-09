@@ -1,5 +1,31 @@
 # Changelog
 
+## 7.9.0
+
+### Minor Changes
+
+- [#14666](https://github.com/Kilo-Org/kilocode/pull/14666) [`205e34a`](https://github.com/Kilo-Org/kilocode/commit/205e34a5ceac90019a76e035647680bb11bb25a0) - Support reloading Core settings from `/reload` and the session and tool window menus, and warn that restarting or reinstalling Core cancels active sessions.
+
+- [#14512](https://github.com/Kilo-Org/kilocode/pull/14512) [`b3da592`](https://github.com/Kilo-Org/kilocode/commit/b3da592cf524a8a99a75c6a1a325e9d5aecc5f2e) - Explain why file checkpoints weren't restored after a revert and add complete Checkpoints settings. JetBrains users can manage snapshots and machine-wide automatic session cleanup, choose a retention period, inspect cleanup progress and results, and manually run cleanup even when automatic cleanup is disabled.
+
+- [#14622](https://github.com/Kilo-Org/kilocode/pull/14622) [`83c1d0f`](https://github.com/Kilo-Org/kilocode/commit/83c1d0fff714490f93b512767baa98c15c5087da) - Render Kilo Swarm board messages as stacked Markdown with agent identities and full syntax highlighting.
+
+### Patch Changes
+
+- [#14548](https://github.com/Kilo-Org/kilocode/pull/14548) [`c5c36fc`](https://github.com/Kilo-Org/kilocode/commit/c5c36fc8a20bf76544e7c55cf2fe3bb98c29f714) - Make background-agent previews toggle their strip and add transcript-style hover feedback to agent and todo strips.
+
+- [#14648](https://github.com/Kilo-Org/kilocode/pull/14648) [`8e1eebc`](https://github.com/Kilo-Org/kilocode/commit/8e1eebc59452de57ccb5cb986ac0991629d9e0bb) - Show a combined MCP and Skill badge for JetBrains marketplace servers that include companion skills.
+
+- [#14642](https://github.com/Kilo-Org/kilocode/pull/14642) [`9350ea8`](https://github.com/Kilo-Org/kilocode/commit/9350ea8211f521c16111fa4946ccbae59036d2b1) - Rename the JetBrains Workflows settings page to Commands and add expandable explanations with documentation links to every Agent Behavior sub-page.
+
+- [#14663](https://github.com/Kilo-Org/kilocode/pull/14663) [`5f2747e`](https://github.com/Kilo-Org/kilocode/commit/5f2747efb6396b5e8037c57d199b2258fc4ed57c) - Show questions and permission requests correctly when they arrive while another session is open.
+
+- [#14583](https://github.com/Kilo-Org/kilocode/pull/14583) [`ecdddc4`](https://github.com/Kilo-Org/kilocode/commit/ecdddc4219bb74ebec9e9900bfafa8ddd6feb55e) - Keep orphan process cleanup attributed to the last active worktree run when stops overlap.
+
+- [#14583](https://github.com/Kilo-Org/kilocode/pull/14583) [`a91a3ad`](https://github.com/Kilo-Org/kilocode/commit/a91a3add011a6cd4394bfcb7c7f46f24976e3e8d) - Keep model and reasoning selections isolated to their JetBrains chat session.
+
+- [#14670](https://github.com/Kilo-Org/kilocode/pull/14670) [`93dd50a`](https://github.com/Kilo-Org/kilocode/commit/93dd50acab004c872670c1b67aaa23836c7bf8ec) - Submit JetBrains chat dialogs with Command+Enter from any focused dialog control.
+
 ## 7.8.0
 
 ### Minor Changes
@@ -535,6 +561,48 @@
 - [#12059](https://github.com/Kilo-Org/kilocode/pull/12059) [`8ea3f10`](https://github.com/Kilo-Org/kilocode/commit/8ea3f10495e28c8a131b805d51f8f7524895148b) - Increase spacing before non-initial user prompts in the JetBrains session transcript.
 
 ## [Unreleased]
+
+## [7.1.9] - 2026-10-07
+
+### Added
+- Added a prompt navigator to the chat transcript for jumping between your sent prompts.
+- Added MCP OAuth sign-in support, including recovery flows for expired or failed authorizations.
+- Combined MCP and skill badges in the chat UI.
+- Added a core settings reload action.
+- Rendered agent board messages as markdown.
+
+### Fixed
+- Fixed hidden session questions not surfacing in the chat UI.
+- Made chat dialogs submit with Cmd/Ctrl+Enter.
+- Fixed spreadsheet date/time handling when reading xlsx and ods files.
+- Finalized reasoning output before stream retries to avoid lost context.
+- Kept storage usable after an interrupted first access.
+- Prevented a rejected attachment from discarding the in-progress prompt.
+- Gated prompt cache breakpoints to first-party OpenAI providers.
+
+### Changed
+- Renamed JetBrains workflows to commands.
+- Split agent guidance documentation into skills.
+- Bumped the bundled Kilo CLI pin to v7.8.8 (via v7.8.3 and v7.8.7 intermediate bumps).
+
+## [7.1.9-rc.2] - 2026-10-07
+
+### Added
+
+- Add a prompt navigator to the chat transcript for jumping between your own prompts.
+- Add MCP OAuth sign-in support, including recognizing recoverable auth failures and refreshing auth after a reset.
+- Show a combined MCP and Skill badge for marketplace servers that include companion skills.
+
+### Fixed
+
+- Submit chat dialogs with Command+Enter from any focused dialog control.
+- Refresh a worktree's pull request status when its agent stops.
+- Prevent a rejected attachment from discarding the prompt you were composing.
+
+### Changed
+
+- Bump the bundled Kilo CLI pin from 7.8.1 to 7.8.8.
+- Pin the Bun runtime and types to 1.4.2 for reproducible builds.
 
 ## [7.1.9-rc.1] - 2026-09-28
 

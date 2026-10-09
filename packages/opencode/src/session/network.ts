@@ -5,6 +5,7 @@ import { Bus } from "../bus"
 import { BusEvent } from "../bus/bus-event"
 import { QuestionID } from "../question/schema"
 import { SessionID } from "../session/schema"
+import { SessionV1 } from "@opencode-ai/core/v1/session"
 import { InstanceState } from "@/effect/instance-state"
 import { InstanceRef } from "@/effect/instance-ref"
 import { capture } from "@/kilocode/instance"
@@ -177,13 +178,16 @@ export namespace SessionNetwork {
     })
   }
 
+  /** Message for a server-side connection reset; shared with serverReset so routing cannot drift from the wording. */
+  const resetMessage = "Connection reset by server"
+
   export function message(err: unknown) {
     // kilocode_change - check for timeout first
     for (const item of chain(err)) {
       if (item instanceof DOMException && item.name === "TimeoutError") return "Request timed out"
     }
     const match = code(err)
-    if (match === "ECONNRESET") return "Connection reset by server"
+    if (match === "ECONNRESET") return resetMessage
     if (match === "ECONNREFUSED") return "Connection refused"
     if (match === "ENOTFOUND") return "Host not found"
     if (match === "EAI_AGAIN") return "DNS lookup failed"
@@ -203,6 +207,21 @@ export namespace SessionNetwork {
     if (msgs(err).some((item) => item.toLowerCase().includes("failed to fetch"))) return "Network request failed"
     if (msgs(err).some((item) => item.toLowerCase().includes("fetch failed"))) return "Network request failed"
     return "Network connection failed"
+  }
+
+  /**
+   * A connection reset the error parser already marked retryable is a transient
+   * server-side failure, not a dead local network: it belongs on the normal
+   * retry path (backoff plus the retry limit) rather than the offline
+   * reconnection wait.
+   *
+   * metadata.code is the durable signal, but fromError records only the
+   * top-level code — a reset nested in a cause chain is caught by the message.
+   */
+  export function serverReset(err: unknown) {
+    if (!SessionV1.APIError.isInstance(err)) return false
+    if (!err.data.isRetryable) return false
+    return err.data.metadata?.code === "ECONNRESET" || err.data.message === resetMessage
   }
 
   async function check(url: string) {
