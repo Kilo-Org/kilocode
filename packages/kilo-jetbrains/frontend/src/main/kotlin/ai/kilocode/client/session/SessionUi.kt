@@ -1577,12 +1577,16 @@ class SessionUi(
         return SessionIssue(
             id = "mcp-auth:$name",
             title = KiloBundle.message("prompt.mcp.provider", display),
-            actions = listOf(
+            actions = listOfNotNull(
                 SessionIssueAction(
                     title = KiloBundle.message(if (busy) "prompt.mcp.needsAuth.busy" else "settings.agentBehavior.mcp.signIn"),
                     enabled = !busy,
                     action = { signInFromPrompt(name) },
                 ),
+                SessionIssueAction(
+                    title = KiloBundle.message("settings.agentBehavior.mcp.signIn.cancel"),
+                    action = { cancelFromPrompt(name) },
+                ).takeIf { busy },
                 SessionIssueAction(
                     title = KiloBundle.message("prompt.mcp.openSettings"),
                     action = { openMcpSettings(name) },
@@ -1606,6 +1610,10 @@ class SessionUi(
             val result = auth.signIn(workspace.directory, name)
             withContext(Dispatchers.EDT) { auth.report(name, result) }
         }
+    }
+
+    private fun cancelFromPrompt(name: String) {
+        cs.launch { service<KiloMcpAuthService>().cancel(workspace.directory, name) }
     }
 
     private fun openKiloSettings() {

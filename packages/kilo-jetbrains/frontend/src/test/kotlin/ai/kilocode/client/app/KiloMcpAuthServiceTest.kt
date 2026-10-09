@@ -156,6 +156,152 @@ class KiloMcpAuthServiceTest : BasePlatformTestCase() {
         assertTrue("cancel must not delete credentials", rpc.mcpAuthRemovals.isEmpty())
     }
 
+    /**
+     * `mcpAuthenticate` only returns when the CLI's OAuth callback completes or its own 5-minute
+     * window closes, so without this race a cancel would leave `signIn` - and the busy flag the
+     * prompt indicator reads - blocked for up to [KiloMcpAuthServiceTest.service]'s timeout instead
+     * of returning immediately.
+     */
+    fun `test signIn returns as soon as it is cancelled instead of waiting for the CLI`() = runBlocking(Dispatchers.Default) {
+        val gate = CompletableDeferred<Unit>()
+        rpc.beforeAuthenticate = { gate.await() }
+        val service = service(authTimeoutMs = 60_000L)
+        val signIn = async { service.signIn("/test", "linear") }
+        withTimeout(5000) { while (!rpc.mcpAuthenticateStarted) delay(5) }
+
+        val result = withTimeout(2000) {
+            service.cancel("/test", "linear")
+            signIn.await()
+        }
+
+        assertEquals("cancelled", result.status)
+        assertTrue(service.busy.value.isEmpty())
+    }
+
+    /** A CLI that refuses the cancel must not strand the attempt busy until the timeout. */
+    fun `test cancel abandons the attempt locally even when the CLI refuses`() = runBlocking(Dispatchers.Default) {
+        val gate = CompletableDeferred<Unit>()
+        rpc.beforeAuthenticate = { gate.await() }
+        rpc.mcpAuthCancelResult = false
+        val service = service(authTimeoutMs = 60_000L)
+        val signIn = async { service.signIn("/test", "linear") }
+        withTimeout(5000) { while (!rpc.mcpAuthenticateStarted) delay(5) }
+
+        val stopped = service.cancel("/test", "linear")
+        val result = withTimeout(2000) { signIn.await() }
+
+        assertFalse("the CLI call itself must still report its own failure", stopped)
+        assertEquals("cancelled", result.status)
+        assertTrue(service.busy.value.isEmpty())
+    }
+
+    fun `test forget cancels an in-flight sign in and clears needs auth without deleting credentials`() =
+        runBlocking(Dispatchers.Default) {
+            val gate = CompletableDeferred<Unit>()
+            rpc.beforeAuthenticate = { gate.await() }
+            val service = service(authTimeoutMs = 60_000L)
+            service.refresh("/test")
+            val signIn = async { service.signIn("/test", "linear") }
+            withTimeout(5000) { while (!rpc.mcpAuthenticateStarted) delay(5) }
+
+            service.forget("/test", "linear")
+            val result = withTimeout(2000) { signIn.await() }
+
+            assertEquals("cancelled", result.status)
+            assertEquals(listOf("linear"), rpc.mcpAuthCancels)
+            assertTrue("forget must not delete credentials via the auth-remove endpoint", rpc.mcpAuthRemovals.isEmpty())
+            assertTrue(service.needsAuth.value["/test"].orEmpty().isEmpty())
+            assertTrue(service.busy.value.isEmpty())
+        }
+
+    /**
+     * Regression test: removing a server races the removal RPC against `signIn`'s own trailing
+     * refresh. If `forget` let that refresh run, it would re-read the still-`needs_auth` runtime
+     * status and put the just-removed server right back into [KiloMcpAuthService.needsAuth].
+     */
+    fun `test forget suppresses the trailing refresh so a removed server does not reappear in needs auth`() =
+        runBlocking(Dispatchers.Default) {
+            val gate = CompletableDeferred<Unit>()
+            rpc.beforeAuthenticate = { gate.await() }
+            // The removal RPC has not landed yet from the CLI's point of view.
+            rpc.mcps = listOf(McpStatusDto("linear", "needs_auth"))
+            val service = service(authTimeoutMs = 60_000L)
+            val signIn = async { service.signIn("/test", "linear") }
+            withTimeout(5000) { while (!rpc.mcpAuthenticateStarted) delay(5) }
+
+            service.forget("/test", "linear")
+            withTimeout(2000) { signIn.await() }
+
+            assertTrue(service.needsAuth.value["/test"].orEmpty().isEmpty())
+        }
+
+    fun `test forget without a pending sign in only clears needs auth`() = runBlocking(Dispatchers.Default) {
+        rpc.mcps = listOf(McpStatusDto("linear", "needs_auth"))
+        val service = service()
+        service.refresh("/test")
+
+        service.forget("/test", "linear")
+
+        assertTrue(service.needsAuth.value["/test"].orEmpty().isEmpty())
+        assertTrue(rpc.mcpAuthCancels.isEmpty())
+    }
+
+    /**
+     * The forgotten marker is scoped to the attempt it abandons, so re-adding the server and signing
+     * in again must get the normal trailing refresh. A marker held in a service-wide set could
+     * survive its attempt and silently suppress this later refresh.
+     */
+    fun `test a later sign in still refreshes after an earlier attempt was forgotten`() = runBlocking(Dispatchers.Default) {
+        val gate = CompletableDeferred<Unit>()
+        rpc.beforeAuthenticate = { gate.await() }
+        rpc.mcps = listOf(McpStatusDto("linear", "needs_auth"))
+        val service = service(authTimeoutMs = 60_000L)
+        val first = async { service.signIn("/test", "linear") }
+        withTimeout(5000) { while (!rpc.mcpAuthenticateStarted) delay(5) }
+        service.forget("/test", "linear")
+        withTimeout(2000) { first.await() }
+        assertTrue(service.needsAuth.value["/test"].orEmpty().isEmpty())
+
+        // The server is back in config and still unauthenticated, so this attempt's refresh must run.
+        rpc.beforeAuthenticate = null
+        rpc.mcpAuthenticateStarted = false
+        rpc.mcpAuthenticateResult = McpAuthResultDto("failed", "denied")
+        service.signIn("/test", "linear")
+
+        assertEquals(setOf("linear"), service.needsAuth.value["/test"])
+    }
+
+    fun `test sync records needs auth from a supplied status list without calling the rpc`() = runBlocking(Dispatchers.Default) {
+        val service = service()
+
+        val needs = service.sync(
+            "/test",
+            listOf(McpStatusDto("linear", "needs_auth"), McpStatusDto("filesystem", "connected")),
+        )
+
+        assertEquals(setOf("linear"), needs)
+        assertEquals(setOf("linear"), service.needsAuth.value["/test"])
+        assertTrue(rpc.mcpCalls.isEmpty())
+    }
+
+    fun `test sync with a blank directory is a no-op`() {
+        val service = service()
+
+        val needs = service.sync("", listOf(McpStatusDto("linear", "needs_auth")))
+
+        assertTrue(needs.isEmpty())
+        assertTrue(service.needsAuth.value.isEmpty())
+    }
+
+    fun `test sync clears a previously recorded name once it no longer needs auth`() = runBlocking(Dispatchers.Default) {
+        val service = service()
+        service.sync("/test", listOf(McpStatusDto("linear", "needs_auth")))
+
+        service.sync("/test", listOf(McpStatusDto("linear", "connected")))
+
+        assertTrue(service.needsAuth.value["/test"].orEmpty().isEmpty())
+    }
+
     fun `test reset reconnects and refreshes needs auth state`() = runBlocking(Dispatchers.Default) {
         rpc.mcps = listOf(McpStatusDto("linear", "connected"))
         rpc.afterMcpConnect = { _, name -> rpc.mcps = listOf(McpStatusDto(name, "needs_auth")) }

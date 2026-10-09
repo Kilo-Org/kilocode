@@ -108,6 +108,10 @@ internal class McpSettingsUi(
         } else {
             behavior.mcpStatus(dir).associateBy { it.name }
         }
+        // Reconciles the composer's needs-auth indicator with runtime truth on every visit to this
+        // page, so a server removed outside the IDE (or whose removal RPC failed after an optimistic
+        // forget()) does not leave the indicator stuck.
+        service<KiloMcpAuthService>().sync(dir, statuses.values.toList())
         val names = (cfg.keys + statuses.keys).sorted()
         LOG.info("mcp settings fetch dir=$dir config=${cfg.size} runtime=${statuses.size} total=${names.size}")
         if (names.isEmpty()) {
@@ -274,6 +278,10 @@ internal class McpSettingsUi(
         )
         if (result != Messages.YES) return
         mutateAndReload(ActiveListSelection.Slide) {
+            // A pending sign-in and the needs-auth indicator both outlive the row, and the CLI can
+            // only cancel the flow while it still knows the name, so drop them before the server
+            // disappears.
+            service<KiloMcpAuthService>().forget(dir, name)
             if (bundle != null) {
                 val removed = service<KiloMarketplaceService>().remove(dir, name, "mcp", target)
                 if (!removed.success) {
