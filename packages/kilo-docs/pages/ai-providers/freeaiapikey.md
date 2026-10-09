@@ -8,13 +8,16 @@ sidebar_label: FreeAIapikey
 
 [FreeAIapikey](https://freeaiapikey.com) is an AI gateway with one-key access to Claude, GPT and more. Kilo Code uses the `freeaiapikey` provider ID and reads your API key from `FREEAIKEY_API_KEY`.
 
+{% callout type="note" %}
+The FreeAIapikey provider entry in Kilo Code's catalog is sourced from [models.dev](https://models.dev). If it does not yet appear in your provider list, the catalog entry may still be pending merge — you can also connect via the OpenAI Compatible provider with base URL `https://api.freeaiapikey.com/v1` in the meantime.
+{% /callout %}
+
 ## Before you begin
 
 1. Create an account at [freeaiapikey.com](https://freeaiapikey.com) ($2 free credit, no card required).
 2. Create an API key in your [FreeAIapikey dashboard](https://freeaiapikey.com/dashboard).
 3. Choose an exact model ID from the live catalog. Model availability and pricing can change, so check `GET https://api.freeaiapikey.com/v1/models` instead of copying an old model list.
 
-Current catalog (checked October 2026): `openai/gpt-5.5`, `openai/gpt-5.6-sol`, `openai/gpt-6-sol`, `openai/gpt-6-Astra`, `anthropic/claude-opus-4.7`, `anthropic/claude-opus-4.8`, `anthropic/claude-opus-5`, `anthropic/claude-opus-5.5`, `anthropic/claude-sonnet-5`.
 
 ## Configure Kilo Code
 
@@ -58,3 +61,7 @@ curl https://api.freeaiapikey.com/v1/models -H "Authorization: Bearer $FREEAIKEY
 ```
 
 If the catalog returns your model, the connection is working.
+
+{% callout type="note" %}
+This documentation was contributed by FreeAIapikey, the provider it describes.
+{% /callout %}
