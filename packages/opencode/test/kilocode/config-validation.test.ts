@@ -1,11 +1,15 @@
 import { afterEach, describe, expect, test } from "bun:test"
 import path from "path"
+import { Effect, Layer } from "effect"
 import { ConfigValidation } from "../../src/kilocode/config-validation"
 import { provideTestInstance } from "../fixture/fixture"
 import { Config } from "../../src/config/config"
 import { AppRuntime } from "../../src/effect/app-runtime"
 import { Filesystem } from "../../src/util/filesystem"
-import { disposeAllInstances, tmpdir } from "../fixture/fixture"
+import { disposeAllInstances, tmpdir, TestInstance } from "../fixture/fixture"
+import { testEffect } from "../lib/effect"
+
+const it = testEffect(Layer.empty)
 
 afterEach(async () => {
   await disposeAllInstances()
@@ -184,3 +188,30 @@ Broken agent`,
     expect(result).toContain("Post-edit validation")
   })
 })
+
+// Regression for #14040. Tools invoke `check` from an Effect fiber, where the
+// instance is provided as a fiber context reference rather than through async-local
+// storage. The ambient context is not preserved across the awaits inside `check`, so
+// project markdown validation used to throw `No context found for instance` and
+// misreport it as a frontmatter parse error.
+it.instance("validates project markdown with only a fiber instance context", () =>
+  Effect.gen(function* () {
+    const test = yield* TestInstance
+    const filepath = path.join(test.directory, ".kilo", "command", "probe.md")
+    yield* Effect.promise(() =>
+      Filesystem.write(
+        filepath,
+        `---
+description: A test command
+---
+Do something useful`,
+      ),
+    )
+
+    const result = yield* Effect.promise(() => check(filepath))
+
+    expect(result).toContain("config_validation")
+    expect(result).toContain("validated successfully")
+    expect(result).not.toContain("No context found for instance")
+  }),
+)
