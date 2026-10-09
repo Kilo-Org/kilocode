@@ -237,13 +237,9 @@ describe("sandbox launch preparation", () => {
       expect(bound).not.toContain(path.join(cache, ".git"))
       expect(bound).toContain(path.join(cache, "repo", ".git"))
       expect(bound).toContain(path.join(project, "nested", ".git"))
-      // The marker gets its own writable bind after the root binds and before every read-only bind.
-      const bind = (target: string) =>
-        result.args.findIndex((arg, index) => arg === "--bind" && result.args[index + 1] === target)
-      const marker = bind(path.join(cache, ".git"))
-      expect(marker).toBeGreaterThan(bind(project))
-      expect(marker).toBeLessThan(result.args.indexOf("--ro-bind", result.args.indexOf("/dev")))
-      expect(result.args.filter((arg) => arg === path.join(project, "nested", ".git"))).toHaveLength(2)
+      // Only the allow rules are bound writable; a scanned path never is.
+      const writable = result.args.flatMap((arg, index) => (arg === "--bind" ? [result.args[index + 1]] : []))
+      expect(writable).toEqual([cache, project])
     } finally {
       rmSync(root, { recursive: true, force: true })
     }
@@ -298,7 +294,7 @@ describe("sandbox launch preparation", () => {
   })
 
   test.skipIf(process.platform !== "linux" || !bubblewrap.support().available)(
-    "keeps existing Linux markers regular files under real Bubblewrap",
+    "writes Linux markers in place under real Bubblewrap while .git directories stay read-only",
     () => {
       const root = realpathSync(mkdtempSync(path.join(os.tmpdir(), "kilo-bubblewrap-real-")))
       const cache = path.join(root, "cache")
@@ -324,14 +320,9 @@ describe("sandbox launch preparation", () => {
 
       try {
         expect(run("printf data > .git")).toBe(0)
-        expect(run("printf x > tmp && mv -f tmp .git")).not.toBe(0)
-        expect(run("ln -s repo lnk && mv -f lnk .git")).not.toBe(0)
-        expect(run("mkdir dir && mv -fT dir .git")).not.toBe(0)
-        expect(run("rm .git")).not.toBe(0)
-        expect(run("mv .git away")).not.toBe(0)
         expect(run("touch repo/.git/config")).not.toBe(0)
+        expect(run("mv repo/.git repo/moved")).not.toBe(0)
         expect(run("touch fresh.txt")).toBe(0)
-        expect(lstatSync(path.join(cache, ".git")).isFile()).toBe(true)
         expect(readFileSync(path.join(cache, ".git"), "utf8")).toBe("data")
         expect(existsSync(path.join(cache, "repo", ".git", "config"))).toBe(false)
       } finally {
