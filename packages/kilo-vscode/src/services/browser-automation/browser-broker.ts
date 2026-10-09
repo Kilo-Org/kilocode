@@ -19,6 +19,7 @@ import { BrowserNetwork } from "./browser-network"
 import { BrowserProxy, UNREACHABLE } from "./browser-proxy"
 import { parse } from "./browser-policy"
 import type {
+  BrowserCursor,
   BrowserFrame,
   BrowserInteraction,
   BrowserViewport,
@@ -80,6 +81,8 @@ interface BrowserDevtoolsInfo {
 
 export interface BrowserBrokerOptions {
   log: (...args: unknown[]) => void
+  /** Current IDE color scheme, applied to pages so `prefers-color-scheme` matches the editor. */
+  theme?: () => "dark" | "light"
   enabled?: () => boolean
   trusted?: () => boolean
   launch?: (options: LaunchOptions) => Promise<BrowserContextFactory>
@@ -246,6 +249,7 @@ export class BrowserBroker {
   private readonly claims = new Map<string, BrowserOwner>()
   private readonly listeners = new Set<(state: BrowserState) => void>()
   private readonly viewers = new Set<(frame: BrowserFrame & Pick<BrowserRoute, "sessionId" | "projectId">) => void>()
+  private readonly pointers = new Set<(cursor: BrowserCursor & Pick<BrowserRoute, "sessionId" | "projectId">) => void>()
   private readonly token = randomBytes(32).toString("hex")
   private readonly proxies = new Set<BrowserProxy>()
   private gateway: BrowserProxy | undefined
@@ -261,6 +265,25 @@ export class BrowserBroker {
   private closed = false
 
   constructor(private readonly opts: BrowserBrokerOptions) {}
+
+  private scheme(): "dark" | "light" {
+    return this.opts.theme?.() ?? "light"
+  }
+
+  /**
+   * Re-apply the current IDE color scheme to every live page. A page keeps the
+   * emulated scheme across navigations, so this only needs to run when the IDE
+   * theme changes, not on every navigation.
+   */
+  retheme(): void {
+    const colorScheme = this.scheme()
+    for (const entry of this.entries.values()) {
+      if (entry.dead) continue
+      void entry.page
+        .emulateMedia({ colorScheme })
+        .catch((error: unknown) => this.opts.log("Browser theme update failed", error))
+    }
+  }
 
   async start(): Promise<void> {
     if (this.closed) throw new Error("Browser broker is closed")
@@ -372,6 +395,11 @@ export class BrowserBroker {
     return () => this.viewers.delete(listener)
   }
 
+  cursors(listener: (cursor: BrowserCursor & Pick<BrowserRoute, "sessionId" | "projectId">) => void): () => void {
+    this.pointers.add(listener)
+    return () => this.pointers.delete(listener)
+  }
+
   async viewport(
     sessionId: string,
     projectId: string | undefined,
@@ -398,6 +426,11 @@ export class BrowserBroker {
         for (const viewer of this.viewers) viewer({ ...frame, projectId: route.projectId, sessionId: route.sessionId })
       },
       this.opts.log,
+      (cursor) => {
+        if (!this.accepts(route.sessionId, route.projectId, cursor)) return
+        for (const listener of this.pointers)
+          listener({ ...cursor, projectId: route.projectId, sessionId: route.sessionId })
+      },
     )
     return entry.stream
   }
@@ -534,6 +567,7 @@ export class BrowserBroker {
         serviceWorkers: "block",
         viewport: { width: 1280, height: 720 },
         deviceScaleFactor: 2,
+        colorScheme: this.scheme(),
         proxy: proxy.proxy,
         ignoreHTTPSErrors: false,
         acceptDownloads: false,
@@ -795,6 +829,7 @@ export class BrowserBroker {
     this.port = undefined
     this.listeners.clear()
     this.viewers.clear()
+    this.pointers.clear()
   }
 
   dispose(): void {

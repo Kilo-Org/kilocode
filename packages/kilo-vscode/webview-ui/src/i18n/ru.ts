@@ -60,6 +60,7 @@ export const dict = {
   ...anacondaDesktopDict,
   ...cloudProviderDict,
   "task.swarm.title": "Доска",
+  "task.swarm.open": "Открыть доску",
   "task.swarm.refresh": "Обновить",
   "task.swarm.reset": "Сбросить доску",
   "task.swarm.resetTitle": "Сбросить эту доску?",
@@ -214,6 +215,7 @@ export const dict = {
   "prompt.action.stop.background": "Остановить основного агента. Фоновые агенты продолжат работу.",
   "prompt.agents.show": "Показать фоновых агентов",
   "prompt.action.enhance": "Улучшить промпт",
+  "prompt.action.more": "Другие действия",
   "prompt.paste.expand": "Нажмите, чтобы развернуть вставленный текст",
   "prompt.issues.title": "Проблемы сессии",
   "prompt.mcp.provider": "MCP {{name}}",
@@ -1381,6 +1383,8 @@ export const dict = {
   "task.backgroundAgents.stopAll": "Остановить всех ({{count}})",
   "task.backgroundAgents.finished": "Фоновые агенты завершили работу",
   "task.stop": "Остановить субагента",
+  "task.open.panel": "Открыть субагента на панели",
+  "task.open.tab": "Открыть субагента во вкладке",
   "settings.saveBar.unsavedChanges": "Несохранённые изменения",
   "settings.saveBar.discard": "Отменить",
   "settings.saveBar.save": "Сохранить",
@@ -1445,6 +1449,11 @@ export const dict = {
   "settings.experimental.browserAutomation.systemChrome.title": "Использовать системный Chrome",
   "settings.experimental.browserAutomation.systemChrome.description":
     "Использовать установленный Google Chrome для встроенного браузера. Отключайте только если совместимый браузер Playwright Chromium уже установлен.",
+  "settings.experimental.browserLinks.title": "Открывать ссылки в",
+  "settings.experimental.browserLinks.description":
+    "Выберите, где открывать веб-ссылки из чатов Kilo. Требуется встроенный браузер.",
+  "settings.experimental.browserLinks.external": "Системный браузер",
+  "settings.experimental.browserLinks.integrated": "Встроенный браузер",
   "chat.search.searchingHistory": "Поиск в более ранних сообщениях…",
   "browserTab.noSession":
     "Откройте браузер из сеанса, чтобы просмотреть локальное приложение или публичную HTTPS-страницу.",

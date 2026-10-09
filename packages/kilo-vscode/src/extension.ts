@@ -83,7 +83,9 @@ export async function activate(context: vscode.ExtensionContext) {
     trusted: () => vscode.workspace.isTrusted,
     useSystemChrome: () => integratedBrowserUseSystemChrome(),
     fallback: () => process.platform === "linux" && integratedBrowserFallback(),
+    theme: browserTheme,
   })
+  context.subscriptions.push(vscode.window.onDidChangeActiveColorTheme(() => browserBroker.retheme()))
 
   // Create shared connection service (one server for all webviews)
   const connectionService = new KiloConnectionService(
@@ -404,6 +406,9 @@ export async function activate(context: vscode.ExtensionContext) {
   provider.setCreateWorktreeHandler((baseBranch, branchName) =>
     agentManagerProvider.createFromSidebar(baseBranch, branchName),
   )
+  // Chat web links open in the Integrated Browser tab for the current session.
+  const openLink = (url: string, sessionId?: string) => (sessionId ? browserTabProvider.openUrl(sessionId, url) : false)
+  provider.setOpenLinkHandler(openLink)
 
   // Register toggle auto-approve shortcut (Ctrl+Alt+A / Cmd+Alt+A)
   const defaultDir = () => vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? process.cwd()
@@ -497,6 +502,7 @@ export async function activate(context: vscode.ExtensionContext) {
     tabProvider.setCreateWorktreeHandler((baseBranch, branchName) =>
       agentManagerProvider.createFromSidebar(baseBranch, branchName),
     )
+    tabProvider.setOpenLinkHandler(openLink)
     tabProvider.setDiffVirtualProvider(diffVirtualProvider)
     tabProvider.setDiffViewerProvider(diffViewerProvider)
     tabProvider.setReviewCommentsHandler(deliver)
@@ -943,6 +949,12 @@ export async function deactivate() {
     if (result.status === "rejected") console.warn("[Kilo New] Extension shutdown failed:", result.reason)
   }
   TelemetryProxy.getInstance().shutdown()
+}
+
+/** Current IDE color scheme, so the Integrated Browser matches the editor theme. */
+function browserTheme(): "dark" | "light" {
+  const kind = vscode.window.activeColorTheme.kind
+  return kind === vscode.ColorThemeKind.Light || kind === vscode.ColorThemeKind.HighContrastLight ? "light" : "dark"
 }
 
 function openKiloInNewTab(

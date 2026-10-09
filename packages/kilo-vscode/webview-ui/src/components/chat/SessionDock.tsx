@@ -17,6 +17,10 @@
  * goal). The dock plans that trailing group as one, so it collapses in a fixed
  * order instead of each badge shrinking on its own. When idle, the chip sits
  * next to the Goal control in the actions row.
+ *
+ * The board button follows the stack: what the agents say sits next to who
+ * works. The board belongs to the session, so the button stays in the same
+ * place when the agents are cleared or the view reloads.
  */
 import { type Component, type JSX, Show, createEffect, createSignal, onCleanup } from "solid-js"
 import { useSession } from "../../context/session"
@@ -25,6 +29,7 @@ import { showsWorking } from "../shared/working-indicator-utils"
 import { running } from "../../context/session-timing"
 import { useGoalDock } from "./goal/useGoalDock"
 import { AgentStack, useAgentStack } from "./AgentStack"
+import { SwarmBoardButton, useSwarmBoard } from "./SwarmBoard"
 import { stackFit, stackPlace, stackWidth } from "./background-agents"
 import { TodoChip, useTodoDock } from "./todo/TodoChip"
 import { TODO_TITLE_MAX, todoFit, type TodoFit } from "./todo/todo-dock"
@@ -38,12 +43,21 @@ interface SessionDockProps {
   blocked?: boolean
   onScrollToBottom?: () => void
   readonly?: boolean
+  projectId?: string
 }
 
 export const SessionDock: Component<SessionDockProps> = (props) => {
   const session = useSession()
   const stack = useAgentStack()
   const todo = useTodoDock()
+  const board = useSwarmBoard({
+    get readonly() {
+      return props.readonly
+    },
+    get projectId() {
+      return props.projectId
+    },
+  })
   const working = () =>
     showsWorking(
       session.status(),
@@ -53,7 +67,9 @@ export const SessionDock: Component<SessionDockProps> = (props) => {
     )
   const actions = () => !working() && !props.blocked && (props.hasActions?.() ?? false)
   const visible = () => !props.readonly && stack.shown()
-  const agents = () => !working() && !actions() && !props.blocked && (visible() || todo.shown())
+  // The stack, the board button, or both lead the spinner.
+  const front = () => visible() || board.shown()
+  const agents = () => !working() && !actions() && !props.blocked && (front() || todo.shown())
   const active = () => working() || actions() || agents()
   const [fit, setFit] = createSignal<TodoFit>({ title: TODO_TITLE_MAX, count: true, compact: false })
   const goal = useGoalDock({
@@ -176,9 +192,12 @@ export const SessionDock: Component<SessionDockProps> = (props) => {
   // Created once, so the actions row can rebuild around it without replaying
   // the stack's open animation.
   const idleStack = (
-    <Show when={visible()}>
-      <AgentStack state={stack} max={Math.min(max(), room())} rule />
-    </Show>
+    <>
+      <Show when={visible()}>
+        <AgentStack state={stack} max={Math.min(max(), room())} rule={!board.shown()} />
+      </Show>
+      <SwarmBoardButton state={board} rule active={actions()} />
+    </>
   )
 
   // The actions row wraps. Put the stack on a line that has room for it, so
@@ -194,8 +213,10 @@ export const SessionDock: Component<SessionDockProps> = (props) => {
       const row = state.querySelector<HTMLElement>(".session-actions-row")
       const item = row?.querySelector<HTMLElement>(':scope > [data-component="agent-stack"]')
       if (!row || !item) return
+      // The board button travels with the stack, right after it.
+      const tail = row.querySelector<HTMLElement>(':scope > [data-component="board-trigger"]')
       const all = [...row.children].filter((child): child is HTMLElement => child instanceof HTMLElement)
-      const kids = all.filter((child) => child !== item)
+      const kids = all.filter((child) => child !== item && child !== tail)
       // Boxes as painted, including a running glide, so a new glide starts
       // where the eye last saw each item.
       const first = new Map(all.map((child) => [child, child.getBoundingClientRect()]))
@@ -208,6 +229,7 @@ export const SessionDock: Component<SessionDockProps> = (props) => {
       // restart and jump out of phase on every pass.
       const prev = item.style.position
       item.style.position = "absolute"
+      if (tail) tail.style.position = "absolute"
       const lines: { last: number; used: number; top: number }[] = []
       kids.forEach((child, index) => {
         const line = lines.at(-1)
@@ -221,16 +243,19 @@ export const SessionDock: Component<SessionDockProps> = (props) => {
         lines.push({ last: index, used: child.offsetWidth, top: child.offsetTop })
       })
       item.style.position = prev
+      tail?.style.removeProperty("position")
+      // The button, plus the spacing and gap that follow it.
+      const extra = tail ? tail.offsetWidth + 4 + gap : 0
       // Show only as many avatars as the roomiest line can take. Plan with the
       // target width, not the measured one, which changes while it animates.
       const count = stack.items().length
       const room = Math.max(0, ...lines.map((line) => width - line.used))
-      const size = Math.min(max(), stackFit(room - gap - 1, count), Math.max(1, count))
+      const size = Math.min(max(), stackFit(room - gap - 1 - extra, count), Math.max(1, count))
       setRoom(size)
       const slot = stackPlace(
         lines.map((line) => line.used),
         width,
-        stackWidth(size, count) + gap + 1,
+        stackWidth(size, count) + gap + 1 + extra,
       )
       kids.forEach((child, index) => {
         const order = String(index * 2 + 2)
@@ -238,6 +263,11 @@ export const SessionDock: Component<SessionDockProps> = (props) => {
       })
       const order = slot.end ? String((lines.at(slot.line)?.last ?? 0) * 2 + 3) : "0"
       const side = slot.end ? "end" : "start"
+      if (tail) {
+        const next = String(Number(order) + 1)
+        if (tail.style.order !== next) tail.style.order = next
+        tail.dataset.place = side
+      }
       if (item.style.order === order && item.dataset.place === side) return
       // The first placement happens while the stack opens, so only later moves glide.
       const moved = item.dataset.place != null
@@ -254,6 +284,7 @@ export const SessionDock: Component<SessionDockProps> = (props) => {
       mutate.disconnect()
       for (const child of state.querySelectorAll<HTMLElement>(".session-actions-row > *"))
         child.style.removeProperty("order")
+      state.querySelector('.session-actions-row > [data-component="board-trigger"]')?.removeAttribute("data-place")
     })
     place()
   })
@@ -268,12 +299,15 @@ export const SessionDock: Component<SessionDockProps> = (props) => {
             setLane(el)
           }}
           data-goal={goal.running() ? "" : undefined}
-          data-agents={visible() ? "" : undefined}
+          data-agents={front() ? "" : undefined}
           data-todos={todo.shown() ? "" : undefined}
         >
-          <Show when={visible()}>
+          <Show when={front()}>
             <div class="session-working-lead" ref={setLead}>
-              <AgentStack state={stack} max={max()} rule />
+              <Show when={visible()}>
+                <AgentStack state={stack} max={max()} rule={!board.shown()} />
+              </Show>
+              <SwarmBoardButton state={board} rule active={working()} />
             </div>
           </Show>
           <WorkingIndicator onScrollToBottom={props.onScrollToBottom} />
@@ -291,6 +325,7 @@ export const SessionDock: Component<SessionDockProps> = (props) => {
           <Show when={visible()}>
             <AgentStack state={stack} label />
           </Show>
+          <SwarmBoardButton state={board} active={agents()} />
           {chip(false)}
         </div>
       </div>

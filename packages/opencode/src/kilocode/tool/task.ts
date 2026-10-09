@@ -35,6 +35,9 @@ const ModelState = z
   .passthrough()
 
 export namespace KiloTask {
+  export const usageDescription =
+    "Subagents launched with this tool are internal to the current session and create no worktrees or interactive sessions. To start visible Agent Manager sessions, use `agent_manager` only when the user explicitly asks."
+
   export const ModelFields = {
     model: Schema.optional(Schema.NullOr(Schema.String)).annotate({
       description:

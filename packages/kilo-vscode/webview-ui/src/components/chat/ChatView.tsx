@@ -7,6 +7,7 @@
 
 import { type Component, type JSX, Show, createEffect, createMemo, createSignal, onCleanup, onMount } from "solid-js"
 import { AgentAvatarPalette } from "@kilocode/kilo-ui/agent-avatar"
+import { useData } from "@kilocode/kilo-ui/context/data"
 import { Button } from "@kilocode/kilo-ui/button"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
@@ -32,6 +33,7 @@ import { isPromptBlocked, isSuggesting, isQuestioning } from "./prompt-input-uti
 import { taskChildren } from "./background-agents"
 import { pollBackgroundJobs } from "./background-jobs"
 import { showTabStrip } from "../../utils/local-tabs"
+import { forcesExternalBrowser } from "../../utils/link-modifier"
 import type { WorktreeReference } from "../../hooks/file-mention-utils"
 
 interface ChatViewProps {
@@ -64,6 +66,7 @@ interface ChatViewProps {
 
 export const ChatView: Component<ChatViewProps> = (props) => {
   const session = useSession()
+  const data = useData()
   const vscode = useVSCode()
   const language = useLanguage()
   const worktreeMode = useWorktreeMode()
@@ -77,6 +80,21 @@ export const ChatView: Component<ChatViewProps> = (props) => {
   const ownsPrompts = () => props.interactivePrompts !== false
 
   const id = () => session.currentSessionID()
+  const openLink = (event: MouseEvent) => {
+    if (!data.openUrl || !(event.target instanceof Element)) return
+    const anchor = event.target.closest("a[href]")
+    if (!anchor || anchor.closest(".chat-view") !== event.currentTarget) return
+    const url = anchor.getAttribute("href") ?? ""
+    if (!/^https?:\/\//i.test(url)) return
+    // Claim the click before renderer handlers and VS Code's window listener.
+    event.preventDefault()
+    event.stopPropagation()
+    if (forcesExternalBrowser(event, data.browserLinks)) {
+      vscode.postMessage({ type: "openExternal", url })
+      return
+    }
+    data.openUrl(url, id())
+  }
   // Keeps the background job list fresh for the dock's agent stack and the
   // swarm board, which both read the replies.
   pollBackgroundJobs()
@@ -392,11 +410,18 @@ export const ChatView: Component<ChatViewProps> = (props) => {
   return (
     <AgentAvatarPalette ids={siblings()}>
       <TranscriptSearchProvider>
-        <div class="chat-view">
+        <div
+          class="chat-view"
+          data-browser-links={data.browserLinks ? "true" : undefined}
+          ref={(node) => {
+            node.addEventListener("click", openLink, true)
+            onCleanup(() => node.removeEventListener("click", openLink, true))
+          }}
+        >
           <Show when={isSidebar() && !props.readonly && tabs && showTabStrip(tabs.ids())}>
             <SessionTabStrip />
           </Show>
-          <TaskHeader readonly={props.readonly} projectId={props.projectId} />
+          <TaskHeader readonly={props.readonly} />
           <div class="chat-messages-wrapper">
             <div class="chat-messages">
               <MessageList
@@ -440,6 +465,7 @@ export const ChatView: Component<ChatViewProps> = (props) => {
                 actions={(control, agents, todos) => renderActions(hasMessages(), control, agents, todos)}
                 onScrollToBottom={scrollToBottom}
                 readonly={props.readonly}
+                projectId={props.projectId}
               />
               <Show when={ownsPrompts() && !props.readonly}>
                 <PromptInput
