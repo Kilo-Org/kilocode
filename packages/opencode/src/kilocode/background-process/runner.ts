@@ -134,7 +134,7 @@ export namespace BackgroundProcessRunner {
     return result
   }
 
-  async function descendants(seen: Map<number, string>, root?: Root) {
+  async function descendants(seen: Map<number, string>, root?: () => Root | undefined) {
     const query =
       "Get-CimInstance Win32_Process | Select-Object ProcessId,ParentProcessId,CreationDate | ConvertTo-Json -Compress"
     const out = await Process.text(["powershell.exe", "-NoProfile", "-NonInteractive", "-Command", query], {
@@ -155,7 +155,7 @@ export namespace BackgroundProcessRunner {
         return []
       return [{ pid: item.ProcessId, parent: item.ParentProcessId, birth: item.CreationDate }]
     })
-    return { seen: walk(rows, seen, root), ok: true }
+    return { seen: walk(rows, seen, root?.()), ok: true }
   }
 
   // Goes to stderr, which serve appends to the process output, so the agent and the user see it.
@@ -275,7 +275,7 @@ export namespace BackgroundProcessRunner {
     while (true) {
       if (failure) throw failure
       const from = root()
-      const walked = await descendants(seen, from)
+      const walked = await descendants(seen, () => from && { ...from, end: exited })
       seen = walked.seen
       if (await Bun.file(input.control).exists()) {
         // Only pids a walk verified: the leader while it is alive, and descendants whose creation
@@ -290,7 +290,8 @@ export namespace BackgroundProcessRunner {
             ),
           )
           await Bun.sleep(100)
-          const next = await descendants(seen, root())
+          const from = root()
+          const next = await descendants(seen, () => from && { ...from, end: exited })
           seen = next.seen
           if (code !== undefined && next.ok && seen.size === 0) {
             await rm(input.control, { force: true })
