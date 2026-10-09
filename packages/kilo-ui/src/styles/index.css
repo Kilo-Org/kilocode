@@ -45,6 +45,7 @@
 @import "../components/task-header.css";
 @import "../components/text-field.css";
 @import "../components/toast.css";
+@import "../components/tool-motion.css";
 @import "../components/tooltip.css";
 
 /* VS Code variable bridge */

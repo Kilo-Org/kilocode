@@ -26,6 +26,7 @@ export const ItemCard = (props: Props) => {
   const type = () => {
     if (props.item.type === "mcp") return t("marketplace.badge.mcpServer")
     if (props.item.type === "agent") return t("marketplace.remove.type.agent")
+    if (props.item.type === "plugin") return t("marketplace.remove.type.plugin")
     return t("marketplace.remove.type.skill")
   }
   const [expanded, setExpanded] = createSignal(false)
@@ -73,6 +74,9 @@ export const ItemCard = (props: Props) => {
         <div class="marketplace-card-tags">
           <Show when={installed()}>
             <Tag class="marketplace-badge-installed">{t("marketplace.card.installed")}</Tag>
+          </Show>
+          <Show when={props.item.type === "mcp" && props.item.skills?.length}>
+            <Tag class="marketplace-badge-skills">{t("marketplace.badge.skills")}</Tag>
           </Show>
           {props.footer}
         </div>

@@ -3,6 +3,7 @@ import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder" // ki
 import { Ripgrep } from "@opencode-ai/core/ripgrep"
 import { PlanExitTool } from "./plan"
 import { Session } from "@/session/session"
+import { SessionCompaction } from "@/session/compaction" // kilocode_change - compaction service for the experimental compact tool
 import { QuestionTool } from "./question"
 // kilocode_change start
 import { SuggestTool } from "../kilocode/suggestion/tool"
@@ -37,6 +38,7 @@ import { AgentManager } from "@/kilocode/agent-manager/service" // kilocode_chan
 import { Wakeup } from "@/kilocode/wakeup" // kilocode_change
 import { SessionDrain } from "@/kilocode/session/drain" // kilocode_change
 import { RepoOverviewTool } from "@/kilocode/tool/repo-overview" // kilocode_change
+import { ContextInfoTool, CompactTool } from "@/kilocode/tool/context" // kilocode_change
 import { RepoCloneTool } from "./repo_clone" // kilocode_change
 import { Flag } from "@opencode-ai/core/flag/flag" // kilocode_change
 import { Auth } from "@/auth" // kilocode_change
@@ -143,6 +145,10 @@ const layer = Layer.effect(
     const websearch = yield* WebSearchTool
     const clone = yield* RepoCloneTool // kilocode_change
     const overview = yield* RepoOverviewTool // kilocode_change
+    // kilocode_change start - self-context tools
+    const contextInfoTool = yield* ContextInfoTool
+    const compactTool = yield* CompactTool
+    // kilocode_change end
     const shell = yield* ShellTool
     const globtool = yield* GlobTool
     const writetool = yield* WriteTool
@@ -283,6 +289,8 @@ const layer = Layer.effect(
           patch: Tool.init(patchtool),
           question: Tool.init(question),
           lsp: Tool.init(lsptool),
+          contextInfo: Tool.init(contextInfoTool), // kilocode_change
+          compact: Tool.init(compactTool), // kilocode_change
           plan: Tool.init(plan),
           suggest: Tool.init(suggesttool),
           ...(codeModeTool ? { execute: Tool.init(codeModeTool) } : {}), // kilocode_change
@@ -321,6 +329,7 @@ const layer = Layer.effect(
               ...KiloToolRegistry.extra(kilo, cfg, flags),
               ...(tool.execute ? [tool.execute] : []),
               ...(flags.experimentalLspTool ? [tool.lsp] : []),
+              ...(flags.experimentalContextTools ? [tool.contextInfo, tool.compact] : []), // kilocode_change
             ],
             kilo,
           ),
@@ -536,6 +545,7 @@ export const node = LayerNode.suspend(() =>
       Agent.node,
       Skill.node,
       Session.node,
+      SessionCompaction.node, // kilocode_change - compaction service for the experimental compact tool
       BackgroundJob.node,
       SessionDrain.node,
       Provider.node,

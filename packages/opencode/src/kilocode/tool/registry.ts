@@ -7,7 +7,9 @@ import { BoardReadTool, BoardPostTool } from "./board"
 import { BrowserOpenTool } from "./browser-open"
 import { CancelWakeupTool } from "./cancel-wakeup"
 import { ChartTool } from "./chart"
+import { CronCreateTool, CronDeleteTool, CronListTool } from "./cron"
 import { GenerateImageTool } from "./generate-image"
+import { LinkPrTool } from "./link-pr"
 import { NotebookEditTool, NotebookExecuteTool, NotebookReadTool } from "./notebook-host"
 import { MemoryRecallTool } from "./memory-recall"
 import { MemorySaveTool } from "./memory-save"
@@ -22,6 +24,7 @@ import * as Network from "@/kilocode/sandbox/network"
 import { Notebook } from "@/kilocode/notebook/service"
 import { AgentManager, HostError } from "@/kilocode/agent-manager/service"
 import { KiloSessions } from "@/kilo-sessions/kilo-sessions"
+import { enabled as prEnabled } from "@/kilo-sessions/pr-link"
 import * as Log from "@opencode-ai/core/util/log"
 import type { Config } from "@/config/config"
 import type { RuntimeFlags } from "@/effect/runtime-flags"
@@ -47,7 +50,25 @@ export namespace KiloToolRegistry {
     config: Pick<Config.Info, "indexing">,
     global?: Pick<Config.Info, "indexing">,
   ): boolean | undefined {
+    // VS Code enables indexing from project consent, not from config. Build the tool here and let
+    // applyVisibility check consent on each turn, because consent can change after the registry is built.
+    if (process.env["KILO_PLATFORM"] === "vscode") return true
     return config.indexing?.enabled ?? global?.indexing?.enabled
+  }
+
+  /**
+   * Check VS Code project consent without failing tool resolution. Import lazily like semanticTool:
+   * indexing.ts imports AppRuntime, which imports the tool registry, and indexing load failures must not break tools.
+   */
+  function consented(dir: string) {
+    return Effect.tryPromise(() => import("@/kilocode/indexing").then((mod) => mod.KiloIndexing.consented(dir))).pipe(
+      Effect.catch((err) =>
+        Effect.sync(() => {
+          log.warn("semantic search consent unavailable", { err })
+          return false
+        }),
+      ),
+    )
   }
 
   export function usePatch(input: { modelID: string; family?: string }) {
@@ -91,9 +112,13 @@ export namespace KiloToolRegistry {
       const notify = yield* NotifyUserTool.pipe(Effect.provideService(KiloSessions.Service, sessions))
       const openPlan = yield* OpenPlanTool
       const send = yield* SendFileTool
+      const linkPr = yield* LinkPrTool
       // Wakeup.Service is provided by Wakeup.node in the tool-registry node graph.
       const schedule = yield* ScheduleWakeupTool
       const cancel = yield* CancelWakeupTool
+      const cronCreate = yield* CronCreateTool
+      const cronList = yield* CronListTool
+      const cronDelete = yield* CronDeleteTool
       const board = yield* Effect.all({
         boardRead: BoardReadTool,
         boardPost: BoardPostTool,
@@ -114,8 +139,12 @@ export namespace KiloToolRegistry {
           notify,
           openPlan,
           send,
+          linkPr,
           schedule,
           cancel,
+          cronCreate,
+          cronList,
+          cronDelete,
           ...board,
         }
       const tools = yield* Effect.all({
@@ -136,8 +165,12 @@ export namespace KiloToolRegistry {
         notify,
         openPlan,
         send,
+        linkPr,
         schedule,
         cancel,
+        cronCreate,
+        cronList,
+        cronDelete,
         ...board,
         ...tools,
       }
@@ -160,8 +193,12 @@ export namespace KiloToolRegistry {
       notify: Tool.Info
       openPlan?: Tool.Info
       send: Tool.Info
+      linkPr: Tool.Info
       schedule?: Tool.Info
       cancel?: Tool.Info
+      cronCreate?: Tool.Info
+      cronList?: Tool.Info
+      cronDelete?: Tool.Info
       boardRead?: Tool.Info
       goalReport?: Tool.Info
       goal?: Tool.Info
@@ -185,10 +222,14 @@ export namespace KiloToolRegistry {
         image: Tool.init(tools.image),
         notify: Tool.init(tools.notify),
         send: Tool.init(tools.send),
+        linkPr: Tool.init(tools.linkPr),
       })
       const openPlan = tools.openPlan ? yield* Tool.init(tools.openPlan) : undefined
       const schedule = tools.schedule ? yield* Tool.init(tools.schedule) : undefined
       const cancel = tools.cancel ? yield* Tool.init(tools.cancel) : undefined
+      const cronCreate = tools.cronCreate ? yield* Tool.init(tools.cronCreate) : undefined
+      const cronList = tools.cronList ? yield* Tool.init(tools.cronList) : undefined
+      const cronDelete = tools.cronDelete ? yield* Tool.init(tools.cronDelete) : undefined
       const report = tools.goalReport ? { goalReport: yield* Tool.init(tools.goalReport) } : {}
       const goal = tools.goal ? { goal: yield* Tool.init(tools.goal) } : {}
       const board =
@@ -216,6 +257,9 @@ export namespace KiloToolRegistry {
         openPlan,
         schedule,
         cancel,
+        cronCreate,
+        cronList,
+        cronDelete,
         notify: base.notify,
         send: base.send,
       }
@@ -281,8 +325,12 @@ export namespace KiloToolRegistry {
       notify: Tool.Def
       openPlan?: Tool.Def
       send: Tool.Def
+      linkPr: Tool.Def
       schedule?: Tool.Def
       cancel?: Tool.Def
+      cronCreate?: Tool.Def
+      cronList?: Tool.Def
+      cronDelete?: Tool.Def
       boardRead?: Tool.Def
       goalReport?: Tool.Def
       goal?: Tool.Def
@@ -295,7 +343,6 @@ export namespace KiloToolRegistry {
       experimental?: {
         image_generation?: boolean
         native_notebook_tools?: boolean
-        task_model_selection?: boolean
       }
       shared_agent_board?: boolean
     },
@@ -315,9 +362,10 @@ export namespace KiloToolRegistry {
       ...(Flag.KILO_CLIENT === "cli" || Flag.KILO_CLIENT === "vscode" ? [tools.process] : []),
       ...((Flag.KILO_CLIENT === "cli" || Flag.KILO_CLIENT === "vscode") && tools.schedule ? [tools.schedule] : []),
       ...((Flag.KILO_CLIENT === "cli" || Flag.KILO_CLIENT === "vscode") && tools.cancel ? [tools.cancel] : []),
-      ...(Flag.KILO_CLIENT === "vscode" || cfg.experimental?.task_model_selection === true
-        ? [tools.managerModels]
-        : []),
+      ...((Flag.KILO_CLIENT === "cli" || Flag.KILO_CLIENT === "vscode") && tools.cronCreate ? [tools.cronCreate] : []),
+      ...((Flag.KILO_CLIENT === "cli" || Flag.KILO_CLIENT === "vscode") && tools.cronList ? [tools.cronList] : []),
+      ...((Flag.KILO_CLIENT === "cli" || Flag.KILO_CLIENT === "vscode") && tools.cronDelete ? [tools.cronDelete] : []),
+      tools.managerModels,
       ...(Flag.KILO_CLIENT === "vscode" ? [tools.manager] : []),
       ...(Flag.KILO_CLIENT === "vscode" && tools.browser ? [tools.browser] : []),
       ...(Flag.KILO_CLIENT === "vscode" &&
@@ -330,6 +378,7 @@ export namespace KiloToolRegistry {
       tools.notify,
       ...(Flag.KILO_CLIENT === "vscode" && tools.openPlan ? [tools.openPlan] : []),
       tools.send,
+      ...(prEnabled() ? [tools.linkPr] : []),
     ]
   }
 
@@ -383,10 +432,18 @@ export namespace KiloToolRegistry {
           return yield* Network.available(new URL(base), token)
         })
       : false
-    return tools.filter((tool) => {
-      if (tool.id.startsWith("kilo_memory_")) return memoryEnabled
-      if (tool.id === "browser_open") return browser
-      return true
+    const semantic =
+      process.env["KILO_PLATFORM"] === "vscode" && tools.some((tool) => tool.id === "semantic_search")
+        ? yield* consented(ctx.directory)
+        : true
+    return tools.flatMap((tool) => {
+      if (tool.id.startsWith("kilo_memory_")) return memoryEnabled ? [tool] : []
+      if (tool.id === "browser_open") return browser ? [tool] : []
+      if (semantic) return [tool]
+      if (tool.id === "semantic_search") return []
+      if (tool.id !== "glob" && tool.id !== "grep") return [tool]
+      const next = { ...tool, description: tool.description.replace(`\n${hint}`, "") }
+      return [Network.isBuiltin(tool) ? Network.builtin(next) : next]
     })
   })
 

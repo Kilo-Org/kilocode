@@ -219,7 +219,9 @@ const Revert = Schema.Struct({
   partID: optionalOmitUndefined(PartID),
   snapshot: optionalOmitUndefined(Schema.String),
   diff: optionalOmitUndefined(Schema.String),
-  workspace: optionalOmitUndefined(Schema.Literals(["restored", "snapshots-disabled", "unavailable"])), // kilocode_change
+  workspace: optionalOmitUndefined(
+    Schema.Literals(["restored", "snapshots-disabled", "unavailable", "not-a-git-repo"]),
+  ), // kilocode_change
 })
 
 const Model = Schema.Struct({
@@ -947,7 +949,16 @@ export const layer: Layer.Layer<
     })
 
     const setArchived = Effect.fn("Session.setArchived")(function* (input: { sessionID: SessionID; time?: number }) {
-      if (input.time != null) GoalState.pause(input.sessionID) // kilocode_change
+      if (input.time != null) {
+        GoalState.pause(input.sessionID) // kilocode_change
+        // kilocode_change start - drop the archived session's goal link state (the
+        // arm closure, wait record, and queued fire); its armed timers settle on
+        // the next fire instead of holding per-session state for the process life.
+        yield* Effect.promise(() =>
+          import("@/kilocode/session/goal/link").then((m) => m.GoalLink.release(input.sessionID)),
+        )
+        // kilocode_change end
+      }
       yield* patch(input.sessionID, { time: { archived: input.time } }).pipe(Effect.orDie)
     })
 

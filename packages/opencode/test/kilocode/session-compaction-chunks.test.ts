@@ -234,19 +234,22 @@ function fakeRuntime(outputTokenMax?: number, error?: MessageV2.Assistant["error
     calls,
     outputs,
     rt: ManagedRuntime.make(
-      LayerNode.compile(LayerNode.group([SessionCompaction.node, SessionNs.node, SessionProjector.node, Bus.node]), [
-        [SessionProcessorModule.SessionProcessor.node, processorNode],
-        [Provider.node, ProviderTest.fake({ model }).layer],
-        [Agent.node, agents],
-        [RuntimeFlags.node, RuntimeFlags.layer({ outputTokenMax })],
+      LayerNode.compile(
+        LayerNode.group([SessionCompaction.node, SessionNs.node, SessionProjector.node, Bus.node, EventV2Bridge.node]),
         [
-          Config.node,
-          Layer.mock(Config.Service)({
-            get: () => Effect.succeed({ ...{}, compaction: { reserved: 1_000 } }),
-            directories: () => Effect.succeed([]),
-          }),
+          [SessionProcessorModule.SessionProcessor.node, processorNode],
+          [Provider.node, ProviderTest.fake({ model }).layer],
+          [Agent.node, agents],
+          [RuntimeFlags.node, RuntimeFlags.layer({ outputTokenMax })],
+          [
+            Config.node,
+            Layer.mock(Config.Service)({
+              get: () => Effect.succeed({ ...{}, compaction: { reserved: 1_000 } }),
+              directories: () => Effect.succeed([]),
+            }),
+          ],
         ],
-      ]),
+      ),
     ),
   }
 }
@@ -270,6 +273,17 @@ async function failure(error?: MessageV2.Assistant["error"], empty = false) {
 
       const { rt } = fakeRuntime(undefined, error, empty)
       try {
+        const errors: Array<typeof SessionNs.Event.Error.data.Type> = []
+        const off = await rt.runPromise(
+          EventV2Bridge.Service.use((svc) =>
+            svc.listen((evt) => {
+              if (evt.type !== SessionNs.Event.Error.type) return Effect.void
+              const data = evt.data as typeof SessionNs.Event.Error.data.Type
+              if (data.sessionID === session.id) errors.push(data)
+              return Effect.void
+            }),
+          ),
+        )
         const msgs = await svc.messages({ sessionID: session.id })
         const parent = msgs.at(-1)?.info.id
         expect(parent).toBeTruthy()
@@ -285,7 +299,8 @@ async function failure(error?: MessageV2.Assistant["error"], empty = false) {
         )
         const all = await svc.messages({ sessionID: session.id })
         const summary = all.find((msg) => msg.info.role === "assistant" && msg.info.summary)
-        return { result, summary }
+        await rt.runPromise(off)
+        return { result, summary, errors }
       } finally {
         await rt.dispose()
       }
@@ -382,6 +397,11 @@ describe("KiloCompactionChunks", () => {
     if (result.summary?.info.role !== "assistant") return
     expect(result.summary.info.finish).toBe("error")
     expect(result.summary.info.error).toEqual(error)
+    expect(
+      result.summary.parts.some(
+        (part) => part.type === "text" && part.text.includes(KiloCompactionChunks.EMPTY_SUMMARY),
+      ),
+    ).toBe(false)
   })
 
   test("keeps context overflow on the terminal compaction path", async () => {
@@ -391,27 +411,34 @@ describe("KiloCompactionChunks", () => {
       }).toObject(),
     )
 
+    expect(result.errors).toHaveLength(1)
     expect(result.result).toBe("stop")
     expect(result.summary?.info.role).toBe("assistant")
     if (result.summary?.info.role !== "assistant") return
     expect(result.summary.info.error?.name).toBe("ContextOverflowError")
     if (result.summary.info.error?.name !== "ContextOverflowError") return
     expect(result.summary.info.error.data.message).toBe(
-      "Session too large to compact - context exceeds model limit even after stripping media",
+      "Session too large to compact - context exceeds model limit even after stripping media. Start a new session to continue.",
     )
   })
 
   test("reports empty chunk worker responses as API errors", async () => {
     const result = await failure(undefined, true)
 
+    expect(result.errors).toHaveLength(1)
     expect(result.result).toBe("stop")
     expect(result.summary?.info.role).toBe("assistant")
     if (result.summary?.info.role !== "assistant") return
     expect(result.summary.info.finish).toBe("error")
     expect(result.summary.info.error?.name).toBe("APIError")
     if (result.summary.info.error?.name !== "APIError") return
-    expect(result.summary.info.error.data.message).toBe("Compaction worker returned an empty response")
+    expect(result.summary.info.error.data.message).toBe(KiloCompactionChunks.EMPTY_SUMMARY)
     expect(result.summary.info.error.data.isRetryable).toBe(true)
+    expect(
+      result.summary.parts.some(
+        (part) => part.type === "text" && part.text.includes(KiloCompactionChunks.EMPTY_SUMMARY),
+      ),
+    ).toBe(true)
   })
 
   test("falls back to chunk workers after the first compaction overflows", async () => {

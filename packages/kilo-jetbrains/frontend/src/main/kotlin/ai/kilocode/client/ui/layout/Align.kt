@@ -88,7 +88,11 @@ class Align(
             child.setBounds(ins.left + cx, ins.top + cy, w, ht)
         }
 
-        override fun minimumLayoutSize(parent: Container): Dimension {
+        override fun minimumLayoutSize(parent: Container) = LayoutPass.size(parent, MIN) { minimum(parent) }
+        override fun preferredLayoutSize(parent: Container) = LayoutPass.size(parent, PREF) { preferred(parent) }
+        override fun maximumLayoutSize(target: Container) = LayoutPass.size(target, MAX) { maximum(target) }
+
+        private fun minimum(parent: Container): Dimension {
             if (parent.componentCount == 0) return Dimension(0, 0)
             val child = parent.getComponent(0)
             val ins = parent.insets
@@ -97,7 +101,7 @@ class Align(
             return Dimension(cw + ins.left + ins.right, ch + ins.top + ins.bottom)
         }
 
-        override fun preferredLayoutSize(parent: Container): Dimension {
+        private fun preferred(parent: Container): Dimension {
             if (parent.componentCount == 0) return Dimension(0, 0)
             val child = parent.getComponent(0)
             val ins = parent.insets
@@ -117,7 +121,7 @@ class Align(
             return Dimension(cw + ins.left + ins.right, ch + ins.top + ins.bottom)
         }
 
-        override fun maximumLayoutSize(target: Container): Dimension {
+        private fun maximum(target: Container): Dimension {
             if (target.componentCount == 0) return Dimension(Int.MAX_VALUE, Int.MAX_VALUE)
             val child = target.getComponent(0)
             val ins = target.insets
@@ -142,7 +146,7 @@ class Align(
 
         override fun getLayoutAlignmentX(target: Container) = 0.5f
         override fun getLayoutAlignmentY(target: Container) = 0.5f
-        override fun invalidateLayout(target: Container) = Unit
+        override fun invalidateLayout(target: Container) = LayoutPass.forget(target)
     }
 }
 

@@ -1,3 +1,4 @@
+import { Show } from "solid-js"
 import { Dialog } from "@kilocode/kilo-ui/dialog"
 import { Button } from "@kilocode/kilo-ui/button"
 import type { MarketplaceItem } from "../../types/marketplace"
@@ -16,6 +17,7 @@ export const RemoveDialog = (props: Props) => {
   const typeName = () => {
     if (props.item.type === "mcp") return t("marketplace.remove.type.mcp")
     if (props.item.type === "agent") return t("marketplace.remove.type.agent")
+    if (props.item.type === "plugin") return t("marketplace.remove.type.plugin")
     return t("marketplace.remove.type.skill")
   }
 
@@ -25,6 +27,9 @@ export const RemoveDialog = (props: Props) => {
         <span>
           {t("marketplace.remove.confirm", { type: typeName(), scope: t(`marketplace.scope.${props.scope}`) })}
         </span>
+        <Show when={props.item.type === "mcp"}>
+          <span data-slot="marketplace-companion-removal">{t("marketplace.remove.mcp.skills")}</span>
+        </Show>
         <div class="dialog-confirm-actions">
           <Button variant="secondary" onClick={props.onClose}>
             {t("marketplace.remove.cancel")}

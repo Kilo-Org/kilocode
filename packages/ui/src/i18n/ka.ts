@@ -69,7 +69,7 @@ export const dict: Record<string, string> = {
   "ui.sessionTurn.error.addCredits": "დაამატე კრედიტები",
   "dialog.usageExceeded.freeTier.title": "უფასო ლიმიტი მიღწეულია",
   "dialog.usageExceeded.freeTier.description":
-    "გამოიწერეთ Kilo გადადით სანდო წვდომისთვის საუკეთესო ღია კოდის მოდელებზე, დაწყებული $5/თვეში.", // kilocode_change
+    "გამოიწერეთ Kilo Go საუკეთესო ღია კოდის მოდელებზე სანდო წვდომისთვის, თვეში $10-ად.", // kilocode_change
   "dialog.usageExceeded.freeTier.actionLabel": "გამოწერა",
   "dialog.usageExceeded.accountRateLimit.title": "გადასვლის ლიმიტი მიღწეულია",
   "dialog.usageExceeded.accountRateLimit.description":

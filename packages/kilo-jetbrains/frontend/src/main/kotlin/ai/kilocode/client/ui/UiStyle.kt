@@ -507,17 +507,32 @@ object UiStyle {
          * Tooltip copy that keeps [lines] as separate lines and still wraps each one at the tooltip
          * column, so a single long line cannot stretch the tooltip past the window.
          */
-        fun tipLines(lines: List<String>): String = HtmlChunk.div()
+        fun tipLines(lines: List<String>): String = linesDiv(lines)
             .attr("width", tipWidth())
+            .wrapWith(HtmlChunk.body())
+            .wrapWith("html")
+            .toString()
+
+        /**
+         * Escapes [lines] and joins them with explicit `<br>` breaks, without a fixed column width.
+         * Use this for a label whose own Swing width already bounds the reflow (e.g. a wrapping
+         * [com.intellij.ui.components.JBLabel]), where a hardcoded HTML column would fight the
+         * component's real width. Pass [centered] for a label whose text should read centered once
+         * it wraps onto more than one line.
+         */
+        fun wrapLines(lines: List<String>, centered: Boolean = false): String {
+            val div = linesDiv(lines)
+            val body = if (centered) div.attr("style", "text-align:center") else div
+            return body.wrapWith(HtmlChunk.body()).wrapWith("html").toString()
+        }
+
+        private fun linesDiv(lines: List<String>): HtmlChunk.Element = HtmlChunk.div()
             .children(
                 lines.flatMapIndexed { i, line ->
                     if (i == lines.lastIndex) listOf(HtmlChunk.text(line))
                     else listOf(HtmlChunk.text(line), HtmlChunk.br())
                 },
             )
-            .wrapWith(HtmlChunk.body())
-            .wrapWith("html")
-            .toString()
     }
 
     object Components {

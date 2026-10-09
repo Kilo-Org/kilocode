@@ -27,6 +27,16 @@ This information lets Kilo show your recent sessions and continue right from the
 1. Open Cloud Agents → Recent Sessions and select the session you want to resume.
 2. The chat will load with your previous messages and context so the agent can keep going without re-explaining your task.
 
+### Resume on another device
+
+Web and mobile session screens track the session and the message on screen, so you can pick the same session up somewhere else. Use the **Copy link** action in the session header to copy a link to the current position, then open that link on another device to land on the same message.
+
+- A link that points at an older message loads older history, up to a bounded number of pages, to reach it.
+- A link whose recorded message can no longer be reached opens at the end of the transcript.
+- A link to a session your signed-in account cannot see shows **Not found** or **Access denied** with a **Back to sessions** action.
+- If you open the link while signed out, the recorded position is kept through sign-in.
+- After you send a message or command from a resumed position, the transcript follows the new output.
+
 ## Share a session (read‑only)
 
 You can share a session with anyone via a link. A shared page:

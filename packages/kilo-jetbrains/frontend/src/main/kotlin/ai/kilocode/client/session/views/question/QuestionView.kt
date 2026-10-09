@@ -142,6 +142,13 @@ class QuestionView(
             hideView()
             return
         }
+        // Same request already showing (e.g. a session UI hidden while this question was active,
+        // then revealed again): re-surface it without resetting the user's in-progress selections,
+        // custom text, or page position.
+        if (isVisible && request == q.id && question == q) {
+            scroll(follow())
+            return
+        }
         request = q.id
         question = q
         idx = 0

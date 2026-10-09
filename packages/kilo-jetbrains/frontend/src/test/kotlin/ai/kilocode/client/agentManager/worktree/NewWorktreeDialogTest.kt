@@ -11,10 +11,15 @@ import ai.kilocode.client.testing.FakeAppRpcApi
 import ai.kilocode.client.testing.FakeSessionRpcApi
 import ai.kilocode.client.testing.FakeWorkspaceRpcApi
 import ai.kilocode.client.util.edtWait
+import ai.kilocode.rpc.dto.AgentConfigDto
 import ai.kilocode.rpc.dto.AgentDto
 import ai.kilocode.rpc.dto.AgentsDto
+import ai.kilocode.rpc.dto.ConfigDto
+import ai.kilocode.rpc.dto.KiloAppStateDto
+import ai.kilocode.rpc.dto.KiloAppStatusDto
 import ai.kilocode.rpc.dto.ModelDto
 import ai.kilocode.rpc.dto.ModelSelectionDto
+import ai.kilocode.rpc.dto.ModelStateDto
 import ai.kilocode.rpc.dto.ModelsWorkspaceDto
 import ai.kilocode.rpc.dto.ProviderDto
 import ai.kilocode.rpc.dto.ProvidersDto
@@ -41,6 +46,7 @@ import javax.swing.plaf.basic.BasicComboPopup
 class NewWorktreeDialogTest : BasePlatformTestCase() {
     private lateinit var scope: CoroutineScope
     private lateinit var app: KiloAppService
+    private lateinit var appRpc: FakeAppRpcApi
     private lateinit var workspaces: KiloWorkspaceService
     private lateinit var sessionRpc: FakeSessionRpcApi
     private var dialog: NewWorktreeDialog? = null
@@ -48,7 +54,8 @@ class NewWorktreeDialogTest : BasePlatformTestCase() {
     override fun setUp() {
         super.setUp()
         scope = CoroutineScope(SupervisorJob())
-        app = KiloAppService(scope, FakeAppRpcApi())
+        appRpc = FakeAppRpcApi()
+        app = KiloAppService(scope, appRpc)
         val ws = FakeWorkspaceRpcApi().apply { models = workspace() }
         workspaces = KiloWorkspaceService(scope, ws)
         sessionRpc = FakeSessionRpcApi()
@@ -77,6 +84,49 @@ class NewWorktreeDialogTest : BasePlatformTestCase() {
             assertTrue(reasoning().isVisible)
             assertEquals("low", reasoning().selectedForTest()?.id)
         }
+    }
+
+    fun `test loads the remembered normal session mode and its saved model`() {
+        KiloPluginSettings.setAgent("plan")
+        app.selectModel("plan", "kilo", "opus")
+
+        open()
+        flushUntil { edt { model().selectionKeyForTest() != null } }
+
+        edt {
+            assertEquals("plan", mode().selectedForTest()?.id)
+            assertEquals("kilo/opus", model().selectionKeyForTest())
+        }
+    }
+
+    fun `test resolves configured models when the selected mode changes`() {
+        app._state.value = KiloAppStateDto(
+            KiloAppStatusDto.READY,
+            config = ConfigDto(agent = mapOf(
+                "build" to AgentConfigDto(model = "kilo/opus"),
+                "plan" to AgentConfigDto(model = "kilo/gpt-5"),
+            )),
+        )
+
+        open()
+        flushUntil { edt { model().selectionKeyForTest() != null } }
+        edt {
+            assertEquals("kilo/opus", model().selectionKeyForTest())
+            mode().onSelect(ModePicker.Item("plan", "Plan"))
+            assertEquals("kilo/gpt-5", model().selectionKeyForTest())
+        }
+    }
+
+    fun `test follows normal session model state that arrives after the catalog`() {
+        app._state.value = KiloAppStateDto(KiloAppStatusDto.READY, config = ConfigDto())
+        open()
+        flushUntil { edt { model().selectionKeyForTest() != null } }
+        edt { assertEquals("kilo/gpt-5", model().selectionKeyForTest()) }
+
+        appRpc.models = ModelStateDto(recent = listOf(ModelSelectionDto("kilo", "opus")))
+        app.refreshModelFavoritesAsync()
+
+        flushUntil { edt { model().selectionKeyForTest() == "kilo/opus" } }
     }
 
     fun `test selecting a mode forwards it with the created prompt only`() {
@@ -131,6 +181,21 @@ class NewWorktreeDialogTest : BasePlatformTestCase() {
         assertEquals("build", payload.agent)
         assertEquals("kilo", payload.provider)
         assertEquals("gpt-5", payload.model)
+        assertEquals("low", payload.variant)
+    }
+
+    fun `test creating sends the visible reasoning fallback instead of an invalid saved value`() {
+        app.selectVariant("kilo/gpt-5", "stale")
+        open()
+        flushUntil { edt { model().selectionKeyForTest() != null } }
+        edt {
+            assertEquals("low", reasoning().selectedForTest()?.id)
+            prompt().setText("build the thing")
+        }
+        flushUntil { edt { prompt().isSendEnabled } }
+        edt { prompt().send() }
+
+        assertEquals("low", submitted().prompt?.variant)
     }
 
     fun `test base branch fuzzy search selects matching popup item`() {
