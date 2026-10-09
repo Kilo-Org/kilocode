@@ -4,6 +4,7 @@ import { Effect, Layer, Schema, Stream } from "effect"
 import * as Log from "@opencode-ai/core/util/log"
 import { Agent } from "../../src/agent/agent"
 import { Bus } from "../../src/bus"
+import { Config } from "../../src/config/config"
 import { KiloIndexing } from "../../src/kilocode/indexing"
 import { KilocodeBootstrap } from "../../src/kilocode/bootstrap"
 import { Wakeup } from "../../src/kilocode/wakeup"
@@ -555,6 +556,7 @@ describe("kilocode tool registry indexing", () => {
     const session = Layer.succeed(Session.Service, {} as Session.Interface)
     const summary = Layer.succeed(SessionSummary.Service, {} as SessionSummary.Interface)
     const provider = Layer.succeed(Provider.Service, {} as Provider.Interface)
+    const config = Layer.succeed(Config.Service, {} as Config.Interface)
     const watcher = Layer.succeed(KilocodeWatcher.Service, KilocodeWatcher.Service.of({ init: () => Effect.void }))
     const wakeup = Layer.succeed(
       Wakeup.Service,
@@ -579,7 +581,7 @@ describe("kilocode tool registry indexing", () => {
         KilocodeBootstrap.Service.use((svc) => svc.init()).pipe(
           Effect.provide(
             KilocodeBootstrap.layer.pipe(
-              Layer.provide([sessions, bus, memory, session, summary, provider, watcher, wakeup]),
+              Layer.provide([sessions, bus, memory, session, summary, provider, config, watcher, wakeup]),
             ),
           ),
           Effect.scoped,

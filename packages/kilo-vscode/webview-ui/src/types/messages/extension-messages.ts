@@ -19,7 +19,7 @@ import type { AgentManagerSidebarTarget } from "./webview-messages"
 import type { PermissionRequest } from "./permissions"
 import type { AnacondaDesktopExtensionMessage } from "../../../../src/shared/anaconda-desktop-messages"
 import type { BrowserFeedbackData, BrowserReference } from "../../../../src/shared/browser-feedback"
-import type { BrowserFrame } from "../../../../src/shared/browser-stream"
+import type { BrowserCursor, BrowserFrame } from "../../../../src/shared/browser-stream"
 import type { CodeContext } from "../../../../src/shared/code-context"
 import type { PRMergeResult, PRReviewResult } from "../../../../src/shared/pr-comment-actions"
 
@@ -294,6 +294,7 @@ export interface MessageCreatedMessage {
 
 export interface SessionsLoadedMessage {
   type: "sessionsLoaded"
+  projectId?: string
   sessions: SessionInfo[]
   preserveSessionIds?: string[]
   append?: boolean
@@ -518,6 +519,9 @@ export interface ChatSettingsLoadedMessage {
   type: "chatSettingsLoaded"
   settings: {
     shiftTabCyclesVariant: boolean
+    browserAutomation: boolean
+    agentManagerBrowserOpenLinksIn: "external" | "integrated"
+    workspaceTrusted: boolean
   }
 }
 
@@ -1704,6 +1708,33 @@ export interface AgentManagerBrowserStateMessage {
   forward?: boolean
 }
 
+/** Sent once per editor-tab browser panel with its bound session and feature flag. */
+export interface BrowserTabScopeMessage {
+  type: "browserTab.scope"
+  sessionId: string
+  browserAutomation: boolean
+}
+
+export type BrowserTabStateMessage = Omit<AgentManagerBrowserStateMessage, "type"> & { type: "browserTab.state" }
+
+export type BrowserTabInspectionMessage = Omit<AgentManagerBrowserInspectionMessage, "type"> & {
+  type: "browserTab.inspection"
+}
+
+export type BrowserTabDevtoolsMessage = Omit<AgentManagerBrowserDevtoolsMessage, "type"> & {
+  type: "browserTab.devtools"
+}
+
+export interface BrowserTabFrameMessage extends BrowserFrame {
+  type: "browserTab.frame"
+  sessionId: string
+}
+
+interface BrowserTabCursorMessage extends BrowserCursor {
+  type: "browserTab.cursor"
+  sessionId: string
+}
+
 export interface AgentManagerBrowserInspectionMessage {
   type: "agentManager.browserInspection"
   error?: string
@@ -1734,6 +1765,12 @@ interface AgentManagerBrowserFrameMessage extends BrowserFrame {
   sessionId: string
 }
 
+interface AgentManagerBrowserCursorMessage extends BrowserCursor {
+  type: "agentManager.browserCursor"
+  projectId?: string
+  sessionId: string
+}
+
 export interface AgentManagerBrowserDevtoolsMessage {
   type: "agentManager.browserDevtools"
   browserId: string
@@ -1760,6 +1797,13 @@ export type ExtensionMessage =
   | AgentManagerBrowserInspectionMessage
   | AgentManagerBrowserDevtoolsMessage
   | AgentManagerBrowserFrameMessage
+  | AgentManagerBrowserCursorMessage
+  | BrowserTabScopeMessage
+  | BrowserTabStateMessage
+  | BrowserTabInspectionMessage
+  | BrowserTabDevtoolsMessage
+  | BrowserTabFrameMessage
+  | BrowserTabCursorMessage
   | ReadyMessage
   | FontSizeChangedMessage
   | GitStatusMessage

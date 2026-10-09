@@ -806,6 +806,16 @@ describe("mapCloudSessionMessage", () => {
     const msg = mapCloudSessionMessageToWebviewMessage(makeCloudMessage({ role: "user" }))
     expect(msg.role).toBe("user")
   })
+
+  it("passes parentID through so turn grouping can link answers to prompts", () => {
+    const msg = mapCloudSessionMessageToWebviewMessage(makeCloudMessage({ parentID: "msg-0" }))
+    expect(msg.parentID).toBe("msg-0")
+  })
+
+  it("leaves parentID undefined when the cloud message has none", () => {
+    const msg = mapCloudSessionMessageToWebviewMessage(makeCloudMessage())
+    expect(msg.parentID).toBeUndefined()
+  })
 })
 
 describe("getErrorMessage", () => {
@@ -939,6 +949,20 @@ describe("getConfigErrorDetails", () => {
 
   it("omits the issues section when only the path is present", () => {
     expect(getConfigErrorDetails({ data: { path: "/cfg.json" } })).toBe("File: /cfg.json")
+  })
+
+  it("formats a shadowed-write error with the overriding file", () => {
+    const err = {
+      data: {
+        message:
+          "The setting was saved to /home/me/.config/kilo/kilo.json, but /home/me/.config/kilo/opencode.json still takes precedence over it.",
+        path: "/home/me/.config/kilo/kilo.json",
+        shadowedBy: "/home/me/.config/kilo/opencode.json",
+      },
+    }
+    expect(getConfigErrorDetails(err)).toBe(
+      "File: /home/me/.config/kilo/kilo.json\nShadowed by: /home/me/.config/kilo/opencode.json",
+    )
   })
 
   it("returns undefined when issues array is empty and no path", () => {

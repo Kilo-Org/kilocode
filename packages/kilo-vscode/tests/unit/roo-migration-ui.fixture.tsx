@@ -19,6 +19,7 @@ Object.assign(globalThis, {
   SVGElement: window.SVGElement,
   MutationObserver: window.MutationObserver,
   ResizeObserver: window.ResizeObserver,
+  IntersectionObserver: window.IntersectionObserver,
   CustomEvent: window.CustomEvent,
   Event: window.Event,
   MouseEvent: window.MouseEvent,

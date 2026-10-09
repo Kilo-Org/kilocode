@@ -472,6 +472,10 @@ jobs:
 
       # build-cli already uploaded unsigned Windows zips to the draft release;
       # replace them with signed copies so release assets match what npm/VSIX ship.
+      # One asset per invocation with retries, for the same reason build-cli uploads
+      # that way: a dropped connection can commit the asset anyway, and the retry
+      # inside gh then dies on "ReleaseAsset.name already exists". --clobber clears
+      # that asset at the start of the next attempt.
       - name: Re-upload signed Windows release zips
         shell: pwsh
         run: |
@@ -481,7 +485,15 @@ jobs:
             Compress-Archive -Path (Join-Path $dir.FullName "bin\*") -DestinationPath $archive -Force
             $archives += $archive
           }
-          gh release upload "v${{ needs.build-cli.outputs.version }}" $archives --clobber
+          foreach ($archive in $archives) {
+            foreach ($attempt in 1..4) {
+              gh release upload "v${{ needs.build-cli.outputs.version }}" $archive --clobber
+              if ($LASTEXITCODE -eq 0) { break }
+              if ($attempt -eq 4) { throw "Could not upload $archive after 4 attempts" }
+              Write-Host "upload: $archive failed (attempt $attempt/4), retrying in 10s"
+              Start-Sleep -Seconds 10
+            }
+          }
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}

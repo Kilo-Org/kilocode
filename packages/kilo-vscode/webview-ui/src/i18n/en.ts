@@ -56,6 +56,7 @@ export const dict = {
   ...anacondaDesktopDict,
   ...cloudProviderDict,
   "task.swarm.title": "Board",
+  "task.swarm.open": "Open board",
   "task.swarm.refresh": "Refresh",
   "task.swarm.reset": "Reset board",
   "task.swarm.resetTitle": "Reset this board?",
@@ -212,6 +213,7 @@ export const dict = {
   "prompt.action.stop.background": "Stop main agent. Background agents keep running.",
   "prompt.agents.show": "Show background agents",
   "prompt.action.enhance": "Enhance prompt",
+  "prompt.action.more": "More actions",
   "prompt.paste.expand": "Click to expand pasted text",
   "prompt.issues.title": "Session issues",
   "prompt.mcp.provider": "{{name}} MCP",
@@ -467,6 +469,9 @@ export const dict = {
   "provider.custom.error.duplicate": "Duplicate",
   "settings.openLocalConfig": "Local Config",
   "settings.openGlobalConfig": "Global Config",
+  "settings.search.placeholder": "Search settings",
+  "settings.search.noResults": "No settings found",
+  "settings.search.clear": "Clear search",
   "settings.config.scope.local": "Local",
   "settings.config.scope.global": "Global",
   "settings.config.status.loaded": "loaded",
@@ -525,6 +530,7 @@ export const dict = {
   "session.tabs.switcher.pending": "New",
   "session.tabs.switcher.busy": "Working",
   "session.tabs.switcher.scheduled": "Scheduled",
+  "session.tabs.pinHint": "Shift+click to pin or unpin",
   "session.tab.local": "Local",
   "session.tab.cloud": "Cloud",
   "session.tab.worktree": "Worktree",
@@ -937,10 +943,17 @@ export const dict = {
     "Extra filesystem paths the sandbox allows writes to (e.g. /tmp, /var/log). These are merged with the default writable paths when the sandbox is active.",
   "settings.experimental.browserAutomation.title": "Integrated Browser",
   "settings.experimental.browserAutomation.description":
-    "Preview local applications and public HTTPS pages in Agent Manager and expose the browser_open tool to Agent Manager sessions.",
+    "Preview local applications and public HTTPS pages in Agent Manager and the Integrated Browser tab, and expose the browser_open tool to sessions.",
   "settings.experimental.browserAutomation.systemChrome.title": "Use System Chrome",
   "settings.experimental.browserAutomation.systemChrome.description":
     "Use installed Google Chrome for the Integrated Browser. Disable only when a compatible Playwright Chromium browser is already installed.",
+  "browserTab.noSession": "Open the browser from a session to preview a local application or public HTTPS page.",
+  "browserTab.disabled": "The Integrated Browser is disabled. Enable it in Kilo Settings > Experimental.",
+  "settings.experimental.browserLinks.title": "Open links in",
+  "settings.experimental.browserLinks.description":
+    "Choose where web links open from Kilo chats. Requires the Integrated Browser.",
+  "settings.experimental.browserLinks.external": "System browser",
+  "settings.experimental.browserLinks.integrated": "Integrated Browser",
   "settings.experimental.conversationPromptHistory.title": "Per-Conversation Prompt History",
   "settings.experimental.conversationPromptHistory.description":
     "Keep the prompt input history (ArrowUp/ArrowDown recall) separate for each conversation instead of sharing one history across all conversations.",
@@ -1344,6 +1357,8 @@ export const dict = {
 
   "task.todos.progress": "{{done}}/{{total}} to-dos done",
   "task.todos.allDone": "{{count}} to-dos done",
+  "task.todos.title": "To-dos",
+  "task.todos.done": "All done",
 
   "task.backgroundAgents.running.one": "1 background agent",
   "task.backgroundAgents.running.many": "{{count}} background agents",
@@ -1363,6 +1378,8 @@ export const dict = {
   "task.backgroundAgents.stopAll": "Stop all ({{count}})",
   "task.backgroundAgents.finished": "Background agents finished",
   "task.stop": "Stop sub-agent",
+  "task.open.panel": "Open sub-agent in panel",
+  "task.open.tab": "Open sub-agent in tab",
 
   "settings.saveBar.unsavedChanges": "Unsaved changes",
   "settings.saveBar.discard": "Discard",

@@ -537,11 +537,16 @@ const layer = Layer.effect(
         // kilocode_change end
         processor.message.error = new SessionV1.ContextOverflowError({
           message: replay
-            ? "Conversation history too large to compact - exceeds model context limit"
-            : "Session too large to compact - context exceeds model limit even after stripping media",
+            ? "Conversation history too large to compact - exceeds model context limit. Start a new session to continue." // kilocode_change
+            : "Session too large to compact - context exceeds model limit even after stripping media. Start a new session to continue.", // kilocode_change
         }).toObject()
         processor.message.finish = "error"
+        processor.message.time.completed = Date.now() // kilocode_change
         yield* session.updateMessage(processor.message)
+        // kilocode_change start - publish the terminal failure after all compaction recovery paths
+        yield* Effect.logError("compaction failed", { "session.id": input.sessionID, error: processor.message.error })
+        yield* events.publish(Session.Event.Error, { sessionID: input.sessionID, error: processor.message.error })
+        // kilocode_change end
         return "stop"
       }
 
@@ -706,6 +711,10 @@ const layer = Layer.effect(
             type: "text",
             text: KiloCompactionChunks.EMPTY_SUMMARY,
           })
+        }
+        if (empty) {
+          yield* Effect.logError("compaction failed", { "session.id": input.sessionID, error })
+          yield* events.publish(Session.Event.Error, { sessionID: input.sessionID, error })
         }
         return "stop"
       }

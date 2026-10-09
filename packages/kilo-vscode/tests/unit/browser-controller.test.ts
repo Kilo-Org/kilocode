@@ -12,7 +12,7 @@ import type {
 
 const point = (x: number): BrowserPosition => ({ x, y: x, width: 100, height: 100 })
 
-function setup(theme: "dark" | "light" = "dark") {
+function setup(theme: "dark" | "light" = "dark", options: { now?: () => number } = {}) {
   const sent: BrowserCommand[] = []
   const references: BrowserReference[] = []
   const listeners = new Set<(event: BrowserEvent) => void>()
@@ -50,6 +50,7 @@ function setup(theme: "dark" | "light" = "dark") {
         cancelled.push(id)
         frames.delete(id)
       },
+      now: options.now,
     })
   })
   const emit = (event: BrowserEvent) => listeners.forEach((listener) => listener(event))
@@ -72,6 +73,13 @@ function inspection(requestId: string, scope: BrowserScope, error?: string): Bro
       ? undefined
       : { tag: "button", selector: `button-${requestId}`, rect: { x: 0, y: 0, width: 1, height: 1 } },
     logs: [],
+  }
+}
+
+function frame(scope: BrowserScope, browserId = "browser", navigation = 1): BrowserEvent {
+  return {
+    type: "frame",
+    value: { scope, browserId, navigation, revision: 1, sequence: 1, width: 100, height: 100, data: "frame" },
   }
 }
 
@@ -161,6 +169,191 @@ describe("browser controller", () => {
     view.run()
 
     expect(view.sent.at(-1)).toMatchObject({ type: "inspect", requestId: "2", position: point(0.4) })
+    view.dispose()
+  })
+
+  test.each([false, true])(
+    "tracks all scrolling frames with pointing=%s without replaying DevTools pointer input",
+    (pointing) => {
+      const view = setup()
+      const scope = { sessionId: "session-a", projectId: "project-a" }
+      view.emit({
+        type: "state",
+        value: { scope, browserId: "browser", navigation: 1, status: "ready", inspecting: pointing, errors: 0 },
+      })
+      if (!pointing) view.controller.toggleSelecting()
+      view.controller.move(point(0.1))
+      view.run()
+      view.emit({ type: "inspection", value: inspection("1", scope) })
+      expect(view.controller.hovered()?.element?.selector).toBe("button-1")
+
+      view.controller.move(point(0.2))
+      view.run()
+      view.controller.scroll(point(0.2))
+      view.controller.scroll(point(0.3))
+      expect(view.controller.hovered()).toBeUndefined()
+      view.emit(frame({ ...scope, sessionId: "other" }))
+      view.emit(frame({ ...scope, projectId: "other" }))
+      view.emit(frame(scope, "other"))
+      view.emit(frame(scope, "browser", 2))
+      expect(view.frames.size).toBe(0)
+      view.emit(frame(scope))
+      view.emit(frame(scope))
+      expect(view.frames.size).toBe(0)
+
+      view.emit({ type: "inspection", value: inspection("2", scope) })
+      expect(view.controller.hovered()).toBeUndefined()
+      expect(view.frames.size).toBe(1)
+      view.emit(frame(scope))
+      view.run()
+      expect(view.sent.at(-1)).toMatchObject({ type: "inspect", requestId: "3", position: point(0.3) })
+      expect(view.sent.filter((item) => item.type === "inspect")).toHaveLength(3)
+      const inputs = view.sent.filter((item) => item.type === "input").length
+      expect(inputs).toBe(pointing ? 2 : 0)
+      view.emit(frame(scope))
+      view.emit({ type: "inspection", value: inspection("3", scope) })
+      view.emit(frame(scope))
+      view.emit(frame(scope))
+      expect(view.controller.hovered()?.element?.selector).toBe("button-3")
+      expect(view.frames.size).toBe(1)
+      view.run()
+      expect(view.sent.at(-1)).toMatchObject({ type: "inspect", requestId: "4", position: point(0.3) })
+      expect(view.sent.filter((item) => item.type === "input")).toHaveLength(inputs)
+      view.dispose()
+    },
+  )
+
+  test("cancels pre-scroll scheduled work without blocking later pointer movement", () => {
+    const view = setup()
+    const scope = { sessionId: "session-a", projectId: "project-a" }
+    view.emit({ type: "state", value: { scope, browserId: "browser", navigation: 1, status: "ready", errors: 0 } })
+    view.controller.toggleSelecting()
+    view.controller.move(point(0.1))
+    view.controller.scroll(point(0.2))
+    view.controller.move(point(0.3))
+    expect(view.cancelled).toEqual([1])
+    expect(view.frames.size).toBe(1)
+    view.emit(frame(scope, "other"))
+    expect(view.frames.size).toBe(1)
+    view.emit(frame(scope))
+    view.emit(frame(scope))
+    expect(view.frames.size).toBe(1)
+    view.run()
+    expect(view.sent.at(-1)).toMatchObject({ type: "inspect", position: point(0.3) })
+    view.dispose()
+  })
+
+  test("does not resume a stale inspection before the post-scroll frame", () => {
+    const view = setup()
+    const scope = { sessionId: "session-a", projectId: "project-a" }
+    view.emit({ type: "state", value: { scope, browserId: "browser", navigation: 1, status: "ready", errors: 0 } })
+    view.controller.toggleSelecting()
+    view.controller.move(point(0.1))
+    view.run()
+    view.controller.scroll(point(0.1))
+    view.emit({ type: "inspection", value: inspection("1", scope) })
+    expect(view.controller.hovered()).toBeUndefined()
+    expect(view.frames.size).toBe(0)
+    view.emit(frame(scope))
+    view.run()
+    expect(view.sent.at(-1)).toMatchObject({ type: "inspect", requestId: "2", position: point(0.1) })
+    view.dispose()
+  })
+
+  test.each([false, true])("clears hover and remembered scroll work on leave with pointing=%s", (pointing) => {
+    const view = setup()
+    const scope = { sessionId: "session-a", projectId: "project-a" }
+    view.emit({
+      type: "state",
+      value: { scope, browserId: "browser", navigation: 1, status: "ready", inspecting: pointing, errors: 0 },
+    })
+    if (!pointing) view.controller.toggleSelecting()
+    view.controller.move(point(0.1))
+    view.run()
+    view.emit({ type: "inspection", value: inspection("1", scope) })
+    view.controller.leave()
+    expect(view.controller.hovered()).toBeUndefined()
+    expect(view.controller.pointing()).toBe(pointing)
+    expect(view.controller.selecting()).toBe(!pointing)
+    view.controller.move(point(0.2))
+    view.run()
+    view.controller.scroll(point(0.2))
+    view.emit(frame(scope))
+    view.controller.leave()
+    view.emit({ type: "inspection", value: inspection("2", scope) })
+    view.emit(frame(scope))
+    expect(view.controller.hovered()).toBeUndefined()
+    expect(view.frames.size).toBe(0)
+    view.controller.move(point(0.3))
+    view.controller.leave()
+    expect(view.frames.size).toBe(0)
+    view.dispose()
+  })
+
+  test.each(["navigation", "browser", "scope"] as const)("clears stationary scroll refresh on %s changes", (change) => {
+    const view = setup()
+    const scope = { sessionId: "session-a", projectId: "project-a" }
+    const state = { scope, browserId: "browser", navigation: 1, status: "ready" as const, inspecting: true, errors: 0 }
+    view.emit({ type: "state", value: state })
+    view.controller.move(point(0.1))
+    view.run()
+    view.controller.scroll(point(0.1))
+    const next = {
+      ...state,
+      scope: change === "scope" ? { ...scope, projectId: "other" } : scope,
+      browserId: change === "browser" ? "other" : state.browserId,
+      navigation: change === "navigation" ? 2 : state.navigation,
+    }
+    if (change === "scope") view.setScope(next.scope)
+    view.emit({ type: "state", value: next })
+    view.emit(frame(next.scope, next.browserId, next.navigation))
+    view.emit({ type: "inspection", value: inspection("1", scope) })
+    expect(view.controller.pointing()).toBe(true)
+    expect(view.controller.hovered()).toBeUndefined()
+    expect(view.frames.size).toBe(0)
+    expect(view.sent.filter((item) => item.type === "inspect")).toHaveLength(1)
+    view.dispose()
+  })
+
+  test("does not refresh scrolls outside picker mode or after stopping the picker", () => {
+    const view = setup()
+    const scope = { sessionId: "session-a", projectId: "project-a" }
+    view.emit({ type: "state", value: { scope, browserId: "browser", navigation: 1, status: "ready", errors: 0 } })
+    view.controller.scroll(point(0.1))
+    view.controller.toggleSelecting()
+    view.emit(frame(scope))
+    expect(view.frames.size).toBe(0)
+    view.controller.scroll(point(0.2))
+    view.emit(frame(scope))
+    expect(view.frames.size).toBe(1)
+    view.controller.toggleSelecting()
+    view.controller.toggleSelecting()
+    view.emit(frame(scope))
+    expect(view.frames.size).toBe(0)
+    expect(view.sent.filter((item) => item.type === "inspect")).toHaveLength(0)
+    view.dispose()
+  })
+
+  test("stops refreshing frames once the scroll settle window passes", () => {
+    let clock = 1_000
+    const view = setup("dark", { now: () => clock })
+    const scope = { sessionId: "session-a", projectId: "project-a" }
+    view.emit({ type: "state", value: { scope, browserId: "browser", navigation: 1, status: "ready", errors: 0 } })
+    view.controller.toggleSelecting()
+    view.controller.move(point(0.1))
+    view.run()
+    view.emit({ type: "inspection", value: inspection("1", scope) })
+    view.controller.scroll(point(0.1))
+    clock += 100
+    view.emit(frame(scope))
+    expect(view.frames.size).toBe(1)
+    view.run()
+    expect(view.sent.at(-1)).toMatchObject({ type: "inspect", requestId: "2" })
+    clock += 5_000
+    view.emit(frame(scope))
+    expect(view.frames.size).toBe(0)
+    view.emit(frame(scope))
+    expect(view.frames.size).toBe(0)
     view.dispose()
   })
 
