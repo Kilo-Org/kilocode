@@ -24,6 +24,7 @@ import { openFileInEditor, getWorkspaceRoot } from "../review-utils"
 import { isWebLink } from "../browser-links"
 import { TelemetryProxy, type TelemetryEventName } from "../services/telemetry"
 import type { AutoApproveController } from "../commands/toggle-auto-approve"
+import type { ApproveForMeController } from "../commands/toggle-approve-for-me"
 import type { RemoteStatusService } from "../services/RemoteStatusService"
 import type { CaffeinationService } from "../services/caffeination"
 
@@ -33,6 +34,7 @@ const PR_MERGE_METHODS_KEY = "agentManager.prMergeMethod"
 export class VscodeHost implements Host {
   private diffVirtual: DiffVirtualProvider | undefined
   private autoApprove: AutoApproveController | undefined
+  private approveForMe: ApproveForMeController | undefined
   private focus: { gained: () => void; lost: () => void } | undefined
   /**
    * Shared project route registry for every Agent Manager panel opened by
@@ -55,6 +57,10 @@ export class VscodeHost implements Host {
 
   setAutoApproveController(ctrl: AutoApproveController): void {
     this.autoApprove = ctrl
+  }
+
+  setApproveForMeController(ctrl: ApproveForMeController): void {
+    this.approveForMe = ctrl
   }
 
   /** Report Agent Manager panel focus so commands can find the user's surface. */
@@ -186,6 +192,7 @@ export class VscodeHost implements Host {
       provider.setStreamVisibility(event.webviewPanel.active && event.webviewPanel.visible),
     )
     if (this.autoApprove) provider.setAutoApproveController(this.autoApprove)
+    if (this.approveForMe) provider.setApproveForMeController(this.approveForMe)
 
     const sessions: SessionProvider = {
       setSessionDirectory: (id, dir) => provider.setSessionDirectory(id, dir),

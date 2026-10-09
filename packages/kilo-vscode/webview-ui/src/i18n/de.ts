@@ -236,6 +236,10 @@ export const dict = {
   "prompt.action.autoApprove.disabled":
     "Automatische Genehmigung ist deaktiviert. Klicken, um Berechtigungsanfragen automatisch zu genehmigen.",
   "prompt.action.autoApprove.sandboxExcluded": "Sandbox-Eskalationsanfragen sind immer ausgeschlossen.",
+  "prompt.approval.label": "Genehmigungsmodus",
+  "prompt.approval.mode.ask": "Jedes Mal fragen",
+  "prompt.approval.mode.approveForMe": "Für mich genehmigen (experimentell)",
+  "prompt.approval.mode.approveAll": "Alles genehmigen",
   "prompt.action.enhanceDescription":
     "Die Schaltfläche 'Prompt verbessern' hilft, deine Anfrage durch zusätzlichen Kontext, Klarstellungen oder Umformulierungen zu verbessern. Versuche, hier eine Anfrage einzugeben und klicke erneut auf die Schaltfläche, um zu sehen, wie es funktioniert.",
   "prompt.action.sandbox.enable": "Sandbox aktivieren",

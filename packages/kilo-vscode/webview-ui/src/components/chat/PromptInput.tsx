@@ -40,6 +40,8 @@ import { mcpAuthIssues } from "./session-issues"
 import { SessionIssues } from "./SessionIssues"
 import { useLanguage } from "../../context/language"
 import { useVSCode } from "../../context/vscode"
+import { ApprovalModeMenu } from "./ApprovalModeMenu"
+import { approvalMode, approvalRequest, nextApprovalMode } from "./approval-mode"
 import { useConfig } from "../../context/config"
 import { recommend, type ManagerContext } from "../../utils/shortcut-hint"
 import { PromptHint } from "./PromptHint"
@@ -435,6 +437,8 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   const [contexts, setContexts] = createSignal<CodeContext[]>([])
   const [enhancing, setEnhancing] = createSignal(false)
   const [autoApprove, setAutoApprove] = createSignal(false)
+  const [approveForMe, setApproveForMe] = createSignal(false)
+  const [approveForMeVisible, setApproveForMeVisible] = createSignal(false)
   const [sandboxes, setSandboxes] = createSignal<Record<string, SandboxState>>({})
   const [sandboxDefault, setSandboxDefault] = createSignal<SandboxDefaultState>()
   const [sandboxRequests, setSandboxRequests] = createSignal<Record<string, string>>({})
@@ -985,6 +989,10 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     if (message.type === "autoApproveState") {
       setAutoApprove(message.active)
     }
+    if (message.type === "approveForMeState") {
+      setApproveForMe(message.active)
+      setApproveForMeVisible(message.visible)
+    }
   })
 
   const restoreFailed = (failed: SendMessageFailedMessage) => {
@@ -1304,6 +1312,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     }
   })
   vscode.postMessage({ type: "requestAutoApproveState" })
+  vscode.postMessage({ type: "requestApproveForMeState" })
 
   onCleanup(() => {
     props.onEditReady?.(false)
@@ -2012,6 +2021,21 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       busy: enhancing(),
       run: handleEnhance,
     })
+    if (approveForMeVisible()) {
+      const flags = { auto: autoApprove(), me: approveForMe() }
+      const mode = approvalMode(flags)
+      list.push({
+        key: "approve",
+        icon: "gauge",
+        label: `${language.t("prompt.approval.label")}: ${language.t(`prompt.approval.mode.${mode}`)}`,
+        tone: mode === "ask" ? undefined : "success",
+        dot: mode === "ask" ? undefined : "success",
+        run: () => {
+          for (const type of approvalRequest(flags, nextApprovalMode(flags))) vscode.postMessage({ type })
+        },
+      })
+      return list
+    }
     list.push({
       key: "approve",
       icon: "shield",
@@ -2428,27 +2452,34 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
             </Tooltip>
           </div>
           <div class="prompt-action" data-folded={folded("approve") ? "" : undefined}>
-            <Tooltip
-              value={`${language.t(
-                autoApprove() ? "prompt.action.autoApprove.enabled" : "prompt.action.autoApprove.disabled",
-              )} ${language.t("prompt.action.autoApprove.sandboxExcluded")}`}
-              placement="top"
-              openDelay={0}
+            <Show
+              when={approveForMeVisible()}
+              fallback={
+                <Tooltip
+                  value={`${language.t(
+                    autoApprove() ? "prompt.action.autoApprove.enabled" : "prompt.action.autoApprove.disabled",
+                  )} ${language.t("prompt.action.autoApprove.sandboxExcluded")}`}
+                  placement="top"
+                  openDelay={0}
+                >
+                  <IconButton
+                    icon="shield"
+                    variant="ghost"
+                    size="small"
+                    onClick={() => vscode.postMessage({ type: "toggleAutoApprove" })}
+                    aria-label={
+                      autoApprove()
+                        ? language.t("prompt.action.autoApprove.disable")
+                        : language.t("prompt.action.autoApprove.enable")
+                    }
+                    aria-pressed={autoApprove()}
+                    class={`prompt-status-button ${autoApprove() ? "prompt-status-button--active" : ""}`}
+                  />
+                </Tooltip>
+              }
             >
-              <IconButton
-                icon="shield"
-                variant="ghost"
-                size="small"
-                onClick={() => vscode.postMessage({ type: "toggleAutoApprove" })}
-                aria-label={
-                  autoApprove()
-                    ? language.t("prompt.action.autoApprove.disable")
-                    : language.t("prompt.action.autoApprove.enable")
-                }
-                aria-pressed={autoApprove()}
-                class={`prompt-status-button ${autoApprove() ? "prompt-status-button--active" : ""}`}
-              />
-            </Tooltip>
+              <ApprovalModeMenu autoApprove={autoApprove} approveForMe={approveForMe} />
+            </Show>
           </div>
           <div class="prompt-input-hint-pinned" ref={pinnedRef}>
             <Show when={canUseSpeech()}>

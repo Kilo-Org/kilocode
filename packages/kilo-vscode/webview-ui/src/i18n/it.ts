@@ -208,6 +208,10 @@ export const dict = {
   "prompt.action.autoApprove.disabled":
     "L'approvazione automatica è disabilitata. Fai clic per approvare automaticamente le richieste di autorizzazione.",
   "prompt.action.autoApprove.sandboxExcluded": "Le richieste di escalation della sandbox sono sempre escluse.",
+  "prompt.approval.label": "Modalità di approvazione",
+  "prompt.approval.mode.ask": "Chiedi ogni volta",
+  "prompt.approval.mode.approveForMe": "Approva per me (sperimentale)",
+  "prompt.approval.mode.approveAll": "Approva tutto",
   "prompt.action.enhanceDescription":
     "Il pulsante 'Migliora prompt' aiuta a migliorare il prompt aggiungendo contesto, chiarimenti o riformulazioni. Scrivi un prompt qui e fai di nuovo clic sul pulsante per vedere come funziona.",
   "prompt.toast.promptSendFailed.title": "Invio prompt non riuscito",

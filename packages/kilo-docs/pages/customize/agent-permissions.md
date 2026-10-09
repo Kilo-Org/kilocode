@@ -173,6 +173,28 @@ permission:
 
 This allows delegation only to `code-reviewer` and `docs-writer`.
 
+## Approve for Me (Experimental Preview)
+
+Approve for me is an early, hidden preview of a future approval mode. The final feature will use a heuristic and an LLM reviewer to auto-allow low-risk commands and flag risky ones, so you see fewer approval prompts without turning on full auto-approve.
+
+{% callout type="warning" %}
+This preview build does not change approval behavior yet. The composer control only tracks which mode is selected. See [issue #7684](https://github.com/Kilo-Org/kilocode/issues/7684) for the current status.
+{% /callout %}
+
+To see the preview in the VS Code composer:
+
+1. Open VS Code settings and search for `kilo-code.new.experimental.approveForMe`.
+2. Turn the setting on. It is an application-scoped setting and defaults to `false`.
+3. The **Auto-Approve** shield in the composer becomes an **Approval mode** menu with three choices.
+
+| Mode | Behavior |
+|---|---|
+| Ask every time | Kilo asks before each permission request. |
+| Approve for me (experimental) | Preview only. Kilo asks as usual for now. |
+| Approve all | Kilo approves every permission request, as Auto-Approve does today. |
+
+Approve for me and Approve all exclude each other. Choosing one turns the other off, and this also holds when you change the settings directly. If both are on when Kilo starts, Approve for me stays on. **Sandbox** is still a separate control in this preview. A later release will fold it into this menu, so each mode also sets the sandbox.
+
 ## Troubleshooting
 
 - If a specific rule appears to be ignored, check whether a later catch-all also matches.

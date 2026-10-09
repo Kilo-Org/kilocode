@@ -292,6 +292,7 @@ describe("Extension — KiloProvider handler wiring", () => {
     for (const name of [
       "setRemoteService",
       "setAutoApproveController",
+      "setApproveForMeController",
       "setContinueInWorktreeHandler",
       "setCreateWorktreeHandler",
       "setDiffVirtualProvider",

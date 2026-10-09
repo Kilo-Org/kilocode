@@ -228,6 +228,10 @@ export const dict = {
   "prompt.action.autoApprove.enabled": "自動承認が有効です。権限リクエストは自動的に承認されます。",
   "prompt.action.autoApprove.disabled": "自動承認が無効です。クリックすると権限リクエストを自動的に承認します。",
   "prompt.action.autoApprove.sandboxExcluded": "サンドボックスからの脱出プロンプトは常に対象外です。",
+  "prompt.approval.label": "承認モード",
+  "prompt.approval.mode.ask": "毎回確認",
+  "prompt.approval.mode.approveForMe": "「代わりに承認」（実験的）",
+  "prompt.approval.mode.approveAll": "すべて承認",
   "prompt.action.enhanceDescription":
     "「プロンプトを強化」ボタンは、追加コンテキスト、説明、または言い換えを提供することで、リクエストを改善します。ここにリクエストを入力し、ボタンを再度クリックして動作を確認してください。",
   "prompt.action.indexing": "インデックス設定",
