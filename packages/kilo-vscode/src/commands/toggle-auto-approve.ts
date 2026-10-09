@@ -75,7 +75,9 @@ export function registerToggleAutoApprove(
         const { data: pending } = await retry(() => client.permission.list({ directory: dir }, { throwOnError: true }))
         for (const req of pending) {
           if (generation !== snapshot) break
-          if (req.metadata?.["sandboxEscalation"] === true) continue
+          // The server refuses a non-interactive approval for these and leaves the ask pending, so
+          // replying only costs a round trip and suppresses the attention nudge for a live prompt.
+          if (req.metadata?.["sandboxEscalation"] === true || req.metadata?.["skillShell"] === true) continue
           await replyOnce(client, req.id, dir, () => generation === snapshot)
         }
       } catch (err) {
@@ -91,6 +93,7 @@ export function registerToggleAutoApprove(
     const client = tryGetClient(connectionService)
     if (!client) return false
     if (event.properties.metadata?.["sandboxEscalation"] === true) return false
+    if (event.properties.metadata?.["skillShell"] === true) return false
     const dir =
       directory ?? connectionService.getPermissionDirectory(event.properties.id) ?? resolve(event.properties.sessionID)
     return replyOnce(client, event.properties.id, dir)

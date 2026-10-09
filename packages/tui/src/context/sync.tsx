@@ -42,6 +42,7 @@ import { collector } from "../kilocode/notices" // kilocode_change
 import { errorMessage } from "../util/error" // kilocode_change
 import { usePermission } from "./permission"
 import { GoalSync } from "@/kilocode/cli/cmd/tui/goal-sync" // kilocode_change
+import { PermissionHumanOnly } from "@/kilocode/permission/human-only" // kilocode_change
 
 const emptyConsoleState: ConsoleState = {
   consoleManagedProviders: [],
@@ -192,8 +193,9 @@ export const {
     // pending asks are one-shot events; refetch them so an evicted or missed ask cannot strand a session
     // skill shell batches and sandbox escalations need an interactive human decision:
     // the server refuses machine replies for them, mirroring temporaryPermission in cli/cmd/run/permission.shared
-    const temporaryPermission = (request: PermissionRequest) =>
-      request.metadata?.["skillShell"] === true || request.metadata?.["sandboxEscalation"] === true
+    // kilocode_change start - one predicate with the server, which also refuses a machine reply to a security ask
+    const temporaryPermission = (request: PermissionRequest) => PermissionHumanOnly.requires(request.metadata)
+    // kilocode_change end
     function mergePending<T extends PermissionRequest | QuestionRequest>(
       list: T[],
       current: Record<string, T[]>,
