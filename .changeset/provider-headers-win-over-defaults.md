@@ -2,4 +2,4 @@
 "@kilocode/cli": patch
 ---
 
-Headers configured on a provider (for example OpenRouter's `HTTP-Referer` / `X-Title` app attribution) are no longer overwritten by Kilo's default headers on each request.
+Headers configured on a provider for Kilo's default attribution (`HTTP-Referer` / `X-Title`, for example OpenRouter app attribution) are now sent on each request in place of Kilo's defaults, including through transports that don't use the provider's SDK options such as Cloudflare AI Gateway.

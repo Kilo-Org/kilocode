@@ -6,14 +6,17 @@ export const DEFAULT_HEADERS = {
   "User-Agent": `Kilo-Code/${InstallationVersion}`,
 }
 
-// DEFAULT_HEADERS for one request, minus the ones the provider was configured
-// with (case-insensitive): a provider's own headers already go out with every
-// request as the SDK's default headers, and a per-request header would replace
-// them — e.g. OpenRouter's HTTP-Referer / X-Title app attribution set in config.
-// User-Agent always stays Kilo's.
-export function defaultHeaders(configured?: Record<string, string>) {
-  const keys = new Set(Object.keys(configured ?? {}).map((key) => key.toLowerCase()))
-  return Object.fromEntries(
-    Object.entries(DEFAULT_HEADERS).filter(([key]) => key === "User-Agent" || !keys.has(key.toLowerCase())),
-  )
+// DEFAULT_HEADERS for one request, with the values the provider was configured
+// with for the same headers (case-insensitive) — e.g. OpenRouter's HTTP-Referer /
+// X-Title app attribution set in config. Materialized here rather than just
+// dropping the default, because some transports never see provider.options.headers
+// (the Cloudflare AI Gateway loader builds its own clients). User-Agent always
+// stays Kilo's.
+export function defaultHeaders(configured?: Record<string, string>): Record<keyof typeof DEFAULT_HEADERS, string> {
+  const values = new Map(Object.entries(configured ?? {}).map(([key, value]) => [key.toLowerCase(), value]))
+  return {
+    "HTTP-Referer": values.get("http-referer") ?? DEFAULT_HEADERS["HTTP-Referer"],
+    "X-Title": values.get("x-title") ?? DEFAULT_HEADERS["X-Title"],
+    "User-Agent": DEFAULT_HEADERS["User-Agent"],
+  }
 }
