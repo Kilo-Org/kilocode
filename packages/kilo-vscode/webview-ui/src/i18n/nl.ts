@@ -217,6 +217,7 @@ export const dict = {
   "prompt.action.stop.background": "Hoofdagent stoppen. Achtergrondagenten blijven actief.",
   "prompt.agents.show": "Achtergrondagenten tonen",
   "prompt.action.enhance": "Prompt verbeteren",
+  "prompt.action.more": "Meer acties",
   "prompt.paste.expand": "Klik om geplakte tekst uit te vouwen",
   "prompt.issues.title": "Sessieproblemen",
   "prompt.mcp.provider": "{{name}} MCP",
@@ -1371,6 +1372,8 @@ export const dict = {
   "task.backgroundAgents.stopAll": "Alles stoppen ({{count}})",
   "task.backgroundAgents.finished": "Achtergrondagenten voltooid",
   "task.stop": "Subagent stoppen",
+  "task.open.panel": "Subagent openen in paneel",
+  "task.open.tab": "Subagent openen in tabblad",
 
   "settings.saveBar.unsavedChanges": "Niet-opgeslagen wijzigingen",
   "settings.saveBar.discard": "Verwerpen",
