@@ -290,6 +290,23 @@ export namespace Telemetry {
     track(TelemetryEvent.AUTH_LOGOUT, { provider })
   }
 
+  // Anaconda Integration
+  export function trackAnacondaLinkCreated() {
+    track(TelemetryEvent.ANACONDA_LINK_CREATED)
+  }
+
+  /**
+   * @param step - "passport" when an existing key could not be verified,
+   *               "link" when creating a new link failed
+   */
+  export function trackAnacondaLinkFailed(step: "passport" | "link") {
+    track(TelemetryEvent.ANACONDA_LINK_FAILED, { step })
+  }
+
+  export function trackAnacondaEmailMismatch() {
+    track(TelemetryEvent.ANACONDA_EMAIL_MISMATCH)
+  }
+
   // Errors
   export function trackError(error: string, context?: string) {
     track(TelemetryEvent.ERROR, { error, context })
