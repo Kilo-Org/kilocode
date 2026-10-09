@@ -1,6 +1,7 @@
 package ai.kilocode.client.session.ui.header
 
 import ai.kilocode.client.plugin.KiloBundle
+import ai.kilocode.client.session.model.HeaderModel
 import ai.kilocode.client.session.model.SessionHeaderSnapshot
 import ai.kilocode.client.session.model.SessionModelEvent
 import ai.kilocode.client.session.model.TimelineItem
@@ -22,6 +23,7 @@ import com.intellij.ui.components.JBLabel
 import com.intellij.util.ui.SwingTextTrimmer
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.components.BorderLayoutPanel
+import com.intellij.xml.util.XmlStringUtil
 import java.awt.BorderLayout
 import java.awt.Component
 import java.awt.Dimension
@@ -135,7 +137,17 @@ class SessionHeaderPanel(
         iconTextGap = UiStyle.Gap.xs()
     }
     private val top = BorderLayoutPanel()
+    private val modelName = JBLabel().apply {
+        putClientProperty(SwingTextTrimmer.KEY, SwingTextTrimmer.ELLIPSIS_AT_RIGHT)
+    }
+    private val modelVariant = JBLabel()
+    private val modelRow = Stack.horizontal()
+        .next(modelName)
+        .gap(UiStyle.Gap.sm())
+        .next(modelVariant)
     private val right = Stack.horizontal()
+        .next(modelRow)
+        .gap(UiStyle.Gap.lg())
         .next(cost)
         .gap(UiStyle.Gap.xl())
         .next(context)
@@ -266,6 +278,7 @@ class SessionHeaderPanel(
 
         syncExpanded(expanded())
 
+        setModel(header.model)
         setCost(money(header.cost))
         set(context, contextText(header.context))
         context.toolTipText = contextTip(header.context)
@@ -305,6 +318,11 @@ class SessionHeaderPanel(
         cost.icon = null
         context.font = style.regularFont
         context.foreground = style.editorForeground
+        val weak = SessionUiStyle.Text.Secondary.foreground()
+        modelName.font = style.regularFont
+        modelName.foreground = weak
+        modelVariant.font = style.regularFont
+        modelVariant.foreground = weak
         agentStrip.applyStyle(style)
         todoStrip.applyStyle(style)
         tokenTitle.font = style.smallFont
@@ -330,6 +348,14 @@ class SessionHeaderPanel(
     internal fun costTip() = cost.toolTipText
 
     internal fun contextText(): String = context.text
+
+    internal fun modelText(): String = modelName.text
+
+    internal fun modelVariantText(): String = modelVariant.text
+
+    internal fun modelVisible(): Boolean = modelRow.isVisible
+
+    internal fun modelTip() = modelRow.toolTipText
 
     internal fun foregrounds() = listOf(title, cost, context).map { it.foreground } +
         todoStrip.labelForeground() +
@@ -459,6 +485,23 @@ class SessionHeaderPanel(
         cost.toolTipText = tip
         cost.accessibleContext.accessibleName = tip
         cost.isVisible = costValue.isNotBlank()
+    }
+
+    /** Sub-agents run with their own model and effort, so surface them in the session header. */
+    private fun setModel(value: HeaderModel?) {
+        val model = value?.takeIf { readonly || controller.model.session?.parentID != null }
+        modelRow.isVisible = model != null
+        modelName.text = model?.name.orEmpty()
+        modelVariant.text = model?.variant?.let { "· $it" }.orEmpty()
+        modelVariant.isVisible = model?.variant != null
+        modelRow.toolTipText = model?.let(::modelTip)
+        modelRow.accessibleContext.accessibleName = model?.let { listOfNotNull(it.name, it.variant).joinToString(" ") }
+    }
+
+    private fun modelTip(model: HeaderModel): String {
+        val lines = mutableListOf(XmlStringUtil.escapeString(model.id))
+        model.variant?.let { lines.add(XmlStringUtil.escapeString(KiloBundle.message("session.header.model.effort", it))) }
+        return XmlStringUtil.wrapInHtml(lines.joinToString("<br>"))
     }
 
     private fun toggle() {

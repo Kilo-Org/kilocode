@@ -9,6 +9,7 @@ import ai.kilocode.rpc.dto.KiloWorkspaceStatusDto
 import ai.kilocode.rpc.dto.MessageDto
 import ai.kilocode.rpc.dto.MessageTimeDto
 import ai.kilocode.rpc.dto.MessageWithPartsDto
+import ai.kilocode.rpc.dto.ModelSelectionDto
 import ai.kilocode.rpc.dto.PartDto
 import ai.kilocode.rpc.dto.PartSourceDto
 import ai.kilocode.rpc.dto.PartSourceTextDto
@@ -1087,6 +1088,46 @@ class SessionModelTest : BasePlatformTestCase() {
         assertEquals(10, model.header.timeline.single().weight)
     }
 
+    fun `test header snapshot shows latest assistant model and effort`() {
+        model.models = listOf(modelItem("kilo", "gpt-5", "GPT-5"))
+        model.upsertMessage(msg("u1", "user").copy(model = ModelSelectionDto("anthropic", "claude", "low")))
+        model.upsertMessage(msg("a1", "assistant").copy(providerID = "kilo", modelID = "gpt-5", variant = "high"))
+
+        assertEquals("GPT-5", model.header.model?.name)
+        assertEquals("High", model.header.model?.variant)
+        assertEquals("kilo/gpt-5", model.header.model?.id)
+    }
+
+    fun `test header snapshot falls back to the user message model`() {
+        model.models = listOf(modelItem("anthropic", "claude", "Claude"))
+        model.upsertMessage(msg("u1", "user").copy(model = ModelSelectionDto("anthropic", "claude", "low")))
+
+        assertEquals("Claude", model.header.model?.name)
+        assertEquals("Low", model.header.model?.variant)
+        assertEquals("anthropic/claude", model.header.model?.id)
+    }
+
+    fun `test header snapshot falls back to provider and id for an unknown model`() {
+        model.upsertMessage(msg("a1", "assistant").copy(providerID = "acme", modelID = "rocket"))
+
+        assertEquals("acme / rocket", model.header.model?.name)
+        assertNull(model.header.model?.variant)
+    }
+
+    fun `test header snapshot uses bare id for an unknown kilo gateway model`() {
+        model.upsertMessage(msg("a1", "assistant").copy(providerID = "kilo", modelID = "mystery"))
+
+        assertEquals("mystery", model.header.model?.name)
+        assertEquals("kilo/mystery", model.header.model?.id)
+    }
+
+    fun `test header snapshot strips sub-provider prefix and free suffix for kilo models`() {
+        model.models = listOf(modelItem("kilo", "gpt-5", "OpenRouter: GPT-5 (free)"))
+        model.upsertMessage(msg("a1", "assistant").copy(providerID = "kilo", modelID = "gpt-5"))
+
+        assertEquals("GPT-5", model.header.model?.name)
+    }
+
     fun `test loadHistory and clear reset header state`() {
         model.setSession(session("Old title"))
         model.upsertMessage(msg("a1", "assistant", cost = 1.0))
@@ -1216,6 +1257,17 @@ class SessionModelTest : BasePlatformTestCase() {
         patterns = listOf("*.kt"),
         always = emptyList(),
         meta = PermissionMeta(),
+    )
+
+    private fun modelItem(provider: String, id: String, display: String) = ModelItem(
+        id = id,
+        display = display,
+        provider = provider,
+        providerName = provider,
+        recommendedIndex = null,
+        free = false,
+        variants = emptyList(),
+        limit = null,
     )
 
     private fun assertModel(expected: String) {
