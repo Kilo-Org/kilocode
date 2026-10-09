@@ -118,7 +118,7 @@ function list(dir: string) {
   }
 }
 
-function scan(root: string, names: ReadonlySet<string>, found: Set<string>) {
+function scan(root: string, names: ReadonlySet<string>, found: Set<string>, markers = false) {
   if (names.has(path.basename(root))) {
     found.add(root)
     return
@@ -141,7 +141,10 @@ function scan(root: string, names: ReadonlySet<string>, found: Set<string>) {
     for (const entry of entries) {
       const target = path.join(dir, entry.name)
       if (names.has(entry.name)) {
-        found.add(target)
+        // Markers stay writable through the root bind. A file bind of their own would block replacement,
+        // but Bubblewrap resolves bind sources at mount time, so a concurrent sandboxed process could swap
+        // the marker for a symlink and get its target bound writable.
+        if (!(markers && entry.isFile())) found.add(target)
         continue
       }
       if (entry.isDirectory()) pending.push(target)
@@ -149,13 +152,14 @@ function scan(root: string, names: ReadonlySet<string>, found: Set<string>) {
   }
 }
 
-function protectedPaths(profile: Profile, allow: ReadonlyArray<PathRule>) {
+function protectedPaths(profile: Profile) {
   const found = new Set(profile.filesystem.denyWrite.filter((rule) => existsSync(rule.path)).map((rule) => rule.path))
   if (profile.filesystem.denyNames.length === 0) return [...found]
 
   const names = new Set(profile.filesystem.denyNames)
-  for (const rule of allow) {
-    if (rule.kind === "subtree") scan(rule.path, names, found)
+  // Scan the raw rules so a strict root nested in (or duplicating) a marker root is still scanned in full.
+  for (const rule of profile.filesystem.allowWrite.filter(exists)) {
+    if (rule.kind === "subtree") scan(rule.path, names, found, rule.markers)
   }
   return [...found].sort((a, b) => a.length - b.length)
 }
@@ -193,7 +197,7 @@ export function generate(
   ]
 
   for (const rule of allow) args.push("--bind", rule.path, rule.path)
-  for (const target of protectedPaths(profile, allow)) args.push("--ro-bind", target, target)
+  for (const target of protectedPaths(profile)) args.push("--ro-bind", target, target)
   if (proxy?.socket) args.push("--ro-bind", proxy.socket, proxy.socket)
   args.push("--proc", "/proc")
   if (launch.cwd) args.push("--chdir", launch.cwd)
