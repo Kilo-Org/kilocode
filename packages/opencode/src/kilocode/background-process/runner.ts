@@ -133,7 +133,7 @@ export namespace BackgroundProcessRunner {
     return result
   }
 
-  async function descendants(seen: Map<number, string>, root?: Root) {
+  async function descendants(seen: Map<number, string>, root?: () => Root | undefined) {
     const query =
       "Get-CimInstance Win32_Process | Select-Object ProcessId,ParentProcessId,CreationDate | ConvertTo-Json -Compress"
     const out = await Process.text(["powershell.exe", "-NoProfile", "-NonInteractive", "-Command", query], {
@@ -154,7 +154,7 @@ export namespace BackgroundProcessRunner {
         return []
       return [{ pid: item.ProcessId, parent: item.ParentProcessId, birth: item.CreationDate }]
     })
-    return walk(rows, seen, root)
+    return walk(rows, seen, root?.())
   }
 
   // Grace window after the leader exits during which we keep walking from its
@@ -183,10 +183,10 @@ export namespace BackgroundProcessRunner {
     while (true) {
       if (failure) throw failure
       const active = code === undefined || (exited !== undefined && Date.now() - exited < GRACE)
-      seen = await descendants(seen, active ? { pid, start, end: exited } : undefined)
+      seen = await descendants(seen, () => (active ? { pid, start, end: exited } : undefined))
       if (await Bun.file(input.control).exists()) {
         await Promise.all(
-          [pid, ...seen.keys()].map((item) =>
+          [...(code === undefined ? [pid] : []), ...seen.keys()].map((item) =>
             Process.run(["taskkill", "/pid", String(item), "/f", "/t"], { nothrow: true }),
           ),
         )
