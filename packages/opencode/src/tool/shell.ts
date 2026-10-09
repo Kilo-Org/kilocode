@@ -132,14 +132,33 @@ function parts(node: Node) {
   return out
 }
 
-function source(node: Node) {
-  return (node.parent?.type === "redirected_statement" ? node.parent.text : node.text).trim()
+// kilocode_change start
+function isSafeDescriptorRedirect(text: string): boolean {
+  return /^\d*\s*(?:>\s*&|<\s*&)\s*(?:\d+|-)$/.test(text.trim())
 }
 
-// kilocode_change start
+function onlySafeRedirects(parent: Node): boolean {
+  if (parent.type !== "redirected_statement") return false
+  const redirects = parent.children.filter(
+    (child): child is Node => Boolean(child && (child.type.includes("redirect") || child.type === "redirection")),
+  )
+  if (redirects.length === 0) return false
+  return redirects.every(
+    (child) =>
+      Boolean(child && (child.type === "file_redirect" || child.type === "redirection") && isSafeDescriptorRedirect(child.text)),
+  )
+}
+
+function source(node: Node) {
+  if (node.parent?.type === "redirected_statement" && !onlySafeRedirects(node.parent)) {
+    return node.parent.text.trim()
+  }
+  return node.text.trim()
+}
+
 function access(cmd: string, node: Node): Access {
   if (!READ.has(cmd)) return "unknown"
-  if (node.parent?.type === "redirected_statement") return "unknown"
+  if (node.parent?.type === "redirected_statement" && !onlySafeRedirects(node.parent)) return "unknown"
   return "read"
 }
 // kilocode_change end
@@ -382,7 +401,11 @@ export const ShellPermission = Effect.gen(function* () {
     const kind = ShellID.toKind(Shell.name(shell))
 
     const nodes = commands(root)
-    if (root.descendantsOfType("file_redirect").length > 0) scan.access = "unknown"
+    // kilocode_change start
+    if (root.descendantsOfType("file_redirect").some((node) => Boolean(node && !isSafeDescriptorRedirect(node.text)))) {
+      scan.access = "unknown"
+    }
+    // kilocode_change end
     if (nodes.some((node) => !READ.has((ps ? parts(node)[0]?.text.toLowerCase() : parts(node)[0]?.text) ?? ""))) {
       scan.access = "unknown"
     }
