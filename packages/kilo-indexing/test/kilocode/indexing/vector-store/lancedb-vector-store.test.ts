@@ -5,6 +5,7 @@
 
 import { describe, test, expect, beforeEach, afterEach, mock, spyOn } from "bun:test"
 import type { Payload } from "../../../../src/indexing/interfaces"
+import { LANCEDB_CLEANUP_RETENTION_MS, LANCEDB_COMPACT_EVERY_WRITES } from "../../../../src/indexing/constants"
 import * as path from "path"
 import fs from "fs"
 
@@ -15,6 +16,7 @@ const mockTable = {
   where: mock().mockReturnThis(),
   toArray: mock().mockResolvedValue([]),
   countRows: mock().mockResolvedValue(0),
+  optimize: mock().mockResolvedValue({}),
   vectorSearch: mock().mockReturnThis(),
   limit: mock().mockReturnThis(),
   refineFactor: mock().mockReturnThis(),
@@ -82,6 +84,7 @@ const allMocks = [
   mockTable.where,
   mockTable.toArray,
   mockTable.countRows,
+  mockTable.optimize,
   mockTable.vectorSearch,
   mockTable.limit,
   mockTable.refineFactor,
@@ -125,6 +128,7 @@ function resetAllMocks() {
   mockTable.where.mockReturnThis()
   mockTable.toArray.mockResolvedValue([])
   mockTable.countRows.mockResolvedValue(0)
+  mockTable.optimize.mockResolvedValue({})
   mockTable.vectorSearch.mockReturnThis()
   mockTable.limit.mockReturnThis()
   mockTable.refineFactor.mockReturnThis()
@@ -408,6 +412,79 @@ describe("LocalVectorStore", () => {
       mockTable.delete.mockResolvedValue(undefined)
       mockTable.add.mockRejectedValue(new Error("fail"))
       await expect(store.upsertPoints(points)).rejects.toThrow()
+    })
+  })
+
+  describe("optimizeTable", () => {
+    test("prunes with a retention window instead of deleting every version", async () => {
+      await store.optimizeTable()
+
+      expect(mockTable.optimize).toHaveBeenCalledTimes(1)
+      const options = mockTable.optimize.mock.calls[0]?.[0] as { cleanupOlderThan: Date }
+      expect(options.cleanupOlderThan).toBeInstanceOf(Date)
+      const age = Date.now() - options.cleanupOlderThan.getTime()
+      expect(age).toBeGreaterThanOrEqual(LANCEDB_CLEANUP_RETENTION_MS - 1_000)
+      expect(age).toBeLessThan(LANCEDB_CLEANUP_RETENTION_MS + 10_000)
+    })
+
+    test("swallows optimization failures", async () => {
+      mockTable.optimize.mockRejectedValue(new Error("optimize failed"))
+      await expect(store.optimizeTable()).resolves.toBeUndefined()
+    })
+  })
+
+  describe("periodic compaction", () => {
+    const point = () => ({
+      id: "123e4567-e89b-12d3-a456-426614174000",
+      vector: [1, 2, 3],
+      payload: { filePath: "src/a.ts", fileHash: "hash", codeChunk: "code", startLine: 1, endLine: 2 },
+    })
+
+    test("schedules compaction once the write budget is reached", async () => {
+      store["_writesSinceCompact"] = LANCEDB_COMPACT_EVERY_WRITES - 2
+      await store.upsertPoints([point()])
+      await store["pending"]
+
+      expect(mockTable.optimize).toHaveBeenCalledTimes(1)
+    })
+
+    test("does not compact before the threshold", async () => {
+      await store.upsertPoints([point()])
+      await store["pending"]
+
+      expect(mockTable.optimize).not.toHaveBeenCalled()
+    })
+
+    test("does not block the write path while compaction is pending", async () => {
+      store["_writesSinceCompact"] = LANCEDB_COMPACT_EVERY_WRITES - 2
+      const gate = Promise.withResolvers<void>()
+      mockTable.optimize.mockImplementation(() => gate.promise)
+
+      await store.upsertPoints([point()])
+      await Bun.sleep(0)
+      // upsertPoints resolved before the pending compaction finished
+      expect(mockTable.optimize).toHaveBeenCalledTimes(1)
+
+      gate.resolve()
+      await store["pending"]
+    })
+
+    test("coalesces threshold crossings while a compaction is running", async () => {
+      const gate = Promise.withResolvers<void>()
+      mockTable.optimize.mockImplementation(() => gate.promise)
+
+      store["_writesSinceCompact"] = LANCEDB_COMPACT_EVERY_WRITES - 2
+      await store.upsertPoints([point()])
+      await Bun.sleep(0)
+      expect(mockTable.optimize).toHaveBeenCalledTimes(1)
+
+      store["_writesSinceCompact"] = LANCEDB_COMPACT_EVERY_WRITES - 2
+      store["noteWrites"](2)
+      await Bun.sleep(0)
+      expect(mockTable.optimize).toHaveBeenCalledTimes(1)
+
+      gate.resolve()
+      await store["pending"]
     })
   })
 

@@ -89,7 +89,7 @@ function loadParcelWatcher(): typeof import("@parcel/watcher") | undefined {
 // Per-repo .gitignore/.kilocodeignore dirs are unioned in initialize() from the
 // ignore matcher; correctness for indexed files stays in shouldIndex().
 function watcherIgnoreGlobs(): string[] {
-  return FileIgnore.PATTERNS.map((pattern) => (pattern.includes("/") ? pattern : `**/${pattern}`))
+  return FileIgnore.globs()
 }
 
 function withSubscribeTimeout(
