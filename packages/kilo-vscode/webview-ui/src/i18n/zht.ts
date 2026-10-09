@@ -690,6 +690,9 @@ export const dict = {
   "settings.aboutKiloCode.title": "關於 Kilo Code",
 
   "session.messages.welcome": "Kilo Code 是一個 AI 程式設計助手。讓它幫你建構功能、修復 bug 或解釋程式碼庫。",
+  "session.workspaceScope.description": "Kilo 聊天僅使用此工作區中的第一個資料夾「{{folder}}」。",
+  "session.workspaceScope.alternatives": "若要使用其他資料夾，請在獨立視窗中開啟，或將其作為專案新增至 Agent Manager。",
+  "session.workspaceScope.dismiss": "關閉工作區範圍提示",
   "session.messages.scrollToBottom": "捲動至底部",
   "session.messages.initializing": "初始化中...",
   "session.messages.taskStarting": "啟動中...",

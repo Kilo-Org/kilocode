@@ -749,6 +749,10 @@ export const dict = {
 
   "session.messages.welcome":
     "Kilo Code is een AI-codeerassistent. Vraag het om features te bouwen, bugs op te lossen of je codebase uit te leggen.",
+  "session.workspaceScope.description": "De Kilo-chat gebruikt alleen ‘{{folder}}’, de eerste map in deze werkruimte.",
+  "session.workspaceScope.alternatives":
+    "Om met een andere map te werken, open je deze in een eigen venster of voeg je deze als project toe in Agent Manager.",
+  "session.workspaceScope.dismiss": "Hint over het bereik van de werkruimte verbergen",
   "session.messages.scrollToBottom": "Scroll naar beneden",
   "session.messages.initializing": "Initialiseren...",
   "session.messages.taskStarting": "Starten...",

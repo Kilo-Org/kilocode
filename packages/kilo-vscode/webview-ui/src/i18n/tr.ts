@@ -747,6 +747,11 @@ export const dict = {
 
   "session.messages.welcome":
     "Kilo Code bir yapay zeka kodlama asistanıdır. Özellik geliştirmesini, hata düzeltmesini veya kod tabanınızı açıklamasını isteyin.",
+  "session.workspaceScope.description":
+    "Kilo sohbeti yalnızca bu çalışma alanındaki ilk klasör olan “{{folder}}” klasörünü kullanır.",
+  "session.workspaceScope.alternatives":
+    "Başka bir klasörde çalışmak için klasörü ayrı bir pencerede açın veya Agent Manager'a proje olarak ekleyin.",
+  "session.workspaceScope.dismiss": "Çalışma alanı kapsamı ipucunu kapat",
   "session.messages.scrollToBottom": "En alta kaydır",
   "session.messages.initializing": "Başlatılıyor...",
   "session.messages.taskStarting": "Başlıyor...",

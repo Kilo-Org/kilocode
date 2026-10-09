@@ -747,6 +747,11 @@ export const dict = {
 
   "session.messages.welcome":
     "Kilo Code — це асистент з кодування на базі ШІ. Попросіть його розробити функцію, виправити помилку або пояснити вашу кодову базу.",
+  "session.workspaceScope.description":
+    "Чат Kilo використовує лише «{{folder}}» — першу папку в цьому робочому просторі.",
+  "session.workspaceScope.alternatives":
+    "Щоб працювати з іншою папкою, відкрийте її в окремому вікні або додайте як проєкт до Agent Manager.",
+  "session.workspaceScope.dismiss": "Закрити підказку про межі робочого простору",
   "session.messages.scrollToBottom": "Прокрутити до низу",
   "session.messages.initializing": "Ініціалізація...",
   "session.messages.taskStarting": "Запуск...",
