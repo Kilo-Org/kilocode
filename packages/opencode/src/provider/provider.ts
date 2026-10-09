@@ -12,6 +12,7 @@ import { serviceUse } from "@opencode-ai/core/effect/service-use"
 import { type LanguageModelV3 } from "@ai-sdk/provider"
 import * as ModelsDev from "./models" // kilocode_change - assemble dynamic Kilo models around upstream core catalog
 import { failure } from "@/kilocode/provider/catalog-recovery" // kilocode_change
+import { discover } from "@/kilocode/provider/discover" // kilocode_change
 import { Auth } from "../auth"
 import { Env } from "../env"
 import { InstallationVersion } from "@opencode-ai/core/installation/version"
@@ -1497,7 +1498,15 @@ const layer = Layer.effect(
         const plugins = yield* plugin.list()
 
         // now read config providers - includes any modifications from plugin config() hook
-        const configProviders = Object.entries(cfg.provider ?? {})
+        // kilocode_change start - add models from opted-in OpenAI-compatible /models endpoints
+        const configProviders = yield* discover({
+          cfg,
+          catalog: modelsDev,
+          auths: yield* auth.all().pipe(Effect.orDie),
+          envs: yield* env.all(),
+          fetch: modelsDevSvc.discover,
+        })
+        // kilocode_change end
         const disabled = new Set(cfg.disabled_providers ?? [])
         const enabled = cfg.enabled_providers ? new Set(cfg.enabled_providers) : null
 

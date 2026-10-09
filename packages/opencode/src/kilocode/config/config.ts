@@ -673,6 +673,28 @@ export namespace KilocodeConfig {
     return merged
   }
 
+  /** Providers whose model discovery flag or target (baseURL, api, env) this config layer sets. */
+  export function retargets(info: Config.Info) {
+    return Object.entries(info.provider ?? {}).flatMap(([id, item]) => {
+      if (!isRecord(item)) return []
+      const opts = isRecord(item.options) ? item.options : {}
+      return "api" in item || "env" in item || "baseURL" in opts || "discoverModels" in opts ? [id] : []
+    })
+  }
+
+  /**
+   * Model discovery calls {baseURL}/models with the provider's credentials as soon as providers
+   * load. Applied after every layer has merged, so a later trusted layer that only turns the flag
+   * on cannot revive a target that untrusted project config chose.
+   */
+  export function undiscover(info: Config.Info, ids: ReadonlySet<string>) {
+    for (const id of ids) {
+      const item = info.provider?.[id]
+      if (!item?.options?.discoverModels) continue
+      info.provider = { ...info.provider, [id]: { ...item, options: { ...item.options, discoverModels: false } } }
+    }
+  }
+
   // ── Directory check helper ───────────────────────────────────────────
 
   /** Check whether a directory path should be treated as a config directory (for loading config files). */
