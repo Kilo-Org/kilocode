@@ -3,6 +3,7 @@ package ai.kilocode.client.session
 import ai.kilocode.client.KiloNotifications
 import ai.kilocode.client.actions.reloadCoreSettings
 import ai.kilocode.client.app.KiloAppService
+import ai.kilocode.client.app.KiloMcpAuthService
 import ai.kilocode.client.app.KiloSessionService
 import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.app.Workspace
@@ -39,8 +40,11 @@ import ai.kilocode.client.session.ui.prompt.KiloPromptCompletionProvider
 import ai.kilocode.client.session.ui.prompt.MentionAction
 import ai.kilocode.client.session.ui.prompt.PromptDataKeys
 import ai.kilocode.client.session.ui.prompt.PromptPanel
+import ai.kilocode.client.session.ui.prompt.SessionIssue
+import ai.kilocode.client.session.ui.prompt.SessionIssueAction
 import ai.kilocode.client.session.ui.prompt.SlashAction
 import ai.kilocode.client.session.ui.prompt.mentionParts as promptMentionParts
+import ai.kilocode.client.session.ui.rail.PromptRailController
 import ai.kilocode.client.session.settings.ApprovalReasonVisibilityListener
 import ai.kilocode.client.session.ui.account.SessionAccountOverlay
 import ai.kilocode.client.session.ui.popup.HeaderPopupController
@@ -77,6 +81,7 @@ import ai.kilocode.client.session.views.SessionOutcomeView
 import ai.kilocode.client.session.views.permission.PermissionView
 import ai.kilocode.client.session.views.question.QuestionView
 import ai.kilocode.client.settings.KiloSettingsConfigurable
+import ai.kilocode.client.settings.agents.McpConfigurable
 import ai.kilocode.client.settings.checkpoints.CheckpointsConfigurable
 import ai.kilocode.client.settings.profile.UserProfileConfigurable
 import ai.kilocode.client.telemetry.Telemetry
@@ -104,6 +109,7 @@ import com.intellij.ide.ui.LafManagerListener
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.ide.CopyPasteManager
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.application.EDT
 import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.components.service
 import com.intellij.openapi.editor.colors.EditorColorsListener
@@ -121,6 +127,8 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.awt.BorderLayout
@@ -167,6 +175,12 @@ class SessionUi(
     private var revertPrompt: String? = null
     private var pendingRollback: String? = null
     private var pendingRedo: String? = null
+    // See sendPrompt()/onStateChanged(): the number of user messages present when a prompt was
+    // dispatched, or null when nothing is in flight. Comparing against a baseline rather than
+    // using a plain boolean is what makes the restore reliable while a turn is streaming: the
+    // prompt box stays enabled during a busy turn, so a queued send must not treat the *previous*
+    // turn's message as confirmation of its own.
+    private var pendingSend: Int? = null
     private val flushMs =
         Registry.intValue("kilo.session.flushMs", EVENT_FLUSH_MS.toInt())
             .takeIf { it > 0 }
@@ -198,6 +212,7 @@ class SessionUi(
     private lateinit var account: SessionAccountOverlay
     private lateinit var drop: SessionDropOverlay
     private lateinit var overlay: SessionHoverCopyOverlay
+    internal lateinit var promptRail: PromptRailController
     private val hide = timers.timer(HIDE_MS, repeats = false) {
         if (disposed || !this::drop.isInitialized) return@timer
         drop.setActive(false)
@@ -253,6 +268,7 @@ class SessionUi(
     private var refreshJob: Job? = null
     private var branchJob: Job? = null
     private var boardJob: Job? = null
+    private var issuesJob: Job? = null
     private var boardHasMessages = false
     private var disposed = false
 
@@ -532,6 +548,7 @@ class SessionUi(
             focus = focus,
             retry = if (readonly) null else controller::retry,
             retryable = controller::canRetry,
+            dismiss = if (readonly) null else controller::dismissError,
         )
         messageBody = SessionMessageListPanel(
             controller.model,
@@ -656,6 +673,14 @@ class SessionUi(
             java.awt.Rectangle(0, 0, pane.width, pane.height)
         }
         root.overlay.setComponentZOrder(drop, 0)
+        promptRail = PromptRailController(
+            root = root,
+            model = controller.model,
+            messages = messageBody,
+            scroll = scroll,
+            parent = this,
+            timers = timers,
+        )
         if (!readonly) {
             prompt.onFileDrag = ::syncDrop
             prompt.installFileDrop(root, "session-root")
@@ -712,6 +737,7 @@ class SessionUi(
             prompt.onChange = { scroll.refresh() }
             prompt.onAutoApproveToggle = ::setAuto
             prompt.setAutoApprove(controller.autoApprove)
+            startMcpAuthTracking()
             prompt.model.favorites = { app.favorites.value }
             prompt.model.onFavoriteToggle = { item ->
                 Telemetry.send(
@@ -769,6 +795,7 @@ class SessionUi(
                     prompt.setResetVisible(m.modelOverride)
                     prompt.setReady(m.isReady())
                     prompt.refreshHighlights()
+                    cs.launch { service<KiloMcpAuthService>().refresh(workspace.directory) }
                 }
 
                 is SessionControllerEvent.ViewChanged.ShowProgress -> {
@@ -815,10 +842,19 @@ class SessionUi(
 
                 is SessionModelEvent.RevertChanged -> onRevertChanged(event.revert)
 
-                is SessionModelEvent.MessageAdded,
+                is SessionModelEvent.MessageAdded -> {
+                    confirmPendingSend()
+                    syncDock()
+                    refreshBoardIfEmpty()
+                }
+
                 is SessionModelEvent.MessageRemoved,
                 is SessionModelEvent.HistoryLoaded,
                 is SessionModelEvent.Cleared -> {
+                    // A reload can surface the pending send's own message without a MessageAdded,
+                    // so re-check here too; otherwise the retained draft would linger until the
+                    // next submit.
+                    confirmPendingSend()
                     syncDock()
                     // Covers opening a session with an existing board, and this session's own first
                     // board post; a subagent's post is caught by the busy->idle probe instead.
@@ -904,6 +940,7 @@ class SessionUi(
                 ApplicationManager.getApplication().invokeLater { surfaceActivePrompt() }
             } else {
                 popup.hideAll()
+                promptRail.hideAll()
             }
         }
 
@@ -1003,8 +1040,30 @@ class SessionUi(
             val model = controller.model.model ?: "none"
             "${ChatLogSummary.prompt(PromptDto(parts = parts, editorContext = editor.context))} agent=$agent model=$model ready=${controller.ready}"
         }
+        // Baseline the user-message count for this send. onStateChanged uses it to tell a prompt
+        // that failed before the server ever created its message (restore the draft) apart from a
+        // turn that failed after the message was already persisted (nothing to restore -- it's in
+        // the transcript already). A queued send baselines above the in-flight turn's message, so
+        // that turn cannot be mistaken for confirmation of this one.
+        pendingSend = userMessages()
         controller.prompt(text, allFiles, editor.context, select)
         scroll.followBottom(follow)
+    }
+
+    @RequiresEdt
+    private fun userMessages() = controller.model.messages().count { it.info.role == "user" }
+
+    /**
+     * Marks the in-flight send as accepted once its own user message is persisted, which releases
+     * the retained draft. Scoped by the dispatch-time baseline so a message belonging to an earlier,
+     * still-streaming turn cannot confirm a queued send that has not landed yet.
+     */
+    @RequiresEdt
+    private fun confirmPendingSend() {
+        val baseline = pendingSend ?: return
+        if (userMessages() <= baseline) return
+        pendingSend = null
+        prompt.clearLastSubmission()
     }
 
     @RequiresEdt
@@ -1398,6 +1457,21 @@ class SessionUi(
             pendingRollback = null
             pendingRedo = null
         }
+        // Restore the typed prompt when the send never produced a persisted message (rejected
+        // synchronously, or prompt_async's 204-then-session.error case). A turn that fails after its
+        // user message was already persisted has nothing to restore -- it's in the transcript -- so
+        // this only fires while a send is still pending.
+        //
+        // TurnEnded deliberately does not participate. It is session-scoped with no turn identity,
+        // and clearing on it is never correct: if the pending send's own message is persisted,
+        // confirmPendingSend() has already released it, and if it is not, the turn that just ended
+        // belongs to an earlier send (a turn only starts once its user message exists). Acting here
+        // would destroy the draft of a send queued behind a still-streaming turn, since the prompt
+        // box stays enabled while busy.
+        if (pendingSend != null && state is SessionState.Error) {
+            pendingSend = null
+            prompt.restoreLastSubmission()
+        }
         prompt.setBusy(busy)
         dock?.setBusy(busy)
         load.setState(state)
@@ -1448,6 +1522,7 @@ class SessionUi(
         prompt.applyStyle(style)
         connection.applyStyle(style)
         scroll.applyStyle(style)
+        promptRail.applyStyle(style)
         empty?.applyStyle(style)
         refresh()
     }
@@ -1472,6 +1547,67 @@ class SessionUi(
         )
     }
 
+    /**
+     * Collects [KiloMcpAuthService] state for this session's directory and reflects it on the prompt
+     * issue actions. Refresh is event-driven (workspace ready, after a sign-in attempt) rather
+     * than polled.
+     */
+    private fun startMcpAuthTracking() {
+        val auth = service<KiloMcpAuthService>()
+        issuesJob?.cancel()
+        issuesJob = cs.launch {
+            auth.needsAuth.combine(auth.busy) { needs, busy ->
+                val servers = needs[workspace.directory].orEmpty()
+                val prefix = "${workspace.directory}\u0000"
+                val active = busy.mapNotNull { key -> if (key.startsWith(prefix)) key.removePrefix(prefix) else null }.toSet()
+                servers to active
+            }
+                .distinctUntilChanged()
+                .collect { (servers, active) ->
+                    withContext(Dispatchers.EDT) {
+                        prompt.setIssues(servers.sorted().map { name -> mcpAuthIssue(name, name in active) })
+                    }
+                }
+        }
+    }
+
+    @RequiresEdt
+    private fun mcpAuthIssue(name: String, busy: Boolean): SessionIssue {
+        val display = name.replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
+        return SessionIssue(
+            id = "mcp-auth:$name",
+            title = KiloBundle.message("prompt.mcp.provider", display),
+            actions = listOf(
+                SessionIssueAction(
+                    title = KiloBundle.message(if (busy) "prompt.mcp.needsAuth.busy" else "settings.agentBehavior.mcp.signIn"),
+                    enabled = !busy,
+                    action = { signInFromPrompt(name) },
+                ),
+                SessionIssueAction(
+                    title = KiloBundle.message("prompt.mcp.openSettings"),
+                    action = { openMcpSettings(name) },
+                ),
+            ),
+        )
+    }
+
+    @RequiresEdt
+    private fun openMcpSettings(name: String) {
+        ShowSettingsUtil.getInstance().showSettingsDialog(
+            project,
+            Predicate { cfg: Configurable -> cfg is ConfigurableWithId && cfg.getId() == McpConfigurable.ID },
+            { cfg: Configurable -> (cfg as? McpConfigurable)?.filter(name) },
+        )
+    }
+
+    private fun signInFromPrompt(name: String) {
+        val auth = service<KiloMcpAuthService>()
+        cs.launch {
+            val result = auth.signIn(workspace.directory, name)
+            withContext(Dispatchers.EDT) { auth.report(name, result) }
+        }
+    }
+
     private fun openKiloSettings() {
         ShowSettingsUtil.getInstance().showSettingsDialog(
             project,
@@ -1486,8 +1622,10 @@ class SessionUi(
         disposed = true
         refreshJob?.cancel()
         branchJob?.cancel()
+        issuesJob?.cancel()
         hide.stop()
         popup.hideAll()
+        if (this::promptRail.isInitialized) promptRail.hideAll()
         modalFocus = null
         empty = null
         if (this::root.isInitialized) root.setModalContent(null)

@@ -54,7 +54,7 @@
       "@solid-primitives/storage": "4.3.3",
       "@tailwindcss/vite": "4.1.11",
       "diff": "8.0.4",
-      "dompurify": "3.4.13",
+      "dompurify": "3.4.16",
       "drizzle-kit": "1.0.0-rc.2",
       "drizzle-orm": "1.0.0-rc.2",
       "effect": "4.0.0-beta.83",
@@ -159,7 +159,8 @@
     "fastify": ">=5.8.3",
     "vite": "7.3.5",
     "diff": "8.0.4",
-    "dompurify": "3.4.13",
+    "dompurify": "3.4.16",
+    "katex": "0.19.0",
     "happy-dom": ">=20.8.9",
     "@opentui/core": "catalog:",
     "@opentui/solid": "catalog:",
@@ -176,7 +177,7 @@
     "gcp-metadata@8.1.2": "patches/gcp-metadata@8.1.2.patch",
     "@ai-sdk/google@3.0.73": "patches/@ai-sdk%2Fgoogle@3.0.73.patch",
     "@pierre/trees@1.0.0-beta.4": "patches/@pierre%2Ftrees@1.0.0-beta.4.patch",
-    "@modelcontextprotocol/sdk@1.29.0": "patches/@modelcontextprotocol%2Fsdk@1.29.0.patch",
+    "@modelcontextprotocol/sdk@1.31.0": "patches/@modelcontextprotocol%2Fsdk@1.31.0.patch",
     "effect@4.0.0-beta.83": "patches/effect@4.0.0-beta.83.patch",
     "@tanstack/virtual-core@3.17.3": "patches/@tanstack%2Fvirtual-core@3.17.3.patch",
     "@ai-sdk/openai-compatible@2.0.41": "patches/@ai-sdk%2Fopenai-compatible@2.0.41.patch",
@@ -191,6 +192,6 @@
     "@ai-sdk/openai-compatible@2.0.48": "patches/@ai-sdk%2Fopenai-compatible@2.0.48.patch",
     "bun-pty@0.4.8": "patches/bun-pty@0.4.8.patch"
   },
-  "version": "7.8.3",
+  "version": "7.8.8",
   "peerDependencies": {}
 }
