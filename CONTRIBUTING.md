@@ -12,6 +12,8 @@ There are lots of ways to contribute to the project:
 - **Feature Requests:** Suggest new features or improvements
 - **Community Support:** Help other users in the community
 
+Community pull requests are triaged twice a week. See [Community triage](docs/community-triage.md) for what to expect and how long we wait for replies.
+
 The Kilo Community is [on Discord](https://kilo.ai/discord).
 
 ## Prerequisites

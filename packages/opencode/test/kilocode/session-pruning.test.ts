@@ -293,6 +293,50 @@ describe("single-turn tool-output pruning", () => {
     { config },
   )
 
+  it.instance(
+    "scans supplied messages instead of reloading the session",
+    Effect.gen(function* () {
+      const parent = yield* setup
+      const sessions = yield* Session.Service
+      const compact = yield* SessionCompaction.Service
+      const parts: MessageV2.ToolPart[] = []
+      for (const output of outputs) parts.push(yield* step(parent, output))
+      const old = new Set(parts.slice(0, 2).map((part) => part.messageID))
+      const messages = (yield* sessions.messages({ sessionID: parent.sessionID })).filter(
+        (message) => !old.has(message.info.id),
+      )
+
+      const cleared = yield* compact.prune({ sessionID: parent.sessionID, reason: "payload-limit", messages })
+
+      expect(cleared).toBe(0)
+      expect(marked(yield* tools(parent.sessionID))).toEqual([false, false, false, false, false, false])
+    }),
+  )
+
+  it.instance(
+    "marks supplied parts but persists the stored part",
+    Effect.gen(function* () {
+      const parent = yield* setup
+      const sessions = yield* Session.Service
+      const compact = yield* SessionCompaction.Service
+      for (const output of outputs) yield* step(parent, output)
+      const messages = yield* sessions.messages({ sessionID: parent.sessionID })
+      const supplied = messages.flatMap((message) => message.parts).filter((part) => part.type === "tool")
+      for (const part of supplied) if (part.state.status === "completed") part.state.title = "transformed"
+
+      const cleared = yield* compact.prune({ sessionID: parent.sessionID, reason: "payload-limit", messages })
+
+      expect(cleared).toBe(2)
+      expect(marked(supplied)).toEqual([true, true, false, false, false, false])
+      const stored = yield* tools(parent.sessionID)
+      expect(marked(stored)).toEqual([true, true, false, false, false, false])
+      expect(stored.map((part) => part.state.status === "completed" && part.state.title)).toEqual(
+        Array(6).fill("result"),
+      )
+      expect(stored.map((part) => part.state.status === "completed" && part.state.output)).toEqual(outputs)
+    }),
+  )
+
   for (const reason of ["normal", "payload-limit"] as const) {
     it.instance(
       reason === "normal" ? "keeps normal pruning opt-in" : "honors explicitly disabled payload pruning",

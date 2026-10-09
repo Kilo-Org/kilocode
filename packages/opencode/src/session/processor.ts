@@ -919,7 +919,10 @@ const layer = Layer.effect(
             return
           }
           ctx.needsCompaction = true
-          yield* events.publish(Session.Event.Error, { sessionID: ctx.sessionID, error })
+          // kilocode_change start - let compaction publish overflow only after recovery is exhausted
+          if (!ctx.assistantMessage.summary)
+            yield* events.publish(Session.Event.Error, { sessionID: ctx.sessionID, error })
+          // kilocode_change end
           return
         }
         ctx.assistantMessage.error = error

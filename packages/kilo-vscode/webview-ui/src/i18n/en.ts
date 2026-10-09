@@ -213,6 +213,7 @@ export const dict = {
   "prompt.action.stop.background": "Stop main agent. Background agents keep running.",
   "prompt.agents.show": "Show background agents",
   "prompt.action.enhance": "Enhance prompt",
+  "prompt.action.more": "More actions",
   "prompt.paste.expand": "Click to expand pasted text",
   "prompt.issues.title": "Session issues",
   "prompt.mcp.provider": "{{name}} MCP",
@@ -1377,6 +1378,8 @@ export const dict = {
   "task.backgroundAgents.stopAll": "Stop all ({{count}})",
   "task.backgroundAgents.finished": "Background agents finished",
   "task.stop": "Stop sub-agent",
+  "task.open.panel": "Open sub-agent in panel",
+  "task.open.tab": "Open sub-agent in tab",
 
   "settings.saveBar.unsavedChanges": "Unsaved changes",
   "settings.saveBar.discard": "Discard",
