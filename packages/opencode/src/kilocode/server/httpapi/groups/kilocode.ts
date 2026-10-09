@@ -120,6 +120,8 @@ export const RetentionState = Schema.Struct({
   skippedActive: Schema.Number,
   failed: Schema.Number,
   durationMs: Schema.Number,
+  cancelled: Schema.optional(Schema.Boolean),
+  reclaimedBytes: Schema.optional(Schema.Number),
 })
 
 export const RetentionStatus = Schema.Struct({
@@ -130,7 +132,7 @@ export const RetentionStatus = Schema.Struct({
   last: Schema.optional(RetentionState),
   progress: Schema.optional(
     Schema.Struct({
-      phase: Schema.Literals(["scanning", "deleting"]),
+      phase: Schema.Literals(["scanning", "deleting", "cancelling"]),
       total: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)),
       processed: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)),
       deleted: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)),
@@ -170,6 +172,7 @@ export const KilocodePaths = {
   backgroundJobPromote: `${root}/background-jobs/:jobID/promote`,
   retentionStatus: `${root}/retention`,
   retentionRun: `${root}/retention/run`,
+  retentionCancel: `${root}/retention/cancel`,
   wakeups: `${root}/wakeups`,
 } as const
 
@@ -306,7 +309,8 @@ export const KilocodeApi = HttpApi.make("kilocode")
           OpenApi.annotations({
             identifier: "kilocode.marketplace.install",
             summary: "Install a marketplace item",
-            description: "Install a marketplace MCP server, agent, skill, or plugin into project or global Kilo config.",
+            description:
+              "Install a marketplace MCP server, agent, skill, or plugin into project or global Kilo config.",
           }),
         ),
         HttpApiEndpoint.post("marketplaceRemove", KilocodePaths.marketplaceRemove, {
@@ -531,6 +535,20 @@ export const KilocodeApi = HttpApi.make("kilocode")
             summary: "Run session retention",
             description:
               "Run one machine-wide session retention pass. Does nothing unless the retention policy is enabled in kilo.json; `force` bypasses the minimum spacing between scheduled passes, never the enable check.",
+          }),
+        ),
+        HttpApiEndpoint.post("retentionCancel", KilocodePaths.retentionCancel, {
+          query: WorkspaceRoutingQuery,
+          success: described(
+            Schema.Struct({ requested: Schema.Boolean }),
+            "Retention cancel request outcome; false when no pass was running",
+          ),
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "kilocode.retention.cancel",
+            summary: "Stop the active session retention pass",
+            description:
+              "Ask the machine-wide retention pass to stop before deleting more sessions. Already-deleted sessions stay deleted; the interrupted pass still records its partial result and honors the spacing window.",
           }),
         ),
       )

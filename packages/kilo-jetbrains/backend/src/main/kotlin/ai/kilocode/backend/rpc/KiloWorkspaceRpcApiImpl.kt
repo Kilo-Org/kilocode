@@ -11,11 +11,14 @@ import ai.kilocode.backend.workspace.AgentData
 import ai.kilocode.backend.workspace.AgentInfo
 import ai.kilocode.backend.workspace.KiloBackendWorkspaceManager
 import ai.kilocode.backend.workspace.KiloWorkspaceState
+import ai.kilocode.jetbrains.api.infrastructure.ClientException
 import ai.kilocode.log.KiloLog
 import ai.kilocode.jetbrains.api.model.Agent
 import ai.kilocode.rpc.KiloWorkspaceRpcApi
 import ai.kilocode.rpc.isManagedWorktreeStorage
 import ai.kilocode.rpc.dto.ConfigTargetDto
+import ai.kilocode.rpc.dto.ConfigDto
+import ai.kilocode.rpc.dto.ConfigPatchDto
 import ai.kilocode.rpc.dto.DiffFileDto
 import ai.kilocode.rpc.dto.FileSearchResultDto
 import ai.kilocode.rpc.dto.KiloWorkspaceStateDto
@@ -55,6 +58,8 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
 import okhttp3.Request
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.RequestBody.Companion.toRequestBody
 import java.net.URI
 import java.net.URLDecoder
 import java.net.URLEncoder
@@ -83,6 +88,7 @@ class KiloWorkspaceRpcApiImpl internal constructor(
         private val GLOBAL = MODERN + LEGACY + "config.json"
         private val LOCAL_DIRS = listOf(".kilo", ".kilocode", ".opencode")
         private const val DIFF_CAP = 200_000
+        private val MEDIA = "application/json".toMediaType()
         private val JSON = Json { ignoreUnknownKeys = true }
         private val CONFIG = """{
   "${'$'}schema": "$SCHEMA"
@@ -132,6 +138,17 @@ class KiloWorkspaceRpcApiImpl internal constructor(
         manager.get(directory).reload()
     }
 
+    override suspend fun reloadCoreSettings(directory: String): Boolean {
+        app.requireReady()
+        val api = app.api ?: throw IllegalStateException("Kilo API is unavailable")
+        return try {
+            withContext(Dispatchers.IO) { api.instanceReload(directory = directory) }
+        } catch (e: ClientException) {
+            if (e.statusCode == 409) return false
+            throw e
+        }
+    }
+
     override suspend fun models(directory: String): ModelsWorkspaceDto {
         app.requireReady()
         val api = app.api ?: throw IllegalStateException("Kilo API is unavailable")
@@ -177,6 +194,40 @@ class KiloWorkspaceRpcApiImpl internal constructor(
             agents = agents?.let(KiloWorkspaceDtoMapper::agents),
             errors = errors.map(KiloWorkspaceDtoMapper::error),
         )
+    }
+
+    override suspend fun config(directory: String): ConfigDto {
+        app.requireReady()
+        val http = app.http ?: throw IllegalStateException("Kilo HTTP client is unavailable")
+        val raw = withContext(Dispatchers.IO) {
+            val request = Request.Builder()
+                .url("http://127.0.0.1:${app.port}/config?directory=${encode(directory)}")
+                .get()
+                .build()
+            http.newCall(request).execute().use { response ->
+                val body = response.body?.string().orEmpty()
+                if (!response.isSuccessful) throw RuntimeException("HTTP ${response.code}: $body")
+                body
+            }
+        }
+        return KiloCliDataParser.parseConfig(raw)
+    }
+
+    override suspend fun updateConfig(directory: String, patch: ConfigPatchDto): ConfigDto {
+        app.requireReady()
+        val http = app.http ?: throw IllegalStateException("Kilo HTTP client is unavailable")
+        val body = KiloCliDataParser.buildConfigPatch(patch)
+        withContext(Dispatchers.IO) {
+            val request = Request.Builder()
+                .url("http://127.0.0.1:${app.port}/config?directory=${encode(directory)}")
+                .patch(body.toRequestBody(MEDIA))
+                .build()
+            http.newCall(request).execute().use { response ->
+                val error = response.body?.string().orEmpty()
+                if (!response.isSuccessful) throw RuntimeException("HTTP ${response.code}: $error")
+            }
+        }
+        return config(directory)
     }
 
     override suspend fun files(directory: String, path: String): List<WorkspaceFileDto> {

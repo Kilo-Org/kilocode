@@ -37,6 +37,7 @@ export const dict = {
   "marketplace.install.scope.global.description":
     "Alle projecten op deze computer. Wordt opgeslagen in je gebruikersconfiguratie.",
   "marketplace.install.destination": "Installatielocatie",
+  "marketplace.install.includedSkills": "Meegeleverde skills",
   "marketplace.install.about.mcp":
     "Een MCP-server geeft Kilo extra hulpmiddelen om met externe diensten of lokale programma's te werken.",
   "marketplace.install.about.agent": "Een agent voegt een herbruikbare rol toe met eigen instructies en machtigingen.",
@@ -52,7 +53,6 @@ export const dict = {
     "Een plugin voegt aangepaste hulpmiddelen en integraties toe aan Kilo. Plugins worden uitgevoerd met volledige machtigingen.",
   "marketplace.install.plugin.warning":
     "Plugins voeren code uit met volledige machtigingen. Ze kunnen je bestanden lezen en wijzigen, opdrachten uitvoeren en toegang krijgen tot je inloggegevens en netwerk. Installeer alleen plugins die je vertrouwt.",
-  "marketplace.install.installedAt": "Geïnstalleerd in {{path}}",
   "marketplace.intro":
     "Installeer herbruikbare agenten, vaardigheden, MCP-hulpmiddelen en plugins voor één project of voor alle projecten.",
   "marketplace.intro.learnMore": "Over Marketplace",
@@ -63,10 +63,19 @@ export const dict = {
   "marketplace.install.failed": "Installatie mislukt",
   "marketplace.install.done": "Klaar",
   "marketplace.install.close": "Sluiten",
+  "marketplace.install.mcp.signIn.message": "{{name}} is geïnstalleerd, maar vereist een login voordat de tools gebruikt kunnen worden.",
+  "marketplace.install.mcp.signIn.button": "Inloggen",
+  "marketplace.install.mcp.signIn.waiting": "Wachten op inloggen via de browser…",
+  "marketplace.install.mcp.signIn.cancel": "Annuleren",
+  "marketplace.install.mcp.signIn.skip": "Later",
+  "marketplace.install.mcp.signIn.success": "Ingelogd bij {{name}}.",
+  "marketplace.install.mcp.signIn.failed": "Inloggen bij {{name}} mislukt.",
   "marketplace.remove.title": "{{name}} verwijderen?",
   "marketplace.remove.confirm":
     "Weet je zeker dat je deze {{type}} wilt verwijderen? Dit verwijdert het uit je {{scope}} configuratie.",
   "marketplace.remove.cancel": "Annuleren",
+  "marketplace.remove.mcp.skills":
+    "Dit verwijdert ook de bijbehorende skills die bij deze installatie horen. Afzonderlijk geïnstalleerde skills blijven behouden.",
   "marketplace.remove.confirm.button": "Verwijderen",
   "marketplace.search": "Zoeken...",
   "marketplace.filter.all": "Alle items",
@@ -75,6 +84,7 @@ export const dict = {
   "marketplace.empty": "Geen items gevonden",
   "marketplace.empty.relevant": "Geen relevante marketplace-items gevonden voor deze werkruimte.",
   "marketplace.badge.mcpServer": "MCP Server",
+  "marketplace.badge.skills": "Inclusief skills",
   "marketplace.card.by": "door {{author}}",
   "marketplace.install.method": "Installatiemethode",
   "marketplace.install.parameters": "Parameters",

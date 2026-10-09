@@ -1,5 +1,45 @@
 # Changelog
 
+## 7.9.0
+
+### Minor Changes
+
+- [#14666](https://github.com/Kilo-Org/kilocode/pull/14666) [`205e34a`](https://github.com/Kilo-Org/kilocode/commit/205e34a5ceac90019a76e035647680bb11bb25a0) - Support reloading Core settings from `/reload` and the session and tool window menus, and warn that restarting or reinstalling Core cancels active sessions.
+
+- [#14512](https://github.com/Kilo-Org/kilocode/pull/14512) [`b3da592`](https://github.com/Kilo-Org/kilocode/commit/b3da592cf524a8a99a75c6a1a325e9d5aecc5f2e) - Explain why file checkpoints weren't restored after a revert and add complete Checkpoints settings. JetBrains users can manage snapshots and machine-wide automatic session cleanup, choose a retention period, inspect cleanup progress and results, and manually run cleanup even when automatic cleanup is disabled.
+
+- [#14622](https://github.com/Kilo-Org/kilocode/pull/14622) [`83c1d0f`](https://github.com/Kilo-Org/kilocode/commit/83c1d0fff714490f93b512767baa98c15c5087da) - Render Kilo Swarm board messages as stacked Markdown with agent identities and full syntax highlighting.
+
+### Patch Changes
+
+- [#14548](https://github.com/Kilo-Org/kilocode/pull/14548) [`c5c36fc`](https://github.com/Kilo-Org/kilocode/commit/c5c36fc8a20bf76544e7c55cf2fe3bb98c29f714) - Make background-agent previews toggle their strip and add transcript-style hover feedback to agent and todo strips.
+
+- [#14648](https://github.com/Kilo-Org/kilocode/pull/14648) [`8e1eebc`](https://github.com/Kilo-Org/kilocode/commit/8e1eebc59452de57ccb5cb986ac0991629d9e0bb) - Show a combined MCP and Skill badge for JetBrains marketplace servers that include companion skills.
+
+- [#14642](https://github.com/Kilo-Org/kilocode/pull/14642) [`9350ea8`](https://github.com/Kilo-Org/kilocode/commit/9350ea8211f521c16111fa4946ccbae59036d2b1) - Rename the JetBrains Workflows settings page to Commands and add expandable explanations with documentation links to every Agent Behavior sub-page.
+
+- [#14663](https://github.com/Kilo-Org/kilocode/pull/14663) [`5f2747e`](https://github.com/Kilo-Org/kilocode/commit/5f2747efb6396b5e8037c57d199b2258fc4ed57c) - Show questions and permission requests correctly when they arrive while another session is open.
+
+- [#14583](https://github.com/Kilo-Org/kilocode/pull/14583) [`ecdddc4`](https://github.com/Kilo-Org/kilocode/commit/ecdddc4219bb74ebec9e9900bfafa8ddd6feb55e) - Keep orphan process cleanup attributed to the last active worktree run when stops overlap.
+
+- [#14583](https://github.com/Kilo-Org/kilocode/pull/14583) [`a91a3ad`](https://github.com/Kilo-Org/kilocode/commit/a91a3add011a6cd4394bfcb7c7f46f24976e3e8d) - Keep model and reasoning selections isolated to their JetBrains chat session.
+
+- [#14670](https://github.com/Kilo-Org/kilocode/pull/14670) [`93dd50a`](https://github.com/Kilo-Org/kilocode/commit/93dd50acab004c872670c1b67aaa23836c7bf8ec) - Submit JetBrains chat dialogs with Command+Enter from any focused dialog control.
+
+## 7.8.0
+
+### Minor Changes
+
+- [#14525](https://github.com/Kilo-Org/kilocode/pull/14525) [`de7df7d`](https://github.com/Kilo-Org/kilocode/commit/de7df7d6b9f63eccb49bbd7cc3d2f3071abc0647) - Show included skills and their install destination before installing a marketplace MCP server, and remove only the skills owned by that installation.
+
+## 7.7.10
+
+### Patch Changes
+
+- [#14515](https://github.com/Kilo-Org/kilocode/pull/14515) [`dfa67d0`](https://github.com/Kilo-Org/kilocode/commit/dfa67d022ac7d63a75a8bd863a34a209b0fe8ce6) - Fix a runtime exception thrown when switching editor tabs while the Kilo Code plugin is being reloaded or unloaded.
+
+- [#14520](https://github.com/Kilo-Org/kilocode/pull/14520) [`ceb83ea`](https://github.com/Kilo-Org/kilocode/commit/ceb83ea1a5f8ec32526f0100404d8384c29c050a) - Speed up switching between JetBrains session and worktree editor tabs, and reduce Agent Manager list repaint cost while sessions are running.
+
 ## 7.8.0
 
 ### Minor Changes
@@ -521,6 +561,113 @@
 - [#12059](https://github.com/Kilo-Org/kilocode/pull/12059) [`8ea3f10`](https://github.com/Kilo-Org/kilocode/commit/8ea3f10495e28c8a131b805d51f8f7524895148b) - Increase spacing before non-initial user prompts in the JetBrains session transcript.
 
 ## [Unreleased]
+
+## [7.1.9] - 2026-10-07
+
+### Added
+- Added a prompt navigator to the chat transcript for jumping between your sent prompts.
+- Added MCP OAuth sign-in support, including recovery flows for expired or failed authorizations.
+- Combined MCP and skill badges in the chat UI.
+- Added a core settings reload action.
+- Rendered agent board messages as markdown.
+
+### Fixed
+- Fixed hidden session questions not surfacing in the chat UI.
+- Made chat dialogs submit with Cmd/Ctrl+Enter.
+- Fixed spreadsheet date/time handling when reading xlsx and ods files.
+- Finalized reasoning output before stream retries to avoid lost context.
+- Kept storage usable after an interrupted first access.
+- Prevented a rejected attachment from discarding the in-progress prompt.
+- Gated prompt cache breakpoints to first-party OpenAI providers.
+
+### Changed
+- Renamed JetBrains workflows to commands.
+- Split agent guidance documentation into skills.
+- Bumped the bundled Kilo CLI pin to v7.8.8 (via v7.8.3 and v7.8.7 intermediate bumps).
+
+## [7.1.9-rc.2] - 2026-10-07
+
+### Added
+
+- Add a prompt navigator to the chat transcript for jumping between your own prompts.
+- Add MCP OAuth sign-in support, including recognizing recoverable auth failures and refreshing auth after a reset.
+- Show a combined MCP and Skill badge for marketplace servers that include companion skills.
+
+### Fixed
+
+- Submit chat dialogs with Command+Enter from any focused dialog control.
+- Refresh a worktree's pull request status when its agent stops.
+- Prevent a rejected attachment from discarding the prompt you were composing.
+
+### Changed
+
+- Bump the bundled Kilo CLI pin from 7.8.1 to 7.8.8.
+- Pin the Bun runtime and types to 1.4.2 for reproducible builds.
+
+## [7.1.9-rc.1] - 2026-09-28
+
+### Added
+
+- Rename workflows to commands throughout the JetBrains plugin and improve the related settings presentation.
+- Render agent board messages as Markdown.
+- Unify goals with scheduling and timing tools so agents can coordinate long-running work more reliably.
+
+### Fixed
+
+- Recover from provider context-limit errors by compacting the conversation automatically.
+- Preserve prompt cache breakpoints only for first-party OpenAI providers, avoiding incompatible requests to custom providers.
+- Report scheduled sessions with their wake time instead of leaving them in a generic busy state.
+- Pass the configured embedding dimension to OpenAI-compatible indexing providers.
+
+## [7.1.8] - 2026-09-25
+
+### Added
+
+- Add Checkpoints settings for snapshots and automatic session cleanup, including manual cleanup controls and the latest cleanup result.
+- Install companion skills when adding MCP servers from the marketplace.
+- Publish CycloneDX software bills of materials alongside JetBrains release artifacts.
+- Support MCP servers that use client ID metadata documents for OAuth registration.
+
+### Fixed
+
+- Avoid a crash when reloading or unloading the JetBrains plugin while editor history still references Kilo virtual files.
+- Keep model selection isolated to each session, including overlapping agent runs and cleanup.
+- Keep sub-agents that belong to an active chat during session cleanup.
+- Make background-agent and todo strip headers expand, collapse, and highlight consistently while keeping expanded agent links actionable.
+- Show specific revert guidance when snapshots are disabled, a checkpoint is unavailable, or the project is not a Git repository.
+
+### Changed
+
+- Reclaim database space after session cleanup and allow cleanup to be stopped.
+- Speed up switching between worktree session editor tabs with long transcripts and reduce unnecessary Agent Manager list repainting.
+- Trim single-line transcript labels more consistently with an ellipsis when they overflow.
+
+## [7.1.8-rc.2] - 2026-09-25
+
+### Added
+
+- Add Checkpoints settings for snapshots and automatic session cleanup, including manual cleanup controls and the latest cleanup result.
+- Publish CycloneDX software bills of materials alongside JetBrains release artifacts.
+
+### Fixed
+
+- Show specific revert guidance when snapshots are disabled, a checkpoint is unavailable, or the project is not a Git repository.
+- Make background-agent and todo strip headers expand, collapse, and highlight consistently while keeping expanded agent links actionable.
+
+### Changed
+
+## [7.1.8-rc.1] - 2026-09-24
+
+### Added
+
+### Fixed
+
+- Avoid a crash when reloading or unloading the JetBrains plugin while editor history still references Kilo virtual files.
+
+### Changed
+
+- Speed up switching between worktree session editor tabs with long transcripts and reduce unnecessary Agent Manager list repainting.
+- Trim single-line transcript labels more consistently with an ellipsis when they overflow.
 
 ## [7.1.7] - 2026-09-23
 

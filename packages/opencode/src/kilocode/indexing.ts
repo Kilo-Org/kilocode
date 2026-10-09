@@ -534,6 +534,13 @@ export namespace KiloIndexing {
     }
   }
 
+  /** True when VS Code has supplied consent for the project of the directory. */
+  export async function consented(dir: string) {
+    const project = projects.get(dir) ?? (await AppRuntime.runPromise(primaryWorktree(dir))) ?? dir
+    projects.set(dir, project)
+    return consent.get(project) === true
+  }
+
   export async function current(): Promise<Status> {
     const entry = await hit().ready
     entry.scope(WorkspaceContext.workspaceID)

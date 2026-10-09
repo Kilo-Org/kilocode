@@ -18,6 +18,7 @@ import { useTheme, selectedForeground } from "../../context/theme"
 import { SplitBorder } from "../../ui/border"
 import { useTerminalDimensions } from "@opentui/solid"
 import { slashDisplay } from "@/kilocode/cli/cmd/command-display" // kilocode_change
+import { KiloSteer } from "../../kilocode/steer" // kilocode_change - subagent views have no slash commands
 import { createSessionPart, sessionMentionText } from "../../kilocode/session-mentions" // kilocode_change
 import { DialogSessionMention } from "../../kilocode/dialog-session-mention" // kilocode_change
 import { useDialog } from "../../ui/dialog" // kilocode_change
@@ -611,6 +612,7 @@ export function Autocomplete(props: {
   useBindings(() => ({
     target: props.input,
     enabled: () => Boolean(store.visible),
+    priority: 2, // kilocode_change - an open list outranks priority-1 subagent-view keys (Esc interrupt)
     commands: [
       {
         name: "prompt.autocomplete.prev",
@@ -682,6 +684,7 @@ export function Autocomplete(props: {
   }))
 
   function show(mode: "@" | "/") {
+    if (mode === "/" && KiloSteer.steering(sync.session.get(props.sessionID ?? ""))) return // kilocode_change
     setStore({
       visible: mode,
       index: props.input().cursorOffset,

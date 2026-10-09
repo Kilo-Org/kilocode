@@ -107,6 +107,23 @@ class KiloBundleLocaleTest : BasePlatformTestCase() {
         }
     }
 
+    fun `test mcp auth keys are present and format in every locale`() {
+        for (locale in LOCALES) {
+            val props = load(locale)
+            for ((key, args) in MCP_AUTH) {
+                val pattern = props.getProperty(key)
+                assertNotNull("$locale: missing $key", pattern)
+                assertTrue("$locale: $key is blank", pattern!!.isNotBlank())
+                assertEscaped(locale, key, pattern)
+                val rendered = format(pattern, *args.toTypedArray())
+                for (arg in args) {
+                    assertTrue("$locale: $key dropped $arg -> $rendered", rendered.contains(arg))
+                }
+                assertClean(locale, key, rendered)
+            }
+        }
+    }
+
     fun `test localized bundles do not carry stale keys`() {
         val base = load("en").stringPropertyNames()
         for (locale in LOCALES.filterNot { it == "en" }) {
@@ -117,11 +134,69 @@ class KiloBundleLocaleTest : BasePlatformTestCase() {
         }
     }
 
+    fun `test checkpoint settings keys are mirrored in every locale`() {
+        for (locale in LOCALES) {
+            val props = load(locale)
+            for (key in CHECKPOINTS) {
+                val value = props.getProperty(key)
+                assertNotNull("$locale: missing $key", value)
+                assertTrue("$locale: $key is blank", value!!.isNotBlank())
+            }
+        }
+    }
+
+    fun `test commands settings and settings info banner keys are mirrored in every locale`() {
+        for (locale in LOCALES) {
+            val props = load(locale)
+            for (key in COMMANDS_AND_INFO) {
+                val value = props.getProperty(key)
+                assertNotNull("$locale: missing $key", value)
+                assertTrue("$locale: $key is blank", value!!.isNotBlank())
+            }
+            val message = props.getProperty("settings.agentBehavior.commands.delete.message")
+            assertNotNull("$locale: missing settings.agentBehavior.commands.delete.message", message)
+            assertEscaped(locale, "settings.agentBehavior.commands.delete.message", message!!)
+            val rendered = format(message, "COMMAND_NAME")
+            assertTrue(
+                "$locale: settings.agentBehavior.commands.delete.message dropped the command name -> $rendered",
+                rendered.contains("COMMAND_NAME"),
+            )
+            assertClean(locale, "settings.agentBehavior.commands.delete.message", rendered)
+        }
+    }
+
+    fun `test core reload keys are translated in every locale`() {
+        for (locale in LOCALES) {
+            val props = load(locale)
+            for (key in CORE_RELOAD) {
+                val value = props.getProperty(key)
+                assertNotNull("$locale: missing $key", value)
+                assertTrue("$locale: $key is blank", value!!.isNotBlank())
+            }
+        }
+    }
+
     fun `test source bundle literals exist in base bundle`() {
         val base = load("en").stringPropertyNames()
         val missing = bundleKeys().filter { "$" !in it }.filter { it !in base }.sorted()
 
         assertTrue("Missing base bundle keys: $missing", missing.isEmpty())
+    }
+
+    fun `test marketplace skill destinations match the scope in every locale`() {
+        for (locale in LOCALES) {
+            val props = load(locale)
+            assertEquals(
+                "$locale: project skill destination",
+                ".kilo/skills/review/",
+                format(props.getProperty("settings.marketplace.install.destination.skill.project"), "review"),
+            )
+            assertEquals(
+                "$locale: global skill destination",
+                "~/.kilo/skills/review/",
+                format(props.getProperty("settings.marketplace.install.destination.skill.global"), "review"),
+            )
+        }
     }
 
     fun `test source scan keeps every when branch after comma separated conditions`() {
@@ -283,6 +358,33 @@ class KiloBundleLocaleTest : BasePlatformTestCase() {
             "session.empty.worktree.unknown",
             "action.Kilo.NewSession.toolbar",
             "action.Kilo.NewWorktree.toolbar",
+            "settings.agentBehavior.mcp.signIn.cancel",
+            "settings.agentBehavior.mcp.resetAuth",
+            "settings.agentBehavior.mcp.resetAuth.title",
+            "settings.agentBehavior.mcp.resetAuth.failed",
+            "settings.agentBehavior.mcp.authUrl.title",
+            "settings.agentBehavior.mcp.authUrl.open",
+            "settings.agentBehavior.mcp.authUrl.copy",
+            "settings.agentBehavior.mcp.edit.oauth",
+            "settings.agentBehavior.mcp.edit.oauth.help",
+            "settings.agentBehavior.mcp.edit.oauth.mode",
+            "settings.agentBehavior.mcp.edit.oauth.mode.automatic",
+            "settings.agentBehavior.mcp.edit.oauth.mode.disabled",
+            "settings.agentBehavior.mcp.edit.oauth.mode.custom",
+            "settings.agentBehavior.mcp.edit.oauth.clientId",
+            "settings.agentBehavior.mcp.edit.oauth.clientSecret",
+            "settings.agentBehavior.mcp.edit.oauth.scope",
+            "settings.agentBehavior.mcp.edit.oauth.callbackPort",
+            "settings.agentBehavior.mcp.edit.oauth.redirectUri",
+            "settings.agentBehavior.mcp.edit.oauth.redirectUri.help",
+            "settings.agentBehavior.mcp.edit.oauth.port.invalid",
+            "settings.agentBehavior.mcp.edit.oauth.secret.invalid",
+            "settings.agentBehavior.mcp.edit.oauth.redirectUri.invalid",
+            "settings.marketplace.mcp.signIn.title",
+            "settings.marketplace.mcp.signIn.confirm",
+            "prompt.mcp.needsAuth.busy",
+            "prompt.mcp.openSettings",
+            "prompt.issues.title",
         )
 
         val AGENT = mapOf(
@@ -296,6 +398,76 @@ class KiloBundleLocaleTest : BasePlatformTestCase() {
             "session.header.agents.more.one",
             "session.header.agents.more.accessible.one",
             "session.header.agents.running.one",
+        )
+
+        val CHECKPOINTS = listOf(
+            "revert.banner.workspace.enableSnapshots",
+            "settings.checkpoints.displayName",
+            "settings.checkpoints.description",
+            "settings.checkpoints.enable.title",
+            "settings.checkpoints.enable.description",
+            "settings.checkpoints.save.failed",
+            "settings.checkpoints.saving",
+            "settings.checkpoints.loading",
+            "settings.checkpoints.cleanup.section",
+            "settings.checkpoints.cleanup.description",
+            "settings.checkpoints.cleanup.enable.title",
+            "settings.checkpoints.cleanup.enable.description",
+            "settings.checkpoints.cleanup.days.title",
+            "settings.checkpoints.cleanup.days.description",
+            "settings.checkpoints.cleanup.days.invalid",
+            "settings.checkpoints.cleanup.last",
+            "settings.checkpoints.cleanup.never",
+            "settings.checkpoints.cleanup.run",
+            "settings.checkpoints.cleanup.running",
+            "settings.checkpoints.cleanup.starting",
+            "settings.checkpoints.cleanup.progress.scanning",
+            "settings.checkpoints.cleanup.progress.deleting",
+            "settings.checkpoints.cleanup.status.error",
+            "settings.checkpoints.cleanup.last.details",
+            "settings.checkpoints.cleanup.confirm.title",
+            "settings.checkpoints.cleanup.confirm.message",
+            "settings.checkpoints.cleanup.error.title",
+            "settings.checkpoints.cleanup.error.message",
+        )
+
+        val COMMANDS_AND_INFO = listOf(
+            "settings.info.showMore",
+            "settings.info.showLess",
+            "settings.info.learnMore",
+            "settings.agentBehavior.agents.info",
+            "settings.agentBehavior.agents.info.more",
+            "settings.agentBehavior.mcp.info",
+            "settings.agentBehavior.mcp.info.more",
+            "settings.agentBehavior.skills.info",
+            "settings.agentBehavior.skills.info.more",
+            "settings.agentBehavior.commands.displayName",
+            "settings.agentBehavior.commands.info",
+            "settings.agentBehavior.commands.info.more",
+            "settings.agentBehavior.commands.search",
+            "settings.agentBehavior.commands.empty",
+            "settings.agentBehavior.commands.content.empty",
+            "settings.agentBehavior.commands.load.timeout",
+            "settings.agentBehavior.commands.reload.blocked",
+            "settings.agentBehavior.commands.saved.notification",
+            "settings.agentBehavior.commands.delete.title",
+            "settings.agentBehavior.commands.delete.failed",
+            "settings.agentBehavior.commands.openInEditor",
+            "settings.agentBehavior.commands.openInEditor.pending",
+            "settings.agentBehavior.commands.openInEditor.failed",
+            "settings.rules.info",
+            "settings.rules.info.more",
+            "settings.agentBehavior.description",
+        )
+
+        val CORE_RELOAD = listOf(
+            "prompt.slash.reload",
+            "action.Kilo.ReloadCoreSettings.text",
+            "action.Kilo.ReloadCoreSettings.description",
+            "action.Kilo.ReloadCoreSettings.busy",
+            "action.Kilo.ReloadCoreSettings.failed",
+            "action.Kilo.CoreLifecycle.confirm.title",
+            "action.Kilo.CoreLifecycle.confirm.message",
         )
 
         val RELEASE_7_1_7 = mapOf(
@@ -331,6 +503,24 @@ class KiloBundleLocaleTest : BasePlatformTestCase() {
             "worktree.diagnostics.copied" to emptyList(),
             "worktree.diagnostics.noProject" to emptyList(),
             "settings.agentBehavior.extended.title" to emptyList(),
+        )
+
+        val MCP_AUTH = mapOf(
+            "settings.agentBehavior.mcp.signIn.progress" to listOf("SERVER_NAME"),
+            "settings.agentBehavior.mcp.signIn.success" to listOf("SERVER_NAME"),
+            "settings.agentBehavior.mcp.signIn.failed" to listOf("SERVER_NAME"),
+            "settings.agentBehavior.mcp.signIn.timeout" to listOf("SERVER_NAME"),
+            "settings.agentBehavior.mcp.signIn.unsupported" to listOf("SERVER_NAME"),
+            "settings.agentBehavior.mcp.resetAuth.message" to listOf("SERVER_NAME"),
+            "settings.agentBehavior.mcp.authUrl.message" to listOf("SERVER_NAME"),
+            "settings.agentBehavior.mcp.delete.bundle.message" to listOf("SERVER_NAME"),
+            "settings.agentBehavior.skills.delete.bundle.message" to listOf("SKILL_NAME", "SERVER_NAME"),
+            "settings.marketplace.mcp.signIn.message" to listOf("SERVER_NAME"),
+            "prompt.mcp.needsAuth.one" to listOf("SERVER_NAME"),
+            "prompt.mcp.needsAuth.many" to listOf("7"),
+            "prompt.mcp.signIn" to listOf("SERVER_NAME"),
+            "prompt.mcp.signingIn" to listOf("SERVER_NAME"),
+            "prompt.mcp.provider" to listOf("SERVER_NAME"),
         )
     }
 }

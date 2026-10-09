@@ -534,6 +534,33 @@ export const McpEditViewRemote: Story = {
   ),
 }
 
+export const McpEditViewRemoteWithCustomOauth: Story = {
+  name: "McpEditView — remote server (custom OAuth client)",
+  render: () => (
+    <StoryProviders
+      config={
+        {
+          mcp: {
+            "remote-mcp": {
+              type: "remote",
+              url: "https://mcp.example.com/sse",
+              oauth: {
+                clientId: "my-registered-client",
+                scope: "mcp.read mcp.write",
+                callbackPort: 19999,
+              },
+            },
+          },
+        } as any
+      }
+    >
+      <div style={{ "max-height": "700px", overflow: "auto" }}>
+        <McpEditView name="remote-mcp" onBack={noop} onRemove={noop} />
+      </div>
+    </StoryProviders>
+  ),
+}
+
 export const ModeEditExport: Story = {
   name: "ModeEditView — export button",
   render: () => {
