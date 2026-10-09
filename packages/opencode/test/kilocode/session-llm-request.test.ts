@@ -130,6 +130,132 @@ describe("Kilo persona in generated metadata requests", () => {
   })
 })
 
+describe("LLM request output tokens", () => {
+  const claude = (input: { id: string; npm: string; output: number; variants?: Provider.Model["variants"] }) =>
+    ({
+      ...model,
+      id: ModelV2.ID.make(input.id),
+      api: { ...model.api, id: input.id, npm: input.npm },
+      capabilities: { ...model.capabilities, reasoning: true },
+      limit: { context: 1_000_000, output: input.output },
+      variants: input.variants,
+    }) satisfies Provider.Model
+
+  const run = (input: { model: Provider.Model; variant?: string; flags?: Partial<RuntimeFlags.Info> }) =>
+    Effect.gen(function* () {
+      const flags = yield* RuntimeFlags.Service
+      const result = yield* LLMRequestPrep.prepare({
+        user: {
+          ...user("code"),
+          model: { providerID: model.providerID, modelID: input.model.id, variant: input.variant },
+        },
+        sessionID: "ses_test",
+        model: input.model,
+        agent: agent("code"),
+        system: [],
+        messages: [],
+        tools: {},
+        provider: { id: model.providerID, name: "Test provider", source: "config", env: [], options: {}, models: {} },
+        auth: undefined,
+        plugin,
+        flags: { ...flags, ...input.flags },
+        isWorkflow: false,
+      })
+      return result.params.maxOutputTokens
+    })
+
+  const adaptive = { high: { reasoning: { enabled: true, effort: "high" }, verbosity: "high" } }
+
+  it.instance("requests the full output limit for Claude on the Kilo gateway", () =>
+    Effect.gen(function* () {
+      const mdl = claude({
+        id: "anthropic/claude-opus-5.5",
+        npm: "@kilocode/kilo-gateway",
+        output: 128_000,
+        variants: adaptive,
+      })
+      expect(yield* run({ model: mdl, variant: "high" })).toBe(128_000)
+      expect(yield* run({ model: mdl })).toBe(128_000)
+    }),
+  )
+
+  it.instance("requests the full output limit for Claude-family aliases", () =>
+    Effect.gen(function* () {
+      for (const npm of ["@kilocode/kilo-gateway", "@ai-sdk/anthropic"]) {
+        for (const family of ["claude", "Claude-Sonnet"]) {
+          const mdl = { ...claude({ id: "kilo-auto/frontier", npm, output: 128_000 }), family }
+          expect(yield* run({ model: mdl })).toBe(128_000)
+        }
+      }
+    }),
+  )
+
+  it.instance("keeps concrete Claude ID detection when family is empty or unrelated", () =>
+    Effect.gen(function* () {
+      for (const family of ["", "custom"]) {
+        const mdl = {
+          ...claude({ id: "claude-sonnet-4-5", npm: "@ai-sdk/anthropic", output: 64_000 }),
+          family,
+        }
+        expect(yield* run({ model: mdl })).toBe(64_000)
+      }
+    }),
+  )
+
+  it.instance("keeps the default for mixed auto routes with a Claude candidate", () =>
+    Effect.gen(function* () {
+      const mdl = {
+        ...claude({ id: "kilo-auto/efficient", npm: "@kilocode/kilo-gateway", output: 65_536 }),
+        family: "kilo-auto",
+        autoRouting: { models: ["anthropic/claude-sonnet-5", "google/gemini-2.5-flash"] },
+      }
+      expect(yield* run({ model: mdl })).toBe(32_000)
+    }),
+  )
+
+  it.instance("requests the full output limit for Claude on first-party providers", () =>
+    Effect.gen(function* () {
+      for (const npm of ["@ai-sdk/anthropic", "@ai-sdk/amazon-bedrock", "@ai-sdk/google-vertex/anthropic"]) {
+        expect(yield* run({ model: claude({ id: "claude-sonnet-4-5", npm, output: 64_000 }) })).toBe(64_000)
+      }
+    }),
+  )
+
+  it.instance("keeps the default when the SDK adds an explicit thinking budget", () =>
+    Effect.gen(function* () {
+      const anthropic = claude({
+        id: "claude-opus-4-5",
+        npm: "@ai-sdk/anthropic",
+        output: 64_000,
+        variants: { high: { thinking: { type: "enabled", budgetTokens: 16_000 } } },
+      })
+      const bedrock = claude({
+        id: "us.anthropic.claude-sonnet-4-5-20250929-v1:0",
+        npm: "@ai-sdk/amazon-bedrock",
+        output: 64_000,
+        variants: { max: { reasoningConfig: { type: "enabled", budgetTokens: 31_999 } } },
+      })
+      expect(yield* run({ model: anthropic, variant: "high" })).toBe(32_000)
+      expect(yield* run({ model: bedrock, variant: "max" })).toBe(32_000)
+    }),
+  )
+
+  it.instance("keeps the default for other providers, other models, and the env override", () =>
+    Effect.gen(function* () {
+      const openrouter = claude({
+        id: "anthropic/claude-opus-5.5",
+        npm: "@openrouter/ai-sdk-provider",
+        output: 128_000,
+      })
+      const other = claude({ id: "openai/gpt-5.6", npm: "@kilocode/kilo-gateway", output: 128_000 })
+      const kilo = claude({ id: "anthropic/claude-opus-5.5", npm: "@kilocode/kilo-gateway", output: 128_000 })
+      expect(yield* run({ model: openrouter })).toBe(32_000)
+      expect(yield* run({ model: other })).toBe(32_000)
+      expect(yield* run({ model: kilo, flags: { outputTokenMax: 48_000 } })).toBe(48_000)
+    }),
+  )
+})
+
 describe("LLM request headers", () => {
   for (const name of ["opencode", "opencode-go"]) {
     it.instance(

@@ -34,6 +34,7 @@ import { McpOAuthPendingProvider, McpOAuthProvider, OAUTH_CALLBACK_PATH } from "
 import { McpOAuthCallback } from "./oauth-callback"
 import { McpAuth } from "./auth"
 import { probe } from "@/kilocode/mcp/sse-probe" // kilocode_change - normalize the optional GET stream probe
+import * as KiloMcpCleanup from "@/kilocode/mcp/cleanup" // kilocode_change
 import { EventV2Bridge } from "@/event-v2-bridge"
 import { TuiEvent } from "@/server/tui-event"
 import { Cause, Effect, Exit, Layer, Context, Schema, Stream } from "effect"
@@ -46,6 +47,7 @@ import * as SandboxNetwork from "@/kilocode/sandbox/network" // kilocode_change
 import { McpCatalog } from "./catalog"
 import { McpEvent } from "@opencode-ai/schema/mcp-event"
 import { McpBrowser } from "./browser"
+import { authFailure } from "@/kilocode/mcp/auth-failure" // kilocode_change
 
 const DEFAULT_TIMEOUT = 30_000
 const CLIENT_OPTIONS = {
@@ -88,6 +90,8 @@ export const ToolsChanged = McpEvent.ToolsChanged
 
 export const BrowserOpenFailed = McpEvent.BrowserOpenFailed
 
+export const AuthUrl = McpEvent.AuthUrl // kilocode_change
+
 export const Failed = NamedError.create("MCPFailed", {
   name: Schema.String,
 })
@@ -115,9 +119,14 @@ const StatusDisabled = Schema.Struct({ status: Schema.Literal("disabled") }).ann
 const StatusFailed = Schema.Struct({ status: Schema.Literal("failed"), error: Schema.String }).annotate({
   identifier: "MCPStatusFailed",
 })
-const StatusNeedsAuth = Schema.Struct({ status: Schema.Literal("needs_auth") }).annotate({
+// kilocode_change start - preserve the classified authentication failure
+const StatusNeedsAuth = Schema.Struct({
+  status: Schema.Literal("needs_auth"),
+  error: Schema.optional(Schema.String),
+}).annotate({
   identifier: "MCPStatusNeedsAuth",
 })
+// kilocode_change end
 const StatusNeedsClientRegistration = Schema.Struct({
   status: Schema.Literal("needs_client_registration"),
   error: Schema.String,
@@ -234,6 +243,12 @@ export interface Interface {
   readonly add: (name: string, mcp: ConfigMCPV1.Info) => Effect.Effect<{ status: Record<string, Status> | Status }>
   readonly connect: (name: string) => Effect.Effect<void, NotFoundError>
   readonly disconnect: (name: string) => Effect.Effect<void, NotFoundError>
+  // kilocode_change start - purge all cached runtime state for a server removed
+  // from config. `disconnect` alone leaves `status[name]` and `config[name]`
+  // behind, so `status()` keeps resurrecting the server's last-known state
+  // (e.g. stuck "needs_auth") after it's been uninstalled.
+  readonly remove: (name: string) => Effect.Effect<void>
+  // kilocode_change end
   readonly getPrompt: (
     clientName: string,
     name: string,
@@ -249,7 +264,9 @@ export interface Interface {
   readonly authenticate: (
     mcpName: string,
     onAuthorization?: (authorizationUrl: string) => void,
+    opts?: { external?: boolean }, // kilocode_change - allow an HTTP client to open the authorization URL
   ) => Effect.Effect<Status, NotFoundError>
+  readonly cancelAuth: (mcpName: string) => Effect.Effect<void> // kilocode_change
   readonly finishAuth: (mcpName: string, authorizationCode: string) => Effect.Effect<Status, NotFoundError>
   readonly removeAuth: (mcpName: string) => Effect.Effect<void>
   readonly supportsOAuth: (mcpName: string) => Effect.Effect<boolean, NotFoundError>
@@ -352,10 +369,13 @@ const layer = Layer.effect(
           Effect.map((client) => ({ client, transportName: name })),
           Effect.catch((error) => {
             const lastError = error instanceof Error ? error : new Error(String(error))
+            // kilocode_change start - classify remote authentication failures centrally
             const isAuthError =
-              error instanceof UnauthorizedError || (authProvider && lastError.message.includes("OAuth"))
+              error instanceof UnauthorizedError ||
+              (authProvider && (lastError.message.includes("OAuth") || authFailure(lastError.message)))
+            // kilocode_change end
 
-            if (isAuthError) {
+            if (isAuthError && authProvider) { // kilocode_change
               if (lastError.message.includes("registration") || lastError.message.includes("client_id")) {
                 lastStatus = {
                   status: "needs_client_registration" as const,
@@ -371,7 +391,7 @@ const layer = Layer.effect(
                   .pipe(Effect.ignore, Effect.as(undefined))
               } else {
                 pendingOAuthTransports.set(key, { transport })
-                lastStatus = { status: "needs_auth" as const }
+                lastStatus = { status: "needs_auth" as const, error: lastError.message } // kilocode_change
                 return events
                   .publish(TuiEvent.ToastShow, {
                     title: "MCP Authentication Required",
@@ -570,6 +590,7 @@ const layer = Layer.effect(
           defs: {},
           instructions: {},
         }
+        yield* Effect.addFinalizer(() => KiloMcpCleanup.release(s, descendants)) // kilocode_change - close servers if this lookup is interrupted
 
         yield* Effect.forEach(
           Object.entries(config),
@@ -726,6 +747,18 @@ const layer = Layer.effect(
       delete s.clients[name]
       s.status[name] = { status: "disabled" }
     })
+
+    // kilocode_change start - see Interface.remove
+    const remove = Effect.fn("MCP.remove")(function* (name: string) {
+      const s = yield* InstanceState.get(state)
+      yield* closeClient(s, name)
+      delete s.clients[name]
+      delete s.defs[name]
+      delete s.instructions[name]
+      delete s.status[name]
+      delete s.config[name]
+    })
+    // kilocode_change end
 
     function requestTimeout(s: State, name: string, configured: McpEntry | undefined, fallback?: number) {
       const staticTimeout = configured && isMcpConfigured(configured) ? configured.timeout : undefined
@@ -959,6 +992,7 @@ const layer = Layer.effect(
     const authenticate = Effect.fn("MCP.authenticate")(function* (
       mcpName: string,
       onAuthorization?: (authorizationUrl: string) => void,
+      opts?: { external?: boolean }, // kilocode_change
     ) {
       const result: AuthResult = yield* startAuth(mcpName, { callback: false }) // kilocode_change
       if (!result.authorizationUrl) {
@@ -1023,11 +1057,17 @@ const layer = Layer.effect(
       // kilocode_change end
       onAuthorization?.(result.authorizationUrl)
 
-      yield* browser.open(result.authorizationUrl).pipe(
-        Effect.catch(() => {
-          return events.publish(BrowserOpenFailed, { mcpName, url: result.authorizationUrl }).pipe(Effect.ignore)
-        }),
-      )
+      // kilocode_change start - external clients open the URL on their own machine
+      if (opts?.external) {
+        yield* events.publish(AuthUrl, { mcpName, url: result.authorizationUrl }).pipe(Effect.ignore)
+      } else {
+        yield* browser.open(result.authorizationUrl).pipe(
+          Effect.catch(() => {
+            return events.publish(BrowserOpenFailed, { mcpName, url: result.authorizationUrl }).pipe(Effect.ignore)
+          }),
+        )
+      }
+      // kilocode_change end
 
       // kilocode_change start
       const callback = yield* Effect.promise(() => callbackSettled)
@@ -1107,6 +1147,14 @@ const layer = Layer.effect(
       pendingOAuthTransports.delete(mcpName)
     })
 
+    // kilocode_change start - cancel an in-flight flow without deleting stored credentials
+    const cancelAuth = Effect.fn("MCP.cancelAuth")(function* (mcpName: string) {
+      const pending = pendingOAuthTransports.get(mcpName)
+      McpOAuthCallback.cancelPending(mcpName)
+      if (pending) yield* releaseFlow(mcpName, pending)
+    })
+    // kilocode_change end
+
     const supportsOAuth = Effect.fn("MCP.supportsOAuth")(function* (mcpName: string) {
       const mcpConfig = yield* requireMcpConfig(mcpName)
       return mcpConfig.type === "remote" && mcpConfig.oauth !== false
@@ -1140,12 +1188,14 @@ const layer = Layer.effect(
       add,
       connect,
       disconnect,
+      remove, // kilocode_change
       getPrompt,
       readResource,
       startAuth,
       authenticate,
       finishAuth,
       removeAuth,
+      cancelAuth, // kilocode_change
       supportsOAuth,
       hasStoredTokens,
       getAuthStatus,

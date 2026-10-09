@@ -71,6 +71,8 @@ The policy lives in `kilo.json` under the `retention` key, so it applies no matt
 
 Once enabled, the VS Code extension triggers cleanup about once a day while it is running. You can also run it immediately with the **Run Cleanup Now** button, which asks for confirmation first because deletion is permanent. A spinner and live status show the scanning or deleting phase and the number of sessions processed out of the total. During deletion, the status also shows deleted and failed counts. Reopening Settings shows the current progress. After each run, the **Last cleanup** line shows how many sessions were deleted, how many were skipped, and whether anything failed.
 
+A long pass can be halted with the **Stop cleanup** button while it runs. Stopping keeps what the pass already deleted and skips the rest; the **Last cleanup** line marks an interrupted run. After a pass frees a large share of the session database, Kilo also reclaims the disk space, so the storage file shrinks instead of keeping its old size.
+
 ### What Is Protected
 
 - **Active sessions**: Cleanup skips sessions reported as busy by the current backend and sessions with message or part writes in the last hour, including writes from another window or terminal. Merely keeping an idle session open does not protect it.

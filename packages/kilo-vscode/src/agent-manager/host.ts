@@ -71,6 +71,7 @@ export interface SessionProvider {
   routeSessionDirectoryFor?(ref: SessionRef): string | undefined
   /** Re-check Git capability for the active project/session directory. */
   refreshGitStatus?(): void
+  retryInitialization?(): void
   dispose(): void
 }
 
@@ -124,6 +125,8 @@ export interface Host {
     /** Dynamic root directory for the panel's session provider (follows the active project). */
     workspaceRoot?: () => string | undefined
     projectId?: () => string | undefined
+    /** Source of an externally created session, including async background work. */
+    sessionProject?: () => string | undefined
   }): PanelContext
 
   /** Get the workspace/project root path. */
@@ -148,9 +151,8 @@ export interface Host {
   /** Clone without changing workspace membership; return the verified checkout path. */
   cloneRepository(url: string, parent: string): Promise<string | undefined>
 
-  /** Whether the experimental multi-project Agent Manager mode is enabled. */
-  multiProject(): boolean
   browserAutomation(): boolean
+  approveBrowserNavigation?(origin: string): Promise<boolean>
 
   /** Whether background worktree pre-warming is enabled. */
   worktreePool(): boolean
@@ -173,8 +175,6 @@ export interface Host {
   /** Subscribe to workspace folder changes (pinned project re-derivation). */
   onDidChangeWorkspaceFolders(cb: () => void): Disposable
 
-  /** Subscribe to multi-project flag changes. */
-  onDidChangeMultiProject(cb: (enabled: boolean) => void): Disposable
   /** Whether the workspace permits executing configured scripts. */
   isTrusted(): boolean
 
@@ -205,11 +205,15 @@ export interface Host {
   /** Create an output channel for logging. */
   createOutput(name: string): OutputHandle
 
-  /** Read extension keybinding metadata. */
+  /** Read extension keybindings, with the user's keybindings.json applied. */
   extensionKeybindings(): Array<{ command: string; key?: string; mac?: string; when?: string }>
 
+  /** Notify when the user's keybindings.json changes. */
+  onDidChangeKeybindings?(cb: () => void): Disposable
+
   /** Copy text to the system clipboard. */
-  copyToClipboard(text: string): void
+  copyToClipboard(text: string): void | Promise<void>
+  readClipboard?(): Promise<string>
 
   /** Capture a telemetry event. */
   capture(event: string, properties?: Record<string, unknown>): void

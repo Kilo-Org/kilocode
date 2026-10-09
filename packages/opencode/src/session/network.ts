@@ -1,9 +1,11 @@
 // kilocode_change - new file
 import { Context, Effect, Layer, Schema, Types } from "effect"
+import { connect } from "node:net"
 import { Bus } from "../bus"
 import { BusEvent } from "../bus/bus-event"
 import { QuestionID } from "../question/schema"
 import { SessionID } from "../session/schema"
+import { SessionV1 } from "@opencode-ai/core/v1/session"
 import { InstanceState } from "@/effect/instance-state"
 import { InstanceRef } from "@/effect/instance-ref"
 import { capture } from "@/kilocode/instance"
@@ -176,13 +178,16 @@ export namespace SessionNetwork {
     })
   }
 
+  /** Message for a server-side connection reset; shared with serverReset so routing cannot drift from the wording. */
+  const resetMessage = "Connection reset by server"
+
   export function message(err: unknown) {
     // kilocode_change - check for timeout first
     for (const item of chain(err)) {
       if (item instanceof DOMException && item.name === "TimeoutError") return "Request timed out"
     }
     const match = code(err)
-    if (match === "ECONNRESET") return "Connection reset by server"
+    if (match === "ECONNRESET") return resetMessage
     if (match === "ECONNREFUSED") return "Connection refused"
     if (match === "ENOTFOUND") return "Host not found"
     if (match === "EAI_AGAIN") return "DNS lookup failed"
@@ -204,6 +209,21 @@ export namespace SessionNetwork {
     return "Network connection failed"
   }
 
+  /**
+   * A connection reset the error parser already marked retryable is a transient
+   * server-side failure, not a dead local network: it belongs on the normal
+   * retry path (backoff plus the retry limit) rather than the offline
+   * reconnection wait.
+   *
+   * metadata.code is the durable signal, but fromError records only the
+   * top-level code — a reset nested in a cause chain is caught by the message.
+   */
+  export function serverReset(err: unknown) {
+    if (!SessionV1.APIError.isInstance(err)) return false
+    if (!err.data.isRetryable) return false
+    return err.data.metadata?.code === "ECONNRESET" || err.data.message === resetMessage
+  }
+
   async function check(url: string) {
     const ctl = new AbortController()
     const timer = setTimeout(() => ctl.abort(), PROBE_MS)
@@ -216,13 +236,50 @@ export namespace SessionNetwork {
       .finally(() => clearTimeout(timer))
   }
 
-  async function probe() {
+  export async function probe() {
     return Promise.any(
       urls.map(async (url) => {
         if (await check(url)) return true
         throw new Error("network probe failed")
       }),
     ).catch(() => false)
+  }
+
+  // A TCP connect tests path liveness without asking the server to answer HTTP,
+  // so a busy or slow provider is never mistaken for a dead network.
+  function dial(url: string) {
+    return new Promise<boolean>((resolve) => {
+      const target = URL.parse(url)
+      if (!target) return resolve(false)
+      const socket = connect({
+        host: target.hostname,
+        port: Number(target.port) || (target.protocol === "https:" ? 443 : 80),
+      })
+      const timer = setTimeout(() => {
+        socket.destroy()
+        resolve(false)
+      }, PROBE_MS)
+      socket.once("connect", () => {
+        clearTimeout(timer)
+        socket.destroy()
+        resolve(true)
+      })
+      socket.once("error", () => {
+        clearTimeout(timer)
+        resolve(false)
+      })
+    })
+  }
+
+  /**
+   * Probe for the offline guard's connectivity check. The provider's own endpoint
+   * is probed at the TCP level — an open socket proves the path is alive however
+   * its host resolves. When the socket does not open, the public probe
+   * distinguishes a dead network from a provider-specific outage.
+   */
+  export async function probeProvider(baseURL: string | undefined, fallback: () => Promise<boolean> = probe) {
+    if (baseURL && (await dial(baseURL))) return true
+    return fallback()
   }
 
   async function delay(abort: AbortSignal) {

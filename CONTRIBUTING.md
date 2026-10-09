@@ -12,11 +12,13 @@ There are lots of ways to contribute to the project:
 - **Feature Requests:** Suggest new features or improvements
 - **Community Support:** Help other users in the community
 
+Community pull requests are triaged twice a week. See [Community triage](docs/community-triage.md) for what to expect and how long we wait for replies.
+
 The Kilo Community is [on Discord](https://kilo.ai/discord).
 
 ## Prerequisites
 
-- **Bun 1.3.14+** — required for all packages.
+- **Bun 1.4.2+** — required for all packages.
 - **Java 21** — required by the JetBrains plugin. The root `bun turbo typecheck` and `bun turbo test:ci` commands include `@kilocode/kilo-jetbrains` and will fail without Java 21.
 
   The preferred way to install Java is via [SDKMAN](https://sdkman.io/install):
@@ -41,7 +43,7 @@ The Kilo Community is [on Discord](https://kilo.ai/discord).
 
 ## Developing Kilo CLI
 
-- **Requirements:** Bun 1.3.14+, Java 21 (see [Prerequisites](#prerequisites) above)
+- **Requirements:** Bun 1.4.2+, Java 21 (see [Prerequisites](#prerequisites) above)
 - Install dependencies and start the CLI from the repo root:
 
   ```bash

@@ -605,7 +605,7 @@ export namespace KiloSessionPrompt {
   }) {
     if (input.attempts < MAX_COMPACTION_ATTEMPTS) return { exhausted: false as const }
     const error = new MessageV2.ContextOverflowError({
-      message: `Compaction exhausted: context still exceeds model limits after ${MAX_COMPACTION_ATTEMPTS} attempts`,
+      message: `Compaction exhausted: context still exceeds model limits after ${MAX_COMPACTION_ATTEMPTS} attempts. Start a new session to continue.`,
     }).toObject()
     input.closeReasons.set(input.sessionID, "error")
     if (input.message) {

@@ -68,7 +68,7 @@ export const dict: Record<string, string> = {
   "ui.sessionTurn.error.freeUsageExceeded": "ነፃ አጠቃቀም ታልፏል",
   "ui.sessionTurn.error.addCredits": "ክሬዲት አክል",
   "dialog.usageExceeded.freeTier.title": "ነፃ ገደብ ላይ ደርሷል",
-  "dialog.usageExceeded.freeTier.description": "ለKilo Go ለምርጥ ክፍት ምንጭ ሞዴሎች ታማኝ መዳረሻ ለማግኘት ይመዝገቡ፣ ከ$5 በወር ጀምሮ።", // kilocode_change
+  "dialog.usageExceeded.freeTier.description": "ለምርጥ ክፍት ምንጭ ሞዴሎች ታማኝ መዳረሻ ለማግኘት በወር $10 ለKilo Go ይመዝገቡ።", // kilocode_change
   "dialog.usageExceeded.freeTier.actionLabel": "ለደንበኝነት ይመዝገቡ",
   "dialog.usageExceeded.accountRateLimit.title": "የሂድ ገደብ ላይ ደርሷል",
   "dialog.usageExceeded.accountRateLimit.description":

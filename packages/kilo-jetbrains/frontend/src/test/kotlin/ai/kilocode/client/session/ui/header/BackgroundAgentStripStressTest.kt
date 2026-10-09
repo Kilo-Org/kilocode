@@ -6,6 +6,7 @@ import ai.kilocode.client.ui.HoverArea
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import java.awt.Component
 import java.awt.Container
+import javax.swing.JComponent
 
 /**
  * Streaming-UI churn test for [BackgroundAgentStrip], per this plugin's stress + leak test
@@ -34,7 +35,7 @@ class BackgroundAgentStripStressTest : BasePlatformTestCase() {
             assertSame(firstCompact, compact(strip, "Agent job1"))
             assertSame(secondCompact, compact(strip, "Agent job2"))
             assertEquals(agents.size, strip.rowCount())
-            assertEquals(agents.size + 1, descendants(strip.rowComponent()).filterIsInstance<HoverArea>().size)
+            assertEquals(1, descendants(strip.rowComponent()).filterIsInstance<HoverArea>().size)
         }
 
         // Settling back down to just the two stable rows must drop every churned row.
@@ -47,8 +48,8 @@ class BackgroundAgentStripStressTest : BasePlatformTestCase() {
     }
 
     private fun compact(strip: BackgroundAgentStrip, title: String) =
-        descendants(strip.rowComponent()).filterIsInstance<HoverArea>().firstOrNull {
-            it.accessibleContext.accessibleName == "Open background agent $title"
+        descendants(strip.rowComponent()).filterIsInstance<JComponent>().firstOrNull {
+            it.toolTipText == title
         }
 
     private fun descendants(root: Component): List<Component> = buildList {

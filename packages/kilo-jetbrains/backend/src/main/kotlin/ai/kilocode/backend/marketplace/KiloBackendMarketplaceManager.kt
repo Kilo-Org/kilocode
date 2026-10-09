@@ -1,12 +1,15 @@
 package ai.kilocode.backend.marketplace
 
 import ai.kilocode.backend.app.KiloBackendAppService
+import ai.kilocode.backend.cli.KiloCliDataParser
 import ai.kilocode.log.KiloLog
+import ai.kilocode.rpc.dto.MarketplaceBundleDto
 import ai.kilocode.rpc.dto.MarketplaceItemDto
 import ai.kilocode.rpc.dto.MarketplaceListDto
 import ai.kilocode.rpc.dto.MarketplaceMethodDto
 import ai.kilocode.rpc.dto.MarketplaceParamDto
 import ai.kilocode.rpc.dto.MarketplaceResultDto
+import ai.kilocode.rpc.dto.MarketplaceSkillDto
 import com.intellij.openapi.components.service
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -20,6 +23,7 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.decodeFromJsonElement
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -28,13 +32,16 @@ import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import java.net.URLEncoder
+import java.net.URI
 import java.nio.charset.StandardCharsets
 import java.nio.file.FileSystems
 import java.nio.file.FileVisitResult
 import java.nio.file.Files
+import java.nio.file.LinkOption
 import java.nio.file.Path
 import java.nio.file.SimpleFileVisitor
 import java.nio.file.attribute.BasicFileAttributes
+import java.util.UUID
 
 /**
  * Talks to the CLI's marketplace routes (`/kilocode/marketplace*`), which fetch the remote
@@ -63,6 +70,29 @@ class KiloBackendMarketplaceManager(private val backend: KiloBackendAppService? 
         return MarketplaceListDto(items = dtos, errors = errors)
     }
 
+    suspend fun bundles(directory: String): List<MarketplaceBundleDto> {
+        val skills = KiloCliDataParser.parseAgentBehaviorSkills(request(directory, PATH_SKILLS, null))
+        return withContext(Dispatchers.IO) {
+            skills.mapNotNull { skill ->
+                val path = skillPath(skill.location) ?: return@mapNotNull null
+                val file = path.parent?.resolve(OWNER_FILE) ?: return@mapNotNull null
+                val owner = runCatching {
+                    if (!Files.isRegularFile(file, LinkOption.NOFOLLOW_LINKS) || Files.size(file) > MAX_OWNER_BYTES) {
+                        return@runCatching null
+                    }
+                    JSON.decodeFromString<WireOwner>(Files.readString(file))
+                }.onFailure { LOG.warn("marketplace owner marker read failed: $file", it) }.getOrNull()
+                    ?: return@mapNotNull null
+                if (owner.version != 1 || !safe(owner.id) || runCatching { UUID.fromString(owner.token) }.isFailure) {
+                    return@mapNotNull null
+                }
+                Owned(owner.id, scope(directory, path), skill.location)
+            }.groupBy { it.id to it.scope }
+                .map { (key, owned) -> MarketplaceBundleDto(key.first, key.second, owned.map { it.location }.sorted()) }
+                .sortedWith(compareBy(MarketplaceBundleDto::scope, MarketplaceBundleDto::id))
+        }
+    }
+
     suspend fun install(
         directory: String,
         item: MarketplaceItemDto,
@@ -77,6 +107,14 @@ class KiloBackendMarketplaceManager(private val backend: KiloBackendAppService? 
                     put("type", item.type)
                     put("id", item.id)
                     put("content", content)
+                    if (item.type == "mcp" && item.skills.isNotEmpty()) {
+                        put("skills", JsonArray(item.skills.map { skill ->
+                            buildJsonObject {
+                                put("id", skill.id)
+                                put("content", skill.content)
+                            }
+                        }))
+                    }
                 },
             )
             put("target", target)
@@ -122,6 +160,29 @@ class KiloBackendMarketplaceManager(private val backend: KiloBackendAppService? 
         val line: Int? = null,
     )
 
+    @Serializable
+    private data class WireSkill(val id: String, val content: String)
+
+    @Serializable
+    private data class WireOwner(val version: Int, val id: String, val token: String)
+
+    private data class Owned(val id: String, val scope: String, val location: String)
+
+    private fun skillPath(location: String): Path? = runCatching {
+        if (location.startsWith("file:")) Path.of(URI(location)) else Path.of(location)
+    }.getOrNull()?.toAbsolutePath()?.normalize()
+
+    private fun scope(directory: String, path: Path): String {
+        val root = runCatching { Path.of(directory).toAbsolutePath().normalize() }.getOrNull()
+        return if (root != null && path.startsWith(root)) "project" else "global"
+    }
+
+    private fun safe(id: String): Boolean {
+        if (id.isBlank() || id == "." || ".." in id || "/" in id || "\\" in id || id.endsWith(".")) return false
+        if (RESERVED.matches(id)) return false
+        return OWNER_ID.matches(id)
+    }
+
     private fun installedKeys(element: JsonElement?): Set<String> = element?.jsonObject?.keys ?: emptySet()
 
     /** [item] paired with its raw `suggest_for.filename` glob patterns, used only to compute [relevantKeys]. */
@@ -157,6 +218,11 @@ class KiloBackendMarketplaceManager(private val backend: KiloBackendAppService? 
             content = contentElement.toString(),
             installedProject = project.contains(key),
             installedGlobal = global.contains(key),
+            skills = if (type == "mcp") get("skills")?.let {
+                JSON.decodeFromJsonElement<List<WireSkill>>(it).map { skill ->
+                    MarketplaceSkillDto(skill.id, skill.content)
+                }
+            }.orEmpty() else emptyList(),
         )
         return Decoded(item, key, filenames)
     }
@@ -283,7 +349,12 @@ class KiloBackendMarketplaceManager(private val backend: KiloBackendAppService? 
         val EXCLUDED_DIRS = setOf("node_modules", ".git", "dist", "build", "out", ".kilo", ".opencode", ".kilocode")
         const val MAX_RELEVANCE_FILES = 20_000
         const val PATH_LIST = "/kilocode/marketplace"
+        const val PATH_SKILLS = "/skill"
         const val PATH_INSTALL = "/kilocode/marketplace/install"
         const val PATH_REMOVE = "/kilocode/marketplace/remove"
+        const val OWNER_FILE = ".kilo-marketplace.json"
+        const val MAX_OWNER_BYTES = 4096L
+        val OWNER_ID = Regex("^[A-Za-z0-9_@.\\-]+$")
+        val RESERVED = Regex("^(con|prn|aux|nul|com[1-9]|lpt[1-9])(\\.|$)", RegexOption.IGNORE_CASE)
     }
 }
