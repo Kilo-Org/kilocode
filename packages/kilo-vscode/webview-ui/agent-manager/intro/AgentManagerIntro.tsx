@@ -3,6 +3,7 @@ import { Button } from "@kilocode/kilo-ui/button"
 import { Popover } from "@kilocode/kilo-ui/popover"
 import { useLanguage } from "../../src/context/language"
 import { useVSCode } from "../../src/context/vscode"
+import type { SessionInfo } from "../../src/types/messages"
 import { WelcomeEmptyState, KiloLogo } from "../../src/components/chat/WelcomeEmptyState"
 import { IntroGraph } from "./IntroGraph"
 import "./intro.css"
@@ -17,11 +18,13 @@ interface IntroProps {
 export function createIntro(opts: {
   base: () => string
   git: () => boolean
+  sessions?: () => SessionInfo[]
   onCreateWorktree: () => void
   onSelectSession?: (id: string) => void
   onShowHistory?: () => void
   reveal: () => void
   focus: () => void
+  hints?: () => JSX.Element
 }) {
   const vscode = useVSCode()
   const [dismissed, setDismissed] = createSignal(
@@ -49,10 +52,12 @@ export function createIntro(opts: {
       <AgentManagerEmptyState
         base={opts.base()}
         git={opts.git()}
+        sessions={opts.sessions}
         intro={state}
         onCreateWorktree={opts.onCreateWorktree}
         onSelectSession={opts.onSelectSession}
         onShowHistory={opts.onShowHistory}
+        hints={opts.hints}
       />
     ),
   }
@@ -60,8 +65,10 @@ export function createIntro(opts: {
 
 interface EmptyProps extends Omit<IntroProps, "onDismiss"> {
   intro: Pick<ReturnType<typeof createIntro>, "visible" | "open" | "dismiss">
+  sessions?: () => SessionInfo[]
   onSelectSession?: (id: string) => void
   onShowHistory?: () => void
+  hints?: () => JSX.Element
 }
 
 function AgentManagerEmptyState(props: EmptyProps) {
@@ -71,18 +78,22 @@ function AgentManagerEmptyState(props: EmptyProps) {
       when={props.intro.visible()}
       fallback={
         <WelcomeEmptyState
+          sessions={props.sessions}
           onSelectSession={props.onSelectSession}
           onShowHistory={props.onShowHistory}
           footer={
-            <Button
-              variant="ghost"
-              size="small"
-              icon="help"
-              data-action="agent-manager-intro"
-              onClick={props.intro.open}
-            >
-              {t("agentManager.intro.reopen")}
-            </Button>
+            <>
+              {props.hints?.()}
+              <Button
+                variant="ghost"
+                size="small"
+                icon="help"
+                data-action="agent-manager-intro"
+                onClick={props.intro.open}
+              >
+                {t("agentManager.intro.reopen")}
+              </Button>
+            </>
           }
         />
       }

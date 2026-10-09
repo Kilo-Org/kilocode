@@ -22,7 +22,13 @@ import type { SidebarTarget } from "./project/route"
 import type { TerminalDestination } from "./terminal-destination"
 import type { ScriptTerminalView } from "./ScriptTerminalManager"
 import type { BrowserFeedbackData } from "../shared/browser-feedback"
-import type { BrowserFrame, BrowserInteraction, BrowserViewport, BrowserViewIdentity } from "../shared/browser-stream"
+import type {
+  BrowserCursor,
+  BrowserFrame,
+  BrowserInteraction,
+  BrowserViewport,
+  BrowserViewIdentity,
+} from "../shared/browser-stream"
 
 export type { TerminalFont }
 export type { ProjectSnapshot }
@@ -105,7 +111,7 @@ export type {
 
 interface WorktreeStatsMessage {
   type: "agentManager.worktreeStats"
-  /** Owning project; absent in single-project mode. */
+  /** Owning project, when available. */
   projectId?: string
   stats: WorktreeStats[]
 }
@@ -123,14 +129,14 @@ interface WorktreeDeletedMessage {
 
 interface LocalStatsMessage {
   type: "agentManager.localStats"
-  /** Owning project; absent in single-project mode. */
+  /** Owning project, when available. */
   projectId?: string
   stats: LocalStats
 }
 
 interface WorktreeSetupMessage {
   type: "agentManager.worktreeSetup"
-  /** Owning project; absent in single-project mode. */
+  /** Owning project, when available. */
   projectId?: string
   status: "creating" | "starting" | "ready" | "error"
   message: string
@@ -162,7 +168,7 @@ interface StateMessage {
   runStatuses?: RunStatus[]
   runScriptConfigured?: boolean
   runScriptPath?: string
-  /** Owning project for this state payload. Absent in legacy single-project payloads. */
+  /** Owning project for this state payload. Absent when no project is ready. */
   projectId?: string
   /** Last selected sidebar target for seamless project-switch restore. */
   activeTarget?: SidebarTarget
@@ -175,8 +181,6 @@ interface StateMessage {
 /** Project catalog pushed to the webview after registry or context changes. */
 interface ProjectsMessage {
   type: "agentManager.projects"
-  /** Whether the multi-project experiment is enabled. */
-  multiProject: boolean
   projects: ProjectSnapshot[]
 }
 
@@ -294,7 +298,7 @@ interface SessionClosedMessage {
 
 interface MultiVersionProgressMessage {
   type: "agentManager.multiVersionProgress"
-  /** Owning project; absent in single-project mode. */
+  /** Owning project, when available. */
   projectId?: string
   status: "creating" | "done"
   total: number
@@ -304,7 +308,7 @@ interface MultiVersionProgressMessage {
 
 interface SetSessionModelMessage {
   type: "agentManager.setSessionModel"
-  /** Owning project; absent in single-project mode. */
+  /** Owning project, when available. */
   projectId?: string
   sessionId: string
   providerID: string
@@ -313,7 +317,7 @@ interface SetSessionModelMessage {
 
 interface SendInitialMessage {
   type: "agentManager.sendInitialMessage"
-  /** Owning project; absent in single-project mode. */
+  /** Owning project, when available. */
   projectId?: string
   sessionId: string
   worktreeId: string
@@ -433,7 +437,7 @@ interface DiffBranchesMessage {
 
 interface PRStatusOutMessage {
   type: "agentManager.prStatus"
-  /** Owning project; absent in single-project mode. */
+  /** Owning project, when available. */
   projectId?: string
   worktreeId: string
   pr: PRStatus | null
@@ -509,6 +513,12 @@ interface BrowserFrameMessage extends BrowserFrame {
   sessionId: string
 }
 
+interface BrowserCursorMessage extends BrowserCursor {
+  type: "agentManager.browserCursor"
+  projectId?: string
+  sessionId: string
+}
+
 interface BrowserDevtoolsMessage {
   type: "agentManager.browserDevtools"
   browserId: string
@@ -519,7 +529,7 @@ interface BrowserDevtoolsMessage {
 
 interface RunStatusMessage extends RunStatus {
   type: "agentManager.runStatus"
-  /** Owning project for this status. Absent in legacy single-project mode. */
+  /** Owning project for this status, when available. */
   projectId?: string
 }
 
@@ -564,6 +574,7 @@ export type AgentManagerOutMessage =
   | BrowserInspectionMessage
   | BrowserDevtoolsMessage
   | BrowserFrameMessage
+  | BrowserCursorMessage
   | RunStatusMessage
   | TerminalCreatedMessage
   | TerminalRestartedMessage
@@ -653,6 +664,12 @@ interface SetProjectExpandedIn {
   expanded: boolean
 }
 
+/** Persist the sidebar order of the additional (not pinned) projects. */
+interface SetProjectOrderIn {
+  type: "agentManager.setProjectOrder"
+  order: string[]
+}
+
 interface DeleteWorktreeIn {
   type: "agentManager.deleteWorktree"
   projectId?: string
@@ -721,6 +738,7 @@ interface CloseSessionIn {
 /** Persist a non-worktree session to agent-manager.json (worktreeId = null). */
 interface PersistSessionIn {
   type: "agentManager.persistSession"
+  projectId?: string
   sessionId: string
   draftID?: string
 }
@@ -1175,6 +1193,13 @@ interface ToggleSectionCollapsedIn {
   sectionId: string
 }
 
+interface SetWorktreePinnedIn {
+  type: "agentManager.setWorktreePinned"
+  projectId?: string
+  worktreeId: string
+  pinned: boolean
+}
+
 interface MoveToSectionIn {
   type: "agentManager.moveToSection"
   projectId?: string
@@ -1282,6 +1307,7 @@ export type AgentManagerInMessage =
   | ActivateSelectionIn
   | RememberTargetIn
   | SetProjectExpandedIn
+  | SetProjectOrderIn
   | DeleteWorktreeIn
   | RemoveStaleWorktreeIn
   | RestoreWorktreeIn
@@ -1358,6 +1384,7 @@ export type AgentManagerInMessage =
   | SetSectionColorIn
   | ToggleSectionCollapsedIn
   | MoveToSectionIn
+  | SetWorktreePinnedIn
   | MoveSectionIn
   | TerminalCreateIn
   | TerminalCloseIn
