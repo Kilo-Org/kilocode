@@ -195,6 +195,8 @@ describe("Claude global configuration migration", () => {
     await fs.mkdir(path.join(home, ".claude", "skills", "file-reference"), { recursive: true })
     await fs.mkdir(path.join(home, ".claude", "skills", "shell"), { recursive: true })
     await fs.mkdir(path.join(home, ".claude", "skills", "shell-docs"), { recursive: true })
+    await fs.mkdir(path.join(home, ".claude", "skills", "inline-markdown"), { recursive: true })
+    await fs.mkdir(path.join(home, ".claude", "skills", "mixed-shell"), { recursive: true })
     await fs.mkdir(config, { recursive: true })
     await fs.writeFile(
       path.join(home, ".claude", "skills", "metadata", "SKILL.md"),
@@ -209,6 +211,14 @@ describe("Claude global configuration migration", () => {
     )
     await fs.writeFile(path.join(home, ".claude", "skills", "shell", "SKILL.md"), "Run !`printf hi`.\n")
     await fs.writeFile(path.join(home, ".claude", "skills", "shell-docs", "SKILL.md"), "```sh\n!`printf hi`\n```\n")
+    await fs.writeFile(
+      path.join(home, ".claude", "skills", "inline-markdown", "SKILL.md"),
+      "Autosquash `fixup!` commits\nSome other valid `code` block\n",
+    )
+    await fs.writeFile(
+      path.join(home, ".claude", "skills", "mixed-shell", "SKILL.md"),
+      "Autosquash `fixup!` commits\n!`printf hi`\n",
+    )
 
     const previous = Global.Path.config
     ;(Global.Path as { config: string }).config = config
@@ -222,12 +232,16 @@ describe("Claude global configuration migration", () => {
       expect(await fs.readFile(path.join(config, "skills", "shell-docs", "SKILL.md"), "utf8")).toBe(
         '---\nname: "shell-docs"\n---\n```sh\n!`printf hi`\n```\n',
       )
+      expect(await fs.readFile(path.join(config, "skills", "inline-markdown", "SKILL.md"), "utf8")).toBe(
+        '---\nname: "inline-markdown"\n---\nAutosquash `fixup!` commits\nSome other valid `code` block\n',
+      )
       expect(result.receipt.items).toEqual(
         expect.arrayContaining([
           expect.objectContaining({ name: "dynamic", reason: "unsupported-markdown", status: "skipped" }),
           expect.objectContaining({ name: "bundle", reason: "skill-bundle-unsupported", status: "skipped" }),
           expect.objectContaining({ name: "file-reference", reason: "unsupported-markdown", status: "skipped" }),
           expect.objectContaining({ name: "shell", reason: "unsupported-markdown", status: "skipped" }),
+          expect.objectContaining({ name: "mixed-shell", reason: "unsupported-markdown", status: "skipped" }),
         ]),
       )
     } finally {
