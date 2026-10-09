@@ -9,6 +9,7 @@ import { attribute } from "./prompt-attribution"
 import { beginBoot, prepareSession, type CreationBoot } from "./provider-lifecycle"
 import { Timing } from "./creation-timing"
 import { plan } from "./creation-plan"
+import { sessionCreateBody } from "./session-create"
 
 const LABEL_MAX = 28
 const PREFIX = new Set(["feat", "fix", "chore", "bug", "issue", "task", "branch"])
@@ -17,6 +18,7 @@ export interface ToolTask {
   prompt?: string
   name?: string
   branchName?: string
+  agent?: string
   model?: { providerID: string; modelID: string }
   variant?: string
 }
@@ -67,6 +69,7 @@ export interface ToolDeps {
     source?: ToolSource,
     boot?: CreationBoot,
     timing?: Timing,
+    agent?: string,
   ) => Promise<Session | null>
   sessionMetadata: (client: KiloClient, dir: string) => Promise<Record<string, unknown>>
   registerWorktreeSession: (sid: string, dir: string) => void
@@ -130,6 +133,7 @@ async function prompt(client: KiloClient, sid: string, dir: string, task: ToolTa
       parts: [{ type: "text", text: attribute(body, source?.sessionID) }],
       model: task.model,
       variant: task.variant,
+      agent: task.agent,
       snapshotInitialization: SNAPSHOT_INITIALIZATION,
     },
     { throwOnError: true },
@@ -171,12 +175,12 @@ async function local(
   const target = wt?.path ?? root
   const metadata = await deps.sessionMetadata(client, target)
   const { data } = await client.session.create(
-    {
+    sessionCreateBody({
       directory: target,
-      platform: PLATFORM,
       metadata,
-      ...(source?.sandboxInheritanceToken ? { sandboxInheritanceToken: source.sandboxInheritanceToken } : {}),
-    },
+      agent: task.agent,
+      sandboxInheritanceToken: source?.sandboxInheritanceToken,
+    }),
     { throwOnError: true },
   )
   const session = data
@@ -237,6 +241,7 @@ async function worktree(
         source,
         boot,
         timing,
+        task.agent,
       )
     },
   )
@@ -357,9 +362,15 @@ function model(value: unknown): ToolTask["model"] {
   return { providerID, modelID }
 }
 
+// The server resolves the agent by exact key, so keep the canonical trimmed name.
+function agent(value: unknown): Pick<ToolTask, "agent"> {
+  if (typeof value !== "string" || !value.trim()) return {}
+  return { agent: value.trim() }
+}
+
 function task(value: unknown): ToolTask | undefined {
   if (!record(value)) return undefined
-  const out: ToolTask = {}
+  const out: ToolTask = { ...agent(value.agent) }
   for (const key of ["prompt", "name", "branchName"] as const) {
     if (Object.hasOwn(value, key) && typeof value[key] === "string" && value[key].trim()) out[key] = value[key]
   }
