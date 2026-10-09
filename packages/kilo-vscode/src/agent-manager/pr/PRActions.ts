@@ -6,8 +6,6 @@ import { execGhRead } from "../gh"
 import { GH_MUTATION_TIMEOUT } from "./pr-constants"
 import { PR_REACTION_CONTENT, type PRReactionContent } from "../../../webview-ui/agent-manager/pr/pr-types"
 
-const REACTION_CONTENT = new Set<string>(PR_REACTION_CONTENT)
-
 export async function execGhInput(
   args: string[],
   input: Record<string, unknown>,
@@ -24,7 +22,7 @@ export async function execGhInput(
 }
 
 export function isPRReactionContent(value: unknown): value is PRReactionContent {
-  return typeof value === "string" && REACTION_CONTENT.has(value)
+  return typeof value === "string" && (PR_REACTION_CONTENT as readonly string[]).includes(value)
 }
 
 async function mutateReaction(subjectId: string, content: PRReactionContent, add: boolean, cwd: string): Promise<void> {

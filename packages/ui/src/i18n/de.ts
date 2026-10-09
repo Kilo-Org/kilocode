@@ -78,7 +78,7 @@ export const dict = {
 
   "dialog.usageExceeded.freeTier.title": "Kostenloses Limit erreicht",
   "dialog.usageExceeded.freeTier.description":
-    "Kilo Go abonnieren und zuverlässigen Zugriff auf die besten Open-Source-Modelle erhalten, ab 5 $ pro Monat.", // kilocode_change
+    "Kilo Go für 10 $ pro Monat abonnieren und zuverlässigen Zugriff auf die besten Open-Source-Modelle erhalten.", // kilocode_change
   "dialog.usageExceeded.freeTier.actionLabel": "Abonnieren",
   "dialog.usageExceeded.accountRateLimit.title": "Go-Limit erreicht",
   "dialog.usageExceeded.accountRateLimit.description":
@@ -243,6 +243,10 @@ export const dict = {
   "ui.mermaid.copyPng": "PNG kopieren",
   "ui.mermaid.downloadSvg": "SVG herunterladen",
   "ui.mermaid.downloadPng": "PNG herunterladen",
+  "ui.mermaid.zoom": "Zoom", // kilocode_change
+  "ui.mermaid.zoomIn": "Vergrößern", // kilocode_change
+  "ui.mermaid.zoomOut": "Verkleinern", // kilocode_change
+  "ui.mermaid.zoomReset": "Zoom zurücksetzen", // kilocode_change
   "ui.message.deleteQueued": "Nachricht in Warteschlange löschen",
   "ui.question.subtitle.dismissed": "{{count}} dismissed",
   "ui.question.answer.dismissed": "Dismissed",

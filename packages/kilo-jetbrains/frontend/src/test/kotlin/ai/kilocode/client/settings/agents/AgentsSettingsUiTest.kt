@@ -6,6 +6,7 @@ import ai.kilocode.client.app.KiloAgentBehaviorService
 import ai.kilocode.client.app.KiloAppService
 import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.plugin.KiloBundle
+import ai.kilocode.client.settings.base.SettingsInfo
 import ai.kilocode.client.testing.FakeAgentBehaviorRpcApi
 import ai.kilocode.client.testing.FakeAppRpcApi
 import ai.kilocode.client.testing.FakeWorkspaceRpcApi
@@ -66,6 +67,17 @@ class AgentsSettingsUiTest : BasePlatformTestCase() {
         }
     }
 
+    fun `test page shows exactly one info banner explaining agents`() {
+        val panel = panel()
+        flushUntil { rows(panel).size == 6 }
+
+        edt {
+            val info = components(panel).filterIsInstance<SettingsInfo>().single()
+            assertEquals(KiloBundle.message("settings.agentBehavior.agents.info"), bannerIntro(info))
+            true
+        }
+    }
+
     fun `test loads agents from cli`() {
         val panel = panel()
 
@@ -100,6 +112,16 @@ class AgentsSettingsUiTest : BasePlatformTestCase() {
 
             assertEquals(1, heights.size)
             assertTrue(list.fixedCellHeight > 0)
+        }
+    }
+
+    fun `test toolbar offers marketplace as final button after separator`() {
+        val panel = panel()
+        flushUntil { rows(panel).size == 6 }
+
+        edt {
+            assertMarketplaceToolbarButton(panel)
+            true
         }
     }
 
@@ -445,6 +467,11 @@ class AgentsSettingsUiTest : BasePlatformTestCase() {
     private fun picker(panel: AgentsSettingsUi) = components(panel).filterIsInstance<JComboBox<String>>().single()
 
     private fun comboItems(box: JComboBox<String>) = (0 until box.itemCount).map { box.getItemAt(it) }
+
+    private fun bannerIntro(info: SettingsInfo): String {
+        val pane = UIUtil.findComponentOfType(info, javax.swing.JEditorPane::class.java) ?: error("no banner text")
+        return pane.text.replace(Regex("<[^>]+>"), "").replace(Regex("\\s+"), " ").trim()
+    }
 
     private fun components(root: java.awt.Component): List<java.awt.Component> {
         val out = mutableListOf<java.awt.Component>()

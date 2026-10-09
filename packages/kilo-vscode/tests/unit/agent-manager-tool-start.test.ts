@@ -44,6 +44,7 @@ function deps(overrides: Partial<ToolDeps> = {}): ToolDeps {
     waitReady: mock(async () => calls.push("waitReady")),
     createWorktree: mock(async () => ({ worktree: { id: "wt-1" }, result: result("/repo/.kilo/worktrees/wt-1") })),
     cleanupWorktree: mock(async () => calls.push("cleanupWorktree")),
+    hasScript: () => true,
     setup: mock(async () => calls.push("setup")),
     createSessionInWorktree: mock(async () => session("s-wt")),
     sessionMetadata: mock(async () => ({ "kilocode.sandbox": { enabled: true, version: 0 } })),
@@ -59,6 +60,55 @@ function deps(overrides: Partial<ToolDeps> = {}): ToolDeps {
 }
 
 describe("agent manager tool start", () => {
+  it.each([false, true])("gates the worktree prompt on setup script presence (%s)", async (script) => {
+    const flow: string[] = []
+    const gate = Promise.withResolvers<void>()
+    const entered = Promise.withResolvers<void>()
+    const prompted = Promise.withResolvers<void>()
+    const client = {
+      session: {
+        promptAsync: async () => {
+          flow.push("prompt")
+          prompted.resolve()
+          return {}
+        },
+      },
+    }
+    const host = deps({
+      getClient: () => client as never,
+      hasScript: () => script,
+      sessionMetadata: async () => {
+        flow.push("boot")
+        return {}
+      },
+      setup: async (_dir, _branch, _id, early) => {
+        flow.push("env")
+        await early?.()
+        entered.resolve()
+        await gate.promise
+        flow.push("setup:end")
+      },
+      createSessionInWorktree: async () => {
+        flow.push("create")
+        return session("s-wt")
+      },
+    })
+    const pending = startFromTool(host, {
+      requestID: "gate",
+      mode: "worktree",
+      tasks: [{ prompt: "Fix it" }],
+    })
+    await entered.promise
+    if (!script) await prompted.promise
+    expect(flow.includes("prompt")).toBe(!script)
+    expect(flow.includes("boot")).toBe(!script)
+    gate.resolve()
+    await pending
+    expect(flow).toEqual(
+      script ? ["env", "setup:end", "boot", "create", "prompt"] : ["env", "boot", "create", "prompt", "setup:end"],
+    )
+  })
+
   for (const mode of ["local", "worktree"] as const) {
     for (const source of [undefined, "ses_source"]) {
       it(`attributes initial ${mode} prompts only with a source (${source ?? "ordinary"})`, async () => {
@@ -399,10 +449,17 @@ describe("agent manager tool start", () => {
       expect.objectContaining({ branchName: "fix/One_two.3", name: "fix/One_two.3", label: "one two 3" }),
     )
     expect(c.setup).toHaveBeenCalled()
-    expect(c.createSessionInWorktree).toHaveBeenCalledWith("/repo/.kilo/worktrees/wt-1", "kilo/test", "wt-1", {
-      sessionID: "s-parent",
-      sandboxInheritanceToken: "si-token",
-    })
+    expect(c.createSessionInWorktree).toHaveBeenCalledWith(
+      "/repo/.kilo/worktrees/wt-1",
+      "kilo/test",
+      "wt-1",
+      {
+        sessionID: "s-parent",
+        sandboxInheritanceToken: "si-token",
+      },
+      expect.any(Object),
+      expect.any(Object),
+    )
     expect(c.registerWorktreeSession).toHaveBeenCalledWith("s-wt", "/repo/.kilo/worktrees/wt-1")
     expect(c.notifyReady).toHaveBeenCalled()
     expect(client.session.promptAsync).toHaveBeenCalledWith(

@@ -6,6 +6,7 @@ import ai.kilocode.client.session.model.SessionState
 import ai.kilocode.client.session.ui.ModifiedFilesView
 import ai.kilocode.client.session.ui.SessionMessageListPanel
 import ai.kilocode.client.session.ui.header.BranchDock
+import ai.kilocode.client.session.ui.header.SessionHeaderPanel
 import ai.kilocode.client.session.ui.prompt.PromptPanel
 import ai.kilocode.client.session.ui.selection.SessionCopyTarget
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
@@ -38,9 +39,11 @@ import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
 import java.awt.Container
 import java.awt.Point
+import java.awt.event.MouseEvent
 import javax.swing.AbstractButton
 import javax.swing.JButton
 import javax.swing.JComponent
+import javax.swing.JPanel
 import javax.swing.Scrollable
 import javax.swing.SwingConstants
 import javax.swing.JTextArea
@@ -49,6 +52,66 @@ import kotlinx.coroutines.CompletableDeferred
 
 @Suppress("UnstableApiUsage")
 class SessionScrollTest : SessionUiTestBase() {
+
+    fun `test timeline click reveals the matching transcript part`() {
+        showMessages()
+        fillTranscript(12)
+        val mid = "timeline_message"
+        val pid = "timeline_part"
+        emit(ChatEventDto.MessageUpdated("ses_test", message(mid).copy(role = "assistant")), flush = false)
+        emit(ChatEventDto.PartUpdated("ses_test", part("timeline_first", mid, "text", text(12))), flush = false)
+        emit(ChatEventDto.PartUpdated("ses_test", part(pid, mid, "reasoning", text(13))), flush = false)
+        fillTranscript(24, start = 12)
+
+        val header = find<SessionHeaderPanel>(ui)
+        if (!header.isExpanded()) click(header.expandButton())
+        drainScroll()
+        val timeline = header.timelinePanel()
+        timeline.setSize(timeline.preferredSize)
+        val bar = scrollBar()
+        setBottom(bar)
+        val messages = find<SessionMessageListPanel>(ui)
+        val target = messages.findMessage(mid)!!.part(pid) as JComponent
+        val expected = SwingUtilities.convertPoint(target, Point(0, 0), messages).y
+        assertTrue("target=$expected bottom=${bottom(bar)}", expected < bottom(bar))
+
+        timeline.dispatchEvent(MouseEvent(
+            timeline, MouseEvent.MOUSE_CLICKED, System.currentTimeMillis(), 0,
+            header.timelineBarWidth() + 1, timeline.height - 1, 1, false, MouseEvent.BUTTON1,
+        ))
+        drainScroll()
+
+        assertEquals(expected, bar.value)
+        assertFalse(ui.scroll.following())
+
+        fillTranscript(1, start = 36)
+
+        assertEquals(expected, bar.value)
+        assertFalse(ui.scroll.following())
+    }
+
+    fun `test timeline step finish navigates to its containing message`() {
+        showMessages()
+        fillTranscript(12)
+        val mid = "timeline_message"
+        emit(ChatEventDto.MessageUpdated("ses_test", message(mid).copy(role = "assistant")), flush = false)
+        emit(ChatEventDto.PartUpdated("ses_test", part("timeline_text", mid, "text", text(12))), flush = false)
+        emit(ChatEventDto.PartUpdated("ses_test", part("timeline_finish", mid, "step-finish")), flush = false)
+        fillTranscript(24, start = 12)
+        val bar = scrollBar()
+        setBottom(bar)
+        val messages = find<SessionMessageListPanel>(ui)
+        val target = messages.findMessage(mid)!!
+        assertNull(target.part("timeline_finish"))
+        val expected = SwingUtilities.convertPoint(target, Point(0, 0), messages).y
+        assertTrue(expected < bottom(bar))
+
+        assertTrue(ui.scroll.scrollPart(mid, "timeline_finish"))
+        drainScroll()
+
+        assertEquals(expected, bar.value)
+        assertFalse(ui.scroll.following())
+    }
 
     fun `test session update follows when transcript is at bottom`() {
         showMessages()
@@ -1127,6 +1190,48 @@ class SessionScrollTest : SessionUiTestBase() {
 
         assertEquals(value, bar.value)
         assertTrue(jumpButton().isVisible)
+    }
+
+    fun `test hidden question is followed when session is revealed`() {
+        val host = JPanel()
+        host.setSize(800, 600)
+        host.add(ui)
+
+        try {
+            host.addNotify()
+            ui.setSize(800, 600)
+            showMessages()
+            fillTranscript(24)
+            val bar = scrollBar()
+            setValue(bar, bottom(bar) / 2)
+            val value = bar.value
+            drainScroll()
+
+            assertEquals(value, bar.value)
+            assertFalse(ui.scroll.following())
+            assertTrue(jumpButton().isVisible)
+
+            host.remove(ui)
+            UIUtil.dispatchAllInvocationEvents()
+            assertFalse(ui.isShowing)
+
+            emit(ChatEventDto.QuestionAsked("ses_test", question("q_hidden_reveal")))
+            drainScroll()
+
+            assertEquals(value, bar.value)
+            assertFalse("Hidden metadata update alone must not resume following", ui.scroll.following())
+            assertTrue(jumpButton().isVisible)
+
+            host.add(ui)
+            drainScroll()
+
+            assertTrue(ui.isShowing)
+            assertBottom(bar)
+            assertTrue(ui.scroll.following())
+            assertFalse(jumpButton().isVisible)
+        } finally {
+            host.removeNotify()
+        }
     }
 
     fun `test question overlay replaces scroll icon and still jumps to bottom`() {

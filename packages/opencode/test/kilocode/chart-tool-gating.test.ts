@@ -18,13 +18,14 @@ const tools = {
   notify: stub("notify"),
   openPlan: stub("open_plan"),
   send: stub("send_file"),
+  linkPr: stub("link_pr"),
 }
 
 function ids(client: string) {
   const prev = process.env.KILO_CLIENT
   try {
     process.env.KILO_CLIENT = client
-    return KiloToolRegistry.extra(tools, {}).map((t) => t.id)
+    return KiloToolRegistry.extra(tools, {}, { experimentalSharedAgentBoard: false }).map((t) => t.id)
   } finally {
     if (prev === undefined) delete process.env.KILO_CLIENT
     else process.env.KILO_CLIENT = prev
@@ -53,4 +54,10 @@ test("open plan tool is included only for vscode clients", () => {
   expect(ids("vscode")).toContain("open_plan")
   expect(ids("cli")).not.toContain("open_plan")
   expect(ids("jetbrains")).not.toContain("open_plan")
+})
+
+test("link_pr tool is included only for cli clients", () => {
+  expect(ids("cli")).toContain("link_pr")
+  expect(ids("vscode")).not.toContain("link_pr")
+  expect(ids("jetbrains")).not.toContain("link_pr")
 })

@@ -77,6 +77,7 @@ export type Event =
   | EventTuiSessionSelect1
   | EventMcpToolsChanged1
   | EventMcpBrowserOpenFailed1
+  | EventMcpAuthUrl1
   | EventCommandExecuted1
   | EventProjectUpdated1
   | EventSessionStatus1
@@ -97,6 +98,7 @@ export type Event =
   | EventGlobalConfigUpdated1
   | EventSessionDrained1
   | EventSessionDrainInterrupted1
+  | EventSessionWakeup1
   | EventServerInstanceDisposed
   | EventSessionTurnOpen
   | EventSessionTurnClose
@@ -195,6 +197,7 @@ export type Event =
   | EventTuiSessionSelect
   | EventMcpToolsChanged
   | EventMcpBrowserOpenFailed
+  | EventMcpAuthUrl
   | EventCommandExecuted
   | EventProjectUpdated
   | EventSessionStatus
@@ -215,6 +218,7 @@ export type Event =
   | EventGlobalConfigUpdated
   | EventSessionDrained
   | EventSessionDrainInterrupted
+  | EventSessionWakeup
 
 export type QuestionReplied = {
   sessionID: string
@@ -234,6 +238,7 @@ export type OAuth = {
   expires: number
   accountId?: string
   enterpriseUrl?: string
+  baseURL?: string
 }
 
 export type ApiAuth = {
@@ -529,7 +534,7 @@ export type Session = {
     partID?: string
     snapshot?: string
     diff?: string
-    workspace?: "restored" | "snapshots-disabled" | "unavailable"
+    workspace?: "restored" | "snapshots-disabled" | "unavailable" | "not-a-git-repo"
   }
 }
 
@@ -1090,6 +1095,10 @@ export type SessionStatus =
       requestID: string
       message: string
     }
+  | {
+      type: "scheduled"
+      scheduledAt: string
+    }
 
 export type QuestionOption = {
   /**
@@ -1238,6 +1247,7 @@ export type GlobalEvent = {
     | EventTuiSessionSelect
     | EventMcpToolsChanged
     | EventMcpBrowserOpenFailed
+    | EventMcpAuthUrl
     | EventCommandExecuted
     | EventProjectUpdated
     | EventSessionStatus
@@ -1258,6 +1268,7 @@ export type GlobalEvent = {
     | EventGlobalConfigUpdated
     | EventSessionDrained
     | EventSessionDrainInterrupted
+    | EventSessionWakeup
     | {
         id: string
         type: "models-dev.refreshed"
@@ -1995,6 +2006,14 @@ export type GlobalEvent = {
       }
     | {
         id: string
+        type: "mcp.auth.url"
+        properties: {
+          mcpName: string
+          url: string
+        }
+      }
+    | {
+        id: string
         type: "command.executed"
         properties: {
           name: string
@@ -2156,6 +2175,14 @@ export type GlobalEvent = {
         type: "session.drain.interrupted"
         properties: {
           sessionID: string
+        }
+      }
+    | {
+        id: string
+        type: "session.wakeup"
+        properties: {
+          sessionID: string
+          pending: number
         }
       }
     | SyncEventSessionCreated
@@ -2516,6 +2543,13 @@ export type Config = {
     ignore?: Array<string>
   }
   snapshot?: boolean
+  retention?: {
+    enabled?: boolean
+    /**
+     * Days a session is kept before retention deletes it. Defaults to 30, minimum 1.
+     */
+    maxAgeDays?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+  }
   plugin?: Array<
     | string
     | [
@@ -2535,6 +2569,8 @@ export type Config = {
   enabled_providers?: Array<string>
   remote_control?: boolean
   auto_collapse_reasoning?: boolean
+  reasoning_display?: "expanded" | "preview" | "headline"
+  shared_agent_board?: boolean
   indexing?: IndexingConfig
   console?: {
     /**
@@ -2576,6 +2612,7 @@ export type Config = {
   subagent_variant_overrides?: {
     [key: string]: string
   }
+  memory_model?: string
   default_agent?: string
   subagent_depth?: number
   username?: string
@@ -2681,10 +2718,11 @@ export type Config = {
     image_generation?: boolean
     image_generation_model?: string
     native_notebook_tools?: boolean
-    task_model_selection?: boolean
+    code_mode?: boolean
     speech_to_text_model?: string
+    speech_to_text_base_url?: string
+    speech_to_text_api_key?: string
     openTelemetry?: boolean
-    shared_agent_board?: boolean
     primary_tools?: Array<string>
     continue_loop_on_deny?: boolean
     sandbox?: boolean
@@ -2953,7 +2991,7 @@ export type GlobalSession = {
     partID?: string
     snapshot?: string
     diff?: string
-    workspace?: "restored" | "snapshots-disabled" | "unavailable"
+    workspace?: "restored" | "snapshots-disabled" | "unavailable" | "not-a-git-repo"
   }
   project: ProjectSummary | null
   worktreeName?: string
@@ -3115,6 +3153,7 @@ export type McpStatusFailed = {
 
 export type McpStatusNeedsAuth = {
   status: "needs_auth"
+  error?: string
 }
 
 export type McpStatusNeedsClientRegistration = {
@@ -3309,7 +3348,7 @@ export type Session1 = {
     partID?: string
     snapshot?: string
     diff?: string
-    workspace?: "restored" | "snapshots-disabled" | "unavailable"
+    workspace?: "restored" | "snapshots-disabled" | "unavailable" | "not-a-git-repo"
   }
 }
 
@@ -3363,7 +3402,7 @@ export type Session2 = {
     partID?: string
     snapshot?: string
     diff?: string
-    workspace?: "restored" | "snapshots-disabled" | "unavailable"
+    workspace?: "restored" | "snapshots-disabled" | "unavailable" | "not-a-git-repo"
   }
 }
 
@@ -3424,7 +3463,7 @@ export type Session3 = {
     partID?: string
     snapshot?: string
     diff?: string
-    workspace?: "restored" | "snapshots-disabled" | "unavailable"
+    workspace?: "restored" | "snapshots-disabled" | "unavailable" | "not-a-git-repo"
   }
 }
 
@@ -3478,7 +3517,7 @@ export type Session4 = {
     partID?: string
     snapshot?: string
     diff?: string
-    workspace?: "restored" | "snapshots-disabled" | "unavailable"
+    workspace?: "restored" | "snapshots-disabled" | "unavailable" | "not-a-git-repo"
   }
 }
 
@@ -3532,7 +3571,7 @@ export type Session5 = {
     partID?: string
     snapshot?: string
     diff?: string
-    workspace?: "restored" | "snapshots-disabled" | "unavailable"
+    workspace?: "restored" | "snapshots-disabled" | "unavailable" | "not-a-git-repo"
   }
 }
 
@@ -3586,7 +3625,7 @@ export type Session6 = {
     partID?: string
     snapshot?: string
     diff?: string
-    workspace?: "restored" | "snapshots-disabled" | "unavailable"
+    workspace?: "restored" | "snapshots-disabled" | "unavailable" | "not-a-git-repo"
   }
 }
 
@@ -3640,7 +3679,7 @@ export type Session7 = {
     partID?: string
     snapshot?: string
     diff?: string
-    workspace?: "restored" | "snapshots-disabled" | "unavailable"
+    workspace?: "restored" | "snapshots-disabled" | "unavailable" | "not-a-git-repo"
   }
 }
 
@@ -3749,7 +3788,7 @@ export type Session8 = {
     partID?: string
     snapshot?: string
     diff?: string
-    workspace?: "restored" | "snapshots-disabled" | "unavailable"
+    workspace?: "restored" | "snapshots-disabled" | "unavailable" | "not-a-git-repo"
   }
 }
 
@@ -3803,7 +3842,7 @@ export type Session9 = {
     partID?: string
     snapshot?: string
     diff?: string
-    workspace?: "restored" | "snapshots-disabled" | "unavailable"
+    workspace?: "restored" | "snapshots-disabled" | "unavailable" | "not-a-git-repo"
   }
 }
 
@@ -4108,10 +4147,6 @@ export type EffectHttpApiErrorUnauthorized = {
   _tag: "Unauthorized"
 }
 
-export type EffectHttpApiErrorServiceUnavailable = {
-  _tag: "ServiceUnavailable"
-}
-
 export type CloudSessionImportError = {
   error: string
 }
@@ -4155,6 +4190,201 @@ export type CommandFile = {
   content?: string
   subtask?: boolean
   hints: Array<string>
+}
+
+export type VscodeExtensionRef =
+  | string
+  | {
+      name: string
+      id: string
+    }
+
+export type MarketplaceSuggestFor = {
+  filename?: Array<string>
+  vscode_extension?: Array<VscodeExtensionRef>
+}
+
+export type McpParameter = {
+  name: string
+  key: string
+  placeholder?: string
+  optional?: boolean
+}
+
+export type McpInstallationMethod = {
+  name: string
+  content: string
+  parameters?: Array<McpParameter>
+  prerequisites?: Array<string>
+}
+
+export type McpSkill = {
+  id: string
+  content: string
+}
+
+export type McpMarketplaceItem = {
+  id: string
+  name: string
+  description: string
+  category: string
+  author?: string
+  authorUrl?: string
+  prerequisites?: Array<string>
+  suggest_for?: MarketplaceSuggestFor
+  type: "mcp"
+  url: string
+  content: string | Array<McpInstallationMethod>
+  parameters?: Array<McpParameter>
+  skills?: Array<McpSkill>
+}
+
+export type AgentMarketplaceItem = {
+  id: string
+  name: string
+  description: string
+  category: string
+  author?: string
+  authorUrl?: string
+  prerequisites?: Array<string>
+  suggest_for?: MarketplaceSuggestFor
+  type: "agent"
+  content: {
+    mode: "primary" | "subagent" | "all"
+    description: string
+    prompt: string
+    options?: {
+      [key: string]: unknown
+    }
+    permission?: {
+      [key: string]: unknown
+    }
+    requirements?: {
+      skills?: Array<string>
+      mcps?: Array<string>
+      vscode_extensions?: Array<{
+        name: string
+        id: string
+      }>
+    }
+  }
+}
+
+export type SkillMarketplaceItem = {
+  id: string
+  name: string
+  description: string
+  category: string
+  author?: string
+  authorUrl?: string
+  prerequisites?: Array<string>
+  suggest_for?: MarketplaceSuggestFor
+  type: "skill"
+  githubUrl: string
+  content: string
+  displayName: string
+  displayCategory: string
+}
+
+export type PluginMarketplaceItem = {
+  id: string
+  name: string
+  description: string
+  category: string
+  author?: string
+  authorUrl?: string
+  prerequisites?: Array<string>
+  suggest_for?: MarketplaceSuggestFor
+  type: "plugin"
+  content: string
+  url?: string
+}
+
+export type MarketplaceItem = McpMarketplaceItem | AgentMarketplaceItem | SkillMarketplaceItem | PluginMarketplaceItem
+
+export type MarketplaceInstalledMetadata = {
+  project: {
+    [key: string]: {
+      type: string
+    }
+  }
+  global: {
+    [key: string]: {
+      type: string
+    }
+  }
+}
+
+export type MarketplaceListResult = {
+  items: Array<MarketplaceItem>
+  installed: MarketplaceInstalledMetadata
+  filenames?: Array<string>
+  errors?: Array<string>
+}
+
+export type McpInstallItem = {
+  type: "mcp"
+  id: string
+  content: string | Array<McpInstallationMethod>
+  skills?: Array<McpSkill>
+}
+
+export type AgentInstallItem = {
+  type: "agent"
+  id: string
+  content: {
+    mode: "primary" | "subagent" | "all"
+    description: string
+    prompt: string
+    options?: {
+      [key: string]: unknown
+    }
+    permission?: {
+      [key: string]: unknown
+    }
+    requirements?: {
+      skills?: Array<string>
+      mcps?: Array<string>
+      vscode_extensions?: Array<{
+        name: string
+        id: string
+      }>
+    }
+  }
+}
+
+export type SkillInstallItem = {
+  type: "skill"
+  id: string
+  content: string
+}
+
+export type PluginInstallItem = {
+  type: "plugin"
+  id: string
+  content: string
+}
+
+export type MarketplaceInstallItem = McpInstallItem | AgentInstallItem | SkillInstallItem | PluginInstallItem
+
+export type MarketplaceInstallResult = {
+  success: boolean
+  slug: string
+  error?: string
+  filePath?: string
+  filePaths?: Array<string>
+  line?: number
+}
+
+export type MarketplaceItemRef = {
+  id: string
+  type: "mcp" | "agent" | "skill" | "plugin"
+}
+
+export type MarketplaceRemoveResult = {
+  success: boolean
+  slug: string
+  error?: string
 }
 
 export type ProviderUsagePeriod = {
@@ -4201,6 +4431,10 @@ export type ProviderUsageSnapshot = {
 export type ProviderUsage = {
   items: Array<ProviderUsageSnapshot>
   generatedAt: string
+}
+
+export type EffectHttpApiErrorServiceUnavailable = {
+  _tag: "ServiceUnavailable"
 }
 
 export type NotebookOutput = {
@@ -4827,6 +5061,7 @@ export type V2Event =
   | TuiSessionSelect
   | McpToolsChanged
   | McpBrowserOpenFailed
+  | McpAuthUrl
   | CommandExecuted
   | ProjectUpdated
   | SessionStatus2
@@ -4847,6 +5082,7 @@ export type V2Event =
   | GlobalConfigUpdated
   | SessionDrained
   | SessionDrainInterrupted
+  | SessionWakeup
 
 export type V2EventStream = string
 
@@ -5776,7 +6012,7 @@ export type RevertState = {
   snapshot?: string
   diff?: string
   files?: Array<FileDiff>
-  workspace?: "restored" | "snapshots-disabled" | "unavailable"
+  workspace?: "restored" | "snapshots-disabled" | "unavailable" | "not-a-git-repo"
 }
 
 export type EventSessionNextRevertStaged = {
@@ -6101,6 +6337,15 @@ export type EventMcpBrowserOpenFailed = {
   }
 }
 
+export type EventMcpAuthUrl = {
+  id: string
+  type: "mcp.auth.url"
+  properties: {
+    mcpName: string
+    url: string
+  }
+}
+
 export type EventCommandExecuted = {
   id: string
   type: "command.executed"
@@ -6304,6 +6549,15 @@ export type EventSessionDrainInterrupted = {
   type: "session.drain.interrupted"
   properties: {
     sessionID: string
+  }
+}
+
+export type EventSessionWakeup = {
+  id: string
+  type: "session.wakeup"
+  properties: {
+    sessionID: string
+    pending: number
   }
 }
 
@@ -9006,6 +9260,24 @@ export type McpBrowserOpenFailed = {
   }
 }
 
+export type McpAuthUrl = {
+  id: string
+  metadata?: {
+    [key: string]: unknown
+  }
+  type: "mcp.auth.url"
+  durable?: {
+    aggregateID: string
+    seq: number
+    version: number
+  }
+  location?: LocationRef
+  data: {
+    mcpName: string
+    url: string
+  }
+}
+
 export type CommandExecuted = {
   id: string
   metadata?: {
@@ -9313,6 +9585,24 @@ export type SessionDrainInterrupted = {
   location?: LocationRef
   data: {
     sessionID: string
+  }
+}
+
+export type SessionWakeup = {
+  id: string
+  metadata?: {
+    [key: string]: unknown
+  }
+  type: "session.wakeup"
+  durable?: {
+    aggregateID: string
+    seq: number
+    version: number
+  }
+  location?: LocationRef
+  data: {
+    sessionID: string
+    pending: number
   }
 }
 
@@ -10169,6 +10459,15 @@ export type EventMcpBrowserOpenFailed1 = {
   }
 }
 
+export type EventMcpAuthUrl1 = {
+  id: string
+  type: "mcp.auth.url"
+  properties: {
+    mcpName: string
+    url: string
+  }
+}
+
 export type EventCommandExecuted1 = {
   id: string
   type: "command.executed"
@@ -10351,6 +10650,15 @@ export type EventSessionDrainInterrupted1 = {
   type: "session.drain.interrupted"
   properties: {
     sessionID: string
+  }
+}
+
+export type EventSessionWakeup1 = {
+  id: string
+  type: "session.wakeup"
+  properties: {
+    sessionID: string
+    pending: number
   }
 }
 
@@ -12149,7 +12457,9 @@ export type McpAuthCallbackResponses = {
 export type McpAuthCallbackResponse = McpAuthCallbackResponses[keyof McpAuthCallbackResponses]
 
 export type McpAuthAuthenticateData = {
-  body?: never
+  body?: {
+    external?: boolean
+  }
   path: {
     name: string
   }
@@ -12181,6 +12491,42 @@ export type McpAuthAuthenticateResponses = {
 }
 
 export type McpAuthAuthenticateResponse = McpAuthAuthenticateResponses[keyof McpAuthAuthenticateResponses]
+
+export type McpAuthCancelData = {
+  body?: never
+  path: {
+    name: string
+  }
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/mcp/{name}/auth/cancel"
+}
+
+export type McpAuthCancelErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+  /**
+   * McpServerNotFoundError
+   */
+  404: McpServerNotFoundError
+}
+
+export type McpAuthCancelError = McpAuthCancelErrors[keyof McpAuthCancelErrors]
+
+export type McpAuthCancelResponses = {
+  /**
+   * OAuth authentication cancelled
+   */
+  200: {
+    success: true
+  }
+}
+
+export type McpAuthCancelResponse = McpAuthCancelResponses[keyof McpAuthCancelResponses]
 
 export type McpConnectData = {
   body?: never
@@ -16325,95 +16671,6 @@ export type KiloOrganizationSetResponses = {
 
 export type KiloOrganizationSetResponse = KiloOrganizationSetResponses[keyof KiloOrganizationSetResponses]
 
-export type KiloClawStatusData = {
-  body?: never
-  path?: never
-  query?: {
-    directory?: string
-    workspace?: string
-  }
-  url: "/kilo/claw/status"
-}
-
-export type KiloClawStatusErrors = {
-  /**
-   * Bad request
-   */
-  400: BadRequestError
-  /**
-   * ServiceUnavailable
-   */
-  503: EffectHttpApiErrorServiceUnavailable
-}
-
-export type KiloClawStatusError = KiloClawStatusErrors[keyof KiloClawStatusErrors]
-
-export type KiloClawStatusResponses = {
-  /**
-   * Instance status
-   */
-  200: {
-    status:
-      | "provisioned"
-      | "starting"
-      | "restarting"
-      | "recovering"
-      | "running"
-      | "stopped"
-      | "destroying"
-      | "restoring"
-      | null
-    sandboxId?: string
-    flyRegion?: string
-    machineSize?: {
-      cpus: number
-      memory_mb: number
-    }
-    openclawVersion?: string | null
-    lastStartedAt?: string | null
-    lastStoppedAt?: string | null
-    channelCount?: number
-    secretCount?: number
-    userId?: string
-    botName?: string | null
-  }
-}
-
-export type KiloClawStatusResponse = KiloClawStatusResponses[keyof KiloClawStatusResponses]
-
-export type KiloClawChatCredentialsData = {
-  body?: never
-  path?: never
-  query?: {
-    directory?: string
-    workspace?: string
-  }
-  url: "/kilo/claw/chat-credentials"
-}
-
-export type KiloClawChatCredentialsErrors = {
-  /**
-   * Bad request
-   */
-  400: BadRequestError
-}
-
-export type KiloClawChatCredentialsError = KiloClawChatCredentialsErrors[keyof KiloClawChatCredentialsErrors]
-
-export type KiloClawChatCredentialsResponses = {
-  /**
-   * Kilo Chat credentials or null
-   */
-  200: {
-    token: string
-    expiresAt: string
-    kiloChatUrl: string
-    eventServiceUrl: string
-  } | null
-}
-
-export type KiloClawChatCredentialsResponse = KiloClawChatCredentialsResponses[keyof KiloClawChatCredentialsResponses]
-
 export type KiloCloudSessionsData = {
   body?: never
   path?: never
@@ -16868,6 +17125,101 @@ export type KilocodeRemoveAgentResponses = {
 
 export type KilocodeRemoveAgentResponse = KilocodeRemoveAgentResponses[keyof KilocodeRemoveAgentResponses]
 
+export type KilocodeMarketplaceListData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/kilocode/marketplace"
+}
+
+export type KilocodeMarketplaceListErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type KilocodeMarketplaceListError = KilocodeMarketplaceListErrors[keyof KilocodeMarketplaceListErrors]
+
+export type KilocodeMarketplaceListResponses = {
+  /**
+   * Marketplace catalog and installed metadata
+   */
+  200: MarketplaceListResult
+}
+
+export type KilocodeMarketplaceListResponse = KilocodeMarketplaceListResponses[keyof KilocodeMarketplaceListResponses]
+
+export type KilocodeMarketplaceInstallData = {
+  body?: {
+    item: MarketplaceInstallItem
+    target?: "project" | "global"
+    parameters?: {
+      [key: string]: unknown
+    }
+  }
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/kilocode/marketplace/install"
+}
+
+export type KilocodeMarketplaceInstallErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type KilocodeMarketplaceInstallError = KilocodeMarketplaceInstallErrors[keyof KilocodeMarketplaceInstallErrors]
+
+export type KilocodeMarketplaceInstallResponses = {
+  /**
+   * Marketplace install result
+   */
+  200: MarketplaceInstallResult
+}
+
+export type KilocodeMarketplaceInstallResponse =
+  KilocodeMarketplaceInstallResponses[keyof KilocodeMarketplaceInstallResponses]
+
+export type KilocodeMarketplaceRemoveData = {
+  body?: {
+    item: MarketplaceItemRef
+    scope: "project" | "global"
+  }
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/kilocode/marketplace/remove"
+}
+
+export type KilocodeMarketplaceRemoveErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type KilocodeMarketplaceRemoveError = KilocodeMarketplaceRemoveErrors[keyof KilocodeMarketplaceRemoveErrors]
+
+export type KilocodeMarketplaceRemoveResponses = {
+  /**
+   * Marketplace removal result
+   */
+  200: MarketplaceRemoveResult
+}
+
+export type KilocodeMarketplaceRemoveResponse =
+  KilocodeMarketplaceRemoveResponses[keyof KilocodeMarketplaceRemoveResponses]
+
 export type KilocodeRemoveSnapshotData = {
   body?: {
     worktree: string
@@ -16897,6 +17249,70 @@ export type KilocodeRemoveSnapshotResponses = {
 }
 
 export type KilocodeRemoveSnapshotResponse = KilocodeRemoveSnapshotResponses[keyof KilocodeRemoveSnapshotResponses]
+
+export type KilocodeTeardownWorktreeData = {
+  body?: {
+    worktree: string
+  }
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/kilocode/worktree/teardown"
+}
+
+export type KilocodeTeardownWorktreeErrors = {
+  /**
+   * BadRequest | InvalidRequestError
+   */
+  400: EffectHttpApiErrorBadRequest | InvalidRequestError
+}
+
+export type KilocodeTeardownWorktreeError = KilocodeTeardownWorktreeErrors[keyof KilocodeTeardownWorktreeErrors]
+
+export type KilocodeTeardownWorktreeResponses = {
+  /**
+   * Worktree backend teardown result
+   */
+  200: {
+    disposed: boolean
+  }
+}
+
+export type KilocodeTeardownWorktreeResponse =
+  KilocodeTeardownWorktreeResponses[keyof KilocodeTeardownWorktreeResponses]
+
+export type KilocodeSnapshotPrepareData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/kilocode/snapshot/prepare"
+}
+
+export type KilocodeSnapshotPrepareErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type KilocodeSnapshotPrepareError = KilocodeSnapshotPrepareErrors[keyof KilocodeSnapshotPrepareErrors]
+
+export type KilocodeSnapshotPrepareResponses = {
+  /**
+   * Snapshot repository preparation result
+   */
+  200: {
+    prepared: boolean
+    durationMs: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+  }
+}
+
+export type KilocodeSnapshotPrepareResponse = KilocodeSnapshotPrepareResponses[keyof KilocodeSnapshotPrepareResponses]
 
 export type KilocodeProviderUsageGetData = {
   body?: never
@@ -17199,6 +17615,7 @@ export type KilocodeSessionModelUsageResponses = {
    */
   200: {
     sessionIDs: Array<string>
+    sessionCost?: number
     totals: {
       steps: number
       cost: number
@@ -17344,6 +17761,171 @@ export type KilocodeBackgroundJobPromoteResponses = {
 
 export type KilocodeBackgroundJobPromoteResponse =
   KilocodeBackgroundJobPromoteResponses[keyof KilocodeBackgroundJobPromoteResponses]
+
+export type KilocodeWakeupsData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/kilocode/wakeups"
+}
+
+export type KilocodeWakeupsErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type KilocodeWakeupsError = KilocodeWakeupsErrors[keyof KilocodeWakeupsErrors]
+
+export type KilocodeWakeupsResponses = {
+  /**
+   * Pending wakeups for the routed directory
+   */
+  200: Array<{
+    sessionID: string
+    pending: number
+  }>
+}
+
+export type KilocodeWakeupsResponse = KilocodeWakeupsResponses[keyof KilocodeWakeupsResponses]
+
+export type KilocodeRetentionStatusData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/kilocode/retention"
+}
+
+export type KilocodeRetentionStatusErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type KilocodeRetentionStatusError = KilocodeRetentionStatusErrors[keyof KilocodeRetentionStatusErrors]
+
+export type KilocodeRetentionStatusResponses = {
+  /**
+   * Session retention policy and last run
+   */
+  200: {
+    policy: {
+      enabled: boolean
+      maxAgeDays: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+    }
+    last?: {
+      at: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+      scanned: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+      deleted: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+      skippedActive: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+      failed: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+      durationMs: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+      cancelled?: boolean
+      reclaimedBytes?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+    }
+    progress?: {
+      phase: "scanning" | "deleting" | "cancelling"
+      total: number
+      processed: number
+      deleted: number
+      failed: number
+      skippedActive: number
+    }
+  }
+}
+
+export type KilocodeRetentionStatusResponse = KilocodeRetentionStatusResponses[keyof KilocodeRetentionStatusResponses]
+
+export type KilocodeRetentionRunData = {
+  body?: {
+    force?: boolean
+  }
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/kilocode/retention/run"
+}
+
+export type KilocodeRetentionRunErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type KilocodeRetentionRunError = KilocodeRetentionRunErrors[keyof KilocodeRetentionRunErrors]
+
+export type KilocodeRetentionRunResponses = {
+  /**
+   * Retention pass outcome
+   */
+  200: {
+    policy: {
+      enabled: boolean
+      maxAgeDays: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+    }
+    last?: {
+      at: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+      scanned: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+      deleted: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+      skippedActive: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+      failed: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+      durationMs: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+      cancelled?: boolean
+      reclaimedBytes?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+    }
+    progress?: {
+      phase: "scanning" | "deleting" | "cancelling"
+      total: number
+      processed: number
+      deleted: number
+      failed: number
+      skippedActive: number
+    }
+  }
+}
+
+export type KilocodeRetentionRunResponse = KilocodeRetentionRunResponses[keyof KilocodeRetentionRunResponses]
+
+export type KilocodeRetentionCancelData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/kilocode/retention/cancel"
+}
+
+export type KilocodeRetentionCancelErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type KilocodeRetentionCancelError = KilocodeRetentionCancelErrors[keyof KilocodeRetentionCancelErrors]
+
+export type KilocodeRetentionCancelResponses = {
+  /**
+   * Retention cancel request outcome; false when no pass was running
+   */
+  200: {
+    requested: boolean
+  }
+}
+
+export type KilocodeRetentionCancelResponse = KilocodeRetentionCancelResponses[keyof KilocodeRetentionCancelResponses]
 
 export type AnacondaDesktopStatusData = {
   body?: never
@@ -17900,7 +18482,7 @@ export type KilocodeSessionImportSessionData = {
       partID?: string
       snapshot?: string
       diff?: string
-      workspace?: "restored" | "snapshots-disabled" | "unavailable"
+      workspace?: "restored" | "snapshots-disabled" | "unavailable" | "not-a-git-repo"
     }
     permission?: {
       [key: string]: unknown

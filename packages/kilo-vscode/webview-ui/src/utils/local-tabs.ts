@@ -1,3 +1,5 @@
+import { complete } from "../context/session-paging"
+
 export const PENDING_TAB_PREFIX = "sidebar-pending:"
 
 export interface LocalTabState {
@@ -49,6 +51,26 @@ export interface LocalTabReconcileResult {
 export const isPendingTab = (id: string) => id.startsWith(PENDING_TAB_PREFIX)
 
 export const showTabStrip = (ids: readonly string[]) => ids.length > 1
+
+/** The tab next to the active tab, without wrapping at the ends of the strip. */
+export function adjacentTab(ids: readonly string[], active: string | undefined, offset: -1 | 1) {
+  const index = active ? ids.indexOf(active) : -1
+  const next = index + offset
+  if (index === -1 || next < 0 || next >= ids.length) return undefined
+  return ids[next]
+}
+
+/** Shortcut that selects this tab from the active tab, if it is a direct neighbour. */
+export function adjacentTabHint(
+  ids: readonly string[],
+  active: string | undefined,
+  id: string,
+  kb: Record<string, string>,
+) {
+  if (adjacentTab(ids, active, -1) === id) return kb.previousTab ?? ""
+  if (adjacentTab(ids, active, 1) === id) return kb.nextTab ?? ""
+  return ""
+}
 
 const unique = (ids: string[]) => [...new Set(ids.filter(Boolean))]
 
@@ -139,9 +161,14 @@ export function closeTab(state: LocalTabState, id: string, pending: PendingTabFa
   return normalize(ids, nextTabAfterClose(state.ids, id), pending)
 }
 
-export function closeOtherTabs(state: LocalTabState, id: string): LocalTabState {
+export function closeAllTabs(pending: PendingTabFactory): LocalTabState {
+  return normalize([], undefined, pending)
+}
+
+export function closeOtherTabs(state: LocalTabState, id: string, pinned: readonly string[] = []): LocalTabState {
   if (!state.ids.includes(id)) return state
-  return { ids: [id], active: id }
+  const keep = new Set([id, ...pinned])
+  return { ids: state.ids.filter((tab) => keep.has(tab)), active: id }
 }
 
 export function addSessionTab(state: LocalTabState, id: string): LocalTabState {
@@ -159,17 +186,42 @@ export function reconcileTabs(
   return normalize(ids, state.active, pending)
 }
 
+// Tab outcome for a `sessionsLoaded` message. A paged list leaves out older
+// sessions, including tabs opened from "Load more"; reconciling against it
+// would close tabs for sessions that are still valid, so only a complete list
+// closes tabs.
+export function tabsForLoadedSessions(
+  state: LocalTabState,
+  message: { sessions: { id: string }[]; preserveSessionIds?: string[]; append?: boolean; hasMore?: boolean },
+  fresh: Iterable<string>,
+  pending: PendingTabFactory,
+): LocalTabState | undefined {
+  if (!complete(message)) return undefined
+  const loaded = [...message.sessions.map((item) => item.id), ...(message.preserveSessionIds ?? []), ...fresh]
+  return reconcileTabs(state, loaded, pending)
+}
+
 export function restoreTrackedTabs(
   inventory: LocalTabInventory,
   current: string[],
   order: string[] | undefined,
   check: PendingTabCheck,
   apply: ApplyLocalTabOrder,
+  closed: ReadonlySet<string> = new Set(),
 ): string[] | undefined {
-  const locals = [...inventory.local]
+  // A close is optimistic in the webview: the host can still list the session
+  // in an intermediate state push. Never resurrect an id the user just closed,
+  // including through `current`, `base`, `merged`, or the `order` path.
+  const locals = inventory.local.filter((id) => !closed.has(id))
   const evict = (ids: string[]) =>
-    ids.filter((id) => !inventory.external?.has(id) && !inventory.unresolved?.has(id) && !inventory.rejected?.has(id))
-  const real = current.filter((id) => !check(id))
+    ids.filter(
+      (id) =>
+        !closed.has(id) &&
+        !inventory.external?.has(id) &&
+        !inventory.unresolved?.has(id) &&
+        !inventory.rejected?.has(id),
+    )
+  const real = current.filter((id) => !check(id) && !closed.has(id))
 
   if (locals.length > 0 && real.length === 0) {
     if (!order) return locals
@@ -194,11 +246,20 @@ export function restoreTrackedTabs(
   return changed ? merged : undefined
 }
 
+/** Drop suppressed ids the host no longer tracks, so a later restore can re-add them. */
+export function pruneClosed(closed: Set<string>, sessions: readonly { id: string }[]): void {
+  const live = new Set(sessions.map((entry) => entry.id))
+  for (const id of closed) {
+    if (!live.has(id)) closed.delete(id)
+  }
+}
+
 export function reconcileTrackedTabs(
   current: string[],
   loaded: readonly string[],
   inventory: LocalTabInventory,
   check: PendingTabCheck,
+  ready = true,
 ): LocalTabReconcileResult | undefined {
   const seen = new Set(loaded)
   const local = new Set(inventory.local)
@@ -211,7 +272,7 @@ export function reconcileTrackedTabs(
       continue
     }
     if (inventory.external?.has(id) || inventory.unresolved?.has(id) || inventory.rejected?.has(id)) continue
-    if (seen.has(id) || local.has(id)) {
+    if (!ready || seen.has(id) || local.has(id)) {
       ids.push(id)
       continue
     }

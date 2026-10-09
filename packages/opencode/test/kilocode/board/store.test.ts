@@ -702,7 +702,7 @@ describe("BoardStore", () => {
     expect(second.observedAt).toBeLessThanOrEqual(Date.now())
   })
 
-  test("isolates roots, rejects invalid ancestry and cursors, and retains child history", async () => {
+  test("isolates roots, recovers invalid read cursors, and retains child history", async () => {
     const result = await setup((db) =>
       Effect.gen(function* () {
         yield* db.run(sql`
@@ -730,7 +730,13 @@ describe("BoardStore", () => {
       }),
     )
     expect(result.other.messages).toEqual([])
-    expect(result.cursor._tag).toBe("Failure")
+    expect(result.cursor).toMatchObject({
+      _tag: "Success",
+      value: {
+        messages: [{ id: result.post.id, body: "child history" }],
+        recovered: true,
+      },
+    })
     expect(result.retained.messages).toMatchObject([{ id: result.post.id, from: id("child"), to: id("sibling") }])
     expect(result.retained.messages.at(0)).not.toHaveProperty("fromLabel")
     expect(result.retained.messages.at(0)).not.toHaveProperty("toLabel")

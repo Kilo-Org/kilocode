@@ -4,8 +4,10 @@ import { Effect, Layer, Schema, Stream } from "effect"
 import * as Log from "@opencode-ai/core/util/log"
 import { Agent } from "../../src/agent/agent"
 import { Bus } from "../../src/bus"
+import { Config } from "../../src/config/config"
 import { KiloIndexing } from "../../src/kilocode/indexing"
 import { KilocodeBootstrap } from "../../src/kilocode/bootstrap"
+import { Wakeup } from "../../src/kilocode/wakeup"
 import { KilocodeWatcher } from "../../src/kilocode/watcher"
 import { KiloSessions } from "../../src/kilo-sessions/kilo-sessions"
 import { KiloMemory } from "@kilocode/kilo-memory/effect"
@@ -184,6 +186,44 @@ describe("kilocode tool registry indexing", () => {
     ),
   )
 
+  it.live("follows VS Code project consent for semantic_search without config enablement", () =>
+    Effect.acquireUseRelease(
+      Effect.sync(() => {
+        const prev = process.env["KILO_PLATFORM"]
+        process.env["KILO_PLATFORM"] = "vscode"
+        return prev
+      }),
+      () =>
+        provideTmpdirInstance(
+          () =>
+            Effect.gen(function* () {
+              const agent = yield* Agent.Service
+              const build = yield* agent.get("build")
+              const registry = yield* ToolRegistry.Service
+              const check = Effect.fnUntraced(function* (enabled: boolean) {
+                const tools = yield* registry.tools({ ...ref, agent: build })
+                const ids = tools.map((tool) => tool.id)
+                const glob = tools.find((tool) => tool.id === "glob")?.description ?? ""
+                expect(ids.includes("semantic_search")).toBe(enabled)
+                expect(glob.includes("semantic_search")).toBe(enabled)
+              })
+
+              yield* check(false)
+              yield* Effect.promise(() => KiloIndexing.setConsent(true))
+              yield* check(true)
+              yield* Effect.promise(() => KiloIndexing.setConsent(false))
+              yield* check(false)
+            }),
+          { git: true },
+        ),
+      (prev) =>
+        Effect.sync(() => {
+          if (prev === undefined) delete process.env["KILO_PLATFORM"]
+          if (prev !== undefined) process.env["KILO_PLATFORM"] = prev
+        }),
+    ),
+  )
+
   for (const client of ["cli", "vscode", "jetbrains"]) {
     it.live(`omits interactive_terminal from ${client} tool definitions`, () =>
       Effect.acquireUseRelease(
@@ -345,26 +385,30 @@ describe("kilocode tool registry indexing", () => {
       image: def("generate_image"),
       notify: def("notify_user"),
       send: def("send_file"),
+      linkPr: def("link_pr"),
       boardRead: def("board_read"),
       boardPost: def("board_post"),
       notebookRead: def("notebook_read"),
       notebookEdit: def("notebook_edit"),
       notebookExecute: def("notebook_execute"),
     }
+    const flags = { experimentalSharedAgentBoard: false }
 
     try {
       process.env["KILO_CLIENT"] = "cli"
-      expect(KiloToolRegistry.extra(tools, {}).map((tool) => tool.id)).toEqual([
+      expect(KiloToolRegistry.extra(tools, {}, flags).map((tool) => tool.id)).toEqual([
         "semantic_search",
         "kilo_memory_recall",
         "kilo_memory_save",
         "recall",
         "background_process",
+        "agent_manager_models",
         "notify_user",
         "send_file",
+        "link_pr",
       ])
       expect(
-        KiloToolRegistry.extra(tools, { experimental: { image_generation: true } }).map((tool) => tool.id),
+        KiloToolRegistry.extra(tools, { experimental: { image_generation: true } }, flags).map((tool) => tool.id),
       ).toEqual([
         "generate_image",
         "semantic_search",
@@ -372,24 +416,14 @@ describe("kilocode tool registry indexing", () => {
         "kilo_memory_save",
         "recall",
         "background_process",
+        "agent_manager_models",
         "notify_user",
         "send_file",
+        "link_pr",
       ])
 
-      for (const client of ["cli", "run", "acp"]) {
-        process.env["KILO_CLIENT"] = client
-        const enabled = KiloToolRegistry.extra(tools, { experimental: { task_model_selection: true } }).map(
-          (tool) => tool.id,
-        )
-        expect(enabled).toContain("agent_manager_models")
-        expect(enabled).not.toContain("agent_manager")
-        expect(
-          KiloToolRegistry.extra(tools, { experimental: { task_model_selection: false } }).map((tool) => tool.id),
-        ).not.toContain("agent_manager_models")
-      }
-
       process.env["KILO_CLIENT"] = "vscode"
-      expect(KiloToolRegistry.extra(tools, {}).map((tool) => tool.id)).toEqual([
+      expect(KiloToolRegistry.extra(tools, {}, flags).map((tool) => tool.id)).toEqual([
         "semantic_search",
         "kilo_memory_recall",
         "kilo_memory_save",
@@ -403,9 +437,13 @@ describe("kilocode tool registry indexing", () => {
         "send_file",
       ])
       expect(
-        KiloToolRegistry.extra(tools, {
-          experimental: { native_notebook_tools: true },
-        }).map((tool) => tool.id),
+        KiloToolRegistry.extra(
+          tools,
+          {
+            experimental: { native_notebook_tools: true },
+          },
+          flags,
+        ).map((tool) => tool.id),
       ).toEqual([
         "semantic_search",
         "kilo_memory_recall",
@@ -422,7 +460,7 @@ describe("kilocode tool registry indexing", () => {
         "notify_user",
         "send_file",
       ])
-      expect(KiloToolRegistry.extra({ ...tools, semantic: undefined }, {}).map((tool) => tool.id)).toEqual([
+      expect(KiloToolRegistry.extra({ ...tools, semantic: undefined }, {}, flags).map((tool) => tool.id)).toEqual([
         "kilo_memory_recall",
         "kilo_memory_save",
         "recall",
@@ -436,43 +474,54 @@ describe("kilocode tool registry indexing", () => {
       ])
 
       process.env["KILO_CLIENT"] = "desktop"
-      expect(KiloToolRegistry.extra(tools, {}).map((tool) => tool.id)).toEqual([
+      expect(KiloToolRegistry.extra(tools, {}, flags).map((tool) => tool.id)).toEqual([
         "semantic_search",
         "kilo_memory_recall",
         "kilo_memory_save",
         "recall",
+        "agent_manager_models",
         "notify_user",
         "send_file",
       ])
 
       process.env["KILO_CLIENT"] = "run"
-      expect(KiloToolRegistry.extra(tools, {}).map((tool) => tool.id)).toEqual([
+      expect(KiloToolRegistry.extra(tools, {}, flags).map((tool) => tool.id)).toEqual([
         "semantic_search",
         "kilo_memory_recall",
         "kilo_memory_save",
         "recall",
+        "agent_manager_models",
         "notify_user",
         "send_file",
       ])
 
       process.env["KILO_CLIENT"] = "acp"
-      expect(KiloToolRegistry.extra(tools, {}).map((tool) => tool.id)).toEqual([
+      expect(KiloToolRegistry.extra(tools, {}, flags).map((tool) => tool.id)).toEqual([
         "semantic_search",
         "kilo_memory_recall",
         "kilo_memory_save",
         "recall",
+        "agent_manager_models",
         "notify_user",
         "send_file",
       ])
       for (const client of ["cli", "vscode", "jetbrains", "desktop", "run", "acp"]) {
         process.env["KILO_CLIENT"] = client
         for (const enabled of [false, true]) {
-          const ids = KiloToolRegistry.extra(tools, { experimental: { shared_agent_board: enabled } })
+          const ids = KiloToolRegistry.extra(
+            tools,
+            { shared_agent_board: enabled },
+            { experimentalSharedAgentBoard: enabled },
+          )
             .map((tool) => tool.id)
             .filter((id) => id.startsWith("board_"))
           expect(ids).toEqual(enabled ? ["board_read", "board_post"] : [])
         }
       }
+      const flagged = KiloToolRegistry.extra(tools, {}, { experimentalSharedAgentBoard: true })
+        .map((tool) => tool.id)
+        .filter((id) => id.startsWith("board_"))
+      expect(flagged).toEqual(["board_read", "board_post"])
     } finally {
       if (prev === undefined) delete process.env["KILO_CLIENT"]
       if (prev !== undefined) process.env["KILO_CLIENT"] = prev
@@ -507,7 +556,23 @@ describe("kilocode tool registry indexing", () => {
     const session = Layer.succeed(Session.Service, {} as Session.Interface)
     const summary = Layer.succeed(SessionSummary.Service, {} as SessionSummary.Interface)
     const provider = Layer.succeed(Provider.Service, {} as Provider.Interface)
+    const config = Layer.succeed(Config.Service, {} as Config.Interface)
     const watcher = Layer.succeed(KilocodeWatcher.Service, KilocodeWatcher.Service.of({ init: () => Effect.void }))
+    const wakeup = Layer.succeed(
+      Wakeup.Service,
+      Wakeup.Service.of({
+        schedule: () => Effect.die(new Error("wakeup schedule is not used by this test")),
+        list: () => Effect.succeed([]),
+        pending: () => Effect.succeed([]),
+        scheduled: () => Effect.succeed(new Map()),
+        cancel: () => Effect.succeed(undefined),
+        cancelSession: () => Effect.succeed(0),
+        adopt: () => Effect.void,
+        cronCreate: () => Effect.die(new Error("wakeup cronCreate is not used by this test")),
+        cronList: () => Effect.succeed([]),
+        cronCancel: () => Effect.succeed(undefined),
+      }),
+    )
     const indexing = spyOn(KiloIndexing, "init").mockRejectedValue(err)
     const warn = spyOn(logger, "warn").mockImplementation(() => {})
 
@@ -515,7 +580,9 @@ describe("kilocode tool registry indexing", () => {
       await Effect.runPromise(
         KilocodeBootstrap.Service.use((svc) => svc.init()).pipe(
           Effect.provide(
-            KilocodeBootstrap.layer.pipe(Layer.provide([sessions, bus, memory, session, summary, provider, watcher])),
+            KilocodeBootstrap.layer.pipe(
+              Layer.provide([sessions, bus, memory, session, summary, provider, config, watcher, wakeup]),
+            ),
           ),
           Effect.scoped,
         ),

@@ -1,0 +1,60 @@
+# kilocode_change - new file
+name: "Setup SBOM tooling"
+description: "Install a pinned, checksum-verified Syft for CRA SBOM generation"
+
+inputs:
+  version:
+    description: "Syft release version"
+    required: false
+    default: "1.52.0"
+
+runs:
+  using: "composite"
+  steps:
+    # Pinned and checksum-verified rather than installed through a convenience
+    # script: the SBOM generator is part of Kilo's supply-chain evidence, so it
+    # must not be able to change underneath a release.
+    - name: Install Syft
+      shell: bash
+      env:
+        VERSION: ${{ inputs.version }}
+      run: |
+        set -euo pipefail
+
+        case "$RUNNER_OS" in
+          Linux) os=linux ;;
+          macOS) os=darwin ;;
+          *) echo "::error::Unsupported runner OS for SBOM tooling: $RUNNER_OS"; exit 1 ;;
+        esac
+        case "$RUNNER_ARCH" in
+          X64) arch=amd64 ;;
+          ARM64) arch=arm64 ;;
+          *) echo "::error::Unsupported runner arch for SBOM tooling: $RUNNER_ARCH"; exit 1 ;;
+        esac
+
+        declare -A sums=(
+          [linux_amd64]=caeedb81fb0491615f1ebd1761e4145d41ee86dd2cc7bf80669f9f5ad9d6133d
+          [linux_arm64]=c46d5e4c28e12aa4c5becfaa343ef1c7f89045b6b895f2c21d471c62db09c706
+          [darwin_amd64]=56975f5d7ffa9846a1eaf64330647841b878097bc7e3730cb9325f93add96917
+          [darwin_arm64]=014d561b6d13059124155f74a6c5a9a99501f5e209313638dd884f39eb418ee6
+        )
+        key="${os}_${arch}"
+        expected="${sums[$key]:-}"
+        if [ -z "$expected" ]; then
+          echo "::error::No pinned Syft $VERSION checksum for $key"
+          exit 1
+        fi
+
+        archive="$RUNNER_TEMP/syft.tar.gz"
+        curl --fail --location --retry 3 \
+          "https://github.com/anchore/syft/releases/download/v${VERSION}/syft_${VERSION}_${key}.tar.gz" \
+          --output "$archive"
+        echo "$expected  $archive" | sha256sum --check --status
+
+        install -d "$RUNNER_TEMP/sbom-bin"
+        tar -xzf "$archive" -C "$RUNNER_TEMP/sbom-bin" syft
+        echo "$RUNNER_TEMP/sbom-bin" >> "$GITHUB_PATH"
+
+    - name: Report tool versions
+      shell: bash
+      run: syft version

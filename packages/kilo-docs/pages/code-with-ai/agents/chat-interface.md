@@ -81,6 +81,17 @@ Double-click the current session title at the top of the chat to edit it inline.
 
 You can also rename local sessions from **History** using the edit button or the session's context menu.
 
+**Switching session tabs:**
+
+When more than one session is open, the sidebar and Kilo editor tabs show a session tab strip. Use these shortcuts while the chat has focus:
+
+| Shortcut (macOS) | Shortcut (Windows/Linux) | Action |
+|---|---|---|
+| `Cmd+Alt+Left` / `Right` | `Ctrl+Alt+Left` / `Right` | Previous / next session tab |
+| `Cmd+Shift+Left` / `Right` | `Ctrl+Shift+Left` / `Right` | Move the focused session tab left / right |
+
+Hover a session tab next to the active tab to see its shortcut. When the prompt is empty, its placeholder also shows the shortcut. To hide these prompt hints, turn off **Show shortcut hints** in **Settings > Display**. To change the keys, search for **Previous Session Tab** or **Next Session Tab** in **Keyboard Shortcuts**. These are the same keys that switch tabs in the Agent Manager, and each window acts on the surface that has focus.
+
 {% /tab %}
 {% tab label="CLI" %}
 
@@ -109,7 +120,7 @@ Type `@` in the TUI to get file autocomplete suggestions, or mention file paths 
 - URLs → Opens in browser
 - Messages → Expand/collapse details
 - Code blocks → Copy button appears
-- Mermaid code blocks → Fenced `mermaid` blocks render as diagrams after the message finishes streaming. The source remains copyable, and invalid Mermaid syntax stays visible in a contained error state.
+- Mermaid code blocks → Fenced `mermaid` blocks render as diagrams after the message finishes streaming. The source remains copyable, invalid Mermaid syntax stays visible in a contained error state, and the Zoom action opens a fullscreen viewer with zoom and pan controls.
 - Charts → In VS Code, asking for a chart, graph, or plot renders an inline chart in the conversation. Supported types include bar, line, scatter, pie, doughnut, radar, bubble, and polar area. Diagrams and flowcharts still render as Mermaid.
 
 **Status signals:**

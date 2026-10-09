@@ -63,10 +63,10 @@ describe("routeEarlyMessage activity", () => {
   it("forwards authoritative webview presentation state without interpreting session events", async () => {
     const calls: unknown[] = []
     const ctx = { activity: (state: unknown) => calls.push(state) } as Ctx
-    for (const state of ["busy", "waiting", "done", "error", "idle"]) {
+    for (const state of ["busy", "waiting", "done", "scheduled", "error", "idle"]) {
       expect(await routeEarlyMessage({ type: "sessionActivity", state }, ctx)).toBe(true)
     }
-    expect(calls).toEqual(["busy", "waiting", "done", "error", "idle"])
+    expect(calls).toEqual(["busy", "waiting", "done", "scheduled", "error", "idle"])
   })
 })
 

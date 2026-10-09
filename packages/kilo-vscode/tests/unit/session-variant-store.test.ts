@@ -57,7 +57,7 @@ describe("per-session variant selection", () => {
   })
 
   it.each(["anthropic/claude-sonnet-4", variantKey(model, "code")])(
-    "prefers the configured variant over the remembered preference %s",
+    "keeps the configured variant %s above the remembered preference",
     (key) => {
       const store = { [key]: "high" }
       expect(getVariant(store, model, ["high", "max"], "code", "pending-new", "max")).toBe("max")

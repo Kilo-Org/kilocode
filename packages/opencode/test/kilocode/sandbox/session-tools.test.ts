@@ -18,6 +18,7 @@ import { Format } from "@/format"
 import { LSP } from "@/lsp/lsp"
 import * as ToolNetwork from "@/kilocode/sandbox/network"
 import { MCP } from "@/mcp"
+import type { Tool as MCPToolDef } from "@modelcontextprotocol/sdk/types.js"
 import { Permission } from "@/permission"
 import { ProjectV2 } from "@opencode-ai/core/project"
 import type { InstanceContext } from "@/project/instance-context"
@@ -382,5 +383,43 @@ it.live("records why a denied tool call was refused on the tool part's metadata"
       source: "project",
       rule: { permission: "bash", pattern: "*", action: "deny" },
     })
+  }),
+)
+
+it.live("drops per-tool MCP definitions when experimental.code_mode is enabled", () =>
+  Effect.gen(function* () {
+    const dirs = yield* fixture()
+    const entry = {
+      def: {
+        name: "current",
+        description: "current weather",
+        inputSchema: { type: "object", properties: {} },
+      } as MCPToolDef,
+      client: {
+        callTool: () => Promise.reject(new Error("MCP tool must not be called")),
+      } as unknown as MCP.McpTool["client"],
+      clientName: "weather",
+    }
+    const overrides = (codeMode: boolean) =>
+      Layer.mergeAll(
+        TestConfig.layer({
+          get: () =>
+            Effect.succeed({
+              sandbox: { enabled: false },
+              ...(codeMode ? { experimental: { code_mode: true } } : {}),
+            }),
+        }),
+        Layer.mock(MCP.Service)({
+          tools: () => Effect.succeed({ weather_current: entry as unknown as MCP.McpTool }),
+          // keep clients empty so the MCP resource tools do not probe a stub client
+          clients: () => Effect.succeed({}),
+        }),
+      )
+
+    const withoutCodeMode = yield* resolve(dirs.ctx).pipe(Effect.provide(overrides(false)))
+    const withCodeMode = yield* resolve(dirs.ctx).pipe(Effect.provide(overrides(true)))
+
+    expect(Object.keys(withoutCodeMode)).toContain("weather_current")
+    expect(Object.keys(withCodeMode)).not.toContain("weather_current")
   }),
 )

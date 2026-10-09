@@ -60,6 +60,7 @@ export const dict = {
   ...anacondaDesktopDict,
   ...cloudProviderDict,
   "task.swarm.title": "Доска",
+  "task.swarm.open": "Открыть доску",
   "task.swarm.refresh": "Обновить",
   "task.swarm.reset": "Сбросить доску",
   "task.swarm.resetTitle": "Сбросить эту доску?",
@@ -74,6 +75,7 @@ export const dict = {
   "session.activity.error": "Ошибка или потеря соединения.",
   "session.activity.retry": "Автоматический повтор.",
   "session.activity.busy": "Выполняется.",
+  "session.activity.scheduled": "Ожидание запланированного пробуждения.",
   "session.activity.done": "Ход завершён.",
   "session.activity.idle": "Агент не запущен.",
 
@@ -89,10 +91,13 @@ export const dict = {
     "Разговор был отменён. Изменения файлов не были восстановлены, так как снимки отключены.",
   "revert.banner.workspace.unavailable":
     "Разговор был отменён. Контрольная точка файлов была недоступна, поэтому изменения в рабочей области не были восстановлены.",
+  "revert.banner.workspace.notAGitRepo":
+    "Разговор был отменён. Контрольные точки файлов требуют репозитория Git, поэтому изменения в рабочей области не были восстановлены.",
   "revert.banner.workspace.legacy":
     "Диалог отменён. Статус восстановления рабочей области недоступен для этого более раннего отката.",
   "revert.banner.workspace.enableSnapshots": "Включить снимки",
   "revert.disabled.agentBusy": "Дождитесь завершения агента",
+  "revert.error.body": "Репозиторий может использоваться. Повторите попытку или проверьте журналы Kilo.",
   "command.session.compact": "Сжать сессию",
   "command.session.export": "Экспортировать запись сеанса",
 
@@ -194,17 +199,34 @@ export const dict = {
   "prompt.worktrees.title": "Worktrees",
   "prompt.worktrees.search": "Поиск worktrees",
   "prompt.thinking.tooltip": "Усилие рассуждения",
+  "prompt.shortcutHint.addSelection": "для добавления выделения",
+  "prompt.shortcutHint.waiting": "для ответа в ожидающей сессии",
+  "prompt.shortcutHint.type": "для ввода",
+  "prompt.shortcutHint.sessions": "для смены сессии",
+  "prompt.shortcutHint.stop": "для остановки",
+  "prompt.shortcutHint.changes": "для просмотра изменений",
+  "prompt.shortcutHint.pr": "для открытия PR",
+  "prompt.shortcutHint.mode": "Следующий режим",
   "prompt.action.send": "Отправить",
   "prompt.action.continue": "Продолжить",
   "prompt.action.send.blocked": "Сначала ответьте на ожидающий вопрос или отклоните его",
   "prompt.action.send.recording": "Расшифровать и отправить",
   "prompt.action.stop": "Остановить",
+  "prompt.action.stop.background": "Остановить основного агента. Фоновые агенты продолжат работу.",
+  "prompt.agents.show": "Показать фоновых агентов",
   "prompt.action.enhance": "Улучшить промпт",
+  "prompt.action.more": "Другие действия",
+  "prompt.paste.expand": "Нажмите, чтобы развернуть вставленный текст",
+  "prompt.issues.title": "Проблемы сессии",
+  "prompt.mcp.provider": "MCP {{name}}",
+  "prompt.mcp.openSettings": "Открыть в настройках",
+  "prompt.mcp.signIn.busy": "Выполняется вход…",
   "prompt.action.autoApprove.enable": "Включить автоодобрение",
   "prompt.action.autoApprove.disable": "Отключить автоодобрение",
   "prompt.action.autoApprove.enabled": "Автоодобрение включено. Запросы разрешений будут одобряться автоматически.",
   "prompt.action.autoApprove.disabled":
     "Автоодобрение отключено. Нажмите, чтобы автоматически одобрять запросы разрешений.",
+  "prompt.action.autoApprove.sandboxExcluded": "Запросы на выход из песочницы всегда исключены.",
   "prompt.action.indexing": "Настройки индексации",
   "prompt.action.enhanceDescription":
     "Кнопка 'Улучшить запрос' помогает сделать ваш запрос лучше, предоставляя дополнительный контекст, уточнения или переформулировку. Попробуйте ввести запрос и снова нажать кнопку, чтобы увидеть, как это работает.",
@@ -222,11 +244,13 @@ export const dict = {
   "prompt.action.sandbox.network.allowed": "Разрешена",
   "prompt.action.sandbox.unrestricted": "Без ограничений",
   "prompt.action.sandbox.description.enabled": "Запись разрешена только в каталогах проекта и Kilo.",
+  "prompt.action.sandbox.description.escalation":
+    "Правила разрешений и автоодобрение действуют внутри песочницы. Команды, которым нужно выйти из неё, всегда спрашивают.",
   "prompt.action.sandbox.description.disabled": "Нажмите, чтобы ограничить запись в файловую систему и доступ к сети.",
   "prompt.action.sandbox.description.disabledNetworkAllowed":
     "Нажмите, чтобы ограничить запись в файловую систему. Доступ к сети останется разрешённым согласно настройкам песочницы.",
 
-  "speechToText.tooltip.start": "Начать голосовой ввод с Kilo Gateway",
+  "speechToText.tooltip.start": "Начать голосовой ввод",
   "speechToText.tooltip.shortcut":
     "Коснитесь или нажмите Cmd/Ctrl+K, чтобы начать или остановить запись; удерживайте кнопку во время речи, затем отпустите её, чтобы транскрибировать и отправить.",
   "speechToText.tooltip.starting": "Запуск микрофона... Пока не говорите.",
@@ -266,8 +290,13 @@ export const dict = {
   "notification.permission.title": "Требуется разрешение",
   "notification.permission.titleSubagent": "Требуется разрешение (субагент)",
   "notification.permission.titleSkillShell": "Выполнить команды оболочки из навыка «{{skill}}»?",
-  "notification.permission.titleSandboxEscalation": "Разрешить операцию Git за пределами песочницы?",
+  "notification.permission.titleSandboxEscalation": "Выполнить вне песочницы?",
+  "notification.permission.descriptionSandboxEscalation":
+    "Команда целиком выполняется без ограничений файловой системы и сети, только для этой команды. Git должен записывать в .git, который доступен только для чтения в песочнице и находится вне рабочего дерева в связанном worktree. Правила разрешений Bash и автоодобрение никогда не одобряют этот запрос автоматически.",
   "ui.permission.manageAutoApprove": "Управление правилами автоодобрения",
+  "ui.permission.reject": "Отклонить",
+  "ui.permission.feedbackPlaceholder": "Скажите Kilo, что сделать иначе",
+  "ui.permission.feedbackHint": "Enter для отклонения, Esc для отмены",
   "ui.permission.doomLoop.prompt":
     "Обнаружен потенциальный цикл при работе инструмента {{tool}}. Продолжить выполнение?",
   "ui.permission.doomLoop.rule": "Продолжать вызовы {{tool}}",
@@ -300,7 +329,7 @@ export const dict = {
   "ui.approval.source.agent.default": "агентом",
   "ui.approval.source.global": "вашей глобальной конфигурацией",
   "ui.approval.source.project": "конфигурацией проекта",
-  "ui.approval.source.yolo": "режимом автоодобрения (YOLO)",
+  "ui.approval.source.yolo": "режимом автоодобрения",
   "ui.approval.source.session": "правилом автоодобрения сессии",
   "ui.approval.source.default": "по умолчанию",
   "ui.approval.outsideWorkspace": "(за пределами вашей рабочей области: {{file}})",
@@ -317,7 +346,6 @@ export const dict = {
   "sidebar.topBar.newTask": "Новая задача",
   "sidebar.topBar.history": "История",
   "sidebar.topBar.agentManager": "Agent Manager",
-  "sidebar.topBar.kiloClaw": "KiloClaw",
   "sidebar.topBar.marketplace": "Маркетплейс",
   "sidebar.topBar.profile": "Профиль",
   "sidebar.topBar.settings": "Настройки",
@@ -458,6 +486,7 @@ export const dict = {
   "settings.providers.tag.customProvider": "Пользовательский провайдер",
   "settings.providers.connected.environmentDescription": "Подключён из ваших переменных окружения",
   "settings.providers.action.signInChatGPT": "Войти через ChatGPT",
+  "settings.providers.action.changeApiKey": "Изменить API-ключ",
   "settings.providers.custom.description": "Добавьте пользовательский провайдер по базовому URL.",
   "settings.providers.subagentModel.title": "Модель субагента",
   "settings.providers.subagentModel.description":
@@ -495,6 +524,7 @@ export const dict = {
   "provider.custom.models.toggleImages": "Переключить изображения для всех",
   "provider.custom.models.remove": "Удалить модель",
   "provider.custom.models.add": "Добавить модель",
+  "provider.custom.models.fetch.button": "Получить модели",
   "provider.custom.models.fetch.authError": "Ошибка аутентификации. Проверьте API-ключ выше и попробуйте снова.",
   "provider.custom.models.fetch.empty": "На этом сервере модели не найдены.",
   "provider.custom.models.fetch.added": "Добавлено {{count}} модель(ей).",
@@ -524,6 +554,9 @@ export const dict = {
   "provider.custom.error.duplicate": "Дубликат",
   "settings.openLocalConfig": "Локальный конфиг",
   "settings.openGlobalConfig": "Глобальный конфиг",
+  "settings.search.placeholder": "Поиск параметров",
+  "settings.search.noResults": "Параметры не найдены",
+  "settings.search.clear": "Очистить поиск",
   "settings.config.scope.local": "Локальный",
   "settings.config.scope.global": "Глобальный",
   "settings.config.status.loaded": "загружено",
@@ -551,38 +584,22 @@ export const dict = {
 
   "settings.permissions.toast.updateFailed.title": "Не удалось обновить разрешения",
 
-  "settings.permissions.tool.read.title": "Чтение",
   "settings.permissions.tool.read.description": "Чтение файла (по совпадению пути)",
-  "settings.permissions.tool.edit.title": "Редактирование",
   "settings.permissions.tool.edit.description":
     "Изменение файлов, включая редактирование, запись, патчи и мульти-редактирование",
-  "settings.permissions.tool.glob.title": "Glob",
   "settings.permissions.tool.glob.description": "Сопоставление файлов по паттернам glob",
-  "settings.permissions.tool.grep.title": "Grep",
   "settings.permissions.tool.grep.description": "Поиск по содержимому файлов с использованием регулярных выражений",
-  "settings.permissions.tool.list.title": "Список",
   "settings.permissions.tool.list.description": "Список файлов в директории",
-  "settings.permissions.tool.bash.title": "Bash",
   "settings.permissions.tool.bash.description": "Выполнение команд оболочки",
-  "settings.permissions.tool.task.title": "Задача",
   "settings.permissions.tool.task.description": "Запуск под-агентов",
-  "settings.permissions.tool.skill.title": "Skill",
   "settings.permissions.tool.skill.description": "Загрузить навык по имени",
-  "settings.permissions.tool.lsp.title": "LSP",
   "settings.permissions.tool.lsp.description": "Выполнение запросов к языковому серверу",
-  "settings.permissions.tool.todoread.title": "Чтение списка задач",
   "settings.permissions.tool.todoread.description": "Чтение списка задач",
-  "settings.permissions.tool.todowrite.title": "Запись списка задач",
   "settings.permissions.tool.todowrite.description": "Обновление списка задач",
-  "settings.permissions.tool.webfetch.title": "Веб-загрузка",
   "settings.permissions.tool.webfetch.description": "Получить содержимое по URL",
-  "settings.permissions.tool.websearch.title": "Веб-поиск",
   "settings.permissions.tool.websearch.description": "Поиск в интернете",
-  "settings.permissions.tool.codesearch.title": "Поиск кода",
   "settings.permissions.tool.codesearch.description": "Поиск кода в интернете",
-  "settings.permissions.tool.external_directory.title": "Внешняя директория",
   "settings.permissions.tool.external_directory.description": "Доступ к файлам вне директории проекта",
-  "settings.permissions.tool.doom_loop.title": "Doom Loop",
   "settings.permissions.tool.doom_loop.description": "Обнаружение повторных вызовов инструментов с одинаковым вводом",
 
   "session.delete.title": "Удалить сессию",
@@ -600,6 +617,8 @@ export const dict = {
   "session.tabs.switcher.current": "Текущая",
   "session.tabs.switcher.pending": "Новая",
   "session.tabs.switcher.busy": "В работе",
+  "session.tabs.switcher.scheduled": "Запланировано",
+  "session.tabs.pinHint": "Shift+щелчок, чтобы закрепить или открепить",
   "session.tab.local": "Локальный",
   "session.tab.cloud": "Облако",
   "session.tab.worktree": "Рабочее дерево",
@@ -624,14 +643,14 @@ export const dict = {
   "workStyle.choice.human-in-the-loop.permissions":
     "Запрашивает разрешение перед редактированием файлов или выполнением команд.",
   "workStyle.choice.human-in-the-loop.bash": "Запрашивает разрешение на каждую команду терминала.",
-  "workStyle.choice.human-in-the-loop.visibility": "Показывает все детали разговора, включая ход рассуждений.",
+  "workStyle.choice.human-in-the-loop.visibility": "Разворачивает рассуждения, команды и изменения для проверки.",
   "workStyle.choice.autonomous.eyebrow": "Меньше прерываний",
   "workStyle.choice.autonomous.title": "Высокая автономность",
   "workStyle.choice.autonomous.description": "Меньше прерываний, упрощённый интерфейс.",
   "workStyle.choice.autonomous.permissions":
     "Редактирует файлы и выполняет команды в рабочем пространстве без разрешения.",
   "workStyle.choice.autonomous.bash": "Может выполнять команды терминала в рабочем пространстве без подтверждения.",
-  "workStyle.choice.autonomous.visibility": "Детали остаются свёрнутыми, пока вы их не развернёте.",
+  "workStyle.choice.autonomous.visibility": "Сворачивает детали инструментов, с компактным предпросмотром рассуждений.",
   "session.cloud.import.title": "Импорт из облака",
   "session.cloud.import.placeholder": "ID сессии, URL или команда kilo import",
   "session.cloud.import.button": "Импортировать",
@@ -676,6 +695,7 @@ export const dict = {
   "profile.usage.source.direct": "Напрямую",
   "profile.usage.state.stale": "Показаны последние обновлённые данные об использовании.",
   "profile.usage.state.unavailable": "Данные об использовании недоступны.",
+  "profile.usage.state.empty": "Лимиты использования не указаны.",
   "profile.usage.plan.pastDue": "Тариф: Платёж просрочен",
   "profile.usage.plan.canceling": "Тариф: Отмена в конце периода",
   "profile.usage.plan.unknown": "Тариф: Статус неизвестен",
@@ -779,11 +799,13 @@ export const dict = {
   "ui.sessionTurn.status.consideringNextSteps": "Продумываю следующие шаги...",
 
   "dialog.model.noProviders": "Нет провайдеров",
+  "dialog.model.unavailable": "Модели Kilo недоступны",
 
   "prompt.placeholder.connecting": "Подключение к серверу...",
   "prompt.placeholder.error": "Не удалось подключиться. Проверьте панель вывода или перезапустите расширение.",
   "prompt.placeholder.default":
     "Введите сообщение, @ чтобы упомянуть файлы... (Enter для отправки, Shift+Enter для новой строки)",
+  "prompt.placeholder.hint": "Введите сообщение, @ чтобы упомянуть файлы... ({{key}} {{action}})",
 
   "context.usage.sessionCost": "Стоимость сессии",
   "context.usage.olderSessions": "{{count}} предыдущих сессий",
@@ -838,9 +860,10 @@ export const dict = {
   "settings.agentBehaviour.subtab.skills": "Навыки",
 
   "settings.browser.description":
-    "При включении ИИ-агент может взаимодействовать с веб-страницами — переходить по ссылкам, нажимать, вводить текст и делать скриншоты. Откроется окно Chrome, чтобы вы могли наблюдать за работой агента.",
+    "Настройте встроенную автоматизацию браузера на основе Playwright. Kilo может переходить по веб-страницам, взаимодействовать с ними и делать скриншоты в ваших сессиях.",
   "settings.browser.enable.title": "Включить автоматизацию браузера",
-  "settings.browser.enable.description": "Зарегистрировать сервер Playwright MCP в CLI-бэкенде.",
+  "settings.browser.enable.description":
+    "Включить привязанный к сеансу браузер Agent Manager для локальных приложений и общедоступных HTTPS-страниц.",
   "settings.browser.systemChrome.title": "Использовать системный Chrome",
   "settings.browser.systemChrome.description":
     "Использовать установленный браузер Chrome вместо отдельного экземпляра Chromium.",
@@ -892,15 +915,28 @@ export const dict = {
   "settings.experimental.batch.description": "Включить пакетную обработку вызовов инструментов",
   "settings.experimental.imageGeneration.title": "Генерация изображений",
   "settings.experimental.imageGeneration.description": "Включить генерацию изображений с помощью ИИ",
-  "settings.experimental.sharedAgentBoard.title": "Kilo Swarm",
-  "settings.experimental.sharedAgentBoard.description":
+  "settings.agentBehaviour.sharedAgentBoard.title": "Kilo Swarm",
+  "settings.agentBehaviour.sharedAgentBoard.description":
     "Предоставьте общую доску основному сеансу и его подагентам, выполняющим задачи, включая вложенных подагентов. Используйте её для параллельных попыток найти решение или взаимодополняющей работы, а не для каждой задачи.",
   "settings.experimental.imageGenerationModel.title": "Модель изображений",
   "settings.experimental.imageGenerationModel.description": "Модель генерации изображений",
   "settings.experimental.imageGenerationModel.placeholder": "По умолчанию (Auto Router)",
 
+  "settings.models.speechToTextModel.customDescription":
+    "Идентификатор модели, отправляемый в ваш собственный эндпоинт транскрипции, например whisper-1.",
+  "settings.models.speechToTextModel.customPlaceholder": "whisper-1",
+  "settings.models.speechToTextBaseUrl.title": "Базовый URL речи в текст",
+  "settings.models.speechToTextBaseUrl.description":
+    "Использовать совместимый с OpenAI API транскрипции вместо Kilo Gateway. Модели читаются из /models, аудио отправляется в /audio/transcriptions. Оставьте пустым, чтобы использовать Kilo Gateway.",
+  "settings.models.speechToTextBaseUrl.placeholder": "https://api.openai.com/v1",
+  "settings.models.speechToTextApiKey.title": "Ключ API речи в текст",
+  "settings.models.speechToTextApiKey.description":
+    "Bearer-токен, отправляемый на собственный базовый URL транскрипции. Хранится в файле конфигурации Kilo.",
+  "settings.models.speechToTextApiKey.placeholder": "sk-...",
   "settings.models.speechToText.disabledDescription":
-    "Включите провайдер Kilo и выполните вход, чтобы использовать Speech to Text. В настоящее время Speech to Text поддерживается только с Kilo Gateway.",
+    "Включите провайдер Kilo и выполните вход, чтобы использовать Speech to Text, либо укажите ниже свой базовый URL транскрипции.",
+  "settings.models.speechToText.remoteDescription":
+    "Голосовой ввод недоступен в удалённых окнах. Откройте Kilo в локальном окне, чтобы использовать микрофон.",
   "settings.models.speechToTextModel.title": "Модель речи в текст",
   "settings.models.speechToTextModel.description": "Выберите модель транскрипции Kilo Gateway для голосового ввода.",
   "settings.experimental.nativeNotebookTools.title": "Нативные инструменты блокнотов",
@@ -919,15 +955,12 @@ export const dict = {
   "settings.sandboxing.writablePaths.title": "Дополнительные пути для записи",
   "settings.sandboxing.writablePaths.description":
     "Дополнительные пути файловой системы, в которые разрешена запись в песочнице (например, /tmp, /var/log). Они объединяются с путями записи по умолчанию при активной песочнице.",
-  "settings.experimental.multiProject.title": "Мультипроектный Agent Manager",
+  "settings.experimental.conversationPromptHistory.title": "История промптов для каждого разговора",
+  "settings.experimental.conversationPromptHistory.description":
+    "Хранить историю промптов (ArrowUp/ArrowDown) отдельно для каждого разговора вместо одной общей истории для всех.",
   "settings.experimental.claudeMigration.title": "Миграция Claude Code",
   "settings.experimental.claudeMigration.description":
     "Однократно импортируйте поддерживаемые глобальные инструкции CLAUDE.md, простые навыки и отключённые определения MCP. Исходные файлы Claude не изменяются; после включения перезапустите backend.",
-  "settings.experimental.multiProject.description":
-    "Включите управление сессиями и рабочими деревьями в нескольких репозиториях в Agent Manager. Текущий репозиторий рабочего пространства всегда является проектом по умолчанию.",
-  "settings.experimental.taskModelSelection.title": "Выбор модели субагента Task",
-  "settings.experimental.taskModelSelection.description":
-    "Позволяет явно выбирать модель, провайдера и уровень рассуждения для субагентов Task.",
   "settings.experimental.mcpTimeout.title": "Таймаут MCP (мс)",
   "settings.experimental.mcpTimeout.description": "Таймаут запросов MCP-сервера в миллисекундах",
   "settings.experimental.remote.title": "Управление Remote",
@@ -1016,12 +1049,31 @@ export const dict = {
   "settings.agentBehaviour.removeAgent.button": "Удалить",
   "settings.agentBehaviour.removeMcp.title": "Удалить сервер MCP",
   "settings.agentBehaviour.removeMcp.confirm": 'Удалить сервер MCP "{{name}}"? Это удалит его из вашей конфигурации.',
+  "settings.agentBehaviour.removeMcp.bundleConfirm":
+    'Удалить сервер MCP "{{name}}" и сопутствующие навыки? Это удалит как сервер, так и каждый навык, принадлежащий этой установке Marketplace.',
   "settings.agentBehaviour.removeMcp.button": "Удалить",
   "settings.agentBehaviour.editMcp": "Редактировать сервер MCP",
   "settings.agentBehaviour.editMcp.transportLocal": "Локальный сервер (транспорт stdio)",
   "settings.agentBehaviour.editMcp.transportRemote": "Удалённый сервер (транспорт SSE/HTTP)",
   "settings.agentBehaviour.editMcp.env": "Переменные окружения",
   "settings.agentBehaviour.editMcp.env.help": "Переменные, передаваемые процессу сервера MCP.",
+  "settings.agentBehaviour.editMcp.oauth": "OAuth",
+  "settings.agentBehaviour.editMcp.oauth.help":
+    "Оставьте значение Автоматически, если сервер не требует предварительно зарегистрированного клиента. Секрет клиента хранится в вашем файле конфигурации Kilo.",
+  "settings.agentBehaviour.editMcp.oauth.mode": "Режим",
+  "settings.agentBehaviour.editMcp.oauth.mode.automatic": "Автоматически",
+  "settings.agentBehaviour.editMcp.oauth.mode.disabled": "Отключено",
+  "settings.agentBehaviour.editMcp.oauth.mode.custom": "Пользовательский клиент",
+  "settings.agentBehaviour.editMcp.oauth.clientId": "ID клиента",
+  "settings.agentBehaviour.editMcp.oauth.clientSecret": "Секрет клиента",
+  "settings.agentBehaviour.editMcp.oauth.scope": "Область",
+  "settings.agentBehaviour.editMcp.oauth.callbackPort": "Порт обратного вызова",
+  "settings.agentBehaviour.editMcp.oauth.redirectUri": "URI перенаправления",
+  "settings.agentBehaviour.editMcp.oauth.redirectUri.help":
+    "По умолчанию http://127.0.0.1:19876/mcp/oauth/callback, переопределяет порт обратного вызова.",
+  "settings.agentBehaviour.editMcp.oauth.port.invalid": "Введите порт от 1 до 65535.",
+  "settings.agentBehaviour.editMcp.oauth.secret.invalid": "Для секрета клиента требуется ID клиента.",
+  "settings.agentBehaviour.editMcp.oauth.redirectUri.invalid": "Введите корректный URI перенаправления.",
   "settings.agentBehaviour.addMcp.command": "Команда",
   "settings.agentBehaviour.addMcp.command.placeholder": "e.g. npx",
   "settings.agentBehaviour.addMcp.args": "Аргументы",
@@ -1034,6 +1086,8 @@ export const dict = {
   "settings.agentBehaviour.removeSkill.title": "Удалить навык",
   "settings.agentBehaviour.removeSkill.confirm":
     'Удалить навык "{{name}}"? Это приведет к удалению файлов навыка с диска.',
+  "settings.agentBehaviour.removeSkill.bundleConfirm":
+    'Удалить навык "{{name}}"? Это также удалит сервер MCP {{mcp}} и каждый сопутствующий навык из той же установки Marketplace.',
   "settings.agentBehaviour.removeSkill.button": "Удалить",
   "settings.agentBehaviour.rules.description":
     "Правила — это файлы инструкций, которые направляют поведение агента. Они включаются в системный промпт для каждого разговора. Добавьте пути к файлам ниже, чтобы включить дополнительные правила.",
@@ -1049,6 +1103,12 @@ export const dict = {
   "settings.agentBehaviour.mcpDetail.command": "Команда",
   "settings.agentBehaviour.mcpDetail.args": "Аргументы",
   "settings.agentBehaviour.mcpDetail.env": "Окружение",
+  "settings.agentBehaviour.mcpSignIn.cancel": "Отменить вход",
+  "settings.agentBehaviour.mcpRemoving": "Удаление…",
+  "settings.agentBehaviour.mcpResetAuth": "Сбросить вход",
+  "settings.agentBehaviour.mcpResetAuth.title": "Сбросить вход MCP",
+  "settings.agentBehaviour.mcpResetAuth.confirm":
+    'Очистить сохраненные данные входа для "{{name}}"? Вам нужно будет войти снова.',
   "settings.agentBehaviour.mcpBrowseMarketplace": "Обзор Marketplace",
   "settings.agentBehaviour.mcpEmpty":
     "MCP-серверы не настроены. Добавьте MCP-серверы в kilo.jsonc или попросите агента добавить их.",
@@ -1061,6 +1121,9 @@ export const dict = {
   "settings.agentBehaviour.workflows.model": "модель",
   "settings.agentBehaviour.workflows.variant": "вариант",
   "settings.agentBehaviour.workflows.modelDescription": "Глобальное переопределение модели",
+  "settings.experimental.codeMode.title": "Программные вызовы инструментов",
+  "settings.experimental.codeMode.description":
+    "Направляет вызовы инструментов MCP через изолированную среду выполнения JavaScript с обнаружением инструментов по запросу вместо прямого предоставления каждого инструмента MCP. Экономит контекст при подключении множества инструментов MCP.",
   "settings.sandboxing.enabled.title": "Песочница",
   "settings.sandboxing.enabled.description":
     "Выполнять команды оболочки агента в песочнице на уровне ОС, которая ограничивает запись в каталоги состояния проекта и Kilo",
@@ -1107,6 +1170,30 @@ export const dict = {
     "Предотвращение повторных идентичных действий. Срабатывает, когда один и тот же вызов инструмента повторяется с идентичными входными данными.",
   "settings.checkpoints.enable.title": "Включить снимки",
   "settings.checkpoints.enable.description": "Создавать контрольные точки перед редактированием файлов",
+  "settings.autoCleanup.enable.title": "Включить автоматическую очистку сессий",
+  "settings.autoCleanup.enable.description":
+    "Автоматически удаляет старую историю сессий по истечении заданного числа дней, во всех проектах и во всех клиентах Kilo на этом компьютере, а не только в этом окне. Запущенные сессии и сессии с недавним форком никогда не удаляются. Удаление необратимо.",
+  "settings.autoCleanup.defaultRetention.title": "Хранить сессии (дней)",
+  "settings.autoCleanup.defaultRetention.description":
+    "Как долго хранится история сессий до удаления автоматической очисткой.",
+  "settings.autoCleanup.lastRun.title": "Последняя очистка",
+  "settings.autoCleanup.lastRun.never": "Никогда не запускалась",
+  "settings.autoCleanup.result":
+    "{{date}}: удалено {{deleted}} из {{scanned}} сессий ({{active}} активных пропущено, {{failed}} с ошибкой) за {{seconds}} с",
+  "settings.autoCleanup.starting": "Запуск очистки сессий...",
+  "settings.autoCleanup.error.status": "Статус очистки сессий временно недоступен. Повторная попытка...",
+  "settings.autoCleanup.error.timeout": "Ожидание статуса очистки. Серверная часть отвечает дольше, чем ожидалось.",
+  "settings.autoCleanup.error.run":
+    "Не удалось подтвердить завершение очистки сессий. Проверьте результат последней очистки перед повторной попыткой.",
+  "settings.autoCleanup.progress.scanning": "Сканирование сессий: обработано {{processed}}/{{total}}",
+  "settings.autoCleanup.progress.deleting":
+    "Удаление сессий: обработано {{processed}}/{{total}} (удалено {{deleted}}, с ошибкой {{failed}})",
+  "settings.autoCleanup.runNow": "Запустить очистку сейчас",
+  "settings.autoCleanup.runNow.confirm":
+    "Безвозвратно удалить устаревшие сессии во всех проектах и во всех клиентах Kilo на этом компьютере?",
+  "settings.autoCleanup.stop": "Остановить очистку",
+  "settings.autoCleanup.progress.cancelling": "Остановка очистки сессий...",
+  "settings.autoCleanup.lastRun.cancelled": "прервана",
   "settings.context.autoCompaction.title": "Автоматическое сжатие",
   "settings.context.autoCompaction.description": "Автоматически сжимать контекст до достижения лимита",
   "settings.context.compaction.title": "Сжатие",
@@ -1114,6 +1201,7 @@ export const dict = {
   "settings.context.compactionModel.description":
     "Модель, используемая для автоматического и ручного сжатия. Оставьте поле пустым, чтобы использовать модель чата. Стоимость, скорость и качество сводки зависят от модели.",
   "settings.context.compactionModel.useChatModel": "Использовать модель чата",
+  "settings.context.compactionModel.hint": "Чтобы выбрать модель для сжатия, см. настройки Моделей.",
   "settings.context.compactionLimit.title": "Лимит автоматического сжатия",
   "settings.context.compactionLimit.description":
     "Сжимать, когда контекст достигает этого процента окна модели. Оставьте пустым, чтобы использовать только буфер безопасности.",
@@ -1153,13 +1241,30 @@ export const dict = {
   "settings.commitMessage.language.sync": "Синхронизация с языком пользовательского интерфейса",
   "settings.commitMessage.language.description": "Выберите язык для сообщений, генерированных ИИ:",
 
+  "settings.display.preview.title": "Предпросмотр",
+  "settings.display.presets.title": "Пресеты отображения",
+  "settings.display.presets.description":
+    "Изменяет параметры отображения ниже, а не разрешения. Сохраните, чтобы применить.",
+  "settings.display.preview.model": "Пример модели",
+  "settings.display.preview.prompt": "Удалите лишние пробелы из приветствия и проверьте тесты.",
+  "settings.display.preview.reasoning":
+    "**Проверьте приветствие.** Функция должна выдавать одинаковое приветствие для обычного имени и имени с лишними пробелами с обеих сторон. Я сохраню существующую сигнатуру функции и формат приветствия и изменю только то, как имя попадает в возвращаемую строку.\n\nДля входных данных вида `  Ada  ` нежелательные пробелы относятся к входным данным, а не к шаблону приветствия. Обрезка готового приветствия оставила бы пробелы рядом с именем. Поэтому операцию обрезки нужно выполнить до подстановки имени.\n\nЯ проверю документацию по строкам, чтобы убедиться, что `trim()` удаляет пробельные символы с обоих концов и возвращает новую строку. Она должна оставить исходные входные данные без изменений. Для этого изменения не нужны регулярное выражение, дополнительная зависимость или отдельная вспомогательная функция.\n\nПробелы внутри имени должны сохраниться. Имя вроде `Ada Lovelace` не должно превратиться в `AdaLovelace`, и регистр букв не должен меняться. Пустые входные данные или данные только из пробелов не требуют нового приветствия по умолчанию в рамках этого точечного исправления.\n\nИзменение может остаться в выражении возврата, если использовать `name.trim()` там, где шаблон сейчас использует `name`. Я сохраню окружающую пунктуацию и намеренный пробел после приветствия. Так diff останется небольшим, а поведение будет легко проверить.\n\nНаконец, я выполню `bun test greeting.test.ts` и проверю оба результата. Случай с дополненным именем должен подтвердить, что лишние пробелы удаляются, а случай с обычным именем защищает существующий вывод. Я сообщу об изменении и результатах тестов только после завершения команды.",
+  "settings.display.preview.shell": "Проверьте тест приветствия",
+  "settings.display.preview.shellOutput":
+    "bun test greeting.test.ts\n\n[pass] удаляет лишние пробелы\n[pass] сохраняет обычное имя\n\n2 теста пройдено",
+  "settings.display.preview.query": "Обрезка строк",
+  "settings.display.preview.result": "trim() удаляет пробелы с обоих концов строки.",
+  "settings.display.preview.answer": "Приветствие обновлено для удаления лишних пробелов. Оба теста проходят.",
   "settings.display.username.title": "Имя пользователя",
   "settings.display.username.description": "Пользовательское имя в разговорах",
   "settings.display.fontSize.title": "Размер шрифта",
   "settings.display.fontSize.description": "Настройте размер шрифта webview UI для Kilo независимо от VS Code.",
-  "settings.display.reasoningAutoCollapse.title": "Автоматически сворачивать рассуждение",
-  "settings.display.reasoningAutoCollapse.description":
-    "Сворачивает блоки рассуждения после того, как агент закончит их писать. Оставьте выключенным, чтобы рассуждение оставалось раскрытым, пока вы не свернете его вручную.",
+  "settings.display.reasoningDisplay.title": "Блоки рассуждений",
+  "settings.display.reasoningDisplay.description":
+    "Выберите, как отображаются блоки рассуждений при запуске. Развёрнуты показывает полный текст, Предпросмотр ограничивает его коротким прокручиваемым предпросмотром, а Заголовок показывает только заголовок и индикатор потоковой передачи, пока вы не откроете блок.",
+  "settings.display.reasoningDisplay.expanded": "Развёрнуты",
+  "settings.display.reasoningDisplay.preview": "Предпросмотр",
+  "settings.display.reasoningDisplay.headline": "Заголовок",
   "settings.display.shiftTabCycle.title": "Переключать усилие рассуждения с помощью Shift+Tab",
   "settings.display.shiftTabCycle.description":
     "Нажмите Shift+Tab в поле ввода запроса, чтобы перейти к следующему уровню усилий рассуждения. Отключите эту настройку, чтобы сохранить Shift+Tab для навигации по фокусу с помощью клавиатуры.",
@@ -1179,12 +1284,15 @@ export const dict = {
   "settings.display.mcpTool.expanded": "Развёрнуты",
   "settings.display.mcpTool.collapsed": "Свёрнуты",
 
+  "settings.display.shortcutHints.title": "Показывать подсказки по сочетаниям клавиш",
+  "settings.display.shortcutHints.description":
+    "Показывать в пустом поле запроса сочетание клавиш, подходящее к текущему действию, например как добавить выделенный код или вернуться к запросу.",
   "settings.display.tokenThroughput.title": "Показывать пропускную способность токенов",
   "settings.display.tokenThroughput.description":
     "Показывать скорость генерации текста (tokens/sec) в последнем сообщении ассистента и в заголовке задачи. Показывается по умолчанию; отключите этот параметр, чтобы при необходимости скрыть её.",
   "settings.display.autoApprovalReason.title": "Показывать причину автоодобрения",
   "settings.display.autoApprovalReason.description":
-    "Показывает строку у вызовов инструментов, объясняющую, почему они были одобрены автоматически (совпавшее правило, значение агента по умолчанию, режим YOLO и т. д.).",
+    "Показывает, почему вызов инструмента был одобрен автоматически, например по совпавшему правилу разрешений или значению агента по умолчанию.",
 
   "chat.throughput.tooltip":
     "Average {{speed}} tokens/s for this turn. Includes output and reasoning tokens; excludes tool execution and waiting time.",
@@ -1255,16 +1363,16 @@ export const dict = {
 
   "task.todos.progress": "{{done}}/{{total}} задач выполнено",
   "task.todos.allDone": "{{count}} задач выполнено",
+  "task.todos.title": "Задачи",
+  "task.todos.done": "Всё готово",
   "task.backgroundAgents.running.one": "1 фоновый агент",
   "task.backgroundAgents.running.many": "Фоновых агентов: {{count}}",
-  "task.backgroundAgents.more": "+{{count}} ещё",
   "task.backgroundAgents.open": "Открыть фонового агента",
   "task.backgroundAgents.openAll": "Открыть всех фоновых агентов",
   "task.backgroundAgents.cancel": "Остановить",
   "task.backgroundAgents.continueInBackground": "Продолжить в фоне",
   "task.backgroundAgents.waiting": "Фоновому агенту требуется ваш ввод",
   "task.backgroundAgents.needsInput": "Требуется ввод",
-  "task.backgroundAgents.dismiss": "Скрыть",
   "task.backgroundAgents.clearFinished": "Очистить завершённые",
   "task.backgroundAgents.summary": "Фоновые агенты: {{running}} из {{total}} выполняются",
   "task.backgroundAgents.status.running": "Выполняется",
@@ -1273,6 +1381,10 @@ export const dict = {
   "task.backgroundAgents.status.error": "Ошибка",
   "task.backgroundAgents.untitled": "Фоновый агент",
   "task.backgroundAgents.stopAll": "Остановить всех ({{count}})",
+  "task.backgroundAgents.finished": "Фоновые агенты завершили работу",
+  "task.stop": "Остановить субагента",
+  "task.open.panel": "Открыть субагента на панели",
+  "task.open.tab": "Открыть субагента во вкладке",
   "settings.saveBar.unsavedChanges": "Несохранённые изменения",
   "settings.saveBar.discard": "Отменить",
   "settings.saveBar.save": "Сохранить",
@@ -1300,6 +1412,16 @@ export const dict = {
     "Файлы, изменённые Kilo в текущей сессии, на основе снимков по ходу. Сбрасывается при начале новой сессии.",
   "diffViewer.group.session": "Сессия",
   "diffViewer.group.git": "Git",
+  "diffViewer.comment.postToGithub": "Опубликовать на GitHub",
+  "diffViewer.comment.loadFailed": "Не удалось загрузить изменения запроса на слияние.",
+  "diffViewer.comment.unavailable": "Эта строка недоступна в текущем снимке запроса на слияние.",
+  "diffViewer.comment.prContext": "PR #{{number}}",
+  "diffViewer.comment.openPR": "Открыть PR",
+  "diffViewer.comment.localChanges": "Локальные изменения",
+  "diffViewer.comment.prChanges": "Изменения PR",
+  "diffViewer.comment.sendToKilo": "Отправить в Kilo",
+  "diffViewer.comment.sendToGithub": "Отправить в GitHub #{{number}}",
+  "diffViewer.comment.chooseDestination": "Выбрать назначение",
   "diffViewer.notice.snapshotsDisabled":
     "Снимки отключены для этого репозитория. Пожалуйста, отредактируйте файлы конфигурации, чтобы отображать изменения сессии.",
 
@@ -1321,5 +1443,19 @@ export const dict = {
   "chat.search.close": "Закрыть поиск",
   "chat.search.invalidRegex": "Недопустимое регулярное выражение",
   "chat.search.noResults": "Нет результатов",
+  "settings.experimental.browserAutomation.title": "Встроенный браузер",
+  "settings.experimental.browserAutomation.description":
+    "Показывайте предпросмотр локальных приложений в Agent Manager и предоставляйте инструмент browser_open сеансам Agent Manager.",
+  "settings.experimental.browserAutomation.systemChrome.title": "Использовать системный Chrome",
+  "settings.experimental.browserAutomation.systemChrome.description":
+    "Использовать установленный Google Chrome для встроенного браузера. Отключайте только если совместимый браузер Playwright Chromium уже установлен.",
+  "settings.experimental.browserLinks.title": "Открывать ссылки в",
+  "settings.experimental.browserLinks.description":
+    "Выберите, где открывать веб-ссылки из чатов Kilo. Требуется встроенный браузер.",
+  "settings.experimental.browserLinks.external": "Системный браузер",
+  "settings.experimental.browserLinks.integrated": "Встроенный браузер",
   "chat.search.searchingHistory": "Поиск в более ранних сообщениях…",
+  "browserTab.noSession":
+    "Откройте браузер из сеанса, чтобы просмотреть локальное приложение или публичную HTTPS-страницу.",
+  "browserTab.disabled": "Встроенный браузер отключён. Включите его в Настройках Kilo > Экспериментальные.",
 }

@@ -6,7 +6,7 @@ import { KILO_API_BASE, KILO_OPENROUTER_BASE, MODELS_FETCH_TIMEOUT_MS, PROMPTS, 
 
 export type KiloModelsResult = {
   models: Record<string, any>
-  error?: { kind: "unauthorized" | "network" | "schema" | "http"; status?: number }
+  error?: { kind: "unauthorized" | "network" | "schema" | "http"; status?: number; retryAfter?: number }
 }
 
 /**
@@ -99,10 +99,7 @@ export async function fetchKiloModels(options?: {
 
   for (const model of raw.data) {
     // Skip models that explicitly don't support tools — Kilo requires tool calling
-    // Optimistically assume models with a missing supported_parameters array support tools
-    if (model.supported_parameters && !model.supported_parameters.includes("tools")) {
-      continue
-    }
+    if (!supportsTools(model)) continue
 
     const transformedModel = transformToModelDevFormat(model)
     models[model.id] = transformedModel
@@ -244,7 +241,11 @@ async function fetchRawKiloModels(options?: {
       return fetchRawKiloModels({})
     }
     const kind = response.status === 401 || response.status === 403 ? "unauthorized" : "http"
-    return { error: { kind, status: response.status } }
+    const header = response.headers.get("retry-after")
+    const seconds =
+      header == null ? NaN : /^\d+$/.test(header) ? Number(header) : (Date.parse(header) - Date.now()) / 1000
+    const retryAfter = Number.isFinite(seconds) ? Math.max(0, seconds) : undefined
+    return { error: { kind, status: response.status, ...(retryAfter == null ? {} : { retryAfter }) } }
   }
 
   const json = await response.json().catch(() => null)
@@ -264,6 +265,17 @@ async function fetchRawKiloModels(options?: {
 }
 
 /**
+ * Kilo requires tool calling, so models that explicitly omit "tools" are hidden.
+ * Optimistically assume models with a missing or empty supported_parameters list
+ * support tools (e.g. routers like typesafe/jev-router report an empty list).
+ */
+export function supportsTools(model: { supported_parameters?: string[] }): boolean {
+  const params = model.supported_parameters
+  if (!params || params.length === 0) return true
+  return params.includes("tools")
+}
+
+/**
  * Transform OpenRouter model to ModelsDev.Model format
  */
 function transformToModelDevFormat(model: OpenRouterModel): any {
@@ -279,7 +291,7 @@ function transformToModelDevFormat(model: OpenRouterModel): any {
 
   // Determine capabilities
   const supportsImages = inputModalities.includes("image")
-  const supportsTools = !model.supported_parameters || supportedParameters.includes("tools")
+  const tools = supportsTools(model)
   const supportsReasoning = supportedParameters.includes("reasoning")
   const supportsTemperature = supportedParameters.includes("temperature")
 
@@ -299,7 +311,7 @@ function transformToModelDevFormat(model: OpenRouterModel): any {
     variants: model.opencode?.variants,
     prompt: model.opencode?.prompt,
     ai_sdk_provider: model.opencode?.ai_sdk_provider,
-    tool_call: supportsTools,
+    tool_call: tools,
     isFree: model.isFree,
     mayTrainOnYourPrompts: model.mayTrainOnYourPrompts,
     hasUserByokAvailable: model.hasUserByokAvailable,

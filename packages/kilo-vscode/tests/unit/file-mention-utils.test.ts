@@ -12,6 +12,7 @@ import {
   isCursorAtMentionEnd,
   findMentionRange,
   mentionSettled,
+  segmentMentionText,
   sessionMentionFilename,
   sessionMentionText,
   sessionMentionToken,
@@ -21,6 +22,8 @@ import {
   TERMINAL_RESULT,
   GIT_CHANGES_RESULT,
   WORKTREES_RESULT,
+  MODEL_RESULT,
+  modelReferenceToken,
   filePickerNamed,
   defaultMentionIndex,
 } from "../../webview-ui/src/hooks/file-mention-utils"
@@ -75,17 +78,29 @@ describe("buildMentionResults", () => {
   it("includes special mentions for empty mention query", () => {
     const result = buildMentionResults("", [])
     expect(result[0]).toEqual({
+      type: "model",
+      value: "model",
+      label: "Model",
+      description: "Reference a model for subagents",
+    })
+    expect(result[1]).toEqual({
       type: "terminal",
       value: "terminal",
       label: "Terminal",
       description: "Active terminal output",
     })
-    expect(result[1]).toEqual({
+    expect(result[2]).toEqual({
       type: "git-changes",
       value: "git-changes",
       label: "Git changes",
       description: "Current session/worktree changes",
     })
+  })
+
+  it("offers the model reference entry for its label and aliases", () => {
+    expect(buildMentionResults("model", [])).toContainEqual(MODEL_RESULT)
+    expect(buildMentionResults("models", [])).toContainEqual(MODEL_RESULT)
+    expect(buildMentionResults("llm", [])).toContainEqual(MODEL_RESULT)
   })
 
   it("ranks terminal above a file the query fits less well", () => {
@@ -121,6 +136,7 @@ describe("buildMentionResults", () => {
   it("keeps the menu order for a bare @, entries above the files", () => {
     const result = buildMentionResults("", ["src/index.ts"])
     expect(result).toEqual([
+      MODEL_RESULT,
       TERMINAL_RESULT,
       GIT_CHANGES_RESULT,
       PAST_CHATS_RESULT,
@@ -133,6 +149,34 @@ describe("buildMentionResults", () => {
     expect(buildMentionResults("src", ["src/index.ts"])).toContainEqual(FILE_PICKER_RESULT)
     expect(buildMentionResults("zzz", [])).toEqual([FILE_PICKER_RESULT])
     expect(buildMentionResults("browse files", [])).toEqual([FILE_PICKER_RESULT])
+  })
+
+  it("ranks a file in another workspace folder on its path within that folder", () => {
+    // The absolute path is what gets inserted, but "nested" occurs only in the
+    // folder's own prefix, never in the file's path within it. Scoring the
+    // absolute form made it a match and lifted it above a file the query misses
+    // just as much, so the order here is what distinguishes the two.
+    const result = buildMentionResults("nested", [
+      { path: "src/aaa.ts", type: "file", root: "repo" },
+      { path: "/deep-nested-name/src/zzz.ts", type: "file", root: "deep-nested-name", relative: "src/zzz.ts" },
+    ])
+    expect(result.filter((item) => item.type === "file").map((item) => item.value)).toEqual([
+      "src/aaa.ts",
+      "/deep-nested-name/src/zzz.ts",
+    ])
+  })
+
+  it("keeps the owning folder ahead of an equally good match elsewhere", () => {
+    // Equal scores must preserve the order the host sent, which is the session's
+    // own project first.
+    const result = buildMentionResults("notes.md", [
+      { path: "notes.md", type: "file", root: "repo" },
+      { path: "/other/notes.md", type: "file", root: "other", relative: "notes.md" },
+    ])
+    expect(result.filter((item) => item.type === "file").map((item) => item.value)).toEqual([
+      "notes.md",
+      "/other/notes.md",
+    ])
   })
 
   it("keeps browse files last among the entries of a bare @", () => {
@@ -420,6 +464,16 @@ describe("buildFileAttachments", () => {
   it("does not attach a UNC path outside the workspace", () => {
     const paths = new Set(["\\\\server\\share\\file.ts"])
     const result = buildFileAttachments("@\\\\server\\share\\file.ts", paths, "/workspace")
+    expect(result).toEqual([])
+  })
+
+  it("does not attach a file from another workspace folder", () => {
+    // Multi-root file search offers folders added via "Add Folder to Workspace..."
+    // as absolute mentions. They must stay mention-only: attaching would read the
+    // file on the backend through a path that bypasses external_directory
+    // approval. The agent has to Read them instead.
+    const paths = new Set(["/other-folder/src/app.ts"])
+    const result = buildFileAttachments("@/other-folder/src/app.ts", paths, "/workspace")
     expect(result).toEqual([])
   })
 
@@ -743,7 +797,7 @@ describe("session mentions", () => {
   describe("buildMentionResults", () => {
     it("offers the past-chats picker alongside the other special mentions", () => {
       const result = buildMentionResults("", [])
-      expect(result[0]).toEqual(TERMINAL_RESULT)
+      expect(result[0]).toEqual(MODEL_RESULT)
       expect(result).toContainEqual(PAST_CHATS_RESULT)
       expect(result).toContainEqual(FILE_PICKER_RESULT)
     })
@@ -799,53 +853,47 @@ describe("session mentions", () => {
   describe("mentionSettled", () => {
     const tokens = new Set(["my file.txt", "src/a.ts"])
 
-    it("reports the inserted mention followed by prose", () => {
-      expect(mentionSettled("my file.txt and then", "my file.txt", tokens)).toBe(true)
+    it("reports a mention followed by prose", () => {
+      expect(mentionSettled("my file.txt and then", tokens)).toBe(true)
     })
 
-    it("reports the inserted mention followed by a single space", () => {
-      expect(mentionSettled("src/a.ts ", "src/a.ts", tokens)).toBe(true)
+    it("reports a mention followed by a single space", () => {
+      expect(mentionSettled("src/a.ts ", tokens)).toBe(true)
     })
 
-    it("treats a prefix of the inserted mention as an edit in progress", () => {
-      expect(mentionSettled("my file", "my file.txt", tokens)).toBe(false)
+    it("treats a prefix of a mention as an edit in progress", () => {
+      expect(mentionSettled("my file", tokens)).toBe(false)
     })
 
-    it("treats the exact inserted mention as an edit in progress", () => {
-      expect(mentionSettled("my file.txt", "my file.txt", tokens)).toBe(false)
+    it("treats the exact mention as an edit in progress", () => {
+      expect(mentionSettled("my file.txt", tokens)).toBe(false)
     })
 
-    it("does not report a longer path that merely starts like the inserted one", () => {
-      expect(mentionSettled("src/a.tsx", "src/a.ts", tokens)).toBe(false)
+    it("does not report a longer path that merely starts like a mention", () => {
+      expect(mentionSettled("src/a.tsx", tokens)).toBe(false)
     })
 
-    it("reports nothing when no mention was inserted at this @", () => {
-      expect(mentionSettled("my file.txt and then", undefined, tokens)).toBe(false)
+    it("reports nothing when no token answers to this @", () => {
+      expect(mentionSettled("notes.md and then", tokens)).toBe(false)
     })
 
-    it("does not settle on a short known path that only prefixes a new query", () => {
-      // "my" lingers in the sticky known set from an earlier mention; typing a
-      // longer, unrelated path that starts with it must keep searching.
-      expect(mentionSettled("my report.txt", undefined, new Set(["my"]))).toBe(false)
-    })
-
-    it("keeps searching while the query still grows toward a longer known path", () => {
+    it("keeps searching while the query still grows toward a longer token", () => {
       const known = new Set(["my", "my report.txt"])
-      expect(mentionSettled("my report", "my", known)).toBe(false)
+      expect(mentionSettled("my report", known)).toBe(false)
     })
 
-    it("settles once the query passes every known path it could complete", () => {
+    it("settles once the query passes every token it could complete", () => {
       const known = new Set(["my", "my report.txt"])
-      expect(mentionSettled("my report.txt and then", "my", known)).toBe(true)
+      expect(mentionSettled("my report.txt and then", known)).toBe(true)
     })
 
-    it("reports inserted builtin mentions", () => {
-      expect(mentionSettled("terminal what failed", TERMINAL_MENTION, new Set())).toBe(true)
-      expect(mentionSettled("git-changes review", GIT_CHANGES_MENTION, new Set())).toBe(true)
+    it("reports builtin mentions", () => {
+      expect(mentionSettled("terminal what failed", new Set([TERMINAL_MENTION]))).toBe(true)
+      expect(mentionSettled("git-changes review", new Set([GIT_CHANGES_MENTION]))).toBe(true)
     })
 
     it("reports nothing for an unrelated query", () => {
-      expect(mentionSettled("some other thing", "my file.txt", tokens)).toBe(false)
+      expect(mentionSettled("some other thing", tokens)).toBe(false)
     })
   })
 
@@ -897,5 +945,61 @@ describe("session mentions", () => {
       expect(attachments.map((item) => item.url)).toEqual(["session:ses_a", "session:ses_b"])
       expect(attachments.map((item) => item.source?.text.value)).toEqual(["@Fix auth bug", "@Fix auth bug (2)"])
     })
+  })
+})
+
+describe("modelReferenceToken", () => {
+  it("builds the provider/model inline token", () => {
+    expect(modelReferenceToken("anthropic", "claude-sonnet-4")).toBe("anthropic/claude-sonnet-4")
+    expect(modelReferenceToken("openrouter", "anthropic/claude-sonnet-4")).toBe("openrouter/anthropic/claude-sonnet-4")
+  })
+
+  it("is rediscovered by syncMentionedPaths as a mention token", () => {
+    const token = modelReferenceToken("anthropic", "claude-sonnet-4")
+    const kept = syncMentionedPaths(new Set([token]), `use @${token} for the subagent`)
+    expect(kept.has(token)).toBe(true)
+  })
+})
+
+describe("segmentMentionText", () => {
+  it("marks inserted mention tokens and keeps plain text as-is", () => {
+    const tokens = new Set(["kilo/kilo-auto/free", "Fix auth bug", "/repo/.kilo/worktrees/feature"])
+    const segments = segmentMentionText(
+      "see @Fix auth bug then @/repo/.kilo/worktrees/feature use @kilo/kilo-auto/free",
+      tokens,
+    )
+    expect(segments.map((segment) => [segment.mention, segment.text])).toEqual([
+      [false, "see "],
+      [true, "@Fix auth bug"],
+      [false, " then "],
+      [true, "@/repo/.kilo/worktrees/feature"],
+      [false, " use "],
+      [true, "@kilo/kilo-auto/free"],
+    ])
+  })
+
+  it("keeps multiple spaces and newlines intact", () => {
+    const segments = segmentMentionText("a  b\n @Fix auth bug", new Set(["Fix auth bug"]))
+    expect(segments.map((segment) => segment.text).join("")).toBe("a  b\n @Fix auth bug")
+    expect(segments.filter((segment) => segment.mention).map((segment) => segment.text)).toEqual(["@Fix auth bug"])
+  })
+
+  it("matches the longest token first", () => {
+    const segments = segmentMentionText("@Fix auth bug", new Set(["Fix", "Fix auth bug"]))
+    expect(segments.filter((segment) => segment.mention).map((segment) => segment.text)).toEqual(["@Fix auth bug"])
+  })
+
+  it("matches tokens that contain regex metacharacters literally", () => {
+    const tokens = new Set(["pkg.name(v2)+beta", "C:\\repo\\wt"])
+    const segments = segmentMentionText("@pkg.name(v2)+beta and @C:\\repo\\wt", tokens)
+    expect(segments.filter((segment) => segment.mention).map((segment) => segment.text)).toEqual([
+      "@pkg.name(v2)+beta",
+      "@C:\\repo\\wt",
+    ])
+  })
+
+  it("returns one plain segment when there are no tokens or no text", () => {
+    expect(segmentMentionText("plain", new Set())).toEqual([{ text: "plain", mention: false }])
+    expect(segmentMentionText("", new Set(["model"]))).toEqual([])
   })
 })

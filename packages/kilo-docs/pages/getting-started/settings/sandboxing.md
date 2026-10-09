@@ -157,6 +157,26 @@ For HTTP, the proxy checks the requested DNS host and port. For HTTPS `CONNECT`,
 A configured destination is an egress route, not tenant, organization, repository, HTTP-origin, path, action, content, or data-loss-prevention isolation. The allowed service can receive, route, or store readable data and inherited credentials under its own policies. After an HTTPS tunnel passes the SNI check, Kilo cannot inspect encrypted requests, and the service may honor an alternate HTTP `Host` value within that connection. Allowing GitHub therefore grants the operations permitted by the active token, not access to only one organization or repository. HTTP and HTTPS are supported, including HTTPS Git remotes. SSH, arbitrary TCP, UDP, QUIC, SOCKS, CIDR ranges, and wildcard hosts remain blocked.
 {% /callout %}
 
+## Leaving the sandbox
+
+Some commands must write outside the sandbox boundary. Kilo then shows an escalation prompt and waits for an explicit approval before it runs the command.
+
+### Git and linked worktrees
+
+`.git` is always read-only inside the sandbox. A mutating git command, such as `git commit`, `git checkout`, or `git worktree add`, must write to `.git` metadata. In a linked worktree, the `.git` file points into the parent repository's `.git` directory. That directory is outside the worktree, so the write is outside the sandbox write boundary. Read-only git commands, such as `git status` or `git log`, do not trigger the prompt.
+
+| Detail | Behavior |
+|---|---|
+| Trigger | A mutating git command while the sandbox is on |
+| Scope | The whole command and its child processes run without filesystem or network restrictions |
+| Duration | One approval covers one command only |
+| Bash allow rules | Do not approve the escalation prompt |
+| Auto-approve | Does not approve the escalation prompt |
+
+Approving the prompt runs the entire shell command outside the sandbox. Filesystem writes and network access are unrestricted for that command and its child processes. The approval is one-shot and applies to that command only. Bash allow rules and auto-approve never cover the escalation prompt, so Kilo always asks for an explicit reply.
+
+GitHub access is a network question, not an escalation question. The GitHub CLI (`gh`) and HTTPS Git need `github.com:443` and `api.github.com:443` in `sandbox.allowed_hosts`. The escalation prompt does not grant network access by itself. See [Network restrictions](#network-restrictions).
+
 ## Session behavior
 
 The config setting supplies the initial default for new sessions that do not have a saved preference. Use the lock button in the VS Code prompt or `/sandbox` in the CLI to change the current session. Your latest choice is saved as the default for future sessions in that project, takes precedence over the config default, and persists across restarts.

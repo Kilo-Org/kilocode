@@ -32,7 +32,7 @@ Pick where you want to run Kilo.
 
 <br>
 
-Install the [Kilo Code extension](vscode:extension/kilocode.kilo-code) directly, or grab it from the [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=kilocode.Kilo-Code). Create an account and you'll have access to 500+ models including GPT-5.5, Claude Opus 4.7, Claude Sonnet 4.6, and Gemini 3.1 Pro Preview, all at provider pricing.
+Install the [Kilo Code extension](vscode:extension/kilocode.kilo-code) directly, or grab it from the [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=kilocode.Kilo-Code). Create an account and you'll have access to 500+ models including GPT-6 Astra, Claude Fable 5.1, Gemini 3.8 Flash, Grok 4.6, and DeepSeek V4.1 Flash, all at provider pricing.
 
 </details>
 
@@ -93,15 +93,6 @@ Set up automated AI code reviews on your pull requests at [app.kilo.ai/code-revi
 </details>
 
 <details>
-<summary><strong>KiloClaw</strong></summary>
-
-<br>
-
-Spin up your always-on AI agent at [app.kilo.ai/claw](https://app.kilo.ai/claw).
-
-</details>
-
-<details>
 <summary>Install the CLI from GitHub Releases (binaries)</summary>
 
 Download the latest binary from the [Releases page](https://github.com/Kilo-Org/kilocode/releases).
@@ -126,7 +117,6 @@ Kilo ships with specialized agents you switch between depending on the task. You
 - **Plan** - Designs architecture and writes implementation plans before any code gets written.
 - **Ask** - Answers questions about your codebase without touching any files.
 - **Debug** - Troubleshoots and traces issues.
-- **Review** - Reviews your changes and surfaces issues across performance, security, style, and test coverage.
 
 Learn more about [agents and custom agents](https://kilo.ai/docs/code-with-ai/agents/using-agents).
 
@@ -136,7 +126,7 @@ Learn more about [agents and custom agents](https://kilo.ai/docs/code-with-ai/ag
 - **Inline autocomplete** with ghost-text suggestions and tab to accept.
 - **Self-checking** so the agent reviews and corrects its own work.
 - **Terminal and browser control** to run commands and automate the web.
-- **MCP marketplace** to find and wire up MCP servers that extend what the agent can do.
+- **Kilo Marketplace** to install agents, skills, MCP servers, and plugins that extend what the agent can do.
 - **500+ models** with mid-task switching, so you can match latency, cost, and reasoning to the job.
 
 ### Autonomous Mode (CI/CD)
@@ -147,7 +137,7 @@ Run `kilo run` with `--auto` for fully autonomous operation with no prompts, bui
 kilo run --auto "run tests and fix any failures"
 ```
 
-`--auto` disables all permission prompts and lets the agent execute any action without confirmation. Only use it in trusted environments.
+`--auto` auto-approves permission prompts unless a rule explicitly denies the action. Only use it in trusted environments.
 
 ### Documentation
 

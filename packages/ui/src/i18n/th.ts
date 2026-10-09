@@ -73,7 +73,7 @@ export const dict = {
 
   "dialog.usageExceeded.freeTier.title": "ถึงขีดจำกัดฟรีแล้ว",
   "dialog.usageExceeded.freeTier.description":
-    "สมัครสมาชิก Kilo Go เพื่อการเข้าถึงโมเดลโอเพนซอร์สที่ดีที่สุดอย่างเชื่อถือได้ เริ่มต้นที่ $5/เดือน", // kilocode_change
+    "สมัครสมาชิก Kilo Go ในราคา $10/เดือน เพื่อการเข้าถึงโมเดลโอเพนซอร์สที่ดีที่สุดอย่างเชื่อถือได้", // kilocode_change
   "dialog.usageExceeded.freeTier.actionLabel": "สมัครสมาชิก",
   "dialog.usageExceeded.accountRateLimit.title": "ถึงขีดจำกัดของ Go แล้ว",
   "dialog.usageExceeded.accountRateLimit.description":
@@ -222,6 +222,10 @@ export const dict = {
   "ui.mermaid.copySvg": "คัดลอก SVG",
   "ui.mermaid.download": "ดาวน์โหลด",
   "ui.mermaid.downloadPng": "ดาวน์โหลด PNG",
+  "ui.mermaid.zoom": "ซูม",
+  "ui.mermaid.zoomIn": "ซูมเข้า",
+  "ui.mermaid.zoomOut": "ซูมออก",
+  "ui.mermaid.zoomReset": "รีเซ็ตการซูม",
   "ui.mermaid.downloadSvg": "ดาวน์โหลด SVG",
   "ui.mermaid.errorDefault": "ไม่สามารถเรนเดอร์ไดอะแกรม Mermaid ได้",
   "ui.mermaid.errorEmpty": "Mermaid เรนเดอร์ไดอะแกรมว่าง",

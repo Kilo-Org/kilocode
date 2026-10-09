@@ -1,8 +1,23 @@
 import { followValue } from "motion"
-import type { MotionValue } from "motion"
+import type { AnimationPlaybackControls, MotionValue } from "motion"
 
 export { animate, springValue } from "motion"
 export type { AnimationPlaybackControls } from "motion"
+
+/**
+ * Settle an element animation whose element is going away.
+ *
+ * `stop()` cancels the Web Animation but leaves Motion's `MotionValue.animation`
+ * pointing at it until the animation *finishes*, which a cancelled animation
+ * never does. That reference cycles through the WAAPI Animation, its target
+ * element and Motion's per-element visual element store, and the GC does not
+ * collect the cycle. Every fade interrupted by a session switch then pins its
+ * transcript row in memory. `complete()` finishes the animation instead, so
+ * Motion resolves its promise and drops the reference.
+ */
+export function settle(anim: AnimationPlaybackControls | undefined) {
+  anim?.complete()
+}
 
 /**
  * Like `springValue` but preserves getters on the config object.

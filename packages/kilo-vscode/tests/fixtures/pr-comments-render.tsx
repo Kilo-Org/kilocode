@@ -7,6 +7,7 @@ const reactions: WebviewMessage[] = []
 const replies: Record<string, unknown>[] = []
 const mutations: Record<string, unknown>[] = []
 const settings: Record<string, unknown>[] = []
+const copied: WebviewMessage[] = []
 const window = new Window({ url: "http://localhost" })
 Object.defineProperty(window, "origin", { value: window.location.origin })
 class CSSStyleSheetStub {
@@ -62,6 +63,7 @@ Object.assign(globalThis, {
       if ((message as { type: string }).type === "agentManager.replyComment") replies.push(message)
       if ((message as { type: string }).type === "agentManager.mutateComment") mutations.push(message)
       if (message.type === "updateSetting") settings.push(message)
+      if (message.type === "agentManager.copyToClipboard") copied.push(message)
     },
     getState: () => undefined,
     setState: () => undefined,
@@ -126,6 +128,7 @@ const [comments, setComments] = createSignal({
       body: "comment body survives Pierre rendering",
       file: "packages/kilo-ui/src/components/file.tsx",
       line: 14,
+      url: "https://github.com/example/repo/pull/42#discussion_r1",
       resolved: false,
       outdated: false,
       createdAt: Date.now() - 5 * 60 * 1000,
@@ -201,6 +204,19 @@ const reactionCount = (button: HTMLButtonElement) => button.querySelector(".am-p
 const pickerTrigger = () => root.querySelector('.am-pr-reactions [data-component="icon-button"]')
 assert.equal(reactionCount(addReaction!), "2")
 assert.ok(pickerTrigger(), "reaction picker trigger is rendered")
+
+// The open card copies its GitHub permalink next to the markdown copy.
+const openCard = root.querySelector('[data-thread-id="PRRT_open"]')
+assert.ok(openCard, "open thread card is rendered")
+const copyLink = openCard.querySelector<HTMLButtonElement>('button[aria-label="Copy comment link"]')
+assert.ok(copyLink, "copy link control is rendered")
+copyLink.click()
+await window.happyDOM.waitUntilComplete()
+assert.deepEqual(copied.at(-1), {
+  type: "agentManager.copyToClipboard",
+  text: "https://github.com/example/repo/pull/42#discussion_r1",
+})
+
 addReaction!.click()
 await window.happyDOM.waitUntilComplete()
 assert.deepEqual(reactions[0], {

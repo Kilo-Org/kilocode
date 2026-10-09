@@ -8,15 +8,15 @@ const PACKAGE = JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8")) as 
 }
 
 describe("Agent Manager settings navigation", () => {
-  const actions = readFileSync(join(ROOT, "webview-ui", "agent-manager", "ProjectActions.tsx"), "utf8")
-  const project = readFileSync(join(ROOT, "webview-ui", "agent-manager", "ProjectSidebarBody.tsx"), "utf8")
+  const actions = readFileSync(join(ROOT, "webview-ui", "agent-manager", "ProjectRowActions.tsx"), "utf8")
+  const list = readFileSync(join(ROOT, "webview-ui", "agent-manager", "ProjectList.tsx"), "utf8")
   const settings = readFileSync(join(ROOT, "webview-ui", "src", "components", "settings", "Settings.tsx"), "utf8")
   const branchDialog = readFileSync(join(ROOT, "webview-ui", "agent-manager", "ProjectBranchDialog.tsx"), "utf8")
 
   it("opens the project settings tab with the owning project id", () => {
     expect(actions).toContain("onClick={props.onSettings}")
-    expect(project).toContain('tab: "agentManager"')
-    expect(project).toContain("projectId: props.project.id")
+    expect(list).toContain('tab: "agentManager"')
+    expect(list).toContain("projectId")
   })
 
   it("renders a project selector and project-scoped settings controls", () => {
@@ -61,6 +61,11 @@ describe("Agent Manager settings navigation", () => {
 })
 
 describe("Agent Manager application settings", () => {
+  it("does not register a multi-project opt-in setting", async () => {
+    const manifest = await Bun.file(join(ROOT, "package.json")).json()
+    expect(manifest.contributes.configuration.properties).not.toHaveProperty("kilo-code.new.experimental.multiProject")
+  })
+
   it.each([
     [undefined, undefined, true, ""],
     [false, "team/", false, "team/"],
@@ -89,7 +94,7 @@ describe("Agent Manager application settings", () => {
       expect(provider.configSettings()["agentManager.autoBranchNaming"]).toBe(expected)
       expect(provider.configSettings()["agentManager.branchPrefix"]).toBe(text)
       expect(provider.configSettings()["agentManager.pushFixes"]).toBe(true)
-      expect(provider.configSettings().multiProject).toBe(false)
+      expect(provider.configSettings()).not.toHaveProperty("multiProject")
       await provider.handleUpdateSetting("agentManager.autoBranchNaming", !expected)
       await provider.handleUpdateSetting("agentManager.branchPrefix", "")
       expect(writes).toEqual([

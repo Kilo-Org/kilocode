@@ -76,7 +76,9 @@ export const RevertBanner: Component = () => {
               {language.t(
                 workspace() === "snapshots-disabled"
                   ? "revert.banner.workspace.snapshotsDisabled"
-                  : "revert.banner.workspace.unavailable",
+                  : workspace() === "not-a-git-repo"
+                    ? "revert.banner.workspace.notAGitRepo"
+                    : "revert.banner.workspace.unavailable",
               )}
             </span>
             <Show when={workspace() === "snapshots-disabled"}>

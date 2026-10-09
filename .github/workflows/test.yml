@@ -149,6 +149,7 @@ jobs:
       # kilocode_change start
       - name: Setup Linux sandbox helper
         if: matrix.settings.run && runner.os == 'Linux'
+        timeout-minutes: 5
         uses: ./.github/actions/setup-linux-sandbox
       # kilocode_change end
       - name: Configure git identity
@@ -282,6 +283,7 @@ jobs:
         uses: ./.github/actions/setup-bun
 
       - name: Setup Linux sandbox helper
+        timeout-minutes: 5
         uses: ./.github/actions/setup-linux-sandbox
 
       - name: Configure git identity

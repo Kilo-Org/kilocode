@@ -1,7 +1,13 @@
 import type { SessionStatus } from "../../types/messages"
+import type { Timing } from "../../context/session-timing"
 
-export function tracksElapsed(status: SessionStatus, submitting: boolean, since: number | undefined): since is number {
-  return since !== undefined && (status !== "idle" || submitting)
+export function tracksElapsed(
+  status: SessionStatus,
+  submitting: boolean,
+  timing: Timing | undefined,
+  goal = false,
+): timing is Timing {
+  return timing !== undefined && (status !== "idle" || submitting || goal)
 }
 
 /**
@@ -13,7 +19,7 @@ export function tracksElapsed(status: SessionStatus, submitting: boolean, since:
  * unconditionally, so the two states can never both claim the row (or both
  * stay empty) and change the dock's height.
  */
-export function showsWorking(status: SessionStatus, submitting: boolean, blocked: boolean): boolean {
+export function showsWorking(status: SessionStatus, submitting: boolean, blocked: boolean, goal = false): boolean {
   if (blocked) return false
-  return submitting || status !== "idle"
+  return submitting || status !== "idle" || goal
 }

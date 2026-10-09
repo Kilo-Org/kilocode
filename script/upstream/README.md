@@ -22,7 +22,7 @@ bun run merge.ts --version v1.1.49
 bun run merge.ts --version v1.1.49 --dry-run
 
 # Use a different base branch (e.g., for incremental merges)
-bun run merge.ts --version v1.1.50 --base-branch catrielmuller/kilo-opencode-v1.1.44
+bun run merge.ts --version v1.1.50 --base-branch username/kilo-opencode-v1.1.44
 ```
 
 ## Scripts
@@ -336,13 +336,13 @@ When working on multiple upstream versions, you can create a chain of merge PRs:
 # First merge: v1.1.44 into main
 bun run merge.ts --version v1.1.44
 
-# Create PR: catrielmuller/kilo-opencode-v1.1.44 -> main
+# Create PR: username/kilo-opencode-v1.1.44 -> main
 
 # Second merge: v1.1.50 based on the previous PR (without waiting for approval)
-bun run merge.ts --version v1.1.50 --base-branch catrielmuller/kilo-opencode-v1.1.44
+bun run merge.ts --version v1.1.50 --base-branch username/kilo-opencode-v1.1.44
 
-# Create PR: catrielmuller/kilo-opencode-v1.1.50 -> catrielmuller/kilo-opencode-v1.1.44
-# OR: catrielmuller/kilo-opencode-v1.1.50 -> main (once first PR is merged)
+# Create PR: username/kilo-opencode-v1.1.50 -> username/kilo-opencode-v1.1.44
+# OR: username/kilo-opencode-v1.1.50 -> main (once first PR is merged)
 ```
 
 ### Benefits
@@ -356,13 +356,13 @@ bun run merge.ts --version v1.1.50 --base-branch catrielmuller/kilo-opencode-v1.
 
 ```bash
 # 1. Analyze next version from your WIP branch
-bun run analyze.ts --version v1.1.50 --base-branch catrielmuller/kilo-opencode-v1.1.44
+bun run analyze.ts --version v1.1.50 --base-branch username/kilo-opencode-v1.1.44
 
 # 2. Run the merge
-bun run merge.ts --version v1.1.50 --base-branch catrielmuller/kilo-opencode-v1.1.44
+bun run merge.ts --version v1.1.50 --base-branch username/kilo-opencode-v1.1.44
 
-# 3. Create PR from catrielmuller/kilo-opencode-v1.1.50
-#    - Target: catrielmuller/kilo-opencode-v1.1.44 (if first PR not merged yet)
+# 3. Create PR from username/kilo-opencode-v1.1.50
+#    - Target: username/kilo-opencode-v1.1.44 (if first PR not merged yet)
 #    - Target: main (if first PR is already merged)
 ```
 

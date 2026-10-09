@@ -444,4 +444,57 @@ describe("classifyWorktreeError", () => {
     expect(classifyWorktreeError("Failed to create worktree: fatal: unknown error")).toBeUndefined()
     expect(classifyWorktreeError("something went wrong")).toBeUndefined()
   })
+
+  // A failed spawn reports ENOENT whether the binary or the working directory is missing, so
+  // "install git" must never be inferred from the message alone.
+  it("blames the missing directory, not git, when the cwd is gone", () => {
+    expect(classifyWorktreeError("Error: spawn git ENOENT", { cwd: "/gone", exists: () => false })).toBe(
+      "worktree_missing",
+    )
+  })
+
+  it("still blames git when the cwd exists", () => {
+    expect(classifyWorktreeError("Error: spawn git ENOENT", { cwd: "/repo", exists: () => true })).toBe("git_not_found")
+  })
+
+  it("blames git when the version probe itself failed", () => {
+    expect(
+      classifyWorktreeError("some unrelated failure", { cwd: "/repo", exists: () => true, probeFailed: true }),
+    ).toBe("git_not_found")
+  })
+
+  it("separates a broken worktree from a non-repo folder", () => {
+    expect(
+      classifyWorktreeError("fatal: not a git repository: /repo/.git/worktrees/hidden-sparrow", {
+        cwd: "/repo/.kilo/worktrees/hidden-sparrow",
+        exists: () => true,
+      }),
+    ).toBe("worktree_unregistered")
+    expect(classifyWorktreeError("fatal: not a git repository", { cwd: "/repo", exists: () => true })).toBe(
+      "not_git_repo",
+    )
+  })
+
+  it("reports a timeout as a timeout", () => {
+    expect(classifyWorktreeError("Git command timed out after 15000ms", { cwd: "/repo", exists: () => true })).toBe(
+      "git_timeout",
+    )
+  })
+
+  // A watchdog kill from execFile carries no "timed out" text — only killed/signal — so the message
+  // alone would classify it as an unexplained failure and show the raw "Command failed" string.
+  it("reports a killed process as a timeout", () => {
+    const err = Object.assign(new Error("Command failed: git --version"), { killed: true, signal: "SIGTERM" })
+
+    expect(classifyWorktreeError(err.message, { cwd: "/repo", exists: () => true, err })).toBe("git_timeout")
+  })
+
+  // A killed shape must win over probeFailed: a wedged probe is not a missing binary.
+  it("prefers a timeout over a failed probe", () => {
+    const err = Object.assign(new Error("Command failed: git --version"), { killed: true, signal: "SIGKILL" })
+
+    expect(classifyWorktreeError(err.message, { cwd: "/repo", exists: () => true, probeFailed: true, err })).toBe(
+      "git_timeout",
+    )
+  })
 })

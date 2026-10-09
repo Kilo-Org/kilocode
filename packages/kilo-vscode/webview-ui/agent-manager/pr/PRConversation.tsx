@@ -146,6 +146,13 @@ function PRConversationCard(props: CardProps) {
           </Show>
           <span class="am-pr-comment-actions-gap" />
           <CopyButton text={prConversationMarkdown(props.comment)} label={t("agentManager.pr.comment.copy")} />
+          <Show when={githubUrl(props.comment.url)}>
+            {(url) => (
+              <Tooltip value={t("agentManager.pr.comment.copyLink")} placement="top">
+                <CopyButton text={url()} icon="link" label={t("agentManager.pr.comment.copyLink")} />
+              </Tooltip>
+            )}
+          </Show>
           <Show when={props.onOpenUrl}>
             <Tooltip value={t("agentManager.pr.comment.openOnGitHub")} placement="top">
               <IconButton

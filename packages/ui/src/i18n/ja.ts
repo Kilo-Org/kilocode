@@ -72,7 +72,7 @@ export const dict = {
 
   "dialog.usageExceeded.freeTier.title": "無料制限に達しました",
   "dialog.usageExceeded.freeTier.description":
-    "Kilo Go にサブスクライブして、最高のオープンソースモデルに安定してアクセスできます。月額 $5 から。", // kilocode_change
+    "Kilo Go にサブスクライブして、最高のオープンソースモデルに安定してアクセスできます。月額 $10。", // kilocode_change
   "dialog.usageExceeded.freeTier.actionLabel": "サブスクライブ",
   "dialog.usageExceeded.accountRateLimit.title": "Go の制限に達しました",
   "dialog.usageExceeded.accountRateLimit.description":
@@ -221,6 +221,10 @@ export const dict = {
   "ui.mermaid.copySvg": "SVG をコピー",
   "ui.mermaid.download": "ダウンロード",
   "ui.mermaid.downloadPng": "PNG をダウンロード",
+  "ui.mermaid.zoom": "ズーム",
+  "ui.mermaid.zoomIn": "拡大",
+  "ui.mermaid.zoomOut": "縮小",
+  "ui.mermaid.zoomReset": "ズームをリセット",
   "ui.mermaid.downloadSvg": "SVG をダウンロード",
   "ui.mermaid.errorDefault": "Mermaid 図をレンダリングできません。",
   "ui.mermaid.errorEmpty": "Mermaid が空の図をレンダリングしました。",

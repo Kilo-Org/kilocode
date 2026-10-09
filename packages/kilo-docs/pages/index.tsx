@@ -372,6 +372,20 @@ export default function HomePage() {
               </Link>
             </div>
           </div>
+          <div className="footer-item">
+            <span className="footer-icon">🐍</span>
+            <div>
+              <strong>Kilo has been acquired by Anaconda</strong>
+              <Link
+                href="https://www.anaconda.com/blog/anaconda-acquires-kilo-code"
+                className="footer-link"
+                target="_blank"
+                rel="noreferrer"
+              >
+                Read the announcement
+              </Link>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -790,7 +804,7 @@ export default function HomePage() {
 
         .footer-grid {
           display: grid;
-          grid-template-columns: repeat(3, 1fr);
+          grid-template-columns: repeat(4, 1fr);
           gap: 2rem;
         }
 

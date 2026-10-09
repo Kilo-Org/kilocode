@@ -28,7 +28,7 @@ const it = testEffect(
   ),
 )
 
-const config = { experimental: { shared_agent_board: true }, formatter: false as const, lsp: false as const }
+const config = { shared_agent_board: true, formatter: false as const, lsp: false as const }
 const decode = Schema.decodeUnknownSync(BoardStore.SessionBoard)
 
 afterEach(async () => {

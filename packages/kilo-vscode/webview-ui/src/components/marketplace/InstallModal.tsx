@@ -50,15 +50,11 @@ export const InstallModal = (props: Props) => {
   const [result, setResult] = createSignal<{
     success: boolean
     error?: string
-    scope: "project" | "global"
-    path: string
-    hasParameters: boolean
-    method?: string
+    needsAuth?: boolean
   } | null>(null)
   const [params, setParams] = createSignal<Record<string, string>>({})
   const [pending, setPending] = createSignal<{
     scope: "project" | "global"
-    path: string
     hasParameters: boolean
     method?: string
   } | null>(null)
@@ -67,10 +63,12 @@ export const InstallModal = (props: Props) => {
     const base = target === "project" ? ".kilo" : "~/.config/kilo"
     if (props.item.type === "mcp") return `${base}/kilo.json`
     if (props.item.type === "agent") return `${base}/agents/${props.item.id}.md`
+    if (props.item.type === "plugin") return `${base}/`
     if (target === "project") return `.kilo/skills/${props.item.id}/`
     return `~/.kilo/skills/${props.item.id}/`
   }
   const about = () => t(`marketplace.install.about.${props.item.type}`)
+  const skills = () => (props.item.type === "mcp" ? (props.item.skills ?? []) : [])
   const scopeDescription = () => t(`marketplace.install.scope.${scope().value}.description`)
   const openDocs = (url: string) => vscode.postMessage({ type: "openExternal", url })
 
@@ -112,7 +110,11 @@ export const InstallModal = (props: Props) => {
         const request = pending()
         setInstalling(false)
         if (!request) return
-        setResult({ success: msg.success, error: msg.error, ...request })
+        setResult({
+          success: msg.success,
+          error: msg.error,
+          needsAuth: msg.needsAuth,
+        })
         props.onInstallResult(msg.success, request.scope, {
           hasParameters: request.hasParameters,
           installationMethodName: request.method,
@@ -133,7 +135,6 @@ export const InstallModal = (props: Props) => {
     const target = scope().value
     setPending({
       scope: target,
-      path: destination(target),
       hasParameters: Object.keys(params()).length > 0,
       method: current?.name,
     })
@@ -164,6 +165,100 @@ export const InstallModal = (props: Props) => {
       ],
     })
   }
+
+  const doneFooter = () => (
+    <div class="dialog-confirm-actions">
+      <Button variant="primary" size="large" onClick={props.onClose}>
+        {t("marketplace.install.done")}
+      </Button>
+    </div>
+  )
+
+  // Inline post-install sign-in step for MCP servers that need OAuth. Uses
+  // `notify: false` so the host does not also fire a native notification —
+  // this pane is the authoritative outcome surface while the modal is open.
+  // `mcpAuthResult` is a shared, sticky signal (it is not cleared between
+  // installs), so a stale outcome from a previous sign-in for the same
+  // server must not leak into a fresh attempt — only watch it after this
+  // modal instance has actually started one.
+  const [signInOutcome, setSignInOutcome] = createSignal<"connected" | "failed" | null>(null)
+  const [signInError, setSignInError] = createSignal<string | undefined>(undefined)
+  const [watchingSignIn, setWatchingSignIn] = createSignal(false)
+
+  createEffect(() => {
+    if (!watchingSignIn()) return
+    const outcome = session.mcpAuthResult()
+    if (!outcome || outcome.name !== props.item.id) return
+    if (outcome.status === "connected") {
+      setSignInOutcome("connected")
+      return
+    }
+    if (outcome.status === "cancelled") {
+      setSignInOutcome(null)
+      return
+    }
+    setSignInOutcome("failed")
+    setSignInError(outcome.error)
+  })
+
+  const startSignIn = () => {
+    setSignInOutcome(null)
+    setSignInError(undefined)
+    session.resetMcpAuthResult()
+    setWatchingSignIn(true)
+    session.signInMcp(props.item.id, false)
+  }
+
+  const signInStep = () => (
+    <>
+      <Show
+        when={session.mcpAuth().busy.includes(props.item.id)}
+        fallback={
+          <Show
+            when={signInOutcome() === "connected"}
+            fallback={
+              <>
+                <Show
+                  when={signInOutcome() === "failed"}
+                  fallback={
+                    <p class="install-modal-mcp-signin-msg">
+                      {t("marketplace.install.mcp.signIn.message", { name: props.item.name })}
+                    </p>
+                  }
+                >
+                  <p class="install-modal-error-msg">
+                    {signInError() ?? t("marketplace.install.mcp.signIn.failed", { name: props.item.name })}
+                  </p>
+                </Show>
+                <div class="dialog-confirm-actions">
+                  <Button variant="ghost" size="large" onClick={props.onClose}>
+                    {t("marketplace.install.mcp.signIn.skip")}
+                  </Button>
+                  <Button variant="primary" size="large" onClick={startSignIn}>
+                    {t("marketplace.install.mcp.signIn.button")}
+                  </Button>
+                </div>
+              </>
+            }
+          >
+            <p class="install-modal-mcp-signin-success">
+              {t("marketplace.install.mcp.signIn.success", { name: props.item.name })}
+            </p>
+            {doneFooter()}
+          </Show>
+        }
+      >
+        <p class="install-modal-mcp-signin-msg">
+          <Spinner /> {t("marketplace.install.mcp.signIn.waiting")}
+        </p>
+        <div class="dialog-confirm-actions">
+          <Button variant="ghost" size="large" onClick={() => session.cancelMcpSignIn(props.item.id)}>
+            {t("marketplace.install.mcp.signIn.cancel")}
+          </Button>
+        </div>
+      </Show>
+    </>
+  )
 
   return (
     <Dialog title={t("marketplace.install.title", { name: props.item.name })} fit>
@@ -199,10 +294,27 @@ export const InstallModal = (props: Props) => {
             </div>
           </div>
 
-          <Show when={props.item.type === "mcp" || scope().value === "project"}>
+          <Show when={skills().length > 0}>
+            <div class="install-modal-section" data-slot="marketplace-companion-skills">
+              <span class="install-modal-label">{t("marketplace.install.includedSkills")}</span>
+              <For each={skills()}>
+                {(skill) => (
+                  <div class="install-modal-destination">
+                    <span>{skill.id}</span>
+                    <code>{`${scope().value === "global" ? "~/" : ""}.kilo/skills/${skill.id}/`}</code>
+                  </div>
+                )}
+              </For>
+            </div>
+          </Show>
+
+          <Show when={props.item.type === "mcp" || props.item.type === "plugin" || scope().value === "project"}>
             <div class="install-modal-warning">
               <Show when={props.item.type === "mcp"}>
                 <p>{t("marketplace.install.mcp.warning")}</p>
+              </Show>
+              <Show when={props.item.type === "plugin"}>
+                <p>{t("marketplace.install.plugin.warning")}</p>
               </Show>
               <Show when={scope().value === "project"}>
                 <p>{t("marketplace.install.project.warning")}</p>
@@ -270,23 +382,24 @@ export const InstallModal = (props: Props) => {
 
       <Show when={result()}>
         {(r) => (
-          <div class="install-modal-result">
+          <div class="dialog-confirm-body install-modal-result">
             <Show
               when={r().success}
               fallback={
                 <>
                   <p class="install-modal-error-msg">{r().error ?? t("marketplace.install.failed")}</p>
-                  <div class="install-modal-footer">
-                    <Button onClick={props.onClose}>{t("marketplace.install.close")}</Button>
+                  <div class="dialog-confirm-actions">
+                    <Button variant="primary" size="large" onClick={props.onClose}>
+                      {t("marketplace.install.close")}
+                    </Button>
                   </div>
                 </>
               }
             >
               <p class="install-modal-success">{t("marketplace.install.success")}</p>
-              <p class="install-modal-result-path">{t("marketplace.install.installedAt", { path: r().path })}</p>
-              <div class="install-modal-footer">
-                <Button onClick={props.onClose}>{t("marketplace.install.done")}</Button>
-              </div>
+              <Show when={r().needsAuth} fallback={doneFooter()}>
+                {signInStep()}
+              </Show>
             </Show>
           </div>
         )}

@@ -7,6 +7,7 @@ import { ThemeToggle } from "./ThemeToggle"
 interface NavItem {
   label: string
   href: string
+  badge?: string
 }
 
 interface DropdownItem {
@@ -31,7 +32,7 @@ const mainNavItems: NavItem[] = [
   { label: "Automate", href: "/automate" },
   { label: "Deploy & Secure", href: "/deploy-secure" },
   { label: "Kilo Gateway", href: "/gateway" },
-  { label: "KiloClaw", href: "/kiloclaw" },
+  { label: "Kilo Desktop", href: "/desktop", badge: "Beta" },
   { label: "Contributing", href: "/contributing" },
 ]
 
@@ -204,6 +205,24 @@ function NavTab({ item, isActive }: { item: NavItem; isActive: boolean }) {
       style={{ color: isActive ? "var(--text-brand)" : "var(--text-secondary)" }}
     >
       {item.label}
+      {item.badge ? (
+        <span
+          className="bg-blue-100 text-blue-700 dark:bg-blue-400/10 dark:text-blue-300"
+          style={{
+            marginLeft: "0.375rem",
+            fontSize: "0.625rem",
+            fontWeight: 600,
+            textTransform: "uppercase",
+            letterSpacing: "0.03em",
+            padding: "0.0625rem 0.3125rem",
+            borderRadius: "0.1875rem",
+            lineHeight: 1.4,
+            verticalAlign: "middle",
+          }}
+        >
+          {item.badge}
+        </span>
+      ) : null}
       {isActive && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600 dark:bg-[#F8F675]" />}
     </Link>
   )
@@ -346,15 +365,6 @@ export function TopNav({ onMobileMenuToggle, isMobileMenuOpen = false, showMobil
             onClose={handleDropdownClose}
           />
         </div>
-      </div>
-
-      {/* Announcement banner */}
-      <div className="announcement-banner">
-        <p>
-          The all-new Kilo Code extension is here, rebuilt on the{" "}
-          <Link href="/code-with-ai/platforms/vscode/whats-new">Kilo CLI</Link> for speed, flexibility, and continued
-          access to 500+ models via the Kilo Gateway →
-        </p>
       </div>
 
       <style jsx>{`
@@ -541,35 +551,6 @@ export function TopNav({ onMobileMenuToggle, isMobileMenuOpen = false, showMobil
 
           .right-actions {
             gap: 0.5rem;
-          }
-        }
-
-        .announcement-banner {
-          background: var(--bg-secondary);
-          color: var(--text-color);
-          padding: 0.5rem 1rem;
-          text-align: center;
-          font-size: 0.875rem;
-          border-bottom: 1px solid var(--border-color);
-        }
-
-        .announcement-banner p {
-          margin: 0;
-        }
-
-        .announcement-banner :global(a) {
-          color: var(--accent-color);
-          text-decoration: underline;
-          text-underline-offset: 2px;
-        }
-
-        .announcement-banner :global(a:hover) {
-          color: var(--accent-hover);
-        }
-
-        @media (max-width: 768px) {
-          .announcement-banner {
-            font-size: 0.8rem;
           }
         }
       `}</style>

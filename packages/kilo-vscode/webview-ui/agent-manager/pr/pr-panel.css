@@ -646,6 +646,76 @@
   flex: 1;
 }
 
+/* The same editor fits between diff lines without a second card or toolbar. */
+.am-pr-comment-composer[data-inline] {
+  padding: 0;
+  gap: 4px;
+  width: 100%;
+  font-family: var(--vscode-font-family, sans-serif);
+}
+
+.am-pr-comment-composer[data-inline] [data-slot="comment-editor"] {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.am-pr-comment-composer[data-inline]
+  [data-component="input"][data-variant="normal"]
+  [data-slot="input-wrapper"]:focus-within:not(:has([data-readonly])) {
+  outline: none;
+}
+
+.am-pr-comment-composer[data-inline] [data-slot="comment-preview"],
+.am-pr-comment-composer[data-inline] [data-component="input"][data-variant="normal"] textarea[data-slot="input-input"] {
+  min-height: 56px;
+  font-family: inherit;
+}
+
+.am-pr-comment-composer[data-inline] .am-pr-comment-actions {
+  padding: 4px 0 0;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+.am-pr-comment-composer[data-inline] [data-slot="comment-actions-gap"] {
+  flex: 1;
+  order: 1;
+}
+
+.am-pr-comment-composer[data-inline] [data-action="cancel"],
+.am-pr-comment-composer[data-inline] [data-action="discard"] {
+  order: 2;
+}
+
+.am-pr-comment-composer[data-inline] [data-action="submit"] {
+  order: 3;
+}
+
+.am-pr-comment-composer[data-inline] [data-action="send"] {
+  order: 4;
+}
+
+/* The unified diff composer keeps Save/Cancel on the left and the send action on the right. */
+.am-pr-comment-composer[data-action="diff"] [data-action="save"],
+.am-pr-comment-composer[data-action="diff"] [data-action="cancel"] {
+  order: 0;
+}
+
+.am-pr-comment-composer[data-action="diff"] [data-slot="comment-actions-gap"] {
+  order: 1;
+}
+
+.am-pr-comment-composer[data-action="diff"] [data-action="preview"],
+.am-pr-comment-composer[data-action="diff"] [data-action="write"] {
+  order: 2;
+}
+
+.am-pr-comment-composer[data-action="diff"] .am-split-button,
+.am-pr-comment-composer[data-action="diff"] [data-action="send-kilo"] {
+  order: 3;
+}
+
 .am-pr-reactions {
   gap: 3px;
   flex-wrap: wrap;
