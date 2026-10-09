@@ -13,6 +13,8 @@ import { SessionRunState } from "@/session/run-state"
 import { MessageID, PartID, SessionID } from "@/session/schema"
 import { Snapshot } from "@/snapshot"
 import { InstanceState } from "@/effect/instance-state"
+import { Storage } from "@/storage/storage"
+import { KiloSessionRevert } from "@/kilocode/session/revert"
 import { provideInstance, provideTmpdirInstance } from "../../fixture/fixture"
 import { pollWithTimeout, testEffect } from "../../lib/effect"
 
@@ -24,6 +26,7 @@ const it = testEffect(
       SessionRevert.node,
       SessionRunState.node,
       Snapshot.node,
+      Storage.node,
       CrossSpawnSpawner.node,
     ]),
   ),
@@ -358,6 +361,56 @@ describe("descendant revert regressions", () => {
               expect(yield* read(file)).toBe("before")
             }
             if (transition !== "later") yield* revert.unrevert({ sessionID: parent.id })
+            expect(yield* read(file)).toBe("after")
+          }),
+        { git: true },
+      ),
+      30_000,
+    )
+  }
+
+  for (const [transition, legacy] of [
+    ["earlier", false],
+    ["same", false],
+    ["earlier", true],
+    ["same", true],
+  ] as const) {
+    it.live(
+      `preserves a deleted child's earlier shared-file baseline on ${transition}${legacy ? " with a legacy saved set" : ""}`,
+      provideTmpdirInstance(
+        (dir) =>
+          Effect.gen(function* () {
+            const sessions = yield* Session.Service
+            const revert = yield* SessionRevert.Service
+            const file = path.join(dir, "shared.txt")
+            yield* Effect.promise(() => fs.writeFile(file, "before"))
+            const parent = yield* sessions.create({})
+            const earlier = yield* user(parent.id, 1)
+            const prompt = yield* user(parent.id, 2)
+            const child = yield* sessions.create({ parentID: parent.id })
+            yield* edit(yield* assistant(child.id, prompt.id, 3), file, "child")
+            yield* edit(yield* assistant(parent.id, prompt.id, 4), file, "after")
+            const undone = yield* revert.revert({ sessionID: parent.id, messageID: prompt.id })
+            expect(yield* read(file)).toBe("before")
+            if (legacy) {
+              if (!undone.revert) throw new Error("expected revert")
+              const storage = yield* Storage.Service
+              const saved = yield* KiloSessionRevert.saved(storage, parent.id, undone.revert)
+              if (!saved) throw new Error("expected saved set")
+              yield* KiloSessionRevert.remember(
+                storage,
+                parent.id,
+                undone.revert,
+                saved.map(({ revertOrder: _, ...part }) => part),
+              )
+            }
+            yield* sessions.remove(child.id)
+            yield* revert.revert({
+              sessionID: parent.id,
+              messageID: transition === "earlier" ? earlier.id : prompt.id,
+            })
+            expect(yield* read(file)).toBe("before")
+            yield* revert.unrevert({ sessionID: parent.id })
             expect(yield* read(file)).toBe("after")
           }),
         { git: true },

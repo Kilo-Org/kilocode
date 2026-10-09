@@ -17,10 +17,11 @@ export namespace KiloSessionRevert {
       }),
     )
 
-  type Patch = Extract<MessageV2.Part, { type: "patch" }>
-  type Entry = { at: number; id: string; part: Patch }
+  type Position = { at: number; id: string }
+  type Patch = Extract<MessageV2.Part, { type: "patch" }> & { revertOrder?: Position }
+  type Entry = Position & { part: Patch }
 
-  const order = (left: Entry, right: Entry) =>
+  const order = (left: Position, right: Position) =>
     left.at - right.at || (left.id < right.id ? -1 : left.id > right.id ? 1 : 0)
 
   const root = (dir: string) => (process.platform === "win32" ? path.resolve(dir).toLowerCase() : path.resolve(dir))
@@ -122,7 +123,10 @@ export namespace KiloSessionRevert {
           : msg,
       )
     const found = yield* walk(sessionID, messages, selected, since)
-    const patches = [...own, ...found.entries].toSorted(order).map((entry) => entry.part)
+    const patches = [...own, ...found.entries].toSorted(order).map((entry) => ({
+      ...entry.part,
+      revertOrder: { at: entry.at, id: entry.id },
+    }))
     const range = [...messages.slice(index), ...found.messages].toSorted(
       (left, right) =>
         left.info.time.created - right.info.time.created ||
@@ -160,7 +164,23 @@ export namespace KiloSessionRevert {
         return patches
     }
     const ids = new Set(patches.map((part) => part.id))
-    return [...patches, ...previous.filter((part) => !ids.has(part.id))]
+    const combined = [...patches, ...previous.filter((part) => !ids.has(part.id))]
+    if (combined.every((part) => part.revertOrder)) {
+      return combined.toSorted((left, right) =>
+        left.revertOrder && right.revertOrder ? order(left.revertOrder, right.revertOrder) : 0,
+      )
+    }
+    // Older saved sets lack message chronology. Preserve their relative order by anchoring
+    // missing patches to surviving patches instead of appending deleted-child baselines.
+    const pending = [...previous]
+    const merged: Patch[] = []
+    for (const part of patches) {
+      const index = pending.findIndex((item) => item.id === part.id)
+      if (index >= 0) merged.push(...pending.splice(0, index))
+      if (index >= 0) pending.shift()
+      merged.push(part)
+    }
+    return [...merged, ...pending]
   }
 
   // Persist the applied patch set, independent of whether a descendant still exists on redo.
