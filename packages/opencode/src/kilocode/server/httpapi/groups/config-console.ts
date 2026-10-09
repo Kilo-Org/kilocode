@@ -75,6 +75,34 @@ export class ConfigOverlayConflictError extends Schema.ErrorClass<ConfigOverlayC
   },
   { httpApiStatus: 409 },
 ) {}
+// A write succeeded on disk but a higher-priority config source still overrides the new value,
+// so the effective setting does not change. Surfaced as 409 so clients can show why.
+export class ConfigOverlayShadowedError extends Schema.ErrorClass<ConfigOverlayShadowedError>(
+  "ConfigOverlayShadowedError",
+)(
+  {
+    message: Schema.String,
+    path: Schema.String,
+    shadowedBy: Schema.optional(Schema.String),
+  },
+  { httpApiStatus: 409 },
+) {}
+// The merged config would be invalid or the target file is unwritable. Surfaced as 400/403
+// with a message instead of an opaque 500.
+export class ConfigOverlayWriteError extends Schema.ErrorClass<ConfigOverlayWriteError>("ConfigOverlayWriteError")(
+  {
+    message: Schema.String,
+    path: Schema.optional(Schema.String),
+    issues: Schema.optional(
+      Schema.Array(
+        Schema.StructWithRest(Schema.Struct({ message: Schema.String, path: Schema.Array(Schema.String) }), [
+          Schema.Record(Schema.String, Schema.Unknown),
+        ]),
+      ),
+    ),
+  },
+  { httpApiStatus: 400 },
+) {}
 export const ConfigRulesQuery = Schema.Struct({
   ...WorkspaceRoutingQueryFields,
   scope: Schema.optional(ProjectScope),
@@ -199,7 +227,7 @@ export const ConfigConsoleApi = HttpApi.make("config-console")
           query: WorkspaceRoutingQuery,
           payload: ConfigOverlayPatch,
           success: described(ConfigOverlayResponse, "Resolved config overlay after patch"),
-          error: ConfigOverlayConflictError,
+          error: [ConfigOverlayConflictError, ConfigOverlayShadowedError, ConfigOverlayWriteError],
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "config.overlayUpdate",

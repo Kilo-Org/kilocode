@@ -248,9 +248,9 @@ it.instance(
     yield* run.prompt.prompt({ sessionID: run.session.id, parts: [{ type: "text", text: "Start something" }] })
     expect(GoalState.read(yield* run.metadata)).toBeUndefined()
     const parts = (yield* run.sessions.messages({ sessionID: run.session.id })).flatMap((message) => message.parts)
-    expect(
-      parts.some((part) => part.type === "tool" && part.tool === "goal" && part.state.status === "error"),
-    ).toBe(true)
+    expect(parts.some((part) => part.type === "tool" && part.tool === "goal" && part.state.status === "error")).toBe(
+      true,
+    )
     yield* Effect.sleep("5200 millis")
     expect(yield* run.llm.hits).toHaveLength(2)
   }),
@@ -273,9 +273,7 @@ it.instance(
       permissions
         .list()
         .pipe(
-          Effect.map((items) =>
-            items.find((item) => item.sessionID === run.session.id && item.permission === "goal"),
-          ),
+          Effect.map((items) => items.find((item) => item.sessionID === run.session.id && item.permission === "goal")),
         ),
       "Goal start did not request permission",
       "10 seconds",
@@ -284,9 +282,9 @@ it.instance(
     yield* run.idle
     expect(GoalState.read(yield* run.metadata)).toBeUndefined()
     const parts = (yield* run.sessions.messages({ sessionID: run.session.id })).flatMap((message) => message.parts)
-    expect(
-      parts.some((part) => part.type === "tool" && part.tool === "goal" && part.state.status === "error"),
-    ).toBe(true)
+    expect(parts.some((part) => part.type === "tool" && part.tool === "goal" && part.state.status === "error")).toBe(
+      true,
+    )
   }),
   30_000,
 )
@@ -304,9 +302,9 @@ it.instance(
     const metadata = yield* run.sessions.get(child.id).pipe(Effect.map((value) => value.metadata))
     expect(GoalState.read(metadata)).toBeUndefined()
     const parts = (yield* run.sessions.messages({ sessionID: child.id })).flatMap((message) => message.parts)
-    expect(
-      parts.some((part) => part.type === "tool" && part.tool === "goal" && part.state.status === "error"),
-    ).toBe(true)
+    expect(parts.some((part) => part.type === "tool" && part.tool === "goal" && part.state.status === "error")).toBe(
+      true,
+    )
   }),
   30_000,
 )
@@ -1175,7 +1173,10 @@ it.instance(
       sessionID: session.id,
       permission: [{ permission: "bash", pattern: "*", action: "ask" }],
     })
-    yield* llm.tool("bash", { command: `echo goal-permission-${crypto.randomUUID()}`, description: "Check the workspace" })
+    yield* llm.tool("bash", {
+      command: `echo goal-permission-${crypto.randomUUID()}`,
+      description: "Check the workspace",
+    })
     yield* command(objective)
     const pending = yield* pollWithTimeout(
       permission.list().pipe(Effect.map((items) => items.find((item) => item.sessionID === session.id))),
@@ -2017,19 +2018,55 @@ for (const override of [
   { template: "Custom workflow: $ARGUMENTS", description: "Run a custom workflow" },
   { agent: "ask", model: "test/selected-model", variant: "focused" },
 ]) {
+  const aliased = "template" in override
   it.instance(
-    `rejects reserved goal ${"template" in override ? "templates" : "execution overrides"} in listing and dispatch`,
+    `ignores reserved goal ${aliased ? "templates" : "execution overrides"} without hiding other commands`,
     Effect.gen(function* () {
-      const run = yield* setup({ command: { goal: override } })
+      const run = yield* setup({
+        command: { goal: override, check: { template: "Check validation", description: "Check the workspace" } },
+      })
       const commands = yield* Command.Service
-      for (const effect of [commands.list().pipe(Effect.asVoid), run.command(objective).pipe(Effect.asVoid)]) {
-        const exit = yield* Effect.exit(effect)
-        expect(Exit.isFailure(exit)).toBe(true)
-        if (Exit.isFailure(exit)) expect(String(Cause.squash(exit.cause))).toContain("/goal command is reserved")
-      }
-      expect(yield* run.metadata).toEqual(retained)
-      expect(yield* run.sessions.messages({ sessionID: run.session.id })).toEqual([])
-      expect(yield* run.llm.hits).toHaveLength(0)
+
+      // A clashing name is skipped, not fatal: it used to fail the whole list and leave
+      // clients with no commands at all.
+      const list = yield* commands.list()
+      expect(list.map((item) => item.name)).toContain("check")
+      expect(list.map((item) => item.name)).toContain("init")
+      const goals = list.filter((item) => item.name === "goal")
+      expect(goals).toHaveLength(1)
+      expect(goals.at(0)?.description).toContain("Keep working toward a session goal")
+      expect(goals.at(0)?.template).toBe("$ARGUMENTS")
+      expect(yield* commands.get("goal")).toMatchObject({ source: "command", template: "$ARGUMENTS" })
+
+      // A template-less override has nothing to alias; a full template is reachable as
+      // goal:command instead of being dropped.
+      expect(list.map((item) => item.name).includes("goal:command")).toBe(aliased)
+
+      // Dispatch still reaches Kilo's own goal, on the dispatched model, and never
+      // renders the override's template.
+      yield* run.llm.text("Goal complete. All work is done.")
+      yield* run.command(objective)
+      yield* run.paused
+      expect(GoalState.read(yield* run.metadata)).toMatchObject({ text: objective, status: "paused" })
+      const hits = yield* run.llm.hits
+      expect(hits).toHaveLength(1)
+      expect(hits.at(0)?.body.model).toBe("test-model")
+      expect(JSON.stringify(hits.at(0)?.body.messages)).not.toContain("Custom workflow")
+
+      if (!aliased) return
+
+      // The override's own template still runs, on its own alias, under the normal
+      // command path rather than the goal runner.
+      yield* run.prompt.command({
+        sessionID: run.session.id,
+        agent: "code",
+        command: "goal:command",
+        arguments: "ship it",
+        model: "test/test-model",
+      })
+      const aliasHits = yield* run.llm.hits
+      expect(aliasHits).toHaveLength(2)
+      expect(JSON.stringify(aliasHits.at(-1)?.body.messages)).toContain("Custom workflow: ship it")
     }),
   )
 }
@@ -2486,16 +2523,12 @@ it.instance(
     const done = yield* goalStatus(run, "complete")
     expect(done.active).toBe(false)
     yield* pollWithTimeout(
-      wake
-        .list({ sessionID: run.session.id })
-        .pipe(Effect.map((items) => (items.length === 0 ? true : undefined))),
+      wake.list({ sessionID: run.session.id }).pipe(Effect.map((items) => (items.length === 0 ? true : undefined))),
       "goal did not release its wakeups",
       "5 seconds",
     )
     yield* pollWithTimeout(
-      wake
-        .cronList({ sessionID: run.session.id })
-        .pipe(Effect.map((items) => (items.length === 0 ? true : undefined))),
+      wake.cronList({ sessionID: run.session.id }).pipe(Effect.map((items) => (items.length === 0 ? true : undefined))),
       "goal did not release its cron tasks",
       "5 seconds",
     )

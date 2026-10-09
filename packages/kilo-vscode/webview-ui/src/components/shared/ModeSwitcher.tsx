@@ -164,8 +164,18 @@ export const ModeSwitcherBase: Component<ModeSwitcherBaseProps> = (props) => {
         triggerProps={{ variant: "ghost", size: "small", disabled: props.blocked }}
         trigger={
           <>
-            <span class="mode-switcher-trigger-label">{triggerLabel()}</span>
-            <svg width="10" height="10" viewBox="0 0 16 16" fill="currentColor" style={{ "flex-shrink": "0" }}>
+            {/* Keyed so the label remounts on change and the prompt pill can animate it. */}
+            <Show when={triggerLabel()} keyed>
+              {(label) => <span class="mode-switcher-trigger-label">{label}</span>}
+            </Show>
+            <svg
+              class="selector-trigger-chevron"
+              width="10"
+              height="10"
+              viewBox="0 0 16 16"
+              fill="currentColor"
+              style={{ "flex-shrink": "0" }}
+            >
               <path d="M8 4l4 5H4l4-5z" />
             </svg>
           </>

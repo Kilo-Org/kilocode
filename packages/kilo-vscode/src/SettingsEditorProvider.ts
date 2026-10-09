@@ -98,6 +98,16 @@ export class SettingsEditorProvider implements vscode.Disposable {
     this.wirePanel(panel, view, projectDirectory)
   }
 
+  /** Open (or reveal) the Settings panel and focus its search field. */
+  focusSearch(): void {
+    this.openPanel("settings")
+    const provider = this.providers.get("settings")
+    if (!provider) return
+    void provider.waitForReady().then(() => {
+      provider.postMessage({ type: "action", action: "focusSettingsSearch" })
+    })
+  }
+
   /** Re-wire a deserialized panel after extension restart. */
   deserializePanel(panel: vscode.WebviewPanel): void {
     const view = SettingsEditorProvider.viewFromType(panel.viewType)

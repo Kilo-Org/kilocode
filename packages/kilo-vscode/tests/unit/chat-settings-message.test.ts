@@ -17,6 +17,7 @@ type Stub = {
 const original = {
   get: vscode.workspace.getConfiguration,
   watch: vscode.workspace.onDidChangeConfiguration,
+  trusted: Object.getOwnPropertyDescriptor(vscode.workspace, "isTrusted"),
 }
 
 function stubConfig(state: Map<string, unknown>, scope = "kilo-code.new.chat") {
@@ -34,6 +35,8 @@ afterEach(() => {
   const workspace = vscode.workspace as unknown as Stub
   workspace.getConfiguration = original.get as Stub["getConfiguration"]
   workspace.onDidChangeConfiguration = original.watch
+  if (original.trusted) Object.defineProperty(vscode.workspace, "isTrusted", original.trusted)
+  else delete (vscode.workspace as { isTrusted?: boolean }).isTrusted
 })
 
 describe("buildChatSettingsMessage", () => {
@@ -52,6 +55,45 @@ describe("buildChatSettingsMessage", () => {
     state.set("shiftTabCyclesVariant", false)
 
     expect(buildChatSettingsMessage().settings.shiftTabCyclesVariant).toBe(false)
+  })
+
+  it("broadcasts browser preference changes to all open chat viewers", () => {
+    Object.defineProperty(vscode.workspace, "isTrusted", { configurable: true, value: true })
+    const workspace = vscode.workspace as unknown as Stub
+    const prefs = new Map<string, unknown>([
+      ["kilo-code.new.experimental.browserAutomation", true],
+      ["kilo-code.new.agentManager.browser.openLinksIn", "integrated"],
+    ])
+    workspace.getConfiguration = (section) => ({
+      get: <T>(key: string, fallback?: T) => (prefs.get(`${section}.${key}`) as T | undefined) ?? fallback,
+    })
+    const listeners = new Set<(event: vscode.ConfigurationChangeEvent) => void>()
+    workspace.onDidChangeConfiguration = (listener) => {
+      listeners.add(listener)
+      return new vscode.Disposable(() => listeners.delete(listener))
+    }
+    const parent: unknown[] = []
+    const child: unknown[] = []
+    const main = watchChatConfig((message) => parent.push(message))
+    const viewer = watchChatConfig((message) => child.push(message))
+    const key = "kilo-code.new.agentManager.browser.openLinksIn"
+    prefs.set(key, "external")
+    for (const listener of listeners) listener({ affectsConfiguration: (name) => name === key })
+    expect(parent).toEqual([
+      {
+        type: "chatSettingsLoaded",
+        settings: {
+          shiftTabCyclesVariant: true,
+          browserAutomation: true,
+          agentManagerBrowserOpenLinksIn: "external",
+          workspaceTrusted: true,
+        },
+      },
+    ])
+    expect(child).toEqual(parent)
+    main.dispose()
+    viewer.dispose()
+    expect(listeners.size).toBe(0)
   })
 })
 

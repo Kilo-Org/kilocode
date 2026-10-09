@@ -26,6 +26,7 @@ import { confirmCaffeination } from "./services/caffeination/confirm"
 import { createCaffeinationDriver } from "./services/caffeination/inhibitor"
 import { BrowserAutomationService, BrowserBroker } from "./services/browser-automation"
 import {
+  integratedBrowserFallback,
   integratedBrowserUseSystemChrome,
   migrateIntegratedBrowserUseSystemChrome,
 } from "./services/browser-automation/chrome-setting"
@@ -81,7 +82,10 @@ export async function activate(context: vscode.ExtensionContext) {
     enabled: () => vscode.workspace.getConfiguration("kilo-code.new.experimental").get("browserAutomation", false),
     trusted: () => vscode.workspace.isTrusted,
     useSystemChrome: () => integratedBrowserUseSystemChrome(),
+    fallback: () => process.platform === "linux" && integratedBrowserFallback(),
+    theme: browserTheme,
   })
+  context.subscriptions.push(vscode.window.onDidChangeActiveColorTheme(() => browserBroker.retheme()))
 
   // Create shared connection service (one server for all webviews)
   const connectionService = new KiloConnectionService(
@@ -230,10 +234,10 @@ export async function activate(context: vscode.ExtensionContext) {
       resolve: (route) => {
         if (!vscode.workspace.isTrusted) return
         if (!vscode.workspace.getConfiguration("kilo-code.new.experimental").get("browserAutomation", false)) return
-        // While the Agent Manager panel is focused on this exact session, it
-        // owns the browser for that shared root session. Other sidebar and
-        // editor-tab sessions still resolve here.
-        if (agentManager?.isActive(route.sessionId)) return
+        // The Agent Manager owns project-scoped browser entries and keeps them
+        // alive across session switches. Defer while it holds one for this
+        // session so a shared root session does not get two browser entries.
+        if (browserTabProvider.owner && browserBroker.ownedByOther(route.sessionId, browserTabProvider.owner)) return
         const tabs = [...tabPanels.values()]
         const surfaced =
           provider.getCurrentSessionId() === route.sessionId ||
@@ -402,6 +406,9 @@ export async function activate(context: vscode.ExtensionContext) {
   provider.setCreateWorktreeHandler((baseBranch, branchName) =>
     agentManagerProvider.createFromSidebar(baseBranch, branchName),
   )
+  // Chat web links open in the Integrated Browser tab for the current session.
+  const openLink = (url: string, sessionId?: string) => (sessionId ? browserTabProvider.openUrl(sessionId, url) : false)
+  provider.setOpenLinkHandler(openLink)
 
   // Register toggle auto-approve shortcut (Ctrl+Alt+A / Cmd+Alt+A)
   const defaultDir = () => vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? process.cwd()
@@ -495,6 +502,7 @@ export async function activate(context: vscode.ExtensionContext) {
     tabProvider.setCreateWorktreeHandler((baseBranch, branchName) =>
       agentManagerProvider.createFromSidebar(baseBranch, branchName),
     )
+    tabProvider.setOpenLinkHandler(openLink)
     tabProvider.setDiffVirtualProvider(diffVirtualProvider)
     tabProvider.setDiffViewerProvider(diffViewerProvider)
     tabProvider.setReviewCommentsHandler(deliver)
@@ -700,6 +708,9 @@ export async function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand("kilo-code.new.settingsButtonClicked", (tab?: string, projectId?: string) => {
       settingsEditorProvider.openPanel("settings", tab, projectId)
     }),
+    vscode.commands.registerCommand("kilo-code.new.settingsSearch", () => {
+      settingsEditorProvider.focusSearch()
+    }),
     vscode.commands.registerCommand("kilo-code.new.openIndexingSettings", () => {
       settingsEditorProvider.openPanel("settings", "indexing")
     }),
@@ -769,6 +780,9 @@ export async function activate(context: vscode.ExtensionContext) {
         subAgentViewerProvider.openPanel(sessionID, title, directory)
       },
     ),
+    // One shortcut pair serves the sidebar, Kilo editor tabs, and Agent Manager.
+    // Every surface receives the action and acts only while it has focus, matching
+    // cycleAgentMode, so one binding never depends on a shared focus context key.
     vscode.commands.registerCommand("kilo-code.new.agentManager.previousSession", () => {
       agentManagerProvider.postMessage({ type: "action", action: "sessionPrevious" })
     }),
@@ -776,9 +790,15 @@ export async function activate(context: vscode.ExtensionContext) {
       agentManagerProvider.postMessage({ type: "action", action: "sessionNext" })
     }),
     vscode.commands.registerCommand("kilo-code.new.agentManager.previousTab", () => {
+      const tab = activeTabProvider()
+      if (tab) tab.postMessage({ type: "action", action: "tabPrevious" })
+      provider.postMessage({ type: "action", action: "tabPrevious" })
       agentManagerProvider.postMessage({ type: "action", action: "tabPrevious" })
     }),
     vscode.commands.registerCommand("kilo-code.new.agentManager.nextTab", () => {
+      const tab = activeTabProvider()
+      if (tab) tab.postMessage({ type: "action", action: "tabNext" })
+      provider.postMessage({ type: "action", action: "tabNext" })
       agentManagerProvider.postMessage({ type: "action", action: "tabNext" })
     }),
     vscode.commands.registerCommand("kilo-code.new.agentManager.previousTerminal", () => {
@@ -929,6 +949,12 @@ export async function deactivate() {
     if (result.status === "rejected") console.warn("[Kilo New] Extension shutdown failed:", result.reason)
   }
   TelemetryProxy.getInstance().shutdown()
+}
+
+/** Current IDE color scheme, so the Integrated Browser matches the editor theme. */
+function browserTheme(): "dark" | "light" {
+  const kind = vscode.window.activeColorTheme.kind
+  return kind === vscode.ColorThemeKind.Light || kind === vscode.ColorThemeKind.HighContrastLight ? "light" : "dark"
 }
 
 function openKiloInNewTab(
