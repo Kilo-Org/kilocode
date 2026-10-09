@@ -35,6 +35,7 @@ export const dict = {
   "marketplace.install.scope.global.description":
     "Wszystkie projekty na tym komputerze. Zapisywane w konfiguracji użytkownika.",
   "marketplace.install.destination": "Miejsce instalacji",
+  "marketplace.install.includedSkills": "Dołączone umiejętności",
   "marketplace.install.about.mcp":
     "Serwer MCP zapewnia Kilo dodatkowe narzędzia do pracy z usługami zewnętrznymi lub programami lokalnymi.",
   "marketplace.install.about.agent": "Agent dodaje rolę wielokrotnego użytku z własnymi instrukcjami i uprawnieniami.",
@@ -47,10 +48,9 @@ export const dict = {
   "marketplace.install.learnMore": "Dowiedz się, jak działają instalacje z Marketplace",
   "marketplace.install.learnMcp": "Dowiedz się więcej o MCP",
   "marketplace.install.about.plugin":
-    "Wtyczka npm dodaje niestandardowe narzędzia i integracje do Kilo. Wtyczki działają z pełnymi uprawnieniami.",
+    "Wtyczka dodaje niestandardowe narzędzia i integracje do Kilo. Wtyczki działają z pełnymi uprawnieniami.",
   "marketplace.install.plugin.warning":
     "Wtyczki wykonują kod z pełnymi uprawnieniami. Mogą odczytywać i zmieniać Twoje pliki, uruchamiać polecenia oraz uzyskiwać dostęp do Twoich danych uwierzytelniających i sieci. Instaluj tylko wtyczki, którym ufasz.",
-  "marketplace.install.installedAt": "Zainstalowano w {{path}}",
   "marketplace.intro":
     "Instaluj agentów, umiejętności, narzędzia MCP i wtyczki wielokrotnego użytku w jednym lub we wszystkich projektach.",
   "marketplace.intro.learnMore": "O Marketplace",
@@ -61,10 +61,19 @@ export const dict = {
   "marketplace.install.failed": "Instalacja nie powiodła się",
   "marketplace.install.done": "Gotowe",
   "marketplace.install.close": "Zamknij",
+  "marketplace.install.mcp.signIn.message": "{{name}} jest zainstalowany, ale wymaga zalogowania, zanim będzie można używać jego narzędzi.",
+  "marketplace.install.mcp.signIn.button": "Zaloguj się",
+  "marketplace.install.mcp.signIn.waiting": "Czekanie na zalogowanie w przeglądarce…",
+  "marketplace.install.mcp.signIn.cancel": "Anuluj",
+  "marketplace.install.mcp.signIn.skip": "Później",
+  "marketplace.install.mcp.signIn.success": "Zalogowano do {{name}}.",
+  "marketplace.install.mcp.signIn.failed": "Logowanie do {{name}} nie powiodło się.",
   "marketplace.remove.title": "Usunąć {{name}}?",
   "marketplace.remove.confirm":
     "Czy na pewno chcesz usunąć ten {{type}}? Spowoduje to usunięcie z konfiguracji: {{scope}}.",
   "marketplace.remove.cancel": "Anuluj",
+  "marketplace.remove.mcp.skills":
+    "Spowoduje to również usunięcie towarzyszących umiejętności należących do tej instalacji. Umiejętności zainstalowane niezależnie zostaną zachowane.",
   "marketplace.remove.confirm.button": "Usuń",
   "marketplace.search": "Szukaj...",
   "marketplace.filter.all": "Wszystkie elementy",
@@ -73,6 +82,7 @@ export const dict = {
   "marketplace.empty": "Nie znaleziono elementów",
   "marketplace.empty.relevant": "Nie znaleziono elementów marketplace istotnych dla tego obszaru roboczego.",
   "marketplace.badge.mcpServer": "Serwer MCP",
+  "marketplace.badge.skills": "Zawiera umiejętności",
   "marketplace.card.by": "autor: {{author}}",
   "marketplace.install.method": "Metoda instalacji",
   "marketplace.install.parameters": "Parametry",

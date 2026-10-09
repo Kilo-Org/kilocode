@@ -40,7 +40,9 @@ export function reasoningHeading(text: string, partial = false): ReasoningHeadin
   const src = text.replace(/\r\n?/g, "\n").trim()
   if (partial && !src.includes("\n")) {
     const mark = src.startsWith("**") ? "**" : src.startsWith("__") ? "__" : ""
-    if (mark && !src.endsWith(mark)) {
+    // Only an unclosed strong line can still become a title. Once the mark
+    // closes and prose follows, it is lead-in text, as it is when complete.
+    if (mark && src.length > mark.length && !src.slice(mark.length).includes(mark)) {
       return {
         title: clean(src.slice(mark.length)),
         body: "",

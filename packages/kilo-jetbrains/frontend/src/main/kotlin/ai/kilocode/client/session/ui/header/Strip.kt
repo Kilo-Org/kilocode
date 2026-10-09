@@ -2,6 +2,7 @@ package ai.kilocode.client.session.ui.header
 
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionEditorStyleTarget
+import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.layout.HAlign
 import ai.kilocode.client.ui.layout.Stack
@@ -17,12 +18,19 @@ import java.awt.BorderLayout
 import java.awt.Component
 import java.awt.Cursor
 import java.awt.Dimension
+import java.awt.Graphics
+import java.awt.Graphics2D
+import java.awt.RenderingHints
+import java.awt.event.ContainerAdapter
+import java.awt.event.ContainerEvent
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
 import javax.swing.BoxLayout
 import javax.swing.JComponent
 import javax.swing.JPanel
 import javax.swing.ScrollPaneConstants
+import javax.swing.SwingUtilities
+import javax.swing.ToolTipManager
 
 /**
  * Shared chrome for a collapsible, one-line-when-collapsed status strip in the session header: an
@@ -56,15 +64,27 @@ abstract class Strip : JPanel(), SessionEditorStyleTarget {
         border = JBUI.Borders.empty(0, UiStyle.Gap.sm())
         add(fallback, BorderLayout.WEST)
     }
-    private val row = BorderLayoutPanel().apply {
-        isOpaque = false
+    private val row = Row().apply {
         add(arrow, BorderLayout.WEST)
         add(summary.align(HAlign.TRACK, VAlign.CENTER), BorderLayout.CENTER)
         add(actions.align(HAlign.RIGHT, VAlign.CENTER), BorderLayout.EAST)
     }
+    private val clickable = linkedSetOf<Component>()
+    private val watched = linkedSetOf<Component>()
     private var body: JComponent? = null
     private val click = object : MouseAdapter() {
         override fun mouseClicked(event: MouseEvent) = toggle()
+    }
+    private val pointer = object : MouseAdapter() {
+        override fun mouseEntered(event: MouseEvent) = hover(true)
+
+        override fun mouseExited(event: MouseEvent) {
+            if (!inside(event)) hover(false)
+        }
+    }
+    private val nested = object : ContainerAdapter() {
+        override fun componentAdded(event: ContainerEvent) = watch(event.child)
+        override fun componentRemoved(event: ContainerEvent) = unwatch(event.child)
     }
 
     /** Todo bodies remain horizontal; background-agent rows opt into width-tracking vertical scroll. */
@@ -81,17 +101,53 @@ abstract class Strip : JPanel(), SessionEditorStyleTarget {
         // A strip has nothing to show until its owner reports content, so it starts hidden and each
         // subclass's update() turns it on via syncVisible.
         isVisible = false
-        // `row` spans the full width, so the empty space beside the summary toggles too. The arrow,
-        // glyph, and label keep their own listeners so a click lands on them directly; Swing
-        // delivers a click only to the innermost listener, so this cannot toggle twice. Controls in
-        // [actions] own their listeners and are therefore never retargeted here.
-        listOf(row, summary, arrow, fallback, content, glyph, label).forEach(::watch)
+        // Bind the whole retained subtree so dynamically added agent previews behave like the rest
+        // of the strip. Existing controls keep their own click action, while hover still covers them.
+        watch(row)
     }
 
-    /** Give a subclass-owned summary surface the strip's ordinary toggle behavior. */
-    protected fun watch(component: Component) {
-        component.cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
-        component.addMouseListener(click)
+    private fun watch(component: Component) {
+        if (!watched.add(component)) return
+        // Swing installs ToolTipManager as a mouse listener for inert labels/panels with tooltips;
+        // that does not make them independent controls. Only a different listener owns the click.
+        if (component.mouseListeners.all { it === ToolTipManager.sharedInstance() }) {
+            component.cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
+            component.addMouseListener(click)
+            clickable.add(component)
+        }
+        component.addMouseListener(pointer)
+        if (component is java.awt.Container) {
+            component.addContainerListener(nested)
+            component.components.forEach(::watch)
+        }
+    }
+
+    private fun unwatch(component: Component) {
+        if (!watched.remove(component)) return
+        if (clickable.remove(component)) {
+            component.removeMouseListener(click)
+            component.cursor = Cursor.getDefaultCursor()
+        }
+        component.removeMouseListener(pointer)
+        if (component is java.awt.Container) {
+            component.removeContainerListener(nested)
+            component.components.forEach(::unwatch)
+        }
+    }
+
+    private fun hover(value: Boolean) {
+        val before = row.background
+        row.isHovered = value
+        if (before.rgb != row.background.rgb) row.repaint()
+    }
+
+    private fun inside(event: MouseEvent): Boolean {
+        val point = SwingUtilities.convertPoint(event.component, event.point, row)
+        if (!row.contains(point)) return false
+        val pane = SwingUtilities.getRootPane(row)?.layeredPane ?: return true
+        val spot = SwingUtilities.convertPoint(event.component, event.point, pane)
+        val top = SwingUtilities.getDeepestComponentAt(pane, spot.x, spot.y) ?: return true
+        return SwingUtilities.isDescendingFrom(top, row)
     }
 
     /** Build the expanded body. Called at most once; the result is retained for the strip's lifetime. */
@@ -166,6 +222,31 @@ abstract class Strip : JPanel(), SessionEditorStyleTarget {
     internal fun labelForeground() = label.foreground
     internal fun bodyAttached(): Boolean = expanded()
     internal fun bodyComponent(): JComponent? = body
+
+    private class Row : BorderLayoutPanel() {
+        var isHovered = false
+
+        override fun isOpaque(): Boolean = false
+
+        override fun getBackground() = if (isHovered) {
+            SessionUiStyle.View.Surface.headerHoverBgColor()
+        } else {
+            SessionUiStyle.View.Surface.headerBgColor()
+        }
+
+        override fun paintComponent(g: Graphics) {
+            super.paintComponent(g)
+            val canvas = g.create() as Graphics2D
+            try {
+                canvas.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
+                canvas.color = background
+                val arc = JBUI.scale(SessionUiStyle.View.BLOCK_ARC)
+                canvas.fillRoundRect(0, 0, width, height, arc, arc)
+            } finally {
+                canvas.dispose()
+            }
+        }
+    }
 }
 
 /**

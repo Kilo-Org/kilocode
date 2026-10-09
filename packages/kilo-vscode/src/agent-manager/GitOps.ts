@@ -3,7 +3,7 @@ import * as os from "os"
 import * as fs from "fs/promises"
 import { spawn } from "../util/process"
 import type { GitExecutable } from "../util/git-executable"
-import simpleGit from "simple-git"
+import { simpleGit } from "simple-git"
 import {
   parseWorktreeList,
   normalizePath,
@@ -91,6 +91,7 @@ export function nonInteractiveEnv(): NodeJS.ProcessEnv {
   delete env.SSH_ASKPASS
   delete env.GIT_ASKPASS
   delete env.EDITOR
+  delete env.VISUAL
   delete env.GIT_EDITOR
   delete env.GIT_SEQUENCE_EDITOR
   delete env.PAGER

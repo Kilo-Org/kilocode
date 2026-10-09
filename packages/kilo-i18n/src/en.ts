@@ -36,13 +36,14 @@ export const dict = {
     "Only this project. The installed files can be committed and shared with your team.",
   "marketplace.install.scope.global.description": "All projects on this machine. Stored in your user configuration.",
   "marketplace.install.destination": "Installation destination",
+  "marketplace.install.includedSkills": "Included skills",
   "marketplace.install.about.mcp":
     "An MCP server gives Kilo additional tools for working with external services or local programs.",
   "marketplace.install.about.agent": "An agent adds a reusable role with its own instructions and permissions.",
   "marketplace.install.about.skill":
     "A skill adds task-specific instructions and resources that Kilo can load when needed.",
   "marketplace.install.about.plugin":
-    "An npm plugin adds custom tools and integrations to Kilo. Plugins run with full permissions.",
+    "A plugin adds custom tools and integrations to Kilo. Plugins run with full permissions.",
   "marketplace.install.mcp.warning":
     "MCP servers can run local commands or connect to external services. Kilo will ask for permission before using their tools unless your permissions allow them automatically.",
   "marketplace.install.plugin.warning":
@@ -51,7 +52,6 @@ export const dict = {
     "Project files may be committed to version control. Do not store secrets here unless the configuration references an environment variable.",
   "marketplace.install.learnMore": "Learn how Marketplace installs work",
   "marketplace.install.learnMcp": "Learn more about MCP",
-  "marketplace.install.installedAt": "Installed to {{path}}",
   "marketplace.intro": "Install reusable agents, skills, MCP tools, and plugins for one project or every project.",
   "marketplace.intro.learnMore": "About Marketplace",
   "marketplace.install.prerequisites": "Prerequisites",
@@ -61,10 +61,19 @@ export const dict = {
   "marketplace.install.failed": "Installation failed",
   "marketplace.install.done": "Done",
   "marketplace.install.close": "Close",
+  "marketplace.install.mcp.signIn.message": "{{name}} is installed but needs sign-in before its tools can be used.",
+  "marketplace.install.mcp.signIn.button": "Sign In",
+  "marketplace.install.mcp.signIn.waiting": "Waiting for browser sign-in…",
+  "marketplace.install.mcp.signIn.cancel": "Cancel",
+  "marketplace.install.mcp.signIn.skip": "Later",
+  "marketplace.install.mcp.signIn.success": "Signed in to {{name}}.",
+  "marketplace.install.mcp.signIn.failed": "Sign-in to {{name}} failed.",
   "marketplace.remove.title": "Remove {{name}}?",
   "marketplace.remove.confirm":
     "Are you sure you want to remove this {{type}}? This will remove it from your {{scope}} configuration.",
   "marketplace.remove.cancel": "Cancel",
+  "marketplace.remove.mcp.skills":
+    "This also removes companion skills owned by this installation. Independently installed skills are kept.",
   "marketplace.remove.confirm.button": "Remove",
   "marketplace.search": "Search...",
   "marketplace.filter.all": "All Items",
@@ -73,6 +82,7 @@ export const dict = {
   "marketplace.empty": "No items found",
   "marketplace.empty.relevant": "No relevant marketplace items found for this workspace.",
   "marketplace.badge.mcpServer": "MCP Server",
+  "marketplace.badge.skills": "Includes skills",
   "marketplace.card.by": "by {{author}}",
   "marketplace.install.method": "Installation Method",
   "marketplace.install.parameters": "Parameters",

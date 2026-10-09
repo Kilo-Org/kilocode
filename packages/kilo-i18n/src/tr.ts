@@ -34,6 +34,7 @@ export const dict = {
     "Yalnızca bu proje. Yüklenen dosyalar sürüm kontrolüne eklenebilir ve ekibinizle paylaşılabilir.",
   "marketplace.install.scope.global.description": "Bu makinedeki tüm projeler. Kullanıcı yapılandırmanızda saklanır.",
   "marketplace.install.destination": "Yükleme hedefi",
+  "marketplace.install.includedSkills": "Dahil edilen yetenekler",
   "marketplace.install.about.mcp":
     "Bir MCP sunucusu, harici hizmetler veya yerel programlarla çalışmak için Kilo'ya ek araçlar sağlar.",
   "marketplace.install.about.agent":
@@ -47,10 +48,9 @@ export const dict = {
   "marketplace.install.learnMore": "Marketplace yüklemelerinin nasıl çalıştığını öğrenin",
   "marketplace.install.learnMcp": "MCP hakkında daha fazla bilgi edinin",
   "marketplace.install.about.plugin":
-    "Bir npm eklentisi, Kilo'ya özel araçlar ve entegrasyonlar ekler. Eklentiler tam izinlerle çalışır.",
+    "Bir eklenti, Kilo'ya özel araçlar ve entegrasyonlar ekler. Eklentiler tam izinlerle çalışır.",
   "marketplace.install.plugin.warning":
     "Eklentiler tam izinlerle kod çalıştırır. Dosyalarınızı okuyup değiştirebilir, komut çalıştırabilir ve kimlik bilgilerinize ve ağınıza erişebilirler. Yalnızca güvendiğiniz eklentileri yükleyin.",
-  "marketplace.install.installedAt": "{{path}} konumuna yüklendi",
   "marketplace.intro":
     "Yeniden kullanılabilir ajanları, yetenekleri, MCP araçlarını ve eklentileri bir proje veya tüm projeler için yükleyin.",
   "marketplace.intro.learnMore": "Marketplace hakkında",
@@ -61,10 +61,19 @@ export const dict = {
   "marketplace.install.failed": "Yükleme başarısız oldu",
   "marketplace.install.done": "Bitti",
   "marketplace.install.close": "Kapat",
+  "marketplace.install.mcp.signIn.message": "{{name}} yüklendi, ancak araçlarının kullanılabilmesi için önce oturum açılması gerekiyor.",
+  "marketplace.install.mcp.signIn.button": "Giriş Yap",
+  "marketplace.install.mcp.signIn.waiting": "Tarayıcıda oturum açma bekleniyor…",
+  "marketplace.install.mcp.signIn.cancel": "İptal",
+  "marketplace.install.mcp.signIn.skip": "Daha sonra",
+  "marketplace.install.mcp.signIn.success": "{{name}} oturumu açıldı.",
+  "marketplace.install.mcp.signIn.failed": "{{name}} oturumu açılamadı.",
   "marketplace.remove.title": "{{name}} kaldırılsın mı?",
   "marketplace.remove.confirm":
     "Bu {{type}} öğesini kaldırmak istediğinizden emin misiniz? Bu, {{scope}} yapılandırmanızdan kaldırılacaktır.",
   "marketplace.remove.cancel": "İptal",
+  "marketplace.remove.mcp.skills":
+    "Bu işlem, bu yüklemeye ait tamamlayıcı yetenekleri de kaldırır. Bağımsız olarak yüklenen yetenekler korunur.",
   "marketplace.remove.confirm.button": "Kaldır",
   "marketplace.search": "Ara...",
   "marketplace.filter.all": "Tüm Öğeler",
@@ -73,6 +82,7 @@ export const dict = {
   "marketplace.empty": "Öğe bulunamadı",
   "marketplace.empty.relevant": "Bu çalışma alanıyla ilgili marketplace öğesi bulunamadı.",
   "marketplace.badge.mcpServer": "MCP Sunucusu",
+  "marketplace.badge.skills": "Yetenekler içerir",
   "marketplace.card.by": "{{author}} tarafından",
   "marketplace.install.method": "Yükleme Yöntemi",
   "marketplace.install.parameters": "Parametreler",

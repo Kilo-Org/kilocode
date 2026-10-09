@@ -69,7 +69,7 @@ flowchart LR
 | Auto Triage | GitHub issue event or dispatch queue | Web duplicate check and `auto-triage-infra` Durable Object per ticket | Cloud Agent only when classification session is needed | Labels, status, callback, and timeout alarm |
 | Auto Fix | `kilo-auto-fix` label or dispatch rule | `auto-fix-infra` Durable Object per fix ticket | Cloud Agent branch and pull-request work | Pull request and lifecycle status callback |
 | Security Agent | Interactive or scheduled Dependabot sync plus analysis queue | `security-sync` and `security-auto-analysis` Workers | Model triage in `security-auto-analysis`; Cloud Agent only for selected deep analysis | Finding state, audit records, and stale-analysis cleanup |
-| Webhook Agent Ingest | HTTP webhook or scheduled alarm | `webhook-agent-ingest` queue and `TriggerDO` | Cloud Agent or Kilo Chat destination | Destination delivery and queue retry behavior |
+| Webhook Agent Ingest | HTTP webhook or scheduled alarm | `webhook-agent-ingest` queue and `TriggerDO` | Cloud Agent destination | Destination delivery and queue retry behavior |
 
 ## Kilo Bot ingress and source-control targets
 
@@ -135,20 +135,15 @@ Security Agent splits finding sync from analysis. Findings, queue rows, and owne
 
 Static source proves scheduled sync and separate auto-analysis infrastructure. It does not prove newly synced findings are automatically enqueued for analysis. See [Cloud Platform](/docs/contributing/architecture/cloud-platform#security-agent) for durable topology and [Cloud Security](/docs/contributing/architecture/cloud-security#security-agent-sync-and-cleanup) for trust boundaries.
 
-## App Builder orchestration boundaries
-
-App Builder is prompt-driven product orchestration, not normal automation ingress. Cloud Agent owns generated-app coding and iteration. Preview, deployment build, and public deployed-app ingress use separate service boundaries. See [Cloud Platform](/docs/contributing/architecture/cloud-platform#app-generation-boundaries) for canonical phase topology and [Cloud Security](/docs/contributing/architecture/cloud-security#generated-application-preview-and-deployment) for trust boundaries.
-
 ## Webhook Agent Ingest
 
-Webhook Agent Ingest handles configured trigger endpoints and schedules. `TriggerDO` stores trigger config and scheduled alarms. Queue consumer dispatches selected destination.
+Webhook Agent Ingest handles configured trigger endpoints and schedules. `TriggerDO` stores trigger config and scheduled alarms. Queue consumer dispatches to the Cloud Agent destination.
 
 | Dimension | Variants | Notes |
 |---|---|---|
 | Activation | HTTP webhook | Can apply configured webhook authentication before queued delivery |
 | Activation | Scheduled | Uses cron expression and Durable Object alarm; webhook auth is not applicable |
 | Destination | `cloud_agent` | Launches Cloud Agent session with webhook or scheduled platform marker |
-| Destination | `kiloclaw_chat` | Posts to user-scoped Kilo Chat destination through Kilo Chat service binding |
 
 ```mermaid
 flowchart LR
@@ -157,13 +152,11 @@ flowchart LR
   queue["Webhook delivery queue"]
   consumer["Queue consumer"]
   agent["Cloud Agent"]
-  chat["Kilo Chat destination"]
 
   http --> queue
   schedule --> queue
   queue --> consumer
   consumer --> agent
-  consumer --> chat
 ```
 
 ## Source map
@@ -177,8 +170,6 @@ Paths below are relative to [`Kilo-Org/cloud`](https://github.com/Kilo-Org/cloud
 | Auto Triage | `apps/web/src/lib/auto-triage/`{% linebreak /%}`services/auto-triage-infra/` |
 | Auto Fix | `apps/web/src/lib/auto-fix/`{% linebreak /%}`services/auto-fix-infra/` |
 | Security Agent | `apps/web/src/lib/security-agent/`{% linebreak /%}`services/security-sync/`{% linebreak /%}`services/security-auto-analysis/` |
-| App Builder preview | `apps/web/src/lib/app-builder/`{% linebreak /%}`services/app-builder/` |
-| Generated-app deployment | `services/deploy-infra/builder/`{% linebreak /%}`services/deploy-infra/dispatcher/` |
 | Webhook Agent Ingest | `services/webhook-agent-ingest/` |
 | Cloud Agent | `services/cloud-agent-next/` |
 
