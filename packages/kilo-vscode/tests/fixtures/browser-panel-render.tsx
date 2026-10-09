@@ -24,9 +24,11 @@ Object.assign(globalThis, {
 
 const { createSignal } = await import("solid-js")
 const { render } = await import("solid-js/web")
-const { BrowserPanel } = await import("../../webview-ui/browser")
+const { BrowserPanel, browserCursorEvent } = await import("../../webview-ui/browser")
+const { StreamViewport } = await import("../../webview-ui/browser/StreamViewport")
 import type { BrowserCommand, BrowserEvent, BrowserLabels } from "../../webview-ui/browser/types"
 import type { BrowserReference } from "../../src/shared/browser-feedback"
+import type { BrowserCursor } from "../../src/shared/browser-stream"
 
 const root = document.createElement("div")
 document.body.append(root)
@@ -38,12 +40,13 @@ const receive = (event: BrowserEvent) => {
   for (const listener of [...listeners]) listener(event)
 }
 let closed = 0
-const actions = { download: 0, settings: 0 }
+const actions = { download: 0, settings: 0, openExternal: [] as string[] }
 const [labels, update] = createSignal<BrowserLabels>({
   title: "Browser",
   url: "Address",
   urlPlaceholder: "Local URL",
   open: "Go",
+  openExternal: "Open in external browser",
   refresh: "Reload",
   back: "Back",
   forward: "Forward",
@@ -79,6 +82,7 @@ const dispose = render(
       }}
       download={() => actions.download++}
       settings={() => actions.settings++}
+      openExternal={(url) => actions.openExternal.push(url)}
       onReference={(reference) => references.push(reference)}
       onClose={() => closed++}
     />
@@ -108,7 +112,7 @@ const button = (label: string) =>
   [...root.querySelectorAll("button")].find((node) => node.textContent?.trim() === label)
 button(labels().download)!.click()
 button(labels().settings)!.click()
-assert.deepEqual(actions, { download: 1, settings: 1 })
+assert.deepEqual(actions, { download: 1, settings: 1, openExternal: [] })
 button(labels().retry)!.click()
 assert.deepEqual(sent.at(-1), { type: "open", scope, url: state.url })
 receive({ type: "state", value: { ...state, browserId: "", status: "error", missing: "chromium" } })
@@ -126,6 +130,10 @@ assert.equal(root.querySelector(".am-browser-stream canvas"), null)
 assert.equal(root.querySelector(".am-browser-empty"), null)
 receive?.({ type: "state", value: state })
 assert.equal(root.querySelector('[role="alert"]'), null)
+const external = root.querySelector(`button[aria-label="${labels().openExternal}"]`) as HTMLButtonElement
+assert.ok(external, "external browser button renders")
+external.click()
+assert.deepEqual(actions.openExternal, [state.url])
 await window.happyDOM.waitUntilComplete()
 const frame = root.querySelector(".am-browser-stream canvas")
 assert.ok(frame)
@@ -250,6 +258,7 @@ const disposeEmpty = render(
       }}
       download={() => undefined}
       settings={() => undefined}
+      openExternal={() => undefined}
       onReference={() => undefined}
       onClose={() => undefined}
     />
@@ -264,4 +273,85 @@ assert.equal(emptyRoot.querySelector(".am-browser-empty"), null)
 assert.equal((emptyRoot.querySelector("input") as HTMLInputElement | null)?.disabled, true)
 assert.equal((emptyRoot.querySelector(`button[aria-label="${labels().open}"]`) as HTMLButtonElement)?.disabled, true)
 disposeEmpty()
+
+// Exercise cursor identity checks with a visible viewport, without decoding or modifying any streamed image.
+const bounds = { left: 0, top: 0, width: 400, height: 200, right: 400, bottom: 200 } as DOMRect
+Object.assign(globalThis, {
+  ResizeObserver: class {
+    observe(target: Element) {
+      target.getBoundingClientRect = () => bounds
+    }
+    disconnect() {}
+  },
+  IntersectionObserver: class {
+    constructor(private readonly notify: IntersectionObserverCallback) {}
+    observe(target: Element) {
+      this.notify(
+        [{ target, isIntersecting: true, intersectionRect: bounds } as IntersectionObserverEntry],
+        this as unknown as IntersectionObserver,
+      )
+    }
+    disconnect() {}
+  },
+})
+const viewport = document.createElement("div")
+document.body.append(viewport)
+const commands: BrowserCommand[] = []
+const readers = new Set<(event: BrowserEvent) => void>()
+const [page, setPage] = createSignal(state)
+const [inspecting, inspect] = createSignal(false)
+const stop = render(
+  () => (
+    <StreamViewport
+      scope={() => scope}
+      state={page}
+      inspecting={inspecting}
+      label="Cursor viewport"
+      transport={{
+        send: (command) => commands.push(command),
+        subscribe: (listener) => {
+          readers.add(listener)
+          return () => readers.delete(listener)
+        },
+      }}
+    />
+  ),
+  viewport,
+)
+const command = commands.findLast((command) => command.type === "viewport")
+assert.ok(command?.type === "viewport" && command.viewport.active)
+const identity = { browserId: command.browserId, navigation: command.navigation, revision: command.viewport.revision }
+const canvas = viewport.querySelector("canvas")!
+const cursor = (value: Partial<BrowserCursor & { scope: typeof scope }> = {}) => {
+  const event: BrowserEvent = { type: "cursor", value: { ...identity, scope, cursor: "pointer", ...value } }
+  for (const reader of readers) reader(event)
+}
+assert.equal(canvas.style.cursor, "default")
+for (const value of [
+  { browserId: "retired" },
+  { navigation: identity.navigation + 1 },
+  { revision: identity.revision - 1 },
+  { scope: { ...scope, sessionId: "other" } },
+  { scope: { ...scope, projectId: "other" } },
+  { cursor: "url(https://example.com/cursor), pointer" },
+  { cursor: "invalid" },
+]) {
+  cursor(value)
+  assert.equal(canvas.style.cursor, "default")
+}
+assert.equal(browserCursorEvent(scope, { ...identity, cursor: "url(https://example.com/cursor), pointer" }), undefined)
+cursor()
+assert.equal(canvas.style.cursor, "pointer")
+inspect(true)
+assert.equal(canvas.style.cursor, "crosshair")
+cursor({ cursor: "grab" })
+assert.equal(canvas.style.cursor, "crosshair")
+inspect(false)
+assert.equal(canvas.style.cursor, "grab")
+setPage({ ...state, navigation: 1 })
+assert.equal(canvas.style.cursor, "default")
+cursor()
+assert.equal(canvas.style.cursor, "default")
+stop()
+assert.equal(readers.size, 0)
 await window.happyDOM.close()

@@ -4,7 +4,7 @@ import { escapeGlob, isAbsolutePath } from "../path-utils"
 import { validateFiles } from "./file-links"
 import type { DiffVirtualFile, DiffVirtualProvider } from "../DiffVirtualProvider"
 import { isPRReviewComment, parseReview, type PRReviewCommentData } from "../shared/review-comments"
-import { openBrowserLink } from "../browser-links"
+import { isWebLink, openBrowserLink } from "../browser-links"
 
 type EditorOpenMessage = {
   type?: string
@@ -22,6 +22,7 @@ function isMarkdownFile(file: string): boolean {
 
 function openExternal(url: unknown): void {
   if (typeof url !== "string") return
+  if (!isWebLink(url)) return
   void vscode.env.openExternal(vscode.Uri.parse(url))
 }
 

@@ -201,6 +201,29 @@ export class ProjectRegistry {
     return true
   }
 
+  /**
+   * Apply a new catalog order. Unknown ids are ignored. Projects that are not
+   * in `ids` (for example added by another window) keep their relative order
+   * after the listed ones.
+   */
+  reorder(ids: string[]): Promise<boolean> {
+    return this.run(() => this.doReorder(ids))
+  }
+
+  private async doReorder(ids: string[]): Promise<boolean> {
+    const current = this.fresh()
+    const wanted = new Set(ids)
+    const listed = [...wanted].flatMap((id) => current.projects.filter((p) => p.id === id))
+    const next = [...listed, ...current.projects.filter((p) => !wanted.has(p.id))].map((p, index) => ({
+      ...p,
+      order: index + 1,
+    }))
+    if (next.every((p, index) => p.id === current.projects[index]?.id && p.order === current.projects[index]?.order))
+      return false
+    await this.write(next, current.pinnedExpanded)
+    return true
+  }
+
   setExpanded(id: string, expanded: boolean): Promise<boolean> {
     return this.run(() => this.doSetExpanded(id, expanded))
   }

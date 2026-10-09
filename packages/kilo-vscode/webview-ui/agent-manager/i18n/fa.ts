@@ -450,6 +450,7 @@ export const dict = {
   "agentManager.browser.url": "نشانی",
   "agentManager.browser.urlPlaceholder": "http://localhost:3000",
   "agentManager.browser.open": "باز کردن",
+  "agentManager.browser.openExternal": "باز کردن در مرورگر خارجی",
   "agentManager.browser.refresh": "بازخوانی مرورگر",
   "agentManager.browser.back": "بازگشت",
   "agentManager.browser.forward": "جلو",

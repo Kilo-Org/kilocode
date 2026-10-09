@@ -447,6 +447,7 @@ export const dict = {
   "agentManager.browser.url": "Adresa",
   "agentManager.browser.urlPlaceholder": "http://localhost:3000",
   "agentManager.browser.open": "Otvori",
+  "agentManager.browser.openExternal": "Otvori u vanjskom pregledniku",
   "agentManager.browser.inspect": "Odaberite element",
   "agentManager.browser.devtoolsTitle": "Razvojni alati",
   "agentManager.browser.refresh": "Osvježi preglednik",

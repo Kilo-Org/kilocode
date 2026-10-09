@@ -33,6 +33,7 @@ import { isPromptBlocked, isSuggesting, isQuestioning } from "./prompt-input-uti
 import { taskChildren } from "./background-agents"
 import { pollBackgroundJobs } from "./background-jobs"
 import { showTabStrip } from "../../utils/local-tabs"
+import { forcesExternalBrowser } from "../../utils/link-modifier"
 import type { WorktreeReference } from "../../hooks/file-mention-utils"
 
 interface ChatViewProps {
@@ -88,6 +89,10 @@ export const ChatView: Component<ChatViewProps> = (props) => {
     // Claim the click before renderer handlers and VS Code's window listener.
     event.preventDefault()
     event.stopPropagation()
+    if (forcesExternalBrowser(event, data.browserLinks)) {
+      vscode.postMessage({ type: "openExternal", url })
+      return
+    }
     data.openUrl(url, id())
   }
   // Keeps the background job list fresh for the dock's agent stack and the
@@ -416,7 +421,7 @@ export const ChatView: Component<ChatViewProps> = (props) => {
           <Show when={isSidebar() && !props.readonly && tabs && showTabStrip(tabs.ids())}>
             <SessionTabStrip />
           </Show>
-          <TaskHeader readonly={props.readonly} projectId={props.projectId} />
+          <TaskHeader readonly={props.readonly} />
           <div class="chat-messages-wrapper">
             <div class="chat-messages">
               <MessageList
@@ -460,6 +465,7 @@ export const ChatView: Component<ChatViewProps> = (props) => {
                 actions={(control, agents, todos) => renderActions(hasMessages(), control, agents, todos)}
                 onScrollToBottom={scrollToBottom}
                 readonly={props.readonly}
+                projectId={props.projectId}
               />
               <Show when={ownsPrompts() && !props.readonly}>
                 <PromptInput

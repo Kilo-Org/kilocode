@@ -442,6 +442,7 @@ export const dict = {
   "agentManager.browser.url": "العنوان",
   "agentManager.browser.urlPlaceholder": "http://localhost:3000",
   "agentManager.browser.open": "فتح",
+  "agentManager.browser.openExternal": "فتح في المتصفح الخارجي",
   "agentManager.browser.refresh": "تحديث المتصفح",
   "agentManager.browser.back": "رجوع",
   "agentManager.browser.forward": "تقدّم",
