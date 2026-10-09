@@ -237,11 +237,14 @@ KILO_API_URL=http://localhost:3000 bun dev
 
 This redirects all gateway traffic (auth, model listing, provider routing, profile, etc.) to your local server. The default is `https://api.kilo.ai`.
 
+AI traffic (models, completions, embeddings, FIM, next-edit, transcriptions) goes to the Kilo AI Gateway at `https://ai-gateway.kilo.ai/api/v1` by default. When `KILO_API_URL` is set, it stays on that server under the legacy `/api/openrouter` and `/api/gateway` routes instead. To use a separate AI gateway, set `KILO_AI_GATEWAY_URL` to its full base URL, e.g. `http://localhost:3010/api/v1`. Other cloud traffic (auth, profile, defaults, sessions) always stays on `KILO_API_URL`.
+
 There are also optional overrides for other services:
 
 | Variable | Default | Purpose |
 |---|---|---|
 | `KILO_API_URL` | `https://api.kilo.ai` | Kilo API (gateway, auth, models, profile) |
+| `KILO_AI_GATEWAY_URL` | `https://ai-gateway.kilo.ai/api/v1`, or the legacy routes on `KILO_API_URL` when that is set | AI gateway base URL, e.g. `http://localhost:3010/api/v1` |
 | `KILO_SESSION_INGEST_URL` | `https://ingest.kilosessions.ai` | Session export / cloud sync |
 | `KILO_MODELS_URL` | `https://models.dev` | Model metadata |
 

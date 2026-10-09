@@ -9,7 +9,7 @@ import {
 } from "@kilocode/kilo-gateway"
 import {
   HEADER_FEATURE,
-  KILO_API_BASE,
+  resolveKiloAiGatewayUrl,
   clearModesCache,
   fetchBalance,
   fetchKilocodeNotifications,
@@ -296,7 +296,7 @@ export const kiloGatewayHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilo",
       const request = yield* HttpServerRequest.HttpServerRequest
       const response = yield* Effect.tryPromise({
         try: () =>
-          fetch(`${KILO_API_BASE}/api/gateway/v1/audio/transcriptions`, {
+          fetch(resolveKiloAiGatewayUrl("audio/transcriptions", "/api/gateway/v1/audio/transcriptions"), {
             method: "POST",
             headers: {
               "Content-Type": "application/json",

@@ -113,6 +113,97 @@ it.instance("routes URL-scoped credentials to their catalog origin", () => {
   )
 })
 
+it.instance("fetches models from KILO_AI_GATEWAY_URL and defaults from the Kilo API", () => {
+  const urls: string[] = []
+  const organizationID = "11111111-1111-4111-8111-111111111111"
+  return Effect.gen(function* () {
+    const catalog = yield* CloudCatalog.Service
+    const token = Redacted.make("https://token.example.test:scoped-token")
+
+    expect(yield* catalog.models({ token })).toEqual(["anthropic/gateway"])
+    expect(yield* catalog.models({ token, organizationID })).toEqual(["anthropic/gateway"])
+    expect(yield* catalog.defaultModel({ token: Redacted.make("stored-token") })).toBe("anthropic/gateway")
+    expect(urls).toEqual([
+      "http://127.0.0.1:3010/api/v1/models",
+      `http://127.0.0.1:3010/api/v1/organizations/${organizationID}/models`,
+      "https://api.example.test/api/defaults",
+    ])
+  }).pipe(
+    Effect.provide(
+      CloudCatalog.layer({
+        env: { KILO_API_URL: "https://api.example.test", KILO_AI_GATEWAY_URL: "http://127.0.0.1:3010/api/v1" },
+        fetch: async (request) => {
+          urls.push(request.url)
+          return Response.json({
+            data: [{ id: "anthropic/gateway", supported_parameters: ["tools"] }],
+            defaultModel: "anthropic/gateway",
+          })
+        },
+      }),
+    ),
+  )
+})
+
+it.instance("fetches models from the production AI gateway when no Kilo URL is configured", () => {
+  const urls: string[] = []
+  return Effect.gen(function* () {
+    const catalog = yield* CloudCatalog.Service
+    const token = Redacted.make("stored-token")
+    yield* catalog.models({ token })
+    yield* catalog.models({ token, organizationID: "org" })
+    yield* catalog.defaultModel({ token })
+    expect(urls).toEqual([
+      "https://ai-gateway.kilo.ai/api/v1/models",
+      "https://ai-gateway.kilo.ai/api/v1/organizations/org/models",
+      "https://api.kilo.ai/api/defaults",
+    ])
+  }).pipe(
+    Effect.provide(
+      CloudCatalog.layer({
+        env: {},
+        fetch: async (request) => {
+          urls.push(request.url)
+          return Response.json({ data: [], defaultModel: "anthropic/gateway" })
+        },
+      }),
+    ),
+  )
+})
+
+it.instance("rejects an insecure KILO_AI_GATEWAY_URL", () =>
+  Effect.gen(function* () {
+    const catalog = yield* CloudCatalog.Service
+    const error = yield* catalog.models({ token: Redacted.make("stored-token") }).pipe(Effect.flip)
+    expect(error).toMatchObject({ _tag: "CloudCatalogError", kind: "schema" })
+  }).pipe(
+    Effect.provide(
+      CloudCatalog.layer({
+        env: { KILO_AI_GATEWAY_URL: "http://gateway.example.test/api/v1" },
+        fetch: () => Promise.reject(new Error("insecure catalog request must not run")),
+      }),
+    ),
+  ),
+)
+
+it.instance("ignores a malformed KILO_AI_GATEWAY_URL like the Kilo Gateway package does", () => {
+  const urls: string[] = []
+  return Effect.gen(function* () {
+    const catalog = yield* CloudCatalog.Service
+    yield* catalog.models({ token: Redacted.make("stored-token") })
+    expect(urls).toEqual(["https://api.example.test/api/openrouter/models"])
+  }).pipe(
+    Effect.provide(
+      CloudCatalog.layer({
+        env: { KILO_API_URL: "https://api.example.test", KILO_AI_GATEWAY_URL: "not a url" },
+        fetch: async (request) => {
+          urls.push(request.url)
+          return Response.json({ data: [] })
+        },
+      }),
+    ),
+  )
+})
+
 it.instance("returns text-output models that support or may support tools", () =>
   Effect.gen(function* () {
     const catalog = yield* CloudCatalog.Service

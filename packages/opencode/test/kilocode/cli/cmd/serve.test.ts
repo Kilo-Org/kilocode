@@ -4,6 +4,8 @@ import { tmpdir } from "../../../fixture/fixture"
 
 const root = path.resolve(import.meta.dir, "../../../..")
 const entry = path.join(root, "src/index.ts")
+// Resolve from the package so Bun does not auto-install the preload from npm into the temp cwd.
+const preload = Bun.resolveSync("@opentui/solid/preload", root)
 
 test("prints the local IPv6 URL for wildcard binds", async () => {
   await using tmp = await tmpdir()
@@ -11,7 +13,7 @@ test("prints the local IPv6 URL for wildcard binds", async () => {
     [
       process.execPath,
       "--conditions=browser",
-      "--preload=@opentui/solid/preload",
+      `--preload=${preload}`,
       entry,
       "serve",
       "--hostname",

@@ -1,8 +1,10 @@
 import {
   buildKiloHeaders,
   DEFAULT_KILO_API_URL,
+  ENV_KILO_AI_GATEWAY_URL,
   getDefaultHeaders,
   getKiloUrlFromToken,
+  resolveKiloAiGatewayRoot,
   resolveKiloOpenRouterBaseUrl,
   supportsTools,
 } from "@kilocode/kilo-gateway"
@@ -142,12 +144,35 @@ export namespace CloudCatalog {
       })
     })
 
+    // The Kilo AI Gateway serves the models, resolved like in @kilocode/kilo-gateway from the injected
+    // env; the defaults stay on the Kilo API. Only an explicit KILO_AI_GATEWAY_URL can be loopback HTTP.
+    const gateway = Effect.fn("CloudCatalog.gateway")(function* (input: Input) {
+      const root = resolveKiloAiGatewayRoot({
+        gateway: env[ENV_KILO_AI_GATEWAY_URL] ?? "",
+        api: env.KILO_API_URL?.trim() ?? "",
+        token: Redacted.value(input.token),
+      })
+      if (!root) return undefined
+      return yield* Effect.try({
+        try: () => {
+          const url = new URL(root)
+          parseServiceOrigin(url.origin, { allowHttpLoopback: true })
+          if (url.username !== "" || url.password !== "") throw new Error("Catalog URL credentials are not allowed")
+          return url
+        },
+        catch: () =>
+          new CatalogError({
+            kind: "schema",
+            message: "Kilo catalog URL must be secure",
+          }),
+      })
+    })
+
     const models = Effect.fn("CloudCatalog.models")(function* (input: Input) {
-      const root = yield* base(input)
-      const path = input.organizationID
-        ? `../organizations/${encodeURIComponent(input.organizationID)}/models`
-        : "models"
-      const result = yield* request(new URL(path, root).toString(), input, Models)
+      const org = input.organizationID ? `organizations/${encodeURIComponent(input.organizationID)}/models` : undefined
+      const root = yield* gateway(input)
+      const url = root ? new URL(org ?? "models", root) : new URL(org ? `../${org}` : "models", yield* base(input))
+      const result = yield* request(url.toString(), input, Models)
       return [
         ...new Set(
           result.data
