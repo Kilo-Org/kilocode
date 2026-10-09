@@ -1824,19 +1824,13 @@ export const layer = Layer.effect(
           )
           const size = Buffer.byteLength(JSON.stringify(modelMsgs))
           if (size > REQUEST_PRUNE_BYTES) {
-            yield* compaction.prune({ sessionID, reason: "payload-limit" })
-            msgs = yield* MessageV2.filterCompactedEffect(sessionID).pipe(
-              Effect.provideService(Database.Service, database),
-            )
-            msgs = KiloSessionPromptQueue.scope(sessionID, msgs)
-            msgs = KiloSessionPrompt.trimBeforeLastSummary(msgs)
-            yield* plugin.trigger("experimental.chat.messages.transform", {}, { messages: msgs })
-            KiloSessionPrompt.injectEditorContext({ msgs, session, sessionID, cache: envCache })
-            msgs = KiloSessionPrompt.maybeStripHistoricalMedia(msgs)
-            modelMsgs = yield* MessageV2.toModelMessagesEffect(msgs, model).pipe(
-              Effect.provideService(Database.Service, database),
-            )
-            const nextSize = Buffer.byteLength(JSON.stringify(modelMsgs))
+            // prune marks cleared outputs on msgs, so re-convert only when it cleared something
+            const cleared = yield* compaction.prune({ sessionID, reason: "payload-limit", messages: msgs })
+            if (cleared > 0)
+              modelMsgs = yield* MessageV2.toModelMessagesEffect(msgs, model).pipe(
+                Effect.provideService(Database.Service, database),
+              )
+            const nextSize = cleared > 0 ? Buffer.byteLength(JSON.stringify(modelMsgs)) : size
             if (nextSize > REQUEST_PRUNE_BYTES)
               yield* Effect.logWarning("payload still large after pruning", { "session.id": sessionID, size: nextSize })
           }
