@@ -22,6 +22,8 @@ class SessionOutcomeView(
     focus: (() -> Unit)? = null,
     private val retry: (() -> Unit)? = null,
     private val retryable: (() -> Boolean)? = null,
+    private val resume: (() -> Unit)? = null,
+    private val resumable: (() -> Boolean)? = null,
     private val dismiss: (() -> Unit)? = null,
 ) : DialogView(selection, focus), SessionView {
 
@@ -44,6 +46,7 @@ class SessionOutcomeView(
         setContentPadding(left = false, right = false)
         setContent(error.scroll)
         syncRetry(true, dismissible = true)
+        syncResume(false)
         isVisible = true
         refresh()
     }
@@ -71,6 +74,7 @@ class SessionOutcomeView(
         setContentPadding()
         setContent(null)
         syncRetry(true)
+        syncResume(false)
         isVisible = true
         refresh()
     }
@@ -87,6 +91,7 @@ class SessionOutcomeView(
                 setHeaderIcon(null)
                 setHeader("", KiloBundle.message("session.outcome.interrupted.note"))
                 syncRetry(false)
+                syncResume(true)
             }
 
             Outcome.FAILED -> {
@@ -95,6 +100,7 @@ class SessionOutcomeView(
                 setHeaderIcon(AllIcons.General.Error, title)
                 setHeader(title, KiloBundle.message("session.outcome.failed.description"))
                 syncRetry(true)
+                syncResume(false)
             }
 
             Outcome.INCOMPLETE -> {
@@ -104,6 +110,7 @@ class SessionOutcomeView(
                 setHeaderIcon(AllIcons.General.Warning, tip)
                 setHeader(title, KiloBundle.message("session.outcome.incomplete.description"))
                 syncRetry(false)
+                syncResume(false)
             }
         }
         setContentPadding()
@@ -139,6 +146,32 @@ class SessionOutcomeView(
         setActions(actions)
     }
 
+    /**
+     * Resume sits on the stop note's own line, at its right edge, rather than in the footer.
+     *
+     * The note is a single muted sentence with no card chrome; a footer button under it would read as
+     * a separate block and pull the eye away from the line it belongs to.
+     *
+     * [resumable] is asked on every show for the same reason [retryable] is: whether the stopped turn
+     * can still be continued depends on the transcript tail, not on the outcome alone.
+     */
+    @RequiresEdt
+    private fun syncResume(show: Boolean) {
+        val run = resume
+        if (run == null || !show || resumable?.invoke() == false) {
+            setHeaderAction(null)
+            return
+        }
+        setHeaderAction(
+            Action(
+                id = RESUME_ACTION,
+                text = KiloBundle.message("session.outcome.resume"),
+                primary = false,
+                handler = run,
+            ),
+        )
+    }
+
     @RequiresEdt
     fun hideView() {
         if (!isVisible) return
@@ -154,6 +187,7 @@ class SessionOutcomeView(
 
     private companion object {
         const val RETRY_ACTION = "retry"
+        const val RESUME_ACTION = "resume"
         const val DISMISS_ACTION = "dismiss"
     }
 }

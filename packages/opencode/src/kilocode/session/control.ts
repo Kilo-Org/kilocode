@@ -19,6 +19,23 @@ export namespace KiloSessionControl {
     return parts.some((part) => part.type === "text" && part.synthetic && part.metadata?.background === true)
   }
 
+  /**
+   * Whether a prompt continues an existing message instead of starting a new turn.
+   *
+   * Retry and Resume send no parts and reuse the original user message id, so the CLI rewrites that
+   * one message and starts a fresh assistant under it. That shape is invisible to the parts-based
+   * human test, which made [begin] skip the resume and leave a stop's pause in place: the ticket was
+   * never running, so the prompt returned the message without opening a turn or reporting idle and
+   * the client stayed busy forever.
+   *
+   * No parts plus a target message is unique to that continuation. Every scheduled caller — a wakeup,
+   * a background task result — sends a synthetic part and no message id, so none of them can reach
+   * this and none of them lose the pause that is deliberately suppressing them.
+   */
+  export function continuation(input: { parts: ReadonlyArray<unknown>; messageID?: string }) {
+    return input.parts.length === 0 && input.messageID !== undefined
+  }
+
   export const make = Effect.gen(function* () {
     const state = yield* InstanceState.make(() => Effect.succeed(new Map<SessionID, State>()))
     const get = Effect.fn("KiloSessionControl.get")(function* (id: SessionID) {

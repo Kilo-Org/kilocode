@@ -451,6 +451,73 @@ class SessionRetryTest : SessionControllerTestBase() {
         edt { assertFalse(m.canRetry()) }
     }
 
+    // ------ resume (a turn the user stopped on purpose) ------
+
+    /**
+     * A stop is not a failure, so it must never light up Retry — but the turn it left behind is just as
+     * continuable, and Resume on the stop note is what continues it.
+     */
+    fun `test resume continues a turn the user stopped`() {
+        failed(MessageErrorDto(type = MessageErrorDto.ABORTED, message = "aborted"))
+        val m = controller("ses_test")
+        flush()
+
+        edt { assertFalse("A stop is still not a failure", m.canRetry()) }
+        edt { assertTrue("A stopped turn can be continued", m.canResume()) }
+        edt { m.resume() }
+        flush()
+
+        assertTrue("Nothing is reverted", rpc.reverts.isEmpty())
+        assertTrue("The stopped turn stays in the transcript", rpc.messageDeletes.isEmpty())
+        val prompt = rpc.prompts.single().third
+        assertEquals("Continues the existing user message", "msg_user", prompt.messageID)
+        assertTrue(prompt.parts.isEmpty())
+        assertEquals("kilo", prompt.providerID)
+        assertEquals("gpt-5", prompt.modelID)
+        assertTrue("Resume must hand off to the running turn", m.model.state is SessionState.Busy)
+    }
+
+    fun `test resume runs with the model picked after the stop`() {
+        failed(MessageErrorDto(type = MessageErrorDto.ABORTED, message = "aborted"))
+        val m = controller("ses_test")
+        flush()
+
+        edt { m.selectModel("anthropic", "claude-opus-5") }
+        flush()
+        edt { m.resume() }
+        flush()
+
+        val prompt = rpc.prompts.single().third
+        assertEquals("anthropic", prompt.providerID)
+        assertEquals("claude-opus-5", prompt.modelID)
+    }
+
+    fun `test resume is unavailable when nothing stopped`() {
+        failed()
+        val m = controller("ses_test")
+        flush()
+
+        edt { assertFalse("A failure is a Retry, not a Resume", m.canResume()) }
+        edt { m.resume() }
+        flush()
+
+        assertTrue(rpc.prompts.isEmpty())
+    }
+
+    fun `test resume is unavailable while the session is busy`() {
+        failed(MessageErrorDto(type = MessageErrorDto.ABORTED, message = "aborted"))
+        val m = controller("ses_test")
+        flush()
+        emit(ChatEventDto.TurnOpen("ses_test"))
+        edt { assertTrue("Precondition: the session is busy", m.model.state is SessionState.Busy) }
+
+        edt { assertFalse(m.canResume()) }
+        edt { m.resume() }
+        flush()
+
+        assertTrue("A busy session must not be continued", rpc.prompts.isEmpty())
+    }
+
     fun `test retry surfaces an error when the prompt fails`() {
         failed()
         rpc.promptThrows = RuntimeException("backend unavailable")
