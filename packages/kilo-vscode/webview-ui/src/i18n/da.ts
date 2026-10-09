@@ -759,6 +759,10 @@ export const dict = {
 
   "session.messages.welcome":
     "Kilo Code er en AI-kodningsassistent. Bed den om at bygge funktioner, rette fejl eller forklare din kodebase.",
+  "session.workspaceScope.description": "Kilo-chatten bruger kun “{{folder}}”, den første mappe i dette arbejdsområde.",
+  "session.workspaceScope.alternatives":
+    "Hvis du vil arbejde med en anden mappe, skal du åbne den i sit eget vindue eller tilføje den som et projekt i Agent Manager.",
+  "session.workspaceScope.dismiss": "Skjul oplysningen om arbejdsområdets afgrænsning",
   "session.messages.scrollToBottom": "Rul til bunden",
   "session.messages.initializing": "Initialiserer...",
   "session.messages.taskStarting": "Starter...",

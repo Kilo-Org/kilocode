@@ -749,6 +749,10 @@ export const dict = {
   "settings.aboutKiloCode.title": "เกี่ยวกับ Kilo Code",
 
   "session.messages.welcome": "Kilo Code เป็นผู้ช่วยเขียนโค้ด AI ขอให้สร้างฟีเจอร์ แก้ไขบัก หรืออธิบายโค้ดเบสของคุณ",
+  "session.workspaceScope.description": "แชต Kilo ใช้เฉพาะ “{{folder}}” ซึ่งเป็นโฟลเดอร์แรกในพื้นที่ทำงานนี้",
+  "session.workspaceScope.alternatives":
+    "หากต้องการทำงานกับโฟลเดอร์อื่น ให้เปิดโฟลเดอร์นั้นในหน้าต่างแยกต่างหาก หรือเพิ่มเป็นโปรเจกต์ใน Agent Manager",
+  "session.workspaceScope.dismiss": "ปิดคำแนะนำเกี่ยวกับขอบเขตพื้นที่ทำงาน",
   "session.messages.scrollToBottom": "เลื่อนไปด้านล่าง",
   "session.messages.initializing": "กำลังเริ่มต้น...",
   "session.messages.taskStarting": "กำลังเริ่มทำงาน...",

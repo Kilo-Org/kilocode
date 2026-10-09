@@ -711,6 +711,10 @@ export const dict = {
 
   "session.messages.welcome":
     "Kilo Code یک دستیار هوش مصنوعی برای کدنویسی است. از آن بخواهید ویژگی‌ها بسازد، باگ‌ها را رفع کند یا کدبیس شما را توضیح دهد.",
+  "session.workspaceScope.description": "گفتگوی Kilo فقط از «{{folder}}»، اولین پوشه در این فضای کاری، استفاده می‌کند.",
+  "session.workspaceScope.alternatives":
+    "برای کار با پوشه‌ای دیگر، آن را در پنجره‌ای جداگانه باز کنید یا به‌عنوان پروژه به Agent Manager اضافه کنید.",
+  "session.workspaceScope.dismiss": "بستن راهنمای محدودهٔ فضای کاری",
   "session.messages.scrollToBottom": "رفتن به پایین",
   "session.messages.initializing": "در حال راه‌اندازی...",
   "session.messages.taskStarting": "در حال شروع...",

@@ -760,6 +760,10 @@ export const dict = {
 
   "session.messages.welcome":
     "Kilo Code je AI asistent za programiranje. Zatražite da gradi funkcionalnosti, ispravlja greške ili objasni vašu bazu koda.",
+  "session.workspaceScope.description": "Kilo razgovor koristi samo „{{folder}}“, prvi folder u ovom radnom prostoru.",
+  "session.workspaceScope.alternatives":
+    "Za rad s drugim folderom, otvorite ga u zasebnom prozoru ili ga dodajte kao projekt u Agent Manager.",
+  "session.workspaceScope.dismiss": "Zatvori savjet o opsegu radnog prostora",
   "session.messages.scrollToBottom": "Pomakni se na dno",
   "session.messages.initializing": "Inicijalizacija...",
   "session.messages.taskStarting": "Pokretanje...",

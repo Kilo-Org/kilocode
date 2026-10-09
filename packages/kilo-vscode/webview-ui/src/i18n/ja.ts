@@ -754,6 +754,11 @@ export const dict = {
 
   "session.messages.welcome":
     "Kilo CodeはAIコーディングアシスタントです。機能の構築、バグの修正、コードベースの説明を依頼できます。",
+  "session.workspaceScope.description":
+    "Kilo チャットは、このワークスペースの最初のフォルダー「{{folder}}」のみを使用します。",
+  "session.workspaceScope.alternatives":
+    "別のフォルダーで作業するには、そのフォルダーを別のウィンドウで開くか、Agent Manager にプロジェクトとして追加してください。",
+  "session.workspaceScope.dismiss": "ワークスペースの範囲に関するヒントを閉じる",
   "session.messages.scrollToBottom": "下にスクロール",
   "session.messages.initializing": "初期化中...",
   "session.messages.taskStarting": "開始中...",

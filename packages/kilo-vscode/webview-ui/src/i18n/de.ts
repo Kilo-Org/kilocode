@@ -771,6 +771,11 @@ export const dict = {
 
   "session.messages.welcome":
     "Kilo Code ist ein KI-Programmierassistent. Bitten Sie ihn, Funktionen zu erstellen, Fehler zu beheben oder Ihre Codebasis zu erklären.",
+  "session.workspaceScope.description":
+    "Der Kilo-Chat verwendet nur „{{folder}}“, den ersten Ordner in diesem Arbeitsbereich.",
+  "session.workspaceScope.alternatives":
+    "Um mit einem anderen Ordner zu arbeiten, öffnen Sie ihn in einem eigenen Fenster oder fügen Sie ihn als Projekt im Agent Manager hinzu.",
+  "session.workspaceScope.dismiss": "Hinweis zum Umfang des Arbeitsbereichs ausblenden",
   "session.messages.scrollToBottom": "Nach unten scrollen",
   "session.messages.initializing": "Initialisierung...",
   "session.messages.taskStarting": "Wird gestartet...",
