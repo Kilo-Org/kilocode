@@ -4,7 +4,7 @@ import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
 import { ProviderV2 } from "@opencode-ai/core/provider"
 import { ModelV2 } from "@opencode-ai/core/model"
 import { describe, expect } from "bun:test"
-import { Cause, Effect, Exit, Fiber } from "effect"
+import { Cause, Effect, Exit, Fiber, Schema } from "effect"
 import fs from "node:fs/promises"
 import path from "node:path"
 import { Session } from "@/session/session"
@@ -17,6 +17,10 @@ import { Storage } from "@/storage/storage"
 import { KiloSessionRevert } from "@/kilocode/session/revert"
 import { provideInstance, provideTmpdirInstance } from "../../fixture/fixture"
 import { pollWithTimeout, testEffect } from "../../lib/effect"
+
+const decodeTrace = Schema.decodeUnknownSync(
+  Schema.Struct({ event: Schema.String, argv: Schema.optional(Schema.Array(Schema.String)) }),
+)
 
 const it = testEffect(
   LayerNode.compile(
@@ -277,10 +281,14 @@ describe("descendant revert regressions", () => {
             revert.revert({ sessionID: parent.id, messageID: prompt.id }),
             revert.revert({ sessionID: parent.id, messageID: later.id }),
             revert.unrevert({ sessionID: parent.id }),
+            revert.cleanup(yield* sessions.get(parent.id)),
           ]) {
             const outcome = yield* action.pipe(Effect.exit)
             expect(Exit.isFailure(outcome)).toBe(true)
-            if (Exit.isFailure(outcome)) expect(Cause.squash(outcome.cause)).toBeInstanceOf(Session.BusyError)
+            if (Exit.isFailure(outcome)) {
+              expect(Cause.squash(outcome.cause)).toBeInstanceOf(Session.BusyError)
+              expect(Cause.hasDies(outcome.cause)).toBe(false)
+            }
             expect(yield* read(file)).toBe("before")
           }
           yield* run.cancel(child.id).pipe(provideInstance(subdir))
@@ -418,6 +426,122 @@ describe("descendant revert regressions", () => {
       30_000,
     )
   }
+
+  it.live(
+    "uses one full-tree diff for distinct child baselines",
+    provideTmpdirInstance(
+      (dir) =>
+        Effect.gen(function* () {
+          const sessions = yield* Session.Service
+          const revert = yield* SessionRevert.Service
+          const files = ["one.txt", "two.txt", "three.txt"].map((name) => path.join(dir, name))
+          yield* Effect.promise(() => Promise.all(files.map((file) => fs.writeFile(file, "before\n"))))
+          const parent = yield* sessions.create({})
+          const prompt = yield* user(parent.id, 1)
+          for (const [index, file] of files.entries()) {
+            const child = yield* sessions.create({ parentID: parent.id })
+            yield* edit(yield* assistant(child.id, prompt.id, index + 2), file, "after\n")
+          }
+          const trace = path.join(dir, ".git", "revert-trace.jsonl")
+          const prior = process.env.GIT_TRACE2_EVENT
+          process.env.GIT_TRACE2_EVENT = trace
+          const undone = yield* revert.revert({ sessionID: parent.id, messageID: prompt.id }).pipe(
+            Effect.ensuring(
+              Effect.sync(() => {
+                if (prior === undefined) delete process.env.GIT_TRACE2_EVENT
+                else process.env.GIT_TRACE2_EVENT = prior
+              }),
+            ),
+          )
+          expect(undone.summary?.files).toBe(3)
+          for (const file of files) expect(yield* read(file)).toBe("before\n")
+          const commands = (yield* read(trace))
+            .trim()
+            .split("\n")
+            .map((line) => decodeTrace(JSON.parse(line)))
+          expect(commands.filter((event) => event.event === "start" && event.argv?.includes("--numstat"))).toHaveLength(
+            1,
+          )
+        }),
+      { git: true },
+    ),
+    30_000,
+  )
+
+  it.live(
+    "prunes inactive undo sets and deleted-session discard markers",
+    provideTmpdirInstance(
+      (dir) =>
+        Effect.gen(function* () {
+          const sessions = yield* Session.Service
+          const revert = yield* SessionRevert.Service
+          const storage = yield* Storage.Service
+          const file = path.join(dir, "child.txt")
+          yield* Effect.promise(() => fs.writeFile(file, "before"))
+          const parent = yield* sessions.create({})
+          yield* user(parent.id, 1)
+          const prompt = yield* user(parent.id, 2)
+          const child = yield* sessions.create({ parentID: parent.id })
+          yield* edit(yield* assistant(child.id, prompt.id, 3), file, "after")
+          const later = yield* user(parent.id, 4)
+          yield* revert.revert({ sessionID: parent.id, messageID: prompt.id })
+          yield* revert.revert({ sessionID: parent.id, messageID: later.id })
+          expect((yield* storage.list(["session_revert", parent.id])).length).toBe(1)
+          yield* revert.unrevert({ sessionID: parent.id })
+          expect(yield* storage.list(["session_revert", parent.id])).toEqual([])
+          const undone = yield* revert.revert({ sessionID: parent.id, messageID: prompt.id })
+          yield* revert.cleanup(undone)
+          expect(yield* storage.list(["session_revert", parent.id])).toEqual([])
+          expect((yield* storage.read<string[]>(["session_discarded_patches", child.id])).length).toBe(1)
+          yield* sessions.remove(child.id)
+          expect(
+            yield* storage
+              .read(["session_discarded_patches", child.id])
+              .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(undefined))),
+          ).toBeUndefined()
+          const next = yield* user(parent.id, 5)
+          yield* edit(yield* assistant(parent.id, next.id, 6), file, "next")
+          yield* revert.revert({ sessionID: parent.id, messageID: next.id })
+          expect((yield* storage.list(["session_revert", parent.id])).length).toBe(1)
+          yield* sessions.remove(parent.id)
+          expect(yield* storage.list(["session_revert", parent.id])).toEqual([])
+        }),
+      { git: true },
+    ),
+    30_000,
+  )
+
+  it.live(
+    "drops a deleted child's own undo set while retaining the parent's",
+    provideTmpdirInstance(
+      (dir) =>
+        Effect.gen(function* () {
+          const sessions = yield* Session.Service
+          const revert = yield* SessionRevert.Service
+          const storage = yield* Storage.Service
+          const ownfile = path.join(dir, "own.txt")
+          const childfile = path.join(dir, "child.txt")
+          yield* Effect.promise(() => Promise.all([fs.writeFile(ownfile, "before"), fs.writeFile(childfile, "before")]))
+          const parent = yield* sessions.create({})
+          const prompt = yield* user(parent.id, 1)
+          yield* edit(yield* assistant(parent.id, prompt.id, 2), ownfile, "after")
+          const child = yield* sessions.create({ parentID: parent.id })
+          const childprompt = yield* user(child.id, 3)
+          yield* edit(yield* assistant(child.id, childprompt.id, 4), childfile, "after")
+          yield* revert.revert({ sessionID: child.id, messageID: childprompt.id })
+          yield* revert.revert({ sessionID: parent.id, messageID: prompt.id })
+          expect((yield* storage.list(["session_revert", child.id])).length).toBe(1)
+          yield* sessions.remove(child.id)
+          expect(yield* storage.list(["session_revert", child.id])).toEqual([])
+          expect((yield* storage.list(["session_revert", parent.id])).length).toBe(1)
+          yield* revert.unrevert({ sessionID: parent.id })
+          expect(yield* read(ownfile)).toBe("after")
+          expect(yield* read(childfile)).toBe("before")
+        }),
+      { git: true },
+    ),
+    30_000,
+  )
 
   it.live(
     "summarizes all restored files when parent and child steps overlap",

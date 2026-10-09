@@ -18,11 +18,11 @@ export interface Interface {
     onInterrupt: Effect.Effect<SessionV1.WithParts>,
     work: Effect.Effect<SessionV1.WithParts>,
     valid?: () => boolean, // kilocode_change
-  ) => Effect.Effect<SessionV1.WithParts>
+  ) => Effect.Effect<SessionV1.WithParts, Session.BusyError> // kilocode_change - preserve shell cleanup failures
   readonly startShell: (
     sessionID: SessionID,
     onInterrupt: Effect.Effect<SessionV1.WithParts>,
-    work: Effect.Effect<SessionV1.WithParts>,
+    work: Effect.Effect<SessionV1.WithParts, Session.BusyError>, // kilocode_change
     ready?: Latch.Latch,
   ) => Effect.Effect<SessionV1.WithParts, Session.BusyError>
 }
@@ -39,7 +39,7 @@ export const layer = Layer.effect(
     const state = yield* InstanceState.make(
       Effect.fn("SessionRunState.state")(function* () {
         const scope = yield* Scope.Scope
-        const runners = new Map<SessionID, Runner.Runner<SessionV1.WithParts>>()
+        const runners = new Map<SessionID, Runner.Runner<SessionV1.WithParts, Session.BusyError>>() // kilocode_change
         yield* Effect.addFinalizer(
           Effect.fnUntraced(function* () {
             yield* Effect.forEach(runners.values(), (runner) => runner.cancel, {
@@ -60,7 +60,8 @@ export const layer = Layer.effect(
       const data = yield* InstanceState.get(state)
       const existing = data.runners.get(sessionID)
       if (existing) return existing
-      const next = Runner.make<SessionV1.WithParts>(data.scope, {
+      // kilocode_change start - share typed cleanup failures with shell callers
+      const next = Runner.make<SessionV1.WithParts, Session.BusyError>(data.scope, {
         onIdle: Effect.gen(function* () {
           data.runners.delete(sessionID)
           yield* status.set(sessionID, { type: "idle" })
@@ -69,6 +70,7 @@ export const layer = Layer.effect(
         onInterrupt,
         lease: drain.hold(sessionID), // kilocode_change
       })
+      // kilocode_change end
       data.runners.set(sessionID, next)
       return next
     })
@@ -113,7 +115,7 @@ export const layer = Layer.effect(
     const startShell = Effect.fn("SessionRunState.startShell")(function* (
       sessionID: SessionID,
       onInterrupt: Effect.Effect<SessionV1.WithParts>,
-      work: Effect.Effect<SessionV1.WithParts>,
+      work: Effect.Effect<SessionV1.WithParts, Session.BusyError>,
       ready?: Latch.Latch,
     ) {
       return yield* drain.track(

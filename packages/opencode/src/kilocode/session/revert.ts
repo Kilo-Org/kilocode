@@ -197,6 +197,23 @@ export namespace KiloSessionRevert {
     patches: Patch[],
   ) => storage.write(key(sessionID, rev), patches).pipe(Effect.orDie)
 
+  // Garbage collection follows a committed state transition. Keep the active undo set;
+  // discard markers must outlive cleanup while the child's historical patches still exist.
+  export const prune = Effect.fn("KiloSessionRevert.prune")(
+    function* (storage: Storage.Interface, sessionID: SessionID, keep?: NonNullable<Session.Info["revert"]>) {
+      const active = keep ? key(sessionID, keep).join("/") : undefined
+      for (const entry of yield* storage.list(["session_revert", sessionID])) {
+        if (entry.join("/") !== active) yield* storage.remove(entry)
+      }
+    },
+    (effect) => effect.pipe(Effect.ignore),
+  )
+
+  export const remove = (storage: Storage.Interface, sessionID: SessionID) =>
+    prune(storage, sessionID).pipe(
+      Effect.andThen(storage.remove(["session_discarded_patches", sessionID]).pipe(Effect.ignore)),
+    )
+
   export const discard = Effect.fn("KiloSessionRevert.discard")(function* (
     storage: Storage.Interface,
     sessionID: SessionID,
@@ -214,30 +231,24 @@ export namespace KiloSessionRevert {
     }
   })
 
-  // Use the exact first-seen baseline per file that Snapshot.revert applies. Step endpoints
-  // ordered by message creation cannot describe overlapping parent/child capture windows.
+  // Capture the restored tree once, after Snapshot.revert has combined the per-file
+  // baselines. This produces one full diff regardless of how many checkpoint hashes won.
   export const diff = Effect.fn("KiloSessionRevert.diff")(function* (
     snap: Snapshot.Interface,
     patches: Snapshot.Patch[],
     to: string,
   ) {
     const ctx = yield* InstanceState.context
-    const seen = new Set<string>()
-    const groups = new Map<string, Set<string>>()
-    for (const patch of patches) {
-      for (const file of patch.files) {
-        if (seen.has(file)) continue
-        seen.add(file)
-        const files = groups.get(patch.hash) ?? new Set<string>()
-        files.add(path.relative(ctx.worktree, file).replaceAll("\\", "/"))
-        groups.set(patch.hash, files)
-      }
-    }
-    const diffs: Snapshot.FileDiff[] = []
-    for (const [hash, files] of groups) {
-      diffs.push(...(yield* snap.diffFull(hash, to)).filter((item) => item.file != null && files.has(item.file)))
-    }
-    return diffs.toSorted((left, right) => (left.file ?? "").localeCompare(right.file ?? ""))
+    const files = new Set(
+      patches.flatMap((patch) => patch.files).map((file) => path.relative(ctx.worktree, file).replaceAll("\\", "/")),
+    )
+    if (files.size === 0) return []
+    const from = yield* snap.track()
+    if (!from)
+      return yield* Effect.die(new Error("Cannot summarize files because the restored snapshot is unavailable"))
+    return (yield* snap.diffFull(from, to))
+      .filter((item) => item.file != null && files.has(item.file))
+      .toSorted((left, right) => (left.file ?? "").localeCompare(right.file ?? ""))
   })
 
   export const apply = Effect.fn("KiloSessionRevert.apply")(function* <A, E, R>(

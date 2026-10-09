@@ -16,7 +16,7 @@ import { EventV2 } from "@opencode-ai/core/event"
 import { SessionV2 } from "@opencode-ai/core/session"
 import { SessionExecution } from "@opencode-ai/core/session/execution"
 
-import { NotFoundError } from "@/storage/storage"
+import { NotFoundError, Storage } from "@/storage/storage" // kilocode_change - retire auxiliary revert metadata on removal
 import { eq, and, gte, isNull, desc, like, sql, inArray, lt, or } from "drizzle-orm"
 import type { SQL } from "drizzle-orm"
 import { PartTable, SessionTable } from "@opencode-ai/core/session/sql"
@@ -37,6 +37,7 @@ import { Global } from "@opencode-ai/core/global"
 import { BackgroundProcess } from "@/kilocode/background-process"
 import * as SandboxInheritance from "@/kilocode/sandbox/inheritance"
 import { KiloSession } from "@/kilocode/session"
+import { KiloSessionRevert } from "@/kilocode/session/revert"
 import { forkWriter } from "@/kilocode/session/fork"
 import { GoalState } from "@/kilocode/session/goal/state"
 import { kiloSessionFork } from "@/kilocode/session/fork-command"
@@ -587,7 +588,7 @@ export type Patch = Omit<Partial<Info>, "time" | "share" | "summary" | "revert" 
 export const layer: Layer.Layer<
   Service,
   never,
-  BackgroundJob.Service | RuntimeFlags.Service | Database.Service | EventV2Bridge.Service
+  BackgroundJob.Service | RuntimeFlags.Service | Database.Service | EventV2Bridge.Service | Storage.Service // kilocode_change
 > = Layer.effect(
   Service,
   Effect.gen(function* () {
@@ -596,6 +597,7 @@ export const layer: Layer.Layer<
     const background = yield* BackgroundJob.Service
     const events = yield* EventV2Bridge.Service
     const flags = yield* RuntimeFlags.Service
+    const storage = yield* Storage.Service // kilocode_change
 
     // kilocode_change start - inherited sandbox policy source
     const createNext = Effect.fn("Session.createNext")(function* (input: {
@@ -747,6 +749,7 @@ export const layer: Layer.Layer<
             const workspaceKey = hasInstance ? yield* InstanceState.directory : undefined // kilocode_change
             yield* Effect.promise(() => SessionExport.onSessionClose(sessionID, workspaceKey)) // kilocode_change
             yield* events.remove(sessionID)
+            yield* KiloSessionRevert.remove(storage, sessionID)
           }),
         )
         // kilocode_change end
@@ -1245,7 +1248,7 @@ export const fork = kiloSessionFork
 export const node = LayerNode.make({
   service: Service,
   layer,
-  deps: [BackgroundJob.node, RuntimeFlags.node, Database.node, EventV2Bridge.node],
+  deps: [BackgroundJob.node, RuntimeFlags.node, Database.node, EventV2Bridge.node, Storage.node], // kilocode_change
 })
 
 export * as Session from "./session"
