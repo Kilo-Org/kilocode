@@ -16,9 +16,6 @@ export namespace SecurityAsk {
 
   export type Marker = Readonly<{ rule_id: string }>
 
-  /** What a client must do with a published ask. */
-  export type Decision = "prompt" | "block" | "once"
-
   export function mark<M extends Record<string, unknown>>(metadata: M, marker: Marker) {
     return { ...metadata, [KEY]: { rule_id: marker.rule_id } }
   }
@@ -33,17 +30,5 @@ export namespace SecurityAsk {
 
   export function is(metadata: Record<string, unknown> | undefined): boolean {
     return of(metadata) !== undefined
-  }
-
-  /**
-   * How an automated run answers a published ask.
-   *
-   * Interactive runs never answer machine-side — a human decides, `--auto` included. Headless runs
-   * keep auto-approving ordinary asks, and reject a security-generated one: that blocks the single
-   * call while leaving the turn free to take another path.
-   */
-  export function autoDecision(input: { interactive: boolean; metadata?: Record<string, unknown> }): Decision {
-    if (input.interactive) return "prompt"
-    return is(input.metadata) ? "block" : "once"
   }
 }

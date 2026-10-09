@@ -94,11 +94,6 @@ interface PendingEntry {
   hardRuleset?: Ruleset
   saved?: boolean
   /**
-   * Set by `reply` when a human or a client actually rejected this request, so `ask` can tell an
-   * answered rejection from a session teardown that fails every pending deferred at once.
-   */
-  rejection?: { interactive: boolean }
-  /**
    * Set by `reply` when this request was approved, recording whether a human actually answered.
    * Auto mode replies from the client without `interactive`, and an approval nobody looked at must
    * not be reported back as one the user gave.
@@ -331,7 +326,6 @@ const layer = Layer.effect(
       })
 
       if (input.reply === "reject") {
-        existing.rejection = { interactive: input.interactive === true } // kilocode_change - answered, not torn down
         yield* Deferred.fail(
           existing.deferred,
           input.message
@@ -341,7 +335,6 @@ const layer = Layer.effect(
 
         for (const [id, item] of pending.entries()) {
           if (item.info.sessionID !== existing.info.sessionID) continue
-          item.rejection = { interactive: false } // kilocode_change - cascaded, so no human saw this one
           pending.delete(id)
           yield* events.publish(Event.Replied, {
             sessionID: item.info.sessionID,
