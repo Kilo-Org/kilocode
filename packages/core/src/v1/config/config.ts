@@ -372,6 +372,11 @@ export const Info = Schema.Struct({
       mcp_timeout: Schema.optional(PositiveInt).annotate({
         description: "Timeout in milliseconds for model context protocol (MCP) requests",
       }),
+      // kilocode_change start
+      chatMaxRetries: Schema.optional(PositiveInt).annotate({
+        description: "Number of retries for chat completions on failure",
+      }),
+      // kilocode_change end
       policies: Schema.optional(Schema.mutable(Schema.Array(ConfigExperimental.Policy))).annotate({
         description: "Policy statements applied to supported resources, such as provider access",
       }),
