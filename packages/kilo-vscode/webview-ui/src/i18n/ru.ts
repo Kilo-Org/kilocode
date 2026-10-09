@@ -262,6 +262,10 @@ export const dict = {
   "speechToText.error.emptyTranscript": "Речь не обнаружена.",
 
   "prompt.toast.promptSendFailed.title": "Не удалось отправить запрос",
+  "prompt.attachment.failed": "Не удалось прикрепить файл",
+  "prompt.attachment.unsupported": "{{name}} не является изображением или текстовым файлом.",
+  "prompt.attachment.tooLarge": "Размер {{name}} превышает {{size}}.",
+  "prompt.attachment.files": "Файлы",
 
   "mcp.status.connected": "подключено",
   "mcp.status.failed": "ошибка",
@@ -529,6 +533,7 @@ export const dict = {
   "provider.custom.models.fetch.empty": "На этом сервере модели не найдены.",
   "provider.custom.models.fetch.added": "Добавлено {{count}} модель(ей).",
   "provider.custom.models.fetch.allExist": "Все полученные модели уже добавлены.",
+  "provider.custom.save.timeout": "Kilo не ответил. Возможно, изменения не сохранены. Попробуйте ещё раз.",
   "provider.custom.models.fetch.selectAll": "Выбрать все",
   "provider.custom.models.fetch.deselectAll": "Снять выбор",
   "provider.custom.models.fetch.found": "Найдено {{count}} моделей",

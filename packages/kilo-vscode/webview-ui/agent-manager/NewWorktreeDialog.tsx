@@ -41,6 +41,7 @@ import {
 } from "./MultiModelSelector"
 import { useLanguage } from "../src/context/language"
 import { useImageAttachments, type ImageAttachment } from "../src/hooks/useImageAttachments"
+import { FileAttachments } from "../src/components/chat/FileAttachments"
 import { useSpeechToText } from "../src/components/speech-to-text/useSpeechToText"
 import { useSpeechToTextModels } from "../src/context/speech-to-text-models"
 import { createSpeechShortcut } from "../src/components/speech-to-text/shortcut"
@@ -454,7 +455,7 @@ export const NewWorktreeDialog: Component<{
    */
   const resolveFiles = (text: string | undefined) => {
     const mentionFiles = text ? mention.parseAttachments(text) : []
-    const imgFiles = imageAttach.images().map((img) => ({ mime: img.mime, url: img.dataUrl }))
+    const imgFiles = imageAttach.images().map((img) => ({ mime: img.mime, url: img.dataUrl, filename: img.filename }))
     const files = [...mentionFiles, ...imgFiles]
     return files.length > 0 ? files : undefined
   }
@@ -830,6 +831,13 @@ export const NewWorktreeDialog: Component<{
               onDragLeave={imageAttach.handleDragLeave}
               onDrop={imageAttach.handleDrop}
             >
+              <Show when={imageAttach.texts().length > 0}>
+                <FileAttachments
+                  files={imageAttach.texts()}
+                  onRemove={imageAttach.remove}
+                  onClear={() => imageAttach.replace(imageAttach.thumbs())}
+                />
+              </Show>
               <div class="mention-model-anchor" aria-hidden="true">
                 <ModelSelectorBase
                   value={null}
@@ -934,9 +942,9 @@ export const NewWorktreeDialog: Component<{
                   </Show>
                 </div>
               </Show>
-              <Show when={imageAttach.images().length > 0}>
+              <Show when={imageAttach.thumbs().length > 0}>
                 <div class="image-attachments">
-                  <For each={imageAttach.images()}>
+                  <For each={imageAttach.thumbs()}>
                     {(img) => (
                       <div class="image-attachment">
                         <img

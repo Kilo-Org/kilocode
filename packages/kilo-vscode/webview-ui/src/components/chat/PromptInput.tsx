@@ -69,6 +69,7 @@ import { useSpeechToText } from "../speech-to-text/useSpeechToText"
 import { useSpeechToTextModels } from "../../context/speech-to-text-models"
 import { createSpeechShortcut } from "../speech-to-text/shortcut"
 import { useImageAttachments, type ImageAttachment } from "../../hooks/useImageAttachments"
+import { isDataAttachment } from "../../hooks/image-attachments-utils"
 import { convertToMentionPath, insertPathMentions } from "../../utils/path-mentions"
 import { promptMentionOver, registerPromptMentionDrop } from "../../utils/prompt-mention-drop"
 import { SessionMentionPicker } from "./SessionMentionPicker"
@@ -122,6 +123,7 @@ import { ReviewComments } from "./ReviewComments"
 import { useRunningAgents } from "./AgentStack"
 import { BrowserReferences } from "./BrowserReferences"
 import { CodeContextChips } from "./CodeContextChips"
+import { FileAttachments } from "./FileAttachments"
 import {
   browserFeedbackData,
   formatBrowserFeedback,
@@ -928,10 +930,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       const parts = session.getParts(request.messageID)
       if (
         parts.some(
-          (part) =>
-            part.type !== "text" &&
-            (part.type !== "file" ||
-              (!part.source && !(part.mime.startsWith("image/") && part.url.startsWith("data:")))),
+          (part) => part.type !== "text" && (part.type !== "file" || (!part.source && !isDataAttachment(part))),
         )
       )
         return
@@ -1010,14 +1009,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     if (!target) return
     const comments = restored.comments
     const browser = restored.browsers
-    const images = (failed.files ?? [])
-      .filter((file) => file.mime.startsWith("image/") && file.url.startsWith("data:"))
-      .map((file) => ({
-        id: crypto.randomUUID(),
-        filename: file.filename ?? "image",
-        mime: file.mime,
-        dataUrl: file.url,
-      }))
+    const images = restored.images
     if (target !== draftKey()) {
       saveDraft(target, draft, comments, images, scrollDrafts.get(target) ?? 0, browser, [])
       return
@@ -2084,6 +2076,17 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
           />
         </div>
       </Show>
+      <Show when={imageAttach.texts().length > 0}>
+        <FileAttachments
+          files={imageAttach.texts()}
+          onRemove={(id) => {
+            if (!readonly()) imageAttach.remove(id)
+          }}
+          onClear={() => {
+            if (!readonly()) imageAttach.replace(imageAttach.thumbs())
+          }}
+        />
+      </Show>
       <div class="mention-model-anchor" aria-hidden="true">
         <ModelSelectorBase
           value={null}
@@ -2220,9 +2223,9 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
           </Show>
         </div>
       </Show>
-      <Show when={imageAttach.images().length > 0}>
+      <Show when={imageAttach.thumbs().length > 0}>
         <div class="image-attachments">
-          <For each={imageAttach.images()}>
+          <For each={imageAttach.thumbs()}>
             {(img) => (
               <div class="image-attachment">
                 <img

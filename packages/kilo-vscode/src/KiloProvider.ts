@@ -2928,23 +2928,18 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private async handleProviderAction(msg: Record<string, unknown>): Promise<void> {
     const rid = typeof msg.requestId === "string" ? msg.requestId : ""
     const pid = typeof msg.providerID === "string" ? msg.providerID : ""
-    if (!rid || !pid) return
-    if (!this.client) {
-      const action =
-        msg.type === "disconnectProvider"
-          ? "disconnect"
-          : msg.type === "authorizeProviderOAuth"
-            ? "authorize"
-            : "connect"
-      this.postMessage({
-        type: "providerActionError",
-        requestId: rid,
-        providerID: pid,
-        action,
-        message: "Not connected to CLI backend",
-      })
+    if (!rid) {
+      // The webview matches replies by request ID, so there is nobody to answer.
+      console.warn("[Kilo New] KiloProvider: provider action without requestId", { type: msg.type })
       return
     }
+    const action =
+      msg.type === "disconnectProvider" ? "disconnect" : msg.type === "authorizeProviderOAuth" ? "authorize" : "connect"
+    // Every request with an ID gets a reply, otherwise the webview spinner waits forever.
+    const fail = (message: string) =>
+      this.postMessage({ type: "providerActionError", requestId: rid, providerID: pid, action, message })
+    if (!pid) return fail("Missing provider ID")
+    if (!this.client) return fail("Not connected to CLI backend")
     const ctx = buildActionContext(
       this.client,
       (m) => this.postMessage(m),
@@ -2965,12 +2960,17 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     const metadata =
       msg.metadata && typeof msg.metadata === "object" ? (msg.metadata as Record<string, unknown>) : undefined
     const inputs = msg.inputs && typeof msg.inputs === "object" ? (msg.inputs as Record<string, string>) : undefined
-    if (msg.type === "connectProvider" && key) return connectProviderAction(ctx, rid, pid, key, metadata)
-    if (msg.type === "authorizeProviderOAuth") return authorizeOAuthAction(ctx, rid, pid, method, inputs)
-    if (msg.type === "completeProviderOAuth") return completeOAuthAction(ctx, rid, pid, method, code)
-    if (msg.type === "disconnectProvider") return disconnectProviderAction(ctx, rid, pid, this.cachedConfigMessage, set)
-    if (msg.type === "saveCustomProvider" && config)
-      return saveCustomProviderAction(ctx, rid, pid, config, key, keyChanged, this.cachedConfigMessage, set)
+    const task = (() => {
+      if (msg.type === "connectProvider" && key) return connectProviderAction(ctx, rid, pid, key, metadata)
+      if (msg.type === "authorizeProviderOAuth") return authorizeOAuthAction(ctx, rid, pid, method, inputs)
+      if (msg.type === "completeProviderOAuth") return completeOAuthAction(ctx, rid, pid, method, code)
+      if (msg.type === "disconnectProvider")
+        return disconnectProviderAction(ctx, rid, pid, this.cachedConfigMessage, set)
+      if (msg.type === "saveCustomProvider" && config)
+        return saveCustomProviderAction(ctx, rid, pid, config, key, keyChanged, this.cachedConfigMessage, set)
+    })()
+    if (!task) return fail(msg.type === "connectProvider" ? "Missing API key" : "Missing provider configuration")
+    await task.catch((err: unknown) => fail(getErrorMessage(err) || "Provider request failed"))
   }
 
   private async handleFetchCustomProviderModels(msg: Record<string, unknown>): Promise<void> {

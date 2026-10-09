@@ -265,6 +265,10 @@ export const dict = {
   "speechToText.error.emptyTranscript": "音声が検出されませんでした。",
 
   "prompt.toast.promptSendFailed.title": "プロンプトの送信に失敗しました",
+  "prompt.attachment.failed": "ファイルを添付できません",
+  "prompt.attachment.unsupported": "{{name}} は画像でもテキストファイルでもありません。",
+  "prompt.attachment.tooLarge": "{{name}} は {{size}} を超えています。",
+  "prompt.attachment.files": "ファイル",
 
   "mcp.status.connected": "接続済み",
   "mcp.status.failed": "失敗",
@@ -529,6 +533,8 @@ export const dict = {
   "provider.custom.models.fetch.empty": "このサーバーにモデルが見つかりません。",
   "provider.custom.models.fetch.added": "{{count}}個のモデルを追加しました。",
   "provider.custom.models.fetch.allExist": "取得したモデルはすべて既に追加されています。",
+  "provider.custom.save.timeout":
+    "Kilo から応答がありません。変更が保存されていない可能性があります。もう一度お試しください。",
   "provider.custom.models.fetch.selectAll": "すべて選択",
   "provider.custom.models.fetch.deselectAll": "すべて選択解除",
   "provider.custom.models.fetch.found": "{{count}}個のモデルが見つかりました",

@@ -428,6 +428,10 @@ export async function disconnectProvider(
   }
 }
 
+// The last pending custom provider save for each provider ID. All webviews share
+// one backend, so the lock is for the extension host and not for one webview.
+const saves = new Map<string, Promise<void>>()
+
 export async function saveCustomProvider(
   ctx: ActionContext,
   requestId: string,
@@ -447,12 +451,27 @@ export async function saveCustomProvider(
     return
   }
 
-  const refresh = async () => {
-    await ctx.disposeGlobal(`custom provider save (${id})`)
-    await ctx.fetchAndSendProviders()
+  // Runs after the reply is sent, so a failure is logged instead of sent as a second reply.
+  const refresh = () =>
+    ctx
+      .disposeGlobal(`custom provider save (${id})`)
+      .then(() => ctx.fetchAndSendProviders())
+      .catch((err: unknown) => console.warn(`[Kilo New] Provider refresh after saving ${id} failed:`, err))
+
+  // The webview stops waiting after a timeout, but this save can still be waiting
+  // for the backend. Saves for one provider run in order, so that an earlier save
+  // cannot write its config or API key after a later save. The lock is released
+  // before the reply, so the next save does not wait for this refresh.
+  const prev = saves.get(id)
+  const lock = Promise.withResolvers<void>()
+  saves.set(id, lock.promise)
+  const release = () => {
+    lock.resolve()
+    if (saves.get(id) === lock.promise) saves.delete(id)
   }
 
   try {
+    await prev
     const globalConfig = (await ctx.client.global.config.get({ throwOnError: true })).data ?? {}
     const disabled = globalConfig.disabled_providers ?? []
     const nextDisabled = disabled.filter((item: string) => item !== id)
@@ -485,14 +504,20 @@ export async function saveCustomProvider(
         await ctx.client.auth.remove({ providerID: id }, { throwOnError: true })
       }
     } catch (error) {
-      await refresh()
+      release()
       postError(ctx, requestId, providerID, "connect", ctx.getErrorMessage(error) || "Failed to save custom provider")
+      await refresh()
       return
     }
 
-    await refresh()
+    // Reply before the refresh: the provider list can be several MB and slow to
+    // load, and the dialog must not wait for it to finish saving (#13292).
+    release()
     ctx.postMessage({ type: "providerConnected", requestId, providerID: id })
+    await refresh()
   } catch (error) {
     postError(ctx, requestId, providerID, "connect", ctx.getErrorMessage(error) || "Failed to save custom provider")
+  } finally {
+    release()
   }
 }

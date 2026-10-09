@@ -263,6 +263,10 @@ export const dict = {
   "speechToText.error.emptyTranscript": "هیچ گفتاری شناسایی نشد.",
 
   "prompt.toast.promptSendFailed.title": "ارسال پرامپت ناموفق بود",
+  "prompt.attachment.failed": "پیوست فایل ممکن نیست",
+  "prompt.attachment.unsupported": "{{name}} تصویر یا فایل متنی نیست.",
+  "prompt.attachment.tooLarge": "حجم {{name}} بیشتر از {{size}} است.",
+  "prompt.attachment.files": "فایل‌ها",
 
   "mcp.status.connected": "متصل",
   "mcp.status.failed": "ناموفق",
@@ -449,6 +453,7 @@ export const dict = {
   "provider.custom.models.fetch.empty": "هیچ مدلی در این سرور یافت نشد.",
   "provider.custom.models.fetch.added": "{{count}} مدل اضافه شد.",
   "provider.custom.models.fetch.allExist": "تمام مدل‌های دریافت‌شده قبلاً اضافه شده‌اند.",
+  "provider.custom.save.timeout": "پاسخی از Kilo دریافت نشد. ممکن است تغییرات شما ذخیره نشده باشد. دوباره تلاش کنید.",
   "provider.custom.models.fetch.selectAll": "انتخاب همه",
   "provider.custom.models.fetch.deselectAll": "لغو انتخاب همه",
   "provider.custom.models.fetch.found": "{{count}} مدل یافت شد",

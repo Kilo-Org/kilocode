@@ -5,8 +5,10 @@ import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { partFeedback } from "../../../../src/shared/browser-feedback"
 import { injectedView } from "../../../../src/shared/injected-prompt"
 import { imageMime } from "../../../../src/shared/image-data-url"
-import type { Message, Part, TextPart } from "../../types/messages"
+import { isDataAttachment } from "../../hooks/image-attachments-utils"
+import type { FilePart, Message, Part, TextPart } from "../../types/messages"
 import { BrowserReferences } from "./BrowserReferences"
+import { FileAttachments } from "./FileAttachments"
 import { ReviewComments } from "./ReviewComments"
 import { useLanguage } from "../../context/language"
 import { useVSCode } from "../../context/vscode"
@@ -93,10 +95,21 @@ export const VscodeUserMessage: Component<VscodeUserMessageProps> = (props) => {
       </div>
     )
   })
+  // Dropped text files. Images stay as attachment tiles in UserMessageDisplay.
+  const files = createMemo(() =>
+    props.parts
+      .filter(
+        (part): part is FilePart => part.type === "file" && isDataAttachment(part) && !part.mime.startsWith("image/"),
+      )
+      .map((part) => ({ id: part.id, filename: part.filename ?? "file", mime: part.mime, dataUrl: part.url })),
+  )
   const header = createMemo(() => {
-    if (!feedback()) return undefined
+    if (!feedback() && files().length === 0) return undefined
     return (
       <>
+        <Show when={files().length > 0}>
+          <FileAttachments files={files()} variant="message" />
+        </Show>
         <Show when={feedback()?.review}>
           {(review) => (
             <ReviewComments comments={review().comments} sessionID={props.message.sessionID} variant="message" />

@@ -265,6 +265,10 @@ export const dict = {
   "speechToText.error.emptyTranscript": "Govor nije otkriven.",
 
   "prompt.toast.promptSendFailed.title": "Neuspješno slanje upita",
+  "prompt.attachment.failed": "Nije moguće priložiti datoteku",
+  "prompt.attachment.unsupported": "{{name}} nije slika ni tekstualna datoteka.",
+  "prompt.attachment.tooLarge": "{{name}} je veća od {{size}}.",
+  "prompt.attachment.files": "Datoteke",
 
   "mcp.status.connected": "povezano",
   "mcp.status.failed": "neuspjelo",
@@ -535,6 +539,7 @@ export const dict = {
   "provider.custom.models.fetch.empty": "Nisu pronađeni modeli na ovom serveru.",
   "provider.custom.models.fetch.added": "Dodano {{count}} model(a).",
   "provider.custom.models.fetch.allExist": "Svi preuzeti modeli su već dodani.",
+  "provider.custom.save.timeout": "Nema odgovora od Kilo. Vaše promjene možda nisu sačuvane. Pokušajte ponovo.",
   "provider.custom.models.fetch.selectAll": "Odaberi sve",
   "provider.custom.models.fetch.deselectAll": "Poništi odabir",
   "provider.custom.models.fetch.found": "{{count}} modela pronađeno",

@@ -9,6 +9,7 @@ import type {
   ToolPart,
 } from "../types/messages"
 import { Identifier } from "../utils/id"
+import { isDataAttachment } from "../hooks/image-attachments-utils"
 import {
   feedbackMetadata,
   partFeedback,
@@ -124,9 +125,7 @@ export function revertPromptState(parts: readonly Part[]): RevertPromptState {
         title: p.source?.text?.value.replace(/^@/, "") ?? p.filename ?? p.url,
         updated: 0,
       })),
-    images: files
-      .filter((p) => p.mime.startsWith("image/") && p.url.startsWith("data:"))
-      .map((p) => ({ dataUrl: p.url, mime: p.mime, filename: p.filename })),
+    images: files.filter(isDataAttachment).map((p) => ({ dataUrl: p.url, mime: p.mime, filename: p.filename })),
     review: feedback.flatMap((p) => p.review?.comments ?? []),
     browser: feedback.flatMap((p) => p.browserFeedback?.references ?? []),
   }

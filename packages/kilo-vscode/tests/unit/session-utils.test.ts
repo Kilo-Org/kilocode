@@ -29,6 +29,9 @@ import {
 } from "../../webview-ui/src/context/session-utils"
 import type { Message, Part, ToolPart } from "../../webview-ui/src/types/messages"
 import { formatBrowserFeedback } from "../../src/shared/browser-feedback"
+import { buildWorktreeAttachments } from "../../webview-ui/src/hooks/file-mention-utils"
+import { buildGitChangesAttachment } from "../../webview-ui/src/hooks/git-changes-context-utils"
+import { buildTerminalAttachment } from "../../webview-ui/src/hooks/terminal-context-utils"
 
 const t = (key: string) => key
 
@@ -1070,6 +1073,41 @@ describe("revertPromptState", () => {
       file({ mime: "application/pdf", url: "data:application/pdf;base64,def" }),
     ])
     expect(state.images).toEqual([{ dataUrl: "data:image/png;base64,abc", mime: "image/png", filename: "shot.png" }])
+  })
+
+  it("restores dropped text file attachments", () => {
+    const state = revertPromptState([
+      file({ mime: "text/plain", url: "data:text/plain;base64,aGk=", filename: "notes.md" }),
+      text("read this"),
+    ])
+    expect(state.images).toEqual([{ dataUrl: "data:text/plain;base64,aGk=", mime: "text/plain", filename: "notes.md" }])
+    expect(state.text).toBe("read this")
+  })
+
+  it("restores dropped text files but not terminal, git, or worktree context", () => {
+    const prompt = "check @terminal and @git-changes in @/repo/wt"
+    const worktree = {
+      id: "wt",
+      name: "wt",
+      branch: "b",
+      path: "/repo/wt",
+      base: "main",
+      sessions: [],
+      disabled: false,
+    }
+    const context = [
+      buildTerminalAttachment(prompt, "$ ls"),
+      buildGitChangesAttachment(prompt, "diff"),
+      ...buildWorktreeAttachments(prompt, [worktree]),
+    ].filter((item) => item !== undefined)
+    expect(context.map((item) => item.url.startsWith("data:text/plain"))).toEqual([true, true, true])
+
+    const state = revertPromptState([
+      text(prompt),
+      file({ mime: "text/plain", url: "data:text/plain;base64,aGk=", filename: "notes.md" }),
+      ...context.map((item) => file(item)),
+    ])
+    expect(state.images).toEqual([{ dataUrl: "data:text/plain;base64,aGk=", mime: "text/plain", filename: "notes.md" }])
   })
 
   it("collects mention paths but excludes session references from paths", () => {

@@ -262,6 +262,10 @@ export const dict = {
   "speechToText.error.emptyTranscript": "ตรวจไม่พบเสียงพูด",
 
   "prompt.toast.promptSendFailed.title": "ไม่สามารถส่งพร้อมท์",
+  "prompt.attachment.failed": "ไม่สามารถแนบไฟล์ได้",
+  "prompt.attachment.unsupported": "{{name}} ไม่ใช่รูปภาพหรือไฟล์ข้อความ",
+  "prompt.attachment.tooLarge": "{{name}} มีขนาดใหญ่กว่า {{size}}",
+  "prompt.attachment.files": "ไฟล์",
 
   "mcp.status.connected": "เชื่อมต่อแล้ว",
   "mcp.status.failed": "ล้มเหลว",
@@ -526,6 +530,7 @@ export const dict = {
   "provider.custom.models.fetch.empty": "ไม่พบโมเดลบนเซิร์ฟเวอร์นี้",
   "provider.custom.models.fetch.added": "เพิ่มแล้ว {{count}} โมเดล",
   "provider.custom.models.fetch.allExist": "โมเดลที่ดึงมาทั้งหมดถูกเพิ่มไปแล้ว",
+  "provider.custom.save.timeout": "ไม่ได้รับการตอบกลับจาก Kilo การเปลี่ยนแปลงของคุณอาจยังไม่ได้บันทึก โปรดลองอีกครั้ง",
   "provider.custom.models.fetch.selectAll": "เลือกทั้งหมด",
   "provider.custom.models.fetch.deselectAll": "ยกเลิกการเลือกทั้งหมด",
   "provider.custom.models.fetch.found": "พบ {{count}} โมเดล",

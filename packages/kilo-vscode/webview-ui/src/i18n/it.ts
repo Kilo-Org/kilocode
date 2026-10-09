@@ -211,6 +211,10 @@ export const dict = {
   "prompt.action.enhanceDescription":
     "Il pulsante 'Migliora prompt' aiuta a migliorare il prompt aggiungendo contesto, chiarimenti o riformulazioni. Scrivi un prompt qui e fai di nuovo clic sul pulsante per vedere come funziona.",
   "prompt.toast.promptSendFailed.title": "Invio prompt non riuscito",
+  "prompt.attachment.failed": "Impossibile allegare il file",
+  "prompt.attachment.unsupported": "{{name}} non è un'immagine né un file di testo.",
+  "prompt.attachment.tooLarge": "{{name}} supera {{size}}.",
+  "prompt.attachment.files": "File",
   "mcp.status.connected": "connesso",
   "mcp.status.failed": "non riuscito",
   "mcp.status.needs_auth": "richiede autenticazione",
@@ -378,6 +382,8 @@ export const dict = {
   "provider.custom.models.fetch.empty": "Nessun modello trovato su questo server.",
   "provider.custom.models.fetch.added": "Aggiunti {{count}} modelli.",
   "provider.custom.models.fetch.allExist": "Tutti i modelli recuperati sono già stati aggiunti.",
+  "provider.custom.save.timeout":
+    "Nessuna risposta da Kilo. Le modifiche potrebbero non essere state salvate. Riprova.",
   "provider.custom.models.fetch.selectAll": "Seleziona tutto",
   "provider.custom.models.fetch.deselectAll": "Deseleziona tutto",
   "provider.custom.models.fetch.found": "{{count}} modelli trovati",

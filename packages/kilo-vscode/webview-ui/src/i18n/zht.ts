@@ -250,6 +250,10 @@ export const dict = {
   "speechToText.error.emptyTranscript": "未偵測到語音。",
 
   "prompt.toast.promptSendFailed.title": "傳送提示失敗",
+  "prompt.attachment.failed": "無法附加檔案",
+  "prompt.attachment.unsupported": "{{name}} 不是圖片或文字檔案。",
+  "prompt.attachment.tooLarge": "{{name}} 超過 {{size}}。",
+  "prompt.attachment.files": "檔案",
 
   "mcp.status.connected": "已連線",
   "mcp.status.failed": "失敗",
@@ -468,6 +472,7 @@ export const dict = {
   "provider.custom.models.fetch.empty": "此伺服器上未找到模型。",
   "provider.custom.models.fetch.added": "已新增 {{count}} 個模型。",
   "provider.custom.models.fetch.allExist": "取得的所有模型均已新增。",
+  "provider.custom.save.timeout": "Kilo 未回應。你的變更可能未儲存。請再試一次。",
   "provider.custom.models.fetch.selectAll": "全選",
   "provider.custom.models.fetch.deselectAll": "取消全選",
   "provider.custom.models.fetch.found": "找到 {{count}} 個模型",

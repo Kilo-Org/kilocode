@@ -269,6 +269,10 @@ export const dict = {
   "speechToText.error.emptyTranscript": "Ingen tale ble oppdaget.",
 
   "prompt.toast.promptSendFailed.title": "Kunne ikke sende forespørsel",
+  "prompt.attachment.failed": "Kan ikke legge ved filen",
+  "prompt.attachment.unsupported": "{{name}} er verken et bilde eller en tekstfil.",
+  "prompt.attachment.tooLarge": "{{name}} er større enn {{size}}.",
+  "prompt.attachment.files": "Filer",
 
   "mcp.status.connected": "tilkoblet",
   "mcp.status.failed": "mislyktes",
@@ -495,6 +499,7 @@ export const dict = {
   "provider.custom.models.fetch.empty": "Ingen modeller funnet på denne serveren.",
   "provider.custom.models.fetch.added": "{{count}} modell(er) lagt til.",
   "provider.custom.models.fetch.allExist": "Alle hentede modeller er allerede lagt til.",
+  "provider.custom.save.timeout": "Ingen svar fra Kilo. Endringene dine er kanskje ikke lagret. Prøv igjen.",
   "provider.custom.models.fetch.selectAll": "Velg alle",
   "provider.custom.models.fetch.deselectAll": "Fjern alle valg",
   "provider.custom.models.fetch.found": "{{count}} modeller funnet",

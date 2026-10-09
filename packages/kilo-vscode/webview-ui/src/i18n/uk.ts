@@ -264,6 +264,10 @@ export const dict = {
   "speechToText.error.emptyTranscript": "Мовлення не виявлено.",
 
   "prompt.toast.promptSendFailed.title": "Не вдалося надіслати запит",
+  "prompt.attachment.failed": "Не вдалося прикріпити файл",
+  "prompt.attachment.unsupported": "{{name}} не є зображенням або текстовим файлом.",
+  "prompt.attachment.tooLarge": "Розмір {{name}} перевищує {{size}}.",
+  "prompt.attachment.files": "Файли",
 
   "mcp.status.connected": "підключено",
   "mcp.status.failed": "помилка",
@@ -484,6 +488,7 @@ export const dict = {
   "provider.custom.models.fetch.empty": "На цьому сервері моделей не знайдено.",
   "provider.custom.models.fetch.added": "Додано {{count}} моделей.",
   "provider.custom.models.fetch.allExist": "Усі отримані моделі вже додано.",
+  "provider.custom.save.timeout": "Kilo не відповів. Можливо, зміни не збережено. Спробуйте ще раз.",
   "provider.custom.models.fetch.selectAll": "Вибрати все",
   "provider.custom.models.fetch.deselectAll": "Зняти весь вибір",
   "provider.custom.models.fetch.found": "Знайдено {{count}} моделей",

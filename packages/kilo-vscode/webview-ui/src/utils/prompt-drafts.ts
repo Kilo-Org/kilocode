@@ -1,14 +1,23 @@
 import { partFeedback } from "../../../src/shared/browser-feedback"
+import { isDataAttachment } from "../hooks/image-attachments-utils"
 import type { SendMessageFailedMessage } from "../types/messages"
 
-export function failedPrompt(failed: Pick<SendMessageFailedMessage, "text" | "review" | "browserFeedback">) {
-  if (!failed.review && !failed.browserFeedback) return { text: failed.text, comments: [], browsers: [] }
+export function failedPrompt(failed: Pick<SendMessageFailedMessage, "text" | "files" | "review" | "browserFeedback">) {
+  // Restore images and dropped text files. Mention context is collected again from the text on send.
+  const images = (failed.files ?? []).filter(isDataAttachment).map((file) => ({
+    id: crypto.randomUUID(),
+    filename: file.filename ?? "image",
+    mime: file.mime,
+    dataUrl: file.url,
+  }))
+  if (!failed.review && !failed.browserFeedback) return { text: failed.text, comments: [], browsers: [], images }
   const parsed = partFeedback({ kilo: { review: failed.review, browserFeedback: failed.browserFeedback } }, failed.text)
   if (!parsed) return undefined
   return {
     text: parsed.body,
     comments: parsed.review?.comments ?? [],
     browsers: parsed.browserFeedback?.references ?? [],
+    images,
   }
 }
 

@@ -268,6 +268,10 @@ export const dict = {
   "speechToText.error.emptyTranscript": "Nenhuma fala foi detectada.",
 
   "prompt.toast.promptSendFailed.title": "Falha ao enviar prompt",
+  "prompt.attachment.failed": "Não foi possível anexar o arquivo",
+  "prompt.attachment.unsupported": "{{name}} não é uma imagem nem um arquivo de texto.",
+  "prompt.attachment.tooLarge": "{{name}} é maior que {{size}}.",
+  "prompt.attachment.files": "Arquivos",
 
   "mcp.status.connected": "conectado",
   "mcp.status.failed": "falhou",
@@ -493,6 +497,7 @@ export const dict = {
   "provider.custom.models.fetch.empty": "Nenhum modelo encontrado neste servidor.",
   "provider.custom.models.fetch.added": "{{count}} modelo(s) adicionado(s).",
   "provider.custom.models.fetch.allExist": "Todos os modelos buscados já foram adicionados.",
+  "provider.custom.save.timeout": "Sem resposta do Kilo. Suas alterações podem não ter sido salvas. Tente novamente.",
   "provider.custom.models.fetch.selectAll": "Selecionar todos",
   "provider.custom.models.fetch.deselectAll": "Desmarcar todos",
   "provider.custom.models.fetch.found": "{{count}} modelos encontrados",

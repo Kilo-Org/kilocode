@@ -50,3 +50,12 @@ export function providersWithKiloFallback(providers: Record<string, Provider>): 
   if (providers[KILO_PROVIDER_ID]) return providers
   return { [KILO_PROVIDER_ID]: createKiloFallbackProvider(), ...providers }
 }
+
+/**
+ * The values that the custom provider edit dialog starts with. The name comes
+ * from the config: after a save, the config is current, but the provider list
+ * stays out of date until the provider refresh finishes.
+ */
+export function existingProvider(item: Provider, cfg: ProviderConfig) {
+  return { providerID: item.id, name: cfg.name || item.name, config: cfg }
+}

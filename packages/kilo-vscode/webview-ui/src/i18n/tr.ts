@@ -263,6 +263,10 @@ export const dict = {
   "speechToText.error.emptyTranscript": "Hiçbir konuşma algılanmadı.",
 
   "prompt.toast.promptSendFailed.title": "Komut gönderilemedi",
+  "prompt.attachment.failed": "Dosya eklenemiyor",
+  "prompt.attachment.unsupported": "{{name}} bir görsel veya metin dosyası değil.",
+  "prompt.attachment.tooLarge": "{{name}} {{size}} boyutundan büyük.",
+  "prompt.attachment.files": "Dosyalar",
 
   "mcp.status.connected": "bağlı",
   "mcp.status.failed": "başarısız",
@@ -481,6 +485,7 @@ export const dict = {
   "provider.custom.models.fetch.empty": "Bu sunucuda model bulunamadı.",
   "provider.custom.models.fetch.added": "{{count}} model eklendi.",
   "provider.custom.models.fetch.allExist": "Getirilen tüm modeller zaten eklenmiş.",
+  "provider.custom.save.timeout": "Kilo'dan yanıt yok. Değişiklikleriniz kaydedilmemiş olabilir. Tekrar deneyin.",
   "provider.custom.models.fetch.selectAll": "Tümünü seç",
   "provider.custom.models.fetch.deselectAll": "Tümünün seçimini kaldır",
   "provider.custom.models.fetch.found": "{{count}} model bulundu",
