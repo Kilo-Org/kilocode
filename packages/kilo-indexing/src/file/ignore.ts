@@ -50,6 +50,12 @@ export namespace FileIgnore {
 
   export const PATTERNS = [...files, ...folders]
 
+  // Bare folder names are not valid globs for nested matches. Expand them to
+  // `**/name/**` so glob prunes the directory instead of walking its contents.
+  export function globs() {
+    return PATTERNS.map((pattern) => (pattern.includes("/") ? pattern : `**/${pattern}/**`))
+  }
+
   export function match(
     filePath: string,
     opts?: {
