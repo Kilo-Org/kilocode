@@ -23,6 +23,8 @@ You can configure models separately for different tasks in the VS Code extension
 - **Subagent model** — the default model for subagents launched by the `task` tool. Configured with the `subagent_model` key in `kilo.jsonc`, or the **Subagent Model** field on the **Settings → Models** tab.
   - If left unset, inherits whichever model the parent agent session is currently using.
 - **Autocomplete model** — the model used for inline code completions as you type. See [Autocomplete: Provider and Model](/docs/code-with-ai/features/autocomplete#provider-and-model) for how to configure it.
+- **Memory model** — the model used for automatic [project memory](/docs/customize/context/memory#use-a-different-model-for-auto-save) saves. Configured with the `memory_model` key in `kilo.jsonc`.
+  - If left unset, uses whichever model the session is currently using.
 - **Compaction model** - the model used to summarize context. Set `agent.compaction.model` in `kilo.jsonc`, or choose **Compaction model** under **Settings → Models**. If unset, compaction uses the current session's model. See [Context Condensing](/docs/customize/context/context-condensing#use-a-different-model-for-compaction).
 
 ### Configuring Local Usage
@@ -128,6 +130,8 @@ When an agent delegates work to a subagent (via the `task` tool), the subagent *
 ```
 
 This sets the `explore` subagent to always use Haiku regardless of the parent's model. Any subagent without a `model` override uses whatever model the invoking agent is running.
+
+A bare model name without a provider prefix also works — for example `"model": "codestral (latest)"`. Kilo resolves the name against your configured providers and prefers the provider of the parent session when several providers offer a model with the same name. This applies to `agent.<name>.model` and `subagent_model`.
 
 {% /tab %}
 {% tab label="VSCode" %}

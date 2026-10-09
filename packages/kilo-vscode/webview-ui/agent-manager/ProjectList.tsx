@@ -301,6 +301,7 @@ export const ProjectList: Component<Props> = (props) => {
       onExpand={(projectId, expanded) =>
         vscode.postMessage({ type: "agentManager.setProjectExpanded", projectId, expanded })
       }
+      onReorder={(order) => vscode.postMessage({ type: "agentManager.setProjectOrder", order })}
       count={(projectId) => {
         const state = props.states[projectId]
         return state ? state.worktrees.length + 1 : undefined

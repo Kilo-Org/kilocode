@@ -6,14 +6,15 @@ import photonWasm from "@silvia-odwyer/photon-node/photon_rs_bg.wasm" with { typ
 import { Context, Effect, Layer, Schema } from "effect"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
+import { sniffAttachmentMime } from "@/util/media" // kilocode_change - decode by content, like Photon does
 
 export const MAX_BASE64_BYTES = 5 * 1024 * 1024 // kilocode_change - share user file pre-read limit
 const MAX_WIDTH = 2000
 const MAX_HEIGHT = 2000
 const AUTO_RESIZE = true
 const JPEG_QUALITIES = [80, 85, 70, 55, 40]
-// kilocode_change start - preserve valid in-limit images when Photon is unavailable
-function dimensions(mime: string, data: Buffer) {
+// kilocode_change start - preserve valid in-limit images when Photon is unavailable; exported for the HTTP-boundary precheck in kilocode/session/attachment.ts
+export function dimensions(mime: string, data: Buffer) {
   if (
     mime === "image/png" &&
     data.length >= 24 &&
@@ -65,6 +66,17 @@ function dimensions(mime: string, data: Buffer) {
   }
 }
 
+/**
+ * Whether these bytes are a raster our decoder can actually open, judged by content rather than
+ * by the declared mime -- Photon's `new_from_byteslice` sniffs the format itself, so an image
+ * labelled with the wrong raster mime still loads. Shared with the HTTP-boundary precheck in
+ * `kilocode/session/attachment.ts` so the boundary and `fallback` below cannot drift apart and
+ * start disagreeing about what is acceptable.
+ */
+export function decodable(mime: string, data: Buffer) {
+  return dimensions(sniffAttachmentMime(data, mime), data)
+}
+
 export function fallback(
   input: MessageV2.FilePart,
   base64: string,
@@ -81,8 +93,11 @@ export function fallback(
       max_height: max.height,
     })
   const data = Buffer.from(base64, "base64")
-  const canonical = data.toString("base64").replace(/=+$/, "") === base64.replace(/=+$/, "")
-  const size = canonical ? dimensions(input.mime, data) : undefined
+  // No canonical base64 round-trip requirement: Buffer.from tolerates line-wrapped payloads that
+  // Photon decodes fine, and `decodable` already validates the magic bytes, which is the stronger
+  // guard. Rejecting here for a non-canonical body would make this path disagree with the
+  // boundary precheck and turn an acceptable attachment into a defect that loses the message.
+  const size = decodable(input.mime, data)
   if (!base64 || !size) return new DecodeError()
   if (size.width > max.width || size.height > max.height)
     return new SizeError({
