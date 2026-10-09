@@ -187,7 +187,23 @@ internal class SessionScroll(
      */
     @RequiresEdt
     fun scrollMessageTop(id: String): Boolean {
-        val target = messages.findTurn(id) ?: return false
+        return scrollTop { messages.findTurn(id) }
+    }
+
+    /**
+     * Scrolls so one part of a message sits at the top of the viewport — used by the header
+     * timeline, whose bars jump to the step they represent rather than the start of the whole
+     * turn. Falls back to the message itself when the part has no renderer (e.g. a timeline-only
+     * `step-finish` marker, or a part currently suppressed from the transcript).
+     */
+    @RequiresEdt
+    fun scrollPartTop(message: String, part: String): Boolean {
+        return scrollTop { messages.findPart(message, part) ?: messages.findMessage(message) }
+    }
+
+    @RequiresEdt
+    private fun scrollTop(resolve: () -> JComponent?): Boolean {
+        val target = resolve() ?: return false
         if (!target.isVisible) return false
         user = false
         pause = false
@@ -197,11 +213,11 @@ internal class SessionScroll(
         auto = false
         val gen = ++seq
         if (SwingUtilities.isEventDispatchThread()) {
-            topPass(gen, id, FOLLOW_PASSES)
+            topPass(gen, FOLLOW_PASSES, resolve)
             return true
         }
         ApplicationManager.getApplication().invokeLater {
-            topPass(gen, id, FOLLOW_PASSES)
+            topPass(gen, FOLLOW_PASSES, resolve)
         }
         return true
     }
@@ -399,9 +415,9 @@ internal class SessionScroll(
     }
 
     @RequiresEdt
-    private fun topPass(id: Int, message: String, remaining: Int) {
+    private fun topPass(id: Int, remaining: Int, resolve: () -> JComponent?) {
         if (id != seq) return
-        val target = messages.findTurn(message)
+        val target = resolve()
         if (target == null || !target.isVisible) {
             stable = -1
             updateJump()
@@ -431,7 +447,7 @@ internal class SessionScroll(
         val left = if (next == stable) remaining - 1 else FOLLOW_PASSES
         stable = next
         ApplicationManager.getApplication().invokeLater {
-            topPass(id, message, left)
+            topPass(id, left, resolve)
         }
     }
 

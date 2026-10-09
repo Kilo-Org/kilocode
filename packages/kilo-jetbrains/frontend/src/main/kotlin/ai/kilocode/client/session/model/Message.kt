@@ -26,7 +26,7 @@ data class ContextUsage(
 )
 
 data class TimelineItem(
-    val id: String,
+    val message: String,
     val part: Content,
     val title: String,
     val weight: Int,

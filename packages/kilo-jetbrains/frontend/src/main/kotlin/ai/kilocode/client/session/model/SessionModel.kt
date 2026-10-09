@@ -711,7 +711,7 @@ class SessionModel {
         .flatMap { msg ->
             msg.parts.values.map { part ->
                 TimelineItem(
-                    id = "${msg.info.id}/${part.id}",
+                    message = msg.info.id,
                     part = part,
                     title = part.timelineTitle(),
                     weight = part.weight().coerceIn(1, 10),
