@@ -20,6 +20,7 @@ import path from "node:path"
 import { Artifact, Deps, Manifest, Policy, Scan, compose, serialize } from "../../../../script/kilocode/sbom/index"
 import type { Component, Gap, Tool } from "../../../../script/kilocode/sbom/index"
 import { LanceDBRuntime } from "../../src/kilocode/lancedb"
+import { ValkeyRuntime } from "../../src/kilocode/valkey"
 
 const root = path.resolve(import.meta.dir, "../..")
 const repo = path.resolve(root, "../..")
@@ -120,10 +121,18 @@ function explicit(input: Target): Component[] {
       delivery: "runtime",
       description: "Externalized from the bundle and installed on demand when indexing is enabled",
     },
+    {
+      type: "library",
+      name: ValkeyRuntime.pkg,
+      version: ValkeyRuntime.version,
+      purl: Deps.purl(ValkeyRuntime.pkg, ValkeyRuntime.version),
+      delivery: "runtime",
+      description: "Externalized from the bundle and installed on demand when Valkey indexing is selected",
+    },
   ]
 }
 
-const RUNTIME: ReadonlySet<string> = new Set<string>(LanceDBRuntime.external)
+const RUNTIME: ReadonlySet<string> = new Set<string>([...LanceDBRuntime.external, ...ValkeyRuntime.external])
 
 /**
  * Reclassify packages the build externalizes.

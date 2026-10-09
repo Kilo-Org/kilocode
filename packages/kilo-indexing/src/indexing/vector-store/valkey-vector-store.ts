@@ -1,0 +1,888 @@
+import { createHash } from "node:crypto"
+import type { Field, FtCreateOptions, GlideClient, GlideString } from "@valkey/valkey-glide"
+import type { IVectorStore, VectorStoreSearchResult } from "../interfaces/vector-store"
+import type { PointStruct } from "../interfaces/vector-store"
+import type { EmbeddingProfile } from "../embedding-profile"
+import { DEFAULT_MAX_SEARCH_RESULTS, DEFAULT_SEARCH_MIN_SCORE } from "../constants"
+import { Log } from "../../util/log"
+// Not bundled: the CLI installs GLIDE on demand and points KILO_VALKEY_GLIDE_PATH at it.
+// Resolved per use (require is cached) so module mocks registered after first load still apply.
+import { loadGlide } from "./valkey-loader"
+
+const log = Log.create({ service: "valkey-store" })
+
+const SCHEMA = "1"
+const KEY = {
+  complete: "indexing_complete",
+  provider: "embedding_provider",
+  model: "embedding_model_id",
+  dimension: "embedding_dimension",
+  schema: "index_schema",
+}
+
+/**
+ * Valkey implementation of the vector store interface using ValkeySearch commands.
+ * Uses the @valkey/valkey-glide client library with its GlideFt module for
+ * ValkeySearch operations (FT.CREATE, FT.SEARCH, FT.DROPINDEX, FT.INFO).
+ */
+export class ValkeyVectorStore implements IVectorStore {
+  private client: GlideClient | null = null
+  private connectingPromise: Promise<GlideClient> | null = null
+  private readonly collectionName: string
+  private readonly metadataKey: string
+  private readonly vectorSize: number
+  private readonly profile: EmbeddingProfile
+  private readonly valkeyUrl: string
+  private readonly valkeyPassword?: string
+
+  constructor(workspacePath: string, url: string, vectorSize: number, password?: string, profile?: EmbeddingProfile) {
+    this.valkeyUrl = this.normalizeUrl(url)
+    this.valkeyPassword = password
+    this.vectorSize = vectorSize
+    this.profile =
+      profile ??
+      ({
+        provider: "openai",
+        modelId: "",
+        dimension: vectorSize,
+      } as EmbeddingProfile)
+
+    const hash = createHash("sha256").update(workspacePath).digest("hex")
+    this.collectionName = `ws-${hash.substring(0, 16)}`
+    this.metadataKey = `${this.collectionName}:__metadata__`
+  }
+
+  /**
+   * Parses the URL after dropping any userinfo. The password is configured separately, and an
+   * unescaped "/" in userinfo would otherwise make URL treat part of the password as the host.
+   */
+  private endpoint(): URL {
+    const scheme = this.valkeyUrl.startsWith("rediss://") ? "rediss://" : "redis://"
+    const rest = this.valkeyUrl.slice(scheme.length)
+    return new URL(scheme + rest.slice(rest.lastIndexOf("@") + 1))
+  }
+
+  /**
+   * Returns the Valkey URL reduced to scheme, host and port for safe logging.
+   */
+  private redactedUrl(): string {
+    try {
+      const url = this.endpoint()
+      return `${url.protocol}//${url.host}`
+    } catch {
+      return "<invalid-url>"
+    }
+  }
+
+  async initialize(): Promise<boolean> {
+    try {
+      await this.ensureConnected()
+    } catch (error) {
+      log.error("Failed to connect to Valkey", {
+        url: this.redactedUrl(),
+        error: error instanceof Error ? error.message : String(error),
+      })
+      throw error
+    }
+
+    try {
+      const info = await this.getIndexInfo()
+
+      if (info === null) {
+        await this.createIndex()
+        return true
+      }
+
+      const existingDimension = this.parseDimensionFromInfo(info)
+      if (existingDimension !== this.vectorSize) {
+        log.warn("Index dimension mismatch, recreating", {
+          collection: this.collectionName,
+          existingDimension,
+          expectedDimension: this.vectorSize,
+        })
+        await this.dropIndex()
+        await this.createIndex()
+        return true
+      }
+
+      const numDocs = this.parseNumDocsFromInfo(info)
+      if (numDocs === 0) {
+        return false
+      }
+
+      const storedProfile = await this.getStoredProfile()
+      if (!storedProfile) {
+        log.info("No stored embedding profile found, recreating index", {
+          collection: this.collectionName,
+        })
+        await this.dropIndex()
+        await this.createIndex()
+        return true
+      }
+
+      if (
+        storedProfile.provider !== this.profile.provider ||
+        storedProfile.modelId !== this.profile.modelId ||
+        storedProfile.dimension !== this.profile.dimension
+      ) {
+        log.info("Embedding profile mismatch, recreating index", {
+          collection: this.collectionName,
+          stored: storedProfile,
+          current: this.profile,
+        })
+        await this.dropIndex()
+        await this.createIndex()
+        return true
+      }
+
+      const metadata = await this.getMetadata()
+      if (metadata?.[KEY.schema] !== SCHEMA) {
+        log.info("Index schema mismatch, recreating index", {
+          collection: this.collectionName,
+          stored: metadata?.[KEY.schema],
+          current: SCHEMA,
+        })
+        await this.dropIndex()
+        await this.createIndex()
+        return true
+      }
+
+      return false
+    } catch (error) {
+      // Re-throw already-enriched connection errors from ensureConnected()
+      if (error instanceof Error && error.message.includes("Valkey at ")) {
+        throw error
+      }
+      const msg = error instanceof Error ? error.message : String(error)
+      log.error("Failed to initialize Valkey index", { collection: this.collectionName, error: msg })
+      throw new Error(`Failed to initialize Valkey index "${this.collectionName}" at ${this.redactedUrl()}: ${msg}`)
+    }
+  }
+
+  private parseDimensionFromInfo(info: Record<string, any>): number {
+    const fields = info.fields
+    if (!Array.isArray(fields)) {
+      return 0
+    }
+
+    for (const field of fields) {
+      if (field && typeof field === "object") {
+        if (field.type === "VECTOR" && field.vector_params) {
+          const dimension = field.vector_params.dimension
+          if (typeof dimension === "number") {
+            return dimension
+          }
+        }
+      }
+    }
+
+    return 0
+  }
+
+  private parseNumDocsFromInfo(info: Record<string, any>): number {
+    const numDocs = info.num_docs
+    if (typeof numDocs === "number") {
+      return numDocs
+    }
+    if (typeof numDocs === "string") {
+      const parsed = Number(numDocs)
+      if (Number.isFinite(parsed)) {
+        return parsed
+      }
+    }
+    return 0
+  }
+
+  private async setMetadata(complete: boolean): Promise<void> {
+    const client = await this.ensureConnected()
+    const fields: Record<string, string> = {
+      type: "metadata",
+      [KEY.complete]: String(complete),
+      [KEY.provider]: this.profile.provider,
+      [KEY.model]: this.profile.modelId,
+      [KEY.dimension]: String(this.profile.dimension),
+      [KEY.schema]: SCHEMA,
+    }
+    await client.hset(this.metadataKey, fields)
+  }
+
+  private async getMetadata(): Promise<Record<string, string> | null> {
+    const client = await this.ensureConnected()
+    const hashData = await client.hgetall(this.metadataKey)
+    if (!hashData || hashData.length === 0) {
+      return null
+    }
+    const result: Record<string, string> = {}
+    for (const entry of hashData) {
+      result[String(entry.field)] = String(entry.value)
+    }
+    return result
+  }
+
+  private async getStoredProfile(): Promise<EmbeddingProfile | null> {
+    const metadata = await this.getMetadata()
+    if (!metadata) {
+      return null
+    }
+
+    const provider = metadata[KEY.provider]
+    const modelId = metadata[KEY.model]
+    const dimensionStr = metadata[KEY.dimension]
+
+    if (!provider || modelId === undefined) {
+      return null
+    }
+
+    const dimension = Number(dimensionStr)
+    if (!Number.isFinite(dimension) || dimension <= 0) {
+      return null
+    }
+
+    return {
+      provider: provider as EmbeddingProfile["provider"],
+      modelId,
+      dimension,
+    }
+  }
+
+  async upsertPoints(points: PointStruct[]): Promise<void> {
+    if (points.length === 0) {
+      return
+    }
+
+    const client = await this.ensureConnected()
+    const BATCH_CHUNK_SIZE = 1000
+
+    try {
+      for (let i = 0; i < points.length; i += BATCH_CHUNK_SIZE) {
+        const chunk = points.slice(i, i + BATCH_CHUNK_SIZE)
+        const batch = new (loadGlide().Batch)(false) // non-atomic pipeline
+
+        for (const point of chunk) {
+          const key = `${this.collectionName}:${point.id}`
+          const fields: Record<string, GlideString> = {
+            vector: this.encodeVector(point.vector),
+            filePath: point.payload.filePath,
+            codeChunk: point.payload.codeChunk,
+            startLine: String(point.payload.startLine),
+            endLine: String(point.payload.endLine),
+            type: "point",
+            ...this.splitPathSegments(point.payload.filePath),
+          }
+          batch.hset(key, fields)
+        }
+
+        await client.exec(batch, true)
+      }
+    } catch (error) {
+      log.error("Failed to upsert points", {
+        collection: this.collectionName,
+        batchSize: points.length,
+        error: error instanceof Error ? error.message : String(error),
+      })
+      this.handleClientError(error)
+      throw error
+    }
+  }
+
+  async search(
+    queryVector: number[],
+    directoryPrefix?: string,
+    minScore?: number,
+    maxResults?: number,
+  ): Promise<VectorStoreSearchResult[]> {
+    if (queryVector.length !== this.vectorSize) {
+      throw new Error(
+        `Vector dimension mismatch: query vector has ${queryVector.length} dimensions, but index expects ${this.vectorSize}`,
+      )
+    }
+
+    const exists = await this.collectionExists()
+    if (!exists) {
+      return []
+    }
+
+    const actualMinScore = minScore ?? DEFAULT_SEARCH_MIN_SCORE
+    const actualMaxResults = maxResults ?? DEFAULT_MAX_SEARCH_RESULTS
+
+    try {
+      const client = await this.ensureConnected()
+      const filter = this.buildDirectoryFilter(directoryPrefix ?? "")
+      const vectorBlob = this.encodeVector(queryVector)
+      const query = `${filter}=>[KNN ${actualMaxResults} @vector $BLOB AS score]`
+
+      const [_count, documents] = await loadGlide().GlideFt.search(client, this.collectionName, query, {
+        params: [{ key: "BLOB", value: vectorBlob }],
+        returnFields: [
+          { fieldIdentifier: "filePath" },
+          { fieldIdentifier: "codeChunk" },
+          { fieldIdentifier: "startLine" },
+          { fieldIdentifier: "endLine" },
+          { fieldIdentifier: "score" },
+        ],
+        dialect: 2,
+        limit: { offset: 0, count: actualMaxResults },
+      })
+
+      const results: VectorStoreSearchResult[] = []
+
+      if (!documents || !Array.isArray(documents)) {
+        return []
+      }
+
+      for (const doc of documents) {
+        const docKey = String(doc.key)
+        const fields = doc.value
+
+        const prefix = `${this.collectionName}:`
+        const id = docKey.startsWith(prefix) ? docKey.slice(prefix.length) : docKey
+
+        const fieldMap: Record<string, string> = {}
+        if (Array.isArray(fields)) {
+          for (const field of fields) {
+            fieldMap[String(field.key)] = String(field.value)
+          }
+        }
+
+        // Cosine distance → similarity score
+        const distance = parseFloat(fieldMap["score"] ?? "1")
+        const score = 1 - distance
+
+        if (score < actualMinScore) {
+          continue
+        }
+
+        results.push({
+          id,
+          score,
+          payload: {
+            filePath: fieldMap["filePath"] ?? "",
+            codeChunk: fieldMap["codeChunk"] ?? "",
+            startLine: parseInt(fieldMap["startLine"] ?? "0", 10),
+            endLine: parseInt(fieldMap["endLine"] ?? "0", 10),
+          },
+        })
+      }
+
+      return results.slice(0, actualMaxResults)
+    } catch (error) {
+      log.error("Search failed", {
+        collection: this.collectionName,
+        directoryPrefix: directoryPrefix ?? "",
+        error: error instanceof Error ? error.message : String(error),
+      })
+      this.handleClientError(error)
+      throw error
+    }
+  }
+
+  async deletePointsByFilePath(filePath: string): Promise<void> {
+    await this.deletePointsByMultipleFilePaths([filePath])
+  }
+
+  async deletePointsByMultipleFilePaths(filePaths: string[]): Promise<void> {
+    if (filePaths.length === 0) {
+      return
+    }
+
+    const exists = await this.collectionExists()
+    if (!exists) {
+      return
+    }
+
+    try {
+      const client = await this.ensureConnected()
+      const DELETE_BATCH_SIZE = 1000
+      const SEARCH_LIMIT = 10000
+
+      for (const filePath of filePaths) {
+        // "=>" cannot be expressed in an FT.SEARCH TAG query; skip it so one path doesn't abort the batch
+        if (filePath.includes("=>")) {
+          log.warn("Skipping delete for path containing '=>'", { collection: this.collectionName, filePath })
+          continue
+        }
+        const sanitizedPath = this.sanitizeTagValue(filePath)
+        const query = `@filePath:{${sanitizedPath}}`
+
+        // Scope the pending keys to this path so one file's chunks are flushed before moving on.
+        const keysToDelete: string[] = []
+
+        // Paginate: re-query from offset 0 until fewer than SEARCH_LIMIT remain,
+        // ensuring files with more than 10,000 chunks are fully cleaned up.
+        let found = 0
+        do {
+          const [, documents] = await loadGlide().GlideFt.search(client, this.collectionName, query, {
+            limit: { offset: 0, count: SEARCH_LIMIT },
+            nocontent: true,
+          })
+
+          if (!documents || documents.length === 0) {
+            break
+          }
+
+          found = documents.length
+
+          for (const doc of documents) {
+            keysToDelete.push(String(doc.key))
+          }
+
+          // Delete in batches to avoid unbounded accumulation
+          while (keysToDelete.length >= DELETE_BATCH_SIZE) {
+            const batch = keysToDelete.splice(0, DELETE_BATCH_SIZE)
+            await client.del(batch)
+          }
+        } while (found >= SEARCH_LIMIT)
+
+        if (keysToDelete.length > 0) {
+          await client.del(keysToDelete)
+        }
+      }
+    } catch (error) {
+      const samplePaths = filePaths.slice(0, 3)
+      log.error("Failed to delete points by file paths", {
+        collection: this.collectionName,
+        fileCount: filePaths.length,
+        samplePaths,
+        error: error instanceof Error ? error.message : String(error),
+      })
+      this.handleClientError(error)
+      throw error
+    }
+  }
+
+  async clearCollection(): Promise<void> {
+    const exists = await this.collectionExists()
+    if (!exists) {
+      return
+    }
+
+    try {
+      const client = await this.ensureConnected()
+      const pattern = `${this.collectionName}:*`
+      let cursor = "0"
+      const MAX_SCAN_ITERATIONS = 100_000
+      let iterations = 0
+
+      do {
+        if (++iterations > MAX_SCAN_ITERATIONS) {
+          log.warn("clearCollection exceeded max iterations, aborting", {
+            collection: this.collectionName,
+            iterations: MAX_SCAN_ITERATIONS,
+          })
+          break
+        }
+        const [nextCursor, keys] = await client.scan(cursor, { match: pattern, count: 100 })
+        cursor = String(nextCursor)
+
+        if (keys.length > 0) {
+          // Preserve the metadata key so the profile and schema survive the clear
+          const keysToDelete = (keys as string[]).filter((key) => key !== this.metadataKey)
+          if (keysToDelete.length > 0) {
+            await client.del(keysToDelete)
+          }
+        }
+      } while (cursor !== "0")
+
+      // FT.INFO num_docs does not drop on DEL, so reset the flag hasIndexedData() relies on
+      await this.setMetadata(false)
+    } catch (error) {
+      log.error("Failed to clear collection", {
+        collection: this.collectionName,
+        error: error instanceof Error ? error.message : String(error),
+      })
+      this.handleClientError(error)
+      throw error
+    }
+  }
+
+  async deleteCollection(): Promise<void> {
+    const exists = await this.collectionExists()
+    if (!exists) {
+      return
+    }
+
+    await this.dropIndex()
+
+    // Metadata key may survive scanAndDelete if written between scan pages
+    const client = await this.ensureConnected()
+    await client.del([this.metadataKey])
+  }
+
+  async collectionExists(): Promise<boolean> {
+    const client = await this.ensureConnected()
+    try {
+      await loadGlide().GlideFt.info(client, this.collectionName)
+      return true
+    } catch (error) {
+      if (error instanceof loadGlide().RequestError) {
+        return false
+      }
+      throw error
+    }
+  }
+
+  async hasIndexedData(): Promise<boolean> {
+    try {
+      const exists = await this.collectionExists()
+      if (!exists) {
+        return false
+      }
+
+      const info = await this.getIndexInfo()
+      if (!info) {
+        return false
+      }
+      const numDocs = this.parseNumDocsFromInfo(info)
+      if (numDocs < 1) {
+        return false
+      }
+
+      const metadata = await this.getMetadata()
+      if (!metadata) {
+        return false
+      }
+
+      return metadata[KEY.complete] === "true"
+    } catch (error) {
+      log.error("hasIndexedData check failed", {
+        collection: this.collectionName,
+        error: error instanceof Error ? error.message : String(error),
+      })
+      return false
+    }
+  }
+
+  async markIndexingComplete(): Promise<void> {
+    try {
+      await this.setMetadata(true)
+    } catch (error) {
+      log.error("Failed to mark indexing complete", {
+        collection: this.collectionName,
+        error: error instanceof Error ? error.message : String(error),
+      })
+      throw error
+    }
+  }
+
+  async markIndexingIncomplete(): Promise<void> {
+    try {
+      await this.setMetadata(false)
+    } catch (error) {
+      log.error("Failed to mark indexing incomplete", {
+        collection: this.collectionName,
+        error: error instanceof Error ? error.message : String(error),
+      })
+      throw error
+    }
+  }
+
+  /**
+   * Opens an existing complete store without mutating it.
+   * Validates that the index exists, dimension matches, profile matches,
+   * and indexing is marked complete.
+   */
+  async openExisting(): Promise<void> {
+    const info = await this.getIndexInfo()
+    if (!info) throw new Error("Baseline Valkey index does not exist")
+
+    const dimension = this.parseDimensionFromInfo(info)
+    if (dimension !== this.vectorSize) throw new Error("Baseline Valkey vector dimension does not match the worktree")
+
+    const storedProfile = await this.getStoredProfile()
+    if (
+      !storedProfile ||
+      storedProfile.provider !== this.profile.provider ||
+      storedProfile.modelId !== this.profile.modelId ||
+      storedProfile.dimension !== this.profile.dimension
+    ) {
+      throw new Error("Baseline Valkey embedding profile does not match the worktree")
+    }
+
+    const metadata = await this.getMetadata()
+    if (metadata?.[KEY.schema] !== SCHEMA) throw new Error("Baseline Valkey index schema does not match the worktree")
+    if (!metadata || metadata[KEY.complete] !== "true") {
+      throw new Error("Baseline Valkey index is not complete")
+    }
+  }
+
+  async close(): Promise<void> {
+    await this.dispose()
+  }
+
+  /**
+   * Creates or returns the GlideClient singleton.
+   * GLIDE multiplexes over a single connection and reconnects automatically.
+   * Uses a connection promise as a mutex to prevent concurrent callers from
+   * creating multiple clients.
+   */
+  protected async ensureConnected(): Promise<GlideClient> {
+    if (this.client) {
+      return this.client
+    }
+
+    if (this.connectingPromise) {
+      return this.connectingPromise
+    }
+
+    this.connectingPromise = this.createConnection()
+    try {
+      this.client = await this.connectingPromise
+      return this.client
+    } catch (error) {
+      this.client = null
+      throw this.enrichConnectionError(error)
+    } finally {
+      this.connectingPromise = null
+    }
+  }
+
+  private async createConnection(): Promise<GlideClient> {
+    const url = this.endpoint()
+    const host = url.hostname
+    const port = url.port ? parseInt(url.port, 10) : 6379
+    const useTLS = url.protocol === "rediss:"
+
+    return loadGlide().GlideClient.createClient({
+      addresses: [{ host, port }],
+      useTLS,
+      credentials: this.valkeyPassword ? { password: this.valkeyPassword } : undefined,
+      clientName: "kilo-valkey-store",
+      clientInfoTag: "kilocode",
+      requestTimeout: 5000,
+    })
+  }
+
+  async dispose(): Promise<void> {
+    if (this.connectingPromise) {
+      try {
+        await this.connectingPromise
+      } catch (err) {
+        log.debug("dispose: ignored connection error", { err })
+      }
+    }
+    if (this.client) {
+      this.client.close()
+      this.client = null
+    }
+    this.connectingPromise = null
+  }
+
+  protected handleClientError(error: unknown): void {
+    if (error instanceof loadGlide().ClosingError) {
+      this.client = null
+    }
+  }
+
+  private enrichConnectionError(error: unknown): Error {
+    const raw = error instanceof Error ? error.message : String(error)
+    const lower = raw.toLowerCase()
+    const url = this.redactedUrl()
+
+    if (lower.includes("wrongpass") || lower.includes("invalid username-password")) {
+      return new Error(
+        `Authentication failed for Valkey at ${url}: invalid password. Check your Valkey password configuration.`,
+      )
+    }
+
+    if (lower.includes("noauth") || lower.includes("must be called with the client already authenticated")) {
+      return new Error(
+        `Authentication required for Valkey at ${url}: the server requires a password but none was provided.`,
+      )
+    }
+
+    if (lower.includes("connection refused") || lower.includes("econnrefused")) {
+      return new Error(`Connection refused for Valkey at ${url}. Ensure the Valkey server is running and accessible.`)
+    }
+
+    if (lower.includes("timeout") || lower.includes("etimedout")) {
+      return new Error(`Connection timed out for Valkey at ${url}. Ensure the server is reachable and not overloaded.`)
+    }
+
+    if (lower.includes("getaddrinfo") || lower.includes("enotfound")) {
+      return new Error(`Cannot resolve host for Valkey at ${url}. Check that the hostname is correct.`)
+    }
+
+    return new Error(`Connection to Valkey at ${url} failed: ${raw}`)
+  }
+
+  async getIndexInfo(): Promise<Record<string, any> | null> {
+    const client = await this.ensureConnected()
+    try {
+      const info = await loadGlide().GlideFt.info(client, this.collectionName)
+      return info as Record<string, any>
+    } catch (error) {
+      if (error instanceof loadGlide().RequestError) {
+        return null
+      }
+      throw error
+    }
+  }
+
+  async createIndex(): Promise<void> {
+    const exists = await this.collectionExists()
+    if (exists) {
+      throw new Error(`Index ${this.collectionName} already exists`)
+    }
+
+    const client = await this.ensureConnected()
+
+    const schema: Field[] = [
+      {
+        type: "VECTOR",
+        name: "vector",
+        attributes: {
+          algorithm: "HNSW",
+          type: "FLOAT32",
+          dimensions: this.vectorSize,
+          distanceMetric: "COSINE",
+        },
+      },
+      { type: "TAG", name: "seg0" },
+      { type: "TAG", name: "seg1" },
+      { type: "TAG", name: "seg2" },
+      { type: "TAG", name: "seg3" },
+      { type: "TAG", name: "seg4" },
+      // Use null-byte separator to prevent default comma tokenization of file paths
+      { type: "TAG", name: "filePath", separator: "\x00" },
+      { type: "TAG", name: "type" },
+    ]
+
+    const options: FtCreateOptions = {
+      dataType: "HASH",
+      prefixes: [`${this.collectionName}:`],
+    }
+
+    await loadGlide().GlideFt.create(client, this.collectionName, schema, options)
+  }
+
+  /**
+   * Drops the ValkeySearch index and removes all orphaned hash keys.
+   * GlideFt.dropindex() removes the index definition but does NOT delete associated
+   * hash keys, so we use scanAndDelete() to clean up orphaned data.
+   */
+  async dropIndex(): Promise<void> {
+    const exists = await this.collectionExists()
+    if (!exists) {
+      return
+    }
+
+    const client = await this.ensureConnected()
+    await loadGlide().GlideFt.dropindex(client, this.collectionName)
+    await this.scanAndDelete(`${this.collectionName}:`)
+  }
+
+  async scanAndDelete(prefix: string): Promise<void> {
+    const client = await this.ensureConnected()
+    const pattern = `${prefix}*`
+    let cursor = "0"
+    const MAX_SCAN_ITERATIONS = 100_000
+    let iterations = 0
+
+    do {
+      if (++iterations > MAX_SCAN_ITERATIONS) {
+        log.warn("scanAndDelete exceeded max iterations, aborting", {
+          collection: this.collectionName,
+          prefix,
+          iterations: MAX_SCAN_ITERATIONS,
+        })
+        break
+      }
+      const [nextCursor, keys] = await client.scan(cursor, { match: pattern, count: 100 })
+      cursor = String(nextCursor)
+
+      if (keys.length > 0) {
+        await client.del(keys as string[])
+      }
+    } while (cursor !== "0")
+  }
+
+  normalizeUrl(url: string): string {
+    const trimmed = url.trim()
+    if (trimmed.startsWith("redis://") || trimmed.startsWith("rediss://")) {
+      return trimmed
+    }
+    return `redis://${trimmed}`
+  }
+
+  encodeVector(vector: number[]): Buffer {
+    const buffer = Buffer.alloc(vector.length * 4)
+    for (let i = 0; i < vector.length; i++) {
+      buffer.writeFloatLE(vector[i], i * 4)
+    }
+    return buffer
+  }
+
+  decodeVector(buffer: Buffer): number[] {
+    const count = buffer.length / 4
+    const result: number[] = Array.from({ length: count })
+    for (let i = 0; i < count; i++) {
+      result[i] = buffer.readFloatLE(i * 4)
+    }
+    return result
+  }
+
+  splitPathSegments(filePath: string): Record<string, string> {
+    const segments = filePath.split("/").filter(Boolean)
+    const result: Record<string, string> = {}
+    const maxSegments = Math.min(segments.length, 5)
+    for (let i = 0; i < maxSegments; i++) {
+      result[`seg${i}`] = segments[i]
+    }
+    return result
+  }
+
+  sanitizeTagValue(segment: string): string {
+    if (segment.includes("=>")) {
+      throw new Error(`Invalid path segment: contains '=>' which is a reserved FT.SEARCH delimiter`)
+    }
+    // Escape all ValkeySearch TAG metacharacters: {}|\*?()@!~[],."- and backslash
+    return segment.replace(/[{}|\\*?()@!~[\],."'-]/g, "\\$&")
+  }
+
+  buildDirectoryFilter(directoryPrefix: string): string {
+    const MAX_PATH_SEGMENTS = 5
+    let normalized = directoryPrefix.replace(/\\/g, "/")
+    if (normalized.startsWith("./")) {
+      normalized = normalized.slice(2)
+    }
+
+    if (normalized === "" || normalized === ".") {
+      return "(@type:{point})"
+    }
+
+    const segments = normalized.split("/").filter(Boolean)
+    if (segments.length > MAX_PATH_SEGMENTS) {
+      log.warn("Directory prefix exceeds max segment depth, filtering on first 5 segments only", {
+        directoryPrefix,
+        segmentCount: segments.length,
+        maxSegments: MAX_PATH_SEGMENTS,
+      })
+    }
+    const segmentFilters = segments
+      .slice(0, MAX_PATH_SEGMENTS)
+      .map((seg, i) => `@seg${i}:{${this.sanitizeTagValue(seg)}}`)
+      .join(" ")
+
+    return `(@type:{point} ${segmentFilters})`
+  }
+
+  getCollectionName(): string {
+    return this.collectionName
+  }
+
+  getMetadataKey(): string {
+    return this.metadataKey
+  }
+
+  getValkeyUrl(): string {
+    return this.valkeyUrl
+  }
+
+  getProfile(): EmbeddingProfile {
+    return this.profile
+  }
+
+  getVectorSize(): number {
+    return this.vectorSize
+  }
+}
