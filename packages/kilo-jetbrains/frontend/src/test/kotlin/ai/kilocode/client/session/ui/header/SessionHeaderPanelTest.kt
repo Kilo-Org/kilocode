@@ -3,6 +3,7 @@ package ai.kilocode.client.session.ui.header
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.model.Reasoning
 import ai.kilocode.client.session.model.StepFinish
+import ai.kilocode.client.session.model.TimelineItem
 import ai.kilocode.client.session.model.Tool
 import ai.kilocode.client.session.model.ToolExecState
 import ai.kilocode.client.session.model.ToolKind
@@ -544,9 +545,35 @@ class SessionHeaderPanelTest : SessionControllerTestBase() {
         assertEquals(panel.timelineBarWidth(), next - first)
     }
 
+    fun `test timeline navigates only on a left click inside a bar`() {
+        val c = promptedHeader()
+        val navigated = mutableListOf<TimelineItem>()
+        val panel = SessionHeaderPanel(c, parent, onNavigate = { navigated.add(it) })
+        val timeline = panel.timelinePanel()
+        timeline.setSize(timeline.preferredSize)
+        val x = panel.timelineBarWidth() + 1
+        val y = timeline.height - 1
+
+        for ((at, button) in listOf(x to MouseEvent.BUTTON3, (panel.timelineBarWidth() - 1) to MouseEvent.BUTTON1)) {
+            timeline.dispatchEvent(MouseEvent(
+                timeline, MouseEvent.MOUSE_CLICKED, System.currentTimeMillis(), 0,
+                at, y, 1, false, button,
+            ))
+        }
+        assertTrue(navigated.isEmpty())
+
+        timeline.dispatchEvent(MouseEvent(
+            timeline, MouseEvent.MOUSE_CLICKED, System.currentTimeMillis(), 0,
+            x, y, 1, false, MouseEvent.BUTTON1,
+        ))
+
+        assertEquals(listOf(c.model.header.timeline[1]), navigated)
+    }
+
     fun `test timeline drags horizontally inside viewport`() {
         val c = promptedHeader()
-        val panel = SessionHeaderPanel(c, parent)
+        val navigated = mutableListOf<TimelineItem>()
+        val panel = SessionHeaderPanel(c, parent, onNavigate = { navigated.add(it) })
         repeat(12) { idx ->
             emit(ChatEventDto.PartUpdated("ses_test", tool("tool_more_$idx", "bash", "running", "More $idx")), flush = false)
         }
@@ -581,6 +608,22 @@ class SessionHeaderPanelTest : SessionControllerTestBase() {
 
         assertTrue(panel.timelineViewport().viewPosition.x > x)
         assertEquals(y, panel.timelineViewport().viewPosition.y)
+
+        for (event in listOf(MouseEvent.MOUSE_RELEASED, MouseEvent.MOUSE_CLICKED)) {
+            timeline.dispatchEvent(MouseEvent(
+                timeline, event, System.currentTimeMillis(), 0,
+                panel.timelineBarWidth() + 1, timeline.height - 1, 1, false, MouseEvent.BUTTON1,
+            ))
+        }
+        assertTrue(navigated.isEmpty())
+
+        for (event in listOf(MouseEvent.MOUSE_PRESSED, MouseEvent.MOUSE_RELEASED, MouseEvent.MOUSE_CLICKED)) {
+            timeline.dispatchEvent(MouseEvent(
+                timeline, event, System.currentTimeMillis(), 0,
+                panel.timelineBarWidth() + 1, timeline.height - 1, 1, false, MouseEvent.BUTTON1,
+            ))
+        }
+        assertEquals(listOf(c.model.header.timeline[1]), navigated)
     }
 
     fun `test timeline touch scrolls horizontally inside viewport`() {
