@@ -118,7 +118,7 @@ function list(dir: string) {
   }
 }
 
-function scan(root: string, names: ReadonlySet<string>, found: Set<string>, markers = false) {
+function scan(root: string, names: ReadonlySet<string>, found: Set<string>, markers?: Set<string>) {
   if (names.has(path.basename(root))) {
     found.add(root)
     return
@@ -141,7 +141,8 @@ function scan(root: string, names: ReadonlySet<string>, found: Set<string>, mark
     for (const entry of entries) {
       const target = path.join(dir, entry.name)
       if (names.has(entry.name)) {
-        if (!(markers && entry.isFile())) found.add(target)
+        if (markers && entry.isFile()) markers.add(target)
+        else found.add(target)
         continue
       }
       if (entry.isDirectory()) pending.push(target)
@@ -151,14 +152,18 @@ function scan(root: string, names: ReadonlySet<string>, found: Set<string>, mark
 
 function protectedPaths(profile: Profile) {
   const found = new Set(profile.filesystem.denyWrite.filter((rule) => existsSync(rule.path)).map((rule) => rule.path))
-  if (profile.filesystem.denyNames.length === 0) return [...found]
+  const markers = new Set<string>()
+  if (profile.filesystem.denyNames.length === 0) return { found: [...found], markers: [] }
 
   const names = new Set(profile.filesystem.denyNames)
   // Scan the raw rules so a strict root nested in (or duplicating) a marker root is still scanned in full.
   for (const rule of profile.filesystem.allowWrite.filter(exists)) {
-    if (rule.kind === "subtree") scan(rule.path, names, found, rule.markers)
+    if (rule.kind === "subtree") scan(rule.path, names, found, rule.markers ? markers : undefined)
   }
-  return [...found].sort((a, b) => a.length - b.length)
+  return {
+    found: [...found].sort((a, b) => a.length - b.length),
+    markers: [...markers].filter((target) => !found.has(target)).sort(),
+  }
 }
 
 export function generate(
@@ -194,7 +199,11 @@ export function generate(
   ]
 
   for (const rule of allow) args.push("--bind", rule.path, rule.path)
-  for (const target of protectedPaths(profile)) args.push("--ro-bind", target, target)
+  const paths = protectedPaths(profile)
+  // A marker file gets its own writable bind so it can be written in place, while renaming over or
+  // unlinking the mount point fails with EBUSY. The read-only binds come after and take precedence.
+  for (const target of paths.markers) args.push("--bind", target, target)
+  for (const target of paths.found) args.push("--ro-bind", target, target)
   if (proxy?.socket) args.push("--ro-bind", proxy.socket, proxy.socket)
   args.push("--proc", "/proc")
   if (launch.cwd) args.push("--chdir", launch.cwd)

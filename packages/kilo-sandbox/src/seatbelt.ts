@@ -46,21 +46,25 @@ function policy(profile: Profile, proxy?: ProxyRuntime) {
   const names = profile.filesystem.denyNames.map((name) => `(require-not (regex #"(^|/)${escape(name)}(/|$)"))`)
   const strict = allow.filter((item) => !item.rule.markers)
   const markers = allow.filter((item) => item.rule.markers)
-  // Marker roots allow a regular file with a denied name, but never a directory (created, renamed
-  // or symlinked) or anything inside one, and never a path a strict root also covers.
-  const files = profile.filesystem.denyNames.flatMap((name) => [
-    `(require-not (regex #"(^|/)${escape(name)}/"))`,
-    `(require-not (require-all (regex #"(^|/)${escape(name)}$") (require-not (vnode-type REGULAR-FILE))))`,
-  ])
+  const excluded = strict.flatMap((item) => exclude(item.rule, item.key))
+  const inside = profile.filesystem.denyNames.map((name) => `(require-not (regex #"(^|/)${escape(name)}/"))`)
+  // Marker roots also let a regular file carry a denied name, but only through create and in-place
+  // data writes. Renames, swaps, links and unlinks need other operations, so an existing marker can
+  // never be replaced by a directory or symlink. Paths a strict root covers are excluded.
   const rules = [
-    { roots: strict, extra: names },
-    { roots: markers, extra: [...files, ...strict.flatMap((item) => exclude(item.rule, item.key))] },
+    { ops: "file-write*", roots: strict, extra: names },
+    { ops: "file-write*", roots: markers, extra: [...names, ...excluded] },
+    {
+      ops: "file-write-create file-write-data",
+      roots: markers,
+      extra: [...inside, "(vnode-type REGULAR-FILE)", ...excluded],
+    },
   ]
   const write = rules
     .filter((item) => item.roots.length > 0)
     .map(
       (item) =>
-        `(allow file-write*\n  (require-all\n    (require-any ${item.roots.map((root) => filter(root.rule, root.key)).join(" ")})\n    ${[...deny, ...item.extra].join("\n    ")}\n  )\n)`,
+        `(allow ${item.ops}\n  (require-all\n    (require-any ${item.roots.map((root) => filter(root.rule, root.key)).join(" ")})\n    ${[...deny, ...item.extra].join("\n    ")}\n  )\n)`,
     )
     .join("\n")
   return {

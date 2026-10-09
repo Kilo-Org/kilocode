@@ -1,11 +1,22 @@
 import { describe, expect, test } from "bun:test"
 import { spawnSync } from "node:child_process"
-import { chmodSync, mkdirSync, mkdtempSync, readdirSync, realpathSync, rmSync, writeFileSync } from "node:fs"
+import {
+  chmodSync,
+  existsSync,
+  lstatSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  realpathSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs"
 import os from "node:os"
 import path from "node:path"
 import { Effect, PlatformError, Result } from "effect"
 import { backendSupport, confine, prepare, type Launch } from "../src/backend"
-import { generate as generateBubblewrap, parseMountinfo } from "../src/bubblewrap"
+import { bubblewrap, generate as generateBubblewrap, parseMountinfo } from "../src/bubblewrap"
 import { run } from "../src/context"
 import { settle } from "../src/mutation"
 import type { Profile } from "../src/profile"
@@ -34,6 +45,14 @@ const launch: Launch = {
     no_proxy: "*",
   },
 }
+
+// Atomically exchanges two paths with renamex_np(RENAME_SWAP), which plain mv cannot do.
+const swap = `
+  const { dlopen } = require("bun:ffi")
+  const lib = dlopen("/usr/lib/libSystem.B.dylib", { renamex_np: { args: ["cstring", "cstring", "u32"], returns: "i32" } })
+  const [from, to] = process.argv.slice(-2).map((value) => Buffer.from(value + "\\0"))
+  process.exit(lib.symbols.renamex_np(from, to, 2) === 0 ? 0 : 1)
+`
 
 // chmod-based permission tests only work when the test user is not root,
 // since root bypasses filesystem permission checks entirely.
@@ -218,6 +237,13 @@ describe("sandbox launch preparation", () => {
       expect(bound).not.toContain(path.join(cache, ".git"))
       expect(bound).toContain(path.join(cache, "repo", ".git"))
       expect(bound).toContain(path.join(project, "nested", ".git"))
+      // The marker gets its own writable bind after the root binds and before every read-only bind.
+      const bind = (target: string) =>
+        result.args.findIndex((arg, index) => arg === "--bind" && result.args[index + 1] === target)
+      const marker = bind(path.join(cache, ".git"))
+      expect(marker).toBeGreaterThan(bind(project))
+      expect(marker).toBeLessThan(result.args.indexOf("--ro-bind", result.args.indexOf("/dev")))
+      expect(result.args.filter((arg) => arg === path.join(project, "nested", ".git"))).toHaveLength(2)
     } finally {
       rmSync(root, { recursive: true, force: true })
     }
@@ -248,6 +274,17 @@ describe("sandbox launch preparation", () => {
 
     try {
       expect(run("/usr/bin/touch", path.join(cache, ".git"))).toBe(0)
+      expect(run("/bin/sh", "-c", `printf data > '${path.join(cache, ".git")}'`)).toBe(0)
+      // An existing marker is written in place only: it cannot be replaced, swapped, removed or moved.
+      expect(run("/bin/sh", "-c", `cd '${cache}' && printf x > tmp && mv -f tmp .git`)).not.toBe(0)
+      expect(run("/bin/sh", "-c", `cd '${cache}' && ln -s repo lnk && mv -f lnk .git`)).not.toBe(0)
+      expect(run("/bin/sh", "-c", `cd '${cache}' && mkdir dir && mv -f dir .git`)).not.toBe(0)
+      expect(run(process.execPath, "-e", swap, path.join(cache, "tmp"), path.join(cache, "dir"))).toBe(0)
+      expect(run(process.execPath, "-e", swap, path.join(cache, "tmp"), path.join(cache, ".git"))).not.toBe(0)
+      expect(run("/bin/rm", path.join(cache, ".git"))).not.toBe(0)
+      expect(run("/bin/mv", path.join(cache, ".git"), path.join(cache, "away"))).not.toBe(0)
+      expect(lstatSync(path.join(cache, ".git")).isFile()).toBe(true)
+      expect(readFileSync(path.join(cache, ".git"), "utf8")).toBe("data")
       expect(run("/usr/bin/touch", path.join(cache, "repo", ".git", "config"))).not.toBe(0)
       expect(run("/bin/mv", path.join(cache, "repo", ".git"), path.join(cache, "repo", "moved"))).not.toBe(0)
       expect(run("/bin/mkdir", path.join(cache, "fresh", ".git"))).not.toBe(0)
@@ -259,6 +296,49 @@ describe("sandbox launch preparation", () => {
       rmSync(root, { recursive: true, force: true })
     }
   })
+
+  test.skipIf(process.platform !== "linux" || !bubblewrap.support().available)(
+    "keeps existing Linux markers regular files under real Bubblewrap",
+    () => {
+      const root = realpathSync(mkdtempSync(path.join(os.tmpdir(), "kilo-bubblewrap-real-")))
+      const cache = path.join(root, "cache")
+      mkdirSync(path.join(cache, "repo", ".git"), { recursive: true })
+      writeFileSync(path.join(cache, ".git"), "")
+      const profile: Profile = {
+        ...makeProfile("allow"),
+        filesystem: {
+          allowWrite: [{ path: cache, kind: "subtree", markers: true }],
+          denyWrite: [],
+          denyNames: [".git"],
+        },
+      }
+      const executable = process.env.KILO_BWRAP_PATH ?? "/usr/bin/bwrap"
+      const run = (script: string) => {
+        const result = generateBubblewrap(
+          profile,
+          { command: "/bin/sh", args: ["-c", script], cwd: cache, environment: {} },
+          executable,
+        )
+        return spawnSync(result.command, result.args, { cwd: cache }).status
+      }
+
+      try {
+        expect(run("printf data > .git")).toBe(0)
+        expect(run("printf x > tmp && mv -f tmp .git")).not.toBe(0)
+        expect(run("ln -s repo lnk && mv -f lnk .git")).not.toBe(0)
+        expect(run("mkdir dir && mv -fT dir .git")).not.toBe(0)
+        expect(run("rm .git")).not.toBe(0)
+        expect(run("mv .git away")).not.toBe(0)
+        expect(run("touch repo/.git/config")).not.toBe(0)
+        expect(run("touch fresh.txt")).toBe(0)
+        expect(lstatSync(path.join(cache, ".git")).isFile()).toBe(true)
+        expect(readFileSync(path.join(cache, ".git"), "utf8")).toBe("data")
+        expect(existsSync(path.join(cache, "repo", ".git", "config"))).toBe(false)
+      } finally {
+        rmSync(root, { recursive: true, force: true })
+      }
+    },
+  )
 
   test("parses escaped mount points from Linux mountinfo", () => {
     const content = [
