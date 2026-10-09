@@ -1,7 +1,10 @@
 package ai.kilocode.client.session.views.tool
 
+import ai.kilocode.client.plugin.KiloPluginSettings
 import ai.kilocode.client.session.model.Content
 import ai.kilocode.client.session.model.Tool
+import ai.kilocode.client.session.settings.BlockDisplay
+import ai.kilocode.client.session.settings.TranscriptDisplayTarget
 import ai.kilocode.client.session.ui.SessionContentPanel
 import ai.kilocode.client.session.ui.SessionSurfacePanel
 import ai.kilocode.client.session.ui.popup.HeaderPopupBody
@@ -37,7 +40,9 @@ class ShellToolView(
     private val parts: ToolParts = toolParts(tool),
     private val body: ShellBody = ShellBody(selection),
     private val footer: ToolApprovalFooter = ToolApprovalFooter(),
-) : AbstractSessionPartView(parts.header, { body.mount(tool) }, { footer }), UiDataProvider, ApprovalReasonTarget {
+    private var display: BlockDisplay = KiloPluginSettings.getTerminalCommandDisplay(),
+) : AbstractSessionPartView(parts.header, { body.mount(tool) }, { footer }), UiDataProvider, ApprovalReasonTarget,
+    TranscriptDisplayTarget {
 
     override val contentId: String = tool.id
 
@@ -174,6 +179,13 @@ class ShellToolView(
         val expand = canExpand(item)
         var changed = false
         changed = syncExpandable(expand) || changed
+        if (!touched) {
+            changed = if (display == BlockDisplay.EXPANDED && expand) {
+                expand() || changed
+            } else {
+                collapse() || changed
+            }
+        }
         changed = setVisible(parts.state, !expand) || changed
         changed = setIcon(parts.glyph, icon(item)) || changed
         changed = setForeground(parts.glyph, color(item)) || changed
@@ -185,6 +197,16 @@ class ShellToolView(
         changed = setForeground(parts.state, color(item)) || changed
         changed = footer.update(item, approvalReasonsVisible()) || changed
         return changed
+    }
+
+    @RequiresEdt
+    override fun syncTranscriptDisplay(): Boolean {
+        if (touched) return false
+        val next = KiloPluginSettings.getTerminalCommandDisplay()
+        if (display == next) return false
+        display = next
+        sync()
+        return true
     }
 
     private fun syncBody(): Boolean = body.update(item)

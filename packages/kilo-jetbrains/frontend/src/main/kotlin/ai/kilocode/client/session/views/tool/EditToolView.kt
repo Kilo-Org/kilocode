@@ -2,11 +2,14 @@ package ai.kilocode.client.session.views.tool
 
 import ai.kilocode.client.diff.DiffLineNumbers
 import ai.kilocode.client.plugin.KiloBundle
+import ai.kilocode.client.plugin.KiloPluginSettings
 import ai.kilocode.client.session.SessionDiffOpener
 import ai.kilocode.client.session.SessionFileOpener
 import ai.kilocode.client.session.model.Content
 import ai.kilocode.client.session.model.Tool
 import ai.kilocode.client.session.model.ToolKind
+import ai.kilocode.client.session.settings.BlockDisplay
+import ai.kilocode.client.session.settings.TranscriptDisplayTarget
 import ai.kilocode.client.session.ui.popup.HeaderPopupBody
 import ai.kilocode.client.session.ui.popup.HeaderPopupRequest
 import ai.kilocode.client.session.ui.selection.SessionCopyTarget
@@ -45,7 +48,9 @@ class EditToolView(
     private val parts: ToolParts = toolParts(tool, openFile),
     private var body: EditBody = editBody(tool, selection, openFile),
     private val footer: ToolApprovalFooter = ToolApprovalFooter(),
-) : AbstractSessionPartView(parts.header, { body.mount(tool) }, { footer }), UiDataProvider, SessionCopyTarget, ApprovalReasonTarget {
+    private var display: BlockDisplay = KiloPluginSettings.getCodeEditDisplay(),
+) : AbstractSessionPartView(parts.header, { body.mount(tool) }, { footer }), UiDataProvider, SessionCopyTarget,
+    ApprovalReasonTarget, TranscriptDisplayTarget {
 
     override val contentId: String = tool.id
 
@@ -55,6 +60,7 @@ class EditToolView(
     private var opener: SessionDiffOpener = { _, _, _ -> }
     private var sessionId: String? = null
     private var canDiff = false
+
     private val badge = DiffStatBadge(0, 0)
     private val open = HeaderOpenAction(SessionViewIcons.openDiff, KiloBundle.message("session.part.tool.openDiff"), ::openDiffViewer)
     private val filesTag = PlainLabel().apply {
@@ -222,6 +228,13 @@ class EditToolView(
         val expand = expandable()
         var changed = false
         changed = syncExpandable(expand) || changed
+        if (!touched) {
+            changed = if (display == BlockDisplay.EXPANDED && expand) {
+                expand() || changed
+            } else {
+                collapse() || changed
+            }
+        }
         changed = setVisible(parts.state, !expand) || changed
         changed = setIcon(parts.glyph, icon(item)) || changed
         changed = setForeground(parts.glyph, color(item)) || changed
@@ -239,6 +252,16 @@ class EditToolView(
         changed = syncBadge() || changed
         changed = footer.update(item, approvalReasonsVisible()) || changed
         return changed
+    }
+
+    @RequiresEdt
+    override fun syncTranscriptDisplay(): Boolean {
+        if (touched) return false
+        val next = KiloPluginSettings.getCodeEditDisplay()
+        if (display == next) return false
+        display = next
+        sync()
+        return true
     }
 
     private fun syncDiffAction(count: Int) {

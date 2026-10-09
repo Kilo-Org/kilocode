@@ -1,5 +1,6 @@
 package ai.kilocode.client.session.ui.popup
 
+import ai.kilocode.client.plugin.KiloPluginSettings
 import ai.kilocode.client.session.ui.SessionRootPanel
 import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.session.views.base.PartView
@@ -31,6 +32,7 @@ class HeaderPopupController(timers: UiTimerSource = UiTimers) : Disposable {
 
     @RequiresEdt
     fun show(view: PartView) {
+        if (!KiloPluginSettings.getHoverPreview()) return
         popup.show(view, view) { request(view) }
     }
 
