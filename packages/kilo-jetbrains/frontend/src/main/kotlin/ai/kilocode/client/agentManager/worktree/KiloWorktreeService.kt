@@ -23,6 +23,7 @@ import fleet.rpc.client.durable
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.launch
 
 /**
@@ -46,6 +47,18 @@ class KiloWorktreeService internal constructor(
         val api = rpc
         return if (api != null) block(api) else durable { block(KiloWorktreeRpcApi.getInstance()) }
     }
+
+    private fun <T> stream(block: suspend KiloWorktreeRpcApi.() -> Flow<T>): Flow<T> = flow {
+        val api = rpc
+        if (api != null) block(api).collect { emit(it) }
+        else durable { block(KiloWorktreeRpcApi.getInstance()).collect { emit(it) } }
+    }
+
+    /**
+     * Ticks whenever something other than this service's own calls mutates [directory]'s worktree
+     * list — see [ai.kilocode.rpc.KiloWorktreeRpcApi.changes]'s doc for why that exists at all.
+     */
+    fun changes(directory: String): Flow<Unit> = stream { changes(directory) }
 
     suspend fun list(directory: String): WorktreeListDto = try {
         call { list(directory) }

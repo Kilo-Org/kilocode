@@ -606,6 +606,17 @@ class KiloBackendSessionManager(
     fun sessionDirectory(id: String): String? =
         directories[id] ?: owned[id]
 
+    /**
+     * Every directory this backend has observed a session in — workspace roots and worktrees alike.
+     *
+     * Needed by callers that must address each CLI instance separately rather than relying on the
+     * server's default directory, because nearly every CLI route is workspace-routed by a `directory`
+     * query (see `server/.../middleware/workspace-routing.kt`'s `defaultDirectory`) and there is no
+     * "all instances" endpoint. [owned] is kept current from SSE session events, not just from
+     * listings, so this reflects sessions created in another project frame too.
+     */
+    fun knownDirectories(): Set<String> = (owned.values + directories.values).toSet()
+
     // ------ mapping (generated API model → DTO) ------
 
     private fun dto(s: ai.kilocode.jetbrains.api.model.Session) = dto(
