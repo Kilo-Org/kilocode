@@ -34,6 +34,7 @@ import { footerWidthPolicy } from "./footer.width"
 import { toolFiletype } from "./tool"
 import { transparent, type RunBlockTheme, type RunFooterTheme } from "./theme"
 import type { PermissionReply, RunDiffStyle } from "./types"
+import { Reason } from "@/kilocode/cli/cmd/run/footer.permission" // kilocode_change
 
 function buttons(
   list: PermissionOption[],
@@ -358,6 +359,7 @@ export function RunPermissionBody(props: {
                 }}
               >
                 <box width="100%" flexDirection="column" gap={1}>
+                  <Reason request={props.request} theme={props.theme} />{/* kilocode_change */}
                   <Show
                     when={info().diff}
                     fallback={

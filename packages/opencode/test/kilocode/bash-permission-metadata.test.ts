@@ -63,6 +63,7 @@ describe("bash permission metadata.command", () => {
         const bashReq = requests.find((r) => r.permission === "bash")
         expect(bashReq).toBeDefined()
         expect(bashReq!.metadata.command).toBe(command)
+        expect(bashReq!.metadata.description).toBe("Echo hello")
       },
     })
   })

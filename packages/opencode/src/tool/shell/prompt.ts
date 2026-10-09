@@ -7,12 +7,12 @@ import { ShellID } from "./id"
 const PS = new Set(["powershell", "pwsh"])
 const CMD = new Set(["cmd"])
 
-// kilocode_change start - description is optional, prefixed with "Recommended:" so the model knows it can omit it
+// kilocode_change start - keep the schema optional for compatibility while requesting task-specific reasons
 const descriptions = {
-  bash: "Recommended: a clear, concise description of what this command does in 5-10 words. Examples:\nInput: ls\nOutput: Lists files in current directory\n\nInput: git status\nOutput: Shows working tree status\n\nInput: npm install\nOutput: Installs package dependencies\n\nInput: mkdir foo\nOutput: Creates directory 'foo'",
+  bash: "Always provide a concise reason for this command, grounded in the user request. Explain the intended outcome; avoid merely restating the command or path and do not invent a purpose. Examples:\nTask: Find available test commands\nCommand: cat package.json\nReason: Identify the project's available test commands\n\nTask: Check changes before editing\nCommand: git status\nReason: Review existing work before making changes",
   powershell:
-    'Recommended: a clear, concise description of what this command does in 5-10 words. Examples:\nInput: Get-ChildItem -LiteralPath "."\nOutput: Lists current directory\n\nInput: git status\nOutput: Shows working tree status\n\nInput: npm install\nOutput: Installs package dependencies\n\nInput: New-Item -ItemType Directory -Path "tmp"\nOutput: Creates directory tmp',
-  cmd: 'Recommended: a clear, concise description of what this command does in 5-10 words. Examples:\nInput: dir\nOutput: Lists current directory\n\nInput: if exist "package.json" type "package.json"\nOutput: Prints package.json when it exists\n\nInput: mkdir tmp\nOutput: Creates directory tmp',
+    'Always provide a concise reason for this command, grounded in the user request. Explain the intended outcome; avoid merely restating the command or path and do not invent a purpose. Examples:\nTask: Find available test commands\nCommand: Get-Content -LiteralPath "package.json"\nReason: Identify the project\'s available test commands\n\nTask: Check changes before editing\nCommand: git status\nReason: Review existing work before making changes',
+  cmd: "Always provide a concise reason for this command, grounded in the user request. Explain the intended outcome; avoid merely restating the command or path and do not invent a purpose. Examples:\nTask: Find available test commands\nCommand: type package.json\nReason: Identify the project's available test commands\n\nTask: Check changes before editing\nCommand: git status\nReason: Review existing work before making changes",
 }
 // kilocode_change end
 export type Limits = {
