@@ -1,5 +1,6 @@
 import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { describe, expect } from "bun:test"
+import { symlink } from "node:fs/promises"
 import path from "node:path"
 import { Effect, FileSystem, Layer } from "effect"
 import { FetchHttpClient } from "effect/unstable/http"
@@ -16,7 +17,12 @@ import { TestConfig } from "../../fixture/config"
 import { Config } from "../../../src/config/config"
 
 const it = testEffect(
-  Layer.mergeAll(AppNodeBuilder.build(CrossSpawnSpawner.node), NodeFileSystem.layer, testInstanceStoreLayer, RuntimeFlags.layer()),
+  Layer.mergeAll(
+    AppNodeBuilder.build(CrossSpawnSpawner.node),
+    NodeFileSystem.layer,
+    testInstanceStoreLayer,
+    RuntimeFlags.layer(),
+  ),
 )
 
 const configLayer = TestConfig.layer()
@@ -62,6 +68,51 @@ describe("instruction markdown substitutions", () => {
           }).pipe(Effect.provide(layer(home, config))),
         )
       }),
+    )
+  }
+
+  for (const relative of [false, true]) {
+    it.live(
+      `loads trusted ${relative ? "home-relative" : "absolute"} recursive instruction globs rooted at a directory symlink without unrestricted symlink traversal`,
+      () =>
+        Effect.gen(function* () {
+          const dir = yield* tmpdirScoped()
+          const project = path.join(dir, "project")
+          const home = path.join(dir, "global")
+          const root = path.join(home, ".shared-rules")
+          const target = path.join(dir, "rules")
+          const bridge = path.join(dir, "bridge")
+          const outside = path.join(dir, "outside")
+          const item = path.join(root, "nested", "guide.md")
+          const pattern = relative ? "~/.shared-rules/**/*.md" : path.join(root, "**", "*.md")
+          yield* write(path.join(project, "README.md"), "project")
+          const fs = yield* FileSystem.FileSystem
+          yield* fs.makeDirectory(home, { recursive: true })
+          yield* fs.makeDirectory(bridge)
+          yield* write(path.join(target, "nested", "guide.md"), "Read instructions through the symlink root.")
+          yield* write(path.join(outside, "excluded.md"), "Do not follow nested directory symlinks.")
+          const type = process.platform === "win32" ? "junction" : "dir"
+          yield* Effect.promise(() => symlink(target, root, type))
+          // glob's follow:false permits one symlink under **, but not another inside it.
+          yield* Effect.promise(() => symlink(bridge, path.join(target, "nested", "linked"), type))
+          yield* Effect.promise(() => symlink(outside, path.join(bridge, "linked"), type))
+          const config = TestConfig.layer({
+            get: () =>
+              Effect.succeed({
+                instructions: [pattern],
+                instruction_origins: { [pattern]: { trusted: true, source: "global config" } },
+              }),
+          })
+
+          yield* provideInstance(project)(
+            Effect.gen(function* () {
+              const svc = yield* Instruction.Service
+              expect(yield* svc.system()).toEqual([
+                `Instructions from: ${item}\nRead instructions through the symlink root.`,
+              ])
+            }).pipe(Effect.provide(layer(home, config))),
+          )
+        }),
     )
   }
 
@@ -174,10 +225,7 @@ describe("instruction markdown substitutions", () => {
           const project = path.join(dir, "project")
           const home = path.join(dir, "global")
           yield* write(path.join(project, "README.md"), "project")
-          yield* write(
-            path.join(home, "rules", "trusted.md"),
-            "{env:KILO_INSTRUCTION_GLOBAL_PATTERN_SECRET}",
-          )
+          yield* write(path.join(home, "rules", "trusted.md"), "{env:KILO_INSTRUCTION_GLOBAL_PATTERN_SECRET}")
           const config = TestConfig.layer({
             get: () =>
               Effect.succeed({

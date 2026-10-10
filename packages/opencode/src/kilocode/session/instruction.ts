@@ -13,7 +13,7 @@ export namespace KilocodeInstruction {
       pattern = `${path.basename(dir)}/${pattern}`
       dir = parent
     }
-    return yield* fs.glob(pattern, { cwd: dir, absolute: true, include: "file", dot: true })
+    return yield* fs.glob(`./${pattern}`, { cwd: dir, absolute: true, include: "file", dot: true })
   })
 
   export function content(text: string, item: string, options: KilocodeMarkdown.Options) {
