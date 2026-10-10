@@ -11,6 +11,7 @@ import { DiffPanel } from "../../agent-manager/DiffPanel"
 import { DiffPanelCache } from "../../agent-manager/DiffPanelCache"
 import { createReviewComposers } from "../../agent-manager/review-composers"
 import { FullScreenDiffView } from "../../diff-viewer/FullScreenDiffView"
+import { createPRDiffs } from "../../diff-viewer/pr-diff"
 import { WorktreeItem } from "../../agent-manager/WorktreeItem"
 import { createIntro } from "../../agent-manager/intro/AgentManagerIntro"
 import { SessionTab } from "../components/chat/SessionTab"
@@ -799,6 +800,88 @@ export const FullScreenDiffAgentEditScroll: Story = {
         </div>
       </StoryProviders>
     )
+  },
+}
+
+const markdownPatch = [
+  "--- a/notes.md",
+  "+++ b/notes.md",
+  "@@ -47,7 +77,7 @@",
+  " Intro",
+  " ",
+  " ",
+  "-# Old heading",
+  "+# New heading",
+  " ",
+  " Details",
+  " End",
+  "",
+].join("\n")
+
+function MarkdownReviewStory(props: { diffs: WorktreeFileDiff[]; inline?: boolean }) {
+  const Panel = props.inline ? DiffPanel : FullScreenDiffView
+  const [version, setVersion] = createSignal(0)
+  const [markdown, setMarkdown] = createSignal(true)
+  const [comments, setComments] = createSignal<ReviewComment[]>([])
+  return (
+    <StoryProviders noPadding>
+      <div style={{ height: "700px", display: "flex", "flex-direction": "column" }}>
+        <div>
+          <Button size="small" onClick={() => setVersion((value) => value + 1)}>
+            Refresh diff
+          </Button>
+          <span data-testid="markdown-review-version">{version()}</span>
+        </div>
+        <Panel
+          diffs={props.diffs.map((diff) => ({ ...diff, stamp: String(version()) }))}
+          loading={false}
+          sessionKey="markdown-review"
+          diffStyle="unified"
+          onDiffStyleChange={() => {}}
+          markdownRender={markdown()}
+          onMarkdownRenderChange={setMarkdown}
+          comments={comments()}
+          onCommentsChange={setComments}
+          onClose={() => {}}
+        />
+      </div>
+    </StoryProviders>
+  )
+}
+
+export const MarkdownExcerptReview: Story = {
+  name: "Markdown review - offset excerpt",
+  args: {
+    diffs: createPRDiffs({
+      id: "markdown-review",
+      head: "a".repeat(40),
+      files: [{ path: "notes.md", status: "modified", patch: markdownPatch }],
+    }),
+  },
+  render: (args: { diffs: WorktreeFileDiff[]; inline?: boolean }) => <MarkdownReviewStory {...args} />,
+}
+
+export const MarkdownExcerptInlineReview: Story = {
+  ...MarkdownExcerptReview,
+  name: "Markdown review - inline offset excerpt",
+  args: { ...MarkdownExcerptReview.args, inline: true },
+}
+
+export const MarkdownFullFileReview: Story = {
+  ...MarkdownExcerptReview,
+  name: "Markdown review - full file",
+  args: {
+    diffs: [
+      {
+        file: "notes.md",
+        before: "Intro\n\n\n# Old heading\n\nDetails\nEnd\n",
+        after: "Intro\n\n\n# New heading\n\nDetails\nEnd\n",
+        additions: 1,
+        deletions: 1,
+        status: "modified",
+        patch: markdownPatch.replace("@@ -47,7 +77,7 @@", "@@ -1,7 +1,7 @@"),
+      },
+    ],
   },
 }
 
