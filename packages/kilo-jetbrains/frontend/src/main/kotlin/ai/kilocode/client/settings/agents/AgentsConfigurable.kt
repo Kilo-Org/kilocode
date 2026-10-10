@@ -8,7 +8,9 @@ import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.plugin.KiloDocs
 import ai.kilocode.client.session.ui.model.ModelPicker
+import ai.kilocode.client.session.ui.model.ModelPopup
 import ai.kilocode.client.session.ui.model.ModelText
+import ai.kilocode.client.session.ui.model.modelItems
 import ai.kilocode.client.settings.base.DirectoryReadyConfigurable
 import ai.kilocode.client.settings.base.SettingsDraftPage
 import ai.kilocode.client.settings.base.SettingsDraftState
@@ -24,7 +26,6 @@ import ai.kilocode.client.ui.list.ActiveListConfig
 import ai.kilocode.client.ui.list.ActiveListItem
 import ai.kilocode.client.ui.list.ActiveListSelection
 import ai.kilocode.rpc.dto.AgentDetailDto
-import ai.kilocode.rpc.dto.ProvidersDto
 import com.intellij.icons.AllIcons
 import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.AnAction
@@ -38,7 +39,9 @@ import com.intellij.openapi.fileChooser.FileChooser
 import com.intellij.openapi.fileChooser.FileChooserDescriptor
 import com.intellij.openapi.project.DumbAwareAction
 import com.intellij.openapi.ui.ComboBox
+import com.intellij.openapi.ui.popup.JBPopup
 import com.intellij.openapi.vfs.VirtualFile
+import com.intellij.ui.awt.RelativePoint
 import com.intellij.ui.components.JBLabel
 import java.nio.charset.StandardCharsets
 import javax.swing.JComponent
@@ -61,11 +64,53 @@ class AgentsConfigurable : DirectoryReadyConfigurable<JComponent>() {
     companion object { const val ID = "ai.kilocode.jetbrains.settings.agentBehavior.agents" }
 }
 
+/**
+ * Opens the per-row model dropdown. Production shows the shared model popup anchored under the row's
+ * model cell; tests substitute a picker that resolves a choice directly.
+ */
+internal fun interface AgentModelPicker {
+    fun show(
+        anchor: JComponent,
+        at: RelativePoint,
+        items: List<ModelPicker.Item>,
+        selected: String?,
+        choose: (String?) -> Unit,
+    ): JBPopup?
+}
+
+internal object AgentModelPopup : AgentModelPicker {
+    override fun show(
+        anchor: JComponent,
+        at: RelativePoint,
+        items: List<ModelPicker.Item>,
+        selected: String?,
+        choose: (String?) -> Unit,
+    ): JBPopup {
+        val app = service<KiloAppService>()
+        return ModelPopup(
+            anchor = anchor,
+            at = at,
+            items = { items },
+            selected = { selected },
+            onSelect = { choose(it.key) },
+            onClear = { choose(null) },
+            favorites = { app.favorites.value },
+            onFavoriteToggle = { app.toggleModelFavorite(it.provider, it.id) },
+            allowEmpty = true,
+            emptyText = KiloBundle.message("settings.agentBehavior.agents.edit.default"),
+        ).show()
+    }
+}
+
 internal class AgentsSettingsUi(
     private val cs: CoroutineScope,
     private var dir: String,
     private val create: (Collection<String>) -> AgentCreateDialogHandle = ::AgentCreateDialog,
     private val choose: (JComponent) -> VirtualFile? = ::chooseImportFile,
+    private val pick: AgentModelPicker = AgentModelPopup,
+    private val edit: (AgentEditDraft, List<ModelPicker.Item>) -> AgentEditDialogHandle = { agent, items ->
+        AgentEditDialog(agent, service<KiloAppService>(), items)
+    },
 ) : SettingsListPanel(cs, ActiveListConfig.Equal), SettingsDraftPage {
     private val app get() = service<KiloAppService>()
     private val state = SettingsDraftState(agentsDraft(app.state.value.config, emptyList()), ::savedMatches)
@@ -93,7 +138,7 @@ internal class AgentsSettingsUi(
 
     override suspend fun fetch(): List<ActiveListItem> {
         val agents = service<KiloAgentBehaviorService>().agents(dir)
-        models = items(service<KiloWorkspaceService>().models(dir).providers)
+        models = modelItems(service<KiloWorkspaceService>().models(dir).providers)
         val next = agentsDraft(service<KiloAppService>().state.value.config, agents)
         val dirty = state.modified()
         val edit = draft
@@ -144,13 +189,35 @@ internal class AgentsSettingsUi(
             remove(agent)
             return
         }
+        if (cellId == MODEL_CELL) {
+            showModels(agent)
+            return
+        }
         if (cellId != EDIT_CELL) return
-        val dialog = AgentEditDialog(agent, service(), models)
+        val dialog = edit(agent, models)
         if (!dialog.showAndGet()) return
-        state.update { updateAgent(this, dialog.result()) }
+        stage(dialog.result())
+    }
+
+    private fun showModels(agent: AgentEditDraft) {
+        val at = view.point(agent.name, MODEL_CELL, leading = true)
+        val popup = pick.show(view, at, models, agent.model) { model ->
+            setModel(agent.name, model)
+        } ?: return
+        trackPopup(popup)
+    }
+
+    private fun setModel(name: String, model: String?) {
+        val agent = draft.agents[name] ?: return
+        if (agent.model == model) return
+        stage(agent.copy(model = model))
+    }
+
+    private fun stage(agent: AgentEditDraft) {
+        state.update { updateAgent(this, agent) }
         syncNames()
         syncPicker()
-        view.update(rows())
+        view.update(rows(), ActiveListSelection.Key(agent.name))
     }
 
     override fun searchPlaceholder() = KiloBundle.message("settings.agentBehavior.agents.search")
@@ -272,6 +339,7 @@ internal class AgentsSettingsUi(
                     UiStyle.Badge.Alert,
                 ).takeIf { item.deprecated },
             )
+            override val doubleClick = EDIT_CELL.takeIf { editable(row.intent) }
             override val cells = when (row.intent) {
                 AgentIntent.New,
                 AgentIntent.PendingDelete,
@@ -279,6 +347,12 @@ internal class AgentsSettingsUi(
                 AgentIntent.Unchanged,
                 AgentIntent.Modified,
                 -> listOfNotNull(
+                    ActiveListCell(
+                        MODEL_CELL,
+                        modelLabel(item.model),
+                        alwaysVisible = true,
+                        tooltip = KiloBundle.message("settings.agentBehavior.agents.edit.model.override.description"),
+                    ),
                     ActiveListCell(EDIT_CELL, KiloBundle.message("settings.agentBehavior.edit")),
                     ActiveListCell(
                     DELETE_CELL,
@@ -289,6 +363,15 @@ internal class AgentsSettingsUi(
                 )
             }
         }
+    }
+
+    /** Staged creates and pending deletes only offer undo, so neither opens the edit dialog. */
+    private fun editable(intent: AgentIntent) = intent == AgentIntent.Unchanged || intent == AgentIntent.Modified
+
+    private fun modelLabel(model: String?): String {
+        if (model == null) return KiloBundle.message("settings.agentBehavior.agents.edit.default")
+        val item = models.firstOrNull { it.key == model || it.id == model } ?: return model
+        return ModelText.buttonLabel(item)
     }
 
     private fun remove(agent: AgentEditDraft) {
@@ -402,36 +485,13 @@ internal class AgentsSettingsUi(
     }
 
     private companion object {
+        const val MODEL_CELL = "model"
         const val EDIT_CELL = "edit"
         const val DELETE_CELL = "delete"
         const val UNDO_CELL = "undo"
-        const val KILO_PROVIDER = "kilo"
     }
 
     private fun taken(): Collection<String> = draft.agents.keys + draft.created.keys + draft.imported.keys
-
-    private fun items(providers: ProvidersDto?): List<ModelPicker.Item> {
-        val cfg = providers ?: return emptyList()
-        return cfg.providers
-            .filter { it.id == KILO_PROVIDER || it.id in cfg.connected }
-            .flatMap { provider ->
-                provider.models.mapNotNull { (id, item) ->
-                    val model = ModelPicker.Item(
-                        id,
-                        item.name,
-                        provider.id,
-                        provider.name,
-                        item.recommendedIndex,
-                        free = item.free,
-                        byok = item.byok,
-                        variants = item.variants,
-                        mayTrainOnYourPrompts = item.mayTrainOnYourPrompts,
-                    )
-                    if (ModelText.small(model)) return@mapNotNull null
-                    model
-                }
-            }
-    }
 }
 
 private fun chooseImportFile(_parent: JComponent): VirtualFile? {

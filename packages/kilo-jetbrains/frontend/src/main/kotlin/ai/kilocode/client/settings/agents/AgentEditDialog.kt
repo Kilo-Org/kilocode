@@ -48,11 +48,16 @@ import javax.swing.text.AbstractDocument
 import javax.swing.text.AttributeSet
 import javax.swing.text.DocumentFilter
 
+internal interface AgentEditDialogHandle {
+    fun showAndGet(): Boolean
+    fun result(): AgentEditDraft
+}
+
 internal class AgentEditDialog(
     private val agent: AgentEditDraft,
     app: KiloAppService,
     items: List<ModelPicker.Item>,
-) : DialogWrapper(true) {
+) : DialogWrapper(true), AgentEditDialogHandle {
     private val description = JBTextArea(agent.description.orEmpty()).apply {
         rows = 3
         lineWrap = true
@@ -91,7 +96,7 @@ internal class AgentEditDialog(
 
     internal fun centerComponent(): JComponent = center ?: error("center panel not built")
 
-    fun result(): AgentEditDraft = agent.copy(
+    override fun result(): AgentEditDraft = agent.copy(
         description = text(description.text),
         prompt = text(prompt.text),
         model = selected,
