@@ -587,8 +587,8 @@ export class LanceDBVectorStore implements IVectorStore {
   }
 
   /**
-   * Checks if the collection exists and has indexed points
-   * @returns Promise resolving to boolean indicating if the collection exists and has points
+   * Reports how far along the store is: empty, partially built, or
+   * complete.
    */
   async state(): Promise<StoreState> {
     const db = await this.getDb()
