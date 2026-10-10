@@ -1,5 +1,6 @@
 package ai.kilocode.client.session
 
+import ai.kilocode.client.app.KiloAppService
 import ai.kilocode.client.app.KiloSessionService
 import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.app.Workspace
@@ -105,6 +106,7 @@ class SessionSidePanelManager(
             sessions = project.service<KiloSessionService>(),
             workspace = root,
             cs = cs,
+            app = service<KiloAppService>().state,
             open = this::openSession,
             deleted = this::removeSession,
         )

@@ -17,6 +17,8 @@ import ai.kilocode.client.ui.list.ACTIVE_LIST_DELETE_CELL
 import ai.kilocode.client.ui.list.ACTIVE_LIST_RENAME_CELL
 import ai.kilocode.client.ui.layout.Align
 import ai.kilocode.rpc.dto.CloudSessionDto
+import ai.kilocode.rpc.dto.KiloAppStateDto
+import ai.kilocode.rpc.dto.KiloAppStatusDto
 import ai.kilocode.rpc.dto.KiloWorkspaceStateDto
 import ai.kilocode.rpc.dto.KiloWorkspaceStatusDto
 import ai.kilocode.rpc.dto.SessionDto
@@ -42,6 +44,7 @@ import javax.swing.Scrollable
 import javax.swing.ScrollPaneConstants
 import javax.swing.event.ListDataEvent
 import javax.swing.event.ListDataListener
+import kotlinx.coroutines.flow.MutableStateFlow
 
 @Suppress("UnstableApiUsage")
 class HistoryControllerTest : BasePlatformTestCase() {
@@ -85,6 +88,27 @@ class HistoryControllerTest : BasePlatformTestCase() {
         assertEquals("ses_1", controller.local.items[0].id)
         assertEquals("Local One", controller.local.items[0].title)
         assertEquals("loading=true size=0 error=null\nloading=false size=1 error=null", events.joinToString("\n"))
+    }
+
+    fun `test local history reloads when the app reconnects`() {
+        val app = MutableStateFlow(KiloAppStateDto(KiloAppStatusDto.READY))
+        val controller = HistoryController(
+            sessions,
+            workspace,
+            coroutines.scope,
+            app,
+            gitUrlProvider = { null },
+            io = coroutines.dispatcher,
+        )
+        rpc.listed += session("ses_1", "One")
+
+        // The CLI drops, a session is created elsewhere, then it comes back.
+        app.value = KiloAppStateDto(KiloAppStatusDto.ERROR)
+        flush()
+        rpc.listed += session("ses_2", "Two")
+        app.value = KiloAppStateDto(KiloAppStatusDto.READY)
+
+        waitFor { controller.local.items.size == 2 }
     }
 
     fun `test cloud load maps sessions and supports load more`() {

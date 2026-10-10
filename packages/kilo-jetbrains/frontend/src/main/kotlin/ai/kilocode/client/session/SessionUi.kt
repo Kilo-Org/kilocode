@@ -828,6 +828,12 @@ class SessionUi(
                     prompt.setReady(controller.model.isReady())
                 }
 
+                is SessionControllerEvent.RecentsChanged -> {
+                    // The empty panel is reused across view refreshes, so push the new snapshot into it
+                    // in place. Null when the transcript (not the empty view) is showing.
+                    empty?.setRecents(controller.recents())
+                }
+
                 is SessionControllerEvent.ConnectionChanged -> Unit
 
                 is SessionControllerEvent.AccountOverlayChanged -> account.onEvent(event)
