@@ -5,6 +5,8 @@ import ai.kilocode.client.session.model.SessionState
 import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.KiloAppStateDto
 import ai.kilocode.rpc.dto.KiloAppStatusDto
+import ai.kilocode.rpc.dto.KiloWorkspaceStateDto
+import ai.kilocode.rpc.dto.KiloWorkspaceStatusDto
 import ai.kilocode.rpc.dto.MessageWithPartsDto
 import ai.kilocode.rpc.dto.ProfileBalanceDto
 import ai.kilocode.rpc.dto.ProfileDto
@@ -79,6 +81,7 @@ class ViewSwitchingTest : SessionControllerTestBase() {
             AppChanged
             WorkspaceChanged
             WorkspaceReady
+            RecentsChanged
             ViewChanged empty
         """, events)
         assertEquals(1, m.recents().size)
@@ -99,6 +102,7 @@ class ViewSwitchingTest : SessionControllerTestBase() {
             AppChanged
             WorkspaceChanged
             WorkspaceReady
+            RecentsChanged
             ViewChanged empty
         """, events)
         assertTrue(m.recents().isEmpty())
@@ -351,6 +355,51 @@ class ViewSwitchingTest : SessionControllerTestBase() {
         assertFalse(events.any { it is SessionControllerEvent.ViewChanged.ShowProgress })
         assertEquals(1, events.count { it is SessionControllerEvent.ViewChanged.ShowEmpty })
         assertTrue(m.recents().isEmpty())
+    }
+
+    fun `test recents retried after reconnect when the first load failed`() {
+        projectRpc.state.value = workspaceReady()
+        rpc.recent.add(session("ses_1"))
+        rpc.recentFailures = 1
+        val m = controller(displayMs = 1_000)
+        val events = collect(m)
+
+        flush()
+
+        // The first load failed, so the empty view was published and the list is empty.
+        assertEquals(1, rpc.recentCalls.size)
+        assertTrue(m.recents().isEmpty())
+
+        // The CLI drops, then comes back.
+        projectRpc.state.value = KiloWorkspaceStateDto(KiloWorkspaceStatusDto.PENDING)
+        flush()
+        projectRpc.state.value = workspaceReady()
+        flush()
+
+        // The reconnect forced a retry that succeeded.
+        assertEquals(2, rpc.recentCalls.size)
+        assertEquals(1, m.recents().size)
+        assertTrue(events.count { it is SessionControllerEvent.RecentsChanged } >= 2)
+    }
+
+    fun `test recents refreshed after reconnect when already loaded`() {
+        projectRpc.state.value = workspaceReady()
+        rpc.recent.add(session("ses_1"))
+        val m = controller(displayMs = 1_000)
+        collect(m)
+        flush()
+        assertEquals(1, m.recents().size)
+
+        // A session created while connected, then a reconnect. The already-Loaded recents must still
+        // be refetched, not short-circuited.
+        rpc.recent.add(session("ses_2"))
+        projectRpc.state.value = KiloWorkspaceStateDto(KiloWorkspaceStatusDto.PENDING)
+        flush()
+        projectRpc.state.value = workspaceReady()
+        flush()
+
+        assertEquals(2, rpc.recentCalls.size)
+        assertEquals(2, m.recents().size)
     }
 
     fun `test recents progress is canceled when messages view appears`() {
