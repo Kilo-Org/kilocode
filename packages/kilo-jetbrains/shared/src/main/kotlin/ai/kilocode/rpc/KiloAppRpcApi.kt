@@ -69,6 +69,14 @@ interface KiloAppRpcApi : RemoteApi<Unit> {
     /** Persist a per-agent model selection. */
     suspend fun updateModelSelection(update: ModelSelectionUpdateDto): ModelStateDto
 
+    /**
+     * Forget the persisted per-agent model selection.
+     *
+     * The persisted pick outranks every config default, so a reset that only cleared the in-memory
+     * session pick resurrected the saved model on the next mode switch or new session.
+     */
+    suspend fun clearModelSelection(agent: String): ModelStateDto
+
     /** Persist a per-model reasoning variant selection. */
     suspend fun updateModelVariant(update: ModelVariantUpdateDto): ModelStateDto
 
