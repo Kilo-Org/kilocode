@@ -6,6 +6,7 @@ import ai.kilocode.client.session.model.SessionState
 import ai.kilocode.client.session.ui.ModifiedFilesView
 import ai.kilocode.client.session.ui.SessionMessageListPanel
 import ai.kilocode.client.session.ui.header.BranchDock
+import ai.kilocode.client.session.ui.header.SessionHeaderPanel
 import ai.kilocode.client.session.ui.prompt.PromptPanel
 import ai.kilocode.client.session.ui.selection.SessionCopyTarget
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
@@ -38,6 +39,7 @@ import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
 import java.awt.Container
 import java.awt.Point
+import java.awt.event.MouseEvent
 import javax.swing.AbstractButton
 import javax.swing.JButton
 import javax.swing.JComponent
@@ -50,6 +52,66 @@ import kotlinx.coroutines.CompletableDeferred
 
 @Suppress("UnstableApiUsage")
 class SessionScrollTest : SessionUiTestBase() {
+
+    fun `test timeline click reveals the matching transcript part`() {
+        showMessages()
+        fillTranscript(12)
+        val mid = "timeline_message"
+        val pid = "timeline_part"
+        emit(ChatEventDto.MessageUpdated("ses_test", message(mid).copy(role = "assistant")), flush = false)
+        emit(ChatEventDto.PartUpdated("ses_test", part("timeline_first", mid, "text", text(12))), flush = false)
+        emit(ChatEventDto.PartUpdated("ses_test", part(pid, mid, "reasoning", text(13))), flush = false)
+        fillTranscript(24, start = 12)
+
+        val header = find<SessionHeaderPanel>(ui)
+        if (!header.isExpanded()) click(header.expandButton())
+        drainScroll()
+        val timeline = header.timelinePanel()
+        timeline.setSize(timeline.preferredSize)
+        val bar = scrollBar()
+        setBottom(bar)
+        val messages = find<SessionMessageListPanel>(ui)
+        val target = messages.findMessage(mid)!!.part(pid) as JComponent
+        val expected = SwingUtilities.convertPoint(target, Point(0, 0), messages).y
+        assertTrue("target=$expected bottom=${bottom(bar)}", expected < bottom(bar))
+
+        timeline.dispatchEvent(MouseEvent(
+            timeline, MouseEvent.MOUSE_CLICKED, System.currentTimeMillis(), 0,
+            header.timelineBarWidth() + 1, timeline.height - 1, 1, false, MouseEvent.BUTTON1,
+        ))
+        drainScroll()
+
+        assertEquals(expected, bar.value)
+        assertFalse(ui.scroll.following())
+
+        fillTranscript(1, start = 36)
+
+        assertEquals(expected, bar.value)
+        assertFalse(ui.scroll.following())
+    }
+
+    fun `test timeline step finish navigates to its containing message`() {
+        showMessages()
+        fillTranscript(12)
+        val mid = "timeline_message"
+        emit(ChatEventDto.MessageUpdated("ses_test", message(mid).copy(role = "assistant")), flush = false)
+        emit(ChatEventDto.PartUpdated("ses_test", part("timeline_text", mid, "text", text(12))), flush = false)
+        emit(ChatEventDto.PartUpdated("ses_test", part("timeline_finish", mid, "step-finish")), flush = false)
+        fillTranscript(24, start = 12)
+        val bar = scrollBar()
+        setBottom(bar)
+        val messages = find<SessionMessageListPanel>(ui)
+        val target = messages.findMessage(mid)!!
+        assertNull(target.part("timeline_finish"))
+        val expected = SwingUtilities.convertPoint(target, Point(0, 0), messages).y
+        assertTrue(expected < bottom(bar))
+
+        assertTrue(ui.scroll.scrollPart(mid, "timeline_finish"))
+        drainScroll()
+
+        assertEquals(expected, bar.value)
+        assertFalse(ui.scroll.following())
+    }
 
     fun `test session update follows when transcript is at bottom`() {
         showMessages()

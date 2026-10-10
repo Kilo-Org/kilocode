@@ -591,6 +591,7 @@ class SessionUi(
             boardVisible = { board },
             onShowBoard = ::showBoard,
             onOpenSubagent = ::openSubagent,
+            onNavigate = { item -> scroll.scrollPart(item.id.substringBefore('/'), item.part.id) },
         )
         if (!readonly && showBranchDock()) {
             val owner = manager

@@ -186,8 +186,18 @@ internal class SessionScroll(
      * ticks jump to where a prompt starts rather than where the transcript ends.
      */
     @RequiresEdt
-    fun scrollMessageTop(id: String): Boolean {
-        val target = messages.findTurn(id) ?: return false
+    fun scrollMessageTop(id: String): Boolean = scrollTop { messages.findTurn(id) }
+
+    @RequiresEdt
+    fun scrollPart(messageId: String, partId: String): Boolean = scrollTop {
+        val message = messages.findMessage(messageId)?.takeIf { it.isVisible } ?: return@scrollTop null
+        // Step-finish entries have no part view; navigate to their containing message instead.
+        message.part(partId)?.takeIf { it.isVisible } ?: message
+    }
+
+    @RequiresEdt
+    private fun scrollTop(find: () -> JComponent?): Boolean {
+        val target = find() ?: return false
         if (!target.isVisible) return false
         user = false
         pause = false
@@ -197,11 +207,11 @@ internal class SessionScroll(
         auto = false
         val gen = ++seq
         if (SwingUtilities.isEventDispatchThread()) {
-            topPass(gen, id, FOLLOW_PASSES)
+            topPass(gen, find, FOLLOW_PASSES)
             return true
         }
         ApplicationManager.getApplication().invokeLater {
-            topPass(gen, id, FOLLOW_PASSES)
+            topPass(gen, find, FOLLOW_PASSES)
         }
         return true
     }
@@ -399,9 +409,9 @@ internal class SessionScroll(
     }
 
     @RequiresEdt
-    private fun topPass(id: Int, message: String, remaining: Int) {
+    private fun topPass(id: Int, find: () -> JComponent?, remaining: Int) {
         if (id != seq) return
-        val target = messages.findTurn(message)
+        val target = find()
         if (target == null || !target.isVisible) {
             stable = -1
             updateJump()
@@ -431,7 +441,7 @@ internal class SessionScroll(
         val left = if (next == stable) remaining - 1 else FOLLOW_PASSES
         stable = next
         ApplicationManager.getApplication().invokeLater {
-            topPass(id, message, left)
+            topPass(id, find, left)
         }
     }
 
