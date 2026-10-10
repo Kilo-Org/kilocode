@@ -223,6 +223,7 @@ export const dict = {
   "prompt.action.stop.background": "Hauptagent stoppen. Hintergrund-Agenten laufen weiter.",
   "prompt.agents.show": "Hintergrund-Agenten anzeigen",
   "prompt.action.enhance": "Prompt verbessern",
+  "prompt.action.enhanceStop": "Prompt-Verbesserung stoppen",
   "prompt.action.more": "Weitere Aktionen",
   "prompt.paste.expand": "Klicken, um eingefügten Text zu erweitern",
   "prompt.issues.title": "Sitzungsprobleme",
