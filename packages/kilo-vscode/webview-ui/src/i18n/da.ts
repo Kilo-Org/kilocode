@@ -289,6 +289,14 @@ export const dict = {
   "error.providerAuth.chatgpt.description":
     "Log ind med ChatGPT igen, og send din besked på ny for at fortsætte med at bruge Codex-modeller.",
 
+  "provider.failure.unauthorized": "Loginoplysninger blev afvist (HTTP {{status}}). Log ind igen.",
+  "provider.failure.unauthorizedNoStatus": "Loginoplysninger blev afvist. Log ind igen.",
+  "provider.failure.unauthenticated": "Ikke logget ind.",
+  "provider.failure.network": "Kunne ikke nå udbyderen. Tjek din forbindelse.",
+  "provider.failure.http": "Udbyderfejl (HTTP {{status}}).",
+  "provider.failure.httpNoStatus": "Udbyderfejl.",
+  "provider.failure.schema": "Uventet svar fra udbyderen.",
+
   "notification.permission.title": "Tilladelse påkrævet",
   "notification.permission.titleSubagent": "Tilladelse påkrævet (underagent)",
   "notification.permission.titleSkillShell": "Kør shell-kommandoer fra færdigheden „{{skill}}“?",
