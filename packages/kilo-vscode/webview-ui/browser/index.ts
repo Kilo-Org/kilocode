@@ -2,6 +2,7 @@ export { BrowserPanel } from "./BrowserPanel"
 export { createBrowserController } from "./controller"
 export type { BrowserController, BrowserControllerOptions } from "./controller"
 export {
+  browserCursorEvent,
   browserDevtoolsEvent,
   browserFrameEvent,
   browserInspectionEvent,

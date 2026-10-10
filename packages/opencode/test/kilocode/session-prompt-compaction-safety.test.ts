@@ -229,14 +229,14 @@ function providerCfg(url: string) {
 const user = Effect.fn("prompt-safety.user")(function* (
   sessionID: SessionID,
   text: string,
-  input?: { synthetic?: boolean; editorContext?: MessageV2.User["editorContext"] },
+  input?: { synthetic?: boolean; editorContext?: MessageV2.User["editorContext"]; agent?: string },
 ) {
   const sessions = yield* Session.Service
   const msg = yield* sessions.updateMessage({
     id: MessageID.ascending(),
     role: "user",
     sessionID,
-    agent: "code",
+    agent: input?.agent ?? "code",
     model: ref,
     time: { created: Date.now() },
     tools: {},
@@ -371,6 +371,45 @@ describe("SessionPrompt compaction safety", () => {
             .filter((part) => part.type === "tool")
             .map((part) => part.state.status === "completed" && !!part.state.time.compacted),
         ).toEqual([true, false, false])
+      }),
+      { git: true, config: (url) => ({ ...providerCfg(url), compaction: { auto: false } }) },
+    ),
+  )
+
+  it.live("keeps plan reminders when pruning an oversized request", () =>
+    provideTmpdirServer(
+      Effect.fnUntraced(function* ({ llm }) {
+        const prompt = yield* SessionPrompt.Service
+        const sessions = yield* Session.Service
+        const chat = yield* sessions.create({ title: "Plan pruning" })
+        const request = yield* user(chat.id, "Plan the task", { agent: "plan" })
+        for (const output of ["stale-output".repeat(120_000), "recent-one", "recent-two"]) {
+          const response = yield* assistant(chat.id, request.id, { finish: "tool-calls" })
+          yield* sessions.updateMessage({ ...response, time: { ...response.time, completed: Date.now() } })
+          yield* sessions.updatePart({
+            id: PartID.ascending(),
+            sessionID: chat.id,
+            messageID: response.id,
+            type: "tool",
+            callID: crypto.randomUUID(),
+            tool: "bash",
+            state: {
+              status: "completed",
+              input: { command: "pwd" },
+              output,
+              title: "result",
+              metadata: {},
+              time: { start: Date.now(), end: Date.now() },
+            },
+          })
+        }
+        yield* llm.text("final answer")
+
+        yield* prompt.loop({ sessionID: chat.id })
+
+        const body = JSON.stringify((yield* llm.inputs).at(-1)?.messages)
+        expect(body).not.toContain("stale-output")
+        expect(body).toContain("## Plan File")
       }),
       { git: true, config: (url) => ({ ...providerCfg(url), compaction: { auto: false } }) },
     ),

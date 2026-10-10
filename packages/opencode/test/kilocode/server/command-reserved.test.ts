@@ -46,10 +46,13 @@ describe("reserved command name over HTTP", () => {
     expect(names).toContain("ship")
     expect(names).toContain("init")
     expect(commands.filter((item) => item.name === "goal")).toHaveLength(1)
+    // The clashing template is reachable under the alias instead of being dropped.
+    expect(names).toContain("goal:command")
 
     const warnings = await json<Config.Warning[]>(await req(tmp.path, "/config/warnings"))
     const clash = warnings.find((item) => item.path === "command.goal")
     expect(clash?.message).toContain('"goal" command registered by your config or a plugin')
     expect(clash?.message).toContain("reserved for Kilo's own command")
+    expect(clash?.message).toContain("Run yours as /goal:command instead.")
   })
 })

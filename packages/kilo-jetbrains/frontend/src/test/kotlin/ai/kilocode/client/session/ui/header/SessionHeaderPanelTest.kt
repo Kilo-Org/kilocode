@@ -544,6 +544,21 @@ class SessionHeaderPanelTest : SessionControllerTestBase() {
         assertEquals(panel.timelineBarWidth(), next - first)
     }
 
+    fun `test a non-left click on a timeline bar does not jump`() {
+        val c = promptedHeader()
+        val jumps = mutableListOf<Pair<String, String>>()
+        val panel = SessionHeaderPanel(c, parent, onJumpTimeline = { message, part -> jumps.add(message to part) })
+        val timeline = panel.timelinePanel()
+        val x = panel.timelineBarWidth() + 1
+        val y = panel.timelinePreferredSize().height - 1
+
+        for (id in listOf(MouseEvent.MOUSE_PRESSED, MouseEvent.MOUSE_RELEASED, MouseEvent.MOUSE_CLICKED)) {
+            timeline.dispatchEvent(MouseEvent(timeline, id, System.currentTimeMillis(), 0, x, y, 1, false, MouseEvent.BUTTON3))
+        }
+
+        assertEquals(emptyList<Pair<String, String>>(), jumps)
+    }
+
     fun `test timeline drags horizontally inside viewport`() {
         val c = promptedHeader()
         val panel = SessionHeaderPanel(c, parent)
@@ -755,6 +770,12 @@ class SessionHeaderPanelTest : SessionControllerTestBase() {
         ))
 
         assertEquals(emptyList<Pair<String, String>>(), jumps)
+
+        // The guard is per gesture: the press that starts the next click must clear it, or the
+        // timeline would stay dead for the rest of the session after one pan.
+        pressReleaseClick(timeline, panel, 1)
+
+        assertEquals(listOf("msg1" to "tool_1"), jumps)
     }
 
     fun `test clicking between timeline bars does not trigger a jump`() {

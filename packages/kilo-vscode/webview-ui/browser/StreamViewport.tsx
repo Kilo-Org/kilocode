@@ -1,5 +1,6 @@
-import { createEffect, onCleanup, onMount, type Accessor, type Component } from "solid-js"
+import { createEffect, createSignal, onCleanup, onMount, type Accessor, type Component } from "solid-js"
 import {
+  CURSORS,
   mergeWheel,
   source,
   VIEWPORT_LIMIT,
@@ -85,6 +86,7 @@ export const StreamViewport: Component<{
   const keyboard = new Map<string, Extract<BrowserInteraction, { kind: "key" }>>()
   const clicker = clicks()
   const text = typing()
+  const [cursor, update] = createSignal("default")
 
   const publish = (view: View, viewport = view.viewport) => {
     props.transport.send({
@@ -136,6 +138,7 @@ export const StreamViewport: Component<{
   // Keep the last image on a resize or a new document of the same page, so the preview does not go blank until the
   // next frame.
   const clear = (keep = false) => {
+    update("default")
     release()
     const queued = pending
     pending = undefined
@@ -521,6 +524,11 @@ export const StreamViewport: Component<{
 
   const unsubscribe = props.transport.subscribe((event) => {
     if (event.type === "frame") receive(event.value)
+    if (event.type !== "cursor" || disposed) return
+    sync()
+    const value = event.value
+    if (!current?.viewport.active || !same(current.scope, value.scope) || !matches(value, current.identity)) return
+    if (CURSORS.has(value.cursor)) update(value.cursor)
   })
 
   createEffect(sync)
@@ -580,6 +588,7 @@ export const StreamViewport: Component<{
         aria-label={props.label}
         aria-description="Press Enter to interact. Press Shift+Escape to leave page input, then Shift+Tab to return to the toolbar."
         aria-keyshortcuts="Enter"
+        style={{ cursor: inspecting() ? "crosshair" : cursor() }}
         onKeyDown={(event) => {
           if (event.key !== "Enter" && event.key !== " ") return
           event.preventDefault()

@@ -1,8 +1,10 @@
 import { setTimeout as wait } from "node:timers/promises"
 import type { CDPSession, Page } from "playwright-core"
 import {
+  CURSORS,
   mergeWheel,
   VIEWPORT_LIMIT,
+  type BrowserCursor,
   type BrowserFrame,
   type BrowserInteraction,
   type BrowserViewport,
@@ -23,6 +25,8 @@ type Cast = {
 const PAYLOAD = 2 * 1024 * 1024
 const TEXT = 64 * 1024
 const SETTLE = 250
+const BINDING = "__kiloCursor"
+const WORLD = "kilo-cursor"
 const BUTTONS = { left: 1, right: 2, middle: 4 } as const
 const MODIFIERS = [
   { key: "Alt", code: "AltLeft", keyCode: 18, mask: 1 },
@@ -201,6 +205,92 @@ function kept(current: BrowserViewport | undefined, next: BrowserViewport) {
   )
 }
 
+// Runs only in an isolated world. Read the hovered element, not the page's full text or layout.
+function reporter(name: string, epoch: number, keywords: string[]) {
+  const globals = globalThis as unknown as Record<string, unknown>
+  const cleanup = `${name}Cleanup`
+  const previous = globals[cleanup]
+  if (typeof previous === "function") previous()
+  const report = globals[name]
+  if (typeof report !== "function") return
+  const fields = ["text", "search", "email", "url", "tel", "password", "number"]
+  const resolve = (event: MouseEvent, node: unknown = event.composedPath()[0]) => {
+    if (!(node instanceof Element)) return "default"
+    const style = getComputedStyle(node)
+    const keyword = style.cursor.slice(style.cursor.lastIndexOf(",") + 1).trim()
+    if (keyword !== "auto") return keywords.includes(keyword) ? keyword : "default"
+    if (node instanceof HTMLTextAreaElement) return node.disabled ? "default" : "text"
+    if (node instanceof HTMLElement && node.isContentEditable) return "text"
+    if (node instanceof HTMLInputElement) return !node.disabled && fields.includes(node.type) ? "text" : "default"
+    if (node.closest("button, select")) return "default"
+    if (style.userSelect === "none") return "default"
+    const caret = document.caretRangeFromPoint?.(event.clientX, event.clientY)
+    const text = caret?.startContainer
+    if (!caret || !(text instanceof Text) || !text.length) return "default"
+    // Check only the characters next to the caret, which can fall on either side of the hovered glyph.
+    const range = document.createRange()
+    range.setStart(text, Math.max(0, caret.startOffset - 1))
+    range.setEnd(text, Math.min(text.length, caret.startOffset + 1))
+    return [...range.getClientRects()].some(
+      (rect) =>
+        event.clientX >= rect.left &&
+        event.clientX <= rect.right &&
+        event.clientY >= rect.top &&
+        event.clientY <= rect.bottom,
+    )
+      ? "text"
+      : "default"
+  }
+  let last = ""
+  const emit = (value: string) => {
+    if (value === last) return
+    last = value
+    report(`${epoch}:${value}`)
+  }
+  const event = typeof PointerEvent === "undefined" ? "mousemove" : "pointermove"
+  const enter = event === "pointermove" ? "pointerover" : "mouseover"
+  const presses =
+    event === "pointermove"
+      ? (["pointerdown", "pointerup", "pointercancel"] as const)
+      : (["mousedown", "mouseup"] as const)
+  let scheduled = 0
+  const move = (event: MouseEvent) => {
+    if (event.type === enter) last = ""
+    emit(resolve(event))
+  }
+  const press = (event: MouseEvent) => {
+    const node = event.composedPath()[0]
+    cancelAnimationFrame(scheduled)
+    // Read pressed styles after the page's event handlers, without observing or changing the document.
+    scheduled = requestAnimationFrame(() => {
+      scheduled = 0
+      emit(
+        resolve(
+          event,
+          node instanceof Element && node.isConnected ? node : document.elementFromPoint(event.clientX, event.clientY),
+        ),
+      )
+    })
+  }
+  const leave = () => {
+    cancelAnimationFrame(scheduled)
+    scheduled = 0
+    emit("default")
+  }
+  addEventListener(event, move, { capture: true, passive: true })
+  addEventListener(enter, move, { capture: true, passive: true })
+  for (const event of presses) addEventListener(event, press, { capture: true, passive: true })
+  document.addEventListener("mouseleave", leave, { passive: true })
+  globals[cleanup] = () => {
+    cancelAnimationFrame(scheduled)
+    removeEventListener(event, move, true)
+    removeEventListener(enter, move, true)
+    for (const event of presses) removeEventListener(event, press, true)
+    document.removeEventListener("mouseleave", leave)
+    delete globals[cleanup]
+  }
+}
+
 export class BrowserStream {
   private session?: CDPSession
   private view?: BrowserViewport
@@ -222,12 +312,17 @@ export class BrowserStream {
   private y = 0
   private composing = false
   private readonly keys = new Map<string, Key>()
+  private readonly contexts = new Set<number>()
+  private reporter: Promise<void> = Promise.resolve()
+  private script?: string
+  private keyword?: string
 
   constructor(
     private readonly page: Page,
     private readonly identity: () => Scope,
     private readonly emit: (frame: BrowserFrame) => void,
     private readonly log: (...args: unknown[]) => void,
+    private readonly cursor?: (value: BrowserCursor) => void,
   ) {
     this.scope = { ...identity() }
     page.on("close", this.ended)
@@ -268,6 +363,7 @@ export class BrowserStream {
     // the preview does not wait for a stream restart and a resize settle on each page load.
     if (this.casting === current && kept(current, next)) {
       this.casting = next
+      await this.install()
       return
     }
     await this.serial(async () => {
@@ -305,6 +401,7 @@ export class BrowserStream {
         maxHeight: Math.round(next.height * (next.scale ?? 1)),
         everyNthFrame: 1,
       })
+      await this.install()
     }).catch((error: unknown) => {
       this.casting = undefined
       if (!this.closed) throw error
@@ -440,8 +537,34 @@ export class BrowserStream {
       const session = this.session
       if (!session) return
       await this.stop().catch(() => this.report("stop failed"))
+      await this.reporter
+      if (this.script) {
+        await session
+          .send("Page.removeScriptToEvaluateOnNewDocument", { identifier: this.script })
+          .catch(() => this.report("cursor script removal failed"))
+        this.script = undefined
+      }
+      await Promise.all(
+        [...this.contexts].map((contextId) =>
+          session
+            .send("Runtime.evaluate", {
+              contextId,
+              expression: `globalThis.${BINDING}Cleanup?.(); delete globalThis.${BINDING}`,
+            })
+            .catch(() => this.report("cursor listener removal failed")),
+        ),
+      )
+      if (this.cursor)
+        await session
+          .send("Runtime.removeBinding", { name: BINDING })
+          .catch(() => this.report("cursor binding removal failed"))
       session.off("Page.screencastFrame", this.receive)
       session.off("Page.frameNavigated", this.navigated)
+      session.off("Runtime.bindingCalled", this.pointed)
+      session.off("Runtime.executionContextCreated", this.created)
+      session.off("Runtime.executionContextDestroyed", this.destroyed)
+      session.off("Runtime.executionContextsCleared", this.cleared)
+      this.contexts.clear()
       this.session = undefined
       await session.detach().catch(() => this.report("detach failed"))
     })
@@ -457,6 +580,7 @@ export class BrowserStream {
     if (this.closed || event.frame.parentId) return
     this.synchronize()
     this.reset()
+    void this.install()
     void this.serial(() => this.release()).catch(() => this.report("navigation release failed"))
   }
 
@@ -480,6 +604,7 @@ export class BrowserStream {
     this.wheel = undefined
     this.outstanding = undefined
     this.buffered = undefined
+    this.keyword = undefined
   }
 
   private synchronize(): void {
@@ -496,7 +621,63 @@ export class BrowserStream {
     session.on("Page.screencastFrame", this.receive)
     session.on("Page.frameNavigated", this.navigated)
     if (!this.closed) await session.send("Page.enable")
+    if (!this.closed && this.cursor) {
+      session.on("Runtime.bindingCalled", this.pointed)
+      session.on("Runtime.executionContextCreated", this.created)
+      session.on("Runtime.executionContextDestroyed", this.destroyed)
+      session.on("Runtime.executionContextsCleared", this.cleared)
+      await session
+        .send("Runtime.enable")
+        .then(() => session.send("Runtime.addBinding", { name: BINDING, executionContextName: WORLD }))
+        .catch(() => this.report("cursor binding setup failed"))
+    }
     return session
+  }
+
+  private readonly created = (event: { context: { id: number; name: string } }): void => {
+    if (event.context.name === WORLD) this.contexts.add(event.context.id)
+  }
+
+  private readonly destroyed = (event: { executionContextId: number }): void => {
+    this.contexts.delete(event.executionContextId)
+  }
+
+  private readonly cleared = (): void => {
+    this.contexts.clear()
+  }
+
+  private install(): Promise<void> {
+    if (!this.cursor || this.closed || !this.session) return Promise.resolve()
+    this.synchronize()
+    const view = this.view
+    const epoch = this.epoch
+    this.reporter = this.reporter
+      .then(async () => {
+        const session = this.session
+        if (this.closed || !session || !view?.active || this.view !== view || this.epoch !== epoch) return
+        if (this.script) await session.send("Page.removeScriptToEvaluateOnNewDocument", { identifier: this.script })
+        const result = await session.send("Page.addScriptToEvaluateOnNewDocument", {
+          source: `(${reporter.toString()})(${JSON.stringify(BINDING)}, ${epoch}, ${JSON.stringify([...CURSORS])})`,
+          worldName: WORLD,
+          runImmediately: true,
+        })
+        this.script = result.identifier
+      })
+      .catch(() => this.report("cursor reporter setup failed"))
+    return this.reporter
+  }
+
+  private readonly pointed = (event: { name: string; payload: string; executionContextId: number }): void => {
+    if (this.closed || event.name !== BINDING || !this.contexts.has(event.executionContextId)) return
+    this.synchronize()
+    const view = this.casting
+    if (!view?.active || this.view !== view || typeof event.payload !== "string" || event.payload.length > 64) return
+    const prefix = `${this.epoch}:`
+    if (!event.payload.startsWith(prefix)) return
+    const cursor = event.payload.slice(prefix.length)
+    if (!CURSORS.has(cursor) || cursor === this.keyword) return
+    this.keyword = cursor
+    this.cursor?.({ ...this.scope, revision: view.revision, cursor })
   }
 
   private async stop(): Promise<void> {

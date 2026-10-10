@@ -34,6 +34,7 @@ import { McpOAuthPendingProvider, McpOAuthProvider, OAUTH_CALLBACK_PATH } from "
 import { McpOAuthCallback } from "./oauth-callback"
 import { McpAuth } from "./auth"
 import { probe } from "@/kilocode/mcp/sse-probe" // kilocode_change - normalize the optional GET stream probe
+import * as KiloMcpCleanup from "@/kilocode/mcp/cleanup" // kilocode_change
 import { EventV2Bridge } from "@/event-v2-bridge"
 import { TuiEvent } from "@/server/tui-event"
 import { Cause, Effect, Exit, Layer, Context, Schema, Stream } from "effect"
@@ -589,6 +590,7 @@ const layer = Layer.effect(
           defs: {},
           instructions: {},
         }
+        yield* Effect.addFinalizer(() => KiloMcpCleanup.release(s, descendants)) // kilocode_change - close servers if this lookup is interrupted
 
         yield* Effect.forEach(
           Object.entries(config),

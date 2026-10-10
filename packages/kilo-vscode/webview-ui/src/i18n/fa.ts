@@ -218,6 +218,7 @@ export const dict = {
   "prompt.action.stop.background": "توقف عامل اصلی. عامل‌های پس‌زمینه به اجرا ادامه می‌دهند.",
   "prompt.agents.show": "نمایش عامل‌های پس‌زمینه",
   "prompt.action.enhance": "بهبود پرامپت",
+  "prompt.action.more": "اقدامات بیشتر",
   "prompt.paste.expand": "برای بازکردن متن جایگذاری‌شده کلیک کنید",
   "prompt.issues.title": "مشکلات نشست",
   "prompt.mcp.provider": "MCP {{name}}",
@@ -1378,6 +1379,8 @@ export const dict = {
   "task.backgroundAgents.stopAll": "توقف همه ({{count}})",
   "task.backgroundAgents.finished": "عامل‌های پس‌زمینه به پایان رسیدند",
   "task.stop": "توقف زیرعامل",
+  "task.open.panel": "باز کردن زیرعامل در پنل",
+  "task.open.tab": "باز کردن زیرعامل در تب",
 
   "settings.saveBar.unsavedChanges": "تغییرات ذخیره‌نشده",
   "settings.saveBar.discard": "رد کردن",

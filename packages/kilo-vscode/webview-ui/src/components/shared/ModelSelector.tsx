@@ -881,7 +881,10 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
           }}
           trigger={
             <>
-              <span class="model-selector-trigger-label">{triggerLabel()}</span>
+              {/* Keyed so the label remounts on change and the prompt pill can animate it. */}
+              <Show when={triggerLabel()} keyed>
+                {(label) => <span class="model-selector-trigger-label">{label}</span>}
+              </Show>
               <Show when={activeCollectsData()}>
                 <Tooltip value={dataLabel()} placement="top" openDelay={0}>
                   <span class="model-selector-trigger-free-data" aria-label={dataLabel()}>

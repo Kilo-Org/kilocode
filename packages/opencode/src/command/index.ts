@@ -132,7 +132,9 @@ const layer = Layer.effect(
       const overrides: Array<{ name: string; command: Override }> = []
       for (const [name, command] of Object.entries(cfg.command ?? {})) {
         if (Reserved.reserved(name)) {
-          yield* Effect.logWarning(Reserved.notice(name))
+          const key = Reserved.rename(cfg.command, name)
+          if (key) applyOverride(commands, key, command, hints)
+          yield* Effect.logWarning(Reserved.notice(name, key))
           continue
         }
         if (!applyOverride(commands, name, command, hints)) overrides.push({ name, command }) // kilocode_change

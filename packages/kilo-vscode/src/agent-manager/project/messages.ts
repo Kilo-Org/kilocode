@@ -129,6 +129,15 @@ export async function handleProjectMessage(m: AgentManagerInMessage, deps: Proje
     await setExpanded(m.projectId, m.expanded, deps)
     return true
   }
+  if (m.type === "agentManager.setProjectOrder") {
+    // Always push, so a failed write replaces the webview's optimistic order with the stored one.
+    if (Array.isArray(m.order))
+      await deps.registry
+        .reorder(m.order.filter((id) => typeof id === "string"))
+        .catch((err) => deps.log("Failed to save project order:", err))
+    deps.push()
+    return true
+  }
   return false
 }
 

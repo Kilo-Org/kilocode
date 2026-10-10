@@ -148,6 +148,29 @@ class SessionScrollPartTest : SessionUiTestBase() {
         assertFalse(ui.scroll.scrollPartTop("does_not_exist", "tool_1"))
     }
 
+    /**
+     * A jump disarms follow, so content arriving afterwards must not drag the transcript back to the
+     * bottom and undo it.
+     */
+    fun `test streamed content does not undo the jump`() {
+        transcript()
+        val bar = scrollBar()
+        val part = find<SessionMessageListPanel>(ui).findPart("asst_1", "tool_1")!!
+        park(bottom(bar))
+
+        assertTrue(ui.scroll.scrollPartTop("asst_1", "tool_1"))
+        drainScroll()
+        val landed = bar.value
+        assertFalse(ui.scroll.following())
+
+        emit(ChatEventDto.MessageUpdated("ses_test", assistant("asst_tail")))
+        drainScroll()
+
+        assertEquals(landed, bar.value)
+        assertFalse(ui.scroll.following())
+        assertVisibleTop(part)
+    }
+
     fun `test scrollPartTop falls back to the message for an unknown part id`() {
         transcript()
         val bar = scrollBar()

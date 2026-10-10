@@ -3,7 +3,7 @@ import { EventEmitter } from "node:events"
 import { existsSync } from "node:fs"
 import { chromium, type Browser, type Page } from "playwright-core"
 import { BrowserStream } from "../../src/services/browser-automation/browser-stream"
-import { source, type BrowserFrame, type BrowserInteraction } from "../../src/shared/browser-stream"
+import { source, type BrowserCursor, type BrowserFrame, type BrowserInteraction } from "../../src/shared/browser-stream"
 
 const streams: BrowserStream[] = []
 const pages: Page[] = []
@@ -24,7 +24,7 @@ function jpeg(width = view.width, height = view.height, length = 17) {
   return data
 }
 
-function protocol() {
+function protocol(cursor?: (value: BrowserCursor) => void) {
   const calls: Array<{ method: string; params?: Record<string, unknown> }> = []
   const hooks = new Map<string, () => Promise<void>>()
   const frames: BrowserFrame[] = []
@@ -35,6 +35,7 @@ function protocol() {
     send: async (method: string, params?: Record<string, unknown>) => {
       calls.push({ method, params })
       await hooks.get(method)?.()
+      if (method === "Page.addScriptToEvaluateOnNewDocument") return { identifier: "cursor-script" }
       return {}
     },
     detach: async () => {
@@ -69,6 +70,7 @@ function protocol() {
       frames.push(frame)
     },
     (...args) => logs.push(args),
+    cursor,
   )
   streams.push(stream)
   const send = (id: number, data?: string, size = view) => {
@@ -87,6 +89,60 @@ afterEach(async () => {
 })
 
 describe("BrowserStream protocol lifecycle", () => {
+  test("accepts only changed cursor keywords from the current isolated reporter and cleans it up", async () => {
+    const cursors: BrowserCursor[] = []
+    const fixture = protocol((value) => cursors.push(value))
+    await fixture.stream.configure(view)
+    fixture.session.emit("Runtime.executionContextCreated", { context: { id: 7, name: "kilo-cursor" } })
+    const epoch = () => {
+      const source = fixture.calls.findLast((call) => call.method === "Page.addScriptToEvaluateOnNewDocument")?.params
+        ?.source
+      return String(source)
+        .match(/\)\("__kiloCursor", (\d+),/)
+        ?.at(1)
+    }
+    const report = (cursor: string, stamp = epoch(), context = 7) =>
+      fixture.session.emit("Runtime.bindingCalled", {
+        name: "__kiloCursor",
+        payload: `${stamp}:${cursor}`,
+        executionContextId: context,
+      })
+    report("pointer")
+    report("pointer")
+    for (const cursor of ["url(https://example.com/cursor), pointer", "invalid", "auto", "pointer:extra"])
+      report(cursor)
+    report("text", epoch(), 8)
+    expect(cursors).toEqual([{ browserId: "browser", navigation: 1, revision: 1, cursor: "pointer" }])
+    const stale = epoch()
+    await fixture.stream.configure({ ...view, revision: 2 })
+    report("text", stale)
+    report("pointer")
+    expect(cursors.at(-1)).toMatchObject({ navigation: 1, revision: 2, cursor: "pointer" })
+    expect(cursors).toHaveLength(2)
+    fixture.scope.navigation++
+    report("text")
+    expect(cursors).toHaveLength(2)
+    fixture.session.emit("Page.frameNavigated", { frame: { id: "main" } })
+    await fixture.stream.configure({ ...view, revision: 3 })
+    report("pointer")
+    expect(cursors.at(-1)).toMatchObject({ navigation: 2, revision: 3, cursor: "pointer" })
+    fixture.session.emit("Runtime.executionContextDestroyed", { executionContextId: 7 })
+    report("text")
+    expect(cursors).toHaveLength(3)
+    fixture.session.emit("Runtime.executionContextCreated", { context: { id: 9, name: "kilo-cursor" } })
+    await fixture.stream.close()
+    expect(fixture.calls).toContainEqual({
+      method: "Runtime.evaluate",
+      params: { contextId: 9, expression: "globalThis.__kiloCursorCleanup?.(); delete globalThis.__kiloCursor" },
+    })
+    expect(fixture.calls).toContainEqual({ method: "Runtime.removeBinding", params: { name: "__kiloCursor" } })
+    expect(fixture.calls.at(-2)?.method).toBe("Runtime.removeBinding")
+    expect(fixture.session.listenerCount("Runtime.bindingCalled")).toBe(0)
+    expect(fixture.session.listenerCount("Runtime.executionContextCreated")).toBe(0)
+    report("text")
+    expect(cursors).toHaveLength(3)
+  })
+
   test("keeps frame sources in data images without treating payloads as external URLs", () => {
     const payload = jpeg().toString("base64")
     expect(source(payload)).toBe(`data:image/jpeg;base64,${payload}`)
@@ -485,7 +541,7 @@ describe.skipIf(!executable)("BrowserStream Chromium", () => {
     await browser?.close()
   })
 
-  async function fixture() {
+  async function fixture(cursor?: (value: BrowserCursor) => void) {
     const page = await browser.newPage({ viewport: { width: 640, height: 480 }, deviceScaleFactor: 2 })
     pages.push(page)
     await page.setContent(`
@@ -541,6 +597,7 @@ describe.skipIf(!executable)("BrowserStream Chromium", () => {
         events.emit("frame", frame)
       },
       (...args) => logs.push(args),
+      cursor,
     )
     streams.push(stream)
     const next = (predicate: (frame: BrowserFrame) => boolean = () => true) => {
@@ -577,6 +634,143 @@ describe.skipIf(!executable)("BrowserStream Chromium", () => {
       document.getSelection()?.selectAllChildren(element)
     })
   }
+
+  test("reports real passive cursors, preserves explicit default, and removes listeners on an existing page", async () => {
+    const cursors: BrowserCursor[] = []
+    const events = new EventEmitter()
+    const { stream, page, scope } = await fixture((value) => {
+      cursors.push(value)
+      events.emit("cursor", value)
+    })
+    const html = `<style>
+      body { margin: 0 } #cursors > * { display: block; width: 300px; height: 40px; margin: 0; font: 20px monospace }
+      #drag:active { cursor: grabbing !important }
+    </style><main id="cursors">
+      <a href="#link">Link</a>
+      <input value="Input">
+      <p style="cursor:default">Explicit default text</p>
+      <p>Native text</p>
+      <div style="cursor:ew-resize">Resize</div>
+      <div id="drag" style="cursor:url(data:image/png;base64,invalid), grab">Custom cursor fallback</div>
+      <button><span>Native button</span></button>
+    </main>`
+    const origin = Bun.serve({ port: 0, fetch: () => new Response(html, { headers: { "content-type": "text/html" } }) })
+    await page.goto(origin.url.href).finally(() => origin.stop(true))
+    const before = await page.locator("#cursors").evaluate((node) => node.outerHTML)
+    const probe = await page.context().newCDPSession(page)
+    const contexts: number[] = []
+    probe.on("Runtime.executionContextCreated", ({ context }) => {
+      if (context.name === "kilo-cursor") contexts.push(context.id)
+    })
+    await probe.send("Runtime.enable")
+    await stream.configure(view)
+    const check = async (cursor: string, action: () => Promise<void>) => {
+      const result = Promise.withResolvers<BrowserCursor>()
+      const receive = (value: BrowserCursor) => {
+        events.off("cursor", receive)
+        result.resolve(value)
+      }
+      events.on("cursor", receive)
+      await action()
+      const value = await Promise.race([
+        result.promise,
+        Bun.sleep(1000).then(() => {
+          throw new Error(`Expected cursor ${cursor}, last report ${cursors.at(-1)?.cursor}`)
+        }),
+      ])
+      expect(value).toMatchObject({
+        browserId: scope.browserId,
+        navigation: scope.navigation,
+        revision: view.revision,
+        cursor,
+      })
+    }
+    try {
+      await check("pointer", () => page.mouse.move(10, 20))
+      await page.mouse.move(15, 20)
+      expect(cursors).toHaveLength(1)
+      await check("text", () => page.mouse.move(10, 60))
+      await check("default", () => page.mouse.move(10, 100))
+      await check("text", () => page.mouse.move(10, 140))
+      await check("ew-resize", () => page.mouse.move(10, 180))
+      await check("grab", () => page.mouse.move(10, 220))
+      await check("grabbing", () => page.mouse.down())
+      await check("grab", () => page.mouse.up())
+      await check("default", () => page.mouse.move(130, 260))
+      expect(await page.locator("#cursors").evaluate((node) => node.outerHTML)).toBe(before)
+      await page.evaluate(() => {
+        const frame = document.createElement("iframe")
+        frame.srcdoc = '<body style="margin:0;cursor:grab;min-height:100vh">Child</body>'
+        frame.style.cssText = "position:absolute;top:300px;left:0;width:300px;height:60px;border:0"
+        document.body.append(frame)
+      })
+      await page.waitForFunction(() => document.querySelector("iframe")?.contentDocument?.body?.style.cursor === "grab")
+      await check("pointer", () => page.mouse.move(10, 20))
+      await check("default", () => page.mouse.move(400, 20))
+      await check("grab", () => page.mouse.move(10, 320))
+      await check("default", async () => {
+        await page.locator("iframe").evaluate((node) => node.remove())
+        await page.mouse.move(400, 20)
+      })
+      expect(await page.evaluate(() => typeof (globalThis as unknown as Record<string, unknown>).__kiloCursor)).toBe(
+        "undefined",
+      )
+      page.on("framenavigated", (frame) => {
+        if (frame === page.mainFrame()) scope.navigation++
+      })
+      await page.goto(`data:text/html,${encodeURIComponent(html)}`)
+      await stream.configure({ ...view, revision: 2 })
+      await page.mouse.move(10, 20)
+      await page.evaluate(() => undefined)
+      expect(cursors.at(-1)).toMatchObject({ navigation: 2, revision: 2, cursor: "pointer" })
+      const contextId = contexts.at(-1)
+      expect(contextId).toBeDefined()
+      const expression = "[typeof globalThis.__kiloCursorCleanup, typeof globalThis.__kiloCursor]"
+      const objectId = (await probe.send("Runtime.evaluate", { contextId, expression: "window" })).result.objectId!
+      expect(
+        (await probe.send("DOMDebugger.getEventListeners", { objectId })).listeners.filter(
+          (event) => event.type === "pointermove",
+        ),
+      ).toHaveLength(1)
+      expect(
+        (await probe.send("Runtime.evaluate", { contextId, expression, returnByValue: true })).result.value,
+      ).toEqual(["function", "function"])
+      await stream.close()
+      expect(
+        (await probe.send("DOMDebugger.getEventListeners", { objectId })).listeners.filter(
+          (event) => event.type === "pointermove",
+        ),
+      ).toHaveLength(0)
+      expect(
+        (await probe.send("Runtime.evaluate", { contextId, expression, returnByValue: true })).result.value,
+      ).toEqual(["undefined", "undefined"])
+      const count = cursors.length
+      await page.mouse.move(10, 180)
+      await page.evaluate(() => undefined)
+      expect(cursors).toHaveLength(count)
+      expect(page.isClosed()).toBe(false)
+      const reports: BrowserCursor[] = []
+      const received = Promise.withResolvers<BrowserCursor>()
+      const reopened = new BrowserStream(
+        page,
+        () => scope,
+        () => {},
+        () => {},
+        (value) => {
+          reports.push(value)
+          received.resolve(value)
+        },
+      )
+      streams.push(reopened)
+      await reopened.configure({ ...view, revision: 3 })
+      await page.mouse.move(10, 20)
+      expect(await received.promise).toMatchObject({ navigation: 2, revision: 3, cursor: "pointer" })
+      expect(reports).toHaveLength(1)
+      expect(cursors).toHaveLength(count)
+    } finally {
+      await probe.detach()
+    }
+  }, 10000)
 
   test("streams bounded JPEGs from the existing page and honors monotonic viewport revisions", async () => {
     const { stream, page, next, frames } = await fixture()

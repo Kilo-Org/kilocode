@@ -1,5 +1,5 @@
 import type { UiI18nParams } from "@kilocode/kilo-ui/context"
-import type { BrowserFrame } from "../../src/shared/browser-stream"
+import { CURSORS, type BrowserCursor, type BrowserFrame } from "../../src/shared/browser-stream"
 import type { ExtensionMessage, WebviewMessage } from "../src/types/messages"
 import type {
   BrowserCommand,
@@ -30,6 +30,11 @@ export function browserDevtoolsEvent(scope: BrowserScope, message: Omit<BrowserD
 
 export function browserFrameEvent(scope: BrowserScope, frame: BrowserFrame): BrowserEvent {
   return { type: "frame", value: { ...frame, scope } }
+}
+
+export function browserCursorEvent(scope: BrowserScope, value: BrowserCursor): BrowserEvent | undefined {
+  if (!CURSORS.has(value.cursor)) return
+  return { type: "cursor", value: { ...value, scope } }
 }
 
 /** Shared browser panel labels. Both browser surfaces use the Agent Manager keys. */
