@@ -2,7 +2,7 @@ import { QdrantClient, type Schemas } from "@qdrant/js-client-rest"
 import { createHash } from "crypto"
 import * as path from "path"
 import type { IVectorStore } from "../interfaces/vector-store"
-import type { Payload, VectorStoreSearchResult } from "../interfaces"
+import type { Payload, StoreState, VectorStoreSearchResult } from "../interfaces"
 import { DEFAULT_MAX_SEARCH_RESULTS, DEFAULT_SEARCH_MIN_SCORE } from "../constants"
 import { Log } from "../../util/log"
 import type { EmbeddingProfile } from "../embedding-profile"
@@ -674,44 +674,35 @@ export class QdrantVectorStore implements IVectorStore {
   }
 
   /**
-   * Checks if the collection exists and has indexed points
-   * @returns Promise resolving to boolean indicating if the collection exists and has points
+   * Reports how far along the store is: empty, partially built, or
+   * complete.
    */
-  async hasIndexedData(): Promise<boolean> {
-    try {
-      const collectionInfo = await this.client.getCollection(this.collectionName)
-      // Check if the collection has any points indexed
-      const pointsCount = collectionInfo.points_count ?? 0
-      if (pointsCount === 0) {
-        log.info("Qdrant collection has no indexed data", {
-          collection: this.collectionName,
-          reason: "points_zero",
-        })
-        return false
-      }
-
-      // Check if the indexing completion marker exists
-      const payload = await this.getMetadataPayload()
-
-      // If marker exists, use it to determine completion status
-      if (payload) {
-        const indexed = payload[KEY.complete] === true
-        log.info("Qdrant indexing metadata evaluated", {
-          collection: this.collectionName,
-          pointsCount,
-          indexed,
-        })
-        return indexed
-      }
-
-      // Backward compatibility: No marker exists (old index or pre-marker version)
-      // Fall back to old logic - assume complete if collection has points
-      log.info("No indexing metadata marker found. Using backward compatibility mode (checking points_count > 0).")
-      return pointsCount > 0
-    } catch (error) {
-      log.error("Failed to check if collection has data", { error })
-      throw error
+  async state(): Promise<StoreState> {
+    const collectionInfo = await this.client.getCollection(this.collectionName)
+    const points = collectionInfo.points_count ?? 0
+    if (points === 0) {
+      log.info("Qdrant collection has no indexed data", {
+        collection: this.collectionName,
+        reason: "points_zero",
+      })
+      return { status: "empty", points }
     }
+
+    const payload = await this.getMetadataPayload()
+    if (payload) {
+      const status = payload[KEY.complete] === true ? "complete" : "partial"
+      log.info("Qdrant indexing metadata evaluated", {
+        collection: this.collectionName,
+        points,
+        status,
+      })
+      return { status, points }
+    }
+
+    // Backward compatibility: no marker means an index from before the marker
+    // existed, which can only ever have been written by a finished scan.
+    log.info("No indexing metadata marker found. Using backward compatibility mode (checking points_count > 0).")
+    return { status: "complete", points }
   }
 
   /**
