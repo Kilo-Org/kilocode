@@ -205,6 +205,35 @@ describe("primaryWorktree", () => {
     }),
   )
 
+  it.live("keeps a carriage return at the end of the primary checkout path", () =>
+    Effect.gen(function* () {
+      if (process.platform === "win32") return
+      const dir = yield* tmpdirScoped()
+      const repo = path.join(dir, "primary\r")
+      const worktree = path.join(dir, "feature")
+      // Dropping the carriage return would land on this sibling.
+      yield* Effect.promise(() => fs.mkdir(path.join(dir, "primary")))
+      yield* Effect.promise(() => $`git init ${repo}`.quiet())
+      yield* Effect.promise(() =>
+        $`git -c user.name=Test -c user.email=test@example.com -c commit.gpgsign=false commit --allow-empty -m init`
+          .cwd(repo)
+          .quiet(),
+      )
+      yield* Effect.addFinalizer(() =>
+        Effect.promise(() => $`git worktree remove --force ${worktree}`.cwd(repo).quiet().nothrow()).pipe(
+          Effect.asVoid,
+        ),
+      )
+      yield* Effect.promise(() => $`git worktree add -b primary-carriage-return ${worktree}`.cwd(repo).quiet())
+      const git = legacy(yield* Git.Service)
+
+      expect(yield* primaryWorktree(repo)).toBe(repo)
+      expect(yield* primaryWorktree(worktree)).toBe(repo)
+      expect(yield* primaryWorktree(repo).pipe(Effect.provideService(Git.Service, git))).toBe(repo)
+      expect(yield* primaryWorktree(worktree).pipe(Effect.provideService(Git.Service, git))).toBe(repo)
+    }),
+  )
+
   it.live("returns the checkout for a subdirectory reached through a symlinked parent", () =>
     Effect.gen(function* () {
       if (process.platform === "win32") return

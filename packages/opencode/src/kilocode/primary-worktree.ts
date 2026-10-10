@@ -46,13 +46,15 @@ export const primaryWorktree = Effect.fn("PrimaryWorktree.find")(function* (dir:
   })
   const resolve = (value: string, from = cwd) =>
     FSUtil.normalizePath(path.isAbsolute(value) ? path.normalize(value) : path.resolve(from, value))
-  const line = (value: string | undefined) => value?.replace(/\r?\n$/, "")
+  // A POSIX path can contain a carriage return, so "\r\n" only counts as a line break on Windows.
+  const eol = process.platform === "win32" ? /\r?\n/ : /\n/
+  const line = (value: string | undefined) => value?.replace(new RegExp(`${eol.source}$`), "")
   // One rev-parse answers all four questions, in argument order. Outside a
   // work tree --show-toplevel fails, so the command fails as a whole.
   // --path-format=absolute is left out because git before 2.31 prints it back as an output line with exit code 0.
   const info = yield* run(["rev-parse", "--is-inside-work-tree", "--show-toplevel", "--git-dir", "--git-common-dir"])
   if (info === undefined) return undefined
-  const lines = line(info)!.split(/\r?\n/)
+  const lines = line(info)!.split(eol)
   // A path that contains a newline spreads over extra lines; fall back to one query per field.
   const [inside, root, gitdir, common] =
     lines.length === 4
@@ -69,7 +71,7 @@ export const primaryWorktree = Effect.fn("PrimaryWorktree.find")(function* (dir:
   // -z needs git 2.36. The newline form cuts a path that contains a newline short, and the cut path can
   // be an unrelated directory. A primary checkout read from it must have the common directory as its git directory.
   const nul = yield* run(["worktree", "list", "--porcelain", "-z"])
-  const listing = nul ?? (yield* run(["worktree", "list", "--porcelain"]))?.replace(/\r?\n/g, "\0")
+  const listing = nul ?? (yield* run(["worktree", "list", "--porcelain"]))?.replace(new RegExp(eol.source, "g"), "\0")
   const fields = listing?.split("\0\0", 1)[0]?.split("\0")
   const worktree = fields?.find((field) => field.startsWith("worktree "))
   if (!worktree || fields?.includes("bare")) return undefined
