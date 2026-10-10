@@ -40,12 +40,12 @@ export const primaryPaths = Effect.fn("PrimaryWorktree.paths")(function* (
 export const primaryWorktree = Effect.fn("PrimaryWorktree.find")(function* (dir: string) {
   const cwd = FSUtil.normalizePath(path.resolve(dir))
   const git = yield* Git.Service
-  const run = Effect.fnUntraced(function* (args: string[]) {
-    const result = yield* git.run(args, { cwd })
+  const run = Effect.fnUntraced(function* (args: string[], at = cwd) {
+    const result = yield* git.run(args, { cwd: at })
     return result.exitCode === 0 ? result.text() : undefined
   })
-  const resolve = (value: string) =>
-    FSUtil.normalizePath(path.isAbsolute(value) ? path.normalize(value) : path.resolve(cwd, value))
+  const resolve = (value: string, from = cwd) =>
+    FSUtil.normalizePath(path.isAbsolute(value) ? path.normalize(value) : path.resolve(from, value))
   const line = (value: string | undefined) => value?.replace(/\r?\n$/, "")
   // One rev-parse answers all four questions, in argument order. Outside a
   // work tree --show-toplevel fails, so the command fails as a whole.
@@ -66,14 +66,17 @@ export const primaryWorktree = Effect.fn("PrimaryWorktree.find")(function* (dir:
   if (inside !== "true" || !root || !gitdir || !common) return undefined
   if (resolve(gitdir) === resolve(common)) return resolve(root)
 
-  // -z needs git 2.36. The newline form cannot carry a path that contains a newline,
-  // so a primary checkout read from it is only trusted when it exists.
+  // -z needs git 2.36. The newline form cuts a path that contains a newline short, and the cut path can
+  // be an unrelated directory. A primary checkout read from it must have the common directory as its git directory.
   const nul = yield* run(["worktree", "list", "--porcelain", "-z"])
   const listing = nul ?? (yield* run(["worktree", "list", "--porcelain"]))?.replace(/\r?\n/g, "\0")
   const fields = listing?.split("\0\0", 1)[0]?.split("\0")
   const worktree = fields?.find((field) => field.startsWith("worktree "))
   if (!worktree || fields?.includes("bare")) return undefined
   const primary = resolve(worktree.slice("worktree ".length))
-  if (nul === undefined && !existsSync(primary)) return undefined
-  return primary
+  if (nul !== undefined) return primary
+  if (!existsSync(primary)) return undefined
+  const own = line(yield* run(["rev-parse", "--git-dir"], primary))
+  // Compare real paths, since --git-common-dir can be relative to a cwd reached through a symlink.
+  return own && FSUtil.resolve(resolve(own, primary)) === FSUtil.resolve(resolve(common)) ? primary : undefined
 })

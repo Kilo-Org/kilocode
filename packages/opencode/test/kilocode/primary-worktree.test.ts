@@ -173,23 +173,35 @@ describe("primaryWorktree", () => {
     Effect.gen(function* () {
       if (process.platform === "win32") return
       const dir = yield* tmpdirScoped()
-      const repo = path.join(dir, "primary-checkout\n")
-      const worktree = path.join(dir, "feature")
-      yield* Effect.promise(() => $`git init ${repo}`.quiet())
-      yield* Effect.promise(() =>
-        $`git -c user.name=Test -c user.email=test@example.com -c commit.gpgsign=false commit --allow-empty -m init`
-          .cwd(repo)
-          .quiet(),
-      )
-      yield* Effect.addFinalizer(() =>
-        Effect.promise(() => $`git worktree remove --force ${worktree}`.cwd(repo).quiet().nothrow()).pipe(
-          Effect.asVoid,
-        ),
-      )
-      yield* Effect.promise(() => $`git worktree add -b legacy-newline-worktree ${worktree}`.cwd(repo).quiet())
+      // The newline form cuts the second path to an existing, unrelated checkout with its own .kilo.
+      const parent = path.join(dir, "parent")
+      yield* Effect.promise(() => $`git init ${parent}`.quiet())
+      yield* Effect.promise(() => fs.mkdir(path.join(parent, ".kilo")))
       const git = legacy(yield* Git.Service)
 
-      expect(yield* primaryWorktree(worktree).pipe(Effect.provideService(Git.Service, git))).toBeUndefined()
+      for (const [name, repo] of [
+        ["missing", path.join(dir, "primary-checkout\n")],
+        ["existing", path.join(parent, "\ncheckout")],
+      ] as const) {
+        const worktree = path.join(dir, `${name}-feature`)
+        yield* Effect.promise(() => $`git init ${repo}`.quiet())
+        yield* Effect.promise(() =>
+          $`git -c user.name=Test -c user.email=test@example.com -c commit.gpgsign=false commit --allow-empty -m init`
+            .cwd(repo)
+            .quiet(),
+        )
+        yield* Effect.addFinalizer(() =>
+          Effect.promise(() => $`git worktree remove --force ${worktree}`.cwd(repo).quiet().nothrow()).pipe(
+            Effect.asVoid,
+          ),
+        )
+        yield* Effect.promise(() => $`git worktree add -b legacy-newline-${name} ${worktree}`.cwd(repo).quiet())
+
+        expect(yield* primaryWorktree(worktree).pipe(Effect.provideService(Git.Service, git))).toBeUndefined()
+        expect(
+          yield* primaryPaths(worktree, worktree, [".kilo"]).pipe(Effect.provideService(Git.Service, git)),
+        ).toEqual([])
+      }
     }),
   )
 
@@ -202,8 +214,11 @@ describe("primaryWorktree", () => {
       yield* Effect.promise(() => $`git init ${repo}`.quiet())
       yield* Effect.promise(() => Bun.write(path.join(repo, "packages", "app", "placeholder"), ""))
       yield* Effect.promise(() => fs.symlink(path.join(dir, "real"), link))
+      const sub = path.join(link, "repo", "packages", "app")
+      const git = legacy(yield* Git.Service)
 
-      expect(yield* primaryWorktree(path.join(link, "repo", "packages", "app"))).toBe(repo)
+      expect(yield* primaryWorktree(sub)).toBe(repo)
+      expect(yield* primaryWorktree(sub).pipe(Effect.provideService(Git.Service, git))).toBe(repo)
     }),
   )
 })
