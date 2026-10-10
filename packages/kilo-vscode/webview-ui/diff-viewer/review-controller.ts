@@ -433,7 +433,8 @@ export function createReviewView(
   const handles = new Map<string, DiffHandle>()
   const reveal = (file: string) => {
     const diff = props.diffs.find((item) => item.file === file)
-    if (!diff || (props.markdownRender && isMarkdownFile(file)) || !shouldVirtualizeDiff(diff)) return true
+    if (!diff || (props.markdownRender && !diff.excerpt && isMarkdownFile(file)) || !shouldVirtualizeDiff(diff))
+      return true
     const target = props.focusedComment
     const anchor = target
       ? remote
