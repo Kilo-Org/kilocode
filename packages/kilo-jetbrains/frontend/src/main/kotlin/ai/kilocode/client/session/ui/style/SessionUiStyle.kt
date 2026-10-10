@@ -269,6 +269,18 @@ object SessionUiStyle {
             fun width(): Int = JBUI.scale(1)
         }
 
+        /**
+         * Transient outline drawn around the turn a header-timeline jump landed on, so the
+         * destination is findable after the viewport moves. Borrows the platform focus ring rather
+         * than [Outline], which marks persistent card edges — this cue is attention, not structure,
+         * and it is cleared by the next scroll or click.
+         */
+        object Highlight {
+            fun outlineColor(): Color = JBUI.CurrentTheme.Focus.focusColor()
+
+            fun width(): Int = JBUI.scale(2)
+        }
+
         /** Filled surface and border for outlined dialog cards (question, permission, login, outcome, revert). */
         object Dialog {
             /**

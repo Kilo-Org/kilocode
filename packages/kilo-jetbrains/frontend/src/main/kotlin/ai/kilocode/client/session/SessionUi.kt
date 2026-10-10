@@ -49,6 +49,7 @@ import ai.kilocode.client.session.settings.ApprovalReasonVisibilityListener
 import ai.kilocode.client.session.ui.account.SessionAccountOverlay
 import ai.kilocode.client.session.ui.popup.HeaderPopupController
 import ai.kilocode.client.session.ui.SessionDropOverlay
+import ai.kilocode.client.session.ui.SessionHighlightOverlay
 import ai.kilocode.client.session.ui.SessionRootPanel
 import ai.kilocode.client.session.ui.SessionMessageListPanel
 import ai.kilocode.client.session.ui.attachment.AttachmentEditorKind
@@ -132,6 +133,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.awt.BorderLayout
+import java.awt.Rectangle
 import java.awt.datatransfer.StringSelection
 import java.awt.event.HierarchyEvent
 import java.net.URI
@@ -212,6 +214,7 @@ class SessionUi(
     private lateinit var account: SessionAccountOverlay
     private lateinit var drop: SessionDropOverlay
     private lateinit var overlay: SessionHoverCopyOverlay
+    internal lateinit var highlight: SessionHighlightOverlay
     internal lateinit var promptRail: PromptRailController
     private val hide = timers.timer(HIDE_MS, repeats = false) {
         if (disposed || !this::drop.isInitialized) return@timer
@@ -591,7 +594,7 @@ class SessionUi(
             boardVisible = { board },
             onShowBoard = ::showBoard,
             onOpenSubagent = ::openSubagent,
-            onJumpTimeline = { message, part -> scroll.scrollPartTop(message, part) },
+            onJumpTimeline = { message, part -> jumpTimeline(message, part) },
         )
         if (!readonly && showBranchDock()) {
             val owner = manager
@@ -613,11 +616,19 @@ class SessionUi(
         root.addOverlay(overlay) { pane, child ->
             overlay.bounds(pane, child)
         }
+        highlight = SessionHighlightOverlay(scroll.component, this)
+        // Full pane: the outline is positioned by painting against live turn bounds, not by layout.
+        root.addOverlay(highlight) { pane, _ ->
+            Rectangle(0, 0, pane.width, pane.height)
+        }
         messageBody.onReflow = { on -> if (on && !opening) scroll.followTail() }
         scroll.onScroll = {
             overlay.clear()
             popup.hideAll()
         }
+        // Only a deliberate scroll clears the outline: onScroll also fires for the jump's own
+        // programmatic passes, which would clear the outline the jump just drew.
+        scroll.onGesture = { highlight.clear() }
 
         completion = KiloPromptCompletionProvider(
             workspace = workspace,
@@ -1240,6 +1251,18 @@ class SessionUi(
             subagentSessionParams(sessionId, workspace.directory),
         )
         Telemetry.send("Subagent Session Opened", mapOf("sessionId" to sessionId))
+    }
+
+    /**
+     * Jumps the transcript to a header-timeline step and outlines the turn it belongs to. The scroll
+     * anchors on the part itself, but the outline wraps the whole turn — a single part is often a
+     * one-line card, too small to find once the viewport has moved.
+     */
+    @RequiresEdt
+    private fun jumpTimeline(message: String, part: String) {
+        if (!scroll.scrollPartTop(message, part)) return
+        val turn = messageBody.findTurn(message) ?: return
+        highlight.show(turn)
     }
 
     @RequiresEdt

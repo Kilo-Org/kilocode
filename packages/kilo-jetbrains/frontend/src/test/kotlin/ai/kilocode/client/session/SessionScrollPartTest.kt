@@ -2,13 +2,18 @@ package ai.kilocode.client.session
 
 import ai.kilocode.client.session.ui.SessionMessageListPanel
 import ai.kilocode.client.session.ui.header.SessionHeaderPanel
+import ai.kilocode.client.ui.UiStyle
+import com.intellij.ui.components.JBScrollPane
 import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.MessageDto
 import ai.kilocode.rpc.dto.MessageTimeDto
 import ai.kilocode.rpc.dto.PartDto
 import ai.kilocode.rpc.dto.PartTimeDto
+import java.awt.Component
+import java.awt.Container
 import java.awt.Point
 import java.awt.event.MouseEvent
+import javax.swing.JComponent
 import javax.swing.SwingUtilities
 
 /**
@@ -18,41 +23,122 @@ import javax.swing.SwingUtilities
  */
 class SessionScrollPartTest : SessionUiTestBase() {
 
-    fun `test scrollPartTop lands the part at the viewport top`() {
-        showMessages()
-        fillTranscript(6)
-        emitAssistantSteps()
-        ui.setSize(900, 400)
-        layout()
-        drainScroll()
+    fun `test scrollPartTop reveals a part below the viewport with a gap above it`() {
+        transcript()
         val bar = scrollBar()
+        val part = find<SessionMessageListPanel>(ui).findPart("asst_1", "tool_2")!!
+        park(0)
+        assertFalse(diag(part), visibleTop(part))
 
         assertTrue(ui.scroll.scrollPartTop("asst_1", "tool_2"))
         drainScroll()
 
+        assertEquals(diag(part), (top(part) - UiStyle.Gap.pad()).coerceIn(0, bottom(bar)), bar.value)
+        assertVisibleTop(part)
+        // Revealed, not pinned flush: the gap is what keeps the outline's top stroke off the edge.
+        assertEquals(UiStyle.Gap.pad(), top(part) - bar.value)
+    }
+
+    fun `test scrollPartTop does not move when the part top is already visible`() {
+        transcript()
+        val bar = scrollBar()
         val part = find<SessionMessageListPanel>(ui).findPart("asst_1", "tool_2")!!
-        val expected = SwingUtilities.convertPoint(part, Point(0, 0), scrollView()).y
-            .coerceIn(0, bottom(bar))
-        assertEquals(expected, bar.value)
+        // Park the part's top comfortably inside the viewport, then ask for it again.
+        park((top(part) - UiStyle.Gap.pad() * 4).coerceIn(0, bottom(bar)))
+        val parked = bar.value
+        assertVisibleTop(part)
+
+        assertTrue(ui.scroll.scrollPartTop("asst_1", "tool_2"))
+        drainScroll()
+
+        assertEquals("an already visible top must not move the transcript", parked, bar.value)
+    }
+
+    fun `test scrollPartTop reveals a part above the viewport`() {
+        transcript()
+        val bar = scrollBar()
+        val part = find<SessionMessageListPanel>(ui).findPart("asst_1", "tool_1")!!
+        park(bottom(bar))
+        assertFalse(diag(part), visibleTop(part))
+
+        assertTrue(ui.scroll.scrollPartTop("asst_1", "tool_1"))
+        drainScroll()
+
+        assertEquals(diag(part), (top(part) - UiStyle.Gap.pad()).coerceIn(0, bottom(bar)), bar.value)
+        assertVisibleTop(part)
     }
 
     fun `test scrollPartTop falls back to the message when the part has no view`() {
-        showMessages()
-        fillTranscript(6)
-        emitAssistantSteps()
-        ui.setSize(900, 400)
-        layout()
-        drainScroll()
+        transcript()
         val bar = scrollBar()
+        park(0)
 
         // step-finish is a timeline-only marker; MessageView never creates a renderer for it.
         assertTrue(ui.scroll.scrollPartTop("asst_1", "step_finish_1"))
         drainScroll()
 
         val message = find<SessionMessageListPanel>(ui).findMessage("asst_1")!!
-        val expected = SwingUtilities.convertPoint(message, Point(0, 0), scrollView()).y
-            .coerceIn(0, bottom(bar))
-        assertEquals(expected, bar.value)
+        assertEquals((top(message) - UiStyle.Gap.pad()).coerceIn(0, bottom(bar)), bar.value)
+        assertVisibleTop(message)
+    }
+
+    /**
+     * The assistant message sits in the middle of the transcript, with scroll room on both sides, so
+     * a reveal is not clamped by the top or the bottom of the content and the tests can tell a real
+     * reveal from a clamped one.
+     *
+     * The base `layout()` leaves the viewport with a zero extent, which would make every reveal
+     * decision and every "is the top visible" assertion meaningless, so the whole tree is laid out.
+     */
+    private fun transcript() {
+        showMessages()
+        fillTranscript(6)
+        emitAssistantSteps()
+        fillTranscript(10, start = 6)
+        ui.setSize(900, 400)
+        layoutAll(ui)
+        drainScroll()
+        layoutAll(ui)
+        val vp = (scrollComponent() as JBScrollPane).viewport
+        assertTrue("the viewport needs a real extent for reveal tests", vp.extentSize.height > 0)
+    }
+
+    /**
+     * Parks the transcript at [value] as a user gesture. A passive move is re-pinned to the bottom by
+     * the follow branch in onScroll, which would silently invalidate every reveal fixture here.
+     */
+    private fun park(value: Int) {
+        setValue(scrollBar(), value)
+        drainScroll()
+    }
+
+    private fun layoutAll(comp: Component) {
+        comp.doLayout()
+        if (comp is Container) comp.components.forEach(::layoutAll)
+    }
+
+    private fun top(target: JComponent): Int =
+        SwingUtilities.convertPoint(target, Point(0, 0), scrollView()).y
+
+    /** The whole point of the reveal: the target's top edge must end up inside the viewport. */
+    private fun assertVisibleTop(target: JComponent) {
+        val vp = (scrollComponent() as JBScrollPane).viewport
+        assertTrue(
+            "top=${top(target)} must be within view=${vp.viewPosition.y}..${vp.viewPosition.y + vp.extentSize.height}",
+            visibleTop(target),
+        )
+    }
+
+    private fun visibleTop(target: JComponent): Boolean {
+        val vp = (scrollComponent() as JBScrollPane).viewport
+        val top = top(target)
+        return top >= vp.viewPosition.y && top < vp.viewPosition.y + vp.extentSize.height
+    }
+
+    private fun diag(target: JComponent): String {
+        val vp = (scrollComponent() as JBScrollPane).viewport
+        return "top=${top(target)} view=${vp.viewPosition.y} extent=${vp.extentSize.height}" +
+            " content=${scrollView()?.height} bottom=${bottom(scrollBar())} value=${scrollBar().value}"
     }
 
     fun `test scrollPartTop returns false for an unknown message`() {
@@ -62,16 +148,19 @@ class SessionScrollPartTest : SessionUiTestBase() {
         assertFalse(ui.scroll.scrollPartTop("does_not_exist", "tool_1"))
     }
 
-    fun `test scrollPartTop returns false for an unknown part on a known message`() {
-        showMessages()
-        fillTranscript(6)
-        emitAssistantSteps()
-        ui.setSize(900, 400)
-        layout()
+    fun `test scrollPartTop falls back to the message for an unknown part id`() {
+        transcript()
+        val bar = scrollBar()
+        park(0)
+
+        // Distinct from the step-finish case above: that part exists in the model but has no
+        // renderer, whereas this id is not in the model at all. Both resolve to the owning message.
+        assertTrue(ui.scroll.scrollPartTop("asst_1", "does_not_exist"))
         drainScroll()
 
-        // No fallback target either: an unknown message id means there is nothing to jump to.
-        assertFalse(ui.scroll.scrollPartTop("does_not_exist", "does_not_exist_either"))
+        val message = find<SessionMessageListPanel>(ui).findMessage("asst_1")!!
+        assertEquals((top(message) - UiStyle.Gap.pad()).coerceIn(0, bottom(bar)), bar.value)
+        assertVisibleTop(message)
     }
 
     /**
@@ -79,27 +168,24 @@ class SessionScrollPartTest : SessionUiTestBase() {
      * moves the real transcript scroll pane, not just the two halves in isolation.
      */
     fun `test clicking the header timeline scrolls the real transcript`() {
-        showMessages()
-        fillTranscript(6)
-        emitAssistantSteps()
-        ui.setSize(900, 400)
-        layout()
-        drainScroll()
+        transcript()
         val header = find<SessionHeaderPanel>(ui)
         click(header.expandButton())
-        layout()
+        layoutAll(ui)
         val bar = scrollBar()
+        val part = find<SessionMessageListPanel>(ui).findPart("asst_1", "tool_2")!!
+        // Park the transcript where the step is off screen, so revealing it has to move the viewport.
+        park(0)
         val before = bar.value
+        assertFalse("fixture must start with the step out of view: ${diag(part)}", visibleTop(part))
 
-        // tool_2 is the 3rd timeline bar: reasoning-free assistant message with tool_1, tool_2, step_finish_1.
+        // tool_2 is the 2nd timeline bar: reasoning-free assistant message with tool_1, tool_2, step_finish_1.
         pressReleaseClick(header, 1)
         drainScroll()
 
-        val part = find<SessionMessageListPanel>(ui).findPart("asst_1", "tool_2")!!
-        val expected = SwingUtilities.convertPoint(part, Point(0, 0), scrollView()).y
-            .coerceIn(0, bottom(bar))
-        assertEquals(expected, bar.value)
-        assertTrue("the click must actually move the transcript", expected != before)
+        assertEquals((top(part) - UiStyle.Gap.pad()).coerceIn(0, bottom(bar)), bar.value)
+        assertVisibleTop(part)
+        assertTrue("revealing an off-screen step must move the transcript", bar.value != before)
     }
 
     /** Presses, releases, and clicks timeline bar [index] on the header's real timeline panel. */
