@@ -95,6 +95,11 @@ class KiloAppRpcApiImpl : KiloAppRpcApi {
         return app.models.selection(update)
     }
 
+    override suspend fun clearModelSelection(agent: String): ModelStateDto {
+        app.requireReady()
+        return app.models.clear(agent)
+    }
+
     override suspend fun updateModelVariant(update: ModelVariantUpdateDto): ModelStateDto {
         app.requireReady()
         return app.models.variant(update)

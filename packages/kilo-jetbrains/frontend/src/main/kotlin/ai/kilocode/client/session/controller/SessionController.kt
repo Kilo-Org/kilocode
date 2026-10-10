@@ -843,12 +843,21 @@ class SessionController(
         capture("Model Selected", sessionProps() + mapOf("agent" to agent, "provider" to provider, "modelId" to id, "isOverride" to "true"))
     }
 
+    /**
+     * Reset this mode back to its computed default.
+     *
+     * Also forgets the persisted per-agent pick in the CLI's shared model state. That pick outranks
+     * every config default in [resolveSessionModel], so clearing only the in-session fields left it
+     * on disk and the next mode switch or new session resurrected it — the reset looked like it had
+     * worked until the picker reverted on its own.
+     */
     fun clearModelOverride() {
         assertEdt()
         val agent = model.agent ?: return
         LOG.debug { "${ChatLogSummary.sid(sid ?: ref?.key ?: "pending")} kind=config model-reset agent=$agent" }
         prefVariantKey = null
         prefVariant = null
+        if (app.models.value.model.containsKey(agent)) app.clearModel(agent)
         val auto = resolvedDefaultModel(agent)?.key
         prefModel = auto
         prefAgent = agent
