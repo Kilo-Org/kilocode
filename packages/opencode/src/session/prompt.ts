@@ -1658,6 +1658,10 @@ export const layer = Layer.effect(
           // kilocode_change start - compaction.process returns "stop" after
           // setting a terminal error on the summary message: either a
           // ContextOverflowError or the empty-summary APIError; surface as turn error
+          if (result === "stop") {
+            closeReasons.set(sessionID, "error")
+            break
+          }
           yield* KiloContextUsage.compacted({ sessionID, parentID: task.messageID, model, session: sessions }).pipe(
             Effect.provideService(Database.Service, database),
             Effect.catchCause((cause) =>
@@ -1668,10 +1672,6 @@ export const layer = Layer.effect(
               }),
             ),
           )
-          if (result === "stop") {
-            closeReasons.set(sessionID, "error")
-            break
-          }
           // kilocode_change end
           continue
         }

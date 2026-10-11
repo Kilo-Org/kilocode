@@ -110,15 +110,15 @@ export type Event =
   | EventBackgroundProcessUpdated
   | EventBackgroundProcessDeleted
   | EventSandboxStatusChanged
+  | EventSuggestionShown
+  | EventSuggestionAccepted
+  | EventSuggestionDismissed
   | EventKilocodeAgentManagerStart
   | EventKilocodeAgentManagerRequested
   | EventKilocodeAgentManagerCancelled
   | EventKilocodeNotebookRequested
   | EventKilocodeNotebookCancelled
   | EventKiloSessionsRemoteStatusChanged
-  | EventSuggestionShown
-  | EventSuggestionAccepted
-  | EventSuggestionDismissed
   | EventLspClientDiagnostics
   | EventMemoryStatus1
   | EventMemoryUpdated1
@@ -307,6 +307,28 @@ export type BackgroundProcessInfo = {
   }
 }
 
+export type SuggestionRequest = {
+  id: string
+  sessionID: string
+  text: string
+  actions: Array<{
+    /**
+     * Button or option label (1-5 words)
+     */
+    label: string
+    description?: string
+    /**
+     * Synthetic user prompt to inject when this action is accepted
+     */
+    prompt: string
+  }>
+  blocking?: boolean
+  tool?: {
+    messageID: string
+    callID: string
+  }
+}
+
 export type AgentManagerRequestId = string
 
 export type AgentManagerFilterState = "idle" | "busy" | "retry" | "offline" | "waiting"
@@ -426,28 +448,6 @@ export type NotebookExecuteRequest = {
 }
 
 export type NotebookRequest = NotebookReadRequest | NotebookEditRequest | NotebookExecuteRequest
-
-export type SuggestionRequest = {
-  id: string
-  sessionID: string
-  text: string
-  actions: Array<{
-    /**
-     * Button or option label (1-5 words)
-     */
-    label: string
-    description?: string
-    /**
-     * Synthetic user prompt to inject when this action is accepted
-     */
-    prompt: string
-  }>
-  blocking?: boolean
-  tool?: {
-    messageID: string
-    callID: string
-  }
-}
 
 export type IndexingStatusState = "Disabled" | "In Progress" | "Complete" | "Error" | "Standby"
 
@@ -1161,15 +1161,15 @@ export type GlobalEvent = {
     | EventBackgroundProcessUpdated
     | EventBackgroundProcessDeleted
     | EventSandboxStatusChanged
+    | EventSuggestionShown
+    | EventSuggestionAccepted
+    | EventSuggestionDismissed
     | EventKilocodeAgentManagerStart
     | EventKilocodeAgentManagerRequested
     | EventKilocodeAgentManagerCancelled
     | EventKilocodeNotebookRequested
     | EventKilocodeNotebookCancelled
     | EventKiloSessionsRemoteStatusChanged
-    | EventSuggestionShown
-    | EventSuggestionAccepted
-    | EventSuggestionDismissed
     | EventLspClientDiagnostics
     | EventMemoryStatus
     | EventMemoryUpdated
@@ -4044,21 +4044,6 @@ export type ConfigOverlayConflictError = {
   }
 }
 
-export type ConfigOverlayShadowedError = {
-  message: string
-  path: string
-  shadowedBy?: string
-}
-
-export type ConfigOverlayWriteError = {
-  message: string
-  path?: string
-  issues?: Array<{
-    message: string
-    path: Array<string>
-  }>
-}
-
 export type ConfigRulesResponse = {
   scope: "project"
   target: string
@@ -5239,6 +5224,42 @@ export type EventSandboxStatusChanged = {
   }
 }
 
+export type EventSuggestionShown = {
+  id: string
+  type: "suggestion.shown"
+  properties: SuggestionRequest
+}
+
+export type EventSuggestionAccepted = {
+  id: string
+  type: "suggestion.accepted"
+  properties: {
+    sessionID: string
+    requestID: string
+    index: number
+    action: {
+      /**
+       * Button or option label (1-5 words)
+       */
+      label: string
+      description?: string
+      /**
+       * Synthetic user prompt to inject when this action is accepted
+       */
+      prompt: string
+    }
+  }
+}
+
+export type EventSuggestionDismissed = {
+  id: string
+  type: "suggestion.dismissed"
+  properties: {
+    sessionID: string
+    requestID: string
+  }
+}
+
 export type EventKilocodeAgentManagerStart = {
   id: string
   type: "kilocode.agent_manager.start"
@@ -5300,42 +5321,6 @@ export type EventKiloSessionsRemoteStatusChanged = {
   properties: {
     enabled: boolean
     connected: boolean
-  }
-}
-
-export type EventSuggestionShown = {
-  id: string
-  type: "suggestion.shown"
-  properties: SuggestionRequest
-}
-
-export type EventSuggestionAccepted = {
-  id: string
-  type: "suggestion.accepted"
-  properties: {
-    sessionID: string
-    requestID: string
-    index: number
-    action: {
-      /**
-       * Button or option label (1-5 words)
-       */
-      label: string
-      description?: string
-      /**
-       * Synthetic user prompt to inject when this action is accepted
-       */
-      prompt: string
-    }
-  }
-}
-
-export type EventSuggestionDismissed = {
-  id: string
-  type: "suggestion.dismissed"
-  properties: {
-    sessionID: string
-    requestID: string
   }
 }
 
@@ -15786,13 +15771,13 @@ export type ConfigOverlayUpdateData = {
 
 export type ConfigOverlayUpdateErrors = {
   /**
-   * ConfigOverlayWriteError | InvalidRequestError
+   * Bad request
    */
-  400: ConfigOverlayWriteError | InvalidRequestError
+  400: BadRequestError
   /**
-   * ConfigOverlayConflictError | ConfigOverlayShadowedError
+   * ConfigOverlayConflictError
    */
-  409: ConfigOverlayConflictError | ConfigOverlayShadowedError
+  409: ConfigOverlayConflictError
 }
 
 export type ConfigOverlayUpdateError = ConfigOverlayUpdateErrors[keyof ConfigOverlayUpdateErrors]
