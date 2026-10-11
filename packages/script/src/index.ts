@@ -13,9 +13,13 @@ if (!expectedBunVersion) {
 // relax version requirement
 const expectedBunVersionRange = `^${expectedBunVersion}`
 
+// kilocode_change start - allow constrained environments to skip the hard bun gate
+if (process.env["KILO_SKIP_BUN_VERSION_CHECK"] !== "1") {
+// kilocode_change end
 if (!semver.satisfies(process.versions.bun, expectedBunVersionRange)) {
   throw new Error(`This script requires bun@${expectedBunVersionRange}, but you are using bun@${process.versions.bun}`)
 }
+} // kilocode_change
 // kilocode_change start
 const env = {
   KILO_CHANNEL: process.env["KILO_CHANNEL"],
