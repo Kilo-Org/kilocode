@@ -1110,7 +1110,9 @@ export function variants(model: Provider.Model): Record<string, Record<string, a
         )
       }
       // https://v5.ai-sdk.dev/providers/ai-sdk-providers/openai
-      const efforts = openaiReasoningEfforts(model.api.id, model.release_date)
+      // kilocode_change start - providerID "openai" serves first-party OpenAI models, so a post-cutoff
+      // id like gpt-6 keeps rollout tiers via release-date logic instead of collapsing to low/medium/high
+      const efforts = openaiReasoningEfforts(model.api.id, model.release_date, model.providerID === "openai")
       return Object.fromEntries(
         efforts.map((effort) => [
           effort,

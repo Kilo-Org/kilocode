@@ -139,4 +139,28 @@ describe("ProviderTransform.variants - gpt-5 rollout-tier gate", () => {
     )
     expect(Object.keys(result)).toEqual(["none", "low", "medium", "high", "xhigh"])
   })
+
+  test("first-party openai with a post-cutoff id keeps rollout tiers via release-date logic", () => {
+    const result = ProviderTransform.variants(
+      model({
+        id: "gpt-6",
+        providerID: "openai",
+        api: { id: "gpt-6", url: "https://api.openai.com", npm: "@ai-sdk/openai" },
+        release_date: "2027-01-01",
+      }),
+    )
+    expect(Object.keys(result)).toEqual(["none", "low", "medium", "high", "xhigh"])
+  })
+
+  test("third-party openai-compatible with a post-cutoff id stays gated to widely supported efforts", () => {
+    const result = ProviderTransform.variants(
+      model({
+        id: "gpt-6",
+        providerID: "custom",
+        api: { id: "gpt-6", url: "https://api.custom.com", npm: "@ai-sdk/openai" },
+        release_date: "2027-01-01",
+      }),
+    )
+    expect(Object.keys(result)).toEqual(["low", "medium", "high"])
+  })
 })
