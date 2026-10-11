@@ -587,8 +587,6 @@ internal suspend fun awaitReady(
     }
 }
 
-private const val DEFAULT_CONFIG = """{"permission":{"edit":"ask"}}"""
-
 // Must be called from a background thread — devStorageEnv() performs blocking I/O (mkdirs).
 internal fun buildKiloCliEnv(
     pwd: String,
@@ -607,7 +605,6 @@ internal fun buildKiloCliEnv(
     put("KILO_TELEMETRY_LEVEL", if (KiloDevMode.enabled()) "off" else "all")
     if (!KiloClaudeCompatSettings.get()) put("KILO_DISABLE_CLAUDE_CODE", "true")
     put("KILOCODE_FEATURE", "jetbrains-plugin")
-    putIfAbsent("KILO_CONFIG_CONTENT", DEFAULT_CONFIG)
     ideEnv(log).forEach { entry -> put(entry.key, entry.value) }
     devStorageEnv(log)?.forEach { entry -> put(entry.key, entry.value) }
 }
