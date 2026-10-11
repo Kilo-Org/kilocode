@@ -226,6 +226,7 @@ internal class AgentsSettingsUi(
 
     override fun applyDraft() {
         val token = state.start() ?: return
+        val retained = details
         syncNames()
         syncPicker()
         view.update(rows())
@@ -276,7 +277,7 @@ internal class AgentsSettingsUi(
                 if (failed == null && change != null) changed = true
             }
             if (changed) waitForReady()
-            val agents = behavior.agents(dir)
+            val agents = behavior.refreshAgents(dir, retained)
             val next = agentsDraft(app.state.value.config, agents)
             withContext(edt) {
                 if (!active(id)) {
@@ -347,12 +348,6 @@ internal class AgentsSettingsUi(
                 AgentIntent.Unchanged,
                 AgentIntent.Modified,
                 -> listOfNotNull(
-                    ActiveListCell(
-                        MODEL_CELL,
-                        modelLabel(item.model),
-                        alwaysVisible = true,
-                        tooltip = KiloBundle.message("settings.agentBehavior.agents.edit.model.override.description"),
-                    ),
                     ActiveListCell(EDIT_CELL, KiloBundle.message("settings.agentBehavior.edit")),
                     ActiveListCell(
                     DELETE_CELL,
@@ -360,6 +355,15 @@ internal class AgentsSettingsUi(
                     icon = AllIcons.Actions.GC,
                     iconOnly = true,
                     ).takeIf { canDelete(item) },
+                    // Last so it stays pinned to the right edge: this is the only cell an unselected
+                    // row shows, so anything after it would shift it sideways once selecting the row
+                    // revealed Edit and Delete.
+                    ActiveListCell(
+                        MODEL_CELL,
+                        modelLabel(item.model),
+                        alwaysVisible = true,
+                        tooltip = KiloBundle.message("settings.agentBehavior.agents.edit.model.override.description"),
+                    ),
                 )
             }
         }
@@ -369,7 +373,7 @@ internal class AgentsSettingsUi(
     private fun editable(intent: AgentIntent) = intent == AgentIntent.Unchanged || intent == AgentIntent.Modified
 
     private fun modelLabel(model: String?): String {
-        if (model == null) return KiloBundle.message("settings.agentBehavior.agents.edit.default")
+        if (model == null) return KiloBundle.message("settings.agentBehavior.agents.model.default")
         val item = models.firstOrNull { it.key == model || it.id == model } ?: return model
         return ModelText.buttonLabel(item)
     }

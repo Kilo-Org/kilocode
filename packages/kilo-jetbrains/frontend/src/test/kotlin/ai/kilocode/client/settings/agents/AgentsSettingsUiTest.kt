@@ -101,18 +101,26 @@ class AgentsSettingsUiTest : BasePlatformTestCase() {
         }
     }
 
-    fun `test agent rows show the assigned model in a cell before edit`() {
+    /**
+     * The model cell has to be last on both a deletable and a non-deletable row: it is the only cell
+     * an unselected row shows, so anything ordered after it would shift it sideways on selection.
+     */
+    fun `test agent rows pin the assigned model to the last cell`() {
         val panel = panel(model = MODEL)
         flushUntil { rows(panel).size == 6 }
 
         edt {
             val code = rows(panel).single { it.key == "code" }
-            assertEquals(listOf(MODEL_CELL, EDIT_CELL), code.cells.map { it.id })
-            assertEquals("GPT-5", code.cells.first().label)
-            assertTrue(code.cells.first().alwaysVisible)
+            assertEquals(listOf(EDIT_CELL, MODEL_CELL), code.cells.map { it.id })
+            assertEquals("GPT-5", code.cells.last().label)
+            assertTrue(code.cells.last().alwaysVisible)
             val hidden = rows(panel).single { it.key == "hidden" }
-            assertEquals(listOf(MODEL_CELL, EDIT_CELL, DELETE_CELL), hidden.cells.map { it.id })
-            assertEquals(KiloBundle.message("settings.agentBehavior.agents.edit.default"), hidden.cells.first().label)
+            assertEquals(listOf(EDIT_CELL, DELETE_CELL, MODEL_CELL), hidden.cells.map { it.id })
+            assertEquals("Default model", hidden.cells.last().label)
+            assertEquals(
+                KiloBundle.message("settings.agentBehavior.agents.model.default"),
+                hidden.cells.last().label,
+            )
             true
         }
     }
@@ -126,7 +134,7 @@ class AgentsSettingsUiTest : BasePlatformTestCase() {
         edt {
             assertEquals(listOf(null to listOf(MODEL, "kilo/sonnet")), picked)
             val row = rows(panel).single { it.key == "code" }
-            assertEquals("GPT-5", row.cells.first().label)
+            assertEquals("GPT-5", row.cells.single { it.id == MODEL_CELL }.label)
             assertTrue(row.badges.any { it.text == "not applied" })
             assertTrue(panel.modified())
             panel.applyDraft()
@@ -146,7 +154,7 @@ class AgentsSettingsUiTest : BasePlatformTestCase() {
         edt {
             assertEquals(listOf(MODEL to listOf(MODEL, "kilo/sonnet")), picked)
             val row = rows(panel).single { it.key == "code" }
-            assertEquals(KiloBundle.message("settings.agentBehavior.agents.edit.default"), row.cells.first().label)
+            assertEquals(KiloBundle.message("settings.agentBehavior.agents.model.default"), row.cells.single { it.id == MODEL_CELL }.label)
             assertTrue(panel.modified())
             panel.applyDraft()
             true
@@ -156,6 +164,51 @@ class AgentsSettingsUiTest : BasePlatformTestCase() {
         val patch = appRpc.configPatches.single().agents.getValue("code")
         assertNull(patch.model)
         assertTrue(patch.clear.contains("model"))
+    }
+
+    /**
+     * Saving config can bounce the CLI, so the post-apply re-read can fail. It used to fall back to an
+     * empty agent list, which blanked the whole settings list and the default-agent picker until the
+     * user hit refresh.
+     */
+    fun `test apply keeps the rows when the agent re-read fails`() {
+        val panel = panel()
+        flushUntil { rows(panel).size == 6 }
+        edt { clickCell(panel, "code", MODEL_CELL); true }
+        assertTrue(edt { staged(panel) })
+
+        agentRpc.agentsError = RuntimeException("connection reset")
+        edt { panel.applyDraft(); true }
+        // The staged badge clears inside the post-apply EDT update, so this waits for that update
+        // rather than for `modified()`, which already reads false while the save is in flight.
+        flushUntil { appRpc.configPatches.isNotEmpty() && !edt { staged(panel) } }
+
+        edt {
+            assertEquals(listOf(DIR, DIR), agentRpc.agentCalls)
+            assertEquals(6, rows(panel).size)
+            assertEquals("GPT-5", rows(panel).single { it.key == "code" }.cells.single { it.id == MODEL_CELL }.label)
+            assertEquals(listOf("", "ask", "code", "old"), comboItems(picker(panel)))
+            assertEquals("code", picker(panel).selectedItem)
+            true
+        }
+    }
+
+    /** An empty re-read is always a failed read: the built-in agents are never absent. */
+    fun `test apply keeps the rows when the agent re-read comes back empty`() {
+        val panel = panel()
+        flushUntil { rows(panel).size == 6 }
+        edt { clickCell(panel, "code", MODEL_CELL); true }
+        assertTrue(edt { staged(panel) })
+
+        agentRpc.agents = emptyList()
+        edt { panel.applyDraft(); true }
+        flushUntil { appRpc.configPatches.isNotEmpty() && !edt { staged(panel) } }
+
+        edt {
+            assertEquals(6, rows(panel).size)
+            assertEquals("GPT-5", rows(panel).single { it.key == "code" }.cells.single { it.id == MODEL_CELL }.label)
+            true
+        }
     }
 
     fun `test double click opens the agent edit dialog`() {
@@ -572,6 +625,10 @@ class AgentsSettingsUiTest : BasePlatformTestCase() {
     }
 
     private fun list(panel: AgentsSettingsUi) = components(panel).filterIsInstance<JBList<ActiveListItem>>().single()
+
+    /** Whether any row still advertises an unsaved change. */
+    private fun staged(panel: AgentsSettingsUi) =
+        rows(panel).any { row -> row.badges.any { it.text == "not applied" } }
 
     private fun picker(panel: AgentsSettingsUi) = components(panel).filterIsInstance<JComboBox<String>>().single()
 
