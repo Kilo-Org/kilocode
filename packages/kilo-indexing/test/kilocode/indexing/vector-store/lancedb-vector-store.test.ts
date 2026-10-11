@@ -178,7 +178,7 @@ describe("LocalVectorStore", () => {
       expect(mockLanceDBModule.connect).not.toHaveBeenCalled()
     })
 
-    test("serializes native connections across stores", async () => {
+    test("serializes native connections per database, not across stores", async () => {
       const other = new LanceDBVectorStore(path.join("mock", "other"), vectorSize, dbDirectory)
       store["db"] = null
       other["lancedbModule"] = mockLanceDBModule
@@ -193,12 +193,21 @@ describe("LocalVectorStore", () => {
       })
 
       try {
+        // Same store twice still serializes: maximum stays 1.
+        const same = new LanceDBVectorStore(workspacePath, vectorSize, dbDirectory)
+        same["db"] = null
+        same["lancedbModule"] = mockLanceDBModule
+        await Promise.all([store.collectionExists(), same.collectionExists()]).finally(() => same.close())
+        expect(maximum).toBe(1)
+        // A different workspace proceeds in parallel: maximum reaches 2.
+        maximum = 0
+        store["db"] = null
+        other["db"] = null
         await Promise.all([store.collectionExists(), other.collectionExists()])
+        expect(maximum).toBe(2)
       } finally {
         await other.close()
       }
-
-      expect(maximum).toBe(1)
     })
   })
 
@@ -485,6 +494,45 @@ describe("LocalVectorStore", () => {
 
       gate.resolve()
       await store["pending"]
+    })
+
+    test("close waits for a compaction chained after the snapshot", async () => {
+      // A queued second compaction must finish before close releases the db:
+      // the first compaction's finally chains the second one, and the snapshot
+      // taken at close time only covers the first.
+      const first = Promise.withResolvers<void>()
+      const second = Promise.withResolvers<void>()
+      let runs = 0
+      mockTable.optimize.mockImplementation(() => {
+        runs += 1
+        return runs === 1 ? first.promise : second.promise
+      })
+
+      store["_writesSinceCompact"] = LANCEDB_COMPACT_EVERY_WRITES - 2
+      const point = {
+        id: "123e4567-e89b-12d3-a456-426614174000",
+        vector: [1, 2, 3],
+        payload: { filePath: "src/a.ts", fileHash: "hash", codeChunk: "code", startLine: 1, endLine: 2 },
+      }
+      await store.upsertPoints([point])
+      // Cross the threshold again while the first compaction is still running.
+      store["_writesSinceCompact"] = LANCEDB_COMPACT_EVERY_WRITES - 2
+      store["noteWrites"](2)
+
+      const closed = store.close()
+      await Bun.sleep(0)
+      // close must not release the db while either compaction is outstanding.
+      expect(mockDb.close).not.toHaveBeenCalled()
+
+      first.resolve()
+      await Bun.sleep(0)
+      // The chained second compaction is now running; the db must stay open.
+      expect(runs).toBe(2)
+      expect(mockDb.close).not.toHaveBeenCalled()
+
+      second.resolve()
+      await closed
+      expect(mockDb.close).toHaveBeenCalledTimes(1)
     })
   })
 
