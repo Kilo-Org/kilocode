@@ -327,6 +327,67 @@ describe("session compaction cap", () => {
       ),
     120_000,
   )
+  testEffect(makeHttp(undefined, true)).live(
+    "preserves the provider error after a chunk worker length finish",
+    () =>
+      provideTmpdirServer(
+        Effect.fnUntraced(function* ({ llm }) {
+          const sessions = yield* Session.Service
+          const prompt = yield* SessionPrompt.Service
+          const compaction = yield* SessionCompaction.Service
+          const chat = yield* sessions.create({})
+          const errors: Array<typeof Session.Event.Error.data.Type> = []
+          const off = yield* (yield* EventV2Bridge.Service).listen((evt) => {
+            if (evt.type !== Session.Event.Error.type) return Effect.void
+            const data = Schema.decodeUnknownSync(Session.Event.Error.data)(evt.data)
+            if (data.sessionID === chat.id) errors.push(data)
+            return Effect.void
+          })
+          yield* Effect.addFinalizer(() => off)
+          yield* llm.push(reply().text("unfinished sentence").finish("length"))
+          yield* llm.error(400, { error: { message: "provider failure after length" } })
+          const user = yield* prompt.prompt({
+            sessionID: chat.id,
+            agent: "code",
+            model: ref,
+            noReply: true,
+            parts: [{ type: "text", text: "x".repeat(400_000) }],
+          })
+          yield* compaction.create({ sessionID: chat.id, agent: "code", model: ref, auto: false })
+          const messages = yield* sessions.messages({ sessionID: chat.id })
+          const result = yield* compaction.process({
+            sessionID: chat.id,
+            parentID: messages.at(-1)!.info.id,
+            messages,
+            auto: false,
+          })
+          expect(yield* llm.calls).toBe(2)
+          expect(JSON.stringify((yield* llm.inputs).at(0))).toContain("Summarize conversation chunk")
+          const history = yield* sessions.messages({ sessionID: chat.id })
+          expect(history.some((msg) => msg.info.id === user.info.id)).toBe(true)
+          const summaries = history.filter((msg) => msg.info.role === "assistant" && msg.info.summary)
+          expect(summaries).toHaveLength(1)
+          const summary = summaries.at(0)!
+          if (summary.info.role !== "assistant") throw new Error("expected assistant summary")
+          expect(result).toBe("stop")
+          expect(summary.info).toMatchObject({
+            finish: "error",
+            error: {
+              name: "APIError",
+              data: { message: "provider failure after length", statusCode: 400, isRetryable: false },
+            },
+          })
+          expect(errors).toEqual([{ sessionID: chat.id, error: summary.info.error }])
+          expect(summary.parts.filter((part) => part.type === "text")).toEqual([])
+          expect(JSON.stringify(history)).not.toContain("unfinished sentence")
+          expect(JSON.stringify(history)).not.toContain(KiloCompactionChunks.TRUNCATED_SUMMARY)
+          expect(JSON.stringify(errors)).not.toContain(KiloCompactionChunks.TRUNCATED_SUMMARY)
+        }),
+        { config: (url) => ({ ...providerCfg(url), compaction: { tail_turns: 0 } }) },
+      ),
+    120_000,
+  )
+
   for (const scenario of [
     { name: "chunk", text: "x".repeat(400_000), replies: ["length"], calls: 1 },
     { name: "reduce", text: "x".repeat(160_000), turns: 2, replies: ["stop", "stop", "length"], calls: 3 },

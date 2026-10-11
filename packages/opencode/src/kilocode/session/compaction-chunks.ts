@@ -318,7 +318,8 @@ export namespace KiloCompactionChunks {
       )
       const result = out.result
       const output = out.output
-      if (result !== "continue" && out.finish !== "length") return { result, output: undefined, error: out.error }
+      if (out.error || (result !== "continue" && out.finish !== "length"))
+        return { result, output: undefined, error: out.error }
       if (!output || out.finish === "length")
         return {
           result: "stop" as const,
