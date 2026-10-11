@@ -31,6 +31,7 @@ import com.intellij.openapi.ui.TestDialogManager
 import com.intellij.testFramework.LightVirtualFile
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.testFramework.replaceService
+import com.intellij.ui.SearchTextField
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBList
 import com.intellij.util.ui.UIUtil
@@ -348,6 +349,66 @@ class AgentsSettingsUiTest : BasePlatformTestCase() {
         assertTrue(edt { rows(panel).any { it.key == "reviewer" } })
     }
 
+    /**
+     * The re-read fallback is the pre-write list, so it cannot contain an agent this apply just
+     * created. Losing that write would hide a row for an agent whose file was in fact written.
+     */
+    fun `test apply keeps a newly created agent whose re-read fails`() {
+        val input = AgentCreateDto("reviewer", "Review code", description = "Reviews code")
+        val panel = panel(create = { FakeCreateDialog(input) })
+        flushUntil { rows(panel).size == 6 }
+
+        edt {
+            panel.CreateAction().perform()
+            agentRpc.agentsError = RuntimeException("connection reset")
+            panel.applyDraft()
+            true
+        }
+        // Apply clears its busy flag only after the state and rows are updated, so `idle` means the
+        // whole apply has settled rather than just that the write reached the CLI.
+        flushUntil { agentRpc.creations.isNotEmpty() && idle(panel) }
+
+        edt {
+            assertEquals(listOf(input), agentRpc.creations)
+            val row = rows(panel).single { it.key == "reviewer" }
+            assertEquals("Reviews code", row.description)
+            true
+        }
+    }
+
+    fun `test apply keeps a newly imported agent whose re-read comes back empty`() {
+        val panel = panel()
+        flushUntil { rows(panel).size == 6 }
+
+        edt {
+            panel.ImportAction().perform(file("reviewer.agent.json", """
+                {
+                    "name": "reviewer",
+                    "description": "Reviews code",
+                    "prompt": "Review carefully",
+                    "mode": "subagent"
+                }
+            """.trimIndent()))
+            true
+        }
+        // Importing is asynchronous and `applyDraft` no-ops while the panel is busy, so wait for it to
+        // settle before applying. The empty re-read is then set up so the apply hits that path.
+        flushUntil { rows(panel).any { it.key == "reviewer" } && idle(panel) }
+
+        edt {
+            agentRpc.agents = emptyList()
+            panel.applyDraft()
+            true
+        }
+        flushUntil { appRpc.configPatches.isNotEmpty() && idle(panel) }
+
+        edt {
+            val row = rows(panel).single { it.key == "reviewer" }
+            assertEquals("Reviews code", row.description)
+            true
+        }
+    }
+
     fun `test apply waits for backend ready before refetching`() {
         val loading = CompletableDeferred<Unit>()
         val panel = panel()
@@ -626,7 +687,10 @@ class AgentsSettingsUiTest : BasePlatformTestCase() {
 
     private fun list(panel: AgentsSettingsUi) = components(panel).filterIsInstance<JBList<ActiveListItem>>().single()
 
-    /** Whether any row still advertises an unsaved change. */
+    /** The panel disables its search field while a request is in flight. */
+    private fun idle(panel: AgentsSettingsUi) =
+        components(panel).filterIsInstance<SearchTextField>().single().isEnabled
+
     private fun staged(panel: AgentsSettingsUi) =
         rows(panel).any { row -> row.badges.any { it.text == "not applied" } }
 
