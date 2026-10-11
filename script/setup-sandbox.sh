@@ -83,7 +83,11 @@ extract_intercept_ca() {
       # self-signed candidate only counts when the presented leaf actually
       # verifies against it. Without this check setup_ca would install the
       # attacker's root as git's global CA and into the JVM cacerts.
-      if openssl verify -CAfile "$f" "$leaf" >/dev/null 2>&1; then
+      # -no-CAfile/-no-CApath anchor trust solely on the candidate: without
+      # them the system store is still consulted, so the leaf (which already
+      # verified against the system store above) would verify against *any*
+      # self-signed candidate and the first one would win.
+      if openssl verify -no-CAfile -no-CApath -CAfile "$f" "$leaf" >/dev/null 2>&1; then
         verified="$f"
         break
       fi
