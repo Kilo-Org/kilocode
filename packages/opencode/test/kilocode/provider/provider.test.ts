@@ -5,7 +5,7 @@ import { Effect } from "effect"
 import { Env } from "@/env"
 import { Plugin } from "@/plugin/index"
 import { Provider } from "@/provider/provider"
-import { cheapestSmallModel } from "@/kilocode/provider/provider"
+import { cheapestSmallModel, isLoopbackProvider } from "@/kilocode/provider/provider"
 import { disposeAllInstances } from "../../fixture/fixture"
 import { testEffect } from "../../lib/effect"
 
@@ -110,6 +110,34 @@ it.instance(
 // The #13192 contract: without kilo credentials the cloud fallback stays
 // unreachable, so auxiliary tasks fall back to the session's own model
 // (getSmallModel returning undefined).
+it.instance(
+  "getSmallModel returns undefined for loopback providers so callers keep the session model",
+  Effect.gen(function* () {
+    for (const key of ["KILO_API_KEY", "KILO_AUTH_CONTENT", "KILO_CONFIG_CONTENT"]) {
+      yield* clearEnv(key)
+    }
+    const model = yield* Provider.use.getSmallModel(ProviderV2.ID.make("lmstudio"))
+    expect(model).toBeUndefined()
+  }),
+  {
+    config: {
+      provider: {
+        lmstudio: {
+          name: "LM Studio",
+          npm: "@ai-sdk/openai-compatible",
+          models: {
+            // Catalog lists every known model, but only installed ones are
+            // served. The cheap pick must not name an uninstalled model.
+            "openai/gpt-oss-20b": { release_date: "2026-01-01" },
+            "qwen/qwen3-30b-a3b-2507": { release_date: "2026-02-01" },
+          },
+          options: { baseURL: "http://localhost:1234/v1" },
+        },
+        kilo: null,
+      },
+    },
+  },
+)
 it.instance(
   "getSmallModel returns undefined without kilo credentials when the provider has no chat-capable model",
   Effect.gen(function* () {
@@ -255,5 +283,42 @@ describe("cheapestSmallModel", () => {
       model({ id: "chat", cost: { input: 0.5, output: 0.5, cache: { read: 0, write: 0 } } }),
     ])
     expect(picked).toMatchObject({ id: "chat" })
+  })
+
+  test("skips safety and classification models even when they are free", () => {
+    const free = { input: 0, output: 0, cache: { read: 0, write: 0 } }
+    const picked = cheapestSmallModel([
+      model({ id: "gpt-oss-safeguard-120b", cost: free }),
+      model({ id: "qwen3guard-gen-8b", cost: free }),
+      model({ id: "llama-guard-4-12b", cost: free }),
+      model({ id: "chat", cost: { input: 0.5, output: 0.5, cache: { read: 0, write: 0 } } }),
+    ])
+    expect(picked).toMatchObject({ id: "chat" })
+  })
+
+  test("checks the api id so an alias cannot bypass the embedding exclusion", () => {
+    const free = { input: 0, output: 0, cache: { read: 0, write: 0 } }
+    const picked = cheapestSmallModel([
+      model({ id: "vectors", api: { id: "nomic-embed-text" }, cost: free }),
+      model({ id: "chat", api: { id: "chat" }, cost: { input: 0.5, output: 0.5, cache: { read: 0, write: 0 } } }),
+    ])
+    expect(picked).toMatchObject({ id: "chat" })
+  })
+})
+
+describe("isLoopbackProvider", () => {
+  test("loopback baseURL marks a local provider", () => {
+    expect(isLoopbackProvider({ options: { baseURL: "http://localhost:1234/v1" }, models: {} })).toBe(true)
+    expect(isLoopbackProvider({ options: { baseURL: "http://127.0.0.1:11434/v1" }, models: {} })).toBe(true)
+  })
+
+  test("remote baseURL is not local even for a local-sounding provider", () => {
+    expect(isLoopbackProvider({ options: { baseURL: "https://api.openai.com/v1" }, models: {} })).toBe(false)
+  })
+
+  test("loopback model urls mark a local provider without a baseURL", () => {
+    const url = "http://127.0.0.1:1234/v1"
+    expect(isLoopbackProvider({ options: {}, models: { a: { api: { url } } as any } })).toBe(true)
+    expect(isLoopbackProvider({ options: {}, models: {} })).toBe(false)
   })
 })
