@@ -96,7 +96,6 @@ If a payment fails, we will notify you via email and automatically pause auto-to
 {% /callout %}
 
 - **Flexibility** — You can disable automatic top-ups at any time.
-- **No Expiration** — Any credits you purchase will never expire; they remain available in your account until used.
 
 ### Configuring Automatic Top-Up
 
