@@ -20,8 +20,8 @@ import { LocationServiceMap } from "@opencode-ai/core/location-services"
 import { InstanceBootstrap } from "../../src/project/bootstrap-service"
 import { InstanceBootstrap as InstanceBootstrapNode } from "../../src/project/bootstrap"
 
-// kilocode_change - pin the client so client-keyed permission defaults (e.g. JetBrains `edit: ask`) stay deterministic
-process.env["KILO_CLIENT"] = "cli"
+// Pin the client so client-keyed permission defaults (e.g. JetBrains `edit: ask`) stay deterministic.
+process.env["KILO_CLIENT"] = "cli" // kilocode_change
 
 const agentLayer = (flags: Partial<RuntimeFlags.Info> = {}) =>
   AppNodeBuilder.build(Agent.node, [
