@@ -1,6 +1,5 @@
 ---
 "kilo-code": patch
-"@kilocode/cli": patch
 ---
 
-Show estimated context usage immediately after compaction, then replace it with the next response's reported usage
+Clear outdated context usage after compaction until the next response reports its usage

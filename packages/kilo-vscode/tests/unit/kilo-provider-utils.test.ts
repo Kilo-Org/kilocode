@@ -360,7 +360,7 @@ describe("mapSSEEventToWebviewMessage", () => {
       aggregateID: "sessionID",
       data: {
         sessionID: "sess-1",
-        info: makeAssistantMessage({ cost: 0.001, summary: true, context: 160_000 }),
+        info: makeAssistantMessage({ cost: 0.001, summary: true, estimate: 160_000 }),
       },
     }
     const msg = mapSSEEventToWebviewMessage(event, "sess-1")
@@ -368,7 +368,7 @@ describe("mapSSEEventToWebviewMessage", () => {
     if (msg?.type === "messageCreated") {
       expect(msg.message.createdAt).toBe(new Date(1700000000000).toISOString())
       expect(msg.message.cost).toBe(0.001)
-      expect(msg.message.context).toBe(160_000)
+      expect(msg.message.estimate).toBe(160_000)
     }
   })
 

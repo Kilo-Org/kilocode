@@ -143,8 +143,15 @@ const live: Layer.Layer<
           : base.messages
       const preflight = input.preflight === true && KiloSessionOverflow.enabled({ cfg, model: input.model })
       const cap = KiloLLM.needsEstimate({ model: input.model, configured: base.params.maxOutputTokens })
-      const usage = cap || preflight ? KiloSessionOverflow.measure({ messages: estimated, tools }) : undefined
-      KiloContextUsage.record(input.sessionID, input.preflight, usage)
+      const usage =
+        cap || preflight
+          ? KiloSessionOverflow.measure({ messages: estimated, tools })
+          : undefined
+      KiloContextUsage.record(input.sessionID, input.preflight, cap ? usage : undefined, {
+        agent: input.agent.name,
+        providerID: input.model.providerID,
+        modelID: input.model.id,
+      })
       const maxOutputTokens = KiloLLM.capOutputTokens({
         model: input.model,
         messages: estimated,

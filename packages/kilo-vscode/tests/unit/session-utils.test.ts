@@ -235,12 +235,12 @@ describe("latestContextUsage", () => {
   })
 
   it("uses the compacted context estimate instead of the summary request's usage", () => {
-    expect(latestContextUsage([response, { ...summary, context: 160_000 }], limit)).toEqual({
+    expect(latestContextUsage([response, { ...summary, estimate: 160_000 }], limit)).toEqual({
       tokens: 160_000,
       percentage: 16,
       estimated: true,
     })
-    expect(latestContextUsage([response, { ...summary, context: 160_000, tokens: zero }], undefined)).toEqual({
+    expect(latestContextUsage([response, { ...summary, estimate: 160_000, tokens: zero }], undefined)).toEqual({
       tokens: 160_000,
       percentage: null,
       estimated: true,
@@ -249,20 +249,20 @@ describe("latestContextUsage", () => {
 
   it("replaces an estimate with the next response's real usage", () => {
     const next = { ...response, id: "next", tokens: { input: 159_000, output: 1_000 } }
-    expect(latestContextUsage([response, { ...summary, context: 150_000 }, next], limit)).toEqual({
+    expect(latestContextUsage([response, { ...summary, estimate: 150_000 }, next], limit)).toEqual({
       tokens: 160_000,
       percentage: 16,
     })
   })
 
   it("ignores estimates on failed and in-progress summaries and chunk workers", () => {
-    const pending = { ...summary, finish: undefined, time: { created: 1 }, context: 160_000 }
+    const pending = { ...summary, finish: undefined, time: { created: 1 }, estimate: 160_000 }
     expect(latestContextUsage([response, pending], limit)).toEqual({ tokens: 820_209, percentage: 82 })
-    expect(latestContextUsage([response, { ...summary, finish: "error", context: 160_000 }], limit)).toEqual({
+    expect(latestContextUsage([response, { ...summary, finish: "error", estimate: 160_000 }], limit)).toEqual({
       tokens: 820_209,
       percentage: 82,
     })
-    expect(latestContextUsage([response, pending, { ...summary, id: "worker", context: 1_000 }], limit)).toEqual({
+    expect(latestContextUsage([response, pending, { ...summary, id: "worker", estimate: 1_000 }], limit)).toEqual({
       tokens: 820_209,
       percentage: 82,
     })

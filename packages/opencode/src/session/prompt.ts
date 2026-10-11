@@ -1655,9 +1655,18 @@ export const layer = Layer.effect(
             auto: task.auto,
             overflow: task.overflow,
           })
-          // kilocode_change start - publish compacted context usage or surface a terminal compaction error
+          // kilocode_change start - compaction.process returns "stop" after
+          // setting a terminal error on the summary message: either a
+          // ContextOverflowError or the empty-summary APIError; surface as turn error
           yield* KiloContextUsage.compacted({ sessionID, parentID: task.messageID, model, session: sessions }).pipe(
             Effect.provideService(Database.Service, database),
+            Effect.catchCause((cause) =>
+              Effect.logWarning("context estimate failed", {
+                "session.id": sessionID,
+                messageID: task.messageID,
+                cause,
+              }),
+            ),
           )
           if (result === "stop") {
             closeReasons.set(sessionID, "error")

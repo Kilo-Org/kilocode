@@ -11909,21 +11909,35 @@
             }
           },
           "400": {
-            "description": "Bad request",
+            "description": "ConfigOverlayWriteError | InvalidRequestError",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/BadRequestError"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ConfigOverlayWriteError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/InvalidRequestError"
+                    }
+                  ]
                 }
               }
             }
           },
           "409": {
-            "description": "ConfigOverlayConflictError",
+            "description": "ConfigOverlayConflictError | ConfigOverlayShadowedError",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ConfigOverlayConflictError"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ConfigOverlayConflictError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ConfigOverlayShadowedError"
+                    }
+                  ]
                 }
               }
             }
@@ -27880,15 +27894,6 @@
             "$ref": "#/components/schemas/EventSandboxStatusChanged"
           },
           {
-            "$ref": "#/components/schemas/EventSuggestionShown"
-          },
-          {
-            "$ref": "#/components/schemas/EventSuggestionAccepted"
-          },
-          {
-            "$ref": "#/components/schemas/EventSuggestionDismissed"
-          },
-          {
             "$ref": "#/components/schemas/EventKilocodeAgent_managerStart"
           },
           {
@@ -27905,6 +27910,15 @@
           },
           {
             "$ref": "#/components/schemas/EventKilo-sessionsRemote-status-changed"
+          },
+          {
+            "$ref": "#/components/schemas/EventSuggestionShown"
+          },
+          {
+            "$ref": "#/components/schemas/EventSuggestionAccepted"
+          },
+          {
+            "$ref": "#/components/schemas/EventSuggestionDismissed"
           },
           {
             "$ref": "#/components/schemas/EventLspClientDiagnostics"
@@ -28487,63 +28501,6 @@
         "required": ["id", "sessionID", "command", "cwd", "ports", "status", "lifetime", "ready", "output", "time"],
         "additionalProperties": false
       },
-      "SuggestionRequest": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "pattern": "^sug"
-          },
-          "sessionID": {
-            "type": "string",
-            "pattern": "^ses"
-          },
-          "text": {
-            "type": "string"
-          },
-          "actions": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "label": {
-                  "type": "string",
-                  "description": "Button or option label (1-5 words)"
-                },
-                "description": {
-                  "type": "string"
-                },
-                "prompt": {
-                  "type": "string",
-                  "description": "Synthetic user prompt to inject when this action is accepted"
-                }
-              },
-              "required": ["label", "prompt"],
-              "additionalProperties": false
-            },
-            "minItems": 1,
-            "maxItems": 2
-          },
-          "blocking": {
-            "type": "boolean"
-          },
-          "tool": {
-            "type": "object",
-            "properties": {
-              "messageID": {
-                "type": "string"
-              },
-              "callID": {
-                "type": "string"
-              }
-            },
-            "required": ["messageID", "callID"],
-            "additionalProperties": false
-          }
-        },
-        "required": ["id", "sessionID", "text", "actions"],
-        "additionalProperties": false
-      },
       "AgentManagerRequestID": {
         "type": "string"
       },
@@ -28928,6 +28885,63 @@
             "$ref": "#/components/schemas/NotebookExecuteRequest"
           }
         ]
+      },
+      "SuggestionRequest": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^sug"
+          },
+          "sessionID": {
+            "type": "string",
+            "pattern": "^ses"
+          },
+          "text": {
+            "type": "string"
+          },
+          "actions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "label": {
+                  "type": "string",
+                  "description": "Button or option label (1-5 words)"
+                },
+                "description": {
+                  "type": "string"
+                },
+                "prompt": {
+                  "type": "string",
+                  "description": "Synthetic user prompt to inject when this action is accepted"
+                }
+              },
+              "required": ["label", "prompt"],
+              "additionalProperties": false
+            },
+            "minItems": 1,
+            "maxItems": 2
+          },
+          "blocking": {
+            "type": "boolean"
+          },
+          "tool": {
+            "type": "object",
+            "properties": {
+              "messageID": {
+                "type": "string"
+              },
+              "callID": {
+                "type": "string"
+              }
+            },
+            "required": ["messageID", "callID"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["id", "sessionID", "text", "actions"],
+        "additionalProperties": false
       },
       "IndexingStatusState": {
         "type": "string",
@@ -29640,7 +29654,7 @@
           "summary": {
             "type": "boolean"
           },
-          "context": {
+          "estimate": {
             "type": "integer",
             "minimum": 0
           },
@@ -31024,15 +31038,6 @@
                 "$ref": "#/components/schemas/EventSandboxStatusChanged"
               },
               {
-                "$ref": "#/components/schemas/EventSuggestionShown"
-              },
-              {
-                "$ref": "#/components/schemas/EventSuggestionAccepted"
-              },
-              {
-                "$ref": "#/components/schemas/EventSuggestionDismissed"
-              },
-              {
                 "$ref": "#/components/schemas/EventKilocodeAgent_managerStart"
               },
               {
@@ -31049,6 +31054,15 @@
               },
               {
                 "$ref": "#/components/schemas/EventKilo-sessionsRemote-status-changed"
+              },
+              {
+                "$ref": "#/components/schemas/EventSuggestionShown"
+              },
+              {
+                "$ref": "#/components/schemas/EventSuggestionAccepted"
+              },
+              {
+                "$ref": "#/components/schemas/EventSuggestionDismissed"
               },
               {
                 "$ref": "#/components/schemas/EventLspClientDiagnostics"
@@ -40149,6 +40163,53 @@
         "required": ["code", "message", "target"],
         "additionalProperties": false
       },
+      "ConfigOverlayShadowedError": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string"
+          },
+          "path": {
+            "type": "string"
+          },
+          "shadowedBy": {
+            "type": "string"
+          }
+        },
+        "required": ["message", "path"],
+        "additionalProperties": false
+      },
+      "ConfigOverlayWriteError": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string"
+          },
+          "path": {
+            "type": "string"
+          },
+          "issues": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "message": {
+                  "type": "string"
+                },
+                "path": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "required": ["message", "path"]
+            }
+          }
+        },
+        "required": ["message"],
+        "additionalProperties": false
+      },
       "ConfigRulesResponse": {
         "type": "object",
         "properties": {
@@ -43708,103 +43769,6 @@
         "required": ["id", "type", "properties"],
         "additionalProperties": false
       },
-      "EventSuggestionShown": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "type": {
-            "type": "string",
-            "enum": ["suggestion.shown"]
-          },
-          "properties": {
-            "$ref": "#/components/schemas/SuggestionRequest"
-          }
-        },
-        "required": ["id", "type", "properties"],
-        "additionalProperties": false
-      },
-      "EventSuggestionAccepted": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "type": {
-            "type": "string",
-            "enum": ["suggestion.accepted"]
-          },
-          "properties": {
-            "type": "object",
-            "properties": {
-              "sessionID": {
-                "type": "string",
-                "pattern": "^ses"
-              },
-              "requestID": {
-                "type": "string",
-                "pattern": "^sug"
-              },
-              "index": {
-                "type": "integer",
-                "minimum": 0
-              },
-              "action": {
-                "type": "object",
-                "properties": {
-                  "label": {
-                    "type": "string",
-                    "description": "Button or option label (1-5 words)"
-                  },
-                  "description": {
-                    "type": "string"
-                  },
-                  "prompt": {
-                    "type": "string",
-                    "description": "Synthetic user prompt to inject when this action is accepted"
-                  }
-                },
-                "required": ["label", "prompt"],
-                "additionalProperties": false
-              }
-            },
-            "required": ["sessionID", "requestID", "index", "action"],
-            "additionalProperties": false
-          }
-        },
-        "required": ["id", "type", "properties"],
-        "additionalProperties": false
-      },
-      "EventSuggestionDismissed": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "type": {
-            "type": "string",
-            "enum": ["suggestion.dismissed"]
-          },
-          "properties": {
-            "type": "object",
-            "properties": {
-              "sessionID": {
-                "type": "string",
-                "pattern": "^ses"
-              },
-              "requestID": {
-                "type": "string",
-                "pattern": "^sug"
-              }
-            },
-            "required": ["sessionID", "requestID"],
-            "additionalProperties": false
-          }
-        },
-        "required": ["id", "type", "properties"],
-        "additionalProperties": false
-      },
       "EventKilocodeAgent_managerStart": {
         "type": "object",
         "properties": {
@@ -44001,6 +43965,103 @@
               }
             },
             "required": ["enabled", "connected"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["id", "type", "properties"],
+        "additionalProperties": false
+      },
+      "EventSuggestionShown": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["suggestion.shown"]
+          },
+          "properties": {
+            "$ref": "#/components/schemas/SuggestionRequest"
+          }
+        },
+        "required": ["id", "type", "properties"],
+        "additionalProperties": false
+      },
+      "EventSuggestionAccepted": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["suggestion.accepted"]
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "sessionID": {
+                "type": "string",
+                "pattern": "^ses"
+              },
+              "requestID": {
+                "type": "string",
+                "pattern": "^sug"
+              },
+              "index": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "action": {
+                "type": "object",
+                "properties": {
+                  "label": {
+                    "type": "string",
+                    "description": "Button or option label (1-5 words)"
+                  },
+                  "description": {
+                    "type": "string"
+                  },
+                  "prompt": {
+                    "type": "string",
+                    "description": "Synthetic user prompt to inject when this action is accepted"
+                  }
+                },
+                "required": ["label", "prompt"],
+                "additionalProperties": false
+              }
+            },
+            "required": ["sessionID", "requestID", "index", "action"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["id", "type", "properties"],
+        "additionalProperties": false
+      },
+      "EventSuggestionDismissed": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["suggestion.dismissed"]
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "sessionID": {
+                "type": "string",
+                "pattern": "^ses"
+              },
+              "requestID": {
+                "type": "string",
+                "pattern": "^sug"
+              }
+            },
+            "required": ["sessionID", "requestID"],
             "additionalProperties": false
           }
         },
