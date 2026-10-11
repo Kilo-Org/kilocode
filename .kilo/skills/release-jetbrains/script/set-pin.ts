@@ -64,6 +64,8 @@ if (previous === version) {
   console.log(`${file} already pins CLI v${version}`)
 } else {
   console.log(`Pinned JetBrains CLI ${previous} -> ${version} in ${file}`)
+  await $`bun install --lockfile-only`.quiet()
+  console.log("Regenerated bun.lock for the new pin")
 }
 console.log("Test locally with: cd packages/kilo-jetbrains && ./gradlew typecheck && ./gradlew test")
 console.log("When satisfied, run this script again with --pr so the bump lands on main before prepare tags it.")
@@ -84,6 +86,7 @@ async function pr(version: string, pre: boolean) {
   await ensure(branch, main)
   const current = (await $`gh api ${`repos/${repo}/contents/${file}?ref=${branch}`}`.json()) as { sha: string }
   await $`gh api --method PUT ${`repos/${repo}/contents/${file}`} -f message=${`chore(jetbrains): bump CLI pin to v${version}`} -f content=${Buffer.from(body).toString("base64")} -f branch=${branch} -f sha=${current.sha}`.quiet()
+  await pushLock(version, previous, branch)
 
   const title = `chore(jetbrains): bump CLI pin to v${version}`
   const desc = [
@@ -117,6 +120,28 @@ async function ensure(branch: string, sha: string) {
     return
   }
   await $`gh api --method POST ${`repos/${repo}/git/refs`} -f ref=${`refs/heads/${branch}`} -f sha=${sha}`.quiet()
+}
+
+// Update bun.lock for the pin bump so the lockfile guard in
+// .github/actions/setup-bun keeps passing. A workspace-only version bump
+// alters exactly one lockfile line (the workspace `version` entry — verified
+// by regenerating locally), so patch that line directly through the API
+// instead of cloning the repo and re-running install.
+async function pushLock(version: string, previous: string, branch: string) {
+  const entry = (await $`gh api ${`repos/${repo}/contents/bun.lock?ref=${branch}`} --jq .content`.text()).trim()
+  const text = Buffer.from(entry, "base64").toString("utf8")
+  const anchor = `"packages/kilo-jetbrains": {\n      "name": "@kilocode/kilo-jetbrains",\n      "version": "${previous}",`
+  const patched = text.replace(
+    anchor,
+    `"packages/kilo-jetbrains": {\n      "name": "@kilocode/kilo-jetbrains",\n      "version": "${version}",`,
+  )
+  if (patched === text) {
+    console.warn("bun.lock workspace entry not found; skipping bun.lock update")
+    return
+  }
+  const current = (await $`gh api ${`repos/${repo}/contents/bun.lock?ref=${branch}`}`.json()) as { sha: string }
+  await $`gh api --method PUT ${`repos/${repo}/contents/bun.lock`} -f message=${`chore(jetbrains): bump CLI pin to v${version}`} -f content=${Buffer.from(patched).toString("base64")} -f branch=${branch} -f sha=${current.sha}`.quiet()
+  console.log(`Updated bun.lock for pin v${previous} -> v${version}`)
 }
 
 async function tag(branch: string, version: string, pre: boolean) {
