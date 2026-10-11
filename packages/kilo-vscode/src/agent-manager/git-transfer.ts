@@ -118,17 +118,13 @@ export async function apply(
   log: (...args: unknown[]) => void,
   binary = "git",
 ): Promise<{ ok: boolean; error?: string }> {
-  // Apply staged patch first, then re-stage those files
+  // Apply staged changes to both the index and working tree, including rename sources.
   if (snapshot.staged) {
-    const result = await git(["apply", "--whitespace=nowarn", "-"], target, snapshot.staged, binary)
+    const result = await git(["apply", "--index", "--whitespace=nowarn", "-"], target, snapshot.staged, binary)
     if (result.code !== 0) {
       const msg = result.stderr.trim() || "Patch did not apply"
       log("Failed to apply staged patch:", msg)
       return { ok: false, error: `Staged patch failed: ${msg}` }
-    }
-    const files = parsePatchFiles(snapshot.staged)
-    if (files.length > 0) {
-      await git(["add", "--", ...files], target, undefined, binary)
     }
   }
 
@@ -154,14 +150,4 @@ export async function apply(
   }
 
   return { ok: true }
-}
-
-/** Extract file paths from a unified diff's `diff --git a/... b/...` headers. */
-function parsePatchFiles(patch: string): string[] {
-  const files: string[] = []
-  for (const line of patch.split("\n")) {
-    const match = /^diff --git a\/.+ b\/(.+)$/.exec(line)
-    if (match && match[1]) files.push(match[1])
-  }
-  return files
 }

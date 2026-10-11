@@ -636,6 +636,7 @@ setInterval(() => {}, 1_000)
         const sessionID = SessionID.descending()
         const child = path.join(test.directory, "descendant.mjs")
         const ready = path.join(test.directory, "descendant-ready")
+        const leaderPid = path.join(test.directory, "descendant-leader-pid")
         yield* Effect.promise(() =>
           Bun.write(
             child,
@@ -652,8 +653,9 @@ setInterval(() => {}, 1_000)
             test.directory,
             "leader.cjs",
             `const { spawn } = require("child_process")
-const { existsSync } = require("fs")
+const { existsSync, writeFileSync } = require("fs")
 console.log("leader:" + process.pid)
+writeFileSync(${JSON.stringify(leaderPid)}, String(process.pid))
 const child = spawn(process.execPath, [${JSON.stringify(child)}], {
   stdio: "ignore",
   detached: process.platform === "win32",
@@ -679,7 +681,10 @@ if (process.platform === "win32") setTimeout(() => {}, 5_000)
             ready: { pattern: "child:", timeout: 15_000 },
           }),
         )
-        const leader = Number(info.output.match(/leader:(\d+)/)?.[1])
+        // Read the leader pid from the file it writes, not from captured output: the leader
+        // writes it before spawning, while the captured stream can still be missing the first
+        // line when the ready pattern matches on a loaded Windows runner.
+        const leader = Number(yield* Effect.promise(() => Bun.file(leaderPid).text()))
         const pid = Number(info.output.match(/child:(\d+)/)?.[1])
         const runner = info.pid
         try {

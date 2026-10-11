@@ -69,6 +69,8 @@ export interface GlobInput {
   readonly follow?: boolean
   readonly signal?: AbortSignal
   readonly validate?: Effect.Effect<void, unknown> // kilocode_change - bind approved searches at spawn
+  readonly noRequireGit?: boolean // kilocode_change - honor ignore files outside a git repository
+  readonly exclude?: readonly string[] // kilocode_change - additional exclusion globs
 }
 
 export interface GrepInput extends KiloGrep.Options {
@@ -93,6 +95,7 @@ export interface SearchResult<A> {
   readonly items: readonly A[]
   readonly truncated: boolean
   readonly partial: boolean
+  readonly invalidPattern?: boolean // kilocode_change - distinguish malformed globs from transient errors
 }
 // kilocode_change end
 
@@ -100,8 +103,12 @@ export class Service extends Context.Service<Service, Interface>()("@opencode/v2
 
 const failure = (message: string, cause?: unknown) => new Error({ message, cause })
 
+// kilocode_change start - also classify invalid globs for the marketplace scan
 const isInvalidPattern = (stderr: string) =>
-  stderr.includes("regex parse error") || stderr.includes("error parsing regex")
+  stderr.includes("regex parse error") ||
+  stderr.includes("error parsing regex") ||
+  stderr.includes("error parsing glob")
+// kilocode_change end
 
 const layer = Layer.effect(
   Service,
@@ -206,6 +213,7 @@ const layer = Layer.effect(
           cwd: input.cwd,
           limit: input.limit,
           signal: input.signal,
+          pattern: input.pattern, // kilocode_change - surface malformed globs instead of a bare partial result
           timeout: 2 * 60 * 1000, // kilocode_change
           validate: input.validate, // kilocode_change - preserve spawn-bound target validation
           args: [
@@ -213,7 +221,9 @@ const layer = Layer.effect(
             "--files",
             ...(input.hidden ? ["--hidden"] : []),
             ...(input.follow ? ["--follow"] : []),
+            ...(input.noRequireGit ? ["--no-require-git"] : []), // kilocode_change
             `--glob=${input.pattern}`,
+            ...(input.exclude ?? []).map((glob) => `--glob=!${glob}`), // kilocode_change
             "--glob=!**/.git/**",
             ".",
           ],
@@ -236,7 +246,11 @@ const layer = Layer.effect(
             ),
           })),
           // kilocode_change end
-          Effect.catchTag("Ripgrep.InvalidPatternError", (cause) => Effect.fail(failure(cause.message, cause))),
+          // kilocode_change start - a malformed glob narrows the result, not the whole request
+          Effect.catchTag("Ripgrep.InvalidPatternError", () =>
+            Effect.succeed({ items: [], truncated: false, partial: true, invalidPattern: true }),
+          ),
+          // kilocode_change end
         ),
       find: (input) =>
         run<Entry>({

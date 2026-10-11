@@ -8,13 +8,15 @@ export interface RetentionResult {
   skippedActive: number
   failed: number
   durationMs: number
+  cancelled?: boolean
+  reclaimedBytes?: number
 }
 
 export interface RetentionStatus {
   policy: { enabled: boolean; maxAgeDays: number }
   last: RetentionResult | null
   progress?: {
-    phase: "scanning" | "deleting"
+    phase: "scanning" | "deleting" | "cancelling"
     total: number
     processed: number
     deleted: number
@@ -123,6 +125,14 @@ export class RetentionService {
         throw signal.aborted ? signal.reason : error
       })
     return this.normalize(response.data)
+  }
+
+  /** Asks the backend to stop the active pass; false when none is running. */
+  async cancel(): Promise<boolean> {
+    const client = this.connection.getClient()
+    const directory = this.directory()
+    const response = await client.kilocode.retention.cancel(directory ? { directory } : {}, { throwOnError: true })
+    return response.data.requested
   }
 
   /** The SDK types JSON numbers as a NaN/Infinity union; the wire format is a plain number. */

@@ -87,22 +87,42 @@ describe("createThrottledValue cadence", () => {
 
 describe("bashLineUpdate", () => {
   test("skips an unchanged render", () => {
-    expect(bashLineUpdate(["a", "b"], ["a", "b"])).toEqual({ start: 0, skip: true })
+    expect(bashLineUpdate(["a", "b"], ["a", "b"])).toEqual({ start: 0, skip: true, shift: 0 })
   })
 
   test("starts after the unchanged prefix when lines are appended", () => {
-    expect(bashLineUpdate(["a", "b"], ["a", "b", "c"])).toEqual({ start: 2, skip: false })
+    expect(bashLineUpdate(["a", "b"], ["a", "b", "c"])).toEqual({ start: 2, skip: false, shift: 0 })
   })
 
   test("re-highlights a changed tail line", () => {
-    expect(bashLineUpdate(["a", "b", "c"], ["a", "b", "c2"])).toEqual({ start: 2, skip: false })
+    expect(bashLineUpdate(["a", "b", "c"], ["a", "b", "c2"])).toEqual({ start: 2, skip: false, shift: 0 })
   })
 
   test("rebuilds when the output shrinks", () => {
-    expect(bashLineUpdate(["a", "b", "c"], ["a", "b"])).toEqual({ start: 0, skip: false })
+    expect(bashLineUpdate(["a", "b", "c"], ["a", "b"])).toEqual({ start: 0, skip: false, shift: 0 })
   })
 
   test("rebuilds when the front changes", () => {
-    expect(bashLineUpdate(["a", "b"], ["x", "b"])).toEqual({ start: 0, skip: false })
+    expect(bashLineUpdate(["a", "b"], ["x", "b"])).toEqual({ start: 0, skip: false, shift: 0 })
+  })
+
+  test("shifts the window when leading lines are dropped", () => {
+    expect(bashLineUpdate(["a", "b", "c", "d"], ["c", "d", "e"])).toEqual({ start: 2, skip: false, shift: 2 })
+  })
+
+  test("re-highlights only the tail after a shift", () => {
+    expect(bashLineUpdate(["a", "b", "c", "d"], ["c", "d2", "e"])).toEqual({ start: 1, skip: false, shift: 2 })
+  })
+
+  test("keeps the unchanged prefix when the first line matches", () => {
+    expect(bashLineUpdate(["x", "x", "a", "b"], ["x", "a", "b", "c"])).toEqual({
+      start: 1,
+      skip: false,
+      shift: 0,
+    })
+  })
+
+  test("shifts an empty render into a full render", () => {
+    expect(bashLineUpdate([], ["a", "b"])).toEqual({ start: 0, skip: false, shift: 0 })
   })
 })

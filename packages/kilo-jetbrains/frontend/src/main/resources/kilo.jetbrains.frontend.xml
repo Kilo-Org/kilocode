@@ -99,8 +99,16 @@
 
         <applicationConfigurable
                 parentId="ai.kilocode.jetbrains.settings"
-                id="ai.kilocode.jetbrains.settings.integrations"
+                id="ai.kilocode.jetbrains.settings.checkpoints"
                 groupWeight="-2"
+                instance="ai.kilocode.client.settings.checkpoints.CheckpointsConfigurable"
+                bundle="messages.KiloBundle"
+                key="settings.checkpoints.displayName"/>
+
+        <applicationConfigurable
+                parentId="ai.kilocode.jetbrains.settings"
+                id="ai.kilocode.jetbrains.settings.integrations"
+                groupWeight="-3"
                 instance="ai.kilocode.client.settings.integrations.IntegrationsConfigurable"
                 bundle="messages.KiloBundle"
                 key="settings.integrations.displayName"/>
@@ -108,7 +116,7 @@
         <applicationConfigurable
                 parentId="ai.kilocode.jetbrains.settings"
                 id="ai.kilocode.jetbrains.settings.advanced"
-                groupWeight="-3"
+                groupWeight="-4"
                 instance="ai.kilocode.client.settings.AdvancedConfigurable"
                 bundle="messages.KiloBundle"
                 key="settings.advanced.displayName"/>
@@ -136,10 +144,10 @@
 
         <applicationConfigurable
                 parentId="ai.kilocode.jetbrains.settings.agentBehavior"
-                id="ai.kilocode.jetbrains.settings.agentBehavior.workflows"
-                instance="ai.kilocode.client.settings.agents.WorkflowsConfigurable"
+                id="ai.kilocode.jetbrains.settings.agentBehavior.commands"
+                instance="ai.kilocode.client.settings.agents.CommandsConfigurable"
                 bundle="messages.KiloBundle"
-                key="settings.agentBehavior.workflows.displayName"/>
+                key="settings.agentBehavior.commands.displayName"/>
 
         <applicationConfigurable
                 parentId="ai.kilocode.jetbrains.settings.agentBehavior"
@@ -189,6 +197,9 @@
         <action id="Kilo.Restart"
                 class="ai.kilocode.client.actions.RestartKiloAction"/>
 
+        <action id="Kilo.ReloadCoreSettings"
+                class="ai.kilocode.client.actions.ReloadCoreSettingsAction"/>
+
         <action id="Kilo.Reinstall"
                 class="ai.kilocode.client.actions.ReinstallKiloAction"/>
 
@@ -218,6 +229,8 @@
                 class="ai.kilocode.client.actions.OpenSetupScriptAction"/>
 
         <group id="Kilo.CliGroup" text="Core" popup="true">
+            <reference ref="Kilo.ReloadCoreSettings"/>
+            <separator/>
             <reference ref="Kilo.Restart"/>
             <reference ref="Kilo.Reinstall"/>
             <separator/>
@@ -283,6 +296,14 @@
                                first-keystroke="meta ENTER"/>
             <keyboard-shortcut keymap="$default"
                                first-keystroke="control ENTER"/>
+        </action>
+
+        <action id="Kilo.SubmitDialog"
+                class="ai.kilocode.client.actions.SubmitDialogAction"
+                text="Submit Dialog"
+                description="Run the default action in the current Kilo dialog">
+            <keyboard-shortcut keymap="Mac OS X 10.5+"
+                               first-keystroke="meta ENTER"/>
         </action>
 
         <action id="Kilo.StopSession"
@@ -486,6 +507,7 @@
             <reference ref="Kilo.Session.CopyPrRef"/>
             <separator/>
             <reference ref="Kilo.OpenSettings"/>
+            <reference ref="Kilo.ReloadCoreSettings"/>
             <separator/>
             <reference ref="$Copy"/>
             <separator/>
@@ -511,6 +533,7 @@
             <reference ref="Kilo.Session.CopyPrRef"/>
             <separator/>
             <reference ref="Kilo.OpenSettings"/>
+            <reference ref="Kilo.ReloadCoreSettings"/>
             <separator/>
             <reference ref="Kilo.Session.CopyId"/>
             <reference ref="Kilo.Session.CopyShareLink"/>

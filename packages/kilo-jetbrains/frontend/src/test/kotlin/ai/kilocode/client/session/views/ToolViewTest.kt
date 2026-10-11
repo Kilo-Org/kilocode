@@ -7,7 +7,9 @@ import ai.kilocode.client.session.model.ToolExecState
 import ai.kilocode.client.session.model.toolKind
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionUiStyle
+import ai.kilocode.client.session.views.tool.FileLinkLabel
 import ai.kilocode.client.session.views.tool.ToolView
+import ai.kilocode.client.ui.PlainLabel
 import com.intellij.openapi.editor.DefaultLanguageHighlighterColors
 import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.editor.EditorFactory
@@ -98,6 +100,19 @@ class ToolViewTest : BasePlatformTestCase() {
         view.toggle()
         assertTrue(view.bodyVisible())
         assertTrue(view.bodyCreated())
+    }
+
+    fun `test header without a file link keeps no link label or wrapper in the tree`() {
+        val view = track(ToolView(tool("p1", "bash", ToolExecState.COMPLETED).also {
+            it.input = mapOf("command" to "pwd", "description" to "Print dir")
+        }))
+
+        val header = header(view)
+
+        // The subtitle is the flexible middle directly, not a stack that also carries a hidden link.
+        val middle = (header.layout as BorderLayout).getLayoutComponent(BorderLayout.CENTER) as PlainLabel
+        assertEquals("Print dir", middle.text)
+        assertTrue(descendants(view).none { it is FileLinkLabel })
     }
 
     fun `test bash tool editor highlights command text`() {
@@ -474,10 +489,15 @@ class ToolViewTest : BasePlatformTestCase() {
         assertTrue(font.size < style.editorSize)
     }
 
-    private fun headerGap(view: ToolView): Int {
+    private fun headerGap(view: ToolView): Int = (header(view).layout as BorderLayout).hgap
+
+    private fun header(view: ToolView): JPanel {
         val row = view.components.filterIsInstance<JPanel>().single()
-        val header = (row.layout as BorderLayout).getLayoutComponent(BorderLayout.CENTER) as JPanel
-        return (header.layout as BorderLayout).hgap
+        return (row.layout as BorderLayout).getLayoutComponent(BorderLayout.CENTER) as JPanel
+    }
+
+    private fun descendants(root: Container): List<java.awt.Component> = root.components.flatMap { child ->
+        listOf(child) + ((child as? Container)?.let(::descendants) ?: emptyList())
     }
 
     private fun texts(root: Container): List<String> = root.components.flatMap { child ->

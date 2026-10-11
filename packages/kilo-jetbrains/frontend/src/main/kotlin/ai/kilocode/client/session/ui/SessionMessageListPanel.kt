@@ -78,7 +78,8 @@ class SessionMessageListPanel(
         SessionUiStyle.SessionLayout.INNER_TOP,
         SessionUiStyle.SessionLayout.INNER_HORIZONTAL,
         SessionUiStyle.SessionLayout.INNER_BOTTOM,
-        SessionUiStyle.SessionLayout.INNER_HORIZONTAL,
+        // Wider than the left: the prompt rail is drawn over this edge and must clear the content.
+        SessionUiStyle.SessionLayout.INNER_RIGHT,
     ),
 ), Disposable, SessionEditorStyleTarget {
 
@@ -163,14 +164,7 @@ class SessionMessageListPanel(
                 is SessionModelEvent.HistoryLoaded -> rebuild()
                 is SessionModelEvent.Cleared -> clear()
 
-                is SessionModelEvent.StateChanged -> {
-                    syncActive(event.state)
-                    syncSettled(event.state)
-                    syncReverted()
-                    syncReverting(event.state)
-                    anchorFooter()
-                    refresh()
-                }
+                is SessionModelEvent.StateChanged -> syncActiveState(event.state)
 
                 is SessionModelEvent.RevertChanged -> {
                     syncReverted()
@@ -591,6 +585,22 @@ class SessionMessageListPanel(
         for (mv in msgToView.values) changed = mv.syncApprovalReasons(visible) || changed
         if (!changed) return
         reflow()
+        refresh()
+    }
+
+    /**
+     * Re-apply [state] to the active question/permission/login/outcome footer and turn settling.
+     * Normally driven by [SessionModelEvent.StateChanged]; also called directly when a session's
+     * component becomes visible again after the state changed while it was hidden, so a question or
+     * permission that arrived off-screen is surfaced instead of staying silently active.
+     */
+    @RequiresEdt
+    fun syncActiveState(state: SessionState = model.state) {
+        syncActive(state)
+        syncSettled(state)
+        syncReverted()
+        syncReverting(state)
+        anchorFooter()
         refresh()
     }
 

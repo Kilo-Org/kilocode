@@ -11,6 +11,7 @@ import { Plugin } from "../plugin"
 import { serviceUse } from "@opencode-ai/core/effect/service-use"
 import { type LanguageModelV3 } from "@ai-sdk/provider"
 import * as ModelsDev from "./models" // kilocode_change - assemble dynamic Kilo models around upstream core catalog
+import { failure } from "@/kilocode/provider/catalog-recovery" // kilocode_change
 import { Auth } from "../auth"
 import { Env } from "../env"
 import { InstallationVersion } from "@opencode-ai/core/installation/version"
@@ -117,6 +118,12 @@ function googleVertexAnthropicBaseURL(project: string | undefined, location: str
   if (location !== "eu" && location !== "us") return
   // Continental multi-regions require Regional Endpoint Platform domains.
   return `https://aiplatform.${location}.rep.googleapis.com/v1/projects/${project}/locations/${location}/publishers/anthropic/models`
+}
+
+function googleVertexEndpoint(location: string) {
+  if (location === "global") return "aiplatform.googleapis.com"
+  if (location === "eu" || location === "us") return `aiplatform.${location}.rep.googleapis.com`
+  return `${location}-aiplatform.googleapis.com`
 }
 
 type BundledSDK = {
@@ -266,7 +273,7 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
       const endpoint = iife(() => {
         return [
           provider.options?.baseURL,
-          auth?.type === "api" ? auth.metadata?.baseURL : undefined,
+          auth?.type === "api" ? auth.metadata?.baseURL : auth?.type === "oauth" ? auth.baseURL : undefined,
           env["AZURE_OPENAI_ENDPOINT"],
         ].find((url) => typeof url === "string" && url.trim() !== "")
       })
@@ -276,6 +283,7 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
             return [
               provider.options?.resourceName,
               auth?.type === "api" ? auth.metadata?.resourceName : undefined,
+              auth?.type === "oauth" ? auth.accountId : undefined,
               env["AZURE_RESOURCE_NAME"],
               env["AZURE_OPENAI_RESOURCE_NAME"],
             ].find((name) => typeof name === "string" && name.trim() !== "")
@@ -555,11 +563,10 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
       return {
         autoload: true,
         vars(_options: Record<string, any>) {
-          const endpoint = location === "global" ? "aiplatform.googleapis.com" : `${location}-aiplatform.googleapis.com`
           return {
             ...(project && { GOOGLE_VERTEX_PROJECT: project }),
             GOOGLE_VERTEX_LOCATION: location,
-            GOOGLE_VERTEX_ENDPOINT: endpoint,
+            GOOGLE_VERTEX_ENDPOINT: googleVertexEndpoint(location),
           }
         },
         options: {
@@ -846,6 +853,7 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
       const { createUnified } = yield* Effect.promise(() => import("ai-gateway-provider/providers/unified"))
       const { createOpenAI } = yield* Effect.promise(() => import("ai-gateway-provider/providers/openai"))
       const { createAnthropic } = yield* Effect.promise(() => import("ai-gateway-provider/providers/anthropic"))
+      const { createOpenAICompatible } = yield* Effect.promise(() => import("@ai-sdk/openai-compatible"))
 
       const metadata = iife(() => {
         if (input.options?.metadata) return input.options.metadata
@@ -881,15 +889,34 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
           // The passthrough wrappers inject a CF_TEMP_TOKEN sentinel that the gateway strips before
           // dispatch, so upstream billing stays on the gateway (Unified Billing / stored BYOK).
           if (modelID.startsWith("openai/")) return aigateway(createOpenAI()(modelID.slice("openai/".length)))
-          if (modelID.startsWith("anthropic/")) return aigateway(createAnthropic()(modelID.slice("anthropic/".length)))
+          // models.dev lists Anthropic ids with dotted versions (claude-haiku-4.5); Anthropic's
+          // Messages API expects dashed native slugs (claude-haiku-4-5), so translate before passing.
+          // No native Anthropic slug contains a dot, so the blanket replacement is lossless here -
+          // unlike OpenAI above, whose native ids (e.g. gpt-4.1) keep their dots and must not be touched.
+          if (modelID.startsWith("anthropic/"))
+            return aigateway(createAnthropic()(modelID.slice("anthropic/".length).replaceAll(".", "-")))
           // Workers AI is the only first-party provider whose upstream is Cloudflare itself, so it is
           // the only one that should receive the Cloudflare token as its upstream Authorization header.
           // The Unified API addresses Workers AI both with the explicit "workers-ai/" prefix and as
           // bare "@cf/..." ids. Third-party providers must not receive the token; they rely on the
           // gateway's stored/BYOK keys instead.
+          // Workers AI is Cloudflare's own upstream, so it rides the unified compat route with the
+          // Cloudflare token as its upstream Authorization header.
           const isWorkersAi = modelID.startsWith("workers-ai/") || modelID.startsWith("@cf/")
-          const unified = createUnified(isWorkersAi ? { apiKey: apiToken } : {})
-          return aigateway(unified(modelID))
+          if (isWorkersAi) return aigateway(createUnified({ apiKey: apiToken })(modelID))
+
+          // Every other third-party provider (google, xai, alibaba, deepseek, moonshotai, …) is only
+          // served by Cloudflare's catalog-aware REST API. The universal/compat gateway route rejects
+          // them with "Invalid provider" (the gateway's compat endpoint doesn't front those upstreams),
+          // so point an OpenAI-compatible client at the REST endpoint and bind it to the gateway with
+          // cf-aig-gateway-id — that keeps requests gateway-routed (analytics/caching/BYOK), not a
+          // bypass. models.dev ids (provider/model, dotted) pass through unchanged.
+          return createOpenAICompatible({
+            name: "cloudflare-ai-gateway",
+            baseURL: `https://api.cloudflare.com/client/v4/accounts/${accountId}/ai/v1`,
+            apiKey: apiToken,
+            headers: { "cf-aig-gateway-id": gateway },
+          })(modelID)
         },
         options: {},
       }
@@ -1169,11 +1196,12 @@ export class ModelNotFoundError extends Schema.TaggedErrorClass<ModelNotFoundErr
   modelID: ModelV2.ID,
   suggestions: Schema.optional(Schema.Array(Schema.String)),
   modelsEmpty: Schema.optional(Schema.Boolean), // kilocode_change
+  catalogError: Schema.optional(Schema.String), // kilocode_change
   cause: Schema.optional(Schema.Defect()),
 }) {
   override get message() {
     const suggestions = this.suggestions?.length ? ` Did you mean: ${this.suggestions.join(", ")}?` : ""
-    return `Model not found: ${this.providerID}/${this.modelID}.${suggestions}`
+    return `Model not found: ${this.providerID}/${this.modelID}.${suggestions}${this.catalogError ? ` ${this.catalogError}` : ""}` // kilocode_change
   }
 
   static isInstance(input: unknown): input is ModelNotFoundError {
@@ -1964,8 +1992,12 @@ const layer = Layer.effect(
           : fuzzysort
               .go(providerID, Object.keys({ ...s.catalog, ...s.providers }), { limit: 3, threshold: -10000 })
               .map((m) => m.target)
-        const empty = false // kilocode_change
-        return yield* new ModelNotFoundError({ providerID, modelID, suggestions, modelsEmpty: empty }) // kilocode_change
+        const empty = !!catalogProvider && Object.keys(catalogProvider.models).length === 0 // kilocode_change
+        // kilocode_change start
+        const catalogError =
+          empty && providerID === "kilo" ? failure(yield* modelsDevSvc.getFailure(providerID)) : undefined
+        return yield* new ModelNotFoundError({ providerID, modelID, suggestions, modelsEmpty: empty, catalogError })
+        // kilocode_change end
       }
 
       const info = provider.models[modelID]

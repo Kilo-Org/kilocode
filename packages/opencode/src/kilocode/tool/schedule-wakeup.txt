@@ -7,6 +7,10 @@ Use this tool to defer your own continuation to a future time, when you cannot k
 
 Do NOT use this tool for short waits that a blocking shell command covers, for anything inside the next few seconds, for periodic or repeating schedules, or for more than the per-session cap. For a short wait, run the wait as a normal blocking shell command with its `timeout` raised instead.
 
+Goals:
+- In a session goal, scheduling a wakeup suspends the goal until the wakeup fires: no further goal turn runs in between, and the goal shows as waiting. A one-shot wait is normal goal progress, not a blocker — do not report a time-based wait as blocked when a scheduled wakeup can carry the goal forward. When the session goal is to wait for a deploy, build, CI job, or other time-based event, call this tool immediately. Do not explore the repository, search for a deploy, or poll with bash instead of scheduling. Do not report blocked because no deploy is visible.
+- A time more than 7 days out is clamped to the 7-day horizon, and the tool result says the requested time was pulled back.
+
 Time:
 - Give exactly one of `when` or `delay`.
 - `when` is an absolute ISO-8601 date-time, e.g. `2026-09-13T14:30:00Z`. With an explicit offset (`Z` or `+02:00`) it is absolute; without one, the host's local timezone applies.

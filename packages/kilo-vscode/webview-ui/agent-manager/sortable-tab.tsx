@@ -13,11 +13,11 @@ import { SessionTab } from "../src/components/chat/SessionTab"
 import { SessionTabMenu } from "../src/components/chat/SessionTabMenu"
 import { SortableTabContainer } from "../src/components/chat/TabDnd"
 import type { Activity } from "../src/utils/session-activity"
-import { parseBindingTokens } from "./keybind-tokens"
+import { parseBindingTokens } from "../src/utils/keybind-tokens"
 
 /** Individual sortable tab wrapper using the `use:sortable` directive. */
 export const SortableTab: Component<{
-  tab: SessionInfo
+  tab: () => SessionInfo
   active: boolean
   state: Activity
   stateLabel: string
@@ -38,7 +38,7 @@ export const SortableTab: Component<{
 }> = (props) => {
   const { t } = useLanguage()
   return (
-    <SortableTabContainer id={props.tab.id}>
+    <SortableTabContainer id={props.tab().id}>
       <SessionTabMenu
         showFork
         onFork={props.onFork}
@@ -58,7 +58,7 @@ export const SortableTab: Component<{
         }
       >
         <SessionTab
-          title={props.tab.title || t("agentManager.session.untitled")}
+          title={props.tab().title || t("agentManager.session.untitled")}
           active={props.active}
           pinned={props.pinned}
           pinnedLabel={t("agentManager.tab.pinned")}
@@ -76,6 +76,7 @@ export const SortableTab: Component<{
           onSelect={props.onSelect}
           onMiddleClick={props.onMiddleClick}
           onClose={props.onClose}
+          onTogglePin={props.onTogglePin}
         />
       </SessionTabMenu>
     </SortableTabContainer>

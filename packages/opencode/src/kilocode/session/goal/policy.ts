@@ -6,6 +6,10 @@ import { KiloSessionPromptQueue } from "../prompt-queue"
 import { GoalState } from "./state"
 
 export namespace GoalPolicy {
+  // A curbed goal may only arm a wait. `background_process` belongs here with the
+  // two time tools: a non-terminal start or a monitor arms a process wait, so
+  // the gate agrees with the instruction text that names it as a valid first call.
+  const WAIT = new Set(["schedule_wakeup", "cron_create", "background_process"])
   export type Report = { status: "complete" | "blocked"; reason: string }
   export type Owner = {
     root: SessionID
@@ -30,8 +34,9 @@ export namespace GoalPolicy {
       const owner = base ? owners.get(base) : undefined
       return owner?.root === id && owner.current()
     }
+    if (GoalState.curbed(id) && !WAIT.has(tool)) return false
     if (tool !== "question" && tool !== "goal") return true
-    if (GoalState.active(id)) return false
+    if (GoalState.hold(id)) return false
     const base = KiloSessionPromptQueue.active(id)
     return !base || !owners.get(base)?.current()
   }

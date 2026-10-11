@@ -34,6 +34,7 @@ import ai.kilocode.rpc.dto.ProfileDto
 import ai.kilocode.rpc.dto.ProfileKiloPassDto
 import ai.kilocode.rpc.dto.ProfileOrganizationDto
 import ai.kilocode.rpc.dto.ProfileStatusDto
+import ai.kilocode.rpc.dto.RetentionStatusDto
 import ai.kilocode.rpc.dto.TelemetryCaptureDto
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.writeAction
@@ -94,11 +95,6 @@ class KiloAppRpcApiImpl : KiloAppRpcApi {
         return app.models.selection(update)
     }
 
-    override suspend fun clearModelSelection(agent: String): ModelStateDto {
-        app.requireReady()
-        return app.models.clear(agent)
-    }
-
     override suspend fun updateModelVariant(update: ModelVariantUpdateDto): ModelStateDto {
         app.requireReady()
         return app.models.variant(update)
@@ -108,6 +104,10 @@ class KiloAppRpcApiImpl : KiloAppRpcApi {
         app.requireReady()
         return appStateDto(app.updateConfig(patch), app.capabilities.value)
     }
+
+    override suspend fun retentionStatus(): RetentionStatusDto = app.retention.status()
+
+    override suspend fun runRetention(force: Boolean): RetentionStatusDto = app.retention.run(force)
 
     override suspend fun applyLogConfig(config: LogConfigDto) {
         LogConfig.apply(config.level, config.contentMode, config.previewMax)

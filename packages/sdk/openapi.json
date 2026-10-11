@@ -3767,12 +3767,108 @@
             }
           }
         },
-        "description": "Start OAuth flow and wait for callback (opens browser).",
+        "description": "Start OAuth flow and wait for callback, optionally letting the client open the browser.",
         "summary": "Authenticate MCP OAuth",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "external": {
+                    "type": "boolean"
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
         "x-codeSamples": [
           {
             "lang": "js",
             "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.mcp.auth.authenticate({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/mcp/{name}/auth/cancel": {
+      "post": {
+        "tags": ["mcp"],
+        "operationId": "mcp.auth.cancel",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "schema": {
+              "type": "string"
+            },
+            "required": true
+          },
+          {
+            "name": "directory",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OAuth authentication cancelled",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [true]
+                    }
+                  },
+                  "required": ["success"],
+                  "additionalProperties": false,
+                  "description": "OAuth authentication cancelled"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "McpServerNotFoundError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/McpServerNotFoundError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Cancel an active OAuth flow without removing stored credentials.",
+        "summary": "Cancel MCP OAuth",
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.mcp.auth.cancel({\n  ...\n})"
           }
         ]
       }
@@ -15620,7 +15716,7 @@
             }
           }
         },
-        "description": "Install a marketplace MCP server, agent, or skill into project or global Kilo config.",
+        "description": "Install a marketplace MCP server, agent, skill, or plugin into project or global Kilo config.",
         "summary": "Install a marketplace item",
         "requestBody": {
           "content": {
@@ -15697,7 +15793,7 @@
             }
           }
         },
-        "description": "Remove a marketplace MCP server, agent, or skill from project or global Kilo config.",
+        "description": "Remove a marketplace MCP server, agent, skill, or plugin from project or global Kilo config.",
         "summary": "Remove a marketplace item",
         "requestBody": {
           "content": {
@@ -16635,6 +16731,9 @@
                         "pattern": "^ses"
                       }
                     },
+                    "sessionCost": {
+                      "type": "number"
+                    },
                     "totals": {
                       "type": "object",
                       "properties": {
@@ -17334,6 +17433,32 @@
                               "enum": ["Infinity", "-Infinity", "NaN"]
                             }
                           ]
+                        },
+                        "cancelled": {
+                          "type": "boolean"
+                        },
+                        "reclaimedBytes": {
+                          "anyOf": [
+                            {
+                              "type": "number"
+                            },
+                            {
+                              "type": "string",
+                              "enum": ["NaN"]
+                            },
+                            {
+                              "type": "string",
+                              "enum": ["Infinity"]
+                            },
+                            {
+                              "type": "string",
+                              "enum": ["-Infinity"]
+                            },
+                            {
+                              "type": "string",
+                              "enum": ["Infinity", "-Infinity", "NaN"]
+                            }
+                          ]
                         }
                       },
                       "required": ["at", "scanned", "deleted", "skippedActive", "failed", "durationMs"],
@@ -17344,7 +17469,7 @@
                       "properties": {
                         "phase": {
                           "type": "string",
-                          "enum": ["scanning", "deleting"]
+                          "enum": ["scanning", "deleting", "cancelling"]
                         },
                         "total": {
                           "type": "integer",
@@ -17602,6 +17727,32 @@
                               "enum": ["Infinity", "-Infinity", "NaN"]
                             }
                           ]
+                        },
+                        "cancelled": {
+                          "type": "boolean"
+                        },
+                        "reclaimedBytes": {
+                          "anyOf": [
+                            {
+                              "type": "number"
+                            },
+                            {
+                              "type": "string",
+                              "enum": ["NaN"]
+                            },
+                            {
+                              "type": "string",
+                              "enum": ["Infinity"]
+                            },
+                            {
+                              "type": "string",
+                              "enum": ["-Infinity"]
+                            },
+                            {
+                              "type": "string",
+                              "enum": ["Infinity", "-Infinity", "NaN"]
+                            }
+                          ]
                         }
                       },
                       "required": ["at", "scanned", "deleted", "skippedActive", "failed", "durationMs"],
@@ -17612,7 +17763,7 @@
                       "properties": {
                         "phase": {
                           "type": "string",
-                          "enum": ["scanning", "deleting"]
+                          "enum": ["scanning", "deleting", "cancelling"]
                         },
                         "total": {
                           "type": "integer",
@@ -17678,6 +17829,68 @@
           {
             "lang": "js",
             "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.kilocode.retention.run({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/kilocode/retention/cancel": {
+      "post": {
+        "tags": ["kilocode"],
+        "operationId": "kilocode.retention.cancel",
+        "parameters": [
+          {
+            "name": "directory",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Retention cancel request outcome; false when no pass was running",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "requested": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": ["requested"],
+                  "additionalProperties": false,
+                  "description": "Retention cancel request outcome; false when no pass was running"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Ask the machine-wide retention pass to stop before deleting more sessions. Already-deleted sessions stay deleted; the interrupted pass still records its partial result and honors the spacing window.",
+        "summary": "Stop the active session retention pass",
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.kilocode.retention.cancel({\n  ...\n})"
           }
         ]
       }
@@ -19057,7 +19270,7 @@
                       },
                       "workspace": {
                         "type": "string",
-                        "enum": ["restored", "snapshots-disabled", "unavailable"]
+                        "enum": ["restored", "snapshots-disabled", "unavailable", "not-a-git-repo"]
                       }
                     },
                     "required": ["messageID"],
@@ -27793,6 +28006,9 @@
             "$ref": "#/components/schemas/EventMcpBrowserOpenFailed1"
           },
           {
+            "$ref": "#/components/schemas/EventMcpAuthUrl1"
+          },
+          {
             "$ref": "#/components/schemas/EventCommandExecuted1"
           },
           {
@@ -28150,6 +28366,9 @@
             "$ref": "#/components/schemas/EventMcpBrowserOpenFailed"
           },
           {
+            "$ref": "#/components/schemas/EventMcpAuthUrl"
+          },
+          {
             "$ref": "#/components/schemas/EventCommandExecuted"
           },
           {
@@ -28274,6 +28493,9 @@
             "type": "string"
           },
           "enterpriseUrl": {
+            "type": "string"
+          },
+          "baseURL": {
             "type": "string"
           }
         },
@@ -29194,7 +29416,7 @@
               },
               "workspace": {
                 "type": "string",
-                "enum": ["restored", "snapshots-disabled", "unavailable"]
+                "enum": ["restored", "snapshots-disabled", "unavailable", "not-a-git-repo"]
               }
             },
             "required": ["messageID"],
@@ -30876,6 +31098,20 @@
             },
             "required": ["type", "requestID", "message"],
             "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": ["scheduled"]
+              },
+              "scheduledAt": {
+                "type": "string"
+              }
+            },
+            "required": ["type", "scheduledAt"],
+            "additionalProperties": false
           }
         ]
       },
@@ -31268,6 +31504,9 @@
               },
               {
                 "$ref": "#/components/schemas/EventMcpBrowserOpenFailed"
+              },
+              {
+                "$ref": "#/components/schemas/EventMcpAuthUrl"
               },
               {
                 "$ref": "#/components/schemas/EventCommandExecuted"
@@ -33879,6 +34118,34 @@
                   },
                   "type": {
                     "type": "string",
+                    "enum": ["mcp.auth.url"]
+                  },
+                  "properties": {
+                    "type": "object",
+                    "properties": {
+                      "mcpName": {
+                        "type": "string"
+                      },
+                      "url": {
+                        "type": "string"
+                      }
+                    },
+                    "required": ["mcpName", "url"],
+                    "additionalProperties": false
+                  }
+                },
+                "required": ["id", "type", "properties"],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "pattern": "^evt_"
+                  },
+                  "type": {
+                    "type": "string",
                     "enum": ["command.executed"]
                   },
                   "properties": {
@@ -35698,6 +35965,9 @@
               "type": "string"
             }
           },
+          "memory_model": {
+            "type": "string"
+          },
           "default_agent": {
             "type": "string"
           },
@@ -36014,9 +36284,6 @@
                 "type": "string"
               },
               "native_notebook_tools": {
-                "type": "boolean"
-              },
-              "task_model_selection": {
                 "type": "boolean"
               },
               "code_mode": {
@@ -36836,7 +37103,7 @@
               },
               "workspace": {
                 "type": "string",
-                "enum": ["restored", "snapshots-disabled", "unavailable"]
+                "enum": ["restored", "snapshots-disabled", "unavailable", "not-a-git-repo"]
               }
             },
             "required": ["messageID"],
@@ -37324,6 +37591,9 @@
           "status": {
             "type": "string",
             "enum": ["needs_auth"]
+          },
+          "error": {
+            "type": "string"
           }
         },
         "required": ["status"],
@@ -37905,7 +38175,7 @@
               },
               "workspace": {
                 "type": "string",
-                "enum": ["restored", "snapshots-disabled", "unavailable"]
+                "enum": ["restored", "snapshots-disabled", "unavailable", "not-a-git-repo"]
               }
             },
             "required": ["messageID"],
@@ -38078,7 +38348,7 @@
               },
               "workspace": {
                 "type": "string",
-                "enum": ["restored", "snapshots-disabled", "unavailable"]
+                "enum": ["restored", "snapshots-disabled", "unavailable", "not-a-git-repo"]
               }
             },
             "required": ["messageID"],
@@ -38270,7 +38540,7 @@
               },
               "workspace": {
                 "type": "string",
-                "enum": ["restored", "snapshots-disabled", "unavailable"]
+                "enum": ["restored", "snapshots-disabled", "unavailable", "not-a-git-repo"]
               }
             },
             "required": ["messageID"],
@@ -38443,7 +38713,7 @@
               },
               "workspace": {
                 "type": "string",
-                "enum": ["restored", "snapshots-disabled", "unavailable"]
+                "enum": ["restored", "snapshots-disabled", "unavailable", "not-a-git-repo"]
               }
             },
             "required": ["messageID"],
@@ -38616,7 +38886,7 @@
               },
               "workspace": {
                 "type": "string",
-                "enum": ["restored", "snapshots-disabled", "unavailable"]
+                "enum": ["restored", "snapshots-disabled", "unavailable", "not-a-git-repo"]
               }
             },
             "required": ["messageID"],
@@ -38789,7 +39059,7 @@
               },
               "workspace": {
                 "type": "string",
-                "enum": ["restored", "snapshots-disabled", "unavailable"]
+                "enum": ["restored", "snapshots-disabled", "unavailable", "not-a-git-repo"]
               }
             },
             "required": ["messageID"],
@@ -38962,7 +39232,7 @@
               },
               "workspace": {
                 "type": "string",
-                "enum": ["restored", "snapshots-disabled", "unavailable"]
+                "enum": ["restored", "snapshots-disabled", "unavailable", "not-a-git-repo"]
               }
             },
             "required": ["messageID"],
@@ -39300,7 +39570,7 @@
               },
               "workspace": {
                 "type": "string",
-                "enum": ["restored", "snapshots-disabled", "unavailable"]
+                "enum": ["restored", "snapshots-disabled", "unavailable", "not-a-git-repo"]
               }
             },
             "required": ["messageID"],
@@ -39473,7 +39743,7 @@
               },
               "workspace": {
                 "type": "string",
-                "enum": ["restored", "snapshots-disabled", "unavailable"]
+                "enum": ["restored", "snapshots-disabled", "unavailable", "not-a-git-repo"]
               }
             },
             "required": ["messageID"],
@@ -40665,6 +40935,19 @@
         "required": ["name", "content"],
         "additionalProperties": false
       },
+      "McpSkill": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "content": {
+            "type": "string"
+          }
+        },
+        "required": ["id", "content"],
+        "additionalProperties": false
+      },
       "McpMarketplaceItem": {
         "type": "object",
         "properties": {
@@ -40719,6 +41002,12 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/McpParameter"
+            }
+          },
+          "skills": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/McpSkill"
             }
           }
         },
@@ -40880,6 +41169,50 @@
         ],
         "additionalProperties": false
       },
+      "PluginMarketplaceItem": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "category": {
+            "type": "string"
+          },
+          "author": {
+            "type": "string"
+          },
+          "authorUrl": {
+            "type": "string"
+          },
+          "prerequisites": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "suggest_for": {
+            "$ref": "#/components/schemas/MarketplaceSuggestFor"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["plugin"]
+          },
+          "content": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          }
+        },
+        "required": ["id", "name", "description", "category", "type", "content"],
+        "additionalProperties": false
+      },
       "MarketplaceItem": {
         "anyOf": [
           {
@@ -40890,6 +41223,9 @@
           },
           {
             "$ref": "#/components/schemas/SkillMarketplaceItem"
+          },
+          {
+            "$ref": "#/components/schemas/PluginMarketplaceItem"
           }
         ]
       },
@@ -40938,6 +41274,12 @@
           "installed": {
             "$ref": "#/components/schemas/MarketplaceInstalledMetadata"
           },
+          "filenames": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
           "errors": {
             "type": "array",
             "items": {
@@ -40970,6 +41312,12 @@
                 }
               }
             ]
+          },
+          "skills": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/McpSkill"
+            }
           }
         },
         "required": ["type", "id", "content"],
@@ -41063,6 +41411,23 @@
         "required": ["type", "id", "content"],
         "additionalProperties": false
       },
+      "PluginInstallItem": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["plugin"]
+          },
+          "id": {
+            "type": "string"
+          },
+          "content": {
+            "type": "string"
+          }
+        },
+        "required": ["type", "id", "content"],
+        "additionalProperties": false
+      },
       "MarketplaceInstallItem": {
         "anyOf": [
           {
@@ -41073,6 +41438,9 @@
           },
           {
             "$ref": "#/components/schemas/SkillInstallItem"
+          },
+          {
+            "$ref": "#/components/schemas/PluginInstallItem"
           }
         ]
       },
@@ -41091,6 +41459,12 @@
           "filePath": {
             "type": "string"
           },
+          "filePaths": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
           "line": {
             "type": "integer"
           }
@@ -41106,7 +41480,7 @@
           },
           "type": {
             "type": "string",
-            "enum": ["mcp", "agent", "skill"]
+            "enum": ["mcp", "agent", "skill", "plugin"]
           }
         },
         "required": ["id", "type"],
@@ -43056,6 +43430,9 @@
           },
           {
             "$ref": "#/components/schemas/McpBrowserOpenFailed"
+          },
+          {
+            "$ref": "#/components/schemas/McpAuthUrl"
           },
           {
             "$ref": "#/components/schemas/CommandExecuted"
@@ -46648,7 +47025,7 @@
           },
           "workspace": {
             "type": "string",
-            "enum": ["restored", "snapshots-disabled", "unavailable"]
+            "enum": ["restored", "snapshots-disabled", "unavailable", "not-a-git-repo"]
           }
         },
         "required": ["messageID"],
@@ -47578,6 +47955,33 @@
           "type": {
             "type": "string",
             "enum": ["mcp.browser.open.failed"]
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "mcpName": {
+                "type": "string"
+              },
+              "url": {
+                "type": "string"
+              }
+            },
+            "required": ["mcpName", "url"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["id", "type", "properties"],
+        "additionalProperties": false
+      },
+      "EventMcpAuthUrl": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["mcp.auth.url"]
           },
           "properties": {
             "type": "object",
@@ -56430,6 +56834,56 @@
         "required": ["id", "type", "data"],
         "additionalProperties": false
       },
+      "McpAuthUrl": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^evt_"
+          },
+          "metadata": {
+            "type": "object"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["mcp.auth.url"]
+          },
+          "durable": {
+            "type": "object",
+            "properties": {
+              "aggregateID": {
+                "type": "string"
+              },
+              "seq": {
+                "type": "integer"
+              },
+              "version": {
+                "type": "integer"
+              }
+            },
+            "required": ["aggregateID", "seq", "version"],
+            "additionalProperties": false
+          },
+          "location": {
+            "$ref": "#/components/schemas/LocationRef"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "mcpName": {
+                "type": "string"
+              },
+              "url": {
+                "type": "string"
+              }
+            },
+            "required": ["mcpName", "url"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["id", "type", "data"],
+        "additionalProperties": false
+      },
       "CommandExecuted": {
         "type": "object",
         "properties": {
@@ -59971,6 +60425,34 @@
           "type": {
             "type": "string",
             "enum": ["mcp.browser.open.failed"]
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "mcpName": {
+                "type": "string"
+              },
+              "url": {
+                "type": "string"
+              }
+            },
+            "required": ["mcpName", "url"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["id", "type", "properties"],
+        "additionalProperties": false
+      },
+      "EventMcpAuthUrl1": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^evt_"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["mcp.auth.url"]
           },
           "properties": {
             "type": "object",

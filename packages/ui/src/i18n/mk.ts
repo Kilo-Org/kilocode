@@ -69,7 +69,7 @@ export const dict = {
   "ui.sessionTurn.error.addCredits": "Додадете кредити",
   "dialog.usageExceeded.freeTier.title": "Достигнато е бесплатното ограничување",
   "dialog.usageExceeded.freeTier.description":
-    "Претплатете се на Kilo Go за сигурен пристап до најдобрите модели со отворен код, почнувајќи од 5 $/месец.", // kilocode_change
+    "Претплатете се на Kilo Go за 10 $/месец за сигурен пристап до најдобрите модели со отворен код.", // kilocode_change
   "dialog.usageExceeded.freeTier.actionLabel": "Претплатете се",
   "dialog.usageExceeded.accountRateLimit.title": "Достигнато е ограничувањето на Go",
   "dialog.usageExceeded.accountRateLimit.description":

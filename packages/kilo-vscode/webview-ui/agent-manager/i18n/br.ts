@@ -32,7 +32,6 @@ export const dict = {
   "agentManager.local": "local",
   "agentManager.sidebar.collapse": "Recolher barra lateral",
   "agentManager.sidebar.expand": "Mostrar barra lateral",
-  "agentManager.section.worktrees": "WORKTREES",
   "agentManager.section.sessions": "SESSÕES",
   "agentManager.projects": "PROJETOS",
   "agentManager.settings.title": "Agent Manager",
@@ -45,6 +44,7 @@ export const dict = {
   "agentManager.settings.worktreePool.title": "Pré-aquecimento de worktrees",
   "agentManager.settings.worktreePool.description":
     "Prepare um worktree pronto em segundo plano para que novas sessões do Agent Manager iniciem mais rápido. Usa espaço em disco extra para um checkout por projeto aberto.",
+  "agentManager.hints.switchSession": "Alternar sessão",
   "agentManager.settings.project.title": "Projeto",
   "agentManager.settings.project.description":
     "Escolha o repository cujas configurações de worktree você deseja editar.",
@@ -73,12 +73,9 @@ export const dict = {
   "agentManager.project.settings": "Configurações do projeto",
   "agentManager.project.restricted":
     "Seu espaço de trabalho atual do VS Code é sua pasta pessoal ou a raiz do sistema de arquivos. Abra uma pasta de projeto específica no VS Code para usar o Agent Manager.",
-  "agentManager.notGitRepo": "Não é um repositório git",
-
   "agentManager.updateBase.title": "Atualizar a partir da base",
   "agentManager.updateBase.selectWorktree": "Selecione primeiro um worktree gerenciado.",
 
-  "agentManager.worktree.settings": "Configurações do Worktree",
   "agentManager.worktree.new": "Novo Worktree",
   "agentManager.worktree.setupScript": "Script de configuração do Worktree",
   "agentManager.worktree.delete": "Excluir Worktree",
@@ -94,6 +91,9 @@ export const dict = {
   "agentManager.worktree.copyPath": "Copiar Caminho",
   "agentManager.worktree.openInVscode": "Abrir no VS Code",
   "agentManager.worktree.rename": "Renomear",
+  "agentManager.worktree.pin": "Fixar",
+  "agentManager.worktree.unpin": "Desafixar",
+  "agentManager.worktree.pinned": "Fixados",
   "agentManager.worktree.newSection": "Nova Seção",
   "agentManager.worktree.ungrouped": "Não Agrupado",
   "agentManager.section.rename": "Renomear Seção",
@@ -106,6 +106,7 @@ export const dict = {
   "agentManager.hoverCard.worktree": "Worktree",
   "agentManager.hoverCard.base": "Base",
   "agentManager.hoverCard.sessions": "Sessões",
+  "agentManager.hoverCard.section": "Seção",
   "agentManager.hoverCard.files": "Arquivos",
   "agentManager.hoverCard.changes": "Alterações",
   "agentManager.hoverCard.commits": "Commits",
@@ -187,13 +188,6 @@ export const dict = {
   "agentManager.shortcuts.cycleAgentMode": "Próximo modo de agente",
   "agentManager.shortcuts.cyclePreviousAgentMode": "Modo de agente anterior",
   "agentManager.shortcuts.showShortcuts": "Mostrar atalhos de teclado",
-  "agentManager.dialog.removeStaleWorktree.title": "Remover Worktree obsoleto",
-  "agentManager.dialog.removeStaleWorktree.messagePre": "Remover Worktree obsoleto ",
-  "agentManager.dialog.removeStaleWorktree.messagePost":
-    "? Isso remove apenas o mapeamento no Agent Manager e não altera os arquivos no disco.",
-  "agentManager.dialog.removeStaleWorktree.cancel": "Cancelar",
-  "agentManager.dialog.removeStaleWorktree.confirm": "Remover Worktree obsoleto",
-
   "agentManager.dialog.project.select": "Selecionar projeto",
   "agentManager.dialog.project.missing": "Repositório não encontrado",
   "agentManager.dialog.openWorktree": "Novo Worktree",
@@ -431,6 +425,10 @@ export const dict = {
   "agentManager.documents.loading": "Carregando documento...",
   "agentManager.documents.preview": "Visualizar documento",
   "agentManager.documents.source": "Mostrar código-fonte",
+  "agentManager.documents.copy": "Copiar conteúdo",
+  "agentManager.documents.copyPath": "Copiar caminho",
+  "agentManager.documents.copyRelativePath": "Copiar caminho relativo",
+  "agentManager.documents.copyFileName": "Copiar nome do arquivo",
   "agentManager.documents.comments": "{{count}} comentários",
   "agentManager.import.pullRequest": "Solicitação de extração",
   "agentManager.import.pastePrUrl": "Cole a URL do PR...",
@@ -450,16 +448,27 @@ export const dict = {
   "agentManager.caffeination.unavailable":
     "O modo de manter o computador acordado não está disponível nesta plataforma",
   "agentManager.browser.title": "Navegador Integrado",
-  "agentManager.browser.url": "URL da aplicação local",
+  "agentManager.browser.url": "Endereço",
   "agentManager.browser.urlPlaceholder": "http://localhost:3000",
   "agentManager.browser.open": "Abrir",
+  "agentManager.browser.openExternal": "Abrir no navegador externo",
   "agentManager.browser.inspect": "Selecionar elemento",
   "agentManager.browser.devtoolsTitle": "Ferramentas de desenvolvedor",
   "agentManager.browser.refresh": "Atualizar navegador",
+  "agentManager.browser.back": "Voltar",
+  "agentManager.browser.forward": "Avançar",
   "agentManager.browser.close": "Fechar navegador",
-  "agentManager.browser.empty": "Abra uma aplicação local para visualizá-la aqui.",
-  "agentManager.browser.noSession":
-    "Inicie ou selecione uma sessão no Agent Manager para navegar em um aplicativo local.",
+  "agentManager.browser.empty": "Abra uma aplicação local ou uma página HTTPS pública para visualizá-la aqui.",
+  "agentManager.browser.requirement":
+    "Requer Google Chrome ou um navegador Playwright Chromium compatível. Os navegadores não são instalados automaticamente.",
+  "agentManager.browser.missingTitle": "Navegador não encontrado",
+  "agentManager.browser.missingChrome":
+    "Google Chrome não foi encontrado. Instale o Chrome para usar o Navegador Integrado e tente novamente.",
+  "agentManager.browser.missingChromium":
+    "Playwright Chromium não foi encontrado. Instale um navegador compatível ou ative “Usar Chrome do Sistema” em “Configurações do navegador”.",
+  "agentManager.browser.downloadChrome": "Baixar Chrome",
+  "agentManager.browser.settings": "Configurações do navegador",
+  "agentManager.browser.noSession": "Inicie ou selecione uma sessão no Agent Manager.",
   "agentManager.browser.screenshotAlt": "Página atual do navegador",
   "agentManager.browser.errors": "Problemas do navegador: {{count}}",
   "agentManager.browser.diagnostics": "Diagnóstico do navegador",

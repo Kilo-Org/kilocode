@@ -22,6 +22,11 @@ export const AuthStartResponse = Schema.Struct({
 export const AuthCallbackPayload = Schema.Struct({
   code: Schema.String,
 })
+// kilocode_change start - client-driven browser option
+export const AuthAuthenticatePayload = Schema.Struct({
+  external: Schema.optional(Schema.Boolean),
+})
+// kilocode_change end
 export const AuthRemoveResponse = Schema.Struct({
   success: Schema.Literal(true),
 })
@@ -35,6 +40,7 @@ export const McpPaths = {
   auth: "/mcp/:name/auth",
   authCallback: "/mcp/:name/auth/callback",
   authAuthenticate: "/mcp/:name/auth/authenticate",
+  authCancel: "/mcp/:name/auth/cancel", // kilocode_change
   connect: "/mcp/:name/connect",
   disconnect: "/mcp/:name/disconnect",
   readResource: "/experimental/resource/read", // kilocode_change
@@ -96,15 +102,32 @@ export const McpApi = HttpApi.make("mcp")
         HttpApiEndpoint.post("authAuthenticate", McpPaths.authAuthenticate, {
           params: { name: Schema.String },
           query: WorkspaceRoutingQuery,
+          payload: [AuthAuthenticatePayload, Schema.Null], // kilocode_change - preserve bodyless callers
           success: described(MCP.Status, "OAuth authentication completed"),
           error: [UnsupportedOAuthError, McpServerNotFoundError],
+        // kilocode_change start - describe optional client-driven browser ownership
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "mcp.auth.authenticate",
             summary: "Authenticate MCP OAuth",
-            description: "Start OAuth flow and wait for callback (opens browser).",
+            description: "Start OAuth flow and wait for callback, optionally letting the client open the browser.",
           }),
         ),
+        // kilocode_change end
+        // kilocode_change start - cancel an active OAuth flow without deleting credentials
+        HttpApiEndpoint.post("authCancel", McpPaths.authCancel, {
+          params: { name: Schema.String },
+          query: WorkspaceRoutingQuery,
+          success: described(AuthRemoveResponse, "OAuth authentication cancelled"),
+          error: McpServerNotFoundError,
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "mcp.auth.cancel",
+            summary: "Cancel MCP OAuth",
+            description: "Cancel an active OAuth flow without removing stored credentials.",
+          }),
+        ),
+        // kilocode_change end
         HttpApiEndpoint.delete("authRemove", McpPaths.auth, {
           params: { name: Schema.String },
           query: WorkspaceRoutingQuery,

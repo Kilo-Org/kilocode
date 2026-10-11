@@ -18,6 +18,10 @@ describe("tracksElapsed", () => {
     expect(tracksElapsed("busy", false, { active: 5000 })).toBe(true)
   })
 
+  it("tracks between-turn waiting while a goal is active", () => {
+    expect(tracksElapsed("idle", false, timing, true)).toBe(true)
+  })
+
   it("stops for idle sessions and missing timing", () => {
     expect(tracksElapsed("idle", false, timing)).toBe(false)
     expect(tracksElapsed("busy", false, undefined)).toBe(false)

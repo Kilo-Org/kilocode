@@ -1,7 +1,6 @@
 import * as vscode from "vscode"
+import { minimatch } from "minimatch"
 import type { MarketplaceItem, MarketplaceRelevanceMetadata } from "./types"
-
-const EXCLUDE = "**/{node_modules,.git,dist,build,out,.kilo,.opencode,.kilocode}/**"
 
 function strings(value: unknown): string[] {
   if (!Array.isArray(value)) return []
@@ -21,52 +20,30 @@ function extensionIds(value: unknown): string[] {
     .filter((id): id is string => typeof id === "string")
 }
 
-interface RelevanceHost {
-  extensions: readonly string[]
-  find: (root: vscode.Uri, pattern: string) => Promise<boolean>
+/** Unique `suggest_for.filename` patterns of the given marketplace items. */
+export function filenamePatterns(items: MarketplaceItem[]): string[] {
+  return Array.from(new Set(items.flatMap((item) => strings(item.suggest_for?.filename))))
 }
 
-function context(): RelevanceHost {
-  return {
-    extensions: vscode.extensions.all.map((extension) => extension.id),
-    find: async (root, pattern) => {
-      const glob = new vscode.RelativePattern(root, `**/${pattern}`)
-      return (await vscode.workspace.findFiles(glob, EXCLUDE, 1)).length > 0
-    },
-  }
+/** Whether a workspace-relative path matches a `suggest_for.filename` pattern. */
+export function matchesPattern(file: string, pattern: string): boolean {
+  return minimatch(file.replaceAll("\\", "/"), `**/${pattern}`, { dot: true })
 }
 
-export async function detectMarketplaceRelevance(
+/**
+ * Combines the filename patterns the backend found in the workspace (it honors
+ * .gitignore) with the installed VS Code extensions.
+ */
+export function detectMarketplaceRelevance(
   items: MarketplaceItem[],
-  roots: readonly vscode.Uri[],
-  source: RelevanceHost = context(),
-): Promise<MarketplaceRelevanceMetadata> {
-  const patterns = Array.from(new Set(items.flatMap((item) => strings(item.suggest_for?.filename))))
-  const files = new Map<string, boolean>()
-
-  const batches = Array.from({ length: Math.ceil(patterns.length / 4) }, (_, index) =>
-    patterns.slice(index * 4, index * 4 + 4),
-  )
-  for (const batch of batches) {
-    await Promise.all(
-      batch.map(async (pattern) => {
-        const found = await Promise.all(
-          roots.map((root) =>
-            source.find(root, pattern).catch((err: unknown) => {
-              console.warn(`[Kilo New] Marketplace relevance scan failed for ${pattern}:`, err)
-              return false
-            }),
-          ),
-        )
-        files.set(pattern, found.some(Boolean))
-      }),
-    )
-  }
-
-  const extensions = new Set(source.extensions.map((id) => id.toLowerCase()))
+  filenames: readonly string[],
+  installed: readonly string[] = vscode.extensions.all.map((extension) => extension.id),
+): MarketplaceRelevanceMetadata {
+  const found = new Set(filenames)
+  const extensions = new Set(installed.map((id) => id.toLowerCase()))
   return Object.fromEntries(
     items.flatMap((item) => {
-      const filename = strings(item.suggest_for?.filename).filter((pattern) => files.get(pattern))
+      const filename = strings(item.suggest_for?.filename).filter((pattern) => found.has(pattern))
       const vscodeExtension = extensionIds(item.suggest_for?.vscode_extension).filter((id) =>
         extensions.has(id.toLowerCase()),
       )

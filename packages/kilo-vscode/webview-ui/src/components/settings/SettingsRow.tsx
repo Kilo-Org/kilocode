@@ -11,6 +11,7 @@ const SettingsRow: Component<{
 }> = (props) => (
   <div
     data-slot="settings-row"
+    data-search-label={props.title}
     style={{
       "margin-bottom": props.last ? "0" : "8px",
       "padding-bottom": props.last ? "0" : "8px",

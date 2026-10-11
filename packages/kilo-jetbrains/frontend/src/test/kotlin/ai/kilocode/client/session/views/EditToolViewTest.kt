@@ -5,6 +5,7 @@ import ai.kilocode.client.session.model.ToolExecState
 import ai.kilocode.client.session.model.toolKind
 import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.session.views.tool.EditToolView
+import ai.kilocode.client.session.views.tool.FileLinkLabel
 import ai.kilocode.client.session.views.tool.ReadToolView
 import ai.kilocode.client.session.views.tool.ToolView
 import ai.kilocode.client.ui.DiffStatBadge
@@ -120,7 +121,7 @@ class EditToolViewTest : BasePlatformTestCase() {
         assertTrue(view.isExpanded())
         assertEquals(2, view.codeEditors().size)
 
-        val fileLinks = labels(view).filter { it.text?.contains("<u>") == true }
+        val fileLinks = labels(view).filter { it.isFileLink() }
         assertTrue(fileLinks.any { it.text!!.contains("A.kt") && !it.text!!.contains("src/") })
         assertTrue(fileLinks.any { it.text!!.contains("B.kt") && !it.text!!.contains("pkg/") })
         assertTrue(fileLinks.any { it.text!!.contains("A.kt") && it.toolTipText == "src/A.kt" })
@@ -358,7 +359,7 @@ class EditToolViewTest : BasePlatformTestCase() {
         val body = view.headerPopup()!!.build()
 
         try {
-            val fileLinks = labels(body.component).filter { it.text?.contains("<u>") == true }
+            val fileLinks = labels(body.component).filter { it.isFileLink() }
             assertTrue(fileLinks.any { it.text!!.contains("A.kt") && it.toolTipText == "src/A.kt" })
             assertTrue(fileLinks.any { it.text!!.contains("B.kt") && it.toolTipText == "pkg/B.kt" })
 
@@ -494,7 +495,9 @@ class EditToolViewTest : BasePlatformTestCase() {
     }
 
     private fun linkLabel(view: EditToolView): JBLabel =
-        labels(view).first { it.text?.contains("<u>") == true }
+        labels(view).first { it.isFileLink() }
+
+    private fun JBLabel.isFileLink() = this is FileLinkLabel && !text.isNullOrEmpty()
 
     private fun labels(root: Container): List<JBLabel> = root.components.flatMap { child ->
         val nested = if (child is Container) labels(child) else emptyList()

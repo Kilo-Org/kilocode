@@ -72,14 +72,6 @@ class KiloBackendModelStateManager(
         updated
     }
 
-    suspend fun clear(agent: String): ModelStateDto = mutex.withLock {
-        val raw = read()
-        val state = KiloCliDataParser.parseModelState(raw.orEmpty())
-        val updated = state.copy(model = state.model - agent)
-        write(KiloCliDataParser.buildModelStateJson(raw, updated))
-        updated
-    }
-
     suspend fun variant(update: ModelVariantUpdateDto): ModelStateDto = mutex.withLock {
         val raw = read()
         val state = KiloCliDataParser.parseModelState(raw.orEmpty())
