@@ -64,11 +64,12 @@ class KiloBackendCliManagerEnvTest {
     }
 
     @Test
-    fun `isolation disabled - default CLI config asks for edit permissions without forcing bash`() {
+    fun `isolation disabled - no permission config is injected over user config`() {
+        // The plugin must not outrank the user's global/project kilo.json permission settings.
+        // The JetBrains edit-ask default now lives in the CLI's client-keyed defaults layer.
         val env = manager.buildEnv("pwd123", emptyMap())
 
-        assertEquals("""{"permission":{"edit":"ask"}}""", env["KILO_CONFIG_CONTENT"])
-        assertFalse(env["KILO_CONFIG_CONTENT"]?.contains("bash") == true)
+        assertFalse(env.containsKey("KILO_CONFIG_CONTENT"))
     }
 
     @Test
