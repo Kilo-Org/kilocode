@@ -47,6 +47,7 @@ export const SessionTabMenu: ParentComponent<{
               <ContextMenu.ItemLabel>
                 {props.pinned ? t("agentManager.tab.unpin") : t("agentManager.tab.pin")}
               </ContextMenu.ItemLabel>
+              <span class="session-tab-menu-hint">{t("session.tabs.pinHint")}</span>
             </ContextMenu.Item>
             <Show when={props.closeable !== false || props.onCloseOthers}>
               <ContextMenu.Separator />

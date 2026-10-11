@@ -110,6 +110,16 @@ describe("the Storybook session mock satisfies what MessageList reads", () => {
     expect(providers).toMatch(/scrollBottomID: \(\) =>/)
     expect(providers).toMatch(/consumeScrollBottom: \(\) =>/)
   })
+
+  it("provides the MCP state and actions read by PromptInput", () => {
+    expect(providers).toMatch(/mcpAuth: \(\) =>/)
+    expect(providers).toMatch(/mcpRemoving: \(\) =>/)
+    expect(providers).toMatch(/mcpAuthResult: \(\) =>/)
+    expect(providers).toMatch(/mcpBundles: \(\) =>/)
+    expect(providers).toMatch(/signInMcp: noop/)
+    expect(providers).toMatch(/cancelMcpSignIn: noop/)
+    expect(providers).toMatch(/resetMcpAuth: noop/)
+  })
 })
 
 describe("MessageList arms a restore pass for the already-selected session", () => {

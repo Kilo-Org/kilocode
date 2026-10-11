@@ -28,6 +28,7 @@ const CSS_FILES = [
 const TSX_FILES = [
   path.join(ROOT, "webview-ui/agent-manager/AgentManagerApp.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/ShortcutsDialog.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/ShortcutHints.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/intro/AgentManagerIntro.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/intro/IntroGraph.tsx"),
   path.join(ROOT, "webview-ui/src/components/chat/MessageList.tsx"),
@@ -65,14 +66,13 @@ const TSX_FILES = [
   path.join(ROOT, "webview-ui/agent-manager/SidebarSectionHeader.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/SidebarSearchMenu.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/SidebarToggleButton.tsx"),
-  path.join(ROOT, "webview-ui/agent-manager/WorktreeSectionActions.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/ProjectsSection.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/ProjectsFooter.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/ProjectSidebarBody.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/ProjectList.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/ProjectActions.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/ProjectRowActions.tsx"),
-  path.join(ROOT, "webview-ui/agent-manager/SidebarBody.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/ProjectAvatar.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/orphans/OrphanNotice.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/orphans/OrphanDialog.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/Skeleton.tsx"),
@@ -236,10 +236,7 @@ describe("Agent Manager edit preview", () => {
 })
 
 describe("Agent Manager leftover worktree folders", () => {
-  const bodies = [
-    path.join(ROOT, "webview-ui/agent-manager/SidebarBody.tsx"),
-    path.join(ROOT, "webview-ui/agent-manager/ProjectSidebarBody.tsx"),
-  ]
+  const bodies = [path.join(ROOT, "webview-ui/agent-manager/ProjectSidebarBody.tsx")]
 
   it("puts the notice above the worktrees instead of below them", () => {
     for (const file of bodies) {
@@ -298,9 +295,7 @@ describe("Agent Manager leftover worktree folders", () => {
     const disposable = { dispose: () => undefined }
     const host = {
       workspacePath: () => "/repo",
-      multiProject: () => false,
       onDidChangeWorkspaceFolders: () => disposable,
-      onDidChangeMultiProject: () => disposable,
       onDidChangeWorktreePool: () => disposable,
     } as unknown as Host
 
@@ -310,6 +305,7 @@ describe("Agent Manager leftover worktree folders", () => {
       log: () => undefined,
       output: () => undefined,
       activate: () => undefined,
+      empty: () => undefined,
       expand: () => undefined,
       ready: () => Promise.resolve({ ok: true, refsFixed: 0, current: true }),
       push: () => undefined,
@@ -1303,30 +1299,33 @@ describe("Shared webview provider shell", () => {
 
   it("owns the common provider order and bridges", () => {
     const source = fs.readFileSync(PROVIDER_SHELL_FILE, "utf-8")
-    ordered(source, [
+    const base = fs.readFileSync(path.join(ROOT, "webview-ui/src/context/provider-base.tsx"), "utf-8")
+    const rich = fs.readFileSync(path.join(ROOT, "webview-ui/src/context/rich-provider.tsx"), "utf-8")
+    const session = fs.readFileSync(path.join(ROOT, "webview-ui/src/context/provider-session.tsx"), "utf-8")
+    expect(source).toContain("<Base content={RichProvider}>")
+    ordered(base, [
       "ThemeProvider",
       "DialogProvider",
       "VSCodeProvider",
-      "MermaidDownloadBridge",
       "ServerProvider",
       "LanguageBridge",
-      "MarkedProvider",
-      "DiffComponentProvider",
-      "CodeComponentProvider",
-      "FileComponentProvider",
+      "Content",
       "ProviderProvider",
       "ConfigProvider",
       "SpeechToTextPrewarm",
       "DisplayProvider",
+    ])
+    ordered(rich, ["MarkedProvider", "DiffComponentProvider", "CodeComponentProvider", "FileComponentProvider"])
+    expect(rich).toContain('window.addEventListener("kilo:save-image", save)')
+    ordered(session, [
       "IndexingProvider",
       "KiloEmbeddingModelsProvider",
       "ImageModelsProvider",
       "NotificationsProvider",
       "SessionProvider",
-      "MemoryProvider",
-      "FeedbackProvider",
     ])
-    expect(source.indexOf("<Toast.Region")).toBeGreaterThan(source.indexOf("</VSCodeProvider>"))
+    ordered(source, ["MemoryProvider", "FeedbackProvider"])
+    expect(base.indexOf("<Toast.Region")).toBeGreaterThan(base.indexOf("</VSCodeProvider>"))
   })
 
   it("keeps sidebar-only providers in the sidebar root", () => {

@@ -15,6 +15,8 @@ import ai.kilocode.client.session.ui.prompt.PromptAttachmentPasteHandler
 import ai.kilocode.client.session.ui.prompt.PromptAttachmentPasteProvider
 import ai.kilocode.client.session.ui.prompt.PromptDataKeys
 import ai.kilocode.client.session.ui.prompt.PromptPanel
+import ai.kilocode.client.session.ui.prompt.SessionIssue
+import ai.kilocode.client.session.ui.prompt.SessionIssueAction
 import ai.kilocode.client.session.ui.prompt.PromptTextPasteProvider
 import ai.kilocode.client.session.ui.prompt.SlashAction
 import ai.kilocode.client.session.ui.selection.SessionSelection
@@ -43,6 +45,7 @@ import com.intellij.openapi.actionSystem.CommonDataKeys
 import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.actionSystem.DataKey
 import com.intellij.openapi.actionSystem.DataSink
+import com.intellij.openapi.actionSystem.DefaultActionGroup
 import com.intellij.openapi.actionSystem.IdeActions
 import com.intellij.openapi.actionSystem.PlatformCoreDataKeys
 import com.intellij.openapi.actionSystem.UiDataProvider
@@ -1117,6 +1120,77 @@ class PromptPanelTest : BasePlatformTestCase() {
         assertTrue(panel.resetVisibleForTest())
     }
 
+    fun `test session issues button is hidden when there are no issues`() {
+        val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> })
+
+        panel.setIssues(emptyList())
+
+        assertFalse(panel.issuesButtonForTest().isVisible)
+    }
+
+    fun `test session issues button appears for an actionable issue`() {
+        val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> })
+        val issue = SessionIssue("mcp-auth:anaconda", "Anaconda MCP", listOf(SessionIssueAction("Sign in") {}))
+
+        panel.setIssues(listOf(issue))
+        realize(panel, 260, 400)
+        panel.setBounds(0, 0, 260, panel.preferredSize.height)
+        layoutTree(panel)
+
+        val button = panel.issuesButtonForTest()
+        assertTrue(button.isVisible)
+        assertEquals(KiloBundle.message("prompt.issues.title"), button.toolTipText)
+        assertEquals(listOf(issue), panel.issuesForTest())
+        val point = SwingUtilities.convertPoint(button.parent, button.location, panel.shellForTest())
+        assertTrue("issues button should be in the right half", point.x > panel.shellForTest().width / 2)
+        assertTrue("issues button should be in the top half", point.y < panel.shellForTest().height / 2)
+    }
+
+    fun `test session issues keep multiple future actions`() {
+        val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> })
+        val issues = listOf(
+            SessionIssue("mcp-auth:anaconda", "Anaconda MCP", listOf(SessionIssueAction("Sign in") {})),
+            SessionIssue("other", "Other provider", listOf(SessionIssueAction("Resolve") {})),
+        )
+
+        panel.setIssues(issues)
+
+        assertEquals(issues, panel.issuesForTest())
+    }
+
+    fun `test session issue action invokes its supplied recovery`() {
+        var clicked = false
+        val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> })
+        val issue = SessionIssue(
+            "mcp-auth:anaconda",
+            "Anaconda MCP",
+            listOf(
+                SessionIssueAction("Sign in") { clicked = true },
+                SessionIssueAction("Open in Settings") {},
+            ),
+        )
+        panel.setIssues(listOf(issue))
+        val provider = panel.issueActions().single() as DefaultActionGroup
+        val actions = provider.getChildren(null)
+        assertEquals("Anaconda MCP", provider.templatePresentation.text)
+        assertEquals(listOf("Sign in", "Open in Settings"), actions.map { it.templatePresentation.text })
+        assertTrue(actions.all { it.templatePresentation.icon == null })
+        val action = actions.first()
+
+        action.actionPerformed(
+            AnActionEvent.createEvent(
+                action,
+                DataContext.EMPTY_CONTEXT,
+                null,
+                ActionPlaces.UNKNOWN,
+                ActionUiKind.NONE,
+                null,
+            ),
+        )
+
+        assertTrue(clicked)
+    }
+
     fun `test prompt editor exposes send context`() {
         val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> })
         val sink = TestSink()
@@ -1820,6 +1894,11 @@ class PromptPanelTest : BasePlatformTestCase() {
         UIUtil.dispatchAllInvocationEvents()
         roots.add(root)
         return root
+    }
+
+    private fun layoutTree(root: Container) {
+        root.doLayout()
+        root.components.filterIsInstance<Container>().forEach(::layoutTree)
     }
 
     private fun realizedEditor(panel: PromptPanel): EditorEx {

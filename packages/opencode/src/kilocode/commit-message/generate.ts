@@ -5,6 +5,7 @@ import { Agent } from "@/agent/agent"
 import { AppRuntime } from "@/effect/app-runtime"
 import { Effect } from "effect"
 import * as Log from "@opencode-ai/core/util/log"
+import { errorMessage } from "@/util/error"
 import type { CommitMessageRequest, CommitMessageResponse, GitContext } from "./types"
 import { getGitContext } from "./git-context"
 
@@ -225,7 +226,7 @@ export async function generateCommitMessage(request: CommitMessageRequest): Prom
     if (controller.signal.aborted) {
       throw new Error("Commit message generation timed out after 30 seconds")
     }
-    const msg = err instanceof Error ? err.message : String(err)
+    const msg = errorMessage(err)
     log.error("generation failed", { error: msg })
     throw new Error(`Failed to generate commit message: ${msg}`)
   } finally {

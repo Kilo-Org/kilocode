@@ -111,11 +111,13 @@ export function getConfigErrorDetails(error: unknown): string | undefined {
   if (!data || typeof data !== "object") return undefined
   const scoped = data as Record<string, unknown>
   const path = typeof scoped.path === "string" ? scoped.path : undefined
+  const shadowedBy = typeof scoped.shadowedBy === "string" ? scoped.shadowedBy : undefined
   const issues = Array.isArray(scoped.issues) ? scoped.issues : undefined
-  if (!path && (!issues || issues.length === 0)) return undefined
+  if (!path && !shadowedBy && (!issues || issues.length === 0)) return undefined
 
   const out: string[] = []
   if (path) out.push(`File: ${path}`)
+  if (shadowedBy) out.push(`Shadowed by: ${shadowedBy}`)
   if (issues && issues.length > 0) {
     if (out.length > 0) out.push("")
     // prettifyError accepts any object with an `issues` array; the cast is
@@ -201,7 +203,7 @@ export async function runWithMessageConfirmation<T>(
 }
 
 export function sessionToWebview(
-  session: Pick<Session, "id" | "parentID" | "title" | "time" | "summary" | "revert" | "metadata">,
+  session: Pick<Session, "id" | "parentID" | "title" | "time" | "summary" | "revert" | "metadata" | "agent" | "model">,
 ) {
   const goal = session.metadata?.["kilo.goal"]
   return {
@@ -210,6 +212,14 @@ export function sessionToWebview(
     title: session.title,
     createdAt: new Date(session.time.created).toISOString(),
     updatedAt: new Date(session.time.updated).toISOString(),
+    // The agent and model the server last ran, so a reopened session shows
+    // them before its history loads. The server stores Default as "default".
+    agent: session.agent,
+    model: session.model && {
+      providerID: session.model.providerID,
+      modelID: session.model.id,
+      ...(session.model.variant && session.model.variant !== "default" ? { variant: session.model.variant } : {}),
+    },
     // Use null (not undefined) so the value survives postMessage JSON serialization.
     // Without this, unrevert responses lose the revert key entirely and the
     // SolidJS store merge never clears the existing revert state.
@@ -780,6 +790,7 @@ export function mapCloudSessionMessageToWebviewMessage(message: CloudSessionMess
     id: message.info.id,
     sessionID: message.info.sessionID,
     role: message.info.role as "user" | "assistant",
+    parentID: message.info.parentID,
     parts: message.parts,
     createdAt: message.info.time?.created
       ? new Date(message.info.time.created).toISOString()

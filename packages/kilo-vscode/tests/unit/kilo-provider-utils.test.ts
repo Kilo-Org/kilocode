@@ -156,6 +156,21 @@ describe("sessionToWebview", () => {
     expect(result.title).toBe("My Session")
   })
 
+  it.each([
+    ["high", { providerID: "kilo", modelID: "gpt", variant: "high" }],
+    ["default", { providerID: "kilo", modelID: "gpt" }],
+  ])("projects the agent and model the session last ran (variant %s)", (variant, model) => {
+    const result = sessionToWebview(makeSession({ agent: "plan", model: { id: "gpt", providerID: "kilo", variant } }))
+    expect(result.agent).toBe("plan")
+    expect(result.model).toEqual(model)
+  })
+
+  it("omits the agent and model before the session first runs", () => {
+    const result = JSON.parse(JSON.stringify(sessionToWebview(makeSession())))
+    expect(result).not.toHaveProperty("agent")
+    expect(result).not.toHaveProperty("model")
+  })
+
   it("produces valid ISO format", () => {
     const result = sessionToWebview(makeSession())
     expect(() => new Date(result.createdAt)).not.toThrow()
@@ -791,6 +806,16 @@ describe("mapCloudSessionMessage", () => {
     const msg = mapCloudSessionMessageToWebviewMessage(makeCloudMessage({ role: "user" }))
     expect(msg.role).toBe("user")
   })
+
+  it("passes parentID through so turn grouping can link answers to prompts", () => {
+    const msg = mapCloudSessionMessageToWebviewMessage(makeCloudMessage({ parentID: "msg-0" }))
+    expect(msg.parentID).toBe("msg-0")
+  })
+
+  it("leaves parentID undefined when the cloud message has none", () => {
+    const msg = mapCloudSessionMessageToWebviewMessage(makeCloudMessage())
+    expect(msg.parentID).toBeUndefined()
+  })
 })
 
 describe("getErrorMessage", () => {
@@ -924,6 +949,20 @@ describe("getConfigErrorDetails", () => {
 
   it("omits the issues section when only the path is present", () => {
     expect(getConfigErrorDetails({ data: { path: "/cfg.json" } })).toBe("File: /cfg.json")
+  })
+
+  it("formats a shadowed-write error with the overriding file", () => {
+    const err = {
+      data: {
+        message:
+          "The setting was saved to /home/me/.config/kilo/kilo.json, but /home/me/.config/kilo/opencode.json still takes precedence over it.",
+        path: "/home/me/.config/kilo/kilo.json",
+        shadowedBy: "/home/me/.config/kilo/opencode.json",
+      },
+    }
+    expect(getConfigErrorDetails(err)).toBe(
+      "File: /home/me/.config/kilo/kilo.json\nShadowed by: /home/me/.config/kilo/opencode.json",
+    )
   })
 
   it("returns undefined when issues array is empty and no path", () => {

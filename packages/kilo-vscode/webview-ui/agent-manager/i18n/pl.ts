@@ -32,7 +32,6 @@ export const dict = {
   "agentManager.local": "lokalne",
   "agentManager.sidebar.collapse": "Zwiń pasek boczny",
   "agentManager.sidebar.expand": "Pokaż pasek boczny",
-  "agentManager.section.worktrees": "WORKTREES",
   "agentManager.section.sessions": "SESJE",
   "agentManager.projects": "PROJEKTY",
   "agentManager.settings.title": "Agent Manager",
@@ -45,6 +44,7 @@ export const dict = {
   "agentManager.settings.worktreePool.title": "Wstępne przygotowanie worktree",
   "agentManager.settings.worktreePool.description":
     "Przygotuj gotowy worktree w tle, aby nowe sesje Agent Manager uruchamiały się szybciej. Wykorzystuje dodatkowe miejsce na dysku na jeden checkout na otwarty projekt.",
+  "agentManager.hints.switchSession": "Przełącz sesję",
   "agentManager.settings.project.title": "Projekt",
   "agentManager.settings.project.description": "Wybierz repository, którego ustawienia worktree chcesz edytować.",
   "agentManager.settings.project.empty": "Brak dostępnych projektów Agent Manager.",
@@ -72,12 +72,9 @@ export const dict = {
   "agentManager.project.settings": "Ustawienia projektu",
   "agentManager.project.restricted":
     "Bieżący obszar roboczy VS Code to folder domowy lub katalog główny systemu plików. Otwórz konkretny folder projektu w VS Code, aby używać Agent Manager.",
-  "agentManager.notGitRepo": "Nie jest repozytorium git",
-
   "agentManager.updateBase.title": "Aktualizuj z bazy",
   "agentManager.updateBase.selectWorktree": "Najpierw wybierz zarządzany worktree.",
 
-  "agentManager.worktree.settings": "Ustawienia Worktree",
   "agentManager.worktree.new": "Nowy Worktree",
   "agentManager.worktree.setupScript": "Skrypt konfiguracji Worktree",
   "agentManager.worktree.delete": "Usuń Worktree",
@@ -93,6 +90,9 @@ export const dict = {
   "agentManager.worktree.copyPath": "Kopiuj ścieżkę",
   "agentManager.worktree.openInVscode": "Otwórz w VS Code",
   "agentManager.worktree.rename": "Zmień nazwę",
+  "agentManager.worktree.pin": "Przypnij",
+  "agentManager.worktree.unpin": "Odepnij",
+  "agentManager.worktree.pinned": "Przypięte",
   "agentManager.worktree.newSection": "Nowa sekcja",
   "agentManager.worktree.ungrouped": "Niezgrupowane",
   "agentManager.section.rename": "Zmień nazwę sekcji",
@@ -105,6 +105,7 @@ export const dict = {
   "agentManager.hoverCard.worktree": "Worktree",
   "agentManager.hoverCard.base": "Baza",
   "agentManager.hoverCard.sessions": "Sesje",
+  "agentManager.hoverCard.section": "Sekcja",
   "agentManager.hoverCard.files": "Pliki",
   "agentManager.hoverCard.changes": "Zmiany",
   "agentManager.hoverCard.commits": "Commity",
@@ -187,13 +188,6 @@ export const dict = {
   "agentManager.shortcuts.cycleAgentMode": "Następny tryb agenta",
   "agentManager.shortcuts.cyclePreviousAgentMode": "Poprzedni tryb agenta",
   "agentManager.shortcuts.showShortcuts": "Pokaż skróty klawiszowe",
-  "agentManager.dialog.removeStaleWorktree.title": "Usuń nieaktualny Worktree",
-  "agentManager.dialog.removeStaleWorktree.messagePre": "Usunąć nieaktualny Worktree ",
-  "agentManager.dialog.removeStaleWorktree.messagePost":
-    "? To usunie tylko mapowanie w Agent Manager i nie zmieni plików na dysku.",
-  "agentManager.dialog.removeStaleWorktree.cancel": "Anuluj",
-  "agentManager.dialog.removeStaleWorktree.confirm": "Usuń nieaktualny Worktree",
-
   "agentManager.dialog.project.select": "Wybierz projekt",
   "agentManager.dialog.project.missing": "Nie znaleziono repozytorium",
   "agentManager.dialog.openWorktree": "Nowy Worktree",
@@ -454,6 +448,7 @@ export const dict = {
   "agentManager.browser.url": "Adres",
   "agentManager.browser.urlPlaceholder": "http://localhost:3000",
   "agentManager.browser.open": "Otwórz",
+  "agentManager.browser.openExternal": "Otwórz w zewnętrznej przeglądarce",
   "agentManager.browser.inspect": "Wybierz element",
   "agentManager.browser.devtoolsTitle": "Narzędzia deweloperskie",
   "agentManager.browser.refresh": "Odśwież przeglądarkę",

@@ -66,6 +66,8 @@ class FakeWorktreeRpcApi : KiloWorktreeRpcApi {
     val prCalls = CopyOnWriteArrayList<String>()
     /** The `maxAge` ceiling of each [prStatus] call, positionally matching [prCalls]. */
     val prAges = CopyOnWriteArrayList<Long?>()
+    /** The paths each [prStatus] call named as uncacheable, positionally matching [prCalls]. */
+    val prFresh = CopyOnWriteArrayList<List<String>>()
     val statsCalls = CopyOnWriteArrayList<String>()
     val dirtyCalls = CopyOnWriteArrayList<String>()
     /** When set, [stats] throws it instead of answering. */
@@ -146,10 +148,11 @@ class FakeWorktreeRpcApi : KiloWorktreeRpcApi {
         return ghResult
     }
 
-    override suspend fun prStatus(directory: String, maxAge: Long?): WorktreePrListDto {
+    override suspend fun prStatus(directory: String, maxAge: Long?, fresh: List<String>): WorktreePrListDto {
         assertNotEdt("prStatus")
         prCalls.add(directory)
         prAges.add(maxAge)
+        prFresh.add(fresh)
         // Snapshot before the gate so a call held open answers with what was configured when it
         // started, letting a test stage a newer result for the calls that follow.
         val answer = prResult

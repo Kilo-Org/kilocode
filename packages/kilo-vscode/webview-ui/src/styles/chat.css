@@ -15,7 +15,9 @@
 @import "./session-actions.css";
 @import "./welcome.css";
 @import "./prompt-input.css";
+@import "./shortcut-keys.css";
 @import "./goal.css";
+@import "./todo-dock.css";
 @import "./prompt-dropdowns.css";
 @import "./model-selector.css";
 @import "./permission-dock.css";

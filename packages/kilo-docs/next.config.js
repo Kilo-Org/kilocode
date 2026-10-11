@@ -20,6 +20,11 @@ module.exports = withMarkdoc(/* config: https://markdoc.io/docs/nextjs#options *
         basePath: false,
         permanent: true,
       },
+      {
+        source: "/desktop",
+        destination: "/desktop/overview",
+        permanent: true,
+      },
       ...previousDocsRedirects,
     ]
   },

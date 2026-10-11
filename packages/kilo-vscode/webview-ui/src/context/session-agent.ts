@@ -45,6 +45,24 @@ export function resolvePromptAgent(input: {
   return input.pending ?? undefined
 }
 
+/**
+ * The agent a scope uses for its model, effort, picks and the prompt it sends.
+ * It mirrors resolvePromptAgent: real sessions keep their recorded agent and
+ * otherwise fall back to the default the server would run, while drafts and
+ * the composer follow the pending agent.
+ */
+export function resolveScopeAgent(input: {
+  id: string
+  selections: Record<string, string>
+  pending: string | null
+  fallback: string
+}) {
+  const sel = input.selections[input.id]
+  if (sel) return sel
+  if (input.id.startsWith("ses_")) return input.fallback
+  return input.pending ?? input.fallback
+}
+
 export function draftAgentSelection(selections: Record<string, string>, draft: string, pending: string | null) {
   if (selections[draft]) return undefined
   return pending ?? undefined

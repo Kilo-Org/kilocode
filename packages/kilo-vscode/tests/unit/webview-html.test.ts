@@ -1,5 +1,44 @@
 import { describe, it, expect } from "bun:test"
 import { buildConnectSrc, buildCspString } from "../../src/webview-html-utils"
+import { KiloProvider } from "../../src/KiloProvider"
+
+describe("Settings webview entry", () => {
+  function html(route?: () => { tab?: string; projectId?: string }) {
+    const provider = new KiloProvider(
+      { fsPath: "/extension" } as never,
+      { getServerInfo: () => ({ port: 3000 }) } as never,
+      undefined,
+      { settingsPanel: route },
+    ) as unknown as { _getHtmlForWebview: (webview: unknown) => string }
+    return () =>
+      provider._getHtmlForWebview({
+        cspSource: "vscode-resource://test",
+        asWebviewUri: (uri: { fsPath: string }) => ({ toString: () => `vscode-resource://${uri.fsPath}` }),
+      })
+  }
+
+  it("starts the current Settings route directly, including after a reload", () => {
+    let tab = "indexing"
+    const render = html(() => ({ tab, projectId: "</script><script>bad()</script>" }))
+    const first = render()
+    expect(first).toContain("/dist/settings.js")
+    expect(first).toContain("/dist/settings.css")
+    expect(first).toContain('type="module"')
+    expect(first).toContain('window.KILO_SETTINGS = {"tab":"indexing"')
+    expect(first).toContain('"projectId":"\\u003c/script>')
+    expect(first).not.toContain("<script>bad()")
+    tab = "display"
+    expect(render()).toContain('window.KILO_SETTINGS = {"tab":"display"')
+  })
+
+  it("keeps the ordinary chat entry and script policy unchanged", () => {
+    const result = html()()
+    expect(result).toContain("/dist/webview.js")
+    expect(result).toContain("/dist/webview.css")
+    expect(result).not.toContain('type="module"')
+    expect(result).not.toContain("'strict-dynamic'")
+  })
+})
 
 describe("buildConnectSrc", () => {
   it("uses wildcard ports when no port specified", () => {
@@ -40,6 +79,13 @@ describe("buildCspString", () => {
     const result = buildCspString(cspSource, nonce)
     expect(result).toContain(`'nonce-${nonce}'`)
     expect(result).toContain("'wasm-unsafe-eval'")
+  })
+
+  it("allows imports from the trusted Settings module without allowing arbitrary script origins", () => {
+    const result = buildCspString(cspSource, nonce, undefined, undefined, true)
+    expect(result).toContain(`script-src 'nonce-${nonce}' 'wasm-unsafe-eval' 'strict-dynamic'`)
+    expect(result).not.toContain("script-src https:")
+    expect(buildCspString(cspSource, nonce)).not.toContain("'strict-dynamic'")
   })
 
   it("includes cspSource in style-src and font-src", () => {

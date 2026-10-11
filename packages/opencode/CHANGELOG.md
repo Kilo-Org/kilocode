@@ -1,5 +1,59 @@
 # @kilocode/cli
 
+## 7.8.8
+
+### Patch Changes
+
+- [#14889](https://github.com/Kilo-Org/kilocode/pull/14889) [`7f64374`](https://github.com/Kilo-Org/kilocode/commit/7f6437435e3886a4753c87aa79fd2e0d43844035) Thanks [@WebReflection](https://github.com/WebReflection)! - Keep MCP OAuth credentials bound to the authorization server that issued them, so a server that switches authorization servers can no longer receive stored refresh tokens or client secrets.
+
+## 7.8.7
+
+### Minor Changes
+
+- [#14724](https://github.com/Kilo-Org/kilocode/pull/14724) [`c9632e4`](https://github.com/Kilo-Org/kilocode/commit/c9632e495115ec9f4592842b02335c2a61149645) - Support client-driven MCP OAuth authorization, preserve credentials when cancelling sign-in, and classify recoverable authentication failures as requiring sign-in.
+
+- [#14781](https://github.com/Kilo-Org/kilocode/pull/14781) [`fffcf0e`](https://github.com/Kilo-Org/kilocode/commit/fffcf0e2ac3ae821a953e1956cc316d35b4a24ce) Thanks [@eborjaa](https://github.com/eborjaa)! - Choose a separate model for automatic project memory saves with the new `memory_model` setting in `kilo.jsonc`. When it is unset or unavailable, memory keeps using the session model.
+
+- [#14701](https://github.com/Kilo-Org/kilocode/pull/14701) [`d627b31`](https://github.com/Kilo-Org/kilocode/commit/d627b3185589fe671748b0b651d7a1c61bbb7795) Thanks [@calebnorman](https://github.com/calebnorman)! - Press Esc twice in a subagent view to stop that subagent and anything it started while the parent session keeps working, the same as Stop on a VS Code task card. The parent is told the user stopped it, so it no longer starts a replacement subagent right away. Leaving the TUI from a subagent view now needs a second press of the exit key.
+
+- [#14702](https://github.com/Kilo-Org/kilocode/pull/14702) [`f1e766d`](https://github.com/Kilo-Org/kilocode/commit/f1e766d339830af0649f3dbe0da67fe73d495ca6) Thanks [@calebnorman](https://github.com/calebnorman)! - Steer a running subagent directly from its TUI view. The steer runs as the subagent's own agent and model, and the parent agent is notified over the shared agent board.
+
+### Patch Changes
+
+- [#14800](https://github.com/Kilo-Org/kilocode/pull/14800) [`b45cbdf`](https://github.com/Kilo-Org/kilocode/commit/b45cbdf5ce3a2a085ccfde17791c707692508286) - Build the CLI with Bun 1.4.2 to fix intermittent subprocess failures.
+
+- [#14794](https://github.com/Kilo-Org/kilocode/pull/14794) [`2792c70`](https://github.com/Kilo-Org/kilocode/commit/2792c704edd485768fceb2c51ecd330fa872f596) Thanks [@qingshungLI](https://github.com/qingshungLI)! - Keep valid custom provider models available when another model entry is malformed.
+
+- [#14805](https://github.com/Kilo-Org/kilocode/pull/14805) [`f54e713`](https://github.com/Kilo-Org/kilocode/commit/f54e713dd25596abbdd3f17cb477a31e6aa2fcef) Thanks [@abdulhusainahk](https://github.com/abdulhusainahk)! - Preserve provider error messages when commit-message generation fails, including context-limit errors returned during streaming.
+
+- [#14723](https://github.com/Kilo-Org/kilocode/pull/14723) [`07b18a1`](https://github.com/Kilo-Org/kilocode/commit/07b18a1a250ac7b1b257e4571e7b6050e3abd092) Thanks [@WebReflection](https://github.com/WebReflection)! - Recover worktree models after transient Kilo catalog failures without falling back to another account's catalog.
+
+- [#14803](https://github.com/Kilo-Org/kilocode/pull/14803) [`21164ba`](https://github.com/Kilo-Org/kilocode/commit/21164ba0b058d1db59b8682f51f811d0407b461d) - Reduce CPU use of the workspace scan for marketplace suggestions. The scan now respects `.gitignore` and other ignore files, searches all file patterns in one pass, and no longer follows symbolic links out of the project. Creating a file no longer starts a new scan unless the file or folder can match a suggestion.
+
+- [#14723](https://github.com/Kilo-Org/kilocode/pull/14723) [`958f1c4`](https://github.com/Kilo-Org/kilocode/commit/958f1c4fff35f6ac200521819229b7da77617a97) Thanks [@WebReflection](https://github.com/WebReflection)! - Fix model precedence so mode-configured models win over remembered picks in new sessions. Manual model picks now apply per agent within each session or draft, reopened sessions immediately show the agent and model they last ran with, and the plan follow-up "Start new session" keeps the planning session in Plan mode. The model picker recovers on its own after a Kilo catalog failure and says when Kilo models are unavailable.
+
+- [#14722](https://github.com/Kilo-Org/kilocode/pull/14722) [`54eacd5`](https://github.com/Kilo-Org/kilocode/commit/54eacd5ff640c3ef67e27f1dba7c94c332f313e2) - Prevent thinking indicators from remaining active after a model response is retried.
+
+- [#14733](https://github.com/Kilo-Org/kilocode/pull/14733) [`6711533`](https://github.com/Kilo-Org/kilocode/commit/671153394545757324ecda671363e3ad1002d596) - Fix `write` and `edit` tools on Linux when the sandbox allows specific network hosts. Before, these tools failed with "Filesystem worker returned an invalid response".
+
+- [#14750](https://github.com/Kilo-Org/kilocode/pull/14750) [`bf40cc7`](https://github.com/Kilo-Org/kilocode/commit/bf40cc7cb221d7d161a378eeaf522bb1b9070553) - Make `semantic_search` available in VS Code when codebase indexing is enabled for the project, also when the indexing config switch is not set.
+
+- [#14834](https://github.com/Kilo-Org/kilocode/pull/14834) [`4e0131e`](https://github.com/Kilo-Org/kilocode/commit/4e0131e41c4f41b612c11910845f5d7b9a4e4c35) Thanks [@WebReflection](https://github.com/WebReflection)! - Update simple-git to 4.0.2 to fix command execution vulnerabilities flagged by Dependabot in Git operations.
+
+- [#14787](https://github.com/Kilo-Org/kilocode/pull/14787) [`b0aeda5`](https://github.com/Kilo-Org/kilocode/commit/b0aeda50beb315169f64f69d28cf98f71e228502) Thanks [@ykakade](https://github.com/ykakade)! - Keep every project skill available when one Kilo server handles several folders, such as Agent Manager worktrees. Skills whose frontmatter has an unquoted colon (for example `description: Use when: ...`) no longer go missing with "Skill not found" after the first folder loads.
+
+- [#14799](https://github.com/Kilo-Org/kilocode/pull/14799) [`1b9c1ab`](https://github.com/Kilo-Org/kilocode/commit/1b9c1abb1812b7e4357040a3a3e0dc1f41344707) Thanks [@L4XB](https://github.com/L4XB)! - Keep the time of day when reading date cells from XLSX and ODS spreadsheets, and read time and duration cells as the sheet shows them instead of as dates in 1899 or 1900.
+
+- [#14860](https://github.com/Kilo-Org/kilocode/pull/14860) [`2d209e6`](https://github.com/Kilo-Org/kilocode/commit/2d209e6d3ea3b7f20d1f36013eca8f21a663dbec) - Fix the TUI starting up to a permanently blank screen. A request sent to the TUI's worker before it finished starting was dropped, and the TUI then waited for a reply that never came, with no error and no timeout. Worker requests are now queued until the worker is ready, worker-side failures are reported instead of silently swallowed, and a worker that never answers fails with a clear message.
+
+- Updated dependencies [[`07b18a1`](https://github.com/Kilo-Org/kilocode/commit/07b18a1a250ac7b1b257e4571e7b6050e3abd092)]:
+  - @kilocode/kilo-gateway@7.8.4
+  - @kilocode/kilo-indexing@7.8.4
+  - @kilocode/kilo-telemetry@7.8.4
+  - @opencode-ai/server@7.8.4
+  - @opencode-ai/tui@7.8.4
+  - @opencode-ai/ui@7.8.4
+
 ## 7.8.2
 
 ### Patch Changes

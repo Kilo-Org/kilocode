@@ -38,6 +38,7 @@ import { Popover } from "@kilocode/kilo-ui/popover"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { useLanguage } from "../../context/language"
 import { useSession } from "../../context/session"
+import { useRunBoundary } from "./run-boundary"
 import { useVSCode } from "../../context/vscode"
 import { useWorktreeMode } from "../../context/worktree-mode"
 import { mergePromptAgents, taskChildren, type BackgroundAgent, type PromptAgent } from "./background-agents"
@@ -72,11 +73,7 @@ function useRunAgents() {
   const agents = useBackgroundAgents()
   // Agents seen active in this run. They stay after they finish.
   const [kept, setKept] = createSignal<ReadonlySet<string>>(new Set())
-  // A background result arrives as a synthetic user message. It is not a new
-  // run, or each finished agent would clear the ones before it.
-  const result = (id: string) =>
-    session.getParts(id).some((part) => part.type === "text" && part.synthetic && part.metadata?.background === true)
-  const user = createMemo(() => session.messages().findLast((msg) => msg.role === "user" && !result(msg.id))?.id)
+  const { user } = useRunBoundary()
   // Agents the run started, known from their task tool parts. This also
   // covers an agent that finished before the first job poll saw it run.
   const started = createMemo(() => {

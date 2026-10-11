@@ -36,4 +36,19 @@ describe("standalone Marketplace architecture", () => {
     expect(remove).not.toContain("AgentMarketplaceItem")
     expect(remove).not.toContain("McpMarketplaceItem")
   })
+
+  it("broadcasts MCP removals from Marketplace to every Kilo provider", () => {
+    expect(panel).toContain("mcpRemoval(this.connection)")
+    expect(panel).toContain('phase: "installed"')
+    expect(panel).toContain('event.phase === "removed" || event.phase === "installed"')
+    expect(kilo).toContain("mcpRemoval(this.connectionService).on")
+    expect(kilo).toContain('type: "mcpRemoved"')
+    expect(kilo).toContain('type: "mcpRemovalState"')
+  })
+
+  it("invalidates Agent Behaviour tabs after cross-provider config changes", () => {
+    expect(kilo).toContain('type: "agentBehaviourInvalidated"')
+    expect(kilo).toContain('event.type === "server.instance.disposed"')
+    expect(kilo).toContain('event.type === "global.config.updated"')
+  })
 })

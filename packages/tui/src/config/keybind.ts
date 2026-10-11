@@ -95,6 +95,7 @@ export const Definitions = {
   session_share: keybind("none", "Share current session"),
   session_unshare: keybind("none", "Unshare current session"),
   session_interrupt: keybind("escape", "Interrupt current session"),
+  subagent_interrupt: keybind("escape", "Interrupt current subagent"), // kilocode_change
   session_background: keybind("ctrl+b", "Background synchronous subagents"),
   session_compact: keybind("<leader>c", "Compact the session"),
   session_toggle_timestamps: keybind("none", "Toggle message timestamps"),
@@ -308,6 +309,7 @@ export const CommandMap = {
   session_share: "session.share",
   session_unshare: "session.unshare",
   session_interrupt: "session.interrupt",
+  subagent_interrupt: "subagent.interrupt", // kilocode_change
   session_background: "session.background",
   session_compact: "session.compact",
   session_toggle_timestamps: "session.toggle.timestamps",

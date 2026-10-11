@@ -4,6 +4,7 @@ import {
   createDraftAgentSeed,
   draftAgentSelection,
   resolvePromptAgent,
+  resolveScopeAgent,
   resolveSessionAgent,
 } from "../../webview-ui/src/context/session-agent"
 import type { Message } from "../../webview-ui/src/types/messages"
@@ -157,6 +158,41 @@ describe("resolvePromptAgent", () => {
   it("omits the agent when there is no explicit selection", () => {
     expect(resolvePromptAgent({ sessionID: "ses_1", selections: {}, pending: null })).toBeUndefined()
     expect(resolvePromptAgent({ selections: {}, pending: null })).toBeUndefined()
+  })
+})
+
+describe("resolveScopeAgent", () => {
+  const fallback = "code"
+
+  it("uses the scope's own selection first", () => {
+    expect(resolveScopeAgent({ id: "ses_1", selections: { ses_1: "plan" }, pending: "ask", fallback })).toBe("plan")
+    expect(
+      resolveScopeAgent({ id: "pending:tab", selections: { "pending:tab": "plan" }, pending: "ask", fallback }),
+    ).toBe("plan")
+  })
+
+  it("resolves drafts and the composer to the pending agent, then the default", () => {
+    for (const id of ["composer", "pending:tab", "sidebar-pending:tab", "4f1c-draft"]) {
+      expect(resolveScopeAgent({ id, selections: {}, pending: "ask", fallback })).toBe("ask")
+      expect(resolveScopeAgent({ id, selections: {}, pending: null, fallback })).toBe(fallback)
+    }
+  })
+
+  it("keeps a real session without a selection on the default agent, never the pending one", () => {
+    expect(resolveScopeAgent({ id: "ses_1", selections: {}, pending: "ask", fallback })).toBe(fallback)
+  })
+
+  it("matches the agent sent with the prompt whenever one is sent", () => {
+    const cases = [
+      { id: "ses_1", selections: { ses_1: "plan" }, pending: "ask" },
+      { id: "pending:tab", selections: {}, pending: "ask" },
+      { id: "composer", selections: {}, pending: "ask" },
+      { id: "ses_2", selections: {}, pending: "ask" },
+    ]
+    for (const input of cases) {
+      const sent = resolvePromptAgent({ sessionID: input.id, selections: input.selections, pending: input.pending })
+      if (sent) expect(resolveScopeAgent({ ...input, fallback })).toBe(sent)
+    }
   })
 })
 
