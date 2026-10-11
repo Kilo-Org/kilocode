@@ -1238,7 +1238,7 @@ const AgentManagerContent: Component = () => {
     window.addEventListener("keydown", shortcut, true)
 
     // Delete/Backspace on a selected worktree triggers inline delete confirmation.
-    // Pressing the key twice in a row (within the 2500ms window) confirms the delete.
+    // Two separate key presses (within the 2500ms window) confirm the delete.
     const deleteKeyHandler = (e: KeyboardEvent) => {
       if (e.key !== "Delete" && e.key !== "Backspace") return
       if (diffPanels.isFocusTarget(e.target)) return
@@ -1247,6 +1247,7 @@ const AgentManagerContent: Component = () => {
       const sel = selection()
       if (!sel || sel === LOCAL) return
       e.preventDefault()
+      if (e.repeat) return
       closeSelectedWorktree()
     }
     window.addEventListener("keydown", deleteKeyHandler)
