@@ -36,6 +36,7 @@ import { isRecord } from "@/util/record"
 import { EventV2Bridge } from "@/event-v2-bridge"
 import { Database } from "@opencode-ai/core/database/database"
 import { Usage, type LLMEvent } from "@opencode-ai/llm"
+import { AnthropicFallback } from "@/kilocode/provider/anthropic-fallback" // kilocode_change
 
 const DOOM_LOOP_THRESHOLD = 3
 export type Result = "compact" | "stop" | "continue"
@@ -773,6 +774,7 @@ const layer = Layer.effect(
               time: { start: Date.now() },
               metadata: value.providerMetadata,
             }
+            if (AnthropicFallback.marker(value.providerMetadata)) ctx.currentText.ignored = true // kilocode_change - structural marker, not UI text
             yield* session.updatePart(ctx.currentText)
             return
 
@@ -790,8 +792,16 @@ const layer = Layer.effect(
             })
             return
 
-          case "text-end":
+          // kilocode_change start - scope the marker binding like neighbouring cases
+          case "text-end": {
             if (!ctx.currentText) return
+            // Fallback carriers bypass text plugins and output accounting
+            const marker = AnthropicFallback.finish(ctx.currentText)
+            if (marker) {
+              yield* session.updatePart(marker)
+              ctx.currentText = undefined
+              return
+            }
             // oxlint-disable-next-line no-self-assign -- reactivity trigger
             ctx.currentText.text = ctx.currentText.text
             ctx.currentText.text = (yield* plugin.trigger(
@@ -815,6 +825,8 @@ const layer = Layer.effect(
             yield* session.updatePart(ctx.currentText)
             ctx.currentText = undefined
             return
+          }
+          // kilocode_change end
 
           case "finish":
             return

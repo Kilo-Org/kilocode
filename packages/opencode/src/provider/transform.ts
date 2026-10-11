@@ -7,6 +7,7 @@ import { iife } from "@/util/iife"
 import { kiloProviderOptions } from "@/kilocode/provider-options"
 import { isLing } from "@/kilocode/model-match" // kilocode_change
 import { reasoningSummary } from "@/kilocode/provider/reasoning-summary" // kilocode_change
+import { AnthropicFallback } from "@/kilocode/provider/anthropic-fallback" // kilocode_change
 
 type Modality = NonNullable<ModelsDev.Model["modalities"]>["input"][number]
 
@@ -182,7 +183,7 @@ function normalizeMessages(
         if (!Array.isArray(msg.content)) return msg
         const filtered = msg.content.filter((part) => {
           if (part.type === "text") {
-            return part.text !== ""
+            return part.text !== "" || AnthropicFallback.marker(part.providerOptions) // kilocode_change - empty fallback is protocol content
           }
           if (part.type === "reasoning") {
             return (
@@ -462,6 +463,7 @@ function applyCaching(msgs: ModelMessage[], model: Provider.Model, options: Reco
           typeof part === "object" &&
           part.type !== "tool-approval-request" &&
           part.type !== "tool-approval-response" &&
+          !AnthropicFallback.marker(part.providerOptions) && // kilocode_change - fallback blocks cannot carry cache_control
           !(part.type === "text" && part.text.trimStart().startsWith("<environment_details>"))
         ) {
           targetIndex = i
@@ -473,7 +475,8 @@ function applyCaching(msgs: ModelMessage[], model: Provider.Model, options: Reco
         lastContent &&
         typeof lastContent === "object" &&
         lastContent.type !== "tool-approval-request" &&
-        lastContent.type !== "tool-approval-response"
+        lastContent.type !== "tool-approval-response" &&
+        !AnthropicFallback.marker(lastContent.providerOptions) // kilocode_change - do not cache a boundary-only message
       ) {
         lastContent.providerOptions = mergeDeep(lastContent.providerOptions ?? {}, providerOptions)
         continue
@@ -481,6 +484,13 @@ function applyCaching(msgs: ModelMessage[], model: Provider.Model, options: Reco
     }
     // kilocode_change end
 
+    // kilocode_change start - message-level caching would annotate the last boundary-only block
+    if (
+      Array.isArray(msg.content) &&
+      msg.content.some((part) => part.type === "text" && AnthropicFallback.marker(part.providerOptions))
+    )
+      continue
+    // kilocode_change end
     msg.providerOptions = mergeDeep(msg.providerOptions ?? {}, providerOptions)
   }
 
