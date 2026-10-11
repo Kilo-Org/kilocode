@@ -119,3 +119,31 @@ it("captures git state from repository A while repository B is selected", async 
   )
   expect(contexts.active()?.root).toBe(b)
 })
+
+it("routes a symlinked workspace path to its canonical pinned project", async () => {
+  const base = await fs.mkdtemp(path.join(os.tmpdir(), "sidebar-symlink-"))
+  dirs.push(base)
+  const root = path.join(base, "repo")
+  const alias = path.join(base, "alias")
+  await fs.mkdir(root)
+  await fs.symlink(root, alias, "dir")
+  const contexts = new ProjectContexts({
+    workspaceRoot: () => alias,
+    registry: { list: () => [], get: () => undefined },
+    deps: { log: () => {} },
+  })
+  const scope = new ProjectScope()
+  const roots: string[] = []
+  const errors: string[] = []
+  await continueSidebar(
+    contexts,
+    scope,
+    alias,
+    (_, __, error) => errors.push(error ?? ""),
+    async () => {
+      roots.push(scope.current()!.root)
+    },
+  )
+  expect(errors).toEqual([])
+  expect(roots).toEqual([await fs.realpath(root)])
+})
