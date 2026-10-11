@@ -246,7 +246,13 @@ export const RoutingSelectorBase: Component<RoutingSelectorBaseProps> = (props) 
   })
 
   function refocus() {
-    requestAnimationFrame(() => window.dispatchEvent(new CustomEvent("focusPrompt", { detail: { restore: true } })))
+    requestAnimationFrame(() => {
+      // Another picker took focus (the prompt pill switched to it on hover).
+      // Do not pull focus back to the prompt.
+      const el = document.activeElement
+      if (el?.closest("[data-component='popover-content']") && !listRef?.contains(el)) return
+      window.dispatchEvent(new CustomEvent("focusPrompt", { detail: { restore: true } }))
+    })
   }
 
   createEffect(() => {
@@ -331,7 +337,14 @@ export const RoutingSelectorBase: Component<RoutingSelectorBaseProps> = (props) 
           <span class="routing-selector-trigger-label">
             {props.custom ? language.t("model.routing.custom") : (value() ?? auto())}
           </span>
-          <svg width="10" height="10" viewBox="0 0 16 16" fill="currentColor" style={{ "flex-shrink": "0" }}>
+          <svg
+            class="selector-trigger-chevron"
+            width="10"
+            height="10"
+            viewBox="0 0 16 16"
+            fill="currentColor"
+            style={{ "flex-shrink": "0" }}
+          >
             <path d="M8 4l4 5H4l4-5z" />
           </svg>
         </>
