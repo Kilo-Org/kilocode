@@ -377,7 +377,13 @@ export function latestContextUsage(messages: readonly Message[], limit: number |
         msg.finish !== "error" &&
         !msg.error
       )
-        return undefined
+        return msg.context === undefined
+          ? undefined
+          : {
+              tokens: msg.context,
+              percentage: limit ? Math.round((msg.context / limit) * 100) : null,
+              estimated: true,
+            }
       continue
     }
     if (!msg.tokens) continue

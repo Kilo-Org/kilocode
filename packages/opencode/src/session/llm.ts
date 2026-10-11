@@ -28,6 +28,7 @@ import { Auth } from "@/auth"
 import { InstanceState } from "@/effect/instance-state"
 import { KiloSession } from "@/kilocode/session"
 import { KiloLLM } from "@/kilocode/session/llm"
+import { KiloContextUsage } from "@/kilocode/session/context-usage"
 import { KiloSessionOverflow } from "@/kilocode/session/overflow"
 import { KiloToolSchema } from "@/kilocode/session/tool-schema"
 import { KiloMessageDiagnostics } from "@/kilocode/session/message-diagnostics"
@@ -142,10 +143,8 @@ const live: Layer.Layer<
           : base.messages
       const preflight = input.preflight === true && KiloSessionOverflow.enabled({ cfg, model: input.model })
       const cap = KiloLLM.needsEstimate({ model: input.model, configured: base.params.maxOutputTokens })
-      const usage =
-        cap || preflight
-          ? KiloSessionOverflow.measure({ messages: estimated, tools })
-          : undefined
+      const usage = cap || preflight ? KiloSessionOverflow.measure({ messages: estimated, tools }) : undefined
+      KiloContextUsage.record(input.sessionID, input.preflight, usage)
       const maxOutputTokens = KiloLLM.capOutputTokens({
         model: input.model,
         messages: estimated,

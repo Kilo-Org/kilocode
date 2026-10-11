@@ -69,8 +69,9 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
   const context = createMemo(() => {
     const usage = session.contextUsage()
     if (!usage) return undefined
-    const tokens = usage.tokens.toLocaleString(language.locale())
-    const pct = usage.percentage !== null ? `${usage.percentage}%` : undefined
+    const prefix = usage.estimated ? "~" : ""
+    const tokens = `${prefix}${usage.tokens.toLocaleString(language.locale())}`
+    const pct = usage.percentage !== null ? `${prefix}${usage.percentage}%` : undefined
     return { tokens, pct }
   })
 

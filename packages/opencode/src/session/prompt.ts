@@ -100,6 +100,7 @@ import { KiloSessionSteering } from "@/kilocode/session/steering" // kilocode_ch
 import { Goal } from "@/kilocode/session/goal/runner" // kilocode_change
 import { GoalPolicy } from "@/kilocode/session/goal/policy" // kilocode_change
 import { GoalState } from "@/kilocode/session/goal/state" // kilocode_change
+import { KiloContextUsage } from "@/kilocode/session/context-usage" // kilocode_change
 
 // @ts-ignore
 globalThis.AI_SDK_LOG_WARNINGS = false
@@ -1654,9 +1655,10 @@ export const layer = Layer.effect(
             auto: task.auto,
             overflow: task.overflow,
           })
-          // kilocode_change start - compaction.process returns "stop" after
-          // setting a terminal error on the summary message: either a
-          // ContextOverflowError or the empty-summary APIError; surface as turn error
+          // kilocode_change start - publish compacted context usage or surface a terminal compaction error
+          yield* KiloContextUsage.compacted({ sessionID, parentID: task.messageID, model, session: sessions }).pipe(
+            Effect.provideService(Database.Service, database),
+          )
           if (result === "stop") {
             closeReasons.set(sessionID, "error")
             break

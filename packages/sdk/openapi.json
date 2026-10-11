@@ -29640,6 +29640,10 @@
           "summary": {
             "type": "boolean"
           },
+          "context": {
+            "type": "integer",
+            "minimum": 0
+          },
           "cost": {
             "type": "number"
           },
