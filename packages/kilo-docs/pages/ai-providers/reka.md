@@ -51,13 +51,15 @@ export REKA_API_KEY="your-api-key"
 }
 ```
 
-Then select a Reka model from the model picker, or set a default model after confirming the model ID against your account:
+Then select a Reka model from the model picker, or set a default model after confirming the model ID in your account:
 
 ```jsonc
 {
   "model": "reka/glm5.3"
 }
 ```
+
+> Reka's model IDs are unhyphenated on the Reka API (e.g. `glm5.3`, `reka-flash-3`) — check [developer.reka.ai/models](https://developer.reka.ai/models) for the current IDs.
 
 {% /tab %}
 {% /tabs %}
