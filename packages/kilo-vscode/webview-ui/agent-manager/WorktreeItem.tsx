@@ -175,6 +175,10 @@ interface WorktreeItemProps {
   onMoveToSection?: (sectionId: string | null) => void
   /** Move this worktree to a new section. */
   onMoveToNewSection?: () => void
+  /** Pinned worktrees lead the sidebar and hide the hover delete button. */
+  pinned?: boolean
+  /** Toggle the pin. Shift+click on the row calls it too. */
+  onTogglePin?: () => void
 
   onClick: () => void
   onDelete: (e: MouseEvent) => void
@@ -258,6 +262,68 @@ function RunBadge(props: { status?: RunStatus }) {
   )
 }
 
+/** Context menu item that pins or unpins the worktree. */
+function PinItem(props: { t: Translate; pinned?: boolean; onToggle?: () => void }) {
+  return (
+    <Show when={props.onToggle}>
+      <ContextMenu.Item onSelect={() => props.onToggle?.()}>
+        <Icon name={props.pinned ? "pin-filled" : "pin"} size="small" />
+        <ContextMenu.ItemLabel>
+          {props.t(props.pinned ? "agentManager.worktree.unpin" : "agentManager.worktree.pin")}
+        </ContextMenu.ItemLabel>
+        <span class="session-tab-menu-hint">{props.t("session.tabs.pinHint")}</span>
+      </ContextMenu.Item>
+      <ContextMenu.Separator />
+    </Show>
+  )
+}
+
+/** Hover button that unpins a pinned worktree. It takes the place of the delete button. */
+function UnpinButton(props: { t: Translate; show: boolean; onToggle?: () => void; onOver: (over: boolean) => void }) {
+  return (
+    <Show when={props.show}>
+      <div class="am-worktree-unpin" onMouseEnter={() => props.onOver(true)} onMouseLeave={() => props.onOver(false)}>
+        <Tooltip value={props.t("agentManager.worktree.unpin")} placement="top">
+          <IconButton
+            icon="pin-filled"
+            size="small"
+            variant="ghost"
+            aria-label={props.t("agentManager.worktree.unpin")}
+            onClick={(e: MouseEvent) => {
+              e.stopPropagation()
+              props.onToggle?.()
+            }}
+          />
+        </Tooltip>
+      </div>
+    </Show>
+  )
+}
+
+/** Hover card row that names the section a pinned worktree returns to when unpinned. */
+function HomeSection(props: { t: Translate; pinned?: boolean; id?: string; sections?: SectionState[] }) {
+  const section = () => (props.pinned && props.id ? props.sections?.find((item) => item.id === props.id) : undefined)
+  return (
+    <Show when={section()}>
+      {(sec) => (
+        <>
+          <div class="am-hover-card-divider" />
+          <div class="am-hover-card-row">
+            <span class="am-hover-card-row-label">{props.t("agentManager.hoverCard.section")}</span>
+            <span class="am-hover-card-row-value">
+              <span
+                class="am-color-swatch am-color-swatch-sm"
+                style={{ background: colorCss(sec().color) ?? "var(--vscode-panel-border)" }}
+              />
+              {sec().name}
+            </span>
+          </div>
+        </>
+      )}
+    </Show>
+  )
+}
+
 function Completion(props: ParentProps<{ completed?: boolean; onEnd?: () => void }>) {
   return (
     <div
@@ -287,6 +353,18 @@ export const WorktreeItem: Component<WorktreeItemProps> = (props) => {
   const problem = () => props.stale || props.health !== undefined
   /** `unavailable` is "not checked", so it gets a question mark rather than a warning triangle. */
   const badge = () => (props.health === "unavailable" ? "help" : "warning")
+  const pinnable = () => props.onTogglePin !== undefined
+  const pin = () => (props.pinned ? "true" : undefined)
+  const unpinnable = () => pinnable() && props.pinned === true && !props.pendingDelete
+  const select = (e: MouseEvent) => {
+    props.onCancelDelete?.()
+    if (e.shiftKey && props.onTogglePin) {
+      e.preventDefault()
+      props.onTogglePin()
+      return
+    }
+    props.onClick()
+  }
   const blocked = () =>
     props.completed ||
     props.busy ||
@@ -294,6 +372,8 @@ export const WorktreeItem: Component<WorktreeItemProps> = (props) => {
     running(state()) ||
     props.runStatus?.state === "running" ||
     props.runStatus?.state === "stopping"
+
+  const deletable = () => !blocked() && !props.pendingDelete && !props.pinned
 
   createEffect(() => {
     if (!props.pendingDelete) return
@@ -362,10 +442,12 @@ export const WorktreeItem: Component<WorktreeItemProps> = (props) => {
                   "am-wt-group-end": props.groupEnd,
                 }}
                 data-sidebar-id={props.preview || props.completed ? undefined : (props.sidebarId ?? props.worktree.id)}
-                onClick={() => {
-                  props.onCancelDelete?.()
-                  props.onClick()
+                data-pinned={pin()}
+                onMouseDown={(e) => {
+                  // Shift+mousedown extends the text selection. Stop it so Shift+click only pins.
+                  if (e.shiftKey && pinnable()) e.preventDefault()
                 }}
+                onClick={select}
               >
                 <div class="am-wt-icon" data-activity={state()} aria-label={t(label(state()))}>
                   <ActivityIcon state={state()} idle={<Icon name="branch" size="small" />} />
@@ -484,7 +566,10 @@ export const WorktreeItem: Component<WorktreeItemProps> = (props) => {
                             {props.shortcut}
                           </span>
                         </Show>
-                        <Show when={!blocked() && !props.pendingDelete}>
+                        <UnpinButton t={t} show={unpinnable()} onToggle={props.onTogglePin} onOver={setOverAction} />
+                        {/* A pinned worktree has no hover delete button, so a click meant for
+                            the unpin button cannot delete it. Delete stays on the context menu. */}
+                        <Show when={deletable()}>
                           <div
                             class="am-worktree-close"
                             onMouseEnter={() => setOverAction(true)}
@@ -642,6 +727,7 @@ export const WorktreeItem: Component<WorktreeItemProps> = (props) => {
               <span class="am-hover-card-row-label">{t("agentManager.hoverCard.sessions")}</span>
               <span class="am-hover-card-row-value">{props.sessions}</span>
             </div>
+            <HomeSection t={t} pinned={props.pinned} id={props.currentSectionId} sections={props.sections} />
             <Show when={problem()}>
               <HealthSection
                 t={t}
@@ -721,10 +807,17 @@ export const WorktreeItem: Component<WorktreeItemProps> = (props) => {
               <Icon name="edit" size="small" />
               <span>{t("agentManager.worktree.doubleClickRename")}</span>
             </div>
+            <Show when={pinnable()}>
+              <div class="am-hover-card-hint">
+                <Icon name="pin" size="small" />
+                <span>{t("session.tabs.pinHint")}</span>
+              </div>
+            </Show>
           </div>
         </HoverCard>
         <ContextMenu.Portal>
           <ContextMenu.Content class="am-ctx-menu">
+            <PinItem t={t} pinned={props.pinned} onToggle={props.onTogglePin} />
             <ContextMenu.Item onSelect={() => props.onStartRename(props.label)}>
               <Icon name="edit" size="small" />
               <ContextMenu.ItemLabel>{t("agentManager.worktree.rename")}</ContextMenu.ItemLabel>

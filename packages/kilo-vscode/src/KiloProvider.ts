@@ -1,5 +1,5 @@
 import * as path from "path"
-import { existsSync } from "fs"
+import { existsSync, readFileSync } from "fs"
 import * as vscode from "vscode"
 import { TRANSIENT as MEMORY_TRANSIENT } from "@kilocode/kilo-memory/schema"
 import type {
@@ -59,7 +59,10 @@ import { resolveProjectDirectory } from "./project-directory"
 import { seedSessionStatuses, seedSessionWakeups, clientSessionStatus } from "./session-status"
 import { normalizeEnhancePromptErrorMessage } from "./enhance-prompt-error"
 import { retry } from "./services/cli-backend/retry"
-import { integratedBrowserUseSystemChrome } from "./services/browser-automation/chrome-setting"
+import {
+  integratedBrowserLinkDestination,
+  integratedBrowserUseSystemChrome,
+} from "./services/browser-automation/chrome-setting"
 import { removeAgent } from "./services/agent-removal"
 import { normalize, type SSEPayload, type SyncPayload, type WirePayload } from "./services/cli-backend/sdk-sse-adapter"
 import { slimInfo, slimPart, slimParts } from "./kilo-provider/slim-metadata"
@@ -594,6 +597,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     | null = null
 
   private createWorktreeHandler: ((baseBranch?: string, branchName?: string) => Promise<void>) | null = null
+
+  private openLinkHandler: ((url: string, sessionID?: string) => boolean) | null = null
 
   private diffVirtualProvider: import("./DiffVirtualProvider").DiffVirtualProvider | undefined
   private diffViewerProvider: import("./diff/DiffViewerProvider").DiffViewerProvider | undefined
@@ -1202,6 +1207,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.createWorktreeHandler = handler
   }
 
+  public setOpenLinkHandler(handler: (url: string, sessionID?: string) => boolean): void {
+    this.openLinkHandler = handler
+  }
+
   public attachToWebview(
     webview: vscode.Webview,
     options?: { onBeforeMessage?: (msg: Record<string, unknown>) => Promise<Record<string, unknown> | null> },
@@ -1391,6 +1400,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           await this.handleCreateSession()
           break
         case "clearSession":
+          this.loadMessagesAbort?.abort()
           this.stopCurrentSessionProcesses()
           this.contextSessionID = undefined
           this.setCurrentSession(null)
@@ -1887,6 +1897,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       dir: (sessionID) => this.getWorkspaceDirectory(sessionID ?? this.currentSession?.id),
       diff: this.diffVirtualProvider,
       openPRComment: (comment, sessionID) => this.openChanges(sessionID, undefined, comment),
+      openLink: this.openLinkHandler ? (url) => this.openLinkHandler!(url, this.currentSession?.id) : undefined,
       openMarkdown: (file, sessionID) => {
         if (!this.documentViewerProvider) return false
         this.documentViewerProvider.openFromCommand({
@@ -2349,6 +2360,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     if (mode === "replace" || mode === "focus") {
       this.trackedSessionIds.add(sessionID)
       if (options.focus !== false) {
+        this.loadMessagesAbort?.abort()
         this.stopCurrentSessionProcesses(sessionID)
         this.focusSession(sessionID)
         this.contextSessionID = sessionID
@@ -2369,7 +2381,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     // Replace competes for the spinner and cancels earlier loads; prepend/reconcile run in parallel.
     const abort = mode === "replace" && options.focus !== false ? new AbortController() : undefined
     if (abort) {
-      this.loadMessagesAbort?.abort()
       this.loadMessagesAbort = abort
     }
     const revision = this.revisions.get(sessionID)
@@ -2527,6 +2538,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
    */
   private getSessionRefreshContext(revision: number): SessionRefreshContext {
     const client = this.client
+    const project = this.opts.projectQualifier?.()
     return {
       pendingSessionRefresh: this.pendingSessionRefresh,
       connectionState: this.connectionState,
@@ -2540,7 +2552,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       worktreeDirectories: this.opts.worktreeDirectories,
       workspaceDirectory: this.getWorkspaceDirectory(),
       isCurrent: () => revision === this.sessionRefreshRevision,
-      postMessage: (msg: unknown) => this.postMessage(msg),
+      postMessage: (msg: unknown) =>
+        this.postMessage(project && typeof msg === "object" && msg !== null ? { ...msg, ...project } : msg),
     }
   }
 
@@ -4456,6 +4469,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       browserAutomation: this.browserAutomationSetting(),
       conversationPromptHistory: this.conversationPromptHistorySetting(),
       agentManagerBrowserUseSystemChrome: integratedBrowserUseSystemChrome(),
+      agentManagerBrowserOpenLinksIn: integratedBrowserLinkDestination(),
       "agentManager.autoBranchNaming": naming.get<boolean>("autoBranchNaming", true),
       "agentManager.branchPrefix": naming.get<string>("branchPrefix", ""),
       "agentManager.worktreePool": naming.get<boolean>("worktreePool", true),
@@ -6206,6 +6220,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   }
 
   private _getHtmlForWebview(webview: vscode.Webview, sidebar = false): string {
+    const bundle = this.opts.settingsPanel ? "settings" : "webview"
+    const file = path.join(this.extensionUri.fsPath, "dist", "settings-preload.json")
+    const preloads: string[] = this.opts.settingsPanel && existsSync(file) ? JSON.parse(readFileSync(file, "utf8")) : []
     return buildWebviewHtml(webview, {
       // The rail follows the physical workbench edge. RTL text direction must not move it between chat and code.
       sidebar: sidebar
@@ -6213,8 +6230,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           ? "right"
           : "left"
         : undefined,
-      scriptUri: webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, "dist", "webview.js")),
-      styleUri: webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, "dist", "webview.css")),
+      scriptUri: webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, "dist", `${bundle}.js`)),
+      styleUri: webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, "dist", `${bundle}.css`)),
       iconsBaseUri: webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, "assets", "icons")),
       workerUri: webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, "dist", "shiki-worker.js")),
       title: "Kilo Code",
@@ -6226,6 +6243,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       topBar: this.opts.hideTopBar !== true && isCursorHost(),
       topBarSurface: this.opts.topBarSurface === "tab" ? "tab_title" : "sidebar_title",
       agentManagerSettings: this.opts.agentManagerSettings !== undefined,
+      settings: this.opts.settingsPanel?.(),
+      module: this.opts.settingsPanel !== undefined,
+      preloads: preloads.map((file) => webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, "dist", file))),
     })
   }
 

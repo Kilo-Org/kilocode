@@ -3,7 +3,7 @@ import os from "node:os"
 import path from "node:path"
 import fs from "node:fs/promises"
 import { existsSync, readFileSync } from "node:fs"
-import simpleGit from "simple-git"
+import { simpleGit } from "simple-git"
 import { WorktreeManager } from "../../src/agent-manager/WorktreeManager"
 
 const tempDirs: string[] = []

@@ -2,7 +2,7 @@
   "name": "kilo-code",
   "displayName": "Kilo Code: AI Coding Agent, Copilot, and Autocomplete",
   "description": "Open Source AI coding agent that generates code from natural language, automates tasks, and runs terminal commands. Features inline autocomplete, browser automation, automated refactoring, and custom modes for planning, coding, and debugging. Supports 500+ AI models including Claude (Anthropic), Gemini, Grok, GPT, Codex and GLM.",
-  "version": "7.8.3",
+  "version": "7.8.8",
   "icon": "assets/icons/logo-outline-black.png",
   "galleryBanner": {
     "color": "#FFFFFF",
@@ -156,6 +156,12 @@
         "icon": "$(settings-gear)"
       },
       {
+        "command": "kilo-code.new.settingsSearch",
+        "title": "Search Settings",
+        "category": "Kilo Code",
+        "icon": "$(search)"
+      },
+      {
         "command": "kilo-code.new.sidebarTitle.plusButtonClicked",
         "title": "New Task",
         "icon": "$(add)"
@@ -193,6 +199,12 @@
           "light": "assets/icons/kilo-light.svg",
           "dark": "assets/icons/kilo-dark.svg"
         }
+      },
+      {
+        "command": "kilo-code.new.openBrowser",
+        "title": "Open Integrated Browser",
+        "category": "Kilo Code",
+        "icon": "$(globe)"
       },
       {
         "command": "kilo-code.new.showChanges",
@@ -246,12 +258,12 @@
       },
       {
         "command": "kilo-code.new.agentManager.previousTab",
-        "title": "Agent Manager: Previous Tab",
+        "title": "Previous Session Tab",
         "category": "Kilo Code"
       },
       {
         "command": "kilo-code.new.agentManager.nextTab",
-        "title": "Agent Manager: Next Tab",
+        "title": "Next Session Tab",
         "category": "Kilo Code"
       },
       {
@@ -691,13 +703,13 @@
         "command": "kilo-code.new.agentManager.previousTab",
         "key": "ctrl+alt+left",
         "mac": "cmd+alt+left",
-        "when": "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel'"
+        "when": "kilo-code.new.sidebarFocused || activeWebviewPanelId == 'kilo-code.new.TabPanel' || activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel'"
       },
       {
         "command": "kilo-code.new.agentManager.nextTab",
         "key": "ctrl+alt+right",
         "mac": "cmd+alt+right",
-        "when": "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel'"
+        "when": "kilo-code.new.sidebarFocused || activeWebviewPanelId == 'kilo-code.new.TabPanel' || activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel'"
       },
       {
         "command": "kilo-code.new.agentManager.previousTerminal",
@@ -887,6 +899,12 @@
         "command": "kilo-code.new.autocomplete.nextEdit.dismiss",
         "key": "escape",
         "when": "editorTextFocus && !editorTabMovesFocus && !inSnippetMode && kilo-code.nextEdit.hasPendingSuggestion"
+      },
+      {
+        "command": "kilo-code.new.settingsSearch",
+        "key": "ctrl+f",
+        "mac": "cmd+f",
+        "when": "activeWebviewPanelId == 'kilo-code.new.settingsPanel'"
       }
     ],
     "configuration": {
@@ -1162,6 +1180,20 @@
           "scope": "application",
           "description": "Use system-installed Google Chrome for the Integrated Browser. Disable only when a compatible Playwright Chromium browser is already installed."
         },
+        "kilo-code.new.agentManager.browser.openLinksIn": {
+          "type": "string",
+          "enum": [
+            "external",
+            "integrated"
+          ],
+          "enumDescriptions": [
+            "Open web links in your default browser.",
+            "Open web links in a browser tab from the sidebar, or in the browser panel from Agent Manager."
+          ],
+          "default": "integrated",
+          "scope": "application",
+          "description": "Choose where web links open from Kilo chats. Requires the experimental Integrated Browser."
+        },
         "kilo-code.new.attention.enabled": {
           "type": "boolean",
           "default": false,
@@ -1401,7 +1433,7 @@
     "openai": "^4.85.4",
     "playwright-core": "1.57.0",
     "quick-lru": "^7.0.0",
-    "simple-git": "3.36.0",
+    "simple-git": "4.0.2",
     "solid-js": "^1.9.11",
     "uri-js": "^4.4.1",
     "virtua": "catalog:",

@@ -385,7 +385,12 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
         assertEquals("the card must be exactly as tall as the wrapped text", area.preferredSize.height, card.height)
     }
 
-    fun `test transcript content has symmetric side padding`() {
+    /**
+     * The right side is wider than the left on purpose: the prompt navigator's rail is drawn over that
+     * edge, and the transcript reserves a full-size tick plus the smallest standard gap so a tick never
+     * sits on top of the content.
+     */
+    fun `test transcript reserves the rail edge beside the content`() {
         model.upsertMessage(msg("a1", "assistant"))
 
         panel.setSize(600, 400)
@@ -394,7 +399,9 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
         val left = turn.x
         val right = panel.width - turn.x - turn.width
 
-        assertEquals(right, left)
+        assertEquals(JBUI.scale(SessionUiStyle.SessionLayout.INNER_HORIZONTAL), left)
+        assertEquals(JBUI.scale(SessionUiStyle.SessionLayout.INNER_RIGHT), right)
+        assertTrue("the rail edge must clear a full-size tick", right >= JBUI.scale(SessionUiStyle.PromptRail.TICK_HOVER))
     }
 
     fun `test reflow drops cached panel measurements`() {

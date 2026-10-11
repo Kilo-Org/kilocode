@@ -151,6 +151,13 @@ function publish(
 }
 
 describe("agent_manager tool", () => {
+  test("tells models to start sessions only on explicit user intent", async () => {
+    const tool = await init()
+
+    expect(tool.description).toContain("Start sessions only when the user explicitly asks")
+    expect(tool.description).toContain("Never start them on your own")
+  })
+
   test("uses an object-root input schema without combinators because more complex schemas break Claude models", async () => {
     const tool = await init()
     const schema = ToolJsonSchema.fromTool(tool)

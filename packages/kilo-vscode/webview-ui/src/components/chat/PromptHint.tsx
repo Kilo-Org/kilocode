@@ -1,5 +1,5 @@
-import { For, type Component } from "solid-js"
-import { parseBindingGroups } from "../../utils/keybind-tokens"
+import { type Component } from "solid-js"
+import { ShortcutKeys } from "../shared/ShortcutKeys"
 
 /**
  * Visual copy of the prompt placeholder that renders the suggested shortcut as
@@ -14,15 +14,7 @@ export const PromptHint: Component<{ before: string; binding: string; after: str
       {props.before.slice(0, props.before.length - open().length)}
       <span class="prompt-input-keys-wrap">
         {open()}
-        <span class="prompt-input-keys">
-          <For each={parseBindingGroups(props.binding)}>
-            {(group) => (
-              <span class="prompt-input-keys-group">
-                <For each={group}>{(key) => <kbd class="prompt-input-key">{key}</kbd>}</For>
-              </span>
-            )}
-          </For>
-        </span>
+        <ShortcutKeys binding={props.binding} />
         {close()}
       </span>
       {props.after.slice(close().length)}

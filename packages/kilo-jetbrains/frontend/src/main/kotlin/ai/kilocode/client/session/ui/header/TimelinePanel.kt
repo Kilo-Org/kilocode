@@ -12,6 +12,7 @@ import ai.kilocode.client.session.model.ToolKind
 import ai.kilocode.client.session.ui.style.SessionUiStyle
 import com.intellij.util.ui.JBUI
 import java.awt.Color
+import java.awt.Cursor
 import java.awt.Dimension
 import java.awt.Graphics
 import java.awt.Graphics2D
@@ -20,8 +21,9 @@ import java.awt.event.MouseEvent
 import java.awt.event.MouseMotionAdapter
 import kotlin.math.roundToInt
 import javax.swing.JPanel
+import javax.swing.SwingUtilities
 
-internal class TimelinePanel : JPanel() {
+internal class TimelinePanel(private val onNavigate: (TimelineItem) -> Unit) : JPanel() {
     companion object {
         private const val WIDTH = 12
         private const val MIN = 8
@@ -32,6 +34,7 @@ internal class TimelinePanel : JPanel() {
     private var items: List<TimelineItem> = emptyList()
     private var heights: List<Int> = emptyList()
     private var hover = -1
+    private var dragged = false
 
     init {
         isOpaque = false
@@ -39,14 +42,29 @@ internal class TimelinePanel : JPanel() {
             override fun mouseMoved(event: MouseEvent) {
                 val idx = index(event)
                 toolTipText = items.getOrNull(idx)?.title
+                cursor = Cursor.getPredefinedCursor(if (idx >= 0) Cursor.HAND_CURSOR else Cursor.DEFAULT_CURSOR)
                 if (hover == idx) return
                 hover = idx
                 repaint()
             }
+
+            override fun mouseDragged(event: MouseEvent) {
+                dragged = true
+            }
         })
         addMouseListener(object : MouseAdapter() {
+            override fun mousePressed(event: MouseEvent) {
+                dragged = false
+            }
+
+            override fun mouseClicked(event: MouseEvent) {
+                if (dragged || !SwingUtilities.isLeftMouseButton(event)) return
+                items.getOrNull(index(event))?.let(onNavigate)
+            }
+
             override fun mouseExited(event: MouseEvent) {
                 toolTipText = null
+                cursor = Cursor.getDefaultCursor()
                 if (hover == -1) return
                 hover = -1
                 repaint()

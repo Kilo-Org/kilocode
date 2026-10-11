@@ -231,11 +231,13 @@ function main() {
     }
   }
 
+  // kilocode_change start
   throw new Error(
     `It seems your package manager failed to install the right Kilo CLI package. Try manually installing ${packageNames()
       .map((name) => JSON.stringify(name))
-      .join(" or ")}.`,
+      .join(" or ")}. Or download the pre-built binary from the GitHub Releases page.`,
   )
+// kilocode_change end
 }
 
 // kilocode_change start - only run main if executed directly (allows importing in tests)

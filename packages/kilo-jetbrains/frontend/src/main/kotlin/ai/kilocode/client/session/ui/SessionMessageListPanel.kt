@@ -78,7 +78,8 @@ class SessionMessageListPanel(
         SessionUiStyle.SessionLayout.INNER_TOP,
         SessionUiStyle.SessionLayout.INNER_HORIZONTAL,
         SessionUiStyle.SessionLayout.INNER_BOTTOM,
-        SessionUiStyle.SessionLayout.INNER_HORIZONTAL,
+        // Wider than the left: the prompt rail is drawn over this edge and must clear the content.
+        SessionUiStyle.SessionLayout.INNER_RIGHT,
     ),
 ), Disposable, SessionEditorStyleTarget {
 
