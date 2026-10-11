@@ -33,6 +33,8 @@ internal class ModelPopup(
     private val emptyText: String = KiloBundle.message("settings.models.notSet"),
     private val includeSmall: Boolean = false,
 ) {
+    private var cache: Pair<String?, String?> = null to null
+
     fun show(): JBPopup {
         val data = CollectionListModel(rows(""))
         var popup: PickerPopup<ModelPickerRow>? = null
@@ -62,7 +64,7 @@ internal class ModelPopup(
             at = at,
             rows = ::rows,
             model = data,
-            renderer = ModelPickerRenderer(model = data, active = selected, favorites = ::keys),
+            renderer = ModelPickerRenderer(model = data, active = ::active, favorites = ::keys),
             key = { it.key },
             mode = PickerPopup.Mode.Single,
             onPrimary = ::pick,
@@ -83,9 +85,24 @@ internal class ModelPopup(
 
     private fun rows(query: String) = modelPickerRows(items(), favorites(), query, allowEmpty, emptyText, includeSmall)
 
-    private fun current(): ModelPicker.Item? {
-        val key = selected() ?: return null
-        return items().firstOrNull { it.key == key || it.id == key }
+    /**
+     * The checkmark compares [ModelPickerRow.key], so a stored `provider/id` and a bare model id have
+     * to resolve to the same row. Memoized per distinct value because the renderer asks for every row
+     * on every width pass, which happens on each search keystroke.
+     */
+    private fun active(): String? {
+        val value = selected()
+        if (cache.first != value) cache = value to item(value)?.key
+        return cache.second
+    }
+
+    internal fun activeForTest(): String? = active()
+
+    private fun current(): ModelPicker.Item? = item(selected())
+
+    private fun item(value: String?): ModelPicker.Item? {
+        if (value == null) return null
+        return items().firstOrNull { it.key == value || it.id == value }
     }
 
     private fun keys(): Set<String> = favorites().mapTo(mutableSetOf()) { "${it.providerID}/${it.modelID}" }
