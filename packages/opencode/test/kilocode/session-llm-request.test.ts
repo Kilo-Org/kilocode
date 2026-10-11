@@ -255,9 +255,9 @@ describe("LLM request output tokens", () => {
     }),
   )
 
-  it.instance("omits the output cap for GPT-6 on OpenAI-compatible providers", () =>
+  it.instance("omits the output cap for GPT-5 and GPT-6 on OpenAI-compatible providers", () =>
     Effect.gen(function* () {
-      for (const id of ["gpt-6-sol", "gpt-6-astra", "gpt-6-luna"]) {
+      for (const id of ["gpt-5", "gpt-6-sol", "gpt-6-astra", "gpt-6-luna"]) {
         const mdl = claude({ id, npm: "@ai-sdk/openai-compatible", output: 128_000 })
         expect(yield* run({ model: mdl })).toBeUndefined()
       }
