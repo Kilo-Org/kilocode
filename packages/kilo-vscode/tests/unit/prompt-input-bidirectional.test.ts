@@ -14,11 +14,15 @@ describe("PromptInput bidirectional text support", () => {
     const overlay = src.match(/<div class="prompt-input-highlight-overlay"[\s\S]*?>/)?.[0]
     const overlayCss = css.match(/\.prompt-input-highlight-overlay\s*{[^}]*}/)?.[0]
     const input = src.match(/<textarea[\s\S]*?\n\s*\/>/)?.[0]
+    const inputCss = css.match(/\.prompt-input\s*{[^}]*}/)?.[0]
 
     expect(overlay).toContain('dir="auto"')
     expect(overlayCss).toContain("unicode-bidi: plaintext")
+    expect(overlayCss).toContain("text-align: start")
     expect(input).toContain('class="prompt-input"')
     expect(input).toContain('dir="auto"')
+    expect(inputCss).toContain("unicode-bidi: plaintext")
+    expect(inputCss).toContain("text-align: start")
   })
 
   it("lets the Agent Manager worktree prompt resolve bidirectional text automatically", () => {
