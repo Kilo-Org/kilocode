@@ -1175,6 +1175,10 @@ export const dict = {
   "settings.display.mcpTool.expanded": "展開",
   "settings.display.mcpTool.collapsed": "收合",
 
+  "settings.display.sessionActions.title": "顯示工作階段操作",
+  "settings.display.sessionActions.description":
+    "在輸入框上方顯示工作階段按鈕。工作狀態、背景代理、待辦事項和目標控制項仍保持可見。",
+
   "settings.display.shortcutHints.title": "顯示快捷鍵提示",
   "settings.display.shortcutHints.description":
     "在空白輸入框中顯示符合目前操作的鍵盤快捷鍵，例如如何新增所選程式碼或返回輸入框。",

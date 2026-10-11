@@ -1284,6 +1284,10 @@ export const dict = {
   "settings.display.mcpTool.expanded": "Развёрнуты",
   "settings.display.mcpTool.collapsed": "Свёрнуты",
 
+  "settings.display.sessionActions.title": "Показывать действия сеанса",
+  "settings.display.sessionActions.description":
+    "Показывать кнопки сеанса над полем ввода. Статус работы, фоновые агенты, задачи и элементы управления целью остаются видимыми.",
+
   "settings.display.shortcutHints.title": "Показывать подсказки по сочетаниям клавиш",
   "settings.display.shortcutHints.description":
     "Показывать в пустом поле запроса сочетание клавиш, подходящее к текущему действию, например как добавить выделенный код или вернуться к запросу.",

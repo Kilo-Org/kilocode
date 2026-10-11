@@ -1247,6 +1247,10 @@ export const dict = {
   "settings.display.mcpTool.expanded": "Genişletilmiş",
   "settings.display.mcpTool.collapsed": "Daraltılmış",
 
+  "settings.display.sessionActions.title": "Oturum işlemlerini göster",
+  "settings.display.sessionActions.description":
+    "Oturum düğmelerini giriş alanının üzerinde göster. Çalışma durumu, arka plan ajanları, görevler ve hedef kontrolleri görünür kalır.",
+
   "settings.display.shortcutHints.title": "Kısayol ipuçlarını göster",
   "settings.display.shortcutHints.description":
     "Boş istemde şu anda yaptığınız işe uyan klavye kısayolunu gösterir, örneğin seçili kodu ekleme veya isteme geri dönme.",

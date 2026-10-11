@@ -1314,6 +1314,10 @@ export const dict = {
   "settings.display.mcpTool.expanded": "Ausgeklappt",
   "settings.display.mcpTool.collapsed": "Eingeklappt",
 
+  "settings.display.sessionActions.title": "Sitzungsaktionen anzeigen",
+  "settings.display.sessionActions.description":
+    "Zeigt die Sitzungsschaltflächen über dem Eingabefeld. Arbeitsstatus, Hintergrundagenten, Aufgaben und Zielsteuerung bleiben sichtbar.",
+
   "settings.display.shortcutHints.title": "Tastenkürzel-Hinweise anzeigen",
   "settings.display.shortcutHints.description":
     "Zeigt in der leeren Eingabe das Tastenkürzel an, das zu Ihrer aktuellen Tätigkeit passt, zum Beispiel wie Sie ausgewählten Code hinzufügen oder zur Eingabe zurückkehren.",

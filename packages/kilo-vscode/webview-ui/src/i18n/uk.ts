@@ -1246,6 +1246,10 @@ export const dict = {
   "settings.display.mcpTool.expanded": "Розгорнуті",
   "settings.display.mcpTool.collapsed": "Згорнуті",
 
+  "settings.display.sessionActions.title": "Показувати дії сеансу",
+  "settings.display.sessionActions.description":
+    "Показувати кнопки сеансу над полем введення. Статус роботи, фонові агенти, завдання та елементи керування ціллю залишаються видимими.",
+
   "settings.display.shortcutHints.title": "Показувати підказки клавіш",
   "settings.display.shortcutHints.description":
     "Показувати в порожньому полі запиту сполучення клавіш, що відповідає поточній дії, наприклад як додати виділений код або повернутися до запиту.",

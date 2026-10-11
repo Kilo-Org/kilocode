@@ -1269,6 +1269,10 @@ export const dict = {
   "settings.display.mcpTool.description": "Choose whether MCP and generic tool blocks start expanded or collapsed.",
   "settings.display.mcpTool.expanded": "Expanded",
   "settings.display.mcpTool.collapsed": "Collapsed",
+  "settings.display.sessionActions.title": "Show session actions",
+  "settings.display.sessionActions.description":
+    "Show the session buttons above the prompt. Working status, background agents, todos, and goal controls stay visible.",
+
   "settings.display.shortcutHints.title": "Show shortcut hints",
   "settings.display.shortcutHints.description":
     "Show the keyboard shortcut that fits what you do now in the empty prompt, for example how to add selected code or return to the prompt.",

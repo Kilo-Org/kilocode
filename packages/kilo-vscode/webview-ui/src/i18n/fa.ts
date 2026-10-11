@@ -1268,6 +1268,10 @@ export const dict = {
     "انتخاب کنید که بلوک‌های ابزار MCP و عمومی در حالت گسترش‌یافته یا جمع‌شده شروع شوند.",
   "settings.display.mcpTool.expanded": "گسترش‌یافته",
   "settings.display.mcpTool.collapsed": "جمع‌شده",
+  "settings.display.sessionActions.title": "نمایش اقدامات جلسه",
+  "settings.display.sessionActions.description":
+    "دکمه‌های جلسه را بالای کادر ورودی نشان دهید. وضعیت کار، عامل‌های پس‌زمینه، کارها و کنترل‌های هدف قابل مشاهده می‌مانند.",
+
   "settings.display.shortcutHints.title": "نمایش راهنمای میانبرها",
   "settings.display.shortcutHints.description":
     "میانبر صفحه‌کلیدی متناسب با کاری که اکنون انجام می‌دهید را در اعلان خالی نمایش می‌دهد، مثلاً نحوه افزودن کد انتخاب‌شده یا بازگشت به اعلان.",
