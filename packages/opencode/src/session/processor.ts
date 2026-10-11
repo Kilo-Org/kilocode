@@ -17,6 +17,7 @@ import { isOverflow } from "./overflow"
 import { RuntimeFlags } from "@/effect/runtime-flags" // kilocode_change - configured output token ceiling
 import { PartID } from "./schema"
 import type { SessionID } from "./schema"
+import { AnthropicRecovery } from "@/kilocode/session/anthropic-recovery" // kilocode_change
 import { SessionRetry } from "./retry"
 import { SessionStatus } from "./status"
 import { SessionSummary } from "./summary"
@@ -957,7 +958,7 @@ const layer = Layer.effect(
 
         return yield* Effect.gen(function* () {
           // kilocode_change start - publish retry state consistently for provider and empty-response retries
-          const retries = { provider: 0 }
+          const retries = { provider: 0, thinking: { output: false, repaired: false } } // kilocode_change
           const setRetry = (info: {
             attempt: number
             message: string
@@ -975,6 +976,7 @@ const layer = Layer.effect(
 
           const request = () =>
             Effect.gen(function* () {
+              retries.thinking.output = false // kilocode_change - scope admission to the rejected attempt
               ctx.currentText = undefined
               ctx.reasoningMap = {}
               yield* status.set(ctx.sessionID, { type: "busy" })
@@ -995,6 +997,11 @@ const layer = Layer.effect(
               yield* guard.watch.pipe(
                 Effect.raceFirst(
                   stream.pipe(
+                    Stream.tap((event) =>
+                      Effect.sync(() => {
+                        retries.thinking.output ||= AnthropicRecovery.output(event)
+                      }),
+                    ), // kilocode_change
                     Stream.tap((event) => handleEvent(event)),
                     Stream.tap(() => Effect.sync(() => guard.touch())),
                     Stream.takeUntil(() => ctx.needsCompaction),
@@ -1083,7 +1090,29 @@ const layer = Layer.effect(
             })
           }
 
-          yield* recover().pipe(Effect.catch(halt), Effect.ensuring(cleanup()))
+          // kilocode_change start - once-per-message exclusion; repaired requests keep normal retry/error behavior
+          yield* AnthropicRecovery.recover({
+            run: recover,
+            model: ctx.model,
+            output: () => retries.thinking.output || retries.thinking.repaired,
+            repair: (error) =>
+              Effect.gen(function* () {
+                const messages = yield* AnthropicRecovery.repair({
+                  sessionID: ctx.sessionID,
+                  model: ctx.model,
+                  messages: streamInput.messages,
+                  error,
+                }).pipe(
+                  Effect.provideService(Session.Service, session),
+                  Effect.provideService(EventV2Bridge.Service, events),
+                )
+                if (!messages) return false
+                yield* discard(new Set())
+                streamInput = { ...streamInput, messages }
+                retries.thinking.repaired = true
+                return true
+              }),
+          }).pipe(Effect.catch(halt), Effect.ensuring(cleanup()))
           // kilocode_change end
 
           if (ctx.needsCompaction) return "compact"
