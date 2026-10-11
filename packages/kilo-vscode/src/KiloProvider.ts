@@ -593,7 +593,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private onBeforeMessage: ((msg: Record<string, unknown>) => Promise<Record<string, unknown> | null>) | null = null
 
   private continueInWorktreeHandler:
-    | ((sessionId: string, progress: (status: string, detail?: string, error?: string) => void) => Promise<void>)
+    | ((
+        sessionId: string,
+        progress: (status: string, detail?: string, error?: string) => void,
+        directory: string,
+      ) => Promise<void>)
     | null = null
 
   private createWorktreeHandler: ((baseBranch?: string, branchName?: string) => Promise<void>) | null = null
@@ -1198,7 +1202,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   }
 
   public setContinueInWorktreeHandler(
-    handler: (sessionId: string, progress: (status: string, detail?: string, error?: string) => void) => Promise<void>,
+    handler: (
+      sessionId: string,
+      progress: (status: string, detail?: string, error?: string) => void,
+      directory: string,
+    ) => Promise<void>,
   ): void {
     this.continueInWorktreeHandler = handler
   }
@@ -1319,7 +1327,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           createWorktree: async (baseBranch, branchName) => {
             await this.createWorktreeHandler?.(baseBranch, branchName)
           },
-          continueInWorktree: this.continueInWorktreeHandler ?? undefined,
+          continueInWorktree: this.continueInWorktreeHandler
+            ? (sessionId, progress) =>
+                this.continueInWorktreeHandler!(sessionId, progress, this.getWorkspaceDirectory(sessionId))
+            : undefined,
         })
       ) {
         return
