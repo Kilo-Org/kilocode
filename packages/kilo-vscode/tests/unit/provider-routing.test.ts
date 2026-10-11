@@ -1,11 +1,10 @@
 import { describe, expect, it } from "bun:test"
 import {
   ROUTING_KEYS,
-  layeredRouting,
   modelRouting,
   routingClear,
   routingCustom,
-  routingOverriddenByProject,
+  routingOverridden,
   routingPartial,
   routingUnsetPaths,
   routingValue,
@@ -96,68 +95,62 @@ describe("provider routing persistence", () => {
     expect(modelRouting(cleared, pid, mid)).toBeUndefined()
   })
 
-  it("layeredRouting merges layers field by field like the backend config merge", () => {
-    const layer = (routing: Record<string, unknown>) => ({
-      provider: { [pid]: { models: { [mid]: { options: { provider: routing } } } } },
-    })
-    const global = layer(routingValue("b/fp8"))
-
-    // A project `order` alone does not displace the global `only` filter.
-    expect(layeredRouting([global, layer({ order: ["a/fp8"] })], pid, mid)).toBe("b/fp8")
-    // A full project pin wins.
-    expect(layeredRouting([global, layer(routingValue("a/fp8"))], pid, mid)).toBe("a/fp8")
-    // Layers without routing for the model are skipped.
-    expect(layeredRouting([global, undefined, layer(siblings)], pid, mid)).toBe("b/fp8")
-    expect(layeredRouting([undefined, layer(siblings)], pid, mid)).toBeUndefined()
-  })
-
   it("routingCustom flags hand-written setups a single pin cannot represent", () => {
-    const layer = (routing: Record<string, unknown>) => ({
+    const config = (routing: Record<string, unknown>) => ({
       provider: { [pid]: { models: { [mid]: { options: { provider: routing } } } } },
     })
 
-    expect(routingCustom([layer({ only: ["a/fp8", "b/fp8"] })], pid, mid)).toBe(true)
-    expect(routingCustom([layer({ order: ["a/fp8", "b/fp8"] })], pid, mid)).toBe(true)
-    expect(routingCustom([layer({ only: ["a/fp8"], order: ["b/fp8"] })], pid, mid)).toBe(true)
-    // Merged across layers: a project order against a global pin disagrees.
-    expect(routingCustom([layer(routingValue("b/fp8")), layer({ order: ["a/fp8"] })], pid, mid)).toBe(true)
+    expect(routingCustom(config({ only: ["a/fp8", "b/fp8"] }), pid, mid)).toBe(true)
+    expect(routingCustom(config({ order: ["a/fp8", "b/fp8"] }), pid, mid)).toBe(true)
+    expect(routingCustom(config({ only: ["a/fp8"], order: ["b/fp8"] }), pid, mid)).toBe(true)
 
-    expect(routingCustom([layer(routingValue("a/fp8"))], pid, mid)).toBe(false)
-    expect(routingCustom([layer({ order: ["a/fp8"] })], pid, mid)).toBe(false)
-    expect(routingCustom([layer(siblings), undefined], pid, mid)).toBe(false)
+    expect(routingCustom(config(routingValue("a/fp8")), pid, mid)).toBe(false)
+    expect(routingCustom(config({ order: ["a/fp8"] }), pid, mid)).toBe(false)
+    expect(routingCustom(config(siblings), pid, mid)).toBe(false)
+    expect(routingCustom(undefined, pid, mid)).toBe(false)
   })
 })
 
-describe("project-level routing override", () => {
-  const projectConfig = (routing: Record<string, unknown>, model = mid) => ({
+describe("routing overridden above the global config", () => {
+  const config = (routing: unknown, model = mid) => ({
     provider: { [pid]: { models: { [model]: { options: { provider: routing } } } } },
   })
 
-  it("reports an override for every field the UI owns", () => {
+  it("stays false while the effective routing is the global one", () => {
+    const pinned = config(routingValue("gmicloud/fp8"))
+    expect(routingOverridden(pinned, pinned, pid, mid)).toBe(false)
+    expect(routingOverridden({}, {}, pid, mid)).toBe(false)
+    expect(routingOverridden(undefined, undefined, pid, mid)).toBe(false)
+  })
+
+  it("reports a pin the global config does not hold", () => {
+    expect(routingOverridden(config(routingValue("baseten/fp8")), {}, pid, mid)).toBe(true)
+    expect(routingOverridden(config(routingValue("baseten/fp8")), config(routingValue("gmicloud/fp8")), pid, mid)).toBe(
+      true,
+    )
+  })
+
+  it("reports a field-level difference for every field the UI owns", () => {
+    const global = routingValue("gmicloud/fp8")
     for (const key of ROUTING_KEYS) {
-      expect(routingOverriddenByProject(projectConfig({ [key]: routingValue("gmicloud/fp8")[key] }), pid, mid)).toBe(
-        true,
-      )
+      const effective = { ...global, [key]: key === "allow_fallbacks" ? true : ["baseten/fp8"] }
+      expect(routingOverridden(config(effective), config(global), pid, mid)).toBe(true)
     }
   })
 
-  it("ignores hand-configured sibling preferences the UI never writes", () => {
-    expect(routingOverriddenByProject(projectConfig(siblings), pid, mid)).toBe(false)
+  it("reports an explicit reset that removed the global pin", () => {
+    // A project `options.provider: null` leaves no routing in the effective config.
+    expect(routingOverridden(config(null), config(routingValue("gmicloud/fp8")), pid, mid)).toBe(true)
+    expect(routingOverridden({}, config(routingValue("gmicloud/fp8")), pid, mid)).toBe(true)
   })
 
-  it("stays false without a project-level routing block", () => {
-    expect(routingOverriddenByProject({}, pid, mid)).toBe(false)
-    expect(routingOverriddenByProject(undefined, pid, mid)).toBe(false)
-    expect(routingOverriddenByProject({ provider: { [pid]: { models: {} } } }, pid, mid)).toBe(false)
+  it("ignores hand-configured sibling preferences the UI never writes", () => {
+    expect(routingOverridden(config(siblings), {}, pid, mid)).toBe(false)
   })
 
   it("is scoped to the one provider and model it is asked about", () => {
-    const config = projectConfig(routingValue("gmicloud/fp8"))
-    expect(routingOverriddenByProject(config, pid, "z-ai/glm-4.5")).toBe(false)
-    expect(routingOverriddenByProject(config, "openrouter", mid)).toBe(false)
-  })
-
-  it("flags allow_fallbacks alone — it shadows the pin the UI writes", () => {
-    expect(routingOverriddenByProject(projectConfig({ allow_fallbacks: true }), pid, mid)).toBe(true)
+    const effective = config(routingValue("gmicloud/fp8"))
+    expect(routingOverridden(effective, {}, pid, "z-ai/glm-4.5")).toBe(false)
+    expect(routingOverridden(effective, {}, "openrouter", mid)).toBe(false)
   })
 })

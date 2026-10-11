@@ -17,9 +17,9 @@ import {
   routingCustom,
   modelRouting,
   routable,
-  routingOverriddenByProject,
   routingPartial,
   useModelEndpoints,
+  useWorkspaceConfig,
 } from "../shared/RoutingSelector"
 import SettingsRow from "./SettingsRow"
 import { DEFAULT_SPEECH_TO_TEXT_MODEL } from "../../../../src/speech-to-text/models"
@@ -33,7 +33,7 @@ import { AUTOCOMPLETE_SELECTOR_MODELS, getAutocompleteSelection } from "./autoco
 import { preserveVariant } from "../../context/session-variant-store"
 
 const ModelsTab: Component = () => {
-  const { config, directory, projectConfig, settings, updateConfig, updateSetting, features } = useConfig()
+  const { config, directory, settings, updateConfig, updateSetting, features } = useConfig()
   const language = useLanguage()
   const provider = useProvider()
   const session = useSession()
@@ -111,6 +111,9 @@ const ModelsTab: Component = () => {
     () => routed() ?? undefined,
     () => directory() ?? "",
   )
+  // The value and the custom setup follow the draft; whether a higher config
+  // overrides the selection is a fact about the saved configs.
+  const workspace = useWorkspaceConfig(() => directory() ?? "")
 
   function updateRouting(provider: string | null) {
     const model = routed()
@@ -179,11 +182,14 @@ const ModelsTab: Component = () => {
                 endpoints={routingEndpoints.endpoints()}
                 failed={routingEndpoints.failed()}
                 value={modelRouting(config(), model().providerID, model().modelID)}
-                custom={routingCustom([config()], model().providerID, model().modelID)}
+                custom={routingCustom(config(), model().providerID, model().modelID)}
                 onSelect={(provider) => updateRouting(provider)}
                 onClear={() => updateRouting(null)}
-                onOpen={routingEndpoints.load}
-                overridden={routingOverriddenByProject(projectConfig(), model().providerID, model().modelID)}
+                onOpen={() => {
+                  routingEndpoints.load()
+                  workspace.refresh()
+                }}
+                overridden={workspace.overridden(model())}
                 placement="bottom-start"
               />
             </SettingsRow>

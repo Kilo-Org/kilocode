@@ -1,6 +1,6 @@
 import { describe, expect, it, spyOn } from "bun:test"
 import { routeModelRoutingMessage, type ModelRoutingContext } from "../../src/kilo-provider/model-routing"
-import { routingUnsetPaths, routingValue } from "../../src/shared/provider-routing"
+import { modelRouting, routingOverridden, routingUnsetPaths, routingValue } from "../../src/shared/provider-routing"
 import { KILO_PROVIDER_ID } from "../../src/shared/provider-model"
 import type { Config, KiloClient } from "@kilocode/sdk/v2/client"
 
@@ -134,10 +134,17 @@ describe("provider routing message router", () => {
     ])
   })
 
-  it("loads a workspace's project config file", async () => {
-    const project = { provider: { [pid]: { models: { [mid]: { options: { provider: { only: ["baseten/fp8"] } } } } } } }
+  it("loads the routing a workspace resolves, not just its project write target", async () => {
+    // WebReflection's first case: the pin lives in the worktree root kilo.json
+    // while .kilo/kilo.jsonc, the project write target, holds unrelated
+    // settings. Only the backend's effective config carries the pin.
+    const pin = { provider: { [pid]: { models: { [mid]: { options: { provider: routingValue("baseten/fp8") } } } } } }
     const { ctx, posted, workspaceCalls } = harness(undefined, async () => ({
-      data: { targets: { project: { raw: project } } },
+      data: {
+        effective: { ...pin, share: "disabled" },
+        global: { share: "manual" },
+        targets: { project: { raw: { share: "disabled" } } },
+      },
     }))
 
     expect(
@@ -150,15 +157,36 @@ describe("provider routing message router", () => {
       { directory: "/worktree", scope: "project" },
       { directory: settingsDir, scope: "project" },
     ])
+    // Only the provider subtree is sent.
     expect(posted).toEqual([
-      { type: "workspaceConfigLoaded", requestID: 5, directory: "/worktree", projectConfig: project },
-      { type: "workspaceConfigLoaded", requestID: 6, directory: settingsDir, projectConfig: project },
+      { type: "workspaceConfigLoaded", requestID: 5, directory: "/worktree", config: pin, globalConfig: {} },
+      { type: "workspaceConfigLoaded", requestID: 6, directory: settingsDir, config: pin, globalConfig: {} },
     ])
+    const loaded = posted[0] as { config: unknown; globalConfig: unknown }
+    expect(modelRouting(loaded.config, pid, mid)).toBe("baseten/fp8")
+    expect(routingOverridden(loaded.config, loaded.globalConfig, pid, mid)).toBe(true)
+  })
+
+  it("reports an explicit project reset of a global pin as overridden automatic routing", async () => {
+    // WebReflection's second case: the project sets `options.provider: null`,
+    // which the backend applies by dropping the global pin.
+    const pin = { provider: { [pid]: { models: { [mid]: { options: { provider: routingValue("gmicloud/fp8") } } } } } }
+    const reset = { provider: { [pid]: { models: { [mid]: { options: { provider: null } } } } } }
+    const { ctx, posted } = harness(undefined, async () => ({
+      data: { effective: reset, global: pin, targets: { project: { raw: reset } } },
+    }))
+
+    await routeModelRoutingMessage({ type: "requestWorkspaceConfig", requestID: 8, directory: "/worktree" }, ctx)
+    await drain()
+
+    const loaded = posted[0] as { config: unknown; globalConfig: unknown }
+    expect(modelRouting(loaded.config, pid, mid)).toBeUndefined()
+    expect(routingOverridden(loaded.config, loaded.globalConfig, pid, mid)).toBe(true)
   })
 
   it("falls back to the settings scope for a directory the extension never advertised", async () => {
     const warn = spyOn(console, "warn").mockImplementation(() => {})
-    const { ctx, posted, workspaceCalls } = harness(undefined, async () => ({ data: { targets: { project: {} } } }))
+    const { ctx, posted, workspaceCalls } = harness(undefined, async () => ({ data: { effective: {}, global: {} } }))
 
     await routeModelRoutingMessage({ type: "requestWorkspaceConfig", requestID: 7, directory: "/elsewhere" }, ctx)
     await drain()

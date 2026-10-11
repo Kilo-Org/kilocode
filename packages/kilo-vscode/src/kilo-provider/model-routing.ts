@@ -1,9 +1,9 @@
 /**
  * Provider-routing webview messages: upstream endpoint discovery for a model,
- * the project-level config of a session's workspace, and the per-model
- * routing preference written into the global config.
+ * the resolved routing of a session's workspace, and the per-model routing
+ * preference written into the global config.
  *
- * Discovery and the project config are resolved in the workspace directory
+ * Discovery and the workspace routing are resolved in the workspace directory
  * the request names — the one the extension advertised for the session via
  * workspaceDirectoryChanged. An Agent Manager worktree can carry its own
  * project config (a different gateway URL or organization, a project-level
@@ -71,8 +71,11 @@ function requestEndpoints(
 }
 
 /**
- * The project-level config file of a workspace, so the routing chip can lay a
- * project pin over the global selection and flag it.
+ * The routing a workspace's requests actually use, and the routing the global
+ * write path holds. Both come from the backend's own merge of every config
+ * file — a project can spread its config over several files and reset a
+ * global pin with null — so the chip never re-derives the merge. Only the
+ * provider subtree is sent: it is all the routing controls read.
  */
 function requestWorkspaceConfig(ctx: ModelRoutingContext, requestID: number, directory: string): void {
   const client = ctx.client
@@ -82,9 +85,14 @@ function requestWorkspaceConfig(ctx: ModelRoutingContext, requestID: number, dir
   }
   void client.config
     .overlay({ directory, scope: "project" }, { throwOnError: true })
-    .then(({ data: overlay }) => {
-      const targets = overlay?.targets as { project?: { raw?: Config } } | undefined
-      ctx.post({ type: "workspaceConfigLoaded", requestID, directory, projectConfig: targets?.project?.raw })
+    .then(({ data }) => {
+      ctx.post({
+        type: "workspaceConfigLoaded",
+        requestID,
+        directory,
+        config: { provider: data.effective.provider },
+        globalConfig: { provider: data.global.provider },
+      })
     })
     .catch((err: unknown) => {
       console.error("[Kilo New] KiloProvider: Failed to fetch workspace config:", err)

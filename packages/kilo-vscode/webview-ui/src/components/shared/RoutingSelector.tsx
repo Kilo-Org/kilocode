@@ -10,7 +10,6 @@
 import { type Accessor, Component, createEffect, createMemo, createSignal, For, Show } from "solid-js"
 import { PopupSelector } from "./PopupSelector"
 import { Button } from "@kilocode/kilo-ui/button"
-import { useConfig } from "../../context/config"
 import { useSession } from "../../context/session"
 import { useServer } from "../../context/server"
 import { useVSCode } from "../../context/vscode"
@@ -21,12 +20,7 @@ import { isEnterKeyCommitNotIme } from "../../utils/ime-enter"
 import { endpointsEntry, requestEndpoints } from "../../context/routing-endpoints"
 import { requestWorkspaceConfig, workspaceConfigEntry } from "../../context/workspace-config"
 import { useRoutingPick } from "../../hooks/useRoutingPick"
-import {
-  layeredRouting,
-  modelRouting,
-  routingCustom,
-  routingOverriddenByProject,
-} from "../../../../src/shared/provider-routing"
+import { modelRouting, routingCustom, routingOverridden } from "../../../../src/shared/provider-routing"
 import type { ModelEndpoint, ModelSelection } from "../../types/messages"
 
 // ---------------------------------------------------------------------------
@@ -68,17 +62,40 @@ export function useModelEndpoints(model: Accessor<ModelSelection | undefined>, d
   return { endpoints, failed, load }
 }
 
+/**
+ * The server-resolved configs of a workspace (shared store in
+ * ../../context/workspace-config), requested on first read and again whenever
+ * a config message marks them stale. An empty directory is the settings scope.
+ */
+export function useWorkspaceConfig(directory: Accessor<string>) {
+  const vscode = useVSCode()
+  const entry = () => workspaceConfigEntry(directory())
+  const refresh = () => requestWorkspaceConfig(directory(), vscode.postMessage)
+  createEffect(() => {
+    // Reading the entry re-runs this when it turns stale after a config message.
+    entry()
+    refresh()
+  })
+  return {
+    entry,
+    refresh,
+    fresh: () => {
+      const value = entry()
+      return value !== undefined && !value.stale
+    },
+    overridden: (model: ModelSelection) => {
+      const value = entry()
+      return value !== undefined && routingOverridden(value.config, value.globalConfig, model.providerID, model.modelID)
+    },
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Config helpers
 // ---------------------------------------------------------------------------
 
 export { routable }
-export {
-  modelRouting,
-  routingCustom,
-  routingOverriddenByProject,
-  routingPartial,
-} from "../../../../src/shared/provider-routing"
+export { modelRouting, routingCustom, routingPartial } from "../../../../src/shared/provider-routing"
 
 function fmtContext(n: number): string {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(n % 1_000_000 === 0 ? 0 : 1)}M`
@@ -183,7 +200,12 @@ export interface RoutingSelectorBaseProps {
   onClear: () => void
   /** Called when the popover opens — used to lazily load endpoints */
   onOpen?: () => void
-  /** A project-level config pins routing for this model and wins over the write path. */
+  /**
+   * A config above the global one decides routing for this model, so a
+   * selection written to the global config cannot take effect (and the
+   * backend rejects a shadowed write). The rows stay visible but cannot be
+   * picked.
+   */
   overridden?: boolean
   /** The catalog request failed, so an absent pin says nothing about its availability. */
   failed?: boolean
@@ -274,6 +296,7 @@ export const RoutingSelectorBase: Component<RoutingSelectorBaseProps> = (props) 
   }
 
   function pick(row: ModelEndpoint | null) {
+    if (props.overridden) return
     if (row === null) props.onClear()
     else props.onSelect(row.provider)
     onOpen(false)
@@ -357,16 +380,21 @@ export const RoutingSelectorBase: Component<RoutingSelectorBaseProps> = (props) 
             <RoutingPreview endpoint={preview()} autoLabel={auto()} unavailable={unavailable()} />
           </div>
           <div class="routing-selector-divider" />
-          <Show when={props.busy}>
+          <Show when={props.busy && !props.overridden}>
             <div class="routing-selector-override">{language.t("model.routing.busy")}</div>
           </Show>
           <Show when={props.overridden}>
             <div class="routing-selector-override">{language.t("model.routing.projectOverride")}</div>
           </Show>
-          <Show when={props.custom}>
+          <Show when={props.custom && !props.overridden}>
             <div class="routing-selector-override">{language.t("model.routing.customNote")}</div>
           </Show>
-          <div class="routing-selector-list" role="listbox" ref={listRef}>
+          <div
+            class="routing-selector-list"
+            role="listbox"
+            aria-disabled={props.overridden ? "true" : undefined}
+            ref={listRef}
+          >
             <For each={rows()}>
               {(row, i) => {
                 const selected = () => !props.custom && (row?.provider ?? undefined) === value()
@@ -420,7 +448,6 @@ export const RoutingSelector: Component<RoutingSelectorProps> = (props) => {
   const session = useSession()
   const server = useServer()
   const vscode = useVSCode()
-  const config = useConfig()
   const id = () => props.sessionID?.()
 
   const routed = () => {
@@ -429,43 +456,32 @@ export const RoutingSelector: Component<RoutingSelectorProps> = (props) => {
     return model
   }
 
-  // The chip must reflect the session's workspace. The config context covers
-  // the settings directory only; a session in an Agent Manager worktree lays
-  // that worktree's project config — which may pin routing on its own — over
-  // the global config, which is shared and always current in the context.
-  // The directory is the one the extension advertised for the session; it is
-  // used as-is so the answer can never be resolved for another session.
+  // The chip must reflect the routing the session's requests use, which the
+  // backend resolves in the session's workspace — an Agent Manager worktree
+  // can pin routing in its own project config. The directory is the one the
+  // extension advertised for the session; it is used as-is so the answer can
+  // never be resolved for another session.
   const directory = () => server.workspaceDirectory()
-  const scoped = () => directory() !== "" && directory() !== config.directory()
-  const workspace = () => (scoped() ? workspaceConfigEntry(directory()) : undefined)
-  const refreshWorkspace = () => {
-    if (scoped()) requestWorkspaceConfig(directory(), vscode.postMessage)
-  }
-  createEffect(() => {
-    // Reading the entry re-runs this when it turns stale after a config message.
-    workspace()
-    refreshWorkspace()
-  })
-  const project = () => (scoped() ? workspace()?.projectConfig : config.projectConfig())
-  const current = (model: ModelSelection) =>
-    scoped()
-      ? layeredRouting([config.globalConfig(), project()], model.providerID, model.modelID)
-      : modelRouting(config.config(), model.providerID, model.modelID)
+  const workspace = useWorkspaceConfig(directory)
+  const effective = () => workspace.entry()?.config
+  const current = (model: ModelSelection) => modelRouting(effective(), model.providerID, model.modelID)
   // Same signal the Settings save bar warns from: a write disposes every
   // backend instance, which cancels running sessions in all panels.
   const busy = () => Object.values(session.allStatusMap()).some((status) => status.type === "busy")
-  const layers = () => (scoped() ? [config.globalConfig(), project()] : [config.config()])
 
   const endpoints = useModelEndpoints(routed, directory)
-  const routing = useRoutingPick(current, vscode)
+  const routing = useRoutingPick(current, workspace.fresh, vscode)
 
+  // Until the workspace config first loads, neither the routing in use nor an
+  // override is known: showing Auto would misstate a pin, and a pick could not
+  // be blocked. A config message retries a failed first lookup.
   return (
-    <Show when={routed()}>
+    <Show when={workspace.entry() && routed()}>
       {(model) => (
         <RoutingSelectorBase
           endpoints={endpoints.endpoints()}
           value={routing.value(model())}
-          custom={!routing.picking(model()) && routingCustom(layers(), model().providerID, model().modelID)}
+          custom={!routing.picking(model()) && routingCustom(effective(), model().providerID, model().modelID)}
           blocked={props.blocked}
           failed={endpoints.failed()}
           busy={busy()}
@@ -473,10 +489,10 @@ export const RoutingSelector: Component<RoutingSelectorProps> = (props) => {
           onClear={() => routing.pick(model(), null)}
           onOpen={() => {
             endpoints.load()
-            // A failed project-config refresh is retried here rather than looping.
-            refreshWorkspace()
+            // A failed workspace config refresh is retried here rather than looping.
+            workspace.refresh()
           }}
-          overridden={routingOverriddenByProject(project(), model().providerID, model().modelID)}
+          overridden={workspace.overridden(model())}
         />
       )}
     </Show>

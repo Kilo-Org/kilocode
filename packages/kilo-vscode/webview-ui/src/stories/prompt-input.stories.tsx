@@ -3,8 +3,8 @@
  * Stories for the PromptInput component.
  *
  * Covers the main prompt bar including the mode switcher, model dropdown,
- * and the thinking-effort (variant) dropdown that appears for models that
- * support reasoning variants.
+ * provider routing dropdown, and the thinking-effort (variant) dropdown that
+ * appears for models that support reasoning variants.
  *
  * Two viewport widths are captured for each scenario:
  *   - 420 px  — typical sidebar width
@@ -15,6 +15,11 @@ import type { Meta, StoryObj } from "storybook-solidjs-vite"
 import { type ParentComponent } from "solid-js"
 import { StoryProviders, mockSessionValue } from "./StoryProviders"
 import { SessionContext } from "../context/session"
+import {
+  handleWorkspaceConfigMessage,
+  requestWorkspaceConfig,
+  resetWorkspaceConfigStore,
+} from "../context/workspace-config"
 import { PromptInput } from "../components/chat/PromptInput"
 import { SandboxTooltipContent } from "../components/shared/SandboxButton"
 import { contextDrafts } from "../utils/draft-store"
@@ -37,6 +42,20 @@ const PromptProviders: ParentComponent<{ variants?: boolean; training?: boolean 
     variantList: () => (props.variants ? ["low", "medium", "high"] : []),
     currentVariant: () => (props.variants ? ("medium" as string | undefined) : undefined),
   }
+  // No extension host answers in Storybook. Reply to the routing segment's
+  // workspace config request as the host does for a workspace without a pin,
+  // so the segment renders.
+  resetWorkspaceConfigStore()
+  requestWorkspaceConfig("", (message) => {
+    if (message.type !== "requestWorkspaceConfig") return
+    handleWorkspaceConfigMessage({
+      type: "workspaceConfigLoaded",
+      requestID: message.requestID,
+      directory: "",
+      config: {},
+      globalConfig: {},
+    })
+  })
 
   return (
     <StoryProviders noPadding training={props.training}>

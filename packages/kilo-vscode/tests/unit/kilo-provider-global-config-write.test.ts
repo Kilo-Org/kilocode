@@ -29,7 +29,7 @@ const target = (scope: "global" | "project", revision: string) => ({
 // The overlay snapshot carries the live revision and a write must present
 // exactly that revision — the backend rejects anything else, which is what the
 // config binding guard relies on. Every accepted write produces a new revision.
-function createConnection(options: { overlay?: () => Promise<unknown> } = {}) {
+function createConnection(options: { overlay?: () => Promise<unknown>; shadowedBy?: string } = {}) {
   const patches: Array<Record<string, unknown>> = []
   let revision = 1
   const targets = () => ({
@@ -43,6 +43,14 @@ function createConnection(options: { overlay?: () => Promise<unknown> } = {}) {
       overlay: options.overlay ?? (async () => ({ data: { project: {}, targets: targets() } })),
       overlayUpdate: async (patch: Record<string, unknown> & { expected: { revision: string } }) => {
         if (patch.expected.revision !== `global-r${revision}`) throw new Error("Revision mismatch")
+        // The backend's 409 body when a higher-precedence file already sets a patched value.
+        if (options.shadowedBy)
+          throw {
+            _tag: "ConfigOverlayShadowedError",
+            message: `Not saved: ${options.shadowedBy} takes precedence over ${patch.expected.path}. Remove or edit the conflicting value there.`,
+            path: patch.expected.path,
+            shadowedBy: options.shadowedBy,
+          }
         revision++
         patches.push(patch)
         return { data: { effective: {}, targets: targets() } }
@@ -189,6 +197,21 @@ describe("KiloProvider.writeGlobalConfig", () => {
       "configUpdateFailed",
       "configUpdated",
     ])
+  })
+
+  it("rolls back a pin a project file shadows and names that file", async () => {
+    const conn = createConnection({ shadowedBy: "/repo/kilo.json" })
+    const { internal, sent } = setup(conn)
+
+    await internal.writeGlobalConfig(pin("gmicloud/fp8"))
+
+    expect(conn.patches).toEqual([])
+    // configUpdateFailed drops the chat pick; the reload republishes the unchanged config.
+    expect(sent.map((message) => message.type)).toEqual(["configUpdateFailed", "configUpdated"])
+    const message =
+      "Not saved: /repo/kilo.json takes precedence over /config/kilo.jsonc. Remove or edit the conflicting value there."
+    expect(sent[0]).toEqual(expect.objectContaining({ message }))
+    expect(notice).toHaveBeenCalledWith(`Config update failed: ${message}`)
   })
 
   it("republishes bindings after a failed write so a Settings save is not rejected as expired", async () => {

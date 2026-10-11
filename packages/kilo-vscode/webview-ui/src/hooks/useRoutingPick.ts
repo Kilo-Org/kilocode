@@ -2,10 +2,12 @@
  * Optimistic state for the chat provider-routing pick.
  *
  * A pick is persisted through a global config write that disposes the backend
- * instances, so the confirming configUpdated can take seconds. The picked
- * value shows immediately and stays until its own write is confirmed or
- * fails. Config messages from other sources — an earlier queued pick, the
- * reload after the write — leave it alone.
+ * instances, so the confirming configUpdated can take seconds, and the
+ * workspace config the chip reads reloads only after it. The picked value
+ * shows immediately and stays until its own write is confirmed and the
+ * workspace config has reloaded since, or until the write fails. Config
+ * messages from other sources — an earlier queued pick, the reload after the
+ * write — leave it alone.
  */
 
 import { createSignal, onCleanup } from "solid-js"
@@ -19,6 +21,8 @@ interface VSCode {
 
 interface RoutingPick extends ModelSelection {
   provider: string | null
+  /** The global config confirmed the write. */
+  written?: true
 }
 
 /**
@@ -39,8 +43,16 @@ function writtenConfig(message: ExtensionMessage): unknown {
   }
 }
 
-/** `current` resolves the routing that applies to a model when no pick is pending. */
-export function useRoutingPick(current: (model: ModelSelection) => string | undefined, vscode: VSCode) {
+/**
+ * `current` resolves the routing that applies to a model from the workspace
+ * config; `fresh` reports whether that config loaded after the last config
+ * change, so once a write is confirmed it already reflects the write.
+ */
+export function useRoutingPick(
+  current: (model: ModelSelection) => string | undefined,
+  fresh: () => boolean,
+  vscode: VSCode,
+) {
   const [pending, setPending] = createSignal<RoutingPick>()
 
   const unsubscribe = vscode.onMessage((message) => {
@@ -51,15 +63,21 @@ export function useRoutingPick(current: (model: ModelSelection) => string | unde
       setPending(undefined)
       return
     }
+    if (next.written) {
+      if (fresh()) setPending(undefined)
+      return
+    }
     const written = writtenConfig(message)
     if (written === undefined) return
-    if (modelRouting(written, next.providerID, next.modelID) === (next.provider ?? undefined)) setPending(undefined)
+    if (modelRouting(written, next.providerID, next.modelID) === (next.provider ?? undefined))
+      setPending({ ...next, written: true })
   })
   onCleanup(unsubscribe)
 
   const picking = (model: ModelSelection) => {
     const next = pending()
-    return next !== undefined && next.providerID === model.providerID && next.modelID === model.modelID
+    if (next === undefined || next.providerID !== model.providerID || next.modelID !== model.modelID) return false
+    return !next.written || !fresh()
   }
 
   return {

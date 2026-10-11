@@ -687,6 +687,15 @@
   color: var(--text-on-interactive-base, var(--vscode-list-activeSelectionForeground));
 }
 
+/* Rows still preview on hover, but a higher config decides routing, so they cannot be picked. */
+.routing-selector-list[aria-disabled="true"] .routing-selector-item {
+  cursor: default;
+}
+
+.routing-selector-list[aria-disabled="true"] .routing-selector-item:not(.selected) {
+  opacity: 0.6;
+}
+
 .routing-selector-item-name {
   min-width: 0;
   font-weight: 500;

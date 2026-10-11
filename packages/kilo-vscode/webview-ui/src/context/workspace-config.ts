@@ -1,20 +1,21 @@
 /**
- * Project-level configs of workspaces other than the config context's directory.
+ * Server-resolved routing configs per workspace directory.
  *
- * The config context loads one directory — the settings scope. A session in
- * an Agent Manager worktree runs against that worktree's project file, which
- * can pin routing on its own, so controls that must show what applies to the
- * session read it from here and lay it over the (shared, always current)
- * global config. Entries are cached per directory and marked stale on every
- * config message: they stay visible while the refresh is in flight, and a
- * failed refresh keeps the previous entry — the next popover open retries.
+ * Each entry holds the effective config of a workspace — the backend's merge
+ * of every global, project, and managed config file — next to the merged
+ * global config the routing controls write to. The config context cannot
+ * stand in for either: it holds one directory's write targets and the user's
+ * unsaved Settings draft. Entries are cached per directory and marked stale on
+ * every config message: they stay visible while the refresh is in flight, and
+ * a failed refresh keeps the previous entry — the next popover open retries.
  */
 
 import { createSignal } from "solid-js"
 import type { ExtensionMessage, WebviewMessage } from "../types/messages"
 
 export interface WorkspaceConfigEntry {
-  projectConfig: unknown
+  config: unknown
+  globalConfig: unknown
   stale?: true
 }
 
@@ -60,7 +61,10 @@ export function handleWorkspaceConfigMessage(message: ExtensionMessage): boolean
       const [directory] = found
       pending.delete(directory)
       if (message.error) return true
-      setEntries((prev) => ({ ...prev, [directory]: { projectConfig: message.projectConfig } }))
+      setEntries((prev) => ({
+        ...prev,
+        [directory]: { config: message.config, globalConfig: message.globalConfig },
+      }))
       return true
     }
     default:
@@ -68,14 +72,14 @@ export function handleWorkspaceConfigMessage(message: ExtensionMessage): boolean
   }
 }
 
-/** Reactive read of the cached project config of a workspace. */
+/** Reactive read of the cached configs of a workspace. */
 export function workspaceConfigEntry(directory: string): WorkspaceConfigEntry | undefined {
   return entries()[directory]
 }
 
 /**
- * Request a workspace's project config unless a fresh entry is cached or a
- * request is in flight. Stale entries stay visible while they refresh.
+ * Request a workspace's configs unless a fresh entry is cached or a request is
+ * in flight. Stale entries stay visible while they refresh.
  */
 export function requestWorkspaceConfig(directory: string, post: (message: WebviewMessage) => void): void {
   if (pending.has(directory)) return
@@ -86,7 +90,7 @@ export function requestWorkspaceConfig(directory: string, post: (message: Webvie
   send(request)
 }
 
-/** Test-only: clear cached entries and in-flight bookkeeping. */
+/** Tests and stories only: clear cached entries and in-flight bookkeeping. */
 export function resetWorkspaceConfigStore(): void {
   setEntries({})
   pending.clear()

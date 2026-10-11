@@ -39,15 +39,18 @@ function routingOptions(config: unknown, providerID: string, modelID: string): R
 }
 
 /**
- * Whether a project-level config sets any of the routing fields this UI owns.
- * The project scope wins when configs merge, so while this is true a selection
- * written to the global config cannot take effect — the UI says so instead of
- * silently reverting.
+ * Whether a layer above the global config decides the routing fields this UI
+ * owns: a pin in any project file, an explicit project reset
+ * (`options.provider: null`), or a managed config. Selections are written to
+ * the global config, so while this is true they cannot take effect. Both
+ * configs must be the server-resolved ones — the effective config of the
+ * session's workspace and the merged global config — because the backend
+ * merges every config file, not only the ones the UI writes.
  */
-export function routingOverriddenByProject(projectConfig: unknown, providerID: string, modelID: string): boolean {
-  const routing = routingOptions(projectConfig, providerID, modelID)
-  if (!routing) return false
-  return ROUTING_KEYS.some((key) => routing[key] !== undefined)
+export function routingOverridden(config: unknown, global: unknown, providerID: string, modelID: string): boolean {
+  const effective = routingOptions(config, providerID, modelID)
+  const written = routingOptions(global, providerID, modelID)
+  return ROUTING_KEYS.some((key) => JSON.stringify(effective?.[key]) !== JSON.stringify(written?.[key]))
 }
 
 function slug(routing: Record<string, unknown> | undefined): string | undefined {
@@ -66,31 +69,16 @@ export function modelRouting(config: unknown, providerID: string, modelID: strin
 }
 
 /**
- * The routing slug that applies when several config layers (lowest precedence
- * first) set routing for a model. Layers merge field by field like the
- * backend's config merge — later layers win and arrays are replaced — so a
- * project-level `order` over a global `only` still resolves to the global
- * `only`, which is what the request is filtered by.
- */
-export function layeredRouting(configs: unknown[], providerID: string, modelID: string): string | undefined {
-  return slug(layered(configs, providerID, modelID))
-}
-
-function layered(configs: unknown[], providerID: string, modelID: string): Record<string, unknown> {
-  return Object.assign({}, ...configs.map((config) => routingOptions(config, providerID, modelID)))
-}
-
-/**
- * Whether the merged routing for a model is a hand-written setup the single-pin
- * UI cannot represent: several providers in `only` or `order`, or lists that
+ * Whether the routing for a model is a hand-written setup the single-pin UI
+ * cannot represent: several providers in `only` or `order`, or lists that
  * start with different providers. Presenting it as a pin of its first entry
  * would misstate what the gateway does, and a selection replaces all of it.
  */
-export function routingCustom(configs: unknown[], providerID: string, modelID: string): boolean {
-  const routing = layered(configs, providerID, modelID)
+export function routingCustom(config: unknown, providerID: string, modelID: string): boolean {
+  const routing = routingOptions(config, providerID, modelID)
   const list = (value: unknown) => (Array.isArray(value) ? value : [])
-  const only = list(routing.only)
-  const order = list(routing.order)
+  const only = list(routing?.only)
+  const order = list(routing?.order)
   if (only.length > 1 || order.length > 1) return true
   return only.length === 1 && order.length === 1 && only[0] !== order[0]
 }

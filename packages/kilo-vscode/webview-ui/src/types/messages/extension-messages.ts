@@ -1214,7 +1214,10 @@ export interface WorkspaceConfigLoadedMessage {
   type: "workspaceConfigLoaded"
   requestID: number
   directory: string
-  projectConfig?: Config
+  /** The workspace's effective config (provider subtree only). */
+  config?: Config
+  /** The merged global config (provider subtree only). */
+  globalConfig?: Config
   error?: boolean
 }
 
