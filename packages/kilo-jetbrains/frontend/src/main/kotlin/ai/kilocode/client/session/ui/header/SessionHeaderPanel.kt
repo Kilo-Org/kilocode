@@ -3,6 +3,7 @@ package ai.kilocode.client.session.ui.header
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.model.SessionHeaderSnapshot
 import ai.kilocode.client.session.model.SessionModelEvent
+import ai.kilocode.client.session.model.TimelineItem
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionEditorStyleTarget
 import ai.kilocode.client.session.controller.SessionController
@@ -47,6 +48,7 @@ class SessionHeaderPanel(
     private val onShowBoard: () -> Unit = {},
     /** Opens a background agent's read-only transcript. See [ai.kilocode.client.session.SessionUi.openSubagent]. */
     private val onOpenSubagent: (String, String) -> Unit = { _, _ -> },
+    onNavigate: (TimelineItem) -> Unit = {},
 ) : BorderLayoutPanel(), SessionEditorStyleTarget {
 
     companion object {
@@ -106,7 +108,7 @@ class SessionHeaderPanel(
             }
         })
     }
-    private val timeline = TimelinePanel()
+    private val timeline = TimelinePanel(onNavigate)
     private val viewport = JViewport().apply {
         isOpaque = false
         view = timeline

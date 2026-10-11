@@ -56,6 +56,7 @@ export const dict = {
   ...anacondaDesktopDict,
   ...cloudProviderDict,
   "task.swarm.title": "Board",
+  "task.swarm.open": "Open board",
   "task.swarm.refresh": "Refresh",
   "task.swarm.reset": "Reset board",
   "task.swarm.resetTitle": "Reset this board?",
@@ -212,6 +213,7 @@ export const dict = {
   "prompt.action.stop.background": "Stop main agent. Background agents keep running.",
   "prompt.agents.show": "Show background agents",
   "prompt.action.enhance": "Enhance prompt",
+  "prompt.action.more": "More actions",
   "prompt.paste.expand": "Click to expand pasted text",
   "prompt.issues.title": "Session issues",
   "prompt.mcp.provider": "{{name}} MCP",
@@ -947,6 +949,11 @@ export const dict = {
     "Use installed Google Chrome for the Integrated Browser. Disable only when a compatible Playwright Chromium browser is already installed.",
   "browserTab.noSession": "Open the browser from a session to preview a local application or public HTTPS page.",
   "browserTab.disabled": "The Integrated Browser is disabled. Enable it in Kilo Settings > Experimental.",
+  "settings.experimental.browserLinks.title": "Open links in",
+  "settings.experimental.browserLinks.description":
+    "Choose where web links open from Kilo chats. Requires the Integrated Browser.",
+  "settings.experimental.browserLinks.external": "System browser",
+  "settings.experimental.browserLinks.integrated": "Integrated Browser",
   "settings.experimental.conversationPromptHistory.title": "Per-Conversation Prompt History",
   "settings.experimental.conversationPromptHistory.description":
     "Keep the prompt input history (ArrowUp/ArrowDown recall) separate for each conversation instead of sharing one history across all conversations.",
@@ -1371,6 +1378,8 @@ export const dict = {
   "task.backgroundAgents.stopAll": "Stop all ({{count}})",
   "task.backgroundAgents.finished": "Background agents finished",
   "task.stop": "Stop sub-agent",
+  "task.open.panel": "Open sub-agent in panel",
+  "task.open.tab": "Open sub-agent in tab",
 
   "settings.saveBar.unsavedChanges": "Unsaved changes",
   "settings.saveBar.discard": "Discard",

@@ -1,5 +1,7 @@
 import * as vscode from "vscode"
 import {
+  BrowserLaunchError,
+  diagnostic,
   type BrowserBroker,
   type BrowserOwner,
   type BrowserRoute,
@@ -14,7 +16,7 @@ import {
   type BrowserControlMessage,
   type BrowserControlSurface,
 } from "../services/browser-automation/browser-control"
-import type { BrowserInteraction, BrowserViewIdentity, BrowserViewport } from "../shared/browser-stream"
+import type { BrowserCursor, BrowserInteraction, BrowserViewIdentity, BrowserViewport } from "../shared/browser-stream"
 import type { BrowserReference } from "../shared/browser-feedback"
 import { buildWebviewHtml } from "../utils"
 
@@ -22,6 +24,7 @@ interface Panel {
   panel: vscode.WebviewPanel
   sessionId: string
   ready: boolean
+  pendingUrl?: string
 }
 
 export interface BrowserTabProviderOptions {
@@ -88,6 +91,9 @@ export class BrowserTabProvider {
         vscode.Disposable.from({ dispose: this.opts.browser.subscribe((state) => this.state(state)) }),
       )
       this.disposables.push(vscode.Disposable.from({ dispose: this.opts.browser.frames((frame) => this.frame(frame)) }))
+      this.disposables.push(
+        vscode.Disposable.from({ dispose: this.opts.browser.cursors((cursor) => this.cursor(cursor)) }),
+      )
     }
   }
 
@@ -136,6 +142,43 @@ export class BrowserTabProvider {
     })
   }
 
+  /**
+   * Open (or reveal) the browser tab for a session and navigate to a URL. Used
+   * when a chat web link should open in the Integrated Browser. Returns false
+   * when the browser cannot take the link, so the caller can fall back.
+   */
+  openUrl(sessionId: string, url: string): boolean {
+    if (!this.options.trusted() || !this.options.enabled()) return false
+    const directory = this.options.directory(sessionId)
+    const route = directory ? { sessionId, directory } : undefined
+    if (!route || !this.options.resolve(route) || !this.opts.browser) return false
+    this.open(sessionId)
+    const entry = this.panels.get(sessionId)
+    if (!entry) return false
+    if (entry.ready) this.navigate(entry, route, url)
+    else entry.pendingUrl = url
+    return true
+  }
+
+  private navigate(entry: Panel, route: BrowserRoute, url: string): void {
+    entry.pendingUrl = undefined
+    void this.opts.browser?.open(route, url, false).catch((error: unknown) => {
+      this.log("Browser open failed:", error)
+      // Surface early failures (for example no Chromium) instead of leaving the
+      // link silently unopened. Keep the `missing` hint so the tab can offer the
+      // install affordance, matching the shared in-panel error path.
+      entry.panel.webview.postMessage({
+        type: "browserTab.state",
+        browserId: "",
+        sessionId: entry.sessionId,
+        status: "error",
+        errors: 0,
+        error: diagnostic(error, url),
+        missing: error instanceof BrowserLaunchError ? error.missing : undefined,
+      })
+    })
+  }
+
   dispose(): void {
     for (const entry of this.panels.values()) entry.panel.dispose()
     this.panels.clear()
@@ -174,6 +217,13 @@ export class BrowserTabProvider {
     const entry = this.panels.get(frame.sessionId)
     if (!entry?.ready) return
     entry.panel.webview.postMessage({ ...frame, type: "browserTab.frame" })
+  }
+
+  private cursor(cursor: BrowserCursor & { sessionId: string; projectId?: string }): void {
+    if (cursor.projectId) return
+    const entry = this.panels.get(cursor.sessionId)
+    if (!entry?.ready) return
+    entry.panel.webview.postMessage({ ...cursor, type: "browserTab.cursor" })
   }
 
   private stateMessage(state: BrowserState) {
@@ -229,6 +279,13 @@ export class BrowserTabProvider {
         sessionId: entry.sessionId,
         browserAutomation: this.options.enabled(),
       })
+      if (entry.pendingUrl) {
+        const url = entry.pendingUrl
+        const directory = this.options.directory(entry.sessionId)
+        const route = directory ? { sessionId: entry.sessionId, directory } : undefined
+        if (route && this.options.resolve(route)) this.navigate(entry, route, url)
+        else entry.pendingUrl = undefined
+      }
       return
     }
     if (message.type === "browserTab.openSettings") {

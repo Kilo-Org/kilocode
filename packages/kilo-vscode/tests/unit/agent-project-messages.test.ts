@@ -451,6 +451,35 @@ describe("handleProjectMessage", () => {
     expect(registry.list()).toEqual([])
   })
 
+  it("persists the project order and keeps unlisted projects last", async () => {
+    const { deps, registry, contexts, storage, calls } = setup()
+    for (const id of ["a", "b", "c", "d"]) await registry.add({ id, root: `/${id}` })
+
+    await handleProjectMessage(msg("agentManager.setProjectOrder", { order: ["c", "unknown", "a", "c", "b"] }), deps)
+
+    expect(new ProjectRegistry(storage).list().map((p) => [p.id, p.order])).toEqual([
+      ["c", 1],
+      ["a", 2],
+      ["b", 3],
+      ["d", 4],
+    ])
+    expect(contexts.snapshots().map((p) => p.id)).toEqual([projectIdFor(WORKSPACE), "c", "a", "b", "d"])
+    expect(calls.push).toBe(1)
+  })
+
+  it("pushes the stored order when saving the project order fails", async () => {
+    const { deps, registry, storage, calls } = setup()
+    for (const id of ["a", "b"]) await registry.add({ id, root: `/${id}` })
+    storage.write = () => {
+      throw new Error("disk full")
+    }
+
+    await handleProjectMessage(msg("agentManager.setProjectOrder", { order: ["b", "a"] }), deps)
+
+    expect(registry.list().map((p) => p.id)).toEqual(["a", "b"])
+    expect(calls.push).toBe(1)
+  })
+
   it("does not initialize missing projects on expand", async () => {
     const repo = gitRepo()
     const { deps, registry, calls } = setup()

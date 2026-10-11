@@ -577,6 +577,7 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
                 href="https://kilo.ai/docs/ai-providers#custom-provider"
                 onClick={(e) => {
                   e.preventDefault()
+                  e.stopPropagation()
                   vscode.postMessage({
                     type: "openExternal",
                     url: "https://kilo.ai/docs/ai-providers#custom-provider",

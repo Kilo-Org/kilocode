@@ -227,7 +227,7 @@ export function createBrowserController(props: BrowserControllerOptions): Browse
       setTools({ browserId: event.value.browserId, url: event.value.url })
       return
     }
-    receiveInspection(event.value)
+    if (event.type === "inspection") receiveInspection(event.value)
   }
 
   const attach = (scope: BrowserScope | undefined) => {

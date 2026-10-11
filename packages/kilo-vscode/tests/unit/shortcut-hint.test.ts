@@ -7,6 +7,8 @@ const bindings = {
   agentManagerOpen: "⌘⇧M",
   previousSession: "⌘⌥↑",
   nextSession: "⌘⌥↓",
+  previousTab: "⌘⌥←",
+  nextTab: "⌘⌥→",
   toggleDiff: "⌘D",
   openPR: "⌘⇧R",
   jumpTo3: "⌘3",
@@ -43,6 +45,13 @@ describe("shortcut hint recommendation", () => {
 
     it("agent runs while the user waits in the prompt: Esc stops it", () => {
       expect(recommend({ ...idle, busy: true })).toEqual({ binding: "Esc", label: "stop" })
+    })
+
+    it("another session tab is open: show how to switch session tabs", () => {
+      const hint = { binding: "⌘⌥← ⌘⌥→", label: "sessions" }
+      expect(recommend({ ...idle, tabs: true })).toEqual(hint)
+      expect(recommend({ ...idle, tabs: true, busy: true })).toEqual(hint)
+      expect(recommend({ ...idle, tabs: true, draft: true })).toBeUndefined()
     })
   })
 

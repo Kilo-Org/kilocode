@@ -59,7 +59,10 @@ import { resolveProjectDirectory } from "./project-directory"
 import { seedSessionStatuses, seedSessionWakeups, clientSessionStatus } from "./session-status"
 import { normalizeEnhancePromptErrorMessage } from "./enhance-prompt-error"
 import { retry } from "./services/cli-backend/retry"
-import { integratedBrowserUseSystemChrome } from "./services/browser-automation/chrome-setting"
+import {
+  integratedBrowserLinkDestination,
+  integratedBrowserUseSystemChrome,
+} from "./services/browser-automation/chrome-setting"
 import { removeAgent } from "./services/agent-removal"
 import { normalize, type SSEPayload, type SyncPayload, type WirePayload } from "./services/cli-backend/sdk-sse-adapter"
 import { slimInfo, slimPart, slimParts } from "./kilo-provider/slim-metadata"
@@ -594,6 +597,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     | null = null
 
   private createWorktreeHandler: ((baseBranch?: string, branchName?: string) => Promise<void>) | null = null
+
+  private openLinkHandler: ((url: string, sessionID?: string) => boolean) | null = null
 
   private diffVirtualProvider: import("./DiffVirtualProvider").DiffVirtualProvider | undefined
   private diffViewerProvider: import("./diff/DiffViewerProvider").DiffViewerProvider | undefined
@@ -1200,6 +1205,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
   public setCreateWorktreeHandler(handler: (baseBranch?: string, branchName?: string) => Promise<void>): void {
     this.createWorktreeHandler = handler
+  }
+
+  public setOpenLinkHandler(handler: (url: string, sessionID?: string) => boolean): void {
+    this.openLinkHandler = handler
   }
 
   public attachToWebview(
@@ -1888,6 +1897,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       dir: (sessionID) => this.getWorkspaceDirectory(sessionID ?? this.currentSession?.id),
       diff: this.diffVirtualProvider,
       openPRComment: (comment, sessionID) => this.openChanges(sessionID, undefined, comment),
+      openLink: this.openLinkHandler ? (url) => this.openLinkHandler!(url, this.currentSession?.id) : undefined,
       openMarkdown: (file, sessionID) => {
         if (!this.documentViewerProvider) return false
         this.documentViewerProvider.openFromCommand({
@@ -4459,6 +4469,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       browserAutomation: this.browserAutomationSetting(),
       conversationPromptHistory: this.conversationPromptHistorySetting(),
       agentManagerBrowserUseSystemChrome: integratedBrowserUseSystemChrome(),
+      agentManagerBrowserOpenLinksIn: integratedBrowserLinkDestination(),
       "agentManager.autoBranchNaming": naming.get<boolean>("autoBranchNaming", true),
       "agentManager.branchPrefix": naming.get<string>("branchPrefix", ""),
       "agentManager.worktreePool": naming.get<boolean>("worktreePool", true),

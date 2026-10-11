@@ -1551,7 +1551,7 @@ export function options(input: {
   }
 
   if (
-    ["zai", "zhipuai"].some((id) => input.model.providerID.includes(id)) &&
+    ["zai", "zai-coding-plan", "zhipuai", "zhipuai-coding-plan"].includes(input.model.providerID) && // kilocode_change - keep vendor defaults out of custom providers
     input.model.api.npm === "@ai-sdk/openai-compatible"
   ) {
     result["thinking"] = {

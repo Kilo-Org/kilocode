@@ -30,6 +30,7 @@ import com.intellij.ui.DocumentAdapter
 import com.intellij.ui.SearchTextField
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import java.awt.BorderLayout
+import java.awt.event.HierarchyEvent
 import java.awt.event.KeyEvent
 import javax.swing.Icon
 import javax.swing.JComponent
@@ -61,6 +62,7 @@ internal abstract class SettingsListPanel(
     private var request = 0
     private var disposed = false
     private var pending = false
+    private var seenShowing = false
     protected var busy = false
         private set
 
@@ -71,6 +73,16 @@ internal abstract class SettingsListPanel(
         view.setEmptyText(emptyText())
         setHeader(header())
         setContent(view)
+        seenShowing = isShowing
+        addHierarchyListener { e ->
+            if (e.changeFlags and HierarchyEvent.SHOWING_CHANGED.toLong() == 0L) return@addHierarchyListener
+            if (!isShowing) return@addHierarchyListener
+            if (!seenShowing) {
+                seenShowing = true
+                return@addHierarchyListener
+            }
+            if (!disposed && refreshOnFocus()) reload()
+        }
     }
 
     @RequiresEdt
@@ -91,6 +103,15 @@ internal abstract class SettingsListPanel(
     fun hasPendingInitialReload(): Boolean {
         checkEdt()
         return pending
+    }
+
+    /** Pre-populate the list search when another UI opens this settings page for a specific item. */
+    @RequiresEdt
+    internal fun filter(query: String) {
+        checkEdt()
+        search.text = query
+        view.filter(query)
+        search.textEditor.requestFocusInWindow()
     }
 
     @RequiresEdt
@@ -151,6 +172,16 @@ internal abstract class SettingsListPanel(
     protected open fun loadingText(): String = KiloBundle.message("settings.agentBehavior.loading")
 
     protected open fun showRefresh(): Boolean = true
+
+    /**
+     * Reload the list automatically whenever this panel becomes visible again, e.g. re-navigating
+     * into it.
+     *
+     * Off by default so an unrelated settings list keeps its existing load-once behavior. Turn it on
+     * for a page whose contents another page can change behind its back, such as MCP and Skills
+     * after a Marketplace install or removal.
+     */
+    protected open fun refreshOnFocus(): Boolean = false
 
     protected open fun afterApply() = Unit
 

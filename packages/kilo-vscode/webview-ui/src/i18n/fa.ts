@@ -60,6 +60,7 @@ export const dict = {
   ...anacondaDesktopDict,
   ...cloudProviderDict,
   "task.swarm.title": "برد",
+  "task.swarm.open": "باز کردن برد",
   "task.swarm.refresh": "تازه‌سازی",
   "task.swarm.reset": "بازنشانی برد",
   "task.swarm.resetTitle": "این برد بازنشانی شود؟",
@@ -217,6 +218,7 @@ export const dict = {
   "prompt.action.stop.background": "توقف عامل اصلی. عامل‌های پس‌زمینه به اجرا ادامه می‌دهند.",
   "prompt.agents.show": "نمایش عامل‌های پس‌زمینه",
   "prompt.action.enhance": "بهبود پرامپت",
+  "prompt.action.more": "اقدامات بیشتر",
   "prompt.paste.expand": "برای بازکردن متن جایگذاری‌شده کلیک کنید",
   "prompt.issues.title": "مشکلات نشست",
   "prompt.mcp.provider": "MCP {{name}}",
@@ -1377,6 +1379,8 @@ export const dict = {
   "task.backgroundAgents.stopAll": "توقف همه ({{count}})",
   "task.backgroundAgents.finished": "عامل‌های پس‌زمینه به پایان رسیدند",
   "task.stop": "توقف زیرعامل",
+  "task.open.panel": "باز کردن زیرعامل در پنل",
+  "task.open.tab": "باز کردن زیرعامل در تب",
 
   "settings.saveBar.unsavedChanges": "تغییرات ذخیره‌نشده",
   "settings.saveBar.discard": "رد کردن",
@@ -1445,6 +1449,11 @@ export const dict = {
   "settings.experimental.browserAutomation.systemChrome.title": "استفاده از Chrome سیستم",
   "settings.experimental.browserAutomation.systemChrome.description":
     "از Google Chrome نصب‌شده برای مرورگر یکپارچه استفاده کنید. فقط زمانی غیرفعال کنید که مرورگر Playwright Chromium سازگار از قبل نصب شده باشد.",
+  "settings.experimental.browserLinks.title": "باز کردن پیوندها در",
+  "settings.experimental.browserLinks.description":
+    "انتخاب کنید پیوندهای وب از گفتگوهای Kilo کجا باز شوند. به مرورگر یکپارچه نیاز دارد.",
+  "settings.experimental.browserLinks.external": "مرورگر سیستم",
+  "settings.experimental.browserLinks.integrated": "مرورگر یکپارچه",
   "chat.search.searchingHistory": "در حال جستجو در پیام‌های قبلی…",
   "browserTab.noSession": "مرورگر را از یک نشست باز کنید تا یک برنامه محلی یا یک صفحه HTTPS عمومی را پیش‌نمایش بگیرید.",
   "browserTab.disabled": "مرورگر یکپارچه غیرفعال است. آن را در تنظیمات Kilo > آزمایشی فعال کنید.",
