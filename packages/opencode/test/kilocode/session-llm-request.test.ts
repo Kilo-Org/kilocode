@@ -254,6 +254,18 @@ describe("LLM request output tokens", () => {
       expect(yield* run({ model: kilo, flags: { outputTokenMax: 48_000 } })).toBe(48_000)
     }),
   )
+
+  it.instance("omits the output cap for GPT-6 on OpenAI-compatible providers", () =>
+    Effect.gen(function* () {
+      for (const id of ["gpt-6-sol", "gpt-6-astra", "gpt-6-luna"]) {
+        const mdl = claude({ id, npm: "@ai-sdk/openai-compatible", output: 128_000 })
+        expect(yield* run({ model: mdl })).toBeUndefined()
+      }
+
+      const mdl = claude({ id: "gpt-4o", npm: "@ai-sdk/openai-compatible", output: 128_000 })
+      expect(yield* run({ model: mdl })).toBe(32_000)
+    }),
+  )
 })
 
 describe("LLM request headers", () => {
