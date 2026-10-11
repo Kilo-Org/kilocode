@@ -90,6 +90,11 @@ export function useWorkspaceConfig(directory: Accessor<string>) {
   }
 }
 
+/** Equality for routed-model memos, so a catalog reload that keeps the model does not remount the selector. */
+export function sameModel(a: ModelSelection | undefined | null, b: ModelSelection | undefined | null) {
+  return a?.providerID === b?.providerID && a?.modelID === b?.modelID
+}
+
 // ---------------------------------------------------------------------------
 // Config helpers
 // ---------------------------------------------------------------------------
@@ -450,11 +455,15 @@ export const RoutingSelector: Component<RoutingSelectorProps> = (props) => {
   const vscode = useVSCode()
   const id = () => props.sessionID?.()
 
-  const routed = () => {
-    const model = session.selected(id())
-    if (!model || !routable(model.providerID, model.modelID)) return undefined
-    return model
-  }
+  const routed = createMemo(
+    () => {
+      const model = session.selected(id())
+      if (!model || !routable(model.providerID, model.modelID)) return undefined
+      return model
+    },
+    undefined,
+    { equals: sameModel },
+  )
 
   // The chip must reflect the routing the session's requests use, which the
   // backend resolves in the session's workspace — an Agent Manager worktree
@@ -475,24 +484,28 @@ export const RoutingSelector: Component<RoutingSelectorProps> = (props) => {
   // Until the workspace config first loads, neither the routing in use nor an
   // override is known: showing Auto would misstate a pin, and a pick could not
   // be blocked. A config message retries a failed first lookup.
+  // Keyed: a provider reload briefly drops the model from the catalog, and the
+  // narrowed accessor of a non-keyed Show throws ("Stale read") when the
+  // selector's computations re-run in that same update. The memo keeps the
+  // model's identity, so the selector only remounts when the model changes.
   return (
-    <Show when={workspace.entry() && routed()}>
+    <Show when={workspace.entry() && routed()} keyed>
       {(model) => (
         <RoutingSelectorBase
           endpoints={endpoints.endpoints()}
-          value={routing.value(model())}
-          custom={!routing.picking(model()) && routingCustom(effective(), model().providerID, model().modelID)}
+          value={routing.value(model)}
+          custom={!routing.picking(model) && routingCustom(effective(), model.providerID, model.modelID)}
           blocked={props.blocked}
           failed={endpoints.failed()}
           busy={busy()}
-          onSelect={(provider) => routing.pick(model(), provider)}
-          onClear={() => routing.pick(model(), null)}
+          onSelect={(provider) => routing.pick(model, provider)}
+          onClear={() => routing.pick(model, null)}
           onOpen={() => {
             endpoints.load()
             // A failed workspace config refresh is retried here rather than looping.
             workspace.refresh()
           }}
-          overridden={workspace.overridden(model())}
+          overridden={workspace.overridden(model)}
         />
       )}
     </Show>

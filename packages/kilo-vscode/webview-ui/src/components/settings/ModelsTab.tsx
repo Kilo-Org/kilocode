@@ -18,6 +18,7 @@ import {
   modelRouting,
   routable,
   routingPartial,
+  sameModel,
   useModelEndpoints,
   useWorkspaceConfig,
 } from "../shared/RoutingSelector"
@@ -102,11 +103,15 @@ const ModelsTab: Component = () => {
     })
   }
 
-  const routed = createMemo(() => {
-    const model = parseModelString(config().model ?? undefined)
-    if (!model || !routable(model.providerID, model.modelID)) return null
-    return model
-  })
+  const routed = createMemo(
+    () => {
+      const model = parseModelString(config().model ?? undefined)
+      if (!model || !routable(model.providerID, model.modelID)) return null
+      return model
+    },
+    null,
+    { equals: sameModel },
+  )
   const routingEndpoints = useModelEndpoints(
     () => routed() ?? undefined,
     () => directory() ?? "",
@@ -172,7 +177,7 @@ const ModelsTab: Component = () => {
             description={language.t("settings.providers.defaultModel.description")}
           />
         </SettingsRow>
-        <Show when={routed()}>
+        <Show when={routed()} keyed>
           {(model) => (
             <SettingsRow
               title={language.t("settings.models.providerRouting.title")}
@@ -181,15 +186,15 @@ const ModelsTab: Component = () => {
               <RoutingSelectorBase
                 endpoints={routingEndpoints.endpoints()}
                 failed={routingEndpoints.failed()}
-                value={modelRouting(config(), model().providerID, model().modelID)}
-                custom={routingCustom(config(), model().providerID, model().modelID)}
+                value={modelRouting(config(), model.providerID, model.modelID)}
+                custom={routingCustom(config(), model.providerID, model.modelID)}
                 onSelect={(provider) => updateRouting(provider)}
                 onClear={() => updateRouting(null)}
                 onOpen={() => {
                   routingEndpoints.load()
                   workspace.refresh()
                 }}
-                overridden={workspace.overridden(model())}
+                overridden={workspace.overridden(model)}
                 placement="bottom-start"
               />
             </SettingsRow>
