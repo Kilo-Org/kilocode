@@ -1260,6 +1260,10 @@ export const dict = {
   "settings.display.mcpTool.expanded": "Uitgeklapt",
   "settings.display.mcpTool.collapsed": "Ingeklapt",
 
+  "settings.display.sessionActions.title": "Sessieacties tonen",
+  "settings.display.sessionActions.description":
+    "Toon de sessieknoppen boven het invoerveld. Werkstatus, achtergrondagenten, taken en doelbediening blijven zichtbaar.",
+
   "settings.display.shortcutHints.title": "Sneltoetstips tonen",
   "settings.display.shortcutHints.description":
     "Toon in de lege prompt de sneltoets die past bij wat je nu doet, bijvoorbeeld hoe je geselecteerde code toevoegt of terugkeert naar de prompt.",

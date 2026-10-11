@@ -1212,6 +1212,10 @@ export const dict = {
   "settings.display.mcpTool.expanded": "展开",
   "settings.display.mcpTool.collapsed": "折叠",
 
+  "settings.display.sessionActions.title": "显示会话操作",
+  "settings.display.sessionActions.description":
+    "在输入框上方显示会话按钮。工作状态、后台代理、待办事项和目标控件仍保持可见。",
+
   "settings.display.shortcutHints.title": "显示快捷键提示",
   "settings.display.shortcutHints.description":
     "在空输入框中显示与当前操作相符的键盘快捷键，例如如何添加所选代码或返回输入框。",

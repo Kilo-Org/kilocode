@@ -1322,6 +1322,10 @@ export const dict = {
   "settings.display.mcpTool.expanded": "Développés",
   "settings.display.mcpTool.collapsed": "Réduits",
 
+  "settings.display.sessionActions.title": "Afficher les actions de session",
+  "settings.display.sessionActions.description":
+    "Affiche les boutons de session au-dessus du champ de saisie. Le statut du travail, les agents en arrière-plan, les tâches et les commandes des objectifs restent visibles.",
+
   "settings.display.shortcutHints.title": "Afficher les astuces de raccourcis",
   "settings.display.shortcutHints.description":
     "Affiche dans le prompt vide le raccourci clavier adapté à ce que vous faites, par exemple pour ajouter le code sélectionné ou revenir au prompt.",

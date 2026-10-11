@@ -1262,6 +1262,10 @@ export const dict = {
   "settings.display.mcpTool.expanded": "펼침",
   "settings.display.mcpTool.collapsed": "접힘",
 
+  "settings.display.sessionActions.title": "세션 작업 표시",
+  "settings.display.sessionActions.description":
+    "입력란 위에 세션 버튼을 표시합니다. 작업 상태, 백그라운드 에이전트, 할 일 및 목표 컨트롤은 계속 표시됩니다.",
+
   "settings.display.shortcutHints.title": "단축키 힌트 표시",
   "settings.display.shortcutHints.description":
     "빈 프롬프트에 현재 작업에 맞는 키보드 단축키를 표시합니다. 예: 선택한 코드를 추가하거나 프롬프트로 돌아가는 방법.",

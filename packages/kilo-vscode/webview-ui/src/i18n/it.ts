@@ -1149,6 +1149,10 @@ export const dict = {
   "settings.display.mcpTool.expanded": "Espansi",
   "settings.display.mcpTool.collapsed": "Compressi",
 
+  "settings.display.sessionActions.title": "Mostra azioni della sessione",
+  "settings.display.sessionActions.description":
+    "Mostra i pulsanti della sessione sopra il campo di input. Lo stato del lavoro, gli agenti in background, le attività e i controlli degli obiettivi restano visibili.",
+
   "settings.display.shortcutHints.title": "Mostra suggerimenti scorciatoie",
   "settings.display.shortcutHints.description":
     "Mostra nel prompt vuoto la scorciatoia da tastiera adatta a ciò che stai facendo, ad esempio come aggiungere il codice selezionato o tornare al prompt.",

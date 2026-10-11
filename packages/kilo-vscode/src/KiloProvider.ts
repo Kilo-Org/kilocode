@@ -205,7 +205,12 @@ import {
   type ConfigTarget,
 } from "./kilo-provider/config-bindings"
 import { canonicalizePath, projectIdFor, samePath } from "./agent-manager/project/paths"
-import { buildTimelineSettingMessage, validChatSetting, watchChatConfig } from "./kilo-provider/chat-settings"
+import {
+  buildChatSettingsMessage,
+  buildTimelineSettingMessage,
+  validChatSetting,
+  watchChatConfig,
+} from "./kilo-provider/chat-settings"
 import { retention } from "./services/task-cleanup/retention"
 import { failure } from "./services/task-cleanup/failure"
 import { buildThroughputSettingMessage, watchThroughputConfig } from "./kilo-provider/throughput-settings"
@@ -4475,6 +4480,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       "agentManager.worktreePool": naming.get<boolean>("worktreePool", true),
       "agentManager.pushFixes": pushFixes(),
       showShortcutHints: shortcutHints(),
+      showSessionActions: buildChatSettingsMessage().settings.showSessionActions,
     }
   }
 

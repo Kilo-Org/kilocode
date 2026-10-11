@@ -1268,6 +1268,11 @@
           "default": true,
           "description": "Show the task timeline graph in the chat header"
         },
+        "kilo-code.new.showSessionActions": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show the session action buttons above the chat prompt. Working status, background agents, todos, and goals remain visible."
+        },
         "kilo-code.new.showShortcutHints": {
           "type": "boolean",
           "default": true,

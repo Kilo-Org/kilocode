@@ -1284,6 +1284,10 @@ export const dict = {
   "settings.display.mcpTool.expanded": "Foldet ud",
   "settings.display.mcpTool.collapsed": "Foldet sammen",
 
+  "settings.display.sessionActions.title": "Vis sessionshandlinger",
+  "settings.display.sessionActions.description":
+    "Vis sessionsknapperne over inputfeltet. Arbejdsstatus, baggrundsagenter, opgaver og målknapper forbliver synlige.",
+
   "settings.display.shortcutHints.title": "Vis genvejstips",
   "settings.display.shortcutHints.description":
     "Vis den tastaturgenvej i den tomme prompt, der passer til det, du gør nu, for eksempel hvordan du tilføjer markeret kode eller vender tilbage til prompten.",

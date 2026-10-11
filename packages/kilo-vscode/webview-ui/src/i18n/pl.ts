@@ -1292,6 +1292,10 @@ export const dict = {
   "settings.display.mcpTool.expanded": "Rozwinięte",
   "settings.display.mcpTool.collapsed": "Zwinięte",
 
+  "settings.display.sessionActions.title": "Pokaż akcje sesji",
+  "settings.display.sessionActions.description":
+    "Pokaż przyciski sesji nad polem wprowadzania. Status pracy, agenci w tle, zadania i elementy sterowania celami pozostają widoczne.",
+
   "settings.display.shortcutHints.title": "Pokaż podpowiedzi skrótów",
   "settings.display.shortcutHints.description":
     "Pokazuje w pustym polu promptu skrót klawiszowy pasujący do tego, co teraz robisz, na przykład jak dodać zaznaczony kod lub wrócić do promptu.",

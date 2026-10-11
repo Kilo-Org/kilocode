@@ -1306,6 +1306,10 @@ export const dict = {
   "settings.display.mcpTool.expanded": "Expandidos",
   "settings.display.mcpTool.collapsed": "Contraídos",
 
+  "settings.display.sessionActions.title": "Mostrar acciones de la sesión",
+  "settings.display.sessionActions.description":
+    "Muestra los botones de la sesión sobre el campo de entrada. El estado de trabajo, los agentes en segundo plano, las tareas y los controles de objetivos siguen visibles.",
+
   "settings.display.shortcutHints.title": "Mostrar sugerencias de atajos",
   "settings.display.shortcutHints.description":
     "Muestra en el prompt vacío el atajo de teclado adecuado a lo que hace ahora, por ejemplo cómo añadir el código seleccionado o volver al prompt.",

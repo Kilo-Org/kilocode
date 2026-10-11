@@ -1290,6 +1290,10 @@ export const dict = {
   "settings.display.mcpTool.expanded": "Prošireni",
   "settings.display.mcpTool.collapsed": "Sažeti",
 
+  "settings.display.sessionActions.title": "Prikaži radnje sesije",
+  "settings.display.sessionActions.description":
+    "Prikaži dugmad sesije iznad polja za unos. Status rada, pozadinski agenti, zadaci i kontrole cilja ostaju vidljivi.",
+
   "settings.display.shortcutHints.title": "Prikaži savjete za prečice",
   "settings.display.shortcutHints.description":
     "Prikazuje u praznom promptu prečicu tastature koja odgovara onome što sada radite, na primjer kako dodati odabrani kod ili se vratiti u prompt.",

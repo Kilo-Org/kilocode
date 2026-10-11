@@ -57,6 +57,39 @@ describe("buildChatSettingsMessage", () => {
     expect(buildChatSettingsMessage().settings.shiftTabCyclesVariant).toBe(false)
   })
 
+  it.each([undefined, false, true])("returns the saved session action visibility %s", (visible) => {
+    if (visible != null) state.set("showSessionActions", visible)
+    stubConfig(state, "kilo-code.new")
+
+    expect(buildChatSettingsMessage().settings.showSessionActions).toBe(visible ?? true)
+  })
+
+  it("broadcasts session action changes to open viewers", () => {
+    stubConfig(state, "kilo-code.new")
+    const listeners = new Set<(event: vscode.ConfigurationChangeEvent) => void>()
+    const workspace = vscode.workspace as unknown as Stub
+    workspace.onDidChangeConfiguration = (listener) => {
+      listeners.add(listener)
+      return new vscode.Disposable(() => listeners.delete(listener))
+    }
+    const parent: unknown[] = []
+    const child: unknown[] = []
+    const main = watchChatConfig((msg) => parent.push(msg))
+    const viewer = watchChatConfig((msg) => child.push(msg))
+
+    for (const visible of [false, true]) {
+      state.set("showSessionActions", visible)
+      for (const listener of listeners)
+        listener({ affectsConfiguration: (key) => key === "kilo-code.new.showSessionActions" })
+      expect(parent.at(-1)).toEqual(buildChatSettingsMessage())
+      expect(child).toEqual(parent)
+    }
+    expect(parent).toHaveLength(2)
+    main.dispose()
+    viewer.dispose()
+    expect(listeners.size).toBe(0)
+  })
+
   it("broadcasts browser preference changes to all open chat viewers", () => {
     Object.defineProperty(vscode.workspace, "isTrusted", { configurable: true, value: true })
     const workspace = vscode.workspace as unknown as Stub
@@ -83,6 +116,7 @@ describe("buildChatSettingsMessage", () => {
       {
         type: "chatSettingsLoaded",
         settings: {
+          showSessionActions: true,
           shiftTabCyclesVariant: true,
           browserAutomation: true,
           agentManagerBrowserOpenLinksIn: "external",

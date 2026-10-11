@@ -1284,6 +1284,10 @@ export const dict = {
   "settings.display.mcpTool.expanded": "Utvidet",
   "settings.display.mcpTool.collapsed": "Skjult",
 
+  "settings.display.sessionActions.title": "Vis økthandlinger",
+  "settings.display.sessionActions.description":
+    "Vis øktknappene over inndatafeltet. Arbeidsstatus, bakgrunnsagenter, oppgaver og målkontroller forblir synlige.",
+
   "settings.display.shortcutHints.title": "Vis snarveitips",
   "settings.display.shortcutHints.description":
     "Vis hurtigtasten som passer til det du gjør nå, i den tomme ledeteksten, for eksempel hvordan du legger til markert kode eller går tilbake til ledeteksten.",

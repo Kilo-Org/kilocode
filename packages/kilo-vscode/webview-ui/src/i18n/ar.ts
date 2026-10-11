@@ -1252,6 +1252,10 @@ export const dict = {
   "settings.display.mcpTool.expanded": "موسّعة",
   "settings.display.mcpTool.collapsed": "مطوية",
 
+  "settings.display.sessionActions.title": "إظهار إجراءات الجلسة",
+  "settings.display.sessionActions.description":
+    "إظهار أزرار الجلسة فوق مربع الإدخال. تبقى حالة العمل والوكلاء في الخلفية والمهام وعناصر التحكم في الهدف ظاهرة.",
+
   "settings.display.shortcutHints.title": "إظهار تلميحات الاختصارات",
   "settings.display.shortcutHints.description":
     "إظهار اختصار لوحة المفاتيح الذي يناسب ما تفعله الآن في الموجّه الفارغ، مثل كيفية إضافة الكود المحدد أو العودة إلى الموجّه.",

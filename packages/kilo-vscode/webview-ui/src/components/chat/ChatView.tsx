@@ -23,6 +23,7 @@ import { SessionDock } from "./SessionDock"
 import { StartupErrorBanner } from "./StartupErrorBanner"
 import { SessionTabStrip } from "./SessionTabStrip"
 import { useSession } from "../../context/session"
+import { useConfig } from "../../context/config"
 import { useLocalTabs } from "../../context/local-tabs"
 import { useVSCode } from "../../context/vscode"
 import { useLanguage } from "../../context/language"
@@ -66,6 +67,7 @@ interface ChatViewProps {
 
 export const ChatView: Component<ChatViewProps> = (props) => {
   const session = useSession()
+  const config = useConfig()
   const data = useData()
   const vscode = useVSCode()
   const language = useLanguage()
@@ -267,15 +269,18 @@ export const ChatView: Component<ChatViewProps> = (props) => {
     vscode.postMessage({ type: "agentManager.requestRepoInfo" })
   })
 
-  const canStartSession = (hasChat: boolean) => hasChat
+  const actions = () => config.settings().showSessionActions !== false
+
+  const canStartSession = (hasChat: boolean) => actions() && hasChat
 
   // Deliberately status-independent so the row keeps one stable layout across
   // turns. The dock hides it and makes it non-interactive while a turn runs.
-  const canFork = (hasChat: boolean) => hasChat && !isSidebar() && !!props.onForkSession
+  const canFork = (hasChat: boolean) => actions() && hasChat && !isSidebar() && !!props.onForkSession
 
-  const canStartWorktree = () => isSidebar() && server.gitInstalled()
+  const canStartWorktree = () => actions() && isSidebar() && server.gitInstalled()
 
-  const canMoveToWorktree = (hasChat: boolean) => hasChat && canContinueInWorktree() && server.gitInstalled()
+  const canMoveToWorktree = (hasChat: boolean) =>
+    actions() && hasChat && canContinueInWorktree() && server.gitInstalled()
 
   const hasActions = (hasChat: boolean) =>
     canStartSession(hasChat) || canFork(hasChat) || canStartWorktree() || canMoveToWorktree(hasChat)

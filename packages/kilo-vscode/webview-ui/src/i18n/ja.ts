@@ -1278,6 +1278,10 @@ export const dict = {
   "settings.display.mcpTool.expanded": "展開",
   "settings.display.mcpTool.collapsed": "折りたたみ",
 
+  "settings.display.sessionActions.title": "セッション操作を表示",
+  "settings.display.sessionActions.description":
+    "入力欄の上にセッション操作ボタンを表示します。作業状況、バックグラウンドエージェント、タスク、目標の操作は引き続き表示されます。",
+
   "settings.display.shortcutHints.title": "ショートカットのヒントを表示",
   "settings.display.shortcutHints.description":
     "空のプロンプトに、現在の操作に合ったキーボードショートカットを表示します。例: 選択したコードの追加方法やプロンプトへの戻り方。",

@@ -170,6 +170,12 @@ You can change both choices later:
 
 Display changes apply as a draft. Click **Save** to keep them or **Discard** to revert.
 
+### Session action buttons
+
+Turn off **Show session actions** in **Settings → Display** to hide the New Session, New Worktree, Move to Worktree, and Fork Session buttons above the chat prompt. The setting applies to the sidebar and Agent Manager and is on by default.
+
+Working status, background agents, todo progress, and active goal controls stay available. Click **Save** to keep the change or **Discard** to revert it. You can also set `kilo-code.new.showSessionActions` in VS Code settings.
+
 ### Markdown Diff Rendering
 
 Markdown files in Kilo diff viewers can be shown as rendered Markdown instead of a raw text diff. Use the eye/code toggle in a Markdown file header, or set `kilo-code.new.diff.renderMarkdown` to `true` to render Markdown files by default.

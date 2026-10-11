@@ -1259,6 +1259,10 @@ export const dict = {
   "settings.display.mcpTool.expanded": "ขยาย",
   "settings.display.mcpTool.collapsed": "ยุบ",
 
+  "settings.display.sessionActions.title": "แสดงการดำเนินการของเซสชัน",
+  "settings.display.sessionActions.description":
+    "แสดงปุ่มเซสชันเหนือช่องป้อนข้อมูล สถานะการทำงาน เอเจนต์เบื้องหลัง งาน และตัวควบคุมเป้าหมายยังคงแสดงอยู่",
+
   "settings.display.shortcutHints.title": "แสดงคำแนะนำปุ่มลัด",
   "settings.display.shortcutHints.description":
     "แสดงปุ่มลัดที่เหมาะกับสิ่งที่คุณทำอยู่ในช่องพรอมต์ที่ว่าง เช่น วิธีเพิ่มโค้ดที่เลือกหรือกลับไปที่พรอมต์",
