@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test"
-import { mkdir, mkdtemp, readFile, rm, utimes, writeFile } from "fs/promises"
+import { mkdir, mkdtemp, readFile, readdir, rm, utimes, writeFile } from "fs/promises"
 import { hostname, tmpdir } from "os"
 import path from "path"
 import { createHash } from "crypto"
@@ -91,6 +91,32 @@ describe("writer lock", () => {
 
     await first?.release()
     expect((await meta()).token).toBe(token)
+    await second?.release()
+  })
+
+  test("reclaims a vanished lock directory instead of wedging", async () => {
+    const first = await acquire(dir, WS)
+    expect(first).toBeDefined()
+    // Winner reclaimed the stale directory out from under a racing claim:
+    // the loser must fall through to claiming, not report held-forever.
+    await rm(slot(), { recursive: true, force: true })
+    const second = await acquire(dir, WS)
+    expect(second).toBeDefined()
+    await second?.release()
+  })
+
+  test("a stale release never deletes the current lock directory", async () => {
+    const first = await acquire(dir, WS)
+    expect(first).toBeDefined()
+    // The first owner's directory vanished (taken over); a second session now
+    // owns the slot. The first owner's release must leave it alone.
+    await rm(slot(), { recursive: true, force: true })
+    const second = await acquire(dir, WS)
+    const token = (await meta()).token
+
+    await first?.release()
+    expect((await meta()).token).toBe(token)
+    expect((await readdir(slot())).sort()).toEqual(["heartbeat", "meta.json"])
     await second?.release()
   })
 })

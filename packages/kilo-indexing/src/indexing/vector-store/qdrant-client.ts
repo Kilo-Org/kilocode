@@ -680,12 +680,17 @@ export class QdrantVectorStore implements IVectorStore {
   async state(): Promise<StoreState> {
     const collectionInfo = await this.client.getCollection(this.collectionName)
     const points = collectionInfo.points_count ?? 0
-    if (points === 0) {
+    // The completion marker is itself a point, so subtract it before judging
+    // emptiness: otherwise a scanned-then-cleared collection reports
+    // points_count 1 and `empty` is unreachable after any scan.
+    const marker = (await this.getMetadataPayload()) ? 1 : 0
+    const indexed = Math.max(0, points - marker)
+    if (indexed === 0) {
       log.info("Qdrant collection has no indexed data", {
         collection: this.collectionName,
         reason: "points_zero",
       })
-      return { status: "empty", points }
+      return { status: "empty", points: indexed }
     }
 
     const payload = await this.getMetadataPayload()
@@ -693,16 +698,16 @@ export class QdrantVectorStore implements IVectorStore {
       const status = payload[KEY.complete] === true ? "complete" : "partial"
       log.info("Qdrant indexing metadata evaluated", {
         collection: this.collectionName,
-        points,
+        points: indexed,
         status,
       })
-      return { status, points }
+      return { status, points: indexed }
     }
 
     // Backward compatibility: no marker means an index from before the marker
     // existed, which can only ever have been written by a finished scan.
     log.info("No indexing metadata marker found. Using backward compatibility mode (checking points_count > 0).")
-    return { status: "complete", points }
+    return { status: "complete", points: indexed }
   }
 
   /**

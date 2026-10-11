@@ -372,6 +372,7 @@ describe("CodeIndexOrchestrator telemetry", () => {
     const held = await acquire(dir, "/tmp/ws")
     expect(held).toBeDefined()
 
+    const events: IndexingTelemetryEvent[] = []
     const store = new Store("partial", false)
     let scanned = false
     const scanner = new Scanner(1, 1, 1) as unknown as DirectoryScanner
@@ -388,6 +389,7 @@ describe("CodeIndexOrchestrator telemetry", () => {
       store as unknown as IVectorStore,
       scanner,
       new Watcher() as unknown as IFileWatcher,
+      (event) => events.push(event),
     )
 
     await orchestrator.startIndexing("background")
@@ -397,6 +399,44 @@ describe("CodeIndexOrchestrator telemetry", () => {
     expect(store.deleteCount).toBe(0)
     expect(store.incompleteCount).toBe(0)
     expect(orchestrator.state).toBe("Standby")
+    // Contention is observable (not a silent park) and never consumes the
+    // manager's failure-retry budget: it reports the contention text while a
+    // real scan error reports its own message.
+    const error = events.find(
+      (event): event is Extract<IndexingTelemetryEvent, { type: "error" }> => event.type === "error",
+    )
+    expect(error?.error).toContain("Another session is indexing this workspace")
+
+    await held?.release()
+    await rm(dir, { recursive: true, force: true })
+  })
+
+  test("contended clear reports an error instead of silent Standby", async () => {
+    const dir = await mkdtemp(path.join(tmpdir(), "indexing-lock-"))
+    const held = await acquire(dir, "/tmp/ws")
+    expect(held).toBeDefined()
+
+    const events: IndexingTelemetryEvent[] = []
+    const store = new Store("complete", false)
+    const orchestrator = new CodeIndexOrchestrator(
+      createConfig(),
+      new CodeIndexStateManager(),
+      "/tmp/ws",
+      { dir, async clearCacheFile() {}, async flush() {} } as unknown as CacheManager,
+      store as unknown as IVectorStore,
+      new Scanner(1, 1, 1) as unknown as DirectoryScanner,
+      new Watcher() as unknown as IFileWatcher,
+      (event) => events.push(event),
+    )
+
+    await orchestrator.clearIndexData()
+
+    expect(store.deleteCount).toBe(0)
+    expect(orchestrator.state).toBe("Error")
+    const error = events.find(
+      (event): event is Extract<IndexingTelemetryEvent, { type: "error" }> => event.type === "error",
+    )
+    expect(error?.error).toContain("was not cleared")
 
     await held?.release()
     await rm(dir, { recursive: true, force: true })

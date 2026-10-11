@@ -201,20 +201,34 @@ export class CodeIndexOrchestrator {
 
     this._cancelRequested = false
 
-    const writer = await this._acquire()
-    if (!writer) {
-      this.stateManager.setSystemState("Standby", "Another session is indexing this workspace.")
-      return
-    }
-
     this._isProcessing = true
     this.stateManager.setSystemState("Indexing", "Initializing services...")
 
     let started = false
     let source: IndexingTelemetrySource = "watcher"
     let mode: IndexingTelemetryMode | undefined
+    let writer: Writer | undefined
 
     try {
+      // Acquired inside the try: a throw between acquire and the body (e.g.
+      // from state setup below) would otherwise skip the release and keep the
+      // lock fresh for STALE_MS, blocking every other session.
+      writer = await this._acquire()
+      if (!writer) {
+        // Contention is worth observing, not a silent park: the manager
+        // surfaces start events as activity, so emit an error event the manager
+        // can retry or display rather than leaving the session in Standby with
+        // no record of the missed run.
+        this.emitError(
+          "orchestrator:startIndexing",
+          new Error("Another session is indexing this workspace."),
+          "scan",
+          trigger,
+        )
+        this.stateManager.setSystemState("Standby", "Another session is indexing this workspace.")
+        return
+      }
+
       this.overlay?.prepare()
       await this._startWatcher()
 
@@ -301,7 +315,7 @@ export class CodeIndexOrchestrator {
       this.stopWatcher()
     } finally {
       this._isProcessing = false
-      await writer.release()
+      await writer?.release()
       log.info("indexing start flow finished", {
         workspacePath: this.workspacePath,
         state: this.stateManager.state,
@@ -394,7 +408,10 @@ export class CodeIndexOrchestrator {
     this.overlay?.reconcile(this.cacheManager.getAllHashes())
     await this.cacheManager.flush?.()
     await this.vectorStore.markIndexingComplete()
-    await this.vectorStore.close?.()
+    // The scan finished, but this session's file watcher still writes the
+    // store for every file change. Releasing the writer lock here would let a
+    // second session acquire it and scan concurrently — the corruption the
+    // lock targets — so the lock stays held until shutdown or clearIndexData.
     this.fileWatcher.setCollecting(true)
     this.stateManager.setSystemState("Indexed", "File watcher started. Index up-to-date.")
     log.info("workspace scan finalized", {
@@ -420,13 +437,20 @@ export class CodeIndexOrchestrator {
   public async shutdown(): Promise<void> {
     this._cancelRequested = true
     this.scanner.cancel()
+    // Stop the session's own watcher writes before releasing the writer lock:
+    // _active's release happens in runIndexing's finally, so the store must be
+    // quiet by then rather than still receiving file-watcher batches.
+    if (this.fileWatcher.shutdown) await this.fileWatcher.shutdown()
+    else this.fileWatcher.dispose()
     this.fileWatcher.setCollecting(false)
+    // Close the store before the writer lock releases in _active's finally:
+    // _active runs runIndexing, whose finally releases the lock, so closing
+    // here hands the next session a closed connection rather than one whose
+    // close is still in flight.
+    await this.vectorStore.close?.()
     await this._active
     for (const sub of this._fileWatcherSubscriptions) sub.dispose()
     this._fileWatcherSubscriptions = []
-    if (this.fileWatcher.shutdown) await this.fileWatcher.shutdown()
-    else this.fileWatcher.dispose()
-    await this.vectorStore.close?.()
     this._isProcessing = false
   }
 
@@ -448,7 +472,10 @@ export class CodeIndexOrchestrator {
     log.info("cancelling indexing", { workspacePath: this.workspacePath })
     this._cancelRequested = true
     this.scanner.cancel()
-    this.stopWatcher()
+    // Keep the file watcher alive: cancel only aborts the scan, and the
+    // session still holds the writer lock, so watcher batches continue to own
+    // the store. Disposing here (via stopWatcher) would strand _active's
+    // finally with a disposed watcher while file changes keep arriving.
     this.stateManager.setSystemState("Standby", "Indexing cancelled.")
     this._isProcessing = false
     log.info("indexing cancelled", { workspacePath: this.workspacePath })
@@ -457,7 +484,15 @@ export class CodeIndexOrchestrator {
   public async clearIndexData(): Promise<void> {
     const writer = await this._acquire()
     if (!writer) {
-      this.stateManager.setSystemState("Standby", "Another session is indexing this workspace.")
+      // A user-requested clear must not vanish silently when another session
+      // holds the lock: record contention as an error event so the manager can
+      // retry or display it, instead of reporting Standby success.
+      this.emitError(
+        "orchestrator:startIndexing",
+        new Error("Another session is indexing this workspace; index data was not cleared."),
+        "scan",
+      )
+      this.stateManager.setSystemState("Error", "Another session is indexing this workspace; index data was not cleared.")
       return
     }
 
