@@ -55,6 +55,11 @@ export namespace AnthropicRecovery {
     return value?.version === 1 && model.api.npm === "@ai-sdk/anthropic"
   }
 
+  function lastStepReasoning(parts: MessageV2.Part[]) {
+    const boundary = parts.findLastIndex((part) => part.type === "step-start")
+    return parts.slice(boundary + 1).filter((part): part is SessionV1.ReasoningPart => part.type === "reasoning")
+  }
+
   export function record(input: { sessionID: string; messageID: string; parts: string[]; error: string }) {
     return {
       sessionID: input.sessionID,
@@ -83,7 +88,7 @@ export namespace AnthropicRecovery {
         item.info.modelID !== input.model.id
       )
         return false
-      const parts = item.parts.filter((part): part is SessionV1.ReasoningPart => part.type === "reasoning")
+      const parts = lastStepReasoning(item.parts)
       return (
         parts.length === outbound.length &&
         parts.every((stored, index) => {
@@ -99,7 +104,7 @@ export namespace AnthropicRecovery {
       )
     })
     if (!source) return undefined
-    const parts = source.parts.filter((part): part is SessionV1.ReasoningPart => part.type === "reasoning")
+    const parts = lastStepReasoning(source.parts)
     if (!parts.length || parts.some((part) => excluded(part, input.model))) return undefined
     if (
       parts.some(

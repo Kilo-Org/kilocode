@@ -262,13 +262,21 @@ function rejected(message = fixture.message, statusCode = fixture.statusCode) {
   })
 }
 
-function signedTool() {
+function signedTool(split = false) {
   const usage = new Usage({ inputTokens: 20, outputTokens: 35 })
   return [
     LLMEvent.stepStart({ index: 0 }),
     LLMEvent.reasoningStart({ id: "A" }),
     LLMEvent.reasoningDelta({ id: "A", text: "thinkingA" }),
     LLMEvent.reasoningEnd({ id: "A", providerMetadata: { anthropic: { signature: "signatureA" } } }),
+    ...(split
+      ? [
+          LLMEvent.textStart({ id: "separator" }),
+          LLMEvent.textEnd({ id: "separator" }),
+          LLMEvent.stepFinish({ index: 0, reason: "stop", usage }),
+          LLMEvent.stepStart({ index: 1 }),
+        ]
+      : []),
     LLMEvent.reasoningStart({ id: "B" }),
     LLMEvent.reasoningDelta({ id: "B", text: "thinkingB" }),
     LLMEvent.reasoningEnd({ id: "B", providerMetadata: { anthropic: { signature: "signatureB" } } }),
@@ -279,9 +287,9 @@ function signedTool() {
   ]
 }
 
-const continuation = Effect.fn("AnthropicRecoveryTest.continuation")(function* (dir: string) {
+const continuation = Effect.fn("AnthropicRecoveryTest.continuation")(function* (dir: string, split = false) {
   const ctx = yield* setup(dir)
-  yield* ctx.test.reply(...signedTool())
+  yield* ctx.test.reply(...signedTool(split))
   expect(yield* ctx.handle.process(ctx.input)).toBe("continue")
   expect(yield* ctx.test.executions).toBe(1)
   const original = yield* MessageV2.parts(ctx.msg.id)
@@ -304,6 +312,55 @@ const logger = Logger.make<unknown, void>((options) => {
 })
 
 describe("Anthropic thinking recovery processor", () => {
+  it.live(
+    "repairs only the latest split assistant step and preserves earlier signed reasoning",
+    () =>
+      provideTmpdirProject(
+        (dir) =>
+          Effect.gen(function* () {
+            const ctx = yield* continuation(dir, true)
+            const before = ctx.input.messages.filter((message) => message.role === "assistant")
+            expect(before).toHaveLength(2)
+            yield* ctx.test.push(Stream.fail(rejected()))
+            yield* ctx.test.reply(...success())
+            expect(yield* ctx.handle.process(ctx.input)).toBe("continue")
+            expect(yield* ctx.test.calls).toBe(3)
+            expect(yield* ctx.test.executions).toBe(1)
+            const stored = (yield* MessageV2.parts(ctx.msg.id)).filter((part) => part.type === "reasoning")
+            expect(stored.map((part) => ({ text: part.text, signature: part.metadata?.anthropic?.signature }))).toEqual(
+              [
+                { text: "thinkingA", signature: "signatureA" },
+                { text: "thinkingB", signature: "signatureB" },
+              ],
+            )
+            expect(stored.map((part) => Boolean(part.metadata?.["kilocode.anthropic-replay-exclusion"]))).toEqual([
+              false,
+              true,
+            ])
+            const resent = (yield* ctx.test.inputs).at(2)
+            const history = yield* ctx.session.messages({ sessionID: ctx.msg.sessionID })
+            const rebuilt = yield* MessageV2.toModelMessagesEffect(
+              history.filter((message) => message.info.id === ctx.msg.id || message.info.role === "user"),
+              ctx.input.model,
+            )
+            const reasoning = (messages: LLM.StreamInput["messages"]) =>
+              messages
+                .filter((message) => message.role === "assistant")
+                .flatMap((message) =>
+                  Array.isArray(message.content) ? message.content.filter((part) => part.type === "reasoning") : [],
+                )
+            expect(reasoning(resent?.messages ?? []).map((part) => part.text)).toEqual(["thinkingA"])
+            expect(reasoning(rebuilt).map((part) => part.text)).toEqual(["thinkingA"])
+            const fork = yield* ctx.session.fork({ sessionID: ctx.msg.sessionID })
+            const forked = yield* ctx.session.messages({ sessionID: fork.id })
+            const replay = yield* MessageV2.toModelMessagesEffect(forked, ctx.input.model)
+            expect(reasoning(replay).map((part) => part.text)).toEqual(["thinkingA"])
+          }),
+        { git: true },
+      ),
+    240000,
+  )
+
   const run = (
     name: string,
     scripts: () => Script[],
