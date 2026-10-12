@@ -74,7 +74,7 @@ describe("BackgroundProcessRunner.walk", () => {
   })
 })
 
-async function lifecycle() {
+async function lifecycle(reuse: boolean) {
   await using tmp = await tmpdir()
   const input = {
     token: "cutoff",
@@ -107,7 +107,7 @@ async function lifecycle() {
       state.rows = [
         { pid: state.pid, parent: 4, birth: `/Date(${Date.now() + 10_000})/` },
         { pid: 900_001, parent: state.pid, birth: `/Date(${birth})/` },
-        { pid: 900_002, parent: state.pid, birth: `/Date(${Date.now() + 10_010})/` },
+        ...(reuse ? [{ pid: 900_002, parent: state.pid, birth: `/Date(${Date.now() + 10_010})/` }] : []),
       ]
     }
     // Later polls cannot reconnect the unrelated child to the leader. If the first
@@ -151,13 +151,113 @@ async function lifecycle() {
 }
 
 test.skipIf(process.platform !== "win32")(
-  "startup fallback reads the leader exit during enumeration before adoption and stop",
+  "leader exit during enumeration rejects reused-pid children on later polls and stop",
   async () => {
-    const result = await lifecycle()
+    const result = await lifecycle(true)
     expect(result.reads).toBeGreaterThanOrEqual(4)
     expect(result.targets).not.toContain(900_002)
     expect(result.targets).toContain(900_001)
+  },
+  20_000,
+)
+
+test.skipIf(process.platform !== "win32")(
+  "a stop never targets the exited leader's reused pid",
+  async () => {
+    const result = await lifecycle(false)
     expect(result.targets).not.toContain(result.pid)
+    expect(result.targets).toContain(900_001)
+  },
+  20_000,
+)
+
+test.skipIf(process.platform !== "win32")(
+  "stop refreshes birth-checked descendants and never asks taskkill to traverse parent pids",
+  async () => {
+    await using tmp = await tmpdir()
+    const input = {
+      token: "stop-walk",
+      shell: process.execPath,
+      args: ["-e", "setInterval(() => {}, 1000)"],
+      cwd: tmp.path,
+      log: path.join(tmp.path, "command.log"),
+      control: path.join(tmp.path, "command.stop"),
+    }
+    const state: { pid: number; reads: number; birth: number; rows: BackgroundProcessRunner.Row[] } = {
+      pid: 0,
+      reads: 0,
+      birth: 0,
+      rows: [],
+    }
+    const calls: string[][] = []
+    const code = process.exitCode ?? 0
+    const token = process.env.KILO_BACKGROUND_PROCESS_TOKEN
+    const spawned = spyOn(child, "spawn")
+    const job = spyOn(BackgroundProcessWindows, "job").mockResolvedValue({ reason: "test startup fallback" })
+    const read = spyOn(Process, "text").mockImplementation(async () => {
+      state.reads++
+      if (state.reads === 1) {
+        const proc = spawned.mock.results.at(0)?.value
+        if (!(proc instanceof child.ChildProcess) || !proc.pid) throw new Error("runner did not spawn the leader")
+        state.pid = proc.pid
+        state.birth = Date.now()
+        state.rows = [
+          { pid: state.pid, parent: 4, birth: `/Date(${state.birth})/` },
+          { pid: 900_001, parent: state.pid, birth: `/Date(${state.birth})/` },
+          { pid: 900_002, parent: 900_001, birth: `/Date(${state.birth - 60_000})/` },
+        ]
+        await Bun.write(input.control, "stop")
+      }
+      if (state.reads === 2) state.rows.push({ pid: 900_003, parent: 900_001, birth: `/Date(${state.birth})/` })
+      if (state.reads === 3) state.rows.push({ pid: 900_004, parent: state.pid, birth: `/Date(${state.birth})/` })
+      return {
+        code: 0,
+        stdout: Buffer.alloc(0),
+        stderr: Buffer.alloc(0),
+        text: JSON.stringify(
+          state.rows.map((row) => ({ ProcessId: row.pid, ParentProcessId: row.parent, CreationDate: row.birth })),
+        ),
+      }
+    })
+    const kill = spyOn(Process, "run").mockImplementation(async (args) => {
+      if (args.at(0) !== "taskkill") throw new Error("unexpected runner command")
+      calls.push(args)
+      const pid = Number(args.at(2))
+      state.rows = state.rows.filter((row) => row.pid !== pid)
+      if (pid === state.pid) {
+        const proc = spawned.mock.results.at(0)?.value
+        if (!(proc instanceof child.ChildProcess)) throw new Error("leader missing")
+        const exited = once(proc, "exit")
+        proc.kill()
+        await exited
+      }
+      return { code: 0, stdout: Buffer.alloc(0), stderr: Buffer.alloc(0) }
+    })
+    try {
+      expect(await BackgroundProcessRunner.maybe(BackgroundProcessRunner.command(input))).toBe(true)
+      expect(calls.every((args) => !args.includes("/t"))).toBe(true)
+      const pids = calls.map((args) => Number(args.at(2)))
+      expect(pids).toContain(state.pid)
+      expect(pids).toContain(900_001)
+      expect(pids).toContain(900_003)
+      expect(pids).toContain(900_004)
+      expect(pids).not.toContain(900_002)
+      expect(state.reads).toBeGreaterThanOrEqual(4)
+    } finally {
+      const proc = spawned.mock.results.at(0)?.value
+      if (proc instanceof child.ChildProcess && proc.exitCode === null && proc.signalCode === null) {
+        const exited = once(proc, "exit")
+        proc.kill()
+        await exited
+      }
+      read.mockRestore()
+      kill.mockRestore()
+      spawned.mockRestore()
+      job.mockRestore()
+      process.exitCode = code
+      if (token === undefined) delete process.env.KILO_BACKGROUND_PROCESS_TOKEN
+      if (token !== undefined) process.env.KILO_BACKGROUND_PROCESS_TOKEN = token
+    }
   },
   20_000,
 )

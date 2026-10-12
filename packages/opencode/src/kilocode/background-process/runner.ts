@@ -284,12 +284,6 @@ export namespace BackgroundProcessRunner {
         // counts once a walk that actually ran finds nothing left.
         const end = Date.now() + 5_000
         while (Date.now() < end) {
-          await Promise.all(
-            [...(code === undefined ? [pid] : []), ...seen.keys()].map((item) =>
-              Process.run(["taskkill", "/pid", String(item), "/f"], { nothrow: true }),
-            ),
-          )
-          await Bun.sleep(100)
           const from = root()
           const next = await descendants(seen, () => from && { ...from, end: exited })
           seen = next.seen
@@ -297,6 +291,13 @@ export namespace BackgroundProcessRunner {
             await rm(input.control, { force: true })
             return code
           }
+          if (next.ok)
+            await Promise.all(
+              [...(code === undefined ? [pid] : []), ...seen.keys()].map((item) =>
+                Process.run(["taskkill", "/pid", String(item), "/f"], { nothrow: true }),
+              ),
+            )
+          await Bun.sleep(100)
         }
         await rm(input.control, { force: true })
         note("could not confirm that every process of the command ended, still guarding it")
