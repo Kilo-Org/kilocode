@@ -93,6 +93,32 @@ function update(sessionID: SessionID) {
 }
 
 describe("BackgroundProcess", () => {
+  test("concurrent persistent cleanup removes each artifact once", async () => {
+    await using tmp = await tmpdir()
+    await provideTestInstance({
+      directory: tmp.path,
+      fn: async () => {
+        const item = await BackgroundProcess.start({
+          sessionID: SessionID.descending(),
+          command: await command(tmp.path, "cleanup.mjs", 'console.log("ready"); setInterval(() => {}, 1000)'),
+          cwd: tmp.path,
+          lifetime: "persistent",
+          ready: { pattern: "ready", timeout: 10_000 },
+        })
+        const removed = spyOn(fs, "rm")
+        try {
+          await Promise.all([BackgroundProcess.stop(item.id), BackgroundProcess.stop(item.id)])
+          const files = removed.mock.calls.map(([file]) => String(file)).filter((file) => file.includes(item.id))
+          expect(files.length).toBeGreaterThan(0)
+          expect(new Set(files).size).toBe(files.length)
+        } finally {
+          removed.mockRestore()
+          await BackgroundProcess.stop(item.id)
+        }
+      },
+    })
+  }, 30_000)
+
   test.skipIf(process.platform !== "win32")(
     "rollback waits for a persistent runner that exits five seconds after stop",
     async () => {
