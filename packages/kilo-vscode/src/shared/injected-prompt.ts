@@ -68,7 +68,11 @@ const SCHEDULED = [
 function scheduled(body: string): InjectedView | undefined {
   const hit = SCHEDULED.find((item) => body.startsWith(item.tag))
   if (!hit) return undefined
-  const first = body.slice(hit.tag.length).trim().split(/\n\s*\n/, 1)[0]?.trim()
+  const first = body
+    .slice(hit.tag.length)
+    .trim()
+    .split(/\n\s*\n/, 1)[0]
+    ?.trim()
   return { label: hit.label, preview: first || undefined }
 }
 

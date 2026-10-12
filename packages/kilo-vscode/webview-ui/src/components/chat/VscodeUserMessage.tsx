@@ -36,7 +36,8 @@ export const VscodeUserMessage: Component<VscodeUserMessageProps> = (props) => {
   const text = createMemo(() =>
     props.parts.find(
       (part): part is TextPart =>
-        part.type === "text" && (!part.synthetic || (part.metadata as { wakeup?: unknown } | undefined)?.wakeup === true),
+        part.type === "text" &&
+        (!part.synthetic || (part.metadata as { wakeup?: unknown } | undefined)?.wakeup === true),
     ),
   )
   const attribution = createMemo(() => text()?.text.match(ATTRIBUTION)?.[1])
