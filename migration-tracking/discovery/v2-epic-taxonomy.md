@@ -68,13 +68,13 @@ Each unit has exactly one surface.
 ### E0 Foundation
 
 - **Why:** the clean base has no Kilo package at all (`git ls-tree HEAD packages/` lists only upstream packages). Every other epic needs a host, a registration pattern and a working CI signal first.
-- **What:** Kilo host/composition package; Kilo RPC and plugin scaffolding; re-landed Kilo `AGENTS.md`, rewritten fork conventions and migration-tracking index; Kilo CI lane on `v2`; disable or neutralize upstream workflows and publish targets that must not run from the fork; v1 reference fixtures for the runtime-policy units.
+- **What:** Kilo host/composition package; Kilo RPC and plugin scaffolding; re-landed Kilo `AGENTS.md`, rewritten fork conventions and migration-tracking index; Kilo CI lane on Kilo's `origin/v2`; disable or neutralize upstream workflows and publish targets that must not run from the fork; v1 reference fixtures for the runtime-policy units.
 - **Exit criteria:**
   - A Kilo host package builds and starts an isolated server through public seams only, verified by a service smoke test.
   - One sample Kilo RPC, registered as a plugin, passes a round-trip test through the generated client.
-  - A Kilo-owned workflow runs `bun run check` and package tests on PRs to `v2`, with results compared to `pinned-v2-baseline.md`.
+  - A Kilo-owned workflow runs `bun run check` and package tests on PRs to `origin/v2`, with results compared to `pinned-v2-baseline.md`.
   - No upstream publish or deploy workflow can publish from the fork, verified by reading each workflow's trigger and repository guard.
-  - `AGENTS.md` and `v2-fork-conventions.md` name `v2`, BASE and the AGENTS branch rules.
+  - `AGENTS.md` and `v2-fork-conventions.md` name the Kilo integration branch `origin/v2`, BASE and the AGENTS branch rules.
   - v1 reference fixtures for offline wait, overflow, slow snapshot and snapshot retention are committed and replayable.
 
 ### E1 Core and identity
@@ -152,7 +152,7 @@ Each unit has exactly one surface.
 - **Why:** JetBrains pins a v1 CLI version until G3 (D5). The plugin is absent from both BASE and the donor.
 - **What:** contract inventory; server startup, discovery, auth and version checks; sessions, streaming, permissions, history, config; terminal and editor-service dependencies; IDE validation; G3 scenario set.
 - **Exit criteria:**
-  - The plugin builds from `v2` and talks to v2 only through the generated client from the assembled OpenAPI contract.
+  - The plugin builds from Kilo's `origin/v2` and talks to the v2 runtime only through the generated client from the assembled OpenAPI contract.
   - Every G3 scenario passes in each supported IDE, recorded with SHA.
   - Version-mismatch handling refuses incompatible CLIs with a clear message.
 
@@ -167,7 +167,7 @@ Each unit has exactly one surface.
 
 ### E8 Retirement
 
-- **Why:** the end state is `v2` as `main` and v1 on a maintenance branch (`migration-context.md`).
+- **Why:** the end state is Kilo's `origin/v2` as `main` and v1 on a maintenance branch (`migration-context.md`).
 - **What:** branch flip and its timing relative to IDE v1 builds; path consolidation after G3 (D6); re-landing or retiring packages that deploy from `main` (docs site, console); v1 end-of-life policy.
 - **Exit criteria:**
   - Every workflow and deployment that builds from `main` has a v2-side owner or is retired before the flip.

@@ -8,8 +8,8 @@ Status: planned (bootstrap docs complete; no unit started). Last updated 2026-10
 
 | Item | Value |
 |---|---|
-| Integration branch | `v2` (long-lived; becomes `main` at cutover) |
-| Current working base | `kilo-v2-clean-bootstrap` (seeded docs on top of `v2`). Discovery, planner and coordinator branch from this until its PR is merged into `v2` |
+| Integration branch | `origin/v2` on Kilo-Org/kilocode (long-lived; becomes `main` at cutover). Not to be confused with opencode's `upstream/v2` |
+| Current working base | `kilo-v2-clean-bootstrap` (seeded docs on top of Kilo's `origin/v2`). Discovery, planner and coordinator branch from this until its PR is merged into `origin/v2` |
 | Upstream base commit | `5e73d5cb1f788637b1b3d5cf1298ea694cbad0c5`: the parent of upstream release tag `v2.0.26`, on `upstream/v2` (`feat(core): add Google Cloud credential setup for Vertex (#53798)`) |
 | Upstream release tag | `v2.0.26` = `9b4ec5714d481559990db0a816d5dec19541a814` (reference marker only; not on `upstream/v2`, see note) |
 | Archived old port | tag `kilo-v2-checkpoints-2026-09` = `879b89e89034f0e9f4cfb7fd09a5323ef06f83c9` (former `kilo-v2` tip). Donor code only |
@@ -18,12 +18,12 @@ Status: planned (bootstrap docs complete; no unit started). Last updated 2026-10
 
 Note on the base: upstream cuts each release as a separate version-bump commit (`release: vX`) on top of the `v2` tip, tags it, and does not merge it back into `v2`. The tag is therefore one commit off the branch. The base is the tag's parent: release-equivalent code, on `upstream/v2`, and free of the version-bump commit, so later merges of `upstream/v2` stay clean.
 
-Eventual end state: `v2` becomes `main`; today's `main` becomes `v1`, maintained for critical fixes only, for a limited period.
+Eventual end state: Kilo's `origin/v2` becomes `main`; today's `main` becomes `v1`, maintained for critical fixes only, for a limited period.
 
 ## Repositories
 
 - Kilo repo: `Kilo-Org/kilocode` (remote `origin`). `main` is Kilo v1.
-- Upstream: `anomalyco/opencode` (remote `upstream`, fetch only), branch `v2`. Published on npm as `@opencode/cli`. Upstream renamed its workspace scope from `@opencode-ai/*` to `@opencode/*` on 2026-09-07 (`a5312e16`); a few packages kept the old scope.
+- Upstream: `anomalyco/opencode` (remote `upstream`, fetch only), branch `v2`, always written `upstream/v2`. Published on npm as `@opencode/cli`. Upstream renamed its workspace scope from `@opencode-ai/*` to `@opencode/*` on 2026-09-07 (`a5312e16`); a few packages kept the old scope.
 - The old port branch `kilo-v2` still exists but is frozen. Read it through the archive tag.
 - **Name collision:** since 2026-10-12 the Kilo integration branch is `v2` on `origin` (Kilo-Org/kilocode), the same name as upstream's `v2` (anomalyco/opencode). Always qualify the remote: write `origin/v2` for the Kilo integration branch and `upstream/v2` for upstream, in docs, commands and merge targets.
 
@@ -63,9 +63,9 @@ Decisions intentionally left open until the work that needs them. Each has a dea
 | Writers | One writer per branch and per file. Announce ownership before starting. |
 | Escalation | Epic or scope changes, gate assignment of consumers, and anything that changes a decision above go to the user. |
 
-**Enforcement is by convention only, for now.** The account running the migration has write access but not repo admin, so branch protection on `v2` cannot be set yet (see deferred admin tasks). Until an admin adds it:
+**Enforcement is by convention only, for now.** The account running the migration has write access but not repo admin, so branch protection on Kilo's `origin/v2` cannot be set yet (see deferred admin tasks). Until an admin adds it:
 
-- Direct pushes to `v2` are forbidden by convention. Every change reaches it through a PR.
+- Direct pushes to `origin/v2` are forbidden by convention. Every change reaches it through a PR.
 - Repo settings, Actions settings, secrets and branch protection are escalations to a repo admin. No agent attempts them.
 
 ## Conventions
@@ -89,7 +89,7 @@ These need a repo admin (or account credentials) and do not block work. Track th
 
 | Task | When | Owner |
 |---|---|---|
-| Branch protection on `v2`: require a PR before merging (0 approvals now, raise to 1 when reviewers are available), force-push and deletion disabled | Now | Repo admin |
+| Branch protection on `origin/v2`: require a PR before merging (0 approvals now, raise to 1 when reviewers are available), force-push and deletion disabled | Now | Repo admin |
 | Actions permissions and secret access for the upstream sync workflow and the e2e lane | When those workflows land | Repo admin |
 | Signing and notarization credentials | Before the G1 preview release train | Account owner |
 | Protect the branch that becomes `main` | At cutover | Repo admin |
@@ -98,7 +98,7 @@ These need a repo admin (or account credentials) and do not block work. Track th
 
 | Item | State |
 |---|---|
-| `v2` created from the upstream base | Done |
+| Kilo integration branch `origin/v2` created from the upstream base | Done |
 | Old port archived as a tag | Done |
 | Migration docs seeded on `kilo-v2-clean-bootstrap` | Done |
 | `kilo-v2-clean-bootstrap` pushed to origin | Done |

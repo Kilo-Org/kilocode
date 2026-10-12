@@ -55,7 +55,7 @@ Columns: class · reason · pin/branch assumed · contradicts (decision) · fact
 | `technical-notes/.DS_Store` | rewrite-or-drop (drop) | macOS junk | — | — | — |
 | `assets/kilo-v2-cli-2026-09-10.png` | archive | Screenshot of the donor CLI, embedded in the published #13750 body via a raw `kilo-v2` URL | `kilo-v2` | — | Donor CLI UI on 2026-09-10 (Plan session, tabs, questions, usage sidebar) |
 | `assets/kilo-v2-vscode-2026-09-10.png` | archive | Same, for the donor VS Code UI | `kilo-v2` | — | Donor VS Code sidebar and Agent Manager on 2026-09-10 |
-| `plans/migration-context.md` | **living** | Canonical brief (fixed rule) | BASE `5e73d5cb`, `v2`, V1 `fb7e96ed`, SNAP `f7115470`, DONOR `879b89e8` | — | Needs the SNAP note from finding 1 and the `kilo2`/`next` channel question from finding 5 |
+| `plans/migration-context.md` | **living** | Canonical brief (fixed rule) | BASE `5e73d5cb`, Kilo integration branch `origin/v2`, V1 `fb7e96ed`, SNAP `f7115470`, DONOR `879b89e8` | — | Needs the SNAP note from finding 1 and the `kilo2`/`next` channel question from finding 5 |
 | `plans/kilo-opencode-v2-execution-plan.md` | archive | Old plan (fixed rule). Finalized 09-30, never started | `kilo-v2` on base `59b29de4`, merge release tags into `kilo-v2`, scope-rename codemod | D1 (tags as merge targets, work continues on `kilo-v2`), D2 | See §7. Its decisions 3/4/5/6/8 map to new D5/D6/D7/D7/D8 |
 | `plans/kilo-opencode-v2-plan-progress.md` | archive | Old progress plan (fixed rule). Status "Implementation paused", 09-09 | `kilo-v2`, phases 0-6 with a single cutover | D5 (single cutover, VS Code-first next steps), D7 (voice, image, Claw and JetBrains rows as needs-port or deferred, not post-cutover), D6 (preview store) | 88-row capability inventory (lines 77-198) with per-row remaining scope; see §7 |
 | `plans/kilo-opencode-v2-working-log.md` | evidence | Frozen dated record. It holds unique facts (user decisions, incidents, measurements, sharing gates, harness rationale) that exist nowhere else, so it is more than a superseded plan. Its headers and pause instruction are hazardous (finding 2) | `kilo-v2`, `76dbaf20` → `59b29de4`, V1 `ecccd1f`/`d99662338`, `kilo2` identity | D1/D2 (header and pause), D6 (`kilo2` and "take the kilo paths" rules, lines 558-596) | 09-08 user decision: preserve the original VS Code UI; the upstream-app wrapper was rejected (71-79). Store and rollback rules (558-596). Sharing gates (1786-1821). Self-sufficient CLI harness (1838-1889) |
@@ -181,7 +181,7 @@ Unless stated otherwise, "Assumes" means donor `packages/kilo-cli` (or another `
 | Stop if a recorded SHA becomes unreachable; never force-push (21-23) | Applies | |
 | `upstream/dev` is a sibling, diverged at `0e2dd4ad` (24-25) | Applies (fact) | |
 | `virtua@0.49.1` patch caveat (27-34) | **Stale / UNVERIFIED** | BASE root `package.json` has no `virtua`, and `patches/` has no virtua patch. The rule only matters once `kilo-vscode` or `kilo-ide-ui` are re-landed. Keep it as a note for G2 |
-| Integration branch `johnnyeric/kilo-opencode-v2`, slices `johnnyeric/v2-*` (38-44) | **Wrong** | Integration branch is `v2`. Branch names must be short and hyphenated with no slashes (AGENTS.md, migration-context Conventions) |
+| Integration branch `johnnyeric/kilo-opencode-v2`, slices `johnnyeric/v2-*` (38-44) | **Wrong** | Integration branch is Kilo's `origin/v2`. Branch names must be short and hyphenated with no slashes (AGENTS.md, migration-context Conventions) |
 | Merge forward, never rebase the integration branch (46-48) | Applies | Matches D1 and the coordinator rules |
 | `johnnyeric/` prefix overrides upstream naming (49-53) | **Wrong** | Contradicts AGENTS.md and the brief. The `type(scope): summary` part still applies |
 | Dev-fix triage lane `not-applicable/already-fixed/port/defer` (55-67) | Applies (concept) | It should track the V1 delta under the staleness gate (D4) as well as `upstream/dev`. "Parity ledger dev-line lane" no longer exists, so name the new home |
@@ -228,7 +228,7 @@ It was read, not run. Findings:
   6. Pre-existing failures (140), with subsections: also red on upstream CI (145) (`opencode-drive` JSON parse; tui footer `Café`); host-environment failures (170) (`pa-PK` ICU; ffmpeg missing); not gated by CI (194).
   7. Why no fork CI workflow yet (206).
   8. Reproducer (229).
-- **Refresh needs:** BASE `5e73d5cb` and the tag `v2.0.26` marker. Integration branch `v2`. Current CI commands (`check.yml` `bun run check`; `test.yml` with `--affected --concurrency=3`, effect-simplifications, Node 26.4.0 build, `services/www`). Current `packageManager` bun version (UNVERIFIED; not read). New failure inventory. Package names under the `@opencode/*` scope. Bootstrap status in `migration-context.md` lists "Baseline health recorded" as recommended next.
+- **Refresh needs:** BASE `5e73d5cb` and the tag `v2.0.26` marker. Kilo integration branch `origin/v2`. Current CI commands (`check.yml` `bun run check`; `test.yml` with `--affected --concurrency=3`, effect-simplifications, Node 26.4.0 build, `services/www`). Current `packageManager` bun version (UNVERIFIED; not read). New failure inventory. Package names under the `@opencode/*` scope. Bootstrap status in `migration-context.md` lists "Baseline health recorded" as recommended next.
 
 ## 7. Facts worth preserving from the old plans (for the new plan's facts appendix)
 
@@ -311,7 +311,7 @@ It was read, not run. Findings:
 ## 8. Rewrite-or-drop list (11 remaining)
 
 1. `migration-tracking/README.md`: rewrite as the living index (context brief, discovery, new plan, evidence folders).
-2. `technical-notes/v2-fork-conventions.md`: rewrite (BASE pin, `v2`, AGENTS branch names, path fixes); then living.
+2. `technical-notes/v2-fork-conventions.md`: rewrite (BASE pin, Kilo integration branch `origin/v2`, AGENTS branch names, path fixes); then living.
 3. ~~`technical-notes/baseline/pinned-v2-baseline.md`~~: done in this phase.
 4. `technical-notes/script/v2-baseline.ts`: fix the pin, the ancestry assertion, `services/www` and the CI mirror; then living.
 5. `test-plans/kilo-opencode-v2-test-plan.md`: rewrite as a gate-tagged index.

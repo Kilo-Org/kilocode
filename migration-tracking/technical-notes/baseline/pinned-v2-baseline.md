@@ -11,7 +11,7 @@ This file records the upstream commit the Kilo v2 line is built on, the validati
 | Upstream base (pinned) | `5e73d5cb1f788637b1b3d5cf1298ea694cbad0c5` | 2026-10-08 | `feat(core): add Google Cloud credential setup for Vertex (#53798)` |
 | Release marker `v2.0.26` | `9b4ec5714d481559990db0a816d5dec19541a814` | — | Version-bump commit whose parent is the base. It is not on `upstream/v2` and is not a merge target |
 | `upstream/v2` at capture | `d2905b8ddae8b0353cd2166d68d59795397921db` | 2026-10-09 | `feat(ai): add Vertex AI Interactions route (#54175)`. 31 commits ahead of the base |
-| Integration branch `v2` | `5e73d5cb` | — | Equal to the base |
+| Kilo integration branch `origin/v2` | `5e73d5cb` | — | Equal to the base |
 | Phase branch `kilo-v2-clean-bootstrap` (HEAD) | `a876c2912a5fd114066ce34e3a3fcc79f7f0a1b0` | 2026-10-11 | Base plus 2 documentation commits (`c4042b39a1`, `a876c2912a`). No source changes |
 | V1 target `origin/main` | `fb7e96eda5409517a05948b9efaf01c53997bf6e` | 2026-10-09 | `Merge pull request #14893 …` |
 
@@ -65,7 +65,7 @@ Constraints:
 - Tests cannot run from the root (`bunfig.toml` test root `do-not-run-tests-from-root`). Run them from a package directory or through turbo.
 - Never run `tsc`. Packages use `tsgo` through `bun typecheck`.
 - `.husky/pre-push` checks the bun version, then runs `bun run check`.
-- `check.yml` runs on pushes to `dev`/`v2` and on pull requests whose base is `dev` or `v2`. `test.yml` runs on every `pull_request`. **Changed 2026-10-12:** the Kilo integration branch was renamed to `v2`, so upstream's `check.yml` triggers now match pushes to `origin/v2` and pull requests that target it. Whether it runs on the fork, passes, or fails for lack of admin-configured secrets or Actions permissions is UNVERIFIED. CI/admin follow-up: observe the first pull request into `origin/v2` and record the result here (relates to U-E0-04 and the Actions-permissions admin task). The 2026-10-11 capture found no pull request targeting the integration branch or `kilo-v2-clean-bootstrap` (`gh pr list`).
+- `check.yml` runs on pushes to any branch named `dev` or `v2`, and on pull requests whose base branch has one of those names. Upstream wrote it for `upstream/dev` and `upstream/v2`. `test.yml` runs on every `pull_request`. **Changed 2026-10-12:** the Kilo integration branch was renamed to `v2`, so upstream's `check.yml` triggers now match pushes to `origin/v2` and pull requests that target it. Whether it runs on the fork, passes, or fails for lack of admin-configured secrets or Actions permissions is UNVERIFIED. CI/admin follow-up: observe the first pull request into `origin/v2` and record the result here (relates to U-E0-04 and the Actions-permissions admin task). The 2026-10-11 capture found no pull request targeting the integration branch or `kilo-v2-clean-bootstrap` (`gh pr list`).
 - `packages/www` no longer exists. Generated docs live in `services/www`, and `typecheck.yml` was replaced by `check.yml`.
 
 ## Results on the phase branch (2026-10-11)
