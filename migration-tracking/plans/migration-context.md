@@ -103,12 +103,13 @@ These need a repo admin (or account credentials) and do not block work. Track th
 | `kilo-v2-clean-bootstrap` pushed to origin | Done |
 | This file | Done |
 | Branch protection | Deferred (admin task) |
-| Baseline health recorded (`bun install`, `bun run check`) | Recommended next |
+| Baseline health recorded (`bun install`, `bun run check`) | Done 2026-10-11: `technical-notes/baseline/pinned-v2-baseline.md` |
+| Discovery report | Done 2026-10-12: `migration-tracking/discovery/` |
 
 ## Reference artifacts
 
 - Plans: `migration-tracking/plans/` (previous execution plan, progress plan and working log; reference only until the new plan lands).
-- Discovery outputs (to be created): `migration-tracking/discovery/`.
+- Discovery outputs: `migration-tracking/discovery/` (feature inventory, epic taxonomy, unit register, doc inventory).
 - Source parity: `migration-tracking/marker-audit/` (the 816-file assessment and shared-change inventory).
 - API and session differences: `migration-tracking/technical-notes/baseline/v2-v1-schema-diffs.md`, `migration-tracking/technical-notes/baseline/v2-v1-session-diffs.md`.
 - Technical notes: `migration-tracking/technical-notes/` and `technical-notes/baseline/`.
