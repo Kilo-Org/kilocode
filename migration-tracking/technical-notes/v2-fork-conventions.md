@@ -18,6 +18,11 @@ conventions.
   base in `migration-tracking/technical-notes/baseline/pinned-v2-baseline.md`, merge it into the
   integration branch, re-run the baseline checks, and diff the failure list
   against the previous baseline before declaring the bump clean.
+- After each upstream merge, run `bun script/check-workflows.ts --fix`. It removes
+  the upstream workflows that Kilo dropped (it also resolves their modify/delete
+  conflicts), then fails on any new upstream workflow. Review each new one and add
+  it to `active` or `removed` in `script/check-workflows.ts`. CI runs the same
+  check without `--fix`.
 - Snapshot every upstream SHA the branch has consumed. If a recorded SHA stops
   being reachable from `upstream/v2`, upstream rewrote history: stop, assess a
   new integration base, and do not force-push the Kilo branch to match.
