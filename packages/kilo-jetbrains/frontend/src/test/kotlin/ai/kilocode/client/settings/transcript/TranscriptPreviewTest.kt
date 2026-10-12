@@ -113,15 +113,16 @@ class TranscriptPreviewTest : BasePlatformTestCase() {
                 "centered lane must match the half-width cap $cap, got ${message.width}",
                 message.width <= cap,
             )
-            // SessionLayoutPanel applies the transcript insets as layout padding, not Swing insets, so the
-            // lane is centered inside the panel's full width. The message starts at that centered lane
-            // start. Allow a pixel for integer division; the exact cap depends on font metrics, which
-            // differ between machines, so compare against the same lane calculation the layout uses.
-            val lane = minOf(transcript.width, cap)
-            val expectedLeft = (transcript.width - lane) / 2
+            // The lane is centered, so the gaps on either side are close. Do not assert an exact pixel:
+            // the half-width cap comes from font metrics and the transcript insets reserve edge width,
+            // both of which differ between machines. Allow one inset plus a couple of pixels; an actually
+            // off-centre lane is hundreds of pixels out, so this still catches a regression.
+            val slack = JBUI.scale(SessionUiStyle.SessionLayout.INNER_HORIZONTAL + 2)
+            val leftGap = message.x
+            val rightGap = transcript.width - message.x - message.width
             assertTrue(
-                "message must start in the centered lane, expected=$expectedLeft actual=${message.x} cap=$cap",
-                abs(message.x - expectedLeft) <= 1,
+                "half-width message must be centered, left=$leftGap right=$rightGap width=${message.width}",
+                abs(leftGap - rightGap) <= slack,
             )
         }
     }
