@@ -1,250 +1,116 @@
 # Pinned upstream v2 baseline
 
-Phase 0 baseline for `plans/kilo-opencode-v2-issue-13750.md` (originally
-captured as slice 1 of the now-superseded `plans/kilo-opencode-v2-port.md`, bead
-`kilocode-cmy`).
+Status: living. Refreshed 2026-10-11 by the discovery phase on `kilo-v2-clean-bootstrap`. Supersedes the 2026-08-13 capture at `76dbaf20` (old branch `johnnyeric/v2-baseline`); that capture survives in git history only.
 
-This records the exact refs the Kilo OpenCode v2 line is based on, the
-authoritative validation commands **as defined by this v2 tree**, and the
-results of running them on pristine upstream v2. Everything below was produced
-on 2026-08-13 on branch `johnnyeric/v2-baseline` with no Kilo product code in
-the tree.
-
-Reproduce with `bun kilocode/script/v2-baseline.ts --checks`.
+This file records the upstream commit the Kilo v2 line is built on, the validation commands that this tree defines, and the result of running them. Compare any failing check against this file before you attribute it to a change (`migration-context.md`, Conventions).
 
 ## Refs
 
-Fetched with `git fetch origin main` and `git fetch upstream dev v2` immediately
-before recording. `origin` is `https://github.com/Kilo-Org/kilocode.git`;
-`upstream` is `https://github.com/anomalyco/opencode.git`.
-
-| Ref | SHA | Commit date | Subject |
+| Ref | SHA | Date | Subject |
 |---|---|---|---|
-| `upstream/v2` (pinned) | `76dbaf20adbd43fd208a00ef3cda4a51e125a234` | 2026-08-12T18:18:24-04:00 | `fix(catalog): serve app shell at lab route (#42159)` |
-| `upstream/dev` | `14b37df39168eaf6a6faf862ec4a7bbe9c825bbd` | 2026-08-12T22:36:40Z | `chore: update nix node_modules hashes` |
-| `origin/main` | `f7115470740c51fd4200fedd9ad3edfad60589ce` | 2026-08-12T10:38:03-06:00 | `Merge pull request #13077 from Kilo-Org/fix/ci-test-stability-in-process` |
+| Upstream base (pinned) | `5e73d5cb1f788637b1b3d5cf1298ea694cbad0c5` | 2026-10-08 | `feat(core): add Google Cloud credential setup for Vertex (#53798)` |
+| Release marker `v2.0.26` | `9b4ec5714d481559990db0a816d5dec19541a814` | — | Version-bump commit whose parent is the base. It is not on `upstream/v2` and is not a merge target |
+| `upstream/v2` at capture | `d2905b8ddae8b0353cd2166d68d59795397921db` | 2026-10-09 | `feat(ai): add Vertex AI Interactions route (#54175)`. 31 commits ahead of the base |
+| Integration branch `kilo-v2-clean` | `5e73d5cb` | — | Equal to the base |
+| Phase branch `kilo-v2-clean-bootstrap` (HEAD) | `a876c2912a5fd114066ce34e3a3fcc79f7f0a1b0` | 2026-10-11 | Base plus 2 documentation commits (`c4042b39a1`, `a876c2912a`). No source changes |
+| V1 target `origin/main` | `fb7e96eda5409517a05948b9efaf01c53997bf6e` | 2026-10-09 | `Merge pull request #14893 …` |
 
-`upstream/dev` moved after the pin was chosen. The pin is deliberately the
-`upstream/v2` tip at pin time, not the newest `upstream/dev` commit.
+The `packages/cli` version at the base is `2.0.25`, because the bump to 2.0.26 lives only in the tag commit.
 
-## Merge bases and ancestry
+## Ancestry
 
-```
-$ git merge-base upstream/dev upstream/v2
-0e2dd4ad150d0182fc9e43d81424d8db11465977
-$ git merge-base origin/main upstream/v2
-0e2dd4ad150d0182fc9e43d81424d8db11465977
-$ git merge-base origin/main upstream/dev
-dc67b7a3bed6334a9639fe1362bb90c56288bc7c
-$ git merge-base --octopus origin/main upstream/dev upstream/v2
-0e2dd4ad150d0182fc9e43d81424d8db11465977
-```
-
-`0e2dd4ad150d0182fc9e43d81424d8db11465977` (`chore: generate`, 2026-06-26) is
-the dev/v2 divergence point and also the base shared with Kilo `origin/main`.
-
-Commits ahead of that base, verified 2026-08-13:
-
-| Ref | Commits ahead of `0e2dd4ad` |
+| Check | Result |
 |---|---|
-| `upstream/dev` | 899 |
-| `upstream/v2` | 1470 |
-| `origin/main` | 3391 |
+| `git merge-base --is-ancestor 5e73d5cb upstream/v2` | true |
+| `git rev-list --count 5e73d5cb..HEAD` | 2 (documentation only) |
+| `git merge-base 5e73d5cb fb7e96ed` | `0e2dd4ad` (`chore: generate`, 2026-06-26): the dev/v2 divergence point, also the last common commit with Kilo v1 |
+| Commits from `0e2dd4ad` to the base | 4,343 |
+| Commits from `0e2dd4ad` to V1 | 18,848 |
 
-Ancestry checks at the time of writing:
+## Toolchain (this host)
 
-```
-$ git rev-parse HEAD
-76dbaf20adbd43fd208a00ef3cda4a51e125a234
-$ git merge-base --is-ancestor 76dbaf20adbd43fd208a00ef3cda4a51e125a234 HEAD; echo $?
-0
-$ git rev-list --count upstream/v2..HEAD
-0
-$ git rev-list --count HEAD..upstream/v2
-0
-```
-
-At baseline capture, `HEAD` was exactly the pinned SHA: the tree carried no Kilo
-commits, so every result below is pristine upstream v2. The slice's own commit
-sits on top of that; `git rev-list --count upstream/v2..HEAD` is expected to be
-non-zero afterwards, while the first two checks must keep holding.
-
-`johnnyeric/kilo-opencode-v2` (the integration branch) also pointed at the
-pinned SHA and is checked out in a different worktree; this slice did not touch
-it.
-
-## Toolchain
-
-| Tool | This host | Upstream CI at the pin |
+| Tool | This host | Upstream CI |
 |---|---|---|
-| bun | 1.3.14 | 1.3.14 (`packageManager` in root `package.json`, via `.github/actions/setup-bun`) |
-| node | v22.23.2 | 24 for install/unit; 26.4.0 for the Node build step; 24.15 for e2e |
-| git | 2.50.1 (Apple Git-155) | 2.52.0 |
-| OS | macOS 26.5.1, Darwin 25.5.0, arm64 | `blacksmith-4vcpu-ubuntu-2404` and `blacksmith-4vcpu-windows-2025` |
-| ffmpeg | not installed | installed on Linux by the unit job |
+| bun | 1.4.2 (equals `packageManager` `bun@1.4.2`) | from `package.json` via `.github/actions/setup-bun` |
+| node | v24.13.0 | 24 for install and unit; 26.4.0 for the Node build step |
+| git | 2.50.1 (Apple Git-155) | runner default |
+| OS | macOS 26.3.1 (25D2128), arm64 | `blacksmith-4vcpu-ubuntu-2404`, `blacksmith-4vcpu-windows-2025` |
+| `/bin/bash` | GNU bash 3.2.57 (macOS system bash) | bash 5.x on Linux runners |
+| `rg` on PATH | absent | present on runners (UNVERIFIED; inferred from green upstream unit runs) |
+| ffmpeg | absent | — |
 
-`bun install` reported `5088 packages installed` and left `bun.lock` unchanged
-(`git status --porcelain` empty afterwards).
+The working tree also contains ignored leftover directories from an earlier v1 checkout (for example `packages/kilo-*` holding only `node_modules`). They are not tracked, are not workspaces of this tree, and do not affect the checks below.
 
-## Authoritative v2 commands
+## Validation commands defined by this tree
 
-Derived from this tree only — root `package.json`, `turbo.json`,
-`.github/workflows/typecheck.yml`, `.github/workflows/test.yml`, and per-package
-`package.json` scripts. Kilo main's `packages/opencode` commands do not apply:
-that package does not exist on v2.
+Derived from the root `package.json`, `.github/workflows/check.yml`, `.github/workflows/test.yml` and per-package scripts at the base.
 
-| Purpose | Command | Working dir |
-|---|---|---|
-| Install | `bun install` | repo root |
-| Typecheck (all packages) | `bun typecheck` (= `bun turbo typecheck --concurrency=3`) | repo root |
-| Unit tests (all packages) | `GITHUB_ACTIONS=false bun turbo test` | repo root |
-| Generated client contract | `bun run check:generated` | `packages/client` |
-| Generated docs/OpenAPI | `bun run check:generated` | `packages/www` |
-| CLI binary build | `bun run script/build.ts --single --skip-install` | `packages/cli` |
-| Service lifecycle smoke | `bun run script/service-smoke.ts` | `packages/cli` |
-| Node CLI build + smoke | `bun run script/build-node.ts --single --skip-install --outdir=dist/node` then `bun run script/service-smoke.ts --node` | `packages/cli` |
-| Client regeneration | `bun run generate` | `packages/client` |
+| Purpose | Command | Working dir | Run by upstream CI |
+|---|---|---|---|
+| Install | `bun install` | root | yes |
+| Lint and typecheck (pre-push hook, `check.yml`) | `bun run check` (= `bun run lint && bun run typecheck`) | root | yes |
+| Typecheck all packages | `bun typecheck` (= `bun turbo typecheck --concurrency=3`) | root | yes, inside `check` |
+| Unit tests | `GITHUB_ACTIONS=false bun turbo test --continue` (CI adds `--affected --concurrency=3`) | root (turbo runs each package's own `test`) | yes |
+| Effect simplification lint | `bun run lint:effect-simplifications`, `bun run test:effect-simplification-rules` | root | yes |
+| Effect pattern lint | `bun run lint:effect-patterns` | root | no |
+| Generated client | `bun run check:generated` | `packages/client` | yes (Linux) |
+| Generated docs | `bun run check:generated` | `services/www` | yes (Linux) |
+| Generated protocol OpenAPI | `bun run check:generated` | `packages/protocol` | no |
+| CLI build | `bun run script/build.ts --single --skip-install` | `packages/cli` | yes |
+| Service smoke | `bun run script/service-smoke.ts` (isolated `HOME`/XDG temp dir) | `packages/cli` | yes |
+| Node build and smoke | `bun run script/build-node.ts --single --skip-install --outdir=dist/node`, then `service-smoke.ts --node` | `packages/cli` | yes (Node 26.4.0) |
 
-Constraints this tree imposes:
+Constraints:
 
-- Tests cannot run from the repo root. `bunfig.toml` sets
-  `[test] root = "./do-not-run-tests-from-root"` and the root `test` script
-  exits 1. Use `bun turbo test` or run from a package directory.
-- Typecheck must go through `bun typecheck` / `bun turbo typecheck`, never
-  `tsc` directly (root `AGENTS.md`). Packages use `tsgo`.
-- `.husky/pre-push` enforces the bun version and runs `bun typecheck`.
-- The `e2e` job in `.github/workflows/test.yml` is skipped on the v2 branch by
-  its own `if: github.ref_name != 'v2' && github.head_ref != 'v2'`. It is not
-  part of the v2 baseline gate.
-- `bun run lint`, `bun run lint:effect-patterns`, and `bun run test:lint-rules`
-  exist but are not run by any workflow in this tree.
+- Tests cannot run from the root (`bunfig.toml` test root `do-not-run-tests-from-root`). Run them from a package directory or through turbo.
+- Never run `tsc`. Packages use `tsgo` through `bun typecheck`.
+- `.husky/pre-push` checks the bun version, then runs `bun run check`.
+- `check.yml` runs on pushes to `dev`/`v2` and on pull requests whose base is `dev` or `v2`. It therefore does **not** run for pull requests that target `kilo-v2-clean`. `test.yml` runs on every `pull_request`. Whether Actions run on the Kilo fork for these branches is UNVERIFIED: no pull request targets `kilo-v2-clean` or `kilo-v2-clean-bootstrap` yet (`gh pr list`, 2026-10-11).
+- `packages/www` no longer exists. Generated docs live in `services/www`, and `typecheck.yml` was replaced by `check.yml`.
 
-## Results on pristine upstream v2
+## Results on the phase branch (2026-10-11)
 
-`GITHUB_ACTIONS=false bun turbo test` was run twice: once as CI runs it, then
-once with `--continue` so a single failure would not mask the rest.
+HEAD `a876c291` carries no source changes, so these are the results for pristine upstream `5e73d5cb`.
 
 | Check | Result | Detail |
 |---|---|---|
-| `bun install` | pass | 5088 packages, 13.2s, lockfile unchanged |
-| `bun typecheck` | pass | 34 of 34 turbo tasks successful, 17.3s |
-| `GITHUB_ACTIONS=false bun turbo test` | **fail** | 17/23 tasks successful, stopped at `@opencode-ai/app#test` |
-| `GITHUB_ACTIONS=false bun turbo test --continue` | **fail** | 20/23 successful; failures: `@opencode-ai/app#test`, `@opencode-ai/tui#test`, `opencode-drive#test` |
-| `packages/client` `bun run check:generated` | pass | no generated drift |
-| `packages/www` `bun run check:generated` | pass | no generated drift |
-| `packages/cli` build + `service-smoke.ts` | pass | `cli-darwin-arm64` built, smoke exits 0 |
-| `bun run lint` | **fail** | 4232 warnings, 1 error (not CI-enforced) |
-| `bun run lint:effect-patterns` | **fail** | 33 errors (not CI-enforced) |
-| `packages/cli` Node build + `service-smoke --node` | not run | CI pins Node 26.4.0 for this step; this host has Node 22.23.2 |
+| `bun install` | pass | "Checked 2477 installs across 2941 packages (no changes)". `bun.lock` unchanged |
+| `bun typecheck` | pass | 36/36 turbo tasks. The first run was a full turbo cache replay, so it was re-run with `--force`: 36/36 pass, 0 cached, 22.3 s |
+| `bun run lint` | pass | oxlint: 1,509 warnings, 0 errors. ast-grep gui-extensions scan and sdk-docs: 0 problems |
+| `bun run check` (lint + typecheck) | pass | Follows from the two rows above |
+| `bun run lint:effect-simplifications` | pass | |
+| `bun run lint:effect-patterns` | **fail** | 27 errors: 20 `no-star-import`, 4 `no-effect-die-string`, 2 `no-json-parse-cast`, 1 `no-import-alias`. Not run by CI |
+| `GITHUB_ACTIONS=false bun turbo test --continue` | **fail** | 26/27 tasks pass. Only `@opencode/core#test` fails: 6,535 pass, 30 fail (see below) |
+| `packages/client` `check:generated` | pass | No drift |
+| `services/www` `check:generated` | pass | |
+| `packages/protocol` `check:generated` | **fail** | "Generated OpenAPI document is stale". Regenerating gives `openapi.json` +951/−70 lines (for example, new `404 LocationNotFoundError` responses). Not run by CI. The file was restored after the probe; the tree is clean |
+| `packages/cli` build + `service-smoke.ts` | pass | 50 s build, smoke exits 0 |
+| Node build + `service-smoke --node` | not run | CI pins Node 26.4.0; this host has 24.13.0 |
+| Upstream CI at the base | green | `gh api …/commits/5e73d5cb/check-runs`: `typecheck`, `unit (linux)`, `unit (windows)`, `e2e (linux)`, `e2e (windows)`, `build-cli` and the signing jobs all succeed |
 
-## Pre-existing failures
+## Current reds
 
-None of these were introduced by this slice. Every one reproduced with `HEAD`
-exactly at the pinned SHA and no Kilo files in the tree.
+Recorded as found, without fixes. None comes from a Kilo change: the tree has none.
 
-### Also red on upstream CI at the pinned SHA
+### Host-environment failures (green on upstream CI)
 
-Upstream's own `unit (linux)` and `unit (windows)` checks fail at
-`76dbaf20`. Read-only confirmation:
+1. **`@opencode/core` shell tests, 7 cases.** `ShellTool conditional process substitution` (4: legacy and native, `once` and `always`), `ShellTool compound syntax approval compatibility` (2) and `real-shell compound syntax > bash` (1). Output: `/bin/bash: wait: pid … is not a child of this shell`, exit 127. Probable cause: macOS system bash 3.2. Linux runners use bash 5.
+2. **`@opencode/core` ripgrep-backed tests, 23 cases.** `Ripgrep > …` (11) and `search tools > …` (12). Cause: `Ripgrep.Error: ripgrep execution failed` → `HttpClientError: Transport error (GET https://github.com/BurntSushi/ripgrep/releases/download/15.1.0/…)`. No `rg` is on PATH, and the in-test download is refused even though the URL is reachable from a normal shell. Install `rg` to clear it (UNVERIFIED).
 
-```
-$ gh api repos/anomalyco/opencode/commits/76dbaf20adbd43fd208a00ef3cda4a51e125a234/check-runs
-unit (linux)      completed  failure
-unit (windows)    completed  failure
-typecheck         completed  success
-build-cli         completed  success
-generate          completed  success
-e2e               completed  skipped
-```
-
-1. **`opencode-drive`**, in `test/instance/config.test.ts`: "instance
-   configuration > initializes the simulation provider with the current OpenCode
-   provider shape" fails with `SyntaxError: Failed to parse JSON`. Reproduced
-   locally and present verbatim in the upstream `unit (linux)` log. This is the
-   failure that turns upstream's job red.
-2. **`@opencode-ai/tui`**, in `test/mini/footer.view.test.tsx`: "run entry
-   content preserves monochrome markdown grammar" expects the ASCII fallback
-   `Caf? -> ...` but receives `Café → …`. Reproduced locally and present in the
-   upstream `unit (linux)` log at the same SHA.
-
-### Host-environment failures, green on upstream CI
-
-3. **`@opencode-ai/app`**, in `src/i18n/desktop-native.test.ts`: "desktop native
-   locale detection > uses Unicode likely subtags for script-sensitive bundles"
-   — `detectDesktopNativeLocale(["pa-PK"])` returns `"en"`, expected `"pa"`.
-   Root cause is ICU data, not code. `packages/app/src/i18n/desktop-native.ts:158`
-   maps `pa` to `pa-Arab-PK` and compares maximized scripts, but this host
-   resolves the newer Nastaliq subtag:
-
-   ```
-   $ bun -e 'console.log(new Intl.Locale("pa-PK").maximize().toString())'
-   pa-Aran-PK
-   $ node -e 'console.log(new Intl.Locale("pa-PK").maximize().toString())'
-   pa-Arab-PK
-   ```
-
-   Upstream `unit (linux)` at the same SHA reports `676 pass / 0 fail` for this
-   package; this host reports `675 pass / 1 fail`. Local only.
-
-4. **`opencode-drive`** — three `test/driver/index.test.ts` cases fail with
-   `NotFound: ChildProcess.spawn (ffmpeg ...)`. The upstream unit job installs
-   ffmpeg on Linux; this host has none. Local only; install ffmpeg to clear
-   them, which still leaves failure 1.
+The failures recorded for `76dbaf20` (`opencode-drive` JSON parse, the tui footer `Café`, `pa-PK` ICU, ffmpeg) do not reproduce at this base: the `app` and `tui` suites pass, and `opencode-drive` no longer exists in this tree.
 
 ### Not gated by CI
 
-5. `bun run lint` (4232 warnings, 1 error) and `bun run lint:effect-patterns`
-   (33 errors) are red on pristine v2. No workflow in this tree runs them, so
-   they are not a regression signal on their own. Use them only as a delta
-   against this baseline.
+3. `lint:effect-patterns`: 27 errors.
+4. `packages/protocol` `check:generated`: stale `openapi.json`.
 
-**Consequence for later slices:** a red `bun turbo test` does not by itself mean
-a Kilo change broke something. Compare against this table, and re-run
-`bun kilocode/script/v2-baseline.ts --checks` from a clean checkout of the
-pinned SHA when a failure is ambiguous.
+Use these only as deltas against this table.
 
-## Why no fork CI workflow yet
+## Out of scope for this baseline
 
-`.github/workflows/` is upstream-owned and this slice adds no workflow file,
-deliberately:
-
-- This effort is local-only by explicit instruction. Nothing is pushed, so no
-  workflow added here could actually run; committing one would claim CI
-  coverage that does not exist.
-- The baseline is already red upstream (failures 1 and 2). A fork workflow
-  running the same commands would be red on its first run, which is a worse
-  signal than this report plus the reproducer script.
-- The integration branch `johnnyeric/kilo-opencode-v2` has no remote yet, so a
-  workflow has no meaningful trigger to target. `test.yml` and `typecheck.yml`
-  trigger on `push` to `dev`/`v2` and on `pull_request`; adapting them needs the
-  fork's branch and remote model to exist first.
-- Editing shared upstream workflow files conflicts on every upstream merge and
-  is exactly what the fork conventions try to avoid.
-
-Revisit when the integration branch gets a remote. At that point the smallest
-useful step is a Kilo-owned workflow that runs
-`bun kilocode/script/v2-baseline.ts --checks` and compares against this report,
-not a copy of upstream's `test.yml`.
+- **Kilo packages.** The base contains no `kilo-*` package (`git ls-tree HEAD packages/`). Kilo package checks (`kilo-vscode` typecheck, `bun run extension`, JetBrains Gradle build) start once each package lands. Each landing records its own baseline row here.
+- **Fork CI.** No Kilo-owned workflow exists on this branch, and repo or Actions settings are an admin task (`migration-context.md`, Deferred admin tasks).
 
 ## Reproducer
 
-`kilocode/script/v2-baseline.ts` is the automation for this report.
-
-```
-bun kilocode/script/v2-baseline.ts            # offline ref and ancestry checks only
-bun kilocode/script/v2-baseline.ts --checks   # also replay the commands above
-```
-
-It asserts the pinned SHA is still an ancestor of `HEAD` and that local
-`upstream/v2` still resolves to it, then runs the install, typecheck, test,
-generated-artifact, and CLI build/smoke commands, writing per-check output to
-`kilocode/baseline/logs/` (gitignored by the root `logs/` rule). It exits
-non-zero if any check fails; it never suppresses a known-red check, because
-suppression would hide a real regression behind a pre-existing one.
-
-`kilocode/script/` is intentionally not a workspace package, so the script is
-not covered by `bun typecheck`: every typecheck project in this repo lives
-inside a workspace, and `@types/bun` is only installed in packages that declare
-it. Making `kilocode/` a workspace would mean editing upstream's root
-`package.json` for one script. It is validated by running it in both modes
-instead. Revisit if `kilocode/script/` grows beyond a couple of files.
+`migration-tracking/technical-notes/script/v2-baseline.ts` **does not run on this base** as written. It hard-codes `PINNED_V2 = 76dbaf20`, refuses to run unless `upstream/v2` equals that pin, and targets `packages/www`. It is classified rewrite-or-drop in `migration-tracking/discovery/doc-inventory.md`. Until it is rewritten, reproduce with the commands in the table above, run from the listed directories. This capture used a throwaway script outside the repo with the same sequence: install, typecheck (`--force` re-run), lint, turbo test `--continue`, the three `check:generated` commands, then CLI build and service smoke.
