@@ -311,6 +311,36 @@ describe("cloud session import preparation", () => {
     expect(detached.info).not.toHaveProperty("path")
   })
 
+  test("issues fresh IDs in source-ID order when the export lists items in ingest order", () => {
+    const base = sample()
+    const part = (id: string, messageID: string, text: string) => ({
+      id,
+      messageID,
+      sessionID: "ses_cloud",
+      type: "text",
+      text,
+    })
+    const user = { info: { ...base.messages[1]!.info, id: "msg_1" }, parts: [part("prt_1", "msg_1", "ask")] }
+    const reply = {
+      info: { ...base.messages[0]!.info, id: "msg_2", parentID: "msg_1" },
+      parts: [part("prt_3", "msg_2", "second"), part("prt_2", "msg_2", "first")],
+    }
+    const result = prepareSessionImport(
+      { info: base.info, messages: [reply, user] },
+      deps(["msg_local_1", "prt_local_1", "msg_local_2", "prt_local_2", "prt_local_3"]),
+    )
+
+    expect(result.messages.map((row) => [row.id, row.data.role, row.data.parentID])).toEqual([
+      ["msg_local_1", "user", undefined],
+      ["msg_local_2", "assistant", "msg_local_1"],
+    ])
+    expect(result.parts.map((row) => [row.id, row.data.text])).toEqual([
+      ["prt_local_1", "ask"],
+      ["prt_local_2", "first"],
+      ["prt_local_3", "second"],
+    ])
+  })
+
   test("rejects malformed, duplicate, and dangling transcript data", () => {
     const base = sample()
     const first = base.messages[0]!

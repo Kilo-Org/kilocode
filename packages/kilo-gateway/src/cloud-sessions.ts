@@ -249,16 +249,26 @@ export interface ImportDeps extends PrepareDeps {
   SessionCreatedEvent: { type: string; properties: unknown }
 }
 
+function byID(a: { id: string }, b: { id: string }) {
+  if (a.id === b.id) return 0
+  return a.id < b.id ? -1 : 1
+}
+
 export function prepareSessionImport(data: unknown, deps: PrepareDeps) {
   const parsed = exportSchema.safeParse(data)
   if (!parsed.success)
     throw new SessionImportValidationError(parsed.error.issues[0]?.message ?? "Invalid session export")
   const source = parsed.data
+  // The export lists items in ingest order, not transcript order. Fresh IDs ascend in
+  // issue order, so issue them in source-ID order to keep the transcript in order.
+  const ordered = source.messages
+    .map((msg) => ({ ...msg, parts: msg.parts.toSorted(byID) }))
+    .toSorted((a, b) => byID(a.info, b.info))
 
   const sessionID = deps.Identifier.descending("session")
   const ids = new Map<string, string>()
   const pids = new Map<string, string>()
-  for (const msg of source.messages) {
+  for (const msg of ordered) {
     ids.set(msg.info.id, deps.Identifier.ascending("message"))
     for (const part of msg.parts) {
       pids.set(part.id, deps.Identifier.ascending("part"))
@@ -311,7 +321,7 @@ export function prepareSessionImport(data: unknown, deps: PrepareDeps) {
     session_id: string
     data: Record<string, unknown>
   }> = []
-  for (const msg of source.messages) {
+  for (const msg of ordered) {
     const id = ids.get(msg.info.id)!
     const parentID = msg.info.parentID === undefined ? undefined : ids.get(msg.info.parentID)!
     const next = {
