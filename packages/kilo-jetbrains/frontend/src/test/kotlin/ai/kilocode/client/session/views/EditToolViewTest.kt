@@ -87,14 +87,24 @@ class EditToolViewTest : BasePlatformTestCase() {
         assertTrue(view.isExpanded())
     }
 
-    fun `test force overrides a manually collapsed edit`() {
-        val view = track(EditToolView(tool(), display = BlockDisplay.COLLAPSED))
+    fun `test force expands an edit the user manually collapsed`() {
+        val view = track(EditToolView(tool(), display = BlockDisplay.EXPANDED))
         view.toggle()
-        assertTrue(view.isExpanded())
+        assertFalse("manual collapse must stick", view.isExpanded())
 
         assertTrue(view.syncTranscriptDisplay(editDisplay(BlockDisplay.EXPANDED), force = true))
 
-        assertTrue(view.isExpanded())
+        assertTrue("force must expand past a manual collapse", view.isExpanded())
+    }
+
+    fun `test force collapses an edit the user manually expanded`() {
+        val view = track(EditToolView(tool(), display = BlockDisplay.COLLAPSED))
+        view.toggle()
+        assertTrue("manual expand must stick", view.isExpanded())
+
+        assertTrue(view.syncTranscriptDisplay(editDisplay(BlockDisplay.COLLAPSED), force = true))
+
+        assertFalse("force must collapse past a manual expand", view.isExpanded())
     }
 
     fun `test edit tool shows Edit title and clickable file link`() {

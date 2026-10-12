@@ -225,11 +225,11 @@ class EditToolView(
     private fun expandable(): Boolean =
         editDiff(item).isNotBlank() || output(item).isNotBlank() || !item.error.isNullOrBlank()
 
-    private fun sync(): Boolean {
+    private fun sync(force: Boolean = false): Boolean {
         val expand = expandable()
         var changed = false
         changed = syncExpandable(expand) || changed
-        if (!touched) {
+        if (force || !touched) {
             changed = if (display == BlockDisplay.EXPANDED && expand) {
                 expand() || changed
             } else {
@@ -259,9 +259,11 @@ class EditToolView(
     override fun syncTranscriptDisplay(display: TranscriptDisplay, force: Boolean): Boolean {
         if (!force && touched) return false
         val next = display.codeEdit
-        if (this.display == next) return false
+        // A forced call must reapply even when the stored value already matches: the card's containment
+        // can have diverged from it while the user held a manual state.
+        if (!force && this.display == next) return false
         this.display = next
-        sync()
+        sync(force)
         // Same contract as update(): a state change the card applies itself must revalidate it.
         refresh()
         return true

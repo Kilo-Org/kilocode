@@ -176,11 +176,11 @@ class ShellToolView(
         return changed
     }
 
-    private fun sync(): Boolean {
+    private fun sync(force: Boolean = false): Boolean {
         val expand = canExpand(item)
         var changed = false
         changed = syncExpandable(expand) || changed
-        if (!touched) {
+        if (force || !touched) {
             changed = if (display == BlockDisplay.EXPANDED && expand) {
                 expand() || changed
             } else {
@@ -204,9 +204,11 @@ class ShellToolView(
     override fun syncTranscriptDisplay(display: TranscriptDisplay, force: Boolean): Boolean {
         if (!force && touched) return false
         val next = display.terminal
-        if (this.display == next) return false
+        // A forced call must reapply even when the stored value already matches: the card's containment
+        // can have diverged from it while the user held a manual state.
+        if (!force && this.display == next) return false
         this.display = next
-        sync()
+        sync(force)
         // Same contract as update(): a state change the card applies itself must revalidate it, or the
         // parent SessionLayout can stack it at the height it cached.
         refresh()

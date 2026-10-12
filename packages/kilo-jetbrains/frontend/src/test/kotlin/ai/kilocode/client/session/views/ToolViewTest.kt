@@ -83,15 +83,26 @@ class ToolViewTest : BasePlatformTestCase() {
         assertTrue(view.isExpanded())
     }
 
-    fun `test force overrides a manually collapsed generic tool`() {
+    fun `test force expands a generic tool the user manually collapsed`() {
         val item = tool("p1", "custom_tool", ToolExecState.COMPLETED).also { it.output = "done" }
-        val view = track(ToolView(item, display = BlockDisplay.COLLAPSED))
+        val view = track(ToolView(item, display = BlockDisplay.EXPANDED))
         view.toggle()
-        assertTrue(view.isExpanded())
+        assertFalse("manual collapse must stick", view.isExpanded())
 
         assertTrue(view.syncTranscriptDisplay(toolDisplay(BlockDisplay.EXPANDED), force = true))
 
-        assertTrue(view.isExpanded())
+        assertTrue("force must expand past a manual collapse", view.isExpanded())
+    }
+
+    fun `test force collapses a generic tool the user manually expanded`() {
+        val item = tool("p1", "custom_tool", ToolExecState.COMPLETED).also { it.output = "done" }
+        val view = track(ToolView(item, display = BlockDisplay.COLLAPSED))
+        view.toggle()
+        assertTrue("manual expand must stick", view.isExpanded())
+
+        assertTrue(view.syncTranscriptDisplay(toolDisplay(BlockDisplay.COLLAPSED), force = true))
+
+        assertFalse("force must collapse past a manual expand", view.isExpanded())
     }
 
     // ---- state icons ------

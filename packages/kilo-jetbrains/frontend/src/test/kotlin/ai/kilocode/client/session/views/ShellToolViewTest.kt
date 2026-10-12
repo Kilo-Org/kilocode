@@ -102,15 +102,26 @@ class ShellToolViewTest : BasePlatformTestCase() {
         assertFalse(view.isExpanded())
     }
 
-    fun `test force overrides a manually collapsed shell`() {
+    fun `test force expands a shell the user manually collapsed`() {
         val item = tool().also { it.input = mapOf("command" to "pwd") }
-        val view = track(ShellToolView(item, display = BlockDisplay.COLLAPSED))
+        val view = track(ShellToolView(item, display = BlockDisplay.EXPANDED))
         view.toggle()
-        assertTrue(view.isExpanded())
+        assertFalse("manual collapse must stick", view.isExpanded())
 
         assertTrue(view.syncTranscriptDisplay(shellDisplay(BlockDisplay.EXPANDED), force = true))
 
-        assertTrue(view.isExpanded())
+        assertTrue("force must expand past a manual collapse", view.isExpanded())
+    }
+
+    fun `test force collapses a shell the user manually expanded`() {
+        val item = tool().also { it.input = mapOf("command" to "pwd") }
+        val view = track(ShellToolView(item, display = BlockDisplay.COLLAPSED))
+        view.toggle()
+        assertTrue("manual expand must stick", view.isExpanded())
+
+        assertTrue(view.syncTranscriptDisplay(shellDisplay(BlockDisplay.COLLAPSED), force = true))
+
+        assertFalse("force must collapse past a manual expand", view.isExpanded())
     }
 
     fun `test command only shell renders one code surface without labels`() {
