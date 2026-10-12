@@ -116,6 +116,17 @@ describe("decide", () => {
   })
 })
 
+describe("cleanup", () => {
+  test("lists community and status labels", () => {
+    const tags = [label.community, label.triage, label.ci, label.adopt, "area:cli", label.high, label.keep]
+    expect(cleanup(tags).sort()).toEqual([label.adopt, label.ci, label.community, label.triage].sort())
+  })
+
+  test("returns nothing for a clean PR", () => {
+    expect(cleanup(["area:cli", label.high])).toEqual([])
+  })
+})
+
 describe("digest", () => {
   const row = (num: number, state: Row["state"], more: Partial<Row> = {}): Row => ({
     number: num,
