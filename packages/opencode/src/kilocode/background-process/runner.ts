@@ -168,6 +168,7 @@ export namespace BackgroundProcessRunner {
   // (now dead) leader, so seeding the walk from the leader's pid for a short
   // window lets us capture it before concluding the tree is empty.
   const GRACE = 1_000
+  const GUARD = 30_000
 
   async function windows(input: Input, child: ReturnType<typeof spawn>, done: Promise<number>, start: number) {
     const pid = child.pid
@@ -176,6 +177,11 @@ export namespace BackgroundProcessRunner {
     let exited: number | undefined
     let failure: unknown
     let unsafe = false
+    let deadline: number | undefined
+    let confirmation: number | undefined
+    let warned = 0
+    let walks = 0
+    const id = process.env.KILO_BACKGROUND_PROCESS_ID ?? input.token
     let seen = new Map<number, string>()
     void done.then(
       (value) => {
@@ -189,9 +195,11 @@ export namespace BackgroundProcessRunner {
     while (true) {
       if (failure) throw failure
       if (await Bun.file(input.control).exists()) {
+        deadline ??= Date.now() + GUARD
         // Refresh birth-checked identities before each kill; taskkill must not walk stale parent pids itself.
-        const end = Date.now() + 5_000
+        const end = Math.min(Date.now() + 5_000, deadline)
         while (Date.now() < end) {
+          walks++
           const next = await descendants(seen, () => ({ pid, start, end: exited }), end - Date.now())
           seen = next.seen
           if (code !== undefined && next.ok && seen.size === 0) {
@@ -216,13 +224,40 @@ export namespace BackgroundProcessRunner {
             "background process runner: stop not confirmed; keeping the stop request and guarding tracked processes\n",
           )
         unsafe = true
+        if (Date.now() >= deadline) {
+          if (code === undefined)
+            await Process.run(["taskkill", "/pid", String(pid), "/f"], { nothrow: true, timeout: 1_000 })
+          process.stderr.write(
+            `background process runner: id=${id} process table unavailable, descendants not verified; stop unconfirmed after 30s, walks=${walks}\n`,
+          )
+          return 1
+        }
         await Bun.sleep(100)
         continue
       }
       const active = code === undefined || (exited !== undefined && Date.now() - exited < GRACE)
-      const walked = await descendants(seen, () => (active ? { pid, start, end: exited } : undefined))
+      if (code !== undefined) confirmation ??= Date.now() + GUARD
+      walks++
+      const walked = await descendants(
+        seen,
+        () => ({ pid, start, end: exited }),
+        confirmation === undefined ? 2_000 : Math.max(1, confirmation - Date.now()),
+      )
       seen = walked.seen
+      if (!walked.ok && Date.now() - warned >= 5_000) {
+        process.stderr.write(
+          `background process runner: id=${id} process walk failed; no new descendants adopted, walks=${walks}\n`,
+        )
+        warned = Date.now()
+      }
       if (code !== undefined && walked.ok && !active && seen.size === 0) return code
+      if (walked.ok) confirmation = undefined
+      if (!walked.ok && confirmation !== undefined && Date.now() >= confirmation) {
+        process.stderr.write(
+          `background process runner: id=${id} process table unavailable, descendants not verified; exit unconfirmed after 30s, walks=${walks}\n`,
+        )
+        return 1
+      }
       await Bun.sleep(100)
     }
   }

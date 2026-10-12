@@ -1,6 +1,8 @@
-import { describe, expect } from "bun:test"
+import { describe, expect, spyOn, test } from "bun:test"
 import { Bus } from "@/bus"
 import { BackgroundProcess } from "@/kilocode/background-process"
+import { BackgroundProcessRunner } from "@/kilocode/background-process/runner"
+import { Process } from "@/util/process"
 import { SessionID } from "@/session/schema"
 import { Shell } from "@opencode-ai/core/shell"
 import { Filesystem } from "@/util/filesystem"
@@ -90,6 +92,92 @@ function update(sessionID: SessionID) {
 }
 
 describe("BackgroundProcess", () => {
+  test.skipIf(process.platform !== "win32")(
+    "an unconfirmed stop is reported before its guarded runner ends",
+    async () => {
+      await using tmp = await tmpdir()
+      const file = path.join(tmp.path, "unconfirmed.ts")
+      const processFile = path.resolve(import.meta.dirname, "../../src/util/process.ts")
+      const runnerFile = path.resolve(import.meta.dirname, "../../src/kilocode/background-process/runner.ts")
+      await Bun.write(
+        file,
+        `import { mock } from "bun:test"
+import fs from "node:fs/promises"
+import * as process from ${JSON.stringify(processFile)}
+const original = { ...process }
+const text = async () => ({ code: 1, stdout: Buffer.alloc(0), stderr: Buffer.alloc(0), text: "" })
+mock.module(${JSON.stringify(processFile)}, () => ({ ...original, text, Process: { ...original, text } }))
+const { BackgroundProcessRunner } = await import(${JSON.stringify(runnerFile)})
+await fs.writeFile(${JSON.stringify(path.join(tmp.path, "fixture-started.json"))}, JSON.stringify({ pid: process.pid, argv: process.argv }))
+await BackgroundProcessRunner.maybe(process.argv)
+process.exit(process.exitCode ?? 0)
+`,
+      )
+      const original = BackgroundProcessRunner.command
+      let launched: string[] = []
+      const command = spyOn(BackgroundProcessRunner, "command").mockImplementation((value) => {
+        const argv = original(value)
+        launched = [process.execPath, file, ...argv.slice(argv.indexOf("__background-process-runner"))]
+        return launched
+      })
+      let pid: number | undefined
+      const text = Process.text
+      const identity = spyOn(Process, "text").mockImplementation(async (args, opts) => {
+        const query = args.find((arg) => arg.includes("Win32_Process") && arg.includes("-Filter"))
+        const match = query?.match(/ProcessId = (\d+)/)
+        const target = match ? Number(match[1]) : undefined
+        if (target && alive(target)) {
+          return {
+            code: 0,
+            stdout: Buffer.alloc(0),
+            stderr: Buffer.alloc(0),
+            text: JSON.stringify({ ProcessId: target, CommandLine: launched.join(" ") }),
+          }
+        }
+        return text(args, opts)
+      })
+      try {
+        await provideTestInstance({
+          directory: tmp.path,
+          fn: async () => {
+            const item = await BackgroundProcess.start({
+              sessionID: SessionID.descending(),
+              command: `& "${process.execPath}" -e "setInterval(() => {}, 1000)"`,
+              cwd: tmp.path,
+              lifetime: "persistent",
+              ready: { pattern: "process walk failed", timeout: 10_000 },
+            })
+            pid = item.pid
+            let error: unknown
+            try {
+              await BackgroundProcess.stop(item.id)
+            } catch (cause) {
+              error = cause
+            }
+            expect(String(error)).toContain("Persistent process runner did not stop safely")
+            expect(alive(pid)).toBe(true)
+            await until(() => !alive(pid), "guarded runner did not end", 35_000)
+            await until(
+              async () => (await BackgroundProcess.get(item.id))?.exitCode === 1,
+              "runner failure was not surfaced",
+              10_000,
+            )
+            expect((await BackgroundProcess.get(item.id))?.exitCode).toBe(1)
+            const info = await BackgroundProcess.get(item.id)
+            expect(info?.output).toContain(`id=${item.id}`)
+            expect(info?.output).toContain("process table unavailable, descendants not verified")
+            expect(info?.output).toContain("walks=")
+          },
+        })
+      } finally {
+        identity.mockRestore()
+        command.mockRestore()
+        if (alive(pid)) await Process.run(["taskkill", "/pid", String(pid), "/f"], { nothrow: true })
+      }
+    },
+    75_000,
+  )
+
   it.instance("starts, reports readiness, and stops a process", () =>
     Effect.gen(function* () {
       const test = yield* TestInstance
