@@ -11,28 +11,31 @@ describe("Together AI streaming usage", () => {
       const requests: Record<string, unknown>[] = []
       const provider = createTogetherAI({
         apiKey: "test-key",
-        fetch: async (_url, init) => {
-          if (typeof init?.body !== "string") throw new Error("Expected a JSON request body")
-          const body = JSON.parse(init.body)
-          requests.push(body)
-          const stream =
-            chunk({
-              id: "test",
-              model: "test",
-              choices: [{ index: 0, delta: { content: "Hello" }, finish_reason: null }],
-            }) +
-            chunk({ id: "test", model: "test", choices: [{ index: 0, delta: {}, finish_reason: "stop" }] }) +
-            (body.stream_options?.include_usage
-              ? chunk({
-                  id: "test",
-                  model: "test",
-                  choices: [],
-                  usage: { prompt_tokens: 42, completion_tokens: 7, total_tokens: 49 },
-                })
-              : "") +
-            "data: [DONE]\n\n"
-          return new Response(stream, { headers: { "content-type": "text/event-stream" } })
-        },
+        fetch: Object.assign(
+          async (_url: RequestInfo | URL, init?: RequestInit) => {
+            if (typeof init?.body !== "string") throw new Error("Expected a JSON request body")
+            const body = JSON.parse(init.body)
+            requests.push(body)
+            const stream =
+              chunk({
+                id: "test",
+                model: "test",
+                choices: [{ index: 0, delta: { content: "Hello" }, finish_reason: null }],
+              }) +
+              chunk({ id: "test", model: "test", choices: [{ index: 0, delta: {}, finish_reason: "stop" }] }) +
+              (body.stream_options?.include_usage
+                ? chunk({
+                    id: "test",
+                    model: "test",
+                    choices: [],
+                    usage: { prompt_tokens: 42, completion_tokens: 7, total_tokens: 49 },
+                  })
+                : "") +
+              "data: [DONE]\n\n"
+            return new Response(stream, { headers: { "content-type": "text/event-stream" } })
+          },
+          { preconnect: () => {} },
+        ),
       })
       const model = route === "provider" ? provider("test") : provider[route]("test")
       const result = await model.doStream({ prompt })
@@ -50,16 +53,19 @@ describe("Together AI streaming usage", () => {
     const requests: Record<string, unknown>[] = []
     const provider = createTogetherAI({
       apiKey: "test-key",
-      fetch: async (_url, init) => {
-        if (typeof init?.body !== "string") throw new Error("Expected a JSON request body")
-        requests.push(JSON.parse(init.body))
-        return Response.json({
-          id: "test",
-          model: "test",
-          choices: [{ index: 0, message: { role: "assistant", content: "Hello" }, finish_reason: "stop" }],
-          usage: { prompt_tokens: 42, completion_tokens: 7, total_tokens: 49 },
-        })
-      },
+      fetch: Object.assign(
+        async (_url: RequestInfo | URL, init?: RequestInit) => {
+          if (typeof init?.body !== "string") throw new Error("Expected a JSON request body")
+          requests.push(JSON.parse(init.body))
+          return Response.json({
+            id: "test",
+            model: "test",
+            choices: [{ index: 0, message: { role: "assistant", content: "Hello" }, finish_reason: "stop" }],
+            usage: { prompt_tokens: 42, completion_tokens: 7, total_tokens: 49 },
+          })
+        },
+        { preconnect: () => {} },
+      ),
     })
     const result = await provider("test").doGenerate({ prompt })
     expect(requests[0]?.stream_options).toBeUndefined()
