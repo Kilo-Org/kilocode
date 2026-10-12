@@ -1,7 +1,7 @@
 ---
-"kilo-code": minor
-"@kilocode/cli": minor
+"kilo-code": patch
+"@kilocode/cli": patch
 "@kilocode/sdk": minor
 ---
 
-Show estimated context usage immediately after compaction, then replace it with the next response's reported usage
+Fix stale context usage after compaction by showing an estimate until the next response reports measured usage
