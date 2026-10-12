@@ -777,3 +777,65 @@ test.skipIf(process.platform !== "win32")(
   },
   45_000,
 )
+
+test.skipIf(process.platform !== "win32")(
+  "an unconfirmed stop names the leader when it survives verified kills",
+  async () => {
+    await using tmp = await tmpdir()
+    const input = {
+      token: "leader-survivor",
+      shell: process.execPath,
+      args: ["-e", "setInterval(() => {}, 1000)"],
+      cwd: tmp.path,
+      log: path.join(tmp.path, "leader.log"),
+      control: path.join(tmp.path, "leader.stop"),
+    }
+    const previous = process.exitCode ?? 0
+    const token = process.env.KILO_BACKGROUND_PROCESS_TOKEN
+    const spawned = spyOn(child, "spawn")
+    let pid = 0
+    const birth = Date.now()
+    const job = spyOn(BackgroundProcessWindows, "job").mockResolvedValue({ reason: "test startup fallback" })
+    const read = spyOn(Process, "text").mockImplementation(async () => {
+      const proc = spawned.mock.results.at(0)?.value
+      if (!(proc instanceof child.ChildProcess) || !proc.pid) throw new Error("leader missing")
+      pid = proc.pid
+      await Bun.write(input.control, "stop")
+      return {
+        code: 0,
+        stdout: Buffer.alloc(0),
+        stderr: Buffer.alloc(0),
+        text: JSON.stringify([{ ProcessId: pid, ParentProcessId: 4, CreationDate: `/Date(${birth})/` }]),
+      }
+    })
+    const kill = spyOn(Process, "run").mockResolvedValue({ code: 1, stdout: Buffer.alloc(0), stderr: Buffer.alloc(0) })
+    const notes: string[] = []
+    const write = spyOn(process.stderr, "write").mockImplementation((value) => {
+      notes.push(String(value))
+      return true
+    })
+    try {
+      expect(await BackgroundProcessRunner.maybe(BackgroundProcessRunner.command(input))).toBe(true)
+      expect(process.exitCode).toBe(1)
+      const final = notes.find((note) => note.includes("stop unconfirmed after 30s"))
+      expect(final).toContain(`leader ${pid} still running`)
+      expect(final).not.toContain("0 verified descendants")
+    } finally {
+      const proc = spawned.mock.results.at(0)?.value
+      if (proc instanceof child.ChildProcess && proc.exitCode === null && proc.signalCode === null) {
+        const done = once(proc, "exit")
+        proc.kill()
+        await done
+      }
+      read.mockRestore()
+      kill.mockRestore()
+      write.mockRestore()
+      spawned.mockRestore()
+      job.mockRestore()
+      process.exitCode = previous
+      if (token === undefined) delete process.env.KILO_BACKGROUND_PROCESS_TOKEN
+      else process.env.KILO_BACKGROUND_PROCESS_TOKEN = token
+    }
+  },
+  45_000,
+)

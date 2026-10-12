@@ -322,7 +322,7 @@ export namespace BackgroundProcessRunner {
           if (code === undefined)
             await Process.run(["taskkill", "/pid", String(pid), "/f"], { nothrow: true, timeout: 1_000 })
           note(
-            `id=${id} ${trusted ? `${seen.size} verified descendants still running: ${[...seen.keys()].join(", ")}` : "process table unavailable, descendants not verified"}; stop unconfirmed after 30s, walks=${walks}`,
+            `id=${id} ${code === undefined ? `leader ${pid} still running; ` : ""}${trusted ? (seen.size > 0 ? `${seen.size} verified descendants still running: ${[...seen.keys()].join(", ")}` : "no verified descendants") : "process table unavailable, descendants not verified"}; stop unconfirmed after 30s, walks=${walks}`,
           )
           return 1
         }

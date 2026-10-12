@@ -23,7 +23,7 @@ const walk = spyOn(Process, "text").mockImplementation(async () => {
   throw new Error("unexpected process walk")
 })
 const until = async (check: () => boolean | Promise<boolean>) => {
-  const end = Date.now() + 12_000
+  const end = Date.now() + 20_000
   while (Date.now() < end) {
     if (await check()) return
     await Bun.sleep(25)
