@@ -562,6 +562,54 @@
 
 ## [Unreleased]
 
+## [7.1.10-rc.1] - 2026-10-12
+
+### Added
+- feat(vscode): open chat links in the system browser on Shift-click by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14919
+- feat(vscode): combine agent, model, and reasoning into one prompt control by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14927
+- feat(agent-manager): reorder projects with drag and drop by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14928
+- feat(vscode): show page cursors in integrated browser preview by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14932
+- feat(jetbrains): show and edit agent models from the agents list by @kirillk in https://github.com/Kilo-Org/kilocode/pull/14967
+- feat(jetbrains): reuse the Core submenu in the prompt bar menu by @kirillk in https://github.com/Kilo-Org/kilocode/pull/15002
+- feat(jetbrains): configure transcript display by @kirillk in https://github.com/Kilo-Org/kilocode/pull/14665
+
+### Fixed
+- fix(indexing): tolerate OpenAI-compatible endpoints that reject dimensions by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14921
+- fix(CI): avoid syntax errors via CodeQL by @WebReflection in https://github.com/Kilo-Org/kilocode/pull/14923
+- fix(cli): require explicit user intent before starting Agent Manager sessions or worktrees by @kilo-code-bot[bot] in https://github.com/Kilo-Org/kilocode/pull/14528
+- fix(vscode): add tooltip to subagent open button by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14930
+- fix(vscode): use open-in-browser icon for PR panel by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14934
+- fix(deps): Update Next.js due Dependabot alerts by @WebReflection in https://github.com/Kilo-Org/kilocode/pull/14933
+- fix(cli): expose a reserved command-name clash as /goal:command by @kirillk in https://github.com/Kilo-Org/kilocode/pull/14906
+- fix(opencode): point cloud sessions at a permitted temp dir by @maphew in https://github.com/Kilo-Org/kilocode/pull/14192
+- fix(cli): resolve bare model names for task subagents by @maphew in https://github.com/Kilo-Org/kilocode/pull/14037
+- fix(cli): surface terminal compaction failures by @quanzhuo in https://github.com/Kilo-Org/kilocode/pull/14651
+- fix(cli): limit Z.ai thinking defaults to built-in providers by @thomasbrugman in https://github.com/Kilo-Org/kilocode/pull/14757
+- fix(vscode): start the backend in Windows drive-root workspaces by @jsilvermist in https://github.com/Kilo-Org/kilocode/pull/14519
+- fix(cli): avoid false frontmatter errors when saving command files by @cpruijsen in https://github.com/Kilo-Org/kilocode/pull/14064
+- fix(cli): bound serve shutdown after signals by @abdulhusainahk in https://github.com/Kilo-Org/kilocode/pull/14830
+- fix(cli): send tool-result images as user content for Bedrock GPT-6 models by @kimnamu in https://github.com/Kilo-Org/kilocode/pull/14524
+- fix(cli): reuse the loaded transcript when pruning large payloads by @kr1shna-exe in https://github.com/Kilo-Org/kilocode/pull/14816
+- fix(jetbrains): navigate to transcript parts from the session timeline by @Suwanwa in https://github.com/Kilo-Org/kilocode/pull/14926
+- fix(cli): clean up MCP servers when their startup is interrupted by @kr1shna-exe in https://github.com/Kilo-Org/kilocode/pull/14809
+- fix(cli): improve missing binary error message for Windows ARM64 by @jhapate0704 in https://github.com/Kilo-Org/kilocode/pull/14838
+- fix(core): retry retryable connection resets through the normal backoff path by @madrugado in https://github.com/Kilo-Org/kilocode/pull/14893
+- fix: remove community labels from maintainer PRs in the sweep by @brunoagatao in https://github.com/Kilo-Org/kilocode/pull/14993
+- fix(vscode): label scheduled cron and wakeup prompts instead of user bubbles by @brunoagatao in https://github.com/Kilo-Org/kilocode/pull/14734
+- fix(jetbrains): restore session lists after a CLI reconnect by @kirillk in https://github.com/Kilo-Org/kilocode/pull/14966
+- fix(jetbrains): stop overriding user permission config by @kirillk in https://github.com/Kilo-Org/kilocode/pull/14970
+- fix(jetbrains): clear MCP sign-in state when the server is removed by @kirillk in https://github.com/Kilo-Org/kilocode/pull/14940
+- fix(jetbrains): make the model reset forget the saved per-mode pick by @kirillk in https://github.com/Kilo-Org/kilocode/pull/14968
+- fix(jetbrains): jump to a step when its timeline bar is clicked by @kirillk in https://github.com/Kilo-Org/kilocode/pull/14935
+
+### Changed
+- release(jetbrains): v7.1.9 by @kilo-maintainer[bot] in https://github.com/Kilo-Org/kilocode/pull/14913
+- chore: add community PR and issue triage automation by @brunoagatao in https://github.com/Kilo-Org/kilocode/pull/14914
+- chore: run community triage tests in CI and skip needs-triage on reopen by @brunoagatao in https://github.com/Kilo-Org/kilocode/pull/14929
+- docs: standardize primary yellow to #FFDD00 by @emilieschario in https://github.com/Kilo-Org/kilocode/pull/14964
+- docs: auto-sync cloud-mobile with merged PRs (through 2026-10-11) by @github-actions[bot] in https://github.com/Kilo-Org/kilocode/pull/14946
+
+
 ## [7.1.9] - 2026-10-07
 
 ### Added
