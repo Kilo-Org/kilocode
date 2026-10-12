@@ -449,6 +449,14 @@ export namespace KiloSessionPrompt {
     return MemoryMarker.part(input)
   }
 
+  /** Internal turns retain the last real input's prefix without changing historical editor blocks. */
+  export function inheritContext(user: MessageV2.User, context: MessageV2.User | undefined) {
+    const editorContext = user.editorContext ?? context?.editorContext
+    const system = user.system ?? context?.system
+    if (editorContext === user.editorContext && system === user.system) return user
+    return { ...user, editorContext, system }
+  }
+
   /**
    * Reconstructs dynamic editor context on every user message without
    * persisting synthetic prompt scaffolding. Using each message's creation

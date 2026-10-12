@@ -22,12 +22,25 @@ export namespace KiloSessionMessageOrder {
     let user: MessageV2.WithParts | undefined
     let assistant: MessageV2.WithParts | undefined
     let finished: MessageV2.WithParts | undefined
+    let context: MessageV2.WithParts | undefined
     let userIndex = -1
     let assistantIndex = -1
     let finishedIndex = -1
+    let contextIndex = -1
 
     for (const [index, msg] of msgs.entries()) {
       const info = msg.info
+      // Match the goal runner's real-input rule, while retaining saved compaction checkpoints.
+      if (
+        info.role === "user" &&
+        (!context || compare(msg, context, index, contextIndex) > 0) &&
+        (msg.parts.some(human) ||
+          (msg.parts.some((part) => part.type === "compaction") &&
+            (info.editorContext !== undefined || info.system !== undefined)))
+      ) {
+        context = msg
+        contextIndex = index
+      }
       if (info.role === "user" && (!user || compare(msg, user, index, userIndex) > 0)) {
         user = msg
         userIndex = index
@@ -55,6 +68,7 @@ export namespace KiloSessionMessageOrder {
 
     return {
       user: user?.info.role === "user" ? user.info : undefined,
+      context: context?.info.role === "user" ? context.info : undefined,
       assistant: assistant?.info.role === "assistant" ? assistant.info : undefined,
       finished: finished?.info.role === "assistant" ? finished.info : undefined,
       userMessage: user,
@@ -63,4 +77,8 @@ export namespace KiloSessionMessageOrder {
       tasks,
     }
   }
+}
+
+function human(part: { type: string; synthetic?: boolean; ignored?: boolean }) {
+  return part.type !== "compaction" && (part.type !== "text" || (!part.synthetic && !part.ignored))
 }

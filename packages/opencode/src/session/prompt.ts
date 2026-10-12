@@ -1566,7 +1566,8 @@ export const layer = Layer.effect(
 
         // kilocode_change start - select loop state by chronology after retained-tail projection
         const latest = KiloSessionMessageOrder.latest(msgs)
-        const { user: lastUser, assistant: lastAssistant, finished: lastFinished, tasks } = latest
+        const { assistant: lastAssistant, finished: lastFinished, tasks } = latest
+        const lastUser = latest.user ? KiloSessionPrompt.inheritContext(latest.user, latest.context) : undefined
         // kilocode_change end
 
         if (input.resume && step === 0 && KiloSessionContinuation.target(msgs) !== input.resume) break // kilocode_change
