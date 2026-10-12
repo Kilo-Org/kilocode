@@ -68,6 +68,50 @@ async function until(check: () => boolean | Promise<boolean>, message: string, t
   throw new Error(message)
 }
 
+async function cleanupFixture(childState: string, childFile: string, text: typeof Process.text) {
+  if (!(await Bun.file(childState).exists())) return
+  const owned: unknown = JSON.parse(await Bun.file(childState).text())
+  if (
+    !owned ||
+    typeof owned !== "object" ||
+    !("pid" in owned) ||
+    !("started" in owned) ||
+    typeof owned.pid !== "number" ||
+    typeof owned.started !== "number"
+  )
+    throw new Error("own fixture record invalid")
+  const query = `Get-CimInstance Win32_Process -Filter "ProcessId = ${owned.pid}" | Select-Object ProcessId,CreationDate,CommandLine | ConvertTo-Json -Compress`
+  const found = await text(["powershell.exe", "-NoProfile", "-NonInteractive", "-Command", query], {
+    nothrow: true,
+    timeout: 30_000,
+  })
+  if (found.code !== 0) throw new Error("own fixture identity could not be checked for cleanup")
+  if (found.text.trim()) {
+    const row: unknown = JSON.parse(found.text)
+    if (
+      !row ||
+      typeof row !== "object" ||
+      !("ProcessId" in row) ||
+      !("CreationDate" in row) ||
+      !("CommandLine" in row) ||
+      typeof row.CreationDate !== "string" ||
+      typeof row.CommandLine !== "string"
+    )
+      throw new Error("own fixture identity invalid")
+    const birth = Number(row.CreationDate.match(/\d+/)?.at(0))
+    if (row.ProcessId !== owned.pid || !row.CommandLine.includes(childFile) || Math.abs(birth - owned.started) > 2_000)
+      throw new Error("own fixture identity changed; refusing cleanup")
+    await Process.run(["taskkill", "/pid", String(owned.pid), "/f"], { nothrow: true })
+  }
+  const pid = owned.pid
+  await until(() => !alive(pid), "own fixture remained after cleanup", 10_000)
+  if (process.env.RUNNER_CLEANUP_PROOF)
+    await Bun.write(
+      process.env.RUNNER_CLEANUP_PROOF,
+      JSON.stringify({ pid: owned.pid, beforeAlive: true, afterAlive: false, birthVerified: true, childFile }),
+    )
+}
+
 function update(sessionID: SessionID) {
   const state: { off?: () => void; timer?: ReturnType<typeof setTimeout> } = {}
   const promise = new Promise<BackgroundProcess.Info>((resolve, reject) => {
@@ -279,6 +323,15 @@ const timer = setInterval(async () => {
     async () => {
       await using tmp = await tmpdir()
       const file = path.join(tmp.path, "unconfirmed.ts")
+      const childFile = path.join(tmp.path, "owned-child.mjs")
+      const childState = path.join(tmp.path, "owned-child.json")
+      await Bun.write(
+        childFile,
+        `import fs from "node:fs"
+fs.writeFileSync(${JSON.stringify(childState)}, JSON.stringify({ pid: process.pid, started: Date.now() - process.uptime() * 1000 }))
+setInterval(() => {}, 1000)
+`,
+      )
       const processFile = path.resolve(import.meta.dirname, "../../src/util/process.ts")
       const runnerFile = path.resolve(import.meta.dirname, "../../src/kilocode/background-process/runner.ts")
       const windowsFile = path.resolve(import.meta.dirname, "../../src/kilocode/background-process/windows.ts")
@@ -295,6 +348,7 @@ mock.module(${JSON.stringify(windowsFile)}, () => ({ BackgroundProcessWindows: {
 const { BackgroundProcessRunner } = await import(${JSON.stringify(runnerFile)})
 await fs.writeFile(${JSON.stringify(path.join(tmp.path, "fixture-started.json"))}, JSON.stringify({ pid: process.pid, argv: process.argv }))
 await BackgroundProcessRunner.maybe(process.argv)
+await fs.writeFile(${JSON.stringify(path.join(tmp.path, "fixture-outcome.json"))}, JSON.stringify({ code: process.exitCode, pid: process.pid }))
 process.exit(process.exitCode ?? 0)
 `,
       )
@@ -327,7 +381,7 @@ process.exit(process.exitCode ?? 0)
           fn: async () => {
             const item = await BackgroundProcess.start({
               sessionID: SessionID.descending(),
-              command: `& "${process.execPath}" -e "setInterval(() => {}, 1000)"`,
+              command: `& "${process.execPath}" "${childFile}"`,
               cwd: tmp.path,
               lifetime: "persistent",
               ready: { pattern: "process walk failed", timeout: 10_000 },
@@ -347,6 +401,13 @@ process.exit(process.exitCode ?? 0)
               "runner completion was not surfaced",
               10_000,
             )
+            const outcome = JSON.parse(await Bun.file(path.join(tmp.path, "fixture-outcome.json")).text())
+            expect(outcome.code).toBe(1)
+            await until(
+              async () => (await BackgroundProcess.get(item.id))?.exitCode === 1,
+              "exit event was not surfaced",
+              3_000,
+            ).catch(() => {})
             expect((await BackgroundProcess.get(item.id))?.exitCode).toBe(1)
             const info = await BackgroundProcess.get(item.id)
             expect(info?.output).toContain(`id=${item.id}`)
@@ -358,6 +419,7 @@ process.exit(process.exitCode ?? 0)
         identity.mockRestore()
         command.mockRestore()
         if (alive(pid)) await Process.run(["taskkill", "/pid", String(pid), "/f"], { nothrow: true })
+        await cleanupFixture(childState, childFile, text)
       }
     },
     120_000,

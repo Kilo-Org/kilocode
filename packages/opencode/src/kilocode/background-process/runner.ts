@@ -265,6 +265,7 @@ export namespace BackgroundProcessRunner {
     let exited: number | undefined
     let failure: unknown
     let unsafe = false
+    let trusted = false
     let deadline: number | undefined
     let confirmation: number | undefined
     let warned = 0
@@ -296,6 +297,7 @@ export namespace BackgroundProcessRunner {
         while (Date.now() < end) {
           walks++
           const next = await descendants(seen, () => ({ pid, start, end: exited }), end - Date.now())
+          trusted = next.ok
           seen = next.seen
           if (code !== undefined && next.ok && seen.size === 0) {
             await rm(input.control, { force: true })
@@ -320,7 +322,7 @@ export namespace BackgroundProcessRunner {
           if (code === undefined)
             await Process.run(["taskkill", "/pid", String(pid), "/f"], { nothrow: true, timeout: 1_000 })
           note(
-            `id=${id} process table unavailable, descendants not verified; stop unconfirmed after 30s, walks=${walks}`,
+            `id=${id} ${trusted ? `${seen.size} verified descendants still running: ${[...seen.keys()].join(", ")}` : "process table unavailable, descendants not verified"}; stop unconfirmed after 30s, walks=${walks}`,
           )
           return 1
         }
@@ -333,7 +335,7 @@ export namespace BackgroundProcessRunner {
       const walked = await descendants(
         seen,
         () => ({ pid, start, end: exited }),
-        confirmation === undefined ? 2_000 : Math.max(1, confirmation - Date.now()),
+        confirmation === undefined ? 2_000 : Math.max(1, Math.min(5_000, confirmation - Date.now())),
       )
       seen = walked.seen
       if (!walked.ok && Date.now() - warned >= 5_000) {
