@@ -67,6 +67,8 @@ Set by hand:
 
 The sweep owns the status labels. It adds and removes them on its own. Do not manage them by hand.
 
+The sweep also removes `community` and the status labels from open PRs whose author is a maintainer. This fixes labels set before the maintainer list was known. It only handles PRs.
+
 `area:*` labels are only added, never removed. Fix a wrong one by hand.
 
 ## Whose turn is it
