@@ -3,6 +3,7 @@ import * as vscode from "vscode"
 import { MarketplaceService } from "."
 import { fetchMarketplaceData, type MarketplaceActionContext } from "./actions"
 import { selectSuggestions, showSuggestionNotification, suggestionSlug } from "./notify"
+import { filenamePatterns, matchesPattern } from "./relevance"
 import type { KiloConnectionService } from "../cli-backend"
 import type { MarketplaceItem } from "./types"
 
@@ -25,6 +26,8 @@ export class MarketplaceNotifier implements vscode.Disposable {
   private disposed = false
   /** Slugs already shown this session so a single scan burst doesn't re-toast. */
   private shown = new Set<string>()
+  /** Filename patterns from the last fetched catalog. */
+  private patterns: string[] = []
 
   constructor(
     private readonly connection: KiloConnectionService,
@@ -35,7 +38,7 @@ export class MarketplaceNotifier implements vscode.Disposable {
     this.disposables.push(
       vscode.workspace.onDidChangeWorkspaceFolders(() => this.schedule()),
       vscode.extensions.onDidChange(() => this.schedule()),
-      vscode.workspace.onDidCreateFiles(() => this.schedule()),
+      vscode.workspace.onDidCreateFiles((event) => void this.created(event.files)),
     )
   }
 
@@ -51,10 +54,10 @@ export class MarketplaceNotifier implements vscode.Disposable {
     this.generation++
     for (const disposable of this.disposables) disposable.dispose()
     this.disposables = []
-    this.marketplace.dispose()
   }
 
   private schedule(): void {
+    if (this.disposed) return
     if (this.timer) clearTimeout(this.timer)
     this.timer = setTimeout(() => {
       this.timer = undefined
@@ -80,8 +83,26 @@ export class MarketplaceNotifier implements vscode.Disposable {
     return this.project() ?? os.homedir()
   }
 
-  private roots(): vscode.Uri[] {
-    return vscode.workspace.workspaceFolders?.map((folder) => folder.uri) ?? []
+  /**
+   * A rescan walks the workspace, so only rescan for entries that can change the
+   * result: a file that matches a known pattern, or a folder (for example a
+   * pasted one) that can contain such files.
+   */
+  private async created(files: readonly vscode.Uri[]): Promise<void> {
+    if (this.patterns.length === 0) return
+    const paths = files.map((uri) => vscode.workspace.asRelativePath(uri, false))
+    if (paths.some((file) => this.patterns.some((pattern) => matchesPattern(file, pattern)))) return this.schedule()
+    const types = await Promise.all(
+      files.map((uri) =>
+        Promise.resolve(vscode.workspace.fs.stat(uri)).then(
+          (stat) => stat.type,
+          // The entry can be gone again before the stat runs; it cannot match then.
+          () => vscode.FileType.Unknown,
+        ),
+      ),
+    )
+    if (this.disposed) return
+    if (types.some((type) => type & vscode.FileType.Directory)) this.schedule()
   }
 
   private get ctx(): MarketplaceActionContext {
@@ -90,13 +111,12 @@ export class MarketplaceNotifier implements vscode.Disposable {
 
   private async scan(): Promise<void> {
     const generation = ++this.generation
-    const data = await fetchMarketplaceData(this.ctx, this.project(), this.directory(), this.roots()).catch(
-      (err: unknown) => {
-        console.warn("[Kilo New] Marketplace suggestion scan failed:", err)
-        return undefined
-      },
-    )
+    const data = await fetchMarketplaceData(this.ctx, this.project(), this.directory()).catch((err: unknown) => {
+      console.warn("[Kilo New] Marketplace suggestion scan failed:", err)
+      return undefined
+    })
     if (!data || generation !== this.generation) return
+    this.patterns = filenamePatterns(data.marketplaceItems)
 
     const installed = new Set([
       ...Object.keys(data.marketplaceInstalledMetadata.project),

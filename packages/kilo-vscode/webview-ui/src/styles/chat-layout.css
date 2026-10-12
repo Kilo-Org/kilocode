@@ -178,7 +178,10 @@
 .scroll-to-bottom-button {
   position: absolute;
   bottom: 12px;
-  right: 12px;
+  /* Clear the prompt rail's right-edge column (8px edge + 16px width + 4px gap).
+     A tick over this button would intercept the click and could open the rail
+     when the pointer rests here after scrolling to the bottom. */
+  right: 28px;
   width: 32px;
   height: 32px;
   border-radius: 50%;
@@ -314,9 +317,10 @@
 }
 
 /* The hidden state stays mounted, so the spinner and the label shimmer would
-   otherwise animate for the whole idle session. */
+   otherwise animate for the whole idle session. The spinner sets its animation
+   inline, which resets the play state to running, so this has to be important. */
 .session-dock-state:not([data-active]) .working-indicator * {
-  animation-play-state: paused;
+  animation-play-state: paused !important;
 }
 
 /* Sized to its text rather than stretched, so the spinner, the label, and the

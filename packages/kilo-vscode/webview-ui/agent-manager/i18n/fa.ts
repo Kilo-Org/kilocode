@@ -31,7 +31,6 @@ export const dict = {
   "agentManager.local": "محلی",
   "agentManager.sidebar.collapse": "بستن نوار کناری",
   "agentManager.sidebar.expand": "نمایش نوار کناری",
-  "agentManager.section.worktrees": "WORKTREES",
   "agentManager.section.sessions": "جلسات",
   "agentManager.projects": "پروژه‌ها",
   "agentManager.settings.title": "Agent Manager",
@@ -44,6 +43,7 @@ export const dict = {
   "agentManager.settings.worktreePool.title": "آماده‌سازی از پیش worktreeها",
   "agentManager.settings.worktreePool.description":
     "یک worktree آماده را در پس‌زمینه فراهم کنید تا نشست‌های جدید Agent Manager سریع‌تر شروع شوند. برای هر پروژه باز، یک checkout روی دیسک فضای اضافی مصرف می‌کند.",
+  "agentManager.hints.switchSession": "تغییر نشست",
   "agentManager.settings.project.title": "پروژه",
   "agentManager.settings.project.description":
     "repository موردنظر را انتخاب کنید تا تنظیمات worktree آن را ویرایش کنید.",
@@ -72,12 +72,9 @@ export const dict = {
   "agentManager.project.settings": "تنظیمات پروژه",
   "agentManager.project.restricted":
     "فضای کاری فعلی VS Code شما پوشه اصلی یا ریشه سیستم فایل است. برای استفاده از Agent Manager، یک پوشه پروژه مشخص را در VS Code باز کنید.",
-  "agentManager.notGitRepo": "این یک مخزن git نیست",
-
   "agentManager.updateBase.title": "به‌روزرسانی از پایه",
   "agentManager.updateBase.selectWorktree": "ابتدا یک worktree تحت مدیریت انتخاب کنید.",
 
-  "agentManager.worktree.settings": "تنظیمات Worktree",
   "agentManager.worktree.new": "Worktree جدید",
   "agentManager.worktree.setupScript": "اسکریپت راه‌اندازی Worktree",
   "agentManager.worktree.delete": "حذف Worktree",
@@ -93,6 +90,9 @@ export const dict = {
   "agentManager.worktree.copyPath": "کپی مسیر",
   "agentManager.worktree.openInVscode": "باز کردن در VS Code",
   "agentManager.worktree.rename": "تغییر نام",
+  "agentManager.worktree.pin": "سنجاق کردن",
+  "agentManager.worktree.unpin": "برداشتن سنجاق",
+  "agentManager.worktree.pinned": "سنجاق‌شده",
   "agentManager.worktree.newSection": "بخش جدید",
   "agentManager.worktree.ungrouped": "بدون گروه",
   "agentManager.section.rename": "تغییر نام بخش",
@@ -106,6 +106,7 @@ export const dict = {
   "agentManager.hoverCard.worktree": "Worktree",
   "agentManager.hoverCard.base": "پایه",
   "agentManager.hoverCard.sessions": "جلسات",
+  "agentManager.hoverCard.section": "بخش",
   "agentManager.hoverCard.files": "فایل‌ها",
   "agentManager.hoverCard.changes": "تغییرات",
   "agentManager.hoverCard.commits": "کامیت‌ها",
@@ -188,13 +189,6 @@ export const dict = {
   "agentManager.shortcuts.cycleAgentMode": "حالت عامل بعدی",
   "agentManager.shortcuts.cyclePreviousAgentMode": "حالت عامل قبلی",
   "agentManager.shortcuts.showShortcuts": "نمایش میانبرهای صفحه‌کلید",
-
-  "agentManager.dialog.removeStaleWorktree.title": "حذف Worktree قدیمی",
-  "agentManager.dialog.removeStaleWorktree.messagePre": "حذف Worktree قدیمی ",
-  "agentManager.dialog.removeStaleWorktree.messagePost":
-    "؟ این عملیات فقط نگاشت Agent Manager را حذف می‌کند و فایل‌های روی دیسک دست‌نخورده باقی می‌مانند.",
-  "agentManager.dialog.removeStaleWorktree.cancel": "لغو",
-  "agentManager.dialog.removeStaleWorktree.confirm": "حذف Worktree قدیمی",
 
   "agentManager.dialog.project.select": "انتخاب پروژه",
   "agentManager.dialog.project.missing": "مخزن یافت نشد",
@@ -456,6 +450,7 @@ export const dict = {
   "agentManager.browser.url": "نشانی",
   "agentManager.browser.urlPlaceholder": "http://localhost:3000",
   "agentManager.browser.open": "باز کردن",
+  "agentManager.browser.openExternal": "باز کردن در مرورگر خارجی",
   "agentManager.browser.refresh": "بازخوانی مرورگر",
   "agentManager.browser.back": "بازگشت",
   "agentManager.browser.forward": "جلو",

@@ -12,12 +12,17 @@ import ai.kilocode.rpc.dto.AgentDetailDto
 import ai.kilocode.jetbrains.api.model.AgentBuilderSaveRequest
 import ai.kilocode.rpc.dto.CommandFileDto
 import ai.kilocode.rpc.dto.ConfigPatchDto
+import ai.kilocode.rpc.dto.McpAuthEventDto
+import ai.kilocode.rpc.dto.McpAuthResultDto
 import ai.kilocode.rpc.dto.McpConfigDto
 import ai.kilocode.rpc.dto.McpServerConfigDto
 import ai.kilocode.rpc.dto.PermissionRuleItemDto
 import ai.kilocode.rpc.dto.SkillDto
 import com.intellij.openapi.components.service
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.channels.trySendBlocking
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.channelFlow
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -40,6 +45,15 @@ class KiloAgentBehaviorRpcApiImpl(private val backend: KiloBackendAppService? = 
         private val saved = ConcurrentHashMap<String, SavedMcp>()
         private val port = AtomicInteger(-1)
         private val extensions = setOf("md", "markdown", "txt", "text", "html", "htm")
+        private const val BROWSER_OPEN_FAILED = "mcp.browser.open.failed"
+        private const val AUTH_URL = "mcp.auth.url"
+
+        /**
+         * Asks the CLI to hand the authorization URL back over SSE instead of opening a browser
+         * itself. In split mode the CLI runs on the host while the user sits at the client, so only
+         * the client can open a usable browser.
+         */
+        private val AUTH_EXTERNAL = JsonObject(mapOf("external" to JsonPrimitive(true)))
     }
 
     private val app: KiloBackendAppService get() = backend ?: service()
@@ -203,12 +217,8 @@ class KiloAgentBehaviorRpcApiImpl(private val backend: KiloBackendAppService? = 
 
     override suspend fun saveMcp(directory: String, name: String, scope: String, config: McpConfigDto?): Boolean {
         app.requireReady()
-        val patch = ConfigPatchDto(mcp = mapOf(name to config))
-        if (scope == "workspace") {
-            patchConfig("/config?directory=${encode(directory)}", KiloCliDataParser.buildConfigPatch(patch))
-        } else {
-            app.updateConfig(patch)
-        }
+        val patch = KiloCliDataParser.buildMcpOverlayPatch(name, scope, config)
+        patchConfig("/config/overlay?directory=${encode(directory)}", patch)
         saveMcpOverride(directory, name, scope, config)
         return true
     }
@@ -217,8 +227,38 @@ class KiloAgentBehaviorRpcApiImpl(private val backend: KiloBackendAppService? = 
 
     override suspend fun mcpDisconnect(directory: String, name: String): Boolean = post(directory, "/mcp/${encodePath(name)}/disconnect")
 
-    override suspend fun mcpAuthenticate(directory: String, name: String): Boolean =
-        post(directory, "/mcp/${encodePath(name)}/auth/authenticate")
+    override suspend fun mcpAuthenticate(directory: String, name: String): McpAuthResultDto {
+        val reply = send(directory, "/mcp/${encodePath(name)}/auth/authenticate", "POST", AUTH_EXTERNAL)
+        val result = KiloCliDataParser.parseMcpAuthResult(reply.code, reply.body)
+        LOG.info("MCP auth dir=$directory name=$name http=${reply.code} status=${result.status}")
+        return result
+    }
+
+    override suspend fun mcpAuthCancel(directory: String, name: String): Boolean {
+        val reply = send(directory, "/mcp/${encodePath(name)}/auth/cancel", "POST")
+        LOG.info("MCP auth cancel dir=$directory name=$name http=${reply.code}")
+        return reply.code in 200..299
+    }
+
+    override suspend fun mcpAuthRemove(directory: String, name: String): Boolean {
+        val reply = send(directory, "/mcp/${encodePath(name)}/auth", "DELETE")
+        LOG.info("MCP auth remove dir=$directory name=$name http=${reply.code}")
+        return reply.code in 200..299
+    }
+
+    override suspend fun mcpAuthEvents(): Flow<McpAuthEventDto> = channelFlow {
+        app.events.collect { event ->
+            val type = if (event.type == AUTH_URL || event.type == BROWSER_OPEN_FAILED) {
+                event.type
+            } else {
+                KiloCliDataParser.extractEventType(event.data)
+            }
+            if (type != AUTH_URL && type != BROWSER_OPEN_FAILED) return@collect
+            val dto = KiloCliDataParser.parseMcpAuthEvent(event.data, external = type == AUTH_URL) ?: return@collect
+            LOG.info("MCP auth url event name=${dto.name} type=$type")
+            trySendBlocking(dto)
+        }
+    }
 
     override suspend fun claudeCodeCompat(): Boolean = KiloClaudeCompatSettings.get()
 
@@ -417,6 +457,26 @@ class KiloAgentBehaviorRpcApiImpl(private val backend: KiloBackendAppService? = 
         }
     }
 
+    private data class Reply(val code: Int, val body: String)
+
+    private suspend fun send(
+        directory: String,
+        path: String,
+        method: String,
+        body: JsonObject = JsonObject(emptyMap()),
+    ): Reply = withContext(Dispatchers.IO) {
+        val http = app.http ?: throw IllegalStateException("Kilo HTTP client is unavailable")
+        val url = "http://127.0.0.1:${app.port}$path?directory=${encode(directory)}"
+        val builder = Request.Builder().url(url)
+        when (method) {
+            "DELETE" -> builder.delete()
+            else -> builder.post(body.toString().toRequestBody(JSON))
+        }
+        http.newCall(builder.build()).execute().use { response ->
+            Reply(response.code, response.body?.string().orEmpty())
+        }
+    }
+
     private suspend fun request(directory: String, path: String, body: JsonObject?): String = withContext(Dispatchers.IO) {
         val http = app.http ?: throw IllegalStateException("Kilo HTTP client is unavailable")
         val url = "http://127.0.0.1:${app.port}$path?directory=${encode(directory)}"
@@ -443,13 +503,27 @@ class KiloAgentBehaviorRpcApiImpl(private val backend: KiloBackendAppService? = 
         }
     }
 
+    /**
+     * Overlays the just-saved MCP entries on top of what the CLI currently reports, so a save is
+     * visible before the CLI reload lands.
+     *
+     * The overlay never carries a client secret (see [saveMcpOverride]); the secret is taken back
+     * from the authoritative config in [items] so the edit dialog still prefills it.
+     */
     private fun withSavedMcp(directory: String, items: Map<String, McpServerConfigDto>): Map<String, McpServerConfigDto> = buildMap {
         syncSaved()
         putAll(items)
         for (item in saved.values) {
             if (item.scope == "workspace" && item.directory != directory) continue
             val cfg = item.config ?: continue
-            put(item.name, McpServerConfigDto(cfg, item.scope))
+            val secret = items[item.name]?.config?.oauth?.clientSecret
+            val oauth = cfg.oauth
+            val merged = if (oauth == null || oauth.clientSecret != null || secret == null) {
+                cfg
+            } else {
+                cfg.copy(oauth = oauth.copy(clientSecret = secret))
+            }
+            put(item.name, McpServerConfigDto(merged, item.scope))
         }
     }
 
@@ -462,11 +536,15 @@ class KiloAgentBehaviorRpcApiImpl(private val backend: KiloBackendAppService? = 
             saved.remove(key)
             return
         }
+        // The overlay only has to make the save visible until the CLI reload lands, so the client
+        // secret is dropped rather than held in a long-lived map. The config the CLI reports back is
+        // the one source for it, and `withSavedMcp` reads it from there.
+        val oauth = config.oauth
         saved[key] = SavedMcp(
             directory = if (scope == "workspace") directory else "",
             name = name,
             scope = scope,
-            config = config,
+            config = if (oauth?.clientSecret == null) config else config.copy(oauth = oauth.copy(clientSecret = null)),
         )
     }
 

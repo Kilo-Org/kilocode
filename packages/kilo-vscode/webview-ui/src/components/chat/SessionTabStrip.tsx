@@ -4,7 +4,8 @@ import { For, Show, createMemo, createSignal, type Component, type JSX } from "s
 import { useLanguage } from "../../context/language"
 import { useLocalTabs } from "../../context/local-tabs"
 import { useSession } from "../../context/session"
-import { isPendingTab } from "../../utils/local-tabs"
+import { adjacentTabHint, isPendingTab } from "../../utils/local-tabs"
+import { useConfig } from "../../context/config"
 import { useTabScroll } from "../../utils/tab-scroll"
 import { focusPrompt, focusSelectedTab, focusTabElement, handleTabKey } from "../../utils/tab-navigation"
 import { setTabWidths } from "../../utils/tab-widths"
@@ -21,6 +22,7 @@ export const SessionTabStrip: Component = () => {
   const session = useSession()
   const language = useLanguage()
   const vscode = useVSCode()
+  const config = useConfig()
   const [dragging, setDragging] = createSignal<string>()
   const [announcement, setAnnouncement] = createSignal("")
   if (!tabs) return null
@@ -162,6 +164,7 @@ export const SessionTabStrip: Component = () => {
                           pinnedLabel={language.t("agentManager.tab.pinned")}
                           state={state(id)}
                           stateLabel={language.t(label(state(id)))}
+                          keybind={adjacentTabHint(tabs.display(), tabs.active(), id, config.shortcuts().bindings)}
                           closeTitle={language.t("common.closeTab")}
                           closeLabel={language.t("common.closeTab")}
                           role="tab"
@@ -173,6 +176,7 @@ export const SessionTabStrip: Component = () => {
                           onMiddleClick={(event) => middle(id, event)}
                           onKeyDown={(event) => key(id, event)}
                           onClose={() => close(id)}
+                          onTogglePin={isPendingTab(id) ? undefined : () => tabs.togglePinned(id)}
                         />
                       </SessionTabMenu>
                     </SortableTabContainer>

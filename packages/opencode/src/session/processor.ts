@@ -1,6 +1,7 @@
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { PermissionV1 } from "@opencode-ai/core/v1/permission"
 import { Image } from "@/image/image"
+import { KiloAttachment } from "@/kilocode/session/attachment" // kilocode_change
 import { SessionV1 } from "@opencode-ai/core/v1/session"
 import { Cause, Deferred, Effect, Exit, Layer, Context, Scope, Schema } from "effect"
 import * as Stream from "effect/Stream"
@@ -547,7 +548,7 @@ const layer = Layer.effect(
             // existing message-v2 filter already strips them from model context.
             const skipNormalization = value.name === "send_file"
             const normalized = yield* Effect.forEach(rawOutput.attachments ?? [], (attachment) =>
-              attachment.mime.startsWith("image/") && !skipNormalization
+              KiloAttachment.classify(attachment.mime) === "raster" && !skipNormalization
                 ? image.normalize(attachment).pipe(
                     Effect.catchIf(
                       (error) => error instanceof Image.ResizerUnavailableError,
@@ -918,7 +919,10 @@ const layer = Layer.effect(
             return
           }
           ctx.needsCompaction = true
-          yield* events.publish(Session.Event.Error, { sessionID: ctx.sessionID, error })
+          // kilocode_change start - let compaction publish overflow only after recovery is exhausted
+          if (!ctx.assistantMessage.summary)
+            yield* events.publish(Session.Event.Error, { sessionID: ctx.sessionID, error })
+          // kilocode_change end
           return
         }
         ctx.assistantMessage.error = error
@@ -1013,6 +1017,7 @@ const layer = Layer.effect(
                 (cause) => !Cause.hasInterruptsOnly(cause),
                 (cause) => Effect.fail(Cause.squash(cause)),
               ),
+              Effect.tapError(() => Effect.forEach(Object.keys(ctx.reasoningMap), finishReasoning)), // kilocode_change - close failed-attempt reasoning before retry resets tracking
               Effect.retry(
                 SessionRetry.policy({
                   provider: input.model.providerID,

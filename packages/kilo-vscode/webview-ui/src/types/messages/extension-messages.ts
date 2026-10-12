@@ -19,7 +19,7 @@ import type { AgentManagerSidebarTarget } from "./webview-messages"
 import type { PermissionRequest } from "./permissions"
 import type { AnacondaDesktopExtensionMessage } from "../../../../src/shared/anaconda-desktop-messages"
 import type { BrowserFeedbackData, BrowserReference } from "../../../../src/shared/browser-feedback"
-import type { BrowserFrame } from "../../../../src/shared/browser-stream"
+import type { BrowserCursor, BrowserFrame } from "../../../../src/shared/browser-stream"
 import type { CodeContext } from "../../../../src/shared/code-context"
 import type { PRMergeResult, PRReviewResult } from "../../../../src/shared/pr-comment-actions"
 
@@ -294,6 +294,7 @@ export interface MessageCreatedMessage {
 
 export interface SessionsLoadedMessage {
   type: "sessionsLoaded"
+  projectId?: string
   sessions: SessionInfo[]
   preserveSessionIds?: string[]
   append?: boolean
@@ -464,6 +465,8 @@ export interface NavigateMessage {
   type: "navigate"
   view: "newTask" | "marketplace" | "history" | "profile" | "settings" | "subAgentViewer"
   tab?: string
+  subtab?: string
+  focus?: string
   projectId?: string
 }
 
@@ -516,6 +519,9 @@ export interface ChatSettingsLoadedMessage {
   type: "chatSettingsLoaded"
   settings: {
     shiftTabCyclesVariant: boolean
+    browserAutomation: boolean
+    agentManagerBrowserOpenLinksIn: "external" | "integrated"
+    workspaceTrusted: boolean
   }
 }
 
@@ -548,6 +554,8 @@ export interface ProvidersLoadedMessage {
   defaultSelection: ModelSelection
   authMethods: Record<string, ProviderAuthMethod[]>
   authStates: Record<string, ProviderAuthState>
+  /** The organization's Kilo catalog failed to load, so Kilo has no models to pick. */
+  kiloUnavailable?: boolean
 }
 
 export interface AgentsLoadedMessage {
@@ -736,7 +744,6 @@ export interface ClaudeCompatSettingLoadedMessage {
 
 export interface ExtensionSettings {
   maxCost?: number
-  multiProject?: boolean
   claudeMigration?: boolean
   conversationPromptHistory?: boolean
   [key: string]: unknown
@@ -861,6 +868,19 @@ export interface AutoApprovalReasonSettingLoadedMessage {
 export interface PushFixesSettingLoadedMessage {
   type: "pushFixesSettingLoaded"
   enabled: boolean
+}
+
+export interface ShortcutHintsSettingLoadedMessage {
+  type: "shortcutHintsSettingLoaded"
+  visible: boolean
+}
+
+/** Shortcut labels (user keybindings applied) and editor state for prompt hints. */
+export interface ShortcutContextMessage {
+  type: "shortcutContext"
+  bindings: Record<string, string>
+  /** The active text editor has selected text. */
+  selection: boolean
 }
 
 export interface WorkStyleLoadedMessage {
@@ -991,12 +1011,12 @@ export interface AgentProjectSnapshot {
   expanded: boolean
   initialized: boolean
   missing: boolean
+  avatar?: string
 }
 
 // Project catalog push from extension to webview
 export interface AgentManagerProjectsMessage {
   type: "agentManager.projects"
-  multiProject: boolean
   projects: AgentProjectSnapshot[]
 }
 
@@ -1182,13 +1202,6 @@ export interface ModelSelectorExpandedLoadedMessage {
 export interface FavoritesLoadedMessage {
   type: "favoritesLoaded"
   favorites: ModelSelection[]
-}
-
-// Preferred and per-mode model selections loaded from persisted state (extension → webview)
-export interface ModelSelectionsLoadedMessage {
-  type: "modelSelectionsLoaded"
-  selections: Record<string, ModelSelection>
-  preferred?: ModelSelection & { variant?: string }
 }
 
 export interface AgentManagerBranchesMessage {
@@ -1517,6 +1530,8 @@ export interface MarketplaceInstallResultMessage {
   error?: string
   filePath?: string
   filePaths?: string[]
+  /** True when the installed MCP server reports `needs_auth` right after install (success only). */
+  needsAuth?: boolean
 }
 
 export interface OpenInstallModalMessage {
@@ -1586,6 +1601,63 @@ export interface McpStatusLoadedMessage {
   status: Record<string, McpStatusEntry>
 }
 
+/** The status tags an MCP sign-in attempt can resolve to: the CLI's `McpStatus` tags, plus client-synthesized `cancelled`/`timeout` and HTTP-derived `unsupported`/`not_found`. */
+export type McpAuthStatus =
+  | "connected"
+  | "failed"
+  | "cancelled"
+  | "timeout"
+  | "unsupported"
+  | "not_found"
+  | "disabled"
+  | "needs_auth"
+  | "needs_client_registration"
+
+export interface McpAuthStateMessage {
+  type: "mcpAuthState"
+  directory: string
+  needsAuth: string[]
+  busy: string[]
+}
+
+export interface McpAuthResultMessage {
+  type: "mcpAuthResult"
+  name: string
+  status: McpAuthStatus
+  error?: string
+}
+
+export interface McpBundle {
+  id: string
+  scope: "project" | "global"
+  skills: string[]
+}
+
+export interface McpBundlesMessage {
+  type: "mcpBundles"
+  bundles: McpBundle[]
+}
+
+export interface McpRemovedMessage {
+  type: "mcpRemoved"
+  name: string
+}
+
+export interface McpInstalledMessage {
+  type: "mcpInstalled"
+  name: string
+}
+
+export interface McpRemovalStateMessage {
+  type: "mcpRemovalState"
+  name: string
+  removing: boolean
+}
+
+export interface AgentBehaviourInvalidatedMessage {
+  type: "agentBehaviourInvalidated"
+}
+
 // Continue in Worktree: progress updates (extension → webview)
 export interface ContinueInWorktreeProgressMessage {
   type: "continueInWorktreeProgress"
@@ -1636,6 +1708,33 @@ export interface AgentManagerBrowserStateMessage {
   forward?: boolean
 }
 
+/** Sent once per editor-tab browser panel with its bound session and feature flag. */
+export interface BrowserTabScopeMessage {
+  type: "browserTab.scope"
+  sessionId: string
+  browserAutomation: boolean
+}
+
+export type BrowserTabStateMessage = Omit<AgentManagerBrowserStateMessage, "type"> & { type: "browserTab.state" }
+
+export type BrowserTabInspectionMessage = Omit<AgentManagerBrowserInspectionMessage, "type"> & {
+  type: "browserTab.inspection"
+}
+
+export type BrowserTabDevtoolsMessage = Omit<AgentManagerBrowserDevtoolsMessage, "type"> & {
+  type: "browserTab.devtools"
+}
+
+export interface BrowserTabFrameMessage extends BrowserFrame {
+  type: "browserTab.frame"
+  sessionId: string
+}
+
+interface BrowserTabCursorMessage extends BrowserCursor {
+  type: "browserTab.cursor"
+  sessionId: string
+}
+
 export interface AgentManagerBrowserInspectionMessage {
   type: "agentManager.browserInspection"
   error?: string
@@ -1666,6 +1765,12 @@ interface AgentManagerBrowserFrameMessage extends BrowserFrame {
   sessionId: string
 }
 
+interface AgentManagerBrowserCursorMessage extends BrowserCursor {
+  type: "agentManager.browserCursor"
+  projectId?: string
+  sessionId: string
+}
+
 export interface AgentManagerBrowserDevtoolsMessage {
   type: "agentManager.browserDevtools"
   browserId: string
@@ -1692,6 +1797,13 @@ export type ExtensionMessage =
   | AgentManagerBrowserInspectionMessage
   | AgentManagerBrowserDevtoolsMessage
   | AgentManagerBrowserFrameMessage
+  | AgentManagerBrowserCursorMessage
+  | BrowserTabScopeMessage
+  | BrowserTabStateMessage
+  | BrowserTabInspectionMessage
+  | BrowserTabDevtoolsMessage
+  | BrowserTabFrameMessage
+  | BrowserTabCursorMessage
   | ReadyMessage
   | FontSizeChangedMessage
   | GitStatusMessage
@@ -1781,6 +1893,8 @@ export type ExtensionMessage =
   | ThroughputSettingLoadedMessage
   | AutoApprovalReasonSettingLoadedMessage
   | PushFixesSettingLoadedMessage
+  | ShortcutHintsSettingLoadedMessage
+  | ShortcutContextMessage
   | WorkStyleLoadedMessage
   | WorkStyleAppliedMessage
   | WorkStyleApplyFailedMessage
@@ -1883,11 +1997,17 @@ export type ExtensionMessage =
   | RecentsLoadedMessage
   | ModelSelectorExpandedLoadedMessage
   | FavoritesLoadedMessage
-  | ModelSelectionsLoadedMessage
   | LanguageChangedMessage
   | ContinueInWorktreeProgressMessage
   | WorktreeStatsLoadedMessage
   | McpStatusLoadedMessage
+  | McpAuthStateMessage
+  | McpAuthResultMessage
+  | McpBundlesMessage
+  | McpRemovedMessage
+  | McpInstalledMessage
+  | McpRemovalStateMessage
+  | AgentBehaviourInvalidatedMessage
   | ClearPendingPromptsMessage
   | ExtensionDataReadyMessage
   | TelemetryStateMessage

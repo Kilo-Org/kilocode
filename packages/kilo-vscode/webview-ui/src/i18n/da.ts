@@ -60,6 +60,7 @@ export const dict = {
   ...anacondaDesktopDict,
   ...cloudProviderDict,
   "task.swarm.title": "Tavle",
+  "task.swarm.open": "Åbn tavle",
   "task.swarm.refresh": "Opdater",
   "task.swarm.reset": "Nulstil tavle",
   "task.swarm.resetTitle": "Nulstil denne tavle?",
@@ -199,6 +200,14 @@ export const dict = {
   "prompt.worktrees.title": "Worktrees",
   "prompt.worktrees.search": "Søg i Worktrees",
   "prompt.thinking.tooltip": "Ræsonnementsindsats",
+  "prompt.shortcutHint.addSelection": "for at tilføje markeringen",
+  "prompt.shortcutHint.waiting": "for at svare en ventende session",
+  "prompt.shortcutHint.type": "for at skrive",
+  "prompt.shortcutHint.sessions": "for at skifte session",
+  "prompt.shortcutHint.stop": "for at stoppe",
+  "prompt.shortcutHint.changes": "for at gennemse ændringer",
+  "prompt.shortcutHint.pr": "for at åbne PR'en",
+  "prompt.shortcutHint.mode": "Næste tilstand",
   "prompt.action.send": "Send",
   "prompt.action.continue": "Fortsæt",
   "prompt.action.send.blocked": "Besvar eller afvis det afventende spørgsmål først",
@@ -207,7 +216,12 @@ export const dict = {
   "prompt.action.stop.background": "Stop hovedagenten. Baggrundsagenter kører videre.",
   "prompt.agents.show": "Vis baggrundsagenter",
   "prompt.action.enhance": "Forbedr prompt",
+  "prompt.action.more": "Flere handlinger",
   "prompt.paste.expand": "Klik for at udvide den indsatte tekst",
+  "prompt.issues.title": "Sessionsproblemer",
+  "prompt.mcp.provider": "{{name}} MCP",
+  "prompt.mcp.openSettings": "Åbn i Indstillinger",
+  "prompt.mcp.signIn.busy": "Logger ind…",
   "prompt.action.autoApprove.enable": "Aktiver automatisk godkendelse",
   "prompt.action.autoApprove.disable": "Deaktiver automatisk godkendelse",
   "prompt.action.autoApprove.enabled":
@@ -543,6 +557,9 @@ export const dict = {
   "provider.custom.error.duplicate": "Duplikat",
   "settings.openLocalConfig": "Lokal konfig",
   "settings.openGlobalConfig": "Global konfig",
+  "settings.search.placeholder": "Søg i indstillinger",
+  "settings.search.noResults": "Ingen indstillinger fundet",
+  "settings.search.clear": "Ryd søgning",
   "settings.config.scope.local": "Lokal",
   "settings.config.scope.global": "Global",
   "settings.config.status.loaded": "indlæst",
@@ -603,6 +620,7 @@ export const dict = {
   "session.tabs.switcher.pending": "Ny",
   "session.tabs.switcher.busy": "Arbejder",
   "session.tabs.switcher.scheduled": "Planlagt",
+  "session.tabs.pinHint": "Skift+klik for at fastgøre eller frigøre",
   "session.tab.local": "Lokal",
   "session.tab.cloud": "Sky",
   "session.tab.worktree": "Arbejdstræ",
@@ -783,11 +801,13 @@ export const dict = {
   "ui.sessionTurn.status.consideringNextSteps": "Overvejer næste trin...",
 
   "dialog.model.noProviders": "Ingen udbydere",
+  "dialog.model.unavailable": "Kilo-modeller er ikke tilgængelige",
 
   "prompt.placeholder.connecting": "Opretter forbindelse til server...",
   "prompt.placeholder.error": "Forbindelse mislykkedes. Tjek outputpanelet eller genstart udvidelsen.",
   "prompt.placeholder.default":
     "Skriv en besked, @ for at nævne filer... (Enter for at sende, Shift+Enter for ny linje)",
+  "prompt.placeholder.hint": "Skriv en besked, @ for at nævne filer... ({{key}} {{action}})",
 
   "context.usage.sessionCost": "Sessionsomkostning",
   "context.usage.olderSessions": "{{count}} ældre sessioner",
@@ -939,15 +959,12 @@ export const dict = {
   "settings.sandboxing.writablePaths.title": "Yderligere skrivbare stier",
   "settings.sandboxing.writablePaths.description":
     "Yderligere filsystemstier, som sandkassen tillader skrivning til (f.eks. /tmp, /var/log). Disse flettes med de standardskrivbare stier, når sandkassen er aktiv.",
-  "settings.experimental.multiProject.title": "Multi-projekt Agent Manager",
   "settings.experimental.conversationPromptHistory.title": "Prompthistorik pr. samtale",
   "settings.experimental.conversationPromptHistory.description":
     "Hold prompthistorikken (ArrowUp/ArrowDown) adskilt for hver samtale i stedet for at dele én historik på tværs af alle samtaler.",
   "settings.experimental.claudeMigration.title": "Claude Code-migrering",
   "settings.experimental.claudeMigration.description":
     "Importér understøttede globale CLAUDE.md-instruktioner, enkle færdigheder og deaktiverede MCP-definitioner én gang. Originale Claude-filer forbliver uændrede; genstart backend efter aktivering.",
-  "settings.experimental.multiProject.description":
-    "Aktivér styring af sessioner og worktrees på tværs af flere repositories i Agent Manager. Det nuværende workspace-repository er altid standardprojektet.",
   "settings.experimental.mcpTimeout.title": "MCP-timeout (ms)",
   "settings.experimental.mcpTimeout.description": "Timeout for MCP-serveranmodninger i millisekunder",
   "settings.experimental.remote.title": "Remote-styring",
@@ -1035,12 +1052,31 @@ export const dict = {
   "settings.agentBehaviour.removeMcp.title": "Fjern MCP-server",
   "settings.agentBehaviour.removeMcp.confirm":
     'Vil du fjerne MCP-serveren "{{name}}"? Dette vil fjerne den fra din konfiguration.',
+  "settings.agentBehaviour.removeMcp.bundleConfirm":
+    'Fjern MCP-serveren "{{name}}" og dens tilhørende færdigheder? Dette fjerner både serveren og alle færdigheder, der ejes af denne Marketplace-installation.',
   "settings.agentBehaviour.removeMcp.button": "Fjern",
   "settings.agentBehaviour.editMcp": "Rediger MCP-server",
   "settings.agentBehaviour.editMcp.transportLocal": "Lokal server (stdio-transport)",
   "settings.agentBehaviour.editMcp.transportRemote": "Fjernserver (SSE/HTTP-transport)",
   "settings.agentBehaviour.editMcp.env": "Miljøvariabler",
   "settings.agentBehaviour.editMcp.env.help": "Variabler der sendes til MCP-serverprocessen.",
+  "settings.agentBehaviour.editMcp.oauth": "OAuth",
+  "settings.agentBehaviour.editMcp.oauth.help":
+    "Lad stå på Automatisk, med mindre serveren kræver en forudregistreret klient. En klienthemmelighed gemmes i din Kilo-konfigurationsfil.",
+  "settings.agentBehaviour.editMcp.oauth.mode": "Tilstand",
+  "settings.agentBehaviour.editMcp.oauth.mode.automatic": "Automatisk",
+  "settings.agentBehaviour.editMcp.oauth.mode.disabled": "Deaktiveret",
+  "settings.agentBehaviour.editMcp.oauth.mode.custom": "Tilpasset klient",
+  "settings.agentBehaviour.editMcp.oauth.clientId": "Klient-ID",
+  "settings.agentBehaviour.editMcp.oauth.clientSecret": "Klienthemmelighed",
+  "settings.agentBehaviour.editMcp.oauth.scope": "Omfang",
+  "settings.agentBehaviour.editMcp.oauth.callbackPort": "Callback-port",
+  "settings.agentBehaviour.editMcp.oauth.redirectUri": "Omdirigerings-URI",
+  "settings.agentBehaviour.editMcp.oauth.redirectUri.help":
+    "Standard er http://127.0.0.1:19876/mcp/oauth/callback og tilsidesætter callback-porten.",
+  "settings.agentBehaviour.editMcp.oauth.port.invalid": "Angiv en port mellem 1 og 65535.",
+  "settings.agentBehaviour.editMcp.oauth.secret.invalid": "En klienthemmelighed kræver et klient-ID.",
+  "settings.agentBehaviour.editMcp.oauth.redirectUri.invalid": "Angiv en gyldig omdirigerings-URI.",
   "settings.agentBehaviour.addMcp.command": "Kommando",
   "settings.agentBehaviour.addMcp.command.placeholder": "e.g. npx",
   "settings.agentBehaviour.addMcp.args": "Argumenter",
@@ -1053,6 +1089,8 @@ export const dict = {
   "settings.agentBehaviour.removeSkill.title": "Fjern færdighed",
   "settings.agentBehaviour.removeSkill.confirm":
     'Vil du fjerne færdigheden "{{name}}"? Dette vil slette færdighedsfilerne fra disken.',
+  "settings.agentBehaviour.removeSkill.bundleConfirm":
+    'Fjern færdigheden "{{name}}"? Dette afinstallerer også {{mcp}} MCP-serveren og alle tilhørende færdigheder fra samme Marketplace-installation.',
   "settings.agentBehaviour.removeSkill.button": "Fjern",
   "settings.agentBehaviour.rules.description":
     "Regler er instruktionsfiler, der styrer agentens adfærd. De inkluderes i systemprompten for hver samtale. Tilføj filstier nedenfor for at inkludere yderligere regler.",
@@ -1068,6 +1106,11 @@ export const dict = {
   "settings.agentBehaviour.mcpDetail.command": "Kommando",
   "settings.agentBehaviour.mcpDetail.args": "Argumenter",
   "settings.agentBehaviour.mcpDetail.env": "Miljø",
+  "settings.agentBehaviour.mcpSignIn.cancel": "Annuller login",
+  "settings.agentBehaviour.mcpRemoving": "Fjerner…",
+  "settings.agentBehaviour.mcpResetAuth": "Nulstil login",
+  "settings.agentBehaviour.mcpResetAuth.title": "Nulstil MCP-login",
+  "settings.agentBehaviour.mcpResetAuth.confirm": 'Fjern det gemte login for "{{name}}"? Du skal logge ind igen.',
   "settings.agentBehaviour.mcpBrowseMarketplace": "Gennemse Marketplace",
   "settings.agentBehaviour.mcpEmpty":
     "Ingen MCP-servere konfigureret. Tilføj MCP-servere i kilo.jsonc, eller bed agenten om at tilføje dem.",
@@ -1241,6 +1284,9 @@ export const dict = {
   "settings.display.mcpTool.expanded": "Foldet ud",
   "settings.display.mcpTool.collapsed": "Foldet sammen",
 
+  "settings.display.shortcutHints.title": "Vis genvejstips",
+  "settings.display.shortcutHints.description":
+    "Vis den tastaturgenvej i den tomme prompt, der passer til det, du gør nu, for eksempel hvordan du tilføjer markeret kode eller vender tilbage til prompten.",
   "settings.display.tokenThroughput.title": "Vis genereringshastighed",
   "settings.display.tokenThroughput.description":
     "Vis tekstgenereringshastigheden (tokens/sec) i den seneste assistentbesked og i opgaveoverskriften. Vises som standard; deaktiver denne indstilling for at skjule den efter behov.",
@@ -1318,6 +1364,8 @@ export const dict = {
 
   "task.todos.progress": "{{done}}/{{total}} opgaver udført",
   "task.todos.allDone": "{{count}} opgaver udført",
+  "task.todos.title": "Opgaver",
+  "task.todos.done": "Alt færdigt",
   "task.backgroundAgents.running.one": "1 baggrundsagent",
   "task.backgroundAgents.running.many": "{{count}} baggrundsagenter",
   "task.backgroundAgents.open": "Åbn baggrundsagent",
@@ -1336,6 +1384,8 @@ export const dict = {
   "task.backgroundAgents.stopAll": "Stop alle ({{count}})",
   "task.backgroundAgents.finished": "Baggrundsagenter er færdige",
   "task.stop": "Stop underagent",
+  "task.open.panel": "Åbn underagent i panel",
+  "task.open.tab": "Åbn underagent i fane",
   "settings.saveBar.unsavedChanges": "Ikke-gemte ændringer",
   "settings.saveBar.discard": "Kassér",
   "settings.saveBar.save": "Gem",
@@ -1400,5 +1450,13 @@ export const dict = {
   "settings.experimental.browserAutomation.systemChrome.title": "Brug system-Chrome",
   "settings.experimental.browserAutomation.systemChrome.description":
     "Brug den installerede Google Chrome til den integrerede browser. Deaktivér kun, når en kompatibel Playwright Chromium-browser allerede er installeret.",
+  "settings.experimental.browserLinks.title": "Åbn links i",
+  "settings.experimental.browserLinks.description":
+    "Vælg, hvor web-links åbnes fra Kilo-chats. Kræver den integrerede browser.",
+  "settings.experimental.browserLinks.external": "Systembrowser",
+  "settings.experimental.browserLinks.integrated": "Integreret browser",
   "chat.search.searchingHistory": "Søger i tidligere beskeder…",
+  "browserTab.noSession":
+    "Åbn browseren fra en session for at forhåndsvise en lokal applikation eller en offentlig HTTPS-side.",
+  "browserTab.disabled": "Den integrerede browser er deaktiveret. Aktivér den i Kilo-indstillinger > Eksperimentel.",
 }

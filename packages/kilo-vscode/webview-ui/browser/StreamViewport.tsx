@@ -1,12 +1,15 @@
-import { createEffect, onCleanup, onMount, type Accessor, type Component } from "solid-js"
+import { createEffect, createSignal, onCleanup, onMount, type Accessor, type Component } from "solid-js"
 import {
+  CURSORS,
+  mergeWheel,
   source,
+  VIEWPORT_LIMIT,
   type BrowserFrame,
   type BrowserInteraction,
   type BrowserViewIdentity,
   type BrowserViewport,
 } from "../../src/shared/browser-stream"
-import type { BrowserScope, BrowserState, BrowserTransport } from "./types"
+import type { BrowserPosition, BrowserScope, BrowserState, BrowserTransport } from "./types"
 import { clicks, clipboard, key, modifiers, pointer, transition, typing, wheel } from "./stream-input"
 import "./stream.css"
 
@@ -15,6 +18,7 @@ type View = { scope: BrowserScope; identity: BrowserViewIdentity; viewport: Brow
 type Job = { frame: Frame; done: boolean; image?: HTMLImageElement }
 
 let revision = Date.now()
+const SETTLE = 300
 
 function same(scope: BrowserScope, value: BrowserScope) {
   return scope.sessionId === value.sessionId && scope.projectId === value.projectId
@@ -30,6 +34,12 @@ function matches(value: BrowserViewIdentity, identity: BrowserViewIdentity) {
 
 function identity(frame: BrowserViewIdentity): BrowserViewIdentity {
   return { browserId: frame.browserId, navigation: frame.navigation, revision: frame.revision }
+}
+
+function fits(view: BrowserViewport, next: Omit<BrowserViewport, "revision">) {
+  return (
+    view.width === next.width && view.height === next.height && view.scale === next.scale && view.active === next.active
+  )
 }
 
 function valid(frame: Frame) {
@@ -52,6 +62,8 @@ export const StreamViewport: Component<{
   state: Accessor<BrowserState | undefined>
   transport: BrowserTransport
   label: string
+  inspecting?: Accessor<boolean>
+  onScroll?: (position: BrowserPosition) => void
 }> = (props) => {
   let host!: HTMLDivElement
   let canvas!: HTMLCanvasElement
@@ -68,9 +80,13 @@ export const StreamViewport: Component<{
   let pid: number | undefined
   let scheduled: number | undefined
   let moving: BrowserInteraction | undefined
+  let wheeling: Extract<BrowserInteraction, { kind: "wheel" }> | undefined
+  let published = 0
+  let deferred: ReturnType<typeof setTimeout> | undefined
   const keyboard = new Map<string, Extract<BrowserInteraction, { kind: "key" }>>()
   const clicker = clicks()
   const text = typing()
+  const [cursor, update] = createSignal("default")
 
   const publish = (view: View, viewport = view.viewport) => {
     props.transport.send({
@@ -106,6 +122,7 @@ export const StreamViewport: Component<{
     keyboard.clear()
     clicker.reset()
     moving = undefined
+    wheeling = undefined
     if (scheduled !== undefined) cancelAnimationFrame(scheduled)
     scheduled = undefined
     const captured = pid
@@ -118,8 +135,10 @@ export const StreamViewport: Component<{
     props.transport.send({ type: "interact", scope: view.scope, identity: view.identity, event: { kind: "release" } })
   }
 
-  // Keep the last image on a resize of the same page, so the preview does not go blank until the next frame.
+  // Keep the last image on a resize or a new document of the same page, so the preview does not go blank until the
+  // next frame.
   const clear = (keep = false) => {
+    update("default")
     release()
     const queued = pending
     pending = undefined
@@ -130,6 +149,8 @@ export const StreamViewport: Component<{
     if (!canvas || keep) return
     canvas.width = 0
     canvas.height = 0
+    canvas.style.removeProperty("width")
+    canvas.style.removeProperty("height")
     for (const name of ["browserId", "navigation", "revision", "sequence", "sessionId", "projectId"]) {
       delete canvas.dataset[name]
     }
@@ -150,10 +171,17 @@ export const StreamViewport: Component<{
     return { scope, browserId: state.browserId, navigation, inspecting: state.inspecting }
   }
 
+  const inspecting = () => props.state()?.inspecting || props.inspecting?.()
+
+  const restrict = () => {
+    if (inspecting() && (held || moving?.kind === "pointer")) release()
+  }
+
   const measure = () => {
     const bounds = host.getBoundingClientRect()
-    const width = Math.max(0, Math.round(bounds.width))
-    const height = Math.max(0, Math.round(bounds.height))
+    // Match the host bounds, so a panel larger than the stream limit does not make the frame scale back up.
+    const width = Math.max(0, Math.min(VIEWPORT_LIMIT.width, Math.round(bounds.width)))
+    const height = Math.max(0, Math.min(VIEWPORT_LIMIT.height, Math.round(bounds.height)))
     const visible = !host.checkVisibility || host.checkVisibility({ checkOpacity: true, checkVisibilityCSS: true })
     const active = intersecting && document.visibilityState !== "hidden" && visible && width > 0 && height > 0
     return {
@@ -178,22 +206,16 @@ export const StreamViewport: Component<{
       return
     }
     const viewport = measure()
-    const unchanged =
-      previous &&
-      same(previous.scope, next.scope) &&
-      previous.identity.browserId === next.browserId &&
-      previous.identity.navigation === next.navigation
-    if (
-      unchanged &&
-      previous.viewport.width === viewport.width &&
-      previous.viewport.height === viewport.height &&
-      previous.viewport.scale === viewport.scale &&
-      previous.viewport.active === viewport.active
-    ) {
-      if (next.inspecting) release()
+    const page = previous && same(previous.scope, next.scope) && previous.identity.browserId === next.browserId
+    const unchanged = page && previous.identity.navigation === next.navigation
+    if (unchanged && fits(previous.viewport, viewport)) {
+      restrict()
       return
     }
-    clear(unchanged && viewport.active)
+    if (unchanged && hold(previous, viewport.active)) return
+    // Like a native browser, a new document of the same page keeps the last image until its first frame. Input waits
+    // for that frame, because it must reach the new document.
+    clear(page && viewport.active)
     if (previous && !unchanged) publish(previous, { ...previous.viewport, revision: ++revision, active: false })
     const version = ++revision
     current = {
@@ -203,27 +225,61 @@ export const StreamViewport: Component<{
     }
     host.dataset.active = String(viewport.active)
     host.setAttribute("aria-busy", String(viewport.active))
-    if (!unchanged || !viewport.active) textarea.blur()
+    if (!page || !viewport.active) textarea.blur()
+    published = performance.now()
     publish(current)
+  }
+
+  // Each size restarts the stream. During a continuous resize, send the next size only after the page painted the
+  // last one, so the preview follows the resize instead of waiting for it to end.
+  const hold = (view: View, active: boolean) => {
+    const wait = SETTLE - (performance.now() - published)
+    if (!view.viewport.active || !active || painted || wait <= 0) return false
+    deferred ??= setTimeout(resume, wait)
+    return true
+  }
+
+  const resume = () => {
+    clearTimeout(deferred)
+    deferred = undefined
+    sync()
   }
 
   const bound = (frame: Frame) => current && same(current.scope, frame.scope) && matches(frame, current.identity)
 
-  const ready = () => {
+  const ready = (input = true) => {
     sync()
-    if (!current?.viewport.active || !painted || !matches(painted, current.identity) || props.state()?.inspecting)
-      return
+    if (!current?.viewport.active || !painted || !matches(painted, current.identity) || (input && inspecting())) return
     return current
   }
 
   const focused = () => document.activeElement === textarea && ready()
 
   const emit = (event: BrowserInteraction) => {
-    const view = ready()
+    const view = ready(event.kind !== "wheel")
     if (!view) return false
-    held = view
+    if (event.kind !== "wheel") held = view
     props.transport.send({ type: "interact", scope: view.scope, identity: view.identity, event })
+    if (event.kind === "wheel") {
+      const bounds = canvas.getBoundingClientRect()
+      props.onScroll?.({ x: event.x, y: event.y, width: bounds.width, height: bounds.height })
+    }
     return true
+  }
+
+  // Keep the image at its page size. A resize then shows or hides the page edge, like a native browser, and does not
+  // stretch the text until the next frame.
+  const fit = (viewport: BrowserViewport) => {
+    const width = `${viewport.width}px`
+    const height = `${viewport.height}px`
+    if (canvas.style.width !== width) canvas.style.width = width
+    if (canvas.style.height !== height) canvas.style.height = height
+  }
+
+  // After a frame, send a size that waited for it, then draw the newest frame.
+  const proceed = () => {
+    if (deferred !== undefined && painted) resume()
+    drain()
   }
 
   const draw = async (job: Job, data: string) => {
@@ -242,6 +298,7 @@ export const StreamViewport: Component<{
       if (canvas.height !== frame.height) canvas.height = frame.height
       context.clearRect(0, 0, canvas.width, canvas.height)
       context.drawImage(image, 0, 0, canvas.width, canvas.height)
+      fit(current.viewport)
       painted = identity(frame)
       canvas.dataset.browserId = frame.browserId
       canvas.dataset.navigation = String(frame.navigation)
@@ -259,7 +316,7 @@ export const StreamViewport: Component<{
       job.image = undefined
       acknowledge(job)
       decoding = undefined
-      if (!disposed) drain()
+      if (!disposed) proceed()
     }
   }
 
@@ -304,9 +361,10 @@ export const StreamViewport: Component<{
   const flush = () => {
     if (scheduled !== undefined) cancelAnimationFrame(scheduled)
     scheduled = undefined
-    const event = moving
+    const queue = [wheeling, moving]
+    wheeling = undefined
     moving = undefined
-    if (event) emit(event)
+    for (const event of queue) if (event) emit(event)
   }
 
   const focus = () => {
@@ -356,14 +414,19 @@ export const StreamViewport: Component<{
   }
 
   const scroll = (event: WheelEvent) => {
-    if (!ready()) return
-    const line = Number.parseFloat(getComputedStyle(host).lineHeight) || 16
+    if (!ready(false)) return
+    if (event.target instanceof Element && event.target.closest(".am-browser-error-overlay")) return
+    const line = event.deltaMode === 1 ? Number.parseFloat(getComputedStyle(host).lineHeight) || 16 : 16
     const value = wheel(event, canvas.getBoundingClientRect(), line)
     if (!value) return
     event.preventDefault()
     event.stopPropagation()
-    flush()
-    emit(value)
+    if (wheeling && mergeWheel(wheeling, value)) return
+    // A new target, direction, or modifier set starts a fresh batch so batches stay ordered and bounded.
+    if (wheeling) emit(wheeling)
+    wheeling = value
+    if (scheduled !== undefined) return
+    scheduled = requestAnimationFrame(flush)
   }
 
   const press = (event: KeyboardEvent) => {
@@ -461,6 +524,11 @@ export const StreamViewport: Component<{
 
   const unsubscribe = props.transport.subscribe((event) => {
     if (event.type === "frame") receive(event.value)
+    if (event.type !== "cursor" || disposed) return
+    sync()
+    const value = event.value
+    if (!current?.viewport.active || !same(current.scope, value.scope) || !matches(value, current.identity)) return
+    if (CURSORS.has(value.cursor)) update(value.cursor)
   })
 
   createEffect(sync)
@@ -480,7 +548,10 @@ export const StreamViewport: Component<{
     }
     resize.observe(host, { box: "device-pixel-content-box" })
     intersection.observe(host)
-    host.addEventListener("wheel", scroll, { passive: false })
+    const viewport = host.parentElement ?? host
+    viewport.addEventListener("wheel", scroll, { passive: false })
+    viewport.addEventListener("pointerdown", flush, true)
+    viewport.addEventListener("pointerleave", flush)
     document.addEventListener("visibilitychange", sync)
     window.addEventListener("blur", blur)
     sync()
@@ -488,7 +559,9 @@ export const StreamViewport: Component<{
       resize.disconnect()
       intersection.disconnect()
       visibility.disconnect()
-      host.removeEventListener("wheel", scroll)
+      viewport.removeEventListener("wheel", scroll)
+      viewport.removeEventListener("pointerdown", flush, true)
+      viewport.removeEventListener("pointerleave", flush)
       document.removeEventListener("visibilitychange", sync)
       window.removeEventListener("blur", blur)
     })
@@ -496,6 +569,7 @@ export const StreamViewport: Component<{
 
   onCleanup(() => {
     disposed = true
+    clearTimeout(deferred)
     unsubscribe()
     clear()
     textarea.blur()
@@ -514,6 +588,7 @@ export const StreamViewport: Component<{
         aria-label={props.label}
         aria-description="Press Enter to interact. Press Shift+Escape to leave page input, then Shift+Tab to return to the toolbar."
         aria-keyshortcuts="Enter"
+        style={{ cursor: inspecting() ? "crosshair" : cursor() }}
         onKeyDown={(event) => {
           if (event.key !== "Enter" && event.key !== " ") return
           event.preventDefault()

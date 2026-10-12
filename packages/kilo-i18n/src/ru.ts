@@ -52,7 +52,6 @@ export const dict = {
     "Плагин добавляет в Kilo пользовательские инструменты и интеграции. Плагины выполняются с полными правами доступа.",
   "marketplace.install.plugin.warning":
     "Плагины выполняют код с полными правами доступа. Они могут читать и изменять ваши файлы, выполнять команды и получать доступ к вашим учётным данным и сети. Устанавливайте только те плагины, которым доверяете.",
-  "marketplace.install.installedAt": "Установлено в {{path}}",
   "marketplace.intro":
     "Устанавливайте многократно используемых агентов, навыки, инструменты MCP и плагины для одного или всех проектов.",
   "marketplace.intro.learnMore": "О Marketplace",
@@ -63,6 +62,13 @@ export const dict = {
   "marketplace.install.failed": "Сбой установки",
   "marketplace.install.done": "Готово",
   "marketplace.install.close": "Закрыть",
+  "marketplace.install.mcp.signIn.message": "{{name}} установлен, но требуется вход, прежде чем его инструменты можно будет использовать.",
+  "marketplace.install.mcp.signIn.button": "Войти",
+  "marketplace.install.mcp.signIn.waiting": "Ожидание входа через браузер…",
+  "marketplace.install.mcp.signIn.cancel": "Отмена",
+  "marketplace.install.mcp.signIn.skip": "Позже",
+  "marketplace.install.mcp.signIn.success": "Вход в {{name}} выполнен.",
+  "marketplace.install.mcp.signIn.failed": "Не удалось войти в {{name}}.",
   "marketplace.remove.title": "Удалить {{name}}?",
   "marketplace.remove.confirm":
     "Вы уверены, что хотите удалить этот {{type}}? Это удалит его из вашей конфигурации ({{scope}}).",

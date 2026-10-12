@@ -58,6 +58,9 @@ jobs:
           languages: java-kotlin
           build-mode: manual
           config-file: ./.github/codeql/codeql-config.yml
+          # Leave headroom for the runner agent and OS. CodeQL otherwise claims ~14.6 GB of the
+          # 16 GB runner, and the query phase OOM-kills the whole VM.
+          ram: 12288
 
       - name: Build Java/Kotlin
         shell: bash
@@ -65,6 +68,19 @@ jobs:
         working-directory: packages/kilo-jetbrains
         env:
           GITHUB_TOKEN: ${{ github.token }}
+
+      # The Gradle and Kotlin daemons stay resident for the rest of the job -- setup-gradle only
+      # stops them in its post step, which runs after CodeQL. Their heap competes with query
+      # evaluation and takes the runner down with it.
+      - name: Stop Gradle and Kotlin daemons
+        shell: bash
+        working-directory: packages/kilo-jetbrains
+        run: |
+          ./gradlew --stop || echo "gradlew --stop failed; continuing"
+          pkill -f KotlinCompileDaemon || echo "no Kotlin compile daemon to stop"
+          sleep 5
+          free -m
+          ps -eo pid,rss,comm --sort=-rss | sed -n '1,15p'
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v4

@@ -12,6 +12,7 @@ type Internals = {
   }
   postToWebview: (message: AgentManagerOutMessage) => void
   runStateFor: (ctx: ProjectContext) => { runStatuses: RunStatus[] }
+  runKey: (id: string) => string
   postRunMessage: (message: AgentManagerOutMessage) => void
 }
 
@@ -51,13 +52,20 @@ describe("Agent Manager run status project scoping", () => {
     ])
   })
 
-  it("keeps legacy unqualified local entries on the pinned project only", () => {
+  it("does not assign unqualified local entries to a project", () => {
     const instance = provider([{ worktreeId: "local", state: "running" }])
 
-    expect(instance.runStateFor(ctx("prj-pinned", true, [])).runStatuses).toEqual([
-      { worktreeId: "local", state: "running" },
-    ])
+    expect(instance.runStateFor(ctx("prj-pinned", true, [])).runStatuses).toEqual([])
     expect(instance.runStateFor(ctx("prj-other", false, [])).runStatuses).toEqual([])
+  })
+
+  it("qualifies local run keys for every project and tolerates no active project", () => {
+    const instance = provider([])
+    for (const id of ["prj-pinned", "prj-other", undefined]) {
+      Object.defineProperty(instance, "context", { configurable: true, value: id ? { id } : undefined })
+      expect(instance.runKey("local")).toBe(id ? `${id}:local` : "local")
+      expect(instance.runKey("wt-a1")).toBe("wt-a1")
+    }
   })
 
   it("stamps the owning project on emissions and un-namespaces qualified local keys", () => {

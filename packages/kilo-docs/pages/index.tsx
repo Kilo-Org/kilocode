@@ -463,14 +463,14 @@ export default function HomePage() {
         }
 
         .btn-primary {
-          background: #f8f674;
+          background: var(--kilo-yellow);
           color: #1a1a18;
-          border-color: #f8f674;
+          border-color: var(--kilo-yellow);
         }
 
         .btn-primary:hover {
-          background: #ffff8d;
-          border-color: #ffff8d;
+          background: var(--kilo-yellow-hover);
+          border-color: var(--kilo-yellow-hover);
           transform: translateY(-1px);
         }
 
@@ -491,8 +491,8 @@ export default function HomePage() {
         }
 
         :global(.dark) .btn-secondary:hover {
-          color: #f8f674;
-          border-color: #f8f674;
+          color: var(--kilo-yellow);
+          border-color: var(--kilo-yellow);
         }
 
         .btn-primary {

@@ -93,8 +93,6 @@ function check(code: string) {
     function dialog(saved = {}, initial = { providers: catalog(x, y), fallback: y, alternate: y, ready: true, connected: [] }) {
       const result = createRoot((dispose) => {
         const [snapshot, refresh] = createSignal(initial)
-        const [compareMode, setCompareMode] = createSignal(false)
-        const preferences = []
         const state = createDialogPreferences({
           saved,
           agent: saved.agent ?? "code",
@@ -103,16 +101,13 @@ function check(code: string) {
           variants: (value) => Object.keys(snapshot().providers[value.providerID]?.models[value.modelID]?.variants ?? {}),
           fallback: (name) => name === "code" ? snapshot().fallback : snapshot().alternate ?? null,
           effort: (name, model) => model ? snapshot().efforts?.[name + "/" + model.modelID] ?? snapshot().efforts?.[name] : undefined,
-          preferred: () => snapshot().preferred,
-          hydrated: () => snapshot().hydrated ?? true,
-          compare: compareMode,
-          remember: (...args) => preferences.push(args),
         })
         return {
-          ...state, setCompareMode, preferences,
+          ...state,
           pick: state.selectModel,
           choose: state.selectVariant,
           clear: () => state.selectVariant(DEFAULT_VARIANT),
+          reset: state.clear,
           cached: state.saved,
           refresh: (update) => refresh((current) => ({ ...current, ...update })), dispose,
         }
@@ -153,7 +148,6 @@ describe("NewWorktreeDialog models", () => {
       assert.deepEqual(state.model(), x)
       assert.deepEqual(state.cached(), { agent: "code", model: x, variant: "" })
       assert.equal(state.selection.canSubmit(), true)
-      assert.deepEqual(state.preferences, [["code", x, ""]])
     `)
   })
 
@@ -171,19 +165,37 @@ describe("NewWorktreeDialog models", () => {
     `)
   })
 
-  it("keeps an explicit model and effort through real dialog mode switches", () => {
+  it("keeps an explicit model and effort per agent through mode switches", () => {
     check(`
-      const state = dialog({ model: x, variant: "high" })
+      const state = dialog({ model: x, variant: "high" }, {
+        providers: catalog(x, y), fallback: x, alternate: y, ready: true, connected: [],
+      })
       await Promise.resolve()
+      assert.deepEqual(state.model(), x)
+      assert.equal(state.effectiveVariant(), "high")
       state.selectAgent("plan")
+      assert.deepEqual(state.model(), y)
+      assert.equal(state.effectiveVariant(), undefined)
+      state.selectAgent("code")
       assert.deepEqual(state.model(), x)
       assert.equal(state.effectiveVariant(), "high")
       assert.deepEqual(state.cached().model, x)
       assert.equal(state.cached().variant, "high")
-      state.selectAgent("code")
+    `)
+  })
+
+  it("keeps picks per agent so switching modes and back restores the choice", () => {
+    check(`
+      const state = dialog({}, {
+        providers: catalog(x, y, z), fallback: x, alternate: z, ready: true, connected: [],
+      })
       assert.deepEqual(state.model(), x)
-      assert.equal(state.effectiveVariant(), "high")
-      assert.deepEqual(state.preferences, [])
+      state.pick("kilo", "y")
+      state.selectAgent("plan")
+      assert.deepEqual(state.model(), z)
+      state.selectAgent("code")
+      assert.deepEqual(state.model(), y)
+      assert.deepEqual(state.cached().model, y)
     `)
   })
 
@@ -197,67 +209,60 @@ describe("NewWorktreeDialog models", () => {
       })
       state.pick("kilo", "y")
       assert.equal(state.variant(), ${JSON.stringify(expected)})
-      assert.deepEqual(state.preferences, [["code", y, ${JSON.stringify(expected)}]])
     `)
   })
 
-  it("pins the displayed inherited model and effort on mode switch without saving a model preference", () => {
+  it("switches to the target agent's default when it has no dialog pick", () => {
     check(`
       const state = dialog({}, {
         providers: catalog(x, y), fallback: x, alternate: y, ready: true, connected: [],
-        efforts: { code: "high", plan: undefined },
+        efforts: { code: "high" },
       })
       await Promise.resolve()
-      state.selectAgent("plan")
       assert.deepEqual(state.model(), x)
       assert.equal(state.effectiveVariant(), "high")
-      state.refresh({ providers: catalog(y) })
+      state.selectAgent("plan")
       assert.deepEqual(state.model(), y)
+      assert.equal(state.effectiveVariant(), undefined)
       state.selectAgent("code")
-      state.refresh({ providers: catalog(x, y) })
       assert.deepEqual(state.model(), x)
+      assert.equal(state.effectiveVariant(), "high")
       assert.equal(state.selection.choice(), undefined)
       assert.equal(state.cached().model, undefined)
-      assert.deepEqual(state.preferences, [])
     `)
   })
 
-  it.each([
-    [undefined, "low"],
-    ["", undefined],
-    ["high", "high"],
-  ])("keeps outgoing effort %s distinct from an unset choice on mode switch", (value, expected) => {
+  it("resolves the target agent's configured effort when it has no pick", () => {
     check(`
       const providers = catalog(x)
       providers.kilo.models.x.variants = { low: {}, high: {} }
-      const state = dialog(${value === "" ? '{ variant: "" }' : "{}"}, {
+      const state = dialog({}, {
         providers, fallback: x, alternate: x, ready: true, connected: [],
-        efforts: { code: ${JSON.stringify(value)}, plan: "low" },
+        efforts: { code: "high", plan: "low" },
       })
       await Promise.resolve()
       state.selectAgent("plan")
-      assert.equal(state.effectiveVariant(), ${JSON.stringify(expected)})
-      assert.equal(state.variant(), ${JSON.stringify(value)})
-      assert.deepEqual(state.preferences, [])
+      assert.equal(state.effectiveVariant(), "low")
+      assert.equal(state.variant(), undefined)
+      state.selectAgent("code")
+      assert.equal(state.effectiveVariant(), "high")
+      assert.equal(state.variant(), undefined)
     `)
   })
 
-  it.each(["", "high"])("keeps inherited raw effort %s through catalog changes and a mode switch", (value) => {
+  it.each(["", "high"])("keeps inherited raw effort %s through catalog changes", (value) => {
     check(`
       const providers = catalog(x)
       providers.kilo.models.x.variants = { low: {} }
       const state = dialog({}, {
         providers, fallback: x, alternate: x, ready: true, connected: [],
-        efforts: { code: ${JSON.stringify(value)}, plan: "low" },
+        efforts: { code: ${JSON.stringify(value)} },
       })
       await Promise.resolve()
       assert.equal(state.variant(), undefined)
       assert.equal(state.effectiveVariant(), ${value === "" ? "undefined" : '"low"'})
-      state.selectAgent("plan")
-      assert.equal(state.variant(), ${JSON.stringify(value)})
       state.refresh({ providers: catalog(x) })
       assert.equal(state.effectiveVariant(), ${value === "" ? "undefined" : '"high"'})
-      assert.deepEqual(state.preferences, [])
     `)
   })
 
@@ -275,7 +280,6 @@ describe("NewWorktreeDialog models", () => {
       reopened.refresh({ providers: catalog(x, y), ready: true })
       assert.deepEqual(reopened.model(), x)
       assert.equal(reopened.effectiveVariant(), "high")
-      assert.deepEqual(reopened.preferences, [])
     `)
   })
 
@@ -291,9 +295,10 @@ describe("NewWorktreeDialog models", () => {
       assert.equal(state.cached().variant, "high")
       state.selectAgent("plan")
       state.refresh({ providers: catalog(x, y) })
+      assert.deepEqual(state.model(), y)
+      state.selectAgent("code")
       assert.deepEqual(state.model(), x)
       assert.equal(state.effectiveVariant(), "high")
-      assert.deepEqual(state.preferences, [])
     `)
   })
 
@@ -309,139 +314,75 @@ describe("NewWorktreeDialog models", () => {
       state.pick("kilo", "z")
       assert.deepEqual(state.model(), z)
       assert.equal(state.effectiveVariant(), "high")
-      assert.deepEqual(state.preferences, [["code", z, "high"]])
     `)
   })
 
-  it("shares only explicit single-model picks and keeps explicit Default across mode switches", () => {
+  it("keeps an explicit Default per agent across mode switches", () => {
     check(`
       const state = dialog({}, {
         providers: catalog(x, y), fallback: x, alternate: y, ready: true, connected: [],
         efforts: { code: "high", plan: "high" },
       })
       await Promise.resolve()
-      assert.deepEqual(state.preferences, [])
-      state.pick("kilo", "y")
-      assert.deepEqual(state.preferences, [["code", y, "high"]])
       state.clear()
-      assert.deepEqual(state.preferences.at(-1), ["code", y, ""])
+      assert.equal(state.variant(), "")
+      assert.deepEqual(state.selection.choice(), x)
       state.selectAgent("plan")
+      assert.equal(state.effectiveVariant(), "high")
+      state.selectAgent("code")
       assert.equal(state.effectiveVariant(), undefined)
       assert.equal(state.variant(), "")
-      assert.equal(state.preferences.length, 2)
-      state.choose("high")
-      assert.deepEqual(state.preferences.at(-1), ["plan", y, "high"])
       const reopened = dialog(state.cached())
       await Promise.resolve()
-      assert.deepEqual(reopened.model(), y)
-      assert.equal(reopened.effectiveVariant(), "high")
-      assert.deepEqual(reopened.preferences, [])
+      assert.deepEqual(reopened.model(), x)
+      assert.equal(reopened.effectiveVariant(), undefined)
+      assert.equal(reopened.variant(), "")
     `)
   })
 
-  it("starts with the latest shared preference rather than stale dialog choices without following later updates", () => {
+  it("uses the agent default and variant preference when no pick is saved", () => {
     check(`
-      const state = dialog({ model: x, variant: "high" }, {
-        providers: catalog(x, y), fallback: x, ready: true, connected: [], preferred: { ...y, variant: "" },
+      const state = dialog({}, {
+        providers: catalog(x, y), fallback: x, ready: true, connected: [], efforts: { "code/y": "high" },
       })
-      await Promise.resolve()
-      assert.deepEqual(state.model(), y)
+      assert.deepEqual(state.model(), x)
       assert.equal(state.effectiveVariant(), undefined)
-      assert.equal(state.variant(), "")
-      state.refresh({ preferred: { ...x, variant: "high" } })
-      assert.deepEqual(state.model(), y)
-      assert.equal(state.variant(), "")
-      assert.deepEqual(state.preferences, [])
+      const other = dialog({ agent: "plan" }, {
+        providers: catalog(x, y), fallback: x, alternate: y, ready: true, connected: [], efforts: { "plan/y": "high" },
+      })
+      assert.deepEqual(other.model(), y)
+      assert.equal(other.effectiveVariant(), "high")
     `)
   })
 
-  it("adopts a delayed first hydrated preference once without following later shared updates", () => {
+  it("clears the saved model and effort after submit so reopening starts from config", () => {
     check(`
-      const providers = catalog(x, y, z)
-      providers.kilo.models.y.variants = { low: {}, high: {} }
-      const state = dialog({ model: x, variant: "high" }, {
-        providers, fallback: x, ready: true, connected: [], hydrated: false,
-      })
+      const state = dialog()
       await Promise.resolve()
-      state.refresh({ preferred: { ...y, variant: "low" } })
-      assert.deepEqual(state.model(), x)
-      assert.equal(state.effectiveVariant(), "high")
-      state.refresh({ hydrated: true })
-      assert.deepEqual(state.model(), y)
-      assert.equal(state.effectiveVariant(), "low")
-      assert.deepEqual(state.cached().model, y)
-      assert.equal(state.cached().variant, "low")
-      state.refresh({ preferred: { ...z, variant: "high" } })
-      assert.deepEqual(state.model(), y)
-      assert.equal(state.effectiveVariant(), "low")
-      assert.deepEqual(state.preferences, [])
-    `)
-  })
-
-  it("retains cached choices when first hydration has no preference and ignores a later preference", () => {
-    check(`
-      const state = dialog({ model: x, variant: "high" }, {
-        providers: catalog(x, y), fallback: y, ready: true, connected: [], hydrated: false,
-      })
-      await Promise.resolve()
-      state.refresh({ hydrated: true })
-      assert.deepEqual(state.model(), x)
-      assert.equal(state.effectiveVariant(), "high")
-      state.refresh({ preferred: { ...y, variant: "" } })
-      assert.deepEqual(state.model(), x)
-      assert.equal(state.effectiveVariant(), "high")
+      state.pick("kilo", "x")
       assert.deepEqual(state.cached().model, x)
-      assert.equal(state.cached().variant, "high")
-      assert.deepEqual(state.preferences, [])
+      state.reset()
+      assert.deepEqual(state.cached(), { agent: "code", model: undefined, variant: undefined })
+      assert.deepEqual(state.model(), y)
     `)
   })
 
-  it.each(["model", "variant", "default", "mode"])(
-    "preserves a %s interaction before initial preferences arrive",
-    (action) => {
-      check(`
-      const state = dialog({ model: x, variant: "high" }, {
-        providers: catalog(x, y, z), fallback: x, alternate: y, ready: true, connected: [], hydrated: false,
-      })
-      const actions = {
-        model: () => state.pick("kilo", "z"),
-        variant: () => state.choose("high"),
-        default: state.clear,
-        mode: () => state.selectAgent("plan"),
-      }
-      actions[${JSON.stringify(action)}]()
-      await Promise.resolve()
-      const expected = state.model()
-      const effort = state.variant()
-      const writes = state.preferences.length
-      state.refresh({ hydrated: true, preferred: { ...y, variant: "" } })
-      assert.deepEqual(state.model(), expected)
-      assert.equal(state.variant(), effort)
-      assert.deepEqual(state.cached().model, expected)
-      assert.equal(state.cached().variant, effort)
-      assert.equal(state.preferences.length, writes)
-    `)
-    },
-  )
-
-  it("pins a model on explicit effort selection but never shares comparison choices", () => {
+  it("pins a model on explicit effort selection and keeps the choice through refreshes", () => {
     check(`
       const state = dialog()
       await Promise.resolve()
       state.choose("high")
-      assert.deepEqual(state.preferences, [["code", y, "high"]])
+      assert.deepEqual(state.selection.choice(), y)
       state.refresh({ fallback: x })
       assert.deepEqual(state.model(), y)
-      state.setCompareMode(true)
       const allocations = setAllocationVariant(toggleModel(new Map(), "kilo", "x", "X"), "kilo", "x", "high")
       assert.equal(state.selection.canSubmit(allocations), true)
-      state.choose(undefined)
-      assert.equal(state.preferences.length, 1)
       state.selectAgent("plan")
       state.refresh({ ready: false })
       state.refresh({ ready: true })
-      assert.deepEqual(state.preferences, [["code", y, "high"]])
+      state.selectAgent("code")
       assert.deepEqual(state.selection.choice(), y)
+      assert.equal(state.variant(), "high")
     `)
   })
 
@@ -461,20 +402,17 @@ describe("NewWorktreeDialog models", () => {
     `)
   })
 
-  it("never saves automatic initial, agent, or refreshed organization defaults", () => {
+  it("follows the target agent's default on mode switch without saving a choice", () => {
     check(`
       const { state, refresh, switchAgent, seen } = scene(undefined)
       assert.deepEqual(state.model(), y)
       assert.equal(state.choice(), undefined)
       refresh({ providers: catalog(y, z), alternate: z })
-      batch(() => {
-        state.retain()
-        switchAgent("plan")
-      })
-      assert.deepEqual(state.model(), y)
+      switchAgent("plan")
+      assert.deepEqual(state.model(), z)
       assert.equal(state.choice(), undefined)
       refresh({ providers: catalog(x), alternate: x })
-      assert.deepEqual(seen, [y, x])
+      assert.deepEqual(seen, [y, z, x])
       assert.equal(state.choice(), undefined)
     `)
   })

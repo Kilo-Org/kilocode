@@ -33,7 +33,6 @@ export const dict = {
   "agentManager.local": "локальный",
   "agentManager.sidebar.collapse": "Свернуть боковую панель",
   "agentManager.sidebar.expand": "Показать боковую панель",
-  "agentManager.section.worktrees": "WORKTREES",
   "agentManager.section.sessions": "СЕССИИ",
   "agentManager.projects": "ПРОЕКТЫ",
   "agentManager.settings.title": "Agent Manager",
@@ -46,6 +45,7 @@ export const dict = {
   "agentManager.settings.worktreePool.title": "Предварительный прогрев worktree",
   "agentManager.settings.worktreePool.description":
     "Подготовьте готовый worktree в фоне, чтобы новые сессии Agent Manager запускались быстрее. Использует дополнительное место на диске для одного checkout на каждый открытый проект.",
+  "agentManager.hints.switchSession": "Переключить сессию",
   "agentManager.settings.project.title": "Проект",
   "agentManager.settings.project.description": "Выберите repository, настройки worktree которого хотите изменить.",
   "agentManager.settings.project.empty": "Нет доступных проектов Agent Manager.",
@@ -74,12 +74,9 @@ export const dict = {
   "agentManager.project.settings": "Настройки проекта",
   "agentManager.project.restricted":
     "Текущее рабочее пространство VS Code является домашней папкой или корнем файловой системы. Откройте конкретную папку проекта в VS Code, чтобы использовать Agent Manager.",
-  "agentManager.notGitRepo": "Не является git-репозиторием",
-
   "agentManager.updateBase.title": "Обновить из базовой ветки",
   "agentManager.updateBase.selectWorktree": "Сначала выберите управляемый worktree.",
 
-  "agentManager.worktree.settings": "Настройки Worktree",
   "agentManager.worktree.new": "Новый Worktree",
   "agentManager.worktree.setupScript": "Скрипт настройки Worktree",
   "agentManager.worktree.delete": "Удалить Worktree",
@@ -95,6 +92,9 @@ export const dict = {
   "agentManager.worktree.copyPath": "Копировать путь",
   "agentManager.worktree.openInVscode": "Открыть в VS Code",
   "agentManager.worktree.rename": "Переименовать",
+  "agentManager.worktree.pin": "Закрепить",
+  "agentManager.worktree.unpin": "Открепить",
+  "agentManager.worktree.pinned": "Закреплённые",
   "agentManager.worktree.newSection": "Новый раздел",
   "agentManager.worktree.ungrouped": "Без группы",
   "agentManager.section.rename": "Переименовать раздел",
@@ -107,6 +107,7 @@ export const dict = {
   "agentManager.hoverCard.worktree": "Worktree",
   "agentManager.hoverCard.base": "Основа",
   "agentManager.hoverCard.sessions": "Сессии",
+  "agentManager.hoverCard.section": "Раздел",
   "agentManager.hoverCard.files": "Файлы",
   "agentManager.hoverCard.changes": "Изменения",
   "agentManager.hoverCard.commits": "Коммиты",
@@ -189,13 +190,6 @@ export const dict = {
   "agentManager.shortcuts.cycleAgentMode": "Следующий режим агента",
   "agentManager.shortcuts.cyclePreviousAgentMode": "Предыдущий режим агента",
   "agentManager.shortcuts.showShortcuts": "Показать сочетания клавиш",
-  "agentManager.dialog.removeStaleWorktree.title": "Удалить устаревший Worktree",
-  "agentManager.dialog.removeStaleWorktree.messagePre": "Удалить устаревший Worktree ",
-  "agentManager.dialog.removeStaleWorktree.messagePost":
-    "? Это удалит только привязку в Agent Manager и не затронет файлы на диске.",
-  "agentManager.dialog.removeStaleWorktree.cancel": "Отмена",
-  "agentManager.dialog.removeStaleWorktree.confirm": "Удалить устаревший Worktree",
-
   "agentManager.dialog.project.select": "Выбрать проект",
   "agentManager.dialog.project.missing": "Репозиторий не найден",
   "agentManager.dialog.openWorktree": "Новый worktree",
@@ -456,6 +450,7 @@ export const dict = {
   "agentManager.browser.url": "Адрес",
   "agentManager.browser.urlPlaceholder": "http://localhost:3000",
   "agentManager.browser.open": "Открыть",
+  "agentManager.browser.openExternal": "Открыть во внешнем браузере",
   "agentManager.browser.refresh": "Обновить браузер",
   "agentManager.browser.back": "Назад",
   "agentManager.browser.forward": "Вперёд",

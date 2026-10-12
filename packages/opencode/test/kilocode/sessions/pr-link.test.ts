@@ -5,7 +5,7 @@ import { Global } from "@opencode-ai/core/global"
 import fs from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
-import simpleGit from "simple-git"
+import { simpleGit } from "simple-git"
 
 // Mock @/util/process before importing the module under test. Bun's
 // mock.module is process-wide; spread the real exports and only override

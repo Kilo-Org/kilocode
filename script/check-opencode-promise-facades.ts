@@ -126,8 +126,10 @@ const testAllow: Record<string, { count: number; reason: string }> = {
 const owned = (file: string) => file.startsWith("kilocode/") || file.startsWith("kilo-sessions/")
 const hits: Array<{ file: string; line: number }> = []
 const glob = new Bun.Glob("**/*.ts")
+// Bun.Glob returns backslash-separated paths on Windows; the allowlists use forward slashes.
+const scan = (cwd: string) => Array.from(glob.scanSync({ cwd, onlyFiles: true }), (file) => file.replaceAll("\\", "/"))
 
-for (const file of glob.scanSync({ cwd: DIR, onlyFiles: true })) {
+for (const file of scan(DIR)) {
   if (owned(file)) continue
   const text = await Bun.file(path.join(DIR, file)).text()
   for (const match of text.matchAll(PATTERN)) {
@@ -144,7 +146,7 @@ const drift = Object.entries(allow).flatMap(([file, reason]) => {
 })
 
 const testHits: Array<{ file: string; line: number }> = []
-for (const file of glob.scanSync({ cwd: TEST_DIR, onlyFiles: true })) {
+for (const file of scan(TEST_DIR)) {
   const text = await Bun.file(path.join(TEST_DIR, file)).text()
   for (const match of text.matchAll(TEST_PATTERN)) {
     const line = text.slice(0, match.index ?? 0).split("\n").length

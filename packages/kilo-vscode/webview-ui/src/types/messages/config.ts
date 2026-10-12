@@ -4,6 +4,14 @@ import type { ProviderConfig } from "./providers"
 
 type SdkIndexingStatus = import("@kilocode/sdk/v2/client").IndexingStatus
 
+export interface McpOAuthConfig {
+  clientId?: string
+  clientSecret?: string
+  scope?: string
+  callbackPort?: number
+  redirectUri?: string
+}
+
 export interface McpConfig {
   type?: "local" | "remote"
   command?: string[] | string
@@ -13,6 +21,9 @@ export interface McpConfig {
   url?: string
   headers?: Record<string, string>
   enabled?: boolean
+  timeout?: number
+  /** `false` disables OAuth auto-detection; an object configures a pre-registered client; absent/`null` is automatic discovery. */
+  oauth?: McpOAuthConfig | false | null
 }
 
 export type ConfigOrigin = "project" | "global" | "system" | "default"
@@ -150,6 +161,7 @@ export interface Config {
   subagent_model?: string | null
   subagent_variant?: string | null
   subagent_variant_overrides?: Record<string, string | null> | null
+  memory_model?: string | null
   default_agent?: string | null
   agent?: Record<string, AgentConfig>
   provider?: Record<string, ProviderConfig>

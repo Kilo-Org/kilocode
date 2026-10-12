@@ -32,7 +32,6 @@ export const dict = {
   "agentManager.local": "lokal",
   "agentManager.sidebar.collapse": "Skjul sidefelt",
   "agentManager.sidebar.expand": "Vis sidefelt",
-  "agentManager.section.worktrees": "WORKTREES",
   "agentManager.section.sessions": "ØKTER",
   "agentManager.projects": "PROSJEKTER",
   "agentManager.settings.title": "Agent Manager",
@@ -45,6 +44,7 @@ export const dict = {
   "agentManager.settings.worktreePool.title": "Forvarm worktrees",
   "agentManager.settings.worktreePool.description":
     "Forbered et klart worktree i bakgrunnen slik at nye Agent Manager-økter starter raskere. Bruker ekstra diskplass for én checkout per åpne prosjekt.",
+  "agentManager.hints.switchSession": "Bytt økt",
   "agentManager.settings.project.title": "Prosjekt",
   "agentManager.settings.project.description": "Velg repository hvis worktree-innstillinger du vil redigere.",
   "agentManager.settings.project.empty": "Ingen Agent Manager-prosjekter er tilgjengelige.",
@@ -72,12 +72,9 @@ export const dict = {
   "agentManager.project.settings": "Prosjektinnstillinger",
   "agentManager.project.restricted":
     "Det gjeldende VS Code-arbeidsområdet er hjemmemappen din eller filsystemroten. Åpne en bestemt prosjektmappe i VS Code for å bruke Agent Manager.",
-  "agentManager.notGitRepo": "Ikke et git-repositorium",
-
   "agentManager.updateBase.title": "Oppdater fra base",
   "agentManager.updateBase.selectWorktree": "Velg først et administrert worktree.",
 
-  "agentManager.worktree.settings": "Worktree-innstillinger",
   "agentManager.worktree.new": "Nytt Worktree",
   "agentManager.worktree.setupScript": "Worktree-oppsettskript",
   "agentManager.worktree.delete": "Slett Worktree",
@@ -93,6 +90,9 @@ export const dict = {
   "agentManager.worktree.copyPath": "Kopier sti",
   "agentManager.worktree.openInVscode": "Åpne i VS Code",
   "agentManager.worktree.rename": "Gi nytt navn",
+  "agentManager.worktree.pin": "Fest",
+  "agentManager.worktree.unpin": "Løsne",
+  "agentManager.worktree.pinned": "Festet",
   "agentManager.worktree.newSection": "Ny seksjon",
   "agentManager.worktree.ungrouped": "Ugruppert",
   "agentManager.section.rename": "Gi seksjon nytt navn",
@@ -105,6 +105,7 @@ export const dict = {
   "agentManager.hoverCard.worktree": "Worktree",
   "agentManager.hoverCard.base": "Base",
   "agentManager.hoverCard.sessions": "Økter",
+  "agentManager.hoverCard.section": "Seksjon",
   "agentManager.hoverCard.files": "Filer",
   "agentManager.hoverCard.changes": "Endringer",
   "agentManager.hoverCard.commits": "Commits",
@@ -184,13 +185,6 @@ export const dict = {
   "agentManager.shortcuts.cycleAgentMode": "Neste agentmodus",
   "agentManager.shortcuts.cyclePreviousAgentMode": "Forrige agentmodus",
   "agentManager.shortcuts.showShortcuts": "Vis tastatursnarveier",
-  "agentManager.dialog.removeStaleWorktree.title": "Fjern utdatert Worktree",
-  "agentManager.dialog.removeStaleWorktree.messagePre": "Fjern utdatert Worktree ",
-  "agentManager.dialog.removeStaleWorktree.messagePost":
-    "? Dette fjerner bare koblingen i Agent Manager og lar filene på disken være urørt.",
-  "agentManager.dialog.removeStaleWorktree.cancel": "Avbryt",
-  "agentManager.dialog.removeStaleWorktree.confirm": "Fjern utdatert Worktree",
-
   "agentManager.dialog.project.select": "Velg prosjekt",
   "agentManager.dialog.project.missing": "Repository ikke funnet",
   "agentManager.dialog.openWorktree": "Ny worktree",
@@ -453,6 +447,7 @@ export const dict = {
   "agentManager.browser.url": "Adresse",
   "agentManager.browser.urlPlaceholder": "http://localhost:3000",
   "agentManager.browser.open": "Åpne",
+  "agentManager.browser.openExternal": "Åpne i ekstern nettleser",
   "agentManager.browser.inspect": "Velg element",
   "agentManager.browser.devtoolsTitle": "Utviklerverktøy",
   "agentManager.browser.refresh": "Oppdater nettleser",

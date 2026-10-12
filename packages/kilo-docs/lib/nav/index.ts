@@ -5,6 +5,7 @@ import { CollaborateNav } from "./collaborate"
 import { ContributingNav } from "./contributing"
 import { CustomizeNav } from "./customize"
 import { DeploySecureNav } from "./deploy-secure"
+import { DesktopNav } from "./desktop"
 import { GatewayNav } from "./gateway"
 import { GettingStartedNav } from "./getting-started"
 import { ToolsNav } from "./tools"
@@ -19,5 +20,6 @@ export const Nav = {
   ContributingNav,
   AiProvidersNav,
   GatewayNav,
+  DesktopNav,
   ToolsNav,
 }
