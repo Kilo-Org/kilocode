@@ -2,4 +2,4 @@
 "@kilocode/cli": patch
 ---
 
-Preserve Anthropic fallback boundaries when continuing a conversation after a server-side model fallback
+Fix conversations stopping with an error after Anthropic falls back to another model mid-response
