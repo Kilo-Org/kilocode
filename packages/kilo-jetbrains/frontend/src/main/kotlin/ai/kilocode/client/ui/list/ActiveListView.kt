@@ -991,7 +991,46 @@ internal class ActiveListView(
         return preferredSize.height < view.height
     }
 
-    override fun getPreferredScrollableViewportSize(): Dimension = preferredSize
+    /**
+     * Full rendered row height at [width], measured from every cell renderer.
+     *
+     * `JList.preferredSize` can be stale before the list enters a viewport: wrapped row height only
+     * becomes known once the final width reaches the renderer. Popup owners need this answer before
+     * building their balloon, so measure the same renderers the list will use and sum every cell.
+     */
+    @RequiresEdt
+    internal fun preferredRowsHeight(width: Int): Int {
+        checkEdt()
+        val old = list.size
+        list.setSize(width.coerceAtLeast(1), old.height.coerceAtLeast(1))
+        try {
+            val fixed = list.fixedCellHeight
+            val body = if (fixed > 0) {
+                fixed.toLong() * model.size
+            } else {
+                (0 until model.size).sumOf { idx ->
+                    list.cellRenderer.getListCellRendererComponent(
+                        list,
+                        model.getElementAt(idx),
+                        idx,
+                        false,
+                        false,
+                    ).preferredSize.height.toLong()
+                }
+            }
+            return (body + list.insets.top + list.insets.bottom)
+                .coerceAtMost(Int.MAX_VALUE.toLong())
+                .toInt()
+        } finally {
+            list.size = old
+        }
+    }
+
+    override fun getPreferredScrollableViewportSize(): Dimension {
+        val pref = super.getPreferredSize()
+        val width = width.takeIf { it > 0 } ?: pref.width
+        return Dimension(pref.width, preferredRowsHeight(width))
+    }
 
     override fun getScrollableUnitIncrement(
         visibleRect: Rectangle,

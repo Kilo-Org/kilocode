@@ -493,6 +493,16 @@ class MessageView(
     @RequiresEdt
     fun promptToolbarActive() = promptToolbar?.active() == true
 
+    /**
+     * Prompt content without [PromptWrap]'s toolbar/footer. Historical prompts without a wrap paint
+     * their bubble on this message itself, so the message is the correct fallback for those.
+     */
+    @RequiresEdt
+    fun promptTarget(): JComponent? {
+        if (role != SessionUiStyle.View.Message.USER_ROLE || !isVisible) return null
+        return promptBox ?: this.takeIf { componentCount > 0 }
+    }
+
     @RequiresEdt
     fun setReverting(active: Boolean, text: String, onCancel: () -> Unit) {
         if (role != SessionUiStyle.View.Message.USER_ROLE) return

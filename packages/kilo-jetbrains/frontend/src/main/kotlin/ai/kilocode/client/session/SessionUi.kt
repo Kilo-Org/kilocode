@@ -50,6 +50,7 @@ import ai.kilocode.client.session.settings.TranscriptDisplayListener
 import ai.kilocode.client.session.ui.account.SessionAccountOverlay
 import ai.kilocode.client.session.ui.popup.HeaderPopupController
 import ai.kilocode.client.session.ui.SessionDropOverlay
+import ai.kilocode.client.session.ui.SessionHighlightOverlay
 import ai.kilocode.client.session.ui.SessionRootPanel
 import ai.kilocode.client.session.ui.SessionMessageListPanel
 import ai.kilocode.client.session.ui.attachment.AttachmentEditorKind
@@ -133,6 +134,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.awt.BorderLayout
+import java.awt.Rectangle
 import java.awt.datatransfer.StringSelection
 import java.awt.event.HierarchyEvent
 import java.net.URI
@@ -213,6 +215,7 @@ class SessionUi(
     private lateinit var account: SessionAccountOverlay
     private lateinit var drop: SessionDropOverlay
     private lateinit var overlay: SessionHoverCopyOverlay
+    internal lateinit var highlight: SessionHighlightOverlay
     internal lateinit var promptRail: PromptRailController
     private val hide = timers.timer(HIDE_MS, repeats = false) {
         if (disposed || !this::drop.isInitialized) return@timer
@@ -592,7 +595,7 @@ class SessionUi(
             boardVisible = { board },
             onShowBoard = ::showBoard,
             onOpenSubagent = ::openSubagent,
-            onNavigate = { item -> scroll.scrollPart(item.id.substringBefore('/'), item.part.id) },
+            onJumpTimeline = { message, part -> jumpTimeline(message, part) },
         )
         if (!readonly && showBranchDock()) {
             val owner = manager
@@ -614,11 +617,19 @@ class SessionUi(
         root.addOverlay(overlay) { pane, child ->
             overlay.bounds(pane, child)
         }
+        highlight = SessionHighlightOverlay(scroll.component, this)
+        // Full pane: the outline is positioned by painting against live turn bounds, not by layout.
+        root.addOverlay(highlight) { pane, _ ->
+            Rectangle(0, 0, pane.width, pane.height)
+        }
         messageBody.onReflow = { on -> if (on && !opening) scroll.followTail() }
         scroll.onScroll = {
             overlay.clear()
             popup.hideAll()
         }
+        // Only a deliberate scroll clears the outline: onScroll also fires for the jump's own
+        // programmatic passes, which would clear the outline the jump just drew.
+        scroll.onGesture = { highlight.clear() }
 
         completion = KiloPromptCompletionProvider(
             workspace = workspace,
@@ -682,6 +693,7 @@ class SessionUi(
             scroll = scroll,
             parent = this,
             timers = timers,
+            onReveal = ::revealPrompt,
         )
         if (!readonly) {
             prompt.onFileDrag = ::syncDrop
@@ -1254,6 +1266,29 @@ class SessionUi(
             subagentSessionParams(sessionId, workspace.directory),
         )
         Telemetry.send("Subagent Session Opened", mapOf("sessionId" to sessionId))
+    }
+
+    /**
+     * Jumps the transcript to a header-timeline step and outlines that step.
+     *
+     * The outline wraps the clicked part, not its turn: a turn is one user message plus the whole
+     * assistant response, which can span dozens of messages and every bar in it, so outlining the
+     * turn would draw the same box for almost every bar. The target resolution mirrors
+     * [ai.kilocode.client.session.scroll.SessionScroll.scrollPartTop] exactly — the part, or its
+     * message when the part has no renderer — so the outline always wraps what the scroll aimed at.
+     */
+    @RequiresEdt
+    private fun jumpTimeline(message: String, part: String) {
+        if (!scroll.scrollPartTop(message, part)) return
+        val step = messageBody.findPart(message, part) ?: messageBody.findMessage(message) ?: return
+        highlight.show(step)
+    }
+
+    /** Marks only the user prompt bubble a prompt-navigator jump landed on. */
+    @RequiresEdt
+    private fun revealPrompt(id: String) {
+        val prompt = messageBody.findPrompt(id) ?: return
+        highlight.show(prompt)
     }
 
     @RequiresEdt
