@@ -16,7 +16,7 @@ This file is the living index of the migration: epics, gates and sequencing (Par
 
 ## A1. Objective
 
-Ship Kilo on the upstream v2 runtime, surface by surface, without breaking a v1 user. The target feature set is upstream v2 at the pinned base plus every Kilo v1 behavior at the pinned v1 target, minus what Decision 7 marks post-cutover or not-needed: feature parity, not code parity. The terminal product (CLI/TUI) ships first at G1; VS Code (G2) and JetBrains (G3) follow on their own go/no-go, and until then they keep running on v1 against untouched v1 data. The work ends when `kilo-v2-clean` becomes `main` and v1 moves to a time-limited maintenance branch.
+Ship Kilo on the upstream v2 runtime, surface by surface, without breaking a v1 user. The target feature set is upstream v2 at the pinned base plus every Kilo v1 behavior at the pinned v1 target, minus what Decision 7 marks post-cutover or not-needed: feature parity, not code parity. The terminal product (CLI/TUI) ships first at G1; VS Code (G2) and JetBrains (G3) follow on their own go/no-go, and until then they keep running on v1 against untouched v1 data. The work ends when `v2` becomes `main` and v1 moves to a time-limited maintenance branch.
 
 ## A2. Why this plan replaces the previous one
 
@@ -45,7 +45,7 @@ The ten decisions in [`migration-context.md` §Decisions](migration-context.md#d
 
 | Decision | How this plan applies it |
 |---|---|
-| D1 New base | Every unit lands on `kilo-v2-clean` by PR. Upstream arrives only through the L1 lane, pinned by SHA |
+| D1 New base | Every unit lands on `v2` by PR. Upstream arrives only through the L1 lane, pinned by SHA |
 | D2 Freeze | The archived port is read through its tag; nothing merges from it |
 | D3 Donor rules | Each Part B row states donor reuse for mechanism only. Behavior acceptance is always written against v1 |
 | D4 Staleness gate | Each Part B row carries a staleness verdict. Non-EMPTY means behavior is re-derived from v1 |
@@ -60,7 +60,7 @@ Items that need user sign-off are listed in A10. None of them changes a decision
 
 ## A4. Approach
 
-**Clean base.** `kilo-v2-clean` starts as pristine upstream and contains no Kilo package yet. Kilo is re-landed onto it in small units, each one a session, a branch and a PR, merged by the user. Nothing from the old port branch is merged.
+**Clean base.** `v2` starts as pristine upstream and contains no Kilo package yet. Kilo is re-landed onto it in small units, each one a session, a branch and a PR, merged by the user. Nothing from the old port branch is merged.
 
 **Re-land by unit.** Every Kilo v1 behavior and every upstream-only surface has exactly one unit (Part B). A unit is done only with code, tests, acceptance evidence recorded with a SHA, its Part B status updated, and docs. A local pass is never recorded as end to end.
 
@@ -112,7 +112,7 @@ Epic IDs follow discovery so register rows stay traceable; they are presented in
 
 - **Outcome:** a Kilo host, a Kilo plugin/RPC pattern, a Kilo CI signal and v1 reference fixtures exist on the clean base, and no upstream workflow can publish from the fork.
 - **Why:** the base has no Kilo package at all. Every other epic needs these first.
-- **Exit criteria:** the host starts an isolated server through public seams only (service smoke test); one sample Kilo RPC round-trips through the generated client; a Kilo-owned workflow runs `bun run check` and package tests on PRs to `kilo-v2-clean`, compared against the pinned baseline; every upstream publish or deploy workflow is disabled or guarded; Kilo `AGENTS.md` and fork conventions name the current base and branch rules; v1 reference fixtures for offline wait, overflow, slow snapshot and snapshot retention replay on the base.
+- **Exit criteria:** the host starts an isolated server through public seams only (service smoke test); one sample Kilo RPC round-trips through the generated client; a Kilo-owned workflow runs `bun run check` and package tests on PRs to `v2`, compared against the pinned baseline; every upstream publish or deploy workflow is disabled or guarded; Kilo `AGENTS.md` and fork conventions name the current base and branch rules; v1 reference fixtures for offline wait, overflow, slow snapshot and snapshot retention replay on the base.
 - **Gate:** blocks everything.
 - **Depends on:** the admin task for Actions permissions (CI lane only).
 - **Top risks:** upstream's test workflow runs on every pull request, so it will run on fork PRs before the Kilo lane exists; branch protection is convention-only until an admin acts.
@@ -193,14 +193,14 @@ Epic IDs follow discovery so register rows stay traceable; they are presented in
 
 - **Outcome:** the JetBrains plugin re-landed on the clean base, talking to v2 only through a client generated from the assembled contract.
 - **Why:** JetBrains pins a v1 CLI until G3; the plugin is absent from both the base and the donor.
-- **Exit criteria:** the plugin builds from `kilo-v2-clean` and uses only the generated client; every G3 scenario passes in each supported IDE, recorded with SHA; incompatible CLIs are refused with a clear message.
+- **Exit criteria:** the plugin builds from `v2` and uses only the generated client; every G3 scenario passes in each supported IDE, recorded with SHA; incompatible CLIs are refused with a clear message.
 - **Gate:** G3.
 - **Depends on:** E0 RPC scaffolding, E2 control-plane and generation contracts, E3 build pipeline.
 - **Top risks:** no donor at all; Kilo plugin RPC endpoints may not appear in the OpenAPI the Kotlin client is generated from; whether FIM gates G3 is still open.
 
 ### E8 Retirement (post-G3)
 
-- **Outcome:** `kilo-v2-clean` is `main`, v1 lives on a maintenance branch that still builds and releases, storage paths are consolidated once, and every deployment from `main` has an owner.
+- **Outcome:** `v2` is `main`, v1 lives on a maintenance branch that still builds and releases, storage paths are consolidated once, and every deployment from `main` has an owner.
 - **Why:** the end state in `migration-context.md`.
 - **Exit criteria:** every workflow and deployment that builds from `main` has a v2-side owner or is retired before the flip; the v1 maintenance branch builds and releases; storage consolidation runs once, with a backup, and is never repeated; the v1 end-of-life policy is published.
 - **Gate:** after G3.
@@ -388,8 +388,8 @@ Each epic section has workstream tables, one row per unit, and one dependency di
 |---|---|---|---|---|---|---|---|---|---|
 | U-E0-01 | Kilo host and composition package (server overrides, Location service replacements, builtin plugin list) | new | pre-gate | Q-HOST-01 | needs-port | n/a | yes H | Host builds and starts an isolated server through public seams only; `service-smoke` passes with isolated HOME/XDG; Q-HOST-01 answer recorded | todo |
 | U-E0-02 | Kilo RPC and plugin scaffolding (`packages/schema/src/kilocode`, plugin `define`, generated client) | new | pre-gate | U-E0-01 | native mechanism | n/a | yes H | One sample Kilo RPC registered as a plugin round-trips through the generated client; `bun run generate` leaves no drift | todo |
-| U-E0-03 | Re-land Kilo `AGENTS.md`; rewrite `v2-fork-conventions.md` and `script/v2-baseline.ts` (README, banners and drops done by this plan, Appendix D) | new | pre-gate | — | needs-port | n/a | no | `AGENTS.md` names `kilo-v2-clean`, BASE and branch rules; conventions carry the base pin, no-prefix branches, `services/www`; `v2-baseline.ts` runs at BASE (pin-is-ancestor assertion, mirrors `check.yml`/`test.yml`) | todo |
-| U-E0-04 | Kilo CI lane on `kilo-v2-clean`; neutralize upstream publish/deploy workflows, `sdks/vscode` publishing, hosted web properties, CI images | new | pre-gate | admin: Actions permissions | needs-port | n/a | no | Kilo workflow runs `bun run check` and package tests on PRs to `kilo-v2-clean`, compared with `pinned-v2-baseline.md`; each upstream publish/deploy workflow disabled or repository-guarded, verified by reading triggers | todo |
+| U-E0-03 | Re-land Kilo `AGENTS.md`; rewrite `v2-fork-conventions.md` and `script/v2-baseline.ts` (README, banners and drops done by this plan, Appendix D) | new | pre-gate | — | needs-port | n/a | no | `AGENTS.md` names `v2`, BASE and branch rules; conventions carry the base pin, no-prefix branches, `services/www`; `v2-baseline.ts` runs at BASE (pin-is-ancestor assertion, mirrors `check.yml`/`test.yml`) | todo |
+| U-E0-04 | Kilo CI lane on `v2`; neutralize upstream publish/deploy workflows, `sdks/vscode` publishing, hosted web properties, CI images | new | pre-gate | admin: Actions permissions | needs-port | n/a | no | Kilo workflow runs `bun run check` and package tests on PRs to `v2`, compared with `pinned-v2-baseline.md`; each upstream publish/deploy workflow disabled or repository-guarded, verified by reading triggers | todo |
 | U-E0-05 | v1 reference fixtures: offline wait, overflow, slow snapshot, snapshot retention (data at v1 target, harness on BASE) | new | pre-gate | U-E0-01 | needs-port | M | partial M | Fixtures generated through v1 writer methods at `fb7e96ed`, each isolating HOME/XDG itself; harness on BASE replays them | todo |
 
 ```mermaid
@@ -618,7 +618,7 @@ The chain 09 → 12 is the serialization rule for shared TUI files, not a functi
 | U-E3-06 | Updater and installation detection under Kilo identity | #14410 | G1 | U-E1-01 | partial | M | yes M | Update and rollback on real artifacts; install method detected; overlap with BASE `services/update` decided | todo |
 | U-E3-07 | Build and release pipeline: platforms, npm/GHCR/AUR/Homebrew/nix/install script, SBOM, PTY smoke, payload format, clean install | #14409, #14412 | G1 | U-E0-04 | partial | M | partial M | Artifacts for every v1 platform; each channel dry-runs; SBOM; PTY smoke; clean install beside v1 | todo |
 | U-E3-13 | Signing and notarization (start early) | #14411 | G1 | U-E0-04, admin: signing credentials | partial | M | no | Signed and notarized macOS and Windows artifacts verify on clean hosts | todo |
-| U-E3-08 | CI and repository guards (forbidden strings, generated artifacts, markers, md tables, CodeQL, sharding, bots) | #14408 | G1 | U-E0-04 | partial | M | no | Each v1 guard ported or recorded not-needed; guards run on PRs to `kilo-v2-clean` | todo |
+| U-E3-08 | CI and repository guards (forbidden strings, generated artifacts, markers, md tables, CodeQL, sharding, bots) | #14408 | G1 | U-E0-04 | partial | M | no | Each v1 guard ported or recorded not-needed; guards run on PRs to `v2` | todo |
 | U-E3-09 | Publish `@kilocode/sdk` and `@kilocode/plugin` from BASE packages | new | G1 | U-E3-07 | partial | SMALL | no | Publish dry run passes `verify:package`; names and versions decided | todo |
 | U-E3-10 | v2 preview release train | new | G1 | U-E3-06, U-E3-07, U-E3-08, U-E3-12 | needs-port | n/a | no | At least one preview shipped to the team under the Q-DIST-01 identity; findings filed against units | todo |
 | U-E3-11 | Canary and cutover/rollback runbook, G1 | #14414 | G1 | U-E3-10, U-L4-05 | needs-port | n/a | no | Runbook written and exercised once on the G1 candidate; rollback to v1 CLI on untouched v1 files | todo |
@@ -768,7 +768,7 @@ No donor exists; behavior comes entirely from v1 (`packages/kilo-jetbrains` at `
 | Unit | Title | Issue | Gate | Deps | Delta | Stale | Donor | Acceptance | Status |
 |---|---|---|---|---|---|---|---|---|---|
 | U-E7-01 | Inventory plugin contracts and map each to a public v2 interface | #14420 | G3 | U-E0-02 | needs-port | M | no | Every route, event and terminal contract mapped; Q-G3-01 and Q-G3-02 answered | todo |
-| U-E7-02 | Re-land the plugin: Gradle build, CLI pin to a v2 release, client generated from the assembled contract, startup, discovery, auth, version checks | #14421 | G3 | U-E7-01, U-E3-07, Q-G3-03 | needs-port | M | no | Builds from `kilo-v2-clean`; only the generated client is used; incompatible CLIs refused with a clear message | todo |
+| U-E7-02 | Re-land the plugin: Gradle build, CLI pin to a v2 release, client generated from the assembled contract, startup, discovery, auth, version checks | #14421 | G3 | U-E7-01, U-E3-07, Q-G3-03 | needs-port | M | no | Builds from `v2`; only the generated client is used; incompatible CLIs refused with a clear message | todo |
 | U-E7-03 | Sessions, streaming, permissions, history, config, board, subagents, prompt completion, settings, MCP OAuth, telemetry | #14422 | G3 | U-E7-02 | needs-port | M | no | Each area as v1 | todo |
 | U-E7-04 | Terminal, diff/VFS, editor-service consumers (enhance prompt, branch name; FIM only if Q-G3-01 keeps the gate) | #14423 | G3 | U-E7-02, U-E2-28 (U-E6-08 if FIM gates) | needs-port | M | no | Each consumer as v1 | todo |
 | U-E7-05 | Agent Manager, worktrees, marketplace, legacy v5 migration | new | G3 | U-E2-27, U-E7-03, Q-G3-05 | needs-port | M | no | Each area as v1; v5 migration per Q-G3-05 | todo |
@@ -794,7 +794,7 @@ flowchart LR
 
 | Unit | Title | Issue | Gate | Deps | Delta | Stale | Donor | Acceptance | Status |
 |---|---|---|---|---|---|---|---|---|---|
-| U-E8-01 | Branch flip (`main`→`v1`, `kilo-v2-clean`→`main`), timed against v1 IDE builds | new | post-G3 | G3 go, Q-G2-01 | needs-port | n/a | no | Flip done; the `v1` branch builds and releases CLI and IDEs | todo |
+| U-E8-01 | Branch flip (`main`→`v1`, `v2`→`main`), timed against v1 IDE builds | new | post-G3 | G3 go, Q-G2-01 | needs-port | n/a | no | Flip done; the `v1` branch builds and releases CLI and IDEs | todo |
 | U-E8-02 | Storage path consolidation (D6), once, with backup | new | post-G3 | U-E8-01 | needs-port | n/a | no | Runs once with backup; a second run is a no-op | todo |
 | U-E8-03 | Packages that deploy from `main`: keep docs site, retire `kilo-console`, re-home workflows | new | post-G3 | U-L5-01 | partial / not-needed | M | no | Every workflow and deployment from `main` has a v2 owner or is retired before the flip | todo |
 | U-E8-04 | v1 end-of-life policy and maintenance window | new | post-G3 | U-E8-01 | needs-port | n/a | no | Policy published with a date | todo |
@@ -819,7 +819,7 @@ Acceptance for every row is a recorded user decision (ship, drop or re-scope); s
 | U-E11-03 | Team sharing ownership; incremental sharing with deletion/revert semantics | #14399 (ownership), #14400 | non-gating | U-E5-02 | post-cutover | EMPTY | no | Decision recorded | todo |
 | U-E11-04 | Legacy TUI extras: kilo-v1/colorblind themes, legacy bindings, fixed-width tables, vim mode | #14376, #14378 (part) | non-gating | U-E9-05 | post-cutover | M | partial L | Decision recorded | todo |
 | U-E11-05 | Default-off experimental features (Exa, context tools, code mode/PTC, MCP Apps, session switcher, notebook tools, Claude migration, scout, LSP tool, VS Code browser automation and prompt history) | new | non-gating | Q-G2-07 | post-cutover | NEW | no | Decision recorded per feature | todo |
-| U-E11-06 | KiloClaw: not needed (removed on v1); no donor remnants copied | #14419 (Claw part) | non-gating | — | not-needed | n/a | no | Grep shows no Claw paths on `kilo-v2-clean` | todo |
+| U-E11-06 | KiloClaw: not needed (removed on v1); no donor remnants copied | #14419 (Claw part) | non-gating | — | not-needed | n/a | no | Grep shows no Claw paths on `v2` | todo |
 
 ```mermaid
 flowchart LR
@@ -1024,8 +1024,8 @@ No discovery epic or unit was dropped. Every discovery unit keeps its ID.
 | Term | Meaning |
 |---|---|
 | v1 | Kilo on `main`, built on opencode v1. The behavioral reference at the pinned v1 target |
-| v2 | Kilo on upstream opencode `v2`, built on `kilo-v2-clean` |
-| BASE | The pinned upstream commit `kilo-v2-clean` started from |
+| v2 | Kilo on upstream opencode `v2`, built on `v2` |
+| BASE | The pinned upstream commit `v2` started from |
 | Donor | The archived old port (tag), used for mechanism only |
 | Snapshot / cutoff | The v1 commit up to which every Kilo change has a disposition. L2 advances it |
 | Staleness | v1 change to a unit's files between snapshot and v1 target (D4) |

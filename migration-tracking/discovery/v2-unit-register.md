@@ -26,7 +26,7 @@ Donor paths are relative to the donor tag; `kc/` = `packages/kilo-cli/src/`, `kv
 | U-E0-01 | Kilo host and composition package (server, overrides, Location service replacements, builtin plugin list) | shared runtime | pre-gate | (host for all E1/E2) | new | needs-port | n/a | yes H: `kc/host.ts` (`ServerFetch.make(options,{overrides})`; `server/src/fetch.ts` overrides still present at BASE) | — |
 | U-E0-02 | Kilo RPC and plugin scaffolding (`packages/schema/src/kilocode`, plugin `define`, generated client consumption) | shared runtime | pre-gate | F-V2-050, Part 1 "Plugins and SDK" | new | native mechanism | n/a | yes H: `packages/schema/src/kilocode/*` (`schema/src/rpc.ts` unchanged since donor base) | U-E0-01 |
 | U-E0-03 | Re-land Kilo `AGENTS.md`; rewrite `v2-fork-conventions.md`, migration-tracking `README.md`, `v2-baseline.ts`; superseded banners on old plans (see `doc-inventory.md` §8) | repo | pre-gate | — | new | needs-port | n/a | no | — |
-| U-E0-04 | Kilo CI lane on `kilo-v2-clean`; neutralize upstream publish/deploy workflows, `sdks/vscode` publishing, hosted web properties, CI images | repo | pre-gate | F-V2-055, F-V2-056, F-V2-057 | new (part of #14408 scope) | needs-port | n/a | no | admin task: Actions permissions |
+| U-E0-04 | Kilo CI lane on `v2`; neutralize upstream publish/deploy workflows, `sdks/vscode` publishing, hosted web properties, CI images | repo | pre-gate | F-V2-055, F-V2-056, F-V2-057 | new (part of #14408 scope) | needs-port | n/a | no | admin task: Actions permissions |
 | U-E0-05 | v1 reference fixtures for offline wait, overflow, slow snapshot, snapshot retention (data at V1, harness on BASE) | repo | pre-gate | — | new (old N5) | needs-port | MATERIAL (A06) | partial M: `kc/test/fixtures/v1-session`, `v1-writer*` (built at V1 `d99662338`/`ecccd1f`; regenerate at V1 `fb7e96ed`) | U-E0-01 |
 
 ## E1 Core and identity
@@ -188,7 +188,7 @@ Shared facts for E7. The plugin is absent from BASE and from the donor (no reuse
 
 | Unit | Title | Surface | Gate | Features | Issues | Delta | Stale | Donor | Depends |
 |---|---|---|---|---|---|---|---|---|---|
-| U-E8-01 | Branch flip (`main`→`v1`, `kilo-v2-clean`→`main`) and its timing relative to IDE v1 builds | repo | post-G3 | — | new (old N10) | needs-port | n/a | no | G3 go/no-go |
+| U-E8-01 | Branch flip (`main`→`v1`, `v2`→`main`) and its timing relative to IDE v1 builds | repo | post-G3 | — | new (old N10) | needs-port | n/a | no | G3 go/no-go |
 | U-E8-02 | Storage path consolidation after G3 (D6), one-time with backup | import | post-G3 | — | new (old N10) | needs-port | n/a | no | U-E8-01 |
 | U-E8-03 | Packages that deploy from `main`: keep (docs site), retire (`kilo-console`, F-CORE-123), re-home their workflows | repo | post-G3 | F-CORE-123 | new (old N6a/N6b in part) | not-needed (console) / needs-port (docs deploy) | MATERIAL (A29) | no | U-L5-01 |
 | U-E8-04 | v1 end-of-life policy and maintenance window | repo | post-G3 | — | new | needs-port | n/a | no | U-E8-01 |

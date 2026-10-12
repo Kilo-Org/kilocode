@@ -1,6 +1,6 @@
 # Kilo v2 migration tracking
 
-Planning, evidence and validation material for moving Kilo onto upstream opencode v2 on the `kilo-v2-clean` branch.
+Planning, evidence and validation material for moving Kilo onto upstream opencode v2 on the `v2` branch.
 
 ## Start here
 

@@ -1,7 +1,7 @@
 # Phased Plan — Port Kilo onto OpenCode v2
 
 > [!WARNING]
-> **Superseded by [`kilo-v2-migration-plan.md`](kilo-v2-migration-plan.md) (2026-10-12).** Archived reference only. Status and percentages below describe the archived `kilo-v2` port, not `kilo-v2-clean`. Live unit status is in Part B of the new plan.
+> **Superseded by [`kilo-v2-migration-plan.md`](kilo-v2-migration-plan.md) (2026-10-12).** Archived reference only. Status and percentages below describe the archived `kilo-v2` port, not `v2`. Live unit status is in Part B of the new plan.
 
 Updated: September 9, 2026  
 Related issue: Kilo-Org/kilocode#13750  
