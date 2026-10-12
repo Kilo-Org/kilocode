@@ -534,7 +534,7 @@ describe("context usage after compaction", () => {
             yield* compaction.create({
               sessionID: chat.id,
               agent: "code",
-              model: match === "exact binding" ? model : { ...model, modelID: "test-model-2" },
+              model: match === "exact binding" ? model : { ...model, modelID: ModelV2.ID.make("test-model-2") },
               auto: false,
             })
             yield* prompt.loop({ sessionID: chat.id })
