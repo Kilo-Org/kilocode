@@ -398,18 +398,22 @@ internal class ActiveListView(
         return model.items.firstOrNull { it.key == key }
     }
 
+    /**
+     * Anchor for a popup or balloon attached to [key]'s row, or to one [cell] of it. [leading] takes
+     * the target's bottom-left corner, which keeps a dropdown aligned with the cell it belongs to;
+     * the default takes its bottom middle for a balloon callout.
+     */
     @RequiresEdt
-    fun point(key: String, cell: String? = null): RelativePoint {
+    fun point(key: String, cell: String? = null, leading: Boolean = false): RelativePoint {
         checkEdt()
         val idx = activeListIndex(model.items, key)
         if (idx < 0) return RelativePoint(list, Point(0, 0))
         val bounds = list.getCellBounds(idx, idx) ?: return RelativePoint(list, Point(0, 0))
         val rect = cell?.let { activeListCellBounds(list, idx, list.isSelectedIndex(idx))[it] }
         val target = rect ?: bounds
-        // Horizontal middle of the target, anchored to its bottom edge: the balloon opens below, so
-        // a center anchor would bury the callout under the balloon body and cover the row instead of
-        // pointing at it.
-        val x = target.x + target.width / 2
+        // Anchored to the target's bottom edge: the balloon opens below, so a center anchor would
+        // bury the callout under the balloon body and cover the row instead of pointing at it.
+        val x = if (leading) target.x else target.x + target.width / 2
         val y = target.y + target.height
         return RelativePoint(list, Point(x.coerceIn(bounds.x, bounds.x + bounds.width), y))
     }

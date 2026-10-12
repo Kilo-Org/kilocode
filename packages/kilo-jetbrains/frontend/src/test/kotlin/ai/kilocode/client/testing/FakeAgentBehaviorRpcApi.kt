@@ -46,6 +46,7 @@ class FakeAgentBehaviorRpcApi : KiloAgentBehaviorRpcApi {
     var afterRemove: (suspend (String, String) -> Unit)? = null
     var afterMcpConnect: (suspend (String, String) -> Unit)? = null
     var createError: Exception? = null
+    var agentsError: Exception? = null
     var skillsError: Exception? = null
     var commandFilesGate: CompletableDeferred<Unit>? = null
     var commandFilesError: Exception? = null
@@ -76,7 +77,9 @@ class FakeAgentBehaviorRpcApi : KiloAgentBehaviorRpcApi {
 
     override suspend fun agents(directory: String): List<AgentDetailDto> {
         assertNotEdt("agentBehavior.agents")
+        // Recorded before the failure so a test can tell an attempted read from one never made.
         agentCalls.add(directory)
+        agentsError?.let { throw it }
         return agents
     }
 

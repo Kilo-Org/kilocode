@@ -9,6 +9,7 @@ import ai.kilocode.client.util.webUrl
 import ai.kilocode.log.KiloLog
 import ai.kilocode.rpc.dto.McpAuthEventDto
 import ai.kilocode.rpc.dto.McpAuthResultDto
+import ai.kilocode.rpc.dto.McpStatusDto
 import com.intellij.ide.BrowserUtil
 import com.intellij.openapi.application.EDT
 import com.intellij.openapi.components.Service
@@ -16,13 +17,17 @@ import com.intellij.openapi.components.service
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import fleet.rpc.client.durable
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.selects.select
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import java.util.concurrent.ConcurrentHashMap
@@ -62,8 +67,28 @@ class KiloMcpAuthService internal constructor(
 
     private val _busy = MutableStateFlow<Set<String>>(emptySet())
     val busy: StateFlow<Set<String>> = _busy.asStateFlow()
-    private val active = ConcurrentHashMap<String, Any>()
-    private val cancelled = ConcurrentHashMap.newKeySet<Any>()
+    private val active = ConcurrentHashMap<String, Attempt>()
+
+    /**
+     * One in-flight sign-in.
+     *
+     * [abort] releases the `signIn` caller waiting on the CLI, and [forgotten] tells that caller the
+     * server is being removed so it skips its trailing refresh. The flag lives on the attempt rather
+     * than in a separate set so it cannot outlive the attempt it describes: [stop] writes it before
+     * completing [abort], and the only reader is the `signIn` that already holds this reference.
+     */
+    private class Attempt {
+        val abort = CompletableDeferred<Unit>()
+
+        @Volatile
+        var forgotten = false
+            private set
+
+        fun stop(forget: Boolean = false) {
+            if (forget) forgotten = true
+            abort.complete(Unit)
+        }
+    }
 
     private val started = AtomicBoolean(false)
     private val lastEventUrl = AtomicReference<String?>(null)
@@ -73,10 +98,13 @@ class KiloMcpAuthService internal constructor(
     suspend fun refresh(dir: String): Set<String> {
         start()
         if (dir.isBlank()) return emptySet()
-        val names = attempt("mcp auth refresh failed dir=$dir", emptyList()) { svc().mcpStatus(dir) }
-            .filter { it.status == "needs_auth" }
-            .map { it.name }
-            .toSet()
+        return sync(dir, attempt("mcp auth refresh failed dir=$dir", emptyList()) { svc().mcpStatus(dir) })
+    }
+
+    /** Records needs-auth state for [dir] from an already-fetched status list and returns the names. */
+    fun sync(dir: String, statuses: List<McpStatusDto>): Set<String> {
+        if (dir.isBlank()) return emptySet()
+        val names = statuses.filter { it.status == "needs_auth" }.map { it.name }.toSet()
         updateNeedsAuth(dir, names)
         return names
     }
@@ -84,17 +112,13 @@ class KiloMcpAuthService internal constructor(
     /** Starts (or resumes) sign-in for [name] in [dir]. Single-flight per directory/name pair. */
     suspend fun signIn(dir: String, name: String): McpAuthResultDto {
         val key = busyKey(dir, name)
-        val token = Any()
-        if (active.putIfAbsent(key, token) != null) return McpAuthResultDto("failed", null)
+        val pending = Attempt()
+        if (active.putIfAbsent(key, pending) != null) return McpAuthResultDto("failed", null)
         _busy.update { it + key }
         return try {
-            val result = withTimeoutOrNull(authTimeoutMs) {
-                attempt("mcp auth signIn failed dir=$dir name=$name", McpAuthResultDto("failed", null)) {
-                    svc().mcpAuthenticate(dir, name)
-                }
-            }
+            val result = withTimeoutOrNull(authTimeoutMs) { race(dir, name, pending.abort) }
             if (result != null) {
-                if (cancelled.contains(token)) return McpAuthResultDto("cancelled", null)
+                if (pending.abort.isCompleted) return McpAuthResultDto("cancelled", null)
                 return result
             }
             // Cancel rather than remove: a timeout should abandon this attempt, not discard
@@ -104,33 +128,81 @@ class KiloMcpAuthService internal constructor(
             }
             McpAuthResultDto("timeout", null)
         } finally {
-            active.remove(key, token)
-            cancelled.remove(token)
-            _busy.update { it - key }
-            refresh(dir)
+            release(key, pending)
+            // A forgotten server is mid-removal, so re-reading its runtime status here would race the
+            // removal RPC and put the name straight back into needsAuth.
+            if (!pending.forgotten) refresh(dir)
         }
+    }
+
+    /**
+     * Waits for the CLI's authenticate reply or for [abort], whichever lands first.
+     *
+     * `mcpAuthenticate` only resolves when the OAuth callback completes or the CLI's own 5-minute
+     * window closes, so without this race a cancel leaves the caller - and the busy flag the prompt
+     * indicator reads - stuck for minutes after the user already gave up.
+     */
+    private suspend fun race(
+        dir: String,
+        name: String,
+        abort: CompletableDeferred<Unit>,
+    ): McpAuthResultDto = coroutineScope {
+        val rpc = async {
+            attempt("mcp auth signIn failed dir=$dir name=$name", McpAuthResultDto("failed", null)) {
+                svc().mcpAuthenticate(dir, name)
+            }
+        }
+        try {
+            select {
+                abort.onAwait { McpAuthResultDto("cancelled", null) }
+                rpc.onAwait { it }
+            }
+        } finally {
+            rpc.cancel()
+        }
+    }
+
+    private fun release(key: String, pending: Attempt) {
+        if (active.remove(key, pending)) _busy.update { it - key }
     }
 
     /** Cancels a pending sign-in for [name], keeping any stored credentials. */
     suspend fun cancel(dir: String, name: String): Boolean {
-        val key = busyKey(dir, name)
-        val token = active[key]
-        if (token != null) cancelled.add(token)
+        val pending = active[busyKey(dir, name)]
         val stopped = attempt("mcp auth cancel failed dir=$dir name=$name", false) { svc().mcpAuthCancel(dir, name) }
-        if (!stopped && token != null) cancelled.remove(token)
+        // Abandon the attempt even when the CLI refuses the cancel. A rejected cancel means the flow
+        // is already unreachable, and leaving it busy strands the Settings progress overlay and the
+        // prompt indicator on "Signing in..." until the six-minute timeout. The trailing refresh in
+        // signIn's finally still reports the truth if the flow somehow completes anyway.
+        pending?.stop()
         return stopped
+    }
+
+    /**
+     * Drops every sign-in trace of [name] in [dir], for a server that is being removed.
+     *
+     * Call this before the removal lands: while the CLI still knows the name it can release the
+     * pending OAuth flow and its callback port, and afterwards `/mcp/{name}/auth/cancel` only
+     * answers 404. The local state is cleared regardless of what the CLI reports, because a removed
+     * server can never finish signing in.
+     */
+    suspend fun forget(dir: String, name: String) {
+        val key = busyKey(dir, name)
+        val pending = active[key]
+        if (pending != null) {
+            attempt("mcp auth forget failed dir=$dir name=$name", false) { svc().mcpAuthCancel(dir, name) }
+            pending.stop(forget = true)
+            release(key, pending)
+        }
+        val names = _needsAuth.value[dir].orEmpty()
+        if (name in names) updateNeedsAuth(dir, names - name)
     }
 
     /** Clears stored credentials and reconnects so the runtime immediately reports [needsAuth]. */
     suspend fun reset(dir: String, name: String): Boolean {
-        val key = busyKey(dir, name)
-        val auth = active[key]
-        if (auth != null) cancelled.add(auth)
         val removed = attempt("mcp auth reset failed dir=$dir name=$name", false) { svc().mcpAuthRemove(dir, name) }
-        if (!removed) {
-            if (auth != null) cancelled.remove(auth)
-            return false
-        }
+        if (!removed) return false
+        active[busyKey(dir, name)]?.stop()
         var reconnected = false
         try {
             val disconnected = attempt("mcp disconnect after auth reset failed dir=$dir name=$name", false) {

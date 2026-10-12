@@ -46,6 +46,7 @@ import ai.kilocode.client.session.ui.prompt.SlashAction
 import ai.kilocode.client.session.ui.prompt.mentionParts as promptMentionParts
 import ai.kilocode.client.session.ui.rail.PromptRailController
 import ai.kilocode.client.session.settings.ApprovalReasonVisibilityListener
+import ai.kilocode.client.session.settings.TranscriptDisplayListener
 import ai.kilocode.client.session.ui.account.SessionAccountOverlay
 import ai.kilocode.client.session.ui.popup.HeaderPopupController
 import ai.kilocode.client.session.ui.SessionDropOverlay
@@ -841,6 +842,12 @@ class SessionUi(
                     prompt.setReady(controller.model.isReady())
                 }
 
+                is SessionControllerEvent.RecentsChanged -> {
+                    // The empty panel is reused across view refreshes, so push the new snapshot into it
+                    // in place. Null when the transcript (not the empty view) is showing.
+                    empty?.setRecents(controller.recents())
+                }
+
                 is SessionControllerEvent.ConnectionChanged -> Unit
 
                 is SessionControllerEvent.AccountOverlayChanged -> account.onEvent(event)
@@ -975,6 +982,13 @@ class SessionUi(
                 if (disposed) return@invokeLater
                 if (!this::messageBody.isInitialized) return@invokeLater
                 messageBody.syncApprovalReasons(visible)
+            }
+        })
+        bus.subscribe(TranscriptDisplayListener.TOPIC, TranscriptDisplayListener { display ->
+            ApplicationManager.getApplication().invokeLater {
+                if (disposed) return@invokeLater
+                if (!this::messageBody.isInitialized) return@invokeLater
+                messageBody.syncTranscriptDisplay(display)
             }
         })
         // refreshBranch cancels the in-flight lookup first, so a flip both drops a running gh call
@@ -1613,12 +1627,16 @@ class SessionUi(
         return SessionIssue(
             id = "mcp-auth:$name",
             title = KiloBundle.message("prompt.mcp.provider", display),
-            actions = listOf(
+            actions = listOfNotNull(
                 SessionIssueAction(
                     title = KiloBundle.message(if (busy) "prompt.mcp.needsAuth.busy" else "settings.agentBehavior.mcp.signIn"),
                     enabled = !busy,
                     action = { signInFromPrompt(name) },
                 ),
+                SessionIssueAction(
+                    title = KiloBundle.message("settings.agentBehavior.mcp.signIn.cancel"),
+                    action = { cancelFromPrompt(name) },
+                ).takeIf { busy },
                 SessionIssueAction(
                     title = KiloBundle.message("prompt.mcp.openSettings"),
                     action = { openMcpSettings(name) },
@@ -1642,6 +1660,10 @@ class SessionUi(
             val result = auth.signIn(workspace.directory, name)
             withContext(Dispatchers.EDT) { auth.report(name, result) }
         }
+    }
+
+    private fun cancelFromPrompt(name: String) {
+        cs.launch { service<KiloMcpAuthService>().cancel(workspace.directory, name) }
     }
 
     private fun openKiloSettings() {
