@@ -320,6 +320,25 @@ describe("Anthropic fallback backport", () => {
     }
   })
 
+  test("keeps message-level caching after a non-trailing fallback boundary", () => {
+    const model = { ...fixtureModel(), providerID: ProviderV2.ID.make("anthropic") }
+    const marker = { type: "text" as const, text: "", providerOptions: metadata }
+    const endings = [
+      { type: "text" as const, text: "answer" },
+      { type: "tool-call" as const, toolCallId: "lookup", toolName: "lookup", input: { q: "x" } },
+    ]
+    for (const ending of endings) {
+      const result = ProviderTransform.message([{ role: "assistant", content: [marker, ending] }], model, {})
+      expect(result[0].providerOptions?.anthropic?.cacheControl).toEqual({ type: "ephemeral" })
+      if (!Array.isArray(result[0].content)) throw new Error("Expected assistant content")
+      const stored = result[0].content[0]
+      if (stored.type !== "text") throw new Error("Expected fallback carrier")
+      expect(stored.providerOptions).toEqual(metadata)
+    }
+    const trailing = ProviderTransform.message([{ role: "assistant", content: [endings[0], marker] }], model, {})
+    expect(trailing[0].providerOptions).toBeUndefined()
+  })
+
   test("replays an ignored stored marker in place without a space or cache annotation", async () => {
     const model = fixtureModel()
     const sessionID = SessionID.make("ses_fixture")

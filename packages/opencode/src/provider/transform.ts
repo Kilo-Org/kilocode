@@ -485,11 +485,8 @@ function applyCaching(msgs: ModelMessage[], model: Provider.Model, options: Reco
     // kilocode_change end
 
     // kilocode_change start - message-level caching would annotate the last boundary-only block
-    if (
-      Array.isArray(msg.content) &&
-      msg.content.some((part) => part.type === "text" && AnthropicFallback.marker(part.providerOptions))
-    )
-      continue
+    const last = Array.isArray(msg.content) ? msg.content.at(-1) : undefined
+    if (last?.type === "text" && AnthropicFallback.marker(last.providerOptions)) continue
     // kilocode_change end
     msg.providerOptions = mergeDeep(msg.providerOptions ?? {}, providerOptions)
   }
