@@ -1,5 +1,8 @@
 # Kilo v1 → v2 migration plan
 
+> [!WARNING]
+> **Superseded by [`kilo-v2-migration-plan.md`](kilo-v2-migration-plan.md) (2026-10-12).** Archived reference only. This plan assumed the old `kilo-v2` branch and release-tag merges, which `migration-context.md` Decisions 1–2 replace. Its decision numbering differs from the current one. Do not act on it.
+
 Finalized 2026-09-30. Base: opus-55. Merged in: upstream-resync rigor, capability handshake and validation rules from deepseek; VS Code blockers, sharing/remote steps, standing rules and metrics from kimi-k3. Status: not started. First actions:
 - Team sign-off on Decisions 3, 4 and 5.
 - Owners assigned for the upstream-sync lane (N1/N3) and the delta sweep (N4).

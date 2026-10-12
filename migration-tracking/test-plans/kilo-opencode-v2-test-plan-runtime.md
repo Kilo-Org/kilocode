@@ -1,5 +1,8 @@
 # Kilo OpenCode v2 runtime test plan
 
+> [!WARNING]
+> **Stale; rewrite pending in U-L4-01 ([plan](../plans/kilo-v2-migration-plan.md)).** Expected behavior was quoted from the archived port, not v1 (Decision 3). Keep the RT IDs; do not use the expectations as acceptance.
+
 Owned by the runtime test-plan delegate for thread `thr_qr9z7p3cqc` (Bootstrap
 OpenCode v2 baseline). Companion to the main index
 `plans/kilo-opencode-v2-test-plan.md` (not edited here) and the separately

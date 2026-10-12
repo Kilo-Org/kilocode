@@ -1,5 +1,8 @@
 # Kilo v2 scenario test plan
 
+> [!WARNING]
+> **Stale; rewrite pending in U-L4-01 ([plan](../plans/kilo-v2-migration-plan.md)).** Expected behavior was quoted from the archived port, not v1 (Decision 3), and scenarios carry no gate tags. Keep the scenario IDs; do not use the expectations as acceptance.
+
 Separate from the [implementation plan](kilo-opencode-v2-issue-13750.md).
 This is a test checklist, not a claim that scenarios have passed.
 

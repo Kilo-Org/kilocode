@@ -2,7 +2,7 @@
 
 This file is the single source for the shared facts, decisions and rules of the Kilo v1 → v2 migration. Role prompts (discovery, planner, coordinator) and implementation session prompts point here instead of restating it. When a fact here changes, change it here first.
 
-Status: bootstrap. Last updated 2026-10-12.
+Status: planned (bootstrap docs complete; no unit started). Last updated 2026-10-12. Plan: [`kilo-v2-migration-plan.md`](kilo-v2-migration-plan.md).
 
 ## Branches and pinned refs
 
@@ -43,7 +43,7 @@ Do not re-litigate these without new evidence. Proposed changes go to the user.
 
 ## Deferred decisions
 
-Decisions intentionally left open until the work that needs them. Each has a deadline; the coordinator raises it with the user and owners before that point. Detail and evidence: `migration-tracking/discovery/v2-unit-register.md`, "Open questions".
+Decisions intentionally left open until the work that needs them. Each has a deadline; the coordinator raises it with the user and owners before that point. Detail and evidence: `migration-tracking/discovery/v2-unit-register.md`, "Open questions"; questions added by the planner (Q-HOST-01, Q-TEL-01): `kilo-v2-migration-plan.md` §A9.
 
 | Decision | Deadline |
 |---|---|
@@ -80,7 +80,7 @@ Decisions intentionally left open until the work that needs them. Each has a dea
 
 ## Definition of done per unit
 
-Code, tests, acceptance evidence, an updated progress row, and docs. A local pass is never recorded as end-to-end.
+Code, tests, acceptance evidence, an updated unit row (Status cell in Part B of the plan), and docs. A local pass is never recorded as end-to-end.
 
 ## Deferred admin tasks
 
@@ -105,11 +105,12 @@ These need a repo admin (or account credentials) and do not block work. Track th
 | Branch protection | Deferred (admin task) |
 | Baseline health recorded (`bun install`, `bun run check`) | Done 2026-10-11: `technical-notes/baseline/pinned-v2-baseline.md` |
 | Discovery report | Done 2026-10-12: `migration-tracking/discovery/` |
+| Migration plan | Done 2026-10-12: `migration-tracking/plans/kilo-v2-migration-plan.md` |
 
 ## Reference artifacts
 
-- Plans: `migration-tracking/plans/` (previous execution plan, progress plan and working log; reference only until the new plan lands).
-- Discovery outputs: `migration-tracking/discovery/` (feature inventory, epic taxonomy, unit register, doc inventory).
+- Plan (living): `migration-tracking/plans/kilo-v2-migration-plan.md`. The previous execution plan, progress plan and working log in `plans/` are superseded (banners at the top) and kept as reference only.
+- Discovery outputs (frozen evidence once absorbed by the plan): `migration-tracking/discovery/` (feature inventory, epic taxonomy, unit register, doc inventory).
 - Source parity: `migration-tracking/marker-audit/` (the 816-file assessment and shared-change inventory).
 - API and session differences: `migration-tracking/technical-notes/baseline/v2-v1-schema-diffs.md`, `migration-tracking/technical-notes/baseline/v2-v1-session-diffs.md`.
 - Technical notes: `migration-tracking/technical-notes/` and `technical-notes/baseline/`.

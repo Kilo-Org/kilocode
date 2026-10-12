@@ -1,5 +1,8 @@
 # Phased Plan - Port Kilo onto OpenCode V2
 
+> [!WARNING]
+> **Frozen evidence, superseded by [`kilo-v2-migration-plan.md`](kilo-v2-migration-plan.md) (2026-10-12).** Cite its dated facts; do not maintain it. Its "implementation is paused" instruction and its branch, store and `kilo2` rules describe the archived `kilo-v2` port and no longer apply. `migration-context.md` and the new plan govern.
+
 > [!IMPORTANT]
 > Local working copy of
 > [Kilo-Org/kilocode#13750](https://github.com/Kilo-Org/kilocode/issues/13750).
