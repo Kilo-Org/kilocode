@@ -38,6 +38,14 @@ class KiloAgentBehaviorService internal constructor(
 
     suspend fun agents(directory: String): List<AgentDetailDto> = safe(emptyList()) { call { agents(directory) } }
 
+    /**
+     * Re-reads the agent list after a write, keeping [fallback] when the read fails or comes back
+     * empty. Saving config can bounce the CLI, and the built-in agents mean an empty list is always a
+     * failed read rather than a real state, so returning one would blank the settings list.
+     */
+    suspend fun refreshAgents(directory: String, fallback: List<AgentDetailDto>): List<AgentDetailDto> =
+        safe(fallback) { call { agents(directory) } }.ifEmpty { fallback }
+
     suspend fun loadSkills(directory: String): List<SkillDto> = call { skills(directory) }
 
     suspend fun refreshSkills(directory: String, fallback: List<SkillDto>): List<SkillDto> = safe(fallback) { call { skills(directory) } }
