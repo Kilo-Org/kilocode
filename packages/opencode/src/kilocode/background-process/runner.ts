@@ -133,16 +133,21 @@ export namespace BackgroundProcessRunner {
     return result
   }
 
-  async function descendants(seen: Map<number, string>, root?: () => Root | undefined) {
+  async function descendants(seen: Map<number, string>, root?: () => Root | undefined, timeout = 2_000) {
     const query =
       "Get-CimInstance Win32_Process | Select-Object ProcessId,ParentProcessId,CreationDate | ConvertTo-Json -Compress"
     const out = await Process.text(["powershell.exe", "-NoProfile", "-NonInteractive", "-Command", query], {
       nothrow: true,
-      abort: AbortSignal.timeout(2_000),
-      timeout: 2_000,
+      abort: AbortSignal.timeout(timeout),
+      timeout,
     })
-    if (out.code !== 0 || !out.text.trim()) return seen
-    const value: unknown = JSON.parse(out.text)
+    if (out.code !== 0 || !out.text.trim()) return { seen, ok: false }
+    let value: unknown
+    try {
+      value = JSON.parse(out.text)
+    } catch {
+      return { seen, ok: false }
+    }
     const items = Array.isArray(value) ? value : [value]
     const rows = items.flatMap((item) => {
       if (
@@ -154,7 +159,7 @@ export namespace BackgroundProcessRunner {
         return []
       return [{ pid: item.ProcessId, parent: item.ParentProcessId, birth: item.CreationDate }]
     })
-    return walk(rows, seen, root?.())
+    return { seen: walk(rows, seen, root?.()), ok: true }
   }
 
   // Grace window after the leader exits during which we keep walking from its
@@ -170,6 +175,7 @@ export namespace BackgroundProcessRunner {
     let code: number | undefined
     let exited: number | undefined
     let failure: unknown
+    let unsafe = false
     let seen = new Map<number, string>()
     void done.then(
       (value) => {
@@ -182,32 +188,41 @@ export namespace BackgroundProcessRunner {
     )
     while (true) {
       if (failure) throw failure
-      const active = code === undefined || (exited !== undefined && Date.now() - exited < GRACE)
-      seen = await descendants(seen, () => (active ? { pid, start, end: exited } : undefined))
       if (await Bun.file(input.control).exists()) {
         // Refresh birth-checked identities before each kill; taskkill must not walk stale parent pids itself.
         const end = Date.now() + 5_000
         while (Date.now() < end) {
-          seen = await descendants(seen, () =>
-            code === undefined || (exited !== undefined && Date.now() - exited < GRACE)
-              ? { pid, start, end: exited }
-              : undefined,
-          )
-          if (code !== undefined && seen.size === 0) {
+          const next = await descendants(seen, () => ({ pid, start, end: exited }), end - Date.now())
+          seen = next.seen
+          if (code !== undefined && next.ok && seen.size === 0) {
             await rm(input.control, { force: true })
             return code
           }
-          await Promise.all(
-            [...(code === undefined ? [pid] : []), ...seen.keys()].map((item) =>
-              Process.run(["taskkill", "/pid", String(item), "/f"], { nothrow: true }),
-            ),
-          )
+          const remaining = end - Date.now()
+          if (remaining > 0)
+            await Promise.all(
+              [...(code === undefined ? [pid] : []), ...(next.ok ? seen.keys() : [])].map((item) =>
+                Process.run(["taskkill", "/pid", String(item), "/f"], {
+                  nothrow: true,
+                  timeout: remaining,
+                  abort: AbortSignal.timeout(remaining),
+                }),
+              ),
+            )
           await Bun.sleep(100)
         }
-        await rm(input.control, { force: true })
-        throw new Error("Background process runner could not terminate its Windows process tree")
+        if (!unsafe)
+          process.stderr.write(
+            "background process runner: stop not confirmed; keeping the stop request and guarding tracked processes\n",
+          )
+        unsafe = true
+        await Bun.sleep(100)
+        continue
       }
-      if (code !== undefined && !active && seen.size === 0) return code
+      const active = code === undefined || (exited !== undefined && Date.now() - exited < GRACE)
+      const walked = await descendants(seen, () => (active ? { pid, start, end: exited } : undefined))
+      seen = walked.seen
+      if (code !== undefined && walked.ok && !active && seen.size === 0) return code
       await Bun.sleep(100)
     }
   }

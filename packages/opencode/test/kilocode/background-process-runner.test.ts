@@ -256,3 +256,181 @@ test.skipIf(process.platform !== "win32")(
   },
   20_000,
 )
+
+for (const failure of ["failed", "malformed", "slow"] as const)
+  test.skipIf(process.platform !== "win32")(
+    `stop does not kill tracked pids when its fresh process walk is ${failure}`,
+    async () => {
+      await using tmp = await tmpdir()
+      const input = {
+        token: "stop-walk-failure",
+        shell: process.execPath,
+        args: ["-e", "setInterval(() => {}, 1000)"],
+        cwd: tmp.path,
+        log: path.join(tmp.path, "command.log"),
+        control: path.join(tmp.path, "command.stop"),
+      }
+      const state = { pid: 0, reads: 0, birth: 0, restored: false }
+      const calls: Array<{ pid: number; restored: boolean }> = []
+      const code = process.exitCode ?? 0
+      const token = process.env.KILO_BACKGROUND_PROCESS_TOKEN
+      const spawned = spyOn(child, "spawn")
+      const read = spyOn(Process, "text").mockImplementation(async (_args, opts) => {
+        state.reads++
+        if (state.reads === 1) {
+          const proc = spawned.mock.results.at(0)?.value
+          if (!(proc instanceof child.ChildProcess) || !proc.pid) throw new Error("runner did not spawn the leader")
+          state.pid = proc.pid
+          state.birth = Date.now()
+          await Bun.write(input.control, "stop")
+        }
+        if (state.reads === 2 && failure === "slow") {
+          await Bun.sleep(2_500)
+          if ((opts?.timeout ?? 0) < 2_500)
+            return { code: 1, stdout: Buffer.alloc(0), stderr: Buffer.alloc(0), text: "" }
+        }
+        if (state.reads === 2 && failure !== "slow")
+          return {
+            code: failure === "failed" ? 1 : 0,
+            stdout: Buffer.alloc(0),
+            stderr: Buffer.alloc(0),
+            text: failure === "failed" ? "" : "not JSON",
+          }
+        state.restored = state.reads > 2 || (failure === "slow" && state.reads === 2)
+        const rows = state.restored
+          ? [{ ProcessId: state.pid, ParentProcessId: 4, CreationDate: `/Date(${state.birth})/` }]
+          : [
+              { ProcessId: state.pid, ParentProcessId: 4, CreationDate: `/Date(${state.birth})/` },
+              { ProcessId: 900_001, ParentProcessId: state.pid, CreationDate: `/Date(${state.birth})/` },
+            ]
+        return { code: 0, stdout: Buffer.alloc(0), stderr: Buffer.alloc(0), text: JSON.stringify(rows) }
+      })
+      const kill = spyOn(Process, "run").mockImplementation(async (args) => {
+        const pid = Number(args.at(2))
+        calls.push({ pid, restored: state.restored })
+        if (pid === state.pid) {
+          const proc = spawned.mock.results.at(0)?.value
+          if (!(proc instanceof child.ChildProcess)) throw new Error("leader missing")
+          const exited = once(proc, "exit")
+          proc.kill()
+          await exited
+        }
+        return { code: 0, stdout: Buffer.alloc(0), stderr: Buffer.alloc(0) }
+      })
+      try {
+        expect(await BackgroundProcessRunner.maybe(BackgroundProcessRunner.command(input))).toBe(true)
+        expect(calls.length).toBeGreaterThan(0)
+        expect(calls.filter((call) => call.pid !== state.pid).every((call) => call.restored)).toBe(true)
+        expect(calls.some((call) => call.pid === 900_001)).toBe(false)
+        expect(await Bun.file(input.control).exists()).toBe(false)
+      } finally {
+        const proc = spawned.mock.results.at(0)?.value
+        if (proc instanceof child.ChildProcess && proc.exitCode === null && proc.signalCode === null) {
+          const exited = once(proc, "exit")
+          proc.kill()
+          await exited
+        }
+        read.mockRestore()
+        kill.mockRestore()
+        spawned.mockRestore()
+        process.exitCode = code
+        if (token === undefined) delete process.env.KILO_BACKGROUND_PROCESS_TOKEN
+        if (token !== undefined) process.env.KILO_BACKGROUND_PROCESS_TOKEN = token
+      }
+    },
+    20_000,
+  )
+
+test.skipIf(process.platform !== "win32")(
+  "an unverified stop keeps its control request and runner until a later trustworthy walk",
+  async () => {
+    await using tmp = await tmpdir()
+    const input = {
+      token: "stop-unverified",
+      shell: process.execPath,
+      args: ["-e", "setInterval(() => {}, 1000)"],
+      cwd: tmp.path,
+      log: path.join(tmp.path, "command.log"),
+      control: path.join(tmp.path, "command.stop"),
+    }
+    let pid = 0
+    let birth = 0
+    let restore = false
+    let reads = 0
+    const targets: number[] = []
+    const previous = process.exitCode ?? 0
+    const token = process.env.KILO_BACKGROUND_PROCESS_TOKEN
+    const spawned = spyOn(child, "spawn")
+    const read = spyOn(Process, "text").mockImplementation(async () => {
+      reads++
+      if (reads === 1) {
+        const proc = spawned.mock.results.at(0)?.value
+        if (!(proc instanceof child.ChildProcess) || !proc.pid) throw new Error("runner did not start")
+        pid = proc.pid
+        birth = Date.now()
+        await Bun.write(input.control, "stop")
+        return {
+          code: 0,
+          stdout: Buffer.alloc(0),
+          stderr: Buffer.alloc(0),
+          text: JSON.stringify([
+            { ProcessId: pid, ParentProcessId: 4, CreationDate: `/Date(${birth})/` },
+            { ProcessId: 900_001, ParentProcessId: pid, CreationDate: `/Date(${birth})/` },
+          ]),
+        }
+      }
+      if (!restore) {
+        await Bun.sleep(100)
+        return { code: 1, stdout: Buffer.alloc(0), stderr: Buffer.alloc(0), text: "" }
+      }
+      return { code: 0, stdout: Buffer.alloc(0), stderr: Buffer.alloc(0), text: "[]" }
+    })
+    const kill = spyOn(Process, "run").mockImplementation(async (args) => {
+      const target = Number(args.at(2))
+      targets.push(target)
+      if (target === pid) {
+        const proc = spawned.mock.results.at(0)?.value
+        if (!(proc instanceof child.ChildProcess)) throw new Error("leader missing")
+        const done = once(proc, "exit")
+        proc.kill()
+        await done
+      }
+      return { code: 0, stdout: Buffer.alloc(0), stderr: Buffer.alloc(0) }
+    })
+    let ended = false
+    const run = BackgroundProcessRunner.maybe(BackgroundProcessRunner.command(input)).finally(() => {
+      ended = true
+    })
+    void run.catch(() => {})
+    try {
+      while (pid === 0) {
+        await Bun.sleep(20)
+        const proc = spawned.mock.results.at(0)?.value
+        if (proc instanceof child.ChildProcess) pid = proc.pid ?? 0
+      }
+      await Bun.sleep(5_500)
+      expect(ended).toBe(false)
+      expect(await Bun.file(input.control).exists()).toBe(true)
+      expect(targets).not.toContain(900_001)
+      restore = true
+      expect(await run).toBe(true)
+      expect(await Bun.file(input.control).exists()).toBe(false)
+    } finally {
+      restore = true
+      const proc = spawned.mock.results.at(0)?.value
+      if (proc instanceof child.ChildProcess && proc.exitCode === null && proc.signalCode === null) {
+        const done = once(proc, "exit")
+        proc.kill()
+        await done
+      }
+      await run.catch(() => {})
+      read.mockRestore()
+      kill.mockRestore()
+      spawned.mockRestore()
+      process.exitCode = previous
+      if (token === undefined) delete process.env.KILO_BACKGROUND_PROCESS_TOKEN
+      else process.env.KILO_BACKGROUND_PROCESS_TOKEN = token
+    }
+  },
+  20_000,
+)
