@@ -13,9 +13,11 @@ import { MessageV2 } from "@/session/message-v2"
 import { MessageID, PartID, SessionID } from "@/session/schema"
 import { KiloSessionPrompt } from "@/kilocode/session/prompt"
 import { KiloSessionMessageOrder } from "@/kilocode/session/message-order"
+import { PlanFollowup, PlanFollowupRuntime } from "@/kilocode/plan-followup"
+import { InstanceRef } from "@/effect/instance-ref"
 import { ProviderV2 } from "@opencode-ai/core/provider"
 import { ModelV2 } from "@opencode-ai/core/model"
-import { TestInstance, seedProject } from "../fixture/fixture"
+import { TestInstance, seedProject, withTestInstance } from "../fixture/fixture"
 import { testEffect } from "../lib/effect"
 import { reply, TestLLMServer } from "../lib/llm-server"
 
@@ -50,6 +52,10 @@ const setup = Effect.gen(function* () {
       lsp: false,
       compaction: { auto: false, prune: false, tail_turns: 0 },
       agent: { title: { disable: true } },
+      command: {
+        probe: { template: "Record the command turn", agent: "code", subtask: false },
+        delegated: { template: "Record the delegated turn", agent: "general", subtask: true },
+      },
       provider: {
         test: {
           npm: "@ai-sdk/openai-compatible",
@@ -64,7 +70,7 @@ const setup = Effect.gen(function* () {
   const sessions = yield* Session.Service
   const prompt = yield* SessionPrompt.Service
   const session = yield* sessions.create({ title: "Shell prefix regression" })
-  const send = (editor?: { shell?: string; activeFile?: string }, synthetic = false, system?: string) =>
+  const send = (editor?: MessageV2.EditorContext, synthetic = false, system?: string) =>
     Effect.gen(function* () {
       yield* llm.push(reply().text("Recorded").stop())
       return yield* prompt.prompt({
@@ -105,6 +111,127 @@ it.instance(
     expect(
       users.flatMap((msg) => msg.parts).some((part) => part.type === "text" && part.text.includes("Default shell")),
     ).toBe(false)
+  }),
+  240_000,
+)
+
+it.instance(
+  "keeps shell and system across a slash command without an editor snapshot",
+  Effect.gen(function* () {
+    const run = yield* setup
+    yield* run.send({ shell: "/bin/fish", activeFile: "first.ts" }, false, "Custom instruction")
+    yield* run.llm.push(reply().text("Command recorded").stop())
+    yield* run.prompt.command({ sessionID: run.session.id, command: "probe", arguments: "", agent: "code" })
+    yield* run.send({ shell: "/bin/fish", activeFile: "second.ts" }, false, "Custom instruction")
+    const systems = yield* run.systems
+    expect(systems).toHaveLength(3)
+    expect(systems.at(1)).toBe(systems.at(0))
+    expect(systems.at(2)).toBe(systems.at(0))
+  }),
+  240_000,
+)
+
+it.instance(
+  "the real same-session plan follow-up retains static context",
+  Effect.gen(function* () {
+    const run = yield* setup
+    const instance = yield* TestInstance
+    const context = yield* InstanceRef
+    yield* run.send({ shell: "/bin/fish", activeFile: "first.ts" }, false, "Custom instruction")
+    const agent = spyOn(PlanFollowupRuntime, "agent").mockResolvedValue(undefined)
+    const store = spyOn(PlanFollowupRuntime, "session").mockImplementation((fn) =>
+      Effect.runPromise(fn(run.sessions).pipe(Effect.provideService(InstanceRef, context))),
+    )
+    yield* Effect.addFinalizer(() =>
+      Effect.sync(() => {
+        agent.mockRestore()
+        store.mockRestore()
+      }),
+    )
+    const messages = yield* run.sessions.messages({ sessionID: run.session.id })
+    const action = yield* Effect.promise(
+      async () =>
+        await withTestInstance({
+          directory: instance.directory,
+          fn: () =>
+            PlanFollowup.ask({
+              sessionID: run.session.id,
+              messages,
+              abort: AbortSignal.any([]),
+              question: {
+                ask: async () => [[PlanFollowup.ANSWER_CONTINUE]],
+                list: async () => [],
+                reject: async () => {},
+              },
+            }),
+        }),
+    )
+    expect(action).toBe("continue")
+    yield* run.llm.push(reply().text("Plan implemented").stop())
+    yield* run.prompt.loop({ sessionID: run.session.id })
+    const systems = yield* run.systems
+    expect(systems).toHaveLength(2)
+    expect(systems.at(1)).toBe(systems.at(0))
+    const stored = yield* run.sessions.messages({ sessionID: run.session.id })
+    expect(
+      stored.some((msg) =>
+        msg.parts.some((part) => part.type === "text" && part.synthetic && part.text === "Implement the plan above."),
+      ),
+    ).toBe(true)
+  }),
+  240_000,
+)
+
+it.instance(
+  "task notifications, wakeups, and crons enter the real prompt API without resetting context",
+  Effect.gen(function* () {
+    const run = yield* setup
+    yield* run.send({ shell: "/bin/fish" }, false, "Custom instruction")
+    for (const [text, metadata] of [
+      ["Background task completed", { background: true }],
+      ["[scheduled wakeup] Continue the synthetic task", { background: true, wakeup: true, wakeupID: "wake_fixture" }],
+      [
+        "[scheduled cron task] Continue the synthetic task",
+        { background: true, wakeup: true, wakeupID: "cron_fixture" },
+      ],
+    ] as const) {
+      yield* run.llm.push(reply().text("Internal turn recorded").stop())
+      yield* run.prompt.prompt({
+        sessionID: run.session.id,
+        agent: "code",
+        parts: [{ type: "text", text, synthetic: true, metadata }],
+      })
+    }
+    const systems = yield* run.systems
+    expect(systems).toHaveLength(4)
+    expect(new Set(systems).size).toBe(1)
+  }),
+  240_000,
+)
+
+it.instance(
+  "task command summaries persist static context without copying old file and tab details",
+  Effect.gen(function* () {
+    const run = yield* setup
+    yield* run.send({ shell: "/bin/fish", activeFile: "first.ts", openTabs: ["first.ts"] }, false, "Custom instruction")
+    yield* run.llm.push(reply().text("Delegated task recorded").stop())
+    yield* run.llm.push(reply().text("Task summarized").stop())
+    yield* run.prompt.command({ sessionID: run.session.id, command: "delegated", arguments: "", agent: "code" })
+    const messages = yield* run.sessions.messages({ sessionID: run.session.id })
+    const summary = messages.find((msg) =>
+      msg.parts.some((part) => part.type === "text" && part.text.startsWith("Summarize the task tool output")),
+    )
+    expect(summary?.info).toMatchObject({ editorContext: { shell: "/bin/fish" }, system: "Custom instruction" })
+    if (!summary || summary.info.role !== "user") throw new Error("Expected task summary")
+    expect(summary.info.editorContext).toEqual({ shell: "/bin/fish" })
+    const hits = yield* run.llm.hits
+    const parent = hits.at(-1)
+    if (!parent || !Array.isArray(parent.body.messages)) throw new Error("Expected parent request")
+    const recent = parent.body.messages.at(-1)
+    expect(JSON.stringify(recent)).not.toContain("Active file:")
+    expect(JSON.stringify(recent)).not.toContain("Open tabs:")
+    const systems = yield* run.systems
+    expect(systems.at(-1)).toBe(systems.at(0))
   }),
   240_000,
 )
@@ -171,7 +298,11 @@ it.instance(
   Effect.gen(function* () {
     const run = yield* setup
     const system = "Retain this custom system instruction"
-    yield* run.send({ shell: "/bin/fish" }, false, system)
+    yield* run.send(
+      { shell: "/bin/fish", activeFile: "first.ts", openTabs: ["first.ts"], visibleFiles: ["first.ts"] },
+      false,
+      system,
+    )
     yield* run.send(undefined, true)
     const compact = yield* SessionCompaction.Service
     yield* compact.create({
@@ -185,12 +316,20 @@ it.instance(
     const stored = yield* run.sessions.messages({ sessionID: run.session.id })
     const checkpoint = stored.find((msg) => msg.parts.some((part) => part.type === "compaction"))
     expect(checkpoint?.info).toMatchObject({ editorContext: { shell: "/bin/fish" }, system })
+    if (!checkpoint || checkpoint.info.role !== "user") throw new Error("Expected compaction checkpoint")
+    expect(checkpoint.info.editorContext).toEqual({ shell: "/bin/fish" })
     const projected = yield* MessageV2.filterCompactedEffect(run.session.id)
     expect(projected.some((msg) => msg.info.id === stored.at(0)?.info.id)).toBe(false)
     yield* run.send(undefined, true)
     const systems = yield* run.systems
     expect(systems.at(1)).toBe(systems.at(0))
     expect(systems.at(3)).toBe(systems.at(0))
+    const hits = yield* run.llm.hits
+    const after = hits.at(-1)
+    if (!after || !Array.isArray(after.body.messages)) throw new Error("Expected post-compaction request")
+    expect(JSON.stringify(after.body.messages)).not.toContain("Active file:")
+    expect(JSON.stringify(after.body.messages)).not.toContain("Open tabs:")
+    expect(JSON.stringify(after.body.messages)).not.toContain("Visible files:")
   }),
   240_000,
 )

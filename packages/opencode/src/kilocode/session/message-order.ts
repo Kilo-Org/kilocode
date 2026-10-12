@@ -1,4 +1,5 @@
 import type { MessageV2 } from "@/session/message-v2"
+import { isRecord } from "@/util/record"
 
 const chronology = new WeakMap<MessageV2.WithParts, number>()
 
@@ -34,7 +35,7 @@ export namespace KiloSessionMessageOrder {
       if (
         info.role === "user" &&
         (!context || compare(msg, context, index, contextIndex) > 0) &&
-        (msg.parts.some(human) ||
+        ((!msg.parts.some(command) && msg.parts.some(human)) ||
           (msg.parts.some((part) => part.type === "compaction") &&
             (info.editorContext !== undefined || info.system !== undefined)))
       ) {
@@ -81,4 +82,11 @@ export namespace KiloSessionMessageOrder {
 
 function human(part: { type: string; synthetic?: boolean; ignored?: boolean }) {
   return part.type !== "compaction" && (part.type !== "text" || (!part.synthetic && !part.ignored))
+}
+
+function command(part: MessageV2.Part) {
+  return (
+    (part.type === "subtask" && !!part.command) ||
+    (part.type === "text" && isRecord(part.metadata?.kilo) && isRecord(part.metadata.kilo.injected))
+  )
 }

@@ -605,7 +605,8 @@ export const layer = Layer.effect(
         time: { created: Date.now() },
         agent: lastUser.agent,
         model: lastUser.model,
-        editorContext: lastUser.editorContext, // kilocode_change — preserve editor context
+        editorContext: KiloSessionPrompt.staticContext(lastUser.editorContext), // kilocode_change - preserve static context only
+        system: lastUser.system, // kilocode_change - preserve the custom system prefix
       }
       yield* sessions.updateMessage(summaryUserMsg)
       yield* sessions.updatePart({

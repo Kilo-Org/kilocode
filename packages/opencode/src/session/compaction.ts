@@ -388,7 +388,11 @@ const layer = Layer.effect(
       ).context
       const recovered = KiloSessionPrompt.inheritContext(parent.info, context)
       // An empty system value also checkpoints a real input that cleared both fields.
-      const userMessage = { ...recovered, system: recovered.system ?? "" }
+      const userMessage = {
+        ...recovered,
+        editorContext: KiloSessionPrompt.staticContext(recovered.editorContext),
+        system: recovered.system ?? "",
+      }
       if (userMessage.editorContext !== parent.info.editorContext || userMessage.system !== parent.info.system) {
         yield* session.updateMessage(userMessage)
         parent.info = userMessage
