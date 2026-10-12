@@ -31,6 +31,7 @@ target
 
 # Local dev files
 opencode-dev
+.kilo-v2-dev/
 UPCOMING_CHANGELOG.md
 RELEASE_REVIEW.md
 logs/
