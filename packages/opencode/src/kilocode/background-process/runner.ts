@@ -134,16 +134,21 @@ export namespace BackgroundProcessRunner {
     return result
   }
 
-  async function descendants(seen: Map<number, string>, root?: () => Root | undefined) {
+  async function descendants(seen: Map<number, string>, root?: () => Root | undefined, timeout = 2_000) {
     const query =
       "Get-CimInstance Win32_Process | Select-Object ProcessId,ParentProcessId,CreationDate | ConvertTo-Json -Compress"
     const out = await Process.text(["powershell.exe", "-NoProfile", "-NonInteractive", "-Command", query], {
       nothrow: true,
-      abort: AbortSignal.timeout(2_000),
-      timeout: 2_000,
+      abort: AbortSignal.timeout(timeout),
+      timeout,
     })
     if (out.code !== 0 || !out.text.trim()) return { seen, ok: false }
-    const value: unknown = JSON.parse(out.text)
+    let value: unknown
+    try {
+      value = JSON.parse(out.text)
+    } catch {
+      return { seen, ok: false }
+    }
     const items = Array.isArray(value) ? value : [value]
     const rows = items.flatMap((item) => {
       if (
@@ -258,6 +263,7 @@ export namespace BackgroundProcessRunner {
     let code: number | undefined
     let exited: number | undefined
     let failure: unknown
+    let unsafe = false
     let seen = new Map<number, string>()
     void done.then(
       (value) => {
@@ -274,9 +280,6 @@ export namespace BackgroundProcessRunner {
         : undefined
     while (true) {
       if (failure) throw failure
-      const from = root()
-      const walked = await descendants(seen, () => from && { ...from, end: exited })
-      seen = walked.seen
       if (await Bun.file(input.control).exists()) {
         // Only pids a walk verified: the leader while it is alive, and descendants whose creation
         // time matched. No `/t`, because taskkill would walk parent pids on its own without that
@@ -284,26 +287,30 @@ export namespace BackgroundProcessRunner {
         // counts once a walk that actually ran finds nothing left.
         const end = Date.now() + 5_000
         while (Date.now() < end) {
-          const from = root()
-          const next = await descendants(seen, () => from && { ...from, end: exited })
+          const next = await descendants(seen, () => ({ pid, start, end: exited }), end - Date.now())
           seen = next.seen
           if (code !== undefined && next.ok && seen.size === 0) {
             await rm(input.control, { force: true })
             return code
           }
-          if (next.ok)
+          const remaining = end - Date.now()
+          if (remaining > 0)
             await Promise.all(
-              [...(code === undefined ? [pid] : []), ...seen.keys()].map((item) =>
-                Process.run(["taskkill", "/pid", String(item), "/f"], { nothrow: true }),
+              [...(code === undefined ? [pid] : []), ...(next.ok ? seen.keys() : [])].map((item) =>
+                Process.run(["taskkill", "/pid", String(item), "/f"], { nothrow: true, timeout: remaining, abort: AbortSignal.timeout(remaining) }),
               ),
             )
           await Bun.sleep(100)
         }
-        await rm(input.control, { force: true })
-        note("could not confirm that every process of the command ended, still guarding it")
+        if (!unsafe) note("stop not confirmed; keeping the stop request and guarding tracked processes")
+        unsafe = true
+        await Bun.sleep(100)
         continue
       }
       // Same rule as for a stop: an empty set only means the command is done if the walk ran.
+      const from = root()
+      const walked = await descendants(seen, () => from && { ...from, end: exited })
+      seen = walked.seen
       if (code !== undefined && !from && walked.ok && seen.size === 0) return code
       await Bun.sleep(100)
     }
