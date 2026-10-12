@@ -3,4 +3,4 @@
 "kilo-code": minor
 ---
 
-Add an experimental Search Ignored Files setting that lets the agent's glob tool find gitignored files and files in hidden directories, off by default
+Add an experimental Search Ignored Paths setting that lists ignored folders or files, such as build output, that the agent's glob tool should still search

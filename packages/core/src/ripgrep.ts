@@ -70,7 +70,7 @@ export interface GlobInput {
   readonly signal?: AbortSignal
   readonly validate?: Effect.Effect<void, unknown> // kilocode_change - bind approved searches at spawn
   readonly noRequireGit?: boolean // kilocode_change - honor ignore files outside a git repository
-  readonly noIgnore?: boolean // kilocode_change - skip ignore files such as .gitignore
+  readonly include?: readonly string[] // kilocode_change - additional whitelist globs
   readonly exclude?: readonly string[] // kilocode_change - additional exclusion globs
 }
 
@@ -223,8 +223,8 @@ const layer = Layer.effect(
             ...(input.hidden ? ["--hidden"] : []),
             ...(input.follow ? ["--follow"] : []),
             ...(input.noRequireGit ? ["--no-require-git"] : []), // kilocode_change
-            ...(input.noIgnore ? ["--no-ignore"] : []), // kilocode_change
             `--glob=${input.pattern}`,
+            ...(input.include ?? []).map((glob) => `--glob=${glob}`), // kilocode_change
             ...(input.exclude ?? []).map((glob) => `--glob=!${glob}`), // kilocode_change
             "--glob=!**/.git/**",
             ".",

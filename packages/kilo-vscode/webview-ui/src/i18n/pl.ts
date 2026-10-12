@@ -904,9 +904,9 @@ export const dict = {
   "settings.experimental.nativeNotebookTools.title": "Natywne narzędzia notatników",
   "settings.experimental.nativeNotebookTools.description":
     "Włącz eksperymentalne narzędzia do odczytu, edycji i uruchamiania notatników VS Code",
-  "settings.experimental.globSearchIgnored.title": "Przeszukuj ignorowane pliki",
-  "settings.experimental.globSearchIgnored.description":
-    "Pozwól narzędziu glob znajdować pliki wykluczone przez .gitignore oraz pliki w ukrytych katalogach (.git jest zawsze wykluczony)",
+  "settings.experimental.globIncludeIgnored.title": "Przeszukuj ignorowane ścieżki",
+  "settings.experimental.globIncludeIgnored.description":
+    "Foldery lub pliki, które narzędzie glob ma przeszukiwać nawet wtedy, gdy .gitignore lub inne pliki ignorowania je wykluczają. Używaj wzorców w stylu gitignore względem obszaru roboczego; ignorowane foldery w ich wnętrzu nadal są pomijane.",
   "settings.experimental.continueOnDeny.title": "Kontynuuj przy odmowie",
   "settings.experimental.continueOnDeny.description": "Kontynuuj pętlę agenta po odmowie uprawnienia",
   "settings.sandboxing.title": "Izolacja w piaskownicy",

@@ -65,7 +65,7 @@ export interface ExperimentalConfig {
   image_generation_model?: string
   code_mode?: boolean
   native_notebook_tools?: boolean
-  glob_search_ignored?: boolean
+  glob_include_ignored?: string[]
   speech_to_text_model?: string
   speech_to_text_base_url?: string
   speech_to_text_api_key?: string

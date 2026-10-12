@@ -942,9 +942,9 @@ export const dict = {
   "settings.experimental.nativeNotebookTools.title": "Нативные инструменты блокнотов",
   "settings.experimental.nativeNotebookTools.description":
     "Включить экспериментальные инструменты для чтения, редактирования и выполнения блокнотов VS Code",
-  "settings.experimental.globSearchIgnored.title": "Поиск в игнорируемых файлах",
-  "settings.experimental.globSearchIgnored.description":
-    "Разрешить инструменту glob находить файлы, исключённые через .gitignore, и файлы в скрытых каталогах (.git всегда исключается)",
+  "settings.experimental.globIncludeIgnored.title": "Поиск в игнорируемых путях",
+  "settings.experimental.globIncludeIgnored.description":
+    "Папки или файлы, в которых инструмент glob должен искать, даже если их исключает .gitignore или другие ignore-файлы. Используйте шаблоны в стиле gitignore относительно рабочей области; игнорируемые папки внутри них по-прежнему пропускаются.",
   "settings.experimental.continueOnDeny.title": "Продолжить при отказе",
   "settings.experimental.continueOnDeny.description": "Продолжить цикл агента при отказе в разрешении",
   "settings.sandboxing.title": "Изоляция в песочнице",

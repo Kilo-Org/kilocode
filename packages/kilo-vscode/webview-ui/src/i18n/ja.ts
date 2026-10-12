@@ -940,9 +940,9 @@ export const dict = {
   "settings.experimental.nativeNotebookTools.title": "ネイティブノートブックツール",
   "settings.experimental.nativeNotebookTools.description":
     "VS Codeノートブックの読み取り、編集、実行を行う実験的なツールを有効にします",
-  "settings.experimental.globSearchIgnored.title": "無視されたファイルを検索",
-  "settings.experimental.globSearchIgnored.description":
-    "glob ツールが .gitignore で除外されたファイルや隠しディレクトリ内のファイルを検索できるようにします（.git は常に除外されます）",
+  "settings.experimental.globIncludeIgnored.title": "無視されたパスを検索",
+  "settings.experimental.globIncludeIgnored.description":
+    ".gitignore などの無視ファイルで除外されていても glob ツールが検索するフォルダーまたはファイル。ワークスペースを基準とした gitignore 形式のパターンを使用します。その中にある無視されたフォルダーは引き続きスキップされます。",
   "settings.experimental.continueOnDeny.title": "拒否時に続行",
   "settings.experimental.continueOnDeny.description": "権限が拒否された場合にエージェントループを続行",
   "settings.sandboxing.title": "サンドボックス化",
