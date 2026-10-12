@@ -305,7 +305,11 @@ export namespace BackgroundProcessRunner {
           if (remaining > 0)
             await Promise.all(
               [...(code === undefined ? [pid] : []), ...(next.ok ? seen.keys() : [])].map((item) =>
-                Process.run(["taskkill", "/pid", String(item), "/f"], { nothrow: true, timeout: remaining, abort: AbortSignal.timeout(remaining) }),
+                Process.run(["taskkill", "/pid", String(item), "/f"], {
+                  nothrow: true,
+                  timeout: remaining,
+                  abort: AbortSignal.timeout(remaining),
+                }),
               ),
             )
           await Bun.sleep(100)
@@ -313,8 +317,11 @@ export namespace BackgroundProcessRunner {
         if (!unsafe) note("stop not confirmed; keeping the stop request and guarding tracked processes")
         unsafe = true
         if (Date.now() >= deadline) {
-          if (code === undefined) await Process.run(["taskkill", "/pid", String(pid), "/f"], { nothrow: true, timeout: 1_000 })
-          note(`id=${id} process table unavailable, descendants not verified; stop unconfirmed after 30s, walks=${walks}`)
+          if (code === undefined)
+            await Process.run(["taskkill", "/pid", String(pid), "/f"], { nothrow: true, timeout: 1_000 })
+          note(
+            `id=${id} process table unavailable, descendants not verified; stop unconfirmed after 30s, walks=${walks}`,
+          )
           return 1
         }
         await Bun.sleep(100)
@@ -323,12 +330,22 @@ export namespace BackgroundProcessRunner {
       // Same rule as for a stop: an empty set only means the command is done if the walk ran.
       if (code !== undefined) confirmation ??= Date.now() + GUARD
       walks++
-      const walked = await descendants(seen, () => ({ pid, start, end: exited }), confirmation === undefined ? 2_000 : Math.max(1, confirmation - Date.now()))
+      const walked = await descendants(
+        seen,
+        () => ({ pid, start, end: exited }),
+        confirmation === undefined ? 2_000 : Math.max(1, confirmation - Date.now()),
+      )
       seen = walked.seen
-      if (!walked.ok && Date.now() - warned >= 5_000) { note(`id=${id} process walk failed; no new descendants adopted, walks=${walks}`); warned = Date.now() }
+      if (!walked.ok && Date.now() - warned >= 5_000) {
+        note(`id=${id} process walk failed; no new descendants adopted, walks=${walks}`)
+        warned = Date.now()
+      }
       if (code !== undefined && !root() && walked.ok && seen.size === 0) return code
       if (walked.ok) confirmation = undefined
-      if (!walked.ok && confirmation !== undefined && Date.now() >= confirmation) { note(`id=${id} process table unavailable, descendants not verified; exit unconfirmed after 30s, walks=${walks}`); return 1 }
+      if (!walked.ok && confirmation !== undefined && Date.now() >= confirmation) {
+        note(`id=${id} process table unavailable, descendants not verified; exit unconfirmed after 30s, walks=${walks}`)
+        return 1
+      }
       await Bun.sleep(100)
     }
   }

@@ -113,14 +113,14 @@ describe("BackgroundProcess", () => {
           await Bun.sleep(100)
           return original.rm(...args)
         }
-        mock.module("fs/promises", () => ({ ...original, rm: remove }))
+        await mock.module("fs/promises", () => ({ ...original, rm: remove }))
         try {
           await BackgroundProcess.stop(item.id)
           const files = removed.filter((file) => file.includes(item.id))
           expect(files.length).toBeGreaterThan(0)
           expect(new Set(files).size).toBe(files.length)
         } finally {
-          mock.module("fs/promises", () => original)
+          await mock.module("fs/promises", () => original)
           await BackgroundProcess.stop(item.id)
         }
       },
