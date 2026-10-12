@@ -698,6 +698,7 @@ export type AssistantMessage = {
   structured?: unknown
   variant?: string
   finish?: string
+  contextOverhead?: number
 }
 
 export type Message = UserMessage | AssistantMessage

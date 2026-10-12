@@ -7,7 +7,7 @@ import { SessionCompaction } from "../../src/session/compaction"
 import { MessageV2 } from "../../src/session/message-v2"
 import { ModelV2 } from "@opencode-ai/core/model"
 import { ProviderV2 } from "@opencode-ai/core/provider"
-import { provideTmpdirServer } from "../fixture/fixture"
+import { provideTmpdirServer, reloadInstance, provideInstanceEffect } from "../fixture/fixture"
 import { testEffect } from "../lib/effect"
 import { TestLLMServer } from "../lib/llm-server"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
@@ -35,6 +35,11 @@ const config = (url: string) => ({
       models: {
         "test-model": {
           name: "Test",
+          limit: { context: 128_000, output: 16_000 },
+          cost: { input: 0, output: 0 },
+        },
+        "test-model-2": {
+          name: "Test 2",
           limit: { context: 128_000, output: 16_000 },
           cost: { input: 0, output: 0 },
         },
@@ -67,6 +72,14 @@ describe("context usage after compaction", () => {
             if (initial.info.role !== "assistant") return
             expect(initial.info.tokens.input).toBe(80_000)
             const overhead = KiloContextUsage.overhead(chat.id)
+            expect(initial.info.contextOverhead).toBe(overhead)
+            for (const value of [-1, 0.5, NaN, Infinity]) {
+              expect(() =>
+                Schema.decodeUnknownSync(MessageV2.Assistant)({ ...initial.info, contextOverhead: value }),
+              ).toThrow()
+            }
+            const legacy = { ...initial.info, contextOverhead: undefined }
+            expect(Schema.encodeSync(MessageV2.Assistant)(legacy)).not.toHaveProperty("contextOverhead")
 
             if (chunks) yield* llm.error(400, overflow)
             yield* llm.text("Preserved the discussion and next actions.")
@@ -178,11 +191,14 @@ describe("context usage after compaction", () => {
 
   test("only measured normal steps update overhead, with bounded oldest-entry eviction", () => {
     const id = `context-${crypto.randomUUID()}`
-    KiloContextUsage.record(id, true, { overhead: 100 }, binding)
-    KiloContextUsage.record(id, false, { overhead: 900 }, { ...binding, agent: "compaction" })
+    const saved: number[] = []
+    const persist = (value: number) => saved.push(value)
+    KiloContextUsage.record(id, true, { overhead: 100 }, binding, persist)
+    KiloContextUsage.record(id, false, { overhead: 900 }, { ...binding, agent: "compaction" }, persist)
     KiloContextUsage.record(id, undefined, { overhead: 800 }, binding)
     KiloContextUsage.record(id, true, undefined, binding)
     expect(KiloContextUsage.overhead(id)).toBe(100)
+    expect(saved).toEqual([100])
     for (let i = 0; i < 512; i++) KiloContextUsage.record(`${id}-${i}`, true, { overhead: i }, binding)
     expect(KiloContextUsage.overhead(id)).toBeUndefined()
     expect(KiloContextUsage.overhead(`${id}-511`)).toBe(511)
@@ -198,7 +214,7 @@ describe("context usage after compaction", () => {
     { kind: "model", agent: "code", model: { ...model, modelID: ModelV2.ID.make("test-model-2") } },
   ]) {
     it.live(
-      `skips overhead when the next ${next.kind} changes`,
+      `estimates from stored overhead when the next ${next.kind} changes`,
       () =>
         provideTmpdirServer(
           Effect.fnUntraced(function* ({ llm }) {
@@ -225,7 +241,7 @@ describe("context usage after compaction", () => {
             expect(summary.info.finish).toBe("stop")
             expect(summary.info.error).toBeUndefined()
             expect(KiloContextUsage.overhead(chat.id)).toBe(overhead)
-            expect(summary.info.estimate).toBeUndefined()
+            expect(summary.info.estimate).toBeGreaterThan(overhead)
           }),
           {
             config: (url) => {
@@ -381,7 +397,7 @@ describe("context usage after compaction", () => {
   )
 
   it.live(
-    "models without an output cap do not record an estimate even when preflight measures usage",
+    "models without an output cap record overhead and estimate after compaction",
     () =>
       provideTmpdirServer(
         Effect.fnUntraced(function* ({ llm }) {
@@ -397,7 +413,7 @@ describe("context usage after compaction", () => {
             model: uncapped,
             parts: [{ type: "text", text: "Discuss." }],
           })
-          expect(KiloContextUsage.overhead(chat.id)).toBeUndefined()
+          expect(KiloContextUsage.overhead(chat.id)).toBeGreaterThan(0)
           yield* llm.text("Preserved discussion.")
           yield* compaction.create({ sessionID: chat.id, agent: "code", model: uncapped, auto: false })
           yield* prompt.loop({ sessionID: chat.id })
@@ -407,7 +423,7 @@ describe("context usage after compaction", () => {
           if (!summary || summary.info.role !== "assistant") throw new Error("Missing summary")
           expect(summary.info.finish).toBe("stop")
           expect(summary.info.error).toBeUndefined()
-          expect(summary.info.estimate).toBeUndefined()
+          expect(summary.info.estimate).toBeGreaterThan(0)
         }),
         {
           config: (url) => {
@@ -427,4 +443,110 @@ describe("context usage after compaction", () => {
       ),
     180_000,
   )
+
+  for (const fresh of [false, true]) {
+    it.live(
+      `recovers stored overhead after ${fresh ? "instance reload" : "record eviction"}`,
+      () =>
+        provideTmpdirServer(
+          Effect.fnUntraced(function* ({ dir, llm }) {
+            const session = yield* Session.Service
+            const prompt = yield* SessionPrompt.Service
+            const chat = yield* session.create({ title: "Stored overhead" })
+            yield* llm.text("Initial response", { usage: { input: 80_000, output: 100 } })
+            const response = yield* prompt.prompt({
+              sessionID: chat.id,
+              agent: "code",
+              model,
+              parts: [{ type: "text", text: "A synthetic discussion. ".repeat(200) }],
+            })
+            if (response.info.role !== "assistant") throw new Error("Missing response")
+            const overhead = KiloContextUsage.overhead(chat.id)
+            expect(overhead).toBeGreaterThan(0)
+            const persisted = yield* MessageV2.get({ sessionID: chat.id, messageID: response.info.id })
+            expect(Reflect.get(persisted.info, "contextOverhead")).toBe(overhead)
+            for (let i = 0; i < 512; i++) KiloContextUsage.record(`${chat.id}-${i}`, true, { overhead: i }, binding)
+            expect(KiloContextUsage.overhead(chat.id)).toBeUndefined()
+            if (fresh) yield* reloadInstance({ directory: dir })
+            yield* Effect.gen(function* () {
+              const compaction = yield* SessionCompaction.Service
+              const prompt = yield* SessionPrompt.Service
+              const session = yield* Session.Service
+              yield* llm.text("Preserved the discussion and next actions.")
+              yield* compaction.create({ sessionID: chat.id, agent: "code", model, auto: false })
+              yield* prompt.loop({ sessionID: chat.id })
+              const summary = (yield* session.messages({ sessionID: chat.id })).find(
+                (msg) => msg.info.role === "assistant" && msg.info.summary,
+              )
+              if (!summary || summary.info.role !== "assistant") throw new Error("Missing summary")
+              expect(summary.info.finish).toBe("stop")
+              expect(summary.info.error).toBeUndefined()
+              expect(summary.info.estimate).toBeGreaterThan(overhead!)
+              expect(summary.info.estimate).toBeLessThan(overhead! + 1_000)
+              yield* llm.text("Continue", { usage: { input: 16_000, output: 20 } })
+              const next = yield* prompt.prompt({
+                sessionID: chat.id,
+                agent: "code",
+                model,
+                parts: [{ type: "text", text: "Continue briefly." }],
+              })
+              if (next.info.role !== "assistant") throw new Error("Missing response")
+              expect(next.info.tokens.input).toBe(16_000)
+              expect(next.info.estimate).toBeUndefined()
+            }).pipe(provideInstanceEffect(dir))
+          }),
+          { config },
+        ),
+      180_000,
+    )
+  }
+
+  for (const match of ["exact binding", "same agent"])
+    it.live(
+      `prefers an older ${match} over a newer cross-binding record`,
+      () =>
+        provideTmpdirServer(
+          Effect.fnUntraced(function* ({ llm }) {
+            const session = yield* Session.Service
+            const prompt = yield* SessionPrompt.Service
+            const compaction = yield* SessionCompaction.Service
+            const chat = yield* session.create({ title: "Exact binding" })
+            yield* llm.text("Code response")
+            const code = yield* prompt.prompt({
+              sessionID: chat.id,
+              agent: "code",
+              model,
+              parts: [{ type: "text", text: "Discuss." }],
+            })
+            if (code.info.role !== "assistant") throw new Error("Missing code response")
+            const overhead = KiloContextUsage.overhead(chat.id)
+            if (overhead === undefined) throw new Error("Missing overhead")
+            yield* llm.text("Plan response")
+            const plan = yield* prompt.prompt({
+              sessionID: chat.id,
+              agent: "plan",
+              model,
+              parts: [{ type: "text", text: "Plan briefly." }],
+            })
+            if (plan.info.role !== "assistant") throw new Error("Missing plan response")
+            yield* session.updateMessage({ ...plan.info, contextOverhead: 90_000 })
+            yield* llm.text("Preserved discussion.")
+            yield* compaction.create({
+              sessionID: chat.id,
+              agent: "code",
+              model: match === "exact binding" ? model : { ...model, modelID: "test-model-2" },
+              auto: false,
+            })
+            yield* prompt.loop({ sessionID: chat.id })
+            const summary = (yield* session.messages({ sessionID: chat.id })).find(
+              (msg) => msg.info.role === "assistant" && msg.info.summary,
+            )
+            if (!summary || summary.info.role !== "assistant") throw new Error("Missing summary")
+            expect(summary.info.estimate).toBeGreaterThan(overhead)
+            expect(summary.info.estimate).toBeLessThan(overhead + 1_000)
+          }),
+          { config },
+        ),
+      180_000,
+    )
 })

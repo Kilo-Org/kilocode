@@ -989,6 +989,11 @@ const layer = Layer.effect(
               const stream = llm.stream({
                 ...streamInput,
                 preflight: !ctx.assistantMessage.summary,
+                // kilocode_change start - the normal message write preserves overhead across restarts
+                onContextOverhead: (overhead) => {
+                  ctx.assistantMessage.contextOverhead = overhead
+                },
+                // kilocode_change end
               })
 
               // kilocode_change start
