@@ -186,6 +186,11 @@ class SessionController(
     // DISCONNECTED -> READY on their initial connection, which history recovery already covers.
     private var lastAppStatus: KiloAppStatusDto? = null
     private var seenReady = false
+    // Whether a READY workspace has been seen, and the previous workspace status. A later
+    // non-READY -> READY edge means the CLI reconnected, so recents that failed or went stale during
+    // the gap must be refetched even though they already reached a terminal state.
+    private var seenWorkspaceReady = false
+    private var lastWorkspaceStatus: KiloWorkspaceStatusDto? = null
     // Bumped whenever a live prompt event or local resolution is handled. recoverPending snapshots
     // this before its suspending REST calls and discards the result if it changed before the EDT
     // commit, so a stale reconnect snapshot cannot overwrite or resurrect a fresher prompt state.
@@ -1164,6 +1169,8 @@ class SessionController(
 
         cs.launch {
             workspace.state.collect { state ->
+                val prevStatus = lastWorkspaceStatus
+                lastWorkspaceStatus = state.status
                 fire(SessionControllerEvent.WorkspaceChanged) {
                     model.workspace = state
                     syncConnectionState()
@@ -1220,9 +1227,13 @@ class SessionController(
                 }
 
                 if (state.status == KiloWorkspaceStatusDto.READY) {
+                    // A READY after an earlier READY that followed a non-READY status is a reconnect:
+                    // force a refetch so a recents load that failed during the outage is retried.
+                    val recovered = seenWorkspaceReady && prevStatus != null && prevStatus != KiloWorkspaceStatusDto.READY
+                    seenWorkspaceReady = true
                     fire(SessionControllerEvent.WorkspaceReady)
                     edt {
-                        if (canUseRecents()) refreshRecents()
+                        if (canUseRecents()) refreshRecents(force = recovered)
                     }
                 }
             }
@@ -2709,21 +2720,28 @@ class SessionController(
                     if (recentsState != state) return@edt
                     setRecentSessionsState(RecentsState.Loaded)
                     if (!canUseRecents()) return@edt
-                    recentsSnapshot = items
-                    setControllerViewState(SessionControllerEvent.ViewChanged.ShowEmpty)
+                    publishRecents(items)
                 }
             } catch (e: Exception) {
                 LOG.warn("kind=session-recent dir=${ChatLogSummary.dir(directory)} failed message=${e.message}", e)
                 edt {
                     if (!canUseRecents()) return@edt
                     if (recentsState != state) return@edt
-                    setRecentSessionsState(RecentsState.Loaded)
+                    // Failed, not Loaded: a later refresh (e.g. after the CLI reconnects) must retry
+                    // instead of assuming the empty snapshot is final.
+                    setRecentSessionsState(RecentsState.Failed)
                     if (!canUseRecents()) return@edt
-                    recentsSnapshot = emptyList()
-                    setControllerViewState(SessionControllerEvent.ViewChanged.ShowEmpty)
+                    publishRecents(emptyList())
                 }
             }
         }
+    }
+
+    private fun publishRecents(items: List<SessionDto>) {
+        assertEdt()
+        recentsSnapshot = items
+        fire(SessionControllerEvent.RecentsChanged)
+        setControllerViewState(SessionControllerEvent.ViewChanged.ShowEmpty)
     }
 
     private fun canUseRecents(): Boolean {
@@ -3090,6 +3108,9 @@ private sealed interface RecentsState {
     data object Idle : RecentsState
     data class Loading(val id: Any = Any()) : RecentsState
     data object Loaded : RecentsState
+    // The last fetch failed. Unlike Loaded this does not short-circuit a non-forced refresh, so the
+    // next workspace-ready (or session change) retries instead of leaving the list permanently empty.
+    data object Failed : RecentsState
 }
 
 private sealed interface SessionLoadState {
