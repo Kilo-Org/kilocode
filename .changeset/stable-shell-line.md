@@ -3,4 +3,4 @@
 "kilo-code": patch
 ---
 
-Keep your shell and custom instructions available when a session continues automatically or is compacted
+Keep the prompt cache intact when task notifications, wakeups, slash commands or plan follow-ups continue a session
