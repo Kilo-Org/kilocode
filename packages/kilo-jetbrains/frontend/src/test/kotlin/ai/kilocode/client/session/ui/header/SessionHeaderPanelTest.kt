@@ -816,29 +816,38 @@ class SessionHeaderPanelTest : SessionControllerTestBase() {
     }
 
     /**
-     * Moving straight from one bar to the next must leave exactly one tooltip registered. The
-     * previous one is dismissed first rather than relying on the manager replacing it, because the
-     * registration also installs a listener and a client property that only a null registration clears.
+     * Leaving the bars must clear the registration outright, which is the part of the teardown the
+     * leak depends on: `setCustomTooltip` also installs a dummy listener and a client property, and
+     * only a null registration removes them.
+     *
+     * Bar-to-bar replacement is deliberately not asserted here. It is not observable in this harness:
+     * `getCustomTooltip` reads back the client property that `setCustomTooltip` overwrites
+     * unconditionally, so a fresh tooltip is registered whether or not the previous one is dismissed
+     * first, and neither `IdeTooltipManager.hasCurrent()` nor the component's listener count differs
+     * between the two — measured, both read identically with and without the dismiss call. The
+     * disposal test below is what actually pins the change.
      */
-    fun `test hovering between bars leaves one registered tooltip`() {
+    fun `test leaving the bars clears the registered tooltip`() {
         val c = promptedHeader()
         val panel = SessionHeaderPanel(c, parent)
         val timeline = panel.timelinePanel() as JComponent
         val manager = IdeTooltipManager.getInstance()
 
-        move(panel, 0)
-        val first = manager.getCustomTooltip(timeline)!!
-
         move(panel, 1)
-        val second = manager.getCustomTooltip(timeline)!!
+        assertNotNull(manager.getCustomTooltip(timeline))
 
-        assertNotSame("bar-to-bar hover must install a fresh tooltip", first, second)
-        // Every bar's label is built into its own tooltip, so the anchor moving proves the second
-        // tooltip is the one now registered rather than the first being left in place.
-        assertFalse(
-            "the anchor must follow the hovered bar",
-            first.point.x == second.point.x,
-        )
+        timeline.dispatchEvent(MouseEvent(
+            timeline,
+            MouseEvent.MOUSE_EXITED,
+            System.currentTimeMillis(),
+            0,
+            0,
+            0,
+            0,
+            false,
+        ))
+
+        assertNull("leaving the bars must clear the registration", manager.getCustomTooltip(timeline))
     }
 
     /** A panel torn down mid-hover must not leave its tooltip registered on the manager. */
