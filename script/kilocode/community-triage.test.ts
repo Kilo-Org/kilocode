@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test"
 import {
   areas,
   classify,
+  cleanup,
   component,
   pushedAt,
   decide,
@@ -113,6 +114,17 @@ describe("decide", () => {
   test("never touches hand-set labels", () => {
     const plan = decide([label.high, label.keep, label.adopt], { state: "approved" }, false)
     expect(plan).toEqual({ add: [], remove: [] })
+  })
+})
+
+describe("cleanup", () => {
+  test("lists community and status labels", () => {
+    const tags = [label.community, label.triage, label.ci, label.adopt, "area:cli", label.high, label.keep]
+    expect(cleanup(tags).sort()).toEqual([label.adopt, label.ci, label.community, label.triage].sort())
+  })
+
+  test("returns nothing for a clean PR", () => {
+    expect(cleanup(["area:cli", label.high])).toEqual([])
   })
 })
 
