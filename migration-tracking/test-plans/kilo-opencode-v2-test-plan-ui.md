@@ -1,5 +1,8 @@
 # Kilo v2 CLI/TUI Scenario Test Plan
 
+> [!WARNING]
+> **Stale; rewrite pending in U-L4-01 ([plan](../plans/kilo-v2-migration-plan.md)).** Expected behavior was quoted from the archived port, not v1 (Decision 3). Keep the UI IDs; do not use the expectations as acceptance.
+
 > **Scope:** Interactive CLI/TUI scenarios, including startup, branding, theme/dimensions, BB terminal lifecycle, slash commands, model picker, agent selection and policies, native Plan mode, Kilo settings, memory UI and modal, and status/sidebar truthfulness.
 >
 > **Status:** **ALL MANUAL TESTS NOT RUN.**

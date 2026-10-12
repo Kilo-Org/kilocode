@@ -1,5 +1,8 @@
 # Issue #13750 publication drafts
 
+> [!NOTE]
+> Archive. `progress-comment.md` (unpublished, stale), `tracking-policy.md` (replaced by the tracking rules in `plans/kilo-v2-migration-plan.md` §B0) and `shared-source-footprint.md` (pointer stub) were removed on 2026-10-12; links to them below are historical. See git history for their content.
+
 Local review package, prepared September 10, 2026. The issue body and all nine subissues have been published to GitHub; the progress comment remains unpublished. Existing plans are preserved.
 
 ## Review order
