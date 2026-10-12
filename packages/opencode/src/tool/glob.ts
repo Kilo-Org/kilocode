@@ -6,6 +6,10 @@ import { Ripgrep } from "@opencode-ai/core/ripgrep"
 import { assertExternalDirectoryEffect } from "./external-directory"
 import DESCRIPTION from "./glob.txt"
 import * as Tool from "./tool"
+// kilocode_change start - opt-in search of ignored files
+import { Config } from "@/config/config"
+import * as KiloGlob from "@/kilocode/tool/glob-ignored"
+// kilocode_change end
 
 // kilocode_change start — support absolute glob patterns (e.g. ~/.config/kilo/command/*.md)
 function normalize(p: string) {
@@ -30,6 +34,7 @@ export const Parameters = Schema.Struct({
   path: Schema.optional(Schema.String).annotate({
     description: `The directory to search in. If not specified, the current working directory will be used. IMPORTANT: Omit this field to use the default directory. DO NOT enter "undefined" or "null" - simply omit it for the default behavior. Must be a valid directory path if provided.`,
   }),
+  ...KiloGlob.fields, // kilocode_change
 })
 
 export const GlobTool = Tool.define(
@@ -37,13 +42,17 @@ export const GlobTool = Tool.define(
   Effect.gen(function* () {
     const fs = yield* FSUtil.Service
     const ripgrep = yield* Ripgrep.Service
+    const config = yield* Config.Service // kilocode_change
     return {
       description: DESCRIPTION,
       parameters: Parameters,
-      execute: (params: { pattern: string; path?: string }, ctx: Tool.Context) =>
+      // kilocode_change start - include Kilo glob parameters
+      execute: (params: Schema.Schema.Type<typeof Parameters>, ctx: Tool.Context) =>
+        // kilocode_change end
         Effect.gen(function* () {
           const ins = yield* InstanceState.context
           const absolute = split(params.pattern) // kilocode_change
+          const ignored = yield* KiloGlob.options(config, params) // kilocode_change - reject before prompting
           yield* ctx.ask({
             permission: "glob",
             patterns: [params.pattern],
@@ -73,6 +82,7 @@ export const GlobTool = Tool.define(
             cwd: search,
             pattern: absolute?.pattern ?? params.pattern, // kilocode_change - absolute patterns are split into cwd + relative glob
             limit,
+            ...ignored, // kilocode_change
             signal: ctx.abort, // kilocode_change - stop ripgrep when the tool call is cancelled
           })
           const files = result.items

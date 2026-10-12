@@ -922,6 +922,9 @@ export const dict = {
   "settings.experimental.nativeNotebookTools.title": "أدوات الدفاتر الأصلية",
   "settings.experimental.nativeNotebookTools.description":
     "تمكين الأدوات التجريبية لقراءة دفاتر VS Code وتحريرها وتنفيذها",
+  "settings.experimental.globSearchIgnored.title": "البحث في الملفات المتجاهلة",
+  "settings.experimental.globSearchIgnored.description":
+    "السماح لأداة glob بالعثور على الملفات المستبعدة بواسطة .gitignore والملفات الموجودة في المجلدات المخفية (يُستثنى .git دائمًا)",
   "settings.experimental.continueOnDeny.title": "المتابعة عند الرفض",
   "settings.experimental.continueOnDeny.description": "متابعة حلقة الوكيل عند رفض الإذن",
   "settings.sandboxing.title": "العزل",

@@ -274,6 +274,7 @@ Available experimental settings include:
 - **LSP integration** - expose language server diagnostics to the agent
 - **Paste summary** - summarize large clipboard pastes before including them
 - **Batch tool** - allow the agent to batch multiple tool calls in one step
+- **Search Ignored Files** - allow the agent's `glob` tool to find files excluded by `.gitignore` and files in hidden directories (`experimental.glob_search_ignored`, off by default; `.git` is always excluded)
 - **Claude Code Migration** - import supported global Claude Code configuration once (off by default)
 - **OpenTelemetry** - enable Kilo telemetry and optional OTLP export when configured
 

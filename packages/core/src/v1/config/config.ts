@@ -331,6 +331,10 @@ export const Info = Schema.Struct({
       native_notebook_tools: Schema.optional(Schema.Boolean).annotate({
         description: "Enable native tools for reading, editing, and executing VS Code notebooks",
       }),
+      glob_search_ignored: Schema.optional(Schema.Boolean).annotate({
+        description:
+          "Allow the glob tool's includeIgnored option to search paths excluded by ignore files such as .gitignore, and hidden directories (default: false)",
+      }),
       code_mode: Schema.optional(Schema.Boolean).annotate({
         description:
           "Route MCP tool calls through a confined JavaScript runtime with on-demand tool discovery instead of exposing every MCP tool directly",

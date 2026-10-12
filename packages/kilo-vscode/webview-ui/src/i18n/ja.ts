@@ -940,6 +940,9 @@ export const dict = {
   "settings.experimental.nativeNotebookTools.title": "ネイティブノートブックツール",
   "settings.experimental.nativeNotebookTools.description":
     "VS Codeノートブックの読み取り、編集、実行を行う実験的なツールを有効にします",
+  "settings.experimental.globSearchIgnored.title": "無視されたファイルを検索",
+  "settings.experimental.globSearchIgnored.description":
+    "glob ツールが .gitignore で除外されたファイルや隠しディレクトリ内のファイルを検索できるようにします（.git は常に除外されます）",
   "settings.experimental.continueOnDeny.title": "拒否時に続行",
   "settings.experimental.continueOnDeny.description": "権限が拒否された場合にエージェントループを続行",
   "settings.sandboxing.title": "サンドボックス化",

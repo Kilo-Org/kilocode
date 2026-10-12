@@ -936,6 +936,9 @@ export const dict = {
   "settings.experimental.nativeNotebookTools.title": "Yerel Not Defteri Araçları",
   "settings.experimental.nativeNotebookTools.description":
     "VS Code not defterlerini okumak, düzenlemek ve çalıştırmak için deneysel araçları etkinleştir",
+  "settings.experimental.globSearchIgnored.title": "Yok sayılan dosyalarda ara",
+  "settings.experimental.globSearchIgnored.description":
+    "glob aracının .gitignore tarafından hariç tutulan dosyaları ve gizli dizinlerdeki dosyaları bulmasına izin ver (.git her zaman hariç tutulur)",
   "settings.experimental.continueOnDeny.title": "Reddetme Durumunda Devam Et",
   "settings.experimental.continueOnDeny.description": "Bir izin reddedildiğinde ajan döngüsüne devam et",
   "settings.sandboxing.title": "Sandbox",

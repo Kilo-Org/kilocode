@@ -94,6 +94,10 @@ exports[`tool parameters JSON Schema (wire shape) glob 1`] = `
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "properties": {
+    "includeIgnored": {
+      "description": "Also search paths excluded by ignore files such as .gitignore, and hidden directories (default false). Requires the user to enable the experimental.glob_search_ignored setting; otherwise the call fails.",
+      "type": "boolean",
+    },
     "path": {
       "description": "The directory to search in. If not specified, the current working directory will be used. IMPORTANT: Omit this field to use the default directory. DO NOT enter "undefined" or "null" - simply omit it for the default behavior. Must be a valid directory path if provided.",
       "type": "string",

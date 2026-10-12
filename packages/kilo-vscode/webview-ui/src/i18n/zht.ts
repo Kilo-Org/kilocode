@@ -864,6 +864,9 @@ export const dict = {
   "settings.models.speechToTextModel.description": "選擇用於語音輸入的 Kilo Gateway 轉錄模型。",
   "settings.experimental.nativeNotebookTools.title": "原生筆記本工具",
   "settings.experimental.nativeNotebookTools.description": "啟用用於讀取、編輯和執行 VS Code 筆記本的實驗性工具",
+  "settings.experimental.globSearchIgnored.title": "搜尋被忽略的檔案",
+  "settings.experimental.globSearchIgnored.description":
+    "允許 glob 工具尋找被 .gitignore 排除的檔案以及隱藏目錄中的檔案（一律排除 .git）",
   "settings.experimental.continueOnDeny.title": "拒絕後繼續",
   "settings.experimental.continueOnDeny.description": "權限被拒絕時繼續 Agent 迴圈",
   "settings.sandboxing.title": "沙盒",

@@ -943,6 +943,9 @@ export const dict = {
   "settings.experimental.nativeNotebookTools.title": "Native notebooktools",
   "settings.experimental.nativeNotebookTools.description":
     "Experimentele tools inschakelen voor het lezen, bewerken en uitvoeren van VS Code-notebooks",
+  "settings.experimental.globSearchIgnored.title": "Genegeerde bestanden doorzoeken",
+  "settings.experimental.globSearchIgnored.description":
+    "Sta de glob-tool toe bestanden te vinden die door .gitignore zijn uitgesloten en bestanden in verborgen mappen (.git wordt altijd uitgesloten)",
   "settings.experimental.continueOnDeny.title": "Doorgaan bij weigering",
   "settings.experimental.continueOnDeny.description":
     "Ga door met de agent loop wanneer een toestemming wordt geweigerd",

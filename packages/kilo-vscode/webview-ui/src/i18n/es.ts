@@ -956,6 +956,9 @@ export const dict = {
   "settings.experimental.nativeNotebookTools.title": "Herramientas nativas de notebook",
   "settings.experimental.nativeNotebookTools.description":
     "Habilitar herramientas experimentales para leer, editar y ejecutar notebooks de VS Code",
+  "settings.experimental.globSearchIgnored.title": "Buscar archivos ignorados",
+  "settings.experimental.globSearchIgnored.description":
+    "Permitir que la herramienta glob encuentre archivos excluidos por .gitignore y archivos en directorios ocultos (.git siempre se excluye)",
   "settings.experimental.continueOnDeny.title": "Continuar al denegar",
   "settings.experimental.continueOnDeny.description": "Continuar el bucle del agente cuando se deniega un permiso",
   "settings.sandboxing.title": "Sandbox",

@@ -36061,6 +36061,9 @@
               "native_notebook_tools": {
                 "type": "boolean"
               },
+              "glob_search_ignored": {
+                "type": "boolean"
+              },
               "code_mode": {
                 "type": "boolean"
               },
