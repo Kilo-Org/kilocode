@@ -375,15 +375,14 @@ export function latestContextUsage(messages: readonly Message[], limit: number |
         typeof msg.time?.completed === "number" &&
         msg.finish &&
         msg.finish !== "error" &&
-        !msg.error
+        !msg.error &&
+        msg.estimate !== undefined
       )
-        return msg.estimate === undefined
-          ? undefined
-          : {
-              tokens: msg.estimate,
-              percentage: limit ? Math.round((msg.estimate / limit) * 100) : null,
-              estimated: true,
-            }
+        return {
+          tokens: msg.estimate,
+          percentage: limit ? Math.round((msg.estimate / limit) * 100) : null,
+          estimated: true,
+        }
       continue
     }
     if (!msg.tokens) continue

@@ -230,8 +230,8 @@ describe("latestContextUsage", () => {
     expect(latestContextUsage([response], undefined)).toEqual({ tokens: 820_209, percentage: null })
   })
 
-  it("clears usage after a successful single-pass summary with large request tokens", () => {
-    expect(latestContextUsage([response, summary], limit)).toBeUndefined()
+  it("keeps previous usage when a successful summary has no estimate", () => {
+    expect(latestContextUsage([response, summary], limit)).toEqual({ tokens: 820_209, percentage: 82 })
   })
 
   it("uses the compacted context estimate instead of the summary request's usage", () => {
@@ -268,9 +268,9 @@ describe("latestContextUsage", () => {
     })
   })
 
-  it("clears usage after a successful chunk summary with zero or missing tokens", () => {
+  it("keeps previous usage when a chunk summary has zero or missing request tokens and no estimate", () => {
     for (const tokens of [zero, undefined]) {
-      expect(latestContextUsage([response, { ...summary, tokens }], limit)).toBeUndefined()
+      expect(latestContextUsage([response, { ...summary, tokens }], limit)).toEqual({ tokens: 820_209, percentage: 82 })
     }
   })
 
@@ -313,19 +313,22 @@ describe("latestContextUsage", () => {
       tokens: 820_209,
       percentage: 82,
     })
-    expect(latestContextUsage([response, summary, worker], limit)).toBeUndefined()
+    expect(latestContextUsage([response, summary, worker], limit)).toEqual({ tokens: 820_209, percentage: 82 })
   })
 
-  it("uses the next response and does not fall back through a successful summary", () => {
+  it("uses the next response and retains the prior value until it reports usage", () => {
     const next = { ...response, id: "next", tokens: { input: 159_000, output: 1_000 } }
     expect(latestContextUsage([response, summary, next], limit)).toEqual({ tokens: 160_000, percentage: 16 })
-    expect(latestContextUsage([response, summary, { ...next, tokens: zero }], limit)).toBeUndefined()
+    expect(latestContextUsage([response, summary, { ...next, tokens: zero }], limit)).toEqual({
+      tokens: 820_209,
+      percentage: 82,
+    })
     expect(
       latestContextUsage(
         [response, summary, { ...summary, id: "pending", parentID: "later", finish: undefined }],
         limit,
       ),
-    ).toBeUndefined()
+    ).toEqual({ tokens: 820_209, percentage: 82 })
   })
 
   it("does not confuse a user-message summary object with compaction", () => {
