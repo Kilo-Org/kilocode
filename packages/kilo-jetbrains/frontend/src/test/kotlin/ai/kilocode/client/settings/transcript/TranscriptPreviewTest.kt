@@ -109,10 +109,20 @@ class TranscriptPreviewTest : BasePlatformTestCase() {
                 SessionEditorStyle.current().transcriptFont,
             ) / 2
 
-            assertTrue("message width ${message.width} must not exceed half-width cap $cap", message.width <= cap)
-            val left = message.x
-            val right = transcript.width - message.x - message.width
-            assertTrue("half-width message must be centered, left=$left right=$right", abs(left - right) <= 1)
+            assertTrue(
+                "centered lane must match the half-width cap $cap, got ${message.width}",
+                message.width <= cap,
+            )
+            // SessionLayoutPanel applies the transcript insets as layout padding, not Swing insets, so the
+            // lane is centered inside the panel's full width. The message starts at that centered lane
+            // start. Allow a pixel for integer division; the exact cap depends on font metrics, which
+            // differ between machines, so compare against the same lane calculation the layout uses.
+            val lane = minOf(transcript.width, cap)
+            val expectedLeft = (transcript.width - lane) / 2
+            assertTrue(
+                "message must start in the centered lane, expected=$expectedLeft actual=${message.x} cap=$cap",
+                abs(message.x - expectedLeft) <= 1,
+            )
         }
     }
 
