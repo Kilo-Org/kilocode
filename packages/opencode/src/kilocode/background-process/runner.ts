@@ -256,6 +256,7 @@ export namespace BackgroundProcessRunner {
   // (now dead) leader, so seeding the walk from the leader's pid for a short
   // window lets us capture it before concluding the tree is empty.
   const GRACE = 1_000
+  const GUARD = 30_000
 
   async function windows(input: Input, child: ReturnType<typeof spawn>, done: Promise<number>, start: number) {
     const pid = child.pid
@@ -264,6 +265,11 @@ export namespace BackgroundProcessRunner {
     let exited: number | undefined
     let failure: unknown
     let unsafe = false
+    let deadline: number | undefined
+    let confirmation: number | undefined
+    let warned = 0
+    let walks = 0
+    const id = process.env.KILO_BACKGROUND_PROCESS_ID ?? input.token
     let seen = new Map<number, string>()
     void done.then(
       (value) => {
@@ -281,12 +287,14 @@ export namespace BackgroundProcessRunner {
     while (true) {
       if (failure) throw failure
       if (await Bun.file(input.control).exists()) {
+        deadline ??= Date.now() + GUARD
         // Only pids a walk verified: the leader while it is alive, and descendants whose creation
         // time matched. No `/t`, because taskkill would walk parent pids on its own without that
         // check, and a dead leader's pid may already belong to another process. The stop only
         // counts once a walk that actually ran finds nothing left.
-        const end = Date.now() + 5_000
+        const end = Math.min(Date.now() + 5_000, deadline)
         while (Date.now() < end) {
+          walks++
           const next = await descendants(seen, () => ({ pid, start, end: exited }), end - Date.now())
           seen = next.seen
           if (code !== undefined && next.ok && seen.size === 0) {
@@ -304,14 +312,23 @@ export namespace BackgroundProcessRunner {
         }
         if (!unsafe) note("stop not confirmed; keeping the stop request and guarding tracked processes")
         unsafe = true
+        if (Date.now() >= deadline) {
+          if (code === undefined) await Process.run(["taskkill", "/pid", String(pid), "/f"], { nothrow: true, timeout: 1_000 })
+          note(`id=${id} process table unavailable, descendants not verified; stop unconfirmed after 30s, walks=${walks}`)
+          return 1
+        }
         await Bun.sleep(100)
         continue
       }
       // Same rule as for a stop: an empty set only means the command is done if the walk ran.
-      const from = root()
-      const walked = await descendants(seen, () => from && { ...from, end: exited })
+      if (code !== undefined) confirmation ??= Date.now() + GUARD
+      walks++
+      const walked = await descendants(seen, () => ({ pid, start, end: exited }), confirmation === undefined ? 2_000 : Math.max(1, confirmation - Date.now()))
       seen = walked.seen
-      if (code !== undefined && !from && walked.ok && seen.size === 0) return code
+      if (!walked.ok && Date.now() - warned >= 5_000) { note(`id=${id} process walk failed; no new descendants adopted, walks=${walks}`); warned = Date.now() }
+      if (code !== undefined && !root() && walked.ok && seen.size === 0) return code
+      if (walked.ok) confirmation = undefined
+      if (!walked.ok && confirmation !== undefined && Date.now() >= confirmation) { note(`id=${id} process table unavailable, descendants not verified; exit unconfirmed after 30s, walks=${walks}`); return 1 }
       await Bun.sleep(100)
     }
   }
