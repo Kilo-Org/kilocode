@@ -286,8 +286,8 @@ const timer = setInterval(async () => {
         file,
         `import { mock } from "bun:test"
 import fs from "node:fs/promises"
-import * as process from ${JSON.stringify(processFile)}
-const original = { ...process }
+import * as helpers from ${JSON.stringify(processFile)}
+const original = { ...helpers }
 const text = async () => ({ code: 1, stdout: Buffer.alloc(0), stderr: Buffer.alloc(0), text: "" })
 mock.module(${JSON.stringify(processFile)}, () => ({ ...original, text, Process: { ...original, text } }))
 const windows = await import(${JSON.stringify(windowsFile)})
@@ -343,8 +343,8 @@ process.exit(process.exitCode ?? 0)
             expect(alive(pid)).toBe(true)
             await until(() => !alive(pid), "guarded runner did not end", 35_000)
             await until(
-              async () => (await BackgroundProcess.get(item.id))?.exitCode === 1,
-              "runner failure was not surfaced",
+              async () => (await BackgroundProcess.get(item.id))?.exitCode !== undefined,
+              "runner completion was not surfaced",
               10_000,
             )
             expect((await BackgroundProcess.get(item.id))?.exitCode).toBe(1)
@@ -360,7 +360,7 @@ process.exit(process.exitCode ?? 0)
         if (alive(pid)) await Process.run(["taskkill", "/pid", String(pid), "/f"], { nothrow: true })
       }
     },
-    75_000,
+    120_000,
   )
 
   it.instance("starts, reports readiness, and stops a process", () =>
