@@ -377,7 +377,7 @@ Source: direct read of V1 (`fb7e96ed`), written by the analyst after the delegat
 | F-JB-010 | Telemetry | `jb/frontend/.../client/telemetry`, `jb/backend/.../telemetry` | Δ | needs-port | U-E7-03 |
 | F-JB-011 | Enhance prompt and branch name consumers (per `editor-services-inventory.md`) | UNVERIFIED paths | Δ | needs-port | U-E7-04 |
 
-**FIM at V1 JetBrains.** No FIM or next-edit producer or consumer exists in `packages/kilo-jetbrains` at V1. The only `autocomplete` hits are a settings holder (`KiloAutocompleteSettingsService.kt`, persisting `enableAutoTrigger`, `enableSmartInlineTaskKeybinding`, `enableChatAutocomplete` migrated from the legacy plugin), the migration engine (`LegacyMigrationEngine.kt:84,349-353`) and a CHANGELOG line about the VS Code change #13655. This matches `technical-notes/baseline/editor-services-inventory.md`. Decision 7 makes FIM a hard G3 gate even though JetBrains v1 has no FIM. See the final report.
+**FIM at V1 JetBrains.** No FIM or next-edit producer or consumer exists in `packages/kilo-jetbrains` at V1. The only `autocomplete` hits are a settings holder (`KiloAutocompleteSettingsService.kt`, persisting `enableAutoTrigger`, `enableSmartInlineTaskKeybinding`, `enableChatAutocomplete` migrated from the legacy plugin), the migration engine (`LegacyMigrationEngine.kt:84,349-353`) and a CHANGELOG line about the VS Code change #13655. This matches `technical-notes/baseline/editor-services-inventory.md`. Decision 7 makes FIM a hard G3 gate even though JetBrains v1 has no FIM. Deferred as Q-G3-01 in `v2-unit-register.md`.
 
 ## Part 4. Upstream v2 features without a Kilo v1 counterpart
 
@@ -491,7 +491,7 @@ Checked on scope (S), errors (E), cancellation (C), persistence (P) and presenta
 
 | Flag on V1 | Default | Applied verdict | Note |
 |---|---|---|---|
-| `KILO_EXPERIMENTAL_BACKGROUND_SUBAGENTS` | **on** (kill switch, `packages/opencode/src/effect/runtime-flags.ts:47-49`) | gating (U-E2-07) | Literal Decision 7 would defer a default-on feature; see final report |
+| `KILO_EXPERIMENTAL_BACKGROUND_SUBAGENTS` | **on** (kill switch, `packages/opencode/src/effect/runtime-flags.ts:47-49`) | gating (U-E2-07) | Literal Decision 7 would defer a default-on feature; see Q-NOW-01 in the register |
 | `KILO_EXPERIMENTAL_SHARED_AGENT_BOARD` | **on** (kill switch, `runtime-flags.ts:61-62`) | gating (U-E2-24) | Same |
 | `experimental.openTelemetry` | on (opt-out) | gating (U-E2-21) | Same |
 | `KILO_EXPERIMENTAL_SCOUT`, `_CONTEXT_TOOLS`, `_CODE_MODE`, `_MCP_APPS`, `_SESSION_SWITCHER`, `_EVENT_SYSTEM`, `_CLAUDE_MIGRATION`, `_LSP_TOOL`, `KILO_ENABLE_EXA`, `experimental.native_notebook_tools`, `experimental.image_generation`, `experimental.speech_to_text_*` | off | post-cutover (E11) | `_EVENT_SYSTEM` debug view is not-needed |

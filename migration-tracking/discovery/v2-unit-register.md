@@ -111,7 +111,7 @@ Donor paths are relative to the donor tag; `kc/` = `packages/kilo-cli/src/`, `kv
 | U-E3-09 | Publish `@kilocode/sdk` and `@kilocode/plugin` from BASE packages | packaging | G1 | F-CORE-126 | new | partial | SMALL (regen) | no | U-E3-07 |
 | U-E3-10 | v2 preview release train | packaging | G1 | — | new (old N17) | needs-port | n/a | no | U-E3-06, U-E3-07 |
 | U-E3-11 | Canary and cutover/rollback runbook, G1 child (G2/G3 children later) | packaging | G1 | — | #14414 | needs-port | n/a | no | U-E3-10 |
-| U-E3-12 | Binary and channel naming; v1-IDE isolation from the v2 binary | packaging | G1 | F-V2-004 | new (user decision; see final report) | needs-port | n/a | no | U-E1-01 |
+| U-E3-12 | Binary and channel naming; v1-IDE isolation from the v2 binary (answer Q-DIST-01 before U-E3-10 starts) | packaging | G1 | F-V2-004 | new (deferred user decision Q-DIST-01) | needs-port | n/a | no | U-E1-01 |
 
 ## E4 Remote sessions
 
@@ -172,7 +172,7 @@ Shared facts for E7. The plugin is absent from BASE and from the donor (no reuse
 | U-E7-01 | Inventory plugin contracts (routes used by the generated Kotlin client, events, terminal) and map each to a public v2 interface | JetBrains | G3 | — | #14420 | needs-port | MATERIAL | no | U-E0-02 |
 | U-E7-02 | Re-land the plugin on the clean base: Gradle build, CLI pinning to a v2 release, OpenAPI client generated from the assembled v2 contract, server startup, discovery, auth, version checks | JetBrains | G3 | F-JB-001, F-JB-002, F-JB-003 | #14421 | needs-port | MATERIAL | no | U-E7-01, U-E3-07 |
 | U-E7-03 | Sessions, streaming, permissions, history, config, board, subagents, prompt completion, settings, MCP OAuth, telemetry | JetBrains | G3 | F-JB-004, F-JB-005, F-JB-006, F-JB-010 | #14422 | needs-port | MATERIAL | no | U-E7-02 |
-| U-E7-04 | Terminal, diff/VFS and shared editor-service consumers (enhance prompt, branch name; FIM only if the gate stays, see final report) | JetBrains | G3 | F-JB-007, F-JB-011 | #14423 | needs-port | MATERIAL | no | U-E7-02, U-E2-28 |
+| U-E7-04 | Terminal, diff/VFS and shared editor-service consumers (enhance prompt, branch name; FIM only if the gate stays, Q-G3-01) | JetBrains | G3 | F-JB-007, F-JB-011 | #14423 | needs-port | MATERIAL | no | U-E7-02, U-E2-28 |
 | U-E7-05 | Agent Manager, worktrees, marketplace, legacy v5 migration | JetBrains | G3 | F-JB-008, F-JB-009 | new | needs-port | MATERIAL | no | U-E2-27, U-E7-03 |
 | U-E7-06 | Validate in supported IDEs: reconnect, restart, version mismatch | JetBrains | G3 | — | #14424 | needs-port | n/a | no | U-E7-02…05 |
 
@@ -369,16 +369,45 @@ Every issue in the #13750 tree maps to a unit or is closed out as a tracker.
 | N15, N16 scenario sets | U-L4-01 |
 | N17 preview release train | U-E3-10 |
 
-## Open items for the user
+## Open questions
 
-These items affect unit gates or scope. They need a user decision before the planner fixes Part B.
+Questions are recorded where they become actionable, not answered up front. Each has a trigger: the unit whose start is the deadline for the answer. The coordinator raises a question with the named owners when its trigger unit is about to start. Nothing listed here blocks work that starts earlier.
 
-| Item | Affected units | Evidence |
-|---|---|---|
-| FIM as a G3 hard gate, although V1 JetBrains has no FIM | U-E6-08, U-E7-04 | Inventory Part 3, "FIM at V1 JetBrains" |
-| Decision 7 and default-on experimental flags (background subagents, shared agent board): treated as gating here | U-E2-07, U-E2-24 | `packages/opencode/src/effect/runtime-flags.ts:47-49,61-62` at V1 |
-| Branch-flip timing: v1 VS Code builds its bundled CLI from `packages/opencode` in the same tree | U-E8-01 | `packages/kilo-vscode/script/local-bin.ts` at V1 |
-| Binary and channel naming (`kilo2` binary and npm `next` per cloud owners, 2026-10-07) | U-E3-12, U-E10-01, U-E10-03 | `technical-notes/baseline/cloud-agent-contracts.md:40-47` |
-| Gate attachment for cloud agents (independent pin `@kilocode/cli@7.8.1`) and Anaconda Desktop | U-E10-01, U-E10-02 | `cloud-agent-consumers.md:48-63`; #14429 |
-| Product disposition of upstream desktop/web app and pairing | U-E9-14, U-E9-15, U-E4-05 | Inventory Part 4 (F-V2-037, F-V2-049) |
-| Snapshot SHA: record `d99662338` alongside `f7115470` in `migration-context.md` | U-L2-01 | `marker-audit/v1-kilo-marker-port-assessment.md:9` |
+### Deferred to the VS Code track (G2)
+
+| ID | Question | Trigger | Owners to involve | Evidence |
+|---|---|---|---|---|
+| Q-G2-01 | When does `main` flip to v2? The v1 VS Code build compiles its bundled CLI from `packages/opencode` in the same tree. Options: flip only after G2 and G3, or build v1 IDE releases from the `v1` branch after the flip | Before any change to `main`; at the latest when E6 starts (U-E6-01) | VS Code owners, release owner | `packages/kilo-vscode/script/local-bin.ts` at V1 |
+| Q-G2-02 | Capability handshake shape (what the extension reads to detect a v2 backend), shared with JetBrains | U-E6-02 (server side U-E1-08 can ship a minimal version first) | VS Code and JetBrains owners | `packages/kilo-vscode/src/features.ts` already probes `experimental.capabilities.get` |
+| Q-G2-03 | First-launch import UX in the extension, and mapping of v1 extension `globalState` and secrets | U-E6-02 | VS Code owners | Old plan N9 (`kilo-opencode-v2-execution-plan.md:270-274`) |
+| Q-G2-04 | Restricted Mode key conflict in the preview, and desktop verification of the Stop fix | U-E6-03 | VS Code owners | Old plan line 25; working log 2026-09-08 |
+| Q-G2-05 | Message-deletion semantics on event-sourced v2 sessions (delete vs revert vs tombstone) | U-E2-05 | VS Code owners, core owner | #14380; `v2-v1-session-diffs.md` |
+| Q-G2-06 | Agent Manager control-plane contract on v2 (worktree routing, ask/reply/reject, multi-project) | U-E2-27 | VS Code owners | #14391; V1 `kilocode/agent-manager/*` |
+| Q-G2-07 | Confirm post-cutover for VS Code experimental settings: browser automation, conversation prompt history, Claude migration, native notebook tools | E6 kickoff | VS Code owners | Inventory Part 3, F-VSC-025…028 |
+| Q-G2-08 | Name and channel of the v2 extension build that bundles the v2 binary | U-E6-19 | VS Code owners, release owner | Depends on Q-DIST-01 |
+
+### Deferred to the JetBrains track (G3)
+
+| ID | Question | Trigger | Owners to involve | Evidence |
+|---|---|---|---|---|
+| Q-G3-01 | Is FIM/next-edit a G3 hard gate (Decision 7), given that V1 JetBrains has no FIM producer or consumer, only migrated autocomplete settings? | U-E7-01 | JetBrains owners | Inventory Part 3, "FIM at V1 JetBrains" |
+| Q-G3-02 | Kilo plugin RPC endpoints (`/api/rpc/:rpcID/:method`) may not appear in the assembled OpenAPI that the JetBrains Kotlin client is generated from. How does the plugin reach Kilo-specific operations? | U-E7-01 | JetBrains owners, core owner | `packages/kilo-jetbrains/backend/build.gradle.kts:11-21`; BASE `protocol/src/groups/rpc` (UNVERIFIED coverage in OpenAPI) |
+| Q-G3-03 | Which v2 CLI release the plugin pins, and how the `jetbrains/v*` release line maps to it | U-E7-02 | JetBrains owners, release owner | `kilo.cli.pinned`, `packages/kilo-jetbrains/package.json` |
+| Q-G3-04 | Supported IDE products and versions, and split-mode support, for validation | U-E7-06 | JetBrains owners | #14424 |
+| Q-G3-05 | Is the legacy v5 plugin migration still needed on v2? | U-E7-05 | JetBrains owners | `backend/.../migration/*` at V1 |
+
+### Other deferred questions
+
+| ID | Question | Trigger | Owners to involve | Evidence |
+|---|---|---|---|---|
+| Q-DIST-01 | Binary name and npm channel for v2 (the cloud owners chose a `kilo2` binary on npm `next` on 2026-10-07), and how v1 IDEs are kept from resolving the v2 binary | Before the first distributed v2 build: U-E3-10 (preview train), which also gates U-E3-12 | Release owner, cloud owners | `technical-notes/baseline/cloud-agent-contracts.md:40-47` |
+| Q-EXT-01 | Gate attachment for cloud agents (independent pin `@kilocode/cli@7.8.1`) | U-E10-01 | Cloud owners | `cloud-agent-consumers.md:48-63` |
+| Q-EXT-02 | Anaconda Desktop integration mode and the surface it gates | U-E10-02 (#14429) | Anaconda Desktop owners | #14429–#14432 |
+| Q-PROD-01 | Ship, hide or defer upstream's desktop/web app and pairing | U-E9-15 (U-E4-05 for pairing) | Product owner | Inventory Part 4 (F-V2-037, F-V2-049) |
+
+### Raised with the user now (affect G1 scope)
+
+| ID | Question | Affected units | Evidence |
+|---|---|---|---|
+| Q-NOW-01 | Decision 7 and features that are named experimental but on by default (background subagents, shared agent board). This register treats them as gating | U-E2-07, U-E2-24 | `packages/opencode/src/effect/runtime-flags.ts:47-49,61-62` at V1 |
+| Q-NOW-02 | Record `d99662338` (assessment review point) alongside `f7115470` in `migration-context.md`. No unit verdict depends on it; it only sets where the first L2 sweep starts | U-L2-01 | `marker-audit/v1-kilo-marker-port-assessment.md:9`; register gap table |
