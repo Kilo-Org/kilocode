@@ -103,7 +103,7 @@ export namespace BackgroundProcessWindows {
     }
   }
 
-  export type Command = { live: false } | { live: true; line: string }
+  export type Command = { live: false } | { live: true; line: string } | { live: true; terminating: true }
 
   // The command line of a process, read directly instead of through WMI. A pid that no process
   // holds, or a process that already exited, is { live: false }. Returns a reason instead when
@@ -125,6 +125,7 @@ export namespace BackgroundProcessWindows {
       const base = lib.ptr(info)
       const needed = new Uint32Array(1)
       const status = lib.nt.NtQueryInformationProcess(proc, COMMAND, base, size, needed)
+      if (status >>> 0 === 0xc000010a) return { live: true, terminating: true }
       const want = needed.at(0) ?? 0
       if (status < 0 && want > size && want <= LIMIT) return read(want)
       if (status < 0) return { reason: `NtQueryInformationProcess(${pid}) failed with status ${status >>> 0}` }

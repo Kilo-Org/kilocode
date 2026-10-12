@@ -1,6 +1,8 @@
-import { describe, expect } from "bun:test"
+import { describe, expect, spyOn, test } from "bun:test"
 import { Bus } from "@/bus"
 import { BackgroundProcess } from "@/kilocode/background-process"
+import { BackgroundProcessWindows } from "@/kilocode/background-process/windows"
+import { Process } from "@/util/process"
 import { SessionID } from "@/session/schema"
 import { Shell } from "@opencode-ai/core/shell"
 import { Filesystem } from "@/util/filesystem"
@@ -90,6 +92,96 @@ function update(sessionID: SessionID) {
 }
 
 describe("BackgroundProcess", () => {
+  test.skipIf(process.platform !== "win32")(
+    "waits for a persistent runner that exits five seconds after stop",
+    async () => {
+      await using tmp = await tmpdir()
+      const sessionID = SessionID.descending()
+      const id = BackgroundProcess.ID.ascending()
+      const files = artifacts(tmp.path, id)
+      const scope = `global\0${Filesystem.resolve(tmp.path)}`
+      const token = `late-${process.pid}-${Date.now()}`
+      const control = files.manifest.slice(0, -5) + ".stop"
+      const source = path.join(tmp.path, "late.mjs")
+      await fs.mkdir(path.dirname(files.manifest), { recursive: true })
+      await fs.mkdir(path.dirname(files.log), { recursive: true })
+      await Bun.write(
+        source,
+        `console.log("ready")
+const timer = setInterval(async () => {
+  if (!(await Bun.file(${JSON.stringify(control)}).exists())) return
+  clearInterval(timer)
+  await Bun.sleep(5_000)
+  process.exit(0)
+}, 20)
+`,
+      )
+      const child = spawn(process.execPath, [source, "__background-process", token], {
+        stdio: "ignore",
+        windowsHide: true,
+      })
+      const exit = once(child, "exit")
+      if (!child.pid) throw new Error("fixture runner did not start")
+      const now = Date.now()
+      await Bun.write(files.log, "ready\n")
+      await Bun.write(
+        files.manifest,
+        JSON.stringify({
+          scope: `scope:${Hash.fast(scope)}`,
+          token,
+          info: {
+            id,
+            sessionID,
+            pid: child.pid,
+            command: "synthetic late runner",
+            cwd: tmp.path,
+            ports: [],
+            status: "running",
+            lifetime: "persistent",
+            ready: false,
+            output: "",
+            time: { started: now, updated: now },
+          },
+          start: { sessionID, command: "synthetic late runner", cwd: tmp.path, lifetime: "persistent" },
+        }),
+      )
+      try {
+        await provideTestInstance({
+          directory: tmp.path,
+          fn: async () => {
+            expect((await BackgroundProcess.get(id))?.pid).toBe(child.pid)
+            const command = BackgroundProcessWindows.command
+            const probe = spyOn(BackgroundProcessWindows, "command").mockImplementation(async (pid) =>
+              pid === child.pid && (await Bun.file(control).exists()) && alive(pid)
+                ? { live: true, terminating: true }
+                : command(pid),
+            )
+            const walk = spyOn(Process, "text")
+            const started = Date.now()
+            try {
+              const stopped = await BackgroundProcess.stop(id)
+              expect(stopped?.status).toBe("stopped")
+              expect(Date.now() - started).toBeGreaterThanOrEqual(5_000)
+              expect(alive(child.pid)).toBe(false)
+              expect(await Bun.file(files.manifest).exists()).toBe(false)
+              expect(walk.mock.calls.filter(([args]) => args[0] === "powershell.exe")).toHaveLength(0)
+            } finally {
+              probe.mockRestore()
+              walk.mockRestore()
+            }
+          },
+        })
+      } finally {
+        if (alive(child.pid)) child.kill("SIGKILL")
+        await exit
+        await fs.rm(files.manifest, { force: true })
+        await fs.rm(files.log, { force: true })
+        await fs.rm(control, { force: true })
+      }
+    },
+    30_000,
+  )
+
   it.instance("starts, reports readiness, and stops a process", () =>
     Effect.gen(function* () {
       const test = yield* TestInstance

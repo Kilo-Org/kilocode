@@ -69,6 +69,35 @@ console.log(JSON.stringify({ leader: leader.pid, before, after: job.members() })
 }
 
 describe.skipIf(process.platform !== "win32")("BackgroundProcessWindows", () => {
+  test("reports STATUS_PROCESS_IS_TERMINATING without failing the native probe", async () => {
+    await using tmp = await tmpdir()
+    const source = path.resolve(import.meta.dirname, "../../src/kilocode/background-process/windows.ts")
+    const file = path.join(tmp.path, "terminating.ts")
+    await Bun.write(
+      file,
+      `import { mock } from "bun:test"
+import * as ffi from "bun:ffi"
+const original = { ...ffi }
+let closed = 0
+mock.module("bun:ffi", () => ({ ...original, dlopen(name) {
+  if (name === "ntdll.dll") return { symbols: { NtQueryInformationProcess: () => -1073741558 } }
+  return { symbols: { OpenProcess: () => 1n, WaitForSingleObject: () => 258, CloseHandle: () => { closed++; return 1 }, GetLastError: () => 0 } }
+} }))
+const { BackgroundProcessWindows } = await import(${JSON.stringify(source)})
+console.log(JSON.stringify({ result: await BackgroundProcessWindows.command(123), closed }))
+`,
+    )
+    const run = Bun.spawn([process.execPath, file], { stdout: "pipe", stderr: "pipe", windowsHide: true })
+    const [stdout, stderr, code] = await Promise.all([
+      new Response(run.stdout).text(),
+      new Response(run.stderr).text(),
+      run.exited,
+    ])
+    if (code !== 0) throw new Error(stderr)
+    expect(stderr).toBe("")
+    expect(JSON.parse(stdout)).toEqual({ result: { live: true, terminating: true }, closed: 1 })
+  })
+
   test("reads the command line of a live process and reports it once it exited", async () => {
     const mark = `bgp-mark-${process.pid}-${Date.now()}`
     const child = spawn(process.execPath, ["-e", "setInterval(() => {}, 1000)", mark], {
@@ -81,7 +110,7 @@ describe.skipIf(process.platform !== "win32")("BackgroundProcessWindows", () => 
     try {
       const found = await BackgroundProcessWindows.command(pid)
       expect(found.live).toBe(true)
-      expect(found.live ? found.line : "").toContain(mark)
+      expect("line" in found ? found.line : "").toContain(mark)
     } finally {
       child.kill()
       await exited
