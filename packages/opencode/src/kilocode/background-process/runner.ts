@@ -185,18 +185,26 @@ export namespace BackgroundProcessRunner {
       const active = code === undefined || (exited !== undefined && Date.now() - exited < GRACE)
       seen = await descendants(seen, () => (active ? { pid, start, end: exited } : undefined))
       if (await Bun.file(input.control).exists()) {
-        await Promise.all(
-          [...(code === undefined ? [pid] : []), ...seen.keys()].map((item) =>
-            Process.run(["taskkill", "/pid", String(item), "/f", "/t"], { nothrow: true }),
-          ),
-        )
-        await rm(input.control, { force: true })
+        // Refresh birth-checked identities before each kill; taskkill must not walk stale parent pids itself.
         const end = Date.now() + 5_000
         while (Date.now() < end) {
-          seen = await descendants(seen)
-          if (code !== undefined && seen.size === 0) return code
+          seen = await descendants(seen, () =>
+            code === undefined || (exited !== undefined && Date.now() - exited < GRACE)
+              ? { pid, start, end: exited }
+              : undefined,
+          )
+          if (code !== undefined && seen.size === 0) {
+            await rm(input.control, { force: true })
+            return code
+          }
+          await Promise.all(
+            [...(code === undefined ? [pid] : []), ...seen.keys()].map((item) =>
+              Process.run(["taskkill", "/pid", String(item), "/f"], { nothrow: true }),
+            ),
+          )
           await Bun.sleep(100)
         }
+        await rm(input.control, { force: true })
         throw new Error("Background process runner could not terminate its Windows process tree")
       }
       if (code !== undefined && !active && seen.size === 0) return code
