@@ -520,7 +520,9 @@
 
         <!--
           Popup shown from the "more" icon in the prompt bar. Same SessionActionsKeys.ACTIONS context
-          as the context menu, with Copy and Stop reserved for the right-click menu.
+          as the context menu, with Copy and Stop reserved for the right-click menu. Core lifecycle
+          reuses the tool window gear's Kilo.CliGroup submenu, so the version/architecture footer and
+          Restart/Reinstall stay in one place.
         -->
         <group id="Kilo.Session.PromptMenu">
             <reference ref="Kilo.Session.AutoApprove"/>
@@ -533,7 +535,7 @@
             <reference ref="Kilo.Session.CopyPrRef"/>
             <separator/>
             <reference ref="Kilo.OpenSettings"/>
-            <reference ref="Kilo.ReloadCoreSettings"/>
+            <reference ref="Kilo.CliGroup"/>
             <separator/>
             <reference ref="Kilo.Session.CopyId"/>
             <reference ref="Kilo.Session.CopyShareLink"/>

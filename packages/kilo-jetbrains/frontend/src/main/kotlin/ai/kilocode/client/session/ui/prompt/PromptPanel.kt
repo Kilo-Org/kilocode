@@ -4,6 +4,7 @@ import ai.kilocode.client.KiloNotifications
 import ai.kilocode.client.actions.CycleModeAction
 import ai.kilocode.client.actions.CycleModelAction
 import ai.kilocode.client.actions.CycleReasoningAction
+import ai.kilocode.client.actions.KiloSettingsAction
 import ai.kilocode.client.actions.ResetModelAction
 import ai.kilocode.client.actions.SendPromptAction
 import ai.kilocode.client.actions.StopSessionAction
@@ -280,7 +281,7 @@ class PromptPanel(
     private val issuesSlot = issuesButton.align(HAlign.RIGHT, VAlign.TOP).apply { isVisible = false }
 
     /**
-     * Opens the Kilo.Session.PromptMenu popup (auto-approve + sharing). Resolves its context from
+     * Opens the Kilo.Session.PromptMenu popup (auto-approve, sharing, Core). Resolves its context from
      * DataManager, so it reads live SessionActionsKeys.ACTIONS from the session ancestor chain rather
      * than needing SessionUi to wire anything through this panel directly.
      */
@@ -741,7 +742,9 @@ class PromptPanel(
         val ctx = DataManager.getInstance().getDataContext(menu)
         val popup = JBPopupFactory.getInstance().createActionGroupPopup(
             null,
-            group,
+            // The nested Core submenu updates on the BGT (version/architecture footer), same as the
+            // tool window gear popup.
+            KiloSettingsAction.popupGroup(group),
             ctx,
             JBPopupFactory.ActionSelectionAid.SPEEDSEARCH,
             true,
