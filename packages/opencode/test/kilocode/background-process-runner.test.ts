@@ -560,6 +560,136 @@ for (const failure of ["failed", "slow"] as const)
   )
 
 test.skipIf(process.platform !== "win32")(
+  "stop during a hung confirmation walk reaches the verified child within five seconds",
+  async () => {
+    await using tmp = await tmpdir()
+    const input = {
+      token: "stop-during-confirmation",
+      shell: process.execPath,
+      args: ["-e", "setTimeout(() => {}, 200)"],
+      cwd: tmp.path,
+      log: path.join(tmp.path, "stop.log"),
+      control: path.join(tmp.path, "stop.stop"),
+    }
+    const previous = process.exitCode ?? 0
+    const token = process.env.KILO_BACKGROUND_PROCESS_TOKEN
+    const spawned = spyOn(child, "spawn")
+    let pid = 0
+    let birth = 0
+    let reads = 0
+    let hung = false
+    let killed = false
+    let requested = 0
+    const timeouts: number[] = []
+    const read = spyOn(Process, "text").mockImplementation(async (_args, opts) => {
+      const proc = spawned.mock.results.at(0)?.value
+      if (!(proc instanceof child.ChildProcess) || !proc.pid) throw new Error("leader missing")
+      pid = proc.pid
+      birth ||= Date.now()
+      reads++
+      if (proc.exitCode !== null && !hung && reads >= 4) {
+        hung = true
+        requested = Date.now()
+        await Bun.write(input.control, "stop")
+        timeouts.push(opts?.timeout ?? 0)
+        await Bun.sleep(opts?.timeout ?? 0)
+        return { code: 1, stdout: Buffer.alloc(0), stderr: Buffer.alloc(0), text: "" }
+      }
+      return {
+        code: 0,
+        stdout: Buffer.alloc(0),
+        stderr: Buffer.alloc(0),
+        text: JSON.stringify(
+          killed ? [] : [{ ProcessId: 900_001, ParentProcessId: pid, CreationDate: `/Date(${birth})/` }],
+        ),
+      }
+    })
+    const kill = spyOn(Process, "run").mockImplementation(async (args) => {
+      if (Number(args.at(2)) === 900_001) killed = true
+      return { code: 0, stdout: Buffer.alloc(0), stderr: Buffer.alloc(0) }
+    })
+    const run = BackgroundProcessRunner.maybe(BackgroundProcessRunner.command(input))
+    void run.catch(() => {})
+    try {
+      expect(await Promise.race([run, Bun.sleep(12_000).then(() => "pending")])).toBe(true)
+      expect(killed).toBe(true)
+      expect(timeouts.every((value) => value <= 5_000)).toBe(true)
+      expect(Date.now() - requested).toBeLessThan(7_000)
+    } finally {
+      killed = true
+      await Bun.write(input.control, "stop")
+      await run.catch(() => {})
+      read.mockRestore()
+      kill.mockRestore()
+      spawned.mockRestore()
+      process.exitCode = previous
+      if (token === undefined) delete process.env.KILO_BACKGROUND_PROCESS_TOKEN
+      else process.env.KILO_BACKGROUND_PROCESS_TOKEN = token
+    }
+  },
+  40_000,
+)
+
+test.skipIf(process.platform !== "win32")(
+  "an unkillable verified child is named as the reason for an unconfirmed stop",
+  async () => {
+    await using tmp = await tmpdir()
+    const input = {
+      token: "verified-survivor",
+      shell: process.execPath,
+      args: ["-e", "setTimeout(() => {}, 200)"],
+      cwd: tmp.path,
+      log: path.join(tmp.path, "survivor.log"),
+      control: path.join(tmp.path, "survivor.stop"),
+    }
+    const previous = process.exitCode ?? 0
+    const token = process.env.KILO_BACKGROUND_PROCESS_TOKEN
+    const spawned = spyOn(child, "spawn")
+    let birth = 0
+    let restore = false
+    const read = spyOn(Process, "text").mockImplementation(async () => {
+      const proc = spawned.mock.results.at(0)?.value
+      if (!(proc instanceof child.ChildProcess) || !proc.pid) throw new Error("leader missing")
+      birth ||= Date.now()
+      await Bun.write(input.control, "stop")
+      return {
+        code: 0,
+        stdout: Buffer.alloc(0),
+        stderr: Buffer.alloc(0),
+        text: JSON.stringify(
+          restore ? [] : [{ ProcessId: 900_001, ParentProcessId: proc.pid, CreationDate: `/Date(${birth})/` }],
+        ),
+      }
+    })
+    const kill = spyOn(Process, "run").mockResolvedValue({ code: 1, stdout: Buffer.alloc(0), stderr: Buffer.alloc(0) })
+    const notes: string[] = []
+    const write = spyOn(process.stderr, "write").mockImplementation((value) => {
+      notes.push(String(value))
+      return true
+    })
+    const run = BackgroundProcessRunner.maybe(BackgroundProcessRunner.command(input))
+    void run.catch(() => {})
+    try {
+      expect(await run).toBe(true)
+      expect(process.exitCode).toBe(1)
+      expect(notes.some((note) => note.includes("1 verified descendants still running: 900001"))).toBe(true)
+      expect(notes.some((note) => note.includes("process table unavailable"))).toBe(false)
+    } finally {
+      restore = true
+      await run.catch(() => {})
+      read.mockRestore()
+      kill.mockRestore()
+      write.mockRestore()
+      spawned.mockRestore()
+      process.exitCode = previous
+      if (token === undefined) delete process.env.KILO_BACKGROUND_PROCESS_TOKEN
+      else process.env.KILO_BACKGROUND_PROCESS_TOKEN = token
+    }
+  },
+  45_000,
+)
+
+test.skipIf(process.platform !== "win32")(
   "an unconfirmed stop stays alive past serve's wait then ends within the guard bound",
   async () => {
     await using tmp = await tmpdir()
