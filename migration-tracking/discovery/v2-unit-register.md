@@ -400,14 +400,14 @@ Questions are recorded where they become actionable, not answered up front. Each
 
 | ID | Question | Trigger | Owners to involve | Evidence |
 |---|---|---|---|---|
-| Q-DIST-01 | Binary name and npm channel for v2 (the cloud owners chose a `kilo2` binary on npm `next` on 2026-10-07), and how v1 IDEs are kept from resolving the v2 binary | Before the first distributed v2 build: U-E3-10 (preview train), which also gates U-E3-12 | Release owner, cloud owners | `technical-notes/baseline/cloud-agent-contracts.md:40-47` |
+| Q-DIST-01 | Binary name and npm channel for v2 (the cloud owners proposed a `kilo2` binary on npm `next` on 2026-10-07), and how v1 IDEs are kept from resolving the v2 binary | **Must be decided before cutting any beta or preview release that is distributed** (first one: U-E3-10 preview train); also blocks U-E3-12 and U-E6-19. Recorded in `migration-context.md`, Deferred decisions | Release owner, cloud owners | `technical-notes/baseline/cloud-agent-contracts.md:40-47` |
 | Q-EXT-01 | Gate attachment for cloud agents (independent pin `@kilocode/cli@7.8.1`) | U-E10-01 | Cloud owners | `cloud-agent-consumers.md:48-63` |
 | Q-EXT-02 | Anaconda Desktop integration mode and the surface it gates | U-E10-02 (#14429) | Anaconda Desktop owners | #14429–#14432 |
 | Q-PROD-01 | Ship, hide or defer upstream's desktop/web app and pairing | U-E9-15 (U-E4-05 for pairing) | Product owner | Inventory Part 4 (F-V2-037, F-V2-049) |
 
-### Raised with the user now (affect G1 scope)
+### Resolved by the user (2026-10-12)
 
-| ID | Question | Affected units | Evidence |
-|---|---|---|---|
-| Q-NOW-01 | Decision 7 and features that are named experimental but on by default (background subagents, shared agent board). This register treats them as gating | U-E2-07, U-E2-24 | `packages/opencode/src/effect/runtime-flags.ts:47-49,61-62` at V1 |
-| Q-NOW-02 | Record `d99662338` (assessment review point) alongside `f7115470` in `migration-context.md`. No unit verdict depends on it; it only sets where the first L2 sweep starts | U-L2-01 | `marker-audit/v1-kilo-marker-port-assessment.md:9`; register gap table |
+| ID | Resolution | Recorded in |
+|---|---|---|
+| Q-NOW-01 | Decision 7's experimental-flag rule applies only to features that are off by default on v1. Background subagents and the shared agent board are gating (U-E2-07, U-E2-24) | `migration-context.md`, Decision 7 |
+| Q-NOW-02 | Note added: the assessment reviewed `d99662338e`; the first L2 sweep starts there | `migration-context.md`, pinned refs |

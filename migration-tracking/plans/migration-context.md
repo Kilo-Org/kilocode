@@ -2,7 +2,7 @@
 
 This file is the single source for the shared facts, decisions and rules of the Kilo v1 → v2 migration. Role prompts (discovery, planner, coordinator) and implementation session prompts point here instead of restating it. When a fact here changes, change it here first.
 
-Status: bootstrap. Last updated 2026-10-11.
+Status: bootstrap. Last updated 2026-10-12.
 
 ## Branches and pinned refs
 
@@ -14,7 +14,7 @@ Status: bootstrap. Last updated 2026-10-11.
 | Upstream release tag | `v2.0.26` = `9b4ec5714d481559990db0a816d5dec19541a814` (reference marker only; not on `upstream/v2`, see note) |
 | Archived old port | tag `kilo-v2-checkpoints-2026-09` = `879b89e89034f0e9f4cfb7fd09a5323ef06f83c9` (former `kilo-v2` tip). Donor code only |
 | V1 target (behavioral reference) | `origin/main` pinned at `fb7e96eda5409517a05948b9efaf01c53997bf6e` (2026-10-09) |
-| V1 assessment snapshot | `f7115470` (2026-08-12): where the existing 816-file source assessment stops |
+| V1 assessment snapshot | `f7115470` (2026-08-12): where the existing 816-file source assessment stops. The assessment itself reviewed `d99662338e` (2026-08-10, 800 commits earlier); the first v1 delta sweep starts from `d99662338e` so the gap gets file-level dispositions. No unit verdict depends on the difference (discovery register, gap table) |
 
 Note on the base: upstream cuts each release as a separate version-bump commit (`release: vX`) on top of the `v2` tip, tags it, and does not merge it back into `v2`. The tag is therefore one commit off the branch. The base is the tag's parent: release-equivalent code, on `upstream/v2`, and free of the version-bump commit, so later merges of `upstream/v2` stay clean.
 
@@ -36,10 +36,19 @@ Do not re-litigate these without new evidence. Proposed changes go to the user.
 4. **Staleness gate.** For each feature, diff the v1 files it touches between the assessment snapshot and the v1 target. Empty delta: the donor is likely faithful. Non-empty: re-derive behavior from v1 and keep only the donor's v2 mapping.
 5. **Staged cutover.** G1 CLI/TUI → G2 VS Code → G3 JetBrains, each with its own go/no-go. G2 and G3 are independent client-surface tracks that run in parallel with G1 once their prerequisites land. Until their gate, the IDEs stay on v1: VS Code bundles the CLI from the same `main` build (no version pin); JetBrains pins a CLI version.
 6. **Storage.** A separate customer v2 data store. v1 files are never touched while any v1 surface ships. Import is opt-in and re-runnable. Path consolidation only after G3.
-7. **Scope.** Post-cutover (non-gating): voice, image generation, team and incremental sharing, legacy TUI extras, and features behind experimental flags on v1 unless explicitly made a gate. KiloClaw is not needed. Hard gates: FIM/next-edit (G2, G3). Cloud agents and Anaconda Desktop gate whichever surface they consume.
+7. **Scope.** Post-cutover (non-gating): voice, image generation, team and incremental sharing, legacy TUI extras, and features behind experimental flags on v1 that are off by default, unless explicitly made a gate. Features named experimental but on by default on v1 (for example background subagents and the shared agent board) are in scope like any shipped feature. KiloClaw is not needed. Hard gates: FIM/next-edit (G2, G3). Cloud agents and Anaconda Desktop gate whichever surface they consume.
 8. **Gates override P-labels** for surface readiness. P-labels order work globally; gates define what a surface needs to ship.
 9. **Plan format.** One file with two parts: Part A high level (epics, gates, critical path, risks), Part B low level (per-epic units, dependencies, acceptance), plus appendices (facts, glossary, links).
 10. **Readability.** Separate why, what, when and how-to-verify. Progressive disclosure. No sub-numbered steps. Issue IDs only in Part B and the register. One canonical place per fact.
+
+## Deferred decisions
+
+Decisions intentionally left open until the work that needs them. Each has a deadline; the coordinator raises it with the user and owners before that point. Detail and evidence: `migration-tracking/discovery/v2-unit-register.md`, "Open questions".
+
+| Decision | Deadline |
+|---|---|
+| v2 binary name and distribution channel (npm dist-tag), and how v1 IDEs are kept from resolving the v2 binary. Cloud owners proposed a `kilo2` binary on npm `next` (2026-10-07) | **Before the first beta or preview release that is distributed outside the team** |
+| VS Code (G2) and JetBrains (G3) questions, including whether FIM/next-edit gates G3 when JetBrains v1 has no FIM | When the trigger unit listed in the register starts |
 
 ## Working model
 
