@@ -1,4 +1,4 @@
-import { describe, expect, spyOn, test } from "bun:test"
+import { describe, expect, mock, spyOn, test } from "bun:test"
 import { Bus } from "@/bus"
 import { BackgroundProcess } from "@/kilocode/background-process"
 import { BackgroundProcessWindows } from "@/kilocode/background-process/windows"
@@ -13,6 +13,7 @@ import { Effect } from "effect"
 import { spawn } from "child_process"
 import { once } from "node:events"
 import fs from "fs/promises"
+import * as allfs from "fs/promises"
 import path from "path"
 import { provideTestInstance, TestInstance, tmpdir } from "../fixture/fixture"
 import { it } from "../lib/effect"
@@ -93,26 +94,33 @@ function update(sessionID: SessionID) {
 }
 
 describe("BackgroundProcess", () => {
-  test("concurrent persistent cleanup removes each artifact once", async () => {
+  test("process exit and persistent stop remove each artifact once", async () => {
     await using tmp = await tmpdir()
     await provideTestInstance({
       directory: tmp.path,
       fn: async () => {
         const item = await BackgroundProcess.start({
           sessionID: SessionID.descending(),
-          command: await command(tmp.path, "cleanup.mjs", 'console.log("ready"); setInterval(() => {}, 1000)'),
+          command: await script(tmp.path, "cleanup.mjs", 'console.log("ready"); setInterval(() => {}, 1000)'),
           cwd: tmp.path,
           lifetime: "persistent",
           ready: { pattern: "ready", timeout: 10_000 },
         })
-        const removed = spyOn(fs, "rm")
+        const original = { ...allfs }
+        const removed: string[] = []
+        const remove: typeof fs.rm = async (...args) => {
+          removed.push(String(args[0]))
+          await Bun.sleep(100)
+          return original.rm(...args)
+        }
+        mock.module("fs/promises", () => ({ ...original, rm: remove }))
         try {
-          await Promise.all([BackgroundProcess.stop(item.id), BackgroundProcess.stop(item.id)])
-          const files = removed.mock.calls.map(([file]) => String(file)).filter((file) => file.includes(item.id))
+          await BackgroundProcess.stop(item.id)
+          const files = removed.filter((file) => file.includes(item.id))
           expect(files.length).toBeGreaterThan(0)
           expect(new Set(files).size).toBe(files.length)
         } finally {
-          removed.mockRestore()
+          mock.module("fs/promises", () => original)
           await BackgroundProcess.stop(item.id)
         }
       },

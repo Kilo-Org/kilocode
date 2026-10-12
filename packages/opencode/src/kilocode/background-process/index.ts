@@ -168,6 +168,7 @@ export namespace BackgroundProcess {
     file?: string
     saved?: boolean
     saving?: Promise<void>
+    forgetting?: Promise<void>
     disposed?: boolean
   }
 
@@ -314,6 +315,12 @@ export namespace BackgroundProcess {
   }
 
   async function forget(shared: Shared, active: Active) {
+    if (active.forgetting) return active.forgetting
+    active.forgetting = forgetArtifacts(shared, active)
+    return active.forgetting
+  }
+
+  async function forgetArtifacts(shared: Shared, active: Active) {
     active.saved = false
     await active.saving?.catch((err) =>
       log.warn("failed to finish persistent process metadata", { err, id: active.info.id }),
