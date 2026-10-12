@@ -253,6 +253,9 @@ class SessionMessageListPanel(
     /** Find the rendered component for one part of a message, or null if neither has a view. */
     fun findPart(message: String, part: String): JComponent? = msgToView[message]?.part(part)
 
+    /** Find only a user prompt's painted bubble, excluding its toolbar/footer. */
+    fun findPrompt(message: String): JComponent? = msgToView[message]?.promptTarget()
+
     /** Number of top-level turns currently displayed. */
     fun turnCount(): Int = turnViews.size
 

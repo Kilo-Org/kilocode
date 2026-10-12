@@ -692,6 +692,7 @@ class SessionUi(
             scroll = scroll,
             parent = this,
             timers = timers,
+            onReveal = ::revealPrompt,
         )
         if (!readonly) {
             prompt.onFileDrag = ::syncDrop
@@ -1267,6 +1268,13 @@ class SessionUi(
         if (!scroll.scrollPartTop(message, part)) return
         val step = messageBody.findPart(message, part) ?: messageBody.findMessage(message) ?: return
         highlight.show(step)
+    }
+
+    /** Marks only the user prompt bubble a prompt-navigator jump landed on. */
+    @RequiresEdt
+    private fun revealPrompt(id: String) {
+        val prompt = messageBody.findPrompt(id) ?: return
+        highlight.show(prompt)
     }
 
     @RequiresEdt
