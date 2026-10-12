@@ -10,8 +10,15 @@ import ai.kilocode.client.session.model.Tool
 import ai.kilocode.client.session.model.ToolExecState
 import ai.kilocode.client.session.model.ToolKind
 import ai.kilocode.client.session.ui.style.SessionUiStyle
+import ai.kilocode.client.ui.UiStyle
+import com.intellij.ide.IdeTooltip
+import com.intellij.ide.IdeTooltipManager
+import com.intellij.openapi.ui.popup.Balloon
+import com.intellij.ui.components.JBLabel
+import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.util.ui.JBUI
 import java.awt.Color
+import java.awt.Point
 import java.awt.Cursor
 import java.awt.Dimension
 import java.awt.Graphics
@@ -35,6 +42,7 @@ internal class TimelinePanel : JPanel() {
     private var items: List<TimelineItem> = emptyList()
     private var heights: List<Int> = emptyList()
     private var hover = -1
+    private var shown: IdeTooltip? = null
 
     init {
         isOpaque = false
@@ -45,6 +53,7 @@ internal class TimelinePanel : JPanel() {
                 cursor = if (idx >= 0) HAND else DEFAULT
                 if (hover == idx) return
                 hover = idx
+                tip(idx)
                 repaint()
             }
         })
@@ -54,10 +63,56 @@ internal class TimelinePanel : JPanel() {
                 cursor = DEFAULT
                 if (hover == -1) return
                 hover = -1
+                tip(-1)
                 repaint()
             }
         })
     }
+
+    /**
+     * Shows the hovered bar's tooltip immediately, unanimated, directly under the bar.
+     *
+     * Driven explicitly rather than left to the hover path, because each requirement lives in a
+     * different place: Swing's `ToolTipManager.initialDelay` is not consulted at all
+     * ([IdeTooltipManager] disables that manager and builds its own tooltip), the delay otherwise
+     * comes from `IdeTooltip.getShowDelay()` reading the global `ide.tooltip.initialDelay` registry
+     * value, and animation is a parameter of `show` rather than a property of the tooltip. Only
+     * `show(now = true, animationEnabled = false)` satisfies all three.
+     *
+     * The anchor is the bar's bottom edge, not the pointer, so the label does not jump around as
+     * the pointer moves within one bar.
+     *
+     * [toolTipText] is still kept in sync by the caller: it is what the accessibility API reads.
+     */
+    @RequiresEdt
+    private fun tip(index: Int) {
+        val manager = IdeTooltipManager.getInstance()
+        val title = items.getOrNull(index)?.title
+        if (title == null) {
+            manager.setCustomTooltip(this, null)
+            shown?.let(manager::hide)
+            shown = null
+            return
+        }
+        val anchor = Point(barWidth() * index + barWidth() / 2, barBottom() + UiStyle.Gap.xs())
+        val tip = object : IdeTooltip(this, anchor, JBLabel(title), this, title) {
+            override fun getShowDelay(): Int = 0
+
+            override fun getInitialReshowDelay(): Int = 0
+        }
+            // Without this the manager replaces the anchor with the component's own centre for any
+            // component under 64px — the bar strip is ~20px tall, so the label would hang from the
+            // middle of the bars instead of below them.
+            .setToCenterIfSmall(false)
+            .setPreferredPosition(Balloon.Position.below)
+        // Keep it registered too, so a hover the manager initiates on its own reuses this tooltip
+        // instead of building a delayed one from toolTipText.
+        manager.setCustomTooltip(this, tip)
+        shown = manager.show(tip, true, false)
+    }
+
+    /** Bottom of the whole bar strip: the label hangs off that edge, not off the hovered bar. */
+    private fun barBottom(): Int = height.takeIf { it > 0 } ?: preferredSize.height
 
     fun setItems(items: List<TimelineItem>): Boolean {
         val appended = items.size > this.items.size

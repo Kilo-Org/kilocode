@@ -1254,15 +1254,19 @@ class SessionUi(
     }
 
     /**
-     * Jumps the transcript to a header-timeline step and outlines the turn it belongs to. The scroll
-     * anchors on the part itself, but the outline wraps the whole turn — a single part is often a
-     * one-line card, too small to find once the viewport has moved.
+     * Jumps the transcript to a header-timeline step and outlines that step.
+     *
+     * The outline wraps the clicked part, not its turn: a turn is one user message plus the whole
+     * assistant response, which can span dozens of messages and every bar in it, so outlining the
+     * turn would draw the same box for almost every bar. The target resolution mirrors
+     * [ai.kilocode.client.session.scroll.SessionScroll.scrollPartTop] exactly — the part, or its
+     * message when the part has no renderer — so the outline always wraps what the scroll aimed at.
      */
     @RequiresEdt
     private fun jumpTimeline(message: String, part: String) {
         if (!scroll.scrollPartTop(message, part)) return
-        val turn = messageBody.findTurn(message) ?: return
-        highlight.show(turn)
+        val step = messageBody.findPart(message, part) ?: messageBody.findMessage(message) ?: return
+        highlight.show(step)
     }
 
     @RequiresEdt

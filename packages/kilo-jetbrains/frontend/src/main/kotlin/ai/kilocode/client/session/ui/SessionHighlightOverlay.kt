@@ -17,15 +17,16 @@ import javax.swing.JComponent
 import javax.swing.SwingUtilities
 
 /**
- * Outlines the turn a header-timeline jump landed on, so the destination stays findable once the
- * viewport has moved. Lives on the session overlay layer because the outline has to sit above the
- * transcript cards without joining transcript layout — a border on
- * [ai.kilocode.client.session.views.TurnView] would reflow every card inside it, and a turn can be
- * taller than the viewport.
+ * Marks the step a header-timeline jump landed on with a vertical guide line in the transcript's
+ * left padding, so the destination stays findable once the viewport has moved.
  *
- * The outline is a wayfinding cue, not state: the next scroll or click clears it.
+ * Lives on the session overlay layer because the guide has to sit above the transcript without
+ * joining transcript layout — a border or inset on a transcript view would reflow the cards inside
+ * it, and the marked step can be taller than the viewport.
  *
- * @param area the transcript viewport, used to clip the outline so a turn taller than the viewport
+ * The guide is a wayfinding cue, not state: the next scroll or click clears it.
+ *
+ * @param area the transcript viewport, used to clip the guide so a step taller than the viewport
  *   does not paint over the header or the prompt.
  */
 internal class SessionHighlightOverlay(
@@ -56,8 +57,8 @@ internal class SessionHighlightOverlay(
     override fun contains(x: Int, y: Int): Boolean = false
 
     @RequiresEdt
-    fun show(turn: JComponent) {
-        target = turn
+    fun show(step: JComponent) {
+        target = step
         isVisible = true
         repaint()
     }
@@ -70,19 +71,19 @@ internal class SessionHighlightOverlay(
         repaint()
     }
 
-    /** The outlined turn, or null when no outline is showing. Test and diagnostic accessor. */
+    /** The outlined step view, or null when no outline is showing. Test and diagnostic accessor. */
     @RequiresEdt
     fun outlined(): JComponent? = target
 
-    /** Turn rectangle in this overlay's coordinates, or an empty rect when there is nothing to draw. */
+    /** Step rectangle in this overlay's coordinates, or an empty rect when there is nothing to draw. */
     @RequiresEdt
     fun outline(): Rectangle {
-        val turn = target ?: return Rectangle()
+        val step = target ?: return Rectangle()
         // Descending from the scroll pane is what makes the coordinate conversion meaningful: it
-        // drops a turn detached by a transcript rebuild, and one left over from a body swap to the
+        // drops a step detached by a transcript rebuild, and one left over from a body swap to the
         // blank or progress panel.
-        if (!turn.isVisible || !SwingUtilities.isDescendingFrom(turn, area)) return Rectangle()
-        return SwingUtilities.convertRectangle(turn, Rectangle(turn.size), this)
+        if (!step.isVisible || !SwingUtilities.isDescendingFrom(step, area)) return Rectangle()
+        return SwingUtilities.convertRectangle(step, Rectangle(step.size), this)
     }
 
     /** Transcript viewport rectangle in this overlay's coordinates. */
@@ -93,31 +94,38 @@ internal class SessionHighlightOverlay(
         return Rectangle(pt.x, pt.y, area.width, area.height)
     }
 
+    /**
+     * X of the guide, in overlay coordinates: half of the transcript's left inset in from the step's
+     * own left edge, so the line sits in the gutter beside the content.
+     *
+     * Measured from the step rather than from the transcript panel's `insets`, which are empty:
+     * [ai.kilocode.client.session.ui.SessionLayout] applies that inset itself and also centers
+     * content in a readable lane, so the panel's left edge is nowhere near the content's.
+     */
+    @RequiresEdt
+    fun guide(): Int? {
+        val rect = outline()
+        if (rect.isEmpty) return null
+        return rect.x - JBUI.scale(SessionUiStyle.SessionLayout.INNER_HORIZONTAL) / 2
+    }
+
     override fun paintComponent(g: Graphics) {
         super.paintComponent(g)
         val rect = outline()
         if (rect.isEmpty) return
         val clip = clip()
         if (clip.isEmpty) return
+        val x = guide() ?: return
         val g2 = g.create() as Graphics2D
         try {
             g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
-            // Clip instead of intersecting the rect: an intersection would draw a false top or
-            // bottom edge along the viewport boundary for a turn taller than the viewport.
+            // Clip instead of shortening the line: trimming it to the viewport would read as the
+            // step ending there, for a step taller than the viewport.
             g2.clip(clip)
-            g2.color = SessionUiStyle.View.Highlight.outlineColor()
-            val arc = JBUI.scale(SessionUiStyle.View.BLOCK_ARC)
+            g2.color = SessionUiStyle.View.Highlight.lineColor()
             val width = SessionUiStyle.View.Highlight.width()
-            for (step in 0 until width) {
-                g2.drawRoundRect(
-                    rect.x + step,
-                    rect.y + step,
-                    rect.width - 1 - step * 2,
-                    rect.height - 1 - step * 2,
-                    arc,
-                    arc,
-                )
-            }
+            // Rounded caps so a short step reads as a marker rather than a clipped bar.
+            g2.fillRoundRect(x - width / 2, rect.y, width, rect.height, width, width)
         } finally {
             g2.dispose()
         }

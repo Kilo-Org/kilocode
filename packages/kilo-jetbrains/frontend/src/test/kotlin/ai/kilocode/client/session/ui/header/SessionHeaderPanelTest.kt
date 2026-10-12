@@ -27,6 +27,9 @@ import java.awt.Point
 import java.awt.event.MouseEvent
 import java.awt.event.MouseWheelEvent
 import java.awt.image.BufferedImage
+import ai.kilocode.client.ui.UiStyle
+import com.intellij.ide.IdeTooltipManager
+import com.intellij.openapi.ui.popup.Balloon
 import javax.swing.JComponent
 import javax.swing.RepaintManager
 import javax.swing.UIManager
@@ -788,6 +791,28 @@ class SessionHeaderPanelTest : SessionControllerTestBase() {
         leftClick(timeline, panel.timelineBarWidth() * 100, panel.timelinePreferredSize().height - 1)
 
         assertEquals(emptyList<Pair<String, String>>(), jumps)
+    }
+
+    /**
+     * The bars are navigation targets, so the label has to appear instantly and hang off the bottom
+     * of the strip. Each property here is defeated by a different platform default: the manager
+     * replaces the anchor with the component's centre for anything under 64px unless
+     * `toCenterIfSmall` is off, and the delays otherwise come from global registry values.
+     */
+    fun `test timeline tooltip anchors below the bar strip with no delay`() {
+        val c = promptedHeader()
+        val panel = SessionHeaderPanel(c, parent)
+        val timeline = panel.timelinePanel() as JComponent
+
+        move(panel, 1)
+
+        val tip = IdeTooltipManager.getInstance().getCustomTooltip(timeline)!!
+        assertFalse("the component centre must not override the anchor", tip.isToCenterIfSmall)
+        assertEquals(Balloon.Position.below, tip.preferredPosition)
+        assertEquals(0, tip.showDelay)
+        assertEquals(0, tip.initialReshowDelay)
+        val bottom = if (timeline.height > 0) timeline.height else timeline.preferredSize.height
+        assertEquals(bottom + UiStyle.Gap.xs(), tip.point.y)
     }
 
     fun `test hovering a timeline bar shows a hand cursor`() {

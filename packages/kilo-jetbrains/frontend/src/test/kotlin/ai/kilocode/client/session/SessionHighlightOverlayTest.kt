@@ -12,6 +12,7 @@ import ai.kilocode.rpc.dto.MessageDto
 import ai.kilocode.rpc.dto.MessageTimeDto
 import ai.kilocode.rpc.dto.PartDto
 import ai.kilocode.rpc.dto.PartTimeDto
+import com.intellij.util.ui.JBUI
 import java.awt.Component
 import java.awt.Container
 import java.awt.Rectangle
@@ -21,7 +22,7 @@ import javax.swing.JLayeredPane
 import javax.swing.SwingUtilities
 
 /**
- * The timeline jump's turn outline — [SessionHighlightOverlay]. The outline is a transient cue, so
+ * The timeline jump's step outline — [SessionHighlightOverlay]. The outline is a transient cue, so
  * these tests drive it through the production entry points (a timeline click, a user scroll gesture,
  * a mouse press) rather than calling `show`/`clear` where the behavior under test is the wiring.
  */
@@ -66,28 +67,63 @@ class SessionHighlightOverlayTest : SessionUiTestBase() {
         assertTrue(highlight.outline().isEmpty)
     }
 
-    fun `test clicking a timeline bar outlines the turn containing that step`() {
+    fun `test clicking a timeline bar outlines that step, not the whole turn`() {
         transcript()
         val highlight = find<SessionHighlightOverlay>(ui)
+        val messages = find<SessionMessageListPanel>(ui)
 
         clickBar(1)
 
-        val turn = find<SessionMessageListPanel>(ui).findTurn("asst_1")!!
-        assertSame(turn, highlight.outlined())
+        val part = messages.findPart("asst_1", "tool_2")!!
+        assertSame(part, highlight.outlined())
         assertTrue(highlight.isVisible)
+        // The turn spans the whole assistant response; the outline must be the step, not that box.
+        val turn = messages.findTurn("asst_1")!!
+        assertFalse("the outline must not be the containing turn", turn === highlight.outlined())
     }
 
-    fun `test outline rectangle tracks the turn in overlay coordinates`() {
+    /**
+     * The regression this covers: turns group one user message with every following assistant
+     * message, so a turn-level outline drew the same box for almost every bar in a response.
+     */
+    fun `test different timeline bars outline different steps`() {
+        transcript()
+        val highlight = find<SessionHighlightOverlay>(ui)
+
+        clickBar(0)
+        val first = highlight.outlined()
+        clickBar(1)
+        val second = highlight.outlined()
+
+        assertNotNull(first)
+        assertNotNull(second)
+        assertFalse("two different bars must not outline the same component", first === second)
+    }
+
+    fun `test outline rectangle tracks the step in overlay coordinates`() {
         transcript()
         val highlight = find<SessionHighlightOverlay>(ui)
 
         clickBar(1)
         drainScroll()
 
-        val turn = find<SessionMessageListPanel>(ui).findTurn("asst_1")!!
-        val expected = SwingUtilities.convertRectangle(turn, Rectangle(turn.size), highlight)
+        val part = find<SessionMessageListPanel>(ui).findPart("asst_1", "tool_2")!!
+        val expected = SwingUtilities.convertRectangle(part, Rectangle(part.size), highlight)
         assertEquals(expected, highlight.outline())
-        assertFalse("the turn must have a real rect to outline", expected.isEmpty)
+        assertFalse("the step must have a real rect to outline", expected.isEmpty)
+    }
+
+    fun `test outline wraps the message when the step has no renderer`() {
+        transcript()
+        val highlight = find<SessionHighlightOverlay>(ui)
+        val messages = find<SessionMessageListPanel>(ui)
+
+        // step-finish is a timeline-only marker with no view; the outline falls back to the message,
+        // matching where scrollPartTop lands.
+        clickBar(2)
+
+        assertNull(messages.findPart("asst_1", "step_finish_1"))
+        assertSame(messages.findMessage("asst_1"), highlight.outlined())
     }
 
     fun `test outline is clipped to the transcript viewport`() {
@@ -104,7 +140,7 @@ class SessionHighlightOverlayTest : SessionUiTestBase() {
         )
         assertEquals(expected, highlight.clip())
         assertFalse("the clip must be a real rect or nothing paints", highlight.clip().isEmpty)
-        // The clip must exclude the prompt, or a turn taller than the viewport would paint its
+        // The clip must exclude the prompt, or a step taller than the viewport would paint its
         // outline across the input area.
         val prompt = find<PromptPanel>(ui)
         val promptRect = SwingUtilities.convertRectangle(
@@ -115,27 +151,39 @@ class SessionHighlightOverlayTest : SessionUiTestBase() {
         assertFalse("clip=${highlight.clip()} prompt=$promptRect", highlight.clip().intersects(promptRect))
     }
 
-    fun `test paint strokes the outline edges inside the clip and nothing when cleared`() {
+    fun `test the guide line paints in the left padding and nothing when cleared`() {
         transcript()
         val highlight = find<SessionHighlightOverlay>(ui)
         clickBar(1)
         drainScroll()
         val rect = highlight.outline()
         val clip = highlight.clip()
+        val x = highlight.guide()!!
         assertFalse(rect.isEmpty)
+        // The guide belongs in the gutter: left of the step's content, not over it.
+        assertTrue("guide x=$x must sit left of the step at ${rect.x}", x < rect.x)
+        // And it must sit inside the step's own left inset, not out at the panel edge. Measuring
+        // from the transcript panel's insets put it at the viewport edge, where it was invisible.
+        val inset = JBUI.scale(SessionUiStyle.SessionLayout.INNER_HORIZONTAL)
+        assertEquals("guide must be half the transcript inset in from the step", rect.x - inset / 2, x)
+        assertTrue("guide x=$x must be clear of the viewport edge at ${clip.x}", x > clip.x)
 
         val painted = paint(highlight)
-        // Sample the left edge at a height the viewport actually shows, so the clip cannot hide it.
-        val y = ((rect.y + rect.height / 2).coerceIn(clip.y + 1, clip.y + clip.height - 2))
-        val stroke = (rect.x until rect.x + SessionUiStyle.View.Highlight.width())
-            .any { x -> painted.getRGB(x, y) != 0 }
-        assertTrue("no outline stroke found on the left edge at y=$y rect=$rect clip=$clip", stroke)
-        // Well inside the turn stays untouched: this is an outline, not a fill.
-        assertEquals(0, painted.getRGB(rect.x + rect.width / 2, y))
+        // Sample at a height the viewport actually shows, so the clip cannot hide the line.
+        val y = (rect.y + rect.height / 2).coerceIn(clip.y + 1, clip.y + clip.height - 2)
+            .coerceIn(0, painted.height - 1)
+        val width = SessionUiStyle.View.Highlight.width()
+        val line = (x - width..x + width)
+            .filter { it in 0 until painted.width }
+            .any { painted.getRGB(it, y) != 0 }
+        assertTrue("no guide line found at x=$x y=$y rect=$rect clip=$clip", line)
+        // Nothing is drawn over the step itself: this is a margin marker, not an outline or a fill.
+        val inside = (rect.x + rect.width / 2).coerceIn(0, painted.width - 1)
+        assertEquals("step interior must stay unpainted at x=$inside", 0, painted.getRGB(inside, y))
 
         highlight.clear()
         val blank = paint(highlight)
-        assertEquals(0, blank.getRGB(rect.x + 1, y))
+        assertEquals(0, blank.getRGB(x.coerceIn(0, blank.width - 1), y))
     }
 
     private fun paint(highlight: SessionHighlightOverlay): BufferedImage {
@@ -217,8 +265,8 @@ class SessionHighlightOverlayTest : SessionUiTestBase() {
         // outlined. Bar 2 is the step-finish marker, whose jump falls back to the owning message.
         clickBar(2)
 
-        val turn = find<SessionMessageListPanel>(ui).findTurn("asst_1")!!
-        assertSame(turn, highlight.outlined())
+        val message = find<SessionMessageListPanel>(ui).findMessage("asst_1")!!
+        assertSame(message, highlight.outlined())
         assertTrue(highlight.isVisible)
     }
 

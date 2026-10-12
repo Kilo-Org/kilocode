@@ -1080,6 +1080,41 @@ class SessionModelTest : BasePlatformTestCase() {
         assertFalse(step.active)
     }
 
+    /**
+     * Adjacent reasoning parts render through one ReasoningView, so one bar must cover the run.
+     * A bar per part would leave the later ones pointing at the same block, which reads as dead.
+     */
+    fun `test header timeline merges adjacent reasoning parts into one bar`() {
+        model.upsertMessage(msg("a1", "assistant"))
+        model.updateContent("a1", part("r1", "a1", "reasoning", text = "first", time = PartTimeDto(1.0, 2.0)))
+        model.updateContent("a1", part("r2", "a1", "reasoning", text = "second", time = PartTimeDto(1.0, 2.0)))
+        model.updateContent("a1", part("r3", "a1", "reasoning", text = "third", time = PartTimeDto(1.0, 2.0)))
+
+        val timeline = model.header.timeline
+        assertEquals(1, timeline.size)
+        // The run reports the first part, which is the id the merged view is keyed by.
+        assertEquals("r1", timeline.single().part.id)
+    }
+
+    fun `test header timeline keeps reasoning runs split by another part`() {
+        model.upsertMessage(msg("a1", "assistant"))
+        model.updateContent("a1", part("r1", "a1", "reasoning", text = "before", time = PartTimeDto(1.0, 2.0)))
+        model.updateContent("a1", part("t1", "a1", "tool", tool = "bash", state = "completed", title = "Run"))
+        model.updateContent("a1", part("r2", "a1", "reasoning", text = "after", time = PartTimeDto(1.0, 2.0)))
+
+        assertEquals(listOf("r1", "t1", "r2"), model.header.timeline.map { it.part.id })
+    }
+
+    fun `test header timeline reasoning run stays active while any part is unfinished`() {
+        model.upsertMessage(msg("a1", "assistant"))
+        model.updateContent("a1", part("r1", "a1", "reasoning", text = "done", time = PartTimeDto(1.0, 2.0)))
+        // Started with no end: still streaming. A part with no time at all counts as done.
+        model.updateContent("a1", part("r2", "a1", "reasoning", text = "still going", time = PartTimeDto(1.0, null)))
+
+        assertEquals(1, model.header.timeline.size)
+        assertTrue(model.header.timeline.single().active)
+    }
+
     fun `test header timeline clamps large step finish token weight`() {
         model.upsertMessage(msg("a1", "assistant"))
         model.updateContent("a1", part("s1", "a1", "step-finish", tokens = TokensDto(Long.MAX_VALUE, 1, 1, 0, 0)))
