@@ -8,8 +8,8 @@ import javax.swing.JComponent
 
 /**
  * Transcript settings page. Not a [ai.kilocode.client.settings.base.DraftReadyConfigurable]: its
- * settings are local IDE preferences that must stay editable when the CLI is unavailable, and each
- * control writes immediately, so there is nothing to apply or revert.
+ * settings are local IDE preferences that must stay editable when the CLI is unavailable. Edits stay
+ * in the page's draft (and drive its live preview) until the platform applies or resets them.
  */
 class TranscriptConfigurable : SearchableConfigurable, Configurable.NoMargin, Configurable.NoScroll {
     private var ui: TranscriptSettingsUi? = null
@@ -20,12 +20,14 @@ class TranscriptConfigurable : SearchableConfigurable, Configurable.NoMargin, Co
 
     override fun createComponent(): JComponent = TranscriptSettingsUi().also { ui = it }
 
-    override fun isModified(): Boolean = false
+    override fun isModified(): Boolean = ui?.modified() == true
 
-    override fun apply() = Unit
+    override fun apply() {
+        ui?.applyDraft()
+    }
 
     override fun reset() {
-        ui?.sync()
+        ui?.resetDraft()
     }
 
     override fun disposeUIResources() {

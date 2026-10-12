@@ -7,6 +7,8 @@ import ai.kilocode.client.session.model.ToolApproval
 import ai.kilocode.client.session.model.ToolExecState
 import ai.kilocode.client.session.model.toolKind
 import ai.kilocode.client.session.settings.BlockDisplay
+import ai.kilocode.client.session.settings.ReasoningDisplay
+import ai.kilocode.client.session.settings.TranscriptDisplay
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.session.views.tool.FileLinkLabel
@@ -75,9 +77,19 @@ class ToolViewTest : BasePlatformTestCase() {
     fun `test live setting expands untouched generic tool`() {
         val item = tool("p1", "custom_tool", ToolExecState.COMPLETED).also { it.output = "done" }
         val view = track(ToolView(item, display = BlockDisplay.COLLAPSED))
-        KiloPluginSettings.setMcpToolDisplay(BlockDisplay.EXPANDED)
 
-        assertTrue(view.syncTranscriptDisplay())
+        assertTrue(view.syncTranscriptDisplay(toolDisplay(BlockDisplay.EXPANDED)))
+
+        assertTrue(view.isExpanded())
+    }
+
+    fun `test force overrides a manually collapsed generic tool`() {
+        val item = tool("p1", "custom_tool", ToolExecState.COMPLETED).also { it.output = "done" }
+        val view = track(ToolView(item, display = BlockDisplay.COLLAPSED))
+        view.toggle()
+        assertTrue(view.isExpanded())
+
+        assertTrue(view.syncTranscriptDisplay(toolDisplay(BlockDisplay.EXPANDED), force = true))
 
         assertTrue(view.isExpanded())
     }
@@ -517,6 +529,8 @@ class ToolViewTest : BasePlatformTestCase() {
         views.add(view)
         return view
     }
+
+    private fun toolDisplay(mcpTool: BlockDisplay) = TranscriptDisplay(reasoning = ReasoningDisplay.EXPANDED, mcpTool = mcpTool)
 
     private fun assertEditorFont(font: java.awt.Font, style: SessionEditorStyle) {
         assertEquals(style.transcriptFont.name, font.name)

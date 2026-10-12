@@ -966,11 +966,11 @@ class SessionUi(
                 messageBody.syncApprovalReasons(visible)
             }
         })
-        bus.subscribe(TranscriptDisplayListener.TOPIC, TranscriptDisplayListener {
+        bus.subscribe(TranscriptDisplayListener.TOPIC, TranscriptDisplayListener { display ->
             ApplicationManager.getApplication().invokeLater {
                 if (disposed) return@invokeLater
                 if (!this::messageBody.isInitialized) return@invokeLater
-                messageBody.syncTranscriptDisplay()
+                messageBody.syncTranscriptDisplay(display)
             }
         })
         // refreshBranch cancels the in-flight lookup first, so a flip both drops a running gh call

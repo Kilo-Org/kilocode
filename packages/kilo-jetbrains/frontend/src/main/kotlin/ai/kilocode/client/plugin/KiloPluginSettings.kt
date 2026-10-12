@@ -2,6 +2,7 @@ package ai.kilocode.client.plugin
 
 import ai.kilocode.client.session.settings.BlockDisplay
 import ai.kilocode.client.session.settings.ReasoningDisplay
+import ai.kilocode.client.session.settings.TranscriptDisplay
 import com.intellij.ide.util.PropertiesComponent
 
 object KiloPluginSettings {
@@ -136,6 +137,26 @@ object KiloPluginSettings {
 
     internal fun unsetHoverPreview() {
         PropertiesComponent.getInstance().unsetValue(HOVER_PREVIEW_KEY)
+    }
+
+    /** Reads every transcript appearance preference as one snapshot. */
+    fun getTranscriptDisplay(): TranscriptDisplay = TranscriptDisplay(
+        reasoning = getReasoningDisplay(),
+        terminal = getTerminalCommandDisplay(),
+        codeEdit = getCodeEditDisplay(),
+        mcpTool = getMcpToolDisplay(),
+        approvalReason = getShowApprovalReason(),
+        hoverPreview = getHoverPreview(),
+    )
+
+    /** Writes every transcript appearance preference from one snapshot. */
+    fun setTranscriptDisplay(value: TranscriptDisplay) {
+        setReasoningDisplay(value.reasoning)
+        setTerminalCommandDisplay(value.terminal)
+        setCodeEditDisplay(value.codeEdit)
+        setMcpToolDisplay(value.mcpTool)
+        setShowApprovalReason(value.approvalReason)
+        setHoverPreview(value.hoverPreview)
     }
 
     private fun blockDisplay(key: String, default: BlockDisplay): BlockDisplay {

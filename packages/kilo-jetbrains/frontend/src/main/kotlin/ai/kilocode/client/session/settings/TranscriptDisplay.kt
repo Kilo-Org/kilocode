@@ -20,3 +20,17 @@ enum class BlockDisplay(val storageKey: String) {
     EXPANDED("expanded"),
     COLLAPSED("collapsed"),
 }
+
+/**
+ * Snapshot of every transcript appearance preference. Lets the settings page carry an unsaved draft
+ * and push it into the live preview (and, on apply, into open sessions) without reading back from
+ * [ai.kilocode.client.plugin.KiloPluginSettings] on each view.
+ */
+data class TranscriptDisplay(
+    val reasoning: ReasoningDisplay,
+    val terminal: BlockDisplay = BlockDisplay.EXPANDED,
+    val codeEdit: BlockDisplay = BlockDisplay.COLLAPSED,
+    val mcpTool: BlockDisplay = BlockDisplay.COLLAPSED,
+    val approvalReason: Boolean = true,
+    val hoverPreview: Boolean = true,
+)

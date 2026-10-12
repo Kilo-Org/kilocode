@@ -4,6 +4,7 @@ import ai.kilocode.client.plugin.KiloPluginSettings
 import ai.kilocode.client.session.model.Content
 import ai.kilocode.client.session.model.Tool
 import ai.kilocode.client.session.settings.BlockDisplay
+import ai.kilocode.client.session.settings.TranscriptDisplay
 import ai.kilocode.client.session.settings.TranscriptDisplayTarget
 import ai.kilocode.client.session.ui.SessionContentPanel
 import ai.kilocode.client.session.ui.SessionSurfacePanel
@@ -200,12 +201,15 @@ class ShellToolView(
     }
 
     @RequiresEdt
-    override fun syncTranscriptDisplay(): Boolean {
-        if (touched) return false
-        val next = KiloPluginSettings.getTerminalCommandDisplay()
-        if (display == next) return false
-        display = next
+    override fun syncTranscriptDisplay(display: TranscriptDisplay, force: Boolean): Boolean {
+        if (!force && touched) return false
+        val next = display.terminal
+        if (this.display == next) return false
+        this.display = next
         sync()
+        // Same contract as update(): a state change the card applies itself must revalidate it, or the
+        // parent SessionLayout can stack it at the height it cached.
+        refresh()
         return true
     }
 

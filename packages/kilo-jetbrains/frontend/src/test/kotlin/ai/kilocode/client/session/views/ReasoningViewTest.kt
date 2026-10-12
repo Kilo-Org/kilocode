@@ -3,6 +3,7 @@ package ai.kilocode.client.session.views
 import ai.kilocode.client.plugin.KiloPluginSettings
 import ai.kilocode.client.session.model.Reasoning
 import ai.kilocode.client.session.settings.ReasoningDisplay
+import ai.kilocode.client.session.settings.TranscriptDisplay
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionUiStyle
 import com.intellij.openapi.editor.EditorFactory
@@ -91,9 +92,8 @@ class ReasoningViewTest : BasePlatformTestCase() {
 
     fun `test live setting collapses untouched reasoning`() {
         val view = ReasoningView(reasoning("p1", done = true, text = "one"), mode = ReasoningDisplay.EXPANDED)
-        KiloPluginSettings.setReasoningDisplay(ReasoningDisplay.HEADLINE)
 
-        assertTrue(view.syncTranscriptDisplay())
+        assertTrue(view.syncTranscriptDisplay(display(reasoning = ReasoningDisplay.HEADLINE)))
 
         assertFalse(view.isExpanded())
         assertFalse(view.bodyCreated())
@@ -102,9 +102,18 @@ class ReasoningViewTest : BasePlatformTestCase() {
     fun `test live setting skips manually expanded reasoning`() {
         val view = ReasoningView(reasoning("p1", done = true, text = "one"), mode = ReasoningDisplay.PREVIEW)
         view.toggle()
-        KiloPluginSettings.setReasoningDisplay(ReasoningDisplay.HEADLINE)
 
-        assertFalse(view.syncTranscriptDisplay())
+        assertFalse(view.syncTranscriptDisplay(display(reasoning = ReasoningDisplay.HEADLINE)))
+
+        assertTrue(view.isExpanded())
+    }
+
+    fun `test force overrides a manually collapsed reasoning block`() {
+        val view = ReasoningView(reasoning("p1", done = true, text = "one"), mode = ReasoningDisplay.HEADLINE)
+        view.toggle()
+        assertTrue(view.isExpanded())
+
+        assertTrue(view.syncTranscriptDisplay(display(reasoning = ReasoningDisplay.EXPANDED), force = true))
 
         assertTrue(view.isExpanded())
     }
@@ -112,9 +121,8 @@ class ReasoningViewTest : BasePlatformTestCase() {
     fun `test live setting collapsing reasoning updates the chevron`() {
         val view = ReasoningView(reasoning("p1", done = true, text = "one"), mode = ReasoningDisplay.EXPANDED)
         assertSame(SessionViewIcons.chevronExpanded, view.arrowIcon())
-        KiloPluginSettings.setReasoningDisplay(ReasoningDisplay.HEADLINE)
 
-        assertTrue(view.syncTranscriptDisplay())
+        assertTrue(view.syncTranscriptDisplay(display(reasoning = ReasoningDisplay.HEADLINE)))
 
         assertFalse(view.isExpanded())
         assertSame(SessionViewIcons.chevronCollapsed, view.arrowIcon())
@@ -123,13 +131,14 @@ class ReasoningViewTest : BasePlatformTestCase() {
     fun `test live setting expanding reasoning updates the chevron`() {
         val view = ReasoningView(reasoning("p1", done = true, text = "one"), mode = ReasoningDisplay.HEADLINE)
         assertSame(SessionViewIcons.chevronCollapsed, view.arrowIcon())
-        KiloPluginSettings.setReasoningDisplay(ReasoningDisplay.EXPANDED)
 
-        assertTrue(view.syncTranscriptDisplay())
+        assertTrue(view.syncTranscriptDisplay(display(reasoning = ReasoningDisplay.EXPANDED)))
 
         assertTrue(view.isExpanded())
         assertSame(SessionViewIcons.chevronExpanded, view.arrowIcon())
     }
+
+    private fun display(reasoning: ReasoningDisplay) = TranscriptDisplay(reasoning = reasoning)
 
     // -- Preview mode (height-capped auto-scrolling body while streaming; auto-collapses + releases body when done) --
 

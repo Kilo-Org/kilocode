@@ -5,6 +5,8 @@ import ai.kilocode.client.session.model.Tool
 import ai.kilocode.client.session.model.ToolExecState
 import ai.kilocode.client.session.model.toolKind
 import ai.kilocode.client.session.settings.BlockDisplay
+import ai.kilocode.client.session.settings.ReasoningDisplay
+import ai.kilocode.client.session.settings.TranscriptDisplay
 import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.session.views.tool.EditToolView
 import ai.kilocode.client.session.views.tool.FileLinkLabel
@@ -79,9 +81,18 @@ class EditToolViewTest : BasePlatformTestCase() {
 
     fun `test live setting expands untouched edit`() {
         val view = track(EditToolView(tool(), display = BlockDisplay.COLLAPSED))
-        KiloPluginSettings.setCodeEditDisplay(BlockDisplay.EXPANDED)
 
-        assertTrue(view.syncTranscriptDisplay())
+        assertTrue(view.syncTranscriptDisplay(editDisplay(BlockDisplay.EXPANDED)))
+
+        assertTrue(view.isExpanded())
+    }
+
+    fun `test force overrides a manually collapsed edit`() {
+        val view = track(EditToolView(tool(), display = BlockDisplay.COLLAPSED))
+        view.toggle()
+        assertTrue(view.isExpanded())
+
+        assertTrue(view.syncTranscriptDisplay(editDisplay(BlockDisplay.EXPANDED), force = true))
 
         assertTrue(view.isExpanded())
     }
@@ -534,6 +545,8 @@ class EditToolViewTest : BasePlatformTestCase() {
         views.add(view)
         return view
     }
+
+    private fun editDisplay(codeEdit: BlockDisplay) = TranscriptDisplay(reasoning = ReasoningDisplay.EXPANDED, codeEdit = codeEdit)
 
     private fun click(component: Component, x: Int) {
         component.dispatchEvent(MouseEvent(component, MouseEvent.MOUSE_CLICKED, System.currentTimeMillis(), 0, x, 1, 1, false))

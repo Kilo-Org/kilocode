@@ -5,6 +5,8 @@ import ai.kilocode.client.session.model.Tool
 import ai.kilocode.client.session.model.ToolExecState
 import ai.kilocode.client.session.model.toolKind
 import ai.kilocode.client.session.settings.BlockDisplay
+import ai.kilocode.client.session.settings.ReasoningDisplay
+import ai.kilocode.client.session.settings.TranscriptDisplay
 import ai.kilocode.client.session.ui.SessionSurfacePanel
 import ai.kilocode.client.session.ui.selection.SessionSelection
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
@@ -84,9 +86,8 @@ class ShellToolViewTest : BasePlatformTestCase() {
     fun `test live setting expands untouched shell`() {
         val item = tool().also { it.input = mapOf("command" to "pwd") }
         val view = track(ShellToolView(item, display = BlockDisplay.COLLAPSED))
-        KiloPluginSettings.setTerminalCommandDisplay(BlockDisplay.EXPANDED)
 
-        assertTrue(view.syncTranscriptDisplay())
+        assertTrue(view.syncTranscriptDisplay(shellDisplay(BlockDisplay.EXPANDED)))
 
         assertTrue(view.isExpanded())
     }
@@ -95,11 +96,21 @@ class ShellToolViewTest : BasePlatformTestCase() {
         val item = tool().also { it.input = mapOf("command" to "pwd") }
         val view = track(ShellToolView(item, display = BlockDisplay.EXPANDED))
         view.toggle()
-        KiloPluginSettings.setTerminalCommandDisplay(BlockDisplay.COLLAPSED)
 
-        assertFalse(view.syncTranscriptDisplay())
+        assertFalse(view.syncTranscriptDisplay(shellDisplay(BlockDisplay.COLLAPSED)))
 
         assertFalse(view.isExpanded())
+    }
+
+    fun `test force overrides a manually collapsed shell`() {
+        val item = tool().also { it.input = mapOf("command" to "pwd") }
+        val view = track(ShellToolView(item, display = BlockDisplay.COLLAPSED))
+        view.toggle()
+        assertTrue(view.isExpanded())
+
+        assertTrue(view.syncTranscriptDisplay(shellDisplay(BlockDisplay.EXPANDED), force = true))
+
+        assertTrue(view.isExpanded())
     }
 
     fun `test command only shell renders one code surface without labels`() {
@@ -610,6 +621,8 @@ class ShellToolViewTest : BasePlatformTestCase() {
         views.add(view)
         return view
     }
+
+    private fun shellDisplay(terminal: BlockDisplay) = TranscriptDisplay(reasoning = ReasoningDisplay.EXPANDED, terminal = terminal)
 
     private fun layout(view: ShellToolView, width: Int) {
         view.setSize(width, view.preferredSize.height)

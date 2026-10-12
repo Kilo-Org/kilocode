@@ -26,13 +26,19 @@ import javax.swing.SwingUtilities
  * Header popups for the chat transcript: the dwell, balloon and lifetime rules live in
  * [SidePopupController], and this adds the chat-specific placement — beside the hovered card, height
  * budgeted to the visible session.
+ *
+ * [enabled] gates hover previews. It defaults to the persisted preference; the settings preview
+ * injects the unsaved draft so hovering there reflects the value the user is still editing.
  */
-class HeaderPopupController(timers: UiTimerSource = UiTimers) : Disposable {
+class HeaderPopupController(
+    timers: UiTimerSource = UiTimers,
+    private val enabled: () -> Boolean = { KiloPluginSettings.getHoverPreview() },
+) : Disposable {
     private val popup = SidePopupController(timers)
 
     @RequiresEdt
     fun show(view: PartView) {
-        if (!KiloPluginSettings.getHoverPreview()) return
+        if (!enabled()) return
         popup.show(view, view) { request(view) }
     }
 

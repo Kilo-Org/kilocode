@@ -9,6 +9,7 @@ import ai.kilocode.client.session.model.Content
 import ai.kilocode.client.session.model.Tool
 import ai.kilocode.client.session.model.ToolKind
 import ai.kilocode.client.session.settings.BlockDisplay
+import ai.kilocode.client.session.settings.TranscriptDisplay
 import ai.kilocode.client.session.settings.TranscriptDisplayTarget
 import ai.kilocode.client.session.ui.popup.HeaderPopupBody
 import ai.kilocode.client.session.ui.popup.HeaderPopupRequest
@@ -255,12 +256,14 @@ class EditToolView(
     }
 
     @RequiresEdt
-    override fun syncTranscriptDisplay(): Boolean {
-        if (touched) return false
-        val next = KiloPluginSettings.getCodeEditDisplay()
-        if (display == next) return false
-        display = next
+    override fun syncTranscriptDisplay(display: TranscriptDisplay, force: Boolean): Boolean {
+        if (!force && touched) return false
+        val next = display.codeEdit
+        if (this.display == next) return false
+        this.display = next
         sync()
+        // Same contract as update(): a state change the card applies itself must revalidate it.
+        refresh()
         return true
     }
 

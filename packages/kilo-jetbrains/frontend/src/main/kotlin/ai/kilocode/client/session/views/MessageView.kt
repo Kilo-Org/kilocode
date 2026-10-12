@@ -11,6 +11,7 @@ import ai.kilocode.client.session.model.StepFinish
 import ai.kilocode.client.session.model.Text
 import ai.kilocode.client.session.model.Tool
 import ai.kilocode.client.session.model.ToolCallRef
+import ai.kilocode.client.session.settings.TranscriptDisplay
 import ai.kilocode.client.session.settings.TranscriptDisplayTarget
 import ai.kilocode.client.session.model.ToolExecState
 import ai.kilocode.client.session.ui.RevertProgress
@@ -187,10 +188,10 @@ class MessageView(
     }
 
     @RequiresEdt
-    fun syncTranscriptDisplay(): Boolean {
+    fun syncTranscriptDisplay(display: TranscriptDisplay, force: Boolean = false): Boolean {
         var changed = false
         for (view in parts.values) {
-            if (view is TranscriptDisplayTarget) changed = view.syncTranscriptDisplay() || changed
+            if (view is TranscriptDisplayTarget) changed = view.syncTranscriptDisplay(display, force) || changed
         }
         if (changed) refresh()
         return changed

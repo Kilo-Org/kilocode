@@ -9,6 +9,7 @@ import ai.kilocode.client.session.openSessionLink
 import ai.kilocode.client.session.model.Content
 import ai.kilocode.client.session.model.Reasoning
 import ai.kilocode.client.session.settings.ReasoningDisplay
+import ai.kilocode.client.session.settings.TranscriptDisplay
 import ai.kilocode.client.session.settings.TranscriptDisplayTarget
 import ai.kilocode.client.session.ui.popup.HeaderPopupBody
 import ai.kilocode.client.session.ui.popup.HeaderPopupRequest
@@ -212,9 +213,9 @@ class ReasoningView(
     }
 
     @RequiresEdt
-    override fun syncTranscriptDisplay(): Boolean {
-        if (touched) return false
-        val next = KiloPluginSettings.getReasoningDisplay()
+    override fun syncTranscriptDisplay(display: TranscriptDisplay, force: Boolean): Boolean {
+        if (!force && touched) return false
+        val next = display.reasoning
         if (mode == next) return false
         mode = next
         val visible = source.isNotBlank()
@@ -225,6 +226,10 @@ class ReasoningView(
             releaseBody()
         }
         syncExpandable(canExpand())
+        // Expanded and Preview are both open and differ only in measured height (full text vs capped
+        // rows), so nothing here changes containment to invalidate the card. Without this the parent
+        // SessionLayout keeps serving the height it cached while the card still reported isValid.
+        refresh()
         return true
     }
 

@@ -5,6 +5,7 @@ import ai.kilocode.client.session.model.Content
 import ai.kilocode.client.session.model.Tool
 import ai.kilocode.client.session.model.ToolExecState
 import ai.kilocode.client.session.settings.BlockDisplay
+import ai.kilocode.client.session.settings.TranscriptDisplay
 import ai.kilocode.client.session.settings.TranscriptDisplayTarget
 import ai.kilocode.client.session.ui.popup.HeaderPopupRequest
 import ai.kilocode.client.session.ui.selection.SessionSelection
@@ -173,12 +174,14 @@ class ToolView(
     }
 
     @RequiresEdt
-    override fun syncTranscriptDisplay(): Boolean {
-        if (touched) return false
-        val next = KiloPluginSettings.getMcpToolDisplay()
-        if (display == next) return false
-        display = next
+    override fun syncTranscriptDisplay(display: TranscriptDisplay, force: Boolean): Boolean {
+        if (!force && touched) return false
+        val next = display.mcpTool
+        if (this.display == next) return false
+        this.display = next
         sync()
+        // Same contract as update(): a state change the card applies itself must revalidate it.
+        refresh()
         return true
     }
 

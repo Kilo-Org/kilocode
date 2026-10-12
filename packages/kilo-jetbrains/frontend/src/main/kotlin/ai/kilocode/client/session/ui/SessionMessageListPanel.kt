@@ -8,6 +8,7 @@ import ai.kilocode.client.session.model.SessionModelEvent
 import ai.kilocode.client.session.model.SessionState
 import ai.kilocode.client.session.model.FileAttachment
 import ai.kilocode.client.session.model.ToolCallRef
+import ai.kilocode.client.session.settings.TranscriptDisplay
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.selection.SessionSelection
 import ai.kilocode.client.session.ui.style.SessionEditorStyleTarget
@@ -589,9 +590,9 @@ class SessionMessageListPanel(
     }
 
     @RequiresEdt
-    fun syncTranscriptDisplay() {
+    fun syncTranscriptDisplay(display: TranscriptDisplay, force: Boolean = false) {
         var changed = false
-        for (mv in msgToView.values) changed = mv.syncTranscriptDisplay() || changed
+        for (mv in msgToView.values) changed = mv.syncTranscriptDisplay(display, force) || changed
         if (!changed) return
         reflow()
         refresh()
