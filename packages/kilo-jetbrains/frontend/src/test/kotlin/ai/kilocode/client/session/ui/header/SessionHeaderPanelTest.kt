@@ -815,6 +815,50 @@ class SessionHeaderPanelTest : SessionControllerTestBase() {
         assertEquals(bottom + UiStyle.Gap.xs(), tip.point.y)
     }
 
+    /**
+     * Moving straight from one bar to the next must leave exactly one tooltip registered. The
+     * previous one is dismissed first rather than relying on the manager replacing it, because the
+     * registration also installs a listener and a client property that only a null registration clears.
+     */
+    fun `test hovering between bars leaves one registered tooltip`() {
+        val c = promptedHeader()
+        val panel = SessionHeaderPanel(c, parent)
+        val timeline = panel.timelinePanel() as JComponent
+        val manager = IdeTooltipManager.getInstance()
+
+        move(panel, 0)
+        val first = manager.getCustomTooltip(timeline)!!
+
+        move(panel, 1)
+        val second = manager.getCustomTooltip(timeline)!!
+
+        assertNotSame("bar-to-bar hover must install a fresh tooltip", first, second)
+        // Every bar's label is built into its own tooltip, so the anchor moving proves the second
+        // tooltip is the one now registered rather than the first being left in place.
+        assertFalse(
+            "the anchor must follow the hovered bar",
+            first.point.x == second.point.x,
+        )
+    }
+
+    /** A panel torn down mid-hover must not leave its tooltip registered on the manager. */
+    fun `test removing the timeline clears its registered tooltip`() {
+        val c = promptedHeader()
+        val panel = SessionHeaderPanel(c, parent)
+        val timeline = panel.timelinePanel() as JComponent
+
+        move(panel, 1)
+        assertNotNull(IdeTooltipManager.getInstance().getCustomTooltip(timeline))
+
+        panel.remove(timeline)
+        timeline.removeNotify()
+
+        assertNull(
+            "a disposed panel must not keep its tooltip registered",
+            IdeTooltipManager.getInstance().getCustomTooltip(timeline),
+        )
+    }
+
     fun `test hovering a timeline bar shows a hand cursor`() {
         val c = promptedHeader()
         val panel = SessionHeaderPanel(c, parent)

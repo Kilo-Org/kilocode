@@ -28,6 +28,7 @@ import java.awt.event.MouseEvent
 import java.awt.event.MouseMotionAdapter
 import kotlin.math.roundToInt
 import javax.swing.JPanel
+import javax.swing.SwingUtilities
 
 internal class TimelinePanel : JPanel() {
     companion object {
@@ -89,11 +90,16 @@ internal class TimelinePanel : JPanel() {
         val manager = IdeTooltipManager.getInstance()
         val title = items.getOrNull(index)?.title
         if (title == null) {
-            manager.setCustomTooltip(this, null)
-            shown?.let(manager::hide)
-            shown = null
+            dismiss(manager)
             return
         }
+        // Drop the previous balloon and its registration first, rather than relying on `show` replacing
+        // it. `show` does tear the old balloon down — it passes the new tooltip as `tooltipToShow`, and
+        // the equality guard that would keep the current one cannot match, because each bar builds a
+        // fresh instance. But `setCustomTooltip` also installs a dummy listener on this component and
+        // parks the tooltip in a client property, and only a null registration removes them, so a
+        // panel disposed while a bar is hovered would otherwise keep both.
+        dismiss(manager)
         val anchor = Point(barWidth() * index + barWidth() / 2, barBottom() + UiStyle.Gap.xs())
         val tip = object : IdeTooltip(this, anchor, JBLabel(title), this, title) {
             override fun getShowDelay(): Int = 0
@@ -109,6 +115,20 @@ internal class TimelinePanel : JPanel() {
         // instead of building a delayed one from toolTipText.
         manager.setCustomTooltip(this, tip)
         shown = manager.show(tip, true, false)
+    }
+
+    /** Clears the registered tooltip and takes any balloon it owns off screen. */
+    @RequiresEdt
+    private fun dismiss(manager: IdeTooltipManager) {
+        manager.setCustomTooltip(this, null)
+        shown?.let(manager::hide)
+        shown = null
+    }
+
+    /** A panel disposed while a bar is hovered must not leave its tooltip registered. */
+    override fun removeNotify() {
+        super.removeNotify()
+        if (SwingUtilities.isEventDispatchThread()) dismiss(IdeTooltipManager.getInstance())
     }
 
     /** Bottom of the whole bar strip: the label hangs off that edge, not off the hovered bar. */
