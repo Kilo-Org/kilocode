@@ -18,7 +18,28 @@ This file is the living index of the migration: epics, gates and sequencing (Par
 
 Ship Kilo on the upstream v2 runtime, surface by surface, without breaking a v1 user. The target feature set is upstream v2 at the pinned base plus every Kilo v1 behavior at the pinned v1 target, minus what Decision 7 marks post-cutover or not-needed: feature parity, not code parity. The terminal product (CLI/TUI) ships first at G1; VS Code (G2) and JetBrains (G3) follow on their own go/no-go, and until then they keep running on v1 against untouched v1 data. The work ends when `kilo-v2-clean` becomes `main` and v1 moves to a time-limited maintenance branch.
 
-## A2. Decisions in force
+## A2. Why this plan replaces the previous one
+
+The previous plan (finalized 2026-09-30, never started) was a sound plan for the situation it assumed: finish the existing `kilo-v2` port. That assumption no longer holds. The port is now frozen as donor code (Decisions 1–2), and the facts measured during discovery change what the remaining work actually is. The previous plan's facts and decisions are preserved; its structure is not.
+
+| What the previous plan assumed or lacked | What we found | How this plan handles it |
+|---|---|---|
+| Work continues on the `kilo-v2` port; the first step is one large consolidation merge of upstream | The port never merged upstream and sits 1,454 upstream commits behind the new base. Upstream moves about 1,000 commits every few weeks | Start from a clean upstream base; upstream arrives through small SHA-pinned merges in a dedicated lane (L1) |
+| The port's behavior is close enough to v1 to finish from | Port behavior is an August snapshot. Since then v1 shipped 3,107 commits touching 4,104 files. Staleness was never measured per feature | Measure staleness per unit (D4). 80 of 137 units are MATERIAL: behavior is re-derived from current v1, and the port supplies only the v2 wiring |
+| Identity, Gateway, catalog, config, engines and most of the TUI were "implemented, full end-to-end pending", so they had no issues | On a clean base none of that code exists | Those areas are now explicit units (E0, E1, most of E2 and E9). This is the largest block of work and the main source of new issues |
+| Its own 17 new units (consolidation, ratchet, sync, fixtures, store, handshake, scenario sets, preview train) would be created as issues first | None was created | Every one is mapped to a unit in Part B; the obsolete ones (consolidation merge, old-branch imports, progress-plan alignment) are dropped with a reason |
+| Live status was split across the plan, a progress plan and a working log | The three disagreed; the progress plan said "paused", and the working log still carried a live "do not resume implementation" instruction | One file holds sequencing and unit status (D9); the old documents carry superseded banners |
+| Acceptance was the existing test plans | Their expected results were quoted from the port's source, not from v1, and there were no IDE scenarios at all | Acceptance is written against v1 for every unit; G2 and G3 get their own scenario sets and acceptance runs (L4) |
+| Some sharing and editor-service items were completion criteria | Team and incremental sharing, speech, image generation and KiloClaw are non-gating under Decision 7 | Non-gating scope lives in one backlog epic (E11), so gate exits are unambiguous |
+| The v2 binary would ship under the customer `kilo` name; the preview identity was not for customers | The cloud owners have since proposed a `kilo2` binary on a `next` dist-tag, and v1 VS Code resolves the CLI without a version pin | The binary-and-channel decision is a named deadline before the first distributed preview, and v1-IDE isolation is a tested unit |
+
+**What this plan does not do yet.**
+- No owner is assigned, so the critical path in A7 is structural and has no dates.
+- Acceptance lines were written by the planner from discovery evidence; epic owners should challenge them.
+- Donor seam claims were measured against the old upstream base and are re-checked inside each unit, not up front.
+- The plan is long by design: only Part A is meant to be read end to end.
+
+## A3. Decisions in force
 
 The ten decisions in [`migration-context.md` §Decisions](migration-context.md#decisions-authoritative) are authoritative. The plan applies them as follows; it does not change any of them.
 
@@ -28,16 +49,16 @@ The ten decisions in [`migration-context.md` §Decisions](migration-context.md#d
 | D2 Freeze | The archived port is read through its tag; nothing merges from it |
 | D3 Donor rules | Each Part B row states donor reuse for mechanism only. Behavior acceptance is always written against v1 |
 | D4 Staleness gate | Each Part B row carries a staleness verdict. Non-EMPTY means behavior is re-derived from v1 |
-| D5 Staged cutover | Three gates, two parallel IDE tracks (A6) |
+| D5 Staged cutover | Three gates, two parallel IDE tracks (A7) |
 | D6 Storage | Store isolation is an E1 exit criterion; import is E3; consolidation is E8 after G3 |
 | D7 Scope | Non-gating scope is isolated in E11; the hard FIM gate sits in E6 |
 | D8 Gates over P-labels | Gate tags in Part B decide surface readiness; P-labels only order work inside a gate |
 | D9 Plan format | This file |
 | D10 Readability | Part A carries no issue IDs; facts are linked, not copied |
 
-Items that need user sign-off are listed in A8. None of them changes a decision.
+Items that need user sign-off are listed in A10. None of them changes a decision.
 
-## A3. Approach
+## A4. Approach
 
 **Clean base.** `kilo-v2-clean` starts as pristine upstream and contains no Kilo package yet. Kilo is re-landed onto it in small units, each one a session, a branch and a PR, merged by the user. Nothing from the old port branch is merged.
 
@@ -51,7 +72,7 @@ Items that need user sign-off are listed in A8. None of them changes a decision.
 
 **Sequencing, not dates.** No owner is assigned and no effort estimate exists. The plan orders work by dependency and external lead time. Dates attach when owners do.
 
-## A4. Program phase map
+## A5. Program phase map
 
 ```mermaid
 flowchart LR
@@ -83,7 +104,7 @@ flowchart LR
 | Phase 4 Retirement | E8 | G3 go | Branch flip, store consolidation, v1 end of life |
 | Backlog | E11 | Any time after its gate surface ships | Every item has a recorded decision |
 
-## A5. Epic map
+## A6. Epic map
 
 Epic IDs follow discovery so register rows stay traceable; they are presented in program order. Exit criteria below are canonical from now on.
 
@@ -205,7 +226,7 @@ Epic IDs follow discovery so register rows stay traceable; they are presented in
 | L4 Acceptance | Gate-tagged scenarios with v1-derived expectations; one recorded run per gate |
 | L5 Docs | kilo.ai/docs describes the shipped surface at each gate |
 
-## A6. Gate map and critical path
+## A7. Gate map and critical path
 
 ```mermaid
 flowchart LR
@@ -259,7 +280,7 @@ What must be true at each gate:
 
 G2 and G3 do not wait for the G1 go/no-go (D5). They do need the shared-runtime units they consume to be accepted.
 
-## A7. Program risks
+## A8. Program risks
 
 | Risk | Effect | Mitigation | Owner |
 |---|---|---|---|
@@ -274,7 +295,7 @@ G2 and G3 do not wait for the G1 go/no-go (D5). They do need the shared-runtime 
 | External services and repositories (Gateway, relay, share backend, viewer, cloud agents) | Gate acceptance blocked outside the team | Book owners at unit start; waivers only by the user, recorded | E4, E5, E10 |
 | Import not proven lossless | Data loss on first import | Re-run the schema audit at the current v1 target and base; byte-identical originals test | E3 |
 
-## A8. Metrics rollup
+## A9. Metrics rollup
 
 Counts at plan creation. Live values are tracked in Part B status cells.
 
@@ -315,7 +336,7 @@ Metrics the coordinator reports at each gate review:
 | Units without an issue | Part B rows marked `new` | Part B |
 | Canary health | Install, update, rollback and crash signals from the preview train and canary | E3 |
 
-## A9. Deferred decisions and sign-offs
+## A10. Deferred decisions and sign-offs
 
 Deferred decisions and their deadlines are canonical in [`migration-context.md` §Deferred decisions](migration-context.md#deferred-decisions); the questions with triggers are in the [register's open questions](../discovery/v2-unit-register.md#open-questions). The coordinator raises each one before its trigger unit starts.
 

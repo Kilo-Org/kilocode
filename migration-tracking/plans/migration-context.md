@@ -43,7 +43,7 @@ Do not re-litigate these without new evidence. Proposed changes go to the user.
 
 ## Deferred decisions
 
-Decisions intentionally left open until the work that needs them. Each has a deadline; the coordinator raises it with the user and owners before that point. Detail and evidence: `migration-tracking/discovery/v2-unit-register.md`, "Open questions"; questions added by the planner (Q-HOST-01, Q-TEL-01): `kilo-v2-migration-plan.md` §A9.
+Decisions intentionally left open until the work that needs them. Each has a deadline; the coordinator raises it with the user and owners before that point. Detail and evidence: `migration-tracking/discovery/v2-unit-register.md`, "Open questions"; questions added by the planner (Q-HOST-01, Q-TEL-01): `kilo-v2-migration-plan.md` §A10.
 
 | Decision | Deadline |
 |---|---|
