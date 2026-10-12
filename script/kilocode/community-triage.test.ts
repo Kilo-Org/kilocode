@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test"
 import {
   areas,
   classify,
+  cleanup,
   component,
   pushedAt,
   decide,
