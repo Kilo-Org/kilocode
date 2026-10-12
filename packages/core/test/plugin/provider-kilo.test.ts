@@ -17,9 +17,12 @@ const addPlugin = Effect.fn(function* () {
 })
 
 describe("KiloPlugin", () => {
-  test("is registered so legacy referer headers can be applied", () => {
-    expect(ProviderPlugins.map((item) => item.id)).toContain("opencode.provider.kilo")
+  // kilocode_change start - the Kilo Gateway plugin (test/kilocode/gateway.test.ts) replaces this plugin
+  test("is replaced by the Kilo Gateway plugin", () => {
+    expect(ProviderPlugins.map((item) => item.id)).not.toContain("opencode.provider.kilo")
+    expect(ProviderPlugins.map((item) => item.id)).toContain("kilocode.gateway")
   })
+  // kilocode_change end
 
   it.effect("applies legacy referer headers only to Kilo endpoints", () =>
     Effect.gen(function* () {

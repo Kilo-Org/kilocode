@@ -102,6 +102,7 @@
     "@ai-sdk/vercel": "2.0.39",
     "@ff-labs/fff-bun": "0.10.5",
     "@ff-labs/fff-node": "0.10.5",
+    "@kilocode/gateway-core": "workspace:*",
     "@lydell/node-pty": "catalog:",
     "@modelcontextprotocol/client": "2.0.0",
     "@modelcontextprotocol/core": "2.0.0",
