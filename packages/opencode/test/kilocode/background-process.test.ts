@@ -2,6 +2,7 @@ import { describe, expect, spyOn, test } from "bun:test"
 import { Bus } from "@/bus"
 import { BackgroundProcess } from "@/kilocode/background-process"
 import { BackgroundProcessWindows } from "@/kilocode/background-process/windows"
+import { BackgroundProcessRunner } from "@/kilocode/background-process/runner"
 import { Process } from "@/util/process"
 import { SessionID } from "@/session/schema"
 import { Shell } from "@opencode-ai/core/shell"
@@ -92,6 +93,63 @@ function update(sessionID: SessionID) {
 }
 
 describe("BackgroundProcess", () => {
+  test.skipIf(process.platform !== "win32")(
+    "rollback waits for a persistent runner that exits five seconds after stop",
+    async () => {
+      await using tmp = await tmpdir()
+      const source = path.join(tmp.path, "rollback.mjs")
+      const captured: { control?: string } = {}
+      const input = spyOn(BackgroundProcessRunner, "command").mockImplementation((value) => {
+        captured.control = value.control
+        return [process.execPath, source, "__background-process", value.token, value.control]
+      })
+      await Bun.write(
+        source,
+        `console.log("ready")
+const timer = setInterval(async () => {
+  if (!(await Bun.file(process.argv[4]).exists())) return
+  clearInterval(timer)
+  await Bun.sleep(5_000)
+  process.exit(0)
+}, 20)
+`,
+      )
+      const pids: number[] = []
+      const probe = spyOn(BackgroundProcessWindows, "command").mockImplementation(async (pid) => {
+        if (!pids.includes(pid)) pids.push(pid)
+        return alive(pid) ? { live: true, terminating: true } : { live: false }
+      })
+      try {
+        await provideTestInstance({
+          directory: tmp.path,
+          fn: async () => {
+            let error: unknown
+            try {
+              await BackgroundProcess.start({
+                sessionID: SessionID.descending(),
+                command: "synthetic rollback runner",
+                cwd: tmp.path,
+                lifetime: "persistent",
+              })
+            } catch (cause) {
+              error = cause
+            }
+            expect(String(error)).toContain("Persistent process identity could not be verified")
+            expect(captured.control).toBeTruthy()
+            expect(pids.length).toBeGreaterThan(0)
+            expect(pids.every((pid) => !alive(pid))).toBe(true)
+            expect(await BackgroundProcess.list()).toEqual([])
+          },
+        })
+      } finally {
+        input.mockRestore()
+        probe.mockRestore()
+        for (const pid of pids) if (alive(pid)) process.kill(pid, "SIGKILL")
+      }
+    },
+    30_000,
+  )
+
   test.skipIf(process.platform !== "win32")(
     "waits for a persistent runner that exits five seconds after stop",
     async () => {

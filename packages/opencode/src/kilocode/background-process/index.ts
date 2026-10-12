@@ -928,7 +928,7 @@ export namespace BackgroundProcess {
         if ((await probe(active)) === "owned") throw err
       }
     }
-    const end = Date.now() + KILL_MS
+    const end = Date.now() + (process.platform === "win32" && active.control ? STOP_MS : KILL_MS)
     while (Date.now() < end) {
       const status = await probe(active)
       if (status === "gone" || status === "foreign") return true
