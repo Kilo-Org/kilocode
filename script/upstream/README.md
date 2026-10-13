@@ -124,11 +124,11 @@ CI runs both in `.github/workflows/kilo-v2.yml` (job `shared upstream patches`),
 
 Branding tools never touch Kilo-owned paths (`utils/owned.ts`). Each branding CLI prints a dry-run report by default (`bun script/upstream/codemods/transform-strings.ts`). `--apply` writes, and refuses while the switch is off unless `--force` is given.
 
-## Not ported from v1
+## Not ported from v1 (yet)
 
 | v1 tool | Reason |
 |---|---|
-| `opencode-changesets.ts`, `script/kilocode/changeset-version.ts` | The v2 line does not use changesets |
+| `opencode-changesets.ts`, `script/kilocode/changeset-version.ts` | Postponed. The v2 line has no changesets yet. Port them (as in v1: one changeset per sync with the upstream release notes) with the first v2 channel release |
 | `transforms/remove-kilo-web.ts` | Its target (`WebCommand` in `packages/opencode/src/index.ts`) does not exist on v2 |
 | Pre-merge compatibility branch (`refactor: kilo compat for`) and `.opencode-version` | It pre-applied the renames to upstream so they did not conflict. With renames off it only adds a commit. The pin comes from the sync merge message instead. Bring it back when the rename transforms turn on (D-1, rebranding) |
 | Version resync after a merge | v2 follows upstream version numbers |
