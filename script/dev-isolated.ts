@@ -12,33 +12,35 @@ await Promise.all(dirs.map((dir) => mkdir(dir, { recursive: true })))
 const login = await kiloLogin()
 console.error(`kilo v2 dev profile: ${profile}${login.KILO_API_KEY ? " (Kilo login from v1 Kilo)" : ""}`)
 
-const child = Bun.spawn(
-  [
-    process.execPath,
-    "--preload",
-    Bun.resolveSync("@opentui/solid/preload", path.join(root, "packages/cli")),
-    path.join(root, "packages/cli/src/index.ts"),
-    ...process.argv.slice(2),
-  ],
-  {
-    // The CLI uses the working directory as the project directory.
-    cwd: process.env.INIT_CWD ?? process.cwd(),
-    env: {
-      ...process.env,
-      ...login,
-      XDG_DATA_HOME: dirs[0],
-      XDG_CONFIG_HOME: dirs[1],
-      XDG_STATE_HOME: dirs[2],
-      XDG_CACHE_HOME: dirs[3],
-      OPENCODE_TEST_HOME: dirs[4],
-      TMPDIR: dirs[5],
-      OPENCODE_DISABLE_AUTOUPDATE: "1",
-    },
-    stdin: "inherit",
-    stdout: "inherit",
-    stderr: "inherit",
+const child = Bun.spawn([process.execPath, path.join(root, "packages/cli/src/index.ts"), ...process.argv.slice(2)], {
+  // The CLI uses the working directory as the project directory.
+  cwd: process.env.INIT_CWD ?? process.cwd(),
+  env: {
+    ...process.env,
+    ...login,
+    // Bun children must load the same JSX transform, even when their cwd has no CLI bunfig.toml.
+    BUN_OPTIONS: [
+      process.env.BUN_OPTIONS,
+      "--preload",
+      Bun.resolveSync("@opentui/solid/preload", path.join(root, "packages/cli")).replace(
+        /[\s\\"']/g,
+        (char) => `\\${char}`,
+      ),
+    ]
+      .filter(Boolean)
+      .join(" "),
+    XDG_DATA_HOME: dirs[0],
+    XDG_CONFIG_HOME: dirs[1],
+    XDG_STATE_HOME: dirs[2],
+    XDG_CACHE_HOME: dirs[3],
+    OPENCODE_TEST_HOME: dirs[4],
+    TMPDIR: dirs[5],
+    OPENCODE_DISABLE_AUTOUPDATE: "1",
   },
-)
+  stdin: "inherit",
+  stdout: "inherit",
+  stderr: "inherit",
+})
 process.exit(await child.exited)
 
 // Development only: reuse the v1 Kilo login so the Kilo Gateway works without a separate sign-in,
