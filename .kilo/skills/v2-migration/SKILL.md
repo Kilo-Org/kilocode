@@ -1,6 +1,6 @@
 ---
 name: v2-migration
-description: Use for any work on the Kilo v2 migration (branches v2, v2-*). Covers strategy, branches and PRs, the isolated test profile, how to self-test the v2 CLI yourself, and the test policy.
+description: Use for any work on the Kilo v2 migration (branches v2, v2-*). Covers strategy (plugin first), branches, PRs and upstream syncs, the isolated test profile, how to self-test the v2 CLI yourself, and the test policy.
 ---
 
 # Kilo v2 migration
@@ -10,21 +10,30 @@ Kilo moves onto upstream OpenCode v2 from a clean base, one feature at a time. V
 ## Sources of truth
 
 - Behavior: v1 Kilo on `main`. Mechanism only: the old port, tag `kilo-v2-checkpoints-2026-09` (former `kilo-v2`). Never merge or copy it as a whole.
-- Context and decisions: `migration-tracking/plans/migration-context.md`. Plan: `migration-tracking/plans/kilo-v2-migration-plan.md` (PR #14987).
-- Epic #13750. Gateway, login and enterprise support: #14991.
-- Known upstream test failures: `migration-tracking/technical-notes/baseline/pinned-v2-baseline.md`.
-- Fork conventions: `migration-tracking/technical-notes/v2-fork-conventions.md`.
+- The migration docs are still on `origin/kilo-v2-clean-bootstrap`. Until they land on `v2`, read them with `git show origin/kilo-v2-clean-bootstrap:<path>`:
+  - Context and decisions: `migration-tracking/plans/migration-context.md`. Plan: `migration-tracking/plans/kilo-v2-migration-plan.md`.
+  - Known upstream test failures: `migration-tracking/technical-notes/baseline/pinned-v2-baseline.md`.
+  - Fork conventions: `migration-tracking/technical-notes/v2-fork-conventions.md`.
+- Changes not yet in the plan (merge source, plugin first, host package): `migration-tracking/plans/v2-plan-delta-2026-10-13.md` on `v2`. Where it differs from the bootstrap docs, it wins.
+- Epic #13750. Gateway, login and enterprise support: #14991. Upstream sync and merge tooling: #15020.
 
 ## Strategy
 
 - Order: CLI/TUI first (G1), then VS Code (G2), then JetBrains (G3). Cloud consumers follow a versioned release.
-- Kilo code lives in Kilo-owned paths (`packages/kilo-*`, `src/kilocode/`) and uses public upstream seams (`@opencode/plugin`). Keep changes to shared upstream files minimal and mark them `kilocode_change`.
+- Kilo code lives in Kilo-owned paths (`packages/kilo-*`, `src/kilocode/`). Plugin first: use the first option that works, and name it in the PR.
+  1. A Kilo plugin on the public plugin API (`@opencode/plugin`).
+  2. The Kilo host (unit U-E0-01): plugin registration through `SdkPlugins.register`, Effect layer overrides (for example `Global.layerWith`), environment translation at the entry. The host does not exist yet. Until it lands, register a Kilo plugin in the upstream builtin list with one marked line.
+  3. A small, generic seam patch in a shared upstream file: widen an API, add a hook, export a value. Prefer files that change rarely.
+  4. A feature patch in a shared upstream file. Last resort. Say in the PR why options 1 to 3 do not work.
+  5. Branding and product strings: the rename script during upstream syncs, never hand edits.
+- Mark every change in a shared upstream file with `kilocode_change` (options 3 and 4). One generic seam is better than many small edits.
 - Kilo logic packages (for example `kilo-gateway-core`) import nothing from `@opencode/*`. Only thin adapters do.
 - The Kilo Gateway is the only source of Kilo models (`models.set`, no models.dev fallback). Requests identify as Kilo (token, team header, `X-KILOCODE-*`). See #14991.
 
 ## Branches and PRs
 
-- Integration branch: `v2`. Use the working base named in `migration-context.md`. Never target `main`.
+- Integration branch: `origin/v2`. Branch from it and target it. Never target `main` or `kilo-v2-clean-bootstrap`.
+- Upstream: `upstream/dev` is upstream's v2 line since 2026-10-10. `upstream/v2` is frozen; never merge it. Never merge upstream in a feature PR. An upstream sync is its own PR (#15020). It targets the next release that `v2` does not have yet (the release commit, which is the parent of the `v2.x.y` tag), and merges with a merge commit, never a squash. After a sync, open PRs merge `v2` into their branch and check and self-test again.
 - Stack on an open v2 PR when you depend on it, and target that PR's branch.
 - One plan unit per PR. Never push directly to `v2`. A human merges.
 - Short hyphenated branch names, no slashes. Titles `type(scope): summary`.
@@ -36,6 +45,7 @@ Kilo moves onto upstream OpenCode v2 from a clean base, one feature at a time. V
 - `bun dev` reuses the v1 Kilo login (read only). For a signed-out test, start it with `XDG_DATA_HOME=/tmp/kilo-v2-empty`.
 - Do not edit the main checkout, `~/.config/kilo`, `~/.local/share/kilo` or OpenCode directories. `bun run extension` does not exist on v2.
 - Models: `kilo/kilo-auto/free` by default. Use `kilo/deepseek/deepseek-v4.1-flash` only when a paid model is needed.
+- Isolate tests too. Upstream tests can write into the real home and leave servers running. Run them with `T=$(mktemp -d)` and `env OPENCODE_TEST_HOME=$T XDG_DATA_HOME=$T/data XDG_CONFIG_HOME=$T/config XDG_STATE_HOME=$T/state XDG_CACHE_HOME=$T/cache bun test ...`. After the run, stop any of your processes that `pgrep -fl 'opencode-test-|opencode-service-lifecycle'` lists.
 
 ## Self-test the CLI
 
@@ -143,7 +153,7 @@ The VS Code extension (G2) uses the same harness later, with `KILO_SELF_TEST_REP
 
 Grow the test surface with each PR.
 
-- Run `bun typecheck` and focused `bun test` from each changed package directory (never from the repo root).
+- Run `bun typecheck` and focused `bun test` from each changed package directory (never from the repo root), with the test isolation above.
 - New Kilo code comes with tests for its behavior. Prefer real integration with the Kilo Gateway over mocks. Use small unit tests only for paths a live server cannot trigger (outage, malformed data).
 - Upstream failures listed in `pinned-v2-baseline.md` are known. Do not fix unrelated ones. A new failure in a package you touched blocks the PR.
 - Never delete or skip a test silently. List every skip in the PR with its reason.
@@ -151,4 +161,9 @@ Grow the test surface with each PR.
 
 ## Evidence
 
-In the PR and the final response, list the commands you ran, the self-test scenarios with pass, fail or blocked, and the limits (for example, a flow that needs credentials).
+In the PR and the final response, list:
+
+- The commands you ran, and the self-test scenarios with pass, fail or blocked.
+- Each shared upstream file you changed, with its option (1 to 5 above) and the missing seam.
+- The CI state. For each red check, the cause: your change (fix it), a flake (one rerun) or a known baseline failure.
+- The limits, for example a flow that needs credentials.
