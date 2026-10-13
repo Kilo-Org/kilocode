@@ -47,9 +47,15 @@ class SessionModel {
         /** Part types that are internal server markers and must never be stored or rendered. */
         val SILENT_PART_TYPES = setOf("step-start", "patch")
 
-        /** Metadata keys the server sets on the synthetic "attachment read failed" text part. */
-        const val NOTICE_KIND = "kilo_notice"
-        const val NOTICE_NAME = "kilo_notice_name"
+        /**
+         * Shape of the synthetic user text the CLI persists when it cannot read an attached file:
+         * `Read tool failed to read <path> with the following error: <message>`. The text is
+         * addressed to the model; the client only uses it to recognize the failure and show a
+         * notice. If the wording changes, the part falls back to being hidden like any other
+         * synthetic user text.
+         */
+        private const val READ_FAILED = "Read tool failed to read "
+        private const val READ_FAILED_ERROR = " with the following error: "
     }
 
     private val entries = LinkedHashMap<String, Message>()
@@ -594,21 +600,27 @@ class SessionModel {
     private fun empty(dto: PartDto) = dto.type == "text" && dto.text?.isNotBlank() != true
 
     private fun hiddenSynthetic(msg: Message, dto: PartDto) =
-        msg.info.role == "user" && dto.type == "text" && dto.synthetic == true && noticeKind(dto) == null
+        msg.info.role == "user" && dto.type == "text" && dto.synthetic == true && notice(dto) == null
 
-    private fun noticeKind(dto: PartDto) = dto.metadata[NOTICE_KIND]?.takeIf { it.isNotBlank() }
-
-    private fun noticeName(dto: PartDto) = dto.metadata[NOTICE_NAME]?.takeIf { it.isNotBlank() }
+    /** Recognizes the CLI's synthetic "could not read attachment" text and turns it into a [Notice]. */
+    private fun notice(dto: PartDto): Notice? {
+        if (dto.type != "text" || dto.synthetic != true) return null
+        val text = dto.text ?: return null
+        if (!text.startsWith(READ_FAILED)) return null
+        val end = text.indexOf(READ_FAILED_ERROR, READ_FAILED.length)
+        if (end < 0) return null
+        val name = text.substring(READ_FAILED.length, end)
+            .substringAfterLast('/')
+            .substringAfterLast('\\')
+            .takeIf { it.isNotBlank() }
+        return Notice(dto.id, Notice.ATTACHMENT_READ_FAILED, name)
+    }
 
     private fun fromDto(dto: PartDto, text: CharSequence? = null): Content {
         val content = text ?: dto.text
         return when (dto.type) {
-            "text" -> {
-                val kind = noticeKind(dto)
-                if (kind != null) Notice(dto.id, kind, noticeName(dto))
-                else Text(dto.id).apply {
-                    if (content != null && content.isNotEmpty()) this.content.append(content)
-                }
+            "text" -> notice(dto) ?: Text(dto.id).apply {
+                if (content != null && content.isNotEmpty()) this.content.append(content)
             }
             "reasoning" -> Reasoning(dto.id).apply {
                 if (content != null && content.isNotEmpty()) this.content.append(content)

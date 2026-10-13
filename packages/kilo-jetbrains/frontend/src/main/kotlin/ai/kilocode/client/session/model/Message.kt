@@ -63,10 +63,14 @@ class Text(id: String) : Content(id) {
 
 /**
  * A non-error informational note rendered inline in the transcript, e.g. an attachment the server
- * could not read. Derived from a synthetic user text part flagged with notice metadata, so it
- * survives a reload like any other part.
+ * could not read. Derived from a persisted synthetic user text part, so it survives a reload like
+ * any other part.
  */
-class Notice(id: String, val kind: String, val name: String?) : Content(id)
+class Notice(id: String, val kind: String, val name: String?) : Content(id) {
+    companion object {
+        const val ATTACHMENT_READ_FAILED = "attachment_read_failed"
+    }
+}
 
 /** Model reasoning / chain-of-thought. */
 class Reasoning(id: String) : Content(id) {

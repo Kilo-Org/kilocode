@@ -69,14 +69,10 @@ class NoticeView(private val notice: Notice) : PartView() {
     }
 
     private fun text(notice: Notice) = when (notice.kind) {
-        ATTACHMENT_READ_FAILED -> notice.name
+        Notice.ATTACHMENT_READ_FAILED -> notice.name
             ?.let { KiloBundle.message("session.notice.attachment.read.failed", it) }
             ?: KiloBundle.message("session.notice.attachment.read.failed.unknown")
         else -> KiloBundle.message("session.notice.unknown")
-    }
-
-    private companion object {
-        const val ATTACHMENT_READ_FAILED = "attachment_read_failed"
     }
 }
 
