@@ -594,6 +594,21 @@
 
 ## [Unreleased]
 
+## [7.1.10-rc.3] - 2026-10-13
+
+### Added
+- feat(cli): let glob search an opt-in allowlist of ignored paths by @WebReflection in https://github.com/Kilo-Org/kilocode/pull/14988
+
+### Fixed
+- fix(cli): track Windows background jobs and runner identity natively by @mardausdennis in https://github.com/Kilo-Org/kilocode/pull/14857
+- fix(cli): reject stale parent links when tracking and stopping Windows background jobs by @mardausdennis in https://github.com/Kilo-Org/kilocode/pull/14796
+- fix(jetbrains): keep RC builds on the production session database by @kirillk in https://github.com/Kilo-Org/kilocode/pull/15012
+
+### Changed
+- release(jetbrains): v7.1.10-rc.2 by @kilo-maintainer[bot] in https://github.com/Kilo-Org/kilocode/pull/15010
+- docs(providers): refresh Mixlayer models and model-list note by @cathrynlavery in https://github.com/Kilo-Org/kilocode/pull/15006
+
+
 ## [7.1.10-rc.2] - 2026-10-13
 
 ### Added
