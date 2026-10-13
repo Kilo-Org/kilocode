@@ -923,6 +923,9 @@ export const dict = {
   "settings.experimental.nativeNotebookTools.title": "Native Notebook Tools",
   "settings.experimental.nativeNotebookTools.description":
     "Enable experimental tools for reading, editing, and executing VS Code notebooks",
+  "settings.experimental.globIncludeIgnored.title": "Search Ignored Paths",
+  "settings.experimental.globIncludeIgnored.description":
+    "Folders or files the glob tool should search even when .gitignore or other ignore files exclude them. Use gitignore-style patterns relative to the workspace; ignored folders inside them stay skipped.",
   "settings.experimental.continueOnDeny.title": "Continue on Deny",
   "settings.experimental.continueOnDeny.description": "Continue the agent loop when a permission is denied",
   "settings.experimental.codeMode.title": "Programmatic Tool Calling",

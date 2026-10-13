@@ -4,6 +4,38 @@
 
 ### Minor Changes
 
+- [#14967](https://github.com/Kilo-Org/kilocode/pull/14967) [`856b016`](https://github.com/Kilo-Org/kilocode/commit/856b01616082c141b3859d2626c31e0e96b21f64) - Show each agent's assigned model in Agent Behavior settings and let you change it from a dropdown on the row, and open an agent for editing by double-clicking it.
+
+- [#14667](https://github.com/Kilo-Org/kilocode/pull/14667) [`d6ca872`](https://github.com/Kilo-Org/kilocode/commit/d6ca872683311bad384c738fc79adbbf00da83dd) - Sign in to remote MCP servers from JetBrains. MCP Settings now highlights servers that need authentication, only shows actions valid for the current connection state, keeps selected-row actions visible when focus moves elsewhere, shows the real sign-in error, lets you cancel an in-progress sign-in without losing credentials you already had, and offers a copyable authorization URL when a browser cannot be opened automatically. Sign-in opens the browser on your own machine, so it also works in remote development. Installing an MCP server from the Marketplace that needs sign-in now offers to start it right away, and the prompt shows a session-issues menu with a sign-in action when a configured MCP server needs authentication. Removing either half of a Marketplace MCP and companion-skill bundle from MCP or Skills Settings now confirms and removes the whole bundle. Remote MCP servers that require a pre-registered OAuth client can now be configured directly from the edit dialog.
+
+- [#14694](https://github.com/Kilo-Org/kilocode/pull/14694) [`1ab3cd2`](https://github.com/Kilo-Org/kilocode/commit/1ab3cd262cafe59f6d17ff379cc916d68511915a) - Add a prompt navigator to the chat transcript for jumping between prompts.
+
+- [#14665](https://github.com/Kilo-Org/kilocode/pull/14665) [`644326e`](https://github.com/Kilo-Org/kilocode/commit/644326e2296acdcf1fdbda83b22967ef3afed26e) - Add a JetBrains Transcript settings page with a live transcript preview, controlling how reasoning, terminal commands, code edits, MCP and generic tools, approval reasons, and collapsed-card hover previews appear. Preferences apply to open chats when the page is saved.
+
+### Patch Changes
+
+- [#14967](https://github.com/Kilo-Org/kilocode/pull/14967) [`adc2007`](https://github.com/Kilo-Org/kilocode/commit/adc2007025b2a67e4eb8d8512851d0e7c0a1f692) - Keep the agent list and default-agent picker populated after applying Agent Behavior settings, instead of blanking them until the next manual refresh.
+
+- [#14940](https://github.com/Kilo-Org/kilocode/pull/14940) [`745fdb7`](https://github.com/Kilo-Org/kilocode/commit/745fdb72ebacae69c560059c39f63e97e00d6e58) - Fix the MCP sign-in indicator in the chat composer staying stuck after removing the server, and let you cancel a pending MCP sign-in directly from that indicator instead of waiting it out.
+
+- [#14970](https://github.com/Kilo-Org/kilocode/pull/14970) [`296b9de`](https://github.com/Kilo-Org/kilocode/commit/296b9de6e54dacabfb85c128fbc3c51fc342cfd0) - Respect `permission` settings from global and project `kilo.jsonc` in the JetBrains plugin. Edits now follow your configured `permission.edit` value instead of being forced to ask, and the Auto-Approve settings page reflects the effective level.
+
+- [#15002](https://github.com/Kilo-Org/kilocode/pull/15002) [`df81430`](https://github.com/Kilo-Org/kilocode/commit/df814309efb43ace90526392493e178f5d4f829a) - Show the full Core submenu in the prompt bar's "more" menu, with Reload Core Settings, Restart, Reinstall, and the Core version and architecture, matching the tool window menu.
+
+- [#14968](https://github.com/Kilo-Org/kilocode/pull/14968) [`3933e3f`](https://github.com/Kilo-Org/kilocode/commit/3933e3f89c361d639cca829661d21395f90eb436) - Fix resetting a mode's model so it stays reset instead of snapping back to a previously saved model on the next mode switch or new session.
+
+- [#14966](https://github.com/Kilo-Org/kilocode/pull/14966) [`1991d3d`](https://github.com/Kilo-Org/kilocode/commit/1991d3da3235b61906eee62bfe64b58dae182b28) - Restore the session list after reconnecting to Kilo, instead of leaving it empty until a new session is started.
+
+- [#14935](https://github.com/Kilo-Org/kilocode/pull/14935) [`a7d0b50`](https://github.com/Kilo-Org/kilocode/commit/a7d0b5055cef1262e7a1d9db1fe5a55c94e0cd4a) - Jump to a step in the chat history by clicking its bar in the session timeline, and improve prompt navigation with a correctly sized popup and a gutter marker on the selected prompt
+
+- [#14902](https://github.com/Kilo-Org/kilocode/pull/14902) [`9965e0a`](https://github.com/Kilo-Org/kilocode/commit/9965e0ad2ea009507dea39ea1b6e1309d2ab8e5a) - Show a worktree's pull request badge as soon as the agent that opened the pull request stops, instead of up to ten minutes later
+
+- [#14776](https://github.com/Kilo-Org/kilocode/pull/14776) [`225c393`](https://github.com/Kilo-Org/kilocode/commit/225c393f4130bac0d2730e099c54144b8d44e235) - Fix SVG and other non-raster image attachments failing the whole prompt instead of being read as source. Fix a rejected or failed send losing the typed message with no way to recover it, and add a Dismiss action to standalone error cards that have no transcript tail to retry.
+
+## 7.9.0
+
+### Minor Changes
+
 - [#14666](https://github.com/Kilo-Org/kilocode/pull/14666) [`205e34a`](https://github.com/Kilo-Org/kilocode/commit/205e34a5ceac90019a76e035647680bb11bb25a0) - Support reloading Core settings from `/reload` and the session and tool window menus, and warn that restarting or reinstalling Core cancels active sessions.
 
 - [#14512](https://github.com/Kilo-Org/kilocode/pull/14512) [`b3da592`](https://github.com/Kilo-Org/kilocode/commit/b3da592cf524a8a99a75c6a1a325e9d5aecc5f2e) - Explain why file checkpoints weren't restored after a revert and add complete Checkpoints settings. JetBrains users can manage snapshots and machine-wide automatic session cleanup, choose a retention period, inspect cleanup progress and results, and manually run cleanup even when automatic cleanup is disabled.
@@ -562,9 +594,56 @@
 
 ## [Unreleased]
 
+## [7.1.10-rc.3] - 2026-10-13
+
+### Added
+- Let the glob tool search an opt-in allowlist of ignored paths.
+
+### Fixed
+- Track Windows background processes with a job object instead of polling PowerShell.
+- Stop Windows background runners from adopting unrelated processes.
+- Keep Windows stop requests until a trustworthy process walk confirms exit.
+- Name a surviving leader in the unconfirmed stop warning.
+- Keep Windows stop responsive during exit confirmation.
+
+### Changed
+- Bundled Kilo CLI pin remains v7.8.9.
+
+## [7.1.10-rc.2] - 2026-10-13
+
+### Added
+- Show and edit agent models directly from the agents list.
+- Configure the chat transcript display, with a live preview of your changes.
+- Reuse the Core submenu in the prompt bar menu.
+- Outline the turn a timeline jump lands on.
+
+### Fixed
+- Restore session lists after a CLI reconnect.
+- Stop overriding your permission configuration.
+- Clear MCP sign-in state when the server is removed.
+- Make the model reset forget the saved per-mode pick.
+- Jump to a step when its timeline bar is clicked.
+- Surface terminal compaction failures instead of hiding them.
+- Resolve bare model names for task subagents.
+- Limit Z.ai thinking defaults to built-in providers.
+- Retry retryable connection resets through the normal backoff path.
+- Clean up MCP servers when their startup is interrupted.
+- Avoid false frontmatter errors when saving command files.
+- Bound serve shutdown after signals.
+- Send tool-result images as user content for Bedrock GPT-6 models.
+- Reuse the loaded transcript when pruning large payloads.
+- Improve the missing-binary error message on Windows ARM64.
+- Point cloud sessions at a permitted temp directory.
+- Expose a reserved command-name clash as `/goal:command`.
+- Require explicit user intent before starting Agent Manager sessions or worktrees.
+
+### Changed
+- Bumped the bundled Kilo CLI pin to v7.8.9.
+
 ## [7.1.9] - 2026-10-07
 
 ### Added
+
 - Added a prompt navigator to the chat transcript for jumping between your sent prompts.
 - Added MCP OAuth sign-in support, including recovery flows for expired or failed authorizations.
 - Combined MCP and skill badges in the chat UI.
@@ -572,6 +651,7 @@
 - Rendered agent board messages as markdown.
 
 ### Fixed
+
 - Fixed hidden session questions not surfacing in the chat UI.
 - Made chat dialogs submit with Cmd/Ctrl+Enter.
 - Fixed spreadsheet date/time handling when reading xlsx and ods files.
@@ -581,6 +661,7 @@
 - Gated prompt cache breakpoints to first-party OpenAI providers.
 
 ### Changed
+
 - Renamed JetBrains workflows to commands.
 - Split agent guidance documentation into skills.
 - Bumped the bundled Kilo CLI pin to v7.8.8 (via v7.8.3 and v7.8.7 intermediate bumps).

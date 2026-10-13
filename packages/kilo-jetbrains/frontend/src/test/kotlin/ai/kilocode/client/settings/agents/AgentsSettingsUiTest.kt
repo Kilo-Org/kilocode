@@ -6,6 +6,7 @@ import ai.kilocode.client.app.KiloAgentBehaviorService
 import ai.kilocode.client.app.KiloAppService
 import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.plugin.KiloBundle
+import ai.kilocode.client.session.ui.model.ModelPicker
 import ai.kilocode.client.settings.base.SettingsInfo
 import ai.kilocode.client.testing.FakeAgentBehaviorRpcApi
 import ai.kilocode.client.testing.FakeAppRpcApi
@@ -30,6 +31,7 @@ import com.intellij.openapi.ui.TestDialogManager
 import com.intellij.testFramework.LightVirtualFile
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.testFramework.replaceService
+import com.intellij.ui.SearchTextField
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBList
 import com.intellij.util.ui.UIUtil
@@ -54,6 +56,7 @@ class AgentsSettingsUiTest : BasePlatformTestCase() {
     private lateinit var app: KiloAppService
     private lateinit var appRpc: FakeAppRpcApi
     private lateinit var agentRpc: FakeAgentBehaviorRpcApi
+    private val picked = mutableListOf<Pair<String?, List<String>>>()
 
     override fun tearDown() {
         try {
@@ -96,6 +99,153 @@ class AgentsSettingsUiTest : BasePlatformTestCase() {
             assertTrue(rows.single { it.key == "hidden" }.cells.any { it.id == DELETE_CELL })
             assertEquals("code", picker(panel).selectedItem)
             assertEquals(listOf("", "ask", "code", "old"), comboItems(picker(panel)))
+        }
+    }
+
+    /**
+     * The model cell has to be last on both a deletable and a non-deletable row: it is the only cell
+     * an unselected row shows, so anything ordered after it would shift it sideways on selection.
+     */
+    fun `test agent rows pin the assigned model to the last cell`() {
+        val panel = panel(model = MODEL)
+        flushUntil { rows(panel).size == 6 }
+
+        edt {
+            val code = rows(panel).single { it.key == "code" }
+            assertEquals(listOf(EDIT_CELL, MODEL_CELL), code.cells.map { it.id })
+            assertEquals("GPT-5", code.cells.last().label)
+            assertTrue(code.cells.last().alwaysVisible)
+            val hidden = rows(panel).single { it.key == "hidden" }
+            assertEquals(listOf(EDIT_CELL, DELETE_CELL, MODEL_CELL), hidden.cells.map { it.id })
+            assertEquals("Default model", hidden.cells.last().label)
+            assertEquals(
+                KiloBundle.message("settings.agentBehavior.agents.model.default"),
+                hidden.cells.last().label,
+            )
+            true
+        }
+    }
+
+    fun `test choosing a model from the row dropdown stages the override`() {
+        val panel = panel()
+        flushUntil { rows(panel).size == 6 }
+
+        edt { clickCell(panel, "code", MODEL_CELL); true }
+
+        edt {
+            assertEquals(listOf(null to listOf(MODEL, "kilo/sonnet")), picked)
+            val row = rows(panel).single { it.key == "code" }
+            assertEquals("GPT-5", row.cells.single { it.id == MODEL_CELL }.label)
+            assertTrue(row.badges.any { it.text == "not applied" })
+            assertTrue(panel.modified())
+            panel.applyDraft()
+            true
+        }
+        flushUntil { appRpc.configPatches.isNotEmpty() }
+
+        assertEquals(MODEL, appRpc.configPatches.single().agents.getValue("code").model)
+    }
+
+    fun `test clearing the row dropdown stages removal of the override`() {
+        val panel = panel(choice = null, model = MODEL)
+        flushUntil { rows(panel).size == 6 }
+
+        edt { clickCell(panel, "code", MODEL_CELL); true }
+
+        edt {
+            assertEquals(listOf(MODEL to listOf(MODEL, "kilo/sonnet")), picked)
+            val row = rows(panel).single { it.key == "code" }
+            assertEquals(KiloBundle.message("settings.agentBehavior.agents.model.default"), row.cells.single { it.id == MODEL_CELL }.label)
+            assertTrue(panel.modified())
+            panel.applyDraft()
+            true
+        }
+        flushUntil { appRpc.configPatches.isNotEmpty() }
+
+        val patch = appRpc.configPatches.single().agents.getValue("code")
+        assertNull(patch.model)
+        assertTrue(patch.clear.contains("model"))
+    }
+
+    /**
+     * Saving config can bounce the CLI, so the post-apply re-read can fail. It used to fall back to an
+     * empty agent list, which blanked the whole settings list and the default-agent picker until the
+     * user hit refresh.
+     */
+    fun `test apply keeps the rows when the agent re-read fails`() {
+        val panel = panel()
+        flushUntil { rows(panel).size == 6 }
+        edt { clickCell(panel, "code", MODEL_CELL); true }
+        assertTrue(edt { staged(panel) })
+
+        agentRpc.agentsError = RuntimeException("connection reset")
+        edt { panel.applyDraft(); true }
+        // The staged badge clears inside the post-apply EDT update, so this waits for that update
+        // rather than for `modified()`, which already reads false while the save is in flight.
+        flushUntil { appRpc.configPatches.isNotEmpty() && !edt { staged(panel) } }
+
+        edt {
+            assertEquals(listOf(DIR, DIR), agentRpc.agentCalls)
+            assertEquals(6, rows(panel).size)
+            assertEquals("GPT-5", rows(panel).single { it.key == "code" }.cells.single { it.id == MODEL_CELL }.label)
+            assertEquals(listOf("", "ask", "code", "old"), comboItems(picker(panel)))
+            assertEquals("code", picker(panel).selectedItem)
+            true
+        }
+    }
+
+    /** An empty re-read is always a failed read: the built-in agents are never absent. */
+    fun `test apply keeps the rows when the agent re-read comes back empty`() {
+        val panel = panel()
+        flushUntil { rows(panel).size == 6 }
+        edt { clickCell(panel, "code", MODEL_CELL); true }
+        assertTrue(edt { staged(panel) })
+
+        agentRpc.agents = emptyList()
+        edt { panel.applyDraft(); true }
+        flushUntil { appRpc.configPatches.isNotEmpty() && !edt { staged(panel) } }
+
+        edt {
+            assertEquals(6, rows(panel).size)
+            assertEquals("GPT-5", rows(panel).single { it.key == "code" }.cells.single { it.id == MODEL_CELL }.label)
+            true
+        }
+    }
+
+    fun `test double click opens the agent edit dialog`() {
+        val seen = mutableListOf<String>()
+        val panel = panel(edit = { agent, items ->
+            seen += agent.name
+            assertEquals(listOf(MODEL, "kilo/sonnet"), items.map { it.key })
+            FakeAgentEditDialog(agent, agent.copy(prompt = "Edited"))
+        })
+        flushUntil { rows(panel).size == 6 }
+
+        edt {
+            assertEquals(EDIT_CELL, rows(panel).single { it.key == "code" }.doubleClick)
+            doubleClick(panel, "code")
+            true
+        }
+
+        assertEquals(listOf("code"), seen)
+        assertTrue(edt { panel.modified() })
+        edt { panel.applyDraft(); true }
+        flushUntil { appRpc.configPatches.isNotEmpty() }
+
+        assertEquals("Edited", appRpc.configPatches.single().agents.getValue("code").prompt)
+    }
+
+    fun `test staged rows do not open the edit dialog on double click`() {
+        val input = AgentCreateDto("reviewer", "Review code", description = "Reviews code")
+        val panel = panel(create = { FakeCreateDialog(input) }, edit = { _, _ -> error("edit must not open") })
+        flushUntil { rows(panel).size == 6 }
+
+        edt {
+            panel.CreateAction().perform()
+            assertNull(rows(panel).single { it.key == "reviewer" }.doubleClick)
+            doubleClick(panel, "reviewer")
+            assertFalse(rows(panel).any { it.key == "reviewer" })
+            true
         }
     }
 
@@ -155,10 +305,10 @@ class AgentsSettingsUiTest : BasePlatformTestCase() {
     fun `test adding an agent stages it until apply and supports undo`() {
         val input = AgentCreateDto("reviewer", "Review code", description = "Reviews code")
         var names = emptyList<String>()
-        val panel = panel { existing ->
+        val panel = panel(create = { existing ->
             names = existing.toList()
             FakeCreateDialog(input)
-        }
+        })
         flushUntil { rows(panel).size == 6 }
 
         edt {
@@ -184,7 +334,7 @@ class AgentsSettingsUiTest : BasePlatformTestCase() {
 
     fun `test applying staged create commits and reloads`() {
         val input = AgentCreateDto("reviewer", "Review code", description = "Reviews code")
-        val panel = panel { FakeCreateDialog(input) }
+        val panel = panel(create = { FakeCreateDialog(input) })
         flushUntil { rows(panel).size == 6 }
 
         edt {
@@ -197,6 +347,66 @@ class AgentsSettingsUiTest : BasePlatformTestCase() {
         assertEquals(listOf(input), agentRpc.creations)
         assertEquals(listOf(DIR), agentRpc.createDirs)
         assertTrue(edt { rows(panel).any { it.key == "reviewer" } })
+    }
+
+    /**
+     * The re-read fallback is the pre-write list, so it cannot contain an agent this apply just
+     * created. Losing that write would hide a row for an agent whose file was in fact written.
+     */
+    fun `test apply keeps a newly created agent whose re-read fails`() {
+        val input = AgentCreateDto("reviewer", "Review code", description = "Reviews code")
+        val panel = panel(create = { FakeCreateDialog(input) })
+        flushUntil { rows(panel).size == 6 }
+
+        edt {
+            panel.CreateAction().perform()
+            agentRpc.agentsError = RuntimeException("connection reset")
+            panel.applyDraft()
+            true
+        }
+        // Apply clears its busy flag only after the state and rows are updated, so `idle` means the
+        // whole apply has settled rather than just that the write reached the CLI.
+        flushUntil { agentRpc.creations.isNotEmpty() && idle(panel) }
+
+        edt {
+            assertEquals(listOf(input), agentRpc.creations)
+            val row = rows(panel).single { it.key == "reviewer" }
+            assertEquals("Reviews code", row.description)
+            true
+        }
+    }
+
+    fun `test apply keeps a newly imported agent whose re-read comes back empty`() {
+        val panel = panel()
+        flushUntil { rows(panel).size == 6 }
+
+        edt {
+            panel.ImportAction().perform(file("reviewer.agent.json", """
+                {
+                    "name": "reviewer",
+                    "description": "Reviews code",
+                    "prompt": "Review carefully",
+                    "mode": "subagent"
+                }
+            """.trimIndent()))
+            true
+        }
+        // Importing is asynchronous and `applyDraft` no-ops while the panel is busy, so wait for it to
+        // settle before applying. The empty re-read is then set up so the apply hits that path.
+        flushUntil { rows(panel).any { it.key == "reviewer" } && idle(panel) }
+
+        edt {
+            agentRpc.agents = emptyList()
+            panel.applyDraft()
+            true
+        }
+        flushUntil { appRpc.configPatches.isNotEmpty() && idle(panel) }
+
+        edt {
+            val row = rows(panel).single { it.key == "reviewer" }
+            assertEquals("Reviews code", row.description)
+            true
+        }
     }
 
     fun `test apply waits for backend ready before refetching`() {
@@ -330,7 +540,7 @@ class AgentsSettingsUiTest : BasePlatformTestCase() {
     fun `test composite apply calls endpoints in order`() {
         val input = AgentCreateDto("creator", "Create", description = "Created")
         val order = mutableListOf<String>()
-        val panel = panel { FakeCreateDialog(input) }
+        val panel = panel(create = { FakeCreateDialog(input) })
         flushUntil { rows(panel).size == 6 }
         agentRpc.afterRemove = { _, name -> order += "remove:$name" }
         agentRpc.afterCreate = { _, item -> order += "create:${item.name}" }
@@ -370,7 +580,7 @@ class AgentsSettingsUiTest : BasePlatformTestCase() {
 
     fun `test apply failure reloads and keeps remaining staged changes`() {
         val input = AgentCreateDto("creator", "Create", description = "Created")
-        val panel = panel { FakeCreateDialog(input) }
+        val panel = panel(create = { FakeCreateDialog(input) })
         flushUntil { rows(panel).size == 6 }
         agentRpc.createError = RuntimeException("boom")
 
@@ -394,7 +604,7 @@ class AgentsSettingsUiTest : BasePlatformTestCase() {
 
     fun `test refresh preserves staged intents`() {
         val input = AgentCreateDto("creator", "Create", description = "Created")
-        val panel = panel { FakeCreateDialog(input) }
+        val panel = panel(create = { FakeCreateDialog(input) })
         flushUntil { rows(panel).size == 6 }
 
         edt {
@@ -413,15 +623,25 @@ class AgentsSettingsUiTest : BasePlatformTestCase() {
         }
     }
 
-    private fun panel(create: (Collection<String>) -> AgentCreateDialogHandle = ::AgentCreateDialog): AgentsSettingsUi {
-        install()
-        val panel = edt { AgentsSettingsUi(scope!!, DIR, create) }
+    private fun panel(
+        create: (Collection<String>) -> AgentCreateDialogHandle = ::AgentCreateDialog,
+        choice: String? = MODEL,
+        model: String? = null,
+        edit: (AgentEditDraft, List<ModelPicker.Item>) -> AgentEditDialogHandle = { agent, _ -> FakeAgentEditDialog(agent) },
+    ): AgentsSettingsUi {
+        install(model)
+        val pick = AgentModelPicker { _, _, items, selected, choose ->
+            picked += selected to items.map { it.key }
+            choose(choice)
+            null
+        }
+        val panel = edt { AgentsSettingsUi(scope!!, DIR, create, pick = pick, edit = edit) }
         ui = panel
         edt { panel.reload(); true }
         return panel
     }
 
-    private fun install() {
+    private fun install(model: String? = null) {
         val cs = CoroutineScope(SupervisorJob())
         scope = cs
         appRpc = FakeAppRpcApi()
@@ -441,7 +661,7 @@ class AgentsSettingsUiTest : BasePlatformTestCase() {
             KiloAppStatusDto.READY,
             config = ConfigDto(
                 defaultAgent = "code",
-                agent = mapOf("code" to AgentConfigDto(description = "Configured code")),
+                agent = mapOf("code" to AgentConfigDto(description = "Configured code", model = model)),
             ),
         )
         app._state.value = ready
@@ -452,7 +672,10 @@ class AgentsSettingsUiTest : BasePlatformTestCase() {
     }
 
     private fun providers() = ProvidersDto(
-        providers = listOf(ProviderDto("kilo", "Kilo", models = mapOf("gpt-5" to ModelDto("gpt-5", "GPT-5")))),
+        providers = listOf(ProviderDto("kilo", "Kilo", models = mapOf(
+            "gpt-5" to ModelDto("gpt-5", "GPT-5", recommendedIndex = 1.0),
+            "sonnet" to ModelDto("sonnet", "Sonnet 4.6"),
+        ))),
         connected = listOf("kilo"),
         defaults = emptyMap(),
     )
@@ -463,6 +686,13 @@ class AgentsSettingsUiTest : BasePlatformTestCase() {
     }
 
     private fun list(panel: AgentsSettingsUi) = components(panel).filterIsInstance<JBList<ActiveListItem>>().single()
+
+    /** The panel disables its search field while a request is in flight. */
+    private fun idle(panel: AgentsSettingsUi) =
+        components(panel).filterIsInstance<SearchTextField>().single().isEnabled
+
+    private fun staged(panel: AgentsSettingsUi) =
+        rows(panel).any { row -> row.badges.any { it.text == "not applied" } }
 
     private fun picker(panel: AgentsSettingsUi) = components(panel).filterIsInstance<JComboBox<String>>().single()
 
@@ -513,15 +743,27 @@ class AgentsSettingsUiTest : BasePlatformTestCase() {
         click(list, center(area))
     }
 
+    private fun doubleClick(panel: AgentsSettingsUi, key: String) {
+        val list = list(panel)
+        list.size = Dimension(420, 260)
+        list.doLayout()
+        val idx = rows(panel).indexOfFirst { it.key == key }
+        list.selectedIndex = idx
+        val area = list.getCellBounds(idx, idx)
+        // Left of the right-aligned action cells: a double-click landing on a cell is ignored.
+        val point = Point(area.x + 2, area.y + area.height / 2)
+        fire(list, mouse(list, MouseEvent.MOUSE_CLICKED, point, count = 2))
+    }
+
     private fun file(name: String, text: String) = LightVirtualFile(name, text)
-    private fun mouse(list: JBList<ActiveListItem>, id: Int, point: Point) = MouseEvent(
+    private fun mouse(list: JBList<ActiveListItem>, id: Int, point: Point, count: Int = 1) = MouseEvent(
         list,
         id,
         System.currentTimeMillis(),
         if (id == MouseEvent.MOUSE_PRESSED) InputEvent.BUTTON1_DOWN_MASK else 0,
         point.x,
         point.y,
-        1,
+        count,
         false,
         MouseEvent.BUTTON1,
     )
@@ -540,6 +782,9 @@ class AgentsSettingsUiTest : BasePlatformTestCase() {
 
     private companion object {
         const val DIR = "/test"
+        const val MODEL = "kilo/gpt-5"
+        const val MODEL_CELL = "model"
+        const val EDIT_CELL = "edit"
         const val DELETE_CELL = "delete"
         const val UNDO_CELL = "undo"
     }
@@ -549,4 +794,13 @@ private class FakeCreateDialog(private val input: AgentCreateDto) : AgentCreateD
     override fun showAndGet() = true
 
     override fun result() = input
+}
+
+private class FakeAgentEditDialog(
+    agent: AgentEditDraft,
+    private val next: AgentEditDraft = agent,
+) : AgentEditDialogHandle {
+    override fun showAndGet() = true
+
+    override fun result() = next
 }

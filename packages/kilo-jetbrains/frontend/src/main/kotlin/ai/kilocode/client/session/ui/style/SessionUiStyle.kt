@@ -269,6 +269,18 @@ object SessionUiStyle {
             fun width(): Int = JBUI.scale(1)
         }
 
+        /**
+         * Transient guide line drawn in the transcript's left padding beside the step a
+         * header-timeline jump landed on, so the destination is findable after the viewport moves.
+         * Borrows the platform focus ring rather than [Outline], which marks persistent card edges —
+         * this cue is attention, not structure, and it is cleared by the next scroll or click.
+         */
+        object Highlight {
+            fun lineColor(): Color = JBUI.CurrentTheme.Focus.focusColor()
+
+            fun width(): Int = JBUI.scale(2)
+        }
+
         /** Filled surface and border for outlined dialog cards (question, permission, login, outcome, revert). */
         object Dialog {
             /**

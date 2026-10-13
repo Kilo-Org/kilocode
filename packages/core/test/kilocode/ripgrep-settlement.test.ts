@@ -233,7 +233,10 @@ writeSync(1, ${JSON.stringify(output)})
           expect(passed).toContain("--fixed-strings")
           expect(passed).toContain("--ignore-case")
           expect(passed).toContain("--context=1")
-          expect(passed).toContain("--glob=*.ts")
+          // The include glob is applied after ignore rules: validated by ripgrep, prefiltered as a file type.
+          expect(passed).toContain("--pre-glob=*.ts")
+          expect(passed).toContain("--type-add=kiloglob:*.ts")
+          expect(passed).not.toContain("--glob=*.ts")
           expect(alive(pid)).toBe(true)
           if (process.platform !== "win32") {
             const child = Number(yield* Effect.promise(() => read(owned)))
