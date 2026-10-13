@@ -125,12 +125,21 @@ describe("Kilo API URL resolvers", () => {
     expect(resolveKiloGatewayUrl("fim/completions")).toBe("https://ai-gateway.kilo.ai/api/v1/fim/completions")
   })
 
-  test("keeps AI gateway base URLs on the gateway root", () => {
+  test("keeps the configured AI gateway base on the gateway root", () => {
     expect(resolveKiloOpenRouterBaseUrl({ baseURL: "https://ai-gateway.kilo.ai/api/v1/" })).toBe(
       "https://ai-gateway.kilo.ai/api/v1/",
     )
-    expect(resolveKiloGatewayBaseUrl({ baseURL: "https://example.test/dev/api/v1/organizations/org" })).toBe(
-      "https://example.test/dev/api/v1/",
+    expect(resolveKiloGatewayBaseUrl({ baseURL: "https://ai-gateway.kilo.ai/api/v1?x=1" })).toBe(
+      "https://ai-gateway.kilo.ai/api/v1/",
+    )
+  })
+
+  test("keeps legacy routing for custom base URLs that contain /api/v1", () => {
+    expect(resolveKiloOpenRouterBaseUrl({ baseURL: "https://proxy.test/api/v1/custom" })).toBe(
+      "https://proxy.test/api/openrouter/",
+    )
+    expect(resolveKiloGatewayBaseUrl({ baseURL: "https://proxy.test/dev/api/v1" })).toBe(
+      "https://proxy.test/dev/api/gateway/",
     )
   })
 

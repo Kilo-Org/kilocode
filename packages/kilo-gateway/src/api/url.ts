@@ -13,14 +13,10 @@ function clean(raw: string) {
   return url
 }
 
-function segments(url: URL) {
-  return url.pathname.split("/").filter(Boolean)
-}
-
 /** Legacy API app route, e.g. `https://api.kilo.ai/api/openrouter/`. */
 function route(raw: string, name: "gateway" | "openrouter"): string {
   const url = clean(raw)
-  const parts = segments(url)
+  const parts = url.pathname.split("/").filter(Boolean)
   const api = parts.lastIndexOf("api")
   const prefix = api >= 0 ? parts.slice(0, api) : parts
   url.pathname = `/${[...prefix, "api", name].join("/")}/`
@@ -29,17 +25,14 @@ function route(raw: string, name: "gateway" | "openrouter"): string {
 
 /**
  * AI gateway root, e.g. `https://ai-gateway.kilo.ai/api/v1/`, when the URL is the
- * configured AI gateway base or an `/api/v1` gateway URL. Undefined for legacy API app URLs.
+ * configured AI gateway base. Any other URL (custom base URLs, token-embedded URLs)
+ * keeps the legacy API app routing.
  */
 function gateway(raw: string): string | undefined {
-  const url = clean(raw)
-  const text = url.toString().replace(/\/+$/, "")
-  if (KILO_AI_GATEWAY_BASE && text === clean(KILO_AI_GATEWAY_BASE).toString().replace(/\/+$/, "")) return `${text}/`
-  const parts = segments(url)
-  const api = parts.lastIndexOf("api")
-  if (api < 0 || parts[api + 1] !== "v1") return undefined
-  url.pathname = `/${parts.slice(0, api + 2).join("/")}/`
-  return url.toString()
+  if (!KILO_AI_GATEWAY_BASE) return undefined
+  const text = clean(raw).toString().replace(/\/+$/, "")
+  if (text !== clean(KILO_AI_GATEWAY_BASE).toString().replace(/\/+$/, "")) return undefined
+  return `${text}/`
 }
 
 function resolve(options: UrlOptions, name: "gateway" | "openrouter"): string {
