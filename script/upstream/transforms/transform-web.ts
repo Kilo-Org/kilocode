@@ -7,7 +7,7 @@
  */
 
 import { $ } from "bun"
-import { info, success, warn, debug } from "../utils/logger"
+import { info, success, warn, debug, error } from "../utils/logger"
 import { defaultConfig } from "../utils/config"
 import { oursHasKilocodeChanges } from "../utils/git"
 
@@ -170,8 +170,12 @@ export function applyWebTransforms(content: string, verbose = false): { result: 
  */
 export async function transformWebFile(file: string, options: WebTransformOptions = {}): Promise<WebTransformResult> {
   if (options.dryRun) {
-    info(`[DRY-RUN] Would transform web file: ${file}`)
-    return { file, action: "transformed", replacements: 0, dryRun: true }
+    const content = await Bun.file(file)
+      .text()
+      .catch(() => "")
+    const { replacements } = applyWebTransforms(content, options.verbose)
+    info(`[DRY-RUN] Would transform web file ${file}: ${replacements} replacements`)
+    return { file, action: "transformed", replacements, dryRun: true }
   }
 
   // If our version has kilocode_change markers, flag for manual resolution
@@ -268,29 +272,32 @@ export async function transformAllWeb(options: WebTransformOptions = {}): Promis
 // CLI entry point
 if (import.meta.main) {
   const args = process.argv.slice(2)
-  const dryRun = args.includes("--dry-run")
+  const apply = args.includes("--apply")
+  const force = args.includes("--force")
   const verbose = args.includes("--verbose")
 
   const files = args.filter((a) => !a.startsWith("--"))
 
-  if (files.length === 0) {
-    info("Usage: transform-web.ts [--dry-run] [--verbose] <file1> <file2> ...")
+  if (apply && !defaultConfig.transforms.branding && !force) {
+    error("Branding transforms are off in the v2 config (transforms.branding); pass --force to apply")
     process.exit(1)
   }
 
-  if (dryRun) {
-    info("Running in dry-run mode")
-  }
-
-  const results = await transformConflictedWeb(files, { dryRun, verbose })
+  const dryRun = !apply
+  const results =
+    files.length > 0
+      ? await transformConflictedWeb(files, { dryRun, verbose })
+      : await transformAllWeb({ dryRun, verbose })
 
   const transformed = results.filter((r) => r.action === "transformed")
   const total = results.reduce((sum, r) => sum + r.replacements, 0)
 
-  console.log()
-  success(`Transformed ${transformed.length} web files with ${total} replacements`)
-
-  if (dryRun) {
-    info("Run without --dry-run to apply changes")
+  for (const result of results) {
+    if (result.replacements > 0) console.log(`${result.file}: ${result.replacements} replacement(s)`)
   }
+
+  console.log()
+  success(apply ? `Transformed ${transformed.length} web files with ${total} replacements` : `Would transform ${transformed.length} web files with ${total} replacements`)
+
+  if (!apply) info("Run with --apply to write changes")
 }

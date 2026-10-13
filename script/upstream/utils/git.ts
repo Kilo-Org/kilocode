@@ -19,18 +19,6 @@ export interface RemoteInfo {
   url: string
 }
 
-export interface CompatBase {
-  commit: string
-  upstream: string
-  message: string
-}
-
-type Semver = readonly [number, number, number]
-
-interface Candidate extends CompatBase {
-  version: Semver
-}
-
 export async function getCurrentBranch(): Promise<string> {
   const result = await $`git rev-parse --abbrev-ref HEAD`.text()
   return result.trim()
@@ -65,15 +53,23 @@ export async function getRemotes(): Promise<RemoteInfo[]> {
   return remotes
 }
 
-export async function hasUpstreamRemote(): Promise<boolean> {
+export async function hasUpstreamRemote(name = "upstream"): Promise<boolean> {
   const remotes = await getRemotes()
-  return remotes.some((r) => r.name === "upstream")
+  return remotes.some((r) => r.name === name)
 }
 
-export async function fetchUpstream(): Promise<void> {
-  const result = await $`git fetch upstream --tags --force`.quiet().nothrow()
+/** Fetch the upstream branch and its tags. Tags are forced because upstream may move a release tag. */
+export async function fetchUpstream(remote = "upstream", branch = "dev"): Promise<void> {
+  const result = await $`git fetch ${remote} ${branch} --tags --force`.quiet().nothrow()
   if (result.exitCode !== 0) {
     throw new Error(`Failed to fetch upstream: ${result.stderr.toString()}`)
+  }
+}
+
+export async function fetchOrigin(remote = "origin", branch = "v2"): Promise<void> {
+  const result = await $`git fetch ${remote} ${branch}`.quiet().nothrow()
+  if (result.exitCode !== 0) {
+    throw new Error(`Failed to fetch ${remote}/${branch}: ${result.stderr.toString()}`)
   }
 }
 
@@ -137,20 +133,29 @@ export async function commit(message: string): Promise<void> {
   await $`git commit -am ${message}`
 }
 
-export async function merge(branch: string): Promise<{ success: boolean; conflicts: string[] }> {
+/** Conclude a merge started with `merge()`, keeping the prepared merge message */
+export async function commitMerge(message: string): Promise<void> {
+  await $`git commit --no-edit -m ${message}`.quiet()
+}
+
+/**
+ * Merge `ref` without committing, so the tooling can resolve conflicts and regenerate lock files
+ * inside the merge commit. Always creates a merge commit later (`--no-ff`), never a fast-forward.
+ */
+export async function merge(ref: string, message: string): Promise<{ success: boolean; conflicts: string[] }> {
   // Force zdiff3 markers even if the contributor's local config has drifted:
   // conflicts carry the base version (|||||||) alongside ours/theirs so mergiraf
   // has the common ancestor for structural heuristics and any remaining manual
   // resolution is dramatically easier. `postinstall` (script/setup-git.ts) sets
-  // this repo-wide as well; the `-c` override here is belt-and-suspenders.
-  const result = await $`git -c merge.conflictStyle=zdiff3 merge ${branch}`.nothrow()
+  // The `-c` override keeps this independent of local config.
+  const result = await $`git -c merge.conflictStyle=zdiff3 merge --no-ff --no-commit -m ${message} ${ref}`.nothrow()
 
   if (result.exitCode === 0) {
     return { success: true, conflicts: [] }
   }
 
-  // Get list of conflicted files
   const conflicts = await getConflictedFiles()
+  if (conflicts.length === 0) throw new Error(`git merge failed without conflicts: ${result.stderr.toString()}`)
   return { success: false, conflicts }
 }
 
@@ -206,165 +211,6 @@ export async function writeTree(): Promise<string> {
   return result.trim()
 }
 
-function chunks<T>(items: T[], size = 200): T[][] {
-  return Array.from({ length: Math.ceil(items.length / size) }, (_, idx) => items.slice(idx * size, (idx + 1) * size))
-}
-
-/**
- * Overlay transformed upstream changes onto the previous compatibility tree.
- * Paths unchanged upstream keep their prior Kilo content, including Kilo-only
- * files and marker-bearing shared files.
- */
-export async function overlayCompatTree(input: {
-  previous: string
-  upstream: string
-  target: string
-  transformed: string
-  extra?: string[]
-}): Promise<string> {
-  const diff = await $`git diff --name-only -z ${input.upstream} ${input.target}`.quiet().nothrow()
-  if (diff.exitCode !== 0) throw new Error(`Failed to list upstream changes: ${diff.stderr.toString()}`)
-
-  const paths = Array.from(
-    new Set([
-      ...diff.stdout
-        .toString()
-        .split("\0")
-        .filter((path) => path.length > 0),
-      ...(input.extra ?? []),
-    ]),
-  )
-  const keep: string[] = []
-  const remove: string[] = []
-  for (const path of paths) {
-    const result = await $`git cat-file -e ${`${input.transformed}:${path}`}`.quiet().nothrow()
-    if (result.exitCode === 0) keep.push(path)
-    else remove.push(path)
-  }
-
-  await $`git read-tree ${input.previous}`.quiet()
-  for (const batch of chunks(keep)) await $`git checkout ${input.transformed} -- ${batch}`.quiet()
-  for (const batch of chunks(remove)) await $`git update-index --force-remove -- ${batch}`.quiet()
-  return writeTree()
-}
-
-export async function createCommit(tree: string, message: string, parent: string): Promise<string> {
-  const result = await $`git commit-tree ${tree} -p ${parent} -m ${message}`.text()
-  return result.trim()
-}
-
-export async function updateBranch(name: string, commit: string): Promise<void> {
-  await $`git update-ref refs/heads/${name} ${commit}`
-}
-
-export async function recordAncestor(ref: string, message: string): Promise<boolean> {
-  if (await isAncestor(ref, "HEAD")) return false
-
-  const result = await $`git merge -s ours --no-ff ${ref} -m ${message}`.nothrow()
-  if (result.exitCode !== 0) {
-    throw new Error(`Failed to record ancestor ${ref}: ${result.stderr.toString()}`)
-  }
-  return true
-}
-
-async function compatUpstream(message: string): Promise<string | null> {
-  const tag = compatTag(message)
-  if (!tag) return null
-
-  const ref = `${tag}^{commit}`
-  const result = await $`git rev-parse ${ref}`.quiet().nothrow()
-  if (result.exitCode !== 0) return null
-  return result.stdout.toString().trim()
-}
-
-function compatTag(message: string): string | null {
-  const prefix = "refactor: kilo compat for "
-  if (!message.startsWith(prefix)) return null
-  return message.slice(prefix.length).trim().split(/\s+/)[0] ?? null
-}
-
-function parseSemver(value: string | undefined): Semver | null {
-  const match = value?.match(/^v?(\d+)\.(\d+)\.(\d+)$/)
-  if (!match) return null
-  const major = Number.parseInt(match[1] ?? "0", 10)
-  const minor = Number.parseInt(match[2] ?? "0", 10)
-  const patch = Number.parseInt(match[3] ?? "0", 10)
-  return [major, minor, patch]
-}
-
-function compareSemver(a: Semver, b: Semver): number {
-  for (const idx of [0, 1, 2] as const) {
-    if (a[idx] < b[idx]) return -1
-    if (a[idx] > b[idx]) return 1
-  }
-  return 0
-}
-
-function exists<T>(value: T | null): value is T {
-  return value !== null
-}
-
-async function targetSemver(ref: string): Promise<Semver | null> {
-  const tags = await getTagsForCommit(ref)
-  const tag = tags.find((item) => parseSemver(item) !== null)
-  const parsed = parseSemver(tag)
-  if (parsed) return parsed
-
-  const message = await getCommitMessage(ref)
-  const match = message.match(/\bv?\d+\.\d+\.\d+\b/)
-  return parseSemver(match?.[0])
-}
-
-async function candidate(line: string): Promise<Candidate | null> {
-  const [commit, message = ""] = line.split("\0")
-  if (!commit) return null
-
-  const version = parseSemver(compatTag(message) ?? undefined)
-  if (!version) return null
-
-  const upstream = (await compatUpstream(message)) ?? (await getCommitParents(commit))[0] ?? commit
-  return { commit, upstream, message, version }
-}
-
-export async function findLatestCompatCommit(base: string, target: string): Promise<CompatBase | null> {
-  const grep = "^refactor: kilo compat for "
-  const result = await $`git log --format=%H%x00%s --grep=${grep} ${base}`.quiet().nothrow()
-  if (result.exitCode !== 0) {
-    throw new Error(`Failed to search compatibility commits: ${result.stderr.toString()}`)
-  }
-
-  const lines = result.stdout
-    .toString()
-    .trim()
-    .split("\n")
-    .filter((line) => line.length > 0)
-
-  const targetVersion = await targetSemver(target)
-  if (targetVersion) {
-    const candidates = (await Promise.all(lines.map(candidate)))
-      .filter(exists)
-      .filter((item) => compareSemver(item.version, targetVersion) < 0)
-      .sort((a, b) => compareSemver(b.version, a.version))
-    const latest = candidates[0]
-    if (latest) return { commit: latest.commit, upstream: latest.upstream, message: latest.message }
-  }
-
-  for (const line of lines) {
-    const [commit, message = ""] = line.split("\0")
-    if (!commit) continue
-
-    const upstream = await compatUpstream(message)
-    if (upstream && (await isAncestor(upstream, target))) return { commit, upstream, message }
-
-    const parents = await getCommitParents(commit)
-    for (const parent of parents) {
-      if (await isAncestor(parent, target)) return { commit, upstream: parent, message }
-    }
-  }
-
-  return null
-}
-
 /**
  * Check if `commit` is an ancestor of `ref` (i.e. reachable from `ref`).
  * Uses `git merge-base --is-ancestor`, which exits 0 for yes, 1 for no.
@@ -389,23 +235,6 @@ export async function getAllTags(): Promise<string[]> {
     .trim()
     .split("\n")
     .filter((t) => t.length > 0)
-}
-
-export async function getUpstreamTags(): Promise<string[]> {
-  const result = await $`git ls-remote --tags upstream`.quiet().nothrow()
-  if (result.exitCode !== 0) {
-    throw new Error(`Failed to list upstream tags: ${result.stderr.toString()}`)
-  }
-
-  const output = result.stdout.toString()
-  const tags: string[] = []
-
-  for (const line of output.trim().split("\n")) {
-    const match = line.match(/refs\/tags\/([^\^]+)$/)
-    if (match && match[1]) tags.push(match[1])
-  }
-
-  return tags
 }
 
 export async function abortMerge(): Promise<void> {

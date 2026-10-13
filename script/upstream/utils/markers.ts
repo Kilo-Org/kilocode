@@ -9,6 +9,7 @@ import { $ } from "bun"
 import { mkdtemp, rm } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import path from "node:path"
+import { isKiloOwned } from "./owned"
 
 export interface Text {
   lines: string[]
@@ -68,7 +69,6 @@ export const styles = new Map<string, Style>([
   [".bash", "hash"],
   [".zsh", "hash"],
 ])
-export const exempt = ["script/upstream/"]
 
 export function ext(file: string) {
   return path.extname(file).toLowerCase()
@@ -81,8 +81,9 @@ export function supported(file: string, text: string) {
   return !kind && text.startsWith("#!")
 }
 
+/** Kilo-owned paths (utils/owned.ts) need no markers */
 export function annotates(file: string) {
-  return !exempt.some((scope) => file.startsWith(scope))
+  return !isKiloOwned(file)
 }
 
 export function binary(data: Uint8Array) {

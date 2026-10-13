@@ -4,8 +4,8 @@
  * branding transforms.
  *
  * Usage:
- *   bun run script/upstream/reset-to-upstream.ts packages/opencode/src/file.ts
- *   bun run script/upstream/reset-to-upstream.ts packages/opencode/src/file.ts --dry-run
+ *   bun run script/upstream/reset-to-upstream.ts packages/core/src/file.ts
+ *   bun run script/upstream/reset-to-upstream.ts packages/core/src/file.ts --dry-run
  */
 
 import { error, header, info, success, warn } from "./utils/logger"

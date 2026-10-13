@@ -1,65 +1,67 @@
 #!/usr/bin/env bun
 /**
- * List available upstream versions
+ * List upstream v2 releases and show which ones a Kilo branch already has.
  *
  * Usage:
- *   bun run script/upstream/list-versions.ts
+ *   bun script/upstream/list-versions.ts [--base <ref>] [--all] [--no-fetch]
+ *
+ * The default base is origin/v2. Each row shows the tag, the release commit (the parent of the tag,
+ * which is the sync target), the release date and the status.
  */
 
-import { getAvailableUpstreamVersions, getCurrentKiloVersion } from "./utils/version"
-import { fetchUpstream, hasUpstreamRemote, isAncestor } from "./utils/git"
+import { defaultConfig } from "./utils/config"
+import { fetchUpstream, hasUpstreamRemote } from "./utils/git"
 import { header, info, success, warn, error } from "./utils/logger"
+import { getSyncStatus } from "./utils/version"
 
 async function main() {
-  header("Available Upstream Versions")
+  const args = process.argv.slice(2)
+  const config = defaultConfig
+  const at = args.indexOf("--base")
+  const base = (at === -1 ? undefined : args[at + 1]) ?? `${config.originRemote}/${config.baseBranch}`
 
-  // Check upstream remote
-  if (!(await hasUpstreamRemote())) {
-    error("No 'upstream' remote found. Please add it:")
-    info("  git remote add upstream git@github.com:anomalyco/opencode.git")
+  header("Upstream v2 Releases")
+
+  if (!(await hasUpstreamRemote(config.upstreamRemote))) {
+    error(`No '${config.upstreamRemote}' remote. Add it:`)
+    info(`  git remote add ${config.upstreamRemote} ${config.upstreamUrl}`)
     process.exit(1)
   }
-
-  info("Fetching upstream tags...")
-  await fetchUpstream()
-
-  const versions = await getAvailableUpstreamVersions()
-  const kiloVersion = await getCurrentKiloVersion()
-
-  console.log()
-  success(`Current Kilo version: ${kiloVersion}`)
-  console.log()
-
-  info("Available upstream versions (newest first):")
-  console.log()
-
-  const limit = process.argv.includes("--all") ? versions.length : 20
-  const shown = versions.slice(0, Math.min(limit, versions.length))
-
-  // Check merge status in parallel — fast because is-ancestor short-circuits.
-  const merged = await Promise.all(shown.map((v) => isAncestor(v.commit, "HEAD")))
-
-  for (let i = 0; i < shown.length; i++) {
-    const v = shown[i]
-    if (!v) continue
-    const marker = merged[i] ? " ✓ merged" : i === 0 ? " (latest)" : ""
-    console.log(`  ${v.tag.padEnd(12)} ${v.commit.slice(0, 8)}${marker}`)
+  if (!args.includes("--no-fetch")) {
+    info(`Fetching ${config.upstreamRemote}/${config.upstreamBranch} and tags...`)
+    await fetchUpstream(config.upstreamRemote, config.upstreamBranch)
   }
 
-  if (versions.length > limit) {
+  const status = await getSyncStatus(base, config)
+  const limit = args.includes("--all") ? status.releases.length : 20
+  const merged = new Set(
+    status.releases.filter((r) => !status.pending.includes(r)).map((r) => r.tag),
+  )
+
+  console.log()
+  info(`Base: ${base}. Newest release in base: ${status.merged?.tag ?? "none"}`)
+  console.log()
+  console.log(`  ${"Tag".padEnd(10)} ${"Release".padEnd(12)} ${"Date".padEnd(26)} Status`)
+  for (const r of status.releases.slice(0, limit)) {
+    const label = r === status.next ? "next" : status.pending.includes(r) ? "pending" : merged.has(r.tag) ? "in base" : ""
+    console.log(`  ${r.tag.padEnd(10)} ${r.commit.slice(0, 11).padEnd(12)} ${r.date.padEnd(26)} ${label}`)
+  }
+  if (status.releases.length > limit) {
     console.log()
-    info(`Showing ${limit} of ${versions.length} versions. Use --all to see all.`)
+    info(`Showing ${limit} of ${status.releases.length} releases. Use --all to see all.`)
   }
 
   console.log()
-  info("To merge a specific version:")
-  info("  bun run script/upstream/merge.ts --version v1.1.49")
-  console.log()
-  info("To merge the latest version:")
-  info("  bun run script/upstream/merge.ts")
+  if (!status.next) {
+    success("The base has the newest release.")
+    return
+  }
+  warn(`Lag: ${status.lag.releases} release(s), ${status.lag.days} day(s)`)
+  info("Sync release by release. Next:")
+  info(`  bun script/upstream/merge.ts --version ${status.next.tag}`)
 }
 
 main().catch((err) => {
-  error(`Error: ${err}`)
+  error(`Error: ${err instanceof Error ? err.message : err}`)
   process.exit(1)
 })

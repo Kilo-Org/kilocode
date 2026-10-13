@@ -1,141 +1,105 @@
 #!/usr/bin/env bun
 /**
- * jscodeshift codemod: Transform string literals
+ * ts-morph codemod: transform string literals to Kilo branding.
  *
- * Transforms string literals containing opencode references to kilo:
- * - "opencode-ai" -> "@kilocode/cli"
- * - "npx opencode" -> "npx @kilocode/cli"
- * - etc.
+ * Package names come from `config.packageMappings`. The codemod is gated by `transforms.branding`
+ * and only reports changes by default; pass `--apply` to write them.
  *
- * Usage:
- *   bun run script/upstream/codemods/transform-strings.ts [files...]
+ * Limitation: the text inside template spans (`${x} text`) is not transformed, because a span has
+ * no standalone replaceable node. Template heads and no-substitution templates are handled.
+ *
+ * Usage: bun run script/upstream/codemods/transform-strings.ts [--apply] [--force] [files...]
  */
 
-import { Project, SyntaxKind, type SourceFile } from "ts-morph"
+import { Project, SyntaxKind, type Node, type SourceFile } from "ts-morph"
 import { Glob } from "bun"
-import { info, success } from "../utils/logger"
+import { info, success, error } from "../utils/logger"
 import { defaultConfig } from "../utils/config"
+
+export interface StringChange {
+  file: string
+  line: number
+  before: string
+  after: string
+}
+
+export interface TransformResult {
+  file: string
+  changes: StringChange[]
+}
 
 interface StringReplacement {
   pattern: RegExp
   replacement: string
 }
 
+function escapeRegExp(text: string): string {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+}
+
+// Package names from the configured mappings. The lookahead keeps subpaths and quotes working.
+const PACKAGE_REPLACEMENTS: StringReplacement[] = defaultConfig.packageMappings.map(({ from, to }) => ({
+  pattern: new RegExp(`${escapeRegExp(from)}(?=/|"|'|\`|$)`, "g"),
+  replacement: to,
+}))
+
 const STRING_REPLACEMENTS: StringReplacement[] = [
-  // Package names in strings (no trailing \b to allow subpath matching like @opencode-ai/sdk/v2)
-  { pattern: /\bopencode-ai\b/g, replacement: "@kilocode/cli" },
-  { pattern: /@opencode-ai\/cli(?=\/|"|'|`|$)/g, replacement: "@kilocode/cli" },
-  { pattern: /@opencode-ai\/sdk(?=\/|"|'|`|$)/g, replacement: "@kilocode/sdk" },
-  { pattern: /@opencode-ai\/plugin(?=\/|"|'|`|$)/g, replacement: "@kilocode/plugin" },
+  ...PACKAGE_REPLACEMENTS,
 
   // CLI commands
   { pattern: /\bnpx opencode\b/g, replacement: "npx @kilocode/cli" },
-  { pattern: /\bbun add opencode\b/g, replacement: "bun add @kilocode/cli" },
-  { pattern: /\bnpm install opencode\b/g, replacement: "npm install @kilocode/cli" },
-  { pattern: /\bnpm i opencode\b/g, replacement: "npm i @kilocode/cli" },
 
   // Database filename
   { pattern: /\bopencode\.db\b/g, replacement: "kilo.db" },
 
-  // Binary name references (be careful with these)
-  { pattern: /\bopencode upgrade\b/g, replacement: "kilo upgrade" },
-
   // HTTP header prefix
   { pattern: /x-opencode-/g, replacement: "x-kilo-" },
 
-  // Environment variables (exclude OPENCODE_API_KEY - upstream Zen SaaS key)
+  // Environment variables (exclude OPENCODE_API_KEY, the upstream Zen SaaS key)
   { pattern: /\bOPENCODE_(?!API_KEY\b)([A-Z_]+)\b/g, replacement: "KILO_$1" },
-  { pattern: /\bVITE_OPENCODE_/g, replacement: "VITE_KILO_" },
-  { pattern: /\b_EXTENSION_OPENCODE_/g, replacement: "_EXTENSION_KILO_" },
 ]
 
-export interface TransformResult {
-  file: string
-  changes: number
+function applyStringReplacements(value: string): { result: string; changed: boolean } {
+  let result = value
+  for (const { pattern, replacement } of STRING_REPLACEMENTS) {
+    pattern.lastIndex = 0
+    result = result.replace(pattern, replacement)
+  }
+  return { result, changed: result !== value }
+}
+
+function visit(node: Node, file: string, changes: StringChange[]): void {
+  const before = node.getText()
+  const { result, changed } = applyStringReplacements(before)
+  if (!changed) return
+  changes.push({ file, line: node.getStartLineNumber(), before, after: result })
+  node.replaceWithText(result)
 }
 
 /**
- * Transform string literals in a source file
+ * Transform string literals in a source file and return the changes it made.
  */
-export function transformStrings(sourceFile: SourceFile): number {
-  let changes = 0
+export function transformStrings(sourceFile: SourceFile): StringChange[] {
+  const file = sourceFile.getFilePath()
+  const changes: StringChange[] = []
 
-  // Get all string literals
-  const stringLiterals = sourceFile.getDescendantsOfKind(SyntaxKind.StringLiteral)
-
-  for (const literal of stringLiterals) {
-    let value = literal.getLiteralValue()
-    let modified = false
-
-    for (const { pattern, replacement } of STRING_REPLACEMENTS) {
-      if (pattern.test(value)) {
-        value = value.replace(pattern, replacement)
-        modified = true
-      }
-    }
-
-    if (modified) {
-      // Preserve the original quote style
-      const text = literal.getText()
-      const quote = text[0]
-      literal.replaceWithText(`${quote}${value}${quote}`)
-      changes++
-    }
+  for (const literal of sourceFile.getDescendantsOfKind(SyntaxKind.StringLiteral)) visit(literal, file, changes)
+  for (const template of sourceFile.getDescendantsOfKind(SyntaxKind.NoSubstitutionTemplateLiteral)) {
+    visit(template, file, changes)
   }
-
-  // Also handle template literals
-  const templates = sourceFile.getDescendantsOfKind(SyntaxKind.TemplateExpression)
-  for (const template of templates) {
-    const head = template.getHead()
-    let headValue = head.getLiteralValue()
-    let headModified = false
-
-    for (const { pattern, replacement } of STRING_REPLACEMENTS) {
-      if (pattern.test(headValue)) {
-        headValue = headValue.replace(pattern, replacement)
-        headModified = true
-      }
-    }
-
-    if (headModified) {
-      // Template head replacement is complex, skip for now
-      changes++
-    }
-  }
-
-  // Handle no-substitution template literals
-  const noSubTemplates = sourceFile.getDescendantsOfKind(SyntaxKind.NoSubstitutionTemplateLiteral)
-  for (const template of noSubTemplates) {
-    let value = template.getLiteralValue()
-    let modified = false
-
-    for (const { pattern, replacement } of STRING_REPLACEMENTS) {
-      if (pattern.test(value)) {
-        value = value.replace(pattern, replacement)
-        modified = true
-      }
-    }
-
-    if (modified) {
-      template.replaceWithText(`\`${value}\``)
-      changes++
-    }
-  }
+  for (const head of sourceFile.getDescendantsOfKind(SyntaxKind.TemplateHead)) visit(head, file, changes)
 
   return changes
 }
 
 /**
- * Transform all files
+ * Transform all TypeScript/JavaScript files matching the patterns.
  */
 export async function transformAllStrings(
   patterns: string[] = ["**/*.ts", "**/*.tsx", "**/*.js", "**/*.jsx"],
-  dryRun = false,
+  apply = false,
 ): Promise<TransformResult[]> {
-  const project = new Project({
-    skipAddingFilesFromTsConfig: true,
-  })
-
+  const project = new Project({ skipAddingFilesFromTsConfig: true })
   const results: TransformResult[] = []
   const excludes = defaultConfig.excludePatterns
 
@@ -143,22 +107,16 @@ export async function transformAllStrings(
     const glob = new Glob(pattern)
 
     for await (const path of glob.scan({ absolute: true })) {
-      if (excludes.some((ex) => path.includes(ex.replace(/\*\*/g, "")))) {
-        continue
-      }
+      if (excludes.some((ex) => path.includes(ex.replace(/\*\*/g, "")))) continue
 
       const sourceFile = project.addSourceFileAtPath(path)
       const changes = transformStrings(sourceFile)
+      if (changes.length === 0) continue
 
-      if (changes > 0) {
-        results.push({ file: path, changes })
-
-        if (!dryRun) {
-          await sourceFile.save()
-          success(`Transformed ${path}: ${changes} string(s)`)
-        } else {
-          info(`[DRY-RUN] Would transform ${path}: ${changes} string(s)`)
-        }
+      results.push({ file: path, changes })
+      if (apply) {
+        await sourceFile.save()
+        success(`Transformed ${path}: ${changes.length} string(s)`)
       }
     }
   }
@@ -169,18 +127,25 @@ export async function transformAllStrings(
 // CLI entry point
 if (import.meta.main) {
   const args = process.argv.slice(2)
-  const dryRun = args.includes("--dry-run")
+  const apply = args.includes("--apply")
+  const force = args.includes("--force")
   const files = args.filter((a) => !a.startsWith("--"))
 
-  if (dryRun) {
-    info("Running in dry-run mode")
+  if (apply && !defaultConfig.transforms.branding && !force) {
+    error("String codemod is off in the v2 config (transforms.branding); pass --force to apply")
+    process.exit(1)
   }
 
-  const patterns = files.length > 0 ? files : undefined
-  const results = await transformAllStrings(patterns, dryRun)
+  const results = await transformAllStrings(files.length > 0 ? files : undefined, apply)
 
+  for (const result of results) {
+    for (const change of result.changes) {
+      console.log(`${change.file}:${change.line}: ${change.before} -> ${change.after}`)
+    }
+  }
+
+  const total = results.reduce((sum, result) => sum + result.changes.length, 0)
   console.log()
-  success(`Transformed ${results.length} files`)
-  const totalChanges = results.reduce((sum, r) => sum + r.changes, 0)
-  info(`Total strings transformed: ${totalChanges}`)
+  success(`${apply ? "Transformed" : "Would transform"} ${results.length} files, ${total} string(s)`)
+  if (!apply) info("Run with --apply to write changes")
 }

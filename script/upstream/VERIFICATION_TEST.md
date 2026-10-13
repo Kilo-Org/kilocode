@@ -1,88 +1,40 @@
-# Verification Test
+# Verification test
 
-Use this checklist to verify CLI and VS Code extension behavior after upstream merge work.
+Use this checklist after an upstream sync on the v2 line. The Kilo executable on `v2` must keep working (D2). Unit tests and typecheck do not count as this test.
 
-## CLI
+Run the CLI only through `bun dev` (`script/dev-isolated.ts`), with a fresh profile for each test. Never run `opencode`, `dev:live` or `bun run --cwd packages/cli` directly: they use the installed OpenCode data and service. The `vscode-self-test` harness and the commands below are described in `.kilo/skills/v2-migration/SKILL.md`, section "Self-test the CLI".
 
-Start the CLI from this branch with `bun install` if dependencies are missing, then `bun run dev` from the repository root. Pass CLI arguments after the script, for example `bun run dev -- help`.
+## Quick check without UI
 
-- Ask which model it is using:
+```bash
+bun install
+env KILO_V2_PROFILE=$(mktemp -d) bun dev run --standalone "Reply with only the word ok."
+```
 
-  ```text
-  Which model are you using?
-  ```
+Expected: the answer `ok`, no error.
 
-- Ask it to use two subagents, changing settings first if needed to trigger a permission prompt:
+## TUI check (skill harness)
 
-  ```text
-  Use two subagents in parallel. Have one subagent run date, and have the other subagent run whoami.
-  ```
+Start the TUI signed out (`env XDG_DATA_HOME=$T/empty KILO_V2_PROFILE=$T/profile bun <v2>/script/dev-isolated.ts --standalone`), then:
 
-  If `date` and `whoami` do not trigger a permission prompt, use:
-
-  ```text
-  Use two subagents in parallel. Have one subagent run date, and have the other subagent run npm install.
-  ```
-
-- Quickly ask a simple follow-up question to verify queued messages work:
+- The home screen shows `ctrl+p commands`.
+- Send a prompt on the free model (`kilo/kilo-auto/free`, or the default free model when signed out):
 
   ```text
-  What is 2 + 2?
+  What is 2 + 2? Reply with only the number.
   ```
 
-- Ask about a favourite animal and have it provide options:
+  Expected: `4`.
 
-  ```text
-  What is my favourite animal? Please provide a few options for me to choose from.
-  ```
+- Type `/connect`. Expected: the provider list shows Kilo Gateway. Press Escape before any credential input.
+- `logs` prints no `level=ERROR` lines.
 
-- Change the model and ask about the favourite animal again:
+## More scenarios when the sync touched these areas
 
-  ```text
-  What is my favourite animal?
-  ```
+- Two subagents in parallel (`Use two subagents in parallel. Have one run date, and the other run whoami.`), with a permission prompt.
+- A queued follow-up message while the agent is busy (`What is 2 + 2?`).
+- A question with options (`What is my favourite animal? Please provide a few options for me to choose from.`).
+- Change the model (`Control+x`, then `m`) and ask again.
+- An `@` mention attaches a file and the agent reads it.
 
-- Find `/review` and run it:
-
-  ```text
-  /review branch
-  ```
-
-- Change from Code mode to Ask mode and ask what it can do:
-
-  ```text
-  What can you do in Ask mode?
-  ```
-
-## VS Code Extension
-
-Start the VS Code extension from this branch with `bun install` if dependencies are missing, then `bun run extension` from the repository root. Use `bun run extension -- --no-build` only when a current build already exists.
-
-Run all CLI verification steps in the VS Code extension, then verify the extension-specific flows:
-
-- Use the diff button in the sidebar next to the Worktree button.
-- Use the Worktree button.
-- Open history, select a previous conversation, and ask:
-
-  ```text
-  What's the last thing I asked you?
-  ```
-
-- Create a worktree and ask:
-
-  ```text
-  In which branch are you?
-  ```
-
-- Open the diff viewer, make a comment, and send it to chat.
-- Run permissions on a subagent in a worktree:
-
-  ```text
-  Use a subagent to run whoami in this worktree.
-  ```
-
-- Ask it to read and edit a file by adding a random line:
-
-  ```text
-  Read README.md and edit it by adding one random test line at the end.
-  ```
+Record each scenario with pass, fail or blocked in the sync PR.

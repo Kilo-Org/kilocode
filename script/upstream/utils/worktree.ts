@@ -15,8 +15,11 @@ export interface RefInput {
 }
 
 export interface RefInfo {
+  /** Pristine upstream release commit */
   opencode: string
+  /** Kilo base before the merge */
   main: string
+  /** Snapshot of the automated merge, conflicts included */
   auto: string
   branch: string
   snapshot: string
@@ -56,7 +59,7 @@ async function assertWorktree(path: string) {
 async function assertClean(path: string) {
   const status = await $`git -C ${path} status --porcelain`.text()
   if (status.trim()) {
-    throw new Error(`${path} has local changes; clean it before refreshing opencode merge references`)
+    throw new Error(`${path} has local changes; clean it before refreshing upstream sync references`)
   }
 }
 
@@ -87,7 +90,7 @@ async function snapshot(input: RefInput) {
     await $`env GIT_INDEX_FILE=${idx} git read-tree ${input.base}`.quiet()
     await $`env GIT_INDEX_FILE=${idx} git add -A`.quiet()
     const tree = (await $`env GIT_INDEX_FILE=${idx} git write-tree`.text()).trim()
-    const msg = `chore: snapshot automated opencode merge for ${input.tag}`
+    const msg = `chore: snapshot automated upstream sync for ${input.tag}`
     const commit = await $`git commit-tree ${tree} -p ${input.base} -p ${input.merge} -m ${msg}`.text()
     return commit.trim()
   } finally {
@@ -97,11 +100,11 @@ async function snapshot(input: RefInput) {
 
 export async function prepare(input: RefInput): Promise<RefInfo> {
   const repo = await root()
-  const dir = join(repo, ".worktrees", "opencode-merge")
-  const opencode = join(dir, "opencode")
-  const main = join(dir, "kilo-main")
+  const dir = join(repo, ".worktrees", "upstream-sync")
+  const opencode = join(dir, "upstream")
+  const main = join(dir, "kilo-base")
   const auto = join(dir, "auto-merge")
-  const branch = `opencode-merge/auto-${slug(input.tag)}`
+  const branch = `upstream-sync-auto-${slug(input.tag)}`
 
   await mkdir(dir, { recursive: true })
   await $`git worktree prune`.quiet()

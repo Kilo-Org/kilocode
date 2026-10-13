@@ -4,8 +4,8 @@
  * merged upstream version.
  *
  * Usage:
- *   bun run script/upstream/fix-kilocode-markers.ts packages/opencode/src/file.ts
- *   bun run script/upstream/fix-kilocode-markers.ts packages/opencode/src/file.ts --dry-run
+ *   bun run script/upstream/fix-kilocode-markers.ts packages/core/src/file.ts
+ *   bun run script/upstream/fix-kilocode-markers.ts packages/core/src/file.ts --dry-run
  */
 
 import path from "node:path"

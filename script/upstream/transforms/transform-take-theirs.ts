@@ -12,7 +12,7 @@
  */
 
 import { $ } from "bun"
-import { info, success, warn, debug } from "../utils/logger"
+import { info, success, warn, debug, error } from "../utils/logger"
 import { defaultConfig } from "../utils/config"
 import { oursHasKilocodeChanges } from "../utils/git"
 
@@ -183,8 +183,12 @@ export function applyBrandingTransforms(content: string, verbose = false): { res
  */
 export async function transformTakeTheirs(file: string, options: TakeTheirsOptions = {}): Promise<TakeTheirsResult> {
   if (options.dryRun) {
-    info(`[DRY-RUN] Would take theirs and transform: ${file}`)
-    return { file, action: "transformed", replacements: 0, dryRun: true }
+    const content = await Bun.file(file)
+      .text()
+      .catch(() => "")
+    const { replacements } = applyBrandingTransforms(content, options.verbose)
+    info(`[DRY-RUN] Would transform ${file}: ${replacements} branding replacements`)
+    return { file, action: "transformed", replacements, dryRun: true }
   }
 
   // If our version has kilocode_change markers, flag for manual resolution
@@ -292,29 +296,32 @@ export async function transformAllTakeTheirs(options: TakeTheirsOptions = {}): P
 // CLI entry point
 if (import.meta.main) {
   const args = process.argv.slice(2)
-  const dryRun = args.includes("--dry-run")
+  const apply = args.includes("--apply")
+  const force = args.includes("--force")
   const verbose = args.includes("--verbose")
 
   const files = args.filter((a) => !a.startsWith("--"))
 
-  if (files.length === 0) {
-    info("Usage: transform-take-theirs.ts [--dry-run] [--verbose] <file1> <file2> ...")
+  if (apply && !defaultConfig.transforms.branding && !force) {
+    error("Branding transforms are off in the v2 config (transforms.branding); pass --force to apply")
     process.exit(1)
   }
 
-  if (dryRun) {
-    info("Running in dry-run mode (no files will be modified)")
-  }
-
-  const results = await transformConflictedTakeTheirs(files, { dryRun, verbose })
+  const dryRun = !apply
+  const results =
+    files.length > 0
+      ? await transformConflictedTakeTheirs(files, { dryRun, verbose })
+      : await transformAllTakeTheirs({ dryRun, verbose })
 
   const transformed = results.filter((r) => r.action === "transformed")
   const total = results.reduce((sum, r) => sum + r.replacements, 0)
 
-  console.log()
-  success(`Transformed ${transformed.length} files with ${total} replacements`)
-
-  if (dryRun) {
-    info("Run without --dry-run to apply changes")
+  for (const result of results) {
+    if (result.replacements > 0) console.log(`${result.file}: ${result.replacements} replacement(s)`)
   }
+
+  console.log()
+  success(apply ? `Transformed ${transformed.length} files with ${total} replacements` : `Would transform ${transformed.length} files with ${total} replacements`)
+
+  if (!apply) info("Run with --apply to write changes")
 }

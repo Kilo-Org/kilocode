@@ -23,7 +23,7 @@
 
 import { $ } from "bun"
 import { Glob } from "bun"
-import { info, success, warn, debug } from "../utils/logger"
+import { info, success, warn, debug, error } from "../utils/logger"
 import { defaultConfig } from "../utils/config"
 import { oursHasKilocodeChanges } from "../utils/git"
 
@@ -329,27 +329,26 @@ export async function transformConflictedI18n(
 // CLI entry point
 if (import.meta.main) {
   const args = process.argv.slice(2)
-  const dryRun = args.includes("--dry-run")
+  const apply = args.includes("--apply")
+  const force = args.includes("--force")
   const verbose = args.includes("--verbose")
   const conflicted = args.includes("--conflicted")
 
-  // Get specific files if provided
   const files = args.filter((a) => !a.startsWith("--"))
 
-  if (dryRun) {
-    info("Running in dry-run mode (no files will be modified)")
+  if (apply && !defaultConfig.transforms.branding && !force) {
+    error("Branding transforms are off in the v2 config (transforms.branding); pass --force to apply")
+    process.exit(1)
   }
+
+  const dryRun = !apply
 
   let results: I18nTransformResult[]
 
   if (conflicted && files.length > 0) {
     results = await transformConflictedI18n(files, { dryRun, verbose })
   } else if (files.length > 0) {
-    results = []
-    for (const file of files) {
-      const result = await transformI18nFile(file, { dryRun, verbose })
-      results.push(result)
-    }
+    results = await Promise.all(files.map((file) => transformI18nFile(file, { dryRun, verbose })))
   } else {
     results = await transformAllI18n({ dryRun, verbose })
   }
@@ -357,12 +356,14 @@ if (import.meta.main) {
   const totalReplacements = results.reduce((sum, r) => sum + r.replacements, 0)
   const totalPreserved = results.reduce((sum, r) => sum + r.preserved, 0)
 
+  for (const result of results) {
+    if (result.replacements > 0) console.log(`${result.file}: ${result.replacements} replacement(s)`)
+  }
+
   console.log()
-  success(`Processed ${results.length} files`)
+  success(apply ? `Transformed ${results.length} files` : `Would transform ${results.length} files`)
   info(`Total replacements: ${totalReplacements}`)
   info(`Total preserved lines: ${totalPreserved}`)
 
-  if (dryRun) {
-    info("Run without --dry-run to apply changes")
-  }
+  if (!apply) info("Run with --apply to write changes")
 }

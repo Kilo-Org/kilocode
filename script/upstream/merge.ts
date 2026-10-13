@@ -1,990 +1,421 @@
 #!/usr/bin/env bun
 /**
- * Upstream Merge Orchestration Script
+ * Upstream sync for the Kilo v2 line.
  *
- * Automates the process of merging upstream opencode changes into Kilo.
+ * Merges one upstream release commit (the parent of a `v2.x.y` tag on `upstream/dev`) into a new
+ * branch from `origin/v2`, resolves the known conflict types, and writes a sync report.
  *
  * Usage:
- *   bun run script/upstream/merge.ts [options]
+ *   bun script/upstream/merge.ts [options]
  *
  * Options:
- *   --version <version>  Target upstream version (e.g., v1.1.49)
- *   --commit <hash>      Target upstream commit hash
- *   --base-branch <name> Base branch to merge into, or HEAD for current branch (default: main)
- *   --dry-run            Preview changes without applying them
- *   --no-push            Don't push branches to remote
- *   --no-worktrees       Don't create auxiliary worktrees
- *   --report-only        Only generate conflict report, don't merge
- *   --verbose            Enable verbose logging
- *   --author <name>      Author name for branch prefix (default: from git config)
+ *   --version <tag>       Release to sync, for example v2.0.27 (default: the next release `v2` does not have)
+ *   --commit <sha>        Pin a commit on upstream/dev instead of a release (only for an unreleased fix Kilo needs)
+ *   --base-branch <name>  Base branch (default: v2, read from origin/v2). HEAD merges into the current branch in place
+ *   --branch <name>       Name of the sync branch (default: sync-v2-0-27)
+ *   --dry-run             Analyze and write the report only
+ *   --report-only         Same as --dry-run
+ *   --allow-skip          Allow a target that skips older releases
+ *   --no-fetch            Do not fetch origin and upstream
+ *   --no-worktrees        Do not create read-only reference worktrees
+ *   --no-install          Do not regenerate lock files
+ *   --push                Push the sync branch to origin after the merge commit
+ *   --output <path>       Report path (default: .git/upstream-sync/report-<tag>.md)
+ *   --verbose             Verbose logging
  */
 
 import { $ } from "bun"
 import * as git from "./utils/git"
 import * as logger from "./utils/logger"
-import * as version from "./utils/version"
 import * as report from "./utils/report"
 import * as worktree from "./utils/worktree"
-import { loadConfig, resolveBaseBranch } from "./utils/config"
-import { transformAll as transformPackageNames } from "./transforms/package-names"
-import { preserveAllVersions } from "./transforms/preserve-versions"
-import { keepOursFiles, resetToOurs } from "./transforms/keep-ours"
+import { loadConfig, resolveBaseBranch, type MergeConfig } from "./utils/config"
+import { compareVersions, findRelease, getSyncStatus, upstreamRef, type Release } from "./utils/version"
+import { pinned, syncMessage } from "./utils/upstream"
+import { keepOursFiles } from "./transforms/keep-ours"
 import { skipFiles } from "./transforms/skip-files"
-import { transformConflictedI18n, transformAllI18n } from "./transforms/transform-i18n"
-// New transforms for auto-resolving more conflict types
-import { transformConflictedTakeTheirs, transformAllTakeTheirs } from "./transforms/transform-take-theirs"
-import {
-  transformConflictedPackageJson,
-  transformAllPackageJson,
-  reconcileAllPackageJson,
-  assertBunPackageManager,
-} from "./transforms/transform-package-json"
-import { transformConflictedScripts, transformAllScripts } from "./transforms/transform-scripts"
-import { transformConflictedExtensions, transformAllExtensions } from "./transforms/transform-extensions"
-import { transformConflictedWeb, transformAllWeb } from "./transforms/transform-web"
-import { transformKiloWeb } from "./transforms/remove-kilo-web"
+import { transformConflictedI18n } from "./transforms/transform-i18n"
+import { transformConflictedTakeTheirs } from "./transforms/transform-take-theirs"
+import { transformConflictedPackageJson, assertBunPackageManager } from "./transforms/transform-package-json"
+import { transformConflictedScripts } from "./transforms/transform-scripts"
+import { transformConflictedExtensions } from "./transforms/transform-extensions"
+import { transformConflictedWeb } from "./transforms/transform-web"
 import { resolveLockFileConflicts, regenerateLockFiles } from "./transforms/lock-files"
-import { writeVersion } from "./utils/upstream"
+import { BASELINE } from "./utils/baseline"
 
-interface MergeOptions {
+export interface MergeOptions {
   version?: string
   commit?: string
   baseBranch?: string
+  branch?: string
   dryRun: boolean
-  push: boolean
+  allowSkip: boolean
+  fetch: boolean
   worktrees: boolean
-  reportOnly: boolean
+  install: boolean
+  push: boolean
+  output?: string
   verbose: boolean
-  author?: string
 }
 
-async function hasMergiraf(): Promise<boolean> {
-  const result = await $`mergiraf --version`.quiet().nothrow()
-  return result.exitCode === 0
+export function parseArgs(args: string[]): MergeOptions {
+  const value = (name: string) => {
+    const i = args.indexOf(name)
+    if (i === -1) return undefined
+    const next = args[i + 1]
+    if (!next || next.startsWith("--")) throw new Error(`Missing value for ${name}`)
+    return next
+  }
+  return {
+    version: value("--version"),
+    commit: value("--commit"),
+    baseBranch: value("--base-branch"),
+    branch: value("--branch"),
+    output: value("--output"),
+    dryRun: args.includes("--dry-run") || args.includes("--report-only"),
+    allowSkip: args.includes("--allow-skip"),
+    fetch: !args.includes("--no-fetch"),
+    worktrees: !args.includes("--no-worktrees"),
+    install: !args.includes("--no-install"),
+    push: args.includes("--push"),
+    verbose: args.includes("--verbose"),
+  }
 }
 
-function abortMissingMergiraf(): never {
-  logger.error("mergiraf is required but not installed.")
-  logger.info("  It provides syntax-aware resolution for imports, JSON/YAML/TOML,")
-  logger.info("  and other structural conflicts during upstream merges.")
-  logger.info("  Install via one of:")
-  logger.info("    brew install mergiraf                 # macOS / Linuxbrew")
-  logger.info("    cargo install mergiraf                # any platform with rustup")
-  logger.info("    nix profile install nixpkgs#mergiraf  # nix")
-  logger.info("  See https://mergiraf.org/installation.html for more options.")
-  process.exit(1)
+/** Sync branch name: `sync-v2-0-27` */
+export function branchName(release: Pick<Release, "tag">, config: MergeConfig) {
+  return `${config.branchPrefix}-${release.tag.replaceAll(".", "-")}`
+}
+
+export async function main(argv: string[]) {
+  // Transforms read repo-relative paths, so run from the repository root.
+  process.chdir((await $`git rev-parse --show-toplevel`.text()).trim())
+  const options = parseArgs(argv)
+  logger.setVerbose(options.verbose)
+  logger.header("Kilo v2 Upstream Sync")
+
+  logger.step(1, 7, "Validating environment...")
+  const current = await git.getCurrentBranch()
+  const base = resolveBaseBranch(options.baseBranch, current)
+  const config = loadConfig(base ? { baseBranch: base } : undefined)
+  const inplace = options.baseBranch === "HEAD"
+  await validate(config, options)
+
+  logger.step(2, 7, "Fetching...")
+  if (options.fetch) {
+    await git.fetchUpstream(config.upstreamRemote, config.upstreamBranch)
+    if (!inplace) await git.fetchOrigin(config.originRemote, config.baseBranch)
+  }
+  const baseRef = inplace ? "HEAD" : await remoteOrLocal(config)
+  const baseSha = await git.getCommitHash(baseRef)
+  logger.info(`Base: ${inplace ? `${current} (in place)` : baseRef} ${baseSha.slice(0, 11)}`)
+
+  logger.step(3, 7, "Determining target release...")
+  const status = await getSyncStatus(baseSha, config)
+  const target = await resolveTarget(options, config, status)
+  logger.success(`Target: ${target.tag} release commit ${target.commit.slice(0, 11)} (${target.date})`)
+
+  logger.step(4, 7, "Analyzing the merge...")
+  const pin = await pinned(baseSha, config)
+  const analysis = await report.analyzeSync(baseSha, target.commit, pin.commit, config)
+  const after = await statusAfter(target, status)
+  const sync: report.SyncReport = {
+    timestamp: new Date().toISOString(),
+    release: target,
+    baseBranch: inplace ? current : config.baseBranch,
+    baseCommit: baseSha,
+    mergeBranch: "",
+    analysis,
+    lagBefore: status.lag,
+    lagAfter: after,
+    notes: [],
+  }
+  printAnalysis(sync)
+
+  const reportFile = await report.reportPath(target.tag, options.output)
+  if (options.dryRun) {
+    await report.saveReport(sync, reportFile)
+    logger.success(`Report saved to ${reportFile}`)
+    return
+  }
+
+  logger.step(5, 7, "Creating the sync branch...")
+  const branch = inplace ? current : (options.branch ?? branchName(target, config))
+  if (!inplace) {
+    if (await git.branchExists(branch)) throw new Error(`Branch ${branch} exists. Delete it or pass --branch`)
+    await $`git switch --no-track -c ${branch} ${baseSha}`.quiet()
+  }
+  sync.mergeBranch = branch
+  logger.info(`Sync branch: ${branch}`)
+
+  await git.ensureRerere()
+  const learned = await git.trainRerere("^chore(upstream): sync v")
+  if (learned > 0) logger.success(`rerere learned ${learned} resolution(s) from earlier syncs`)
+
+  logger.step(6, 7, `Merging ${target.tag}...`)
+  const message = syncMessage(target.tag, target.commit)
+  const merged = await git.merge(target.commit, message)
+  if (!merged.success) {
+    logger.warn(`${merged.conflicts.length} conflict(s):`)
+    logger.list(merged.conflicts)
+    await resolve(config, options, sync)
+  }
+
+  const workflows = await checkWorkflows()
+  const remaining = await git.getConflictedFiles()
+  if (merged.success || remaining.length === 0) await lockFiles(options, sync)
+
+  if (remaining.length > 0 || !workflows.ok) {
+    if (!workflows.ok) {
+      logger.warn("Unexpected workflows after the merge:")
+      logger.list(workflows.errors)
+      sync.notes.push(...workflows.errors.map((e) => `Workflow: ${e}`))
+    }
+    if (remaining.length > 0) {
+      logger.warn(`${remaining.length} conflict(s) need manual resolution:`)
+      logger.list(remaining)
+      sync.notes.push(...remaining.map((file) => `Manual conflict: \`${file}\``))
+    }
+    await report.saveReport(sync, reportFile)
+    logger.success(`Report saved to ${reportFile}`)
+    await references(options, target, baseSha)
+    logger.divider()
+    logger.info("Next steps:")
+    logger.info("  1. Resolve the conflicts. Keep Kilo's kilocode_change lines, take upstream's other changes.")
+    logger.info("     For a new upstream workflow: review it, add it to `active` or `removed` in")
+    logger.info("     script/check-workflows.ts, then run `bun script/check-workflows.ts --fix`.")
+    logger.info("  2. git add <files> && git commit --no-edit   (keeps the message: " + message + ")")
+    logger.info("  3. bun install, then the checks in script/upstream/README.md")
+    logger.info("To abort: git merge --abort")
+    process.exit(1)
+  }
+
+  await validateBun(baseSha, target.commit)
+  await git.stageAll()
+  await git.commitMerge(message)
+  logger.success(`Committed: ${message}`)
+
+  logger.step(7, 7, "Finishing...")
+  await guards(sync)
+  if (options.push) {
+    await git.push(config.originRemote, branch, true)
+    logger.success(`Pushed ${branch}`)
+  }
+  await report.saveReport(sync, reportFile)
+  logger.success(`Report saved to ${reportFile}`)
+  await references(options, target, baseSha)
+
+  logger.divider()
+  logger.info("Next steps:")
+  logger.info("  1. bun install, bun script/check-workflows.ts, bun run check, focused tests, self-test")
+  logger.info(`  2. Open a PR from ${branch} into ${config.baseBranch}. Merge it with a merge commit, never squash.`)
+}
+
+async function validate(config: MergeConfig, options: MergeOptions) {
+  if (!(await git.hasUpstreamRemote(config.upstreamRemote))) {
+    logger.error(`No '${config.upstreamRemote}' remote. Add it:`)
+    logger.info(`  git remote add ${config.upstreamRemote} ${config.upstreamUrl}`)
+    process.exit(1)
+  }
+  if (!options.dryRun && (await git.hasUncommittedChanges())) {
+    logger.error("The working tree has changes. Commit or stash them first.")
+    process.exit(1)
+  }
+  const mergiraf = await $`mergiraf --version`.quiet().nothrow()
+  if (mergiraf.exitCode !== 0) {
+    logger.warn("mergiraf is not installed: no syntax-aware conflict resolution (brew install mergiraf)")
+  }
+}
+
+async function remoteOrLocal(config: MergeConfig) {
+  const remote = `${config.originRemote}/${config.baseBranch}`
+  const result = await $`git rev-parse --verify --quiet ${remote}`.quiet().nothrow()
+  return result.exitCode === 0 ? remote : config.baseBranch
+}
+
+async function resolveTarget(
+  options: MergeOptions,
+  config: MergeConfig,
+  status: Awaited<ReturnType<typeof getSyncStatus>>,
+): Promise<Release> {
+  const branch = upstreamRef(config)
+  if (options.commit) {
+    const commit = await git.getCommitHash(`${options.commit}^{commit}`)
+    if (!(await git.isAncestor(commit, branch))) {
+      throw new Error(`${options.commit} is not on ${branch}. Never merge ${config.frozenBranches.join(", ")}`)
+    }
+    const release = status.releases.find((r) => r.commit === commit)
+    const date = (await $`git log -1 --format=%cI ${commit}`.quiet().text()).trim()
+    return release ?? { version: "unreleased", tag: `dev-${commit.slice(0, 11)}`, tagCommit: commit, commit, date }
+  }
+
+  const release = options.version ? findRelease(status.releases, options.version) : status.next
+  if (!release && options.version) {
+    logger.error(`Release ${options.version} not found on ${branch}. Run: bun script/upstream/list-versions.ts`)
+    process.exit(1)
+  }
+  if (!release) {
+    logger.success(`The base has the newest release (${status.merged?.tag}). Nothing to sync.`)
+    process.exit(0)
+  }
+  if (status.merged && compareVersions(release.version, status.merged.version) <= 0) {
+    logger.error(`The base already has ${release.tag} (newest merged: ${status.merged.tag})`)
+    process.exit(1)
+  }
+  const skipped = status.pending.filter((r) => compareVersions(r.version, release.version) < 0)
+  if (skipped.length > 0 && !options.allowSkip) {
+    logger.error(`${release.tag} skips ${skipped.map((r) => r.tag).join(", ")}. Sync release by release, or pass --allow-skip`)
+    process.exit(1)
+  }
+  return release
+}
+
+async function statusAfter(target: Release, status: Awaited<ReturnType<typeof getSyncStatus>>) {
+  const pending = status.pending.filter((r) => compareVersions(r.version, target.version) > 0)
+  const newest = status.releases[0]
+  const days =
+    newest && pending.length > 0 ? Math.round(((Date.parse(newest.date) - Date.parse(target.date)) / 86_400_000) * 10) / 10 : 0
+  return { releases: pending.length, days }
+}
+
+function printAnalysis(sync: report.SyncReport) {
+  const a = sync.analysis
+  logger.info(`Commits added to history: ${a.commits}`)
+  logger.info(`Files changed upstream: ${a.changed}`)
+  logger.info(`Harness change: ${a.harness.files} files, +${a.harness.insertions} / -${a.harness.deletions}`)
+  logger.info(`Lag before: ${sync.lagBefore.releases} release(s), ${sync.lagBefore.days} day(s)`)
+  logger.info(`Lag after: ${sync.lagAfter.releases} release(s), ${sync.lagAfter.days} day(s)`)
+  logger.info(`Conflicts: ${a.conflicts.length}`)
+  for (const c of a.conflicts) logger.info(`  - ${c.path} (${c.kind}): ${c.recommendation}`)
+  if (a.newWorkflows.length > 0) {
+    logger.warn("New upstream workflows (review, then add to `active` or `removed` in script/check-workflows.ts):")
+    logger.list(a.newWorkflows)
+  }
+  logger.info(`Shared files touched: ${a.sharedTouched.length}`)
+  logger.list(a.sharedTouched)
+}
+
+/** Resolve the known conflict types. Files that need a person stay conflicted. */
+async function resolve(config: MergeConfig, options: MergeOptions, sync: report.SyncReport) {
+  const transform = { dryRun: false, verbose: options.verbose }
+
+  // Workflows that Kilo removed: `--fix` removes them, which also resolves their modify/delete conflicts.
+  const fix = await $`bun script/check-workflows.ts --fix`.quiet().nothrow()
+  const removed = fix.stdout.toString().split("\n").filter((line) => line.startsWith("check-workflows: removed"))
+  if (removed.length > 0) logger.success(`Removed ${removed.length} workflow(s) that Kilo dropped`)
+
+  const skipped = (await skipFiles(transform)).filter((r) => r.action === "removed")
+  if (skipped.length > 0) logger.success(`Removed ${skipped.length} skipped file(s)`)
+
+  const kept = (await keepOursFiles(transform)).filter((r) => r.action === "kept")
+  if (kept.length > 0) logger.success(`Kept Kilo's version of ${kept.length} Kilo-owned file(s)`)
+
+  const solved = await mergiraf(await git.getConflictedFiles())
+  if (solved > 0) logger.success(`mergiraf resolved ${solved} file(s)`)
+
+  const flagged: string[] = []
+  const passes = [
+    ...(config.transforms.branding
+      ? [transformConflictedI18n, transformConflictedTakeTheirs, transformConflictedScripts, transformConflictedExtensions, transformConflictedWeb]
+      : []),
+    transformConflictedPackageJson,
+  ]
+  for (const pass of passes) {
+    const files = await git.getConflictedFiles()
+    if (files.length === 0) break
+    const results: { file: string; action?: string; flagged?: boolean }[] = await pass(files, transform)
+    flagged.push(...results.filter((r) => r.action === "flagged" || r.flagged).map((r) => r.file))
+  }
+  if (flagged.length > 0) {
+    logger.warn("Files with kilocode_change markers, left for manual resolution:")
+    logger.list(flagged)
+    sync.notes.push(...flagged.map((file) => `Has kilocode_change markers: \`${file}\``))
+  }
+
+  const lock = (await resolveLockFileConflicts(transform)).filter((r) => r.action === "resolved")
+  if (lock.length > 0) logger.success(`Lock file conflicts: kept ours for ${lock.length}, regenerating after the merge`)
 }
 
 /**
- * Attempt syntax-aware resolution of conflicted files via mergiraf.
- * Assumes `git merge` was invoked with `merge.conflictStyle=zdiff3`, so the
- * working tree already contains base-aware markers that mergiraf can feed
- * into its structural heuristics.
- *
- * Only runs on files whose working-tree content actually contains text
- * conflict markers. Delete/modify (UD/DU) and similar non-textual conflicts
- * have no markers — running `mergiraf solve` + `git add` on them would
- * silently stage the file with our side of the conflict, losing the signal
- * that upstream deleted (or that we deleted what upstream modified). Those
- * are left untouched for manual review.
- *
- * Only stages files mergiraf resolves completely (no conflict markers
- * remain). Partial resolutions are left unstaged so the remaining markers
- * show up for manual review — we never auto-commit a partially-resolved
- * file. Per-file failures are logged at debug level and skipped so the
- * overall merge continues to the next transform pass.
+ * Syntax-aware resolution with mergiraf. Only files with text conflict markers are tried, and only
+ * fully resolved files are staged. A modify/delete conflict has no markers and stays for review.
  */
-async function runMergiraf(files: string[]): Promise<{ solved: number; partial: number; skipped: number }> {
-  let solved = 0
-  let partial = 0
-  let skipped = 0
-  for (const file of files) {
-    const before = await Bun.file(file)
-      .text()
-      .catch(() => "")
-    if (!before) {
-      logger.debug(`skipping ${file}: file missing from working tree (likely delete/modify conflict)`)
-      skipped++
-      continue
-    }
-    if (!before.includes("<<<<<<< ")) {
-      // No text conflict markers — this is a non-textual conflict (UD/DU,
-      // add/add with identical content, submodule, binary, etc.). Running
-      // mergiraf + git add here would silently stage our side as resolved.
-      logger.debug(`skipping ${file}: no conflict markers (non-textual conflict, needs manual review)`)
-      skipped++
-      continue
-    }
-    const mg = await $`mergiraf solve --keep-backup=false ${file}`.quiet().nothrow()
-    const after = await Bun.file(file)
-      .text()
-      .catch(() => "")
-    if (!after) {
-      logger.debug(`skipping ${file}: empty after mergiraf (exit ${mg.exitCode})`)
-      continue
-    }
-    if (after.includes("<<<<<<< ")) {
-      // exit 2 = mergiraf reduced but didn't fully resolve; exit 1 = no change.
-      // Either way the working tree still has markers, so leave it unstaged
-      // for manual review rather than silently staging a half-resolved file.
-      logger.debug(`${file}: mergiraf left conflict markers (exit ${mg.exitCode}) — unstaged for manual review`)
-      if (mg.exitCode === 2) partial++
-      continue
-    }
-    const add = await $`git add ${file}`.quiet().nothrow()
-    if (add.exitCode !== 0) {
-      logger.debug(`${file}: git add failed (exit ${add.exitCode}) — leaving for next transform pass`)
-      continue
-    }
-    solved++
-  }
-  return { solved, partial, skipped }
-}
-
-function parseArgs(): MergeOptions {
-  const args = process.argv.slice(2)
-
-  const options: MergeOptions = {
-    dryRun: args.includes("--dry-run"),
-    push: !args.includes("--no-push"),
-    worktrees: !args.includes("--no-worktrees"),
-    reportOnly: args.includes("--report-only"),
-    verbose: args.includes("--verbose"),
-  }
-
-  const versionIdx = args.indexOf("--version")
-  if (versionIdx !== -1 && args[versionIdx + 1]) {
-    options.version = args[versionIdx + 1]
-  }
-
-  const commitIdx = args.indexOf("--commit")
-  if (commitIdx !== -1 && args[commitIdx + 1]) {
-    options.commit = args[commitIdx + 1]
-  }
-
-  const authorIdx = args.indexOf("--author")
-  if (authorIdx !== -1 && args[authorIdx + 1]) {
-    options.author = args[authorIdx + 1]
-  }
-
-  const baseBranchIdx = args.indexOf("--base-branch")
-  if (baseBranchIdx !== -1 && args[baseBranchIdx + 1]) {
-    options.baseBranch = args[baseBranchIdx + 1]
-  }
-
-  return options
-}
-
-function logWorktrees(refs: worktree.RefInfo, input: worktree.RefInput, baseName: string): void {
-  logger.divider()
-  logger.info("Reference worktrees:")
-  logger.info(`  opencode:   ${refs.opencode} (${input.tag}, ${input.upstream.slice(0, 8)})`)
-  logger.info(`  kilo-main:  ${refs.main} (${baseName}, ${input.base.slice(0, 8)})`)
-  logger.info(`  auto-merge: ${refs.auto} (${refs.branch}, ${refs.snapshot.slice(0, 8)})`)
-  logger.info("")
-  logger.info("Agent prompt:")
-  logger.info("  Use these references while resolving the merge:")
-  logger.info(`  - upstream opencode: ${refs.opencode}`)
-  logger.info(`  - Kilo base main: ${refs.main}`)
-  logger.info(`  - automated merge snapshot: ${refs.auto}`)
-}
-
-async function prepareWorktrees(options: MergeOptions, input: worktree.RefInput, baseName: string) {
-  if (!options.worktrees) return null
-
-  logger.info("Preparing reference worktrees...")
-  const refs = await worktree.prepare(input)
-  logWorktrees(refs, input, baseName)
-  return refs
-}
-
-async function getAuthor(): Promise<string> {
-  const result = await $`git config user.name`.text()
-  return result
-    .trim()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .replace(/\s+/g, "")
-}
-
-function manager(content: string): string | undefined {
-  const pkg: unknown = JSON.parse(content)
-  if (!pkg || typeof pkg !== "object" || !("packageManager" in pkg)) return undefined
-  return typeof pkg.packageManager === "string" ? pkg.packageManager : undefined
-}
-
-async function managerAt(ref: string): Promise<string | undefined> {
-  const result = await $`git show ${ref}:package.json`.quiet().nothrow()
-  if (result.exitCode === 0) return manager(result.stdout.toString())
-  logger.warn(`Could not read package.json at ${ref}; excluding it from Bun packageManager validation`)
-  return undefined
-}
-
-async function validateBun(base: string, upstream: string): Promise<void> {
-  const current = manager(await Bun.file("package.json").text())
-  const ours = await managerAt(base)
-  const theirs = await managerAt(upstream)
-  assertBunPackageManager(current, ours, theirs)
-  logger.success(`Validated Bun packageManager: ${current ?? "missing"}`)
-}
-
-async function createBackupBranch(baseBranch: string): Promise<string> {
-  const timestamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19)
-  const backupName = `backup/${baseBranch}-${timestamp}`
-
-  await git.createBranch(backupName, baseBranch)
-  await git.checkout(baseBranch)
-
-  return backupName
-}
-
-async function main() {
-  // Ensure all relative paths resolve against the repo root, not whichever
-  // directory the user invoked the script from. Transforms feed git-reported
-  // paths (repo-relative) straight into Bun.file() and Glob.scan(), so running
-  // from script/upstream/ would silently break every file lookup.
-  process.chdir((await $`git rev-parse --show-toplevel`.text()).trim())
-
-  const options = parseArgs()
-
-  if (options.verbose) {
-    logger.setVerbose(true)
-  }
-
-  logger.header("Kilo Upstream Merge Tool")
-
-  // Step 1: Validate environment
-  logger.step(1, 8, "Validating environment...")
-
-  if (!(await git.hasUpstreamRemote())) {
-    logger.error("No 'upstream' remote found. Please add it:")
-    logger.info("  git remote add upstream git@github.com:anomalyco/opencode.git")
-    process.exit(1)
-  }
-
-  if (!(await hasMergiraf())) {
-    abortMissingMergiraf()
-  }
-
-  if (await git.hasUncommittedChanges()) {
-    logger.error("Working directory has uncommitted changes. Please commit or stash them first.")
-    process.exit(1)
-  }
-
-  const currentBranch = await git.getCurrentBranch()
-  logger.info(`Current branch: ${currentBranch}`)
-
-  const base = resolveBaseBranch(options.baseBranch, currentBranch)
-  const config = loadConfig(base ? { baseBranch: base } : undefined)
-  if (options.baseBranch === "HEAD") {
-    logger.info(`Resolved --base-branch HEAD to current branch: ${config.baseBranch}`)
-  }
-
-  // Enable git rerere so conflict resolutions are recorded and reused across merges
-  if (!options.dryRun) {
-    await git.ensureRerere()
-    logger.info("git rerere enabled (resolutions will be recorded and reused automatically)")
-
-    // Train rerere from past upstream merge commits so the cache is populated
-    // even on a fresh clone. This replays past merges to learn their resolutions.
-    // The grep covers both the current convention ("merge: upstream vX.Y.Z") and the
-    // historical convention used by older upstream merges ("[Rr]esolve merge conflicts").
-    // Without the lowercase alternative, ~70 past merges are dropped from training on
-    // this repo, since most older resolution commits use a lowercase "resolve".
-    if (options.worktrees) {
-      logger.info("Training rerere cache from past merge history...")
-      const learned = await git.trainRerere("merge: upstream\\|[Rr]esolve merge conflict")
-      if (learned > 0) {
-        logger.success(`Learned ${learned} conflict resolution(s) from history`)
-      }
-      if (learned === 0) {
-        logger.info("No new resolutions to learn from history (cache already up to date)")
-      }
-    }
-    if (!options.worktrees) {
-      logger.info("Skipping rerere history training because --no-worktrees was requested")
-    }
-  }
-
-  // Step 2: Fetch upstream
-  logger.step(2, 8, "Fetching upstream...")
-
-  if (!options.dryRun) {
-    await git.fetchUpstream()
-  }
-
-  // Step 3: Determine target version/commit
-  logger.step(3, 8, "Determining target version...")
-
-  let targetVersion: version.VersionInfo | null = null
-
-  if (options.commit) {
-    targetVersion = await version.getVersionForCommit(options.commit)
-    if (!targetVersion) {
-      targetVersion = {
-        version: "unknown",
-        tag: "unknown",
-        commit: options.commit,
-      }
-    }
-  } else if (options.version) {
-    const versions = await version.getAvailableUpstreamVersions()
-    targetVersion = versions.find((v) => v.version === options.version || v.tag === options.version) || null
-
-    if (!targetVersion) {
-      logger.error(`Version ${options.version} not found in upstream`)
-      logger.info("Available versions:")
-      for (const v of versions.slice(0, 10)) {
-        logger.info(`  - ${v.tag} (${v.commit.slice(0, 8)})`)
-      }
-      process.exit(1)
-    }
-  } else {
-    targetVersion = await version.getLatestUpstreamVersion()
-  }
-
-  if (!targetVersion) {
-    logger.error("Could not determine target version")
-    process.exit(1)
-  }
-
-  logger.success(`Target: ${targetVersion.tag} (${targetVersion.commit.slice(0, 8)})`)
-
-  // Step 4: Generate conflict report
-  logger.step(4, 8, "Analyzing potential conflicts...")
-
-  // Use the commit hash or tag directly (tags are fetched, not remote refs)
-  const upstreamRef = targetVersion.commit || targetVersion.tag
-  const conflicts = await report.analyzeConflicts(upstreamRef, config.baseBranch, config.keepOurs, config.skipFiles)
-
-  const conflictReport: report.ConflictReport = {
-    timestamp: new Date().toISOString(),
-    upstreamVersion: targetVersion.version,
-    upstreamCommit: targetVersion.commit,
-    baseBranch: config.baseBranch,
-    mergeBranch: "", // Will be set later
-    totalConflicts: conflicts.length,
-    conflicts,
-    recommendations: [],
-  }
-
-  // Add recommendations
-  const skipCount = conflicts.filter((c) => c.recommendation === "skip").length
-  const i18nCount = conflicts.filter((c) => c.recommendation === "i18n-transform").length
-  const keepOursCount = conflicts.filter((c) => c.recommendation === "keep-ours").length
-  const codemodCount = conflicts.filter((c) => c.recommendation === "codemod").length
-  const manualCount = conflicts.filter((c) => c.recommendation === "manual").length
-
-  if (skipCount > 0) {
-    conflictReport.recommendations.push(`${skipCount} files will be skipped (auto-removed)`)
-  }
-  if (i18nCount > 0) {
-    conflictReport.recommendations.push(`${i18nCount} i18n files will be auto-transformed`)
-  }
-  if (keepOursCount > 0) {
-    conflictReport.recommendations.push(`${keepOursCount} files will keep Kilo's version`)
-  }
-  if (codemodCount > 0) {
-    conflictReport.recommendations.push(`${codemodCount} files will be processed by codemods`)
-  }
-  if (manualCount > 0) {
-    conflictReport.recommendations.push(`${manualCount} files require manual review`)
-  }
-
-  logger.info(`Total files changed: ${conflicts.length}`)
-  logger.info(`  - Skip (auto-remove): ${skipCount}`)
-  logger.info(`  - i18n transform: ${i18nCount}`)
-  logger.info(`  - Keep ours: ${keepOursCount}`)
-  logger.info(`  - Codemod: ${codemodCount}`)
-  logger.info(`  - Manual review: ${manualCount}`)
-
-  if (options.reportOnly) {
-    const reportPath = `upstream-merge-report-${targetVersion.version}.md`
-    await report.saveReport(conflictReport, reportPath)
-    logger.success(`Report saved to ${reportPath}`)
-    process.exit(0)
-  }
-
-  if (options.dryRun) {
-    logger.info("[DRY-RUN] Would proceed with merge")
-    const reportPath = `upstream-merge-report-${targetVersion.version}.md`
-    await report.saveReport(conflictReport, reportPath)
-    logger.success(`Report saved to ${reportPath}`)
-    process.exit(0)
-  }
-
-  // Step 5: Create branches
-  logger.step(5, 8, "Creating branches...")
-
-  const author = options.author || (await getAuthor())
-  const kiloVersion = await version.getCurrentKiloVersion()
-  const dirs = ["packages/ui/src/assets/icons/provider", "packages/ui/src/components/provider-icons"]
-  const kiloBranch = `${author}/kilo-opencode-${targetVersion.tag}`
-  const inplace = options.baseBranch === "HEAD" && currentBranch === kiloBranch
-
-  logger.info("Resetting generated provider icons before checkout...")
-  await git.restoreDirectories(dirs)
-  await git.cleanDirectories(dirs)
-
-  // Create backup branch
-  await git.checkout(config.baseBranch)
-  if (options.baseBranch !== "HEAD") {
-    await git.pull(config.originRemote)
-  }
-  if (options.baseBranch === "HEAD") {
-    logger.info("Using the checked-out HEAD as the merge base without pulling")
-  }
-  const baseSha = await git.getCommitHash("HEAD")
-  const backupBranch = await createBackupBranch(config.baseBranch)
-  logger.info(`Created backup branch: ${backupBranch}`)
-
-  // Create Kilo merge branch
-  if (inplace) {
-    logger.info(`Using the checked-out target branch in place: ${kiloBranch}`)
-  }
-  if (!inplace) {
-    const kiloBackup = await git.backupAndDeleteBranch(kiloBranch)
-    if (kiloBackup) {
-      logger.info(`Backed up existing branch to: ${kiloBackup}`)
-    }
-    await git.createBranch(kiloBranch)
-  }
-
-  if (options.push) {
-    await git.push(config.originRemote, kiloBranch, true)
-  }
-  logger.info(`Created Kilo branch: ${kiloBranch}`)
-
-  // Create opencode compatibility branch from upstream commit
-  const opencodeBranch = `${author}/opencode-${targetVersion.tag}`
-  const opencodeBackup = await git.backupAndDeleteBranch(opencodeBranch)
-  if (opencodeBackup) {
-    logger.info(`Backed up existing branch to: ${opencodeBackup}`)
-  }
-  await git.checkout(targetVersion.commit)
-  await git.createBranch(opencodeBranch)
-  logger.info(`Created opencode branch: ${opencodeBranch}`)
-
-  const prior = await git.findLatestCompatCommit(config.baseBranch, targetVersion.commit)
-  if (prior) {
-    logger.info(
-      `Found previous compatibility base: ${prior.message} (${prior.commit.slice(0, 8)}) from upstream ${prior.upstream.slice(0, 8)}`,
-    )
-  } else {
-    logger.warn("No previous compatibility base found; merge base will remain pristine upstream")
-  }
-
-  // Step 6: Apply ALL transformations to opencode branch (pre-merge)
-  // This reduces conflicts by transforming upstream code to Kilo conventions BEFORE merging
-  logger.step(6, 8, "Applying transformations to opencode branch (pre-merge)...")
-
-  logger.info("Removing files skipped in Kilo...")
-  const skips = await skipFiles({ dryRun: false, verbose: options.verbose, force: true })
-  const count = skips.filter((r) => r.action === "removed").length
-  if (count > 0) {
-    logger.success(`Removed ${count} skipped file(s) from opencode branch`)
-  }
-
-  // Kilo does not ship upstream's embedded web UI command. Remove the known
-  // registration before merging so upstream updates cannot restore it silently.
-  logger.info("Removing unsupported Kilo web command...")
-  const webCommand = await transformKiloWeb({ dryRun: false, verbose: options.verbose })
-  if (webCommand.removals > 0) {
-    logger.success("Removed unsupported Kilo web command registration")
-  }
-
-  // 6a. Transform package names (opencode-ai -> @kilocode/cli)
-  logger.info("Transforming package names...")
-  const nameResults = await transformPackageNames({ dryRun: false, verbose: options.verbose })
-  logger.success(`Transformed ${nameResults.length} files`)
-
-  // 6b. Preserve Kilo versions
-  logger.info("Preserving Kilo versions...")
-  const versionResults = await preserveAllVersions({
-    dryRun: false,
-    verbose: options.verbose,
-    targetVersion: kiloVersion,
-  })
-  logger.success(`Preserved versions in ${versionResults.length} files`)
-
-  // 6c. Transform i18n files (OpenCode -> Kilo branding)
-  logger.info("Transforming i18n files...")
-  const i18nPreResults = await transformAllI18n({ dryRun: false, verbose: options.verbose })
-  const i18nPreCount = i18nPreResults.filter((r) => r.replacements > 0).length
-  if (i18nPreCount > 0) {
-    logger.success(`Transformed ${i18nPreCount} i18n files with Kilo branding`)
-  }
-
-  // 6d. Transform branding-only files (take-theirs patterns)
-  logger.info("Transforming branding-only files...")
-  const brandingResults = await transformAllTakeTheirs({ dryRun: false, verbose: options.verbose })
-  const brandingCount = brandingResults.filter((r) => r.action === "transformed" && r.replacements > 0).length
-  if (brandingCount > 0) {
-    logger.success(`Transformed ${brandingCount} files with Kilo branding`)
-  }
-
-  // 6f. Transform package.json files (names, deps, Kilo injections)
-  logger.info("Transforming package.json files...")
-  const pkgPreResults = await transformAllPackageJson({ dryRun: false, verbose: options.verbose })
-  const pkgPreCount = pkgPreResults.filter((r) => r.action === "transformed" && r.changes.length > 0).length
-  if (pkgPreCount > 0) {
-    logger.success(`Transformed ${pkgPreCount} package.json files`)
-  }
-
-  // 6g. Transform script files (GitHub API references)
-  logger.info("Transforming script files...")
-  const scriptPreResults = await transformAllScripts({ dryRun: false, verbose: options.verbose })
-  const scriptPreCount = scriptPreResults.filter((r) => r.action === "transformed" && r.replacements > 0).length
-  if (scriptPreCount > 0) {
-    logger.success(`Transformed ${scriptPreCount} script files`)
-  }
-
-  // 6h. Transform extension files (Zed, etc.)
-  logger.info("Transforming extension files...")
-  const extPreResults = await transformAllExtensions({ dryRun: false, verbose: options.verbose })
-  const extPreCount = extPreResults.filter((r) => r.action === "transformed" && r.replacements > 0).length
-  if (extPreCount > 0) {
-    logger.success(`Transformed ${extPreCount} extension files`)
-  }
-
-  // 6i. Transform web/docs files
-  logger.info("Transforming web/docs files...")
-  const webPreResults = await transformAllWeb({ dryRun: false, verbose: options.verbose })
-  const webPreCount = webPreResults.filter((r) => r.action === "transformed" && r.replacements > 0).length
-  if (webPreCount > 0) {
-    logger.success(`Transformed ${webPreCount} web/docs files`)
-  }
-
-  // 6j. Reset keep-ours files to Kilo's version
-  logger.info("Resetting Kilo-specific files...")
-  const keepOursResults = await resetToOurs(config.keepOurs, { dryRun: false, verbose: options.verbose })
-  logger.success(`Reset ${keepOursResults.length} files to Kilo's version`)
-
-  // 6k. Record the last merged upstream tag so future automation can find it
-  // without walking ls-remote + isAncestor for every tag.
-  const versionFile = await writeVersion(targetVersion.tag)
-  logger.success(`Recorded ${targetVersion.tag} in ${versionFile.split("/").pop()}`)
-
-  // Clean untracked build artifacts from Kilo-specific directories.
-  // These packages don't exist in upstream, so their .gitignore files are absent
-  // on the opencode branch. Artifacts like bin/, out/, .next/ etc. would otherwise
-  // be picked up by the git add -A below.
-  logger.info("Cleaning Kilo-specific directory artifacts...")
-  await git.cleanDirectories(config.kiloDirectories)
-
-  // Commit all transformations
-  await git.stageAll()
-  const compatMessage = `refactor: kilo compat for ${targetVersion.tag}`
-  if (prior) {
-    const transformed = await git.writeTree()
-    const tree = await git.overlayCompatTree({
-      previous: prior.commit,
-      upstream: prior.upstream,
-      target: targetVersion.commit,
-      transformed,
-      extra: [".opencode-version"],
-    })
-    const commit = await git.createCommit(tree, compatMessage, prior.commit)
-    await git.updateBranch(opencodeBranch, commit)
-    await $`git reset --hard ${commit}`.quiet()
-  } else {
-    await git.commit(compatMessage)
-  }
-  logger.success("Committed pre-merge transformations")
-
-  // Step 7: Merge into Kilo branch
-  logger.step(7, 8, "Merging into Kilo branch...")
-
-  await git.checkout(kiloBranch)
-  if (prior) {
-    const linked = await git.recordAncestor(targetVersion.commit, `merge: record upstream ${targetVersion.tag}`)
-    if (linked) logger.info(`Recorded upstream ${targetVersion.tag} as Kilo branch ancestry`)
-  }
-  const mergeResult = await git.merge(opencodeBranch)
-
-  if (!mergeResult.success) {
-    logger.warn("Merge has conflicts (these should only be files with actual code differences)")
-    logger.info("Conflicted files:")
-    logger.list(mergeResult.conflicts)
-
-    // Check if git rerere already auto-resolved any conflicts from recorded history.
-    // rerere.autoupdate stages them automatically; we just log how many were handled.
-    const rerereResolved = await git.getRerereResolved()
-    if (rerereResolved.length > 0) {
-      logger.success(`git rerere auto-resolved ${rerereResolved.length} conflict(s) from recorded history:`)
-      logger.list(rerereResolved)
-    }
-
-    // Since we applied all branding transforms pre-merge, remaining conflicts should be minimal.
-    // These are likely files with kilocode_change markers or actual logic differences.
-
-    // Step 7a: Skip files that shouldn't exist in Kilo
-    logger.info("Removing files that shouldn't exist in Kilo...")
-    const skipResults = await skipFiles({ dryRun: false, verbose: options.verbose })
-    const skippedCount = skipResults.filter((r) => r.action === "removed").length
-    if (skippedCount > 0) {
-      logger.success(`Skipped ${skippedCount} files (removed from merge)`)
-    }
-
-    // Step 7b: Auto-resolve keep-ours conflicts
-    logger.info("Keeping Kilo-specific files...")
-    const resolved = await keepOursFiles({ dryRun: false, verbose: options.verbose })
-    const autoResolved = resolved.filter((r) => r.action === "kept")
-    if (autoResolved.length > 0) {
-      logger.success(`Auto-resolved ${autoResolved.length} conflicts (kept Kilo's version)`)
-    }
-
-    // Step 7c: Try to auto-resolve remaining conflicts with post-merge transforms
-    // These handle edge cases where pre-merge transforms might have missed something.
-    // Files with kilocode_change markers are flagged for manual resolution instead.
-    let conflictedFiles = await git.getConflictedFiles()
-    const flaggedFiles: string[] = []
-
-    if (conflictedFiles.length > 0) {
-      logger.info("Attempting to auto-resolve remaining conflicts...")
-
-      // Step 7c-pre: syntax-aware resolution via mergiraf.
-      // Handles the common pattern of neighbouring import additions around
-      // kilocode_change markers, plus JSON/YAML/TOML key merges and other
-      // structural conflicts. Presence is enforced at startup.
-      logger.info("Running mergiraf on remaining conflicts...")
-      const mgResult = await runMergiraf(conflictedFiles)
-      if (mgResult.solved > 0) {
-        logger.success(`mergiraf auto-resolved ${mgResult.solved} conflict(s)`)
-        conflictedFiles = await git.getConflictedFiles()
-      } else {
-        logger.info("mergiraf did not fully resolve any conflicts")
-      }
-      if (mgResult.partial > 0) {
-        logger.info(
-          `mergiraf partially resolved ${mgResult.partial} file(s) — remaining markers left unstaged for manual review`,
-        )
-      }
-      if (mgResult.skipped > 0) {
-        logger.info(
-          `mergiraf skipped ${mgResult.skipped} file(s) with non-textual conflicts (delete/modify, binary, etc.) — left for manual review`,
-        )
-      }
-
-      // Transform i18n files
-      const i18nResults = await transformConflictedI18n(conflictedFiles, { dryRun: false, verbose: options.verbose })
-      const i18nTransformed = i18nResults.filter((r) => r.replacements > 0).length
-      if (i18nTransformed > 0) {
-        logger.success(`Auto-resolved ${i18nTransformed} i18n conflicts`)
-      }
-      const i18nFlagged = i18nResults.filter((r) => r.flagged).map((r) => r.file)
-      if (i18nFlagged.length > 0) {
-        logger.warn(`${i18nFlagged.length} i18n file(s) have kilocode_change markers — flagged for manual resolution`)
-        flaggedFiles.push(...i18nFlagged)
-      }
-
-      // Transform branding-only files
-      conflictedFiles = await git.getConflictedFiles()
-      if (conflictedFiles.length > 0) {
-        const takeTheirsResults = await transformConflictedTakeTheirs(conflictedFiles, {
-          dryRun: false,
-          verbose: options.verbose,
-        })
-        const takeTheirsCount = takeTheirsResults.filter((r) => r.action === "transformed").length
-        if (takeTheirsCount > 0) {
-          logger.success(`Auto-resolved ${takeTheirsCount} branding conflicts`)
-        }
-        const takeFlagged = takeTheirsResults.filter((r) => r.action === "flagged").map((r) => r.file)
-        if (takeFlagged.length > 0) {
-          logger.warn(
-            `${takeFlagged.length} branding file(s) have kilocode_change markers — flagged for manual resolution`,
-          )
-          flaggedFiles.push(...takeFlagged)
-        }
-      }
-
-      // Transform package.json files
-      conflictedFiles = await git.getConflictedFiles()
-      if (conflictedFiles.length > 0) {
-        const pkgResults = await transformConflictedPackageJson(conflictedFiles, {
-          dryRun: false,
-          verbose: options.verbose,
-        })
-        const pkgCount = pkgResults.filter((r) => r.action === "transformed").length
-        if (pkgCount > 0) {
-          logger.success(`Auto-resolved ${pkgCount} package.json conflicts`)
-        }
-        const pkgFlagged = pkgResults.filter((r) => r.action === "flagged").map((r) => r.file)
-        if (pkgFlagged.length > 0) {
-          logger.warn(
-            `${pkgFlagged.length} package.json file(s) have kilocode_change markers — flagged for manual resolution`,
-          )
-          flaggedFiles.push(...pkgFlagged)
-        }
-      }
-
-      // Transform script files
-      conflictedFiles = await git.getConflictedFiles()
-      if (conflictedFiles.length > 0) {
-        const scriptResults = await transformConflictedScripts(conflictedFiles, {
-          dryRun: false,
-          verbose: options.verbose,
-        })
-        const scriptCount = scriptResults.filter((r) => r.action === "transformed").length
-        if (scriptCount > 0) {
-          logger.success(`Auto-resolved ${scriptCount} script conflicts`)
-        }
-        const scriptFlagged = scriptResults.filter((r) => r.action === "flagged").map((r) => r.file)
-        if (scriptFlagged.length > 0) {
-          logger.warn(
-            `${scriptFlagged.length} script file(s) have kilocode_change markers — flagged for manual resolution`,
-          )
-          flaggedFiles.push(...scriptFlagged)
-        }
-      }
-
-      // Transform extension files
-      conflictedFiles = await git.getConflictedFiles()
-      if (conflictedFiles.length > 0) {
-        const extResults = await transformConflictedExtensions(conflictedFiles, {
-          dryRun: false,
-          verbose: options.verbose,
-        })
-        const extCount = extResults.filter((r) => r.action === "transformed").length
-        if (extCount > 0) {
-          logger.success(`Auto-resolved ${extCount} extension conflicts`)
-        }
-        const extFlagged = extResults.filter((r) => r.action === "flagged").map((r) => r.file)
-        if (extFlagged.length > 0) {
-          logger.warn(
-            `${extFlagged.length} extension file(s) have kilocode_change markers — flagged for manual resolution`,
-          )
-          flaggedFiles.push(...extFlagged)
-        }
-      }
-
-      // Transform web/docs files
-      conflictedFiles = await git.getConflictedFiles()
-      if (conflictedFiles.length > 0) {
-        const webResults = await transformConflictedWeb(conflictedFiles, {
-          dryRun: false,
-          verbose: options.verbose,
-        })
-        const webCount = webResults.filter((r) => r.action === "transformed").length
-        if (webCount > 0) {
-          logger.success(`Auto-resolved ${webCount} web/docs conflicts`)
-        }
-        const webFlagged = webResults.filter((r) => r.action === "flagged").map((r) => r.file)
-        if (webFlagged.length > 0) {
-          logger.warn(
-            `${webFlagged.length} web/docs file(s) have kilocode_change markers — flagged for manual resolution`,
-          )
-          flaggedFiles.push(...webFlagged)
-        }
-      }
-
-      // Resolve lock file conflicts (accept ours, will regenerate later)
-      conflictedFiles = await git.getConflictedFiles()
-      if (conflictedFiles.length > 0) {
-        const lockResults = await resolveLockFileConflicts({
-          dryRun: false,
-          verbose: options.verbose,
-        })
-        const lockCount = lockResults.filter((r) => r.action === "resolved").length
-        if (lockCount > 0) {
-          logger.success(`Resolved ${lockCount} lock file conflicts (will regenerate)`)
-        }
-      }
-    }
-
-    // Reconcile every package.json that the merge touched, regardless of
-    // whether it was conflicted, auto-resolved by rerere, or merged textually.
-    // rerere can replay stale resolutions that bypass our package.json
-    // transform entirely, so always run our merge logic as the final word for
-    // package.json content. Skip files that are still conflicted so the user
-    // can resolve them manually instead of silently overwriting markers.
-    const stillConflicted = new Set(await git.getConflictedFiles())
-    const reconcileResults = await reconcileAllPackageJson({
-      oursRef: baseSha,
-      theirsRef: opencodeBranch,
-      verbose: options.verbose,
-      skip: stillConflicted,
-    })
-    const reconcileCount = reconcileResults.filter((r) => r.action === "transformed" && r.changes.length > 0).length
-    if (reconcileCount > 0) {
-      logger.success(`Reconciled ${reconcileCount} package.json file(s) post-merge`)
-    }
-
-    // Check remaining conflicts
-    const remaining = await git.getConflictedFiles()
-    // Combine git-reported conflicts with files flagged due to kilocode_change markers
-    const allManual = [...new Set([...remaining, ...flaggedFiles])]
-    if (allManual.length > 0) {
-      if (flaggedFiles.length > 0) {
-        logger.warn(`${flaggedFiles.length} file(s) were flagged because they contain kilocode_change markers:`)
-        logger.list(flaggedFiles)
-        logger.info("  These files have intentional Kilo-specific changes. Keep our version or merge carefully.")
-        logger.info("")
-      }
-      if (remaining.length > 0) {
-        logger.warn(`${remaining.length} conflict(s) still require manual resolution:`)
-        logger.list(remaining)
-      }
-      logger.info("")
-      logger.info("These conflicts contain kilocode_change markers or actual code differences.")
-      logger.info("After resolving conflicts, run:")
-      logger.info("  git add -A && git commit -m 'resolve merge conflicts'")
-
-      // Save report before exiting so user has documentation
-      conflictReport.mergeBranch = kiloBranch
-      const reportPath = `upstream-merge-report-${targetVersion.version}.md`
-      await report.saveReport(conflictReport, reportPath)
-      logger.success(`Report saved to ${reportPath}`)
-
-      await prepareWorktrees(
-        options,
-        {
-          tag: targetVersion.tag,
-          upstream: targetVersion.commit,
-          base: await git.getCommitHash("HEAD"),
-          merge: await git.getCommitHash(opencodeBranch),
-        },
-        config.baseBranch,
-      )
-
-      logger.divider()
-      logger.info("Next steps:")
-      logger.info("  1. Resolve remaining conflicts manually")
-      logger.info("  2. git add -A && git commit -m 'resolve merge conflicts'")
-      logger.info(`  3. git push ${config.originRemote} ${kiloBranch}`)
-      logger.info("  4. Create PR from " + kiloBranch + " to " + config.baseBranch)
-      logger.info("")
-      logger.info("To rollback:")
-      logger.info(`  git checkout ${config.baseBranch}`)
-      logger.info(`  git reset --hard ${backupBranch}`)
-
-      // Exit early - don't continue to finalization steps
-      process.exit(1)
-    } else {
-      await validateBun(baseSha, targetVersion.commit)
-      await git.stageAll()
-      await git.commit(`merge: upstream ${targetVersion.tag}`)
-      logger.success("Merge completed - all conflicts auto-resolved!")
-    }
-  } else {
-    logger.success("Merge completed without conflicts!")
-    // Same reconcile pass as the conflict path: ensure rerere or git's textual
-    // merge can't slip stale package.json resolutions through.
-    const reconcileResults = await reconcileAllPackageJson({
-      oursRef: baseSha,
-      theirsRef: opencodeBranch,
-      verbose: options.verbose,
-    })
-    const reconcileCount = reconcileResults.filter((r) => r.action === "transformed" && r.changes.length > 0).length
-    if (reconcileCount > 0) {
-      logger.success(`Reconciled ${reconcileCount} package.json file(s) post-merge`)
-    }
-    await validateBun(baseSha, targetVersion.commit)
-    await git.stageAll()
-    const hasChanges = await git.hasUncommittedChanges()
-    if (hasChanges) {
-      await git.commit(`merge: upstream ${targetVersion.tag}`)
-    }
-  }
-
-  const autoSha = await git.getCommitHash("HEAD")
-
-  // Step 8: Regenerate lock files and finalize
-  logger.step(8, 8, "Regenerating lock files and finalizing...")
-
-  // Regenerate lock files (bun.lock, Cargo.lock, etc.)
-  const lockRegenResults = await regenerateLockFiles({ dryRun: false, verbose: options.verbose })
-  const regeneratedCount = lockRegenResults.filter((r) => r.action === "regenerated").length
-  if (regeneratedCount > 0) {
-    logger.success(`Regenerated ${regeneratedCount} lock file(s)`)
-    // Stage and commit the regenerated lock files
-    await git.stageAll()
-    const hasLockChanges = await git.hasUncommittedChanges()
-    if (hasLockChanges) {
-      await git.commit("chore: regenerate lock files after upstream merge")
-      logger.success("Committed regenerated lock files")
-    }
-  }
-
-  // Regenerate OpenAPI spec and SDK (keeps generated files in sync with merged code)
-  logger.info("Regenerating OpenAPI spec and SDK...")
-  const regenResult = await $`bun ./script/generate.ts`.quiet().nothrow()
-  if (regenResult.exitCode === 0) {
-    logger.success("Regenerated OpenAPI spec and SDK")
-    await git.stageAll()
-    const hasSpecChanges = await git.hasUncommittedChanges()
-    if (hasSpecChanges) {
-      await git.commit("chore: regenerate openapi spec and sdk after upstream merge")
-      logger.success("Committed regenerated OpenAPI spec and SDK")
-    }
-  } else {
-    logger.warn("OpenAPI spec regeneration failed — run ./script/generate.ts manually after resolving any issues")
-    logger.warn(regenResult.stderr.toString().trim())
-  }
-
-  if (options.push) {
-    await git.push(config.originRemote, kiloBranch)
-    logger.success(`Pushed ${kiloBranch} to ${config.originRemote}`)
-  }
-
-  // Update merge branch in report
-  conflictReport.mergeBranch = kiloBranch
-
-  // Save final report
-  const reportPath = `upstream-merge-report-${targetVersion.version}.md`
-  await report.saveReport(conflictReport, reportPath)
-  logger.success(`Report saved to ${reportPath}`)
-
-  // Summary
-  logger.divider()
-  logger.header("Merge Summary")
-
-  logger.info(`Upstream version: ${targetVersion.tag}`)
-  logger.info(`Kilo branch: ${kiloBranch}`)
-  logger.info(`Opencode branch: ${opencodeBranch}`)
-  logger.info(`Backup branch: ${backupBranch}`)
-  logger.info(`Report: ${reportPath}`)
-
-  await prepareWorktrees(
-    options,
-    {
-      tag: targetVersion.tag,
-      upstream: targetVersion.commit,
-      base: baseSha,
-      merge: opencodeBranch,
-      snapshot: autoSha,
-    },
-    config.baseBranch,
+async function mergiraf(files: string[]) {
+  const results = await Promise.all(
+    files.map(async (file) => {
+      const before = await Bun.file(file)
+        .text()
+        .catch(() => "")
+      if (!before.includes("<<<<<<< ")) return false
+      await $`mergiraf solve --keep-backup=false ${file}`.quiet().nothrow()
+      const after = await Bun.file(file)
+        .text()
+        .catch(() => "")
+      if (!after || after.includes("<<<<<<< ")) return false
+      return (await $`git add ${file}`.quiet().nothrow()).exitCode === 0
+    }),
   )
-
-  const remainingConflicts = await git.getConflictedFiles()
-  if (remainingConflicts.length > 0) {
-    logger.warn(`${remainingConflicts.length} conflicts need manual resolution`)
-  } else {
-    logger.success("All conflicts resolved")
-  }
-
-  logger.divider()
-
-  logger.info("Next steps:")
-  if (remainingConflicts.length > 0) {
-    logger.info("  1. Resolve remaining conflicts")
-    logger.info("  2. git add -A && git commit -m 'resolve merge conflicts'")
-    logger.info(`  3. git push ${config.originRemote} ${kiloBranch}`)
-    logger.info("  4. Create PR from " + kiloBranch + " to " + config.baseBranch)
-  } else {
-    logger.info("  1. Review changes")
-    logger.info("  2. Create PR from " + kiloBranch + " to " + config.baseBranch)
-  }
-
-  logger.info("")
-  logger.info("To rollback:")
-  logger.info(`  git checkout ${config.baseBranch}`)
-  logger.info(`  git reset --hard ${backupBranch}`)
+  return results.filter(Boolean).length
 }
 
-main().catch((err) => {
-  logger.error(`Fatal error: ${err}`)
-  process.exit(1)
-})
+async function checkWorkflows() {
+  const result = await $`bun script/check-workflows.ts`.quiet().nothrow()
+  const errors = result.stderr
+    .toString()
+    .split("\n")
+    .filter((line) => /^(unexpected|removed|expected) /.test(line))
+  return { ok: result.exitCode === 0, errors }
+}
+
+async function lockFiles(options: MergeOptions, sync: report.SyncReport) {
+  if (!options.install) return
+  const results = await regenerateLockFiles({ dryRun: false, verbose: options.verbose })
+  const skipped = results.filter((r) => r.action === "skipped" || r.action === "failed")
+  if (skipped.length > 0) sync.notes.push("bun.lock was not regenerated (Bun version or install error). Run `bun install` with the pinned Bun")
+}
+
+async function validateBun(base: string, upstream: string) {
+  const read = async (ref?: string) => {
+    const text = ref ? await $`git show ${`${ref}:package.json`}`.quiet().text() : await Bun.file("package.json").text()
+    return JSON.parse(text).packageManager
+  }
+  assertBunPackageManager(await read(), await read(base), await read(upstream))
+}
+
+/**
+ * Run the annotation check and the shared-patch counter on the result, for the report. A branch
+ * without the scripts or the baseline uses the copies next to this tool.
+ */
+async function guards(sync: report.SyncReport) {
+  const local = await Bun.file(BASELINE).exists()
+  const baseline = local ? BASELINE : new URL("./shared-patches.json", import.meta.url).pathname
+  if (!local) sync.notes.push(`The branch has no \`${BASELINE}\`: the guards used the copy of this tool`)
+  for (const name of ["check-opencode-annotations.ts", "check-shared-patches.ts"]) {
+    const branch = `script/${name}`
+    const script = (await Bun.file(branch).exists()) ? branch : new URL(`../${name}`, import.meta.url).pathname
+    const result = await $`bun ${script} --baseline ${baseline}`.quiet().nothrow()
+    console.log(result.stdout.toString() + result.stderr.toString())
+    if (result.exitCode === 0) logger.success(`${name}: ok`)
+    if (result.exitCode !== 0) {
+      logger.warn(`${name} failed`)
+      sync.notes.push(`\`${name}\` fails after the merge. Fix it in the sync PR`)
+    }
+  }
+}
+
+async function references(options: MergeOptions, target: Release, base: string) {
+  if (!options.worktrees) return
+  const refs = await worktree.prepare({ tag: target.tag, upstream: target.commit, base, merge: target.commit })
+  logger.divider()
+  logger.info("Read-only reference worktrees:")
+  logger.info(`  upstream:   ${refs.opencode} (${target.tag}, ${target.commit.slice(0, 11)})`)
+  logger.info(`  kilo base:  ${refs.main} (${base.slice(0, 11)})`)
+  logger.info(`  auto-merge: ${refs.auto} (${refs.branch})`)
+}
+
+if (import.meta.main) {
+  main(process.argv.slice(2)).catch((err) => {
+    logger.error(`Fatal error: ${err instanceof Error ? err.message : err}`)
+    process.exit(1)
+  })
+}

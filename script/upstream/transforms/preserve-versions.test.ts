@@ -2,34 +2,45 @@ import { describe, expect, test } from "bun:test"
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
-import { preserveZedVersion } from "./preserve-versions"
+import { getCurrentVersion, preserveVersion } from "./preserve-versions"
 
-describe("preserveZedVersion", () => {
-  test("preserves the Kilo extension version and release archives", async () => {
-    const dir = await mkdtemp(join(tmpdir(), "kilo-zed-version-"))
-    const file = join(dir, "extension.toml")
+describe("getCurrentVersion", () => {
+  test("reads the root package.json version", async () => {
+    const root = new URL("../../../package.json", import.meta.url)
+    const expected = (await Bun.file(root).json()).version
+    expect(await getCurrentVersion()).toBe(expected)
+  })
+})
+
+describe("preserveVersion", () => {
+  test("writes the target version into a package.json", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "kilo-version-"))
+    const file = join(dir, "package.json")
     try {
-      await writeFile(
-        file,
-        [
-          'version = "1.14.42"',
-          'archive = "https://github.com/Kilo-Org/kilocode/releases/download/v1.14.42/opencode-linux-x64.tar.gz"',
-          "",
-        ].join("\n"),
-      )
+      await writeFile(file, `${JSON.stringify({ name: "x", version: "0.0.1" }, null, 2)}\n`)
 
-      expect(await preserveZedVersion(file, { targetVersion: "7.3.18" })).toMatchObject({
+      expect(await preserveVersion(file, { targetVersion: "7.3.18" })).toMatchObject({
         file,
-        originalVersion: "1.14.42",
+        originalVersion: "0.0.1",
         preserved: true,
       })
-      expect(await readFile(file, "utf8")).toBe(
-        [
-          'version = "7.3.18"',
-          'archive = "https://github.com/Kilo-Org/kilocode/releases/download/v7.3.18/opencode-linux-x64.tar.gz"',
-          "",
-        ].join("\n"),
-      )
+      expect(JSON.parse(await readFile(file, "utf8")).version).toBe("7.3.18")
+    } finally {
+      await rm(dir, { recursive: true, force: true })
+    }
+  })
+
+  test("does not write in dry-run mode", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "kilo-version-"))
+    const file = join(dir, "package.json")
+    try {
+      await writeFile(file, `${JSON.stringify({ name: "x", version: "0.0.1" }, null, 2)}\n`)
+
+      expect(await preserveVersion(file, { targetVersion: "7.3.18", dryRun: true })).toMatchObject({
+        preserved: true,
+        dryRun: true,
+      })
+      expect(JSON.parse(await readFile(file, "utf8")).version).toBe("0.0.1")
     } finally {
       await rm(dir, { recursive: true, force: true })
     }

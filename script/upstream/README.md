@@ -1,426 +1,134 @@
-# Upstream Merge Automation
+# Upstream sync tooling (Kilo v2 line)
 
-Scripts for automating the merge of upstream opencode changes into Kilo.
+Scripts to sync Kilo's `v2` branch with upstream OpenCode, release by release, and to keep Kilo's patches in shared upstream files small and visible.
 
-## Quick Start
+- Integration branch: `origin/v2`. Upstream source: `upstream/dev` (upstream's v2 line since 2026-10-10). Never merge `upstream/v2`: it is frozen at `4617210822b`.
+- Each sync merges one **release commit**: the parent of a `v2.x.y` tag. Upstream tags a version-bump commit next to `dev`, so the tag itself is not on the branch.
+- Sync each release in order, at least weekly. One PR per release, from a branch off `origin/v2`.
+- The merge commit message is `chore(upstream): sync v2.x.y (<sha11>)`. The checks use it to find the pinned upstream release.
+- **Merge the PR with "Create a merge commit". Never squash or rebase**: that drops the upstream ancestry, and the next sync conflicts again.
+- Upstream package names (`@opencode/*`) stay until decision D-1. The package-name transform and the branding codemods are in the code but off in `utils/config.ts`.
+
+v1 (`main`) keeps its own copy of this tooling. This copy is for the v2 line only.
+
+## Quick start
 
 ```bash
-# Install dependencies (from script/upstream directory)
-cd script/upstream
+git remote add upstream https://github.com/anomalyco/opencode.git   # once
+bun install --cwd script/upstream                                     # once, for the codemods (ts-morph)
+
+bun script/upstream/list-versions.ts              # releases, which ones v2 has, next target, lag
+bun script/upstream/analyze.ts                    # dry run of the next sync: conflicts, new workflows, shared files touched
+bun script/upstream/merge.ts                      # merge the next release into a new branch sync-v2-x-y from origin/v2
+bun script/upstream/merge.ts --version v2.0.27    # a given release
+```
+
+In an Agent Manager worktree that is already on a fresh branch from `origin/v2`, merge in place: `bun script/upstream/merge.ts --base-branch HEAD`.
+
+## What `merge.ts` does
+
+1. Checks the `upstream` remote and a clean working tree. mergiraf is optional (`brew install mergiraf`).
+2. Fetches `upstream/dev` with tags, and `origin/v2`.
+3. Picks the target: the next release that the base does not have, or `--version`. It refuses a target that skips an older release (`--allow-skip` overrides) and a commit that is not on `upstream/dev`.
+4. Analyzes the merge with `git merge-tree` and prints the report: conflicts with a recommendation, new upstream workflows, shared files that Kilo patched and upstream changed, commits added to history, harness change size, and the lag before and after (releases and days).
+5. Creates `sync-v2-x-y` from `origin/v2` (or uses the current branch with `--base-branch HEAD`), enables rerere and trains it from earlier sync merges.
+6. Runs `git merge --no-ff --no-commit` with the sync message, then resolves what it can:
+   - `bun script/check-workflows.ts --fix`: removes workflows that Kilo dropped. This also resolves their modify/delete conflicts.
+   - `skipFiles`, `keepOurs` and Kilo-owned paths (`utils/owned.ts`): keep Kilo's version.
+   - mergiraf: syntax-aware resolution, staged only when no marker is left.
+   - package.json: `transforms/transform-package-json.ts` (take upstream, re-apply Kilo's listed fields).
+   - Branding transforms: only when `transforms.branding` is on.
+   - Lock files: keep ours, then regenerate with `bun install` (only with the Bun version from `packageManager`).
+7. Runs `bun script/check-workflows.ts` and lists unexpected workflows.
+8. If conflicts or unexpected workflows are left, it stops with the merge in progress and writes the report. Otherwise it commits the merge, runs `script/check-opencode-annotations.ts` and `script/check-shared-patches.ts`, and writes the report.
+
+Reports go to `$(git rev-parse --absolute-git-dir)/upstream-sync/report-<tag>.md`, so they are never committed.
+
+### Options
+
+| Option | Use |
+|---|---|
+| `--version <tag>` | Release to sync, for example `v2.0.27` |
+| `--commit <sha>` | Pin a commit on `upstream/dev`. Only for an unreleased fix that Kilo needs |
+| `--base-branch <name>` | Base branch (default `v2`, read from `origin/v2`). `HEAD` merges into the current branch in place |
+| `--branch <name>` | Sync branch name (default `sync-v2-x-y`) |
+| `--dry-run`, `--report-only` | Analysis and report only |
+| `--allow-skip` | Allow a target that skips older releases |
+| `--no-fetch` | Do not fetch |
+| `--no-worktrees` | No read-only reference worktrees |
+| `--no-install` | Do not regenerate lock files |
+| `--push` | Push the sync branch after the merge commit (off by default) |
+| `--output <path>` | Report path |
+
+Reference worktrees (`.worktrees/upstream-sync/`): `upstream` (pristine release commit), `kilo-base` (the base before the merge) and `auto-merge` (the automated merge with its conflicts). They are read-only evidence.
+
+## Resolving what is left
+
+- Keep Kilo's `kilocode_change` lines and take upstream's other changes. Never drop upstream code without a reason in the PR.
+- When a conflict hits a Kilo patch, check the plugin-first order before you re-apply it, and record the result in the sync PR:
+  1. Kilo plugin on the public plugin API (`@opencode/plugin`).
+  2. Kilo host (U-E0-01): `SdkPlugins.register`, Effect layer overrides such as `Global.layerWith`, environment translation at the entry. It does not exist yet.
+  3. Small, generic seam patch in a shared file, marked `kilocode_change`, in a file that changes rarely.
+  4. Feature patch in a shared file, marked, last resort, with the reason in the PR.
+  5. Branding and product strings: the rename script (codemods below), never hand edits.
+
+  Move the code in a follow-up PR: the sync PR contains only the merge and the conflict resolutions.
+- New upstream workflow: review it, add it to `active` or `removed` in `script/check-workflows.ts`, then `bun script/check-workflows.ts --fix`.
+- Conclude with `git commit --no-edit` to keep the sync message.
+- `.kilo/agent/upstream-merge.md` has the detailed resolution workflow.
+
+## Verify a sync
+
+```bash
 bun install
-
-# List available upstream versions
-bun run list-versions.ts
-
-# Analyze changes for a specific version (without merging)
-bun run analyze.ts --version v1.1.49
-
-# Run the full merge process
-bun run merge.ts --version v1.1.49
-
-# Dry-run to preview what would happen
-bun run merge.ts --version v1.1.49 --dry-run
-
-# Use a different base branch (e.g., for incremental merges)
-bun run merge.ts --version v1.1.50 --base-branch username/kilo-opencode-v1.1.44
+bun script/check-workflows.ts
+bun run check                                   # or bun typecheck in packages/core, cli, server, tui, plugin
+bun script/check-opencode-annotations.ts
+bun script/check-shared-patches.ts
 ```
 
-## Scripts
+Then run focused tests in `packages/core`, `cli` and `server` with the test isolation from `.kilo/skills/v2-migration/SKILL.md`, run the same tests on `origin/v2`, and classify each failure as new or already failing. Self-test the CLI as the skill describes (`VERIFICATION_TEST.md`).
 
-### Main Scripts
+The sync PR body gives: release and SHA, lag before and after, each conflict and its resolution, shared files touched, tooling gaps, the test comparison, self-test evidence, and in bold: **Merge with 'Create a merge commit'. Do not squash or rebase.**
 
-| Script | Description |
+## Shared-patch checks
+
+Both checks compare the tree with the pinned upstream release commit: the second parent of the newest `chore(upstream): sync` merge in the history, or the initial base of `v2` (`5e73d5cb1f7`, release commit of v2.0.26) before the first sync. They need no network, only a full history.
+
+- `bun script/check-opencode-annotations.ts [--worktree] [--pin <ref>]`: fails on a Kilo line in a shared upstream file without a `kilocode_change` marker. A file that cannot carry markers (JSON) needs an `unmarked` reason in `shared-patches.json`.
+- `bun script/check-shared-patches.ts [--worktree] [--json] [--pin <ref>]` (U-L3-01): prints each shared file that Kilo adds or changes, its marked and unmarked lines, and the shared files Kilo deleted. It fails when a shared file has no entry in `shared-patches.json` (rung and missing seam), or when a count grows above its limit. A PR that adds a shared patch adds the entry and raises the limit in the same diff. Deleted workflows are not counted: `script/check-workflows.ts` governs them.
+
+CI runs both in `.github/workflows/kilo-v2.yml` (job `shared upstream patches`), and the tests of this directory (job `upstream sync tooling tests`).
+
+## Per-file tools
+
+| Command | Use |
 |---|---|
-| `merge.ts` | Main orchestration script for upstream merges |
-| `list-versions.ts` | List available upstream versions |
-| `analyze.ts` | Analyze changes without merging |
-| `opencode-changesets.ts` | Generate Kilo changesets from upstream opencode release notes |
-| `fix-kilocode-markers.ts` | Rebuild `kilocode_change` markers for one file against the last merged upstream |
-| `reset-to-upstream.ts` | Reset one file to the transformed last merged upstream version |
-| `find-reset-candidates.ts` | Bulk-find files that have drifted insignificantly from upstream and (optionally) reset them |
+| `bun script/upstream/fix-kilocode-markers.ts <file> [--dry-run]` | Rebuild the markers of one shared file from its diff with the pinned upstream release |
+| `bun script/upstream/reset-to-upstream.ts <file> [--dry-run]` | Reset one file to the pinned upstream release (with the enabled transforms) |
+| `bun script/upstream/find-reset-candidates.ts [path] [--dry-run]` | Find shared files whose diff with upstream is only markers or whitespace, and reset them |
+| `script/upstream/find-conflict-markers.sh <file>` | Print the conflict markers of a file |
 
-### Transform Scripts
+## Transforms and codemods
 
-| Script | Description |
+| Tool | v2 state |
 |---|---|
-| `transforms/package-names.ts` | Transform opencode package names to kilo |
-| `transforms/preserve-versions.ts` | Preserve Kilo's package versions |
-| `transforms/keep-ours.ts` | Keep Kilo's version of specific files |
-| `transforms/skip-files.ts` | Skip/remove files that shouldn't exist in Kilo |
-| `transforms/remove-kilo-web.ts` | Remove the unsupported embedded web command and warn when upstream reshapes it |
-| `transforms/transform-i18n.ts` | Transform i18n files with Kilo branding |
-| `transforms/transform-take-theirs.ts` | Take upstream + apply Kilo branding for branding-only files |
-| `transforms/transform-package-json.ts` | Enhanced package.json with Kilo dependency injection and newest-Bun-wins reconciliation |
-| `transforms/transform-scripts.ts` | Transform script files with GitHub API references |
-| `transforms/transform-extensions.ts` | Transform extension files (Zed, etc.) |
-| `transforms/transform-web.ts` | Transform web/docs files (.mdx) |
+| `transforms/keep-ours.ts` | On. Kilo-owned paths and `keepOurs` (empty on v2) |
+| `transforms/skip-files.ts` | On. `skipFiles` is empty on v2: workflows go through `script/check-workflows.ts` |
+| `transforms/lock-files.ts` | On. Keep ours, regenerate with the pinned Bun |
+| `transforms/transform-package-json.ts` | On for conflicted package.json files. Re-applies Kilo's root `dev` script |
+| `transforms/package-names.ts` | Off until decision D-1 (`transforms.packageNames`) |
+| `transforms/preserve-versions.ts` | Off: v2 follows upstream version numbers (`transforms.versions`) |
+| `transforms/transform-i18n.ts`, `transform-take-theirs.ts`, `transform-scripts.ts`, `transform-extensions.ts`, `transform-web.ts` | Off until rebranding (`transforms.branding`) |
+| `codemods/transform-strings.ts`, `codemods/transform-imports.ts` | Off until rebranding. Default is a dry-run report of each change; `--apply` writes |
 
-### Codemods (AST-based)
+Each branding CLI prints a dry-run report by default (`bun script/upstream/codemods/transform-strings.ts`). `--apply` writes, and refuses while the switch is off unless `--force` is given.
 
-| Script | Description |
+## Not ported from v1
+
+| v1 tool | Reason |
 |---|---|
-| `codemods/transform-imports.ts` | Transform import statements using ts-morph |
-| `codemods/transform-strings.ts` | Transform string literals |
-
-## Release Notes Changesets
-
-After merging upstream opencode releases, use `opencode-changesets.ts` to turn the upstream GitHub release notes into Kilo changesets:
-
-```bash
-bun script/upstream/opencode-changesets.ts --from 1.17.0 --to 1.17.7
-```
-
-The script fetches releases from `anomalyco/opencode`, selects published releases in the semver range `(from, to]`, and writes one `.changeset/opencode-vX-Y-Z-to-vX-Y-Z.md` file for the whole range. It requires the target release to exist, merges notes from every release into shared `##` sections and `###` categories, then folds those headings into each bullet (for example, `Core Bugfixes: ...`) so Changesets can embed the notes cleanly in package changelogs. It generates a patch changeset for the fixed release group, `@kilocode/cli` and `kilo-code`. Generated notes omit contributor thank-you blocks and the upstream `Desktop` and `SDK` sections by default because Kilo does not ship the opencode desktop app and SDK release notes are not user-facing for Kilo.
-
-## Merge Process
-
-The merge automation follows this process, applying **all transformations BEFORE the merge** to minimize conflicts:
-
-1. **Validate environment**
-   - Check for upstream remote
-   - Ensure working directory is clean
-
-2. **Fetch upstream** and determine target version
-
-3. **Generate conflict report** analyzing which files will conflict
-
-4. **Create branches**
-   - `backup/<branch>-<timestamp>` - Backup of current state
-   - `<author>/kilo-opencode-<version>` - Merge target branch
-   - `<author>/opencode-<version>` - Transformed upstream branch
-
-5. **Apply ALL transformations to upstream branch (PRE-MERGE)**:
-   - Remove files that should not exist in Kilo (`skipFiles`)
-   - Remove the unsupported embedded web command and its CLI registration
-   - Transform package names (opencode-ai -> @kilocode/cli)
-   - Preserve Kilo's versions
-   - Transform i18n files with Kilo branding
-   - Transform branding-only files (UI components, configs)
-   - Transform package.json files (names, deps, Kilo injections)
-   - Transform script files (GitHub API references)
-   - Transform extension files (Zed, etc.)
-   - Transform web/docs files
-   - Reset Kilo-specific files
-
-6. **Merge** transformed upstream into Kilo branch
-   - Since all branding transforms are applied pre-merge, conflicts should be minimal
-   - Remaining conflicts are files with actual code differences (kilocode_change markers)
-
-7. **Auto-resolve** any remaining conflicts
-   - Skip files that shouldn't exist in Kilo
-   - Keep Kilo's version of specific files
-   - Fallback transforms for edge cases
-
-8. **Push** and generate final report
-
-## Configuration
-
-Configuration is defined in `utils/config.ts`:
-
-```typescript
-{
-  // Package name mappings
-  packageMappings: [
-    { from: "opencode-ai", to: "@kilocode/cli" },
-    { from: "@opencode-ai/cli", to: "@kilocode/cli" },
-    // ...
-  ],
-
-  // Files to always keep Kilo's version (never take upstream)
-  keepOurs: [
-    "README.md",
-    "CONTRIBUTING.md",
-    "AGENTS.md",
-    ".github/workflows/publish.yml",  // GitHub workflows - manual review
-    // ...
-  ],
-
-  // Files to skip entirely (remove from merge)
-  skipFiles: [
-    "README.*.md",  // Translated READMEs
-    "STATS.md",
-    ".github/workflows/update-nix-hashes.yml",
-    // ...
-  ],
-
-  // Files to take upstream + apply Kilo branding transforms
-  takeTheirsAndTransform: [
-    "packages/ui/src/**/*.tsx",
-    // ...
-  ],
-
-  // Kilo-specific directories (preserved)
-  kiloDirectories: [
-    "packages/opencode/src/kilocode",
-    "packages/kilo-gateway",
-    "packages/kilo-telemetry",
-    // ...
-  ],
-}
-```
-
-## Pre-Merge Transformation Strategy
-
-**Key insight**: By applying all branding transforms to the upstream branch BEFORE merging, we eliminate most conflicts that would otherwise occur due to branding differences (OpenCode -> Kilo).
-
-### Transform Order (Pre-Merge)
-
-The following transforms are applied to the opencode branch before merging:
-
-1. **Skip files** - Remove upstream-only packages/files that should not exist in Kilo
-2. **Package names** - `opencode-ai` -> `@kilocode/cli`, etc.
-3. **Versions** - Preserve Kilo's version numbers
-4. **i18n files** - OpenCode -> Kilo in user-visible strings
-5. **Branding files** - UI components, configs with branding only
-6. **package.json** - Names, dependencies, Kilo injections
-7. **Scripts** - GitHub API references
-8. **Extensions** - Zed, etc.
-9. **Web/docs** - Documentation files
-
-### Post-Merge Strategies
-
-After merging, any remaining conflicts are handled based on file type:
-
-| File Type | Strategy | Description |
-|---|---|---|
-| i18n files | `i18n-transform` | Take upstream, apply Kilo branding |
-| UI components | `take-theirs-transform` | Take upstream, apply branding (no logic changes) |
-| package.json | `package-transform` | Take upstream, transform names, inject Kilo deps |
-| Script files | `script-transform` | Take upstream, transform GitHub references |
-| Extensions | `extension-transform` | Take upstream, apply branding |
-| Web/docs | `web-transform` | Take upstream, apply branding |
-| README/docs | `keep-ours` | Keep Kilo's version |
-| GitHub workflows | `keep-ours` | Keep Kilo's version (manual review) |
-| Code with markers | `manual` | Has `kilocode_change` markers, needs review |
-
-### Why This Reduces Conflicts
-
-Previously, conflicts occurred because:
-
-- Upstream had `OpenCode` branding
-- Kilo had `Kilo` branding
-- Git saw these as conflicting changes
-
-Now:
-
-- We transform upstream to `Kilo` branding BEFORE merge
-- Both branches have the same branding
-- Git sees no conflict for branding-only files
-
-The only remaining conflicts are files with **actual code differences** - files with `kilocode_change` markers that contain Kilo-specific logic.
-
-### Bun Version Safety
-
-Root `package.json` reconciliation uses the newer valid `packageManager` Bun version from Kilo and upstream. An older upstream version cannot downgrade Kilo, while a newer upstream version is retained as an upgrade. Before the merge is finalized, `merge.ts` also validates the result against the pristine Kilo base and upstream commit and aborts if the merged Bun version is lower than either input.
-
-## CLI Options
-
-### merge.ts
-
-```
-Options:
-  --version <version>    Target upstream version (e.g., v1.1.49)
-  --commit <hash>        Target upstream commit hash
-  --base-branch <name>   Base branch to merge into; use HEAD for current branch (default: main)
-  --dry-run              Preview changes without applying them
-  --no-push              Don't push branches to remote
-  --no-worktrees         Don't create auxiliary worktrees, including rerere training worktrees
-  --report-only          Only generate conflict report
-  --verbose              Enable verbose logging
-  --author <name>        Author name for branch prefix
-```
-
-By default, `merge.ts` also prepares prompt-friendly reference worktrees under `.worktrees/opencode-merge/`:
-
-| Path | Snapshot |
-|---|---|
-| `.worktrees/opencode-merge/opencode` | Pristine upstream opencode at the requested version or commit |
-| `.worktrees/opencode-merge/kilo-main` | The Kilo base branch snapshot used for the merge |
-| `.worktrees/opencode-merge/auto-merge` | The automated merge result before final lockfile or SDK regeneration |
-
-If conflicts remain after automation, `auto-merge` is a committed local snapshot branch that may intentionally contain conflict markers as normal file content. The real merge branch remains unresolved so manual resolution can continue with accurate git conflict state.
-
-### analyze.ts
-
-```
-Options:
-  --version <version>    Target upstream version
-  --commit <hash>        Target commit hash
-  --base-branch <name>   Base branch to analyze from (default: main)
-  --output <file>        Output file for report
-```
-
-### fix-kilocode-markers.ts
-
-```
-Usage:
-  bun run script/upstream/fix-kilocode-markers.ts <repo-relative-file> [--dry-run]
-
-Options:
-  --dry-run              Show what would change without writing the file
-```
-
-The command finds the newest upstream tag already merged into `HEAD` (read from `.opencode-version` at the repo root, falling back to an `ls-remote` + `merge-base --is-ancestor` walk), reads that upstream version of the file, applies the same branding transforms used by upstream merge automation, strips existing `kilocode_change` markers from the current file, and adds fresh markers around the remaining lines that differ from upstream.
-
-The `.opencode-version` file is a single-line tag (e.g. `v1.14.33`) recorded by `merge.ts` after every successful upstream merge. Editing it by hand pins the "last merged" tag for the per-file commands above; delete it to fall back to the slower automatic discovery.
-
-### reset-to-upstream.ts
-
-```
-Usage:
-  bun run script/upstream/reset-to-upstream.ts <repo-relative-file> [--dry-run]
-
-Options:
-  --dry-run              Show what would change without writing the file
-```
-
-The command finds the newest upstream tag already merged into `HEAD`, reads that upstream version of the file, applies the same branding transforms used by upstream merge automation for text files, and writes the result to the working tree. Binary files are restored as raw upstream bytes without text transforms. If the file does not exist upstream, the local file is deleted.
-
-### find-reset-candidates.ts
-
-```
-Usage:
-  bun run script/upstream/find-reset-candidates.ts [path] [options]
-
-Arguments:
-  path                     Optional repo-relative subdirectory to scope to.
-                           Defaults to all tracked shared paths.
-
-Options:
-  --review-limit <n>       Max non-marker, non-whitespace diff lines that
-                           still auto-resets (default: 5).
-  --dry-run                Classify and report only; do not write any files.
-  --concurrency <n>        Parallel classifications (default: 8).
-```
-
-The command pre-filters with `git diff --name-only <last-merged-upstream>..HEAD` and drops:
-
-- Kilo-only paths: anything under `packages/kilo-*/`, any `**/kilocode/**` subdir, `script/upstream/`.
-- Non-code assets: SVG, PNG, fonts, archives, lock files, etc. (see `SKIP_EXTENSIONS` / `SKIP_FILENAMES` in the script).
-- Files covered by the merge config's `keepOurs` or `skipFiles` lists in `utils/config.ts` — these are intentionally preserved or removed in Kilo and must not be bulk-reset.
-
-It then issues one `git cat-file --batch-check` for all remaining paths to grab upstream blob sizes in a single subprocess. Files absent upstream land in `upstream-missing` immediately; files above 256 KB land in `too-large` (generated manifests, giant snapshots). Only the survivors get fetched via `git show` and classified:
-
-| Bucket | Meaning | Action |
-|---|---|---|
-| `identical` | Local bytes already match transformed upstream (branding-only drift in raw git diff) | none |
-| `markers-only` | Stripping `kilocode_change` markers makes local match upstream | reset |
-| `cosmetic-only` | Non-marker diff is only whitespace or reordered lines (the line multiset is identical) | reset |
-| `small-diff` | ≤ `--review-limit` non-marker, non-cosmetic diff lines | reset |
-| `large-diff` | > `--review-limit` non-marker, non-cosmetic diff lines | skipped |
-| `upstream-missing` | File does not exist upstream (kilo-only, intentional) | skipped |
-| `local-missing` | File tracked but missing locally (deleted in Kilo) | skipped |
-| `binary-diff` | Binary file differs | skipped (use `reset-to-upstream.ts` per file) |
-| `binary-identical` | Binary file already matches | none |
-| `too-large` | Upstream blob > 256 KB | skipped (use `reset-to-upstream.ts` per file) |
-
-Line counting uses an in-process multiset diff (pure JS, no subprocess) for speed and robustness against concurrent git output stalls on big files. Moved/reordered lines therefore count as zero drift, which is usually what you want for "is this file meaningfully different from upstream".
-
-`markers-only`, `cosmetic-only`, and `small-diff` buckets are auto-reset unless `--dry-run` is passed. A markdown summary is printed to stdout so you can review what happened and spot-check the resulting `git diff`. All resets land as uncommitted working-tree changes; `git diff` / `git checkout` is your safety net.
-
-Tighten the blast radius with `--review-limit 0` (only `markers-only` and `cosmetic-only`) or by scoping with a `path` argument (e.g. `packages/opencode/src/mcp`).
-
-## Using Custom Base Branches
-
-By default, upstream merges start from the `main` branch. However, you can use `--base-branch` to start from a different branch. This is useful for:
-
-Passing `--base-branch HEAD` targets the currently checked-out branch without typing its full name.
-It uses the checked-out commit without pulling. If the current branch already has the generated
-target name, the script keeps and merges into that branch instead of backing it up and recreating it.
-
-### Incremental Merges
-
-When working on multiple upstream versions, you can create a chain of merge PRs:
-
-```bash
-# First merge: v1.1.44 into main
-bun run merge.ts --version v1.1.44
-
-# Create PR: username/kilo-opencode-v1.1.44 -> main
-
-# Second merge: v1.1.50 based on the previous PR (without waiting for approval)
-bun run merge.ts --version v1.1.50 --base-branch username/kilo-opencode-v1.1.44
-
-# Create PR: username/kilo-opencode-v1.1.50 -> username/kilo-opencode-v1.1.44
-# OR: username/kilo-opencode-v1.1.50 -> main (once first PR is merged)
-```
-
-### Benefits
-
-- **Work in parallel**: Don't wait for PR approval to start the next merge
-- **Isolation**: Each merge is independent and easier to review
-- **Flexibility**: Can adjust the PR chain as needed
-- **Cleaner history**: Related merges can be grouped together
-
-### Example Workflow
-
-```bash
-# 1. Analyze next version from your WIP branch
-bun run analyze.ts --version v1.1.50 --base-branch username/kilo-opencode-v1.1.44
-
-# 2. Run the merge
-bun run merge.ts --version v1.1.50 --base-branch username/kilo-opencode-v1.1.44
-
-# 3. Create PR from username/kilo-opencode-v1.1.50
-#    - Target: username/kilo-opencode-v1.1.44 (if first PR not merged yet)
-#    - Target: main (if first PR is already merged)
-```
-
-## Manual Conflict Resolution
-
-After running the merge script, you may have remaining conflicts. To resolve:
-
-1. Open each conflicted file
-2. Look for `kilocode_change` markers to identify Kilo-specific code
-3. Resolve conflicts, keeping Kilo-specific changes
-4. Stage and commit:
-   ```bash
-   git add -A
-   git commit -m "resolve merge conflicts"
-   ```
-
-## Rollback
-
-If something goes wrong:
-
-```bash
-# Find your backup branch
-git branch | grep backup
-
-# Reset to backup
-git checkout main
-git reset --hard backup/main-<timestamp>
-```
-
-## Adding New Transformations
-
-### String-based (simple)
-
-Edit `transforms/package-names.ts` and add patterns to `PACKAGE_PATTERNS`.
-
-### AST-based (robust)
-
-1. Create a new file in `codemods/`
-2. Use ts-morph for TypeScript AST manipulation
-3. Export transform functions
-4. Add to the merge orchestration if needed
-
-## Troubleshooting
-
-### "No upstream remote found"
-
-```bash
-git remote add upstream git@github.com:anomalyco/opencode.git
-```
-
-### "Working directory has uncommitted changes"
-
-```bash
-git stash
-# or
-git commit -am "WIP"
-```
-
-### Merge conflicts after auto-resolution
-
-Some files require manual review. Check the generated report for guidance.
+| `opencode-changesets.ts`, `script/kilocode/changeset-version.ts` | The v2 line does not use changesets |
+| `transforms/remove-kilo-web.ts` | Its target (`WebCommand` in `packages/opencode/src/index.ts`) does not exist on v2 |
+| Pre-merge compatibility branch (`refactor: kilo compat for`) and `.opencode-version` | It pre-applied the renames to upstream so they did not conflict. With renames off it only adds a commit. The pin comes from the sync merge message instead. Bring it back when the rename transforms turn on (D-1, rebranding) |
+| Version resync after a merge | v2 follows upstream version numbers |

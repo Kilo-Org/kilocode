@@ -1,377 +1,230 @@
 #!/usr/bin/env bun
 /**
- * Conflict report generation utilities
+ * Sync analysis and report for the Kilo v2 line.
+ *
+ * The analysis uses `git merge-tree`, so it shows the real conflicts of a merge without touching the
+ * working tree or the index.
  */
 
 import { $ } from "bun"
-import { defaultConfig } from "./config"
+import path from "node:path"
+import { defaultConfig, type MergeConfig } from "./config"
 import { matches } from "./match"
+import { isKiloOwned } from "./owned"
+import { isLockFile } from "../transforms/lock-files"
+import type { Lag, Release } from "./version"
 
-export interface ConflictReport {
-  timestamp: string
-  upstreamVersion: string
-  upstreamCommit: string
-  baseBranch: string
-  mergeBranch: string
-  totalConflicts: number
-  conflicts: ConflictFile[]
-  recommendations: string[]
-}
+export type Recommendation =
+  | "keep-ours"
+  | "skip"
+  | "workflow"
+  | "lock-file"
+  | "package-transform"
+  | "i18n-transform"
+  | "take-theirs-transform"
+  | "script-transform"
+  | "extension-transform"
+  | "web-transform"
+  | "manual"
 
 export interface ConflictFile {
   path: string
-  type: "markdown" | "package" | "code" | "config" | "i18n" | "script" | "extension" | "web" | "other"
-  recommendation:
-    | "keep-ours"
-    | "keep-theirs"
-    | "manual"
-    | "codemod"
-    | "skip"
-    | "i18n-transform"
-    | "take-theirs-transform"
-    | "package-transform"
-    | "script-transform"
-    | "extension-transform"
-    | "web-transform"
+  /** Conflict type from git, for example `content` or `modify/delete` */
+  kind: string
+  type: "markdown" | "package" | "code" | "config" | "i18n" | "script" | "extension" | "web" | "workflow" | "other"
+  recommendation: Recommendation
   reason: string
 }
 
-/**
- * Check if a file is an i18n translation file
- */
-function isI18nFile(path: string): boolean {
-  // Match patterns like packages/*/src/i18n/*.ts
-  return /packages\/[^/]+\/src\/i18n\/[^/]+\.ts$/.test(path) && !path.endsWith("/index.ts")
+export interface Analysis {
+  base: string
+  target: string
+  mergeBase: string
+  /** Commits that the merge adds to the history of the base */
+  commits: number
+  /** Files that upstream changed since the merge base */
+  changed: number
+  harness: { files: number; insertions: number; deletions: number }
+  conflicts: ConflictFile[]
+  /** Workflow files that upstream added since the merge base */
+  newWorkflows: string[]
+  /** Shared files that Kilo patched and upstream also changed */
+  sharedTouched: string[]
 }
 
-/**
- * Check if a file is a script file
- */
-function isScriptFile(path: string): boolean {
-  return path.startsWith("script/") || path.includes("/script/")
+export interface SyncReport {
+  timestamp: string
+  release: Release
+  baseBranch: string
+  baseCommit: string
+  mergeBranch: string
+  analysis: Analysis
+  lagBefore: Lag
+  lagAfter: Lag
+  /** Follow-up notes from the merge run (manual steps, tooling gaps) */
+  notes: string[]
 }
 
-/**
- * Check if a file is an extension file
- */
-function isExtensionFile(path: string): boolean {
-  return path.includes("packages/extensions/")
-}
-
-/**
- * Check if a file is a web/docs file
- */
-function isWebFile(path: string): boolean {
-  return path.includes("packages/web/src/content/docs/") && path.endsWith(".mdx")
-}
-
-/**
- * Check if a file should use take-theirs + transform strategy
- */
-function shouldTakeTheirsTransform(path: string): boolean {
-  const patterns = [/^packages\/ui\/src\/.*\.tsx$/, /^github\/index\.ts$/, /^packages\/slack\/src\/.*\.ts$/]
-  return patterns.some((p) => p.test(path))
-}
-
-/**
- * Classify a file based on its path
- */
-export function classifyFile(path: string): ConflictFile["type"] {
-  if (isI18nFile(path)) return "i18n"
-  if (isScriptFile(path)) return "script"
-  if (isExtensionFile(path)) return "extension"
-  if (isWebFile(path)) return "web"
-  if (path.endsWith(".md")) return "markdown"
-  if (path.includes("package.json")) return "package"
-  if (path.endsWith(".ts") || path.endsWith(".tsx") || path.endsWith(".js") || path.endsWith(".jsx")) return "code"
-  if (
-    path.endsWith(".json") ||
-    path.endsWith(".yaml") ||
-    path.endsWith(".yml") ||
-    path.endsWith(".toml") ||
-    path.endsWith(".config.ts")
-  )
-    return "config"
+export function classifyFile(file: string): ConflictFile["type"] {
+  if (file.startsWith(".github/workflows/")) return "workflow"
+  if (/packages\/[^/]+\/src\/i18n\/[^/]+\.ts$/.test(file) && !file.endsWith("/index.ts")) return "i18n"
+  if (file.startsWith("script/") || file.includes("/script/")) return "script"
+  if (file.includes("packages/extensions/")) return "extension"
+  if (file.startsWith("packages/web/src/content/docs/") && file.endsWith(".mdx")) return "web"
+  if (file.endsWith(".md")) return "markdown"
+  if (path.basename(file) === "package.json") return "package"
+  if (/\.(ts|tsx|js|jsx)$/.test(file)) return "code"
+  if (/\.(json|jsonc|yaml|yml|toml)$/.test(file)) return "config"
   return "other"
 }
 
 /**
- * Check if a file should be skipped (not added from upstream)
- */
-function shouldSkipFile(path: string, skipPatterns: string[]): boolean {
-  return matches(path, skipPatterns)
-}
-
-/**
- * Get recommendation for a conflicted file.
- * Pass currentContent (our version of the file) to detect kilocode_change markers
- * in files that would otherwise be auto-transformed.
+ * Recommend how to resolve one conflicted file. Branding transforms are recommended only when
+ * `config.transforms.branding` is on. A file whose Kilo side has `kilocode_change` markers is
+ * always manual: the markers mean an intentional Kilo change.
  */
 export function getRecommendation(
-  path: string,
-  keepOurs: string[],
-  skipFiles: string[] = [],
-  currentContent?: string,
-): { recommendation: ConflictFile["recommendation"]; reason: string } {
-  // Check if file should be skipped entirely (doesn't exist in Kilo, shouldn't be added)
-  if (shouldSkipFile(path, skipFiles)) {
-    return {
-      recommendation: "skip",
-      reason: "File should be skipped (does not exist in Kilo fork)",
-    }
+  file: string,
+  config: MergeConfig = defaultConfig,
+  ours?: string,
+): { recommendation: Recommendation; reason: string } {
+  if (matches(file, config.skipFiles)) return { recommendation: "skip", reason: "Kilo does not ship this upstream file" }
+  if (matches(file, config.keepOurs)) return { recommendation: "keep-ours", reason: "Kilo owns the full content" }
+  if (isKiloOwned(file)) return { recommendation: "keep-ours", reason: "Kilo-owned path" }
+  if (file.startsWith(".github/workflows/") && ours === undefined)
+    return { recommendation: "workflow", reason: "Kilo deleted this workflow: `script/check-workflows.ts --fix`" }
+  if (isLockFile(file, config.lockFiles)) return { recommendation: "lock-file", reason: "Accept ours, then regenerate" }
+  if (ours?.includes("kilocode_change"))
+    return { recommendation: "manual", reason: "Kilo side has kilocode_change markers: keep the Kilo change, take upstream's other changes" }
+
+  const type = classifyFile(file)
+  if (type === "package") return { recommendation: "package-transform", reason: "Merge package.json fields" }
+  if (config.transforms.branding) {
+    if (type === "i18n") return { recommendation: "i18n-transform", reason: "Take upstream and apply Kilo branding" }
+    if (matches(file, config.takeTheirsAndTransform))
+      return { recommendation: "take-theirs-transform", reason: "Take upstream and apply Kilo branding" }
+    if (type === "script") return { recommendation: "script-transform", reason: "Take upstream and apply Kilo branding" }
+    if (type === "extension") return { recommendation: "extension-transform", reason: "Take upstream and apply Kilo branding" }
+    if (type === "web") return { recommendation: "web-transform", reason: "Take upstream and apply Kilo branding" }
   }
+  return { recommendation: "manual", reason: "Resolve by hand" }
+}
 
-  // Check if file should always keep ours
-  if (keepOurs.some((pattern) => path.includes(pattern) || path === pattern)) {
-    return {
-      recommendation: "keep-ours",
-      reason: "File is Kilo-specific and should not be overwritten",
-    }
-  }
+/** Analyze a merge of `target` into `base` without changing the working tree */
+export async function analyzeSync(
+  base: string,
+  target: string,
+  pin: string,
+  config: MergeConfig = defaultConfig,
+): Promise<Analysis> {
+  const mergeBase = (await $`git merge-base ${base} ${target}`.quiet().text()).trim()
+  const tree = await $`git merge-tree --write-tree --name-only --messages ${base} ${target}`.quiet().nothrow()
+  if (tree.exitCode > 1) throw new Error(`git merge-tree failed: ${tree.stderr.toString()}`)
+  const [head = "", ...messages] = tree.stdout.toString().split("\n\n")
+  const names = head.split("\n").slice(1).filter(Boolean)
+  const info = messages.join("\n").split("\n")
 
-  // Kilo directories should always keep ours
-  if (
-    matches(
-      path,
-      defaultConfig.kiloDirectories.map((dir) => `${dir}/**`),
-    )
-  ) {
-    return {
-      recommendation: "keep-ours",
-      reason: "File is in a Kilo-specific directory",
-    }
-  }
+  const conflicts = await Promise.all(
+    names.map(async (file) => {
+      const kind = info.find((line) => line.startsWith("CONFLICT") && line.includes(file))?.match(/^CONFLICT \(([^)]+)\)/)?.[1]
+      const ours = await show(base, file)
+      return { path: file, kind: kind ?? "unknown", type: classifyFile(file), ...getRecommendation(file, config, ours) }
+    }),
+  )
 
-  const type = classifyFile(path)
+  const changed = await list($`git diff --name-only ${mergeBase} ${target}`)
+  const newWorkflows = await list(
+    $`git diff --name-only --diff-filter=A ${mergeBase} ${target} -- .github/workflows/`,
+  ).then(async (files) => (await Promise.all(files.map(async (f) => ((await show(base, f)) === undefined ? f : "")))).filter(Boolean))
+  const upstream = new Set(await list($`git ls-tree -r --name-only ${pin}`))
+  const kilo = (await list($`git diff --name-only ${pin} ${base}`)).filter((file) => !isKiloOwned(file, upstream))
+  const touched = new Set(changed)
+  const stat = (await $`git diff --shortstat ${mergeBase} ${target} -- ${config.harness}`.quiet().text()).trim()
 
-  // Check for specific auto-transform strategies
-  if (shouldTakeTheirsTransform(path)) {
-    // If our version has kilocode_change markers, flag for manual review
-    if (currentContent?.includes("kilocode_change")) {
-      return {
-        recommendation: "manual",
-        reason: "File has kilocode_change markers — auto-transform skipped, needs manual review",
-      }
-    }
-    return {
-      recommendation: "take-theirs-transform",
-      reason: "Branding-only file: take upstream and apply Kilo branding transforms",
-    }
-  }
-
-  switch (type) {
-    case "i18n":
-      // i18n files that have kilocode_change markers need manual review
-      if (currentContent?.includes("kilocode_change")) {
-        return {
-          recommendation: "manual",
-          reason: "i18n file has kilocode_change markers — auto-transform skipped, needs manual review",
-        }
-      }
-      return {
-        recommendation: "i18n-transform",
-        reason: "i18n file: take upstream translations and apply Kilo branding",
-      }
-    case "script":
-      if (currentContent?.includes("kilocode_change")) {
-        return {
-          recommendation: "manual",
-          reason: "Script file has kilocode_change markers — auto-transform skipped, needs manual review",
-        }
-      }
-      return {
-        recommendation: "script-transform",
-        reason: "Script file: take upstream and transform GitHub references",
-      }
-    case "extension":
-      if (currentContent?.includes("kilocode_change")) {
-        return {
-          recommendation: "manual",
-          reason: "Extension file has kilocode_change markers — auto-transform skipped, needs manual review",
-        }
-      }
-      return {
-        recommendation: "extension-transform",
-        reason: "Extension file: take upstream and apply Kilo branding",
-      }
-    case "web":
-      if (currentContent?.includes("kilocode_change")) {
-        return {
-          recommendation: "manual",
-          reason: "Web/docs file has kilocode_change markers — auto-transform skipped, needs manual review",
-        }
-      }
-      return {
-        recommendation: "web-transform",
-        reason: "Web/docs file: take upstream and apply Kilo branding",
-      }
-    case "markdown":
-      return {
-        recommendation: "keep-ours",
-        reason: "Markdown files are typically Kilo-specific documentation",
-      }
-    case "package":
-      if (currentContent?.includes("kilocode_change")) {
-        return {
-          recommendation: "manual",
-          reason: "package.json has kilocode_change markers — auto-transform skipped, needs manual review",
-        }
-      }
-      return {
-        recommendation: "package-transform",
-        reason: "Package.json: take upstream, transform names, inject Kilo deps, preserve version",
-      }
-    case "code":
-      return {
-        recommendation: "manual",
-        reason: "Code files need manual review for kilocode_change markers",
-      }
-    case "config":
-      return {
-        recommendation: "manual",
-        reason: "Config files may have Kilo-specific settings",
-      }
-    default:
-      return {
-        recommendation: "manual",
-        reason: "File needs manual review",
-      }
+  return {
+    base,
+    target,
+    mergeBase,
+    commits: Number((await $`git rev-list --count ${base}..${target}`.quiet().text()).trim()),
+    changed: changed.length,
+    harness: {
+      files: Number(stat.match(/(\d+) files? changed/)?.[1] ?? 0),
+      insertions: Number(stat.match(/(\d+) insertions?/)?.[1] ?? 0),
+      deletions: Number(stat.match(/(\d+) deletions?/)?.[1] ?? 0),
+    },
+    conflicts,
+    newWorkflows,
+    sharedTouched: kilo.filter((file) => touched.has(file)).sort(),
   }
 }
 
-/**
- * Analyze potential conflicts before merge
- */
-export async function analyzeConflicts(
-  upstreamRef: string,
-  baseBranch: string,
-  keepOurs: string[],
-  skipFiles: string[] = [],
-): Promise<ConflictFile[]> {
-  // Get list of files that differ between branches
-  // Use quiet to suppress output and nothrow to handle errors
-  const result = await $`git diff --name-only ${baseBranch}...${upstreamRef}`.quiet().nothrow()
-
-  if (result.exitCode !== 0) {
-    throw new Error(`Failed to analyze conflicts: ${result.stderr.toString()}`)
-  }
-
-  const files = result.stdout
-    .toString()
-    .trim()
-    .split("\n")
-    .filter((f) => f.length > 0)
-
-  const conflicts: ConflictFile[] = []
-
-  for (const path of files) {
-    const type = classifyFile(path)
-    // Read current file content (our version) to detect kilocode_change markers
-    const content = await Bun.file(path)
-      .text()
-      .catch(() => "")
-    const { recommendation, reason } = getRecommendation(path, keepOurs, skipFiles, content)
-
-    conflicts.push({
-      path,
-      type,
-      recommendation,
-      reason,
-    })
-  }
-
-  return conflicts
+async function show(ref: string, file: string) {
+  const result = await $`git show ${`${ref}:${file}`}`.quiet().nothrow()
+  return result.exitCode === 0 ? result.stdout.toString() : undefined
 }
 
-/**
- * Generate a markdown report
- */
-export function generateMarkdownReport(report: ConflictReport): string {
-  const lines: string[] = [
-    "# Upstream Merge Conflict Report",
+async function list(command: ReturnType<typeof $>) {
+  return (await command.quiet().text()).split("\n").filter(Boolean)
+}
+
+export function generateMarkdownReport(report: SyncReport): string {
+  const a = report.analysis
+  const lag = (l: Lag) => `${l.releases} release(s), ${l.days} day(s)`
+  return [
+    `# Upstream sync report: ${report.release.tag}`,
     "",
     `Generated: ${report.timestamp}`,
     "",
-    "## Summary",
+    "| Item | Value |",
+    "|---|---|",
+    `| Release | ${report.release.tag} (tag \`${report.release.tagCommit.slice(0, 11)}\`, ${report.release.date}) |`,
+    `| Release commit (merged) | \`${report.release.commit}\` |`,
+    `| Base | ${report.baseBranch} \`${report.baseCommit.slice(0, 11)}\` |`,
+    `| Merge branch | ${report.mergeBranch || "(none, analysis only)"} |`,
+    `| Merge base | \`${a.mergeBase.slice(0, 11)}\` |`,
+    `| Commits added to history | ${a.commits} |`,
+    `| Files changed upstream | ${a.changed} |`,
+    `| Harness change | ${a.harness.files} files, +${a.harness.insertions} / -${a.harness.deletions} |`,
+    `| Lag before | ${lag(report.lagBefore)} |`,
+    `| Lag after | ${lag(report.lagAfter)} |`,
     "",
-    `- **Upstream Version**: ${report.upstreamVersion}`,
-    `- **Upstream Commit**: \`${report.upstreamCommit.slice(0, 8)}\``,
-    `- **Base Branch**: ${report.baseBranch}`,
-    `- **Merge Branch**: ${report.mergeBranch}`,
-    `- **Total Files Changed**: ${report.totalConflicts}`,
+    "## Conflicts",
     "",
-    "## Files by Recommendation",
+    ...(a.conflicts.length === 0
+      ? ["None."]
+      : [
+          "| File | Kind | Recommendation | Reason |",
+          "|---|---|---|---|",
+          ...a.conflicts.map((c) => `| \`${c.path}\` | ${c.kind} | ${c.recommendation} | ${c.reason} |`),
+        ]),
     "",
-  ]
-
-  const byRecommendation = new Map<string, ConflictFile[]>()
-  for (const conflict of report.conflicts) {
-    const list = byRecommendation.get(conflict.recommendation) || []
-    list.push(conflict)
-    byRecommendation.set(conflict.recommendation, list)
-  }
-
-  const order: ConflictFile["recommendation"][] = [
-    "skip",
-    "i18n-transform",
-    "take-theirs-transform",
-    "package-transform",
-    "script-transform",
-    "extension-transform",
-    "web-transform",
-    "keep-ours",
-    "codemod",
-    "keep-theirs",
-    "manual",
-  ]
-
-  for (const rec of order) {
-    const files = byRecommendation.get(rec)
-    if (!files || files.length === 0) continue
-
-    const titleMap: Record<ConflictFile["recommendation"], string> = {
-      skip: "Skip (Auto-Remove)",
-      "i18n-transform": "i18n Transform (Auto-Apply Kilo Branding)",
-      "take-theirs-transform": "Take Upstream + Kilo Branding (Auto)",
-      "package-transform": "Package.json Transform (Auto)",
-      "script-transform": "Script Transform (Auto)",
-      "extension-transform": "Extension Transform (Auto)",
-      "web-transform": "Web/Docs Transform (Auto)",
-      "keep-ours": "Keep Kilo Version (Ours)",
-      "keep-theirs": "Take Upstream Version (Theirs)",
-      codemod: "Apply Codemod",
-      manual: "Manual Review Required",
-    }
-
-    const title = titleMap[rec]
-
-    lines.push(`### ${title}`)
-    lines.push("")
-
-    for (const file of files) {
-      lines.push(`- \`${file.path}\` (${file.type})`)
-      lines.push(`  - ${file.reason}`)
-    }
-
-    lines.push("")
-  }
-
-  if (report.recommendations.length > 0) {
-    lines.push("## Recommendations")
-    lines.push("")
-    for (const rec of report.recommendations) {
-      lines.push(`- ${rec}`)
-    }
-    lines.push("")
-  }
-
-  return lines.join("\n")
+    "## New upstream workflows",
+    "",
+    ...(a.newWorkflows.length === 0
+      ? ["None."]
+      : [
+          ...a.newWorkflows.map((f) => `- \`${f}\``),
+          "",
+          "Review each one, then add it to `active` or `removed` in `script/check-workflows.ts`.",
+        ]),
+    "",
+    "## Shared files touched",
+    "",
+    "Shared upstream files that Kilo patched and upstream changed in this sync:",
+    "",
+    ...(a.sharedTouched.length === 0 ? ["None."] : a.sharedTouched.map((f) => `- \`${f}\``)),
+    "",
+    ...(report.notes.length === 0 ? [] : ["## Notes", "", ...report.notes.map((n) => `- ${n}`), ""]),
+  ].join("\n")
 }
 
-/**
- * Save report to file
- */
-export async function saveReport(report: ConflictReport, path: string): Promise<void> {
-  const markdown = generateMarkdownReport(report)
-  await Bun.write(path, markdown)
+export async function saveReport(report: SyncReport, file: string): Promise<void> {
+  await Bun.write(file, generateMarkdownReport(report))
+}
+
+/** Reports go to the git directory, so a merge never commits them by accident */
+export async function reportPath(tag: string, output?: string) {
+  if (output) return output
+  const dir = (await $`git rev-parse --absolute-git-dir`.quiet().text()).trim()
+  return path.join(dir, "upstream-sync", `report-${tag}.md`)
 }

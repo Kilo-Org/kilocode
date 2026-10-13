@@ -8,19 +8,24 @@ import { isI18nFile, transformI18nContent } from "../transforms/transform-i18n"
 import { applyScriptTransforms } from "../transforms/transform-scripts"
 import { applyBrandingTransforms } from "../transforms/transform-take-theirs"
 import { applyWebTransforms } from "../transforms/transform-web"
-import { removeKiloWeb } from "../transforms/remove-kilo-web"
-import { warn, info } from "./logger"
-import { compareVersions, parseVersion, type VersionInfo } from "./version"
+import { defaultConfig, type MergeConfig } from "./config"
+import { warn } from "./logger"
 import { isAncestor } from "./git"
+import { compareVersions, parseVersion } from "./version"
 
-const url = "https://github.com/anomalyco/opencode.git"
-const workflows = [".github/workflows/publish.yml", ".github/workflows/beta.yml"]
+export interface Pin {
+  /** Upstream tag of the release, or `initial` for the base that `v2` was created from */
+  tag: string
+  /** Upstream release commit */
+  commit: string
+}
 
-/**
- * Repo-relative path of the file that records the last merged upstream tag.
- * Single line containing the upstream tag (e.g. `v1.14.33`).
- */
-export const versionFile = ".opencode-version"
+/** Subject of a sync merge commit, for example `chore(upstream): sync v2.0.27 (4d9678a79d6)` */
+export function syncMessage(tag: string, commit: string) {
+  return `chore(upstream): sync ${tag} (${commit.slice(0, 11)})`
+}
+
+const SYNC = /^chore\(upstream\): sync (v\d+\.\d+\.\d+) \(([0-9a-f]{7,40})\)/
 
 export async function root() {
   return (await $`git rev-parse --show-toplevel`.text()).trim()
@@ -37,106 +42,41 @@ export function normalize(root: string, file: string) {
   return rel
 }
 
-export async function remote() {
-  const result = await $`git remote get-url upstream`.quiet().nothrow()
-  if (result.exitCode === 0) return "upstream"
+export async function remote(config: MergeConfig = defaultConfig) {
+  const result = await $`git remote get-url ${config.upstreamRemote}`.quiet().nothrow()
+  if (result.exitCode === 0) return config.upstreamRemote
 
-  warn(`No 'upstream' remote found; using ${url}`)
-  return url
-}
-
-export async function last(): Promise<VersionInfo> {
-  const recorded = await readVersionFile()
-  if (recorded) return recorded
-
-  const source = await remote()
-
-  info(`Fetching upstream tags from ${source}...`)
-  const fetch = await $`git fetch ${source} --tags --force`.quiet().nothrow()
-  if (fetch.exitCode !== 0) throw new Error(`Failed to fetch upstream: ${fetch.stderr.toString()}`)
-
-  const items = await versions(source)
-  for (const version of items) {
-    if (await isAncestor(version.commit, "HEAD")) return version
-  }
-
-  throw new Error("Could not find a merged upstream tag in HEAD")
+  warn(`No '${config.upstreamRemote}' remote found; using ${config.upstreamUrl}`)
+  return config.upstreamUrl
 }
 
 /**
- * Read the recorded last-merged upstream tag from `.opencode-version`. Returns
- * null if the file is missing/empty, or if the recorded tag cannot be resolved
- * to a commit (e.g. tags have not been fetched yet). Falls back to the
- * isAncestor-based discovery in `last()`.
+ * The upstream release commit that `ref` is pinned to: the second parent of the newest sync merge
+ * (`chore(upstream): sync v2.x.y (<sha>)`) in its history, or `initialBase` before the first sync.
+ * It needs no network and no upstream remote, so CI can use it with a full clone.
  */
-async function readVersionFile(): Promise<VersionInfo | null> {
-  const repo = await root()
-  const file = Bun.file(`${repo}/${versionFile}`)
-  if (!(await file.exists())) return null
-
-  const tag = (await file.text()).trim()
-  if (!tag) return null
-
-  const version = parseVersion(tag)
-  if (!version) {
-    warn(`${versionFile} contains '${tag}' which is not a valid version tag; ignoring`)
-    return null
-  }
-
-  const commit = await resolveTag(tag)
-  if (!commit) return null
-
-  return { version, tag, commit }
+export async function pinned(ref = "HEAD", config: MergeConfig = defaultConfig): Promise<Pin> {
+  const log = await $`git log --format=%H%x00%P%x00%s --grep=${"^chore(upstream): sync v"} ${ref}`.quiet().text()
+  const syncs = log.split("\n").flatMap((line) => {
+    const [, parents = "", subject = ""] = line.split("\0")
+    const found = subject.match(SYNC)
+    const commit = parents.split(" ").slice(1).find((parent) => found?.[2] && parent.startsWith(found[2]))
+    const version = found?.[1] ? parseVersion(found[1]) : null
+    if (!found?.[1] || !commit || !version) return []
+    return [{ tag: found[1], commit, version }]
+  })
+  const newest = syncs.sort((a, b) => compareVersions(b.version, a.version))[0]
+  if (newest) return { tag: newest.tag, commit: newest.commit }
+  if (await isAncestor(config.initialBase, ref)) return { tag: "initial", commit: config.initialBase }
+  // A history without the v2 base (for example a test repository): use the merge base with upstream.
+  const base = await $`git merge-base ${ref} ${`${config.upstreamRemote}/${config.upstreamBranch}`}`.quiet().nothrow()
+  if (base.exitCode === 0) return { tag: "merge-base", commit: base.stdout.toString().trim() }
+  throw new Error(`No sync merge and no initial base ${config.initialBase.slice(0, 11)} in the history of ${ref}`)
 }
 
-async function resolveTag(tag: string): Promise<string | null> {
-  const local = await $`git rev-parse --verify --quiet ${tag}^{commit}`.quiet().nothrow()
-  if (local.exitCode === 0) return local.stdout.toString().trim()
-
-  const source = await remote()
-  info(`Tag ${tag} not present locally; fetching from ${source}...`)
-  const fetch = await $`git fetch ${source} tag ${tag} --no-tags`.quiet().nothrow()
-  if (fetch.exitCode !== 0) {
-    warn(`Failed to fetch tag ${tag}: ${fetch.stderr.toString()}`)
-    return null
-  }
-
-  const after = await $`git rev-parse --verify --quiet ${tag}^{commit}`.quiet().nothrow()
-  return after.exitCode === 0 ? after.stdout.toString().trim() : null
-}
-
-/**
- * Record the merged upstream tag in `.opencode-version` so subsequent runs of
- * `last()` resolve instantly without an `ls-remote` walk.
- */
-export async function writeVersion(tag: string): Promise<string> {
-  const repo = await root()
-  const dest = `${repo}/${versionFile}`
-  await Bun.write(dest, `${tag}\n`)
-  return dest
-}
-
-export async function versions(source: string): Promise<VersionInfo[]> {
-  const result = await $`git ls-remote --tags ${source}`.quiet().nothrow()
-  if (result.exitCode !== 0) throw new Error(`Failed to list upstream tags: ${result.stderr.toString()}`)
-
-  const found = new Map<string, string>()
-  for (const line of result.stdout.toString().trim().split("\n")) {
-    const match = line.match(/^([a-f0-9]+)\s+refs\/tags\/([^^]+)(\^\{\})?$/)
-    if (!match) continue
-
-    const commit = match[1]
-    const tag = match[2]
-    const peeled = Boolean(match[3])
-    if (commit && tag && (peeled || !found.has(tag))) found.set(tag, commit)
-  }
-
-  return [...found]
-    .flatMap(([tag, commit]) => {
-      const version = parseVersion(tag)
-      return version ? [{ version, tag, commit }] : []
-    })
-    .sort((a, b) => compareVersions(b.version, a.version))
+/** Alias kept for the v1 per-file tools (`fix-kilocode-markers`, `reset-to-upstream`) */
+export async function last(ref = "HEAD") {
+  return pinned(ref)
 }
 
 export async function upstream(ref: string, file: string) {
@@ -188,26 +128,16 @@ export async function upstreamSizes(ref: string, files: string[]): Promise<Map<s
   return result
 }
 
-export async function translate(file: string, text: string) {
-  const names = applyPackageNameTransforms(text).result
+/**
+ * Apply the enabled Kilo transforms to upstream text, so that per-file tools compare like with like.
+ * With the v2 defaults (package names and branding off) the text stays as upstream wrote it.
+ */
+export async function translate(file: string, text: string, config: MergeConfig = defaultConfig) {
+  const names = config.transforms.packageNames ? applyPackageNameTransforms(text).result : text
+  if (!config.transforms.branding) return names
   const script = applyScriptTransforms(names).result
   const branded = applyBrandingTransforms(script).result
   const i18n = transformI18nContent(branded, false, isI18nFile(file)).result
   const ext = applyExtensionTransforms(i18n, file).result
-  const web = applyWebTransforms(ext).result
-  const command = removeKiloWeb(file, web).result
-
-  return workflow(file, command)
-}
-
-function workflow(file: string, text: string) {
-  if (!workflows.includes(file)) return text
-  return text
-    .replace(/github\.repository == 'anomalyco\/opencode'/g, "github.repository == 'Kilo-Org/kilocode'")
-    .replace(/github\.repository == "anomalyco\/opencode"/g, 'github.repository == "Kilo-Org/kilocode"')
-    .replace(/\bopencode-ai\b/g, "@kilocode/cli")
-    .replace(
-      /GH_REPO:\s*\$\{\{ \(github\.ref_name == 'beta' && 'anomalyco\/opencode-beta'\) \|\| github\.repository \}\}/g,
-      "GH_REPO: ${{ github.repository }}",
-    )
+  return applyWebTransforms(ext).result
 }

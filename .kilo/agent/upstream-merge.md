@@ -1,5 +1,5 @@
 ---
-description: Resolve upstream opencode merge conflicts interactively
+description: Resolve upstream OpenCode sync conflicts on the Kilo v2 line interactively
 mode: primary
 permission:
   read: ask
@@ -32,17 +32,27 @@ permission:
     "diff *": allow
     "gh pr view *": allow
     "gh run view *": allow
-    "gh api \"repos/sst/opencode/commits/dev\" *": allow
-    "axiom *": allow
     "bun test *": allow
+    "bun typecheck *": allow
     "bun run typecheck *": allow
     "bun run lint *": allow
-    "bun run script/check-opencode-annotations.ts *": allow
+    "bun script/check-workflows.ts": allow
+    "bun script/check-opencode-annotations.ts *": allow
+    "bun script/check-shared-patches.ts *": allow
+    "bun script/upstream/list-versions.ts *": allow
+    "bun script/upstream/analyze.ts *": allow
     "script/upstream/find-conflict-markers.sh *": allow
     "./script/upstream/find-conflict-markers.sh *": allow
 ---
 
-Resolve the manual part of an upstream merge.
+Resolve the manual part of an upstream sync on the Kilo v2 line.
+
+The v2 line (`origin/v2`) merges upstream OpenCode `upstream/dev` release by
+release. Each sync merges one release commit (the parent of a `v2.x.y` tag)
+with a merge commit `chore(upstream): sync v2.x.y (<sha11>)`. Never merge
+`upstream/v2` (frozen since 2026-10-10). Upstream package names (`@opencode/*`)
+stay. `script/upstream/merge.ts` runs the automatic part; this agent handles
+what it leaves.
 
 **Do not load the `kilocode-merge-minimizer` skill.** That skill is for
 authoring new Kilo changes against shared upstream files; during an upstream
@@ -50,10 +60,9 @@ merge it gives the wrong guidance (it nudges toward extracting Kilo logic out
 of conflict regions, which is exactly the opposite of what merge resolution
 needs). Follow the rules in this agent file instead.
 
-The user will provide the upstream version (for example `v1.1.50` or `1.1.50`)
-in their first message. If they don't, infer it from the current branch name,
-from `upstream-merge-report-<version>.md`, or from the newest relevant report
-file.
+The user will provide the upstream release (for example `v2.0.27`) in their
+first message. If they don't, infer it from the branch name (`sync-v2-0-27`),
+from `MERGE_MSG`, or from the newest report in `.git/upstream-sync/`.
 
 ## Workflow
 
@@ -61,8 +70,10 @@ file.
 
 - `git status --short`
 - `git diff --name-only --diff-filter=U`
-- `upstream-merge-report-<version>.md` when present
-- `.worktrees/opencode-merge/auto-merge` for the automated merge snapshot when present
+- the sync report `.git/upstream-sync/report-<tag>.md` (in a linked worktree:
+  `$(git rev-parse --absolute-git-dir)/upstream-sync/`)
+- `.worktrees/upstream-sync/auto-merge` for the automated merge snapshot when present
+- `bun script/check-workflows.ts` for workflows that the merge brought back or added
 
 ### 2. Read every conflicted file end-to-end before planning
 
@@ -78,11 +89,11 @@ conflict hunk. Specifically check:
   same file (imports, signatures, call sites) that will break if we drop it?
 
 When HEAD includes a non-obvious Kilo-specific wrapper (e.g. a helper in
-`packages/opencode/src/kilocode/`), find out why it exists before deciding to
-keep or bypass it:
+`packages/<pkg>/src/kilocode/` or `packages/kilo-*`), find out why it exists
+before deciding to keep or bypass it:
 
 ```bash
-git log --all --oneline -S "<symbol>" -- packages/opencode/src/kilocode/
+git log --all --oneline -S "<symbol>" -- 'packages/*/src/kilocode/' 'packages/kilo-*'
 git log --all --oneline -- <kilo-file>
 ```
 
@@ -93,6 +104,28 @@ When upstream narrows an externally-visible compatibility list (models,
 providers, routes, config keys, file formats), verify the intent from upstream
 PRs, issues, release notes, or current docs before dropping entries. Treat
 silent list shrinkage during a refactor as suspicious until proven intentional.
+
+### 2.5. Check the plugin-first order for each conflicting Kilo patch
+
+A conflict in a shared upstream file means a Kilo patch (option 3 or 4 below)
+met an upstream change. Before you re-apply the patch, check whether a higher
+option can replace it. Use the order from `.kilo/skills/v2-migration/SKILL.md`:
+
+1. A Kilo plugin on the public plugin API (`@opencode/plugin`).
+2. The Kilo host (U-E0-01): `SdkPlugins.register`, Effect layer overrides such
+   as `Global.layerWith`, environment translation at the entry. It does not
+   exist yet.
+3. A small, generic seam patch in a shared file, marked `kilocode_change`, in a
+   file that changes rarely.
+4. A feature patch in a shared file, marked, last resort, with the reason in
+   the PR.
+5. Branding and product strings: the rename script (`script/upstream`
+   codemods), never hand edits.
+
+Record the result for each conflicting patch in the sync PR: "kept as option
+3, seam X is missing", or "moved to a plugin in #NNNN". Do not move Kilo code
+in the sync PR itself: the sync PR contains only the merge and the conflict
+resolutions. Open a follow-up for the move.
 
 ### 3. Write a plan in chat and get approval
 
@@ -134,15 +167,20 @@ reverse-engineer the decision.
 
 Reference worktrees when present:
 
-- `.worktrees/opencode-merge/opencode` — pristine upstream tree
-- `.worktrees/opencode-merge/kilo-main` — Kilo base snapshot
-- `.worktrees/opencode-merge/auto-merge` — automated merge snapshot (original
+- `.worktrees/upstream-sync/upstream` — pristine upstream release commit
+- `.worktrees/upstream-sync/kilo-base` — Kilo base snapshot (`origin/v2`)
+- `.worktrees/upstream-sync/auto-merge` — automated merge snapshot (original
   conflict reference)
 
 Apply in order:
 
 - prefer upstream code and architecture whenever compatible with Kilo behaviour
+- never resolve a code conflict by dropping upstream code without a reason in
+  the PR
 - preserve Kilo-specific behaviour marked with `kilocode_change`
+- keep workflows that Kilo deleted deleted (`bun script/check-workflows.ts --fix`).
+  For a new upstream workflow, review it, then add it to `active` or `removed`
+  in `script/check-workflows.ts`
 - keep `kilocode_change` markers around Kilo-specific code in shared opencode
   files
 - when upstream refactors a region that HEAD had annotated with
@@ -159,9 +197,7 @@ Apply in order:
 - if Kilo-specific code must be refactored to fit new upstream architecture,
   explain the refactor in the final summary
 - if upstream moved the relevant logic to another file, port the Kilo behaviour
-  there and list both paths in the final summary. Verify the new file already
-  carries the Kilo-renamed symbols (e.g. `x-kilo-directory`) by diffing against
-  pristine upstream.
+  there and list both paths in the final summary.
 - if upstream extracts shared policy into a helper, move Kilo-specific additions
   into the helper when possible instead of keeping a pre-check at the old call
   site. The extracted helper should stay the source of truth for all callers.
@@ -241,34 +277,30 @@ be broken. Check every auto-merged file for:
 ### 8. Run the full checks once everything is resolved
 
 - `git diff --name-only --diff-filter=U` returns empty
-- `bun run typecheck` from `packages/opencode/` (targeted) and from repo root
-  (catches non-conflicted call-site breakage)
-- relevant targeted tests. Tests that hang or time out in an unrelated part of
-  the graph may be pre-existing — note them, don't block the merge on them
-- `bun run script/check-opencode-annotations.ts` if `packages/opencode/` shared
-  files changed. Note that this tool compares against the merge base via `HEAD`
-  and will be silent until the merge commit lands
-- other CI guards that touched files imply (knip for `kilo-vscode/`,
-  `check-kilocode-change`, source-links, visual regression,
-  `script/check-forbidden-strings.ts`)
-- if you encounter a hardcoded upstream URL, repo path, or attribution string
-  during conflict resolution that obviously shouldn't ship in Kilo (e.g. another
-  `https://opencode.ai/...` link, an `anomalyco/opencode` reference, an
-  attribution header naming "opencode"), suggest adding a literal pattern for
-  it to `script/check-forbidden-strings.ts` in the merge summary so future
-  merges catch it automatically. Don't add it silently mid-merge — flag it for
-  the user.
+- `bun install`, then `bun script/check-workflows.ts`
+- `bun run check` from the repository root. If it does not finish, run
+  `bun typecheck` in `packages/core`, `cli`, `server`, `tui` and `plugin`
+- focused tests in `packages/core`, `cli` and `server` with the test isolation
+  from `.kilo/skills/v2-migration/SKILL.md`. Run the same tests on `origin/v2`
+  and classify each failure: new from the sync, or already failing before
+- `bun script/check-opencode-annotations.ts` and `bun script/check-shared-patches.ts`.
+  They compare with the pinned upstream release, which is the new release once
+  the merge commit exists. Run them after the commit
+- the self-test from the v2-migration skill: `bun dev` quick check and a TUI
+  check (the Kilo executable on `v2` must keep working)
 
 ### 9. Commit with the standard message
 
-Per `script/upstream/README.md`:
+`merge.ts` prepared the message. Conclude the merge with it:
 
 ```bash
-git commit -m "resolve merge conflicts"
+git commit --no-edit   # chore(upstream): sync v2.x.y (<sha11>)
 ```
 
-The default `git merge` auto-message (`Merge branch '…' into …`) is also fine,
-but `resolve merge conflicts` is the convention for these PRs.
+The message is load-bearing: the annotation check and the shared-patch counter
+find the pinned upstream release from it. Do not change it. The PR must merge
+with "Create a merge commit": a squash or rebase drops the upstream ancestry,
+and the next sync conflicts again.
 
 ### 9.5. Handle downstream API renames as separate commits
 
@@ -313,51 +345,30 @@ breaks. These auto-merge cleanly and then fail. Three resolution patterns:
 Never silently delete; always leave a breadcrumb. A future reviewer should be
 able to understand why this one upstream test is treated differently.
 
-### 10. Resync version strings in a separate commit
+### 10. Do not resync versions
 
-Upstream stamps its own version into shared files — notably
-`packages/extensions/zed/extension.toml` (version field + 5 Kilo-Org download
-URLs), and any `package.json` that upstream bumped in the same release window.
-After the merge this leaves parts of the tree pointing at upstream's version
-(e.g. `1.14.30`), whose release tag does not exist on Kilo's pipeline, so the
-Zed download URLs silently 404.
-
-Fix this in a dedicated commit *after* `resolve merge conflicts`:
-
-```bash
-bun run script/sync-versions.ts             # uses root package.json version
-# or, to target an explicit version:
-bun run script/sync-versions.ts 7.2.41
-git add -A
-git commit -m "chore: resync versions after upstream merge"
-```
-
-The script rewrites every top-level `"version"` in `package.json` files
-(excluding `node_modules`, hidden dirs, and `packages/kilo-jetbrains/` which
-tracks its own cadence), plus the Zed extension toml. It is idempotent — rerun
-it any time to rebase the version back onto Kilo main (useful during
-long-running upstream merges where `main` releases in the meantime).
-
-Keeping this in its own commit makes reviewers' job easier: the merge commit
-only contains behavioural resolutions, and the version resync is a trivial
-diff they can skim in one glance.
+The v2 line follows upstream version numbers. Do not rewrite `version` fields
+after a sync.
 
 ### 11. Write the PR body
 
 Structure the description so reviewers can skim:
 
-- **Non-trivial merge decisions**: a short section per file (or group of
-  related files) that required more than a mechanical `take-ours`/`take-theirs`.
-  Focus on *what Kilo behaviour survived* and *what upstream features were
-  adopted*. Link to Kilo PRs when a `kilocode_change` encodes a specific fix.
+- **Release**: tag, release commit SHA, lag before and after (releases and days,
+  from `bun script/upstream/list-versions.ts` or the sync report).
+- **Conflicts**: each conflict and its resolution, including the plugin-first
+  check from §2.5 for each Kilo patch.
+- **Shared files touched**: from the sync report, with the option (1 to 5) and
+  the missing seam for each Kilo patch.
 - **Notable auto-merged changes**: new columns, new helper files, renamed
   middleware — anything reviewers should eyeball even though git didn't flag
   it.
-- **What to test**: explicit, scenario-level test steps for each non-trivial
-  change. Don't list tests; list *user-visible behaviour* so a tester who
-  doesn't read the diff can exercise it.
-- **CI guards to watch**: typecheck, knip, annotation check, visual regression.
+- **Tooling gaps**: each step that the tooling did not do and you did by hand.
+- **Tests**: the comparison against `origin/v2` (new failures, failures that
+  were already there).
+- **Self-test**: the scenarios and results.
 - **Follow-ups**: any `TODO:` you left in code, as a bullet list with links.
+- In bold: **Merge with 'Create a merge commit'. Do not squash or rebase.**
 
 ## User-approval checkpoints
 

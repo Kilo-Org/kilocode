@@ -1,21 +1,20 @@
 #!/usr/bin/env bun
 /**
- * Enhanced package.json transform with Kilo dependency injection
+ * Enhanced package.json transform for the Kilo v2 line.
  *
  * This script handles package.json conflicts by:
  * 1. Taking upstream's version (to get new dependencies)
- * 2. Transforming package names (opencode -> kilo)
- * 3. Injecting Kilo-specific dependencies
- * 4. Preserving Kilo's version number
- * 5. Preserving overrides and patchedDependencies
- * 6. Preserving Kilo's repository metadata
- * 7. Using "newest wins" strategy for dependency versions
+ * 2. Transforming package names when `transforms.packageNames` is on
+ * 3. Merging dependencies with a "newest wins" strategy
+ * 4. Keeping Kilo metadata and workspace packages only when Kilo changed them from the merge base
+ * 5. Preserving Kilo's version number only when `transforms.versions` is on
  */
 
 import { $ } from "bun"
 import { info, success, warn, debug } from "../utils/logger"
 import { getCurrentVersion } from "./preserve-versions"
 import { oursHasKilocodeChanges } from "../utils/git"
+import { defaultConfig } from "../utils/config"
 
 /**
  * Extract clean version string from a version specifier
@@ -135,17 +134,57 @@ export function fixPackageManager(
   pkg.packageManager = next
 }
 
+function same(a: unknown, b: unknown): boolean {
+  return JSON.stringify(a) === JSON.stringify(b)
+}
+
+/** True when our side changed the value from the merge base (or the base is unknown). */
+function differs(ours: unknown, base: unknown): boolean {
+  if (ours === undefined) return false
+  if (base === undefined) return true
+  return !same(ours, base)
+}
+
+/**
+ * Keep Kilo's repository metadata only when Kilo changed it from the merge base. When our side
+ * equals the base, take upstream's value. A null base (pre-merge, base unknown) keeps ours.
+ */
 export function fixRepository(
   pkg: Record<string, unknown>,
   ours: Record<string, unknown> | null,
+  base: Record<string, unknown> | null,
   changes: string[],
 ): void {
   if (!ours) return
   for (const key of ["repository", "homepage", "bugs"] as const) {
-    if (ours[key] === undefined || JSON.stringify(pkg[key]) === JSON.stringify(ours[key])) continue
+    if (ours[key] === undefined) continue
+    if (base && !differs(ours[key], base[key])) continue
+    if (same(pkg[key], ours[key])) continue
     pkg[key] = ours[key]
     changes.push(`${key}: preserved Kilo metadata`)
   }
+}
+
+/**
+ * Keep Kilo's root `workspaces.packages` only when Kilo changed it from the merge base.
+ */
+export function preserveWorkspacePackages(
+  pkg: Record<string, unknown>,
+  ours: Record<string, unknown> | null,
+  base: Record<string, unknown> | null,
+  relativePath: string,
+  changes: string[],
+): void {
+  if (relativePath !== "package.json" || !ours) return
+  const ourPackages = (ours.workspaces as { packages?: string[] } | undefined)?.packages
+  if (!ourPackages) return
+  const basePackages = (base?.workspaces as { packages?: string[] } | undefined)?.packages
+  if (base && !differs(ourPackages, basePackages)) return
+  const workspaces = (pkg.workspaces as Record<string, unknown> | undefined) || {}
+  if (same(workspaces.packages, ourPackages)) return
+  workspaces.packages = ourPackages
+  pkg.workspaces = workspaces
+  changes.push("workspaces.packages: preserved Kilo's workspace configuration")
 }
 
 export function assertBunPackageManager(current: unknown, base: unknown, upstream: unknown): void {
@@ -236,6 +275,8 @@ export interface PackageJsonOptions {
 export interface ReconcileOptions extends PackageJsonOptions {
   oursRef: string
   theirsRef: string
+  /** Merge base ref for the three-way metadata rule. Defaults to the merge base of the two refs. */
+  baseRef?: string
   /**
    * Files to skip (e.g. still-conflicted files where the user is going to
    * resolve manually). The reconciler would otherwise overwrite the conflict
@@ -244,96 +285,42 @@ export interface ReconcileOptions extends PackageJsonOptions {
   skip?: Set<string>
 }
 
-// Package name mappings
-const PACKAGE_NAME_MAP: Record<string, string> = {
-  "opencode-ai": "@kilocode/cli",
-  "@opencode-ai/cli": "@kilocode/cli",
-  "@opencode-ai/sdk": "@kilocode/sdk",
-  "@opencode-ai/plugin": "@kilocode/plugin",
+/** Versions are preserved only when the switch is on or a caller asks for it explicitly. */
+function shouldPreserveVersion(options: PackageJsonOptions): boolean {
+  return options.preserveVersion === true || defaultConfig.transforms.versions
 }
 
-// Kilo-specific dependencies to inject into specific packages
-// NOTE: When adding new Kilo-specific workspace dependencies (packages starting with @kilocode/kilo-*),
-// add them here to prevent them from being removed during upstream merges
-const KILO_DEPENDENCIES: Record<string, Record<string, string>> = {
-  // packages/opencode/package.json needs these
-  "packages/opencode/package.json": {
-    "@kilocode/kilo-gateway": "workspace:*",
-    "@kilocode/kilo-telemetry": "workspace:*",
-  },
-}
+// Package name mappings, built from the configured mappings and applied only when
+// `transforms.packageNames` is on. On the v2 line Kilo keeps upstream `@opencode/*` names by default.
+const PACKAGE_NAME_MAP: Record<string, string> = defaultConfig.transforms.packageNames
+  ? Object.fromEntries(defaultConfig.packageMappings.map((mapping) => [mapping.from, mapping.to]))
+  : {}
 
-// Kilo-specific bin entries to set on specific packages
-const KILO_BIN: Record<string, Record<string, string>> = {
-  "packages/opencode/package.json": {
-    kilo: "./bin/kilo",
-    kilocode: "./bin/kilo",
-  },
-}
+// Kilo-specific dependencies to inject into specific packages. Empty on v2.
+const KILO_DEPENDENCIES: Record<string, Record<string, string>> = {}
 
-// Packages that should have their name transformed
-const TRANSFORM_PACKAGE_NAMES: Record<string, string> = {
-  "package.json": "@kilocode/kilo",
-  "packages/opencode/package.json": "@kilocode/cli",
-  "packages/plugin/package.json": "@kilocode/plugin",
-  "packages/sdk/js/package.json": "@kilocode/sdk",
-}
+// Kilo-specific bin entries to set on specific packages. Empty on v2.
+const KILO_BIN: Record<string, Record<string, string>> = {}
 
-// Kilo-specific scripts to preserve from the base branch per package.json.
-// Upstream's version wholesale-replaces the scripts block, so anything listed
-// here gets re-applied from ours after taking theirs.
+// Packages that should have their name transformed. Empty on v2.
+const TRANSFORM_PACKAGE_NAMES: Record<string, string> = {}
+
+// Kilo-specific scripts to preserve from the base branch per package.json. Kilo's root `dev`
+// runs `bun script/dev-isolated.ts`, which upstream does not have.
 const PRESERVE_SCRIPTS: Record<string, string[]> = {
-  "package.json": [
-    "dev",
-    "extension",
-    "extension:isolated",
-    "extension:isolated:clean",
-    "changeset",
-    "changeset:version",
-    "dev-setup",
-    "postinstall",
-    "dev:local",
-    "test:script:ci",
-  ],
-  "packages/opencode/package.json": ["test", "test:ci"],
-  // Upstream-shared packages where Kilo adds a JUnit test:ci script for CI.
-  // Without these entries every merge silently schedules zero tests for them.
-  "packages/core/package.json": ["test:ci"],
-  "packages/effect-drizzle-sqlite/package.json": ["test:ci"],
-  "packages/http-recorder/package.json": ["test:ci"],
-  "packages/client/package.json": ["test:ci"],
-  "packages/httpapi-codegen/package.json": ["test:ci"],
-  "packages/llm/package.json": ["test:ci"],
-  "packages/sdk-next/package.json": ["test:ci"],
-  "packages/session-ui/package.json": ["test:ci"],
-  "packages/tui/package.json": ["test:ci"],
-  "packages/ui/package.json": ["test:ci"],
-  "packages/codemode/package.json": ["test:ci"],
+  "package.json": ["dev"],
 }
 
-// Upstream-only trusted dependencies to delete per package.json. Trusted deps
-// get native lifecycle scripts run on install; Kilo keeps tree-sitter-powershell
-// for its WASM grammar only and avoids a root node-gyp requirement, so
-// upstream's native-build trust must not come over.
-const DELETE_UPSTREAM_TRUSTED_DEPS: Record<string, string[]> = {
-  "package.json": ["tree-sitter-powershell"],
-}
+// Upstream-only trusted dependencies to delete per package.json. Empty on v2.
+const DELETE_UPSTREAM_TRUSTED_DEPS: Record<string, string[]> = {}
 
-// Upstream-only scripts to delete per package.json. These reference packages
-// Kilo doesn't ship (desktop-electron, console/app, app) and would otherwise
-// reappear on every merge.
-const DELETE_UPSTREAM_SCRIPTS: Record<string, string[]> = {
-  "package.json": ["dev:desktop", "dev:web", "dev:console", "translate:app"],
-}
+// Upstream-only scripts to delete per package.json. Empty on v2.
+const DELETE_UPSTREAM_SCRIPTS: Record<string, string[]> = {}
 
-// Upstream-only catalog entries to delete per package.json. These are pulled
-// in by upstream features (e.g. desktop Sentry integration) that Kilo doesn't
-// ship, so they add install weight with zero consumers in our tree.
-const DELETE_UPSTREAM_CATALOG: Record<string, string[]> = {
-  "package.json": ["@sentry/solid", "@sentry/vite-plugin", "opentui-spinner"],
-}
+// Upstream-only catalog entries to delete per package.json. Empty on v2.
+const DELETE_UPSTREAM_CATALOG: Record<string, string[]> = {}
 
-const DELETE_UPSTREAM_DEPENDENCIES = new Set(["opentui-spinner"])
+const DELETE_UPSTREAM_DEPENDENCIES = new Set<string>()
 
 /**
  * Re-apply Kilo-specific scripts on top of the upstream-shaped scripts block,
@@ -425,29 +412,37 @@ export function fixCatalog(pkg: Record<string, unknown>, path: string, changes: 
   }
 }
 
-export function fixMetadata(
-  pkg: Record<string, unknown>,
-  path: string,
-  ours: Record<string, unknown> | null,
-  changes: string[],
-): void {
-  if (path !== "packages/opencode/package.json") return
-  if (!ours) return
-  if (Array.isArray(ours.keywords) && JSON.stringify(pkg.keywords) !== JSON.stringify(ours.keywords)) {
-    pkg.keywords = ours.keywords
-    changes.push("keywords: preserved from base")
-  }
-  if (typeof ours.private === "boolean" && pkg.private !== ours.private) {
-    pkg.private = ours.private
-    changes.push("private: preserved from base")
-  }
-}
-
 /**
  * Check if file is a package.json
  */
 export function isPackageJson(file: string): boolean {
   return file.endsWith("package.json")
+}
+
+/** Read a JSON object from a git merge stage, or null when the stage is missing. */
+async function readStageJson(stage: string, file: string): Promise<Record<string, unknown> | null> {
+  try {
+    return JSON.parse(await $`git show ${stage}${file}`.text())
+  } catch {
+    return null
+  }
+}
+
+/** Read a JSON object from a git ref, or null when the file is missing. */
+async function readRefJson(ref: string, file: string): Promise<Record<string, unknown> | null> {
+  try {
+    return JSON.parse(await $`git show ${ref}:${file}`.text())
+  } catch {
+    return null
+  }
+}
+
+/** The merge base of two refs, or null when git cannot find one. */
+async function mergeBase(oursRef: string, theirsRef: string): Promise<string | null> {
+  const result = await $`git merge-base ${oursRef} ${theirsRef}`.quiet().nothrow()
+  if (result.exitCode !== 0) return null
+  const sha = result.stdout.toString().trim()
+  return sha || null
 }
 
 /**
@@ -497,24 +492,19 @@ export async function transformPackageJson(file: string, options: PackageJsonOpt
   }
 
   try {
-    // Save Kilo's version BEFORE taking theirs
-    let ourPkg: Record<string, unknown> | null = null
-    try {
-      const ourContent = await $`git show :2:${file}`.text() // :2: is "ours" in merge
-      ourPkg = JSON.parse(ourContent)
-    } catch {
-      // File might not exist in ours (new file from upstream)
-      // or we're not in a merge conflict - try reading current file
+    // Save Kilo's version and the merge base BEFORE taking theirs
+    let ourPkg = await readStageJson(":2:", file) // :2: is "ours" in merge
+    if (!ourPkg) {
+      // File might not exist in ours (new file from upstream), or we are not in a
+      // merge conflict. Fall back to the current file when it has no conflict markers.
       try {
         const currentContent = await Bun.file(file).text()
-        if (!currentContent.includes("<<<<<<<")) {
-          // Not a conflict, read as-is
-          ourPkg = JSON.parse(currentContent)
-        }
+        if (!currentContent.includes("<<<<<<<")) ourPkg = JSON.parse(currentContent)
       } catch {
         // File doesn't exist yet
       }
     }
+    const basePkg = await readStageJson(":1:", file)
 
     // Take upstream's version
     await $`git checkout --theirs ${file}`.quiet().nothrow()
@@ -534,8 +524,8 @@ export async function transformPackageJson(file: string, options: PackageJsonOpt
 
     fixPackageManager(pkg, relativePath, ourPkg, changes)
 
-    // 2. Preserve Kilo version if requested
-    if (options.preserveVersion !== false) {
+    // 2. Preserve Kilo version only when the versions switch is on
+    if (shouldPreserveVersion(options)) {
       const kiloVersion = await getCurrentVersion()
       if (pkg.version !== kiloVersion) {
         changes.push(`version: ${pkg.version} -> ${kiloVersion}`)
@@ -585,22 +575,15 @@ export async function transformPackageJson(file: string, options: PackageJsonOpt
         }
       }
 
-      // 6. Preserve repository metadata so published packages keep Kilo links
-      fixRepository(pkg, ourPkg, changes)
+      // 6. Preserve repository metadata only when Kilo changed it from the merge base
+      fixRepository(pkg, ourPkg, basePkg, changes)
 
-      fixMetadata(pkg, relativePath, ourPkg, changes)
-
-      // 7. Handle workspaces for root package.json
-      // Kilo has removed hosted platform packages (console/*, slack, etc.)
-      // so we need to preserve Kilo's workspace configuration instead of taking upstream's
+      // 7. Handle workspaces for root package.json. Keep Kilo's workspace packages only when
+      // Kilo changed them from the merge base.
       const ourWorkspaces = ourPkg.workspaces as { packages?: string[]; catalog?: Record<string, string> } | undefined
       const theirWorkspaces = pkg.workspaces as { packages?: string[]; catalog?: Record<string, string> } | undefined
 
-      if (relativePath === "package.json" && ourWorkspaces?.packages) {
-        pkg.workspaces = pkg.workspaces || {}
-        pkg.workspaces.packages = ourWorkspaces.packages
-        changes.push(`workspaces.packages: preserved Kilo's workspace configuration`)
-      }
+      preserveWorkspacePackages(pkg, ourPkg, basePkg, relativePath, changes)
 
       fixScripts(pkg, relativePath, ourPkg, changes)
 
@@ -705,12 +688,14 @@ export async function transformConflictedPackageJson(
 }
 
 /**
- * Get Kilo's package.json from the base branch (main) for comparison
- * Used during pre-merge to compare upstream versions against Kilo's versions
+ * Get Kilo's package.json from the base branch (default: v2) for comparison.
+ * Used during pre-merge to compare upstream versions against Kilo's versions.
  */
-async function getKiloPackageJson(path: string, baseBranch = "main"): Promise<Record<string, unknown> | null> {
+async function getKiloPackageJson(
+  path: string,
+  baseBranch = defaultConfig.baseBranch,
+): Promise<Record<string, unknown> | null> {
   try {
-    // Try to get the file from origin/main (or whatever base branch)
     const content = await $`git show origin/${baseBranch}:${path}`.text()
     return JSON.parse(content)
   } catch {
@@ -754,8 +739,8 @@ export async function transformAllPackageJson(options: PackageJsonOptions = {}):
 
       fixPackageManager(pkg, path, kiloPkg, changes)
 
-      // 2. Preserve Kilo version if requested
-      if (options.preserveVersion !== false) {
+      // 2. Preserve Kilo version only when the versions switch is on
+      if (shouldPreserveVersion(options)) {
         const kiloVersion = await getCurrentVersion()
         if (pkg.version !== kiloVersion) {
           changes.push(`version: ${pkg.version} -> ${kiloVersion}`)
@@ -805,18 +790,11 @@ export async function transformAllPackageJson(options: PackageJsonOptions = {}):
           }
         }
 
-        // 6. Preserve repository (Kilo-specific, upstream doesn't have this)
-        const kiloRepo = kiloPkg.repository
-        if (kiloRepo && JSON.stringify(pkg.repository) !== JSON.stringify(kiloRepo)) {
-          pkg.repository = kiloRepo
-          changes.push(`repository: preserved Kilo's repository configuration`)
-        }
+        // 6. Preserve repository metadata (base is unknown pre-merge, so keep Kilo's values)
+        fixRepository(pkg, kiloPkg, null, changes)
 
-        fixMetadata(pkg, path, kiloPkg, changes)
-
-        // 7. Handle workspaces for root package.json
-        // Kilo has removed hosted platform packages (console/*, slack, etc.)
-        // so we need to preserve Kilo's workspace configuration instead of taking upstream's
+        // 7. Handle workspaces for root package.json. Keep Kilo's workspace packages when the
+        // base is unknown.
         const kiloWorkspaces = kiloPkg.workspaces as
           | { packages?: string[]; catalog?: Record<string, string> }
           | undefined
@@ -824,11 +802,7 @@ export async function transformAllPackageJson(options: PackageJsonOptions = {}):
           | { packages?: string[]; catalog?: Record<string, string> }
           | undefined
 
-        if (path === "package.json" && kiloWorkspaces?.packages) {
-          pkg.workspaces = pkg.workspaces || {}
-          pkg.workspaces.packages = kiloWorkspaces.packages
-          changes.push(`workspaces.packages: preserved Kilo's workspace configuration`)
-        }
+        preserveWorkspacePackages(pkg, kiloPkg, null, path, changes)
 
         fixScripts(pkg, path, kiloPkg, changes)
 
@@ -939,27 +913,18 @@ export async function reconcilePackageJsonFromRefs(
     return { file, action: "flagged", changes: [], dryRun }
   }
 
-  let ourPkg: Record<string, unknown> | null = null
-  try {
-    const ourContent = await $`git show ${options.oursRef}:${file}`.text()
-    ourPkg = JSON.parse(ourContent)
-  } catch {
-    // file didn't exist in ours - that's fine
-  }
+  const ourPkg = await readRefJson(options.oursRef, file)
 
-  let pkg: Record<string, unknown> | null = null
-  try {
-    const theirContent = await $`git show ${options.theirsRef}:${file}`.text()
-    pkg = JSON.parse(theirContent)
-  } catch {
-    // file didn't exist in theirs either - nothing to reconcile
-  }
+  let pkg = await readRefJson(options.theirsRef, file)
 
   if (!pkg) {
     if (!ourPkg) return { file, action: "skipped", changes: [], dryRun }
     pkg = JSON.parse(JSON.stringify(ourPkg))
   }
   if (!pkg) return { file, action: "skipped", changes: [], dryRun }
+
+  const baseRef = options.baseRef ?? (await mergeBase(options.oursRef, options.theirsRef))
+  const basePkg = baseRef ? await readRefJson(baseRef, file) : null
 
   const relativePath = file.replace(process.cwd() + "/", "")
   const newName = TRANSFORM_PACKAGE_NAMES[relativePath]
@@ -970,7 +935,7 @@ export async function reconcilePackageJsonFromRefs(
 
   fixPackageManager(pkg, relativePath, ourPkg, changes)
 
-  if (options.preserveVersion !== false) {
+  if (shouldPreserveVersion(options)) {
     const kiloVersion = await getCurrentVersion()
     if (pkg.version !== kiloVersion) {
       changes.push(`version: ${pkg.version} -> ${kiloVersion}`)
@@ -1021,33 +986,20 @@ export async function reconcilePackageJsonFromRefs(
       }
     }
 
-    const ourRepo = ourPkg.repository
-    if (ourRepo && JSON.stringify(pkg.repository) !== JSON.stringify(ourRepo)) {
-      pkg.repository = ourRepo
-      changes.push(`repository: preserved Kilo's repository configuration`)
-    }
-
-    fixMetadata(pkg, relativePath, ourPkg, changes)
+    // Preserve repository metadata only when Kilo changed it from the merge base
+    fixRepository(pkg, ourPkg, basePkg, changes)
 
     const ourWs = ourPkg.workspaces as { packages?: string[]; catalog?: Record<string, string> } | undefined
     const theirWs = pkg.workspaces as { packages?: string[]; catalog?: Record<string, string> } | undefined
 
-    if (relativePath === "package.json" && ourWs?.packages) {
-      pkg.workspaces = (pkg.workspaces as Record<string, unknown>) || {}
-      ;(pkg.workspaces as { packages: string[] }).packages = ourWs.packages
-      changes.push(`workspaces.packages: preserved Kilo's workspace configuration`)
-    }
+    preserveWorkspacePackages(pkg, ourPkg, basePkg, relativePath, changes)
 
     fixScripts(pkg, relativePath, ourPkg, changes)
 
     if (ourWs?.catalog || theirWs?.catalog) {
       pkg.workspaces = (pkg.workspaces as Record<string, unknown>) || {}
-      ;(pkg.workspaces as { catalog: Record<string, string> }).catalog = mergeWithNewestVersions(
-        ourWs?.catalog,
-        theirWs?.catalog,
-        changes,
-        "workspaces.catalog",
-      )
+      const catalog = mergeWithNewestVersions(ourWs?.catalog, theirWs?.catalog, changes, "workspaces.catalog")
+      ;(pkg.workspaces as { catalog: Record<string, string> }).catalog = catalog ?? {}
     }
 
     fixCatalog(pkg, relativePath, changes)

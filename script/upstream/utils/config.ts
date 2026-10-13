@@ -1,30 +1,45 @@
 #!/usr/bin/env bun
 /**
- * Configuration for upstream merge automation
+ * Configuration for upstream merge automation on the Kilo v2 line.
+ *
+ * The v2 line merges upstream OpenCode `dev` release by release. Each sync merges the release
+ * commit of a `v2.x.y` tag (the parent of the tag: the tag itself is a version-bump commit next
+ * to the branch).
  */
+
+import { owned, ownedDirectories } from "./owned"
 
 export interface PackageMapping {
   from: string
   to: string
 }
 
+export interface TransformSwitches {
+  /** Rename upstream package names to Kilo names. Off until decision D-1. */
+  packageNames: boolean
+  /** Branding transforms and codemods (strings, imports, i18n, take-theirs, scripts, extensions, web). Off until rebranding (A11). */
+  branding: boolean
+  /** Keep Kilo package versions instead of upstream's. Off: v2 follows upstream version numbers. */
+  versions: boolean
+}
+
 export interface MergeConfig {
-  /** Package name mappings from opencode to kilo */
+  /** Package name mappings, used only when `transforms.packageNames` is on */
   packageMappings: PackageMapping[]
 
-  /** Files to always keep Kilo's version (never take upstream changes) */
+  /** Shared files where Kilo always keeps its version (never take upstream changes) */
   keepOurs: string[]
 
-  /** Files to skip entirely (don't add from upstream, remove if added) */
+  /** Upstream files that Kilo does not ship (removed when a merge adds them) */
   skipFiles: string[]
 
-  /** Files that should take upstream version and apply Kilo branding transforms */
+  /** Files that take the upstream version plus Kilo branding transforms */
   takeTheirsAndTransform: string[]
 
   /** Script files with GitHub API references */
   scriptFiles: string[]
 
-  /** Extension files (Zed, etc.) */
+  /** Editor extension files */
   extensionFiles: string[]
 
   /** Web/docs files */
@@ -33,171 +48,82 @@ export interface MergeConfig {
   /** Lock files to accept ours and regenerate after merge */
   lockFiles: string[]
 
-  /** Directories that are Kilo-specific and should be preserved */
+  /** Kilo-owned directories (see utils/owned.ts) */
   kiloDirectories: string[]
+
+  /** Kilo-owned path patterns (see utils/owned.ts) */
+  kiloOwned: string[]
 
   /** File patterns to exclude from codemods */
   excludePatterns: string[]
 
-  /** Default branch to merge into */
+  /** Kilo branch to merge into */
   baseBranch: string
 
-  /** Branch prefix for merge branches */
+  /** Upstream branch that carries the release commits */
+  upstreamBranch: string
+
+  /** Upstream branches that must never be merged */
+  frozenBranches: string[]
+
+  /** Tags that mark upstream releases for this line */
+  tagPattern: RegExp
+
+  /** Upstream release commit that the Kilo base branch was created from (before the first sync) */
+  initialBase: string
+
+  /** Prefix for sync branches, for example `sync-v2-0-27` */
   branchPrefix: string
 
   /** Remote name for upstream */
   upstreamRemote: string
+
+  /** Upstream repository URL, used when the remote is missing */
+  upstreamUrl: string
 
   /** Remote name for origin */
   originRemote: string
 
   /** i18n file patterns that need string transformation */
   i18nPatterns: string[]
+
+  /** Harness packages, for the change size in sync reports */
+  harness: string[]
+
+  /** Transform switches */
+  transforms: TransformSwitches
 }
 
 export const defaultConfig: MergeConfig = {
+  // Only used when `transforms.packageNames` is on (decision D-1). Upstream uses `@opencode/*`
+  // on the v2 line. The proposal for D-1 keeps these names and renames only published packages.
   packageMappings: [
-    { from: "opencode-ai", to: "@kilocode/cli" },
-    { from: "@opencode-ai/cli", to: "@kilocode/cli" },
-    { from: "@opencode-ai/sdk", to: "@kilocode/sdk" },
-    { from: "@opencode-ai/plugin", to: "@kilocode/plugin" },
+    { from: "@opencode/cli", to: "@kilocode/cli" },
+    { from: "@opencode/sdk", to: "@kilocode/sdk" },
+    { from: "@opencode/plugin", to: "@kilocode/plugin" },
   ],
 
-  keepOurs: [
-    "README.md",
-    "CONTRIBUTING.md",
-    "CODE_OF_CONDUCT.md",
-    "PRIVACY.md",
-    "SECURITY.md",
-    "AGENTS.md",
-    // GitHub workflows - MANUAL REVIEW (can break CI/CD)
-    ".github/workflows/publish.yml",
-    ".github/workflows/close-stale-prs.yml",
-    ".github/pull_request_template.md",
-    // Kilo-specific command files
-    ".opencode/command/commit.md",
-    // Kilo-specific publish scripts
-    "packages/opencode/script/publish-registries.ts",
-    // Generated OpenAPI spec - kept ours and regenerated post-merge via script/generate.ts
-    "packages/sdk/openapi.json",
-    // GitHub Action - Kilo version is fully ported and complete
-    "github/action.yml",
-    "github/README.md",
-    "github/script/release",
-    "github/script/publish",
-  ],
+  // Kilo does not replace a shared upstream file as a whole on v2 yet. Kilo-owned paths are kept by
+  // `kiloOwned`. Add a file here only when Kilo owns its full content and the reason is in the PR.
+  keepOurs: [],
 
-  // Files that only exist in upstream and should NOT be added to Kilo
-  // These are removed during merge if they appear
-  skipFiles: [
-    // Translated README files (Kilo doesn't have these)
-    "README.ar.md",
-    "README.bn.md",
-    "README.br.md",
-    "README.bs.md",
-    "README.da.md",
-    "README.de.md",
-    "README.es.md",
-    "README.fr.md",
-    "README.gr.md",
-    "README.it.md",
-    "README.ja.md",
-    "README.ko.md",
-    "README.no.md",
-    "README.pl.md",
-    "README.ru.md",
-    "README.th.md",
-    "README.tr.md",
-    "README.uk.md",
-    "README.vi.md",
-    "README.zh.md",
-    "README.zht.md",
-    // Stats file
-    "STATS.md",
-    // Team members file (Kilo doesn't maintain this upstream list)
-    ".github/TEAM_MEMBERS",
-    // Workflows that don't exist in Kilo
-    ".github/workflows/update-nix-hashes.yml",
-    ".github/workflows/deploy.yml",
-    ".github/workflows/docs-update.yml",
-    ".github/workflows/docs-locale-sync.yml",
-    // Workflows deleted in Kilo (replaced or no longer needed)
-    ".github/workflows/close-prs.yml",
-    ".github/workflows/opencode.yml",
-    ".github/workflows/publish-vscode.yml",
-    // Upstream PR cleanup is replaced by .github/workflows/kilo-auto-close.yml
-    "script/github/close-prs.ts",
-    // VS Code example configs (Kilo ships real .vscode/* files)
-    ".vscode/launch.example.json",
-    ".vscode/settings.example.json",
-    // Nix files for packages Kilo has removed / replaced with nix/kilo.nix
-    "nix/desktop.nix",
-    "nix/opencode.nix",
-    // opencode CLI bin (Kilo uses its own build output)
-    "packages/opencode/bin/opencode",
-    // Kilo does not ship upstream's embedded web UI command.
-    "packages/opencode/src/cli/cmd/web.ts",
-    // Removed prompt file
-    "packages/opencode/src/session/prompt/build-switch.txt",
-    // Upstream app translation automation targets products and binaries Kilo does not ship
-    "script/translate-app.ts",
-    "script/translate-app.test.ts",
-    "script/translate-app.md",
-    // Vouch files (Kilo doesn't use Vouch).
-    // Upstream currently ships VOUCHED.td (typo extension). The glob covers both
-    // the current .td file and any future .md rename without another merge breaking.
-    ".github/VOUCHED.*",
-    ".github/workflows/vouch-check-issue.yml",
-    ".github/workflows/vouch-check-pr.yml",
-    ".github/workflows/vouch-manage-by-issue.yml",
-    // SST infrastructure files (Kilo is CLI-only, no hosted platform)
-    "sst.config.ts",
-    "sst-env.d.ts",
-    // Hosted platform packages (not needed for CLI)
-    "infra/**",
-    "packages/console/**",
-    "packages/enterprise/**",
-    "packages/web/**",
-    "packages/slack/**",
-    "packages/function/**",
-    "packages/docs/**",
-    "packages/identity/**",
-    "packages/app/**",
-    "packages/desktop/**",
-    "packages/desktop-electron/**",
-    "packages/cli/**",
-    "packages/stats/**",
-    "sdks/vscode/**",
-    // GitHub Action - Kilo version is fully ported and complete
-    "github/index.ts",
-    "github/package.json",
-    "github/tsconfig.json",
-    "github/bun.lock",
-    "github/sst-env.d.ts",
-    "github/.gitignore",
-  ],
+  // Kilo removed no upstream file on v2, except workflows. Workflows are handled by
+  // `script/check-workflows.ts --fix` (its `removed` list), not by this list.
+  skipFiles: [],
 
-  // Files that should take upstream version and apply Kilo branding transforms
-  // These are files with only branding differences, no logic changes
-  takeTheirsAndTransform: [
-    // Model-facing prompts that need Kilo product identity and documentation links
-    "packages/opencode/src/session/prompt/meta.txt",
-    // UI components
-    "packages/ui/src/components/**/*.tsx",
-    "packages/ui/src/context/**/*.tsx",
-  ],
+  // Branding only (`transforms.branding`).
+  takeTheirsAndTransform: ["packages/ui/src/components/**/*.tsx", "packages/ui/src/context/**/*.tsx"],
 
-  // Script files with GitHub API references
-  scriptFiles: ["script/*.ts", "packages/opencode/script/*.ts"],
+  // Branding only (`transforms.branding`).
+  scriptFiles: ["script/*.ts", "packages/cli/script/*.ts"],
 
-  // Extension files
-  extensionFiles: ["packages/extensions/**/*"],
+  // Branding only. `packages/extensions` does not exist on the v2 line.
+  extensionFiles: [],
 
-  // Web/docs files
-  webFiles: [],
+  // Branding only. `packages/web` is upstream's docs site on v2.
+  webFiles: ["packages/web/src/content/docs/**/*.mdx"],
 
   // Lock files and generated files to accept ours and regenerate after merge
-  // Note: nix/hashes.json is regenerated by CI (update-nix-hashes.yml), not locally
   lockFiles: [
     "bun.lock",
     "**/bun.lock",
@@ -209,21 +135,10 @@ export const defaultConfig: MergeConfig = {
     "**/pnpm-lock.yaml",
     "Cargo.lock",
     "**/Cargo.lock",
-    "nix/hashes.json",
   ],
 
-  kiloDirectories: [
-    "packages/opencode/src/kilocode",
-    "packages/opencode/test/kilocode",
-    "packages/kilo-gateway",
-    "packages/kilo-telemetry",
-    "packages/kilo-vscode",
-    "packages/kilo-jetbrains",
-    "packages/kilo-ui",
-    "packages/kilo-docs",
-    "packages/kilo-i18n",
-    "script/upstream",
-  ],
+  kiloDirectories: ownedDirectories(),
+  kiloOwned: owned,
 
   excludePatterns: [
     "**/node_modules/**",
@@ -234,13 +149,40 @@ export const defaultConfig: MergeConfig = {
     "**/yarn.lock",
   ],
 
-  baseBranch: "main",
-  branchPrefix: "upstream-merge",
+  baseBranch: "v2",
+  upstreamBranch: "dev",
+  // Upstream promoted v2 to `dev` on 2026-10-10. `upstream/v2` is frozen at 4617210822b.
+  frozenBranches: ["v2"],
+  tagPattern: /^v2\.\d+\.\d+$/,
+  // Release commit of upstream v2.0.26 (parent of the tag). `origin/v2` starts here.
+  initialBase: "5e73d5cb1f788637b1b3d5cf1298ea694cbad0c5",
+  branchPrefix: "sync",
   upstreamRemote: "upstream",
+  upstreamUrl: "https://github.com/anomalyco/opencode.git",
   originRemote: "origin",
 
-  // i18n translation files that need Kilo branding transforms
+  // Branding only. On v2 this pattern matches upstream's `packages/ui` and `packages/web` locales.
   i18nPatterns: ["packages/*/src/i18n/*.ts"],
+
+  harness: [
+    "packages/core",
+    "packages/cli",
+    "packages/server",
+    "packages/tui",
+    "packages/plugin",
+    "packages/protocol",
+    "packages/schema",
+    "packages/client",
+    "packages/sdk",
+    "packages/util",
+    "packages/ai",
+  ],
+
+  transforms: {
+    packageNames: false,
+    branding: false,
+    versions: false,
+  },
 }
 
 export function loadConfig(overrides?: Partial<MergeConfig>): MergeConfig {

@@ -11,6 +11,7 @@ import { info, success, warn, error, debug } from "../utils/logger"
 import { defaultConfig } from "../utils/config"
 import { checkoutOurs, stageFiles, getConflictedFiles } from "../utils/git"
 import { matches } from "../utils/match"
+import { isKiloOwned } from "../utils/owned"
 
 export interface KeepOursResult {
   file: string
@@ -25,11 +26,10 @@ export interface KeepOursOptions {
 }
 
 /**
- * Check if a file matches any keep-ours patterns
+ * Check if a file matches a keep-ours pattern or is a Kilo-owned path (utils/owned.ts)
  */
 export function shouldKeepOurs(filePath: string, patterns: string[]): boolean {
-  const dirs = defaultConfig.kiloDirectories.map((dir) => `${dir}/**`)
-  return matches(filePath, [...patterns, ...dirs]) || patterns.some((pattern) => filePath.includes(pattern))
+  return matches(filePath, patterns) || isKiloOwned(filePath)
 }
 
 /**

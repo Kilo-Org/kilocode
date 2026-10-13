@@ -24,7 +24,7 @@
  *
  * Usage:
  *   bun run script/upstream/find-reset-candidates.ts
- *   bun run script/upstream/find-reset-candidates.ts packages/opencode/src/agent
+ *   bun run script/upstream/find-reset-candidates.ts packages/core/src/agent
  *   bun run script/upstream/find-reset-candidates.ts --dry-run --review-limit 3
  */
 
@@ -34,6 +34,7 @@ import { error, header, info, success, warn } from "./utils/logger"
 import { matches } from "./utils/match"
 import { classifyDrift, resetFile, type Bucket, type ClassifyResult } from "./utils/reset"
 import { last, normalize, root, upstreamSizes } from "./utils/upstream"
+import { owned } from "./utils/owned"
 
 interface Args {
   scope?: string
@@ -48,11 +49,8 @@ interface Entry extends ClassifyResult {
   reset?: boolean
 }
 
-const KILO_ONLY_PATHSPECS = [
-  ":(exclude,glob)packages/kilo-*/**",
-  ":(exclude,glob)**/kilocode/**",
-  ":(exclude)script/upstream",
-]
+// Kilo-owned paths (utils/owned.ts) are never reset to upstream.
+const KILO_ONLY_PATHSPECS = owned.map((pattern) => `:(exclude,glob)${pattern}`)
 
 // Non-code assets never make sense to bulk-reset. Big binary-ish files (large
 // SVG sprites, icons, fonts, archives) also stress concurrent git subprocesses

@@ -1,8 +1,6 @@
 #!/usr/bin/env bun
 /**
- * Upstream Merge Automation - Main Entry Point
- *
- * This module exports all utilities and transforms for upstream merges.
+ * Upstream sync tooling for the Kilo v2 line: utilities and transforms.
  */
 
 // Utils
@@ -14,13 +12,16 @@ export * from "./utils/report"
 export * from "./utils/upstream"
 export * from "./utils/markers"
 export * from "./utils/reset"
+export * from "./utils/owned"
+export * from "./utils/shared"
+export * from "./utils/baseline"
 
 // Transforms
 export { transformAll as transformPackageNames, transformFile } from "./transforms/package-names"
 export { preserveAllVersions, preserveVersion, getCurrentVersion } from "./transforms/preserve-versions"
 export { keepOursFiles, resetToOurs, shouldKeepOurs } from "./transforms/keep-ours"
 export { skipFiles, skipSpecificFiles, shouldSkip } from "./transforms/skip-files"
-export { removeKiloWeb, transformKiloWeb } from "./transforms/remove-kilo-web"
+export { isLockFile, resolveLockFileConflicts, regenerateLockFiles } from "./transforms/lock-files"
 export {
   transformAllI18n,
   transformConflictedI18n,
@@ -28,8 +29,6 @@ export {
   transformI18nContent,
   isI18nFile,
 } from "./transforms/transform-i18n"
-
-// New transforms for auto-resolving more conflict types
 export {
   transformConflictedTakeTheirs,
   transformTakeTheirs,
@@ -38,14 +37,12 @@ export {
   applyBrandingTransforms,
   matchesPattern,
 } from "./transforms/transform-take-theirs"
-
 export {
   transformConflictedPackageJson,
   transformPackageJson,
   transformAllPackageJson,
   isPackageJson,
 } from "./transforms/transform-package-json"
-
 export {
   transformConflictedScripts,
   transformScriptFile,
@@ -53,7 +50,6 @@ export {
   isScriptFile,
   applyScriptTransforms,
 } from "./transforms/transform-scripts"
-
 export {
   transformConflictedExtensions,
   transformExtensionFile,
@@ -61,7 +57,6 @@ export {
   isExtensionFile,
   applyExtensionTransforms,
 } from "./transforms/transform-extensions"
-
 export {
   transformConflictedWeb,
   transformWebFile,
