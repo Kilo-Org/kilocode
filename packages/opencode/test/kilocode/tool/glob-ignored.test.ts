@@ -109,7 +109,9 @@ describe("Kilo glob include ignored", () => {
     expect(plan(["packages/*/dist"], "/w", "/w/packages/a/dist")).toBeUndefined()
     expect(plan(["packages/*/dist"], "/w", "/w/src")).toBeUndefined()
     expect(plan(["dist"], "/w", "/elsewhere")).toBeUndefined()
-    expect(plan(["dist", "**/gen"], "/w", "/w/src")).toMatchObject({ include: ["dist/", "**/gen/"], filter: undefined })
+    const sub = plan(["dist", "**/gen"], "/w", "/w/src")
+    expect(sub?.include).toEqual(["dist/", "**/gen/"])
+    expect(["dist/a.js", "x/gen/b.ts", "x/c.ts"].map((file) => sub?.filter(file))).toEqual([true, true, false])
   })
 
   unix(
@@ -119,6 +121,30 @@ describe("Kilo glob include ignored", () => {
         expect(yield* run("**/*.txt")).toEqual(["src/main.txt", "visible.txt"])
       }),
     { git: true },
+  )
+
+  unix(
+    "keeps ignored paths out of default results even for patterns that match folders",
+    () =>
+      Effect.gen(function* () {
+        const all = yield* run("**/*")
+        expect(all).toContain("visible.txt")
+        expect(all).toContain(".cache/hidden.txt")
+        expect(all.filter((file) => /^(build|node_modules|dist|out)\/|^src\/gen\/|^packages\//.test(file))).toEqual([])
+      }),
+    { git: true },
+  )
+
+  unix(
+    "only adds listed folders when the pattern also matches ignored folders",
+    () =>
+      Effect.gen(function* () {
+        const all = yield* run("**/*")
+        expect(all).toContain("build/out.txt")
+        expect(all).toContain("visible.txt")
+        expect(all.filter((file) => /^(node_modules|dist|out)\/|^src\/gen\/|^packages\//.test(file))).toEqual([])
+      }),
+    config(["build"]),
   )
 
   unix(
