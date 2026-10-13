@@ -2922,12 +2922,14 @@ noLLMServer.instance(
       )
       expect(hasFailure).toBe(true)
 
+      // kilocode_change start - assert the read-failure part carries the notice metadata clients render
       const failure = msg.parts.find(
         (part) => part.type === "text" && part.synthetic && part.text.includes("Read tool failed to read"),
       )
       if (failure?.type !== "text") throw new Error("expected text part")
       expect(failure.metadata?.kilo_notice).toBe("attachment_read_failed")
       expect(failure.metadata?.kilo_notice_name).toBe("does-not-exist.ts")
+      // kilocode_change end
 
       yield* sessions.remove(session.id)
     }),
