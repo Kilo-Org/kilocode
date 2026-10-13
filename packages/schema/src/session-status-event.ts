@@ -44,6 +44,14 @@ export const Info = Schema.Union([
     scheduledAt: Schema.String,
   }),
   // kilocode_change end
+  // kilocode_change start - represent a session blocked waiting for a permission
+  // prompt so unattended consumers can distinguish it from real busy work (#33)
+  Schema.Struct({
+    type: Schema.Literal("waiting"),
+    reason: Schema.Literal("permission"),
+    requestID: Schema.String.pipe(optional),
+  }),
+  // kilocode_change end
 ]).annotate({ identifier: "SessionStatus" })
 export type Info = Schema.Schema.Type<typeof Info>
 
