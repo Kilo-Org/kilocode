@@ -130,6 +130,10 @@ export async function main(argv: string[]) {
     lagAfter: after,
     notes: [],
   }
+  const skipped = status.pending.filter((r) => compareVersions(r.version, target.version) < 0)
+  if (skipped.length > 0) {
+    sync.notes.push(`Skips ${skipped.map((r) => r.tag).join(", ")} (--allow-skip). State the reason in the PR`)
+  }
   printAnalysis(sync)
 
   const reportFile = await report.reportPath(target.tag, options.output)
@@ -287,6 +291,7 @@ function printAnalysis(sync: report.SyncReport) {
   logger.info(`Lag after: ${sync.lagAfter.releases} release(s), ${sync.lagAfter.days} day(s)`)
   logger.info(`Conflicts: ${a.conflicts.length}`)
   for (const c of a.conflicts) logger.info(`  - ${c.path} (${c.kind}): ${c.recommendation}`)
+  for (const note of sync.notes) logger.warn(note)
   if (a.newWorkflows.length > 0) {
     logger.warn("New upstream workflows (review, then add to `active` or `removed` in script/check-workflows.ts):")
     logger.list(a.newWorkflows)

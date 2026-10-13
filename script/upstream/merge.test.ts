@@ -78,6 +78,10 @@ test("refuses a release that skips an older one", async () => {
   const result = await run(r, "--version", "v2.0.28")
   expect(result.code).toBe(1)
   expect(result.output).toContain("skips v2.0.27")
+
+  const allowed = await run(r, "--version", "v2.0.28", "--allow-skip", "--dry-run")
+  expect(allowed.code).toBe(0)
+  expect(allowed.output).toContain("Skips v2.0.27 (--allow-skip)")
 })
 
 test("dry run reports the conflicts without changing the branch", async () => {
