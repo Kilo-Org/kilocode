@@ -1,0 +1,29 @@
+{
+  "$comment": "Shared-patch baseline (U-L3-01). Read by script/check-shared-patches.ts and script/check-opencode-annotations.ts. Each shared upstream file that Kilo adds or changes needs an entry: rung (3 = seam patch, 4 = feature patch) and the missing seam. `unmarked` allows lines without markers and states why. Raise a limit only in the PR that adds the patch, and lower it when a patch goes away.",
+  "limits": {
+    "files": 4,
+    "markedLines": 3,
+    "unmarkedLines": 2,
+    "deletedFiles": 0
+  },
+  "files": {
+    ".github/workflows/check.yml": {
+      "rung": 3,
+      "seam": "CI triggers and gates: run `check` for every pull request, so stacked v2 PRs that target another PR branch are checked; skip `lint:changed` on upstream sync PRs (branch `sync-v*`), whose changed files are upstream's and fail upstream's lint too. No seam: workflow triggers and step conditions cannot be extended from outside the file."
+    },
+    ".gitignore": {
+      "rung": 3,
+      "seam": "Ignore the isolated `bun dev` profile `.kilo-v2-dev/` (script/dev-isolated.ts). Goes away when the Kilo host owns the dev entry (U-E0-01).",
+      "unmarked": "One ignore pattern. A gitignore line cannot carry an inline comment."
+    },
+    "package.json": {
+      "rung": 3,
+      "seam": "Root `dev` script runs script/dev-isolated.ts, so `bun dev` never uses the installed OpenCode or Kilo data. Goes away when the Kilo host owns the dev entry (U-E0-01).",
+      "unmarked": "JSON has no comments."
+    },
+    "packages/core/test/tool-execute.test.ts": {
+      "rung": 4,
+      "seam": "Temporary: skips `execute rejects filesystem fetches`, which also fails on upstream v2.0.27 (the expected text does not match packages/core/src/codemode/web.ts). Upstream fixed it in #54699 (e5f4bf4c241, in v2.0.28). Remove the skip, this entry and the raised limits in the v2.0.28 sync."
+    }
+  }
+}

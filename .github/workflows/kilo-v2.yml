@@ -32,3 +32,52 @@ jobs:
 
       - name: Check workflow allowlist
         run: bun script/check-workflows.ts
+
+  shared:
+    name: shared upstream patches
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          # The checks compare with the pinned upstream release commit, which they find in the history.
+          # A blobless clone has all commits and trees, and fetches only the blobs that the diff reads.
+          fetch-depth: 0
+          filter: blob:none
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: package.json
+
+      - name: Check kilocode_change markers in shared upstream files
+        run: bun script/check-opencode-annotations.ts
+
+      - name: Count shared upstream patches
+        run: bun script/check-shared-patches.ts
+
+  upstream-tooling:
+    name: upstream sync tooling tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: script/upstream
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: package.json
+
+      - name: Install
+        run: bun install --frozen-lockfile
+
+      - name: Typecheck
+        run: bun run typecheck
+
+      - name: Test
+        run: bun test
