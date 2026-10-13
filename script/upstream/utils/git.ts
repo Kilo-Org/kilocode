@@ -1,0 +1,382 @@
+#!/usr/bin/env bun
+/**
+ * Git utilities for upstream merge automation
+ */
+
+import { $ } from "bun"
+import { rm } from "node:fs/promises"
+import { randomUUID } from "node:crypto"
+import { tmpdir } from "node:os"
+import { join } from "node:path"
+
+export interface BranchInfo {
+  current: string
+  exists: boolean
+}
+
+export interface RemoteInfo {
+  name: string
+  url: string
+}
+
+export async function getCurrentBranch(): Promise<string> {
+  const result = await $`git rev-parse --abbrev-ref HEAD`.text()
+  return result.trim()
+}
+
+export async function branchExists(name: string): Promise<boolean> {
+  const result = await $`git show-ref --verify --quiet refs/heads/${name}`.nothrow()
+  return result.exitCode === 0
+}
+
+export async function remoteBranchExists(remote: string, branch: string): Promise<boolean> {
+  const result = await $`git ls-remote --heads ${remote} ${branch}`.text()
+  return result.trim().length > 0
+}
+
+export async function getRemotes(): Promise<RemoteInfo[]> {
+  const result = await $`git remote -v`.text()
+  const lines = result.trim().split("\n")
+  const remotes: RemoteInfo[] = []
+  const seen = new Set<string>()
+
+  for (const line of lines) {
+    const parts = line.split(/\s+/)
+    const name = parts[0] ?? ""
+    const url = parts[1] ?? ""
+    if (name && !seen.has(name)) {
+      seen.add(name)
+      remotes.push({ name, url })
+    }
+  }
+
+  return remotes
+}
+
+export async function hasUpstreamRemote(name = "upstream"): Promise<boolean> {
+  const remotes = await getRemotes()
+  return remotes.some((r) => r.name === name)
+}
+
+/** Fetch the upstream branch and its tags. Tags are forced because upstream may move a release tag. */
+export async function fetchUpstream(remote = "upstream", branch = "dev"): Promise<void> {
+  const result = await $`git fetch ${remote} ${branch} --tags --force`.quiet().nothrow()
+  if (result.exitCode !== 0) {
+    throw new Error(`Failed to fetch upstream: ${result.stderr.toString()}`)
+  }
+}
+
+export async function fetchOrigin(remote = "origin", branch = "v2"): Promise<void> {
+  const result = await $`git fetch ${remote} ${branch}`.quiet().nothrow()
+  if (result.exitCode !== 0) {
+    throw new Error(`Failed to fetch ${remote}/${branch}: ${result.stderr.toString()}`)
+  }
+}
+
+export async function checkout(ref: string): Promise<void> {
+  await $`git checkout ${ref}`
+}
+
+export async function createBranch(name: string, from?: string): Promise<void> {
+  if (from) {
+    await $`git checkout -b ${name} ${from}`
+  } else {
+    await $`git checkout -b ${name}`
+  }
+}
+
+export async function deleteBranch(name: string, force = false): Promise<void> {
+  if (force) {
+    await $`git branch -D ${name}`
+  } else {
+    await $`git branch -d ${name}`
+  }
+}
+
+export async function backupAndDeleteBranch(name: string): Promise<string | null> {
+  if (!(await branchExists(name))) return null
+
+  const timestamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19)
+  const backupName = `backup/${name}-${timestamp}`
+  const current = await getCurrentBranch()
+
+  // Delete the old branch (must not be on it). Check before the backup, so the error path has no side effect.
+  if (current === name) {
+    throw new Error(`Cannot backup and delete branch '${name}' while it is checked out`)
+  }
+  await $`git branch ${backupName} ${name}`
+
+  await deleteBranch(name, true)
+
+  return backupName
+}
+
+export async function push(remote = "origin", branch?: string, setUpstream = false): Promise<void> {
+  const currentBranch = branch || (await getCurrentBranch())
+  if (setUpstream) {
+    await $`git push -u ${remote} ${currentBranch}`
+  } else {
+    await $`git push ${remote} ${currentBranch}`
+  }
+}
+
+export async function pull(remote = "origin", branch?: string): Promise<void> {
+  if (branch) {
+    await $`git pull ${remote} ${branch}`
+  } else {
+    await $`git pull ${remote}`
+  }
+}
+
+export async function commit(message: string): Promise<void> {
+  await $`git commit -am ${message}`
+}
+
+/** Conclude a merge started with `merge()`, keeping the prepared merge message */
+export async function commitMerge(message: string): Promise<void> {
+  await $`git commit --no-edit -m ${message}`.quiet()
+}
+
+/**
+ * Merge `ref` without committing, so the tooling can resolve conflicts and regenerate lock files
+ * inside the merge commit. Always creates a merge commit later (`--no-ff`), never a fast-forward.
+ */
+export async function merge(ref: string, message: string): Promise<{ success: boolean; conflicts: string[] }> {
+  // Force zdiff3 markers even if the contributor's local config has drifted:
+  // conflicts carry the base version (|||||||) alongside ours/theirs so mergiraf
+  // has the common ancestor for structural heuristics and any remaining manual
+  // resolution is dramatically easier. `postinstall` (script/setup-git.ts) sets
+  // The `-c` override keeps this independent of local config.
+  const result = await $`git -c merge.conflictStyle=zdiff3 merge --no-ff --no-commit -m ${message} ${ref}`.nothrow()
+
+  if (result.exitCode === 0) {
+    return { success: true, conflicts: [] }
+  }
+
+  const conflicts = await getConflictedFiles()
+  if (conflicts.length === 0) throw new Error(`git merge failed without conflicts: ${result.stderr.toString()}`)
+  return { success: false, conflicts }
+}
+
+export async function getConflictedFiles(): Promise<string[]> {
+  const result = await $`git diff --name-only --diff-filter=U`.text()
+  return result
+    .trim()
+    .split("\n")
+    .filter((f) => f.length > 0)
+}
+
+export async function hasUncommittedChanges(): Promise<boolean> {
+  const result = await $`git status --porcelain`.text()
+  return result.trim().length > 0
+}
+
+export async function restoreDirectories(dirs: string[]): Promise<void> {
+  for (const dir of dirs) {
+    await $`git restore ${dir}`.quiet().nothrow()
+  }
+}
+
+export async function stageAll(): Promise<void> {
+  await $`git add -A`
+}
+
+export async function stageFiles(files: string[]): Promise<void> {
+  for (const file of files) {
+    await $`git add ${file}`
+  }
+}
+
+export async function getCommitMessage(ref: string): Promise<string> {
+  const result = await $`git log -1 --format=%s ${ref}`.text()
+  return result.trim()
+}
+
+export async function getCommitHash(ref: string): Promise<string> {
+  const result = await $`git rev-parse ${ref}`.text()
+  return result.trim()
+}
+
+export async function getCommitParents(ref: string): Promise<string[]> {
+  const result = await $`git show --no-patch --format=%P ${ref}`.text()
+  return result
+    .trim()
+    .split(/\s+/)
+    .filter((parent) => parent.length > 0)
+}
+
+export async function writeTree(): Promise<string> {
+  const result = await $`git write-tree`.text()
+  return result.trim()
+}
+
+/**
+ * Check if `commit` is an ancestor of `ref` (i.e. reachable from `ref`).
+ * Uses `git merge-base --is-ancestor`, which exits 0 for yes, 1 for no.
+ * Any other exit code (e.g. unknown commit) is treated as "not an ancestor".
+ */
+export async function isAncestor(commit: string, ref = "HEAD"): Promise<boolean> {
+  const result = await $`git merge-base --is-ancestor ${commit} ${ref}`.quiet().nothrow()
+  return result.exitCode === 0
+}
+
+export async function getTagsForCommit(commit: string): Promise<string[]> {
+  const result = await $`git tag --points-at ${commit}`.text()
+  return result
+    .trim()
+    .split("\n")
+    .filter((t) => t.length > 0)
+}
+
+export async function getAllTags(): Promise<string[]> {
+  const result = await $`git tag -l`.text()
+  return result
+    .trim()
+    .split("\n")
+    .filter((t) => t.length > 0)
+}
+
+export async function abortMerge(): Promise<void> {
+  await $`git merge --abort`
+}
+
+export async function checkoutOurs(files: string[]): Promise<void> {
+  for (const file of files) {
+    await $`git checkout --ours ${file}`
+  }
+}
+
+export async function checkoutTheirs(files: string[]): Promise<void> {
+  for (const file of files) {
+    await $`git checkout --theirs ${file}`
+  }
+}
+
+/**
+ * Remove untracked files and directories from specific directories.
+ * Used to clean build artifacts from Kilo-specific directories after checking
+ * out the upstream branch, where package-level .gitignore files don't exist.
+ */
+export async function cleanDirectories(dirs: string[]): Promise<void> {
+  for (const dir of dirs) {
+    await $`git clean -fd ${dir}`.quiet().nothrow()
+  }
+}
+
+/**
+ * Check if the "ours" version of a conflicted file contains kilocode_change markers.
+ * Uses git stage :2: which is the "ours" side during a merge conflict.
+ * Returns false if the file doesn't exist in ours (new file from upstream).
+ */
+export async function oursHasKilocodeChanges(file: string): Promise<boolean> {
+  const result = await $`git show :2:${file}`.quiet().nothrow()
+  if (result.exitCode !== 0) return false
+  return result.stdout.toString().includes("kilocode_change")
+}
+
+/**
+ * Enable git rerere (REuse REcorded REsolution) in the local repo config.
+ * Also enables autoupdate so resolved files are automatically staged.
+ */
+export async function ensureRerere(): Promise<void> {
+  await $`git config rerere.enabled true`.quiet()
+  await $`git config rerere.autoupdate true`.quiet()
+}
+
+async function reset(dir: string): Promise<void> {
+  await $`git -C ${dir} reset -q --hard`.quiet().nothrow()
+  await $`git -C ${dir} clean -fdx`.quiet().nothrow()
+}
+
+/**
+ * Train the rerere cache from past merge commits in the repo history.
+ * Implements the same logic as git's contrib/rerere-train.sh:
+ *   For each merge commit in the range, replay the merge to let rerere
+ *   record the pre-image, then check out the resolved tree so rerere
+ *   records the post-image (the resolution).
+ *
+ * Returns the number of resolutions learned.
+ */
+export async function trainRerere(grep: string): Promise<number> {
+  const head = (await $`git rev-parse --verify HEAD`.text()).trim()
+  const dir = join(tmpdir(), `kilo-rerere-train-${randomUUID()}`)
+
+  let learned = 0
+
+  try {
+    await $`git worktree add --detach ${dir} ${head}`.quiet()
+
+    // Find all merge commits matching the grep pattern (merges have multiple parents)
+    const revList = await $`git rev-list --parents --all --fixed-strings --grep=${grep}`.quiet().nothrow()
+    if (revList.exitCode !== 0 || !revList.stdout.toString().trim()) return 0
+
+    const lines = revList.stdout
+      .toString()
+      .trim()
+      .split("\n")
+      .filter((l) => l.trim())
+
+    for (const line of lines) {
+      const parts = line.trim().split(/\s+/)
+      if (parts.length < 3) continue // skip non-merges (need commit + at least 2 parents)
+
+      const [commit, parent1, ...otherParents] = parts
+
+      await reset(dir)
+
+      // Checkout the first parent
+      const coResult = await $`git -C ${dir} checkout -q ${parent1}`.quiet().nothrow()
+      if (coResult.exitCode !== 0) continue
+
+      // Attempt the merge - we expect it to fail with conflicts
+      const mergeResult = await $`git -C ${dir} merge --no-gpg-sign ${otherParents}`.quiet().nothrow()
+      if (mergeResult.exitCode === 0) {
+        // Cleanly merged — no conflicts to learn from, reset and skip
+        await reset(dir)
+        continue
+      }
+
+      // Check if rerere recorded a pre-image (MERGE_RR exists and is non-empty)
+      const rr = await $`git -C ${dir} rev-parse --git-path MERGE_RR`.text()
+      const hasMergeRR = await Bun.file(rr.trim())
+        .exists()
+        .catch(() => false)
+      if (!hasMergeRR) {
+        await reset(dir)
+        continue
+      }
+
+      // Record the conflict pre-image
+      await $`git -C ${dir} rerere`.quiet().nothrow()
+
+      // Apply the actual resolution by checking out the merge commit's tree
+      await $`git -C ${dir} checkout -q ${commit} -- .`.quiet().nothrow()
+
+      // Record the resolution post-image
+      await $`git -C ${dir} rerere`.quiet().nothrow()
+
+      learned++
+      await reset(dir)
+    }
+  } finally {
+    await $`git worktree remove --force ${dir}`.quiet().nothrow()
+    await rm(dir, { recursive: true, force: true })
+  }
+
+  return learned
+}
+
+/**
+ * Return files that git rerere has already auto-resolved.
+ * These files no longer have conflict markers but haven't been staged yet
+ * (unless rerere.autoupdate is true, in which case they're already staged).
+ */
+export async function getRerereResolved(): Promise<string[]> {
+  const result = await $`git rerere status`.quiet().nothrow()
+  if (result.exitCode !== 0 || !result.stdout.toString().trim()) return []
+  return result.stdout
+    .toString()
+    .trim()
+    .split("\n")
+    .filter((f) => f.length > 0)
+}
