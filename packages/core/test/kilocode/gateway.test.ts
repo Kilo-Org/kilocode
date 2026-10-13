@@ -8,6 +8,7 @@ import { Plugin } from "@opencode/core/plugin"
 import { PluginHost } from "@opencode/core/plugin/host"
 import { ProviderPlugins } from "@opencode/core/plugin/provider"
 import { Provider } from "@opencode/core/provider"
+import { Rpc } from "@opencode/core/rpc"
 import { withEnv } from "../fixture/env"
 import { testEffect } from "../lib/effect"
 import { PluginTestLayer } from "../plugin/fixture"
@@ -181,6 +182,69 @@ describe("KiloGatewayPlugin", () => {
         const provider = yield* (yield* Provider.Service).get(kilo)
         expect(provider?.headers).toEqual(headers("env-team"))
         expect(provider?.settings).not.toHaveProperty("apiKey")
+      }),
+    ),
+  )
+
+  it.live("reads the profile and stores the team choice per connection, as v1 does after login", () =>
+    Effect.acquireUseRelease(
+      Effect.sync(() => fixture()),
+      (backend) =>
+        withEnv(env, () =>
+          Effect.gen(function* () {
+            const credentials = yield* Credential.Service
+            yield* credentials.create({
+              integrationID,
+              label: "a@example.test",
+              value: oauth({ server: backend.url, organizationID: "selected", email: "a@example.test" }),
+            })
+            yield* addPlugin()
+            const rpc = yield* Rpc.Service
+            const providers = yield* Provider.Service
+            expect(yield* rpc.call("kilocode.gateway", "profile", {})).toEqual({
+              email: "profile@example.test",
+              organizations: [
+                { id: "first", name: "First", role: "member" },
+                { id: "selected", name: "Selected", role: "owner" },
+              ],
+              hasPersonalAccount: true,
+              organizationID: "selected",
+            })
+            expect(backend.requests.at(-1)).toEqual({ method: "GET", path: "/api/profile", authorization: "Bearer token" })
+
+            yield* rpc.call("kilocode.gateway", "organization.set", { organizationID: "first" })
+            expect((yield* providers.get(kilo))?.headers).toEqual(headers("first"))
+            expect(yield* rpc.call("kilocode.gateway", "profile", {})).toMatchObject({ organizationID: "first" })
+            yield* rpc.call("kilocode.gateway", "organization.set", { organizationID: null })
+            expect((yield* providers.get(kilo))?.headers).toEqual(headers())
+
+            // A new login is a new connection, so its own default team applies again.
+            yield* credentials.create({
+              integrationID,
+              label: "b@example.test",
+              value: oauth({ server: backend.url, organizationID: "selected", email: "b@example.test" }),
+            })
+            expect(
+              (yield* eventually(providers.get(kilo), (provider) => provider?.headers?.["X-KILOCODE-ORGANIZATIONID"] === "selected"))
+                ?.headers,
+            ).toEqual(headers("selected"))
+          }),
+        ),
+      (backend) => Effect.sync(() => backend[Symbol.dispose]()),
+    ),
+  )
+
+  it.live("rejects account calls when signed out", () =>
+    withEnv(env, () =>
+      Effect.gen(function* () {
+        yield* addPlugin()
+        const rpc = yield* Rpc.Service
+        expect(yield* rpc.call("kilocode.gateway", "profile", {}).pipe(Effect.flip)).toMatchObject({
+          type: "unauthorized",
+        })
+        expect(
+          yield* rpc.call("kilocode.gateway", "organization.set", { organizationID: "team" }).pipe(Effect.flip),
+        ).toMatchObject({ type: "unauthorized" })
       }),
     ),
   )

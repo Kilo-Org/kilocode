@@ -27,6 +27,7 @@ import { DialogSelect } from "../ui/dialog-select"
 import { Link } from "../ui/link"
 import { useToast } from "../ui/toast"
 import { errorMessage } from "../util/error"
+import { chooseKiloAccount } from "../kilocode/gateway" // kilocode_change - Kilo account choice after login
 import {
   formInitialValues,
   formLabel,
@@ -1232,6 +1233,9 @@ async function connected(
     data.location.provider.sync(location),
   ])
   toast.show({ variant: "success", message: `Connected ${integration.name}` })
+  // kilocode_change start - after a Kilo login, choose the personal account or a team, as in v1
+  if (integration.id === "kilo" && !(await chooseKiloAccount(dialog, location))) return
+  // kilocode_change end
   if (onConnected && integration.metadata?.source !== "mcp") {
     onConnected(providerID(data, location, integration.id))
     return
