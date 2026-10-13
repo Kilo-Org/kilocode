@@ -1,10 +1,11 @@
 export * as KiloDevice from "./device.js"
 
 import { Clock, Effect, Option, Schema } from "effect"
-import { json, request } from "./http.js"
+import { json, request, TIMEOUT } from "./http.js"
 import { KiloProfile } from "./profile.js"
 
 export const POLL_INTERVAL = 3000
+const MAX_BACKOFF = 30_000
 
 /** v1 has no token refresh. The token is valid for one year. */
 export const TOKEN_LIFETIME = 365 * 24 * 60 * 60 * 1000
@@ -64,27 +65,44 @@ export function login(server: string, code: Code, interval = POLL_INTERVAL) {
   })
 }
 
+// `delay` is the wait before the next poll. It doubles after each failed request, up to MAX_BACKOFF.
 function poll(
   server: string,
   code: Code,
   deadline: number,
   interval: number,
+  delay = interval,
 ): Effect.Effect<{ token: string; email: string }, Error> {
   return Effect.gen(function* () {
-    const response = yield* request(`${server}/api/device-auth/codes/${encodeURIComponent(code.code)}`)
-    if (response.status === 403) return yield* Effect.fail(new Error("Authorization denied by user"))
-    if (response.status === 410) return yield* Effect.fail(new Error("Authorization code expired"))
-    if (!response.ok) return yield* Effect.fail(new Error(`Failed to poll device authorization: ${response.status}`))
-    const result = response.status === 202 ? { status: "pending" as const } : yield* json(response, Poll)
+    const remaining = deadline - (yield* Clock.currentTimeMillis)
+    if (remaining <= 0) return yield* Effect.fail(new Error("Authorization code expired"))
+    const response = yield* request(
+      `${server}/api/device-auth/codes/${encodeURIComponent(code.code)}`,
+      undefined,
+      Math.min(TIMEOUT, remaining),
+    ).pipe(Effect.option)
+    // A network failure, a timeout or a temporary server error must not end a login that the user may
+    // still approve. Unlike v1, retry with backoff until the code expires.
+    if (Option.isNone(response) || retryable(response.value.status)) {
+      yield* Effect.sleep(Math.min(delay, remaining))
+      return yield* poll(server, code, deadline, interval, Math.min(delay * 2, MAX_BACKOFF))
+    }
+    if (response.value.status === 403) return yield* Effect.fail(new Error("Authorization denied by user"))
+    if (response.value.status === 410) return yield* Effect.fail(new Error("Authorization code expired"))
+    if (!response.value.ok)
+      return yield* Effect.fail(new Error(`Failed to poll device authorization: ${response.value.status}`))
+    const result = response.value.status === 202 ? { status: "pending" as const } : yield* json(response.value, Poll)
     if (result.status === "denied") return yield* Effect.fail(new Error("Authorization denied by user"))
     if (result.status === "expired") return yield* Effect.fail(new Error("Authorization code expired"))
     if (result.status === "approved") {
       if (!result.token || !result.userEmail) return yield* Effect.fail(new Error("Invalid Kilo response"))
       return { token: result.token, email: result.userEmail }
     }
-    const remaining = deadline - (yield* Clock.currentTimeMillis)
-    if (remaining <= 0) return yield* Effect.fail(new Error("Authorization code expired"))
     yield* Effect.sleep(Math.min(interval, remaining))
     return yield* poll(server, code, deadline, interval)
   })
+}
+
+function retryable(status: number) {
+  return status === 408 || status === 429 || status >= 500
 }

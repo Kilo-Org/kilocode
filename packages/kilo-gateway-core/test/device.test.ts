@@ -53,21 +53,43 @@ test("reports rate limits and rejects a verification URL that is not HTTP(S)", a
   await expect(login(backend.url)).rejects.toThrow("Invalid device verification URL")
 })
 
-test("expires locally and stops polling when interrupted", async () => {
+test("retries temporary poll failures until the user approves", async () => {
   using backend = fixture()
+  backend.state.pollErrors = [503, 429, 408, 500]
+  expect((await login(backend.url)).token).toBe("fixture-token")
+  expect(backend.requests.filter((item) => item.path === "/api/device-auth/codes/ABCD-1234")).toHaveLength(6)
+})
+
+test("ends at the code expiry when the Gateway keeps failing or never answers", async () => {
+  using backend = fixture()
+  backend.state.expiresIn = 0.05
   backend.state.pending = Number.MAX_SAFE_INTEGER
-  backend.state.expiresIn = 0.02
   await expect(login(backend.url)).rejects.toThrow("expired")
 
-  backend.state.expiresIn = 60
+  backend.state.pollErrors = Array(1000).fill(503)
+  await expect(login(backend.url)).rejects.toThrow("expired")
+
+  backend.state.hang = true
+  const started = Date.now()
+  await expect(login(backend.url)).rejects.toThrow("expired")
+  // The request timeout follows the remaining code lifetime, so a hung request cannot outlive the code.
+  expect(Date.now() - started).toBeLessThan(1000)
+})
+
+test("stops polling when interrupted", async () => {
+  using backend = fixture()
+  backend.state.pending = Number.MAX_SAFE_INTEGER
   await Effect.runPromise(
     Effect.gen(function* () {
       const code = yield* KiloDevice.start(backend.url)
-      const fiber = yield* KiloDevice.login(backend.url, code, 1000).pipe(Effect.forkScoped({ startImmediately: true }))
-      yield* Effect.sleep(20)
+      const fiber = yield* KiloDevice.login(backend.url, code, 1).pipe(Effect.forkScoped({ startImmediately: true }))
+      yield* Effect.sleep(30)
+      // With a 1 ms interval, a loop that survived the interruption would add requests below.
+      expect(backend.requests.length).toBeGreaterThan(3)
       yield* Fiber.interrupt(fiber)
+      yield* Effect.sleep(10)
       const count = backend.requests.length
-      yield* Effect.sleep(20)
+      yield* Effect.sleep(50)
       expect(backend.requests).toHaveLength(count)
     }).pipe(Effect.scoped),
   )

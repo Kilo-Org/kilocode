@@ -6,6 +6,10 @@ export function fixture() {
     expiresIn: 60,
     verificationUrl: undefined as string | undefined,
     pending: 1,
+    // Statuses that the poll route returns first, one per request, before it answers normally.
+    pollErrors: [] as number[],
+    // The poll route never answers.
+    hang: false,
     pollStatus: 200,
     approved: { status: "approved", token: "fixture-token", userEmail: "device@example.test" } as unknown,
     profileStatus: 200,
@@ -37,6 +41,9 @@ export function fixture() {
         )
       }
       if (path === "/api/device-auth/codes/ABCD-1234") {
+        if (state.hang) return new Promise<Response>(() => {})
+        const error = state.pollErrors.shift()
+        if (error) return new Response(null, { status: error })
         if (state.pending-- > 0) return new Response(null, { status: 202 })
         return Response.json(state.approved, { status: state.pollStatus })
       }
