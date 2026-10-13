@@ -66,6 +66,10 @@ Provider controls also decide how a router is routed:
 - With no provider allow list configured, routers are unrestricted, like any other model.
 - **Virtual** is a Kilo-only slug and is never sent upstream; Kilo routes router requests to a real provider.
 
+## Model pricing
+
+The model and provider detail dialogs show the price Kilo bills for each model in the **In** and **Out** columns. When Kilo bills a model at a custom discounted rate, the dialog shows the discounted price with the original list price struck through above it, so the saving is visible. Models without a discount show the list price only.
+
 ## Filtering Options
 
 Use filters to find the models or providers you want to block:
