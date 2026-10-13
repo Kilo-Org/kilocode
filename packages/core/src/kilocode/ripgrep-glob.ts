@@ -7,6 +7,7 @@
 //
 // Hidden paths keep their previous behavior: a hidden file is returned when it matches the pattern, and a
 // hidden folder is searched only when the pattern matches the folder itself, as ripgrep does for overrides.
+// The same applies to the grep `include` filter and to `find`, which pass globs to ripgrep the same way.
 
 export interface Input {
   readonly pattern: string
@@ -34,12 +35,15 @@ export function compile(pattern: string) {
 }
 
 /**
- * A file-name pattern can also be applied by ripgrep as a file type. Types match after ignore rules, so they
- * keep ripgrep from printing every file; `match` still decides, which covers hidden folders and edge cases.
+ * Ripgrep can also apply the last path segment of the pattern as a file type. Types match file names after
+ * ignore rules, so they keep ripgrep from printing (or, for grep, reading) every file; `match` still
+ * decides, which covers the folder part of the pattern, hidden folders, and edge cases. Patterns whose
+ * braces span folders, such as `{src/*.ts,lib/*.js}`, have no single last segment and skip this.
  */
 function prefilter(pattern: string) {
-  const name = pattern.replace(/^(\*\*\/)+/, "")
-  if (!name || name.includes("/") || name.includes(":")) return []
+  const name = pattern.split("/").at(-1) ?? ""
+  if (!name || name === "**" || name.includes(":") || pattern.includes("\\/")) return []
+  if (/\{[^}]*\//.test(pattern) || name.split("{").length !== name.split("}").length) return []
   return [`--type-add=kiloglob:${name}`, "--type=kiloglob"]
 }
 
@@ -72,22 +76,54 @@ export function walk(input: Input): Walk | undefined {
   }
 }
 
-const cache = new WeakMap<object, Walk | undefined>()
-
-const plan = (input: Input) => {
-  if (cache.has(input)) return cache.get(input)
-  const result = walk(input)
-  cache.set(input, result)
-  return result
+export interface Plan {
+  readonly args: readonly string[]
+  readonly keep: (path: string) => boolean
 }
 
-/** Pattern arguments for `rg --files`. */
-export const args = (input: Input) => plan(input)?.args ?? [`--glob=${input.pattern}`]
+const all: Plan = { args: [], keep: () => true }
 
-/** The cwd-relative path when the search keeps it, otherwise undefined. */
-export const keep = (input: Input & { readonly filter?: (path: string) => boolean }, path: string) => {
-  const result = plan(input)
-  if (result && !result.match(path)) return undefined
-  if (input.filter && !input.filter(path)) return undefined
-  return path
+/** Remember one plan per search input, since ripgrep arguments and every output line need the same one. */
+const memo = <A extends object>(make: (input: A) => Plan) => {
+  const cache = new WeakMap<A, Plan>()
+  return (input: A) => {
+    const known = cache.get(input)
+    if (known) return known
+    const plan = make(input)
+    cache.set(input, plan)
+    return plan
+  }
 }
+
+const plan = (pattern: string, input: Omit<Input, "pattern">) => {
+  const result = walk({ ...input, pattern })
+  return { args: result?.args ?? [`--glob=${pattern}`], keep: result?.match ?? all.keep }
+}
+
+/** `rg --files` arguments and the per-path filter for a glob search. */
+export const glob = memo((input: Input & { readonly filter?: (path: string) => boolean }): Plan => {
+  const base = plan(input.pattern, input)
+  const filter = input.filter
+  if (!filter) return base
+  return { args: base.args, keep: (path) => base.keep(path) && filter(path) }
+})
+
+/** `rg --files` arguments and the per-path filter for a find, where `*` lists every file. */
+export const find = memo((input: Input): Plan => (input.pattern === "*" ? all : plan(input.pattern, input)))
+
+/**
+ * Arguments and the per-path filter for the grep `include` glob. Grep always searches hidden files. An
+ * explicit file is searched whatever the glob says, as before.
+ */
+export const grep = memo((input: { readonly include?: string; readonly file?: string }): Plan => {
+  if (!input.include) return all
+  if (input.file) return { args: [`--glob=${input.include}`], keep: all.keep }
+  return plan(input.include, { hidden: true })
+})
+
+/** Normalize a ripgrep output path to the cwd-relative, slash-separated form that plans match. */
+export const relative = (line: string) =>
+  line
+    .replace(/^(?:\.[\\/])+/u, "")
+    .replace(/^[\\/]+/u, "")
+    .replaceAll("\\", "/")

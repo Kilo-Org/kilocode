@@ -111,6 +111,19 @@ const list = async (rg: string, cwd: string, args: string[]) => {
     .map((line) => line.replace(/^(?:\.[\\/])+/u, "").replaceAll("\\", "/"))
 }
 
+/** Files that contain `x` according to ripgrep's own `--glob` include, the way grep searched before. */
+const matching = async (rg: string, cwd: string, include: string) => {
+  const proc = Bun.spawn(
+    [rg, "--no-config", "--hidden", "--files-with-matches", `--glob=${include}`, "--glob=!**/.git/**", "--", "x", "."],
+    { cwd, stdout: "pipe", stderr: "ignore" },
+  )
+  const text = await new Response(proc.stdout).text()
+  return text
+    .split("\n")
+    .filter(Boolean)
+    .map((line) => line.replace(/^(?:\.[\\/])+/u, "").replaceAll("\\", "/"))
+}
+
 /** True when this ripgrep build rejects the glob, which differs across ripgrep versions. */
 const rejects = async (rg: string, cwd: string, pattern: string) => {
   const proc = Bun.spawn([rg, "--no-config", "--files", `--glob=${pattern}`, "."], {
@@ -155,6 +168,42 @@ describe("Kilo ripgrep glob", () => {
     ),
   )
 
+  it.live("applies find patterns and grep include globs the same way", () =>
+    Effect.acquireUseRelease(
+      Effect.promise(() => tmpdir()),
+      (tmp) =>
+        Effect.gen(function* () {
+          yield* Effect.promise(() => seed(tmp.path))
+          const rg = yield* (yield* RipgrepBinary.Service).filepath
+          const ripgrep = yield* Ripgrep.Service
+          const allowed = new Set(yield* Effect.promise(() => list(rg, tmp.path, ["--hidden"])))
+          for (const pattern of patterns) {
+            for (const hidden of [false, true]) {
+              // `find` treats `*` as "every file" and never passed it to ripgrep as a glob.
+              const glob = pattern === "*" ? [] : [`--glob=${pattern}`]
+              const before = yield* Effect.promise(() => list(rg, tmp.path, [...(hidden ? ["--hidden"] : []), ...glob]))
+              const found = yield* ripgrep.find({ cwd: tmp.path, pattern, hidden, limit: 10_000 })
+              expect({ pattern, hidden, paths: found.map((item) => String(item.path)).sort() }).toEqual({
+                pattern,
+                hidden,
+                paths: before.filter((file) => allowed.has(file)).sort(),
+              })
+            }
+            const before = yield* Effect.promise(() => matching(rg, tmp.path, pattern))
+            const matches = yield* ripgrep.grep({ cwd: tmp.path, pattern: "x", include: pattern, limit: 10_000 })
+            expect({
+              include: pattern,
+              paths: [...new Set(matches.items.map((item) => String(item.entry.path)))].sort(),
+            }).toEqual({
+              include: pattern,
+              paths: before.filter((file) => allowed.has(file)).sort(),
+            })
+          }
+        }),
+      (tmp) => Effect.promise(() => tmp[Symbol.asyncDispose]()),
+    ),
+  )
+
   it.live("keeps ignored folders and files out of results", () =>
     Effect.acquireUseRelease(
       Effect.promise(() => tmpdir()),
@@ -173,6 +222,43 @@ describe("Kilo ripgrep glob", () => {
             "src/a.ts",
             "src/gen/d.ts",
           ])
+        }),
+      (tmp) => Effect.promise(() => tmp[Symbol.asyncDispose]()),
+    ),
+  )
+
+  it.live("keeps ignored files out of grep include and find results", () =>
+    Effect.acquireUseRelease(
+      Effect.promise(() => tmpdir()),
+      (tmp) =>
+        Effect.gen(function* () {
+          yield* Effect.promise(() => seed(tmp.path))
+          const ripgrep = yield* Ripgrep.Service
+          const grep = yield* ripgrep.grep({ cwd: tmp.path, pattern: "x", include: "*.ts", limit: 100 })
+          const paths = [...new Set(grep.items.map((item) => String(item.entry.path)))].sort()
+          expect(paths).toEqual(
+            [
+              "a.ts.d/m.ts",
+              "lib/i.ts",
+              "sp ace/k l.ts",
+              "src/.hidden.ts",
+              "src/a.ts",
+              "src/gen/d.ts",
+              ".hidden.d/f.ts",
+            ].sort(),
+          )
+          const file = yield* ripgrep.grep({
+            cwd: tmp.path,
+            pattern: "x",
+            file: "build/x.ts",
+            include: "*.md",
+            limit: 100,
+          })
+          expect(file.items.map((item) => String(item.entry.path))).toEqual(["build/x.ts"])
+          const found = yield* ripgrep.find({ cwd: tmp.path, pattern: "**/*", limit: 1_000 })
+          expect(
+            found.map((item) => String(item.path)).filter((file) => /node_modules|build\/|\.gen\.ts/.test(file)),
+          ).toEqual([])
         }),
       (tmp) => Effect.promise(() => tmp[Symbol.asyncDispose]()),
     ),
