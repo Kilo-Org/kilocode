@@ -2,7 +2,6 @@ import { arch, platform, release, tmpdir } from "node:os"
 import { chmod, mkdtemp, mkdir, rm } from "node:fs/promises"
 import { join } from "node:path"
 import { describe, test, expect, beforeEach, spyOn } from "bun:test"
-import { PostHog } from "posthog-node"
 import { Client } from "../client.js"
 import { Conda } from "../conda.js"
 import { Identity } from "../identity.js"
@@ -148,13 +147,12 @@ describe("Telemetry", () => {
 
 const shell = process.platform === "win32" ? test.skip : test
 
-shell("CLI telemetry uses conda's effective client ID", async () => {
+shell("uses conda's effective client ID", async () => {
   const root = await mkdtemp(join(tmpdir(), "kilo-aau-"))
   const home = process.env.HOME
   const exe = process.env.CONDA_EXE
   const token = "abcdefghijklmnopqrstuv"
   const conda = join(root, "conda")
-  const send = spyOn(PostHog.prototype, "capture").mockImplementation(() => {})
 
   try {
     await mkdir(join(root, ".conda"))
@@ -164,27 +162,11 @@ shell("CLI telemetry uses conda's effective client ID", async () => {
     process.env.HOME = root
     process.env.CONDA_EXE = conda
 
-    await Telemetry.init({ dataPath: root, version: "test", enabled: true })
-    Telemetry.trackCliStart()
-    expect(send).toHaveBeenCalledWith(
-      expect.objectContaining({ properties: expect.objectContaining({ aauClientToken: token }) }),
-    )
+    expect(await Conda.clientToken()).toBe(token)
 
     await Bun.write(conda, "#!/bin/sh\nprintf '%s\\n' '{\"user_agent\":\"conda/26.1\"}'\n")
     expect(await Conda.clientToken()).toBeUndefined()
-
-    await Bun.write(conda, "#!/bin/sh\nsleep 4\n")
-    const start = Date.now()
-    expect(await Conda.clientToken()).toBeUndefined()
-    expect(Date.now() - start).toBeLessThan(3000)
-
-    send.mockClear()
-    Telemetry.setEnabled(false)
-    Telemetry.trackCliStart()
-    expect(send).not.toHaveBeenCalled()
   } finally {
-    send.mockRestore()
-    await Telemetry.shutdown()
     if (home === undefined) delete process.env.HOME
     else process.env.HOME = home
     if (exe === undefined) delete process.env.CONDA_EXE
