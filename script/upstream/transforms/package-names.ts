@@ -10,6 +10,8 @@
 import { Glob } from "bun"
 import { info, success, error } from "../utils/logger"
 import { defaultConfig, type MergeConfig, type PackageMapping } from "../utils/config"
+import { isKiloOwned } from "../utils/owned"
+import { relative } from "node:path"
 
 export interface TransformResult {
   file: string
@@ -105,6 +107,8 @@ export async function transformAll(options: TransformOptions = {}): Promise<Tran
     const glob = new Glob(pattern)
 
     for await (const path of glob.scan({ absolute: true })) {
+      // Kilo-owned paths are Kilo code: never rebrand them.
+      if (isKiloOwned(relative(process.cwd(), path))) continue
       if (excludes.some((ex) => path.includes(ex.replace(/\*\*/g, "")))) continue
 
       const result = await transformFile(path, options)

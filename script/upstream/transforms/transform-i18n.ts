@@ -26,6 +26,8 @@ import { Glob } from "bun"
 import { info, success, warn, debug, error } from "../utils/logger"
 import { defaultConfig } from "../utils/config"
 import { oursHasKilocodeChanges } from "../utils/git"
+import { isKiloOwned } from "../utils/owned"
+import { relative } from "node:path"
 
 export interface I18nTransformResult {
   file: string
@@ -261,6 +263,8 @@ export async function transformAllI18n(options: I18nTransformOptions = {}): Prom
     const glob = new Glob(pattern)
 
     for await (const path of glob.scan({ absolute: true })) {
+      // Kilo-owned paths are Kilo code: never rebrand them.
+      if (isKiloOwned(relative(process.cwd(), path))) continue
       // Skip index.ts files (they're usually just exports)
       if (path.endsWith("/index.ts")) continue
 

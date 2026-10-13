@@ -18,7 +18,7 @@
  *   - binary-diff         : binary file differs (skipped; use reset-to-upstream.ts
  *                           per file if you want to reset binaries)
  *
- * markers-only, whitespace-only, and small-diff buckets are auto-reset unless
+ * markers-only and whitespace-only buckets are auto-reset (small-diff is report-only) unless
  * --dry-run is passed. A markdown summary is printed to stdout at the end so
  * you can review what happened and spot-check the resulting `git diff`.
  *
@@ -35,6 +35,7 @@ import { matches } from "./utils/match"
 import { classifyDrift, resetFile, type Bucket, type ClassifyResult } from "./utils/reset"
 import { last, normalize, root, upstreamSizes } from "./utils/upstream"
 import { owned } from "./utils/owned"
+import { BASELINE } from "./utils/baseline"
 
 interface Args {
   scope?: string
@@ -93,7 +94,9 @@ const SKIP_FILENAMES = new Set(["bun.lock", "package-lock.json", "yarn.lock", "p
 // subprocesses under concurrency.
 const MAX_SIZE = 256 * 1024
 
-const RESET_BUCKETS = new Set<Bucket>(["markers-only", "cosmetic-only", "small-diff"])
+// Only buckets without a real Kilo change are reset. On v2 most Kilo patches are one or two lines, so
+// v1's `small-diff` bucket would reset real patches (for example the check.yml trigger). It is report-only.
+const RESET_BUCKETS = new Set<Bucket>(["markers-only", "cosmetic-only"])
 
 const BUCKET_ORDER: Bucket[] = [
   "markers-only",
@@ -168,6 +171,15 @@ interface CandidateSet {
 }
 
 async function candidates(commit: string, scope: string | undefined, top: string): Promise<CandidateSet> {
+  const baseline = new Set(
+    Object.keys(
+      (
+        await Bun.file(`${top}/${BASELINE}`)
+          .json()
+          .catch(() => ({ files: {} }))
+      ).files,
+    ),
+  )
   const pathspecs = [scope ?? ".", ...KILO_ONLY_PATHSPECS]
   const result = await $`git diff --name-only ${commit}..HEAD -- ${pathspecs}`.cwd(top).quiet().nothrow()
   if (result.exitCode !== 0) {
@@ -187,7 +199,7 @@ async function candidates(commit: string, scope: string | undefined, top: string
       skippedAssets.push(file)
       continue
     }
-    if (policyExempt(file)) {
+    if (policyExempt(file, baseline)) {
       skippedPolicy.push(file)
       continue
     }
@@ -202,7 +214,9 @@ async function candidates(commit: string, scope: string | undefined, top: string
  * by the bulk resetter. They show up in `git diff` against raw upstream but
  * resetting them would undo deliberate Kilo decisions.
  */
-function policyExempt(file: string): boolean {
+function policyExempt(file: string, baseline: Set<string>): boolean {
+  // A shared patch with a stated seam in shared-patches.json is intentional: never reset it.
+  if (baseline.has(file)) return true
   if (matches(file, defaultConfig.keepOurs)) return true
   if (matches(file, defaultConfig.skipFiles)) return true
   return false
@@ -250,7 +264,7 @@ function detail(entry: Entry): string {
 function describe(bucket: Bucket, count: number, dryRun: boolean): { label: string; action: string } {
   if (bucket === "markers-only") return { label: `markers-only (${count})`, action: dryRun ? "would reset" : "reset" }
   if (bucket === "cosmetic-only") return { label: `cosmetic-only (${count})`, action: dryRun ? "would reset" : "reset" }
-  if (bucket === "small-diff") return { label: `small-diff (${count})`, action: dryRun ? "would reset" : "reset" }
+  if (bucket === "small-diff") return { label: `small-diff (${count})`, action: "review (not reset)" }
   if (bucket === "large-diff") return { label: `large-diff (${count})`, action: "skipped" }
   if (bucket === "identical") return { label: `identical (${count})`, action: "nothing to do" }
   if (bucket === "binary-diff") return { label: `binary-diff (${count})`, action: "skipped" }

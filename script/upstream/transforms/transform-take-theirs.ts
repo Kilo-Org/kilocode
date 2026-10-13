@@ -15,6 +15,7 @@ import { $ } from "bun"
 import { info, success, warn, debug, error } from "../utils/logger"
 import { defaultConfig } from "../utils/config"
 import { oursHasKilocodeChanges } from "../utils/git"
+import { isKiloOwned } from "../utils/owned"
 
 export interface TakeTheirsResult {
   file: string
@@ -267,6 +268,8 @@ export async function transformAllTakeTheirs(options: TakeTheirsOptions = {}): P
     const glob = new Glob(pattern)
 
     for await (const path of glob.scan({ absolute: false })) {
+      // Kilo-owned paths are Kilo code: never rebrand them.
+      if (isKiloOwned(path)) continue
       // Skip if file doesn't exist
       const file = Bun.file(path)
       if (!(await file.exists())) continue

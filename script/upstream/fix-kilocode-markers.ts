@@ -16,6 +16,7 @@ import { last, normalize, root, translate, upstream } from "./utils/upstream"
 interface Args {
   file?: string
   dryRun: boolean
+  force: boolean
   help: boolean
 }
 
@@ -23,13 +24,14 @@ function usage() {
   console.log(`Usage: bun run script/upstream/fix-kilocode-markers.ts <repo-relative-file> [--dry-run]
 
 Rebuilds kilocode_change markers by:
-  1. Finding the newest upstream tag whose commit is already merged into HEAD.
-  2. Applying upstream merge branding transforms to that upstream file.
+  1. Finding the pinned upstream release (the newest sync merge, or the initial v2 base).
+  2. Applying the enabled transforms to that upstream file (none with the v2 defaults).
   3. Comparing the transformed upstream file with the current working tree file.
   4. Removing existing kilocode_change markers and adding fresh markers around remaining changed lines.
 
 Options:
   --dry-run  Show what would change without writing the file.
+  --force    Write even when Kilo deleted upstream lines. Their explaining markers are then lost.
   --help     Show this help message.`)
 }
 
@@ -38,6 +40,7 @@ function args(): Args {
   return {
     file: raw.find((arg) => !arg.startsWith("--")),
     dryRun: raw.includes("--dry-run"),
+    force: raw.includes("--force"),
     help: raw.includes("--help") || raw.includes("-h"),
   }
 }
@@ -78,6 +81,12 @@ async function main() {
   if (base === null && !annotates(file)) warn(`${file} does not exist upstream`)
   if (diff && diff.deleted > 0)
     warn(`${diff.deleted} upstream-only deleted line(s) cannot be annotated in the current file`)
+  // A deletion has no line to carry a marker, so its explaining marker is a standalone comment line.
+  // Rebuilding the markers would remove that comment and hide the deletion from the next merger.
+  if (diff && diff.deleted > 0 && annotates(file) && !opts.force) {
+    error(`${file} has Kilo deletions: rebuilding would drop the markers that explain them. Fix it by hand, or pass --force`)
+    process.exit(1)
+  }
   if (!annotates(file)) warn(`${file} is exempt from annotation checks; this command still reports differences`)
   if (!annotates(file)) {
     success(`${file} differs from ${version.tag} in ${found.length} range(s)`)

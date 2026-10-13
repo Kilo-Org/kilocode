@@ -15,6 +15,8 @@ import { Project, SyntaxKind, type Node, type SourceFile } from "ts-morph"
 import { Glob } from "bun"
 import { info, success, error } from "../utils/logger"
 import { defaultConfig } from "../utils/config"
+import { isKiloOwned } from "../utils/owned"
+import { relative } from "node:path"
 
 export interface StringChange {
   file: string
@@ -107,6 +109,8 @@ export async function transformAllStrings(
     const glob = new Glob(pattern)
 
     for await (const path of glob.scan({ absolute: true })) {
+      // Kilo-owned paths are Kilo code: never rebrand them.
+      if (isKiloOwned(relative(process.cwd(), path))) continue
       if (excludes.some((ex) => path.includes(ex.replace(/\*\*/g, "")))) continue
 
       const sourceFile = project.addSourceFileAtPath(path)
