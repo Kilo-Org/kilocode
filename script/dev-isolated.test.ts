@@ -5,7 +5,7 @@ import path from "node:path"
 import { isolatedEnv } from "../packages/cli/test/fixture/environment"
 
 test("isolated dev passes the JSX preload and existing Bun options to standalone children", async () => {
-  const root = await mkdtemp(path.join(os.tmpdir(), "kilo-dev-standalone-"))
+  const root = await mkdtemp(path.join(os.tmpdir(), "kilo dev-standalone-"))
   const preload = path.join(root, "preload.ts")
   await Bun.write(
     preload,
@@ -24,7 +24,7 @@ test("isolated dev passes the JSX preload and existing Bun options to standalone
     {
       cwd: root,
       env: isolatedEnv(root, {
-        BUN_OPTIONS: `--preload ${preload} --conditions=kilo-dev-test`,
+        BUN_OPTIONS: `--preload ${preload.replace(/[\s\\"']/g, (char) => `\\${char}`)} --conditions=kilo-dev-test`,
         INIT_CWD: undefined,
         KILO_API_KEY: undefined,
         KILO_V2_PROFILE: path.join(root, "profile"),
