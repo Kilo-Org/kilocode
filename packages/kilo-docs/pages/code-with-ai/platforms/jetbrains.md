@@ -15,6 +15,8 @@ Open **Settings → Tools → Kilo Code** to configure the plugin. Shared agent 
 
 - **Auto-Approve** — set per-tool permission levels (Allow / Ask / Deny) and manage granular command and path exceptions without editing config by hand. Permission prompts offer one-time approvals alongside saved allow/reject rules. See [Auto-Approving Actions](/docs/getting-started/settings/auto-approving-actions) for the shared permission model.
 - **Context** — toggle auto-compaction, set the auto-compaction limit (the percentage of the model window that triggers compaction), enable pruning of old tool outputs, and manage file watcher ignore patterns. See [Context Condensing](/docs/customize/context/context-condensing) and [.kilocodeignore](/docs/customize/context/kilocodeignore) for what these settings control.
+- **Transcript** — set how blocks first appear in the chat transcript: the reasoning mode (Expanded, Preview, or Headline), whether terminal command, code edit, and MCP or generic tool blocks start expanded or collapsed, approval-reason footers on tool cards, and hover previews for collapsed cards. New installations start with reasoning and terminal commands expanded and code edits and MCP or generic tools collapsed. A live sample transcript reflects unsaved changes, and saving them applies to open chats.
+- **Agent Behavior → Agents** — the agent list shows the model each agent is assigned, where **Default model** means it follows the current default. Change an agent's model from the dropdown on its row, or double-click a row to open the full editor.
 - **Agent Behavior → Skills** — inspect loaded skills, add extra skill sources (local paths or remote URLs), edit or remove custom skills, and open skill files in the editor. See [Skills](/docs/customize/skills) for the skill format and discovery rules.
 - **Integrations** - enable or disable the GitHub integration for pull request badges and imports. It requires the GitHub CLI (`gh`) to be installed and authenticated.
 - **Advanced → Index agent worktrees** - include `.kilo/worktrees` in the containing project's index. Worktrees are excluded by default to avoid duplicate search results. Files opened from an excluded worktree in the main IDE window lack code resolution and inspections; open the worktree as its own project for full indexing.
@@ -62,6 +64,10 @@ Click a diagram to open a zoomable viewer, or use its toolbar to open an editor 
 - **Stale diff refresh** — diff views detect when files change on disk and offer a **Refresh** action to reload them instead of showing outdated content.
 
 Worktree rows separate committed changes against the base branch from uncommitted changes. Select the uncommitted-changes badge to compare with `HEAD`, or use **Compare to Base** in the session menu to review the branch's changes including uncommitted work.
+
+## Session timeline
+
+Expand the session header with the chevron (**Show session metrics**) to see a timeline of colored bars, one per step of the conversation, colored by the kind of step (read, write, tool, error, or text). Click a bar to scroll that step to the top of the transcript, and hover a bar to see what it represents.
 
 ## Session controls
 
