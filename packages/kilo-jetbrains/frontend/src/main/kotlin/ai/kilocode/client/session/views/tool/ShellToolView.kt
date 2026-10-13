@@ -1,7 +1,11 @@
 package ai.kilocode.client.session.views.tool
 
+import ai.kilocode.client.plugin.KiloPluginSettings
 import ai.kilocode.client.session.model.Content
 import ai.kilocode.client.session.model.Tool
+import ai.kilocode.client.session.settings.BlockDisplay
+import ai.kilocode.client.session.settings.TranscriptDisplay
+import ai.kilocode.client.session.settings.TranscriptDisplayTarget
 import ai.kilocode.client.session.ui.SessionContentPanel
 import ai.kilocode.client.session.ui.SessionSurfacePanel
 import ai.kilocode.client.session.ui.popup.HeaderPopupBody
@@ -37,7 +41,9 @@ class ShellToolView(
     private val parts: ToolParts = toolParts(tool),
     private val body: ShellBody = ShellBody(selection),
     private val footer: ToolApprovalFooter = ToolApprovalFooter(),
-) : AbstractSessionPartView(parts.header, { body.mount(tool) }, { footer }), UiDataProvider, ApprovalReasonTarget {
+    private var display: BlockDisplay = KiloPluginSettings.getTerminalCommandDisplay(),
+) : AbstractSessionPartView(parts.header, { body.mount(tool) }, { footer }), UiDataProvider, ApprovalReasonTarget,
+    TranscriptDisplayTarget {
 
     override val contentId: String = tool.id
 
@@ -170,10 +176,17 @@ class ShellToolView(
         return changed
     }
 
-    private fun sync(): Boolean {
+    private fun sync(force: Boolean = false): Boolean {
         val expand = canExpand(item)
         var changed = false
         changed = syncExpandable(expand) || changed
+        if (force || !touched) {
+            changed = if (display == BlockDisplay.EXPANDED && expand) {
+                expand() || changed
+            } else {
+                collapse() || changed
+            }
+        }
         changed = setVisible(parts.state, !expand) || changed
         changed = setIcon(parts.glyph, icon(item)) || changed
         changed = setForeground(parts.glyph, color(item)) || changed
@@ -185,6 +198,21 @@ class ShellToolView(
         changed = setForeground(parts.state, color(item)) || changed
         changed = footer.update(item, approvalReasonsVisible()) || changed
         return changed
+    }
+
+    @RequiresEdt
+    override fun syncTranscriptDisplay(display: TranscriptDisplay, force: Boolean): Boolean {
+        if (!force && touched) return false
+        val next = display.terminal
+        // A forced call must reapply even when the stored value already matches: the card's containment
+        // can have diverged from it while the user held a manual state.
+        if (!force && this.display == next) return false
+        this.display = next
+        sync(force)
+        // Same contract as update(): a state change the card applies itself must revalidate it, or the
+        // parent SessionLayout can stack it at the height it cached.
+        refresh()
+        return true
     }
 
     private fun syncBody(): Boolean = body.update(item)

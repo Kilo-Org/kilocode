@@ -709,17 +709,35 @@ class SessionModel {
     private fun timeline(items: List<Message>): List<TimelineItem> = items
         .filter { it.info.role == "assistant" }
         .flatMap { msg ->
-            msg.parts.values.map { part ->
+            // Adjacent reasoning parts render through a single ReasoningView (see MessageView's
+            // aliases map), so they get a single bar. One bar per part would put several bars on the
+            // same block: clicking the second and later ones would jump nowhere new, which reads as a
+            // dead bar.
+            runs(msg.parts.values.toList()).map { run ->
+                val head = run.first()
                 TimelineItem(
-                    id = "${msg.info.id}/${part.id}",
-                    part = part,
-                    title = part.timelineTitle(),
-                    weight = part.weight().coerceIn(1, 10),
-                    durationMs = (part as? Tool)?.time?.durationMs(),
-                    active = (part as? Tool)?.state == ToolExecState.RUNNING || part is Reasoning && !part.done,
+                    message = msg.info.id,
+                    part = head,
+                    title = head.timelineTitle(),
+                    weight = run.sumOf { it.weight() }.coerceIn(1, 10),
+                    durationMs = (head as? Tool)?.time?.durationMs(),
+                    active = run.any {
+                        (it as? Tool)?.state == ToolExecState.RUNNING || it is Reasoning && !it.done
+                    },
                 )
             }
         }
+
+    /** Groups each stretch of adjacent reasoning parts together; every other part stands alone. */
+    private fun runs(parts: List<Content>): List<List<Content>> {
+        val result = mutableListOf<MutableList<Content>>()
+        for (part in parts) {
+            val last = result.lastOrNull()
+            if (part is Reasoning && last != null && last.last() is Reasoning) last.add(part)
+            else result.add(mutableListOf(part))
+        }
+        return result
+    }
 
     private fun item(key: String): ModelItem? = models.firstOrNull { it.key == key }
 

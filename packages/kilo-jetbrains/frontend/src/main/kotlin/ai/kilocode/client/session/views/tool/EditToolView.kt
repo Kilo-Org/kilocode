@@ -2,11 +2,15 @@ package ai.kilocode.client.session.views.tool
 
 import ai.kilocode.client.diff.DiffLineNumbers
 import ai.kilocode.client.plugin.KiloBundle
+import ai.kilocode.client.plugin.KiloPluginSettings
 import ai.kilocode.client.session.SessionDiffOpener
 import ai.kilocode.client.session.SessionFileOpener
 import ai.kilocode.client.session.model.Content
 import ai.kilocode.client.session.model.Tool
 import ai.kilocode.client.session.model.ToolKind
+import ai.kilocode.client.session.settings.BlockDisplay
+import ai.kilocode.client.session.settings.TranscriptDisplay
+import ai.kilocode.client.session.settings.TranscriptDisplayTarget
 import ai.kilocode.client.session.ui.popup.HeaderPopupBody
 import ai.kilocode.client.session.ui.popup.HeaderPopupRequest
 import ai.kilocode.client.session.ui.selection.SessionCopyTarget
@@ -45,7 +49,9 @@ class EditToolView(
     private val parts: ToolParts = toolParts(tool, openFile),
     private var body: EditBody = editBody(tool, selection, openFile),
     private val footer: ToolApprovalFooter = ToolApprovalFooter(),
-) : AbstractSessionPartView(parts.header, { body.mount(tool) }, { footer }), UiDataProvider, SessionCopyTarget, ApprovalReasonTarget {
+    private var display: BlockDisplay = KiloPluginSettings.getCodeEditDisplay(),
+) : AbstractSessionPartView(parts.header, { body.mount(tool) }, { footer }), UiDataProvider, SessionCopyTarget,
+    ApprovalReasonTarget, TranscriptDisplayTarget {
 
     override val contentId: String = tool.id
 
@@ -55,6 +61,7 @@ class EditToolView(
     private var opener: SessionDiffOpener = { _, _, _ -> }
     private var sessionId: String? = null
     private var canDiff = false
+
     private val badge = DiffStatBadge(0, 0)
     private val open = HeaderOpenAction(SessionViewIcons.openDiff, KiloBundle.message("session.part.tool.openDiff"), ::openDiffViewer)
     private val filesTag = PlainLabel().apply {
@@ -218,10 +225,17 @@ class EditToolView(
     private fun expandable(): Boolean =
         editDiff(item).isNotBlank() || output(item).isNotBlank() || !item.error.isNullOrBlank()
 
-    private fun sync(): Boolean {
+    private fun sync(force: Boolean = false): Boolean {
         val expand = expandable()
         var changed = false
         changed = syncExpandable(expand) || changed
+        if (force || !touched) {
+            changed = if (display == BlockDisplay.EXPANDED && expand) {
+                expand() || changed
+            } else {
+                collapse() || changed
+            }
+        }
         changed = setVisible(parts.state, !expand) || changed
         changed = setIcon(parts.glyph, icon(item)) || changed
         changed = setForeground(parts.glyph, color(item)) || changed
@@ -239,6 +253,20 @@ class EditToolView(
         changed = syncBadge() || changed
         changed = footer.update(item, approvalReasonsVisible()) || changed
         return changed
+    }
+
+    @RequiresEdt
+    override fun syncTranscriptDisplay(display: TranscriptDisplay, force: Boolean): Boolean {
+        if (!force && touched) return false
+        val next = display.codeEdit
+        // A forced call must reapply even when the stored value already matches: the card's containment
+        // can have diverged from it while the user held a manual state.
+        if (!force && this.display == next) return false
+        this.display = next
+        sync(force)
+        // Same contract as update(): a state change the card applies itself must revalidate it.
+        refresh()
+        return true
     }
 
     private fun syncDiffAction(count: Int) {

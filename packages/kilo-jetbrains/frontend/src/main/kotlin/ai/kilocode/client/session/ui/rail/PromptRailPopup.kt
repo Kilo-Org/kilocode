@@ -102,6 +102,7 @@ internal class PromptRailPopup(
         accessibleContext.accessibleName = KiloBundle.message("session.prompts.latest")
         addActionListener { onLatest() }
     }
+    private val head = header()
 
     /**
      * Clamps the body to the room the balloon was given. Without the clamp the list's preferred height
@@ -109,10 +110,13 @@ internal class PromptRailPopup(
      */
     private val capped = object : BorderLayoutPanel() {
         override fun getPreferredSize(): Dimension {
-            val pref = super.getPreferredSize()
             // Width takes the room the balloon was given rather than the rows' natural width: a wrapping
             // row has no meaningful preferred width, and the navigator should read as a steady column.
-            return Dimension(cap.width, pref.height.coerceAtMost(cap.height))
+            // Measure every row at that final width before the list enters a viewport. Ordinary Swing
+            // preferred size is stale here: wrapped previews become taller only after layout, which
+            // left the last prompt cut off inside a balloon that had already been sized.
+            val height = head.preferredSize.height + rows.preferredHeight(cap.width)
+            return Dimension(cap.width, height.coerceAtMost(cap.height))
         }
 
         /**
@@ -128,7 +132,7 @@ internal class PromptRailPopup(
         }
     }.apply {
         isOpaque = false
-        addToTop(header())
+        addToTop(head)
         addToCenter(rows)
     }
 

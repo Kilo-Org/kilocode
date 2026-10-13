@@ -8,6 +8,7 @@ import ai.kilocode.client.session.model.SessionModelEvent
 import ai.kilocode.client.session.model.SessionState
 import ai.kilocode.client.session.model.FileAttachment
 import ai.kilocode.client.session.model.ToolCallRef
+import ai.kilocode.client.session.settings.TranscriptDisplay
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.selection.SessionSelection
 import ai.kilocode.client.session.ui.style.SessionEditorStyleTarget
@@ -249,6 +250,12 @@ class SessionMessageListPanel(
 
     /** Find the [TurnView] that contains a message. */
     fun findTurn(messageId: String): TurnView? = msgToTurn[messageId]
+
+    /** Find the rendered component for one part of a message, or null if neither has a view. */
+    fun findPart(message: String, part: String): JComponent? = msgToView[message]?.part(part)
+
+    /** Find only a user prompt's painted bubble, excluding its toolbar/footer. */
+    fun findPrompt(message: String): JComponent? = msgToView[message]?.promptTarget()
 
     /** Number of top-level turns currently displayed. */
     fun turnCount(): Int = turnViews.size
@@ -583,6 +590,15 @@ class SessionMessageListPanel(
     fun syncApprovalReasons(visible: Boolean) {
         var changed = false
         for (mv in msgToView.values) changed = mv.syncApprovalReasons(visible) || changed
+        if (!changed) return
+        reflow()
+        refresh()
+    }
+
+    @RequiresEdt
+    fun syncTranscriptDisplay(display: TranscriptDisplay, force: Boolean = false) {
+        var changed = false
+        for (mv in msgToView.values) changed = mv.syncTranscriptDisplay(display, force) || changed
         if (!changed) return
         reflow()
         refresh()

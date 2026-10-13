@@ -1,9 +1,12 @@
 package ai.kilocode.client.session
 
 import ai.kilocode.client.session.ui.SessionDropOverlay
+import ai.kilocode.client.session.ui.SessionHighlightOverlay
+import ai.kilocode.client.session.ui.SessionMessageListPanel
 import ai.kilocode.client.session.ui.SessionRootPanel
 import ai.kilocode.client.session.ui.account.SessionAccountOverlay
 import ai.kilocode.client.session.ui.rail.PromptRail
+import ai.kilocode.client.session.ui.rail.PromptRailEntry
 import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.ui.UiStyle
 import com.intellij.ui.components.JBScrollPane
@@ -86,6 +89,37 @@ class PromptRailLayoutTest : SessionUiTestBase() {
         assertTrue(root.overlay.getComponentZOrder(rail) > root.overlay.getComponentZOrder(drop))
         assertTrue(root.overlay.getComponentZOrder(rail) > root.overlay.getComponentZOrder(account))
         assertTrue(root.overlay.getComponentZOrder(rail) > root.overlay.getComponentZOrder(jumpButton()))
+    }
+
+    /**
+     * Navigating from the navigator marks the prompt it landed on with the same guide the header
+     * timeline draws for a step, so the destination is findable once the viewport has moved.
+     */
+    fun `test navigating from the rail marks the prompt it lands on`() {
+        showMessages()
+        fillTranscript(10)
+        ui.setSize(900, 400)
+        layoutAll(ui)
+        drainScroll()
+        val rail = find<PromptRail>(ui)
+        val highlight = find<SessionHighlightOverlay>(ui)
+        assertNull("nothing is marked before navigating", highlight.outlined())
+
+        // Drive the controller's own handler, the one a tick press calls.
+        rail.onSelect!!.invoke(PromptRailEntry.Prompt(1))
+        drainScroll()
+
+        val messages = find<SessionMessageListPanel>(ui)
+        val prompt = messages.findPrompt("msg_1")!!
+        assertSame("only the navigated prompt bubble must be marked", prompt, highlight.outlined())
+        assertFalse(
+            "the whole message includes prompt toolbar/footer and must not be marked",
+            messages.findMessage("msg_1") === highlight.outlined(),
+        )
+        assertFalse(
+            "the guide must not span the prompt's whole turn",
+            messages.findTurn("msg_1") === highlight.outlined(),
+        )
     }
 
     fun `test scrolling changes active prompt and jump scrolls to prompt top`() {

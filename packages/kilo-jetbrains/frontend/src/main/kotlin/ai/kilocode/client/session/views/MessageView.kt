@@ -11,6 +11,8 @@ import ai.kilocode.client.session.model.StepFinish
 import ai.kilocode.client.session.model.Text
 import ai.kilocode.client.session.model.Tool
 import ai.kilocode.client.session.model.ToolCallRef
+import ai.kilocode.client.session.settings.TranscriptDisplay
+import ai.kilocode.client.session.settings.TranscriptDisplayTarget
 import ai.kilocode.client.session.model.ToolExecState
 import ai.kilocode.client.session.ui.RevertProgress
 import ai.kilocode.client.session.ui.SessionView
@@ -180,6 +182,16 @@ class MessageView(
         var changed = false
         for (view in parts.values) {
             if (view is ApprovalReasonTarget) changed = view.syncApprovalReason(visible) || changed
+        }
+        if (changed) refresh()
+        return changed
+    }
+
+    @RequiresEdt
+    fun syncTranscriptDisplay(display: TranscriptDisplay, force: Boolean = false): Boolean {
+        var changed = false
+        for (view in parts.values) {
+            if (view is TranscriptDisplayTarget) changed = view.syncTranscriptDisplay(display, force) || changed
         }
         if (changed) refresh()
         return changed
@@ -480,6 +492,16 @@ class MessageView(
 
     @RequiresEdt
     fun promptToolbarActive() = promptToolbar?.active() == true
+
+    /**
+     * Prompt content without [PromptWrap]'s toolbar/footer. Historical prompts without a wrap paint
+     * their bubble on this message itself, so the message is the correct fallback for those.
+     */
+    @RequiresEdt
+    fun promptTarget(): JComponent? {
+        if (role != SessionUiStyle.View.Message.USER_ROLE || !isVisible) return null
+        return promptBox ?: this.takeIf { componentCount > 0 }
+    }
 
     @RequiresEdt
     fun setReverting(active: Boolean, text: String, onCancel: () -> Unit) {
