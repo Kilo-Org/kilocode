@@ -11,6 +11,7 @@ import { info, success, warn, debug, error } from "../utils/logger"
 import { defaultConfig } from "../utils/config"
 import { oursHasKilocodeChanges } from "../utils/git"
 import { isKiloOwned } from "../utils/owned"
+import { matches as matchAny } from "../utils/match"
 
 export interface WebTransformResult {
   file: string
@@ -110,10 +111,7 @@ const PRESERVE_PATTERNS = [/opencode\.json/g, /\.opencode\//g, /`\.opencode`/g]
 export function isWebFile(file: string): boolean {
   const patterns = defaultConfig.webFiles
 
-  return patterns.some((pattern) => {
-    const regex = new RegExp("^" + pattern.replace(/\./g, "\\.").replace(/\*\*/g, ".*").replace(/\*/g, "[^/]*") + "$")
-    return regex.test(file)
-  })
+  return matchAny(file, patterns)
 }
 
 /**

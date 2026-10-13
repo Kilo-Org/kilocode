@@ -28,6 +28,7 @@ import { defaultConfig } from "../utils/config"
 import { oursHasKilocodeChanges } from "../utils/git"
 import { isKiloOwned } from "../utils/owned"
 import { relative } from "node:path"
+import { matches as matchAny } from "../utils/match"
 
 export interface I18nTransformResult {
   file: string
@@ -245,11 +246,7 @@ export async function transformI18nFile(
 export function isI18nFile(filePath: string, patterns?: string[]): boolean {
   const i18nPatterns = patterns || defaultConfig.i18nPatterns
 
-  return i18nPatterns.some((pattern) => {
-    // Convert glob pattern to regex
-    const regex = new RegExp("^" + pattern.replace(/\./g, "\\.").replace(/\*\*/g, ".*").replace(/\*/g, "[^/]*") + "$")
-    return regex.test(filePath)
-  })
+  return matchAny(filePath, i18nPatterns)
 }
 
 /**

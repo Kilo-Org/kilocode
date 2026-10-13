@@ -7,10 +7,15 @@ function esc(text: string): string {
 }
 
 function glob(pattern: string): RegExp {
-  const source = pattern
-    .split("**")
-    .map((part) => part.split("*").map(esc).join("[^/]*"))
-    .join(".*")
+  // `**/` matches zero or more directories, a bare `**` matches anything, and `*` stays inside one
+  // path segment. Translate to placeholders first, so a later `*` pass cannot rewrite an inserted `.*`.
+  const source = esc(pattern)
+    .replace(/\*\*\//g, "\u0000dir\u0000")
+    .replace(/\*\*/g, "\u0000any\u0000")
+    .replace(/\*/g, "\u0000star\u0000")
+    .replaceAll("\u0000dir\u0000", "(?:.*/)?")
+    .replaceAll("\u0000any\u0000", ".*")
+    .replaceAll("\u0000star\u0000", "[^/]*")
 
   return new RegExp(`^${source}$`)
 }

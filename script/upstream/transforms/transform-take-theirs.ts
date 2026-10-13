@@ -16,6 +16,7 @@ import { info, success, warn, debug, error } from "../utils/logger"
 import { defaultConfig } from "../utils/config"
 import { oursHasKilocodeChanges } from "../utils/git"
 import { isKiloOwned } from "../utils/owned"
+import { matches as matchAny } from "../utils/match"
 
 export interface TakeTheirsResult {
   file: string
@@ -131,11 +132,7 @@ const BRANDING_REPLACEMENTS: BrandingReplacement[] = [
  * Check if a file matches any of the patterns
  */
 export function matchesPattern(file: string, patterns: string[]): boolean {
-  return patterns.some((pattern) => {
-    // Convert glob pattern to regex
-    const regex = new RegExp("^" + pattern.replace(/\./g, "\\.").replace(/\*\*/g, ".*").replace(/\*/g, "[^/]*") + "$")
-    return regex.test(file)
-  })
+  return matchAny(file, patterns)
 }
 
 /**
