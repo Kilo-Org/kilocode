@@ -117,12 +117,11 @@ describe("Telemetry", () => {
     capture.mockRestore()
   })
 
-  test("ignores forwarded conda client IDs", () => {
+  test("ignores a forwarded conda client ID", () => {
     const capture = spyOn(Client, "capture").mockImplementation(() => {})
     try {
-      Telemetry.track(TelemetryEvent.CLI_START, { aauClientToken: "supplied", aauClientTokenHash: "supplied" })
+      Telemetry.track(TelemetryEvent.CLI_START, { aauClientToken: "supplied" })
       expect(capture.mock.calls[0]?.[1]).not.toHaveProperty("aauClientToken")
-      expect(capture.mock.calls[0]?.[1]).not.toHaveProperty("aauClientTokenHash")
     } finally {
       capture.mockRestore()
     }
@@ -173,10 +172,10 @@ shell("uses conda's effective client ID", async () => {
     process.env.HOME = root
     process.env.CONDA_EXE = conda
 
-    expect(await Conda.clientHash()).toBe("f69f9b70d1c9a5442258ca76f8b0a7a45fcb4e31c36141b6357ec591328b0624")
+    expect(await Conda.clientToken()).toBe(token)
 
     await Bun.write(conda, "#!/bin/sh\nprintf '%s\\n' '{\"user_agent\":\"conda/26.1\"}'\n")
-    expect(await Conda.clientHash()).toBeUndefined()
+    expect(await Conda.clientToken()).toBeUndefined()
   } finally {
     if (home === undefined) delete process.env.HOME
     else process.env.HOME = home

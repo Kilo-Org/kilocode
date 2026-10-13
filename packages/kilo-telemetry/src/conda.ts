@@ -1,9 +1,8 @@
-import { createHash } from "node:crypto"
 import { homedir } from "node:os"
 import { join } from "node:path"
 
 export namespace Conda {
-  export async function clientHash(): Promise<string | undefined> {
+  export async function clientToken(): Promise<string | undefined> {
     try {
       // Avoid starting conda (or creating an AAU token) for users who have never used it.
       const home = (process.platform === "win32" ? process.env.USERPROFILE : process.env.HOME) || homedir()
@@ -38,8 +37,7 @@ export namespace Conda {
         const info: unknown = JSON.parse(Buffer.concat(chunks).toString())
         if (!info || typeof info !== "object" || !("user_agent" in info)) return undefined
         if (typeof info.user_agent !== "string") return undefined
-        const token = /(?:^|\s)c\/([A-Za-z0-9_-]{22})(?=\s|$)/.exec(info.user_agent)?.[1]
-        return token ? createHash("sha256").update(token).digest("hex") : undefined
+        return /(?:^|\s)c\/([A-Za-z0-9_-]{22})(?=\s|$)/.exec(info.user_agent)?.[1]
       } finally {
         clearTimeout(timer)
         reader.releaseLock()
