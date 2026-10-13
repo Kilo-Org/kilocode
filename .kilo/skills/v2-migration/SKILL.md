@@ -1,6 +1,6 @@
 ---
 name: v2-migration
-description: Use for any work on the Kilo v2 migration (branches kilo-v2-clean*, v2-*). Covers strategy, branches and PRs, the isolated test profile, how to self-test the v2 CLI yourself, and the test policy.
+description: Use for any work on the Kilo v2 migration (branches v2, v2-*). Covers strategy, branches and PRs, the isolated test profile, how to self-test the v2 CLI yourself, and the test policy.
 ---
 
 # Kilo v2 migration
@@ -24,9 +24,9 @@ Kilo moves onto upstream OpenCode v2 from a clean base, one feature at a time. V
 
 ## Branches and PRs
 
-- Integration branch: `kilo-v2-clean`. Use the working base named in `migration-context.md`. Never target `main`.
+- Integration branch: `v2`. Use the working base named in `migration-context.md`. Never target `main`.
 - Stack on an open v2 PR when you depend on it, and target that PR's branch.
-- One plan unit per PR. Never push to `kilo-v2-clean*`. A human merges.
+- One plan unit per PR. Never push directly to `v2`. A human merges.
 - Short hyphenated branch names, no slashes. Titles `type(scope): summary`.
 
 ## Isolation: never touch the v1 setup
