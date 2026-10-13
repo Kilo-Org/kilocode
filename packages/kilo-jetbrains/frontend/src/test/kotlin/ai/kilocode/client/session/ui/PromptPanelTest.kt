@@ -1191,6 +1191,43 @@ class PromptPanelTest : BasePlatformTestCase() {
         assertTrue(clicked)
     }
 
+    /**
+     * Mirrors `SessionUi.mcpAuthIssue(name, busy = true)`: while a sign-in is in flight the
+     * composer must offer a way out instead of only a disabled "Signing in..." entry.
+     */
+    fun `test a busy session issue offers a disabled sign in entry alongside an enabled cancel`() {
+        val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> })
+        var cancelled = false
+        val issue = SessionIssue(
+            "mcp-auth:anaconda",
+            "Anaconda MCP",
+            listOf(
+                SessionIssueAction("Signing in\u2026", enabled = false) {},
+                SessionIssueAction("Cancel") { cancelled = true },
+                SessionIssueAction("Open in Settings") {},
+            ),
+        )
+        panel.setIssues(listOf(issue))
+        val provider = panel.issueActions().single() as DefaultActionGroup
+        val actions = provider.getChildren(null)
+        assertEquals(listOf("Signing in\u2026", "Cancel", "Open in Settings"), actions.map { it.templatePresentation.text })
+
+        fun eventFor(action: AnAction) =
+            AnActionEvent.createEvent(action, DataContext.EMPTY_CONTEXT, null, ActionPlaces.UNKNOWN, ActionUiKind.NONE, null)
+        val signIn = actions[0]
+        val cancel = actions[1]
+        val signInEvent = eventFor(signIn)
+        val cancelEvent = eventFor(cancel)
+        signIn.update(signInEvent)
+        cancel.update(cancelEvent)
+        assertFalse("Signing in... must stay disabled while busy", signInEvent.presentation.isEnabled)
+        assertTrue("Cancel must be clickable while busy", cancelEvent.presentation.isEnabled)
+
+        cancel.actionPerformed(cancelEvent)
+
+        assertTrue(cancelled)
+    }
+
     fun `test prompt editor exposes send context`() {
         val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> })
         val sink = TestSink()

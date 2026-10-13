@@ -24,6 +24,19 @@ class ActiveListAnchorTest : BasePlatformTestCase() {
         assertEquals(bounds.y + bounds.height, anchor.point.y)
     }
 
+    /** A dropdown opens below its button, so it anchors on the left edge instead of the middle. */
+    fun `test leading row anchor points at the left of the row from its bottom edge`() {
+        val view = laidOut()
+
+        val anchor = view.point("b", leading = true)
+
+        val bounds = view.list.getCellBounds(1, 1)!!
+        assertTrue("a zero-width row would make the edge assertion vacuous", bounds.width > 0)
+        assertSame(view.list, anchor.component)
+        assertEquals(bounds.x, anchor.point.x)
+        assertEquals(bounds.y + bounds.height, anchor.point.y)
+    }
+
     fun `test anchor for an unknown key falls back to the list origin`() {
         val view = laidOut()
 

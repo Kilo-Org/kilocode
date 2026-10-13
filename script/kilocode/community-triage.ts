@@ -26,6 +26,10 @@ export const label = {
 // Labels the sweep owns. It adds and removes these on its own.
 const managed = [label.triage, label.review, label.awaiting, label.ci]
 
+// Labels that only make sense on a community PR. A maintainer PR must not keep them.
+export const cleanup = (current: string[]) =>
+  [label.community, label.adopt, ...managed].filter((name) => current.includes(name))
+
 const labels = [
   { name: label.community, color: "0e8a16", description: "Opened by someone outside the Kilo team" },
   { name: label.triage, color: "fbca04", description: "Community PR no maintainer has looked at yet" },
@@ -418,10 +422,16 @@ async function sweep() {
   const rows: Row[] = []
   for (const pr of prs) {
     const login = pr.author?.login
-    if (!login || pr.author?.__typename === "Bot" || bots(login) || pr.isDraft) continue
-    if (await maintainer(login, pr.authorAssociation)) continue
-
-    const tags: string[] = pr.labels.nodes.map((l: { name: string }) => l.name)
+    if (!login || pr.author?.__typename === "Bot" || bots(login)) continue
+    const tags = pr.labels.nodes.map((l) => l.name)
+    if (await maintainer(login, pr.authorAssociation)) {
+      // Heals labels set before the maintainer list was known.
+      const wrong = cleanup(tags)
+      if (wrong.length > 0) console.log(`#${pr.number} maintainer PR, removing [${wrong}]`)
+      await drop(pr.number, wrong)
+      continue
+    }
+    if (pr.isDraft) continue
     const nodes: Node[] = [
       ...pr.comments.nodes,
       ...pr.reviews.nodes.filter((r: Node) => r.state !== "PENDING" && r.state !== "DISMISSED"),
