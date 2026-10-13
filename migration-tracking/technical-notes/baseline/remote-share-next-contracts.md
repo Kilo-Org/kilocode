@@ -5,7 +5,7 @@ accepted batch in this worktree is untouched; no task transitions, commits,
 installs, fetches, credentials, or live relay/share traffic. Sources, all read
 locally: this checkout (`kilo-v2` at `61a8707c03` plus the frozen dirty batch),
 Kilo v1 pinned `ecccd1f54b62f9bb16e53a2a58b32bb6d98d0fd7` (`git show`), and the
-sibling cloud checkout `/Users/johnnyamancio/Workspace/kilo_workspace/cloud`
+sibling cloud checkout `<cloud checkout>`
 (clean worktree at `c32be17d6`; its `origin/main`
 `08c4887fa68738f19089284101084f404eb6c9b8` read through local git objects only).
 Sharing and remote are kept distinct throughout. The accepted remote

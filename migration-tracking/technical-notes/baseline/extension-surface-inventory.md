@@ -78,7 +78,7 @@ row; current coarse coverage is **24/43 (55.8%)**.
 
 ## Completed self-test observations (older runtime)
 
-Framework: `/Users/johnnyamancio/.config/kilo/scripts/vscode-self-test/cli.mjs`;
+Framework: `<self-test framework>`;
 delegate `thr_7bdux6wma9`. VS Code `1.135.0` arm64. Existing extension artifact
 SHA-256 `713bac9cf684a46e9e0f143e9597dd3cf9f782245ce72df6e33506160faab7d2`;
 bundled CLI SHA-256 `5e8a5ac27339df6df19e156451e808baade23aebe2c9a2187a8619ab5ebab1fb`.
@@ -104,11 +104,7 @@ All HOME/XDG/profile/workspace state was isolated. The delegate verified no
 Account Pooler access. Owned processes and disposable profile/workspace/socket
 artifacts were cleaned up; the existing user window/stores were untouched.
 
-Sanitized evidence: [model groups](/Users/johnnyamancio/.bb/thread-storage/thr_7bdux6wma9/v1-selftest-model-picker.png),
-[agent configuration](/Users/johnnyamancio/.bb/thread-storage/thr_7bdux6wma9/v1-selftest-agent-behaviour.png),
-[runtime agent picker](/Users/johnnyamancio/.bb/thread-storage/thr_7bdux6wma9/v1-selftest-agent-picker.png),
-[first-run sidebar](/Users/johnnyamancio/.bb/thread-storage/thr_7bdux6wma9/v1-selftest-sidebar-inner.png),
-[Agent Manager](/Users/johnnyamancio/.bb/thread-storage/thr_7bdux6wma9/v1-selftest-agent-manager.png).
+Sanitized evidence: screenshots not published.
 
 This was framework-driven navigation and observation, not model/tool workflow
 execution or live-contract verification. No completion credit is added.

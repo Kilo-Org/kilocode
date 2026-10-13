@@ -8,7 +8,7 @@ and clean; that does not describe the cleanliness of the source checkout.
 
 ## Exact source and runtime
 
-The source checkout is `/Users/johnnyamancio/Workspace/kilo_workspace/kilocode`
+The source checkout is `<v1 checkout>`
 at `d99662338e3ddbd2613ab41fc0369837a6eb4be9` (merge pull request #13046,
 2026-08-10). It was already dirty and was not changed by this work. Its
 porcelain status at audit time was:
@@ -99,7 +99,7 @@ The live writer roundtrip is intentionally explicit because it loads the
 separate V1 dependency graph:
 
 ```
-KILOCODE_V1_CHECKOUT=/Users/johnnyamancio/Workspace/kilo_workspace/kilocode \
+KILOCODE_V1_CHECKOUT=<v1 checkout> \
   dist/interactive/bun --no-env-file test --preload @opentui/solid/preload \
   --timeout 180000 ./test/v1-writer-fixture-live.ts
 ```

@@ -24,7 +24,7 @@ After the user's explicit approval, a SQLite online backup was created in a
 mode-0700 private thread-storage directory, with the database file mode 0600.
 The backup passed `PRAGMA quick_check` and contained the expected 60 records.
 
-Backup: `/Users/johnnyamancio/.bb/thread-storage/thr_qr9z7p3cqc/credential-recovery-20rbKX/before-cleanup.db`.
+Backup: a private thread-storage directory (not published).
 It contains credentials: do not publish, attach, or commit it.
 
 One transaction deleted exactly 59 records, requiring integration `kilo`, key

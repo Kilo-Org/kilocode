@@ -8,10 +8,10 @@ Discovery only: no source changes in any repository.
 | Item | Value |
 |---|---|
 | Date | 2026-10-07 (amended; first pass 2026-10-05) |
-| Cloud repo | `Kilo-Org/cloud` at `3de933dd85070e9d15c41d8ff3af6c91ca856fd4` (read-only clone `/Users/fpliger/dev/kiloverse/cloud`) |
+| Cloud repo | `Kilo-Org/cloud` at `3de933dd85070e9d15c41d8ff3af6c91ca856fd4` (read-only clone `<cloud checkout>`) |
 | This repo, `origin/main` (v1) | `62f674d4a91969ac077e4a7b6ceeb8a99de80e47` |
 | This repo, `kilo-v2` (v2) | `782263326df5be50081517ddedd937f1080a89cf` |
-| Upstream opencode, `origin/v2` | `f20f5b68ee318721c453fb19d20e46d2b9225bc0` (clone `/Users/fpliger/dev/opencode`) |
+| Upstream opencode, `origin/v2` | `f20f5b68ee318721c453fb19d20e46d2b9225bc0` (clone `<opencode checkout>`) |
 | #14425 inventory | `migration-tracking/technical-notes/baseline/cloud-agent-consumers.md` |
 
 #14425 assessed the cloud repo at the same SHA; its this-repo SHAs were older

@@ -4,7 +4,7 @@
 
 # Kilo override-marker inventory
 
-Generated 2026-09-08 from the working tree at `/Users/johnnyamancio/Workspace/kilo_workspace/kilo-opencode-v2-baseline`.
+Generated 2026-09-08 from the working tree at `<baseline worktree>`.
 
 ## Scope and method
 

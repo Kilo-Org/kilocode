@@ -723,7 +723,7 @@ all-wire credential regression. Opus follow-up review confirms the native
 delta closes the leak without a protocol/auth/reasoning regression. The stable
 snapshot passed the full CLI fresh-artifact wrapper: **443 pass / 0 fail,
 2,741 assertions across 77 files** (359.21s, bundled Bun 1.4). Log:
-`/Users/johnnyamancio/.bb/thread-storage/thr_qr9z7p3cqc/native-route-full-cli.log`.
+a private thread-storage directory (not published).
 Post-snapshot cleanup shares the two native routes' parser/isolation helpers
 inside `packages/ai/src/kilocode/routed.ts`, preserves dialect option handling
 and explicit `extraBody`, and strengthens the real server-value sentinel.
