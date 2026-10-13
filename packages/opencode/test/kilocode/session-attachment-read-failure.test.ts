@@ -12,7 +12,6 @@ import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { SessionProjector } from "@opencode-ai/core/session/projector"
 import { Flag } from "@opencode-ai/core/flag/flag"
 import * as Log from "@opencode-ai/core/util/log"
-import { AppRuntime } from "../../src/effect/app-runtime"
 import { makeRuntime } from "../../src/effect/run-service"
 import { Session } from "../../src/session/session"
 import { SessionPrompt } from "../../src/session/prompt"
@@ -36,7 +35,6 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await runtime.dispose()
-  await AppRuntime.dispose()
   await disposeTestRuntime()
   Flag.KILO_DB = previous
   await Promise.all([dbfile, `${dbfile}-wal`, `${dbfile}-shm`].map(cleanup))
