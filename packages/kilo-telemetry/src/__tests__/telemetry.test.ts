@@ -117,6 +117,16 @@ describe("Telemetry", () => {
     capture.mockRestore()
   })
 
+  test("ignores a forwarded conda client ID", () => {
+    const capture = spyOn(Client, "capture").mockImplementation(() => {})
+    try {
+      Telemetry.track(TelemetryEvent.CLI_START, { aauClientToken: "supplied" })
+      expect(capture.mock.calls[0]?.[1]).not.toHaveProperty("aauClientToken")
+    } finally {
+      capture.mockRestore()
+    }
+  })
+
   test("indexing helpers are exposed", () => {
     expect(typeof Telemetry.trackIndexingStarted).toBe("function")
     expect(typeof Telemetry.trackIndexingCompleted).toBe("function")

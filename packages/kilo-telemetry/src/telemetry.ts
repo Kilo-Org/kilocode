@@ -111,7 +111,7 @@ export namespace Telemetry {
     const current = ++probe
     const token = await Conda.clientToken()
     if (current !== probe || !Client.isEnabled()) return
-    props.aauClientToken = token
+    if (token) props.aauClientToken = token
   }
 
   export function isEnabled(): boolean {
@@ -133,10 +133,11 @@ export namespace Telemetry {
 
   export function track(event: TelemetryEvent, properties?: Record<string, unknown>) {
     const org = Identity.getOrganizationId()
+    const data = { ...properties }
+    delete data.aauClientToken
     Client.capture(event, {
       ...props,
-      ...properties,
-      ...(props.aauClientToken && { aauClientToken: props.aauClientToken }),
+      ...data,
       ...(Identity.getUserId() &&
         (event === TelemetryEvent.CLI_START || event === TelemetryEvent.AUTH_SUCCESS) && {
           $set: {
