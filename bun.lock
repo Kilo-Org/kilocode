@@ -584,6 +584,19 @@
         "@typescript/native-preview": "catalog:",
       },
     },
+    "packages/kilo-plugin": {
+      "name": "@kilocode/kilo-plugin",
+      "version": "0.0.0",
+      "dependencies": {
+        "@opencode/plugin": "workspace:*",
+        "effect": "catalog:",
+      },
+      "devDependencies": {
+        "@tsconfig/bun": "catalog:",
+        "@types/bun": "catalog:",
+        "@typescript/native-preview": "catalog:",
+      },
+    },
     "packages/latex": {
       "name": "@opencode/latex",
       "version": "2.0.25",
@@ -2018,6 +2031,8 @@
     "@jsx-email/tailwind": ["@jsx-email/tailwind@2.4.4", "", { "dependencies": { "@jsx-email/render": "1.1.1", "react": "18.2.0", "react-dom": "18.2.0", "tw-to-css": "0.0.12" } }, "sha512-RqLD0y2le1ruFBt9MCa0PNnTVUgcS8vcOOWMJUkMezBZUAUkP5KSj3DO+6DdgVn67kH9cnnRvknXo8L6qd6BwA=="],
 
     "@jsx-email/text": ["@jsx-email/text@1.0.2", "", { "peerDependencies": { "react": "^18.2.0" } }, "sha512-0zzwEwrKtY6tfjPJF0r3krKCDpP/ySYDvkn4+MvIFrIH5RZKmn3XDa5o/3hkbxMwpLn4MsXGIXn9XzMTaqTfUA=="],
+
+    "@kilocode/kilo-plugin": ["@kilocode/kilo-plugin@workspace:packages/kilo-plugin"],
 
     "@kitlangton/solid-motion": ["@kitlangton/solid-motion@0.2.2", "", { "dependencies": { "motion-dom": "14.0.0", "motion-utils": "14.0.0" }, "peerDependencies": { "solid-js": "^1.8.0" } }, "sha512-Fp7T8gJta3aRGJakBPQ6WIWmF6U6TmWhT6sGNNgkBiJ8cOVfuKkF9yYXzhvgRtKpo7WfzxtNLku907dLHhTDtw=="],
 

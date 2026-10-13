@@ -1,0 +1,29 @@
+{
+  "name": "@kilocode/upstream-merge",
+  "private": true,
+  "type": "module",
+  "description": "Upstream OpenCode sync tooling for the Kilo v2 line",
+  "scripts": {
+    "versions": "bun run list-versions.ts",
+    "analyze": "bun run analyze.ts",
+    "merge": "bun run merge.ts",
+    "merge:dry-run": "bun run merge.ts --dry-run",
+    "transform:names": "bun run transforms/package-names.ts",
+    "transform:imports": "bun run codemods/transform-imports.ts",
+    "transform:strings": "bun run codemods/transform-strings.ts",
+    "fix:markers": "bun run fix-kilocode-markers.ts",
+    "reset:upstream": "bun run reset-to-upstream.ts",
+    "find:candidates": "bun run find-reset-candidates.ts",
+    "keep-ours": "bun run transforms/keep-ours.ts",
+    "typecheck": "tsgo --noEmit -p tsconfig.json",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "ts-morph": "^24.0.0"
+  },
+  "devDependencies": {
+    "@tsconfig/bun": "1.0.9",
+    "@types/bun": "1.4.2",
+    "@typescript/native-preview": "7.0.0-dev.20251207.1"
+  }
+}
