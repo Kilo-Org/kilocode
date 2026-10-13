@@ -46,6 +46,45 @@ class KiloBackendCliManagerEnvTest {
     }
 
     @Test
+    fun `pinned CLI - rc channel is forced onto the production database`() {
+        val env = manager.buildEnv("pwd123", emptyMap(), pinned = true)
+
+        assertEquals("true", env["KILO_DISABLE_CHANNEL_DB"])
+    }
+
+    @Test
+    fun `pinned CLI - inherited env cannot re-enable the channel database`() {
+        val env = manager.buildEnv("pwd123", mapOf("KILO_DISABLE_CHANNEL_DB" to "false"), pinned = true)
+
+        assertEquals("true", env["KILO_DISABLE_CHANNEL_DB"])
+    }
+
+    @Test
+    fun `local repo CLI - per-branch dev database is kept`() {
+        val env = manager.buildEnv("pwd123", emptyMap(), pinned = false)
+
+        assertFalse(env.containsKey("KILO_DISABLE_CHANNEL_DB"))
+    }
+
+    @Test
+    fun `local repo CLI - developer override is preserved`() {
+        val env = manager.buildEnv("pwd123", mapOf("KILO_DISABLE_CHANNEL_DB" to "true"), pinned = false)
+
+        assertEquals("true", env["KILO_DISABLE_CHANNEL_DB"])
+    }
+
+    @Test
+    fun `pinned CLI with isolation - production database name resolves under isolated data home`() {
+        System.setProperty("kilo.dev.storage.isolated", "true")
+        System.setProperty("kilo.dev.worktree.root", tmp.absolutePath)
+
+        val env = manager.buildEnv("pwd123", emptyMap(), pinned = true)
+
+        assertEquals("true", env["KILO_DISABLE_CHANNEL_DB"])
+        assertEquals(File(File(tmp, ".kilo-dev"), "data").absolutePath, env["XDG_DATA_HOME"])
+    }
+
+    @Test
     fun `dev mode disables CLI telemetry`() {
         System.setProperty("idea.plugin.in.sandbox.mode", "true")
 
