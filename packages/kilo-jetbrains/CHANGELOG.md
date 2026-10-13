@@ -597,17 +597,17 @@
 ## [7.1.10-rc.3] - 2026-10-13
 
 ### Added
-- feat(cli): let glob search an opt-in allowlist of ignored paths by @WebReflection in https://github.com/Kilo-Org/kilocode/pull/14988
+- Let the glob tool search an opt-in allowlist of ignored paths.
 
 ### Fixed
-- fix(cli): track Windows background jobs and runner identity natively by @mardausdennis in https://github.com/Kilo-Org/kilocode/pull/14857
-- fix(cli): reject stale parent links when tracking and stopping Windows background jobs by @mardausdennis in https://github.com/Kilo-Org/kilocode/pull/14796
-- fix(jetbrains): keep RC builds on the production session database by @kirillk in https://github.com/Kilo-Org/kilocode/pull/15012
+- Track Windows background processes with a job object instead of polling PowerShell.
+- Stop Windows background runners from adopting unrelated processes.
+- Keep Windows stop requests until a trustworthy process walk confirms exit.
+- Name a surviving leader in the unconfirmed stop warning.
+- Keep Windows stop responsive during exit confirmation.
 
 ### Changed
-- release(jetbrains): v7.1.10-rc.2 by @kilo-maintainer[bot] in https://github.com/Kilo-Org/kilocode/pull/15010
-- docs(providers): refresh Mixlayer models and model-list note by @cathrynlavery in https://github.com/Kilo-Org/kilocode/pull/15006
-
+- Bundled Kilo CLI pin remains v7.8.9.
 
 ## [7.1.10-rc.2] - 2026-10-13
 
