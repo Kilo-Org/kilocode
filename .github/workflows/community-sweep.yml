@@ -61,7 +61,9 @@ jobs:
         env:
           SLACK_WEBHOOK: ${{ secrets.COMMUNITY_TRIAGE_SLACK_WEBHOOK }}
           SLACK_TOKEN: ${{ secrets.COMMUNITY_TRIAGE_SLACK_TOKEN }}
-        run: echo "enabled=${{ env.SLACK_WEBHOOK != '' && env.SLACK_TOKEN == '' }}" >> "$GITHUB_OUTPUT"
+          SLACK_CHANNEL: ${{ secrets.COMMUNITY_TRIAGE_SLACK_CHANNEL }}
+        # The script posts with the bot token only when the token and the channel are both set.
+        run: echo "enabled=${{ env.SLACK_WEBHOOK != '' && !(env.SLACK_TOKEN != '' && env.SLACK_CHANNEL != '') }}" >> "$GITHUB_OUTPUT"
 
       - name: Notify Slack
         if: steps.slack.outputs.enabled == 'true'
