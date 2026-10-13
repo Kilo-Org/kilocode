@@ -594,6 +594,37 @@
 
 ## [Unreleased]
 
+## [7.1.10-rc.2] - 2026-10-13
+
+### Added
+- Show and edit agent models directly from the agents list.
+- Configure the chat transcript display, with a live preview of your changes.
+- Reuse the Core submenu in the prompt bar menu.
+- Outline the turn a timeline jump lands on.
+
+### Fixed
+- Restore session lists after a CLI reconnect.
+- Stop overriding your permission configuration.
+- Clear MCP sign-in state when the server is removed.
+- Make the model reset forget the saved per-mode pick.
+- Jump to a step when its timeline bar is clicked.
+- Surface terminal compaction failures instead of hiding them.
+- Resolve bare model names for task subagents.
+- Limit Z.ai thinking defaults to built-in providers.
+- Retry retryable connection resets through the normal backoff path.
+- Clean up MCP servers when their startup is interrupted.
+- Avoid false frontmatter errors when saving command files.
+- Bound serve shutdown after signals.
+- Send tool-result images as user content for Bedrock GPT-6 models.
+- Reuse the loaded transcript when pruning large payloads.
+- Improve the missing-binary error message on Windows ARM64.
+- Point cloud sessions at a permitted temp directory.
+- Expose a reserved command-name clash as `/goal:command`.
+- Require explicit user intent before starting Agent Manager sessions or worktrees.
+
+### Changed
+- Bumped the bundled Kilo CLI pin to v7.8.9.
+
 ## [7.1.9] - 2026-10-07
 
 ### Added
