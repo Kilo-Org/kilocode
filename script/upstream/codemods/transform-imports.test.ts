@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test"
 import { Project } from "ts-morph"
-import { transformImports } from "./transform-imports"
+import path from "node:path"
+import { transformAllImports, transformImports } from "./transform-imports"
 
 test("reports and rewrites mapped imports, exports, dynamic imports, and requires", () => {
   const project = new Project({ useInMemoryFileSystem: true })
@@ -41,4 +42,20 @@ test("leaves the external @opencode-ai packages that upstream v2 still uses", ()
 
   expect(transformImports(sourceFile)).toEqual([])
   expect(sourceFile.getFullText()).toContain('"@opencode-ai/pty"')
+})
+
+test("renames imports in the Kilo plugin too, so Kilo code follows a package rename", async () => {
+  const root = path.join(import.meta.dir, "..", "..", "..")
+  const cwd = process.cwd()
+  process.chdir(root)
+  try {
+    const results = await transformAllImports(["packages/kilo-plugin/src/*.ts"])
+    expect(results.flatMap((r) => r.changes.map((c) => [c.before, c.after]))).toEqual([
+      ["@opencode/plugin/effect", "@kilocode/plugin/effect"],
+    ])
+    // Dry run: the file is unchanged.
+    expect(await Bun.file("packages/kilo-plugin/src/index.ts").text()).toContain('from "@opencode/plugin/effect"')
+  } finally {
+    process.chdir(cwd)
+  }
 })

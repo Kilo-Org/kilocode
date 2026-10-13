@@ -12,8 +12,6 @@ import { Project, SyntaxKind, type Node, type SourceFile } from "ts-morph"
 import { Glob } from "bun"
 import { info, success, error } from "../utils/logger"
 import { defaultConfig } from "../utils/config"
-import { isKiloOwned } from "../utils/owned"
-import { relative } from "node:path"
 
 export interface ImportChange {
   file: string
@@ -109,8 +107,7 @@ export async function transformAllImports(
     const glob = new Glob(pattern)
 
     for await (const path of glob.scan({ absolute: true })) {
-      // Kilo-owned paths are Kilo code: never rebrand them.
-      if (isKiloOwned(relative(process.cwd(), path))) continue
+      // Package renames apply to Kilo-owned code too, or Kilo imports of a renamed package break.
       if (excludes.some((ex) => path.includes(ex.replace(/\*\*/g, "")))) continue
 
       const sourceFile = project.addSourceFileAtPath(path)

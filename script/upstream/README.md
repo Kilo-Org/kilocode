@@ -117,12 +117,12 @@ CI runs both in `.github/workflows/kilo-v2.yml` (job `shared upstream patches`),
 | `transforms/skip-files.ts` | On. `skipFiles` is empty on v2: workflows go through `script/check-workflows.ts` |
 | `transforms/lock-files.ts` | On. Keep ours, regenerate with the pinned Bun |
 | `transforms/transform-package-json.ts` | On for conflicted package.json files. Re-applies Kilo's root `dev` script |
-| `transforms/package-names.ts` | Off until decision D-1 (`transforms.packageNames`) |
+| `transforms/package-names.ts` | Off until decision D-1 (`transforms.packageNames`). Package renames apply to Kilo-owned code too (for example `packages/kilo-plugin` imports `@opencode/plugin`), so Kilo imports follow the rename |
 | `transforms/preserve-versions.ts` | Off: v2 follows upstream version numbers (`transforms.versions`) |
 | `transforms/transform-i18n.ts`, `transform-take-theirs.ts`, `transform-scripts.ts`, `transform-extensions.ts`, `transform-web.ts` | Off until rebranding (`transforms.branding`) |
 | `codemods/transform-strings.ts`, `codemods/transform-imports.ts` | Off until rebranding. Default is a dry-run report of each change; `--apply` writes |
 
-Branding tools never touch Kilo-owned paths (`utils/owned.ts`). Each branding CLI prints a dry-run report by default (`bun script/upstream/codemods/transform-strings.ts`). `--apply` writes, and refuses while the switch is off unless `--force` is given.
+Brand-text tools never touch Kilo-owned paths (`utils/owned.ts`); package-name tools (`package-names.ts`, `transform-imports.ts`) do, so Kilo imports follow a rename. Each branding CLI prints a dry-run report by default (`bun script/upstream/codemods/transform-strings.ts`). `--apply` writes, and refuses while the switch is off unless `--force` is given.
 
 ## Not ported from v1 (yet)
 
