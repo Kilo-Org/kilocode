@@ -105,8 +105,8 @@ CI runs both in `.github/workflows/kilo-v2.yml` (job `shared upstream patches`),
 | Command | Use |
 |---|---|
 | `bun script/upstream/fix-kilocode-markers.ts <file> [--dry-run]` | Rebuild the markers of one shared file from its diff with the pinned upstream release. It refuses a file where Kilo deleted upstream lines (the standalone marker that explains a deletion would be lost) unless `--force` |
-| `bun script/upstream/reset-to-upstream.ts <file> [--dry-run]` | Reset one file to the pinned upstream release (with the enabled transforms) |
-| `bun script/upstream/find-reset-candidates.ts [path] [--dry-run]` | Find shared files whose diff with upstream is only markers or whitespace, and reset them. Small real diffs are listed for review, never reset, and files in `shared-patches.json` are skipped |
+| `bun script/upstream/reset-to-upstream.ts <file> [--dry-run]` | Reset one file to the pinned upstream release (with the enabled transforms). It refuses a file listed in `shared-patches.json` unless `--force` |
+| `bun script/upstream/find-reset-candidates.ts [path] [--dry-run]` | Find shared files whose diff with upstream is only `kilocode_change` markers, and reset them. Whitespace-only and small real diffs are listed for review, never reset, and files in `shared-patches.json` are skipped |
 | `script/upstream/find-conflict-markers.sh <file>` | Print the conflict markers of a file |
 
 ## Transforms and codemods

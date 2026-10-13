@@ -30,6 +30,12 @@ test("the pin is the upstream parent of the newest sync merge", async () => {
 
     await r.git("merge", "-q", "--no-ff", "-m", syncMessage("v2.0.28", r28), r28)
     expect(await pinned("HEAD", config)).toEqual({ tag: "v2.0.28", commit: r28 })
+
+    // A squashed sync keeps the subject but loses the upstream parent: the check must fail loudly.
+    await r.git("switch", "-q", "-c", "squashed", "v2")
+    await r.git("merge", "-q", "--squash", "dev")
+    await r.commit(`${syncMessage("v2.0.29", r28)} (#2)`)
+    expect(pinned("HEAD", config)).rejects.toThrow("squashed or rebased")
   } finally {
     process.chdir(cwd)
   }

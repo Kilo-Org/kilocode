@@ -87,4 +87,4 @@ When in doubt, add a finding. A human should verify config path changes manually
 
 Check whether this PR removed any Kilo-specific tests.
 
-Kilo-specific tests may live in `packages/kilo-*`, `packages/*/test/kilocode/`, `script/upstream/`, or may include Kilo-specific assertions, fixtures, or `kilocode_change` markers. Also list upstream tests that the PR skips or deletes, with the reason the PR gives.
+Kilo-specific tests may live in `packages/kilo-*`, `packages/**/test/kilocode/`, `script/upstream/`, or may include Kilo-specific assertions, fixtures, or `kilocode_change` markers. Also list upstream tests that the PR skips or deletes, with the reason the PR gives.

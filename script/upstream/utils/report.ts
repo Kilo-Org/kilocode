@@ -118,19 +118,36 @@ export async function analyzeSync(
   config: MergeConfig = defaultConfig,
 ): Promise<Analysis> {
   const mergeBase = (await $`git merge-base ${base} ${target}`.quiet().text()).trim()
-  const tree = await $`git merge-tree --write-tree --name-only --messages ${base} ${target}`.quiet().nothrow()
+  // quotePath off, so non-ASCII paths come out as they are and match the classifiers.
+  const tree = await $`git -c core.quotePath=false merge-tree --write-tree --name-only --messages ${base} ${target}`
+    .quiet()
+    .nothrow()
   if (tree.exitCode > 1) throw new Error(`git merge-tree failed: ${tree.stderr.toString()}`)
   const [head = "", ...messages] = tree.stdout.toString().split("\n\n")
   const names = head.split("\n").slice(1).filter(Boolean)
   const info = messages.join("\n").split("\n")
 
-  const conflicts = await Promise.all(
+  // Exit 1 without a conflicted file is still a conflict (for example a directory rename).
+  const treeLevel: ConflictFile[] =
+    tree.exitCode === 1 && names.length === 0
+      ? [
+          {
+            path: "(no single file)",
+            kind: info.find((line) => line.startsWith("CONFLICT"))?.match(/^CONFLICT \(([^)]+)\)/)?.[1] ?? "tree",
+            type: "other",
+            recommendation: "manual",
+            reason: "git merge-tree reports a conflict without a file: read its messages",
+          },
+        ]
+      : []
+  const files = await Promise.all(
     names.map(async (file) => {
       const kind = info.find((line) => line.startsWith("CONFLICT") && line.includes(file))?.match(/^CONFLICT \(([^)]+)\)/)?.[1]
       const ours = await show(base, file)
       return { path: file, kind: kind ?? "unknown", type: classifyFile(file), ...getRecommendation(file, config, ours) }
     }),
   )
+  const conflicts = [...treeLevel, ...files]
 
   const changed = await list($`git diff --name-only ${mergeBase} ${target}`)
   const newWorkflows = await list(

@@ -14,8 +14,9 @@ import { match } from "./match"
 
 export const owned = [
   "packages/kilo-*/**",
-  "packages/*/src/kilocode/**",
-  "packages/*/test/kilocode/**",
+  // `**` so nested workspace packages (for example packages/console/app) are covered too.
+  "packages/**/src/kilocode/**",
+  "packages/**/test/kilocode/**",
   ".kilo/**",
   "migration-tracking/**",
   "script/upstream/**",

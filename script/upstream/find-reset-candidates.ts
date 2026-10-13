@@ -18,7 +18,7 @@
  *   - binary-diff         : binary file differs (skipped; use reset-to-upstream.ts
  *                           per file if you want to reset binaries)
  *
- * markers-only and whitespace-only buckets are auto-reset (small-diff is report-only) unless
+ * the markers-only bucket is auto-reset (cosmetic-only and small-diff are report-only) unless
  * --dry-run is passed. A markdown summary is printed to stdout at the end so
  * you can review what happened and spot-check the resulting `git diff`.
  *
@@ -94,9 +94,11 @@ const SKIP_FILENAMES = new Set(["bun.lock", "package-lock.json", "yarn.lock", "p
 // subprocesses under concurrency.
 const MAX_SIZE = 256 * 1024
 
-// Only buckets without a real Kilo change are reset. On v2 most Kilo patches are one or two lines, so
-// v1's `small-diff` bucket would reset real patches (for example the check.yml trigger). It is report-only.
-const RESET_BUCKETS = new Set<Bucket>(["markers-only", "cosmetic-only"])
+// Only files whose text equals upstream once markers are removed are reset. `cosmetic-only` compares
+// lines without whitespace and order, so it can hide real changes (YAML indentation, spaces in strings,
+// moved lines). On v2 most Kilo patches are one or two lines, so `small-diff` would reset real patches
+// (for example the check.yml trigger). Both are report-only.
+const RESET_BUCKETS = new Set<Bucket>(["markers-only"])
 
 const BUCKET_ORDER: Bucket[] = [
   "markers-only",
@@ -263,7 +265,7 @@ function detail(entry: Entry): string {
 
 function describe(bucket: Bucket, count: number, dryRun: boolean): { label: string; action: string } {
   if (bucket === "markers-only") return { label: `markers-only (${count})`, action: dryRun ? "would reset" : "reset" }
-  if (bucket === "cosmetic-only") return { label: `cosmetic-only (${count})`, action: dryRun ? "would reset" : "reset" }
+  if (bucket === "cosmetic-only") return { label: `cosmetic-only (${count})`, action: "review (not reset)" }
   if (bucket === "small-diff") return { label: `small-diff (${count})`, action: "review (not reset)" }
   if (bucket === "large-diff") return { label: `large-diff (${count})`, action: "skipped" }
   if (bucket === "identical") return { label: `identical (${count})`, action: "nothing to do" }

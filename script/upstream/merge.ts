@@ -153,7 +153,7 @@ export async function main(argv: string[]) {
   logger.info(`Sync branch: ${branch}`)
 
   await git.ensureRerere()
-  const learned = await git.trainRerere("^chore(upstream): sync v")
+  const learned = await git.trainRerere("chore(upstream): sync v")
   if (learned > 0) logger.success(`rerere learned ${learned} resolution(s) from earlier syncs`)
 
   logger.step(6, 7, `Merging ${target.tag}...`)

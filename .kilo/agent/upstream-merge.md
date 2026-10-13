@@ -78,7 +78,7 @@ from `MERGE_MSG`, or from the newest report in `.git/upstream-sync/`.
 ### 2. Read every conflicted file end-to-end before planning
 
 Use `script/upstream/find-conflict-markers.sh <file>` to jump to each region,
-then read enough surrounding lines to understand the code — not just the
+then read enough surrounding lines to understand the code - not just the
 conflict hunk. Specifically check:
 
 - is this a plain 3-way on a single expression, or a structural refactor?
@@ -93,7 +93,7 @@ When HEAD includes a non-obvious Kilo-specific wrapper (e.g. a helper in
 before deciding to keep or bypass it:
 
 ```bash
-git log --all --oneline -S "<symbol>" -- 'packages/*/src/kilocode/' 'packages/kilo-*'
+git log --all --oneline -S "<symbol>" -- 'packages/**/src/kilocode/' 'packages/kilo-*'
 git log --all --oneline -- <kilo-file>
 ```
 
@@ -130,7 +130,7 @@ resolutions. Open a follow-up for the move.
 ### 3. Write a plan in chat and get approval
 
 For every conflicted file (and any adjacent file the resolution forces you to
-touch — see §6) include:
+touch - see §6) include:
 
 - expected resolution kind: `hybrid`, `take-ours`, `take-theirs`, `regenerated`,
   `removed`, `renamed`, or `other`
@@ -157,7 +157,7 @@ order:
 3. State which Kilo behaviour must survive and why (reference PR numbers /
    `kilocode_change` comments when possible).
 4. State the resolution and why it is better than the alternatives.
-5. Then apply the edit. The tool will display the diff — the user only has to
+5. Then apply the edit. The tool will display the diff - the user only has to
    verify the diff matches the reasoning.
 
 Do not lead with the diff. A diff without reasoning forces the user to
@@ -167,9 +167,9 @@ reverse-engineer the decision.
 
 Reference worktrees when present:
 
-- `.worktrees/upstream-sync/upstream` — pristine upstream release commit
-- `.worktrees/upstream-sync/kilo-base` — Kilo base snapshot (`origin/v2`)
-- `.worktrees/upstream-sync/auto-merge` — automated merge snapshot (original
+- `.worktrees/upstream-sync/upstream` - pristine upstream release commit
+- `.worktrees/upstream-sync/kilo-base` - Kilo base snapshot (`origin/v2`)
+- `.worktrees/upstream-sync/auto-merge` - automated merge snapshot (original
   conflict reference)
 
 Apply in order:
@@ -187,11 +187,11 @@ Apply in order:
   `kilocode_change`, **check whether the marker encodes a bug fix or a feature
   delta**. Bug fixes (missing `await`, defensive null-check, error capture)
   usually need to be re-applied on top of the upstream refactor. Example from
-  v1.14.30: `Workspace.isSyncing` was missing an `await` — upstream's Effect
+  v1.14.30: `Workspace.isSyncing` was missing an `await` - upstream's Effect
   refactor reintroduced the same bug, so we had to port the fix into the new
   `Effect.gen` block.
 - when a `take-theirs` drops a line that was the target of a Kilo pre-filter,
-  the upstream line may be actively wrong for Kilo — e.g. an inner `continue`
+  the upstream line may be actively wrong for Kilo - e.g. an inner `continue`
   filter whose condition collides with an outer filter Kilo added. Re-read the
   surrounding 20 lines before committing to `take-theirs`.
 - if Kilo-specific code must be refactored to fit new upstream architecture,
@@ -232,7 +232,7 @@ Upstream restructures sometimes split one file into several (e.g. `permission.ts
 shows up in `git diff --diff-filter=U`; the new sibling may need a Kilo feature
 ported in too. After resolving the flagged file, check:
 
-- files that import from the resolved file — do they compile?
+- files that import from the resolved file - do they compile?
 - files at paths implied by new imports (e.g. `../middleware/*`, `./handlers/*`)
 - `kilocode_change` comments in the *auto-merge* snapshot that didn't end up in
   the working tree because the hosting file was renamed
@@ -251,7 +251,7 @@ be broken. Check every auto-merged file for:
 - **Duplicate keys in config/manifest files.** If both sides added the same
   entry to a shared manifest (dependencies, scripts, workflow lists), the
   merged file may have the key twice. This often breaks install/setup before
-  any test runs — a cheap early win to scan for.
+  any test runs - a cheap early win to scan for.
 - **Orphaned imports and references.** A rename upstream may leave a Kilo
   callsite pointing at a now-missing export. Run full typecheck from the repo
   root; references that silently survived the merge surface there.
@@ -265,7 +265,7 @@ be broken. Check every auto-merged file for:
 - confirm `script/upstream/find-conflict-markers.sh <file>` prints nothing
 - read the final file region (the new shape after edit) and sanity-check imports
 - for apparently-unused symbols upstream introduced, `grep` the file and the
-  rest of the package before deleting — they may be called from non-conflicted
+  rest of the package before deleting - they may be called from non-conflicted
   code elsewhere. Example: `isTheme` in `theme.tsx` looked unused at the
   resolution site but was called twice further down.
 - run the smallest relevant check (single `bun test` file, or `bun run
@@ -361,7 +361,7 @@ Structure the description so reviewers can skim:
 - **Shared files touched**: from the sync report, with the option (1 to 5) and
   the missing seam for each Kilo patch.
 - **Notable auto-merged changes**: new columns, new helper files, renamed
-  middleware — anything reviewers should eyeball even though git didn't flag
+  middleware - anything reviewers should eyeball even though git didn't flag
   it.
 - **Tooling gaps**: each step that the tooling did not do and you did by hand.
 - **Tests**: the comparison against `origin/v2` (new failures, failures that
@@ -382,23 +382,23 @@ config schema behaviour, migrations, provider routing, or security posture.
 - Auto-merged code can reference declarations that still live inside conflict
   blocks.
 - Related sibling files can need edits even when they are not listed as
-  unmerged — especially after upstream structural splits.
+  unmerged - especially after upstream structural splits.
 - `renamed` should be used only when behaviour moves to a different file.
 - Function signatures can drift across conflict boundaries (args added, return
   types widened). Grep for every call site before finalising.
 - Full-repo typecheck is the catch-all for non-conflicted call-site breakage.
-- Upstream can reintroduce bugs a Kilo `kilocode_change` had already fixed —
+- Upstream can reintroduce bugs a Kilo `kilocode_change` had already fixed  - 
   during big refactors check every `kilocode_change` the refactor touched.
 - "Take-theirs" on an inner conditional is often wrong when Kilo added an outer
   pre-filter whose whole point was to widen what makes it to the inner block.
 - Apparently-unused upstream-added declarations may be called from
   non-conflicted code elsewhere. Grep before deleting.
 - Stricter DOM lib types (upstream TS upgrade) can surface latent casting
-  issues around `WebSocket.send`, `Headers`, etc. — prefer narrowing the Kilo
+  issues around `WebSocket.send`, `Headers`, etc. - prefer narrowing the Kilo
   type over adding `any` casts.
 - Auto-merge can duplicate the same declaration twice in one scope when both
   sides added equivalent code independently. Silent for git, caught by
-  typecheck. Same hazard for duplicated object keys in config/manifest files —
+  typecheck. Same hazard for duplicated object keys in config/manifest files  - 
   those can break install before any test runs.
 - Kilo code may rely on ambient context (async-local storage, globally-set
   flags, process env) being populated at a lifecycle moment that upstream
@@ -414,7 +414,7 @@ config schema behaviour, migrations, provider routing, or security posture.
 - When Kilo extends a shared data shape with extra optional fields, different
   serialization paths for that shape can diverge on whether missing values are
   omitted or emitted as null. Parity tests between two such paths break on
-  every Kilo addition — audit the encoding assumption before adding fields.
+  every Kilo addition - audit the encoding assumption before adding fields.
 - Rule ordering in allowlist/permission evaluation is usually last-match-wins.
   Re-declaring a catch-all rule "for safety" in a later ruleset silently
   overrides more specific allow rules from an earlier ruleset. Treat a
@@ -422,11 +422,11 @@ config schema behaviour, migrations, provider routing, or security posture.
 - Upstream-added tests can encode a design contract Kilo deliberately breaks.
   The test passes upstream because upstream doesn't share Kilo's requirement.
   Decide between refactoring Kilo to match the upstream contract or rewriting
-  the test to assert Kilo's divergent contract — with a `kilocode_change`
+  the test to assert Kilo's divergent contract - with a `kilocode_change`
   marker explaining the divergence.
 - CI and local can show different test failures. Tests that read user-local
   state (home dir, global config, auth tokens) pass in one environment but
   fail in the other. A green local run does not imply green CI.
 - Dependency manifests and lockfiles move together. When the merge edits one,
-  regenerate and commit the other in the same change — otherwise CI breaks on
+  regenerate and commit the other in the same change - otherwise CI breaks on
   the follow-up setup step.

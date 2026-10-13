@@ -216,6 +216,7 @@ export function mergeWithNewestVersions(
   theirs: Record<string, string> | undefined,
   changes: string[],
   section: string,
+  base?: Record<string, string>,
 ): Record<string, string> | undefined {
   if (!ours && !theirs) return
   const result: Record<string, string> = {}
@@ -224,6 +225,18 @@ export function mergeWithNewestVersions(
   if (ours) {
     for (const [name, ourVersion] of Object.entries(ours)) {
       const theirVersion = theirs?.[name]
+      // Three-way rule with the merge base: a value Kilo did not change follows upstream, including an
+      // upstream removal or downgrade; a value upstream did not change keeps Kilo's.
+      if (base && same(ourVersion, base[name])) {
+        if (theirVersion !== undefined) result[name] = theirVersion
+        if (theirVersion === undefined) changes.push(`${section}: ${name} removed upstream`)
+        continue
+      }
+      if (base && same(theirVersion, base[name])) {
+        result[name] = ourVersion
+        if (theirVersion !== ourVersion) changes.push(`${section}: ${name} kept Kilo ${ourVersion}`)
+        continue
+      }
       if (theirVersion === undefined) {
         result[name] = ourVersion
         changes.push(`${section}: preserved ${name}@${ourVersion} (kilo-only)`)
@@ -231,6 +244,12 @@ export function mergeWithNewestVersions(
       }
       if (ourVersion === theirVersion) {
         result[name] = theirVersion
+        continue
+      }
+      // Object values (nested overrides) cannot be compared as versions: take upstream's.
+      if (typeof ourVersion !== "string" || typeof theirVersion !== "string") {
+        result[name] = theirVersion
+        changes.push(`${section}: ${name} kept upstream (not a version string)`)
         continue
       }
       const cmp = compareVersions(ourVersion, theirVersion)
@@ -250,9 +269,10 @@ export function mergeWithNewestVersions(
   // Append any theirs-only keys at the end, preserving theirs' relative order.
   if (theirs) {
     for (const [name, version] of Object.entries(theirs)) {
-      if (result[name] === undefined) {
-        result[name] = version
-      }
+      if (result[name] !== undefined) continue
+      // Kilo removed a key that upstream did not change: keep it removed.
+      if (base && ours && !(name in ours) && same(version, base[name])) continue
+      result[name] = version
     }
   }
 
@@ -540,6 +560,7 @@ export async function transformPackageJson(file: string, options: PackageJsonOpt
         pkg.dependencies,
         changes,
         "dependencies",
+        basePkg?.dependencies as Record<string, string> | undefined,
       )
 
       pkg.devDependencies = mergeWithNewestVersions(
@@ -547,6 +568,7 @@ export async function transformPackageJson(file: string, options: PackageJsonOpt
         pkg.devDependencies,
         changes,
         "devDependencies",
+        basePkg?.devDependencies as Record<string, string> | undefined,
       )
 
       pkg.peerDependencies = mergeWithNewestVersions(
@@ -554,12 +576,19 @@ export async function transformPackageJson(file: string, options: PackageJsonOpt
         pkg.peerDependencies,
         changes,
         "peerDependencies",
+        basePkg?.peerDependencies as Record<string, string> | undefined,
       )
 
       // 4. Preserve/merge overrides
       const ourOverrides = ourPkg.overrides as Record<string, string> | undefined
       if (ourOverrides || pkg.overrides) {
-        pkg.overrides = mergeWithNewestVersions(ourOverrides, pkg.overrides, changes, "overrides")
+        pkg.overrides = mergeWithNewestVersions(
+          ourOverrides,
+          pkg.overrides,
+          changes,
+          "overrides",
+          basePkg?.overrides as Record<string, string> | undefined,
+        )
       }
 
       // 5. Preserve patchedDependencies (Kilo-specific, upstream won't have these)
@@ -595,6 +624,7 @@ export async function transformPackageJson(file: string, options: PackageJsonOpt
           theirWorkspaces?.catalog,
           changes,
           "workspaces.catalog",
+          (basePkg?.workspaces as { catalog?: Record<string, string> } | undefined)?.catalog,
         )
       }
 

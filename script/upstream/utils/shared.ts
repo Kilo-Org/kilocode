@@ -68,7 +68,7 @@ async function analyzeFile(input: SharedInput, file: string, status: SharedFile[
 
   const diff = await addedLines(input, file, status, text)
   const lines = text.split(/\r?\n/)
-  const covered = coveredLines(lines)
+  const covered = coveredLines(lines, status === "A")
   const added = [...diff.added].filter((n) => (lines[n - 1] ?? "").trim() !== "")
   return {
     path: file,
@@ -109,13 +109,17 @@ export function parseDiff(diff: string) {
   const added = new Set<number>()
   let removed = 0
   let next = 0
+  let body = false
   for (const line of diff.split("\n")) {
     const hunk = line.match(/^@@ -\d+(?:,\d+)? \+(\d+)(?:,\d+)? @@/)
     if (hunk) {
       next = Number(hunk[1])
+      body = true
       continue
     }
-    if (line.startsWith("+++") || line.startsWith("---")) continue
+    // File headers (`--- a/x`, `+++ b/x`) come only before the first hunk. Inside a hunk, an added
+    // line such as `++i` is serialized as `+++i` and must count.
+    if (!body) continue
     if (line.startsWith("+")) added.add(next++)
     else if (line.startsWith("-")) removed++
   }
@@ -135,19 +139,29 @@ export function hasMarker(line: string) {
 /**
  * Line numbers (1-based) that a marker covers:
  * - a line with an inline marker, or a marker line itself
- * - every line inside a `kilocode_change start` / `kilocode_change end` block
- * - every line of a file whose first non-shebang, non-empty line is `kilocode_change - new file`
+ * - every line inside a `kilocode_change start` / `kilocode_change end` block. A block without its
+ *   `end` covers nothing, so a lost `end` cannot hide the rest of the file
+ * - every line of a new file (`fresh`: not in upstream) whose first non-shebang, non-empty line is
+ *   `kilocode_change - new file`. On a file that exists upstream this header covers only its own line
  */
-export function coveredLines(lines: string[]) {
+export function coveredLines(lines: string[], fresh = true) {
   const covered = new Set<number>()
   const first = lines.find((line) => line.trim() !== "" && !line.startsWith("#!"))
-  if (first && NEW_FILE.test(first)) return new Set(lines.map((_, i) => i + 1))
+  if (fresh && first && NEW_FILE.test(first)) return new Set(lines.map((_, i) => i + 1))
 
+  const open: number[] = []
   let block = false
   lines.forEach((line, i) => {
     if (START.test(line)) block = true
-    if (block || MARKER.test(line)) covered.add(i + 1)
-    if (END.test(line)) block = false
+    if (block) open.push(i + 1)
+    if (!block && MARKER.test(line)) covered.add(i + 1)
+    if (block && END.test(line)) {
+      open.forEach((n) => covered.add(n))
+      open.length = 0
+      block = false
+    }
   })
+  // An unterminated block: only marker lines count.
+  open.filter((n) => MARKER.test(lines[n - 1] ?? "")).forEach((n) => covered.add(n))
   return covered
 }

@@ -45,9 +45,8 @@ const PACKAGE_REPLACEMENTS: StringReplacement[] = defaultConfig.packageMappings.
   replacement: to,
 }))
 
-const STRING_REPLACEMENTS: StringReplacement[] = [
-  ...PACKAGE_REPLACEMENTS,
-
+// Brand text (`transforms.branding`). Package names above follow `transforms.packageNames`.
+const BRAND_REPLACEMENTS: StringReplacement[] = [
   // CLI commands
   { pattern: /\bnpx opencode\b/g, replacement: "npx @kilocode/cli" },
 
@@ -61,18 +60,25 @@ const STRING_REPLACEMENTS: StringReplacement[] = [
   { pattern: /\bOPENCODE_(?!API_KEY\b)([A-Z_]+)\b/g, replacement: "KILO_$1" },
 ]
 
-function applyStringReplacements(value: string): { result: string; changed: boolean } {
+/** The rules for the enabled switches. The dry-run report uses both, to show what each would change. */
+export function stringRules(input: { packages: boolean; brand: boolean }): StringReplacement[] {
+  return [...(input.packages ? PACKAGE_REPLACEMENTS : []), ...(input.brand ? BRAND_REPLACEMENTS : [])]
+}
+
+const ALL = stringRules({ packages: true, brand: true })
+
+function applyStringReplacements(value: string, rules: StringReplacement[]): { result: string; changed: boolean } {
   let result = value
-  for (const { pattern, replacement } of STRING_REPLACEMENTS) {
+  for (const { pattern, replacement } of rules) {
     pattern.lastIndex = 0
     result = result.replace(pattern, replacement)
   }
   return { result, changed: result !== value }
 }
 
-function visit(node: Node, file: string, changes: StringChange[]): void {
+function visit(node: Node, file: string, changes: StringChange[], rules: StringReplacement[]): void {
   const before = node.getText()
-  const { result, changed } = applyStringReplacements(before)
+  const { result, changed } = applyStringReplacements(before, rules)
   if (!changed) return
   changes.push({ file, line: node.getStartLineNumber(), before, after: result })
   node.replaceWithText(result)
@@ -81,15 +87,15 @@ function visit(node: Node, file: string, changes: StringChange[]): void {
 /**
  * Transform string literals in a source file and return the changes it made.
  */
-export function transformStrings(sourceFile: SourceFile): StringChange[] {
+export function transformStrings(sourceFile: SourceFile, rules: StringReplacement[] = ALL): StringChange[] {
   const file = sourceFile.getFilePath()
   const changes: StringChange[] = []
 
-  for (const literal of sourceFile.getDescendantsOfKind(SyntaxKind.StringLiteral)) visit(literal, file, changes)
+  for (const literal of sourceFile.getDescendantsOfKind(SyntaxKind.StringLiteral)) visit(literal, file, changes, rules)
   for (const template of sourceFile.getDescendantsOfKind(SyntaxKind.NoSubstitutionTemplateLiteral)) {
-    visit(template, file, changes)
+    visit(template, file, changes, rules)
   }
-  for (const head of sourceFile.getDescendantsOfKind(SyntaxKind.TemplateHead)) visit(head, file, changes)
+  for (const head of sourceFile.getDescendantsOfKind(SyntaxKind.TemplateHead)) visit(head, file, changes, rules)
 
   return changes
 }
@@ -100,6 +106,7 @@ export function transformStrings(sourceFile: SourceFile): StringChange[] {
 export async function transformAllStrings(
   patterns: string[] = ["**/*.ts", "**/*.tsx", "**/*.js", "**/*.jsx"],
   apply = false,
+  rules: StringReplacement[] = ALL,
 ): Promise<TransformResult[]> {
   const project = new Project({ skipAddingFilesFromTsConfig: true })
   const results: TransformResult[] = []
@@ -109,12 +116,15 @@ export async function transformAllStrings(
     const glob = new Glob(pattern)
 
     for await (const path of glob.scan({ absolute: true })) {
-      // Kilo-owned paths are Kilo code: never rebrand them.
-      if (isKiloOwned(relative(process.cwd(), path))) continue
       if (excludes.some((ex) => path.includes(ex.replace(/\*\*/g, "")))) continue
+      // Kilo-owned code is never rebranded, but it follows package renames so its imports keep working.
+      const fileRules = isKiloOwned(relative(process.cwd(), path))
+        ? rules.filter((rule) => PACKAGE_REPLACEMENTS.includes(rule))
+        : rules
+      if (fileRules.length === 0) continue
 
       const sourceFile = project.addSourceFileAtPath(path)
-      const changes = transformStrings(sourceFile)
+      const changes = transformStrings(sourceFile, fileRules)
       if (changes.length === 0) continue
 
       results.push({ file: path, changes })
@@ -135,12 +145,16 @@ if (import.meta.main) {
   const force = args.includes("--force")
   const files = args.filter((a) => !a.startsWith("--"))
 
-  if (apply && !defaultConfig.transforms.branding && !force) {
-    error("String codemod is off in the v2 config (transforms.branding); pass --force to apply")
+  // Apply only the rules whose switch is on. The report (no --apply) shows both.
+  const packages = defaultConfig.transforms.packageNames || force
+  const brand = defaultConfig.transforms.branding || force
+  if (apply && !packages && !brand) {
+    error("String codemod is off in the v2 config (transforms.packageNames, transforms.branding); pass --force to apply")
     process.exit(1)
   }
 
-  const results = await transformAllStrings(files.length > 0 ? files : undefined, apply)
+  const rules = apply ? stringRules({ packages, brand }) : ALL
+  const results = await transformAllStrings(files.length > 0 ? files : undefined, apply, rules)
 
   for (const result of results) {
     for (const change of result.changes) {

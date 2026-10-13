@@ -308,7 +308,7 @@ export async function trainRerere(grep: string): Promise<number> {
     await $`git worktree add --detach ${dir} ${head}`.quiet()
 
     // Find all merge commits matching the grep pattern (merges have multiple parents)
-    const revList = await $`git rev-list --parents --all --grep=${grep}`.quiet().nothrow()
+    const revList = await $`git rev-list --parents --all --fixed-strings --grep=${grep}`.quiet().nothrow()
     if (revList.exitCode !== 0 || !revList.stdout.toString().trim()) return 0
 
     const lines = revList.stdout

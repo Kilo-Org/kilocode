@@ -1,13 +1,13 @@
 ---
 name: kilocode-merge-minimizer
-description: Use when changing shared upstream-owned files to add Kilo-specific behavior, editing `kilocode_change` markers in shared code, or moving Kilo code out of shared files into a plugin or the Kilo host to reduce upstream merge conflicts on the Kilo v2 line. Do not use for changes confined to Kilo-owned paths such as `packages/kilo-*/` or `packages/*/src/kilocode/`.
+description: Use when changing shared upstream-owned files to add Kilo-specific behavior, editing `kilocode_change` markers in shared code, or moving Kilo code out of shared files into a plugin or the Kilo host to reduce upstream merge conflicts on the Kilo v2 line. Do not use for changes confined to Kilo-owned paths such as `packages/kilo-*/` or `packages/**/src/kilocode/`.
 ---
 
 # Kilo Merge Minimizer (v2 line)
 
 Use this skill whenever a normal development task on the v2 line touches shared upstream-owned code and includes Kilo-specific behavior, especially for marker cleanup, extraction work, or `kilocode_change` annotations.
 
-Do not use this skill when all changes are confined to Kilo-owned paths. The one list of Kilo-owned paths is `script/upstream/utils/owned.ts` (`packages/kilo-*`, `packages/*/src/kilocode/`, `packages/*/test/kilocode/`, `.kilo/`, `migration-tracking/`, `script/upstream/`, `script/check-*.ts`, `script/dev-isolated.ts`, `.github/workflows/kilo-v2.yml`). Those files are not merged from upstream and need no markers. If a task also touches shared upstream-owned code, use this skill for the shared portion only.
+Do not use this skill when all changes are confined to Kilo-owned paths. The one list of Kilo-owned paths is `script/upstream/utils/owned.ts` (`packages/kilo-*`, `packages/**/src/kilocode/`, `packages/**/test/kilocode/`, `.kilo/`, `migration-tracking/`, `script/upstream/`, `script/check-*.ts`, `script/dev-isolated.ts`, `.github/workflows/kilo-v2.yml`). Those files are not merged from upstream and need no markers. If a task also touches shared upstream-owned code, use this skill for the shared portion only.
 
 Do not use this as the primary guide for upstream sync resolution. Syncs have their own instructions (`.kilo/agent/upstream-merge.md`, `script/upstream/README.md`).
 
@@ -92,7 +92,7 @@ registerKiloFeature(app)
 
 ## Tests
 
-- Put Kilo-specific tests in Kilo-owned test paths (`packages/*/test/kilocode/`, `packages/kilo-*`).
+- Put Kilo-specific tests in Kilo-owned test paths (`packages/**/test/kilocode/`, `packages/kilo-*`).
 - Move tests out of shared upstream test paths when the behavior under test is Kilo-specific.
 - Tests should cover the real failing path, not private or unstable APIs chosen only for convenience.
 - Do not add skip gates for required regression coverage.

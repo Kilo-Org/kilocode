@@ -132,8 +132,9 @@ if (import.meta.main) {
   const force = args.includes("--force")
   const files = args.filter((a) => !a.startsWith("--"))
 
-  if (apply && !defaultConfig.transforms.branding && !force) {
-    error("Import codemod is off in the v2 config (transforms.branding); pass --force to apply")
+  // Import specifiers are package names: they follow D-1 (`transforms.packageNames`), not branding.
+  if (apply && !defaultConfig.transforms.packageNames && !force) {
+    error("Import codemod is off in the v2 config (transforms.packageNames); pass --force to apply")
     process.exit(1)
   }
 

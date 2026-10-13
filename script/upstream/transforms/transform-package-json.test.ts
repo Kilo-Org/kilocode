@@ -224,3 +224,22 @@ test("assertBunPackageManager accepts the newest input or a newer result", () =>
   expect(() => assertBunPackageManager("bun@1.3.15", "bun@1.3.14", "bun@1.3.15")).not.toThrow()
   expect(() => assertBunPackageManager("bun@1.3.16", "bun@1.3.14", "bun@1.3.15")).not.toThrow()
 })
+
+test("dependency merge follows upstream for values Kilo did not change", () => {
+  const changes: string[] = []
+  const base = { a: "1.0.0", b: "1.0.0", c: "1.0.0", d: "1.0.0" }
+  const ours = { a: "1.0.0", b: "2.0.0", c: "1.0.0", k: "workspace:*" }
+  const theirs = { a: "0.9.0", b: "1.0.0", d: "1.0.0" }
+  // a: upstream downgrade wins, b: Kilo bump stays, c: upstream removal wins, d: Kilo removal stays, k: Kilo-only stays.
+  expect(mergeWithNewestVersions(ours, theirs, changes, "dependencies", base)).toEqual({
+    a: "0.9.0",
+    b: "2.0.0",
+    k: "workspace:*",
+  })
+})
+
+test("dependency merge takes upstream for values that are not version strings", () => {
+  const ours = { x: { y: "1.0.0" } } as unknown as Record<string, string>
+  const theirs = { x: { y: "2.0.0" } } as unknown as Record<string, string>
+  expect(mergeWithNewestVersions(ours, theirs, [], "overrides")).toEqual(theirs)
+})

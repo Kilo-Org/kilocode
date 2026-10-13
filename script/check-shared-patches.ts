@@ -37,7 +37,7 @@ const patched = files.filter((file) => file.status !== "D" && !file.generated).s
 const generated = files.filter((file) => file.generated).map((file) => file.path).sort()
 // Deleted workflows are governed by script/check-workflows.ts (its `removed` list), so a sync that
 // brings a new upstream workflow does not change this count.
-const removed = files.filter((file) => file.status === "D").map((file) => file.path).sort()
+const removed = files.filter((file) => file.status === "D" && !file.generated).map((file) => file.path).sort()
 const workflows = removed.filter((file) => file.startsWith(".github/workflows/"))
 const deleted = removed.filter((file) => !file.startsWith(".github/workflows/"))
 const counts: Limits = {

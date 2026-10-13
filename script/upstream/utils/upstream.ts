@@ -56,17 +56,27 @@ export async function remote(config: MergeConfig = defaultConfig) {
  * It needs no network and no upstream remote, so CI can use it with a full clone.
  */
 export async function pinned(ref = "HEAD", config: MergeConfig = defaultConfig): Promise<Pin> {
-  const log = await $`git log --format=%H%x00%P%x00%s --grep=${"^chore(upstream): sync v"} ${ref}`.quiet().text()
-  const syncs = log.split("\n").flatMap((line) => {
+  // Fixed-string grep, so a user `grep.patternType` setting cannot change the match. SYNC filters exactly.
+  const log = await $`git log --fixed-strings --format=%H%x00%P%x00%s --grep=${"chore(upstream): sync v"} ${ref}`
+    .quiet()
+    .text()
+  const found = log.split("\n").flatMap((line) => {
     const [, parents = "", subject = ""] = line.split("\0")
-    const found = subject.match(SYNC)
-    const commit = parents.split(" ").slice(1).find((parent) => found?.[2] && parent.startsWith(found[2]))
-    const version = found?.[1] ? parseVersion(found[1]) : null
-    if (!found?.[1] || !commit || !version) return []
-    return [{ tag: found[1], commit, version }]
+    const match = subject.match(SYNC)
+    const version = match?.[1] ? parseVersion(match[1]) : null
+    if (!match?.[1] || !match[2] || !version) return []
+    const commit = parents.split(" ").slice(1).find((parent) => parent.startsWith(match[2] ?? ""))
+    return [{ tag: match[1], commit, version }]
   })
-  const newest = syncs.sort((a, b) => compareVersions(b.version, a.version))[0]
-  if (newest) return { tag: newest.tag, commit: newest.commit }
+  const newest = found.sort((a, b) => compareVersions(b.version, a.version))[0]
+  // A squash or rebase merge keeps the subject but loses the upstream parent. The pin would then fall
+  // back to an older release and every check would compare with the wrong upstream tree.
+  if (newest && !newest.commit) {
+    throw new Error(
+      `${newest.tag} sync has no upstream parent: it was squashed or rebased. Sync merges must use "Create a merge commit"`,
+    )
+  }
+  if (newest?.commit) return { tag: newest.tag, commit: newest.commit }
   if (await isAncestor(config.initialBase, ref)) return { tag: "initial", commit: config.initialBase }
   // A history without the v2 base (for example a test repository): use the merge base with upstream.
   const base = await $`git merge-base ${ref} ${`${config.upstreamRemote}/${config.upstreamBranch}`}`.quiet().nothrow()
