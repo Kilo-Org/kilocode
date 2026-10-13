@@ -8,7 +8,7 @@
  * with upstream), not only the lines of one pull request:
  * - the pin is the second parent of the newest `chore(upstream): sync v2.x.y (<sha>)` merge in the
  *   history, or the initial base of `v2` before the first sync (`script/upstream/utils/upstream.ts`).
- * - Kilo-owned paths need no markers (`script/upstream/utils/owned.ts`).
+ * - Kilo-owned paths and generated files such as bun.lock need no markers (`script/upstream/utils/owned.ts`).
  * - A shared file that cannot carry markers (for example JSON) is allowed only when
  *   `script/upstream/shared-patches.json` lists it with an `unmarked` reason.
  *

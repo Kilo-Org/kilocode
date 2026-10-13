@@ -24,6 +24,17 @@ export const owned = [
   ".github/workflows/kilo-v2.yml",
 ]
 
+/**
+ * Generated shared files. They follow from other files (bun.lock follows the package.json files),
+ * so they carry no decision of their own: the checks list them but need no markers and count no
+ * lines. A new Kilo package (for example the first packages/kilo-* plugin) changes bun.lock.
+ */
+export const generated = ["bun.lock", "**/bun.lock"]
+
+export function isGenerated(file: string) {
+  return generated.some((pattern) => match(file.replaceAll("\\", "/"), pattern))
+}
+
 export function isKiloOwned(file: string, upstream?: Set<string>) {
   const path = file.replaceAll("\\", "/")
   if (upstream?.has(path)) return false

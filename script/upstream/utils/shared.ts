@@ -7,7 +7,7 @@
 
 import { $ } from "bun"
 import path from "node:path"
-import { isKiloOwned } from "./owned"
+import { isGenerated, isKiloOwned } from "./owned"
 
 export interface SharedFile {
   path: string
@@ -19,6 +19,8 @@ export interface SharedFile {
   unmarked: { line: number; text: string }[]
   /** Upstream lines that Kilo removed */
   removed: number
+  /** Generated file (see utils/owned.ts): listed, but not marked and not counted */
+  generated: boolean
 }
 
 export interface SharedInput {
@@ -57,10 +59,12 @@ export async function sharedFiles(input: SharedInput): Promise<SharedFile[]> {
 }
 
 async function analyzeFile(input: SharedInput, file: string, status: SharedFile["status"]): Promise<SharedFile> {
-  if (status === "D") return { path: file, status, marked: 0, unmarked: [], removed: 0 }
+  const generated = isGenerated(file)
+  if (status === "D" || generated) return { path: file, status, marked: 0, unmarked: [], removed: 0, generated }
 
   const text = await content(input, file)
-  if (text === undefined) return { path: file, status, marked: 0, unmarked: [{ line: 0, text: "(binary file)" }], removed: 0 }
+  if (text === undefined)
+    return { path: file, status, marked: 0, unmarked: [{ line: 0, text: "(binary file)" }], removed: 0, generated }
 
   const diff = await addedLines(input, file, status, text)
   const lines = text.split(/\r?\n/)
@@ -72,6 +76,7 @@ async function analyzeFile(input: SharedInput, file: string, status: SharedFile[
     marked: added.filter((n) => covered.has(n)).length,
     unmarked: added.filter((n) => !covered.has(n)).map((n) => ({ line: n, text: (lines[n - 1] ?? "").trim() })),
     removed: diff.removed,
+    generated,
   }
 }
 

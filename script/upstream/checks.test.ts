@@ -52,6 +52,32 @@ test("marked lines and Kilo-owned files pass, unmarked lines fail", async () => 
   expect(worktree.output).not.toContain("src/a.ts")
 })
 
+test("a first Kilo package, Kilo dir and empty plugin do not affect the checks", async () => {
+  const { r, pin } = await fixture()
+  await using _ = r
+  await r.write("bun.lock", '{ "workspaces": {} }\n')
+  await r.commit("upstream lock")
+  const upstream = await r.git("rev-parse", "HEAD")
+  await baseline(r, empty)
+  await r.write(
+    "packages/kilo-probe/src/index.ts",
+    'export default Plugin.define({ id: "kilo.probe", effect: () => Effect.void })\n',
+  )
+  await r.write("packages/kilo-probe/package.json", '{ "name": "@kilocode/kilo-probe" }\n')
+  await r.write("packages/core/src/kilocode/probe.ts", 'export const probe = "kilo"\n')
+  await r.write("packages/core/test/kilocode/probe.test.ts", "test.todo('probe')\n")
+  // The new workspace package changes the shared, generated bun.lock.
+  await r.write("bun.lock", '{ "workspaces": { "packages/kilo-probe": { "name": "@kilocode/kilo-probe" } } }\n')
+  await r.commit("kilo package")
+
+  expect((await run(r, annotations, upstream)).code).toBe(0)
+  const counted = await run(r, counter, upstream, "--json")
+  expect(counted.code).toBe(0)
+  const json = JSON.parse(counted.stdout)
+  expect(json.counts).toEqual({ files: 0, markedLines: 0, unmarkedLines: 0, deletedFiles: 0 })
+  expect(json.generated).toEqual(["bun.lock"])
+})
+
 test("a JSON change needs an unmarked reason in the baseline", async () => {
   const { r, pin } = await fixture()
   await using _ = r

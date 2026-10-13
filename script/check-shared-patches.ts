@@ -7,6 +7,7 @@
  *
  * It prints each shared file Kilo adds or changes, its marked lines, its unmarked lines (allowed only
  * for files with an `unmarked` reason, for example JSON), and the shared files Kilo deleted.
+ * Generated files (bun.lock, see script/upstream/utils/owned.ts) are listed but not counted.
  *
  * It fails when:
  * - a shared file that Kilo adds or changes has no entry (rung and seam) in script/upstream/shared-patches.json
@@ -32,7 +33,8 @@ const pin = args.pin ?? (await pinned("HEAD")).commit
 const baseline = await readBaseline(root, args.baseline)
 const files = await sharedFiles({ pin, ref: args.worktree ? undefined : "HEAD", cwd: root })
 
-const patched = files.filter((file) => file.status !== "D").sort((a, b) => a.path.localeCompare(b.path))
+const patched = files.filter((file) => file.status !== "D" && !file.generated).sort((a, b) => a.path.localeCompare(b.path))
+const generated = files.filter((file) => file.generated).map((file) => file.path).sort()
 // Deleted workflows are governed by script/check-workflows.ts (its `removed` list), so a sync that
 // brings a new upstream workflow does not change this count.
 const removed = files.filter((file) => file.status === "D").map((file) => file.path).sort()
@@ -46,7 +48,7 @@ const counts: Limits = {
 }
 
 if (args.json) {
-  console.log(JSON.stringify({ pin, counts, limits: baseline.limits, files: patched, deleted, workflows }, null, 2))
+  console.log(JSON.stringify({ pin, counts, limits: baseline.limits, files: patched, deleted, workflows, generated }, null, 2))
 }
 
 if (!args.json) {
@@ -64,6 +66,7 @@ if (!args.json) {
   console.log(`Deleted shared files: ${deleted.length}`)
   for (const file of deleted) console.log(`  - ${file}`)
   console.log(`Deleted upstream workflows (script/check-workflows.ts): ${workflows.length}`)
+  console.log(`Generated shared files (not counted): ${generated.length === 0 ? "none" : generated.join(", ")}`)
   console.log("")
   console.log("| Count | Current | Limit |")
   console.log("|---|---|---|")
