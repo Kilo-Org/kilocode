@@ -14,7 +14,9 @@ Verified on 2026-10-13 with the commands in the evidence column.
 |---|---|
 | Upstream made v2 its default branch on 2026-10-10 | `5caf1f9 chore: promote v2 to dev`. `upstream/dev` has no `packages/opencode` |
 | `upstream/v2` is frozen | Tip `4617210822b` (2026-10-10). `git rev-list --count upstream/dev..upstream/v2` is 0 |
-| Kilo `v2` lags upstream | Base `5e73d5cb1f7` (2026-10-08). Since then `upstream/dev` changed 534 files in the harness packages, +9,940 / -4,354 lines |
+| Kilo `v2` lags upstream | Base `5e73d5cb1f7` is the release commit of `v2.0.26` (2026-10-08), the parent of the tag. Since then upstream released `v2.0.27` (2026-10-12) and `v2.0.28` (2026-10-13), and `upstream/dev` changed 534 files in the harness packages, +9,940 / -4,354 lines |
+| Upstream releases v2 almost daily | 10 releases from `v2.0.19` (2026-09-29) to `v2.0.28` (2026-10-13). v2 releases are tags only. The "Latest" GitHub release is still `v1.19.0` (2026-10-11) |
+| The next sync has no code conflicts | Dry run (`git merge-tree`) of `origin/v2` with `044d8b7d2e5`, the release commit of `v2.0.28`: 0 conflicts outside `.github/workflows/`. 7 modify/delete conflicts on deleted workflows, 1 content conflict in `check.yml`. About 10 new upstream workflows to delete |
 | The first sync adds history | `git rev-list --count origin/v2..upstream/dev` is 1,506. File content is not affected |
 | The shared diff on `v2` is small today | 28 shared files, 25 of them deleted workflows |
 | The v1 fork patched widely | `origin/main`: 609 upstream files with 5,246 `kilocode_change` markers |
@@ -27,18 +29,25 @@ Verified on 2026-10-13 with the commands in the evidence column.
 
 ### Changes to the plan and the context
 
-- Decision D1, lane L1 and unit U-L1-01: the merge source is `upstream/dev`, pinned by SHA. Release tags are markers only: each tag is a version-bump commit next to the branch.
+- Decision D1, lane L1 and unit U-L1-01: the merge source is `upstream/dev`. The sync target is the newest release commit: the parent of the newest `v2.x.y` tag, which is on `upstream/dev`. This follows the base rule in `migration-context.md` ("the base is the tag's parent"). Merge the tip of `dev` only when a fix after the newest release is needed, and pin it by SHA.
 - `migration-context.md`, name collision note: add that `upstream/v2` is frozen since 2026-10-10 and must not be merged.
+
+### Why syncs start now, before the tooling
+
+- Upstream ships about 5 releases a week, and in the last 5 days it changed 534 harness files. Every week without a sync makes the next sync bigger, and every Kilo patch is built against an older API. The archived port shows the cost: 5 weeks without a sync, and 16 of 21 remaining seam patches conflict.
+- Today the shared diff is 28 files, and the next sync has no code conflicts (section 1). Manual syncs are cheap now.
+- The tooling only pays off when shared patches grow. Each sync is the real test for the next tooling step, so the tooling grows with the syncs.
 
 ### Steps
 
-1. **First sync.** On a branch from `origin/v2`, merge `upstream/dev` at a pinned SHA. Then run `bun script/check-workflows.ts` (it deletes workflows that upstream adds again), `bun typecheck` in the changed Kilo packages, and the focused baseline. The PR body gives the SHA, the lag before and after, the conflicts and the shared files touched. Merge the PR with a merge commit. A squash removes the upstream ancestry, and the next sync then conflicts again.
-2. **Tooling, in this order** (#15020):
-   1. The annotation check and the shared-patch counter. They enforce section 3.
-   2. `script/upstream/merge.ts` and the transforms, with v2 path lists.
+1. **First sync, now.** On a branch from `origin/v2`, merge `044d8b7d2e5` (the release commit of `v2.0.28`). Keep the deleted workflows deleted, keep Kilo's `check.yml` trigger, and delete the new upstream workflows (`bun script/check-workflows.ts` fails until they are gone). Then run `bun typecheck` in the changed Kilo packages and focused tests with the test isolation from the skill. Compare test failures against `origin/v2`, because `pinned-v2-baseline.md` is for the old base. The PR body gives the SHA and release, the lag before and after, each conflict and its resolution, and the shared files touched. Merge the PR with a merge commit. A squash removes the upstream ancestry, and the next sync then conflicts again.
+2. **After the sync.** Open PRs merge `v2` into their branch (no force-push), run their checks again and self-test again.
+3. **Tooling, one step per sync** (#15020):
+   1. The annotation check and the shared-patch counter. They need no decision and enforce section 3. Start them in parallel with the first sync.
+   2. `script/upstream/merge.ts` and the transforms, with v2 path lists, after decision D-1.
    3. The string and import codemods, together with the rebranding work.
    4. A v2 mode for the upstream-merge agent, the review command and the merge skills.
-3. **Cadence.** Sync weekly. If a week is missed, the next sync PR says why.
+4. **Cadence.** Sync to the newest release commit at least weekly, and right away when a release fixes something Kilo needs. If a week is missed, the next sync PR says why. Each sync PR records the lag in releases and days.
 
 ## 3. Extension policy: plugin first
 
@@ -101,6 +110,6 @@ In-flight PRs do not wait. They merge with their marked registration and move to
 | ID | Decision | Proposal |
 |---|---|---|
 | D-1 | Package names on `v2` | Keep upstream's internal `@opencode/*` names. Rename only published packages, the binary and user-visible strings. v1 renamed on every merge, which caused a large share of the conflicts |
-| D-2 | Sync cadence | Weekly |
+| D-2 | Sync cadence and target | At least weekly, to the newest release commit (the parent of the newest `v2.x.y` tag) |
 | D-3 | Owners of U-L1-01, U-L3-01 and U-E0-01 | To agree |
 | D-4 | Split of identity and branding | Identity PR 1 is store isolation and the `kilo2` app directory. Binary, user agent, theme and logo go with rebranding (Fabio, A11) |
