@@ -1195,6 +1195,7 @@ export const layer = Layer.effect(
                     type: "text",
                     synthetic: true,
                     text: `Read tool failed to read ${filepath} with the following error: ${message}`,
+                    metadata: { kilo_notice: "attachment_read_failed", kilo_notice_name: part.filename ?? path.basename(filepath) }, // kilocode_change - flag the failure so clients can show an inline attachment notice
                   })
                 }
                 return pieces
@@ -1220,6 +1221,7 @@ export const layer = Layer.effect(
                       type: "text",
                       synthetic: true,
                       text: `Read tool failed to read ${filepath} with the following error: ${message}`,
+                      metadata: { kilo_notice: "attachment_read_failed", kilo_notice_name: part.filename ?? path.basename(filepath) }, // kilocode_change - flag the failure so clients can show an inline attachment notice
                     },
                   ]
                 }
@@ -1324,6 +1326,7 @@ export const layer = Layer.effect(
                     type: "text",
                     synthetic: true,
                     text: `Read tool failed to read ${filepath} with the following error: ${message}`,
+                    metadata: { kilo_notice: "attachment_read_failed", kilo_notice_name: part.filename ?? path.basename(filepath) }, // kilocode_change - flag the failure so clients can show an inline attachment notice
                   },
                 ]
               }

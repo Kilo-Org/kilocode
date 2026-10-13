@@ -208,8 +208,31 @@ class SessionModelTest : BasePlatformTestCase() {
         assertTrue(events.isEmpty())
     }
 
-    fun `test updateContent removes existing user text when marked synthetic`() {
+    fun `test updateContent renders the attachment read failure notice`() {
         model.addMessage(msg("m1", "user"))
+        events.clear()
+
+        model.updateContent("m1", readFailurePart())
+
+        val notice = model.message("m1")!!.parts["p1"] as Notice
+        assertEquals("attachment_read_failed", notice.kind)
+        assertEquals("report.jfr", notice.name)
+        assertModel("""
+            user#m1
+            notice#p1 attachment_read_failed report.jfr
+        """)
+    }
+
+    fun `test loadHistory renders the attachment read failure notice`() {
+        model.loadHistory(listOf(MessageWithPartsDto(msg("m1", "user"), listOf(readFailurePart()))))
+
+        assertModel("""
+            user#m1
+            notice#p1 attachment_read_failed report.jfr
+        """)
+    }
+
+    fun `test updateContent removes existing user text when marked synthetic`() {        model.addMessage(msg("m1", "user"))
         model.updateContent("m1", part("p1", "m1", "text", text = "visible"))
         events.clear()
 
@@ -1211,6 +1234,18 @@ class SessionModelTest : BasePlatformTestCase() {
         url = url,
         filename = filename,
         source = source,
+    )
+
+    private fun readFailurePart() = part(
+        id = "p1",
+        mid = "m1",
+        type = "text",
+        text = "Read tool failed to read /tmp/report.jfr with the following error: Cannot read binary file",
+        synthetic = true,
+        metadata = mapOf(
+            SessionModel.NOTICE_KIND to "attachment_read_failed",
+            SessionModel.NOTICE_NAME to "report.jfr",
+        ),
     )
 
     private fun taskPart(id: String, mid: String, child: String) = part(

@@ -1,10 +1,12 @@
 package ai.kilocode.client.session.views
 
 import ai.kilocode.client.session.model.Message
+import ai.kilocode.client.session.model.Notice
 import ai.kilocode.client.session.model.Text
 import ai.kilocode.client.session.model.Tool
 import ai.kilocode.client.session.model.ToolExecState
 import ai.kilocode.client.session.model.ToolKind
+import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.views.question.QuestionResultView
 import ai.kilocode.rpc.dto.MessageDto
 import ai.kilocode.rpc.dto.MessageTimeDto
@@ -60,5 +62,23 @@ class MessageViewTest : BasePlatformTestCase() {
 
         view.removePart("p1")
         assertFalse("message hides again when content is removed", view.isVisible)
+    }
+
+    // An attachment the server could not read renders as an inline notice rather than a raw
+    // synthetic text part, and names the file so the user knows what was skipped.
+    fun `test notice renders an inline notice view with the attachment name`() {
+        val msg = Message(MessageDto("m1", "ses", "user", MessageTimeDto(0.0)))
+        val view = MessageView(msg, openFile = { _, _ -> })
+
+        val notice = Notice("p1", "attachment_read_failed", "report.jfr")
+        msg.parts["p1"] = notice
+        view.upsertPart(notice)
+
+        val rendered = view.part("p1")
+        assertTrue(rendered is NoticeView)
+        assertEquals(
+            KiloBundle.message("session.notice.attachment.read.failed", "report.jfr"),
+            (rendered as NoticeView).text(),
+        )
     }
 }

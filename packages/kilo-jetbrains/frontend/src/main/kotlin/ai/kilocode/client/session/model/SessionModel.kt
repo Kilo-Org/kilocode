@@ -46,6 +46,10 @@ class SessionModel {
     companion object {
         /** Part types that are internal server markers and must never be stored or rendered. */
         val SILENT_PART_TYPES = setOf("step-start", "patch")
+
+        /** Metadata keys the server sets on the synthetic "attachment read failed" text part. */
+        const val NOTICE_KIND = "kilo_notice"
+        const val NOTICE_NAME = "kilo_notice_name"
     }
 
     private val entries = LinkedHashMap<String, Message>()
@@ -580,6 +584,7 @@ class SessionModel {
                 existing.cost = dto.cost
                 existing.tokens = dto.tokens
             }
+            is Notice -> return
             is Generic -> return
         }
         fire(SessionModelEvent.ContentUpdated(messageId, existing))
@@ -589,13 +594,21 @@ class SessionModel {
     private fun empty(dto: PartDto) = dto.type == "text" && dto.text?.isNotBlank() != true
 
     private fun hiddenSynthetic(msg: Message, dto: PartDto) =
-        msg.info.role == "user" && dto.type == "text" && dto.synthetic == true
+        msg.info.role == "user" && dto.type == "text" && dto.synthetic == true && noticeKind(dto) == null
+
+    private fun noticeKind(dto: PartDto) = dto.metadata[NOTICE_KIND]?.takeIf { it.isNotBlank() }
+
+    private fun noticeName(dto: PartDto) = dto.metadata[NOTICE_NAME]?.takeIf { it.isNotBlank() }
 
     private fun fromDto(dto: PartDto, text: CharSequence? = null): Content {
         val content = text ?: dto.text
         return when (dto.type) {
-            "text" -> Text(dto.id).apply {
-                if (content != null && content.isNotEmpty()) this.content.append(content)
+            "text" -> {
+                val kind = noticeKind(dto)
+                if (kind != null) Notice(dto.id, kind, noticeName(dto))
+                else Text(dto.id).apply {
+                    if (content != null && content.isNotEmpty()) this.content.append(content)
+                }
             }
             "reasoning" -> Reasoning(dto.id).apply {
                 if (content != null && content.isNotEmpty()) this.content.append(content)
@@ -879,6 +892,7 @@ private fun Content.timelineTitle(): String = when (this) {
     is Tool -> fileActionTitle() ?: title?.takeIf { it.isNotBlank() } ?: name
     is Compaction -> "Compaction"
     is StepFinish -> "Step finish"
+    is Notice -> "Notice"
     is Generic -> type
 }
 
@@ -913,6 +927,7 @@ private fun Content.weight(): Int = when (this) {
     is Tool -> listOf(input.size, output?.length?.div(400) ?: 0, error?.length?.div(200) ?: 0).sum() + 1
     is Compaction -> 2
     is StepFinish -> tokens?.stepWeight() ?: 1
+    is Notice -> 1
     is Generic -> 1
 }
 
@@ -940,6 +955,7 @@ private fun renderMessage(msg: Message): List<String> {
             is Tool -> out.add(renderTool(part))
             is Compaction -> out.add("compaction#${part.id}")
             is StepFinish -> out.add("step-finish#${part.id}")
+            is Notice -> out.add("notice#${part.id} ${part.kind} ${part.name ?: ""}".trimEnd())
             is Generic -> out.add("${part.type}#${part.id}")
         }
     }

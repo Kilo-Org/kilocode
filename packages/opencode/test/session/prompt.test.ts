@@ -2922,6 +2922,13 @@ noLLMServer.instance(
       )
       expect(hasFailure).toBe(true)
 
+      const failure = msg.parts.find(
+        (part) => part.type === "text" && part.synthetic && part.text.includes("Read tool failed to read"),
+      )
+      if (failure?.type !== "text") throw new Error("expected text part")
+      expect(failure.metadata?.kilo_notice).toBe("attachment_read_failed")
+      expect(failure.metadata?.kilo_notice_name).toBe("does-not-exist.ts")
+
       yield* sessions.remove(session.id)
     }),
   { config: cfg },
