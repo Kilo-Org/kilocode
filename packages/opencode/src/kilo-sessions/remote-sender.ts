@@ -81,8 +81,12 @@ const CreateSessionRequest = z
     // The old wire form omits this field and performs a fresh sessionCreate;
     // remove the fresh-create branch when every shipped CLI advertises sessionClone.
     cloneFromKiloSessionId: z.string().min(1).optional(),
+    // kilocode_change - cloneUpToMessageId: inclusive fork cut for a clone;
+    // only valid with cloneFromKiloSessionId. Advertised as sessionCloneAtMessage.
+    cloneUpToMessageId: z.string().min(1).max(RemoteCommand.MAX_STRING_LENGTH).optional(),
   })
   .strict()
+  .refine((data) => data.cloneUpToMessageId === undefined || data.cloneFromKiloSessionId !== undefined)
 
 type CreateSessionInput = {
   agent?: string
@@ -141,6 +145,7 @@ function resolveUnderLaunch(launchDir: string, relative: string | undefined): st
 function importErrorText(error: unknown): string {
   const value = error as { status?: unknown; _tag?: unknown } | null | undefined
   if (value?._tag === "CloudSessionImportUnauthorized") return "cloud session import unauthorized"
+  if (value?._tag === "CloudSessionImportCutNotFound") return "cloud session cut not found"
   if (value?.status === 404) return "cloud session not found"
   if (value?.status === 401) return "cloud session import unauthorized"
   if (value?.status === 403) return "cloud session import access denied"
@@ -245,7 +250,11 @@ export namespace RemoteSender {
     // `finalize` only after a successful attach. Production wires this to the
     // in-process import helper (dynamic import + AppRuntime.runPromise); a
     // missing seam is a wiring bug, never a fallback to sessionCreate.
-    importFromCloud?: (cloneId: string) => Promise<{ session: Session.Info; finalize: () => Promise<void> }>
+    // An optional `upToMessageId` forks at that message (inclusive cut).
+    importFromCloud?: (
+      cloneId: string,
+      opts?: { upToMessageId?: string },
+    ) => Promise<{ session: Session.Info; finalize: () => Promise<void> }>
     catalog?: {
       readonly get: (sessionID: SessionID) => Promise<Session.Info>
       readonly messages: (sessionID: SessionID) => Promise<MessageV2.WithParts[]>
@@ -1003,6 +1012,7 @@ export namespace RemoteSender {
           return
         }
         const cloneId = parsed.data.cloneFromKiloSessionId
+        const cut = parsed.data.cloneUpToMessageId
         const importFromCloud = options.importFromCloud
         if (cloneId && !importFromCloud) {
           options.conn.send({
@@ -1072,7 +1082,7 @@ export namespace RemoteSender {
                 fn: async (): Promise<{ id: string } | { error: string }> => {
                   let imported: { session: Session.Info; finalize: () => Promise<void> }
                   try {
-                    imported = await importFromCloud!(cloneId)
+                    imported = await importFromCloud!(cloneId, cut === undefined ? undefined : { upToMessageId: cut })
                   } catch (importError) {
                     return { error: importErrorText(importError) }
                   }

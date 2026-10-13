@@ -4101,7 +4101,7 @@ describe("RemoteSender slash commands", () => {
   test("create_session with cloneFromKiloSessionId imports in-process, attaches, and never creates", async () => {
     const { conn, sent } = fakeConn()
     const dirs: string[] = []
-    const importCalls: string[] = []
+    const importCalls: unknown[] = []
     const createCalls: unknown[] = []
     const attachCalls: SessionID[] = []
     const order: string[] = []
@@ -4127,8 +4127,8 @@ describe("RemoteSender slash commands", () => {
         attachCalls.push(input)
         order.push("attach")
       },
-      importFromCloud: async (cloneId) => {
-        importCalls.push(cloneId)
+      importFromCloud: async (cloneId, opts) => {
+        importCalls.push([cloneId, opts])
         return {
           session: { id: importedId, directory: "/workspace/project-a" } as any,
           finalize: async () => {
@@ -4150,11 +4150,84 @@ describe("RemoteSender slash commands", () => {
     response.restore()
 
     expect(dirs).toEqual(["/workspace/project-a"])
-    expect(importCalls).toEqual(["ses_cloud"])
+    expect(importCalls).toEqual([["ses_cloud", undefined]])
     expect(createCalls).toHaveLength(0)
     expect(attachCalls).toEqual([importedId])
     expect(order).toEqual(["attach", "finalize"])
     expect(sent).toEqual([{ type: "response", id: "req_clone", result: { protocolVersion: 1, sessionID: importedId } }])
+  })
+
+  test("create_session with cloneUpToMessageId forwards the cut to importFromCloud", async () => {
+    const { conn, sent } = fakeConn()
+    const importCalls: unknown[] = []
+    const importedId = SessionID.make("ses_imported")
+    const sender = RemoteSender.create({
+      conn,
+      directory: "/tmp/process-default",
+      log: nolog,
+      subscribe: fakeBus().subscribe,
+      provide: async <R>(input: { directory: string; fn: () => R }) => input.fn(),
+      session: {
+        get: async (sessionID) => ({ id: sessionID, directory: "/workspace/project-a" }) as any,
+        children: async () => [],
+        create: async () => ({ id: SessionID.make("ses_fresh") }) as any,
+      },
+      attachSession: async () => {},
+      importFromCloud: async (cloneId, opts) => {
+        importCalls.push([cloneId, opts])
+        return { session: { id: importedId, directory: "/workspace/project-a" } as any, finalize: async () => {} }
+      },
+    })
+
+    const response = expectResponse(conn, sent, "req_clone_cut")
+    sender.handle({
+      type: "command",
+      id: "req_clone_cut",
+      command: "create_session",
+      sessionId: "ses_current",
+      data: { protocolVersion: 1, cloneFromKiloSessionId: "ses_cloud", cloneUpToMessageId: "msg_002" },
+    })
+    await response.promise
+    response.restore()
+
+    expect(importCalls).toEqual([["ses_cloud", { upToMessageId: "msg_002" }]])
+    expect(sent).toEqual([
+      { type: "response", id: "req_clone_cut", result: { protocolVersion: 1, sessionID: importedId } },
+    ])
+  })
+
+  test("create_session rejects cloneUpToMessageId without cloneFromKiloSessionId", () => {
+    const { conn, sent } = fakeConn()
+    const createCalls: unknown[] = []
+    const importCalls: unknown[] = []
+    const sender = RemoteSender.create({
+      conn,
+      directory: "/tmp",
+      log: nolog,
+      subscribe: fakeBus().subscribe,
+      session: {
+        get: async (sessionID) => ({ id: sessionID, directory: "/tmp" }) as any,
+        children: async () => [],
+        create: async (input) => {
+          createCalls.push(input)
+          return { id: SessionID.make("ses_x"), directory: "/tmp" } as any
+        },
+      },
+      attachSession: async () => {},
+      importFromCloud: async (cloneId) => {
+        importCalls.push(cloneId)
+        return { session: { id: SessionID.make("ses_imported"), directory: "/tmp" } as any, finalize: async () => {} }
+      },
+    })
+    sender.handle({
+      type: "command",
+      id: "req_cut_only",
+      command: "create_session",
+      data: { protocolVersion: 1, cloneUpToMessageId: "msg_002" },
+    })
+    expect(sent).toEqual([{ type: "response", id: "req_cut_only", error: "invalid create_session command" }])
+    expect(createCalls).toHaveLength(0)
+    expect(importCalls).toHaveLength(0)
   })
 
   test("create_session with cloneFromKiloSessionId and no importFromCloud seam rejects without creating", () => {
@@ -4202,6 +4275,7 @@ describe("RemoteSender slash commands", () => {
         wire: "cloud session import unauthorized",
       },
       { error: { status: 403, error: "Import failed: 403" }, wire: "cloud session import access denied" },
+      { error: { _tag: "CloudSessionImportCutNotFound" }, wire: "cloud session cut not found" },
       { error: new Error("boom"), wire: "cloud session import failed" },
     ]
     for (const { error, wire } of cases) {
