@@ -32,3 +32,47 @@ jobs:
 
       - name: Check workflow allowlist
         run: bun script/check-workflows.ts
+
+  # Build the CLI on one native runner per OS and keep the binaries as workflow artifacts.
+  # Artifacts only: no publishing and no secrets.
+  build:
+    name: build (${{ matrix.target }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: linux-x64
+            host: ubuntu-24.04
+          - target: darwin-arm64
+            host: macos-15
+    runs-on: ${{ matrix.host }}
+    timeout-minutes: 30
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Setup Bun and install dependencies
+        uses: ./.github/actions/setup-bun
+
+      - name: Build CLI
+        working-directory: packages/cli
+        run: bun run script/build.ts --single --skip-install
+
+      # The glob keeps this step independent of the binary name.
+      - name: Check that the binary starts
+        run: |
+          binary=(packages/cli/dist/cli-${{ matrix.target }}/bin/*)
+          "${binary[0]}" --version
+
+      # A tarball keeps the executable bit, which a zipped artifact loses.
+      - name: Archive CLI
+        run: tar -czf kilo-v2-cli-${{ matrix.target }}.tar.gz -C packages/cli/dist cli-${{ matrix.target }}
+
+      - name: Upload CLI artifact
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          path: kilo-v2-cli-${{ matrix.target }}.tar.gz
+          archive: false
+          if-no-files-found: error
+          overwrite: true
+          retention-days: 7
