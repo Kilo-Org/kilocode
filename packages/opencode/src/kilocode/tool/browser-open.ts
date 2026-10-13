@@ -62,21 +62,8 @@ export const BrowserOpenTool = Tool.define<
       execute: (params: Schema.Schema.Type<typeof Parameters>, ctx: Tool.Context) =>
         Effect.gen(function* () {
           const instance = yield* InstanceState.context
-          const base = yield* env.get("KILO_BROWSER_BROKER_URL")
-          const token = yield* env.get("KILO_BROWSER_BROKER_TOKEN")
-          const broker = base && URL.canParse(base) ? new URL(base) : undefined
-          if (
-            !broker ||
-            !token ||
-            broker.protocol !== "http:" ||
-            broker.hostname !== "127.0.0.1" ||
-            !broker.port ||
-            broker.username ||
-            broker.password ||
-            broker.pathname !== "/" ||
-            broker.search ||
-            broker.hash
-          ) {
+          const bridge = yield* Network.bridge(env)
+          if (!bridge) {
             return {
               title: "Browser unavailable",
               output: "The Integrated Browser is not available in this session.",
@@ -132,17 +119,13 @@ export const BrowserOpenTool = Tool.define<
           return yield* Effect.gen(function* () {
             const response = yield* Network.broker(
               http,
-              broker,
-              token,
+              bridge.url,
+              bridge.token,
               { sessionID: ctx.sessionID, directory: instance.directory, url: url.href, viewport },
               ctx.abort,
             )
-            if (response.status < 200 || response.status >= 300) {
-              const body = yield* response.json.pipe(Effect.orElseSucceed(() => undefined))
-              const error =
-                typeof body === "object" && body !== null && "error" in body && typeof body.error === "string"
-                  ? body.error
-                  : `HTTP ${response.status}`
+            const error = yield* Network.refusal(response)
+            if (error) {
               return {
                 title: "Browser open failed",
                 output: `The browser could not open the page: ${error}`,

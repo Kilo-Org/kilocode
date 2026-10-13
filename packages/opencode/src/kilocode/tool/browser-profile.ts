@@ -79,10 +79,8 @@ export const BrowserProfileTool = Tool.define<
       execute: (params: Schema.Schema.Type<typeof Parameters>, ctx: Tool.Context) =>
         Effect.gen(function* () {
           const instance = yield* InstanceState.context
-          const base = yield* env.get("KILO_BROWSER_BROKER_URL")
-          const token = yield* env.get("KILO_BROWSER_BROKER_TOKEN")
-          const broker = base && URL.canParse(base) ? new URL(base) : undefined
-          if (!broker || !token) {
+          const bridge = yield* Network.bridge(env)
+          if (!bridge) {
             return {
               title: "Browser profile unavailable",
               output: "Browser Automation is not available in this session.",
@@ -102,8 +100,8 @@ export const BrowserProfileTool = Tool.define<
           return yield* Effect.gen(function* () {
             const response = yield* Network.profile(
               http,
-              broker,
-              token,
+              bridge.url,
+              bridge.token,
               {
                 sessionID: ctx.sessionID,
                 directory: instance.directory,
@@ -114,12 +112,8 @@ export const BrowserProfileTool = Tool.define<
               },
               ctx.abort,
             )
-            if (response.status < 200 || response.status >= 300) {
-              const body = yield* response.json.pipe(Effect.orElseSucceed(() => undefined))
-              const error =
-                typeof body === "object" && body !== null && "error" in body && typeof body.error === "string"
-                  ? body.error
-                  : `HTTP ${response.status}`
+            const error = yield* Network.refusal(response)
+            if (error) {
               return {
                 title: "Browser profile not changed",
                 output: `The browser profile was not changed: ${error}`,

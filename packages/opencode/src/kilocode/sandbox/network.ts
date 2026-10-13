@@ -1,5 +1,6 @@
 import { Effect, Layer } from "effect"
-import { FetchHttpClient, HttpClient, HttpClientRequest } from "effect/unstable/http"
+import { FetchHttpClient, HttpClient, HttpClientRequest, type HttpClientResponse } from "effect/unstable/http"
+import type { Env } from "@/env"
 import { assertNetwork, assertSandbox, networkHttpLayer, unrestricted } from "@kilocode/sandbox"
 import { host, opaque } from "./network-tools"
 
@@ -30,6 +31,27 @@ function cancel(signal: AbortSignal) {
     const handler = () => resume(failure())
     signal.addEventListener("abort", handler, { once: true })
     return Effect.sync(() => signal.removeEventListener("abort", handler))
+  })
+}
+
+/** The VS Code extension's local browser bridge, when this process has a valid one. */
+export function bridge(env: Env.Interface) {
+  return Effect.gen(function* () {
+    const base = yield* env.get("KILO_BROWSER_BROKER_URL")
+    const token = yield* env.get("KILO_BROWSER_BROKER_TOKEN")
+    const url = base && URL.canParse(base) ? new URL(base) : undefined
+    return url && token && local(url) ? { url, token } : undefined
+  })
+}
+
+/** Why the bridge refused a request, or undefined when it accepted it. */
+export function refusal(response: HttpClientResponse.HttpClientResponse) {
+  return Effect.gen(function* () {
+    if (response.status >= 200 && response.status < 300) return undefined
+    const body = yield* response.json.pipe(Effect.orElseSucceed(() => undefined))
+    return typeof body === "object" && body !== null && "error" in body && typeof body.error === "string"
+      ? body.error
+      : `HTTP ${response.status}`
   })
 }
 
