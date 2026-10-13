@@ -52,7 +52,9 @@ class SessionModel {
          * `Read tool failed to read <path> with the following error: <message>`. The text is
          * addressed to the model; the client only uses it to recognize the failure and show a
          * notice. If the wording changes, the part falls back to being hidden like any other
-         * synthetic user text.
+         * synthetic user text. It is produced in `packages/opencode/src/session/prompt.ts`, and
+         * `packages/opencode/test/kilocode/session-attachment-read-failure.test.ts` pins this
+         * shape so an upstream rewording fails CI.
          */
         private const val READ_FAILED = "Read tool failed to read "
         private const val READ_FAILED_ERROR = " with the following error: "
