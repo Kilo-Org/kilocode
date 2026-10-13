@@ -4,6 +4,7 @@ import { Context, Duration, Effect, Fiber, Layer, Schema, Stream } from "effect"
 import { ChildProcess } from "effect/unstable/process"
 import { makeGlobalNode } from "./effect/app-node"
 import { Entry, Match } from "@opencode-ai/schema/filesystem"
+import * as KiloGlob from "./kilocode/ripgrep-glob" // kilocode_change
 import * as KiloGrep from "./kilocode/ripgrep-grep" // kilocode_change
 import * as SpawnExit from "./kilocode/spawn-exit" // kilocode_change
 import * as SpawnValidation from "./kilocode/spawn-validation" // kilocode_change
@@ -72,6 +73,7 @@ export interface GlobInput {
   readonly noRequireGit?: boolean // kilocode_change - honor ignore files outside a git repository
   readonly include?: readonly string[] // kilocode_change - additional whitelist globs
   readonly exclude?: readonly string[] // kilocode_change - additional exclusion globs
+  readonly filter?: (path: string) => boolean // kilocode_change - drop paths before the result limit
 }
 
 export interface GrepInput extends KiloGrep.Options {
@@ -223,19 +225,24 @@ const layer = Layer.effect(
             ...(input.hidden ? ["--hidden"] : []),
             ...(input.follow ? ["--follow"] : []),
             ...(input.noRequireGit ? ["--no-require-git"] : []), // kilocode_change
-            `--glob=${input.pattern}`,
+            ...KiloGlob.args(input), // kilocode_change - apply the pattern after ignore rules
             ...(input.include ?? []).map((glob) => `--glob=${glob}`), // kilocode_change
             ...(input.exclude ?? []).map((glob) => `--glob=!${glob}`), // kilocode_change
             "--glob=!**/.git/**",
             ".",
           ],
+          // kilocode_change start - drop paths the pattern or filter rejects
           parse: (line) =>
             Effect.succeed(
-              line
-                .replace(/^(?:\.[\\/])+/u, "")
-                .replace(/^[\\/]+/u, "")
-                .replaceAll("\\", "/"),
+              KiloGlob.keep(
+                input,
+                line
+                  .replace(/^(?:\.[\\/])+/u, "")
+                  .replace(/^[\\/]+/u, "")
+                  .replaceAll("\\", "/"),
+              ),
             ),
+          // kilocode_change end
         }).pipe(
           // kilocode_change start - retain spawn metadata after mapping paths
           Effect.map((result) => ({
