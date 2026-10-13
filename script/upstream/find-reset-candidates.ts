@@ -30,7 +30,7 @@
 
 import { $ } from "bun"
 import { defaultConfig } from "./utils/config"
-import { error, header, info, success, warn } from "./utils/logger"
+import { error, header, info, success } from "./utils/logger"
 import { matches } from "./utils/match"
 import { classifyDrift, resetFile, type Bucket, type ClassifyResult } from "./utils/reset"
 import { last, normalize, root, upstreamSizes } from "./utils/upstream"
