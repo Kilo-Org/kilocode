@@ -14,6 +14,7 @@ import ai.kilocode.client.session.settings.BlockDisplay
 import ai.kilocode.client.session.settings.ReasoningDisplay
 import ai.kilocode.client.session.settings.TranscriptDisplay
 import ai.kilocode.client.plugin.KiloBundle
+import ai.kilocode.client.plugin.KiloPluginSettings
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.session.views.LoginRequiredView
@@ -712,21 +713,106 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
     }
 
     fun `test settings re-apply expands history blocks`() {
-        model.loadHistory(listOf(
-            MessageWithPartsDto(
-                msg("a1", "assistant"),
-                listOf(toolPart("t1", "a1", "bash", "c1", state = "completed", input = mapOf("command" to "pwd"))),
-            ),
-        ))
-        val shell = panel.findMessage("a1")!!.part("t1") as ShellToolView
-        assertFalse(shell.isExpanded())
+        KiloPluginSettings.setTerminalCommandDisplay(BlockDisplay.COLLAPSED)
+        try {
+            model.loadHistory(listOf(
+                MessageWithPartsDto(
+                    msg("a1", "assistant"),
+                    listOf(toolPart("t1", "a1", "bash", "c1", state = "completed", input = mapOf("command" to "pwd"))),
+                ),
+            ))
+            val shell = panel.findMessage("a1")!!.part("t1") as ShellToolView
+            assertFalse(shell.isExpanded())
 
-        panel.syncTranscriptDisplay(
-            TranscriptDisplay(reasoning = ReasoningDisplay.EXPANDED, terminal = BlockDisplay.EXPANDED),
-            force = true,
-        )
+            // The production TranscriptDisplayListener applies with the default force=false, so cover
+            // that path: an explicit settings change must reach a settled/history card.
+            panel.syncTranscriptDisplay(
+                TranscriptDisplay(reasoning = ReasoningDisplay.EXPANDED, terminal = BlockDisplay.EXPANDED),
+            )
 
-        assertTrue("an explicit settings change must re-apply to history", shell.isExpanded())
+            assertTrue("an explicit settings change must re-apply to history", shell.isExpanded())
+        } finally {
+            KiloPluginSettings.unsetTerminalCommandDisplay()
+        }
+    }
+
+    fun `test settings re-apply collapses history blocks`() {
+        KiloPluginSettings.setTerminalCommandDisplay(BlockDisplay.EXPANDED)
+        try {
+            model.loadHistory(listOf(
+                MessageWithPartsDto(
+                    msg("a1", "assistant"),
+                    listOf(toolPart("t1", "a1", "bash", "c1", state = "completed", input = mapOf("command" to "pwd"))),
+                ),
+            ))
+            val shell = panel.findMessage("a1")!!.part("t1") as ShellToolView
+            // History load keeps it collapsed despite the EXPANDED setting; open it manually first so
+            // the settings change has a rendered block to collapse.
+            panel.syncTranscriptDisplay(
+                TranscriptDisplay(reasoning = ReasoningDisplay.EXPANDED, terminal = BlockDisplay.EXPANDED),
+                force = true,
+            )
+            assertTrue(shell.isExpanded())
+
+            panel.syncTranscriptDisplay(
+                TranscriptDisplay(reasoning = ReasoningDisplay.EXPANDED, terminal = BlockDisplay.COLLAPSED),
+            )
+
+            assertFalse("an explicit collapse must reach a settled/history card", shell.isExpanded())
+        } finally {
+            KiloPluginSettings.unsetTerminalCommandDisplay()
+        }
+    }
+
+    fun `test settings re-apply opens history reasoning`() {
+        KiloPluginSettings.setReasoningDisplay(ReasoningDisplay.HEADLINE)
+        try {
+            model.loadHistory(listOf(
+                MessageWithPartsDto(
+                    msg("a1", "assistant"),
+                    listOf(part("r1", "a1", "reasoning", text = "thinking")),
+                ),
+            ))
+            val reasoning = panel.findMessage("a1")!!.part("r1") as ReasoningView
+            assertFalse(reasoning.isExpanded())
+
+            panel.syncTranscriptDisplay(
+                TranscriptDisplay(reasoning = ReasoningDisplay.EXPANDED, terminal = BlockDisplay.EXPANDED),
+            )
+
+            assertTrue("an explicit settings change must open history reasoning", reasoning.isExpanded())
+        } finally {
+            KiloPluginSettings.unsetReasoningDisplay()
+        }
+    }
+
+    fun `test turn removed mid-rebuild is not re-added as a ghost`() {
+        // Defer drain slices so a removal can land while turns are still queued. The rebuild drains
+        // 4 turns per slice, so 6 turns leave the last two queued after the first slice.
+        val pending = ArrayDeque<() -> Unit>()
+        val item = SessionMessageListPanel(model, parent, openFile = openFile, schedule = { pending.add(it) })
+        model.loadHistory((1..6).flatMap { n ->
+            listOf(
+                MessageWithPartsDto(msg("u$n", "user"), listOf(part("u${n}p", "u$n", "text", "u$n"))),
+                MessageWithPartsDto(msg("a$n", "assistant"), listOf(part("a${n}p", "a$n", "text", "a$n"))),
+            )
+        })
+        // One slice builds u1..u4; u5 and u6 remain queued.
+        pending.removeFirst().invoke()
+        assertNotNull(item.findTurn("u4"))
+        assertNull("u5 is still queued after the first slice", item.findTurn("u5"))
+
+        // Remove the queued trailing turn entirely (user anchor plus assistant), so no regrouping
+        // merges its messages into a neighbor.
+        model.removeMessage("u5")
+        model.removeMessage("a5")
+        while (pending.isNotEmpty()) pending.removeFirst().invoke()
+
+        assertNull("a turn removed mid-rebuild must not be rebuilt", item.findTurn("u5"))
+        assertNull(item.findMessage("u5"))
+        assertNull(item.findMessage("a5"))
+        // Unaffected turns still render.
+        assertNotNull(item.findTurn("u6"))
     }
 
     // ------ TurnRemoved ------

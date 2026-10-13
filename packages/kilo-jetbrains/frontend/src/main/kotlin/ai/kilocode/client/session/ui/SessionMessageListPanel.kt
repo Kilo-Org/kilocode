@@ -443,7 +443,9 @@ class SessionMessageListPanel(
     private fun buildTurns(batch: List<ai.kilocode.client.session.model.Turn>) {
         for (turn in batch) {
             if (dead) return
-            if (turnViews.containsKey(turn.id)) continue
+            // A turn may have been removed from the model while it sat queued across EDT turns; skip
+            // it so a removed turn is not rebuilt as a ghost.
+            if (turnViews.containsKey(turn.id) || model.turn(turn.id) == null) continue
             val tv = createTurn(turn)
             turnViews[turn.id] = tv
             addMessages(turn)
