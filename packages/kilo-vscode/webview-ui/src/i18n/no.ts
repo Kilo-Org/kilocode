@@ -826,13 +826,25 @@ export const dict = {
   "settings.browser.description":
     "Konfigurer innebygd nettleserautomatisering drevet av Playwright. Kilo kan navigere, samhandle med og ta skjermbilder av nettsider i øktene dine.",
   "settings.browser.enable.title": "Aktiver nettleserautomatisering",
-  "settings.browser.enable.description":
-    "Aktiver den øktspesifikke nettleseren i Agent Manager for lokale applikasjoner og offentlige HTTPS-sider.",
-  "settings.browser.systemChrome.title": "Bruk system-Chrome",
-  "settings.browser.systemChrome.description":
-    "Bruk den installerte Chrome-nettleseren i stedet for en separat Chromium-instans.",
-  "settings.browser.headless.title": "Headless-modus",
-  "settings.browser.headless.description": "Kjør i headless-modus (uten synlig nettleservindu).",
+  "settings.browser.enable.description": "La agenten starte en Playwright-nettleser når en oppgave trenger det.",
+  "settings.browser.browsers.title": "Tillatte nettlesere",
+  "settings.browser.browsers.description":
+    "Nettlesere som agenten kan bruke. For hver oppgave velger agenten nettleser, enhetsemulering, visningsstørrelse og om vinduet er synlig. Chrome og Edge kan aktiveres når de er installert på denne maskinen. Når du aktiverer en Playwright-versjon, lastes den ned hvis den mangler.",
+  "settings.browser.browsers.chrome": "Google Chrome",
+  "settings.browser.browsers.chromium": "Chromium (Playwright-versjon)",
+  "settings.browser.browsers.msedge": "Microsoft Edge",
+  "settings.browser.browsers.firefox": "Firefox (Playwright-versjon)",
+  "settings.browser.browsers.webkit": "WebKit (Safari-motor, Playwright-versjon)",
+  "settings.browser.status.installed": "Installert",
+  "settings.browser.status.missing": "Ikke installert",
+  "settings.browser.status.unknown": "Kunne ikke kontrollere",
+  "settings.browser.status.checking": "Kontrollerer…",
+  "settings.browser.status.preparing": "Forbereder nedlasting…",
+  "settings.browser.status.downloading": "Laster ned {{name}}: {{percent}} %",
+  "settings.browser.status.unpacking": "Pakker ut {{name}}…",
+  "settings.browser.status.failed": "Installasjonen mislyktes: {{message}}",
+  "settings.browser.size.download": "nedlasting på {{size}}",
+  "settings.browser.size.disk": "{{size}} på disken",
 
   "settings.language.description": 'Velg språket for Kilo Code-grensesnittet. "Auto" bruker VS Codes visningsspråk.',
   "settings.language.auto": "Auto (VS Code-språk)",

@@ -865,13 +865,25 @@ export const dict = {
   "settings.browser.description":
     "Konfigurirajte ugrađenu automatizaciju preglednika koju pokreće Playwright. Kilo može navigirati, komunicirati sa web stranicama i snimati ekran u vašim sesijama.",
   "settings.browser.enable.title": "Omogući automatizaciju preglednika",
-  "settings.browser.enable.description":
-    "Omogući preglednik vezan za sesiju u aplikaciji Agent Manager za lokalne aplikacije i javne HTTPS stranice.",
-  "settings.browser.systemChrome.title": "Koristi sistemski Chrome",
-  "settings.browser.systemChrome.description":
-    "Koristite instalirani Chrome preglednik umjesto zasebne Chromium instance.",
-  "settings.browser.headless.title": "Headless način",
-  "settings.browser.headless.description": "Pokreni u headless načinu (bez vidljivog prozora preglednika).",
+  "settings.browser.enable.description": "Dozvolite agentu da pokrene Playwright preglednik kada zadatak to zahtijeva.",
+  "settings.browser.browsers.title": "Dozvoljeni preglednici",
+  "settings.browser.browsers.description":
+    "Preglednici koje agent smije koristiti. Za svaki zadatak agent bira preglednik, emulaciju uređaja, veličinu prikaza i da li je prozor vidljiv. Chrome i Edge se mogu uključiti kada su instalirani na ovom računaru. Kada uključite Playwright verziju, ona se preuzima ako nedostaje.",
+  "settings.browser.browsers.chrome": "Google Chrome",
+  "settings.browser.browsers.chromium": "Chromium (Playwright verzija)",
+  "settings.browser.browsers.msedge": "Microsoft Edge",
+  "settings.browser.browsers.firefox": "Firefox (Playwright verzija)",
+  "settings.browser.browsers.webkit": "WebKit (Safari pogon, Playwright verzija)",
+  "settings.browser.status.installed": "Instalirano",
+  "settings.browser.status.missing": "Nije instalirano",
+  "settings.browser.status.unknown": "Provjera nije uspjela",
+  "settings.browser.status.checking": "Provjera…",
+  "settings.browser.status.preparing": "Priprema preuzimanja…",
+  "settings.browser.status.downloading": "Preuzimanje {{name}}: {{percent}}%",
+  "settings.browser.status.unpacking": "Raspakivanje {{name}}…",
+  "settings.browser.status.failed": "Instalacija nije uspjela: {{message}}",
+  "settings.browser.size.download": "preuzimanje {{size}}",
+  "settings.browser.size.disk": "{{size}} na disku",
 
   "settings.language.description": 'Odaberite jezik za Kilo Code sučelje. "Auto" koristi jezik prikaza VS Code-a.',
   "settings.language.auto": "Auto (VS Code jezik)",

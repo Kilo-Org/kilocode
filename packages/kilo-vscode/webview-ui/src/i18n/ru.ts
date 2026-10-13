@@ -862,13 +862,25 @@ export const dict = {
   "settings.browser.description":
     "Настройте встроенную автоматизацию браузера на основе Playwright. Kilo может переходить по веб-страницам, взаимодействовать с ними и делать скриншоты в ваших сессиях.",
   "settings.browser.enable.title": "Включить автоматизацию браузера",
-  "settings.browser.enable.description":
-    "Включить привязанный к сеансу браузер Agent Manager для локальных приложений и общедоступных HTTPS-страниц.",
-  "settings.browser.systemChrome.title": "Использовать системный Chrome",
-  "settings.browser.systemChrome.description":
-    "Использовать установленный браузер Chrome вместо отдельного экземпляра Chromium.",
-  "settings.browser.headless.title": "Безголовый режим",
-  "settings.browser.headless.description": "Запуск в безголовом режиме (без видимого окна браузера).",
+  "settings.browser.enable.description": "Разрешить агенту запускать браузер Playwright, когда он нужен для задачи.",
+  "settings.browser.browsers.title": "Разрешённые браузеры",
+  "settings.browser.browsers.description":
+    "Браузеры, которые может использовать агент. Для каждой задачи агент выбирает браузер, эмуляцию устройства, размер области просмотра и видимость окна. Chrome и Edge можно включить, если они установлены на этом компьютере. При включении сборки Playwright она загружается, если её нет.",
+  "settings.browser.browsers.chrome": "Google Chrome",
+  "settings.browser.browsers.chromium": "Chromium (сборка Playwright)",
+  "settings.browser.browsers.msedge": "Microsoft Edge",
+  "settings.browser.browsers.firefox": "Firefox (сборка Playwright)",
+  "settings.browser.browsers.webkit": "WebKit (движок Safari, сборка Playwright)",
+  "settings.browser.status.installed": "Установлен",
+  "settings.browser.status.missing": "Не установлен",
+  "settings.browser.status.unknown": "Не удалось проверить",
+  "settings.browser.status.checking": "Проверка…",
+  "settings.browser.status.preparing": "Подготовка загрузки…",
+  "settings.browser.status.downloading": "Загрузка {{name}}: {{percent}}%",
+  "settings.browser.status.unpacking": "Распаковка {{name}}…",
+  "settings.browser.status.failed": "Не удалось установить: {{message}}",
+  "settings.browser.size.download": "загрузка {{size}}",
+  "settings.browser.size.disk": "{{size}} на диске",
 
   "settings.language.description": "Выберите язык интерфейса Kilo Code. «Авто» использует язык отображения VS Code.",
   "settings.language.auto": "Авто (язык VS Code)",

@@ -60,9 +60,11 @@ import { seedSessionStatuses, seedSessionWakeups, clientSessionStatus } from "./
 import { normalizeEnhancePromptErrorMessage } from "./enhance-prompt-error"
 import { retry } from "./services/cli-backend/retry"
 import {
+  automationBrowsers,
   integratedBrowserLinkDestination,
   integratedBrowserUseSystemChrome,
 } from "./services/browser-automation/chrome-setting"
+import { installer } from "./services/browser-automation/browser-install"
 import { removeAgent } from "./services/agent-removal"
 import { normalize, type SSEPayload, type SyncPayload, type WirePayload } from "./services/cli-backend/sdk-sse-adapter"
 import { slimInfo, slimPart, slimParts } from "./kilo-provider/slim-metadata"
@@ -148,6 +150,7 @@ import {
 import { fetchAndSendPendingSuggestions } from "./kilo-provider/handlers/suggestion"
 import { nativeTitle } from "./kilo-provider/native-tab-title"
 import { isActivity, type Activity } from "../webview-ui/src/utils/session-activity"
+import type { BrowserStatusLoadedMessage } from "../webview-ui/src/types/messages/extension-messages"
 import type { PRReviewCommentData, ReviewMessageData } from "./shared/review-comments"
 import { feedbackMetadata, parseFeedback, type BrowserFeedbackData } from "./shared/browser-feedback"
 import { mergeInjected } from "./shared/injected-prompt"
@@ -1639,6 +1642,12 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           break
         case "updateSetting":
           await this.handleUpdateSetting(message.key, message.value)
+          break
+        case "requestBrowserStatus":
+          void this.sendBrowserStatus()
+          break
+        case "installBrowser":
+          void this.installBrowser(message.browser)
           break
         case "requestClaudeCompatSetting":
           this.sendClaudeCompatSetting()
@@ -5247,10 +5256,53 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       type: "browserSettingsLoaded",
       settings: {
         enabled: config.get<boolean>("enabled", false),
-        useSystemChrome: config.get<boolean>("useSystemChrome", true),
-        headless: config.get<boolean>("headless", false),
+        browsers: automationBrowsers(),
       },
     })
+  }
+
+  /**
+   * Tell the webview which automation browsers are installed and which are downloading.
+   */
+  private async sendBrowserStatus(failed?: BrowserStatusLoadedMessage["failed"]) {
+    // Installed browsers are a file check. A missing Playwright build needs a lookup that can take a while.
+    this.sendBrowserProgress({ status: await installer.known() })
+    this.sendBrowserProgress({ status: await installer.status(), failed })
+    // Sizes come last, because they need a request per download and a walk of each installed build.
+    this.sendBrowserProgress({ sizes: await installer.sizes() })
+  }
+
+  private sendBrowserProgress(input: Partial<Pick<BrowserStatusLoadedMessage, "status" | "sizes" | "failed">> = {}) {
+    this.postMessage({
+      type: "browserStatusLoaded",
+      status: input.status ?? {},
+      installing: installer.installing(),
+      progress: installer.progress(),
+      sizes: input.sizes,
+      failed: input.failed,
+    })
+  }
+
+  /**
+   * Download a Playwright browser build when the user allows it in Settings.
+   */
+  private async installBrowser(name: unknown): Promise<void> {
+    if (name !== "chromium" && name !== "firefox" && name !== "webkit") return
+    const browser = name
+    // The webview shows the row as installing as soon as it asks, so every exit reports the real state.
+    if (!vscode.workspace.isTrusted) return this.sendBrowserProgress()
+    // Allowing a browser that is already there must not download it again.
+    if ((await installer.check(browser)) === "installed") return this.sendBrowserStatus()
+    const task = installer.install(browser, () => this.sendBrowserProgress())
+    this.sendBrowserProgress()
+    const failed = await task.then(
+      () => undefined,
+      (error: unknown): { browser: typeof browser; message: string } => {
+        console.error("[Kilo New] Browser install failed:", error)
+        return { browser, message: (error instanceof Error ? error.message : String(error)).slice(0, 300) }
+      },
+    )
+    await this.sendBrowserStatus(failed)
   }
 
   /**

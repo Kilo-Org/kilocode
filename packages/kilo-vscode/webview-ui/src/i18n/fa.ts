@@ -847,12 +847,25 @@ export const dict = {
     "پیکربندی اتوماسیون مرورگر داخلی با پشتیبانی Playwright. Kilo می‌تواند در جلسات شما در صفحات وب پیمایش کند، با آن‌ها تعامل داشته باشد و اسکرین‌شات بگیرد.",
   "settings.browser.enable.title": "فعال‌سازی اتوماسیون مرورگر",
   "settings.browser.enable.description":
-    "مرورگر Agent Manager مختص هر جلسه را برای برنامه‌های محلی و صفحات عمومی HTTPS فعال کنید.",
-  "settings.browser.systemChrome.title": "استفاده از Chrome سیستم",
-  "settings.browser.systemChrome.description":
-    "به جای یک نمونه Chromium جداگانه، از مرورگر Chrome نصب‌شده شما استفاده کنید.",
-  "settings.browser.headless.title": "حالت Headless",
-  "settings.browser.headless.description": "در حالت headless اجرا شود (بدون پنجره مرورگر قابل مشاهده).",
+    "به عامل اجازه می‌دهد هر زمان کاری نیاز داشت یک مرورگر Playwright راه‌اندازی کند.",
+  "settings.browser.browsers.title": "مرورگرهای مجاز",
+  "settings.browser.browsers.description":
+    "مرورگرهایی که عامل می‌تواند استفاده کند. عامل برای هر کار مرورگر، شبیه‌سازی دستگاه، اندازه نمایه و نمایان بودن پنجره را انتخاب می‌کند. Chrome و Edge وقتی روی این دستگاه نصب باشند قابل فعال‌سازی هستند. با فعال کردن یک نسخه Playwright، در صورت نبودن دانلود می‌شود.",
+  "settings.browser.browsers.chrome": "Google Chrome",
+  "settings.browser.browsers.chromium": "Chromium (نسخه Playwright)",
+  "settings.browser.browsers.msedge": "Microsoft Edge",
+  "settings.browser.browsers.firefox": "Firefox (نسخه Playwright)",
+  "settings.browser.browsers.webkit": "WebKit (موتور Safari، نسخه Playwright)",
+  "settings.browser.status.installed": "نصب‌شده",
+  "settings.browser.status.missing": "نصب‌نشده",
+  "settings.browser.status.unknown": "بررسی ممکن نشد",
+  "settings.browser.status.checking": "در حال بررسی…",
+  "settings.browser.status.preparing": "در حال آماده‌سازی دانلود…",
+  "settings.browser.status.downloading": "در حال دانلود {{name}}: {{percent}}%",
+  "settings.browser.status.unpacking": "در حال استخراج {{name}}…",
+  "settings.browser.status.failed": "نصب ناموفق بود: {{message}}",
+  "settings.browser.size.download": "دانلود {{size}}",
+  "settings.browser.size.disk": "{{size}} روی دیسک",
 
   "settings.language.description":
     "زبان رابط کاربری Kilo Code را انتخاب کنید. «Auto» از زبان نمایشی VS Code شما استفاده می‌کند.",

@@ -838,12 +838,25 @@ export const dict = {
   "settings.browser.description":
     "Configure built-in browser automation powered by Playwright. Kilo can navigate, interact with, and screenshot web pages in your sessions.",
   "settings.browser.enable.title": "Enable Browser Automation",
-  "settings.browser.enable.description": "Register the Playwright MCP server with the CLI backend.",
-  "settings.browser.systemChrome.title": "Use System Chrome",
-  "settings.browser.systemChrome.description":
-    "Use installed Google Chrome. Disable only when a compatible Playwright Chromium browser is already installed.",
-  "settings.browser.headless.title": "Headless Mode",
-  "settings.browser.headless.description": "Run in headless mode (no visible browser window).",
+  "settings.browser.enable.description": "Let the agent start a Playwright browser when a task needs one.",
+  "settings.browser.browsers.title": "Allowed Browsers",
+  "settings.browser.browsers.description":
+    "Browsers the agent may use. For each task the agent picks the browser, device emulation, viewport size, and whether the window is visible. Chrome and Edge can be enabled when they are installed on this machine. Enabling a Playwright build downloads it if it is missing.",
+  "settings.browser.browsers.chrome": "Google Chrome",
+  "settings.browser.browsers.chromium": "Chromium (Playwright build)",
+  "settings.browser.browsers.msedge": "Microsoft Edge",
+  "settings.browser.browsers.firefox": "Firefox (Playwright build)",
+  "settings.browser.browsers.webkit": "WebKit (Safari engine, Playwright build)",
+  "settings.browser.status.installed": "Installed",
+  "settings.browser.status.missing": "Not installed",
+  "settings.browser.status.unknown": "Could not check",
+  "settings.browser.status.checking": "Checking…",
+  "settings.browser.status.preparing": "Preparing download…",
+  "settings.browser.status.downloading": "Downloading {{name}}: {{percent}}%",
+  "settings.browser.status.unpacking": "Unpacking {{name}}…",
+  "settings.browser.status.failed": "Install failed: {{message}}",
+  "settings.browser.size.download": "{{size}} download",
+  "settings.browser.size.disk": "{{size}} on disk",
 
   "settings.language.description":
     'Choose the language for the Kilo Code UI. "Auto" uses your VS Code display language.',

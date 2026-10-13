@@ -3,7 +3,7 @@ import type { FileAttachment } from "./parts"
 import type { MessageLoadMode } from "./sessions"
 import type { PermissionFileDiff } from "./permissions"
 import type { ModelSelection, ProviderConfig } from "./providers"
-import type { Config } from "./config"
+import type { AutomationBuild, Config } from "./config"
 import type { ModelAllocation, ReviewCommentEntry, TerminalDestination, TerminalPlacement } from "./agent-manager"
 import type { PRReviewCommentData, ReviewMessageData } from "../../../../src/shared/review-comments"
 import type { BrowserFeedbackData, BrowserReference } from "../../../../src/shared/browser-feedback"
@@ -593,6 +593,15 @@ export interface StreamSessionVisibleMessage {
 
 export interface RequestBrowserSettingsMessage {
   type: "requestBrowserSettings"
+}
+
+export interface RequestBrowserStatusMessage {
+  type: "requestBrowserStatus"
+}
+
+export interface InstallBrowserMessage {
+  type: "installBrowser"
+  browser: AutomationBuild
 }
 
 export interface RequestClaudeCompatSettingMessage {
@@ -1841,6 +1850,8 @@ export type WebviewMessage =
   | ApplyWorkStyleMessage
   | StreamSessionVisibleMessage
   | RequestBrowserSettingsMessage
+  | RequestBrowserStatusMessage
+  | InstallBrowserMessage
   | RequestClaudeCompatSettingMessage
   | RequestConfigMessage
   | RequestGlobalConfigMessage

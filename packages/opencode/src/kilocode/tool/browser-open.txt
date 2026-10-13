@@ -1,6 +1,11 @@
 Open a local application or public HTTPS page in the Integrated Browser panel for the current Agent Manager session.
 
 Use this tool when the user asks you to inspect or verify a web page.
+To check a responsive layout, pass width and height, for example 390x844 for a
+phone, 820x1180 for a tablet, or 1440x900 for a desktop. Only the returned
+screenshot uses that size; the user's live view keeps the panel size. This sets
+the viewport only: it does not emulate a mobile user agent, touch input, or
+another browser engine. Call the tool again with another size to compare.
 The user sees a live view of this same browser page in Agent Manager. Reuse this
 browser instead of launching another browser. Native select menus on macOS are
 not captured by the streamed view.

@@ -84,6 +84,8 @@ export async function activate(context: vscode.ExtensionContext) {
     useSystemChrome: () => integratedBrowserUseSystemChrome(),
     fallback: () => process.platform === "linux" && integratedBrowserFallback(),
     theme: browserTheme,
+    // The broker's local bridge also carries the agent's Playwright profile requests.
+    extend: (path, body) => browserAutomationService.handle(path, body),
   })
   context.subscriptions.push(vscode.window.onDidChangeActiveColorTheme(() => browserBroker.retheme()))
 
