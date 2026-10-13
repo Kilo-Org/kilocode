@@ -3,7 +3,7 @@ name: check
 on:
   push:
     branches: [dev, v2]
-  # kilocode_change - run for every pull request, so Kilo v2 PRs (which target kilo-v2-clean* or a stacked PR branch) are checked
+  # kilocode_change - run for every pull request, so Kilo v2 PRs (which target v2 or a stacked PR branch) are checked
   pull_request:
   workflow_dispatch:
 

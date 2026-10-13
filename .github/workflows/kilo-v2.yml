@@ -3,8 +3,7 @@ name: kilo-v2
 on:
   push:
     branches:
-      - kilo-v2-clean
-      - kilo-v2-clean-*
+      - v2
   # Every pull request, so stacked PRs that target another v2 PR branch also run.
   # This file exists only on the v2 line, so PRs into main do not run it.
   pull_request:
