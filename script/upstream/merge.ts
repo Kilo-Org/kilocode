@@ -112,7 +112,11 @@ export async function main(argv: string[]) {
 
   logger.step(3, 7, "Determining target release...")
   const status = await getSyncStatus(baseSha, config)
-  const target = await resolveTarget(options, config, status)
+  if (status.releases.length === 0) {
+    logger.error(`No ${config.tagPattern} release tags on ${upstreamRef(config)}. Run: git fetch ${config.upstreamRemote} --tags`)
+    process.exit(1)
+  }
+  const target = await resolveTarget(options, config, status, baseSha)
   logger.success(`Target: ${target.tag} release commit ${target.commit.slice(0, 11)} (${target.date})`)
 
   logger.step(4, 7, "Analyzing the merge...")
@@ -241,6 +245,7 @@ async function resolveTarget(
   options: MergeOptions,
   config: MergeConfig,
   status: Awaited<ReturnType<typeof getSyncStatus>>,
+  base: string,
 ): Promise<Release> {
   const branch = upstreamRef(config)
   if (options.commit) {
@@ -248,6 +253,7 @@ async function resolveTarget(
     if (!(await git.isAncestor(commit, branch))) {
       throw new Error(`${options.commit} is not on ${branch}. Never merge ${config.frozenBranches.join(", ")}`)
     }
+    if (await git.isAncestor(commit, base)) throw new Error(`The base already has ${options.commit}`)
     const release = status.releases.find((r) => r.commit === commit)
     const date = (await $`git log -1 --format=%cI ${commit}`.quiet().text()).trim()
     return release ?? { version: "unreleased", tag: `dev-${commit.slice(0, 11)}`, tagCommit: commit, commit, date }

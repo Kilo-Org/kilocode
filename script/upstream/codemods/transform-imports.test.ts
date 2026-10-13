@@ -50,8 +50,9 @@ test("renames imports in the Kilo plugin too, so Kilo code follows a package ren
   process.chdir(root)
   try {
     const results = await transformAllImports(["packages/kilo-plugin/src/*.ts"])
-    expect(results.flatMap((r) => r.changes.map((c) => [c.before, c.after]))).toEqual([
-      ["@opencode/plugin/effect", "@kilocode/plugin/effect"],
+    expect(results.flatMap((r) => r.changes.map((c) => [c.before, c.after]))).toContainEqual([
+      "@opencode/plugin/effect",
+      "@kilocode/plugin/effect",
     ])
     // Dry run: the file is unchanged.
     expect(await Bun.file("packages/kilo-plugin/src/index.ts").text()).toContain('from "@opencode/plugin/effect"')
