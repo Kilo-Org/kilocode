@@ -54,6 +54,10 @@ object ViewFactory {
         openDiff: SessionDiffOpener = { _, _, _ -> },
         sessionId: String? = null,
         onOpenSubagent: ((String, String) -> Unit)? = null,
+        // Whether a block built here may auto-expand from the transcript display settings. False for
+        // history/rebuild construction and for blocks outside the actively streaming turn; see
+        // SessionMessageListPanel/TurnView. Kept before avatarColor for the trailing-lambda rule below.
+        live: () -> Boolean = { true },
         // avatarColor sits before onPromoteBackgroundAgent (not after) so this overload's last
         // parameter stays a non-function type: if a lambda type were last here, a trailing-lambda
         // call meant for the exact-arity `create(content, openFile, openUrl)` overload above would
@@ -62,17 +66,17 @@ object ViewFactory {
         onPromoteBackgroundAgent: BackgroundPromote? = null,
     ): PartView = when (content) {
         is Text -> TextView(content, openFile = openFile, openUrl = openUrl, selection = selection)
-        is Reasoning -> ReasoningView(content, openFile = openFile, openUrl = openUrl, selection = selection)
+        is Reasoning -> ReasoningView(content, openFile = openFile, openUrl = openUrl, selection = selection, live = live)
         is FileAttachment -> AttachmentView(content, openAttachment)
         is Tool -> when {
             TodoWriteView.canRender(content) -> TodoWriteView(content)
             PlanExitView.canRender(content) -> PlanExitView(content, openFile, openUrl, selection)
             QuestionResultView.canRender(content) -> QuestionResultView(content, selection)
-            ShellToolView.canRender(content) -> ShellToolView(content, selection = selection)
+            ShellToolView.canRender(content) -> ShellToolView(content, selection = selection, live = live)
             GlobToolView.canRender(content) -> GlobToolView(content, selection = selection, repo = repo)
             SearchToolView.canRender(content) -> SearchToolView(content, selection = selection, repo = repo)
             ReadToolView.canRender(content) -> ReadToolView(content, openFile, selection = selection)
-            EditToolView.canRender(content) -> EditToolView(content, openFile, selection, openDiff, sessionId)
+            EditToolView.canRender(content) -> EditToolView(content, openFile, selection, openDiff, sessionId, live = live)
             TaskToolView.canRender(content) -> TaskToolView(
                 content,
                 selection = selection,
@@ -81,7 +85,7 @@ object ViewFactory {
                 avatarColor = avatarColor,
             )
             BoardToolView.canRender(content) -> BoardToolView(content, selection = selection)
-            else -> ToolView(content, selection = selection)
+            else -> ToolView(content, selection = selection, live = live)
         }
         is Compaction -> CompactionView(content)
         is StepFinish -> error("step-finish is timeline-only")
@@ -110,6 +114,8 @@ object ViewFactory {
         openDiff: SessionDiffOpener = { _, _, _ -> },
         sessionId: String? = null,
         onOpenSubagent: ((String, String) -> Unit)? = null,
+        // See the matching comment on `create`: keep the live flag off the end.
+        live: () -> Boolean = { true },
         // See the matching comment on `create`: keep this last parameter a non-function type.
         avatarColor: (String) -> Int? = { null },
         onPromoteBackgroundAgent: BackgroundPromote? = null,
@@ -117,7 +123,7 @@ object ViewFactory {
         is Text -> PromptView(content, openFile = openFile, openAttachment = openAttachment, openUrl = openUrl, selection = selection, mentions = mentions)
         else -> create(
             content, openFile, openUrl, selection, repo, openAttachment, openDiff, sessionId,
-            onOpenSubagent = onOpenSubagent, avatarColor = avatarColor, onPromoteBackgroundAgent = onPromoteBackgroundAgent,
+            onOpenSubagent = onOpenSubagent, live = live, avatarColor = avatarColor, onPromoteBackgroundAgent = onPromoteBackgroundAgent,
         )
     }
 
