@@ -594,6 +594,12 @@
 
 ## [Unreleased]
 
+## [7.1.10-rc.2] - 2026-10-13
+
+### Changed
+- chore(jetbrains): bump CLI pin to v7.8.9 by @kilo-maintainer[bot] in https://github.com/Kilo-Org/kilocode/pull/15009
+
+
 ## [7.1.9] - 2026-10-07
 
 ### Added
