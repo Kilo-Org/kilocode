@@ -1,8 +1,10 @@
 import {
   buildKiloHeaders,
   DEFAULT_KILO_API_URL,
+  ENV_KILO_AI_GATEWAY_URL,
   getDefaultHeaders,
   getKiloUrlFromToken,
+  resolveKiloAiGatewayBase,
   resolveKiloOpenRouterBaseUrl,
   supportsTools,
 } from "@kilocode/kilo-gateway"
@@ -123,14 +125,11 @@ export namespace CloudCatalog {
       return parsed.data
     })
 
-    const base = Effect.fn("CloudCatalog.base")(function* (input: Input) {
-      const raw = env.KILO_API_URL?.trim()
-      const fallback = raw || DEFAULT_KILO_API_URL
-      const value = getKiloUrlFromToken(fallback, Redacted.value(input.token))
-      return yield* Effect.try({
+    const secure = (value: () => string, loopback: boolean) =>
+      Effect.try({
         try: () => {
-          const url = new URL(resolveKiloOpenRouterBaseUrl({ baseURL: value }))
-          parseServiceOrigin(url.origin, { allowHttpLoopback: !!raw || value !== fallback })
+          const url = new URL(value())
+          parseServiceOrigin(url.origin, { allowHttpLoopback: loopback })
           if (url.username !== "" || url.password !== "") throw new Error("Catalog URL credentials are not allowed")
           return url
         },
@@ -140,14 +139,27 @@ export namespace CloudCatalog {
             message: "Kilo catalog URL must be secure",
           }),
       })
+
+    const base = Effect.fn("CloudCatalog.base")(function* (input: Input) {
+      const raw = env.KILO_API_URL?.trim()
+      const fallback = raw || DEFAULT_KILO_API_URL
+      const value = getKiloUrlFromToken(fallback, Redacted.value(input.token))
+      return yield* secure(() => resolveKiloOpenRouterBaseUrl({ baseURL: value }), !!raw || value !== fallback)
+    })
+
+    // AI gateway root for model listing. Undefined when only the legacy KILO_API_URL
+    // is set or the token embeds its own URL; those keep using the API app routes.
+    const gateway = Effect.fn("CloudCatalog.gateway")(function* (input: Input) {
+      const root = resolveKiloAiGatewayBase(env)
+      if (!root || getKiloUrlFromToken("", Redacted.value(input.token))) return undefined
+      return yield* secure(() => `${root}/`, !!env[ENV_KILO_AI_GATEWAY_URL]?.trim())
     })
 
     const models = Effect.fn("CloudCatalog.models")(function* (input: Input) {
-      const root = yield* base(input)
-      const path = input.organizationID
-        ? `../organizations/${encodeURIComponent(input.organizationID)}/models`
-        : "models"
-      const result = yield* request(new URL(path, root).toString(), input, Models)
+      const org = input.organizationID ? `organizations/${encodeURIComponent(input.organizationID)}/models` : undefined
+      const root = yield* gateway(input)
+      const url = root ? new URL(org ?? "models", root) : new URL(org ? `../${org}` : "models", yield* base(input))
+      const result = yield* request(url.toString(), input, Models)
       return [
         ...new Set(
           result.data

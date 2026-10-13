@@ -83,9 +83,9 @@ export interface KiloProviderOptions {
   openRouterSpecificProvider?: string
 
   /**
-   * Base URL for the KiloCode API
-   * Can be overridden by KILO_API_URL environment variable
-   * @default "https://api.kilo.ai"
+   * Base URL for Kilo Gateway traffic
+   * Defaults to KILO_AI_GATEWAY_URL, or the legacy `${KILO_API_URL}/api/openrouter` when only KILO_API_URL is set
+   * @default "https://ai-gateway.kilo.ai/api/v1"
    */
   baseURL?: string
 
