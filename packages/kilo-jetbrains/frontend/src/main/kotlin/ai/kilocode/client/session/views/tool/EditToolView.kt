@@ -50,6 +50,7 @@ class EditToolView(
     private var body: EditBody = editBody(tool, selection, openFile),
     private val footer: ToolApprovalFooter = ToolApprovalFooter(),
     private var display: BlockDisplay = KiloPluginSettings.getCodeEditDisplay(),
+    private val live: () -> Boolean = { true },
 ) : AbstractSessionPartView(parts.header, { body.mount(tool) }, { footer }), UiDataProvider, SessionCopyTarget,
     ApprovalReasonTarget, TranscriptDisplayTarget {
 
@@ -95,7 +96,8 @@ class EditToolView(
         selection: SessionSelection?,
         openDiff: SessionDiffOpener,
         sessionId: String?,
-    ) : this(tool, openFile, selection) {
+        live: () -> Boolean = { true },
+    ) : this(tool, openFile, selection, live = live) {
         opener = openDiff
         this.sessionId = sessionId
     }
@@ -229,7 +231,7 @@ class EditToolView(
         val expand = expandable()
         var changed = false
         changed = syncExpandable(expand) || changed
-        if (force || !touched) {
+        if (force || (!touched && live())) {
             changed = if (display == BlockDisplay.EXPANDED && expand) {
                 expand() || changed
             } else {

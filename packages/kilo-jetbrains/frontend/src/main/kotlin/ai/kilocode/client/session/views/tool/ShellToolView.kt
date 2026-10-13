@@ -42,6 +42,7 @@ class ShellToolView(
     private val body: ShellBody = ShellBody(selection),
     private val footer: ToolApprovalFooter = ToolApprovalFooter(),
     private var display: BlockDisplay = KiloPluginSettings.getTerminalCommandDisplay(),
+    private val live: () -> Boolean = { true },
 ) : AbstractSessionPartView(parts.header, { body.mount(tool) }, { footer }), UiDataProvider, ApprovalReasonTarget,
     TranscriptDisplayTarget {
 
@@ -180,7 +181,7 @@ class ShellToolView(
         val expand = canExpand(item)
         var changed = false
         changed = syncExpandable(expand) || changed
-        if (force || !touched) {
+        if (force || (!touched && live())) {
             changed = if (display == BlockDisplay.EXPANDED && expand) {
                 expand() || changed
             } else {

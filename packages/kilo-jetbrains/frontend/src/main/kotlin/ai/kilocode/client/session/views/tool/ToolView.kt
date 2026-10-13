@@ -28,6 +28,7 @@ class ToolView(
     private val parts: ToolParts = toolParts(tool, mode = ToolBodyMode.EDITOR),
     private val footer: ToolApprovalFooter = ToolApprovalFooter(),
     private var display: BlockDisplay = KiloPluginSettings.getMcpToolDisplay(),
+    private val live: () -> Boolean = { true },
 ) : AbstractSessionPartView(parts.header, { parts.scroll(tool) }, { footer }), UiDataProvider, ApprovalReasonTarget,
     TranscriptDisplayTarget {
 
@@ -155,7 +156,7 @@ class ToolView(
         val expand = canExpand(item)
         var changed = false
         changed = syncExpandable(expand) || changed
-        if (force || !touched) {
+        if (force || (!touched && live())) {
             changed = if (display == BlockDisplay.EXPANDED && expand) {
                 expand() || changed
             } else {
