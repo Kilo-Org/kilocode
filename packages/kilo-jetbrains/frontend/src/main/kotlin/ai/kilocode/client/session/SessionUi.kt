@@ -583,6 +583,7 @@ class SessionUi(
                 available = { app.state.value.backgroundSubagents },
                 promote = controller::promoteBackgroundAgent,
             ),
+            visible = { isShowing },
         ).also {
             it.outcome = outcome
             it.setDiffOpener(::openInlineDiff, controller.id)
@@ -623,6 +624,9 @@ class SessionUi(
             Rectangle(0, 0, pane.width, pane.height)
         }
         messageBody.onReflow = { on -> if (on && !opening) scroll.followTail() }
+        // A chunked rebuild drains across EDT turns; the open handshake must wait for it or it would
+        // scroll to the bottom of a transcript that is still assembling.
+        messageBody.onRebuilt = { if (opening) resumeOpen() }
         scroll.onScroll = {
             overlay.clear()
             popup.hideAll()
@@ -1030,6 +1034,9 @@ class SessionUi(
         if (!pending || !opening || !this::scroll.isInitialized) return
         if (width <= 0 || height <= 0) return
         if (body(controller.model.state) !== messageBody) return
+        // A chunked history rebuild assembles the transcript over several EDT turns; wait for it so
+        // openBottom lands on the finished transcript instead of a partial one.
+        if (messageBody.rebuilding) return
         pending = false
         messageBody.reflow()
         scroll.openBottom {
