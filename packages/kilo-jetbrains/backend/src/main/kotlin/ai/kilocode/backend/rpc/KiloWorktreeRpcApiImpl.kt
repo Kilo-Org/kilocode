@@ -7,6 +7,7 @@ import ai.kilocode.backend.diff.GIT_PRUNE_TIMEOUT_MS
 import ai.kilocode.backend.diff.GIT_WRITE_TIMEOUT_MS
 import ai.kilocode.backend.diff.GitComparison
 import ai.kilocode.backend.diff.runGitCommand
+import ai.kilocode.backend.repo.RepoGate
 import ai.kilocode.backend.worktree.WorktreeTrash
 import ai.kilocode.log.KiloLog
 import ai.kilocode.rpc.KiloWorktreeRpcApi
@@ -67,9 +68,7 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withLock
-import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.builtins.MapSerializer
@@ -123,9 +122,15 @@ class KiloWorktreeRpcApiImpl(
         // `git worktree remove --force`, which recursively deletes the checkout synchronously and
         // therefore needs far more headroom than the default query timeout.
         private const val REMOVE_TIMEOUT_MS = 600_000
-        // Total git/gh processes this service will run at once for one repository. Each poll used to
+        // Total git/gh processes this service will run at once **per repository**. Each poll used to
         // create its own Semaphore(4), so stats + dirty + PR polls could fan out three times that.
         private const val PROCESS_BUDGET = 4
+        // Ceiling across all repositories, so N repos cannot each admit PROCESS_BUDGET processes and
+        // reproduce the process storm the per-repo budget was introduced to stop. Three repositories
+        // running a full poll pass at once.
+        private const val GLOBAL_PROCESS_BUDGET = 12
+        // Above this many repository gates, a list poll prunes entries for repositories that are gone.
+        private const val GATE_EVICT_LIMIT = 64
         // Above this, a caller waiting on the per-repo mutation lock is worth a log line — most waits
         // are a few ms and would just be noise.
         private const val LOCK_WAIT_LOG_THRESHOLD_MS = 200L
@@ -136,8 +141,8 @@ class KiloWorktreeRpcApiImpl(
         }
     }
 
-    /** Shared across every polling path in this service; see [parallel]. */
-    private val budget = Semaphore(PROCESS_BUDGET)
+    /** Per-repository process budget under a global ceiling; see [parallel] and [RepoGate]. */
+    private val gate = RepoGate(PROCESS_BUDGET, GLOBAL_PROCESS_BUDGET)
     private val prs = ConcurrentHashMap<String, Timed<WorktreePrListDto>>()
     private val branches = ConcurrentHashMap<String, Timed<BranchStatusDto>>()
     private val resolver = PrResolver(gh = { dir, args, ms -> runGh(dir, args, ms) }, git = ::runGit)
@@ -155,6 +160,9 @@ class KiloWorktreeRpcApiImpl(
 
     override suspend fun list(directory: String): WorktreeListDto = withContext(Dispatchers.IO) {
         val base = Path.of(directory).normalize()
+        // Opportunistic cleanup of per-repo gate entries for repositories that no longer exist, so the
+        // gate map cannot grow without bound across a long session. Only runs once the map is large.
+        gate.evict(GATE_EVICT_LIMIT) { Files.isDirectory(Path.of(it)) }
         // Same reconcile the stats/dirty polls use, so the rows and their status can never disagree
         // about which worktrees exist.
         val reconciled = reconcile(base) ?: return@withContext WorktreeListDto()
@@ -264,7 +272,7 @@ class KiloWorktreeRpcApiImpl(
         val root = Path.of(directory).normalize()
         val items = sync(root) ?: return@withContext WorktreeStatsListDto(unavailable = true)
         val fallback = baseBranch(items) ?: "HEAD"
-        WorktreeStatsListDto(parallel(items.filter { !it.main }) { item -> statsSafe(item, fallback) })
+        WorktreeStatsListDto(parallel(repoKey(root, items), items.filter { !it.main }) { item -> statsSafe(item, fallback) })
     }
 
     /**
@@ -276,7 +284,7 @@ class KiloWorktreeRpcApiImpl(
     override suspend fun dirty(directory: String): WorktreeDirtyListDto = withContext(Dispatchers.IO) {
         val root = Path.of(directory).normalize()
         val items = sync(root) ?: return@withContext WorktreeDirtyListDto(unavailable = true)
-        WorktreeDirtyListDto(parallel(items) { item -> dirtySafe(item) })
+        WorktreeDirtyListDto(parallel(repoKey(root, items), items) { item -> dirtySafe(item) })
     }
 
     /**
@@ -328,6 +336,9 @@ class KiloWorktreeRpcApiImpl(
 
     private fun main(all: List<WorktreeDto>): Path? =
         all.firstOrNull { it.main }?.let { Path.of(it.path).normalize() }
+
+    /** Gate key for a repository: its main working tree when the reconcile found it, else [root]. */
+    private fun repoKey(root: Path, items: List<WorktreeDto>): String = (main(items) ?: root).toString()
 
     /**
      * `git worktree prune`, on a budget short enough to bound how long a mutation waits for a poll.
@@ -422,7 +433,7 @@ class KiloWorktreeRpcApiImpl(
         val items = prTargets(all)
         val base = baseBranch(all)
         var status = GhAvailability.OK
-        val data = parallel(items) { item ->
+        val data = parallel(repoKey(root, all), items) { item ->
             if (status != GhAvailability.OK) return@parallel null
             val lookup = runCatching { resolver.resolve(item.path, item.branch, base, prAge(item.path, named, maxAge)) }.getOrElse { err ->
                 if (err is CancellationException) throw err
@@ -1211,14 +1222,20 @@ class KiloWorktreeRpcApiImpl(
     }
 
     /**
-     * Run [block] for every item, bounded by one service-wide process budget.
+     * Run [block] for every item of the repository identified by [key], bounded by that repository's
+     * process budget under a shared global ceiling.
      *
-     * The budget is shared across stats, dirty, and PR polling on purpose: those loops run on the
-     * same cadence, and a per-call semaphore let them multiply into a process storm where even
-     * `git --version` timed out.
+     * [key] is the repository's main-worktree path, derived from the reconciled worktree list, so a call
+     * made against a linked worktree shares the same budget as one made against the main checkout.
+     *
+     * The budget is shared across stats, dirty, and PR polling on purpose: those loops run on the same
+     * cadence, and a per-call semaphore let them multiply into a process storm where even `git --version`
+     * timed out. It is now per repository rather than service-wide so a slow or worktree-heavy repo
+     * cannot occupy every slot while the others wait — see [RepoGate] for why the per-repo permit is
+     * taken before the global one.
      */
-    private suspend fun <T, R> parallel(items: List<T>, block: suspend (T) -> R): List<R> = coroutineScope {
-        items.map { item -> async { budget.withPermit { block(item) } } }.map { it.await() }
+    private suspend fun <T, R> parallel(key: String, items: List<T>, block: suspend (T) -> R): List<R> = coroutineScope {
+        items.map { item -> async { gate.withRepo(key) { block(item) } } }.map { it.await() }
     }
 
     /**
@@ -1951,11 +1968,11 @@ private fun worktreeNameStore(items: List<WorktreeDto>): Path? {
     return Path.of(main.path).normalize().resolve(".kilo").resolve(WORKTREE_NAMES_FILE)
 }
 
-private fun samePath(a: String, b: String): Boolean {
+internal fun samePath(a: String, b: String): Boolean {
     return realPath(a) == realPath(b)
 }
 
-private fun realPath(path: String): Path {
+internal fun realPath(path: String): Path {
     val file = Path.of(path).normalize()
     return if (Files.exists(file)) file.toRealPath() else file
 }
