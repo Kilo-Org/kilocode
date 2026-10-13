@@ -2718,6 +2718,7 @@ export type Config = {
     image_generation?: boolean
     image_generation_model?: string
     native_notebook_tools?: boolean
+    glob_include_ignored?: Array<string>
     code_mode?: boolean
     speech_to_text_model?: string
     speech_to_text_base_url?: string
