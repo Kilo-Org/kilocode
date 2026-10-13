@@ -48,7 +48,7 @@ Focus on UI strings, docs, help text, package metadata shown to users, URLs, CLI
 
 Check whether any merged files now use `kilocode_change` markers without any actual difference to upstream.
 
-Use `script/upstream/find-reset-candidates.ts --dry-run` to see whether any files changed in the PR are actually now identical to upstream. If you find candidates, verify them with `script/upstream/reset-to-upstream.ts --dry-run`.
+Use `script/upstream/find-reset-candidates.ts --dry-run` to see whether any files changed in the PR are actually now identical to upstream. If you find candidates, verify each with `script/upstream/reset-to-upstream.ts <repo-relative-file> --dry-run`.
 
 ## BROKEN_PIPELINE_CHAINS.md
 

@@ -387,7 +387,7 @@ config schema behaviour, migrations, provider routing, or security posture.
 - Function signatures can drift across conflict boundaries (args added, return
   types widened). Grep for every call site before finalising.
 - Full-repo typecheck is the catch-all for non-conflicted call-site breakage.
-- Upstream can reintroduce bugs a Kilo `kilocode_change` had already fixed  - 
+- Upstream can reintroduce bugs a Kilo `kilocode_change` had already fixed -
   during big refactors check every `kilocode_change` the refactor touched.
 - "Take-theirs" on an inner conditional is often wrong when Kilo added an outer
   pre-filter whose whole point was to widen what makes it to the inner block.
@@ -398,7 +398,7 @@ config schema behaviour, migrations, provider routing, or security posture.
   type over adding `any` casts.
 - Auto-merge can duplicate the same declaration twice in one scope when both
   sides added equivalent code independently. Silent for git, caught by
-  typecheck. Same hazard for duplicated object keys in config/manifest files  - 
+  typecheck. Same hazard for duplicated object keys in config/manifest files -
   those can break install before any test runs.
 - Kilo code may rely on ambient context (async-local storage, globally-set
   flags, process env) being populated at a lifecycle moment that upstream

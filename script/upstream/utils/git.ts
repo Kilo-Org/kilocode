@@ -100,13 +100,12 @@ export async function backupAndDeleteBranch(name: string): Promise<string | null
   const backupName = `backup/${name}-${timestamp}`
   const current = await getCurrentBranch()
 
-  // Create backup from the existing branch
-  await $`git branch ${backupName} ${name}`
-
-  // Delete the old branch (must not be on it)
+  // Delete the old branch (must not be on it). Check before the backup, so the error path has no side effect.
   if (current === name) {
     throw new Error(`Cannot backup and delete branch '${name}' while it is checked out`)
   }
+  await $`git branch ${backupName} ${name}`
+
   await deleteBranch(name, true)
 
   return backupName

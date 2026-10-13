@@ -2,7 +2,7 @@
 /**
  * ts-morph codemod: transform import and require statements to Kilo package names.
  *
- * Module mappings come from `config.packageMappings`. The codemod is gated by `transforms.branding`
+ * Module mappings come from `config.packageMappings`. The codemod is gated by `transforms.packageNames`
  * and only reports changes by default; pass `--apply` to write them.
  *
  * Usage: bun run script/upstream/codemods/transform-imports.ts [--apply] [--force] [files...]

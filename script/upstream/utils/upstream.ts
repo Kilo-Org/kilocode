@@ -38,7 +38,8 @@ export function normalize(root: string, file: string) {
   const abs = path.resolve(root, file)
   const rel = path.relative(root, abs).replaceAll(path.sep, "/")
 
-  if (!rel || rel.startsWith("..") || path.isAbsolute(rel)) throw new Error("File must stay inside the repo")
+  if (!rel || rel === ".." || rel.startsWith("../") || path.isAbsolute(rel))
+    throw new Error("File must stay inside the repo")
   return rel
 }
 

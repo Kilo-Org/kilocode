@@ -17,7 +17,7 @@ export interface PackageMapping {
 export interface TransformSwitches {
   /** Rename upstream package names to Kilo names. Off until decision D-1. */
   packageNames: boolean
-  /** Branding transforms and codemods (strings, imports, i18n, take-theirs, scripts, extensions, web). Off until rebranding (A11). */
+  /** Brand text transforms and codemods (i18n, take-theirs, scripts, extensions, web) and the brand-text rules of the string codemod. Off until rebranding (A11). */
   branding: boolean
   /** Keep Kilo package versions instead of upstream's. Off: v2 follows upstream version numbers. */
   versions: boolean

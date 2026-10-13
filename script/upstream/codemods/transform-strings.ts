@@ -2,8 +2,8 @@
 /**
  * ts-morph codemod: transform string literals to Kilo branding.
  *
- * Package names come from `config.packageMappings`. The codemod is gated by `transforms.branding`
- * and only reports changes by default; pass `--apply` to write them.
+ * Package names come from `config.packageMappings` and follow `transforms.packageNames`; brand text
+ * follows `transforms.branding`. The codemod only reports changes by default; pass `--apply` to write them.
  *
  * Limitation: the text inside template spans (`${x} text`) is not transformed, because a span has
  * no standalone replaceable node. Template heads and no-substitution templates are handled.

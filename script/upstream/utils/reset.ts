@@ -12,7 +12,7 @@ import path from "node:path"
 import { approxDiff, binary, clean, join } from "./markers"
 import { translate, upstreamData } from "./upstream"
 
-export type ResetAction = "identical" | "deleted" | "written" | "skipped"
+export type ResetAction = "identical" | "deleted" | "written"
 
 export interface ResetResult {
   action: ResetAction

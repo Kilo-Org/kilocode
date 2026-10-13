@@ -401,9 +401,8 @@ async function main() {
     const resets = entries.filter((e) => RESET_BUCKETS.has(e.bucket))
     if (resets.length > 0) info(`Resetting ${resets.length} file(s) to upstream...`)
     await concurrent(resets, opts.concurrency, async (entry) => {
-      const result = await resetFile({ root: top, file: entry.file, commit: version.commit })
-      entry.reset = result.action !== "skipped"
-      if (result.action === "skipped") warn(`Skipped ${entry.file}: ${result.reason ?? "unknown"}`)
+      await resetFile({ root: top, file: entry.file, commit: version.commit })
+      entry.reset = true
     })
   }
 
