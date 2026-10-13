@@ -108,7 +108,18 @@ const list = async (rg: string, cwd: string, args: string[]) => {
   return text
     .split("\n")
     .filter(Boolean)
-    .map((line) => line.replace(/^\.\//, ""))
+    .map((line) => line.replace(/^(?:\.[\\/])+/u, "").replaceAll("\\", "/"))
+}
+
+/** True when this ripgrep build rejects the glob, which differs across ripgrep versions. */
+const rejects = async (rg: string, cwd: string, pattern: string) => {
+  const proc = Bun.spawn([rg, "--no-config", "--files", `--glob=${pattern}`, "."], {
+    cwd,
+    stdout: "ignore",
+    stderr: "pipe",
+  })
+  const text = await new Response(proc.stderr).text()
+  return (await proc.exited) === 2 && text.includes("error parsing glob")
 }
 
 const run = (input: Omit<Ripgrep.GlobInput, "limit"> & { limit?: number }) =>
@@ -217,14 +228,14 @@ describe("Kilo ripgrep glob", () => {
       (tmp) =>
         Effect.gen(function* () {
           yield* Effect.promise(() => seed(tmp.path))
+          const rg = yield* (yield* RipgrepBinary.Service).filepath
           for (const pattern of ["**/[abc", "{a,b", "a}b", "\\"]) {
+            const invalid = yield* Effect.promise(() => rejects(rg, tmp.path, pattern))
             const result = yield* run({ cwd: tmp.path, pattern })
-            expect({ pattern, invalid: result.invalidPattern, items: result.paths }).toEqual({
-              pattern,
-              invalid: true,
-              items: [],
-            })
+            expect({ pattern, invalid: result.invalidPattern === true }).toEqual({ pattern, invalid })
+            if (invalid) expect(result.paths).toEqual([])
           }
+          expect(yield* Effect.promise(() => rejects(rg, tmp.path, "**/[abc"))).toBe(true)
         }),
       (tmp) => Effect.promise(() => tmp[Symbol.asyncDispose]()),
     ),
