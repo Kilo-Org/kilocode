@@ -31,7 +31,9 @@ jobs:
       # Every GUI package file (app, desktop, gui-extensions, ui, session-ui) a pull request adds or edits must be free of
       # oxlint problems, warn-level rules (anti-slop) included. Other packages are not affected.
       - name: Lint changed files
-        if: github.event_name == 'pull_request' && !startsWith(github.head_ref, 'sync-v') # kilocode_change - an upstream sync PR changes upstream's files, which fail upstream's lint too
+        # A sync PR changes upstream's own files, which fail upstream's lint too. Require a maintainer
+        # branch and a maintainer author, so a contributor cannot skip the step by naming a branch sync-v*.
+        if: github.event_name == 'pull_request' && !(startsWith(github.head_ref, 'sync-v') && contains(fromJSON('["MEMBER","OWNER","COLLABORATOR"]'), github.event.pull_request.author_association)) # kilocode_change
         # Against the merge's first parent, so base-branch commits the pull request has not merged are not counted as its
         # changes (the event's base SHA can predate them).
         run: bun run lint:changed HEAD^1
