@@ -906,3 +906,4 @@ export function configured(options?: Options) {
 }
 
 export const node = configured()
+export const kiloProbe = 1
