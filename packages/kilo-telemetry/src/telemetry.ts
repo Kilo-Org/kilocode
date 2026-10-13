@@ -13,7 +13,7 @@ export interface TelemetryProperties {
   os_arch: string
   editorName?: string
   vscodeVersion?: string
-  aauClientToken?: string
+  aauClientTokenHash?: string
 }
 
 export type ReviewCommand = "review"
@@ -102,16 +102,16 @@ export namespace Telemetry {
   export function setEnabled(value: boolean) {
     if (value === Client.isEnabled()) return
     Client.setEnabled(value)
-    delete props.aauClientToken
+    delete props.aauClientTokenHash
     if (value) void refreshConda()
     else probe++
   }
 
   async function refreshConda() {
     const current = ++probe
-    const token = await Conda.clientToken()
+    const hash = await Conda.clientHash()
     if (current !== probe || !Client.isEnabled()) return
-    if (token) props.aauClientToken = token
+    if (hash) props.aauClientTokenHash = hash
   }
 
   export function isEnabled(): boolean {
@@ -135,6 +135,7 @@ export namespace Telemetry {
     const org = Identity.getOrganizationId()
     const data = { ...properties }
     delete data.aauClientToken
+    delete data.aauClientTokenHash
     Client.capture(event, {
       ...props,
       ...data,
