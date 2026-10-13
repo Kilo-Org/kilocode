@@ -2,7 +2,7 @@ import { expect, test } from "bun:test"
 import { mkdtemp, rm } from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
-import { isolatedEnv } from "../packages/cli/test/fixture/environment"
+import { isolatedEnv } from "../fixture/environment"
 
 test("isolated dev passes the JSX preload and existing Bun options to standalone children", async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), "kilo dev-standalone-"))
@@ -14,7 +14,7 @@ test("isolated dev passes the JSX preload and existing Bun options to standalone
   const child = Bun.spawn(
     [
       process.execPath,
-      path.join(import.meta.dir, "dev-isolated.ts"),
+      path.join(import.meta.dir, "../../../../script/dev-isolated.ts"),
       "session",
       "list",
       "--standalone",
