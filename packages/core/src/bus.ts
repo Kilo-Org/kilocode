@@ -906,4 +906,4 @@ export function configured(options?: Options) {
 }
 
 export const node = configured()
-export const kiloProbe = 1
+export const kiloProbe = 1 // kilocode_change - probe for the shared-patch checks, do not merge
