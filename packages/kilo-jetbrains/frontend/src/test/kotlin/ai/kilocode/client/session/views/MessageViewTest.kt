@@ -81,4 +81,19 @@ class MessageViewTest : BasePlatformTestCase() {
             (rendered as NoticeView).text(),
         )
     }
+
+    // An unrecognized notice kind (a newer server) must not leak the raw snake_case token into the
+    // transcript; it falls back to a bundled generic sentence.
+    fun `test notice falls back to a generic sentence for an unknown kind`() {
+        val msg = Message(MessageDto("m1", "ses", "user", MessageTimeDto(0.0)))
+        val view = MessageView(msg, openFile = { _, _ -> })
+
+        val notice = Notice("p1", "some_future_notice_kind", null)
+        msg.parts["p1"] = notice
+        view.upsertPart(notice)
+
+        val text = (view.part("p1") as NoticeView).text()
+        assertEquals(KiloBundle.message("session.notice.unknown"), text)
+        assertFalse(text.contains("some_future_notice_kind"))
+    }
 }
