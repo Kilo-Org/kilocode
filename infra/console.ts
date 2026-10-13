@@ -1,8 +1,6 @@
-import { deployAws, domain } from "./stage"
+import { domain } from "./stage"
 import { EMAILOCTOPUS_API_KEY } from "./app"
 import { SECRET } from "./secret"
-
-const lake = deployAws ? await import("./lake") : undefined
 
 ////////////////
 // DATABASE
@@ -71,38 +69,6 @@ export const auth = new sst.cloudflare.Worker("AuthApi", {
 // GATEWAY
 ////////////////
 
-export const stripeWebhook = new stripe.WebhookEndpoint("StripeWebhookEndpoint", {
-  url: $interpolate`https://${domain}/stripe/webhook`,
-  enabledEvents: [
-    "checkout.session.async_payment_failed",
-    "checkout.session.async_payment_succeeded",
-    "checkout.session.completed",
-    "checkout.session.expired",
-    "charge.refunded",
-    "invoice.payment_succeeded",
-    "invoice.payment_failed",
-    "invoice.payment_action_required",
-    "customer.created",
-    "customer.deleted",
-    "customer.updated",
-    "customer.discount.created",
-    "customer.discount.deleted",
-    "customer.discount.updated",
-    "customer.source.created",
-    "customer.source.deleted",
-    "customer.source.expiring",
-    "customer.source.updated",
-    "customer.subscription.created",
-    "customer.subscription.deleted",
-    "customer.subscription.paused",
-    "customer.subscription.pending_update_applied",
-    "customer.subscription.pending_update_expired",
-    "customer.subscription.resumed",
-    "customer.subscription.trial_will_end",
-    "customer.subscription.updated",
-  ],
-})
-
 const zenLiteProduct = new stripe.Product("ZenLite", {
   name: "OpenCode Go",
 })
@@ -150,8 +116,9 @@ const zenLitePrice = new stripe.Price("ZenLitePrice", {
 })
 const ZEN_LITE_PRICE = new sst.Linkable("ZEN_LITE_PRICE", {
   properties: {
-    product: zenLiteProduct.id,
-    price: zenLitePrice.id,
+    // Use existing Go resources in dev's checkout Stripe account.
+    product: $app.stage === "dev" ? "prod_U1tUscpmwtV2bG" : zenLiteProduct.id,
+    price: $app.stage === "dev" ? "price_1T3phhE7fOCwHSD4zS6w2NPy" : zenLitePrice.id,
     priceInr: 92900,
     firstMonth50Coupon: zenLiteCouponFirstMonth50.id,
     firstMonth100Coupon: zenLiteCouponFirstMonth100.id,
@@ -221,8 +188,14 @@ const STRIPE_PUBLISHABLE_KEY = new sst.Secret("STRIPE_PUBLISHABLE_KEY")
 const AUTH_API_URL = new sst.Linkable("AUTH_API_URL", {
   properties: { value: auth.url.apply((url) => url!) },
 })
-const STRIPE_WEBHOOK_SECRET = new sst.Linkable("STRIPE_WEBHOOK_SECRET", {
-  properties: { value: stripeWebhook.secret },
+// Preview branches have independent databases; do not send their workspaces to shared dev.
+const migrationDomain =
+  $app.stage === "production" ? "opencode.ai" : $app.stage === "dev" ? "dev.opencode.ai" : undefined
+const consoleMigration = new sst.Linkable("ConsoleMigration", {
+  properties: {
+    consoleUrl: migrationDomain ? `https://${migrationDomain}/console` : "",
+    inferenceUrl: migrationDomain ? `https://${migrationDomain}/inference` : "",
+  },
 })
 
 ////////////////
@@ -243,7 +216,7 @@ const SALESFORCE_INSTANCE_URL = new sst.Secret("SALESFORCE_INSTANCE_URL")
 
 const logProcessor = new sst.cloudflare.Worker("LogProcessor", {
   handler: "packages/console/function/src/log-processor.ts",
-  link: [SECRET.HoneycombApiKey, ...(lake?.lakeIngest ? [lake.lakeIngest] : [])],
+  link: [SECRET.HoneycombApiKey],
 })
 
 new sst.cloudflare.x.SolidStart("Console", {
@@ -253,10 +226,8 @@ new sst.cloudflare.x.SolidStart("Console", {
     bucket,
     bucketNew,
     database,
-    SECRET.UpstashRedisRestUrl,
-    SECRET.UpstashRedisRestToken,
     AUTH_API_URL,
-    STRIPE_WEBHOOK_SECRET,
+    consoleMigration,
     SECRET.SupportApiKey,
     DISCORD_INCIDENT_WEBHOOK_URL,
     SECRET.HoneycombWebhookSecret,
@@ -272,6 +243,7 @@ new sst.cloudflare.x.SolidStart("Console", {
     ZEN_LITE_PRICE,
     new sst.Secret("ZEN_LIMITS"),
     new sst.Secret("ZEN_SESSION_SECRET"),
+    new sst.Secret("CLOUDFLARE_ACCESS_CLIENT_ID"),
     ...ZEN_MODELS,
     ...($dev
       ? [
@@ -285,6 +257,7 @@ new sst.cloudflare.x.SolidStart("Console", {
     //VITE_API_URL: gateway.url.apply((url) => url!),
     VITE_AUTH_URL: auth.url.apply((url) => url!),
     VITE_STRIPE_PUBLISHABLE_KEY: STRIPE_PUBLISHABLE_KEY.value,
+    VITE_CONSOLE_MARKETING_ENABLED: $app.stage === "dev" ? "true" : "false",
   },
   transform: {
     server: {

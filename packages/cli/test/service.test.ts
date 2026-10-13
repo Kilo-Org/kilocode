@@ -5,6 +5,7 @@ import { Global } from "@opencode/util/global"
 import { OPENCODE_VERSION } from "../src/version"
 import { expect, test } from "bun:test"
 import { Deferred, Effect, FileSystem, Schedule, Schema } from "effect"
+import { NetAddress } from "effect/net"
 import { TestClock } from "effect/testing"
 import fs from "node:fs/promises"
 import os from "node:os"
@@ -80,12 +81,12 @@ test("remote access route is random, stable once created, hidden, and forgotten 
     expect(await run(ServiceConfig.get())).not.toContain(route)
 
     await run(ServiceConfig.set("remote", "false"))
-    expect(await run(ServiceConfig.read())).toEqual({})
+    expect(await run(ServiceConfig.read())).toEqual({ remoteAccepted: true })
     expect(await run(ServiceConfig.get("remote"))).toBe("false")
     expect(await run(ServiceConfig.remote())).not.toBe(route)
 
     await run(ServiceConfig.unset("remote"))
-    expect(await run(ServiceConfig.read())).toEqual({})
+    expect(await run(ServiceConfig.read())).toEqual({ remoteAccepted: true })
   } finally {
     await fs.rm(root, { recursive: true, force: true })
   }
@@ -632,7 +633,7 @@ test("service registration replaces a stale owner with the bound address", async
   try {
     const cleanup = await Effect.runPromise(
       ServiceRegistration.register({
-        address: { _tag: "TcpAddress", hostname: "127.0.0.1", port: 4321 },
+        address: NetAddress.inetAddressFromIpStringUnsafe("127.0.0.1", 4321),
         password: "secret",
         id: "owner",
         file: registration,
@@ -727,7 +728,7 @@ const registered = Effect.fnUntraced(function* () {
   const file = path.join(yield* fileSystem.makeTempDirectoryScoped(), "service-local.json")
   const stopped = yield* Deferred.make<void>()
   const cleanup = yield* ServiceRegistration.register({
-    address: { _tag: "TcpAddress", hostname: "127.0.0.1", port: 4321 },
+    address: NetAddress.inetAddressFromIpStringUnsafe("127.0.0.1", 4321),
     password: "secret",
     id: "owner",
     file,

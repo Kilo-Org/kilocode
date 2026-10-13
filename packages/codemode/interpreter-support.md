@@ -8,8 +8,8 @@ standard-library surface that programs can use today, plus concrete gaps that ma
 - Checked items do not promise complete ECMAScript edge-case parity; known differences are stated explicitly.
 - Intentional boundaries are not listed as compatibility work.
 
-When behavior changes, update this file and the tests in the same change. The implementation and tests remain the
-ultimate source of truth. Upstream test262 files run verbatim from `test/test262`; a failing file is listed in
+Check off items as support lands and add unchecked items for significant gaps. The implementation and tests remain
+the ultimate source of truth. Upstream test262 files run verbatim from `test/test262`; a failing file is listed in
 `test/test262/skipped.txt` and its gap is an unchecked item here (see `test/test262/README.md`).
 
 ## Source and execution model

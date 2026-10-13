@@ -58,7 +58,13 @@ export const GoogleVertexPlugin = define({
     const read = (file: string) => fs.readFileStringSafe(file).pipe(Effect.orElseSucceed(() => undefined))
     // Same lookup as gcloud itself. Only project IDs are read; nothing here contacts Google.
     const gcloud =
-      process.env.CLOUDSDK_CONFIG ??
+      (process.env.CLOUDSDK_CONFIG
+        ? process.env.CLOUDSDK_CONFIG === "~"
+          ? Global.Path.home
+          : process.env.CLOUDSDK_CONFIG.startsWith("~/")
+            ? path.join(Global.Path.home, process.env.CLOUDSDK_CONFIG.slice(2))
+            : process.env.CLOUDSDK_CONFIG
+        : undefined) ??
       (process.platform === "win32" && process.env.APPDATA
         ? path.join(process.env.APPDATA, "gcloud")
         : path.join(Global.Path.home, ".config", "gcloud"))
@@ -108,6 +114,12 @@ export const GoogleVertexPlugin = define({
     })
 
     yield* ctx.integration.transform((editor) => {
+      // models.dev lists project, location, and the ADC file path, which configure Google auth rather than
+      // carrying a key. The Express Mode key is the only env credential.
+      editor.method.update({
+        integrationID: Provider.ID.googleVertex,
+        method: { type: "env", names: ["GOOGLE_VERTEX_API_KEY"] },
+      })
       editor.method.update({
         integrationID: Provider.ID.googleVertex,
         method: {

@@ -128,10 +128,6 @@ declare module "sst" {
       "type": "sst.sst.Secret"
       "value": string
     }
-    "STRIPE_WEBHOOK_SECRET": {
-      "type": "sst.sst.Linkable"
-      "value": string
-    }
     "SUPPORT_API_KEY": {
       "type": "sst.sst.Secret"
       "value": string
@@ -140,14 +136,6 @@ declare module "sst" {
     "Teams": {
       "type": "sst.cloudflare.SolidStart"
       "url": string
-    }
-    "UpstashRedisRestToken": {
-      "type": "sst.sst.Secret"
-      "value": string
-    }
-    "UpstashRedisRestUrl": {
-      "type": "sst.sst.Secret"
-      "value": string
     }
     "Web": {
       "type": "sst.cloudflare.Astro"

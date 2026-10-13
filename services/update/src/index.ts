@@ -96,9 +96,6 @@ export default {
     const cutoff =
       Date.now() - (rollout?.duration_hours ?? 0) * 3_600_000 * (hash === undefined ? 1 : (hash + 1) / 2 ** 32)
     if (path.length === 4) {
-      if (path[1] !== "desktop" || !/^latest(?:-mac|-linux(?:-arm64)?)?\.yml$/.test(path[3])) {
-        return new Response("Not found", { status: 404 })
-      }
       return artifactDistribution(env.DB, resolved, path[1], path[2], caller, cutoff, path[3])
     }
     if (path.length === 1) return channel(env.DB, resolved, caller, cutoff)
@@ -150,14 +147,16 @@ async function artifactDistribution(
   if (!artifact) return json({ error: "Artifact not found" }, 404)
   if (manifest) {
     const metadata = decodeMetadata(artifact.metadata)
-    const value =
-      isRecord(metadata) && isRecord(metadata.manifests)
-        ? metadata.manifests[manifest.replace(/^latest/, "desktop")]
-        : undefined
-    if (!isRecord(value)) return json({ error: "Manifest not found" }, 404)
-    return new Response(stringify({ ...value, version: artifact.version }), {
-      headers: { "Content-Type": "application/yaml; charset=utf-8", "Cache-Control": "no-store" },
-    })
+    if (name === "desktop" && /^latest(?:-mac|-linux(?:-arm64)?)?\.yml$/.test(manifest)) {
+      const value = isRecord(metadata) && isRecord(metadata.manifests) ? metadata.manifests[manifest.replace(/^latest/, "desktop")] : undefined
+      if (!isRecord(value)) return json({ error: "Manifest not found" }, 404)
+      return new Response(stringify({ ...value, version: artifact.version }), {
+        headers: { "Content-Type": "application/yaml; charset=utf-8", "Cache-Control": "no-store" },
+      })
+    }
+    const file = isRecord(metadata) && isRecord(metadata.files) ? metadata.files[manifest] : undefined
+    if (!isRecord(file) || typeof file.url !== "string") return json({ error: "File not found" }, 404)
+    return new Response(null, { status: 302, headers: { Location: file.url, "Cache-Control": "no-store" } })
   }
   return updateResponse(decodeArtifact(artifact))
 }

@@ -17,6 +17,9 @@ export const Info = Schema.Struct({
   // Present when remote access is on. The route is generated, never user-set: the secret subdomain the service is
   // served on.
   remote: Schema.optional(Schema.Struct({ route: Schema.String })),
+  // Set once the user has accepted exposing the service to the internet, or had remote access on before, so turning
+  // remote access off and on again does not ask a second time.
+  remoteAccepted: Schema.optional(Schema.Literal(true)),
   hostname: Schema.optional(Schema.String),
   port: Schema.optional(Schema.Int.check(Schema.isGreaterThanOrEqualTo(1), Schema.isLessThanOrEqualTo(65_535))),
   password: Schema.optional(Schema.String),
@@ -173,6 +176,17 @@ export const password = Effect.fn("cli.service-config.password")(function* (valu
   return next
 })
 
+export const acceptRemote = Effect.fn("cli.service-config.accept-remote")(function* () {
+  yield* write({ ...(yield* read()), remoteAccepted: true })
+})
+
+// Disabling forgets the address, so enabling again issues a new unguessable one. Having had it on counts as
+// accepting remote access.
+const disableRemote = Effect.fnUntraced(function* () {
+  const { remote, ...next } = yield* read()
+  yield* write(remote === undefined ? next : { ...next, remoteAccepted: true })
+})
+
 // Turns remote access on and returns its route, created once and kept so the remote URL survives restarts.
 export const remote = Effect.fn("cli.service-config.remote")(function* () {
   const existing = yield* read()
@@ -238,9 +252,7 @@ export const set = Effect.fn("cli.service-config.set")(function* (key: string, v
         yield* remote()
         return
       }
-      // Disabling forgets the address, so enabling again issues a new unguessable one.
-      const { remote: _remote, ...next } = yield* read()
-      yield* write(next)
+      yield* disableRemote()
       return
     }
     case "hostname": {
@@ -294,8 +306,7 @@ export const unset = Effect.fn("cli.service-config.unset")(function* (key: strin
     }
     case "remote": {
       yield* Service.stop(yield* options())
-      const { remote: _remote, ...next } = yield* read()
-      yield* write(next)
+      yield* disableRemote()
       return
     }
     case "hostname": {

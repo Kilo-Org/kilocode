@@ -11,6 +11,8 @@ type Init = {
 }
 
 const fetch = async (input: string | URL, init: Init = {}) => {
+  if (URL.parse(String(input))?.protocol === "file:")
+    throw new Error("fetch cannot be used for filesystem access.")
   const response = await globalThis.fetch(input, {
     method: init.method,
     headers: init.headers,

@@ -45,6 +45,7 @@ const removed = new Set([
   "containers.yml",
   "deploy-files.yml",
   "deploy-posts.yml",
+  "deploy-update.yml",
   "deploy-www.yml",
   "deploy.yml",
   "docs-locale-sync.yml",
