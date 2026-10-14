@@ -1,4 +1,23 @@
+import { Schema, SchemaGetter } from "effect"
 import type { Match } from "@opencode-ai/schema/filesystem"
+
+// ripgrep only emits base64 `bytes` when the data is not valid UTF-8. Decode it as
+// Windows-1252 (the WHATWG mapping for ISO-8859-1), the common legacy source encoding.
+// Every byte maps to one UTF-16 unit, so ripgrep's byte offsets stay aligned with the text.
+const legacy = new TextDecoder("windows-1252")
+
+/** ripgrep `arbitrary data` (`{text}` or `{bytes}`) normalized to `{text}`. */
+export const Data = Schema.Union([
+  Schema.Struct({ text: Schema.String }),
+  Schema.Struct({ bytes: Schema.String }),
+]).pipe(
+  Schema.decodeTo(Schema.Struct({ text: Schema.String }), {
+    decode: SchemaGetter.transform((data) =>
+      "text" in data ? { text: data.text } : { text: legacy.decode(Buffer.from(data.bytes, "base64")) },
+    ),
+    encode: SchemaGetter.passthrough({ strict: false }),
+  }),
+)
 
 export interface Options {
   readonly context?: number
