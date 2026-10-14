@@ -9,7 +9,8 @@ import { EventV2Bridge } from "@/event-v2-bridge"
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { Flock } from "@opencode-ai/core/util/flock"
 import { WakeupEvent } from "@opencode-ai/schema/kilocode/wakeup-event"
-import { Context, Effect, Fiber, Layer, Option, Semaphore } from "effect"
+import { FSUtil } from "@opencode-ai/core/fs-util"
+import { Cause, Context, Effect, Fiber, Layer, Option, Schema, Semaphore } from "effect"
 import { fireLayer, text as wakeupText } from "./resume"
 import * as schema from "./schema"
 
@@ -45,19 +46,22 @@ export namespace Wakeup {
   export const clampNotice = schema.clampNotice
   export const text = wakeupText
 
+  export class Busy extends Schema.TaggedErrorClass<Busy>()("Wakeup.Busy", { message: Schema.String }) {}
+  export type Unreadable = { id: ID; sessionID: SessionID; unreadable: true }
+
   export interface Interface {
     readonly schedule: (input: Input) => Effect.Effect<Info, InvalidTime | PastTime | TooMany>
     readonly list: (input?: { sessionID?: SessionID }) => Effect.Effect<Info[]>
     readonly pending: (directory: string) => Effect.Effect<{ sessionID: SessionID; pending: number }[]>
     readonly scheduled: (directory?: string) => Effect.Effect<Map<SessionID, number>>
-    readonly cancel: (id: ID, sessionID?: SessionID) => Effect.Effect<Info | undefined>
+    readonly cancel: (id: ID, sessionID?: SessionID) => Effect.Effect<Info | Unreadable | undefined, Busy>
     readonly cancelSession: (sessionID: SessionID, options?: { notify?: boolean }) => Effect.Effect<number>
     readonly adopt: (directory: string) => Effect.Effect<void>
     readonly cronCreate: (
       input: CronInput,
     ) => Effect.Effect<CronInfo, InvalidTime | PastTime | InvalidSchedule | TooManyCron>
     readonly cronList: (input?: { sessionID?: SessionID }) => Effect.Effect<CronInfo[]>
-    readonly cronCancel: (id: ID, sessionID?: SessionID) => Effect.Effect<CronInfo | undefined>
+    readonly cronCancel: (id: ID, sessionID?: SessionID) => Effect.Effect<CronInfo | Unreadable | undefined, Busy>
   }
 
   export class Service extends Context.Service<Service, Interface>()("@kilocode/Wakeup") {}
@@ -91,14 +95,18 @@ export namespace Wakeup {
       const locked = <A, E, R>(sessionID: SessionID, effect: Effect.Effect<A, E, R>) =>
         Effect.scoped(
           Effect.gen(function* () {
-            yield* Flock.effect(`wakeup:${sessionID}`, { timeoutMs: 10_000 })
-            return yield* effect
+            const acquired = yield* Flock.effect(`wakeup:${sessionID}`, { timeoutMs: 10_000 }).pipe(
+              Effect.as(true),
+              Effect.catchCause((cause) => {
+                const error = Cause.squash(cause)
+                if (error instanceof Error && error.message === `Timed out waiting for lock: wakeup:${sessionID}`)
+                  return Effect.succeed(false)
+                return Effect.failCause(cause)
+              }),
+            )
+            if (!acquired) return Option.none<A>()
+            return Option.some(yield* effect.pipe(Effect.orDie))
           }),
-        ).pipe(
-          Effect.asSome,
-          Effect.catchCause((cause) =>
-            Effect.logWarning("scheduled task claim failed", { sessionID, cause }).pipe(Effect.as(Option.none<A>())),
-          ),
         )
 
       const stop = () => {
@@ -127,6 +135,13 @@ export namespace Wakeup {
             (error) => Storage.NotFoundError.isInstance(error),
             () => Effect.succeed(undefined),
           ),
+          Effect.catchIf(
+            (error) =>
+              error instanceof FSUtil.FileSystemError &&
+              error.method === "readJson" &&
+              error.cause instanceof SyntaxError,
+            () => Effect.succeed({ unreadable: true as const }),
+          ),
         )
 
       // Tell clients how many wakeups a session still holds, so Keep Awake stays
@@ -145,7 +160,10 @@ export namespace Wakeup {
         for (const target of keys) {
           if (target.at(-1) !== id) continue
           const info = yield* readCancel<Info>(target).pipe(Effect.orDie)
-          if (info) return info
+          if (info)
+            return "unreadable" in info
+              ? { id, sessionID: SessionID.make(target.at(-2)!), unreadable: true as const }
+              : info
         }
         return undefined
       })
@@ -157,7 +175,10 @@ export namespace Wakeup {
         for (const target of keys) {
           if (target.at(-1) !== id) continue
           const task = yield* readCancel<CronInfo>(target).pipe(Effect.orDie)
-          if (task) return task
+          if (task)
+            return "unreadable" in task
+              ? { id, sessionID: SessionID.make(target.at(-2)!), unreadable: true as const }
+              : task
         }
         return undefined
       })
@@ -492,7 +513,7 @@ export namespace Wakeup {
           )
         })
 
-      const remove = <A>(target: string[], sessionID: SessionID, cleanup: boolean): Effect.Effect<A | undefined> =>
+      const remove = <A>(target: string[], sessionID: SessionID, cleanup: boolean) =>
         Effect.gen(function* () {
           while (true) {
             const claim = yield* locked(
@@ -504,7 +525,7 @@ export namespace Wakeup {
               }),
             )
             if (Option.isSome(claim)) return claim.value
-            if (!cleanup) return yield* Effect.die(new Error("Could not cancel right now, retry."))
+            if (!cleanup) return yield* new Busy({ message: "Could not cancel right now, retry." })
             // Cleanup has no user to retry it. Keep waiting for durable removal;
             // Flock's stale breaker recovers a crashed holder after about a minute.
             yield* Effect.sleep("100 millis")
@@ -527,8 +548,12 @@ export namespace Wakeup {
         }
         entries.delete(id)
         yield* announce(info.sessionID)
-        if (removed && notify) yield* notifyGoal(removed.sessionID, removed.id, removed.directory, "wakeup")
-        return removed
+        const record = removed && "unreadable" in removed ? info : removed
+        if (record && "directory" in record && notify)
+          yield* notifyGoal(record.sessionID, record.id, record.directory, "wakeup")
+        return removed && "unreadable" in removed
+          ? { id, sessionID: info.sessionID, unreadable: true as const }
+          : removed
       })
 
       const cronCancel = Effect.fn("Wakeup.cronCancel")(function* (
@@ -546,8 +571,12 @@ export namespace Wakeup {
           yield* Fiber.interrupt(fiber)
         }
         cronEntries.delete(id)
-        if (removed && notify) yield* notifyGoal(removed.sessionID, removed.id, removed.directory, "cron")
-        return removed
+        const record = removed && "unreadable" in removed ? task : removed
+        if (record && "directory" in record && notify)
+          yield* notifyGoal(record.sessionID, record.id, record.directory, "cron")
+        return removed && "unreadable" in removed
+          ? { id, sessionID: task.sessionID, unreadable: true as const }
+          : removed
       })
 
       // Called when a session is removed so its wakeups stop holding Keep Awake
@@ -561,11 +590,29 @@ export namespace Wakeup {
         options?: { notify?: boolean },
       ) {
         const notify = options?.notify !== false
-        const held = yield* list({ sessionID })
-        for (const info of held) yield* cancel(info.id, undefined, notify, true)
-        const scheduled = yield* cronList({ sessionID })
-        for (const task of scheduled) yield* cronCancel(task.id, undefined, notify, true)
-        return held.length + scheduled.length
+        let count = 0
+        for (const kind of ["wakeup", "cron"] as const) {
+          const held = kind === "wakeup" ? yield* list({ sessionID }) : yield* cronList({ sessionID })
+          const keys = yield* storage.list([kind, sessionID]).pipe(Effect.orDie)
+          const ids = new Set([...held.map((info) => info.id), ...keys.map((target) => ID.make(target.at(-1)!))])
+          for (const id of ids) {
+            const attempt: Effect.Effect<Info | CronInfo | Unreadable | undefined, Busy> =
+              kind === "wakeup" ? cancel(id, sessionID, notify, true) : cronCancel(id, sessionID, notify, true)
+            yield* attempt.pipe(
+              Effect.tap((removed) =>
+                Effect.sync(() => {
+                  if (removed) count++
+                }),
+              ),
+              Effect.catchCause((cause) =>
+                Cause.hasInterrupts(cause)
+                  ? Effect.interrupt
+                  : Effect.logError("scheduled task cleanup failed", { sessionID, id, kind, cause }),
+              ),
+            )
+          }
+        }
+        return count
       })
 
       // Register once per Wakeup layer build so a goal that settles, pauses, or

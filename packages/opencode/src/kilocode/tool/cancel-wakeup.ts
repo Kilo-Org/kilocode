@@ -73,10 +73,22 @@ export const CancelWakeupTool = Tool.define<typeof Params, Meta, Wakeup.Service,
           }
           return {
             title: "Cancelled wakeup",
-            output: `Cancelled wakeup ${removed.id} (${new Date(removed.dueAt).toISOString()}).`,
+            output:
+              "unreadable" in removed
+                ? `Cancelled wakeup ${removed.id} (unreadable task record).`
+                : `Cancelled wakeup ${removed.id} (${new Date(removed.dueAt).toISOString()}).`,
             metadata: { id: removed.id, cancelled: true },
           }
-        }),
+        }).pipe(
+          Effect.catchTags({
+            "Wakeup.Busy": (error) =>
+              Effect.succeed({
+                title: "Wakeup cancellation busy",
+                output: error.message,
+                metadata: { cancelled: false },
+              }),
+          }),
+        ),
     }
   }),
 )

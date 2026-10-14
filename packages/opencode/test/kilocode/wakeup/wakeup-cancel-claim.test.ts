@@ -1,5 +1,5 @@
 import { describe, expect } from "bun:test"
-import { Cause, Context, Effect, Exit, Fiber, Layer, Scope } from "effect"
+import { Context, Effect, Fiber, Layer, Scope } from "effect"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { EventV2 } from "@opencode-ai/core/event"
@@ -93,10 +93,9 @@ describe("contended cancellation", () => {
             kind === "cron" ? tool.execute({ id: task.id }, ctx) : tool.execute({ action: "cancel", id: task.id }, ctx)
           const lease = yield* Effect.promise(() => Flock.acquire(`wakeup:${sessionID}`))
           yield* Effect.addFinalizer(() => Effect.promise(() => lease.release().catch(() => undefined)))
-          const result = yield* call().pipe(Effect.exit)
-          expect(Exit.isFailure(result)).toBe(true)
-          if (Exit.isFailure(result))
-            expect(String(Cause.squash(result.cause))).toMatch(/could not cancel right now.*retry/i)
+          const result = yield* call()
+          expect(result.output).toBe("Could not cancel right now, retry.")
+          expect(result.metadata).toMatchObject(kind === "cron" ? { deleted: false } : { cancelled: false })
           const file = path.join(directory, "storage", kind, sessionID, `${task.id}.json`)
           expect(yield* Effect.promise(() => Bun.file(file).exists())).toBe(true)
           expect((yield* a.scheduled(directory)).get(sessionID)).toBe(task.dueAt)
