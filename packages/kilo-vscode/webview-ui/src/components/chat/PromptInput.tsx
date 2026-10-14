@@ -49,6 +49,7 @@ import { ModeSwitcher } from "../shared/ModeSwitcher"
 import { ThinkingSelector } from "../shared/ThinkingSelector"
 import { SandboxButtonBase, SandboxTooltipContent } from "../shared/SandboxButton"
 import { SpeechToTextButton } from "../speech-to-text/SpeechToTextButton"
+import { EnhanceStatus, type EnhanceState } from "./EnhanceStatus"
 import { canUseSpeechToText, selectedSpeechToTextModel } from "../speech-to-text/availability"
 import { PromptSelectors } from "./PromptSelectors"
 import { PromptOverflow, type OverflowItem } from "./PromptOverflow"
@@ -554,21 +555,33 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   // Backing text of collapsed pastes, restored alongside preEnhanceText on undo.
   let preEnhancePastes: string[] | null = null
 
-  // Stop the in-flight Enhance request. The draft stays as the user left it,
-  // and undo no longer reverts an earlier Enhance result.
+  // How the last Enhance request ended, shown above the draft with a retry action.
+  const [enhanceState, setEnhanceState] = createSignal<EnhanceState>()
+
+  // Stop the in-flight Enhance request and return its id. The draft stays as
+  // the user left it, and undo no longer reverts an earlier Enhance result.
   const stopEnhance = () => {
     const request = enhanceRequest
     enhanceRequest = undefined
     preEnhanceText = null
     preEnhancePastes = null
     setEnhancing(false)
+    setEnhanceState(undefined)
     if (request) vscode.postMessage({ type: "cancelEnhancePrompt", requestId: request.id })
+    return request?.id
   }
 
   // Any change to the draft while Enhance runs stops it, so a late result
   // cannot replace what the user typed.
   createEffect(() => {
-    if (enhancing() && text() !== enhanceRequest?.text) stopEnhance()
+    if (!enhancing() || text() === enhanceRequest?.text) return
+    const id = stopEnhance()
+    if (id) setEnhanceState({ kind: "changed", id })
+  })
+
+  // An empty draft, for example after a send, has nothing left to retry.
+  createEffect(() => {
+    if (!text().trim()) setEnhanceState(undefined)
   })
 
   createEffect(() => {
@@ -1314,6 +1327,11 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       if (result.requestId === enhanceRequest?.id) {
         enhanceRequest = undefined
         setEnhancing(false)
+        setEnhanceState({
+          kind: result.reason === "timeout" ? "timeout" : "failed",
+          id: result.requestId,
+          error: result.error,
+        })
       }
     }
 
@@ -1590,10 +1608,12 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
 
   const handleEnhance = () => {
     if (enhancing()) {
-      stopEnhance()
+      const id = stopEnhance()
+      if (id) setEnhanceState({ kind: "stopped", id })
       return
     }
     if (isDisabled() || isBusy()) return
+    setEnhanceState(undefined)
     const draft = paste.plainText(text()).trim()
     if (!draft) {
       const description = language.t("prompt.action.enhanceDescription")
@@ -1605,7 +1625,8 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       }
       return
     }
-    enhanceRequest = { id: `enhance-${draftKey()}-${crypto.randomUUID()}`, text: text() }
+    // Short enough to read from the status row and find in the extension log.
+    enhanceRequest = { id: `enhance-${crypto.randomUUID().slice(0, 8)}`, text: text() }
     setEnhancing(true)
     vscode.postMessage({ type: "enhancePrompt", text: draft, requestId: enhanceRequest.id })
   }
@@ -2273,6 +2294,16 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
             )}
           </For>
         </div>
+      </Show>
+      <Show when={enhanceState()}>
+        {(state) => (
+          <EnhanceStatus
+            state={state()}
+            disabled={isBusy() || isDisabled()}
+            onRetry={handleEnhance}
+            onDismiss={() => setEnhanceState(undefined)}
+          />
+        )}
       </Show>
       <div class="prompt-input-wrapper">
         <div class="prompt-input-ghost-wrapper">

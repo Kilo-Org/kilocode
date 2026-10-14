@@ -224,6 +224,12 @@ export const dict = {
   "prompt.agents.show": "Hintergrund-Agenten anzeigen",
   "prompt.action.enhance": "Prompt verbessern",
   "prompt.action.enhanceStop": "Prompt-Verbesserung stoppen",
+  "prompt.enhance.status.failed": "Prompt-Verbesserung fehlgeschlagen: {{error}}",
+  "prompt.enhance.status.timeout":
+    "Zeitüberschreitung bei der Prompt-Verbesserung. Das Modell hat nicht rechtzeitig geantwortet.",
+  "prompt.enhance.status.stopped": "Prompt-Verbesserung gestoppt.",
+  "prompt.enhance.status.changed": "Prompt-Verbesserung gestoppt, weil sich der Entwurf geändert hat.",
+  "prompt.enhance.status.request": "Anfrage {{id}}",
   "prompt.action.more": "Weitere Aktionen",
   "prompt.paste.expand": "Klicken, um eingefügten Text zu erweitern",
   "prompt.issues.title": "Sitzungsprobleme",

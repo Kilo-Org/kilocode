@@ -450,10 +450,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private providersGeneration = 0
   /** Re-fetch providers while an organization's Kilo catalog is unavailable. */
   private readonly catalogRetry = createCatalogRetry({ refresh: () => void this.fetchAndSendProviders() })
-  private readonly enhance = new EnhanceRequests(
-    (reply) => this.postMessage(reply),
-    (error) => vscode.window.showErrorMessage(`Enhance prompt failed: ${error}`),
-  )
+  private readonly enhance = new EnhanceRequests((reply) => this.postMessage(reply))
   private sandboxRevision = 0
   private cachedAgentsMessage: unknown = null
   /** Cached skillsLoaded payload so requestSkills can be served before client is ready */
