@@ -275,8 +275,8 @@ class KiloSessionRpcApiImpl internal constructor(
             .filter { event ->
                 val sid = ChatLogSummary.sid(event)
                 val passes = event is ChatEventDto.SessionCreated || sid == null || sid == id
-                if (passes) log.debug { "${ChatLogSummary.sid(id)} pass=true ${ChatLogSummary.eventBody(event)}" }
-                else log.debug { "${ChatLogSummary.sid(id)} pass=false srcSid=$sid ${ChatLogSummary.eventBody(event)}" }
+                if (passes) logEvent(id, "pass=true", event, null)
+                else logEvent(id, "pass=false", event, sid)
                 if (passes) {
                     ChatLogSummary.error(event)?.let { log.warn("${ChatLogSummary.sid(id)} route=rpc-events pass=true $it") }
                 }
@@ -354,4 +354,24 @@ class KiloSessionRpcApiImpl internal constructor(
         app.requireReady()
         return block()
     }
+
+    /**
+     * Prompt delivery is rare and high-signal — a request that reaches a client is what a stuck
+     * session hinges on — so it is logged at INFO, while the per-event noise stays on DEBUG.
+     */
+    private fun logEvent(id: String, tag: String, event: ChatEventDto, srcSid: String?) {
+        val suffix = if (srcSid == null) "" else " srcSid=$srcSid"
+        val body = "${ChatLogSummary.sid(id)} $tag$suffix ${ChatLogSummary.eventBody(event)}"
+        if (promptEvent(event)) log.info(body) else log.debug { body }
+    }
+}
+
+/** Returns true for the rare prompt events whose delivery is worth logging at INFO. */
+private fun promptEvent(event: ChatEventDto): Boolean = when (event) {
+    is ChatEventDto.PermissionAsked,
+    is ChatEventDto.PermissionReplied,
+    is ChatEventDto.QuestionAsked,
+    is ChatEventDto.QuestionReplied,
+    is ChatEventDto.QuestionRejected -> true
+    else -> false
 }
