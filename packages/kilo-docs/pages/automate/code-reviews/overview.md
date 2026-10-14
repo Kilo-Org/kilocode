@@ -232,6 +232,18 @@ The Review Agent is ideal for:
 - **Security-focused environments requiring strict gates**
 - **Educating junior developers with rich explanations**
 
+## Concurrency Limits
+
+Kilo limits how many reviews run at the same time for a single owner. The limit is applied per owner and is based on the owner's credit balance, not on whether the selected model is free.
+
+| Owner | Concurrent reviews |
+|---|---|
+| Non-funded (credit balance ≤ $5) | 1 review at a time, run sequentially |
+| Funded (credit balance > $5) | Up to 3 concurrent reviews |
+| Organization | Up to 20 concurrent reviews |
+
+A funded user running a free model still gets 3 slots.
+
 ## Limitations and Guidance
 
 - Reviews are subject to a fixed time limit — consider splitting very large PRs into smaller ones.
