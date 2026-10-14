@@ -76,6 +76,8 @@ class MessageView(
     private val onPromoteBackgroundAgent: BackgroundPromote? = null,
     /** Sibling color slot for a child session's generated avatar. See [ai.kilocode.client.session.AgentAvatar]. */
     private val avatarColor: (String) -> Int? = { null },
+    /** Whether a block in this message may auto-expand from the transcript display settings. */
+    private val live: () -> Boolean = { true },
 ) : ai.kilocode.client.session.ui.SessionLayoutPanel(
     SessionUiStyle.SessionLayout.GAP,
 ), Disposable, SessionEditorStyleTarget, SessionView {
@@ -429,13 +431,13 @@ class MessageView(
         ViewFactory.createUser(
             content, openFile, openUrl, selection, repo, promptMentions(msg),
             { openAttachment(msg.info.id, it) }, openDiff, sessionId,
-            onOpenSubagent = onOpenSubagent, avatarColor = avatarColor, onPromoteBackgroundAgent = onPromoteBackgroundAgent,
+            onOpenSubagent = onOpenSubagent, live = live, avatarColor = avatarColor, onPromoteBackgroundAgent = onPromoteBackgroundAgent,
         )
     } else {
         ViewFactory.create(
             content, openFile, openUrl, selection, repo,
             { openAttachment(msg.info.id, it) }, openDiff, sessionId,
-            onOpenSubagent = onOpenSubagent, avatarColor = avatarColor, onPromoteBackgroundAgent = onPromoteBackgroundAgent,
+            onOpenSubagent = onOpenSubagent, live = live, avatarColor = avatarColor, onPromoteBackgroundAgent = onPromoteBackgroundAgent,
         )
     }
 

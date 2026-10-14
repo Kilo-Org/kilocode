@@ -931,6 +931,9 @@ export const dict = {
   "settings.experimental.nativeNotebookTools.title": "เครื่องมือโน้ตบุ๊กดั้งเดิม",
   "settings.experimental.nativeNotebookTools.description":
     "เปิดใช้งานเครื่องมือทดลองสำหรับการอ่าน แก้ไข และเรียกใช้โน้ตบุ๊ก VS Code",
+  "settings.experimental.globIncludeIgnored.title": "ค้นหาพาธที่ถูกละเว้น",
+  "settings.experimental.globIncludeIgnored.description":
+    "โฟลเดอร์หรือไฟล์ที่เครื่องมือ glob ควรค้นหาแม้ว่า .gitignore หรือไฟล์ ignore อื่นๆ จะยกเว้นไว้ ใช้รูปแบบสไตล์ gitignore ที่อ้างอิงจากเวิร์กสเปซ โฟลเดอร์ที่ถูกละเว้นภายในจะยังคงถูกข้าม",
   "settings.experimental.continueOnDeny.title": "ดำเนินต่อเมื่อถูกปฏิเสธ",
   "settings.experimental.continueOnDeny.description": "ดำเนินลูปเอเจนต์ต่อเมื่อสิทธิ์ถูกปฏิเสธ",
   "settings.sandboxing.title": "การทำงานในแซนด์บ็อกซ์",

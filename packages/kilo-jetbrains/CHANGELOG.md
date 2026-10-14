@@ -594,6 +594,21 @@
 
 ## [Unreleased]
 
+## [7.1.10-rc.3] - 2026-10-13
+
+### Added
+- Let the glob tool search an opt-in allowlist of ignored paths.
+
+### Fixed
+- Track Windows background processes with a job object instead of polling PowerShell.
+- Stop Windows background runners from adopting unrelated processes.
+- Keep Windows stop requests until a trustworthy process walk confirms exit.
+- Name a surviving leader in the unconfirmed stop warning.
+- Keep Windows stop responsive during exit confirmation.
+
+### Changed
+- Bundled Kilo CLI pin remains v7.8.9.
+
 ## [7.1.10-rc.2] - 2026-10-13
 
 ### Added

@@ -185,7 +185,11 @@ export type Row = {
   closed: boolean
 }
 
-export function digest(rows: Row[], mode: "md" | "slack", repo: string, now: number) {
+export type Digest = { title: string; counts: string; blocks: string[] }
+
+// Split into a title, a one-line count summary and one block per section, so
+// Slack can show the summary and put the lists in a thread.
+export function parts(rows: Row[], mode: "md" | "slack", repo: string, now: number): Digest {
   const link = (row: Row) => {
     const text = `#${row.number} ${row.title.replace(/[<>|]/g, "")}`
     return mode === "md" ? `[${text}](${row.url})` : `<${row.url}|${text}>`
@@ -193,49 +197,79 @@ export function digest(rows: Row[], mode: "md" | "slack", repo: string, now: num
   const age = (row: Row) => Math.floor((now - row.created) / DAY)
   const bold = (text: string) => (mode === "md" ? `**${text}**` : `*${text}*`)
   const open = rows.filter((row) => !row.closed)
-  const section = (title: string, list: Row[], note: (row: Row) => string) => {
-    if (list.length === 0) return []
+  const found: { short: string; count: number; text: string }[] = []
+  const section = (name: string, short: string, list: Row[], note: (row: Row) => string) => {
+    if (list.length === 0) return
     const shown = list.slice(0, LIMIT).map((row) => `- ${link(row)} (@${row.author}, ${note(row)})`)
     const more = list.length > LIMIT ? [`- ...and ${list.length - LIMIT} more`] : []
-    return ["", bold(`${title} (${list.length})`), ...shown, ...more]
+    found.push({ short, count: list.length, text: [bold(`${name} (${list.length})`), ...shown, ...more].join("\n") })
   }
   const awaiting = (row: Row) => (row.state.state === "awaiting" ? row.state : undefined)
   const state = (name: State["state"]) => open.filter((row) => row.state.state === name)
   const oldest = (a: Row, b: Row) => a.created - b.created
+  const ci = (row: Row) => (row.failing ? ", CI failing" : "")
 
-  return [
-    bold(`Community PR queue for ${repo}: ${open.length} open`),
-    ...section(
-      "Adopt: high-value, no reply in 14 days",
-      open.filter((row) => row.adopt),
-      (row) => `${awaiting(row)?.days}d silent`,
-    ),
-    ...section(
-      "Needs triage",
-      state("triage").sort(oldest),
-      (row) => `${age(row)}d old${row.failing ? ", CI failing" : ""}`,
-    ),
-    ...section(
-      "Contributor replied, needs review",
-      state("review").sort(oldest),
-      (row) => `${age(row)}d old${row.failing ? ", CI failing" : ""}`,
-    ),
-    ...section(
-      "Approved, ready to merge",
-      state("approved"),
-      (row) => `${age(row)}d old${row.failing ? ", CI failing" : ""}`,
-    ),
-    ...section(
-      "Waiting for contributor",
-      state("awaiting").sort((a, b) => (awaiting(b)?.days ?? 0) - (awaiting(a)?.days ?? 0)),
-      (row) => `${awaiting(row)?.days}d of ${WAIT_DAYS}${row.failing ? ", CI failing" : ""}`,
-    ),
-    ...section(
-      "Closed in this run",
-      rows.filter((row) => row.closed),
-      () => `no reply in ${WAIT_DAYS} days`,
-    ),
-  ].join("\n")
+  section(
+    "Adopt: high-value, no reply in 14 days",
+    "Adopt",
+    open.filter((row) => row.adopt),
+    (row) => `${awaiting(row)?.days}d silent`,
+  )
+  section("Needs triage", "Triage", state("triage").sort(oldest), (row) => `${age(row)}d old${ci(row)}`)
+  section(
+    "Contributor replied, needs review",
+    "Review",
+    state("review").sort(oldest),
+    (row) => `${age(row)}d old${ci(row)}`,
+  )
+  section("Approved, ready to merge", "Approved", state("approved"), (row) => `${age(row)}d old${ci(row)}`)
+  section(
+    "Waiting for contributor",
+    "Waiting",
+    state("awaiting").sort((a, b) => (awaiting(b)?.days ?? 0) - (awaiting(a)?.days ?? 0)),
+    (row) => `${awaiting(row)?.days}d of ${WAIT_DAYS}${ci(row)}`,
+  )
+  section(
+    "Closed in this run",
+    "Closed",
+    rows.filter((row) => row.closed),
+    () => `no reply in ${WAIT_DAYS} days`,
+  )
+
+  return {
+    title: bold(`Community PR queue for ${repo}: ${open.length} open`),
+    counts: found.map((item) => `${item.short}: ${item.count}`).join(" · "),
+    blocks: found.map((item) => item.text),
+  }
+}
+
+export function digest(rows: Row[], mode: "md" | "slack", repo: string, now: number) {
+  const out = parts(rows, mode, repo, now)
+  return [out.title, ...out.blocks.flatMap((block) => ["", block])].join("\n")
+}
+
+// Slack rejects text over 40,000 characters, and long sections read badly.
+export function clip(text: string, max = 3500) {
+  if (text.length <= max) return text
+  const cut = text.slice(0, max).lastIndexOf("\n")
+  return text.slice(0, cut > 0 ? cut : max) + "\n- ...list shortened"
+}
+
+async function slack(out: Digest, url: string) {
+  const token = process.env.SLACK_TOKEN!
+  const channel = process.env.SLACK_CHANNEL!
+  const post = async (body: Record<string, unknown>) => {
+    const res = await fetch("https://slack.com/api/chat.postMessage", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json; charset=utf-8" },
+      body: JSON.stringify({ channel, unfurl_links: false, ...body }),
+    })
+    const json = (await res.json()) as { ok: boolean; ts?: string; error?: string }
+    if (!json.ok) throw new Error(`Slack chat.postMessage failed: ${json.error}`)
+    return json.ts!
+  }
+  const ts = await post({ text: [out.title, out.counts, url ? `<${url}|Full run>` : ""].filter(Boolean).join("\n") })
+  for (const block of out.blocks) await post({ thread_ts: ts, text: clip(block) })
 }
 
 // ---- GitHub I/O ----
@@ -522,8 +556,15 @@ async function sweep() {
 
   const out = process.env.GITHUB_STEP_SUMMARY
   if (out) await Bun.write(out, digest(rows, "md", repo, now) + "\n")
-  const slack = process.env.SLACK_PAYLOAD
-  if (slack) await Bun.write(slack, JSON.stringify({ text: digest(rows, "slack", repo, now) }))
+  const payload = process.env.SLACK_PAYLOAD
+  if (payload) await Bun.write(payload, JSON.stringify({ text: digest(rows, "slack", repo, now) }))
+  // With a bot token and channel, post the summary and thread the lists.
+  if (process.env.SLACK_TOKEN && process.env.SLACK_CHANNEL) {
+    const run = process.env.GITHUB_RUN_ID
+      ? `${process.env.GITHUB_SERVER_URL}/${repo}/actions/runs/${process.env.GITHUB_RUN_ID}`
+      : ""
+    await slack(parts(rows, "slack", repo, now), run)
+  }
   console.log(digest(rows, "md", repo, now))
 }
 

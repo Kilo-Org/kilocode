@@ -907,6 +907,9 @@ export const dict = {
   "settings.experimental.nativeNotebookTools.title": "Innebygde notatbok-verktøy",
   "settings.experimental.nativeNotebookTools.description":
     "Aktiver eksperimentelle verktøy for å lese, redigere og kjøre VS Code-notatbøker",
+  "settings.experimental.globIncludeIgnored.title": "Søk i ignorerte stier",
+  "settings.experimental.globIncludeIgnored.description":
+    "Mapper eller filer som glob-verktøyet skal søke i selv når .gitignore eller andre ignore-filer ekskluderer dem. Bruk mønstre i gitignore-stil relativt til arbeidsområdet; ignorerte mapper inni dem hoppes fortsatt over.",
   "settings.experimental.continueOnDeny.title": "Fortsett ved avvisning",
   "settings.experimental.continueOnDeny.description": "Fortsett agentløkken når en tillatelse avvises",
   "settings.sandboxing.title": "Kjøring i sandkasse",

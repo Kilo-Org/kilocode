@@ -37,13 +37,16 @@ import javax.swing.SwingUtilities
 
 /**
  * Renders reasoning as a secondary collapsible block. Behavior is driven by the configured
- * [ReasoningDisplay] mode (Transcript settings), read once at construction:
- * - [ReasoningDisplay.EXPANDED]: opens whenever content is non-blank (streaming or history), full
- *   height, never auto-collapses.
+ * [ReasoningDisplay] mode (Transcript settings):
+ * - [ReasoningDisplay.EXPANDED]: opens whenever content is non-blank, full height, never
+ *   auto-collapses.
  * - [ReasoningDisplay.PREVIEW]: opens while streaming in a height-capped auto-scrolling body,
- *   auto-collapses and releases its body when the block finishes; history starts collapsed.
+ *   auto-collapses and releases its body when the block finishes.
  * - [ReasoningDisplay.HEADLINE]: never auto-opens; header only until the user expands it.
  *
+ * Auto-opening is gated by [live]: a block only opens itself while its turn is the actively
+ * streaming (non-settled) turn in a visible transcript. History load, transcript rebuilds, and
+ * background catch-up leave every block collapsed; only a live block in the active turn opens.
  * A manual user toggle marks the base view as touched and always overrides later automatic changes.
  */
 class ReasoningView(
@@ -53,11 +56,13 @@ class ReasoningView(
     private val selection: SessionSelection? = null,
     private val parts: ReasoningParts = reasoningParts(selection),
     private var mode: ReasoningDisplay = KiloPluginSettings.getReasoningDisplay(),
+    /** Whether this block may auto-open from the display setting: a live block in a visible turn. */
+    private val live: () -> Boolean = { true },
 ) :
     AbstractSessionPartView(
         parts.header,
         { parts.scroll(openFile, openUrl) },
-        expanded = initialExpanded(mode, reasoning),
+        expanded = initialExpanded(mode, reasoning) && live(),
         compact = true,
     ), TranscriptDisplayTarget {
 
@@ -205,7 +210,7 @@ class ReasoningView(
             changed = true
         }
         changed = syncExpandable(canExpand()) || changed
-        if (!touched && opens(mode, visible, done) && !isExpanded()) {
+        if (!touched && live() && opens(mode, visible, done) && !isExpanded()) {
             changed = expand() || changed
             changed = syncExpandable(canExpand()) || changed
         }
