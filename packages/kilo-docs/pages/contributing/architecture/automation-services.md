@@ -97,6 +97,8 @@ Code Review queues pull-request work in database, enforces per-owner concurrency
 | Output | Review feedback is posted back to pull request |
 | Recovery | Worker updates database and triggers dispatch of next pending review |
 
+History: personal accounts had a default limit of 1 before balance-based tiers. The 1 or 3 tiers started on April 29, 2026 in [cloud pull request #2886](https://github.com/Kilo-Org/cloud/pull/2886).
+
 ## Auto Triage
 
 Auto Triage classifies GitHub issues and applies labels or status updates. Duplicate check happens through web backend. Non-duplicate issues can launch Cloud Agent classification through prepare, initiate, and callback flow.

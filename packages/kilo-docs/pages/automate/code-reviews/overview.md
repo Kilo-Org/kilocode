@@ -55,8 +55,6 @@ A funded personal account running a free model still gets 3 concurrent reviews.
 
 Organization reviews use the organization as the owner. A member's personal balance does not set the organization limit.
 
-Personal accounts have used a default limit of 1 since that limit was introduced, and that default has not changed. Balance-based personal tiers (1 or 3) started on April 29, 2026 in [cloud pull request #2886](https://github.com/Kilo-Org/cloud/pull/2886).
-
 ## Getting Started
 
 1. Go to the **Code Reviews** page in your [personal dashboard](https://app.kilo.ai/profile) or [organization dashboard](https://app.kilo.ai/organizations).
