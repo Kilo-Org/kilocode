@@ -930,6 +930,9 @@ export const dict = {
   "settings.experimental.nativeNotebookTools.title": "ابزارهای بومی Notebook",
   "settings.experimental.nativeNotebookTools.description":
     "ابزارهای آزمایشی برای خواندن، ویرایش و اجرای VS Code notebooks را فعال کنید",
+  "settings.experimental.globIncludeIgnored.title": "جستجوی مسیرهای نادیده‌گرفته‌شده",
+  "settings.experimental.globIncludeIgnored.description":
+    "پوشه‌ها یا فایل‌هایی که ابزار glob باید حتی وقتی .gitignore یا سایر فایل‌های نادیده‌گیری آن‌ها را مستثنا می‌کنند، جستجو کند. از الگوهای سبک gitignore نسبت به فضای کاری استفاده کنید؛ پوشه‌های نادیده‌گرفته‌شده درون آن‌ها همچنان رد می‌شوند.",
   "settings.experimental.continueOnDeny.title": "ادامه در صورت رد",
   "settings.experimental.continueOnDeny.description": "حلقه عامل را هنگام رد شدن یک مجوز ادامه دهید",
   "settings.experimental.codeMode.title": "فراخوانی برنامه‌نویسی ابزارها",

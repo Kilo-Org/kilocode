@@ -6,7 +6,9 @@ import {
   component,
   pushedAt,
   decide,
+  clip,
   digest,
+  parts,
   DAY,
   label,
   type Event,
@@ -175,5 +177,52 @@ describe("digest", () => {
   test("caps long lists", () => {
     const rows = Array.from({ length: 20 }, (_, i) => row(i + 1, { state: "triage" }))
     expect(digest(rows, "md", "o/r", now)).toContain("...and 5 more")
+  })
+})
+
+describe("parts", () => {
+  const row = (num: number, state: Row["state"]): Row => ({
+    number: num,
+    title: `PR ${num}`,
+    url: `https://github.com/o/r/pull/${num}`,
+    author: "dev",
+    created: ago(4),
+    state,
+    failing: false,
+    adopt: false,
+    closed: false,
+  })
+
+  test("splits a summary from one block per section", () => {
+    const out = parts(
+      [row(1, { state: "triage" }), row(2, { state: "triage" }), row(3, { state: "review" })],
+      "slack",
+      "o/r",
+      now,
+    )
+    expect(out.title).toBe("*Community PR queue for o/r: 3 open*")
+    expect(out.counts).toBe("Triage: 2 · Review: 1")
+    expect(out.blocks).toHaveLength(2)
+    expect(out.blocks[0]).toContain("*Needs triage (2)*")
+  })
+
+  test("digest still joins everything", () => {
+    const text = digest([row(1, { state: "triage" })], "md", "o/r", now)
+    expect(text).toContain("**Community PR queue for o/r: 1 open**")
+    expect(text).toContain("**Needs triage (1)**")
+  })
+})
+
+describe("clip", () => {
+  test("keeps short text", () => {
+    expect(clip("abc")).toBe("abc")
+  })
+
+  test("cuts long text at a line end", () => {
+    const text = Array.from({ length: 200 }, (_, i) => `- line ${i} ${"x".repeat(30)}`).join("\n")
+    const out = clip(text, 500)
+    expect(out.length).toBeLessThan(560)
+    expect(out.endsWith("- ...list shortened")).toBe(true)
+    expect(out).not.toContain("line 1 x".repeat(40))
   })
 })

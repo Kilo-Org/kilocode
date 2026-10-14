@@ -28,6 +28,7 @@ class ToolView(
     private val parts: ToolParts = toolParts(tool, mode = ToolBodyMode.EDITOR),
     private val footer: ToolApprovalFooter = ToolApprovalFooter(),
     private var display: BlockDisplay = KiloPluginSettings.getMcpToolDisplay(),
+    private val live: () -> Boolean = { true },
 ) : AbstractSessionPartView(parts.header, { parts.scroll(tool) }, { footer }), UiDataProvider, ApprovalReasonTarget,
     TranscriptDisplayTarget {
 
@@ -151,11 +152,17 @@ class ToolView(
         return changed
     }
 
-    private fun sync(force: Boolean = false): Boolean {
+    /**
+     * [force] reapplies even when the stored display matches a divergence from the card's
+     * containment. [auto] marks an automatic expansion from construction/streaming, which [live]
+     * may suppress for history or non-streaming blocks; an explicit display change passes
+     * `auto = false` and always applies.
+     */
+    private fun sync(force: Boolean = false, auto: Boolean = true): Boolean {
         val expand = canExpand(item)
         var changed = false
         changed = syncExpandable(expand) || changed
-        if (force || !touched) {
+        if (force || (!touched && (!auto || live()))) {
             changed = if (display == BlockDisplay.EXPANDED && expand) {
                 expand() || changed
             } else {
@@ -181,7 +188,7 @@ class ToolView(
         // can have diverged from it while the user held a manual state.
         if (!force && this.display == next) return false
         this.display = next
-        sync(force)
+        sync(force, auto = false)
         // Same contract as update(): a state change the card applies itself must revalidate it.
         refresh()
         return true
