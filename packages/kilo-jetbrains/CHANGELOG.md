@@ -615,24 +615,23 @@
 ## [7.1.10-rc.4] - 2026-10-14
 
 ### Added
-- feat: thread community triage queue in Slack by @brunoagatao in https://github.com/Kilo-Org/kilocode/pull/15019
-- feat(cli): fork a remote session from a message by @iscekic in https://github.com/Kilo-Org/kilocode/pull/15004
-- feat(telemetry): include conda client ID in Kilo events by @pedroheyerdahl in https://github.com/Kilo-Org/kilocode/pull/15034
-- feat(jetbrains): opt in to Marketplace error handler by @kirillk in https://github.com/Kilo-Org/kilocode/pull/15058
+
+- Opt in to the JetBrains Marketplace error handler so crashes and freezes attributed to the plugin are reported on the plugin's Marketplace page.
+- Fork a remote session from a specific message, branching the conversation at that point.
 
 ### Fixed
-- fix(vscode): inline esbuild watch problem matcher and drop extension dependency by @brunoagatao in https://github.com/Kilo-Org/kilocode/pull/14254
-- fix(cli): stop glob and grep include patterns from bypassing .gitignore by @WebReflection in https://github.com/Kilo-Org/kilocode/pull/15017
-- fix(jetbrains): auto-expand transcript blocks only while live by @kirillk in https://github.com/Kilo-Org/kilocode/pull/15036
-- fix(mcp): stop automatic OAuth reset and sync auth badges by @kirillk in https://github.com/Kilo-Org/kilocode/pull/15047
-- fix(core): handle non-UTF-8 ripgrep matches in grep by @kirillk in https://github.com/Kilo-Org/kilocode/pull/15056
-- fix(jetbrains): recover a missed pending prompt from backend activity by @kirillk in https://github.com/Kilo-Org/kilocode/pull/15057
-- fix(jetbrains): surface unreadable attachments as an inline chat notice by @kirillk in https://github.com/Kilo-Org/kilocode/pull/15033
+
+- Show an inline notice in the chat when an attached file cannot be read.
+- Expand transcript blocks only while a block is in the actively streaming turn, so opening a session no longer auto-expands history.
+- Recover a session stuck on "Considering next steps" by re-reading the pending prompt when the session view misses it.
+- Keep the prompt draft in step with the transcript and restore the prompt text and attachments when reverting a message.
+- Keep MCP sign-in from resetting, sync the authentication warning across all open sessions, and stop the MCP stream probe from rewriting OAuth metadata.
+- Stop glob and grep include patterns from bypassing `.gitignore`.
+- Handle non-UTF-8 ripgrep matches in grep without failing.
 
 ### Changed
-- release(jetbrains): v7.1.10-rc.3 by @kilo-maintainer[bot] in https://github.com/Kilo-Org/kilocode/pull/15024
-- chore(jetbrains): bump CLI pin to v7.8.10 by @kilo-maintainer[bot] in https://github.com/Kilo-Org/kilocode/pull/15078
 
+- Bundled Kilo CLI pin updated to v7.8.10.
 
 ## [7.1.10-rc.3] - 2026-10-13
 
