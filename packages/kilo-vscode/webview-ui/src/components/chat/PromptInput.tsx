@@ -554,10 +554,13 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   // Backing text of collapsed pastes, restored alongside preEnhanceText on undo.
   let preEnhancePastes: string[] | null = null
 
-  // Stop the in-flight Enhance request. The draft stays as the user left it.
+  // Stop the in-flight Enhance request. The draft stays as the user left it,
+  // and undo no longer reverts an earlier Enhance result.
   const stopEnhance = () => {
     const request = enhanceRequest
     enhanceRequest = undefined
+    preEnhanceText = null
+    preEnhancePastes = null
     setEnhancing(false)
     if (request) vscode.postMessage({ type: "cancelEnhancePrompt", requestId: request.id })
   }
@@ -682,8 +685,6 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       setContexts(contextDrafts.get(key) ?? [])
       imageAttach.replace(imageDrafts.get(key) ?? [])
       stopEnhance()
-      preEnhanceText = null
-      preEnhancePastes = null
       history.reset()
       if (textareaRef) {
         if (textareaRef.value !== draft) textareaRef.value = draft
@@ -971,8 +972,6 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       mentionDrafts.set(key, { paths: state.paths, sessions: state.sessions })
       if (!active) return
       stopEnhance()
-      preEnhanceText = null
-      preEnhancePastes = null
       history.reset()
       setText(value)
       mention.seedFromParts(state.paths, value)
