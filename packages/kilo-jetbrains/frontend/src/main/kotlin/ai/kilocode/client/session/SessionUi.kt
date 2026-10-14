@@ -1537,11 +1537,12 @@ class SessionUi(
         if (pendingSend != null && state is SessionState.Error) {
             prompt.restoreLastSubmission()
         }
-        // A turn starts only once its user message exists, so a turn opening proves the send that
-        // restored a draft did land and the copy in the box is a duplicate. Gating on the turn, not
-        // the message add, keeps an unrelated message (a redo re-adding a reverted one, or a
-        // reload) from dropping a draft whose send genuinely failed.
-        if (state is SessionState.Busy) prompt.discardRestoredSubmission()
+        // A restored draft is a duplicate only once this send's own message landed. That is exactly
+        // when pendingSend is released (confirmPendingSend saw a user message id that was not in the
+        // dispatch baseline), so gate the discard on that rather than on any Busy. A retry, a login
+        // resume, or an auto-approval also enters Busy but proves nothing about this send, and must
+        // not drop the draft; a genuine failure never persists a message, so its draft stays put too.
+        if (state is SessionState.Busy && pendingSend == null) prompt.discardRestoredSubmission()
         prompt.setBusy(busy)
         dock?.setBusy(busy)
         load.setState(state)

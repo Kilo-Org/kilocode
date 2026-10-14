@@ -301,4 +301,30 @@ class SessionUiPromptRestoreTest : SessionUiTestBase() {
 
         assertEquals("don't lose this", find<PromptPanel>(ui).text())
     }
+
+    // Busy alone does not prove the failed send landed: a retry (of an older failed turn), a login
+    // resume, or an auto-approval also enters Busy with no new user message. None may drop the draft.
+    fun `test a turn opening without this send's message keeps the failed draft`() {
+        showMessages()
+        rpc.prompts.clear()
+
+        find<EditorTextField>(ui).text = "don't lose this"
+        find<PromptPanel>(ui).send()
+        assertTrue("the send never reached the backend", pumpUntil { rpc.prompts.isNotEmpty() })
+
+        emit(ChatEventDto.Error("ses_test", MessageErrorDto(type = "unknown", message = "boom")))
+        assertTrue(
+            "the draft was never restored",
+            pumpUntil { find<PromptPanel>(ui).text() == "don't lose this" },
+        )
+
+        // A retry of an older failed turn moves Error -> Busy, with no user message for this send.
+        emit(ChatEventDto.TurnOpen("ses_test"))
+        assertTrue(
+            "the turn never started",
+            pumpUntil { controller().model.state is SessionState.Busy },
+        )
+
+        assertEquals("don't lose this", find<PromptPanel>(ui).text())
+    }
 }
