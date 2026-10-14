@@ -8,10 +8,13 @@ import { KiloGatewayPlugin } from "@opencode/core/kilocode/gateway"
 import { KiloGatewayRpc } from "@opencode/core/kilocode/gateway-rpc"
 import { Model } from "@opencode/core/model"
 import { Plugin } from "@opencode/core/plugin"
+import { PluginHooks } from "@opencode/core/plugin/hooks"
 import { PluginHost } from "@opencode/core/plugin/host"
 import { ProviderPlugins } from "@opencode/core/plugin/provider"
 import { Provider } from "@opencode/core/provider"
 import { Rpc } from "@opencode/core/rpc"
+import { Agent } from "@opencode/schema/agent"
+import { Session } from "@opencode/schema/session"
 import { withEnv } from "../fixture/env"
 import { testEffect } from "../lib/effect"
 import { PluginTestLayer } from "../plugin/fixture"
@@ -27,6 +30,8 @@ const env = {
   KILO_AUTH_CONTENT: undefined,
   KILO_API_URL: undefined,
   KILO_ORG_ID: undefined,
+  KILO_MACHINE_ID: undefined,
+  KILO_DATA_COLLECTION: undefined,
   KILOCODE_EDITOR_NAME: undefined,
   KILOCODE_FEATURE: undefined,
   KILOCODE_VERSION: undefined,
@@ -406,5 +411,138 @@ describe("KiloGatewayPlugin", () => {
         ),
       (backend) => Effect.sync(() => backend[Symbol.dispose]()),
     ),
+  )
+
+  it.live(
+    "injects per-request headers, sanitizes request bodies, rewrites Gateway errors, and records routedModelID",
+    () =>
+      Effect.acquireUseRelease(
+        Effect.sync(() => fixture()),
+        (backend) =>
+          withEnv(
+            {
+              ...env,
+              KILO_API_URL: backend.url,
+              KILO_API_KEY: "env-token",
+              KILO_ORG_ID: "selected",
+              KILO_MACHINE_ID: "mach-test",
+              KILO_DATA_COLLECTION: "deny",
+            },
+            () =>
+              Effect.gen(function* () {
+                const host = yield* addPlugin()
+                const hooks = yield* PluginHooks.Service
+                const rpc = yield* Rpc.Service
+                const parent = yield* host.session.create({ title: "parent" })
+                const child = yield* host.session.create({ title: "child", parentID: parent.id })
+                const modelRef = {
+                  providerID: kilo,
+                  id: Model.ID.make("kilo-auto/frontier"),
+                }
+
+                const modelEvt = yield* hooks.trigger("session", "model.request", {
+                  sessionID: child.id,
+                  agent: Agent.ID.make("code"),
+                  model: modelRef,
+                  kind: "primary",
+                  headers: {},
+                })
+                expect(modelEvt.headers).toMatchObject({
+                  "HTTP-Referer": "https://kilocode.ai",
+                  "X-Title": "Kilo Code",
+                  "X-KILOCODE-ORGANIZATIONID": "selected",
+                  "X-KILOCODE-TASKID": child.id,
+                  "X-KILOCODE-PARENT-TASKID": parent.id,
+                  "X-KILOCODE-MACHINEID": "mach-test",
+                  "x-kilocode-mode": "code",
+                  "User-Agent": "opencode-kilo-provider/unknown",
+                })
+
+                const httpReq = yield* hooks.trigger("session", "http.request", {
+                  sessionID: child.id,
+                  agent: Agent.ID.make("code"),
+                  model: modelRef,
+                  kind: "primary",
+                  request: new Request(`${backend.url}/api/gateway/responses`, {
+                    method: "POST",
+                    headers: { "content-type": "application/json", "x-api-key": "env-token" },
+                    body: JSON.stringify({
+                      model: "openai/gpt-5.4",
+                      server: backend.url,
+                      organizationID: "selected",
+                      input: [
+                        { type: "item_reference", id: "item_1" },
+                        { type: "message", id: "msg_1", role: "user", content: "hello" },
+                      ],
+                    }),
+                  }),
+                })
+                expect(httpReq.request.headers.get("authorization")).toBe("Bearer env-token")
+                expect(httpReq.request.headers.get("x-api-key")).toBeNull()
+                expect(yield* Effect.promise(() => httpReq.request.json())).toEqual({
+                  model: "openai/gpt-5.4",
+                  input: [{ type: "message", role: "user", content: "hello" }],
+                  provider: { data_collection: "deny" },
+                })
+
+                const errorRes = yield* hooks.trigger("session", "http.response", {
+                  sessionID: child.id,
+                  agent: Agent.ID.make("code"),
+                  model: modelRef,
+                  kind: "primary",
+                  request: httpReq.request,
+                  response: Response.json(
+                    {
+                      error: {
+                        title: "Low balance",
+                        message: "Balance is depleted.",
+                        balance: 0,
+                        buyCreditsUrl: "https://app.kilo.ai/billing",
+                      },
+                      error_type: "usage_limit_exceeded",
+                    },
+                    { status: 402 },
+                  ),
+                })
+                expect(yield* Effect.promise(() => errorRes.response.json())).toMatchObject({
+                  error: {
+                    code: "usage_limit_exceeded",
+                    message:
+                      "Low balance: Balance is depleted. (Balance: $0.00) Buy credits at https://app.kilo.ai/billing",
+                  },
+                })
+
+                const sseBody = [
+                  `data: ${JSON.stringify({
+                    model: "anthropic/claude-sonnet-4.6",
+                    choices: [{ delta: { content: "PONG" }, finish_reason: "stop" }],
+                    usage: { prompt_tokens: 4, completion_tokens: 1, total_tokens: 5 },
+                  })}`,
+                  "data: [DONE]",
+                  "",
+                ].join("\n")
+                const streamRes = yield* hooks.trigger("session", "http.response", {
+                  sessionID: Session.ID.make(child.id),
+                  agent: Agent.ID.make("code"),
+                  model: modelRef,
+                  kind: "primary",
+                  request: httpReq.request,
+                  response: new Response(sseBody, {
+                    status: 200,
+                    headers: { "content-type": "text/event-stream", "x-vercel-id": "iad1::abc" },
+                  }),
+                })
+                const streamText = yield* Effect.promise(() => streamRes.response.text())
+                expect(streamText).toContain('"routedModelID":"anthropic/claude-sonnet-4.6"')
+                expect(
+                  yield* rpc.call("kilocode.gateway", "session.metadata", { sessionID: child.id }),
+                ).toEqual({
+                  routedModelID: "anthropic/claude-sonnet-4.6",
+                  vercelID: "iad1::abc",
+                })
+              }),
+          ),
+        (backend) => Effect.sync(() => backend[Symbol.dispose]()),
+      ),
   )
 })
