@@ -80,12 +80,13 @@ const RawModel = Schema.Struct({
   ),
 })
 
-export const CatalogResponse = Schema.Struct({
-  data: Schema.Array(RawModel),
+export const CatalogEnvelope = Schema.Struct({
+  data: Schema.Array(Schema.Unknown),
 })
 
 type RawModel = typeof RawModel.Type
-const decodeCatalog = Schema.decodeUnknownOption(CatalogResponse)
+const decodeEnvelope = Schema.decodeUnknownOption(CatalogEnvelope)
+const decodeRawModel = Schema.decodeUnknownOption(RawModel)
 
 export interface Cost {
   readonly input: number
@@ -193,7 +194,7 @@ export function get(scope: Scope): Effect.Effect<Result, Failure> {
     const raw = yield* json(response, "Models fetch failed").pipe(
       Effect.mapError((): Failure => ({ kind: "schema" })),
     )
-    const parsed = decodeCatalog(raw)
+    const parsed = decodeEnvelope(raw)
     if (Option.isNone(parsed)) return yield* Effect.fail({ kind: "schema" } satisfies Failure)
     const anonymous = !scope.token
     return {
@@ -203,8 +204,10 @@ export function get(scope: Scope): Effect.Effect<Result, Failure> {
   })
 }
 
-export function catalogModels(response: typeof CatalogResponse.Type, anonymous: boolean): Model[] {
+// Validates each entry individually so a single malformed model record does not drop the entire catalog.
+export function catalogModels(response: { readonly data: readonly unknown[] }, anonymous: boolean): Model[] {
   return response.data
+    .flatMap((entry) => Option.toArray(decodeRawModel(entry)))
     .filter(supportsTools)
     .map(toModel)
     .filter((model) => !anonymous || model.free)
