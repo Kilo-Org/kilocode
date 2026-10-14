@@ -611,11 +611,9 @@ class SessionModel {
         if (!text.startsWith(READ_FAILED)) return null
         val end = text.indexOf(READ_FAILED_ERROR, READ_FAILED.length)
         if (end < 0) return null
-        val name = text.substring(READ_FAILED.length, end)
-            .substringAfterLast('/')
-            .substringAfterLast('\\')
-            .takeIf { it.isNotBlank() }
-        return Notice(dto.id, Notice.ATTACHMENT_READ_FAILED, name)
+        val path = text.substring(READ_FAILED.length, end).takeIf { it.isNotBlank() }
+        val name = path?.substringAfterLast('/')?.substringAfterLast('\\')?.takeIf { it.isNotBlank() }
+        return Notice(dto.id, Notice.ATTACHMENT_READ_FAILED, name, path)
     }
 
     private fun fromDto(dto: PartDto, text: CharSequence? = null): Content {

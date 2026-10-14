@@ -82,6 +82,27 @@ class MessageViewTest : BasePlatformTestCase() {
         )
     }
 
+    // The notice belongs to the prompt bubble, like the attachment chips, so reverting the message
+    // rolls the notice back together with the rest of the prompt instead of leaving it behind.
+    fun `test notice renders inside the prompt bubble`() {
+        val msg = Message(MessageDto("m1", "ses", "user", MessageTimeDto(0.0)))
+        val view = MessageView(msg, openFile = { _, _ -> })
+
+        val prompt = Text("p1").also { it.content.append("check this") }
+        val notice = Notice("n1", "attachment_read_failed", "report.jfr")
+        msg.parts["p1"] = prompt
+        msg.parts["n1"] = notice
+        view.upsertPart(prompt)
+        view.upsertPart(notice)
+
+        val promptView = view.part("p1")
+        val noticeView = view.part("n1")
+        assertNotNull(promptView)
+        assertNotNull(noticeView)
+        assertFalse("notice is not a separate top-level row", view.components.contains(noticeView))
+        assertTrue("notice sits inside the prompt box", SwingUtilities.isDescendingFrom(noticeView, promptView!!.parent))
+    }
+
     // An unrecognized notice kind (a newer server) must not leak the raw snake_case token into the
     // transcript; it falls back to a bundled generic sentence.
     fun `test notice falls back to a generic sentence for an unknown kind`() {

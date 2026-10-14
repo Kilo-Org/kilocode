@@ -52,6 +52,7 @@ import ai.kilocode.rpc.dto.GhState
 import ai.kilocode.rpc.dto.KiloAppStateDto
 import ai.kilocode.rpc.dto.KiloAppStatusDto
 import ai.kilocode.rpc.dto.ProfileDto
+import ai.kilocode.rpc.dto.PartDto
 import ai.kilocode.rpc.dto.SessionRevertDto
 import ai.kilocode.rpc.dto.WorktreePrDto
 import ai.kilocode.rpc.dto.DiffFileDto
@@ -715,6 +716,48 @@ class SessionUiLayoutTest : SessionUiTestBase() {
         model.setRevert(SessionRevertDto("u1"))
 
         assertEquals("rolled back prompt", prompt.text())
+    }
+
+    fun `test revert sync restores the message attachments`() {
+        val prompt = find<PromptPanel>(ui)
+        val model = controller().model
+        model.upsertMessage(message("u1"))
+        model.updateContent("u1", part("p1", "u1", "text", "rolled back prompt"))
+        model.updateContent(
+            "u1",
+            PartDto("f1", "ses_test", "u1", "file", mime = "text/plain", url = "file:///tmp/a.txt", filename = "a.txt"),
+        )
+
+        model.setRevert(SessionRevertDto("u1"))
+
+        assertEquals("rolled back prompt", prompt.text())
+        assertEquals(listOf("a.txt"), prompt.attachments().map { it.name })
+    }
+
+    // The CLI keeps no file part for an attachment it could not read, only the notice naming the
+    // path, so the chip has to be rebuilt from the notice.
+    fun `test revert sync restores an unreadable attachment from its notice`() {
+        val prompt = find<PromptPanel>(ui)
+        val model = controller().model
+        model.upsertMessage(message("u1"))
+        model.updateContent("u1", part("p1", "u1", "text", "rolled back prompt"))
+        model.updateContent(
+            "u1",
+            PartDto(
+                "n1",
+                "ses_test",
+                "u1",
+                "text",
+                text = "Read tool failed to read /tmp/trace.jfr with the following error: Cannot read binary file",
+                synthetic = true,
+            ),
+        )
+
+        model.setRevert(SessionRevertDto("u1"))
+
+        val item = prompt.attachments().single()
+        assertEquals("trace.jfr", item.name)
+        assertTrue(item.reference)
     }
 
     fun `test connection panel overlays above prompt with transparent inset`() {

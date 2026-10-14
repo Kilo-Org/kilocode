@@ -65,8 +65,11 @@ class Text(id: String) : Content(id) {
  * A non-error informational note rendered inline in the transcript, e.g. an attachment the server
  * could not read. Derived from a persisted synthetic user text part, so it survives a reload like
  * any other part.
+ *
+ * [path] is the full source path the CLI reported, kept so the attachment can be rebuilt when the
+ * message is reverted back into the prompt; [name] is just its file name for display.
  */
-class Notice(id: String, val kind: String, val name: String?) : Content(id) {
+class Notice(id: String, val kind: String, val name: String?, val path: String? = null) : Content(id) {
     companion object {
         const val ATTACHMENT_READ_FAILED = "attachment_read_failed"
     }

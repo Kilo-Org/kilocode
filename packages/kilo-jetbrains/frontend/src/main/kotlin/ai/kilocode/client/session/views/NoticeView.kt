@@ -15,15 +15,15 @@ import com.intellij.util.ui.JBUI
 import java.awt.BorderLayout
 import java.awt.Dimension
 import javax.swing.JPanel
+import javax.swing.SwingConstants
 
 /**
- * Renders a [Notice] as a small informational row in the transcript.
+ * Renders a [Notice] as a small informational row inside a user prompt bubble, alongside the
+ * attachment chips, so a reverted message brings the notice back together with the rest of the
+ * prompt. The copy is a bundled, user-facing sentence keyed by the notice kind; the raw server text
+ * (which is addressed to the model) is intentionally not shown.
  *
- * Used for things the user should know about that are not an error on the turn, such as an
- * attachment the server could not read. The copy is a bundled, user-facing sentence keyed by the
- * notice kind; the raw server text (which is addressed to the model) is intentionally not shown.
- *
- * An accented block rather than a full card, matching [MessageErrorView].
+ * The row is transparent and takes the prompt bubble's background, led by a warning glyph.
  */
 class NoticeView(private val notice: Notice) : PartView() {
 
@@ -50,10 +50,12 @@ class NoticeView(private val notice: Notice) : PartView() {
         repaint()
     }
 
-    /** Re-resolved here so the accent survives a Look and Feel switch. */
+    /** Re-resolved here so the inset follows the IDE zoom and the current Look and Feel. */
     override fun updateUI() {
         super.updateUI()
-        border = JBUI.Borders.customLineLeft(UiStyle.Colors.warningLabelForeground())
+        // Inset the text to line up with the prompt text above it in the bubble.
+        val side = JBUI.scale(SessionUiStyle.View.Prompt.SHELL_HORIZONTAL_PADDING)
+        border = JBUI.Borders.empty(UiStyle.Gap.sm(), side, UiStyle.Gap.sm(), side)
     }
 
     override fun dumpLabel() = "NoticeView#$contentId"
@@ -77,7 +79,7 @@ class NoticeView(private val notice: Notice) : PartView() {
 }
 
 /**
- * Selectable, wrapping notice text over the raised editor surface, led by a warning glyph.
+ * Selectable, wrapping notice text led by a warning glyph, over the prompt bubble's background.
  *
  * Owns its own theme values: assigning them from the parent's `init` would not survive a Look and
  * Feel switch, and re-applying them in the parent's `updateUI` would run before these fields exist.
@@ -101,25 +103,31 @@ private class NoticeText : JPanel(BorderLayout()) {
         }
 
     init {
-        isOpaque = true
+        isOpaque = false
         add(icon, BorderLayout.WEST)
         add(label, BorderLayout.CENTER)
     }
 
     override fun updateUI() {
         super.updateUI()
-        background = SessionUiStyle.Colors.codeBlockBackground()
         border = JBUI.Borders.empty(
             JBUI.scale(SessionUiStyle.View.Layout.VERTICAL_PADDING),
-            JBUI.scale(SessionUiStyle.View.Layout.HORIZONTAL_PADDING),
+            0,
+            JBUI.scale(SessionUiStyle.View.Layout.VERTICAL_PADDING),
+            0,
         )
     }
 }
 
-/** Warning glyph with the trailing gap owned here so it survives a Look and Feel switch. */
+/**
+ * Warning glyph pinned to the top of the row so it lines up with the first line of text rather
+ * than floating in the vertical centre of a multi-line notice. Trailing gap lives here so it
+ * survives a Look and Feel switch.
+ */
 private class NoticeIcon : JBLabel(AllIcons.General.Warning) {
     override fun updateUI() {
         super.updateUI()
+        verticalAlignment = SwingConstants.TOP
         border = JBUI.Borders.emptyRight(UiStyle.Gap.sm())
     }
 }
