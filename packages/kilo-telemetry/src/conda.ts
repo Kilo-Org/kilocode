@@ -13,6 +13,7 @@ export namespace Conda {
       const proc = Bun.spawn([process.env.CONDA_EXE || "conda", "info", "--json", "--offline"], {
         stdout: "pipe",
         stderr: "ignore",
+        windowsHide: true,
       })
       const reader = proc.stdout.getReader()
       const timer = setTimeout(() => {
@@ -40,6 +41,7 @@ export namespace Conda {
         return /(?:^|\s)c\/([A-Za-z0-9_-]{22})(?=\s|$)/.exec(info.user_agent)?.[1]
       } finally {
         clearTimeout(timer)
+        if (proc.exitCode === null) proc.kill()
         reader.releaseLock()
       }
     } catch {
