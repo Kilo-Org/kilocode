@@ -87,6 +87,9 @@
       "dependsOn": ["^build"],
       "outputs": []
     },
+    "@kilocode/gateway-core#test": {
+      "outputs": []
+    },
     "@opencode/sdk#verify:package": {
       "outputs": []
     }
