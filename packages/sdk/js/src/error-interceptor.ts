@@ -45,8 +45,16 @@ export function wrapClientError(
 
 function describe(request: Request | undefined, response: Response | undefined) {
   const method = request?.method ?? "?"
-  const url = request?.url ?? "?"
   const status = response?.status
   const statusText = response?.statusText
-  return `${method} ${url}${status ? " → " + status : ""}${statusText ? " " + statusText : ""}`
+  return `${method} ${safePath(request?.url)}${status ? " → " + status : ""}${statusText ? " " + statusText : ""}`
+}
+
+function safePath(raw: string | undefined): string {
+  if (!raw) return "?"
+  try {
+    return new URL(raw).pathname || "/"
+  } catch {
+    return "[redacted]"
+  }
 }
