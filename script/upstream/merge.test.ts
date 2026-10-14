@@ -9,6 +9,7 @@ const guard = path.join(import.meta.dir, "..", "check-workflows.ts")
 async function fixture() {
   const r = await repo()
   await r.write("package.json", '{ "name": "fixture", "packageManager": "bun@1.4.2" }\n')
+  await r.write(".gitignore", ["tmp/", "", "# Local dev files", "opencode-dev", ""].join("\n"))
   await r.write("src/a.ts", "export const a = 1\n")
   for (const name of ["check.yml", "test.yml", "deploy.yml"]) await r.write(`.github/workflows/${name}`, `name: ${name}\n`)
   await r.release("v2.0.26", "2026-10-08T00:00:00Z")
@@ -82,6 +83,39 @@ test("refuses a release that skips an older one", async () => {
   const allowed = await run(r, "--version", "v2.0.28", "--allow-skip", "--dry-run")
   expect(allowed.code).toBe(0)
   expect(allowed.output).toContain("Skips v2.0.27 (--allow-skip)")
+})
+
+test("reconciles Kilo's marked root .gitignore rules with upstream .gitignore changes", async () => {
+  await using r = await fixture()
+  await r.git("switch", "-q", "v2")
+  await r.write(
+    ".gitignore",
+    ["tmp/", "", "# Local dev files", "opencode-dev", "# kilocode_change: Kilo dev profile", ".kilo-v2-dev/", ""].join(
+      "\n",
+    ),
+  )
+  await r.commit("chore: kilo gitignore")
+  await r.git("switch", "-q", "dev")
+  await r.write(".gitignore", ["tmp/", "dist-node", "", "# Local dev files", "opencode-dev", ""].join("\n"))
+  await r.release("v2.0.27", "2026-10-12T00:00:00Z")
+  await linkUpstream(r)
+  await r.git("switch", "-q", "-c", "sync-v2-0-27", "v2")
+
+  const result = await run(r)
+  expect(result.code).toBe(0)
+  expect(await Bun.file(path.join(r.dir, ".gitignore")).text()).toBe(
+    [
+      "tmp/",
+      "dist-node",
+      "",
+      "# Local dev files",
+      "opencode-dev",
+      "# kilocode_change: Kilo dev profile",
+      ".kilo-v2-dev/",
+      "",
+    ].join("\n"),
+  )
+  expect(await r.git("status", "--porcelain")).toBe("")
 })
 
 test("dry run reports the conflicts without changing the branch", async () => {
