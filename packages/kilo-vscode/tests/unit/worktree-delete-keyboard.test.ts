@@ -1,42 +1,15 @@
 import { describe, expect, it } from "bun:test"
 import { Window } from "happy-dom"
 import { createRoot } from "solid-js"
-import { Project, SyntaxKind } from "ts-morph"
 import { createDiffPanelFocus } from "../../webview-ui/agent-manager/diff-panel-focus"
 import { LOCAL } from "../../webview-ui/agent-manager/navigate"
 import { createProjectStore } from "../../webview-ui/agent-manager/project/store"
-import { createWorktreeDelete } from "../../webview-ui/agent-manager/worktree-delete"
-
-// Run the production key handler without mounting the full application or
-// replacing the store, confirmation helper, or diff focus guard with mocks.
-const source = new Project({ skipAddingFilesFromTsConfig: true }).addSourceFileAtPath(
-  `${import.meta.dir}/../../webview-ui/agent-manager/AgentManagerApp.tsx`,
-)
-const declaration = source
-  .getDescendantsOfKind(SyntaxKind.VariableDeclaration)
-  .find((node) => node.getName() === "deleteKeyHandler")
-if (!declaration) throw new Error("Worktree delete key handler not found")
-const code = new Bun.Transpiler({ loader: "ts" }).transformSync(
-  `const handler = ${declaration.getInitializerOrThrow().getText()}`,
-)
-// This factory compiles only the local handler and supplies its typed closure dependencies.
-// oxlint-disable-next-line typescript-eslint(no-implied-eval), typescript-eslint(no-unsafe-type-assertion)
-const compile = new Function(
-  "selection",
-  "LOCAL",
-  "diffPanels",
-  "closeSelectedWorktree",
-  `${code}; return handler`,
-) as (
-  selection: () => string | undefined,
-  local: string,
-  focus: Pick<ReturnType<typeof createDiffPanelFocus>, "isFocusTarget">,
-  close: () => void,
-) => (event: KeyboardEvent) => void
+import { createDeleteKey, createWorktreeDelete } from "../../webview-ui/agent-manager/worktree-delete"
 
 function setup() {
   return createRoot((dispose) => {
     const window = new Window()
+    const view = window as unknown as typeof globalThis.window
     const doc = window.document
     const state = { selection: "wt" as string | undefined }
     const store = createProjectStore("project")
@@ -53,6 +26,7 @@ function setup() {
       },
       remove: (project, id) => removed.push([project, id]),
       reveal: () => {},
+      view,
     })
     const focus = createDiffPanelFocus({
       isOpen: () => false,
@@ -62,38 +36,55 @@ function setup() {
       focusPrompt: () => {},
       track: () => {},
     })
+    // The app wires the same handler to the same confirmation helper.
     window.addEventListener(
       "keydown",
-      compile(
-        () => state.selection,
-        LOCAL,
-        focus,
-        () => deletion.confirm("project", "wt"),
-      ),
+      createDeleteKey({
+        guard: focus.isFocusTarget,
+        selection: () => state.selection,
+        close: () => deletion.confirm("project", "wt"),
+      }),
     )
     const press = (key: string, repeat = false, target = doc.body) => {
       const event = new window.KeyboardEvent("keydown", { key, repeat, bubbles: true, cancelable: true })
       target.dispatchEvent(event)
       return event
     }
-    return { dispose, state, store, deletion, removed, doc, press }
+    // VS Code shortcuts reach the webview as a keydown, then as a host action message.
+    const shortcut = (key: string, repeat = false) => {
+      press(key, repeat)
+      deletion.confirm("project", "wt")
+    }
+    return { dispose, state, store, deletion, removed, doc, press, shortcut }
   })
 }
 
 describe("worktree delete keyboard confirmation", () => {
   for (const key of ["Backspace", "Delete"]) {
-    it(`does not confirm deletion while holding ${key}`, () => {
+    it(`does not confirm deletion while holding ${key}`, async () => {
       const fixture = setup()
       try {
         expect(fixture.press(key).defaultPrevented).toBe(true)
         expect(fixture.deletion.pending()).toEqual({ projectId: "project", worktreeId: "wt" })
-        for (let i = 0; i < 3; i++) fixture.press(key, true)
+        for (let i = 0; i < 3; i++) expect(fixture.press(key, true).defaultPrevented).toBe(true)
         expect(fixture.removed).toEqual([])
         expect(fixture.store.busy().has("wt")).toBe(false)
         expect(fixture.deletion.pending()).toEqual({ projectId: "project", worktreeId: "wt" })
+        await Bun.sleep(350)
         fixture.press(key)
         expect(fixture.removed).toEqual([["project", "wt"]])
         expect(fixture.store.busy().get("wt")?.reason).toBe("deleting")
+      } finally {
+        fixture.dispose()
+      }
+    })
+
+    it(`confirms deletion from two quick ${key} presses`, () => {
+      const fixture = setup()
+      try {
+        fixture.press(key)
+        fixture.press(key)
+        expect(fixture.removed).toEqual([["project", "wt"]])
       } finally {
         fixture.dispose()
       }
@@ -125,6 +116,37 @@ describe("worktree delete keyboard confirmation", () => {
       }
     })
   }
+
+  it("does not confirm deletion while holding a close shortcut", async () => {
+    const fixture = setup()
+    try {
+      fixture.shortcut("w")
+      expect(fixture.deletion.pending()).toEqual({ projectId: "project", worktreeId: "wt" })
+      for (let i = 0; i < 3; i++) fixture.shortcut("w", true)
+      expect(fixture.removed).toEqual([])
+      expect(fixture.deletion.pending()).toEqual({ projectId: "project", worktreeId: "wt" })
+      await Bun.sleep(350)
+      fixture.shortcut("w")
+      expect(fixture.removed).toEqual([["project", "wt"]])
+    } finally {
+      fixture.dispose()
+    }
+  })
+
+  it("does not block a close shortcut while modifiers repeat", () => {
+    const fixture = setup()
+    try {
+      fixture.press("Shift", true)
+      fixture.press("Control", true)
+      fixture.shortcut("w")
+      expect(fixture.deletion.pending()).toEqual({ projectId: "project", worktreeId: "wt" })
+      fixture.press("Shift", true)
+      fixture.shortcut("w")
+      expect(fixture.removed).toEqual([["project", "wt"]])
+    } finally {
+      fixture.dispose()
+    }
+  })
 
   it.each([undefined, LOCAL])("ignores a selection of %s", (selection) => {
     const fixture = setup()

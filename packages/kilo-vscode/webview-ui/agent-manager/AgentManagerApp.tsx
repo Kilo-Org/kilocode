@@ -88,7 +88,7 @@ import {
   projectLocalSessions,
 } from "./project/local-tabs"
 import { createProjectRegistry, type PersistedProjectTabs } from "./project/registry"
-import type { WorktreeDelete } from "./worktree-delete"
+import { createDeleteKey, type WorktreeDelete } from "./worktree-delete"
 import { rememberTarget } from "./project/restore"
 import { createProjectHydration } from "./project/hydration"
 import { createProjectStateRouter } from "./project/state"
@@ -1238,18 +1238,11 @@ const AgentManagerContent: Component = () => {
     window.addEventListener("keydown", shortcut, true)
 
     // Delete/Backspace on a selected worktree triggers inline delete confirmation.
-    // Two separate key presses (within the 2500ms window) confirm the delete.
-    const deleteKeyHandler = (e: KeyboardEvent) => {
-      if (e.key !== "Delete" && e.key !== "Backspace") return
-      if (diffPanels.isFocusTarget(e.target)) return
-      const tag = (e.target as HTMLElement)?.tagName
-      if (tag === "INPUT" || tag === "TEXTAREA" || (e.target as HTMLElement)?.isContentEditable) return
-      const sel = selection()
-      if (!sel || sel === LOCAL) return
-      e.preventDefault()
-      if (e.repeat) return
-      closeSelectedWorktree()
-    }
+    const deleteKeyHandler = createDeleteKey({
+      guard: (target) => diffPanels.isFocusTarget(target),
+      selection,
+      close: () => closeSelectedWorktree(),
+    })
     window.addEventListener("keydown", deleteKeyHandler)
     onCleanup(diffPanels.listen())
     onCleanup(() => window.removeEventListener("agentManager.openSubagent", subagent))
