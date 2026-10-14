@@ -612,6 +612,28 @@
 
 ## [Unreleased]
 
+## [7.1.10-rc.4] - 2026-10-14
+
+### Added
+- feat: thread community triage queue in Slack by @brunoagatao in https://github.com/Kilo-Org/kilocode/pull/15019
+- feat(cli): fork a remote session from a message by @iscekic in https://github.com/Kilo-Org/kilocode/pull/15004
+- feat(telemetry): include conda client ID in Kilo events by @pedroheyerdahl in https://github.com/Kilo-Org/kilocode/pull/15034
+- feat(jetbrains): opt in to Marketplace error handler by @kirillk in https://github.com/Kilo-Org/kilocode/pull/15058
+
+### Fixed
+- fix(vscode): inline esbuild watch problem matcher and drop extension dependency by @brunoagatao in https://github.com/Kilo-Org/kilocode/pull/14254
+- fix(cli): stop glob and grep include patterns from bypassing .gitignore by @WebReflection in https://github.com/Kilo-Org/kilocode/pull/15017
+- fix(jetbrains): auto-expand transcript blocks only while live by @kirillk in https://github.com/Kilo-Org/kilocode/pull/15036
+- fix(mcp): stop automatic OAuth reset and sync auth badges by @kirillk in https://github.com/Kilo-Org/kilocode/pull/15047
+- fix(core): handle non-UTF-8 ripgrep matches in grep by @kirillk in https://github.com/Kilo-Org/kilocode/pull/15056
+- fix(jetbrains): recover a missed pending prompt from backend activity by @kirillk in https://github.com/Kilo-Org/kilocode/pull/15057
+- fix(jetbrains): surface unreadable attachments as an inline chat notice by @kirillk in https://github.com/Kilo-Org/kilocode/pull/15033
+
+### Changed
+- release(jetbrains): v7.1.10-rc.3 by @kilo-maintainer[bot] in https://github.com/Kilo-Org/kilocode/pull/15024
+- chore(jetbrains): bump CLI pin to v7.8.10 by @kilo-maintainer[bot] in https://github.com/Kilo-Org/kilocode/pull/15078
+
+
 ## [7.1.10-rc.3] - 2026-10-13
 
 ### Added
