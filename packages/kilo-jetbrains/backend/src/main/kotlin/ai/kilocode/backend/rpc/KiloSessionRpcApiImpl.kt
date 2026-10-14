@@ -35,6 +35,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.FlowCollector
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.flow.onStart
@@ -271,7 +272,14 @@ class KiloSessionRpcApiImpl internal constructor(
 
     override suspend fun events(id: String, directory: String): Flow<ChatEventDto> =
         (source ?: chat.events)
-            .onStart { log.info("${ChatLogSummary.sid(id)} kind=subscription route=rpc-events start=true dir=${ChatLogSummary.dir(directory)}") }
+            .onStart {
+                log.info("${ChatLogSummary.sid(id)} kind=subscription route=rpc-events start=true dir=${ChatLogSummary.dir(directory)}")
+                // Replay any prompts that are pending on the server right now, so a collector that
+                // starts after the live question.asked / permission.asked was emitted still sees
+                // them. The underlying SharedFlow has replay = 0, so without this a missed event
+                // leaves the session stuck forever.
+                replayPending(id, directory)
+            }
             .filter { event ->
                 val sid = ChatLogSummary.sid(event)
                 val passes = event is ChatEventDto.SessionCreated || sid == null || sid == id
@@ -353,6 +361,29 @@ class KiloSessionRpcApiImpl internal constructor(
     private suspend fun <T> ready(block: suspend () -> T): T {
         app.requireReady()
         return block()
+    }
+
+    /**
+     * Emit any prompts that are already pending on the CLI for [id] so the collector starts with
+     * an accurate view even when the original `question.asked` / `permission.asked` event was
+     * emitted before this subscription existed. Called from [events]' `onStart`.
+     */
+    private suspend fun FlowCollector<ChatEventDto>.replayPending(id: String, directory: String) {
+        try {
+            val permissions = pendingPermissions(directory).filter { it.sessionID == id }
+            val questions = pendingQuestions(directory).filter { it.sessionID == id }
+            for (p in permissions) emit(ChatEventDto.PermissionAsked(p.sessionID, p))
+            for (q in questions) emit(ChatEventDto.QuestionAsked(q.sessionID, q))
+            if (permissions.isNotEmpty() || questions.isNotEmpty()) {
+                log.info("${ChatLogSummary.sid(id)} route=rpc-events replay permissions=${permissions.size} questions=${questions.size}")
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            // App not ready yet or HTTP failure — the live flow will still deliver events once the
+            // connection is up, and recoverPending in the frontend covers the startup case.
+            log.debug { "${ChatLogSummary.sid(id)} route=rpc-events replay skipped: ${e.message}" }
+        }
     }
 
     /**

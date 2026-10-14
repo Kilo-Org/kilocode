@@ -138,11 +138,6 @@ class SessionController(
         internal const val REVERT_TIMEOUT_MS = 30_000L
         private const val FOLLOWUP_TTL_MS = 30_000L
         private const val FOLLOWUP_NEW_SESSION = "Start new session"
-        // A stuck-busy session is probed for a missed prompt this often, once it has been silent
-        // for [PROMPT_WATCHDOG_IDLE_MS], and at most once per [PROMPT_WATCHDOG_INTERVAL_MS].
-        private const val PROMPT_WATCHDOG_TICK_MS = 5_000
-        private const val PROMPT_WATCHDOG_IDLE_MS = 20_000L
-        private const val PROMPT_WATCHDOG_INTERVAL_MS = 30_000L
     }
 
     init {
@@ -209,12 +204,6 @@ class SessionController(
     // The last (activity kind, promptRevision) an activity-mismatch probe was started for, so the
     // same unchanged signal cannot refetch repeatedly.
     private var activityProbe: Pair<SessionActivityKindDto, Long>? = null
-    // Virtual clock reading of the last chat event handled, and of the last watchdog probe. Null
-    // until the watchdog first runs, so the first probe is never blocked by the interval.
-    private var lastEventAt = 0L
-    private var lastWatchdogAt: Long? = null
-    private val promptWatchdog: UiTimer =
-        timers.timer(PROMPT_WATCHDOG_TICK_MS, repeats = true) { onPromptWatchdog() }
     private var recentsState: RecentsState = RecentsState.Idle
     private var recentsSnapshot: List<SessionDto> = emptyList()
     private var viewState: SessionControllerEvent.ViewChanged? = null
@@ -1158,7 +1147,6 @@ class SessionController(
 
         model.addListener(this) { event ->
             LOG.debug { "session=${sid ?: ref?.key ?: "pending"} model: $event" }
-            if (event is SessionModelEvent.StateChanged) syncPromptWatchdog(event.state)
         }
 
         // The Agent Manager badges a worktree row from the backend's global activity map, which the
@@ -1717,55 +1705,6 @@ class SessionController(
         promptRecoveryJob = cs.launch { recoverPending(id, revision, trigger = "activity") }
     }
 
-    /**
-     * Safety net for a prompt the backend activity map does not carry at all (the backend drops a
-     * session whose directory it cannot resolve) and for a session that is simply stuck Busy with no
-     * events. Probes the pending-prompt endpoints after [PROMPT_WATCHDOG_IDLE_MS] of silence, at
-     * most once per [PROMPT_WATCHDOG_INTERVAL_MS]. Runs on the EDT.
-     */
-    @RequiresEdt
-    private fun onPromptWatchdog() {
-        if (disposed) {
-            promptWatchdog.stop()
-            return
-        }
-        if (!watchable(model.state)) {
-            promptWatchdog.stop()
-            return
-        }
-        val now = timers.now()
-        if (now - lastEventAt < PROMPT_WATCHDOG_IDLE_MS) return
-        val last = lastWatchdogAt
-        if (last != null && now - last < PROMPT_WATCHDOG_INTERVAL_MS) return
-        val id = sid ?: return
-        if (sessionLoadState !is SessionLoadState.Idle) return
-        lastWatchdogAt = now
-        val revision = promptRevision
-        LOG.info("${ChatLogSummary.sid(id)} kind=prompt-reconcile trigger=watchdog activity=none state=${model.state::class.simpleName} action=recover idle=${now - lastEventAt}ms")
-        promptRecoveryJob?.cancel()
-        promptRecoveryJob = cs.launch { recoverPending(id, revision, trigger = "watchdog") }
-    }
-
-    /** Start the stall watchdog while a session can stall, and stop it once it cannot. */
-    @RequiresEdt
-    private fun syncPromptWatchdog(state: SessionState) {
-        if (watchable(state)) {
-            if (!promptWatchdog.isRunning()) {
-                lastEventAt = timers.now()
-                lastWatchdogAt = null
-                promptWatchdog.start()
-            }
-            return
-        }
-        promptWatchdog.stop()
-    }
-
-    /** A state that shows no live prompt and can meaningfully stall waiting for one. */
-    private fun watchable(state: SessionState): Boolean = when (state) {
-        is SessionState.Busy, is SessionState.Retry, is SessionState.Offline -> true
-        else -> false
-    }
-
     /** True when the transcript already shows something the backend activity map only mirrors. */
     @RequiresEdt
     private fun reconcilable(): Boolean = when (model.state) {
@@ -1904,7 +1843,6 @@ class SessionController(
     }
 
     private fun handle(event: ChatEventDto) {
-        lastEventAt = timers.now()
         LOG.debug { ChatLogSummary.event(event) }
         when (event) {
             is ChatEventDto.MessageUpdated -> {
@@ -2098,7 +2036,6 @@ class SessionController(
     }
 
     private fun handleMetadata(event: ChatEventDto) {
-        lastEventAt = timers.now()
         if (promptEvent(event)) LOG.info("${ChatLogSummary.sid(sid ?: ref?.key ?: "pending")} evt=${ChatLogSummary.eventBody(event)}")
         else LOG.debug { ChatLogSummary.event(event) }
         when (event) {
@@ -3088,7 +3025,6 @@ class SessionController(
             disposed = true
             connectionDelay.dispose()
             cancelSubscriptions()
-            promptWatchdog.stop()
             promptRecoveryJob?.cancel()
             promptRecoveryJob = null
             reconnectRecoveryJob?.cancel()

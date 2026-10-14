@@ -894,61 +894,6 @@ class SessionRecoveryTest : SessionControllerTestBase() {
         assertEquals("q_live", (m.model.state as SessionState.AwaitingQuestion).question.id)
     }
 
-    fun `test watchdog recovers a question after a silent stall`() {
-        projectRpc.state.value = workspaceReady()
-        val m = controller("ses_test")
-        flush()
-
-        emit(ChatEventDto.TurnOpen("ses_test"))
-        rpc.statuses.value = mapOf("ses_test" to SessionStatusDto("busy"))
-        val before = rpc.pendingQuestionCalls
-        rpc.pendingQuestionList.add(question("q_stalled"))
-
-        pause(20_000)
-        flush()
-
-        assertTrue(m.model.state is SessionState.AwaitingQuestion)
-        assertEquals("q_stalled", (m.model.state as SessionState.AwaitingQuestion).question.id)
-        assertEquals(before + 1, rpc.pendingQuestionCalls)
-    }
-
-    fun `test watchdog does not re-probe within its interval`() {
-        projectRpc.state.value = workspaceReady()
-        val m = controller("ses_test")
-        flush()
-
-        emit(ChatEventDto.TurnOpen("ses_test"))
-        rpc.statuses.value = mapOf("ses_test" to SessionStatusDto("busy"))
-        val before = rpc.pendingQuestionCalls
-
-        pause(20_000)
-        flush()
-        assertEquals(before + 1, rpc.pendingQuestionCalls)
-        assertTrue(m.model.state is SessionState.Busy)
-
-        pause(20_000)
-        flush()
-        // Still inside the 30s probe interval: no second recovery.
-        assertEquals(before + 1, rpc.pendingQuestionCalls)
-    }
-
-    fun `test watchdog recovery keeps a specific busy label`() {
-        projectRpc.state.value = workspaceReady()
-        val m = controller("ses_test")
-        flush()
-
-        emit(ChatEventDto.TurnOpen("ses_test"))
-        rpc.statuses.value = mapOf("ses_test" to SessionStatusDto("busy"))
-        // A long silent step sets a specific label (status() does this on PartUpdated).
-        edt { m.model.setState(SessionState.Busy("Running long tool…")) }
-
-        pause(20_000)
-        flush()
-
-        // The probe runs but must not clobber the specific label with the generic "considering" one.
-        assertEquals(SessionState.Busy("Running long tool…"), m.model.state)
-    }
-
     private fun question(id: String) = QuestionRequestDto(
         id = id,
         sessionID = "ses_test",
