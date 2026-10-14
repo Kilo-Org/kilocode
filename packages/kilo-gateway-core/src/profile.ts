@@ -37,6 +37,43 @@ export interface Info {
 
 const decode = Schema.decodeUnknownOption(Response)
 
+const BalanceResponse = Schema.Struct({
+  balance: Schema.optionalKey(Schema.NullOr(Schema.Finite)),
+  isDepleted: Schema.optionalKey(Schema.NullOr(Schema.Boolean)),
+})
+const decodeBalance = Schema.decodeUnknownOption(BalanceResponse)
+
+export interface Balance {
+  readonly balance: number
+  readonly isDepleted?: boolean
+}
+
+export function balance(
+  server: string,
+  token: string,
+  organizationID?: string | null,
+): Effect.Effect<Balance | null> {
+  return Effect.gen(function* () {
+    const headers: Record<string, string> = {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+      ...(organizationID ? { "x-kilocode-organizationid": organizationID } : {}),
+    }
+    const response = yield* request(
+      `${KiloServer.normalize(server)}/api/profile/balance`,
+      { headers },
+      "Balance fetch failed",
+    )
+    if (!response.ok) return null
+    const parsed = decodeBalance(yield* json(response, "Balance fetch failed"))
+    if (Option.isNone(parsed)) return null
+    return {
+      balance: parsed.value.balance ?? 0,
+      ...(typeof parsed.value.isDepleted === "boolean" ? { isDepleted: parsed.value.isDepleted } : {}),
+    }
+  }).pipe(Effect.orElseSucceed(() => null))
+}
+
 export function get(server: string, token: string): Effect.Effect<Info, Error> {
   return Effect.gen(function* () {
     const response = yield* request(

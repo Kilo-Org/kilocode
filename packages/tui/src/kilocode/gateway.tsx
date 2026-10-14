@@ -123,6 +123,15 @@ export default Plugin.define({
                 ),
               run: () => teams(context),
             },
+            {
+              id: "kilo.account",
+              title: "Kilo Account Status",
+              description: "View Kilo Gateway account, balance, and Kilo Pass status",
+              group: "Kilo",
+              palette: true,
+              slash: { name: "kilo-account", aliases: ["balance", "kilo-pass"] },
+              run: () => accountStatus(context),
+            },
           ],
         }))
         return null
@@ -130,6 +139,40 @@ export default Plugin.define({
     })
   },
 })
+
+async function accountStatus(context: Plugin.Context) {
+  const rpc = context.client.rpc(KiloGatewayRpc.Definition)
+  const options = { location: { directory: (context.location ?? context.data.location.default()).directory } }
+  const status = await rpc.authStatus({}, options).catch(() => undefined)
+  if (!status?.authenticated) {
+    return context.ui.dialog.alert({
+      title: "Kilo Gateway (Signed Out)",
+      message: `Server: ${status?.server ?? "https://api.kilo.ai"}\nUse /connect to sign in to Kilo Gateway.`,
+    })
+  }
+  const [profile, balance, pass, modes] = await Promise.all([
+    rpc.profile({}, options).catch(() => undefined),
+    rpc.balance({}, options).catch(() => undefined),
+    rpc.kiloPass({}, options).catch(() => null),
+    rpc.modes({}, options).catch(() => []),
+  ])
+  const orgName = profile?.organizationID
+    ? (profile.organizations.find((o) => o.id === profile.organizationID)?.name ?? profile.organizationID)
+    : "Personal Account"
+  const lines = [
+    profile?.email ? `Account: ${profile.email}` : undefined,
+    `Scope: ${orgName}`,
+    balance?.balance != null ? `Balance: $${balance.balance.toFixed(2)}` : undefined,
+    pass
+      ? `Kilo Pass: $${pass.currentPeriodUsageUsd.toFixed(2)} / $${pass.currentPeriodBaseCreditsUsd.toFixed(2)} used`
+      : undefined,
+    modes.length > 0 ? `Team Modes: ${modes.map((m) => m.name).join(", ")}` : undefined,
+  ].filter(Boolean)
+  return context.ui.dialog.alert({
+    title: "Kilo Gateway Account",
+    message: lines.join("\n"),
+  })
+}
 
 async function teams(context: Plugin.Context) {
   const rpc = context.client.rpc(KiloGatewayRpc.Definition)
