@@ -1792,7 +1792,8 @@ class SessionController(
     }
 
     /** Rehydrate pending permissions/questions and current session status after history load or reconnect. */
-    private suspend fun recoverPending(id: String, revision: Long, trigger: String = "history") {        try {
+    private suspend fun recoverPending(id: String, revision: Long, trigger: String = "history") {
+        try {
             val permissions = sessions.pendingPermissions(directory).filter { it.sessionID == id }
             val questions = sessions.pendingQuestions(directory).filter { it.sessionID == id }
             val status = sessions.statuses.value[id]
@@ -1849,8 +1850,7 @@ class SessionController(
                         // A convergence probe must not reset a more specific busy label (one set on
                         // PartUpdated) back to "Considering next steps…"; it only needs to surface a
                         // prompt, and the status is already correct when the model is Busy.
-                        if (live is SessionState.Busy && model.state is SessionState.Busy) Unit
-                        else model.setState(live)
+                        if (!(live is SessionState.Busy && model.state is SessionState.Busy)) model.setState(live)
                     } else {
                         seedOutcome()
                     }
