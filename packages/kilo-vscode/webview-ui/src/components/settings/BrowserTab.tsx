@@ -82,13 +82,7 @@ const BrowserTab: Component = () => {
       if (msg.sizes) setSizes(msg.sizes)
       const error = msg.failed
       if (error) setFailed((prev) => ({ ...prev, [error.browser]: error.message }))
-      // An allowed build can be missing after a failed download or settings synced from another machine. Allowing it
-      // was the consent, so download it now. This is also the retry for the last allowed browser, which cannot be
-      // turned off and on.
-      for (const name of ["chromium", "firefox", "webkit"] as const) {
-        if (msg.status[name] !== "missing" || !allowed(name) || busy(name) || tried.has(name)) continue
-        install(name)
-      }
+      heal()
     }
   })
   onCleanup(unsubscribe)
@@ -111,6 +105,17 @@ const BrowserTab: Component = () => {
     setFailed((prev) => ({ ...prev, [browser]: undefined }))
     setInstalling((prev) => [...prev, browser])
     postMessage({ type: "installBrowser", browser })
+  }
+
+  // An allowed build can be missing after a failed download or settings synced from another machine. Allowing it was
+  // the consent, so download it while browser automation is on. This is also the retry for the last allowed browser,
+  // which cannot be turned off and on.
+  const heal = () => {
+    if (!settings().enabled) return
+    for (const name of ["chromium", "firefox", "webkit"] as const) {
+      if (status()[name] !== "missing" || !allowed(name) || busy(name) || tried.has(name)) continue
+      install(name)
+    }
   }
 
   const state = (browser: Browser) => {
@@ -231,7 +236,14 @@ const BrowserTab: Component = () => {
             description={t("settings.browser.enable.description")}
             last
           >
-            <Switch checked={settings().enabled} onChange={(checked: boolean) => update("enabled", checked)} hideLabel>
+            <Switch
+              checked={settings().enabled}
+              onChange={(checked: boolean) => {
+                update("enabled", checked)
+                heal()
+              }}
+              hideLabel
+            >
               {t("settings.browser.enable.title")}
             </Switch>
           </SettingsRow>
