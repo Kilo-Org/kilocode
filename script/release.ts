@@ -54,12 +54,12 @@ process.chdir(root)
 
 console.log("\n=== Generating changelog ===\n")
 await rm(review, { force: true })
-await $`git fetch origin "+refs/tags/v2.*:refs/tags/v2.*"`
+await $`git fetch origin "+refs/tags/v2.*:refs/tags/v2.*" "+refs/heads/v1:refs/remotes/origin/v1"`
 const base =
   values.from ??
   (await $`git tag --list "v2.*" --sort=-version:refname`.text()).split("\n").find((tag) => /^v2\.\d+\.\d+$/.test(tag))
 if (!base) throw new Error("No stable V2 release tag was found")
-console.log(`Comparing ${base}..${values.to}`)
+console.log(`Comparing ${commitRange(base, values.to)}`)
 await generateReview(base, values.to)
 
 if (!(await Bun.file(review).exists())) throw new Error("OpenCode did not create RELEASE_REVIEW.md")
@@ -93,7 +93,7 @@ if (answer?.trim().toLowerCase() !== "y" && answer?.trim().toLowerCase() !== "ye
   process.exit(0)
 }
 
-await $`gh workflow run publish.yml --ref v2 ${input} -f release_notes=${releaseNotes}`
+await $`gh workflow run publish.yml --ref dev ${input} -f release_notes=${releaseNotes}`
 console.log(`Triggered the ${version} release`)
 
 async function generateReview(base: string, head: string) {
@@ -149,11 +149,19 @@ async function generateReview(base: string, head: string) {
   }
 }
 
+// V1 history was merged into dev when V2 was promoted, so it must be excluded from the release range. Merges are skipped
+// because dev only takes squash merges, and the promotion merge would otherwise show the whole V1 tree.
+function commitRange(base: string, head: string) {
+  return `--no-merges ${base}..${head} --not origin/v1`
+}
+
 function reviewPrompt(base: string, head: string) {
   return `Create a concise pre-release review for a maintainer.
 
-The previous stable V2 release is ${base}. Inspect every relevant commit and actual diff in the exact range ${base}..${head}.
-Do not compare against dev, V1 release tags, or commits outside that range. Do not rely only on commit titles. Write a
+The previous stable V2 release is ${base}. Inspect every relevant commit in \`git log ${commitRange(base, head)}\` and
+read each commit's actual diff with \`git show\`. Do not use a whole-tree \`git diff\` between the endpoints, which
+includes V1 history merged into dev. Do not compare against V1 release tags or commits outside that range. Do not rely
+only on commit titles. Write a
 user-facing changelog with sections for Core, TUI, Desktop, SDK, and Extensions, omitting empty sections and changes that
 are entirely internal. Group bug fixes separately from improvements. Preserve community contributor attribution when it
 is available from merged pull requests, but never thank authors listed in .github/TEAM_MEMBERS.

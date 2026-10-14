@@ -4,10 +4,18 @@ import { parseSmallMarkdown } from "./marked-base"
 
 const parser = createMarkdownParser((code, language) => `<pre data-language="${language}">${code}</pre>`)
 
-test("renders links with application attributes", async () => {
-  expect(await parser.parse("[OpenCode](https://opencode.ai)")).toBe(
-    '<p><a href="https://opencode.ai" class="external-link" target="_blank" rel="noopener noreferrer">OpenCode</a></p>\n',
-  )
+test.each([
+  ["OpenCode", "OpenCode"],
+  ["**`#123`**", "<strong><code>#123</code></strong>"],
+  ["*Review* ~~draft~~", "<em>Review</em> <del>draft</del>"],
+  ["`<example>`", "<code>&lt;example&gt;</code>"],
+  ["\\*literal\\*", "*literal*"],
+])("renders link label %s with application attributes", async (label, html) => {
+  const markdown = `[${label}](https://opencode.ai)`
+  const expected = `<p><a href="https://opencode.ai" class="external-link" target="_blank" rel="noopener noreferrer">${html}</a></p>\n`
+
+  expect(await parser.parse(markdown)).toBe(expected)
+  expect(parseSmallMarkdown(markdown)).toBe(expected)
 })
 
 test("renders inline and block math", async () => {

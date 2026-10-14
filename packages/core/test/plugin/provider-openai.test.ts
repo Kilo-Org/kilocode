@@ -122,6 +122,13 @@ describe("OpenAIPlugin", () => {
         catalog.models.update(Provider.ID.openai, Model.ID.make("gpt-6-astra"), (model) => {
           model.limit = { context: 1_050_000, input: 922_000, output: 128_000 }
         })
+        catalog.models.update(Provider.ID.openai, Model.ID.make("gpt-6.1-sol"), (model) => {
+          model.limit = { context: 1_050_000, input: 922_000, output: 128_000 }
+        })
+        catalog.models.update(Provider.ID.openai, Model.ID.make("gpt-6.1-sol-fast"), (model) => {
+          model.modelID = Model.ID.make("gpt-6.1-sol")
+          model.limit = { context: 1_050_000, input: 922_000, output: 128_000 }
+        })
         catalog.models.update(Provider.ID.openai, Model.ID.make("gpt-5.10"), (model) => {
           model.limit = { context: 1_050_000, input: 922_000, output: 128_000 }
         })
@@ -181,6 +188,16 @@ describe("OpenAIPlugin", () => {
       expect(gpt56.limit).toEqual({ context: 400_000, input: 272_000, output: 128_000 })
       expect(required(yield* models.get(Provider.ID.openai, Model.ID.make("gpt-4.1"))).enabled).toBe(false)
       expect(required(yield* models.get(Provider.ID.openai, Model.ID.make("gpt-6-astra"))).enabled).toBe(true)
+      expect(required(yield* models.get(Provider.ID.openai, Model.ID.make("gpt-6.1-sol"))).limit).toEqual({
+        context: 628_000,
+        input: 500_000,
+        output: 128_000,
+      })
+      expect(required(yield* models.get(Provider.ID.openai, Model.ID.make("gpt-6.1-sol-fast"))).limit).toEqual({
+        context: 628_000,
+        input: 500_000,
+        output: 128_000,
+      })
       expect(required(yield* models.get(Provider.ID.openai, Model.ID.make("gpt-5.10"))).enabled).toBe(true)
       expect(required(yield* models.get(Provider.ID.openai, Model.ID.make("gpt-5"))).enabled).toBe(false)
       expect(required(yield* models.get(Provider.ID.openai, Model.ID.make("gpt-5.04-astra"))).enabled).toBe(false)

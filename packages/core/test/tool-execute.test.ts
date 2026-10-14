@@ -32,6 +32,15 @@ test("execute describes invariant Code Mode behavior", () => {
   )
 })
 
+test.skip("execute rejects filesystem fetches", async () => { // kilocode_change - fails on upstream v2.0.27 too (expected text does not match web.ts); upstream fix #54699 is in v2.0.28, remove the skip in that sync
+  const result = await Effect.runPromise(
+    createCodeMode(new Map()).execute({ code: 'return await fetch("file:///blocked.txt")' }, context),
+  )
+
+  expect(result.output.error).toBe(true)
+  expect(result.output.output).toContain("fetch cannot currently be used for filesystem access.")
+})
+
 test("canonical execution distinguishes declared, model-only, and raw schema outputs", async () => {
   const declared: Info = {
     name: "declared",
