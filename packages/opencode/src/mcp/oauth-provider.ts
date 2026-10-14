@@ -9,6 +9,7 @@ import { Effect } from "effect"
 import { McpAuth } from "./auth"
 import { clientMetadataUrl } from "../kilocode/mcp/client-metadata" // kilocode_change
 import { configured, retain, stored } from "../kilocode/mcp/oauth-issuer" // kilocode_change
+import type { Expected } from "../kilocode/mcp/invalidation" // kilocode_change
 
 const OAUTH_CALLBACK_PORT = 19876
 const OAUTH_CALLBACK_PATH = "/mcp/oauth/callback"
@@ -34,6 +35,16 @@ export interface McpOAuthCallbacks {
 }
 
 export class McpOAuthProvider implements OAuthClientProvider {
+  // kilocode_change start - credential the most recent rejected request presented, recorded by
+  // the OAuth fetch guard so invalidateCredentials can clear exactly that credential
+  protected rejected?: Expected
+
+  /** Record the credential a failed OAuth request was bound to, immediately before invalidation. */
+  markRejected(expected: Expected): void {
+    this.rejected = expected
+  }
+  // kilocode_change end
+
   constructor(
     protected mcpName: string,
     protected serverUrl: string,
@@ -191,21 +202,36 @@ export class McpOAuthProvider implements OAuthClientProvider {
   }
 
   async invalidateCredentials(type: "all" | "client" | "tokens"): Promise<void> {
-    const entry = await Effect.runPromise(this.auth.get(this.mcpName))
-    if (!entry) return
-    switch (type) {
-      case "all":
-        await Effect.runPromise(this.auth.remove(this.mcpName))
-        break
-      case "client":
-        delete entry.clientInfo
-        await Effect.runPromise(this.auth.set(this.mcpName, entry))
-        break
-      case "tokens":
-        delete entry.tokens
-        await Effect.runPromise(this.auth.set(this.mcpName, entry))
-        break
+    // kilocode_change start - automatic invalidation is conditional. The fetch guard
+    // that observed the rejected OAuth request records the exact credential it presented
+    // here, then this clears only that credential and only if a newer one has not replaced
+    // it. Without a recorded expectation (or when all credentials are requested) fall back
+    // to keeping the entry, so a blind delete can never wipe a concurrent rotation.
+    if (type === "tokens" || type === "client") {
+      const expected = this.rejected
+      if (expected) {
+        this.rejected = undefined
+        const name = this.mcpName
+        const invalidate = this.auth.invalidate(name, type, expected)
+        // Diagnose automatic invalidation: "cleared" means the rejected credential was still the
+        // stored one, "superseded" means a concurrent rotation won and the stored tokens were kept.
+        await Effect.runPromise(
+          invalidate.pipe(
+            Effect.tap((result) =>
+              Effect.logInfo("MCP OAuth automatic invalidation", { server: name, type, outcome: result._tag }),
+            ),
+            Effect.asVoid,
+          ),
+        )
+        return
+      }
+      return
     }
+    // "all" is only raised for a rejected client registration; clear the client binding but
+    // keep any tokens so a re-register can reuse them if the server still accepts them.
+    const entry = await Effect.runPromise(this.auth.get(this.mcpName))
+    if (entry?.clientInfo) await Effect.runPromise(this.auth.invalidate(this.mcpName, "client", { serverUrl: this.serverUrl }))
+    // kilocode_change end
   }
 }
 

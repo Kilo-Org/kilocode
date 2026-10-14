@@ -230,7 +230,10 @@ class KiloAgentBehaviorRpcApiImpl(private val backend: KiloBackendAppService? = 
     override suspend fun mcpAuthenticate(directory: String, name: String): McpAuthResultDto {
         val reply = send(directory, "/mcp/${encodePath(name)}/auth/authenticate", "POST", AUTH_EXTERNAL)
         val result = KiloCliDataParser.parseMcpAuthResult(reply.code, reply.body)
-        LOG.info("MCP auth dir=$directory name=$name http=${reply.code} status=${result.status}")
+        // The CLI failure reason is what identifies why sign-in was rejected; without it the next
+        // "auth keeps resetting" report cannot be diagnosed. It never contains tokens or advice
+        // URLs, so log it verbatim but only for a non-success result.
+        LOG.info("MCP auth dir=$directory name=$name http=${reply.code} status=${result.status} reason=${result.error}")
         return result
     }
 
