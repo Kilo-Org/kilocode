@@ -161,18 +161,23 @@ export function resolveEditTarget(
       return { provider: "inception", model: info.requestModel, url: INCEPTION_EDIT_URL }
     }
   }
-  return { provider: "kilo", model: info.requestModel, url: "" }
+  return {
+    provider: "kilo",
+    model: info.requestModel,
+    url: `${KiloServer.normalize(server)}/api/edit/completions`,
+  }
 }
 
 export function extractFencedBody(message: string): string {
   if (!message) return ""
-  const fenceOpen = message.indexOf("```")
-  if (fenceOpen === -1) return message
-  const afterFenceOpen = message.indexOf("\n", fenceOpen + 3)
+  const normalized = message.replace(/\r\n/g, "\n")
+  const fenceOpen = normalized.indexOf("```")
+  if (fenceOpen === -1) return normalized
+  const afterFenceOpen = normalized.indexOf("\n", fenceOpen + 3)
   if (afterFenceOpen === -1) return ""
-  const fenceClose = message.indexOf("```", afterFenceOpen + 1)
+  const fenceClose = normalized.indexOf("```", afterFenceOpen + 1)
   if (fenceClose === -1) return ""
-  let body = message.slice(afterFenceOpen + 1, fenceClose)
+  let body = normalized.slice(afterFenceOpen + 1, fenceClose)
   if (body.endsWith("\n")) body = body.slice(0, -1)
   body = body.replace(/^<\|code_to_edit\|>\n?/, "")
   body = body.replace(/\n?<\|\/code_to_edit\|>$/, "")
@@ -191,6 +196,7 @@ export async function requestMistralFim(request: (url: string) => Promise<Respon
   const first = await request(firstUrl)
   if (first.ok) return first
   if (first.status !== 401 && first.status !== 403) return first
+  await first.body?.cancel().catch(() => undefined)
   preferredMistralEndpoint = undefined
   const second = await request(secondUrl)
   if (second.ok) preferredMistralEndpoint = secondUrl

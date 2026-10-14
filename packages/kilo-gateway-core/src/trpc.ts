@@ -110,9 +110,13 @@ export function kiloPass(
           "Content-Type": "application/json",
           ...KiloHeaders.provider({ version, organizationID }),
         },
+        redirect: "error",
         signal: AbortSignal.timeout(TIMEOUT_MS),
       })
-      if (!response.ok) return null
+      if (!response.ok) {
+        await response.body?.cancel().catch(() => undefined)
+        return null
+      }
       const text = await readBounded(response)
       const parsed = decodeJson(text)
       return Option.isSome(parsed) ? parseKiloPassState(parsed.value) : null
