@@ -49,10 +49,10 @@ class RepoRegistry : PersistentStateComponent<RepoRegistry.State> {
     private var state = State()
     private val lock = Any()
 
-    override fun getState(): State = state
+    override fun getState(): State = synchronized(lock) { state.deepCopy() }
 
     override fun loadState(state: State) {
-        this.state = state
+        synchronized(lock) { this.state = state }
     }
 
     /** Added repositories for [pinned], in insertion order. */
@@ -108,3 +108,23 @@ class RepoRegistry : PersistentStateComponent<RepoRegistry.State> {
 }
 
 private const val REPO_REGISTRY_VERSION = 1
+
+/**
+ * Deep copy for the platform's settings serializer, which runs on its own thread while backend RPC
+ * threads mutate the registry under [RepoRegistry.lock]. Handing out the live object let a save race a
+ * mutation and serialize a half-updated list, or throw [ConcurrentModificationException] while it
+ * iterated one. The copy is taken under the lock, so what is serialized is always a consistent snapshot,
+ * and later mutations of the live state cannot disturb an in-flight serialization.
+ */
+private fun RepoRegistry.State.deepCopy(): RepoRegistry.State = RepoRegistry.State(
+    version = version,
+    workspaces = workspaces.mapTo(mutableListOf()) { workspace ->
+        RepoRegistry.Workspace(
+            root = workspace.root,
+            added = workspace.added.mapTo(mutableListOf()) { entry ->
+                RepoRegistry.Entry(entry.root, entry.label, entry.order, entry.addedAt)
+            },
+            dismissed = workspace.dismissed.toMutableList(),
+        )
+    },
+)

@@ -66,6 +66,41 @@ class RepoRegistryTest {
         assertEquals(1, registry.added(first).size)
     }
 
+    @Test
+    fun `getState returns a snapshot the platform can serialize off-thread`() {
+        registry.add(first, "/tmp/repo-1", "one", NOW)
+        registry.dismiss(first, "/tmp/inferred")
+
+        val snap = registry.getState()
+        // Mutating after the snapshot must not disturb it: the settings serializer reads it on its own
+        // thread while RPC threads keep mutating the live state.
+        registry.add(first, "/tmp/repo-2", null, NOW)
+        registry.dismiss(first, "/tmp/inferred-2")
+
+        assertEquals(listOf("/tmp/repo-1"), snap.workspaces.single().added.map { it.root })
+        assertEquals(listOf("/tmp/inferred"), snap.workspaces.single().dismissed)
+        assertEquals(
+            listOf("/tmp/repo-1", "/tmp/repo-2"),
+            registry.getState().workspaces.single().added.map { it.root },
+            "a fresh snapshot reflects the new state",
+        )
+    }
+
+    @Test
+    fun `loadState replaces the state that getState reports`() {
+        registry.add(first, "/tmp/repo-1", null, NOW)
+
+        val next = RepoRegistry.State(
+            workspaces = mutableListOf(
+                RepoRegistry.Workspace(root = second, added = mutableListOf(RepoRegistry.Entry("/tmp/other", null, 0, NOW))),
+            ),
+        )
+        registry.loadState(next)
+
+        assertTrue(registry.added(first).isEmpty(), "the old workspace is gone after load")
+        assertEquals(listOf("/tmp/other"), registry.added(second).map { it.root })
+    }
+
     private companion object {
         const val NOW = "2020-01-01T00:00:00Z"
     }
