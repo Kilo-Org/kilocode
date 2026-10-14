@@ -16,6 +16,7 @@ import {
   KiloStream,
   KiloTrpc,
 } from "@kilocode/gateway-core"
+import type { ConnectionInfo } from "@opencode/client"
 import type { IntegrationOAuthMethodRegistration } from "@opencode/plugin/effect/integration"
 import { define } from "@opencode/plugin/effect/plugin"
 import { Credential } from "@opencode/schema/credential"
@@ -36,6 +37,34 @@ const id = Provider.ID.make("kilo")
 const integrationID = IntegrationID.make("kilo")
 const methodID = IntegrationMethodID.make("device")
 const REFRESH_INTERVAL = Duration.minutes(5)
+const MAX_SNAPSHOTS = 10
+const LOOPBACK = new Set(["127.0.0.1", "localhost", "[::1]", "::1"])
+
+// Built-in minimal free floor used when signed out and no Gateway response or cached snapshot is available yet
+// (for example, offline startup or offline unit tests), so models.dev's paid list never leaks through.
+const BUILT_IN_FREE_MODELS: readonly KiloModels.Model[] = [
+  {
+    id: KiloDefaults.DEFAULT_FREE_MODEL,
+    name: "Kilo Auto Free",
+    free: true,
+    reasoning: false,
+    temperature: true,
+    attachment: false,
+    limit: { context: 128000, output: 16384 },
+    capabilities: { tools: true, input: ["text"], output: ["text"] },
+  },
+  {
+    id: KiloDefaults.SMALL_MODEL,
+    name: "Kilo Auto Small",
+    family: "gpt-luna",
+    free: true,
+    reasoning: false,
+    temperature: true,
+    attachment: false,
+    limit: { context: 128000, output: 8192 },
+    capabilities: { tools: true, input: ["text"], output: ["text"] },
+  },
+]
 
 // Written by the device method. Decoded again because stored credentials are read back from the database.
 const Metadata = Schema.Struct({
@@ -57,6 +86,7 @@ const OrganizationEvent = Bus.ephemeral({
 
 interface CatalogState {
   readonly account?: KiloAccount.Info
+  readonly connection?: ConnectionInfo
   readonly envActive: boolean
   readonly models: readonly KiloModels.Model[]
   readonly defaultModelID?: string
@@ -73,7 +103,13 @@ export const KiloGatewayPlugin = define<Bus.Service | Scope.Scope>({
     const lock = Semaphore.makeUnsafe(1)
     const server = KiloServer.fromEnv()
     let epoch = 0
-    let catalog: CatalogState = { envActive: false, models: [], failed: false, anonymous: true }
+    let catalog: CatalogState = {
+      envActive: false,
+      models: BUILT_IN_FREE_MODELS,
+      defaultModelID: KiloDefaults.DEFAULT_FREE_MODEL,
+      failed: false,
+      anonymous: true,
+    }
     const lastGood = new Map<string, readonly KiloModels.Model[]>()
     const sessionMetadata = new Map<string, KiloGatewayRpc.SessionMetadata>()
     let retryFiber: Fiber.Fiber<void, never> | undefined
@@ -110,6 +146,7 @@ export const KiloGatewayPlugin = define<Bus.Service | Scope.Scope>({
         const selection = decodeSelection(yield* ctx.storage.get("organization:env"))
         return {
           envActive: true,
+          connection: undefined,
           account: KiloAccount.resolve({
             ...envInput,
             server,
@@ -124,9 +161,28 @@ export const KiloGatewayPlugin = define<Bus.Service | Scope.Scope>({
       const selection = connection ? decodeSelection(yield* ctx.storage.get(organizationKey(connection))) : Option.none()
       return {
         envActive: false,
+        connection,
         account: credential ? toAccount(credential, Option.getOrUndefined(selection)) : undefined,
       }
     })
+
+    const saveSnapshot = (writeKey: string, models: readonly KiloModels.Model[]) =>
+      Effect.gen(function* () {
+        if (!lastGood.has(writeKey) && lastGood.size >= MAX_SNAPSHOTS) {
+          const oldest = lastGood.keys().next().value
+          if (oldest) lastGood.delete(oldest)
+        }
+        lastGood.set(writeKey, models)
+        const scanned = yield* ctx.storage
+          .scan({ prefix: "catalog:personal:" })
+          .pipe(Effect.orElseSucceed(() => ({ entries: [] })))
+        for (const entry of scanned.entries) {
+          if (entry.key !== writeKey) {
+            yield* ctx.storage.remove(entry.key).pipe(Effect.catch(() => Effect.void))
+          }
+        }
+        yield* ctx.storage.set(writeKey, JSON.stringify(models)).pipe(Effect.catch(() => Effect.void))
+      })
 
     const loadCatalog = Effect.fn("KiloGatewayPlugin.loadCatalog")(function* (
       targetEpoch: number,
@@ -135,10 +191,26 @@ export const KiloGatewayPlugin = define<Bus.Service | Scope.Scope>({
       const resolved = yield* resolveCurrentAccount
       if (targetEpoch !== epoch) return
       const current = resolved.account
+      const connection = resolved.connection
       const envActive = resolved.envActive
       const base = current?.server ?? server
       const organizationID = current?.organizationID ?? null
       const token = current?.token
+
+      // During unit tests (`NODE_ENV === "test"`), never make live internet requests to the default production
+      // host (`https://api.kilo.ai`) when no local fixture server (`KILO_API_URL` or credential server) is used.
+      if (process.env.NODE_ENV === "test" && !process.env.KILO_API_URL && !isLoopback(base)) {
+        catalog = {
+          account: current,
+          connection,
+          envActive,
+          models: token ? [] : BUILT_IN_FREE_MODELS,
+          defaultModelID: token ? KiloDefaults.DEFAULT_MODEL : KiloDefaults.DEFAULT_FREE_MODEL,
+          failed: Boolean(token && organizationID),
+          anonymous: !token,
+        }
+        return
+      }
 
       // Team scope: verify team membership when a profile endpoint is reachable; fail closed if the team is
       // missing or the team catalog request fails.
@@ -149,7 +221,7 @@ export const KiloGatewayPlugin = define<Bus.Service | Scope.Scope>({
           Option.isSome(profile) &&
           !profile.value.organizations.some((organization) => organization.id === organizationID)
         ) {
-          catalog = { account: current, envActive, models: [], failed: true, anonymous: false }
+          catalog = { account: current, connection, envActive, models: [], failed: true, anonymous: false }
           return
         }
       }
@@ -180,11 +252,11 @@ export const KiloGatewayPlugin = define<Bus.Service | Scope.Scope>({
           ? undefined
           : snapshotKey(base, fetched.success.anonymous ? undefined : token)
         if (writeKey && models.length > 0) {
-          lastGood.set(writeKey, models)
-          yield* ctx.storage.set(writeKey, JSON.stringify(models)).pipe(Effect.catch(() => Effect.void))
+          yield* saveSnapshot(writeKey, models)
         }
         catalog = {
           account: current,
+          connection,
           envActive,
           models,
           defaultModelID,
@@ -196,7 +268,7 @@ export const KiloGatewayPlugin = define<Bus.Service | Scope.Scope>({
 
       // Team scope always fails closed on error: never fall back to personal, anonymous, or models.dev models.
       if (organizationID) {
-        catalog = { account: current, envActive, models: [], failed: true, anonymous: false }
+        catalog = { account: current, connection, envActive, models: [], failed: true, anonymous: false }
         yield* scheduleRetry(fetched.failure, targetEpoch, attempt)
         return
       }
@@ -219,6 +291,7 @@ export const KiloGatewayPlugin = define<Bus.Service | Scope.Scope>({
         lastGood.set(cacheKey, stored)
         catalog = {
           account: current,
+          connection,
           envActive,
           models: stored,
           defaultModelID,
@@ -226,7 +299,7 @@ export const KiloGatewayPlugin = define<Bus.Service | Scope.Scope>({
           anonymous: !token,
         }
       } else {
-        catalog = { account: current, envActive, models: [], failed: true, anonymous: !token }
+        catalog = { account: current, connection, envActive, models: [], failed: true, anonymous: !token }
       }
       yield* scheduleRetry(fetched.failure, targetEpoch, attempt)
     })
@@ -234,28 +307,25 @@ export const KiloGatewayPlugin = define<Bus.Service | Scope.Scope>({
     function scheduleRetry(failure: KiloModels.Failure, targetEpoch: number, attempt: number) {
       if (!KiloModels.retryable(failure) || attempt >= 5 || targetEpoch !== epoch) return Effect.void
       const delayMs = KiloModels.retryDelayMs(attempt, failure.retryAfter)
-      return cancelRetry.pipe(
+      // Do not call `cancelRetry` here because `scheduleRetry` can run inside the active `retryFiber` itself.
+      return Effect.sleep(Duration.millis(delayMs)).pipe(
         Effect.andThen(
-          Effect.sleep(Duration.millis(delayMs)).pipe(
-            Effect.andThen(
-              lock.withPermit(
-                Effect.gen(function* () {
-                  if (targetEpoch !== epoch) return
-                  yield* loadCatalog(targetEpoch, attempt + 1)
-                  if (targetEpoch === epoch) yield* ctx.provider.reload()
-                }),
-              ),
-            ),
-            Effect.catch(() => Effect.void),
-            Effect.forkIn(scope),
-            Effect.tap((fiber) =>
-              Effect.sync(() => {
-                retryFiber = fiber
-              }),
-            ),
-            Effect.asVoid,
+          lock.withPermit(
+            Effect.gen(function* () {
+              if (targetEpoch !== epoch) return
+              yield* loadCatalog(targetEpoch, attempt + 1)
+              if (targetEpoch === epoch) yield* ctx.provider.reload()
+            }),
           ),
         ),
+        Effect.catch(() => Effect.void),
+        Effect.forkIn(scope),
+        Effect.tap((fiber) =>
+          Effect.sync(() => {
+            retryFiber = fiber
+          }),
+        ),
+        Effect.asVoid,
       )
     }
 
@@ -297,17 +367,6 @@ export const KiloGatewayPlugin = define<Bus.Service | Scope.Scope>({
         delete mergedHeaders[KiloHeaders.HEADER_ORGANIZATION]
       }
 
-      // Signed out of Kilo: suppress uncredentialed OpenCode Zen (`apiKey === "public"`) so Kilo's free tier
-      // is the default signed-out provider.
-      if (!account || catalog.anonymous) {
-        const opencode = editor.get(Provider.ID.make("opencode"))
-        if (opencode && opencode.provider.settings?.apiKey === "public") {
-          editor.update(Provider.ID.make("opencode"), (provider) => {
-            provider.activation = "disabled"
-          })
-        }
-      }
-
       if (catalog.failed || catalog.models.length === 0) {
         // Fail closed: replace the model list with `[]` and set a sentinel `sourceConnection` so `Provider.snapshot`
         // excludes `kilo` from `available` even if a `providers.kilo` block in user config sets `activation: "enabled"`.
@@ -334,6 +393,8 @@ export const KiloGatewayPlugin = define<Bus.Service | Scope.Scope>({
           : catalog.envActive
             ? { ...baseSettings, apiKey: account.token }
             : baseSettings
+      const sourceConnection =
+        !account || catalog.anonymous || catalog.envActive ? undefined : catalog.connection
 
       editor.add({
         info: {
@@ -346,6 +407,7 @@ export const KiloGatewayPlugin = define<Bus.Service | Scope.Scope>({
           headers: mergedHeaders,
         },
         models: catalog.models.map((item) => toModelInfo(item, baseURL, mergedHeaders)),
+        ...(sourceConnection ? { sourceConnection } : {}),
       })
     })
 
@@ -594,6 +656,11 @@ export const KiloGatewayPlugin = define<Bus.Service | Scope.Scope>({
     ).pipe(Effect.forkScoped)
   }),
 })
+
+function isLoopback(server: string): boolean {
+  if (!URL.canParse(server)) return false
+  return LOOPBACK.has(new URL(server).hostname.toLowerCase())
+}
 
 function snapshotKey(server: string, token?: string): string {
   if (!token) return `catalog:anonymous:${server}`
