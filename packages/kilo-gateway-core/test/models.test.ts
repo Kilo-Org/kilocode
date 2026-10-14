@@ -104,10 +104,15 @@ describe("KiloModels", () => {
     }
   })
 
-  test("drops models that explicitly omit tools, keeps empty supported_parameters, and ignores negative pricing or malformed optional metadata", () => {
+  test("drops models that explicitly omit tools or have malformed fields, keeps empty supported_parameters, and ignores negative pricing", () => {
     const models = KiloModels.catalogModels(
       {
         data: [
+          {
+            id: "test/malformed-context",
+            name: "Malformed Context",
+            context_length: 0,
+          },
           {
             id: "test/no-tools",
             name: "No Tools",
