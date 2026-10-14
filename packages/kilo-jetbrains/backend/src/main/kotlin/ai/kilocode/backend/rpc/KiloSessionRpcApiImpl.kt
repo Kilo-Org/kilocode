@@ -42,6 +42,7 @@ import kotlinx.coroutines.flow.channelFlow
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.flow.onStart
+import kotlinx.coroutines.flow.onSubscription
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonArray
@@ -277,16 +278,18 @@ class KiloSessionRpcApiImpl internal constructor(
         channelFlow {
             log.info("${ChatLogSummary.sid(id)} kind=subscription route=rpc-events start=true dir=${ChatLogSummary.dir(directory)}")
 
-            // Gate: the live subscription must be established before the replay runs, so the
-            // pending-prompt fetch cannot open a window where an event is in neither the snapshot
-            // nor the live stream. A rendezvous channel blocks the replay until the first collect
-            // iteration is entered.
+            // Gate: the live SharedFlow subscription must be established before the replay runs, so
+            // the pending-prompt fetch cannot open a window where an event is in neither the
+            // snapshot nor the live stream. For the real SharedFlow path, onSubscription fires after
+            // the subscriber is registered; for the injected test source, onStart is sufficient.
             val gate = Channel<Unit>(Channel.RENDEZVOUS)
+            val upstream = source
+                ?.onStart { gate.send(Unit) }
+                ?: chat.events.onSubscription { gate.send(Unit) }
 
             // 1. Start collecting the live stream immediately.
             val live = launch {
-                (source ?: chat.events)
-                    .onStart { gate.send(Unit) }
+                upstream
                     .filter { event ->
                         val sid = ChatLogSummary.sid(event)
                         val passes = event is ChatEventDto.SessionCreated || sid == null || sid == id
