@@ -95,7 +95,10 @@ export namespace KiloTask {
    * OpenCode removed parent-agent inheritance entirely in anomalyco/opencode#31696.
    * Kilo intentionally differs: native-agent edit denials and parent notebook/MCP denials
    * remain hard ceilings for Plan Mode and MCP restrictions. A custom delegator's edit
-   * policy only governs itself; session edit denials still constrain its descendants.
+   * policy governs only that agent: it is not projected onto the subagents it starts, so
+   * even path-scoped denies such as `edit: { "secrets/**": "deny" }` stop there and no
+   * longer confine delegated writes. Session edit denials still constrain every descendant,
+   * so use a session-level edit restriction to confine a delegated workflow.
    * Parent ask/allow rules must not replace the selected subagent's policy.
    *
    * Broad bash denies are deliberately NOT inherited from the calling agent. A read-only/delegating

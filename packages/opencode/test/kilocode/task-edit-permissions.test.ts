@@ -180,3 +180,22 @@ for (const name of ["plan", "ask", "orchestrator"]) {
     { config },
   )
 }
+
+// Documents the semantic change: a custom delegator's edit policy, including a path-scoped
+// deny, governs that agent only. The child's own policy is the boundary; only session-level
+// edit denials confine delegated writes.
+it.instance(
+  "a custom delegator's path-scoped edit denial does not confine its subagent",
+  () =>
+    Effect.gen(function* () {
+      const agents = yield* Agent.Service
+      const base = yield* agents.get("job-scout")
+      const child = yield* agents.get("career-consultant")
+      const caller = { ...base, permission: Permission.fromConfig({ edit: { "candidate/**": "deny" }, task: "allow" }) }
+      expect(Permission.evaluate("edit", "candidate/profile.md", caller.permission).action).toBe("deny")
+      const rules = policy(caller, child)
+      expect(Permission.disabled(tools, rules)).toEqual(new Set())
+      expect(Permission.evaluate("edit", "candidate/profile.md", rules).action).toBe("allow")
+    }),
+  { config },
+)
