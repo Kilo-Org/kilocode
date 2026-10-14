@@ -3,13 +3,17 @@ package ai.kilocode.client.app
 import ai.kilocode.client.testing.FakeAgentBehaviorRpcApi
 import ai.kilocode.rpc.dto.AgentCreateDto
 import ai.kilocode.rpc.dto.CommandFileDto
+import ai.kilocode.rpc.dto.McpAuthEventDto
+import ai.kilocode.rpc.dto.McpAuthResultDto
 import ai.kilocode.rpc.dto.McpStatusDto
 import ai.kilocode.rpc.dto.SkillDto
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import kotlin.test.assertFailsWith
@@ -144,7 +148,7 @@ class KiloAgentBehaviorServiceTest : BasePlatformTestCase() {
 
         assertTrue(connected)
         assertTrue(disconnected)
-        assertTrue(authenticated)
+        assertEquals("connected", authenticated.status)
         assertEquals(listOf("filesystem"), rpc.mcpConnects)
         assertEquals(listOf("github"), rpc.mcpDisconnects)
         assertEquals(listOf("linear"), rpc.mcpAuthentications)
@@ -160,5 +164,21 @@ class KiloAgentBehaviorServiceTest : BasePlatformTestCase() {
         assertTrue(status.isEmpty())
         assertFalse(ok)
         assertTrue(rpc.mcpConnects.isEmpty())
+    }
+
+    fun `test mcp auth remove forwards name`() = runBlocking {
+        val ok = withContext(Dispatchers.Default) { service.mcpAuthRemove("/test", "linear") }
+
+        assertTrue(ok)
+        assertEquals(listOf("linear"), rpc.mcpAuthRemovals)
+    }
+
+    fun `test mcp auth events pass through`() = runBlocking {
+        val events = withContext(Dispatchers.Default) { service.mcpAuthEvents() }
+        val first = async(Dispatchers.Default) { events.first() }
+        rpc.mcpAuthEventsFlow.subscriptionCount.first { it > 0 }
+        rpc.mcpAuthEventsFlow.emit(McpAuthEventDto("linear", "https://example.com/authorize"))
+
+        assertEquals(McpAuthEventDto("linear", "https://example.com/authorize"), first.await())
     }
 }

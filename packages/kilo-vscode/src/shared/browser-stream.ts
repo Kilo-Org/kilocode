@@ -24,6 +24,49 @@ export interface BrowserFrame extends BrowserViewIdentity {
   data: string
 }
 
+export interface BrowserCursor extends BrowserViewIdentity {
+  cursor: string
+}
+
+// Only CSS keywords can cross the browser boundary, never page-provided cursor images or URLs.
+export const CURSORS = new Set([
+  "default",
+  "none",
+  "context-menu",
+  "help",
+  "pointer",
+  "progress",
+  "wait",
+  "cell",
+  "crosshair",
+  "text",
+  "vertical-text",
+  "alias",
+  "copy",
+  "move",
+  "no-drop",
+  "not-allowed",
+  "grab",
+  "grabbing",
+  "all-scroll",
+  "col-resize",
+  "row-resize",
+  "n-resize",
+  "e-resize",
+  "s-resize",
+  "w-resize",
+  "ne-resize",
+  "nw-resize",
+  "se-resize",
+  "sw-resize",
+  "ew-resize",
+  "ns-resize",
+  "nesw-resize",
+  "nwse-resize",
+  "zoom-in",
+  "zoom-out",
+])
+
 export type BrowserInteraction =
   | {
       kind: "pointer"
@@ -52,6 +95,10 @@ export type BrowserInteraction =
   | { kind: "release" }
 
 export type WheelInteraction = Extract<BrowserInteraction, { kind: "wheel" }>
+
+// The host clamps the streamed page to these bounds. The viewport the webview publishes must use the same bounds, so
+// the frame and the canvas size stay equal and the preview is never scaled back up.
+export const VIEWPORT_LIMIT = { width: 4096, height: 2160 } as const
 
 // Coalesces compatible wheel input in place. Coordinates, modifiers, axis direction, and the 10000 cap are
 // ordering barriers, so callers can keep batching while preserving scroll distance and reversals.

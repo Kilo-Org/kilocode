@@ -60,6 +60,7 @@ export const dict = {
   ...anacondaDesktopDict,
   ...cloudProviderDict,
   "task.swarm.title": "Bord",
+  "task.swarm.open": "Bord openen",
   "task.swarm.refresh": "Vernieuwen",
   "task.swarm.reset": "Bord resetten",
   "task.swarm.resetTitle": "Dit bord resetten?",
@@ -216,6 +217,7 @@ export const dict = {
   "prompt.action.stop.background": "Hoofdagent stoppen. Achtergrondagenten blijven actief.",
   "prompt.agents.show": "Achtergrondagenten tonen",
   "prompt.action.enhance": "Prompt verbeteren",
+  "prompt.action.more": "Meer acties",
   "prompt.paste.expand": "Klik om geplakte tekst uit te vouwen",
   "prompt.issues.title": "Sessieproblemen",
   "prompt.mcp.provider": "{{name}} MCP",
@@ -941,6 +943,9 @@ export const dict = {
   "settings.experimental.nativeNotebookTools.title": "Native notebooktools",
   "settings.experimental.nativeNotebookTools.description":
     "Experimentele tools inschakelen voor het lezen, bewerken en uitvoeren van VS Code-notebooks",
+  "settings.experimental.globIncludeIgnored.title": "Genegeerde paden doorzoeken",
+  "settings.experimental.globIncludeIgnored.description":
+    "Mappen of bestanden die de glob-tool moet doorzoeken, ook als .gitignore of andere ignore-bestanden ze uitsluiten. Gebruik patronen in gitignore-stijl relatief aan de werkruimte; genegeerde mappen daarbinnen worden nog steeds overgeslagen.",
   "settings.experimental.continueOnDeny.title": "Doorgaan bij weigering",
   "settings.experimental.continueOnDeny.description":
     "Ga door met de agent loop wanneer een toestemming wordt geweigerd",
@@ -1370,6 +1375,8 @@ export const dict = {
   "task.backgroundAgents.stopAll": "Alles stoppen ({{count}})",
   "task.backgroundAgents.finished": "Achtergrondagenten voltooid",
   "task.stop": "Subagent stoppen",
+  "task.open.panel": "Subagent openen in paneel",
+  "task.open.tab": "Subagent openen in tabblad",
 
   "settings.saveBar.unsavedChanges": "Niet-opgeslagen wijzigingen",
   "settings.saveBar.discard": "Verwerpen",
@@ -1476,6 +1483,11 @@ export const dict = {
   "settings.experimental.browserAutomation.systemChrome.title": "Gebruik Systeem Chrome",
   "settings.experimental.browserAutomation.systemChrome.description":
     "Gebruik de geïnstalleerde Google Chrome voor de geïntegreerde browser. Schakel dit alleen uit als er al een compatibele Playwright Chromium-browser is geïnstalleerd.",
+  "settings.experimental.browserLinks.title": "Links openen in",
+  "settings.experimental.browserLinks.description":
+    "Kies waar weblinks openen vanuit Kilo-chats. Vereist de geïntegreerde browser.",
+  "settings.experimental.browserLinks.external": "Systeembrowser",
+  "settings.experimental.browserLinks.integrated": "Geïntegreerde browser",
   "chat.search.searchingHistory": "Eerdere berichten doorzoeken…",
   "browserTab.noSession":
     "Open de browser vanuit een sessie om een lokale applicatie of een openbare HTTPS-pagina te bekijken.",

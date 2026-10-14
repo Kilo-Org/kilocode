@@ -1,0 +1,47 @@
+# kilocode_change - new file
+name: Community label
+
+# Labels new PRs and issues so maintainers can tell community work from team
+# work and see which part of the repo it touches. See docs/community-triage.md.
+#
+# pull_request_target runs with write access, even for fork PRs. That is safe
+# here because the job only checks out the base branch and never runs code from
+# the PR. It reads PR metadata (title, author, file names) as data.
+
+on:
+  pull_request_target:
+    types: [opened, reopened, ready_for_review, edited]
+  issues:
+    types: [opened, edited]
+
+concurrency:
+  group: community-label-${{ github.event.pull_request.number || github.event.issue.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
+jobs:
+  label:
+    if: github.repository == 'Kilo-Org/kilocode'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+
+      - name: Label
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          # Optional. Lets the job see private org members. See the docs.
+          MEMBER_TOKEN: ${{ secrets.COMMUNITY_TRIAGE_MEMBER_TOKEN }}
+          MAINTAINERS: ${{ vars.COMMUNITY_MAINTAINERS }}
+        run: bun run script/kilocode/community-triage.ts label

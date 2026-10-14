@@ -60,6 +60,7 @@ export const dict = {
   ...anacondaDesktopDict,
   ...cloudProviderDict,
   "task.swarm.title": "Bacheca",
+  "task.swarm.open": "Apri bacheca",
   "task.swarm.refresh": "Aggiorna",
   "task.swarm.reset": "Reimposta bacheca",
   "task.swarm.resetTitle": "Reimpostare questa bacheca?",
@@ -193,6 +194,7 @@ export const dict = {
   "prompt.action.stop.background": "Ferma l'agente principale. Gli agenti in background continuano a funzionare.",
   "prompt.agents.show": "Mostra agenti in background",
   "prompt.action.enhance": "Migliora prompt",
+  "prompt.action.more": "Altre azioni",
   "prompt.paste.expand": "Fai clic per espandere il testo incollato",
   "prompt.issues.title": "Problemi della sessione",
   "prompt.mcp.provider": "MCP {{name}}",
@@ -791,6 +793,9 @@ export const dict = {
   "settings.experimental.nativeNotebookTools.title": "Strumenti nativi per notebook",
   "settings.experimental.nativeNotebookTools.description":
     "Abilita strumenti sperimentali per leggere, modificare ed eseguire i notebook di VS Code",
+  "settings.experimental.globIncludeIgnored.title": "Cerca nei percorsi ignorati",
+  "settings.experimental.globIncludeIgnored.description":
+    "Cartelle o file in cui lo strumento glob deve cercare anche quando .gitignore o altri file di esclusione li escludono. Usa pattern in stile gitignore relativi all’area di lavoro; le cartelle ignorate al loro interno restano escluse.",
   "settings.experimental.continueOnDeny.title": "Continua dopo rifiuto",
   "settings.experimental.continueOnDeny.description": "Continua il loop agente quando un'autorizzazione viene negata",
   "settings.sandboxing.title": "Sandbox",
@@ -1242,6 +1247,8 @@ export const dict = {
   "task.backgroundAgents.stopAll": "Arresta tutti ({{count}})",
   "task.backgroundAgents.finished": "Agenti in background completati",
   "task.stop": "Arresta sub-agent",
+  "task.open.panel": "Apri sub-agent nel pannello",
+  "task.open.tab": "Apri sub-agent in una scheda",
   "settings.saveBar.unsavedChanges": "Modifiche non salvate",
   "settings.saveBar.discard": "Scarta",
   "settings.saveBar.save": "Salva",
@@ -1431,6 +1438,11 @@ export const dict = {
   "settings.experimental.browserAutomation.systemChrome.title": "Usa Chrome di sistema",
   "settings.experimental.browserAutomation.systemChrome.description":
     "Usa il Google Chrome installato per il Browser integrato. Disattivalo solo se è già installato un browser Playwright Chromium compatibile.",
+  "settings.experimental.browserLinks.title": "Apri i link in",
+  "settings.experimental.browserLinks.description":
+    "Scegli dove aprire i link web dalle chat di Kilo. Richiede il Browser integrato.",
+  "settings.experimental.browserLinks.external": "Browser di sistema",
+  "settings.experimental.browserLinks.integrated": "Browser integrato",
   "chat.search.searchingHistory": "Ricerca nei messaggi precedenti…",
   "browserTab.noSession":
     "Apri il browser da una sessione per visualizzare in anteprima un'applicazione locale o una pagina HTTPS pubblica.",

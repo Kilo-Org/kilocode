@@ -60,6 +60,7 @@ export const dict = {
   ...anacondaDesktopDict,
   ...cloudProviderDict,
   "task.swarm.title": "ボード",
+  "task.swarm.open": "ボードを開く",
   "task.swarm.refresh": "更新",
   "task.swarm.reset": "ボードをリセット",
   "task.swarm.resetTitle": "このボードをリセットしますか？",
@@ -216,6 +217,7 @@ export const dict = {
   "prompt.action.stop.background": "メインエージェントを停止します。バックグラウンドエージェントは実行を続けます。",
   "prompt.agents.show": "バックグラウンドエージェントを表示",
   "prompt.action.enhance": "プロンプトを改善",
+  "prompt.action.more": "その他の操作",
   "prompt.paste.expand": "クリックして貼り付けたテキストを展開",
   "prompt.issues.title": "セッションの問題",
   "prompt.mcp.provider": "{{name}} MCP",
@@ -938,6 +940,9 @@ export const dict = {
   "settings.experimental.nativeNotebookTools.title": "ネイティブノートブックツール",
   "settings.experimental.nativeNotebookTools.description":
     "VS Codeノートブックの読み取り、編集、実行を行う実験的なツールを有効にします",
+  "settings.experimental.globIncludeIgnored.title": "無視されたパスを検索",
+  "settings.experimental.globIncludeIgnored.description":
+    ".gitignore などの無視ファイルで除外されていても glob ツールが検索するフォルダーまたはファイル。ワークスペースを基準とした gitignore 形式のパターンを使用します。その中にある無視されたフォルダーは引き続きスキップされます。",
   "settings.experimental.continueOnDeny.title": "拒否時に続行",
   "settings.experimental.continueOnDeny.description": "権限が拒否された場合にエージェントループを続行",
   "settings.sandboxing.title": "サンドボックス化",
@@ -1375,6 +1380,8 @@ export const dict = {
   "task.backgroundAgents.stopAll": "すべて停止 ({{count}})",
   "task.backgroundAgents.finished": "バックグラウンドエージェントが完了しました",
   "task.stop": "サブエージェントを停止",
+  "task.open.panel": "サブエージェントをパネルで開く",
+  "task.open.tab": "サブエージェントをタブで開く",
   "settings.saveBar.unsavedChanges": "未保存の変更",
   "settings.saveBar.discard": "破棄",
   "settings.saveBar.save": "保存",
@@ -1439,6 +1446,11 @@ export const dict = {
   "settings.experimental.browserAutomation.systemChrome.title": "システムChromeを使用",
   "settings.experimental.browserAutomation.systemChrome.description":
     "統合ブラウザーにインストール済みの Google Chrome を使用します。互換性のある Playwright Chromium ブラウザーが既にインストールされている場合にのみ無効にしてください。",
+  "settings.experimental.browserLinks.title": "リンクを開く場所",
+  "settings.experimental.browserLinks.description":
+    "Kilo のチャットから web リンクを開く場所を選択します。統合ブラウザーが必要です。",
+  "settings.experimental.browserLinks.external": "システムブラウザー",
+  "settings.experimental.browserLinks.integrated": "統合ブラウザー",
   "chat.search.searchingHistory": "以前のメッセージを検索しています…",
   "browserTab.noSession": "セッションからブラウザを開いて、ローカルアプリまたは公開 HTTPS ページをプレビューします。",
   "browserTab.disabled": "統合ブラウザは無効になっています。Kilo 設定 > 実験的機能で有効にしてください。",

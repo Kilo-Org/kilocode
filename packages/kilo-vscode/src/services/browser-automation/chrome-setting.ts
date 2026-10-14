@@ -14,6 +14,19 @@ export function integratedBrowserUseSystemChrome(): boolean {
   return vscode.workspace.getConfiguration(INTEGRATED_BROWSER).get("useSystemChrome", true)
 }
 
+export function integratedBrowserFallback(remote = vscode.env.remoteName): boolean {
+  return (
+    remote === "wsl" &&
+    vscode.workspace.getConfiguration(INTEGRATED_BROWSER).inspect<boolean>("useSystemChrome")?.globalValue == null
+  )
+}
+
+/** Keep the settings payload and effective link destination in sync. */
+export function integratedBrowserLinkDestination() {
+  const value = vscode.workspace.getConfiguration(INTEGRATED_BROWSER).get<string>("openLinksIn", "integrated")
+  return value === "external" ? "external" : "integrated"
+}
+
 /**
  * Copy a user-level Chrome preference that was stored before this setting had
  * its own key.

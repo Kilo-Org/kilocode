@@ -148,7 +148,7 @@ describe("Agent Manager sandbox startup", () => {
   })
 
   test("places the sandbox toggle with prompt actions instead of model selectors", () => {
-    const selectors = dialog.indexOf('<div class="prompt-input-hint-selectors">')
+    const selectors = dialog.indexOf("<PromptSelectors")
     const actions = dialog.indexOf('<div class="prompt-input-hint-actions">', selectors)
     const sandbox = dialog.indexOf("<SandboxButtonBase", actions)
     const speech = dialog.indexOf("<SpeechToTextButton", actions)

@@ -11,6 +11,8 @@ import ai.kilocode.client.session.model.StepFinish
 import ai.kilocode.client.session.model.Text
 import ai.kilocode.client.session.model.Tool
 import ai.kilocode.client.session.model.ToolCallRef
+import ai.kilocode.client.session.settings.TranscriptDisplay
+import ai.kilocode.client.session.settings.TranscriptDisplayTarget
 import ai.kilocode.client.session.model.ToolExecState
 import ai.kilocode.client.session.ui.RevertProgress
 import ai.kilocode.client.session.ui.SessionView
@@ -74,6 +76,8 @@ class MessageView(
     private val onPromoteBackgroundAgent: BackgroundPromote? = null,
     /** Sibling color slot for a child session's generated avatar. See [ai.kilocode.client.session.AgentAvatar]. */
     private val avatarColor: (String) -> Int? = { null },
+    /** Whether a block in this message may auto-expand from the transcript display settings. */
+    private val live: () -> Boolean = { true },
 ) : ai.kilocode.client.session.ui.SessionLayoutPanel(
     SessionUiStyle.SessionLayout.GAP,
 ), Disposable, SessionEditorStyleTarget, SessionView {
@@ -180,6 +184,16 @@ class MessageView(
         var changed = false
         for (view in parts.values) {
             if (view is ApprovalReasonTarget) changed = view.syncApprovalReason(visible) || changed
+        }
+        if (changed) refresh()
+        return changed
+    }
+
+    @RequiresEdt
+    fun syncTranscriptDisplay(display: TranscriptDisplay, force: Boolean = false): Boolean {
+        var changed = false
+        for (view in parts.values) {
+            if (view is TranscriptDisplayTarget) changed = view.syncTranscriptDisplay(display, force) || changed
         }
         if (changed) refresh()
         return changed
@@ -417,13 +431,13 @@ class MessageView(
         ViewFactory.createUser(
             content, openFile, openUrl, selection, repo, promptMentions(msg),
             { openAttachment(msg.info.id, it) }, openDiff, sessionId,
-            onOpenSubagent = onOpenSubagent, avatarColor = avatarColor, onPromoteBackgroundAgent = onPromoteBackgroundAgent,
+            onOpenSubagent = onOpenSubagent, live = live, avatarColor = avatarColor, onPromoteBackgroundAgent = onPromoteBackgroundAgent,
         )
     } else {
         ViewFactory.create(
             content, openFile, openUrl, selection, repo,
             { openAttachment(msg.info.id, it) }, openDiff, sessionId,
-            onOpenSubagent = onOpenSubagent, avatarColor = avatarColor, onPromoteBackgroundAgent = onPromoteBackgroundAgent,
+            onOpenSubagent = onOpenSubagent, live = live, avatarColor = avatarColor, onPromoteBackgroundAgent = onPromoteBackgroundAgent,
         )
     }
 
@@ -480,6 +494,16 @@ class MessageView(
 
     @RequiresEdt
     fun promptToolbarActive() = promptToolbar?.active() == true
+
+    /**
+     * Prompt content without [PromptWrap]'s toolbar/footer. Historical prompts without a wrap paint
+     * their bubble on this message itself, so the message is the correct fallback for those.
+     */
+    @RequiresEdt
+    fun promptTarget(): JComponent? {
+        if (role != SessionUiStyle.View.Message.USER_ROLE || !isVisible) return null
+        return promptBox ?: this.takeIf { componentCount > 0 }
+    }
 
     @RequiresEdt
     fun setReverting(active: Boolean, text: String, onCancel: () -> Unit) {

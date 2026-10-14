@@ -60,6 +60,7 @@ export const dict = {
   ...anacondaDesktopDict,
   ...cloudProviderDict,
   "task.swarm.title": "Дошка",
+  "task.swarm.open": "Відкрити дошку",
   "task.swarm.refresh": "Оновити",
   "task.swarm.reset": "Скинути дошку",
   "task.swarm.resetTitle": "Скинути цю дошку?",
@@ -216,6 +217,7 @@ export const dict = {
   "prompt.action.stop.background": "Зупинити головного агента. Фонові агенти продовжать роботу.",
   "prompt.agents.show": "Показати фонових агентів",
   "prompt.action.enhance": "Покращити запит",
+  "prompt.action.more": "Інші дії",
   "prompt.paste.expand": "Натисніть, щоб розгорнути вставлений текст",
   "prompt.issues.title": "Проблеми сесії",
   "prompt.mcp.provider": "MCP {{name}}",
@@ -935,6 +937,9 @@ export const dict = {
   "settings.experimental.nativeNotebookTools.title": "Власні інструменти для блокнотів",
   "settings.experimental.nativeNotebookTools.description":
     "Увімкнути експериментальні інструменти для читання, редагування та виконання блокнотів VS Code",
+  "settings.experimental.globIncludeIgnored.title": "Пошук в ігнорованих шляхах",
+  "settings.experimental.globIncludeIgnored.description":
+    "Папки або файли, у яких інструмент glob має шукати, навіть якщо їх виключає .gitignore чи інші ignore-файли. Використовуйте шаблони у стилі gitignore відносно робочої області; ігноровані папки всередині них і далі пропускаються.",
   "settings.experimental.continueOnDeny.title": "Продовжувати при відхиленні",
   "settings.experimental.continueOnDeny.description": "Продовжувати цикл агента, коли дозвіл відхилено",
   "settings.sandboxing.title": "Пісочниця",
@@ -1355,6 +1360,8 @@ export const dict = {
   "task.backgroundAgents.stopAll": "Зупинити всіх ({{count}})",
   "task.backgroundAgents.finished": "Фонові агенти завершили роботу",
   "task.stop": "Зупинити підагента",
+  "task.open.panel": "Відкрити підагента на панелі",
+  "task.open.tab": "Відкрити підагента у вкладці",
 
   "settings.saveBar.unsavedChanges": "Незбережені зміни",
   "settings.saveBar.discard": "Скасувати",
@@ -1463,6 +1470,11 @@ export const dict = {
   "settings.experimental.browserAutomation.systemChrome.title": "Використовувати системний Chrome",
   "settings.experimental.browserAutomation.systemChrome.description":
     "Використовувати встановлений Google Chrome для вбудованого браузера. Вимкніть лише якщо сумісний браузер Playwright Chromium уже встановлено.",
+  "settings.experimental.browserLinks.title": "Відкривати посилання в",
+  "settings.experimental.browserLinks.description":
+    "Виберіть, де відкривати веб-посилання з чатів Kilo. Потрібен вбудований браузер.",
+  "settings.experimental.browserLinks.external": "Системний браузер",
+  "settings.experimental.browserLinks.integrated": "Вбудований браузер",
   "chat.search.searchingHistory": "Пошук у попередніх повідомленнях…",
   "browserTab.noSession":
     "Відкрийте браузер із сеансу, щоб переглянути локальний застосунок або загальнодоступну HTTPS-сторінку.",

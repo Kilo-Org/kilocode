@@ -86,7 +86,7 @@ The app follows your device language, with English as the fallback. Choose anoth
 
 For Kilo Pass pricing, billing, and account management details, use the [Kilo Pass pricing page](https://kilo.ai/pricing/kilo-pass).
 
-On Android, you can buy, restore, and change Kilo Pass tiers through Google Play. Tier changes take effect at the next renewal; your current tier and credits stay in place until then. Google manages cancellation and payment methods for passes purchased through Google Play.
+Kilo Pass is not sold inside the iOS or Android app. Subscribe to or change your Kilo Pass on the web instead. If you try to buy a Kilo Pass in the app, it shows **Kilo Pass purchase is not available right now.** The Android app can open the web to manage a Kilo Pass you already have; the iOS app does not offer that link.
 
 ### Buying credits in the app
 

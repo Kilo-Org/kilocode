@@ -4,6 +4,8 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 :root {
+  --kilo-yellow: #ffdd00;
+  --kilo-yellow-hover: #ffe640;
   --top-nav-height: 105px;
   --border-color: #dce6e9;
   --bg-color: theme(colors.zinc.50);
@@ -24,10 +26,10 @@
   --text-header: #e9e9e9;
   --text-secondary: theme(colors.gray.300);
   --text-link: theme(colors.slate.400);
-  --text-brand: #f8f674;
-  --text-brand-hover: #f8f675;
-  --accent-color: #f8f675;
-  --accent-hover: #f8f675;
+  --text-brand: var(--kilo-yellow);
+  --text-brand-hover: var(--kilo-yellow);
+  --accent-color: var(--kilo-yellow);
+  --accent-hover: var(--kilo-yellow-hover);
 }
 
 *,
@@ -150,14 +152,14 @@ a:hover {
 }
 
 .btn-primary {
-  background: #f8f674;
+  background: var(--kilo-yellow);
   color: #1a1a18 !important;
-  border-color: #f8f674;
+  border-color: var(--kilo-yellow);
 }
 
 .btn-primary:hover {
-  background: #ffff8d;
-  border-color: #ffff8d;
+  background: var(--kilo-yellow-hover);
+  border-color: var(--kilo-yellow-hover);
   color: #1a1a18 !important;
   transform: translateY(-1px);
 }
@@ -169,8 +171,8 @@ a:hover {
 }
 
 .btn-secondary:hover {
-  color: #f8f674 !important;
-  border-color: #f8f674;
+  color: var(--kilo-yellow) !important;
+  border-color: var(--kilo-yellow);
 }
 
 /* Terminal Syntax Highlighting */
@@ -296,7 +298,7 @@ pre[class*="language-"] {
 
 /* ==========================================================================
    Dark mode syntax highlighting
-   Coordinated with site palette: #1a1a18 base, #f8f674 brand accent
+   Coordinated with site palette: #1a1a18 base, #ffdd00 brand accent
    ========================================================================== */
 
 .dark pre[class*="language-"],
@@ -361,7 +363,7 @@ pre[class*="language-"] {
 .dark .token.atrule,
 .dark .token.attr-value,
 .dark .token.keyword {
-  color: #d4c96b; /* warm yellow, near brand #f8f674 but less saturated */
+  color: #d4c96b; /* muted yellow, same hue as brand #ffdd00 but less saturated */
 }
 
 .dark .token.function,

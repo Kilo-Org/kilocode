@@ -60,6 +60,7 @@ export const dict = {
   ...anacondaDesktopDict,
   ...cloudProviderDict,
   "task.swarm.title": "Tablero",
+  "task.swarm.open": "Abrir tablero",
   "task.swarm.refresh": "Actualizar",
   "task.swarm.reset": "Restablecer tablero",
   "task.swarm.resetTitle": "¿Restablecer este tablero?",
@@ -217,6 +218,7 @@ export const dict = {
   "prompt.action.stop.background": "Detener el agente principal. Los agentes en segundo plano siguen en ejecución.",
   "prompt.agents.show": "Mostrar agentes en segundo plano",
   "prompt.action.enhance": "Mejorar prompt",
+  "prompt.action.more": "Más acciones",
   "prompt.paste.expand": "Haz clic para expandir el texto pegado",
   "prompt.issues.title": "Problemas de la sesión",
   "prompt.mcp.provider": "MCP de {{name}}",
@@ -954,6 +956,9 @@ export const dict = {
   "settings.experimental.nativeNotebookTools.title": "Herramientas nativas de notebook",
   "settings.experimental.nativeNotebookTools.description":
     "Habilitar herramientas experimentales para leer, editar y ejecutar notebooks de VS Code",
+  "settings.experimental.globIncludeIgnored.title": "Buscar rutas ignoradas",
+  "settings.experimental.globIncludeIgnored.description":
+    "Carpetas o archivos que la herramienta glob debe buscar aunque .gitignore u otros archivos de exclusión los ignoren. Usa patrones de estilo gitignore relativos al espacio de trabajo; las carpetas ignoradas dentro de ellos se siguen omitiendo.",
   "settings.experimental.continueOnDeny.title": "Continuar al denegar",
   "settings.experimental.continueOnDeny.description": "Continuar el bucle del agente cuando se deniega un permiso",
   "settings.sandboxing.title": "Sandbox",
@@ -1403,6 +1408,8 @@ export const dict = {
   "task.backgroundAgents.stopAll": "Detener todos ({{count}})",
   "task.backgroundAgents.finished": "Agentes en segundo plano finalizados",
   "task.stop": "Detener subagente",
+  "task.open.panel": "Abrir subagente en el panel",
+  "task.open.tab": "Abrir subagente en una pestaña",
   "settings.saveBar.unsavedChanges": "Cambios sin guardar",
   "settings.saveBar.discard": "Descartar",
   "settings.saveBar.save": "Guardar",
@@ -1467,6 +1474,11 @@ export const dict = {
   "settings.experimental.browserAutomation.systemChrome.title": "Usar Chrome del sistema",
   "settings.experimental.browserAutomation.systemChrome.description":
     "Usa el Google Chrome instalado para el Navegador integrado. Desactívalo solo si ya hay instalado un navegador Playwright Chromium compatible.",
+  "settings.experimental.browserLinks.title": "Abrir enlaces en",
+  "settings.experimental.browserLinks.description":
+    "Elige dónde se abren los enlaces web desde los chats de Kilo. Requiere el Navegador integrado.",
+  "settings.experimental.browserLinks.external": "Navegador del sistema",
+  "settings.experimental.browserLinks.integrated": "Navegador integrado",
   "chat.search.searchingHistory": "Buscando en mensajes anteriores…",
   "browserTab.noSession":
     "Abre el navegador desde una sesión para previsualizar una aplicación local o una página HTTPS pública.",
