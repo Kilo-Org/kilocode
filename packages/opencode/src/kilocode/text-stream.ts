@@ -71,7 +71,18 @@ export function safeSlice(text: string, end: number) {
 /** Whole-file decoded Readable; buffers legacy encodings only after UTF-8 streaming fails. */
 export async function openDecoded(read: (signal?: AbortSignal) => Promise<Buffer>, signal?: AbortSignal) {
   const bytes = await read(signal)
-  return abortable(Readable.from([Encoding.decode(bytes, Encoding.detect(bytes))]), signal)
+  const text = Encoding.decode(bytes, Encoding.detect(bytes))
+  // Readable.from([text]) (one synchronous chunk) made readline in Bun close before `for await` took the last
+  // lines, so reading a legacy-encoded file (e.g. windows-1251) to its end - the read tool always does, to count the
+  // lines - failed with "readline was closed" (ERR_USE_AFTER_CLOSE). An async source in 64 KB slices reads to the end.
+  return abortable(
+    Readable.from(
+      (async function* () {
+        for (let i = 0; i < text.length; i += 65536) yield text.slice(i, i + 65536)
+      })(),
+    ),
+    signal,
+  )
 }
 
 /**
