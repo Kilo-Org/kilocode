@@ -4,6 +4,7 @@ import { Context, Duration, Effect, Fiber, Layer, Schema, Stream } from "effect"
 import { ChildProcess } from "effect/unstable/process"
 import { makeGlobalNode } from "./effect/app-node"
 import { Entry, Match } from "@opencode-ai/schema/filesystem"
+import * as KiloGlob from "./kilocode/ripgrep-glob" // kilocode_change
 import * as KiloGrep from "./kilocode/ripgrep-grep" // kilocode_change
 import * as SpawnExit from "./kilocode/spawn-exit" // kilocode_change
 import * as SpawnValidation from "./kilocode/spawn-validation" // kilocode_change
@@ -72,6 +73,7 @@ export interface GlobInput {
   readonly noRequireGit?: boolean // kilocode_change - honor ignore files outside a git repository
   readonly include?: readonly string[] // kilocode_change - additional whitelist globs
   readonly exclude?: readonly string[] // kilocode_change - additional exclusion globs
+  readonly filter?: (path: string) => boolean // kilocode_change - drop paths before the result limit
 }
 
 export interface GrepInput extends KiloGrep.Options {
@@ -223,19 +225,18 @@ const layer = Layer.effect(
             ...(input.hidden ? ["--hidden"] : []),
             ...(input.follow ? ["--follow"] : []),
             ...(input.noRequireGit ? ["--no-require-git"] : []), // kilocode_change
-            `--glob=${input.pattern}`,
+            ...KiloGlob.glob(input).args, // kilocode_change - apply the pattern after ignore rules
             ...(input.include ?? []).map((glob) => `--glob=${glob}`), // kilocode_change
             ...(input.exclude ?? []).map((glob) => `--glob=!${glob}`), // kilocode_change
             "--glob=!**/.git/**",
             ".",
           ],
-          parse: (line) =>
-            Effect.succeed(
-              line
-                .replace(/^(?:\.[\\/])+/u, "")
-                .replace(/^[\\/]+/u, "")
-                .replaceAll("\\", "/"),
-            ),
+          // kilocode_change start - drop paths the pattern or filter rejects
+          parse: (line) => {
+            const file = KiloGlob.relative(line)
+            return Effect.succeed(KiloGlob.glob(input).keep(file) ? file : undefined)
+          },
+          // kilocode_change end
         }).pipe(
           // kilocode_change start - retain spawn metadata after mapping paths
           Effect.map((result) => ({
@@ -264,7 +265,7 @@ const layer = Layer.effect(
             "--files",
             ...(input.hidden ? ["--hidden"] : []),
             ...(input.follow ? ["--follow"] : []),
-            ...(input.pattern === "*" ? [] : [`--glob=${input.pattern}`]),
+            ...KiloGlob.find(input).args, // kilocode_change - apply the pattern after ignore rules
             "--glob=!**/.git/**",
             ".",
           ],
@@ -273,6 +274,7 @@ const layer = Layer.effect(
               .replace(/^(?:\.[\\/])+/u, "")
               .replace(/^[\\/]+/u, "")
               .replaceAll("\\", "/")
+            if (!KiloGlob.find(input).keep(relative)) return Effect.succeed(undefined) // kilocode_change
             return Effect.succeed(
               Entry.make({
                 path: RelativePath.make(relative),
@@ -295,7 +297,7 @@ const layer = Layer.effect(
             "--hidden",
             "--no-messages",
             ...KiloGrep.flags(input), // kilocode_change
-            ...(input.include ? [`--glob=${input.include}`] : []),
+            ...KiloGlob.grep(input).args, // kilocode_change - apply the include glob after ignore rules
             "--glob=!**/.git/**",
             "--",
             input.pattern,
@@ -324,6 +326,7 @@ const layer = Layer.effect(
                     submatches: match.data.submatches.slice(0, MAX_SUBMATCHES),
                     context: match.type === "context", // kilocode_change
                   })),
+                  Effect.map((row) => (KiloGlob.grep(input).keep(KiloGlob.relative(row.path.text)) ? row : undefined)), // kilocode_change
                   Effect.mapError((cause) => failure("Invalid ripgrep match output", cause)),
                 )
               }),

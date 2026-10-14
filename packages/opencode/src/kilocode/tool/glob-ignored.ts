@@ -8,17 +8,18 @@ import type { Config } from "@/config/config"
  * still search. Entries use gitignore-style patterns relative to the workspace root: a pattern without a
  * slash matches at any depth, and a pattern with a slash is anchored to the root.
  *
- * Ripgrep whitelist globs (`--glob=<dir>/`) make ripgrep descend into matching ignored folders while the
- * agent's own pattern still filters files and nested ignored folders stay skipped. Reaching an entry below
- * an ignored parent also requires whitelisting that parent, which would expose its other files, so those
- * searches run a second time without the extra globs and keep only the new results that match an entry.
+ * The normal search never descends into ignored folders. A second ripgrep run adds whitelist globs
+ * (`--glob=<dir>/`) that make ripgrep descend into matching ignored folders, and keeps the agent's pattern
+ * as an override glob. Override globs bypass ignore rules, so a pattern that also matches folder names can
+ * enter other ignored folders, and reaching an entry below an ignored parent exposes the parent's other
+ * files; that run therefore keeps only paths that match an entry, before its result limit.
  */
 
 type Entry = { readonly anchored: boolean; readonly parts: readonly string[]; readonly glob: Bun.Glob }
 
 export type Plan = {
   readonly include: readonly string[]
-  readonly filter?: (file: string) => boolean
+  readonly filter: (file: string) => boolean
 }
 
 const wild = (part: string) => part === "**" || /^[*?]+$/.test(part)
@@ -60,10 +61,9 @@ export function plan(input: readonly string[], root: string, cwd: string): Plan 
   const entries = input.flatMap((item) => parse(item) ?? [])
   const found = entries.flatMap((entry) => globs(entry, base) ?? [])
   if (found.length === 0) return undefined
-  const parents = found.flatMap((item) => item.parents)
   return {
-    include: [...new Set([...found.map((item) => item.dir), ...parents])],
-    filter: parents.length > 0 ? (file) => keep(entries, file) : undefined,
+    include: [...new Set(found.flatMap((item) => [item.dir, ...item.parents]))],
+    filter: (file) => keep(entries, rel ? `${rel}/${file}` : file),
   }
 }
 
@@ -81,14 +81,14 @@ export const search = (ripgrep: Ripgrep.Interface, config: Config.Interface, roo
     const cfg = yield* config.get()
     const extra = plan(cfg.experimental?.glob_include_ignored ?? [], root, input.cwd)
     if (!extra) return yield* ripgrep.glob(input)
-    const wide = { ...input, include: [...(input.include ?? []), ...extra.include] }
-    const filter = extra.filter
-    if (!filter) return yield* ripgrep.glob(wide)
+    const wide = {
+      ...input,
+      include: [...(input.include ?? []), ...extra.include],
+      filter: (file: string) => extra.filter(file) && (input.filter?.(file) ?? true),
+    }
     const [plain, all] = yield* Effect.all([ripgrep.glob(input), ripgrep.glob(wide)], { concurrency: 2 })
     const seen = new Set(plain.items.map((item) => item.path))
-    const rel = path.relative(root, input.cwd).replaceAll("\\", "/")
-    const added = all.items.filter((item) => !seen.has(item.path) && filter(rel ? `${rel}/${item.path}` : item.path))
-    const items = [...plain.items, ...added]
+    const items = [...plain.items, ...all.items.filter((item) => !seen.has(item.path))]
     return {
       items: items.slice(0, input.limit),
       truncated: plain.truncated || all.truncated || items.length > input.limit,

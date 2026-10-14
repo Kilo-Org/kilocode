@@ -68,6 +68,10 @@ export namespace RemoteProtocol {
       // wire form omits sessionClone; remove the mobile fail-closed check
       // when every shipped CLI advertises it.
       sessionClone: z.boolean().optional(),
+      // kilocode_change - sessionCloneAtMessage: present only when the CLI
+      // accepts create_session.cloneUpToMessageId (fork at a message).
+      // Absent means unsupported; mobile hides "Fork from here".
+      sessionCloneAtMessage: z.boolean().optional(),
     })
     .optional()
   export const Heartbeat = z.object({
