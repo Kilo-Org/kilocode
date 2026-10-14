@@ -32,6 +32,8 @@ import { ContextMenu } from "@kilocode/kilo-ui/context-menu"
 import { ThinkingSelectorBase } from "../components/shared/ThinkingSelector"
 import { DeferredPopover } from "../components/shared/DeferredPopover"
 import { ProjectSelect } from "../../agent-manager/ProjectSelect"
+import { NewWorktreeDialog } from "../../agent-manager/NewWorktreeDialog"
+import { useDialog } from "@kilocode/kilo-ui/context/dialog"
 import { ProjectsSection } from "../../agent-manager/ProjectsSection"
 import { PRComments } from "../../agent-manager/pr/PRComments"
 import { PRConversation } from "../../agent-manager/pr/PRConversation"
@@ -2475,4 +2477,20 @@ export const ProjectsAvatars: Story = {
 export const ProjectsAvatars200: Story = {
   name: "Projects — organization avatars 200px",
   render: ProjectsStory,
+}
+
+// The real New Worktree dialog, so tests can drive its prompt and Enhance button.
+const NewWorktreeOpener = () => {
+  const dialog = useDialog()
+  onMount(() => dialog.show(() => <NewWorktreeDialog onClose={() => {}} mode={createModeRouter()} />))
+  return null
+}
+
+export const NewWorktreePrompt: Story = {
+  name: "NewWorktreeDialog — prompt",
+  render: () => (
+    <StoryProviders>
+      <NewWorktreeOpener />
+    </StoryProviders>
+  ),
 }
