@@ -11,8 +11,6 @@ The Kilo AI Gateway provides an OpenAI-compatible API. All endpoints use the bas
 https://ai-gateway.kilo.ai/api/v1
 ```
 
-The previous base URL, `https://api.kilo.ai/api/gateway`, still works and serves the same API, but new integrations should use `https://ai-gateway.kilo.ai/api/v1`. On the previous host, FIM completions live at `https://api.kilo.ai/api/fim/completions` and TypeSafe System One at `https://api.kilo.ai/api/gateway/typesafe/v1/systemone`.
-
 ## Chat completions
 
 Create a chat completion. This is the primary endpoint for interacting with AI models.

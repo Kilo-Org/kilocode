@@ -43,8 +43,6 @@ All gateway API requests use the following base URL:
 https://ai-gateway.kilo.ai/api/v1
 ```
 
-The previous base URL, `https://api.kilo.ai/api/gateway`, still works and serves the same API, but new integrations should use `https://ai-gateway.kilo.ai/api/v1`.
-
 ## More resources
 
 - [Quickstart](/docs/gateway/quickstart) -- Get up and running in minutes
