@@ -612,6 +612,27 @@
 
 ## [Unreleased]
 
+## [7.1.10-rc.4] - 2026-10-14
+
+### Added
+
+- Opt in to the JetBrains Marketplace error handler so crashes and freezes attributed to the plugin are reported on the plugin's Marketplace page.
+- Fork a remote session from a specific message, branching the conversation at that point.
+
+### Fixed
+
+- Show an inline notice in the chat when an attached file cannot be read.
+- Expand transcript blocks only while a block is in the actively streaming turn, so opening a session no longer auto-expands history.
+- Recover a session stuck on "Considering next steps" by re-reading the pending prompt when the session view misses it.
+- Keep the prompt draft in step with the transcript and restore the prompt text and attachments when reverting a message.
+- Keep MCP sign-in from resetting, sync the authentication warning across all open sessions, and stop the MCP stream probe from rewriting OAuth metadata.
+- Stop glob and grep include patterns from bypassing `.gitignore`.
+- Handle non-UTF-8 ripgrep matches in grep without failing.
+
+### Changed
+
+- Bundled Kilo CLI pin updated to v7.8.10.
+
 ## [7.1.10-rc.3] - 2026-10-13
 
 ### Added
