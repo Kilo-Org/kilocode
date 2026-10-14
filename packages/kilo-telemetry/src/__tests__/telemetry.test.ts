@@ -157,12 +157,13 @@ describe("Telemetry", () => {
 
 const shell = process.platform === "win32" ? test.skip : test
 
-shell("uses conda's effective client ID", async () => {
+shell("uses conda's effective client ID in events", async () => {
   const root = await mkdtemp(join(tmpdir(), "kilo-aau-"))
   const home = process.env.HOME
   const exe = process.env.CONDA_EXE
   const token = "abcdefghijklmnopqrstuv"
   const conda = join(root, "conda")
+  const capture = spyOn(Client, "capture").mockImplementation(() => {})
 
   try {
     await mkdir(join(root, ".conda"))
@@ -173,10 +174,15 @@ shell("uses conda's effective client ID", async () => {
     process.env.CONDA_EXE = conda
 
     expect(await Conda.clientToken()).toBe(token)
+    await Telemetry.init({ dataPath: root, version: "test", enabled: true })
+    Telemetry.trackCliStart()
+    expect(capture).toHaveBeenCalledWith(TelemetryEvent.CLI_START, expect.objectContaining({ aauClientToken: token }))
 
     await Bun.write(conda, "#!/bin/sh\nprintf '%s\\n' '{\"user_agent\":\"conda/26.1\"}'\n")
     expect(await Conda.clientToken()).toBeUndefined()
   } finally {
+    capture.mockRestore()
+    await Client.shutdown()
     if (home === undefined) delete process.env.HOME
     else process.env.HOME = home
     if (exe === undefined) delete process.env.CONDA_EXE
