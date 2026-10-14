@@ -54,6 +54,11 @@ export class BrowserAutomationService implements vscode.Disposable {
             if (!isRunningStatus(event.properties.status.type)) this.release(event.properties.sessionID)
             return
           }
+          // A deleted session never reports idle again.
+          if (event.type === "session.deleted") {
+            this.release(event.properties.info.id)
+            return
+          }
           if (event.type === "message.part.updated") {
             const part = event.properties.part
             if (part.type === "tool" && part.tool.startsWith(`${BrowserAutomationService.MCP_SERVER_NAME}_`))
@@ -166,7 +171,13 @@ export class BrowserAutomationService implements vscode.Disposable {
     // Keep the browser tools working with the profile that was running before.
     this.profiles.set(dir, prior)
     await this.register([dir])
-    throw new Error(`The ${label} browser profile could not start. The previous profile was restored.`)
+    if (this.registered.has(dir)) {
+      throw new Error(`The ${label} browser profile could not start. The previous profile was restored.`)
+    }
+    this.profiles.delete(dir)
+    throw new Error(
+      `The ${label} browser profile could not start, and the previous profile could not start again. Start a browser with browser_profile.`,
+    )
   }
 
   private static same(current: PlaywrightProfile | undefined, next: PlaywrightProfile): boolean {
@@ -276,8 +287,10 @@ export class BrowserAutomationService implements vscode.Disposable {
       return
     }
     const folders = this.directories()
-    for (const dir of this.profiles.keys()) {
-      if (!folders.includes(dir)) this.profiles.delete(dir)
+    for (const dir of [...this.profiles.keys(), ...this.owners.keys()]) {
+      if (folders.includes(dir)) continue
+      this.profiles.delete(dir)
+      this.owners.delete(dir)
     }
     // Only folders where an agent picked a profile have a server.
     const dirs = folders.filter((dir) => this.profiles.has(dir))

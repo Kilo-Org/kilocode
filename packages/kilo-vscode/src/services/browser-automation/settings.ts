@@ -96,7 +96,7 @@ export function playwrightRequest(
   const browser = body.browser === undefined ? current?.browser : playwrightBrowser(body.browser)
   if (!browser || !allowed.includes(browser)) {
     throw new Error(
-      `Browser "${String(body.browser)}" is not allowed. Allowed browsers: ${allowed.join(", ")}. The user can change this in Kilo Settings > Web Tools.`,
+      `Browser "${String(body.browser ?? current?.browser)}" is not allowed. Allowed browsers: ${allowed.join(", ")}. The user can change this in Kilo Settings > Web Tools.`,
     )
   }
   const device = playwrightDevice(body.device, browser)

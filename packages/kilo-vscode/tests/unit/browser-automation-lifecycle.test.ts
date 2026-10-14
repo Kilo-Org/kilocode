@@ -15,6 +15,8 @@ describe("Playwright MCP lifecycle", () => {
   let enabled: boolean
   let connected: boolean
   let failed: boolean
+  // Fail only the next MCP start.
+  let once: boolean
   let pending: Promise<void> | undefined
   let additions: string[]
   let commands: string[][]
@@ -43,6 +45,7 @@ describe("Playwright MCP lifecycle", () => {
     enabled = true
     connected = true
     failed = false
+    once = false
     pending = undefined
     additions = []
     commands = []
@@ -81,7 +84,8 @@ describe("Playwright MCP lifecycle", () => {
           commands.push(input.config.command)
           started.resolve()
           await pending
-          if (failed) {
+          if (failed || once) {
+            once = false
             down.add(directory)
             return { data: { [name]: { status: "failed", error: "MCP startup failed" } } }
           }
@@ -444,13 +448,41 @@ describe("Playwright MCP lifecycle", () => {
       expect(await select("a", { browser: "chrome" })).toMatchObject({ changed: true })
     })
 
-    test("restores the previous profile when the new one cannot start", async () => {
+    test("a deleted session gives up the browser", async () => {
+      allowed = ["chrome", "webkit"]
+      await select("a", { browser: "chrome" })
+      await expect(select("b", { browser: "webkit" })).rejects.toThrow("Another chat session")
+      emit({ type: "session.deleted", properties: { info: { id: "a" } } })
+      expect(await select("b", { browser: "webkit" })).toMatchObject({ changed: true })
+    })
+
+    test("a removed folder takes its browser and owner with it", async () => {
+      allowed = ["chrome", "webkit"]
+      folders(["/repo", "/old"])
+      await select("a", { browser: "chrome" }, "/old")
+      folders(["/repo"])
+      await Promise.all([...listeners].map((listener) => listener()))
+      folders(["/repo", "/old"])
+      await Promise.all([...listeners].map((listener) => listener()))
+      expect(await select("b", { browser: "webkit" }, "/old")).toMatchObject({ changed: true })
+    })
+
+    test("does not claim a restore that did not start", async () => {
       allowed = ["chrome", "webkit"]
       await select("a", { browser: "chrome" })
       failed = true
+      await expect(select("a", { browser: "webkit" })).rejects.toThrow("the previous profile could not start again")
+      failed = false
+      expect(await select("a")).toEqual({ allowed: ["chrome", "webkit"], changed: false })
+    })
+
+    test("restores the previous profile when the new one cannot start", async () => {
+      allowed = ["chrome", "webkit"]
+      await select("a", { browser: "chrome" })
+      once = true
       await expect(select("a", { browser: "webkit" })).rejects.toThrow("previous profile was restored")
       expect(commands.map((command) => command.at(3))).toEqual(["chrome", "webkit", "chrome"])
-      failed = false
+      expect(active.has("/repo")).toBe(true)
       expect(await select("a")).toMatchObject({ browser: "chrome" })
     })
 

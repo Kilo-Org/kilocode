@@ -52,6 +52,8 @@ const BrowserTab: Component = () => {
   const [installing, setInstalling] = createSignal<Browser[]>([])
   const [progress, setProgress] = createSignal<NonNullable<BrowserStatusLoadedMessage["progress"]>>({})
   const [sizes, setSizes] = createSignal<NonNullable<BrowserStatusLoadedMessage["sizes"]>>({})
+  // Builds this view already tried to download, so a failure is retried once per opening of Settings.
+  const tried = new Set<Build>()
   // The latest download error of each build, kept until the build is allowed again or installed.
   const [failed, setFailed] = createSignal<Partial<Record<Build, string>>>({})
 
@@ -80,6 +82,13 @@ const BrowserTab: Component = () => {
       if (msg.sizes) setSizes(msg.sizes)
       const error = msg.failed
       if (error) setFailed((prev) => ({ ...prev, [error.browser]: error.message }))
+      // An allowed build can be missing after a failed download or settings synced from another machine. Allowing it
+      // was the consent, so download it now. This is also the retry for the last allowed browser, which cannot be
+      // turned off and on.
+      for (const name of ["chromium", "firefox", "webkit"] as const) {
+        if (msg.status[name] !== "missing" || !allowed(name) || busy(name) || tried.has(name)) continue
+        install(name)
+      }
     }
   })
   onCleanup(unsubscribe)
@@ -98,6 +107,7 @@ const BrowserTab: Component = () => {
   const absent = (browser: Browser) => !build(browser) && status()[browser] === "missing"
 
   const install = (browser: Build) => {
+    tried.add(browser)
     setFailed((prev) => ({ ...prev, [browser]: undefined }))
     setInstalling((prev) => [...prev, browser])
     postMessage({ type: "installBrowser", browser })

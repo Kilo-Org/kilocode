@@ -132,7 +132,7 @@ Browser automation settings are available under **Settings → Web Tools → Bro
 
 You do not need all of them. Chrome and Edge can be enabled when they are installed on your machine. If one is not installed, its row is greyed out.
 
-Chromium, Firefox, and WebKit are Playwright builds. A missing build shows its download size, and an installed build shows the disk space it takes. When you enable one that is missing, Kilo downloads it right away. A build is several files, so the row names the file it is downloading or unpacking and its position, such as `Downloading Firefox 156.0 (1/2): 40%`. If the download fails, the row shows the reason. Disable and enable the build to try again.
+Chromium, Firefox, and WebKit are Playwright builds. A missing build shows its download size, and an installed build shows the disk space it takes. When you enable one that is missing, Kilo downloads it right away. A build is several files, so the row names the file it is downloading or unpacking and its position, such as `Downloading Firefox 156.0 (1/2): 40%`. If the download fails, the row shows the reason. Disable and enable the build, or open Settings again, to try again.
 
 Kilo downloads the build that matches its Playwright version, so do not use `npx playwright install`, which can fetch a different build. The download needs Node.js with `npx` on your machine. On Linux, a build may also need system packages that the download does not include.
 
@@ -144,7 +144,7 @@ You do not configure a browser, device, viewport, or headless mode. No browser r
 
 - `Check the checkout page in Safari on an iPhone.` starts WebKit with iPhone emulation.
 - `Does the menu also break in Firefox?` switches to Firefox on desktop.
-- `Compare the dashboard at tablet and desktop widths.` resizes the window in the current browser.
+- `Compare the dashboard at tablet and desktop widths.` resizes the window with `browser_resize`, which keeps the page. Changing the viewport through `browser_profile` restarts the browser instead.
 - `Run the check in the background.` starts the browser headless.
 
 The browser window is visible unless you ask for headless. Kilo can only use browsers you enabled under **Allowed browsers**, and it is told when one is not installed. It names the browser, device, and viewport when it reports results.

@@ -96,6 +96,10 @@ describe("Playwright profile request", () => {
 
   it("rejects browsers that are not allowed and invalid options", () => {
     expect(() => playwrightRequest({ browser: "webkit" }, current, allowed)).toThrow("not allowed")
+    // A running browser the user no longer allows is named, not shown as undefined.
+    expect(() => playwrightRequest({ device: "Pixel 7" }, { browser: "webkit", headless: false }, allowed)).toThrow(
+      'Browser "webkit" is not allowed',
+    )
     expect(() => playwrightRequest({ browser: "netscape" }, current, allowed)).toThrow("not allowed")
     expect(() => playwrightRequest({ browser: "firefox", device: "Pixel 7" }, current, allowed)).toThrow("mobile")
     expect(() => playwrightRequest({ viewport: "10x10" }, current, allowed)).toThrow("WIDTHxHEIGHT")

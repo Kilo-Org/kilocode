@@ -3,6 +3,7 @@ import { createServer, type IncomingMessage, type Server, type ServerResponse } 
 import type { Socket } from "node:net"
 import { URL } from "node:url"
 import { stripVTControlCharacters } from "node:util"
+import { setTimeout as wait } from "node:timers/promises"
 import {
   chromium,
   type BrowserContext,
@@ -191,6 +192,8 @@ function size(value: unknown): Capture {
   return { width, height }
 }
 
+// Longest wait for a resized page to lay out before an agent-sized screenshot.
+const SETTLE = 250
 const MAX_BODY = 32 * 1024
 const MAX_SCREENSHOT = 2 * 1024 * 1024
 const TIMEOUT = /ERR_CONNECTION_TIMED_OUT|ETIMEDOUT|Timeout \d+ms exceeded/i
@@ -1106,10 +1109,18 @@ export class BrowserBroker {
       const prior = entry.page.viewportSize?.()
       await entry.page.setViewportSize(size)
       try {
-        // Let responsive layout and media queries settle at the new size before the screenshot.
-        await entry.page
-          .evaluate(() => new Promise<void>((done) => requestAnimationFrame(() => requestAnimationFrame(() => done()))))
-          .catch((error: unknown) => this.opts.log("Browser resize wait failed", error))
+        // Let responsive layout and media queries settle at the new size before the screenshot. A busy renderer
+        // must not hold the stream queue, so the wait is bounded.
+        const abort = new AbortController()
+        await Promise.race([
+          entry.page
+            .evaluate(
+              () => new Promise<void>((done) => requestAnimationFrame(() => requestAnimationFrame(() => done()))),
+            )
+            .catch((error: unknown) => this.opts.log("Browser resize wait failed", error)),
+          wait(SETTLE, undefined, { signal: abort.signal }).catch(() => undefined),
+        ])
+        abort.abort()
         return await entry.page.screenshot({ type: "jpeg", quality: 70 })
       } finally {
         if (prior) await entry.page.setViewportSize(prior)

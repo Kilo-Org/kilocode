@@ -1,7 +1,8 @@
 import * as fs from "fs"
 import * as os from "os"
 import * as path from "path"
-import { spawn } from "../../util/process"
+import type { ChildProcess } from "child_process"
+import { exec, spawn } from "../../util/process"
 import { PLAYWRIGHT_MCP, PLAYWRIGHT_REVISIONS, type PlaywrightBrowser } from "./settings"
 
 export type BrowserStatus = "installed" | "missing" | "unknown"
@@ -66,15 +67,20 @@ function npx(args: string[], timeout: number, output?: (text: string) => void): 
   const child = spawn("npx", ["--prefer-offline", "-y", "-p", PLAYWRIGHT_MCP, "playwright", ...args], {
     // npx is a .cmd shim on Windows, which Node only starts through a shell. Every argument is a fixed string.
     shell: process.platform === "win32",
+    // Its own process group on Unix, so a timeout can stop npx and the Playwright process it starts.
+    detached: process.platform !== "win32",
     stdio: ["ignore", "pipe", "pipe"],
   })
   const out: string[] = []
   const err: string[] = []
+  const state = { over: false }
   const timer = setTimeout(() => {
-    child.kill()
+    state.over = true
+    stop(child)
     done.reject(new Error("The Playwright command did not finish in time."))
   }, timeout)
   child.stdout?.on("data", (chunk: Buffer) => {
+    if (state.over) return
     const text = chunk.toString("utf8")
     out.push(text)
     output?.(text)
@@ -86,6 +92,24 @@ function npx(args: string[], timeout: number, output?: (text: string) => void): 
     done.reject(new Error(reason(err.join("") || out.join("") || `The Playwright command exited with code ${code}.`)))
   })
   return done.promise.finally(() => clearTimeout(timer))
+}
+
+/** Stop a command and every process it started. */
+function stop(child: ChildProcess): void {
+  const pid = child.pid
+  if (pid === undefined) return
+  if (process.platform === "win32") {
+    // The shell runs npx, which runs Playwright, so only a tree kill reaches the download.
+    void exec("taskkill", ["/pid", String(pid), "/T", "/F"]).catch((error: unknown) =>
+      console.warn("[Kilo New] BrowserInstaller: could not stop the Playwright command:", error),
+    )
+    return
+  }
+  try {
+    process.kill(-pid, "SIGTERM")
+  } catch (error) {
+    console.warn("[Kilo New] BrowserInstaller: could not stop the Playwright command:", error)
+  }
 }
 
 async function head(url: string): Promise<number | undefined> {
@@ -363,7 +387,10 @@ export class BrowserInstaller {
     this.watchers.set(browser, watchers)
     const running = this.active.get(browser)
     if (running) return running
+    const state = { over: false }
     const report = (value: Progress) => {
+      // Output can still arrive while a timed-out command shuts down.
+      if (state.over) return
       this.percents.set(browser, value)
       for (const item of watchers) item()
     }
@@ -385,6 +412,7 @@ export class BrowserInstaller {
         })
       })
       .finally(() => {
+        state.over = true
         this.active.delete(browser)
         this.percents.delete(browser)
         this.watchers.delete(browser)

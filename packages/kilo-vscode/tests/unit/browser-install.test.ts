@@ -331,6 +331,33 @@ describe("BrowserInstaller install", () => {
     expect(await ctx.installer.check("firefox")).toBe("installed")
   })
 
+  it("ignores output that arrives after the install ended", async () => {
+    const late = Promise.withResolvers<void>()
+    const seen: unknown[] = []
+    const installer = new BrowserInstaller({
+      platform: "linux",
+      env: {},
+      home: "/home/kilo",
+      exists: () => false,
+      run: async (args, _timeout, output) => {
+        if (args.includes("--dry-run")) return DRY.webkit
+        // A command that timed out can still print while it shuts down.
+        setTimeout(() => {
+          output?.(`Downloading WebKit 26.6 (playwright webkit v2368) from ${CDN}/webkit.zip\n`)
+          late.resolve()
+        }, 0)
+        throw new Error("The Playwright command did not finish in time.")
+      },
+    })
+    await expect(installer.install("webkit", () => seen.push(installer.progress().webkit))).rejects.toThrow(
+      "did not finish in time",
+    )
+    await late.promise
+    expect(installer.progress()).toEqual({})
+    expect(installer.installing()).toEqual([])
+    expect(seen).toEqual([{ percent: 0, total: 1 }])
+  })
+
   it("does not count files that are already installed as steps", async () => {
     const ctx = setup({ files: [`${ROOT}/ffmpeg-1011/INSTALLATION_COMPLETE`] })
     const hold = Promise.withResolvers<void>()
