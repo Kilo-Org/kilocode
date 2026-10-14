@@ -361,8 +361,10 @@ class KiloSessionRpcApiImpl internal constructor(
      */
     private fun logEvent(id: String, tag: String, event: ChatEventDto, srcSid: String?) {
         val suffix = if (srcSid == null) "" else " srcSid=$srcSid"
-        val body = "${ChatLogSummary.sid(id)} $tag$suffix ${ChatLogSummary.eventBody(event)}"
-        if (promptEvent(event)) log.info(body) else log.debug { body }
+        // Build the summary inside each branch: eventBody and the string concat are only paid for
+        // when the level is enabled, matching the previous `log.debug { ... }` cost profile.
+        if (promptEvent(event)) log.info("${ChatLogSummary.sid(id)} $tag$suffix ${ChatLogSummary.eventBody(event)}")
+        else log.debug { "${ChatLogSummary.sid(id)} $tag$suffix ${ChatLogSummary.eventBody(event)}" }
     }
 }
 

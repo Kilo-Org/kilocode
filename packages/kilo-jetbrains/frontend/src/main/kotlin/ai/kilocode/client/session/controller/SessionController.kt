@@ -1709,9 +1709,12 @@ class SessionController(
         val key = dto.kind to promptRevision
         if (activityProbe == key) return
         activityProbe = key
+        // Capture the revision on the EDT, like recoverOnReconnect: reading it inside the
+        // coroutine would let the debounce key and the guard token diverge.
+        val revision = promptRevision
         LOG.info("${ChatLogSummary.sid(id)} kind=prompt-reconcile trigger=activity activity=${dto.kind} state=${model.state::class.simpleName} action=recover")
         promptRecoveryJob?.cancel()
-        promptRecoveryJob = cs.launch { recoverPending(id, promptRevision, trigger = "activity") }
+        promptRecoveryJob = cs.launch { recoverPending(id, revision, trigger = "activity") }
     }
 
     /**
@@ -1737,9 +1740,10 @@ class SessionController(
         val id = sid ?: return
         if (sessionLoadState !is SessionLoadState.Idle) return
         lastWatchdogAt = now
+        val revision = promptRevision
         LOG.info("${ChatLogSummary.sid(id)} kind=prompt-reconcile trigger=watchdog activity=none state=${model.state::class.simpleName} action=recover idle=${now - lastEventAt}ms")
         promptRecoveryJob?.cancel()
-        promptRecoveryJob = cs.launch { recoverPending(id, promptRevision, trigger = "watchdog") }
+        promptRecoveryJob = cs.launch { recoverPending(id, revision, trigger = "watchdog") }
     }
 
     /** Start the stall watchdog while a session can stall, and stop it once it cannot. */
@@ -1788,8 +1792,7 @@ class SessionController(
     }
 
     /** Rehydrate pending permissions/questions and current session status after history load or reconnect. */
-    private suspend fun recoverPending(id: String, revision: Long, trigger: String = "history") {
-        try {
+    private suspend fun recoverPending(id: String, revision: Long, trigger: String = "history") {        try {
             val permissions = sessions.pendingPermissions(directory).filter { it.sessionID == id }
             val questions = sessions.pendingQuestions(directory).filter { it.sessionID == id }
             val status = sessions.statuses.value[id]
@@ -1843,7 +1846,11 @@ class SessionController(
                     } else if (questions.isNotEmpty()) {
                         model.setState(SessionState.AwaitingQuestion(toQuestion(questions.last())))
                     } else if (live != null) {
-                        model.setState(live)
+                        // A convergence probe must not reset a more specific busy label (one set on
+                        // PartUpdated) back to "Considering next steps…"; it only needs to surface a
+                        // prompt, and the status is already correct when the model is Busy.
+                        if (live is SessionState.Busy && model.state is SessionState.Busy) Unit
+                        else model.setState(live)
                     } else {
                         seedOutcome()
                     }

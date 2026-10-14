@@ -932,6 +932,23 @@ class SessionRecoveryTest : SessionControllerTestBase() {
         assertEquals(before + 1, rpc.pendingQuestionCalls)
     }
 
+    fun `test watchdog recovery keeps a specific busy label`() {
+        projectRpc.state.value = workspaceReady()
+        val m = controller("ses_test")
+        flush()
+
+        emit(ChatEventDto.TurnOpen("ses_test"))
+        rpc.statuses.value = mapOf("ses_test" to SessionStatusDto("busy"))
+        // A long silent step sets a specific label (status() does this on PartUpdated).
+        edt { m.model.setState(SessionState.Busy("Running long tool…")) }
+
+        pause(20_000)
+        flush()
+
+        // The probe runs but must not clobber the specific label with the generic "considering" one.
+        assertEquals(SessionState.Busy("Running long tool…"), m.model.state)
+    }
+
     private fun question(id: String) = QuestionRequestDto(
         id = id,
         sessionID = "ses_test",
