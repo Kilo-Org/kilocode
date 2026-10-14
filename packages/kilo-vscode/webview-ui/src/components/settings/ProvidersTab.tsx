@@ -212,7 +212,14 @@ const ProvidersTab: Component = () => {
             </div>
             <Show when={kiloFailure()}>
               {(failure) => {
-                const { key, vars } = providerFailureMessageKey(failure())
+                // Read the failure inside a tracked call so a changed reason
+                // (e.g. network -> unauthorized) re-renders instead of keeping
+                // the previous text. A non-keyed Show does not re-run its
+                // render function when one truthy value replaces another.
+                const message = createMemo(() => {
+                  const { key, vars } = providerFailureMessageKey(failure())
+                  return language.t(key, vars)
+                })
                 return (
                   <span
                     style={{
@@ -221,7 +228,7 @@ const ProvidersTab: Component = () => {
                       "padding-left": "32px",
                     }}
                   >
-                    {language.t(key, vars)}
+                    {message()}
                   </span>
                 )
               }}

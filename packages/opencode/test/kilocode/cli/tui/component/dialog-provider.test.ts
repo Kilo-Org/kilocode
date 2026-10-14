@@ -17,6 +17,11 @@ describe("failedDescription", () => {
     expect(failedDescription("kilo", ["kilo"], failures)).toBe("(Credentials rejected (HTTP 401) — sign in again)")
   })
 
+  test("reports unauthorized credentials without a status code", () => {
+    const failures = [{ providerID: "kilo", kind: "unauthorized" as const }]
+    expect(failedDescription("kilo", ["kilo"], failures)).toBe("(Credentials rejected — sign in again)")
+  })
+
   test("reports unauthenticated without a status code", () => {
     const failures = [{ providerID: "kilo", kind: "unauthenticated" as const }]
     expect(failedDescription("kilo", ["kilo"], failures)).toBe("(Not signed in — sign in to continue)")
@@ -30,6 +35,11 @@ describe("failedDescription", () => {
   test("reports generic http failures with the status code", () => {
     const failures = [{ providerID: "kilo", kind: "http" as const, status: 503 }]
     expect(failedDescription("kilo", ["kilo"], failures)).toBe("(Provider error (HTTP 503))")
+  })
+
+  test("reports generic http failures without a status code", () => {
+    const failures = [{ providerID: "kilo", kind: "http" as const }]
+    expect(failedDescription("kilo", ["kilo"], failures)).toBe("(Provider error)")
   })
 
   test("reports schema failures", () => {
