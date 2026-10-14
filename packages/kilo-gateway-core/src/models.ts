@@ -257,9 +257,10 @@ export function imageModels(scope: Scope): Effect.Effect<ImageModel[], Failure> 
     const raw = yield* json(response, "Image models fetch failed").pipe(
       Effect.mapError((): Failure => ({ kind: "schema" })),
     )
-    const parsed = decodeCatalog(raw)
+    const parsed = decodeEnvelope(raw)
     if (Option.isNone(parsed)) return yield* Effect.fail({ kind: "schema" } satisfies Failure)
     return parsed.value.data
+      .flatMap((entry) => Option.toArray(decodeRawModel(entry)))
       .filter((model) => model.architecture?.output_modalities?.includes("image"))
       .map((model) => ({
         id: model.id,
