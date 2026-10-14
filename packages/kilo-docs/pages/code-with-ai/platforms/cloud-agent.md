@@ -50,6 +50,25 @@ If a compute billing check fails, follow the recovery action next to the compose
 
 Automatic commit and push depends on your session settings. If it is disabled, review, commit, and push the changes you want to keep.
 
+## Choosing where sessions run
+
+A Cloud Agent session runs in a sandbox, the environment that provides its compute. When your account can select a sandbox, the new-session page shows a **Sandbox** field. You can set a default sandbox for your owner account (personal or organization) and override it per repository so you do not have to pick each time.
+
+Open the Cloud Agent settings dialog from the gear at the right of the top bar. It has a **General** tab for where sessions run and a **Profiles** tab for agent environment profiles.
+
+On the **General** tab:
+
+- **Default sandbox** — the sandbox for new sessions when a repository has no override. The dialog names the sandbox that **Platform default** resolves to, so you can see what a session uses when nothing else applies.
+- **Repository overrides** — set or clear a sandbox and an [agent environment profile](#agent-environment-profiles) for an individual repository.
+
+The **Profiles** tab hosts the full profile manager: the profile list on the left and a detail pane on the right with **Overview**, **Variables**, **Setup**, **Slash Cmds**, **MCP**, **Skills**, and **Agents**.
+
+Each change saves as you make it. In an organization, members see the settings read-only; only owners and admins can change them.
+
+When you start a session, the sandbox is resolved in this order: the sandbox you pick in the new-session field, then the repository override, then the owner default, then the platform default. A saved choice that is no longer offered, or that is not available for the repository, falls through to the next level. The new-session picker preselects the sandbox that applies and tags it **Default**.
+
+Vercel sandboxes are offered for GitHub repositories only. If your account cannot select a sandbox, the settings show where sessions run as plain text and the new-session page hides the picker.
+
 ## Queueing follow-up messages
 
 The composer stays editable while a session is being prepared or finalized, so you can keep typing and send follow-up messages without waiting for the current turn to finish. Sent messages are queued and processed in order, and the composer shows the current phase while it waits. While a session is still loading, when its connection is unresolved, or when a chat is read-only, the composer does not accept submissions, but anything you have typed is preserved.
@@ -128,6 +147,8 @@ Agent environment profiles are reusable bundles of environment settings for clou
 - Setup commands (which Cloud Agent will execute before starting a session)
 
 Profiles are owned by either a user or an organization. Names are unique per owner, and each owner can have a single default profile. This lets teams share standard environment setups across multiple sessions and triggers.
+
+In the web app, manage profiles from the **Profiles** tab of the [Cloud Agent settings dialog](#choosing-where-sessions-run).
 
 ## Environment Variables & Secrets & Startup Commands
 
