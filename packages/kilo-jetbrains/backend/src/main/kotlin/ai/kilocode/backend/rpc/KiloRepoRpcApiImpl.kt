@@ -113,8 +113,9 @@ class KiloRepoRpcApiImpl internal constructor(
      */
     private suspend fun build(projectId: ProjectId?, directory: String, mutate: suspend (Path) -> Unit): RepoListDto =
         withContext(Dispatchers.IO) {
-            mutate(pinnedRoot(directory))
-            build(pinnedRoot(directory), projectId, directory)
+            val pinned = pinnedRoot(directory)
+            mutate(pinned)
+            build(pinned, projectId, directory)
         }
 
     private suspend fun build(projectId: ProjectId?, directory: String): RepoListDto =
