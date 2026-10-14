@@ -1,8 +1,10 @@
-import { generateText } from "ai"
+import { APICallError, RetryError, generateText } from "ai"
 import { randomUUID } from "crypto"
 import { mergeDeep } from "remeda"
 import { Provider } from "@/provider/provider"
 import { ProviderTransform } from "@/provider/transform"
+import { ProviderError } from "@/provider/error"
+import type { ProviderV2 } from "@opencode-ai/core/provider"
 import { AppRuntime } from "@/effect/app-runtime"
 import { Effect } from "effect"
 import * as Log from "@opencode-ai/core/util/log"
@@ -22,6 +24,14 @@ export const INSTRUCTION = [
 export function clean(text: string) {
   const stripped = text.replace(/^```\w*\n?|```$/g, "").trim()
   return stripped.replace(/^(['"])([\s\S]*)\1$/, "$2").trim()
+}
+
+/** The provider's own reason for a failed call, in the same words a chat error uses. */
+export function reason(providerID: ProviderV2.ID, err: unknown) {
+  const last = RetryError.isInstance(err) ? err.lastError : err
+  if (APICallError.isInstance(last)) return ProviderError.parseAPICallError({ providerID, error: last }).message
+  if (last instanceof Error) return last.message
+  return String(last)
 }
 
 /**
@@ -58,6 +68,9 @@ export async function enhancePrompt(text: string, signal?: AbortSignal): Promise
     // per call still satisfies the opencode API's "stable per-conversation ID" requirement.
     headers: opencodeSessionHeaders({ providerID: resolved.model.providerID, sessionID: randomUUID() }),
     messages: [{ role: "user" as const, content: `Draft prompt to enhance, not answer:\n\n${text}` }],
+  }).catch((err: unknown) => {
+    if (!signal?.aborted) log.error("failed", { err })
+    throw new Error(reason(resolved.model.providerID, err), { cause: err })
   })
 
   log.info("enhanced", { length: result.text.length })

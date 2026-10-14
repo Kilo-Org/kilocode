@@ -70,6 +70,36 @@ test("enhance-prompt returns the enhanced text to a connected client", async () 
   }
 }, 60_000)
 
+// A provider failure reaches the client with the provider's own message, not a generic server error.
+test("enhance-prompt returns the provider error message when the model call fails", async () => {
+  Flag.KILO_SERVER_PASSWORD = undefined
+  const provider = Bun.serve({
+    port: 0,
+    hostname: "127.0.0.1",
+    fetch() {
+      return Response.json(
+        { error: { message: "Incorrect API key provided", type: "invalid_request_error" } },
+        { status: 401 },
+      )
+    },
+  })
+  await using tmp = await tmpdir({ config: config(provider.url) })
+  const listener = await Server.listen({ hostname: "127.0.0.1", port: 0 })
+
+  try {
+    const response = await fetch(new URL("/enhance-prompt", listener.url), {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-kilo-directory": tmp.path },
+      body: JSON.stringify({ text: "draft prompt" }),
+    })
+    expect(response.status).toBe(422)
+    expect(await response.json()).toEqual({ message: "Incorrect API key provided" })
+  } finally {
+    await listener.stop(true)
+    await provider.stop(true)
+  }
+}, 60_000)
+
 // A dropped TCP socket, not a clean fetch abort, must still stop the model call.
 test("enhance-prompt aborts the model call when the client socket drops", async () => {
   Flag.KILO_SERVER_PASSWORD = undefined

@@ -5,7 +5,7 @@ import { EffectBridge } from "@/effect/bridge"
 import { InstanceHttpApi } from "@/server/routes/instance/httpapi/api"
 import { enhancePrompt } from "@/kilocode/enhance-prompt"
 import { disconnect } from "@/kilocode/server/sse"
-import { EnhancePromptPayload } from "../groups/enhance-prompt"
+import { EnhancePromptFailedError, EnhancePromptPayload } from "../groups/enhance-prompt"
 
 export const enhancePromptHandlers = HttpApiBuilder.group(InstanceHttpApi, "enhance-prompt", (handlers) =>
   Effect.gen(function* () {
@@ -18,6 +18,11 @@ export const enhancePromptHandlers = HttpApiBuilder.group(InstanceHttpApi, "enha
       const request = yield* HttpServerRequest.HttpServerRequest
       const abort = new AbortController()
       const text = yield* EffectBridge.fromPromise(() => enhancePrompt(ctx.payload.text, abort.signal)).pipe(
+        Effect.catchDefect((defect) =>
+          defect instanceof Error
+            ? Effect.fail(new EnhancePromptFailedError({ message: defect.message }))
+            : Effect.die(defect),
+        ),
         Effect.raceFirst(disconnect(request).pipe(Effect.andThen(Effect.interrupt))),
         Effect.onInterrupt(() => Effect.sync(() => abort.abort())),
       )
