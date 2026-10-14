@@ -209,6 +209,44 @@ test("fingerprints tokens without an issuer even when clientInfo has one", async
   )
 })
 
+test("fingerprints the stored client on a client error when client_id travels in the Authorization header", async () => {
+  const file = authFile()
+  await Effect.runPromise(
+    Effect.gen(function* () {
+      const auth = yield* service(file.fsLayer)
+      yield* auth.set(
+        "atlassian",
+        { tokens: { accessToken: "a", refreshToken: "R1" }, clientInfo: { clientId: "c1", clientSecret: "s1" } },
+        URL_A,
+      )
+
+      const marked: Expected[] = []
+      const guard = oauthGuard(async () => tokenResponse(401, { error: "invalid_client" }), {
+        name: "atlassian",
+        serverUrl: URL_A,
+        auth,
+        provider: { markRejected: (e) => marked.push(e) },
+      })
+
+      // client_secret_basic: no client_id in the form body, only the stored refresh token.
+      const body = new URLSearchParams({ grant_type: "refresh_token", refresh_token: "R1" })
+      yield* Effect.promise(() =>
+        guard(TOKEN_URL, { method: "POST", body, headers: { authorization: "Basic YzE6czE=" } }),
+      )
+
+      expect(marked).toHaveLength(1)
+      expect(marked[0].clientId).toBe("c1")
+      expect(marked[0].refreshToken).toBeUndefined()
+
+      const outcome = yield* auth.invalidate("atlassian", "client", marked[0])
+      expect(outcome._tag).toBe("cleared")
+      const entry = yield* auth.get("atlassian")
+      expect(entry?.clientInfo).toBeUndefined()
+      expect(entry?.tokens?.refreshToken).toBe("R1")
+    }),
+  )
+})
+
 test("fingerprints the client binding on a client error", async () => {
   const file = authFile()
   await Effect.runPromise(

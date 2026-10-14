@@ -48,6 +48,16 @@ test("maps all to a client-scoped conditional clear using the recorded fingerpri
   expect(calls[0].expected).toMatchObject({ clientId: "c1" })
 })
 
+test("falls back to the URL-bound client when all is raised without a recorded fingerprint", async () => {
+  const { auth, calls } = recordingAuth()
+  // A rejected client that the guard could not fingerprint must still be cleared, otherwise a
+  // stale client (for example an expired secret) would be retried forever.
+  await provider(auth).invalidateCredentials("all")
+  expect(calls).toHaveLength(1)
+  expect(calls[0].type).toBe("client")
+  expect(calls[0].expected).toEqual({ serverUrl: "https://mcp.example.com/mcp" })
+})
+
 test("clears the recorded fingerprint after use", async () => {
   const { auth, calls } = recordingAuth()
   const p = provider(auth)

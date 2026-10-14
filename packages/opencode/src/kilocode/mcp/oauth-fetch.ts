@@ -63,15 +63,20 @@ export function oauthGuard(base: BaseFetch, args: OAuthFetchArgs): BaseFetch {
     // binding. Pinning a field from the other credential would make `matches` compare it against a
     // field the stored credential does not carry and refuse to clear a genuinely rejected value.
     const tokenError = error === "invalid_grant"
-    const matchesRefresh = tokenError && refreshToken != null && entry?.tokens?.refreshToken === refreshToken
-    const matchesClient = !tokenError && submittedClientId != null && entry?.clientInfo?.clientId === submittedClientId
+    const sameRefresh = refreshToken != null && entry?.tokens?.refreshToken === refreshToken
+    // A client authenticating with `client_secret_basic` sends its id in the Authorization header,
+    // not the form body, so a still-stored refresh token also proves this request used the stored
+    // client binding.
+    const sameClient =
+      entry?.clientInfo != null &&
+      (submittedClientId != null ? entry.clientInfo.clientId === submittedClientId : sameRefresh)
     // Only fingerprint a credential the store already holds, so we never clear a value
     // that some other operation wrote while this request was in flight.
-    if (matchesRefresh || matchesClient) {
+    if (tokenError ? sameRefresh : sameClient) {
       args.provider.markRejected({
         serverUrl: args.serverUrl,
-        refreshToken: matchesRefresh ? refreshToken : undefined,
-        clientId: matchesClient ? submittedClientId : undefined,
+        refreshToken: tokenError ? refreshToken : undefined,
+        clientId: tokenError ? undefined : entry?.clientInfo?.clientId,
         issuer: tokenError ? entry?.tokens?.issuer : entry?.clientInfo?.issuer,
       })
     }

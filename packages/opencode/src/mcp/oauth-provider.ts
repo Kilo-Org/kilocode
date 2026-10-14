@@ -205,14 +205,17 @@ export class McpOAuthProvider implements OAuthClientProvider {
     // kilocode_change start - automatic invalidation is conditional. The fetch guard
     // that observed the rejected OAuth request records the exact credential it presented
     // here, then this clears only that credential and only if a newer one has not replaced
-    // it. Without a recorded expectation the entry is kept, so a blind delete can never
-    // wipe a concurrent rotation.
-    const expected = this.rejected
-    if (!expected) return
-    this.rejected = undefined
-    // "all" is raised for a rejected client registration; clear the client binding but keep any
-    // tokens so a re-register can reuse them if the server still accepts them.
+    // it. Tokens without a recorded expectation are kept: refresh tokens rotate, so a blind
+    // delete could wipe a concurrent rotation, and the SDK retry re-reads the newer value.
     const scope = type === "tokens" ? "tokens" : "client"
+    const recorded = this.rejected
+    this.rejected = undefined
+    if (!recorded && scope === "tokens") return
+    // "all"/"client" are raised for a rejected client (`invalid_client`/`unauthorized_client`);
+    // clear the client binding but keep any tokens. Without a recorded fingerprint, fall back to
+    // the client bound to this server URL: a stale client (for example an expired secret) would
+    // otherwise be retried forever, and client registrations do not rotate like refresh tokens.
+    const expected = recorded ?? { serverUrl: this.serverUrl }
     const name = this.mcpName
     const invalidate = this.auth.invalidate(name, scope, expected)
     // Diagnose automatic invalidation: "cleared" means the rejected credential was still the
@@ -220,7 +223,13 @@ export class McpOAuthProvider implements OAuthClientProvider {
     await Effect.runPromise(
       invalidate.pipe(
         Effect.tap((result) =>
-          Effect.logInfo("MCP OAuth automatic invalidation", { server: name, type, scope, outcome: result._tag }),
+          Effect.logInfo("MCP OAuth automatic invalidation", {
+            server: name,
+            type,
+            scope,
+            binding: recorded ? "request" : "url",
+            outcome: result._tag,
+          }),
         ),
         Effect.asVoid,
       ),
