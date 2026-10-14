@@ -5,6 +5,12 @@ import type { Match } from "@opencode-ai/schema/filesystem"
 // Decode with lossy UTF-8 so valid multi-byte sequences survive intact and only
 // truly undecodable bytes become U+FFFD. This avoids guessing the source encoding
 // (which could misrepresent content to the LLM) and keeps valid portions readable.
+//
+// Caveat: submatch start/end are ripgrep byte offsets. On mixed-encoding lines
+// (valid UTF-8 multi-byte sequences alongside invalid bytes), the decoded text has
+// fewer characters than raw bytes, so the offsets no longer index into the decoded
+// string. Nothing in-repo consumes these offsets for slicing today; if that changes,
+// recompute them after decoding or drop them for bytes-decoded records.
 
 /** ripgrep `arbitrary data` (`{text}` or `{bytes}`) normalized to `{text}`. */
 export const Data = Schema.Union([
