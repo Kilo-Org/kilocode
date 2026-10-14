@@ -38,12 +38,11 @@ export default Runtime.handler(
 )
 
 export async function resolveConfigPath(directory: string) {
-  const candidates = [
-    path.join(directory, "opencode.json"),
-    path.join(directory, "opencode.jsonc"),
-    path.join(directory, ".opencode", "opencode.json"),
-    path.join(directory, ".opencode", "opencode.jsonc"),
-  ]
+  // kilocode_change start - Kilo config names, with .kilo and .kilocode before root files, like Kilo v1
+  const candidates = [".kilo", ".kilocode", "."].flatMap((parent) =>
+    ["kilo.jsonc", "kilo.json", "opencode.jsonc", "opencode.json"].map((name) => path.join(directory, parent, name)),
+  )
+  // kilocode_change end
   for (const candidate of candidates) {
     if (
       await stat(candidate).then(
@@ -53,7 +52,7 @@ export async function resolveConfigPath(directory: string) {
     )
       return candidate
   }
-  return candidates[0]
+  return path.join(directory, "kilo.json") // kilocode_change - new files are kilo.json, like Kilo v1
 }
 
 async function write(configPath: string, name: string, server: unknown) {
