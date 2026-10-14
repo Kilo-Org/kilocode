@@ -28,7 +28,7 @@ function probe(env: Record<string, string>) {
       openrouter: constants.KILO_OPENROUTER_BASE,
       gateway: url.resolveKiloGatewayBaseUrl(),
       router: url.resolveKiloOpenRouterBaseUrl(),
-      audio: url.resolveKiloGatewayUrl("audio/transcriptions", "gateway/v1/audio/transcriptions"),
+      audio: url.resolveKiloGatewayUrl("audio/transcriptions"),
       fim: fim.resolveFimTarget().url,
       edit: edit.resolveEditTarget().url,
       calls,
@@ -47,8 +47,10 @@ describe("resolveKiloAiGatewayBase", () => {
     expect(resolveKiloAiGatewayBase({})).toBe("https://ai-gateway.kilo.ai/api/v1")
   })
 
-  test("keeps legacy routing when only KILO_API_URL is set", () => {
-    expect(resolveKiloAiGatewayBase({ KILO_API_URL: "http://localhost:3000" })).toBeUndefined()
+  test("uses the API app's gateway rewrite when only KILO_API_URL is set", () => {
+    expect(resolveKiloAiGatewayBase({ KILO_API_URL: "http://localhost:3000/" })).toBe(
+      "http://localhost:3000/api/gateway/v1",
+    )
   })
 
   test("prefers KILO_AI_GATEWAY_URL over KILO_API_URL", () => {
@@ -83,19 +85,19 @@ describe("gateway traffic by environment", () => {
     })
   })
 
-  test("keeps legacy API routes when only KILO_API_URL is set", () => {
+  test("routes through KILO_API_URL/api/gateway/v1 when only KILO_API_URL is set", () => {
     expect(probe({ KILO_API_URL: "http://localhost:3000" })).toEqual({
-      openrouter: "http://localhost:3000/api/openrouter",
-      gateway: "http://localhost:3000/api/gateway/",
-      router: "http://localhost:3000/api/openrouter/",
+      openrouter: "http://localhost:3000/api/gateway/v1",
+      gateway: "http://localhost:3000/api/gateway/v1/",
+      router: "http://localhost:3000/api/gateway/v1/",
       audio: "http://localhost:3000/api/gateway/v1/audio/transcriptions",
-      fim: "http://localhost:3000/api/fim/completions",
-      edit: "http://localhost:3000/api/edit/completions",
+      fim: "http://localhost:3000/api/gateway/v1/fim/completions",
+      edit: "http://localhost:3000/api/gateway/v1/edit/completions",
       calls: [
-        "http://localhost:3000/api/openrouter/models",
-        "http://localhost:3000/api/organizations/org-1/models",
-        "http://localhost:3000/api/gateway/transcription-models",
-        "http://localhost:3000/api/gateway/embedding-models",
+        "http://localhost:3000/api/gateway/v1/models",
+        "http://localhost:3000/api/gateway/v1/organizations/org-1/models",
+        "http://localhost:3000/api/gateway/v1/transcription-models",
+        "http://localhost:3000/api/gateway/v1/embedding-models",
       ],
     })
   })

@@ -434,7 +434,7 @@ export function createKiloRoutes(deps: KiloRoutesDeps) {
           [HEADER_FEATURE]: "vscode-extension",
         }
 
-        const response = await fetch(resolveKiloGatewayUrl("audio/transcriptions", "gateway/v1/audio/transcriptions"), {
+        const response = await fetch(resolveKiloGatewayUrl("audio/transcriptions"), {
           method: "POST",
           headers,
           signal: c.req.raw.signal,

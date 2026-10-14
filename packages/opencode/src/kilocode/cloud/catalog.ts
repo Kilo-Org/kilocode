@@ -2,6 +2,7 @@ import {
   buildKiloHeaders,
   DEFAULT_KILO_API_URL,
   ENV_KILO_AI_GATEWAY_URL,
+  ENV_KILO_API_URL,
   getDefaultHeaders,
   getKiloUrlFromToken,
   resolveKiloAiGatewayBase,
@@ -147,12 +148,12 @@ export namespace CloudCatalog {
       return yield* secure(() => resolveKiloOpenRouterBaseUrl({ baseURL: value }), !!raw || value !== fallback)
     })
 
-    // AI gateway root for model listing. Undefined when only the legacy KILO_API_URL
-    // is set or the token embeds its own URL; those keep using the API app routes.
+    // AI gateway root for model listing. Undefined when the token embeds its own URL,
+    // which keeps using the API app routes on that URL.
     const gateway = Effect.fn("CloudCatalog.gateway")(function* (input: Input) {
-      const root = resolveKiloAiGatewayBase(env)
-      if (!root || getKiloUrlFromToken("", Redacted.value(input.token))) return undefined
-      return yield* secure(() => `${root}/`, !!env[ENV_KILO_AI_GATEWAY_URL]?.trim())
+      if (getKiloUrlFromToken("", Redacted.value(input.token))) return undefined
+      const loopback = !!env[ENV_KILO_AI_GATEWAY_URL]?.trim() || !!env[ENV_KILO_API_URL]?.trim()
+      return yield* secure(() => `${resolveKiloAiGatewayBase(env)}/`, loopback)
     })
 
     const models = Effect.fn("CloudCatalog.models")(function* (input: Input) {

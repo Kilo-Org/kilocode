@@ -169,6 +169,23 @@ it.instance("lists models from KILO_AI_GATEWAY_URL while defaults stay on KILO_A
   )
 })
 
+it.instance("lists models through KILO_API_URL/api/gateway/v1 when only KILO_API_URL is set", () => {
+  const urls: string[] = []
+  return lookups.pipe(
+    Effect.provide(recorder({ KILO_API_URL: "http://127.0.0.1:3000" }, urls)),
+    Effect.tap(() =>
+      Effect.sync(() =>
+        expect(urls).toEqual([
+          "http://127.0.0.1:3000/api/gateway/v1/models",
+          "http://127.0.0.1:3000/api/gateway/v1/organizations/org-1/models",
+          "http://127.0.0.1:3000/api/defaults",
+          "http://127.0.0.1:3000/api/organizations/org-1/defaults",
+        ]),
+      ),
+    ),
+  )
+})
+
 it.instance("rejects insecure non-loopback AI gateway overrides", () =>
   Effect.gen(function* () {
     const catalog = yield* CloudCatalog.Service
@@ -278,11 +295,11 @@ it.instance(
           model: "anthropic/explicit",
           organizationID: explicitID,
         })
-        expect(requests.map((request) => request.path)).toEqual([`/api/organizations/${explicitID}/models`])
+        expect(requests.map((request) => request.path)).toEqual([`/api/gateway/v1/organizations/${explicitID}/models`])
         expect(
           requests.every(
             (request) =>
-              request.path.startsWith(`/api/organizations/${explicitID}/`) &&
+              request.path.startsWith(`/api/gateway/v1/organizations/${explicitID}/`) &&
               request.authorization === "Bearer stored-token" &&
               request.feature === "kilo-cli" &&
               request.organization === explicitID,
@@ -310,7 +327,7 @@ it.instance(
           const resolved = yield* CloudDefaults.resolve()
           expect(resolved.mode).toBe("code")
           expect(resolved.model).toBe("anthropic/repository")
-          expect(requests.map((request) => request.path)).toEqual(["/api/openrouter/models"])
+          expect(requests.map((request) => request.path)).toEqual(["/api/gateway/v1/models"])
           expect(requests.every((request) => request.organization === null)).toBe(true)
         }).pipe(
           Effect.provide(
@@ -372,7 +389,7 @@ it.instance(
         Effect.tap((resolved) =>
           Effect.sync(() => {
             expect(resolved.model).toBe("anthropic/default")
-            expect(requests.map((request) => request.path)).toEqual(["/api/openrouter/models", "/api/defaults"])
+            expect(requests.map((request) => request.path)).toEqual(["/api/gateway/v1/models", "/api/defaults"])
           }),
         ),
         Effect.provide(
@@ -488,7 +505,9 @@ it.instance(
             model: "anthropic/mode",
             organizationID,
           })
-          expect(requests.map((request) => request.path)).toEqual([`/api/organizations/${organizationID}/models`])
+          expect(requests.map((request) => request.path)).toEqual([
+            `/api/gateway/v1/organizations/${organizationID}/models`,
+          ])
           expect(
             requests.every(
               (request) => request.authorization === "Bearer stored-token" && request.organization === organizationID,
