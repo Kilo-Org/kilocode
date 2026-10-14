@@ -2,8 +2,8 @@
   "$comment": "Shared-patch baseline (U-L3-01). Read by script/check-shared-patches.ts and script/check-opencode-annotations.ts. Each shared upstream file that Kilo adds or changes needs an entry: rung (3 = seam patch, 4 = feature patch) and the missing seam. `unmarked` allows lines without markers and states why. Raise a limit only in the PR that adds the patch, and lower it when a patch goes away.",
   "limits": {
     "files": 5,
-    "markedLines": 5,
-    "unmarkedLines": 2,
+    "markedLines": 20,
+    "unmarkedLines": 13,
     "deletedFiles": 0
   },
   "files": {
@@ -17,8 +17,8 @@
     },
     ".gitignore": {
       "rung": 3,
-      "seam": "Ignore the isolated `bun dev` profile `.kilo-v2-dev/` (script/dev-isolated.ts). Goes away when the Kilo host owns the dev entry (U-E0-01).",
-      "unmarked": "One ignore pattern. A gitignore line cannot carry an inline comment."
+      "seam": "Ignore Kilo-only local dev profiles (`.kilo-v2-dev/` from script/dev-isolated.ts and `.kilo-dev/`), `telemetry-id`, generated dependency installs, merge reports, and JetBrains state under `.kilo/`, and `packages/app/.artifacts/`. No seam: root gitignore rules cannot live in a Kilo-owned file. Reconciled by 3-way merge during upstream syncs; goes away when the Kilo host owns the root and dev entry (U-E0-01).",
+      "unmarked": "Twelve ignore patterns. A gitignore pattern line cannot carry an inline comment, so each pattern is preceded by a `# kilocode_change:` comment line."
     },
     "package.json": {
       "rung": 3,
