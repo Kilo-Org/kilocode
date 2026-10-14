@@ -174,7 +174,7 @@ export const CronDeleteTool = Tool.define<typeof CronDeleteParams, CronDeleteMet
             title: "Deleted cron task",
             output:
               "unreadable" in removed
-                ? `Deleted cron task ${removed.id} (unreadable task record).`
+                ? `Deleted cron task ${removed.id}.`
                 : `Deleted cron task ${removed.id} (next ${new Date(removed.dueAt).toISOString()}).`,
             metadata: { id: removed.id, deleted: true },
           }

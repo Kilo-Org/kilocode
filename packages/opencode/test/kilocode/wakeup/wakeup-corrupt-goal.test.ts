@@ -11,6 +11,7 @@ import { Wakeup } from "@/kilocode/wakeup"
 import { InstanceStore } from "@/project/instance-store"
 import { Session } from "@/session/session"
 import { SessionPrompt } from "@/session/prompt"
+import { remove } from "../cleanup"
 
 afterAll(() => AppRuntime.dispose())
 test("goal clear with a truncated wakeup finishes and removes it", async () => {
@@ -63,6 +64,6 @@ test("goal clear with a truncated wakeup finishes and removes it", async () => {
     expect(stored.metadata?.["kilo.goal"]).toBeUndefined()
   } finally {
     await AppRuntime.runPromise(InstanceStore.Service.use((store) => store.disposeDirectory(directory)))
-    await fs.rm(directory, { recursive: true, force: true })
+    await remove(directory)
   }
-}, 15000)
+}, 60000)

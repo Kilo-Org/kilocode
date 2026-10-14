@@ -75,7 +75,7 @@ export const CancelWakeupTool = Tool.define<typeof Params, Meta, Wakeup.Service,
             title: "Cancelled wakeup",
             output:
               "unreadable" in removed
-                ? `Cancelled wakeup ${removed.id} (unreadable task record).`
+                ? `Cancelled wakeup ${removed.id}.`
                 : `Cancelled wakeup ${removed.id} (${new Date(removed.dueAt).toISOString()}).`,
             metadata: { id: removed.id, cancelled: true },
           }

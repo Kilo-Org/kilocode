@@ -183,6 +183,20 @@ export namespace Wakeup {
         return undefined
       })
 
+      const failedClaim = (info: Info | CronInfo, kind: "wakeup" | "cron", cause: Cause.Cause<never>) => {
+        if (Cause.hasInterrupts(cause)) return Effect.interrupt
+        const activeTimers = kind === "wakeup" ? timers : cronTimers
+        const activeEntries = kind === "wakeup" ? entries : cronEntries
+        activeTimers.delete(info.id)
+        activeEntries.delete(info.id)
+        return Effect.logError("scheduled task fire claim failed", {
+          sessionID: info.sessionID,
+          id: info.id,
+          kind,
+          cause,
+        })
+      }
+
       const fireNow = (info: Info, inPlace = false): Effect.Effect<void> =>
         Effect.gen(function* () {
           if (firing.has(info.id)) return
@@ -193,12 +207,14 @@ export namespace Wakeup {
             const claim = yield* locked(
               info.sessionID,
               Effect.gen(function* () {
-                const current = yield* read(key(info))
+                const stored = yield* readCancel<Info>(key(info))
+                const current = stored && ("unreadable" in stored ? info : stored)
                 if (!current) return undefined
                 yield* storage.remove(key(current))
                 return current
               }),
-            )
+            ).pipe(Effect.catchCause((cause) => failedClaim(info, "wakeup", cause).pipe(Effect.as(undefined))))
+            if (!claim) return
             if (Option.isNone(claim)) {
               yield* arm(info, 2000)
               return
@@ -249,12 +265,14 @@ export namespace Wakeup {
           const claim = yield* locked(
             task.sessionID,
             Effect.gen(function* () {
-              const current = yield* readCron(cronKey(task))
+              const stored = yield* readCancel<CronInfo>(cronKey(task))
+              const current = stored && ("unreadable" in stored ? task : stored)
               if (!current) return { state: "gone" as const }
               if (current.dueAt !== task.dueAt) return { state: "moved" as const, next: current }
               return { state: "won" as const, next: yield* advance(current) }
             }),
-          )
+          ).pipe(Effect.catchCause((cause) => failedClaim(task, "cron", cause).pipe(Effect.as(undefined))))
+          if (!claim) return
           if (Option.isNone(claim)) {
             yield* armCron(task, 2000)
             return
@@ -593,9 +611,7 @@ export namespace Wakeup {
         let count = 0
         for (const kind of ["wakeup", "cron"] as const) {
           const held = kind === "wakeup" ? yield* list({ sessionID }) : yield* cronList({ sessionID })
-          const keys = yield* storage.list([kind, sessionID]).pipe(Effect.orDie)
-          const ids = new Set([...held.map((info) => info.id), ...keys.map((target) => ID.make(target.at(-1)!))])
-          for (const id of ids) {
+          for (const { id } of held) {
             const attempt: Effect.Effect<Info | CronInfo | Unreadable | undefined, Busy> =
               kind === "wakeup" ? cancel(id, sessionID, notify, true) : cronCancel(id, sessionID, notify, true)
             yield* attempt.pipe(
