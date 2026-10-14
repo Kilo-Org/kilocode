@@ -32,6 +32,7 @@ import com.intellij.ui.components.JBLabel
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.util.ui.UIUtil
 import javax.swing.JComponent
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -106,7 +107,17 @@ internal class McpSettingsUi(
             LOG.warn("mcp settings fetch skipped runtime status: missing project directory config=${cfg.size}")
             emptyMap()
         } else {
-            behavior.mcpStatus(dir).associateBy { it.name }
+            // A failed runtime read must not replace the whole settings list with an error: fall
+            // back to the configured servers without status pills, as before this page used a
+            // strict read. Cancellation still propagates so a dismissed page stops its load.
+            try {
+                behavior.mcpStatus(dir).associateBy { it.name }
+            } catch (err: CancellationException) {
+                throw err
+            } catch (err: Exception) {
+                LOG.warn("mcp settings fetch runtime status failed dir=$dir", err)
+                emptyMap()
+            }
         }
         // Reconciles the composer's needs-auth indicator with runtime truth on every visit to this
         // page, so a server removed outside the IDE (or whose removal RPC failed after an optimistic

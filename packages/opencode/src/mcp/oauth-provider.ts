@@ -205,32 +205,26 @@ export class McpOAuthProvider implements OAuthClientProvider {
     // kilocode_change start - automatic invalidation is conditional. The fetch guard
     // that observed the rejected OAuth request records the exact credential it presented
     // here, then this clears only that credential and only if a newer one has not replaced
-    // it. Without a recorded expectation (or when all credentials are requested) fall back
-    // to keeping the entry, so a blind delete can never wipe a concurrent rotation.
-    if (type === "tokens" || type === "client") {
-      const expected = this.rejected
-      if (expected) {
-        this.rejected = undefined
-        const name = this.mcpName
-        const invalidate = this.auth.invalidate(name, type, expected)
-        // Diagnose automatic invalidation: "cleared" means the rejected credential was still the
-        // stored one, "superseded" means a concurrent rotation won and the stored tokens were kept.
-        await Effect.runPromise(
-          invalidate.pipe(
-            Effect.tap((result) =>
-              Effect.logInfo("MCP OAuth automatic invalidation", { server: name, type, outcome: result._tag }),
-            ),
-            Effect.asVoid,
-          ),
-        )
-        return
-      }
-      return
-    }
-    // "all" is only raised for a rejected client registration; clear the client binding but
-    // keep any tokens so a re-register can reuse them if the server still accepts them.
-    const entry = await Effect.runPromise(this.auth.get(this.mcpName))
-    if (entry?.clientInfo) await Effect.runPromise(this.auth.invalidate(this.mcpName, "client", { serverUrl: this.serverUrl }))
+    // it. Without a recorded expectation the entry is kept, so a blind delete can never
+    // wipe a concurrent rotation.
+    const expected = this.rejected
+    if (!expected) return
+    this.rejected = undefined
+    // "all" is raised for a rejected client registration; clear the client binding but keep any
+    // tokens so a re-register can reuse them if the server still accepts them.
+    const scope = type === "tokens" ? "tokens" : "client"
+    const name = this.mcpName
+    const invalidate = this.auth.invalidate(name, scope, expected)
+    // Diagnose automatic invalidation: "cleared" means the rejected credential was still the
+    // stored one, "superseded" means a concurrent rotation won and the stored credential was kept.
+    await Effect.runPromise(
+      invalidate.pipe(
+        Effect.tap((result) =>
+          Effect.logInfo("MCP OAuth automatic invalidation", { server: name, type, scope, outcome: result._tag }),
+        ),
+        Effect.asVoid,
+      ),
+    )
     // kilocode_change end
   }
 }

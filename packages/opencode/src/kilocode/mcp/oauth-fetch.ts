@@ -58,18 +58,21 @@ export function oauthGuard(base: BaseFetch, args: OAuthFetchArgs): BaseFetch {
     if (error !== "invalid_grant" && error !== "invalid_client" && error !== "unauthorized_client") return response
 
     const entry = await Effect.runPromise(args.auth.getForUrl(args.name, args.serverUrl))
-    const matchesRefresh = refreshToken != null && entry?.tokens?.refreshToken === refreshToken
-    const matchesClient = submittedClientId != null && entry?.clientInfo?.clientId === submittedClientId
+    // Pin only the credential the SDK will invalidate, matching the mapped invalidation type:
+    // `invalid_grant` clears tokens, while `invalid_client`/`unauthorized_client` clear the client
+    // binding. Pinning a field from the other credential would make `matches` compare it against a
+    // field the stored credential does not carry and refuse to clear a genuinely rejected value.
+    const tokenError = error === "invalid_grant"
+    const matchesRefresh = tokenError && refreshToken != null && entry?.tokens?.refreshToken === refreshToken
+    const matchesClient = !tokenError && submittedClientId != null && entry?.clientInfo?.clientId === submittedClientId
     // Only fingerprint a credential the store already holds, so we never clear a value
     // that some other operation wrote while this request was in flight.
     if (matchesRefresh || matchesClient) {
       args.provider.markRejected({
         serverUrl: args.serverUrl,
-        refreshToken,
-        clientId: submittedClientId ?? entry?.clientInfo?.clientId,
-        // Pin the issuer the entry is actually bound to, not the freshly discovered one, so the
-        // comparison in the store matches the credential we are about to clear.
-        issuer: entry?.tokens?.issuer ?? entry?.clientInfo?.issuer,
+        refreshToken: matchesRefresh ? refreshToken : undefined,
+        clientId: matchesClient ? submittedClientId : undefined,
+        issuer: tokenError ? entry?.tokens?.issuer : entry?.clientInfo?.issuer,
       })
     }
     return response

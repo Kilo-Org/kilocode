@@ -27,9 +27,12 @@ export interface Expected {
 export type Outcome =
   /** The stored credential matched the expectation and the requested fields were cleared. */
   | { _tag: "cleared"; entry: McpAuth.Entry }
-  /** A newer credential replaced the rejected one; nothing was deleted. */
+  /**
+   * A different credential is stored now — either a newer one from a concurrent rotation, or an
+   * entry bound to a different server URL. Nothing was deleted.
+   */
   | { _tag: "superseded" }
-  /** No entry exists, or it is bound to a different URL. */
+  /** No entry exists for this server. */
   | { _tag: "missing" }
 
 /**

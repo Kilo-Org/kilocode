@@ -173,3 +173,70 @@ test("leaves malformed and network errors unmarked", async () => {
     }),
   )
 })
+
+test("fingerprints tokens without an issuer even when clientInfo has one", async () => {
+  const file = authFile()
+  await Effect.runPromise(
+    Effect.gen(function* () {
+      const auth = yield* service(file.fsLayer)
+      // Stored tokens carry no issuer while the client binding does; the tokens fingerprint must
+      // still match the stored tokens so a genuinely rejected refresh is cleared, not left stuck.
+      yield* auth.set(
+        "atlassian",
+        { tokens: { accessToken: "a", refreshToken: "R1" }, clientInfo: { clientId: "c1", issuer: "https://auth.example.com" } },
+        URL_A,
+      )
+
+      const marked: Expected[] = []
+      const guard = oauthGuard(async () => tokenResponse(400, { error: "invalid_grant" }), {
+        name: "atlassian",
+        serverUrl: URL_A,
+        auth,
+        provider: { markRejected: (e) => marked.push(e) },
+      })
+
+      const body = new URLSearchParams({ grant_type: "refresh_token", refresh_token: "R1" })
+      yield* Effect.promise(() => guard(TOKEN_URL, { method: "POST", body }))
+
+      expect(marked).toHaveLength(1)
+      expect(marked[0].refreshToken).toBe("R1")
+      expect(marked[0].issuer).toBeUndefined()
+
+      // The recorded fingerprint must actually match and clear the stored tokens.
+      const outcome = yield* auth.invalidate("atlassian", "tokens", marked[0])
+      expect(outcome._tag).toBe("cleared")
+    }),
+  )
+})
+
+test("fingerprints the client binding on a client error", async () => {
+  const file = authFile()
+  await Effect.runPromise(
+    Effect.gen(function* () {
+      const auth = yield* service(file.fsLayer)
+      yield* auth.set(
+        "atlassian",
+        { tokens: { accessToken: "a", refreshToken: "R1", issuer: "https://auth.example.com" }, clientInfo: { clientId: "c1", issuer: "https://auth.example.com" } },
+        URL_A,
+      )
+
+      const marked: Expected[] = []
+      const guard = oauthGuard(async () => tokenResponse(400, { error: "invalid_client" }), {
+        name: "atlassian",
+        serverUrl: URL_A,
+        auth,
+        provider: { markRejected: (e) => marked.push(e) },
+      })
+
+      const body = new URLSearchParams({ grant_type: "refresh_token", refresh_token: "R1", client_id: "c1" })
+      yield* Effect.promise(() => guard(TOKEN_URL, { method: "POST", body }))
+
+      expect(marked).toHaveLength(1)
+      expect(marked[0].clientId).toBe("c1")
+      expect(marked[0].issuer).toBe("https://auth.example.com")
+
+      const outcome = yield* auth.invalidate("atlassian", "client", marked[0])
+      expect(outcome._tag).toBe("cleared")
+    }),
+  )
+})

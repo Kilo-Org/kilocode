@@ -132,13 +132,13 @@ class KiloMcpAuthService internal constructor(
      * other open sessions must re-read their runtime status to drop or raise their badge. A failed
      * read for one directory leaves that directory's last-known set intact.
      */
-    suspend fun refreshAll(origin: String) {
+    suspend fun refreshAll(origin: String, skip: String? = null) {
         start()
         if (origin.isBlank()) return
         val dirs = buildSet {
             add(origin)
             addAll(_needsAuth.value.keys)
-        }
+        } - setOfNotNull(skip)
         coroutineScope {
             for (dir in dirs) launch { refresh(dir) }
         }
@@ -257,8 +257,17 @@ class KiloMcpAuthService internal constructor(
             reconnected = disconnected && connected
             return reconnected
         } finally {
-            refreshAll(dir)
-            if (!reconnected) markNeedsAuth(dir, name)
+            // Force the needs-auth badge before any suspending refresh: `refreshAll` can propagate
+            // cancellation, and `_needsAuth` is app-level state, so a cancelled reset must not skip
+            // the badge for a failed reconnect. The origin is excluded from the refresh when the
+            // reconnect failed, because its runtime status may still read "connected" and would
+            // immediately drop the forced badge; sibling directories are still refreshed.
+            if (reconnected) {
+                refreshAll(dir)
+            } else {
+                markNeedsAuth(dir, name)
+                refreshAll(dir, skip = dir)
+            }
         }
     }
 
