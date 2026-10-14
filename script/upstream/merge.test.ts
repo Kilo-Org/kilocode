@@ -52,7 +52,7 @@ test("syncs the next release with a merge commit and keeps deleted workflows del
 
 test("stops for a new upstream workflow and a code conflict, with the merge in progress", async () => {
   await using r = await fixture()
-  await r.write(".github/workflows/deploy-update.yml", "name: deploy-update\n")
+  await r.write(".github/workflows/upstream-new.yml", "name: upstream-new\n")
   await r.write("src/a.ts", "export const a = 2\n")
   await r.release("v2.0.27", "2026-10-12T00:00:00Z")
   await linkUpstream(r)
@@ -62,7 +62,7 @@ test("stops for a new upstream workflow and a code conflict, with the merge in p
 
   const result = await run(r)
   expect(result.code).toBe(1)
-  expect(result.output).toContain("unexpected workflow: deploy-update.yml")
+  expect(result.output).toContain("unexpected workflow: upstream-new.yml")
   expect(result.output).toContain("src/a.ts")
   expect(await r.git("rev-parse", "-q", "--verify", "MERGE_HEAD")).not.toBe("")
   expect(await r.git("diff", "--name-only", "--diff-filter=U")).toBe("src/a.ts")
