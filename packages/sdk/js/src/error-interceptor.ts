@@ -43,6 +43,7 @@ export function wrapClientError(
   })
 }
 
+// kilocode_change start - preserve server identity without exposing credentials or query data.
 function describe(request: Request | undefined, response: Response | undefined) {
   const method = request?.method ?? "?"
   const status = response?.status
@@ -53,8 +54,10 @@ function describe(request: Request | undefined, response: Response | undefined) 
 function safePath(raw: string | undefined): string {
   if (!raw) return "?"
   try {
-    return new URL(raw).pathname || "/"
+    const url = new URL(raw)
+    return `${url.origin}${url.pathname || "/"}`
   } catch {
     return "[redacted]"
   }
 }
+// kilocode_change end

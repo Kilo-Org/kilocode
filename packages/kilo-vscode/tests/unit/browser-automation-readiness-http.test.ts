@@ -12,7 +12,7 @@ import { wrapClientError } from "../../../sdk/js/src/error-interceptor"
 
 const SECRET = "secret-token-do-not-log"
 
-type Mode = "503" | "reset" | "hang" | "recover" | "connected" | "failed" | "bad"
+type Mode = "503" | "reset" | "hang" | "recover" | "connected" | "failed" | "bad" | number
 
 describe("optional Playwright readiness HTTP boundary", () => {
   const descriptors = Object.getOwnPropertyDescriptors(vscode.workspace)
@@ -56,6 +56,11 @@ describe("optional Playwright readiness HTTP boundary", () => {
       return
     }
     if (mode === "hang") return
+    if (typeof mode === "number") {
+      res.writeHead(mode)
+      res.end()
+      return
+    }
     if (mode === "503") {
       res.writeHead(503)
       res.end()
@@ -144,8 +149,10 @@ describe("optional Playwright readiness HTTP boundary", () => {
     const message = (error as Error).message
     expect(message).toContain("503")
     expect(message).toContain("/mcp")
+    expect(message).toContain("http://127.0.0.1:9/mcp")
     expect(message).not.toContain(SECRET)
     expect(message).not.toContain("directory=")
+    expect(message).not.toContain("pw@")
     expect((error as { cause?: { status?: number } }).cause?.status).toBe(503)
   })
 
@@ -175,6 +182,21 @@ describe("optional Playwright readiness HTTP boundary", () => {
     expect(leaked()).toBe(false)
     expect(crashes).toEqual([])
   })
+
+  test.each([408, 409, 425, 429, 500, 501, 502, 503, 504, 599])(
+    "HTTP %i follows the shared retry policy within the readiness budget",
+    async (status) => {
+      mode = status
+      await start(1000)
+      await expect(service.ready(dir)).resolves.toBeUndefined()
+      expect(gets).toBeGreaterThan(1)
+      expect(gets).toBeLessThanOrEqual(5)
+      expect(posts).toBe(0)
+      expect(warnings.some((line) => line.includes(`HTTP ${status}`))).toBe(true)
+      expect(leaked()).toBe(false)
+      expect(crashes).toEqual([])
+    },
+  )
 
   test("a hung status GET times out without a background rejection", async () => {
     mode = "hang"

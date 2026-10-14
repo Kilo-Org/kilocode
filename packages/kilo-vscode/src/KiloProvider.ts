@@ -93,6 +93,7 @@ import { childID } from "./kilo-provider/task-session"
 import { VisibleTaskStreams } from "./kilo-provider/visible-task-streams"
 import { handleNetworkEvent, clearNetworkWaits } from "./kilo-provider/network"
 import { SessionAbort } from "./kilo-provider/abort"
+import { Preparations } from "./kilo-provider/preparations"
 import {
   buildAutocompleteSettingsMessage,
   validAutocompleteSetting,
@@ -4296,7 +4297,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   /** Abort controllers for active retry loops, keyed by session ID */
   private retryAbortControllers = new Map<string, AbortController>()
   /** Abort controllers for optional tool readiness, keyed by session ID */
-  private prepareAbortControllers = new Map<string, AbortController>()
+  private prepareAbortControllers = new Preparations()
 
   /** Execute an SDK call with visible exponential backoff for retryable HTTP errors. */
   private async withRetry(
@@ -4363,7 +4364,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
   /** Cancel an active retry loop for a session */
   private cancelRetry(sid: string): void {
-    this.prepareAbortControllers.get(sid)?.abort()
+    this.prepareAbortControllers.cancel(sid)
     const controller = this.retryAbortControllers.get(sid)
     if (controller) {
       controller.abort()
@@ -4372,14 +4373,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   }
 
   private trackPrepare(sid: string): AbortController {
-    this.prepareAbortControllers.get(sid)?.abort()
-    const controller = new AbortController()
-    this.prepareAbortControllers.set(sid, controller)
-    return controller
+    return this.prepareAbortControllers.track(sid)
   }
 
   private finishPrepare(sid: string, controller: AbortController): void {
-    if (this.prepareAbortControllers.get(sid) === controller) this.prepareAbortControllers.delete(sid)
+    this.prepareAbortControllers.finish(sid, controller)
   }
 
   private maxCostSetting(): number {
@@ -6327,6 +6325,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
    * Does NOT kill the server — that's the connection service's job.
    */
   dispose(): void {
+    this.prepareAbortControllers.dispose()
     this.opts.onHidden?.()
     if (this.opts.focusContext) {
       void vscode.commands.executeCommand("setContext", this.opts.focusContext, false)

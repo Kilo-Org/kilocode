@@ -3,6 +3,7 @@ import type { KiloClient } from "@kilocode/sdk/v2/client"
 import type { KiloConnectionService } from "../cli-backend"
 import { playwrightCommand } from "./settings"
 import { canonicalizePath, samePath } from "../../agent-manager/project/paths"
+import { retryable } from "../../util/retry"
 
 /**
  * Manages the built-in Playwright MCP browser server for ordinary Kilo sessions.
@@ -266,8 +267,7 @@ export class BrowserAutomationService implements vscode.Disposable {
   private static isOptionalTransport(error: unknown): boolean {
     if (BrowserAutomationService.isAbort(error)) return false
     const status = BrowserAutomationService.httpStatus(error)
-    if (status !== undefined)
-      return status === 408 || status === 429 || status === 502 || status === 503 || status === 504
+    if (status !== undefined) return retryable(status)
     return BrowserAutomationService.isNetwork(error)
   }
 
