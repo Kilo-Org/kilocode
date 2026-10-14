@@ -1,5 +1,7 @@
 export * as KiloAccount from "./account.js"
+export * as KiloDefaults from "./defaults.js"
 export * as KiloDevice from "./device.js"
 export * as KiloHeaders from "./headers.js"
+export * as KiloModels from "./models.js"
 export * as KiloProfile from "./profile.js"
 export * as KiloServer from "./server.js"

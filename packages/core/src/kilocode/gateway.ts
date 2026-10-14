@@ -1,17 +1,31 @@
-import { KiloAccount, KiloDevice, KiloHeaders, KiloProfile, KiloServer } from "@kilocode/gateway-core"
+import {
+  KiloAccount,
+  KiloDefaults,
+  KiloDevice,
+  KiloHeaders,
+  KiloModels,
+  KiloProfile,
+  KiloServer,
+} from "@kilocode/gateway-core"
 import type { IntegrationOAuthMethodRegistration } from "@opencode/plugin/effect/integration"
 import { define } from "@opencode/plugin/effect/plugin"
 import { Credential } from "@opencode/schema/credential"
-import { IntegrationMethodID } from "@opencode/schema/integration-id"
-import { Clock, Effect, Option, Schema, Scope, Stream } from "effect"
+import { IntegrationID, IntegrationMethodID } from "@opencode/schema/integration-id"
+import { Model } from "@opencode/schema/model"
+import { Money } from "@opencode/schema/money"
+import { Provider } from "@opencode/schema/provider"
+import { createHash, randomUUID } from "node:crypto"
+import { Clock, Duration, Effect, Fiber, Option, Schedule, Schema, Scope, Semaphore, Stream } from "effect"
 import { Bus } from "../bus.js"
+import { Variant } from "../variant.js"
 import { KiloGatewayRpc } from "./gateway-rpc.js"
 
-// v2 adapter for the Kilo Gateway (issue #14991, PR 1: login and teams).
-// Kilo logic lives in @kilocode/gateway-core; this file only maps it onto the public plugin API.
-// The `kilo` integration and provider come from the models.dev seed.
-const id = "kilo"
+// v2 adapter for the Kilo Gateway (issue #14991, PR 1 & PR 2: login, teams, and catalog authority).
+// Kilo logic lives in @kilocode/gateway-core; this file maps it onto the v2 plugin API.
+const id = Provider.ID.make("kilo")
+const integrationID = IntegrationID.make("kilo")
 const methodID = IntegrationMethodID.make("device")
+const REFRESH_INTERVAL = Duration.minutes(5)
 
 // Written by the device method. Decoded again because stored credentials are read back from the database.
 const Metadata = Schema.Struct({
@@ -21,75 +35,309 @@ const Metadata = Schema.Struct({
 const decodeMetadata = Schema.decodeUnknownOption(Metadata)
 // The team choice in plugin storage. `null` is the personal account.
 const decodeSelection = Schema.decodeUnknownOption(Schema.Struct({ organizationID: Schema.NullOr(Schema.String) }))
+const decodeStoredModels = Schema.decodeUnknownOption(Schema.fromJsonString(Schema.Unknown))
 // Published on the global bus (`{ global: true }`), so plugin instances of other locations also reload.
 const OrganizationEvent = Bus.ephemeral({
   type: `rpc.${KiloGatewayRpc.Definition.id}.organization`,
-  schema: { organizationID: Schema.NullOr(Schema.String) },
+  schema: {
+    organizationID: Schema.NullOr(Schema.String),
+    source: Schema.optional(Schema.String),
+  },
 })
+
+interface CatalogState {
+  readonly account?: KiloAccount.Info
+  readonly envActive: boolean
+  readonly models: readonly KiloModels.Model[]
+  readonly defaultModelID?: string
+  readonly failed: boolean
+  readonly anonymous: boolean
+}
 
 export const KiloGatewayPlugin = define<Bus.Service | Scope.Scope>({
   id: "kilocode.gateway",
   effect: Effect.fn(function* (ctx) {
     const bus = yield* Bus.Service
+    const scope = yield* Scope.Scope
+    const instanceID = randomUUID()
+    const lock = Semaphore.makeUnsafe(1)
     const server = KiloServer.fromEnv()
-    let account: KiloAccount.Info | undefined
-    let envActive = false
+    let epoch = 0
+    let catalog: CatalogState = { envActive: false, models: [], failed: false, anonymous: true }
+    const lastGood = new Map<string, readonly KiloModels.Model[]>()
+    let retryFiber: Fiber.Fiber<void, never> | undefined
 
-    const load = Effect.gen(function* () {
+    const cancelRetry = Effect.gen(function* () {
+      if (!retryFiber) return
+      const fiber = retryFiber
+      retryFiber = undefined
+      yield* Fiber.interrupt(fiber)
+    })
+
+    const resolveCurrentAccount = Effect.gen(function* () {
       // Environment tokens (`KILO_API_KEY`, `KILOCODE_TOKEN`, `KILO_AUTH_CONTENT`) take precedence over stored
       // credentials, matching v1 (`acd3d1ff9b`) and supporting headless/cloud consumers.
       const envInput = KiloAccount.envToken()
       if (envInput) {
         const selection = decodeSelection(yield* ctx.storage.get("organization:env"))
-        envActive = true
-        account = KiloAccount.resolve({
-          ...envInput,
-          server,
-          organizationID: Option.isSome(selection) ? selection.value.organizationID : envInput.organizationID,
-        })
-        return
+        return {
+          envActive: true,
+          account: KiloAccount.resolve({
+            ...envInput,
+            server,
+            organizationID: Option.isSome(selection) ? selection.value.organizationID : envInput.organizationID,
+          }),
+        }
       }
-      envActive = false
       const connection = yield* ctx.integration.connection.active(id)
       const credential = connection
         ? yield* ctx.integration.connection.resolve(connection).pipe(Effect.orElseSucceed(() => undefined))
         : undefined
       const selection = connection ? decodeSelection(yield* ctx.storage.get(organizationKey(connection))) : Option.none()
-      account = credential ? toAccount(credential, Option.getOrUndefined(selection)) : undefined
+      return {
+        envActive: false,
+        account: credential ? toAccount(credential, Option.getOrUndefined(selection)) : undefined,
+      }
     })
 
-    yield* ctx.integration.transform((editor) => editor.method.update(device(server)))
-    yield* load
-    yield* ctx.provider.transform((editor) => {
-      if (!editor.get(id)) return
-      editor.update(id, (provider) => {
-        const { apiKey: _, ...rest } = provider.settings ?? {}
-        const settings = { ...rest, baseURL: KiloServer.gateway(account?.server ?? server) }
-        provider.headers = {
-          ...provider.headers,
-          ...KiloHeaders.provider({ version: ctx.app.version, organizationID: account?.organizationID }),
-        }
-        if (account) {
-          if (envActive) {
-            provider.activation = "enabled"
-            provider.settings = { ...settings, apiKey: account.token }
-            return
-          }
-          provider.activation = "auto"
-          provider.settings = settings
+    const loadCatalog = Effect.fn("KiloGatewayPlugin.loadCatalog")(function* (
+      targetEpoch: number,
+      attempt = 0,
+    ): Effect.fn.Return<void> {
+      const resolved = yield* resolveCurrentAccount
+      if (targetEpoch !== epoch) return
+      const current = resolved.account
+      const envActive = resolved.envActive
+      const base = current?.server ?? server
+      const organizationID = current?.organizationID ?? null
+      const token = current?.token
+
+      // Team scope: verify team membership when a profile endpoint is reachable; fail closed if the team is
+      // missing or the team catalog request fails.
+      if (token && organizationID) {
+        const profile = yield* KiloProfile.get(base, token).pipe(Effect.option)
+        if (targetEpoch !== epoch) return
+        if (
+          Option.isSome(profile) &&
+          !profile.value.organizations.some((organization) => organization.id === organizationID)
+        ) {
+          catalog = { account: current, envActive, models: [], failed: true, anonymous: false }
           return
         }
-        // Signed out, the integration has no connection and the provider would stay hidden. The Gateway
-        // serves its free models to the anonymous key, as in v1.
-        provider.activation = "enabled"
-        provider.settings = { ...settings, apiKey: KiloAccount.ANONYMOUS_KEY }
+      }
+
+      const [fetched, defaultModelID] = yield* Effect.all(
+        [
+          KiloModels.get({
+            server: base,
+            token,
+            organizationID,
+            version: ctx.app.version,
+          }).pipe(Effect.result),
+          KiloDefaults.get({
+            server: base,
+            token,
+            organizationID,
+          }),
+        ],
+        { concurrency: 2 },
+      )
+      if (targetEpoch !== epoch) return
+
+      if (fetched._tag === "Success") {
+        const models = fetched.success.models
+        // Key the snapshot by the actual scope of the returned data: a 401 personal fallback returns the
+        // anonymous free catalog (`anonymous === true`), so never store it under the personal token key.
+        const writeKey = organizationID
+          ? undefined
+          : snapshotKey(base, fetched.success.anonymous ? undefined : token)
+        if (writeKey && models.length > 0) {
+          lastGood.set(writeKey, models)
+          yield* ctx.storage.set(writeKey, JSON.stringify(models)).pipe(Effect.catch(() => Effect.void))
+        }
+        catalog = {
+          account: current,
+          envActive,
+          models,
+          defaultModelID,
+          failed: false,
+          anonymous: fetched.success.anonymous,
+        }
+        return
+      }
+
+      // Team scope always fails closed on error: never fall back to personal, anonymous, or models.dev models.
+      if (organizationID) {
+        catalog = { account: current, envActive, models: [], failed: true, anonymous: false }
+        yield* scheduleRetry(fetched.failure, targetEpoch, attempt)
+        return
+      }
+
+      // Personal or anonymous scope: keep the last good Gateway catalog for this exact scope, if any.
+      // Never fall back to models.dev.
+      const cacheKey = snapshotKey(base, token)
+      const memory = lastGood.get(cacheKey)
+      const stored =
+        memory ??
+        (yield* ctx.storage.get(cacheKey).pipe(
+          Effect.map((value) => {
+            const decoded = typeof value === "string" ? Option.getOrUndefined(decodeStoredModels(value)) : undefined
+            return Array.isArray(decoded) ? (decoded as readonly KiloModels.Model[]) : undefined
+          }),
+          Effect.orElseSucceed(() => undefined),
+        ))
+      if (targetEpoch !== epoch) return
+      if (stored && stored.length > 0) {
+        lastGood.set(cacheKey, stored)
+        catalog = {
+          account: current,
+          envActive,
+          models: stored,
+          defaultModelID,
+          failed: false,
+          anonymous: !token,
+        }
+      } else {
+        catalog = { account: current, envActive, models: [], failed: true, anonymous: !token }
+      }
+      yield* scheduleRetry(fetched.failure, targetEpoch, attempt)
+    })
+
+    function scheduleRetry(failure: KiloModels.Failure, targetEpoch: number, attempt: number) {
+      if (!KiloModels.retryable(failure) || attempt >= 5 || targetEpoch !== epoch) return Effect.void
+      const delayMs = KiloModels.retryDelayMs(attempt, failure.retryAfter)
+      return cancelRetry.pipe(
+        Effect.andThen(
+          Effect.sleep(Duration.millis(delayMs)).pipe(
+            Effect.andThen(
+              lock.withPermit(
+                Effect.gen(function* () {
+                  if (targetEpoch !== epoch) return
+                  yield* loadCatalog(targetEpoch, attempt + 1)
+                  if (targetEpoch === epoch) yield* ctx.provider.reload()
+                }),
+              ),
+            ),
+            Effect.catch(() => Effect.void),
+            Effect.forkIn(scope),
+            Effect.tap((fiber) =>
+              Effect.sync(() => {
+                retryFiber = fiber
+              }),
+            ),
+            Effect.asVoid,
+          ),
+        ),
+      )
+    }
+
+    const reload = Effect.suspend(() => {
+      const targetEpoch = ++epoch
+      return cancelRetry.pipe(
+        Effect.andThen(
+          lock.withPermit(
+            loadCatalog(targetEpoch, 0).pipe(
+              Effect.andThen(Effect.suspend(() => (targetEpoch === epoch ? ctx.provider.reload() : Effect.void))),
+            ),
+          ),
+        ),
+      )
+    })
+
+    yield* ctx.integration.transform((editor) => {
+      editor.update(id, (integration) => {
+        integration.name = "Kilo Gateway"
+      })
+      editor.method.update(device(server))
+    })
+
+    yield* lock.withPermit(loadCatalog(++epoch, 0))
+
+    yield* ctx.provider.transform((editor) => {
+      const account = catalog.account
+      const base = account?.server ?? server
+      const baseURL = KiloServer.gateway(base)
+      const headers = KiloHeaders.provider({ version: ctx.app.version, organizationID: account?.organizationID })
+      const current = editor.get(id)
+      const { apiKey: _, ...restSettings } = current?.provider.settings ?? {}
+      const baseSettings = { ...restSettings, baseURL }
+      const mergedHeaders = {
+        ...current?.provider.headers,
+        ...headers,
+      }
+      if (!account?.organizationID) {
+        delete mergedHeaders[KiloHeaders.HEADER_ORGANIZATION]
+      }
+
+      // Signed out of Kilo: suppress uncredentialed OpenCode Zen (`apiKey === "public"`) so Kilo's free tier
+      // is the default signed-out provider.
+      if (!account || catalog.anonymous) {
+        const opencode = editor.get(Provider.ID.make("opencode"))
+        if (opencode && opencode.provider.settings?.apiKey === "public") {
+          editor.update(Provider.ID.make("opencode"), (provider) => {
+            provider.activation = "disabled"
+          })
+        }
+      }
+
+      if (catalog.failed || catalog.models.length === 0) {
+        // Fail closed: replace the model list with `[]` and set a sentinel `sourceConnection` so `Provider.snapshot`
+        // excludes `kilo` from `available` even if a `providers.kilo` block in user config sets `activation: "enabled"`.
+        editor.add({
+          info: {
+            id,
+            name: current?.provider.name ?? "Kilo Gateway",
+            integrationID,
+            activation: "disabled",
+            package: "@opencode/ai/providers/openrouter",
+            settings: baseSettings,
+            headers: mergedHeaders,
+          },
+          models: [],
+          sourceConnection: { type: "env", name: "__kilo_catalog_unavailable__" },
+        })
+        return
+      }
+
+      const activation = !account || catalog.anonymous || catalog.envActive ? "enabled" : "auto"
+      const settings =
+        !account || catalog.anonymous
+          ? { ...baseSettings, apiKey: KiloAccount.ANONYMOUS_KEY }
+          : catalog.envActive
+            ? { ...baseSettings, apiKey: account.token }
+            : baseSettings
+
+      editor.add({
+        info: {
+          id,
+          name: "Kilo Gateway",
+          integrationID,
+          activation,
+          package: "@opencode/ai/providers/openrouter",
+          settings,
+          headers: mergedHeaders,
+        },
+        models: catalog.models.map((item) => toModelInfo(item, baseURL, mergedHeaders)),
       })
     })
-    const reload = load.pipe(Effect.andThen(ctx.provider.reload()))
+
+    yield* ctx.model.transform((models) => {
+      if (catalog.failed) {
+        for (const model of models.list(id)) {
+          models.remove(id, model.id)
+        }
+        return
+      }
+      if (catalog.defaultModelID && catalog.models.some((model) => model.id === catalog.defaultModelID)) {
+        models.default.set(id, Model.ID.make(catalog.defaultModelID))
+      }
+    })
+
     yield* ctx.rpc
       .register(KiloGatewayRpc.Definition, {
         profile: (_input, context) =>
           Effect.gen(function* () {
+            const account = catalog.account
             if (!account) return yield* Effect.fail(context.error("unauthorized", "Not signed in to Kilo Gateway"))
             const profile = yield* KiloProfile.get(account.server, account.token).pipe(
               Effect.mapError((error) => context.error("failed", error.message)),
@@ -101,33 +349,125 @@ export const KiloGatewayPlugin = define<Bus.Service | Scope.Scope>({
               organizationID: account.organizationID,
             }
           }),
-        // Same as v1 `setOrganization`, which stores the team in the auth record of the login. The choice
-        // wins over the login default and is kept per connection.
         "organization.set": (input, context) =>
           Effect.gen(function* () {
             const envInput = KiloAccount.envToken()
             const connection = envInput ? undefined : yield* ctx.integration.connection.active(id)
             const key = envInput ? "organization:env" : connection ? organizationKey(connection) : undefined
-            if (!key || !account)
+            if (!key || !catalog.account)
               return yield* Effect.fail(context.error("unauthorized", "Not signed in to Kilo Gateway"))
             yield* ctx.storage.set(key, { organizationID: input.organizationID })
             yield* reload
-            yield* bus.publish(OrganizationEvent, { organizationID: input.organizationID }, { global: true })
+            yield* bus.publish(
+              OrganizationEvent,
+              { organizationID: input.organizationID, source: instanceID },
+              { global: true },
+            )
             return {}
+          }),
+        models: (_input, context) =>
+          Effect.gen(function* () {
+            if (catalog.failed) {
+              return yield* Effect.fail(context.error("failed", "Unable to retrieve Kilo model catalog"))
+            }
+            return KiloModels.entries(catalog.models)
           }),
       })
       .pipe(Effect.orDie)
+
     yield* ctx.event.subscribe().pipe(
       Stream.filter(
         (event) =>
-          (event.type === "credential.switched" && event.data.integrationID === id) ||
-          event.type === OrganizationEvent.type,
+          event.type === "credential.updated" ||
+          (event.type === "credential.switched" && event.data.integrationID === integrationID) ||
+          (event.type === OrganizationEvent.type && event.data.source !== instanceID),
       ),
       Stream.runForEach(() => reload),
       Effect.forkScoped({ startImmediately: true }),
     )
+
+    // Periodic catalog refresh every 5 minutes, matching v1 model-cache TTL.
+    yield* Effect.repeat(
+      Effect.sleep(REFRESH_INTERVAL).pipe(Effect.andThen(reload), Effect.catch(() => Effect.void)),
+      Schedule.forever,
+    ).pipe(Effect.forkScoped)
   }),
 })
+
+function snapshotKey(server: string, token?: string): string {
+  if (!token) return `catalog:anonymous:${server}`
+  const hash = createHash("sha256").update(`${server}:${token}`).digest("hex")
+  return `catalog:personal:${hash}`
+}
+
+function packageFor(aiSDKProvider?: KiloModels.AISDKProvider): string {
+  if (aiSDKProvider === "anthropic") return "@opencode/ai/providers/anthropic"
+  if (aiSDKProvider === "openai") return "@opencode/ai/providers/openai"
+  if (aiSDKProvider === "openai-compatible") return "@opencode/ai/providers/openai-compatible"
+  return "@opencode/ai/providers/openrouter"
+}
+
+function toModelInfo(
+  source: KiloModels.Model,
+  baseURL: string,
+  headers: Record<string, string>,
+): Model.Info {
+  const modelID = Model.ID.make(source.id)
+  const pkg = packageFor(source.aiSDKProvider)
+  const settings = {
+    baseURL,
+    ...(pkg === "@opencode/ai/providers/openai-compatible" ? { provider: id } : {}),
+  }
+  const base: Model.Info = {
+    id: modelID,
+    modelID,
+    providerID: id,
+    name: source.name,
+    ...(source.family ? { family: Model.Family.make(source.family) } : {}),
+    package: pkg,
+    settings,
+    headers: { ...headers },
+    capabilities: {
+      tools: true,
+      input: [...source.capabilities.input],
+      output: [...source.capabilities.output],
+    },
+    variants: [],
+    time: { released: 0 },
+    cost: source.cost
+      ? [
+          {
+            input: Money.USDPerMillionTokens.make(source.cost.input),
+            output: Money.USDPerMillionTokens.make(source.cost.output),
+            cache: {
+              read: Money.USDPerMillionTokens.make(source.cost.cacheRead ?? 0),
+              write: Money.USDPerMillionTokens.make(source.cost.cacheWrite ?? 0),
+            },
+          },
+        ]
+      : [],
+    status: "active",
+    enabled: true,
+    limit: {
+      context: source.limit.context,
+      output: source.limit.output,
+    },
+  }
+  const resolvedVariants = source.reasoning ? Variant.resolve(base) : []
+  const byID = new Map(resolvedVariants.map((variant) => [variant.id, variant]))
+  for (const variant of source.variants ?? []) {
+    const variantID = Model.VariantID.make(variant.id)
+    byID.set(variantID, {
+      id: variantID,
+      settings: { ...settings, ...variant.settings },
+      headers: { ...headers },
+    })
+  }
+  return {
+    ...base,
+    variants: [...byID.values()],
+  }
+}
 
 function device(server: string) {
   return {

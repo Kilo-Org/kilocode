@@ -20,8 +20,35 @@ export const Profile = Schema.Struct({
 
 export type Profile = typeof Profile.Type
 
-// The TUI uses this contract for the account picker after login and for /teams, as v1 uses
-// `kilo.profile` and `kilo.organization.set`.
+export const ModelEntry = Schema.Struct({
+  id: Schema.String,
+  name: Schema.String,
+  isFree: Schema.Boolean,
+  recommendedIndex: Schema.optional(Schema.Number),
+  hasUserByokAvailable: Schema.optional(Schema.Boolean),
+  mayTrainOnYourPrompts: Schema.optional(Schema.Boolean),
+  autoRouting: Schema.optional(
+    Schema.Struct({
+      models: Schema.Array(Schema.String),
+    }),
+  ),
+  terminalBench: Schema.optional(
+    Schema.Struct({
+      overallScore: Schema.Number,
+      avgAttemptCostUsd: Schema.Number,
+    }),
+  ),
+  description: Schema.optional(Schema.String),
+  reasoning: Schema.optional(Schema.Boolean),
+  family: Schema.optional(Schema.String),
+  prompt: Schema.optional(Schema.String),
+  aiSDKProvider: Schema.optional(Schema.String),
+})
+
+export type ModelEntry = typeof ModelEntry.Type
+
+// The TUI and IDE clients use this contract for the account picker after login, /teams,
+// and Kilo-specific model catalog metadata.
 export const Definition = Rpc.define({
   id: "kilocode.gateway",
   methods: {
@@ -33,6 +60,11 @@ export const Definition = Rpc.define({
     "organization.set": {
       input: portable(Schema.Struct({ organizationID: OrganizationID })),
       output: portable(Schema.Struct({})),
+      errors: Failure,
+    },
+    models: {
+      input: portable(Schema.Struct({})),
+      output: portable(Schema.Array(ModelEntry)),
       errors: Failure,
     },
   },
