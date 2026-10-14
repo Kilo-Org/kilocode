@@ -29,41 +29,42 @@ const search = (input: { readonly content: Buffer; readonly pattern: string; rea
   )
 
 describe("Ripgrep non-UTF-8 output", () => {
-  it.live("decodes Latin-1 match lines reported as bytes", () =>
+  it.live("replaces non-UTF-8 bytes with U+FFFD", () =>
     Effect.gen(function* () {
       const result = yield* search({ content: latin, pattern: "Handl" })
       expect(result.items).toHaveLength(1)
-      expect(result.items[0]?.text).toBe('title = "Handläggning"\n')
+      // 0xE4 is not valid UTF-8 on its own, so it becomes the replacement character
+      expect(result.items[0]?.text).toBe('title = "Handl\uFFFDggning"\n')
       expect(result.items[0]?.submatches).toEqual([{ text: "Handl", start: 9, end: 14 }])
     }),
   )
 
-  it.live("decodes submatches that cover non-UTF-8 bytes", () =>
+  it.live("replaces non-UTF-8 bytes in submatches with U+FFFD", () =>
     Effect.gen(function* () {
       // Unicode `.` never matches an invalid UTF-8 byte; a byte-level class does
       const result = yield* search({ content: latin, pattern: "Handl(?-u:.)ggning" })
-      expect(result.items[0]?.submatches).toEqual([{ text: "Handläggning", start: 9, end: 21 }])
+      expect(result.items[0]?.submatches).toEqual([{ text: "Handl\uFFFDggning", start: 9, end: 21 }])
     }),
   )
 
-  it.live("decodes Windows-1252 punctuation", () =>
+  it.live("replaces each invalid byte with its own U+FFFD", () =>
     Effect.gen(function* () {
       const result = yield* search({
         content: Buffer.concat([Buffer.from("price "), Buffer.from([0x80, 0x93]), Buffer.from(" needle\n")]),
         pattern: "needle",
       })
-      expect(result.items[0]?.text).toBe("price €“ needle\n")
+      expect(result.items[0]?.text).toBe("price \uFFFD\uFFFD needle\n")
     }),
   )
 
-  it.live("decodes non-UTF-8 context lines", () =>
+  it.live("replaces non-UTF-8 bytes in context lines", () =>
     Effect.gen(function* () {
       const result = yield* search({
         content: Buffer.concat([latin, Buffer.from("needle\n")]),
         pattern: "needle",
         context: 1,
       })
-      expect(result.items.map((item) => item.text)).toEqual(['title = "Handläggning"\n', "needle\n"])
+      expect(result.items.map((item) => item.text)).toEqual(['title = "Handl\uFFFDggning"\n', "needle\n"])
       expect(result.items.map((item) => item.context)).toEqual([true, false])
     }),
   )

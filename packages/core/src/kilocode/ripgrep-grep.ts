@@ -1,14 +1,10 @@
 import { Schema, SchemaGetter } from "effect"
 import type { Match } from "@opencode-ai/schema/filesystem"
 
-// ripgrep only emits base64 `bytes` when the data is not valid UTF-8. Decode it as
-// Windows-1252 (the WHATWG mapping for ISO-8859-1), the common legacy source encoding.
-// Every byte maps to one UTF-16 unit, so ripgrep's byte offsets stay aligned with the text.
-// Tradeoff: ripgrep reports the whole line as bytes when any byte is invalid UTF-8, so a
-// valid UTF-8 multi-byte sequence sharing a line with a stray Latin-1 byte decodes as
-// mojibake (e.g. UTF-8 "ä" becomes "Ã¤"). This keeps offsets correct and only affects
-// mixed-encoding lines; fully UTF-8 and fully Latin-1 lines are unaffected.
-const legacy = new TextDecoder("windows-1252")
+// ripgrep emits base64 `bytes` instead of `text` when the data is not valid UTF-8.
+// Decode with lossy UTF-8 so valid multi-byte sequences survive intact and only
+// truly undecodable bytes become U+FFFD. This avoids guessing the source encoding
+// (which could misrepresent content to the LLM) and keeps valid portions readable.
 
 /** ripgrep `arbitrary data` (`{text}` or `{bytes}`) normalized to `{text}`. */
 export const Data = Schema.Union([
@@ -17,7 +13,7 @@ export const Data = Schema.Union([
 ]).pipe(
   Schema.decodeTo(Schema.Struct({ text: Schema.String }), {
     decode: SchemaGetter.transform((data) =>
-      "text" in data ? { text: data.text } : { text: legacy.decode(Buffer.from(data.bytes, "base64")) },
+      "text" in data ? { text: data.text } : { text: Buffer.from(data.bytes, "base64").toString("utf8") },
     ),
     encode: SchemaGetter.passthrough({ strict: false }),
   }),
