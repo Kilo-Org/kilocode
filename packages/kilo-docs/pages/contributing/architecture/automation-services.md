@@ -91,7 +91,7 @@ Code Review queues pull-request work in database, enforces per-owner concurrency
 | Concern | Behavior |
 |---|---|
 | Trigger | Pull-request webhook or review dispatch |
-| Authorization owner | Per-owner dispatch slots separate concurrent review work |
+| Authorization owner | Per-owner dispatch slots. Organizations: 20. Personal accounts: 3 when remaining credit balance is above $5, otherwise 1. Balance sets the personal tier, not model price. |
 | Queue | Reviews wait in database as pending rows |
 | Orchestration | Durable Object keeps Cloud Agent connection alive |
 | Output | Review feedback is posted back to pull request |
