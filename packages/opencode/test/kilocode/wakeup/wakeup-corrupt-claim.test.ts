@@ -1,5 +1,5 @@
 import { describe, expect, spyOn } from "bun:test"
-import { Context, Effect, Fiber, Layer, Scope } from "effect"
+import { Cause, Context, Effect, Exit, Fiber, Layer, Scope } from "effect"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { EventV2 } from "@opencode-ai/core/event"
@@ -21,7 +21,7 @@ import { tmpdirScoped } from "../../fixture/fixture"
 import { testEffect } from "../../lib/effect"
 
 const it = testEffect(LayerNode.compile(CrossSpawnSpawner.node))
-const build = (directory: string, failRemove?: { calls: number }) =>
+const build = (directory: string, failRemove?: { calls: number; recovered?: boolean }, fired: Wakeup.Info[] = []) =>
   Effect.gen(function* () {
     const scope = yield* Scope.make()
     yield* Effect.addFinalizer((exit) => Scope.close(scope, exit))
@@ -32,7 +32,8 @@ const build = (directory: string, failRemove?: { calls: number }) =>
     const injected = failRemove
       ? Storage.Service.of({
           ...storage,
-          remove: () => {
+          remove: (key) => {
+            if (failRemove.recovered) return storage.remove(key)
             failRemove.calls++
             return Effect.die(new Error("permanent test-only remove failure"))
           },
@@ -46,7 +47,10 @@ const build = (directory: string, failRemove?: { calls: number }) =>
             Layer.mock(EventV2Bridge.Service, {
               publish: (definition, data) => Effect.succeed({ id: EventV2.ID.create(), type: definition.type, data }),
             }),
-            Layer.succeed(Wakeup.Fire, Wakeup.Fire.of({ run: () => Effect.void })),
+            Layer.succeed(
+              Wakeup.Fire,
+              Wakeup.Fire.of({ run: (info) => Effect.sync(() => fired.push(info)).pipe(Effect.asVoid) }),
+            ),
           ),
         ),
       ),
@@ -90,6 +94,60 @@ const call = (wake: Wakeup.Interface, kind: "wakeup" | "cron", id: Wakeup.ID, se
   )
 
 describe("corrupt cancellation", () => {
+  it.live(
+    "uncached truncated records from another process are removed by session cleanup",
+    () =>
+      Effect.gen(function* () {
+        const directory = yield* tmpdirScoped()
+        const creator = yield* build(directory)
+        const reader = yield* build(directory)
+        const sessionID = SessionID.descending()
+        for (const kind of ["wakeup", "cron"] as const) {
+          const input = { sessionID, directory, prompt: "uncached cleanup", delay: "10m" }
+          const task = yield* kind === "cron" ? creator.cronCreate(input) : creator.schedule(input)
+          const file = path.join(directory, "storage", kind, sessionID, `${task.id}.json`)
+          yield* Effect.promise(() => Bun.write(file, '{"id":"' + task.id.slice(0, 6)))
+          expect(yield* reader.scheduled(directory)).toEqual(new Map())
+          expect(yield* reader.cancelSession(sessionID, { notify: false })).toBe(1)
+          expect(yield* Effect.promise(() => Bun.file(file).exists())).toBe(false)
+        }
+      }),
+    10000,
+  )
+
+  it.live(
+    "tool removal failure propagates and leaves the wakeup stored listed and armed",
+    () =>
+      Effect.gen(function* () {
+        const directory = yield* tmpdirScoped()
+        const fault = { calls: 0, recovered: false }
+        const fired: Wakeup.Info[] = []
+        const wake = yield* build(directory, fault, fired)
+        const task = yield* wake.schedule({
+          sessionID: SessionID.descending(),
+          directory,
+          prompt: "cancel failure",
+          when: new Date(Date.now() + 1800).toISOString(),
+        })
+        const result = yield* call(wake, "wakeup", task.id, task.sessionID).pipe(Effect.exit)
+        expect(Exit.isFailure(result)).toBe(true)
+        if (Exit.isFailure(result))
+          expect(String(Cause.squash(result.cause))).toContain("permanent test-only remove failure")
+        expect(fault.calls).toBe(1)
+        expect(
+          yield* Effect.promise(() =>
+            Bun.file(path.join(directory, "storage/wakeup", task.sessionID, `${task.id}.json`)).exists(),
+          ),
+        ).toBe(true)
+        expect((yield* wake.list({ sessionID: task.sessionID })).map((info) => info.id)).toContain(task.id)
+        expect((yield* wake.scheduled(directory)).get(task.sessionID)).toBe(task.dueAt)
+        fault.recovered = true
+        yield* Effect.sleep(`${Math.max(0, task.dueAt - Date.now()) + 500} millis`)
+        expect(fired.map((info) => info.id)).toEqual([task.id])
+      }),
+    10000,
+  )
+
   for (const kind of ["wakeup", "cron"] as const) {
     for (const cleanup of ["session", "goal"] as const) {
       it.live(

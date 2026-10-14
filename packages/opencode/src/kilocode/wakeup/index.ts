@@ -20,6 +20,9 @@ export namespace Wakeup {
   export const MAX_PER_SESSION = schema.MAX_PER_SESSION
   export const MAX_CRON_PER_SESSION = schema.MAX_CRON_PER_SESSION
   export const CRON_TTL_MS = schema.CRON_TTL_MS
+  const CLAIM_TIMEOUT_MS = 10_000
+  const CLAIM_RETRY_MS = 2000
+  const CLEANUP_RETRY_MS = 100
   export const ID = schema.ID
   export type ID = schema.ID
   export const Info = schema.Info
@@ -95,7 +98,7 @@ export namespace Wakeup {
       const locked = <A, E, R>(sessionID: SessionID, effect: Effect.Effect<A, E, R>) =>
         Effect.scoped(
           Effect.gen(function* () {
-            const acquired = yield* Flock.effect(`wakeup:${sessionID}`, { timeoutMs: 10_000 }).pipe(
+            const acquired = yield* Flock.effect(`wakeup:${sessionID}`, { timeoutMs: CLAIM_TIMEOUT_MS }).pipe(
               Effect.as(true),
               Effect.catchCause((cause) => {
                 const error = Cause.squash(cause)
@@ -216,7 +219,7 @@ export namespace Wakeup {
             ).pipe(Effect.catchCause((cause) => failedClaim(info, "wakeup", cause).pipe(Effect.as(undefined))))
             if (!claim) return
             if (Option.isNone(claim)) {
-              yield* arm(info, 2000)
+              yield* arm(info, CLAIM_RETRY_MS)
               return
             }
             entries.delete(info.id)
@@ -274,7 +277,7 @@ export namespace Wakeup {
           ).pipe(Effect.catchCause((cause) => failedClaim(task, "cron", cause).pipe(Effect.as(undefined))))
           if (!claim) return
           if (Option.isNone(claim)) {
-            yield* armCron(task, 2000)
+            yield* armCron(task, CLAIM_RETRY_MS)
             return
           }
           cronEntries.delete(task.id)
@@ -546,7 +549,7 @@ export namespace Wakeup {
             if (!cleanup) return yield* new Busy({ message: "Could not cancel right now, retry." })
             // Cleanup has no user to retry it. Keep waiting for durable removal;
             // Flock's stale breaker recovers a crashed holder after about a minute.
-            yield* Effect.sleep("100 millis")
+            yield* Effect.sleep(`${CLEANUP_RETRY_MS} millis`)
           }
         })
 
@@ -611,7 +614,9 @@ export namespace Wakeup {
         let count = 0
         for (const kind of ["wakeup", "cron"] as const) {
           const held = kind === "wakeup" ? yield* list({ sessionID }) : yield* cronList({ sessionID })
-          for (const { id } of held) {
+          const keys = yield* storage.list([kind, sessionID]).pipe(Effect.catch(() => Effect.succeed([] as string[][])))
+          const ids = new Set([...held.map((info) => info.id), ...keys.map((target) => ID.make(target.at(-1)!))])
+          for (const id of ids) {
             const attempt: Effect.Effect<Info | CronInfo | Unreadable | undefined, Busy> =
               kind === "wakeup" ? cancel(id, sessionID, notify, true) : cronCancel(id, sessionID, notify, true)
             yield* attempt.pipe(
