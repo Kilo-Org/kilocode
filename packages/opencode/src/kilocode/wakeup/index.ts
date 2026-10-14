@@ -121,6 +121,14 @@ export namespace Wakeup {
       const readCron = (target: string[]) =>
         storage.read<CronInfo>(target).pipe(Effect.catch(() => Effect.succeed(undefined)))
 
+      const readCancel = <A>(target: string[]) =>
+        storage.read<A>(target).pipe(
+          Effect.catchIf(
+            (error) => Storage.NotFoundError.isInstance(error),
+            () => Effect.succeed(undefined),
+          ),
+        )
+
       // Tell clients how many wakeups a session still holds, so Keep Awake stays
       // active while one is pending. Best effort: a publish failure must not
       // fail the scheduling operation.
@@ -133,10 +141,10 @@ export namespace Wakeup {
       const lookup = Effect.fnUntraced(function* (id: ID) {
         const known = entries.get(id)
         if (known) return known
-        const keys = yield* storage.list(["wakeup"]).pipe(Effect.catch(() => Effect.succeed([] as string[][])))
+        const keys = yield* storage.list(["wakeup"]).pipe(Effect.orDie)
         for (const target of keys) {
           if (target.at(-1) !== id) continue
-          const info = yield* read(target)
+          const info = yield* readCancel<Info>(target).pipe(Effect.orDie)
           if (info) return info
         }
         return undefined
@@ -145,10 +153,10 @@ export namespace Wakeup {
       const cronLookup = Effect.fnUntraced(function* (id: ID) {
         const known = cronEntries.get(id)
         if (known) return known
-        const keys = yield* storage.list(["cron"]).pipe(Effect.catch(() => Effect.succeed([] as string[][])))
+        const keys = yield* storage.list(["cron"]).pipe(Effect.orDie)
         for (const target of keys) {
           if (target.at(-1) !== id) continue
-          const task = yield* readCron(target)
+          const task = yield* readCancel<CronInfo>(target).pipe(Effect.orDie)
           if (task) return task
         }
         return undefined
@@ -484,17 +492,34 @@ export namespace Wakeup {
           )
         })
 
-      const cancel = Effect.fn("Wakeup.cancel")(function* (id: ID, sessionID?: SessionID, notify = true) {
+      const remove = <A>(target: string[], sessionID: SessionID, cleanup: boolean): Effect.Effect<A | undefined> =>
+        Effect.gen(function* () {
+          while (true) {
+            const claim = yield* locked(
+              sessionID,
+              Effect.gen(function* () {
+                const current = yield* readCancel<A>(target)
+                if (current) yield* storage.remove(target)
+                return current
+              }),
+            )
+            if (Option.isSome(claim)) return claim.value
+            if (!cleanup) return yield* Effect.die(new Error("Could not cancel right now, retry."))
+            // Cleanup has no user to retry it. Keep waiting for durable removal;
+            // Flock's stale breaker recovers a crashed holder after about a minute.
+            yield* Effect.sleep("100 millis")
+          }
+        })
+
+      const cancel = Effect.fn("Wakeup.cancel")(function* (
+        id: ID,
+        sessionID?: SessionID,
+        notify = true,
+        cleanup = false,
+      ) {
         const info = yield* lookup(id)
         if (!info || (sessionID && info.sessionID !== sessionID)) return undefined
-        const claim = yield* locked(
-          info.sessionID,
-          Effect.gen(function* () {
-            const current = yield* read(key(info))
-            if (current) yield* storage.remove(key(current))
-            return current
-          }),
-        )
+        const removed = yield* remove<Info>(key(info), info.sessionID, cleanup)
         const fiber = timers.get(id)
         if (fiber) {
           timers.delete(id)
@@ -502,29 +527,25 @@ export namespace Wakeup {
         }
         entries.delete(id)
         yield* announce(info.sessionID)
-        const removed = Option.getOrUndefined(claim)
         if (removed && notify) yield* notifyGoal(removed.sessionID, removed.id, removed.directory, "wakeup")
         return removed
       })
 
-      const cronCancel = Effect.fn("Wakeup.cronCancel")(function* (id: ID, sessionID?: SessionID, notify = true) {
+      const cronCancel = Effect.fn("Wakeup.cronCancel")(function* (
+        id: ID,
+        sessionID?: SessionID,
+        notify = true,
+        cleanup = false,
+      ) {
         const task = yield* cronLookup(id)
         if (!task || (sessionID && task.sessionID !== sessionID)) return undefined
-        const claim = yield* locked(
-          task.sessionID,
-          Effect.gen(function* () {
-            const current = yield* readCron(cronKey(task))
-            if (current) yield* storage.remove(cronKey(current))
-            return current
-          }),
-        )
+        const removed = yield* remove<CronInfo>(cronKey(task), task.sessionID, cleanup)
         const fiber = cronTimers.get(id)
         if (fiber) {
           cronTimers.delete(id)
           yield* Fiber.interrupt(fiber)
         }
         cronEntries.delete(id)
-        const removed = Option.getOrUndefined(claim)
         if (removed && notify) yield* notifyGoal(removed.sessionID, removed.id, removed.directory, "cron")
         return removed
       })
@@ -541,9 +562,9 @@ export namespace Wakeup {
       ) {
         const notify = options?.notify !== false
         const held = yield* list({ sessionID })
-        for (const info of held) yield* cancel(info.id, undefined, notify)
+        for (const info of held) yield* cancel(info.id, undefined, notify, true)
         const scheduled = yield* cronList({ sessionID })
-        for (const task of scheduled) yield* cronCancel(task.id, undefined, notify)
+        for (const task of scheduled) yield* cronCancel(task.id, undefined, notify, true)
         return held.length + scheduled.length
       })
 
