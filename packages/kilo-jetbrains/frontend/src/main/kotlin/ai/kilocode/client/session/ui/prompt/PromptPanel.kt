@@ -580,7 +580,7 @@ class PromptPanel(
     // reverted message. Attachment chips are cleared first so the result is exactly [items].
     @RequiresEdt
     fun setDraft(text: String, items: List<PromptAttachment>) {
-        if (this.text() == text && attachments == items) return
+        if (this.text() == text.trim() && attachments == items) return
         setText(text)
         attachments.clear()
         strip.clear()

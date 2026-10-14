@@ -1092,9 +1092,6 @@ class SessionUi(
      * the retained draft. Scoped by the dispatch-time baseline so a message belonging to an earlier,
      * still-streaming turn cannot confirm a queued send that has not landed yet. Keyed by id rather
      * than count, so a revert removing a message cannot strand the next send above its baseline.
-     *
-     * Also drops a draft that an earlier error restored: the message did land, so the copy in the
-     * box is a duplicate. Only an untouched copy is cleared (see PromptPanel.discardRestoredSubmission).
      */
     @RequiresEdt
     private fun confirmPendingSend() {
@@ -1102,7 +1099,6 @@ class SessionUi(
         if (userMessageIds().all { it in baseline }) return
         pendingSend = null
         prompt.clearLastSubmission()
-        prompt.discardRestoredSubmission()
     }
 
     @RequiresEdt
@@ -1176,7 +1172,10 @@ class SessionUi(
             }
         }
         prompt.setDraft(text, items)
-        revertDraft = text to items
+        // Store what the box actually holds, not the raw part text: prompt.text() is trimmed, so a
+        // message whose text carries surrounding whitespace would otherwise never match the guard
+        // above and the revert would stop being tracked after the first sync.
+        revertDraft = prompt.text() to items
     }
 
     private fun slashActions(): List<SlashAction> {
@@ -1532,12 +1531,17 @@ class SessionUi(
         // Give the typed prompt back when a send errors before its message is persisted (rejected
         // synchronously, or prompt_async's 204-then-session.error case). pendingSend is deliberately
         // kept: some errors -- an unreadable attachment, for one -- are reported before the user
-        // message is written but the send still lands, and confirmPendingSend() must still be able
-        // to clear the restored draft when that message arrives. A genuine failure never persists a
+        // message is written but the send still lands, so the draft has to be droppable again once
+        // that is confirmed (see the turn-open branch below). A genuine failure never persists a
         // message, so its draft stays put.
         if (pendingSend != null && state is SessionState.Error) {
             prompt.restoreLastSubmission()
         }
+        // A turn starts only once its user message exists, so a turn opening proves the send that
+        // restored a draft did land and the copy in the box is a duplicate. Gating on the turn, not
+        // the message add, keeps an unrelated message (a redo re-adding a reverted one, or a
+        // reload) from dropping a draft whose send genuinely failed.
+        if (state is SessionState.Busy) prompt.discardRestoredSubmission()
         prompt.setBusy(busy)
         dock?.setBusy(busy)
         load.setState(state)

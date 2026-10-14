@@ -718,6 +718,23 @@ class SessionUiLayoutTest : SessionUiTestBase() {
         assertEquals("rolled back prompt", prompt.text())
     }
 
+    // The reverted text is compared after trimming (matching prompt.text()), so a message whose text
+    // carries surrounding whitespace must not be mistaken for a user edit that stops revert tracking.
+    fun `test revert keeps tracking a draft restored from padded text`() {
+        val prompt = find<PromptPanel>(ui)
+        val model = controller().model
+        model.upsertMessage(message("u1"))
+        model.updateContent("u1", part("p1", "u1", "text", "  first  "))
+        model.upsertMessage(message("u2"))
+        model.updateContent("u2", part("p2", "u2", "text", "second"))
+
+        model.setRevert(SessionRevertDto("u1"))
+        assertEquals("first", prompt.text())
+
+        model.setRevert(SessionRevertDto("u2"))
+        assertEquals("second", prompt.text())
+    }
+
     fun `test revert sync restores the message attachments`() {
         val prompt = find<PromptPanel>(ui)
         val model = controller().model
