@@ -7,6 +7,7 @@ import { SessionID } from "@/session/schema"
 import { Storage } from "@/storage/storage"
 import { EventV2Bridge } from "@/event-v2-bridge"
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
+import { Flock } from "@opencode-ai/core/util/flock"
 import { WakeupEvent } from "@opencode-ai/schema/kilocode/wakeup-event"
 import { Context, Effect, Fiber, Layer, Option, Semaphore } from "effect"
 import { fireLayer, text as wakeupText } from "./resume"
@@ -87,6 +88,18 @@ export namespace Wakeup {
       const cronFiring = new Set<ID>()
       // Serializes the count-and-write in `cronCreate`.
       const cronGate = Semaphore.makeUnsafe(1)
+      const locked = <A, E, R>(sessionID: SessionID, effect: Effect.Effect<A, E, R>) =>
+        Effect.scoped(
+          Effect.gen(function* () {
+            yield* Flock.effect(`wakeup:${sessionID}`, { timeoutMs: 10_000 })
+            return yield* effect
+          }),
+        ).pipe(
+          Effect.asSome,
+          Effect.catchCause((cause) =>
+            Effect.logWarning("scheduled task claim failed", { sessionID, cause }).pipe(Effect.as(Option.none<A>())),
+          ),
+        )
 
       const stop = () => {
         for (const fiber of timers.values()) fiber.interruptUnsafe()
@@ -141,30 +154,41 @@ export namespace Wakeup {
         return undefined
       })
 
-      const fireNow = (info: Info, inPlace = false) =>
+      const fireNow = (info: Info, inPlace = false): Effect.Effect<void> =>
         Effect.gen(function* () {
           if (firing.has(info.id)) return
           firing.add(info.id)
           // The guard release belongs only to the branch that acquired it: an
           // early return above must not clear an in-flight fire's guard.
           yield* Effect.gen(function* () {
+            const claim = yield* locked(
+              info.sessionID,
+              Effect.gen(function* () {
+                const current = yield* read(key(info))
+                if (!current) return undefined
+                yield* storage.remove(key(current))
+                return current
+              }),
+            )
+            if (Option.isNone(claim)) {
+              yield* arm(info, 2000)
+              return
+            }
             entries.delete(info.id)
             timers.delete(info.id)
-            // Drop the persistence before the resume: the model turn can be slow,
-            // and a concurrent `adopt` that still sees the file would fire twice.
-            yield* storage.remove(key(info)).pipe(Effect.ignore)
             // Announce after persistence clears so a concurrent snapshot cannot
             // report the fired wakeup as still pending.
             yield* announce(info.sessionID)
+            if (!claim.value) return
             yield* fire
               .run(info, { inPlace })
               .pipe(Effect.catchCause((cause) => Effect.logError("wakeup fire failed", { id: info.id, cause })))
           }).pipe(Effect.ensuring(Effect.sync(() => firing.delete(info.id))))
         })
 
-      const arm = (info: Info) =>
+      const arm = (info: Info, retry?: number): Effect.Effect<void> =>
         Effect.gen(function* () {
-          const delay = Math.max(0, info.dueAt - Date.now())
+          const delay = retry ?? Math.max(0, info.dueAt - Date.now())
           const fiber = yield* Effect.forkIn(
             Effect.sleep(`${delay} millis`).pipe(Effect.andThen(fireNow(info))),
             scope,
@@ -172,43 +196,57 @@ export namespace Wakeup {
           timers.set(info.id, fiber)
         })
 
-      // Compute, persist and arm a task's next occurrence, computed from now so
+      // Compute and persist a task's next occurrence under the claim lock, from now so
       // a missed window is skipped rather than replayed one-for-one. Drop the
       // record when there is no next occurrence (a one-shot) or the next window
       // is past expiry, so a finished task never holds a session slot. The
       // expiry check reads the schedule's next window before jitter, and jitter
       // is clamped to the expiry, so only the schedule decides the cutoff.
-      const rearm = (task: CronInfo): Effect.Effect<CronInfo | undefined> =>
+      const advance = (task: CronInfo) =>
         Effect.gen(function* () {
           const base = task.recurring ? schema.next(task.schedule, Date.now()) : undefined
           if (base === undefined || base > task.expiresAt) {
-            cronEntries.delete(task.id)
-            cronTimers.delete(task.id)
-            yield* storage.remove(cronKey(task)).pipe(Effect.ignore)
+            yield* storage.remove(cronKey(task))
             return undefined
           }
           const due = Math.min(base + schema.jitter(task.id), task.expiresAt)
           const updated: CronInfo = { ...task, dueAt: due }
-          cronEntries.set(updated.id, updated)
-          yield* storage.write(cronKey(updated), updated).pipe(Effect.orDie)
-          yield* armCron(updated)
+          yield* storage.write(cronKey(updated), updated)
           return updated
         })
 
       const fireCron = (task: CronInfo, inPlace = false): Effect.Effect<void> =>
         Effect.gen(function* () {
+          const claim = yield* locked(
+            task.sessionID,
+            Effect.gen(function* () {
+              const current = yield* readCron(cronKey(task))
+              if (!current) return { state: "gone" as const }
+              if (current.dueAt !== task.dueAt) return { state: "moved" as const, next: current }
+              return { state: "won" as const, next: yield* advance(current) }
+            }),
+          )
+          if (Option.isNone(claim)) {
+            yield* armCron(task, 2000)
+            return
+          }
+          cronEntries.delete(task.id)
+          cronTimers.delete(task.id)
+          const result = claim.value
+          if (result.state === "gone") return
+          if (result.next) {
+            cronEntries.set(task.id, result.next)
+            yield* armCron(result.next)
+          }
+          if (result.state === "moved") return
           if (cronFiring.has(task.id)) {
             // A fire outlasted its interval: the occurrence that just came due
             // is skipped, not replayed, but the schedule must not stall. Arm the
             // next window and leave the in-flight fire alone.
-            yield* rearm(task)
             return
           }
           cronFiring.add(task.id)
           yield* Effect.gen(function* () {
-            // Persist the next occurrence before the fire: a crash mid-turn
-            // must not lose the schedule.
-            yield* rearm(task)
             // The fired occurrence carries the due time it was scheduled for.
             yield* fire
               .run(
@@ -227,9 +265,9 @@ export namespace Wakeup {
           }).pipe(Effect.ensuring(Effect.sync(() => cronFiring.delete(task.id))))
         })
 
-      const armCron = (task: CronInfo): Effect.Effect<void> =>
+      const armCron = (task: CronInfo, retry?: number): Effect.Effect<void> =>
         Effect.gen(function* () {
-          const delay = Math.max(0, task.dueAt - Date.now())
+          const delay = retry ?? Math.max(0, task.dueAt - Date.now())
           const fiber = yield* Effect.forkIn(
             Effect.sleep(`${delay} millis`).pipe(Effect.andThen(fireCron(task))),
             scope,
@@ -309,7 +347,7 @@ export namespace Wakeup {
             }
             yield* storage.write(key(info), info).pipe(Effect.orDie)
             entries.set(info.id, info)
-            yield* arm(info)
+            if (!timers.has(info.id)) yield* arm(info)
             yield* announce(info.sessionID)
             return info
           }),
@@ -383,7 +421,7 @@ export namespace Wakeup {
             }
             yield* storage.write(cronKey(task), task).pipe(Effect.orDie)
             cronEntries.set(task.id, task)
-            yield* armCron(task)
+            if (!cronTimers.has(task.id)) yield* armCron(task)
             return task
           }),
         )
@@ -449,30 +487,46 @@ export namespace Wakeup {
       const cancel = Effect.fn("Wakeup.cancel")(function* (id: ID, sessionID?: SessionID, notify = true) {
         const info = yield* lookup(id)
         if (!info || (sessionID && info.sessionID !== sessionID)) return undefined
+        const claim = yield* locked(
+          info.sessionID,
+          Effect.gen(function* () {
+            const current = yield* read(key(info))
+            if (current) yield* storage.remove(key(current))
+            return current
+          }),
+        )
         const fiber = timers.get(id)
         if (fiber) {
           timers.delete(id)
           yield* Fiber.interrupt(fiber)
         }
         entries.delete(id)
-        yield* storage.remove(key(info)).pipe(Effect.ignore)
         yield* announce(info.sessionID)
-        if (notify) yield* notifyGoal(info.sessionID, info.id, info.directory, "wakeup")
-        return info
+        const removed = Option.getOrUndefined(claim)
+        if (removed && notify) yield* notifyGoal(removed.sessionID, removed.id, removed.directory, "wakeup")
+        return removed
       })
 
       const cronCancel = Effect.fn("Wakeup.cronCancel")(function* (id: ID, sessionID?: SessionID, notify = true) {
         const task = yield* cronLookup(id)
         if (!task || (sessionID && task.sessionID !== sessionID)) return undefined
+        const claim = yield* locked(
+          task.sessionID,
+          Effect.gen(function* () {
+            const current = yield* readCron(cronKey(task))
+            if (current) yield* storage.remove(cronKey(current))
+            return current
+          }),
+        )
         const fiber = cronTimers.get(id)
         if (fiber) {
           cronTimers.delete(id)
           yield* Fiber.interrupt(fiber)
         }
         cronEntries.delete(id)
-        yield* storage.remove(cronKey(task)).pipe(Effect.ignore)
-        if (notify) yield* notifyGoal(task.sessionID, task.id, task.directory, "cron")
-        return task
+        const removed = Option.getOrUndefined(claim)
+        if (removed && notify) yield* notifyGoal(removed.sessionID, removed.id, removed.directory, "cron")
+        return removed
       })
 
       // Called when a session is removed so its wakeups stop holding Keep Awake
