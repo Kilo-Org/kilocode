@@ -35,6 +35,7 @@ const methodID = IntegrationMethodID.make("device")
 const REFRESH_INTERVAL = Duration.minutes(5)
 const MAX_SNAPSHOTS = 10
 const LOOPBACK = new Set(["127.0.0.1", "localhost", "[::1]", "::1"])
+const IS_TEST_RUNNER = typeof Bun !== "undefined" && /\.test\.[cm]?[jt]sx?$/.test(Bun.main)
 
 // Built-in minimal free floor used when signed out and no Gateway response or cached snapshot is available yet
 // (for example, offline startup or offline unit tests), so models.dev's paid list never leaks through.
@@ -193,9 +194,9 @@ export const KiloGatewayPlugin = define<Bus.Service | Scope.Scope>({
       const organizationID = current?.organizationID ?? null
       const token = current?.token
 
-      // During unit tests (`NODE_ENV === "test"`), never make live internet requests to the default production
+      // During unit tests (`IS_TEST_RUNNER`), never make live internet requests to the default production
       // host (`https://api.kilo.ai`) when no local fixture server (`KILO_API_URL` or credential server) is used.
-      if (process.env.NODE_ENV === "test" && !process.env.KILO_API_URL && !isLoopback(base)) {
+      if (IS_TEST_RUNNER && !process.env.KILO_API_URL && !isLoopback(base)) {
         catalog = {
           account: current,
           connection,
@@ -338,16 +339,12 @@ export const KiloGatewayPlugin = define<Bus.Service | Scope.Scope>({
       )
     })
 
-    yield* ctx.integration.transform((editor) => {
-      editor.update(id, (integration) => {
-        integration.name = "Kilo Gateway"
-      })
-      editor.method.update(device(server))
-    })
+    yield* ctx.integration.transform((editor) => editor.method.update(device(server)))
 
     yield* lock.withPermit(loadCatalog(++epoch, 0))
 
     yield* ctx.provider.transform((editor) => {
+      if (!editor.get(id)) return
       const account = catalog.account
       const base = account?.server ?? server
       const baseURL = KiloServer.gateway(base)
@@ -414,7 +411,10 @@ export const KiloGatewayPlugin = define<Bus.Service | Scope.Scope>({
         }
         return
       }
-      if (catalog.defaultModelID && catalog.models.some((model) => model.id === catalog.defaultModelID)) {
+      if (
+        catalog.defaultModelID &&
+        models.list(id).some((model) => model.id === Model.ID.make(catalog.defaultModelID!))
+      ) {
         models.default.set(id, Model.ID.make(catalog.defaultModelID))
       }
     })
@@ -540,7 +540,6 @@ export const KiloGatewayPlugin = define<Bus.Service | Scope.Scope>({
     yield* ctx.event.subscribe().pipe(
       Stream.filter(
         (event) =>
-          event.type === "credential.updated" ||
           (event.type === "credential.switched" && event.data.integrationID === integrationID) ||
           (event.type === OrganizationEvent.type && event.data.source !== instanceID),
       ),
@@ -548,11 +547,13 @@ export const KiloGatewayPlugin = define<Bus.Service | Scope.Scope>({
       Effect.forkScoped({ startImmediately: true }),
     )
 
-    // Periodic catalog refresh every 5 minutes, matching v1 model-cache TTL.
-    yield* Effect.repeat(
-      Effect.sleep(REFRESH_INTERVAL).pipe(Effect.andThen(reload), Effect.catch(() => Effect.void)),
-      Schedule.forever,
-    ).pipe(Effect.forkScoped)
+    // Periodic catalog refresh every 5 minutes in production, matching v1 model-cache TTL.
+    if (!IS_TEST_RUNNER) {
+      yield* Effect.repeat(
+        Effect.sleep(REFRESH_INTERVAL).pipe(Effect.andThen(reload), Effect.catch(() => Effect.void)),
+        Schedule.forever,
+      ).pipe(Effect.forkScoped)
+    }
   }),
 })
 
