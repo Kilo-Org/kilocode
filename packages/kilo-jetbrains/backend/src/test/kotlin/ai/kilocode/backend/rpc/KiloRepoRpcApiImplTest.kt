@@ -1,6 +1,5 @@
 package ai.kilocode.backend.rpc
 
-import ai.kilocode.backend.repo.RepoRegistry
 import ai.kilocode.rpc.dto.RepoSource
 import com.intellij.execution.configurations.GeneralCommandLine
 import com.intellij.execution.process.CapturingProcessHandler
@@ -17,14 +16,14 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
- * Real git repositories and a directly constructed [RepoRegistry]. No IDE project is open in unit
+ * Real git repositories and a directly constructed [WorktreeStateStore]. No IDE project is open in unit
  * tests, so inference degrades to an empty result and the pinned/added paths are exercised on their own —
  * which is exactly what [ai.kilocode.backend.repo.RepoInferenceTest] does not cover.
  */
 class KiloRepoRpcApiImplTest {
     private val base: Path = Files.createTempDirectory("kilo-repo-rpc")
-    private val registry = RepoRegistry()
-    private val api = KiloRepoRpcApiImpl(registry)
+    private val states = WorktreeStateStore()
+    private val api = KiloRepoRpcApiImpl(states)
 
     private lateinit var ws: Path
     private lateinit var first: Path
@@ -83,7 +82,7 @@ class KiloRepoRpcApiImplTest {
         val result = api.add(ws.toString(), worktree.toString())
 
         assertEquals(first.toRealPath().toString(), assertNotNull(result.repo).root, "a worktree resolves to its main repo")
-        assertEquals(1, registry.added(ws.toRealPath().toString()).size)
+        assertEquals(1, readWorktreeState(worktreeStateFile(ws.toRealPath())).repos.size)
     }
 
     @Test

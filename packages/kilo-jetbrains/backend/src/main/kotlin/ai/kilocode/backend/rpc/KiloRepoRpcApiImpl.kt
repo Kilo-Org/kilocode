@@ -1,7 +1,6 @@
 package ai.kilocode.backend.rpc
 
 import ai.kilocode.backend.repo.RepoInference
-import ai.kilocode.backend.repo.RepoRegistry
 import ai.kilocode.backend.repo.RepoRoots
 import ai.kilocode.backend.repo.RepoSettings
 import ai.kilocode.backend.repo.repoPathKey
@@ -12,7 +11,6 @@ import ai.kilocode.rpc.dto.RepoDto
 import ai.kilocode.rpc.dto.RepoListDto
 import ai.kilocode.rpc.dto.RepoSource
 import com.intellij.openapi.application.ApplicationManager
-import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.ProjectManager
 import com.intellij.platform.project.ProjectId
@@ -26,19 +24,18 @@ import java.time.Instant
 /**
  * Backend implementation of [KiloRepoRpcApi].
  *
- * Composes the three pieces — the persisted [RepoRegistry], pure [RepoInference], and the
- * [RepoRoots] identity helper — into one list per pinned workspace. Repository-bound work still goes
- * through the directory-scoped worktree/workspace RPCs; this API only catalogs.
+ * Composes the shared [WorktreeStateStore], pure [RepoInference], and [RepoRoots] identity helper into
+ * one list per pinned workspace. Repository-bound work still goes through the directory-scoped
+ * worktree/workspace RPCs; this API only catalogs.
  */
 class KiloRepoRpcApiImpl internal constructor(
-    private val registry: RepoRegistry? = null,
+    /** Same app service as the worktree RPC, so poll reconciliation cannot overwrite repo changes. */
+    private val states: WorktreeStateStore = defaultWorktreeStateStore(),
 ) : KiloRepoRpcApi {
 
     private companion object {
         val LOG = KiloLog.create(KiloRepoRpcApiImpl::class.java)
     }
-
-    private val reg: RepoRegistry get() = registry ?: service()
 
     override suspend fun list(projectId: ProjectId?, directory: String): RepoListDto = build(projectId, directory)
 
@@ -62,35 +59,55 @@ class KiloRepoRpcApiImpl internal constructor(
             return@withContext RepoAddResultDto(error = "That repository is already the current project.")
         }
 
-        // A path already registered — including a linked worktree of an added repo, which resolves to
-        // the same canonical root — is success with the existing entry, not an error.
-        reg.added(key)
-            .firstOrNull { repoPathKey(it.root) == repoPathKey(root.toString()) }
-            ?.let { return@withContext RepoAddResultDto(repo = repoDto(root, RepoSource.ADDED, it.label, order = it.order)) }
-
-        reg.add(key, root.toString(), label, Instant.now().toString())
-        val entry = reg.added(key).firstOrNull { repoPathKey(it.root) == repoPathKey(root.toString()) }
+        val file = worktreeStateFile(pinned)
+        val target = repoPathKey(root.toString())
+        var entry: RepoEntry? = null
+        states.update(file) { state ->
+            // A linked worktree resolves to the same canonical root. Return that existing entry rather
+            // than writing a duplicate, while still clearing a stale inferred-repo dismissal.
+            val found = state.repos.firstOrNull { repoPathKey(it.root) == target }
+            val added = found ?: RepoEntry(
+                root = root.toString(),
+                label = label,
+                order = (state.repos.maxOfOrNull { it.order } ?: -1) + 1,
+                addedAt = Instant.now().toString(),
+            )
+            entry = added
+            state.copy(
+                repos = if (found == null) state.repos + added else state.repos,
+                dismissed = state.dismissed.filterNot { repoPathKey(it) == target },
+            )
+        }
         LOG.info("repo added root=$root key=$key")
-        RepoAddResultDto(repo = repoDto(root, RepoSource.ADDED, entry?.label ?: label, order = entry?.order ?: 0))
+        val added = entry ?: return@withContext RepoAddResultDto(error = "Repository state update failed.")
+        RepoAddResultDto(repo = repoDto(root, RepoSource.ADDED, added.label, order = added.order))
     }
 
     override suspend fun remove(projectId: ProjectId?, directory: String, repoId: String): RepoListDto = build(projectId, directory) {
         val key = it.toString()
         if (repoId == RepoRoots.id(it)) return@build
 
-        reg.added(key).firstOrNull { RepoRoots.id(Path.of(it.root)) == repoId }?.let { entry ->
-            reg.remove(key, entry.root)
-            LOG.info("repo removed root=${entry.root} key=$key")
+        val file = worktreeStateFile(it)
+        var removed: RepoEntry? = null
+        val state = states.update(file) { current ->
+            removed = current.repos.firstOrNull { repo -> RepoRoots.id(Path.of(repo.root)) == repoId }
+            if (removed == null) current else current.copy(repos = current.repos.filterNot { repo -> repo == removed })
+        }
+        removed?.let {
+            LOG.info("repo removed root=${it.root} key=$key")
             return@build
         }
 
         // Not an added repo: an inferred one. Its opaque id has to be matched against the current
         // inference result to recover the root a dismissal is stored by.
         val project = resolveProject(projectId, directory)
-        val inferred = project?.let { RepoInference.fromProject(it, reg.dismissed(key)) }
+        val inferred = project?.let { RepoInference.fromProject(it, state.dismissed.toSet()) }
         val match = inferred?.let { result -> (result.active + result.nested).firstOrNull { path -> RepoRoots.id(path) == repoId } }
         if (match != null) {
-            reg.dismiss(key, match.toString())
+            states.update(file) { current ->
+                if (current.dismissed.any { repoPathKey(it) == repoPathKey(match.toString()) }) current
+                else current.copy(dismissed = current.dismissed + match.toString())
+            }
             LOG.info("repo dismissed root=$match key=$key")
         }
     }
@@ -129,11 +146,11 @@ class KiloRepoRpcApiImpl internal constructor(
     private suspend fun build(pinned: Path, projectId: ProjectId?, directory: String): RepoListDto {
         val key = pinned.toString()
         val includeNested = RepoSettings.includeNested()
-        val dismissed = reg.dismissed(key)
+        val state = states.read(worktreeStateFile(pinned))
         val project = resolveProject(projectId, directory)
-        val inferred = project?.let { RepoInference.fromProject(it, dismissed) } ?: RepoInference.Result()
+        val inferred = project?.let { RepoInference.fromProject(it, state.dismissed.toSet()) } ?: RepoInference.Result()
 
-        val added = reg.added(key)
+        val added = state.repos.sortedBy { it.order }
         val taken = (listOf(key) + added.map { it.root }).map { repoPathKey(it) }.toSet()
         val active = inferred.active.filterNot { repoPathKey(it.toString()) in taken }
         val nested = inferred.nested.filterNot { repoPathKey(it.toString()) in taken }
