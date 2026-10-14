@@ -93,9 +93,10 @@ export namespace KiloTask {
    * overriding the selected subagent's own allowlist with parent ask/allow rules.
    *
    * OpenCode removed parent-agent inheritance entirely in anomalyco/opencode#31696.
-   * Kilo intentionally differs: parent edit/notebook/MCP denials remain hard ceilings
-   * for Plan Mode and MCP restrictions, while parent ask/allow rules must not replace
-   * the selected subagent's policy. Preserve this distinction during upstream merges.
+   * Kilo intentionally differs: native-agent edit denials and parent notebook/MCP denials
+   * remain hard ceilings for Plan Mode and MCP restrictions. A custom delegator's edit
+   * policy only governs itself; session edit denials still constrain its descendants.
+   * Parent ask/allow rules must not replace the selected subagent's policy.
    *
    * Broad bash denies are deliberately NOT inherited from the calling agent. A read-only/delegating
    * agent (plan, ask, orchestrator) carries a `readOnlyBash` allowlist whose deny rules
@@ -116,18 +117,21 @@ export namespace KiloTask {
     session: Pick<Session.Info, "permission">
     mcp: Config.Info["mcp"]
   }): Permission.Ruleset {
-    const rules = Permission.merge(input.caller.permission ?? [], input.session.permission ?? [])
+    const session = input.session.permission ?? []
+    const rules = Permission.merge(input.caller.permission ?? [], session)
+    const edit = input.caller.native === false ? session : rules
     const prefixes = Object.keys(input.mcp ?? {}).map((k) => k.replace(/[^a-zA-Z0-9_-]/g, "_") + "_")
     const isMcp = (p: string) => prefixes.some((prefix) => p.startsWith(prefix))
     // `guarded` covers the tools a read-only mode may never regain from config; keeping
     // it here too stops a Plan-launched subagent from reaching them under a catch-all.
     // `bash` is intentionally excluded — see the doc comment above (#11523).
     const mutation = new Set(["edit", ...guarded.filter((p) => p !== "bash")])
-    const inherited = rules.filter(
-      (r: Permission.Rule) => r.action === "deny" && (mutation.has(r.permission) || isMcp(r.permission)),
-    )
+    const inherited = [
+      ...rules.filter((rule) => rule.permission !== "edit"),
+      ...edit.filter((rule) => rule.permission === "edit"),
+    ].filter((r: Permission.Rule) => r.action === "deny" && (mutation.has(r.permission) || isMcp(r.permission)))
     for (const permission of mutation) {
-      if (Permission.evaluate(permission, "*", rules).action !== "deny") continue
+      if (Permission.evaluate(permission, "*", permission === "edit" ? edit : rules).action !== "deny") continue
       inherited.push({ permission, pattern: "*", action: "deny" })
     }
     const scoped = rules.filter((rule) => rule.permission !== "*")
