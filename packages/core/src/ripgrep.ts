@@ -26,13 +26,13 @@ const MAX_SUBMATCHES = 100
 const RawMatch = Schema.Struct({
   type: Schema.Literals(["match", "context"]), // kilocode_change - retain requested context records
   data: Schema.Struct({
-    path: Schema.Struct({ text: Schema.String }),
-    lines: Schema.Struct({ text: Schema.String }),
+    path: KiloGrep.Data, // kilocode_change - accept ripgrep's base64 shape for non-UTF-8 data
+    lines: KiloGrep.Data, // kilocode_change
     line_number: PositiveInt,
     absolute_offset: NonNegativeInt,
     submatches: Schema.Array(
       Schema.Struct({
-        match: Schema.Struct({ text: Schema.String }),
+        match: KiloGrep.Data, // kilocode_change
         start: NonNegativeInt,
         end: NonNegativeInt,
       }),
