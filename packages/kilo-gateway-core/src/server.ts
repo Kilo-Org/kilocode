@@ -70,3 +70,21 @@ export function gateway(server?: string, env: Record<string, string | undefined>
   if (isConfiguredBase(server, env)) return aiGatewayFromEnv(env)
   return apiUrl(server!, "gateway")
 }
+
+// Resolves the models catalog endpoint, matching `fetchRawKiloModels` / `CloudCatalog.models` on main:
+// - For the configured AI gateway base: `${aiGatewayBase}/models` or `${aiGatewayBase}/organizations/${id}/models`.
+// - For custom or token-embedded server URLs: `${openrouterBase}/models` or `${server}/api/organizations/${id}/models`.
+export function modelsUrl(
+  server?: string,
+  organizationID?: string | null,
+  env: Record<string, string | undefined> = process.env,
+) {
+  if (isConfiguredBase(server, env)) {
+    const base = aiGatewayFromEnv(env)
+    return organizationID ? `${base}/organizations/${encodeURIComponent(organizationID)}/models` : `${base}/models`
+  }
+  if (organizationID) {
+    return apiUrl(server!, "organizations", encodeURIComponent(organizationID), "models")
+  }
+  return apiUrl(server!, "openrouter", "models")
+}
