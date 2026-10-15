@@ -22,8 +22,12 @@ import ai.kilocode.client.plugin.KiloDocs
 import ai.kilocode.client.plugin.KiloPluginSettings
 import ai.kilocode.client.session.board.SessionBoardDialog
 import ai.kilocode.client.session.model.FileAttachment
+import ai.kilocode.client.session.model.Notice
+import ai.kilocode.client.session.model.PromptAttachment
 import ai.kilocode.client.session.model.SessionModelEvent
 import ai.kilocode.client.session.model.SessionState
+import ai.kilocode.client.session.model.Text
+import ai.kilocode.client.session.model.toPromptAttachment
 import ai.kilocode.client.session.scroll.SessionScroll
 import ai.kilocode.client.session.subagent.SubagentSessionEditorKind
 import ai.kilocode.client.session.subagent.SubagentTitleCache
@@ -175,15 +179,15 @@ class SessionUi(
     private var opening = ref != null
     private var pending = false
     private var loaded: Boolean? = null
-    private var revertPrompt: String? = null
+    private var revertDraft: Pair<String, List<PromptAttachment>>? = null
     private var pendingRollback: String? = null
     private var pendingRedo: String? = null
-    // See sendPrompt()/onStateChanged(): the number of user messages present when a prompt was
-    // dispatched, or null when nothing is in flight. Comparing against a baseline rather than
-    // using a plain boolean is what makes the restore reliable while a turn is streaming: the
-    // prompt box stays enabled during a busy turn, so a queued send must not treat the *previous*
-    // turn's message as confirmation of its own.
-    private var pendingSend: Int? = null
+    // See sendPrompt()/onStateChanged(): the ids of the user messages present when a prompt was
+    // dispatched, or null when nothing is in flight. Tracking identity rather than a count is what
+    // makes the restore reliable while a turn is streaming and across a revert: a queued send must
+    // not treat the *previous* turn's message as confirmation, and a revert removes a message, so a
+    // count baseline would be permanently too high for the next send.
+    private var pendingSend: Set<String>? = null
     private val flushMs =
         Registry.intValue("kilo.session.flushMs", EVENT_FLUSH_MS.toInt())
             .takeIf { it > 0 }
@@ -1074,28 +1078,32 @@ class SessionUi(
             val model = controller.model.model ?: "none"
             "${ChatLogSummary.prompt(PromptDto(parts = parts, editorContext = editor.context))} agent=$agent model=$model ready=${controller.ready}"
         }
-        // Baseline the user-message count for this send. onStateChanged uses it to tell a prompt
+        // Baseline the user-message ids for this send. onStateChanged uses it to tell a prompt
         // that failed before the server ever created its message (restore the draft) apart from a
         // turn that failed after the message was already persisted (nothing to restore -- it's in
-        // the transcript already). A queued send baselines above the in-flight turn's message, so
-        // that turn cannot be mistaken for confirmation of this one.
-        pendingSend = userMessages()
+        // the transcript already). A queued send baselines the in-flight turn's message, so that
+        // turn cannot be mistaken for confirmation of this one.
+        pendingSend = userMessageIds()
         controller.prompt(text, allFiles, editor.context, select)
         scroll.followBottom(follow)
     }
 
     @RequiresEdt
-    private fun userMessages() = controller.model.messages().count { it.info.role == "user" }
+    private fun userMessageIds() = controller.model.messages()
+        .filter { it.info.role == "user" }
+        .map { it.info.id }
+        .toSet()
 
     /**
      * Marks the in-flight send as accepted once its own user message is persisted, which releases
      * the retained draft. Scoped by the dispatch-time baseline so a message belonging to an earlier,
-     * still-streaming turn cannot confirm a queued send that has not landed yet.
+     * still-streaming turn cannot confirm a queued send that has not landed yet. Keyed by id rather
+     * than count, so a revert removing a message cannot strand the next send above its baseline.
      */
     @RequiresEdt
     private fun confirmPendingSend() {
         val baseline = pendingSend ?: return
-        if (userMessages() <= baseline) return
+        if (userMessageIds().all { it in baseline }) return
         pendingSend = null
         prompt.clearLastSubmission()
     }
@@ -1144,24 +1152,37 @@ class SessionUi(
         if (revert != null) pendingRedo = null
     }
 
+    // Refills the prompt box from the message a revert landed on: its text plus every attachment it
+    // carried, including files the CLI could not read (their path survives in the notice). Stops
+    // managing the box once the user edits the draft, so a manual change is never overwritten.
     @RequiresEdt
     private fun syncPromptRevert() {
-        val saved = revertPrompt
-        if (saved != null && (prompt.text() != saved || prompt.hasAttachments())) {
-            revertPrompt = null
+        val saved = revertDraft
+        if (saved != null && (prompt.text() != saved.first || prompt.attachments() != saved.second)) {
+            revertDraft = null
             return
         }
         if (saved == null && prompt.hasDraft()) return
         val mark = controller.model.revert()
         if (mark == null) {
             prompt.clear()
-            revertPrompt = null
+            revertDraft = null
             return
         }
         val msg = controller.model.message(mark.messageID) ?: return
-        val text = msg.parts.values.filterIsInstance<ai.kilocode.client.session.model.Text>().firstOrNull()?.content?.toString() ?: return
-        prompt.setText(text)
-        revertPrompt = prompt.text()
+        val text = msg.parts.values.filterIsInstance<Text>().firstOrNull()?.content?.toString() ?: ""
+        val items = msg.parts.values.mapNotNull { part ->
+            when (part) {
+                is FileAttachment -> part.toPromptAttachment()
+                is Notice -> part.toPromptAttachment()
+                else -> null
+            }
+        }
+        prompt.setDraft(text, items)
+        // Store what the box actually holds, not the raw part text: prompt.text() is trimmed, so a
+        // message whose text carries surrounding whitespace would otherwise never match the guard
+        // above and the revert would stop being tracked after the first sync.
+        revertDraft = prompt.text() to items
     }
 
     private fun slashActions(): List<SlashAction> {
@@ -1514,21 +1535,21 @@ class SessionUi(
             pendingRollback = null
             pendingRedo = null
         }
-        // Restore the typed prompt when the send never produced a persisted message (rejected
-        // synchronously, or prompt_async's 204-then-session.error case). A turn that fails after its
-        // user message was already persisted has nothing to restore -- it's in the transcript -- so
-        // this only fires while a send is still pending.
-        //
-        // TurnEnded deliberately does not participate. It is session-scoped with no turn identity,
-        // and clearing on it is never correct: if the pending send's own message is persisted,
-        // confirmPendingSend() has already released it, and if it is not, the turn that just ended
-        // belongs to an earlier send (a turn only starts once its user message exists). Acting here
-        // would destroy the draft of a send queued behind a still-streaming turn, since the prompt
-        // box stays enabled while busy.
+        // Give the typed prompt back when a send errors before its message is persisted (rejected
+        // synchronously, or prompt_async's 204-then-session.error case). pendingSend is deliberately
+        // kept: some errors -- an unreadable attachment, for one -- are reported before the user
+        // message is written but the send still lands, so the draft has to be droppable again once
+        // that is confirmed (see the turn-open branch below). A genuine failure never persists a
+        // message, so its draft stays put.
         if (pendingSend != null && state is SessionState.Error) {
-            pendingSend = null
             prompt.restoreLastSubmission()
         }
+        // A restored draft is a duplicate only once this send's own message landed. That is exactly
+        // when pendingSend is released (confirmPendingSend saw a user message id that was not in the
+        // dispatch baseline), so gate the discard on that rather than on any Busy. A retry, a login
+        // resume, or an auto-approval also enters Busy but proves nothing about this send, and must
+        // not drop the draft; a genuine failure never persists a message, so its draft stays put too.
+        if (state is SessionState.Busy && pendingSend == null) prompt.discardRestoredSubmission()
         prompt.setBusy(busy)
         dock?.setBusy(busy)
         load.setState(state)

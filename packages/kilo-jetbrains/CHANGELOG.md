@@ -1,5 +1,23 @@
 # Changelog
 
+## 7.8.10
+
+### Patch Changes
+
+- [#15033](https://github.com/Kilo-Org/kilocode/pull/15033) [`3e2ff35`](https://github.com/Kilo-Org/kilocode/commit/3e2ff35dd55b76764f00629b3bf76653dbb1769e) - In the chat, show an inline notice explaining when an attached file could not be read, keep the Stop button available while a session is running even when the prompt box holds a draft, drop a draft restored after a non-fatal send error once the message turns out to be saved, and restore the prompt text and all attachments when reverting a message.
+
+- [#15036](https://github.com/Kilo-Org/kilocode/pull/15036) [`cd7c29e`](https://github.com/Kilo-Org/kilocode/commit/cd7c29ef65b4a4a137708a890e7d592aacf3f19c) - Auto-expand terminal, reasoning, and other tool blocks only for a live block in the actively streaming turn. Opening a session no longer expands blocks from history, and a long transcript now loads without blocking the UI.
+
+- [#15058](https://github.com/Kilo-Org/kilocode/pull/15058) [`b8d12a1`](https://github.com/Kilo-Org/kilocode/commit/b8d12a119969af4a95f04f8b1c2d8bdc1852a365) - Opt in to the JetBrains Marketplace error handler so crashes and freezes attributed to the plugin are reported and surfaced on the plugin's Marketplace page.
+
+- [#15057](https://github.com/Kilo-Org/kilocode/pull/15057) [`00698f3`](https://github.com/Kilo-Org/kilocode/commit/00698f3ba2401662eeaad74e82dea2a591dd100c) - Recover a session that is stuck on "Considering next steps" after finishing a plan, by re-reading the pending prompt when the session view misses it.
+
+- [#15012](https://github.com/Kilo-Org/kilocode/pull/15012) [`bf714d4`](https://github.com/Kilo-Org/kilocode/commit/bf714d4e17754c0ecfdcbfc10c340c1b037ed175) - Keep existing sessions visible when the plugin runs a pre-release Kilo CLI, instead of starting from an empty session history.
+
+- [#15047](https://github.com/Kilo-Org/kilocode/pull/15047) [`fdb634f`](https://github.com/Kilo-Org/kilocode/commit/fdb634f535409e8a35d6eeb165cc15c123e9d66e) - Keep MCP sign-in from resetting
+
+  Automatic OAuth recovery no longer clears stored credentials another session just refreshed, and signing in to a remote MCP server now updates the authentication warning in every open session instead of only the one that started it. The optional MCP stream probe is also restricted to its own endpoint so it cannot rewrite OAuth metadata or token responses.
+
 ## 7.9.0
 
 ### Minor Changes
@@ -594,12 +612,35 @@
 
 ## [Unreleased]
 
+## [7.1.10-rc.4] - 2026-10-14
+
+### Added
+
+- Opt in to the JetBrains Marketplace error handler so crashes and freezes attributed to the plugin are reported on the plugin's Marketplace page.
+- Fork a remote session from a specific message, branching the conversation at that point.
+
+### Fixed
+
+- Show an inline notice in the chat when an attached file cannot be read.
+- Expand transcript blocks only while a block is in the actively streaming turn, so opening a session no longer auto-expands history.
+- Recover a session stuck on "Considering next steps" by re-reading the pending prompt when the session view misses it.
+- Keep the prompt draft in step with the transcript and restore the prompt text and attachments when reverting a message.
+- Keep MCP sign-in from resetting, sync the authentication warning across all open sessions, and stop the MCP stream probe from rewriting OAuth metadata.
+- Stop glob and grep include patterns from bypassing `.gitignore`.
+- Handle non-UTF-8 ripgrep matches in grep without failing.
+
+### Changed
+
+- Bundled Kilo CLI pin updated to v7.8.10.
+
 ## [7.1.10-rc.3] - 2026-10-13
 
 ### Added
+
 - Let the glob tool search an opt-in allowlist of ignored paths.
 
 ### Fixed
+
 - Track Windows background processes with a job object instead of polling PowerShell.
 - Stop Windows background runners from adopting unrelated processes.
 - Keep Windows stop requests until a trustworthy process walk confirms exit.
@@ -607,17 +648,20 @@
 - Keep Windows stop responsive during exit confirmation.
 
 ### Changed
+
 - Bundled Kilo CLI pin remains v7.8.9.
 
 ## [7.1.10-rc.2] - 2026-10-13
 
 ### Added
+
 - Show and edit agent models directly from the agents list.
 - Configure the chat transcript display, with a live preview of your changes.
 - Reuse the Core submenu in the prompt bar menu.
 - Outline the turn a timeline jump lands on.
 
 ### Fixed
+
 - Restore session lists after a CLI reconnect.
 - Stop overriding your permission configuration.
 - Clear MCP sign-in state when the server is removed.
@@ -638,6 +682,7 @@
 - Require explicit user intent before starting Agent Manager sessions or worktrees.
 
 ### Changed
+
 - Bumped the bundled Kilo CLI pin to v7.8.9.
 
 ## [7.1.9] - 2026-10-07
