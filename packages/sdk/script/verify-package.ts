@@ -16,6 +16,7 @@ const names = [
   "client",
   "plugin",
   "plugin-browser",
+  "kilo-gateway-core", // kilocode_change - Kilo Gateway logic, a runtime dependency of core
   "core",
   "simulation",
   "server",
