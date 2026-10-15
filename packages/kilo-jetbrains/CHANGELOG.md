@@ -615,86 +615,51 @@
 ## [7.1.10] - 2026-10-15
 
 ### Added
-- feat(vscode): open chat links in the system browser on Shift-click by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14919
-- feat(vscode): combine agent, model, and reasoning into one prompt control by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14927
-- feat(agent-manager): reorder projects with drag and drop by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14928
-- feat(vscode): show page cursors in integrated browser preview by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14932
-- feat(jetbrains): show and edit agent models from the agents list by @kirillk in https://github.com/Kilo-Org/kilocode/pull/14967
-- feat(jetbrains): reuse the Core submenu in the prompt bar menu by @kirillk in https://github.com/Kilo-Org/kilocode/pull/15002
-- feat(jetbrains): configure transcript display by @kirillk in https://github.com/Kilo-Org/kilocode/pull/14665
-- feat(cli): let glob search an opt-in allowlist of ignored paths by @WebReflection in https://github.com/Kilo-Org/kilocode/pull/14988
-- feat: thread community triage queue in Slack by @brunoagatao in https://github.com/Kilo-Org/kilocode/pull/15019
-- feat(cli): fork a remote session from a message by @iscekic in https://github.com/Kilo-Org/kilocode/pull/15004
-- feat(telemetry): include conda client ID in Kilo events by @pedroheyerdahl in https://github.com/Kilo-Org/kilocode/pull/15034
-- feat(jetbrains): opt in to Marketplace error handler by @kirillk in https://github.com/Kilo-Org/kilocode/pull/15058
-- feat(gateway): route gateway traffic via KILO_AI_GATEWAY_URL by @chrarnoldus in https://github.com/Kilo-Org/kilocode/pull/15030
+
+- Show and edit agent models from the agents list.
+- Configure transcript display, with a live preview and localized settings.
+- Reuse the Core submenu in the prompt bar menu.
+- Opt in to the Marketplace error handler.
+- Fork a remote session from a message in the CLI.
+- Let glob search an opt-in allowlist of ignored paths.
+- Bundle Kilo CLI v7.8.12.
 
 ### Fixed
-- fix(indexing): tolerate OpenAI-compatible endpoints that reject dimensions by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14921
-- fix(CI): avoid syntax errors via CodeQL by @WebReflection in https://github.com/Kilo-Org/kilocode/pull/14923
-- fix(cli): require explicit user intent before starting Agent Manager sessions or worktrees by @kilo-code-bot[bot] in https://github.com/Kilo-Org/kilocode/pull/14528
-- fix(vscode): add tooltip to subagent open button by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14930
-- fix(vscode): use open-in-browser icon for PR panel by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/14934
-- fix(deps): Update Next.js due Dependabot alerts by @WebReflection in https://github.com/Kilo-Org/kilocode/pull/14933
-- fix(cli): expose a reserved command-name clash as /goal:command by @kirillk in https://github.com/Kilo-Org/kilocode/pull/14906
-- fix(opencode): point cloud sessions at a permitted temp dir by @maphew in https://github.com/Kilo-Org/kilocode/pull/14192
-- fix(cli): resolve bare model names for task subagents by @maphew in https://github.com/Kilo-Org/kilocode/pull/14037
-- fix(cli): surface terminal compaction failures by @quanzhuo in https://github.com/Kilo-Org/kilocode/pull/14651
-- fix(cli): limit Z.ai thinking defaults to built-in providers by @thomasbrugman in https://github.com/Kilo-Org/kilocode/pull/14757
-- fix(vscode): start the backend in Windows drive-root workspaces by @jsilvermist in https://github.com/Kilo-Org/kilocode/pull/14519
-- fix(cli): avoid false frontmatter errors when saving command files by @cpruijsen in https://github.com/Kilo-Org/kilocode/pull/14064
-- fix(cli): bound serve shutdown after signals by @abdulhusainahk in https://github.com/Kilo-Org/kilocode/pull/14830
-- fix(cli): send tool-result images as user content for Bedrock GPT-6 models by @kimnamu in https://github.com/Kilo-Org/kilocode/pull/14524
-- fix(cli): reuse the loaded transcript when pruning large payloads by @kr1shna-exe in https://github.com/Kilo-Org/kilocode/pull/14816
-- fix(jetbrains): navigate to transcript parts from the session timeline by @Suwanwa in https://github.com/Kilo-Org/kilocode/pull/14926
-- fix(cli): clean up MCP servers when their startup is interrupted by @kr1shna-exe in https://github.com/Kilo-Org/kilocode/pull/14809
-- fix(cli): improve missing binary error message for Windows ARM64 by @jhapate0704 in https://github.com/Kilo-Org/kilocode/pull/14838
-- fix(core): retry retryable connection resets through the normal backoff path by @madrugado in https://github.com/Kilo-Org/kilocode/pull/14893
-- fix: remove community labels from maintainer PRs in the sweep by @brunoagatao in https://github.com/Kilo-Org/kilocode/pull/14993
-- fix(vscode): label scheduled cron and wakeup prompts instead of user bubbles by @brunoagatao in https://github.com/Kilo-Org/kilocode/pull/14734
-- fix(jetbrains): restore session lists after a CLI reconnect by @kirillk in https://github.com/Kilo-Org/kilocode/pull/14966
-- fix(jetbrains): stop overriding user permission config by @kirillk in https://github.com/Kilo-Org/kilocode/pull/14970
-- fix(jetbrains): clear MCP sign-in state when the server is removed by @kirillk in https://github.com/Kilo-Org/kilocode/pull/14940
-- fix(jetbrains): make the model reset forget the saved per-mode pick by @kirillk in https://github.com/Kilo-Org/kilocode/pull/14968
-- fix(jetbrains): jump to a step when its timeline bar is clicked by @kirillk in https://github.com/Kilo-Org/kilocode/pull/14935
-- fix(cli): track Windows background jobs and runner identity natively by @mardausdennis in https://github.com/Kilo-Org/kilocode/pull/14857
-- fix(cli): reject stale parent links when tracking and stopping Windows background jobs by @mardausdennis in https://github.com/Kilo-Org/kilocode/pull/14796
-- fix(jetbrains): keep RC builds on the production session database by @kirillk in https://github.com/Kilo-Org/kilocode/pull/15012
-- fix(vscode): inline esbuild watch problem matcher and drop extension dependency by @brunoagatao in https://github.com/Kilo-Org/kilocode/pull/14254
-- fix(cli): stop glob and grep include patterns from bypassing .gitignore by @WebReflection in https://github.com/Kilo-Org/kilocode/pull/15017
-- fix(jetbrains): auto-expand transcript blocks only while live by @kirillk in https://github.com/Kilo-Org/kilocode/pull/15036
-- fix(mcp): stop automatic OAuth reset and sync auth badges by @kirillk in https://github.com/Kilo-Org/kilocode/pull/15047
-- fix(core): handle non-UTF-8 ripgrep matches in grep by @kirillk in https://github.com/Kilo-Org/kilocode/pull/15056
-- fix(jetbrains): recover a missed pending prompt from backend activity by @kirillk in https://github.com/Kilo-Org/kilocode/pull/15057
-- fix(jetbrains): surface unreadable attachments as an inline chat notice by @kirillk in https://github.com/Kilo-Org/kilocode/pull/15033
-- fix(vscode): retain terminal ownership across restart and teardown by @LEN5010 in https://github.com/Kilo-Org/kilocode/pull/14774
-- fix(cli): use brand yellow for the CLI theme by @emilieschario in https://github.com/Kilo-Org/kilocode/pull/15114
-- fix(jetbrains): use primary brand yellow for logos by @emilieschario in https://github.com/Kilo-Org/kilocode/pull/15112
-- fix: report why a provider failed to load instead of hiding it by @kirillk in https://github.com/Kilo-Org/kilocode/pull/14942
-- fix: preserve custom agents and edit permissions during delegation by @kirillk in https://github.com/Kilo-Org/kilocode/pull/14866
-- fix(vscode): update brand yellow to #FFDD00 by @emilieschario in https://github.com/Kilo-Org/kilocode/pull/15113
-- fix: match Anaconda brand yellow hover color by @lambertjosh in https://github.com/Kilo-Org/kilocode/pull/15118
+
+- Restore session lists after a CLI reconnect.
+- Stop overriding the user permission config.
+- Clear MCP sign-in state when the server is removed.
+- Make the model reset forget the saved per-mode pick.
+- Navigate to transcript parts from the session timeline, and jump to a step when its timeline bar is clicked.
+- Auto-expand transcript blocks only while live.
+- Recover a missed pending prompt from backend activity.
+- Surface unreadable attachments as an inline chat notice.
+- Use the primary brand yellow for logos.
+- Keep RC builds on the production session database.
+- Report why a provider failed to load instead of hiding it.
+- Preserve custom agents and edit permissions during delegation.
+- Stop automatic MCP OAuth reset and sync auth badges.
+- Handle non-UTF-8 ripgrep matches in grep.
+- Stop glob and grep include patterns from bypassing `.gitignore`.
+- Track Windows background jobs and runner identity natively, and reject stale parent links when stopping them.
+- Require explicit user intent before starting Agent Manager sessions or worktrees.
+- Expose a reserved command-name clash as `/goal:command`.
+- Point cloud sessions at a permitted temp directory.
+- Resolve bare model names for task subagents.
+- Surface terminal compaction failures.
+- Limit Z.ai thinking defaults to built-in providers.
+- Avoid false frontmatter errors when saving command files.
+- Bound serve shutdown after signals.
+- Send tool-result images as user content for Bedrock GPT-6 models.
+- Reuse the loaded transcript when pruning large payloads.
+- Clean up MCP servers when their startup is interrupted.
+- Improve the missing-binary error message for Windows ARM64.
+- Retry retryable connection resets through the normal backoff path.
+- Start the backend in Windows drive-root workspaces.
 
 ### Changed
-- release(jetbrains): v7.1.9 by @kilo-maintainer[bot] in https://github.com/Kilo-Org/kilocode/pull/14913
-- chore: add community PR and issue triage automation by @brunoagatao in https://github.com/Kilo-Org/kilocode/pull/14914
-- chore: run community triage tests in CI and skip needs-triage on reopen by @brunoagatao in https://github.com/Kilo-Org/kilocode/pull/14929
-- docs: standardize primary yellow to #FFDD00 by @emilieschario in https://github.com/Kilo-Org/kilocode/pull/14964
-- docs: auto-sync cloud-mobile with merged PRs (through 2026-10-11) by @github-actions[bot] in https://github.com/Kilo-Org/kilocode/pull/14946
-- chore(jetbrains): bump CLI pin to v7.8.9 by @kilo-maintainer[bot] in https://github.com/Kilo-Org/kilocode/pull/15009
-- release(jetbrains): v7.1.10-rc.2 by @kilo-maintainer[bot] in https://github.com/Kilo-Org/kilocode/pull/15010
-- docs(providers): refresh Mixlayer models and model-list note by @cathrynlavery in https://github.com/Kilo-Org/kilocode/pull/15006
-- release(jetbrains): v7.1.10-rc.3 by @kilo-maintainer[bot] in https://github.com/Kilo-Org/kilocode/pull/15024
-- chore(jetbrains): bump CLI pin to v7.8.10 by @kilo-maintainer[bot] in https://github.com/Kilo-Org/kilocode/pull/15078
-- release(jetbrains): v7.1.10-rc.4 by @kilo-maintainer[bot] in https://github.com/Kilo-Org/kilocode/pull/15082
-- docs: auto-sync cloud-agent with merged PRs (through 2026-10-15) by @github-actions[bot] in https://github.com/Kilo-Org/kilocode/pull/14555
-- docs: document code review concurrency limits by @emilieschario in https://github.com/Kilo-Org/kilocode/pull/15053
-- docs(kilo-docs): use ai-gateway.kilo.ai as the Kilo Gateway base URL by @chrarnoldus in https://github.com/Kilo-Org/kilocode/pull/15032
-- docs(swarm): board lives with background agents, not Experimental settings by @kilo-code-bot[bot] in https://github.com/Kilo-Org/kilocode/pull/15106
-- docs: update Mistral autocomplete API key setup by @thomasbrugman in https://github.com/Kilo-Org/kilocode/pull/14756
-- docs: show Sign in with ChatGPT in usage data by @emilieschario in https://github.com/Kilo-Org/kilocode/pull/15089
-- chore(jetbrains): bump CLI pin to v7.8.12 by @kilo-maintainer[bot] in https://github.com/Kilo-Org/kilocode/pull/15107
 
+- Route gateway traffic via `KILO_AI_GATEWAY_URL`.
 
 ## [7.1.10-rc.4] - 2026-10-14
 
