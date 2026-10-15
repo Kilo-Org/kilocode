@@ -39,7 +39,7 @@ abstract class SessionHost(
         val active = current
         if (active?.blank == true) return
         register(active)
-        show(create(project, root, this, null, timers))
+        show(newSessionUi())
         onSessionsChanged()
     }
 
@@ -108,15 +108,19 @@ abstract class SessionHost(
     protected fun currentUi(): SessionUi? = current
 
     /**
-     * Present an empty, lazily-created session panel so a host never sits on a blank void while a
-     * real session cannot be created yet (e.g. the backend is paused for migration). Unlike
-     * [newSession] it does not fire [onSessionsChanged], so it won't kick off list reloads.
+     * Present a new-session panel while a real session cannot be created yet (e.g. the backend is
+     * paused for migration). Reuses a retained draft when one exists. Unlike [newSession] it does
+     * not fire [onSessionsChanged], so it won't kick off list reloads.
      */
     @RequiresEdt
-    protected fun showBlank() {
+    protected fun showNewSession() {
         if (current?.blank == true) return
-        show(create(project, root, this, null, timers))
+        show(newSessionUi())
     }
+
+    @RequiresEdt
+    private fun newSessionUi(): SessionUi = all.firstOrNull { it.blank && it.hasDraft() }
+        ?: create(project, root, this, null, timers)
 
     @RequiresEdt
     fun currentKey(): String? {
@@ -177,6 +181,7 @@ abstract class SessionHost(
     protected fun release(ui: SessionUi?) {
         if (ui == null) return
         if (ui.cacheKey == null) {
+            if (ui.hasDraft()) return
             disposeUi(ui)
             return
         }
@@ -220,7 +225,7 @@ abstract class SessionHost(
         val delay = Registry.intValue("kilo.session.inactive.disposeTimeoutMs").coerceAtLeast(0)
         val timer = timers.timer(delay, repeats = false) {
             activeTimers.remove(ui)
-            if (ui === current || ui !in all) return@timer
+            if (ui === current || ui !in all || ui.hasDraft()) return@timer
             disposeUi(ui)
             onSessionsChanged()
         }

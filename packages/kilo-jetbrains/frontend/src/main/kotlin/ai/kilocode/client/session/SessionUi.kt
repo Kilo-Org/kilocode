@@ -312,6 +312,9 @@ class SessionUi(
 
     internal val blank: Boolean get() = controller.blank
 
+    @RequiresEdt
+    internal fun hasDraft(): Boolean = prompt.hasDraft()
+
     override val id: String? get() = controller.id
 
     internal val cacheKey: String? get() = controller.refKey

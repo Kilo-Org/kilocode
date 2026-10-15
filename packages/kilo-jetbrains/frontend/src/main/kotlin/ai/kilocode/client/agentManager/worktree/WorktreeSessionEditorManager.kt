@@ -237,10 +237,10 @@ open class WorktreeSessionEditorManager(
                 consumePendingPrompt()
             } else {
                 // The backend could not create a session yet (e.g. it is paused for legacy
-                // migration). Show the empty session panel so the worktree editor mirrors the tool
+                // migration). Show a new-session panel so the worktree editor mirrors the tool
                 // window instead of a blank panel; WorktreeSessionEditorPanel re-runs start() once
                 // migration finishes to create the real session.
-                if (currentUi() == null) showBlank()
+                if (currentUi() == null) showNewSession()
                 onListChanged?.invoke()
             }
         }
