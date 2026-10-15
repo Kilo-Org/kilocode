@@ -3561,8 +3561,8 @@ body.am-wt-dragging-active * {
   overflow: visible;
 }
 
-[data-component="dialog"]:has(.am-nv-project-inline [data-component="popover-content"]) [data-slot="dialog-content"],
-[data-component="dialog"]:has(.am-nv-project-inline [data-component="popover-content"]) [data-slot="dialog-body"] {
+[data-component="dialog"]:has(.am-nv-origin [data-component="popover-content"]) [data-slot="dialog-content"],
+[data-component="dialog"]:has(.am-nv-origin [data-component="popover-content"]) [data-slot="dialog-body"] {
   overflow: visible;
 }
 
@@ -4362,20 +4362,113 @@ body.am-wt-dragging-active * {
   color: var(--text-on-interactive-base) !important;
 }
 
-/* Project scope selector — inline with the New/Import tabs */
+/* Worktree origin: project and base branch as one segmented control,
+   inline with the New/Import tabs. Reads as "project / branch". */
 
-.am-nv-project-inline {
+.am-nv-origin {
   display: flex;
   align-items: center;
-  flex-shrink: 0;
-  flex: 0 1 260px;
+  flex: 0 1 auto;
   min-width: 0;
+  max-width: 72%;
+  height: 30px;
   margin-left: auto;
+  border: 1px solid var(--border-weak-base);
+  border-radius: var(--radius-sm);
+  background: var(--vscode-input-background, var(--surface-inset-base));
+  transition: border-color 120ms ease;
 }
 
-.am-nv-project-inline .am-selector-wrapper {
+.am-nv-origin:hover {
+  border-color: var(--text-weaker);
+}
+
+.am-nv-origin:focus-within {
+  border-color: var(--border-focus, #007fd4);
+}
+
+.am-nv-origin > [data-slot="popover-trigger"] {
+  display: flex;
+  height: 100%;
+  min-width: 0;
+}
+
+.am-nv-origin > [data-slot="popover-trigger"]:has(.am-nv-origin-project) {
+  flex: 0 0 auto;
+  max-width: 200px;
+}
+
+.am-nv-origin > [data-slot="popover-trigger"]:has(.am-nv-origin-branch) {
+  flex: 1 1 auto;
+}
+
+.am-nv-origin-segment {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   width: 100%;
   min-width: 0;
+  height: 100%;
+  padding: 0 8px 0 10px;
+  border: none;
+  border-radius: calc(var(--radius-sm) - 1px);
+  background: transparent;
+  color: var(--text-base);
+  font-family: inherit;
+  font-size: var(--font-size-base);
+  cursor: pointer;
+  transition:
+    background-color 120ms ease,
+    color 120ms ease;
+}
+
+.am-nv-origin-segment:hover,
+[data-slot="popover-trigger"][data-expanded] > .am-nv-origin-segment {
+  background: var(--surface-inset-base-hover);
+}
+
+.am-nv-origin-segment:focus-visible {
+  outline: 1px solid var(--border-focus, #007fd4);
+  outline-offset: -1px;
+}
+
+.am-nv-origin-segment:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.am-nv-origin-segment [data-component="icon"] {
+  flex-shrink: 0;
+  color: var(--text-weaker);
+}
+
+.am-nv-origin-segment > [data-component="icon"]:last-child {
+  margin-left: auto;
+  opacity: 0.7;
+}
+
+.am-nv-origin-value {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.am-nv-origin-mono {
+  font-family: var(--font-mono, monospace);
+  font-size: var(--kilo-font-size-12);
+}
+
+.am-nv-origin-placeholder {
+  color: var(--text-weaker);
+  white-space: nowrap;
+}
+
+.am-nv-origin-divider {
+  flex-shrink: 0;
+  width: 1px;
+  height: 16px;
+  background: var(--border-weak-base);
 }
 
 /* Import tab layout */
@@ -4627,6 +4720,66 @@ body.am-wt-dragging-active * {
   text-align: center;
   font-size: var(--kilo-font-size-12);
   color: var(--text-weaker);
+}
+
+.am-dropdown-more {
+  padding: 6px 8px 4px;
+  text-align: center;
+  font-size: var(--kilo-font-size-11);
+  color: var(--text-weaker);
+}
+
+.am-dropdown-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 34px;
+  padding: 4px 6px 4px 12px;
+  border-top: 1px solid var(--border-weak-base);
+  font-size: var(--kilo-font-size-12);
+  color: var(--text-weak);
+}
+
+/* Origin dropdowns open from narrow segments, so they use fixed widths. */
+
+.am-nv-origin-dropdown[data-component="popover-content"] {
+  width: min(380px, calc(100vw - 48px));
+}
+
+.am-nv-origin-projects[data-component="popover-content"] {
+  width: min(320px, calc(100vw - 48px));
+}
+
+.am-nv-origin-default {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.am-nv-origin-set-default {
+  flex-shrink: 0;
+  padding: 3px 8px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--vscode-textLink-foreground, var(--text-base));
+  font-family: inherit;
+  font-size: var(--kilo-font-size-12);
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 120ms ease;
+}
+
+.am-nv-origin-set-default:hover {
+  background: var(--surface-inset-base-hover);
+}
+
+.am-nv-origin-set-default:focus-visible {
+  outline: 1px solid var(--border-focus, #007fd4);
+  outline-offset: -1px;
 }
 
 /* Project option rows in the New Worktree project dropdown. */
@@ -5364,8 +5517,17 @@ body.vscode-high-contrast-light {
   }
 
   /* Selector trigger (dropdown button) */
-  .am-selector-trigger {
+  .am-selector-trigger,
+  .am-nv-origin {
     border-color: var(--vscode-contrastBorder, var(--border-weak-base));
+  }
+
+  .am-nv-origin-divider {
+    background: var(--vscode-contrastBorder, var(--border-weak-base));
+  }
+
+  .am-dropdown-footer {
+    border-top-color: var(--vscode-contrastBorder, var(--border-weak-base));
   }
 
   /* Annotation buttons */

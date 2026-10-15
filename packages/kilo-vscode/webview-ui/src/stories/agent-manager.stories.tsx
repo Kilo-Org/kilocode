@@ -30,8 +30,7 @@ import { Icon } from "@kilocode/kilo-ui/icon"
 import { TooltipKeybind } from "@kilocode/kilo-ui/tooltip"
 import { ContextMenu } from "@kilocode/kilo-ui/context-menu"
 import { ThinkingSelectorBase } from "../components/shared/ThinkingSelector"
-import { DeferredPopover } from "../components/shared/DeferredPopover"
-import { ProjectSelect } from "../../agent-manager/ProjectSelect"
+import { WorktreeOrigin } from "../../agent-manager/WorktreeOrigin"
 import { ProjectsSection } from "../../agent-manager/ProjectsSection"
 import { PRComments } from "../../agent-manager/pr/PRComments"
 import { PRConversation } from "../../agent-manager/pr/PRConversation"
@@ -1652,38 +1651,20 @@ export const NewWorktreeProjectDropdown: Story = {
                   <button class="am-tab-switcher-pill" type="button">
                     Import
                   </button>
-                  <div class="am-nv-project-inline">
-                    <div class="am-selector-wrapper">
-                      <DeferredPopover
-                        open
-                        onOpenChange={() => undefined}
-                        placement="bottom-start"
-                        flip={false}
-                        sameWidth
-                        portal={false}
-                        deferDismiss
-                        class="am-dropdown"
-                        trigger={
-                          <button class="am-selector-trigger" type="button" aria-label="Select project">
-                            <span class="am-selector-left">
-                              <Icon name="folder" size="small" />
-                              <span class="am-selector-value">kilocode</span>
-                            </span>
-                            <span class="am-selector-right">
-                              <Icon name="selector" size="small" />
-                            </span>
-                          </button>
-                        }
-                      >
-                        <ProjectSelect
-                          projects={projectPickerProjects}
-                          selected="project-main"
-                          onSelect={() => undefined}
-                          labels={{ missing: "Repository not found" }}
-                        />
-                      </DeferredPopover>
-                    </div>
-                  </div>
+                  <WorktreeOrigin
+                    projects={projectPickerProjects}
+                    project="project-main"
+                    onProject={() => undefined}
+                    projectOpen
+                    onProjectOpen={() => undefined}
+                    branch
+                    branches={[]}
+                    loading={false}
+                    base="main"
+                    fallback="main"
+                    onBase={() => undefined}
+                    onDefault={() => undefined}
+                  />
                 </div>
                 <div class="am-nv-dialog" style={{ "max-height": "520px" }}>
                   <div class="am-nv-dialog-content">

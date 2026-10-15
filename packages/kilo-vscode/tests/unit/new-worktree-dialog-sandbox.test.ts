@@ -34,6 +34,20 @@ describe("NewWorktreeDialog base branch", () => {
     expect(src).toContain("baseBranch: effectiveBaseBranch(),")
     expect(src).not.toContain("baseBranch: advanced ? (baseBranch() ?? undefined) : undefined")
   })
+
+  it("keeps base branch picks as per-project drafts until submit", () => {
+    expect(src).toContain("setBaseBranch(id ? (drafts()[id] ?? null) : null)")
+    expect(src).toContain("persistBase(project(), next)")
+    expect(src).toContain("persistBase(target, null)")
+  })
+
+  it("changes the project default only through the explicit action", () => {
+    const sends = src.match(/type: "agentManager\.setDefaultBaseBranch"/g) ?? []
+    expect(sends).toHaveLength(1)
+    expect(src).toContain(
+      'vscode.postMessage({ type: "agentManager.setDefaultBaseBranch", projectId: project(), branch: name })',
+    )
+  })
 })
 
 // Evaluates each scenario with shared fixtures and the real model helpers in a fresh Bun process.
