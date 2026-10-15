@@ -13,6 +13,8 @@ import ai.kilocode.rpc.dto.PermissionRequestDto
 import ai.kilocode.rpc.dto.QuestionInfoDto
 import ai.kilocode.rpc.dto.QuestionReplyDto
 import ai.kilocode.rpc.dto.QuestionRequestDto
+import ai.kilocode.rpc.dto.SessionActivityDto
+import ai.kilocode.rpc.dto.SessionActivityKindDto
 import ai.kilocode.rpc.dto.SessionStatusDto
 import com.intellij.openapi.util.Disposer
 import kotlinx.coroutines.CompletableDeferred
@@ -813,6 +815,83 @@ class SessionRecoveryTest : SessionControllerTestBase() {
         flush()
 
         assertEquals(SessionState.Idle, m.model.state)
+    }
+
+    // ------ Backend-activity reconcile and stuck-busy watchdog ------
+
+    /**
+     * The badge path the Agent Manager uses kept the `question.asked` the transcript's per-session
+     * stream dropped. Backend activity still reports the wait, so the controller must probe the
+     * pending-question endpoint rather than stay Busy forever.
+     */
+    fun `test backend activity question recovers a missed prompt over stale Busy`() {
+        projectRpc.state.value = workspaceReady()
+        val m = controller("ses_test")
+        flush()
+
+        emit(ChatEventDto.TurnOpen("ses_test"))
+        assertTrue(m.model.state is SessionState.Busy)
+
+        rpc.pendingQuestionList.add(question("q_activity"))
+        rpc.activity.value = mapOf("ses_test" to SessionActivityDto("/test", SessionActivityKindDto.QUESTION))
+
+        assertTrue(waitFor { m.model.state is SessionState.AwaitingQuestion })
+        assertEquals("q_activity", (m.model.state as SessionState.AwaitingQuestion).question.id)
+    }
+
+    fun `test backend activity reconcile is skipped while a prompt is already shown`() {
+        projectRpc.state.value = workspaceReady()
+        val m = controller("ses_test")
+        flush()
+
+        emit(ChatEventDto.QuestionAsked("ses_test", question("q_live")))
+        assertTrue(m.model.state is SessionState.AwaitingQuestion)
+        val before = rpc.pendingQuestionCalls
+
+        rpc.activity.value = mapOf("ses_test" to SessionActivityDto("/test", SessionActivityKindDto.QUESTION))
+        // Let the activity grace window elapse so a probe would have fired if the gate did not hold.
+        waitFor(700) { false }
+
+        assertEquals(before, rpc.pendingQuestionCalls)
+        assertEquals("q_live", (m.model.state as SessionState.AwaitingQuestion).question.id)
+    }
+
+    fun `test backend activity for another session does not probe`() {
+        projectRpc.state.value = workspaceReady()
+        controller("ses_test")
+        flush()
+        val before = rpc.pendingQuestionCalls
+
+        rpc.activity.value = mapOf("ses_other" to SessionActivityDto("/test", SessionActivityKindDto.QUESTION))
+        waitFor(700) { false }
+
+        assertEquals(before, rpc.pendingQuestionCalls)
+    }
+
+    fun `test stale activity recovery cannot overwrite a live QuestionAsked`() {
+        projectRpc.state.value = workspaceReady()
+        val m = controller("ses_test")
+        flush()
+
+        emit(ChatEventDto.TurnOpen("ses_test"))
+        assertTrue(m.model.state is SessionState.Busy)
+
+        // Hold the activity probe's fetch open so a live QuestionAsked can land first.
+        val before = rpc.pendingPermissionCalls
+        val gate = CompletableDeferred<Unit>()
+        rpc.pendingGate = gate
+        rpc.activity.value = mapOf("ses_test" to SessionActivityDto("/test", SessionActivityKindDto.QUESTION))
+        assertTrue(waitFor { rpc.pendingPermissionCalls > before })
+
+        emit(ChatEventDto.QuestionAsked("ses_test", question("q_live")))
+        assertTrue(m.model.state is SessionState.AwaitingQuestion)
+
+        gate.complete(Unit)
+        flush()
+
+        // The probe's stale snapshot (taken before q_live existed) must not overwrite it.
+        assertTrue(m.model.state is SessionState.AwaitingQuestion)
+        assertEquals("q_live", (m.model.state as SessionState.AwaitingQuestion).question.id)
     }
 
     private fun question(id: String) = QuestionRequestDto(

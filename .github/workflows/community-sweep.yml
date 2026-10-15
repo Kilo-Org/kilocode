@@ -48,6 +48,10 @@ jobs:
           # Closing stays off until the repo variable is set to "true".
           CLOSE_ENABLED: ${{ github.event_name == 'workflow_dispatch' && format('{0}', inputs.close) || vars.COMMUNITY_AUTO_CLOSE_ENABLED }}
           SLACK_PAYLOAD: ${{ runner.temp }}/slack-payload.json
+          # Optional. With both set, the sweep posts a short summary and puts
+          # the lists in a thread. Without them, the webhook below is used.
+          SLACK_TOKEN: ${{ secrets.COMMUNITY_TRIAGE_SLACK_TOKEN }}
+          SLACK_CHANNEL: ${{ secrets.COMMUNITY_TRIAGE_SLACK_CHANNEL }}
         run: bun run script/kilocode/community-triage.ts sweep
 
       # A step cannot read its own env in `if`, so a small step exposes the
@@ -56,7 +60,10 @@ jobs:
         id: slack
         env:
           SLACK_WEBHOOK: ${{ secrets.COMMUNITY_TRIAGE_SLACK_WEBHOOK }}
-        run: echo "enabled=${{ env.SLACK_WEBHOOK != '' }}" >> "$GITHUB_OUTPUT"
+          SLACK_TOKEN: ${{ secrets.COMMUNITY_TRIAGE_SLACK_TOKEN }}
+          SLACK_CHANNEL: ${{ secrets.COMMUNITY_TRIAGE_SLACK_CHANNEL }}
+        # The script posts with the bot token only when the token and the channel are both set.
+        run: echo "enabled=${{ env.SLACK_WEBHOOK != '' && !(env.SLACK_TOKEN != '' && env.SLACK_CHANNEL != '') }}" >> "$GITHUB_OUTPUT"
 
       - name: Notify Slack
         if: steps.slack.outputs.enabled == 'true'

@@ -10,7 +10,11 @@ import ai.kilocode.client.session.model.QuestionOption
 import ai.kilocode.client.session.model.SessionModel
 import ai.kilocode.client.session.model.SessionState
 import ai.kilocode.client.session.model.ToolCallRef
+import ai.kilocode.client.session.settings.BlockDisplay
+import ai.kilocode.client.session.settings.ReasoningDisplay
+import ai.kilocode.client.session.settings.TranscriptDisplay
 import ai.kilocode.client.plugin.KiloBundle
+import ai.kilocode.client.plugin.KiloPluginSettings
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.session.views.LoginRequiredView
@@ -26,9 +30,11 @@ import ai.kilocode.client.session.views.MessageErrorView
 import ai.kilocode.client.session.views.MessageToolbar
 import ai.kilocode.client.session.views.MessageView
 import ai.kilocode.client.session.views.PromptAttachmentView
+import ai.kilocode.client.session.views.ReasoningView
 import ai.kilocode.client.session.views.TextView
 import ai.kilocode.client.session.views.TurnView
 import ai.kilocode.client.session.views.base.PartView
+import ai.kilocode.client.session.views.tool.ShellToolView
 import ai.kilocode.client.session.views.tool.TaskToolView
 import ai.kilocode.client.session.views.tool.ToolView
 import ai.kilocode.client.session.views.todo.TodoWriteView
@@ -102,7 +108,7 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
         super.setUp()
         parent = Disposer.newDisposable("test")
         model = SessionModel()
-        panel = SessionMessageListPanel(model, parent, openFile = openFile)
+        panel = SessionMessageListPanel(model, parent, openFile = openFile, schedule = { it() })
     }
 
     override fun tearDown() {
@@ -558,7 +564,7 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
         Disposer.dispose(parent)
         parent = Disposer.newDisposable("test-queued")
         model = SessionModel()
-        panel = SessionMessageListPanel(model, parent, openFile = openFile, deleteQueued = { deleted = it })
+        panel = SessionMessageListPanel(model, parent, openFile = openFile, deleteQueued = { deleted = it }, schedule = { it() })
         model.upsertMessage(msg("u1", "user"))
         model.updateContent("u1", part("p1", "u1", "text", text = "first"))
         model.upsertMessage(msg("u2", "user"))
@@ -658,6 +664,157 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
         assertTrue(panel.findTurn("u1")!!.isVisible)
     }
 
+    // ------ live-only auto-expand ------
+
+    // The terminal and reasoning display settings default to EXPANDED, so without the live gate a
+    // history rebuild would build every heavy body on the EDT (the JFR hotspot this gate removes).
+
+    fun `test history load does not auto-expand terminal block`() {
+        model.loadHistory(listOf(
+            MessageWithPartsDto(
+                msg("a1", "assistant"),
+                listOf(toolPart("t1", "a1", "bash", "c1", state = "completed", input = mapOf("command" to "pwd"))),
+            ),
+        ))
+
+        val shell = panel.findMessage("a1")!!.part("t1") as ShellToolView
+        assertFalse("history load must not auto-expand terminal blocks", shell.isExpanded())
+        assertFalse("history load must not build the terminal body", shell.bodyCreated())
+    }
+
+    fun `test history load does not auto-open reasoning`() {
+        model.loadHistory(listOf(
+            MessageWithPartsDto(
+                msg("a1", "assistant"),
+                listOf(part("r1", "a1", "reasoning", text = "thinking")),
+            ),
+        ))
+
+        val reasoning = panel.findMessage("a1")!!.part("r1") as ReasoningView
+        assertFalse("history load must not auto-open reasoning", reasoning.isExpanded())
+    }
+
+    fun `test live streaming turn auto-expands terminal block`() {
+        model.setState(SessionState.Busy("Working"))
+        model.upsertMessage(msg("a1", "assistant"))
+        model.updateContent("a1", toolPart("t1", "a1", "bash", "c1", state = "running", input = mapOf("command" to "pwd")))
+
+        val shell = panel.findMessage("a1")!!.part("t1") as ShellToolView
+        assertTrue("a live block in the active turn must auto-expand", shell.isExpanded())
+    }
+
+    fun `test settled turn update does not auto-expand terminal block`() {
+        model.upsertMessage(msg("a1", "assistant"))
+        model.updateContent("a1", toolPart("t1", "a1", "bash", "c1", state = "running", input = mapOf("command" to "pwd")))
+        model.updateContent("a1", toolPart("t1", "a1", "bash", "c1", state = "completed", input = mapOf("command" to "pwd")))
+
+        val shell = panel.findMessage("a1")!!.part("t1") as ShellToolView
+        assertFalse("a settled turn must stay collapsed", shell.isExpanded())
+    }
+
+    fun `test settings re-apply expands history blocks`() {
+        KiloPluginSettings.setTerminalCommandDisplay(BlockDisplay.COLLAPSED)
+        try {
+            model.loadHistory(listOf(
+                MessageWithPartsDto(
+                    msg("a1", "assistant"),
+                    listOf(toolPart("t1", "a1", "bash", "c1", state = "completed", input = mapOf("command" to "pwd"))),
+                ),
+            ))
+            val shell = panel.findMessage("a1")!!.part("t1") as ShellToolView
+            assertFalse(shell.isExpanded())
+
+            // The production TranscriptDisplayListener applies with the default force=false, so cover
+            // that path: an explicit settings change must reach a settled/history card.
+            panel.syncTranscriptDisplay(
+                TranscriptDisplay(reasoning = ReasoningDisplay.EXPANDED, terminal = BlockDisplay.EXPANDED),
+            )
+
+            assertTrue("an explicit settings change must re-apply to history", shell.isExpanded())
+        } finally {
+            KiloPluginSettings.unsetTerminalCommandDisplay()
+        }
+    }
+
+    fun `test settings re-apply collapses history blocks`() {
+        KiloPluginSettings.setTerminalCommandDisplay(BlockDisplay.EXPANDED)
+        try {
+            model.loadHistory(listOf(
+                MessageWithPartsDto(
+                    msg("a1", "assistant"),
+                    listOf(toolPart("t1", "a1", "bash", "c1", state = "completed", input = mapOf("command" to "pwd"))),
+                ),
+            ))
+            val shell = panel.findMessage("a1")!!.part("t1") as ShellToolView
+            // History load keeps it collapsed despite the EXPANDED setting; open it manually first so
+            // the settings change has a rendered block to collapse.
+            panel.syncTranscriptDisplay(
+                TranscriptDisplay(reasoning = ReasoningDisplay.EXPANDED, terminal = BlockDisplay.EXPANDED),
+                force = true,
+            )
+            assertTrue(shell.isExpanded())
+
+            panel.syncTranscriptDisplay(
+                TranscriptDisplay(reasoning = ReasoningDisplay.EXPANDED, terminal = BlockDisplay.COLLAPSED),
+            )
+
+            assertFalse("an explicit collapse must reach a settled/history card", shell.isExpanded())
+        } finally {
+            KiloPluginSettings.unsetTerminalCommandDisplay()
+        }
+    }
+
+    fun `test settings re-apply opens history reasoning`() {
+        KiloPluginSettings.setReasoningDisplay(ReasoningDisplay.HEADLINE)
+        try {
+            model.loadHistory(listOf(
+                MessageWithPartsDto(
+                    msg("a1", "assistant"),
+                    listOf(part("r1", "a1", "reasoning", text = "thinking")),
+                ),
+            ))
+            val reasoning = panel.findMessage("a1")!!.part("r1") as ReasoningView
+            assertFalse(reasoning.isExpanded())
+
+            panel.syncTranscriptDisplay(
+                TranscriptDisplay(reasoning = ReasoningDisplay.EXPANDED, terminal = BlockDisplay.EXPANDED),
+            )
+
+            assertTrue("an explicit settings change must open history reasoning", reasoning.isExpanded())
+        } finally {
+            KiloPluginSettings.unsetReasoningDisplay()
+        }
+    }
+
+    fun `test turn removed mid-rebuild is not re-added as a ghost`() {
+        // Defer drain slices so a removal can land while turns are still queued. The rebuild drains
+        // 4 turns per slice, so 6 turns leave the last two queued after the first slice.
+        val pending = ArrayDeque<() -> Unit>()
+        val item = SessionMessageListPanel(model, parent, openFile = openFile, schedule = { pending.add(it) })
+        model.loadHistory((1..6).flatMap { n ->
+            listOf(
+                MessageWithPartsDto(msg("u$n", "user"), listOf(part("u${n}p", "u$n", "text", "u$n"))),
+                MessageWithPartsDto(msg("a$n", "assistant"), listOf(part("a${n}p", "a$n", "text", "a$n"))),
+            )
+        })
+        // One slice builds u1..u4; u5 and u6 remain queued.
+        pending.removeFirst().invoke()
+        assertNotNull(item.findTurn("u4"))
+        assertNull("u5 is still queued after the first slice", item.findTurn("u5"))
+
+        // Remove the queued trailing turn entirely (user anchor plus assistant), so no regrouping
+        // merges its messages into a neighbor.
+        model.removeMessage("u5")
+        model.removeMessage("a5")
+        while (pending.isNotEmpty()) pending.removeFirst().invoke()
+
+        assertNull("a turn removed mid-rebuild must not be rebuilt", item.findTurn("u5"))
+        assertNull(item.findMessage("u5"))
+        assertNull(item.findMessage("a5"))
+        // Unaffected turns still render.
+        assertNotNull(item.findTurn("u6"))
+    }
+
     // ------ TurnRemoved ------
 
     fun `test removing only message removes the turn`() {
@@ -754,7 +911,7 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
 
     fun `test user prompt toolbar shows rollback when revert handler is present`() {
         var called: String? = null
-        panel = SessionMessageListPanel(model, parent, openFile = openFile, revert = { called = it })
+        panel = SessionMessageListPanel(model, parent, openFile = openFile, revert = { called = it }, schedule = { it() })
         model.upsertMessage(msg("u1", "user"))
         model.updateContent("u1", part("p1", "u1", "text", text = "hello"))
 
@@ -771,7 +928,7 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
 
     fun `test rollback state shows inline prompt progress and suppresses toolbar`() {
         var cancelled = false
-        panel = SessionMessageListPanel(model, parent, openFile = openFile, revert = {}, cancelRevert = { cancelled = true })
+        panel = SessionMessageListPanel(model, parent, openFile = openFile, revert = {}, cancelRevert = { cancelled = true }, schedule = { it() })
         model.upsertMessage(msg("u1", "user"))
         model.updateContent("u1", part("p1", "u1", "text", text = "hello"))
         val message = panel.findMessage("u1")!!
@@ -831,7 +988,7 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
 
     fun `test text markdown link uses panel url opener`() {
         val urls = mutableListOf<String>()
-        val item = SessionMessageListPanel(model, parent, openFile = openFile, openUrl = { urls.add(it) })
+        val item = SessionMessageListPanel(model, parent, openFile = openFile, openUrl = { urls.add(it) }, schedule = { it() })
         model.upsertMessage(msg("a1", "assistant"))
         model.updateContent("a1", part("p1", "a1", "text", text = "[docs](https://kilocode.ai/docs)"))
 
@@ -847,6 +1004,7 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
             model,
             parent,
             openFile = openFile,
+            schedule = { it() },
         ).also {
             it.onHover = { view, on -> events.add("${view.contentId}:$on") }
         }
@@ -1430,7 +1588,7 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
 
     fun `test rollback banner is anchored inside transcript before progress footer`() {
         val banner = RevertBanner(model, {}, {}, {})
-        val item = SessionMessageListPanel(model, parent, openFile = openFile, banner = banner)
+        val item = SessionMessageListPanel(model, parent, openFile = openFile, banner = banner, schedule = { it() })
         model.upsertMessage(msg("u1", "user"))
         model.upsertMessage(msg("a1", "assistant"))
 
@@ -1905,7 +2063,7 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
 
     fun `test completed plan update replaces tool view and keeps open file action`() {
         val opened = mutableListOf<String>()
-        val item = SessionMessageListPanel(model, parent, openFile = { href, _ -> opened.add(href) })
+        val item = SessionMessageListPanel(model, parent, openFile = { href, _ -> opened.add(href) }, schedule = { it() })
         model.upsertMessage(msg("a1", "assistant"))
         model.updateContent("a1", toolPart("tp1", "a1", "plan_exit", "call1", state = "running"))
 
@@ -1972,7 +2130,7 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
         )
         val l = LoginRequiredView(openProfile = {}, dismiss = {})
         val o = SessionOutcomeView()
-        return SessionMessageListPanel(model, parent, q, p, l, openFile).also { it.outcome = o }
+        return SessionMessageListPanel(model, parent, q, p, l, openFile, schedule = { it() }).also { it.outcome = o }
     }
 
     private inline fun <reified T> find(root: Container): T? = findCls(root, T::class.java)
@@ -2030,7 +2188,7 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
     /** Panel whose footer can offer Retry, so the split between card text and footer action is testable. */
     private fun panelWithRetry(retryable: () -> Boolean): SessionMessageListPanel {
         val o = SessionOutcomeView(retry = {}, retryable = retryable)
-        return SessionMessageListPanel(model, parent, openFile = openFile).also { it.outcome = o }
+        return SessionMessageListPanel(model, parent, openFile = openFile, schedule = { it() }).also { it.outcome = o }
     }
 
     private fun button(root: Container, label: String) =

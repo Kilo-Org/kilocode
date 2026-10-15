@@ -2718,6 +2718,7 @@ export type Config = {
     image_generation?: boolean
     image_generation_model?: string
     native_notebook_tools?: boolean
+    glob_include_ignored?: Array<string>
     code_mode?: boolean
     speech_to_text_model?: string
     speech_to_text_base_url?: string
@@ -4041,6 +4042,21 @@ export type ConfigOverlayConflictError = {
       [key: string]: unknown
     }
   }
+}
+
+export type ConfigOverlayShadowedError = {
+  message: string
+  path: string
+  shadowedBy?: string
+}
+
+export type ConfigOverlayWriteError = {
+  message: string
+  path?: string
+  issues?: Array<{
+    message: string
+    path: Array<string>
+  }>
 }
 
 export type ConfigRulesResponse = {
@@ -15770,13 +15786,13 @@ export type ConfigOverlayUpdateData = {
 
 export type ConfigOverlayUpdateErrors = {
   /**
-   * Bad request
+   * ConfigOverlayWriteError | InvalidRequestError
    */
-  400: BadRequestError
+  400: ConfigOverlayWriteError | InvalidRequestError
   /**
-   * ConfigOverlayConflictError
+   * ConfigOverlayConflictError | ConfigOverlayShadowedError
    */
-  409: ConfigOverlayConflictError
+  409: ConfigOverlayConflictError | ConfigOverlayShadowedError
 }
 
 export type ConfigOverlayUpdateError = ConfigOverlayUpdateErrors[keyof ConfigOverlayUpdateErrors]
