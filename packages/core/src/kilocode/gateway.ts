@@ -195,6 +195,12 @@ export const KiloGatewayPlugin = define<Bus.Service | Scope.Scope>({
 
       if (fetched._tag === "Success") {
         const models = fetched.success.models
+        const resolvedDefault =
+          models.some((model) => model.id === defaultModelID)
+            ? defaultModelID
+            : organizationID
+              ? models[0]?.id
+              : defaultModelID
         // Key the snapshot by the actual scope of the returned data: a 401 personal fallback returns the
         // anonymous free catalog (`anonymous === true`), so never store it under the personal token key.
         const writeKey = organizationID
@@ -208,7 +214,7 @@ export const KiloGatewayPlugin = define<Bus.Service | Scope.Scope>({
           connection,
           envActive,
           models,
-          defaultModelID,
+          defaultModelID: resolvedDefault,
           failed: false,
           anonymous: fetched.success.anonymous,
         }
