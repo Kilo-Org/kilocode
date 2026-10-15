@@ -342,6 +342,7 @@ describe("KiloGatewayPlugin", () => {
             const providers = yield* Provider.Service
             expect(yield* rpc.call("kilocode.gateway", "profile", {})).toEqual({
               email: "profile@example.test",
+              name: "Fixture",
               organizations: [
                 { id: "first", name: "First", role: "member" },
                 { id: "selected", name: "Selected", role: "owner" },

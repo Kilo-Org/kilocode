@@ -232,6 +232,9 @@ export function imageModels(scope: Scope): Effect.Effect<ImageModel[], Failure> 
       Effect.mapError((): Failure => ({ kind: "network" })),
     )
     if (!response.ok) {
+      if (response.status === 401 && scope.token && !organizationID) {
+        return yield* imageModels({ server, version: scope.version })
+      }
       const kind = response.status === 401 || response.status === 403 ? "unauthorized" : "http"
       return yield* Effect.fail({ kind, status: response.status } satisfies Failure)
     }

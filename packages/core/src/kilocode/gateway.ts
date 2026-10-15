@@ -522,6 +522,7 @@ export const KiloGatewayPlugin = define<Bus.Service | Scope.Scope>({
             )
             return {
               email: profile.email,
+              ...(profile.name ? { name: profile.name } : {}),
               organizations: profile.organizations,
               hasPersonalAccount: profile.hasPersonalAccount !== false,
               organizationID: account.organizationID,

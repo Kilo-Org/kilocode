@@ -160,6 +160,7 @@ async function accountStatus(context: Plugin.Context) {
     ? (profile.organizations.find((o) => o.id === profile.organizationID)?.name ?? profile.organizationID)
     : "Personal Account"
   const lines = [
+    profile?.name ? `Name: ${profile.name}` : undefined,
     profile?.email ? `Account: ${profile.email}` : undefined,
     `Scope: ${orgName}`,
     balance?.balance != null ? `Balance: $${balance.balance.toFixed(2)}` : undefined,

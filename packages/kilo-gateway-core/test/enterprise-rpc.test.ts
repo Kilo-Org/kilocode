@@ -115,6 +115,11 @@ describe("Enterprise account, tRPC, modes, notifications, media, and FIM/edit", 
       model: "inception/mercury-edit-2",
       url: "https://ai-gateway.kilo.ai/api/v1/edit/completions",
     })
+    expect(KiloAutocomplete.resolveEditTarget("kilo", "mistralai/codestral-2508", "https://api.kilo.ai")).toEqual({
+      provider: "kilo",
+      model: "mistralai/codestral-2508",
+      url: "",
+    })
     expect(
       KiloAutocomplete.extractFencedBody("```ts\n<|code_to_edit|>\nconst x = 1\n<|/code_to_edit|>\n```"),
     ).toBe("const x = 1")

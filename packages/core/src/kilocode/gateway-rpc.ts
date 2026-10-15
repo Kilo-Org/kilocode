@@ -10,6 +10,7 @@ const OrganizationID = Schema.NullOr(Schema.String)
 
 export const Profile = Schema.Struct({
   email: Schema.String,
+  name: Schema.optional(Schema.String),
   organizations: Schema.Array(
     Schema.Struct({ id: Schema.String, name: Schema.String, role: Schema.optional(Schema.String) }),
   ),

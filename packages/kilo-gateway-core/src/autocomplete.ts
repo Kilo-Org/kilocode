@@ -165,7 +165,7 @@ export function resolveEditTarget(
   return {
     provider: "kilo",
     model: info.requestModel,
-    url: kiloUrl,
+    url: "",
   }
 }
 
