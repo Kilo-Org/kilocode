@@ -15,47 +15,50 @@ import { provideTestInstance, tmpdir } from "../fixture/fixture"
 
 const original = { ...fs }
 const processes = { ...child }
-const gate: {
+let gate: {
+  pid?: number
+  token?: string
+  group?: "owned" | "gone"
+  gone?: number
+  ended?: boolean
   file?: string
-  output?: "error" | "hang"
-  watch?: { reached: PromiseWithResolvers<void>; release: PromiseWithResolvers<void> }
-  probe?: "error" | "hang"
+  watch?: PromiseWithResolvers<void>
   reached?: PromiseWithResolvers<void>
-  release?: PromiseWithResolvers<void>
-  proc?: child.ChildProcess
 } = {}
 
-async function blockedProbe() {
-  if (!gate.probe) return
-  gate.reached?.resolve()
-  if (gate.probe === "error") throw new Error("test probe failure")
-  await gate.release?.promise
-}
-
 const stat = async (...args: Parameters<typeof fs.stat>) => {
-  if (String(args[0]) === gate.file) {
-    if (gate.watch) {
-      const watch = gate.watch
-      gate.watch = undefined
-      watch.reached.resolve()
-      await watch.release.promise
-    }
-    if (gate.output === "error") throw new Error("test output failure")
-    if (gate.output === "hang") await gate.release?.promise
+  if (String(args[0]) === gate.file && gate.watch) {
+    const held = gate.watch
+    gate.watch = undefined
+    gate.reached?.resolve()
+    await held.promise
   }
   return original.stat(...args)
 }
 
 const readFile = async (...args: Parameters<typeof fs.readFile>) => {
-  if (gate.proc?.pid && typeof args[0] === "string" && args[0].startsWith(`/proc/${gate.proc.pid}/`))
-    await blockedProbe()
+  if (gate.pid && typeof args[0] === "string" && args[0].startsWith(`/proc/${gate.pid}/`)) {
+    if (gate.group === "gone" || (gate.ended && gate.group !== "owned"))
+      throw Object.assign(new Error("gone"), { code: "ENOENT" })
+    if (args[0].endsWith("/stat")) return `${gate.pid} (fixture) S 1 ${gate.pid} 0 0`
+    if (args[0].endsWith("/environ")) return Buffer.from(`KILO_BACKGROUND_PROCESS_TOKEN=${gate.token}\0`)
+  }
   return original.readFile(...args)
 }
 
-void mock.module("fs/promises", () => ({ ...original, stat, readFile }))
+const readdir = new Proxy(original.readdir, {
+  apply(fn, receiver, args) {
+    if (args[0] === "/proc" && gate.pid) {
+      if (gate.group !== "owned") gate.gone = (gate.gone ?? 0) + 1
+      return Promise.resolve(gate.group === "owned" ? [String(gate.pid)] : [])
+    }
+    return Reflect.apply(fn, receiver, args)
+  },
+})
+void mock.module("fs/promises", () => ({ ...original, stat, readFile, readdir }))
 
-async function until(check: () => boolean | Promise<boolean>, message: string, timeout = 10_000) {
-  const end = Date.now() + timeout
+async function until(check: () => boolean | Promise<boolean>, message: string) {
+  const end = Date.now() + 10_000
   while (Date.now() < end) {
     if (await check()) return
     await Bun.sleep(20)
@@ -70,9 +73,10 @@ async function fixture(
     exit: () => Promise<void>
     release: () => void
   }) => Promise<void>,
-  order: "watch" | "event" = "event",
+  mode: "watch" | "event" | "unreported" | "adopted" = "watch",
   signal = false,
 ) {
+  gate = {}
   await using tmp = await tmpdir()
   const flag = path.join(tmp.path, "exit.flag")
   const file = path.join(tmp.path, "owned.mjs")
@@ -82,57 +86,69 @@ async function fixture(
   )
   let proc: child.ChildProcess | undefined
   let release: (() => void) | undefined
-  let emitted = false
+  let held = false
   const spawned = spyOn(child, "spawn").mockImplementation(
     new Proxy(processes.spawn, {
-      apply(spawn, receiver, args) {
-        const next: child.ChildProcess = Reflect.apply(spawn, receiver, args)
+      apply(fn, receiver, args) {
+        const next: child.ChildProcess = Reflect.apply(fn, receiver, args)
         proc = next
-        gate.proc = next
-        if (order === "watch") {
+        gate.pid = next.pid
+        if (mode === "watch" || mode === "unreported") {
           const emit = next.emit.bind(next)
           spyOn(next, "emit").mockImplementation(
             new Proxy(emit, {
               apply(fn, receiver, args) {
-                if (args[0] === "exit" && !emitted) {
-                  emitted = true
-                  release = () => Reflect.apply(fn, receiver, args)
+                if (args[0] === "exit" && !held) {
+                  held = true
+                  gate.ended = true
+                  const code = next.exitCode
+                  const end = next.signalCode
+                  if (mode === "unreported") {
+                    Object.defineProperty(next, "exitCode", { value: null, writable: true })
+                    Object.defineProperty(next, "signalCode", { value: null, writable: true })
+                  }
+                  release = () => {
+                    Object.defineProperty(next, "exitCode", { value: code, writable: true })
+                    Object.defineProperty(next, "signalCode", { value: end, writable: true })
+                    return Reflect.apply(fn, receiver, args)
+                  }
                   return true
                 }
                 return Reflect.apply(fn, receiver, args)
               },
             }),
           )
-        }
+        } else
+          next.once("exit", () => {
+            gate.ended = true
+          })
         return next
       },
     }),
   )
-  const command = spyOn(BackgroundProcessRunner, "command").mockImplementation((input) => [
-    process.execPath,
-    file,
-    "__background-process-runner",
-    input.token,
-  ])
-  const native = spyOn(BackgroundProcessWindows, "command").mockImplementation(async (pid) => {
-    await blockedProbe()
-    if (!proc || proc.pid !== pid || proc.exitCode !== null || proc.signalCode !== null) return { live: false }
-    const input = command.mock.calls.at(0)?.at(0)
-    return { live: true, line: `__background-process-runner ${input?.token}` }
+  const command = spyOn(BackgroundProcessRunner, "command").mockImplementation((input) => {
+    gate.token = input.token
+    return [process.execPath, file, "__background-process-runner", input.token]
+  })
+  const native = spyOn(BackgroundProcessWindows, "command").mockImplementation(async () => {
+    if (gate.group === "gone" || (gate.ended && gate.group !== "owned")) {
+      gate.gone = (gate.gone ?? 0) + 1
+      return { live: false }
+    }
+    return { live: true, line: `__background-process-runner ${gate.token}` }
   })
   const text = Process.text
   const query = spyOn(Process, "text").mockImplementation(async (args, opts) => {
     if (args[0] === "ps") {
-      await blockedProbe()
-      const input = command.mock.calls.at(0)?.at(0)
+      if (gate.group === "gone" || (gate.ended && gate.group !== "owned")) gate.gone = (gate.gone ?? 0) + 1
       return {
         code: 0,
         stdout: Buffer.alloc(0),
         stderr: Buffer.alloc(0),
         text:
-          proc?.pid && proc.exitCode === null && proc.signalCode === null
-            ? `${proc.pid} ${proc.pid} ${input?.token}`
-            : "",
+          gate.group === "gone" || (gate.ended && gate.group !== "owned")
+            ? ""
+            : `${gate.pid} ${gate.pid} __background-process-runner ${gate.token}`,
       }
     }
     return text(args, opts)
@@ -141,45 +157,83 @@ async function fixture(
     await provideTestInstance({
       directory: tmp.path,
       fn: async () => {
-        const info = await BackgroundProcess.start({
-          sessionID: SessionID.descending(),
-          command: "synthetic owned exit",
-          cwd: tmp.path,
-          lifetime: "persistent",
-          ready: { pattern: "READY_EXIT", timeout: 10_000 },
-        })
-        const owned = proc
-        if (!owned) throw new Error("owned ChildProcess missing")
         const scope = `scope-${Hash.fast(`global\0${Filesystem.resolve(tmp.path)}`)}`
-        gate.file = path.join(Global.Path.log, "background-process", scope, `${info.id}.log`)
+        let id: BackgroundProcess.ID
+        if (mode === "adopted") {
+          id = BackgroundProcess.ID.ascending()
+          gate.token = `adopted-${id}`
+          proc = processes.spawn(process.execPath, [file, "__background-process-runner", gate.token], {
+            stdio: "ignore",
+            windowsHide: true,
+          })
+          gate.pid = proc.pid
+          proc.once("exit", () => {
+            gate.ended = true
+          })
+          const directory = path.join(Global.Path.state, "background-process", scope)
+          await fs.mkdir(directory, { recursive: true })
+          const now = Date.now()
+          const sessionID = SessionID.descending()
+          await Bun.write(
+            path.join(directory, `${id}.json`),
+            JSON.stringify({
+              scope: scope.replace("scope-", "scope:"),
+              token: gate.token,
+              info: {
+                id,
+                sessionID,
+                pid: proc.pid,
+                command: "synthetic adopted exit",
+                cwd: tmp.path,
+                ports: [],
+                status: "running",
+                lifetime: "persistent",
+                ready: false,
+                output: "",
+                time: { started: now, updated: now },
+              },
+              start: { sessionID, command: "synthetic adopted exit", cwd: tmp.path, lifetime: "persistent" },
+            }),
+          )
+          expect((await BackgroundProcess.get(id))?.pid).toBe(proc.pid)
+        } else {
+          id = (
+            await BackgroundProcess.start({
+              sessionID: SessionID.descending(),
+              command: "synthetic owned exit",
+              cwd: tmp.path,
+              lifetime: "persistent",
+              ready: { pattern: "READY_EXIT", timeout: 10_000 },
+            })
+          ).id
+        }
+        const owned = proc
+        if (!owned) throw new Error("ChildProcess missing")
+        gate.file = path.join(Global.Path.log, "background-process", scope, `${id}.log`)
         await run({
-          id: info.id,
+          id,
           proc: owned,
-          release: () => release?.(),
+          release: () => {
+            if (mode === "watch" || mode === "unreported") expect(held).toBe(true)
+            release?.()
+          },
           exit: async () => {
             if (signal) owned.kill("SIGTERM")
             else await Bun.write(flag, "exit")
-            await until(() => owned.exitCode !== null || owned.signalCode !== null, "owned child did not exit")
+            await until(() => gate.ended === true, "real child did not exit")
           },
         })
       },
     })
   } finally {
-    gate.release?.resolve()
-    gate.watch?.release.resolve()
+    gate.watch?.resolve()
     release?.()
-    delete gate.file
-    delete gate.output
-    delete gate.watch
-    delete gate.probe
-    delete gate.reached
-    delete gate.release
-    delete gate.proc
     if (proc && proc.exitCode === null && proc.signalCode === null) {
       const ended = once(proc, "exit")
       proc.kill("SIGKILL")
       await ended
     }
+    gate = {}
     query.mockRestore()
     native.mockRestore()
     command.mockRestore()
@@ -187,77 +241,103 @@ async function fixture(
   }
 }
 
-describe("owned background process exit", () => {
-  for (const order of ["watch", "event"] as const) {
-    for (const signal of [false, true]) {
-      test(`keeps the real ${signal ? "signal" : "exit code"} when ${order} finishes first`, async () => {
-        await fixture(
-          async ({ id, proc, exit, release }) => {
-            const held =
-              order === "event"
-                ? { reached: Promise.withResolvers<void>(), release: Promise.withResolvers<void>() }
-                : undefined
-            if (held) {
-              gate.watch = held
-              await held.reached.promise
-            }
-            try {
-              await exit()
-              await until(
-                async () => (await BackgroundProcess.get(id))?.time.ended !== undefined,
-                "owned job stayed non-terminal",
-              )
-              const info = await BackgroundProcess.get(id)
-              expect(info?.status).toBe("failed")
-              if (signal) {
-                expect(proc.signalCode).toBe("SIGTERM")
-                expect(info?.signal).toBe("SIGTERM")
-                expect(info?.exitCode).toBeUndefined()
-              } else {
-                expect(proc.exitCode).toBe(1)
-                expect(info?.exitCode).toBe(1)
-                expect(info?.signal).toBeUndefined()
-              }
-            } finally {
-              release()
-              held?.release.resolve()
-            }
-            await Bun.sleep(100)
-            expect((await BackgroundProcess.get(id))?.exitCode).toBe(signal ? undefined : 1)
-            expect((await BackgroundProcess.get(id))?.signal).toBe(signal ? "SIGTERM" : undefined)
-          },
-          order,
-          signal,
-        )
-      }, 30_000)
-    }
-  }
-
-  for (const source of ["output", "probe"] as const) {
-    for (const failure of ["error", "hang"] as const) {
-      test(`finalizes the owned exit when ${source} ${failure === "hang" ? "hangs" : "fails"}`, async () => {
-        await fixture(async ({ id, proc, exit }) => {
-          gate.release = Promise.withResolvers<void>()
-          if (source === "output") gate.output = failure
-          else {
-            gate.reached = Promise.withResolvers<void>()
-            gate.probe = failure
-            await gate.reached.promise
-          }
-          const started = Date.now()
+describe("background process exit after the group is gone", () => {
+  for (const signal of [false, true])
+    test(`watch preserves the owned ${signal ? "signal" : "exit code"}`, async () => {
+      await fixture(
+        async ({ id, proc, exit, release }) => {
           await exit()
-          await until(
-            async () => (await BackgroundProcess.get(id))?.time.ended !== undefined,
-            "finalizer exceeded its bound",
-            3_000,
-          )
-          const info = await BackgroundProcess.get(id)
-          expect(proc.exitCode).toBe(1)
-          expect(info?.status).toBe("failed")
-          expect(info?.exitCode).toBe(1)
-          expect(Date.now() - started).toBeLessThan(3_000)
-        })
-      }, 30_000)
-    }
-  }
+          try {
+            expect((await BackgroundProcess.get(id))?.time.ended).toBeUndefined()
+            await until(async () => (await BackgroundProcess.get(id))?.time.ended !== undefined, "job did not finish")
+            const info = await BackgroundProcess.get(id)
+            expect(info?.status).toBe("failed")
+            expect(info?.exitCode).toBe(signal ? undefined : 1)
+            expect(info?.signal).toBe(signal ? "SIGTERM" : undefined)
+            expect(signal ? proc.signalCode : proc.exitCode).toBe(signal ? "SIGTERM" : 1)
+            if (signal)
+              console.log(
+                JSON.stringify({
+                  platform: process.platform,
+                  childExitCode: proc.exitCode,
+                  childSignalCode: proc.signalCode,
+                  storedExitCode: info?.exitCode,
+                  storedSignal: info?.signal,
+                }),
+              )
+          } finally {
+            release()
+          }
+        },
+        "watch",
+        signal,
+      )
+    }, 30_000)
+
+  test("gone before the owned end is reported waits for the real exit event", async () => {
+    await fixture(async ({ id, exit, release }) => {
+      await exit()
+      gate.group = "gone"
+      const before = gate.gone ?? 0
+      try {
+        await until(() => (gate.gone ?? 0) > before, "the watch never observed the gone group")
+        await Bun.sleep(50)
+        const info = await BackgroundProcess.get(id)
+        if (!info) throw new Error("owned job disappeared")
+        expect(["running", "ready"]).toContain(info.status)
+        expect(info?.exitCode).toBeUndefined()
+      } finally {
+        release()
+      }
+      await until(async () => (await BackgroundProcess.get(id))?.time.ended !== undefined, "real exit did not finalize")
+      expect((await BackgroundProcess.get(id))?.exitCode).toBe(1)
+    }, "unreported")
+  }, 30_000)
+
+  // This case preserves main's normal exit-handler path, rather than guarding the watch change.
+  test("the owning exit handler preserves its code when it runs first", async () => {
+    await fixture(async ({ id, exit }) => {
+      gate.reached = Promise.withResolvers<void>()
+      const held = Promise.withResolvers<void>()
+      gate.watch = held
+      await gate.reached.promise
+      await exit()
+      held.resolve()
+      await until(
+        async () => (await BackgroundProcess.get(id))?.time.ended !== undefined,
+        "exit handler did not finalize",
+      )
+      expect((await BackgroundProcess.get(id))?.exitCode).toBe(1)
+    }, "event")
+  }, 30_000)
+
+  test("an adopted job without a ChildProcess keeps its zero-code behavior", async () => {
+    await fixture(async ({ id, exit }) => {
+      await exit()
+      await until(
+        async () => (await BackgroundProcess.get(id))?.time.ended !== undefined,
+        "adopted job did not finalize",
+      )
+      expect((await BackgroundProcess.get(id))?.status).toBe("exited")
+      expect((await BackgroundProcess.get(id))?.exitCode).toBe(0)
+    }, "adopted")
+  }, 30_000)
+
+  test("a surviving group stays manageable after the owned leader ends", async () => {
+    await fixture(async ({ id, exit }) => {
+      gate.group = "owned"
+      await exit()
+      await Bun.sleep(350)
+      const info = await BackgroundProcess.get(id)
+      if (!info) throw new Error("owned group disappeared")
+      expect(["running", "ready"]).toContain(info.status)
+      expect((await BackgroundProcess.get(id))?.time.ended).toBeUndefined()
+      gate.group = "gone"
+      await until(
+        async () => (await BackgroundProcess.get(id))?.time.ended !== undefined,
+        "gone group did not finalize",
+      )
+      expect((await BackgroundProcess.get(id))?.exitCode).toBe(1)
+    }, "event")
+  }, 30_000)
 })

@@ -523,13 +523,6 @@ export namespace BackgroundProcess {
     publish(active)
   }
 
-  function settle(active: Active) {
-    const proc = active.proc
-    if (!proc || !stopped(proc)) return false
-    exited(active, proc.exitCode, proc.signalCode)
-    return true
-  }
-
   function failed(active: Active, err: unknown) {
     if (active.disposed) return
     append(active, `\n${err instanceof Error ? err.message : String(err)}\n`)
@@ -893,12 +886,6 @@ export namespace BackgroundProcess {
     if (active.disposed || terminal(active.info.status) || active.watch) return
     active.watch = setTimeout(() => {
       active.watch = undefined
-      if (settle(active)) {
-        void forget(shared, active).catch((err) =>
-          log.warn("failed to finalize persistent process", { err, id: active.info.id }),
-        )
-        return
-      }
       void output(active)
         .then(async () => {
           const status = await probe(active)
@@ -907,11 +894,13 @@ export namespace BackgroundProcess {
             watch(shared, active)
             return
           }
-          if (active.proc && !settle(active)) {
-            watch(shared, active)
-            return
-          }
-          if (!active.proc) exited(active, 0, null)
+          if (active.proc) {
+            if (!stopped(active.proc)) {
+              watch(shared, active)
+              return
+            }
+            exited(active, active.proc.exitCode, active.proc.signalCode)
+          } else exited(active, 0, null)
           await forget(shared, active)
         })
         .catch((err) => {
@@ -1043,17 +1032,17 @@ export namespace BackgroundProcess {
         if (!terminal(active.info.status)) active.drain = setTimeout(() => exited(active, code, signal), DRAIN_MS)
         return
       }
-      const finish = () => {
-        exited(active, code, signal)
-        void forget(state.shared, active).catch((err) => log.warn("failed to finalize persistent process", { err, id }))
-      }
-      active.drain = setTimeout(() => {
-        log.warn("timed out draining an exited persistent process", { id })
-        finish()
-      }, DRAIN_MS)
       void output(active)
-        .catch((err) => log.warn("failed to drain persistent process", { err, id }))
-        .finally(finish)
+        .then(async () => {
+          const status = await probe(active)
+          if (status === "owned" || status === "unknown" || status === "terminating") {
+            watch(state.shared, active)
+            return
+          }
+          exited(active, code, signal)
+          await forget(state.shared, active)
+        })
+        .catch((err) => log.warn("failed to finalize persistent process", { err, id }))
     })
     // A non-persistent process normally finalizes on `close`, which fires after
     // its stdio pipes drain; the exit handler's bounded drain covers a
