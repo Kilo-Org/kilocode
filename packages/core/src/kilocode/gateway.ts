@@ -734,42 +734,8 @@ function toModelInfo(
   }
   return {
     ...base,
-    variants: source.reasoning ? Variant.resolve(base, parseSupports(source.reasoningOptions)) : [],
+    variants: source.reasoning ? Variant.resolve(base, source.reasoningOptions) : [],
   }
-}
-
-const ReasoningSupport = Schema.Union([
-  Schema.Struct({
-    type: Schema.Literal("effort"),
-    values: Schema.optionalKey(Schema.Array(Schema.NullOr(Schema.String))),
-  }),
-  Schema.Struct({
-    type: Schema.Literal("toggle"),
-  }),
-  Schema.Struct({
-    type: Schema.Literal("budget_tokens"),
-    min: Schema.optionalKey(Schema.Number),
-    max: Schema.optionalKey(Schema.Number),
-  }),
-])
-const decodeReasoningSupport = Schema.decodeUnknownOption(ReasoningSupport)
-
-// Same `reasoning_options` normalization as `supports(model)` in `packages/core/src/models-dev.ts:196-202`.
-function parseSupports(options?: readonly unknown[]): readonly Variant.Support[] | undefined {
-  if (!options || options.length === 0) return undefined
-  const supports = options
-    .flatMap((option) => Option.toArray(decodeReasoningSupport(option)))
-    .map((option): Variant.Support =>
-      option.type === "effort"
-        ? {
-            type: "effort",
-            ...(option.values
-              ? { values: option.values.filter((value): value is string => value !== null && value !== "null") }
-              : {}),
-          }
-        : option,
-    )
-  return supports.length > 0 ? supports : undefined
 }
 
 function device(server: string) {

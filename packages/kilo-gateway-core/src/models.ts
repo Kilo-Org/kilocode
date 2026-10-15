@@ -82,6 +82,11 @@ export interface Cost {
   readonly cacheWrite?: number
 }
 
+export type ReasoningOption =
+  | { readonly type: "effort"; readonly values?: readonly string[] }
+  | { readonly type: "toggle" }
+  | { readonly type: "budget_tokens"; readonly min?: number; readonly max?: number }
+
 export interface Model {
   readonly id: string
   readonly name: string
@@ -104,7 +109,7 @@ export interface Model {
     readonly input: readonly ("text" | "audio" | "image" | "video" | "pdf")[]
     readonly output: readonly ("text" | "audio" | "image" | "video" | "pdf")[]
   }
-  readonly reasoningOptions?: readonly unknown[]
+  readonly reasoningOptions?: readonly ReasoningOption[]
 }
 
 export interface Entry {
@@ -339,7 +344,10 @@ function toModel(model: RawModel): Model {
       ? model.opencode.family.trim()
       : undefined
   const family = explicitFamily ?? extractFamily(model.id)
-  const reasoningOptions = model.opencode?.reasoning_options ?? model.reasoning_options
+  const reasoningOptions = (model.opencode?.reasoning_options ?? model.reasoning_options) as
+    | readonly ReasoningOption[]
+    | null
+    | undefined
   return {
     id: model.id,
     name: model.name,
