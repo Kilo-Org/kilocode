@@ -62,7 +62,6 @@ const RawModel = Schema.Struct({
     Schema.Struct({
       family: Schema.optionalKey(Schema.NullOr(Schema.String)),
       reasoning_options: Schema.optionalKey(Schema.NullOr(Schema.Array(Schema.Unknown))),
-      variants: Schema.optionalKey(Schema.Record(Schema.String, Schema.Record(Schema.String, Schema.Unknown))),
       ai_sdk_provider: Schema.optionalKey(Schema.Unknown),
     }),
   ),
@@ -81,11 +80,6 @@ export interface Cost {
   readonly output: number
   readonly cacheRead?: number
   readonly cacheWrite?: number
-}
-
-export interface Variant {
-  readonly id: string
-  readonly settings: Record<string, unknown>
 }
 
 export interface Model {
@@ -111,7 +105,6 @@ export interface Model {
     readonly output: readonly ("text" | "audio" | "image" | "video" | "pdf")[]
   }
   readonly reasoningOptions?: readonly unknown[]
-  readonly variants?: readonly Variant[]
 }
 
 export interface Entry {
@@ -394,14 +387,6 @@ function toModel(model: RawModel): Model {
       output: outputModalities,
     },
     ...(reasoningOptions && reasoningOptions.length > 0 ? { reasoningOptions } : {}),
-    ...(model.opencode?.variants
-      ? {
-          variants: Object.entries(model.opencode.variants).map(([id, settings]) => ({
-            id,
-            settings,
-          })),
-        }
-      : {}),
   }
 }
 

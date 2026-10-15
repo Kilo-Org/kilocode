@@ -732,27 +732,9 @@ function toModelInfo(
       output: source.limit.output,
     },
   }
-  const supports = parseSupports(source.reasoningOptions)
-  const resolvedFromOptions = supports ? Variant.resolve(base, supports) : []
-  if (resolvedFromOptions.length > 0) {
-    return {
-      ...base,
-      variants: resolvedFromOptions,
-    }
-  }
-  const resolvedVariants = source.reasoning ? Variant.resolve(base) : []
-  const byID = new Map(resolvedVariants.map((variant) => [variant.id, variant]))
-  for (const variant of source.variants ?? []) {
-    const variantID = Model.VariantID.make(variant.id)
-    byID.set(variantID, {
-      id: variantID,
-      settings: { ...settings, ...variant.settings },
-      headers: { ...headers },
-    })
-  }
   return {
     ...base,
-    variants: [...byID.values()],
+    variants: source.reasoning ? Variant.resolve(base, parseSupports(source.reasoningOptions)) : [],
   }
 }
 

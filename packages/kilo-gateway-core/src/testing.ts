@@ -54,9 +54,9 @@ export function fixture() {
             family: "claude",
             ai_sdk_provider: "openrouter",
             prompt: "anthropic",
-            variants: {
-              high: { reasoningEffort: "high" },
-            },
+            reasoning_options: [
+              { type: "effort", values: ["high"] },
+            ],
           },
         },
         {

@@ -30,7 +30,7 @@ describe("KiloModels", () => {
       temperature: true,
       limit: { context: 200000, output: 32000 },
       cost: { input: 3, output: 15, cacheRead: 0.3 },
-      variants: [{ id: "high", settings: { reasoningEffort: "high" } }],
+      reasoningOptions: [{ type: "effort", values: ["high"] }],
     })
     const small = result.models.find((model) => model.id === "kilo-auto/small")
     expect(small?.family).toBe("gpt-luna")
