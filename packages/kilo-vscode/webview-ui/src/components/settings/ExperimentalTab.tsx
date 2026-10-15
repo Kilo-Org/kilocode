@@ -9,6 +9,7 @@ import { useVSCode } from "../../context/vscode"
 import { useImageModels } from "../../context/image-models"
 import type { ExtensionMessage } from "../../types/messages"
 import SettingsRow from "./SettingsRow"
+import PatternList from "./PatternList"
 
 interface ShareOption {
   value: string
@@ -319,6 +320,19 @@ const ExperimentalTab: Component = () => {
           />
         </SettingsRow>
       </Card>
+
+      <h4
+        style={{ "margin-top": "16px", "margin-bottom": "8px" }}
+        data-search-label={language.t("settings.experimental.globIncludeIgnored.title")}
+      >
+        {language.t("settings.experimental.globIncludeIgnored.title")}
+      </h4>
+      <PatternList
+        patterns={experimental().glob_include_ignored ?? []}
+        description={language.t("settings.experimental.globIncludeIgnored.description")}
+        placeholder="e.g. packages/*/dist"
+        onChange={(patterns) => updateExperimental("glob_include_ignored", patterns)}
+      />
 
       {/* Tool toggles */}
       <Show when={config().tools && Object.keys(config().tools ?? {}).length > 0}>

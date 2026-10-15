@@ -208,8 +208,57 @@ class SessionModelTest : BasePlatformTestCase() {
         assertTrue(events.isEmpty())
     }
 
-    fun `test updateContent removes existing user text when marked synthetic`() {
+    fun `test updateContent renders the attachment read failure notice`() {
         model.addMessage(msg("m1", "user"))
+        events.clear()
+
+        model.updateContent("m1", readFailurePart())
+
+        val notice = model.message("m1")!!.parts["p1"] as Notice
+        assertEquals("attachment_read_failed", notice.kind)
+        assertEquals("report.jfr", notice.name)
+        assertModel("""
+            user#m1
+            notice#p1 attachment_read_failed report.jfr
+        """)
+    }
+
+    fun `test read failure notice takes the file name from a windows path`() {
+        model.addMessage(msg("m1", "user"))
+
+        model.updateContent("m1", readFailurePart(path = """C:\Users\me\trace.jfr"""))
+
+        assertEquals("trace.jfr", (model.message("m1")!!.parts["p1"] as Notice).name)
+    }
+
+    fun `test typed read failure text stays a normal prompt`() {
+        model.addMessage(msg("m1", "user"))
+
+        model.updateContent("m1", readFailurePart(synthetic = null))
+
+        assertTrue(model.message("m1")!!.parts["p1"] is Text)
+    }
+
+    fun `test synthetic text without the error clause stays hidden`() {
+        model.addMessage(msg("m1", "user"))
+        events.clear()
+
+        model.updateContent("m1", part("p1", "m1", "text", text = "Read tool failed to read /tmp/a.jfr", synthetic = true))
+
+        assertNull(model.message("m1")!!.parts["p1"])
+        assertTrue(events.isEmpty())
+    }
+
+    fun `test loadHistory renders the attachment read failure notice`() {
+        model.loadHistory(listOf(MessageWithPartsDto(msg("m1", "user"), listOf(readFailurePart()))))
+
+        assertModel("""
+            user#m1
+            notice#p1 attachment_read_failed report.jfr
+        """)
+    }
+
+    fun `test updateContent removes existing user text when marked synthetic`() {        model.addMessage(msg("m1", "user"))
         model.updateContent("m1", part("p1", "m1", "text", text = "visible"))
         events.clear()
 
@@ -1080,6 +1129,41 @@ class SessionModelTest : BasePlatformTestCase() {
         assertFalse(step.active)
     }
 
+    /**
+     * Adjacent reasoning parts render through one ReasoningView, so one bar must cover the run.
+     * A bar per part would leave the later ones pointing at the same block, which reads as dead.
+     */
+    fun `test header timeline merges adjacent reasoning parts into one bar`() {
+        model.upsertMessage(msg("a1", "assistant"))
+        model.updateContent("a1", part("r1", "a1", "reasoning", text = "first", time = PartTimeDto(1.0, 2.0)))
+        model.updateContent("a1", part("r2", "a1", "reasoning", text = "second", time = PartTimeDto(1.0, 2.0)))
+        model.updateContent("a1", part("r3", "a1", "reasoning", text = "third", time = PartTimeDto(1.0, 2.0)))
+
+        val timeline = model.header.timeline
+        assertEquals(1, timeline.size)
+        // The run reports the first part, which is the id the merged view is keyed by.
+        assertEquals("r1", timeline.single().part.id)
+    }
+
+    fun `test header timeline keeps reasoning runs split by another part`() {
+        model.upsertMessage(msg("a1", "assistant"))
+        model.updateContent("a1", part("r1", "a1", "reasoning", text = "before", time = PartTimeDto(1.0, 2.0)))
+        model.updateContent("a1", part("t1", "a1", "tool", tool = "bash", state = "completed", title = "Run"))
+        model.updateContent("a1", part("r2", "a1", "reasoning", text = "after", time = PartTimeDto(1.0, 2.0)))
+
+        assertEquals(listOf("r1", "t1", "r2"), model.header.timeline.map { it.part.id })
+    }
+
+    fun `test header timeline reasoning run stays active while any part is unfinished`() {
+        model.upsertMessage(msg("a1", "assistant"))
+        model.updateContent("a1", part("r1", "a1", "reasoning", text = "done", time = PartTimeDto(1.0, 2.0)))
+        // Started with no end: still streaming. A part with no time at all counts as done.
+        model.updateContent("a1", part("r2", "a1", "reasoning", text = "still going", time = PartTimeDto(1.0, null)))
+
+        assertEquals(1, model.header.timeline.size)
+        assertTrue(model.header.timeline.single().active)
+    }
+
     fun `test header timeline clamps large step finish token weight`() {
         model.upsertMessage(msg("a1", "assistant"))
         model.updateContent("a1", part("s1", "a1", "step-finish", tokens = TokensDto(Long.MAX_VALUE, 1, 1, 0, 0)))
@@ -1176,6 +1260,18 @@ class SessionModelTest : BasePlatformTestCase() {
         url = url,
         filename = filename,
         source = source,
+    )
+
+    // Exact text the CLI persists when it cannot read an attached file.
+    private fun readFailurePart(
+        path: String = "/tmp/report.jfr",
+        synthetic: Boolean? = true,
+    ) = part(
+        id = "p1",
+        mid = "m1",
+        type = "text",
+        text = "Read tool failed to read $path with the following error: Cannot read binary file: $path",
+        synthetic = synthetic,
     )
 
     private fun taskPart(id: String, mid: String, child: String) = part(

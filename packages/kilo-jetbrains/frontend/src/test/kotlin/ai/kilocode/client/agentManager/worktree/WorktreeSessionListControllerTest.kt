@@ -6,11 +6,14 @@ import ai.kilocode.client.testing.FakeSessionRpcApi.ForkCall
 import ai.kilocode.client.testing.TestCoroutines
 import ai.kilocode.client.testing.pumpEdt
 import ai.kilocode.client.util.edtWait
+import ai.kilocode.rpc.dto.KiloAppStateDto
+import ai.kilocode.rpc.dto.KiloAppStatusDto
 import ai.kilocode.rpc.dto.SessionChangeDto
 import ai.kilocode.rpc.dto.SessionChangeKindDto
 import ai.kilocode.rpc.dto.SessionDto
 import ai.kilocode.rpc.dto.SessionTimeDto
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import kotlinx.coroutines.flow.MutableStateFlow
 
 @Suppress("UnstableApiUsage")
 class WorktreeSessionListControllerTest : BasePlatformTestCase() {
@@ -233,6 +236,23 @@ class WorktreeSessionListControllerTest : BasePlatformTestCase() {
         emit(change("ses_main", "/repo", SessionChangeKindDto.CREATED))
         // Waiting past the coalescing window proves no reload was merely pending.
         assertFalse(coroutines.pumpUntil(QUIET_MS) { rpc.lists.size > before })
+    }
+
+    fun `test the list reloads when the app reconnects`() {
+        val app = MutableStateFlow(KiloAppStateDto(KiloAppStatusDto.READY))
+        val controller = WorktreeSessionListController(sessions, dir, coroutines.scope, app, telemetry = { _, _ -> })
+        rpc.listed += session("ses_1", "One")
+        drain()
+
+        // The CLI drops, a session is created on another surface, then it comes back.
+        app.value = KiloAppStateDto(KiloAppStatusDto.ERROR)
+        drain()
+        val before = rpc.lists.size
+        rpc.listed += session("ses_2", "Two")
+        app.value = KiloAppStateDto(KiloAppStatusDto.READY)
+
+        assertTrue(coroutines.pumpUntil { controller.model.size == 2 })
+        assertTrue(rpc.lists.size > before)
     }
 
     fun `test a session change matches a directory with a trailing separator`() {
