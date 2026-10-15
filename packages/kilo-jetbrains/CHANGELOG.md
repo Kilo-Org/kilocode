@@ -612,6 +612,31 @@
 
 ## [Unreleased]
 
+## [7.1.10-rc.5] - 2026-10-15
+
+### Added
+- feat(gateway): route gateway traffic via KILO_AI_GATEWAY_URL by @chrarnoldus in https://github.com/Kilo-Org/kilocode/pull/15030
+
+### Fixed
+- fix(vscode): retain terminal ownership across restart and teardown by @LEN5010 in https://github.com/Kilo-Org/kilocode/pull/14774
+- fix(cli): use brand yellow for the CLI theme by @emilieschario in https://github.com/Kilo-Org/kilocode/pull/15114
+- fix(jetbrains): use primary brand yellow for logos by @emilieschario in https://github.com/Kilo-Org/kilocode/pull/15112
+- fix: report why a provider failed to load instead of hiding it by @kirillk in https://github.com/Kilo-Org/kilocode/pull/14942
+- fix: preserve custom agents and edit permissions during delegation by @kirillk in https://github.com/Kilo-Org/kilocode/pull/14866
+- fix(vscode): update brand yellow to #FFDD00 by @emilieschario in https://github.com/Kilo-Org/kilocode/pull/15113
+- fix: match Anaconda brand yellow hover color by @lambertjosh in https://github.com/Kilo-Org/kilocode/pull/15118
+
+### Changed
+- release(jetbrains): v7.1.10-rc.4 by @kilo-maintainer[bot] in https://github.com/Kilo-Org/kilocode/pull/15082
+- docs: auto-sync cloud-agent with merged PRs (through 2026-10-15) by @github-actions[bot] in https://github.com/Kilo-Org/kilocode/pull/14555
+- docs: document code review concurrency limits by @emilieschario in https://github.com/Kilo-Org/kilocode/pull/15053
+- docs(kilo-docs): use ai-gateway.kilo.ai as the Kilo Gateway base URL by @chrarnoldus in https://github.com/Kilo-Org/kilocode/pull/15032
+- docs(swarm): board lives with background agents, not Experimental settings by @kilo-code-bot[bot] in https://github.com/Kilo-Org/kilocode/pull/15106
+- docs: update Mistral autocomplete API key setup by @thomasbrugman in https://github.com/Kilo-Org/kilocode/pull/14756
+- docs: show Sign in with ChatGPT in usage data by @emilieschario in https://github.com/Kilo-Org/kilocode/pull/15089
+- chore(jetbrains): bump CLI pin to v7.8.12 by @kilo-maintainer[bot] in https://github.com/Kilo-Org/kilocode/pull/15107
+
+
 ## [7.1.10-rc.4] - 2026-10-14
 
 ### Added
