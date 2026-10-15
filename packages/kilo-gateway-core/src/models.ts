@@ -24,26 +24,6 @@ const decodeTerminalBench = Schema.decodeUnknownOption(TerminalBench)
 
 const PositiveInt = Schema.Int.check(Schema.isGreaterThan(0))
 
-const ReasoningEffort = Schema.Literals(["none", "minimal", "low", "medium", "high", "xhigh", "max"])
-export type ReasoningEffort = typeof ReasoningEffort.Type
-
-const ReasoningOption = Schema.Union([
-  Schema.Struct({
-    type: Schema.Literal("effort"),
-    values: Schema.Array(ReasoningEffort),
-  }),
-  Schema.Struct({
-    type: Schema.Literal("toggle"),
-  }),
-  Schema.Struct({
-    type: Schema.Literal("budget_tokens"),
-    min: Schema.optionalKey(Schema.Number),
-    max: Schema.optionalKey(Schema.Number),
-  }),
-])
-export type ReasoningOption = typeof ReasoningOption.Type
-const decodeReasoningOption = Schema.decodeUnknownOption(ReasoningOption)
-
 const RawModel = Schema.Struct({
   id: Schema.String,
   name: Schema.String,
@@ -130,7 +110,7 @@ export interface Model {
     readonly input: readonly ("text" | "audio" | "image" | "video" | "pdf")[]
     readonly output: readonly ("text" | "audio" | "image" | "video" | "pdf")[]
   }
-  readonly reasoningOptions?: readonly ReasoningOption[]
+  readonly reasoningOptions?: readonly unknown[]
   readonly variants?: readonly Variant[]
 }
 
@@ -366,6 +346,7 @@ function toModel(model: RawModel): Model {
       ? model.opencode.family.trim()
       : undefined
   const family = explicitFamily ?? extractFamily(model.id)
+  const reasoningOptions = model.opencode?.reasoning_options ?? model.reasoning_options
   return {
     id: model.id,
     name: model.name,
@@ -412,9 +393,7 @@ function toModel(model: RawModel): Model {
       input: inputModalities,
       output: outputModalities,
     },
-    ...(parseReasoningOptions(model.opencode?.reasoning_options ?? model.reasoning_options)
-      ? { reasoningOptions: parseReasoningOptions(model.opencode?.reasoning_options ?? model.reasoning_options) }
-      : {}),
+    ...(reasoningOptions && reasoningOptions.length > 0 ? { reasoningOptions } : {}),
     ...(model.opencode?.variants
       ? {
           variants: Object.entries(model.opencode.variants).map(([id, settings]) => ({
@@ -424,12 +403,6 @@ function toModel(model: RawModel): Model {
         }
       : {}),
   }
-}
-
-function parseReasoningOptions(raw: readonly unknown[] | null | undefined): ReasoningOption[] | undefined {
-  if (!raw || raw.length === 0) return undefined
-  const decoded = raw.flatMap((item) => Option.toArray(decodeReasoningOption(item)))
-  return decoded.length > 0 ? decoded : undefined
 }
 
 function extractFamily(modelID: string): string | undefined {
