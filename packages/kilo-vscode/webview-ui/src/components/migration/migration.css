@@ -165,7 +165,7 @@
 
 .migration-wizard__status-icon--warning {
   background: rgba(255, 159, 10, 0.12);
-  color: var(--vscode-testing-iconQueued, #ffdd00);
+  color: var(--vscode-testing-iconQueued, #ff9f0a);
 }
 
 .migration-wizard__status-icon--error {
@@ -287,7 +287,7 @@
 }
 
 .migration-session-summary__list--skipped {
-  border-color: color-mix(in srgb, var(--vscode-testing-iconQueued, #ffdd00) 55%, var(--vscode-panel-border) 45%);
+  border-color: color-mix(in srgb, var(--vscode-testing-iconQueued, #d7ba7d) 55%, var(--vscode-panel-border) 45%);
 }
 
 .migration-session-summary__pick {

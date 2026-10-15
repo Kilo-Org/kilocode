@@ -244,7 +244,7 @@
 
 .model-preview-auto-icon,
 .model-selector-auto-icon {
-  --icon-base: var(--vscode-list-warningForeground, var(--vscode-inputValidation-warningForeground, #ffdd00));
+  --icon-base: var(--vscode-list-warningForeground, var(--vscode-inputValidation-warningForeground, #9a6700));
   color: var(--icon-base);
   opacity: 0.95;
 }
@@ -471,7 +471,7 @@
 }
 
 .model-selector-item.active .model-selector-auto-icon {
-  --icon-base: var(--vscode-list-warningForeground, var(--vscode-inputValidation-warningForeground, #ffdd00));
+  --icon-base: var(--vscode-list-warningForeground, var(--vscode-inputValidation-warningForeground, #9a6700));
   color: var(--icon-base);
   opacity: 1;
 }

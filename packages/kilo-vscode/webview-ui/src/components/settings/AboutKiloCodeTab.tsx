@@ -130,7 +130,7 @@ const AboutKiloCodeTab: Component<AboutKiloCodeTabProps> = (props) => {
       case "connected":
         return "var(--vscode-testing-iconPassed, #89d185)"
       case "connecting":
-        return "var(--vscode-testing-iconQueued, #ffdd00)"
+        return "var(--vscode-testing-iconQueued, #cca700)"
       case "disconnected":
         return "var(--vscode-testing-iconFailed, #f14c4c)"
       case "error":

@@ -137,8 +137,8 @@
   gap: 8px;
   margin-top: 8px;
   padding: 6px 8px;
-  border-left: 3px solid var(--vscode-editorWarning-foreground, #ffdd00);
-  background: var(--vscode-editorWarning-background, color-mix(in srgb, var(--kilo-yellow, #ffdd00) 16%, transparent));
+  border-left: 3px solid var(--vscode-editorWarning-foreground, #cca700);
+  background: var(--vscode-editorWarning-background, rgba(204, 167, 0, 0.1));
   color: var(--text-base, var(--vscode-foreground));
   font-weight: 500;
 }
@@ -335,11 +335,8 @@
   display: flex;
   align-items: flex-start;
   gap: 8px;
-  border: 1px solid var(--vscode-inputValidation-warningBorder, #ffdd00);
-  background: var(
-    --vscode-inputValidation-warningBackground,
-    color-mix(in srgb, var(--kilo-yellow, #ffdd00) 12%, transparent)
-  );
+  border: 1px solid var(--vscode-inputValidation-warningBorder, #b89500);
+  background: var(--vscode-inputValidation-warningBackground, rgba(184, 149, 0, 0.1));
   color: var(--vscode-inputValidation-warningForeground, var(--vscode-foreground));
   font-size: var(--kilo-font-size-12);
   line-height: 1.4;

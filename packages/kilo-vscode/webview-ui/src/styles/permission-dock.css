@@ -17,7 +17,7 @@
      short panel. */
   min-height: var(--permission-card-min-height, 11em);
   border: 1px solid
-    color-mix(in srgb, var(--vscode-editorWarning-foreground, #ffdd00) 40%, var(--vscode-panel-border, transparent));
+    color-mix(in srgb, var(--vscode-editorWarning-foreground, #cca700) 40%, var(--vscode-panel-border, transparent));
   border-radius: 0.25rem;
   overflow: clip;
 
