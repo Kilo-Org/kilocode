@@ -4,7 +4,8 @@ export const DEFAULT_API_URL = "https://api.kilo.ai"
 export const DEFAULT_AI_GATEWAY_URL = "https://ai-gateway.kilo.ai/api/v1"
 // Same regex as v1 `getKiloUrlFromToken` (`packages/kilo-gateway/src/auth/token.ts`):
 // matches `http(s)://host(:port)(/path):secret` without greedily consuming colons inside the secret.
-const TOKEN = /^(https?:\/\/[^:/]+(?::\d+)?(?:\/[^:]*)?):(?!\d+$).+/
+const TOKEN = /^(https?:\/\/[^:]+(?::\d+)?(?:\/[^:]*)?):/
+const ORG_PATH = /\/api\/organizations\/([^/]+)/
 
 export function fromEnv(env: Record<string, string | undefined> = process.env) {
   return normalize(env.KILO_API_URL?.trim() || DEFAULT_API_URL)
@@ -25,6 +26,14 @@ export function aiGatewayFromEnv(env: Record<string, string | undefined> = proce
 export function fromToken(token: string) {
   const match = TOKEN.exec(token)
   return match?.[1] && URL.canParse(match[1]) ? normalize(match[1]) : undefined
+}
+
+// Extracts an organization ID embedded in a URL path (`/api/organizations/<org>`), matching v1 `scoped`
+// (`packages/opencode/src/kilocode/provider/catalog.ts`).
+export function organizationFromUrl(raw: string): string | undefined {
+  if (!URL.canParse(raw)) return undefined
+  const match = ORG_PATH.exec(new URL(raw).pathname)
+  return match?.[1] ? decodeURIComponent(match[1]) : undefined
 }
 
 export function normalize(input: string) {
