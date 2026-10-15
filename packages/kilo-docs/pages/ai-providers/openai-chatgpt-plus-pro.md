@@ -62,12 +62,6 @@ For eligible requests, Kilo uses your connected ChatGPT subscription instead of 
 
 Requests served through the subscription use your ChatGPT allowance rather than Kilo credits for model inference. Other costs are separate: [Cloud Agent compute](/docs/code-with-ai/platforms/cloud-agent#cost), Kilo Deploy, and other paid services are not included in your ChatGPT subscription.
 
-### Usage data
-
-Sign in with ChatGPT requests appear in Kilo [Usage](https://app.kilo.ai/usage). Cost is **$0** for every request.
-
-Filter **Usage → Provider → `openai-chatgpt`** to isolate those requests and their token totals through Kilo. That filter does not include pay-as-you-go OpenAI API-key requests.
-
 **When you reach your ChatGPT usage limit, the request stops with an error.** Kilo does not retry it using a saved API key or Kilo credits. Retrying the same eligible request with the same connection still uses ChatGPT, so buying Kilo credits alone does not bypass the limit.
 
 Open BYOK and use **Manage usage** to check your allowance and reset time. Wait for the limit to reset, or disconnect the applicable subscription connection to use your saved API key or Kilo credits for subsequent requests.
@@ -84,6 +78,12 @@ Learn more in OpenAI's help articles:
 - [Using your ChatGPT plan in other apps and sites](https://help.openai.com/en/articles/20001542-using-your-chatgpt-plan-in-other-apps-and-sites)
 - [Sign in with ChatGPT](https://help.openai.com/en/articles/20001410-sign-in-with-chatgpt)
 {% /callout %}
+
+### Usage data
+
+Sign in with ChatGPT requests appear in Kilo [Usage](https://app.kilo.ai/usage). Cost is **$0** for every request.
+
+Filter **Usage → Provider → `openai-chatgpt`** to isolate those requests and their token totals through Kilo. That filter does not include pay-as-you-go OpenAI API-key requests.
 
 ### Manage the connection
 
