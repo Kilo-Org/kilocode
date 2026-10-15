@@ -103,4 +103,24 @@ describe("session status occurrence", () => {
     expect(await statuses.snapshot("deleted", async () => ({ status: "question" }))).toEqual({ status: "question" })
     expect(await statuses.snapshot("kept", async () => ({ status: "permission" }))).toEqual(kept)
   })
+
+  test("a deletion during a first full sync leaves no tracked state behind", async () => {
+    const statuses = StatusSync.create()
+    const pending = Promise.withResolvers<StatusSync.Derived>()
+    const snapshot = statuses.snapshot("gone", () => pending.promise)
+    statuses.delete("gone")
+    pending.resolve({ status: "idle" })
+    expect(await snapshot).toEqual({ status: "idle" })
+    expect(statuses.record("gone", { status: "question" }, morning)).toMatchObject({ previousStatus: null })
+  })
+
+  test("a failed first full sync leaves no tracked state behind", async () => {
+    const statuses = StatusSync.create()
+    await expect(
+      statuses.snapshot("unread", async () => {
+        throw new Error("read failed")
+      }),
+    ).rejects.toThrow("read failed")
+    expect(statuses.record("unread", { status: "question" }, morning)).toMatchObject({ previousStatus: null })
+  })
 })

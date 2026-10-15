@@ -445,7 +445,7 @@ describe("share ingest queue", () => {
     expect(sched.size()).toBe(0)
   })
 
-  test("timestamp-only producers retain distinct status occurrences while unknown snapshots still coalesce", async () => {
+  test("repeated same-status transitions in one millisecond stay distinct while unknown snapshots coalesce", async () => {
     const sent: { data: IngestQueue.Data[] }[] = []
     const sched = scheduler(() => clock.now)
     const q = IngestQueue.create({
@@ -462,15 +462,19 @@ describe("share ingest queue", () => {
         },
       }),
     })
-    const records: IngestQueue.Data[] = [
-      { type: "session_status", data: { status: "question", occurredAt: "2026-10-15T07:59:59.900Z" } },
-      { type: "session_status", data: { status: "idle", occurredAt: "2026-10-15T08:00:00.100Z" } },
-    ]
-    await q.sync("fallback", [{ type: "session_status", data: { status: "busy" } }])
-    await q.sync("fallback", records)
-    await q.sync("fallback", [{ type: "session_status", data: { status: "idle" } }])
-    await q.flush("fallback")
-    expect(sent[0]?.data).toEqual([{ type: "session_status", data: { status: "idle" } }, ...records])
+    const statuses = StatusSync.create()
+    const instant = "2026-10-15T07:59:59.900Z"
+    const records = (["question", "idle", "question"] as const).map((status) =>
+      statuses.record("same-ms", { status }, instant),
+    )
+    await q.sync("same-ms", [{ type: "session_status", data: { status: "busy" } }])
+    for (const data of records) await q.sync("same-ms", [{ type: "session_status", data }])
+    await q.sync("same-ms", [{ type: "session_status", data: { status: "idle" } }])
+    await q.flush("same-ms")
+    expect(sent[0]?.data).toEqual([
+      { type: "session_status", data: { status: "idle" } },
+      ...records.map((data) => ({ type: "session_status" as const, data })),
+    ])
     expect(sched.size()).toBe(0)
   })
 

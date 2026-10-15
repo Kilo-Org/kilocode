@@ -23,6 +23,7 @@ import { KILO_API_BASE } from "@kilocode/kilo-gateway"
 import { Config } from "@/config/config"
 import { InstanceState } from "@/effect/instance-state"
 import { Instance } from "@/kilocode/instance"
+import { iife } from "@/util/iife"
 import { Vcs } from "@/project/vcs"
 import { Git } from "@/git"
 import { simpleGit } from "simple-git"
@@ -675,7 +676,8 @@ export namespace KiloSessions {
             const info = evt.properties.info
             const sessionID = info.id
             tracked.add(sessionID)
-            statuses.record(sessionID, AppRuntime.runSync(deriveStatus(sessionID)))
+            const derived = sample(sessionID)
+            if (derived) statuses.record(sessionID, derived)
             if (typeof info.title === "string") knownTitles.set(sessionID, info.title)
             return create(sessionID).catch((error) => log.error("share init create failed", { sessionID, error }))
           })
@@ -826,8 +828,19 @@ export namespace KiloSessions {
               ]),
             ),
           )
+          // A read that cannot finish synchronously (e.g. a cache re-initialized after warm-up) has no
+          // event-time state; callers then leave the onset unknown instead of failing the dispatcher.
+          const sample = (sessionID: string, status?: SessionStatus.Info) =>
+            iife(() => {
+              try {
+                return AppRuntime.runSync(deriveStatus(sessionID, status))
+              } catch (error) {
+                log.warn("status not derivable synchronously", { sessionID, error: String(error) })
+              }
+            })
           for (const sessionID of tracked) {
-            statuses.record(sessionID, AppRuntime.runSync(deriveStatus(sessionID)))
+            const derived = sample(sessionID)
+            if (derived) statuses.record(sessionID, derived)
           }
 
           const sync = (evt: { properties: { sessionID: string; status?: SessionStatus.Info } }) => {
@@ -835,8 +848,12 @@ export namespace KiloSessions {
             const sessionID = evt.properties.sessionID
             tracked.add(sessionID)
             // Status is published before busy/retry is stored; the event wins over that stale map entry.
-            const derived = AppRuntime.runSync(deriveStatus(sessionID, evt.properties.status))
-            return deriveAndSyncStatus(sessionID, derived, occurredAt)
+            const derived = sample(sessionID, evt.properties.status)
+            if (derived) return deriveAndSyncStatus(sessionID, derived, occurredAt)
+            // Without a same-tick read the event's onset is unknown, so only the live state is sent.
+            return statuses
+              .snapshot(sessionID, () => AppRuntime.runPromise(deriveStatus(sessionID, evt.properties.status)))
+              .then((data) => ingest.sync(sessionID, [{ type: "session_status", data }]))
           }
           watch(SessionStatus.Event.Status, sync)
           watch(Question.Event.Asked, sync)
@@ -859,9 +876,11 @@ export namespace KiloSessions {
                 if (!fn) return
                 // Instance.restore: handlers run async work after the emitting fiber's
                 // synchronous window, where fiber-scoped InstanceRef is no longer visible.
-                Promise.resolve(Instance.restore(ctx, () => fn({ properties: event.payload!.properties }))).catch(
-                  (cause) => log.error("subscriber failed", { type, cause }),
-                )
+                // Promise.try-equivalent: a synchronous handler throw must not escape into GlobalBus.emit,
+                // where it would fail the publisher and skip later listeners.
+                new Promise((resolve) =>
+                  resolve(Instance.restore(ctx, () => fn({ properties: event.payload!.properties }))),
+                ).catch((cause) => log.error("subscriber failed", { type, cause }))
               }
               GlobalBus.on("event", handler)
               return handler

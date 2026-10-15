@@ -141,3 +141,32 @@ it.instance(
   },
   30_000,
 )
+
+it.instance(
+  "a status that cannot be derived at event time never throws into the event publisher",
+  () => {
+    const seen: string[] = []
+    const later = (event: { payload?: { id?: string } }) => {
+      if (event.payload?.id) seen.push(event.payload.id)
+    }
+    return Effect.gen(function* () {
+      const instance = yield* TestInstance
+      const kilo = yield* KiloSessions.Service
+      yield* kilo.init()
+      GlobalBus.on("event", later)
+      // An unparseable session id makes the synchronous derivation fail.
+      expect(() =>
+        GlobalBus.emit("event", {
+          directory: instance.directory,
+          payload: {
+            id: "status-underivable",
+            type: SessionStatus.Event.Status.type,
+            properties: { sessionID: "not-a-session", status: { type: "busy" } },
+          },
+        }),
+      ).not.toThrow()
+      expect(seen).toEqual(["status-underivable"])
+    }).pipe(Effect.ensuring(Effect.sync(() => void GlobalBus.off("event", later))), Effect.provide(layer))
+  },
+  30_000,
+)
