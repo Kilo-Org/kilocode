@@ -1,5 +1,4 @@
 // kilocode_change - new file
-import { RGBA } from "@opentui/core"
 import { For, type JSX } from "solid-js"
 import { useTheme, tint } from "@tui/context/theme"
 import { tui } from "@/kilocode/cli/logo"
@@ -11,12 +10,12 @@ import { tui } from "@/kilocode/cli/logo"
 const SHADOW_MARKER = /[_^~]/
 
 export function KiloLogo() {
-  const { theme, mode } = useTheme()
+  const { theme } = useTheme()
   const logo = tui()
 
   const renderLine = (line: string): JSX.Element[] => {
-    const yellow = RGBA.fromHex(mode() === "light" ? "#736400" : "#ffdd00")
-    const shadow = tint(theme.background, yellow, 0.25)
+    const color = theme.primary
+    const shadow = tint(theme.background, color, 0.25)
     const elements: JSX.Element[] = []
     let i = 0
 
@@ -26,7 +25,7 @@ export function KiloLogo() {
 
       if (markerIndex === -1) {
         elements.push(
-          <text fg={yellow} selectable={false}>
+          <text fg={color} selectable={false}>
             {rest}
           </text>,
         )
@@ -35,7 +34,7 @@ export function KiloLogo() {
 
       if (markerIndex > 0) {
         elements.push(
-          <text fg={yellow} selectable={false}>
+          <text fg={color} selectable={false}>
             {rest.slice(0, markerIndex)}
           </text>,
         )
@@ -45,14 +44,14 @@ export function KiloLogo() {
       switch (marker) {
         case "_":
           elements.push(
-            <text fg={yellow} bg={shadow} selectable={false}>
+            <text fg={color} bg={shadow} selectable={false}>
               {" "}
             </text>,
           )
           break
         case "^":
           elements.push(
-            <text fg={yellow} bg={shadow} selectable={false}>
+            <text fg={color} bg={shadow} selectable={false}>
               ▀
             </text>,
           )
