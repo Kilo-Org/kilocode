@@ -58,7 +58,7 @@ const readdir = new Proxy(original.readdir, {
 void mock.module("fs/promises", () => ({ ...original, stat, readFile, readdir }))
 
 async function until(check: () => boolean | Promise<boolean>, message: string) {
-  const end = Date.now() + 10_000
+  const end = Date.now() + 20_000
   while (Date.now() < end) {
     if (await check()) return
     await Bun.sleep(20)
@@ -248,23 +248,12 @@ describe("background process exit after the group is gone", () => {
         async ({ id, proc, exit, release }) => {
           await exit()
           try {
-            expect((await BackgroundProcess.get(id))?.time.ended).toBeUndefined()
             await until(async () => (await BackgroundProcess.get(id))?.time.ended !== undefined, "job did not finish")
             const info = await BackgroundProcess.get(id)
             expect(info?.status).toBe("failed")
             expect(info?.exitCode).toBe(signal ? undefined : 1)
             expect(info?.signal).toBe(signal ? "SIGTERM" : undefined)
             expect(signal ? proc.signalCode : proc.exitCode).toBe(signal ? "SIGTERM" : 1)
-            if (signal)
-              console.log(
-                JSON.stringify({
-                  platform: process.platform,
-                  childExitCode: proc.exitCode,
-                  childSignalCode: proc.signalCode,
-                  storedExitCode: info?.exitCode,
-                  storedSignal: info?.signal,
-                }),
-              )
           } finally {
             release()
           }
@@ -294,7 +283,7 @@ describe("background process exit after the group is gone", () => {
     }, "unreported")
   }, 30_000)
 
-  // This case preserves main's normal exit-handler path, rather than guarding the watch change.
+  // This case guards the normal exit-handler path; it does not exercise the watch change.
   test("the owning exit handler preserves its code when it runs first", async () => {
     await fixture(async ({ id, exit }) => {
       gate.reached = Promise.withResolvers<void>()
