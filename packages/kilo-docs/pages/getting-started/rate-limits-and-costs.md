@@ -81,6 +81,12 @@ Kilo automatically applies prompt caching on supported providers. Repeated conte
 
 For current pricing, visit [kilo.ai/models](https://kilo.ai/models).
 
+### Review each prompt's cost in VS Code
+
+After a prompt finishes, hover over its final response to see the duration and estimated cost in USD beside the copy button. The cost includes every model step for that prompt and completed subagents. It stays available when you reopen the session.
+
+A reported zero cost appears as `$0.00`. If any step has no cost data, Kilo omits the prompt's cost instead of showing an incomplete total.
+
 ## Related
 
 - [Auto Model](/docs/code-with-ai/agents/auto-model) — Full details on each Auto Model tier
