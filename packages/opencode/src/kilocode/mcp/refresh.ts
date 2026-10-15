@@ -32,22 +32,49 @@ export interface RefreshArgs {
   auth: McpAuth.Interface
   /** Fetch used for discovery and the token request; carries the OAuth refresh guard. */
   fetch: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>
+  /**
+   * Upper bound on the whole refresh. A stalled authorization server must not block MCP startup,
+   * and the single-flight entry below must always settle or every later connect for the same
+   * server would await the same stuck promise.
+   */
+  timeout: number
 }
 
 /**
  * Refresh an expired stored OAuth token so the next request carries a valid one.
- * Never throws: a refresh that fails leaves the stored credential in place for the
- * normal connect path to classify as `needs_auth`.
+ * Never throws and never outlives `timeout`: a refresh that fails or times out leaves the
+ * stored credential in place for the normal connect path to classify as `needs_auth`.
  */
 export function refreshExpired(args: RefreshArgs): Promise<void> {
   const key = `${args.name}\u0000${args.serverUrl}`
   const active = inflight.get(key)
   if (active) return active
-  const run = attempt(args).finally(() => {
-    if (inflight.get(key) === run) inflight.delete(key)
-  })
+  const run = deadline(attempt(args), args.timeout)
+    .catch((err) => {
+      log.info("expired MCP token could not be refreshed", { server: args.name, err })
+    })
+    .finally(() => {
+      if (inflight.get(key) === run) inflight.delete(key)
+    })
   inflight.set(key, run)
   return run
+}
+
+/** Settles when `work` settles, but never later than `ms`. */
+function deadline(work: Promise<void>, ms: number): Promise<void> {
+  const { promise, resolve, reject } = Promise.withResolvers<void>()
+  const timer = setTimeout(() => reject(new Error(`MCP token refresh timed out after ${ms}ms`)), ms)
+  work.then(
+    (value) => {
+      clearTimeout(timer)
+      resolve(value)
+    },
+    (err) => {
+      clearTimeout(timer)
+      reject(err)
+    },
+  )
+  return promise
 }
 
 async function attempt(args: RefreshArgs): Promise<void> {
@@ -63,9 +90,7 @@ async function attempt(args: RefreshArgs): Promise<void> {
   const issuer = tokens.issuer ?? clientInfo.issuer
   if (!issuer) return
 
-  await refresh(args, issuer, tokens.refreshToken, clientInfo).catch((err) => {
-    log.info("expired MCP token could not be refreshed", { server: args.name, err })
-  })
+  await refresh(args, issuer, tokens.refreshToken, clientInfo)
 }
 
 async function refresh(
@@ -74,12 +99,16 @@ async function refresh(
   refreshToken: string,
   clientInfo: McpAuth.ClientInfo,
 ): Promise<void> {
-  const metadata = await discoverAuthorizationServerMetadata(issuer, { fetchFn: args.fetch })
+  // Abort the discovery and token requests when the deadline fires, so a stalled server does not
+  // leave the socket open after the refresh has already given up.
+  const signal = AbortSignal.timeout(args.timeout)
+  const fetch: typeof args.fetch = (input, init) => args.fetch(input, { ...init, signal })
+  const metadata = await discoverAuthorizationServerMetadata(issuer, { fetchFn: fetch })
   const next = await refreshAuthorization(issuer, {
     metadata,
     clientInformation: { client_id: clientInfo.clientId, client_secret: clientInfo.clientSecret },
     refreshToken,
-    fetchFn: args.fetch,
+    fetchFn: fetch,
   })
   await Effect.runPromise(
     args.auth.updateTokens(

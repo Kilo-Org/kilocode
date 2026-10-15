@@ -357,9 +357,11 @@ const layer = Layer.effect(
         : probe(fetch, url.href)
 
       // kilocode_change start - some servers reject an expired access token with 403, which the
-      // SDK never retries as an auth failure; refresh a stored-but-expired token before connecting
+      // SDK never retries as an auth failure; refresh a stored-but-expired token before connecting,
+      // bounded by the connect timeout so a stalled server cannot block MCP startup
       if (authProvider) {
-        yield* Effect.promise(() => refreshExpired({ name: key, serverUrl: mcp.url, auth, fetch: remoteFetch }))
+        const timeout = mcp.timeout ?? DEFAULT_TIMEOUT
+        yield* Effect.promise(() => refreshExpired({ name: key, serverUrl: mcp.url, auth, fetch: remoteFetch, timeout }))
       }
       // kilocode_change end
 

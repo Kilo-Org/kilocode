@@ -10,6 +10,7 @@ import { Config } from "../../../src/config/config"
 import { EventV2Bridge } from "../../../src/event-v2-bridge"
 import { McpAuth } from "../../../src/mcp/auth"
 import { MCP } from "../../../src/mcp/index"
+import { refreshExpired } from "../../../src/kilocode/mcp/refresh"
 import { testEffect } from "../../lib/effect"
 
 const mcpTest = testEffect(
@@ -124,5 +125,30 @@ mcpTest.instance("refreshes an expired stored token instead of reporting needs_a
     expect((result.status as Record<string, { status: string }>)[name]?.status).toBe("connected")
     expect(server.refreshes()).toBe(1)
     expect((yield* auth.getForUrl(name, server.url))?.tokens?.accessToken).toBe("fresh-token")
+  }),
+)
+
+mcpTest.instance("a stalled refresh settles within its timeout and does not pin the single-flight entry", () =>
+  Effect.gen(function* () {
+    const auth = yield* McpAuth.Service
+    const name = "test-refresh-timeout"
+    const serverUrl = "https://stalled.example/mcp"
+
+    yield* auth.updateClientInfo(name, { clientId: "test-client" }, serverUrl)
+    yield* auth.updateTokens(
+      name,
+      { accessToken: "expired-token", refreshToken: "refresh-token", expiresAt: 1, issuer: "https://stalled.example" },
+      serverUrl,
+    )
+
+    // A server that never answers: the refresh must be abandoned at the timeout, not awaited forever.
+    const hang = () => new Promise<Response>(() => {})
+    const args = { name, serverUrl, auth, fetch: hang, timeout: 250 }
+
+    const started = Date.now()
+    yield* Effect.promise(() => refreshExpired(args))
+    expect(Date.now() - started).toBeLessThan(2000)
+    // The single-flight entry must have settled; a later connect must not await the stuck promise.
+    yield* Effect.promise(() => refreshExpired(args))
   }),
 )
