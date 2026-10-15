@@ -1,9 +1,9 @@
 {
   "$comment": "Shared-patch baseline (U-L3-01). Read by script/check-shared-patches.ts and script/check-opencode-annotations.ts. Each shared upstream file that Kilo adds or changes needs an entry: rung (3 = seam patch, 4 = feature patch) and the missing seam. `unmarked` allows lines without markers and states why. Raise a limit only in the PR that adds the patch, and lower it when a patch goes away.",
   "limits": {
-    "files": 5,
-    "markedLines": 20,
-    "unmarkedLines": 13,
+    "files": 12,
+    "markedLines": 34,
+    "unmarkedLines": 17,
     "deletedFiles": 0
   },
   "files": {
@@ -25,9 +25,39 @@
       "seam": "Root `dev` script runs script/dev-isolated.ts, so `bun dev` never uses the installed OpenCode or Kilo data. Goes away when the Kilo host owns the dev entry (U-E0-01).",
       "unmarked": "JSON has no comments."
     },
+    "packages/core/package.json": {
+      "rung": 3,
+      "seam": "Runtime dependency on `@kilocode/gateway-core` for the built-in `KiloGatewayPlugin` adapter (`packages/core/src/kilocode/gateway.ts`). Goes away when the Kilo host registers the Gateway plugin outside `@opencode/core` (U-E0-01).",
+      "unmarked": "JSON has no comments."
+    },
+    "packages/core/src/plugin/provider.ts": {
+      "rung": 3,
+      "seam": "Replace upstream `KiloPlugin` (which stamps OpenCode referer and title headers) with `KiloGatewayPlugin` (`packages/core/src/kilocode/gateway.ts`) until the Kilo host registers built-in Kilo plugins via `SdkPlugins.register` (U-E0-01)."
+    },
+    "packages/core/test/plugin/provider-kilo.test.ts": {
+      "rung": 3,
+      "seam": "Update the built-in `ProviderPlugins` assertion to expect `kilocode.gateway` in place of `opencode.provider.kilo`."
+    },
     "packages/core/test/tool-execute.test.ts": {
       "rung": 4,
       "seam": "Temporary: skips `execute rejects filesystem fetches`, which also fails on upstream v2.0.27 (the expected text does not match packages/core/src/codemode/web.ts). Upstream fixed it in #54699 (e5f4bf4c241, in v2.0.28). Remove the skip, this entry and the raised limits in the v2.0.28 sync."
+    },
+    "packages/sdk/script/verify-package.ts": {
+      "rung": 3,
+      "seam": "Pack `@kilocode/gateway-core` before `@opencode/core` in the workerd SDK verification script because `@opencode/core` depends on `@kilocode/gateway-core`."
+    },
+    "packages/tui/src/component/dialog-integration.tsx": {
+      "rung": 3,
+      "seam": "Prompt for Personal Account vs Team (`chooseKiloAccount`) after a Kilo Gateway login completes, before closing or chaining the integration dialog. `TuiPlugin` has no post-integration-connect hook."
+    },
+    "packages/tui/src/plugin/builtins.ts": {
+      "rung": 3,
+      "seam": "Register the built-in `KiloTeams` TUI plugin (`/teams`, `/team`, `/org`, `/orgs`) until the Kilo host owns the TUI built-in plugin list (U-E0-01)."
+    },
+    "turbo.json": {
+      "rung": 3,
+      "seam": "Register `@kilocode/gateway-core#test` in Turborepo so `bun turbo test --affected` runs the Gateway core unit and boundary tests in CI.",
+      "unmarked": "JSON has no comments."
     }
   }
 }

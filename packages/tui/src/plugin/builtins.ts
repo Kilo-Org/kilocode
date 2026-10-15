@@ -11,6 +11,7 @@ import Storybook from "../feature-plugins/system/storybook"
 import Stats from "../feature-plugins/system/stats"
 import Latex from "@opencode/latex/plugin"
 import Merman from "@opencode/merman/plugin"
+import KiloTeams from "../kilocode/gateway" // kilocode_change - Kilo /teams command
 
 export const builtins = [
   HomeFooter,
@@ -28,4 +29,5 @@ export const builtins = [
   // normal launches and register it only for OPENCODE_STORY runs.
   ...(process.env.OPENCODE_STORY ? [Storybook] : []),
   DiffViewer,
+  KiloTeams, // kilocode_change
 ]
