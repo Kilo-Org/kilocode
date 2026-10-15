@@ -26,6 +26,7 @@ const env = {
   KILOCODE_TOKEN: undefined,
   KILO_AUTH_CONTENT: undefined,
   KILO_API_URL: undefined,
+  KILO_AI_GATEWAY_URL: undefined,
   KILO_ORG_ID: undefined,
   KILOCODE_EDITOR_NAME: undefined,
   KILOCODE_FEATURE: undefined,
@@ -123,7 +124,7 @@ describe("KiloGatewayPlugin", () => {
               (yield* Provider.Service).get(kilo),
               (provider) => provider?.headers?.["X-KILOCODE-ORGANIZATIONID"] === "selected",
             )
-            expect(provider?.settings?.baseURL).toBe(`${backend.url}/api/gateway`)
+            expect(provider?.settings?.baseURL).toBe(`${backend.url}/api/gateway/v1`)
           }),
         ),
       (backend) => Effect.sync(() => backend[Symbol.dispose]()),
@@ -141,7 +142,7 @@ describe("KiloGatewayPlugin", () => {
             const models = yield* Model.Service
             const provider = yield* providers.get(kilo)
             expect(provider?.activation).toBe("enabled")
-            expect(provider?.settings).toMatchObject({ baseURL: `${backend.url}/api/gateway`, apiKey: "anonymous" })
+            expect(provider?.settings).toMatchObject({ baseURL: `${backend.url}/api/gateway/v1`, apiKey: "anonymous" })
             // Kilo headers only: no OpenCode referer or title.
             expect(provider?.headers).toEqual(headers())
             expect((yield* providers.available()).map((item) => item.id)).toContain(kilo)
@@ -183,7 +184,7 @@ describe("KiloGatewayPlugin", () => {
             const models = yield* Model.Service
             const signedIn = yield* providers.get(kilo)
             expect(signedIn?.headers).toEqual(headers("selected"))
-            expect(signedIn?.settings?.baseURL).toBe(`${backend.url}/api/gateway`)
+            expect(signedIn?.settings?.baseURL).toBe(`${backend.url}/api/gateway/v1`)
             expect(signedIn?.settings).not.toHaveProperty("apiKey")
             expect(signedIn?.activation).toBe("auto")
             expect(
