@@ -6,6 +6,7 @@ import {
   component,
   pushedAt,
   decide,
+  failure,
   clip,
   digest,
   parts,
@@ -224,5 +225,18 @@ describe("clip", () => {
     expect(out.length).toBeLessThan(560)
     expect(out.endsWith("- ...list shortened")).toBe(true)
     expect(out).not.toContain("line 1 x".repeat(40))
+  })
+})
+
+describe("failure", () => {
+  test("names the missing scope", () => {
+    expect(failure({ error: "missing_scope", needed: "chat:write", provided: "incoming-webhook" })).toBe(
+      "Slack chat.postMessage failed: missing_scope (needed: chat:write, provided: incoming-webhook)",
+    )
+  })
+
+  test("handles replies without scope details", () => {
+    expect(failure({ error: "not_in_channel" })).toBe("Slack chat.postMessage failed: not_in_channel")
+    expect(failure({})).toBe("Slack chat.postMessage failed: unknown error")
   })
 })
