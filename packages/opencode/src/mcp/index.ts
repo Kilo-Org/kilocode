@@ -35,6 +35,7 @@ import { McpOAuthCallback } from "./oauth-callback"
 import { McpAuth } from "./auth"
 import { probe } from "@/kilocode/mcp/sse-probe" // kilocode_change - normalize the optional GET stream probe
 import { oauthGuard } from "@/kilocode/mcp/oauth-fetch" // kilocode_change - bind automatic invalidation to the rejected credential
+import { refreshExpired } from "@/kilocode/mcp/refresh" // kilocode_change - refresh an expired token the SDK would otherwise report as needs_auth
 import * as KiloMcpCleanup from "@/kilocode/mcp/cleanup" // kilocode_change
 import { EventV2Bridge } from "@/event-v2-bridge"
 import { TuiEvent } from "@/server/tui-event"
@@ -354,6 +355,13 @@ const layer = Layer.effect(
             provider: authProvider,
           })
         : probe(fetch, url.href)
+
+      // kilocode_change start - some servers reject an expired access token with 403, which the
+      // SDK never retries as an auth failure; refresh a stored-but-expired token before connecting
+      if (authProvider) {
+        yield* Effect.promise(() => refreshExpired({ name: key, serverUrl: mcp.url, auth, fetch: remoteFetch }))
+      }
+      // kilocode_change end
 
       const transports: Array<{ name: string; transport: TransportWithAuth }> = [
         {
