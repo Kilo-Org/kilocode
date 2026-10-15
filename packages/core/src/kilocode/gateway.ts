@@ -37,32 +37,6 @@ const MAX_SNAPSHOTS = 10
 const LOOPBACK = new Set(["127.0.0.1", "localhost", "[::1]", "::1"])
 const IS_TEST_RUNNER = typeof Bun !== "undefined" && /\.test\.[cm]?[jt]sx?$/.test(Bun.main)
 
-// Built-in minimal free floor used when signed out and no Gateway response or cached snapshot is available yet
-// (for example, offline startup or offline unit tests), so models.dev's paid list never leaks through.
-const BUILT_IN_FREE_MODELS: readonly KiloModels.Model[] = [
-  {
-    id: KiloDefaults.DEFAULT_FREE_MODEL,
-    name: "Kilo Auto Free",
-    free: true,
-    reasoning: false,
-    temperature: true,
-    attachment: false,
-    limit: { context: 128000, output: 16384 },
-    capabilities: { tools: true, input: ["text"], output: ["text"] },
-  },
-  {
-    id: KiloDefaults.SMALL_MODEL,
-    name: "Kilo Auto Small",
-    family: "gpt-luna",
-    free: true,
-    reasoning: false,
-    temperature: true,
-    attachment: false,
-    limit: { context: 128000, output: 8192 },
-    capabilities: { tools: true, input: ["text"], output: ["text"] },
-  },
-]
-
 // Written by the device method. Decoded again because stored credentials are read back from the database.
 const Metadata = Schema.Struct({
   server: Schema.optional(Schema.String),
@@ -89,6 +63,7 @@ interface CatalogState {
   readonly defaultModelID?: string
   readonly failed: boolean
   readonly anonymous: boolean
+  readonly skippedOfflineTest?: boolean
 }
 
 export const KiloGatewayPlugin = define<Bus.Service | Scope.Scope>({
@@ -102,8 +77,7 @@ export const KiloGatewayPlugin = define<Bus.Service | Scope.Scope>({
     let epoch = 0
     let catalog: CatalogState = {
       envActive: false,
-      models: BUILT_IN_FREE_MODELS,
-      defaultModelID: KiloDefaults.DEFAULT_FREE_MODEL,
+      models: [],
       failed: false,
       anonymous: true,
     }
@@ -203,10 +177,10 @@ export const KiloGatewayPlugin = define<Bus.Service | Scope.Scope>({
           account: current,
           connection,
           envActive,
-          models: token ? [] : BUILT_IN_FREE_MODELS,
-          defaultModelID: token ? KiloDefaults.DEFAULT_MODEL : KiloDefaults.DEFAULT_FREE_MODEL,
-          failed: Boolean(token && organizationID),
+          models: [],
+          failed: false,
           anonymous: !token,
+          skippedOfflineTest: true,
         }
         return
       }
@@ -360,6 +334,22 @@ export const KiloGatewayPlugin = define<Bus.Service | Scope.Scope>({
       }
       if (!account?.organizationID) {
         delete mergedHeaders[KiloHeaders.HEADER_ORGANIZATION]
+      }
+
+      if (catalog.skippedOfflineTest) {
+        const activation = !account || catalog.anonymous || catalog.envActive ? "enabled" : "auto"
+        const settings =
+          !account || catalog.anonymous
+            ? { ...baseSettings, apiKey: KiloAccount.ANONYMOUS_KEY }
+            : catalog.envActive
+              ? { ...baseSettings, apiKey: account.token }
+              : baseSettings
+        editor.update(id, (provider) => {
+          provider.activation = activation
+          provider.settings = settings
+          provider.headers = mergedHeaders
+        })
+        return
       }
 
       if (catalog.failed || catalog.models.length === 0) {
