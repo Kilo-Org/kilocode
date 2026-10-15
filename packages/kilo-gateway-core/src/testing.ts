@@ -272,12 +272,17 @@ export function fixture() {
         return Response.json(state.approved, { status: state.pollStatus })
       }
       if (path === "/api/profile") return Response.json(state.profile, { status: state.profileStatus })
-      if (path === "/api/openrouter/models" || path === "/api/gateway/models") {
+      if (
+        path === "/api/openrouter/models" ||
+        path === "/api/gateway/models" ||
+        path === "/api/gateway/v1/models" ||
+        path === "/api/v1/models"
+      ) {
         const headers = state.modelsRetryAfter ? { "retry-after": state.modelsRetryAfter } : undefined
         if (state.modelsStatus !== 200) return new Response("Unavailable", { status: state.modelsStatus, headers })
         return Response.json(state.models)
       }
-      if (/^\/api\/organizations\/[^/]+\/models$/.test(path)) {
+      if (/^\/api\/(?:gateway\/v1\/|v1\/)?organizations\/[^/]+\/models$/.test(path)) {
         const headers = state.modelsRetryAfter ? { "retry-after": state.modelsRetryAfter } : undefined
         if (state.teamModelsStatus !== 200) return new Response("Unavailable", { status: state.teamModelsStatus, headers })
         return Response.json(state.teamModels)
