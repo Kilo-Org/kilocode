@@ -38,6 +38,12 @@ export const Info = Schema.Union([
     message: Schema.String,
   }),
   // kilocode_change end
+  // kilocode_change start - represent a session asleep on a pending wakeup
+  Schema.Struct({
+    type: Schema.Literal("scheduled"),
+    scheduledAt: Schema.String,
+  }),
+  // kilocode_change end
 ]).annotate({ identifier: "SessionStatus" })
 export type Info = Schema.Schema.Type<typeof Info>
 

@@ -7,7 +7,8 @@ import "@opencode-ai/core/account"
 import "@/server/event"
 import "@/kilocode/indexing-event" // kilocode_change - register indexing.status before HttpApi event schemas
 import { Schema } from "effect"
-import { HttpApi, HttpApiEndpoint, HttpApiError, HttpApiGroup, HttpApiSchema, OpenApi } from "effect/unstable/httpapi"
+import { HttpApi, HttpApiEndpoint, HttpApiError, HttpApiGroup, HttpApiSchema, OpenApi } from "effect/unstable/httpapi" // kilocode_change - HttpApiSchema for the bodyless upgrade payload
+import semver from "semver"
 import { described } from "./metadata"
 
 const GlobalHealth = Schema.Struct({
@@ -51,7 +52,13 @@ const GlobalEventSchema = Schema.Struct({
 }).annotate({ identifier: "GlobalEvent" })
 
 export const GlobalUpgradeInput = Schema.Struct({
-  target: Schema.optional(Schema.String),
+  // kilocode_change start - an omitted target upgrades to the latest version
+  target: Schema.optional(
+    Schema.String.check(
+      Schema.makeFilter((value) => (semver.valid(value) === null ? "Expected a semantic version" : undefined)),
+    ),
+  ),
+  // kilocode_change end
 })
 
 const GlobalUpgradeResult = Schema.Union([
@@ -124,7 +131,9 @@ export const GlobalApi = HttpApi.make("global").add(
         }),
       ),
       HttpApiEndpoint.post("upgrade", GlobalPaths.upgrade, {
+        // kilocode_change start - a bodyless request upgrades to the latest version
         payload: [HttpApiSchema.NoContent, GlobalUpgradeInput],
+        // kilocode_change end
         success: described(GlobalUpgradeResult, "Upgrade result"),
         error: HttpApiError.BadRequest,
       }).annotateMerge(

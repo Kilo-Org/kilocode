@@ -1,5 +1,6 @@
 package ai.kilocode.client.session.controller
 
+import ai.kilocode.client.util.EdtDrain
 import ai.kilocode.client.util.edt
 import ai.kilocode.log.ChatLogSummary
 import ai.kilocode.log.KiloLog
@@ -17,6 +18,8 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 internal const val EVENT_FLUSH_MS = 150L
+internal const val EVENT_CATCHUP_SIZE = 8
+internal const val EVENT_CATCHUP_SCAN_SIZE = 128
 
 internal class SessionUpdateQueue(
     parent: Disposable,
@@ -25,7 +28,7 @@ internal class SessionUpdateQueue(
     private val flushMs: Long = EVENT_FLUSH_MS,
     private val fire: (List<ChatEventDto>) -> Unit,
     private val condense: Boolean = true,
-    hold: Boolean,
+    held: Boolean,
     private val hidden: (ChatEventDto) -> Boolean = { false },
     private val sid: () -> String,
 ) : Disposable {
@@ -34,10 +37,25 @@ internal class SessionUpdateQueue(
     }
 
     private val condenser = SessionQueueCondenser()
-    private val pending = mutableListOf<ChatEventDto>()
+    private val pending = ArrayDeque<ChatEventDto>()
     private val lock = Any()
     private val disposed = AtomicBoolean(false)
     private val visible = AtomicBoolean(comp == null)
+    private var last = 0L
+    // Named `held` on the constructor so the mutable `hold` property is what the drain lambda reads
+    // below; a same-named constructor parameter would be captured by value and freeze at its start.
+    private var hold = held
+    // Applies a catch-up backlog in bounded slices, one per EDT turn, so a newly visible editor
+    // cannot monopolize the event queue when its tab is selected.
+    private val drain = EdtDrain(
+        size = EVENT_CATCHUP_SIZE,
+        ready = { !disposed.get() && visible.get() && !hold },
+        refill = { prepare(take(EVENT_CATCHUP_SCAN_SIZE), "visible", true, System.currentTimeMillis()) },
+        sink = {
+            LOG.debug { "${ChatLogSummary.sid(sid())} catchup batch=${it.size}" }
+            fire(it)
+        },
+    )
     private val tick: Job? = if (flushMs == Long.MAX_VALUE) null else cs.launch {
         while (isActive) {
             delay(flushMs)
@@ -52,8 +70,6 @@ internal class SessionUpdateQueue(
             onVisible(it.isShowing)
         }
     }
-    private var last = 0L
-    private var hold = hold
 
     init {
         Disposer.register(parent, this)
@@ -100,6 +116,7 @@ internal class SessionUpdateQueue(
         val cleanup = {
             if (comp != null && watch != null) comp.removeHierarchyListener(watch)
             synchronized(lock) { pending.clear() }
+            drain.cancel()
         }
         edt(cleanup)
     }
@@ -108,19 +125,42 @@ internal class SessionUpdateQueue(
         if (disposed.get()) return
         if (hold) return
         if (!forced && !visible.get()) return
+        if (!forced && drain.active) {
+            drain.wake()
+            return
+        }
         val now = System.currentTimeMillis()
         if (!forced && now - last < flushMs) return
-        val batch = synchronized(lock) {
-            if (pending.isEmpty()) return
-            pending.toList().also { pending.clear() }
+        val batch = take()
+        if (batch.isEmpty()) {
+            if (forced && drain.hasQueued()) fire(drain.take())
+            return
         }
-        val before = batch.size
-        val types = batch.groupBy { it::class.simpleName }
-            .entries.joinToString(",") { (k, v) -> "$k:${v.size}" }
+        val out = prepare(batch, source, forced, now)
+        if (forced && drain.hasQueued()) {
+            drain.append(out)
+            fire(drain.take())
+            return
+        }
+        fire(out)
+    }
+
+    private fun take(limit: Int = Int.MAX_VALUE): List<ChatEventDto> = synchronized(lock) {
+        val count = minOf(limit, pending.size)
+        buildList(count) {
+            repeat(count) { add(pending.removeFirst()) }
+        }
+    }
+
+    private fun prepare(batch: List<ChatEventDto>, source: String, forced: Boolean, now: Long): List<ChatEventDto> {
         val out = if (condense) condenser.condense(batch) else batch
         last = now
-        LOG.debug { "${ChatLogSummary.sid(sid())} flush source=$source forced=$forced pending=$before condensed=${out.size} saved=${before - out.size} types=$types" }
-        fire(out)
+        LOG.debug {
+            val types = batch.groupBy { it::class.simpleName }
+                .entries.joinToString(",") { (k, v) -> "$k:${v.size}" }
+            "${ChatLogSummary.sid(sid())} flush source=$source forced=$forced pending=${batch.size} condensed=${out.size} saved=${batch.size - out.size} types=$types"
+        }
+        return out
     }
 
     private fun onVisible(show: Boolean) {
@@ -129,7 +169,7 @@ internal class SessionUpdateQueue(
         if (prev == show) return
         LOG.debug { "${ChatLogSummary.sid(sid())} visible=$show" }
         if (!show) return
-        requestFlush(true, "visible")
+        drain.wake()
     }
 
     private fun run(block: () -> Unit) = edt({ !disposed.get() }, block)

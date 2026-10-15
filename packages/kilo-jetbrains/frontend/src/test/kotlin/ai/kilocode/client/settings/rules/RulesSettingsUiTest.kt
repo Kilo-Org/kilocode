@@ -4,6 +4,8 @@ import ai.kilocode.client.util.edtWait
 import ai.kilocode.client.app.KiloAgentBehaviorService
 import ai.kilocode.client.app.KiloAppService
 import ai.kilocode.client.app.KiloWorkspaceService
+import ai.kilocode.client.plugin.KiloBundle
+import ai.kilocode.client.settings.base.SettingsInfo
 import ai.kilocode.client.settings.base.SettingsToggle
 import ai.kilocode.client.testing.FakeAgentBehaviorRpcApi
 import ai.kilocode.client.testing.FakeAppRpcApi
@@ -56,6 +58,16 @@ class RulesSettingsUiTest : BasePlatformTestCase() {
             if (::appCoroutines.isInitialized) appCoroutines.close()
         } finally {
             super.tearDown()
+        }
+    }
+
+    fun `test page shows exactly one info banner explaining rules`() {
+        val panel = panel()
+        flushUntil { rows(panel).size == 1 }
+
+        edt {
+            val info = components(panel).filterIsInstance<SettingsInfo>().single()
+            assertEquals(KiloBundle.message("settings.rules.info"), bannerIntro(info))
         }
     }
 
@@ -346,6 +358,11 @@ class RulesSettingsUiTest : BasePlatformTestCase() {
     }
 
     private fun rulesList(panel: RulesSettingsUi) = components(panel).filterIsInstance<JBList<ActiveListItem>>().single()
+
+    private fun bannerIntro(info: SettingsInfo): String {
+        val pane = com.intellij.util.ui.UIUtil.findComponentOfType(info, javax.swing.JEditorPane::class.java) ?: error("no banner text")
+        return pane.text.replace(Regex("<[^>]+>"), "").replace(Regex("\\s+"), " ").trim()
+    }
 
     private fun toggle(panel: RulesSettingsUi): SettingsToggle = components(panel).filterIsInstance<SettingsToggle>().single()
 

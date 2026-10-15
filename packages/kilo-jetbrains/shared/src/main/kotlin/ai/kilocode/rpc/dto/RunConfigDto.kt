@@ -12,6 +12,17 @@ data class RunConfigDto(
     val via: String? = null,
 )
 
+/**
+ * A configuration the worktree cannot run, so the popup can say why instead of silently omitting it.
+ * "My run configuration is missing" is otherwise indistinguishable from a backend that never listed.
+ */
+@Serializable
+data class RunSkipDto(
+    val name: String,
+    val type: String,   // configuration type display name
+    val reason: String, // WorktreeRunDelegate.Support.Skip.reason
+)
+
 @Serializable
 data class RunConfigListDto(
     val configs: List<RunConfigDto> = emptyList(),
@@ -19,6 +30,7 @@ data class RunConfigListDto(
     // True when the project has at least one linked external-system root whose build tasks are known,
     // so the worktree can be built. False hides the build actions instead of offering a failing one.
     val buildable: Boolean = false,
+    val skipped: List<RunSkipDto> = emptyList(),
 )
 
 @Serializable

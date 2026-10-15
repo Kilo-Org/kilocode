@@ -2,6 +2,7 @@ import { Cause, Effect, Scope } from "effect"
 import { NamedError } from "@opencode-ai/core/util/error"
 import { EventV2Bridge } from "@/event-v2-bridge"
 import { KiloSessionContinuation } from "@/kilocode/session/continuation"
+import { KiloSessionRetention } from "@/kilocode/session/retention"
 import { Suggestion } from "@/kilocode/suggestion"
 import { Permission } from "@/permission"
 import { Question } from "@/question"
@@ -16,6 +17,7 @@ import * as KiloSkill from "@/kilocode/skill-remove"
 import { Agent } from "@/agent/agent"
 import { Command } from "@/command"
 import { Config } from "@/config/config"
+import { MCP } from "@/mcp"
 import { WorkspaceRef } from "@/effect/instance-ref"
 import { InstanceState } from "@/effect/instance-state"
 import { HeapSnapshot } from "@/kilocode/cli/heap-snapshot"
@@ -27,6 +29,8 @@ import { ModelUsage } from "@/kilocode/session/model-usage"
 import * as MarketplaceApi from "@/kilocode/marketplace/api"
 import * as MarketplaceDetection from "@/kilocode/marketplace/detection"
 import * as MarketplaceInstaller from "@/kilocode/marketplace/installer"
+import * as MarketplaceRelevance from "@/kilocode/marketplace/relevance"
+import { Ripgrep } from "@opencode-ai/core/ripgrep"
 import {
   MarketplaceInstallPayload,
   MarketplaceRemovePayload,
@@ -73,6 +77,7 @@ import {
   BackgroundJobsQuery,
   SessionBoardQuery,
   ResetSessionBoardPayload,
+  RetentionRunPayload,
 } from "../groups/kilocode"
 
 export const kilocodeHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilocode", (handlers) =>
@@ -80,7 +85,9 @@ export const kilocodeHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilocode"
     const agents = yield* Agent.Service
     const commands = yield* Command.Service
     const skills = yield* Skill.Service
+    const ripgrep = yield* Ripgrep.Service
     const config = yield* Config.Service
+    const mcp = yield* MCP.Service
     const store = yield* InstanceStore.Service
     const manager = yield* AgentManager.Service
     const notebook = yield* Notebook.Service
@@ -294,17 +301,26 @@ export const kilocodeHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilocode"
       const installed = yield* Effect.promise(() =>
         MarketplaceDetection.detect({ directory: instance.directory, worktree: instance.worktree, skills: entries }),
       )
+      const scanned = Date.now()
+      const filenames = yield* MarketplaceRelevance.detect({
+        ripgrep,
+        directory: instance.directory,
+        items: items.items,
+      })
       yield* Effect.logInfo("marketplace request complete", {
         endpoint: "list",
         directory: instance.directory,
         outcome: "success",
         count: items.items.length,
         errors: items.errors.length,
+        filenames: filenames.length,
+        relevanceMs: Date.now() - scanned,
         durationMs: Date.now() - started,
       })
       return {
         items: items.items,
         installed,
+        filenames,
         ...(items.errors.length > 0 ? { errors: items.errors } : {}),
       }
     })
@@ -325,10 +341,20 @@ export const kilocodeHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilocode"
         parameterCount: Object.keys(ctx.payload.parameters ?? {}).length,
       })
       const result = yield* MarketplaceInstaller.install(
-        { config, agents, skills, directory: instance.directory, worktree: instance.worktree },
+        {
+          config,
+          agents,
+          skills,
+          mcp: { remove: mcp.remove }, // kilocode_change
+          directory: instance.directory,
+          worktree: instance.worktree,
+          vcs: instance.project.vcs,
+        },
         ctx.payload,
       )
-      if (result.success) yield* store.dispose(instance)
+      // Plugin and MCP bundle writes can partially succeed, including on a failed request.
+      if (result.success || ctx.payload.item.type === "plugin" || ctx.payload.item.type === "mcp")
+        yield* store.dispose(instance)
       yield* Effect.logInfo("marketplace request complete", {
         endpoint: "install",
         directory: instance.directory,
@@ -355,11 +381,20 @@ export const kilocodeHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilocode"
         scope: ctx.payload.scope,
       })
       const result: MarketplaceRemoveResult = yield* MarketplaceInstaller.remove(
-        { config, agents, skills, directory: instance.directory, worktree: instance.worktree },
+        {
+          config,
+          agents,
+          skills,
+          mcp: { remove: mcp.remove }, // kilocode_change
+          directory: instance.directory,
+          worktree: instance.worktree,
+          vcs: instance.project.vcs,
+        },
         ctx.payload.item,
         ctx.payload.scope,
       )
-      if (result.success) yield* store.dispose(instance)
+      if (result.success || ctx.payload.item.type === "plugin" || ctx.payload.item.type === "mcp")
+        yield* store.dispose(instance)
       yield* Effect.logInfo("marketplace request complete", {
         endpoint: "remove",
         directory: instance.directory,
@@ -529,6 +564,32 @@ export const kilocodeHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilocode"
       return yield* wake.pending(directory)
     })
 
+    const retentionActive = Effect.fn("KilocodeHttpApi.retentionActive")(function* () {
+      const info = yield* config.get()
+      const active = KiloSessionRetention.policy(info)
+      return {
+        policy: { enabled: active.enabled, maxAgeDays: active.maxAgeDays },
+      }
+    })
+
+    const retentionStatus = Effect.fn("KilocodeHttpApi.retentionStatus")(function* () {
+      const progress = yield* KiloSessionRetention.readProgress()
+      const last = yield* KiloSessionRetention.readState()
+      return { ...(yield* retentionActive()), ...(last ? { last } : {}), ...(progress ? { progress } : {}) }
+    })
+
+    const retentionRun = Effect.fn("KilocodeHttpApi.retentionRun")(function* (ctx: {
+      payload: typeof RetentionRunPayload.Type
+    }) {
+      const outcome = yield* KiloSessionRetention.run({ force: ctx.payload.force === true })
+      if (!outcome.ran) return yield* retentionStatus()
+      return { ...(yield* retentionActive()), last: outcome.result }
+    })
+
+    const retentionCancel = Effect.fn("KilocodeHttpApi.retentionCancel")(function* () {
+      return { requested: KiloSessionRetention.cancel() }
+    })
+
     return handlers
       .handle("resumeSession", resumeSession)
       .handle("drainSession", drainSession)
@@ -564,5 +625,8 @@ export const kilocodeHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilocode"
       .handle("backgroundJobCancel", backgroundJobCancel)
       .handle("backgroundJobPromote", backgroundJobPromote)
       .handle("wakeups", wakeups)
+      .handle("retentionStatus", retentionStatus)
+      .handle("retentionRun", retentionRun)
+      .handle("retentionCancel", retentionCancel)
   }),
 )

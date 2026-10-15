@@ -141,6 +141,35 @@ Terminal command blocks stay expanded by default in the VS Code chat UI. Choose 
 
 Valid values are `expanded` and `collapsed`.
 
+### Code Edit and Tool Blocks
+
+Code edit and diff blocks start collapsed. Choose **Expanded** for **Code Edit Blocks** in the Display tab, or set `code_edit_display` in `kilo.jsonc`. MCP and generic tool blocks also start collapsed, controlled by `mcp_tool_display`:
+
+```json
+{
+  "code_edit_display": "expanded",
+  "mcp_tool_display": "expanded"
+}
+```
+
+Both keys accept `expanded` and `collapsed`.
+
+### Work Styles and the Session Preview
+
+Onboarding asks you to pick a work style. The choice sets display defaults and, for **Review first**, permission rules:
+
+- **Review first** expands reasoning, terminal, and code edit blocks, collapses MCP and generic tool blocks, and shows auto-approval reasons. It also allows read-only commands and asks before edits, external directory access, and other commands.
+- **High autonomy** uses a reasoning preview, collapses terminal, code edit, and tool blocks, and hides auto-approval reasons. It leaves permissions unchanged.
+
+Onboarding only fills settings and permission rules that are not already configured, so an existing `kilo.jsonc` or customized settings are preserved.
+
+You can change both choices later:
+
+- **Settings → Display** holds the display options. The **Display presets** buttons apply the same combinations as onboarding, and each option stays individually editable. A looping sample conversation beside the options previews your changes with the same components as a real session, using local data only.
+- **Settings → Auto-Approve** lists the current permission rules and lets you edit them.
+
+Display changes apply as a draft. Click **Save** to keep them or **Discard** to revert.
+
 ### Markdown Diff Rendering
 
 Markdown files in Kilo diff viewers can be shown as rendered Markdown instead of a raw text diff. Use the eye/code toggle in a Markdown file header, or set `kilo-code.new.diff.renderMarkdown` to `true` to render Markdown files by default.
@@ -230,7 +259,7 @@ Straightforward tasks can stay solo. Enabling the board does not mean agents are
 
 All participants can read the board history, including messages addressed to others. Recipient selection is not a privacy boundary. Peer messages do not grant user approval or change permissions; `HOLD` and `VETO` are advisory, not controls that pause or cancel work.
 
-When a main session has board messages, open the **Board** icon in its task header (VS Code) or session header (JetBrains, which also offers a **View Kilo Swarm** session menu action) to read them, refresh them, or reset the board. Only the owning top-level session can view or reset its board; child sessions and cloud sessions cannot. Reset clears visible messages only and does not stop agents or clear conversations. See [Kilo Swarm communication](/docs/automate/agent-manager#kilo-swarm-communication) for the board dialog, ownership rules, and recipient-state warnings.
+In VS Code, the **Board** control lives in the session dock above the prompt, next to the background-agent row when background agents exist. It appears when Kilo Swarm is enabled and the session has board messages, works with foreground and background task agents, and stays in place after background agents are cleared. It is no longer in the task header, and Kilo Swarm is configured under **Agent Behaviour**, not Experimental settings. In JetBrains, open the **Board** icon in the session header, which also offers a **View Kilo Swarm** session menu action. Use the control to read the board messages, refresh them, or reset the board. Only the owning top-level session can view or reset its board; child sessions and cloud sessions cannot. Reset clears visible messages only and does not stop agents or clear conversations. See [Kilo Swarm communication](/docs/automate/agent-manager#kilo-swarm-communication) for the board dialog, ownership rules, and recipient-state warnings.
 
 ## Experimental Features
 
@@ -245,7 +274,7 @@ Available experimental settings include:
 - **LSP integration** - expose language server diagnostics to the agent
 - **Paste summary** - summarize large clipboard pastes before including them
 - **Batch tool** - allow the agent to batch multiple tool calls in one step
-- **Task Subagent Model Selection** - let you request a different model or reasoning effort for an individual subagent task (off by default)
+- **Search Ignored Paths** - list folders or files the agent's `glob` tool should search even when `.gitignore` or other ignore files exclude them, such as `packages/*/dist` (`experimental.glob_include_ignored`, empty by default). Patterns are gitignore-style and relative to the workspace: a pattern without a slash matches folders at any depth, and a single file inside an ignored folder is listed by its path (for example `build/report.json`). Ignored or hidden folders inside a listed folder stay skipped, and `.git` is never searched
 - **Claude Code Migration** - import supported global Claude Code configuration once (off by default)
 - **OpenTelemetry** - enable Kilo telemetry and optional OTLP export when configured
 
@@ -276,9 +305,7 @@ Telemetry is enabled by default. Set `experimental.openTelemetry` to `false` in 
 
 ### Task subagent model selection
 
-Enable **Task Subagent Model Selection** in **Settings → Experimental**, or set `experimental.task_model_selection` to `true` in `kilo.jsonc`. It is off by default.
-
-This lets you explicitly request a different model, provider, or reasoning effort for an individual subagent task. The agent keeps normal defaults unless you request an override; it does not select models autonomously for cost or complexity. See [Per-task model selection](/docs/code-with-ai/agents/model-selection#per-task-model-selection-experimental).
+You can explicitly request a different model, provider, or reasoning effort for an individual subagent task. The agent keeps normal defaults unless you request an override; it does not select models autonomously for cost or complexity. See [Per-task model selection](/docs/code-with-ai/agents/model-selection#per-task-model-selection).
 
 ### Claude Code migration
 

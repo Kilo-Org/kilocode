@@ -1,10 +1,11 @@
-import { randomUUID } from "crypto"
 import type { ProjectContext } from "./project/context"
 import type { LifecycleHost } from "./provider-lifecycle"
 import type { Worktree } from "./WorktreeStateManager"
 import { prompt } from "./orchestration-domain"
 import { startSession } from "./mcp-warmup"
 import { PLATFORM } from "./constants"
+import { injectedMetadata } from "../shared/injected-prompt"
+import { isRunningStatus } from "../session-status"
 
 import type { BaseUpdateRequest } from "../../webview-ui/src/types/messages/agent-manager"
 
@@ -56,7 +57,7 @@ export async function handleBaseUpdate(
       if (msg.sessionId && selected?.worktreeId !== worktree.id)
         throw new Error("The target session changed worktrees.")
       const busy = sessions
-        .filter((session) => (statuses.data[session.id]?.type ?? "idle") !== "idle")
+        .filter((session) => isRunningStatus(statuses.data[session.id]?.type))
         .map((session) => session.id)
       const id = selected?.id ?? sessions.find((session) => busy.includes(session.id))?.id ?? sessions.at(0)?.id
       if (busy.some((item) => item !== id))
@@ -102,7 +103,7 @@ export async function handleBaseUpdate(
       state,
       sessionID: id,
       text: baseUpdatePrompt(worktree, push),
-      messageID: randomUUID(),
+      metadata: injectedMetadata(`Update from ${worktree.parentBranch}`),
       questions: "dismiss",
       model: msg.model,
       variant: msg.variant,

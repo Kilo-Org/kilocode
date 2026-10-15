@@ -48,7 +48,6 @@ export function applyProjectSelection(
  */
 export function createTargetRememberer(opts: {
   pid: () => string | undefined
-  enabled: () => boolean
   applied: () => string | undefined
   selection: () => string | null
   owns: (sel: string) => boolean
@@ -57,7 +56,7 @@ export function createTargetRememberer(opts: {
 }): void {
   createEffect(() => {
     const pid = opts.pid()
-    if (!pid || !opts.enabled()) return
+    if (!pid) return
     // pid flips with the catalog push, before the new project's state is
     // applied. In that window selection() still belongs to the previous
     // project, so persisting it would poison this project's target.

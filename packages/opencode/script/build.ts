@@ -24,6 +24,8 @@ import { stageBubblewrap } from "./kilocode/bubblewrap"
 import { LanceDBRuntime } from "../src/kilocode/lancedb"
 import { KiloSandboxWorker } from "./kilocode/kilo-sandbox-worker"
 import { KiloSandboxNetwork } from "./kilocode/kilo-sandbox-network"
+import * as KiloSbom from "./kilocode/sbom"
+import * as KiloRelease from "../../../script/kilocode/release"
 // kilocode_change end
 
 const singleFlag = process.argv.includes("--single")
@@ -469,7 +471,18 @@ if (Script.release) {
       // kilocode_change end
     }
   }
-  await $`gh release upload v${Script.version} ${archives} --clobber` // kilocode_change
+  // kilocode_change start - CRA evidence: describe the exact archives that were
+  // just produced, then publish the sidecars with them so the release asset and
+  // its SBOM always land together.
+  const evidence = await KiloSbom.evidence({
+    dir: path.resolve(dir, "dist"),
+    release: { version: Script.version, channel: Script.channel },
+    expected: targets.length,
+  })
+  // One `gh release upload` for the whole set cancels every in-flight upload as
+  // soon as a single transfer hiccups, so publish them one at a time instead.
+  await KiloRelease.upload({ tag: `v${Script.version}`, files: [...archives, ...evidence.files] })
+  // kilocode_change end
 }
 
 export { binaries }

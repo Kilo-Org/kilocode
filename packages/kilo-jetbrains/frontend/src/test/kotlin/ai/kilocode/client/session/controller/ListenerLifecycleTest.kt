@@ -2,6 +2,8 @@ package ai.kilocode.client.session.controller
 
 import ai.kilocode.client.session.model.SessionState
 import ai.kilocode.rpc.dto.ChatEventDto
+import ai.kilocode.rpc.dto.QuestionInfoDto
+import ai.kilocode.rpc.dto.QuestionRequestDto
 import ai.kilocode.rpc.dto.SessionStatusDto
 import com.intellij.openapi.util.Disposer
 
@@ -123,4 +125,27 @@ class ListenerLifecycleTest : SessionControllerTestBase() {
         assertTrue(modelEvents.isEmpty())
         assertEquals(SessionState.Idle, m.model.state)
     }
+
+    /**
+     * The CLI keeps a blocking question (e.g. a plan follow-up) open while it reports the session
+     * idle between turns. An idle status must not hide that question, matching session.idle's
+     * existing AwaitingQuestion guard.
+     */
+    fun `test session status idle does not clobber AwaitingQuestion`() {
+        val (m, _, modelEvents) = prompted()
+
+        emit(ChatEventDto.QuestionAsked("ses_test", question("q1")))
+        modelEvents.clear()
+
+        emit(ChatEventDto.SessionStatusChanged("ses_test", SessionStatusDto("idle")))
+
+        assertTrue(modelEvents.isEmpty())
+        assertTrue(m.model.state is SessionState.AwaitingQuestion)
+    }
+
+    private fun question(id: String) = QuestionRequestDto(
+        id = id,
+        sessionID = "ses_test",
+        questions = listOf(QuestionInfoDto("Pick one", "Choice")),
+    )
 }

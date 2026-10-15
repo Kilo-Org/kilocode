@@ -2,7 +2,6 @@ import { describe, it, expect } from "bun:test"
 import {
   buildExport,
   parseImport,
-  mergeConfig,
   MAX_IMPORT_SIZE,
   KNOWN_KEYS,
   META_VERSION,
@@ -188,6 +187,13 @@ describe("parseImport", () => {
     }
   })
 
+  it("preserves the memory model setting", () => {
+    const json = JSON.stringify({ memory_model: "kilo/kilo-auto/small" })
+    const result = parseImport(json)
+    expect(result.ok).toBe(true)
+    if (result.ok) expect(result.config.memory_model).toBe("kilo/kilo-auto/small")
+  })
+
   it("strips _meta before returning config", () => {
     const json = JSON.stringify({
       _meta: { version: 1, exportedAt: "2026-01-01", secretsStripped: true },
@@ -274,83 +280,6 @@ describe("parseImport", () => {
 })
 
 // ---------------------------------------------------------------------------
-// mergeConfig
-// ---------------------------------------------------------------------------
-describe("mergeConfig", () => {
-  it("merges imported agents with existing agents", () => {
-    const existing: Config = {
-      agent: {
-        coder: { mode: "primary", prompt: "Code" },
-        reviewer: { mode: "primary", prompt: "Review" },
-      },
-    }
-    const imported: Config = {
-      agent: {
-        reviewer: { mode: "primary", prompt: "Updated review" },
-        planner: { mode: "primary", prompt: "Plan" },
-      },
-    }
-    const result = mergeConfig(existing, imported)
-    expect(result.agent?.coder?.prompt).toBe("Code")
-    expect(result.agent?.reviewer?.prompt).toBe("Updated review")
-    expect(result.agent?.planner?.prompt).toBe("Plan")
-  })
-
-  it("imported values override existing for same keys", () => {
-    const existing: Config = { model: "old-model", default_agent: "coder" }
-    const imported: Config = { model: "new-model" }
-    const result = mergeConfig(existing, imported)
-    expect(result.model).toBe("new-model")
-    expect(result.default_agent).toBe("coder")
-  })
-
-  it("existing values not in import are preserved", () => {
-    const existing: Config = {
-      model: "test",
-      permission: { read: "allow" },
-      instructions: ["old.md"],
-    }
-    const imported: Config = { model: "updated" }
-    const result = mergeConfig(existing, imported)
-    expect(result.model).toBe("updated")
-    expect(result.permission).toEqual({ read: "allow" })
-    expect(result.instructions).toEqual(["old.md"])
-  })
-
-  it("merges providers without losing existing ones", () => {
-    const existing: Config = {
-      provider: {
-        openai: { name: "OpenAI", api_key: "sk-existing" },
-        anthropic: { name: "Anthropic", api_key: "sk-ant" },
-      },
-    }
-    const imported: Config = {
-      provider: {
-        openai: { name: "OpenAI Updated", base_url: "https://new.api" },
-      },
-    }
-    const result = mergeConfig(existing, imported)
-    expect(result.provider?.openai?.name).toBe("OpenAI Updated")
-    expect(result.provider?.openai?.base_url).toBe("https://new.api")
-    expect(result.provider?.anthropic?.name).toBe("Anthropic")
-    expect(result.provider?.anthropic?.api_key).toBe("sk-ant")
-  })
-
-  it("handles empty existing config", () => {
-    const imported: Config = { model: "test", agent: { coder: { mode: "primary" } } }
-    const result = mergeConfig({}, imported)
-    expect(result.model).toBe("test")
-    expect(result.agent?.coder?.mode).toBe("primary")
-  })
-
-  it("handles empty imported config", () => {
-    const existing: Config = { model: "test" }
-    const result = mergeConfig(existing, {})
-    expect(result.model).toBe("test")
-  })
-})
-
-// ---------------------------------------------------------------------------
 // Round-trip
 // ---------------------------------------------------------------------------
 describe("round-trip", () => {
@@ -377,6 +306,13 @@ describe("round-trip", () => {
       expect(result.config.permission).toEqual({ read: "allow" })
       expect(result.config.instructions).toEqual(["rules.md"])
     }
+  })
+
+  it("export then import preserves the memory model setting", () => {
+    const original: Config = { memory_model: "kilo/kilo-auto/small" }
+    const result = parseImport(JSON.stringify(buildExport(original)))
+    expect(result.ok).toBe(true)
+    if (result.ok) expect(result.config.memory_model).toBe("kilo/kilo-auto/small")
   })
 })
 

@@ -12,6 +12,7 @@ import {
   isCursorAtMentionEnd,
   findMentionRange,
   mentionSettled,
+  segmentMentionText,
   sessionMentionFilename,
   sessionMentionText,
   sessionMentionToken,
@@ -148,6 +149,34 @@ describe("buildMentionResults", () => {
     expect(buildMentionResults("src", ["src/index.ts"])).toContainEqual(FILE_PICKER_RESULT)
     expect(buildMentionResults("zzz", [])).toEqual([FILE_PICKER_RESULT])
     expect(buildMentionResults("browse files", [])).toEqual([FILE_PICKER_RESULT])
+  })
+
+  it("ranks a file in another workspace folder on its path within that folder", () => {
+    // The absolute path is what gets inserted, but "nested" occurs only in the
+    // folder's own prefix, never in the file's path within it. Scoring the
+    // absolute form made it a match and lifted it above a file the query misses
+    // just as much, so the order here is what distinguishes the two.
+    const result = buildMentionResults("nested", [
+      { path: "src/aaa.ts", type: "file", root: "repo" },
+      { path: "/deep-nested-name/src/zzz.ts", type: "file", root: "deep-nested-name", relative: "src/zzz.ts" },
+    ])
+    expect(result.filter((item) => item.type === "file").map((item) => item.value)).toEqual([
+      "src/aaa.ts",
+      "/deep-nested-name/src/zzz.ts",
+    ])
+  })
+
+  it("keeps the owning folder ahead of an equally good match elsewhere", () => {
+    // Equal scores must preserve the order the host sent, which is the session's
+    // own project first.
+    const result = buildMentionResults("notes.md", [
+      { path: "notes.md", type: "file", root: "repo" },
+      { path: "/other/notes.md", type: "file", root: "other", relative: "notes.md" },
+    ])
+    expect(result.filter((item) => item.type === "file").map((item) => item.value)).toEqual([
+      "notes.md",
+      "/other/notes.md",
+    ])
   })
 
   it("keeps browse files last among the entries of a bare @", () => {
@@ -435,6 +464,16 @@ describe("buildFileAttachments", () => {
   it("does not attach a UNC path outside the workspace", () => {
     const paths = new Set(["\\\\server\\share\\file.ts"])
     const result = buildFileAttachments("@\\\\server\\share\\file.ts", paths, "/workspace")
+    expect(result).toEqual([])
+  })
+
+  it("does not attach a file from another workspace folder", () => {
+    // Multi-root file search offers folders added via "Add Folder to Workspace..."
+    // as absolute mentions. They must stay mention-only: attaching would read the
+    // file on the backend through a path that bypasses external_directory
+    // approval. The agent has to Read them instead.
+    const paths = new Set(["/other-folder/src/app.ts"])
+    const result = buildFileAttachments("@/other-folder/src/app.ts", paths, "/workspace")
     expect(result).toEqual([])
   })
 
@@ -919,5 +958,48 @@ describe("modelReferenceToken", () => {
     const token = modelReferenceToken("anthropic", "claude-sonnet-4")
     const kept = syncMentionedPaths(new Set([token]), `use @${token} for the subagent`)
     expect(kept.has(token)).toBe(true)
+  })
+})
+
+describe("segmentMentionText", () => {
+  it("marks inserted mention tokens and keeps plain text as-is", () => {
+    const tokens = new Set(["kilo/kilo-auto/free", "Fix auth bug", "/repo/.kilo/worktrees/feature"])
+    const segments = segmentMentionText(
+      "see @Fix auth bug then @/repo/.kilo/worktrees/feature use @kilo/kilo-auto/free",
+      tokens,
+    )
+    expect(segments.map((segment) => [segment.mention, segment.text])).toEqual([
+      [false, "see "],
+      [true, "@Fix auth bug"],
+      [false, " then "],
+      [true, "@/repo/.kilo/worktrees/feature"],
+      [false, " use "],
+      [true, "@kilo/kilo-auto/free"],
+    ])
+  })
+
+  it("keeps multiple spaces and newlines intact", () => {
+    const segments = segmentMentionText("a  b\n @Fix auth bug", new Set(["Fix auth bug"]))
+    expect(segments.map((segment) => segment.text).join("")).toBe("a  b\n @Fix auth bug")
+    expect(segments.filter((segment) => segment.mention).map((segment) => segment.text)).toEqual(["@Fix auth bug"])
+  })
+
+  it("matches the longest token first", () => {
+    const segments = segmentMentionText("@Fix auth bug", new Set(["Fix", "Fix auth bug"]))
+    expect(segments.filter((segment) => segment.mention).map((segment) => segment.text)).toEqual(["@Fix auth bug"])
+  })
+
+  it("matches tokens that contain regex metacharacters literally", () => {
+    const tokens = new Set(["pkg.name(v2)+beta", "C:\\repo\\wt"])
+    const segments = segmentMentionText("@pkg.name(v2)+beta and @C:\\repo\\wt", tokens)
+    expect(segments.filter((segment) => segment.mention).map((segment) => segment.text)).toEqual([
+      "@pkg.name(v2)+beta",
+      "@C:\\repo\\wt",
+    ])
+  })
+
+  it("returns one plain segment when there are no tokens or no text", () => {
+    expect(segmentMentionText("plain", new Set())).toEqual([{ text: "plain", mention: false }])
+    expect(segmentMentionText("", new Set(["model"]))).toEqual([])
   })
 })

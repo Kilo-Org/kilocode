@@ -4,7 +4,7 @@ import { isHttpsUrl, type PRReviewCommentData } from "../shared/review-comments"
 import { thread } from "../shared/pr-review"
 import type { KiloConnectionService } from "../services/cli-backend"
 import { appendOutput, getWorkspaceRoot, openRelativeFile } from "../review-utils"
-import { getDiffMarkdownRender, setDiffMarkdownRender } from "../review-settings"
+import { getDiffMarkdownRender, getUserDiffStyle, setDiffMarkdownRender, setUserDiffStyle } from "../review-settings"
 import { buildWebviewHtml, getWebviewFontSize } from "../utils"
 import { watchFontSizeConfig } from "../kilo-provider/font-size"
 import { createDiffPRPolling, type DiffPRPoller, type DiffPRPollerOptions } from "./pr-poller"
@@ -360,7 +360,9 @@ export class DiffViewerProvider implements vscode.Disposable {
       void vscode.env.openExternal(vscode.Uri.parse(msg.url))
     },
     "diffViewer.close": () => this.panel?.dispose(),
-    "diffViewer.setDiffStyle": () => {},
+    "diffViewer.setDiffStyle": (msg) => {
+      if (msg.style === "unified" || msg.style === "split") void setUserDiffStyle(msg.style)
+    },
     "diffViewer.setMarkdownRender": (msg) => {
       if (typeof msg.render === "boolean") void setDiffMarkdownRender(msg.render)
     },
@@ -426,6 +428,8 @@ export class DiffViewerProvider implements vscode.Disposable {
       workspaceDirectory: this.ctx?.dir ?? getWorkspaceRoot(),
     })
     void this.panel.webview.postMessage({ type: "diffViewer.markdownRender", render: getDiffMarkdownRender() })
+    const style = getUserDiffStyle()
+    if (style) void this.panel.webview.postMessage({ type: "diffViewer.initialDiffStyle", style })
     this.openContext(false)
     const initial = this.ctx ? this.catalog.defaultSourceId(this.ctx) : undefined
     if (!initial) {

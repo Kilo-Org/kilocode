@@ -4,6 +4,7 @@ import ai.kilocode.backend.rpc.readWorktreeState
 import ai.kilocode.log.KiloLog
 import ai.kilocode.rpc.dto.RunConfigDto
 import ai.kilocode.rpc.dto.RunConfigListDto
+import ai.kilocode.rpc.dto.RunSkipDto
 import ai.kilocode.rpc.dto.RunProcessState
 import ai.kilocode.rpc.dto.RunResultDto
 import ai.kilocode.rpc.dto.RunStateDto
@@ -116,8 +117,14 @@ class WorktreeRunManager internal constructor(
         val start: Instant = Instant.now(),
     )
 
+    /** Latest cleanup owner and earliest start among overlapping stopped runs in one worktree. */
+    private data class Claim(val key: Key, val since: Instant)
+
     private val clones = ConcurrentHashMap<Key, Entry>()
     private val handlers = ConcurrentHashMap<Key, ProcessHandler>()
+
+    /** Latest stopped run eligible to claim a worktree-wide orphan scan. */
+    private val owners = ConcurrentHashMap<String, Claim>()
 
     /**
      * Pids [WorktreeRunReaper] is tracking per key because their [ProcessHandler] is already gone but
@@ -158,7 +165,7 @@ class WorktreeRunManager internal constructor(
      */
     suspend fun configs(): RunConfigListDto {
         val manager = RunManager.getInstance(project)
-        val skipped = mutableListOf<String>()
+        val skipped = mutableListOf<RunSkipDto>()
         val items = readAction {
             manager.allSettings.mapNotNull { s ->
                 val type = s.type.displayName
@@ -170,7 +177,7 @@ class WorktreeRunManager internal constructor(
                         RunConfigDto(s.uniqueID, s.name, type, via = support.via)
 
                     is WorktreeRunDelegate.Support.Skip -> {
-                        skipped += "'${s.name}' [$type] ${support.reason}"
+                        skipped += RunSkipDto(s.name, type, support.reason)
                         null
                     }
                 }
@@ -180,9 +187,9 @@ class WorktreeRunManager internal constructor(
         LOG.info(
             "worktree run: configs listed=${items.size} skipped=${skipped.size} buildableRoots=${roots.size}" +
                 items.joinToString("") { "\n  + '${it.name}' [${it.type}]${it.via?.let { v -> " via $v" } ?: ""}" } +
-                skipped.joinToString("") { "\n  - $it" },
+                skipped.joinToString("") { "\n  - '${it.name}' [${it.type}] ${it.reason}" },
         )
-        return RunConfigListDto(items, buildable = roots.isNotEmpty())
+        return RunConfigListDto(items, buildable = roots.isNotEmpty(), skipped = skipped)
     }
 
     /**
@@ -420,6 +427,12 @@ class WorktreeRunManager internal constructor(
         val key = Key(id, worktree)
         val handler = handlers[key]
         if (handler != null) {
+            val entry = clones[key]?.takeIf { it.reapable }
+            val root = pathKey(worktree)
+            if (entry != null) synchronized(owners) {
+                val since = minOf(owners[root]?.since ?: entry.start, entry.start)
+                owners[root] = Claim(key, since)
+            }
             LOG.info(
                 "worktree run: stop config=$id worktree=$worktree" +
                     " terminating=${handler.isProcessTerminating} detach=${handler.detachIsDefault()}",
@@ -431,7 +444,7 @@ class WorktreeRunManager internal constructor(
             // a delegated bootRun/run is) since 4.8, so this SIGTERMs a delegated app's forked JVM in
             // the common case; arm() is the fallback for when it does not.
             ExecutionManagerImpl.stopProcess(handler)
-            clones[key]?.takeIf { it.reapable }?.let { arm(key, handler, it.start) }
+            if (entry != null) arm(key, handler, root)
             return true
         }
         // No live handler: either unknown, or its app JVM outlived it and arm() is already tracking
@@ -453,13 +466,30 @@ class WorktreeRunManager internal constructor(
      * an application the user is still using. A live delegated run always has a handler for as long as
      * its application runs, because the build that forked it blocks.
      */
-    private fun arm(key: Key, handler: ProcessHandler, since: Instant) {
+    private fun arm(key: Key, handler: ProcessHandler, root: String) {
         cs.launch {
             if (!awaitGone(key, handler)) {
                 LOG.info("worktree run: handler still alive after stop, not reaping config=${key.id}")
                 return@launch
             }
-            val siblings = siblings(key)
+            val initial = synchronized(owners) {
+                val owner = owners[root]?.takeIf { it.key == key } ?: return@synchronized null
+                owner.since to siblings(key)
+            }
+            if (initial == null) {
+                LOG.info("worktree run: yielding orphan cleanup config=${key.id} worktree=${key.worktree}")
+                return@launch
+            }
+            if (initial.second.isNotEmpty()) awaitHandlersGone(initial.second, HANDLER_WAIT_MS)
+            val candidate = synchronized(owners) {
+                val owner = owners[root]?.takeIf { it.key == key } ?: return@synchronized null
+                owner.since to siblings(key)
+            }
+            if (candidate == null) {
+                LOG.info("worktree run: yielding orphan cleanup config=${key.id} worktree=${key.worktree}")
+                return@launch
+            }
+            val siblings = candidate.second
             if (siblings.isNotEmpty()) {
                 LOG.info(
                     "worktree run: not reaping config=${key.id} worktree=${key.worktree};" +
@@ -467,15 +497,21 @@ class WorktreeRunManager internal constructor(
                 )
                 return@launch
             }
+            val since = candidate.first
             val matches = WorktreeRunReaper.match(key.worktree, since, WorktreeRunReaper.scan())
             if (matches.isEmpty()) {
                 LOG.info(
                     "worktree run: no orphan app process started since $since" +
                         " for config=${key.id} worktree=${key.worktree}",
                 )
+                synchronized(owners) { if (owners[root]?.key == key) owners.remove(root) }
                 return@launch
             }
-            reap(key, matches)
+            try {
+                reap(key, matches)
+            } finally {
+                synchronized(owners) { if (owners[root]?.key == key) owners.remove(root) }
+            }
         }
     }
 
@@ -557,6 +593,7 @@ class WorktreeRunManager internal constructor(
         val keys = lock.withLock {
             val target = pathKey(worktree)
             released.add(target)
+            synchronized(owners) { owners.remove(target) }
             val found = clones.keys.filter { pathKey(it.worktree) == target }
             found.forEach { key -> handlers[key]?.let { ExecutionManagerImpl.stopProcess(it) } }
             LOG.info("worktree run: released worktree=$worktree keys=${found.size}")

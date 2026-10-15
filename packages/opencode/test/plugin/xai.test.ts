@@ -1,11 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import {
-  accessTokenIsExpiring,
-  buildAuthorizeUrl,
-  pollDeviceCodeToken,
-  requestDeviceCode,
-  XaiAuthPlugin,
-} from "../../src/plugin/xai"
+import { accessTokenIsExpiring, buildAuthorizeUrl, pollDeviceCodeToken, requestDeviceCode, XaiAuthPlugin } from "../../src/plugin/xai"
 import { OAUTH_DUMMY_KEY } from "../../src/auth"
 
 function makeJwt(payload: object): string {

@@ -87,7 +87,14 @@ class GhBannerTest : BasePlatformTestCase() {
     }
 
     fun `test banner explains a gh that did not answer in time`() {
-        edt { service.report(project, GhAvailability.TIMEOUT) }
+        // Twice and spread out, because the coordinator does not call gh unresponsive on one slow lookup
+        // and reads a quick second report as a cached replay of the first — see
+        // GhStatusCoordinator.TIMEOUT_CONFIRMATIONS and TIMEOUT_WINDOW. This test is about what the
+        // banner says once that state is reached, not about how it is reached.
+        repeat(GhStatusCoordinator.TIMEOUT_CONFIRMATIONS) {
+            edt { service.report(project, GhAvailability.TIMEOUT) }
+            timers.advanceBy(GhStatusCoordinator.TIMEOUT_WINDOW)
+        }
         pump()
 
         val banner = edt { GhBanner(project, testRootDisposable) }

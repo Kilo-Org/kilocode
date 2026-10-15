@@ -10,6 +10,7 @@ import ai.kilocode.backend.app.KiloBackendSessionManager
 import ai.kilocode.backend.workspace.KiloBackendWorkspaceManager
 import ai.kilocode.log.ChatLogSummary
 import ai.kilocode.rpc.KiloSessionRpcApi
+import ai.kilocode.rpc.dto.BackgroundJobDto
 import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.CloudSessionListDto
 import ai.kilocode.rpc.dto.DiffFileDto
@@ -32,11 +33,16 @@ import com.intellij.openapi.components.service
 import ai.kilocode.log.KiloLog
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.channels.SendChannel
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.channelFlow
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.flow.onStart
+import kotlinx.coroutines.flow.onSubscription
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonArray
@@ -269,24 +275,47 @@ class KiloSessionRpcApiImpl internal constructor(
         ready { chat.attachmentPart(id, directory, messageId, partId, attachmentKey) }
 
     override suspend fun events(id: String, directory: String): Flow<ChatEventDto> =
-        (source ?: chat.events)
-            .onStart { log.info("${ChatLogSummary.sid(id)} kind=subscription route=rpc-events start=true dir=${ChatLogSummary.dir(directory)}") }
-            .filter { event ->
-                val sid = ChatLogSummary.sid(event)
-                val passes = event is ChatEventDto.SessionCreated || sid == null || sid == id
-                if (passes) log.debug { "${ChatLogSummary.sid(id)} pass=true ${ChatLogSummary.eventBody(event)}" }
-                else log.debug { "${ChatLogSummary.sid(id)} pass=false srcSid=$sid ${ChatLogSummary.eventBody(event)}" }
-                if (passes) {
-                    ChatLogSummary.error(event)?.let { log.warn("${ChatLogSummary.sid(id)} route=rpc-events pass=true $it") }
-                }
-                if (passes && event is ChatEventDto.SessionStatusChanged && event.status.type != "busy") {
-                    log.info(
-                        "${ChatLogSummary.sid(id)} kind=status route=rpc-events pass=true " +
-                            ChatLogSummary.status(event.status),
-                    )
-                }
-                passes
+        channelFlow {
+            log.info("${ChatLogSummary.sid(id)} kind=subscription route=rpc-events start=true dir=${ChatLogSummary.dir(directory)}")
+
+            // Gate: the live SharedFlow subscription must be established before the replay runs, so
+            // the pending-prompt fetch cannot open a window where an event is in neither the
+            // snapshot nor the live stream. For the real SharedFlow path, onSubscription fires after
+            // the subscriber is registered; for the injected test source, onStart is sufficient.
+            val gate = Channel<Unit>(Channel.RENDEZVOUS)
+            val upstream = source
+                ?.onStart { gate.send(Unit) }
+                ?: chat.events.onSubscription { gate.send(Unit) }
+
+            // 1. Start collecting the live stream immediately.
+            val live = launch {
+                upstream
+                    .filter { event ->
+                        val sid = ChatLogSummary.sid(event)
+                        val passes = event is ChatEventDto.SessionCreated || sid == null || sid == id
+                        if (passes) logEvent(id, "pass=true", event, null)
+                        else logEvent(id, "pass=false", event, sid)
+                        if (passes) {
+                            ChatLogSummary.error(event)?.let { log.warn("${ChatLogSummary.sid(id)} route=rpc-events pass=true $it") }
+                        }
+                        if (passes && event is ChatEventDto.SessionStatusChanged && event.status.type != "busy") {
+                            log.info(
+                                "${ChatLogSummary.sid(id)} kind=status route=rpc-events pass=true " +
+                                    ChatLogSummary.status(event.status),
+                            )
+                        }
+                        passes
+                    }
+                    .collect { send(it) }
             }
+
+            // 2. Wait for the live subscriber to be registered, then replay any pending prompts.
+            gate.receive()
+            replayPending(id, directory)
+
+            // Keep the channelFlow alive until the live collector completes or is cancelled.
+            live.join()
+        }
             .onCompletion { cause ->
                 if (cause == null || cause is CancellationException) {
                     log.info("${ChatLogSummary.sid(id)} kind=subscription route=rpc-events stop=true cancelled=${cause is CancellationException}")
@@ -301,6 +330,7 @@ class KiloSessionRpcApiImpl internal constructor(
         app.requireReady()
         log.info("replyPermission: requestId=$requestId, reply=${reply.reply}")
         chat.replyPermission(requestId, directory, reply)
+        if (chat.permissionPending(requestId, directory) == false) activity.resolve(requestId)
     }
 
     override suspend fun savePermissionRules(requestId: String, directory: String, rules: PermissionAlwaysRulesDto) {
@@ -313,12 +343,14 @@ class KiloSessionRpcApiImpl internal constructor(
         app.requireReady()
         log.info("replyQuestion: requestId=$requestId, answers=${answers.answers.size}")
         chat.replyQuestion(requestId, directory, answers)
+        if (chat.questionPending(requestId, directory) == false) activity.resolve(requestId)
     }
 
     override suspend fun rejectQuestion(requestId: String, directory: String) {
         app.requireReady()
         log.info("rejectQuestion: requestId=$requestId")
         chat.rejectQuestion(requestId, directory)
+        if (chat.questionPending(requestId, directory) == false) activity.resolve(requestId)
     }
 
     override suspend fun pendingPermissions(directory: String): List<PermissionRequestDto> =
@@ -335,8 +367,65 @@ class KiloSessionRpcApiImpl internal constructor(
     override suspend fun resetSessionBoard(sessionID: String, directory: String, revision: Int): SessionBoardDto? =
         ready { withContext(Dispatchers.IO) { sessions.resetSessionBoard(sessionID, directory, revision) } }
 
+    // ------ background subagents ------
+
+    override suspend fun backgroundJobs(id: String, directory: String): Flow<List<BackgroundJobDto>> =
+        sessions.backgroundJobs(id, directory)
+
+    override suspend fun cancelBackgroundJob(id: String, directory: String): Boolean =
+        ready { withContext(Dispatchers.IO) { sessions.cancelBackgroundJob(id, directory) } }
+
+    override suspend fun promoteBackgroundJob(id: String, directory: String): Boolean =
+        ready { withContext(Dispatchers.IO) { sessions.promoteBackgroundJob(id, directory) } }
+
     private suspend fun <T> ready(block: suspend () -> T): T {
         app.requireReady()
         return block()
     }
+
+    /**
+     * Send any prompts that are already pending on the CLI for [id] so the collector starts with
+     * an accurate view even when the original `question.asked` / `permission.asked` event was
+     * emitted before this subscription existed. Called from [events] after the live subscription
+     * is established.
+     */
+    private suspend fun SendChannel<ChatEventDto>.replayPending(id: String, directory: String) {
+        try {
+            val permissions = pendingPermissions(directory).filter { it.sessionID == id }
+            val questions = pendingQuestions(directory).filter { it.sessionID == id }
+            for (p in permissions) send(ChatEventDto.PermissionAsked(p.sessionID, p))
+            for (q in questions) send(ChatEventDto.QuestionAsked(q.sessionID, q))
+            if (permissions.isNotEmpty() || questions.isNotEmpty()) {
+                log.info("${ChatLogSummary.sid(id)} route=rpc-events replay permissions=${permissions.size} questions=${questions.size}")
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            // App not ready yet or HTTP failure — the live flow will still deliver events once the
+            // connection is up, and recoverPending in the frontend covers the startup case.
+            log.debug { "${ChatLogSummary.sid(id)} route=rpc-events replay skipped: ${e.message}" }
+        }
+    }
+
+    /**
+     * Prompt delivery is rare and high-signal — a request that reaches a client is what a stuck
+     * session hinges on — so it is logged at INFO, while the per-event noise stays on DEBUG.
+     */
+    private fun logEvent(id: String, tag: String, event: ChatEventDto, srcSid: String?) {
+        val suffix = if (srcSid == null) "" else " srcSid=$srcSid"
+        // Build the summary inside each branch: eventBody and the string concat are only paid for
+        // when the level is enabled, matching the previous `log.debug { ... }` cost profile.
+        if (promptEvent(event)) log.info("${ChatLogSummary.sid(id)} $tag$suffix ${ChatLogSummary.eventBody(event)}")
+        else log.debug { "${ChatLogSummary.sid(id)} $tag$suffix ${ChatLogSummary.eventBody(event)}" }
+    }
+}
+
+/** Returns true for the rare prompt events whose delivery is worth logging at INFO. */
+private fun promptEvent(event: ChatEventDto): Boolean = when (event) {
+    is ChatEventDto.PermissionAsked,
+    is ChatEventDto.PermissionReplied,
+    is ChatEventDto.QuestionAsked,
+    is ChatEventDto.QuestionReplied,
+    is ChatEventDto.QuestionRejected -> true
+    else -> false
 }

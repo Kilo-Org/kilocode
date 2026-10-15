@@ -217,6 +217,41 @@ export function rebasePastes(pastes: readonly PasteRange[], start: number, end: 
 }
 
 /**
+ * The edit `[start, end)` describes when it accounts for the change from `prev`
+ * to `next`, or undefined when it does not. A span captured before a native edit
+ * can be stale — a rewrite may have landed instead — so the text on either side
+ * of it is checked before it is trusted.
+ */
+export function spanEdit(
+  prev: string,
+  next: string,
+  start: number,
+  end: number,
+): { start: number; end: number; length: number } | undefined {
+  if (start < 0 || end < start || end > prev.length) return
+  const length = next.length - prev.length + (end - start)
+  if (length < 0) return
+  if (prev.slice(0, start) !== next.slice(0, start)) return
+  if (prev.slice(end) !== next.slice(start + length)) return
+  return { start, end, length }
+}
+
+/**
+ * The selection a `beforeinput` is about to replace — the span that tells two
+ * identical placeholders apart — or undefined when there is none worth keeping:
+ * a caret replaces nothing, and undo and redo replay a span of their own.
+ */
+export function inputSpan(
+  event: InputEvent,
+  textarea: HTMLTextAreaElement | undefined,
+): { start: number; end: number } | undefined {
+  if (!textarea || (event.inputType ?? "").startsWith("history")) return
+  const start = textarea.selectionStart ?? 0
+  const end = textarea.selectionEnd ?? 0
+  if (start !== end) return { start, end }
+}
+
+/**
  * Build the text for a collapsed paste inserted at `[start, end)` together with
  * the chip range and the caret it should leave behind. The placeholder gains a
  * separating space on either side when the neighbouring text needs one, so the

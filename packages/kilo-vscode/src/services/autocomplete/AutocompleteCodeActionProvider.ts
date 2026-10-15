@@ -2,6 +2,8 @@ import * as vscode from "vscode"
 import { t } from "../i18n"
 
 export class AutocompleteCodeActionProvider implements vscode.CodeActionProvider {
+  constructor(private readonly pending: () => boolean = () => false) {}
+
   public readonly providedCodeActionKinds = {
     quickfix: vscode.CodeActionKind.QuickFix,
   }
@@ -17,7 +19,9 @@ export class AutocompleteCodeActionProvider implements vscode.CodeActionProvider
       this.providedCodeActionKinds["quickfix"],
     )
     action.command = {
-      command: "kilo-code.new.autocomplete.generateSuggestions",
+      command: this.pending()
+        ? "kilo-code.new.autocomplete.nextEdit.acceptOrJump"
+        : "kilo-code.new.autocomplete.generateSuggestions",
       title: "",
       arguments: [document.uri, range],
     }

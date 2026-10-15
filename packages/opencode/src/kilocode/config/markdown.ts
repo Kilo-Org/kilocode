@@ -43,6 +43,7 @@ export namespace KilocodeMarkdown {
       escapeJson: false,
       trusted: options.trusted,
       fileScope: options.fileScope,
+      markdown: true,
     })
   }
 }

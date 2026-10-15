@@ -38,26 +38,6 @@ export type MermaidLabels = {
   close: string
 }
 
-const labels: MermaidLabels = {
-  rendering: "Rendering Mermaid diagram...",
-  renderError: (message) => `Mermaid render failed: ${message}`,
-  errorDefault: "Unable to render Mermaid diagram.",
-  errorEmpty: "Mermaid rendered an empty diagram.",
-  copied: "Copied",
-  copy: "Copy",
-  download: "Download",
-  copySource: "Copy Mermaid source",
-  copySvg: "Copy SVG",
-  copyPng: "Copy PNG",
-  downloadSvg: "Download SVG",
-  downloadPng: "Download PNG",
-  zoom: "Zoom",
-  zoomIn: "Zoom in",
-  zoomOut: "Zoom out",
-  zoomReset: "Reset zoom",
-  close: "Close",
-}
-
 const cache: { promise?: Promise<Mermaid>; id: number; queue: Promise<void> } = {
   id: 0,
   queue: Promise.resolve(),
@@ -212,10 +192,6 @@ function enqueue<T>(run: () => Promise<T>) {
 function sanitize(svg: string) {
   if (!DOMPurify.isSupported) return ""
   return DOMPurify.sanitize(svg, svgConfig)
-}
-
-function mergeLabels(input?: Partial<MermaidLabels>) {
-  return { ...labels, ...input }
 }
 
 function message(err: unknown, labels: MermaidLabels) {
@@ -412,12 +388,7 @@ async function svg(renderer: Mermaid, source: string, cfg: ReturnType<typeof con
   })
 }
 
-export async function renderMermaid(
-  root: HTMLDivElement,
-  signal: { aborted: boolean },
-  input?: Partial<MermaidLabels>,
-) {
-  const label = mergeLabels(input)
+export async function renderMermaid(root: HTMLDivElement, signal: { aborted: boolean }, labels: MermaidLabels) {
   const blocks = Array.from(root.querySelectorAll('pre > code[data-lang="mermaid"]'))
   if (blocks.length === 0) return
 
@@ -428,7 +399,7 @@ export async function renderMermaid(
       if (!(pre instanceof HTMLPreElement)) continue
       if (!(wrapper instanceof HTMLElement)) continue
       if (wrapper.getAttribute("data-component") !== "markdown-code") continue
-      fail(wrapper, pre, err, label)
+      fail(wrapper, pre, err, labels)
     }
   })
   if (!renderer) return
@@ -470,7 +441,7 @@ export async function renderMermaid(
     const el = panel(wrapper)
     if (!keep) {
       el.setAttribute("data-state", "rendering")
-      el.textContent = label.rendering
+      el.textContent = labels.rendering
       pre.hidden = false
     } else {
       pre.hidden = true
@@ -481,17 +452,17 @@ export async function renderMermaid(
       if (signal.aborted || !root.isConnected || !wrapper.isConnected) return
 
       const safe = sanitize(result.svg)
-      if (!safe) throw new Error(label.errorEmpty)
+      if (!safe) throw new Error(labels.errorEmpty)
 
       cleanupActions(el)
       el.setAttribute("data-state", "rendered")
       el.innerHTML = safe
-      renderActions(el, pre, source, label)
+      renderActions(el, pre, source, labels)
       wrapper.setAttribute("data-mermaid-state", "rendered")
       pre.hidden = true
     } catch (err) {
       if (signal.aborted || !root.isConnected || !wrapper.isConnected) return
-      fail(wrapper, pre, err, label)
+      fail(wrapper, pre, err, labels)
     }
   }
 }

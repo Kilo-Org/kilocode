@@ -131,8 +131,10 @@ describe("shared board notifications", () => {
     expect(BoardContext.instructions).toContain("When working alone without relevant peer context, skip board calls")
     expect(BoardContext.instructions).toContain("your own board_read is not proof")
     expect(BoardContext.instructions).toContain("Respect requested independence and communication limits")
-    expect(BoardContext.instructions).toContain("including parents, children, and background siblings, not yourself")
-    expect(BoardContext.instructions).toContain("main is the board root, not necessarily your parent")
+    expect(BoardContext.instructions).toContain("including parents, children, and background siblings")
+    expect(BoardContext.instructions).toContain("flagged self: true")
+    expect(BoardContext.instructions).toContain("belong in your final response")
+    expect(BoardContext.instructions).not.toContain("main is the board root, not necessarily your parent")
     expect(BoardContext.instructions).toContain("ALL only for team-wide updates")
     expect(BoardContext.instructions).toContain(
       "For incremental reads, set since to your last successful board_read cursor",

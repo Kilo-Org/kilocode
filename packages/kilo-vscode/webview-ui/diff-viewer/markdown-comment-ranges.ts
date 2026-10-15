@@ -30,10 +30,19 @@ function lineCount(raw: string): number {
   return Math.max(1, raw.replace(/\n+$/, "").split("\n").length)
 }
 
+/**
+ * Lines an item spans, from its start to the next one's. A loose list separates
+ * items with a blank line that `lineCount` drops, so the newline count carries
+ * the gap. The last item is tokenized without a trailing newline, hence the floor.
+ */
+function stride(raw: string, size: number): number {
+  return Math.max(size, raw.match(/\n/g)?.length ?? 0)
+}
+
 function list(token: Tokens.List, range: MarkdownRange): MarkdownBlock {
   let line = range.start
   const items = token.items.map((item) => {
-    const size = lineCount(item.raw)
+    const size = stride(item.raw, lineCount(item.raw))
     const next = { start: line, end: line + size - 1 }
     line += size
     return next

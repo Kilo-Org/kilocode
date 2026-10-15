@@ -333,7 +333,14 @@ it.live(
           }),
       })
       const previous = process.env["KILO_SNAPSHOT_MATERIALIZE_IDLE_MS"]
-      process.env["KILO_SNAPSHOT_MATERIALIZE_IDLE_MS"] = "1500"
+      // The quiet period has to outlast the gap between the two snapshots with room to
+      // spare. The second snapshot must land while the first wait is still pending (a
+      // materialization that has already started is not restarted), and the "restarted"
+      // check must land after the first wait's deadline but before the second's. The old
+      // 1.5s period left a 500ms margin there, so a loaded CI host that spent longer than
+      // that tracking the second snapshot failed this test.
+      const idle = 4500
+      process.env["KILO_SNAPSHOT_MATERIALIZE_IDLE_MS"] = String(idle)
       yield* Effect.gen(function* () {
         const snapshot = yield* Snapshot.Service
         const ctx = yield* InstanceState.context
@@ -342,14 +349,15 @@ it.live(
         const first = yield* snapshot.track()
         expect(first).toBeTruthy()
         // Snapshot operations during the quiet period are not blocked behind the repack.
-        yield* Effect.sleep("1 second")
+        yield* Effect.sleep("2 seconds")
         expect(existsSync(alt)).toBe(true)
         yield* Effect.promise(() => Bun.write(path.join(dir, "note.txt"), "changed\n"))
         const second = yield* snapshot.track()
         expect(second).toBeTruthy()
         expect(second).not.toBe(first)
-        // The second snapshot restarted the quiet period, so nothing has been repacked yet.
-        yield* Effect.sleep("1 second")
+        // The second snapshot restarted the quiet period: the first wait's deadline has
+        // passed by now, so had it survived the second snapshot the repack would be done.
+        yield* Effect.sleep("3 seconds")
         expect(existsSync(alt)).toBe(true)
         yield* pollWithTimeout(
           Effect.sync(() => (!existsSync(alt) && !existsSync(`${alt}.materializing`) ? true : undefined)),

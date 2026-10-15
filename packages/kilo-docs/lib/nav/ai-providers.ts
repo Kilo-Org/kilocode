@@ -15,7 +15,7 @@ export const AiProvidersNav: NavSection[] = [
       { href: "/ai-providers/openai", children: "OpenAI" },
       {
         href: "/ai-providers/openai-chatgpt-plus-pro",
-        children: "ChatGPT Plus/Pro",
+        children: "ChatGPT Go/Plus/Pro",
       },
       { href: "/ai-providers/gemini", children: "Google Gemini" },
       { href: "/ai-providers/poolside", children: "Poolside" },
@@ -51,6 +51,7 @@ export const AiProvidersNav: NavSection[] = [
       { href: "/ai-providers/cerebras", children: "Cerebras" },
       { href: "/ai-providers/fireworks", children: "Fireworks AI" },
       { href: "/ai-providers/mixlayer", children: "Mixlayer" },
+      { href: "/ai-providers/nebius", children: "Nebius Token Factory" },
       { href: "/ai-providers/crusoe", children: "Crusoe" },
     ],
   },

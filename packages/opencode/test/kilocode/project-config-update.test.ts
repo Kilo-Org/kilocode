@@ -103,6 +103,30 @@ test("project config update prefers existing root kilo.json", async () => {
   })
 })
 
+test("project config update preserves unknown JSON fields", async () => {
+  await using tmp = await tmpdir()
+  await writeConfig(tmp.path, {
+    model: "test/before",
+    future: { enabled: true },
+    experimental: { future_flag: { value: 1 } },
+  })
+
+  await provideTestInstance({
+    directory: tmp.path,
+    fn: async () => {
+      await save({ model: "test/after" })
+
+      const saved = await Bun.file(path.join(tmp.path, "kilo.json")).json()
+      expect(saved).toMatchObject({
+        model: "test/after",
+        future: { enabled: true },
+        experimental: { future_flag: { value: 1 } },
+      })
+      expect((await load()).model).toBe("test/after")
+    },
+  })
+})
+
 test("project config update patches ancestor .kilo/kilo.json from nested directory", async () => {
   await using tmp = await tmpdir()
   const child = path.join(tmp.path, "nested", "workspace")

@@ -13,6 +13,7 @@ import ai.kilocode.backend.workspace.ModelTerminalBenchInfo
 import ai.kilocode.backend.workspace.ProviderData
 import ai.kilocode.backend.workspace.ProviderInfo
 import ai.kilocode.rpc.dto.AgentConfigDto
+import ai.kilocode.rpc.dto.BackgroundJobDto
 import ai.kilocode.rpc.dto.BoardMessageDto
 import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.CloudSessionDto
@@ -32,7 +33,10 @@ import ai.kilocode.rpc.dto.MessageErrorDto
 import ai.kilocode.rpc.dto.MessageSummaryDto
 import ai.kilocode.rpc.dto.MessageTimeDto
 import ai.kilocode.rpc.dto.MessageWithPartsDto
+import ai.kilocode.rpc.dto.McpAuthEventDto
+import ai.kilocode.rpc.dto.McpAuthResultDto
 import ai.kilocode.rpc.dto.McpConfigDto
+import ai.kilocode.rpc.dto.McpOAuthDto
 import ai.kilocode.rpc.dto.McpStatusDto
 import ai.kilocode.rpc.dto.ModelAutoRoutingDto
 import ai.kilocode.rpc.dto.ModelCacheCostDto
@@ -68,6 +72,7 @@ import ai.kilocode.rpc.dto.QuestionInfoDto
 import ai.kilocode.rpc.dto.QuestionOptionDto
 import ai.kilocode.rpc.dto.QuestionReplyDto
 import ai.kilocode.rpc.dto.QuestionRequestDto
+import ai.kilocode.rpc.dto.RetentionConfigDto
 import ai.kilocode.rpc.dto.SessionChangeDto
 import ai.kilocode.rpc.dto.SessionChangeKindDto
 import ai.kilocode.rpc.dto.SessionBoardDto
@@ -451,6 +456,40 @@ object KiloCliDataParser {
     }
 
     /**
+     * Parse a background-jobs list response (`GET /kilocode/background-jobs`) into
+     * [BackgroundJobDto]s, flattening the open `metadata` map's `sessionId`/`parentSessionId`/
+     * `background` keys into typed fields. A row missing `id`/`type`/`status` is dropped rather
+     * than failing the whole list.
+     *
+     * `started_at`/`completed_at` normally arrive as numbers, but the generated SDK types widen them
+     * to `"NaN"`/`"Infinity"`/`"-Infinity"` strings — [JsonObject.num] parses both via
+     * [String.toDoubleOrNull], and a non-finite result falls back to the given default rather than a
+     * garbage [Long].
+     */
+    fun parseBackgroundJobs(raw: String): List<BackgroundJobDto> {
+        val arr = tryParseArray(raw) ?: return emptyList()
+        return arr.mapNotNull { elem ->
+            val row = elem.obj() ?: return@mapNotNull null
+            val id = row.str("id") ?: return@mapNotNull null
+            val type = row.str("type") ?: return@mapNotNull null
+            val status = row.str("status") ?: return@mapNotNull null
+            val metadata = row["metadata"].obj()
+            BackgroundJobDto(
+                id = id,
+                type = type,
+                status = status,
+                title = row.str("title"),
+                startedAt = row.num("started_at")?.takeIf { it.isFinite() }?.toLong() ?: 0L,
+                completedAt = row.num("completed_at")?.takeIf { it.isFinite() }?.toLong(),
+                error = row.str("error"),
+                sessionId = metadata?.str("sessionId"),
+                parentSessionId = metadata?.str("parentSessionId"),
+                background = metadata.bool("background"),
+            )
+        }
+    }
+
+    /**
      * Parse message history response (`GET /session/{id}/message`)
      * into a list of messages with their parts.
      */
@@ -599,6 +638,15 @@ object KiloCliDataParser {
             agent = parseAgentConfig(obj["agent"].obj()),
             permission = parsePermissionConfig(obj["permission"].obj()),
             shared_agent_board = runCatching { obj.flagOrNull("shared_agent_board") }.getOrNull(),
+            snapshot = runCatching { obj.flagOrNull("snapshot") }.getOrNull(),
+            retention = obj["retention"].obj()?.let { retention ->
+                RetentionConfigDto(
+                    enabled = runCatching { retention.flagOrNull("enabled") }.getOrNull(),
+                    maxAgeDays = runCatching { retention.long("maxAgeDays") }.getOrNull()
+                        ?.takeIf { it in 1..Int.MAX_VALUE }
+                        ?.toInt(),
+                )
+            },
         )
     }.getOrDefault(ConfigDto())
 
@@ -647,8 +695,23 @@ object KiloCliDataParser {
                 headers = item.map("headers").takeIf { it.isNotEmpty() },
                 enabled = item.flagOrNull("enabled"),
                 timeout = item.long("timeout"),
+                oauth = parseMcpOAuth(item["oauth"]),
             )
         }.toMap()
+    }
+
+    private fun parseMcpOAuth(elem: JsonElement?): McpOAuthDto? {
+        if (elem == null || elem is JsonNull) return null
+        runCatching { elem.jsonPrimitive.booleanOrNull }.getOrNull()?.let { return McpOAuthDto(enabled = it) }
+        val obj = elem.obj() ?: return null
+        return McpOAuthDto(
+            enabled = true,
+            clientId = obj.str("clientId"),
+            clientSecret = obj.str("clientSecret"),
+            scope = obj.str("scope"),
+            callbackPort = obj.long("callbackPort")?.toInt(),
+            redirectUri = obj.str("redirectUri"),
+        )
     }
 
     private fun parseAgentConfig(obj: JsonObject?): Map<String, AgentConfigDto> {
@@ -774,6 +837,33 @@ object KiloCliDataParser {
         }
     }
 
+    fun parseMcpAuthResult(code: Int, raw: String): McpAuthResultDto {
+        val obj = tryParseObject(raw)
+        if (code in 200..299) {
+            return McpAuthResultDto(status = obj?.str("status") ?: "failed", error = obj?.str("error"))
+        }
+        val status = when (code) {
+            400 -> "unsupported"
+            404 -> "not_found"
+            else -> "failed"
+        }
+        return McpAuthResultDto(status = status, error = obj?.str("error") ?: obj?.str("message") ?: "HTTP $code")
+    }
+
+    /**
+     * Parses the `{ mcpName, url }` payload shared by `mcp.auth.url` and `mcp.browser.open.failed`.
+     *
+     * [external] marks the `mcp.auth.url` variant, where opening the URL is the client's job.
+     */
+    fun parseMcpAuthEvent(raw: String, external: Boolean = false): McpAuthEventDto? {
+        val obj = tryParseObject(raw) ?: return null
+        val payload = obj["payload"]?.jsonObject ?: obj
+        val props = payload["properties"]?.jsonObject ?: obj
+        val name = props.str("mcpName") ?: return null
+        val url = props.str("url") ?: return null
+        return McpAuthEventDto(name = name, url = url, external = external)
+    }
+
     private fun String.array(): JsonArray {
         val root = runCatching { json.parseToJsonElement(this) }.getOrNull()
         return when (root) {
@@ -783,6 +873,15 @@ object KiloCliDataParser {
         }
     }
 
+    /**
+     * The status is taken verbatim from the CLI.
+     *
+     * Classifying a transport failure as "sign-in required" belongs to the CLI, which does it once
+     * in `packages/opencode/src/kilocode/mcp/auth-failure.ts` and reports `needs_auth` directly —
+     * including for a rejected browser flow, a failed token exchange, and HTTP 401/403 rejections.
+     * Re-deriving that here from the human-readable `error` text would duplicate the rules and drift
+     * from them, so the plugin only reads the structured field.
+     */
     private fun mcpStatus(item: JsonElement, fallback: String? = null): McpStatusDto? {
         val obj = item.obj() ?: return null
         val name = obj.str("name") ?: fallback ?: return null
@@ -1020,6 +1119,23 @@ object KiloCliDataParser {
                             }
                             if (it.enabled != null) put("enabled", it.enabled)
                             if (it.timeout != null) put("timeout", it.timeout)
+                            val oauth = it.oauth
+                            when {
+                                oauth == null -> Unit
+                                oauth.clear -> put("oauth", JsonNull)
+                                oauth.enabled == false -> put("oauth", JsonPrimitive(false))
+                                // The config schema deep-merges on PATCH, so an omitted key keeps
+                                // its old value on disk. A field the user cleared therefore has to
+                                // be written as an explicit null sentinel or the previous client
+                                // id/secret/scope survives and is reused after a restart.
+                                else -> put("oauth", buildJsonObject {
+                                    put("clientId", oauth.clientId?.let(::JsonPrimitive) ?: JsonNull)
+                                    put("clientSecret", oauth.clientSecret?.let(::JsonPrimitive) ?: JsonNull)
+                                    put("scope", oauth.scope?.let(::JsonPrimitive) ?: JsonNull)
+                                    put("callbackPort", oauth.callbackPort?.let(::JsonPrimitive) ?: JsonNull)
+                                    put("redirectUri", oauth.redirectUri?.let(::JsonPrimitive) ?: JsonNull)
+                                })
+                            }
                         }
                     } ?: JsonNull)
                 })
@@ -1029,6 +1145,12 @@ object KiloCliDataParser {
             if (permission != null) put("permission", buildPermission(permission))
 
             if (patch.shared_agent_board != null) put("shared_agent_board", patch.shared_agent_board)
+            if (patch.snapshot != null) put("snapshot", patch.snapshot)
+            val retention = patch.retention
+            if (retention != null) put("retention", buildJsonObject {
+                if (retention.enabled != null) put("enabled", retention.enabled)
+                if (retention.maxAgeDays != null) put("maxAgeDays", retention.maxAgeDays)
+            })
 
             if (patch.agents.isNotEmpty()) {
                 put("agent", buildJsonObject {
@@ -1090,19 +1212,42 @@ object KiloCliDataParser {
         return json.encodeToString(JsonObject.serializer(), obj)
     }
 
+    fun buildMcpOverlayPatch(name: String, scope: String, config: McpConfigDto?): String = buildJsonObject {
+        put("scope", if (scope == "workspace") "project" else "global")
+        if (config == null) {
+            put("unset", buildJsonArray {
+                add(buildJsonArray {
+                    add(JsonPrimitive("mcp"))
+                    add(JsonPrimitive(name))
+                })
+            })
+            return@buildJsonObject
+        }
+        put("set", json.parseToJsonElement(buildConfigPatch(ConfigPatchDto(mcp = mapOf(name to config)))))
+    }.toString()
+
     fun buildDisabledProviderPatch(ids: List<String>): String {
         val arr = JsonArray(ids.distinct().sorted().map { JsonPrimitive(it) })
         return json.encodeToString(JsonObject.serializer(), JsonObject(mapOf("disabled_providers" to arr)))
     }
 
-    fun buildCustomProviderPatch(input: CustomProviderSaveDto): String {
+    /**
+     * [removedModelIds] are previously configured model IDs no longer present in [input.models].
+     * The config schema deep-merges provider objects on PATCH, so a removed model key must be
+     * emitted as an explicit `null` sentinel or it survives on disk under the old id forever
+     * (visible again after a restart).
+     */
+    fun buildCustomProviderPatch(input: CustomProviderSaveDto, removedModelIds: Set<String> = emptySet()): String {
         val id = input.id.trim()
         val env = input.envVar?.trim()?.takeIf { it.isNotBlank() }
-        val models = input.models.associate { model ->
-            model.id to buildJsonObject {
-                put("id", model.id)
-                put("name", model.name.ifBlank { model.id })
-                put("capabilities", buildJsonObject { put("reasoning", model.reasoning) })
+        val models = buildJsonObject {
+            removedModelIds.forEach { removedId -> put(removedId, JsonNull) }
+            input.models.forEach { model ->
+                put(model.id, buildJsonObject {
+                    put("id", model.id)
+                    put("name", model.name.ifBlank { model.id })
+                    put("capabilities", buildJsonObject { put("reasoning", model.reasoning) })
+                })
             }
         }
         val provider = buildJsonObject {
@@ -1111,7 +1256,7 @@ object KiloCliDataParser {
             put("options", buildJsonObject { put("baseURL", input.baseUrl.trim()) })
             if (env != null) put("env", buildJsonArray { add(JsonPrimitive(env)) })
             if (input.headers.isNotEmpty()) put("headers", buildJsonObject { input.headers.forEach { (k, v) -> put(k, v) } })
-            if (models.isNotEmpty()) put("models", JsonObject(models))
+            if (models.isNotEmpty()) put("models", models)
         }
         val root = buildJsonObject {
             put("provider", buildJsonObject { put(id, provider) })
@@ -1122,6 +1267,23 @@ object KiloCliDataParser {
     fun buildCustomProviderDeletePatch(id: String): String {
         val root = buildJsonObject {
             put("provider", buildJsonObject { put(id, JsonNull) })
+        }
+        return json.encodeToString(JsonObject.serializer(), root)
+    }
+
+    /**
+     * A models-only deletion patch for provider [id]. Used when the same custom provider id has a
+     * separate, independently-authored config entry in another scope (global vs. workspace) that
+     * still lists a model the primary save removed. Only nulls the given model keys; every other
+     * field on that scope's entry is left untouched by the deep-merge PATCH.
+     */
+    fun buildCustomProviderModelRemovalPatch(id: String, modelIds: Set<String>): String {
+        val root = buildJsonObject {
+            put("provider", buildJsonObject {
+                put(id, buildJsonObject {
+                    put("models", buildJsonObject { modelIds.forEach { put(it, JsonNull) } })
+                })
+            })
         }
         return json.encodeToString(JsonObject.serializer(), root)
     }
@@ -1653,6 +1815,7 @@ object KiloCliDataParser {
             snapshot = obj.str("snapshot"),
             diff = diff,
             diffs = parseUnifiedDiff(diff),
+            workspace = obj.str("workspace"),
         )
     }
 

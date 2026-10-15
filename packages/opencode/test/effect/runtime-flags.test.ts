@@ -84,8 +84,8 @@ describe("RuntimeFlags", () => {
       expect(flags.experimentalReferences).toBe(true)
       expect(flags.experimentalLspTy).toBe(false)
       expect(flags.experimentalLspTool).toBe(true)
+      expect(flags.experimentalContextTools).toBe(true) // kilocode_change
       expect(flags.experimentalOxfmt).toBe(true)
-      expect(flags.experimentalPlanMode).toBe(true)
       expect(flags.experimentalEventSystem).toBe(true)
       expect(flags.experimentalWorkspaces).toBe(true)
       expect(flags.experimentalIconDiscovery).toBe(true)
@@ -283,6 +283,31 @@ describe("RuntimeFlags", () => {
       expect(flags.experimentalOxfmt).toBe(true)
     }),
   )
+
+  // kilocode_change start - self-context tools
+  it.effect("experimentalContextTools defaults to false", () =>
+    Effect.gen(function* () {
+      const flags = yield* readFlags.pipe(Effect.provide(fromConfig({})))
+
+      expect(flags.experimentalContextTools).toBe(false)
+    }),
+  )
+
+  it.effect("experimentalContextTools is disabled by an explicit false override", () =>
+    Effect.gen(function* () {
+      const flags = yield* readFlags.pipe(
+        Effect.provide(
+          fromConfig({
+            KILO_EXPERIMENTAL: "true",
+            KILO_EXPERIMENTAL_CONTEXT_TOOLS: "false",
+          }),
+        ),
+      )
+
+      expect(flags.experimentalContextTools).toBe(false)
+    }),
+  )
+  // kilocode_change end
 
   for (const input of [
     { name: "absent", config: {}, expected: undefined },

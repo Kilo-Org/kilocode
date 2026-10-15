@@ -70,6 +70,7 @@ type Story = StoryObj
 
 const states: { state: Activity; title: string }[] = [
   { state: "busy", title: "Running" },
+  { state: "scheduled", title: "Scheduled" },
   { state: "waiting", title: "Needs input" },
   { state: "done", title: "Completed" },
   { state: "retry", title: "Retrying" },
@@ -107,7 +108,7 @@ const tabs = (items: typeof states) => (
 const gallery = (groups: (typeof states)[]) => (
   <StoryProviders noPadding>
     <div data-activity-story style={{ padding: "12px", background: "var(--surface-base)" }}>
-      <style>{'[data-activity-story] [data-component="spinner"] rect { animation: none !important; }'}</style>
+      <style>{'[data-activity-story] [data-component="spinner"] path { animation: none !important; }'}</style>
       <For each={groups}>{tabs}</For>
     </div>
   </StoryProviders>
@@ -131,6 +132,72 @@ export const MultipleSessions: Story = {
 export const MultipleSessions200: Story = {
   name: "Sidebar session tabs - multiple sessions - 200px",
   render: () => gallery([states.slice(0, 3)]),
+}
+
+export const PinnedTabs: Story = {
+  name: "Session tabs - pinned",
+  render: () => (
+    <StoryProviders noPadding>
+      <div style={{ padding: "12px", background: "var(--surface-base)" }}>
+        <div class="session-tab-bar">
+          <div class="am-tab-list" role="tablist" aria-label="Pinned session tabs" style={{ "--tab-count": 3 }}>
+            <div class="am-tab-sortable">
+              <SessionTab
+                title="Refactor shared search menu styles"
+                active={false}
+                pinned
+                pinnedLabel="Pinned"
+                state="idle"
+                stateLabel="Current session"
+                closeTitle="Close tab"
+                closeLabel="Close tab"
+                role="tab"
+                selected={false}
+                tabIndex={0}
+                onSelect={noop}
+                onMiddleClick={noop}
+                onClose={noop}
+              />
+            </div>
+            <div class="am-tab-sortable">
+              <SessionTab
+                title="Run the extension test suite"
+                active={false}
+                pinned
+                pinnedLabel="Pinned"
+                state="done"
+                stateLabel="Completed"
+                closeTitle="Close tab"
+                closeLabel="Close tab"
+                role="tab"
+                selected={false}
+                tabIndex={-1}
+                onSelect={noop}
+                onMiddleClick={noop}
+                onClose={noop}
+              />
+            </div>
+            <div class="am-tab-sortable">
+              <SessionTab
+                title="Review keyboard navigation behavior"
+                active={false}
+                state="idle"
+                stateLabel="Current session"
+                closeTitle="Close tab"
+                closeLabel="Close tab"
+                role="tab"
+                selected={false}
+                tabIndex={-1}
+                onSelect={noop}
+                onMiddleClick={noop}
+                onClose={noop}
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+    </StoryProviders>
+  ),
 }
 
 export const SwitcherOpen: Story = {

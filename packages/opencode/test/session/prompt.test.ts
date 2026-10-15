@@ -138,12 +138,14 @@ function makeMcp(instructions: MCP.ServerInstructions[] = []) {
       add: () => Effect.succeed({ status: { status: "disabled" as const } }),
       connect: () => Effect.void,
       disconnect: () => Effect.void,
+    remove: () => Effect.void, // kilocode_change
       getPrompt: () => Effect.succeed(undefined),
       readResource: () => Effect.succeed(undefined),
       startAuth: () => Effect.die("unexpected MCP auth in prompt-effect tests"),
       authenticate: () => Effect.die("unexpected MCP auth in prompt-effect tests"),
       finishAuth: () => Effect.die("unexpected MCP auth in prompt-effect tests"),
       removeAuth: () => Effect.void,
+      cancelAuth: () => Effect.void, // kilocode_change
       supportsOAuth: () => Effect.succeed(false),
       hasStoredTokens: () => Effect.succeed(false),
       getAuthStatus: () => Effect.succeed("not_authenticated" as const),
@@ -249,11 +251,11 @@ const promptRoot = LayerNode.group([
   memoryNode,
 ])
 
-function makePrompt(input?: { processor?: "blocking" }) {
+function makePrompt(input?: { mcpInstructions?: MCP.ServerInstructions[]; processor?: "blocking" }) {
   const replacements = [
     [SessionSummary.node, summary],
     [LSP.node, lsp],
-    [MCP.node, makeMcp()],
+    [MCP.node, makeMcp(input?.mcpInstructions)],
     [RuntimeFlags.node, runtimeFlags],
     [KiloSessions.node, KiloSessions.testLayer],
   ] as const
@@ -267,12 +269,12 @@ function makePrompt(input?: { processor?: "blocking" }) {
   return LayerNode.compile(promptRoot, replacements)
 }
 
-function makeHttp(input?: { processor?: "blocking" }) {
+function makeHttp(input?: { mcpInstructions?: MCP.ServerInstructions[]; processor?: "blocking" }) {
   const root = LayerNode.group([promptRoot, testLLMServerNode])
   const replacements = [
     [SessionSummary.node, summary],
     [LSP.node, lsp],
-    [MCP.node, makeMcp()],
+    [MCP.node, makeMcp(input?.mcpInstructions)],
     [RuntimeFlags.node, runtimeFlags],
     [KiloSessions.node, KiloSessions.testLayer],
   ] as const
@@ -286,7 +288,7 @@ function makeHttp(input?: { processor?: "blocking" }) {
   return LayerNode.compile(root, replacements)
 }
 
-function makeHttpNoLLMServer(input?: { processor?: "blocking" }) {
+function makeHttpNoLLMServer(input?: { mcpInstructions?: MCP.ServerInstructions[]; processor?: "blocking" }) {
   return makePrompt(input)
 }
 // kilocode_change end
@@ -294,6 +296,17 @@ function makeHttpNoLLMServer(input?: { processor?: "blocking" }) {
 const it = testEffect(makeHttp())
 const noLLMServer = testEffect(makeHttpNoLLMServer())
 const raceNoLLMServer = testEffect(makeHttpNoLLMServer({ processor: "blocking" }))
+const withMcpInstructions = testEffect(
+  makeHttp({
+    mcpInstructions: [
+      {
+        name: "guide-server",
+        instructions: "Use lookup before mutate.",
+        tools: ["guide-server_lookup"],
+      },
+    ],
+  }),
+)
 const unix = process.platform !== "win32" ? it.instance : it.instance.skip
 const unixNoLLMServer = process.platform !== "win32" ? noLLMServer.instance : noLLMServer.instance.skip
 
@@ -495,6 +508,46 @@ noLLMServer.instance(
   { config: cfg },
 )
 
+noLLMServer.instance(
+  "loop exits for a completed parent turn with nonmonotonic message IDs",
+  () =>
+    Effect.gen(function* () {
+      const prompt = yield* SessionPrompt.Service
+      const sessions = yield* Session.Service
+      const chat = yield* sessions.create({ title: "Pinned" })
+      const userID = MessageID.make("msg_z_user")
+      const assistantID = MessageID.make("msg_a_assistant")
+      yield* sessions.updateMessage({
+        id: userID,
+        role: "user",
+        sessionID: chat.id,
+        agent: "build",
+        model: ref,
+        time: { created: 100 },
+      })
+      yield* sessions.updateMessage({
+        id: assistantID,
+        role: "assistant",
+        parentID: userID,
+        sessionID: chat.id,
+        mode: "build",
+        agent: "build",
+        cost: 0,
+        path: { cwd: "/tmp", root: "/tmp" },
+        tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
+        modelID: ref.modelID,
+        providerID: ref.providerID,
+        time: { created: 200, completed: 201 },
+        finish: "stop",
+      })
+
+      const result = yield* prompt.loop({ sessionID: chat.id })
+
+      expect(result.info.id).toBe(assistantID)
+    }),
+  { config: cfg },
+)
+
 it.instance("loop exits without an LLM request for interrupted orphan tool calls", () =>
   Effect.gen(function* () {
     const { llm } = yield* useServerConfig(providerCfg)
@@ -547,6 +600,32 @@ it.instance("loop calls LLM and returns assistant message", () =>
     expect(parts.some((p) => p.type === "text" && p.text === "world")).toBe(true)
     expect(yield* llm.hits).toHaveLength(1)
   }),
+)
+
+withMcpInstructions.instance(
+  "loop includes MCP instructions in model system context",
+  () =>
+    Effect.gen(function* () {
+      const { llm } = yield* useServerConfig(providerCfg)
+      const prompt = yield* SessionPrompt.Service
+      const sessions = yield* Session.Service
+      const chat = yield* sessions.create({
+        title: "Pinned",
+        permission: [{ permission: "*", pattern: "*", action: "allow" }],
+      })
+      yield* llm.hang
+      yield* user(chat.id, "hello")
+
+      const fiber = yield* prompt.loop({ sessionID: chat.id }).pipe(Effect.forkChild)
+      yield* awaitWithTimeout(llm.wait(1), "timed out waiting for MCP instruction request", "10 seconds")
+
+      const hits = yield* llm.hits
+      const body = JSON.stringify(hits[0]?.body)
+      expect(body).toContain('<server name=\\"guide-server\\">')
+      expect(body).toContain("Use lookup before mutate.")
+      yield* Fiber.interrupt(fiber)
+    }),
+  15_000,
 )
 
 // kilocode_change start - guard provider-compatible max-step request shape
@@ -735,6 +814,77 @@ noLLMServer.instance(
     }),
   { config: cfg },
 )
+
+// kilocode_change start - SVG "images" are markup, not rasters Photon can decode; they must not die the prompt
+noLLMServer.instance(
+  "decodes a user SVG data image into readable source instead of normalizing it",
+  () =>
+    Effect.gen(function* () {
+      const prompt = yield* SessionPrompt.Service
+      const sessions = yield* Session.Service
+      const chat = yield* sessions.create({ title: "User SVG data" })
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg"><circle r="1"/></svg>`
+      const url = `data:image/svg+xml;base64,${Buffer.from(svg).toString("base64")}`
+
+      const result = yield* prompt.prompt({
+        sessionID: chat.id,
+        agent: "build",
+        model: ref,
+        noReply: true,
+        parts: [{ type: "file", mime: "image/svg+xml", filename: "icon.svg", url }],
+      })
+
+      expect(result.parts).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ type: "text", synthetic: true, text: svg }),
+          // Relabelled text/plain, so message-v2 keeps it out of the model request instead of
+          // forwarding an image/svg+xml file part that providers reject on every later turn.
+          expect.objectContaining({ type: "file", mime: "text/plain", url }),
+        ]),
+      )
+      expect(result.parts.some((part) => part.type === "file" && part.mime === "image/svg+xml")).toBe(false)
+
+      const saved = yield* sessions.messages({ sessionID: chat.id })
+      const savedParts = saved.flatMap((message) => message.parts)
+      expect(savedParts.some((part) => part.type === "file")).toBe(true)
+      expect(savedParts.some((part) => part.type === "file" && part.mime === "image/svg+xml")).toBe(false)
+    }),
+  { config: cfg },
+)
+
+noLLMServer.instance(
+  "decodes a user SVG file URL into readable source instead of normalizing it",
+  () =>
+    Effect.gen(function* () {
+      const test = yield* TestInstance
+      const prompt = yield* SessionPrompt.Service
+      const sessions = yield* Session.Service
+      const chat = yield* sessions.create({ title: "User SVG file" })
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg"><rect width="1" height="1"/></svg>`
+      const file = path.join(test.directory, "icon.svg")
+      yield* Effect.promise(() => Bun.write(file, svg))
+
+      const result = yield* prompt.prompt({
+        sessionID: chat.id,
+        agent: "build",
+        model: ref,
+        noReply: true,
+        parts: [{ type: "file", mime: "image/svg+xml", filename: "icon.svg", url: pathToFileURL(file).href }],
+      })
+
+      // Relabelled text/plain, so it goes through the real Read tool: the markup arrives as
+      // normal numbered file content, and the retained part never reaches the model as an image.
+      expect(result.parts).toEqual(
+        expect.arrayContaining([expect.objectContaining({ type: "file", mime: "text/plain", filename: "icon.svg" })]),
+      )
+      expect(
+        result.parts.some((part) => part.type === "text" && typeof part.text === "string" && part.text.includes(svg)),
+      ).toBe(true)
+      expect(result.parts.some((part) => part.type === "file" && part.mime === "image/svg+xml")).toBe(false)
+    }),
+  { config: cfg },
+)
+// kilocode_change end
 
 it.instance("loop surfaces content-filter finishes as session errors", () =>
   Effect.gen(function* () {
@@ -957,6 +1107,43 @@ it.instance("loop continues when finish is tool-calls", () =>
       expect(result.parts.some((part) => part.type === "text" && part.text === "second")).toBe(true)
       expect(result.info.finish).toBe("stop")
     }
+  }),
+)
+
+it.instance("loop continues when finish is unknown", () =>
+  Effect.gen(function* () {
+    const { llm } = yield* useServerConfig(providerCfg)
+    const prompt = yield* SessionPrompt.Service
+    const sessions = yield* Session.Service
+    const session = yield* sessions.create({
+      title: "Pinned",
+      permission: [{ permission: "*", pattern: "*", action: "allow" }],
+    })
+    yield* prompt.prompt({
+      sessionID: session.id,
+      agent: "build",
+      noReply: true,
+      parts: [{ type: "text", text: "hello" }],
+    })
+    yield* llm.push(reply())
+    yield* llm.text("second")
+
+    const result = yield* prompt.loop({ sessionID: session.id })
+    // kilocode_change start - Kilo settles a finish-less response instead of
+    // continuing the prompt loop. Kilo preserves the AI SDK's unexpected
+    // provider finish reason as "other" (packages/llm/src/schema/ids.ts), which
+    // is a terminal finish for the loop-exit check in session/prompt.ts, and
+    // src/kilocode/session/processor.ts only retries genuinely incomplete
+    // responses through its bounded recover budget. The second queued reply is
+    // therefore never consumed and only one model call is made.
+    expect(yield* llm.calls).toBe(1)
+    expect(yield* llm.pending).toBe(1)
+    expect(result.info.role).toBe("assistant")
+    if (result.info.role === "assistant") {
+      expect(result.parts.some((part) => part.type === "text" && part.text === "second")).toBe(false)
+      expect(result.info.finish).toBe("other")
+    }
+    // kilocode_change end
   }),
 )
 
@@ -1250,6 +1437,64 @@ it.instance(
     }),
   10_000,
 )
+
+// kilocode_change start - TUI subagent-view Esc and the VS Code task-card Stop both abort the child as a tree
+it.instance(
+  "tree abort of a running subagent leaves the parent running and reports the task as cancelled",
+  () =>
+    Effect.gen(function* () {
+      const { llm } = yield* useServerConfig(providerCfg)
+      const prompt = yield* SessionPrompt.Service
+      const sessions = yield* Session.Service
+      const status = yield* SessionStatus.Service
+      const chat = yield* sessions.create({
+        title: "Pinned",
+        permission: [{ permission: "*", pattern: "*", action: "allow" }],
+      })
+      yield* llm.tool("task", {
+        description: "inspect bug",
+        prompt: "look into the cache key path",
+        subagent_type: "general",
+      })
+      yield* llm.hang
+      yield* llm.text("parent recovered")
+      yield* user(chat.id, "hello")
+
+      const fiber = yield* prompt.loop({ sessionID: chat.id }).pipe(Effect.forkChild)
+      const child = yield* pollWithTimeout(
+        Effect.gen(function* () {
+          const id = (yield* sessions.children(chat.id))[0]?.id
+          if (!id) return undefined
+          if ((yield* status.get(id)).type !== "busy") return undefined
+          return (yield* llm.calls) >= 2 ? id : undefined
+        }),
+        "child task never started",
+        "10 seconds",
+      )
+
+      yield* prompt.cancel(child, "tree")
+      const result = yield* awaitWithTimeout(
+        Fiber.join(fiber),
+        "parent did not continue after child abort",
+        "15 seconds",
+      )
+
+      // the parent was not aborted: it finished its step and made its next model call
+      expect(result.parts.some((part) => part.type === "text" && part.text === "parent recovered")).toBe(true)
+      const part = (yield* MessageV2.filterCompactedEffect(chat.id))
+        .flatMap((msg) => msg.parts)
+        .find(
+          (part): part is ErrorToolPart =>
+            part.type === "tool" && part.tool === "task" && part.state.status === "error",
+        )
+      expect(part?.state.error).toBe("Task cancelled by the user")
+      // the reason reaches the parent model, so it does not treat the stop as a failure to retry
+      expect(JSON.stringify((yield* llm.hits).at(-1)?.body)).toContain("Task cancelled by the user")
+      expect((yield* status.get(child)).type).toBe("idle")
+    }),
+  30_000,
+)
+// kilocode_change end
 
 it.instance(
   "loop sets status to busy then idle",

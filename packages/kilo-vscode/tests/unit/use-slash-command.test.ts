@@ -139,7 +139,7 @@ describe("useSlashCommand sandbox action", () => {
     ctx.dispose()
   })
 
-  it("can restrict the menu to worktree configuration commands", () => {
+  it("restricts client actions with include without hiding server commands", () => {
     const ctx = setup(() => {}, { include: new Set(["models", "agents", "variant", "sandbox"]) })
 
     ctx.fire({
@@ -149,11 +149,16 @@ describe("useSlashCommand sandbox action", () => {
         { name: "models", description: "Server model command", hints: [] },
       ],
     })
+    // Server commands stay available so worktree-independent commands can run.
     ctx.slash.onInput("/merge", 6)
-    expect(ctx.slash.results()).toEqual([])
+    expect(ctx.slash.results().map((command) => command.name)).toEqual(["merge"])
 
     ctx.slash.onInput("/models", 7)
     expect(ctx.slash.results().map((command) => command.name)).toEqual(["models"])
+
+    // Client actions outside the include set stay hidden.
+    ctx.slash.onInput("/review", 7)
+    expect(ctx.slash.results()).toEqual([])
     ctx.dispose()
   })
 

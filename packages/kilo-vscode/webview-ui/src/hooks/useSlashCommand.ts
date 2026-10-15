@@ -246,8 +246,11 @@ export function useSlashCommand(
     const list = client()
     const names = new Set(list.map((c) => c.name))
     const set = excluded()
-    const only = included()
-    const filtered = server().filter((c) => !names.has(c.name) && !set?.has(c.name) && (!only || only.has(c.name)))
+    // `include` restricts the local client actions only. Server commands are
+    // worktree-independent configuration (custom commands, skills, MCP prompts,
+    // /goal), so callers that pass `include` still get every server command
+    // unless they explicitly exclude it.
+    const filtered = server().filter((c) => !names.has(c.name) && !set?.has(c.name))
     const taken = new Set(filtered.filter((c) => !skill(c)).map((c) => c.name))
     return [...list, ...disambiguate(filtered, taken)]
   }
