@@ -881,7 +881,7 @@ body.vscode-reduce-motion .prompt-action {
 }
 
 .prompt-more-button[data-dot="warning"]::after {
-  background: var(--vscode-charts-yellow, #ffdd00);
+  background: var(--kilo-yellow-ink, var(--vscode-charts-yellow, #ffdd00));
 }
 
 .prompt-more-button[data-dot="error"]::after {

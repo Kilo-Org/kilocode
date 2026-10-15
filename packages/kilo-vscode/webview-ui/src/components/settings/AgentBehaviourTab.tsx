@@ -570,7 +570,7 @@ const AgentBehaviourTab: Component<Props> = (props) => {
                               "font-size": "var(--kilo-font-size-10)",
                               padding: "1px 5px",
                               "border-radius": "3px",
-                              background: "var(--vscode-editorWarning-foreground, #ffdd00)",
+                              background: "var(--kilo-yellow, #ffdd00)",
                               color: "var(--vscode-editorWarning-foreground-text, #1e1e1e)",
                             }}
                           >

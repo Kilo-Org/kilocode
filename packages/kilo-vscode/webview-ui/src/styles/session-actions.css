@@ -516,7 +516,7 @@
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: var(--icon-warning-base, var(--vscode-editorWarning-foreground));
+  background: var(--kilo-yellow-ink, var(--icon-warning-base, var(--vscode-editorWarning-foreground)));
 }
 
 /* A small gap keeps each dot glyph separate. Overlapping glyphs merge into one
