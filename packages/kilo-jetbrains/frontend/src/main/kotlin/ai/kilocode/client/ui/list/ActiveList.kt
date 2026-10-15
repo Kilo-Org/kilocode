@@ -157,6 +157,23 @@ internal class ActiveList(
     @RequiresEdt
     fun preferredFocus(): JComponent = view.list
 
+    /**
+     * Preferred height of this whole list at [width], including every rendered cell and scroll-pane
+     * chrome. Unlike ordinary Swing preferred-size measurement this is safe before the list enters a
+     * viewport, when wrapped cells do not have their final width yet.
+     */
+    @RequiresEdt
+    fun preferredHeight(width: Int): Int {
+        val own = insets
+        val pane = scroll.insets
+        val port = scroll.viewportBorder?.getBorderInsets(scroll) ?: JBUI.emptyInsets()
+        val room = (width - own.left - own.right - pane.left - pane.right - port.left - port.right)
+            .coerceAtLeast(1)
+        val rows = view.preferredRowsHeight(room)
+        val search = search?.preferredSize?.height ?: 0
+        return own.top + own.bottom + search + pane.top + pane.bottom + port.top + port.bottom + rows
+    }
+
     @RequiresEdt
     fun trackBalloon(balloon: Balloon) = view.trackBalloon(balloon)
 

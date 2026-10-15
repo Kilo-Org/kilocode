@@ -67,6 +67,8 @@ Set by hand:
 
 The sweep owns the status labels. It adds and removes them on its own. Do not manage them by hand.
 
+The sweep also removes `community` and the status labels from open PRs whose author is a maintainer. This fixes labels set before the maintainer list was known. It only handles PRs.
+
 `area:*` labels are only added, never removed. Fix a wrong one by hand.
 
 ## Whose turn is it
@@ -119,7 +121,7 @@ When a PR first gets `awaiting-contributor`, the sweep also posts one comment th
 
 ## The maintainer routine
 
-Open the latest "Community sweep" run. The job summary has the queue. A copy goes to Slack when `COMMUNITY_TRIAGE_SLACK_WEBHOOK` is set.
+Open the latest "Community sweep" run. The job summary has the queue. A copy goes to Slack when a Slack secret is set. With a bot token, the channel gets one short summary and the lists are posted in its thread. With only a webhook, the channel gets the whole queue as one message.
 
 1. **Adopt**: pick an owner and add the PR to the standup doc.
 2. **Needs triage**: decide. Add `high-value` or `low-value`, or comment on it. Not sure? Put it in the standup doc.
@@ -146,7 +148,9 @@ New issues get the `community` label, `needs-triage` and an `area:*` label. The 
 | `COMMUNITY_AUTO_CLOSE_ENABLED` | Variable | No | `true` turns on closing and comments |
 | `COMMUNITY_MAINTAINERS` | Variable | No | Logins treated as maintainers |
 | `COMMUNITY_TRIAGE_MEMBER_TOKEN` | Secret | No | Token with `read:org`. Finds private org members |
-| `COMMUNITY_TRIAGE_SLACK_WEBHOOK` | Secret | No | Posts the queue to Slack |
+| `COMMUNITY_TRIAGE_SLACK_TOKEN` | Secret | No | Slack bot token (`xoxb-`, scope `chat:write`). Posts a summary and threads the lists. The bot must be in the channel |
+| `COMMUNITY_TRIAGE_SLACK_CHANNEL` | Secret | No | Channel ID (`C...`) for the bot token |
+| `COMMUNITY_TRIAGE_SLACK_WEBHOOK` | Secret | No | Fallback. Posts the whole queue as one message. Not used when the bot token is set |
 
 Labels are created by the workflows. Run "Community sweep" once by hand after merge to create them and label the open PRs.
 

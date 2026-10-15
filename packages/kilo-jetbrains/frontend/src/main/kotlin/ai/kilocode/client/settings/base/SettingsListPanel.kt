@@ -26,6 +26,7 @@ import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.application.asContextElement
 import com.intellij.openapi.components.service
 import com.intellij.openapi.project.DumbAwareAction
+import com.intellij.openapi.ui.popup.JBPopup
 import com.intellij.ui.DocumentAdapter
 import com.intellij.ui.SearchTextField
 import com.intellij.util.concurrency.annotations.RequiresEdt
@@ -112,6 +113,13 @@ internal abstract class SettingsListPanel(
         search.text = query
         view.filter(query)
         search.textEditor.requestFocusInWindow()
+    }
+
+    /** Keeps the row's action cells painted while [popup] holds focus outside the list. */
+    @RequiresEdt
+    protected fun trackPopup(popup: JBPopup) {
+        checkEdt()
+        view.trackPopup(popup)
     }
 
     @RequiresEdt
