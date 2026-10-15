@@ -2,10 +2,15 @@ import {
   KiloAccount,
   KiloDefaults,
   KiloDevice,
+  KiloErrors,
   KiloHeaders,
+  KiloMachine,
   KiloModels,
   KiloProfile,
+  KiloProject,
+  KiloRequests,
   KiloServer,
+  KiloStream,
 } from "@kilocode/gateway-core"
 import type { ConnectionInfo } from "@opencode/client"
 import type { IntegrationOAuthMethodRegistration } from "@opencode/plugin/effect/integration"
@@ -15,13 +20,14 @@ import { IntegrationID, IntegrationMethodID } from "@opencode/schema/integration
 import { Model } from "@opencode/schema/model"
 import { Money } from "@opencode/schema/money"
 import { Provider } from "@opencode/schema/provider"
+import { Global } from "@opencode/util/global"
 import { createHash, randomUUID } from "node:crypto"
 import { Clock, Duration, Effect, Fiber, Option, Schedule, Schema, Scope, Semaphore, Stream } from "effect"
 import { Bus } from "../bus.js"
 import { Variant } from "../variant.js"
 import { KiloGatewayRpc } from "./gateway-rpc.js"
 
-// v2 adapter for the Kilo Gateway (issue #14991, PR 1 & PR 2: login, teams, and catalog authority).
+// v2 adapter for the Kilo Gateway (issue #14991, PRs 1-3: login, teams, catalog authority, requests, and errors).
 // Kilo logic lives in @kilocode/gateway-core; this file maps it onto the v2 plugin API.
 const id = Provider.ID.make("kilo")
 const integrationID = IntegrationID.make("kilo")
@@ -76,7 +82,25 @@ export const KiloGatewayPlugin = define<Bus.Service | Scope.Scope>({
       anonymous: true,
     }
     const lastGood = new Map<string, readonly KiloModels.Model[]>()
+    const sessionMetadata = new Map<string, KiloGatewayRpc.SessionMetadata>()
     let retryFiber: Fiber.Fiber<void, never> | undefined
+    let cachedProjectID: string | null | undefined
+    let cachedMachineID: string | null | undefined
+
+    const getProjectID = Effect.gen(function* () {
+      if (cachedProjectID !== undefined) return cachedProjectID ?? undefined
+      const resolved = yield* KiloProject.resolve(ctx.location.directory)
+      cachedProjectID = resolved ?? null
+      return resolved
+    })
+
+    const getMachineID = Effect.gen(function* () {
+      if (process.env.KILO_MACHINE_ID?.trim()) return process.env.KILO_MACHINE_ID.trim()
+      if (cachedMachineID !== undefined) return cachedMachineID ?? undefined
+      const resolved = yield* KiloMachine.get(Global.Path.data)
+      cachedMachineID = resolved ?? null
+      return resolved
+    })
 
     const cancelRetry = Effect.gen(function* () {
       if (!retryFiber) return
@@ -403,6 +427,80 @@ export const KiloGatewayPlugin = define<Bus.Service | Scope.Scope>({
       }
     })
 
+    // Per-request attribution headers (`X-KILOCODE-TASKID`, `X-KILOCODE-PARENT-TASKID`, `X-KILOCODE-PROJECTID`,
+    // `X-KILOCODE-MACHINEID`, `x-kilocode-mode`, `User-Agent`, plus provider headers).
+    yield* ctx.session.hook(
+      "model.request",
+      (event) =>
+        Effect.gen(function* () {
+          const [session, projectID, machineID] = yield* Effect.all(
+            [
+              ctx.session.get({ sessionID: event.sessionID }).pipe(Effect.option),
+              getProjectID,
+              getMachineID,
+            ],
+            { concurrency: 3 },
+          )
+          const parentSessionID = Option.isSome(session) ? session.value.parentID : undefined
+          const requestHeaders = KiloHeaders.request({
+            version: ctx.app.version,
+            organizationID: catalog.account?.organizationID,
+            sessionID: event.sessionID,
+            parentSessionID,
+            projectID,
+            machineID,
+            mode: event.agent,
+          })
+          Object.assign(event.headers, requestHeaders)
+        }),
+      { providerID: id },
+    )
+
+    // Request body and auth normalization (`x-api-key` -> `Bearer`, credential metadata stripping,
+    // stateless `/responses` item stripping, and `provider.data_collection`).
+    yield* ctx.session.hook(
+      "http.request",
+      (event) =>
+        Effect.promise(async () => {
+          const dataCollection =
+            process.env.KILO_DATA_COLLECTION === "deny"
+              ? ("deny" as const)
+              : process.env.KILO_DATA_COLLECTION === "allow"
+                ? ("allow" as const)
+                : undefined
+          event.request = await KiloRequests.rewriteRequest(event.request, { dataCollection })
+        }),
+      { providerID: id },
+    )
+
+    // Error contract and SSE stream metadata (`routedModelID`, `x-vercel-id`, and mid-stream SSE errors).
+    yield* ctx.session.hook(
+      "http.response",
+      (event) =>
+        Effect.promise(async () => {
+          if (event.response.status >= 400) {
+            event.response = await KiloErrors.rewriteHttpResponse(event.response)
+            return
+          }
+          event.response = KiloStream.transformResponse(event.response, (meta) => {
+            if (meta.routedModelID || meta.vercelID) {
+              const prev = sessionMetadata.get(event.sessionID)
+              if (!prev && sessionMetadata.size >= 500) {
+                const oldest = sessionMetadata.keys().next().value
+                if (oldest) sessionMetadata.delete(oldest)
+              }
+              sessionMetadata.set(event.sessionID, {
+                ...(prev?.routedModelID ? { routedModelID: prev.routedModelID } : {}),
+                ...(prev?.vercelID ? { vercelID: prev.vercelID } : {}),
+                ...(meta.routedModelID ? { routedModelID: meta.routedModelID } : {}),
+                ...(meta.vercelID ? { vercelID: meta.vercelID } : {}),
+              })
+            }
+          })
+        }),
+      { providerID: id },
+    )
+
     yield* ctx.rpc
       .register(KiloGatewayRpc.Definition, {
         profile: (_input, context) =>
@@ -442,6 +540,8 @@ export const KiloGatewayPlugin = define<Bus.Service | Scope.Scope>({
             }
             return KiloModels.entries(catalog.models)
           }),
+        "session.metadata": (input) =>
+          Effect.sync(() => sessionMetadata.get(input.sessionID) ?? {}),
       })
       .pipe(Effect.orDie)
 

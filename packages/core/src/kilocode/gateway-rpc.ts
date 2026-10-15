@@ -46,8 +46,15 @@ export const ModelEntry = Schema.Struct({
 
 export type ModelEntry = typeof ModelEntry.Type
 
+export const SessionMetadata = Schema.Struct({
+  routedModelID: Schema.optional(Schema.String),
+  vercelID: Schema.optional(Schema.String),
+})
+
+export type SessionMetadata = typeof SessionMetadata.Type
+
 // The TUI and IDE clients use this contract for the account picker after login, /teams,
-// and Kilo-specific model catalog metadata.
+// Kilo-specific model catalog metadata, and per-session routed model metadata.
 export const Definition = Rpc.define({
   id: "kilocode.gateway",
   methods: {
@@ -64,6 +71,11 @@ export const Definition = Rpc.define({
     models: {
       input: portable(Schema.Struct({})),
       output: portable(Schema.Array(ModelEntry)),
+      errors: Failure,
+    },
+    "session.metadata": {
+      input: portable(Schema.Struct({ sessionID: Schema.String })),
+      output: portable(SessionMetadata),
       errors: Failure,
     },
   },
