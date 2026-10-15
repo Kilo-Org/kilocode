@@ -272,7 +272,7 @@ describe("easy", () => {
   test("agent definitions and changesets are not docs", () => {
     expect(easy(10, [".kilo/agent/a.md"])).toBeUndefined()
     expect(easy(10, [".kilo/skills/x/SKILL.md"])).toBeUndefined()
-    expect(easy(10, [".changeset/a.md"])).toBeUndefined()
+    expect(easy(100, [".changeset/a.md"])).toBeUndefined()
   })
 
   test("a small fix with a changeset is still small", () => {

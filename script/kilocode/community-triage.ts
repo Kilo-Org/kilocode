@@ -151,7 +151,6 @@ const riskyFiles = ["package.json", "bun.lock"]
 const meta = (file: string) => file.startsWith(".kilo/") || file.startsWith(".changeset/")
 const docs = (file: string) =>
   !meta(file) && (file.startsWith("packages/kilo-docs/") || file.startsWith("docs/") || /\.mdx?$/.test(file))
-file.startsWith("packages/kilo-docs/") || file.startsWith("docs/") || /\.mdx?$/.test(file)
 const tests = (file: string) => /(^|\/)(tests?|__tests__)\//.test(file) || /\.(test|spec)\.[cm]?[jt]sx?$/.test(file)
 
 export type Quick = "docs" | "tests" | "small"
