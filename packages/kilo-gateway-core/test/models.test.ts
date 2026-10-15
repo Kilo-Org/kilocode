@@ -20,7 +20,6 @@ describe("KiloModels", () => {
       description: "Frontier router model",
       family: "claude",
       aiSDKProvider: "openrouter",
-      prompt: "anthropic",
       free: false,
       recommendedIndex: 0,
       hasUserByokAvailable: true,
@@ -47,7 +46,6 @@ describe("KiloModels", () => {
       description: "Frontier router model",
       reasoning: true,
       family: "claude",
-      prompt: "anthropic",
       aiSDKProvider: "openrouter",
     })
   })
@@ -138,7 +136,6 @@ describe("KiloModels", () => {
     expect(models[0]?.terminalBench).toBeUndefined()
     expect(models[0]?.autoRouting).toBeUndefined()
     expect(models[0]?.aiSDKProvider).toBeUndefined()
-    expect(models[0]?.prompt).toBeUndefined()
     expect(models[0]?.limit).toEqual({ context: 128000, output: 25600 })
   })
 
