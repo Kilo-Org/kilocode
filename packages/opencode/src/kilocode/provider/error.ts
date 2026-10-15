@@ -81,7 +81,23 @@ function retryable(error: Frame["error"], message: string) {
 export function fallback(body: Frame, responseBody: string) {
   const message = body.error?.message
   if (typeof message !== "string" || !message.trim()) return
-  return { type: "api_error" as const, message, isRetryable: retryable(body.error, message), responseBody }
+  // kilocode_change start - propagate numeric HTTP status (e.g. 504) so
+  // downstream retry logic and UI can classify the error without re-parsing
+  // the responseBody.
+  const code = body.error?.code
+  const numeric =
+    typeof code === "number" ? code : typeof code === "string" && code.trim() !== "" ? Number(code) : NaN
+  const statusCode = Number.isNaN(numeric) ? undefined : numeric
+  // kilocode_change end
+  return {
+    type: "api_error" as const,
+    message,
+    isRetryable: retryable(body.error, message),
+    responseBody,
+    // kilocode_change start
+    statusCode,
+    // kilocode_change end
+  }
 }
 
 const AUTH_ERROR =
