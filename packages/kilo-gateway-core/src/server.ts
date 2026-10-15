@@ -2,7 +2,9 @@ export * as KiloServer from "./server.js"
 
 export const DEFAULT_API_URL = "https://api.kilo.ai"
 export const DEFAULT_AI_GATEWAY_URL = "https://ai-gateway.kilo.ai/api/v1"
-const TOKEN = /^(https?:\/\/.+):.+$/
+// Same regex as v1 `getKiloUrlFromToken` (`packages/kilo-gateway/src/auth/token.ts`):
+// matches `http(s)://host(:port)(/path):secret` without greedily consuming colons inside the secret.
+const TOKEN = /^(https?:\/\/[^:/]+(?::\d+)?(?:\/[^:]*)?):(?!\d+$).+/
 
 export function fromEnv(env: Record<string, string | undefined> = process.env) {
   return normalize(env.KILO_API_URL?.trim() || DEFAULT_API_URL)
@@ -19,10 +21,10 @@ export function aiGatewayFromEnv(env: Record<string, string | undefined> = proce
   return DEFAULT_AI_GATEWAY_URL
 }
 
-// Development tokens can carry the backend URL before the final `:`, as in v1 (`auth/token.ts`).
+// Development tokens can carry the backend URL before the token secret, as in v1 (`auth/token.ts`).
 export function fromToken(token: string) {
   const match = TOKEN.exec(token)
-  return match?.[1] ? normalize(match[1]) : undefined
+  return match?.[1] && URL.canParse(match[1]) ? normalize(match[1]) : undefined
 }
 
 export function normalize(input: string) {
@@ -37,18 +39,23 @@ function parse(input: string) {
   return url
 }
 
-function legacyRoute(raw: string, name: "gateway" | "openrouter") {
+// Builds an `/api/<segments>` route on `raw`, stripping any existing `/api/...` suffix first
+// (same prefix rule as `route` in `packages/kilo-gateway/src/api/url.ts`).
+export function apiUrl(raw: string, ...segments: string[]) {
   const url = parse(raw)
   url.search = ""
   url.hash = ""
   const parts = url.pathname.split("/").filter(Boolean)
   const api = parts.lastIndexOf("api")
   const prefix = api >= 0 ? parts.slice(0, api) : parts
-  url.pathname = `/${[...prefix, "api", name].join("/")}`
+  url.pathname = `/${[...prefix, "api", ...segments].join("/")}`
   return url.toString().replace(/\/+$/, "")
 }
 
-function isConfiguredBase(server: string | undefined, env: Record<string, string | undefined>): boolean {
+export function isConfiguredBase(
+  server: string | undefined,
+  env: Record<string, string | undefined> = process.env,
+): boolean {
   if (!server) return true
   const normalized = normalize(server)
   return normalized === fromEnv(env) || normalized === aiGatewayFromEnv(env)
@@ -61,12 +68,7 @@ function isConfiguredBase(server: string | undefined, env: Record<string, string
 // - Keeps legacy API app routing (`${prefix}/api/gateway`) for custom or token-embedded server URLs.
 export function gateway(server?: string, env: Record<string, string | undefined> = process.env) {
   if (isConfiguredBase(server, env)) return aiGatewayFromEnv(env)
-  return legacyRoute(server!, "gateway")
-}
-
-export function openrouter(server?: string, env: Record<string, string | undefined> = process.env) {
-  if (isConfiguredBase(server, env)) return aiGatewayFromEnv(env)
-  return legacyRoute(server!, "openrouter")
+  return apiUrl(server!, "gateway")
 }
 
 // Resolves the models catalog endpoint, matching `fetchRawKiloModels` / `CloudCatalog.models` on main:
