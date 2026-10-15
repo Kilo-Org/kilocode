@@ -178,8 +178,8 @@ open class WorktreeSessionEditorManager(
 
     /**
      * While the backend is paused for legacy migration, list/create fail and the editor can only
-     * show the empty session panel. Once migration finishes the backend is ready, so re-run [start]
-     * to create/open the real session — but only for an editor the user has actually opened
+     * show an empty session panel or retained draft. Once migration finishes, re-run [start] to
+     * create/open the real session — but only for an editor the user has actually opened
      * ([startedOnce]), never for background worktree editor tabs.
      */
     private fun bindMigration() {
@@ -237,8 +237,8 @@ open class WorktreeSessionEditorManager(
                 consumePendingPrompt()
             } else {
                 // The backend could not create a session yet (e.g. it is paused for legacy
-                // migration). Show a new-session panel so the worktree editor mirrors the tool
-                // window instead of a blank panel; WorktreeSessionEditorPanel re-runs start() once
+                // migration). Show the empty session panel or retained draft so the worktree editor
+                // mirrors the tool window; WorktreeSessionEditorPanel re-runs start() once
                 // migration finishes to create the real session.
                 if (currentUi() == null) showNewSession()
                 onListChanged?.invoke()

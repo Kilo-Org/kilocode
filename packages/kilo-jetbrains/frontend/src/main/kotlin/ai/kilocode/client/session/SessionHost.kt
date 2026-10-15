@@ -108,9 +108,9 @@ abstract class SessionHost(
     protected fun currentUi(): SessionUi? = current
 
     /**
-     * Present a new-session panel while a real session cannot be created yet (e.g. the backend is
-     * paused for migration). Reuses a retained draft when one exists. Unlike [newSession] it does
-     * not fire [onSessionsChanged], so it won't kick off list reloads.
+     * Show a lazily-created empty session panel or retained draft while a real session cannot be
+     * created yet (e.g. the backend is paused for migration). Unlike [newSession], this does not
+     * fire [onSessionsChanged], so it won't kick off list reloads.
      */
     @RequiresEdt
     protected fun showNewSession() {
