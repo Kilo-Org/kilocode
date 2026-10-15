@@ -123,4 +123,37 @@ describe("session status occurrence", () => {
     ).rejects.toThrow("read failed")
     expect(statuses.record("unread", { status: "question" }, morning)).toMatchObject({ previousStatus: null })
   })
+
+  test("an event sample keeps the status it observed when a peer full-sync sample records first", async () => {
+    const statuses = StatusSync.create()
+    const event = Promise.withResolvers<StatusSync.Derived>()
+    const peer = Promise.withResolvers<StatusSync.Derived>()
+    const observed = statuses.event("race", () => event.promise)
+    const sampled = statuses.snapshot("race", () => peer.promise)
+    peer.resolve({ status: "idle" })
+    expect(await sampled).toEqual({ status: "idle" })
+    event.resolve({ status: "permission" })
+    expect(await observed).toEqual({ status: "permission" })
+    expect(statuses.record("race", { status: "question" }, morning)).toMatchObject({ previousStatus: "permission" })
+  })
+
+  test("an event sample yields to a transition recorded while it sampled", async () => {
+    const statuses = StatusSync.create()
+    const pending = Promise.withResolvers<StatusSync.Derived>()
+    const observed = statuses.event("defer", () => pending.promise)
+    const latest = statuses.record("defer", { status: "busy" }, night)
+    pending.resolve({ status: "idle" })
+    expect(await observed).toEqual(latest)
+    expect(statuses.record("defer", { status: "question" }, morning)).toMatchObject({ previousStatus: "busy" })
+  })
+
+  test("a deletion during an event sample leaves no tracked state behind", async () => {
+    const statuses = StatusSync.create()
+    const pending = Promise.withResolvers<StatusSync.Derived>()
+    const observed = statuses.event("gone-event", () => pending.promise)
+    statuses.delete("gone-event")
+    pending.resolve({ status: "idle" })
+    expect(await observed).toEqual({ status: "idle" })
+    expect(statuses.record("gone-event", { status: "question" }, morning)).toMatchObject({ previousStatus: null })
+  })
 })

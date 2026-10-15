@@ -852,7 +852,7 @@ export namespace KiloSessions {
             if (derived) return deriveAndSyncStatus(sessionID, derived, occurredAt)
             // Without a same-tick read the event's onset is unknown, so only the live state is sent.
             return statuses
-              .snapshot(sessionID, () => AppRuntime.runPromise(deriveStatus(sessionID, evt.properties.status)))
+              .event(sessionID, () => AppRuntime.runPromise(deriveStatus(sessionID, evt.properties.status)))
               .then((data) => ingest.sync(sessionID, [{ type: "session_status", data }]))
           }
           watch(SessionStatus.Event.Status, sync)
