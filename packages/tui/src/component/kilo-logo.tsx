@@ -12,7 +12,7 @@ const SHADOW_MARKER = /[_^~]/
 
 export function KiloLogo() {
   const { theme } = useTheme()
-  const yellow = RGBA.fromHex("#F8F675")
+  const yellow = RGBA.fromHex("#FFDD00")
   const logo = tui()
 
   const renderLine = (line: string): JSX.Element[] => {
