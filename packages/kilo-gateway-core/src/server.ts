@@ -84,7 +84,7 @@ export function modelsUrl(
     return organizationID ? `${base}/organizations/${encodeURIComponent(organizationID)}/models` : `${base}/models`
   }
   if (organizationID) {
-    return `${normalize(server!)}/api/organizations/${encodeURIComponent(organizationID)}/models`
+    return apiUrl(server!, "organizations", encodeURIComponent(organizationID), "models")
   }
-  return `${legacyRoute(server!, "openrouter")}/models`
+  return apiUrl(server!, "openrouter", "models")
 }
