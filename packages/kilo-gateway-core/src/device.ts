@@ -104,7 +104,7 @@ function poll(
     if (parsed.value.status === "pending") return yield* wait(0)
     if (parsed.value.status === "denied") return yield* Effect.fail(new Error("Authorization denied by user"))
     if (parsed.value.status === "expired") return yield* Effect.fail(new Error("Authorization code expired"))
-    if (!parsed.value.token) return yield* Effect.fail(new Error("Invalid Kilo response"))
-    return { token: parsed.value.token, email: parsed.value.userEmail ?? "" }
+    if (!parsed.value.token || !parsed.value.userEmail) return yield* Effect.fail(new Error("Invalid Kilo response"))
+    return { token: parsed.value.token, email: parsed.value.userEmail }
   })
 }
