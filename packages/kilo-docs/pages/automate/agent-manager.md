@@ -61,7 +61,7 @@ Separate Agent Manager sessions do not share a Swarm board just because they use
 
 #### Viewing the board
 
-The board is only shown with the session's background agents. When Kilo Swarm is enabled and the main session has background agents, a **Board** control appears at the bottom of the background agent sessions, in the session dock next to the background-agent row above the prompt. It is no longer in the task header, and the feature is no longer configured under Experimental settings. Select the control to open a panel with the latest posts, then open the full board dialog to read the stored messages. Each message shows the sender and recipient avatars. Select an avatar to open that agent's transcript.
+When Kilo Swarm is enabled and the session has board messages, a **Board** control appears in the session dock above the prompt, next to the background-agent row when background agents exist. It works with foreground and background task agents, and it stays in the same place after background agents are cleared or the view reloads. It is no longer in the task header, and the feature is no longer configured under Experimental settings. Select the control to open a panel with the latest posts, then open the full board dialog to read the stored messages. Each message shows the sender and recipient avatars. Select an avatar to open that agent's transcript.
 
 The dialog has a **Refresh** action. Earlier messages load as you scroll to the top of the list, using the cursor from the loaded page.
 
