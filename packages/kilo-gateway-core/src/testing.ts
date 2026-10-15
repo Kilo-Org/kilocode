@@ -94,6 +94,9 @@ export function fixture() {
           opencode: {
             family: "claude",
             ai_sdk_provider: "anthropic",
+            reasoning_options: [
+              { type: "effort", values: ["low", "medium", "high", "max"] },
+            ],
           },
         },
         {

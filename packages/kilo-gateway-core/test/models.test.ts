@@ -65,6 +65,9 @@ describe("KiloModels", () => {
     )
     expect(result.anonymous).toBe(false)
     expect(result.models.map((model) => model.id)).toEqual(["anthropic/claude-sonnet-4.6", "kilo-auto/small"])
+    expect(result.models[0]?.reasoningOptions).toEqual([
+      { type: "effort", values: ["low", "medium", "high", "max"] },
+    ])
     expect(backend.requests.at(-1)).toEqual({
       method: "GET",
       path: "/api/organizations/selected/models",

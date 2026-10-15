@@ -732,6 +732,12 @@ function toModelInfo(
       output: source.limit.output,
     },
   }
+  if (source.reasoningOptions && source.reasoningOptions.length > 0) {
+    return {
+      ...base,
+      variants: Variant.resolve(base, source.reasoningOptions),
+    }
+  }
   const resolvedVariants = source.reasoning ? Variant.resolve(base) : []
   const byID = new Map(resolvedVariants.map((variant) => [variant.id, variant]))
   for (const variant of source.variants ?? []) {

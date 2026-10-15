@@ -24,6 +24,26 @@ const decodeTerminalBench = Schema.decodeUnknownOption(TerminalBench)
 
 const PositiveInt = Schema.Int.check(Schema.isGreaterThan(0))
 
+const ReasoningEffort = Schema.Literals(["none", "minimal", "low", "medium", "high", "xhigh", "max"])
+export type ReasoningEffort = typeof ReasoningEffort.Type
+
+const ReasoningOption = Schema.Union([
+  Schema.Struct({
+    type: Schema.Literal("effort"),
+    values: Schema.Array(ReasoningEffort),
+  }),
+  Schema.Struct({
+    type: Schema.Literal("toggle"),
+  }),
+  Schema.Struct({
+    type: Schema.Literal("budget_tokens"),
+    min: Schema.optionalKey(Schema.Number),
+    max: Schema.optionalKey(Schema.Number),
+  }),
+])
+export type ReasoningOption = typeof ReasoningOption.Type
+const decodeReasoningOption = Schema.decodeUnknownOption(ReasoningOption)
+
 const RawModel = Schema.Struct({
   id: Schema.String,
   name: Schema.String,
@@ -57,9 +77,11 @@ const RawModel = Schema.Struct({
   hasUserByokAvailable: Schema.optionalKey(Schema.Boolean),
   autoRouting: Schema.optionalKey(Schema.Unknown),
   terminalBench: Schema.optionalKey(Schema.Unknown),
+  reasoning_options: Schema.optionalKey(Schema.NullOr(Schema.Array(Schema.Unknown))),
   opencode: Schema.optionalKey(
     Schema.Struct({
       family: Schema.optionalKey(Schema.NullOr(Schema.String)),
+      reasoning_options: Schema.optionalKey(Schema.NullOr(Schema.Array(Schema.Unknown))),
       variants: Schema.optionalKey(Schema.Record(Schema.String, Schema.Record(Schema.String, Schema.Unknown))),
       ai_sdk_provider: Schema.optionalKey(Schema.Unknown),
     }),
@@ -108,6 +130,7 @@ export interface Model {
     readonly input: readonly ("text" | "audio" | "image" | "video" | "pdf")[]
     readonly output: readonly ("text" | "audio" | "image" | "video" | "pdf")[]
   }
+  readonly reasoningOptions?: readonly ReasoningOption[]
   readonly variants?: readonly Variant[]
 }
 
@@ -389,6 +412,9 @@ function toModel(model: RawModel): Model {
       input: inputModalities,
       output: outputModalities,
     },
+    ...(parseReasoningOptions(model.opencode?.reasoning_options ?? model.reasoning_options)
+      ? { reasoningOptions: parseReasoningOptions(model.opencode?.reasoning_options ?? model.reasoning_options) }
+      : {}),
     ...(model.opencode?.variants
       ? {
           variants: Object.entries(model.opencode.variants).map(([id, settings]) => ({
@@ -398,6 +424,12 @@ function toModel(model: RawModel): Model {
         }
       : {}),
   }
+}
+
+function parseReasoningOptions(raw: readonly unknown[] | null | undefined): ReasoningOption[] | undefined {
+  if (!raw || raw.length === 0) return undefined
+  const decoded = raw.flatMap((item) => Option.toArray(decodeReasoningOption(item)))
+  return decoded.length > 0 ? decoded : undefined
 }
 
 function extractFamily(modelID: string): string | undefined {
