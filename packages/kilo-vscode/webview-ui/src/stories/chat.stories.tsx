@@ -12,6 +12,7 @@ import type { AssistantMessage } from "@kilocode/sdk/v2"
 import { batch, createEffect, createSignal, onCleanup, onMount } from "solid-js"
 import { StoryProviders, defaultMockData, mockSessionValue } from "./StoryProviders"
 import { Button } from "@kilocode/kilo-ui/button"
+import { ClipboardProvider } from "@kilocode/kilo-ui/context/clipboard"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { ChatView } from "../components/chat/ChatView"
 import { SessionDock } from "../components/chat/SessionDock"
@@ -115,6 +116,9 @@ const reviewSuggestion: SuggestionRequest = {
 const policyMessage =
   "No endpoints found matching your data policy (Free model training). Configure: https://openrouter.ai/settings/privacy"
 
+const retryMessage =
+  "The selected model cannot process this request because your workspace privacy policy restricts inference to Europe and the United States. This model is currently available through providers that require global routing. To resolve this error, open workspace privacy settings and set Allowed Regions to Global."
+
 const policyError: NonNullable<AssistantMessage["error"]> = {
   name: "APIError",
   data: {
@@ -216,11 +220,12 @@ export const ChatViewSessionDockStability: Story = {
   render: () => {
     const [busy, setBusy] = createSignal(false)
     const [goal, setGoal] = createSignal(false)
+    const [retry, setRetry] = createSignal(false)
     // Statuses of deliberately different widths: the label swap is what used to
     // shove the centered spinner sideways.
     const labels = ["Thinking…", "Searching the codebase", "Making edits"]
     const [step, setStep] = createSignal(0)
-    const status = () => (busy() ? "busy" : "idle")
+    const status = () => (busy() ? (retry() ? "retry" : "busy") : "idle")
     const base = mockSessionValue({ id: SESSION_ID, status: "idle", closeReason: "completed" })
     const session = {
       ...base,
@@ -229,7 +234,15 @@ export const ChatViewSessionDockStability: Story = {
         goal: goal() ? { text: "Keep the session controls available", active: busy() } : undefined,
       }),
       status,
-      statusInfo: () => ({ type: status() }),
+      statusInfo: () =>
+        status() === "retry"
+          ? {
+              type: "retry",
+              attempt: 2,
+              message: retryMessage,
+              next: Date.now() + 60_000,
+            }
+          : { type: status() },
       statusText: () => (busy() ? labels[step() % labels.length] : undefined),
       busyTiming: () => (busy() ? { active: 2000, since: Date.now() } : undefined),
       submitting: () => busy(),
@@ -249,10 +262,15 @@ export const ChatViewSessionDockStability: Story = {
                 <button data-testid="next-status" onClick={() => setStep(step() + 1)}>
                   next status
                 </button>
+                <button data-testid="toggle-retry" onClick={() => setRetry(!retry())}>
+                  toggle retry
+                </button>
                 <button data-testid="toggle-goal" onClick={() => setGoal(!goal())}>
                   toggle goal
                 </button>
-                <ChatView onForkSession={() => undefined} continueInWorktree />
+                <ClipboardProvider write={(text) => navigator.clipboard.writeText(text)}>
+                  <ChatView onForkSession={() => undefined} continueInWorktree />
+                </ClipboardProvider>
               </div>
             </WorktreeModeProvider>
           </SessionContext.Provider>

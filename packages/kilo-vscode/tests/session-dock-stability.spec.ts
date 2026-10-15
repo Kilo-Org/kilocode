@@ -81,6 +81,49 @@ test("only one of the two states is visible in the dock", async ({ page }) => {
   await expect(page.locator('[data-component="session-dock"] .new-task-button-wrapper')).toBeHidden()
 })
 
+// The system clipboard is shared between browser workers.
+test.describe.serial("retry error clipboard", () => {
+  for (const width of [340, 1400]) {
+    test(`retry status exposes and copies its full error at ${width}px`, async ({ page }) => {
+      await page.context().grantPermissions(["clipboard-read", "clipboard-write"])
+      await openStory(page)
+      await page.setViewportSize({ width, height: 640 })
+      await page.getByTestId("toggle-busy").click()
+
+      const label = page.locator(".working-status")
+      const copy = page.locator(".working-copy")
+      await expect(label).toBeVisible()
+      await expect(copy).toBeHidden()
+
+      await page.getByTestId("toggle-retry").click()
+      const error =
+        "The selected model cannot process this request because your workspace privacy policy restricts inference to Europe and the United States. This model is currently available through providers that require global routing. To resolve this error, open workspace privacy settings and set Allowed Regions to Global."
+      await expect(label).toHaveAttribute("data-clip")
+      await expect(page.locator(".working-count")).toBeVisible()
+      await expect(page.locator(".working-cancel")).toBeVisible()
+      await expect(copy).toHaveText("Copy error")
+      await page.evaluate(() => navigator.clipboard.writeText(""))
+      await copy.focus()
+      await page.keyboard.press("Enter")
+      await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe(error)
+      expect(await copy.textContent()).toBe("Copy error")
+
+      await page.getByTestId("toggle-retry").click()
+      await expect(copy).toBeHidden()
+
+      await page.getByTestId("toggle-retry").click()
+      await expect(copy).toHaveText("Copy error")
+      await page.evaluate(() => navigator.clipboard.writeText(""))
+      await copy.click()
+      await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe(error)
+      expect(await copy.textContent()).toBe("Copy error")
+
+      await page.getByTestId("toggle-busy").click()
+      await expect(copy).toBeHidden()
+    })
+  }
+})
+
 /**
  * The dock owns the space above the composer. A gutter left on only one of its
  * two states put a gap under the actions row that the working indicator did not
