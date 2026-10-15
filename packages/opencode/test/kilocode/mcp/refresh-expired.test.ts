@@ -142,13 +142,21 @@ mcpTest.instance("a stalled refresh settles within its timeout and does not pin 
     )
 
     // A server that never answers: the refresh must be abandoned at the timeout, not awaited forever.
-    const hang = () => new Promise<Response>(() => {})
+    let calls = 0
+    const hang = () => {
+      calls++
+      return new Promise<Response>(() => {})
+    }
     const args = { name, serverUrl, auth, fetch: hang, timeout: 250 }
 
     const started = Date.now()
     yield* Effect.promise(() => refreshExpired(args))
     expect(Date.now() - started).toBeLessThan(2000)
-    // The single-flight entry must have settled; a later connect must not await the stuck promise.
+    expect(calls).toBe(1)
+
+    // The single-flight entry must have settled and been cleared, so this call starts a fresh
+    // attempt (a second fetch) rather than returning the previous one.
     yield* Effect.promise(() => refreshExpired(args))
+    expect(calls).toBe(2)
   }),
 )
