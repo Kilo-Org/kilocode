@@ -57,14 +57,14 @@ describe("KiloReasoningReplay.reconcile", () => {
   const messageID = MessageID.make("msg_replay")
   const base = () => ({ id: PartID.ascending(), sessionID, messageID })
   const start = (): SessionV1.Part => ({ ...base(), type: "step-start" })
-  const reasoning = (metadata?: Record<string, unknown>): SessionV1.Part => ({
+  const reasoning = (metadata?: Record<string, unknown>): SessionV1.ReasoningPart => ({
     ...base(),
     type: "reasoning",
     text: "thinking",
     time: { start: 1, end: 2 },
     metadata,
   })
-  const call = (id: string, metadata?: Record<string, unknown>): SessionV1.Part => ({
+  const call = (id: string, metadata?: Record<string, unknown>): SessionV1.ToolPart => ({
     ...base(),
     type: "tool",
     tool: "lookup",
@@ -285,7 +285,7 @@ const replay = Effect.fn("ReasoningReplayTest.replay")(function* (input: {
   dir: string
   head: unknown[]
   tail: unknown[]
-  gate: (part: SessionV1.Part) => boolean
+  gate: (part: (typeof MessageV2.Event.PartUpdated.data.Type)["part"]) => boolean
   follow?: string
 }) {
   const llm = yield* TestLLMServer
