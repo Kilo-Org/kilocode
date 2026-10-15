@@ -126,9 +126,9 @@ export const CODESTRAL_FIM_URL = "https://codestral.mistral.ai/v1/fim/completion
 export function resolveFimTarget(
   provider?: string,
   model?: string,
-  server = KiloServer.fromEnv(),
+  server?: string,
 ): FimTarget {
-  const kiloUrl = `${KiloServer.normalize(server)}/api/fim/completions`
+  const kiloUrl = `${KiloServer.gateway(server)}/fim/completions`
   if (!provider || provider === "kilo") {
     return { provider: "kilo", model: model ?? "mistralai/codestral-2501", url: kiloUrl }
   }
@@ -145,16 +145,17 @@ export function resolveFimTarget(
 export function resolveEditTarget(
   provider?: string,
   model?: string,
-  server = KiloServer.fromEnv(),
+  server?: string,
 ): EditTarget {
   const info = getAutocompleteModel(provider, model)
+  const kiloUrl = `${KiloServer.gateway(server)}/edit/completions`
   if (info.kind === "edit") {
     if (info.providerID === "kilo") {
       const m = info.requestModel.includes("/") ? info.requestModel : `inception/${info.requestModel}`
       return {
         provider: "kilo",
         model: m,
-        url: `${KiloServer.normalize(server)}/api/edit/completions`,
+        url: kiloUrl,
       }
     }
     if (info.directProvider === "inception") {
@@ -164,7 +165,7 @@ export function resolveEditTarget(
   return {
     provider: "kilo",
     model: info.requestModel,
-    url: `${KiloServer.normalize(server)}/api/edit/completions`,
+    url: kiloUrl,
   }
 }
 

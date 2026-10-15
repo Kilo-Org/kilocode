@@ -631,7 +631,7 @@ describe("KiloGatewayPlugin", () => {
                 ).toEqual({
                   provider: "kilo",
                   model: "mistralai/codestral-2508",
-                  url: `${backend.url}/api/fim/completions`,
+                  url: `${backend.url}/api/gateway/v1/fim/completions`,
                 })
                 expect(
                   yield* rpc.call("kilocode.gateway", "autocomplete.editTarget", {
@@ -641,7 +641,7 @@ describe("KiloGatewayPlugin", () => {
                 ).toEqual({
                   provider: "kilo",
                   model: "inception/mercury-edit-2",
-                  url: `${backend.url}/api/edit/completions`,
+                  url: `${backend.url}/api/gateway/v1/edit/completions`,
                 })
               }),
           ),

@@ -104,7 +104,7 @@ describe("Enterprise account, tRPC, modes, notifications, media, and FIM/edit", 
     expect(KiloAutocomplete.resolveFimTarget("kilo", "mistralai/codestral-2508", "https://api.kilo.ai")).toEqual({
       provider: "kilo",
       model: "mistralai/codestral-2508",
-      url: "https://api.kilo.ai/api/fim/completions",
+      url: "https://ai-gateway.kilo.ai/api/v1/fim/completions",
     })
     expect(KiloAutocomplete.resolveFimTarget("mistral", "codestral-2508", "https://api.kilo.ai")).toEqual({
       provider: "mistral",
@@ -113,7 +113,7 @@ describe("Enterprise account, tRPC, modes, notifications, media, and FIM/edit", 
     expect(KiloAutocomplete.resolveEditTarget("kilo", "inception/mercury-next-edit", "https://api.kilo.ai")).toEqual({
       provider: "kilo",
       model: "inception/mercury-edit-2",
-      url: "https://api.kilo.ai/api/edit/completions",
+      url: "https://ai-gateway.kilo.ai/api/v1/edit/completions",
     })
     expect(
       KiloAutocomplete.extractFencedBody("```ts\n<|code_to_edit|>\nconst x = 1\n<|/code_to_edit|>\n```"),

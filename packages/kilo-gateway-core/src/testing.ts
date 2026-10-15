@@ -307,7 +307,11 @@ export function fixture() {
         if (state.notificationsStatus !== 200) return new Response(null, { status: state.notificationsStatus })
         return Response.json(state.notifications)
       }
-      if (path === "/api/gateway/transcription-models") {
+      if (
+        path === "/api/gateway/transcription-models" ||
+        path === "/api/gateway/v1/transcription-models" ||
+        path === "/api/v1/transcription-models"
+      ) {
         if (state.transcriptionModelsStatus !== 200)
           return new Response(null, { status: state.transcriptionModelsStatus })
         return Response.json(state.transcriptionModels)
