@@ -269,6 +269,16 @@ describe("easy", () => {
     expect(easy(5, ["README.md", ".github/CODEOWNERS"])).toBeUndefined()
   })
 
+  test("agent definitions and changesets are not docs", () => {
+    expect(easy(10, [".kilo/agent/a.md"])).toBeUndefined()
+    expect(easy(10, [".kilo/skills/x/SKILL.md"])).toBeUndefined()
+    expect(easy(10, [".changeset/a.md"])).toBeUndefined()
+  })
+
+  test("a small fix with a changeset is still small", () => {
+    expect(easy(20, ["packages/opencode/src/a.ts", ".changeset/a.md"])).toBe("small")
+  })
+
   test("no files", () => {
     expect(easy(0, [])).toBeUndefined()
   })

@@ -145,10 +145,13 @@ export const EASY_LINES = 150
 export const SMALL_LINES = 50
 const SMALL_FILES = 3
 // Never a quick win, even when small: CI, dependencies, scripts and account code.
-const risky = [".github/", "script/", "patches/", "packages/kilo-gateway/"]
+const risky = [".github/", ".kilo/", "script/", "patches/", "packages/kilo-gateway/"]
 const riskyFiles = ["package.json", "bun.lock"]
+// Markdown that steers agents or release notes is not documentation.
+const meta = (file: string) => file.startsWith(".kilo/") || file.startsWith(".changeset/")
 const docs = (file: string) =>
-  file.startsWith("packages/kilo-docs/") || file.startsWith("docs/") || /\.mdx?$/.test(file)
+  !meta(file) && (file.startsWith("packages/kilo-docs/") || file.startsWith("docs/") || /\.mdx?$/.test(file))
+file.startsWith("packages/kilo-docs/") || file.startsWith("docs/") || /\.mdx?$/.test(file)
 const tests = (file: string) => /(^|\/)(tests?|__tests__)\//.test(file) || /\.(test|spec)\.[cm]?[jt]sx?$/.test(file)
 
 export type Quick = "docs" | "tests" | "small"

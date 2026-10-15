@@ -108,7 +108,7 @@ The 14 day clock starts at the time of the last maintainer reaction.
 A warm first reply matters most for people who are new here.
 
 - GitHub marks an author as `FIRST_TIME_CONTRIBUTOR` or `FIRST_TIMER` until one of their PRs is merged. These PRs and issues get `first-time-contributor`.
-- The label is set when the item opens. The sweep keeps it in sync, and removes it after the first merge.
+- The label is set when the item opens. The sweep keeps it in sync on PRs, and removes it after the first merge. Issues keep the label.
 - The digest adds "first-time contributor" next to these PRs, and the Slack summary shows how many there are.
 - First-time contributors often need a maintainer to approve their workflow runs before CI starts. Approve the runs early. Few checks on a PR can mean this.
 
@@ -118,12 +118,12 @@ A warm first reply matters most for people who are new here.
 
 - The PR is not a draft, its author is a community member, and it is not waiting for the contributor.
 - The last commit has passing checks, and GitHub reports the PR as mergeable.
-- No changed file is risky: `.github/`, `script/`, `patches/`, `packages/kilo-gateway/`, `package.json` or `bun.lock`.
+- No changed file is risky: `.github/`, `.kilo/`, `script/`, `patches/`, `packages/kilo-gateway/`, `package.json` or `bun.lock`.
 - One of these shapes fits:
 
 | Shape | Rule |
 |---|---|
-| Docs only | Every file is a `.md` or `.mdx` file, or is under `docs/` or `packages/kilo-docs/`. At most 150 changed lines |
+| Docs only | Every file is a `.md` or `.mdx` file, or is under `docs/` or `packages/kilo-docs/`. Files under `.kilo/` and `.changeset/` do not count as docs. At most 150 changed lines |
 | Tests only | Every file is a test file. At most 150 changed lines |
 | Small change | At most 50 changed lines in at most 3 files |
 
