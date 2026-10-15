@@ -170,12 +170,14 @@ export const KiloGatewayPlugin = define<Bus.Service | Scope.Scope>({
           if (oldest) lastGood.delete(oldest)
         }
         lastGood.set(writeKey, models)
-        const scanned = yield* ctx.storage
-          .scan({ prefix: "catalog:personal:" })
-          .pipe(Effect.orElseSucceed(() => ({ entries: [] })))
-        for (const entry of scanned.entries) {
-          if (entry.key !== writeKey) {
-            yield* ctx.storage.remove(entry.key).pipe(Effect.catch(() => Effect.void))
+        if (writeKey.startsWith("catalog:personal:")) {
+          const scanned = yield* ctx.storage
+            .scan({ prefix: "catalog:personal:" })
+            .pipe(Effect.orElseSucceed(() => ({ entries: [] })))
+          for (const entry of scanned.entries) {
+            if (entry.key !== writeKey) {
+              yield* ctx.storage.remove(entry.key).pipe(Effect.catch(() => Effect.void))
+            }
           }
         }
         yield* ctx.storage.set(writeKey, JSON.stringify(models)).pipe(Effect.catch(() => Effect.void))
