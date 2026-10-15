@@ -1,0 +1,24 @@
+/*
+ * Kilo brand yellow. VS Code injects --vscode-* on the webview, so the
+ * highlight tokens need !important to win. High contrast keeps the host colors.
+ */
+
+html[data-theme="kilo-vscode"] {
+  --kilo-yellow: #ffdd00;
+}
+
+html[data-theme="kilo-vscode"] body:not(.vscode-high-contrast):not(.vscode-high-contrast-light) {
+  --kilo-yellow: #ffdd00;
+  --vscode-charts-yellow: var(--kilo-yellow) !important;
+  --vscode-editorWarning-foreground: var(--kilo-yellow) !important;
+  --vscode-notificationsWarningIcon-foreground: var(--kilo-yellow) !important;
+  --vscode-testing-iconQueued: var(--kilo-yellow) !important;
+  --vscode-inputValidation-warningForeground: var(--kilo-yellow) !important;
+  --vscode-list-warningForeground: var(--kilo-yellow) !important;
+  --vscode-editorWarning-background: color-mix(in srgb, var(--kilo-yellow) 16%, transparent) !important;
+  --vscode-inputValidation-warningBorder: color-mix(in srgb, var(--kilo-yellow) 55%, transparent) !important;
+  --vscode-inputValidation-warningBackground: color-mix(in srgb, var(--kilo-yellow) 12%, transparent) !important;
+  --text-warning: var(--kilo-yellow);
+  --surface-warning: color-mix(in srgb, var(--kilo-yellow) 16%, transparent);
+  --border-warning: color-mix(in srgb, var(--kilo-yellow) 45%, transparent);
+}

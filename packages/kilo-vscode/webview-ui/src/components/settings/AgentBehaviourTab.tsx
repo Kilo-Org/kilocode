@@ -570,7 +570,7 @@ const AgentBehaviourTab: Component<Props> = (props) => {
                               "font-size": "var(--kilo-font-size-10)",
                               padding: "1px 5px",
                               "border-radius": "3px",
-                              background: "var(--vscode-editorWarning-foreground, #cca700)",
+                              background: "var(--vscode-editorWarning-foreground, #ffdd00)",
                               color: "var(--vscode-editorWarning-foreground-text, #1e1e1e)",
                             }}
                           >
@@ -686,7 +686,7 @@ const AgentBehaviourTab: Component<Props> = (props) => {
       if (s === "connected") return "var(--vscode-testing-iconPassed, #4caf50)"
       if (s === "failed") return "var(--vscode-testing-iconFailed, #f44336)"
       if (s === "needs_auth" || s === "needs_client_registration")
-        return "var(--vscode-editorWarning-foreground, #ff9800)"
+        return "var(--vscode-editorWarning-foreground, #ffdd00)"
       if (s === "disabled") return "var(--vscode-disabledForeground, #888)"
       return "var(--vscode-disabledForeground, #888)"
     }

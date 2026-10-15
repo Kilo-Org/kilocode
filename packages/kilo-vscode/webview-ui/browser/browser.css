@@ -213,7 +213,7 @@
 
 .am-browser-console-entry[data-level="warning"],
 .am-browser-console-entry[data-level="warn"] {
-  color: var(--text-warning, #d6a23a);
+  color: var(--text-warning, #ffdd00);
 }
 
 .am-browser-console-entry[data-level="error"] {

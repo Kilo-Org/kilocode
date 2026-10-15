@@ -188,7 +188,7 @@
   color: var(--vscode-testing-iconFailed, #f87171);
 }
 .am-pr-checks-count-pending {
-  color: var(--vscode-charts-yellow, #fbbf24);
+  color: var(--vscode-charts-yellow, #ffdd00);
 }
 
 .am-pr-panel-section-count {
@@ -248,7 +248,7 @@
   color: var(--vscode-testing-iconFailed, #f87171);
 }
 .am-pr-panel-value[data-checks="pending"] {
-  color: var(--vscode-charts-yellow, #fbbf24);
+  color: var(--vscode-charts-yellow, #ffdd00);
 }
 .am-pr-panel-value[data-checks="success"] {
   color: var(--vscode-testing-iconPassed, #34d399);
@@ -258,7 +258,7 @@
   gap: 6px;
 }
 .am-pr-panel-unresolved {
-  color: var(--vscode-charts-yellow, #fbbf24);
+  color: var(--vscode-charts-yellow, #ffdd00);
 }
 
 /* PR comment list */
@@ -965,7 +965,7 @@
   color: var(--text-weaker);
 }
 .am-pr-panel-check-item[data-status="pending"] .am-pr-check-icon {
-  color: var(--vscode-charts-yellow, #fbbf24);
+  color: var(--vscode-charts-yellow, #ffdd00);
 }
 .am-pr-panel-check-item[data-status="pending"] .am-pr-check-icon[data-component="spinner"],
 .am-pr-summary-row[data-status="pending"] .am-pr-summary-icon[data-component="spinner"] {
@@ -1048,10 +1048,10 @@
   color: var(--vscode-testing-iconFailed, #f87171);
 }
 .am-pr-summary-row[data-status="pending"] .am-pr-summary-icon {
-  color: var(--vscode-charts-yellow, #fbbf24);
+  color: var(--vscode-charts-yellow, #ffdd00);
 }
 .am-pr-summary-row[data-status="warning"] .am-pr-summary-icon {
-  color: var(--vscode-charts-yellow, #fbbf24);
+  color: var(--vscode-charts-yellow, #ffdd00);
 }
 
 .am-pr-summary-row.am-pr-merge-status[data-status="error"] .am-pr-summary-icon {
@@ -1061,7 +1061,7 @@
 .am-pr-summary-row.am-pr-merge-status[data-status="blocked"] .am-pr-summary-icon,
 .am-pr-summary-row.am-pr-merge-status[data-status="unstable"] .am-pr-summary-icon,
 .am-pr-summary-row.am-pr-merge-status[data-status="unknown"] .am-pr-summary-icon {
-  color: var(--vscode-charts-yellow, #fbbf24);
+  color: var(--vscode-charts-yellow, #ffdd00);
 }
 .am-pr-summary-row.am-pr-merge-status[data-status="clean"] .am-pr-summary-icon {
   color: var(--vscode-testing-iconPassed, #34d399);

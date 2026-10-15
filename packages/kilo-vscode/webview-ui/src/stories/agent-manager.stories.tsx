@@ -2424,7 +2424,7 @@ export const FullScreenDiffWithPRThreads: Story = {
 }
 
 const orgAvatar = `data:image/svg+xml,${encodeURIComponent(
-  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><rect width="16" height="16" fill="#f8f675"/><path d="M4 4h3v3H4zM9 9h3v3H9z" fill="#000"/></svg>',
+  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><rect width="16" height="16" fill="#FFDD00"/><path d="M4 4h3v3H4zM9 9h3v3H9z" fill="#000"/></svg>',
 )}`
 
 const storyProjects = [

@@ -881,7 +881,7 @@ body.vscode-reduce-motion .prompt-action {
 }
 
 .prompt-more-button[data-dot="warning"]::after {
-  background: var(--vscode-charts-yellow, #cca700);
+  background: var(--vscode-charts-yellow, #ffdd00);
 }
 
 .prompt-more-button[data-dot="error"]::after {
@@ -942,7 +942,7 @@ body.vscode-reduce-motion .prompt-action {
 }
 
 .prompt-more-menu [data-slot="dropdown-menu-item"][data-tone="warning"] .prompt-more-icon {
-  color: var(--vscode-charts-yellow, #cca700);
+  color: var(--vscode-charts-yellow, #ffdd00);
 }
 
 .prompt-more-menu [data-slot="dropdown-menu-item"][data-tone="error"] .prompt-more-icon {
@@ -1024,7 +1024,7 @@ body.vscode-reduce-motion .prompt-action {
    inherited currentColor, so it is overridden explicitly here too. */
 .prompt-issues-button,
 .prompt-issues-button [data-component="icon"] {
-  color: var(--vscode-charts-yellow, #cca700);
+  color: var(--vscode-charts-yellow, #ffdd00);
 }
 
 /* Match VS Code's native menu chrome so the session-issues popup reads as a
@@ -1092,7 +1092,7 @@ body.vscode-reduce-motion .prompt-issues-menu {
 }
 
 .prompt-indexing-button--warning {
-  color: var(--vscode-charts-yellow, #cca700);
+  color: var(--vscode-charts-yellow, #ffdd00);
 }
 
 .prompt-indexing-button--success {
@@ -1184,7 +1184,7 @@ body.vscode-reduce-motion .prompt-issues-menu {
 }
 
 .prompt-speech-button--error {
-  color: var(--vscode-charts-yellow, #cca700);
+  color: var(--vscode-charts-yellow, #ffdd00);
 }
 
 @keyframes prompt-speech-recording-pulse {

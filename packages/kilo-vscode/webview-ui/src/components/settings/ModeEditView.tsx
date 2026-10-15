@@ -359,7 +359,7 @@ const ModeEditView: Component<Props> = (props) => {
 
 const ACTION_COLORS: Record<string, { bg: string; fg: string }> = {
   allow: { bg: "var(--vscode-terminal-ansiGreen, #3fb950)", fg: "var(--vscode-editor-background, #1e1e1e)" },
-  ask: { bg: "var(--vscode-editorWarning-foreground, #cca700)", fg: "var(--vscode-editor-background, #1e1e1e)" },
+  ask: { bg: "var(--vscode-editorWarning-foreground, #ffdd00)", fg: "var(--vscode-editor-background, #1e1e1e)" },
   deny: { bg: "var(--vscode-errorForeground, #f85149)", fg: "var(--vscode-editor-background, #fff)" },
   unknown: { bg: "var(--vscode-descriptionForeground, #8b949e)", fg: "var(--vscode-editor-background, #1e1e1e)" },
 }

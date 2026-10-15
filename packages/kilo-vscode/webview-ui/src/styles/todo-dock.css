@@ -34,7 +34,7 @@
 [data-slot="todo-panel"] {
   --todo-ok: var(--vscode-testing-iconPassed, #73c991);
   --todo-accent: var(--vscode-progressBar-background, #3794ff);
-  --todo-goal: var(--vscode-charts-yellow, #d7ba7d);
+  --todo-goal: var(--vscode-charts-yellow, #ffdd00);
   --todo-track: color-mix(in srgb, var(--vscode-descriptionForeground) 32%, transparent);
   --todo-ease: cubic-bezier(0.22, 1, 0.36, 1);
 }
