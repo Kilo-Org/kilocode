@@ -287,6 +287,14 @@ export const dict = {
   "error.providerAuth.chatgpt.description":
     "เข้าสู่ระบบ ChatGPT อีกครั้ง จากนั้นส่งข้อความของคุณใหม่เพื่อใช้งานโมเดล Codex ต่อไป",
 
+  "provider.failure.unauthorized": "ข้อมูลรับรองถูกปฏิเสธ (HTTP {{status}}) โปรดเข้าสู่ระบบอีกครั้ง",
+  "provider.failure.unauthorizedNoStatus": "ข้อมูลรับรองถูกปฏิเสธ โปรดเข้าสู่ระบบอีกครั้ง",
+  "provider.failure.unauthenticated": "ยังไม่ได้เข้าสู่ระบบ",
+  "provider.failure.network": "ไม่สามารถเชื่อมต่อผู้ให้บริการได้ โปรดตรวจสอบการเชื่อมต่อของคุณ",
+  "provider.failure.http": "เกิดข้อผิดพลาดของผู้ให้บริการ (HTTP {{status}})",
+  "provider.failure.httpNoStatus": "เกิดข้อผิดพลาดของผู้ให้บริการ",
+  "provider.failure.schema": "ได้รับการตอบกลับที่ไม่คาดคิดจากผู้ให้บริการ",
+
   "notification.permission.title": "ต้องการสิทธิ์",
   "notification.permission.titleSubagent": "ต้องการสิทธิ์ (ตัวแทนย่อย)",
   "notification.permission.titleSkillShell": 'เรียกใช้คำสั่งเชลล์จากสกิล "{{skill}}" หรือไม่?',

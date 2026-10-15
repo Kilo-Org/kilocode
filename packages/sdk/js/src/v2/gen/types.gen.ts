@@ -3245,6 +3245,12 @@ export type PermissionNotFoundError = {
   message: string
 }
 
+export type ProviderFailure = {
+  providerID: string
+  kind: "unauthorized" | "unauthenticated" | "network" | "schema" | "http"
+  status?: number
+}
+
 export type ProviderAuthMethod = {
   type: "oauth" | "api"
   label: string
@@ -13403,6 +13409,7 @@ export type ProviderListResponses = {
     }
     connected: Array<string>
     failed: Array<string>
+    failures: Array<ProviderFailure>
   }
 }
 
