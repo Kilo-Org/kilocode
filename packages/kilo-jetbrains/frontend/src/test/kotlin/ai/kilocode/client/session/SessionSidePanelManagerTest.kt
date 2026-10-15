@@ -306,7 +306,7 @@ class SessionSidePanelManagerTest : BasePlatformTestCase() {
         assertEquals(listOf("/test" to "ses_1", "/test" to "ses_2", "/test" to "ses_1"), created)
     }
 
-    fun `test hidden session draft survives timeout and reopen`() {
+    fun `test hidden session draft is discarded after timeout`() {
         useShortInactiveDisposeTimeout()
         val manager = manager()
         manager.openSession(session("ses_1"))
@@ -315,10 +315,11 @@ class SessionSidePanelManagerTest : BasePlatformTestCase() {
         manager.openSession(session("ses_2"))
 
         expire()
+        assertFalse(ui.contains(first))
         manager.openSession(session("ses_1"))
 
-        assertSame(first, active(manager))
-        assertEquals("Also check the user name", prompt(first).text())
+        assertNotSame(first, active(manager))
+        assertEquals("", prompt(active(manager)).text())
     }
 
     fun `test queued hidden transcript events are discarded after timeout disposal`() {

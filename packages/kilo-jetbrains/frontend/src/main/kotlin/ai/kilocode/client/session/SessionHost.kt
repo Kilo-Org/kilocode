@@ -225,7 +225,7 @@ abstract class SessionHost(
         val delay = Registry.intValue("kilo.session.inactive.disposeTimeoutMs").coerceAtLeast(0)
         val timer = timers.timer(delay, repeats = false) {
             activeTimers.remove(ui)
-            if (ui === current || ui !in all || ui.hasDraft()) return@timer
+            if (ui === current || ui !in all) return@timer
             disposeUi(ui)
             onSessionsChanged()
         }
