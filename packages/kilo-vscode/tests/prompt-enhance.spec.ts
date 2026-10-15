@@ -100,7 +100,12 @@ test("a failed enhancement shows the error, the request id, and a retry action",
   await input.pressSequentially("Original draft")
   await page.getByRole("button", { name: "Enhance prompt", exact: true }).click()
   const first = (await api.sent()).at(0)?.requestId
-  await api.reply({ type: "enhancePromptError", requestId: first, reason: "failed", error: "Incorrect API key provided" })
+  await api.reply({
+    type: "enhancePromptError",
+    requestId: first,
+    reason: "failed",
+    error: "Incorrect API key provided",
+  })
 
   const status = page.getByRole("alert").filter({ hasText: "Enhance failed" })
   await expect(status).toContainText("Enhance failed: Incorrect API key provided")
