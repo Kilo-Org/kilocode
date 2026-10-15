@@ -35,7 +35,7 @@ const methodID = IntegrationMethodID.make("device")
 const REFRESH_INTERVAL = Duration.minutes(5)
 const MAX_SNAPSHOTS = 10
 const LOOPBACK = new Set(["127.0.0.1", "localhost", "[::1]", "::1"])
-const IS_TEST_RUNNER = typeof Bun !== "undefined" && /\.test\.[cm]?[jt]sx?$/.test(Bun.main)
+const IS_TEST_RUNNER = /\.test\.[cm]?[jt]sx?$/.test(process.argv[1] ?? "")
 
 // Written by the device method. Decoded again because stored credentials are read back from the database.
 const Metadata = Schema.Struct({
