@@ -11,11 +11,11 @@ import { tui } from "@/kilocode/cli/logo"
 const SHADOW_MARKER = /[_^~]/
 
 export function KiloLogo() {
-  const { theme } = useTheme()
-  const yellow = RGBA.fromHex("#FFDD00")
+  const { theme, mode } = useTheme()
   const logo = tui()
 
   const renderLine = (line: string): JSX.Element[] => {
+    const yellow = RGBA.fromHex(mode() === "light" ? "#736400" : "#ffdd00")
     const shadow = tint(theme.background, yellow, 0.25)
     const elements: JSX.Element[] = []
     let i = 0
