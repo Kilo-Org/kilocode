@@ -7,6 +7,8 @@
 //
 // Flow and rules: docs/community-triage.md
 
+import { appendFileSync } from "node:fs"
+
 export const DAY = 24 * 60 * 60 * 1000
 export const WAIT_DAYS = 14
 const LIMIT = 15
@@ -255,6 +257,14 @@ export function clip(text: string, max = 3500) {
   return text.slice(0, cut > 0 ? cut : max) + "\n- ...list shortened"
 }
 
+type SlackReply = { ok: boolean; ts?: string; error?: string; needed?: string; provided?: string }
+
+// Slack names the missing scope in `needed` and `provided`. Show them.
+export function failure(json: Pick<SlackReply, "error" | "needed" | "provided">) {
+  const scope = json.needed ? ` (needed: ${json.needed}, provided: ${json.provided ?? "none"})` : ""
+  return `Slack chat.postMessage failed: ${json.error ?? "unknown error"}${scope}`
+}
+
 async function slack(out: Digest, url: string) {
   const token = process.env.SLACK_TOKEN!
   const channel = process.env.SLACK_CHANNEL!
@@ -264,8 +274,8 @@ async function slack(out: Digest, url: string) {
       headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json; charset=utf-8" },
       body: JSON.stringify({ channel, unfurl_links: false, ...body }),
     })
-    const json = (await res.json()) as { ok: boolean; ts?: string; error?: string }
-    if (!json.ok) throw new Error(`Slack chat.postMessage failed: ${json.error}`)
+    const json = (await res.json()) as SlackReply
+    if (!json.ok) throw new Error(failure(json))
     return json.ts!
   }
   const ts = await post({ text: [out.title, out.counts, url ? `<${url}|Full run>` : ""].filter(Boolean).join("\n") })
@@ -563,7 +573,15 @@ async function sweep() {
     const run = process.env.GITHUB_RUN_ID
       ? `${process.env.GITHUB_SERVER_URL}/${repo}/actions/runs/${process.env.GITHUB_RUN_ID}`
       : ""
-    await slack(parts(rows, "slack", repo, now), run)
+    // Slack must not fail a sweep whose labels are already done. Warn, and
+    // tell the workflow so it can fall back to the webhook.
+    try {
+      await slack(parts(rows, "slack", repo, now), run)
+    } catch (err) {
+      console.log(`::warning title=Slack post failed::${err instanceof Error ? err.message : String(err)}`)
+      const flag = process.env.GITHUB_OUTPUT
+      if (flag) appendFileSync(flag, "slack_failed=true\n")
+    }
   }
   console.log(digest(rows, "md", repo, now))
 }
