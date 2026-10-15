@@ -91,11 +91,13 @@ Code Review queues pull-request work in database, enforces per-owner concurrency
 | Concern | Behavior |
 |---|---|
 | Trigger | Pull-request webhook or review dispatch |
-| Authorization owner | Per-owner dispatch slots separate concurrent review work |
+| Authorization owner | Per-owner dispatch slots. Organizations: 20. Personal accounts: 3 when remaining credit balance is above $5, otherwise 1. Balance sets the personal tier, not model price. Personal accounts used a default of 1 since concurrency was introduced; balance-based tiers (1 or 3) started on April 29, 2026 in [cloud#2886](https://github.com/Kilo-Org/cloud/pull/2886). |
 | Queue | Reviews wait in database as pending rows |
 | Orchestration | Durable Object keeps Cloud Agent connection alive |
 | Output | Review feedback is posted back to pull request |
 | Recovery | Worker updates database and triggers dispatch of next pending review |
+
+History: personal accounts had a default limit of 1 before balance-based tiers. The 1 or 3 tiers started on April 29, 2026 in [cloud pull request #2886](https://github.com/Kilo-Org/cloud/pull/2886).
 
 ## Auto Triage
 
