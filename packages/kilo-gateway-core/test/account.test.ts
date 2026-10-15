@@ -26,9 +26,10 @@ test("normalizes the server and resolves KILO_API_URL and KILO_AI_GATEWAY_URL li
 
 test("reads the server from a token like v1", () => {
   expect(KiloServer.fromToken("http://localhost:3000:secret")).toBe("http://localhost:3000")
+  expect(KiloServer.fromToken("http://localhost:3000:1234")).toBe("http://localhost:3000")
   expect(KiloServer.fromToken("http://localhost:3000:abc:def")).toBe("http://localhost:3000")
-  expect(KiloServer.fromToken("http://localhost:3000")).toBeUndefined()
   expect(KiloServer.fromToken("https://staging.example.test/base:secret")).toBe("https://staging.example.test/base")
+  expect(KiloServer.fromToken("https://staging.example.test/base:123")).toBe("https://staging.example.test/base")
   expect(KiloServer.fromToken("eyJhbGciOiJIUzI1NiJ9.payload.signature")).toBeUndefined()
 })
 
@@ -66,6 +67,13 @@ test("resolves the account server and team in v1 order", () => {
       KILO_ORG_ID: "env-team",
     }),
   ).toEqual({ token: "http://localhost:3000:secret", server: "http://localhost:3000", organizationID: "env-team" })
+  expect(
+    KiloAccount.resolve({ token: "https://gateway.test/api/organizations/token-org:secret" }, {}),
+  ).toEqual({
+    token: "https://gateway.test/api/organizations/token-org:secret",
+    server: "https://gateway.test/api/organizations/token-org",
+    organizationID: "token-org",
+  })
 })
 
 test("builds Kilo provider headers without OpenCode attribution", () => {

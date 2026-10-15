@@ -44,12 +44,14 @@ export function envToken(env: Record<string, string | undefined> = process.env):
 }
 
 // Server order: token-embedded URL (v1 `auth/token.ts`), then login server, then KILO_API_URL.
-// Team order: KILO_ORG_ID, then selected or login team, then personal account.
+// Team order: KILO_ORG_ID, then selected or login team, then org embedded in the token/server URL, then personal account.
 export function resolve(input: Input, env: Record<string, string | undefined> = process.env): Info {
-  const server = KiloServer.fromToken(input.token) ?? (input.server ? KiloServer.normalize(input.server) : KiloServer.fromEnv(env))
+  const tokenServer = KiloServer.fromToken(input.token)
+  const server = tokenServer ?? (input.server ? KiloServer.normalize(input.server) : KiloServer.fromEnv(env))
+  const tokenOrg = KiloServer.organizationFromUrl(tokenServer ?? server)
   return {
     token: input.token,
     server,
-    organizationID: env.KILO_ORG_ID || input.organizationID || null,
+    organizationID: env.KILO_ORG_ID || input.organizationID || tokenOrg || null,
   }
 }
