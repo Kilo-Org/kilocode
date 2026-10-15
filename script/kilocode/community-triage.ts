@@ -265,6 +265,9 @@ export function failure(json: Pick<SlackReply, "error" | "needed" | "provided">)
   return `Slack chat.postMessage failed: ${json.error ?? "unknown error"}${scope}`
 }
 
+const warn = (title: string, err: unknown) =>
+  console.log(`::warning title=${title}::${err instanceof Error ? err.message : String(err)}`)
+
 async function slack(out: Digest, url: string) {
   const token = process.env.SLACK_TOKEN!
   const channel = process.env.SLACK_CHANNEL!
@@ -279,7 +282,15 @@ async function slack(out: Digest, url: string) {
     return json.ts!
   }
   const ts = await post({ text: [out.title, out.counts, url ? `<${url}|Full run>` : ""].filter(Boolean).join("\n") })
-  for (const block of out.blocks) await post({ thread_ts: ts, text: clip(block) })
+  // The summary is out. A failed section must not trigger the webhook
+  // fallback, which would post the whole queue a second time.
+  for (const block of out.blocks) {
+    try {
+      await post({ thread_ts: ts, text: clip(block) })
+    } catch (err) {
+      warn("Slack thread post failed", err)
+    }
+  }
 }
 
 // ---- GitHub I/O ----
@@ -573,12 +584,12 @@ async function sweep() {
     const run = process.env.GITHUB_RUN_ID
       ? `${process.env.GITHUB_SERVER_URL}/${repo}/actions/runs/${process.env.GITHUB_RUN_ID}`
       : ""
-    // Slack must not fail a sweep whose labels are already done. Warn, and
-    // tell the workflow so it can fall back to the webhook.
+    // Slack must not fail a sweep whose labels are already done. If not even
+    // the summary was posted, warn and tell the workflow to use the webhook.
     try {
       await slack(parts(rows, "slack", repo, now), run)
     } catch (err) {
-      console.log(`::warning title=Slack post failed::${err instanceof Error ? err.message : String(err)}`)
+      warn("Slack post failed", err)
       const flag = process.env.GITHUB_OUTPUT
       if (flag) appendFileSync(flag, "slack_failed=true\n")
     }
