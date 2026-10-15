@@ -153,14 +153,12 @@ export function get(scope: Scope): Effect.Effect<Result, Failure> {
   return Effect.gen(function* () {
     const server = KiloServer.normalize(scope.server)
     const organizationID = scope.token ? (scope.organizationID ?? null) : null
-    const path = organizationID
-      ? `/api/organizations/${encodeURIComponent(organizationID)}/models`
-      : "/api/openrouter/models"
+    const url = KiloServer.modelsUrl(server, organizationID)
     const headers: Record<string, string> = {
       ...KiloHeaders.provider({ version: scope.version ?? "unknown", organizationID }),
       ...(scope.token ? { Authorization: `Bearer ${scope.token}` } : {}),
     }
-    const response = yield* request(`${server}${path}`, { headers }, "Models fetch failed", TIMEOUT_MS).pipe(
+    const response = yield* request(url, { headers }, "Models fetch failed", TIMEOUT_MS).pipe(
       Effect.mapError((): Failure => ({ kind: "network" })),
     )
     if (!response.ok) {

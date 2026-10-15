@@ -1,13 +1,27 @@
 import { expect, test } from "bun:test"
 import { KiloAccount, KiloHeaders, KiloServer } from "../src/index.js"
 
-test("normalizes the server and reads KILO_API_URL", () => {
+test("normalizes the server and resolves KILO_API_URL and KILO_AI_GATEWAY_URL like main", () => {
   expect(KiloServer.fromEnv({})).toBe("https://api.kilo.ai")
   expect(KiloServer.fromEnv({ KILO_API_URL: "http://localhost:3000/" })).toBe("http://localhost:3000")
   expect(KiloServer.normalize("https://example.test/prefix//?query#hash")).toBe("https://example.test/prefix")
   expect(() => KiloServer.normalize("ftp://example.test")).toThrow("Invalid Kilo API URL")
   expect(() => KiloServer.fromEnv({ KILO_API_URL: "not a url" })).toThrow("Invalid Kilo API URL")
-  expect(KiloServer.gateway("https://api.kilo.ai")).toBe("https://api.kilo.ai/api/gateway")
+  expect(KiloServer.aiGatewayFromEnv({})).toBe("https://ai-gateway.kilo.ai/api/v1")
+  expect(KiloServer.aiGatewayFromEnv({ KILO_API_URL: "http://localhost:3000/" })).toBe(
+    "http://localhost:3000/api/gateway/v1",
+  )
+  expect(
+    KiloServer.aiGatewayFromEnv({
+      KILO_API_URL: "http://localhost:3000",
+      KILO_AI_GATEWAY_URL: "http://localhost:3001/api/v1/",
+    }),
+  ).toBe("http://localhost:3001/api/v1")
+  expect(KiloServer.gateway("https://api.kilo.ai", {})).toBe("https://ai-gateway.kilo.ai/api/v1")
+  expect(KiloServer.gateway("http://localhost:3000", { KILO_API_URL: "http://localhost:3000" })).toBe(
+    "http://localhost:3000/api/gateway/v1",
+  )
+  expect(KiloServer.gateway("https://staging.kilo.test", {})).toBe("https://staging.kilo.test/api/gateway")
 })
 
 test("reads the server from a token like v1", () => {
