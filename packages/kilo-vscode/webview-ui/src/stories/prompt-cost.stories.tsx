@@ -1,3 +1,4 @@
+/** @jsxImportSource solid-js */
 import type { Meta, StoryObj } from "storybook-solidjs-vite"
 import { For } from "solid-js"
 import { TranscriptRowView } from "../components/chat/TranscriptRow"
