@@ -18,13 +18,19 @@ export interface Scope {
   readonly server: string
   readonly token?: string
   readonly organizationID?: string | null
+  readonly fallback?: string
 }
 
 // Same behavior as v1 `fetchDefaultModel` (`api/profile.ts:106-136`):
 // reads `/api/organizations/{id}/defaults` for a team or `/api/defaults` otherwise,
-// and falls back to `kilo-auto/frontier` when signed in or `kilo-auto/free` when signed out.
+// and falls back to `scope.fallback` (first model in catalog for a team) or
+// `kilo-auto/frontier` when signed in / `kilo-auto/free` when signed out.
 export function get(scope: Scope): Effect.Effect<string> {
-  const fallback = scope.token ? DEFAULT_MODEL : DEFAULT_FREE_MODEL
+  const fallback = scope.fallback
+    ? stripProviderPrefix(scope.fallback)
+    : scope.token
+      ? DEFAULT_MODEL
+      : DEFAULT_FREE_MODEL
   return Effect.gen(function* () {
     const server = KiloServer.normalize(scope.server)
     const organizationID = scope.token ? (scope.organizationID ?? null) : null

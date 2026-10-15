@@ -190,7 +190,6 @@ export const ModelEntry = Schema.Struct({
   description: Schema.optional(Schema.String),
   reasoning: Schema.optional(Schema.Boolean),
   family: Schema.optional(Schema.String),
-  prompt: Schema.optional(Schema.String),
   aiSDKProvider: Schema.optional(Schema.String),
 })
 
