@@ -54,7 +54,7 @@ Each PR is small, self-contained, and **manually testable on its own** in `bun d
 ### PR 1: Login, Account/Team Selection & Provider Attribution (`gateway-login`)
 - **Supersedes:** PR [#14998](https://github.com/Kilo-Org/kilocode/pull/14998), rebased on current `origin/v2`.
 - **What it includes:**
-  - `packages/kilo-gateway-core`: server URL resolution (`KILO_API_URL`, token-embedded URL), device OAuth (`POST /api/device-auth/codes`, polling `GET /api/device-auth/codes/{code}` with retry/backoff and timeout), `/api/profile`, default team rule (`selectedOrganizationId` else first team when `hasPersonalAccount === false`), account resolution with env precedence (`KILO_API_KEY` / `KILOCODE_TOKEN` / `KILO_AUTH_CONTENT` > stored credential; `KILO_ORG_ID` > stored team > login default), provider headers (`HTTP-Referer: https://kilocode.ai`, `X-Title: Kilo Code`, `X-KILOCODE-EDITORNAME`, `X-KILOCODE-FEATURE`, `X-KILOCODE-ORGANIZATIONID`), and `test/boundary.test.ts`.
+  - `packages/kilo-gateway-core`: server and AI Gateway URL resolution (`KILO_AI_GATEWAY_URL`, default `https://ai-gateway.kilo.ai/api/v1`, `${KILO_API_URL}/api/gateway/v1` fallback when only `KILO_API_URL` is set, and legacy `${server}/api/gateway` for custom/token-embedded servers), device OAuth (`POST /api/device-auth/codes`, polling `GET /api/device-auth/codes/{code}` with retry/backoff and timeout), `/api/profile`, default team rule (`selectedOrganizationId` else first team when `hasPersonalAccount === false`), account resolution with env precedence (`KILO_API_KEY` / `KILOCODE_TOKEN` / `KILO_AUTH_CONTENT` > stored credential; `KILO_ORG_ID` > stored team > login default), provider headers (`HTTP-Referer: https://kilocode.ai`, `X-Title: Kilo Code`, `X-KILOCODE-EDITORNAME`, `X-KILOCODE-FEATURE`, `X-KILOCODE-ORGANIZATIONID`), and `test/boundary.test.ts`.
   - `packages/core/src/kilocode/gateway.ts` & `gateway-rpc.ts`: `kilocode.gateway` plugin replacing `KiloPlugin` in `packages/core/src/plugin/provider.ts`; `device` OAuth method; signed-out `anonymous` key activation; `profile` and `organization.set` RPCs.
   - `packages/tui/src/kilocode/gateway.tsx`: Post-login `Select Account (<email>)` picker and `/teams` (`team`, `org`, `orgs`) slash command.
   - `script/dev-isolated.ts`: Remove v1 `~/.local/share/kilo/auth.json` token reuse.
@@ -63,13 +63,14 @@ Each PR is small, self-contained, and **manually testable on its own** in `bun d
   - Run `bun dev` signed out: free model (`kilo/kilo-auto/free`) answers; paid model returns `"You need to sign in to use this model."`
   - Run `/connect` -> `Kilo Gateway (Device Authorization)`: shows verification URL and code; after login opens `Select Account (<email>)` picker; `/teams` switches active team and updates `X-KILOCODE-ORGANIZATIONID`.
 
-### PR 2: Catalog Authority, Team Fail-Closed & Defaults (`gateway-catalog`, stacked on PR 1)
+### PR 2: Catalog Authority, Variants/Efforts, Team Fail-Closed & Defaults (`gateway-catalog`, stacked on PR 1)
 - **What it includes:**
   - Copy `api/models.ts`, `api/constants.ts`, `api/url.ts`, and `fetchDefaultModel` (`api/profile.ts`) + unit tests from `origin/main:packages/kilo-gateway` into `packages/kilo-gateway-core`.
-  - Map Gateway models onto v2 `Model.Info` and replace the `kilo` catalog via `providers.models.set("kilo", ...)`:
-    - **Signed in (personal):** `GET /api/gateway/models` (with 401 anonymous retry when `!organizationID`); on failure keep last good personal list (persisted in plugin storage; never `models.dev`).
-    - **Signed in (team):** `GET /api/organizations/{id}/models`; on failure **fail closed** (`models.set("kilo", [])` + `model.transform` disable guard so `ConfigProviderPlugin` in `post` cannot re-enable static models).
+  - Map Gateway models onto v2 `Model.Info` and replace the `kilo` catalog via `providers.models.set("kilo", ...)` (`editor.add`):
+    - **Signed in (personal):** `GET ${aiGatewayBase}/models` (with 401 anonymous retry when `!organizationID`); on failure keep last good personal list (persisted in plugin storage; never `models.dev`).
+    - **Signed in (team):** `GET ${aiGatewayBase}/organizations/{id}/models`; on failure **fail closed** (`models: []`, sentinel `sourceConnection`, and `model.transform` disable guard so `ConfigProviderPlugin` in `post` cannot re-enable static models).
     - **Signed out (anonymous):** filter Gateway catalog to `isFree === true`; on failure keep last good anonymous free list (never `models.dev`).
+    - **Reasoning variants and efforts:** pass Gateway `reasoning_options` (when provided by the backend) into v2's `Variant.resolve(base, supports)`, and translate legacy OpenRouter-shaped `opencode.variants` (`{ reasoning: { enabled, effort }, verbosity }`) into dialect-specific settings (`openrouter`, `anthropic`, `openai`, `openai-compatible`), matching v1 `packages/opencode/src/kilocode/provider-options.ts`.
   - Refresh on login, logout, `credential.switched`, `organization.set`, and periodic timer.
   - Apply `/api/defaults` and `/api/organizations/{id}/defaults` for default model and `kilo-auto/small` for small tasks (`Model.small`).
   - Expose `models` metadata RPC (`isFree`, `recommendedIndex`, `hasUserByokAvailable`, `mayTrainOnYourPrompts`, `autoRouting`, `terminalBench`).
