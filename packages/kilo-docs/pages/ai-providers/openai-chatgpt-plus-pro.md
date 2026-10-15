@@ -1,12 +1,14 @@
 ---
 title: "Using ChatGPT subscriptions with Kilo Code"
-description: "Sign in to Kilo with ChatGPT, connect your subscription through BYOK, or use OpenAI directly in VS Code and the CLI. Learn how setup, limits, and billing work."
-sidebar_label: ChatGPT Plus/Pro
+description: "Sign in to Kilo with ChatGPT on Go, Plus, or Pro, connect your subscription through BYOK, and see those requests in Usage. Learn how setup, limits, and billing work."
+sidebar_label: ChatGPT Go/Plus/Pro
 ---
 
 # Using ChatGPT subscriptions with Kilo Code
 
 You can use your ChatGPT account to sign in to Kilo and your subscription to run supported OpenAI models. Signing in and connecting your subscription are separate options. You can sign in with ChatGPT without using it for model requests, or connect a ChatGPT subscription to your existing Kilo account.
+
+Sign in with ChatGPT plan usage is available on the ChatGPT Go, Plus, and Pro plans. On those plans, you can sign in to commercial launch-partner apps and open source applications, including Kilo, and take your ChatGPT plan allowance with you.
 
 Your ChatGPT plan determines which models and how much usage are included. Check [OpenAI's current plan details](https://developers.openai.com/codex/pricing/) for details.
 
@@ -60,6 +62,12 @@ For eligible requests, Kilo uses your connected ChatGPT subscription instead of 
 
 Requests served through the subscription use your ChatGPT allowance rather than Kilo credits for model inference. Other costs are separate: [Cloud Agent compute](/docs/code-with-ai/platforms/cloud-agent#cost), Kilo Deploy, and other paid services are not included in your ChatGPT subscription.
 
+### Usage data
+
+Sign in with ChatGPT requests appear in Kilo [Usage](https://app.kilo.ai/usage). Cost is **$0** for every request.
+
+Filter **Usage → Provider → `openai-chatgpt`** to isolate those requests and their token totals through Kilo. That filter does not include pay-as-you-go OpenAI API-key requests.
+
 **When you reach your ChatGPT usage limit, the request stops with an error.** Kilo does not retry it using a saved API key or Kilo credits. Retrying the same eligible request with the same connection still uses ChatGPT, so buying Kilo credits alone does not bypass the limit.
 
 Open BYOK and use **Manage usage** to check your allowance and reset time. Wait for the limit to reset, or disconnect the applicable subscription connection to use your saved API key or Kilo credits for subsequent requests.
@@ -107,7 +115,7 @@ If OpenAI is already connected from an API key, environment variable, or `kilo.j
 {% /tab %}
 {% tab label="CLI" %}
 
-Run the auth command and follow the ChatGPT Plus/Pro sign-in flow:
+Run the auth command and follow the ChatGPT Go, Plus, or Pro sign-in flow:
 
 ```bash
 kilo auth login --provider codex
