@@ -212,6 +212,9 @@ export const KiloGatewayPlugin = define<Bus.Service | Scope.Scope>({
           failed: false,
           anonymous: fetched.success.anonymous,
         }
+        if (models.length === 0) {
+          yield* scheduleRetry({ kind: "network" }, targetEpoch, attempt)
+        }
         return
       }
 
@@ -254,7 +257,7 @@ export const KiloGatewayPlugin = define<Bus.Service | Scope.Scope>({
     })
 
     function scheduleRetry(failure: KiloModels.Failure, targetEpoch: number, attempt: number) {
-      if (!KiloModels.retryable(failure) || attempt >= 5 || targetEpoch !== epoch) return Effect.void
+      if (!KiloModels.retryable(failure) || targetEpoch !== epoch) return Effect.void
       const delayMs = KiloModels.retryDelayMs(attempt, failure.retryAfter)
       // Do not call `cancelRetry` here because `scheduleRetry` can run inside the active `retryFiber` itself.
       return Effect.sleep(Duration.millis(delayMs)).pipe(
