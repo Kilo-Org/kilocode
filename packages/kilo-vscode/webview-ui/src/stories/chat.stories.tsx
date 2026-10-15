@@ -13,6 +13,7 @@ import { batch, createEffect, createSignal, onCleanup, onMount } from "solid-js"
 import { StoryProviders, defaultMockData, mockSessionValue } from "./StoryProviders"
 import { Button } from "@kilocode/kilo-ui/button"
 import { ClipboardProvider } from "@kilocode/kilo-ui/context/clipboard"
+import { Toast } from "@kilocode/kilo-ui/toast"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { ChatView } from "../components/chat/ChatView"
 import { SessionDock } from "../components/chat/SessionDock"
@@ -270,6 +271,7 @@ export const ChatViewSessionDockStability: Story = {
                 </button>
                 <ClipboardProvider write={(text) => navigator.clipboard.writeText(text)}>
                   <ChatView onForkSession={() => undefined} continueInWorktree />
+                  <Toast.Region />
                 </ClipboardProvider>
               </div>
             </WorktreeModeProvider>

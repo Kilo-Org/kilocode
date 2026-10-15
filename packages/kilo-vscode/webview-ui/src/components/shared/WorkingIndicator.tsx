@@ -12,6 +12,7 @@ import { type Component, Show, createSignal, createEffect, createMemo, onCleanup
 import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { Button } from "@kilocode/kilo-ui/button"
 import { useClipboard } from "@kilocode/kilo-ui/context/clipboard"
+import { showToast } from "@kilocode/kilo-ui/toast"
 import { useSession } from "../../context/session"
 import { useLanguage } from "../../context/language"
 import { useVSCode } from "../../context/vscode"
@@ -94,7 +95,10 @@ export const WorkingIndicator: Component<WorkingIndicatorProps> = (props) => {
 
   const isRetrying = () => session.statusInfo().type === "retry"
 
-  const copy = async () => clipboard.write(statusText())
+  const copy = async () => {
+    await clipboard.write(statusText())
+    showToast({ variant: "success", title: language.t("ui.message.copied") })
+  }
 
   // The counter's slot is reserved for exactly as long as the turn is timed, so a
   // state that never counts (a retry with no start time) keeps the row compact.
@@ -131,7 +135,16 @@ export const WorkingIndicator: Component<WorkingIndicatorProps> = (props) => {
           variant="ghost"
           size="small"
           class="working-copy"
-          onClick={() => void copy().catch((err) => console.error("[Kilo New] Failed to copy retry error", err))}
+          onClick={() =>
+            void copy().catch((err) => {
+              console.error("[Kilo New] Failed to copy retry error", err)
+              showToast({
+                variant: "error",
+                title: language.t("common.requestFailed"),
+                description: err instanceof Error ? err.message : String(err),
+              })
+            })
+          }
         >
           {language.t("ui.toolErrorCard.copyError")}
         </Button>

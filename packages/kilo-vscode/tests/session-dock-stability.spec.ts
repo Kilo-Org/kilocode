@@ -83,6 +83,9 @@ test("only one of the two states is visible in the dock", async ({ page }) => {
 
 // The system clipboard is shared between browser workers.
 test.describe.serial("retry error clipboard", () => {
+  const error =
+    "The selected model cannot process this request because your workspace privacy policy restricts inference to Europe and the United States. This model is currently available through providers that require global routing. To resolve this error, open workspace privacy settings and set Allowed Regions to Global."
+
   for (const width of [340, 1400]) {
     test(`retry status exposes and copies its full error at ${width}px`, async ({ page }) => {
       await page.context().grantPermissions(["clipboard-read", "clipboard-write"])
@@ -96,16 +99,17 @@ test.describe.serial("retry error clipboard", () => {
       await expect(copy).toBeHidden()
 
       await page.getByTestId("toggle-retry").click()
-      const error =
-        "The selected model cannot process this request because your workspace privacy policy restricts inference to Europe and the United States. This model is currently available through providers that require global routing. To resolve this error, open workspace privacy settings and set Allowed Regions to Global."
       await expect(label).toHaveAttribute("data-clip")
       await expect(page.locator(".working-count")).toBeVisible()
       await expect(page.locator(".working-cancel")).toBeVisible()
       await expect(copy).toHaveText("Copy error")
+      const before = await geometry(page)
       await page.evaluate(() => navigator.clipboard.writeText(""))
       await copy.focus()
       await page.keyboard.press("Enter")
       await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe(error)
+      await expect(page.locator('[data-component="toast"][data-variant="success"]')).toContainText("Copied")
+      expect(await geometry(page)).toEqual(before)
       expect(await copy.textContent()).toBe("Copy error")
 
       await page.getByTestId("toggle-retry").click()
@@ -122,6 +126,33 @@ test.describe.serial("retry error clipboard", () => {
       await expect(copy).toBeHidden()
     })
   }
+
+  test("failed retry copy shows an error and can be retried", async ({ page }) => {
+    await page.context().grantPermissions(["clipboard-read", "clipboard-write"])
+    await openStory(page)
+    await page.getByTestId("toggle-busy").click()
+    await page.getByTestId("toggle-retry").click()
+    await page.evaluate(() => {
+      Object.defineProperty(navigator.clipboard, "writeText", {
+        configurable: true,
+        value: () => Promise.reject(new Error("Clipboard unavailable")),
+      })
+    })
+
+    const copy = page.locator(".working-copy")
+    await copy.click()
+    const toast = page.locator('[data-component="toast"][data-variant="error"]')
+    await expect(toast).toContainText("Request failed")
+    await expect(toast).toContainText("Clipboard unavailable")
+    await expect(page.locator('[data-component="toast"][data-variant="success"]')).toBeHidden()
+    await expect(copy).toHaveText("Copy error")
+    await toast.getByRole("button", { name: "Dismiss" }).click()
+
+    await page.evaluate(() => Reflect.deleteProperty(navigator.clipboard, "writeText"))
+    await copy.click()
+    await expect(page.locator('[data-component="toast"][data-variant="success"]')).toContainText("Copied")
+    await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe(error)
+  })
 })
 
 /**
