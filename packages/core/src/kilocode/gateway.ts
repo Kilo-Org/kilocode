@@ -171,8 +171,15 @@ export const KiloGatewayPlugin = define<Bus.Service | Scope.Scope>({
       const token = current?.token
 
       // During unit tests (`IS_TEST_RUNNER`), never make live internet requests to the default production
-      // host (`https://api.kilo.ai`) when no local fixture server (`KILO_API_URL` or credential server) is used.
-      if (IS_TEST_RUNNER && !process.env.KILO_API_URL && !isLoopback(base)) {
+      // host (`https://api.kilo.ai`) when no local fixture server (`KILO_API_URL`, `KILO_AI_GATEWAY_URL`, or
+      // credential server) is used.
+      if (
+        IS_TEST_RUNNER &&
+        !process.env.KILO_API_URL &&
+        !process.env.KILO_AI_GATEWAY_URL &&
+        !isLoopback(base) &&
+        !isLoopback(KiloServer.aiGatewayFromEnv())
+      ) {
         catalog = {
           account: current,
           connection,
@@ -564,8 +571,9 @@ function isLoopback(server: string): boolean {
 }
 
 function snapshotKey(server: string, token?: string): string {
-  if (!token) return `catalog:anonymous:${server}`
-  const hash = createHash("sha256").update(`${server}:${token}`).digest("hex")
+  const route = KiloServer.gateway(server)
+  if (!token) return `catalog:anonymous:${route}`
+  const hash = createHash("sha256").update(`${route}:${token}`).digest("hex")
   return `catalog:personal:${hash}`
 }
 
