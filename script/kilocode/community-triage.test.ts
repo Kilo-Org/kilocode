@@ -8,6 +8,7 @@ import {
   component,
   pushedAt,
   decide,
+  failure,
   clip,
   digest,
   parts,
@@ -319,5 +320,18 @@ describe("digest with quick wins and newcomers", () => {
 describe("cleanup of new labels", () => {
   test("removes first-time and quick-win from maintainer PRs", () => {
     expect(cleanup([label.first, label.quick, "area:cli"]).sort()).toEqual([label.first, label.quick].sort())
+  })
+})
+
+describe("failure", () => {
+  test("names the missing scope", () => {
+    expect(failure({ error: "missing_scope", needed: "chat:write", provided: "incoming-webhook" })).toBe(
+      "Slack chat.postMessage failed: missing_scope (needed: chat:write, provided: incoming-webhook)",
+    )
+  })
+
+  test("handles replies without scope details", () => {
+    expect(failure({ error: "not_in_channel" })).toBe("Slack chat.postMessage failed: not_in_channel")
+    expect(failure({})).toBe("Slack chat.postMessage failed: unknown error")
   })
 })

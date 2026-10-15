@@ -40,6 +40,7 @@ jobs:
           bun-version-file: package.json
 
       - name: Sweep
+        id: sweep
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
@@ -49,7 +50,8 @@ jobs:
           CLOSE_ENABLED: ${{ github.event_name == 'workflow_dispatch' && format('{0}', inputs.close) || vars.COMMUNITY_AUTO_CLOSE_ENABLED }}
           SLACK_PAYLOAD: ${{ runner.temp }}/slack-payload.json
           # Optional. With both set, the sweep posts a short summary and puts
-          # the lists in a thread. Without them, the webhook below is used.
+          # the lists in a thread. Without them, or if that post fails, the
+          # webhook below is used.
           SLACK_TOKEN: ${{ secrets.COMMUNITY_TRIAGE_SLACK_TOKEN }}
           SLACK_CHANNEL: ${{ secrets.COMMUNITY_TRIAGE_SLACK_CHANNEL }}
         run: bun run script/kilocode/community-triage.ts sweep
@@ -63,10 +65,13 @@ jobs:
           SLACK_TOKEN: ${{ secrets.COMMUNITY_TRIAGE_SLACK_TOKEN }}
           SLACK_CHANNEL: ${{ secrets.COMMUNITY_TRIAGE_SLACK_CHANNEL }}
         # The script posts with the bot token only when the token and the channel are both set.
-        run: echo "enabled=${{ env.SLACK_WEBHOOK != '' && !(env.SLACK_TOKEN != '' && env.SLACK_CHANNEL != '') }}" >> "$GITHUB_OUTPUT"
+        run: |
+          echo "webhook=${{ env.SLACK_WEBHOOK != '' }}" >> "$GITHUB_OUTPUT"
+          echo "api=${{ env.SLACK_TOKEN != '' && env.SLACK_CHANNEL != '' }}" >> "$GITHUB_OUTPUT"
 
       - name: Notify Slack
-        if: steps.slack.outputs.enabled == 'true'
+        # Use the webhook when the bot API is not set up, or when its post failed.
+        if: steps.slack.outputs.webhook == 'true' && (steps.slack.outputs.api != 'true' || steps.sweep.outputs.slack_failed == 'true')
         uses: slackapi/slack-github-action@v2.0.0
         with:
           webhook: ${{ secrets.COMMUNITY_TRIAGE_SLACK_WEBHOOK }}
