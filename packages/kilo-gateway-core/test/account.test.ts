@@ -26,6 +26,8 @@ test("normalizes the server and resolves KILO_API_URL and KILO_AI_GATEWAY_URL li
 
 test("reads the server from a token like v1", () => {
   expect(KiloServer.fromToken("http://localhost:3000:secret")).toBe("http://localhost:3000")
+  expect(KiloServer.fromToken("http://localhost:3000:abc:def")).toBe("http://localhost:3000")
+  expect(KiloServer.fromToken("http://localhost:3000")).toBeUndefined()
   expect(KiloServer.fromToken("https://staging.example.test/base:secret")).toBe("https://staging.example.test/base")
   expect(KiloServer.fromToken("eyJhbGciOiJIUzI1NiJ9.payload.signature")).toBeUndefined()
 })
