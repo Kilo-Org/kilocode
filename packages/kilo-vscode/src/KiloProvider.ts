@@ -2895,6 +2895,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
             authMethods,
             authStates,
             kiloUnavailable: unavailable,
+            failures: response.failures,
           }
           this.cachedProvidersMessage = message
           this.cachedProvidersDirectory = this.settingsDirectory()

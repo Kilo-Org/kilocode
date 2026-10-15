@@ -247,6 +247,8 @@ The **Usage** tab of the organization dashboard provides:
 
 This gives administrators visibility into which team members, models, and projects are driving the majority of spend.
 
+Sign in with ChatGPT requests are included. Filter **Usage → Provider → `openai-chatgpt`** to isolate those requests and token totals. Cost is **$0** for every request.
+
 **Where to access:** [app.kilo.ai](https://app.kilo.ai) → Usage tab. 
 
 ### Administrative permissions
