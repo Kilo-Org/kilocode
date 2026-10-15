@@ -23,7 +23,7 @@ export const DiffEndMarker: Component = () => {
 
           <g class="am-kiloman-upper">
             <rect x="41" y="36" width="16" height="22" fill="var(--kilo-yellow)" />
-            <circle cx="49" cy="24" r="14" fill="var(--kilo-yellow)" />
+            <circle cx="49" cy="24" r="14" fill="var(--kilo-yellow-hover)" />
             <rect x="53" y="21" width="4" height="4" fill="#111827" />
           </g>
         </svg>
