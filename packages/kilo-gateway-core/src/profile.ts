@@ -77,7 +77,7 @@ export function balance(
 export function get(server: string, token: string): Effect.Effect<Info, Error> {
   return Effect.gen(function* () {
     const response = yield* request(
-      `${KiloServer.normalize(server)}/api/profile`,
+      KiloServer.apiUrl(server, "profile"),
       { headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" } },
       "Profile fetch failed",
     )

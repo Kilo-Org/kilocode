@@ -166,10 +166,11 @@ export interface Result {
 }
 
 // Fetches and validates the Gateway model catalog for the given scope.
-// - Team scope (`organizationID` set): reads `/api/organizations/{id}/models` and never falls back to public models.
-// - Personal scope (`token` set, no `organizationID`): reads `/api/openrouter/models`; on 401 falls back to the
-//   anonymous free catalog, matching v1 (`api/models.ts:239-242`).
-// - Anonymous scope (no `token`): reads `/api/openrouter/models` without `Authorization` and keeps only `isFree` models.
+// - Team scope (`organizationID` set): reads `${aiGatewayBase}/organizations/{id}/models` (or `/api/organizations/{id}/models`
+//   on custom servers) and never falls back to public models.
+// - Personal scope (`token` set, no `organizationID`): reads `${aiGatewayBase}/models` (or `/api/openrouter/models` on
+//   custom servers); on 401 falls back to the anonymous free catalog, matching v1 (`api/models.ts:239-242`).
+// - Anonymous scope (no `token`): reads `${aiGatewayBase}/models` without `Authorization` and keeps only `isFree` models.
 export function get(scope: Scope): Effect.Effect<Result, Failure> {
   return Effect.gen(function* () {
     const server = KiloServer.normalize(scope.server)

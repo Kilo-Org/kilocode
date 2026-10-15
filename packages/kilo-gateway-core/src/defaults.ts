@@ -26,16 +26,15 @@ export interface Scope {
 export function get(scope: Scope): Effect.Effect<string> {
   const fallback = scope.token ? DEFAULT_MODEL : DEFAULT_FREE_MODEL
   return Effect.gen(function* () {
-    const server = KiloServer.normalize(scope.server)
     const organizationID = scope.token ? (scope.organizationID ?? null) : null
-    const path = organizationID
-      ? `/api/organizations/${encodeURIComponent(organizationID)}/defaults`
-      : "/api/defaults"
+    const url = organizationID
+      ? KiloServer.apiUrl(scope.server, "organizations", encodeURIComponent(organizationID), "defaults")
+      : KiloServer.apiUrl(scope.server, "defaults")
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
       ...(scope.token ? { Authorization: `Bearer ${scope.token}` } : {}),
     }
-    const response = yield* request(`${server}${path}`, { headers }, "Defaults fetch failed")
+    const response = yield* request(url, { headers }, "Defaults fetch failed")
     if (!response.ok) return fallback
     const parsed = decode(yield* json(response, "Defaults fetch failed"))
     if (Option.isNone(parsed)) return fallback
