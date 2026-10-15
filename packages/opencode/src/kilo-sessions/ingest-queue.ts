@@ -52,6 +52,10 @@ export namespace IngestQueue {
         type: "session_status"
         data: {
           status: "idle" | "busy" | "question" | "permission" | "retry" | "scheduled"
+          // Historical snapshots omit onset; known transitions replay this tuple unchanged.
+          occurredAt?: string
+          previousStatus?: "idle" | "busy" | "question" | "permission" | "retry" | "scheduled" | null
+          transitionId?: string
           // scheduled wakeups: the ISO-8601 due time, present only with status
           // "scheduled".
           scheduledAt?: string
@@ -153,7 +157,11 @@ export namespace IngestQueue {
       if (item.type === "session_diff") return "session_diff"
       if (item.type === "session_open") return "session_open"
       if (item.type === "session_close") return "session_close"
-      if (item.type === "session_status") return "session_status"
+      if (item.type === "session_status") {
+        if (item.data.transitionId) return `session_status:${item.data.transitionId}`
+        if (item.data.occurredAt) return `session_status:${item.data.occurredAt}:${item.data.status}`
+        return "session_status"
+      }
       if (item.type === "session_pr_link") return "session_pr_link"
 
       if (item.type === "message") {
