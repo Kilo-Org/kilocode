@@ -153,4 +153,12 @@ describe("SecurityContinuation.turn", () => {
     expect(SecurityContinuation.after(SecurityContinuation.turn("msg_turn_a"), blocked, call)).toBe("stop")
     expect(SecurityContinuation.after(SecurityContinuation.turn("msg_turn_b"), blocked, call)).toBe("continue")
   })
+
+  test("a parent turn outlives the subagent turns it starts", () => {
+    const call = { tool: "edit", input: { filePath: ".git/hooks/pre-commit" } }
+    const blocked = SecurityBlocked.of("SEC.V1.GIT_HOOK_WRITE", {} as never)
+    expect(SecurityContinuation.after(SecurityContinuation.turn("msg_parent"), blocked, call)).toBe("continue")
+    for (let i = 0; i < 200; i++) SecurityContinuation.turn(`msg_child_${i}`)
+    expect(SecurityContinuation.after(SecurityContinuation.turn("msg_parent"), blocked, call)).toBe("stop")
+  })
 })

@@ -58,15 +58,22 @@ export namespace SecurityContinuation {
   }
 
   const turns = new Map<string, State>()
+  const TURNS = 1024
 
   /**
    * The state for one user turn. A turn spans several processors (one per model step), so the state
-   * is keyed by the parent user message, like `malformedToolGuard`. Bounded to the 64 newest turns.
+   * is keyed by the parent user message, like `malformedToolGuard`. Least recently used turns are
+   * evicted first, and the bound is far above the turns a session keeps alive at once (a parent
+   * turn waiting on its subagents included).
    */
   export function turn(key: string): State {
     const found = turns.get(key)
-    if (found) return found
-    if (turns.size >= 64) {
+    if (found) {
+      turns.delete(key)
+      turns.set(key, found)
+      return found
+    }
+    if (turns.size >= TURNS) {
       const oldest = turns.keys().next()
       if (!oldest.done) turns.delete(oldest.value)
     }
