@@ -356,7 +356,7 @@ const bar = (done: number, total: number) => {
 }
 const ratio = (k: { done: number; total: number }) => (k.total ? `${k.done}/${k.total}` : "")
 
-// Treemap, after AnyPS5's tools/progress.py: squarified boxes per feature, a grid of cells inside each box,
+// Treemap: squarified boxes per feature, a grid of cells inside each box,
 // green for done, grey for open, yellow for dropped. Boxes above CAP cells draw CAP cells that each stand for
 // several, so the file stays small enough to commit.
 const PANEL = 495
