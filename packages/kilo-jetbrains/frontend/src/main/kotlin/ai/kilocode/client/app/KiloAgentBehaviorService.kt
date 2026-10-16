@@ -57,13 +57,11 @@ class KiloAgentBehaviorService internal constructor(
     suspend fun refreshCommandFiles(directory: String, fallback: List<CommandFileDto>): List<CommandFileDto> =
         safe(fallback) { call { commandFiles(directory) } }
 
-    suspend fun mcpStatus(directory: String): List<McpStatusDto> = try {
-        LOG.info("mcp status: requesting dir=$directory")
-        call { mcpStatus(directory) }.also { LOG.info("mcp status: received dir=$directory count=${it.size}") }
-    } catch (e: Exception) {
-        LOG.warn("mcp status failed dir=$directory", e)
-        emptyList()
-    }
+    /**
+     * Loads MCP runtime status for [directory] as a strict read: a failed or cancelled RPC throws
+     * so callers can keep their last-known state instead of treating the failure as "no servers".
+     */
+    suspend fun mcpStatus(directory: String): List<McpStatusDto> = call { mcpStatus(directory) }
 
     suspend fun mcpConfig(directory: String): Map<String, McpServerConfigDto> = safe(emptyMap()) { call { mcpConfig(directory) } }
 
