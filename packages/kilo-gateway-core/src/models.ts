@@ -417,7 +417,8 @@ function toModel(model: RawModel): Model {
       input: inputModalities,
       output: outputModalities,
     },
-    ...(reasoningOptions?.length ? { reasoningOptions } : {}),
+    // `[]` means reasoning is always on, so the model has no variants (same as models.dev).
+    ...(reasoningOptions ? { reasoningOptions } : {}),
   }
 }
 

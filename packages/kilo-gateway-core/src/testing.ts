@@ -35,7 +35,7 @@ export function fixture() {
           supported_parameters: ["tools", "temperature"],
           isFree: true,
           preferredIndex: 1,
-          opencode: { reasoning_options: [null] },
+          opencode: { reasoning_options: [] },
         },
         {
           id: "kilo-auto/frontier",

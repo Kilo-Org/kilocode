@@ -34,7 +34,7 @@ describe("KiloModels", () => {
     })
     const small = result.models.find((model) => model.id === "kilo-auto/small")
     expect(small?.family).toBe("gpt-luna")
-    expect(result.models.find((model) => model.id === "kilo-auto/free")?.reasoningOptions).toBeUndefined()
+    expect(result.models.find((model) => model.id === "kilo-auto/free")?.reasoningOptions).toEqual([])
     expect(KiloModels.entries(result.models)).toContainEqual({
       id: "kilo-auto/frontier",
       name: "Kilo Auto Frontier",
