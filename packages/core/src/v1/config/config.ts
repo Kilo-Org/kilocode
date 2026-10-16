@@ -55,6 +55,49 @@ const CommitMessageSchema = Schema.optional(
     }),
   }),
 ).annotate({ description: "Configuration for AI-generated commit messages" })
+
+/** Claude Code-compatible command hooks (`hooks` -> event -> matcher groups -> handlers). */
+const HookHandler = Schema.Struct({
+  type: Schema.Literal("command"),
+  command: Schema.String.annotate({
+    description:
+      "Command to run. Without args it runs through the shell; with args it is the program to spawn directly. It receives the hook input as JSON on stdin.",
+  }),
+  args: Schema.optional(Schema.mutable(Schema.Array(Schema.String))).annotate({
+    description: "Arguments for exec form: the command is spawned directly with these arguments, without a shell.",
+  }),
+  timeout: Schema.optional(PositiveInt).annotate({
+    description: "Timeout in seconds (default: 60). A hook that times out does not block the tool call.",
+  }),
+  onFailure: Schema.optional(Schema.Literal("block")).annotate({
+    description:
+      'Set to "block" so a PreToolUse hook that fails (timeout, crash, unexpected exit code) blocks the tool call instead of letting it run.',
+  }),
+})
+const HookGroup = Schema.Struct({
+  matcher: Schema.optional(
+    Schema.String.annotate({
+      description:
+        'Tool names to match: "*" or omitted matches all tools, "edit|write" matches exact names, anything else is a regular expression. Kilo tool ids and their Claude Code names (e.g. Edit, Bash) both match.',
+    }),
+  ),
+  hooks: Schema.mutable(Schema.Array(HookHandler)),
+})
+const HookGroups = Schema.optional(Schema.mutable(Schema.Array(HookGroup)))
+const HooksSchema = Schema.optional(
+  Schema.Struct({
+    PreToolUse: HookGroups.annotate({
+      description: "Run before a tool call. Exit code 2 (or a JSON deny decision) blocks the call.",
+    }),
+    PostToolUse: HookGroups.annotate({
+      description:
+        "Run after a tool call succeeds. Exit code 2 stderr (or a JSON block reason / additionalContext) is shown to the model.",
+    }),
+  }),
+).annotate({
+  description:
+    "Shell command hooks run around agent tool calls, compatible with Claude Code hooks. Only read from global, managed, or organization config; project config hooks are ignored.",
+})
 // kilocode_change end
 
 export const Info = Schema.Struct({
@@ -211,6 +254,7 @@ export const Info = Schema.Struct({
     description:
       "Default agent to use when none is specified. Must be a primary agent. Falls back to 'code' if not set or if the specified agent is invalid.",
   }),
+  hooks: HooksSchema,
   // kilocode_change end
   subagent_depth: Schema.optional(NonNegativeInt).annotate({
     description: "Maximum subagent nesting depth. Defaults to 1, which prevents subagents from launching subagents.",

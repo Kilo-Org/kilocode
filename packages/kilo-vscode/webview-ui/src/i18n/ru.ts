@@ -1110,7 +1110,7 @@ export const dict = {
   "settings.agentBehaviour.claudeCompat.heading": "Совместимость с Claude Code",
   "settings.agentBehaviour.claudeCompat.title": "Загружать файлы Claude Code",
   "settings.agentBehaviour.claudeCompat.description":
-    "Загружать инструкции CLAUDE.md и навыки из каталога конфигурации Claude Code в сессии. Включите эту опцию, если хотите, чтобы Kilo использовал ваши инструкции и навыки Claude Code. Требуется перезапуск.",
+    "Загружать инструкции CLAUDE.md и навыки из каталога конфигурации Claude Code в сессии. Включите эту опцию, если хотите, чтобы Kilo использовал ваши инструкции и навыки Claude Code. Требуется перезапуск. Также выполняет команды хуков PreToolUse и PostToolUse из ~/.claude/settings.json с вашими правами пользователя.",
   "settings.agentBehaviour.mcpDetail.command": "Команда",
   "settings.agentBehaviour.mcpDetail.args": "Аргументы",
   "settings.agentBehaviour.mcpDetail.env": "Окружение",

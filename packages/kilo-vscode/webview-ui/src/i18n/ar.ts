@@ -1089,7 +1089,7 @@ export const dict = {
   "settings.agentBehaviour.claudeCompat.heading": "توافق Claude Code",
   "settings.agentBehaviour.claudeCompat.title": "تحميل ملفات Claude Code",
   "settings.agentBehaviour.claudeCompat.description":
-    "تحميل تعليمات ومهارات CLAUDE.md من مجلد إعدادات Claude Code إلى الجلسات. قم بتمكين هذا الخيار إذا كنت ترغب في أن يستخدم Kilo مهارات وتعليمات Claude Code الخاصة بك. يتطلب إعادة التشغيل.",
+    "تحميل تعليمات ومهارات CLAUDE.md من مجلد إعدادات Claude Code إلى الجلسات. قم بتمكين هذا الخيار إذا كنت ترغب في أن يستخدم Kilo مهارات وتعليمات Claude Code الخاصة بك. يتطلب إعادة التشغيل. يشغّل أيضًا أوامر خطافات PreToolUse وPostToolUse من ~/.claude/settings.json بصلاحيات المستخدم الخاصة بك.",
   "settings.agentBehaviour.mcpDetail.command": "الأمر",
   "settings.agentBehaviour.mcpDetail.args": "الوسائط",
   "settings.agentBehaviour.mcpDetail.env": "البيئة",

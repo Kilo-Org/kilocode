@@ -273,6 +273,28 @@ Skills are markdown files at `skills/<name>/SKILL.md` (or `skill/<name>/SKILL.md
 | `username` | `string` | Display name override |
 | `compaction.auto` | `boolean` | Auto-compact when context full (default: true) |
 | `compaction.prune` | `boolean` | Prune old tool outputs (default: true) |
+| `hooks` | `object` | Shell command hooks around tool calls (see below) |
+
+## Hooks
+
+`hooks` runs shell commands before or after tool calls, using the Claude Code hooks format. Hooks are **only read from the global config** (`~/.config/kilo/kilo.jsonc`); hooks in project `kilo.json`, `kilo.jsonc` or `.kilo/` are ignored, so write them to the global file.
+
+```jsonc
+{
+  "hooks": {
+    // After an edit, run a linter; exit code 2 shows its stderr to the agent.
+    "PostToolUse": [
+      { "matcher": "edit|write|apply_patch", "hooks": [{ "type": "command", "command": "~/.config/kilo/hooks/lint.sh" }] }
+    ],
+    // Before a shell command; exit code 2 blocks the call with stderr as the reason.
+    "PreToolUse": [{ "matcher": "bash", "hooks": [{ "type": "command", "command": "~/.config/kilo/hooks/guard.sh", "timeout": 10 }] }]
+  }
+}
+```
+
+- Supported events: `PreToolUse`, `PostToolUse`. `matcher` is `*`/omitted (all tools), an exact list like `edit|write` (Claude Code names such as `Edit`/`Bash` also match), or a regular expression. MCP tools are named `<server>_<tool>` (`mcp__<server>__<tool>` also matches).
+- Each hook gets JSON on stdin (`tool_name`, `tool_input` with `file_path` added, `tool_response` for `PostToolUse`); `apply_patch` runs the hooks once per patched file. Default timeout 60 s; timeouts and other exit codes never block unless the hook sets `"onFailure": "block"`. Use `"args": [...]` to run a program directly without a shell.
+- Hooks run with the user's permissions outside the sandbox. Docs: https://kilo.ai/docs/customize/hooks
 
 ## TUI Settings (Ctrl+P Command Palette)
 

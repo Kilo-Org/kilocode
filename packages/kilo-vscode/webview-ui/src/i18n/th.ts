@@ -1097,7 +1097,7 @@ export const dict = {
   "settings.agentBehaviour.claudeCompat.heading": "ความเข้ากันได้กับ Claude Code",
   "settings.agentBehaviour.claudeCompat.title": "โหลดไฟล์ Claude Code",
   "settings.agentBehaviour.claudeCompat.description":
-    "โหลดคำแนะนำและทักษะจาก CLAUDE.md ในไดเรกทอรีการกำหนดค่า Claude Code ของคุณลงในเซสชัน เปิดใช้งานตัวเลือกนี้หากคุณต้องการให้ Kilo ใช้คำแนะนำและทักษะจาก Claude Code ของคุณ จำเป็นต้องรีสตาร์ท",
+    "โหลดคำแนะนำและทักษะจาก CLAUDE.md ในไดเรกทอรีการกำหนดค่า Claude Code ของคุณลงในเซสชัน เปิดใช้งานตัวเลือกนี้หากคุณต้องการให้ Kilo ใช้คำแนะนำและทักษะจาก Claude Code ของคุณ จำเป็นต้องรีสตาร์ท และจะรันคำสั่งฮุก PreToolUse และ PostToolUse จาก ~/.claude/settings.json ด้วยสิทธิ์ผู้ใช้ของคุณด้วย",
   "settings.agentBehaviour.mcpDetail.command": "คำสั่ง",
   "settings.agentBehaviour.mcpDetail.args": "อาร์กิวเมนต์",
   "settings.agentBehaviour.mcpDetail.env": "สภาพแวดล้อม",

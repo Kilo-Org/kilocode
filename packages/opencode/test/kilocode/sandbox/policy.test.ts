@@ -190,10 +190,11 @@ describe("sandbox policy", () => {
     const dirs = tmp.extra
     const ctx = context(dirs.a, dirs.a, dirs)
     const policy = profile(ctx)
-    const [storeWrite, prefWrite] = await Effect.runPromise(
+    const [storeWrite, prefWrite, claudeWrite] = await Effect.runPromise(
       Effect.all([
         runSandbox(policy, assertWrite(SandboxStore.root)).pipe(Effect.exit),
         runSandbox(policy, assertWrite(SandboxPreference.root)).pipe(Effect.exit),
+        runSandbox(policy, assertWrite(path.join(Global.Path.home, ".claude", "settings.json"))).pipe(Effect.exit),
       ]),
     )
 
@@ -203,6 +204,9 @@ describe("sandbox policy", () => {
       { path: SandboxStore.root, kind: "subtree" },
       { path: SandboxPreference.root, kind: "subtree" },
       { path: Global.Path.config, kind: "subtree" },
+      { path: path.join(Global.Path.home, ".kilo"), kind: "subtree" },
+      { path: path.join(Global.Path.home, ".kilocode"), kind: "subtree" },
+      { path: path.join(Global.Path.home, ".claude"), kind: "subtree" },
     ])
     expect(policy.environment.deny).toEqual([
       "KILO_CONFIG",
@@ -215,6 +219,7 @@ describe("sandbox policy", () => {
     ])
     expect(Exit.isFailure(storeWrite)).toBe(true)
     expect(Exit.isFailure(prefWrite)).toBe(true)
+    expect(Exit.isFailure(claudeWrite)).toBe(true)
   })
 
   test("uses deny-by-default and configurable network profiles", async () => {

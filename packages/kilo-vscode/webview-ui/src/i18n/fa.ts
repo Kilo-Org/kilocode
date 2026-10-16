@@ -1027,7 +1027,7 @@ export const dict = {
   "settings.agentBehaviour.claudeCompat.heading": "سازگاری با Claude Code",
   "settings.agentBehaviour.claudeCompat.title": "بارگذاری فایل‌های Claude Code",
   "settings.agentBehaviour.claudeCompat.description":
-    "دستورالعمل‌ها و مهارت‌های CLAUDE.md را از پوشه پیکربندی Claude Code شما در جلسات بارگذاری می‌کند. اگر می‌خواهید Kilo از دستورالعمل‌ها و مهارت‌های Claude Code شما استفاده کند، این گزینه را فعال کنید. نیاز به راه‌اندازی مجدد دارد.",
+    "دستورالعمل‌ها و مهارت‌های CLAUDE.md را از پوشه پیکربندی Claude Code شما در جلسات بارگذاری می‌کند. اگر می‌خواهید Kilo از دستورالعمل‌ها و مهارت‌های Claude Code شما استفاده کند، این گزینه را فعال کنید. نیاز به راه‌اندازی مجدد دارد. همچنین دستورهای هوک PreToolUse و PostToolUse را از ~/.claude/settings.json با مجوزهای کاربری شما اجرا می‌کند.",
   "settings.agentBehaviour.removeMcp.title": "حذف سرور MCP",
   "settings.agentBehaviour.removeMcp.confirm": "سرور MCP «{{name}}» حذف شود؟ این کار آن را از پیکربندی شما حذف می‌کند.",
   "settings.agentBehaviour.removeMcp.bundleConfirm":

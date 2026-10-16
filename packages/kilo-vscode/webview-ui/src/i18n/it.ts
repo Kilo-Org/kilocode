@@ -898,7 +898,7 @@ export const dict = {
   "settings.agentBehaviour.claudeCompat.heading": "Compatibilità Claude Code",
   "settings.agentBehaviour.claudeCompat.title": "Carica file Claude Code",
   "settings.agentBehaviour.claudeCompat.description":
-    "Carica istruzioni CLAUDE.md e skill dalla directory di configurazione Claude Code nelle sessioni. Abilitalo se vuoi che Kilo usi istruzioni e skill di Claude Code. Richiede riavvio.",
+    "Carica istruzioni CLAUDE.md e skill dalla directory di configurazione Claude Code nelle sessioni. Abilitalo se vuoi che Kilo usi istruzioni e skill di Claude Code. Richiede riavvio. Esegue anche i comandi hook PreToolUse e PostToolUse di ~/.claude/settings.json con i tuoi permessi utente.",
   "settings.agentBehaviour.removeMcp.title": "Rimuovi server MCP",
   "settings.agentBehaviour.removeMcp.confirm":
     'Rimuovere il server MCP "{{name}}"? Questo lo rimuoverà dalla configurazione.',

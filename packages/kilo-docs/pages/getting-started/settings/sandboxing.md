@@ -117,6 +117,7 @@ Writes are denied everywhere else. The following rules still apply inside writab
 - `.git` directories are always read-only to sandboxed tools.
 - Kilo's stored sandbox policy and preference files are read-only.
 - Kilo's global config root is read-only so a sandboxed command cannot widen network or write authority for a later session.
+- `~/.kilo`, `~/.kilocode`, and `~/.claude` are read-only so a sandboxed command cannot add [hooks](/docs/customize/hooks) that run outside the sandbox.
 - A permission approval for a path outside the sandbox does not make that path writable. Add the path to **Additional Writable Paths** if the tool must modify it.
 - Linked worktree sessions can write to their active worktree, not the primary checkout or sibling worktrees.
 

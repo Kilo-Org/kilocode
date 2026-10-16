@@ -251,7 +251,16 @@ export function profile(
   return {
     filesystem: {
       allowWrite: writable,
-      denyWrite: [root(SandboxStore.root), root(SandboxPreference.root), root(Global.Path.config)],
+      // Config that can make Kilo run commands outside the sandbox: global config, legacy global
+      // config dirs, and Claude Code settings (hooks).
+      denyWrite: [
+        root(SandboxStore.root),
+        root(SandboxPreference.root),
+        root(Global.Path.config),
+        root(path.join(Global.Path.home, ".kilo")),
+        root(path.join(Global.Path.home, ".kilocode")),
+        root(path.join(Global.Path.home, ".claude")),
+      ],
       denyNames: [".git"],
       temporaryDirectory: Global.Path.tmp,
     },

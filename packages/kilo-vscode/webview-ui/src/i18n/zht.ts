@@ -1024,7 +1024,7 @@ export const dict = {
   "settings.agentBehaviour.claudeCompat.heading": "Claude Code 相容性",
   "settings.agentBehaviour.claudeCompat.title": "載入 Claude Code 檔案",
   "settings.agentBehaviour.claudeCompat.description":
-    "從您的 Claude Code 設定目錄將 CLAUDE.md 指示與技能載入至工作階段中。如果您希望 Kilo 使用您的 Claude Code 指示與技能，請啟用此選項。需要重新啟動。",
+    "從您的 Claude Code 設定目錄將 CLAUDE.md 指示與技能載入至工作階段中。如果您希望 Kilo 使用您的 Claude Code 指示與技能，請啟用此選項。需要重新啟動。也會以你的使用者權限執行 ~/.claude/settings.json 中的 PreToolUse 和 PostToolUse 鉤子命令。",
   "settings.agentBehaviour.mcpDetail.command": "指令",
   "settings.agentBehaviour.mcpDetail.args": "引數",
   "settings.agentBehaviour.mcpDetail.env": "環境",

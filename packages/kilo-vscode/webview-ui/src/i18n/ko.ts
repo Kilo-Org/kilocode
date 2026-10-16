@@ -1101,7 +1101,7 @@ export const dict = {
   "settings.agentBehaviour.claudeCompat.heading": "Claude Code 호환성",
   "settings.agentBehaviour.claudeCompat.title": "Claude Code 파일 로드",
   "settings.agentBehaviour.claudeCompat.description":
-    "Claude Code 설정 디렉터리에서 세션으로 CLAUDE.md 지침 및 스킬을 로드합니다. Kilo가 Claude Code 지침 및 스킬을 사용하게 하려면 활성화하세요. 다시 시작해야 합니다.",
+    "Claude Code 설정 디렉터리에서 세션으로 CLAUDE.md 지침 및 스킬을 로드합니다. Kilo가 Claude Code 지침 및 스킬을 사용하게 하려면 활성화하세요. 다시 시작해야 합니다. ~/.claude/settings.json의 PreToolUse 및 PostToolUse 훅 명령도 사용자 권한으로 실행합니다.",
   "settings.agentBehaviour.mcpDetail.command": "명령어",
   "settings.agentBehaviour.mcpDetail.args": "인수",
   "settings.agentBehaviour.mcpDetail.env": "환경",

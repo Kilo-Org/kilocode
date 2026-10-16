@@ -1032,7 +1032,7 @@ export const dict = {
   "settings.agentBehaviour.claudeCompat.heading": "Claude Code Compatibility",
   "settings.agentBehaviour.claudeCompat.title": "Load Claude Code Files",
   "settings.agentBehaviour.claudeCompat.description":
-    "Load CLAUDE.md instructions and skills from your Claude Code configuration directory into sessions. Enable this if you want Kilo to use your Claude Code instructions and skills. Requires restart.",
+    "Load CLAUDE.md instructions and skills from your Claude Code configuration directory into sessions. Enable this if you want Kilo to use your Claude Code instructions and skills. Requires restart. Also runs the PreToolUse and PostToolUse hook commands from ~/.claude/settings.json with your user permissions.",
   "settings.agentBehaviour.removeMcp.title": "Remove MCP server",
   "settings.agentBehaviour.removeMcp.confirm": 'Remove MCP server "{{name}}"? This will remove it from your config.',
   "settings.agentBehaviour.removeMcp.bundleConfirm":

@@ -1140,7 +1140,7 @@ export const dict = {
   "settings.agentBehaviour.claudeCompat.heading": "Compatibilité Claude Code",
   "settings.agentBehaviour.claudeCompat.title": "Charger les fichiers Claude Code",
   "settings.agentBehaviour.claudeCompat.description":
-    "Charge les instructions et les compétences de CLAUDE.md depuis votre répertoire de configuration Claude Code dans les sessions. Activez cette option si vous souhaitez que Kilo utilise vos instructions et compétences Claude Code. Nécessite un redémarrage.",
+    "Charge les instructions et les compétences de CLAUDE.md depuis votre répertoire de configuration Claude Code dans les sessions. Activez cette option si vous souhaitez que Kilo utilise vos instructions et compétences Claude Code. Nécessite un redémarrage. Exécute aussi les commandes de hooks PreToolUse et PostToolUse de ~/.claude/settings.json avec vos droits utilisateur.",
   "settings.agentBehaviour.mcpDetail.command": "Commande",
   "settings.agentBehaviour.mcpDetail.args": "Arguments",
   "settings.agentBehaviour.mcpDetail.env": "Environnement",

@@ -1042,7 +1042,7 @@ export const dict = {
   "settings.agentBehaviour.claudeCompat.heading": "Claude Code Uyumluluğu",
   "settings.agentBehaviour.claudeCompat.title": "Claude Code Dosyalarını Yükle",
   "settings.agentBehaviour.claudeCompat.description":
-    "Claude Code yapılandırma dizininizdeki CLAUDE.md talimatlarını ve becerilerini oturumlara yükleyin. Kilo'nun Claude Code talimatlarınızı ve becerilerinizi kullanmasını istiyorsanız bunu etkinleştirin. Yeniden başlatma gerektirir.",
+    "Claude Code yapılandırma dizininizdeki CLAUDE.md talimatlarını ve becerilerini oturumlara yükleyin. Kilo'nun Claude Code talimatlarınızı ve becerilerinizi kullanmasını istiyorsanız bunu etkinleştirin. Yeniden başlatma gerektirir. Ayrıca ~/.claude/settings.json içindeki PreToolUse ve PostToolUse hook komutlarını kullanıcı izinlerinizle çalıştırır.",
   "settings.agentBehaviour.removeMcp.title": "MCP sunucusunu kaldır",
   "settings.agentBehaviour.removeMcp.confirm":
     '"{{name}}" MCP sunucusu kaldırılsın mı? Bu, yapılandırmanızdan kaldırılacak.',

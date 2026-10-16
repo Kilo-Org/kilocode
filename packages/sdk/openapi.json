@@ -35766,6 +35766,104 @@
           "default_agent": {
             "type": "string"
           },
+          "hooks": {
+            "type": "object",
+            "properties": {
+              "PreToolUse": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "matcher": {
+                      "type": "string",
+                      "description": "Tool names to match: \"*\" or omitted matches all tools, \"edit|write\" matches exact names, anything else is a regular expression. Kilo tool ids and their Claude Code names (e.g. Edit, Bash) both match."
+                    },
+                    "hooks": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "type": {
+                            "type": "string",
+                            "enum": ["command"]
+                          },
+                          "command": {
+                            "type": "string",
+                            "description": "Command to run. Without args it runs through the shell; with args it is the program to spawn directly. It receives the hook input as JSON on stdin."
+                          },
+                          "args": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          },
+                          "timeout": {
+                            "type": "integer",
+                            "exclusiveMinimum": 0
+                          },
+                          "onFailure": {
+                            "type": "string",
+                            "enum": ["block"]
+                          }
+                        },
+                        "required": ["type", "command"],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": ["hooks"],
+                  "additionalProperties": false
+                }
+              },
+              "PostToolUse": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "matcher": {
+                      "type": "string",
+                      "description": "Tool names to match: \"*\" or omitted matches all tools, \"edit|write\" matches exact names, anything else is a regular expression. Kilo tool ids and their Claude Code names (e.g. Edit, Bash) both match."
+                    },
+                    "hooks": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "type": {
+                            "type": "string",
+                            "enum": ["command"]
+                          },
+                          "command": {
+                            "type": "string",
+                            "description": "Command to run. Without args it runs through the shell; with args it is the program to spawn directly. It receives the hook input as JSON on stdin."
+                          },
+                          "args": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          },
+                          "timeout": {
+                            "type": "integer",
+                            "exclusiveMinimum": 0
+                          },
+                          "onFailure": {
+                            "type": "string",
+                            "enum": ["block"]
+                          }
+                        },
+                        "required": ["type", "command"],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": ["hooks"],
+                  "additionalProperties": false
+                }
+              }
+            },
+            "additionalProperties": false
+          },
           "subagent_depth": {
             "type": "integer",
             "minimum": 0

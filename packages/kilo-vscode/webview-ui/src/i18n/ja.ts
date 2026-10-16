@@ -1108,7 +1108,7 @@ export const dict = {
   "settings.agentBehaviour.claudeCompat.heading": "Claude Code 互換性",
   "settings.agentBehaviour.claudeCompat.title": "Claude Code ファイルを読み込む",
   "settings.agentBehaviour.claudeCompat.description":
-    "Claude Code の設定ディレクトリから CLAUDE.md のインストラクションとスキルをセッションに読み込みます。Kilo に Claude Code のインストラクションとスキルを使用させる場合は、これを有効にしてください。再起動が必要です。",
+    "Claude Code の設定ディレクトリから CLAUDE.md のインストラクションとスキルをセッションに読み込みます。Kilo に Claude Code のインストラクションとスキルを使用させる場合は、これを有効にしてください。再起動が必要です。~/.claude/settings.json の PreToolUse と PostToolUse のフックコマンドもユーザー権限で実行します。",
   "settings.agentBehaviour.mcpDetail.command": "コマンド",
   "settings.agentBehaviour.mcpDetail.args": "引数",
   "settings.agentBehaviour.mcpDetail.env": "環境",
