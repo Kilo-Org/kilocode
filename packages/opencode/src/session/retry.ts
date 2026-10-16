@@ -81,6 +81,11 @@ export function delay(attempt: number, error?: SessionV1.APIError, random = Math
 
       return cap(exponential(attempt, random))
     }
+
+    // kilocode_change start - the reset can also be advertised in the message alone
+    const reset = SessionRetryKilo.reset(error)
+    if (reset !== undefined) return cap(reset)
+    // kilocode_change end
   }
 
   return cap(Math.min(exponential(attempt, random), RETRY_MAX_DELAY_NO_HEADERS))

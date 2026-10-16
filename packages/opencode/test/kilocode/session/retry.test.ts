@@ -50,6 +50,15 @@ describe("kilocode session.retry ratelimit reset", () => {
     expect(SessionRetryKilo.reset(error)).toBe(9_500)
   })
 
+  test("accepts word-form units in the try-again message", () => {
+    expect(
+      SessionRetryKilo.reset(apiError({ message: "Rate limit reached. Please try again in 9 seconds." })),
+    ).toBe(9_500)
+    expect(
+      SessionRetryKilo.reset(apiError({ message: "Rate limit reached. Please try again in 1 minute." })),
+    ).toBe(60_500)
+  })
+
   test("falls back to the try-again phrase in the response body", () => {
     const error = Schema.decodeUnknownSync(SessionV1.APIError.Schema)(
       new SessionV1.APIError({
@@ -70,6 +79,13 @@ describe("kilocode session.retry ratelimit reset", () => {
 
   test("delay waits out the advertised reset instead of the exponential backoff", () => {
     const error = apiError({ headers: { "x-ratelimit-reset-requests": "9s" } })
+    expect(SessionRetry.delay(1, error, 0)).toBe(9_500)
+  })
+
+  test("delay honors the message-advertised reset on headerless errors", () => {
+    const error = apiError({
+      message: "Too Many Requests: Rate limit reached for glm-5.3 on requests per min (RPM): Limit 10, Used 10. Please try again in 9s.",
+    })
     expect(SessionRetry.delay(1, error, 0)).toBe(9_500)
   })
 

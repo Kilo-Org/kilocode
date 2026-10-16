@@ -8,7 +8,20 @@ export namespace SessionRetryKilo {
   /** Rate-limit window reset headers, most specific first. */
   const headers = ["x-ratelimit-reset-requests", "ratelimit-unified-reset", "ratelimit-requests-reset", "x-ratelimit-reset"]
 
-  const units: Record<string, number> = { ms: 1, s: 1_000, m: 60_000, h: 3_600_000 }
+  const units: Record<string, number> = {
+    ms: 1,
+    millisecond: 1,
+    milliseconds: 1,
+    s: 1_000,
+    second: 1_000,
+    seconds: 1_000,
+    m: 60_000,
+    minute: 60_000,
+    minutes: 60_000,
+    h: 3_600_000,
+    hour: 3_600_000,
+    hours: 3_600_000,
+  }
 
   /** "9s", "1m30s", "500ms" -> milliseconds */
   function span(value: string) {
@@ -48,7 +61,7 @@ export namespace SessionRetryKilo {
     }
     for (const text of [error.data.message, error.data.responseBody]) {
       if (typeof text !== "string") continue
-      const match = text.match(/try again in (\d+(?:\.\d+)?)\s*(ms|s|m|h)\b/i)
+      const match = text.match(/try again in (\d+(?:\.\d+)?)\s*(milliseconds?|seconds?|minutes?|hours?|ms|s|m|h)\b/i)
       if (!match) continue
       const ms = Number.parseFloat(match[1]) * (units[match[2].toLowerCase()] ?? 0)
       if (ms > 0) return Math.ceil(ms) + BUFFER_MS
