@@ -37,12 +37,27 @@ The sweep runs the evening before each maintainer slot. Andrea starts Friday and
 An author or commenter is a maintainer when one of these is true:
 
 - GitHub shows them as `OWNER`, `MEMBER` or `COLLABORATOR`.
-- Their login is in the repo variable `COMMUNITY_MAINTAINERS` (comma separated).
-- The optional secret `COMMUNITY_TRIAGE_MEMBER_TOKEN` (`read:org`) shows they are in the org.
+- The secret `COMMUNITY_TRIAGE_MEMBER_TOKEN` (`read:org`) shows they are in the org.
+- Their login is in `.github/community-maintainers.json`.
 
-The default token cannot see private org members. They look like normal contributors. Set the variable or the secret so their PRs are not labeled `community`.
+The default token cannot see private org members. They look like normal contributors. The member token fixes that, so it is needed. Org members are never listed in the file.
 
 Bots are ignored.
+
+### The list of extra maintainers
+
+`.github/community-maintainers.json` holds logins that count as maintainers but are not in the org: bot and agent accounts, and people outside the org. It has one key, `logins`, with a list of GitHub logins. The list must be sorted, in lower case and without duplicates. A test checks this.
+
+```json
+{
+  "logins": ["some-agent-account", "someone-outside-the-org"]
+}
+```
+
+- Change the list with a normal PR.
+- The file is public. Do not add org members. The member token finds them, and their membership may be private.
+- One file serves every repo. The community dashboard reads the same file for its four repos, so the two tools agree on who is a maintainer.
+- The dashboard's reviewer list is separate. It says who can be assigned reviews, not who counts as a maintainer.
 
 ## Labels
 
@@ -232,8 +247,7 @@ New issues get the `community` label, `needs-triage`, `first-time-contributor` f
 | Name | Kind | Needed | Purpose |
 |---|---|---|---|
 | `COMMUNITY_AUTO_CLOSE_ENABLED` | Variable | No | `true` turns on closing and comments |
-| `COMMUNITY_MAINTAINERS` | Variable | No | Logins treated as maintainers |
-| `COMMUNITY_TRIAGE_MEMBER_TOKEN` | Secret | No | Token with `read:org`. Finds private org members |
+| `COMMUNITY_TRIAGE_MEMBER_TOKEN` | Secret | Yes | Token with `read:org`. Finds private org members |
 | `COMMUNITY_TRIAGE_SLACK_TOKEN` | Secret | No | Slack bot token (`xoxb-`, scope `chat:write`). Posts a summary and threads the lists. The bot must be in the channel |
 | `COMMUNITY_TRIAGE_SLACK_CHANNEL` | Secret | No | Channel ID (`C...`) for the bot token |
 | `COMMUNITY_TRIAGE_SLACK_WEBHOOK` | Secret | No | Posts the whole queue as one message. Used when there is no bot token, or when the bot post fails |
