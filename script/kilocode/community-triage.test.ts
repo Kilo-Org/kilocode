@@ -298,9 +298,39 @@ describe("easy", () => {
     expect(easy(5, ["README.md", ".github/CODEOWNERS"])).toBeUndefined()
   })
 
-  test("agent definitions and changesets are not docs", () => {
-    expect(easy(10, [".kilo/agent/a.md"])).toBeUndefined()
-    expect(easy(10, [".kilo/skills/x/SKILL.md"])).toBeUndefined()
+  test("code under a docs directory is not docs", () => {
+    // 120 lines is over the small limit, so only the docs shape could match.
+    expect(easy(120, ["packages/kilo-docs/scripts/deploy.ts"])).toBeUndefined()
+    expect(easy(120, ["packages/kilo-docs/next.config.js"])).toBeUndefined()
+    expect(easy(120, ["docs/conf.py"])).toBeUndefined()
+    expect(easy(120, ["packages/kilo-docs/pages/a.md", "packages/kilo-docs/components/x.tsx"])).toBeUndefined()
+    expect(easy(20, ["packages/kilo-docs/scripts/deploy.ts"])).toBe("small")
+  })
+
+  test("images count as docs only under a docs directory", () => {
+    expect(easy(10, ["packages/kilo-docs/public/a.png", "packages/kilo-docs/pages/a.md"])).toBe("docs")
+    expect(easy(10, ["src/logo.png"])).toBe("small")
+    expect(easy(150, ["packages/kilo-docs/public/a.svg"])).toBeUndefined()
+  })
+
+  test("agent files and agent directories are never quick wins", () => {
+    for (const file of [
+      "AGENTS.md",
+      "packages/kilo-docs/AGENTS.md",
+      "CLAUDE.md",
+      ".cursorrules",
+      ".kilo/agent/a.md",
+      ".kilo/skills/x/SKILL.md",
+      ".kilocode/rules/a.md",
+      ".claude/commands/a.md",
+      ".agents/skills/x/SKILL.md",
+    ]) {
+      expect(easy(5, [file])).toBeUndefined()
+    }
+    expect(easy(5, ["README.md", "AGENTS.md"])).toBeUndefined()
+  })
+
+  test("changesets are not docs", () => {
     expect(easy(100, [".changeset/a.md"])).toBeUndefined()
   })
 
